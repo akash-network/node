@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package registry;
+
+service Registry {
+
+  rpc AccountCreate(AccountCreateRequest)               returns (AccountCreateResponse);
+  rpc AccountMetacenters(AccountMetacentersRequest)     returns (AccountMetacentersResponse);
+  rpc AccountControlAgents(AccountControlAgentsRequest) returns (AccountControlAgentsResponse);
+
+  rpc MetacenterCreate (MetacenterCreateRequest) returns (MetacenterCreateResponse);
+  rpc MetacenterDelete (MetacenterDeleteRequest) returns (MetacenterDeleteResponse);
+
+  rpc ControlAgentCreate (ControlAgentCreateRequest) returns (ControlAgentCreateResponse);
+  rpc ControlAgentUpdate (ControlAgentUpdateRequest) returns (ControlAgentUpdateResponse);
+  rpc ControlAgentDelete (ControlAgentDeleteRequest) returns (ControlAgentDeleteResponse);
+  rpc ControlAgentMatch  (ControlAgentMatchRequest)  returns (ControlAgentMatchResponse);
+
+}
+
+message AccountCreateRequest {
+  string email = 1;
+}
+
+message AccountCreateResponse {
+  string id   = 1;
+  string cert = 2;
+  string key  = 3;
+}
+
+message AccountMetacentersRequest {
+}
+
+message AccountMetacentersResponse {
+  repeated Metacenter items = 1;
+}
+
+message AccountControlAgentsRequest {
+}
+
+message AccountControlAgentsResponse {
+  repeated ControlAgent items = 1;
+}
+
+message MetacenterCreateRequest {
+}
+
+message MetacenterCreateResponse {
+  string id = 1;
+}
+
+message MetacenterDeleteRequest {
+  string id = 1;
+}
+
+message MetacenterDeleteResponse {
+}
+
+message ControlAgentCreateRequest {
+}
+
+message ControlAgentCreateResponse {
+  string id = 1;
+}
+
+message ControlAgentUpdateRequest {
+  string id = 1;
+}
+
+message ControlAgentUpdateResponse {
+  string id = 1;
+}
+
+message ControlAgentDeleteRequest {
+  string id = 1;
+}
+
+message ControlAgentDeleteResponse {
+}
+
+message ControlAgentMatchRequest {
+}
+
+message ControlAgentMatchResponse {
+  repeated ControlAgent items = 1;
+}
+
+message ControlAgent {
+  string id       = 1;
+  string endpoint = 2;
+  string state    = 3;
+}
+
+message Metacenter {
+  string id       = 1;
+  string endpoint = 2;
+  string state    = 3;
+}
