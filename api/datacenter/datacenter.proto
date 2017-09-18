@@ -1,12 +1,25 @@
 syntax = "proto3";
 
 service Datacenter {
+
+  // Create new deployment which will be owned by caller (metacenter)
   rpc DeploymentCreate(DeploymentCreateRequest) returns (DeploymentCreateResponse);
+
+  // Update deployment owned by caller (metacenter)
   rpc DeploymentUpdate(DeploymentUpdateRequest) returns (DeploymentUpdateResponse);
+
+  // Get status for deployment owned by caller (metacenter)
   rpc DeploymentStatus(DeploymentStatusRequest) returns (DeploymentStatusResponse);
+
+  // Get events for deployment owned by caller (metacenter)
   rpc DeploymentEvents(DeploymentEventsRequest) returns (stream DeploymentEvent);
+
+  // Delete deployment owned by caller (metacenter)
   rpc DeploymentDelete(DeploymentDeleteRequest) returns (DeploymentDeleteResponse);
+
+  // List deployments owned by caller (metacenter)
   rpc DeploymentList(DeploymentListRequest)     returns (DeploymentListResponse);
+
 }
 
 message DeploymentCreateRequest {

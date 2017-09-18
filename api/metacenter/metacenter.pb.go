@@ -105,8 +105,11 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for Metacenter service
 
 type MetacenterClient interface {
+	// Update deployment.  Restricted to Metacenter owner (user).
 	Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
+	// Get deployment status.  Restricted to Metacenter owner (user).
 	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	// Stream deployment events.  Restricted to Metacenter owner (user).
 	Events(ctx context.Context, in *EventsRequest, opts ...grpc.CallOption) (Metacenter_EventsClient, error)
 }
 
@@ -171,8 +174,11 @@ func (x *metacenterEventsClient) Recv() (*Event, error) {
 // Server API for Metacenter service
 
 type MetacenterServer interface {
+	// Update deployment.  Restricted to Metacenter owner (user).
 	Update(context.Context, *UpdateRequest) (*UpdateResponse, error)
+	// Get deployment status.  Restricted to Metacenter owner (user).
 	Status(context.Context, *StatusRequest) (*StatusResponse, error)
+	// Stream deployment events.  Restricted to Metacenter owner (user).
 	Events(*EventsRequest, Metacenter_EventsServer) error
 }
 

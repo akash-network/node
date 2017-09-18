@@ -12,21 +12,21 @@ It has these top-level messages:
 	AccountCreateResponse
 	AccountMetacentersRequest
 	AccountMetacentersResponse
-	AccountControlAgentsRequest
-	AccountControlAgentsResponse
+	AccountDatacentersRequest
+	AccountDatacentersResponse
 	MetacenterCreateRequest
 	MetacenterCreateResponse
 	MetacenterDeleteRequest
 	MetacenterDeleteResponse
-	ControlAgentCreateRequest
-	ControlAgentCreateResponse
-	ControlAgentUpdateRequest
-	ControlAgentUpdateResponse
-	ControlAgentDeleteRequest
-	ControlAgentDeleteResponse
-	ControlAgentMatchRequest
-	ControlAgentMatchResponse
-	ControlAgent
+	DatacenterCreateRequest
+	DatacenterCreateResponse
+	DatacenterUpdateRequest
+	DatacenterUpdateResponse
+	DatacenterDeleteRequest
+	DatacenterDeleteResponse
+	DatacenterMatchRequest
+	DatacenterMatchResponse
+	Datacenter
 	Metacenter
 */
 package registry
@@ -123,24 +123,24 @@ func (m *AccountMetacentersResponse) GetItems() []*Metacenter {
 	return nil
 }
 
-type AccountControlAgentsRequest struct {
+type AccountDatacentersRequest struct {
 }
 
-func (m *AccountControlAgentsRequest) Reset()                    { *m = AccountControlAgentsRequest{} }
-func (m *AccountControlAgentsRequest) String() string            { return proto.CompactTextString(m) }
-func (*AccountControlAgentsRequest) ProtoMessage()               {}
-func (*AccountControlAgentsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (m *AccountDatacentersRequest) Reset()                    { *m = AccountDatacentersRequest{} }
+func (m *AccountDatacentersRequest) String() string            { return proto.CompactTextString(m) }
+func (*AccountDatacentersRequest) ProtoMessage()               {}
+func (*AccountDatacentersRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
-type AccountControlAgentsResponse struct {
-	Items []*ControlAgent `protobuf:"bytes,1,rep,name=items" json:"items,omitempty"`
+type AccountDatacentersResponse struct {
+	Items []*Datacenter `protobuf:"bytes,1,rep,name=items" json:"items,omitempty"`
 }
 
-func (m *AccountControlAgentsResponse) Reset()                    { *m = AccountControlAgentsResponse{} }
-func (m *AccountControlAgentsResponse) String() string            { return proto.CompactTextString(m) }
-func (*AccountControlAgentsResponse) ProtoMessage()               {}
-func (*AccountControlAgentsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+func (m *AccountDatacentersResponse) Reset()                    { *m = AccountDatacentersResponse{} }
+func (m *AccountDatacentersResponse) String() string            { return proto.CompactTextString(m) }
+func (*AccountDatacentersResponse) ProtoMessage()               {}
+func (*AccountDatacentersResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
 
-func (m *AccountControlAgentsResponse) GetItems() []*ControlAgent {
+func (m *AccountDatacentersResponse) GetItems() []*Datacenter {
 	if m != nil {
 		return m.Items
 	}
@@ -195,136 +195,136 @@ func (m *MetacenterDeleteResponse) String() string            { return proto.Com
 func (*MetacenterDeleteResponse) ProtoMessage()               {}
 func (*MetacenterDeleteResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
 
-type ControlAgentCreateRequest struct {
+type DatacenterCreateRequest struct {
 }
 
-func (m *ControlAgentCreateRequest) Reset()                    { *m = ControlAgentCreateRequest{} }
-func (m *ControlAgentCreateRequest) String() string            { return proto.CompactTextString(m) }
-func (*ControlAgentCreateRequest) ProtoMessage()               {}
-func (*ControlAgentCreateRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+func (m *DatacenterCreateRequest) Reset()                    { *m = DatacenterCreateRequest{} }
+func (m *DatacenterCreateRequest) String() string            { return proto.CompactTextString(m) }
+func (*DatacenterCreateRequest) ProtoMessage()               {}
+func (*DatacenterCreateRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
 
-type ControlAgentCreateResponse struct {
+type DatacenterCreateResponse struct {
 	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
 }
 
-func (m *ControlAgentCreateResponse) Reset()                    { *m = ControlAgentCreateResponse{} }
-func (m *ControlAgentCreateResponse) String() string            { return proto.CompactTextString(m) }
-func (*ControlAgentCreateResponse) ProtoMessage()               {}
-func (*ControlAgentCreateResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+func (m *DatacenterCreateResponse) Reset()                    { *m = DatacenterCreateResponse{} }
+func (m *DatacenterCreateResponse) String() string            { return proto.CompactTextString(m) }
+func (*DatacenterCreateResponse) ProtoMessage()               {}
+func (*DatacenterCreateResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
 
-func (m *ControlAgentCreateResponse) GetId() string {
+func (m *DatacenterCreateResponse) GetId() string {
 	if m != nil {
 		return m.Id
 	}
 	return ""
 }
 
-type ControlAgentUpdateRequest struct {
+type DatacenterUpdateRequest struct {
 	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
 }
 
-func (m *ControlAgentUpdateRequest) Reset()                    { *m = ControlAgentUpdateRequest{} }
-func (m *ControlAgentUpdateRequest) String() string            { return proto.CompactTextString(m) }
-func (*ControlAgentUpdateRequest) ProtoMessage()               {}
-func (*ControlAgentUpdateRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+func (m *DatacenterUpdateRequest) Reset()                    { *m = DatacenterUpdateRequest{} }
+func (m *DatacenterUpdateRequest) String() string            { return proto.CompactTextString(m) }
+func (*DatacenterUpdateRequest) ProtoMessage()               {}
+func (*DatacenterUpdateRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
 
-func (m *ControlAgentUpdateRequest) GetId() string {
+func (m *DatacenterUpdateRequest) GetId() string {
 	if m != nil {
 		return m.Id
 	}
 	return ""
 }
 
-type ControlAgentUpdateResponse struct {
+type DatacenterUpdateResponse struct {
 	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
 }
 
-func (m *ControlAgentUpdateResponse) Reset()                    { *m = ControlAgentUpdateResponse{} }
-func (m *ControlAgentUpdateResponse) String() string            { return proto.CompactTextString(m) }
-func (*ControlAgentUpdateResponse) ProtoMessage()               {}
-func (*ControlAgentUpdateResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
+func (m *DatacenterUpdateResponse) Reset()                    { *m = DatacenterUpdateResponse{} }
+func (m *DatacenterUpdateResponse) String() string            { return proto.CompactTextString(m) }
+func (*DatacenterUpdateResponse) ProtoMessage()               {}
+func (*DatacenterUpdateResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
 
-func (m *ControlAgentUpdateResponse) GetId() string {
+func (m *DatacenterUpdateResponse) GetId() string {
 	if m != nil {
 		return m.Id
 	}
 	return ""
 }
 
-type ControlAgentDeleteRequest struct {
+type DatacenterDeleteRequest struct {
 	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
 }
 
-func (m *ControlAgentDeleteRequest) Reset()                    { *m = ControlAgentDeleteRequest{} }
-func (m *ControlAgentDeleteRequest) String() string            { return proto.CompactTextString(m) }
-func (*ControlAgentDeleteRequest) ProtoMessage()               {}
-func (*ControlAgentDeleteRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{14} }
+func (m *DatacenterDeleteRequest) Reset()                    { *m = DatacenterDeleteRequest{} }
+func (m *DatacenterDeleteRequest) String() string            { return proto.CompactTextString(m) }
+func (*DatacenterDeleteRequest) ProtoMessage()               {}
+func (*DatacenterDeleteRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{14} }
 
-func (m *ControlAgentDeleteRequest) GetId() string {
+func (m *DatacenterDeleteRequest) GetId() string {
 	if m != nil {
 		return m.Id
 	}
 	return ""
 }
 
-type ControlAgentDeleteResponse struct {
+type DatacenterDeleteResponse struct {
 }
 
-func (m *ControlAgentDeleteResponse) Reset()                    { *m = ControlAgentDeleteResponse{} }
-func (m *ControlAgentDeleteResponse) String() string            { return proto.CompactTextString(m) }
-func (*ControlAgentDeleteResponse) ProtoMessage()               {}
-func (*ControlAgentDeleteResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{15} }
+func (m *DatacenterDeleteResponse) Reset()                    { *m = DatacenterDeleteResponse{} }
+func (m *DatacenterDeleteResponse) String() string            { return proto.CompactTextString(m) }
+func (*DatacenterDeleteResponse) ProtoMessage()               {}
+func (*DatacenterDeleteResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{15} }
 
-type ControlAgentMatchRequest struct {
+type DatacenterMatchRequest struct {
 }
 
-func (m *ControlAgentMatchRequest) Reset()                    { *m = ControlAgentMatchRequest{} }
-func (m *ControlAgentMatchRequest) String() string            { return proto.CompactTextString(m) }
-func (*ControlAgentMatchRequest) ProtoMessage()               {}
-func (*ControlAgentMatchRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{16} }
+func (m *DatacenterMatchRequest) Reset()                    { *m = DatacenterMatchRequest{} }
+func (m *DatacenterMatchRequest) String() string            { return proto.CompactTextString(m) }
+func (*DatacenterMatchRequest) ProtoMessage()               {}
+func (*DatacenterMatchRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{16} }
 
-type ControlAgentMatchResponse struct {
-	Items []*ControlAgent `protobuf:"bytes,1,rep,name=items" json:"items,omitempty"`
+type DatacenterMatchResponse struct {
+	Items []*Datacenter `protobuf:"bytes,1,rep,name=items" json:"items,omitempty"`
 }
 
-func (m *ControlAgentMatchResponse) Reset()                    { *m = ControlAgentMatchResponse{} }
-func (m *ControlAgentMatchResponse) String() string            { return proto.CompactTextString(m) }
-func (*ControlAgentMatchResponse) ProtoMessage()               {}
-func (*ControlAgentMatchResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{17} }
+func (m *DatacenterMatchResponse) Reset()                    { *m = DatacenterMatchResponse{} }
+func (m *DatacenterMatchResponse) String() string            { return proto.CompactTextString(m) }
+func (*DatacenterMatchResponse) ProtoMessage()               {}
+func (*DatacenterMatchResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{17} }
 
-func (m *ControlAgentMatchResponse) GetItems() []*ControlAgent {
+func (m *DatacenterMatchResponse) GetItems() []*Datacenter {
 	if m != nil {
 		return m.Items
 	}
 	return nil
 }
 
-type ControlAgent struct {
+type Datacenter struct {
 	Id       string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
 	Endpoint string `protobuf:"bytes,2,opt,name=endpoint" json:"endpoint,omitempty"`
 	State    string `protobuf:"bytes,3,opt,name=state" json:"state,omitempty"`
 }
 
-func (m *ControlAgent) Reset()                    { *m = ControlAgent{} }
-func (m *ControlAgent) String() string            { return proto.CompactTextString(m) }
-func (*ControlAgent) ProtoMessage()               {}
-func (*ControlAgent) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{18} }
+func (m *Datacenter) Reset()                    { *m = Datacenter{} }
+func (m *Datacenter) String() string            { return proto.CompactTextString(m) }
+func (*Datacenter) ProtoMessage()               {}
+func (*Datacenter) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{18} }
 
-func (m *ControlAgent) GetId() string {
+func (m *Datacenter) GetId() string {
 	if m != nil {
 		return m.Id
 	}
 	return ""
 }
 
-func (m *ControlAgent) GetEndpoint() string {
+func (m *Datacenter) GetEndpoint() string {
 	if m != nil {
 		return m.Endpoint
 	}
 	return ""
 }
 
-func (m *ControlAgent) GetState() string {
+func (m *Datacenter) GetState() string {
 	if m != nil {
 		return m.State
 	}
@@ -368,21 +368,21 @@ func init() {
 	proto.RegisterType((*AccountCreateResponse)(nil), "AccountCreateResponse")
 	proto.RegisterType((*AccountMetacentersRequest)(nil), "AccountMetacentersRequest")
 	proto.RegisterType((*AccountMetacentersResponse)(nil), "AccountMetacentersResponse")
-	proto.RegisterType((*AccountControlAgentsRequest)(nil), "AccountControlAgentsRequest")
-	proto.RegisterType((*AccountControlAgentsResponse)(nil), "AccountControlAgentsResponse")
+	proto.RegisterType((*AccountDatacentersRequest)(nil), "AccountDatacentersRequest")
+	proto.RegisterType((*AccountDatacentersResponse)(nil), "AccountDatacentersResponse")
 	proto.RegisterType((*MetacenterCreateRequest)(nil), "MetacenterCreateRequest")
 	proto.RegisterType((*MetacenterCreateResponse)(nil), "MetacenterCreateResponse")
 	proto.RegisterType((*MetacenterDeleteRequest)(nil), "MetacenterDeleteRequest")
 	proto.RegisterType((*MetacenterDeleteResponse)(nil), "MetacenterDeleteResponse")
-	proto.RegisterType((*ControlAgentCreateRequest)(nil), "ControlAgentCreateRequest")
-	proto.RegisterType((*ControlAgentCreateResponse)(nil), "ControlAgentCreateResponse")
-	proto.RegisterType((*ControlAgentUpdateRequest)(nil), "ControlAgentUpdateRequest")
-	proto.RegisterType((*ControlAgentUpdateResponse)(nil), "ControlAgentUpdateResponse")
-	proto.RegisterType((*ControlAgentDeleteRequest)(nil), "ControlAgentDeleteRequest")
-	proto.RegisterType((*ControlAgentDeleteResponse)(nil), "ControlAgentDeleteResponse")
-	proto.RegisterType((*ControlAgentMatchRequest)(nil), "ControlAgentMatchRequest")
-	proto.RegisterType((*ControlAgentMatchResponse)(nil), "ControlAgentMatchResponse")
-	proto.RegisterType((*ControlAgent)(nil), "ControlAgent")
+	proto.RegisterType((*DatacenterCreateRequest)(nil), "DatacenterCreateRequest")
+	proto.RegisterType((*DatacenterCreateResponse)(nil), "DatacenterCreateResponse")
+	proto.RegisterType((*DatacenterUpdateRequest)(nil), "DatacenterUpdateRequest")
+	proto.RegisterType((*DatacenterUpdateResponse)(nil), "DatacenterUpdateResponse")
+	proto.RegisterType((*DatacenterDeleteRequest)(nil), "DatacenterDeleteRequest")
+	proto.RegisterType((*DatacenterDeleteResponse)(nil), "DatacenterDeleteResponse")
+	proto.RegisterType((*DatacenterMatchRequest)(nil), "DatacenterMatchRequest")
+	proto.RegisterType((*DatacenterMatchResponse)(nil), "DatacenterMatchResponse")
+	proto.RegisterType((*Datacenter)(nil), "Datacenter")
 	proto.RegisterType((*Metacenter)(nil), "Metacenter")
 }
 
@@ -397,15 +397,24 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for Registry service
 
 type RegistryClient interface {
+	// Create new Account and return identity bundle.
 	AccountCreate(ctx context.Context, in *AccountCreateRequest, opts ...grpc.CallOption) (*AccountCreateResponse, error)
+	// List all Metacenters owned by caller (user).
 	AccountMetacenters(ctx context.Context, in *AccountMetacentersRequest, opts ...grpc.CallOption) (*AccountMetacentersResponse, error)
-	AccountControlAgents(ctx context.Context, in *AccountControlAgentsRequest, opts ...grpc.CallOption) (*AccountControlAgentsResponse, error)
+	// List all Datacenters owned by caller (provider)
+	AccountDatacenters(ctx context.Context, in *AccountDatacentersRequest, opts ...grpc.CallOption) (*AccountDatacentersResponse, error)
+	// Create Metacenter which will be owned by caller (user).
 	MetacenterCreate(ctx context.Context, in *MetacenterCreateRequest, opts ...grpc.CallOption) (*MetacenterCreateResponse, error)
+	// Delete Metacenter owned by caller (user).
 	MetacenterDelete(ctx context.Context, in *MetacenterDeleteRequest, opts ...grpc.CallOption) (*MetacenterDeleteResponse, error)
-	ControlAgentCreate(ctx context.Context, in *ControlAgentCreateRequest, opts ...grpc.CallOption) (*ControlAgentCreateResponse, error)
-	ControlAgentUpdate(ctx context.Context, in *ControlAgentUpdateRequest, opts ...grpc.CallOption) (*ControlAgentUpdateResponse, error)
-	ControlAgentDelete(ctx context.Context, in *ControlAgentDeleteRequest, opts ...grpc.CallOption) (*ControlAgentDeleteResponse, error)
-	ControlAgentMatch(ctx context.Context, in *ControlAgentMatchRequest, opts ...grpc.CallOption) (*ControlAgentMatchResponse, error)
+	// Create Datacenter owned by caller (provider).
+	DatacenterCreate(ctx context.Context, in *DatacenterCreateRequest, opts ...grpc.CallOption) (*DatacenterCreateResponse, error)
+	// Update Datacenter owned by caller (provider).
+	DatacenterUpdate(ctx context.Context, in *DatacenterUpdateRequest, opts ...grpc.CallOption) (*DatacenterUpdateResponse, error)
+	// Delete Datacenter owned by caller (provider).
+	DatacenterDelete(ctx context.Context, in *DatacenterDeleteRequest, opts ...grpc.CallOption) (*DatacenterDeleteResponse, error)
+	// Match Datacenters for given request.
+	DatacenterMatch(ctx context.Context, in *DatacenterMatchRequest, opts ...grpc.CallOption) (*DatacenterMatchResponse, error)
 }
 
 type registryClient struct {
@@ -434,9 +443,9 @@ func (c *registryClient) AccountMetacenters(ctx context.Context, in *AccountMeta
 	return out, nil
 }
 
-func (c *registryClient) AccountControlAgents(ctx context.Context, in *AccountControlAgentsRequest, opts ...grpc.CallOption) (*AccountControlAgentsResponse, error) {
-	out := new(AccountControlAgentsResponse)
-	err := grpc.Invoke(ctx, "/Registry/AccountControlAgents", in, out, c.cc, opts...)
+func (c *registryClient) AccountDatacenters(ctx context.Context, in *AccountDatacentersRequest, opts ...grpc.CallOption) (*AccountDatacentersResponse, error) {
+	out := new(AccountDatacentersResponse)
+	err := grpc.Invoke(ctx, "/Registry/AccountDatacenters", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -461,36 +470,36 @@ func (c *registryClient) MetacenterDelete(ctx context.Context, in *MetacenterDel
 	return out, nil
 }
 
-func (c *registryClient) ControlAgentCreate(ctx context.Context, in *ControlAgentCreateRequest, opts ...grpc.CallOption) (*ControlAgentCreateResponse, error) {
-	out := new(ControlAgentCreateResponse)
-	err := grpc.Invoke(ctx, "/Registry/ControlAgentCreate", in, out, c.cc, opts...)
+func (c *registryClient) DatacenterCreate(ctx context.Context, in *DatacenterCreateRequest, opts ...grpc.CallOption) (*DatacenterCreateResponse, error) {
+	out := new(DatacenterCreateResponse)
+	err := grpc.Invoke(ctx, "/Registry/DatacenterCreate", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *registryClient) ControlAgentUpdate(ctx context.Context, in *ControlAgentUpdateRequest, opts ...grpc.CallOption) (*ControlAgentUpdateResponse, error) {
-	out := new(ControlAgentUpdateResponse)
-	err := grpc.Invoke(ctx, "/Registry/ControlAgentUpdate", in, out, c.cc, opts...)
+func (c *registryClient) DatacenterUpdate(ctx context.Context, in *DatacenterUpdateRequest, opts ...grpc.CallOption) (*DatacenterUpdateResponse, error) {
+	out := new(DatacenterUpdateResponse)
+	err := grpc.Invoke(ctx, "/Registry/DatacenterUpdate", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *registryClient) ControlAgentDelete(ctx context.Context, in *ControlAgentDeleteRequest, opts ...grpc.CallOption) (*ControlAgentDeleteResponse, error) {
-	out := new(ControlAgentDeleteResponse)
-	err := grpc.Invoke(ctx, "/Registry/ControlAgentDelete", in, out, c.cc, opts...)
+func (c *registryClient) DatacenterDelete(ctx context.Context, in *DatacenterDeleteRequest, opts ...grpc.CallOption) (*DatacenterDeleteResponse, error) {
+	out := new(DatacenterDeleteResponse)
+	err := grpc.Invoke(ctx, "/Registry/DatacenterDelete", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *registryClient) ControlAgentMatch(ctx context.Context, in *ControlAgentMatchRequest, opts ...grpc.CallOption) (*ControlAgentMatchResponse, error) {
-	out := new(ControlAgentMatchResponse)
-	err := grpc.Invoke(ctx, "/Registry/ControlAgentMatch", in, out, c.cc, opts...)
+func (c *registryClient) DatacenterMatch(ctx context.Context, in *DatacenterMatchRequest, opts ...grpc.CallOption) (*DatacenterMatchResponse, error) {
+	out := new(DatacenterMatchResponse)
+	err := grpc.Invoke(ctx, "/Registry/DatacenterMatch", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -500,15 +509,24 @@ func (c *registryClient) ControlAgentMatch(ctx context.Context, in *ControlAgent
 // Server API for Registry service
 
 type RegistryServer interface {
+	// Create new Account and return identity bundle.
 	AccountCreate(context.Context, *AccountCreateRequest) (*AccountCreateResponse, error)
+	// List all Metacenters owned by caller (user).
 	AccountMetacenters(context.Context, *AccountMetacentersRequest) (*AccountMetacentersResponse, error)
-	AccountControlAgents(context.Context, *AccountControlAgentsRequest) (*AccountControlAgentsResponse, error)
+	// List all Datacenters owned by caller (provider)
+	AccountDatacenters(context.Context, *AccountDatacentersRequest) (*AccountDatacentersResponse, error)
+	// Create Metacenter which will be owned by caller (user).
 	MetacenterCreate(context.Context, *MetacenterCreateRequest) (*MetacenterCreateResponse, error)
+	// Delete Metacenter owned by caller (user).
 	MetacenterDelete(context.Context, *MetacenterDeleteRequest) (*MetacenterDeleteResponse, error)
-	ControlAgentCreate(context.Context, *ControlAgentCreateRequest) (*ControlAgentCreateResponse, error)
-	ControlAgentUpdate(context.Context, *ControlAgentUpdateRequest) (*ControlAgentUpdateResponse, error)
-	ControlAgentDelete(context.Context, *ControlAgentDeleteRequest) (*ControlAgentDeleteResponse, error)
-	ControlAgentMatch(context.Context, *ControlAgentMatchRequest) (*ControlAgentMatchResponse, error)
+	// Create Datacenter owned by caller (provider).
+	DatacenterCreate(context.Context, *DatacenterCreateRequest) (*DatacenterCreateResponse, error)
+	// Update Datacenter owned by caller (provider).
+	DatacenterUpdate(context.Context, *DatacenterUpdateRequest) (*DatacenterUpdateResponse, error)
+	// Delete Datacenter owned by caller (provider).
+	DatacenterDelete(context.Context, *DatacenterDeleteRequest) (*DatacenterDeleteResponse, error)
+	// Match Datacenters for given request.
+	DatacenterMatch(context.Context, *DatacenterMatchRequest) (*DatacenterMatchResponse, error)
 }
 
 func RegisterRegistryServer(s *grpc.Server, srv RegistryServer) {
@@ -551,20 +569,20 @@ func _Registry_AccountMetacenters_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Registry_AccountControlAgents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AccountControlAgentsRequest)
+func _Registry_AccountDatacenters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AccountDatacentersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RegistryServer).AccountControlAgents(ctx, in)
+		return srv.(RegistryServer).AccountDatacenters(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Registry/AccountControlAgents",
+		FullMethod: "/Registry/AccountDatacenters",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RegistryServer).AccountControlAgents(ctx, req.(*AccountControlAgentsRequest))
+		return srv.(RegistryServer).AccountDatacenters(ctx, req.(*AccountDatacentersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -605,74 +623,74 @@ func _Registry_MetacenterDelete_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Registry_ControlAgentCreate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ControlAgentCreateRequest)
+func _Registry_DatacenterCreate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DatacenterCreateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RegistryServer).ControlAgentCreate(ctx, in)
+		return srv.(RegistryServer).DatacenterCreate(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Registry/ControlAgentCreate",
+		FullMethod: "/Registry/DatacenterCreate",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RegistryServer).ControlAgentCreate(ctx, req.(*ControlAgentCreateRequest))
+		return srv.(RegistryServer).DatacenterCreate(ctx, req.(*DatacenterCreateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Registry_ControlAgentUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ControlAgentUpdateRequest)
+func _Registry_DatacenterUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DatacenterUpdateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RegistryServer).ControlAgentUpdate(ctx, in)
+		return srv.(RegistryServer).DatacenterUpdate(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Registry/ControlAgentUpdate",
+		FullMethod: "/Registry/DatacenterUpdate",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RegistryServer).ControlAgentUpdate(ctx, req.(*ControlAgentUpdateRequest))
+		return srv.(RegistryServer).DatacenterUpdate(ctx, req.(*DatacenterUpdateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Registry_ControlAgentDelete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ControlAgentDeleteRequest)
+func _Registry_DatacenterDelete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DatacenterDeleteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RegistryServer).ControlAgentDelete(ctx, in)
+		return srv.(RegistryServer).DatacenterDelete(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Registry/ControlAgentDelete",
+		FullMethod: "/Registry/DatacenterDelete",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RegistryServer).ControlAgentDelete(ctx, req.(*ControlAgentDeleteRequest))
+		return srv.(RegistryServer).DatacenterDelete(ctx, req.(*DatacenterDeleteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Registry_ControlAgentMatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ControlAgentMatchRequest)
+func _Registry_DatacenterMatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DatacenterMatchRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RegistryServer).ControlAgentMatch(ctx, in)
+		return srv.(RegistryServer).DatacenterMatch(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Registry/ControlAgentMatch",
+		FullMethod: "/Registry/DatacenterMatch",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RegistryServer).ControlAgentMatch(ctx, req.(*ControlAgentMatchRequest))
+		return srv.(RegistryServer).DatacenterMatch(ctx, req.(*DatacenterMatchRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -690,8 +708,8 @@ var _Registry_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Registry_AccountMetacenters_Handler,
 		},
 		{
-			MethodName: "AccountControlAgents",
-			Handler:    _Registry_AccountControlAgents_Handler,
+			MethodName: "AccountDatacenters",
+			Handler:    _Registry_AccountDatacenters_Handler,
 		},
 		{
 			MethodName: "MetacenterCreate",
@@ -702,20 +720,20 @@ var _Registry_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Registry_MetacenterDelete_Handler,
 		},
 		{
-			MethodName: "ControlAgentCreate",
-			Handler:    _Registry_ControlAgentCreate_Handler,
+			MethodName: "DatacenterCreate",
+			Handler:    _Registry_DatacenterCreate_Handler,
 		},
 		{
-			MethodName: "ControlAgentUpdate",
-			Handler:    _Registry_ControlAgentUpdate_Handler,
+			MethodName: "DatacenterUpdate",
+			Handler:    _Registry_DatacenterUpdate_Handler,
 		},
 		{
-			MethodName: "ControlAgentDelete",
-			Handler:    _Registry_ControlAgentDelete_Handler,
+			MethodName: "DatacenterDelete",
+			Handler:    _Registry_DatacenterDelete_Handler,
 		},
 		{
-			MethodName: "ControlAgentMatch",
-			Handler:    _Registry_ControlAgentMatch_Handler,
+			MethodName: "DatacenterMatch",
+			Handler:    _Registry_DatacenterMatch_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -725,36 +743,34 @@ var _Registry_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("api/registry/registry.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 484 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x95, 0x51, 0x6f, 0xd3, 0x30,
-	0x10, 0x80, 0xd5, 0x96, 0xa2, 0x71, 0x63, 0x68, 0x58, 0x1b, 0x24, 0x4e, 0x27, 0x0d, 0xf3, 0x32,
-	0x60, 0x3a, 0xa4, 0xf1, 0x0e, 0x4c, 0x43, 0x42, 0x42, 0x0a, 0x42, 0x41, 0xfc, 0x80, 0x90, 0x9c,
-	0x4a, 0x44, 0x9b, 0x84, 0xc4, 0x7d, 0xe8, 0x4f, 0xe3, 0xdf, 0xa1, 0x24, 0x4e, 0x13, 0x3b, 0x71,
-	0x04, 0xe2, 0x2d, 0xf6, 0x9d, 0xbe, 0x3b, 0xdb, 0xf7, 0xb5, 0xe0, 0x85, 0x79, 0xf2, 0xba, 0xa0,
-	0x75, 0x52, 0xca, 0x62, 0x7f, 0xf8, 0xc0, 0xbc, 0xc8, 0x64, 0x26, 0xae, 0xe1, 0xec, 0x36, 0x8a,
-	0xb2, 0x5d, 0x2a, 0xef, 0x0a, 0x0a, 0x25, 0x05, 0xf4, 0x6b, 0x47, 0xa5, 0x64, 0x67, 0xb0, 0xa4,
-	0x6d, 0x98, 0x6c, 0x9c, 0xd9, 0xe5, 0xec, 0xea, 0x41, 0xd0, 0x2c, 0x84, 0x0f, 0xe7, 0x46, 0x76,
-	0x99, 0x67, 0x69, 0x49, 0xec, 0x11, 0xcc, 0x93, 0x58, 0xe5, 0xce, 0x93, 0x98, 0x31, 0xb8, 0x17,
-	0x51, 0x21, 0x9d, 0x79, 0xbd, 0x53, 0x7f, 0xb3, 0x53, 0x58, 0xfc, 0xa4, 0xbd, 0xb3, 0xa8, 0xb7,
-	0xaa, 0x4f, 0xe1, 0x81, 0xab, 0x70, 0x3e, 0xc9, 0x30, 0xa2, 0x54, 0x52, 0x51, 0xaa, 0x0e, 0xc4,
-	0x3b, 0xe0, 0x63, 0x41, 0x55, 0xf0, 0x19, 0x2c, 0x13, 0x49, 0xdb, 0xd2, 0x99, 0x5d, 0x2e, 0xae,
-	0x8e, 0x6f, 0x8e, 0xb1, 0x4b, 0x0a, 0x9a, 0x88, 0xb8, 0x00, 0xaf, 0x6d, 0x36, 0x4b, 0x65, 0x91,
-	0x6d, 0x6e, 0xd7, 0x94, 0xca, 0x03, 0xff, 0x0e, 0x56, 0xe3, 0x61, 0x55, 0xe1, 0xb9, 0x5e, 0xe1,
-	0x04, 0xfb, 0x69, 0x6d, 0x0d, 0x17, 0x9e, 0x76, 0x85, 0xb5, 0x1b, 0x14, 0x2f, 0xc1, 0x19, 0x86,
-	0xc6, 0xaf, 0x4b, 0xbc, 0xe8, 0x63, 0x3e, 0xd0, 0x86, 0xba, 0x87, 0x30, 0x53, 0x79, 0x1f, 0xdb,
-	0xa6, 0x36, 0xd8, 0xea, 0x3e, 0xfb, 0x4d, 0xea, 0xfd, 0x5c, 0x03, 0x1f, 0x0b, 0x5a, 0x3a, 0x7a,
-	0xa5, 0xa3, 0xbe, 0xe5, 0x71, 0x68, 0xef, 0xc9, 0x40, 0xb7, 0xc9, 0x7f, 0x87, 0x9e, 0x3e, 0xee,
-	0x4a, 0x47, 0x1b, 0x07, 0xe6, 0xe0, 0xf4, 0xa3, 0x7e, 0x28, 0xa3, 0x1f, 0xed, 0x79, 0xdf, 0xeb,
-	0x65, 0x54, 0xec, 0x5f, 0x1e, 0xf7, 0x0b, 0x3c, 0xec, 0x6f, 0x0f, 0x86, 0x9c, 0xc3, 0x11, 0xa5,
-	0x71, 0x9e, 0x25, 0x69, 0x3b, 0xe8, 0x87, 0x75, 0xe5, 0x4f, 0x29, 0x43, 0x49, 0x6a, 0xdc, 0x9b,
-	0x85, 0xf8, 0x0c, 0xd0, 0x3d, 0xde, 0xff, 0xf3, 0x6e, 0x7e, 0x2f, 0xe1, 0x28, 0x50, 0x42, 0xb3,
-	0xb7, 0x70, 0xa2, 0xc9, 0xc9, 0xce, 0x71, 0x4c, 0x6d, 0xfe, 0x04, 0xc7, 0x1d, 0xf6, 0x81, 0x0d,
-	0x85, 0x63, 0x1c, 0xad, 0x8a, 0x72, 0x0f, 0x27, 0x0c, 0xfd, 0xda, 0xfd, 0xb2, 0xf4, 0xfd, 0x62,
-	0x2b, 0x9c, 0xb0, 0x92, 0x5f, 0xe0, 0xa4, 0x94, 0x1f, 0xe1, 0xd4, 0x94, 0x8a, 0x39, 0x68, 0x51,
-	0x90, 0xbb, 0x68, 0x35, 0x50, 0x03, 0x35, 0x53, 0xa5, 0x81, 0xb4, 0xa9, 0xd4, 0x40, 0xfa, 0x08,
-	0x56, 0xb7, 0x36, 0xd4, 0x8a, 0x71, 0xb4, 0x8a, 0xc8, 0x3d, 0x9c, 0xf0, 0xd0, 0xc0, 0x35, 0x2a,
-	0x19, 0x38, 0x4d, 0x46, 0x03, 0x67, 0xb8, 0x67, 0xe0, 0xd4, 0x41, 0x75, 0x9c, 0x7e, 0x54, 0x0f,
-	0xed, 0xbe, 0xb1, 0x4f, 0xf0, 0x78, 0xe0, 0x14, 0x73, 0xd1, 0xe6, 0x20, 0xe7, 0x68, 0x55, 0xf0,
-	0xfb, 0xfd, 0xfa, 0x0f, 0xe8, 0xcd, 0x9f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x3b, 0x61, 0x48, 0x6f,
-	0x9f, 0x06, 0x00, 0x00,
+	// 451 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x95, 0xcd, 0x8a, 0xdb, 0x30,
+	0x10, 0x80, 0x49, 0xd2, 0x94, 0x74, 0x42, 0xdb, 0x20, 0xf2, 0x23, 0x2b, 0x97, 0xd4, 0xa7, 0xb4,
+	0x14, 0x15, 0xd2, 0x6b, 0x69, 0x29, 0x0d, 0xf4, 0xe4, 0x1e, 0x0c, 0x7d, 0x00, 0xd5, 0x1e, 0xba,
+	0x66, 0x13, 0xdb, 0x6b, 0x2b, 0x87, 0x3c, 0xcb, 0xbe, 0xec, 0x62, 0x5b, 0x8e, 0x2c, 0xdb, 0xca,
+	0x06, 0xf6, 0x26, 0x69, 0x86, 0x4f, 0x33, 0xd6, 0x7c, 0x18, 0xd6, 0x22, 0x8d, 0xbe, 0x64, 0xf8,
+	0x3f, 0xca, 0x65, 0x76, 0xbe, 0x2c, 0x78, 0x9a, 0x25, 0x32, 0x71, 0x3f, 0xc3, 0xfc, 0x67, 0x10,
+	0x24, 0xa7, 0x58, 0xfe, 0xca, 0x50, 0x48, 0xf4, 0xf1, 0xe1, 0x84, 0xb9, 0x24, 0x73, 0x18, 0xe3,
+	0x51, 0x44, 0x07, 0x3a, 0xd8, 0x0c, 0xb6, 0x6f, 0xfc, 0x6a, 0xe3, 0x7a, 0xb0, 0x68, 0x65, 0xe7,
+	0x69, 0x12, 0xe7, 0x48, 0xde, 0xc1, 0x30, 0x0a, 0x55, 0xee, 0x30, 0x0a, 0x09, 0x81, 0x57, 0x01,
+	0x66, 0x92, 0x0e, 0xcb, 0x93, 0x72, 0x4d, 0x66, 0x30, 0xba, 0xc7, 0x33, 0x1d, 0x95, 0x47, 0xc5,
+	0xd2, 0x5d, 0x83, 0xa3, 0x70, 0x1e, 0x4a, 0x11, 0x60, 0x2c, 0x31, 0xcb, 0x55, 0x05, 0xee, 0x0f,
+	0x60, 0x7d, 0x41, 0x75, 0xe1, 0x07, 0x18, 0x47, 0x12, 0x8f, 0x39, 0x1d, 0x6c, 0x46, 0xdb, 0xe9,
+	0x6e, 0xca, 0x75, 0x92, 0x5f, 0x45, 0x1a, 0xf4, 0xbd, 0xb8, 0x42, 0x37, 0x82, 0x36, 0xba, 0x4e,
+	0xaa, 0xe9, 0x0e, 0xac, 0xf4, 0x95, 0xc6, 0xb7, 0x73, 0x3f, 0x01, 0xed, 0x86, 0xfa, 0x3f, 0x94,
+	0xfb, 0xb1, 0x89, 0xd9, 0xe3, 0x01, 0xf5, 0x13, 0xb4, 0x53, 0x59, 0x13, 0x5b, 0xa7, 0x56, 0xd8,
+	0xa2, 0x1a, 0x5d, 0x62, 0xa7, 0x9a, 0x6e, 0xc8, 0x5e, 0x8d, 0xce, 0xfd, 0x9b, 0x86, 0xc2, 0x5e,
+	0x8d, 0x81, 0xad, 0x53, 0x6f, 0xc1, 0x3e, 0xdb, 0x64, 0x37, 0x55, 0x35, 0x49, 0x61, 0xa9, 0x63,
+	0x9e, 0x90, 0xc1, 0x5d, 0xdd, 0xe3, 0xb7, 0xe6, 0x05, 0x2a, 0x72, 0xfb, 0x53, 0xfe, 0x01, 0xd0,
+	0x87, 0x9d, 0x51, 0x66, 0x30, 0xc1, 0x38, 0x4c, 0x93, 0x28, 0xae, 0xc7, 0xf9, 0xb2, 0x2f, 0x2c,
+	0xc9, 0xa5, 0x90, 0xa8, 0x86, 0xba, 0xda, 0x14, 0x3c, 0xfd, 0x50, 0x2f, 0xe7, 0xed, 0x1e, 0xc7,
+	0x30, 0xf1, 0x95, 0xb6, 0xe4, 0x3b, 0xbc, 0x35, 0x14, 0x24, 0x0b, 0xde, 0x27, 0x30, 0x5b, 0xf2,
+	0x7e, 0x53, 0x3d, 0x20, 0x5d, 0xad, 0x08, 0xe3, 0x56, 0x11, 0xd9, 0x9a, 0x5f, 0xf1, 0x50, 0xe3,
+	0x1a, 0x1e, 0x69, 0x5c, 0xd7, 0x3c, 0x8d, 0xeb, 0x13, 0xef, 0x37, 0xcc, 0xda, 0xea, 0x10, 0xca,
+	0x2d, 0xa2, 0x31, 0x87, 0x5b, 0x3d, 0x33, 0x40, 0xd5, 0x1c, 0x19, 0x20, 0x63, 0x0a, 0x0d, 0x90,
+	0x39, 0x74, 0x05, 0xa8, 0xad, 0x0f, 0xa1, 0xdc, 0x22, 0x1b, 0x73, 0xb8, 0xd5, 0x35, 0x03, 0x54,
+	0x09, 0x63, 0x80, 0x0c, 0xdd, 0x0c, 0x50, 0xcb, 0x2e, 0x03, 0x74, 0x69, 0xcd, 0x22, 0x98, 0x01,
+	0x6a, 0xb5, 0xb6, 0x87, 0xf7, 0x2d, 0x6b, 0xc8, 0x8a, 0xf7, 0x1b, 0xc6, 0x28, 0xb7, 0x08, 0xf6,
+	0xef, 0x75, 0xf9, 0x23, 0xf9, 0xfa, 0x14, 0x00, 0x00, 0xff, 0xff, 0xeb, 0x6c, 0xe2, 0x63, 0x67,
+	0x06, 0x00, 0x00,
 }

@@ -271,11 +271,17 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for Datacenter service
 
 type DatacenterClient interface {
+	// Create new deployment which will be owned by caller (metacenter)
 	DeploymentCreate(ctx context.Context, in *DeploymentCreateRequest, opts ...grpc.CallOption) (*DeploymentCreateResponse, error)
+	// Update deployment owned by caller (metacenter)
 	DeploymentUpdate(ctx context.Context, in *DeploymentUpdateRequest, opts ...grpc.CallOption) (*DeploymentUpdateResponse, error)
+	// Get status for deployment owned by caller (metacenter)
 	DeploymentStatus(ctx context.Context, in *DeploymentStatusRequest, opts ...grpc.CallOption) (*DeploymentStatusResponse, error)
+	// Get events for deployment owned by caller (metacenter)
 	DeploymentEvents(ctx context.Context, in *DeploymentEventsRequest, opts ...grpc.CallOption) (Datacenter_DeploymentEventsClient, error)
+	// Delete deployment owned by caller (metacenter)
 	DeploymentDelete(ctx context.Context, in *DeploymentDeleteRequest, opts ...grpc.CallOption) (*DeploymentDeleteResponse, error)
+	// List deployments owned by caller (metacenter)
 	DeploymentList(ctx context.Context, in *DeploymentListRequest, opts ...grpc.CallOption) (*DeploymentListResponse, error)
 }
 
@@ -367,11 +373,17 @@ func (c *datacenterClient) DeploymentList(ctx context.Context, in *DeploymentLis
 // Server API for Datacenter service
 
 type DatacenterServer interface {
+	// Create new deployment which will be owned by caller (metacenter)
 	DeploymentCreate(context.Context, *DeploymentCreateRequest) (*DeploymentCreateResponse, error)
+	// Update deployment owned by caller (metacenter)
 	DeploymentUpdate(context.Context, *DeploymentUpdateRequest) (*DeploymentUpdateResponse, error)
+	// Get status for deployment owned by caller (metacenter)
 	DeploymentStatus(context.Context, *DeploymentStatusRequest) (*DeploymentStatusResponse, error)
+	// Get events for deployment owned by caller (metacenter)
 	DeploymentEvents(*DeploymentEventsRequest, Datacenter_DeploymentEventsServer) error
+	// Delete deployment owned by caller (metacenter)
 	DeploymentDelete(context.Context, *DeploymentDeleteRequest) (*DeploymentDeleteResponse, error)
+	// List deployments owned by caller (metacenter)
 	DeploymentList(context.Context, *DeploymentListRequest) (*DeploymentListResponse, error)
 }
 

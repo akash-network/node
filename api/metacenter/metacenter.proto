@@ -1,8 +1,13 @@
 syntax = "proto3";
 
 service Metacenter {
+  // Update deployment.  Restricted to Metacenter owner (user).
   rpc Update(UpdateRequest) returns (UpdateResponse);
+
+  // Get deployment status.  Restricted to Metacenter owner (user).
   rpc Status(StatusRequest) returns (StatusResponse);
+
+  // Stream deployment events.  Restricted to Metacenter owner (user).
   rpc Events(EventsRequest) returns (stream Event);
 }
 

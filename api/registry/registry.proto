@@ -2,17 +2,32 @@ syntax = "proto3";
 
 service Registry {
 
+  // Create new Account and return identity bundle.
   rpc AccountCreate(AccountCreateRequest)               returns (AccountCreateResponse);
-  rpc AccountMetacenters(AccountMetacentersRequest)     returns (AccountMetacentersResponse);
-  rpc AccountControlAgents(AccountControlAgentsRequest) returns (AccountControlAgentsResponse);
 
+  // List all Metacenters owned by caller (user).
+  rpc AccountMetacenters(AccountMetacentersRequest)     returns (AccountMetacentersResponse);
+
+  // List all Datacenters owned by caller (provider)
+  rpc AccountDatacenters(AccountDatacentersRequest) returns (AccountDatacentersResponse);
+
+  // Create Metacenter which will be owned by caller (user).
   rpc MetacenterCreate (MetacenterCreateRequest) returns (MetacenterCreateResponse);
+
+  // Delete Metacenter owned by caller (user).
   rpc MetacenterDelete (MetacenterDeleteRequest) returns (MetacenterDeleteResponse);
 
-  rpc ControlAgentCreate (ControlAgentCreateRequest) returns (ControlAgentCreateResponse);
-  rpc ControlAgentUpdate (ControlAgentUpdateRequest) returns (ControlAgentUpdateResponse);
-  rpc ControlAgentDelete (ControlAgentDeleteRequest) returns (ControlAgentDeleteResponse);
-  rpc ControlAgentMatch  (ControlAgentMatchRequest)  returns (ControlAgentMatchResponse);
+  // Create Datacenter owned by caller (provider).
+  rpc DatacenterCreate (DatacenterCreateRequest) returns (DatacenterCreateResponse);
+
+  // Update Datacenter owned by caller (provider).
+  rpc DatacenterUpdate (DatacenterUpdateRequest) returns (DatacenterUpdateResponse);
+
+  // Delete Datacenter owned by caller (provider).
+  rpc DatacenterDelete (DatacenterDeleteRequest) returns (DatacenterDeleteResponse);
+
+  // Match Datacenters for given request.
+  rpc DatacenterMatch  (DatacenterMatchRequest)  returns (DatacenterMatchResponse);
 
 }
 
@@ -33,11 +48,11 @@ message AccountMetacentersResponse {
   repeated Metacenter items = 1;
 }
 
-message AccountControlAgentsRequest {
+message AccountDatacentersRequest {
 }
 
-message AccountControlAgentsResponse {
-  repeated ControlAgent items = 1;
+message AccountDatacentersResponse {
+  repeated Datacenter items = 1;
 }
 
 message MetacenterCreateRequest {
@@ -54,36 +69,36 @@ message MetacenterDeleteRequest {
 message MetacenterDeleteResponse {
 }
 
-message ControlAgentCreateRequest {
+message DatacenterCreateRequest {
 }
 
-message ControlAgentCreateResponse {
+message DatacenterCreateResponse {
   string id = 1;
 }
 
-message ControlAgentUpdateRequest {
+message DatacenterUpdateRequest {
   string id = 1;
 }
 
-message ControlAgentUpdateResponse {
+message DatacenterUpdateResponse {
   string id = 1;
 }
 
-message ControlAgentDeleteRequest {
+message DatacenterDeleteRequest {
   string id = 1;
 }
 
-message ControlAgentDeleteResponse {
+message DatacenterDeleteResponse {
 }
 
-message ControlAgentMatchRequest {
+message DatacenterMatchRequest {
 }
 
-message ControlAgentMatchResponse {
-  repeated ControlAgent items = 1;
+message DatacenterMatchResponse {
+  repeated Datacenter items = 1;
 }
 
-message ControlAgent {
+message Datacenter {
   string id       = 1;
   string endpoint = 2;
   string state    = 3;
