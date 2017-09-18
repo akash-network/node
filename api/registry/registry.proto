@@ -1,7 +1,5 @@
 syntax = "proto3";
 
-package registry;
-
 service Registry {
 
   rpc AccountCreate(AccountCreateRequest)               returns (AccountCreateResponse);
