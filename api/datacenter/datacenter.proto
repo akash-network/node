@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+service Datacenter {
+  rpc DeploymentCreate(DeploymentCreateRequest) returns (DeploymentCreateResponse);
+  rpc DeploymentUpdate(DeploymentUpdateRequest) returns (DeploymentUpdateResponse);
+  rpc DeploymentStatus(DeploymentStatusRequest) returns (DeploymentStatusResponse);
+  rpc DeploymentEvents(DeploymentEventsRequest) returns (stream DeploymentEvent);
+  rpc DeploymentDelete(DeploymentDeleteRequest) returns (DeploymentDeleteResponse);
+  rpc DeploymentList(DeploymentListRequest)     returns (DeploymentListResponse);
+}
+
+message DeploymentCreateRequest {
+}
+message DeploymentCreateResponse {
+  string id = 1;
+}
+
+message DeploymentUpdateRequest {
+  string id = 1;
+}
+message DeploymentUpdateResponse {
+  string id = 1;
+}
+
+message DeploymentStatusRequest {
+  string id = 1;
+}
+message DeploymentStatusResponse {
+  string id = 1;
+}
+
+message DeploymentEventsRequest {
+  string id = 1;
+}
+message DeploymentEvent {
+  string id = 1;
+}
+
+message DeploymentDeleteRequest {
+  string id = 1;
+}
+message DeploymentDeleteResponse {
+  string id = 1;
+}
+
+message DeploymentListRequest {
+}
+message DeploymentListResponse {
+  repeated Deployment items = 1;
+}
+
+message Deployment {
+  string id    = 1;
+  string state = 2;
+}
