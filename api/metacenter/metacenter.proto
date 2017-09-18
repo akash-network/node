@@ -1,5 +1,22 @@
 syntax = "proto3";
 
 service Metacenter {
+  rpc Update(UpdateRequest) returns (UpdateResponse);
+  rpc Status(StatusRequest) returns (StatusResponse);
+  rpc Events(EventsRequest) returns (stream Event);
+}
 
+message UpdateRequest {
+}
+message UpdateResponse {
+}
+
+message StatusRequest {
+}
+message StatusResponse {
+}
+
+message EventsRequest {
+}
+message Event {
 }
