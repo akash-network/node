@@ -9,6 +9,9 @@ service Metacenter {
 
   // Stream deployment events.  Restricted to Metacenter owner (user).
   rpc Events(EventsRequest) returns (stream Event);
+
+  // Register an exposed service hosted on the calling datacenter.
+  rpc RegisterService(RegisterServiceRequest) returns (RegisterServiceResponse);
 }
 
 message UpdateRequest {
@@ -24,4 +27,13 @@ message StatusResponse {
 message EventsRequest {
 }
 message Event {
+}
+
+message RegisterServiceRequest {
+  string pubkey = 1;
+}
+
+message RegisterServiceResponse {
+  string cert      = 1;
+  string ca_bundle = 2;
 }

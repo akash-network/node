@@ -11,7 +11,7 @@ test:
 test-full:
 	go test -race $$(glide novendor)
 
-install-deps:
+deps-install:
 	glide install
 
 genapi: $(PROTOC_FILES)
@@ -20,4 +20,4 @@ genapi: $(PROTOC_FILES)
 	protoc --go_out=plugins=grpc:. $<
 
 .PHONY: build test test-full \
-	install-deps
+	deps-install

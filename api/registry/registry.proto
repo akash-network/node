@@ -3,10 +3,10 @@ syntax = "proto3";
 service Registry {
 
   // Create new Account and return identity bundle.
-  rpc AccountCreate(AccountCreateRequest)               returns (AccountCreateResponse);
+  rpc AccountCreate(AccountCreateRequest)           returns (AccountCreateResponse);
 
   // List all Metacenters owned by caller (user).
-  rpc AccountMetacenters(AccountMetacentersRequest)     returns (AccountMetacentersResponse);
+  rpc AccountMetacenters(AccountMetacentersRequest) returns (AccountMetacentersResponse);
 
   // List all Datacenters owned by caller (provider)
   rpc AccountDatacenters(AccountDatacentersRequest) returns (AccountDatacentersResponse);
@@ -32,13 +32,14 @@ service Registry {
 }
 
 message AccountCreateRequest {
-  string email = 1;
+  string email  = 1;
+  string pubkey = 2;
 }
 
 message AccountCreateResponse {
-  string id   = 1;
-  string cert = 2;
-  string key  = 3;
+  string id        = 1;
+  string cert      = 2;
+  string ca_bundle = 3;
 }
 
 message AccountMetacentersRequest {
@@ -56,10 +57,15 @@ message AccountDatacentersResponse {
 }
 
 message MetacenterCreateRequest {
+  string pubkey = 1;
 }
 
 message MetacenterCreateResponse {
-  string id = 1;
+  string id        = 1;
+  string endpoint  = 2;
+
+  string cert      = 3;
+  string ca_bundle = 4;
 }
 
 message MetacenterDeleteRequest {
@@ -70,10 +76,14 @@ message MetacenterDeleteResponse {
 }
 
 message DatacenterCreateRequest {
+  string pubkey = 1;
 }
 
 message DatacenterCreateResponse {
-  string id = 1;
+  string id        = 1;
+
+  string cert      = 2;
+  string ca_bundle = 3;
 }
 
 message DatacenterUpdateRequest {

@@ -1,0 +1,131 @@
+---
+version: "0.1"
+
+include:
+  - "foo.yml"
+  - "https://foo.yml"
+
+services:
+
+  db-master:
+    image: postgres
+    expose:
+      - port: 5432
+        proto: tcp
+        to:
+          - service: db-pool
+          - service: db-pool
+            global:  true
+          - service: db-slave
+            global: true
+
+  db-slave:
+    image: postgres-slave
+    depends-on:
+      - service: db-master
+    expose:
+      - port: 5432
+        proto: tcp
+        to:
+          - service: db-pool
+
+  db-pool:
+    image: db-pool
+    depends-on:
+      - service: db-slave
+      - service: db-master
+    expose:
+      - port: 5432
+        proto: tcp
+        to:
+          - service: web
+
+  web:
+    image: foo:latest
+    port: 80
+    depends-on:
+      - service: db-pool
+    expose:
+      - port: 80
+        to:
+          global: true
+      - port: 443
+        to:
+          global: true
+
+deployment:
+
+  datacenters:
+
+    westcoast:
+      region: us-west
+      profiles:
+        web:
+          qos:
+            lifetime: medium
+            memory: 3GB
+          pricing:
+        db:
+          qos:
+            lifetime: long
+            memory: 10GB
+          pricing:
+
+    eastcoast:
+      region: us-east
+      profiles:
+        web:
+          pricing:
+          qos:
+            lifetime: medium
+            memory: 3GB
+        db:
+          qos:
+            lifetime: long
+            memory: 10GB
+          pricing:
+
+  services:
+
+    db-master:
+      westcoast:
+        profile: db
+        nodes: 1
+
+    db-slave:
+      westcoast:
+        profile: db
+        nodes: 1
+      eastcoast:
+        profile: db
+        nodes: 1
+
+    db-pool:
+      westcoast:
+        profile: db-pool
+        nodes: 10
+      eastcoast:
+        profile: db-pool
+        nodes: 5
+
+    web:
+      westcoast:
+        profile: web
+        nodes: 20
+      eastcoast:
+        profile: web
+        nodes: 10
+
+notifications:
+
+  - name: slack
+    type: webhook
+    url:  https://test.slack.com
+
+  - name: admin-alert
+    type: email
+    to: admin@test.com
+    events:
+      - cluster.down
+      - deploy.failure
+
