@@ -1,6 +1,6 @@
 # Photon
 
-Photon is a cloud infrasture system that pairs independent datacenter providers with users seeking high-performance application hosting.  The process is simple for both sides of the equation - [Datacenter Components](#datacenter) are easy to install and provide a high degree of automation, while application deployment [configuration](#deployment-configuration) and [administration](#photon-command) is simple and intuitive.
+Photon is a cloud infrasture system that pairs independent datacenter providers with users seeking high-performance application hosting.  The process is simple for both parties - [Datacenter Components](#datacenter) are easy to install and provide a high degree of automation, while application deployment [configuration](#deployment-configuration) and [administration](#photon-command) is simple and intuitive.
 
  * [Photon Components](#photon-components)
    * [Registry](#registry)
@@ -60,11 +60,11 @@ Deployment services, datacenters, pricing, etc.. are described by a [YAML](http:
 
 Deployments can be composed of multiple files via the [include](#include) section.  A complete deployment has the following sections:
 
-* [version](#version)
-* [include](#include) (optional)
-* [services](#include)
-* [deployment](#deployment)
-* [notifications](#notifications) (optional)
+ * [version](#version)
+ * [include](#include) (optional)
+ * [services](#include)
+ * [deployment](#deployment)
+ * [notifications](#notifications) (optional)
 
 An example deployment configuration can be found [here](_docs/deployment.yml).
 
@@ -317,11 +317,22 @@ This generated cert is used by both sides of a connection for cross-datacenter c
 
 ## Building
 
+ * [Dependencies](#dependencies)
+   * [MacOS](#macos)
+   * [Arch Linux](#arch-linux)
+ * [Building Photon](#photon-1)
+
 ### Dependencies
 
- * [glide](https://github.com/Masterminds/glide):
- * [protocol buffers](https://developers.google.com/protocol-buffers/)
- * [protoc-gen-go](https://github.com/golang/protobuf)
+ Photon is developed and tested with [golang 1.8+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation and a properly set `GOPATH`.
+
+ Additional requirements are:
+
+ * [glide](https://github.com/Masterminds/glide): Golang library management.
+ * [protocol buffers](https://developers.google.com/protocol-buffers/): Protobuf compiler.
+ * [protoc-gen-go](https://github.com/golang/protobuf): Golang protobuf compiler plugin.
+
+ See below for dependency installation instructions for various platforms.
 
 #### MacOS:
 
