@@ -324,13 +324,21 @@ This generated cert is used by both sides of a connection for cross-datacenter c
 
 ### Dependencies
 
- Photon is developed and tested with [golang 1.8+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation and a properly set `GOPATH`.
+ Photon is developed and tested with [golang 1.8+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
 
  Additional requirements are:
 
  * [glide](https://github.com/Masterminds/glide): Golang library management.
+
+For development environments, requirements include:
+
  * [protocol buffers](https://developers.google.com/protocol-buffers/): Protobuf compiler.
+
+ Most golang libraries will be packaged in the local `vendor/` directory via [glide](https://github.com/Masterminds/glide), however the following packages will
+ be installed globally with their binaries placed in `$GOPATH/bin` by `make devdeps-install`:
+
  * [protoc-gen-go](https://github.com/golang/protobuf): Golang protobuf compiler plugin.
+ * [`cfssl`,`cfssljson`,`mkbundle`](https://github.com/cloudflare/cfssl): CFSSL command-line utilities.
 
  See below for dependency installation instructions for various platforms.
 
@@ -338,16 +346,18 @@ This generated cert is used by both sides of a connection for cross-datacenter c
 
 ```sh
 brew install glide
+
+# dev environment only:
 brew install protobuf
-go get -u github.com/golang/protobuf/protoc-gen-go
 ```
 
 #### Arch Linux:
 
 ```sh
 curl https://glide.sh/get | sh
+
+# dev environment only:
 sudo pacman -Sy protobuf
-go get -u github.com/golang/protobuf/protoc-gen-go
 ```
 
 ### Photon
@@ -359,4 +369,7 @@ go get -d github.com/ovrclk/photon
 cd $GOPATH/src/github.com/ovrclk/photon
 make deps-install
 make
+
+# dev environment only:
+make devdeps-install
 ```
