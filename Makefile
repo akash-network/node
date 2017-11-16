@@ -2,6 +2,9 @@
 PROTO_FILES  = $(wildcard api/*/*.proto)
 PROTOC_FILES = $(patsubst %.proto,%.pb.go, $(PROTO_FILES))
 
+docs:
+	(cd _docs/dot && make)
+
 build:
 	go build -i $$(glide novendor)
 
@@ -24,4 +27,5 @@ genapi: $(PROTOC_FILES)
 	protoc --go_out=plugins=grpc:. $<
 
 .PHONY: build test test-full \
-	deps-install devdeps-install
+	deps-install devdeps-install \
+	docs

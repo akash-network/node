@@ -55,37 +55,49 @@ services:
 
 deployment:
 
-  datacenters:
+  infrastructure:
 
     westcoast:
       region: us-west
       profiles:
         web:
-          qos:
-            lifetime: medium
+          compute:
+            cpu: 2
             memory: 3GB
+            disk: 5GB
           pricing:
+            max-price: 5
+            collateral: 1h
         db:
-          qos:
-            lifetime: long
+          compute:
+            cpu: 10
             memory: 10GB
+            disk: 5GB
           pricing:
+            max-price: 10
+            collateral: 30d
 
     eastcoast:
       region: us-east
       profiles:
         web:
-          pricing:
-          qos:
-            lifetime: medium
+          compute:
+            cpu: 2
             memory: 3GB
-        db:
-          qos:
-            lifetime: long
-            memory: 10GB
+            disk: 5GB
           pricing:
+            max-price: 5
+            collateral: 1h
+        db:
+          compute:
+            cpu: 10
+            memory: 10GB
+            disk: 5GB
+          pricing:
+            max-price: 10
+            collateral: 30d
 
-  services:
+  workloads:
 
     db-master:
       westcoast:
@@ -115,17 +127,3 @@ deployment:
       eastcoast:
         profile: web
         nodes: 10
-
-notifications:
-
-  - name: slack
-    type: webhook
-    url:  https://test.slack.com
-
-  - name: admin-alert
-    type: email
-    to: admin@test.com
-    events:
-      - cluster.down
-      - deploy.failure
-
