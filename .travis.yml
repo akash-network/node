@@ -1,0 +1,18 @@
+language: go
+
+go:
+  - 1.9
+  - master
+
+sudo: required
+
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install musl-tools -y
+
+install:
+  - curl https://glide.sh/get | sh
+  - make deps-install
+
+script:
+  - make test-full
