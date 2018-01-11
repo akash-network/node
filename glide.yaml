@@ -8,3 +8,9 @@ import:
   - context
 - package: google.golang.org/grpc
   version: ~1.6.0
+  subpackages:
+  - balancer
+  - encoding
+  - resolver
+  - dns
+  - passthrough
