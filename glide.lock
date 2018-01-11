@@ -1,5 +1,5 @@
-hash: 8a46e5bb296aece1988c1f006167d5191e873f418617939e45130586d197ac52
-updated: 2018-01-10T16:24:54.143997728-08:00
+hash: f1b47cc02e5e60531e49fbc575692a8cb4737839afe2b1f5469a8093b6adb92f
+updated: 2018-01-10T16:57:50.862291349-08:00
 imports:
 - name: github.com/bgentry/speakeasy
   version: 4aabc24848ce5fd31929f7d1e4ea74d3709c14cd
@@ -47,7 +47,7 @@ imports:
 - name: github.com/ebuchman/fail-test
   version: 95f809107225be108efcf10a3509e4ea6ceef3c4
 - name: github.com/ethanfrey/hid
-  version: dce75af84cf849c60f39bf1b8192fb5cd597b5d9
+  version: f76da0b80567e8b6f676e1757b549a93494fe4b5
 - name: github.com/ethanfrey/ledger
   version: f7f2f056357db77db845a79aa1abdadc3ae66369
 - name: github.com/fsnotify/fsnotify
