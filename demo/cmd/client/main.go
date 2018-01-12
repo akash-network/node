@@ -27,7 +27,7 @@ import (
 
 // BaseCli - main basecoin client command
 var BaseCli = &cobra.Command{
-	Use:   "basecli",
+	Use:   "client",
 	Short: "Light client for Tendermint",
 	Long: `Basecli is a certifying light client for the basecoin abci app.
 
@@ -93,6 +93,6 @@ func main() {
 		auto.AutoCompleteCmd,
 	)
 
-	cmd := cli.PrepareMainCmd(BaseCli, "BC", os.ExpandEnv("$HOME/.basecli"))
+	cmd := cli.PrepareMainCmd(BaseCli, "BC", os.ExpandEnv("$HOME/.democlient"))
 	cmd.Execute()
 }

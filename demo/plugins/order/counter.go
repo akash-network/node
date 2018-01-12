@@ -98,7 +98,7 @@ func ErrDecoding() error {
 //--------------------------------------------------------------------------------
 
 /* snippet from basecoin example
-		diff is roles (multisig), ibc (inter blockchain), eyes (kv store?)
+		diff is roles (multisig), ibc (inter blockchain), eyes (kv store)
 
 		Dispatch(
 			coin.NewHandler(),
