@@ -1,41 +1,39 @@
-## Accounts Design
+# Accounts Design
+
+* [Account data model](#account-data-model)
+* [Common validations](#common-validations)
+* [Commands](#commands)
+  * [Create User Account](#create-user-account)
+  * [Update Datacenter Accounts](#update-datacenter-accounts)
+  * [Transfer Tokens](#transfer-tokens)
+  * [Get Account Details](#get-account-details)
+* [Open Questions](#open-questions)
 
 
-#### Questions:
-* use same model for user and datacenter and leave some fields empty for users?
-* "send" tokens or "transfer" tokens
-* transactions include fees / gas
+## Account data model:
 
-#### Account data model:
-
-```go
+```proto3
 {
-  name: "string",
-  type: ["user", "datacenter"],
-  pubkey: "string",
-  balance: "uint64"
+  string pubkey;
+  enum type {
+
+    USER;
+    DATACENTER;
+  }
+  uint64 balance;
+  message Provider {
+    // datacenter specific variables
+    string address;
+  }
 }
 ```
 
-
-#### Datacenter account data model:
-
-```go
-{
-  address: "IP address",
-  resources:
-    {
-      "some measure of total resources"
-    }
-}
-```
-
-#### Common validations: happen for each tx
+## Common validations: happens for each tx
 * pubkey is valid - character length, etc.
 * tx is signiture is valid - cryptographic check
 
-#### Commands:
-1. **create user account**
+## Commands:
+### Create User Account
 
 
     command:
@@ -43,10 +41,13 @@
     photon account new -n <accountname> -t user
     ```
     transaction:
-    ```go
+    ```proto3
     {
-      pubkey: "string",
-      type: ["user" | "datacenter"]
+      string pubkey;
+      enum type {
+        USER;
+        DATACENTER;
+      }
     }
     ```
     validations:
@@ -55,52 +56,53 @@
     * pubkey entery in DB has type attribute set
 
 
-2. **update datacenter accounts**
+### Update Datacenter Accounts
 
     command:
     ```sh
     photon account update -a <address> -r <resources>
     ```
     transaction:
-    ```go
+    ```proto3
     {
-      pubkey: "string",
-      address: "IP address"
-      resources: {
-        "some measure of total resources"
+      string pubkey;
+      message Provider {
+        // datacenter specific variables
+        string address;
       }
     }
     ```
     validations:
     * account with pubkey is type datacenter
-    * address conforms to IPv4/6 specification
+    * address conforms to IPv4/6 specification or DNS name
     * resources conforms to schema TBD
 
     state change:
     * pubkey entry in DB sets adderess and/or resource values
 
 
-3. **transfer tokens**
+### Transfer Tokens
 
     command:
     ```sh
     photon transfer --name=<accountname> --amount=<amount> --to=<address> --sequence=<integer>
     ```
     transaction:
-    ```go
+    ```proto3
     {
-      pubkey: "string",
-      amount: "uint64",
-      destination: "string",
-      sequence: "uint64",
-      fee: "uint64"
+      string pubkey;
+      uint64 amount;
+      string destination;
+      uint64 sequence;
+      uint64 fee;
     }
     ```
 
     validations:
 
-    * pubkey account has balance >= amount + fee
+    * pubkey account has balance >= amount
     * squence is > last sequence
+    * destination exists
 
     state change:
 
@@ -109,16 +111,16 @@
     * block creater address is credited fee
 
 
-4. **get account details**
+### Get Account Details
 
     command:
     ```sh
-    photon account query -n <accountname> [--key=<publickey>]
+    photon account query --address=<publickey>
     ```
     transaction:
-    ```go
+    ```proto3
     {
-      pubkey: "string",
+      string pubkey;
     }
     ```
 
@@ -128,3 +130,7 @@
     state change:
     * none
 
+## Open Questions:
+* use same model for user and datacenter and leave some fields empty for users?
+* "send" tokens or "transfer" tokens
+* transactions include fees / gas

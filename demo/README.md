@@ -5,13 +5,12 @@ http://cosmos-sdk.readthedocs.io/en/latest/basecoin-tool.html
 Setup:
 open a terminal for the client
 ```sh
-go build cmd/client/main.go; mv main client
-go build cmd/node/main.go; mv main node
+make build
 ./client keys new cool
 ./client keys new friend
 ```
 
-copy the address output afger craeteing the keys for cool
+copy the address output after creating the keys for cool
 open new terminal for the node
 
 ```sh
@@ -32,8 +31,8 @@ Notes: the --genesis file is created duing node init and only exists on the node
 in the client termianl
 
 ```sh
-ME=$(basecli keys get cool | awk '{print $2}')
-YOU=$(basecli keys get friend | awk '{print $2}')
+ME=$(./client keys get cool | awk '{print $2}')
+YOU=$(./client keys get friend | awk '{print $2}')
 ./client query account $ME
 ```
 
