@@ -33,102 +33,102 @@
 * tx is signiture is valid - cryptographic check
 
 ## Commands:
+
 ### Create User Account
 
-
-    command:
-    ```sh
-    photon account new -n <accountname> -t user
-    ```
-    transaction:
-    ```proto3
-    {
-      string pubkey;
-      enum type {
-        USER;
-        DATACENTER;
-      }
-    }
-    ```
-    validations:
-    * type is "user" or "datacenter"
-    state change:
-    * pubkey entery in DB has type attribute set
+command:
+```sh
+photon account new -n <accountname> -t user
+```
+transaction:
+```proto3
+{
+  string pubkey;
+  enum type {
+    USER;
+    DATACENTER;
+  }
+}
+```
+validations:
+* type is "user" or "datacenter"
+state change:
+* pubkey entery in DB has type attribute set
 
 
 ### Update Datacenter Accounts
 
-    command:
-    ```sh
-    photon account update -a <address> -r <resources>
-    ```
-    transaction:
-    ```proto3
-    {
-      string pubkey;
-      message Provider {
-        // datacenter specific variables
-        string address;
-      }
-    }
-    ```
-    validations:
-    * account with pubkey is type datacenter
-    * address conforms to IPv4/6 specification or DNS name
-    * resources conforms to schema TBD
+command:
+```sh
+photon account update -a <address> -r <resources>
+```
+transaction:
+```proto3
+{
+  string pubkey;
+  message Provider {
+    // datacenter specific variables
+    string address;
+  }
+}
+```
+validations:
+* account with pubkey is type datacenter
+* address conforms to IPv4/6 specification or DNS name
+* resources conforms to schema TBD
 
-    state change:
-    * pubkey entry in DB sets adderess and/or resource values
+state change:
+* pubkey entry in DB sets adderess and/or resource values
 
 
 ### Transfer Tokens
 
-    command:
-    ```sh
-    photon transfer --name=<accountname> --amount=<amount> --to=<address> --sequence=<integer>
-    ```
-    transaction:
-    ```proto3
-    {
-      string pubkey;
-      uint64 amount;
-      string destination;
-      uint64 sequence;
-      uint64 fee;
-    }
-    ```
+command:
+```sh
+photon transfer --name=<accountname> --amount=<amount> --to=<address> --sequence=<integer>
+```
+transaction:
+```proto3
+{
+  string pubkey;
+  uint64 amount;
+  string destination;
+  uint64 sequence;
+  uint64 fee;
+}
+```
 
-    validations:
+validations:
 
-    * pubkey account has balance >= amount
-    * squence is > last sequence
-    * destination exists
+* pubkey account has balance >= amount
+* squence is > last sequence
+* destination exists
 
-    state change:
+state change:
 
-    * pubkey account balance is decremented amount + fee
-    * destination account is incremented fee
-    * block creater address is credited fee
+* pubkey account balance is decremented amount + fee
+* destination account is incremented fee
+* block creater address is credited fee
 
 
 ### Get Account Details
 
-    command:
-    ```sh
-    photon account query --address=<publickey>
-    ```
-    transaction:
-    ```proto3
-    {
-      string pubkey;
-    }
-    ```
+command:
+```sh
+photon account query --address=<publickey>
+```
+transaction:
+```proto3
+{
+  string pubkey;
+}
+```
 
-    validations:
-    * none
+validations:
+* none
 
-    state change:
-    * none
+state change:
+* none
 
 ## Open Questions:
 * use same model for user and datacenter and leave some fields empty for users?
