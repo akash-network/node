@@ -16,7 +16,6 @@
 {
   string pubkey;
   enum type {
-
     USER;
     DATACENTER;
   }
