@@ -1,6 +1,2 @@
 /vendor
 *.DS_Store
-
-# demo artifacts
-client
-node
