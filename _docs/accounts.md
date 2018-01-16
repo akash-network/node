@@ -93,7 +93,6 @@ transaction:
   uint64 amount;
   string destination;
   uint64 sequence;
-  uint64 fee;
 }
 ```
 
@@ -104,10 +103,8 @@ validations:
 * destination exists
 
 state change:
-
-* pubkey account balance is decremented amount + fee
-* destination account is incremented fee
-* block creater address is credited fee
+* pubkey account balance is decremented amount
+* destination account is incremented amount
 
 
 ### Get Account Details
@@ -116,7 +113,7 @@ command:
 ```sh
 photon account query --address=<publickey>
 ```
-transaction:
+request data:
 ```proto3
 {
   string pubkey;
