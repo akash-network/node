@@ -27,7 +27,7 @@
 }
 ```
 
-## Common validations: happens for each tx
+## Common validations for each transaction
 * pubkey is valid - character length, etc.
 * tx is signiture is valid - cryptographic check
 
