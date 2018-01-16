@@ -1,5 +1,7 @@
 package: github.com/ovrclk/photon
 import:
+- package: github.com/ethanfrey/hid
+  version: f76da0b80567e8b6f676e1757b549a93494fe4b5
 - package: github.com/golang/protobuf
   subpackages:
   - proto
@@ -8,3 +10,9 @@ import:
   - context
 - package: google.golang.org/grpc
   version: ~1.6.0
+  subpackages:
+  - balancer
+  - encoding
+  - resolver
+  - dns
+  - passthrough
