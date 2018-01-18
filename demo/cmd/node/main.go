@@ -12,18 +12,19 @@ import (
 	"github.com/cosmos/cosmos-sdk/modules/base"
 	"github.com/cosmos/cosmos-sdk/modules/coin"
 	_ "github.com/cosmos/cosmos-sdk/modules/eyes"
-	"github.com/cosmos/cosmos-sdk/modules/fee"
+	_ "github.com/cosmos/cosmos-sdk/modules/fee"
 	"github.com/cosmos/cosmos-sdk/modules/ibc"
 	"github.com/cosmos/cosmos-sdk/modules/nonce"
 	"github.com/cosmos/cosmos-sdk/modules/roles"
 	"github.com/cosmos/cosmos-sdk/server/commands"
 	"github.com/cosmos/cosmos-sdk/stack"
+	_ "github.com/ovrclk/photon/demo/plugins/accounts"
 )
 
 // RootCmd is the entry point for this binary
 var RootCmd = &cobra.Command{
-	Use:   "basecoin",
-	Short: "A cryptocurrency framework in Golang based on Tendermint-Core",
+	Use:   "photon",
+	Short: "Blockchained infrustructure",
 }
 
 // BuildApp constructs the stack we want to use for this app
@@ -39,12 +40,17 @@ func BuildApp(feeDenom string) sdk.Handler {
 		IBC(ibc.NewMiddleware()).
 		Apps(
 			roles.NewMiddleware(),
-			fee.NewSimpleFeeMiddleware(coin.Coin{feeDenom, 0}, fee.Bank),
+			// fee.NewSimpleFeeMiddleware(coin.Coin{feeDenom, 0}, fee.Bank),
 			stack.Checkpoint{OnDeliver: true},
 		).
 		Dispatch(
 			coin.NewHandler(),
-			stack.WrapHandler(roles.NewHandler()),
+			/*
+				add module/plugin handlers here
+				use a stack.WrapHandler over all handlers after coin.NewHandler()
+			*/
+			// stack.WrapHandler(accounts.NewHandler()),
+			// stack.WrapHandler(roles.NewHandler()),
 			// stack.WrapHandler(ibc.NewHandler()),
 			// and just for run, add eyes as well
 			// stack.WrapHandler(eyes.NewHandler()),

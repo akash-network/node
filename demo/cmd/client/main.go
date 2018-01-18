@@ -19,21 +19,17 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/modules/auth/commands"
 	basecmd "github.com/cosmos/cosmos-sdk/modules/base/commands"
 	coincmd "github.com/cosmos/cosmos-sdk/modules/coin/commands"
-	feecmd "github.com/cosmos/cosmos-sdk/modules/fee/commands"
-	ibccmd "github.com/cosmos/cosmos-sdk/modules/ibc/commands"
+	// feecmd "github.com/cosmos/cosmos-sdk/modules/fee/commands"
+	// ibccmd "github.com/cosmos/cosmos-sdk/modules/ibc/commands"
 	noncecmd "github.com/cosmos/cosmos-sdk/modules/nonce/commands"
-	rolecmd "github.com/cosmos/cosmos-sdk/modules/roles/commands"
+	// rolecmd "github.com/cosmos/cosmos-sdk/modules/roles/commands"
+	accountscmd "github.com/ovrclk/photon/demo/plugins/accounts/commands"
 )
 
 // BaseCli - main basecoin client command
 var BaseCli = &cobra.Command{
 	Use:   "client",
 	Short: "Light client for Tendermint",
-	Long: `Basecli is a certifying light client for the basecoin abci app.
-
-It leverages the power of the tendermint consensus algorithm get full
-cryptographic proof of all queries while only syncing a fraction of the
-block headers.`,
 }
 
 func main() {
@@ -46,8 +42,9 @@ func main() {
 		query.KeyQueryCmd,
 		coincmd.AccountQueryCmd,
 		noncecmd.NonceQueryCmd,
-		rolecmd.RoleQueryCmd,
-		ibccmd.IBCQueryCmd,
+		// rolecmd.RoleQueryCmd,
+		// ibccmd.IBCQueryCmd,
+		accountscmd.AccountsQueryCmd,
 	)
 
 	// these are queries to search for a tx
@@ -57,8 +54,8 @@ func main() {
 
 	// set up the middleware
 	txcmd.Middleware = txcmd.Wrappers{
-		feecmd.FeeWrapper{},
-		rolecmd.RoleWrapper{},
+		// feecmd.FeeWrapper{},
+		// rolecmd.RoleWrapper{},
 		noncecmd.NonceWrapper{},
 		basecmd.ChainWrapper{},
 		authcmd.SigWrapper{},
@@ -69,13 +66,15 @@ func main() {
 	txcmd.RootCmd.AddCommand(
 		// This is the default transaction, optional in your app
 		coincmd.SendTxCmd,
-		coincmd.CreditTxCmd,
+		// coincmd.CreditTxCmd,
 		// this enables creating roles
-		rolecmd.CreateRoleTxCmd,
+		// rolecmd.CreateRoleTxCmd,
 		// these are for handling ibc
-		ibccmd.RegisterChainTxCmd,
-		ibccmd.UpdateChainTxCmd,
-		ibccmd.PostPacketTxCmd,
+		// ibccmd.RegisterChainTxCmd,
+		// ibccmd.UpdateChainTxCmd,
+		// ibccmd.PostPacketTxCmd,
+		accountscmd.SetTxCmd,
+		accountscmd.RemoveTxCmd,
 	)
 
 	// Set up the various commands to use
