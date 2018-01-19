@@ -60,8 +60,6 @@ func main() {
 	txcmd.RootCmd.AddCommand(
 		// This is the default transaction, optional in your app
 		coincmd.SendTxCmd,
-		accountscmd.SetTxCmd,
-		accountscmd.RemoveTxCmd,
 		accountscmd.CreateTxCmd,
 	)
 

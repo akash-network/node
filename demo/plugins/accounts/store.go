@@ -8,13 +8,13 @@ type Data struct {
 	SetAt int64 `json:"set_at"`
 	// Value is the data that was stored.
 	// data.Bytes is like []byte but json encodes as hex not base64
-	Value data.Bytes `json:"value"`
+	Type data.Bytes `json:"type"`
 }
 
 // NewData creates a new Data item
-func NewData(value []byte, setAt int64) Data {
+func NewData(accountType []byte, setAt int64) Data {
 	return Data{
 		SetAt: setAt,
-		Value: value,
+		Type:  accountType,
 	}
 }
