@@ -37,6 +37,7 @@ func (Handler) Name() string {
 
 // CheckTx verifies if the transaction is properly formated
 func (h Handler) CheckTx(ctx sdk.Context, store state.SimpleDB, tx sdk.Tx) (res sdk.CheckResult, err error) {
+	println("doing checktx")
 	err = tx.ValidateBasic()
 	return
 }
@@ -53,8 +54,8 @@ func (h Handler) DeliverTx(ctx sdk.Context, store state.SimpleDB, tx sdk.Tx) (re
 		res, err = h.doSetTx(ctx, store, t)
 	case RemoveTx:
 		res, err = h.doRemoveTx(ctx, store, t)
-	// case CreateTx:
-	// 	res, err = h.doCreateTx(ctx, store, t)
+	case CreateTx:
+		res, err = h.doCreateTx(ctx, store, t)
 	default:
 		err = errors.ErrUnknownTxType(tx)
 	}
@@ -80,15 +81,15 @@ func (h Handler) doRemoveTx(ctx sdk.Context, store state.SimpleDB, tx RemoveTx) 
 	return
 }
 
-// func (h Handler) doCreateTx(ctx sdk.Context, store state.SimpleDB, tx CreateTx) (res sdk.DeliverResult, err error) {
-// 	data := NewData(tx.Type, ctx.BlockHeight())
+func (h Handler) doCreateTx(ctx sdk.Context, store state.SimpleDB, tx CreateTx) (res sdk.DeliverResult, err error) {
+	data := NewData(tx.Type, ctx.BlockHeight())
 
-// 	// todo: get tx signer address
-// 	// print("context")
-// 	// print(ctx)
+	// todo: get tx signer address
+	print("context")
+	print(ctx)
 
-// 	address := []byte("0x01")
+	address := []byte("0x01")
 
-// 	store.Set(address, wire.BinaryBytes(data))
-// 	return
-// }
+	store.Set(address, wire.BinaryBytes(data))
+	return
+}

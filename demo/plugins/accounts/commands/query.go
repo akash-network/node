@@ -17,9 +17,9 @@ import (
 
 const flagHeight = "height"
 
-// EyesQueryCmd - command to query raw data
+// command to query raw data
 var AccountsQueryCmd = &cobra.Command{
-	Use:   "accounts [key]",
+	Use:   "accounts [address]",
 	Short: "Get data stored under key in accounts",
 	RunE:  commands.RequireInit(accountsQueryCmd),
 }
@@ -32,7 +32,7 @@ func accountsQueryCmd(cmd *cobra.Command, args []string) error {
 	var res accounts.Data
 
 	// get value of key to query
-	arg, err := commands.GetOneArg(args, "key")
+	arg, err := commands.GetOneArg(args, "address")
 	if err != nil {
 		return err
 	}

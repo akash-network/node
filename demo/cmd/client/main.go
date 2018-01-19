@@ -56,13 +56,13 @@ func main() {
 	}
 	txcmd.Middleware.Register(txcmd.RootCmd.PersistentFlags())
 
-	// you will always want this for the base send command
+	// todo: if a command is not found the CLI will just hang
 	txcmd.RootCmd.AddCommand(
 		// This is the default transaction, optional in your app
 		coincmd.SendTxCmd,
 		accountscmd.SetTxCmd,
 		accountscmd.RemoveTxCmd,
-		// accountscmd.CreateTxCmd,
+		accountscmd.CreateTxCmd,
 	)
 
 	// Set up the various commands to use

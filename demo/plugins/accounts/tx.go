@@ -9,15 +9,18 @@ import (
 const (
 	TypeSet    = Name + "/set"
 	TypeRemove = Name + "/remove"
+	TypeCreate = Name + "/create"
 
 	ByteSet    = 0xF6
 	ByteRemove = 0xF7
+	ByteCreate = 0xFF
 )
 
 func init() {
 	sdk.TxMapper.
 		RegisterImplementation(SetTx{}, TypeSet, ByteSet).
-		RegisterImplementation(RemoveTx{}, TypeRemove, ByteRemove)
+		RegisterImplementation(RemoveTx{}, TypeRemove, ByteRemove).
+		RegisterImplementation(CreateTx{}, TypeCreate, ByteCreate)
 }
 
 /****************
@@ -77,25 +80,25 @@ func (t RemoveTx) ValidateBasic() error {
 	  CREATE TX
 *****************/
 
-// // sets an account's type
-// type CreateTx struct {
-// 	Type data.Bytes `json:"type"`
-// }
+// sets an account's type
+type CreateTx struct {
+	Type data.Bytes `json:"type"`
+}
 
-// func NewCreateTx(accountType []byte) sdk.Tx {
-// 	return CreateTx{Type: accountType}.Wrap()
-// }
+func NewCreateTx(accountType []byte) sdk.Tx {
+	return CreateTx{Type: accountType}.Wrap()
+}
 
-// // Wrap - fulfills TxInner interface
-// func (t CreateTx) Wrap() sdk.Tx {
-// 	return sdk.Tx{t}
-// }
+// Wrap - fulfills TxInner interface
+func (t CreateTx) Wrap() sdk.Tx {
+	return sdk.Tx{t}
+}
 
-// // ValidateBasic makes sure it is valid
-// func (t CreateTx) ValidateBasic() error {
-// 	// todo: ensure type is one of user or datacenter
-// 	if len(t.Type) == 0 {
-// 		return ErrMissingData()
-// 	}
-// 	return nil
-// }
+// ValidateBasic makes sure it is valid
+func (t CreateTx) ValidateBasic() error {
+	// todo: ensure type is one of user or datacenter
+	if len(t.Type) == 0 {
+		return ErrMissingData()
+	}
+	return nil
+}
