@@ -62,6 +62,7 @@ func main() {
 		coincmd.SendTxCmd,
 		accountscmd.SetTxCmd,
 		accountscmd.RemoveTxCmd,
+		// accountscmd.CreateTxCmd,
 	)
 
 	// Set up the various commands to use

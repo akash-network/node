@@ -20,6 +20,10 @@ func init() {
 		RegisterImplementation(RemoveTx{}, TypeRemove, ByteRemove)
 }
 
+/****************
+	  SET TX
+*****************/
+
 // SetTx sets a key-value pair
 type SetTx struct {
 	Key   data.Bytes `json:"key"`
@@ -43,6 +47,10 @@ func (t SetTx) ValidateBasic() error {
 	return nil
 }
 
+/****************
+	  REMOVE TX
+*****************/
+
 // RemoveTx deletes the value at this key, returns old value
 type RemoveTx struct {
 	Key data.Bytes `json:"key"`
@@ -64,3 +72,30 @@ func (t RemoveTx) ValidateBasic() error {
 	}
 	return nil
 }
+
+/****************
+	  CREATE TX
+*****************/
+
+// // sets an account's type
+// type CreateTx struct {
+// 	Type data.Bytes `json:"type"`
+// }
+
+// func NewCreateTx(accountType []byte) sdk.Tx {
+// 	return CreateTx{Type: accountType}.Wrap()
+// }
+
+// // Wrap - fulfills TxInner interface
+// func (t CreateTx) Wrap() sdk.Tx {
+// 	return sdk.Tx{t}
+// }
+
+// // ValidateBasic makes sure it is valid
+// func (t CreateTx) ValidateBasic() error {
+// 	// todo: ensure type is one of user or datacenter
+// 	if len(t.Type) == 0 {
+// 		return ErrMissingData()
+// 	}
+// 	return nil
+// }

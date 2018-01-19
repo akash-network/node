@@ -22,17 +22,25 @@ var RemoveTxCmd = &cobra.Command{
 	RunE:  commands.RequireInit(removeTxCmd),
 }
 
+// create account
+// var CreateTxCmd = &cobra.Command{
+// 	Use:   "create",
+// 	Short: "Create a Photon account",
+// 	RunE:  commands.RequireInit(createTxCmd),
+// }
+
 const (
 	// FlagKey is the cli flag to set the key
 	FlagKey = "key"
 	// FlagValue is the cli flag to set the value
 	FlagValue = "value"
+	// FlagType is the cli flag to set the type
+	// FlagType = "type"
 )
 
 func init() {
 	SetTxCmd.Flags().String(FlagKey, "", "Key to store data under (hex)")
 	SetTxCmd.Flags().String(FlagValue, "", "Data to store (hex)")
-
 	RemoveTxCmd.Flags().String(FlagKey, "", "Key under which to remove data (hex)")
 }
 
@@ -61,3 +69,13 @@ func removeTxCmd(cmd *cobra.Command, args []string) error {
 	tx := accounts.NewRemoveTx(key)
 	return txs.DoTx(tx)
 }
+
+// // createTxCmd creates a CreateTx, wraps, signs, and delivers it
+// func createTxCmd(cmd *cobra.Command, args []string) error {
+// 	accountType, err := commands.ParseHexFlag(FlagType)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	tx := accounts.NewCreateTx(accountType)
+// 	return txs.DoTx(tx)
+// }

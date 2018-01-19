@@ -13,8 +13,7 @@
 ## Account data model:
 
 ```proto3
-{
-  string pubkey;
+message pubkey {
   enum type {
     USER;
     DATACENTER;

@@ -10,8 +10,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/commands"
 	"github.com/cosmos/cosmos-sdk/client/commands/query"
-	//"github.com/cosmos/cosmos-sdk/modules/eyes"
 	"github.com/cosmos/cosmos-sdk/stack"
+
 	"github.com/ovrclk/photon/demo/plugins/accounts"
 )
 
@@ -21,14 +21,14 @@ const flagHeight = "height"
 var AccountsQueryCmd = &cobra.Command{
 	Use:   "accounts [key]",
 	Short: "Get data stored under key in accounts",
-	RunE:  commands.RequireInit(eyesQueryCmd),
+	RunE:  commands.RequireInit(accountsQueryCmd),
 }
 
 func init() {
 	AccountsQueryCmd.Flags().String(flagHeight, "", "Block height of data to query (Default is 0 for latest)")
 }
 
-func eyesQueryCmd(cmd *cobra.Command, args []string) error {
+func accountsQueryCmd(cmd *cobra.Command, args []string) error {
 	var res accounts.Data
 
 	// get value of key to query

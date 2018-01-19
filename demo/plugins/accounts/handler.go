@@ -12,9 +12,9 @@ const (
 	Name = "accounts"
 
 	// CostSet is the gas needed for the set operation
-	CostSet int64 = 10
+	CostSet int64 = 0
 	// CostRemove is the gas needed for the remove operation
-	CostRemove = 10
+	CostRemove = 0
 )
 
 // Handler allows us to set and remove data
@@ -38,24 +38,10 @@ func (Handler) Name() string {
 // CheckTx verifies if the transaction is properly formated
 func (h Handler) CheckTx(ctx sdk.Context, store state.SimpleDB, tx sdk.Tx) (res sdk.CheckResult, err error) {
 	err = tx.ValidateBasic()
-	if err != nil {
-		return
-	}
-
-	switch tx.Unwrap().(type) {
-	case SetTx:
-		res = sdk.NewCheck(CostSet, "")
-	case RemoveTx:
-		res = sdk.NewCheck(CostRemove, "")
-	default:
-		err = errors.ErrUnknownTxType(tx)
-	}
 	return
 }
 
 // DeliverTx tries to create a new role.
-//
-// Returns an error if the role already exists
 func (h Handler) DeliverTx(ctx sdk.Context, store state.SimpleDB, tx sdk.Tx) (res sdk.DeliverResult, err error) {
 	err = tx.ValidateBasic()
 	if err != nil {
@@ -67,6 +53,8 @@ func (h Handler) DeliverTx(ctx sdk.Context, store state.SimpleDB, tx sdk.Tx) (re
 		res, err = h.doSetTx(ctx, store, t)
 	case RemoveTx:
 		res, err = h.doRemoveTx(ctx, store, t)
+	// case CreateTx:
+	// 	res, err = h.doCreateTx(ctx, store, t)
 	default:
 		err = errors.ErrUnknownTxType(tx)
 	}
@@ -91,3 +79,16 @@ func (h Handler) doRemoveTx(ctx sdk.Context, store state.SimpleDB, tx RemoveTx) 
 	}
 	return
 }
+
+// func (h Handler) doCreateTx(ctx sdk.Context, store state.SimpleDB, tx CreateTx) (res sdk.DeliverResult, err error) {
+// 	data := NewData(tx.Type, ctx.BlockHeight())
+
+// 	// todo: get tx signer address
+// 	// print("context")
+// 	// print(ctx)
+
+// 	address := []byte("0x01")
+
+// 	store.Set(address, wire.BinaryBytes(data))
+// 	return
+// }
