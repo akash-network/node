@@ -9,7 +9,7 @@ node:
 				go build ./cmd/node
 
 clean:
-				rm client
-				rm node
-				rm -rf $HOME/.demonode
-				rm -rf $HOME/.democlient
+				rm -f client
+				rm -f node
+				rm -rf ${HOME}/.demonode
+				rm -rf ${HOME}/.democlient

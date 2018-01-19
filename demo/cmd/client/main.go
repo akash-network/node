@@ -19,10 +19,8 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/modules/auth/commands"
 	basecmd "github.com/cosmos/cosmos-sdk/modules/base/commands"
 	coincmd "github.com/cosmos/cosmos-sdk/modules/coin/commands"
-	// feecmd "github.com/cosmos/cosmos-sdk/modules/fee/commands"
-	// ibccmd "github.com/cosmos/cosmos-sdk/modules/ibc/commands"
 	noncecmd "github.com/cosmos/cosmos-sdk/modules/nonce/commands"
-	// rolecmd "github.com/cosmos/cosmos-sdk/modules/roles/commands"
+
 	accountscmd "github.com/ovrclk/photon/demo/plugins/accounts/commands"
 )
 
@@ -42,8 +40,6 @@ func main() {
 		query.KeyQueryCmd,
 		coincmd.AccountQueryCmd,
 		noncecmd.NonceQueryCmd,
-		// rolecmd.RoleQueryCmd,
-		// ibccmd.IBCQueryCmd,
 		accountscmd.AccountsQueryCmd,
 	)
 
@@ -54,8 +50,6 @@ func main() {
 
 	// set up the middleware
 	txcmd.Middleware = txcmd.Wrappers{
-		// feecmd.FeeWrapper{},
-		// rolecmd.RoleWrapper{},
 		noncecmd.NonceWrapper{},
 		basecmd.ChainWrapper{},
 		authcmd.SigWrapper{},
@@ -66,13 +60,6 @@ func main() {
 	txcmd.RootCmd.AddCommand(
 		// This is the default transaction, optional in your app
 		coincmd.SendTxCmd,
-		// coincmd.CreditTxCmd,
-		// this enables creating roles
-		// rolecmd.CreateRoleTxCmd,
-		// these are for handling ibc
-		// ibccmd.RegisterChainTxCmd,
-		// ibccmd.UpdateChainTxCmd,
-		// ibccmd.PostPacketTxCmd,
 		accountscmd.SetTxCmd,
 		accountscmd.RemoveTxCmd,
 	)

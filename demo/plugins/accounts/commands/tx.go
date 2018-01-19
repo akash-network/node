@@ -5,7 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/commands"
 	"github.com/cosmos/cosmos-sdk/client/commands/txs"
-	"github.com/cosmos/cosmos-sdk/modules/eyes"
+	"github.com/ovrclk/photon/demo/plugins/accounts"
 )
 
 // SetTxCmd is CLI command to set data
@@ -47,7 +47,7 @@ func setTxCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	tx := eyes.NewSetTx(key, value)
+	tx := accounts.NewSetTx(key, value)
 	return txs.DoTx(tx)
 }
 
@@ -58,6 +58,6 @@ func removeTxCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	tx := eyes.NewRemoveTx(key)
+	tx := accounts.NewRemoveTx(key)
 	return txs.DoTx(tx)
 }
