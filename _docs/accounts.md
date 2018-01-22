@@ -36,7 +36,7 @@ message pubkey {
 
 command:
 ```sh
-photon tx create -type [user|datacenter] -name <accountname>
+photon tx create --type [user|datacenter] --name <accountname>
 ```
 transaction:
 ```proto3
@@ -58,13 +58,13 @@ state change:
 
 command:
 ```sh
-photon tx update -r <resources> -name <accountname>
+photon tx update --resources <resources> --name <accountname>
 ```
 transaction:
 ```proto3
 {
   string pubkey;
-  message Provider {
+  message Resources {
     // datacenter specific variables
     string address;
   }
@@ -110,7 +110,7 @@ state change:
 
 command:
 ```sh
-photon account query --address=<publickey>
+photon query accounts <publickey>
 ```
 request data:
 ```proto3
