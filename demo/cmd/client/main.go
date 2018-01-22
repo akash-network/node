@@ -58,9 +58,9 @@ func main() {
 
 	// todo: if a command is not found the CLI will just hang
 	txcmd.RootCmd.AddCommand(
-		// This is the default transaction, optional in your app
 		coincmd.SendTxCmd,
 		accountscmd.CreateTxCmd,
+		accountscmd.UpdateTxCmd,
 	)
 
 	// Set up the various commands to use

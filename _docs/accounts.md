@@ -36,7 +36,7 @@ message pubkey {
 
 command:
 ```sh
-photon account new -n <accountname> -t user
+photon tx create -type [user|datacenter] -name <accountname>
 ```
 transaction:
 ```proto3
@@ -58,7 +58,7 @@ state change:
 
 command:
 ```sh
-photon account update -a <address> -r <resources>
+photon tx update -r <resources> -name <accountname>
 ```
 transaction:
 ```proto3

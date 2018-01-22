@@ -3,9 +3,11 @@ build :
 				go build ./cmd/node
 
 client:
+				rm -f client
 				go build ./cmd/client
 
 node:
+				rm -f node
 				go build ./cmd/node
 
 clean:

@@ -45,6 +45,7 @@ func accountsQueryCmd(cmd *cobra.Command, args []string) error {
 	// get value of block height to do the query at
 	height := viper.GetInt64(flagHeight)
 
+	// append the module name (accounts.Name) to the key that is being looked up
 	key = stack.PrefixedKey(accounts.Name, key)
 	prove := !viper.GetBool(commands.FlagTrustNode)
 	height, err = query.GetParsed(key, &res, height, prove)

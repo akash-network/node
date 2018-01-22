@@ -6,15 +6,16 @@ import "github.com/tendermint/go-wire/data"
 type Data struct {
 	// SetAt is the block height this was set at
 	SetAt int64 `json:"set_at"`
-	// Value is the data that was stored.
 	// data.Bytes is like []byte but json encodes as hex not base64
-	Type data.Bytes `json:"type"`
+	Resources data.Bytes `json:"resources"`
+	Type      data.Bytes `json:"type"`
 }
 
 // NewData creates a new Data item
-func NewData(accountType []byte, setAt int64) Data {
+func NewData(accountType, resouces []byte, setAt int64) Data {
 	return Data{
-		SetAt: setAt,
-		Type:  accountType,
+		SetAt:     setAt,
+		Resources: resouces,
+		Type:      accountType,
 	}
 }
