@@ -1,9 +1,10 @@
 package accounts
 
 import (
+	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk"
 	"github.com/cosmos/cosmos-sdk/errors"
-	"github.com/cosmos/cosmos-sdk/stack"
+	_ "github.com/cosmos/cosmos-sdk/stack"
 	"github.com/cosmos/cosmos-sdk/state"
 	wire "github.com/tendermint/go-wire"
 )
@@ -68,35 +69,30 @@ func (h Handler) doCreateTx(ctx sdk.Context, store state.SimpleDB, tx CreateTx) 
 
 func (h Handler) doUpdateTx(ctx sdk.Context, store state.SimpleDB, tx UpdateTx) (res sdk.DeliverResult, err error) {
 
-	println("--------------------IN UPDATE HANDLER-------------------------")
 	// check if tx has permission
 	if !ctx.HasPermission(tx.Actor) {
 		err = errors.ErrUnauthorized()
 		return
 	}
-	println("--------------------1 UPDATE HANDLER-------------------------")
 
 	// get account type
 	var oldData Data
-
-	key := stack.PrefixedKey(Name, tx.Actor.Address)
-	println("--------------------2 UPDATE HANDLER-------------------------")
-	println(key)
-	println("--------------------2a UPDATE HANDLER-------------------------")
-	val := store.Get(key)
-	println(val)
-	println("--------------------2b UPDATE HANDLER-------------------------")
-	err = wire.ReadBinaryBytes(val, &oldData)
-	if err != nil {
+	key := tx.Actor.Address.Bytes()
+	data := store.Get(key)
+	if len(data) == 0 {
+		err = ErrNoAccount()
 		return
 	}
-	println("--------------------3 UPDATE HANDLER, old type-------------------------")
-	println(oldData.Type)
+	err = wire.ReadBinaryBytes(data, &oldData)
+	if err != nil {
+		msg := fmt.Sprintf("Error reading account %X", key)
+		err = errors.ErrInternal(msg)
+		return
+	}
+
 	accountType := oldData.Type
-	println("got account type")
-	println(accountType)
-	data := NewData(accountType, tx.Resources, ctx.BlockHeight())
-	store.Set(tx.Actor.Address, wire.BinaryBytes(data))
+	newData := NewData(accountType, tx.Resources, ctx.BlockHeight())
+	store.Set(tx.Actor.Address, wire.BinaryBytes(newData))
 
 	return
 }

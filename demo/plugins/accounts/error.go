@@ -8,8 +8,10 @@ import (
 
 var (
 	errMissingData = fmt.Errorf("All tx fields must be filled")
+	errNoAccount   = fmt.Errorf("No such account")
 
-	malformed = errors.CodeTypeEncodingErr
+	malformed      = errors.CodeTypeEncodingErr
+	unknownAddress = errors.CodeTypeBaseUnknownAddress
 )
 
 //nolint
@@ -18,4 +20,8 @@ func ErrMissingData() errors.TMError {
 }
 func IsMissingDataErr(err error) bool {
 	return errors.IsSameError(errMissingData, err)
+}
+
+func ErrNoAccount() errors.TMError {
+	return errors.WithCode(errNoAccount, unknownAddress)
 }
