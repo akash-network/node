@@ -1,6 +1,12 @@
 package accounts
 
-import "github.com/tendermint/go-wire/data"
+import (
+	"fmt"
+	"github.com/cosmos/cosmos-sdk/errors"
+	"github.com/cosmos/cosmos-sdk/state"
+	wire "github.com/tendermint/go-wire"
+	"github.com/tendermint/go-wire/data"
+)
 
 // Data is the struct we use to store in the merkle tree
 type Data struct {
@@ -18,4 +24,19 @@ func NewData(accountType, resouces []byte, setAt int64) Data {
 		Resources: resouces,
 		Type:      accountType,
 	}
+}
+
+func GetAccount(key []byte, store state.SimpleDB) (Data, error) {
+	var account Data
+	data := store.Get(key)
+	// if len(data) == 0 {
+	// 	err := ErrNoAccount()
+	// 	return account, err
+	// }
+	err := wire.ReadBinaryBytes(data, &account)
+	if err != nil {
+		msg := fmt.Sprintf("Error reading account %X", key)
+		err = errors.ErrInternal(msg)
+	}
+	return account, err
 }

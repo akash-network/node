@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk"
 	"github.com/cosmos/cosmos-sdk/errors"
 	_ "github.com/cosmos/cosmos-sdk/stack"
@@ -62,6 +61,14 @@ func (h Handler) doCreateTx(ctx sdk.Context, store state.SimpleDB, tx CreateTx) 
 		err = errors.ErrUnauthorized()
 		return
 	}
+
+	// do not overwrite existing account
+	account, err := GetAccount(tx.Actor.Address.Bytes(), store)
+	if len(account.Type) > 0 {
+		err = ErrAccountExists()
+		return
+	}
+
 	data := NewData(tx.Type, nil, ctx.BlockHeight())
 	store.Set(tx.Actor.Address, wire.BinaryBytes(data))
 	return
@@ -76,23 +83,10 @@ func (h Handler) doUpdateTx(ctx sdk.Context, store state.SimpleDB, tx UpdateTx) 
 	}
 
 	// get account type
-	var oldData Data
-	key := tx.Actor.Address.Bytes()
-	data := store.Get(key)
-	if len(data) == 0 {
-		err = ErrNoAccount()
-		return
-	}
-	err = wire.ReadBinaryBytes(data, &oldData)
-	if err != nil {
-		msg := fmt.Sprintf("Error reading account %X", key)
-		err = errors.ErrInternal(msg)
-		return
-	}
+	account, err := GetAccount(tx.Actor.Address.Bytes(), store)
 
-	accountType := oldData.Type
-	newData := NewData(accountType, tx.Resources, ctx.BlockHeight())
-	store.Set(tx.Actor.Address, wire.BinaryBytes(newData))
+	data := NewData(account.Type, tx.Resources, ctx.BlockHeight())
+	store.Set(tx.Actor.Address, wire.BinaryBytes(data))
 
 	return
 }
