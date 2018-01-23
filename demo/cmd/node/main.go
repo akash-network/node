@@ -10,13 +10,12 @@ import (
 	client "github.com/cosmos/cosmos-sdk/client/commands"
 	"github.com/cosmos/cosmos-sdk/modules/auth"
 	"github.com/cosmos/cosmos-sdk/modules/base"
+	"github.com/cosmos/cosmos-sdk/modules/coin"
 	"github.com/cosmos/cosmos-sdk/modules/nonce"
 	"github.com/cosmos/cosmos-sdk/server/commands"
 	"github.com/cosmos/cosmos-sdk/stack"
 
-	"github.com/cosmos/cosmos-sdk/modules/coin"
-
-	accounts "github.com/ovrclk/photon/demo/plugins/accounts"
+	"github.com/ovrclk/photon/demo/plugins/accounts"
 )
 
 // RootCmd is the entry point for this binary
