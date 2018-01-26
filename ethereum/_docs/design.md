@@ -60,14 +60,14 @@ For internal use only
 #### Uses
 
 * Deploy the Master contract
-* Run an order mathcing Daemon
+* Run an order matching Daemon
 
 ### Web Client
 
 #### Uses
 
 * Deploy Client or Provider contract
-* Integrates with Metamask for tranaction signing
+* Integrates with Metamask for transaction signing
 
 ## Contracts
 
@@ -92,7 +92,7 @@ The master contract has two functions anyone can call and one function only the 
 
 ##### match
 
-* Matches a Provider contract with a Client contract. Matches must be done on a first come first serve basis. The only way to guarentee this is to restrict the parties which are allowed to match the Provider and Client contracts. The result of the matching is publicy viewable on the blockchain, therefor there is no risk that the maintainer can secrety give preference to certain orders without the potential of being exposed.
+* Matches a Provider contract with a Client contract. Matches must be done on a first come first serve basis. The only way to guarantee this is to restrict the parties which are allowed to match the Provider and Client contracts. The result of the matching is publicly viewable on the blockchain, therefore there is no risk that the maintainer can secretly give preference to certain orders without the potential of being exposed.
 
 * Callable by the maintainer
 
@@ -109,7 +109,7 @@ Extended by: Ownable, Parameterized, Matchable, Cancelable, Payable, BadActor
 
 ##### networkAddress
 
-* The IP or URL of the provider which can be contacted to initate mainifest distribution
+* The IP or URL of the provider which can be contacted to initiate manifest distribution
 
 #### Functions
 
@@ -121,16 +121,16 @@ Extended by: Ownable, Parameterized, Matchable, Cancelable, Payable, BadActor
 ##### match
 
 * Tries to match with a Client contract
-* Checks if Client contract has compatable parameters
+* Checks if Client contract has compatible parameters
 
 ##### cancel
 
-* Marks the contract as cancelled
+* Marks the contract as canceled
 * May charge the Provider an early cancellation fee
 
 ##### uncancel
 
-* Marks the contract as not cancelled
+* Marks the contract as not canceled
 * Allows contract to be re-matched
 
 ##### withdrawal
@@ -175,7 +175,7 @@ Extended by Ownable, Parameterized, Matchable, Cancelable, Payable, Deliquent
 
 #### setBill
 
-* Determines the unsetled balance of the Client
+* Determines the unsettled balance of the Client
 
 #### bill
 
@@ -195,7 +195,7 @@ Extended by Ownable, Parameterized, Matchable, Cancelable, Payable, Deliquent
 
 ## Modifiers
 
-* These are contracts that act as small modules of behavior and state to be extende by large contracts
+* These are contracts that act as small modules of behavior and state to be extended by large contracts
 
 ### Parameterized
 
@@ -204,7 +204,7 @@ Extended by Ownable, Parameterized, Matchable, Cancelable, Payable, Deliquent
 
 ### Maintainable
 
-* Allows an address to be the maintainer and transfer maintainorship to another address
+* Allows an address to be the maintainer and transfer maintainership to another address
 
 ### Delinquent
 
@@ -232,9 +232,9 @@ Extended by Ownable, Parameterized, Matchable, Cancelable, Payable, Deliquent
 
 ## Future Work
 
-* Multiple Clients matched per single Provider contract which lists aggregate resources. Available resouce calculations are managed by the contract
+* Multiple Clients matched per single Provider contract which lists aggregate resources. Available resource calculations are managed by the contract
 * Oracle permission to mark Providers as bad actors
-* Use a math library for accurate calcuation of billing
+* Use a math library for accurate calculation of billing
 * Blacklist URLs of bad acting Providers
 
 ## Open Questions
@@ -245,11 +245,11 @@ Extended by Ownable, Parameterized, Matchable, Cancelable, Payable, Deliquent
 Which, or both, should be implemented?
 
 
-Client Burden: client maintains a minimum balanace, if balance falls below minimum, provider can cancel without being charged a fee
-    - provider can ensure he is always payed
-    - client has tp 'waste' money by keeping it sitting in a contract
+Client Burden: client maintains a minimum balance, if balance falls below minimum, provider can cancel without being charged a fee
+    - a provider can ensure he is always paid
+    - a client has to 'waste' money by keeping it sitting in a contract
 
 
 Provider Burden: if client misses too many payments, provider can cancel without incurring fees
-    - provider may not be paid for services
-    - client is allowed flexability of payment
+    - a provider may not be paid for services
+    - a client is allowed flexibility of payment
