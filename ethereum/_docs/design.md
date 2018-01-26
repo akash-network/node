@@ -1,5 +1,7 @@
 # Ethereum MVP
 
+<img src="../dot/contracts.svg">
+
 - [Deliverable Applications](#deliverable-applications)
   * [Server](#server)
     + [Uses](#uses)
