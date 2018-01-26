@@ -14,7 +14,7 @@ digraph marketplace {
   "master" -> "provider"        [label="deploy"];
   "master" -> "client"          [label="deploy"];
   "provider" -> "client"        [label="match"];
-  "client" -> "provider"        [label="send funds", labelangle="-50.0"];
+  "client" -> "provider"        [label="transfer"];
   "user" -> "client"            [label="transfer,\ncancel"];
   "datacenter" -> "provider"    [label="withdrawal,\ncancel"];
   "oracle" -> "provider"        [label="make bad actor"];
