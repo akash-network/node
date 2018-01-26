@@ -6,7 +6,7 @@
   * [Server](#server)
     + [Uses](#uses)
   * [Web Client](#web-client)
-    + [Uses](#uses)
+    + [Uses](#uses-1)
 - [Contracts](#contracts)
   * [Master](#master)
     + [Functions](#functions)
@@ -31,6 +31,13 @@
       - [totalBilled](#totalbilled)
       - [unsettledBalance](#unsettledbalance)
       - [maxUnsettledBalance](#maxunsettledbalance)
+  * [Functions](#functions-2)
+    + [match](#match-2)
+    + [setBill](#setbill)
+    + [bill](#bill)
+    + [cancel](#cancel-1)
+    + [providerCancel](#providercancel)
+    + [unCancel](#uncancel)
 - [Modifiers](#modifiers)
   * [Parameterized](#parameterized)
   * [Maintainable](#maintainable)
@@ -160,6 +167,32 @@ Extended by Ownable, Parameterized, Matchable, Cancelable, Payable, Deliquent
 
 * The amount that the client has promised not owe greater than
 
+### Functions
+
+#### match
+
+* Called by a Provider contract to attempt a match
+
+#### setBill
+
+* Determines the unsetled balance of the Client
+
+#### bill
+
+* Sends unsettled balance to the matched Provider
+
+#### cancel
+
+* Cancel the contract
+
+#### providerCancel
+
+* Allows the matched Provider to cancel the contract and withdraw all funds if the Client is delinquent
+
+#### unCancel
+
+* Uncancel the contract to enable matching
+
 ## Modifiers
 
 * These are contracts that act as small modules of behavior and state to be extende by large contracts
@@ -202,6 +235,7 @@ Extended by Ownable, Parameterized, Matchable, Cancelable, Payable, Deliquent
 * Multiple Clients matched per single Provider contract which lists aggregate resources. Available resouce calculations are managed by the contract
 * Oracle permission to mark Providers as bad actors
 * Use a math library for accurate calcuation of billing
+* Blacklist URLs of bad acting Providers
 
 ## Open Questions
 
