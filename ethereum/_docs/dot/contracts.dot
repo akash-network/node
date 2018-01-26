@@ -1,0 +1,25 @@
+digraph marketplace {
+
+  rankdir=TD;
+
+  "master"                      [shape=circle label="Master"];
+  "provider"                    [shape=circle label="Provider"];
+  "client"                      [shape=circle label="Client"];
+  "user"                        [shape=square label="User"];
+  "datacenter"                  [shape=square label="Datacenter"];
+  "overclock-labs"              [shape=square label="Overclock Labs"];
+  "oracle"                      [shape=square label="Oracle"];
+
+  "overclock-labs" -> "master"  [label="deploy contract"];
+  "master" -> "provider"        [label="deploy contract"];
+  "master" -> "client"          [label="deploy contract"];
+  "provider" -> "client"        [label="match"];
+  "client" -> "provider"        [label="send funds", labelangle="-50.0"];
+  "user" -> "client"            [label="send funds, cancel"];
+  "datacenter" -> "provider"    [label="withdrawal funds, cancel"];
+  "oracle" -> "provider"        [label="make bad actor"];
+
+  { rank=source "overclock-labs" }
+  { rank=sink "user", "datacenter", "oracle" }
+  { rank=same "client", "provider" }
+}
