@@ -2,7 +2,7 @@
 
 <img src="./dot/contracts.svg">
 
-- [Deliverable Applications](#deliverable-applications)
+- [Applications](#applications)
   * [Server](#server)
     + [Uses](#uses)
   * [Web Client](#web-client)
@@ -31,13 +31,13 @@
       - [totalBilled](#totalbilled)
       - [unsettledBalance](#unsettledbalance)
       - [maxUnsettledBalance](#maxunsettledbalance)
-  * [Functions](#functions-2)
-    + [match](#match-2)
-    + [setBill](#setbill)
-    + [bill](#bill)
-    + [cancel](#cancel-1)
-    + [providerCancel](#providercancel)
-    + [unCancel](#uncancel)
+    + [Functions](#functions-2)
+      - [match](#match-2)
+      - [setBill](#setbill)
+      - [bill](#bill)
+      - [cancel](#cancel-1)
+      - [providerCancel](#providercancel)
+      - [unCancel](#uncancel)
 - [Modifiers](#modifiers)
   * [Parameterized](#parameterized)
   * [Maintainable](#maintainable)
@@ -51,7 +51,7 @@
 - [Open Questions](#open-questions)
   * [Fee Structure](#fee-structure)
 
-## Deliverable Applications
+## Applications
 
 ### Server
 
@@ -167,29 +167,29 @@ Extended by Ownable, Parameterized, Matchable, Cancelable, Payable, Deliquent
 
 * The amount that the client has promised not owe greater than
 
-### Functions
+#### Functions
 
-#### match
+##### match
 
 * Called by a Provider contract to attempt a match
 
-#### setBill
+##### setBill
 
 * Determines the unsettled balance of the Client
 
-#### bill
+##### bill
 
 * Sends unsettled balance to the matched Provider
 
-#### cancel
+##### cancel
 
 * Cancel the contract
 
-#### providerCancel
+##### providerCancel
 
 * Allows the matched Provider to cancel the contract and withdraw all funds if the Client is delinquent
 
-#### unCancel
+##### unCancel
 
 * Uncancel the contract to enable matching
 
