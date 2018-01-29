@@ -53,21 +53,31 @@
 
 ## Applications
 
-### Server
+### Order Matching Daemon
 
-For internal use only
+#### PSQL database
 
-#### Uses
+* Tables mirror data within the contracts
+* Tables: Clients, Providers
 
-* Deploy the Master contract
-* Run an order matching Daemon
+#### Go App
+
+* Gets internal transactons from Master contract
+* Creates records for addresses of all Deploy Client and Provider transactions
+* Creates records for the state of all found Client and Provider transactions
+* Iterates through unmatched Provder contracts searching for a matching Client contract
+* Order of iterations is by order time / order sequence
+* Calls the `match` function on the Master contract for the matched contracts
+* Waits for a new Ethereum block and repeates this process
 
 ### Web Client
 
-#### Uses
-
-* Deploy Client or Provider contract
+* For users and datacenters to Deploy Client or Provider contracts
 * Integrates with Metamask for transaction signing
+* Encrypts and seeds deployment manifest
+* Looks up users in-progress contracts by ETH address
+* Lists unmatched contracts
+* For users to interact with their contract
 
 ## Contracts
 
