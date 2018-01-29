@@ -1,5 +1,5 @@
-hash: f1b47cc02e5e60531e49fbc575692a8cb4737839afe2b1f5469a8093b6adb92f
-updated: 2018-01-10T16:57:50.862291349-08:00
+hash: d7c43c8e5dafd8b70ddbc03f8b4b2c3e27f5df0db9de16ea3ad5c03b624ce667
+updated: 2018-01-19T11:43:07.537926485-08:00
 imports:
 - name: github.com/bgentry/speakeasy
   version: 4aabc24848ce5fd31929f7d1e4ea74d3709c14cd
@@ -31,15 +31,9 @@ imports:
   - modules/base/commands
   - modules/coin
   - modules/coin/commands
-  - modules/eyes
-  - modules/fee
-  - modules/fee/commands
   - modules/ibc
-  - modules/ibc/commands
   - modules/nonce
   - modules/nonce/commands
-  - modules/roles
-  - modules/roles/commands
   - server/commands
   - stack
   - state
@@ -47,7 +41,7 @@ imports:
 - name: github.com/ebuchman/fail-test
   version: 95f809107225be108efcf10a3509e4ea6ceef3c4
 - name: github.com/ethanfrey/hid
-  version: f76da0b80567e8b6f676e1757b549a93494fe4b5
+  version: ea8f4c923d3bc8c9c312b7d38724a294f184258a
 - name: github.com/ethanfrey/ledger
   version: f7f2f056357db77db845a79aa1abdadc3ae66369
 - name: github.com/fsnotify/fsnotify

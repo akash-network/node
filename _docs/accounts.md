@@ -13,8 +13,7 @@
 ## Account data model:
 
 ```proto3
-{
-  string pubkey;
+message pubkey {
   enum type {
     USER;
     DATACENTER;
@@ -37,7 +36,7 @@
 
 command:
 ```sh
-photon account new -n <accountname> -t user
+photon tx create --type [user|datacenter] --name <accountname>
 ```
 transaction:
 ```proto3
@@ -59,13 +58,13 @@ state change:
 
 command:
 ```sh
-photon account update -a <address> -r <resources>
+photon tx update --resources <resources> --name <accountname>
 ```
 transaction:
 ```proto3
 {
   string pubkey;
-  message Provider {
+  message Resources {
     // datacenter specific variables
     string address;
   }
@@ -111,7 +110,7 @@ state change:
 
 command:
 ```sh
-photon account query --address=<publickey>
+photon query accounts <publickey>
 ```
 request data:
 ```proto3

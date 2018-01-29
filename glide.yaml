@@ -1,7 +1,7 @@
 package: github.com/ovrclk/photon
 import:
 - package: github.com/ethanfrey/hid
-  version: f76da0b80567e8b6f676e1757b549a93494fe4b5
+  version: ea8f4c923d3bc8c9c312b7d38724a294f184258a
 - package: github.com/golang/protobuf
   subpackages:
   - proto
