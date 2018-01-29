@@ -1,7 +1,14 @@
 pragma solidity ^0.4.18;
 
 contract BadActor {
-    bool public isBadActor
+    bool public badActor;
+    function BadActor() public {
+        badActor = false;
+    }
+    modifier notBadActor() {
+        require(!badActor);
+        _;
+    }
 }
 
 contract Matchable {
@@ -9,8 +16,9 @@ contract Matchable {
     function Matchable() public {
         matched = false;
     }
-    modifier notMatched() public {
-        require(!matched)
+    modifier notMatched() {
+        require(!matched);
+        _;
     }
 }
 
@@ -41,17 +49,17 @@ contract Ownable {
     }
 }
 
-contract Deliquent {
-    bool public deliquent
-    function Deliquent() public {
-        deliquent = false;
+contract Delinquent {
+    bool public delinquent;
+    function Delinquent() public {
+        delinquent = false;
     }
     modifier isDelinquent() {
-        require(deliquent)
+        require(delinquent);
         _;
     }
     modifier notDelinquent() {
-        require(!deliquent)
+        require(!delinquent);
         _;
     }
 }
@@ -70,7 +78,7 @@ contract Maintainable {
           maintainer = newMaintainer;
         }
     }
- }
+}
 
 contract Parameterized is Maintainable {
 
@@ -87,7 +95,7 @@ contract Parameterized is Maintainable {
         minimumBalanace = _minimumBalanace;
         cancelFee = _cancelFee;
     }
-    function alter(uint _ram, uint _cpu, uint _rate, uint _minimumBalanace, uint _cancelFee) public onlyMaintainer {
+    function modify(uint _ram, uint _cpu, uint _rate, uint _minimumBalanace, uint _cancelFee) public onlyMaintainer {
         ram = _ram;
         cpu = _cpu;
         rate = _rate;
@@ -103,17 +111,17 @@ contract Provider is Ownable, Parameterized, Matchable, Cancelable, Payable, Bad
     // Provider's public endpoint for Manifest distribution
     string public networkAddress;
 
-    // Constructor. Ensure contract has value >= cancelFee
+    // Constructor
     function Provider(address maintainer, uint ram, uint cpu, uint rate, uint minimumBalanace, uint cancelFee) public Parameterized(ram, cpu, rate, minimumBalanace, cancelFee) Maintainable(maintainer) {}
 
     // confirm and declare that a valid matching contract is at an address
-    function match(address clientAddress) public onlyOwner notCanceled notMatched returns (bool) {
+    function doMatch(address clientAddress) public onlyOwner notCanceled notMatched returns (bool) {
         // load client contract
         Client client = Client(clientAddress);
         // make sure resources match
         require(client.cpu() <= cpu && client.ram() <= ram && client.rate() >= rate && client.minimumBalanace() >= minimumBalanace && client.cancelFee() <= cancelFee);
         // attempt to match with the client
-        require(client.match(this))
+        require(client.doMatch(this));
         matchedClient = client;
         matched = true;
         return matched;
@@ -132,7 +140,7 @@ contract Provider is Ownable, Parameterized, Matchable, Cancelable, Payable, Bad
     }
 
     // makes canceled false. contract can be rematched to a provider.
-    function uncancel() public isCanceled   {
+    function uncancel() public isCanceled {
         canceled = false;
     }
 
@@ -143,23 +151,24 @@ contract Provider is Ownable, Parameterized, Matchable, Cancelable, Payable, Bad
         require(amount > 0);
         maintainer.transfer(amount);
     }
-  }
+}
 
- contract Client is Ownable, Parameterized, Matchable, Cancelable, Payable, Deliquent {
+ contract Client is Ownable, Parameterized, Matchable, Cancelable, Payable, Delinquent {
 
     Provider public matchedProvider;
-    uint public minimumBalanace;
     uint public matchStartTime;
     uint public totalBilled;
     uint public unsettledBalance;
     uint public maxUnsettledBalance;
 
     // Constructor
-    function Client(address maintainer, uint ram, uint cpu, uint rate, uint _minimumBalanace, uint cancelFee, uint maxUnsettledBalance) public Parameterized(ram, cpu, rate, _minimumBalanace, cancelFee) Maintainable(maintainer) {}
+    function Client(address maintainer, uint ram, uint cpu, uint rate, uint _minimumBalanace, uint cancelFee, uint _maxUnsettledBalance) public Parameterized(ram, cpu, rate, _minimumBalanace, cancelFee) Maintainable(maintainer) {
+        maxUnsettledBalance = _maxUnsettledBalance;
+    }
 
     // confirm and delcare that the matching contracts matching contract address is this address.
     // confirms both contracts agree that they can match
-    function match(address providerAddress) public onlyOwner notCanceled notMatched returns (bool) {
+    function doMatch(address providerAddress) public onlyOwner notCanceled notMatched returns (bool) {
         // load provider contract
         Provider provider = Provider(providerAddress);
         // check provider is compatible
@@ -193,7 +202,7 @@ contract Provider is Ownable, Parameterized, Matchable, Cancelable, Payable, Bad
         unsettledBalance -= payment;
 
         // if unselted balance is > N hour value of contract let provider cancel it
-        if (ununsettledBalance > maxUnsettledBalance) {
+        if (unsettledBalance > maxUnsettledBalance) {
             delinquent = true;
         }
     }
@@ -209,7 +218,7 @@ contract Provider is Ownable, Parameterized, Matchable, Cancelable, Payable, Bad
     // leave delinquent true so there is a perminent record of clients bad behavior
     function providerCancel() public isDelinquent {
         // only matchedProvider should be able to call this
-        require(msg.sender == matchedProvider)
+        require(msg.sender == address(matchedProvider));
         matched = false;
         canceled = true;
         matchedProvider.transfer(this.balance);
@@ -219,9 +228,9 @@ contract Provider is Ownable, Parameterized, Matchable, Cancelable, Payable, Bad
     function uncancel() public isCanceled notDelinquent{
         canceled = false;
     }
-  }
+}
 
-  contract Master is Maintainable {
+contract Master is Maintainable {
 
     function Master() public Maintainable(msg.sender) {}
 
@@ -235,10 +244,10 @@ contract Provider is Ownable, Parameterized, Matchable, Cancelable, Payable, Bad
     }
 
     // call to put an ask for a service on the network
-    function deployClient(uint _ram, uint _cpu, uint _rate, uint _minimumBalanace, uint _cancelFee) public payable returns (Client) {
+    function deployClient(uint _ram, uint _cpu, uint _rate, uint _minimumBalanace, uint _cancelFee, uint _maxUnsettledBalance) public payable returns (Client) {
         // ensure client contract has minimum balance
         require(msg.value >= _minimumBalanace);
-        Client client = new Client(msg.sender, _ram, _cpu, _rate, _minimumBalanace, _cancelFee);
+        Client client = new Client(msg.sender, _ram, _cpu, _rate, _minimumBalanace, _cancelFee, _maxUnsettledBalance);
         client.transfer(msg.value);
         return client;
     }
@@ -247,9 +256,9 @@ contract Provider is Ownable, Parameterized, Matchable, Cancelable, Payable, Bad
     // this is onlyMaintainer because the matching must be done in a fair way
     // photon will do the matching based on provider and client order sequennces
     // the results of the matching are publicly auditable because eth transactions are public
-    function match(address clientAddress, address providerAddress) onlyMaintainer public {
+    function doMatch(address clientAddress, address providerAddress) onlyMaintainer public {
       // Matches initated by providers. Could be the other way around, makes no difference
       Provider provider = Provider(providerAddress);
-      require(provider.match(clientAddress));
+      require(provider.doMatch(clientAddress));
     }
-  }
+}

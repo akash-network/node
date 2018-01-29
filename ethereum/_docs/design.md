@@ -3,10 +3,10 @@
 <img src="./dot/contracts.svg">
 
 - [Applications](#applications)
-  * [Server](#server)
-    + [Uses](#uses)
+  * [Order Matching Daemon](#order-matching-daemon)
+    + [PSQL database](#psql-database)
+    + [Go App](#go-app)
   * [Web Client](#web-client)
-    + [Uses](#uses-1)
 - [Contracts](#contracts)
   * [Master](#master)
     + [Functions](#functions)
