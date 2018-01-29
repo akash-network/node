@@ -2,6 +2,8 @@
 
 ## Parity
 
+## Account Setup
+
 * Install Parity https://www.parity.io/
 * Open parity. Should open a browser tab
 * Click 'SETTINGS' -> 'Parity'
@@ -11,7 +13,7 @@
 * Create the new account
 * Add Kovan Eth to the account https://github.com/kovan-testnet/faucet
 
-## Deploy and Watch Master Contract
+### Deploy and Watch Master Contract
 
 In Parity on the Kovan testnet...
 * Click 'CONTRACTS'
@@ -28,9 +30,19 @@ In Parity on the Kovan testnet...
 * Paste in the contract address and contract abi
 * Click '+ADD CONTRACT'
 
-## Use a Watched Contract
+### Use a Watched Contract
 
 In Parity on the Kovan testnet...
 * Click 'CONTRACTS'
 * Click a contract
 * Click '> EXECUTE'
+
+## Remix
+
+* Go to http://remix.ethereum.org/
+* Paste in Solidity code
+* Do Start Compile
+* Go to the Run tab
+* Select Environment -> JavaScript VM
+* Select the Maser contract
+* Click Create
