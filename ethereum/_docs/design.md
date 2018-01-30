@@ -66,7 +66,7 @@
 * Creates records for addresses of all Deploy Client and Provider transactions
 * Creates records for the state of all found Client and Provider transactions
 * Iterates through unmatched Provder contracts searching for a matching Client contract
-* Order of iterations is by order time / order sequence
+* Order matching precedence is closest match then time
 * Calls the `match` function on the Master contract for the matched contracts
 * Waits for a new Ethereum block and repeates this process
 
