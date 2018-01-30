@@ -112,16 +112,18 @@ contract Provider is Ownable, Parameterized, Matchable, Cancelable, Payable, Bad
     string public networkAddress;
 
     // Constructor
-    function Provider(address maintainer, uint ram, uint cpu, uint rate, uint minimumBalanace, uint cancelFee) public Parameterized(ram, cpu, rate, minimumBalanace, cancelFee) Maintainable(maintainer) {}
+    function Provider(address maintainer, uint ram, uint cpu, uint rate, uint minimumBalanace, uint cancelFee, string _networkAddress) public Parameterized(ram, cpu, rate, minimumBalanace, cancelFee) Maintainable(maintainer) {
+        networkAddress = _networkAddress;
+    }
 
     // confirm and declare that a valid matching contract is at an address
-    function doMatch(address clientAddress) public onlyOwner notCanceled notMatched returns (bool) {
+    function matchClient(address clientAddress) public onlyOwner notCanceled notMatched returns (bool) {
         // load client contract
         Client client = Client(clientAddress);
         // make sure resources match
         require(client.cpu() <= cpu && client.ram() <= ram && client.rate() >= rate && client.minimumBalanace() >= minimumBalanace && client.cancelFee() <= cancelFee);
         // attempt to match with the client
-        require(client.doMatch(this));
+        require(client.matchProvider(this));
         matchedClient = client;
         matched = true;
         return matched;
@@ -162,13 +164,13 @@ contract Provider is Ownable, Parameterized, Matchable, Cancelable, Payable, Bad
     uint public maxUnsettledBalance;
 
     // Constructor
-    function Client(address maintainer, uint ram, uint cpu, uint rate, uint _minimumBalanace, uint cancelFee, uint _maxUnsettledBalance) public Parameterized(ram, cpu, rate, _minimumBalanace, cancelFee) Maintainable(maintainer) {
+    function Client(address maintainer, uint ram, uint cpu, uint rate, uint _minimumBalanace, uint cancelFee, uint _maxUnsettledBalance) public payable Parameterized(ram, cpu, rate, _minimumBalanace, cancelFee) Maintainable(maintainer) {
         maxUnsettledBalance = _maxUnsettledBalance;
     }
 
     // confirm and delcare that the matching contracts matching contract address is this address.
     // confirms both contracts agree that they can match
-    function doMatch(address providerAddress) public onlyOwner notCanceled notMatched returns (bool) {
+    function matchProvider(address providerAddress) public onlyOwner notCanceled notMatched returns (bool) {
         // load provider contract
         Provider provider = Provider(providerAddress);
         // check provider is compatible
@@ -235,10 +237,10 @@ contract Master is Maintainable {
     function Master() public Maintainable(msg.sender) {}
 
     // call to put a bid for a service on the network
-    function deployProvider(uint _ram, uint _cpu, uint _rate, uint _minimumBalanace, uint _cancelFee) public payable returns (Provider) {
+    function deployProvider(uint _ram, uint _cpu, uint _rate, uint _minimumBalanace, uint _cancelFee, string _networkAddress) public payable returns (Provider) {
         // provider must provide the cancel fee up front
         require(msg.value >= _cancelFee);
-        Provider provider = new Provider(msg.sender, _ram, _cpu, _rate, _minimumBalanace, _cancelFee);
+        Provider provider = new Provider(msg.sender, _ram, _cpu, _rate, _minimumBalanace, _cancelFee, _networkAddress);
         provider.transfer(msg.value);
         return provider;
     }
@@ -256,9 +258,9 @@ contract Master is Maintainable {
     // this is onlyMaintainer because the matching must be done in a fair way
     // photon will do the matching based on provider and client order sequennces
     // the results of the matching are publicly auditable because eth transactions are public
-    function doMatch(address clientAddress, address providerAddress) onlyMaintainer public {
-      // Matches initated by providers. Could be the other way around, makes no difference
-      Provider provider = Provider(providerAddress);
-      require(provider.doMatch(clientAddress));
+    function matchContracts(address clientAddress, address providerAddress) onlyMaintainer public {
+        // Matches initated by providers. Could be the other way around, makes no difference
+        Provider provider = Provider(providerAddress);
+        require(provider.matchClient(clientAddress));
     }
 }
