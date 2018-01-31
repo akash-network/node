@@ -1,0 +1,29 @@
+{
+  "extends": "airbnb",
+  "env": {
+    "browser": true,
+    "node": true,
+    "mocha": true
+  },
+  "plugins": [
+    "mocha"
+  ],
+  "parser": "babel-eslint",
+  "rules": {
+    "import/prefer-default-export": [0],
+    "jsx-a11y/href-no-hash": "off",
+    "no-underscore-dangle": [
+      "error",
+      {
+        "allow": ["__REDUX_DEVTOOLS_EXTENSION__", "__REDUX_DEVTOOLS_EXTENSION_COMPOSE__"]
+      }
+    ],
+    "react/jsx-filename-extension": [0],
+    "react/forbid-prop-types": [1, { "forbid": ['any', 'array'] }],
+    "no-case-declarations": [0],
+    "max-len": [0],
+    "no-loop-func": [0],
+    "arrow-body-style": [0],
+    "jsx-a11y/label-has-for": [0],
+  }
+}
