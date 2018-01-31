@@ -11,9 +11,8 @@ contract Maintainable {
         _;
     }
     function transferMaintainorship(address newMaintainer) public onlyMaintainer {
-        if (newMaintainer != address(0)) {
-          maintainer = newMaintainer;
-        }
+        require(newMaintainer != address(0));
+        maintainer = newMaintainer;
     }
 }
 
