@@ -60,14 +60,20 @@
 #### Go App
 
 * Operator: Master contract maintainer
-* Algorithm
-  ** Gets internal transactons from the Master contract
-  ** Creates records for addresses of all deploy Client and Provider transactions
-  ** Creates records for the state of all found Client and Provider contracts
-  ** Iterates through unmatched Provder contracts searching for a matching Client contract
-  ** Order matching precedence is closest match then time
-  ** Calls a matching function on the Master contract for the matched contracts
-  ** Waits for a new Ethereum block and repeates this process
+* Mathcing Algorithm
+
+  * Gets internal transactons from the Master contract
+  * Creates records for addresses of all deploy Client and Provider transactions
+  * Creates records for the state of all found Client and Provider contracts
+  * Iterates through unmatched Provder contracts searching for a matching Client contract
+  * Order matching precedence is closest match then time
+  * Calls a matching function on the Master contract for the matched contracts
+
+  * Waits for a new Ethereum block and repeates this process
+
+* Billing Algorith
+
+  * For matched Providers, call the withdrawal() method periodically.
 
 
 #### Seeding server

@@ -46,7 +46,7 @@ contract Payable is BadActor {
     function () public notBadActor payable {}
 }
 
-contract Matchable is Payable {
+contract Matchable is  {
     bool public matched;
     function Matchable() public {
         matched = false;
@@ -61,7 +61,30 @@ contract Matchable is Payable {
     }
 }
 
-contract Parameterized is Maintainable, Matchable {
+contract Cancelable {
+    bool canceled false;
+    function Cancelable {
+        canceled = false;
+    }
+    function cancel() {
+        canceled = true;
+    }
+    function uncancel() {
+        canceled = false;
+    }
+    modifier isCanceled() {
+        require(canceled);
+        _;
+    }
+    modifier notCanceled() {
+        require(!canceled);
+        _;
+    }
+
+
+}
+
+contract Parameterized is Maintainable, Payable, Matchable, Cancellable {
 
     uint public ram;
     uint public cpu;
@@ -76,7 +99,7 @@ contract Parameterized is Maintainable, Matchable {
         minimumBalanace = _minimumBalanace;
         cancelFee = _cancelFee;
     }
-    function modify(uint _ram, uint _cpu, uint _rate, uint _minimumBalanace, uint _cancelFee) public onlyMaintainer {
+    function modify(uint _ram, uint _cpu, uint _rate, uint _minimumBalanace, uint _cancelFee) notMatched public onlyMaintainer {
         ram = _ram;
         cpu = _cpu;
         rate = _rate;
@@ -100,7 +123,7 @@ contract Parameterized is Maintainable, Matchable {
     }
 
     // match with provider
-    function matchProvider(address providerAddress) external onlyOwner notMatched notBadActor returns (bool) {
+    function matchProvider(address providerAddress) external notCanceled onlyOwner notMatched notBadActor returns (bool) {
         matchedProvider = Provider(providerAddress);
         // set parameters to that of the provider
         ram = matchedProvider.ram();
@@ -155,6 +178,7 @@ contract Parameterized is Maintainable, Matchable {
         bill();
         matchedProvider.clientCancel();
         reset();
+        canceled = true;
     }
 
     // lets provider cancel the contract
@@ -182,7 +206,7 @@ contract Provider is Ownable, Parameterized {
     }
 
     // confirm and declare that a valid matching contract is at an address
-    function matchClient(address clientAddress) external onlyOwner notMatched notBadActor returns (bool) {
+    function matchClient(address clientAddress) external notCanceled onlyOwner notMatched notBadActor returns (bool) {
         // load client contract
         Client client = Client(clientAddress);
         // make sure resources match
@@ -211,6 +235,7 @@ contract Provider is Ownable, Parameterized {
             matchedClient.transfer(cancelFee);
         }
         reset();
+        canceled = true;
     }
 
     // client cancels contract
@@ -229,8 +254,10 @@ contract Provider is Ownable, Parameterized {
 
     // send maximum allowable funds to contract maintainer
     function withdrawal() public notBadActor {
-         uint amount = this.balance;
+
+        uint amount = this.balance;
         if (matched) {
+            matchClient.bill();
             // ensure contract always can pay the early cancel fee when not canceled
             amount = amount - cancelFee;
         }
