@@ -4,13 +4,13 @@ import { Switch, Route, Redirect } from 'react-router-dom';
 import { connect } from 'react-redux';
 import { withRouter } from 'react-router';
 
-import { getLoggedIn } from '../actions';
+import WarningModal from '../component'
+import { initWeb3 } from '../actions';
 
 class App extends Component {
-  // fetch documents
   componentWillMount = async () => {
-    // get if user is logged in
-    await this.props.getLoggedIn();
+    // init web3
+    await this.props.initWeb3();
   };
 
   render() {
@@ -24,28 +24,27 @@ class App extends Component {
             }}
             />
           </Switch>
-
+          { // show warning modal if the client is not connected to a supported network
+            !this.props.connected || !this.props.supportedNetwork <WarningModal />
+          }
       </div>
     );
   }
 }
 
 App.propTypes = {
-  loggedIn: PropTypes.bool,
-  getLoggedIn: PropTypes.func.isRequired,
-  role: PropTypes.number,
+  connected: PropTypes.bool,
+  supportedNetwork: PropTypes.func.isRequired,
 };
 
 App.defaultProps = {
-  loggedIn: false,
-  // initalize role at -1. do not load routes until true role id is fetched from the server
-  role: -1,
+  connected: false,
+  supportedNetwork: false,
 };
 
 const mapStateToProps = state => (
   {
     loggedIn: state.api.loggedIn,
-    role: state.api.role,
   }
 );
 
