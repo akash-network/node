@@ -1,0 +1,13 @@
+on kovan
+
+master: 0xf01163467c8329dc7230885fe76ab9597946f676
+
+deploy tx: 0x70d4ce3866d4b257a464c7fa21e83102cc2bcdd4c799b2bb1c95df02551afe76
+
+new contract: 0x59c136ae38ac6cb45e433a22abca301f02a9980f
+
+
+curl --data '{"method":"eth_getTransactionByHash","params":["0x70d4ce3866d4b257a464c7fa21e83102cc2bcdd4c799b2bb1c95df02551afe76"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8545
+
+
+curl --data '{"method":"trace_replayTransaction","params":["0x70d4ce3866d4b257a464c7fa21e83102cc2bcdd4c799b2bb1c95df02551afe76",["trace"]],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8545

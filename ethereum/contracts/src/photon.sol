@@ -42,8 +42,11 @@ contract BadActor {
     }
 }
 
-contract Payable is BadActor {
-    function () public notBadActor payable {}
+contract Payable {
+    function () public payable {}
+    function balanace() external view returns (uint) {
+        return this.balance;
+    }
 }
 
 contract Matchable {
@@ -93,7 +96,7 @@ contract Parameterized is Maintainable, Matchable {
         minimumBalanace = _minimumBalanace;
         cancelFee = _cancelFee;
     }
-    function modify(uint _ram, uint _cpu, uint _rate, uint _minimumBalanace, uint _cancelFee) notMatched public onlyMaintainer {
+    function modify(uint _ram, uint _cpu, uint _rate, uint _minimumBalanace, uint _cancelFee) notMatched onlyMaintainer public  {
         ram = _ram;
         cpu = _cpu;
         rate = _rate;
@@ -102,7 +105,7 @@ contract Parameterized is Maintainable, Matchable {
     }
 }
 
- contract Client is Ownable, Cancelable, Payable, Parameterized {
+ contract Client is BadActor, Cancelable, Ownable, Parameterized, Payable {
 
     Provider public matchedProvider;
     uint public matchStartTime;
@@ -111,7 +114,7 @@ contract Parameterized is Maintainable, Matchable {
 
     // Constructor
     function Client(address maintainer, uint ram, uint cpu, uint rate, uint _minimumBalanace, uint cancelFee, string _manifest)
-        public payable Parameterized(ram, cpu, rate, _minimumBalanace, cancelFee) Maintainable(maintainer)
+        public Ownable() Parameterized(ram, cpu, rate, _minimumBalanace, cancelFee) Maintainable(maintainer)
     {
         manifest = _manifest;
     }
@@ -175,7 +178,7 @@ contract Parameterized is Maintainable, Matchable {
         canceled = true;
     }
 
-    // // lets provider cancel the contract
+    // lets provider cancel the contract
     function providerCancel() external {
         bill();
         // only matchedProvider should be able to call this
@@ -187,7 +190,7 @@ contract Parameterized is Maintainable, Matchable {
     }
 }
 
-contract Provider is Ownable, Parameterized, Cancelable , Payable {
+contract Provider is BadActor, Cancelable, Ownable, Parameterized, Payable {
 
     Client public matchedClient;
     string public networkAddress;
@@ -200,7 +203,7 @@ contract Provider is Ownable, Parameterized, Cancelable , Payable {
     }
 
     // confirm and declare that a valid matching contract is at an address
-    function matchClient(address clientAddress) external notCanceled onlyOwner notMatched notBadActor returns (bool) {
+    function matchClient(address clientAddress) external notCanceled /*onlyOwner*/ notMatched notBadActor returns (bool) {
         // load client contract
         Client client = Client(clientAddress);
         // make sure resources match
@@ -242,7 +245,7 @@ contract Provider is Ownable, Parameterized, Cancelable , Payable {
         reset();
     }
 
-    function makeBadActor() external notBadActor onlyOwner {
+    function makeBadActor() external notBadActor /*onlyOwner*/ {
         badActor = true;
     }
 
@@ -267,14 +270,17 @@ contract Master is Maintainable {
 
     function Master() public Maintainable(msg.sender) {}
 
+    function fund(uint amount, address recipient) private {
+        recipient.transfer(amount);
+    }
+
     // call to put an ask for a service on the network
     function deployClient(uint _ram, uint _cpu, uint _rate, uint _minimumBalanace, uint _cancelFee, string _manifest)
         public payable returns (Client)
     {
         require(msg.value >= _minimumBalanace);
         Client client = new Client(msg.sender, _ram, _cpu, _rate, _minimumBalanace, _cancelFee, _manifest);
-
-        client.transfer(msg.value);
+        fund(msg.value, address(client));
         return client;
     }
 
@@ -284,8 +290,7 @@ contract Master is Maintainable {
     {
         require(msg.value >= _cancelFee);
         Provider provider = new Provider(msg.sender, _ram, _cpu, _rate, _minimumBalanace, _cancelFee, _networkAddress);
-        todo: following line breaks deployment
-        provider.transfer(msg.value);
+        fund(msg.value, address(provider));
         return provider;
     }
 
