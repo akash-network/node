@@ -1,0 +1,25 @@
+digraph marketplace {
+
+  rankdir=TD;
+
+  "master"                      [shape=circle label="Master"];
+  "provider"                    [shape=circle label="Provider"];
+  "client"                      [shape=circle label="Client"];
+  "user"                        [shape=square label="User"];
+  "datacenter"                  [shape=square label="Datacenter"];
+  "oracle"                      [shape=square label="Oracle"];
+
+  "user" -> "master"            [label=""];
+  "datacenter" -> "master"      [label=""];
+  "master" -> "provider"        [label="deploy"];
+  "master" -> "client"          [label="deploy"];
+  "provider" -> "client"        [label="match"];
+  "client" -> "provider"        [label="transfer"];
+  "user" -> "client"            [label="transfer,\ncancel"];
+  "datacenter" -> "provider"    [label="withdrawal,\ncancel"];
+  "oracle" -> "provider"        [label="make bad actor"];
+
+  { rank=source "user", "datacenter" }
+  { rank=sink  "oracle" }
+  { rank=same "client", "provider" }
+}
