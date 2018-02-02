@@ -2,13 +2,12 @@ import { combineReducers } from 'redux';
 
 import abi from './abi';
 import contracts from './contracts';
-import network from './network';
-
+import networks from './networks';
 
 const reducer = combineReducers({
   abi,
   contracts,
-  network,
+  networks,
 });
 
 export default reducer;

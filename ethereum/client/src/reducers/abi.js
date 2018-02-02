@@ -1,7 +1,7 @@
 const INIT_STATE = {
   "0.0.1": {
     client: [],
-    provide: [],
+    provider: [],
     master: [],
   },
 };

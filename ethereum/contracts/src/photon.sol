@@ -46,7 +46,7 @@ contract Payable is BadActor {
     function () public notBadActor payable {}
 }
 
-contract Matchable is  {
+contract Matchable {
     bool public matched;
     function Matchable() public {
         matched = false;
@@ -62,14 +62,8 @@ contract Matchable is  {
 }
 
 contract Cancelable {
-    bool canceled false;
-    function Cancelable {
-        canceled = false;
-    }
-    function cancel() {
-        canceled = true;
-    }
-    function uncancel() {
+    bool canceled;
+    function Cancelable() public {
         canceled = false;
     }
     modifier isCanceled() {
@@ -84,7 +78,7 @@ contract Cancelable {
 
 }
 
-contract Parameterized is Maintainable, Payable, Matchable, Cancellable {
+contract Parameterized is Maintainable, Matchable {
 
     uint public ram;
     uint public cpu;
@@ -108,7 +102,7 @@ contract Parameterized is Maintainable, Payable, Matchable, Cancellable {
     }
 }
 
- contract Client is Ownable, Parameterized {
+ contract Client is Ownable, Cancelable, Payable, Parameterized {
 
     Provider public matchedProvider;
     uint public matchStartTime;
@@ -181,7 +175,7 @@ contract Parameterized is Maintainable, Payable, Matchable, Cancellable {
         canceled = true;
     }
 
-    // lets provider cancel the contract
+    // // lets provider cancel the contract
     function providerCancel() external {
         bill();
         // only matchedProvider should be able to call this
@@ -193,7 +187,7 @@ contract Parameterized is Maintainable, Payable, Matchable, Cancellable {
     }
 }
 
-contract Provider is Ownable, Parameterized {
+contract Provider is Ownable, Parameterized, Cancelable , Payable {
 
     Client public matchedClient;
     string public networkAddress;
@@ -257,7 +251,7 @@ contract Provider is Ownable, Parameterized {
 
         uint amount = this.balance;
         if (matched) {
-            matchClient.bill();
+            matchedClient.bill();
             // ensure contract always can pay the early cancel fee when not canceled
             amount = amount - cancelFee;
         }
@@ -268,8 +262,10 @@ contract Provider is Ownable, Parameterized {
 
 contract Master is Maintainable {
 
-    function Master() public Maintainable(msg.sender) {}
     mapping(address => uint) public badActors;
+    string public version = "0.0.1";
+
+    function Master() public Maintainable(msg.sender) {}
 
     // call to put an ask for a service on the network
     function deployClient(uint _ram, uint _cpu, uint _rate, uint _minimumBalanace, uint _cancelFee, string _manifest)
@@ -277,6 +273,7 @@ contract Master is Maintainable {
     {
         require(msg.value >= _minimumBalanace);
         Client client = new Client(msg.sender, _ram, _cpu, _rate, _minimumBalanace, _cancelFee, _manifest);
+
         client.transfer(msg.value);
         return client;
     }
@@ -287,6 +284,7 @@ contract Master is Maintainable {
     {
         require(msg.value >= _cancelFee);
         Provider provider = new Provider(msg.sender, _ram, _cpu, _rate, _minimumBalanace, _cancelFee, _networkAddress);
+        todo: following line breaks deployment
         provider.transfer(msg.value);
         return provider;
     }

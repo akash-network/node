@@ -1,35 +1,46 @@
-const INIT_STATE = {
-  kovan: {
+const INIT_STATE = [
+  {
     connected: false,
     id: 42,
+    name: 'kovan',
   },
-  mainnet: {
+  {
     connected: false,
     id: 1,
+    name: 'mainnet',
   },
-  morden: {
+  {
     connected: false,
     id: 2,
+    name: 'morden',
   },
-  rinkeby: {
+  {
     connected: false,
     id: 4,
+    name: 'rinkeby',
   },
-  ropsten: {
+  {
     connected: false,
     id: 3,
+    name: 'ropsten',
   },
-};
+];
 
-const network = (state = INIT_STATE, action) => {
+const networks = (state = INIT_STATE, action) => {
   switch (action.type) {
     case setConnected:
-      // set connection true where netid === id
-      // set all others false
-      return;
+      return state.map(_network) => (
+        const network = { ...network };
+        if (network.id === action.id ) {
+          network.connected = true;
+        } else {
+          network.connected = false;
+        }
+        return network;
+      ));
     defualt:
-      return;
+      return { ...state };
   }
 };
 
-export default network;
+export default networks;
