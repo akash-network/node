@@ -6,3 +6,4 @@ RUN curl https://glide.sh/get | sh
 RUN rm -rf vendor
 RUN glide install
 RUN cd demo && make dockerbuild
+EXPOSE 46657
