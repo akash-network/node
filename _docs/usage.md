@@ -110,7 +110,9 @@ YOU=$(./photon keys get friend | awk '{print $2}')
 >>>>>>> redo redme for multinode setup:demo/README.md
 ```
 
-## Initalize validater nodes
+## Setup validater nodes
+
+### Initalize validater nodes
 
 ```sh
 <<<<<<< HEAD:_docs/usage.md
@@ -120,18 +122,19 @@ YOU=$(./photon keys get friend | awk '{print $2}')
 ./node init <issuer public key> --home=./data/node1 --chain-id=photon-test
 ./node init <issuer public key> --home=./data/node2 --chain-id=photon-test
 ./node init <issuer public key> --home=./data/node3 --chain-id=photon-test
+<<<<<<< HEAD:_docs/usage.md
 ./node init <issuer public key> --home=./data/node3 --chain-id=photon-test
 >>>>>>> redo redme for multinode setup:demo/README.md
+=======
+./node init <issuer public key> --home=./data/node4 --chain-id=photon-test
+>>>>>>> fix readme:demo/README.md
 ```
-
-
-## Setup validater nodes
 
 ### genesis.json
 
-The public keys of node1, node2, and node3 must be present in each's respective genesis file.
+The public keys of node1, node2, node3, and node4 must be present in each's respective genesis file.
 
-`Genesis file location: ./data/node\*/genesis.json`
+`Genesis file location: ./data/node*/genesis.json`
 
 In the genesis file for a single node, the `"validators"` array initally contains the node's public key.
 Copy and paste these array members into each nodes `"validators"` array so that there are three unique entries in each geneis file.
@@ -165,16 +168,23 @@ laddr = "tcp://0.0.0.0:46677"
 
 ### Add seeds to config
 
-For the `[p2p] seeds` field add each validators `[rpc]laddr` separated by comma
+For the `[p2p] seeds` field add each validators `[rpc]laddr` separated by comma, ommiting a validator node's own address.
 
 Example:
 ```
-seeds = "0.0.0.0:46657,0.0.0.0:46667,0.0.0.0:46677"
+seeds = "0.0.0.0:46666,0.0.0.0:46676,0.0.0.0:46686"
 ```
 
 ## Setup non-validater node
 
 The non-validator will not vote on blocks but will verify and keep up with the consensus protocol.
+
+### Initalize validater nodes
+
+```sh
+./node init <issuer public key> --home=./data/node5 --chain-id=photon-test
+```
+
 
 ### genesis.json
 
@@ -184,11 +194,11 @@ Copy the genesis.json from one of the validator nodes to this node.
 
 ### Add seeds to config
 
-For the `[p2p] seeds` field add each validators `[rpc]laddr` separated by comma
+For the `[p2p] seeds` field add each validators `[p2p]laddr` separated by comma
 
 Example:
 ```
-"0.0.0.0:46657,0.0.0.0:46667,0.0.0.0:46677"
+"0.0.0.0:46656,0.0.0.0:46666,0.0.0.0:46676,0.0.0.0:46686"
 ```
 
 ## Start nodes
@@ -200,6 +210,7 @@ In separate temainal sessions or environments
 ./node start --home=data/node2
 ./node start --home=data/node3
 ./node start --home=data/node4
+./node start --home=data/node5
 ```
 
 # Third party library reference:
