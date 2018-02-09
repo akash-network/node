@@ -193,3 +193,20 @@ http://cosmos-sdk.readthedocs.io/en/latest/basecoin-tool.html
 ### Node configuration
 https://github.com/cosmos/cosmos-sdk/blob/master/docs/staking/local-testnet.rst
 https://github.com/tendermint/tendermint/blob/master/docs/using-tendermint.rst
+
+## notes
+
+```sh
+export PHOTON_DATA=$PWD/devdata/client
+export PHOTOND_DATA=$PWD/devdata/node
+
+rm -rf $PHOTON_DATA
+MASTER_ADDRESS=$(./photon key create master)
+
+rm -rf $PHOTOND_DATA
+./photond init $MASTER_ADDRESS
+./photond start
+
+USER_ADDRESS=$(./photon key create user)
+./photon send 100 $USER_ADDRESS -k master
+```

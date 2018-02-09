@@ -4,3 +4,6 @@
 # build artifacts
 /photon
 /photond
+
+# dev artifacts
+/devdata

@@ -53,77 +53,59 @@ services:
         to:
           global: true
 
-deployment:
+profiles:
+
+  compute:
+    web:
+      cpu: 2
+      memory: 3GB
+      disk: 5GB
+    db:
+      cpu: 10
+      memory: 10GB
+      disk: 5GB
 
   infrastructure:
-
     westcoast:
-      region: us-west
-      profiles:
-        web:
-          compute:
-            cpu: 2
-            memory: 3GB
-            disk: 5GB
-          pricing:
-            max-price: 5
-            collateral: 1h
-        db:
-          compute:
-            cpu: 10
-            memory: 10GB
-            disk: 5GB
-          pricing:
-            max-price: 10
-            collateral: 30d
-
+      attributes:
+        region: us-west
+      pricing:
+        web: 8
+        db: 15
     eastcoast:
-      region: us-east
-      profiles:
-        web:
-          compute:
-            cpu: 2
-            memory: 3GB
-            disk: 5GB
-          pricing:
-            max-price: 5
-            collateral: 1h
-        db:
-          compute:
-            cpu: 10
-            memory: 10GB
-            disk: 5GB
-          pricing:
-            max-price: 10
-            collateral: 30d
+      attributes:
+        region: us-east
+      pricing:
+        web: 5
+        db: 10
 
-  workloads:
+deployment:
 
-    db-master:
-      westcoast:
-        profile: db
-        nodes: 1
+  db-master:
+    westcoast:
+      profile: db
+      count: 1
 
-    db-slave:
-      westcoast:
-        profile: db
-        nodes: 1
-      eastcoast:
-        profile: db
-        nodes: 1
+  db-slave:
+    westcoast:
+      profile: db
+      count: 1
+    eastcoast:
+      profile: db
+      count: 1
 
-    db-pool:
-      westcoast:
-        profile: db-pool
-        nodes: 10
-      eastcoast:
-        profile: db-pool
-        nodes: 5
+  db-pool:
+    westcoast:
+      profile: db-pool
+      count: 10
+    eastcoast:
+      profile: db-pool
+      count: 5
 
-    web:
-      westcoast:
-        profile: web
-        nodes: 20
-      eastcoast:
-        profile: web
-        nodes: 10
+  web:
+    westcoast:
+      profile: web
+      count: 20
+    eastcoast:
+      profile: web
+      count: 10

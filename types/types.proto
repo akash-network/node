@@ -1,0 +1,92 @@
+
+syntax = "proto3";
+
+package types;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.stable_marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.gostring_all) = true;
+option (gogoproto.goproto_stringer_all) = true;
+
+//option (gogoproto.stringer_all) = true;
+
+/* BEGIN GLOBAL */
+message Genesis {
+  repeated Account accounts = 1 [(gogoproto.nullable) = false];
+}
+message Tx {
+  bytes key         = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.PubKey"];
+  bytes signature   = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Signature"];
+  TxPayload payload = 3 [(gogoproto.nullable) = false];
+}
+
+message TxPayload {
+  oneof payload {
+    TxSend txSend = 1;
+  }
+}
+/* END GLOBAL */
+
+/* BEGIN ACCOUNT */
+message Account {
+  // wait for https://github.com/gogo/protobuf/pull/227
+  // bytes address = 1  [(gogoproto.customtype) = "github.com/tendermint/go-wire/data.Bytes", (gogoproto.nullable) = false];
+
+  bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  uint64 balance = 2;
+}
+
+message TxSend {
+  bytes  from = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  to   = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  uint64 amount    = 3;
+}
+/* END ACCOUNT */
+
+/* BEGIN EXCHANGE */
+message ResourceUnit {
+  uint32 cpu    = 1;
+  uint32 memory = 2;
+  uint64 disk   = 3;
+}
+
+message ResourceGroup {
+  ResourceUnit unit  = 1 [(gogoproto.nullable) = false];
+  uint32       count = 2;
+  uint32       price = 3; // price per unit.
+}
+
+message ProviderAttribute {
+  string name  = 1;
+  string value = 2;
+}
+
+message DeploymentGroup {
+  repeated ProviderAttribute requirements = 1 [(gogoproto.nullable) = false];
+  repeated ResourceGroup     resources    = 2 [(gogoproto.nullable) = false];
+}
+
+message Deployment {
+  repeated DeploymentGroup groups = 1 [(gogoproto.nullable) = false];
+}
+
+message DeploymentOrder {
+  uint32 group      = 2;
+}
+
+message FulfillmentOrder {
+  string   deployment = 1;
+  uint32   group      = 2;
+  string   provider   = 3;
+  repeated ResourceGroup resources = 4 [(gogoproto.nullable) = false];
+}
+
+message Lease {
+  string deployment = 1;
+  uint32 group      = 2;
+  uint32 order      = 3;
+}
+
+/* END EXCHANGE */

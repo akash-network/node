@@ -1,8 +1,7 @@
 
-PROTO_FILES  = $(wildcard api/*/*.proto)
+PROTO_FILES  = $(wildcard types/*.proto)
 PROTOC_FILES = $(patsubst %.proto,%.pb.go, $(PROTO_FILES))
 PROGRAMS     = photon photond
-
 
 all: build $(PROGRAMS)
 
@@ -13,6 +12,12 @@ build-linux:
 	env GOOS=linux GOARCH=amd64 go build -o photon-linux -i ./cmd/photon
 	env GOOS=linux GOARCH=amd64 go build -o photond-linux -i ./cmd/photond
 
+photon:
+	go build ./cmd/photon
+
+photond:
+	go build ./cmd/photond
+
 image:
 	docker build --rm -t quay.io/ovrclk/photon:demo .
 
@@ -21,12 +26,6 @@ push-image:
 
 configmap:
 	@$(MAKE) -C _demo
-
-photon:
-	go build ./cmd/photon
-
-photond:
-	go build ./cmd/photond
 
 test:
 	go test $$(glide novendor)
@@ -38,13 +37,13 @@ deps-install:
 	glide install
 
 devdeps-install:
-	go get -u github.com/golang/protobuf/protoc-gen-go
+	go get github.com/gogo/protobuf/protoc-gen-gogo
 	go get -u github.com/cloudflare/cfssl/cmd/...
 
-genapi: $(PROTOC_FILES)
+gentypes: $(PROTOC_FILES)
 
 %.pb.go: %.proto
-	protoc --go_out=plugins=grpc:. $<
+	protoc -I. -I$(GOPATH)/src -I=$(GOPATH)/src/github.com/gogo/protobuf/protobuf --gogo_out=plugins=grpc:. $<
 
 docs:
 	(cd _docs/dot && make)
@@ -52,7 +51,10 @@ docs:
 clean:
 	rm -f $(PROGRAMS)
 
-.PHONY: all build photon photond buildamd64\
+.PHONY: all build build-linux \
+	photon photond \
+	image push-image \
+	configmap \
 	test test-full \
 	deps-install devdeps-install \
 	docs \

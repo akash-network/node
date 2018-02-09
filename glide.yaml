@@ -1,18 +1,43 @@
 package: github.com/ovrclk/photon
 import:
-- package: github.com/ethanfrey/hid
-  version: ea8f4c923d3bc8c9c312b7d38724a294f184258a
-- package: github.com/golang/protobuf
+- package: github.com/gogo/protobuf
+  version: ^1.0.0
   subpackages:
+  - gogoproto
   - proto
-- package: golang.org/x/net
+- package: github.com/spf13/cobra
+- package: github.com/spf13/viper
+  version: master
+- package: github.com/tendermint/abci
+  version: master
   subpackages:
-  - context
-- package: google.golang.org/grpc
-  version: ~1.6.0
+  - types
+- package: github.com/tendermint/go-crypto
+  version: master
   subpackages:
-  - balancer
-  - encoding
-  - resolver
-  - dns
-  - passthrough
+  - keys
+  - keys/cryptostore
+  - keys/storage/filestorage
+- package: github.com/tendermint/go-wire
+  version: master
+  subpackages:
+  - data
+- package: github.com/tendermint/iavl
+- package: github.com/tendermint/tendermint
+  version: master
+  subpackages:
+  - config
+  - node
+  - proxy
+  - rpc/core/types
+  - types
+- package: github.com/tendermint/tmlibs
+  version: master
+  subpackages:
+  - db
+  - log
+- package: github.com/stretchr/testify
+  version: ^1.2.1
+  subpackages:
+  - require
+- package: github.com/rcrowley/go-metrics
