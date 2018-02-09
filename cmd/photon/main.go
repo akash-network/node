@@ -21,7 +21,7 @@ import (
 	coincmd "github.com/cosmos/cosmos-sdk/modules/coin/commands"
 	noncecmd "github.com/cosmos/cosmos-sdk/modules/nonce/commands"
 
-	accountscmd "github.com/ovrclk/photon/demo/plugins/accounts/commands"
+	accountscmd "github.com/ovrclk/photon/plugins/accounts/commands"
 )
 
 // BaseCli - main basecoin client command

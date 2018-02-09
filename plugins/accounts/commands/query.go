@@ -12,7 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/commands/query"
 	"github.com/cosmos/cosmos-sdk/stack"
 
-	"github.com/ovrclk/photon/demo/plugins/accounts"
+	"github.com/ovrclk/photon/plugins/accounts"
 )
 
 const flagHeight = "height"

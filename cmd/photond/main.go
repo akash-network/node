@@ -15,7 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/commands"
 	"github.com/cosmos/cosmos-sdk/stack"
 
-	"github.com/ovrclk/photon/demo/plugins/accounts"
+	"github.com/ovrclk/photon/plugins/accounts"
 )
 
 // RootCmd is the entry point for this binary
