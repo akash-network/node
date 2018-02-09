@@ -3,7 +3,7 @@ package commands
 import (
 	"github.com/cosmos/cosmos-sdk/client/commands"
 	"github.com/cosmos/cosmos-sdk/client/commands/txs"
-	"github.com/ovrclk/photon/demo/plugins/accounts"
+	"github.com/ovrclk/photon/plugins/accounts"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
