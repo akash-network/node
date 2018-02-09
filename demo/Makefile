@@ -2,7 +2,7 @@ build:
 				go build ./cmd/client
 				go build ./cmd/node
 
-dockerbuild:
+buildamd64:
 				env GOOS=linux GOARCH=amd64 go build ./cmd/client
 				env GOOS=linux GOARCH=amd64 go build ./cmd/node
 
