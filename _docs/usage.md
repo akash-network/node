@@ -40,13 +40,7 @@ make
 ## Create basecoin account
 
 ```sh
-<<<<<<< HEAD:_docs/usage.md
-make build
-./photon keys new cool
-./photon keys new friend
-=======
 ./client keys new <account name>
->>>>>>> redo redme for multinode setup:demo/README.md
 ```
 
 ## Initialize data directory
@@ -72,12 +66,7 @@ example:
 ## Start node
 
 ```sh
-<<<<<<< HEAD:_docs/usage.md
-./photond init <the address you copied>
-./photond start
-=======
 ./node start
->>>>>>> redo redme for multinode setup:demo/README.md
 ```
 
 ## Query account
@@ -89,11 +78,7 @@ example:
 ## Send tokens
 
 ```sh
-<<<<<<< HEAD:_docs/usage.md
-./photon init --node=tcp://localhost:46657 --genesis=$HOME/.demonode/genesis.json
-=======
 ./client tx send --name=<your account name> --amount=<amount><denom> --to=<public key> --sequence=<sqn number>
->>>>>>> redo redme for multinode setup:demo/README.md
 ```
 
 # Multi node setup
@@ -101,13 +86,7 @@ example:
 ## Create client keys
 
 ```sh
-<<<<<<< HEAD:_docs/usage.md
-ME=$(./photon keys get cool | awk '{print $2}')
-YOU=$(./photon keys get friend | awk '{print $2}')
-./photon query account $ME
-=======
 ./client keys new issuer
->>>>>>> redo redme for multinode setup:demo/README.md
 ```
 
 ## Setup validater nodes
@@ -115,19 +94,10 @@ YOU=$(./photon keys get friend | awk '{print $2}')
 ### Initalize validater nodes
 
 ```sh
-<<<<<<< HEAD:_docs/usage.md
-./photon tx send --name=cool --amount=1000mycoin --to=$YOU --sequence=1
-./photon query account $YOU
-=======
 ./node init <issuer public key> --home=./data/node1 --chain-id=photon-test
 ./node init <issuer public key> --home=./data/node2 --chain-id=photon-test
 ./node init <issuer public key> --home=./data/node3 --chain-id=photon-test
-<<<<<<< HEAD:_docs/usage.md
-./node init <issuer public key> --home=./data/node3 --chain-id=photon-test
->>>>>>> redo redme for multinode setup:demo/README.md
-=======
 ./node init <issuer public key> --home=./data/node4 --chain-id=photon-test
->>>>>>> fix readme:demo/README.md
 ```
 
 ### genesis.json
