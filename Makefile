@@ -8,6 +8,11 @@ all: build $(PROGRAMS)
 build:
 	go build -i $$(glide novendor)
 
+buildamd64:
+	env GOOS=linux GOARCH=amd64 go build ./cmd/photon
+	env GOOS=linux GOARCH=amd64 go build ./cmd/photond
+
+
 photon:
 	go build ./cmd/photon
 
@@ -38,7 +43,7 @@ docs:
 clean:
 	rm -f $(PROGRAMS)
 
-.PHONY: all build photon photond \
+.PHONY: all build photon photond buildamd64\
 	test test-full \
 	deps-install devdeps-install \
 	docs \

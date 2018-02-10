@@ -78,6 +78,6 @@ func main() {
 		auto.AutoCompleteCmd,
 	)
 
-	cmd := cli.PrepareMainCmd(BaseCli, "BC", os.ExpandEnv("./data/client"))
+	cmd := cli.PrepareMainCmd(BaseCli, "BC", os.ExpandEnv("./data/photon"))
 	cmd.Execute()
 }

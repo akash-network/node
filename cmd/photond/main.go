@@ -52,6 +52,6 @@ func main() {
 	)
 	commands.SetUpRoot(RootCmd)
 
-	cmd := cli.PrepareMainCmd(RootCmd, "BC", os.ExpandEnv("./data/node"))
+	cmd := cli.PrepareMainCmd(RootCmd, "BC", os.ExpandEnv("./data/photond"))
 	cmd.Execute()
 }
