@@ -1,0 +1,203 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  name: photond1
+  labels:
+    app: photond1
+spec:
+  type: NodePort
+  ports:
+  - port: 46656
+    name: photond1-p2p
+  - port: 46657
+    name: photond1-rpc
+  - port: 46658
+    name: photond1-proxyapp
+  selector:
+    app: photond1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  name: photond2
+  labels:
+    app: photond2
+spec:
+  type: NodePort
+  ports:
+  - port: 46656
+    name: photond2-p2p
+  - port: 46657
+    name: photond2-rpc
+  - port: 46658
+    name: photond2-proxyapp
+  selector:
+    app: photond2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  name: photond3
+  labels:
+    app: photond3
+spec:
+  type: NodePort
+  ports:
+  - port: 46656
+    name: photond3-p2p
+  - port: 46657
+    name: photond3-rpc
+  - port: 46658
+    name: photond3-proxyapp
+  selector:
+    app: photond3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  name: photond4
+  labels:
+    app: photond4
+spec:
+  type: NodePort
+  ports:
+  - port: 46656
+    name: photond4-p2p
+  - port: 46657
+    name: photond4-rpc
+  - port: 46658
+    name: photond4-proxyapp
+  selector:
+    app: photond4
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: photond1
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: photond1
+    spec:
+      containers:
+      - name: photond1
+        image: quay.io/ovrclk/photon:demo
+        imagePullPolicy: Always
+        command: ["/bin/sh","-c"]
+        args: ["mkdir -p data/photond1; cp static_data/photond1/* data/photond1/ && ./photond start --home=data/photond1"]
+        ports:
+        - containerPort: 46656
+        - containerPort: 46657
+        - containerPort: 46658
+        volumeMounts:
+          - name: photond1
+            mountPath: /go/src/github.com/ovrclk/photon/static_data/photond1
+      volumes:
+        - name: photond1
+          configMap:
+            name: photond1
+      imagePullSecrets:
+      - name: ovrclk-builder-pull-secret
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: photond2
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: photond2
+    spec:
+      containers:
+      - name: photond2
+        image: quay.io/ovrclk/photon:demo
+        imagePullPolicy: Always
+        command: ["/bin/sh","-c"]
+        args: ["mkdir -p data/photond2; cp static_data/photond2/* data/photond2/ && ./photond start --home=data/photond2"]
+        ports:
+        - containerPort: 46656
+        - containerPort: 46657
+        - containerPort: 46658
+        volumeMounts:
+          - name: photond2
+            mountPath: /go/src/github.com/ovrclk/photon/static_data/photond2
+      volumes:
+        - name: photond2
+          configMap:
+            name: photond2
+      imagePullSecrets:
+      - name: ovrclk-builder-pull-secret
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: photond3
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: photond3
+    spec:
+      containers:
+      - name: photond3
+        image: quay.io/ovrclk/photon:demo
+        imagePullPolicy: Always
+        command: ["/bin/sh","-c"]
+        args: ["mkdir -p data/photond3; cp static_data/photond3/* data/photond3/ && ./photond start --home=data/photond3"]
+        ports:
+        - containerPort: 46656
+        - containerPort: 46657
+        - containerPort: 46658
+        volumeMounts:
+          - name: photond3
+            mountPath: /go/src/github.com/ovrclk/photon/static_data/photond3
+      volumes:
+        - name: photond3
+          configMap:
+            name: photond3
+      imagePullSecrets:
+      - name: ovrclk-builder-pull-secret
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: photond4
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: photond4
+    spec:
+      containers:
+      - name: photond4
+        image: quay.io/ovrclk/photon:demo
+        imagePullPolicy: Always
+        command: ["/bin/sh","-c"]
+        args: ["mkdir -p data/photond4; cp static_data/photond4/* data/photond4/ && ./photond start --home=data/photond4"]
+        ports:
+        - containerPort: 46656
+        - containerPort: 46657
+        - containerPort: 46658
+        volumeMounts:
+          - name: photond4
+            mountPath: /go/src/github.com/ovrclk/photon/static_data/photond4
+      volumes:
+        - name: photond4
+          configMap:
+            name: photond4
+      imagePullSecrets:
+      - name: ovrclk-builder-pull-secret

@@ -1,0 +1,53 @@
+{
+  "app_hash": "",
+  "chain_id": "local",
+  "genesis_time": "0001-01-01T00:00:00.000Z",
+  "validators": [
+    {
+      "power": 10,
+      "name": "",
+      "pub_key": {
+        "type": "ed25519",
+        "data": "E733BC7603158DA8A8B6F8545C436F5C5717F3732967613B911FF73209943B9E"
+      }
+    },
+    {
+      "power": 10,
+      "name": "",
+      "pub_key": {
+        "type": "ed25519",
+        "data": "40E3212A66B57D3CB0172ED97A6D95E84CD3AF15D0C547E63DEE75694B3FE841"
+      }
+    },
+    {
+      "power": 10,
+      "name": "",
+      "pub_key": {
+        "type": "ed25519",
+        "data": "B516B3ABE352F76FA5816BA4B2407DA365D0DAAE096ABC69AFEBDC6957AF7200"
+      }
+    },
+    {
+      "power": 10,
+      "name": "",
+      "pub_key": {
+        "type": "ed25519",
+        "data": "6F8D7667DACBC1C937A14F0171F0155FD318B51A9FDADB40AF949333FDA83A33"
+      }
+    }
+  ],
+  "app_options": {
+    "accounts": [{
+      "address": "9D0E23535B1D99AC7B8E7CE3FCD3844724E44F01",
+      "coins": [
+        {
+          "denom": "mycoin",
+          "amount": 9007199254740992
+        }
+      ]
+    }],
+    "plugin_options": [
+      "coin/issuer", {"app": "sigs", "addr": "9D0E23535B1D99AC7B8E7CE3FCD3844724E44F01"}
+    ]
+  }
+}
