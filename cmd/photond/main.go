@@ -41,18 +41,17 @@ func BuildApp(feeDenom string) sdk.Handler {
 }
 
 func main() {
-	// set coin name
+	// todo: create an issue in cosmos-sdk about custom coin names not working
 	commands.Handler = BuildApp("photon")
 
 	RootCmd.AddCommand(
 		commands.InitCmd,
 		commands.StartCmd,
-		//commands.RelayCmd,
 		commands.UnsafeResetAllCmd,
 		client.VersionCmd,
 	)
 	commands.SetUpRoot(RootCmd)
 
-	cmd := cli.PrepareMainCmd(RootCmd, "BC", os.ExpandEnv("$HOME/.demonode"))
+	cmd := cli.PrepareMainCmd(RootCmd, "BC", os.ExpandEnv("./data/photond"))
 	cmd.Execute()
 }

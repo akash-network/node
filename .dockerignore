@@ -1,0 +1,12 @@
+# vendor
+vendor
+
+# binaries
+photon
+photond
+photon-linux
+photond-linux
+
+# etc
+.github
+*.DS_Store
