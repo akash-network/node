@@ -3,6 +3,7 @@ PROTO_FILES  = $(wildcard api/*/*.proto)
 PROTOC_FILES = $(patsubst %.proto,%.pb.go, $(PROTO_FILES))
 PROGRAMS     = photon photond
 
+
 all: build $(PROGRAMS)
 
 build:
@@ -19,14 +20,7 @@ push-image:
 	docker push quay.io/ovrclk/photon:demo
 
 configmap:
-	kubectl delete configmap photond1
-	kubectl delete configmap photond2
-	kubectl delete configmap photond3
-	kubectl delete configmap photond4
-	kubectl create configmap photond1 --from-file=./_demo/photond1
-	kubectl create configmap photond2 --from-file=./_demo/photond2
-	kubectl create configmap photond3 --from-file=./_demo/photond3
-	kubectl create configmap photond4 --from-file=./_demo/photond4
+	@$(MAKE) -C _demo
 
 photon:
 	go build ./cmd/photon
