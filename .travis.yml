@@ -16,3 +16,4 @@ install:
 
 script:
   - make build && make test-full
+  - make image

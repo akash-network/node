@@ -8,10 +8,25 @@ all: build $(PROGRAMS)
 build:
 	go build -i $$(glide novendor)
 
-buildamd64:
-	env GOOS=linux GOARCH=amd64 go build ./cmd/photon
-	env GOOS=linux GOARCH=amd64 go build ./cmd/photond
+build-linux:
+	env GOOS=linux GOARCH=amd64 go build -o photon-linux -i ./cmd/photon
+	env GOOS=linux GOARCH=amd64 go build -o photond-linux -i ./cmd/photond
 
+image:
+	docker build --rm -t quay.io/ovrclk/photon:demo .
+
+push-image:
+	docker push quay.io/ovrclk/photon:demo
+
+configmap:
+	kubectl delete configmap photond1
+	kubectl delete configmap photond2
+	kubectl delete configmap photond3
+	kubectl delete configmap photond4
+	kubectl create configmap photond1 --from-file=./_demo/photond1
+	kubectl create configmap photond2 --from-file=./_demo/photond2
+	kubectl create configmap photond3 --from-file=./_demo/photond3
+	kubectl create configmap photond4 --from-file=./_demo/photond4
 
 photon:
 	go build ./cmd/photon

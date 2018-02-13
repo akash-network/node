@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: photond1
+spec:
+  containers:
+  - name: photond1
+    image: quay.io/ovrclk/photon:demo
+    imagePullPolicy: Always
+    # command: ["sleep"]
+    # args: ["5000"]
+    # command: ["./photond"]
+    # args: ["start", "--home=data/photond1"]
+    command: ["/bin/sh","-c"]
+    args: ["mkdir -p data/photond1; cp static_data/photond1/* data/photond1/ && ./photond start --home=data/photond1"]
+    ports:
+    - containerPort: 46656
+    - containerPort: 46657
+    - containerPort: 46658
+    volumeMounts:
+      - name: photond1
+        mountPath: /go/src/github.com/ovrclk/photon/static_data/photond1
+  volumes:
+    - name: photond1
+      configMap:
+        name: photond1
+  imagePullSecrets:
+  - name: ovrclk-builder-pull-secret
+  restartPolicy: Never

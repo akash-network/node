@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  name: photond4
+  labels:
+    app: photond4
+spec:
+  type: NodePort
+  ports:
+  - port: 46656
+    name: photond4-p2p
+  - port: 46657
+    name: photond4-rpc
+  - port: 46658
+    name: photond4-proxyapp
+  selector:
+    app: photond4
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: photond4
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: photond4
+    spec:
+      containers:
+      - name: photond4
+        image: quay.io/ovrclk/photon:demo
+        imagePullPolicy: Always
+        command: ["./_demo/run.sh"]
+        args: ["photond4"]
+        ports:
+        - containerPort: 46656
+        - containerPort: 46657
+        - containerPort: 46658
+        volumeMounts:
+          - name: photond4
+            mountPath: /go/src/github.com/ovrclk/photon/static_data/photond4
+      volumes:
+        - name: photond4
+          configMap:
+            name: photond4
+      imagePullSecrets:
+      - name: ovrclk-builder-pull-secret
