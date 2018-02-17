@@ -41,3 +41,6 @@ import:
   subpackages:
   - require
 - package: github.com/rcrowley/go-metrics
+- package: github.com/ethanfrey/hid
+  repo: https://github.com/boz/hid.git
+  version: master

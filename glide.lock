@@ -1,5 +1,5 @@
-hash: 701c286810ad8b774b450099cc70c22d41e320a575a25bfffb4874e2bb433c78
-updated: 2018-02-15T22:41:19.485827379-08:00
+hash: 2981cd8a527e59d7cf11780ed17d1f415d874a02cb450d25d9bacff282187bdb
+updated: 2018-02-16T22:58:16.152094-08:00
 imports:
 - name: github.com/btcsuite/btcd
   version: 9866016012e7992f394888a4e65ec4315dfa8d49
@@ -8,7 +8,8 @@ imports:
 - name: github.com/ebuchman/fail-test
   version: 95f809107225be108efcf10a3509e4ea6ceef3c4
 - name: github.com/ethanfrey/hid
-  version: f76da0b80567e8b6f676e1757b549a93494fe4b5
+  version: 467094215b4f30f8436014ace95f9347de929460
+  repo: https://github.com/boz/hid.git
 - name: github.com/ethanfrey/ledger
   version: f7f2f056357db77db845a79aa1abdadc3ae66369
 - name: github.com/fsnotify/fsnotify

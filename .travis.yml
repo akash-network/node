@@ -1,18 +1,32 @@
 language: go
 
 go:
-  - 1.9
+  - "1.9"
   - master
 
-sudo: required
+sudo: false
 
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install musl-tools -y
+matrix:
+  include:
+    - os: linux
+      go: "1.10"
+      sudo: required
+      env: BUILD_IMAGE=true
+    - os: osx
+      osx_image: xcode9.3beta
+      go: "1.9.2"
+
+addons:
+  apt:
+    packages:
+      - musl-tools
 
 install:
+  - mkdir -p "$GOPATH/bin"
   - curl https://glide.sh/get | sh
   - make deps-install
 
 script:
-  - make build && make test-full && make image
+  - make build
+  - make test-full
+  - if [ "$BUILD_IMAGE" == "true" ];then make image; fi
