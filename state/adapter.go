@@ -16,6 +16,7 @@ const (
 type AccountAdapter interface {
 	Save(account *types.Account) error
 	Get(base.Bytes) (*types.Account, error)
+	KeyFor(base.Bytes) base.Bytes
 }
 
 type accountAdapter struct {
@@ -27,7 +28,7 @@ func NewAccountAdapter(db DB) AccountAdapter {
 }
 
 func (a *accountAdapter) Save(account *types.Account) error {
-	key := append([]byte(accountPath), account.Address...)
+	key := a.KeyFor(account.Address)
 
 	buf := make([]byte, balanceSize)
 	wire.PutUint64(buf, account.GetBalance())
@@ -37,7 +38,7 @@ func (a *accountAdapter) Save(account *types.Account) error {
 }
 
 func (a *accountAdapter) Get(address base.Bytes) (*types.Account, error) {
-	key := append([]byte(accountPath), address...)
+	key := a.KeyFor(address)
 
 	buf := a.db.Get(key)
 
@@ -52,4 +53,8 @@ func (a *accountAdapter) Get(address base.Bytes) (*types.Account, error) {
 	balance := wire.GetUint64(buf)
 
 	return &types.Account{Address: address, Balance: balance}, nil
+}
+
+func (a *accountAdapter) KeyFor(address base.Bytes) base.Bytes {
+	return append([]byte(accountPath), address...)
 }

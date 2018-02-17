@@ -44,7 +44,7 @@ func LoadState(db DB, gen *types.Genesis) (State, error) {
 
 	state := NewState(db)
 
-	if !db.IsEmpty() {
+	if gen == nil || !db.IsEmpty() {
 		return state, nil
 	}
 
