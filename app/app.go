@@ -64,7 +64,8 @@ func (app *app) CheckTx(buf []byte) tmtypes.ResponseCheckTx {
 	if err != nil {
 		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
-	return app_.CheckTx(ctx, tx)
+
+	return app_.CheckTx(ctx, tx.Payload.Payload)
 }
 
 func (app *app) BeginBlock(req tmtypes.RequestBeginBlock) tmtypes.ResponseBeginBlock {
@@ -76,7 +77,7 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
 	}
-	return app_.DeliverTx(ctx, tx)
+	return app_.DeliverTx(ctx, tx.Payload.Payload)
 }
 
 func (app *app) EndBlock(req tmtypes.RequestEndBlock) tmtypes.ResponseEndBlock {
