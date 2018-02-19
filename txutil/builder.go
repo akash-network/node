@@ -12,6 +12,8 @@ import (
 
 type TxBuilder interface {
 	keys.Signable
+
+	Signature() *base.Signature
 }
 
 func BuildTx(signer keys.Signer, keyName, password string, payload interface{}) ([]byte, error) {
@@ -68,6 +70,10 @@ func (b *txBuilder) Signers() ([]crypto.PubKey, error) {
 		return nil, nil
 	}
 	return []crypto.PubKey{crypto.PubKey(*b.tx.Key)}, nil
+}
+
+func (b *txBuilder) Signature() *base.Signature {
+	return b.tx.Signature
 }
 
 func (b *txBuilder) TxBytes() ([]byte, error) {

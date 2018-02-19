@@ -24,11 +24,15 @@ func (t *PubKey) Unmarshal(data []byte) error {
 }
 
 func (t PubKey) MarshalJSON() ([]byte, error) {
-	return t.MarshalJSON()
+	obj := crypto.PubKey(t)
+	return obj.MarshalJSON()
 }
 
 func (t *PubKey) UnmarshalJSON(data []byte) error {
-	return t.UnmarshalJSON(data)
+	obj := &crypto.PubKey{}
+	err := obj.UnmarshalJSON(data)
+	*t = PubKey(*obj)
+	return err
 }
 
 type Signature crypto.Signature
@@ -48,9 +52,13 @@ func (t *Signature) Unmarshal(data []byte) error {
 }
 
 func (t Signature) MarshalJSON() ([]byte, error) {
-	return t.MarshalJSON()
+	obj := crypto.Signature(t)
+	return obj.MarshalJSON()
 }
 
 func (t *Signature) UnmarshalJSON(data []byte) error {
-	return t.UnmarshalJSON(data)
+	obj := &crypto.Signature{}
+	err := obj.UnmarshalJSON(data)
+	*t = Signature(*obj)
+	return err
 }
