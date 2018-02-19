@@ -64,7 +64,6 @@ func (app *app) CheckTx(buf []byte) tmtypes.ResponseCheckTx {
 	if err != nil {
 		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
-
 	return app_.CheckTx(ctx, tx.Payload.Payload)
 }
 
