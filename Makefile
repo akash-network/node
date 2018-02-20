@@ -33,12 +33,19 @@ test:
 test-full:
 	go test -race $$(glide novendor)
 
+test-cover:
+	goveralls -service=travis-pro
+
 deps-install:
 	glide install
 
 devdeps-install:
 	go get github.com/gogo/protobuf/protoc-gen-gogo
 	go get -u github.com/cloudflare/cfssl/cmd/...
+
+coverdeps-install:
+	go get golang.org/x/tools/cmd/cover
+	go get github.com/mattn/goveralls
 
 gentypes: $(PROTOC_FILES)
 
@@ -59,5 +66,6 @@ clean:
 	configmap \
 	test test-full \
 	deps-install devdeps-install \
+	test-cover coverdeps-install \
 	docs \
 	clean

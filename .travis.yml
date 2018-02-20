@@ -11,7 +11,7 @@ matrix:
     - os: linux
       go: "1.10"
       sudo: required
-      env: BUILD_IMAGE=true
+      env: PRIMARY_CONFIG=true
     - os: osx
       osx_image: xcode9.3beta
       go: "1.9.2"
@@ -25,8 +25,10 @@ install:
   - mkdir -p "$GOPATH/bin"
   - curl https://glide.sh/get | sh
   - make deps-install
+  - if [ "$PRIMARY_CONFIG" == "true" ];then make coverdeps-install; fi
 
 script:
   - make build
   - make test-full
-  - if [ "$BUILD_IMAGE" == "true" ];then make image; fi
+  - if [ "$PRIMARY_CONFIG" == "true" ];then make image     ; fi
+  - if [ "$PRIMARY_CONFIG" == "true" ];then make test-cover; fi

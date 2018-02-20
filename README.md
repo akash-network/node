@@ -1,4 +1,4 @@
-# Photon [![Build Status](https://travis-ci.com/ovrclk/photon.svg?token=xMx9pPujMteGc5JpGjzX&branch=master-update)](https://travis-ci.com/ovrclk/photon)
+# Photon [![Build Status](https://travis-ci.com/ovrclk/photon.svg?token=xMx9pPujMteGc5JpGjzX&branch=master-update)](https://travis-ci.com/ovrclk/photon) [![Coverage Status](https://coveralls.io/repos/github/ovrclk/photon/badge.svg?t=bXSvuV)](https://coveralls.io/github/ovrclk/photon)
 
 The Photon Network is a blockchain-powered cloud infrasture system that pairs independent datacenter providers with users seeking high-performance application hosting.  The process is simple for both parties - Datacenter components are easy to install and provide a high degree of automation, while application deployment and administration is simple and intuitive.
 
