@@ -1,12 +1,14 @@
+# etc
+/.github
+/_docs
+*.DS_Store
+
 # vendor
-vendor
+/vendor
 
 # binaries
-photon
-photond
-photon-linux
-photond-linux
+/photon
+/photond
 
-# etc
-.github
-*.DS_Store
+# dev artifacts
+/devdata

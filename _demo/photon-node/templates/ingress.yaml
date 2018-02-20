@@ -1,0 +1,25 @@
+{{- if .Values.ingress.enabled -}}
+{{- $fullName := include "photon-node.fullname" . -}}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}
+  labels:
+    app: {{ template "photon-node.name" . }}
+    chart: {{ template "photon-node.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+{{- with .Values.ingress.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+  rules:
+    - host: {{ .Release.Name }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: {{ $fullName }}
+              servicePort: photond-p2p
+{{- end }}

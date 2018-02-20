@@ -11,6 +11,7 @@ import (
 
 func initEnv(root string) error {
 	viper.SetEnvPrefix("PHOTON")
+	viper.AutomaticEnv()
 
 	viper.SetConfigFile(path.Join(root, "photon.toml"))
 

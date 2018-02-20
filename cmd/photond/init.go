@@ -1,89 +1,95 @@
 package main
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
-
 	ptypes "github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
+	"github.com/ovrclk/photon/util/initgen"
 	"github.com/spf13/cobra"
-	"github.com/tendermint/tendermint/types"
 )
 
 const (
 	maxTokens uint64 = 1000000000
-	chainID          = "local"
+
+	flagInitCount  = "count"
+	flagInitType   = "type"
+	flagInitOutput = "out"
+	flagInitName   = "name"
 )
 
 func initCommand() *cobra.Command {
+
 	cmd := &cobra.Command{
 		Use:   "init [address]",
 		Short: "Initialize node",
 		Args:  cobra.ExactArgs(1),
 		RunE:  withContext(doInitCommand),
 	}
+
+	cmd.Flags().UintP(flagInitCount, "c", 1, "generate multiple init directories")
+	cmd.Flags().StringP(flagInitType, "t", string(initgen.TypeDirectory), "output type (dir,helm)")
+	cmd.Flags().StringP(flagInitOutput, "o", "", "output directory (default to -d value)")
+	cmd.Flags().StringP(flagInitName, "n", "node", "node name")
+
 	return cmd
 }
 
 func doInitCommand(ctx Context, cmd *cobra.Command, args []string) error {
 
-	cfg, err := ctx.TMConfig()
+	b := initgen.NewBuilder()
+
+	name, err := cmd.Flags().GetString(flagInitName)
+	if err != nil {
+		return err
+	}
+	b = b.WithName(name)
+
+	path, err := cmd.Flags().GetString(flagInitOutput)
+	if err != nil {
+		return err
+	}
+	if path == "" {
+		path = ctx.RootDir()
+	}
+	b = b.WithPath(path)
+
+	count, err := cmd.Flags().GetUint(flagInitCount)
+	if err != nil {
+		return err
+	}
+	b = b.WithCount(count)
+
+	type_, err := cmd.Flags().GetString(flagInitType)
 	if err != nil {
 		return err
 	}
 
-	pval := types.GenPrivValidatorFS("")
+	pg, err := generatePhotonGenesis(cmd, args)
+	if err != nil {
+		return err
+	}
+	b = b.WithPhotonGenesis(pg)
 
-	// photon genesis
-
-	addr := new(base.Bytes)
-	if err := addr.DecodeString(args[0]); err != nil {
+	wctx, err := b.Create()
+	if err != nil {
 		return err
 	}
 
-	pgenesis := &ptypes.Genesis{
+	w, err := initgen.CreateWriter(initgen.Type(type_), wctx)
+	if err != nil {
+		return err
+	}
+
+	return w.Write()
+}
+
+func generatePhotonGenesis(cmd *cobra.Command, args []string) (*ptypes.Genesis, error) {
+	addr := new(base.Bytes)
+	if err := addr.DecodeString(args[0]); err != nil {
+		return nil, err
+	}
+	return &ptypes.Genesis{
 		Accounts: []ptypes.Account{
 			ptypes.Account{Address: *addr, Balance: maxTokens},
 		},
-	}
-
-	doc := types.GenesisDoc{
-		ChainID: chainID,
-		Validators: []types.GenesisValidator{
-			types.GenesisValidator{
-				Name:   "root",
-				Power:  10,
-				PubKey: pval.PubKey,
-			},
-		},
-		AppOptions: pgenesis,
-	}
-
-	if err := doc.ValidateAndComplete(); err != nil {
-		return err
-	}
-	if err := writeObj(doc, cfg.GenesisFile(), 0644); err != nil {
-		return err
-	}
-	if err := writeObj(pval, cfg.PrivValidatorFile(), 0400); err != nil {
-		return err
-	}
-	return nil
-}
-
-func writeObj(obj interface{}, path string, perm os.FileMode) error {
-	data, err := json.MarshalIndent(obj, "", "  ")
-	if err != nil {
-		return err
-	}
-	_, err = os.Stat(path)
-	if !os.IsNotExist(err) {
-		return nil
-	}
-	err = ioutil.WriteFile(path, data, perm)
-	if err != nil {
-		return err
-	}
-	return nil
+	}, nil
 }

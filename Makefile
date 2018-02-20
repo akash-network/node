@@ -1,16 +1,14 @@
-
 PROTO_FILES  = $(wildcard types/*.proto)
 PROTOC_FILES = $(patsubst %.proto,%.pb.go, $(PROTO_FILES))
 PROGRAMS     = photon photond
+
+IMAGE_REPO ?= quay.io/ovrclk/photon
+IMAGE_TAG  ?= latest
 
 all: build $(PROGRAMS)
 
 build:
 	go build -i $$(glide novendor)
-
-build-linux:
-	env GOOS=linux GOARCH=amd64 go build -o photon-linux -i ./cmd/photon
-	env GOOS=linux GOARCH=amd64 go build -o photond-linux -i ./cmd/photond
 
 photon:
 	go build ./cmd/photon
@@ -19,13 +17,13 @@ photond:
 	go build ./cmd/photond
 
 image:
-	docker build --rm -t quay.io/ovrclk/photon:demo .
+	docker build --rm -t $(IMAGE_REPO):$(IMAGE_TAG) .
 
-push-image:
-	docker push quay.io/ovrclk/photon:demo
+image-push:
+	docker push $(IMAGE_REPO):$(IMAGE_TAG)
 
-configmap:
-	@$(MAKE) -C _demo
+image-minikube:
+	eval $$(minikube docker-env) && make image
 
 test:
 	go test $$(glide novendor)
@@ -63,10 +61,9 @@ docs:
 clean:
 	rm -f $(PROGRAMS)
 
-.PHONY: all build build-linux \
+.PHONY: all build \
 	photon photond \
-	image push-image \
-	configmap \
+	image image-push \
 	test test-full \
 	deps-install devdeps-install \
 	test-cover coverdeps-install \
