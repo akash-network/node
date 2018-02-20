@@ -34,5 +34,6 @@ install:
 script:
   - make build
   - make test-full
+  - make test-vet
   - if [ "$PRIMARY_CONFIG" == "true" ];then make image     ; fi
   - if [ "$PRIMARY_CONFIG" == "true" ];then make test-cover; fi

@@ -36,6 +36,9 @@ test-full:
 test-cover:
 	goveralls -service=travis-pro
 
+test-vet:
+	go vet $$(glide novendor)
+
 deps-install:
 	glide install
 
@@ -65,5 +68,6 @@ clean:
 	test test-full \
 	deps-install devdeps-install \
 	test-cover coverdeps-install \
+	test-vet \
 	docs \
 	clean
