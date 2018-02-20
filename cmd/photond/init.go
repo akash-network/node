@@ -44,7 +44,7 @@ func doInitCommand(ctx Context, cmd *cobra.Command, args []string) error {
 
 	pgenesis := &ptypes.Genesis{
 		Accounts: []ptypes.Account{
-			ptypes.Account{*addr, maxTokens},
+			ptypes.Account{Address: *addr, Balance: maxTokens},
 		},
 	}
 
