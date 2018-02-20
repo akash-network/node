@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/go-kit/kit/log/term"
 	"github.com/ovrclk/photon/app"
 	"github.com/ovrclk/photon/node"
 	"github.com/ovrclk/photon/state"
@@ -47,8 +48,6 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-
 	db, err := state.LoadDB(path.Join(ctx.RootDir(), "data", dbName))
 	if err != nil {
 		return err
@@ -59,7 +58,13 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	app, err := app.Create(state, logger)
+	logger := log.NewTMLoggerWithColorFn(log.NewSyncWriter(os.Stdout), logColorFn)
+	logger = log.NewFilter(logger, log.AllowError(),
+		log.AllowDebugWith("module", "photon"))
+
+	applog := logger.With("module", "photon")
+
+	app, err := app.Create(state, applog)
 	if err != nil {
 		return err
 	}
@@ -78,7 +83,7 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Failed to start node: %v", err)
 	}
 
-	logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
+	applog.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
 
 	n.RunForever()
 
@@ -89,4 +94,8 @@ func tmgenesisProvider(path string) tmnode.GenesisDocProvider {
 	return func() (*tmtypes.GenesisDoc, error) {
 		return node.TMGenesisFromFile(path)
 	}
+}
+
+func logColorFn(keyvals ...interface{}) term.FgBgColor {
+	return term.FgBgColor{}
 }

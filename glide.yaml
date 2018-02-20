@@ -5,6 +5,7 @@ import:
   subpackages:
   - gogoproto
   - proto
+  - jsonpb
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
   version: master
@@ -42,5 +43,5 @@ import:
   - require
 - package: github.com/rcrowley/go-metrics
 - package: github.com/ethanfrey/hid
-  repo: https://github.com/boz/hid.git
   version: master
+  repo: https://github.com/boz/hid.git

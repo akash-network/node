@@ -1,10 +1,14 @@
-hash: 2981cd8a527e59d7cf11780ed17d1f415d874a02cb450d25d9bacff282187bdb
-updated: 2018-02-16T22:58:16.152094-08:00
+hash: 5543e53610f3b7428f7594d8e9734ea7c7f6daa191a442e49c28d3e51d6b9041
+updated: 2018-02-19T22:02:53.416154-08:00
 imports:
 - name: github.com/btcsuite/btcd
   version: 9866016012e7992f394888a4e65ec4315dfa8d49
   subpackages:
   - btcec
+- name: github.com/davecgh/go-spew
+  version: 346938d642f2ec3594ed81d874461961cd0faa76
+  subpackages:
+  - spew
 - name: github.com/ebuchman/fail-test
   version: 95f809107225be108efcf10a3509e4ea6ceef3c4
 - name: github.com/ethanfrey/hid
@@ -79,6 +83,10 @@ imports:
   version: acdc4509485b587f5e675510c4f2c63e90ff68a8
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
 - name: github.com/rcrowley/go-metrics
   version: 8732c616f52954686704c8645fe1a9d59e9df7c1
 - name: github.com/spf13/afero
@@ -242,12 +250,4 @@ imports:
   version: 535f85221eb67ab842438877b22cac6274380cf2
 - name: gopkg.in/yaml.v2
   version: d670f9405373e636a5a2765eea47fac0c9bc91a4
-testImports:
-- name: github.com/davecgh/go-spew
-  version: 346938d642f2ec3594ed81d874461961cd0faa76
-  subpackages:
-  - spew
-- name: github.com/pmezard/go-difflib
-  version: 792786c7400a136282c1664665ae0a8db921c6c2
-  subpackages:
-  - difflib
+testImports: []

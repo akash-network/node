@@ -43,7 +43,9 @@ devdeps-install:
 gentypes: $(PROTOC_FILES)
 
 %.pb.go: %.proto
-	protoc -I. -I$(GOPATH)/src -I=$(GOPATH)/src/github.com/gogo/protobuf/protobuf --gogo_out=plugins=grpc:. $<
+	protoc -I. \
+		-Ivendor -Ivendor/github.com/gogo/protobuf/protobuf \
+		--gogo_out=plugins=grpc:. $<
 
 docs:
 	(cd _docs/dot && make)
