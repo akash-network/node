@@ -21,6 +21,10 @@ addons:
     packages:
       - musl-tools
 
+cache:
+  directories:
+    - $HOME/.glide
+
 install:
   - mkdir -p "$GOPATH/bin"
   - curl https://glide.sh/get | sh
