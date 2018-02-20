@@ -5,6 +5,8 @@ type State interface {
 	Hash() []byte
 	Commit(version uint64) ([]byte, error)
 
+	DB() DBReader
+
 	Account() AccountAdapter
 }
 
@@ -26,6 +28,10 @@ func (s *state) Hash() []byte {
 
 func (s *state) Commit(version uint64) ([]byte, error) {
 	return s.db.Commit(version)
+}
+
+func (s *state) DB() DBReader {
+	return s.db
 }
 
 func (s *state) Account() AccountAdapter {

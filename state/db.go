@@ -2,16 +2,19 @@ package state
 
 import "github.com/tendermint/iavl"
 
-type DB interface {
+type DBReader interface {
 	IsEmpty() bool
 	Version() uint64
 	Hash() []byte
-	Commit(version uint64) ([]byte, error)
-
 	Get(key []byte) []byte
+	GetWithProof(key []byte) ([]byte, iavl.KeyProof, error)
+}
+
+type DB interface {
+	DBReader
+	Commit(version uint64) ([]byte, error)
 	Set(key, val []byte)
 	Remove(key []byte) ([]byte, bool)
-	GetWithProof(key []byte) ([]byte, iavl.KeyProof, error)
 }
 
 type iavlDB struct {

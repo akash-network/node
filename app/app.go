@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/photon/app/account"
+	"github.com/ovrclk/photon/app/store"
 	apptypes "github.com/ovrclk/photon/app/types"
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/txutil"
@@ -31,8 +32,15 @@ func Create(state state.State, logger log.Logger) (tmtypes.Application, error) {
 	var apps []apptypes.Application
 
 	{
-		app, err := account.NewApp(state,
-			logger.With("app", "account"))
+		app, err := account.NewApp(state, logger.With("app", "account"))
+		if err != nil {
+			return nil, err
+		}
+		apps = append(apps, app)
+	}
+
+	{
+		app, err := store.NewApp(state, logger.With("app", "store"))
 		if err != nil {
 			return nil, err
 		}
