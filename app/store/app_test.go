@@ -14,11 +14,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmtypes "github.com/tendermint/abci/types"
-	wire "github.com/tendermint/go-wire"
+)
+
+const (
+	balance uint64 = 100
+	nonce   uint64 = 1
 )
 
 func TestStoreApp(t *testing.T) {
-	const balance uint64 = 100
 
 	kmgr := testutil.KeyManager(t)
 
@@ -27,7 +30,7 @@ func TestStoreApp(t *testing.T) {
 
 	state := testutil.NewState(t, &types.Genesis{
 		Accounts: []types.Account{
-			types.Account{Address: base.Bytes(keyfrom.Address), Balance: balance},
+			types.Account{Address: base.Bytes(keyfrom.Address), Balance: balance, Nonce: nonce},
 		},
 	})
 
@@ -44,10 +47,11 @@ func TestStoreApp(t *testing.T) {
 			Path: store.QueryPath,
 			Data: key,
 		})
+		acc := new(types.Account)
+		acc.Unmarshal(resp.Value)
 		assert.True(t, resp.IsOK())
 		assert.Equal(t, key, resp.Key.Bytes())
-		assert.Len(t, resp.Value, 8)
-		assert.Equal(t, balance, wire.GetUint64(resp.Value))
+		assert.Equal(t, balance, acc.Balance)
 		assert.Empty(t, resp.Proof.Bytes())
 	}
 
@@ -58,10 +62,11 @@ func TestStoreApp(t *testing.T) {
 			Data:  key,
 			Prove: true,
 		})
+		acc := new(types.Account)
+		acc.Unmarshal(resp.Value)
 		assert.True(t, resp.IsOK())
 		assert.Equal(t, key, resp.Key.Bytes())
-		assert.Len(t, resp.Value, 8)
-		assert.Equal(t, balance, wire.GetUint64(resp.Value))
+		assert.Equal(t, balance, acc.Balance)
 		assert.NotEmpty(t, resp.Proof.Bytes())
 	}
 

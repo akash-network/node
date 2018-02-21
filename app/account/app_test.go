@@ -21,6 +21,7 @@ func TestAccountApp(t *testing.T) {
 	const (
 		balance uint64 = 150
 		amount  uint64 = 100
+		nonce   uint64 = 1
 	)
 
 	kmgr := testutil.KeyManager(t)
@@ -36,6 +37,7 @@ func TestAccountApp(t *testing.T) {
 			From:   base.Bytes(keyfrom.Address),
 			To:     base.Bytes(keyto.Address),
 			Amount: amount,
+			Nonce:  nonce,
 		},
 	}
 

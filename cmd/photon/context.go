@@ -116,8 +116,6 @@ func (ctx *context) Nonce() uint64 {
 		res.Unmarshal(result.Response.Value)
 		nonce = res.Nonce + 1
 	}
-	print("nonce: ")
-	println(nonce)
 	return nonce
 }
 
