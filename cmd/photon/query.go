@@ -43,10 +43,9 @@ func doQueryCommand(ctx Context, cmd *cobra.Command, args []string) error {
 
 	res.Unmarshal(result.Response.Value)
 
-	fmt.Println(string(result.Response.Key))
+	fmt.Println("query key: " + string(result.Response.Key))
+	print("query value: ")
 	fmt.Println(res)
-
-	println(res)
 
 	return nil
 }
