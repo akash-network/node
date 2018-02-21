@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/hex"
 	"errors"
-	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/types"
@@ -43,9 +45,9 @@ func doQueryCommand(ctx Context, cmd *cobra.Command, args []string) error {
 
 	res.Unmarshal(result.Response.Value)
 
-	fmt.Println("query key: " + string(result.Response.Key))
-	print("query value: ")
-	fmt.Println(res)
+	println("query path: " + queryPath)
+	println("address: " + strings.ToUpper(hex.EncodeToString(res.Address)))
+	println("balance: " + strconv.FormatUint(res.Balance, 10))
 
 	return nil
 }
