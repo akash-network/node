@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/hex"
-	"errors"
 	"strconv"
 	"strings"
 
@@ -33,9 +32,6 @@ func doQueryCommand(ctx Context, cmd *cobra.Command, args []string) error {
 	res := new(types.Account)
 
 	account := args[0]
-	if len(args[0]) < 1 {
-		return errors.New("account invalid. Too $hort")
-	}
 
 	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
 

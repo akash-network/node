@@ -56,8 +56,6 @@ func (a *accountAdapter) Get(address base.Bytes) (*types.Account, error) {
 	return &types.Account{Address: address, Balance: balance}, nil
 }
 
-// publicKey -> "/accounts/publickey"
-// should be renamed to PathFor
 func (a *accountAdapter) KeyFor(address base.Bytes) base.Bytes {
 	return append([]byte(AccountPath), address...)
 }
