@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ovrclk/photon/app/account"
 	"github.com/ovrclk/photon/app/store"
+	pstate "github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/testutil"
 	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
@@ -34,12 +34,12 @@ func TestStoreApp(t *testing.T) {
 	app, err := store.NewApp(state, testutil.Logger())
 
 	assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: store.QueryPath}))
-	assert.False(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", account.QueryPath, hex.EncodeToString(keyfrom.Address))}))
+	assert.False(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.AccountPath, hex.EncodeToString(keyfrom.Address))}))
 
 	assert.False(t, app.AcceptTx(nil, nil))
 
 	{
-		key := append([]byte(account.QueryPath), keyfrom.Address...)
+		key := append([]byte(pstate.AccountPath), keyfrom.Address...)
 		resp := app.Query(tmtypes.RequestQuery{
 			Path: store.QueryPath,
 			Data: key,
@@ -52,7 +52,7 @@ func TestStoreApp(t *testing.T) {
 	}
 
 	{
-		key := append([]byte(account.QueryPath), keyfrom.Address...)
+		key := append([]byte(pstate.AccountPath), keyfrom.Address...)
 		resp := app.Query(tmtypes.RequestQuery{
 			Path:  store.QueryPath,
 			Data:  key,
@@ -66,7 +66,7 @@ func TestStoreApp(t *testing.T) {
 	}
 
 	{
-		key := append([]byte(account.QueryPath), keyfrom.Address...)
+		key := append([]byte(pstate.AccountPath), keyfrom.Address...)
 		resp := app.Query(tmtypes.RequestQuery{
 			Path: "/bad",
 			Data: key,
