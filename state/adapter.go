@@ -1,16 +1,12 @@
 package state
 
 import (
-	"errors"
-
+	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
-	wire "github.com/tendermint/go-wire"
 )
 
 const (
-	balanceSize = 8
-	// exported becuase used for CLI and app query command
 	AccountPath = "/accounts/"
 )
 
@@ -31,29 +27,29 @@ func NewAccountAdapter(db DB) AccountAdapter {
 func (a *accountAdapter) Save(account *types.Account) error {
 	key := a.KeyFor(account.Address)
 
-	buf := make([]byte, balanceSize)
-	wire.PutUint64(buf, account.GetBalance())
+	abytes, err := proto.Marshal(account)
+	if err != nil {
+		return err
+	}
 
-	a.db.Set(key, buf)
+	a.db.Set(key, abytes)
 	return nil
 }
 
 func (a *accountAdapter) Get(address base.Bytes) (*types.Account, error) {
+
+	acc := types.Account{}
+
 	key := a.KeyFor(address)
 
 	buf := a.db.Get(key)
-
 	if buf == nil {
 		return nil, nil
 	}
 
-	if len(buf) != balanceSize {
-		return nil, errors.New("invalid balance")
-	}
+	acc.Unmarshal(buf)
 
-	balance := wire.GetUint64(buf)
-
-	return &types.Account{Address: address, Balance: balance}, nil
+	return &acc, nil
 }
 
 func (a *accountAdapter) KeyFor(address base.Bytes) base.Bytes {

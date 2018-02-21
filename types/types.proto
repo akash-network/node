@@ -36,12 +36,14 @@ message Account {
 
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   uint64 balance = 2;
+  uint64 nonce   = 3;
 }
 
 message TxSend {
-  bytes  from = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  bytes  to   = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  uint64 amount    = 3;
+  bytes  from   = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  to     = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  uint64 amount = 3;
+  uint64 nonce  = 4;
 }
 /* END ACCOUNT */
 

@@ -7,6 +7,9 @@ const (
 	flagNode    = "node"
 	defaultNode = "http://localhost:46657"
 
+	// all non-query commands / actual transactions
+	flagNonce = "nonce"
+
 	// only commands which need private key / signing
 	flagKey = "key"
 	keyDir  = "keys"

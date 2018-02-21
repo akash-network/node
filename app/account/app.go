@@ -143,6 +143,13 @@ func (a *app) doCheckTxSend(ctx apptypes.Context, tx *types.TxSend) tmtypes.Resp
 		}
 	}
 
+	if acct.Nonce >= tx.Nonce {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "invalid nonce",
+		}
+	}
+
 	return tmtypes.ResponseCheckTx{}
 }
 
@@ -185,6 +192,7 @@ func (a *app) doDeliverTxSend(ctx apptypes.Context, tx *types.TxSend) tmtypes.Re
 	}
 
 	acct.Balance -= tx.Amount
+	acct.Nonce = tx.Nonce
 	toacct.Balance += tx.Amount
 
 	if err := a.state.Account().Save(acct); err != nil {
