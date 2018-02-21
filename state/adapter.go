@@ -10,7 +10,8 @@ import (
 
 const (
 	balanceSize = 8
-	accountPath = "/accounts/"
+	// exported becuase used for CLI and app query command
+	AccountPath = "/accounts/"
 )
 
 type AccountAdapter interface {
@@ -56,5 +57,5 @@ func (a *accountAdapter) Get(address base.Bytes) (*types.Account, error) {
 }
 
 func (a *accountAdapter) KeyFor(address base.Bytes) base.Bytes {
-	return append([]byte(accountPath), address...)
+	return append([]byte(AccountPath), address...)
 }

@@ -16,10 +16,6 @@ import (
 	"github.com/tendermint/tmlibs/log"
 )
 
-const (
-	QueryPath = "/accounts/"
-)
-
 type app struct {
 	state  state.State
 	logger log.Logger
@@ -30,7 +26,7 @@ func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) 
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
-	return strings.HasPrefix(req.GetPath(), QueryPath)
+	return strings.HasPrefix(req.GetPath(), state.AccountPath)
 }
 
 func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
@@ -41,8 +37,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 			Log:  "invalid key",
 		}
 	}
-
-	id := strings.TrimPrefix(req.Path, QueryPath)
+	id := strings.TrimPrefix(req.Path, state.AccountPath)
 	key := new(base.Bytes)
 	if err := key.DecodeString(id); err != nil {
 		return tmtypes.ResponseQuery{

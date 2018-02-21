@@ -12,18 +12,6 @@ import (
 	"github.com/tendermint/go-crypto/keys/storage/filestorage"
 )
 
-const (
-	flagRootDir = "data"
-
-	flagNode    = "node"
-	defaultNode = "http://localhost:46657"
-
-	flagKey = "key"
-
-	keyDir = "keys"
-	codec  = "english"
-)
-
 type Context interface {
 	RootDir() string
 	KeyManager() (keys.Manager, error)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/ovrclk/photon/app/account"
 	apptypes "github.com/ovrclk/photon/app/types"
+	pstate "github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/testutil"
 	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
@@ -56,7 +57,7 @@ func TestAccountApp(t *testing.T) {
 	app, err := account.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 
-	assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", account.QueryPath, hex.EncodeToString(keyfrom.Address))}))
+	assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.AccountPath, hex.EncodeToString(keyfrom.Address))}))
 	assert.False(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", "/foo/", hex.EncodeToString(keyfrom.Address))}))
 
 	assert.True(t, app.AcceptTx(ctx, send))
@@ -72,7 +73,7 @@ func TestAccountApp(t *testing.T) {
 	}
 
 	{
-		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", account.QueryPath, hex.EncodeToString(keyfrom.Address))})
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.AccountPath, hex.EncodeToString(keyfrom.Address))})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 
@@ -84,7 +85,7 @@ func TestAccountApp(t *testing.T) {
 	}
 
 	{
-		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", account.QueryPath, hex.EncodeToString(keyto.Address))})
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.AccountPath, hex.EncodeToString(keyto.Address))})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 

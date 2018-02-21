@@ -10,13 +10,6 @@ import (
 	"github.com/tendermint/go-wire/data"
 )
 
-const (
-	flagKeyType = "type"
-
-	// todo: interactive.
-	password = "0123456789"
-)
-
 func keyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "key",
