@@ -8,6 +8,8 @@ import (
 
 const (
 	AccountPath = "/accounts/"
+
+	DeploymentPath = "/deployments/"
 )
 
 type AccountAdapter interface {

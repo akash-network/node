@@ -23,10 +23,11 @@ message Tx {
 }
 
 message TxPayload {
+  uint64 nonce = 1;
   oneof payload {
-    TxSend txSend = 1;
+    TxSend txSend = 2;
+    TxDeployment txDeployment = 3;
   }
-  uint64 nonce = 2;
 }
 /* END GLOBAL */
 
@@ -72,6 +73,11 @@ message DeploymentGroup {
 
 message Deployment {
   repeated DeploymentGroup groups = 1 [(gogoproto.nullable) = false];
+}
+
+message TxDeployment {
+  bytes from = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  Deployment deployment = 2;
 }
 
 message DeploymentOrder {

@@ -26,18 +26,21 @@ func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) 
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
-	return strings.HasPrefix(req.GetPath(), state.AccountPath)
+	return strings.HasPrefix(req.GetPath(), state.DeploymentPath)
 }
 
 func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
+	// todo: abstractiion: all queries should have this
 	if !a.AcceptQuery(req) {
 		return tmtypes.ResponseQuery{
 			Code: code.UNKNOWN_QUERY,
 			Log:  "invalid key",
 		}
 	}
-	id := strings.TrimPrefix(req.Path, state.AccountPath)
+
+	// todo: abstractiion: all queries should have this
+	id := strings.TrimPrefix(req.Path, state.DeploymentPath)
 	key := new(base.Bytes)
 	if err := key.DecodeString(id); err != nil {
 		return tmtypes.ResponseQuery{
@@ -46,7 +49,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	acct, err := a.state.Account().Get(*key)
+	dep, err := a.state.Deployment().Get(*key)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -54,14 +57,14 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	if acct == nil {
+	if dep == nil {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("account %x not found", *key),
+			Log:  fmt.Sprintf("deployment %x not found", *key),
 		}
 	}
 
-	bytes, err := proto.Marshal(acct)
+	bytes, err := proto.Marshal(dep)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -78,7 +81,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	switch tx.(type) {
-	case *types.TxPayload_TxSend:
+	case *types.TxPayload_TxDeployment:
 		return true
 	}
 	return false
@@ -86,8 +89,8 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 
 func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
-	case *types.TxPayload_TxSend:
-		return a.doCheckTxSend(ctx, tx.TxSend)
+	case *types.TxPayload_TxDeployment:
+		return a.doCheckTxDeployment(ctx, tx.TxDeployment)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -97,8 +100,8 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 
 func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
-	case *types.TxPayload_TxSend:
-		return a.doDeliverTxSend(ctx, tx.TxSend)
+	case *types.TxPayload_TxDeployment:
+		return a.doDeliverTxDeployment(ctx, tx.TxDeployment)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -106,19 +109,14 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 	}
 }
 
-func (a *app) doCheckTxSend(ctx apptypes.Context, tx *types.TxSend) tmtypes.ResponseCheckTx {
+// todo: break each check out into a named global exported funtion for all trasaction types to utilize
+func (a *app) doCheckTxDeployment(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.ResponseCheckTx {
 
+	// todo: abstraction - all tx handlers need this
 	if !bytes.Equal(ctx.Signer().Address(), tx.From) {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Not signed by sending address",
-		}
-	}
-
-	if bytes.Equal(tx.From, tx.To) {
-		return tmtypes.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "source and destination can't be the same address",
 		}
 	}
 
@@ -136,19 +134,24 @@ func (a *app) doCheckTxSend(ctx apptypes.Context, tx *types.TxSend) tmtypes.Resp
 		}
 	}
 
-	if acct.Balance < tx.Amount {
-		return tmtypes.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "insufficient funds",
-		}
-	}
+	/* todo: balance checks
+	    balance > deployment stake
+	    balance > minimum deployment cost?
+	    balance > ?????
+		if acct.Balance < tx.Amount {
+			return tmtypes.ResponseCheckTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  "insufficient funds",
+			}
+		}*/
 
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTxSend(ctx apptypes.Context, tx *types.TxSend) tmtypes.ResponseDeliverTx {
+// todo: rename 'doDeliverTxDeployment' to 'doDeliverTx' because simpler
+func (a *app) doDeliverTxDeployment(ctx apptypes.Context, tx *types.TxSend) tmtypes.ResponseDeliverTx {
 
-	cresp := a.doCheckTxSend(ctx, tx)
+	cresp := a.doCheckTxDeployment(ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -170,22 +173,10 @@ func (a *app) doDeliverTxSend(ctx apptypes.Context, tx *types.TxSend) tmtypes.Re
 		}
 	}
 
-	toacct, err := a.state.Account().Get(tx.To)
-	if err != nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err.Error(),
-		}
-	}
-
-	if toacct == nil {
-		toacct = &types.Account{
-			Address: tx.To,
-		}
-	}
-
-	acct.Balance -= tx.Amount
-	toacct.Balance += tx.Amount
+	// todo / question/ idea: hold deployment stake in "escrow" - bind to deployment?
+	// acct.Balance -= tx.Stake
+	// deployment.Balance += tx.Stake
+	// if deployment is canceled -> acct.Balance += deployment.Balance && rm deployment
 
 	if err := a.state.Account().Save(acct); err != nil {
 		return tmtypes.ResponseDeliverTx{
@@ -194,7 +185,7 @@ func (a *app) doDeliverTxSend(ctx apptypes.Context, tx *types.TxSend) tmtypes.Re
 		}
 	}
 
-	if err := a.state.Account().Save(toacct); err != nil {
+	if err := a.state.Deployment().Save(deployment); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
