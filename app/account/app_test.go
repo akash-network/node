@@ -37,7 +37,6 @@ func TestAccountApp(t *testing.T) {
 			From:   base.Bytes(keyfrom.Address),
 			To:     base.Bytes(keyto.Address),
 			Amount: amount,
-			Nonce:  nonce,
 		},
 	}
 

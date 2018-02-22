@@ -96,6 +96,7 @@ func (app *app) CheckTx(buf []byte) tmtypes.ResponseCheckTx {
 		}
 	}
 
+	app.traceTx("CheckTx", tx)
 	return app_.CheckTx(ctx, tx.Payload.Payload)
 }
 
