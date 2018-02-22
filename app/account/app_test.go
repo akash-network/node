@@ -21,7 +21,6 @@ func TestAccountApp(t *testing.T) {
 	const (
 		balance uint64 = 150
 		amount  uint64 = 100
-		nonce   uint64 = 1
 	)
 
 	kmgr := testutil.KeyManager(t)
