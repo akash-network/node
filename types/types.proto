@@ -26,6 +26,7 @@ message TxPayload {
   oneof payload {
     TxSend txSend = 1;
   }
+  uint64 nonce = 2;
 }
 /* END GLOBAL */
 
@@ -43,7 +44,6 @@ message TxSend {
   bytes  from   = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   bytes  to     = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   uint64 amount = 3;
-  uint64 nonce  = 4;
 }
 /* END ACCOUNT */
 

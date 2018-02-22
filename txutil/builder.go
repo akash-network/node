@@ -16,8 +16,8 @@ type TxBuilder interface {
 	Signature() *base.Signature
 }
 
-func BuildTx(signer keys.Signer, keyName, password string, payload interface{}) ([]byte, error) {
-	txb, err := NewTxBuilder(payload)
+func BuildTx(signer keys.Signer, keyName, password string, nonce uint64, payload interface{}) ([]byte, error) {
+	txb, err := NewTxBuilder(nonce, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func BuildTx(signer keys.Signer, keyName, password string, payload interface{}) 
 	return txb.TxBytes()
 }
 
-func NewTxBuilder(payload interface{}) (TxBuilder, error) {
+func NewTxBuilder(nonce uint64, payload interface{}) (TxBuilder, error) {
 
 	tx := &types.Tx{}
 
@@ -37,6 +37,8 @@ func NewTxBuilder(payload interface{}) (TxBuilder, error) {
 	default:
 		return nil, fmt.Errorf("unknown payload type: %T", payload)
 	}
+
+	tx.Payload.Nonce = nonce
 
 	pbytes, err := proto.Marshal(&tx.Payload)
 	if err != nil {
