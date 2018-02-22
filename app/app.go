@@ -79,13 +79,25 @@ func (app *app) CheckTx(buf []byte) tmtypes.ResponseCheckTx {
 	if err != nil {
 		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
+
+	// global nonce check
+	signer, err_ := app.state.Account().Get(ctx.Signer().Address())
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err_.Error(),
+		}
+	}
+
+	if signer.Nonce >= tx.Payload.Nonce {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "invalid nonce",
+		}
+	}
+
 	app.traceTx("CheckTx", tx)
 	return app_.CheckTx(ctx, tx.Payload.Payload)
-}
-
-func (app *app) BeginBlock(req tmtypes.RequestBeginBlock) tmtypes.ResponseBeginBlock {
-	app.trace("BeginBlock")
-	return tmtypes.ResponseBeginBlock{}
 }
 
 func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
@@ -93,8 +105,31 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
 	}
+
+	signer, err_ := app.state.Account().Get(ctx.Signer().Address())
+	if err_ != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err_.Error(),
+		}
+	}
+
+	signer.Nonce = tx.Payload.Nonce
+
+	if err_ := app.state.Account().Save(signer); err_ != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err_.Error(),
+		}
+	}
+
 	app.traceTx("DeliverTx", tx)
 	return app_.DeliverTx(ctx, tx.Payload.Payload)
+}
+
+func (app *app) BeginBlock(req tmtypes.RequestBeginBlock) tmtypes.ResponseBeginBlock {
+	app.trace("BeginBlock")
+	return tmtypes.ResponseBeginBlock{}
 }
 
 func (app *app) EndBlock(req tmtypes.RequestEndBlock) tmtypes.ResponseEndBlock {

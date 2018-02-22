@@ -12,6 +12,8 @@ import (
 
 func TestTxBuilder(t *testing.T) {
 
+	const nonce = 1
+
 	manager := testutil.KeyManager(t)
 
 	keyfrom, _, err := manager.Create("keyfrom", testutil.KeyPasswd, testutil.KeyAlgo)
@@ -26,7 +28,7 @@ func TestTxBuilder(t *testing.T) {
 		Amount: 100,
 	}
 
-	txbytes, err := txutil.BuildTx(manager, keyfrom.Name, testutil.KeyPasswd, send)
+	txbytes, err := txutil.BuildTx(manager, keyfrom.Name, testutil.KeyPasswd, nonce, send)
 
 	txp, err := txutil.NewTxProcessor(txbytes)
 	require.NoError(t, err)

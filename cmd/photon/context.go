@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/ovrclk/photon/state"
+	"github.com/ovrclk/photon/types"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/go-crypto/keys"
 	"github.com/tendermint/go-crypto/keys/cryptostore"
 	"github.com/tendermint/go-crypto/keys/storage/filestorage"
+	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
 type Context interface {
@@ -17,6 +21,7 @@ type Context interface {
 	KeyManager() (keys.Manager, error)
 	Node() string
 	Key() (keys.Info, error)
+	Nonce() uint64
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -98,6 +103,20 @@ func (ctx *context) KeyManager() (keys.Manager, error) {
 func (ctx *context) Node() string {
 	val := viper.GetString(flagNode)
 	return val
+}
+
+func (ctx *context) Nonce() uint64 {
+	nonce, err := ctx.cmd.Flags().GetUint64(flagNonce)
+	if err != nil || nonce == uint64(0) {
+		res := new(types.Account)
+		client := tmclient.NewHTTP(ctx.Node(), "/websocket")
+		key, _ := ctx.Key()
+		queryPath := state.AccountPath + key.Address.String()
+		result, _ := client.ABCIQuery(queryPath, nil)
+		res.Unmarshal(result.Response.Value)
+		nonce = res.Nonce + 1
+	}
+	return nonce
 }
 
 func (ctx *context) Key() (keys.Info, error) {

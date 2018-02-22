@@ -29,12 +29,14 @@ func TestPubKey_JSON(t *testing.T) {
 }
 
 func TestSignature_JSON(t *testing.T) {
+	const nonce = 1
+
 	kmgr := testutil.KeyManager(t)
 
 	_, _, err := kmgr.Create("key", testutil.KeyPasswd, testutil.KeyAlgo)
 	require.NoError(t, err)
 
-	b, err := txutil.NewTxBuilder(&types.TxSend{})
+	b, err := txutil.NewTxBuilder(nonce, &types.TxSend{})
 	require.NoError(t, err)
 
 	require.NoError(t, kmgr.Sign("key", testutil.KeyPasswd, b))

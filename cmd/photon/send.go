@@ -15,7 +15,7 @@ import (
 func sendCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "send [amount] [account]",
+		Use:   "send [amount] [to account]",
 		Short: "send tokens",
 		Args:  cobra.ExactArgs(2),
 		RunE: withContext(
@@ -27,6 +27,8 @@ func sendCommand() *cobra.Command {
 
 	cmd.Flags().StringP(flagKey, "k", "", "key name (required)")
 	cmd.MarkFlagRequired(flagKey)
+
+	cmd.Flags().Uint64(flagNonce, 0, "nonce (optional)")
 
 	return cmd
 }
@@ -45,7 +47,9 @@ func doSendCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	tx, err := txutil.BuildTx(kmgr, key.Name, password, &types.TxSend{
+	nonce := ctx.Nonce()
+
+	tx, err := txutil.BuildTx(kmgr, key.Name, password, nonce, &types.TxSend{
 		From:   base.Bytes(key.Address),
 		To:     *to,
 		Amount: amount,

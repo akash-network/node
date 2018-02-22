@@ -44,6 +44,7 @@ func doQueryCommand(ctx Context, cmd *cobra.Command, args []string) error {
 	println("query path: " + queryPath)
 	println("address: " + strings.ToUpper(hex.EncodeToString(res.Address)))
 	println("balance: " + strconv.FormatUint(res.Balance, 10))
+	println("nonce: " + strconv.FormatUint(res.Nonce, 10))
 
 	return nil
 }
