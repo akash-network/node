@@ -1,4 +1,4 @@
-package account
+package deployment
 
 import (
 	"bytes"
@@ -149,7 +149,7 @@ func (a *app) doCheckTxDeployment(ctx apptypes.Context, tx *types.TxDeployment) 
 }
 
 // todo: rename 'doDeliverTxDeployment' to 'doDeliverTx' because simpler
-func (a *app) doDeliverTxDeployment(ctx apptypes.Context, tx *types.TxSend) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverTxDeployment(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.ResponseDeliverTx {
 
 	cresp := a.doCheckTxDeployment(ctx, tx)
 	if !cresp.IsOK() {
@@ -172,6 +172,8 @@ func (a *app) doDeliverTxDeployment(ctx apptypes.Context, tx *types.TxSend) tmty
 			Log:  "unknown source account",
 		}
 	}
+
+	deployment := tx.Deployment
 
 	// todo / question/ idea: hold deployment stake in "escrow" - bind to deployment?
 	// acct.Balance -= tx.Stake

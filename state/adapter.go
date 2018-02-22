@@ -57,3 +57,49 @@ func (a *accountAdapter) Get(address base.Bytes) (*types.Account, error) {
 func (a *accountAdapter) KeyFor(address base.Bytes) base.Bytes {
 	return append([]byte(AccountPath), address...)
 }
+
+type DeploymentAdapter interface {
+	Save(deployment *types.Deployment) error
+	Get(base.Bytes) (*types.Deployment, error)
+	KeyFor(base.Bytes) base.Bytes
+}
+
+type deploymentAdapter struct {
+	db DB
+}
+
+func NewDeploymentAdapter(db DB) DeploymentAdapter {
+	return &deploymentAdapter{db}
+}
+
+func (d *deploymentAdapter) Save(deployment *types.Deployment) error {
+	key := d.KeyFor(deployment.Address)
+
+	dbytes, err := proto.Marshal(deployment)
+	if err != nil {
+		return err
+	}
+
+	d.db.Set(key, dbytes)
+	return nil
+}
+
+func (d *deploymentAdapter) Get(address base.Bytes) (*types.Deployment, error) {
+
+	dep := types.Deployment{}
+
+	key := d.KeyFor(address)
+
+	buf := d.db.Get(key)
+	if buf == nil {
+		return nil, nil
+	}
+
+	dep.Unmarshal(buf)
+
+	return &dep, nil
+}
+
+func (a *deploymentAdapter) KeyFor(address base.Bytes) base.Bytes {
+	return append([]byte(DeploymentPath), address...)
+}

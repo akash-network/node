@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/ovrclk/photon/txutil"
@@ -36,9 +38,11 @@ func doDeployCommand(ctx Context, cmd *cobra.Command, args []string) error {
 	kmgr, _ := ctx.KeyManager()
 	key, _ := ctx.Key()
 
-	deployment, _ := parseDeployment(args[0])
-
 	nonce := ctx.Nonce()
+
+	hash := doHash(key.Address, nonce)
+
+	deployment, _ := parseDeployment(args[0], hash)
 
 	tx, err := txutil.BuildTx(kmgr, key.Name, password, nonce, &types.TxDeployment{
 		From:       base.Bytes(key.Address),
@@ -60,7 +64,7 @@ func doDeployCommand(ctx Context, cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func parseDeployment(file string) (types.Deployment, error) {
+func parseDeployment(file string, hash []byte) (types.Deployment, error) {
 	// todo: read and parse deployment yaml file
 
 	/* begin stub data */
@@ -92,9 +96,18 @@ func parseDeployment(file string) (types.Deployment, error) {
 	groups := []types.DeploymentGroup{*deploymentgroup}
 
 	deployment := &types.Deployment{
-		Groups: groups,
+		Address: hash,
+		Groups:  groups,
 	}
 	/* end stub data */
 
 	return *deployment, nil
+}
+
+func doHash(address []byte, nonce uint64) []byte {
+	nbytes := make([]byte, 10)
+	binary.LittleEndian.PutUint64(nbytes, nonce)
+	data := append(address, nbytes...)
+	hash32 := sha256.Sum256(data)
+	return hash32[:32]
 }

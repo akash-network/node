@@ -8,6 +8,7 @@ type State interface {
 	DB() DBReader
 
 	Account() AccountAdapter
+	Deployment() DeploymentAdapter
 }
 
 func NewState(db DB) State {
@@ -36,4 +37,8 @@ func (s *state) DB() DBReader {
 
 func (s *state) Account() AccountAdapter {
 	return NewAccountAdapter(s.db)
+}
+
+func (s *state) Deployment() DeploymentAdapter {
+	return NewDeploymentAdapter(s.db)
 }
