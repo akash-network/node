@@ -12,7 +12,6 @@ func queryDeploymentCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "deployment",
 		Short: "query deployment",
-		Args:  cobra.ExactArgs(1),
 		RunE:  context.WithContext(context.RequireNode(doQueryDeploymentCommand)),
 	}
 
@@ -20,9 +19,14 @@ func queryDeploymentCommand() *cobra.Command {
 }
 
 func doQueryDeploymentCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	structure := new(types.Deployment)
-	account := args[0]
-	path := state.DeploymentPath + account
-	doQuery(ctx, path, structure)
+	path := state.DeploymentPath
+	if len(args) > 0 {
+		structure := new(types.Deployment)
+		path += args[0]
+		doQuery(ctx, path, structure)
+	} else {
+		structure := new(types.Deployments)
+		doQuery(ctx, path, structure)
+	}
 	return nil
 }

@@ -3,6 +3,7 @@ package deployment
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
@@ -31,7 +32,6 @@ func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
 
 func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
-	// todo: abstractiion: all queries should have this
 	if !a.AcceptQuery(req) {
 		return tmtypes.ResponseQuery{
 			Code: code.UNKNOWN_QUERY,
@@ -49,34 +49,13 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	dep, err := a.state.Deployment().Get(*key)
-	if err != nil {
-		return tmtypes.ResponseQuery{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}
-	}
+	println("query id: ", id)
 
-	if dep == nil {
-		return tmtypes.ResponseQuery{
-			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("deployment %x not found", *key),
-		}
+	// id is empty string, get full range
+	if len(id) == 0 {
+		return a.doRangeQuery(*key)
 	}
-
-	bytes, err := proto.Marshal(dep)
-	if err != nil {
-		return tmtypes.ResponseQuery{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}
-	}
-
-	return tmtypes.ResponseQuery{
-		Key:    data.Bytes(a.state.Account().KeyFor(*key)),
-		Value:  bytes,
-		Height: int64(a.state.Version()),
-	}
+	return a.doQuery(*key)
 }
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
@@ -106,6 +85,87 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
 		Log:  "unknown transaction",
+	}
+}
+
+func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
+
+	dep, err := a.state.Deployment().Get(key)
+
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	if dep == nil {
+		return tmtypes.ResponseQuery{
+			Code: code.NOT_FOUND,
+			Log:  fmt.Sprintf("deployment %x not found", key),
+		}
+	}
+
+	bytes, err := proto.Marshal(dep)
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseQuery{
+		Key:    data.Bytes(a.state.Account().KeyFor(key)),
+		Value:  bytes,
+		Height: int64(a.state.Version()),
+	}
+}
+
+func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
+	start := new(base.Bytes)
+	if err := start.DecodeString("25245F6B1D89A87BFA8C50B7EE40859B269B0C6C4B8AFCE7E390A2EA0E59EB48"); err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+	end := new(base.Bytes)
+	if err := end.DecodeString("25245F6B1D89A87BFA8C50B7EE40859B269B0C6C4B8AFCE7E390A2EA0E59EB48"); err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	limit := math.MaxInt64
+	_, dep, _, err := a.state.Deployment().GetRangeWithProof(*start, *end, limit)
+
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	if len(dep.Deployments) == 0 {
+		return tmtypes.ResponseQuery{
+			Code: code.NOT_FOUND,
+			Log:  fmt.Sprintf("deployments %x not found"),
+		}
+	}
+
+	bytes, err := proto.Marshal(dep)
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseQuery{
+		Key:    data.Bytes("max_range"),
+		Value:  bytes,
+		Height: int64(a.state.Version()),
 	}
 }
 

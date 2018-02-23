@@ -76,6 +76,10 @@ message Deployment {
   repeated DeploymentGroup groups = 2 [(gogoproto.nullable) = false];
  }
 
+ message Deployments {
+  repeated Deployment deployments = 1 [(gogoproto.nullable) = false];
+ }
+
 message TxDeployment {
   bytes from = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   Deployment deployment = 2;
