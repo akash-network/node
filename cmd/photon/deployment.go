@@ -3,7 +3,9 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/ovrclk/photon/cmd/photon/constants"
 	"github.com/ovrclk/photon/cmd/photon/context"
@@ -40,6 +42,7 @@ func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 	kmgr, _ := ctx.KeyManager()
 	key, _ := ctx.Key()
 
+	// todo: throw more informative error if node cannot be dialed
 	nonce := ctx.Nonce()
 
 	hash := doHash(key.Address, nonce)
@@ -62,6 +65,7 @@ func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 		return err
 	}
 	fmt.Println(result)
+	fmt.Println("Created deployment: " + strings.ToUpper(hex.EncodeToString(deployment.Address)))
 
 	return nil
 }
