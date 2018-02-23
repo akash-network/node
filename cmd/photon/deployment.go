@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/ovrclk/photon/cmd/photon/constants"
+	"github.com/ovrclk/photon/cmd/photon/context"
 	"github.com/ovrclk/photon/txutil"
 	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
@@ -19,22 +21,22 @@ func deploymentCommand() *cobra.Command {
 		Use:   "deploy [file]",
 		Short: "post a deployment",
 		Args:  cobra.ExactArgs(1),
-		RunE: withContext(
-			requireKey(requireNode(doDeployCommand))),
+		RunE: context.WithContext(
+			context.RequireKey(context.RequireNode(doDeployCommand))),
 	}
 
-	cmd.Flags().StringP(flagNode, "n", defaultNode, "node host")
-	viper.BindPFlag(flagNode, cmd.Flags().Lookup(flagNode))
+	cmd.Flags().StringP(constants.FlagNode, "n", constants.DefaultNode, "node host")
+	viper.BindPFlag(constants.FlagNode, cmd.Flags().Lookup(constants.FlagNode))
 
-	cmd.Flags().StringP(flagKey, "k", "", "key name (required)")
-	cmd.MarkFlagRequired(flagKey)
+	cmd.Flags().StringP(constants.FlagKey, "k", "", "key name (required)")
+	cmd.MarkFlagRequired(constants.FlagKey)
 
-	cmd.Flags().Uint64(flagNonce, 0, "nonce (optional)")
+	cmd.Flags().Uint64(constants.FlagNonce, 0, "nonce (optional)")
 
 	return cmd
 }
 
-func doDeployCommand(ctx Context, cmd *cobra.Command, args []string) error {
+func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
 	kmgr, _ := ctx.KeyManager()
 	key, _ := ctx.Key()
 
@@ -44,7 +46,7 @@ func doDeployCommand(ctx Context, cmd *cobra.Command, args []string) error {
 
 	deployment, _ := parseDeployment(args[0], hash)
 
-	tx, err := txutil.BuildTx(kmgr, key.Name, password, nonce, &types.TxDeployment{
+	tx, err := txutil.BuildTx(kmgr, key.Name, constants.Password, nonce, &types.TxDeployment{
 		From:       base.Bytes(key.Address),
 		Deployment: &deployment,
 	})

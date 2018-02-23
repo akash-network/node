@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/ovrclk/photon/cmd/photon/constants"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -31,7 +32,7 @@ func baseCommand() *cobra.Command {
 		Use:   "photon",
 		Short: "Photon client",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			root, _ := cmd.Flags().GetString(flagRootDir)
+			root, _ := cmd.Flags().GetString(constants.FlagRootDir)
 			return initEnv(root)
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
@@ -39,7 +40,7 @@ func baseCommand() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringP(flagRootDir, "d", defaultRootDir(), "data directory")
+	cmd.PersistentFlags().StringP(constants.FlagRootDir, "d", defaultRootDir(), "data directory")
 
 	return cmd
 }

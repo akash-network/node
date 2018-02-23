@@ -1,33 +1,30 @@
-package main
+package query
 
 import (
 	"encoding/hex"
 	"strconv"
 	"strings"
 
+	"github.com/ovrclk/photon/cmd/photon/context"
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/types"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
-func queryCommand() *cobra.Command {
+func queryAccountCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "query [account]",
+		Use:   "account",
 		Short: "query account",
 		Args:  cobra.ExactArgs(1),
-		RunE:  withContext(requireNode(doQueryCommand)),
+		RunE:  context.WithContext(context.RequireNode(doQueryAccountCommand)),
 	}
-
-	cmd.Flags().StringP(flagNode, "n", defaultNode, "node host")
-	viper.BindPFlag(flagNode, cmd.Flags().Lookup(flagNode))
 
 	return cmd
 }
 
-func doQueryCommand(ctx Context, cmd *cobra.Command, args []string) error {
+func doQueryAccountCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
 
 	res := new(types.Account)
 
