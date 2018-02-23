@@ -22,7 +22,7 @@ type Context interface {
 	KeyManager() (keys.Manager, error)
 	Node() string
 	Key() (keys.Info, error)
-	Nonce() uint64
+	Nonce() (uint64, error)
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -106,18 +106,21 @@ func (ctx *context) Node() string {
 	return val
 }
 
-func (ctx *context) Nonce() uint64 {
+func (ctx *context) Nonce() (uint64, error) {
 	nonce, err := ctx.cmd.Flags().GetUint64(constants.FlagNonce)
 	if err != nil || nonce == uint64(0) {
 		res := new(types.Account)
 		client := tmclient.NewHTTP(ctx.Node(), "/websocket")
 		key, _ := ctx.Key()
 		queryPath := state.AccountPath + key.Address.String()
-		result, _ := client.ABCIQuery(queryPath, nil)
+		result, err := client.ABCIQuery(queryPath, nil)
+		if err != nil {
+			return 0, err
+		}
 		res.Unmarshal(result.Response.Value)
 		nonce = res.Nonce + 1
 	}
-	return nonce
+	return nonce, nil
 }
 
 func (ctx *context) Key() (keys.Info, error) {

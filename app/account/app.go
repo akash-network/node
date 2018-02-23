@@ -87,7 +87,7 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxSend:
-		return a.doCheckTxSend(ctx, tx.TxSend)
+		return a.doCheckTx(ctx, tx.TxSend)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -98,7 +98,7 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxSend:
-		return a.doDeliverTxSend(ctx, tx.TxSend)
+		return a.doDeliverTx(ctx, tx.TxSend)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -106,7 +106,7 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 	}
 }
 
-func (a *app) doCheckTxSend(ctx apptypes.Context, tx *types.TxSend) tmtypes.ResponseCheckTx {
+func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.ResponseCheckTx {
 
 	if !bytes.Equal(ctx.Signer().Address(), tx.From) {
 		return tmtypes.ResponseCheckTx{
@@ -146,9 +146,9 @@ func (a *app) doCheckTxSend(ctx apptypes.Context, tx *types.TxSend) tmtypes.Resp
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTxSend(ctx apptypes.Context, tx *types.TxSend) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.ResponseDeliverTx {
 
-	cresp := a.doCheckTxSend(ctx, tx)
+	cresp := a.doCheckTx(ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,

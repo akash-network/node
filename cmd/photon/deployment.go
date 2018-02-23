@@ -42,8 +42,10 @@ func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 	kmgr, _ := ctx.KeyManager()
 	key, _ := ctx.Key()
 
-	// todo: throw more informative error if node cannot be dialed
-	nonce := ctx.Nonce()
+	nonce, err := ctx.Nonce()
+	if err != nil {
+		return err
+	}
 
 	hash := doHash(key.Address, nonce)
 
@@ -57,7 +59,6 @@ func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	// todo: this should be abstracted, each tx will have this same code
 	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
 
 	result, err := client.BroadcastTxCommit(tx)

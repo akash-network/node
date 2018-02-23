@@ -49,7 +49,10 @@ func doSendCommand(ctx context.Context, cmd *cobra.Command, args []string) error
 		return err
 	}
 
-	nonce := ctx.Nonce()
+	nonce, err := ctx.Nonce()
+	if err != nil {
+		return err
+	}
 
 	tx, err := txutil.BuildTx(kmgr, key.Name, constants.Password, nonce, &types.TxSend{
 		From:   base.Bytes(key.Address),

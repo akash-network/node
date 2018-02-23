@@ -90,7 +90,7 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxDeployment:
-		return a.doCheckTxDeployment(ctx, tx.TxDeployment)
+		return a.doCheckTx(ctx, tx.TxDeployment)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -101,7 +101,7 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxDeployment:
-		return a.doDeliverTxDeployment(ctx, tx.TxDeployment)
+		return a.doDeliverTx(ctx, tx.TxDeployment)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -109,10 +109,9 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 	}
 }
 
-// todo: break each check out into a named global exported funtion for all trasaction types to utilize
-func (a *app) doCheckTxDeployment(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.ResponseCheckTx {
+// todo: break each type of check out into a named global exported funtion for all trasaction types to utilize
+func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.ResponseCheckTx {
 
-	// todo: abstraction - all tx handlers need this
 	if !bytes.Equal(ctx.Signer().Address(), tx.From) {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -135,23 +134,24 @@ func (a *app) doCheckTxDeployment(ctx apptypes.Context, tx *types.TxDeployment) 
 	}
 
 	/* todo: balance checks
+
 	    balance > deployment stake
 	    balance > minimum deployment cost?
 	    balance > ?????
-		if acct.Balance < tx.Amount {
+
+		if acct.Balance < ?? {
 			return tmtypes.ResponseCheckTx{
 				Code: code.INVALID_TRANSACTION,
 				Log:  "insufficient funds",
-			}
-		}*/
+		}
+	}*/
 
 	return tmtypes.ResponseCheckTx{}
 }
 
-// todo: rename 'doDeliverTxDeployment' to 'doDeliverTx' because simpler
-func (a *app) doDeliverTxDeployment(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.ResponseDeliverTx {
 
-	cresp := a.doCheckTxDeployment(ctx, tx)
+	cresp := a.doCheckTx(ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -175,7 +175,7 @@ func (a *app) doDeliverTxDeployment(ctx apptypes.Context, tx *types.TxDeployment
 
 	deployment := tx.Deployment
 
-	// todo / question/ idea: hold deployment stake in "escrow" - bind to deployment?
+	// todo: / question/ idea: hold deployment stake in "escrow" - bind to deployment?
 	// acct.Balance -= tx.Stake
 	// deployment.Balance += tx.Stake
 	// if deployment is canceled -> acct.Balance += deployment.Balance && rm deployment
