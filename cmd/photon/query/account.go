@@ -23,6 +23,5 @@ func doQueryAccountCommand(ctx context.Context, cmd *cobra.Command, args []strin
 	structure := new(types.Account)
 	account := args[0]
 	path := state.AccountPath + account
-	doQuery(ctx, path, structure)
-	return nil
+	return doQuery(ctx, path, structure)
 }

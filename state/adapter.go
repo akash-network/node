@@ -64,6 +64,7 @@ type DeploymentAdapter interface {
 	Get(base.Bytes) (*types.Deployment, error)
 	GetRangeWithProof(base.Bytes, base.Bytes, int) ([][]byte, *types.Deployments, iavl.KeyRangeProof, error)
 	KeyFor(base.Bytes) base.Bytes
+	String() string
 }
 
 type deploymentAdapter struct {
@@ -128,4 +129,8 @@ func (d *deploymentAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.B
 
 func (a *deploymentAdapter) KeyFor(address base.Bytes) base.Bytes {
 	return append([]byte(DeploymentPath), address...)
+}
+
+func (d *deploymentAdapter) String() string {
+	return d.db.String()
 }

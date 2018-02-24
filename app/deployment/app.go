@@ -49,8 +49,6 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	println("query id: ", id)
-
 	// id is empty string, get full range
 	if len(id) == 0 {
 		return a.doRangeQuery(*key)
@@ -123,14 +121,14 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 
 func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	start := new(base.Bytes)
-	if err := start.DecodeString("25245F6B1D89A87BFA8C50B7EE40859B269B0C6C4B8AFCE7E390A2EA0E59EB48"); err != nil {
+	if err := start.DecodeString(""); err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
 	}
 	end := new(base.Bytes)
-	if err := end.DecodeString("25245F6B1D89A87BFA8C50B7EE40859B269B0C6C4B8AFCE7E390A2EA0E59EB48"); err != nil {
+	if err := end.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"); err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
@@ -150,7 +148,7 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	if len(dep.Deployments) == 0 {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("deployments %x not found"),
+			Log:  fmt.Sprintf("deployments not found"),
 		}
 	}
 

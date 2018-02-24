@@ -23,10 +23,9 @@ func doQueryDeploymentCommand(ctx context.Context, cmd *cobra.Command, args []st
 	if len(args) > 0 {
 		structure := new(types.Deployment)
 		path += args[0]
-		doQuery(ctx, path, structure)
+		return doQuery(ctx, path, structure)
 	} else {
 		structure := new(types.Deployments)
-		doQuery(ctx, path, structure)
+		return doQuery(ctx, path, structure)
 	}
-	return nil
 }

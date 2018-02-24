@@ -2,6 +2,8 @@ package query
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	"github.com/ovrclk/photon/cmd/photon/constants"
 	"github.com/ovrclk/photon/cmd/photon/context"
@@ -27,20 +29,29 @@ func QueryCommand() *cobra.Command {
 	return cmd
 }
 
-func doQuery(ctx context.Context, path string, structure interface{}) {
+func doQuery(ctx context.Context, path string, structure interface{}) error {
 
 	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
 	result, _ := client.ABCIQuery(path, nil)
+	if result.Response.IsErr() {
+		return result.Response.Error()
+	}
 
 	switch s := structure.(type) {
 	case *types.Account:
 		s.Unmarshal(result.Response.Value)
 	case *types.Deployment:
 		s.Unmarshal(result.Response.Value)
+	case *types.Deployments:
+		s.Unmarshal(result.Response.Value)
+	default:
+		return errors.New("Unknown query value structure")
 	}
 
 	data, _ := json.MarshalIndent(structure, "", "  ")
 
 	println("path: " + path)
 	println("response: " + string(data))
+
+	return nil
 }
