@@ -3,7 +3,6 @@ package query
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/ovrclk/photon/cmd/photon/constants"
 	"github.com/ovrclk/photon/cmd/photon/context"
@@ -34,7 +33,7 @@ func doQuery(ctx context.Context, path string, structure interface{}) error {
 	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
 	result, _ := client.ABCIQuery(path, nil)
 	if result.Response.IsErr() {
-		return result.Response.Error()
+		return errors.New(result.Response.Error())
 	}
 
 	switch s := structure.(type) {
