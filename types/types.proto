@@ -73,7 +73,8 @@ message DeploymentGroup {
 
 message Deployment {
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  repeated DeploymentGroup groups = 2 [(gogoproto.nullable) = false];
+  bytes  from =    2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  repeated DeploymentGroup groups = 3 [(gogoproto.nullable) = false];
  }
 
  message Deployments {

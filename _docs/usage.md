@@ -2,30 +2,34 @@
 
 - [Photon Demo Commands](#photon-demo-commands)
   * [Build](#build)
-  * [Photon account commands (to be mered with basecoin)](#photon-account-commands--to-be-mered-with-basecoin-)
-  * [Create basecoin account](#create-basecoin-account)
   * [Initialize data directory](#initialize-data-directory)
     + [Node](#node)
     + [Client](#client)
   * [Start node](#start-node)
+  * [Create account](#create-account)
   * [Query account](#query-account)
   * [Send tokens](#send-tokens)
+  * [Create deployment](#create-deployment)
+  * [Query deployment](#query-deployment)
+      - [Query all deployments](#query-all-deployments)
 - [Multi node setup](#multi-node-setup)
   * [Create client keys](#create-client-keys)
-  * [Initalize validater nodes](#initalize-validater-nodes)
   * [Setup validater nodes](#setup-validater-nodes)
+    + [Initalize validater nodes](#initalize-validater-nodes)
     + [genesis.json](#genesisjson)
     + [config.toml](#configtoml)
       - [Change port numbers (If running on the same IP/domain)](#change-port-numbers--if-running-on-the-same-ip-domain-)
     + [Add seeds to config](#add-seeds-to-config)
   * [Setup non-validater node](#setup-non-validater-node)
+    + [Initalize validater nodes](#initalize-validater-nodes-1)
     + [genesis.json](#genesisjson-1)
     + [config.toml](#configtoml-1)
     + [Add seeds to config](#add-seeds-to-config-1)
   * [Start nodes](#start-nodes)
-- [Reference for usage:](#reference-for-usage-)
+- [Third party library reference:](#third-party-library-reference-)
     + [Accounts](#accounts)
     + [Node configuration](#node-configuration)
+  * [notes](#notes)
 
 ## Build
 
@@ -33,53 +37,71 @@
 make
 ```
 
-## Photon account commands (to be mered with basecoin)
-
-<a href="../_docs/accounts.md">Photon account commands</a>
-
-## Create basecoin account
-
-```sh
-./client keys new <account name>
-```
-
 ## Initialize data directory
 
 ### Node
 
 ```sh
-./node init <public key>
+./photond init <public key>
 ```
 
 ### Client
 
 ```sh
-./client init --node=tcp://<url>:<port> --genesis=<path/to/genesis.json>
+./photon init --node=tcp://<url>:<port> --genesis=<path/to/genesis.json>
 ```
 
 example:
 
 ```sh
-./client init --node=tcp://localhost:46657 --genesis=data/node/genesis.json
+./photon init --node=tcp://localhost:46657 --genesis=data/node/genesis.json
 ```
 
 ## Start node
 
 ```sh
-./node start
+./photond start
+```
+
+## Create account
+
+```sh
+./photon key create <account name>
 ```
 
 ## Query account
 
 ```sh
-./client query account <public key>
+./photon query account <public key>
 ```
 
 ## Send tokens
 
 ```sh
-./client tx send --name=<your account name> --amount=<amount><denom> --to=<public key> --sequence=<sqn number>
+./photon send <amount> <to address> -k <account name> [flags]
 ```
+
+## Create deployment
+```
+./photon deploy <filepath> -k <account name>
+```
+
+Returns the 32 byte address of the deployment
+
+## Query deployment
+```
+./photon query deployment [address]
+```
+
+Returns deployment object located at [address]
+
+#### Query all deployments
+```
+./photon query deployment
+```
+
+Returns all deployment objects
+
 
 # Multi node setup
 
