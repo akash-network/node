@@ -6,6 +6,7 @@ import (
 	"github.com/ovrclk/photon/txutil"
 	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
+	"github.com/ovrclk/photon/types/code"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -45,7 +46,7 @@ func TestApp(t *testing.T) {
 		})
 		require.NoError(t, err)
 		resp := app.CheckTx(tx)
-		require.Equal(t, uint32(0x3), resp.Code)
+		require.Equal(t, code.INVALID_TRANSACTION, resp.Code)
 		require.True(t, resp.IsErr())
 		require.False(t, resp.IsOK())
 	}
@@ -59,7 +60,7 @@ func TestApp(t *testing.T) {
 		})
 		require.NoError(t, err)
 		resp := app.CheckTx(tx)
-		require.Equal(t, uint32(0x3), resp.Code)
+		require.Equal(t, code.INVALID_TRANSACTION, resp.Code)
 		require.True(t, resp.IsErr())
 		require.False(t, resp.IsOK())
 	}
@@ -73,7 +74,7 @@ func TestApp(t *testing.T) {
 		})
 		require.NoError(t, err)
 		resp := app.CheckTx(tx)
-		require.Equal(t, uint32(0x0), resp.Code)
+		require.Equal(t, code.OK, resp.Code)
 		require.False(t, resp.IsErr())
 		require.True(t, resp.IsOK())
 	}
