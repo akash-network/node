@@ -6,6 +6,8 @@ import (
 	"os"
 	"text/tabwriter"
 
+	"github.com/ovrclk/photon/cmd/photon/constants"
+	"github.com/ovrclk/photon/cmd/photon/context"
 	"github.com/spf13/cobra"
 	"github.com/tendermint/go-wire/data"
 )
@@ -24,13 +26,13 @@ func keyCreateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [name]",
 		Short: "Create new key",
-		RunE:  withContext(requireRootDir(doKeyCreateCommand)),
+		RunE:  context.WithContext(context.RequireRootDir(doKeyCreateCommand)),
 	}
-	cmd.Flags().StringP(flagKeyType, "t", "ed25519", "Type of key (ed25519|secp256k1|ledger)")
+	cmd.Flags().StringP(constants.FlagKeyType, "t", "ed25519", "Type of key (ed25519|secp256k1|ledger)")
 	return cmd
 }
 
-func doKeyCreateCommand(ctx Context, cmd *cobra.Command, args []string) error {
+func doKeyCreateCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
 	if len(args) != 1 {
 		return errors.New("name argument required")
 	}
@@ -40,12 +42,12 @@ func doKeyCreateCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	ktype, err := cmd.Flags().GetString(flagKeyType)
+	ktype, err := cmd.Flags().GetString(constants.FlagKeyType)
 	if err != nil {
 		return err
 	}
 
-	info, _, err := kmgr.Create(args[0], password, ktype)
+	info, _, err := kmgr.Create(args[0], constants.Password, ktype)
 	if err != nil {
 		return err
 	}
@@ -64,11 +66,11 @@ func keyListCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "list keys",
-		RunE:  withContext(requireKeyManager(doKeyListCommand)),
+		RunE:  context.WithContext(context.RequireKeyManager(doKeyListCommand)),
 	}
 }
 
-func doKeyListCommand(ctx Context, cmd *cobra.Command, args []string) error {
+func doKeyListCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
 	kmgr, _ := ctx.KeyManager()
 
 	infos, err := kmgr.List()

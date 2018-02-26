@@ -34,6 +34,8 @@ func NewTxBuilder(nonce uint64, payload interface{}) (TxBuilder, error) {
 	switch payload := payload.(type) {
 	case *types.TxSend:
 		tx.Payload.Payload = &types.TxPayload_TxSend{TxSend: payload}
+	case *types.TxDeployment:
+		tx.Payload.Payload = &types.TxPayload_TxDeployment{TxDeployment: payload}
 	default:
 		return nil, fmt.Errorf("unknown payload type: %T", payload)
 	}

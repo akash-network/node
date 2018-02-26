@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/ovrclk/photon/cmd/photon/constants"
+	"github.com/ovrclk/photon/cmd/photon/context"
 	"github.com/ovrclk/photon/txutil"
 	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
@@ -18,22 +20,22 @@ func sendCommand() *cobra.Command {
 		Use:   "send [amount] [to account]",
 		Short: "send tokens",
 		Args:  cobra.ExactArgs(2),
-		RunE: withContext(
-			requireKey(requireNode(doSendCommand))),
+		RunE: context.WithContext(
+			context.RequireKey(context.RequireNode(doSendCommand))),
 	}
 
-	cmd.Flags().StringP(flagNode, "n", defaultNode, "node host")
-	viper.BindPFlag(flagNode, cmd.Flags().Lookup(flagNode))
+	cmd.Flags().StringP(constants.FlagNode, "n", constants.DefaultNode, "node host")
+	viper.BindPFlag(constants.FlagNode, cmd.Flags().Lookup(constants.FlagNode))
 
-	cmd.Flags().StringP(flagKey, "k", "", "key name (required)")
-	cmd.MarkFlagRequired(flagKey)
+	cmd.Flags().StringP(constants.FlagKey, "k", "", "key name (required)")
+	cmd.MarkFlagRequired(constants.FlagKey)
 
-	cmd.Flags().Uint64(flagNonce, 0, "nonce (optional)")
+	cmd.Flags().Uint64(constants.FlagNonce, 0, "nonce (optional)")
 
 	return cmd
 }
 
-func doSendCommand(ctx Context, cmd *cobra.Command, args []string) error {
+func doSendCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
 	kmgr, _ := ctx.KeyManager()
 	key, _ := ctx.Key()
 
@@ -47,9 +49,12 @@ func doSendCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	nonce := ctx.Nonce()
+	nonce, err := ctx.Nonce()
+	if err != nil {
+		return err
+	}
 
-	tx, err := txutil.BuildTx(kmgr, key.Name, password, nonce, &types.TxSend{
+	tx, err := txutil.BuildTx(kmgr, key.Name, constants.Password, nonce, &types.TxSend{
 		From:   base.Bytes(key.Address),
 		To:     *to,
 		Amount: amount,

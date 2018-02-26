@@ -1,10 +1,11 @@
-package main
+package context
 
 import (
 	"errors"
 	"fmt"
 	"path"
 
+	"github.com/ovrclk/photon/cmd/photon/constants"
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/types"
 
@@ -21,20 +22,20 @@ type Context interface {
 	KeyManager() (keys.Manager, error)
 	Node() string
 	Key() (keys.Info, error)
-	Nonce() uint64
+	Nonce() (uint64, error)
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
 type ctxRunner func(ctx Context, cmd *cobra.Command, args []string) error
 
-func withContext(fn ctxRunner) cmdRunner {
+func WithContext(fn ctxRunner) cmdRunner {
 	return func(cmd *cobra.Command, args []string) error {
-		ctx := newContext(cmd)
+		ctx := NewContext(cmd)
 		return fn(ctx, cmd, args)
 	}
 }
 
-func requireRootDir(fn ctxRunner) ctxRunner {
+func RequireRootDir(fn ctxRunner) ctxRunner {
 	return func(ctx Context, cmd *cobra.Command, args []string) error {
 		if root := ctx.RootDir(); root == "" {
 			return errors.New("root directory unset")
@@ -43,8 +44,8 @@ func requireRootDir(fn ctxRunner) ctxRunner {
 	}
 }
 
-func requireKeyManager(fn ctxRunner) ctxRunner {
-	return requireRootDir(func(ctx Context, cmd *cobra.Command, args []string) error {
+func RequireKeyManager(fn ctxRunner) ctxRunner {
+	return RequireRootDir(func(ctx Context, cmd *cobra.Command, args []string) error {
 		if _, err := ctx.KeyManager(); err != nil {
 			return err
 		}
@@ -52,7 +53,7 @@ func requireKeyManager(fn ctxRunner) ctxRunner {
 	})
 }
 
-func requireNode(fn ctxRunner) ctxRunner {
+func RequireNode(fn ctxRunner) ctxRunner {
 	return func(ctx Context, cmd *cobra.Command, args []string) error {
 		if node := ctx.Node(); node == "" {
 			return fmt.Errorf("node required")
@@ -61,7 +62,7 @@ func requireNode(fn ctxRunner) ctxRunner {
 	}
 }
 
-func requireKey(fn ctxRunner) ctxRunner {
+func RequireKey(fn ctxRunner) ctxRunner {
 	return func(ctx Context, cmd *cobra.Command, args []string) error {
 		if _, err := ctx.Key(); err != nil {
 			return err
@@ -70,7 +71,7 @@ func requireKey(fn ctxRunner) ctxRunner {
 	}
 }
 
-func newContext(cmd *cobra.Command) Context {
+func NewContext(cmd *cobra.Command) Context {
 	return &context{cmd: cmd}
 }
 
@@ -80,7 +81,7 @@ type context struct {
 }
 
 func (ctx *context) RootDir() string {
-	root, _ := ctx.cmd.Flags().GetString(flagRootDir)
+	root, _ := ctx.cmd.Flags().GetString(constants.FlagRootDir)
 	return root
 }
 
@@ -101,22 +102,25 @@ func (ctx *context) KeyManager() (keys.Manager, error) {
 }
 
 func (ctx *context) Node() string {
-	val := viper.GetString(flagNode)
+	val := viper.GetString(constants.FlagNode)
 	return val
 }
 
-func (ctx *context) Nonce() uint64 {
-	nonce, err := ctx.cmd.Flags().GetUint64(flagNonce)
+func (ctx *context) Nonce() (uint64, error) {
+	nonce, err := ctx.cmd.Flags().GetUint64(constants.FlagNonce)
 	if err != nil || nonce == uint64(0) {
 		res := new(types.Account)
 		client := tmclient.NewHTTP(ctx.Node(), "/websocket")
 		key, _ := ctx.Key()
 		queryPath := state.AccountPath + key.Address.String()
-		result, _ := client.ABCIQuery(queryPath, nil)
+		result, err := client.ABCIQuery(queryPath, nil)
+		if err != nil {
+			return 0, err
+		}
 		res.Unmarshal(result.Response.Value)
 		nonce = res.Nonce + 1
 	}
-	return nonce
+	return nonce, nil
 }
 
 func (ctx *context) Key() (keys.Info, error) {
@@ -125,7 +129,7 @@ func (ctx *context) Key() (keys.Info, error) {
 		return keys.Info{}, err
 	}
 
-	kname, err := ctx.cmd.Flags().GetString(flagKey)
+	kname, err := ctx.cmd.Flags().GetString(constants.FlagKey)
 	if err != nil {
 		return keys.Info{}, err
 	}
@@ -138,13 +142,13 @@ func (ctx *context) Key() (keys.Info, error) {
 }
 
 func loadKeyManager(root string) (keys.Manager, error) {
-	codec, err := keys.LoadCodec(codec)
+	codec, err := keys.LoadCodec(constants.Codec)
 	if err != nil {
 		return nil, err
 	}
 	manager := cryptostore.New(
 		cryptostore.SecretBox,
-		filestorage.New(path.Join(root, keyDir)),
+		filestorage.New(path.Join(root, constants.KeyDir)),
 		codec,
 	)
 	return manager, nil

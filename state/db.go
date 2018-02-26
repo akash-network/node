@@ -8,6 +8,8 @@ type DBReader interface {
 	Hash() []byte
 	Get(key []byte) []byte
 	GetWithProof(key []byte) ([]byte, iavl.KeyProof, error)
+	GetRangeWithProof([]byte, []byte, int) ([][]byte, [][]byte, iavl.KeyRangeProof, error)
+	String() string
 }
 
 type DB interface {
@@ -52,4 +54,13 @@ func (db *iavlDB) Remove(key []byte) ([]byte, bool) {
 
 func (db *iavlDB) GetWithProof(key []byte) ([]byte, iavl.KeyProof, error) {
 	return db.tree.GetWithProof(key)
+}
+
+func (db *iavlDB) GetRangeWithProof(startKey []byte, endKey []byte, limit int) ([][]byte, [][]byte, iavl.KeyRangeProof, error) {
+	keys, deps, proof, err := db.tree.GetRangeWithProof(startKey, endKey, limit)
+	return keys, deps, *proof, err
+}
+
+func (db *iavlDB) String() string {
+	return db.tree.String()
 }
