@@ -1,7 +1,10 @@
-/vendor
+# etc
 *.DS_Store
 
-# build artifacts
+#vendor
+/vendor
+
+# binaries
 /photon
 /photond
 

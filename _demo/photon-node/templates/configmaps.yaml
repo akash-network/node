@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "photon-node.fullname" . }}
+  labels:
+    app: {{ template "photon-node.name" . }}
+    chart: {{ template "photon-node.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  genesis.json: |-
+{{ .Values.node.genesis | indent 4 }}
+  priv_validator.json: |-
+{{ .Values.node.priv_validator | indent 4 }}
+  run.sh: |-
+{{ .Files.Get "run.sh" | indent 4 }}

@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	tmconfig "github.com/tendermint/tendermint/config"
 )
 
@@ -53,12 +54,33 @@ func (ctx *context) TMConfig() (*tmconfig.Config, error) {
 	if ctx.tmcfg != nil {
 		return ctx.tmcfg, nil
 	}
+
 	root := ctx.RootDir()
+
 	if root == "" {
 		return nil, errors.New("root dir required")
 	}
+
 	cfg := tmconfig.DefaultConfig()
+
+	if err := viper.Unmarshal(cfg); err != nil {
+		return nil, err
+	}
+
 	cfg.SetRoot(root)
+
+	if val := viper.GetString("genesis"); val != "" {
+		cfg.Genesis = val
+	}
+
+	if val := viper.GetString("validator"); val != "" {
+		cfg.PrivValidator = val
+	}
+
+	if val := viper.GetString("moniker"); val != "" {
+		cfg.Moniker = val
+	}
+
 	tmconfig.EnsureRoot(root)
 	return cfg, nil
 }
