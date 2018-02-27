@@ -3,9 +3,11 @@ package app
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/photon/app/account"
+	"github.com/ovrclk/photon/app/datacenter"
 	"github.com/ovrclk/photon/app/deployment"
 	"github.com/ovrclk/photon/app/store"
 	apptypes "github.com/ovrclk/photon/app/types"
@@ -56,6 +58,14 @@ func Create(state state.State, logger log.Logger) (tmtypes.Application, error) {
 		apps = append(apps, app)
 	}
 
+	{
+		app, err := datacenter.NewApp(state, logger.With("app", "datacenter"))
+		if err != nil {
+			return nil, err
+		}
+		apps = append(apps, app)
+	}
+
 	return &app{state: state, apps: apps, log: logger}, nil
 }
 
@@ -98,7 +108,7 @@ func (app *app) CheckTx(buf []byte) tmtypes.ResponseCheckTx {
 		}
 	}
 
-	if signer.Nonce >= tx.Payload.Nonce {
+	if signer.GetNonce() >= tx.GetPayload().GetNonce() {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "invalid nonce",

@@ -136,7 +136,7 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 
 	limit := math.MaxInt64
-	_, dep, _, err := a.state.Deployment().GetRangeWithProof(*start, *end, limit)
+	_, deps, _, err := a.state.Deployment().GetRangeWithProof(*start, *end, limit)
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -145,14 +145,14 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 		}
 	}
 
-	if len(dep.Deployments) == 0 {
+	if len(deps.Deployments) == 0 {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
 			Log:  fmt.Sprintf("deployments not found"),
 		}
 	}
 
-	bytes, err := proto.Marshal(dep)
+	bytes, err := proto.Marshal(deps)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,

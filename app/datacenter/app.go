@@ -136,7 +136,7 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 
 	limit := math.MaxInt64
-	_, dc, _, err := a.state.Datacenter().GetRangeWithProof(*start, *end, limit)
+	_, dcs, _, err := a.state.Datacenter().GetRangeWithProof(*start, *end, limit)
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -145,14 +145,14 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 		}
 	}
 
-	if len(dc.Datacenters) == 0 {
+	if len(dcs.Datacenters) == 0 {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
 			Log:  fmt.Sprintf("datacenters not found"),
 		}
 	}
 
-	bytes, err := proto.Marshal(dep)
+	bytes, err := proto.Marshal(dcs)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -233,7 +233,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tm
 
 	datacenter := tx.Datacenter
 
-	if err := a.state.Datacenter().Save(datacenter); err != nil {
+	if err := a.state.Datacenter().Save(&datacenter); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),

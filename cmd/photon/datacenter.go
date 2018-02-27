@@ -16,7 +16,7 @@ import (
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
-func DatacenterCommand() *cobra.Command {
+func datacenterCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "datacenter [something]",
@@ -38,31 +38,28 @@ func createCommand() *cobra.Command {
 		Use:   "create [file] [flags]",
 		Short: "create a datacenter",
 		Args:  cobra.ExactArgs(1),
-		RunE: context.WithContext(
-			context.RequireKey(context.RequireNode(doCreateCommand))),
+		RunE:  context.WithContext(context.RequireNode(doCreateCommand)),
 	}
 
 	cmd.Flags().StringP(constants.FlagKey, "k", "", "key name (required)")
+	cmd.Flags().StringP(constants.FlagKeyType, "t", "ed25519", "Type of key (ed25519|secp256k1|ledger)")
 	cmd.MarkFlagRequired(constants.FlagKey)
 
 	return cmd
 }
 
 func doCreateCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-
 	// parse file for resources and attributes
 	datacenter, err := parseDatacenter(args[0])
 	if err != nil {
 		return err
 	}
-
-	// get key or create key if not present
-	key, err := ctx.Key()
 	kmgr, err := ctx.KeyManager()
 	if err != nil {
 		return err
 	}
-
+	// get key or create key if not present
+	key, err := ctx.Key()
 	if err != nil {
 		kname, _ := cmd.Flags().GetString(constants.FlagKey)
 		ktype, err := cmd.Flags().GetString(constants.FlagKeyType)
@@ -87,8 +84,10 @@ func doCreateCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 
 	// create datacenter / send createdatacentertx
 
+	println("1")
 	nonce, err := ctx.Nonce()
 	if err != nil {
+		println("2")
 		return err
 	}
 
