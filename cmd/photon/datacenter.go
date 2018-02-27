@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/ovrclk/photon/types/base"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/tendermint/go-wire/data"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
@@ -49,45 +49,23 @@ func createCommand() *cobra.Command {
 }
 
 func doCreateCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	// parse file for resources and attributes
 	datacenter, err := parseDatacenter(args[0])
 	if err != nil {
 		return err
 	}
+
 	kmgr, err := ctx.KeyManager()
 	if err != nil {
 		return err
 	}
-	// get key or create key if not present
+
 	key, err := ctx.Key()
 	if err != nil {
-		kname, _ := cmd.Flags().GetString(constants.FlagKey)
-		ktype, err := cmd.Flags().GetString(constants.FlagKeyType)
-		if err != nil {
-			return err
-		}
-
-		info, _, err := kmgr.Create(kname, constants.Password, ktype)
-		if err != nil {
-			return err
-		}
-
-		addr, err := data.ToText(info.Address)
-		if err != nil {
-			return err
-		}
-
-		fmt.Println("Public key created: ", addr)
+		return err
 	}
 
-	key, err = ctx.Key()
-
-	// create datacenter / send createdatacentertx
-
-	println("1")
 	nonce, err := ctx.Nonce()
 	if err != nil {
-		println("2")
 		return err
 	}
 
@@ -108,7 +86,13 @@ func doCreateCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 	if err != nil {
 		return err
 	}
-	fmt.Println(result)
+	if result.CheckTx.IsErr() {
+		return errors.New(result.CheckTx.Error())
+	}
+	if result.DeliverTx.IsErr() {
+		return errors.New(result.DeliverTx.Error())
+	}
+
 	fmt.Println("Created datacenter: " + strings.ToUpper(hex.EncodeToString(datacenter.Address)))
 
 	return nil

@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/photon/app/account"
@@ -108,7 +107,14 @@ func (app *app) CheckTx(buf []byte) tmtypes.ResponseCheckTx {
 		}
 	}
 
-	if signer.GetNonce() >= tx.GetPayload().GetNonce() {
+	if signer == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "unknown signer account",
+		}
+	}
+
+	if signer.Nonce >= tx.Payload.Nonce {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "invalid nonce",
@@ -130,6 +136,13 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err_.Error(),
+		}
+	}
+
+	if signer == nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "unknown signer account",
 		}
 	}
 
