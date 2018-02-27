@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/ovrclk/photon/cmd/photon/constants"
 	"github.com/ovrclk/photon/cmd/photon/context"
 	"github.com/ovrclk/photon/types"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
@@ -20,8 +18,7 @@ func QueryCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 
-	cmd.Flags().StringP(constants.FlagNode, "n", constants.DefaultNode, "node host")
-	viper.BindPFlag(constants.FlagNode, cmd.Flags().Lookup(constants.FlagNode))
+	context.AddFlagNode(cmd, cmd.PersistentFlags())
 
 	cmd.AddCommand(queryAccountCommand(), queryDeploymentCommand())
 

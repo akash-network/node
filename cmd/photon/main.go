@@ -8,5 +8,6 @@ func main() {
 	root.AddCommand(sendCommand())
 	root.AddCommand(deploymentCommand())
 	root.AddCommand(query.QueryCommand())
+	root.AddCommand(pingCommand())
 	root.Execute()
 }
