@@ -9,6 +9,7 @@ type State interface {
 
 	Account() AccountAdapter
 	Deployment() DeploymentAdapter
+	Datacenter() DatacenterAdapter
 }
 
 func NewState(db DB) State {
@@ -41,4 +42,8 @@ func (s *state) Account() AccountAdapter {
 
 func (s *state) Deployment() DeploymentAdapter {
 	return NewDeploymentAdapter(s.db)
+}
+
+func (s *state) Datacenter() DatacenterAdapter {
+	return NewDatacenterAdapter(s.db)
 }

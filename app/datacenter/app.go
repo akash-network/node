@@ -1,4 +1,4 @@
-package deployment
+package datacenter
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) 
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
-	return strings.HasPrefix(req.GetPath(), state.DeploymentPath)
+	return strings.HasPrefix(req.GetPath(), state.DatacenterPath)
 }
 
 func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
@@ -40,7 +40,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	}
 
 	// todo: abstractiion: all queries should have this
-	id := strings.TrimPrefix(req.Path, state.DeploymentPath)
+	id := strings.TrimPrefix(req.Path, state.DatacenterPath)
 	key := new(base.Bytes)
 	if err := key.DecodeString(id); err != nil {
 		return tmtypes.ResponseQuery{
@@ -58,7 +58,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	switch tx.(type) {
-	case *types.TxPayload_TxDeployment:
+	case *types.TxPayload_TxCreateDatacenter:
 		return true
 	}
 	return false
@@ -66,8 +66,8 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 
 func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
-	case *types.TxPayload_TxDeployment:
-		return a.doCheckTx(ctx, tx.TxDeployment)
+	case *types.TxPayload_TxCreateDatacenter:
+		return a.doCheckTx(ctx, tx.TxCreateDatacenter)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -77,8 +77,8 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 
 func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
-	case *types.TxPayload_TxDeployment:
-		return a.doDeliverTx(ctx, tx.TxDeployment)
+	case *types.TxPayload_TxCreateDatacenter:
+		return a.doDeliverTx(ctx, tx.TxCreateDatacenter)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -88,7 +88,7 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 
 func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 
-	dep, err := a.state.Deployment().Get(key)
+	dc, err := a.state.Datacenter().Get(key)
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -97,14 +97,14 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 		}
 	}
 
-	if dep == nil {
+	if dc == nil {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("deployment %x not found", key),
+			Log:  fmt.Sprintf("datacenter %x not found", key),
 		}
 	}
 
-	bytes, err := proto.Marshal(dep)
+	bytes, err := proto.Marshal(dc)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -113,7 +113,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 
 	return tmtypes.ResponseQuery{
-		Key:    data.Bytes(a.state.Deployment().KeyFor(key)),
+		Key:    data.Bytes(a.state.Account().KeyFor(key)),
 		Value:  bytes,
 		Height: int64(a.state.Version()),
 	}
@@ -136,7 +136,7 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 
 	limit := math.MaxInt64
-	_, dep, _, err := a.state.Deployment().GetRangeWithProof(*start, *end, limit)
+	_, dc, _, err := a.state.Datacenter().GetRangeWithProof(*start, *end, limit)
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -145,10 +145,10 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 		}
 	}
 
-	if len(dep.Deployments) == 0 {
+	if len(dc.Datacenters) == 0 {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("deployments not found"),
+			Log:  fmt.Sprintf("datacenters not found"),
 		}
 	}
 
@@ -161,23 +161,23 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 
 	return tmtypes.ResponseQuery{
-		Key:    data.Bytes(state.DeploymentPath),
+		Key:    data.Bytes(state.DatacenterPath),
 		Value:  bytes,
 		Height: int64(a.state.Version()),
 	}
 }
 
 // todo: break each type of check out into a named global exported funtion for all trasaction types to utilize
-func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.ResponseCheckTx {
+func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tmtypes.ResponseCheckTx {
 
-	if !bytes.Equal(ctx.Signer().Address(), tx.From) {
+	if !bytes.Equal(ctx.Signer().Address(), tx.Datacenter.Owner) {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "Not signed by sending address",
+			Log:  "Not signed by owner",
 		}
 	}
 
-	acct, err := a.state.Account().Get(tx.From)
+	acct, err := a.state.Account().Get(tx.Datacenter.Owner)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -193,21 +193,21 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.Re
 
 	/* todo: balance checks
 
-	    balance > deployment stake
-	    balance > minimum deployment cost?
-	    balance > ?????
+	     balance > deployment stake
+	     balance > minimum deployment cost?
+	     balance > ?????
 
-		if acct.Balance < ?? {
-			return tmtypes.ResponseCheckTx{
-				Code: code.INVALID_TRANSACTION,
-				Log:  "insufficient funds",
-		}
-	}*/
+	   if acct.Balance < ?? {
+	     return tmtypes.ResponseCheckTx{
+	       Code: code.INVALID_TRANSACTION,
+	       Log:  "insufficient funds",
+	   }
+	 }*/
 
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tmtypes.ResponseDeliverTx {
 
 	cresp := a.doCheckTx(ctx, tx)
 	if !cresp.IsOK() {
@@ -217,7 +217,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.
 		}
 	}
 
-	acct, err := a.state.Account().Get(tx.From)
+	acct, err := a.state.Account().Get(tx.Datacenter.Owner)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -231,21 +231,9 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.
 		}
 	}
 
-	deployment := tx.Deployment
+	datacenter := tx.Datacenter
 
-	// todo: / question/ idea: hold deployment stake in "escrow" - bind to deployment?
-	// acct.Balance -= tx.Stake
-	// deployment.Balance += tx.Stake
-	// if deployment is canceled -> acct.Balance += deployment.Balance && rm deployment
-
-	if err := a.state.Account().Save(acct); err != nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err.Error(),
-		}
-	}
-
-	if err := a.state.Deployment().Save(deployment); err != nil {
+	if err := a.state.Datacenter().Save(datacenter); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
