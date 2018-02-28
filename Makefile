@@ -32,7 +32,8 @@ test-full:
 	go test -race $$(glide novendor)
 
 test-cover:
-	goveralls -service=travis-pro
+	TRAVIS_BRANCH=$${TRAVIS_PULL_REQUEST_BRANCH:-$$TRAVIS_BRANCH} \
+		goveralls -service=travis-pro
 
 test-vet:
 	go vet $$(glide novendor)
