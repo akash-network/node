@@ -10,7 +10,6 @@ import (
 	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
@@ -24,13 +23,9 @@ func sendCommand() *cobra.Command {
 			context.RequireKey(context.RequireNode(doSendCommand))),
 	}
 
-	cmd.Flags().StringP(constants.FlagNode, "n", constants.DefaultNode, "node host")
-	viper.BindPFlag(constants.FlagNode, cmd.Flags().Lookup(constants.FlagNode))
-
-	cmd.Flags().StringP(constants.FlagKey, "k", "", "key name (required)")
-	cmd.MarkFlagRequired(constants.FlagKey)
-
-	cmd.Flags().Uint64(constants.FlagNonce, 0, "nonce (optional)")
+	context.AddFlagNode(cmd, cmd.Flags())
+	context.AddFlagKey(cmd, cmd.Flags())
+	context.AddFlagNonce(cmd, cmd.Flags())
 
 	return cmd
 }

@@ -2,7 +2,7 @@
 
 Start minikube
 ```sh
-$ minikube create --cpus 4 --memory 4096
+$ minikube start --cpus 4 --memory 4096
 ```
 
 Initialize helm

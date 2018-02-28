@@ -9,5 +9,6 @@ func main() {
 	root.AddCommand(deploymentCommand())
 	root.AddCommand(datacenterCommand())
 	root.AddCommand(query.QueryCommand())
+	root.AddCommand(pingCommand())
 	root.Execute()
 }

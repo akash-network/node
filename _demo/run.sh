@@ -1,6 +1,7 @@
 #!/bin/sh
 
 CMD=$0
+DATA=$(dirname $0)/data/client
 
 nodeport(){
   echo $(kubectl get service node-0-photon-node -o jsonpath='{.spec.ports[?(@.name == "photond-rpc")].nodePort}')
@@ -11,14 +12,19 @@ do_node(){
 }
 
 do_send(){
-  export PHOTON_NODE=$(do_node)
-  ../photon send 100 $(cat data/other.key) -k master --node "$PHOTON_NODE" -d data/client
+  node=$(do_node)
+  ../photon send 100 $(cat data/other.key) -k master -n "$node" -d "$DATA"
 }
 
 do_query(){
   key=${1:-master}
-  export PHOTON_NODE=$(do_node)
-  ../photon query $(cat "data/$key.key") -d data/client
+  node=$(do_node)
+  ../photon query account $(cat "data/$key.key") -n "$node" -d "$DATA"
+}
+
+do_ping(){
+  node=$(do_node)
+  ../photon ping -n "$node" -d "$DATA"
 }
 
 do_usage(){
@@ -38,6 +44,10 @@ case "$cmd" in
   query)
     do_query "$@"
     ;;
+  ping)
+    do_ping "$@"
+    ;;
   *)
     do_usage
+    ;;
 esac

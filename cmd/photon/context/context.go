@@ -21,21 +21,22 @@ type Context interface {
 	RootDir() string
 	KeyManager() (keys.Manager, error)
 	Node() string
+	KeyName() string
 	Key() (keys.Info, error)
 	Nonce() (uint64, error)
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
-type ctxRunner func(ctx Context, cmd *cobra.Command, args []string) error
+type Runner func(ctx Context, cmd *cobra.Command, args []string) error
 
-func WithContext(fn ctxRunner) cmdRunner {
+func WithContext(fn Runner) cmdRunner {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx := NewContext(cmd)
 		return fn(ctx, cmd, args)
 	}
 }
 
-func RequireRootDir(fn ctxRunner) ctxRunner {
+func RequireRootDir(fn Runner) Runner {
 	return func(ctx Context, cmd *cobra.Command, args []string) error {
 		if root := ctx.RootDir(); root == "" {
 			return errors.New("root directory unset")
@@ -44,7 +45,7 @@ func RequireRootDir(fn ctxRunner) ctxRunner {
 	}
 }
 
-func RequireKeyManager(fn ctxRunner) ctxRunner {
+func RequireKeyManager(fn Runner) Runner {
 	return RequireRootDir(func(ctx Context, cmd *cobra.Command, args []string) error {
 		if _, err := ctx.KeyManager(); err != nil {
 			return err
@@ -53,7 +54,7 @@ func RequireKeyManager(fn ctxRunner) ctxRunner {
 	})
 }
 
-func RequireNode(fn ctxRunner) ctxRunner {
+func RequireNode(fn Runner) Runner {
 	return func(ctx Context, cmd *cobra.Command, args []string) error {
 		if node := ctx.Node(); node == "" {
 			return fmt.Errorf("node required")
@@ -62,7 +63,7 @@ func RequireNode(fn ctxRunner) ctxRunner {
 	}
 }
 
-func RequireKey(fn ctxRunner) ctxRunner {
+func RequireKey(fn Runner) Runner {
 	return func(ctx Context, cmd *cobra.Command, args []string) error {
 		if _, err := ctx.Key(); err != nil {
 			return err
@@ -106,6 +107,11 @@ func (ctx *context) Node() string {
 	return val
 }
 
+func (ctx *context) KeyName() string {
+	val, _ := ctx.cmd.Flags().GetString(constants.FlagKey)
+	return val
+}
+
 func (ctx *context) Nonce() (uint64, error) {
 	nonce, err := ctx.cmd.Flags().GetUint64(constants.FlagNonce)
 	if err != nil || nonce == uint64(0) {
@@ -129,9 +135,9 @@ func (ctx *context) Key() (keys.Info, error) {
 		return keys.Info{}, err
 	}
 
-	kname, err := ctx.cmd.Flags().GetString(constants.FlagKey)
-	if err != nil {
-		return keys.Info{}, err
+	kname := ctx.KeyName()
+	if kname == "" {
+		return keys.Info{}, errors.New("no key specified")
 	}
 
 	info, err := kmgr.Get(kname)
