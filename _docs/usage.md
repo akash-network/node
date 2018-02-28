@@ -102,6 +102,28 @@ Returns deployment object located at [address]
 
 Returns all deployment objects
 
+## Create datacenter
+```
+./photon datacenter <filepath> -k <account name>
+```
+
+Returns the 32 byte address of the datacenter
+Note: If no account name exists it will be created
+
+## Query datacenter
+```
+./photon query datacenter [address]
+```
+
+Returns datacenter object located at [address]
+
+#### Query all datacenter
+```
+./photon query datacenter
+```
+
+Returns all datacenter objects
+
 
 # Multi node setup
 

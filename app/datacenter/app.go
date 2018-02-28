@@ -169,28 +169,12 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 
 // todo: break each type of check out into a named global exported funtion for all trasaction types to utilize
 func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tmtypes.ResponseCheckTx {
-
 	if !bytes.Equal(ctx.Signer().Address(), tx.Datacenter.Owner) {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Not signed by owner",
 		}
 	}
-
-	// acct, err := a.state.Account().Get(tx.Datacenter.Owner)
-	// if err != nil {
-	// 	return tmtypes.ResponseCheckTx{
-	// 		Code: code.INVALID_TRANSACTION,
-	// 		Log:  err.Error(),
-	// 	}
-	// }
-	// if acct == nil {
-	// 	return tmtypes.ResponseCheckTx{
-	// 		Code: code.INVALID_TRANSACTION,
-	// 		Log:  "unknown source account",
-	// 	}
-	// }
-
 	return tmtypes.ResponseCheckTx{}
 }
 
