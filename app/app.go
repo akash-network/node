@@ -97,30 +97,6 @@ func (app *app) CheckTx(buf []byte) tmtypes.ResponseCheckTx {
 	if err != nil {
 		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
-
-	// global nonce check
-	signer, err_ := app.state.Account().Get(ctx.Signer().Address())
-	if err != nil {
-		return tmtypes.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err_.Error(),
-		}
-	}
-
-	if signer == nil {
-		return tmtypes.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "unknown signer account",
-		}
-	}
-
-	if signer.Nonce >= tx.Payload.Nonce {
-		return tmtypes.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "invalid nonce",
-		}
-	}
-
 	app.traceTx("CheckTx", tx)
 	return app_.CheckTx(ctx, tx.Payload.Payload)
 }
@@ -140,9 +116,21 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 	}
 
 	if signer == nil {
+		// return tmtypes.ResponseDeliverTx{
+		// 	Code: code.INVALID_TRANSACTION,
+		// 	Log:  "unknown signer account",
+		// }
+		signer = &types.Account{
+			Address: ctx.Signer().Address(),
+			Balance: 0,
+			Nonce:   0,
+		}
+	}
+
+	if signer.Nonce >= tx.Payload.Nonce {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "unknown signer account",
+			Log:  "invalid nonce",
 		}
 	}
 

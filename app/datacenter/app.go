@@ -177,19 +177,19 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tmty
 		}
 	}
 
-	acct, err := a.state.Account().Get(tx.Datacenter.Owner)
-	if err != nil {
-		return tmtypes.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err.Error(),
-		}
-	}
-	if acct == nil {
-		return tmtypes.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "unknown source account",
-		}
-	}
+	// acct, err := a.state.Account().Get(tx.Datacenter.Owner)
+	// if err != nil {
+	// 	return tmtypes.ResponseCheckTx{
+	// 		Code: code.INVALID_TRANSACTION,
+	// 		Log:  err.Error(),
+	// 	}
+	// }
+	// if acct == nil {
+	// 	return tmtypes.ResponseCheckTx{
+	// 		Code: code.INVALID_TRANSACTION,
+	// 		Log:  "unknown source account",
+	// 	}
+	// }
 
 	return tmtypes.ResponseCheckTx{}
 }

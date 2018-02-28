@@ -13,6 +13,7 @@ import (
 	"github.com/ovrclk/photon/types/base"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/tendermint/go-wire/data"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
@@ -61,7 +62,27 @@ func doCreateCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 
 	key, err := ctx.Key()
 	if err != nil {
-		return err
+		kname, _ := cmd.Flags().GetString(constants.FlagKey)
+		ktype, err := cmd.Flags().GetString(constants.FlagKeyType)
+		if err != nil {
+			return err
+		}
+
+		info, _, err := kmgr.Create(kname, constants.Password, ktype)
+		if err != nil {
+			return err
+		}
+
+		addr, err := data.ToText(info.Address)
+		if err != nil {
+			return err
+		}
+		key, err = kmgr.Get(kname)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Key created: ", addr)
 	}
 
 	nonce, err := ctx.Nonce()
