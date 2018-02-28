@@ -19,7 +19,7 @@ import (
 func datacenterCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "datacenter [something]",
+		Use:   "datacenter",
 		Short: "manage datacenter",
 		Args:  cobra.ExactArgs(1),
 	}
