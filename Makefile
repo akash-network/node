@@ -32,6 +32,9 @@ test-full:
 	go test -race $$(glide novendor)
 
 test-cover:
+	if [ "$$TRAVIS_PULL_REQUEST" != "false" ]; then \
+		export TRAVIS_BRANCH=$$TRAVIS_PULL_REQUEST_BRANCH; \
+	fi; \
 	goveralls -service=travis-pro
 
 test-vet:
