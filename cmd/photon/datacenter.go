@@ -12,7 +12,6 @@ import (
 	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"github.com/tendermint/go-wire/data"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
@@ -21,12 +20,9 @@ func datacenterCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "datacenter [something]",
-		Short: "datacenter something",
+		Short: "manage datacenter",
 		Args:  cobra.ExactArgs(1),
 	}
-
-	cmd.Flags().StringP(constants.FlagNode, "n", constants.DefaultNode, "node host")
-	viper.BindPFlag(constants.FlagNode, cmd.Flags().Lookup(constants.FlagNode))
 
 	cmd.AddCommand(createCommand())
 
@@ -42,9 +38,10 @@ func createCommand() *cobra.Command {
 		RunE:  context.WithContext(context.RequireNode(doCreateCommand)),
 	}
 
-	cmd.Flags().StringP(constants.FlagKey, "k", "", "key name (required)")
-	cmd.Flags().StringP(constants.FlagKeyType, "t", "ed25519", "Type of key (ed25519|secp256k1|ledger)")
-	cmd.MarkFlagRequired(constants.FlagKey)
+	context.AddFlagKeyType(cmd, cmd.Flags())
+	context.AddFlagNode(cmd, cmd.Flags())
+	context.AddFlagKey(cmd, cmd.Flags())
+	context.AddFlagNonce(cmd, cmd.Flags())
 
 	return cmd
 }

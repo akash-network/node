@@ -20,3 +20,7 @@ func AddFlagKey(cmd *cobra.Command, flags *pflag.FlagSet) {
 func AddFlagNonce(cmd *cobra.Command, flags *pflag.FlagSet) {
 	flags.Uint64(constants.FlagNonce, 0, "nonce (optional)")
 }
+
+func AddFlagKeyType(cmd *cobra.Command, flags *pflag.FlagSet) {
+	flags.StringP(constants.FlagKeyType, "t", "ed25519", "Type of key (ed25519|secp256k1|ledger)")
+}
