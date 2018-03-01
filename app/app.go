@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/hex"
 	"encoding/json"
+	"math"
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/photon/app/account"
@@ -13,6 +14,7 @@ import (
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/txutil"
 	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/photon/types/base"
 	"github.com/ovrclk/photon/types/code"
 	"github.com/ovrclk/photon/version"
 	tmtypes "github.com/tendermint/abci/types"
@@ -154,7 +156,39 @@ func (app *app) BeginBlock(req tmtypes.RequestBeginBlock) tmtypes.ResponseBeginB
 
 func (app *app) createDeploymentOrders() {
 	// create deploymentOrders for deployments without matching active deployment orders
-	deployments = app.state.Deployment().GetRangeWithProof()
+
+	// get all deployments
+	// todo: would storing deployments by state (open, close, etc.) cause a significant over performance increase?
+	start := new(base.Bytes)
+	start.DecodeString("")
+	end := new(base.Bytes)
+	end.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+	limit := math.MaxInt64
+	depo := &types.DeploymentOrder{}
+	_, deps, _, _ := app.state.Deployment().GetRangeWithProof(*start, *end, limit)
+
+	// create deploymentOrders for deployments with open state
+	for _, deployment := range deps.Deployments {
+		if deployment.State == types.Deployment_OPEN {
+			// create deployment order
+			// generate new address for deployment order
+			depo.Address = hash(deployment.version + deployment.Address)
+			depo.From = deployment.From
+			depo.Groups = deployment.Groups
+			depo.State = deployment.State
+
+			err := app.state.DeploymentOrder().Save(deploymentOrder)
+			if err != nil {
+				app.trace("ERROR: deploymentOrder save failed")
+			}
+			// change deployment state to Deployment_ORDERED
+			deployment.State = types.Deployment_ORDERED
+			err := app.state.Deployment().Save(deployment)
+			if err != nil {
+				app.trace("ERROR: deployment save failed")
+			}
+		}
+	}
 }
 
 func (app *app) EndBlock(req tmtypes.RequestEndBlock) tmtypes.ResponseEndBlock {

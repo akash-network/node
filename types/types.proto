@@ -96,6 +96,13 @@ message Deployment {
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   bytes  from =    2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   repeated DeploymentGroup groups = 3 [(gogoproto.nullable) = false];
+  enum DeploymentState {
+    OPEN      = 0;
+    ORDERED   = 1;
+    CLOSED    = 2;
+  }
+  DeploymentState state = 4;
+  uint32 nonce = 5;
 }
 
 message Deployments {
@@ -111,7 +118,16 @@ message DeploymentOrder {
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   bytes  from =    2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   repeated DeploymentGroup groups = 3 [(gogoproto.nullable) = false];
-  uint32 state = 4;
+  enum DeploymentOrderState {
+    OPEN      = 0;
+    MATCHED   = 1;
+    CLOSED    = 2;
+  }
+  DeploymentOrderState state = 4;
+}
+
+message DeploymentOrders {
+  repeated DeploymentOrder deploymentOrders = 1 [(gogoproto.nullable) = false];
 }
 
 message FulfillmentOrder {

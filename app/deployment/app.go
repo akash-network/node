@@ -233,11 +233,6 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.
 
 	deployment := tx.Deployment
 
-	// todo: / question/ idea: hold deployment stake in "escrow" - bind to deployment?
-	// acct.Balance -= tx.Stake
-	// deployment.Balance += tx.Stake
-	// if deployment is canceled -> acct.Balance += deployment.Balance && rm deployment
-
 	if err := a.state.Account().Save(acct); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,

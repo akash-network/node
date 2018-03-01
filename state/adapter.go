@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	AccountPath    = "/accounts/"
-	DatacenterPath = "/datacenter/"
-	DeploymentPath = "/deployments/"
+	AccountPath         = "/accounts/"
+	DeploymentPath      = "/deployments/"
+	DatacenterPath      = "/datacenter/"
+	DeploymentOrderPath = "/deploymentorders/"
 )
 
 type AccountAdapter interface {
@@ -160,14 +161,12 @@ func (d *datacenterAdapter) Save(datacenter *types.Datacenter) error {
 func (d *datacenterAdapter) Get(address base.Bytes) (*types.Datacenter, error) {
 
 	dc := types.Datacenter{}
-
 	key := d.KeyFor(address)
 
 	buf := d.db.Get(key)
 	if buf == nil {
 		return nil, nil
 	}
-
 	dc.Unmarshal(buf)
 
 	return &dc, nil
@@ -177,7 +176,6 @@ func (d *datacenterAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.B
 	dcs := types.Datacenters{}
 	proof := iavl.KeyRangeProof{}
 	dc := types.Datacenter{}
-
 	start := d.KeyFor(startKey)
 	end := d.KeyFor(endKey)
 
@@ -199,4 +197,74 @@ func (d *datacenterAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.B
 
 func (a *datacenterAdapter) KeyFor(address base.Bytes) base.Bytes {
 	return append([]byte(DatacenterPath), address...)
+}
+
+type DeploymentOrderAdapter interface {
+	Save(deploymentOrder *types.DeploymentOrder) error
+	Get(base.Bytes) (*types.DeploymentOrder, error)
+	GetRangeWithProof(base.Bytes, base.Bytes, int) ([][]byte, *types.DeploymentOrders, iavl.KeyRangeProof, error)
+	KeyFor(base.Bytes) base.Bytes
+}
+
+type deploymentOrderAdapter struct {
+	db DB
+}
+
+func NewDeploymentOrderAdapter(db DB) DeploymentOrderAdapter {
+	return &deploymentOrderAdapter{db}
+}
+
+func (d *deploymentOrderAdapter) Save(deploymentOrder *types.DeploymentOrder) error {
+	key := d.KeyFor(deploymentOrder.Address)
+	dbytes, err := proto.Marshal(deploymentOrder)
+	if err != nil {
+		return err
+	}
+
+	d.db.Set(key, dbytes)
+	return nil
+}
+
+func (d *deploymentOrderAdapter) Get(address base.Bytes) (*types.DeploymentOrder, error) {
+
+	depo := types.DeploymentOrder{}
+
+	key := d.KeyFor(address)
+
+	buf := d.db.Get(key)
+	if buf == nil {
+		return nil, nil
+	}
+
+	depo.Unmarshal(buf)
+
+	return &depo, nil
+}
+
+func (d *deploymentOrderAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.DeploymentOrders, iavl.KeyRangeProof, error) {
+	depos := types.DeploymentOrders{}
+	proof := iavl.KeyRangeProof{}
+	depo := types.DeploymentOrder{}
+
+	start := d.KeyFor(startKey)
+	end := d.KeyFor(endKey)
+
+	keys, dbytes, proof, err := d.db.GetRangeWithProof(start, end, limit)
+	if err != nil {
+		return nil, &depos, proof, err
+	}
+	if keys == nil {
+		return nil, &depos, proof, nil
+	}
+
+	for _, d := range dbytes {
+		depo.Unmarshal(d)
+		depos.Deployments = append(deps.DeploymentOrders, dep)
+	}
+
+	return keys, &depos, proof, nil
+}
+
+func (a *deploymentOrderAdapter) KeyFor(address base.Bytes) base.Bytes {
+	return append([]byte(DeploymentOrderPath), address...)
 }
