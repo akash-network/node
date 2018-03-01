@@ -96,11 +96,11 @@ message Deployment {
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   bytes  from =    2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   repeated DeploymentGroup groups = 3 [(gogoproto.nullable) = false];
- }
+}
 
- message Deployments {
+message Deployments {
   repeated Deployment deployments = 1 [(gogoproto.nullable) = false];
- }
+}
 
 message TxDeployment {
   bytes from = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
@@ -108,7 +108,10 @@ message TxDeployment {
 }
 
 message DeploymentOrder {
-  uint32 group      = 2;
+  bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  from =    2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  repeated DeploymentGroup groups = 3 [(gogoproto.nullable) = false];
+  uint32 state = 4;
 }
 
 message FulfillmentOrder {

@@ -152,8 +152,14 @@ func (app *app) BeginBlock(req tmtypes.RequestBeginBlock) tmtypes.ResponseBeginB
 	return tmtypes.ResponseBeginBlock{}
 }
 
+func (app *app) createDeploymentOrders() {
+	// create deploymentOrders for deployments without matching active deployment orders
+	deployments = app.state.Deployment().GetRangeWithProof()
+}
+
 func (app *app) EndBlock(req tmtypes.RequestEndBlock) tmtypes.ResponseEndBlock {
 	app.trace("EndBlock")
+
 	return tmtypes.ResponseEndBlock{}
 }
 
