@@ -7,6 +7,7 @@ func main() {
 	root.AddCommand(keyCommand())
 	root.AddCommand(sendCommand())
 	root.AddCommand(deploymentCommand())
+	root.AddCommand(datacenterCommand())
 	root.AddCommand(query.QueryCommand())
 	root.AddCommand(pingCommand())
 	root.Execute()

@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	AccountPath = "/accounts/"
-
+	AccountPath    = "/accounts/"
+	DatacenterPath = "/datacenter/"
 	DeploymentPath = "/deployments/"
 )
 
@@ -64,7 +64,6 @@ type DeploymentAdapter interface {
 	Get(base.Bytes) (*types.Deployment, error)
 	GetRangeWithProof(base.Bytes, base.Bytes, int) ([][]byte, *types.Deployments, iavl.KeyRangeProof, error)
 	KeyFor(base.Bytes) base.Bytes
-	String() string
 }
 
 type deploymentAdapter struct {
@@ -131,6 +130,73 @@ func (a *deploymentAdapter) KeyFor(address base.Bytes) base.Bytes {
 	return append([]byte(DeploymentPath), address...)
 }
 
-func (d *deploymentAdapter) String() string {
-	return d.db.String()
+type DatacenterAdapter interface {
+	Save(datacenter *types.Datacenter) error
+	Get(base.Bytes) (*types.Datacenter, error)
+	GetRangeWithProof(base.Bytes, base.Bytes, int) ([][]byte, *types.Datacenters, iavl.KeyRangeProof, error)
+	KeyFor(base.Bytes) base.Bytes
+}
+
+type datacenterAdapter struct {
+	db DB
+}
+
+func NewDatacenterAdapter(db DB) DatacenterAdapter {
+	return &datacenterAdapter{db}
+}
+
+func (d *datacenterAdapter) Save(datacenter *types.Datacenter) error {
+	key := d.KeyFor(datacenter.Address)
+
+	dbytes, err := proto.Marshal(datacenter)
+	if err != nil {
+		return err
+	}
+
+	d.db.Set(key, dbytes)
+	return nil
+}
+
+func (d *datacenterAdapter) Get(address base.Bytes) (*types.Datacenter, error) {
+
+	dc := types.Datacenter{}
+
+	key := d.KeyFor(address)
+
+	buf := d.db.Get(key)
+	if buf == nil {
+		return nil, nil
+	}
+
+	dc.Unmarshal(buf)
+
+	return &dc, nil
+}
+
+func (d *datacenterAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.Datacenters, iavl.KeyRangeProof, error) {
+	dcs := types.Datacenters{}
+	proof := iavl.KeyRangeProof{}
+	dc := types.Datacenter{}
+
+	start := d.KeyFor(startKey)
+	end := d.KeyFor(endKey)
+
+	keys, dbytes, proof, err := d.db.GetRangeWithProof(start, end, limit)
+	if err != nil {
+		return nil, &dcs, proof, err
+	}
+	if keys == nil {
+		return nil, &dcs, proof, nil
+	}
+
+	for _, d := range dbytes {
+		dc.Unmarshal(d)
+		dcs.Datacenters = append(dcs.Datacenters, dc)
+	}
+
+	return keys, &dcs, proof, nil
+}
+
+func (a *datacenterAdapter) KeyFor(address base.Bytes) base.Bytes {
+	return append([]byte(DatacenterPath), address...)
 }

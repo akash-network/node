@@ -16,6 +16,7 @@ option (gogoproto.goproto_stringer_all) = true;
 message Genesis {
   repeated Account accounts = 1 [(gogoproto.nullable) = false];
 }
+
 message Tx {
   bytes key         = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.PubKey"];
   bytes signature   = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Signature"];
@@ -27,6 +28,7 @@ message TxPayload {
   oneof payload {
     TxSend txSend = 2;
     TxDeployment txDeployment = 3;
+    TxCreateDatacenter txCreateDatacenter = 4;
   }
 }
 /* END GLOBAL */
@@ -47,6 +49,25 @@ message TxSend {
   uint64 amount = 3;
 }
 /* END ACCOUNT */
+
+/* BEGIN DATACENTER */
+
+message Datacenter {
+  bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  owner = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  repeated ProviderAttribute attributes = 3 [(gogoproto.nullable) = false];
+  repeated ResourceGroup     resources    = 4 [(gogoproto.nullable) = false];
+}
+
+message Datacenters {
+  repeated Datacenter datacenters = 1 [(gogoproto.nullable) = false];
+}
+
+message TxCreateDatacenter {
+  Datacenter datacenter = 1 [(gogoproto.nullable) = false];
+}
+
+/* END DATACENTER */
 
 /* BEGIN EXCHANGE */
 message ResourceUnit {

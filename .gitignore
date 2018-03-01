@@ -10,3 +10,6 @@
 
 # dev artifacts
 /devdata
+
+# chain data
+*.tsd

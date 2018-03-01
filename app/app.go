@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/photon/app/account"
+	"github.com/ovrclk/photon/app/datacenter"
 	"github.com/ovrclk/photon/app/deployment"
 	"github.com/ovrclk/photon/app/store"
 	apptypes "github.com/ovrclk/photon/app/types"
@@ -56,6 +57,14 @@ func Create(state state.State, logger log.Logger) (tmtypes.Application, error) {
 		apps = append(apps, app)
 	}
 
+	{
+		app, err := datacenter.NewApp(state, logger.With("app", "datacenter"))
+		if err != nil {
+			return nil, err
+		}
+		apps = append(apps, app)
+	}
+
 	return &app{state: state, apps: apps, log: logger}, nil
 }
 
@@ -88,23 +97,6 @@ func (app *app) CheckTx(buf []byte) tmtypes.ResponseCheckTx {
 	if err != nil {
 		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
-
-	// global nonce check
-	signer, err_ := app.state.Account().Get(ctx.Signer().Address())
-	if err != nil {
-		return tmtypes.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err_.Error(),
-		}
-	}
-
-	if signer.Nonce >= tx.Payload.Nonce {
-		return tmtypes.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "invalid nonce",
-		}
-	}
-
 	app.traceTx("CheckTx", tx)
 	return app_.CheckTx(ctx, tx.Payload.Payload)
 }
@@ -120,6 +112,25 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err_.Error(),
+		}
+	}
+
+	if signer == nil {
+		// return tmtypes.ResponseDeliverTx{
+		// 	Code: code.INVALID_TRANSACTION,
+		// 	Log:  "unknown signer account",
+		// }
+		signer = &types.Account{
+			Address: ctx.Signer().Address(),
+			Balance: 0,
+			Nonce:   0,
+		}
+	}
+
+	if signer.Nonce >= tx.Payload.Nonce {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "invalid nonce",
 		}
 	}
 

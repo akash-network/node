@@ -45,7 +45,7 @@ func TestApp(t *testing.T) {
 			Amount: 0,
 		})
 		require.NoError(t, err)
-		resp := app.CheckTx(tx)
+		resp := app.DeliverTx(tx)
 		require.Equal(t, code.INVALID_TRANSACTION, resp.Code)
 		require.True(t, resp.IsErr())
 		require.False(t, resp.IsOK())
@@ -59,10 +59,24 @@ func TestApp(t *testing.T) {
 			Amount: 0,
 		})
 		require.NoError(t, err)
-		resp := app.CheckTx(tx)
+		resp := app.DeliverTx(tx)
 		require.Equal(t, code.INVALID_TRANSACTION, resp.Code)
 		require.True(t, resp.IsErr())
 		require.False(t, resp.IsOK())
+	}
+
+	{
+		nonce := uint64(2)
+		tx, err := txutil.BuildTx(kmgr, keyfrom.Name, testutil.KeyPasswd, nonce, &types.TxSend{
+			From:   base.Bytes(keyf.Address()),
+			To:     base.Bytes(keyt.Address()),
+			Amount: 0,
+		})
+		require.NoError(t, err)
+		resp := app.DeliverTx(tx)
+		require.Equal(t, code.OK, resp.Code)
+		require.False(t, resp.IsErr())
+		require.True(t, resp.IsOK())
 	}
 
 	{
