@@ -1,7 +1,6 @@
 package app
 
 import (
-	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -165,19 +164,7 @@ func (app *app) BeginBlock(req tmtypes.RequestBeginBlock) tmtypes.ResponseBeginB
 	return tmtypes.ResponseBeginBlock{}
 }
 
-func doHash(address []byte, nonce uint64) []byte {
-	nbytes := make([]byte, 10)
-	binary.LittleEndian.PutUint64(nbytes, nonce)
-	data := append(address, nbytes...)
-	hash32 := sha256.Sum256(data)
-	return hash32[:32]
-}
-
 func (app *app) createDeploymentOrders() {
-	// create deploymentOrders for deployments without matching active deployment orders
-
-	// get all deployments
-	// todo: would storing deployments by state (open, close, etc.) cause a significant over performance increase?
 	start := new(base.Bytes)
 	start.DecodeString("")
 	end := new(base.Bytes)
@@ -186,12 +173,13 @@ func (app *app) createDeploymentOrders() {
 	depo := &types.DeploymentOrder{}
 	_, deps, _, _ := app.state.Deployment().GetRangeWithProof(*start, *end, limit)
 
-	// create deploymentOrders for deployments with open state
 	for _, deployment := range deps.Deployments {
 		if deployment.State == types.Deployment_OPEN {
-			// create deployment order
-			// generate new unique address for deployment order
-			depo.Address = doHash(deployment.Address, deployment.Nonce)
+
+			nbytes := make([]byte, binary.MaxVarintLen64)
+			binary.PutUvarint(nbytes, deployment.Nonce)
+			depo.Address = append(deployment.Address, nbytes...)
+			depo.Deployment = deployment.Address
 			depo.From = deployment.From
 			depo.Groups = deployment.Groups
 			depo.State = types.DeploymentOrder_OPEN
@@ -200,7 +188,6 @@ func (app *app) createDeploymentOrders() {
 			if err != nil {
 				app.trace("ERROR: deploymentOrder save failed")
 			}
-			// change deployment state to Deployment_ORDERED
 			deployment.State = types.Deployment_ORDERED
 			deployment.Nonce += 1
 			err = app.state.Deployment().Save(&deployment)

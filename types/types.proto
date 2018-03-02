@@ -116,13 +116,14 @@ message TxDeployment {
 message DeploymentOrder {
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   bytes  from =    2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  repeated DeploymentGroup groups = 3 [(gogoproto.nullable) = false];
+  bytes  deployment = 3 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  repeated DeploymentGroup groups = 4 [(gogoproto.nullable) = false];
   enum DeploymentOrderState {
     OPEN      = 0;
     MATCHED   = 1;
     CLOSED    = 2;
   }
-  DeploymentOrderState state = 4;
+  DeploymentOrderState state = 5;
 }
 
 message DeploymentOrders {
