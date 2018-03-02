@@ -79,6 +79,10 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if err := app.ActivateMarket(pvalidator, n.EventBus()); err != nil {
+		return err
+	}
+
 	if err := n.Start(); err != nil {
 		return fmt.Errorf("Failed to start node: %v", err)
 	}

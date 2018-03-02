@@ -3,11 +3,13 @@ package app
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/photon/app/account"
 	"github.com/ovrclk/photon/app/datacenter"
 	"github.com/ovrclk/photon/app/deployment"
+	"github.com/ovrclk/photon/app/market"
 	"github.com/ovrclk/photon/app/store"
 	apptypes "github.com/ovrclk/photon/app/types"
 	"github.com/ovrclk/photon/state"
@@ -16,8 +18,14 @@ import (
 	"github.com/ovrclk/photon/types/code"
 	"github.com/ovrclk/photon/version"
 	tmtypes "github.com/tendermint/abci/types"
+	tmtmtypes "github.com/tendermint/tendermint/types"
 	"github.com/tendermint/tmlibs/log"
 )
+
+type Application interface {
+	tmtypes.Application
+	ActivateMarket(tmtmtypes.PrivValidator, *tmtmtypes.EventBus) error
+}
 
 type app struct {
 	tmtypes.BaseApplication
@@ -26,10 +34,12 @@ type app struct {
 
 	apps []apptypes.Application
 
+	mfacilitator market.Facilitator
+
 	log log.Logger
 }
 
-func Create(state state.State, logger log.Logger) (tmtypes.Application, error) {
+func Create(state state.State, logger log.Logger) (Application, error) {
 
 	var apps []apptypes.Application
 
@@ -66,6 +76,29 @@ func Create(state state.State, logger log.Logger) (tmtypes.Application, error) {
 	}
 
 	return &app{state: state, apps: apps, log: logger}, nil
+}
+
+func (app *app) ActivateMarket(validator tmtmtypes.PrivValidator, bus *tmtmtypes.EventBus) error {
+
+	if app.mfacilitator != nil {
+		return errors.New("market already activated")
+	}
+
+	mapp, err := market.NewApp(app.state, app.log.With("app", "market"))
+	if err != nil {
+		return err
+	}
+
+	mfacilitator, err := market.NewFacilitator(app.log.With("app", "market-facilitator"), validator, bus)
+	if err != nil {
+		return err
+	}
+
+	app.mfacilitator = mfacilitator
+
+	app.apps = append(app.apps, mapp)
+
+	return nil
 }
 
 func (app *app) Info(req tmtypes.RequestInfo) tmtypes.ResponseInfo {
@@ -148,7 +181,12 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 }
 
 func (app *app) BeginBlock(req tmtypes.RequestBeginBlock) tmtypes.ResponseBeginBlock {
-	app.trace("BeginBlock")
+	app.trace("BeginBlock", "tmhash", hex.EncodeToString(req.Hash))
+
+	if app.mfacilitator != nil {
+		app.mfacilitator.OnBeginBlock(req)
+	}
+
 	return tmtypes.ResponseBeginBlock{}
 }
 
@@ -166,6 +204,10 @@ func (app *app) Commit() tmtypes.ResponseCommit {
 
 	if err != nil {
 		return tmtypes.ResponseCommit{Data: data, Code: code.ERROR, Log: err.Error()}
+	}
+
+	if app.mfacilitator != nil {
+		app.mfacilitator.OnCommit(app.state)
 	}
 
 	return tmtypes.ResponseCommit{Code: tmtypes.CodeTypeOK, Data: data}
@@ -207,8 +249,8 @@ func (app *app) traceTx(meth string, obj *types.Tx) {
 	app.traceLog().Debug(meth, "tx", js)
 }
 
-func (app *app) trace(meth string) {
-	app.traceLog().Debug(meth)
+func (app *app) trace(meth string, keyvals ...interface{}) {
+	app.traceLog().Debug(meth, keyvals...)
 }
 
 func (app *app) traceLog() log.Logger {
