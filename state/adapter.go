@@ -259,7 +259,7 @@ func (d *deploymentOrderAdapter) GetRangeWithProof(startKey base.Bytes, endKey b
 
 	for _, d := range dbytes {
 		depo.Unmarshal(d)
-		depos.Deployments = append(deps.DeploymentOrders, dep)
+		depos.DeploymentOrders = append(depos.DeploymentOrders, depo)
 	}
 
 	return keys, &depos, proof, nil

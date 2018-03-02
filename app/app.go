@@ -1,6 +1,8 @@
 package app
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"math"
@@ -9,6 +11,7 @@ import (
 	"github.com/ovrclk/photon/app/account"
 	"github.com/ovrclk/photon/app/datacenter"
 	"github.com/ovrclk/photon/app/deployment"
+	"github.com/ovrclk/photon/app/deploymentOrder"
 	"github.com/ovrclk/photon/app/store"
 	apptypes "github.com/ovrclk/photon/app/types"
 	"github.com/ovrclk/photon/state"
@@ -53,6 +56,14 @@ func Create(state state.State, logger log.Logger) (tmtypes.Application, error) {
 
 	{
 		app, err := deployment.NewApp(state, logger.With("app", "deployment"))
+		if err != nil {
+			return nil, err
+		}
+		apps = append(apps, app)
+	}
+
+	{
+		app, err := deploymentOrder.NewApp(state, logger.With("app", "deploymentorder"))
 		if err != nil {
 			return nil, err
 		}
@@ -154,6 +165,14 @@ func (app *app) BeginBlock(req tmtypes.RequestBeginBlock) tmtypes.ResponseBeginB
 	return tmtypes.ResponseBeginBlock{}
 }
 
+func doHash(address []byte, nonce uint64) []byte {
+	nbytes := make([]byte, 10)
+	binary.LittleEndian.PutUint64(nbytes, nonce)
+	data := append(address, nbytes...)
+	hash32 := sha256.Sum256(data)
+	return hash32[:32]
+}
+
 func (app *app) createDeploymentOrders() {
 	// create deploymentOrders for deployments without matching active deployment orders
 
@@ -171,19 +190,20 @@ func (app *app) createDeploymentOrders() {
 	for _, deployment := range deps.Deployments {
 		if deployment.State == types.Deployment_OPEN {
 			// create deployment order
-			// generate new address for deployment order
-			depo.Address = hash(deployment.version + deployment.Address)
+			// generate new unique address for deployment order
+			depo.Address = doHash(deployment.Address, deployment.Nonce)
 			depo.From = deployment.From
 			depo.Groups = deployment.Groups
-			depo.State = deployment.State
+			depo.State = types.DeploymentOrder_OPEN
 
-			err := app.state.DeploymentOrder().Save(deploymentOrder)
+			err := app.state.DeploymentOrder().Save(depo)
 			if err != nil {
 				app.trace("ERROR: deploymentOrder save failed")
 			}
 			// change deployment state to Deployment_ORDERED
 			deployment.State = types.Deployment_ORDERED
-			err := app.state.Deployment().Save(deployment)
+			deployment.Nonce += 1
+			err = app.state.Deployment().Save(&deployment)
 			if err != nil {
 				app.trace("ERROR: deployment save failed")
 			}
@@ -193,7 +213,7 @@ func (app *app) createDeploymentOrders() {
 
 func (app *app) EndBlock(req tmtypes.RequestEndBlock) tmtypes.ResponseEndBlock {
 	app.trace("EndBlock")
-
+	app.createDeploymentOrders()
 	return tmtypes.ResponseEndBlock{}
 }
 

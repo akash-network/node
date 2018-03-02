@@ -101,7 +101,7 @@ message Deployment {
     CLOSED    = 2;
   }
   DeploymentState state = 4;
-  uint32 nonce = 5;
+  uint64 nonce = 5;
 }
 
 message Deployments {

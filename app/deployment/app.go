@@ -191,19 +191,6 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.Re
 		}
 	}
 
-	/* todo: balance checks
-
-	    balance > deployment stake
-	    balance > minimum deployment cost?
-	    balance > ?????
-
-		if acct.Balance < ?? {
-			return tmtypes.ResponseCheckTx{
-				Code: code.INVALID_TRANSACTION,
-				Log:  "insufficient funds",
-		}
-	}*/
-
 	return tmtypes.ResponseCheckTx{}
 }
 
