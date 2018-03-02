@@ -174,25 +174,35 @@ func (app *app) createDeploymentOrders() {
 	_, deps, _, _ := app.state.Deployment().GetRangeWithProof(*start, *end, limit)
 
 	for _, deployment := range deps.Deployments {
-		if deployment.State == types.Deployment_OPEN {
+		if deployment.State == types.Deployment_ACTIVE {
+			println("found active deployment", deployment.Address.EncodeString())
+			for i, group := range deployment.Groups {
+				if group.State == types.DeploymentGroup_OPEN {
+					println("found open deployment group")
+					println("index", i)
+					ibytes := make([]byte, binary.MaxVarintLen32)
+					binary.PutUvarint(ibytes, uint64(i))
+					depo.Address = append(deployment.Address, ibytes...)
+					depo.GroupIndex = uint32(i)
+					depo.State = types.DeploymentOrder_OPEN
 
-			nbytes := make([]byte, binary.MaxVarintLen64)
-			binary.PutUvarint(nbytes, deployment.Nonce)
-			depo.Address = append(deployment.Address, nbytes...)
-			depo.Deployment = deployment.Address
-			depo.From = deployment.From
-			depo.Groups = deployment.Groups
-			depo.State = types.DeploymentOrder_OPEN
+					println("saving deploymentorder")
+					data, _ := json.MarshalIndent(depo, "", "  ")
+					println(string(data))
 
-			err := app.state.DeploymentOrder().Save(depo)
-			if err != nil {
-				app.trace("ERROR: deploymentOrder save failed")
-			}
-			deployment.State = types.Deployment_ORDERED
-			deployment.Nonce += 1
-			err = app.state.Deployment().Save(&deployment)
-			if err != nil {
-				app.trace("ERROR: deployment save failed")
+					err := app.state.DeploymentOrder().Save(depo)
+					if err != nil {
+						app.trace("ERROR: deploymentOrder save failed")
+					}
+
+					group.State = types.DeploymentGroup_ORDERED
+					deployment.Groups[i] = group
+					// err = app.state.Deployment().Save(&deployment)
+					// if err != nil {
+					// 	app.trace("ERROR: deployment save failed")
+					// }
+
+				}
 			}
 		}
 	}

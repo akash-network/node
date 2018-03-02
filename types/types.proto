@@ -89,19 +89,24 @@ message ProviderAttribute {
 message DeploymentGroup {
   repeated ProviderAttribute requirements = 1 [(gogoproto.nullable) = false];
   repeated ResourceGroup     resources    = 2 [(gogoproto.nullable) = false];
+  enum DeploymentGroupState {
+    OPEN    = 0;
+    ORDERED = 1;
+    CLOSED  = 2;
+  }
+  DeploymentGroupState state = 3;
 }
 
 message Deployment {
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  bytes  from =    2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  from    = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   repeated DeploymentGroup groups = 3 [(gogoproto.nullable) = false];
   enum DeploymentState {
-    OPEN      = 0;
-    ORDERED   = 1;
-    CLOSED    = 2;
+    ACTIVE  = 0;
+    CLOSING = 1;
+    CLOSED  = 2;
   }
   DeploymentState state = 4;
-  uint64 nonce = 5;
 }
 
 message Deployments {
@@ -114,16 +119,14 @@ message TxDeployment {
 }
 
 message DeploymentOrder {
-  bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  bytes  from =    2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  bytes  deployment = 3 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  repeated DeploymentGroup groups = 4 [(gogoproto.nullable) = false];
+  bytes address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  uint32 groupIndex = 2;
   enum DeploymentOrderState {
-    OPEN      = 0;
-    MATCHED   = 1;
-    CLOSED    = 2;
+    OPEN    = 0;
+    MATCHED = 1;
+    CLOSED  = 2;
   }
-  DeploymentOrderState state = 5;
+  DeploymentOrderState state = 3;
 }
 
 message DeploymentOrders {

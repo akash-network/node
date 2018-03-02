@@ -60,7 +60,7 @@ func doQuery(ctx context.Context, path string, structure interface{}) error {
 	data, _ := json.MarshalIndent(structure, "", "  ")
 
 	println("path: " + path)
-	println("response: " + string(data))
+	println("response:\n" + string(data))
 
 	return nil
 }
