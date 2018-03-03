@@ -48,15 +48,23 @@ func (f *facilitator) buildTx(signer tmtmtypes.PrivValidatorFS, nonce uint64, pa
 	if err != nil {
 		return nil, err
 	}
-
 	sig, err := signer.Sign(txb.SignBytes())
 	if err != nil {
 		return nil, err
 	}
-
 	pubkey := signer.PubKey
 	txb.Sign(pubkey, sig)
 	return txb.TxBytes()
+}
+
+func (f *facilitator) sendTx(tx []byte) error {
+	result, err := core.BroadcastTxCommit(tx)
+	if err != nil {
+		f.log.Error("failed to send tx's", err)
+		return err
+	}
+	f.log.Info("sent tx's", result)
+	return nil
 }
 
 func (f *facilitator) OnCommit(state state.State) error {
@@ -65,8 +73,6 @@ func (f *facilitator) OnCommit(state state.State) error {
 		return nil
 	}
 	f.log.Info("I SHOULD MAKE THE MARKET STUFF HAPPEN.")
-
-	// market stuff happens here
 
 	// create deployment order tx
 	createDeploymentOrderTxs, err := deploymentOrder.CreateDeploymentOrderTxs(state)
@@ -79,11 +85,11 @@ func (f *facilitator) OnCommit(state state.State) error {
 		if err != nil {
 			f.log.Error("failed to build tx's", err)
 		}
-		result, err := core.BroadcastTxCommit(tx)
-		if err != nil {
-			f.log.Error("failed to send tx's", err)
-		}
-		f.log.Info("sent tx's", result)
+
+		data, _ := json.MarshalIndent(tx, "", "  ")
+		println("tx:\n" + string(data))
+
+		go f.sendTx(tx)
 	}
 
 	return nil
