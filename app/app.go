@@ -1,11 +1,9 @@
 package app
 
 import (
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"math"
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/photon/app/account"
@@ -18,7 +16,6 @@ import (
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/txutil"
 	"github.com/ovrclk/photon/types"
-	"github.com/ovrclk/photon/types/base"
 	"github.com/ovrclk/photon/types/code"
 	"github.com/ovrclk/photon/version"
 	tmtypes "github.com/tendermint/abci/types"
@@ -28,7 +25,7 @@ import (
 
 type Application interface {
 	tmtypes.Application
-	ActivateMarket(tmtmtypes.PrivValidator, *tmtmtypes.EventBus) error
+	ActivateMarket(tmtmtypes.PrivValidatorFS, *tmtmtypes.EventBus) error
 }
 
 type app struct {
@@ -90,7 +87,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	return &app{state: state, apps: apps, log: logger}, nil
 }
 
-func (app *app) ActivateMarket(validator tmtmtypes.PrivValidator, bus *tmtmtypes.EventBus) error {
+func (app *app) ActivateMarket(validator tmtmtypes.PrivValidatorFS, bus *tmtmtypes.EventBus) error {
 
 	if app.mfacilitator != nil {
 		return errors.New("market already activated")
@@ -202,53 +199,8 @@ func (app *app) BeginBlock(req tmtypes.RequestBeginBlock) tmtypes.ResponseBeginB
 	return tmtypes.ResponseBeginBlock{}
 }
 
-func (app *app) createDeploymentOrders() {
-	start := new(base.Bytes)
-	start.DecodeString("")
-	end := new(base.Bytes)
-	end.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
-	limit := math.MaxInt64
-	depo := &types.DeploymentOrder{}
-	_, deps, _, _ := app.state.Deployment().GetRangeWithProof(*start, *end, limit)
-
-	for _, deployment := range deps.Deployments {
-		if deployment.State == types.Deployment_ACTIVE {
-			println("found active deployment", deployment.Address.EncodeString())
-			for i, group := range deployment.Groups {
-				if group.State == types.DeploymentGroup_OPEN {
-					println("found open deployment group")
-					println("index", i)
-					ibytes := make([]byte, binary.MaxVarintLen32)
-					binary.PutUvarint(ibytes, uint64(i))
-					depo.Address = append(deployment.Address, ibytes...)
-					depo.GroupIndex = uint32(i)
-					depo.State = types.DeploymentOrder_OPEN
-
-					println("saving deploymentorder")
-					data, _ := json.MarshalIndent(depo, "", "  ")
-					println(string(data))
-
-					err := app.state.DeploymentOrder().Save(depo)
-					if err != nil {
-						app.trace("ERROR: deploymentOrder save failed")
-					}
-
-					group.State = types.DeploymentGroup_ORDERED
-					deployment.Groups[i] = group
-					// err = app.state.Deployment().Save(&deployment)
-					// if err != nil {
-					// 	app.trace("ERROR: deployment save failed")
-					// }
-
-				}
-			}
-		}
-	}
-}
-
 func (app *app) EndBlock(req tmtypes.RequestEndBlock) tmtypes.ResponseEndBlock {
 	app.trace("EndBlock")
-	app.createDeploymentOrders()
 	return tmtypes.ResponseEndBlock{}
 }
 

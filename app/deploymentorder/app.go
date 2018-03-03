@@ -1,13 +1,14 @@
 package deploymentOrder
 
 import (
+	"encoding/binary"
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/photon/app/types"
 	"github.com/ovrclk/photon/state"
+	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
 	"github.com/ovrclk/photon/types/code"
 	tmtypes "github.com/tendermint/abci/types"
@@ -106,23 +107,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 }
 
 func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
-	start := new(base.Bytes)
-	if err := start.DecodeString(""); err != nil {
-		return tmtypes.ResponseQuery{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}
-	}
-	end := new(base.Bytes)
-	if err := end.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"); err != nil {
-		return tmtypes.ResponseQuery{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}
-	}
-	limit := math.MaxInt64
-	_, depos, _, err := a.state.DeploymentOrder().GetRangeWithProof(*start, *end, limit)
-
+	depos, err := a.state.DeploymentOrder().GetMaxRange()
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -150,4 +135,38 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 		Value:  bytes,
 		Height: int64(a.state.Version()),
 	}
+}
+
+func CreateDeploymentOrderTxs(state state.State) ([]types.TxCreateDeploymentOrder, error) {
+	depotxs := make([]types.TxCreateDeploymentOrder, 1, 1)
+	deps, err := state.Deployment().GetMaxRange()
+	if err != nil {
+		return depotxs, err
+	}
+
+	for _, deployment := range deps.Deployments {
+		if deployment.State == types.Deployment_ACTIVE {
+			println("found active deployment", deployment.Address.EncodeString())
+			for i, group := range deployment.Groups {
+				if group.State == types.DeploymentGroup_OPEN {
+
+					// create deploymentOrder for group
+					ibytes := make([]byte, binary.MaxVarintLen32)
+					binary.PutUvarint(ibytes, uint64(i))
+
+					depotx := types.TxCreateDeploymentOrder{
+						DeploymentOrder: &types.DeploymentOrder{
+							Address:    append(deployment.Address, ibytes...),
+							GroupIndex: uint32(i),
+							State:      types.DeploymentOrder_OPEN,
+						},
+					}
+
+					depotxs = append(depotxs, depotx)
+				}
+			}
+		}
+	}
+
+	return depotxs, nil
 }

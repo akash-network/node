@@ -1,6 +1,8 @@
 package state
 
 import (
+	"math"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
@@ -12,7 +14,21 @@ const (
 	DeploymentPath      = "/deployments/"
 	DatacenterPath      = "/datacenter/"
 	DeploymentOrderPath = "/deploymentorders/"
+
+	MaxRangeLimit = math.MaxInt64
 )
+
+func GetMinStartRange() base.Bytes {
+	minStartRange := new(base.Bytes)
+	minStartRange.DecodeString("")
+	return *minStartRange
+}
+
+func GetMaxEndRange64() base.Bytes {
+	maxEndRange64 := new(base.Bytes)
+	maxEndRange64.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+	return *maxEndRange64
+}
 
 type AccountAdapter interface {
 	Save(account *types.Account) error
@@ -63,6 +79,7 @@ func (a *accountAdapter) KeyFor(address base.Bytes) base.Bytes {
 type DeploymentAdapter interface {
 	Save(deployment *types.Deployment) error
 	Get(base.Bytes) (*types.Deployment, error)
+	GetMaxRange() (*types.Deployments, error)
 	GetRangeWithProof(base.Bytes, base.Bytes, int) ([][]byte, *types.Deployments, iavl.KeyRangeProof, error)
 	KeyFor(base.Bytes) base.Bytes
 }
@@ -103,6 +120,11 @@ func (d *deploymentAdapter) Get(address base.Bytes) (*types.Deployment, error) {
 	return &dep, nil
 }
 
+func (d *deploymentAdapter) GetMaxRange() (*types.Deployments, error) {
+	_, deps, _, err := d.GetRangeWithProof(GetMinStartRange(), GetMaxEndRange64(), MaxRangeLimit)
+	return deps, err
+}
+
 func (d *deploymentAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.Deployments, iavl.KeyRangeProof, error) {
 	deps := types.Deployments{}
 	proof := iavl.KeyRangeProof{}
@@ -134,6 +156,7 @@ func (a *deploymentAdapter) KeyFor(address base.Bytes) base.Bytes {
 type DatacenterAdapter interface {
 	Save(datacenter *types.Datacenter) error
 	Get(base.Bytes) (*types.Datacenter, error)
+	GetMaxRange() (*types.Datacenters, error)
 	GetRangeWithProof(base.Bytes, base.Bytes, int) ([][]byte, *types.Datacenters, iavl.KeyRangeProof, error)
 	KeyFor(base.Bytes) base.Bytes
 }
@@ -172,6 +195,11 @@ func (d *datacenterAdapter) Get(address base.Bytes) (*types.Datacenter, error) {
 	return &dc, nil
 }
 
+func (d *datacenterAdapter) GetMaxRange() (*types.Datacenters, error) {
+	_, dcs, _, err := d.GetRangeWithProof(GetMinStartRange(), GetMaxEndRange64(), MaxRangeLimit)
+	return dcs, err
+}
+
 func (d *datacenterAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.Datacenters, iavl.KeyRangeProof, error) {
 	dcs := types.Datacenters{}
 	proof := iavl.KeyRangeProof{}
@@ -202,6 +230,7 @@ func (a *datacenterAdapter) KeyFor(address base.Bytes) base.Bytes {
 type DeploymentOrderAdapter interface {
 	Save(deploymentOrder *types.DeploymentOrder) error
 	Get(base.Bytes) (*types.DeploymentOrder, error)
+	GetMaxRange() (*types.DeploymentOrders, error)
 	GetRangeWithProof(base.Bytes, base.Bytes, int) ([][]byte, *types.DeploymentOrders, iavl.KeyRangeProof, error)
 	KeyFor(base.Bytes) base.Bytes
 }
@@ -239,6 +268,11 @@ func (d *deploymentOrderAdapter) Get(address base.Bytes) (*types.DeploymentOrder
 	depo.Unmarshal(buf)
 
 	return &depo, nil
+}
+
+func (d *deploymentOrderAdapter) GetMaxRange() (*types.DeploymentOrders, error) {
+	_, depos, _, err := d.GetRangeWithProof(GetMinStartRange(), GetMaxEndRange64(), MaxRangeLimit)
+	return depos, err
 }
 
 func (d *deploymentOrderAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.DeploymentOrders, iavl.KeyRangeProof, error) {

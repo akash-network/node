@@ -26,8 +26,9 @@ message TxPayload {
   uint64 nonce = 1;
   oneof payload {
     TxSend txSend = 2;
-    TxDeployment txDeployment = 3;
-    TxCreateDatacenter txCreateDatacenter = 4;
+    TxCreateDeployment txCreateDeployment = 3;
+    TxCreateDeploymentOrder txCreateDeploymentOrder = 4;
+    TxCreateDatacenter txCreateDatacenter = 5;
   }
 }
 /* END GLOBAL */
@@ -113,9 +114,8 @@ message Deployments {
   repeated Deployment deployments = 1 [(gogoproto.nullable) = false];
 }
 
-message TxDeployment {
-  bytes from = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  Deployment deployment = 2;
+message TxCreateDeployment {
+  Deployment deployment = 1;
 }
 
 message DeploymentOrder {
@@ -127,6 +127,10 @@ message DeploymentOrder {
     CLOSED  = 2;
   }
   DeploymentOrderState state = 3;
+}
+
+message TxCreateDeploymentOrder {
+  DeploymentOrder deploymentOrder = 1;
 }
 
 message DeploymentOrders {

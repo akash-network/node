@@ -3,7 +3,6 @@ package datacenter
 import (
 	"bytes"
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
@@ -120,24 +119,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 }
 
 func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
-	start := new(base.Bytes)
-	if err := start.DecodeString(""); err != nil {
-		return tmtypes.ResponseQuery{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}
-	}
-	end := new(base.Bytes)
-	if err := end.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"); err != nil {
-		return tmtypes.ResponseQuery{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}
-	}
-
-	limit := math.MaxInt64
-	_, dcs, _, err := a.state.Datacenter().GetRangeWithProof(*start, *end, limit)
-
+	dcs, err := a.state.Datacenter().GetMaxRange()
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,

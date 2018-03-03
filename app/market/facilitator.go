@@ -7,9 +7,13 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/ovrclk/photon/app/deploymentOrder"
 	"github.com/ovrclk/photon/state"
+	"github.com/ovrclk/photon/txutil"
+	_ "github.com/ovrclk/photon/types"
 	tmtypes "github.com/tendermint/abci/types"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
+	"github.com/tendermint/tendermint/rpc/core"
 	tmtmtypes "github.com/tendermint/tendermint/types"
 	"github.com/tendermint/tmlibs/log"
 )
@@ -25,7 +29,7 @@ type Facilitator interface {
 
 type facilitator struct {
 	log       log.Logger
-	validator tmtmtypes.PrivValidator
+	validator tmtmtypes.PrivValidatorFS
 
 	block *tmtypes.RequestBeginBlock
 	rs    *ctypes.RoundState
@@ -38,6 +42,21 @@ func (f *facilitator) OnBeginBlock(req tmtypes.RequestBeginBlock) error {
 	return nil
 }
 
+func (f *facilitator) buildTx(signer tmtmtypes.PrivValidatorFS, nonce uint64, payload interface{}) ([]byte, error) {
+	txb, err := txutil.NewTxBuilder(nonce, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := signer.Sign(txb.SignBytes())
+	if err != nil {
+		return nil, err
+	}
+	pubkey := signer.PubKey
+	txb.Sign(pubkey, sig)
+	return txb.TxBytes()
+}
+
 func (f *facilitator) OnCommit(state state.State) error {
 	if !f.checkCommit(state) {
 		f.log.Info("NOT MY TURN TO DO MARKET STUFF.")
@@ -46,6 +65,28 @@ func (f *facilitator) OnCommit(state state.State) error {
 	f.log.Info("I SHOULD MAKE THE MARKET STUFF HAPPEN.")
 
 	// market stuff happens here
+
+	// create deployment order tx
+	createDeploymentOrderTsx, err := deploymentOrder.CreateDeploymentOrderTxs(state)
+	if err != nil {
+		f.log.Error("Failed to generate createDeploymentOrder transactions", err)
+	}
+
+	for _, createDeploymentOrder := range createDeploymentOrderTsx {
+		tx, err := f.buildTx(f.validator, 1, createDeploymentOrder)
+		if err != nil {
+			f.log.Error("Failed to sign createDeploymentOrder transaction", err)
+		}
+		result, err := core.BroadcastTxCommit(tx)
+		if err != nil {
+			return err
+		}
+		f.log.Info("Sent createDeploymentOrder transaction", result)
+	}
+
+	// create fulfilment order tx
+
+	//	create lease tx
 
 	return nil
 }
@@ -111,7 +152,7 @@ func (f *facilitator) onEvent(evt interface{}) {
 	f.onProposalComplete(rs)
 }
 
-func NewFacilitator(log log.Logger, validator tmtmtypes.PrivValidator, bus *tmtmtypes.EventBus) (Facilitator, error) {
+func NewFacilitator(log log.Logger, validator tmtmtypes.PrivValidatorFS, bus *tmtmtypes.EventBus) (Facilitator, error) {
 
 	f := &facilitator{
 		log:       log,
