@@ -120,13 +120,14 @@ message TxCreateDeployment {
 
 message DeploymentOrder {
   bytes address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  uint32 groupIndex = 2;
+  bytes deployment = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  uint32 groupIndex = 3;
   enum DeploymentOrderState {
     OPEN    = 0;
     MATCHED = 1;
     CLOSED  = 2;
   }
-  DeploymentOrderState state = 3;
+  DeploymentOrderState state = 4;
 }
 
 message TxCreateDeploymentOrder {

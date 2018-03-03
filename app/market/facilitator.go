@@ -60,10 +60,13 @@ func (f *facilitator) buildTx(signer tmtmtypes.PrivValidatorFS, nonce uint64, pa
 func (f *facilitator) sendTx(tx []byte) error {
 	result, err := core.BroadcastTxCommit(tx)
 	if err != nil {
+		data, _ := json.MarshalIndent(err, "", "  ")
+		println("err:\n" + string(data))
 		f.log.Error("failed to send tx's", err)
 		return err
 	}
-	f.log.Info("sent tx's", result)
+	data, _ := json.MarshalIndent(result, "", "  ")
+	println("result:\n" + string(data))
 	return nil
 }
 
@@ -80,15 +83,12 @@ func (f *facilitator) OnCommit(state state.State) error {
 		f.log.Error("Failed to generate createDeploymentOrder transactions", err)
 	}
 
+	// todo: increment nonce for account
 	for _, createDeploymentOrder := range createDeploymentOrderTxs {
 		tx, err := f.buildTx(f.validator, 1, createDeploymentOrder)
 		if err != nil {
-			f.log.Error("failed to build tx's", err)
+			f.log.Error("failed to build tx", err)
 		}
-
-		data, _ := json.MarshalIndent(tx, "", "  ")
-		println("tx:\n" + string(data))
-
 		go f.sendTx(tx)
 	}
 

@@ -30,10 +30,18 @@ func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
 }
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
+	switch tx.(type) {
+	case *types.TxPayload_TxCreateDeploymentOrder:
+		return true
+	}
 	return false
 }
 
 func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
+	switch tx := tx.(type) {
+	case *types.TxPayload_TxCreateDeploymentOrder:
+		return a.doCheckTx(ctx, tx.TxCreateDeploymentOrder)
+	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
 		Log:  "unknown transaction",
@@ -41,6 +49,10 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 }
 
 func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
+	switch tx := tx.(type) {
+	case *types.TxPayload_TxCreateDeploymentOrder:
+		return a.doDeliverTx(ctx, tx.TxCreateDeploymentOrder)
+	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
 		Log:  "unknown transaction",
@@ -137,36 +149,88 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 }
 
+// todo: break each type of check out into a named global exported funtion for all trasaction types to utilize
+func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateDeploymentOrder) tmtypes.ResponseCheckTx {
+
+	// todo: ensure signed by last block creator / valid market facilitator
+
+	// if !bytes.Equal(ctx.Signer().Address(), tx.Deployment.From) {
+	// 	return tmtypes.ResponseCheckTx{
+	// 		Code: code.INVALID_TRANSACTION,
+	// 		Log:  "Not signed by sending address",
+	// 	}
+	// }
+
+	return tmtypes.ResponseCheckTx{}
+}
+
+func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDeploymentOrder) tmtypes.ResponseDeliverTx {
+
+	cresp := a.doCheckTx(ctx, tx)
+	if !cresp.IsOK() {
+		return tmtypes.ResponseDeliverTx{
+			Code: cresp.Code,
+			Log:  cresp.Log,
+		}
+	}
+
+	deploymentOrder := tx.DeploymentOrder
+
+	deployment, err := a.state.Deployment().Get(deploymentOrder.Deployment)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	if err := a.state.DeploymentOrder().Save(deploymentOrder); err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	deployment.Groups[deploymentOrder.GroupIndex].State = types.DeploymentGroup_ORDERED
+	if err := a.state.Deployment().Save(deployment); err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseDeliverTx{}
+}
+
 func CreateDeploymentOrderTxs(state state.State) ([]types.TxCreateDeploymentOrder, error) {
 	depotxs := make([]types.TxCreateDeploymentOrder, 0, 0)
 	deps, err := state.Deployment().GetMaxRange()
 	if err != nil {
 		return depotxs, err
 	}
-
 	for _, deployment := range deps.Deployments {
 		if deployment.State == types.Deployment_ACTIVE {
-			println("found active deployment", deployment.Address.EncodeString())
 			for i, group := range deployment.Groups {
 				if group.State == types.DeploymentGroup_OPEN {
-
-					// create deploymentOrder for group
 					ibytes := make([]byte, binary.MaxVarintLen32)
 					binary.PutUvarint(ibytes, uint64(i))
-
+					abytes := make([]byte, 32)
+					_, err := deployment.Address.MarshalTo(abytes)
+					if err != nil {
+						return depotxs, err
+					}
 					depotx := &types.TxCreateDeploymentOrder{
 						DeploymentOrder: &types.DeploymentOrder{
-							Address:    append(deployment.Address, ibytes...),
+							Address:    append(abytes, ibytes...),
+							Deployment: abytes,
 							GroupIndex: uint32(i),
 							State:      types.DeploymentOrder_OPEN,
 						},
 					}
-
 					depotxs = append(depotxs, *depotx)
 				}
 			}
 		}
 	}
-
 	return depotxs, nil
 }

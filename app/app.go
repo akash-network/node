@@ -229,7 +229,6 @@ func (app *app) appForTx(buf []byte) (
 		return nil, nil, nil, apptypes.WrapError(code.ERROR, err)
 	}
 	ctx := apptypes.NewContext(tx)
-
 	for _, app := range app.apps {
 		if app.AcceptTx(ctx, tx.Payload.Payload) {
 			return ctx, app, tx, nil
