@@ -11,7 +11,7 @@ import (
 	"github.com/ovrclk/photon/app/deploymentOrder"
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/txutil"
-	_ "github.com/ovrclk/photon/types"
+	"github.com/ovrclk/photon/types/base"
 	tmtypes "github.com/tendermint/abci/types"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/rpc/core"
@@ -70,6 +70,19 @@ func (f *facilitator) sendTx(tx []byte) error {
 	return nil
 }
 
+func (f *facilitator) getNonce(state state.State) (uint64, error) {
+	address := new(base.Bytes)
+	address.Unmarshal(f.validator.Address)
+	account, err := state.Account().Get(*address)
+	if err != nil {
+		return 0, err
+	}
+	if account == nil {
+		return uint64(1), nil
+	}
+	return account.Nonce, nil
+}
+
 func (f *facilitator) OnCommit(state state.State) error {
 	if !f.checkCommit(state) {
 		f.log.Info("NOT MY TURN TO DO MARKET STUFF.")
@@ -83,9 +96,15 @@ func (f *facilitator) OnCommit(state state.State) error {
 		f.log.Error("Failed to generate createDeploymentOrder transactions", err)
 	}
 
+	nonce, err := f.getNonce(state)
+	if err != nil {
+		f.log.Error("failed to get validator nonce", err)
+	}
+
 	// todo: increment nonce for account
 	for _, createDeploymentOrder := range createDeploymentOrderTxs {
-		tx, err := f.buildTx(f.validator, 1, createDeploymentOrder)
+		nonce += 1
+		tx, err := f.buildTx(f.validator, nonce, createDeploymentOrder)
 		if err != nil {
 			f.log.Error("failed to build tx", err)
 		}

@@ -95,7 +95,7 @@ func parseDeployment(file string, hash []byte) (types.Deployment, error) {
 		Resources:    resources,
 	}
 
-	groups := []types.DeploymentGroup{*deploymentgroup} // *deploymentgroup, *deploymentgroup
+	groups := []types.DeploymentGroup{*deploymentgroup, *deploymentgroup} //, *deploymentgroup
 
 	deployment := &types.Deployment{
 		Address: hash,
