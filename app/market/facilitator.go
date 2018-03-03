@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -52,6 +53,7 @@ func (f *facilitator) buildTx(signer tmtmtypes.PrivValidatorFS, nonce uint64, pa
 	if err != nil {
 		return nil, err
 	}
+
 	pubkey := signer.PubKey
 	txb.Sign(pubkey, sig)
 	return txb.TxBytes()
@@ -67,26 +69,22 @@ func (f *facilitator) OnCommit(state state.State) error {
 	// market stuff happens here
 
 	// create deployment order tx
-	createDeploymentOrderTsx, err := deploymentOrder.CreateDeploymentOrderTxs(state)
+	createDeploymentOrderTxs, err := deploymentOrder.CreateDeploymentOrderTxs(state)
 	if err != nil {
 		f.log.Error("Failed to generate createDeploymentOrder transactions", err)
 	}
 
-	for _, createDeploymentOrder := range createDeploymentOrderTsx {
+	for _, createDeploymentOrder := range createDeploymentOrderTxs {
 		tx, err := f.buildTx(f.validator, 1, createDeploymentOrder)
 		if err != nil {
-			f.log.Error("Failed to sign createDeploymentOrder transaction", err)
+			f.log.Error("failed to build tx's", err)
 		}
 		result, err := core.BroadcastTxCommit(tx)
 		if err != nil {
-			return err
+			f.log.Error("failed to send tx's", err)
 		}
-		f.log.Info("Sent createDeploymentOrder transaction", result)
+		f.log.Info("sent tx's", result)
 	}
-
-	// create fulfilment order tx
-
-	//	create lease tx
 
 	return nil
 }

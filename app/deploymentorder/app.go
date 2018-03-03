@@ -138,7 +138,7 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 }
 
 func CreateDeploymentOrderTxs(state state.State) ([]types.TxCreateDeploymentOrder, error) {
-	depotxs := make([]types.TxCreateDeploymentOrder, 1, 1)
+	depotxs := make([]types.TxCreateDeploymentOrder, 0, 0)
 	deps, err := state.Deployment().GetMaxRange()
 	if err != nil {
 		return depotxs, err
@@ -154,7 +154,7 @@ func CreateDeploymentOrderTxs(state state.State) ([]types.TxCreateDeploymentOrde
 					ibytes := make([]byte, binary.MaxVarintLen32)
 					binary.PutUvarint(ibytes, uint64(i))
 
-					depotx := types.TxCreateDeploymentOrder{
+					depotx := &types.TxCreateDeploymentOrder{
 						DeploymentOrder: &types.DeploymentOrder{
 							Address:    append(deployment.Address, ibytes...),
 							GroupIndex: uint32(i),
@@ -162,7 +162,7 @@ func CreateDeploymentOrderTxs(state state.State) ([]types.TxCreateDeploymentOrde
 						},
 					}
 
-					depotxs = append(depotxs, depotx)
+					depotxs = append(depotxs, *depotx)
 				}
 			}
 		}
