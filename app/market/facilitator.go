@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/ovrclk/photon/app/deploymentOrder"
+	"github.com/ovrclk/photon/app/deploymentorder"
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/txutil"
 	"github.com/ovrclk/photon/types"
@@ -122,7 +122,7 @@ func (f *facilitator) OnCommit(state state.State) error {
 		return nil
 	}
 
-	createDeploymentOrderTxs, err := deploymentOrder.CreateDeploymentOrderTxs(state)
+	createDeploymentOrderTxs, err := deploymentorder.CreateDeploymentOrderTxs(state)
 	if err != nil {
 		f.log.Error("Failed to generate createDeploymentOrder transactions", err)
 	}

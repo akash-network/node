@@ -9,7 +9,7 @@ import (
 	"github.com/ovrclk/photon/app/account"
 	"github.com/ovrclk/photon/app/datacenter"
 	"github.com/ovrclk/photon/app/deployment"
-	"github.com/ovrclk/photon/app/deploymentOrder"
+	"github.com/ovrclk/photon/app/deploymentorder"
 	"github.com/ovrclk/photon/app/market"
 	"github.com/ovrclk/photon/app/store"
 	apptypes "github.com/ovrclk/photon/app/types"
@@ -69,7 +69,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := deploymentOrder.NewApp(state, logger.With("app", "deploymentorder"))
+		app, err := deploymentorder.NewApp(state, logger.With("app", "deploymentorder"))
 		if err != nil {
 			return nil, err
 		}

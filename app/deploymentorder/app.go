@@ -1,4 +1,4 @@
-package deploymentOrder
+package deploymentorder
 
 import (
 	"encoding/binary"

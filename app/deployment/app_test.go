@@ -59,11 +59,11 @@ func TestDeploymentApp(t *testing.T) {
 
 	groups := []types.DeploymentGroup{*deploymentgroup}
 
-	deploymenttx := &types.TxPayload_TxDeployment{
-		TxDeployment: &types.TxDeployment{
-			From: base.Bytes(keyfrom.Address),
+	deploymenttx := &types.TxPayload_TxCreateDeployment{
+		TxCreateDeployment: &types.TxCreateDeployment{
 			Deployment: &types.Deployment{
 				Address: address,
+				From:    base.Bytes(keyfrom.Address),
 				Groups:  groups,
 			},
 		},
@@ -109,8 +109,8 @@ func TestDeploymentApp(t *testing.T) {
 		dep := new(types.Deployment)
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
-		// assert.Equal(t, deployment.TxDeployment.From, dep.From)
-		assert.Equal(t, deploymenttx.TxDeployment.Deployment.Address, dep.Address)
+		assert.Equal(t, deploymenttx.TxCreateDeployment.Deployment.From, dep.From)
+		assert.Equal(t, deploymenttx.TxCreateDeployment.Deployment.Address, dep.Address)
 		assert.Equal(t, dep.Groups[0].Requirements[0].Name, name)
 		assert.Equal(t, dep.Groups[0].Requirements[0].Value, value)
 		assert.Equal(t, dep.Groups[0].Resources[0].Count, number)
