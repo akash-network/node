@@ -128,7 +128,6 @@ func (d *deploymentAdapter) GetMaxRange() (*types.Deployments, error) {
 func (d *deploymentAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.Deployments, iavl.KeyRangeProof, error) {
 	deps := types.Deployments{}
 	proof := iavl.KeyRangeProof{}
-	dep := types.Deployment{}
 
 	start := d.KeyFor(startKey)
 	end := d.KeyFor(endKey)
@@ -142,6 +141,7 @@ func (d *deploymentAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.B
 	}
 
 	for _, d := range dbytes {
+		dep := types.Deployment{}
 		dep.Unmarshal(d)
 		deps.Deployments = append(deps.Deployments, dep)
 	}
@@ -203,7 +203,6 @@ func (d *datacenterAdapter) GetMaxRange() (*types.Datacenters, error) {
 func (d *datacenterAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.Datacenters, iavl.KeyRangeProof, error) {
 	dcs := types.Datacenters{}
 	proof := iavl.KeyRangeProof{}
-	dc := types.Datacenter{}
 	start := d.KeyFor(startKey)
 	end := d.KeyFor(endKey)
 
@@ -216,6 +215,7 @@ func (d *datacenterAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.B
 	}
 
 	for _, d := range dbytes {
+		dc := types.Datacenter{}
 		dc.Unmarshal(d)
 		dcs.Datacenters = append(dcs.Datacenters, dc)
 	}
@@ -278,7 +278,6 @@ func (d *deploymentOrderAdapter) GetMaxRange() (*types.DeploymentOrders, error) 
 func (d *deploymentOrderAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.DeploymentOrders, iavl.KeyRangeProof, error) {
 	depos := types.DeploymentOrders{}
 	proof := iavl.KeyRangeProof{}
-	depo := types.DeploymentOrder{}
 
 	start := d.KeyFor(startKey)
 	end := d.KeyFor(endKey)
@@ -292,6 +291,7 @@ func (d *deploymentOrderAdapter) GetRangeWithProof(startKey base.Bytes, endKey b
 	}
 
 	for _, d := range dbytes {
+		depo := types.DeploymentOrder{}
 		depo.Unmarshal(d)
 		depos.DeploymentOrders = append(depos.DeploymentOrders, depo)
 	}

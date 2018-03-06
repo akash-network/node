@@ -153,14 +153,6 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateDeploymentOrder) tmtypes.ResponseCheckTx {
 
 	// todo: ensure signed by last block creator / valid market facilitator
-
-	// if !bytes.Equal(ctx.Signer().Address(), tx.Deployment.From) {
-	// 	return tmtypes.ResponseCheckTx{
-	// 		Code: code.INVALID_TRANSACTION,
-	// 		Log:  "Not signed by sending address",
-	// 	}
-	// }
-
 	return tmtypes.ResponseCheckTx{}
 }
 
@@ -208,6 +200,7 @@ func CreateDeploymentOrderTxs(state state.State) ([]types.TxCreateDeploymentOrde
 	if err != nil {
 		return depotxs, err
 	}
+
 	for _, deployment := range deps.Deployments {
 		if deployment.State == types.Deployment_ACTIVE {
 			for i, group := range deployment.Groups {

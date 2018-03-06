@@ -25,7 +25,7 @@ import (
 
 type Application interface {
 	tmtypes.Application
-	ActivateMarket(tmtmtypes.PrivValidatorFS, *tmtmtypes.EventBus) error
+	ActivateMarket(*tmtmtypes.PrivValidatorFS, *tmtmtypes.EventBus) error
 }
 
 type app struct {
@@ -87,7 +87,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	return &app{state: state, apps: apps, log: logger}, nil
 }
 
-func (app *app) ActivateMarket(validator tmtmtypes.PrivValidatorFS, bus *tmtmtypes.EventBus) error {
+func (app *app) ActivateMarket(validator *tmtmtypes.PrivValidatorFS, bus *tmtmtypes.EventBus) error {
 
 	if app.mfacilitator != nil {
 		return errors.New("market already activated")
@@ -125,7 +125,6 @@ func (app *app) SetOption(req tmtypes.RequestSetOption) tmtypes.ResponseSetOptio
 
 func (app *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	app.traceJs("Query", "req", req)
-
 	for _, app := range app.apps {
 		if app.AcceptQuery(req) {
 			return app.Query(req)

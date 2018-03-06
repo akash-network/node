@@ -31,7 +31,7 @@ type Facilitator interface {
 
 type facilitator struct {
 	log       log.Logger
-	validator tmtmtypes.PrivValidatorFS
+	validator *tmtmtypes.PrivValidatorFS
 
 	block *tmtypes.RequestBeginBlock
 	rs    *ctypes.RoundState
@@ -44,7 +44,7 @@ func (f *facilitator) OnBeginBlock(req tmtypes.RequestBeginBlock) error {
 	return nil
 }
 
-func (f *facilitator) buildTx(signer tmtmtypes.PrivValidatorFS, nonce uint64, payload interface{}) ([]byte, error) {
+func (f *facilitator) buildTx(signer *tmtmtypes.PrivValidatorFS, nonce uint64, payload interface{}) ([]byte, error) {
 	txb, err := txutil.NewTxBuilder(nonce, payload)
 	if err != nil {
 		f.log.Error("cannot get transaction bytes")
@@ -196,7 +196,7 @@ func (f *facilitator) onEvent(evt interface{}) {
 	f.onProposalComplete(rs)
 }
 
-func NewFacilitator(log log.Logger, validator tmtmtypes.PrivValidatorFS, bus *tmtmtypes.EventBus) (Facilitator, error) {
+func NewFacilitator(log log.Logger, validator *tmtmtypes.PrivValidatorFS, bus *tmtmtypes.EventBus) (Facilitator, error) {
 
 	f := &facilitator{
 		log:       log,

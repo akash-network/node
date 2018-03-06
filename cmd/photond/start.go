@@ -79,7 +79,7 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := app.ActivateMarket(*pvalidator, n.EventBus()); err != nil {
+	if err := app.ActivateMarket(pvalidator, n.EventBus()); err != nil {
 		return err
 	}
 

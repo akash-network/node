@@ -202,13 +202,6 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tm
 
 	deployment := tx.Deployment
 
-	if err := a.state.Account().Save(acct); err != nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err.Error(),
-		}
-	}
-
 	if err := a.state.Deployment().Save(deployment); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
