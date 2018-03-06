@@ -5,14 +5,12 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"reflect"
 	"sync"
 
 	"github.com/ovrclk/photon/app/deploymentorder"
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/txutil"
 	"github.com/ovrclk/photon/types"
-	"github.com/ovrclk/photon/types/base"
 	tmtypes "github.com/tendermint/abci/types"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
 	"github.com/tendermint/tendermint/rpc/core"
@@ -71,9 +69,7 @@ func (f *facilitator) sendTx(tx []byte) error {
 }
 
 func (f *facilitator) getNonce(state state.State) (uint64, error) {
-	address := new(base.Bytes)
-	address.Unmarshal(f.validator.Address)
-	account, err := state.Account().Get(*address)
+	account, err := state.Account().Get(f.validator.Address.Bytes())
 	if err != nil {
 		f.log.Error("Could not get facilitator account.", err)
 		return 0, err
@@ -90,21 +86,14 @@ func (f *facilitator) doTxs(state state.State, txs interface{}) error {
 	if err != nil {
 		f.log.Error("Failed to get validator nonce", err)
 	}
-	switch reflect.TypeOf(txs).Kind() {
-	case reflect.Slice:
-		s := reflect.ValueOf(txs)
-		for i := 0; i < s.Len(); i++ {
+
+	switch txs := txs.(type) {
+	case []types.TxCreateDeploymentOrder:
+		for _, tx := range txs {
 			txbytes := *new([]byte)
 			err := *new(error)
-			txVal := s.Index(i)
 			nonce += 1
-			switch txType := txVal.Interface().(type) {
-			case types.TxCreateDeploymentOrder:
-				tx := txVal.Interface().(types.TxCreateDeploymentOrder)
-				txbytes, err = f.buildTx(f.validator, nonce, tx)
-			default:
-				f.log.Error("Unknown market transaction type", txType)
-			}
+			txbytes, err = f.buildTx(f.validator, nonce, tx)
 			if err != nil {
 				f.log.Error("failed to build tx", err)
 				return err
@@ -112,7 +101,7 @@ func (f *facilitator) doTxs(state state.State, txs interface{}) error {
 			go f.sendTx(txbytes)
 		}
 	default:
-		f.log.Error("Transactions not a slice")
+		f.log.Error("Transactions type unknown:", fmt.Sprintf("%T", txs))
 	}
 	return err
 }
