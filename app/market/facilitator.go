@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
+	"reflect"
 	"sync"
 
 	"github.com/ovrclk/photon/app/deploymentOrder"
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/txutil"
+	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
 	tmtypes "github.com/tendermint/abci/types"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
@@ -46,10 +47,12 @@ func (f *facilitator) OnBeginBlock(req tmtypes.RequestBeginBlock) error {
 func (f *facilitator) buildTx(signer tmtmtypes.PrivValidatorFS, nonce uint64, payload interface{}) ([]byte, error) {
 	txb, err := txutil.NewTxBuilder(nonce, payload)
 	if err != nil {
+		f.log.Error("cannot get transaction bytes")
 		return nil, err
 	}
 	sig, err := signer.Sign(txb.SignBytes())
 	if err != nil {
+		f.log.Error("cannot sign transaction bytes")
 		return nil, err
 	}
 	pubkey := signer.PubKey
@@ -60,13 +63,10 @@ func (f *facilitator) buildTx(signer tmtmtypes.PrivValidatorFS, nonce uint64, pa
 func (f *facilitator) sendTx(tx []byte) error {
 	result, err := core.BroadcastTxCommit(tx)
 	if err != nil {
-		data, _ := json.MarshalIndent(err, "", "  ")
-		println("err:\n" + string(data))
-		f.log.Error("failed to send tx's", err)
+		f.log.Error("Facilitator failed to send market transaction.", err)
 		return err
 	}
-	data, _ := json.MarshalIndent(result, "", "  ")
-	println("result:\n" + string(data))
+	f.log.Info("Facilitator sent market transaction.", result)
 	return nil
 }
 
@@ -75,40 +75,61 @@ func (f *facilitator) getNonce(state state.State) (uint64, error) {
 	address.Unmarshal(f.validator.Address)
 	account, err := state.Account().Get(*address)
 	if err != nil {
+		f.log.Error("Could not get facilitator account.", err)
 		return 0, err
 	}
 	if account == nil {
+		f.log.Error("Facilitator account is nil.", err)
 		return uint64(1), nil
 	}
 	return account.Nonce, nil
 }
 
+func (f *facilitator) doTxs(state state.State, txs interface{}) error {
+	nonce, err := f.getNonce(state)
+	if err != nil {
+		f.log.Error("Failed to get validator nonce", err)
+	}
+	switch reflect.TypeOf(txs).Kind() {
+	case reflect.Slice:
+		s := reflect.ValueOf(txs)
+		for i := 0; i < s.Len(); i++ {
+			txbytes := *new([]byte)
+			err := *new(error)
+			txVal := s.Index(i)
+			nonce += 1
+			switch txType := txVal.Interface().(type) {
+			case types.TxCreateDeploymentOrder:
+				tx := txVal.Interface().(types.TxCreateDeploymentOrder)
+				txbytes, err = f.buildTx(f.validator, nonce, tx)
+			default:
+				f.log.Error("Unknown market transaction type", txType)
+			}
+			if err != nil {
+				f.log.Error("failed to build tx", err)
+				return err
+			}
+			go f.sendTx(txbytes)
+		}
+	default:
+		f.log.Error("Transactions not a slice")
+	}
+	return err
+}
+
 func (f *facilitator) OnCommit(state state.State) error {
 	if !f.checkCommit(state) {
-		f.log.Info("NOT MY TURN TO DO MARKET STUFF.")
 		return nil
 	}
-	f.log.Info("I SHOULD MAKE THE MARKET STUFF HAPPEN.")
 
-	// create deployment order tx
 	createDeploymentOrderTxs, err := deploymentOrder.CreateDeploymentOrderTxs(state)
 	if err != nil {
 		f.log.Error("Failed to generate createDeploymentOrder transactions", err)
 	}
 
-	nonce, err := f.getNonce(state)
+	err = f.doTxs(state, createDeploymentOrderTxs)
 	if err != nil {
-		f.log.Error("failed to get validator nonce", err)
-	}
-
-	// todo: increment nonce for account
-	for _, createDeploymentOrder := range createDeploymentOrderTxs {
-		nonce += 1
-		tx, err := f.buildTx(f.validator, nonce, createDeploymentOrder)
-		if err != nil {
-			f.log.Error("failed to build tx", err)
-		}
-		go f.sendTx(tx)
+		f.log.Error("Failed to send transactions", err)
 	}
 
 	return nil
