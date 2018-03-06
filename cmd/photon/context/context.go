@@ -3,8 +3,11 @@ package context
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
+	"sync"
 
+	"github.com/ovrclk/photon/cmd/common"
 	"github.com/ovrclk/photon/cmd/photon/constants"
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/types"
@@ -15,6 +18,7 @@ import (
 	"github.com/tendermint/go-crypto/keys/cryptostore"
 	"github.com/tendermint/go-crypto/keys/storage/filestorage"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
+	"github.com/tendermint/tmlibs/log"
 )
 
 type Context interface {
@@ -24,6 +28,7 @@ type Context interface {
 	KeyName() string
 	Key() (keys.Info, error)
 	Nonce() (uint64, error)
+	Log() log.Logger
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -73,12 +78,26 @@ func RequireKey(fn Runner) Runner {
 }
 
 func NewContext(cmd *cobra.Command) Context {
-	return &context{cmd: cmd}
+	return &context{cmd: cmd, mtx: sync.Mutex{}}
 }
 
 type context struct {
 	cmd  *cobra.Command
 	kmgr keys.Manager
+	log  log.Logger
+	mtx  sync.Mutex
+}
+
+func (ctx *context) Log() log.Logger {
+	ctx.mtx.Lock()
+	defer ctx.mtx.Unlock()
+
+	if ctx.log != nil {
+		return ctx.log
+	}
+
+	ctx.log = common.NewLogger(os.Stdout).With("app", "photon")
+	return ctx.log
 }
 
 func (ctx *context) RootDir() string {
@@ -87,6 +106,8 @@ func (ctx *context) RootDir() string {
 }
 
 func (ctx *context) KeyManager() (keys.Manager, error) {
+	ctx.mtx.Lock()
+	defer ctx.mtx.Unlock()
 
 	if ctx.kmgr != nil {
 		return ctx.kmgr, nil

@@ -7,6 +7,7 @@ import (
 )
 
 type Application interface {
+	Name() string
 	AcceptQuery(req tmtypes.RequestQuery) bool
 	Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery
 

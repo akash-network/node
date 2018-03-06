@@ -45,7 +45,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	var apps []apptypes.Application
 
 	{
-		app, err := account.NewApp(state, logger.With("app", "account"))
+		app, err := account.NewApp(state, logger.With("app", account.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -53,7 +53,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := store.NewApp(state, logger.With("app", "store"))
+		app, err := store.NewApp(state, logger.With("app", store.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -61,7 +61,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := deployment.NewApp(state, logger.With("app", "deployment"))
+		app, err := deployment.NewApp(state, logger.With("app", deployment.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -69,7 +69,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := deploymentorder.NewApp(state, logger.With("app", "deploymentorder"))
+		app, err := deploymentorder.NewApp(state, logger.With("app", deploymentorder.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -77,7 +77,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := datacenter.NewApp(state, logger.With("app", "datacenter"))
+		app, err := datacenter.NewApp(state, logger.With("app", datacenter.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -93,7 +93,7 @@ func (app *app) ActivateMarket(validator *tmtmtypes.PrivValidatorFS, bus *tmtmty
 		return errors.New("market already activated")
 	}
 
-	mapp, err := market.NewApp(app.state, app.log.With("app", "market"))
+	mapp, err := market.NewApp(app.state, app.log.With("app", market.Name))
 	if err != nil {
 		return err
 	}

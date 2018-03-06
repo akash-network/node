@@ -12,6 +12,7 @@ import (
 
 const (
 	QueryPath = "/store"
+	Name      = "store"
 )
 
 type app struct {
@@ -21,6 +22,10 @@ type app struct {
 
 func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) {
 	return &app{state, logger}, nil
+}
+
+func (a *app) Name() string {
+	return Name
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {

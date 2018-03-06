@@ -24,18 +24,18 @@ func datacenterCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 
-	cmd.AddCommand(createCommand())
+	cmd.AddCommand(createDatacenterCommand())
 
 	return cmd
 }
 
-func createCommand() *cobra.Command {
+func createDatacenterCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create [file] [flags]",
 		Short: "create a datacenter",
 		Args:  cobra.ExactArgs(1),
-		RunE:  context.WithContext(context.RequireNode(doCreateCommand)),
+		RunE:  context.WithContext(context.RequireNode(doCreateDatacenterCommand)),
 	}
 
 	context.AddFlagKeyType(cmd, cmd.Flags())
@@ -46,7 +46,7 @@ func createCommand() *cobra.Command {
 	return cmd
 }
 
-func doCreateCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+func doCreateDatacenterCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
 	datacenter, err := parseDatacenter(args[0])
 	if err != nil {
 		return err

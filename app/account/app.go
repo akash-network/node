@@ -16,6 +16,10 @@ import (
 	"github.com/tendermint/tmlibs/log"
 )
 
+const (
+	Name = apptypes.TagAppAccount
+)
+
 type app struct {
 	state  state.State
 	logger log.Logger
@@ -23,6 +27,10 @@ type app struct {
 
 func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) {
 	return &app{state, logger}, nil
+}
+
+func (a app) Name() string {
+	return Name
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
@@ -201,5 +209,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.Respon
 		}
 	}
 
-	return tmtypes.ResponseDeliverTx{}
+	return tmtypes.ResponseDeliverTx{
+		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeSend),
+	}
 }

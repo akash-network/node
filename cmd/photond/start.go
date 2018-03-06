@@ -2,10 +2,8 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path"
 
-	"github.com/go-kit/kit/log/term"
 	"github.com/ovrclk/photon/app"
 	"github.com/ovrclk/photon/node"
 	"github.com/ovrclk/photon/state"
@@ -58,8 +56,7 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	logger := log.NewTMLoggerWithColorFn(log.NewSyncWriter(os.Stdout), logColorFn)
-	logger = log.NewFilter(logger, log.AllowError(),
+	logger := log.NewFilter(ctx.Log(), log.AllowError(),
 		log.AllowDebugWith("module", "photon"))
 
 	applog := logger.With("module", "photon")
@@ -98,8 +95,4 @@ func tmgenesisProvider(path string) tmnode.GenesisDocProvider {
 	return func() (*tmtypes.GenesisDoc, error) {
 		return node.TMGenesisFromFile(path)
 	}
-}
-
-func logColorFn(keyvals ...interface{}) term.FgBgColor {
-	return term.FgBgColor{}
 }

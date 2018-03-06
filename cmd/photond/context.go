@@ -2,10 +2,14 @@ package main
 
 import (
 	"errors"
+	"os"
+	"sync"
 
+	"github.com/ovrclk/photon/cmd/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	tmconfig "github.com/tendermint/tendermint/config"
+	"github.com/tendermint/tmlibs/log"
 )
 
 const (
@@ -34,15 +38,18 @@ func requireRootDir(fn ctxRunner) ctxRunner {
 type Context interface {
 	RootDir() string
 	TMConfig() (*tmconfig.Config, error)
+	Log() log.Logger
 }
 
 type context struct {
 	cmd   *cobra.Command
 	tmcfg *tmconfig.Config
+	log   log.Logger
+	mtx   sync.Mutex
 }
 
 func newContext(cmd *cobra.Command) Context {
-	return &context{cmd: cmd}
+	return &context{cmd: cmd, mtx: sync.Mutex{}}
 }
 
 func (ctx *context) RootDir() string {
@@ -50,7 +57,22 @@ func (ctx *context) RootDir() string {
 	return root
 }
 
+func (ctx *context) Log() log.Logger {
+	ctx.mtx.Lock()
+	defer ctx.mtx.Unlock()
+
+	if ctx.log != nil {
+		return ctx.log
+	}
+
+	ctx.log = common.NewLogger(os.Stdout)
+	return ctx.log
+}
+
 func (ctx *context) TMConfig() (*tmconfig.Config, error) {
+	ctx.mtx.Lock()
+	defer ctx.mtx.Unlock()
+
 	if ctx.tmcfg != nil {
 		return ctx.tmcfg, nil
 	}

@@ -10,5 +10,6 @@ func main() {
 	root.AddCommand(datacenterCommand())
 	root.AddCommand(query.QueryCommand())
 	root.AddCommand(pingCommand())
+	root.AddCommand(marketplaceCommand())
 	root.Execute()
 }
