@@ -302,15 +302,3 @@ func TestDeploymentOrderApp(t *testing.T) {
 		assert.Equal(t, types.DeploymentOrder_OPEN, txs[1].DeploymentOrder.State, "state wrong")
 	}
 }
-
-/*
-
-	things to test
-
-		CreateDeploymentOrderTxs
-
-				no deployment transactions at all to find
-				no ACTIVE deployments to create stuff for
-				deployment with no deployment groups
-				deployment with no OPEN deployment groups
-*/

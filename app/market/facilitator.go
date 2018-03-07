@@ -115,11 +115,13 @@ func (f *facilitator) OnCommit(state state.State) error {
 	createDeploymentOrderTxs, err := deploymentorder.CreateDeploymentOrderTxs(state)
 	if err != nil {
 		f.log.Error("Failed to generate createDeploymentOrder transactions", err)
+		return err
 	}
 
 	err = f.doTxs(state, createDeploymentOrderTxs)
 	if err != nil {
 		f.log.Error("Failed to send transactions", err)
+		return err
 	}
 
 	return nil
