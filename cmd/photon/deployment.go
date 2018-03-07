@@ -47,8 +47,7 @@ func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 	deployment, _ := parseDeployment(args[0], hash)
 	deployment.From = base.Bytes(key.Address)
 
-	tx, err := txutil.BuildTx(kmgr, key.Name, constants.Password, nonce, &types.TxDeployment{
-		From:       base.Bytes(key.Address),
+	tx, err := txutil.BuildTx(kmgr, key.Name, constants.Password, nonce, &types.TxCreateDeployment{
 		Deployment: &deployment,
 	})
 	if err != nil {
@@ -96,7 +95,7 @@ func parseDeployment(file string, hash []byte) (types.Deployment, error) {
 		Resources:    resources,
 	}
 
-	groups := []types.DeploymentGroup{*deploymentgroup}
+	groups := []types.DeploymentGroup{*deploymentgroup, *deploymentgroup, *deploymentgroup}
 
 	deployment := &types.Deployment{
 		Address: hash,

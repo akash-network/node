@@ -23,7 +23,9 @@ func QueryCommand() *cobra.Command {
 	cmd.AddCommand(
 		queryAccountCommand(),
 		queryDeploymentCommand(),
-		queryDatacenterCommand())
+		queryDatacenterCommand(),
+		queryDeploymentOrderCommand(),
+	)
 
 	return cmd
 }
@@ -47,6 +49,10 @@ func doQuery(ctx context.Context, path string, structure interface{}) error {
 		s.Unmarshal(result.Response.Value)
 	case *types.Datacenters:
 		s.Unmarshal(result.Response.Value)
+	case *types.DeploymentOrder:
+		s.Unmarshal(result.Response.Value)
+	case *types.DeploymentOrders:
+		s.Unmarshal(result.Response.Value)
 	default:
 		return errors.New("Unknown query value structure")
 	}
@@ -54,7 +60,7 @@ func doQuery(ctx context.Context, path string, structure interface{}) error {
 	data, _ := json.MarshalIndent(structure, "", "  ")
 
 	println("path: " + path)
-	println("response: " + string(data))
+	println("response:\n" + string(data))
 
 	return nil
 }

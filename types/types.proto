@@ -1,4 +1,3 @@
-
 syntax = "proto3";
 
 package types;
@@ -27,8 +26,9 @@ message TxPayload {
   uint64 nonce = 1;
   oneof payload {
     TxSend txSend = 2;
-    TxDeployment txDeployment = 3;
-    TxCreateDatacenter txCreateDatacenter = 4;
+    TxCreateDeployment txCreateDeployment = 3;
+    TxCreateDeploymentOrder txCreateDeploymentOrder = 4;
+    TxCreateDatacenter txCreateDatacenter = 5;
   }
 }
 /* END GLOBAL */
@@ -90,25 +90,52 @@ message ProviderAttribute {
 message DeploymentGroup {
   repeated ProviderAttribute requirements = 1 [(gogoproto.nullable) = false];
   repeated ResourceGroup     resources    = 2 [(gogoproto.nullable) = false];
+  enum DeploymentGroupState {
+    OPEN    = 0;
+    ORDERED = 1;
+    CLOSED  = 2;
+  }
+  DeploymentGroupState state = 3;
 }
 
 message Deployment {
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  bytes  from =    2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  from    = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   repeated DeploymentGroup groups = 3 [(gogoproto.nullable) = false];
- }
+  enum DeploymentState {
+    ACTIVE  = 0;
+    CLOSING = 1;
+    CLOSED  = 2;
+  }
+  DeploymentState state = 4;
+}
 
- message Deployments {
+message Deployments {
   repeated Deployment deployments = 1 [(gogoproto.nullable) = false];
- }
+}
 
-message TxDeployment {
-  bytes from = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  Deployment deployment = 2;
+message TxCreateDeployment {
+  Deployment deployment = 1;
 }
 
 message DeploymentOrder {
-  uint32 group      = 2;
+  bytes address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes deployment = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  uint32 groupIndex = 3;
+  enum DeploymentOrderState {
+    OPEN    = 0;
+    MATCHED = 1;
+    CLOSED  = 2;
+  }
+  DeploymentOrderState state = 4;
+}
+
+message TxCreateDeploymentOrder {
+  DeploymentOrder deploymentOrder = 1;
+}
+
+message DeploymentOrders {
+  repeated DeploymentOrder deploymentOrders = 1 [(gogoproto.nullable) = false];
 }
 
 message FulfillmentOrder {

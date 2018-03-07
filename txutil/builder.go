@@ -28,16 +28,17 @@ func BuildTx(signer keys.Signer, keyName, password string, nonce uint64, payload
 }
 
 func NewTxBuilder(nonce uint64, payload interface{}) (TxBuilder, error) {
-
 	tx := &types.Tx{}
 
 	switch payload := payload.(type) {
 	case *types.TxSend:
 		tx.Payload.Payload = &types.TxPayload_TxSend{TxSend: payload}
-	case *types.TxDeployment:
-		tx.Payload.Payload = &types.TxPayload_TxDeployment{TxDeployment: payload}
+	case *types.TxCreateDeployment:
+		tx.Payload.Payload = &types.TxPayload_TxCreateDeployment{TxCreateDeployment: payload}
 	case *types.TxCreateDatacenter:
 		tx.Payload.Payload = &types.TxPayload_TxCreateDatacenter{TxCreateDatacenter: payload}
+	case types.TxCreateDeploymentOrder:
+		tx.Payload.Payload = &types.TxPayload_TxCreateDeploymentOrder{TxCreateDeploymentOrder: &payload}
 	default:
 		return nil, fmt.Errorf("unknown payload type: %T", payload)
 	}

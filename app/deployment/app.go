@@ -3,7 +3,6 @@ package deployment
 import (
 	"bytes"
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
@@ -58,7 +57,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	switch tx.(type) {
-	case *types.TxPayload_TxDeployment:
+	case *types.TxPayload_TxCreateDeployment:
 		return true
 	}
 	return false
@@ -66,8 +65,8 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 
 func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
-	case *types.TxPayload_TxDeployment:
-		return a.doCheckTx(ctx, tx.TxDeployment)
+	case *types.TxPayload_TxCreateDeployment:
+		return a.doCheckTx(ctx, tx.TxCreateDeployment)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -77,8 +76,8 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 
 func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
-	case *types.TxPayload_TxDeployment:
-		return a.doDeliverTx(ctx, tx.TxDeployment)
+	case *types.TxPayload_TxCreateDeployment:
+		return a.doDeliverTx(ctx, tx.TxCreateDeployment)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -120,24 +119,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 }
 
 func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
-	start := new(base.Bytes)
-	if err := start.DecodeString(""); err != nil {
-		return tmtypes.ResponseQuery{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}
-	}
-	end := new(base.Bytes)
-	if err := end.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"); err != nil {
-		return tmtypes.ResponseQuery{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}
-	}
-
-	limit := math.MaxInt64
-	_, deps, _, err := a.state.Deployment().GetRangeWithProof(*start, *end, limit)
-
+	deps, err := a.state.Deployment().GetMaxRange()
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -168,16 +150,16 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 }
 
 // todo: break each type of check out into a named global exported funtion for all trasaction types to utilize
-func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.ResponseCheckTx {
+func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tmtypes.ResponseCheckTx {
 
-	if !bytes.Equal(ctx.Signer().Address(), tx.From) {
+	if !bytes.Equal(ctx.Signer().Address(), tx.Deployment.From) {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Not signed by sending address",
 		}
 	}
 
-	acct, err := a.state.Account().Get(tx.From)
+	acct, err := a.state.Account().Get(tx.Deployment.From)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -191,23 +173,10 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.Re
 		}
 	}
 
-	/* todo: balance checks
-
-	    balance > deployment stake
-	    balance > minimum deployment cost?
-	    balance > ?????
-
-		if acct.Balance < ?? {
-			return tmtypes.ResponseCheckTx{
-				Code: code.INVALID_TRANSACTION,
-				Log:  "insufficient funds",
-		}
-	}*/
-
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tmtypes.ResponseDeliverTx {
 
 	cresp := a.doCheckTx(ctx, tx)
 	if !cresp.IsOK() {
@@ -217,7 +186,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.
 		}
 	}
 
-	acct, err := a.state.Account().Get(tx.From)
+	acct, err := a.state.Account().Get(tx.Deployment.From)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -232,18 +201,6 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxDeployment) tmtypes.
 	}
 
 	deployment := tx.Deployment
-
-	// todo: / question/ idea: hold deployment stake in "escrow" - bind to deployment?
-	// acct.Balance -= tx.Stake
-	// deployment.Balance += tx.Stake
-	// if deployment is canceled -> acct.Balance += deployment.Balance && rm deployment
-
-	if err := a.state.Account().Save(acct); err != nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err.Error(),
-		}
-	}
 
 	if err := a.state.Deployment().Save(deployment); err != nil {
 		return tmtypes.ResponseDeliverTx{
