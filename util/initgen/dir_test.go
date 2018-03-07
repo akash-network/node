@@ -7,6 +7,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/ovrclk/photon/testutil"
 	"github.com/ovrclk/photon/util/initgen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,8 +15,7 @@ import (
 )
 
 func TestDirWriter(t *testing.T) {
-	basedir, err := ioutil.TempDir("", "photon-test-initgen")
-	require.NoError(t, err)
+	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
 
 	ctx, err := initgen.NewBuilder().
@@ -56,8 +56,7 @@ func TestDirWriter(t *testing.T) {
 }
 
 func TestMultiDirWriter(t *testing.T) {
-	basedir, err := ioutil.TempDir("", "photon-test-initgen")
-	require.NoError(t, err)
+	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
 
 	ctx, err := initgen.NewBuilder().

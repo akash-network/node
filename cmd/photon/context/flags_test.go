@@ -1,13 +1,13 @@
 package context_test
 
 import (
-	"io/ioutil"
 	"os"
 	"strconv"
 	"testing"
 
 	"github.com/ovrclk/photon/cmd/photon/constants"
 	"github.com/ovrclk/photon/cmd/photon/context"
+	"github.com/ovrclk/photon/testutil"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -58,8 +58,7 @@ func TestFlag_Nonce(t *testing.T) {
 }
 
 func assertCommand(t *testing.T, flagfn flagFn, fn context.Runner, args ...string) {
-	basedir, err := ioutil.TempDir("", "photon-photon-context")
-	require.NoError(t, err)
+	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
 
 	viper.Reset()

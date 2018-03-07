@@ -1,20 +1,20 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/ovrclk/photon/cmd/photon/context"
+	"github.com/ovrclk/photon/testutil"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
 
 func TestKeyCreateCommand(t *testing.T) {
-	basedir, err := ioutil.TempDir("", "photon-photon-key-create")
-	require.NoError(t, err)
+	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
+
 	os.Setenv("PHOTON_DATA", basedir)
 
 	const keyName = "foo"

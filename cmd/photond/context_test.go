@@ -1,10 +1,10 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/ovrclk/photon/testutil"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -12,8 +12,7 @@ import (
 )
 
 func TestContext_RootDir_Env(t *testing.T) {
-	basedir, err := ioutil.TempDir("", "photon-photond")
-	require.NoError(t, err)
+	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
 
 	os.Setenv("PHOTOND_DATA", basedir)
@@ -25,8 +24,7 @@ func TestContext_RootDir_Env(t *testing.T) {
 }
 
 func TestContext_RootDir_Arg(t *testing.T) {
-	basedir, err := ioutil.TempDir("", "photon-photond")
-	require.NoError(t, err)
+	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
 
 	assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
@@ -36,8 +34,7 @@ func TestContext_RootDir_Arg(t *testing.T) {
 }
 
 func TestContext_EnvOverrides(t *testing.T) {
-	basedir, err := ioutil.TempDir("", "photon-photond")
-	require.NoError(t, err)
+	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
 
 	gpath := "/foo/bar/genesis.json"

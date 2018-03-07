@@ -4,7 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/go-kit/kit/log/term"
 	"github.com/ovrclk/photon/app/deployment"
 	"github.com/ovrclk/photon/app/market"
 	apptypes "github.com/ovrclk/photon/app/types"
@@ -13,9 +12,7 @@ import (
 	"github.com/ovrclk/photon/types/base"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	tmconfig "github.com/tendermint/tendermint/config"
 	tmtmtypes "github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tmlibs/log"
 )
 
 func makeDeployment(address []byte, from base.Bytes) *types.Deployment {
@@ -72,11 +69,9 @@ func makeDeployment(address []byte, from base.Bytes) *types.Deployment {
 	}
 }
 
-func logColorFn(keyvals ...interface{}) term.FgBgColor {
-	return term.FgBgColor{}
-}
-
 func TestFacilitatorApp(t *testing.T) {
+	basedir := testutil.TempDir(t)
+	defer os.RemoveAll(basedir)
 
 	kmgr := testutil.KeyManager(t)
 
@@ -89,9 +84,8 @@ func TestFacilitatorApp(t *testing.T) {
 		},
 	})
 
-	cfg := tmconfig.DefaultConfig()
-
-	logger := log.NewTMLoggerWithColorFn(log.NewSyncWriter(os.Stdout), logColorFn)
+	cfg := testutil.TMConfig(t, basedir)
+	logger := testutil.Logger()
 
 	eventBus := tmtmtypes.NewEventBus()
 	eventBus.SetLogger(logger.With("module", "events"))
