@@ -175,6 +175,12 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDeploymentOrde
 			Log:  err.Error(),
 		}
 	}
+	if deployment == nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  fmt.Sprintf("Deployment is nil at address %v", deploymentOrder.Deployment),
+		}
+	}
 
 	if err := a.state.DeploymentOrder().Save(deploymentOrder); err != nil {
 		return tmtypes.ResponseDeliverTx{
@@ -215,7 +221,7 @@ func CreateDeploymentOrderTxs(state state.State) ([]types.TxCreateDeploymentOrde
 					depotx := &types.TxCreateDeploymentOrder{
 						DeploymentOrder: &types.DeploymentOrder{
 							Address:    append(abytes, ibytes...),
-							Deployment: abytes,
+							Deployment: deployment.Address,
 							GroupIndex: uint32(i),
 							State:      types.DeploymentOrder_OPEN,
 						},

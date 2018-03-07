@@ -74,6 +74,7 @@ func (f *facilitator) getNonce(state state.State) (uint64, error) {
 		f.log.Error("Could not get facilitator account.", err)
 		return 0, err
 	}
+	// todo: on node init, also init own facilitator accout
 	if account == nil {
 		f.log.Error("Facilitator account is nil.", err)
 		return uint64(1), nil

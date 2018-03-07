@@ -12,7 +12,7 @@ import (
 const (
 	AccountPath         = "/accounts/"
 	DeploymentPath      = "/deployments/"
-	DatacenterPath      = "/datacenter/"
+	DatacenterPath      = "/datacenters/"
 	DeploymentOrderPath = "/deploymentorders/"
 
 	MaxRangeLimit = math.MaxInt64
