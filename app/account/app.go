@@ -21,16 +21,11 @@ const (
 )
 
 type app struct {
-	state  state.State
-	logger log.Logger
+	*apptypes.BaseApp
 }
 
 func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) {
-	return &app{state, logger}, nil
-}
-
-func (a app) Name() string {
-	return Name
+	return &app{apptypes.NewBaseApp(Name, state, logger)}, nil
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
@@ -54,7 +49,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	acct, err := a.state.Account().Get(*key)
+	acct, err := a.State().Account().Get(*key)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -78,9 +73,9 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	}
 
 	return tmtypes.ResponseQuery{
-		Key:    data.Bytes(a.state.Account().KeyFor(*key)),
+		Key:    data.Bytes(a.State().Account().KeyFor(*key)),
 		Value:  bytes,
-		Height: int64(a.state.Version()),
+		Height: int64(a.State().Version()),
 	}
 }
 
@@ -130,7 +125,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.Response
 		}
 	}
 
-	acct, err := a.state.Account().Get(tx.From)
+	acct, err := a.State().Account().Get(tx.From)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -164,7 +159,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.Respon
 		}
 	}
 
-	acct, err := a.state.Account().Get(tx.From)
+	acct, err := a.State().Account().Get(tx.From)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -178,7 +173,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.Respon
 		}
 	}
 
-	toacct, err := a.state.Account().Get(tx.To)
+	toacct, err := a.State().Account().Get(tx.To)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -195,14 +190,14 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.Respon
 	acct.Balance -= tx.Amount
 	toacct.Balance += tx.Amount
 
-	if err := a.state.Account().Save(acct); err != nil {
+	if err := a.State().Account().Save(acct); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
 		}
 	}
 
-	if err := a.state.Account().Save(toacct); err != nil {
+	if err := a.State().Account().Save(toacct); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),

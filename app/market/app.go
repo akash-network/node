@@ -12,12 +12,11 @@ const (
 )
 
 type app struct {
-	state  state.State
-	logger log.Logger
+	*apptypes.BaseApp
 }
 
 func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) {
-	return &app{state, logger}, nil
+	return &app{apptypes.NewBaseApp(Name, state, logger)}, nil
 }
 
 func (a *app) Name() string {

@@ -16,16 +16,11 @@ const (
 )
 
 type app struct {
-	state state.State
-	log   log.Logger
+	*apptypes.BaseApp
 }
 
 func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) {
-	return &app{state, logger}, nil
-}
-
-func (a *app) Name() string {
-	return Name
+	return &app{apptypes.NewBaseApp(Name, state, logger)}, nil
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
@@ -40,7 +35,7 @@ func (a *app) Query(req types.RequestQuery) types.ResponseQuery {
 		}
 	}
 
-	db := a.state.DB()
+	db := a.State().DB()
 
 	if req.Prove {
 		val, proof, err := db.GetWithProof(req.Data)

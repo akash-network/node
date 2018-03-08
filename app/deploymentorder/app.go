@@ -21,16 +21,11 @@ const (
 )
 
 type app struct {
-	state  state.State
-	logger log.Logger
+	*apptypes.BaseApp
 }
 
 func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) {
-	return &app{state, logger}, nil
-}
-
-func (a *app) Name() string {
-	return Name
+	return &app{apptypes.NewBaseApp(Name, state, logger)}, nil
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
@@ -95,7 +90,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 
-	depo, err := a.state.DeploymentOrder().Get(key)
+	depo, err := a.State().DeploymentOrder().Get(key)
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -120,14 +115,14 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 
 	return tmtypes.ResponseQuery{
-		Key:    data.Bytes(a.state.DeploymentOrder().KeyFor(key)),
+		Key:    data.Bytes(a.State().DeploymentOrder().KeyFor(key)),
 		Value:  bytes,
-		Height: int64(a.state.Version()),
+		Height: int64(a.State().Version()),
 	}
 }
 
 func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
-	depos, err := a.state.DeploymentOrder().GetMaxRange()
+	depos, err := a.State().DeploymentOrder().GetMaxRange()
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -153,7 +148,7 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	return tmtypes.ResponseQuery{
 		Key:    data.Bytes(state.DeploymentOrderPath),
 		Value:  bytes,
-		Height: int64(a.state.Version()),
+		Height: int64(a.State().Version()),
 	}
 }
 
@@ -176,7 +171,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDeploymentOrde
 
 	deploymentOrder := tx.DeploymentOrder
 
-	deployment, err := a.state.Deployment().Get(deploymentOrder.Deployment)
+	deployment, err := a.State().Deployment().Get(deploymentOrder.Deployment)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -190,7 +185,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDeploymentOrde
 		}
 	}
 
-	if err := a.state.DeploymentOrder().Save(deploymentOrder); err != nil {
+	if err := a.State().DeploymentOrder().Save(deploymentOrder); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
@@ -198,7 +193,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDeploymentOrde
 	}
 
 	deployment.Groups[deploymentOrder.GroupIndex].State = types.DeploymentGroup_ORDERED
-	if err := a.state.Deployment().Save(deployment); err != nil {
+	if err := a.State().Deployment().Save(deployment); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),

@@ -21,16 +21,11 @@ const (
 )
 
 type app struct {
-	state  state.State
-	logger log.Logger
+	*apptypes.BaseApp
 }
 
 func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) {
-	return &app{state, logger}, nil
-}
-
-func (a *app) Name() string {
-	return Name
+	return &app{apptypes.NewBaseApp(Name, state, logger)}, nil
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
@@ -95,7 +90,7 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 
 func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 
-	dc, err := a.state.Datacenter().Get(key)
+	dc, err := a.State().Datacenter().Get(key)
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -120,14 +115,14 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 
 	return tmtypes.ResponseQuery{
-		Key:    data.Bytes(a.state.Account().KeyFor(key)),
+		Key:    data.Bytes(a.State().Account().KeyFor(key)),
 		Value:  bytes,
-		Height: int64(a.state.Version()),
+		Height: int64(a.State().Version()),
 	}
 }
 
 func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
-	dcs, err := a.state.Datacenter().GetMaxRange()
+	dcs, err := a.State().Datacenter().GetMaxRange()
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -153,7 +148,7 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	return tmtypes.ResponseQuery{
 		Key:    data.Bytes(state.DatacenterPath),
 		Value:  bytes,
-		Height: int64(a.state.Version()),
+		Height: int64(a.State().Version()),
 	}
 }
 
@@ -178,7 +173,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tm
 		}
 	}
 
-	acct, err := a.state.Account().Get(tx.Datacenter.Owner)
+	acct, err := a.State().Account().Get(tx.Datacenter.Owner)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -194,7 +189,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tm
 
 	datacenter := tx.Datacenter
 
-	if err := a.state.Datacenter().Save(&datacenter); err != nil {
+	if err := a.State().Datacenter().Save(&datacenter); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
