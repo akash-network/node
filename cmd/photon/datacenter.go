@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ovrclk/photon/cmd/common"
 	"github.com/ovrclk/photon/cmd/photon/constants"
 	"github.com/ovrclk/photon/cmd/photon/context"
+	"github.com/ovrclk/photon/marketplace"
+	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/txutil"
 	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
@@ -24,7 +27,12 @@ func datacenterCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 
+	context.AddFlagNode(cmd, cmd.PersistentFlags())
+	context.AddFlagKey(cmd, cmd.PersistentFlags())
+	context.AddFlagNonce(cmd, cmd.PersistentFlags())
+
 	cmd.AddCommand(createDatacenterCommand())
+	cmd.AddCommand(createRunCommand())
 
 	return cmd
 }
@@ -39,9 +47,6 @@ func createDatacenterCommand() *cobra.Command {
 	}
 
 	context.AddFlagKeyType(cmd, cmd.Flags())
-	context.AddFlagNode(cmd, cmd.Flags())
-	context.AddFlagKey(cmd, cmd.Flags())
-	context.AddFlagNonce(cmd, cmd.Flags())
 
 	return cmd
 }
@@ -87,11 +92,13 @@ func doCreateDatacenterCommand(ctx context.Context, cmd *cobra.Command, args []s
 		return err
 	}
 
-	address := doHash(key.Address, nonce)
+	address := state.DatacenterAddress(key.Address, nonce)
 	datacenter.Address = address
 	datacenter.Owner = base.Bytes(key.Address)
 
-	tx, err := txutil.BuildTx(kmgr, key.Name, constants.Password, nonce, &types.TxCreateDatacenter{
+	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
+
+	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateDatacenter{
 		Datacenter: datacenter,
 	})
 	if err != nil {
@@ -148,4 +155,78 @@ func parseDatacenter(file string) (types.Datacenter, error) {
 	/* end stub data */
 
 	return *datacenter, nil
+}
+
+func createRunCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:  "run <datacenter>",
+		Args: cobra.ExactArgs(1),
+		RunE: context.WithContext(context.RequireNode(doDatacenterRunCommand)),
+	}
+	return cmd
+}
+
+func doDatacenterRunCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+	kmgr, _ := ctx.KeyManager()
+
+	client := ctx.Client()
+
+	provider := new(base.Bytes)
+
+	if err := provider.DecodeString(args[0]); err != nil {
+		return err
+	}
+
+	key, err := ctx.Key()
+	if err != nil {
+		return err
+	}
+
+	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
+
+	handler := marketplace.NewBuilder().
+		OnTxCreateDeploymentOrder(func(tx *types.TxCreateDeploymentOrder) {
+
+			nonce, err := ctx.Nonce()
+			if err != nil {
+				ctx.Log().Error("error getting nonce", err)
+				return
+			}
+
+			ordertx := &types.TxCreateFulfillmentOrder{
+				Order: &types.FulfillmentOrder{
+					Deployment: tx.DeploymentOrder.Deployment,
+					Group:      tx.DeploymentOrder.Group,
+					Order:      tx.DeploymentOrder.Order,
+					Provider:   *provider,
+				},
+			}
+
+			//time.Sleep(time.Second * 5)
+			fmt.Printf("BIDDING ON ORDER: %X/%v/%v\n",
+				tx.DeploymentOrder.Deployment, tx.DeploymentOrder.Group, tx.DeploymentOrder.Order)
+
+			txbuf, err := txutil.BuildTx(signer, nonce, ordertx)
+			if err != nil {
+				ctx.Log().Error("error building tx", err)
+				return
+			}
+
+			resp, err := client.BroadcastTxCommit(txbuf)
+			if err != nil {
+				ctx.Log().Error("error broadcasting tx", err)
+				return
+			}
+			if resp.CheckTx.IsErr() {
+				ctx.Log().Error("CheckTx error", "err", resp.CheckTx.Log)
+				return
+			}
+			if resp.DeliverTx.IsErr() {
+				ctx.Log().Error("DeliverTx error", "err", resp.DeliverTx.Log)
+				return
+			}
+
+		}).Create()
+
+	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
 }

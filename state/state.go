@@ -11,6 +11,9 @@ type State interface {
 	Deployment() DeploymentAdapter
 	Datacenter() DatacenterAdapter
 	DeploymentOrder() DeploymentOrderAdapter
+	DeploymentGroup() DeploymentGroupAdapter
+	FulfillmentOrder() FulfillmentOrderAdapter
+	Lease() LeaseAdapter
 }
 
 func NewState(db DB) State {
@@ -45,10 +48,22 @@ func (s *state) Deployment() DeploymentAdapter {
 	return NewDeploymentAdapter(s.db)
 }
 
+func (s *state) DeploymentGroup() DeploymentGroupAdapter {
+	return NewDeploymentGroupAdapter(s.db)
+}
+
 func (s *state) Datacenter() DatacenterAdapter {
 	return NewDatacenterAdapter(s.db)
 }
 
 func (s *state) DeploymentOrder() DeploymentOrderAdapter {
 	return NewDeploymentOrderAdapter(s.db)
+}
+
+func (s *state) FulfillmentOrder() FulfillmentOrderAdapter {
+	return NewFulfillmentOrderAdapter(s.db)
+}
+
+func (s *state) Lease() LeaseAdapter {
+	return NewLeaseAdapter(s.db)
 }

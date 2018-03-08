@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTxBuilder(t *testing.T) {
+func TestTxBuilder_KeyManager(t *testing.T) {
 
 	const nonce = 1
 
@@ -28,7 +28,7 @@ func TestTxBuilder(t *testing.T) {
 		Amount: 100,
 	}
 
-	txbytes, err := txutil.BuildTx(manager, keyfrom.Name, testutil.KeyPasswd, nonce, send)
+	txbytes, err := txutil.BuildTx(txutil.NewKeystoreSigner(manager, keyfrom.Name, testutil.KeyPasswd), nonce, send)
 
 	txp, err := txutil.NewTxProcessor(txbytes)
 	require.NoError(t, err)
@@ -45,4 +45,36 @@ func TestTxBuilder(t *testing.T) {
 	require.Equal(t, rsend.From, send.From)
 	require.Equal(t, rsend.To, send.To)
 	require.Equal(t, rsend.Amount, send.Amount)
+}
+
+func TestTxBuilder_KeySigner(t *testing.T) {
+	const nonce = 1
+
+	keyfrom := testutil.PrivateKey(t)
+	keyto := testutil.PrivateKey(t)
+
+	send := &types.TxSend{
+		From:   base.Bytes(keyfrom.PubKey().Address()),
+		To:     base.Bytes(keyto.PubKey().Address()),
+		Amount: 100,
+	}
+
+	txbytes, err := txutil.BuildTx(txutil.NewPrivateKeySigner(keyfrom), nonce, send)
+
+	txp, err := txutil.NewTxProcessor(txbytes)
+	require.NoError(t, err)
+
+	require.NoError(t, txp.Validate())
+
+	tx := txp.GetTx()
+
+	require.Equal(t, []byte(keyfrom.PubKey().Address()), tx.Key.Address())
+
+	rsend := tx.Payload.GetTxSend()
+	require.NotNil(t, rsend)
+
+	require.Equal(t, rsend.From, send.From)
+	require.Equal(t, rsend.To, send.To)
+	require.Equal(t, rsend.Amount, send.Amount)
+
 }
