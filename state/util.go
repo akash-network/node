@@ -12,7 +12,7 @@ import (
 
 const (
 	dbCacheSize = 256
-	dbBackend   = tmdb.GoLevelDBBackendStr
+	dbBackend   = tmdb.GoLevelDBBackend
 )
 
 func LoadDB(pathname string) (DB, error) {
@@ -32,7 +32,7 @@ func LoadDB(pathname string) (DB, error) {
 	name := path.Base(pathname)
 
 	db := tmdb.NewDB(name, dbBackend, dir)
-	tree := iavl.NewVersionedTree(dbCacheSize, db)
+	tree := iavl.NewVersionedTree(db, dbCacheSize)
 	if err := tree.Load(); err != nil {
 		return nil, err
 	}
@@ -60,6 +60,6 @@ func LoadState(db DB, gen *types.Genesis) (State, error) {
 }
 
 func NewMemDB() DB {
-	tree := iavl.NewVersionedTree(0, tmdb.NewMemDB())
+	tree := iavl.NewVersionedTree(tmdb.NewMemDB(), 0)
 	return &iavlDB{tree}
 }

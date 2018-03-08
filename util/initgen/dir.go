@@ -11,6 +11,7 @@ import (
 const (
 	GenesisFilename          = "genesis.json"
 	PrivateValidatorFilename = "priv_validator.json"
+	ConfigDir                = "config"
 )
 
 func NewMultiDirWriter(ctx Context) Writer {
@@ -48,23 +49,27 @@ func (w dirWriter) Write() error {
 		return fmt.Errorf("%T: too many private validators", w)
 	}
 
-	if err := os.MkdirAll(w.ctx.Path(), 0755); err != nil {
+	if err := os.MkdirAll(w.basedir(), 0755); err != nil {
 		return err
 	}
 
 	if len(w.ctx.PrivateValidators()) > 0 {
-		fpath := path.Join(w.ctx.Path(), PrivateValidatorFilename)
+		fpath := path.Join(w.basedir(), PrivateValidatorFilename)
 		if err := writeObj(fpath, 0400, w.ctx.PrivateValidators()[0]); err != nil {
 			return err
 		}
 	}
 
-	fpath := path.Join(w.ctx.Path(), GenesisFilename)
+	fpath := path.Join(w.basedir(), GenesisFilename)
 	if err := writeObj(fpath, 0644, w.ctx.Genesis()); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (w dirWriter) basedir() string {
+	return path.Join(w.ctx.Path(), ConfigDir)
 }
 
 func writeObj(path string, perm os.FileMode, obj interface{}) error {

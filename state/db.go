@@ -4,7 +4,7 @@ import "github.com/tendermint/iavl"
 
 type DBReader interface {
 	IsEmpty() bool
-	Version() uint64
+	Version() int64
 	Hash() []byte
 	Get(key []byte) []byte
 	GetWithProof(key []byte) ([]byte, iavl.KeyProof, error)
@@ -13,7 +13,7 @@ type DBReader interface {
 
 type DB interface {
 	DBReader
-	Commit(version uint64) ([]byte, error)
+	Commit() ([]byte, int64, error)
 	Set(key, val []byte)
 	Remove(key []byte) ([]byte, bool)
 }
@@ -26,16 +26,16 @@ func (db *iavlDB) IsEmpty() bool {
 	return db.tree.IsEmpty()
 }
 
-func (db *iavlDB) Version() uint64 {
-	return db.tree.LatestVersion()
+func (db *iavlDB) Version() int64 {
+	return db.tree.Version64()
 }
 
 func (db *iavlDB) Hash() []byte {
 	return db.tree.Hash()
 }
 
-func (db *iavlDB) Commit(version uint64) ([]byte, error) {
-	return db.tree.SaveVersion(version)
+func (db *iavlDB) Commit() ([]byte, int64, error) {
+	return db.tree.SaveVersion()
 }
 
 func (db *iavlDB) Get(key []byte) []byte {

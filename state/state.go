@@ -1,9 +1,9 @@
 package state
 
 type State interface {
-	Version() uint64
+	Version() int64
 	Hash() []byte
-	Commit(version uint64) ([]byte, error)
+	Commit() ([]byte, int64, error)
 
 	DB() DBReader
 
@@ -21,7 +21,7 @@ type state struct {
 	db DB
 }
 
-func (s *state) Version() uint64 {
+func (s *state) Version() int64 {
 	return s.db.Version()
 }
 
@@ -29,8 +29,8 @@ func (s *state) Hash() []byte {
 	return s.db.Hash()
 }
 
-func (s *state) Commit(version uint64) ([]byte, error) {
-	return s.db.Commit(version)
+func (s *state) Commit() ([]byte, int64, error) {
+	return s.db.Commit()
 }
 
 func (s *state) DB() DBReader {

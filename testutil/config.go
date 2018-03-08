@@ -2,6 +2,8 @@ package testutil
 
 import (
 	"io/ioutil"
+	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,7 +17,8 @@ func TempDir(t *testing.T) string {
 }
 
 func TMConfig(t *testing.T, basedir string) *tmconfig.Config {
-	cfg := tmconfig.DefaultConfig()
+	cfg := tmconfig.TestConfig()
 	cfg.SetRoot(basedir)
+	os.MkdirAll(path.Dir(cfg.PrivValidatorFile()), 0755)
 	return cfg
 }

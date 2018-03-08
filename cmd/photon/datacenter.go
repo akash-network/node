@@ -105,10 +105,10 @@ func doCreateDatacenterCommand(ctx context.Context, cmd *cobra.Command, args []s
 		return err
 	}
 	if result.CheckTx.IsErr() {
-		return errors.New(result.CheckTx.Error())
+		return errors.New(result.CheckTx.GetLog())
 	}
 	if result.DeliverTx.IsErr() {
-		return errors.New(result.DeliverTx.Error())
+		return errors.New(result.DeliverTx.GetLog())
 	}
 
 	fmt.Println("Created datacenter: " + strings.ToUpper(hex.EncodeToString(datacenter.Address)))

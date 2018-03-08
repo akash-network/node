@@ -30,7 +30,7 @@ func TestDirWriter(t *testing.T) {
 	require.NoError(t, w.Write())
 
 	{
-		path := path.Join(basedir, initgen.GenesisFilename)
+		path := path.Join(basedir, initgen.ConfigDir, initgen.GenesisFilename)
 		assert.FileExists(t, path)
 
 		buf, err := ioutil.ReadFile(path)
@@ -43,7 +43,7 @@ func TestDirWriter(t *testing.T) {
 	}
 
 	{
-		path := path.Join(basedir, initgen.PrivateValidatorFilename)
+		path := path.Join(basedir, initgen.ConfigDir, initgen.PrivateValidatorFilename)
 		assert.FileExists(t, path)
 
 		buf, err := ioutil.ReadFile(path)
@@ -70,9 +70,9 @@ func TestMultiDirWriter(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, w.Write())
 
-	assert.FileExists(t, path.Join(basedir, "foo-0", initgen.GenesisFilename))
-	assert.FileExists(t, path.Join(basedir, "foo-0", initgen.PrivateValidatorFilename))
+	assert.FileExists(t, path.Join(basedir, "foo-0", initgen.ConfigDir, initgen.GenesisFilename))
+	assert.FileExists(t, path.Join(basedir, "foo-0", initgen.ConfigDir, initgen.PrivateValidatorFilename))
 
-	assert.FileExists(t, path.Join(basedir, "foo-1", initgen.GenesisFilename))
-	assert.FileExists(t, path.Join(basedir, "foo-1", initgen.PrivateValidatorFilename))
+	assert.FileExists(t, path.Join(basedir, "foo-1", initgen.ConfigDir, initgen.GenesisFilename))
+	assert.FileExists(t, path.Join(basedir, "foo-1", initgen.ConfigDir, initgen.PrivateValidatorFilename))
 }

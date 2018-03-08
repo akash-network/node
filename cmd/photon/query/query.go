@@ -33,9 +33,12 @@ func QueryCommand() *cobra.Command {
 func doQuery(ctx context.Context, path string, structure interface{}) error {
 
 	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
-	result, _ := client.ABCIQuery(path, nil)
+	result, err := client.ABCIQuery(path, nil)
+	if err != nil {
+		return err
+	}
 	if result.Response.IsErr() {
-		return errors.New(result.Response.Error())
+		return errors.New(result.Response.GetLog())
 	}
 
 	switch s := structure.(type) {

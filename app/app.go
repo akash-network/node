@@ -206,19 +206,17 @@ func (app *app) EndBlock(req tmtypes.RequestEndBlock) tmtypes.ResponseEndBlock {
 func (app *app) Commit() tmtypes.ResponseCommit {
 	app.trace("Commit")
 
-	version := app.state.Version()
-
-	data, err := app.state.Commit(version + 1)
+	data, _, err := app.state.Commit()
 
 	if err != nil {
-		return tmtypes.ResponseCommit{Data: data, Code: code.ERROR, Log: err.Error()}
+		return tmtypes.ResponseCommit{Data: data}
 	}
 
 	if app.mfacilitator != nil {
 		app.mfacilitator.OnCommit(app.state)
 	}
 
-	return tmtypes.ResponseCommit{Code: tmtypes.CodeTypeOK, Data: data}
+	return tmtypes.ResponseCommit{Data: data}
 }
 
 func (app *app) appForTx(buf []byte) (

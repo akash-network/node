@@ -10,22 +10,19 @@ import:
 - package: github.com/spf13/viper
   version: master
 - package: github.com/tendermint/abci
-  version: master
   subpackages:
   - types
 - package: github.com/tendermint/go-crypto
-  version: master
   subpackages:
   - keys
   - keys/cryptostore
   - keys/storage/filestorage
 - package: github.com/tendermint/go-wire
-  version: master
   subpackages:
   - data
 - package: github.com/tendermint/iavl
 - package: github.com/tendermint/tendermint
-  version: master
+  version: ^0.16.0
   subpackages:
   - config
   - node
@@ -33,7 +30,6 @@ import:
   - rpc/core/types
   - types
 - package: github.com/tendermint/tmlibs
-  version: master
   subpackages:
   - db
   - log
@@ -41,6 +37,7 @@ import:
   version: ^1.2.1
   subpackages:
   - require
+  - assert
 - package: github.com/rcrowley/go-metrics
 - package: github.com/ethanfrey/hid
   version: master

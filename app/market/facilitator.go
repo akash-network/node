@@ -135,7 +135,7 @@ func (f *facilitator) checkCommit(state state.State) bool {
 		return false
 	}
 
-	if uint64(f.rs.Height) != state.Version() {
+	if f.rs.Height != state.Version() {
 		return false
 	}
 

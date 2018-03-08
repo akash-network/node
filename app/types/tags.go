@@ -1,7 +1,7 @@
 package types
 
 import (
-	tmtypes "github.com/tendermint/abci/types"
+	tmcommon "github.com/tendermint/tmlibs/common"
 )
 
 const (
@@ -21,17 +21,24 @@ const (
 	TxTypeDatacenterCreate = "datacenter-create"
 )
 
-func NewTagApp(name string) *tmtypes.KVPair {
-	return tmtypes.KVPairString(TagNameApp, name)
+func NewTagApp(name string) tmcommon.KVPair {
+	return kvPair(TagNameApp, name)
 }
 
-func NewTagTxType(name string) *tmtypes.KVPair {
-	return tmtypes.KVPairString(TagNameTxType, name)
+func NewTagTxType(name string) tmcommon.KVPair {
+	return kvPair(TagNameTxType, name)
 }
 
-func NewTags(appName, txType string) []*tmtypes.KVPair {
-	return []*tmtypes.KVPair{
+func NewTags(appName, txType string) []tmcommon.KVPair {
+	return []tmcommon.KVPair{
 		NewTagApp(appName),
 		NewTagTxType(txType),
+	}
+}
+
+func kvPair(k, v string) tmcommon.KVPair {
+	return tmcommon.KVPair{
+		Key:   []byte(k),
+		Value: []byte(v),
 	}
 }

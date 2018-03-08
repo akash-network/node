@@ -50,9 +50,9 @@ func TestStoreApp(t *testing.T) {
 		acc := new(types.Account)
 		acc.Unmarshal(resp.Value)
 		assert.True(t, resp.IsOK())
-		assert.Equal(t, key, resp.Key.Bytes())
+		assert.Equal(t, key, resp.Key)
 		assert.Equal(t, balance, acc.Balance)
-		assert.Empty(t, resp.Proof.Bytes())
+		assert.Empty(t, resp.Proof)
 	}
 
 	{
@@ -65,9 +65,9 @@ func TestStoreApp(t *testing.T) {
 		acc := new(types.Account)
 		acc.Unmarshal(resp.Value)
 		assert.True(t, resp.IsOK())
-		assert.Equal(t, key, resp.Key.Bytes())
+		assert.Equal(t, key, resp.Key)
 		assert.Equal(t, balance, acc.Balance)
-		assert.NotEmpty(t, resp.Proof.Bytes())
+		assert.NotEmpty(t, resp.Proof)
 	}
 
 	{
@@ -78,7 +78,7 @@ func TestStoreApp(t *testing.T) {
 		})
 		assert.False(t, resp.IsOK())
 		assert.Nil(t, resp.Key)
-		assert.Empty(t, resp.Proof.Bytes())
+		assert.Empty(t, resp.Proof)
 	}
 
 	{
@@ -89,8 +89,8 @@ func TestStoreApp(t *testing.T) {
 		})
 		assert.True(t, resp.IsOK())
 		assert.Empty(t, resp.Value)
-		assert.Equal(t, key, resp.Key.Bytes())
-		assert.Empty(t, resp.Proof.Bytes())
+		assert.Equal(t, key, resp.Key)
+		assert.Empty(t, resp.Proof)
 	}
 
 	{
