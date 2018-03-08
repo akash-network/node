@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/photon/types"
 	"github.com/tendermint/iavl"
 	tmdb "github.com/tendermint/tmlibs/db"
@@ -62,4 +63,14 @@ func LoadState(db DB, gen *types.Genesis) (State, error) {
 func NewMemDB() DB {
 	tree := iavl.NewVersionedTree(tmdb.NewMemDB(), 0)
 	return &iavlDB{tree}
+}
+
+func saveObject(db DB, key []byte, obj proto.Message) error {
+	buf, err := proto.Marshal(obj)
+	if err != nil {
+		return err
+	}
+
+	db.Set(key, buf)
+	return nil
 }

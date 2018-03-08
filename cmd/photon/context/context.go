@@ -25,6 +25,7 @@ type Context interface {
 	RootDir() string
 	KeyManager() (keys.Manager, error)
 	Node() string
+	Client() *tmclient.HTTP
 	KeyName() string
 	Key() (keys.Info, error)
 	Nonce() (uint64, error)
@@ -126,6 +127,10 @@ func (ctx *context) KeyManager() (keys.Manager, error) {
 func (ctx *context) Node() string {
 	val := viper.GetString(constants.FlagNode)
 	return val
+}
+
+func (ctx *context) Client() *tmclient.HTTP {
+	return tmclient.NewHTTP(ctx.Node(), "/websocket")
 }
 
 func (ctx *context) KeyName() string {
