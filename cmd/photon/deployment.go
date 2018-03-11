@@ -56,11 +56,11 @@ func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 
 	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
 
-	result, err := client.BroadcastTxCommit(tx)
+	_, err = client.BroadcastTxCommit(tx)
 	if err != nil {
 		return err
 	}
-	fmt.Println(result)
+
 	fmt.Println("Created deployment: " + strings.ToUpper(hex.EncodeToString(deployment.Address)))
 
 	return nil

@@ -64,7 +64,8 @@ func doSendCommand(ctx context.Context, cmd *cobra.Command, args []string) error
 	if err != nil {
 		return err
 	}
-	fmt.Println(result)
+
+	fmt.Printf("Sent %v tokens to %v in block %v\n", amount, to.EncodeString(), result.Height)
 
 	return nil
 }
