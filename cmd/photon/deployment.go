@@ -1,19 +1,16 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
+	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/ovrclk/photon/cmd/photon/constants"
 	"github.com/ovrclk/photon/cmd/photon/context"
+	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/txutil"
 	"github.com/ovrclk/photon/types"
 	"github.com/ovrclk/photon/types/base"
 	"github.com/spf13/cobra"
-	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
 func deploymentCommand() *cobra.Command {
@@ -42,26 +39,34 @@ func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	hash := doHash(key.Address, nonce)
+	hash := state.DeploymentAddress(key.Address, nonce)
 
 	deployment, _ := parseDeployment(args[0], hash)
-	deployment.From = base.Bytes(key.Address)
+	deployment.Tenant = base.Bytes(key.Address)
 
-	tx, err := txutil.BuildTx(kmgr, key.Name, constants.Password, nonce, &types.TxCreateDeployment{
+	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
+
+	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateDeployment{
 		Deployment: &deployment,
 	})
 	if err != nil {
 		return err
 	}
 
-	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
-
-	_, err = client.BroadcastTxCommit(tx)
+	res, err := ctx.Client().BroadcastTxCommit(tx)
 	if err != nil {
+		ctx.Log().Error("error sending tx", err)
 		return err
 	}
-
-	fmt.Println("Created deployment: " + strings.ToUpper(hex.EncodeToString(deployment.Address)))
+	if !res.CheckTx.IsOK() {
+		ctx.Log().Error("error delivering tx", "err", res.CheckTx.GetLog())
+		return errors.New(res.CheckTx.GetLog())
+	}
+	if !res.DeliverTx.IsOK() {
+		ctx.Log().Error("error delivering tx", "err", res.DeliverTx.GetLog())
+		return errors.New(res.DeliverTx.GetLog())
+	}
+	fmt.Printf("Created deployment: %X\n", deployment.Address)
 
 	return nil
 }
@@ -95,7 +100,7 @@ func parseDeployment(file string, hash []byte) (types.Deployment, error) {
 		Resources:    resources,
 	}
 
-	groups := []types.DeploymentGroup{*deploymentgroup, *deploymentgroup, *deploymentgroup}
+	groups := []types.DeploymentGroup{*deploymentgroup}
 
 	deployment := &types.Deployment{
 		Address: hash,
@@ -104,12 +109,4 @@ func parseDeployment(file string, hash []byte) (types.Deployment, error) {
 	/* end stub data */
 
 	return *deployment, nil
-}
-
-func doHash(address []byte, nonce uint64) []byte {
-	nbytes := make([]byte, 10)
-	binary.LittleEndian.PutUint64(nbytes, nonce)
-	data := append(address, nbytes...)
-	hash32 := sha256.Sum256(data)
-	return hash32[:32]
 }

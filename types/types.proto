@@ -25,10 +25,12 @@ message Tx {
 message TxPayload {
   uint64 nonce = 1;
   oneof payload {
-    TxSend txSend = 2;
-    TxCreateDeployment txCreateDeployment = 3;
-    TxCreateDeploymentOrder txCreateDeploymentOrder = 4;
-    TxCreateDatacenter txCreateDatacenter = 5;
+    TxSend                   txSend                   = 2;
+    TxCreateDeployment       txCreateDeployment       = 3;
+    TxCreateDeploymentOrder  txCreateDeploymentOrder  = 4;
+    TxCreateFulfillmentOrder txCreateFulfillmentOrder = 5;
+    TxCreateLease            txCreateLease            = 6;
+    TxCreateDatacenter       txCreateDatacenter       = 7;
   }
 }
 /* END GLOBAL */
@@ -88,19 +90,40 @@ message ProviderAttribute {
 }
 
 message DeploymentGroup {
-  repeated ProviderAttribute requirements = 1 [(gogoproto.nullable) = false];
-  repeated ResourceGroup     resources    = 2 [(gogoproto.nullable) = false];
+
+  /* BEGIN ID FIELDS */
+
+  // deployment address
+  bytes  deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+
+  // unique sequence over deployment
+  uint64 seq = 2;
+
+  /* END ID FIELDS */
+
+  DeploymentGroupState state = 3;
   enum DeploymentGroupState {
     OPEN    = 0;
     ORDERED = 1;
     CLOSED  = 2;
   }
-  DeploymentGroupState state = 3;
+
+  repeated ProviderAttribute requirements = 4 [(gogoproto.nullable) = false];
+  repeated ResourceGroup     resources    = 5 [(gogoproto.nullable) = false];
+
+}
+
+message DeploymentGroups {
+  repeated DeploymentGroup items = 1;
 }
 
 message Deployment {
+
+  /* BEGIN ID FIELDS */
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  bytes  from    = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  /* END ID FIELDS */
+
+  bytes  tenant  = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   repeated DeploymentGroup groups = 3 [(gogoproto.nullable) = false];
   enum DeploymentState {
     ACTIVE  = 0;
@@ -111,7 +134,7 @@ message Deployment {
 }
 
 message Deployments {
-  repeated Deployment deployments = 1 [(gogoproto.nullable) = false];
+  repeated Deployment items = 1 [(gogoproto.nullable) = false];
 }
 
 message TxCreateDeployment {
@@ -119,9 +142,20 @@ message TxCreateDeployment {
 }
 
 message DeploymentOrder {
-  bytes address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  bytes deployment = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  uint32 groupIndex = 3;
+
+  /* BEGIN ID FIELDS */
+
+  // deployment address
+  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+
+  // deployment group sequence
+  uint64 group = 2;
+
+  // deployment order sequence
+  uint64 order = 3;
+
+  /* END ID FIELDS */
+
   enum DeploymentOrderState {
     OPEN    = 0;
     MATCHED = 1;
@@ -135,20 +169,50 @@ message TxCreateDeploymentOrder {
 }
 
 message DeploymentOrders {
-  repeated DeploymentOrder deploymentOrders = 1 [(gogoproto.nullable) = false];
+  repeated DeploymentOrder items = 1;
 }
 
 message FulfillmentOrder {
-  string   deployment = 1;
-  uint32   group      = 2;
-  string   provider   = 3;
-  repeated ResourceGroup resources = 4 [(gogoproto.nullable) = false];
+  /* BEGIN ID FIELDS */
+
+  // deployment address
+  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+
+  // deployment group sequence
+  uint64 group = 2;
+
+  // deployment order sequence
+  uint64 order = 3;
+
+  // provider address
+  bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+
+  /* END ID FIELDS */
+}
+
+message TxCreateFulfillmentOrder {
+  FulfillmentOrder order = 1;
 }
 
 message Lease {
-  string deployment = 1;
-  uint32 group      = 2;
-  uint32 order      = 3;
+  /* BEGIN ID FIELDS */
+
+  // deployment address
+  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+
+  // deployment group sequence
+  uint64 group = 2;
+
+  // deployment order sequence
+  uint64 order = 3;
+
+  // provider address
+  bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+
+  /* END ID FIELDS */
 }
 
+message TxCreateLease {
+  Lease lease = 1;
+}
 /* END EXCHANGE */

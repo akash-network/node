@@ -117,7 +117,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	return tmtypes.ResponseQuery{
 		Key:    data.Bytes(a.State().Deployment().KeyFor(key)),
 		Value:  bytes,
-		Height: int64(a.State().Version()),
+		Height: a.State().Version(),
 	}
 }
 
@@ -127,13 +127,6 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
-		}
-	}
-
-	if len(deps.Deployments) == 0 {
-		return tmtypes.ResponseQuery{
-			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("deployments not found"),
 		}
 	}
 
@@ -148,21 +141,21 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	return tmtypes.ResponseQuery{
 		Key:    data.Bytes(state.DeploymentPath),
 		Value:  bytes,
-		Height: int64(a.State().Version()),
+		Height: a.State().Version(),
 	}
 }
 
 // todo: break each type of check out into a named global exported funtion for all trasaction types to utilize
 func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tmtypes.ResponseCheckTx {
 
-	if !bytes.Equal(ctx.Signer().Address(), tx.Deployment.From) {
+	if !bytes.Equal(ctx.Signer().Address(), tx.Deployment.Tenant) {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Not signed by sending address",
 		}
 	}
 
-	acct, err := a.State().Account().Get(tx.Deployment.From)
+	acct, err := a.State().Account().Get(tx.Deployment.Tenant)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -189,21 +182,15 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tm
 		}
 	}
 
-	acct, err := a.State().Account().Get(tx.Deployment.From)
-	if err != nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err.Error(),
-		}
-	}
-	if acct == nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "unknown source account",
-		}
-	}
-
 	deployment := tx.Deployment
+
+	seq := a.State().Deployment().SequenceFor(deployment.Address)
+
+	for _, group := range deployment.Groups {
+		group.Deployment = deployment.Address
+		group.Seq = seq.Advance()
+		a.State().DeploymentGroup().Save(&group)
+	}
 
 	if err := a.State().Deployment().Save(deployment); err != nil {
 		return tmtypes.ResponseDeliverTx{

@@ -43,6 +43,7 @@ deps-install:
 devdeps-install:
 	go get github.com/gogo/protobuf/protoc-gen-gogo
 	go get -u github.com/cloudflare/cfssl/cmd/...
+	go get github.com/vektra/mockery/.../
 
 coverdeps-install:
 	go get golang.org/x/tools/cmd/cover
@@ -54,6 +55,10 @@ gentypes: $(PROTOC_FILES)
 	protoc -I. \
 		-Ivendor -Ivendor/github.com/gogo/protobuf/protobuf \
 		--gogo_out=plugins=grpc:. $<
+
+mocks:
+	mockery -case=underscore -dir app/market -output app/market/mocks -name Client
+	mockery -case=underscore -dir app/market -output app/market/mocks -name Engine
 
 docs:
 	(cd _docs/dot && make)
@@ -68,5 +73,6 @@ clean:
 	deps-install devdeps-install \
 	test-cover coverdeps-install \
 	test-vet \
+	mocks \
 	docs \
 	clean

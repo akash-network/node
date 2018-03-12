@@ -1,7 +1,6 @@
 package deployment_test
 
 import (
-	"encoding/hex"
 	"fmt"
 	"testing"
 
@@ -16,108 +15,86 @@ import (
 	tmtypes "github.com/tendermint/abci/types"
 )
 
-func TestDeploymentApp(t *testing.T) {
+func TestAcceptQuery(t *testing.T) {
+	state_ := testutil.NewState(t, nil)
 
-	const (
-		name     = "region"
-		value    = "us-west"
-		number   = uint32(1)
-		number64 = uint64(1)
-	)
+	account, _ := testutil.CreateAccount(t, state_)
+	address := account.Address
 
-	kmgr := testutil.KeyManager(t)
-
-	keyfrom, _, err := kmgr.Create("keyfrom", testutil.KeyPasswd, testutil.KeyAlgo)
+	app, err := deployment.NewApp(state_, testutil.Logger())
 	require.NoError(t, err)
 
-	address := []byte("address")
-
-	resourceunit := &types.ResourceUnit{
-		Cpu:    number,
-		Memory: number,
-		Disk:   number64,
+	{
+		path := fmt.Sprintf("%v%X", pstate.DeploymentPath, address)
+		assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: path}))
 	}
 
-	resourcegroup := &types.ResourceGroup{
-		Unit:  *resourceunit,
-		Count: number,
-		Price: number,
+	{
+		path := fmt.Sprintf("%v%X", "/foo/", address)
+		assert.False(t, app.AcceptQuery(tmtypes.RequestQuery{Path: path}))
 	}
+}
 
-	providerattribute := &types.ProviderAttribute{
-		Name:  name,
-		Value: value,
-	}
+func TestValidTx(t *testing.T) {
 
-	requirements := []types.ProviderAttribute{*providerattribute}
-	resources := []types.ResourceGroup{*resourcegroup}
+	state_ := testutil.NewState(t, nil)
 
-	deploymentgroup := &types.DeploymentGroup{
-		Requirements: requirements,
-		Resources:    resources,
-	}
+	account, key := testutil.CreateAccount(t, state_)
 
-	groups := []types.DeploymentGroup{*deploymentgroup}
+	depl := testutil.Deployment(t, account.Address, 0)
 
-	deploymenttx := &types.TxPayload_TxCreateDeployment{
+	tx := &types.TxPayload_TxCreateDeployment{
 		TxCreateDeployment: &types.TxCreateDeployment{
-			Deployment: &types.Deployment{
-				Address: address,
-				From:    base.Bytes(keyfrom.Address),
-				Groups:  groups,
-			},
+			Deployment: depl,
 		},
 	}
 
-	state := testutil.NewState(t, &types.Genesis{
-		Accounts: []types.Account{
-			types.Account{Address: base.Bytes(keyfrom.Address), Balance: 0},
-		},
-	})
-
-	key := base.PubKey(keyfrom.PubKey)
+	pubkey := base.PubKey(key.PubKey())
 
 	ctx := apptypes.NewContext(&types.Tx{
-		Key: &key,
+		Key: &pubkey,
 		Payload: types.TxPayload{
-			Payload: deploymenttx,
+			Payload: tx,
 		},
 	})
 
-	app, err := deployment.NewApp(state, testutil.Logger())
+	app, err := deployment.NewApp(state_, testutil.Logger())
 	require.NoError(t, err)
-	assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.DeploymentPath, hex.EncodeToString(address))}))
-	assert.False(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", "/foo/", hex.EncodeToString(keyfrom.Address))}))
 
-	assert.True(t, app.AcceptTx(ctx, deploymenttx))
+	assert.True(t, app.AcceptTx(ctx, tx))
 
 	{
-		resp := app.CheckTx(ctx, deploymenttx)
+		resp := app.CheckTx(ctx, tx)
 		assert.True(t, resp.IsOK())
 	}
 
 	{
-		resp := app.DeliverTx(ctx, deploymenttx)
+		resp := app.DeliverTx(ctx, tx)
 		assert.True(t, resp.IsOK())
 	}
 
 	{
-		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.DeploymentPath, hex.EncodeToString(address))})
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 
 		dep := new(types.Deployment)
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
-		assert.Equal(t, deploymenttx.TxCreateDeployment.Deployment.From, dep.From)
-		assert.Equal(t, deploymenttx.TxCreateDeployment.Deployment.Address, dep.Address)
-		assert.Equal(t, dep.Groups[0].Requirements[0].Name, name)
-		assert.Equal(t, dep.Groups[0].Requirements[0].Value, value)
-		assert.Equal(t, dep.Groups[0].Resources[0].Count, number)
-		assert.Equal(t, dep.Groups[0].Resources[0].Price, number)
-		assert.Equal(t, dep.Groups[0].Resources[0].Unit.Cpu, number)
-		assert.Equal(t, dep.Groups[0].Resources[0].Unit.Disk, number64)
-		assert.Equal(t, dep.Groups[0].Resources[0].Unit.Memory, number)
+		assert.Equal(t, tx.TxCreateDeployment.Deployment.Tenant, dep.Tenant)
+		assert.Equal(t, tx.TxCreateDeployment.Deployment.Address, dep.Address)
 
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, dep.Groups[0].Requirements, depl.Groups[0].Requirements)
+		assert.Equal(t, dep.Groups[0].Resources, depl.Groups[0].Resources)
+	}
+
+	{
+		groups, err := state_.DeploymentGroup().ForDeployment(depl.Address)
+		require.NoError(t, err)
+		require.Len(t, groups, 1)
+
+		assert.Equal(t, groups[0].Requirements, depl.Groups[0].Requirements)
+		assert.Equal(t, groups[0].Resources, depl.Groups[0].Resources)
 	}
 }

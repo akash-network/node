@@ -12,16 +12,15 @@ import (
 
 type TxBuilder interface {
 	keys.Signable
-
 	Signature() *base.Signature
 }
 
-func BuildTx(signer keys.Signer, keyName, password string, nonce uint64, payload interface{}) ([]byte, error) {
+func BuildTx(signer Signer, nonce uint64, payload interface{}) ([]byte, error) {
 	txb, err := NewTxBuilder(nonce, payload)
 	if err != nil {
 		return nil, err
 	}
-	if err := signer.Sign(keyName, password, txb); err != nil {
+	if err := signer.Sign(txb); err != nil {
 		return nil, err
 	}
 	return txb.TxBytes()
@@ -37,8 +36,12 @@ func NewTxBuilder(nonce uint64, payload interface{}) (TxBuilder, error) {
 		tx.Payload.Payload = &types.TxPayload_TxCreateDeployment{TxCreateDeployment: payload}
 	case *types.TxCreateDatacenter:
 		tx.Payload.Payload = &types.TxPayload_TxCreateDatacenter{TxCreateDatacenter: payload}
-	case types.TxCreateDeploymentOrder:
-		tx.Payload.Payload = &types.TxPayload_TxCreateDeploymentOrder{TxCreateDeploymentOrder: &payload}
+	case *types.TxCreateDeploymentOrder:
+		tx.Payload.Payload = &types.TxPayload_TxCreateDeploymentOrder{TxCreateDeploymentOrder: payload}
+	case *types.TxCreateFulfillmentOrder:
+		tx.Payload.Payload = &types.TxPayload_TxCreateFulfillmentOrder{TxCreateFulfillmentOrder: payload}
+	case *types.TxCreateLease:
+		tx.Payload.Payload = &types.TxPayload_TxCreateLease{TxCreateLease: payload}
 	default:
 		return nil, fmt.Errorf("unknown payload type: %T", payload)
 	}

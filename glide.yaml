@@ -38,6 +38,7 @@ import:
   subpackages:
   - require
   - assert
+  - mock
 - package: github.com/rcrowley/go-metrics
 - package: github.com/ethanfrey/hid
   version: master

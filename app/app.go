@@ -10,6 +10,8 @@ import (
 	"github.com/ovrclk/photon/app/datacenter"
 	"github.com/ovrclk/photon/app/deployment"
 	"github.com/ovrclk/photon/app/deploymentorder"
+	"github.com/ovrclk/photon/app/fulfillmentorder"
+	"github.com/ovrclk/photon/app/lease"
 	"github.com/ovrclk/photon/app/market"
 	"github.com/ovrclk/photon/app/store"
 	apptypes "github.com/ovrclk/photon/app/types"
@@ -25,7 +27,7 @@ import (
 
 type Application interface {
 	tmtypes.Application
-	ActivateMarket(*tmtmtypes.PrivValidatorFS, *tmtmtypes.EventBus) error
+	ActivateMarket(market.Actor, *tmtmtypes.EventBus) error
 }
 
 type app struct {
@@ -35,7 +37,7 @@ type app struct {
 
 	apps []apptypes.Application
 
-	mfacilitator market.Facilitator
+	mfacilitator market.Driver
 
 	log log.Logger
 }
@@ -77,6 +79,22 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
+		app, err := fulfillmentorder.NewApp(state, logger.With("app", fulfillmentorder.Name))
+		if err != nil {
+			return nil, err
+		}
+		apps = append(apps, app)
+	}
+
+	{
+		app, err := lease.NewApp(state, logger.With("app", lease.Name))
+		if err != nil {
+			return nil, err
+		}
+		apps = append(apps, app)
+	}
+
+	{
 		app, err := datacenter.NewApp(state, logger.With("app", datacenter.Name))
 		if err != nil {
 			return nil, err
@@ -87,7 +105,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	return &app{state: state, apps: apps, log: logger}, nil
 }
 
-func (app *app) ActivateMarket(validator *tmtmtypes.PrivValidatorFS, bus *tmtmtypes.EventBus) error {
+func (app *app) ActivateMarket(actor market.Actor, bus *tmtmtypes.EventBus) error {
 
 	if app.mfacilitator != nil {
 		return errors.New("market already activated")
@@ -98,7 +116,7 @@ func (app *app) ActivateMarket(validator *tmtmtypes.PrivValidatorFS, bus *tmtmty
 		return err
 	}
 
-	mfacilitator, err := market.NewFacilitator(app.log.With("app", "market-facilitator"), validator, bus)
+	mfacilitator, err := market.NewDriver(app.log.With("app", "market-facilitator"), actor, bus)
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,6 @@
 package deploymentorder
 
 import (
-	"encoding/binary"
 	"fmt"
 	"strings"
 
@@ -90,7 +89,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 
-	depo, err := a.State().DeploymentOrder().Get(key)
+	depo, err := a.State().DeploymentOrder().GetByKey(key)
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -122,7 +121,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 }
 
 func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
-	depos, err := a.State().DeploymentOrder().GetMaxRange()
+	items, err := a.State().DeploymentOrder().All()
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -130,14 +129,9 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 		}
 	}
 
-	if len(depos.DeploymentOrders) == 0 {
-		return tmtypes.ResponseQuery{
-			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("deployment orders not found"),
-		}
-	}
+	coll := &types.DeploymentOrders{Items: items}
 
-	bytes, err := proto.Marshal(depos)
+	bytes, err := proto.Marshal(coll)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -148,7 +142,7 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	return tmtypes.ResponseQuery{
 		Key:    data.Bytes(state.DeploymentOrderPath),
 		Value:  bytes,
-		Height: int64(a.State().Version()),
+		Height: a.State().Version(),
 	}
 }
 
@@ -156,6 +150,72 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateDeploymentOrder) tmtypes.ResponseCheckTx {
 
 	// todo: ensure signed by last block creator / valid market facilitator
+
+	// ensure order provided
+	order := tx.DeploymentOrder
+	if order == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "No order specified",
+		}
+	}
+
+	// ensure deployment exists
+	deployment, err := a.State().Deployment().Get(order.Deployment)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+	if deployment == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment not found",
+		}
+	}
+
+	// ensure deployment group exists
+	group, err := a.State().DeploymentGroup().Get(order.Deployment, order.Group)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+	if group == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Group not found",
+		}
+	}
+
+	// ensure deployment group in correct state
+	if group.GetState() != types.DeploymentGroup_OPEN {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Group not in open state",
+		}
+	}
+
+	// ensure no other open orders
+	others, err := a.State().DeploymentOrder().ForGroup(group)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	for _, other := range others {
+		if other.GetState() == types.DeploymentOrder_OPEN {
+			return tmtypes.ResponseCheckTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  "Order already exists for group",
+			}
+		}
+	}
+
 	return tmtypes.ResponseCheckTx{}
 }
 
@@ -169,31 +229,14 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDeploymentOrde
 		}
 	}
 
-	deploymentOrder := tx.DeploymentOrder
+	order := tx.DeploymentOrder
 
-	deployment, err := a.State().Deployment().Get(deploymentOrder.Deployment)
-	if err != nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err.Error(),
-		}
-	}
-	if deployment == nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  fmt.Sprintf("Deployment is nil at address %v", deploymentOrder.Deployment),
-		}
-	}
+	oseq := a.State().Deployment().SequenceFor(order.Deployment)
+	oseq.Advance()
+	// order.Order = oseq.Advance()
+	order.State = types.DeploymentOrder_OPEN
 
-	if err := a.State().DeploymentOrder().Save(deploymentOrder); err != nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err.Error(),
-		}
-	}
-
-	deployment.Groups[deploymentOrder.GroupIndex].State = types.DeploymentGroup_ORDERED
-	if err := a.State().Deployment().Save(deployment); err != nil {
+	if err := a.State().DeploymentOrder().Save(order); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
@@ -203,38 +246,4 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDeploymentOrde
 	return tmtypes.ResponseDeliverTx{
 		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCreateDeploymentOrder),
 	}
-}
-
-func CreateDeploymentOrderTxs(state state.State) ([]types.TxCreateDeploymentOrder, error) {
-	depotxs := make([]types.TxCreateDeploymentOrder, 0, 0)
-	deps, err := state.Deployment().GetMaxRange()
-	if err != nil {
-		return depotxs, err
-	}
-
-	for _, deployment := range deps.Deployments {
-		if deployment.State == types.Deployment_ACTIVE {
-			for i, group := range deployment.Groups {
-				if group.State == types.DeploymentGroup_OPEN {
-					ibytes := make([]byte, binary.MaxVarintLen32)
-					binary.PutUvarint(ibytes, uint64(i))
-					abytes := make([]byte, 32)
-					_, err := deployment.Address.MarshalTo(abytes)
-					if err != nil {
-						return depotxs, err
-					}
-					depotx := &types.TxCreateDeploymentOrder{
-						DeploymentOrder: &types.DeploymentOrder{
-							Address:    append(abytes, ibytes...),
-							Deployment: deployment.Address,
-							GroupIndex: uint32(i),
-							State:      types.DeploymentOrder_OPEN,
-						},
-					}
-					depotxs = append(depotxs, *depotx)
-				}
-			}
-		}
-	}
-	return depotxs, nil
 }

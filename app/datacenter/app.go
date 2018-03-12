@@ -117,7 +117,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	return tmtypes.ResponseQuery{
 		Key:    data.Bytes(a.State().Account().KeyFor(key)),
 		Value:  bytes,
-		Height: int64(a.State().Version()),
+		Height: a.State().Version(),
 	}
 }
 

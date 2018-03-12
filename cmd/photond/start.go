@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"github.com/ovrclk/photon/app"
+	"github.com/ovrclk/photon/app/market"
 	"github.com/ovrclk/photon/node"
 	"github.com/ovrclk/photon/state"
 	"github.com/spf13/cobra"
@@ -76,7 +77,9 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := app.ActivateMarket(pvalidator, n.EventBus()); err != nil {
+	actor := market.NewActor(pvalidator.PrivKey)
+
+	if err := app.ActivateMarket(actor, n.EventBus()); err != nil {
 		return err
 	}
 

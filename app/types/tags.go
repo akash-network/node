@@ -5,8 +5,10 @@ import (
 )
 
 const (
-	TagNameApp    = "app"
-	TagNameTxType = "tx.type"
+	TagNameApp        = "app"
+	TagNameTxType     = "tx.type"
+	TagNameDeployment = "market.deployment"
+	TagNameLease      = "market.lease"
 
 	TagAppAccount = "account"
 	TxTypeSend    = "send"
@@ -16,6 +18,12 @@ const (
 
 	TagAppDeploymentOrder       = "deployment-order"
 	TxTypeCreateDeploymentOrder = "deployment-order-create"
+
+	TagAppFulfillmentOrder       = "fulfillment-order"
+	TxTypeCreateFulfillmentOrder = "fulfillment-order-create"
+
+	TagAppLease       = "lease"
+	TxTypeCreateLease = "lease-create"
 
 	TagAppDatacenter       = "datacenter"
 	TxTypeDatacenterCreate = "datacenter-create"

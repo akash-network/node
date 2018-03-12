@@ -3,14 +3,11 @@ package main
 import (
 	"fmt"
 
-	goctx "context"
-
 	"github.com/ovrclk/photon/cmd/common"
 	"github.com/ovrclk/photon/cmd/photon/context"
 	"github.com/ovrclk/photon/marketplace"
 	"github.com/ovrclk/photon/types"
 	"github.com/spf13/cobra"
-	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
 func marketplaceCommand() *cobra.Command {
@@ -28,30 +25,34 @@ func marketplaceCommand() *cobra.Command {
 }
 
 func doMarketplaceMonitorCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
-
-	gctx, cancel := goctx.WithCancel(goctx.Background())
-	donech := common.WatchSignals(gctx, cancel)
-
-	m := marketplace.NewMonitor(gctx, ctx.Log(), client)
-	h := marketplaceMonitorHandler()
-
-	if err := m.Start(); err != nil {
-		return err
-	}
-
-	m.AddHandler("photon-cli", h, marketplace.TxQuery())
-
-	<-m.Wait()
-	cancel()
-	<-donech
-
-	return nil
+	handler := marketplaceMonitorHandler()
+	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
 }
 
 func marketplaceMonitorHandler() marketplace.Handler {
 	return marketplace.NewBuilder().
 		OnTxSend(func(tx *types.TxSend) {
 			fmt.Printf("TRANSFER %v tokens from %X to %X\n", tx.GetAmount(), tx.From, tx.To)
-		}).Create()
+		}).
+		OnTxCreateDatacenter(func(tx *types.TxCreateDatacenter) {
+			fmt.Printf("DATACENTER CREATED: %X created by %X\n", tx.Datacenter.Address, tx.Datacenter.Owner)
+		}).
+		OnTxCreateDeployment(func(tx *types.TxCreateDeployment) {
+			fmt.Printf("DEPLOYMENT CREATED: %X created by %X\n", tx.Deployment.Address, tx.Deployment.Tenant)
+		}).
+		OnTxCreateDeploymentOrder(func(tx *types.TxCreateDeploymentOrder) {
+			fmt.Printf("DEPLOYMENT ORDER CREATED: %X/%v/%v\n",
+				tx.DeploymentOrder.Deployment, tx.DeploymentOrder.Group, tx.DeploymentOrder.Order)
+		}).
+		OnTxCreateFulfillmentOrder(func(tx *types.TxCreateFulfillmentOrder) {
+			fmt.Printf("FULFILLMENT ORDER CREATED %X/%v/%v by %X\n",
+				tx.Order.Deployment, tx.Order.Group, tx.Order.Order,
+				tx.Order.Provider)
+		}).
+		OnTxCreateLease(func(tx *types.TxCreateLease) {
+			fmt.Printf("LEASE CREATED %X/%v/%v by %X\n",
+				tx.Lease.Deployment, tx.Lease.Group, tx.Lease.Order,
+				tx.Lease.Provider)
+		}).
+		Create()
 }

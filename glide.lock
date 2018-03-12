@@ -1,5 +1,5 @@
-hash: 6563c9a1b9203e74f04bb436533a96cf7647fe5891fd8a5e4d870d8b59bcaaeb
-updated: 2018-03-07T18:43:54.514629654-08:00
+hash: ba9c2e553788b0af2589460aa208af978b714b43027a3099cc8b1e50c7aaed5e
+updated: 2018-03-09T15:00:46.706107601-08:00
 imports:
 - name: github.com/btcsuite/btcd
   version: 2be2f12b358dc57d70b8f501b00be450192efbc3
@@ -101,6 +101,7 @@ imports:
   version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
   subpackages:
   - assert
+  - mock
   - require
 - name: github.com/syndtr/goleveldb
   version: 169b1b37be738edb2813dab48c97a549bcf99bb5

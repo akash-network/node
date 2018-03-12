@@ -3,7 +3,9 @@ package testutil
 import (
 	"testing"
 
+	"github.com/ovrclk/photon/txutil"
 	"github.com/stretchr/testify/require"
+	crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-crypto/keys"
 	"github.com/tendermint/go-crypto/keys/cryptostore"
 	"github.com/tendermint/go-crypto/keys/storage/memstorage"
@@ -24,4 +26,16 @@ func KeyManager(t *testing.T) cryptostore.Manager {
 		memstorage.New(),
 		codec,
 	)
+}
+
+func PrivateKey(t *testing.T) crypto.PrivKey {
+	secret := crypto.CRandBytes(16)
+	key, err := cryptostore.GenEd25519.Generate(secret)
+	require.NoError(t, err)
+	return key
+}
+
+func PrivateKeySigner(t *testing.T) (txutil.Signer, crypto.PrivKey) {
+	key := PrivateKey(t)
+	return txutil.NewPrivateKeySigner(key), key
 }
