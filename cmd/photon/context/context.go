@@ -125,8 +125,10 @@ func (ctx *context) KeyManager() (keys.Manager, error) {
 }
 
 func (ctx *context) Node() string {
-	val := viper.GetString(constants.FlagNode)
-	return val
+	if len(ctx.cmd.Flag(constants.FlagNode).Value.String()) > 0 {
+		return ctx.cmd.Flag(constants.FlagNode).Value.String()
+	}
+	return viper.GetString(constants.FlagNode)
 }
 
 func (ctx *context) Client() *tmclient.HTTP {

@@ -8,7 +8,7 @@ import (
 )
 
 func AddFlagNode(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.StringP(constants.FlagNode, "n", constants.DefaultNode, "node host")
+	flags.StringP(constants.FlagNode, "n", "", "node host")
 	viper.BindPFlag(constants.FlagNode, flags.Lookup(constants.FlagNode))
 }
 
