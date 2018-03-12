@@ -172,8 +172,8 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateLease) tmtypes
 
 	lease := tx.GetLease()
 	tags := apptypes.NewTags(a.Name(), apptypes.TxTypeCreateLease)
-	tags = append(tags, tmcommon.KVPair{[]byte(apptypes.TagNameDeployment), lease.Deployment})
-	tags = append(tags, tmcommon.KVPair{[]byte(apptypes.TagNameLease), state.IDForLease(lease)})
+	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameDeployment), Value: lease.Deployment})
+	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: state.IDForLease(lease)})
 
 	return tmtypes.ResponseDeliverTx{
 		Tags: tags,
