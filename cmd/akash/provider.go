@@ -1,18 +1,20 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
 
-	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/cmd/akash/query"
+	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
@@ -54,11 +56,6 @@ func createProviderCommand() *cobra.Command {
 }
 
 func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	provider, err := parseProvider(args[0])
-	if err != nil {
-		return err
-	}
-
 	kmgr, err := ctx.KeyManager()
 	if err != nil {
 		return err
@@ -94,14 +91,15 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	address := state.ProviderAddress(key.Address, nonce)
-	provider.Address = address
-	provider.Owner = base.Bytes(key.Address)
+	provider, err := parseProvider(args[0], key.Address, nonce)
+	if err != nil {
+		return err
+	}
 
 	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateProvider{
-		Provider: provider,
+		Provider: *provider,
 	})
 	if err != nil {
 		return err
@@ -125,24 +123,14 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 	return nil
 }
 
-func parseProvider(file string) (types.Provider, error) {
+func parseProvider(file string, tenant []byte, nonce uint64) (*types.Provider, error) {
 	// todo: read and parse deployment yaml file
 
 	/* begin stub data */
-	providerattribute := &types.ProviderAttribute{
-		Name:  "region",
-		Value: "us-west",
-	}
-
-	attributes := []types.ProviderAttribute{*providerattribute}
-
-	provider := &types.Provider{
-		Attributes: attributes,
-	}
-
+	provider := testutil.Provider(tenant, nonce)
 	/* end stub data */
 
-	return *provider, nil
+	return provider, nil
 }
 
 func createRunCommand() *cobra.Command {
@@ -232,7 +220,10 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 func getPrice(ctx context.Context, addr base.Bytes, seq uint64) (uint32, error) {
 	// get deployment group
 	price := uint32(0)
-	path := addr.EncodeString() + string(seq)
+	address := addr.EncodeString()
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, seq)
+	path := state.DeploymentGroupPath + address + hex.EncodeToString(buf)
 	group := new(types.DeploymentGroup)
 	result, err := query.Query(ctx, path)
 	if err != nil {

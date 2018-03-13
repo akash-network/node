@@ -14,7 +14,7 @@ func TestEngine_Orders(t *testing.T) {
 
 	tenant, _ := testutil.CreateAccount(t, state_)
 
-	deployment := testutil.Deployment(t, tenant.Address, tenant.Nonce)
+	deployment := testutil.Deployment(tenant.Address, tenant.Nonce)
 	require.NoError(t, state_.Deployment().Save(deployment))
 
 	for idx := range deployment.Groups {

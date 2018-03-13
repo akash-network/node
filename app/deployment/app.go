@@ -33,7 +33,6 @@ func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
 }
 
 func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
-
 	if !a.AcceptQuery(req) {
 		return tmtypes.ResponseQuery{
 			Code: code.UNKNOWN_QUERY,
@@ -43,7 +42,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 	// todo: need abtraction for multiple query types per app
 	if strings.HasPrefix(req.GetPath(), state.DeploymentGroupPath) {
-		id := strings.TrimPrefix(req.Path, state.DeploymentPath)
+		id := strings.TrimPrefix(req.Path, state.DeploymentGroupPath)
 		key := new(base.Bytes)
 		if err := key.DecodeString(id); err != nil {
 			return tmtypes.ResponseQuery{

@@ -4,12 +4,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ovrclk/akash/cmd/akash/constants"
-	"github.com/ovrclk/akash/cmd/akash/context"
-	"github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/cmd/photon/constants"
+	"github.com/ovrclk/akash/cmd/photon/context"
+	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/spf13/cobra"
 )
 
@@ -31,23 +30,30 @@ func deploymentCommand() *cobra.Command {
 }
 
 func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	kmgr, _ := ctx.KeyManager()
-	key, _ := ctx.Key()
+	kmgr, err := ctx.KeyManager()
+	if err != nil {
+		return err
+	}
+
+	key, err := ctx.Key()
+	if err != nil {
+		return err
+	}
 
 	nonce, err := ctx.Nonce()
 	if err != nil {
 		return err
 	}
 
-	hash := state.DeploymentAddress(key.Address, nonce)
-
-	deployment, _ := parseDeployment(args[0], hash)
-	deployment.Tenant = base.Bytes(key.Address)
+	deployment, err := parseDeployment(args[0], key.Address, nonce)
+	if err != nil {
+		return err
+	}
 
 	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateDeployment{
-		Deployment: &deployment,
+		Deployment: deployment,
 	})
 	if err != nil {
 		return err
@@ -71,42 +77,12 @@ func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 	return nil
 }
 
-func parseDeployment(file string, hash []byte) (types.Deployment, error) {
+func parseDeployment(file string, tenant []byte, nonce uint64) (*types.Deployment, error) {
 	// todo: read and parse deployment yaml file
 
 	/* begin stub data */
-	resourceunit := &types.ResourceUnit{
-		Cpu:    1,
-		Memory: 1,
-		Disk:   1,
-	}
-
-	resourcegroup := &types.ResourceGroup{
-		Unit:  *resourceunit,
-		Count: 1,
-		Price: 1,
-	}
-
-	providerattribute := &types.ProviderAttribute{
-		Name:  "region",
-		Value: "us-west",
-	}
-
-	requirements := []types.ProviderAttribute{*providerattribute}
-	resources := []types.ResourceGroup{*resourcegroup}
-
-	deploymentgroup := &types.DeploymentGroup{
-		Requirements: requirements,
-		Resources:    resources,
-	}
-
-	groups := []types.DeploymentGroup{*deploymentgroup}
-
-	deployment := &types.Deployment{
-		Address: hash,
-		Groups:  groups,
-	}
+	deployment := testutil.Deployment(tenant, nonce)
 	/* end stub data */
 
-	return *deployment, nil
+	return deployment, nil
 }
