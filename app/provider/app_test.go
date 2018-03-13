@@ -32,29 +32,15 @@ func TestProviderApp(t *testing.T) {
 	keyfrom, _, err := kmgr.Create("keyfrom", testutil.KeyPasswd, testutil.KeyAlgo)
 	require.NoError(t, err)
 
-	resourceunit := &types.ResourceUnit{
-		Cpu:    number,
-		Memory: number,
-		Disk:   number64,
-	}
-
-	resourcegroup := &types.ResourceGroup{
-		Unit:  *resourceunit,
-		Count: number,
-		Price: number,
-	}
-
 	providerattribute := &types.ProviderAttribute{
 		Name:  name,
 		Value: value,
 	}
 
 	attributes := []types.ProviderAttribute{*providerattribute}
-	resources := []types.ResourceGroup{*resourcegroup}
 
 	dc := &types.Provider{
 		Attributes: attributes,
-		Resources:  resources,
 		Address:    address,
 		Owner:      base.Bytes(keyfrom.Address),
 	}
@@ -109,10 +95,5 @@ func TestProviderApp(t *testing.T) {
 		assert.Equal(t, providertx.TxCreateProvider.Provider.Address, dc.Address)
 		assert.Equal(t, dc.Attributes[0].Name, name)
 		assert.Equal(t, dc.Attributes[0].Value, value)
-		assert.Equal(t, dc.Resources[0].Count, number)
-		assert.Equal(t, dc.Resources[0].Price, number)
-		assert.Equal(t, dc.Resources[0].Unit.Cpu, number)
-		assert.Equal(t, dc.Resources[0].Unit.Disk, number64)
-		assert.Equal(t, dc.Resources[0].Unit.Memory, number)
 	}
 }

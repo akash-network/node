@@ -127,28 +127,14 @@ func parseProvider(file string) (types.Provider, error) {
 	// todo: read and parse deployment yaml file
 
 	/* begin stub data */
-	resourceunit := &types.ResourceUnit{
-		Cpu:    1,
-		Memory: 1,
-		Disk:   1,
-	}
-
-	resourcegroup := &types.ResourceGroup{
-		Unit:  *resourceunit,
-		Count: 1,
-		Price: 1,
-	}
-
 	providerattribute := &types.ProviderAttribute{
 		Name:  "region",
 		Value: "us-west",
 	}
 
 	attributes := []types.ProviderAttribute{*providerattribute}
-	resources := []types.ResourceGroup{*resourcegroup}
 
 	provider := &types.Provider{
-		Resources:  resources,
 		Attributes: attributes,
 	}
 

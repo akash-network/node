@@ -58,7 +58,6 @@ message Provider {
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   bytes  owner = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   repeated ProviderAttribute attributes = 3 [(gogoproto.nullable) = false];
-  repeated ResourceGroup     resources    = 4 [(gogoproto.nullable) = false];
 }
 
 message Providers {
