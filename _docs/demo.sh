@@ -34,9 +34,9 @@ case "$1" in
     photon marketplace
     ;;
   dc-1)
-    photon datacenter create unused.yml -k dc-1 | \
+    photon provider create unused.yml -k dc-1 | \
       sed -e 's/.*: //' > "$DIR"/dc-1.dc
-    photon datacenter run "$(cat "$DIR/dc-1.dc")" -k dc-1
+    photon provider run "$(cat "$DIR/dc-1.dc")" -k dc-1
     ;;
   deploy)
     photon deploy unused.yml -k master

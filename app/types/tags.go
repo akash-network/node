@@ -25,8 +25,8 @@ const (
 	TagAppLease       = "lease"
 	TxTypeCreateLease = "lease-create"
 
-	TagAppDatacenter       = "datacenter"
-	TxTypeDatacenterCreate = "datacenter-create"
+	TagAppProvider       = "provider"
+	TxTypeProviderCreate = "provider-create"
 )
 
 func NewTagApp(name string) tmcommon.KVPair {
