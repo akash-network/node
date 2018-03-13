@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ovrclk/akash/cmd/photon/constants"
-	"github.com/ovrclk/akash/cmd/photon/context"
+	"github.com/ovrclk/akash/cmd/akash/constants"
+	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"

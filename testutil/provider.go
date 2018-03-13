@@ -1,9 +1,9 @@
 package testutil
 
 import (
-	"github.com/ovrclk/photon/state"
-	"github.com/ovrclk/photon/types"
-	"github.com/ovrclk/photon/types/base"
+	"github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
 )
 
 func Provider(tenant base.Bytes, nonce uint64) *types.Provider {
