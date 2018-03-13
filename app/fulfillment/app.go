@@ -86,14 +86,14 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 }
 
 func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseCheckTx {
-	order := tx.GetOrder()
+	fulfillment := tx.GetFulfillment()
 
-	if order == nil {
+	if fulfillment == nil {
 		return tmtypes.ResponseCheckTx{Code: code.INVALID_TRANSACTION}
 	}
 
 	// lookup provider
-	provider, err := a.State().Provider().Get(order.Provider)
+	provider, err := a.State().Provider().Get(fulfillment.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -131,7 +131,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmt
 	}
 
 	// ensure order exists
-	dorder, err := a.State().Order().Get(order.Deployment, order.Group, order.Order)
+	dorder, err := a.State().Order().Get(fulfillment.Deployment, fulfillment.Group, fulfillment.Order)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -153,8 +153,27 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmt
 		}
 	}
 
+	// get deployment group
+	group, err := a.State().DeploymentGroup().Get(fulfillment.Deployment, fulfillment.Group)
+
+	// ensure provider has matching attributes
+	for _, requirement := range group.Requirements {
+		valid := false
+		for _, attribute := range provider.Attributes {
+			if requirement.Name == attribute.Name && requirement.Value == attribute.Value {
+				valid = true
+			}
+		}
+		if !valid {
+			return tmtypes.ResponseCheckTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  "Invalid provider attribute",
+			}
+		}
+	}
+
 	// ensure there are no other orders for this provider
-	other, err := a.State().Fulfillment().Get(order.Deployment, order.Group, order.Order, order.Provider)
+	other, err := a.State().Fulfillment().Get(fulfillment.Deployment, fulfillment.Group, fulfillment.Order, fulfillment.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -180,7 +199,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) t
 		}
 	}
 
-	if err := a.State().Fulfillment().Save(tx.GetOrder()); err != nil {
+	if err := a.State().Fulfillment().Save(tx.GetFulfillment()); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),

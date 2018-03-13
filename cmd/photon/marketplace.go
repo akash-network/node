@@ -46,8 +46,8 @@ func marketplaceMonitorHandler() marketplace.Handler {
 		}).
 		OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 			fmt.Printf("FULFILLMENT ORDER CREATED %X/%v/%v by %X\n",
-				tx.Order.Deployment, tx.Order.Group, tx.Order.Order,
-				tx.Order.Provider)
+				tx.Fulfillment.Deployment, tx.Fulfillment.Group, tx.Fulfillment.Order,
+				tx.Fulfillment.Provider)
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
 			fmt.Printf("LEASE CREATED %X/%v/%v by %X\n",

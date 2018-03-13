@@ -192,7 +192,7 @@ message Fulfillment {
 }
 
 message TxCreateFulfillment {
-  Fulfillment order = 1;
+  Fulfillment fulfillment = 1;
 }
 
 message Lease {

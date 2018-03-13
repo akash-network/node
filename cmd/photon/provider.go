@@ -193,7 +193,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 			price = uint32(float32(price) * rand.Float32())
 
 			ordertx := &types.TxCreateFulfillment{
-				Order: &types.Fulfillment{
+				Fulfillment: &types.Fulfillment{
 					Deployment: tx.Order.Deployment,
 					Group:      tx.Order.Group,
 					Order:      tx.Order.Order,
