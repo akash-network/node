@@ -1,9 +1,9 @@
-package deploymentorder_test
+package order_test
 
 import (
 	"testing"
 
-	"github.com/ovrclk/photon/app/deploymentorder"
+	"github.com/ovrclk/photon/app/order"
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/testutil"
 	"github.com/ovrclk/photon/types"
@@ -18,12 +18,12 @@ import (
 func TestAcceptQuery(t *testing.T) {
 	state := testutil.NewState(t, nil)
 
-	app, err := deploymentorder.NewApp(state, testutil.Logger())
+	app, err := order.NewApp(state, testutil.Logger())
 	require.NoError(t, err, "failed to create app")
 
 	{
 		data := make([]byte, 0)
-		path := "/deploymentorders/"
+		path := "/orders/"
 		prove := false
 		height := int64(0)
 		query := tmtypes.RequestQuery{
@@ -58,9 +58,9 @@ func TestTx(t *testing.T) {
 
 	deployment := createDeployment(t, state_, account)
 
-	tx := &types.TxPayload_TxCreateDeploymentOrder{
-		TxCreateDeploymentOrder: &types.TxCreateDeploymentOrder{
-			DeploymentOrder: &types.DeploymentOrder{
+	tx := &types.TxPayload_TxCreateOrder{
+		TxCreateOrder: &types.TxCreateOrder{
+			Order: &types.Order{
 				Deployment: deployment.Address,
 				Group:      deployment.Groups[0].Seq,
 			},
@@ -76,7 +76,7 @@ func TestTx(t *testing.T) {
 		},
 	})
 
-	app, err := deploymentorder.NewApp(state_, testutil.Logger())
+	app, err := order.NewApp(state_, testutil.Logger())
 	require.NoError(t, err)
 
 	assert.True(t, app.AcceptTx(ctx, tx))
@@ -91,7 +91,7 @@ func TestTx(t *testing.T) {
 		require.True(t, res.IsOK())
 	}
 
-	orders, err := state_.DeploymentOrder().ForGroup(&deployment.Groups[0])
+	orders, err := state_.Order().ForGroup(&deployment.Groups[0])
 	require.NoError(t, err)
 	require.Len(t, orders, 1)
 }

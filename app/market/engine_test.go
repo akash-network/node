@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEngine_DeploymentOrders(t *testing.T) {
+func TestEngine_Orders(t *testing.T) {
 	state_ := testutil.NewState(t, nil)
 
 	tenant, _ := testutil.CreateAccount(t, state_)
@@ -26,10 +26,10 @@ func TestEngine_DeploymentOrders(t *testing.T) {
 
 	require.Len(t, txs, 1)
 
-	tx, ok := txs[0].(*types.TxCreateDeploymentOrder)
+	tx, ok := txs[0].(*types.TxCreateOrder)
 	require.True(t, ok)
 
-	require.Equal(t, deployment.Address, tx.DeploymentOrder.Deployment)
-	require.Equal(t, deployment.Groups[0].Seq, tx.DeploymentOrder.GetGroup())
-	require.Equal(t, types.DeploymentOrder_OPEN, tx.DeploymentOrder.GetState())
+	require.Equal(t, deployment.Address, tx.Order.Deployment)
+	require.Equal(t, deployment.Groups[0].Seq, tx.Order.GetGroup())
+	require.Equal(t, types.Order_OPEN, tx.Order.GetState())
 }

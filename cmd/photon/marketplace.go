@@ -34,17 +34,17 @@ func marketplaceMonitorHandler() marketplace.Handler {
 		OnTxSend(func(tx *types.TxSend) {
 			fmt.Printf("TRANSFER %v tokens from %X to %X\n", tx.GetAmount(), tx.From, tx.To)
 		}).
-		OnTxCreateDatacenter(func(tx *types.TxCreateDatacenter) {
-			fmt.Printf("DATACENTER CREATED: %X created by %X\n", tx.Datacenter.Address, tx.Datacenter.Owner)
+		OnTxCreateProvider(func(tx *types.TxCreateProvider) {
+			fmt.Printf("DATACENTER CREATED: %X created by %X\n", tx.Provider.Address, tx.Provider.Owner)
 		}).
 		OnTxCreateDeployment(func(tx *types.TxCreateDeployment) {
 			fmt.Printf("DEPLOYMENT CREATED: %X created by %X\n", tx.Deployment.Address, tx.Deployment.Tenant)
 		}).
-		OnTxCreateDeploymentOrder(func(tx *types.TxCreateDeploymentOrder) {
-			fmt.Printf("DEPLOYMENT ORDER CREATED: %X/%v/%v\n",
-				tx.DeploymentOrder.Deployment, tx.DeploymentOrder.Group, tx.DeploymentOrder.Order)
+		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
+			fmt.Printf("order CREATED: %X/%v/%v\n",
+				tx.Order.Deployment, tx.Order.Group, tx.Order.Order)
 		}).
-		OnTxCreateFulfillmentOrder(func(tx *types.TxCreateFulfillmentOrder) {
+		OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 			fmt.Printf("FULFILLMENT ORDER CREATED %X/%v/%v by %X\n",
 				tx.Order.Deployment, tx.Order.Group, tx.Order.Order,
 				tx.Order.Provider)

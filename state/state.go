@@ -9,10 +9,10 @@ type State interface {
 
 	Account() AccountAdapter
 	Deployment() DeploymentAdapter
-	Datacenter() DatacenterAdapter
-	DeploymentOrder() DeploymentOrderAdapter
+	Provider() ProviderAdapter
+	Order() OrderAdapter
 	DeploymentGroup() DeploymentGroupAdapter
-	FulfillmentOrder() FulfillmentOrderAdapter
+	Fulfillment() FulfillmentAdapter
 	Lease() LeaseAdapter
 }
 
@@ -52,16 +52,16 @@ func (s *state) DeploymentGroup() DeploymentGroupAdapter {
 	return NewDeploymentGroupAdapter(s.db)
 }
 
-func (s *state) Datacenter() DatacenterAdapter {
-	return NewDatacenterAdapter(s.db)
+func (s *state) Provider() ProviderAdapter {
+	return NewProviderAdapter(s.db)
 }
 
-func (s *state) DeploymentOrder() DeploymentOrderAdapter {
-	return NewDeploymentOrderAdapter(s.db)
+func (s *state) Order() OrderAdapter {
+	return NewOrderAdapter(s.db)
 }
 
-func (s *state) FulfillmentOrder() FulfillmentOrderAdapter {
-	return NewFulfillmentOrderAdapter(s.db)
+func (s *state) Fulfillment() FulfillmentAdapter {
+	return NewFulfillmentAdapter(s.db)
 }
 
 func (s *state) Lease() LeaseAdapter {

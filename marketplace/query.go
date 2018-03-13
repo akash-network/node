@@ -21,8 +21,8 @@ func TxQueryTxType(name string) pubsub.Query {
 	return buildTxQuery("%s='%s'", apptypes.TagNameTxType, name)
 }
 
-func TxQueryCreateDeploymentOrder() pubsub.Query {
-	return TxQueryTxType(apptypes.TxTypeCreateDeploymentOrder)
+func TxQueryCreateOrder() pubsub.Query {
+	return TxQueryTxType(apptypes.TxTypeCreateOrder)
 }
 
 func buildTxQuery(format string, args ...interface{}) pubsub.Query {

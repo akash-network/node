@@ -1,4 +1,4 @@
-package datacenter
+package provider
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	Name = apptypes.TagAppDatacenter
+	Name = apptypes.TagAppProvider
 )
 
 type app struct {
@@ -29,7 +29,7 @@ func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) 
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
-	return strings.HasPrefix(req.GetPath(), state.DatacenterPath)
+	return strings.HasPrefix(req.GetPath(), state.ProviderPath)
 }
 
 func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
@@ -42,7 +42,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	}
 
 	// todo: abstractiion: all queries should have this
-	id := strings.TrimPrefix(req.Path, state.DatacenterPath)
+	id := strings.TrimPrefix(req.Path, state.ProviderPath)
 	key := new(base.Bytes)
 	if err := key.DecodeString(id); err != nil {
 		return tmtypes.ResponseQuery{
@@ -60,7 +60,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	switch tx.(type) {
-	case *types.TxPayload_TxCreateDatacenter:
+	case *types.TxPayload_TxCreateProvider:
 		return true
 	}
 	return false
@@ -68,8 +68,8 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 
 func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
-	case *types.TxPayload_TxCreateDatacenter:
-		return a.doCheckTx(ctx, tx.TxCreateDatacenter)
+	case *types.TxPayload_TxCreateProvider:
+		return a.doCheckTx(ctx, tx.TxCreateProvider)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -79,8 +79,8 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 
 func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
-	case *types.TxPayload_TxCreateDatacenter:
-		return a.doDeliverTx(ctx, tx.TxCreateDatacenter)
+	case *types.TxPayload_TxCreateProvider:
+		return a.doDeliverTx(ctx, tx.TxCreateProvider)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -90,7 +90,7 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 
 func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 
-	dc, err := a.State().Datacenter().Get(key)
+	dc, err := a.State().Provider().Get(key)
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -102,7 +102,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	if dc == nil {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("datacenter %x not found", key),
+			Log:  fmt.Sprintf("provider %x not found", key),
 		}
 	}
 
@@ -122,7 +122,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 }
 
 func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
-	dcs, err := a.State().Datacenter().GetMaxRange()
+	dcs, err := a.State().Provider().GetMaxRange()
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -130,10 +130,10 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 		}
 	}
 
-	if len(dcs.Datacenters) == 0 {
+	if len(dcs.Providers) == 0 {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("datacenters not found"),
+			Log:  fmt.Sprintf("providers not found"),
 		}
 	}
 
@@ -146,15 +146,15 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 
 	return tmtypes.ResponseQuery{
-		Key:    data.Bytes(state.DatacenterPath),
+		Key:    data.Bytes(state.ProviderPath),
 		Value:  bytes,
 		Height: int64(a.State().Version()),
 	}
 }
 
 // todo: break each type of check out into a named global exported funtion for all trasaction types to utilize
-func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tmtypes.ResponseCheckTx {
-	if !bytes.Equal(ctx.Signer().Address(), tx.Datacenter.Owner) {
+func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmtypes.ResponseCheckTx {
+	if !bytes.Equal(ctx.Signer().Address(), tx.Provider.Owner) {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Not signed by owner",
@@ -163,7 +163,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tmty
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmtypes.ResponseDeliverTx {
 
 	cresp := a.doCheckTx(ctx, tx)
 	if !cresp.IsOK() {
@@ -173,7 +173,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tm
 		}
 	}
 
-	acct, err := a.State().Account().Get(tx.Datacenter.Owner)
+	acct, err := a.State().Account().Get(tx.Provider.Owner)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -187,9 +187,9 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tm
 		}
 	}
 
-	datacenter := tx.Datacenter
+	provider := tx.Provider
 
-	if err := a.State().Datacenter().Save(&datacenter); err != nil {
+	if err := a.State().Provider().Save(&provider); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
@@ -197,6 +197,6 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDatacenter) tm
 	}
 
 	return tmtypes.ResponseDeliverTx{
-		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeDatacenterCreate),
+		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeProviderCreate),
 	}
 }

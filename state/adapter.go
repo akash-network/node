@@ -16,11 +16,11 @@ const (
 	DeploymentPath         = "/deployments/"
 	DeploymentSequencePath = "/deployments-seq/"
 
-	DeploymentGroupPath  = "/deployment-groups/"
-	DatacenterPath       = "/datacenters/"
-	DeploymentOrderPath  = "/deploymentorders/"
-	FulfillmentOrderPath = "/fulfillment-orders/"
-	LeasePath            = "/lease/"
+	DeploymentGroupPath = "/deployment-groups/"
+	ProviderPath        = "/providers/"
+	OrderPath           = "/orders/"
+	FulfillmentPath     = "/fulfillment-orders/"
+	LeasePath           = "/lease/"
 
 	MaxRangeLimit = math.MaxInt64
 
@@ -169,26 +169,26 @@ func (a *deploymentAdapter) SequenceFor(address base.Bytes) Sequence {
 	return NewSequence(a.db, path)
 }
 
-type DatacenterAdapter interface {
-	Save(datacenter *types.Datacenter) error
-	Get(base.Bytes) (*types.Datacenter, error)
-	GetMaxRange() (*types.Datacenters, error)
-	GetRangeWithProof(base.Bytes, base.Bytes, int) ([][]byte, *types.Datacenters, iavl.KeyRangeProof, error)
+type ProviderAdapter interface {
+	Save(provider *types.Provider) error
+	Get(base.Bytes) (*types.Provider, error)
+	GetMaxRange() (*types.Providers, error)
+	GetRangeWithProof(base.Bytes, base.Bytes, int) ([][]byte, *types.Providers, iavl.KeyRangeProof, error)
 	KeyFor(base.Bytes) base.Bytes
 }
 
-type datacenterAdapter struct {
+type providerAdapter struct {
 	db DB
 }
 
-func NewDatacenterAdapter(db DB) DatacenterAdapter {
-	return &datacenterAdapter{db}
+func NewProviderAdapter(db DB) ProviderAdapter {
+	return &providerAdapter{db}
 }
 
-func (d *datacenterAdapter) Save(datacenter *types.Datacenter) error {
-	key := d.KeyFor(datacenter.Address)
+func (d *providerAdapter) Save(provider *types.Provider) error {
+	key := d.KeyFor(provider.Address)
 
-	dbytes, err := proto.Marshal(datacenter)
+	dbytes, err := proto.Marshal(provider)
 	if err != nil {
 		return err
 	}
@@ -197,9 +197,9 @@ func (d *datacenterAdapter) Save(datacenter *types.Datacenter) error {
 	return nil
 }
 
-func (d *datacenterAdapter) Get(address base.Bytes) (*types.Datacenter, error) {
+func (d *providerAdapter) Get(address base.Bytes) (*types.Provider, error) {
 
-	dc := types.Datacenter{}
+	dc := types.Provider{}
 	key := d.KeyFor(address)
 
 	buf := d.db.Get(key)
@@ -211,13 +211,13 @@ func (d *datacenterAdapter) Get(address base.Bytes) (*types.Datacenter, error) {
 	return &dc, nil
 }
 
-func (d *datacenterAdapter) GetMaxRange() (*types.Datacenters, error) {
+func (d *providerAdapter) GetMaxRange() (*types.Providers, error) {
 	_, dcs, _, err := d.GetRangeWithProof(GetMinStartRange(), GetMaxEndRange64(), MaxRangeLimit)
 	return dcs, err
 }
 
-func (d *datacenterAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.Datacenters, iavl.KeyRangeProof, error) {
-	dcs := types.Datacenters{}
+func (d *providerAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.Providers, iavl.KeyRangeProof, error) {
+	dcs := types.Providers{}
 	proof := iavl.KeyRangeProof{}
 	start := d.KeyFor(startKey)
 	end := d.KeyFor(endKey)
@@ -231,14 +231,14 @@ func (d *datacenterAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.B
 	}
 
 	for _, d := range dbytes {
-		dc := types.Datacenter{}
+		dc := types.Provider{}
 		dc.Unmarshal(d)
-		dcs.Datacenters = append(dcs.Datacenters, dc)
+		dcs.Providers = append(dcs.Providers, dc)
 	}
 
 	return keys, &dcs, proof, nil
 }
 
-func (a *datacenterAdapter) KeyFor(address base.Bytes) base.Bytes {
-	return append([]byte(DatacenterPath), address...)
+func (a *providerAdapter) KeyFor(address base.Bytes) base.Bytes {
+	return append([]byte(ProviderPath), address...)
 }

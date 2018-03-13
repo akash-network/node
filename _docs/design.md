@@ -11,16 +11,16 @@
     * [ComputeUnit](#computeunit)
     * [ResourceGroup](#computeunit)
     * [Deployment](#deployment)
-    * [DeploymentOrder](#deploymentorder)
-    * [FulfillmentOrder](#fulfillmentorder)
+    * [Order](#order)
+    * [Fulfillment](#fulfillment)
     * [Lease](#lease)
     * [LeaseConfirmation](#leaseconfirmation)
   * [Transactions](#transactions)
     * [SubmitDeployment](#submitdeployment)
     * [UpdateDeployment](#updatedeployment)
     * [CancelDeployment](#canceldeployment)
-    * [SubmitFulfillmentOrder](#submitfultillmentorder)
-    * [CancelFulfillmentOrder](#cancelfultillmentorder)
+    * [SubmitFulfillment](#submitfultillmentorder)
+    * [CancelFulfillment](#cancelfultillmentorder)
     * [SubmitLeaseConfirmation](#submitleaseconfirmation)
     * [SubmitLease](#submitlease)
     * [SubmitStaleLease](#submitstalelease)
@@ -49,12 +49,12 @@
 
 * [Users](#users) [define](#deployment) desired infrastructure, workloads to run on infrastructure, and how workloads can connect to one another.
   * Desired lifetime of resources is expressed via [collateral](#resourcegroup) requirements.
-* [Orders](#deploymentorder) are generated from the [user's definition](#deployment).
-* [Datacenters](#datacenters) [bid](#fulfillmentorder) on open [orders](#deploymentorder).
-* The [bid](#fulfillmentorder) with lowest price gets [matched](#matchopenorders) with [order](#deploymentorder) to create a [lease](#lease).
+* [Orders](#order) are generated from the [user's definition](#deployment).
+* [Datacenters](#datacenters) [bid](#fulfillment) on open [orders](#order).
+* The [bid](#fulfillment) with lowest price gets [matched](#matchopenorders) with [order](#order) to create a [lease](#lease).
 * Once [lease](#lease) is reached, workloads and topology are delivered to [datacenter](#datacenters).
 * [Datacenter](#datacenters) deploy workloads and allow connectivity as specified by the user.
-* If a [datacenter](#datacenters) fails to maintain lease, collateral is transferred to user, and a new [order](#deploymentorder) is crated for the desired resources.
+* If a [datacenter](#datacenters) fails to maintain lease, collateral is transferred to user, and a new [order](#order) is crated for the desired resources.
 
 ### Use Cases
 
@@ -74,7 +74,7 @@ Each datacenter will host an agent which is a mediator between the with the Phot
 
 The datacenter agent is responsible for
 
-* Bidding on [deployment orders](#deploymentorder) fulfillable by the datacenter.
+* Bidding on [orders](#order) fulfillable by the datacenter.
 * Managing managing active leases it is a provider for.
 
 ### Validators
@@ -92,7 +92,7 @@ Marketplace facilitators maintain the distributed exchange (marketplace).  [Vali
 |Name|Description|
 |---|---|
 |reconfirmation-period| Number of blocks between required [lease confirmations](#leaseconfirmation)|
-|collateral-interest-rate| Interest rate awarded to [datacenters](#datacenters) for collateral posted with [fulfillment orders](#fulfillmentorder) |
+|collateral-interest-rate| Interest rate awarded to [datacenters](#datacenters) for collateral posted with [fulfillment orders](#fulfillment) |
 
 ### Models
 
@@ -120,12 +120,12 @@ A `Deployment` represents the state of a [user's](#users) application.  It inclu
 | Field | Definition |
 | --- | --- |
 | infrastructure | List of [deployment infrastructure](#deploymentinfrastructure) definitions |
-| wait-duration | Amount of time to wait before matching generated [deployment orders](#deploymentorder) with [fulfillment orders](#fulfillmentorder) |
+| wait-duration | Amount of time to wait before matching generated [orders](#order) with [fulfillment orders](#fulfillment) |
 
 #### DeploymentInfrastructure
 
 `DeploymentInfrastructure` represents a set of resources (including pricing) that a [user](#users) would like to be provisioned in a single [datacenter](#datacenters).
-[Deployment orders](#deploymentorder) are created from [deployment infrastructure](#deploymentinfrastructure) as necessary.
+[orders](#order) are created from [deployment infrastructure](#deploymentinfrastructure) as necessary.
 
 | Field | Definition |
 | --- | --- |
@@ -138,42 +138,42 @@ Within the `resources` list, [resource group](#resourcegroup) fields are interpr
 | Field | Definition |
 | --- | --- |
 |price| Maximum price user is willing to pay. |
-|collateral| Amount of collateral that the [datacenter](#datacenters) must post when creating a [fulfillment order](#fulfillmentorder) |
+|collateral| Amount of collateral that the [datacenter](#datacenters) must post when creating a [fulfillment order](#fulfillment) |
 
-#### DeploymentOrder
+#### Order
 
-A `DeploymentOrder` is generated for each [deployment infrastructure](#deploymentinfrastructure) present in the [deployment](#deployment).
+A `Order` is generated for each [deployment infrastructure](#deploymentinfrastructure) present in the [deployment](#deployment).
 
 | Field | Definition |
 | --- | --- |
 | region  | Geographic region of datacenter |
 | resources | List of [resource groups](#resourcegroup) for this datacenter |
-| wait-duration | Number of blocks to wait before matching the order with [fulfillment orders](#fulfillmentorder) |
+| wait-duration | Number of blocks to wait before matching the order with [fulfillment orders](#fulfillment) |
 
-#### FulfillmentOrder
+#### Fulfillment
 
-A `FulfillmentOrder` represents a [datacenter](#datacenters)'s interest in providing the resources requested in a [deployment order](#deploymentorder).
+A `Fulfillment` represents a [datacenter](#datacenters)'s interest in providing the resources requested in a [order](#order).
 
 | Field | Definition |
 | --- | --- |
-| order | ID of [deployment order](#deploymentorder) which is being bid on. |
+| order | ID of [order](#order) which is being bid on. |
 | resources | List of [resource groups](#resourcegroup) for this datacenter. |
 
-The `resources` list must match the [deployment order's](#deploymentorder) `resources` list for each [resource group](#resourcegroup) with the following rules:
+The `resources` list must match the [order's](#order) `resources` list for each [resource group](#resourcegroup) with the following rules:
 
  * the `compute`, `count`,`collateral` fields must be the same.
- * the `price` field represents the [datacenter's](#datacenters) offering price and must be less than or equal to the [deployment order's](#deploymentorder) price.
+ * the `price` field represents the [datacenter's](#datacenters) offering price and must be less than or equal to the [order's](#order) price.
 
-The total collateral required to post a [fulfillment order](#fulfillmentorder) is the sum of `collateral` fields present in the [deployment order's](#deploymentorder) `resources` list.
+The total collateral required to post a [fulfillment order](#fulfillment) is the sum of `collateral` fields present in the [order's](#order) `resources` list.
 
 #### Lease
 
-A `Lease` represents a matching [deployment order](#deploymentorder) and [fulfillment order](#fulfillmentorder).
+A `Lease` represents a matching [order](#order) and [fulfillment order](#fulfillment).
 
 | Field | Definition |
 | --- | --- |
-| deployment-order | ID of [deployment order](#deploymentorder) |
-| fulfillment-order | ID of [fulfillment order](#deploymentorder) |
+| deployment-order | ID of [order](#order) |
+| fulfillment-order | ID of [fulfillment order](#order) |
 
 #### LeaseConfirmation
 
@@ -188,7 +188,7 @@ tokens from the [user](#users) to the [datacenter](#datacenters)
 
 ### SubmitDeployment
 
-Sent by a [user](#users) to deploy their application on Photon.  A [deployment order](#deploymentorder) will be created for each datacenter
+Sent by a [user](#users) to deploy their application on Photon.  A [order](#order) will be created for each datacenter
 configuration described in the [deployment](#deployment)
 
 ### UpdateDeployment
@@ -199,13 +199,13 @@ Sent by a [user](#users) to update their application on Photon.
 
 Sent by a [user](#users) to cancel their application on Photon.
 
-### SubmitFulfillmentOrder
+### SubmitFulfillment
 
-Sent by a [datacenter](#datacenters) to bid on a [deployment order](#deploymentorder).
+Sent by a [datacenter](#datacenters) to bid on a [order](#order).
 
-### CancelFulfillmentOrder
+### CancelFulfillment
 
-Sent by a [datacenter](#datacenters) to cancel an existing [fulfillment order](#fulfillmentorder).
+Sent by a [datacenter](#datacenters) to cancel an existing [fulfillment order](#fulfillment).
 
 ### SubmitLeaseConfirmation
 
@@ -214,7 +214,7 @@ be called once every [reconfirmation period](#global-parameters) rounds.
 
 ### SubmitLease
 
-Sent by a [validator](#validator) to match a [deployment order](#deploymentorder) with a [fulfillment order](#fulfillmentorder).
+Sent by a [validator](#validator) to match a [order](#order) with a [fulfillment order](#fulfillment).
 
 ### SubmitStaleLease
 
@@ -232,9 +232,9 @@ Every time a new block is created, each facilitator runs [`MatchOpenOrders`](#ma
 
 ##### MatchOpenOrders
 
-For each [deployment order](#deploymentorder) that is ready to be fulfilled (`state=open`,`wait-duration` has transpired):
+For each [order](#order) that is ready to be fulfilled (`state=open`,`wait-duration` has transpired):
 
-1. Find the matching [fulfillment order](#fulfillmentorder) with the lowest price.
+1. Find the matching [fulfillment order](#fulfillment) with the lowest price.
 1. Emit a [`SubmitLease`](#submitlease) transaction to initiate a [lease](#lease) for the matching orders.
 
 ##### InvalidateStaleLeases
@@ -255,11 +255,11 @@ For each lease currently provided by the [datacenter](#datacenters):
 
 ##### BidOnOpenOrders
 
-For each open [deployment order](#deploymentorder):
+For each open [order](#order):
 
 1. If the [datacenter](#datacenters) is out of collateral, exit.
-1. If [datacenter](#datacenters) is not able to fulfill the [deployment order](#deploymentorder), skip to next [deployment order](#deploymentorder).
-1. Emit a [`SubmitFulfillmentOrder`](#submitfulfillmentorder) transaction for the [deployment order](#deploymentorder)
+1. If [datacenter](#datacenters) is not able to fulfill the [order](#order), skip to next [order](#order).
+1. Emit a [`SubmitFulfillment`](#submitfulfillment) transaction for the [order](#order)
 
 ## Deployments
 
