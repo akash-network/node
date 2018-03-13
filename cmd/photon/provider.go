@@ -179,8 +179,8 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 				return
 			}
 
-			ordertx := &types.TxCreateFulfillmentOrder{
-				Order: &types.FulfillmentOrder{
+			ordertx := &types.TxCreateFulfillment{
+				Order: &types.Fulfillment{
 					Deployment: tx.Order.Deployment,
 					Group:      tx.Order.Group,
 					Order:      tx.Order.Order,

@@ -135,8 +135,8 @@ loop:
 				h.OnTxCreateDeployment(tx.TxCreateDeployment)
 			case *types.TxPayload_TxCreateOrder:
 				h.OnTxCreateOrder(tx.TxCreateOrder)
-			case *types.TxPayload_TxCreateFulfillmentOrder:
-				h.OnTxCreateFulfillmentOrder(tx.TxCreateFulfillmentOrder)
+			case *types.TxPayload_TxCreateFulfillment:
+				h.OnTxCreateFulfillment(tx.TxCreateFulfillment)
 			case *types.TxPayload_TxCreateLease:
 				h.OnTxCreateLease(tx.TxCreateLease)
 			}

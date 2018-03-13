@@ -8,7 +8,7 @@ import (
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/photon/app/account"
 	"github.com/ovrclk/photon/app/deployment"
-	"github.com/ovrclk/photon/app/fulfillmentorder"
+	"github.com/ovrclk/photon/app/fulfillment"
 	"github.com/ovrclk/photon/app/lease"
 	"github.com/ovrclk/photon/app/market"
 	"github.com/ovrclk/photon/app/order"
@@ -79,7 +79,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := fulfillmentorder.NewApp(state, logger.With("app", fulfillmentorder.Name))
+		app, err := fulfillment.NewApp(state, logger.With("app", fulfillment.Name))
 		if err != nil {
 			return nil, err
 		}

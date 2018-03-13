@@ -1,4 +1,4 @@
-package fulfillmentorder
+package fulfillment
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	Name = apptypes.TagAppFulfillmentOrder
+	Name = apptypes.TagAppFulfillment
 )
 
 type app struct {
@@ -27,12 +27,12 @@ func NewApp(state state.State, log log.Logger) (apptypes.Application, error) {
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
-	return strings.HasPrefix(req.GetPath(), state.FulfillmentOrderPath)
+	return strings.HasPrefix(req.GetPath(), state.FulfillmentPath)
 }
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	switch tx.(type) {
-	case *types.TxPayload_TxCreateFulfillmentOrder:
+	case *types.TxPayload_TxCreateFulfillment:
 		return true
 	}
 	return false
@@ -40,8 +40,8 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 
 func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
-	case *types.TxPayload_TxCreateFulfillmentOrder:
-		return a.doCheckTx(ctx, tx.TxCreateFulfillmentOrder)
+	case *types.TxPayload_TxCreateFulfillment:
+		return a.doCheckTx(ctx, tx.TxCreateFulfillment)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -51,8 +51,8 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 
 func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
-	case *types.TxPayload_TxCreateFulfillmentOrder:
-		return a.doDeliverTx(ctx, tx.TxCreateFulfillmentOrder)
+	case *types.TxPayload_TxCreateFulfillment:
+		return a.doDeliverTx(ctx, tx.TxCreateFulfillment)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -69,7 +69,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	}
 
 	// todo: abstractiion: all queries should have this
-	id := strings.TrimPrefix(req.Path, state.FulfillmentOrderPath)
+	id := strings.TrimPrefix(req.Path, state.FulfillmentPath)
 	key := new(base.Bytes)
 	if err := key.DecodeString(id); err != nil {
 		return tmtypes.ResponseQuery{
@@ -85,7 +85,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	return a.doQuery(*key)
 }
 
-func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillmentOrder) tmtypes.ResponseCheckTx {
+func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseCheckTx {
 	order := tx.GetOrder()
 
 	if order == nil {
@@ -154,7 +154,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillmentOrder
 	}
 
 	// ensure there are no other orders for this provider
-	other, err := a.State().FulfillmentOrder().Get(order.Deployment, order.Group, order.Order, order.Provider)
+	other, err := a.State().Fulfillment().Get(order.Deployment, order.Group, order.Order, order.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -171,7 +171,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillmentOrder
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateFulfillmentOrder) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseDeliverTx {
 	cresp := a.doCheckTx(ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
@@ -180,7 +180,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateFulfillmentOrd
 		}
 	}
 
-	if err := a.State().FulfillmentOrder().Save(tx.GetOrder()); err != nil {
+	if err := a.State().Fulfillment().Save(tx.GetOrder()); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
@@ -188,7 +188,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateFulfillmentOrd
 	}
 
 	return tmtypes.ResponseDeliverTx{
-		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCreateFulfillmentOrder),
+		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCreateFulfillment),
 	}
 }
 

@@ -108,7 +108,7 @@ func (e engine) processOrder(state state.State, w txBuffer, dorder *types.Order)
 		return true, nil
 	}
 
-	forders, err := state.FulfillmentOrder().ForOrder(dorder)
+	forders, err := state.Fulfillment().ForOrder(dorder)
 	if err != nil {
 		return true, err
 	}

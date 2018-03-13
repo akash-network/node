@@ -16,11 +16,11 @@ const (
 	DeploymentPath         = "/deployments/"
 	DeploymentSequencePath = "/deployments-seq/"
 
-	DeploymentGroupPath  = "/deployment-groups/"
-	ProviderPath         = "/providers/"
-	OrderPath            = "/orders/"
-	FulfillmentOrderPath = "/fulfillment-orders/"
-	LeasePath            = "/lease/"
+	DeploymentGroupPath = "/deployment-groups/"
+	ProviderPath        = "/providers/"
+	OrderPath           = "/orders/"
+	FulfillmentPath     = "/fulfillment-orders/"
+	LeasePath           = "/lease/"
 
 	MaxRangeLimit = math.MaxInt64
 

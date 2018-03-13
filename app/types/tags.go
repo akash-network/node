@@ -19,8 +19,8 @@ const (
 	TagAppOrder       = "deployment-order"
 	TxTypeCreateOrder = "deployment-order-create"
 
-	TagAppFulfillmentOrder       = "fulfillment-order"
-	TxTypeCreateFulfillmentOrder = "fulfillment-order-create"
+	TagAppFulfillment       = "fulfillment-order"
+	TxTypeCreateFulfillment = "fulfillment-order-create"
 
 	TagAppLease       = "lease"
 	TxTypeCreateLease = "lease-create"

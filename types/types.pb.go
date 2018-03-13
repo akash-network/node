@@ -27,8 +27,8 @@
 		Order
 		TxCreateOrder
 		Orders
-		FulfillmentOrder
-		TxCreateFulfillmentOrder
+		Fulfillment
+		TxCreateFulfillment
 		Lease
 		TxCreateLease
 */
@@ -174,7 +174,7 @@ type TxPayload struct {
 	//	*TxPayload_TxSend
 	//	*TxPayload_TxCreateDeployment
 	//	*TxPayload_TxCreateOrder
-	//	*TxPayload_TxCreateFulfillmentOrder
+	//	*TxPayload_TxCreateFulfillment
 	//	*TxPayload_TxCreateLease
 	//	*TxPayload_TxCreateProvider
 	Payload isTxPayload_Payload `protobuf_oneof:"payload"`
@@ -198,8 +198,8 @@ type TxPayload_TxCreateDeployment struct {
 type TxPayload_TxCreateOrder struct {
 	TxCreateOrder *TxCreateOrder `protobuf:"bytes,4,opt,name=txCreateOrder,oneof"`
 }
-type TxPayload_TxCreateFulfillmentOrder struct {
-	TxCreateFulfillmentOrder *TxCreateFulfillmentOrder `protobuf:"bytes,5,opt,name=txCreateFulfillmentOrder,oneof"`
+type TxPayload_TxCreateFulfillment struct {
+	TxCreateFulfillment *TxCreateFulfillment `protobuf:"bytes,5,opt,name=txCreateFulfillment,oneof"`
 }
 type TxPayload_TxCreateLease struct {
 	TxCreateLease *TxCreateLease `protobuf:"bytes,6,opt,name=txCreateLease,oneof"`
@@ -208,12 +208,12 @@ type TxPayload_TxCreateProvider struct {
 	TxCreateProvider *TxCreateProvider `protobuf:"bytes,7,opt,name=txCreateProvider,oneof"`
 }
 
-func (*TxPayload_TxSend) isTxPayload_Payload()                   {}
-func (*TxPayload_TxCreateDeployment) isTxPayload_Payload()       {}
-func (*TxPayload_TxCreateOrder) isTxPayload_Payload()            {}
-func (*TxPayload_TxCreateFulfillmentOrder) isTxPayload_Payload() {}
-func (*TxPayload_TxCreateLease) isTxPayload_Payload()            {}
-func (*TxPayload_TxCreateProvider) isTxPayload_Payload()         {}
+func (*TxPayload_TxSend) isTxPayload_Payload()              {}
+func (*TxPayload_TxCreateDeployment) isTxPayload_Payload()  {}
+func (*TxPayload_TxCreateOrder) isTxPayload_Payload()       {}
+func (*TxPayload_TxCreateFulfillment) isTxPayload_Payload() {}
+func (*TxPayload_TxCreateLease) isTxPayload_Payload()       {}
+func (*TxPayload_TxCreateProvider) isTxPayload_Payload()    {}
 
 func (m *TxPayload) GetPayload() isTxPayload_Payload {
 	if m != nil {
@@ -250,9 +250,9 @@ func (m *TxPayload) GetTxCreateOrder() *TxCreateOrder {
 	return nil
 }
 
-func (m *TxPayload) GetTxCreateFulfillmentOrder() *TxCreateFulfillmentOrder {
-	if x, ok := m.GetPayload().(*TxPayload_TxCreateFulfillmentOrder); ok {
-		return x.TxCreateFulfillmentOrder
+func (m *TxPayload) GetTxCreateFulfillment() *TxCreateFulfillment {
+	if x, ok := m.GetPayload().(*TxPayload_TxCreateFulfillment); ok {
+		return x.TxCreateFulfillment
 	}
 	return nil
 }
@@ -277,7 +277,7 @@ func (*TxPayload) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) err
 		(*TxPayload_TxSend)(nil),
 		(*TxPayload_TxCreateDeployment)(nil),
 		(*TxPayload_TxCreateOrder)(nil),
-		(*TxPayload_TxCreateFulfillmentOrder)(nil),
+		(*TxPayload_TxCreateFulfillment)(nil),
 		(*TxPayload_TxCreateLease)(nil),
 		(*TxPayload_TxCreateProvider)(nil),
 	}
@@ -302,9 +302,9 @@ func _TxPayload_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 		if err := b.EncodeMessage(x.TxCreateOrder); err != nil {
 			return err
 		}
-	case *TxPayload_TxCreateFulfillmentOrder:
+	case *TxPayload_TxCreateFulfillment:
 		_ = b.EncodeVarint(5<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.TxCreateFulfillmentOrder); err != nil {
+		if err := b.EncodeMessage(x.TxCreateFulfillment); err != nil {
 			return err
 		}
 	case *TxPayload_TxCreateLease:
@@ -351,13 +351,13 @@ func _TxPayload_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buff
 		err := b.DecodeMessage(msg)
 		m.Payload = &TxPayload_TxCreateOrder{msg}
 		return true, err
-	case 5: // payload.txCreateFulfillmentOrder
+	case 5: // payload.txCreateFulfillment
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(TxCreateFulfillmentOrder)
+		msg := new(TxCreateFulfillment)
 		err := b.DecodeMessage(msg)
-		m.Payload = &TxPayload_TxCreateFulfillmentOrder{msg}
+		m.Payload = &TxPayload_TxCreateFulfillment{msg}
 		return true, err
 	case 6: // payload.txCreateLease
 		if wire != proto.WireBytes {
@@ -399,8 +399,8 @@ func _TxPayload_OneofSizer(msg proto.Message) (n int) {
 		n += proto.SizeVarint(4<<3 | proto.WireBytes)
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *TxPayload_TxCreateFulfillmentOrder:
-		s := proto.Size(x.TxCreateFulfillmentOrder)
+	case *TxPayload_TxCreateFulfillment:
+		s := proto.Size(x.TxCreateFulfillment)
 		n += proto.SizeVarint(5<<3 | proto.WireBytes)
 		n += proto.SizeVarint(uint64(s))
 		n += s
@@ -790,7 +790,7 @@ func (m *Orders) GetItems() []*Order {
 	return nil
 }
 
-type FulfillmentOrder struct {
+type Fulfillment struct {
 	// deployment address
 	Deployment github_com_ovrclk_photon_types_base.Bytes `protobuf:"bytes,1,opt,name=deployment,proto3,customtype=github.com/ovrclk/photon/types/base.Bytes" json:"deployment"`
 	// deployment group sequence
@@ -801,35 +801,35 @@ type FulfillmentOrder struct {
 	Provider github_com_ovrclk_photon_types_base.Bytes `protobuf:"bytes,4,opt,name=provider,proto3,customtype=github.com/ovrclk/photon/types/base.Bytes" json:"provider"`
 }
 
-func (m *FulfillmentOrder) Reset()                    { *m = FulfillmentOrder{} }
-func (m *FulfillmentOrder) String() string            { return proto.CompactTextString(m) }
-func (*FulfillmentOrder) ProtoMessage()               {}
-func (*FulfillmentOrder) Descriptor() ([]byte, []int) { return fileDescriptorTypes, []int{19} }
+func (m *Fulfillment) Reset()                    { *m = Fulfillment{} }
+func (m *Fulfillment) String() string            { return proto.CompactTextString(m) }
+func (*Fulfillment) ProtoMessage()               {}
+func (*Fulfillment) Descriptor() ([]byte, []int) { return fileDescriptorTypes, []int{19} }
 
-func (m *FulfillmentOrder) GetGroup() uint64 {
+func (m *Fulfillment) GetGroup() uint64 {
 	if m != nil {
 		return m.Group
 	}
 	return 0
 }
 
-func (m *FulfillmentOrder) GetOrder() uint64 {
+func (m *Fulfillment) GetOrder() uint64 {
 	if m != nil {
 		return m.Order
 	}
 	return 0
 }
 
-type TxCreateFulfillmentOrder struct {
-	Order *FulfillmentOrder `protobuf:"bytes,1,opt,name=order" json:"order,omitempty"`
+type TxCreateFulfillment struct {
+	Order *Fulfillment `protobuf:"bytes,1,opt,name=order" json:"order,omitempty"`
 }
 
-func (m *TxCreateFulfillmentOrder) Reset()                    { *m = TxCreateFulfillmentOrder{} }
-func (m *TxCreateFulfillmentOrder) String() string            { return proto.CompactTextString(m) }
-func (*TxCreateFulfillmentOrder) ProtoMessage()               {}
-func (*TxCreateFulfillmentOrder) Descriptor() ([]byte, []int) { return fileDescriptorTypes, []int{20} }
+func (m *TxCreateFulfillment) Reset()                    { *m = TxCreateFulfillment{} }
+func (m *TxCreateFulfillment) String() string            { return proto.CompactTextString(m) }
+func (*TxCreateFulfillment) ProtoMessage()               {}
+func (*TxCreateFulfillment) Descriptor() ([]byte, []int) { return fileDescriptorTypes, []int{20} }
 
-func (m *TxCreateFulfillmentOrder) GetOrder() *FulfillmentOrder {
+func (m *TxCreateFulfillment) GetOrder() *Fulfillment {
 	if m != nil {
 		return m.Order
 	}
@@ -902,8 +902,8 @@ func init() {
 	proto.RegisterType((*Order)(nil), "types.Order")
 	proto.RegisterType((*TxCreateOrder)(nil), "types.TxCreateOrder")
 	proto.RegisterType((*Orders)(nil), "types.Orders")
-	proto.RegisterType((*FulfillmentOrder)(nil), "types.FulfillmentOrder")
-	proto.RegisterType((*TxCreateFulfillmentOrder)(nil), "types.TxCreateFulfillmentOrder")
+	proto.RegisterType((*Fulfillment)(nil), "types.Fulfillment")
+	proto.RegisterType((*TxCreateFulfillment)(nil), "types.TxCreateFulfillment")
 	proto.RegisterType((*Lease)(nil), "types.Lease")
 	proto.RegisterType((*TxCreateLease)(nil), "types.TxCreateLease")
 	proto.RegisterEnum("types.DeploymentGroup_DeploymentGroupState", DeploymentGroup_DeploymentGroupState_name, DeploymentGroup_DeploymentGroupState_value)
@@ -975,12 +975,12 @@ func (this *TxPayload_TxCreateOrder) GoString() string {
 		`TxCreateOrder:` + fmt.Sprintf("%#v", this.TxCreateOrder) + `}`}, ", ")
 	return s
 }
-func (this *TxPayload_TxCreateFulfillmentOrder) GoString() string {
+func (this *TxPayload_TxCreateFulfillment) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&types.TxPayload_TxCreateFulfillmentOrder{` +
-		`TxCreateFulfillmentOrder:` + fmt.Sprintf("%#v", this.TxCreateFulfillmentOrder) + `}`}, ", ")
+	s := strings.Join([]string{`&types.TxPayload_TxCreateFulfillment{` +
+		`TxCreateFulfillment:` + fmt.Sprintf("%#v", this.TxCreateFulfillment) + `}`}, ", ")
 	return s
 }
 func (this *TxPayload_TxCreateLease) GoString() string {
@@ -1224,12 +1224,12 @@ func (this *Orders) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *FulfillmentOrder) GoString() string {
+func (this *Fulfillment) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 8)
-	s = append(s, "&types.FulfillmentOrder{")
+	s = append(s, "&types.Fulfillment{")
 	s = append(s, "Deployment: "+fmt.Sprintf("%#v", this.Deployment)+",\n")
 	s = append(s, "Group: "+fmt.Sprintf("%#v", this.Group)+",\n")
 	s = append(s, "Order: "+fmt.Sprintf("%#v", this.Order)+",\n")
@@ -1237,12 +1237,12 @@ func (this *FulfillmentOrder) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *TxCreateFulfillmentOrder) GoString() string {
+func (this *TxCreateFulfillment) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 5)
-	s = append(s, "&types.TxCreateFulfillmentOrder{")
+	s = append(s, "&types.TxCreateFulfillment{")
 	if this.Order != nil {
 		s = append(s, "Order: "+fmt.Sprintf("%#v", this.Order)+",\n")
 	}
@@ -1653,7 +1653,7 @@ func (m *TxPayload) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 5:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TxCreateFulfillmentOrder", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field TxCreateFulfillment", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -1677,11 +1677,11 @@ func (m *TxPayload) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &TxCreateFulfillmentOrder{}
+			v := &TxCreateFulfillment{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Payload = &TxPayload_TxCreateFulfillmentOrder{v}
+			m.Payload = &TxPayload_TxCreateFulfillment{v}
 			iNdEx = postIndex
 		case 6:
 			if wireType != 2 {
@@ -3536,7 +3536,7 @@ func (m *Orders) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *FulfillmentOrder) Unmarshal(dAtA []byte) error {
+func (m *Fulfillment) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3559,10 +3559,10 @@ func (m *FulfillmentOrder) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: FulfillmentOrder: wiretype end group for non-group")
+			return fmt.Errorf("proto: Fulfillment: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: FulfillmentOrder: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Fulfillment: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3684,7 +3684,7 @@ func (m *FulfillmentOrder) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *TxCreateFulfillmentOrder) Unmarshal(dAtA []byte) error {
+func (m *TxCreateFulfillment) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3707,10 +3707,10 @@ func (m *TxCreateFulfillmentOrder) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: TxCreateFulfillmentOrder: wiretype end group for non-group")
+			return fmt.Errorf("proto: TxCreateFulfillment: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: TxCreateFulfillmentOrder: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: TxCreateFulfillment: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3740,7 +3740,7 @@ func (m *TxCreateFulfillmentOrder) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Order == nil {
-				m.Order = &FulfillmentOrder{}
+				m.Order = &Fulfillment{}
 			}
 			if err := m.Order.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err

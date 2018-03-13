@@ -9,17 +9,17 @@ type Handler interface {
 	OnTxCreateProvider(*types.TxCreateProvider)
 	OnTxCreateDeployment(*types.TxCreateDeployment)
 	OnTxCreateOrder(*types.TxCreateOrder)
-	OnTxCreateFulfillmentOrder(*types.TxCreateFulfillmentOrder)
+	OnTxCreateFulfillment(*types.TxCreateFulfillment)
 	OnTxCreateLease(*types.TxCreateLease)
 }
 
 type handler struct {
-	onTxSend                   func(*types.TxSend)
-	onTxCreateProvider         func(*types.TxCreateProvider)
-	onTxCreateDeployment       func(*types.TxCreateDeployment)
-	onTxCreateOrder            func(*types.TxCreateOrder)
-	onTxCreateFulfillmentOrder func(*types.TxCreateFulfillmentOrder)
-	onTxCreateLease            func(*types.TxCreateLease)
+	onTxSend              func(*types.TxSend)
+	onTxCreateProvider    func(*types.TxCreateProvider)
+	onTxCreateDeployment  func(*types.TxCreateDeployment)
+	onTxCreateOrder       func(*types.TxCreateOrder)
+	onTxCreateFulfillment func(*types.TxCreateFulfillment)
+	onTxCreateLease       func(*types.TxCreateLease)
 }
 
 func (h handler) OnTxSend(tx *types.TxSend) {
@@ -46,9 +46,9 @@ func (h handler) OnTxCreateOrder(tx *types.TxCreateOrder) {
 	}
 }
 
-func (h handler) OnTxCreateFulfillmentOrder(tx *types.TxCreateFulfillmentOrder) {
-	if h.onTxCreateFulfillmentOrder != nil {
-		h.onTxCreateFulfillmentOrder(tx)
+func (h handler) OnTxCreateFulfillment(tx *types.TxCreateFulfillment) {
+	if h.onTxCreateFulfillment != nil {
+		h.onTxCreateFulfillment(tx)
 	}
 }
 
@@ -63,7 +63,7 @@ type Builder interface {
 	OnTxCreateProvider(func(*types.TxCreateProvider)) Builder
 	OnTxCreateDeployment(func(*types.TxCreateDeployment)) Builder
 	OnTxCreateOrder(func(*types.TxCreateOrder)) Builder
-	OnTxCreateFulfillmentOrder(func(*types.TxCreateFulfillmentOrder)) Builder
+	OnTxCreateFulfillment(func(*types.TxCreateFulfillment)) Builder
 	OnTxCreateLease(func(*types.TxCreateLease)) Builder
 	Create() Handler
 }
@@ -94,8 +94,8 @@ func (b *builder) OnTxCreateOrder(fn func(*types.TxCreateOrder)) Builder {
 	return b
 }
 
-func (b *builder) OnTxCreateFulfillmentOrder(fn func(*types.TxCreateFulfillmentOrder)) Builder {
-	b.onTxCreateFulfillmentOrder = fn
+func (b *builder) OnTxCreateFulfillment(fn func(*types.TxCreateFulfillment)) Builder {
+	b.onTxCreateFulfillment = fn
 	return b
 }
 

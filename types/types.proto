@@ -28,7 +28,7 @@ message TxPayload {
     TxSend                   txSend                   = 2;
     TxCreateDeployment       txCreateDeployment       = 3;
     TxCreateOrder            txCreateOrder            = 4;
-    TxCreateFulfillmentOrder txCreateFulfillmentOrder = 5;
+    TxCreateFulfillment txCreateFulfillment = 5;
     TxCreateLease            txCreateLease            = 6;
     TxCreateProvider         txCreateProvider         = 7;
   }
@@ -171,7 +171,7 @@ message Orders {
   repeated Order items = 1;
 }
 
-message FulfillmentOrder {
+message Fulfillment {
   /* BEGIN ID FIELDS */
 
   // deployment address
@@ -189,8 +189,8 @@ message FulfillmentOrder {
   /* END ID FIELDS */
 }
 
-message TxCreateFulfillmentOrder {
-  FulfillmentOrder order = 1;
+message TxCreateFulfillment {
+  Fulfillment order = 1;
 }
 
 message Lease {

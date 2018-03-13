@@ -126,7 +126,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.
 	}
 
 	// ensure fulfillment order exists
-	forder, err := a.State().FulfillmentOrder().Get(lease.Deployment, lease.Group, lease.Order, lease.Provider)
+	forder, err := a.State().Fulfillment().Get(lease.Deployment, lease.Group, lease.Order, lease.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
