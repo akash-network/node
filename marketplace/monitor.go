@@ -129,14 +129,14 @@ loop:
 			switch tx := tx.Payload.GetPayload().(type) {
 			case *types.TxPayload_TxSend:
 				h.OnTxSend(tx.TxSend)
-			case *types.TxPayload_TxCreateDatacenter:
-				h.OnTxCreateDatacenter(tx.TxCreateDatacenter)
+			case *types.TxPayload_TxCreateProvider:
+				h.OnTxCreateProvider(tx.TxCreateProvider)
 			case *types.TxPayload_TxCreateDeployment:
 				h.OnTxCreateDeployment(tx.TxCreateDeployment)
-			case *types.TxPayload_TxCreateDeploymentOrder:
-				h.OnTxCreateDeploymentOrder(tx.TxCreateDeploymentOrder)
-			case *types.TxPayload_TxCreateFulfillmentOrder:
-				h.OnTxCreateFulfillmentOrder(tx.TxCreateFulfillmentOrder)
+			case *types.TxPayload_TxCreateOrder:
+				h.OnTxCreateOrder(tx.TxCreateOrder)
+			case *types.TxPayload_TxCreateFulfillment:
+				h.OnTxCreateFulfillment(tx.TxCreateFulfillment)
 			case *types.TxPayload_TxCreateLease:
 				h.OnTxCreateLease(tx.TxCreateLease)
 			}

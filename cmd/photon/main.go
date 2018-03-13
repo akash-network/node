@@ -7,7 +7,7 @@ func main() {
 	root.AddCommand(keyCommand())
 	root.AddCommand(sendCommand())
 	root.AddCommand(deploymentCommand())
-	root.AddCommand(datacenterCommand())
+	root.AddCommand(providerCommand())
 	root.AddCommand(query.QueryCommand())
 	root.AddCommand(statusCommand())
 	root.AddCommand(marketplaceCommand())

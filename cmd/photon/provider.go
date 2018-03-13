@@ -19,11 +19,11 @@ import (
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
-func datacenterCommand() *cobra.Command {
+func providerCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "datacenter",
-		Short: "manage datacenter",
+		Use:   "provider",
+		Short: "manage provider",
 		Args:  cobra.ExactArgs(1),
 	}
 
@@ -31,19 +31,19 @@ func datacenterCommand() *cobra.Command {
 	context.AddFlagKey(cmd, cmd.PersistentFlags())
 	context.AddFlagNonce(cmd, cmd.PersistentFlags())
 
-	cmd.AddCommand(createDatacenterCommand())
+	cmd.AddCommand(createProviderCommand())
 	cmd.AddCommand(createRunCommand())
 
 	return cmd
 }
 
-func createDatacenterCommand() *cobra.Command {
+func createProviderCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create [file] [flags]",
-		Short: "create a datacenter",
+		Short: "create a provider",
 		Args:  cobra.ExactArgs(1),
-		RunE:  context.WithContext(context.RequireNode(doCreateDatacenterCommand)),
+		RunE:  context.WithContext(context.RequireNode(doCreateProviderCommand)),
 	}
 
 	context.AddFlagKeyType(cmd, cmd.Flags())
@@ -51,8 +51,8 @@ func createDatacenterCommand() *cobra.Command {
 	return cmd
 }
 
-func doCreateDatacenterCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	datacenter, err := parseDatacenter(args[0])
+func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+	provider, err := parseProvider(args[0])
 	if err != nil {
 		return err
 	}
@@ -92,14 +92,14 @@ func doCreateDatacenterCommand(ctx context.Context, cmd *cobra.Command, args []s
 		return err
 	}
 
-	address := state.DatacenterAddress(key.Address, nonce)
-	datacenter.Address = address
-	datacenter.Owner = base.Bytes(key.Address)
+	address := state.ProviderAddress(key.Address, nonce)
+	provider.Address = address
+	provider.Owner = base.Bytes(key.Address)
 
 	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
 
-	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateDatacenter{
-		Datacenter: datacenter,
+	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateProvider{
+		Provider: provider,
 	})
 	if err != nil {
 		return err
@@ -118,55 +118,41 @@ func doCreateDatacenterCommand(ctx context.Context, cmd *cobra.Command, args []s
 		return errors.New(result.DeliverTx.GetLog())
 	}
 
-	fmt.Println("Created datacenter: " + strings.ToUpper(hex.EncodeToString(datacenter.Address)))
+	fmt.Println("Created provider: " + strings.ToUpper(hex.EncodeToString(provider.Address)))
 
 	return nil
 }
 
-func parseDatacenter(file string) (types.Datacenter, error) {
+func parseProvider(file string) (types.Provider, error) {
 	// todo: read and parse deployment yaml file
 
 	/* begin stub data */
-	resourceunit := &types.ResourceUnit{
-		Cpu:    1,
-		Memory: 1,
-		Disk:   1,
-	}
-
-	resourcegroup := &types.ResourceGroup{
-		Unit:  *resourceunit,
-		Count: 1,
-		Price: 1,
-	}
-
 	providerattribute := &types.ProviderAttribute{
 		Name:  "region",
 		Value: "us-west",
 	}
 
 	attributes := []types.ProviderAttribute{*providerattribute}
-	resources := []types.ResourceGroup{*resourcegroup}
 
-	datacenter := &types.Datacenter{
-		Resources:  resources,
+	provider := &types.Provider{
 		Attributes: attributes,
 	}
 
 	/* end stub data */
 
-	return *datacenter, nil
+	return *provider, nil
 }
 
 func createRunCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "run <datacenter>",
+		Use:  "run <provider>",
 		Args: cobra.ExactArgs(1),
-		RunE: context.WithContext(context.RequireNode(doDatacenterRunCommand)),
+		RunE: context.WithContext(context.RequireNode(doProviderRunCommand)),
 	}
 	return cmd
 }
 
-func doDatacenterRunCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
 	kmgr, _ := ctx.KeyManager()
 
 	client := ctx.Client()
@@ -185,7 +171,7 @@ func doDatacenterRunCommand(ctx context.Context, cmd *cobra.Command, args []stri
 	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
 
 	handler := marketplace.NewBuilder().
-		OnTxCreateDeploymentOrder(func(tx *types.TxCreateDeploymentOrder) {
+		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
 
 			nonce, err := ctx.Nonce()
 			if err != nil {
@@ -193,18 +179,18 @@ func doDatacenterRunCommand(ctx context.Context, cmd *cobra.Command, args []stri
 				return
 			}
 
-			ordertx := &types.TxCreateFulfillmentOrder{
-				Order: &types.FulfillmentOrder{
-					Deployment: tx.DeploymentOrder.Deployment,
-					Group:      tx.DeploymentOrder.Group,
-					Order:      tx.DeploymentOrder.Order,
+			ordertx := &types.TxCreateFulfillment{
+				Order: &types.Fulfillment{
+					Deployment: tx.Order.Deployment,
+					Group:      tx.Order.Group,
+					Order:      tx.Order.Order,
 					Provider:   *provider,
 				},
 			}
 
 			//time.Sleep(time.Second * 5)
 			fmt.Printf("BIDDING ON ORDER: %X/%v/%v\n",
-				tx.DeploymentOrder.Deployment, tx.DeploymentOrder.Group, tx.DeploymentOrder.Order)
+				tx.Order.Deployment, tx.Order.Group, tx.Order.Order)
 
 			txbuf, err := txutil.BuildTx(signer, nonce, ordertx)
 			if err != nil {

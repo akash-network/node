@@ -34,12 +34,12 @@ func NewTxBuilder(nonce uint64, payload interface{}) (TxBuilder, error) {
 		tx.Payload.Payload = &types.TxPayload_TxSend{TxSend: payload}
 	case *types.TxCreateDeployment:
 		tx.Payload.Payload = &types.TxPayload_TxCreateDeployment{TxCreateDeployment: payload}
-	case *types.TxCreateDatacenter:
-		tx.Payload.Payload = &types.TxPayload_TxCreateDatacenter{TxCreateDatacenter: payload}
-	case *types.TxCreateDeploymentOrder:
-		tx.Payload.Payload = &types.TxPayload_TxCreateDeploymentOrder{TxCreateDeploymentOrder: payload}
-	case *types.TxCreateFulfillmentOrder:
-		tx.Payload.Payload = &types.TxPayload_TxCreateFulfillmentOrder{TxCreateFulfillmentOrder: payload}
+	case *types.TxCreateProvider:
+		tx.Payload.Payload = &types.TxPayload_TxCreateProvider{TxCreateProvider: payload}
+	case *types.TxCreateOrder:
+		tx.Payload.Payload = &types.TxPayload_TxCreateOrder{TxCreateOrder: payload}
+	case *types.TxCreateFulfillment:
+		tx.Payload.Payload = &types.TxPayload_TxCreateFulfillment{TxCreateFulfillment: payload}
 	case *types.TxCreateLease:
 		tx.Payload.Payload = &types.TxPayload_TxCreateLease{TxCreateLease: payload}
 	default:

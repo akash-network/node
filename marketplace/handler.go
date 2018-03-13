@@ -6,20 +6,20 @@ import (
 
 type Handler interface {
 	OnTxSend(*types.TxSend)
-	OnTxCreateDatacenter(*types.TxCreateDatacenter)
+	OnTxCreateProvider(*types.TxCreateProvider)
 	OnTxCreateDeployment(*types.TxCreateDeployment)
-	OnTxCreateDeploymentOrder(*types.TxCreateDeploymentOrder)
-	OnTxCreateFulfillmentOrder(*types.TxCreateFulfillmentOrder)
+	OnTxCreateOrder(*types.TxCreateOrder)
+	OnTxCreateFulfillment(*types.TxCreateFulfillment)
 	OnTxCreateLease(*types.TxCreateLease)
 }
 
 type handler struct {
-	onTxSend                   func(*types.TxSend)
-	onTxCreateDatacenter       func(*types.TxCreateDatacenter)
-	onTxCreateDeployment       func(*types.TxCreateDeployment)
-	onTxCreateDeploymentOrder  func(*types.TxCreateDeploymentOrder)
-	onTxCreateFulfillmentOrder func(*types.TxCreateFulfillmentOrder)
-	onTxCreateLease            func(*types.TxCreateLease)
+	onTxSend              func(*types.TxSend)
+	onTxCreateProvider    func(*types.TxCreateProvider)
+	onTxCreateDeployment  func(*types.TxCreateDeployment)
+	onTxCreateOrder       func(*types.TxCreateOrder)
+	onTxCreateFulfillment func(*types.TxCreateFulfillment)
+	onTxCreateLease       func(*types.TxCreateLease)
 }
 
 func (h handler) OnTxSend(tx *types.TxSend) {
@@ -28,9 +28,9 @@ func (h handler) OnTxSend(tx *types.TxSend) {
 	}
 }
 
-func (h handler) OnTxCreateDatacenter(tx *types.TxCreateDatacenter) {
-	if h.onTxCreateDatacenter != nil {
-		h.onTxCreateDatacenter(tx)
+func (h handler) OnTxCreateProvider(tx *types.TxCreateProvider) {
+	if h.onTxCreateProvider != nil {
+		h.onTxCreateProvider(tx)
 	}
 }
 
@@ -40,15 +40,15 @@ func (h handler) OnTxCreateDeployment(tx *types.TxCreateDeployment) {
 	}
 }
 
-func (h handler) OnTxCreateDeploymentOrder(tx *types.TxCreateDeploymentOrder) {
-	if h.onTxCreateDeploymentOrder != nil {
-		h.onTxCreateDeploymentOrder(tx)
+func (h handler) OnTxCreateOrder(tx *types.TxCreateOrder) {
+	if h.onTxCreateOrder != nil {
+		h.onTxCreateOrder(tx)
 	}
 }
 
-func (h handler) OnTxCreateFulfillmentOrder(tx *types.TxCreateFulfillmentOrder) {
-	if h.onTxCreateFulfillmentOrder != nil {
-		h.onTxCreateFulfillmentOrder(tx)
+func (h handler) OnTxCreateFulfillment(tx *types.TxCreateFulfillment) {
+	if h.onTxCreateFulfillment != nil {
+		h.onTxCreateFulfillment(tx)
 	}
 }
 
@@ -60,10 +60,10 @@ func (h handler) OnTxCreateLease(tx *types.TxCreateLease) {
 
 type Builder interface {
 	OnTxSend(func(*types.TxSend)) Builder
-	OnTxCreateDatacenter(func(*types.TxCreateDatacenter)) Builder
+	OnTxCreateProvider(func(*types.TxCreateProvider)) Builder
 	OnTxCreateDeployment(func(*types.TxCreateDeployment)) Builder
-	OnTxCreateDeploymentOrder(func(*types.TxCreateDeploymentOrder)) Builder
-	OnTxCreateFulfillmentOrder(func(*types.TxCreateFulfillmentOrder)) Builder
+	OnTxCreateOrder(func(*types.TxCreateOrder)) Builder
+	OnTxCreateFulfillment(func(*types.TxCreateFulfillment)) Builder
 	OnTxCreateLease(func(*types.TxCreateLease)) Builder
 	Create() Handler
 }
@@ -79,8 +79,8 @@ func (b *builder) OnTxSend(fn func(*types.TxSend)) Builder {
 	return b
 }
 
-func (b *builder) OnTxCreateDatacenter(fn func(*types.TxCreateDatacenter)) Builder {
-	b.onTxCreateDatacenter = fn
+func (b *builder) OnTxCreateProvider(fn func(*types.TxCreateProvider)) Builder {
+	b.onTxCreateProvider = fn
 	return b
 }
 
@@ -89,13 +89,13 @@ func (b *builder) OnTxCreateDeployment(fn func(*types.TxCreateDeployment)) Build
 	return b
 }
 
-func (b *builder) OnTxCreateDeploymentOrder(fn func(*types.TxCreateDeploymentOrder)) Builder {
-	b.onTxCreateDeploymentOrder = fn
+func (b *builder) OnTxCreateOrder(fn func(*types.TxCreateOrder)) Builder {
+	b.onTxCreateOrder = fn
 	return b
 }
 
-func (b *builder) OnTxCreateFulfillmentOrder(fn func(*types.TxCreateFulfillmentOrder)) Builder {
-	b.onTxCreateFulfillmentOrder = fn
+func (b *builder) OnTxCreateFulfillment(fn func(*types.TxCreateFulfillment)) Builder {
+	b.onTxCreateFulfillment = fn
 	return b
 }
 

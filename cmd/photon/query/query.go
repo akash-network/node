@@ -23,8 +23,8 @@ func QueryCommand() *cobra.Command {
 	cmd.AddCommand(
 		queryAccountCommand(),
 		queryDeploymentCommand(),
-		queryDatacenterCommand(),
-		queryDeploymentOrderCommand(),
+		queryProviderCommand(),
+		queryOrderCommand(),
 	)
 
 	return cmd
@@ -48,13 +48,13 @@ func doQuery(ctx context.Context, path string, structure interface{}) error {
 		s.Unmarshal(result.Response.Value)
 	case *types.Deployments:
 		s.Unmarshal(result.Response.Value)
-	case *types.Datacenter:
+	case *types.Provider:
 		s.Unmarshal(result.Response.Value)
-	case *types.Datacenters:
+	case *types.Providers:
 		s.Unmarshal(result.Response.Value)
-	case *types.DeploymentOrder:
+	case *types.Order:
 		s.Unmarshal(result.Response.Value)
-	case *types.DeploymentOrders:
+	case *types.Orders:
 		s.Unmarshal(result.Response.Value)
 	default:
 		return errors.New("Unknown query value structure")
