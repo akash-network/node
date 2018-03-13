@@ -130,8 +130,8 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillmentOrder
 		}
 	}
 
-	// ensure deployment order exists
-	dorder, err := a.State().DeploymentOrder().Get(order.Deployment, order.Group, order.Order)
+	// ensure order exists
+	dorder, err := a.State().Order().Get(order.Deployment, order.Group, order.Order)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -141,15 +141,15 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillmentOrder
 	if dorder == nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "Deployment order not found",
+			Log:  "order not found",
 		}
 	}
 
-	// ensure deployment order in correct state
-	if dorder.State != types.DeploymentOrder_OPEN {
+	// ensure order in correct state
+	if dorder.State != types.Order_OPEN {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "Deployment order not open",
+			Log:  "order not open",
 		}
 	}
 

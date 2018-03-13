@@ -27,7 +27,7 @@ message TxPayload {
   oneof payload {
     TxSend                   txSend                   = 2;
     TxCreateDeployment       txCreateDeployment       = 3;
-    TxCreateDeploymentOrder  txCreateDeploymentOrder  = 4;
+    TxCreateOrder            txCreateOrder            = 4;
     TxCreateFulfillmentOrder txCreateFulfillmentOrder = 5;
     TxCreateLease            txCreateLease            = 6;
     TxCreateProvider         txCreateProvider         = 7;
@@ -140,7 +140,7 @@ message TxCreateDeployment {
   Deployment deployment = 1;
 }
 
-message DeploymentOrder {
+message Order {
 
   /* BEGIN ID FIELDS */
 
@@ -150,25 +150,25 @@ message DeploymentOrder {
   // deployment group sequence
   uint64 group = 2;
 
-  // deployment order sequence
+  // order sequence
   uint64 order = 3;
 
   /* END ID FIELDS */
 
-  enum DeploymentOrderState {
+  enum OrderState {
     OPEN    = 0;
     MATCHED = 1;
     CLOSED  = 2;
   }
-  DeploymentOrderState state = 4;
+  OrderState state = 4;
 }
 
-message TxCreateDeploymentOrder {
-  DeploymentOrder deploymentOrder = 1;
+message TxCreateOrder {
+  Order order = 1;
 }
 
-message DeploymentOrders {
-  repeated DeploymentOrder items = 1;
+message Orders {
+  repeated Order items = 1;
 }
 
 message FulfillmentOrder {
@@ -180,7 +180,7 @@ message FulfillmentOrder {
   // deployment group sequence
   uint64 group = 2;
 
-  // deployment order sequence
+  // order sequence
   uint64 order = 3;
 
   // provider address
@@ -202,7 +202,7 @@ message Lease {
   // deployment group sequence
   uint64 group = 2;
 
-  // deployment order sequence
+  // order sequence
   uint64 order = 3;
 
   // provider address

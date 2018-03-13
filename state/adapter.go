@@ -18,7 +18,7 @@ const (
 
 	DeploymentGroupPath  = "/deployment-groups/"
 	ProviderPath         = "/providers/"
-	DeploymentOrderPath  = "/deploymentorders/"
+	OrderPath            = "/orders/"
 	FulfillmentOrderPath = "/fulfillment-orders/"
 	LeasePath            = "/lease/"
 

@@ -28,7 +28,7 @@ func (e engine) Run(state state.State) ([]interface{}, error) {
 	return buf.all(), nil
 }
 
-// create deployment orders as necessary
+// create orders as necessary
 func (e engine) processDeployments(state state.State, w txBuffer) error {
 	items, err := state.Deployment().GetMaxRange()
 	if err != nil {
@@ -60,11 +60,11 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 			continue
 		}
 
-		// TODO: put ttl on deployment orders
-		// TODO: cancel stale deployment orders
+		// TODO: put ttl on orders
+		// TODO: cancel stale orders
 
 		// process current orders
-		orders, err := state.DeploymentOrder().ForGroup(group)
+		orders, err := state.Order().ForGroup(group)
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 		activeFound := false
 
 		for _, order := range orders {
-			active, err := e.processDeploymentOrder(state, w, order)
+			active, err := e.processOrder(state, w, order)
 			if err != nil {
 				return err
 			}
@@ -83,12 +83,12 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 
 		// if no active order emit create tx
 		if !activeFound {
-			w.put(&types.TxCreateDeploymentOrder{
-				DeploymentOrder: &types.DeploymentOrder{
+			w.put(&types.TxCreateOrder{
+				Order: &types.Order{
 					Deployment: deployment.Address,
 					Group:      group.GetSeq(),
 					Order:      nextSeq,
-					State:      types.DeploymentOrder_OPEN,
+					State:      types.Order_OPEN,
 				},
 			})
 			nextSeq++
@@ -99,16 +99,16 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 }
 
 // create leases as necessary
-func (e engine) processDeploymentOrder(state state.State, w txBuffer, dorder *types.DeploymentOrder) (bool, error) {
+func (e engine) processOrder(state state.State, w txBuffer, dorder *types.Order) (bool, error) {
 
 	switch dorder.State {
-	case types.DeploymentOrder_CLOSED:
+	case types.Order_CLOSED:
 		return false, nil
-	case types.DeploymentOrder_MATCHED:
+	case types.Order_MATCHED:
 		return true, nil
 	}
 
-	forders, err := state.FulfillmentOrder().ForDeploymentOrder(dorder)
+	forders, err := state.FulfillmentOrder().ForOrder(dorder)
 	if err != nil {
 		return true, err
 	}

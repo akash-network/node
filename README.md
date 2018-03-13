@@ -51,7 +51,7 @@ Each datacenter will host an agent which is a mediator between the with the Phot
 
 The datacenter agent is responsible for:
 
-* Bidding on deployment orders fulfillable by the datacenter.
+* Bidding on orders fulfillable by the datacenter.
 * Managing managing active leases it is a provider for.
 
 ### Distributed Exchange

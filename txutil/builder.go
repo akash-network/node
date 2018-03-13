@@ -36,8 +36,8 @@ func NewTxBuilder(nonce uint64, payload interface{}) (TxBuilder, error) {
 		tx.Payload.Payload = &types.TxPayload_TxCreateDeployment{TxCreateDeployment: payload}
 	case *types.TxCreateProvider:
 		tx.Payload.Payload = &types.TxPayload_TxCreateProvider{TxCreateProvider: payload}
-	case *types.TxCreateDeploymentOrder:
-		tx.Payload.Payload = &types.TxPayload_TxCreateDeploymentOrder{TxCreateDeploymentOrder: payload}
+	case *types.TxCreateOrder:
+		tx.Payload.Payload = &types.TxPayload_TxCreateOrder{TxCreateOrder: payload}
 	case *types.TxCreateFulfillmentOrder:
 		tx.Payload.Payload = &types.TxPayload_TxCreateFulfillmentOrder{TxCreateFulfillmentOrder: payload}
 	case *types.TxCreateLease:

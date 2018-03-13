@@ -20,7 +20,7 @@ func DeploymentGroupID(daddr []byte, gseq uint64) []byte {
 //
 //
 // AKA: DeploymentGroupID(daddr,gseq) + oseq
-func DeploymentOrderID(daddr []byte, gseq uint64, oseq uint64) []byte {
+func OrderID(daddr []byte, gseq uint64, oseq uint64) []byte {
 	buf := make([]byte, len(daddr)+8+8)
 	copy(buf, daddr)
 	binary.BigEndian.PutUint64(buf[len(daddr):], gseq)
@@ -31,7 +31,7 @@ func DeploymentOrderID(daddr []byte, gseq uint64, oseq uint64) []byte {
 // {deployment-address}{group-sequence-id}{order-sequence-id}{provider-address}
 //
 //
-// AKA: DeploymentOrderID(daddr,gseq,oseq) + provider-address
+// AKA: OrderID(daddr,gseq,oseq) + provider-address
 func FulfillmentOrderID(daddr []byte, gseq uint64, oseq uint64, paddr []byte) []byte {
 	buf := make([]byte, len(daddr)+8+8+len(paddr))
 	copy(buf, daddr)

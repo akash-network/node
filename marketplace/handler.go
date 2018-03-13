@@ -8,7 +8,7 @@ type Handler interface {
 	OnTxSend(*types.TxSend)
 	OnTxCreateProvider(*types.TxCreateProvider)
 	OnTxCreateDeployment(*types.TxCreateDeployment)
-	OnTxCreateDeploymentOrder(*types.TxCreateDeploymentOrder)
+	OnTxCreateOrder(*types.TxCreateOrder)
 	OnTxCreateFulfillmentOrder(*types.TxCreateFulfillmentOrder)
 	OnTxCreateLease(*types.TxCreateLease)
 }
@@ -17,7 +17,7 @@ type handler struct {
 	onTxSend                   func(*types.TxSend)
 	onTxCreateProvider         func(*types.TxCreateProvider)
 	onTxCreateDeployment       func(*types.TxCreateDeployment)
-	onTxCreateDeploymentOrder  func(*types.TxCreateDeploymentOrder)
+	onTxCreateOrder            func(*types.TxCreateOrder)
 	onTxCreateFulfillmentOrder func(*types.TxCreateFulfillmentOrder)
 	onTxCreateLease            func(*types.TxCreateLease)
 }
@@ -40,9 +40,9 @@ func (h handler) OnTxCreateDeployment(tx *types.TxCreateDeployment) {
 	}
 }
 
-func (h handler) OnTxCreateDeploymentOrder(tx *types.TxCreateDeploymentOrder) {
-	if h.onTxCreateDeploymentOrder != nil {
-		h.onTxCreateDeploymentOrder(tx)
+func (h handler) OnTxCreateOrder(tx *types.TxCreateOrder) {
+	if h.onTxCreateOrder != nil {
+		h.onTxCreateOrder(tx)
 	}
 }
 
@@ -62,7 +62,7 @@ type Builder interface {
 	OnTxSend(func(*types.TxSend)) Builder
 	OnTxCreateProvider(func(*types.TxCreateProvider)) Builder
 	OnTxCreateDeployment(func(*types.TxCreateDeployment)) Builder
-	OnTxCreateDeploymentOrder(func(*types.TxCreateDeploymentOrder)) Builder
+	OnTxCreateOrder(func(*types.TxCreateOrder)) Builder
 	OnTxCreateFulfillmentOrder(func(*types.TxCreateFulfillmentOrder)) Builder
 	OnTxCreateLease(func(*types.TxCreateLease)) Builder
 	Create() Handler
@@ -89,8 +89,8 @@ func (b *builder) OnTxCreateDeployment(fn func(*types.TxCreateDeployment)) Build
 	return b
 }
 
-func (b *builder) OnTxCreateDeploymentOrder(fn func(*types.TxCreateDeploymentOrder)) Builder {
-	b.onTxCreateDeploymentOrder = fn
+func (b *builder) OnTxCreateOrder(fn func(*types.TxCreateOrder)) Builder {
+	b.onTxCreateOrder = fn
 	return b
 }
 

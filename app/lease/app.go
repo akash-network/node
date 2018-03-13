@@ -65,7 +65,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	}
 }
 
-func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.ResponseCheckTx, *types.DeploymentOrder) {
+func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.ResponseCheckTx, *types.Order) {
 	lease := tx.GetLease()
 
 	if lease == nil {
@@ -102,8 +102,8 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.
 		}, nil
 	}
 
-	// ensure deployment order exists
-	dorder, err := a.State().DeploymentOrder().Get(lease.Deployment, lease.Group, lease.Order)
+	// ensure order exists
+	dorder, err := a.State().Order().Get(lease.Deployment, lease.Group, lease.Order)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -113,15 +113,15 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.
 	if dorder == nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "Deployment order not found",
+			Log:  "order not found",
 		}, nil
 	}
 
-	// ensure deployment order in correct state
-	if dorder.State != types.DeploymentOrder_OPEN {
+	// ensure order in correct state
+	if dorder.State != types.Order_OPEN {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "Deployment order not open",
+			Log:  "order not open",
 		}, nil
 	}
 
@@ -162,8 +162,8 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateLease) tmtypes
 		}
 	}
 
-	dorder.State = types.DeploymentOrder_MATCHED
-	if err := a.State().DeploymentOrder().Save(dorder); err != nil {
+	dorder.State = types.Order_MATCHED
+	if err := a.State().Order().Save(dorder); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),

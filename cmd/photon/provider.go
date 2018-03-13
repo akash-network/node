@@ -171,7 +171,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
 
 	handler := marketplace.NewBuilder().
-		OnTxCreateDeploymentOrder(func(tx *types.TxCreateDeploymentOrder) {
+		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
 
 			nonce, err := ctx.Nonce()
 			if err != nil {
@@ -181,16 +181,16 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 
 			ordertx := &types.TxCreateFulfillmentOrder{
 				Order: &types.FulfillmentOrder{
-					Deployment: tx.DeploymentOrder.Deployment,
-					Group:      tx.DeploymentOrder.Group,
-					Order:      tx.DeploymentOrder.Order,
+					Deployment: tx.Order.Deployment,
+					Group:      tx.Order.Group,
+					Order:      tx.Order.Order,
 					Provider:   *provider,
 				},
 			}
 
 			//time.Sleep(time.Second * 5)
 			fmt.Printf("BIDDING ON ORDER: %X/%v/%v\n",
-				tx.DeploymentOrder.Deployment, tx.DeploymentOrder.Group, tx.DeploymentOrder.Order)
+				tx.Order.Deployment, tx.Order.Group, tx.Order.Order)
 
 			txbuf, err := txutil.BuildTx(signer, nonce, ordertx)
 			if err != nil {

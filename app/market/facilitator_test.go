@@ -26,8 +26,8 @@ func TestFacilitator(t *testing.T) {
 	state_.Account().Save(account)
 
 	daddr := state.DeploymentAddress(account.Address, nonce)
-	tx := &types.TxCreateDeploymentOrder{
-		DeploymentOrder: &types.DeploymentOrder{
+	tx := &types.TxCreateOrder{
+		Order: &types.Order{
 			Deployment: daddr,
 		},
 	}
@@ -51,7 +51,7 @@ func TestFacilitator(t *testing.T) {
 		payload := tx.GetPayload()
 		assert.Equal(t, nonce+1, payload.GetNonce())
 
-		txdo := payload.GetTxCreateDeploymentOrder()
+		txdo := payload.GetTxCreateOrder()
 		require.NotNil(t, txdo)
 
 	}).Return(nil, nil).Once()

@@ -40,9 +40,9 @@ func marketplaceMonitorHandler() marketplace.Handler {
 		OnTxCreateDeployment(func(tx *types.TxCreateDeployment) {
 			fmt.Printf("DEPLOYMENT CREATED: %X created by %X\n", tx.Deployment.Address, tx.Deployment.Tenant)
 		}).
-		OnTxCreateDeploymentOrder(func(tx *types.TxCreateDeploymentOrder) {
-			fmt.Printf("DEPLOYMENT ORDER CREATED: %X/%v/%v\n",
-				tx.DeploymentOrder.Deployment, tx.DeploymentOrder.Group, tx.DeploymentOrder.Order)
+		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
+			fmt.Printf("order CREATED: %X/%v/%v\n",
+				tx.Order.Deployment, tx.Order.Group, tx.Order.Order)
 		}).
 		OnTxCreateFulfillmentOrder(func(tx *types.TxCreateFulfillmentOrder) {
 			fmt.Printf("FULFILLMENT ORDER CREATED %X/%v/%v by %X\n",
