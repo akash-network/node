@@ -90,7 +90,7 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 
 func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 
-	dc, err := a.State().Provider().Get(key)
+	provider, err := a.State().Provider().Get(key)
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -99,14 +99,14 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 		}
 	}
 
-	if dc == nil {
+	if provider == nil {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
 			Log:  fmt.Sprintf("provider %x not found", key),
 		}
 	}
 
-	bytes, err := proto.Marshal(dc)
+	bytes, err := proto.Marshal(provider)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -115,7 +115,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 
 	return tmtypes.ResponseQuery{
-		Key:    data.Bytes(a.State().Account().KeyFor(key)),
+		Key:    data.Bytes(a.State().Provider().KeyFor(key)),
 		Value:  bytes,
 		Height: a.State().Version(),
 	}

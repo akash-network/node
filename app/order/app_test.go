@@ -97,7 +97,7 @@ func TestTx(t *testing.T) {
 }
 
 func createDeployment(t *testing.T, state_ state.State, account *types.Account) *types.Deployment {
-	deployment := testutil.Deployment(t, account.Address, 10)
+	deployment := testutil.Deployment(account.Address, 10)
 
 	require.NoError(t, state_.Deployment().Save(deployment))
 

@@ -2,7 +2,6 @@ package testutil
 
 import (
 	"math/rand"
-	"testing"
 
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
@@ -17,7 +16,7 @@ func RandUint64() uint64 {
 	return uint64(rand.Int63())
 }
 
-func Deployment(t *testing.T, tenant base.Bytes, nonce uint64) *types.Deployment {
+func Deployment(tenant base.Bytes, nonce uint64) *types.Deployment {
 
 	address := state.DeploymentAddress(tenant, nonce)
 	nonce++

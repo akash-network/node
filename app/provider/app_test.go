@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ovrclk/akash/app/provider"
+	app_ "github.com/ovrclk/akash/app/provider"
 	apptypes "github.com/ovrclk/akash/app/types"
 	pstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
@@ -17,59 +17,31 @@ import (
 )
 
 func TestProviderApp(t *testing.T) {
+	state := testutil.NewState(t, nil)
+	account, key := testutil.CreateAccount(t, state)
+	nonce := uint64(0)
 
-	const (
-		name     = "region"
-		value    = "us-west"
-		number   = uint32(1)
-		number64 = uint64(1)
-	)
-
-	address := []byte("address")
-
-	kmgr := testutil.KeyManager(t)
-
-	keyfrom, _, err := kmgr.Create("keyfrom", testutil.KeyPasswd, testutil.KeyAlgo)
-	require.NoError(t, err)
-
-	providerattribute := &types.ProviderAttribute{
-		Name:  name,
-		Value: value,
-	}
-
-	attributes := []types.ProviderAttribute{*providerattribute}
-
-	dc := &types.Provider{
-		Attributes: attributes,
-		Address:    address,
-		Owner:      base.Bytes(keyfrom.Address),
-	}
+	provider := testutil.Provider(account.Address, nonce)
 
 	providertx := &types.TxPayload_TxCreateProvider{
 		TxCreateProvider: &types.TxCreateProvider{
-			Provider: *dc,
+			Provider: *provider,
 		},
 	}
 
-	state := testutil.NewState(t, &types.Genesis{
-		Accounts: []types.Account{
-			types.Account{Address: base.Bytes(keyfrom.Address), Balance: 0},
-		},
-	})
-
-	key := base.PubKey(keyfrom.PubKey)
+	pubkey := base.PubKey(key.PubKey())
 
 	ctx := apptypes.NewContext(&types.Tx{
-		Key: &key,
+		Key: &pubkey,
 		Payload: types.TxPayload{
 			Payload: providertx,
 		},
 	})
 
-	app, err := provider.NewApp(state, testutil.Logger())
+	app, err := app_.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
-	assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.ProviderPath, hex.EncodeToString(address))}))
-	assert.False(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", "/foo/", hex.EncodeToString(address))}))
+	assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.ProviderPath, hex.EncodeToString(provider.Address))}))
+	assert.False(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", "/foo/", hex.EncodeToString(provider.Address))}))
 
 	assert.True(t, app.AcceptTx(ctx, providertx))
 
@@ -84,16 +56,17 @@ func TestProviderApp(t *testing.T) {
 	}
 
 	{
-		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.ProviderPath, hex.EncodeToString(address))})
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.ProviderPath, hex.EncodeToString(provider.Address))})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 
-		dc := new(types.Provider)
-		require.NoError(t, dc.Unmarshal(resp.Value))
+		queriedprovider := new(types.Provider)
+		require.NoError(t, queriedprovider.Unmarshal(resp.Value))
+		assert.NotEmpty(t, resp.Value)
 
 		// assert.Equal(t, deployment.TxDeployment.From, dep.From)
-		assert.Equal(t, providertx.TxCreateProvider.Provider.Address, dc.Address)
-		assert.Equal(t, dc.Attributes[0].Name, name)
-		assert.Equal(t, dc.Attributes[0].Value, value)
+		assert.Equal(t, providertx.TxCreateProvider.Provider.Address, queriedprovider.Address)
+		assert.Equal(t, provider.Attributes[0].Name, queriedprovider.Attributes[0].Name)
+		assert.Equal(t, provider.Attributes[0].Value, queriedprovider.Attributes[0].Value)
 	}
 }

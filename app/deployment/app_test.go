@@ -41,7 +41,7 @@ func TestValidTx(t *testing.T) {
 
 	account, key := testutil.CreateAccount(t, state_)
 
-	depl := testutil.Deployment(t, account.Address, 0)
+	depl := testutil.Deployment(account.Address, 0)
 
 	tx := &types.TxPayload_TxCreateDeployment{
 		TxCreateDeployment: &types.TxCreateDeployment{
