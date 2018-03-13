@@ -4,11 +4,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strings"
 
 	"github.com/ovrclk/photon/cmd/common"
 	"github.com/ovrclk/photon/cmd/photon/constants"
 	"github.com/ovrclk/photon/cmd/photon/context"
+	"github.com/ovrclk/photon/cmd/photon/query"
 	"github.com/ovrclk/photon/marketplace"
 	"github.com/ovrclk/photon/state"
 	"github.com/ovrclk/photon/txutil"
@@ -179,12 +181,22 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 				return
 			}
 
+			price, err := getPrice(ctx, tx.Order.Deployment, tx.Order.Group)
+			if err != nil {
+				ctx.Log().Error("error getting price", err)
+				return
+			}
+
+			// randomize price
+			price = uint32(rand.Int31n(int32(price) + 1))
+
 			ordertx := &types.TxCreateFulfillment{
-				Order: &types.Fulfillment{
+				Fulfillment: &types.Fulfillment{
 					Deployment: tx.Order.Deployment,
 					Group:      tx.Order.Group,
 					Order:      tx.Order.Order,
 					Provider:   *provider,
+					Price:      price,
 				},
 			}
 
@@ -215,4 +227,20 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 		}).Create()
 
 	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
+}
+
+func getPrice(ctx context.Context, addr base.Bytes, seq uint64) (uint32, error) {
+	// get deployment group
+	price := uint32(0)
+	path := addr.EncodeString() + string(seq)
+	group := new(types.DeploymentGroup)
+	result, err := query.Query(ctx, path)
+	if err != nil {
+		return 0, err
+	}
+	group.Unmarshal(result.Response.Value)
+	for _, group := range group.GetResources() {
+		price += group.Price
+	}
+	return price, nil
 }

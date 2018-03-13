@@ -29,7 +29,7 @@ func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) 
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
-	return strings.HasPrefix(req.GetPath(), state.DeploymentPath)
+	return strings.HasPrefix(req.GetPath(), state.DeploymentPath) || strings.HasPrefix(req.GetPath(), state.DeploymentGroupPath)
 }
 
 func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
@@ -39,6 +39,19 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 			Code: code.UNKNOWN_QUERY,
 			Log:  "invalid key",
 		}
+	}
+
+	// todo: need abtraction for multiple query types per app
+	if strings.HasPrefix(req.GetPath(), state.DeploymentGroupPath) {
+		id := strings.TrimPrefix(req.Path, state.DeploymentPath)
+		key := new(base.Bytes)
+		if err := key.DecodeString(id); err != nil {
+			return tmtypes.ResponseQuery{
+				Code: code.ERROR,
+				Log:  err.Error(),
+			}
+		}
+		return a.doDeploymentGroupQuery(*key)
 	}
 
 	// todo: abstractiion: all queries should have this
@@ -140,6 +153,39 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 
 	return tmtypes.ResponseQuery{
 		Key:    data.Bytes(state.DeploymentPath),
+		Value:  bytes,
+		Height: a.State().Version(),
+	}
+}
+
+func (a *app) doDeploymentGroupQuery(key base.Bytes) tmtypes.ResponseQuery {
+
+	dep, err := a.State().DeploymentGroup().GetByKey(key)
+
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	if dep == nil {
+		return tmtypes.ResponseQuery{
+			Code: code.NOT_FOUND,
+			Log:  fmt.Sprintf("deployment group %x not found", key),
+		}
+	}
+
+	bytes, err := proto.Marshal(dep)
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseQuery{
+		Key:    data.Bytes(a.State().DeploymentGroup().KeyFor(key)),
 		Value:  bytes,
 		Height: a.State().Version(),
 	}

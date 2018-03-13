@@ -118,10 +118,15 @@ func (e engine) processOrder(state state.State, w txBuffer, dorder *types.Order)
 		return true, nil
 	}
 
-	// match first order for now
-	// TODO: better matching.  obvies.
+	// match with cheapest order
+	bestMatch := 0
+	for i, fulfillment := range forders {
+		if fulfillment.Price < forders[bestMatch].Price {
+			bestMatch = i
+		}
+	}
 
-	forder := forders[0]
+	forder := forders[bestMatch]
 
 	w.put(&types.TxCreateLease{
 		Lease: &types.Lease{
