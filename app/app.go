@@ -7,12 +7,12 @@ import (
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/photon/app/account"
-	"github.com/ovrclk/photon/app/datacenter"
 	"github.com/ovrclk/photon/app/deployment"
 	"github.com/ovrclk/photon/app/deploymentorder"
 	"github.com/ovrclk/photon/app/fulfillmentorder"
 	"github.com/ovrclk/photon/app/lease"
 	"github.com/ovrclk/photon/app/market"
+	"github.com/ovrclk/photon/app/provider"
 	"github.com/ovrclk/photon/app/store"
 	apptypes "github.com/ovrclk/photon/app/types"
 	"github.com/ovrclk/photon/state"
@@ -95,7 +95,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := datacenter.NewApp(state, logger.With("app", datacenter.Name))
+		app, err := provider.NewApp(state, logger.With("app", provider.Name))
 		if err != nil {
 			return nil, err
 		}

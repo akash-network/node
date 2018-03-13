@@ -23,7 +23,7 @@ func QueryCommand() *cobra.Command {
 	cmd.AddCommand(
 		queryAccountCommand(),
 		queryDeploymentCommand(),
-		queryDatacenterCommand(),
+		queryProviderCommand(),
 		queryDeploymentOrderCommand(),
 	)
 
@@ -48,9 +48,9 @@ func doQuery(ctx context.Context, path string, structure interface{}) error {
 		s.Unmarshal(result.Response.Value)
 	case *types.Deployments:
 		s.Unmarshal(result.Response.Value)
-	case *types.Datacenter:
+	case *types.Provider:
 		s.Unmarshal(result.Response.Value)
-	case *types.Datacenters:
+	case *types.Providers:
 		s.Unmarshal(result.Response.Value)
 	case *types.DeploymentOrder:
 		s.Unmarshal(result.Response.Value)

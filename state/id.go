@@ -57,7 +57,7 @@ func DeploymentAddress(account []byte, nonce uint64) []byte {
 	return NonceAddress(account, nonce)
 }
 
-func DatacenterAddress(account []byte, nonce uint64) []byte {
+func ProviderAddress(account []byte, nonce uint64) []byte {
 	return NonceAddress(account, nonce)
 }
 

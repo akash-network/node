@@ -93,7 +93,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillmentOrder
 	}
 
 	// lookup provider
-	provider, err := a.State().Datacenter().Get(order.Provider)
+	provider, err := a.State().Provider().Get(order.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,

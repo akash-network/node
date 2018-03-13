@@ -30,7 +30,7 @@ message TxPayload {
     TxCreateDeploymentOrder  txCreateDeploymentOrder  = 4;
     TxCreateFulfillmentOrder txCreateFulfillmentOrder = 5;
     TxCreateLease            txCreateLease            = 6;
-    TxCreateDatacenter       txCreateDatacenter       = 7;
+    TxCreateProvider         txCreateProvider         = 7;
   }
 }
 /* END GLOBAL */
@@ -52,24 +52,24 @@ message TxSend {
 }
 /* END ACCOUNT */
 
-/* BEGIN DATACENTER */
+/* BEGIN PROVIDER */
 
-message Datacenter {
+message Provider {
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   bytes  owner = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
   repeated ProviderAttribute attributes = 3 [(gogoproto.nullable) = false];
   repeated ResourceGroup     resources    = 4 [(gogoproto.nullable) = false];
 }
 
-message Datacenters {
-  repeated Datacenter datacenters = 1 [(gogoproto.nullable) = false];
+message Providers {
+  repeated Provider providers = 1 [(gogoproto.nullable) = false];
 }
 
-message TxCreateDatacenter {
-  Datacenter datacenter = 1 [(gogoproto.nullable) = false];
+message TxCreateProvider {
+  Provider provider = 1 [(gogoproto.nullable) = false];
 }
 
-/* END DATACENTER */
+/* END PROVIDER */
 
 /* BEGIN EXCHANGE */
 message ResourceUnit {

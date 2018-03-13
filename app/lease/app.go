@@ -73,7 +73,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.
 	}
 
 	// lookup provider
-	provider, err := a.State().Datacenter().Get(lease.Provider)
+	provider, err := a.State().Provider().Get(lease.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
