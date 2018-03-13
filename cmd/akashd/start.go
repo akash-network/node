@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/ovrclk/photon/app"
-	"github.com/ovrclk/photon/app/market"
-	"github.com/ovrclk/photon/node"
-	"github.com/ovrclk/photon/state"
+	"github.com/ovrclk/akash/app"
+	"github.com/ovrclk/akash/app/market"
+	"github.com/ovrclk/akash/node"
+	"github.com/ovrclk/akash/state"
 	"github.com/spf13/cobra"
 	tmnode "github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/proxy"
@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	dbName = "photon.db"
+	dbName = "akash.db"
 )
 
 func startCommand() *cobra.Command {
@@ -58,9 +58,9 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 	}
 
 	logger := log.NewFilter(ctx.Log(), log.AllowError(),
-		log.AllowDebugWith("module", "photon"))
+		log.AllowDebugWith("module", "akash"))
 
-	applog := logger.With("module", "photon")
+	applog := logger.With("module", "akash")
 
 	app, err := app.Create(state, applog)
 	if err != nil {

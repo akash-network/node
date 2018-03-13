@@ -5,8 +5,8 @@ import (
 
 	tmtypes "github.com/tendermint/abci/types"
 
-	"github.com/ovrclk/photon/app"
-	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/akash/app"
+	"github.com/ovrclk/akash/types"
 	"github.com/stretchr/testify/require"
 )
 

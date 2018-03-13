@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ovrclk/photon/cmd/photon/constants"
-	"github.com/ovrclk/photon/cmd/photon/context"
-	"github.com/ovrclk/photon/txutil"
-	"github.com/ovrclk/photon/types"
-	"github.com/ovrclk/photon/types/base"
+	"github.com/ovrclk/akash/cmd/akash/constants"
+	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/txutil"
+	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
 	"github.com/spf13/cobra"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )

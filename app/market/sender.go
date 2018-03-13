@@ -1,7 +1,7 @@
 package market
 
 import (
-	"github.com/ovrclk/photon/txutil"
+	"github.com/ovrclk/akash/txutil"
 	"github.com/tendermint/tmlibs/log"
 )
 

@@ -3,7 +3,7 @@ package base_test
 import (
 	"testing"
 
-	"github.com/ovrclk/photon/types/base"
+	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

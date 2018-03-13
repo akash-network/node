@@ -5,8 +5,8 @@ import (
 	"math"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/ovrclk/photon/types"
-	"github.com/ovrclk/photon/types/base"
+	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
 	"github.com/tendermint/iavl"
 )
 

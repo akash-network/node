@@ -13,7 +13,7 @@ An example deployment configuration can be found [here](deployment.yml).
 
 ### version
 
-Indicates version of Photon configuration file.  Currently only `"0.1"` is accepted.
+Indicates version of Akash configuration file.  Currently only `"0.1"` is accepted.
 
 ### include
 
@@ -33,7 +33,7 @@ Examples:
 
 ### services
 
-The top-level `services` entry contains a map of workloads to be ran on the Photon deployment.  Each key is a service name; values are a map containing the following keys:
+The top-level `services` entry contains a map of workloads to be ran on the Akash deployment.  Each key is a service name; values are a map containing the following keys:
 
 | Name | Required | Meaning |
 | --- | --- | --- |
@@ -90,7 +90,7 @@ It contains two fields: `datacenters` for defining profiles of desired compute r
 
 `datacenters` is a map of desired datacenter attributes.  Each entry will match one datacenter in the marketplace.  Entry keys are the name of the datacenter and will be referenced later in the deployment section.
 
-Each entry has two keys: `region` and `profiles`.  `region` is one of a standard set of regions that photon recognizes.  `profiles` configures the desired resource profiles.  For more on profiles, see [deployment.datacenters.profiles](#deploymentdatacentersprofiles).
+Each entry has two keys: `region` and `profiles`.  `region` is one of a standard set of regions that akash recognizes.  `profiles` configures the desired resource profiles.  For more on profiles, see [deployment.datacenters.profiles](#deploymentdatacentersprofiles).
 
 Example:
 

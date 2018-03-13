@@ -3,9 +3,9 @@ package market_test
 import (
 	"testing"
 
-	"github.com/ovrclk/photon/app/market"
-	"github.com/ovrclk/photon/testutil"
-	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/akash/app/market"
+	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/types"
 	"github.com/stretchr/testify/require"
 )
 

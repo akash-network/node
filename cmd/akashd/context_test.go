@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ovrclk/photon/testutil"
+	"github.com/ovrclk/akash/testutil"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"

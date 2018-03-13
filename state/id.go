@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 
-	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/akash/types"
 )
 
 // {deployment-address}{group-sequence-id}

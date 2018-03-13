@@ -7,10 +7,10 @@ import (
 	"path"
 	"sync"
 
-	"github.com/ovrclk/photon/cmd/common"
-	"github.com/ovrclk/photon/cmd/photon/constants"
-	"github.com/ovrclk/photon/state"
-	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/cmd/akash/constants"
+	"github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/types"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -97,7 +97,7 @@ func (ctx *context) Log() log.Logger {
 		return ctx.log
 	}
 
-	ctx.log = common.NewLogger(os.Stdout).With("app", "photon")
+	ctx.log = common.NewLogger(os.Stdout).With("app", "akash")
 	return ctx.log
 }
 

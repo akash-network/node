@@ -5,7 +5,7 @@ CMD=$0
 DATA=$(dirname $0)/data/client
 
 nodeport(){
-  echo $(kubectl get service node-0-photon-node -o jsonpath='{.spec.ports[?(@.name == "photond-rpc")].nodePort}')
+  echo $(kubectl get service node-0-akash-node -o jsonpath='{.spec.ports[?(@.name == "akashd-rpc")].nodePort}')
 }
 
 do_node(){
@@ -14,21 +14,21 @@ do_node(){
 
 do_send(){
   node=$(do_node)
-  export PHOTON_NODE=$node
-  ../photon send 100 $(cat data/other.key) -k master -n "$node" -d "$DATA"
+  export AKASH_NODE=$node
+  ../akash send 100 $(cat data/other.key) -k master -n "$node" -d "$DATA"
 }
 
 do_query(){
   key=${1:-master}
   node=$(do_node)
-  export PHOTON_NODE=$node
-  ../photon query account $(cat "data/$key.key") -n "$node" -d "$DATA"
+  export AKASH_NODE=$node
+  ../akash query account $(cat "data/$key.key") -n "$node" -d "$DATA"
 }
 
 do_ping(){
   node=$(do_node)
-  export PHOTON_NODE=$node
-  ../photon ping -n "$node" -d "$DATA"
+  export AKASH_NODE=$node
+  ../akash ping -n "$node" -d "$DATA"
 }
 
 do_usage(){

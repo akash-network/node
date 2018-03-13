@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/ovrclk/photon/cmd/common"
-	"github.com/ovrclk/photon/cmd/photon/context"
-	"github.com/ovrclk/photon/marketplace"
-	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/marketplace"
+	"github.com/ovrclk/akash/types"
 	"github.com/spf13/cobra"
 )
 

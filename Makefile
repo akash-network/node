@@ -1,8 +1,8 @@
 PROTO_FILES  = $(wildcard types/*.proto)
 PROTOC_FILES = $(patsubst %.proto,%.pb.go, $(PROTO_FILES))
-PROGRAMS     = photon photond
+PROGRAMS     = akash akashd
 
-IMAGE_REPO ?= quay.io/ovrclk/photon
+IMAGE_REPO ?= quay.io/ovrclk/akash
 IMAGE_TAG  ?= latest
 
 all: build $(PROGRAMS)
@@ -10,11 +10,11 @@ all: build $(PROGRAMS)
 build:
 	go build -i $$(glide novendor)
 
-photon:
-	go build ./cmd/photon
+akash:
+	go build ./cmd/akash
 
-photond:
-	go build ./cmd/photond
+akashd:
+	go build ./cmd/akashd
 
 image:
 	docker build --rm -t $(IMAGE_REPO):$(IMAGE_TAG) .
@@ -67,7 +67,7 @@ clean:
 	rm -f $(PROGRAMS)
 
 .PHONY: all build \
-	photon photond \
+	akash akashd \
 	image image-push \
 	test test-full \
 	deps-install devdeps-install \

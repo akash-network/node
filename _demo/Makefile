@@ -1,5 +1,5 @@
-PHOTON  = ../photon
-PHOTOND = ../photond
+AKASH  = ../akash
+AKASHD = ../akashd
 
 DATA_ROOT   = data
 MASTER_KEY  = $(DATA_ROOT)/master.key
@@ -7,7 +7,7 @@ OTHER_KEY   = $(DATA_ROOT)/other.key
 CLIENT_ROOT = $(DATA_ROOT)/client
 NODE_ROOT   = $(DATA_ROOT)/node
 
-HELM_CHART = photon-node
+HELM_CHART = akash-node
 
 HELM_NODE_COUNT ?= 4
 HELM_NODE_FILES = $(sort $(wildcard $(NODE_ROOT)/*.yaml))
@@ -20,17 +20,17 @@ keys: $(MASTER_KEY) $(OTHER_KEY)
 
 $(MASTER_KEY):
 	mkdir -p "$(DATA_ROOT)"
-	$(PHOTON) key create master -d "$(CLIENT_ROOT)" > "$(MASTER_KEY)"
+	$(AKASH) key create master -d "$(CLIENT_ROOT)" > "$(MASTER_KEY)"
 
 $(OTHER_KEY):
 	mkdir -p "$(DATA_ROOT)"
-	$(PHOTON) key create other -d "$(CLIENT_ROOT)" > "$(OTHER_KEY)"
+	$(AKASH) key create other -d "$(CLIENT_ROOT)" > "$(OTHER_KEY)"
 
 genesis: $(MASTER_KEY)
-	$(PHOTOND) init $$(cat "$(MASTER_KEY)") -d "$(NODE_ROOT)"
+	$(AKASHD) init $$(cat "$(MASTER_KEY)") -d "$(NODE_ROOT)"
 
 genesis-helm: $(MASTER_KEY)
-	$(PHOTOND) init $$(cat "$(MASTER_KEY)") -d "$(NODE_ROOT)" -t helm -c "$(HELM_NODE_COUNT)"
+	$(AKASHD) init $$(cat "$(MASTER_KEY)") -d "$(NODE_ROOT)" -t helm -c "$(HELM_NODE_COUNT)"
 
 helm-init: keys genesis-helm
 

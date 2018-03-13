@@ -1,7 +1,7 @@
 package marketplace
 
 import (
-	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/akash/types"
 )
 
 type Handler interface {

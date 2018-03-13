@@ -3,16 +3,16 @@ package order_test
 import (
 	"testing"
 
-	"github.com/ovrclk/photon/app/order"
-	"github.com/ovrclk/photon/state"
-	"github.com/ovrclk/photon/testutil"
-	"github.com/ovrclk/photon/types"
-	"github.com/ovrclk/photon/types/base"
+	"github.com/ovrclk/akash/app/order"
+	"github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmtypes "github.com/tendermint/abci/types"
 
-	apptypes "github.com/ovrclk/photon/app/types"
+	apptypes "github.com/ovrclk/akash/app/types"
 )
 
 func TestAcceptQuery(t *testing.T) {

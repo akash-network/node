@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/ovrclk/photon/cmd/photon/context"
+	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/spf13/cobra"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )

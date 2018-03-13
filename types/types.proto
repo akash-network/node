@@ -17,8 +17,8 @@ message Genesis {
 }
 
 message Tx {
-  bytes key         = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.PubKey"];
-  bytes signature   = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Signature"];
+  bytes key         = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.PubKey"];
+  bytes signature   = 2 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Signature"];
   TxPayload payload = 3 [(gogoproto.nullable) = false];
 }
 
@@ -40,14 +40,14 @@ message Account {
   // wait for https://github.com/gogo/protobuf/pull/227
   // bytes address = 1  [(gogoproto.customtype) = "github.com/tendermint/go-wire/data.Bytes", (gogoproto.nullable) = false];
 
-  bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
   uint64 balance = 2;
   uint64 nonce   = 3;
 }
 
 message TxSend {
-  bytes  from   = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  bytes  to     = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  from   = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  to     = 2 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
   uint64 amount = 3;
 }
 /* END ACCOUNT */
@@ -55,8 +55,8 @@ message TxSend {
 /* BEGIN PROVIDER */
 
 message Provider {
-  bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
-  bytes  owner = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  owner = 2 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
   repeated ProviderAttribute attributes = 3 [(gogoproto.nullable) = false];
 }
 
@@ -93,7 +93,7 @@ message DeploymentGroup {
   /* BEGIN ID FIELDS */
 
   // deployment address
-  bytes  deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 
   // unique sequence over deployment
   uint64 seq = 2;
@@ -119,10 +119,10 @@ message DeploymentGroups {
 message Deployment {
 
   /* BEGIN ID FIELDS */
-  bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
   /* END ID FIELDS */
 
-  bytes  tenant  = 2 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes  tenant  = 2 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
   repeated DeploymentGroup groups = 3 [(gogoproto.nullable) = false];
   enum DeploymentState {
     ACTIVE  = 0;
@@ -145,7 +145,7 @@ message Order {
   /* BEGIN ID FIELDS */
 
   // deployment address
-  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 
   // deployment group sequence
   uint64 group = 2;
@@ -175,7 +175,7 @@ message Fulfillment {
   /* BEGIN ID FIELDS */
 
   // deployment address
-  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 
   // deployment group sequence
   uint64 group = 2;
@@ -184,7 +184,7 @@ message Fulfillment {
   uint64 order = 3;
 
   // provider address
-  bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 
   uint32 price = 5;
 
@@ -199,7 +199,7 @@ message Lease {
   /* BEGIN ID FIELDS */
 
   // deployment address
-  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 
   // deployment group sequence
   uint64 group = 2;
@@ -208,7 +208,7 @@ message Lease {
   uint64 order = 3;
 
   // provider address
-  bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 
   /* END ID FIELDS */
 }

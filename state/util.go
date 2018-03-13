@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/iavl"
 	tmdb "github.com/tendermint/tmlibs/db"
 )

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ovrclk/photon/state"
+	"github.com/ovrclk/akash/state"
 	tmtypes "github.com/tendermint/abci/types"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
 	tmtmtypes "github.com/tendermint/tendermint/types"
@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	subscriber = "photon-market"
+	subscriber = "akash-market"
 )
 
 type Driver interface {
@@ -46,7 +46,7 @@ func NewDriver(log log.Logger, actor Actor, bus *tmtmtypes.EventBus) (Driver, er
 
 	ch := make(chan interface{})
 
-	if err := bus.Subscribe(context.Background(), "photon-market", tmtmtypes.EventQueryCompleteProposal, ch); err != nil {
+	if err := bus.Subscribe(context.Background(), "akash-market", tmtmtypes.EventQueryCompleteProposal, ch); err != nil {
 		return nil, err
 	}
 

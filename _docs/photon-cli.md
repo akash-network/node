@@ -1,75 +1,75 @@
-### photon Command
+### akash Command
 
-`photon` is the command-line interface to the Photon network.  It is used to create/manage/delete Photon deployments.
+`akash` is the command-line interface to the Akash network.  It is used to create/manage/delete Akash deployments.
 
-#### photon validate
+#### akash validate
 
-Validate a photon configuration file (defaults to `photon.yml`)
-
-```sh
-photon validate [ -f photon.yml ]
-```
-
-#### photon register
-
-Create a new photon account.
+Validate a akash configuration file (defaults to `akash.yml`)
 
 ```sh
-photon register <email-address> [ -h registry-host ]
+akash validate [ -f akash.yml ]
 ```
 
-#### photon create
+#### akash register
+
+Create a new akash account.
+
+```sh
+akash register <email-address> [ -h registry-host ]
+```
+
+#### akash create
 
 Create a new deployment for the given deployment.  This will create a [Metacenter](#metacenter) to manage the deployment.
 
 ```sh
-photon create [ -f photon.yml ] [ -h registry-host ]
+akash create [ -f akash.yml ] [ -h registry-host ]
 ```
 
-#### photon list
+#### akash list
 
 List all [Metacenters](#metacenter) accessible to this account.
 
 ```sh
-photon list [ -h registry-host ]
+akash list [ -h registry-host ]
 ```
 
-#### photon search
+#### akash search
 
 List available datacenters that match the [deployment](#deployment) configuration.
 
 ```sh
-photon search [ -f photon.yml ] [ -h registry-host ]
+akash search [ -f akash.yml ] [ -h registry-host ]
 ```
 
-#### photon update
+#### akash update
 
-Update a deployment for a photon configuration file (defaults to `photon.yml`)
+Update a deployment for a akash configuration file (defaults to `akash.yml`)
 
 ```sh
-photon update [ -f photon.yml ] [ -h metacenter-host ]
+akash update [ -f akash.yml ] [ -h metacenter-host ]
 ```
 
-#### photon delete
+#### akash delete
 
-Delete a deployment for a photon configuration file (defaults to `photon.yml`)
+Delete a deployment for a akash configuration file (defaults to `akash.yml`)
 
 ```sh
-photon delete [ -f photon.yml ] [ -h metacenter-host ]
+akash delete [ -f akash.yml ] [ -h metacenter-host ]
 ```
 
-#### photon status
+#### akash status
 
-Get deployment status for a photon configuration file (defaults to `photon.yml`)
+Get deployment status for a akash configuration file (defaults to `akash.yml`)
 
 ```sh
-photon status [ -f photon.yml ] [ -h metacenter-host ]
+akash status [ -f akash.yml ] [ -h metacenter-host ]
 ```
 
-#### photon notify
+#### akash notify
 
-Delete a deployment for a photon configuration file (defaults to `photon.yml`)
+Delete a deployment for a akash configuration file (defaults to `akash.yml`)
 
 ```sh
-photon notify [ notification-name ] [ --event <event-name> ] [ -f photon.yml ]
+akash notify [ notification-name ] [ --event <event-name> ] [ -f akash.yml ]
 ```

@@ -1,8 +1,8 @@
 package types
 
 import (
-	"github.com/ovrclk/photon/types"
-	"github.com/ovrclk/photon/types/base"
+	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
 	tmtypes "github.com/tendermint/abci/types"
 )
 

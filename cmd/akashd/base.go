@@ -29,7 +29,7 @@ func initEnv(path string) error {
 
 func baseCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "photond",
+		Use:   "akashd",
 		Short: "Photon node",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			root, err := cmd.Flags().GetString(flagRootDir)
@@ -49,5 +49,5 @@ func defaultRootDir() string {
 	if val := os.Getenv(envPrefix + "_DATA"); val != "" {
 		return val
 	}
-	return os.ExpandEnv("$HOME/.photond")
+	return os.ExpandEnv("$HOME/.akashd")
 }

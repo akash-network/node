@@ -6,11 +6,11 @@ import (
 
 	"github.com/tendermint/tmlibs/log"
 
-	apptypes "github.com/ovrclk/photon/app/types"
-	"github.com/ovrclk/photon/state"
-	"github.com/ovrclk/photon/types"
-	"github.com/ovrclk/photon/types/base"
-	"github.com/ovrclk/photon/types/code"
+	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
+	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
 )
 

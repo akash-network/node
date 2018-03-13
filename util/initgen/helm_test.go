@@ -7,8 +7,8 @@ import (
 	"path"
 	"testing"
 
-	"github.com/ovrclk/photon/testutil"
-	"github.com/ovrclk/photon/util/initgen"
+	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/util/initgen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmtypes "github.com/tendermint/tendermint/types"

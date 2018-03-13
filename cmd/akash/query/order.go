@@ -1,9 +1,9 @@
 package query
 
 import (
-	"github.com/ovrclk/photon/cmd/photon/context"
-	"github.com/ovrclk/photon/state"
-	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/types"
 	"github.com/spf13/cobra"
 )
 

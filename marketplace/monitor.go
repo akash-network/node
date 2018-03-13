@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/ovrclk/photon/txutil"
-	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/akash/txutil"
+	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tendermint/rpc/client"
 	tmtmtypes "github.com/tendermint/tendermint/types"
 	"github.com/tendermint/tmlibs/log"

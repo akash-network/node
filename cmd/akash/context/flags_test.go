@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ovrclk/photon/cmd/photon/constants"
-	"github.com/ovrclk/photon/cmd/photon/context"
-	"github.com/ovrclk/photon/testutil"
+	"github.com/ovrclk/akash/cmd/akash/constants"
+	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/testutil"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"

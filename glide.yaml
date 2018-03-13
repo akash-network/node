@@ -1,4 +1,4 @@
-package: github.com/ovrclk/photon
+package: github.com/ovrclk/akash
 import:
 - package: github.com/gogo/protobuf
   version: ^1.0.0

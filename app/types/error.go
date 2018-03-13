@@ -1,6 +1,6 @@
 package types
 
-import "github.com/ovrclk/photon/types/code"
+import "github.com/ovrclk/akash/types/code"
 
 type Error interface {
 	Error() string

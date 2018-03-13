@@ -3,12 +3,12 @@ package app_test
 import (
 	"testing"
 
-	app_ "github.com/ovrclk/photon/app"
-	"github.com/ovrclk/photon/testutil"
-	"github.com/ovrclk/photon/txutil"
-	"github.com/ovrclk/photon/types"
-	"github.com/ovrclk/photon/types/base"
-	"github.com/ovrclk/photon/types/code"
+	app_ "github.com/ovrclk/akash/app"
+	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/txutil"
+	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
+	"github.com/ovrclk/akash/types/code"
 	"github.com/stretchr/testify/require"
 )
 

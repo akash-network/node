@@ -2,7 +2,7 @@
 getpeers() {
 
   p2p_port=46656
-  p2p_addr_env=PHOTON_NODE_PORT_${p2p_port}_TCP_ADDR
+  p2p_addr_env=AKASH_NODE_PORT_${p2p_port}_TCP_ADDR
 
   env                    | \
     grep "$p2p_addr_env" | \
@@ -10,8 +10,8 @@ getpeers() {
     paste -sd ',' -
 }
 
-export PHOTOND_P2P_SEEDS=$(getpeers)
+export AKASHD_P2P_SEEDS=$(getpeers)
 
-echo "found P2P peers: $PHOTOND_P2P_SEEDS"
+echo "found P2P peers: $AKASHD_P2P_SEEDS"
 
-/photond start
+/akashd start

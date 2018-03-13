@@ -3,7 +3,7 @@ package marketplace
 import (
 	"fmt"
 
-	apptypes "github.com/ovrclk/photon/app/types"
+	apptypes "github.com/ovrclk/akash/app/types"
 	tmtmtypes "github.com/tendermint/tendermint/types"
 	"github.com/tendermint/tmlibs/pubsub"
 	tmquery "github.com/tendermint/tmlibs/pubsub/query"

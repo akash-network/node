@@ -1,7 +1,7 @@
 package context
 
 import (
-	"github.com/ovrclk/photon/cmd/photon/constants"
+	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"

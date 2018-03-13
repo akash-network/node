@@ -3,10 +3,10 @@ package txutil_test
 import (
 	"testing"
 
-	"github.com/ovrclk/photon/testutil"
-	"github.com/ovrclk/photon/txutil"
-	"github.com/ovrclk/photon/types"
-	"github.com/ovrclk/photon/types/base"
+	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/txutil"
+	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/require"
 )
 

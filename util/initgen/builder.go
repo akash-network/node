@@ -3,7 +3,7 @@ package initgen
 import (
 	"fmt"
 
-	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/akash/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 )
 

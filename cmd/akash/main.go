@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/ovrclk/photon/cmd/photon/query"
+	"github.com/ovrclk/akash/cmd/akash/query"
 )
 
 func main() {

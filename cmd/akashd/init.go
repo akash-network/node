@@ -1,9 +1,9 @@
 package main
 
 import (
-	ptypes "github.com/ovrclk/photon/types"
-	"github.com/ovrclk/photon/types/base"
-	"github.com/ovrclk/photon/util/initgen"
+	ptypes "github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
+	"github.com/ovrclk/akash/util/initgen"
 	"github.com/spf13/cobra"
 )
 

@@ -1,8 +1,8 @@
 package market
 
 import (
-	"github.com/ovrclk/photon/state"
-	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tmlibs/log"
 )
 

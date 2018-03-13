@@ -5,8 +5,8 @@
 /vendor
 
 # binaries
-/photon
-/photond
+/akash
+/akashd
 
 # dev artifacts
 /devdata

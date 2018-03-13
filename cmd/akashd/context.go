@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/ovrclk/photon/cmd/common"
+	"github.com/ovrclk/akash/cmd/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	tmconfig "github.com/tendermint/tendermint/config"

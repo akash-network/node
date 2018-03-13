@@ -3,7 +3,7 @@ package testutil
 import (
 	"testing"
 
-	"github.com/ovrclk/photon/txutil"
+	"github.com/ovrclk/akash/txutil"
 	"github.com/stretchr/testify/require"
 	crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-crypto/keys"

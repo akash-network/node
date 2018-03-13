@@ -3,7 +3,7 @@ package state_test
 import (
 	"testing"
 
-	"github.com/ovrclk/photon/state"
+	"github.com/ovrclk/akash/state"
 	"github.com/stretchr/testify/assert"
 )
 

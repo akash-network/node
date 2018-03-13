@@ -1,6 +1,6 @@
-# Photon Demo Commands
+# Akash Demo Commands
 
-- [Photon Demo Commands](#photon-demo-commands)
+- [Akash Demo Commands](#akash-demo-commands)
   * [Build](#build)
   * [Initialize data directory](#initialize-data-directory)
     + [Node](#node)
@@ -42,69 +42,69 @@ make
 ### Node
 
 ```sh
-./photond init <public key>
+./akashd init <public key>
 ```
 
 ### Client
 
 ```sh
-./photon init --node=tcp://<url>:<port> --genesis=<path/to/genesis.json>
+./akash init --node=tcp://<url>:<port> --genesis=<path/to/genesis.json>
 ```
 
 example:
 
 ```sh
-./photon init --node=tcp://localhost:46657 --genesis=data/node/genesis.json
+./akash init --node=tcp://localhost:46657 --genesis=data/node/genesis.json
 ```
 
 ## Start node
 
 ```sh
-./photond start
+./akashd start
 ```
 
 ## Create account
 
 ```sh
-./photon key create <account name>
+./akash key create <account name>
 ```
 
 ## Query account
 
 ```sh
-./photon query account <public key>
+./akash query account <public key>
 ```
 
 ## Send tokens
 
 ```sh
-./photon send <amount> <to address> -k <account name> [flags]
+./akash send <amount> <to address> -k <account name> [flags]
 ```
 
 ## Create deployment
 ```
-./photon deploy <filepath> -k <account name>
+./akash deploy <filepath> -k <account name>
 ```
 
 Returns the 32 byte address of the deployment
 
 ## Query deployment
 ```
-./photon query deployment [address]
+./akash query deployment [address]
 ```
 
 Returns deployment object located at [address]
 
 #### Query all deployments
 ```
-./photon query deployment
+./akash query deployment
 ```
 
 Returns all deployment objects
 
 ## Create provider
 ```
-./photon provider <filepath> -k <account name>
+./akash provider <filepath> -k <account name>
 ```
 
 Returns the 32 byte address of the provider
@@ -112,14 +112,14 @@ Note: If no account name exists it will be created
 
 ## Query provider
 ```
-./photon query provider [address]
+./akash query provider [address]
 ```
 
 Returns provider object located at [address]
 
 #### Query all provider
 ```
-./photon query provider
+./akash query provider
 ```
 
 Returns all provider objects
@@ -138,10 +138,10 @@ Returns all provider objects
 ### Initalize validater nodes
 
 ```sh
-./node init <issuer public key> --home=./data/node1 --chain-id=photon-test
-./node init <issuer public key> --home=./data/node2 --chain-id=photon-test
-./node init <issuer public key> --home=./data/node3 --chain-id=photon-test
-./node init <issuer public key> --home=./data/node4 --chain-id=photon-test
+./node init <issuer public key> --home=./data/node1 --chain-id=akash-test
+./node init <issuer public key> --home=./data/node2 --chain-id=akash-test
+./node init <issuer public key> --home=./data/node3 --chain-id=akash-test
+./node init <issuer public key> --home=./data/node4 --chain-id=akash-test
 ```
 
 ### genesis.json
@@ -196,7 +196,7 @@ The non-validator will not vote on blocks but will verify and keep up with the c
 ### Initalize validater nodes
 
 ```sh
-./node init <issuer public key> --home=./data/node5 --chain-id=photon-test
+./node init <issuer public key> --home=./data/node5 --chain-id=akash-test
 ```
 
 
@@ -241,16 +241,16 @@ https://github.com/tendermint/tendermint/blob/master/docs/using-tendermint.rst
 ## notes
 
 ```sh
-export PHOTON_DATA=$PWD/devdata/client
-export PHOTOND_DATA=$PWD/devdata/node
+export AKASH_DATA=$PWD/devdata/client
+export AKASHD_DATA=$PWD/devdata/node
 
-rm -rf $PHOTON_DATA
-MASTER_ADDRESS=$(./photon key create master)
+rm -rf $AKASH_DATA
+MASTER_ADDRESS=$(./akash key create master)
 
-rm -rf $PHOTOND_DATA
-./photond init $MASTER_ADDRESS
-./photond start
+rm -rf $AKASHD_DATA
+./akashd init $MASTER_ADDRESS
+./akashd start
 
-USER_ADDRESS=$(./photon key create user)
-./photon send 100 $USER_ADDRESS -k master
+USER_ADDRESS=$(./akash key create user)
+./akash send 100 $USER_ADDRESS -k master
 ```

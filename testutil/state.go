@@ -3,8 +3,8 @@ package testutil
 import (
 	"testing"
 
-	"github.com/ovrclk/photon/state"
-	"github.com/ovrclk/photon/types"
+	"github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/types"
 	"github.com/stretchr/testify/require"
 	crypto "github.com/tendermint/go-crypto"
 )

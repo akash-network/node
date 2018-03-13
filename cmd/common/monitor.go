@@ -3,7 +3,7 @@ package common
 import (
 	"context"
 
-	"github.com/ovrclk/photon/marketplace"
+	"github.com/ovrclk/akash/marketplace"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 	"github.com/tendermint/tmlibs/log"
 )
@@ -19,7 +19,7 @@ func MonitorMarketplace(log log.Logger, client *tmclient.HTTP, handler marketpla
 		return err
 	}
 
-	monitor.AddHandler("photon-cli", handler, marketplace.TxQuery())
+	monitor.AddHandler("akash-cli", handler, marketplace.TxQuery())
 
 	<-monitor.Wait()
 	cancel()
