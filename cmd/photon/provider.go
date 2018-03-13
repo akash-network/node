@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
-	"time"
 
 	"github.com/ovrclk/photon/cmd/common"
 	"github.com/ovrclk/photon/cmd/photon/constants"
@@ -189,8 +188,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 			}
 
 			// randomize price [0, price]
-			rand.Seed(time.Now().UnixNano())
-			price = uint32(float32(price) * rand.Float32())
+			price = rand.Int31n(price + 1)
 
 			ordertx := &types.TxCreateFulfillment{
 				Fulfillment: &types.Fulfillment{
@@ -231,9 +229,9 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
 }
 
-func getPrice(ctx context.Context, addr base.Bytes, seq uint64) (uint32, error) {
+func getPrice(ctx context.Context, addr base.Bytes, seq uint64) (int32, error) {
 	// get deployment group
-	price := uint32(0)
+	price := int32(0)
 	path := addr.EncodeString() + string(seq)
 	group := new(types.DeploymentGroup)
 	result, err := query.Query(ctx, path)

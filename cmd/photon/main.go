@@ -1,8 +1,14 @@
 package main
 
-import "github.com/ovrclk/photon/cmd/photon/query"
+import (
+	"math/rand"
+	"time"
+
+	"github.com/ovrclk/photon/cmd/photon/query"
+)
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 	root := baseCommand()
 	root.AddCommand(keyCommand())
 	root.AddCommand(sendCommand())
