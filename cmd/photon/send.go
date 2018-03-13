@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -65,6 +66,12 @@ func doSendCommand(ctx context.Context, cmd *cobra.Command, args []string) error
 	result, err := client.BroadcastTxCommit(tx)
 	if err != nil {
 		return err
+	}
+	if result.CheckTx.IsErr() {
+		return errors.New(result.CheckTx.GetLog())
+	}
+	if result.DeliverTx.IsErr() {
+		return errors.New(result.DeliverTx.GetLog())
 	}
 
 	fmt.Printf("Sent %v tokens to %v in block %v\n", amount, to.EncodeString(), result.Height)
