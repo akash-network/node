@@ -80,7 +80,7 @@ message ResourceUnit {
 message ResourceGroup {
   ResourceUnit unit  = 1 [(gogoproto.nullable) = false];
   uint32       count = 2;
-  int32       price = 3; // price per unit.
+  uint32       price = 3; // price per unit.
 }
 
 message ProviderAttribute {
@@ -186,7 +186,7 @@ message Fulfillment {
   // provider address
   bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
 
-  int32 price = 5;
+  uint32 price = 5;
 
   /* END ID FIELDS */
 }
