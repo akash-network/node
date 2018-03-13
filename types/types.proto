@@ -28,7 +28,7 @@ message TxPayload {
     TxSend                   txSend                   = 2;
     TxCreateDeployment       txCreateDeployment       = 3;
     TxCreateOrder            txCreateOrder            = 4;
-    TxCreateFulfillment txCreateFulfillment = 5;
+    TxCreateFulfillment      txCreateFulfillment = 5;
     TxCreateLease            txCreateLease            = 6;
     TxCreateProvider         txCreateProvider         = 7;
   }
@@ -185,6 +185,8 @@ message Fulfillment {
 
   // provider address
   bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/photon/types/base.Bytes",(gogoproto.nullable) = false];
+
+  uint32 price = 5;
 
   /* END ID FIELDS */
 }

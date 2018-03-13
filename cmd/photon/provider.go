@@ -4,7 +4,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/ovrclk/photon/cmd/common"
 	"github.com/ovrclk/photon/cmd/photon/constants"
@@ -180,12 +182,23 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 				return
 			}
 
+			price, err := getPrice(ctx, tx.Order.Deployment, tx.Order.Group)
+			if err != nil {
+				ctx.Log().Error("error getting price", err)
+				return
+			}
+
+			// randomize price [0, price]
+			rand.Seed(time.Now().UnixNano())
+			price = uint32(float32(price) * rand.Float32())
+
 			ordertx := &types.TxCreateFulfillment{
 				Order: &types.Fulfillment{
 					Deployment: tx.Order.Deployment,
 					Group:      tx.Order.Group,
 					Order:      tx.Order.Order,
 					Provider:   *provider,
+					Price:      price,
 				},
 			}
 
