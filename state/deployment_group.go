@@ -11,7 +11,9 @@ import (
 type DeploymentGroupAdapter interface {
 	Save(*types.DeploymentGroup) error
 	Get(addr base.Bytes, seq uint64) (*types.DeploymentGroup, error)
+	GetByKey(addr base.Bytes) (*types.DeploymentGroup, error)
 	ForDeployment(addr base.Bytes) ([]*types.DeploymentGroup, error)
+	KeyFor(base.Bytes) base.Bytes
 }
 
 func NewDeploymentGroupAdapter(db DB) DeploymentGroupAdapter {
@@ -32,6 +34,16 @@ func (a *deploymentGroupAdapter) Get(addr base.Bytes, seq uint64) (*types.Deploy
 	buf := a.db.Get(path)
 	obj := new(types.DeploymentGroup)
 	return obj, proto.Unmarshal(buf, obj)
+}
+
+func (a *deploymentGroupAdapter) GetByKey(address base.Bytes) (*types.DeploymentGroup, error) {
+	obj := types.DeploymentGroup{}
+	key := a.KeyFor(address)
+	buf := a.db.Get(key)
+	if buf == nil {
+		return nil, nil
+	}
+	return &obj, obj.Unmarshal(buf)
 }
 
 func (a *deploymentGroupAdapter) ForDeployment(deployment base.Bytes) ([]*types.DeploymentGroup, error) {
@@ -57,8 +69,8 @@ func (a *deploymentGroupAdapter) ForDeployment(deployment base.Bytes) ([]*types.
 }
 
 // /deployment-groups/{deployment-address}{group-sequence}
-func (a *deploymentGroupAdapter) KeyFor(id []byte) []byte {
-	return append([]byte(DeploymentGroupPath), id...)
+func (a *deploymentGroupAdapter) KeyFor(id base.Bytes) base.Bytes {
+	return append(base.Bytes(DeploymentGroupPath), id...)
 }
 
 // {deployment-address}{group-sequence}

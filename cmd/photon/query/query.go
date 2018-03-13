@@ -8,6 +8,7 @@ import (
 	"github.com/ovrclk/photon/types"
 	"github.com/spf13/cobra"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 func QueryCommand() *cobra.Command {
@@ -30,15 +31,22 @@ func QueryCommand() *cobra.Command {
 	return cmd
 }
 
-func doQuery(ctx context.Context, path string, structure interface{}) error {
-
+func Query(ctx context.Context, path string) (*core_types.ResultABCIQuery, error) {
 	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
 	result, err := client.ABCIQuery(path, nil)
 	if err != nil {
-		return err
+		return result, err
 	}
 	if result.Response.IsErr() {
-		return errors.New(result.Response.GetLog())
+		return result, errors.New(result.Response.GetLog())
+	}
+	return result, nil
+}
+
+func doQuery(ctx context.Context, path string, structure interface{}) error {
+	result, err := Query(ctx, path)
+	if err != nil {
+		return err
 	}
 
 	switch s := structure.(type) {
@@ -60,7 +68,10 @@ func doQuery(ctx context.Context, path string, structure interface{}) error {
 		return errors.New("Unknown query value structure")
 	}
 
-	data, _ := json.MarshalIndent(structure, "", "  ")
+	data, err := json.MarshalIndent(structure, "", "  ")
+	if err != nil {
+		return err
+	}
 
 	println("path: " + path)
 	println("response:\n" + string(data))
