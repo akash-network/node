@@ -134,6 +134,7 @@ func (e engine) processOrder(state state.State, w txBuffer, dorder *types.Order)
 			Group:      forder.Group,
 			Order:      forder.Order,
 			Provider:   forder.Provider,
+			Price:      forder.Price,
 		},
 	})
 

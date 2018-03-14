@@ -210,6 +210,9 @@ message Lease {
   // provider address
   bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 
+  // price of matching fulfillment
+  uint32 price = 5;
+
   /* END ID FIELDS */
 }
 

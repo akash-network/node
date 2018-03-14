@@ -1,14 +1,19 @@
 package lease
 
 import (
-	"github.com/tendermint/tmlibs/log"
+	"fmt"
+	"strings"
 
+	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/akash/app/types"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
+	"github.com/tendermint/go-wire/data"
 	tmcommon "github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/tmlibs/log"
 )
 
 const (
@@ -24,7 +29,7 @@ func NewApp(state state.State, log log.Logger) (apptypes.Application, error) {
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
-	return false
+	return strings.HasPrefix(req.GetPath(), state.LeasePath)
 }
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
@@ -59,10 +64,28 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 }
 
 func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
-	return tmtypes.ResponseQuery{
-		Code: code.UNKNOWN_QUERY,
-		Log:  "invalid key",
+	if !a.AcceptQuery(req) {
+		return tmtypes.ResponseQuery{
+			Code: code.UNKNOWN_QUERY,
+			Log:  "invalid key",
+		}
 	}
+
+	// todo: abstractiion: all queries should have this
+	id := strings.TrimPrefix(req.Path, state.LeasePath)
+	key := new(base.Bytes)
+	if err := key.DecodeString(id); err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	// id is empty string, get full range
+	if len(id) == 0 {
+		return a.doRangeQuery(*key)
+	}
+	return a.doQuery(*key)
 }
 
 func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.ResponseCheckTx, *types.Order) {
@@ -178,4 +201,40 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateLease) tmtypes
 	return tmtypes.ResponseDeliverTx{
 		Tags: tags,
 	}
+}
+
+func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
+	lease, err := a.State().Lease().GetByKey(key)
+
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	if lease == nil {
+		return tmtypes.ResponseQuery{
+			Code: code.NOT_FOUND,
+			Log:  fmt.Sprintf("lease %x not found", key),
+		}
+	}
+
+	bytes, err := proto.Marshal(lease)
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseQuery{
+		Key:    data.Bytes(a.State().Lease().KeyFor(key)),
+		Value:  bytes,
+		Height: a.State().Version(),
+	}
+}
+
+func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
+	return tmtypes.ResponseQuery{}
 }
