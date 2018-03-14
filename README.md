@@ -1,4 +1,4 @@
-# Akash [![Build Status](https://travis-ci.com/ovrclk/akash.svg?token=xMx9pPujMteGc5JpGjzX&branch=master-update)](https://travis-ci.com/ovrclk/akash) [![Coverage Status](https://coveralls.io/repos/github/ovrclk/akash/badge.svg?t=bXSvuV)](https://coveralls.io/github/ovrclk/akash)
+# Akash [![Build Status](https://travis-ci.com/ovrclk/akash.svg?token=xMx9pPujMteGc5JpGjzX&branch=master-update)](https://travis-ci.com/ovrclk/akash) [![Coverage Status](https://coveralls.io/repos/github/ovrclk/akash/badge.svg?t=Mv99a5)](https://coveralls.io/github/ovrclk/akash)
 
 The Akash Network is a blockchain-powered cloud infrasture system that pairs independent datacenter providers with users seeking high-performance application hosting.  The process is simple for both parties - Datacenter components are easy to install and provide a high degree of automation, while application deployment and administration is simple and intuitive.
 
