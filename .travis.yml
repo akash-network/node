@@ -9,7 +9,7 @@ sudo: false
 matrix:
   include:
     - os: linux
-      go: "1.10"
+      go: "1.9"
       sudo: required
       env: PRIMARY_CONFIG=true
     - os: osx
