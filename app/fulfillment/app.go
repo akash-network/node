@@ -2,16 +2,19 @@ package fulfillment
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 
 	"github.com/tendermint/tmlibs/log"
 
+	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/akash/app/types"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
+	"github.com/tendermint/go-wire/data"
 )
 
 const (
@@ -218,7 +221,35 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) t
 }
 
 func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
-	return tmtypes.ResponseQuery{}
+	ful, err := a.State().Fulfillment().GetByKey(key)
+
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	if ful == nil {
+		return tmtypes.ResponseQuery{
+			Code: code.NOT_FOUND,
+			Log:  fmt.Sprintf("fulfillment %x not found", key),
+		}
+	}
+
+	bytes, err := proto.Marshal(ful)
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseQuery{
+		Key:    data.Bytes(a.State().Fulfillment().KeyFor(key)),
+		Value:  bytes,
+		Height: a.State().Version(),
+	}
 }
 
 func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {

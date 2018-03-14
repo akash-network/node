@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"testing"
 
 	apptypes "github.com/ovrclk/akash/app/types"
@@ -33,6 +34,7 @@ func CreateProvider(t *testing.T, app apptypes.Application, account *types.Accou
 	cresp := app.CheckTx(ctx, providertx)
 	assert.True(t, cresp.IsOK())
 	dresp := app.DeliverTx(ctx, providertx)
+	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
 	assert.True(t, dresp.IsOK())
 	return provider
 }

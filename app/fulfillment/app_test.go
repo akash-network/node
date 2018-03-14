@@ -6,6 +6,7 @@ import (
 
 	dapp "github.com/ovrclk/akash/app/deployment"
 	app_ "github.com/ovrclk/akash/app/fulfillment"
+	oapp "github.com/ovrclk/akash/app/order"
 	papp "github.com/ovrclk/akash/app/provider"
 	state_ "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
@@ -45,7 +46,7 @@ func TestValidTx(t *testing.T) {
 	require.NoError(t, err)
 	paccount, pkey := testutil.CreateAccount(t, state)
 	pnonce := uint64(0)
-	testutil.CreateProvider(t, papp, paccount, &pkey, pnonce)
+	provider := testutil.CreateProvider(t, papp, paccount, &pkey, pnonce)
 
 	// create tenant
 	taccount, tkey := testutil.CreateAccount(t, state)
@@ -54,11 +55,19 @@ func TestValidTx(t *testing.T) {
 	dapp, err := dapp.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	tnonce := uint64(1)
-	testutil.CreateDeployment(t, dapp, taccount, &tkey, tnonce)
-	tnonce += 1
+	deployment := testutil.CreateDeployment(t, dapp, taccount, &tkey, tnonce)
+	groupSeq := deployment.Groups[0].Seq
+	daddress := state_.DeploymentAddress(taccount.Address, tnonce)
+
+	// create order
+	oapp, err := oapp.NewApp(state, testutil.Logger())
+	require.NoError(t, err)
+	oSeq := uint64(0)
+	testutil.CreateOrder(t, oapp, taccount, &tkey, deployment.Address, groupSeq, oSeq)
+	price := uint32(0)
 
 	// create fulfillment
-	fulfillment := testutil.CreateFulfillment(t, app, paccount, &pkey, taccount, tnonce)
+	fulfillment := testutil.CreateFulfillment(t, app, provider.Address, &pkey, daddress, groupSeq, oSeq, price)
 
 	{
 		path := fmt.Sprintf("%v%X", state_.FulfillmentPath, state.Fulfillment().IDFor(fulfillment))

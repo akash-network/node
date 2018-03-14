@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 
@@ -42,6 +43,7 @@ func CreateDeployment(t *testing.T, app apptypes.Application, account *types.Acc
 	cresp := app.CheckTx(ctx, deploymenttx)
 	assert.True(t, cresp.IsOK())
 	dresp := app.DeliverTx(ctx, deploymenttx)
+	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
 	assert.True(t, dresp.IsOK())
 	return deployment
 }

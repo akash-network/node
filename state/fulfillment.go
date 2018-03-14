@@ -11,9 +11,11 @@ import (
 type FulfillmentAdapter interface {
 	Save(*types.Fulfillment) error
 	Get(daddr base.Bytes, group uint64, order uint64, paddr base.Bytes) (*types.Fulfillment, error)
+	GetByKey(address base.Bytes) (*types.Fulfillment, error)
 	ForGroup(*types.DeploymentGroup) ([]*types.Fulfillment, error)
 	ForOrder(*types.Order) ([]*types.Fulfillment, error)
 	IDFor(*types.Fulfillment) []byte
+	KeyFor(id []byte) []byte
 }
 
 func NewFulfillmentAdapter(db DB) FulfillmentAdapter {
@@ -26,6 +28,7 @@ type fulfillmentAdapter struct {
 
 func (a *fulfillmentAdapter) Save(obj *types.Fulfillment) error {
 	path := a.KeyFor(a.IDFor(obj))
+	println("\n\n\nDEPADDR", base.Bytes(path).EncodeString(), "\n\n\n")
 	return saveObject(a.db, path, obj)
 }
 
@@ -37,6 +40,16 @@ func (a *fulfillmentAdapter) Get(daddr base.Bytes, group uint64, order uint64, p
 	}
 	obj := new(types.Fulfillment)
 	return obj, proto.Unmarshal(buf, obj)
+}
+
+func (a *fulfillmentAdapter) GetByKey(address base.Bytes) (*types.Fulfillment, error) {
+	ful := types.Fulfillment{}
+	key := a.KeyFor(address)
+	buf := a.db.Get(key)
+	if buf == nil {
+		return nil, nil
+	}
+	return &ful, ful.Unmarshal(buf)
 }
 
 func (a *fulfillmentAdapter) ForGroup(group *types.DeploymentGroup) ([]*types.Fulfillment, error) {
