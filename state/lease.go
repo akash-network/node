@@ -9,6 +9,9 @@ import (
 type LeaseAdapter interface {
 	Save(*types.Lease) error
 	Get(daddr base.Bytes, group uint64, order uint64, paddr base.Bytes) (*types.Lease, error)
+	GetByKey(address base.Bytes) (*types.Lease, error)
+	IDFor(obj *types.Lease) []byte
+	KeyFor(id []byte) []byte
 }
 
 func NewLeaseAdapter(db DB) LeaseAdapter {
@@ -32,6 +35,16 @@ func (a *leaseAdapter) Get(daddr base.Bytes, group uint64, order uint64, paddr b
 	}
 	obj := new(types.Lease)
 	return obj, proto.Unmarshal(buf, obj)
+}
+
+func (a *leaseAdapter) GetByKey(address base.Bytes) (*types.Lease, error) {
+	ful := types.Lease{}
+	key := a.KeyFor(address)
+	buf := a.db.Get(key)
+	if buf == nil {
+		return nil, nil
+	}
+	return &ful, ful.Unmarshal(buf)
 }
 
 // /fulfillment-orders/{deployment-address}{group-sequence}{order-sequence}{provider-address}

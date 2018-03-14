@@ -34,7 +34,6 @@ func CreateFulfillment(t *testing.T, app apptypes.Application, provider base.Byt
 	assert.True(t, cresp.IsOK())
 	dresp := app.DeliverTx(ctx, fulfillmenttx)
 	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
-	println("dresp", dresp.String())
 	assert.True(t, dresp.IsOK())
 	return fulfillment
 }
