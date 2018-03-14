@@ -5,23 +5,21 @@ import (
 	"testing"
 
 	"github.com/ovrclk/akash/app/deployment"
-	apptypes "github.com/ovrclk/akash/app/types"
 	pstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmtypes "github.com/tendermint/abci/types"
 )
 
 func TestAcceptQuery(t *testing.T) {
-	state_ := testutil.NewState(t, nil)
+	state := testutil.NewState(t, nil)
 
-	account, _ := testutil.CreateAccount(t, state_)
+	account, _ := testutil.CreateAccount(t, state)
 	address := account.Address
 
-	app, err := deployment.NewApp(state_, testutil.Logger())
+	app, err := deployment.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 
 	{
@@ -36,42 +34,13 @@ func TestAcceptQuery(t *testing.T) {
 }
 
 func TestValidTx(t *testing.T) {
-
-	state_ := testutil.NewState(t, nil)
-
-	account, key := testutil.CreateAccount(t, state_)
-
-	depl := testutil.Deployment(account.Address, 0)
-
-	tx := &types.TxPayload_TxCreateDeployment{
-		TxCreateDeployment: &types.TxCreateDeployment{
-			Deployment: depl,
-		},
-	}
-
-	pubkey := base.PubKey(key.PubKey())
-
-	ctx := apptypes.NewContext(&types.Tx{
-		Key: &pubkey,
-		Payload: types.TxPayload{
-			Payload: tx,
-		},
-	})
-
-	app, err := deployment.NewApp(state_, testutil.Logger())
+	state := testutil.NewState(t, nil)
+	app, err := deployment.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
+	account, key := testutil.CreateAccount(t, state)
+	nonce := uint64(1)
 
-	assert.True(t, app.AcceptTx(ctx, tx))
-
-	{
-		resp := app.CheckTx(ctx, tx)
-		assert.True(t, resp.IsOK())
-	}
-
-	{
-		resp := app.DeliverTx(ctx, tx)
-		assert.True(t, resp.IsOK())
-	}
+	depl := testutil.CreateDeployment(t, app, account, &key, nonce)
 
 	{
 		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
@@ -81,8 +50,8 @@ func TestValidTx(t *testing.T) {
 		dep := new(types.Deployment)
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
-		assert.Equal(t, tx.TxCreateDeployment.Deployment.Tenant, dep.Tenant)
-		assert.Equal(t, tx.TxCreateDeployment.Deployment.Address, dep.Address)
+		assert.Equal(t, depl.Tenant, dep.Tenant)
+		assert.Equal(t, depl.Address, dep.Address)
 
 		require.Len(t, dep.Groups, 1)
 		assert.Equal(t, dep.Groups[0].Requirements, depl.Groups[0].Requirements)
@@ -90,7 +59,7 @@ func TestValidTx(t *testing.T) {
 	}
 
 	{
-		groups, err := state_.DeploymentGroup().ForDeployment(depl.Address)
+		groups, err := state.DeploymentGroup().ForDeployment(depl.Address)
 		require.NoError(t, err)
 		require.Len(t, groups, 1)
 
