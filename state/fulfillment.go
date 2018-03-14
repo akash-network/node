@@ -13,6 +13,7 @@ type FulfillmentAdapter interface {
 	Get(daddr base.Bytes, group uint64, order uint64, paddr base.Bytes) (*types.Fulfillment, error)
 	ForGroup(*types.DeploymentGroup) ([]*types.Fulfillment, error)
 	ForOrder(*types.Order) ([]*types.Fulfillment, error)
+	IDFor(*types.Fulfillment) []byte
 }
 
 func NewFulfillmentAdapter(db DB) FulfillmentAdapter {

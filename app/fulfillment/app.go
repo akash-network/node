@@ -155,6 +155,12 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmt
 
 	// get deployment group
 	group, err := a.State().DeploymentGroup().Get(fulfillment.Deployment, fulfillment.Group)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
 
 	// ensure provider has matching attributes
 	for _, requirement := range group.Requirements {
