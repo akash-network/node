@@ -71,11 +71,9 @@ func TestValidTx(t *testing.T) {
 
 	{
 		path := fmt.Sprintf("%v%X", state_.FulfillmentPath, state.Fulfillment().IDFor(fulfillment))
-		println("\n\ngetting ful at", path, "\n\n")
 		resp := app.Query(tmtypes.RequestQuery{Path: path})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
-		println("\n\nresp", resp.String(), "\n\n")
 		ful := new(types.Fulfillment)
 		require.NoError(t, ful.Unmarshal(resp.Value))
 

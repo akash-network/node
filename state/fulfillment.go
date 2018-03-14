@@ -28,7 +28,6 @@ type fulfillmentAdapter struct {
 
 func (a *fulfillmentAdapter) Save(obj *types.Fulfillment) error {
 	path := a.KeyFor(a.IDFor(obj))
-	println("\n\n\nDEPADDR", base.Bytes(path).EncodeString(), "\n\n\n")
 	return saveObject(a.db, path, obj)
 }
 
