@@ -31,7 +31,6 @@ func CreateLease(t *testing.T, app apptypes.Application, provider base.Bytes, ke
 
 	assert.True(t, app.AcceptTx(ctx, tx))
 	cresp := app.CheckTx(ctx, tx)
-	println(cresp.String())
 	assert.True(t, cresp.IsOK())
 	dresp := app.DeliverTx(ctx, tx)
 	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
