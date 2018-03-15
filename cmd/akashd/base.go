@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	envPrefix = "PHOTOND"
+	envPrefix = "AKASHD"
 )
 
 func initEnv(path string) error {
@@ -18,7 +18,7 @@ func initEnv(path string) error {
 		viper.SetConfigType("toml")
 		viper.AddConfigPath(path)
 	}
-	viper.SetEnvPrefix("PHOTOND")
+	viper.SetEnvPrefix(envPrefix)
 
 	viper.BindEnv("p2p.seeds")
 
@@ -30,7 +30,7 @@ func initEnv(path string) error {
 func baseCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "akashd",
-		Short: "Photon node",
+		Short: "Akash node",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			root, err := cmd.Flags().GetString(flagRootDir)
 			if err != nil {

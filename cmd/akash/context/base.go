@@ -21,7 +21,7 @@ func SetupBaseCommand(cmd *cobra.Command) {
 }
 
 func initCommandConfig(root string) error {
-	viper.SetEnvPrefix("PHOTON")
+	viper.SetEnvPrefix("AKASH")
 	viper.AutomaticEnv()
 	viper.SetConfigFile(path.Join(root, "akash.toml"))
 
@@ -36,7 +36,7 @@ func saveCommandConfig() error {
 }
 
 func defaultRootDir() string {
-	if val := os.Getenv("PHOTON_DATA"); val != "" {
+	if val := os.Getenv("AKASH_DATA"); val != "" {
 		return val
 	}
 	return os.ExpandEnv("$HOME/.akash")

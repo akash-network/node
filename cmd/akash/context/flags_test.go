@@ -20,7 +20,7 @@ type flagFn func(cmd *cobra.Command, flags *pflag.FlagSet)
 func TestNode_Env(t *testing.T) {
 	const val = "foo.bar:123"
 
-	os.Setenv("PHOTON_NODE", val)
+	os.Setenv("AKASH_NODE", val)
 
 	assertCommand(t, context.AddFlagNode, func(ctx context.Context, cmd *cobra.Command, args []string) error {
 		assert.Equal(t, val, ctx.Node())
@@ -65,7 +65,7 @@ func assertCommand(t *testing.T, flagfn flagFn, fn context.Runner, args ...strin
 
 	ran := false
 
-	os.Setenv("PHOTON_DATA", basedir)
+	os.Setenv("AKASH", basedir)
 
 	cmd := &cobra.Command{
 		Use: "test",

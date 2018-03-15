@@ -15,7 +15,7 @@ type Builder interface {
 	WithName(string) Builder
 	WithPath(string) Builder
 	WithCount(uint) Builder
-	WithPhotonGenesis(*types.Genesis) Builder
+	WithAkashGenesis(*types.Genesis) Builder
 	Create() (Context, error)
 }
 
@@ -46,7 +46,7 @@ func (b *builder) WithCount(count uint) Builder {
 	return b
 }
 
-func (b *builder) WithPhotonGenesis(pgenesis *types.Genesis) Builder {
+func (b *builder) WithAkashGenesis(pgenesis *types.Genesis) Builder {
 	b.pgenesis = pgenesis
 	return b
 }
