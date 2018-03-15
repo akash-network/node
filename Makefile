@@ -32,7 +32,7 @@ test-full:
 	go test -race $$(glide novendor)
 
 test-cover:
-	goveralls -service=travis-pro -ignore="types/types.pb.go" -flags -count=1
+	goveralls -service=travis-pro -ignore="types/types.pb.go" -flags "-count=1"
 
 test-vet:
 	go vet $$(glide novendor)
