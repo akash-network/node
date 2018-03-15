@@ -27,7 +27,7 @@ func TMGenesisFromFile(path string) (*tmtypes.GenesisDoc, error) {
 	return &obj, nil
 }
 
-// Photon genesis doc from file
+// Akash genesis doc from file
 func GenesisFromTMGenesis(genesis *tmtypes.GenesisDoc) (*types.Genesis, error) {
 	obj, ok := genesis.AppOptions.(*types.Genesis)
 	if ok {

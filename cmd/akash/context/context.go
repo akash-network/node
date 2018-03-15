@@ -7,8 +7,8 @@ import (
 	"path"
 	"sync"
 
-	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/cmd/akash/constants"
+	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 
@@ -125,7 +125,7 @@ func (ctx *context) KeyManager() (keys.Manager, error) {
 }
 
 func (ctx *context) Node() string {
-	if len(ctx.cmd.Flag(constants.FlagNode).Value.String()) > 0 {
+	if ctx.cmd.Flag(constants.FlagNode).Value.String() != ctx.cmd.Flag(constants.FlagNode).DefValue {
 		return ctx.cmd.Flag(constants.FlagNode).Value.String()
 	}
 	return viper.GetString(constants.FlagNode)

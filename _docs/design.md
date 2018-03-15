@@ -66,11 +66,11 @@
 
 ### Users
 
-A user hosting an application on the Photon network
+A user hosting an application on the Akash network
 
 ### Datacenters
 
-Each datacenter will host an agent which is a mediator between the with the Photon Network and datecenter-local infrastructure.
+Each datacenter will host an agent which is a mediator between the with the Akash Network and datecenter-local infrastructure.
 
 The datacenter agent is responsible for
 
@@ -79,7 +79,7 @@ The datacenter agent is responsible for
 
 ### Validators
 
-A Photon Node that is elected to be a validator in the DPoS consensus scheme.
+A Akash Node that is elected to be a validator in the DPoS consensus scheme.
 
 ### Marketplace Facilitators
 
@@ -188,16 +188,16 @@ tokens from the [user](#users) to the [datacenter](#datacenters)
 
 ### SubmitDeployment
 
-Sent by a [user](#users) to deploy their application on Photon.  A [order](#order) will be created for each datacenter
+Sent by a [user](#users) to deploy their application on Akash.  A [order](#order) will be created for each datacenter
 configuration described in the [deployment](#deployment)
 
 ### UpdateDeployment
 
-Sent by a [user](#users) to update their application on Photon.
+Sent by a [user](#users) to update their application on Akash.
 
 ### CancelDeployment
 
-Sent by a [user](#users) to cancel their application on Photon.
+Sent by a [user](#users) to cancel their application on Akash.
 
 ### SubmitFulfillment
 
@@ -265,7 +265,7 @@ For each open [order](#order):
 
 Once resources have been procured, clients must distribute their workloads to providers so that they
 can execute on the leased resources.  We refer to the current state of the client’s workloads on the
-Photon Network as a "deployment".
+Akash Network as a "deployment".
 
 A user describes their desired deployment in a "manifest".  The manifest contains workload
 definitions, configuration, and connection rules.  Providers use workload definitions and
@@ -291,7 +291,7 @@ Each on-chain deployment contains a hash of the manifest.  This hash represents 
 _version_.
 
 The manifest contains sensitive information which should only be shared with participants of the
-deployment.  This poses a problem for self-managed deployments - Photon must distribute the workload
+deployment.  This poses a problem for self-managed deployments - Akash must distribute the workload
 definition autonomously, without revealing its contents to unnecessary participants.
 
 To address these issues, we devised a peer-to-peer file sharing scheme in which lease participants
@@ -311,7 +311,7 @@ end-user browsers should have access to the web tier workload, and the web tier 
 to the database workload. Furthermore, the web tier may not be hosted in the same datacenter as the
 database.
 
-On the Photon Network, clients can selectively allow communications to and between workloads by
+On the Akash Network, clients can selectively allow communications to and between workloads by
 defining a connection topology within the manifest. Datacenters use this topology to configure
 firewall rules and to create a secure network between individual workloads as needed.
 
@@ -331,7 +331,7 @@ to one another through stable addresses and standard protocols.
 
 #### Stack
 
-A *stack* is a description of all components necessary to deploy an application on the Photon Network.
+A *stack* is a description of all components necessary to deploy an application on the Akash Network.
 
 A *stack* includes:
 
@@ -350,7 +350,7 @@ A *manifest* includes:
 
 #### Deployment
 
-A *deployment* represents the _current state_ of a stack as fulfilled by the Photon Network.
+A *deployment* represents the _current state_ of a stack as fulfilled by the Akash Network.
 
 * Infrastructure procured via the cloud exchange (_leases_).
 * Manifest distribution state.
@@ -392,12 +392,12 @@ complexity of said resources is a curse.  The goal of DevOps -- the practice of 
 programmatically -- is to alleviate the pain points of cloud infrastructure by leveraging its
 strengths.
 
-The Photon Network was built from the ground up to provide DevOps engineers with a simple but
+The Akash Network was built from the ground up to provide DevOps engineers with a simple but
 powerful toolset for creating highly-automated deployments.  The toolset is comprised of the
 primitives that enable non-management applications -- generic workloads and overlay networks -- and
 can be leveraged to create autonomous, self-managed systems.
 
-Self-managed deployments on Photon are a simple matter of creating workloads that manage their own
+Self-managed deployments on Akash are a simple matter of creating workloads that manage their own
 deployment themselves.  A DevOps engineer may employ a workload that updates DNS entries as
 providers join or leave the deployment; tests response times of web tier applications; and scales up
 and down infrastructure (in accordance with permissions and constraints defined by the client) as
@@ -415,10 +415,10 @@ applications employ content delivery networks (CDNs) to deliver static content s
 users quickly.
 
 CDNs provide reduced latency by distributing content so that it is geographically close to the users
-that are accessing it.  Deployments on the Photon Network can not only replicate this approach, but
-beat it - Photon gives clients the ability to place dynamic content close to an application’s users.
+that are accessing it.  Deployments on the Akash Network can not only replicate this approach, but
+beat it - Akash gives clients the ability to place dynamic content close to an application’s users.
 
-To implement a self-managed "dynamic delivery network" on Photon, a DevOps engineer would include a
+To implement a self-managed "dynamic delivery network" on Akash, a DevOps engineer would include a
 management tier in their deployment which monitors the geographical location of clients.  This
 management tier would add and remove datacenters across the globe, provisioning more resources in
 regions where user activity is high, and less resources in regions where user participation is low.
@@ -429,7 +429,7 @@ Machine learning applications employ a large number of nodes to parallelize comp
 large datasets.  They do their work in "batches" - there is no "steady state" of capacity that is
 required.
 
-A machine learning application on Photon may use a management tier to proactively procure resources
+A machine learning application on Akash may use a management tier to proactively procure resources
 within a single datacenter.  As a machine learning task begins, the management tier can "scale up"
 the number of nodes for it; when a task completes, the resources provisioned for it can be
 relinquished.

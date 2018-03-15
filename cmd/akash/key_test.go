@@ -15,7 +15,7 @@ func TestKeyCreateCommand(t *testing.T) {
 	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
 
-	os.Setenv("PHOTON_DATA", basedir)
+	os.Setenv("AKASH_DATA", basedir)
 
 	const keyName = "foo"
 

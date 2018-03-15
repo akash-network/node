@@ -63,11 +63,11 @@ func doInitCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	pg, err := generatePhotonGenesis(cmd, args)
+	pg, err := generateAkashGenesis(cmd, args)
 	if err != nil {
 		return err
 	}
-	b = b.WithPhotonGenesis(pg)
+	b = b.WithAkashGenesis(pg)
 
 	wctx, err := b.Create()
 	if err != nil {
@@ -82,7 +82,7 @@ func doInitCommand(ctx Context, cmd *cobra.Command, args []string) error {
 	return w.Write()
 }
 
-func generatePhotonGenesis(cmd *cobra.Command, args []string) (*ptypes.Genesis, error) {
+func generateAkashGenesis(cmd *cobra.Command, args []string) (*ptypes.Genesis, error) {
 	addr := new(base.Bytes)
 	if err := addr.DecodeString(args[0]); err != nil {
 		return nil, err

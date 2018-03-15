@@ -15,7 +15,7 @@ func TestContext_RootDir_Env(t *testing.T) {
 	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
 
-	os.Setenv("PHOTOND_DATA", basedir)
+	os.Setenv("AKASHD_DATA", basedir)
 
 	assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
 		assert.Equal(t, basedir, ctx.RootDir())
@@ -42,11 +42,11 @@ func TestContext_EnvOverrides(t *testing.T) {
 	seeds := "a,b,c"
 	moniker := "foobar"
 
-	os.Setenv("PHOTOND_DATA", basedir)
-	os.Setenv("PHOTOND_GENESIS", gpath)
-	os.Setenv("PHOTOND_VALIDATOR", vpath)
-	os.Setenv("PHOTOND_MONIKER", moniker)
-	os.Setenv("PHOTOND_P2P_SEEDS", seeds)
+	os.Setenv("AKASHD_DATA", basedir)
+	os.Setenv("AKASHD_GENESIS", gpath)
+	os.Setenv("AKASHD_VALIDATOR", vpath)
+	os.Setenv("AKASHD_MONIKER", moniker)
+	os.Setenv("AKASHD_P2P_SEEDS", seeds)
 
 	assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
 		cfg, err := ctx.TMConfig()
