@@ -14,6 +14,7 @@ import (
 func TestContext_RootDir_Env(t *testing.T) {
 	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
+	defer os.Clearenv()
 
 	os.Setenv("AKASHD_DATA", basedir)
 
@@ -36,6 +37,7 @@ func TestContext_RootDir_Arg(t *testing.T) {
 func TestContext_EnvOverrides(t *testing.T) {
 	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
+	defer os.Clearenv()
 
 	gpath := "/foo/bar/genesis.json"
 	vpath := "/foo/bar/private_validator.json"

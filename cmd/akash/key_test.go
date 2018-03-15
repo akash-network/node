@@ -14,6 +14,7 @@ import (
 func TestKeyCreateCommand(t *testing.T) {
 	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
+	defer os.Clearenv()
 
 	os.Setenv("AKASH_DATA", basedir)
 
