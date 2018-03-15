@@ -12,7 +12,6 @@ import (
 func SetupBaseCommand(cmd *cobra.Command) {
 	cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		root, _ := cmd.Flags().GetString(constants.FlagRootDir)
-		println("\n\nSetupBaseCommand", root, "\n\n")
 		return initCommandConfig(root)
 	}
 	cmd.PersistentPostRunE = func(cmd *cobra.Command, args []string) error {
