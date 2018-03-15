@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -17,7 +19,9 @@ func Test_Start(t *testing.T) {
 	defer os.RemoveAll(basedir)
 
 	{
-		args := []string{startCommand().Name(), "-d", basedir}
+		emmptydir := testutil.TempDir(t)
+		defer os.RemoveAll(emmptydir)
+		args := []string{startCommand().Name(), "-d", emmptydir}
 		base := baseCommand()
 		base.AddCommand(startCommand())
 		base.SetArgs(args)
@@ -37,21 +41,29 @@ func Test_Start(t *testing.T) {
 
 		args := []string{initCommand().Name(), addr, "-d", basedir}
 
+		ls(basedir + "/config")
+
 		base := baseCommand()
 		base.AddCommand(initCommand())
 		base.SetArgs(args)
 		require.NoError(t, base.Execute())
+
+		ls(basedir + "/config")
 
 		tmgenesis, err := node.TMGenesisFromFile(genesispath)
 		require.NoError(t, err)
 		_, err = node.GenesisFromTMGenesis(tmgenesis)
 		require.NoError(t, err)
 
+		ls(basedir + "/config")
+
 		// run node
 		startargs := []string{startCommand().Name(), "-d", basedir}
 		startbase := baseCommand()
 		startbase.AddCommand(startCommand())
 		startbase.SetArgs(startargs)
+
+		ls(basedir + "/config")
 
 		errchan := make(chan error)
 		quit := make(chan bool)
@@ -65,7 +77,9 @@ func Test_Start(t *testing.T) {
 		for run {
 			if started == false {
 				go func() {
+					ls(basedir + "/config")
 					errchan <- startbase.Execute()
+					ls(basedir + "/config")
 				}()
 				started = true
 			}
@@ -74,6 +88,7 @@ func Test_Start(t *testing.T) {
 			}
 		}
 
+		ls(basedir + "/config")
 		err = emptyErrChannel(errchan)
 		require.NoError(t, err)
 	}
@@ -85,5 +100,17 @@ func emptyErrChannel(ch chan error) error {
 		return x
 	default:
 		return nil
+	}
+}
+
+func ls(dir string) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		println("err:", err.Error())
+	}
+
+	println("Files in ", dir)
+	for _, f := range files {
+		fmt.Println(f.Name())
 	}
 }
