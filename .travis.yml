@@ -33,7 +33,7 @@ install:
 
 script:
   - make build
-  - make test-full
+  - if [ "$PRIMARY_CONFIG" != "true" ]; then make test-full; fi
   - make test-vet
   - if [ "$PRIMARY_CONFIG" == "true" ];then make image     ; fi
   - if [ "$PRIMARY_CONFIG" == "true" ];then make test-cover; fi
