@@ -58,7 +58,7 @@ func Test_Start(t *testing.T) {
 		defer close(errchan)
 		defer close(quit)
 
-		time.AfterFunc(5*time.Second, func() { quit <- true })
+		time.AfterFunc(3*time.Second, func() { quit <- true })
 
 		started := false
 		run := true
