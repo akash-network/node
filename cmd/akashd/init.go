@@ -67,7 +67,7 @@ func doInitCommand(ctx Context, cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	b = b.WithAkashnGenesis(pg)
+	b = b.WithAkashGenesis(pg)
 
 	wctx, err := b.Create()
 	if err != nil {

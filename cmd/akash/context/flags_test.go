@@ -65,13 +65,13 @@ func assertCommand(t *testing.T, flagfn flagFn, fn context.Runner, args ...strin
 
 	ran := false
 
-	os.Setenv("AKASH", basedir)
+	os.Setenv("AKASH_DATA", basedir)
 
 	cmd := &cobra.Command{
 		Use: "test",
 		RunE: context.WithContext(func(ctx context.Context, cmd *cobra.Command, args []string) error {
 			ran = true
-			require.Equal(t, basedir, ctx.RootDir())
+			require.Equal(t, basedir, ctx.RootDir(), "unexpected home dir")
 			return fn(ctx, cmd, args)
 		}),
 	}

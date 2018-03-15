@@ -15,7 +15,7 @@ func TestContext_RootDir_Env(t *testing.T) {
 	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
 
-	os.Setenv("AKASH_DATA", basedir)
+	os.Setenv("AKASHD_DATA", basedir)
 
 	assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
 		assert.Equal(t, basedir, ctx.RootDir())
