@@ -1,0 +1,6 @@
+replicaCount: 3
+
+image:
+  repository: quay.io/ovrclk/akash
+  tag: latest
+  pullPolicy: Never
