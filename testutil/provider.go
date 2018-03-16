@@ -13,30 +13,30 @@ import (
 )
 
 func CreateProvider(t *testing.T, app apptypes.Application, account *types.Account, key *crypto.PrivKey, nonce uint64) *types.Provider {
-	provider := Provider(account.Address, nonce)
-
-	providertx := &types.TxPayload_TxCreateProvider{
-		TxCreateProvider: &types.TxCreateProvider{
-			Provider: *provider,
-		},
-	}
-
-	pubkey := base.PubKey(key.PubKey())
-
-	ctx := apptypes.NewContext(&types.Tx{
-		Key: &pubkey,
-		Payload: types.TxPayload{
-			Payload: providertx,
-		},
-	})
-
-	assert.True(t, app.AcceptTx(ctx, providertx))
-	cresp := app.CheckTx(ctx, providertx)
+	tx := ProviderTx(account, key, nonce)
+	ctx := apptypes.NewContext(tx)
+	assert.True(t, app.AcceptTx(ctx, tx.Payload.Payload))
+	cresp := app.CheckTx(ctx, tx.Payload.Payload)
 	assert.True(t, cresp.IsOK())
-	dresp := app.DeliverTx(ctx, providertx)
+	dresp := app.DeliverTx(ctx, tx.Payload.Payload)
 	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
 	assert.True(t, dresp.IsOK())
-	return provider
+	return &tx.Payload.GetTxCreateProvider().Provider
+}
+
+func ProviderTx(account *types.Account, key *crypto.PrivKey, nonce uint64) *types.Tx {
+	pubkey := base.PubKey(key.PubKey())
+	provider := Provider(account.Address, nonce)
+	return &types.Tx{
+		Key: &pubkey,
+		Payload: types.TxPayload{
+			Payload: &types.TxPayload_TxCreateProvider{
+				TxCreateProvider: &types.TxCreateProvider{
+					Provider: *provider,
+				},
+			},
+		},
+	}
 }
 
 func Provider(account base.Bytes, nonce uint64) *types.Provider {

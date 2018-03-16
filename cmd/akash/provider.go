@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -220,10 +219,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 func getPrice(ctx context.Context, addr base.Bytes, seq uint64) (uint32, error) {
 	// get deployment group
 	price := uint32(0)
-	address := addr.EncodeString()
-	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, seq)
-	path := state.DeploymentGroupPath + address + hex.EncodeToString(buf)
+	path := state.DeploymentGroupPath + hex.EncodeToString(state.DeploymentGroupID(addr, seq))
 	group := new(types.DeploymentGroup)
 	result, err := query.Query(ctx, path)
 	if err != nil {
