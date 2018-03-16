@@ -107,7 +107,6 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 
 	ctx.Cancel()
 
-	println("waiting on donech to be done")
 	<-donech // make sure all threads are cleaned up
 	return nil
 }
