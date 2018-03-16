@@ -108,12 +108,15 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 
 	result, err := client.BroadcastTxCommit(tx)
 	if err != nil {
+		println("\n\n1\n\n")
 		return err
 	}
 	if result.CheckTx.IsErr() {
+		println("\n\n2\n\n")
 		return errors.New(result.CheckTx.GetLog())
 	}
 	if result.DeliverTx.IsErr() {
+		println("\n\n3\n\n")
 		return errors.New(result.DeliverTx.GetLog())
 	}
 
