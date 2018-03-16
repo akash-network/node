@@ -60,9 +60,9 @@ func Test_Start(t *testing.T) {
 	}()
 
 	select {
-	case <-time.After(3 * time.Second):
+	case <-time.After(1 * time.Second):
 		// cancel the process
-		testCtx.Done()
+		testCtx.Cancel()
 	case err := <-errch:
 		require.NoError(t, err)
 	}
