@@ -36,7 +36,7 @@ func providerCommand() *cobra.Command {
 	context.AddFlagNonce(cmd, cmd.PersistentFlags())
 
 	cmd.AddCommand(createProviderCommand())
-	cmd.AddCommand(createRunCommand())
+	cmd.AddCommand(runCommand())
 
 	return cmd
 }
@@ -133,7 +133,7 @@ func parseProvider(file string, tenant []byte, nonce uint64) (*types.Provider, e
 	return provider, nil
 }
 
-func createRunCommand() *cobra.Command {
+func runCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "run <provider>",
 		Args: cobra.ExactArgs(1),

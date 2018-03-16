@@ -14,10 +14,10 @@ import (
 const (
 	KeyPasswd = "0123456789"
 	KeyAlgo   = "ed25519"
+	KeyName   = "test"
 )
 
 func KeyManager(t *testing.T) cryptostore.Manager {
-
 	codec, err := keys.LoadCodec("english")
 	require.NoError(t, err)
 
@@ -38,4 +38,11 @@ func PrivateKey(t *testing.T) crypto.PrivKey {
 func PrivateKeySigner(t *testing.T) (txutil.Signer, crypto.PrivKey) {
 	key := PrivateKey(t)
 	return txutil.NewPrivateKeySigner(key), key
+}
+
+func NewNamedKey(t *testing.T) (keys.Info, cryptostore.Manager) {
+	kmgr := KeyManager(t)
+	info, _, err := kmgr.Create(KeyName, KeyPasswd, KeyAlgo)
+	require.NoError(t, err)
+	return info, kmgr
 }
