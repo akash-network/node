@@ -9,6 +9,7 @@ import (
 	app_ "github.com/ovrclk/akash/app/lease"
 	oapp "github.com/ovrclk/akash/app/order"
 	papp "github.com/ovrclk/akash/app/provider"
+	apptypes "github.com/ovrclk/akash/app/types"
 	state_ "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
@@ -88,4 +89,18 @@ func TestValidTx(t *testing.T) {
 		assert.Equal(t, lease.Provider, lea.Provider)
 		assert.Equal(t, lease.Price, lea.Price)
 	}
+}
+
+func TestTx_BadTxType(t *testing.T) {
+	state_ := testutil.NewState(t, nil)
+	app, err := app_.NewApp(state_, testutil.Logger())
+	require.NoError(t, err)
+	account, key := testutil.CreateAccount(t, state_)
+	tx := testutil.ProviderTx(account, &key, 10)
+	ctx := apptypes.NewContext(tx)
+	assert.False(t, app.AcceptTx(ctx, tx.Payload.Payload))
+	cresp := app.CheckTx(ctx, tx.Payload.Payload)
+	assert.False(t, cresp.IsOK())
+	dresp := app.DeliverTx(ctx, tx.Payload.Payload)
+	assert.False(t, dresp.IsOK())
 }

@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	app_ "github.com/ovrclk/akash/app/provider"
+	apptypes "github.com/ovrclk/akash/app/types"
 	pstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmtypes "github.com/tendermint/abci/types"
@@ -42,4 +44,30 @@ func TestProviderApp(t *testing.T) {
 		assert.Equal(t, provider.Attributes[0].Name, queriedprovider.Attributes[0].Name)
 		assert.Equal(t, provider.Attributes[0].Value, queriedprovider.Attributes[0].Value)
 	}
+}
+
+func TestTx_BadTxType(t *testing.T) {
+	state_ := testutil.NewState(t, nil)
+	app, err := app_.NewApp(state_, testutil.Logger())
+	account, key := testutil.CreateAccount(t, state_)
+	pubkey := base.PubKey(key.PubKey())
+	tx := &types.Tx{
+		Key: &pubkey,
+		Payload: types.TxPayload{
+			Payload: &types.TxPayload_TxSend{
+				TxSend: &types.TxSend{
+					From:   base.Bytes(account.Address),
+					To:     base.Bytes(account.Address),
+					Amount: 0,
+				},
+			},
+		},
+	}
+	ctx := apptypes.NewContext(tx)
+	require.NoError(t, err)
+	assert.False(t, app.AcceptTx(ctx, tx.Payload.Payload))
+	cresp := app.CheckTx(ctx, tx.Payload.Payload)
+	assert.False(t, cresp.IsOK())
+	dresp := app.DeliverTx(ctx, tx.Payload.Payload)
+	assert.False(t, dresp.IsOK())
 }
