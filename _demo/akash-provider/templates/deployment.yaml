@@ -1,22 +1,22 @@
 apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
-  name: {{ template "akash-node.fullname" . }}
+  name: {{ template "akash-provider.fullname" . }}
   labels:
-    app: {{ template "akash-node.name" . }}
-    chart: {{ template "akash-node.chart" . }}
+    app: {{ template "akash-provider.name" . }}
+    chart: {{ template "akash-provider.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ template "akash-node.name" . }}
+      app: {{ template "akash-provider.name" . }}
       release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: {{ template "akash-node.name" . }}
+        app: {{ template "akash-provider.name" . }}
         release: {{ .Release.Name }}
     spec:
       containers:
@@ -25,18 +25,12 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: [ "/bin/sh" , "/config/run.sh" ]
           env:
-            - name: akashD_DATA
-              value: /data
-            - name: akashD_GENESIS
-              value: /config/genesis.json
-            - name: akashD_VALIDATOR
-              value: /config/priv_validator.json
+            - name: AKASH_NODE
+              value: http://node-0-akash-node:46657
           volumeMounts:
             - name: config
               mountPath: /config
-          ports:
-{{ toYaml .Values.akashd.ports | indent 12 }}
       volumes:
         - name: config
           configMap:
-            name: {{ template "akash-node.fullname" . }}
+            name: {{ template "akash-provider.fullname" . }}

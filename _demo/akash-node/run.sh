@@ -14,4 +14,8 @@ export AKASHD_P2P_SEEDS=$(getpeers)
 
 echo "found P2P peers: $AKASHD_P2P_SEEDS"
 
+mkdir -p $AKASHD_DATA/config
+cp /config/genesis.json $AKASHD_DATA/config
+cp /config/priv_validator.json $AKASHD_DATA/config
+
 /akashd start
