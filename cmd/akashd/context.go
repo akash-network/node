@@ -3,7 +3,6 @@ package main
 import (
 	gctx "context"
 	"errors"
-	// "fmt"
 	"os"
 	"sync"
 
@@ -51,16 +50,16 @@ type context struct {
 	log      log.Logger
 	mtx      sync.Mutex
 	cancel   gctx.CancelFunc
-	delagate gctx.Context
+	delegate gctx.Context
 }
 
 func newContext(cmd *cobra.Command) Context {
-	delagate, cancel := gctx.WithCancel(gctx.Background())
+	delegate, cancel := gctx.WithCancel(gctx.Background())
 	return &context{
 		cmd:      cmd,
 		mtx:      sync.Mutex{},
 		cancel:   cancel,
-		delagate: delagate,
+		delegate: delegate,
 	}
 }
 
@@ -69,7 +68,7 @@ func (ctx *context) Cancel() {
 }
 
 func (ctx *context) Done() <-chan struct{} {
-	return ctx.delagate.Done()
+	return ctx.delegate.Done()
 }
 
 func (ctx *context) RootDir() string {
