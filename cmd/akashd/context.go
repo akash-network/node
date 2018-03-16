@@ -57,11 +57,8 @@ func newContext(cmd *cobra.Command) Context {
 func (ctx *context) Done() <-chan struct{} {
 	ctx.mtx.Lock()
 	defer ctx.mtx.Unlock()
-	if ctx.done == nil {
-		ctx.done = make(chan struct{})
-	}
-	d := ctx.done
-	return d
+	ctx.done = make(chan struct{})
+	return ctx.done
 }
 
 func (ctx *context) RootDir() string {
