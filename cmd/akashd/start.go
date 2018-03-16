@@ -12,6 +12,7 @@ import (
 	tmnode "github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/proxy"
 	tmtypes "github.com/tendermint/tendermint/types"
+	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/log"
 )
 
@@ -89,8 +90,23 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 
 	applog.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
 
-	n.RunForever()
+	donech := make(chan struct{})
 
+	go func() {
+		defer close(donech)
+		select {
+		case <-ctx.Done():
+			n.Stop()
+		}
+	}()
+
+	cmn.TrapSignal(func() {
+		ctx.Cancel()
+	})
+
+	ctx.Cancel()
+
+	<-donech // make sure all threads are cleaned up
 	return nil
 }
 

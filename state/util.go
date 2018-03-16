@@ -4,6 +4,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/types"
@@ -38,7 +39,8 @@ func LoadDB(pathname string) (DB, error) {
 		return nil, err
 	}
 
-	return &iavlDB{tree}, nil
+	mtx := new(sync.RWMutex)
+	return &iavlDB{tree, mtx}, nil
 }
 
 func LoadState(db DB, gen *types.Genesis) (State, error) {
@@ -61,8 +63,9 @@ func LoadState(db DB, gen *types.Genesis) (State, error) {
 }
 
 func NewMemDB() DB {
+	mtx := new(sync.RWMutex)
 	tree := iavl.NewVersionedTree(tmdb.NewMemDB(), 0)
-	return &iavlDB{tree}
+	return &iavlDB{tree, mtx}
 }
 
 func saveObject(db DB, key []byte, obj proto.Message) error {

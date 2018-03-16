@@ -1,6 +1,7 @@
 package main
 
 import (
+	gctx "context"
 	"errors"
 	"os"
 	"sync"
@@ -36,20 +37,38 @@ func requireRootDir(fn ctxRunner) ctxRunner {
 }
 
 type Context interface {
+	Cancel()
+	Done() <-chan struct{}
 	RootDir() string
 	TMConfig() (*tmconfig.Config, error)
 	Log() log.Logger
 }
 
 type context struct {
-	cmd   *cobra.Command
-	tmcfg *tmconfig.Config
-	log   log.Logger
-	mtx   sync.Mutex
+	cmd      *cobra.Command
+	tmcfg    *tmconfig.Config
+	log      log.Logger
+	mtx      sync.Mutex
+	cancel   gctx.CancelFunc
+	delegate gctx.Context
 }
 
 func newContext(cmd *cobra.Command) Context {
-	return &context{cmd: cmd, mtx: sync.Mutex{}}
+	delegate, cancel := gctx.WithCancel(gctx.Background())
+	return &context{
+		cmd:      cmd,
+		mtx:      sync.Mutex{},
+		cancel:   cancel,
+		delegate: delegate,
+	}
+}
+
+func (ctx *context) Cancel() {
+	ctx.cancel()
+}
+
+func (ctx *context) Done() <-chan struct{} {
+	return ctx.delegate.Done()
 }
 
 func (ctx *context) RootDir() string {
