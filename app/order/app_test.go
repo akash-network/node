@@ -5,6 +5,7 @@ import (
 
 	deployment_ "github.com/ovrclk/akash/app/deployment"
 	"github.com/ovrclk/akash/app/order"
+	apptypes "github.com/ovrclk/akash/app/types"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,4 +62,18 @@ func TestTx(t *testing.T) {
 	orders, err := state_.Order().ForGroup(&deployment.Groups[0])
 	require.NoError(t, err)
 	require.Len(t, orders, 1)
+}
+
+func TestTx_BadTxType(t *testing.T) {
+	state_ := testutil.NewState(t, nil)
+	app, err := order.NewApp(state_, testutil.Logger())
+	require.NoError(t, err)
+	account, key := testutil.CreateAccount(t, state_)
+	tx := testutil.ProviderTx(account, &key, 10)
+	ctx := apptypes.NewContext(tx)
+	assert.False(t, app.AcceptTx(ctx, tx.Payload.Payload))
+	cresp := app.CheckTx(ctx, tx.Payload.Payload)
+	assert.False(t, cresp.IsOK())
+	dresp := app.DeliverTx(ctx, tx.Payload.Payload)
+	assert.False(t, dresp.IsOK())
 }
