@@ -89,6 +89,11 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 
 	applog.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
 
+	select {
+	case <-ctx.Done():
+		n.OnStop()
+	}
+
 	n.RunForever()
 
 	return nil

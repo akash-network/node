@@ -7,6 +7,7 @@ import (
 
 	"github.com/ovrclk/akash/node"
 	"github.com/ovrclk/akash/testutil"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
@@ -49,39 +50,35 @@ func Test_Start(t *testing.T) {
 	// run node
 	startargs := []string{startCommand().Name(), "-d", basedir}
 	startbase := baseCommand()
-	startbase.AddCommand(startCommand())
 	startbase.SetArgs(startargs)
+	testCtx := newContext(startbase)
+	startbase.AddCommand(testStartCommand(testCtx))
 
-	errchan := make(chan error)
-	quit := make(chan bool)
-	// defer close(errchan)
-	defer close(quit)
+	errch := make(chan error, 1)
+	go func() {
+		errch <- startbase.Execute()
+	}()
 
-	time.AfterFunc(3*time.Second, func() { quit <- true })
-
-	started := false
-	run := true
-	for run {
-		if started == false {
-			go func() {
-				errchan <- startbase.Execute()
-			}()
-			started = true
-		}
-		if <-quit {
-			break
-		}
+	select {
+	case <-time.After(3 * time.Second):
+		// cancel the process
+		testCtx.Done()
+	case err := <-errch:
+		require.NoError(t, err)
 	}
-
-	err = emptyErrChannel(errchan)
-	require.NoError(t, err)
 }
 
-func emptyErrChannel(ch chan error) error {
-	select {
-	case x, _ := <-ch:
-		return x
-	default:
-		return nil
+func testStartCommand(ctx Context) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "start",
+		Short: "start node",
+		RunE:  testWithContext(ctx, doStartCommand),
+	}
+	return cmd
+}
+
+func testWithContext(ctx Context, fn ctxRunner) cmdRunner {
+	return func(cmd *cobra.Command, args []string) error {
+		return fn(ctx, cmd, args)
 	}
 }
