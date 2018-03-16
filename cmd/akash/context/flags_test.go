@@ -19,7 +19,7 @@ type flagFn func(cmd *cobra.Command, flags *pflag.FlagSet)
 
 func TestNode_Env(t *testing.T) {
 	const val = "foo.bar:123"
-	defer os.Clearenv()
+	defer os.Unsetenv("AKASH_NODE")
 
 	os.Setenv("AKASH_NODE", val)
 
@@ -61,7 +61,7 @@ func TestFlag_Nonce(t *testing.T) {
 func assertCommand(t *testing.T, flagfn flagFn, fn context.Runner, args ...string) {
 	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
-	defer os.Clearenv()
+	defer os.Unsetenv("AKASH_DATA")
 
 	viper.Reset()
 
