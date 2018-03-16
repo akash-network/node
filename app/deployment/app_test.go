@@ -1,6 +1,7 @@
 package deployment_test
 
 import (
+	"encoding/hex"
 	"fmt"
 	"testing"
 
@@ -57,6 +58,32 @@ func TestValidTx(t *testing.T) {
 		require.Len(t, dep.Groups, 1)
 		assert.Equal(t, dep.Groups[0].Requirements, depl.Groups[0].Requirements)
 		assert.Equal(t, dep.Groups[0].Resources, depl.Groups[0].Resources)
+	}
+
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: pstate.DeploymentPath})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+	}
+
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: pstate.DeploymentPath + hex.EncodeToString(pstate.DeploymentGroupID(depl.Address, 1))})
+		assert.NotEmpty(t, resp.Log)
+		require.False(t, resp.IsOK())
+	}
+
+	{
+		path := pstate.DeploymentGroupPath + hex.EncodeToString(pstate.DeploymentGroupID(depl.Address, 1))
+		resp := app.Query(tmtypes.RequestQuery{Path: path})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+	}
+
+	{
+		path := pstate.DeploymentGroupPath + hex.EncodeToString(pstate.DeploymentGroupID(depl.Address, 0))
+		resp := app.Query(tmtypes.RequestQuery{Path: path})
+		assert.NotEmpty(t, resp.Log)
+		require.False(t, resp.IsOK())
 	}
 
 	{

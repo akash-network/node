@@ -1,11 +1,13 @@
 package order_test
 
 import (
+	"encoding/hex"
 	"testing"
 
 	deployment_ "github.com/ovrclk/akash/app/deployment"
 	"github.com/ovrclk/akash/app/order"
 	apptypes "github.com/ovrclk/akash/app/types"
+	state "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -57,11 +59,20 @@ func TestTx(t *testing.T) {
 
 	deployment := testutil.CreateDeployment(t, dapp, account, &key, 10)
 
-	testutil.CreateOrder(t, app, account, &key, deployment.Address, deployment.Groups[0].Seq, 0)
+	orderSeq := uint64(0)
+	testutil.CreateOrder(t, app, account, &key, deployment.Address, deployment.Groups[0].Seq, orderSeq)
 
 	orders, err := state_.Order().ForGroup(&deployment.Groups[0])
 	require.NoError(t, err)
 	require.Len(t, orders, 1)
+
+	path := state.OrderPath + hex.EncodeToString(state.OrderID(deployment.Address, deployment.Groups[0].Seq, orderSeq))
+	resp := app.Query(tmtypes.RequestQuery{Path: path})
+	assert.Empty(t, resp.Log)
+	require.True(t, resp.IsOK())
+	resp = app.Query(tmtypes.RequestQuery{Path: state.OrderPath})
+	assert.Empty(t, resp.Log)
+	require.True(t, resp.IsOK())
 }
 
 func TestTx_BadTxType(t *testing.T) {
