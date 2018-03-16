@@ -12,27 +12,39 @@ do_node(){
   echo "http://$(minikube ip):$(nodeport)"
 }
 
-do_send(){
+akash() {
   node=$(do_node)
   export AKASH_NODE=$node
-  ../akash send 100 $(cat data/other.key) -k master -n "$node" -d "$DATA"
+  ../akash -n "$node" -d "$DATA" "$@"
+}
+
+do_send(){
+  akash send 100 $(cat data/other.key) -k master
 }
 
 do_query(){
   key=${1:-master}
-  node=$(do_node)
-  export AKASH_NODE=$node
-  ../akash query account $(cat "data/$key.key") -n "$node" -d "$DATA"
+  akash query account $(cat "data/$key.key")
 }
 
-do_ping(){
-  node=$(do_node)
-  export AKASH_NODE=$node
-  ../akash ping -n "$node" -d "$DATA"
+do_status(){
+  akash status
+}
+
+do_monitor(){
+  akash marketplace
+}
+
+do_provider(){
+  akash provider create unused.yml -k dc
+}
+
+do_deploy(){
+  akash deploy unused.yml -k dc
 }
 
 do_usage(){
-  echo "USAGE: $CMD <node|send|query>" >&2
+  echo "USAGE: $CMD <node|send|query|status|monitor|provider|deploy>" >&2
   exit 1
 }
 
@@ -48,8 +60,17 @@ case "$cmd" in
   query)
     do_query "$@"
     ;;
-  ping)
-    do_ping "$@"
+  status)
+    do_status "$@"
+    ;;
+  monitor)
+    do_monitor "$@"
+    ;;
+  provider)
+    do_provider "$@"
+    ;;
+  deploy)
+    do_deploy "$@"
     ;;
   *)
     do_usage

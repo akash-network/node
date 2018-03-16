@@ -83,7 +83,7 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 			return err
 		}
 
-		fmt.Println("Key created: ", addr)
+		fmt.Println("Key created:", addr)
 	}
 
 	nonce, err := ctx.Nonce()

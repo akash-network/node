@@ -1,0 +1,38 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ template "akash-node.fullname" . }}
+  labels:
+    app: {{ template "akash-node.name" . }}
+    chart: {{ template "akash-node.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "akash-node.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "akash-node.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [ "/bin/sh" , "/config/run.sh" ]
+          env:
+            - name: AKASHD_DATA
+              value: /data
+          volumeMounts:
+            - name: config
+              mountPath: /config
+          ports:
+{{ toYaml .Values.akashd.ports | indent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ template "akash-node.fullname" . }}
