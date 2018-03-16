@@ -12,7 +12,7 @@ import (
 	tmnode "github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/proxy"
 	tmtypes "github.com/tendermint/tendermint/types"
-	cmn "github.com/tendermint/tmlibs/common"
+	_ "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/log"
 )
 
@@ -95,8 +95,7 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 	go func() {
 		defer close(donech)
 		select {
-		case msg := <-ctx.Done():
-			applog.Info("Stopping node", msg, "nodeInfo", n.Switch().NodeInfo())
+		case <-ctx.Done():
 			n.Stop()
 		}
 	}()

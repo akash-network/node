@@ -39,7 +39,7 @@ func requireRootDir(fn ctxRunner) ctxRunner {
 
 type Context interface {
 	Cancel()
-	Done() <-chan string
+	Done() <-chan struct{}
 	RootDir() string
 	TMConfig() (*tmconfig.Config, error)
 	Log() log.Logger
@@ -51,7 +51,6 @@ type context struct {
 	log      log.Logger
 	mtx      sync.Mutex
 	cancel   gctx.CancelFunc
-	done     chan string
 	delagate gctx.Context
 }
 
@@ -62,21 +61,15 @@ func newContext(cmd *cobra.Command) Context {
 		mtx:      sync.Mutex{},
 		cancel:   cancel,
 		delagate: delagate,
-		done:     make(chan string, 1),
 	}
 }
 
 func (ctx *context) Cancel() {
-	ctx.mtx.Lock()
-	defer ctx.mtx.Unlock()
-	ctx.done <- "cancelled"
 	ctx.cancel()
 }
 
-func (ctx *context) Done() <-chan string {
-	ctx.mtx.Lock()
-	defer ctx.mtx.Unlock()
-	return ctx.done
+func (ctx *context) Done() <-chan struct{} {
+	return ctx.delagate.Done()
 }
 
 func (ctx *context) RootDir() string {
