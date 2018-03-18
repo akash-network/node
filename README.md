@@ -1,76 +1,31 @@
-# Akash [![Build Status](https://travis-ci.com/ovrclk/akash.svg?token=xMx9pPujMteGc5JpGjzX&branch=master-update)](https://travis-ci.com/ovrclk/akash) [![Coverage Status](https://coveralls.io/repos/github/ovrclk/akash/badge.svg?t=Mv99a5)](https://coveralls.io/github/ovrclk/akash)
+[![Akash](_docs/img/logo-label-black.svg "Akash")](#overview)
+[![Build Status](https://travis-ci.com/ovrclk/akash.svg?token=xMx9pPujMteGc5JpGjzX&branch=master-update)](https://travis-ci.com/ovrclk/akash) [![Coverage Status](https://coveralls.io/repos/github/ovrclk/akash/badge.svg?t=Mv99a5)](https://coveralls.io/github/ovrclk/akash)
 
-The Akash Network is a blockchain-powered cloud infrasture system that pairs independent datacenter providers with users seeking high-performance application hosting.  The process is simple for both parties - Datacenter components are easy to install and provide a high degree of automation, while application deployment and administration is simple and intuitive.
+# Overview
 
-* [Overview](#overview)
-* [Design](#design)
-  * [Users](#users)
-  * [Datacenters](#datacenters)
-  * [Distributed Exchange](#distributed-exchange)
-* [Building](#building)
+Akash is a cloud infrastructure platform whose resources are provided
+by independent datacenters.  A high-level overview of the Akash Protocol
+can be found [here](https://akash.network/paper.pdf); a detailed
+protocol definition can be found [here](_docs/design.md); and the target
+workload definition spec is [here](_docs/sdl.md).
 
-## Overview
+This repository contains Akash Suite, the reference implementation of the
+[Akash Protocol](https://akash.network/paper.pdf).  It is an actively-developed 
+prototype currently focused on the distributed marketplace functionality.  
 
-The foundational design objective of the Akash Network is to maintain a low barrier to entry for
-providers while at the same time ensuring that clients can trust the resources that the platform
-offers them.  To achieve this, the system requires a publicly-verifiable record of transactions
-within the network.  To that end, the Akash Network is implemented using blockchain technologies as
-a means of achieving consensus on the veracity of a distributed database.
+The Akash Suite is composed of two applications: `akash` and `akashd`.  `akashd`
+is the ([tendermint](https://github.com/tendermint/tendermint)-powered) blockchain node that
+implements the decentralized exchange; `akash` is the client used to access the exchange and network
+in general.
 
-Akash is, first and foremost, a platform that allows clients to procure resources from providers.
-This is enabled by a blockchain-powered distributed exchange where clients post their desired
-resources for providers to bid on.  The currency of this marketplace is a digital token, the Akash
-(PTN), whose ledger is stored on the blockchain-based distributed database.
-
-Akash is a cloud platform for real-world applications. The requirements of such applications
-include:
-
-* Many workloads deployed across any number of datacenters.
-* Connectivity restrictions which prevent unwanted access to workloads.
-* Self-managed so that operators do not need to constantly tend to deployments.
-
-To support running workloads on procured resources, Akash includes a peer-to-peer protocol for
-distributing workloads and deployment configuration to and between a client’s providers.
-
-Workloads in Akash are defined as Docker containers.  Docker containers allow for highly-isolated
-and configurable execution environments, and are already part of many cloud-based deployments today.
-
-## Design
-
-Comprehensive design documentation can be found [here](_docs/design.md).
-
-### Users
-
-A user hosting an application on the Akash network.
-
-Initially, users interact with the network through a [command-line inteface](_docs/akash-cli.md) and define their deployments via a [declarative file](_docs/sdl.md).
-
-### Datacenters
-
-Each datacenter will host an agent which is a mediator between the with the Akash Network and datecenter-local infrastructure.
-
-The datacenter agent is responsible for:
-
-* Bidding on orders fulfillable by the datacenter.
-* Managing managing active leases it is a provider for.
-
-### Distributed Exchange
-
-Users lease resources from [datacenters] through a distributed exchange.  The Akash protocol enables this exchange by providing a distributed
-orderbook and a set of transactions to act upon it.
-
-### Workload Distribution
-
-## Building
+# Building
 
  * [Dependencies](#dependencies)
    * [MacOS](#macos)
    * [Arch Linux](#arch-linux)
- * [Building Akash](#akash-1)
- * [Testing](#testing)
- * [Documentation](#documentation)
+ * [Akash Suite](#akash-suite)
 
-### Dependencies
+## Dependencies
 
  Akash is developed and tested with [golang 1.8+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
 
@@ -85,12 +40,12 @@ For development environments, requirements include:
  Most golang libraries will be packaged in the local `vendor/` directory via [glide](https://github.com/Masterminds/glide), however the following packages will
  be installed globally with their binaries placed in `$GOPATH/bin` by `make devdeps-install`:
 
- * [protoc-gen-go](https://github.com/golang/protobuf): Golang protobuf compiler plugin.
- * [`cfssl`,`cfssljson`,`mkbundle`](https://github.com/cloudflare/cfssl): CFSSL command-line utilities.
+ * [gogoprotobuf](https://github.com/gogo/protobuf): Golang protobuf compiler plugin.
+ * [mockery](https://github.com/vektra/mockery): Mock generator.
 
  See below for dependency installation instructions for various platforms.
 
-#### MacOS:
+### MacOS:
 
 ```sh
 brew install glide
@@ -99,7 +54,7 @@ brew install glide
 brew install protobuf
 ```
 
-#### Arch Linux:
+### Arch Linux:
 
 ```sh
 curl https://glide.sh/get | sh
@@ -108,9 +63,9 @@ curl https://glide.sh/get | sh
 sudo pacman -Sy protobuf
 ```
 
-### Akash
+## Akash Suite
 
-Download and build akash:
+Download and build `akash` and `akashd`:
 
 ```sh
 go get -d github.com/ovrclk/akash
@@ -122,15 +77,20 @@ make
 make devdeps-install
 ```
 
-### Testing
+# Running
 
-```sh
-make test
-make test-full
-```
+We use thin integration testing environments to simplify
+the development and testing process.  We currently have two environments:
 
-### Documentation
+* [Single node](_run/single): simple single node running locally
+* [Multi node](_run/multi): multi-node setup within a virtual machine.
 
-```sh
-make docs
-```
+Each of these environments can demonstrate:
+
+* Sending tokens from one account to another.
+* Creating provider accounts.
+* Running a provider which bids on open orders.
+* Creating deployments.
+* Obtaining leases for deployments.
+* Monitoring marketplace activity.
+* Querying details of all objects.

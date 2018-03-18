@@ -1,7 +1,7 @@
 * [Workflow](#workflow)
   * [Use Cases](#use-cases)
 * [Actors](#actors)
-  * [Users](#users)
+  * [Tenants](#tenants)
   * [Datacenters](#datacenters)
   * [Validators](#validators)
   * [Marketplace Facilitators](#marketplace-facilitators)
@@ -25,7 +25,7 @@
     * [SubmitLease](#submitlease)
     * [SubmitStaleLease](#submitstalelease)
   * [Workflows](#workflows)
-    * [Users](#users-1)
+    * [Tenants](#tenants-1)
     * [Datacenters](#datacenters-1)
     * [Marketplace Facilitators](#marketplace-facilitators-1)
 * [Deployments](#deployments)
@@ -47,14 +47,14 @@
 
 ### Workflow
 
-* [Users](#users) [define](#deployment) desired infrastructure, workloads to run on infrastructure, and how workloads can connect to one another.
+* [Tenants](#tenants) [define](#deployment) desired infrastructure, workloads to run on infrastructure, and how workloads can connect to one another.
   * Desired lifetime of resources is expressed via [collateral](#resourcegroup) requirements.
-* [Orders](#order) are generated from the [user's definition](#deployment).
+* [Orders](#order) are generated from the [tenant's definition](#deployment).
 * [Datacenters](#datacenters) [bid](#fulfillment) on open [orders](#order).
 * The [bid](#fulfillment) with lowest price gets [matched](#matchopenorders) with [order](#order) to create a [lease](#lease).
 * Once [lease](#lease) is reached, workloads and topology are delivered to [datacenter](#datacenters).
-* [Datacenter](#datacenters) deploy workloads and allow connectivity as specified by the user.
-* If a [datacenter](#datacenters) fails to maintain lease, collateral is transferred to user, and a new [order](#order) is crated for the desired resources.
+* [Datacenter](#datacenters) deploy workloads and allow connectivity as specified by the tenant.
+* If a [datacenter](#datacenters) fails to maintain lease, collateral is transferred to tenant, and a new [order](#order) is crated for the desired resources.
 
 ### Use Cases
 
@@ -64,9 +64,9 @@
 
 ## Actors
 
-### Users
+### Tenants
 
-A user hosting an application on the Akash network
+A tenant hosting an application on the Akash network
 
 ### Datacenters
 
@@ -115,7 +115,7 @@ Marketplace facilitators maintain the distributed exchange (marketplace).  [Vali
 
 #### Deployment
 
-A `Deployment` represents the state of a [user's](#users) application.  It includes desired infrastructure and pricing parameters, as well as workload definitions and connectivity.
+A `Deployment` represents the state of a [tenant's](#tenants) application.  It includes desired infrastructure and pricing parameters, as well as workload definitions and connectivity.
 
 | Field | Definition |
 | --- | --- |
@@ -124,7 +124,7 @@ A `Deployment` represents the state of a [user's](#users) application.  It inclu
 
 #### DeploymentInfrastructure
 
-`DeploymentInfrastructure` represents a set of resources (including pricing) that a [user](#users) would like to be provisioned in a single [datacenter](#datacenters).
+`DeploymentInfrastructure` represents a set of resources (including pricing) that a [tenant](#tenants) would like to be provisioned in a single [datacenter](#datacenters).
 [orders](#order) are created from [deployment infrastructure](#deploymentinfrastructure) as necessary.
 
 | Field | Definition |
@@ -137,7 +137,7 @@ Within the `resources` list, [resource group](#resourcegroup) fields are interpr
 
 | Field | Definition |
 | --- | --- |
-|price| Maximum price user is willing to pay. |
+|price| Maximum price tenant is willing to pay. |
 |collateral| Amount of collateral that the [datacenter](#datacenters) must post when creating a [fulfillment order](#fulfillment) |
 
 #### Order
@@ -178,7 +178,7 @@ A `Lease` represents a matching [order](#order) and [fulfillment order](#fulfill
 #### LeaseConfirmation
 
 A `LeaseConfirmation` represents a confirmation that the resources are being provided by the datacenter.  Its creation may initiate a transfer of
-tokens from the [user](#users) to the [datacenter](#datacenters)
+tokens from the [tenant](#tenants) to the [datacenter](#datacenters)
 
 | Field | Definition |
 | --- | --- |
@@ -188,16 +188,16 @@ tokens from the [user](#users) to the [datacenter](#datacenters)
 
 ### SubmitDeployment
 
-Sent by a [user](#users) to deploy their application on Akash.  A [order](#order) will be created for each datacenter
+Sent by a [tenant](#tenants) to deploy their application on Akash.  A [order](#order) will be created for each datacenter
 configuration described in the [deployment](#deployment)
 
 ### UpdateDeployment
 
-Sent by a [user](#users) to update their application on Akash.
+Sent by a [tenant](#tenants) to update their application on Akash.
 
 ### CancelDeployment
 
-Sent by a [user](#users) to cancel their application on Akash.
+Sent by a [tenant](#tenants) to cancel their application on Akash.
 
 ### SubmitFulfillment
 
@@ -222,9 +222,9 @@ Sent by a [validator](#validator) after finding a lease that has not been confir
 
 ### Workflows
 
-#### Users
+#### Tenants
 
-Users submit their [deployment](#deployment) to the network via [`SubmitDeployment`](#submitdeployment).
+Tenants submit their [deployment](#deployment) to the network via [`SubmitDeployment`](#submitdeployment).
 
 #### Marketplace Facilitators
 
@@ -267,7 +267,7 @@ Once resources have been procured, clients must distribute their workloads to pr
 can execute on the leased resources.  We refer to the current state of the client’s workloads on the
 Akash Network as a "deployment".
 
-A user describes their desired deployment in a "manifest".  The manifest contains workload
+A tenant describes their desired deployment in a "manifest".  The manifest contains workload
 definitions, configuration, and connection rules.  Providers use workload definitions and
 configuration to execute the workloads on the resources they’re providing, and use the connection
 rules to build an overlay network and firewall configurations.
@@ -307,7 +307,7 @@ protocol also enables fast distribution of large manifests to a large number of 
 
 By default, a workload’s network is isolated - nothing can connect to it. While this is secure, it
 is not practical for real-world applications. For example, consider a simple web application:
-end-user browsers should have access to the web tier workload, and the web tier needs to communicate
+end-tenant browsers should have access to the web tier workload, and the web tier needs to communicate
 to the database workload. Furthermore, the web tier may not be hosted in the same datacenter as the
 database.
 
@@ -410,18 +410,18 @@ the secure overlay network.
 #### Latency-Optimized Deployment
 
 Many web-based applications are "latency-sensitive" - lower response times from application servers
-translates into a dramatically improved end-user experience.  Modern deployments of such
+translates into a dramatically improved end-tenant experience.  Modern deployments of such
 applications employ content delivery networks (CDNs) to deliver static content such as images to end
-users quickly.
+tenants quickly.
 
-CDNs provide reduced latency by distributing content so that it is geographically close to the users
+CDNs provide reduced latency by distributing content so that it is geographically close to the tenants
 that are accessing it.  Deployments on the Akash Network can not only replicate this approach, but
-beat it - Akash gives clients the ability to place dynamic content close to an application’s users.
+beat it - Akash gives clients the ability to place dynamic content close to an application’s tenants.
 
 To implement a self-managed "dynamic delivery network" on Akash, a DevOps engineer would include a
 management tier in their deployment which monitors the geographical location of clients.  This
 management tier would add and remove datacenters across the globe, provisioning more resources in
-regions where user activity is high, and less resources in regions where user participation is low.
+regions where tenant activity is high, and less resources in regions where tenant participation is low.
 
 #### Machine Learning Deployment
 
@@ -436,9 +436,6 @@ relinquished.
 
 # TODO
 
- * Accounts
  * Service Marketplace
  * Off-chain event bus: implemented as marketplace service
  * Telemetry data via off-chain event bus
- * Write transaction preconditions and state mutation for all transactions
- * Document state transitions for all models.

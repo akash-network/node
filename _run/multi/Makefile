@@ -1,40 +1,9 @@
-AKASH  = ../akash
-AKASHD = ../akashd
-
-DATA_ROOT   = data
-MASTER_KEY  = $(DATA_ROOT)/master.key
-OTHER_KEY   = $(DATA_ROOT)/other.key
-CLIENT_ROOT = $(DATA_ROOT)/client
-NODE_ROOT   = $(DATA_ROOT)/node
+include ../common.mk
 
 HELM_CHART = akash-node
 
-HELM_NODE_COUNT ?= 4
 HELM_NODE_FILES = $(sort $(wildcard $(NODE_ROOT)/*.yaml))
 HELM_NODES      = $(patsubst $(NODE_ROOT)/%.yaml,%,$(HELM_NODE_FILES))
-
-STRIP_KEY := sed -e 's/.*: //'
-
-image-minikube:
-	( cd .. && make image-minikube )
-
-keys: $(MASTER_KEY) $(OTHER_KEY)
-
-$(MASTER_KEY):
-	mkdir -p "$(DATA_ROOT)"
-	$(AKASH) key create master -d "$(CLIENT_ROOT)" | $(STRIP_KEY) > "$(MASTER_KEY)"
-
-$(OTHER_KEY):
-	mkdir -p "$(DATA_ROOT)"
-	$(AKASH) key create other -d "$(CLIENT_ROOT)" | $(STRIP_KEY) > "$(OTHER_KEY)"
-
-genesis: $(MASTER_KEY)
-	$(AKASHD) init $$(cat "$(MASTER_KEY)") -d "$(NODE_ROOT)"
-
-genesis-helm: $(MASTER_KEY)
-	$(AKASHD) init $$(cat "$(MASTER_KEY)") -d "$(NODE_ROOT)" -t helm -c "$(HELM_NODE_COUNT)"
-
-helm-init: keys genesis-helm
 
 helm-install: $(patsubst %,helm-install-%,$(HELM_NODES))
 helm-upgrade: $(patsubst %,helm-upgrade-%,$(HELM_NODES))
@@ -56,6 +25,3 @@ helm-delete-provider:
 	helm delete akash-provider --purge
 helm-upgrade-provider:
 	helm upgrade akash-provider akash-provider
-
-clean:
-	rm -rf data

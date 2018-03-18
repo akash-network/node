@@ -199,7 +199,6 @@ The non-validator will not vote on blocks but will verify and keep up with the c
 ./node init <issuer public key> --home=./data/node5 --chain-id=akash-test
 ```
 
-
 ### genesis.json
 
 Copy the genesis.json from one of the validator nodes to this node.
@@ -229,12 +228,7 @@ In separate temainal sessions or environments
 
 # Third party library reference:
 
-### Accounts
-
-http://cosmos-sdk.readthedocs.io/en/latest/basecoin-basics.html
-http://cosmos-sdk.readthedocs.io/en/latest/basecoin-tool.html
-
-### Node configuration
+## Node configuration
 https://github.com/cosmos/cosmos-sdk/blob/master/docs/staking/local-testnet.rst
 https://github.com/tendermint/tendermint/blob/master/docs/using-tendermint.rst
 

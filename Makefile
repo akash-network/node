@@ -42,7 +42,6 @@ deps-install:
 
 devdeps-install:
 	go get github.com/gogo/protobuf/protoc-gen-gogo
-	go get -u github.com/cloudflare/cfssl/cmd/...
 	go get github.com/vektra/mockery/.../
 
 coverdeps-install:
