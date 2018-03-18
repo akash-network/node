@@ -32,7 +32,7 @@ test-full:
 	go test -race $$(glide novendor)
 
 test-cover:
-	goveralls -service=travis-pro -ignore="types/types.pb.go"
+	goveralls -service=travis-ci -ignore="types/types.pb.go"
 
 test-vet:
 	go vet $$(glide novendor)
@@ -59,6 +59,7 @@ mocks:
 	mockery -case=underscore -dir app/market -output app/market/mocks -name Client
 	mockery -case=underscore -dir app/market -output app/market/mocks -name Engine
 	mockery -case=underscore -dir app/market -output app/market/mocks -name Facilitator
+	mockery -case=underscore -dir marketplace -output marketplace/mocks -name Handler
 
 docs:
 	(cd _docs/dot && make)

@@ -1,5 +1,6 @@
 [![Akash](_docs/img/logo-label-black.svg "Akash")](#overview)
-[![Build Status](https://travis-ci.com/ovrclk/akash.svg?token=xMx9pPujMteGc5JpGjzX&branch=master-update)](https://travis-ci.com/ovrclk/akash) [![Coverage Status](https://coveralls.io/repos/github/ovrclk/akash/badge.svg?t=Mv99a5)](https://coveralls.io/github/ovrclk/akash)
+[![Build Status](https://travis-ci.org/ovrclk/akash.svg?branch=master)](https://travis-ci.org/ovrclk/akash)
+[![Coverage Status](https://coveralls.io/repos/github/ovrclk/akash/badge.svg?branch=master)](https://coveralls.io/github/ovrclk/akash?branch=master)
 
 # Overview
 
@@ -10,8 +11,8 @@ protocol definition can be found [here](_docs/design.md); and the target
 workload definition spec is [here](_docs/sdl.md).
 
 This repository contains Akash Suite, the reference implementation of the
-[Akash Protocol](https://akash.network/paper.pdf).  It is an actively-developed 
-prototype currently focused on the distributed marketplace functionality.  
+[Akash Protocol](https://akash.network/paper.pdf).  It is an actively-developed
+prototype currently focused on the distributed marketplace functionality.
 
 The Akash Suite is composed of two applications: `akash` and `akashd`.  `akashd`
 is the ([tendermint](https://github.com/tendermint/tendermint)-powered) blockchain node that

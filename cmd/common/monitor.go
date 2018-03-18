@@ -9,20 +9,44 @@ import (
 )
 
 func MonitorMarketplace(log log.Logger, client *tmclient.HTTP, handler marketplace.Handler) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	return doMonitorMarketplace(context.Background(), log, client, handler)
+}
+
+func doMonitorMarketplace(ctx context.Context, log log.Logger, client *tmclient.HTTP, handler marketplace.Handler) error {
+
+	ctx, cancel := context.WithCancel(ctx)
 	donech := WatchSignals(ctx, cancel)
+	defer func() {
+		cancel()
+		<-donech
+	}()
 
-	monitor := marketplace.NewMonitor(ctx, log, client)
-
-	if err := monitor.Start(); err != nil {
-		log.Error("error starting monitor", err)
+	if err := client.Start(); err != nil {
+		log.Error("error starting ws client", err)
 		return err
 	}
 
-	monitor.AddHandler("akash-cli", handler, marketplace.TxQuery())
+	cdonech := make(chan interface{})
 
-	<-monitor.Wait()
-	cancel()
-	<-donech
+	go func() {
+		defer close(cdonech)
+		client.Wait()
+	}()
+
+	monitor, err := marketplace.NewMonitor(ctx, log, client, "akash-cli", handler, marketplace.TxQuery())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		<-monitor.Wait()
+	}()
+
+	select {
+	case <-ctx.Done():
+		client.UnsubscribeAll(context.Background(), "akash-cli")
+		client.Stop()
+	case <-cdonech:
+	}
+
 	return nil
 }
