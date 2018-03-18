@@ -2,144 +2,98 @@ package marketplace
 
 import (
 	"context"
-	"sync"
 
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
-	"github.com/tendermint/tendermint/rpc/client"
 	tmtmtypes "github.com/tendermint/tendermint/types"
 	"github.com/tendermint/tmlibs/log"
 	"github.com/tendermint/tmlibs/pubsub"
 )
 
 type Monitor interface {
-	AddHandler(name string, h Handler, q pubsub.Query)
-	Start() error
 	Stop() error
 	Wait() <-chan struct{}
 }
 
 type monitor struct {
-	client EventProvider
+	name    string
+	handler Handler
+	query   pubsub.Query
+
+	bus tmtmtypes.EventBusSubscriber
 
 	ctx context.Context
 	log log.Logger
 
 	donech chan struct{}
-	stopch chan struct{}
-
-	wg sync.WaitGroup
 }
 
-// limited client.HTTP to make testing easier.
-type EventProvider interface {
-	client.EventsClient
-	Start() error
-	Stop() error
-	Wait()
-}
-
-func NewMonitor(ctx context.Context, log log.Logger, client EventProvider) Monitor {
+func NewMonitor(ctx context.Context, log log.Logger, bus tmtmtypes.EventBusSubscriber, name string, handler Handler, query pubsub.Query) (Monitor, error) {
 
 	m := &monitor{
-		client: client,
-		ctx:    ctx,
-		log:    log,
-		donech: make(chan struct{}),
-		stopch: make(chan struct{}),
-		wg:     sync.WaitGroup{},
+		name:    name,
+		handler: handler,
+		query:   query,
+		ctx:     ctx,
+		log:     log,
+		bus:     bus,
+		donech:  make(chan struct{}),
 	}
 
-	go m.doWait()
+	ch := make(chan interface{})
+	go m.runListener(ch, m.handler)
 
-	m.wg.Add(1)
-	go m.watchContext()
-
-	return m
-}
-
-func (m *monitor) doWait() {
-	m.client.Wait()
-	close(m.stopch)
-	m.wg.Wait()
-	close(m.donech)
-}
-
-func (m *monitor) watchContext() {
-	defer m.wg.Done()
-
-	select {
-	case <-m.ctx.Done():
-		m.Stop()
-	case <-m.stopch:
+	if err := m.bus.Subscribe(m.ctx, m.name, m.query, ch); err != nil {
+		close(ch)
+		<-m.donech
+		return nil, err
 	}
 
-}
-
-func (m *monitor) Start() error {
-	return m.client.Start()
+	return m, nil
 }
 
 func (m *monitor) Stop() error {
-	return m.client.Stop()
+	return m.bus.Unsubscribe(m.ctx, m.name, m.query)
 }
 
 func (m *monitor) Wait() <-chan struct{} {
 	return m.donech
 }
 
-func (m *monitor) AddHandler(name string, h Handler, q pubsub.Query) {
-	ch := m.newListener(h)
-	m.client.Subscribe(m.ctx, name, q, ch)
-}
-
-func (m *monitor) newListener(h Handler) chan<- interface{} {
-	ch := make(chan interface{})
-
-	m.wg.Add(1)
-	go m.runListener(ch, h)
-
-	return ch
-}
-
 func (m *monitor) runListener(ch <-chan interface{}, h Handler) {
-	defer m.wg.Done()
+	defer close(m.donech)
 
-loop:
-	for {
-		select {
-		case <-m.stopch:
-			return
-		case ev := <-ch:
-			ed, ok := ev.(tmtmtypes.TMEventData)
-			if !ok {
-				continue loop
-			}
+	for ev := range ch {
 
-			evt, ok := ed.Unwrap().(tmtmtypes.EventDataTx)
-			if !ok {
-				continue loop
-			}
+		ed, ok := ev.(tmtmtypes.TMEventData)
+		if !ok {
+			continue
+		}
 
-			tx, err := txutil.ProcessTx(evt.Tx)
-			if err != nil {
-				continue loop
-			}
+		evt, ok := ed.Unwrap().(tmtmtypes.EventDataTx)
+		if !ok {
+			continue
+		}
 
-			switch tx := tx.Payload.GetPayload().(type) {
-			case *types.TxPayload_TxSend:
-				h.OnTxSend(tx.TxSend)
-			case *types.TxPayload_TxCreateProvider:
-				h.OnTxCreateProvider(tx.TxCreateProvider)
-			case *types.TxPayload_TxCreateDeployment:
-				h.OnTxCreateDeployment(tx.TxCreateDeployment)
-			case *types.TxPayload_TxCreateOrder:
-				h.OnTxCreateOrder(tx.TxCreateOrder)
-			case *types.TxPayload_TxCreateFulfillment:
-				h.OnTxCreateFulfillment(tx.TxCreateFulfillment)
-			case *types.TxPayload_TxCreateLease:
-				h.OnTxCreateLease(tx.TxCreateLease)
-			}
+		tx, err := txutil.ProcessTx(evt.Tx)
+		if err != nil {
+			m.log.Error("ProcessTx", "err", err)
+			continue
+		}
+
+		switch tx := tx.Payload.GetPayload().(type) {
+		case *types.TxPayload_TxSend:
+			h.OnTxSend(tx.TxSend)
+		case *types.TxPayload_TxCreateProvider:
+			h.OnTxCreateProvider(tx.TxCreateProvider)
+		case *types.TxPayload_TxCreateDeployment:
+			h.OnTxCreateDeployment(tx.TxCreateDeployment)
+		case *types.TxPayload_TxCreateOrder:
+			h.OnTxCreateOrder(tx.TxCreateOrder)
+		case *types.TxPayload_TxCreateFulfillment:
+			h.OnTxCreateFulfillment(tx.TxCreateFulfillment)
+		case *types.TxPayload_TxCreateLease:
+			h.OnTxCreateLease(tx.TxCreateLease)
 		}
 	}
 }
