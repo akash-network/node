@@ -17,15 +17,6 @@ func (t *Bytes) Unmarshal(data []byte) error {
 	return nil
 }
 
-func (t *Bytes) MarshalTo(data []byte) (n int, err error) {
-	if len(data) >= len(*t) {
-		copy(data, *t)
-		return len(*t), nil
-	}
-	copy(data, (*t)[:len(data)])
-	return -len(data), nil
-}
-
 func (t Bytes) MarshalJSON() ([]byte, error) {
 	return data.Encoder.Marshal(t)
 }
