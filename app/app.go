@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -116,7 +117,7 @@ func (app *app) ActivateMarket(actor market.Actor, bus *tmtmtypes.EventBus) erro
 		return err
 	}
 
-	mfacilitator, err := market.NewDriver(app.log.With("app", "market-facilitator"), actor, bus)
+	mfacilitator, err := market.NewDriver(context.Background(), app.log.With("app", "market-facilitator"), actor, bus)
 	if err != nil {
 		return err
 	}

@@ -59,6 +59,7 @@ gentypes: $(PROTOC_FILES)
 mocks:
 	mockery -case=underscore -dir app/market -output app/market/mocks -name Client
 	mockery -case=underscore -dir app/market -output app/market/mocks -name Engine
+	mockery -case=underscore -dir app/market -output app/market/mocks -name Facilitator
 
 docs:
 	(cd _docs/dot && make)

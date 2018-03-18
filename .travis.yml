@@ -6,6 +6,10 @@ go:
 
 sudo: false
 
+env:
+  global:
+    - TEST_DELAY_THREAD_START=10ms
+
 matrix:
   include:
     - os: linux

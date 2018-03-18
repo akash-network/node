@@ -1,6 +1,8 @@
 package market
 
 import (
+	"context"
+
 	"github.com/ovrclk/akash/state"
 	"github.com/tendermint/tmlibs/log"
 )
@@ -16,8 +18,8 @@ type facilitator struct {
 	log    log.Logger
 }
 
-func DefaultFacilitator(log log.Logger, actor Actor) Facilitator {
-	return NewFacilitator(log, actor, NewEngine(log), newLocalClient())
+func DefaultFacilitator(ctx context.Context, log log.Logger, actor Actor) Facilitator {
+	return NewWorker(ctx, NewFacilitator(log, actor, NewEngine(log), newLocalClient()))
 }
 
 func NewFacilitator(log log.Logger, actor Actor, engine Engine, client Client) Facilitator {
