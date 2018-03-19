@@ -24,15 +24,15 @@ digraph marketplace {
   "2" -> "3"           [label="TxCreateFulfillment"];
   "3" -> "4"           [label="TxCreateLease"];
 
-  "1" -> "5"           [label="TxCancelDeployment"];
-  "2" -> "6"           [label="TxCancelDeployment"];
-  "3" -> "7"           [label="TxCancelDeployment"];
-  "4" -> "8"           [label="TxCancelDeployment"];
+  "1" -> "5"           [label="TxCloseDeploymetGroup"];
+  "2" -> "6"           [label="TxCloseDeploymetGroup\lTxCloseOrder\l"];
+  "3" -> "7"           [label="TxCloseDeploymetGroup\lTxCloseOrder\lTxCloseFulfillment\l"];
+  "4" -> "8"           [label="TxCloseDeploymetGroup\lTxCloseOrder\lTxCloseFulfillment\lTxCloseLease\l"];
 
-  "5" -> "9"           [label=""];
-  "6" -> "10"          [label=""];
-  "7" -> "11"          [label=""];
-  "8" -> "12"          [label=""];
+  "5" -> "9"           [label="TxCloseDeployment"];
+  "6" -> "10"          [label="TxCloseDeployment"];
+  "7" -> "11"          [label="TxCloseDeployment"];
+  "8" -> "12"          [label="TxCloseDeployment"];
 
   { rank=same "1", "2", "3", "4" }
   { rank=same "5", "6", "7", "8" }
