@@ -1,43 +1,69 @@
 language: go
 
-go:
-  - "1.10"
-  - master
-
 sudo: false
+
+git:
+  depth: 5
 
 env:
   global:
     - TEST_DELAY_THREAD_START=10ms
 
-matrix:
+stages:
+  - test
+  - image
+
+jobs:
   include:
-    - os: linux
-      go: "1.9"
-      sudo: required
-      env: PRIMARY_CONFIG=true
-    - os: osx
+
+    - name: test
+      os: linux
+      go: 1.9
+      script:
+        - make build
+        - make test-vet
+        - make coverdeps-install
+        - make test-cover
+
+    - name: test
+      os: linux
+      go: "1.10"
+      script:
+        - make build
+        - make test-vet
+        - make test
+
+    - name: test
+      os: linux
+      go: master
+      script:
+        - make build
+        - make test-vet
+        - make test
+      if: type = cron
+
+    - name: test
+      os: osx
       osx_image: xcode9.3beta
       go: "1.9.2"
+      script:
+        - make build
+        - make test-vet
+        - make test
+      if: type = cron
 
-addons:
-  apt:
-    packages:
-      - musl-tools
+    - name: image
+      os: linux
+      go: "1.10"
+      sudo: required
+      script:
+        - make image
+      if: type = cron
 
 cache:
   directories:
     - $HOME/.glide
 
 install:
-  - mkdir -p "$GOPATH/bin"
   - curl https://glide.sh/get | sh
   - make deps-install
-  - if [ "$PRIMARY_CONFIG" == "true" ];then make coverdeps-install; fi
-
-script:
-  - make build
-  - if [ "$PRIMARY_CONFIG" != "true" ]; then make test-full; fi
-  - make test-vet
-  - if [ "$PRIMARY_CONFIG" == "true" ];then make image     ; fi
-  - if [ "$PRIMARY_CONFIG" == "true" ];then make test-cover; fi
