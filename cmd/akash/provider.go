@@ -134,9 +134,10 @@ func parseProvider(file string, tenant []byte, nonce uint64) (*types.Provider, e
 
 func runCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "run <provider>",
-		Args: cobra.ExactArgs(1),
-		RunE: context.WithContext(context.RequireNode(doProviderRunCommand)),
+		Use:   "run <provider>",
+		Short: "respond to chain events",
+		Args:  cobra.ExactArgs(1),
+		RunE:  context.WithContext(context.RequireNode(doProviderRunCommand)),
 	}
 	return cmd
 }

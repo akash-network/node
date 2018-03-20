@@ -88,7 +88,7 @@ func (a *fulfillmentAdapter) orderMinRange(order *types.Order) []byte {
 	return a.KeyFor(FulfillmentID(order.Deployment, order.GetGroup(), order.GetOrder(), []byte{}))
 }
 
-// /fulfillment-orders/{deployment-address}{group-sequence}{max-order-sequence}{max-address}
+// /fulfillment-orders/{deployment-address}{group-sequence}{order-sequence}{max-address}
 func (a *fulfillmentAdapter) orderMaxRange(order *types.Order) []byte {
 	return a.KeyFor(FulfillmentID(order.Deployment, order.GetGroup(), order.GetOrder(), MaxAddress()))
 }

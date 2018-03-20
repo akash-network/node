@@ -13,8 +13,10 @@ const (
 	TagAppAccount = "account"
 	TxTypeSend    = "send"
 
-	TagAppDeployment = "deployment"
-	TxTypeDeployment = "deployment"
+	TagAppDeployment        = "deployment"
+	TxTypeDeploy            = "deploy"
+	TxTypeClosingDeployment = "deployment-closing"
+	TxTypeCloseDeployment   = "deployment-close"
 
 	TagAppOrder       = "deployment-order"
 	TxTypeCreateOrder = "deployment-order-create"
