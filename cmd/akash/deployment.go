@@ -165,6 +165,11 @@ func doCancelCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 	fmt.Printf("Closing deployment: %X\n", deployment)
 
 	// todo: wait for TxCancelDeployment for same deployment
+	handler := marketplace.NewBuilder().
+		OnTxClosedDeployment(func(tx *types.TxClosedDeployment) {
+			fmt.Printf("Closing deployment: %X\n", tx.Deployment)
+			return nil
+		}).Create()
 
-	return nil
+	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
 }
