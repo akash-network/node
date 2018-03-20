@@ -35,7 +35,7 @@ func TestAcceptQuery(t *testing.T) {
 	}
 }
 
-func TestValidTx(t *testing.T) {
+func TestCreateTx(t *testing.T) {
 	state := testutil.NewState(t, nil)
 	app, err := deployment.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
@@ -108,4 +108,62 @@ func TestTx_BadTxType(t *testing.T) {
 	assert.False(t, cresp.IsOK())
 	dresp := app.DeliverTx(ctx, tx.Payload.Payload)
 	assert.False(t, dresp.IsOK())
+}
+
+func TestCloseTx(t *testing.T) {
+	state := testutil.NewState(t, nil)
+	app, err := deployment.NewApp(state, testutil.Logger())
+	require.NoError(t, err)
+	account, key := testutil.CreateAccount(t, state)
+	nonce := uint64(1)
+
+	depl := testutil.CreateDeployment(t, app, account, &key, nonce)
+
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, dep.State, depl.State)
+		assert.Equal(t, dep.State, types.Deployment_ACTIVE)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, dep.Groups[0].State, depl.Groups[0].State)
+		assert.Equal(t, dep.Groups[0].State, types.DeploymentGroup_OPEN)
+	}
+
+	testutil.CloseDeployment(t, app, &depl.Address, &key)
+
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Deployment_CLOSING, dep.State)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, types.DeploymentGroup_CLOSING, dep.Groups[0].State)
+	}
+
+	testutil.DeploymentClosed(t, app, &depl.Address, &key)
+
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Deployment_CLOSED, dep.State)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, types.DeploymentGroup_CLOSED, dep.Groups[0].State)
+	}
 }

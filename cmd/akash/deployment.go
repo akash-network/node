@@ -24,20 +24,20 @@ func deploymentCommand() *cobra.Command {
 		Short: "manage deployments",
 	}
 
-	cmd.AddCommand(deployCommand())
-	cmd.AddCommand(cancelCommand())
+	cmd.AddCommand(createDeploymentCommand())
+	cmd.AddCommand(closeDeploymentCommand())
 
 	return cmd
 }
 
-func deployCommand() *cobra.Command {
+func createDeploymentCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create <file>",
 		Short: "create a deployment",
 		Args:  cobra.ExactArgs(1),
 		RunE: context.WithContext(
-			context.RequireKey(context.RequireNode(doDeployCommand))),
+			context.RequireKey(context.RequireNode(createDeployment))),
 	}
 
 	context.AddFlagNode(cmd, cmd.Flags())
@@ -57,7 +57,7 @@ func parseDeployment(file string, tenant []byte, nonce uint64) (*types.Deploymen
 	return deployment, nil
 }
 
-func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) error {
 	kmgr, err := ctx.KeyManager()
 	if err != nil {
 		return err
@@ -105,14 +105,14 @@ func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 	return nil
 }
 
-func cancelCommand() *cobra.Command {
+func closeDeploymentCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "close <deployment>",
 		Short: "close a deployment",
 		Args:  cobra.ExactArgs(1),
 		RunE: context.WithContext(
-			context.RequireKey(context.RequireNode(doCancelCommand))),
+			context.RequireKey(context.RequireNode(closeDeployment))),
 	}
 
 	context.AddFlagNode(cmd, cmd.Flags())
@@ -122,7 +122,7 @@ func cancelCommand() *cobra.Command {
 	return cmd
 }
 
-func doCancelCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) error {
 	kmgr, err := ctx.KeyManager()
 	if err != nil {
 		return err
@@ -166,9 +166,9 @@ func doCancelCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 		ctx.Log().Error("error delivering tx", "err", res.DeliverTx.GetLog())
 		return errors.New(res.DeliverTx.GetLog())
 	}
-	fmt.Printf("Closing deployment: %X\n", *deployment)
 
-	// todo: wait for TxCancelDeployment for same deployment
+	fmt.Println("Closing deployment...")
+
 	handler := marketplace.NewBuilder().
 		OnTxDeploymentClosed(func(tx *types.TxDeploymentClosed) {
 			if bytes.Equal(tx.Deployment, *deployment) {

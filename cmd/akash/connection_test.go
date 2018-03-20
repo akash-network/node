@@ -17,7 +17,6 @@ func TestProviderCreate_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	// assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestProviderRun_NoNode(t *testing.T) {
@@ -32,10 +31,23 @@ func TestProviderRun_NoNode(t *testing.T) {
 	assert.Contains(t, err.Error(), "connection refused")
 }
 
-func TestDeployment_NoNode(t *testing.T) {
+func TestCreateDeployment_NoNode(t *testing.T) {
 	path := "deployment.yaml"
 	info, _ := testutil.NewNamedKey(t)
-	args := []string{deploymentCommand().Name(), path, "-k", info.Name}
+	args := []string{deploymentCommand().Name(), createDeploymentCommand().Name(), path, "-k", info.Name}
+
+	base := baseCommand()
+	base.AddCommand(deploymentCommand())
+	base.SetArgs(args)
+	err := base.Execute()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "connection refused")
+}
+
+func TestCloseDeployment_NoNode(t *testing.T) {
+	deployment := "191D3BD403FD3F60712B128CB3E0666602C19912711BDE77F86F56BDAB8A44B4"
+	info, _ := testutil.NewNamedKey(t)
+	args := []string{deploymentCommand().Name(), closeDeploymentCommand().Name(), deployment, "-k", info.Name}
 
 	base := baseCommand()
 	base.AddCommand(deploymentCommand())

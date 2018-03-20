@@ -34,6 +34,11 @@ func (_m *Handler) OnTxCreateProvider(_a0 *types.TxCreateProvider) {
 	_m.Called(_a0)
 }
 
+// OnTxDeploymentClosed provides a mock function with given fields: _a0
+func (_m *Handler) OnTxDeploymentClosed(_a0 *types.TxDeploymentClosed) {
+	_m.Called(_a0)
+}
+
 // OnTxSend provides a mock function with given fields: _a0
 func (_m *Handler) OnTxSend(_a0 *types.TxSend) {
 	_m.Called(_a0)

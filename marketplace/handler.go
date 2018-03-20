@@ -61,7 +61,7 @@ func (h handler) OnTxCreateLease(tx *types.TxCreateLease) {
 }
 
 func (h handler) OnTxDeploymentClosed(tx *types.TxDeploymentClosed) {
-	if h.OnTxDeploymentClosed != nil {
+	if h.onTxDeploymentClosed != nil {
 		h.onTxDeploymentClosed(tx)
 	}
 }
