@@ -229,7 +229,6 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployment
 }
 
 func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment) tmtypes.ResponseCheckTx {
-
 	deployment, err := a.State().Deployment().Get(tx.Deployment)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
@@ -282,7 +281,7 @@ func (a *app) doCheckClosedTx(ctx apptypes.Context, tx *types.TxDeploymentClosed
 	// check each object related to the deployment is also closing state
 	for _, group := range deployment.Groups {
 		// begin for each group
-		if group.State != types.DeploymentGroup_CLOSED {
+		if group.State != types.DeploymentGroup_CLOSING {
 			return tmtypes.ResponseCheckTx{
 				Code: code.INVALID_TRANSACTION,
 				Log:  "Deployment group not closed",
