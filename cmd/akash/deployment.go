@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/context"
@@ -169,7 +171,10 @@ func doCancelCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 	// todo: wait for TxCancelDeployment for same deployment
 	handler := marketplace.NewBuilder().
 		OnTxDeploymentClosed(func(tx *types.TxDeploymentClosed) {
-			fmt.Printf("Closed deployment: %X\n", tx.Deployment)
+			if bytes.Equal(tx.Deployment, *deployment) {
+				fmt.Printf("Closed deployment: %X\n", tx.Deployment)
+				os.Exit(1)
+			}
 		}).Create()
 
 	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
