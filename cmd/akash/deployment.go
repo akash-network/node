@@ -6,6 +6,8 @@ import (
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
@@ -162,13 +164,12 @@ func doCancelCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 		ctx.Log().Error("error delivering tx", "err", res.DeliverTx.GetLog())
 		return errors.New(res.DeliverTx.GetLog())
 	}
-	fmt.Printf("Closing deployment: %X\n", deployment)
+	fmt.Printf("Closing deployment: %X\n", *deployment)
 
 	// todo: wait for TxCancelDeployment for same deployment
 	handler := marketplace.NewBuilder().
-		OnTxClosedDeployment(func(tx *types.TxClosedDeployment) {
-			fmt.Printf("Closing deployment: %X\n", tx.Deployment)
-			return nil
+		OnTxDeploymentClosed(func(tx *types.TxDeploymentClosed) {
+			fmt.Printf("Closed deployment: %X\n", tx.Deployment)
 		}).Create()
 
 	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
