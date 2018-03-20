@@ -31,8 +31,8 @@ message TxPayload {
     TxCreateFulfillment      txCreateFulfillment      = 5;
     TxCreateLease            txCreateLease            = 6;
     TxCreateProvider         txCreateProvider         = 7;
-    TxClosingDeployment      txClosingDeployment      = 8;
-    TxCloseDeployment        txCloseDeployment        = 9;
+    TxCloseDeployment        txCloseDeployment        = 8;
+    TxDeploymentClosed       txDeploymentClosed       = 9;
   }
 }
 /* END GLOBAL */
@@ -106,7 +106,8 @@ message DeploymentGroup {
   enum DeploymentGroupState {
     OPEN    = 0;
     ORDERED = 1;
-    CLOSED  = 2;
+    CLOSING = 2;
+    CLOSED  = 3;
   }
 
   repeated ProviderAttribute requirements = 4 [(gogoproto.nullable) = false];
@@ -160,7 +161,8 @@ message Order {
   enum OrderState {
     OPEN    = 0;
     MATCHED = 1;
-    CLOSED  = 2;
+    CLOSING = 2;
+    CLOSED  = 3;
   }
   OrderState state = 4;
 }
@@ -195,7 +197,8 @@ message Fulfillment {
   enum FulfillmentState {
     OPEN    = 0;
     MATCHED = 1;
-    CLOSED  = 2;
+    CLOSING = 2;
+    CLOSED  = 3;
   }
   FulfillmentState state = 6;
 }
@@ -225,8 +228,9 @@ message Lease {
   /* END ID FIELDS */
 
   enum LeaseState {
-    ACTIVE = 0;
-    CLOSED = 1;
+    ACTIVE  = 0;
+    CLOSING = 1;
+    CLOSED  = 2;
   }
   LeaseState state = 6;
 }
@@ -235,7 +239,7 @@ message TxCreateLease {
   Lease lease = 1;
 }
 
-message TxClosingDeployment {
+message TxCloseDeployment {
   /* BEGIN ID FIELDS */
 
   // deployment address
@@ -244,7 +248,7 @@ message TxClosingDeployment {
   /* END ID FIELDS */
 }
 
-message TxCloseDeployment {
+message TxDeploymentClosed {
   /* BEGIN ID FIELDS */
 
   // deployment address

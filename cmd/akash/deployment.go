@@ -43,23 +43,6 @@ func deployCommand() *cobra.Command {
 	return cmd
 }
 
-func cancelCommand() *cobra.Command {
-
-	cmd := &cobra.Command{
-		Use:   "cancel <deployment>",
-		Short: "cancel a deployment",
-		Args:  cobra.ExactArgs(1),
-		RunE: context.WithContext(
-			context.RequireKey(context.RequireNode(doCancelCommand))),
-	}
-
-	context.AddFlagNode(cmd, cmd.Flags())
-	context.AddFlagKey(cmd, cmd.Flags())
-	context.AddFlagNonce(cmd, cmd.Flags())
-
-	return cmd
-}
-
 func parseDeployment(file string, tenant []byte, nonce uint64) (*types.Deployment, error) {
 	// todo: read and parse deployment yaml file
 
@@ -118,6 +101,23 @@ func doDeployCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 	return nil
 }
 
+func cancelCommand() *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:   "close <deployment>",
+		Short: "close a deployment",
+		Args:  cobra.ExactArgs(1),
+		RunE: context.WithContext(
+			context.RequireKey(context.RequireNode(doCancelCommand))),
+	}
+
+	context.AddFlagNode(cmd, cmd.Flags())
+	context.AddFlagKey(cmd, cmd.Flags())
+	context.AddFlagNonce(cmd, cmd.Flags())
+
+	return cmd
+}
+
 func doCancelCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
 	kmgr, err := ctx.KeyManager()
 	if err != nil {
@@ -142,7 +142,7 @@ func doCancelCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	tx, err := txutil.BuildTx(signer, nonce, &types.TxClosingDeployment{
+	tx, err := txutil.BuildTx(signer, nonce, &types.TxCloseDeployment{
 		Deployment: *deployment,
 	})
 	if err != nil {

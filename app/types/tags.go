@@ -13,16 +13,16 @@ const (
 	TagAppAccount = "account"
 	TxTypeSend    = "send"
 
-	TagAppDeployment        = "deployment"
-	TxTypeDeploy            = "deploy"
-	TxTypeClosingDeployment = "deployment-closing"
-	TxTypeCloseDeployment   = "deployment-close"
+	TagAppDeployment       = "deployment"
+	TxTypeCreateDeployment = "deployment-create"
+	TxTypeCloseDeployment  = "deployment-close"
+	TxTypeDeploymentClosed = "closed-deployment"
 
-	TagAppOrder       = "deployment-order"
-	TxTypeCreateOrder = "deployment-order-create"
+	TagAppOrder       = "order"
+	TxTypeCreateOrder = "order-create"
 
-	TagAppFulfillment       = "fulfillment-order"
-	TxTypeCreateFulfillment = "fulfillment-order-create"
+	TagAppFulfillment       = "fulfillment"
+	TxTypeCreateFulfillment = "fulfillment-create"
 
 	TagAppLease       = "lease"
 	TxTypeCreateLease = "lease-create"
