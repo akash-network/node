@@ -1,0 +1,40 @@
+digraph marketplace {
+
+  rankdir=LR;
+
+  "0"     [shape=box label=""];
+
+  "1"     [shape=box labeljust="1" label="Deployment: Active\lDeploymentGroup: Open\l"];
+  "2"     [shape=box labeljust="1" label="Deployment: Active\lDeploymentGroup: Ordered\lOrder: Open\l"];
+  "3"     [shape=box labeljust="1" label="Deployment: Active\lDeploymentGroup: Ordered\lOrder: Open\lFulfillment: Open\l"];
+  "4"     [shape=box labeljust="1" label="Deployment: Active\lDeploymentGroup: Ordered\lOrder: Matched\lFulfillment: Matched\lLease: Active\l"];
+
+  "5"     [shape=box label="Deployment: Closing\lDeploymentGroup: Closed\l"];
+  "6"     [shape=box label="Deployment: Closing\lDeploymentGroup: Closed\lOrder: Closed\l"];
+  "7"     [shape=box label="Deployment: Closing\lDeploymentGroup: Closed\lOrder: Closed\lFulfillment: Closed\l"];
+  "8"     [shape=box label="Deployment: Closing\lDeploymentGroup: Closed\lOrder: Closed\lFulfillment: Closed\lLease: Closed\l"];
+
+  "9"     [shape=box label="Deployment: Closed\lDeploymentGroup: Closed\l"];
+  "10"    [shape=box label="Deployment: Closed\lDeploymentGroup: Closed\lOrder: Closed\l"];
+  "11"    [shape=box label="Deployment: Closed\lDeploymentGroup: Closed\lOrder: Closed\lFulfillment: Closed\l"];
+  "12"    [shape=box label="Deployment: Closed\lDeploymentGroup: Closed\lOrder: Closed\lFulfillment: Closed\lLease: Closed\l"];
+
+  "0" -> "1"           [label="TxCreateDeployment"];
+  "1" -> "2"           [label="TxCreateOrder"];
+  "2" -> "3"           [label="TxCreateFulfillment"];
+  "3" -> "4"           [label="TxCreateLease"];
+
+  "1" -> "5"           [label="TxCloseDeploymetGroup"];
+  "2" -> "6"           [label="TxCloseDeploymetGroup\lTxCloseOrder\l"];
+  "3" -> "7"           [label="TxCloseDeploymetGroup\lTxCloseOrder\lTxCloseFulfillment\l"];
+  "4" -> "8"           [label="TxCloseDeploymetGroup\lTxCloseOrder\lTxCloseFulfillment\lTxCloseLease\l"];
+
+  "5" -> "9"           [label="TxCloseDeployment"];
+  "6" -> "10"          [label="TxCloseDeployment"];
+  "7" -> "11"          [label="TxCloseDeployment"];
+  "8" -> "12"          [label="TxCloseDeployment"];
+
+  { rank=same "1", "2", "3", "4" }
+  { rank=same "5", "6", "7", "8" }
+  { rank=same "9", "10", "11", "12" }
+}
