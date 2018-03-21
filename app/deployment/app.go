@@ -74,6 +74,10 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	switch tx.(type) {
 	case *types.TxPayload_TxCreateDeployment:
 		return true
+	case *types.TxPayload_TxCloseDeployment:
+		return true
+	case *types.TxPayload_TxDeploymentClosed:
+		return true
 	}
 	return false
 }
@@ -81,7 +85,11 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateDeployment:
-		return a.doCheckTx(ctx, tx.TxCreateDeployment)
+		return a.doCheckCreateTx(ctx, tx.TxCreateDeployment)
+	case *types.TxPayload_TxCloseDeployment:
+		return a.doCheckCloseTx(ctx, tx.TxCloseDeployment)
+	case *types.TxPayload_TxDeploymentClosed:
+		return a.doCheckClosedTx(ctx, tx.TxDeploymentClosed)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -92,7 +100,11 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateDeployment:
-		return a.doDeliverTx(ctx, tx.TxCreateDeployment)
+		return a.doDeliverCreateTx(ctx, tx.TxCreateDeployment)
+	case *types.TxPayload_TxCloseDeployment:
+		return a.doDeliverCloseTx(ctx, tx.TxCloseDeployment)
+	case *types.TxPayload_TxDeploymentClosed:
+		return a.doDeliverClosedTx(ctx, tx.TxDeploymentClosed)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -190,8 +202,7 @@ func (a *app) doDeploymentGroupQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 }
 
-// todo: break each type of check out into a named global exported funtion for all trasaction types to utilize
-func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tmtypes.ResponseCheckTx {
+func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tmtypes.ResponseCheckTx {
 
 	if !bytes.Equal(ctx.Signer().Address(), tx.Deployment.Tenant) {
 		return tmtypes.ResponseCheckTx{
@@ -217,9 +228,126 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tmty
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tmtypes.ResponseDeliverTx {
+func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment) tmtypes.ResponseCheckTx {
+	deployment, err := a.State().Deployment().Get(tx.Deployment)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+	if deployment == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment not found",
+		}
+	}
 
-	cresp := a.doCheckTx(ctx, tx)
+	if !bytes.Equal(ctx.Signer().Address(), deployment.Tenant) {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Not signed by tenant address",
+		}
+	}
+
+	if deployment.State != types.Deployment_ACTIVE {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment not active",
+		}
+	}
+
+	return tmtypes.ResponseCheckTx{}
+}
+
+func (a *app) doCheckClosedTx(ctx apptypes.Context, tx *types.TxDeploymentClosed) tmtypes.ResponseCheckTx {
+
+	// todo: check signed by block facilitator
+
+	deployment, err := a.State().Deployment().Get(tx.Deployment)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+	if deployment == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment not found",
+		}
+	}
+
+	// check each object related to the deployment is also closing state
+	for _, group := range deployment.Groups {
+		// begin for each group
+		if group.State != types.DeploymentGroup_CLOSING {
+			return tmtypes.ResponseCheckTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  "Deployment group not closed",
+			}
+		}
+
+		orders, err := a.State().Order().ForGroup(&group)
+		if err != nil {
+			return tmtypes.ResponseCheckTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  err.Error(),
+			}
+		}
+
+		for _, order := range orders {
+			// begin for each order
+			if order.State != types.Order_CLOSING {
+				return tmtypes.ResponseCheckTx{
+					Code: code.INVALID_TRANSACTION,
+					Log:  "Order not closed",
+				}
+			}
+
+			fulfillments, err := a.State().Fulfillment().ForOrder(order)
+			if err != nil {
+				return tmtypes.ResponseCheckTx{
+					Code: code.INVALID_TRANSACTION,
+					Log:  err.Error(),
+				}
+			}
+
+			for _, fulfillment := range fulfillments {
+				// begin for each fulfillment
+				if fulfillment.State != types.Fulfillment_CLOSING {
+					return tmtypes.ResponseCheckTx{
+						Code: code.INVALID_TRANSACTION,
+						Log:  "Fulfillment not closed",
+					}
+				}
+
+				lease, err := a.State().Lease().Get(deployment.Address, group.Seq, order.Order, fulfillment.Provider)
+				if err != nil {
+					return tmtypes.ResponseCheckTx{
+						Code: code.INVALID_TRANSACTION,
+						Log:  err.Error(),
+					}
+				}
+				if lease != nil && lease.State != types.Lease_CLOSING {
+					return tmtypes.ResponseCheckTx{
+						Code: code.INVALID_TRANSACTION,
+						Log:  "Lease not closed",
+					}
+				}
+				// end for each fulfillment
+			}
+			// end for each order
+		}
+		// end for each group
+	}
+
+	return tmtypes.ResponseCheckTx{}
+}
+
+func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tmtypes.ResponseDeliverTx {
+
+	cresp := a.doCheckCreateTx(ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -245,6 +373,242 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tm
 	}
 
 	return tmtypes.ResponseDeliverTx{
-		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeDeployment),
+		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCreateDeployment),
+	}
+}
+
+func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment) tmtypes.ResponseDeliverTx {
+
+	cresp := a.doCheckCloseTx(ctx, tx)
+	if !cresp.IsOK() {
+		return tmtypes.ResponseDeliverTx{
+			Code: cresp.Code,
+			Log:  cresp.Log,
+		}
+	}
+
+	deployment, err := a.State().Deployment().Get(tx.Deployment)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+	if deployment == nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment not found",
+		}
+	}
+
+	deployment.State = types.Deployment_CLOSING
+
+	for i, group := range deployment.Groups {
+		// begin for each group
+		if group.State != types.DeploymentGroup_CLOSING {
+			group.State = types.DeploymentGroup_CLOSING
+			deployment.Groups[i] = group
+		}
+
+		orders, err := a.State().Order().ForGroup(&group)
+		if err != nil {
+			return tmtypes.ResponseDeliverTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  err.Error(),
+			}
+		}
+
+		for _, order := range orders {
+			// begin for each otder
+			if order.State != types.Order_CLOSING {
+				order.State = types.Order_CLOSING
+			}
+
+			fulfillments, err := a.State().Fulfillment().ForOrder(order)
+			if err != nil {
+				return tmtypes.ResponseDeliverTx{
+					Code: code.INVALID_TRANSACTION,
+					Log:  err.Error(),
+				}
+			}
+
+			for _, fulfillment := range fulfillments {
+				// begin for each fulfillment
+				if fulfillment.State != types.Fulfillment_CLOSING {
+					fulfillment.State = types.Fulfillment_CLOSING
+				}
+
+				lease, err := a.State().Lease().Get(deployment.Address, group.Seq, order.Order, fulfillment.Provider)
+				if err != nil {
+					return tmtypes.ResponseDeliverTx{
+						Code: code.INVALID_TRANSACTION,
+						Log:  err.Error(),
+					}
+				}
+				if lease != nil && lease.State == types.Lease_ACTIVE {
+					lease.State = types.Lease_CLOSING
+					err = a.State().Lease().Save(lease)
+					if err != nil {
+						return tmtypes.ResponseDeliverTx{
+							Code: code.INVALID_TRANSACTION,
+							Log:  err.Error(),
+						}
+					}
+				}
+
+				err = a.State().Fulfillment().Save(fulfillment)
+				if err != nil {
+					return tmtypes.ResponseDeliverTx{
+						Code: code.INVALID_TRANSACTION,
+						Log:  err.Error(),
+					}
+				}
+				// end for each fulfillment
+			}
+
+			err = a.State().Order().Save(order)
+			if err != nil {
+				return tmtypes.ResponseDeliverTx{
+					Code: code.INVALID_TRANSACTION,
+					Log:  err.Error(),
+				}
+			}
+			// end for each order
+		}
+		// end for each group
+	}
+
+	err = a.State().Deployment().Save(deployment)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseDeliverTx{
+		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCloseDeployment),
+	}
+}
+
+func (a *app) doDeliverClosedTx(ctx apptypes.Context, tx *types.TxDeploymentClosed) tmtypes.ResponseDeliverTx {
+
+	cresp := a.doCheckClosedTx(ctx, tx)
+	if !cresp.IsOK() {
+		return tmtypes.ResponseDeliverTx{
+			Code: cresp.Code,
+			Log:  cresp.Log,
+		}
+	}
+
+	deployment, err := a.State().Deployment().Get(tx.Deployment)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+	if deployment == nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment not found",
+		}
+	}
+
+	deployment.State = types.Deployment_CLOSED
+
+	for i, group := range deployment.Groups {
+		// begin for each group
+		if group.State != types.DeploymentGroup_CLOSED {
+			group.State = types.DeploymentGroup_CLOSED
+			deployment.Groups[i] = group
+		}
+
+		orders, err := a.State().Order().ForGroup(&group)
+		if err != nil {
+			return tmtypes.ResponseDeliverTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  err.Error(),
+			}
+		}
+
+		for _, order := range orders {
+			// begin for each otder
+			if order.State != types.Order_CLOSED {
+				order.State = types.Order_CLOSED
+			}
+
+			fulfillments, err := a.State().Fulfillment().ForOrder(order)
+			if err != nil {
+				return tmtypes.ResponseDeliverTx{
+					Code: code.INVALID_TRANSACTION,
+					Log:  err.Error(),
+				}
+			}
+
+			for _, fulfillment := range fulfillments {
+				// begin for each fulfillment
+				if fulfillment.State != types.Fulfillment_CLOSED {
+					fulfillment.State = types.Fulfillment_CLOSED
+				}
+
+				lease, err := a.State().Lease().Get(deployment.Address, group.Seq, order.Order, fulfillment.Provider)
+				if err != nil {
+					return tmtypes.ResponseDeliverTx{
+						Code: code.INVALID_TRANSACTION,
+						Log:  err.Error(),
+					}
+				}
+				if lease != nil && lease.State != types.Lease_CLOSED {
+					lease.State = types.Lease_CLOSED
+					err = a.State().Lease().Save(lease)
+					if err != nil {
+						return tmtypes.ResponseDeliverTx{
+							Code: code.INVALID_TRANSACTION,
+							Log:  err.Error(),
+						}
+					}
+				}
+
+				err = a.State().Fulfillment().Save(fulfillment)
+				if err != nil {
+					return tmtypes.ResponseDeliverTx{
+						Code: code.INVALID_TRANSACTION,
+						Log:  err.Error(),
+					}
+				}
+				// end for each fulfillment
+			}
+
+			err = a.State().Order().Save(order)
+			if err != nil {
+				return tmtypes.ResponseDeliverTx{
+					Code: code.INVALID_TRANSACTION,
+					Log:  err.Error(),
+				}
+			}
+			// end for each order
+		}
+		// end for each group
+	}
+
+	err = a.State().Deployment().Save(deployment)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	err = a.State().Deployment().Save(deployment)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseDeliverTx{
+		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeDeploymentClosed),
 	}
 }

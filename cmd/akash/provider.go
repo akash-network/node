@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -134,9 +135,10 @@ func parseProvider(file string, tenant []byte, nonce uint64) (*types.Provider, e
 
 func runCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "run <provider>",
-		Args: cobra.ExactArgs(1),
-		RunE: context.WithContext(context.RequireNode(doProviderRunCommand)),
+		Use:   "run <provider>",
+		Short: "respond to chain events",
+		Args:  cobra.ExactArgs(1),
+		RunE:  context.WithContext(context.RequireNode(doProviderRunCommand)),
 	}
 	return cmd
 }
@@ -158,6 +160,8 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 	}
 
 	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
+
+	deployments := make(map[string]struct{})
 
 	handler := marketplace.NewBuilder().
 		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
@@ -187,8 +191,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 				},
 			}
 
-			//time.Sleep(time.Second * 5)
-			fmt.Printf("BIDDING ON ORDER: %X/%v/%v\n",
+			fmt.Printf("Bidding on order: %X/%v/%v\n",
 				tx.Order.Deployment, tx.Order.Group, tx.Order.Order)
 
 			txbuf, err := txutil.BuildTx(signer, nonce, ordertx)
@@ -211,6 +214,20 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 				return
 			}
 
+		}).
+		OnTxCreateLease(func(tx *types.TxCreateLease) {
+			leaseProvider, _ := tx.Lease.Provider.Marshal()
+			if bytes.Equal(leaseProvider, *provider) {
+				deployments[tx.Lease.Deployment.EncodeString()] = struct{}{}
+				fmt.Printf("Won lease for order: %X/%v/%v\n",
+					tx.Lease.Deployment, tx.Lease.Group, tx.Lease.Order)
+			}
+		}).
+		OnTxDeploymentClosed(func(tx *types.TxDeploymentClosed) {
+			_, ok := deployments[tx.Deployment.EncodeString()]
+			if ok {
+				fmt.Printf("Closed lease for deployment: %X\n", tx.Deployment)
+			}
 		}).Create()
 
 	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)

@@ -28,9 +28,11 @@ message TxPayload {
     TxSend                   txSend                   = 2;
     TxCreateDeployment       txCreateDeployment       = 3;
     TxCreateOrder            txCreateOrder            = 4;
-    TxCreateFulfillment      txCreateFulfillment = 5;
+    TxCreateFulfillment      txCreateFulfillment      = 5;
     TxCreateLease            txCreateLease            = 6;
     TxCreateProvider         txCreateProvider         = 7;
+    TxCloseDeployment        txCloseDeployment        = 8;
+    TxDeploymentClosed       txDeploymentClosed       = 9;
   }
 }
 /* END GLOBAL */
@@ -104,7 +106,8 @@ message DeploymentGroup {
   enum DeploymentGroupState {
     OPEN    = 0;
     ORDERED = 1;
-    CLOSED  = 2;
+    CLOSING = 2;
+    CLOSED  = 3;
   }
 
   repeated ProviderAttribute requirements = 4 [(gogoproto.nullable) = false];
@@ -158,7 +161,8 @@ message Order {
   enum OrderState {
     OPEN    = 0;
     MATCHED = 1;
-    CLOSED  = 2;
+    CLOSING = 2;
+    CLOSED  = 3;
   }
   OrderState state = 4;
 }
@@ -189,6 +193,14 @@ message Fulfillment {
   uint32 price = 5;
 
   /* END ID FIELDS */
+
+  enum FulfillmentState {
+    OPEN    = 0;
+    MATCHED = 1;
+    CLOSING = 2;
+    CLOSED  = 3;
+  }
+  FulfillmentState state = 6;
 }
 
 message TxCreateFulfillment {
@@ -214,9 +226,35 @@ message Lease {
   uint32 price = 5;
 
   /* END ID FIELDS */
+
+  enum LeaseState {
+    ACTIVE  = 0;
+    CLOSING = 1;
+    CLOSED  = 2;
+  }
+  LeaseState state = 6;
 }
 
 message TxCreateLease {
   Lease lease = 1;
 }
+
+message TxCloseDeployment {
+  /* BEGIN ID FIELDS */
+
+  // deployment address
+  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+
+  /* END ID FIELDS */
+}
+
+message TxDeploymentClosed {
+  /* BEGIN ID FIELDS */
+
+  // deployment address
+  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+
+  /* END ID FIELDS */
+}
+
 /* END EXCHANGE */

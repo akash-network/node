@@ -46,7 +46,16 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 
 	nextSeq := state.Deployment().SequenceFor(deployment.Address).Next()
 
-	if deployment.State != types.Deployment_ACTIVE {
+	// process cancel deployment
+	if deployment.State == types.Deployment_CLOSED {
+		return nil
+	}
+
+	if deployment.State == types.Deployment_CLOSING {
+		// TODO: check for asyc shutdown process competion
+		w.put(&types.TxDeploymentClosed{
+			Deployment: deployment.Address,
+		})
 		return nil
 	}
 
@@ -55,6 +64,7 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 		return err
 	}
 
+	// process groups
 	for _, group := range groups {
 		if group.State != types.DeploymentGroup_OPEN {
 			continue

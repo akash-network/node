@@ -6,6 +6,10 @@ import (
 	"testing"
 
 	"github.com/ovrclk/akash/app/deployment"
+	"github.com/ovrclk/akash/app/fulfillment"
+	"github.com/ovrclk/akash/app/lease"
+	"github.com/ovrclk/akash/app/order"
+	"github.com/ovrclk/akash/app/provider"
 	apptypes "github.com/ovrclk/akash/app/types"
 	pstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
@@ -35,7 +39,7 @@ func TestAcceptQuery(t *testing.T) {
 	}
 }
 
-func TestValidTx(t *testing.T) {
+func TestCreateTx(t *testing.T) {
 	state := testutil.NewState(t, nil)
 	app, err := deployment.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
@@ -108,4 +112,507 @@ func TestTx_BadTxType(t *testing.T) {
 	assert.False(t, cresp.IsOK())
 	dresp := app.DeliverTx(ctx, tx.Payload.Payload)
 	assert.False(t, dresp.IsOK())
+}
+
+func TestCloseTx_1(t *testing.T) {
+	state := testutil.NewState(t, nil)
+	app, err := deployment.NewApp(state, testutil.Logger())
+	require.NoError(t, err)
+	account, key := testutil.CreateAccount(t, state)
+	nonce := uint64(1)
+
+	depl := testutil.CreateDeployment(t, app, account, &key, nonce)
+
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, dep.State, depl.State)
+		assert.Equal(t, dep.State, types.Deployment_ACTIVE)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, dep.Groups[0].State, depl.Groups[0].State)
+		assert.Equal(t, dep.Groups[0].State, types.DeploymentGroup_OPEN)
+	}
+
+	testutil.CloseDeployment(t, app, &depl.Address, &key)
+
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Deployment_CLOSING, dep.State)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, types.DeploymentGroup_CLOSING, dep.Groups[0].State)
+	}
+
+	testutil.DeploymentClosed(t, app, &depl.Address, &key)
+
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Deployment_CLOSED, dep.State)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, types.DeploymentGroup_CLOSED, dep.Groups[0].State)
+	}
+}
+
+func TestCloseTx_2(t *testing.T) {
+
+	const (
+		groupseq = 2
+		orderseq = 3
+	)
+
+	state := testutil.NewState(t, nil)
+	app, err := deployment.NewApp(state, testutil.Logger())
+	require.NoError(t, err)
+	account, key := testutil.CreateAccount(t, state)
+	nonce := uint64(1)
+
+	depl := testutil.CreateDeployment(t, app, account, &key, nonce)
+
+	orderapp, err := order.NewApp(state, testutil.Logger())
+	require.NoError(t, err)
+
+	testutil.CreateOrder(t, orderapp, account, &key, depl.Address, groupseq, orderseq)
+
+	{
+		// check deployment state
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, dep.State, depl.State)
+		assert.Equal(t, dep.State, types.Deployment_ACTIVE)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, dep.Groups[0].State, depl.Groups[0].State)
+		assert.Equal(t, dep.Groups[0].State, types.DeploymentGroup_OPEN)
+	}
+
+	{
+		// check order state
+		resp := orderapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.OrderPath, pstate.OrderID(depl.Address, groupseq, orderseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Order)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Order_OPEN, o.State)
+	}
+
+	testutil.CloseDeployment(t, app, &depl.Address, &key)
+
+	{
+		// check deployment state
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Deployment_CLOSING, dep.State)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, types.DeploymentGroup_CLOSING, dep.Groups[0].State)
+	}
+
+	{
+		// check order state
+		resp := orderapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.OrderPath, pstate.OrderID(depl.Address, groupseq, orderseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Order)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Order_CLOSING, o.State)
+	}
+
+	testutil.DeploymentClosed(t, app, &depl.Address, &key)
+
+	{
+		// check deployment state
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Deployment_CLOSED, dep.State)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, types.DeploymentGroup_CLOSED, dep.Groups[0].State)
+	}
+
+	{
+		// check order state
+		resp := orderapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.OrderPath, pstate.OrderID(depl.Address, groupseq, orderseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Order)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Order_CLOSED, o.State)
+	}
+}
+
+func TestCloseTx_3(t *testing.T) {
+
+	const (
+		groupseq = 2
+		orderseq = 3
+		price    = 0
+	)
+
+	state := testutil.NewState(t, nil)
+	app, err := deployment.NewApp(state, testutil.Logger())
+	require.NoError(t, err)
+	account, key := testutil.CreateAccount(t, state)
+	nonce := uint64(1)
+	depl := testutil.CreateDeployment(t, app, account, &key, nonce)
+
+	orderapp, err := order.NewApp(state, testutil.Logger())
+	require.NoError(t, err)
+	testutil.CreateOrder(t, orderapp, account, &key, depl.Address, groupseq, orderseq)
+
+	providerapp, err := provider.NewApp(state, testutil.Logger())
+	prov := testutil.CreateProvider(t, providerapp, account, &key, nonce)
+
+	fulfillmentapp, err := fulfillment.NewApp(state, testutil.Logger())
+	testutil.CreateFulfillment(t, fulfillmentapp, prov.Address, &key, depl.Address, groupseq, orderseq, price)
+
+	{
+		// check deployment state
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, dep.State, depl.State)
+		assert.Equal(t, dep.State, types.Deployment_ACTIVE)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, dep.Groups[0].State, depl.Groups[0].State)
+		assert.Equal(t, dep.Groups[0].State, types.DeploymentGroup_OPEN)
+	}
+
+	{
+		// check order state
+		resp := orderapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.OrderPath, pstate.OrderID(depl.Address, groupseq, orderseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Order)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Order_OPEN, o.State)
+	}
+
+	{
+		// check fulfillment state
+		resp := fulfillmentapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.FulfillmentPath, pstate.FulfillmentID(depl.Address, groupseq, orderseq, prov.Address))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Fulfillment)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Fulfillment_OPEN, o.State)
+	}
+
+	testutil.CloseDeployment(t, app, &depl.Address, &key)
+
+	{
+		// check deployment state
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Deployment_CLOSING, dep.State)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, types.DeploymentGroup_CLOSING, dep.Groups[0].State)
+	}
+
+	{
+		// check order state
+		resp := orderapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.OrderPath, pstate.OrderID(depl.Address, groupseq, orderseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Order)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Order_CLOSING, o.State)
+	}
+
+	{
+		// check fulfillment state
+		resp := fulfillmentapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.FulfillmentPath, pstate.FulfillmentID(depl.Address, groupseq, orderseq, prov.Address))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Fulfillment)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Fulfillment_CLOSING, o.State)
+	}
+
+	testutil.DeploymentClosed(t, app, &depl.Address, &key)
+
+	{
+		// check deployment state
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Deployment_CLOSED, dep.State)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, types.DeploymentGroup_CLOSED, dep.Groups[0].State)
+	}
+
+	{
+		// check order state
+		resp := orderapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.OrderPath, pstate.OrderID(depl.Address, groupseq, orderseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Order)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Order_CLOSED, o.State)
+	}
+
+	{
+		// check fulfillment state
+		resp := fulfillmentapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.FulfillmentPath, pstate.FulfillmentID(depl.Address, groupseq, orderseq, prov.Address))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Fulfillment)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Fulfillment_CLOSED, o.State)
+	}
+}
+
+func TestCloseTx_4(t *testing.T) {
+
+	const (
+		groupseq = 2
+		orderseq = 3
+		price    = 0
+	)
+
+	state := testutil.NewState(t, nil)
+	app, err := deployment.NewApp(state, testutil.Logger())
+	require.NoError(t, err)
+	account, key := testutil.CreateAccount(t, state)
+	nonce := uint64(1)
+	depl := testutil.CreateDeployment(t, app, account, &key, nonce)
+
+	orderapp, err := order.NewApp(state, testutil.Logger())
+	require.NoError(t, err)
+	testutil.CreateOrder(t, orderapp, account, &key, depl.Address, groupseq, orderseq)
+
+	providerapp, err := provider.NewApp(state, testutil.Logger())
+	prov := testutil.CreateProvider(t, providerapp, account, &key, nonce)
+
+	fulfillmentapp, err := fulfillment.NewApp(state, testutil.Logger())
+	testutil.CreateFulfillment(t, fulfillmentapp, prov.Address, &key, depl.Address, groupseq, orderseq, price)
+
+	leaseapp, err := lease.NewApp(state, testutil.Logger())
+	testutil.CreateLease(t, leaseapp, prov.Address, &key, depl.Address, groupseq, orderseq, price)
+
+	{
+		// check deployment state
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, dep.State, depl.State)
+		assert.Equal(t, dep.State, types.Deployment_ACTIVE)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, dep.Groups[0].State, depl.Groups[0].State)
+		assert.Equal(t, dep.Groups[0].State, types.DeploymentGroup_OPEN)
+	}
+
+	{
+		// check order state
+		resp := orderapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.OrderPath, pstate.OrderID(depl.Address, groupseq, orderseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Order)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Order_MATCHED, o.State)
+	}
+
+	{
+		// check fulfillment state
+		resp := fulfillmentapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.FulfillmentPath, pstate.FulfillmentID(depl.Address, groupseq, orderseq, prov.Address))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Fulfillment)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Fulfillment_OPEN, o.State)
+	}
+
+	{
+		// check lease state
+		resp := leaseapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.LeasePath, pstate.LeaseID(depl.Address, groupseq, orderseq, prov.Address))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Lease)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Lease_ACTIVE, o.State)
+	}
+
+	testutil.CloseDeployment(t, app, &depl.Address, &key)
+
+	{
+		// check deployment state
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Deployment_CLOSING, dep.State)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, types.DeploymentGroup_CLOSING, dep.Groups[0].State)
+	}
+
+	{
+		// check order state
+		resp := orderapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.OrderPath, pstate.OrderID(depl.Address, groupseq, orderseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Order)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Order_CLOSING, o.State)
+	}
+
+	{
+		// check fulfillment state
+		resp := fulfillmentapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.FulfillmentPath, pstate.FulfillmentID(depl.Address, groupseq, orderseq, prov.Address))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Fulfillment)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Fulfillment_CLOSING, o.State)
+	}
+
+	{
+		// check lease state
+		resp := leaseapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.LeasePath, pstate.LeaseID(depl.Address, groupseq, orderseq, prov.Address))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Lease)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Lease_CLOSING, o.State)
+	}
+
+	testutil.DeploymentClosed(t, app, &depl.Address, &key)
+
+	{
+		// check deployment state
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Deployment_CLOSED, dep.State)
+
+		require.Len(t, dep.Groups, 1)
+		assert.Equal(t, types.DeploymentGroup_CLOSED, dep.Groups[0].State)
+	}
+
+	{
+		// check order state
+		resp := orderapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.OrderPath, pstate.OrderID(depl.Address, groupseq, orderseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Order)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Order_CLOSED, o.State)
+	}
+
+	{
+		// check fulfillment state
+		resp := fulfillmentapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.FulfillmentPath, pstate.FulfillmentID(depl.Address, groupseq, orderseq, prov.Address))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Fulfillment)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Fulfillment_CLOSED, o.State)
+	}
+
+	{
+		// check lease state
+		resp := leaseapp.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.LeasePath, pstate.LeaseID(depl.Address, groupseq, orderseq, prov.Address))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		o := new(types.Lease)
+		require.NoError(t, o.Unmarshal(resp.Value))
+
+		assert.Equal(t, types.Lease_CLOSED, o.State)
+	}
 }
