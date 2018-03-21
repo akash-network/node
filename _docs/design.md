@@ -92,7 +92,7 @@ Marketplace facilitators maintain the distributed exchange (marketplace).  [Vali
 |Name|Description|
 |---|---|
 |reconfirmation-period| Number of blocks between required [lease confirmations](#leaseconfirmation)|
-|collateral-interest-rate| Interest rate awarded to [datacenters](#datacenters) for collateral posted with [fulfillment orders](#fulfillment) |
+|collateral-interest-rate| Interest rate awarded to [datacenters](#datacenters) for collateral posted with [fulfillments](#fulfillment) |
 
 ### Models
 
@@ -120,7 +120,7 @@ A `Deployment` represents the state of a [tenant's](#tenants) application.  It i
 | Field | Definition |
 | --- | --- |
 | infrastructure | List of [deployment infrastructure](#deploymentinfrastructure) definitions |
-| wait-duration | Amount of time to wait before matching generated [orders](#order) with [fulfillment orders](#fulfillment) |
+| wait-duration | Amount of time to wait before matching generated [orders](#order) with [fulfillments](#fulfillment) |
 
 #### DeploymentInfrastructure
 
@@ -138,7 +138,7 @@ Within the `resources` list, [resource group](#resourcegroup) fields are interpr
 | Field | Definition |
 | --- | --- |
 |price| Maximum price tenant is willing to pay. |
-|collateral| Amount of collateral that the [datacenter](#datacenters) must post when creating a [fulfillment order](#fulfillment) |
+|collateral| Amount of collateral that the [datacenter](#datacenters) must post when creating a [fulfillment](#fulfillment) |
 
 #### Order
 
@@ -148,7 +148,7 @@ A `Order` is generated for each [deployment infrastructure](#deploymentinfrastru
 | --- | --- |
 | region  | Geographic region of datacenter |
 | resources | List of [resource groups](#resourcegroup) for this datacenter |
-| wait-duration | Number of blocks to wait before matching the order with [fulfillment orders](#fulfillment) |
+| wait-duration | Number of blocks to wait before matching the order with [fulfillments](#fulfillment) |
 
 #### Fulfillment
 
@@ -164,16 +164,16 @@ The `resources` list must match the [order's](#order) `resources` list for each 
  * the `compute`, `count`,`collateral` fields must be the same.
  * the `price` field represents the [datacenter's](#datacenters) offering price and must be less than or equal to the [order's](#order) price.
 
-The total collateral required to post a [fulfillment order](#fulfillment) is the sum of `collateral` fields present in the [order's](#order) `resources` list.
+The total collateral required to post a [fulfillment](#fulfillment) is the sum of `collateral` fields present in the [order's](#order) `resources` list.
 
 #### Lease
 
-A `Lease` represents a matching [order](#order) and [fulfillment order](#fulfillment).
+A `Lease` represents a matching [order](#order) and [fulfillment](#fulfillment).
 
 | Field | Definition |
 | --- | --- |
 | deployment-order | ID of [order](#order) |
-| fulfillment-order | ID of [fulfillment order](#order) |
+| fulfillment-order | ID of [fulfillment](#order) |
 
 #### LeaseConfirmation
 
@@ -205,7 +205,7 @@ Sent by a [datacenter](#datacenters) to bid on a [order](#order).
 
 ### CancelFulfillment
 
-Sent by a [datacenter](#datacenters) to cancel an existing [fulfillment order](#fulfillment).
+Sent by a [datacenter](#datacenters) to cancel an existing [fulfillment](#fulfillment).
 
 ### SubmitLeaseConfirmation
 
@@ -214,7 +214,7 @@ be called once every [reconfirmation period](#global-parameters) rounds.
 
 ### SubmitLease
 
-Sent by a [validator](#validator) to match a [order](#order) with a [fulfillment order](#fulfillment).
+Sent by a [validator](#validator) to match a [order](#order) with a [fulfillment](#fulfillment).
 
 ### SubmitStaleLease
 
@@ -234,7 +234,7 @@ Every time a new block is created, each facilitator runs [`MatchOpenOrders`](#ma
 
 For each [order](#order) that is ready to be fulfilled (`state=open`,`wait-duration` has transpired):
 
-1. Find the matching [fulfillment order](#fulfillment) with the lowest price.
+1. Find the matching [fulfillment](#fulfillment) with the lowest price.
 1. Emit a [`SubmitLease`](#submitlease) transaction to initiate a [lease](#lease) for the matching orders.
 
 ##### InvalidateStaleLeases

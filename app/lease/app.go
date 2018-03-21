@@ -148,7 +148,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.
 		}, nil
 	}
 
-	// ensure fulfillment order exists
+	// ensure fulfillment exists
 	fulfillment, err := a.State().Fulfillment().Get(lease.Deployment, lease.Group, lease.Order, lease.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
@@ -159,13 +159,13 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.
 	if fulfillment == nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "Fulfillment order not found",
+			Log:  "Fulfillment not found",
 		}, nil
 	}
 	if fulfillment.State != types.Fulfillment_OPEN {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "Fulfillment order not open",
+			Log:  "Fulfillment not open",
 		}, nil
 	}
 
