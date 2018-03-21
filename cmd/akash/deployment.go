@@ -158,7 +158,7 @@ func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) err
 		OnTxDeploymentClosed(func(tx *types.TxDeploymentClosed) {
 			if bytes.Equal(tx.Deployment, *deployment) {
 				fmt.Printf("Closed deployment: %X\n", tx.Deployment)
-				os.Exit(1)
+				os.Exit(0)
 			}
 		}).Create()
 
