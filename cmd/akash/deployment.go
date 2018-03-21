@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/marketplace"
@@ -58,12 +57,7 @@ func parseDeployment(file string, tenant []byte, nonce uint64) (*types.Deploymen
 }
 
 func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) error {
-	kmgr, err := ctx.KeyManager()
-	if err != nil {
-		return err
-	}
-
-	key, err := ctx.Key()
+	signer, key, err := ctx.Signer()
 	if err != nil {
 		return err
 	}
@@ -77,8 +71,6 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 	if err != nil {
 		return err
 	}
-
-	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateDeployment{
 		Deployment: deployment,
@@ -123,12 +115,7 @@ func closeDeploymentCommand() *cobra.Command {
 }
 
 func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) error {
-	kmgr, err := ctx.KeyManager()
-	if err != nil {
-		return err
-	}
-
-	key, err := ctx.Key()
+	signer, _, err := ctx.Signer()
 	if err != nil {
 		return err
 	}
@@ -137,8 +124,6 @@ func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) err
 	if err != nil {
 		return err
 	}
-
-	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
 
 	deployment := new(base.Bytes)
 	err = deployment.DecodeString(args[0])
