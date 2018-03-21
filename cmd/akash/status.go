@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/cmd/common"
@@ -27,6 +28,10 @@ func doStatusCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 	common.HandleError(err)
 
 	fmt.Printf("Block: %v\nBlock Hash: %v\n", result.LatestBlockHeight, result.LatestBlockHash)
+
+	if result.LatestBlockHeight == 0 {
+		os.Exit(1)
+	}
 
 	return nil
 }

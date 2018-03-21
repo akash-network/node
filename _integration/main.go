@@ -9,6 +9,18 @@ import (
 	"github.com/ovrclk/gestalt/vars"
 )
 
+type key struct {
+	name vars.Ref
+	addr vars.Ref
+}
+
+func newKey(name string) key {
+	return key{
+		name: vars.NewRef(name),
+		addr: vars.NewRef(name + "-addr"),
+	}
+}
+
 func Node() gestalt.Component {
 	return g.Group("node").
 		Run(g.SH("cleanup", "echo", "cleanup")).
@@ -20,55 +32,52 @@ func Node() gestalt.Component {
 }
 
 func Akash(args ...string) gx.Cmd {
-	cmd := g.EXEC("akash", "{{akash-path}}", append([]string{"-d", "{{akash-root}}"}, args...)...)
-
-	//cmd.AddEnv("AKASH_ROOT", "{{akash-root}}")
+	cmd := g.EXEC("akash",
+		"{{akash-path}}",
+		append([]string{"-d", "{{akash-root}}"}, args...)...)
 
 	cmd.WithMeta(g.Require("akash-path", "akash-root"))
 	return cmd
 }
 
 func Akashd(args ...string) gx.Cmd {
-	cmd := g.EXEC("akashd", "{{akashd-path}}", append([]string{"-d", "{{akashd-root}}"}, args...)...)
-
-	//cmd.AddEnv("AKASHD_ROOT", "{{akashd-root}}")
+	cmd := g.EXEC("akashd",
+		"{{akashd-path}}",
+		append([]string{"-d", "{{akashd-root}}"}, args...)...)
 
 	cmd.WithMeta(g.Require("akashd-path", "akashd-root"))
 	return cmd
 }
 
-func CreateKey(name string) gestalt.Component {
-	kname := name + "-addr"
-	return Akash("key", "create", name).
-		FN(gx.Capture(kname)).
-		WithMeta(g.Export(kname))
+func CreateKey(key key) gestalt.Component {
+	return Akash("key", "create", key.name.Name()).
+		FN(gx.Capture(key.addr.Name())).
+		WithMeta(g.Export(key.addr.Name()))
 }
 
-func KeyList(name string) gestalt.Component {
-	addr := vars.NewRef(name + "-addr")
+func KeyList(key key) gestalt.Component {
 	return Akash("key", "list").
 		FN(gx.ParseColumns("name", "address").
-			GrepField("name", name).
-			GrepField("address", addr.Var()).
+			GrepField("name", key.name.Name()).
+			GrepField("address", key.addr.Var()).
 			EnsureCount(1).
 			Done()).
-		WithMeta(g.Require(addr.Name()))
+		WithMeta(g.Require(key.addr.Name()))
 }
 
-func KeySuite() gestalt.Component {
+func KeySuite(key key) gestalt.Component {
 	return g.Group("keys").
-		Run(CreateKey("master")).
-		Run(KeyList("master")).
-		WithMeta(g.Export("master-addr"))
+		Run(CreateKey(key)).
+		Run(KeyList(key)).
+		WithMeta(g.Export(key.addr.Name()))
 }
 
-func NodeInit(name string) gestalt.Component {
-	addr := vars.NewRef(name + "-addr")
-	return Akashd("init", addr.Var()).
-		WithMeta(g.Require(addr.Name()))
+func NodeInit(key key) gestalt.Component {
+	return Akashd("init", key.addr.Var()).
+		WithMeta(g.Require(key.addr.Name()))
 }
 
-func NodeRun(name string) gestalt.Component {
+func NodeRun() gestalt.Component {
 	return g.Group("run").
 		Run(g.BG().
 			Run(Akashd("start"))).
@@ -76,16 +85,38 @@ func NodeRun(name string) gestalt.Component {
 			Run(Akash("status")))
 }
 
-func NodeSuite() gestalt.Component {
+func NodeSuite(key key) gestalt.Component {
 	return g.Group("node").
-		Run(NodeInit("master")).
-		Run(NodeRun("master"))
+		Run(NodeInit(key)).
+		Run(NodeRun())
+}
+
+func KeyBalance(key key, amount int) gestalt.Component {
+	// check account balance
+	return g.Group("account-balance")
+}
+
+func SendTo(from key, to key, amount int) gestalt.Component {
+	// send `amount` from `from` to `to`
+	return g.Group("account-send")
+}
+
+func SendAmount(key key) gestalt.Component {
+	other := newKey("other")
+	return g.Group("send").
+		Run(KeySuite(other)).
+		Run(KeyBalance(key, 10000)).
+		Run(SendTo(key, other, 100)).
+		Run(KeyBalance(key, 10000-100)).
+		Run(KeyBalance(other, 100))
 }
 
 func Suite() gestalt.Component {
+	key := newKey("master")
 	return g.Suite("main").
-		Run(KeySuite()).
-		Run(NodeSuite())
+		Run(KeySuite(key)).
+		Run(NodeSuite(key)).
+		Run(SendAmount(key))
 }
 
 func main() {
