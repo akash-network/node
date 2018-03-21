@@ -94,7 +94,9 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 		ctx.Log().Error("error delivering tx", "error", res.DeliverTx.GetLog())
 		return errors.New(res.DeliverTx.GetLog())
 	}
-	fmt.Printf("Created deployment: %X\n", deployment.Address)
+	//fmt.Printf("Created deployment: %X\n", deployment.Address)
+
+	fmt.Printf("%X\n", deployment.Address)
 
 	return nil
 }

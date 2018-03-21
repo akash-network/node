@@ -48,6 +48,12 @@ coverdeps-install:
 	go get golang.org/x/tools/cmd/cover
 	go get github.com/mattn/goveralls
 
+test-integration: $(PROGRAMS)
+	(cd _integration && make clean run)
+
+integrationdeps-install:
+	(cd _integration && make deps-install)
+
 gentypes: $(PROTOC_FILES)
 
 %.pb.go: %.proto
@@ -73,6 +79,7 @@ clean:
 	test test-full \
 	deps-install devdeps-install \
 	test-cover coverdeps-install \
+	test-integraion integrationdeps-install \
 	test-vet \
 	mocks \
 	docs \

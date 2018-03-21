@@ -256,5 +256,27 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 }
 
 func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
-	return tmtypes.ResponseQuery{}
+	items, err := a.State().Lease().All()
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	coll := &types.Leases{Items: items}
+
+	bytes, err := proto.Marshal(coll)
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseQuery{
+		Key:    data.Bytes(state.LeasePath),
+		Value:  bytes,
+		Height: a.State().Version(),
+	}
 }

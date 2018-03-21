@@ -57,7 +57,7 @@ func doKeyCreateCommand(ctx context.Context, cmd *cobra.Command, args []string) 
 		return err
 	}
 
-	fmt.Println("Created new key:", addr)
+	fmt.Println(addr)
 
 	return nil
 }

@@ -254,6 +254,10 @@ message TxCreateLease {
   Lease lease = 1;
 }
 
+message Leases {
+  repeated Lease items = 1;
+}
+
 message TxCloseDeployment {
   /* BEGIN ID FIELDS */
 
