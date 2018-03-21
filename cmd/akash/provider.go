@@ -61,6 +61,7 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
+	// XXX generate key for provider if doens't exist
 	key, err := ctx.Key()
 	if err != nil {
 		kname, _ := cmd.Flags().GetString(constants.FlagKey)
@@ -86,6 +87,11 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		fmt.Println("Key created:", addr)
 	}
 
+	signer, key, err := ctx.Signer()
+	if err != nil {
+		return err
+	}
+
 	nonce, err := ctx.Nonce()
 	if err != nil {
 		return err
@@ -95,8 +101,6 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 	if err != nil {
 		return err
 	}
-
-	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateProvider{
 		Provider: *provider,
@@ -144,22 +148,17 @@ func runCommand() *cobra.Command {
 }
 
 func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	kmgr, _ := ctx.KeyManager()
-
 	client := ctx.Client()
 
 	provider := new(base.Bytes)
-
 	if err := provider.DecodeString(args[0]); err != nil {
 		return err
 	}
 
-	key, err := ctx.Key()
+	signer, _, err := ctx.Signer()
 	if err != nil {
 		return err
 	}
-
-	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
 
 	deployments := make(map[string]struct{})
 

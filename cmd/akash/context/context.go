@@ -10,6 +10,7 @@ import (
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 
 	"github.com/spf13/cobra"
@@ -30,6 +31,7 @@ type Context interface {
 	Key() (keys.Info, error)
 	Nonce() (uint64, error)
 	Log() log.Logger
+	Signer() (txutil.Signer, keys.Info, error)
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -140,23 +142,6 @@ func (ctx *context) KeyName() string {
 	return val
 }
 
-func (ctx *context) Nonce() (uint64, error) {
-	nonce, err := ctx.cmd.Flags().GetUint64(constants.FlagNonce)
-	if err != nil || nonce == uint64(0) {
-		res := new(types.Account)
-		client := tmclient.NewHTTP(ctx.Node(), "/websocket")
-		key, _ := ctx.Key()
-		queryPath := state.AccountPath + key.Address.String()
-		result, err := client.ABCIQuery(queryPath, nil)
-		if err != nil {
-			return 0, err
-		}
-		res.Unmarshal(result.Response.Value)
-		nonce = res.Nonce + 1
-	}
-	return nonce, nil
-}
-
 func (ctx *context) Key() (keys.Info, error) {
 	kmgr, err := ctx.KeyManager()
 	if err != nil {
@@ -173,6 +158,48 @@ func (ctx *context) Key() (keys.Info, error) {
 		return keys.Info{}, err
 	}
 	return info, nil
+}
+
+func (ctx *context) Password() (string, error) {
+	return constants.Password, nil
+}
+
+func (ctx *context) Signer() (txutil.Signer, keys.Info, error) {
+	kmgr, err := ctx.KeyManager()
+	if err != nil {
+		return nil, keys.Info{}, err
+	}
+
+	key, err := ctx.Key()
+	if err != nil {
+		return nil, keys.Info{}, err
+	}
+
+	password, err := ctx.Password()
+	if err != nil {
+		return nil, key, err
+	}
+
+	signer := txutil.NewKeystoreSigner(kmgr, key.Name, password)
+
+	return signer, key, nil
+}
+
+func (ctx *context) Nonce() (uint64, error) {
+	nonce, err := ctx.cmd.Flags().GetUint64(constants.FlagNonce)
+	if err != nil || nonce == uint64(0) {
+		res := new(types.Account)
+		client := tmclient.NewHTTP(ctx.Node(), "/websocket")
+		key, _ := ctx.Key()
+		queryPath := state.AccountPath + key.Address.String()
+		result, err := client.ABCIQuery(queryPath, nil)
+		if err != nil {
+			return 0, err
+		}
+		res.Unmarshal(result.Response.Value)
+		nonce = res.Nonce + 1
+	}
+	return nonce, nil
 }
 
 func loadKeyManager(root string) (keys.Manager, error) {

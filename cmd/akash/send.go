@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
@@ -32,8 +31,12 @@ func sendCommand() *cobra.Command {
 }
 
 func doSendCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	kmgr, _ := ctx.KeyManager()
-	key, _ := ctx.Key()
+	signer, key, err := ctx.Signer()
+	if err != nil {
+		return err
+	}
+
+	nonce, err := ctx.Nonce()
 
 	amount, err := strconv.ParseUint(args[0], 10, 64)
 	if err != nil {
@@ -44,13 +47,6 @@ func doSendCommand(ctx context.Context, cmd *cobra.Command, args []string) error
 	if err := to.DecodeString(args[1]); err != nil {
 		return err
 	}
-
-	nonce, err := ctx.Nonce()
-	if err != nil {
-		return err
-	}
-
-	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxSend{
 		From:   base.Bytes(key.Address),
