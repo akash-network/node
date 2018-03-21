@@ -192,7 +192,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmt
 	if other != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "Fulfillment order by provider already exists.",
+			Log:  "Fulfillment by provider already exists.",
 		}
 	}
 

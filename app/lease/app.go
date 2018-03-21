@@ -148,22 +148,27 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.
 		}, nil
 	}
 
-	// ensure fulfillment order exists
-	forder, err := a.State().Fulfillment().Get(lease.Deployment, lease.Group, lease.Order, lease.Provider)
+	// ensure fulfillment exists
+	fulfillment, err := a.State().Fulfillment().Get(lease.Deployment, lease.Group, lease.Order, lease.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}, nil
 	}
-	if forder == nil {
+	if fulfillment == nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "Fulfillment order not found",
+			Log:  "Fulfillment not found",
+		}, nil
+	}
+	if fulfillment.State != types.Fulfillment_OPEN {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Fulfillment not open",
 		}, nil
 	}
 
-	// TODO: ensure fulfillment order in correct state
 	// TODO: verify that matching algorithm would choose this match
 
 	return tmtypes.ResponseCheckTx{}, dorder
