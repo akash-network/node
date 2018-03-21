@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -188,8 +189,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 				},
 			}
 
-			//time.Sleep(time.Second * 5)
-			fmt.Printf("BIDDING ON ORDER: %X/%v/%v\n",
+			fmt.Printf("Bidding on order: %X/%v/%v\n",
 				tx.Order.Deployment, tx.Order.Group, tx.Order.Order)
 
 			txbuf, err := txutil.BuildTx(signer, nonce, ordertx)
@@ -212,6 +212,13 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 				return
 			}
 
+		}).
+		OnTxCreateLease(func(tx *types.TxCreateLease) {
+			leaseProvider, _ := tx.Lease.Provider.Marshal()
+			if bytes.Equal(leaseProvider, *provider) {
+				fmt.Printf("Won lease for order: %X/%v/%v\n",
+					tx.Lease.Deployment, tx.Lease.Group, tx.Lease.Order)
+			}
 		}).Create()
 
 	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
