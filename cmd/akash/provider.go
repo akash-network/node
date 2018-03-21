@@ -161,6 +161,8 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 
 	signer := txutil.NewKeystoreSigner(kmgr, key.Name, constants.Password)
 
+	deployments := make(map[string]struct{})
+
 	handler := marketplace.NewBuilder().
 		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
 
@@ -216,8 +218,15 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
 			leaseProvider, _ := tx.Lease.Provider.Marshal()
 			if bytes.Equal(leaseProvider, *provider) {
+				deployments[tx.Lease.Deployment.EncodeString()] = struct{}{}
 				fmt.Printf("Won lease for order: %X/%v/%v\n",
 					tx.Lease.Deployment, tx.Lease.Group, tx.Lease.Order)
+			}
+		}).
+		OnTxDeploymentClosed(func(tx *types.TxDeploymentClosed) {
+			_, ok := deployments[tx.Deployment.EncodeString()]
+			if ok {
+				fmt.Printf("Closed lease for deployment: %X\n", tx.Deployment)
 			}
 		}).Create()
 
