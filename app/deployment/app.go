@@ -445,19 +445,14 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 						Log:  err.Error(),
 					}
 				}
-				if lease != nil && lease.State != types.Lease_CLOSING {
-					return tmtypes.ResponseDeliverTx{
-						Code: code.INVALID_TRANSACTION,
-						Log:  "Lease not closed",
-					}
-				}
-
-				lease.State = types.Lease_CLOSING
-				err = a.State().Lease().Save(lease)
-				if err != nil {
-					return tmtypes.ResponseDeliverTx{
-						Code: code.INVALID_TRANSACTION,
-						Log:  err.Error(),
+				if lease != nil && lease.State == types.Lease_ACTIVE {
+					lease.State = types.Lease_CLOSING
+					err = a.State().Lease().Save(lease)
+					if err != nil {
+						return tmtypes.ResponseDeliverTx{
+							Code: code.INVALID_TRANSACTION,
+							Log:  err.Error(),
+						}
 					}
 				}
 
@@ -565,18 +560,13 @@ func (a *app) doDeliverClosedTx(ctx apptypes.Context, tx *types.TxDeploymentClos
 					}
 				}
 				if lease != nil && lease.State != types.Lease_CLOSED {
-					return tmtypes.ResponseDeliverTx{
-						Code: code.INVALID_TRANSACTION,
-						Log:  "Lease not closed",
-					}
-				}
-
-				lease.State = types.Lease_CLOSED
-				err = a.State().Lease().Save(lease)
-				if err != nil {
-					return tmtypes.ResponseDeliverTx{
-						Code: code.INVALID_TRANSACTION,
-						Log:  err.Error(),
+					lease.State = types.Lease_CLOSED
+					err = a.State().Lease().Save(lease)
+					if err != nil {
+						return tmtypes.ResponseDeliverTx{
+							Code: code.INVALID_TRANSACTION,
+							Log:  err.Error(),
+						}
 					}
 				}
 
