@@ -35,6 +35,8 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	switch tx.(type) {
 	case *types.TxPayload_TxCreateOrder:
 		return true
+	case *types.TxPayload_TxCloseOrder:
+		return true
 	}
 	return false
 }
@@ -42,7 +44,9 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateOrder:
-		return a.doCheckTx(ctx, tx.TxCreateOrder)
+		return a.doCheckCreateTx(ctx, tx.TxCreateOrder)
+	case *types.TxPayload_TxCloseOrder:
+		return a.doCheckCloseTx(ctx, tx.TxCloseOrder)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -53,7 +57,9 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateOrder:
-		return a.doDeliverTx(ctx, tx.TxCreateOrder)
+		return a.doDeliverCreateTx(ctx, tx.TxCreateOrder)
+	case *types.TxPayload_TxCloseOrder:
+		return a.doDeliverCloseTx(ctx, tx.TxCloseOrder)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -145,8 +151,7 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 }
 
-// todo: break each type of check out into a named global exported funtion for all trasaction types to utilize
-func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseCheckTx {
+func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseCheckTx {
 
 	// todo: ensure signed by last block creator / valid market facilitator
 
@@ -218,9 +223,71 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.R
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseDeliverTx {
+func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseOrder) tmtypes.ResponseCheckTx {
 
-	cresp := a.doCheckTx(ctx, tx)
+	// todo: ensure signed by last block creator / valid market facilitator
+
+	// ensure order provided
+	order := tx.Order
+	if order == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "No order specified",
+		}
+	}
+
+	// ensure deployment exists
+	deployment, err := a.State().Deployment().Get(order.Deployment)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+	if deployment == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment not found",
+		}
+	}
+
+	// ensure deployment group exists
+	group, err := a.State().DeploymentGroup().Get(order.Deployment, order.Group)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+	if group == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Group not found",
+		}
+	}
+
+	// ensure state
+	if order.State != types.Order_OPEN {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Order still valid",
+		}
+	}
+
+	// ensure height is after ttl
+	if order.EndAt > a.State().Version() {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Order still valid",
+		}
+	}
+
+	return tmtypes.ResponseCheckTx{}
+}
+
+func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseDeliverTx {
+
+	cresp := a.doCheckCreateTx(ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -244,5 +311,30 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes
 
 	return tmtypes.ResponseDeliverTx{
 		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCreateOrder),
+	}
+}
+
+func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseOrder) tmtypes.ResponseDeliverTx {
+
+	cresp := a.doCheckCloseTx(ctx, tx)
+	if !cresp.IsOK() {
+		return tmtypes.ResponseDeliverTx{
+			Code: cresp.Code,
+			Log:  cresp.Log,
+		}
+	}
+
+	order := tx.Order
+	order.State = types.Order_CLOSED
+
+	if err := a.State().Order().Save(order); err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseDeliverTx{
+		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCloseOrder),
 	}
 }

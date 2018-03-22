@@ -46,6 +46,8 @@ func NewTxBuilder(nonce uint64, payload interface{}) (TxBuilder, error) {
 		tx.Payload.Payload = &types.TxPayload_TxCloseDeployment{TxCloseDeployment: payload}
 	case *types.TxDeploymentClosed:
 		tx.Payload.Payload = &types.TxPayload_TxDeploymentClosed{TxDeploymentClosed: payload}
+	case *types.TxCloseOrder:
+		tx.Payload.Payload = &types.TxPayload_TxCloseOrder{TxCloseOrder: payload}
 	default:
 		return nil, fmt.Errorf("unknown payload type: %T", payload)
 	}

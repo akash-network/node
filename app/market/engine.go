@@ -42,9 +42,15 @@ func (e engine) processDeployments(state state.State, w txBuffer) error {
 	return nil
 }
 
+// only create leases for orders which are at their EndAt
+// only care about orders at thier TTL
+//   either create a lease, or close if no lease is found
+//   will need a tx to close the order
+
 func (e engine) processDeployment(state state.State, w txBuffer, deployment types.Deployment) error {
 
 	nextSeq := state.Deployment().SequenceFor(deployment.Address).Next()
+	height := state.Version()
 
 	// process cancel deployment
 	if deployment.State == types.Deployment_CLOSED {
@@ -88,9 +94,11 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 			if !activeFound && order.State == types.Order_OPEN || order.State == types.Order_MATCHED {
 				activeFound = true
 			}
-			err := e.processOrder(state, w, order)
-			if err != nil {
-				return err
+			if order.EndAt == height {
+				err := e.processOrder(state, w, order)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -102,6 +110,7 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 					Group:      group.GetSeq(),
 					Order:      nextSeq,
 					State:      types.Order_OPEN,
+					EndAt:      group.OrderTTL + height,
 				},
 			})
 			nextSeq++
@@ -141,6 +150,9 @@ func (e engine) processOrder(state state.State, w txBuffer, order *types.Order) 
 		return err
 	}
 	if fulfillment == nil {
+		// w.put(&types.TxCloseOrder{
+		// 	Order: order,
+		// })
 		return nil
 	}
 

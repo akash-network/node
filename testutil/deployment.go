@@ -108,6 +108,8 @@ func Deployment(tenant base.Bytes, nonce uint64) *types.Deployment {
 
 func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGroups {
 
+	address := state.DeploymentAddress(tenant, nonce)
+	orderTTL := int64(5)
 	nonce++
 
 	runit := types.ResourceUnit{
@@ -132,6 +134,7 @@ func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGrou
 		Seq:          nonce,
 		Resources:    []types.ResourceGroup{rgroup},
 		Requirements: []types.ProviderAttribute{pattr},
+		OrderTTL:     orderTTL,
 	}
 
 	groups := []types.DeploymentGroup{*group}
