@@ -1,10 +1,12 @@
 package lease
 
 import (
+	_ "bytes"
 	"fmt"
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/ovrclk/akash/app/market"
 	apptypes "github.com/ovrclk/akash/app/types"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
@@ -126,14 +128,14 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.
 	}
 
 	// ensure order exists
-	dorder, err := a.State().Order().Get(lease.Deployment, lease.Group, lease.Order)
+	order, err := a.State().Order().Get(lease.Deployment, lease.Group, lease.Order)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}, nil
 	}
-	if dorder == nil {
+	if order == nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "order not found",
@@ -141,7 +143,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.
 	}
 
 	// ensure order in correct state
-	if dorder.State != types.Order_OPEN {
+	if order.State != types.Order_OPEN {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "order not open",
@@ -169,13 +171,26 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.
 		}, nil
 	}
 
-	// TODO: verify that matching algorithm would choose this match
+	bestFulfillment, err := market.BestFulfillment(a.State(), order)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}, nil
+	}
 
-	return tmtypes.ResponseCheckTx{}, dorder
+	if bestFulfillment.Compare(fulfillment) != 0 {
+		return tmtypes.ResponseCheckTx{
+			Code: code.ERROR,
+			Log:  "Unexpected fulfillment",
+		}, nil
+	}
+
+	return tmtypes.ResponseCheckTx{}, order
 }
 
 func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateLease) tmtypes.ResponseDeliverTx {
-	cresp, dorder := a.doCheckTx(ctx, tx)
+	cresp, order := a.doCheckTx(ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -190,8 +205,8 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateLease) tmtypes
 		}
 	}
 
-	dorder.State = types.Order_MATCHED
-	if err := a.State().Order().Save(dorder); err != nil {
+	order.State = types.Order_MATCHED
+	if err := a.State().Order().Save(order); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),

@@ -1,6 +1,7 @@
 package base
 
 import (
+	"bytes"
 	"encoding/hex"
 
 	"github.com/tendermint/go-wire/data"
@@ -34,4 +35,10 @@ func (t *Bytes) DecodeString(buf string) error {
 
 func (t Bytes) EncodeString() string {
 	return hex.EncodeToString(t)
+}
+
+func (this Bytes) Compare(that Bytes) int {
+	thisb, _ := this.Marshal()
+	thatb, _ := that.Marshal()
+	return bytes.Compare(thisb, thatb)
 }

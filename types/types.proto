@@ -41,7 +41,7 @@ message TxPayload {
 message Account {
   // wait for https://github.com/gogo/protobuf/pull/227
   // bytes address = 1  [(gogoproto.customtype) = "github.com/tendermint/go-wire/data.Bytes", (gogoproto.nullable) = false];
-
+  option (gogoproto.compare) = true;
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
   uint64 balance = 2;
   uint64 nonce   = 3;
@@ -57,6 +57,7 @@ message TxSend {
 /* BEGIN PROVIDER */
 
 message Provider {
+  option (gogoproto.compare) = true;
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
   bytes  owner = 2 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
   repeated ProviderAttribute attributes = 3 [(gogoproto.nullable) = false];
@@ -74,23 +75,27 @@ message TxCreateProvider {
 
 /* BEGIN EXCHANGE */
 message ResourceUnit {
+  option (gogoproto.compare) = true;
   uint32 cpu    = 1;
   uint32 memory = 2;
   uint64 disk   = 3;
 }
 
 message ResourceGroup {
+  option (gogoproto.compare) = true;
   ResourceUnit unit  = 1 [(gogoproto.nullable) = false];
   uint32       count = 2;
   uint32       price = 3; // price per unit.
 }
 
 message ProviderAttribute {
+  option (gogoproto.compare) = true;
   string name  = 1;
   string value = 2;
 }
 
 message DeploymentGroup {
+  option (gogoproto.compare) = true;
 
   /* BEGIN ID FIELDS */
 
@@ -120,6 +125,7 @@ message DeploymentGroups {
 }
 
 message Deployment {
+  option (gogoproto.compare) = true;
 
   /* BEGIN ID FIELDS */
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
@@ -144,6 +150,7 @@ message TxCreateDeployment {
 }
 
 message Order {
+  option (gogoproto.compare) = true;
 
   /* BEGIN ID FIELDS */
 
@@ -176,6 +183,8 @@ message Orders {
 }
 
 message Fulfillment {
+  option (gogoproto.compare) = true;
+
   /* BEGIN ID FIELDS */
 
   // deployment address
