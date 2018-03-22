@@ -79,19 +79,22 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 			return err
 		}
 
+		// no active orders found for the deployment group
 		activeFound := false
 
+		// for each order for the deployment group
 		for _, order := range orders {
-			active, err := e.processOrder(state, w, order)
+			// try to create a lease for the order
+			if !activeFound && order.State == types.Order_OPEN || order.State == types.Order_MATCHED {
+				activeFound = true
+			}
+			err := e.processOrder(state, w, order)
 			if err != nil {
 				return err
 			}
-			if !activeFound && active {
-				activeFound = true
-			}
 		}
 
-		// if no active order emit create tx
+		// if no active order for the group emit create tx
 		if !activeFound {
 			w.put(&types.TxCreateOrder{
 				Order: &types.Order{
@@ -108,47 +111,50 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 	return nil
 }
 
-// create leases as necessary
-func (e engine) processOrder(state state.State, w txBuffer, dorder *types.Order) (bool, error) {
-
-	switch dorder.State {
-	case types.Order_CLOSED:
-		return false, nil
-	case types.Order_MATCHED:
-		return true, nil
-	}
-
-	forders, err := state.Fulfillment().ForOrder(dorder)
+func BestFulfillment(state state.State, order *types.Order) (*types.Fulfillment, error) {
+	fulfillments, err := state.Fulfillment().ForOrder(order)
 	if err != nil {
-		return true, err
+		return nil, err
 	}
 
 	// no orders to match
-	if len(forders) == 0 {
-		return true, nil
+	if len(fulfillments) == 0 {
+		return nil, nil
 	}
 
 	// match with cheapest order
 	bestMatch := 0
-	for i, fulfillment := range forders {
-		if fulfillment.Price < forders[bestMatch].Price {
+	for i, fulfillment := range fulfillments {
+		if fulfillment.Price < fulfillments[bestMatch].Price {
 			bestMatch = i
 		}
 	}
 
-	forder := forders[bestMatch]
+	return fulfillments[bestMatch], nil
+}
+
+// create leases as necessary
+func (e engine) processOrder(state state.State, w txBuffer, order *types.Order) error {
+
+	fulfillment, err := BestFulfillment(state, order)
+	if err != nil {
+		return err
+	}
+	if fulfillment == nil {
+		return nil
+	}
 
 	w.put(&types.TxCreateLease{
 		Lease: &types.Lease{
-			Deployment: forder.Deployment,
-			Group:      forder.Group,
-			Order:      forder.Order,
-			Provider:   forder.Provider,
-			Price:      forder.Price,
+			Deployment: fulfillment.Deployment,
+			Group:      fulfillment.Group,
+			Order:      fulfillment.Order,
+			Provider:   fulfillment.Provider,
+			Price:      fulfillment.Price,
 		},
 	})
 
-	return true, nil
+	return nil
 }
 
 type txBuffer interface {
