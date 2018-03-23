@@ -141,9 +141,6 @@ func TestCloseTx_1(t *testing.T) {
 		dep := new(types.Deployment)
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
-		println("resp", resp.String())
-		println("\ndep\n", dep.String())
-
 		assert.Equal(t, types.Deployment_ACTIVE, dep.State)
 	}
 
