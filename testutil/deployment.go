@@ -136,5 +136,5 @@ func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGrou
 
 	groups := []types.DeploymentGroup{*group}
 
-	return &types.DeploymentGroups{groups}
+	return &types.DeploymentGroups{Groups: groups}
 }
