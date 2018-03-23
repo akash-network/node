@@ -65,5 +65,6 @@ cache:
     - $HOME/.glide
 
 install:
+  - mkdir -p "$GOPATH/bin"
   - curl https://glide.sh/get | sh
   - make deps-install
