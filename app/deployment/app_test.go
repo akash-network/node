@@ -40,13 +40,14 @@ func TestAcceptQuery(t *testing.T) {
 }
 
 func TestCreateTx(t *testing.T) {
+	const groupseq = 1
 	state := testutil.NewState(t, nil)
 	app, err := deployment.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
 
-	depl := testutil.CreateDeployment(t, app, account, &key, nonce)
+	depl, groups := testutil.CreateDeployment(t, app, account, &key, nonce)
 
 	{
 		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
@@ -58,10 +59,18 @@ func TestCreateTx(t *testing.T) {
 
 		assert.Equal(t, depl.Tenant, dep.Tenant)
 		assert.Equal(t, depl.Address, dep.Address)
+	}
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, dep.Groups[0].Requirements, depl.Groups[0].Requirements)
-		assert.Equal(t, dep.Groups[0].Resources, depl.Groups[0].Resources)
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		grps := new(types.DeploymentGroup)
+		require.NoError(t, grps.Unmarshal(resp.Value))
+
+		assert.Equal(t, grps.Requirements, groups.GetItems()[0].Requirements)
+		assert.Equal(t, grps.Resources, groups.GetItems()[0].Resources)
 	}
 
 	{
@@ -91,12 +100,12 @@ func TestCreateTx(t *testing.T) {
 	}
 
 	{
-		groups, err := state.DeploymentGroup().ForDeployment(depl.Address)
+		grps, err := state.DeploymentGroup().ForDeployment(depl.Address)
 		require.NoError(t, err)
-		require.Len(t, groups, 1)
+		require.Len(t, grps, 1)
 
-		assert.Equal(t, groups[0].Requirements, depl.Groups[0].Requirements)
-		assert.Equal(t, groups[0].Resources, depl.Groups[0].Resources)
+		assert.Equal(t, grps[0].Requirements, groups.GetItems()[0].Requirements)
+		assert.Equal(t, grps[0].Resources, groups.GetItems()[0].Resources)
 	}
 }
 
@@ -115,13 +124,14 @@ func TestTx_BadTxType(t *testing.T) {
 }
 
 func TestCloseTx_1(t *testing.T) {
+	const groupseq = 1
 	state := testutil.NewState(t, nil)
 	app, err := deployment.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
 
-	depl := testutil.CreateDeployment(t, app, account, &key, nonce)
+	depl, groups := testutil.CreateDeployment(t, app, account, &key, nonce)
 
 	{
 		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentPath, depl.Address)})
@@ -131,12 +141,22 @@ func TestCloseTx_1(t *testing.T) {
 		dep := new(types.Deployment)
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
-		assert.Equal(t, dep.State, depl.State)
-		assert.Equal(t, dep.State, types.Deployment_ACTIVE)
+		println("resp", resp.String())
+		println("\ndep\n", dep.String())
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, dep.Groups[0].State, depl.Groups[0].State)
-		assert.Equal(t, dep.Groups[0].State, types.DeploymentGroup_OPEN)
+		assert.Equal(t, types.Deployment_ACTIVE, dep.State)
+	}
+
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		group := new(types.DeploymentGroup)
+		require.NoError(t, group.Unmarshal(resp.Value))
+
+		assert.Equal(t, group.State, groups.GetItems()[0].State)
+		assert.Equal(t, group.State, types.DeploymentGroup_OPEN)
 	}
 
 	testutil.CloseDeployment(t, app, &depl.Address, &key)
@@ -150,9 +170,17 @@ func TestCloseTx_1(t *testing.T) {
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
 		assert.Equal(t, types.Deployment_CLOSING, dep.State)
+	}
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, types.DeploymentGroup_CLOSING, dep.Groups[0].State)
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		group := new(types.DeploymentGroup)
+		require.NoError(t, group.Unmarshal(resp.Value))
+
+		assert.Equal(t, group.State, types.DeploymentGroup_CLOSING)
 	}
 
 	testutil.DeploymentClosed(t, app, &depl.Address, &key)
@@ -166,16 +194,24 @@ func TestCloseTx_1(t *testing.T) {
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
 		assert.Equal(t, types.Deployment_CLOSED, dep.State)
+	}
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, types.DeploymentGroup_CLOSED, dep.Groups[0].State)
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		group := new(types.DeploymentGroup)
+		require.NoError(t, group.Unmarshal(resp.Value))
+
+		assert.Equal(t, group.State, types.DeploymentGroup_CLOSED)
 	}
 }
 
 func TestCloseTx_2(t *testing.T) {
 
 	const (
-		groupseq = 2
+		groupseq = 1
 		orderseq = 3
 	)
 
@@ -185,7 +221,7 @@ func TestCloseTx_2(t *testing.T) {
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
 
-	depl := testutil.CreateDeployment(t, app, account, &key, nonce)
+	depl, groups := testutil.CreateDeployment(t, app, account, &key, nonce)
 
 	orderapp, err := order.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
@@ -203,10 +239,18 @@ func TestCloseTx_2(t *testing.T) {
 
 		assert.Equal(t, dep.State, depl.State)
 		assert.Equal(t, dep.State, types.Deployment_ACTIVE)
+	}
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, dep.Groups[0].State, depl.Groups[0].State)
-		assert.Equal(t, dep.Groups[0].State, types.DeploymentGroup_OPEN)
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		group := new(types.DeploymentGroup)
+		require.NoError(t, group.Unmarshal(resp.Value))
+
+		assert.Equal(t, group.State, groups.GetItems()[0].State)
+		assert.Equal(t, group.State, types.DeploymentGroup_OPEN)
 	}
 
 	{
@@ -233,9 +277,17 @@ func TestCloseTx_2(t *testing.T) {
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
 		assert.Equal(t, types.Deployment_CLOSING, dep.State)
+	}
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, types.DeploymentGroup_CLOSING, dep.Groups[0].State)
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		group := new(types.DeploymentGroup)
+		require.NoError(t, group.Unmarshal(resp.Value))
+
+		assert.Equal(t, group.State, types.DeploymentGroup_CLOSING)
 	}
 
 	{
@@ -262,9 +314,17 @@ func TestCloseTx_2(t *testing.T) {
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
 		assert.Equal(t, types.Deployment_CLOSED, dep.State)
+	}
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, types.DeploymentGroup_CLOSED, dep.Groups[0].State)
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		group := new(types.DeploymentGroup)
+		require.NoError(t, group.Unmarshal(resp.Value))
+
+		assert.Equal(t, group.State, types.DeploymentGroup_CLOSED)
 	}
 
 	{
@@ -283,7 +343,7 @@ func TestCloseTx_2(t *testing.T) {
 func TestCloseTx_3(t *testing.T) {
 
 	const (
-		groupseq = 2
+		groupseq = 1
 		orderseq = 3
 		price    = 0
 	)
@@ -293,7 +353,7 @@ func TestCloseTx_3(t *testing.T) {
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
-	depl := testutil.CreateDeployment(t, app, account, &key, nonce)
+	depl, groups := testutil.CreateDeployment(t, app, account, &key, nonce)
 
 	orderapp, err := order.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
@@ -316,10 +376,18 @@ func TestCloseTx_3(t *testing.T) {
 
 		assert.Equal(t, dep.State, depl.State)
 		assert.Equal(t, dep.State, types.Deployment_ACTIVE)
+	}
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, dep.Groups[0].State, depl.Groups[0].State)
-		assert.Equal(t, dep.Groups[0].State, types.DeploymentGroup_OPEN)
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		group := new(types.DeploymentGroup)
+		require.NoError(t, group.Unmarshal(resp.Value))
+
+		assert.Equal(t, group.State, groups.GetItems()[0].State)
+		assert.Equal(t, group.State, types.DeploymentGroup_OPEN)
 	}
 
 	{
@@ -358,9 +426,17 @@ func TestCloseTx_3(t *testing.T) {
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
 		assert.Equal(t, types.Deployment_CLOSING, dep.State)
+	}
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, types.DeploymentGroup_CLOSING, dep.Groups[0].State)
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		group := new(types.DeploymentGroup)
+		require.NoError(t, group.Unmarshal(resp.Value))
+
+		assert.Equal(t, group.State, types.DeploymentGroup_CLOSING)
 	}
 
 	{
@@ -399,9 +475,17 @@ func TestCloseTx_3(t *testing.T) {
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
 		assert.Equal(t, types.Deployment_CLOSED, dep.State)
+	}
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, types.DeploymentGroup_CLOSED, dep.Groups[0].State)
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		group := new(types.DeploymentGroup)
+		require.NoError(t, group.Unmarshal(resp.Value))
+
+		assert.Equal(t, group.State, types.DeploymentGroup_CLOSED)
 	}
 
 	{
@@ -432,7 +516,7 @@ func TestCloseTx_3(t *testing.T) {
 func TestCloseTx_4(t *testing.T) {
 
 	const (
-		groupseq = 2
+		groupseq = 1
 		orderseq = 3
 		price    = 0
 	)
@@ -442,7 +526,7 @@ func TestCloseTx_4(t *testing.T) {
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
-	depl := testutil.CreateDeployment(t, app, account, &key, nonce)
+	depl, groups := testutil.CreateDeployment(t, app, account, &key, nonce)
 
 	orderapp, err := order.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
@@ -468,10 +552,18 @@ func TestCloseTx_4(t *testing.T) {
 
 		assert.Equal(t, dep.State, depl.State)
 		assert.Equal(t, dep.State, types.Deployment_ACTIVE)
+	}
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, dep.Groups[0].State, depl.Groups[0].State)
-		assert.Equal(t, dep.Groups[0].State, types.DeploymentGroup_OPEN)
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		group := new(types.DeploymentGroup)
+		require.NoError(t, group.Unmarshal(resp.Value))
+
+		assert.Equal(t, group.State, groups.GetItems()[0].State)
+		assert.Equal(t, group.State, types.DeploymentGroup_OPEN)
 	}
 
 	{
@@ -522,9 +614,17 @@ func TestCloseTx_4(t *testing.T) {
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
 		assert.Equal(t, types.Deployment_CLOSING, dep.State)
+	}
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, types.DeploymentGroup_CLOSING, dep.Groups[0].State)
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		group := new(types.DeploymentGroup)
+		require.NoError(t, group.Unmarshal(resp.Value))
+
+		assert.Equal(t, group.State, types.DeploymentGroup_CLOSING)
 	}
 
 	{
@@ -575,9 +675,17 @@ func TestCloseTx_4(t *testing.T) {
 		require.NoError(t, dep.Unmarshal(resp.Value))
 
 		assert.Equal(t, types.Deployment_CLOSED, dep.State)
+	}
 
-		require.Len(t, dep.Groups, 1)
-		assert.Equal(t, types.DeploymentGroup_CLOSED, dep.Groups[0].State)
+	{
+		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%X", pstate.DeploymentGroupPath, pstate.DeploymentGroupID(depl.Address, groupseq))})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		group := new(types.DeploymentGroup)
+		require.NoError(t, group.Unmarshal(resp.Value))
+
+		assert.Equal(t, group.State, types.DeploymentGroup_CLOSED)
 	}
 
 	{

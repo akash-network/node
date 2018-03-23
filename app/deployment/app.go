@@ -211,6 +211,13 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployment
 		}
 	}
 
+	if len(tx.Groups.GetItems()) == 0 {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "No groups in deployment",
+		}
+	}
+
 	acct, err := a.State().Account().Get(tx.Deployment.Tenant)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
@@ -278,8 +285,22 @@ func (a *app) doCheckClosedTx(ctx apptypes.Context, tx *types.TxDeploymentClosed
 		}
 	}
 
+	groups, err := a.State().DeploymentGroup().ForDeployment(deployment.Address)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+	if deployment == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment groups",
+		}
+	}
+
 	// check each object related to the deployment is also closing state
-	for _, group := range deployment.Groups {
+	for _, group := range groups {
 		// begin for each group
 		if group.State != types.DeploymentGroup_CLOSING {
 			return tmtypes.ResponseCheckTx{
@@ -288,7 +309,7 @@ func (a *app) doCheckClosedTx(ctx apptypes.Context, tx *types.TxDeploymentClosed
 			}
 		}
 
-		orders, err := a.State().Order().ForGroup(&group)
+		orders, err := a.State().Order().ForGroup(group)
 		if err != nil {
 			return tmtypes.ResponseCheckTx{
 				Code: code.INVALID_TRANSACTION,
@@ -359,7 +380,9 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployme
 
 	seq := a.State().Deployment().SequenceFor(deployment.Address)
 
-	for _, group := range deployment.Groups {
+	groups := tx.Groups.GetItems()
+
+	for _, group := range groups {
 		group.Deployment = deployment.Address
 		group.Seq = seq.Advance()
 		a.State().DeploymentGroup().Save(&group)
@@ -401,16 +424,30 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 		}
 	}
 
+	groups, err := a.State().DeploymentGroup().ForDeployment(deployment.Address)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+	if deployment == nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment groups",
+		}
+	}
+
 	deployment.State = types.Deployment_CLOSING
 
-	for i, group := range deployment.Groups {
+	for i, group := range groups {
 		// begin for each group
 		if group.State != types.DeploymentGroup_CLOSING {
 			group.State = types.DeploymentGroup_CLOSING
-			deployment.Groups[i] = group
+			groups[i] = group
 		}
 
-		orders, err := a.State().Order().ForGroup(&group)
+		orders, err := a.State().Order().ForGroup(group)
 		if err != nil {
 			return tmtypes.ResponseDeliverTx{
 				Code: code.INVALID_TRANSACTION,
@@ -475,6 +512,13 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 			}
 			// end for each order
 		}
+		err = a.State().DeploymentGroup().Save(group)
+		if err != nil {
+			return tmtypes.ResponseDeliverTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  err.Error(),
+			}
+		}
 		// end for each group
 	}
 
@@ -517,14 +561,28 @@ func (a *app) doDeliverClosedTx(ctx apptypes.Context, tx *types.TxDeploymentClos
 
 	deployment.State = types.Deployment_CLOSED
 
-	for i, group := range deployment.Groups {
+	groups, err := a.State().DeploymentGroup().ForDeployment(deployment.Address)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+	if deployment == nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment groups",
+		}
+	}
+
+	for i, group := range groups {
 		// begin for each group
 		if group.State != types.DeploymentGroup_CLOSED {
 			group.State = types.DeploymentGroup_CLOSED
-			deployment.Groups[i] = group
+			groups[i] = group
 		}
 
-		orders, err := a.State().Order().ForGroup(&group)
+		orders, err := a.State().Order().ForGroup(group)
 		if err != nil {
 			return tmtypes.ResponseDeliverTx{
 				Code: code.INVALID_TRANSACTION,
@@ -588,6 +646,13 @@ func (a *app) doDeliverClosedTx(ctx apptypes.Context, tx *types.TxDeploymentClos
 				}
 			}
 			// end for each order
+		}
+		err = a.State().DeploymentGroup().Save(group)
+		if err != nil {
+			return tmtypes.ResponseDeliverTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  err.Error(),
+			}
 		}
 		// end for each group
 	}
