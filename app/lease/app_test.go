@@ -57,8 +57,8 @@ func TestValidTx(t *testing.T) {
 	dapp, err := dapp.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	tnonce := uint64(1)
-	deployment := testutil.CreateDeployment(t, dapp, taccount, &tkey, tnonce)
-	groupSeq := deployment.Groups[0].Seq
+	deployment, groups := testutil.CreateDeployment(t, dapp, taccount, &tkey, tnonce)
+	groupSeq := groups.GetItems()[0].Seq
 	daddress := state_.DeploymentAddress(taccount.Address, tnonce)
 
 	// create order

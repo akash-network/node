@@ -21,12 +21,14 @@ func RandUint64() uint64 {
 	return uint64(rand.Int63())
 }
 
-func CreateDeployment(t *testing.T, app apptypes.Application, account *types.Account, key *crypto.PrivKey, nonce uint64) *types.Deployment {
+func CreateDeployment(t *testing.T, app apptypes.Application, account *types.Account, key *crypto.PrivKey, nonce uint64) (*types.Deployment, *types.DeploymentGroups) {
 	deployment := Deployment(account.Address, nonce)
+	groups := DeploymentGroups(deployment.Address, nonce)
 
 	deploymenttx := &types.TxPayload_TxCreateDeployment{
 		TxCreateDeployment: &types.TxCreateDeployment{
 			Deployment: deployment,
+			Groups:     groups,
 		},
 	}
 
@@ -45,7 +47,7 @@ func CreateDeployment(t *testing.T, app apptypes.Application, account *types.Acc
 	dresp := app.DeliverTx(ctx, deploymenttx)
 	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
 	assert.True(t, dresp.IsOK())
-	return deployment
+	return deployment, groups
 }
 
 func CloseDeployment(t *testing.T, app apptypes.Application, deployment *base.Bytes, key *crypto.PrivKey) {
@@ -98,8 +100,14 @@ func DeploymentClosed(t *testing.T, app apptypes.Application, deployment *base.B
 }
 
 func Deployment(tenant base.Bytes, nonce uint64) *types.Deployment {
+	return &types.Deployment{
+		Tenant:  tenant,
+		Address: state.DeploymentAddress(tenant, nonce),
+	}
+}
 
-	address := state.DeploymentAddress(tenant, nonce)
+func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGroups {
+
 	nonce++
 
 	runit := types.ResourceUnit{
@@ -119,18 +127,14 @@ func Deployment(tenant base.Bytes, nonce uint64) *types.Deployment {
 		Value: "us-west",
 	}
 
-	group := types.DeploymentGroup{
-		Deployment:   address,
+	group := &types.DeploymentGroup{
+		Deployment:   deployment,
 		Seq:          nonce,
 		Resources:    []types.ResourceGroup{rgroup},
 		Requirements: []types.ProviderAttribute{pattr},
 	}
 
-	groups := []types.DeploymentGroup{group}
+	groups := []types.DeploymentGroup{*group}
 
-	return &types.Deployment{
-		Tenant:  tenant,
-		Address: address,
-		Groups:  groups,
-	}
+	return &types.DeploymentGroups{Items: groups}
 }

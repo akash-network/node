@@ -15,10 +15,11 @@ func TestEngine_Orders(t *testing.T) {
 	tenant, _ := testutil.CreateAccount(t, state_)
 
 	deployment := testutil.Deployment(tenant.Address, tenant.Nonce)
+	groups := testutil.DeploymentGroups(deployment.Address, tenant.Nonce)
 	require.NoError(t, state_.Deployment().Save(deployment))
 
-	for idx := range deployment.Groups {
-		require.NoError(t, state_.DeploymentGroup().Save(&deployment.Groups[idx]))
+	for idx := range groups.GetItems() {
+		require.NoError(t, state_.DeploymentGroup().Save(&groups.GetItems()[idx]))
 	}
 
 	txs, err := market.NewEngine(testutil.Logger()).Run(state_)
@@ -30,6 +31,6 @@ func TestEngine_Orders(t *testing.T) {
 	require.True(t, ok)
 
 	require.Equal(t, deployment.Address, tx.Order.Deployment)
-	require.Equal(t, deployment.Groups[0].Seq, tx.Order.GetGroup())
+	require.Equal(t, groups.GetItems()[0].Seq, tx.Order.GetGroup())
 	require.Equal(t, types.Order_OPEN, tx.Order.GetState())
 }

@@ -121,7 +121,7 @@ message DeploymentGroup {
 }
 
 message DeploymentGroups {
-  repeated DeploymentGroup items = 1;
+  repeated DeploymentGroup items = 1 [(gogoproto.nullable) = false];
 }
 
 message Deployment {
@@ -132,13 +132,12 @@ message Deployment {
   /* END ID FIELDS */
 
   bytes  tenant  = 2 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
-  repeated DeploymentGroup groups = 3 [(gogoproto.nullable) = false];
   enum DeploymentState {
     ACTIVE  = 0;
     CLOSING = 1;
     CLOSED  = 2;
   }
-  DeploymentState state = 4;
+  DeploymentState state = 3;
 }
 
 message Deployments {
@@ -147,6 +146,7 @@ message Deployments {
 
 message TxCreateDeployment {
   Deployment deployment = 1;
+  DeploymentGroups groups = 2;
 }
 
 message Order {

@@ -46,14 +46,15 @@ func createDeploymentCommand() *cobra.Command {
 	return cmd
 }
 
-func parseDeployment(file string, tenant []byte, nonce uint64) (*types.Deployment, error) {
+func parseDeployment(file string, tenant []byte, nonce uint64) (*types.Deployment, *types.DeploymentGroups, error) {
 	// todo: read and parse deployment yaml file
 
 	/* begin stub data */
 	deployment := testutil.Deployment(tenant, nonce)
+	groups := testutil.DeploymentGroups(deployment.Address, nonce)
 	/* end stub data */
 
-	return deployment, nil
+	return deployment, groups, nil
 }
 
 func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) error {
@@ -67,13 +68,14 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 		return err
 	}
 
-	deployment, err := parseDeployment(args[0], key.Address, nonce)
+	deployment, groups, err := parseDeployment(args[0], key.Address, nonce)
 	if err != nil {
 		return err
 	}
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateDeployment{
 		Deployment: deployment,
+		Groups:     groups,
 	})
 	if err != nil {
 		return err
