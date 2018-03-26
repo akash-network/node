@@ -3,8 +3,10 @@ package query
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/types"
 	"github.com/spf13/cobra"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
@@ -70,11 +72,10 @@ func doQuery(ctx context.Context, path string, structure interface{}) error {
 
 	data, err := json.MarshalIndent(structure, "", "  ")
 	if err != nil {
-		return err
+		return common.HandleError(err)
 	}
 
-	println("path: " + path)
-	println("response:\n" + string(data))
+	fmt.Println(string(data))
 
 	return nil
 }
