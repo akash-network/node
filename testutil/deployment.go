@@ -135,7 +135,7 @@ func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGrou
 		OrderTTL:     orderTTL,
 	}
 
-	groups := []types.DeploymentGroup{*group}
+	groups := []*types.DeploymentGroup{group}
 
 	return &types.DeploymentGroups{Items: groups}
 }

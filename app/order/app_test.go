@@ -62,7 +62,7 @@ func TestTx(t *testing.T) {
 	orderSeq := uint64(0)
 	testutil.CreateOrder(t, app, account, &key, deployment.Address, groups.GetItems()[0].Seq, orderSeq)
 
-	orders, err := state_.Order().ForGroup(&groups.GetItems()[0])
+	orders, err := state_.Order().ForGroup(groups.GetItems()[0])
 	require.NoError(t, err)
 	require.Len(t, orders, 1)
 

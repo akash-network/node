@@ -19,7 +19,7 @@ func TestEngine_Orders(t *testing.T) {
 	require.NoError(t, state_.Deployment().Save(deployment))
 
 	for idx := range groups.GetItems() {
-		require.NoError(t, state_.DeploymentGroup().Save(&groups.GetItems()[idx]))
+		require.NoError(t, state_.DeploymentGroup().Save(groups.GetItems()[idx]))
 	}
 
 	txs, err := market.NewEngine(testutil.Logger()).Run(state_)

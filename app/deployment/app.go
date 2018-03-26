@@ -385,7 +385,7 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployme
 	for _, group := range groups {
 		group.Deployment = deployment.Address
 		group.Seq = seq.Advance()
-		a.State().DeploymentGroup().Save(&group)
+		a.State().DeploymentGroup().Save(group)
 	}
 
 	if err := a.State().Deployment().Save(deployment); err != nil {
