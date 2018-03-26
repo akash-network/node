@@ -7,8 +7,9 @@ import (
 
 func baseCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "akash",
-		Short: "Akash client",
+		Use:          "akash",
+		Short:        "Akash client",
+		SilenceUsage: true,
 	}
 	context.SetupBaseCommand(cmd)
 	return cmd

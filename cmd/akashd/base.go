@@ -29,8 +29,9 @@ func initEnv(path string) error {
 
 func baseCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "akashd",
-		Short: "Akash node",
+		Use:          "akashd",
+		Short:        "Akash node",
+		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			root, err := cmd.Flags().GetString(flagRootDir)
 			if err != nil {

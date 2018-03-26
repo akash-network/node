@@ -2,6 +2,7 @@ package main
 
 import (
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/ovrclk/akash/cmd/akash/query"
@@ -17,5 +18,8 @@ func main() {
 	root.AddCommand(query.QueryCommand())
 	root.AddCommand(statusCommand())
 	root.AddCommand(marketplaceCommand())
-	root.Execute()
+
+	if err := root.Execute(); err != nil {
+		os.Exit(1)
+	}
 }
