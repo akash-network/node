@@ -440,11 +440,10 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 
 	deployment.State = types.Deployment_CLOSING
 
-	for i, group := range groups {
+	for _, group := range groups {
 		// begin for each group
 		if group.State != types.DeploymentGroup_CLOSING {
 			group.State = types.DeploymentGroup_CLOSING
-			groups[i] = group
 		}
 
 		orders, err := a.State().Order().ForGroup(group)
@@ -575,11 +574,10 @@ func (a *app) doDeliverClosedTx(ctx apptypes.Context, tx *types.TxDeploymentClos
 		}
 	}
 
-	for i, group := range groups {
+	for _, group := range groups {
 		// begin for each group
 		if group.State != types.DeploymentGroup_CLOSED {
 			group.State = types.DeploymentGroup_CLOSED
-			groups[i] = group
 		}
 
 		orders, err := a.State().Order().ForGroup(group)
