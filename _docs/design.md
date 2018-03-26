@@ -1,49 +1,57 @@
-* [Workflow](#workflow)
-  * [Use Cases](#use-cases)
-* [Actors](#actors)
-  * [Tenants](#tenants)
-  * [Datacenters](#datacenters)
-  * [Validators](#validators)
-  * [Marketplace Facilitators](#marketplace-facilitators)
-* [Distributed Exchange](#distributed-exchange)
-  * [Global Parameters](#global-parameters)
-  * [Models](#models)
-    * [ComputeUnit](#computeunit)
-    * [ResourceGroup](#computeunit)
-    * [Deployment](#deployment)
-    * [Order](#order)
-    * [Fulfillment](#fulfillment)
-    * [Lease](#lease)
-    * [LeaseConfirmation](#leaseconfirmation)
-  * [Transactions](#transactions)
-    * [SubmitDeployment](#submitdeployment)
-    * [UpdateDeployment](#updatedeployment)
-    * [CancelDeployment](#canceldeployment)
-    * [SubmitFulfillment](#submitfultillmentorder)
-    * [CancelFulfillment](#cancelfultillmentorder)
-    * [SubmitLeaseConfirmation](#submitleaseconfirmation)
-    * [SubmitLease](#submitlease)
-    * [SubmitStaleLease](#submitstalelease)
-  * [Workflows](#workflows)
-    * [Tenants](#tenants-1)
-    * [Datacenters](#datacenters-1)
-    * [Marketplace Facilitators](#marketplace-facilitators-1)
-* [Deployments](#deployments)
   * [Workflow](#workflow)
-  * [Manifest Distribution](#manifest-distribution)
-  * [Overlay Network](#overlay-network)
-  * [Models](#models-1)
-    * [Stack](#stack)
-    * [Manifest](#manifest)
-    * [Deployment](#deployment)
-    * [Workload](#workload)
-    * [Connection](#connection)
-    * [LeasedWorkload](#leasedWorkload)
-* [Automation](#automation)
-  * [Examples](#examples)
-    * [Latency-Optimized Deployment](#latency-optimized-deployment)
-    * [Machine Learning Deployment](#machine-learning-deployment)
-* [TODO](#todo)
+  * [Use Cases](#use-cases)
+    * [Web Application](#web-application)
+  * [Actors](#actors)
+    + [Tenants](#tenants)
+    + [Datacenters](#datacenters)
+    + [Validators](#validators)
+    + [Marketplace Facilitators](#marketplace-facilitators)
+  * [Distributed Exchange](#distributed-exchange)
+    + [Global Parameters](#global-parameters)
+    + [Models](#models)
+      - [ComputeUnit](#computeunit)
+      - [ResourceGroup](#resourcegroup)
+      - [Deployment](#deployment)
+      - [DeploymentInfrastructure](#deploymentinfrastructure)
+      - [Order](#order)
+      - [Fulfillment](#fulfillment)
+      - [Lease](#lease)
+      - [LeaseConfirmation](#leaseconfirmation)
+    + [Transactions](#transactions)
+    + [SubmitDeployment](#submitdeployment)
+    + [UpdateDeployment](#updatedeployment)
+    + [CloseDeployment](#closedeployment)
+    + [DeploymentClosed](#deploymentclosed)
+    + [SubmitFulfillment](#submitfulfillment)
+    + [CancelFulfillment](#cancelfulfillment)
+    + [SubmitLeaseConfirmation](#submitleaseconfirmation)
+    + [SubmitLease](#submitlease)
+    + [SubmitStaleLease](#submitstalelease)
+    + [Workflows](#workflows)
+      - [Tenants](#tenants-1)
+      - [Marketplace Facilitators](#marketplace-facilitators-1)
+        * [MatchOpenOrders](#matchopenorders)
+        * [InvalidateStaleLeases](#invalidatestaleleases)
+      - [Datacenters](#datacenters-1)
+        * [ConfirmCurrentLeases](#confirmcurrentleases)
+        * [BidOnOpenOrders](#bidonopenorders)
+  * [Deployments](#deployments)
+    + [Workflow](#workflow-1)
+    + [Manifest Distribution](#manifest-distribution)
+    + [Overlay Network](#overlay-network)
+    + [Closing Deployments](#closing-deployments)
+    + [Models](#models-1)
+      - [Stack](#stack)
+      - [Manifest](#manifest)
+      - [Deployment](#deployment-1)
+      - [Workload](#workload)
+      - [Connection](#connection)
+      - [LeasedWorkload](#leasedworkload)
+  * [Automation](#automation)
+    + [Examples](#examples)
+      - [Latency-Optimized Deployment](#latency-optimized-deployment)
+      - [Machine Learning Deployment](#machine-learning-deployment)
+- [TODO](#todo)
 
 ### Workflow
 
@@ -55,6 +63,7 @@
 * Once [lease](#lease) is reached, workloads and topology are delivered to [datacenter](#datacenters).
 * [Datacenter](#datacenters) deploy workloads and allow connectivity as specified by the tenant.
 * If a [datacenter](#datacenters) fails to maintain lease, collateral is transferred to tenant, and a new [order](#order) is crated for the desired resources.
+* A tenant can [close](#close) any active deployment at any time
 
 ### Use Cases
 
@@ -195,9 +204,13 @@ configuration described in the [deployment](#deployment)
 
 Sent by a [tenant](#tenants) to update their application on Akash.
 
-### CancelDeployment
+### CloseDeployment
 
-Sent by a [tenant](#tenants) to cancel their application on Akash.
+Sent by a [tenant](#tenants) to close their application on Akash.
+
+### DeploymentClosed
+
+Sent by a [facilitator](#marketplace-facilitators) after the deployments datacenter's confirm the deployments' resources have been reset.
 
 ### SubmitFulfillment
 
@@ -225,6 +238,7 @@ Sent by a [validator](#validator) after finding a lease that has not been confir
 #### Tenants
 
 Tenants submit their [deployment](#deployment) to the network via [`SubmitDeployment`](#submitdeployment).
+Tenants close their [deployment](#deployment) on the network via [`CloseDeployment`](#closedeployment).
 
 #### Marketplace Facilitators
 
@@ -284,6 +298,8 @@ distributed database.
 1. Stack manifest is distributed to deployment data centers (lease providers).
 1. Datacenters deploy workloads and distribute connection parameters to all other deployment datacenters.
 1. Overlay network is established to allow for connectivity between workloads.
+1. Tenant closes the deployment
+1. Datacenters receive the close event
 
 ### Manifest Distribution
 
@@ -326,6 +342,12 @@ the certificates it receives.
 Once certificates are exchanged, providers establish an authenticated tunnel and connect the
 workload’s network to it.  All of this is transparent to the workloads themselves - they can connect
 to one another through stable addresses and standard protocols.
+
+### Closing Deployments
+
+![close deployment](dot/tenant-cancel.svg)
+
+Deployments are closed by tenants and consist of two states. The first `Closing` state will notify the datacenter so that allocated resources can be deallocated. The tenant will not be billed for leases in the `Closing` state. Once the datacenter has deallocated and made it's resources available again the previous lease will be se to the `Closed` state.
 
 ### Models
 
