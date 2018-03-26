@@ -46,11 +46,7 @@ func (d *orderAdapter) GetByKey(address base.Bytes) (*types.Order, error) {
 func (a *orderAdapter) ForGroup(group *types.DeploymentGroup) ([]*types.Order, error) {
 	min := a.groupMinRange(group)
 	max := a.groupMaxRange(group)
-	println("\n\n\ngettting order for group")
-	println(group.GoString())
-	println("\n\n\n")
 	orders, _ := a.forRange(min, max)
-	println("\ngot orders for group\n\n", len(orders))
 	return orders, nil
 }
 

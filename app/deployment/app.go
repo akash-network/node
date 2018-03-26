@@ -503,8 +503,6 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 				// end for each fulfillment
 			}
 
-			println("\n\n\n\n\nsavign order", order.GoString(), "\n\n\n\n\n")
-
 			err = a.State().Order().Save(order)
 			if err != nil {
 				return tmtypes.ResponseDeliverTx{
