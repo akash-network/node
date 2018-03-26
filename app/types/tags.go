@@ -20,7 +20,6 @@ const (
 
 	TagAppOrder       = "order"
 	TxTypeCreateOrder = "order-create"
-	TxTypeCloseOrder  = "order-close"
 
 	TagAppFulfillment       = "fulfillment"
 	TxTypeCreateFulfillment = "fulfillment-create"

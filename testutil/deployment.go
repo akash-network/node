@@ -107,8 +107,6 @@ func Deployment(tenant base.Bytes, nonce uint64) *types.Deployment {
 }
 
 func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGroups {
-
-	address := state.DeploymentAddress(tenant, nonce)
 	orderTTL := int64(5)
 	nonce++
 
