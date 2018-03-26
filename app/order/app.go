@@ -42,7 +42,7 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateOrder:
-		return a.doCheckTx(ctx, tx.TxCreateOrder)
+		return a.doCheckCreateTx(ctx, tx.TxCreateOrder)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -53,7 +53,7 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateOrder:
-		return a.doDeliverTx(ctx, tx.TxCreateOrder)
+		return a.doDeliverCreateTx(ctx, tx.TxCreateOrder)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -145,8 +145,7 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 }
 
-// todo: break each type of check out into a named global exported funtion for all trasaction types to utilize
-func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseCheckTx {
+func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseCheckTx {
 
 	// todo: ensure signed by last block creator / valid market facilitator
 
@@ -218,9 +217,9 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.R
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseDeliverTx {
 
-	cresp := a.doCheckTx(ctx, tx)
+	cresp := a.doCheckCreateTx(ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,

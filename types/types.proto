@@ -107,7 +107,10 @@ message DeploymentGroup {
 
   /* END ID FIELDS */
 
-  DeploymentGroupState state = 3;
+  // max number of blocks orders are open
+  int64 orderTTL = 3;
+
+  DeploymentGroupState state = 4;
   enum DeploymentGroupState {
     OPEN    = 0;
     ORDERED = 1;
@@ -115,8 +118,8 @@ message DeploymentGroup {
     CLOSED  = 3;
   }
 
-  repeated ProviderAttribute requirements = 4 [(gogoproto.nullable) = false];
-  repeated ResourceGroup     resources    = 5 [(gogoproto.nullable) = false];
+  repeated ProviderAttribute requirements = 5 [(gogoproto.nullable) = false];
+  repeated ResourceGroup     resources    = 6 [(gogoproto.nullable) = false];
 
 }
 
@@ -165,13 +168,16 @@ message Order {
 
   /* END ID FIELDS */
 
+  // maximum block number order can be open
+  int64 endAt = 4;
+
   enum OrderState {
     OPEN    = 0;
     MATCHED = 1;
     CLOSING = 2;
     CLOSED  = 3;
   }
-  OrderState state = 4;
+  OrderState state = 5;
 }
 
 message TxCreateOrder {
