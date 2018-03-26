@@ -124,7 +124,7 @@ message DeploymentGroup {
 }
 
 message DeploymentGroups {
-  repeated DeploymentGroup items = 1 [(gogoproto.nullable) = false];
+  repeated DeploymentGroup items = 1;
 }
 
 message Deployment {
