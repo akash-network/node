@@ -1,6 +1,7 @@
+BINARY := run
 
 build:
-	go build -o main .
+	go build -o $(BINARY) .
 
 init:
 	mkdir -p data/client
@@ -9,6 +10,6 @@ akash:
 	(cd .. && make)
 
 clean:
-	rm -rf data
+	rm -rf data $(BINARY)
 
 reset: clean init build akash
