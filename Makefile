@@ -37,6 +37,9 @@ test-cover:
 test-vet:
 	go vet $$(glide novendor)
 
+test-integration: $(PROGRAMS)
+	(cd _integration && make clean run)
+
 deps-install:
 	glide install
 
@@ -47,6 +50,9 @@ devdeps-install:
 coverdeps-install:
 	go get golang.org/x/tools/cmd/cover
 	go get github.com/mattn/goveralls
+
+integrationdeps-install:
+	(cd _integration && make deps-install)
 
 gentypes: $(PROTOC_FILES)
 
@@ -73,6 +79,7 @@ clean:
 	test test-full \
 	deps-install devdeps-install \
 	test-cover coverdeps-install \
+	test-integraion integrationdeps-install \
 	test-vet \
 	mocks \
 	docs \
