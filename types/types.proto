@@ -276,4 +276,13 @@ message TxDeploymentClosed {
   /* END ID FIELDS */
 }
 
+message Bill {
+  // lease address
+  bytes lease = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+}
+
+message TxBillTenant {
+  Bill bill = 1;
+}
+
 /* END EXCHANGE */

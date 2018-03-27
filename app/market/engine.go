@@ -87,7 +87,7 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 			if !activeFound && order.State == types.Order_OPEN || order.State == types.Order_MATCHED {
 				activeFound = true
 			}
-			if order.EndAt <= height {
+			if order.State == types.Order_OPEN && order.EndAt <= height {
 				err := e.processOrder(state, w, order)
 				if err != nil {
 					return err

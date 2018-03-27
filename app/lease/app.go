@@ -1,7 +1,7 @@
 package lease
 
 import (
-	_ "bytes"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -279,4 +279,73 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 		Value:  bytes,
 		Height: a.State().Version(),
 	}
+}
+
+// billing for leases
+func ProcessLeases(state state.State) error {
+	leases, err := state.Lease().All()
+	if err != nil {
+		return err
+	}
+	for _, lease := range leases {
+		if lease.State == types.Lease_ACTIVE {
+			if err := processLease(state, *lease); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func processLease(state state.State, lease types.Lease) error {
+	deployment, err := state.Deployment().Get(lease.Deployment)
+	if err != nil {
+		return err
+	}
+	if deployment == nil {
+		return errors.New("deployment not found")
+	}
+	tenant, err := state.Account().Get(deployment.Tenant)
+	if err != nil {
+		return err
+	}
+	if tenant == nil {
+		return errors.New("tenant not found")
+	}
+	provider, err := state.Provider().Get(lease.Provider)
+	if err != nil {
+		return err
+	}
+	if provider == nil {
+		return errors.New("provider not found")
+	}
+	owner, err := state.Account().Get(provider.Owner)
+	if err != nil {
+		return err
+	}
+	if owner == nil {
+		return errors.New("owner not found")
+	}
+
+	p := uint64(lease.Price)
+
+	if tenant.Balance >= p {
+		owner.Balance += p
+		tenant.Balance -= p
+	} else {
+		owner.Balance += tenant.Balance
+		tenant.Balance = 0
+	}
+
+	err = state.Account().Save(tenant)
+	if err != nil {
+		return err
+	}
+
+	err = state.Account().Save(owner)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

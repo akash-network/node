@@ -8,7 +8,6 @@ import (
 )
 
 func TestProviderCreate_NoNode(t *testing.T) {
-	testutil.Shrug(t, 151)
 	path := "providerfile.yaml"
 	info, _ := testutil.NewNamedKey(t)
 	args := []string{providerCommand().Name(), createProviderCommand().Name(), path, "-k", info.Name}
@@ -21,7 +20,6 @@ func TestProviderCreate_NoNode(t *testing.T) {
 }
 
 func TestProviderRun_NoNode(t *testing.T) {
-	testutil.Shrug(t, 151)
 	info, _ := testutil.NewNamedKey(t)
 	args := []string{providerCommand().Name(), runCommand().Name(), info.Address.String(), "-k", info.Name}
 
@@ -30,11 +28,9 @@ func TestProviderRun_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestCreateDeployment_NoNode(t *testing.T) {
-	testutil.Shrug(t, 151)
 	path := "deployment.yaml"
 	info, _ := testutil.NewNamedKey(t)
 	args := []string{deploymentCommand().Name(), createDeploymentCommand().Name(), path, "-k", info.Name}
@@ -44,11 +40,9 @@ func TestCreateDeployment_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestCloseDeployment_NoNode(t *testing.T) {
-	testutil.Shrug(t, 151)
 	deployment := "191D3BD403FD3F60712B128CB3E0666602C19912711BDE77F86F56BDAB8A44B4"
 	info, _ := testutil.NewNamedKey(t)
 	args := []string{deploymentCommand().Name(), closeDeploymentCommand().Name(), deployment, "-k", info.Name}
@@ -58,22 +52,18 @@ func TestCloseDeployment_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestMarketplace_NoNode(t *testing.T) {
-	testutil.Shrug(t, 151)
 	args := []string{marketplaceCommand().Name()}
 	base := baseCommand()
 	base.AddCommand(marketplaceCommand())
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestSend_NoNode(t *testing.T) {
-	testutil.Shrug(t, 151)
 	from, _ := testutil.NewNamedKey(t)
 	to, _ := testutil.NewNamedKey(t)
 	amount := "1"
@@ -83,16 +73,13 @@ func TestSend_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestStatus_NoNode(t *testing.T) {
-	testutil.Shrug(t, 151)
 	args := []string{statusCommand().Name()}
 	base := baseCommand()
 	base.AddCommand(statusCommand())
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }

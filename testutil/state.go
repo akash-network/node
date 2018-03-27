@@ -20,6 +20,7 @@ func CreateAccount(t *testing.T, state state.State) (*types.Account, crypto.Priv
 	key := PrivateKey(t)
 	account := &types.Account{
 		Address: key.PubKey().Address(),
+		Balance: 1000000000,
 	}
 	require.NoError(t, state.Account().Save(account))
 	return account, key

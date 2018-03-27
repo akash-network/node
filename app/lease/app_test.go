@@ -13,6 +13,7 @@ import (
 	state_ "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmtypes "github.com/tendermint/abci/types"
@@ -103,4 +104,61 @@ func TestTx_BadTxType(t *testing.T) {
 	assert.False(t, cresp.IsOK())
 	dresp := app.DeliverTx(ctx, tx.Payload.Payload)
 	assert.False(t, dresp.IsOK())
+}
+
+func TestBilling(t *testing.T) {
+
+	state := testutil.NewState(t, nil)
+	app, err := app_.NewApp(state, testutil.Logger())
+
+	// create provider
+	papp, err := papp.NewApp(state, testutil.Logger())
+	require.NoError(t, err)
+	paccount, pkey := testutil.CreateAccount(t, state)
+	pnonce := uint64(0)
+	provider := testutil.CreateProvider(t, papp, paccount, &pkey, pnonce)
+
+	// create tenant
+	tenant, tkey := testutil.CreateAccount(t, state)
+
+	// create deployment
+	dapp, err := dapp.NewApp(state, testutil.Logger())
+	require.NoError(t, err)
+	tnonce := uint64(1)
+	deployment, groups := testutil.CreateDeployment(t, dapp, tenant, &tkey, tnonce)
+	groupSeq := groups.GetItems()[0].Seq
+	daddress := state_.DeploymentAddress(tenant.Address, tnonce)
+
+	// create order
+	oapp, err := oapp.NewApp(state, testutil.Logger())
+	require.NoError(t, err)
+	oSeq := uint64(0)
+	testutil.CreateOrder(t, oapp, tenant, &tkey, deployment.Address, groupSeq, oSeq)
+	price := uint32(1)
+	p := uint64(price)
+
+	// create fulfillment
+	fapp, err := fapp.NewApp(state, testutil.Logger())
+	testutil.CreateFulfillment(t, fapp, provider.Address, &pkey, daddress, groupSeq, oSeq, price)
+
+	// create lease
+	testutil.CreateLease(t, app, provider.Address, &pkey, daddress, groupSeq, oSeq, price)
+
+	iTenBal := getBalance(t, state, tenant.Address)
+	iProBal := getBalance(t, state, provider.Owner)
+	require.NotZero(t, iTenBal)
+	require.NotZero(t, iProBal)
+
+	app_.ProcessLeases(state)
+
+	fTenBal := getBalance(t, state, tenant.Address)
+	fProBal := getBalance(t, state, provider.Owner)
+	require.Equal(t, iTenBal-p, fTenBal)
+	require.Equal(t, iProBal+p, fProBal)
+}
+
+func getBalance(t *testing.T, state state_.State, address base.Bytes) uint64 {
+	acc, err := state.Account().Get(address)
+	require.NoError(t, err)
+	return acc.GetBalance()
 }
