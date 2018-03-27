@@ -16,7 +16,7 @@ func nodeRun() gestalt.Component {
 	return g.Group("node-run").
 		Run(g.BG().
 			Run(akashd("start"))).
-		Run(g.Retry(5).
+		Run(g.Retry(10).
 			Run(akash("status")))
 }
 
