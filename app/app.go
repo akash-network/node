@@ -235,7 +235,9 @@ func (app *app) Commit() tmtypes.ResponseCommit {
 		app.mfacilitator.OnCommit(app.state)
 	}
 
-	lease.ProcessLeases(app.state)
+	if err = lease.ProcessLeases(app.state); err != nil {
+		app.log.Error("processing leases", "error", err)
+	}
 
 	return tmtypes.ResponseCommit{Data: data}
 }
