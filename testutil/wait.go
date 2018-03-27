@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	defaultDelayThreadStart = time.Millisecond * 5
+	defaultDelayThreadStart = time.Millisecond * 6
 )
 
 func SleepForThreadStart(t *testing.T) {
