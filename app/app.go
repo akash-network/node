@@ -235,6 +235,8 @@ func (app *app) Commit() tmtypes.ResponseCommit {
 		app.mfacilitator.OnCommit(app.state)
 	}
 
+	lease.ProcessLeases(app.state)
+
 	return tmtypes.ResponseCommit{Data: data}
 }
 

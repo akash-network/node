@@ -7,7 +7,6 @@ import (
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,8 +25,6 @@ func TestEngine_All(t *testing.T) {
 
 	state_, tx := testOrder(t, state_, tenant, deployment, groups)
 	state_ = testLease(t, state_, provider, deployment, groups, tx)
-	state_ = testBilling(t, state_, tenant, provider)
-
 }
 
 func testOrder(t *testing.T, state state.State, tenant *types.Account, deployment *types.Deployment, groups *types.DeploymentGroups) (state.State, *types.TxCreateOrder) {
@@ -73,28 +70,4 @@ func testLease(t *testing.T, state state.State, provider *types.Provider, deploy
 	require.NoError(t, state.Order().Save(matchedOrder))
 
 	return state
-}
-
-func testBilling(t *testing.T, state state.State, tenant *types.Account, provider *types.Provider) state.State {
-	iTenBal := getBalance(t, state, tenant.Address)
-	iProBal := getBalance(t, state, provider.Owner)
-	require.NotZero(t, iTenBal)
-	require.NotZero(t, iProBal)
-
-	txs, err := market.NewEngine(testutil.Logger()).Run(state)
-	require.NoError(t, err)
-	require.Len(t, txs, 0)
-
-	fTenBal := getBalance(t, state, tenant.Address)
-	fProBal := getBalance(t, state, provider.Owner)
-	require.Equal(t, iTenBal-1, fTenBal)
-	require.Equal(t, iProBal+1, fProBal)
-
-	return state
-}
-
-func getBalance(t *testing.T, state state.State, address base.Bytes) uint64 {
-	acc, err := state.Account().Get(address)
-	require.NoError(t, err)
-	return acc.GetBalance()
 }
