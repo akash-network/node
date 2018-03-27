@@ -8,10 +8,9 @@ do_init(){
   mkdir -p "$AKASH_DIR"
   mkdir -p "$AKASHD_DIR"
 
-  _akash key create master | stripkey > "$DATA_ROOT/master.key"
-  _akash key create other  | stripkey > "$DATA_ROOT/other.key"
+  _akash key create master > "$DATA_ROOT/master.key"
+  _akash key create other  > "$DATA_ROOT/other.key"
 
-  set -x
   _akashd init "$(cat "$DATA_ROOT/master.key")" -t helm -c "${HELM_NODE_COUNT:-4}"
 }
 
@@ -30,7 +29,7 @@ case "$1" in
     akash marketplace
     ;;
   deploy)
-    akash deploy unused.yml -k master
+    akash deployment create unused.yml -k master
     ;;
   *)
     echo "USAGE: $0 <init|send|query|marketplace|deploy>" >&2

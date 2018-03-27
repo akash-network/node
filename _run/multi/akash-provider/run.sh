@@ -7,7 +7,7 @@ set -o pipefail
 
 rm -rf provider.key
 
-./akash provider create unused.yml -k dc | tail -1 | sed -e 's/.*: //' > provider.key
+./akash provider create unused.yml -k dc | tail -1 > provider.key
 
 echo "created datacenter: " $(cat provider.key)
 

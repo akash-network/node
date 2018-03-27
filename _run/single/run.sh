@@ -8,8 +8,8 @@ do_init() {
   mkdir -p "$AKASH_DIR"
   mkdir -p "$AKASHD_DIR"
 
-  akash key create master | stripkey > "$DATA_ROOT/master.key"
-  akash key create other  | stripkey > "$DATA_ROOT/other.key"
+  akash key create master > "$DATA_ROOT/master.key"
+  akash key create other  > "$DATA_ROOT/other.key"
   akashd init "$(cat "$DATA_ROOT/master.key")"
 }
 
@@ -31,12 +31,11 @@ case "$1" in
     akash marketplace
     ;;
   provider)
-    akash provider create unused.yml -k other | \
-      stripkey > "$DATA_ROOT"/other.dc
+    akash provider create unused.yml -k other > "$DATA_ROOT"/other.dc
     akash provider run "$(cat "$DATA_ROOT/other.dc")" -k other
     ;;
   deploy)
-    akash deploy unused.yml -k master
+    akash deployment create unused.yml -k master
     ;;
   *)
     echo "USAGE: $0 <init|akashd|send|query|marketplace|provider|deploy>" >&2
