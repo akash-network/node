@@ -15,7 +15,7 @@ func ProviderCreate(key vars.Ref, paddr vars.Ref) gestalt.Component {
 
 func ProviderQuery(paddr vars.Ref) gestalt.Component {
 	return Akash("query", "provider", paddr.Var()).
-		FN(js.PathEQStr(paddr.Var(), "address")).
+		FN(js.Do(js.Str(paddr.Var(), "address"))).
 		WithMeta(g.Require(paddr.Name()))
 }
 

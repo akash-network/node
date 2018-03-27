@@ -8,18 +8,18 @@ import (
 	g "github.com/ovrclk/gestalt/builder"
 )
 
-func AccountBalance(key key, amount int) gestalt.Component {
+func AccountBalance(key key, amount int64) gestalt.Component {
 	return Akash("query", "account", key.addr.Var()).
-		FN(js.PathEQInt(amount, "balance"))
+		FN(js.Do(js.Int(amount, "balance")))
 }
 
-func AccountSendTo(from key, to key, amount int) gestalt.Component {
-	return Akash("send", strconv.Itoa(amount), to.addr.Var(), "-k", from.name.Name())
+func AccountSendTo(from key, to key, amount int64) gestalt.Component {
+	return Akash("send", strconv.FormatInt(amount, 10), to.addr.Var(), "-k", from.name.Name())
 }
 
 func GroupAccountSend(key key) gestalt.Component {
-	start := 1000000000
-	amount := 100
+	start := int64(1000000000)
+	amount := int64(100)
 	other := newKey("other")
 	return g.Group("account-send").
 		Run(GroupKeyCreate(other)).
