@@ -122,7 +122,8 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		return errors.New(result.DeliverTx.GetLog())
 	}
 
-	fmt.Println("Created provider: " + strings.ToUpper(hex.EncodeToString(provider.Address)))
+	fmt.Println(strings.ToUpper(hex.EncodeToString(provider.Address)))
+	//fmt.Println("Created provider: " + strings.ToUpper(hex.EncodeToString(provider.Address)))
 
 	return nil
 }
