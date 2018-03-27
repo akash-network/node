@@ -8,20 +8,21 @@ import (
 )
 
 func providerCreate(key vars.Ref, paddr vars.Ref) gestalt.Component {
+
+	check := akash("query", "query", "provider", paddr.Var()).
+		FN(js.Do(js.Str(paddr.Var(), "address")))
+
 	return g.Group("provider-create").
 		Run(
-			akash("provider", "create", "unused.yml", "-k", key.Name()).
+			akash("create", "provider", "create", "unused.yml", "-k", key.Name()).
 				FN(g.Capture(paddr.Name())).
 				WithMeta(g.Export(paddr.Name()))).
-		Run(
-			akash("query", "provider", paddr.Var()).
-				FN(js.Do(js.Str(paddr.Var(), "address")))).
+		Run(g.Retry(5).Run(check)).
 		WithMeta(g.Export(paddr.Name()))
 }
 
 func providerRun(key vars.Ref, paddr vars.Ref) gestalt.Component {
-	return g.Group("provider-run").
-		Run(akash("provider", "run", paddr.Var(), "-k", key.Name())).
+	return akash("provider-run", "provider", "run", paddr.Var(), "-k", key.Name()).
 		WithMeta(g.Require(paddr.Name()))
 }
 

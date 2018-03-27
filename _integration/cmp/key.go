@@ -7,24 +7,22 @@ import (
 )
 
 func keyCreate(key key) gestalt.Component {
-	return g.Group("key-create").
-		Run(
-			akash("key", "create", key.name.Name()).
-				FN(gx.Capture(key.addr.Name())).
-				WithMeta(g.Export(key.addr.Name()))).
+	return akash("key-create", "key", "create", key.name.Name()).
+		FN(gx.Capture(key.addr.Name())).
 		WithMeta(g.Export(key.addr.Name()))
 }
 
 func keyList(key key) gestalt.Component {
-	return g.Group("key-list").
-		Run(
-			akash("key", "list").
-				FN(gx.ParseColumns("name", "address").
-					GrepField("name", key.name.Name()).
-					GrepField("address", key.addr.Var()).
-					EnsureCount(1).
-					Done()).
-				WithMeta(g.Require(key.addr.Name())))
+
+	parse := gx.ParseColumns("name", "address").
+		GrepField("name", key.name.Name()).
+		GrepField("address", key.addr.Var()).
+		EnsureCount(1).
+		Done()
+
+	return akash("key-list", "key", "list").
+		FN(parse).
+		WithMeta(g.Require(key.addr.Name()))
 }
 
 func groupKey(key key) gestalt.Component {

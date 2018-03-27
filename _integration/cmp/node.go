@@ -6,18 +6,18 @@ import (
 )
 
 func nodeInit(key key) gestalt.Component {
-	return g.Group("node-init").
-		Run(
-			akashd("init", key.addr.Var())).
+	return akashd("node-init", "init", key.addr.Var()).
 		WithMeta(g.Require(key.addr.Name()))
 }
 
 func nodeRun() gestalt.Component {
+	check := akash("node-status", "status")
+
 	return g.Group("node-run").
 		Run(g.BG().
-			Run(akashd("start"))).
+			Run(akashd("node-start", "start"))).
 		Run(g.Retry(10).
-			Run(akash("status")))
+			Run(check))
 }
 
 func groupNodeRun(key key) gestalt.Component {

@@ -5,8 +5,8 @@ import (
 	gx "github.com/ovrclk/gestalt/exec"
 )
 
-func akash(args ...string) gx.Cmd {
-	cmd := g.EXEC("akash",
+func akash(name string, args ...string) gx.Cmd {
+	cmd := g.EXEC("akash-"+name,
 		"{{akash-path}}",
 		append([]string{"-d", "{{akash-root}}"}, args...)...)
 
@@ -14,11 +14,10 @@ func akash(args ...string) gx.Cmd {
 	return cmd
 }
 
-func akashd(args ...string) gx.Cmd {
-	cmd := g.EXEC("akashd",
+func akashd(name string, args ...string) gx.Cmd {
+	cmd := g.EXEC("akashd-"+name,
 		"{{akashd-path}}",
 		append([]string{"-d", "{{akashd-root}}"}, args...)...)
-
 	cmd.WithMeta(g.Require("akashd-path", "akashd-root"))
 	return cmd
 }
