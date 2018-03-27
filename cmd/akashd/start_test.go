@@ -60,7 +60,7 @@ func Test_Start(t *testing.T) {
 	}()
 
 	select {
-	case <-time.After(1 * time.Second):
+	case <-time.After(2 * time.Second):
 		// cancel the process
 		testCtx.Cancel()
 	case err := <-errch:
