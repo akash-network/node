@@ -10,9 +10,9 @@ func Suite() gestalt.Component {
 	paddr := g.Ref("provider-id")
 	daddr := g.Ref("deployment-id")
 	return g.Suite("main").
-		Run(GroupKeyCreate(key)).
-		Run(GroupNodeRun(key)).
-		Run(GroupAccountSend(key)).
-		Run(GroupProviderRun(key.name, paddr)).
-		Run(GroupDeployCreate(key.name, daddr))
+		Run(groupKey(key)).
+		Run(groupNodeRun(key)).
+		Run(groupAccountSend(key)).
+		Run(groupProvider(key.name, paddr)).
+		Run(groupDeploy(key.name, daddr))
 }

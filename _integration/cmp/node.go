@@ -5,21 +5,23 @@ import (
 	g "github.com/ovrclk/gestalt/builder"
 )
 
-func NodeInit(key key) gestalt.Component {
-	return Akashd("init", key.addr.Var()).
+func nodeInit(key key) gestalt.Component {
+	return g.Group("node-init").
+		Run(
+			akashd("init", key.addr.Var())).
 		WithMeta(g.Require(key.addr.Name()))
 }
 
-func NodeRun() gestalt.Component {
-	return g.Group("run").
+func nodeRun() gestalt.Component {
+	return g.Group("node-run").
 		Run(g.BG().
-			Run(Akashd("start"))).
+			Run(akashd("start"))).
 		Run(g.Retry(5).
-			Run(Akash("status")))
+			Run(akash("status")))
 }
 
-func GroupNodeRun(key key) gestalt.Component {
-	return g.Group("node-run").
-		Run(NodeInit(key)).
-		Run(NodeRun())
+func groupNodeRun(key key) gestalt.Component {
+	return g.Group("node").
+		Run(nodeInit(key)).
+		Run(nodeRun())
 }
