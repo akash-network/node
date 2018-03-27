@@ -6,12 +6,15 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
+	"github.com/tendermint/iavl"
 )
 
 type LeaseAdapter interface {
 	Save(*types.Lease) error
 	Get(daddr base.Bytes, group uint64, order uint64, paddr base.Bytes) (*types.Lease, error)
 	GetByKey(address base.Bytes) (*types.Lease, error)
+	GetMaxRange() ([]*types.Lease, error)
+	GetRangeWithProof(base.Bytes, base.Bytes, int) ([][]byte, []*types.Lease, iavl.KeyRangeProof, error)
 	IDFor(obj *types.Lease) []byte
 	KeyFor(id []byte) []byte
 	All() ([]*types.Lease, error)

@@ -1,6 +1,8 @@
 package market
 
 import (
+	"errors"
+
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tmlibs/log"
@@ -25,7 +27,80 @@ func (e engine) Run(state state.State) ([]interface{}, error) {
 		return buf.all(), err
 	}
 
+	if err := e.processLeases(state); err != nil {
+		return buf.all(), err
+	}
+
 	return buf.all(), nil
+}
+
+// billing for leases
+func (e engine) processLeases(state state.State) error {
+	leases, err := state.Lease().GetMaxRange()
+	if err != nil {
+		return err
+	}
+	for _, lease := range leases {
+		if lease.State == types.Lease_ACTIVE {
+			if err := e.processLease(state, *lease); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (e engine) processLease(state state.State, lease types.Lease) error {
+	deployment, err := state.Deployment().Get(lease.Deployment)
+	if err != nil {
+		return err
+	}
+	if deployment == nil {
+		return errors.New("deployment not found")
+	}
+	tenant, err := state.Account().Get(deployment.Tenant)
+	if err != nil {
+		return err
+	}
+	if tenant == nil {
+		return errors.New("tenant not found")
+	}
+	provider, err := state.Provider().Get(lease.Provider)
+	if err != nil {
+		return err
+	}
+	if provider == nil {
+		return errors.New("provider not found")
+	}
+	owner, err := state.Account().Get(provider.Owner)
+	if err != nil {
+		return err
+	}
+	if owner == nil {
+		return errors.New("owner not found")
+	}
+
+	p := uint64(lease.Price)
+	println(tenant.Balance, "|", lease.Price, "|", p)
+	if tenant.Balance >= p {
+		owner.Balance += p
+		tenant.Balance -= p
+	} else {
+		owner.Balance += tenant.Balance
+		tenant.Balance = 0
+	}
+
+	err = state.Account().Save(tenant)
+	if err != nil {
+		return err
+	}
+
+	err = state.Account().Save(owner)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // create orders as necessary
@@ -87,7 +162,7 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 			if !activeFound && order.State == types.Order_OPEN || order.State == types.Order_MATCHED {
 				activeFound = true
 			}
-			if order.EndAt <= height {
+			if order.State == types.Order_OPEN && order.EndAt <= height {
 				err := e.processOrder(state, w, order)
 				if err != nil {
 					return err

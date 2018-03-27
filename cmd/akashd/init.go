@@ -5,10 +5,11 @@ import (
 	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/util/initgen"
 	"github.com/spf13/cobra"
+	"math"
 )
 
 const (
-	maxTokens uint64 = 1000000000
+	maxTokens uint64 = math.MaxUint64
 
 	flagInitCount  = "count"
 	flagInitType   = "type"
