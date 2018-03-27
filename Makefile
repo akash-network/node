@@ -37,9 +37,6 @@ test-cover:
 test-vet:
 	go vet $$(glide novendor)
 
-test-integration: $(PROGRAMS)
-	(cd _integration && make clean run)
-
 deps-install:
 	glide install
 
@@ -50,6 +47,9 @@ devdeps-install:
 coverdeps-install:
 	go get golang.org/x/tools/cmd/cover
 	go get github.com/mattn/goveralls
+
+test-integration: $(PROGRAMS)
+	(cd _integration && make clean run)
 
 integrationdeps-install:
 	(cd _integration && make deps-install)

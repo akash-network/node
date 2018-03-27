@@ -32,6 +32,8 @@ jobs:
         - make build
         - make test-vet
         - make test
+        - make integrationdeps-install
+        - make test-integration
 
     - name: test
       os: linux
