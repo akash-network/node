@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/cmd/common"
-	"github.com/ovrclk/akash/types"
 	"github.com/spf13/cobra"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
@@ -28,6 +28,7 @@ func QueryCommand() *cobra.Command {
 		queryDeploymentCommand(),
 		queryProviderCommand(),
 		queryOrderCommand(),
+		queryLeaseCommand(),
 	)
 
 	return cmd
@@ -45,32 +46,17 @@ func Query(ctx context.Context, path string) (*core_types.ResultABCIQuery, error
 	return result, nil
 }
 
-func doQuery(ctx context.Context, path string, structure interface{}) error {
+func doQuery(ctx context.Context, path string, obj proto.Message) error {
 	result, err := Query(ctx, path)
 	if err != nil {
 		return err
 	}
 
-	switch s := structure.(type) {
-	case *types.Account:
-		s.Unmarshal(result.Response.Value)
-	case *types.Deployment:
-		s.Unmarshal(result.Response.Value)
-	case *types.Deployments:
-		s.Unmarshal(result.Response.Value)
-	case *types.Provider:
-		s.Unmarshal(result.Response.Value)
-	case *types.Providers:
-		s.Unmarshal(result.Response.Value)
-	case *types.Order:
-		s.Unmarshal(result.Response.Value)
-	case *types.Orders:
-		s.Unmarshal(result.Response.Value)
-	default:
-		return errors.New("Unknown query value structure")
+	if err := proto.Unmarshal(result.Response.Value, obj); err != nil {
+		return err
 	}
 
-	data, err := json.MarshalIndent(structure, "", "  ")
+	data, err := json.MarshalIndent(obj, "", "  ")
 	if err != nil {
 		return common.HandleError(err)
 	}

@@ -15,7 +15,14 @@ func DeployCreate(key vars.Ref, daddr vars.Ref) gestalt.Component {
 
 func DeployQuery(daddr vars.Ref) gestalt.Component {
 	return Akash("query", "deployment", daddr.Var()).
-		FN(js.PathEQStr(daddr.Var(), "address"))
+		FN(js.PathEQStr(daddr.Var(), "address")).
+		WithMeta(g.Export(daddr.Var()))
+}
+
+func LeaseQuery(daddr vars.Ref) gestalt.Component {
+	return Akash("query", "lease").
+		FN(js.PathEQStr(daddr.Var(), "deployment")).
+		WithMeta(g.Require(daddr.Name()))
 }
 
 func GroupDeployCreate(key vars.Ref, daddr vars.Ref) gestalt.Component {
@@ -23,5 +30,7 @@ func GroupDeployCreate(key vars.Ref, daddr vars.Ref) gestalt.Component {
 		Run(DeployCreate(key, daddr)).
 		Run(g.Retry(5).
 			Run(DeployQuery(daddr))).
+		Run(g.Retry(10).
+			Run(LeaseQuery(daddr))).
 		WithMeta(g.Export(daddr.Name()))
 }
