@@ -3,7 +3,7 @@ language: go
 sudo: false
 
 git:
-  depth: 5
+  depth: 50
 
 env:
   global:
@@ -12,6 +12,8 @@ env:
 stages:
   - test
   - image
+  - test-skipped
+  - release
 
 jobs:
   include:
@@ -57,7 +59,7 @@ jobs:
     - name: image
       os: linux
       go: "1.10"
-      sudo: required
+      services: [docker]
       script:
         - make image
       if: type = cron
@@ -70,6 +72,21 @@ jobs:
       script:
         - go test -v -count=1 $(glide novendor)
       if: type = cron
+
+    - name: release
+      os: linux
+      go: "1.10"
+      services: [docker]
+      script:
+        - docker build --rm -t ovrclk/akash .
+        - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+        - docker tag ovrclk/akash "ovrclk/akash:$TRAVIS_TAG"
+        - docker push "ovrclk/akash:$TRAVIS_TAG"
+        - docker tag ovrclk/akash ovrclk/akash:latest
+        - docker push ovrclk/akash:latest
+        - go get github.com/goreleaser/goreleaser
+        - $GOPATH/bin/goreleaser
+      if: tag =~ ^v AND fork = false
 
 matrix:
   allow_failures:

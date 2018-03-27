@@ -1,5 +1,19 @@
 package version
 
-const (
-	Version = "0.0.1"
+var (
+	version = "master"
+	commit  = ""
+	date    = ""
 )
+
+func Version() string {
+	return version
+}
+
+func Commit() string {
+	return commit
+}
+
+func Date() string {
+	return date
+}

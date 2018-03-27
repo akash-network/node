@@ -132,7 +132,7 @@ func (app *app) ActivateMarket(actor market.Actor, bus *tmtmtypes.EventBus) erro
 func (app *app) Info(req tmtypes.RequestInfo) tmtypes.ResponseInfo {
 	return tmtypes.ResponseInfo{
 		Data:             "{}",
-		Version:          version.Version,
+		Version:          version.Version(),
 		LastBlockHeight:  int64(app.state.Version()),
 		LastBlockAppHash: app.state.Hash(),
 	}

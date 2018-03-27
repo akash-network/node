@@ -1,0 +1,25 @@
+# See documentation at http://goreleaser.com
+builds:
+
+  - binary: akash
+    main: ./cmd/akash
+    goarch: [amd64]
+    goos: [linux]
+    ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
+
+  - binary: akashd
+    main: ./cmd/akashd
+    goarch: [amd64]
+    goos: [linux]
+    ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
+
+archive:
+  files:
+    - none*
+
+release:
+  github:
+    owner: ovrclk
+    name: akash
+  prerelease: true
+  draft: false
