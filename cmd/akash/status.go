@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/ovrclk/akash/cmd/akash/context"
-	"github.com/ovrclk/akash/cmd/common"
 	"github.com/spf13/cobra"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
@@ -25,7 +24,9 @@ func doStatusCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
 
 	result, err := client.Status()
-	common.HandleError(err)
+	if err != nil {
+		return err
+	}
 
 	fmt.Printf("Block: %v\nBlock Hash: %v\n", result.LatestBlockHeight, result.LatestBlockHash)
 

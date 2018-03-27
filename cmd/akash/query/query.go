@@ -7,7 +7,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/cmd/akash/context"
-	"github.com/ovrclk/akash/cmd/common"
 	"github.com/spf13/cobra"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
@@ -58,7 +57,7 @@ func doQuery(ctx context.Context, path string, obj proto.Message) error {
 
 	data, err := json.MarshalIndent(obj, "", "  ")
 	if err != nil {
-		return common.HandleError(err)
+		return err
 	}
 
 	fmt.Println(string(data))
