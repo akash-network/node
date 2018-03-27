@@ -62,6 +62,19 @@ jobs:
         - make image
       if: type = cron
 
+    - name: test-skipped
+      os: linux
+      go: "1.10"
+      sudo: required
+      env: TEST_UNSKIP=true
+      script:
+        - go test -v -count=1 $(glide novendor)
+      if: type = cron
+
+matrix:
+  allow_failures:
+    - env: TEST_UNSKIP=true
+
 cache:
   directories:
     - $HOME/.glide
