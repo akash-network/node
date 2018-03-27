@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"math"
 	"testing"
 
 	"github.com/ovrclk/akash/state"
@@ -21,7 +20,7 @@ func CreateAccount(t *testing.T, state state.State) (*types.Account, crypto.Priv
 	key := PrivateKey(t)
 	account := &types.Account{
 		Address: key.PubKey().Address(),
-		Balance: math.MaxUint64 / 2,
+		Balance: 1000000000,
 	}
 	require.NoError(t, state.Account().Save(account))
 	return account, key

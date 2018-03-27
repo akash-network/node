@@ -28,8 +28,8 @@ func TestEngine_All(t *testing.T) {
 }
 
 func testOrder(t *testing.T, state state.State, tenant *types.Account, deployment *types.Deployment, groups *types.DeploymentGroups) (state.State, *types.TxCreateOrder) {
-	for idx := range groups.GetItems() {
-		require.NoError(t, state.DeploymentGroup().Save(groups.GetItems()[idx]))
+	for _, group := range groups.GetItems() {
+		require.NoError(t, state.DeploymentGroup().Save(group))
 	}
 
 	txs, err := market.NewEngine(testutil.Logger()).Run(state)
