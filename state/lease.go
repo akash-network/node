@@ -1,6 +1,8 @@
 package state
 
 import (
+	"math"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
@@ -12,6 +14,7 @@ type LeaseAdapter interface {
 	GetByKey(address base.Bytes) (*types.Lease, error)
 	IDFor(obj *types.Lease) []byte
 	KeyFor(id []byte) []byte
+	All() ([]*types.Lease, error)
 }
 
 func NewLeaseAdapter(db DB) LeaseAdapter {
@@ -47,12 +50,44 @@ func (a *leaseAdapter) GetByKey(address base.Bytes) (*types.Lease, error) {
 	return &ful, ful.Unmarshal(buf)
 }
 
-// /fulfillment-orders/{deployment-address}{group-sequence}{order-sequence}{provider-address}
+// /lease/{deployment-address}{group-sequence}{order-sequence}{provider-address}
 func (a *leaseAdapter) KeyFor(id []byte) []byte {
 	return append([]byte(LeasePath), id...)
+}
+
+func (a *leaseAdapter) All() ([]*types.Lease, error) {
+	min := a.allMinRange()
+	max := a.allMaxRange()
+	return a.forRange(min, max)
 }
 
 // {deployment-address}{group-sequence}{order-sequence}{provider-address}
 func (a *leaseAdapter) IDFor(obj *types.Lease) []byte {
 	return LeaseID(obj.Deployment, obj.GetGroup(), obj.GetOrder(), obj.Provider)
+}
+
+func (a *leaseAdapter) allMinRange() []byte {
+	return a.KeyFor(LeaseID(MinAddress(), 0, 0, MinAddress()))
+}
+
+func (a *leaseAdapter) allMaxRange() []byte {
+	return a.KeyFor(LeaseID(MaxAddress(), math.MaxUint64, math.MaxUint64, MaxAddress()))
+}
+
+func (a *leaseAdapter) forRange(min, max []byte) ([]*types.Lease, error) {
+	_, bufs, _, err := a.db.GetRangeWithProof(min, max, MaxRangeLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	var items []*types.Lease
+
+	for _, buf := range bufs {
+		item := &types.Lease{}
+		if err := item.Unmarshal(buf); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
 }
