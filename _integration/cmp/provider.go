@@ -19,9 +19,10 @@ func ProviderQuery(paddr vars.Ref) gestalt.Component {
 		WithMeta(g.Require(paddr.Name()))
 }
 
-func ProviderRun(paddr vars.Ref) gestalt.Component {
+func ProviderRun(key vars.Ref, paddr vars.Ref) gestalt.Component {
 	return g.Group("provider-run").
-		Run(Akash("provider", "run", paddr.Var()))
+		Run(Akash("provider", "run", paddr.Var(), "-k", key.Name())).
+		WithMeta(g.Require(paddr.Name()))
 }
 
 func GroupProviderCreate(key vars.Ref, paddr vars.Ref) gestalt.Component {
@@ -35,6 +36,6 @@ func GroupProviderRun(key vars.Ref, paddr vars.Ref) gestalt.Component {
 	return g.Group("provider").
 		Run(GroupProviderCreate(key, paddr)).
 		Run(g.BG().
-			Run(ProviderRun(paddr))).
+			Run(ProviderRun(key, paddr))).
 		WithMeta(g.Export(paddr.Name()))
 }
