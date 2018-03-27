@@ -20,7 +20,6 @@ import (
 	"github.com/ovrclk/akash/types/base"
 	"github.com/spf13/cobra"
 	"github.com/tendermint/go-wire/data"
-	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
 func providerCommand() *cobra.Command {
@@ -109,7 +108,7 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
+	client := ctx.Client()
 
 	result, err := client.BroadcastTxCommit(tx)
 	if err != nil {

@@ -8,7 +8,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/spf13/cobra"
-	tmclient "github.com/tendermint/tendermint/rpc/client"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
@@ -34,7 +33,7 @@ func QueryCommand() *cobra.Command {
 }
 
 func Query(ctx context.Context, path string) (*core_types.ResultABCIQuery, error) {
-	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
+	client := ctx.Client()
 	result, err := client.ABCIQuery(path, nil)
 	if err != nil {
 		return result, err

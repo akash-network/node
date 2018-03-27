@@ -6,7 +6,6 @@ import (
 
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/spf13/cobra"
-	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
 func statusCommand() *cobra.Command {
@@ -21,7 +20,7 @@ func statusCommand() *cobra.Command {
 }
 
 func doStatusCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
+	client := ctx.Client()
 
 	result, err := client.Status()
 	if err != nil {

@@ -10,7 +10,6 @@ import (
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	"github.com/spf13/cobra"
-	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
 func sendCommand() *cobra.Command {
@@ -57,7 +56,7 @@ func doSendCommand(ctx context.Context, cmd *cobra.Command, args []string) error
 		return err
 	}
 
-	client := tmclient.NewHTTP(ctx.Node(), "/websocket")
+	client := ctx.Client()
 
 	result, err := client.BroadcastTxCommit(tx)
 	if err != nil {

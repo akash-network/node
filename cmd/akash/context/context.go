@@ -189,7 +189,7 @@ func (ctx *context) Nonce() (uint64, error) {
 	nonce, err := ctx.cmd.Flags().GetUint64(constants.FlagNonce)
 	if err != nil || nonce == uint64(0) {
 		res := new(types.Account)
-		client := tmclient.NewHTTP(ctx.Node(), "/websocket")
+		client := ctx.Client()
 		key, _ := ctx.Key()
 		queryPath := state.AccountPath + key.Address.String()
 		result, err := client.ABCIQuery(queryPath, nil)
