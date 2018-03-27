@@ -160,7 +160,7 @@ func (d *driver) watchContext() {
 	defer d.wg.Done()
 	<-d.ctx.Done()
 	if err := d.unsubscribe(); err != nil {
-		d.log.Error("unsubscribing", err)
+		d.log.Error("unsubscribing", "error", err)
 	}
 }
 

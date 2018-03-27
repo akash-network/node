@@ -167,13 +167,13 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 
 			nonce, err := ctx.Nonce()
 			if err != nil {
-				ctx.Log().Error("error getting nonce", err)
+				ctx.Log().Error("error getting nonce", "error", err)
 				return
 			}
 
 			price, err := getPrice(ctx, tx.Order.Deployment, tx.Order.Group)
 			if err != nil {
-				ctx.Log().Error("error getting price", err)
+				ctx.Log().Error("error getting price", "error", err)
 				return
 			}
 
@@ -195,21 +195,21 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 
 			txbuf, err := txutil.BuildTx(signer, nonce, ordertx)
 			if err != nil {
-				ctx.Log().Error("error building tx", err)
+				ctx.Log().Error("error building tx", "error", err)
 				return
 			}
 
 			resp, err := client.BroadcastTxCommit(txbuf)
 			if err != nil {
-				ctx.Log().Error("error broadcasting tx", err)
+				ctx.Log().Error("error broadcasting tx", "error", err)
 				return
 			}
 			if resp.CheckTx.IsErr() {
-				ctx.Log().Error("CheckTx error", "err", resp.CheckTx.Log)
+				ctx.Log().Error("CheckTx error", "error", resp.CheckTx.Log)
 				return
 			}
 			if resp.DeliverTx.IsErr() {
-				ctx.Log().Error("DeliverTx error", "err", resp.DeliverTx.Log)
+				ctx.Log().Error("DeliverTx error", "error", resp.DeliverTx.Log)
 				return
 			}
 

@@ -22,7 +22,7 @@ func doMonitorMarketplace(ctx context.Context, log log.Logger, client *tmclient.
 	}()
 
 	if err := client.Start(); err != nil {
-		log.Error("error starting ws client", err)
+		log.Error("error starting ws client", "error", err)
 		return err
 	}
 

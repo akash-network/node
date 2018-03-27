@@ -49,7 +49,7 @@ func (f *facilitator) Run(state state.State) error {
 
 	for _, tx := range txs {
 		if _, err := sender.Send(tx); err != nil {
-			f.log.Error("Error sending transaction", err)
+			f.log.Error("Error sending transaction", "error", err)
 			return err
 		}
 	}
@@ -60,7 +60,7 @@ func (f *facilitator) Run(state state.State) error {
 func (f *facilitator) currentNonce(state state.State) (uint64, error) {
 	account, err := state.Account().Get(f.actor.Address())
 	if err != nil {
-		f.log.Error("Facilitator does not have an account.", err)
+		f.log.Error("Facilitator does not have an account.", "error", err)
 		return 0, err
 	}
 	if account == nil {

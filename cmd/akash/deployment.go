@@ -83,15 +83,15 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 
 	res, err := ctx.Client().BroadcastTxCommit(tx)
 	if err != nil {
-		ctx.Log().Error("error sending tx", err)
+		ctx.Log().Error("error sending tx", "error", err)
 		return err
 	}
 	if !res.CheckTx.IsOK() {
-		ctx.Log().Error("error delivering tx", "err", res.CheckTx.GetLog())
+		ctx.Log().Error("error delivering tx", "error", res.CheckTx.GetLog())
 		return errors.New(res.CheckTx.GetLog())
 	}
 	if !res.DeliverTx.IsOK() {
-		ctx.Log().Error("error delivering tx", "err", res.DeliverTx.GetLog())
+		ctx.Log().Error("error delivering tx", "error", res.DeliverTx.GetLog())
 		return errors.New(res.DeliverTx.GetLog())
 	}
 	fmt.Printf("Created deployment: %X\n", deployment.Address)
@@ -142,15 +142,15 @@ func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) err
 
 	res, err := ctx.Client().BroadcastTxCommit(tx)
 	if err != nil {
-		ctx.Log().Error("error sending tx", err)
+		ctx.Log().Error("error sending tx", "error", err)
 		return err
 	}
 	if !res.CheckTx.IsOK() {
-		ctx.Log().Error("error delivering tx", "err", res.CheckTx.GetLog())
+		ctx.Log().Error("error delivering tx", "error", res.CheckTx.GetLog())
 		return errors.New(res.CheckTx.GetLog())
 	}
 	if !res.DeliverTx.IsOK() {
-		ctx.Log().Error("error delivering tx", "err", res.DeliverTx.GetLog())
+		ctx.Log().Error("error delivering tx", "error", res.DeliverTx.GetLog())
 		return errors.New(res.DeliverTx.GetLog())
 	}
 

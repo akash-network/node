@@ -77,7 +77,7 @@ func (m *monitor) runListener(ch <-chan interface{}, h Handler) {
 
 		tx, err := txutil.ProcessTx(evt.Tx)
 		if err != nil {
-			m.log.Error("ProcessTx", "err", err)
+			m.log.Error("ProcessTx", "error", err)
 			continue
 		}
 
