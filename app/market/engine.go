@@ -36,7 +36,7 @@ func (e engine) Run(state state.State) ([]interface{}, error) {
 
 // billing for leases
 func (e engine) processLeases(state state.State) error {
-	leases, err := state.Lease().GetMaxRange()
+	leases, err := state.Lease().All()
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (e engine) processLease(state state.State, lease types.Lease) error {
 	}
 
 	p := uint64(lease.Price)
-	println(tenant.Balance, "|", lease.Price, "|", p)
+
 	if tenant.Balance >= p {
 		owner.Balance += p
 		tenant.Balance -= p

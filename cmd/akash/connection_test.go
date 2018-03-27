@@ -30,7 +30,6 @@ func TestProviderRun_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestCreateDeployment_NoNode(t *testing.T) {
@@ -44,7 +43,6 @@ func TestCreateDeployment_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestCloseDeployment_NoNode(t *testing.T) {
@@ -58,7 +56,6 @@ func TestCloseDeployment_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestMarketplace_NoNode(t *testing.T) {
@@ -69,7 +66,6 @@ func TestMarketplace_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestSend_NoNode(t *testing.T) {
@@ -83,7 +79,6 @@ func TestSend_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestStatus_NoNode(t *testing.T) {
@@ -94,5 +89,4 @@ func TestStatus_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }

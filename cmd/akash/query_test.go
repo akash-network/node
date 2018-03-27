@@ -16,7 +16,6 @@ func TestAccountQuery_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestDeploymentQuery_NoNode(t *testing.T) {
@@ -27,7 +26,6 @@ func TestDeploymentQuery_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestOrderQuery_NoNode(t *testing.T) {
@@ -38,7 +36,6 @@ func TestOrderQuery_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestProviderQuery_NoNode(t *testing.T) {
@@ -49,5 +46,4 @@ func TestProviderQuery_NoNode(t *testing.T) {
 	base.SetArgs(args)
 	err := base.Execute()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection refused")
 }
