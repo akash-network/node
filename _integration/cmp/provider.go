@@ -7,22 +7,34 @@ import (
 	"github.com/ovrclk/gestalt/vars"
 )
 
-func ProviderCreate(key key, ref vars.Ref) gestalt.Component {
+func ProviderCreate(key key, paddr vars.Ref) gestalt.Component {
 	return Akash("provider", "create", "unused.yml", "-k", key.name.Name()).
-		FN(g.Capture(ref.Name())).
-		WithMeta(g.Export(ref.Name()))
+		FN(g.Capture(paddr.Name())).
+		WithMeta(g.Export(paddr.Name()))
 }
 
-func ProviderQuery(addr vars.Ref) gestalt.Component {
-	return Akash("query", "provider", addr.Var()).
-		FN(js.PathEQStr(addr.Var(), "address")).
-		WithMeta(g.Require(addr.Name()))
+func ProviderQuery(paddr vars.Ref) gestalt.Component {
+	return Akash("query", "provider", paddr.Var()).
+		FN(js.PathEQStr(paddr.Var(), "address")).
+		WithMeta(g.Require(paddr.Name()))
 }
 
-func GroupProviderCreate(key key) gestalt.Component {
-	addr := vars.NewRef("provider-id")
+func ProviderRun(paddr vars.Ref) gestalt.Component {
+	return g.Group("provider-run").
+		Run(Akash("provider", "run", paddr.Var()))
+}
+
+func GroupProviderCreate(key key, paddr vars.Ref) gestalt.Component {
 	return g.Group("provider-create").
-		Run(ProviderCreate(key, addr)).
-		Run(ProviderQuery(addr)).
-		WithMeta(g.Export(addr.Name()))
+		Run(ProviderCreate(key, paddr)).
+		Run(ProviderQuery(paddr)).
+		WithMeta(g.Export(paddr.Name()))
+}
+
+func GroupProviderRun(key key) gestalt.Component {
+	paddr := g.Ref("provider-id")
+	return g.Group("provider").
+		Run(GroupProviderCreate(key, paddr)).
+		Run(g.BG().
+			Run(ProviderRun(paddr)))
 }

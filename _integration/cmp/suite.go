@@ -11,5 +11,5 @@ func Suite() gestalt.Component {
 		Run(GroupKeyCreate(key)).
 		Run(GroupNodeRun(key)).
 		Run(GroupAccountSend(key)).
-		Run(GroupProviderCreate(key))
+		Run(GroupProviderRun(key))
 }
