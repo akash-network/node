@@ -152,8 +152,26 @@ func (app *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	return tmtypes.ResponseQuery{Code: code.UNKNOWN_QUERY, Log: "unknown query"}
 }
 
+func (app *app) checkNonce(address []byte, nonce uint64) apptypes.Error {
+	signer, err_ := app.state.Account().Get(address)
+	if err_ != nil {
+		return apptypes.NewError(code.INVALID_TRANSACTION, err_.Error())
+	}
+	err := apptypes.NewError(code.INVALID_TRANSACTION, "invalid nonce")
+	if signer == nil && nonce != 1 {
+		return err
+	} else if signer.Nonce >= nonce {
+		return err
+	}
+	return nil
+}
+
 func (app *app) CheckTx(buf []byte) tmtypes.ResponseCheckTx {
 	ctx, app_, tx, err := app.appForTx(buf)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
+	}
+	err = app.checkNonce(ctx.Signer().Address().Bytes(), tx.Payload.Nonce)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
@@ -166,20 +184,17 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
 	}
-
+	err = app.checkNonce(ctx.Signer().Address().Bytes(), tx.Payload.Nonce)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
+	}
 	signer, err_ := app.state.Account().Get(ctx.Signer().Address().Bytes())
 	if err_ != nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err_.Error(),
-		}
+		return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 	}
 
+	// XXX: Need separate create account tx which costs tokens to prevent spam
 	if signer == nil {
-		// return tmtypes.ResponseDeliverTx{
-		// 	Code: code.INVALID_TRANSACTION,
-		// 	Log:  "unknown signer account",
-		// }
 		signer = &types.Account{
 			Address: ctx.Signer().Address().Bytes(),
 			Balance: 0,
@@ -187,24 +202,23 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 		}
 	}
 
-	if signer.Nonce >= tx.Payload.Nonce {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "invalid nonce",
-		}
-	}
-
-	signer.Nonce = tx.Payload.Nonce
-
 	if err_ := app.state.Account().Save(signer); err_ != nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err_.Error(),
+		return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
+	}
+
+	// deliver tx
+	app.traceTx("DeliverTx", tx)
+	resp := app_.DeliverTx(ctx, tx.Payload.Payload)
+
+	// set new account nonce
+	if resp.IsOK() {
+		signer.Nonce = tx.Payload.Nonce
+		if err_ := app.state.Account().Save(signer); err_ != nil {
+			return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 		}
 	}
 
-	app.traceTx("DeliverTx", tx)
-	return app_.DeliverTx(ctx, tx.Payload.Payload)
+	return resp
 }
 
 func (app *app) BeginBlock(req tmtypes.RequestBeginBlock) tmtypes.ResponseBeginBlock {

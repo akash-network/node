@@ -75,7 +75,7 @@ func TestApp(t *testing.T) {
 	}
 
 	{
-		nonce := uint64(2)
+		nonce := uint64(3)
 		tx, err := txutil.BuildTx(signer, nonce, &types.TxSend{
 			From:   addrfrom,
 			To:     addrto,

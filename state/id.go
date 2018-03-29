@@ -61,8 +61,6 @@ func ProviderAddress(account []byte, nonce uint64) []byte {
 	return NonceAddress(account, nonce)
 }
 
-// TODO: these addresses are susceptible to DoS attacks because they
-//       are guessable and generated client side.
 func NonceAddress(account []byte, nonce uint64) []byte {
 	buf := new(bytes.Buffer)
 	buf.Write(account)

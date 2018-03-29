@@ -94,6 +94,11 @@ message ProviderAttribute {
   string value = 2;
 }
 
+message GroupSpec {
+  repeated ProviderAttribute requirements = 1 [(gogoproto.nullable) = false];
+  repeated ResourceGroup     resources    = 2 [(gogoproto.nullable) = false];
+}
+
 message DeploymentGroup {
   option (gogoproto.compare) = true;
 
@@ -148,8 +153,10 @@ message Deployments {
 }
 
 message TxCreateDeployment {
-  Deployment deployment = 1;
-  DeploymentGroups groups = 2;
+  bytes  tenant  = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  uint64 nonce = 2;
+  int64 orderTTL = 3;
+  repeated GroupSpec groups = 4;
 }
 
 message Order {

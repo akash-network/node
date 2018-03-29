@@ -6,6 +6,7 @@ import (
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/marketplace"
+	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/spf13/cobra"
 
@@ -40,7 +41,7 @@ func marketplaceMonitorHandler() marketplace.Handler {
 			fmt.Printf("DATACENTER CREATED\t%v created by %v\n", X(tx.Provider.Address), X(tx.Provider.Owner))
 		}).
 		OnTxCreateDeployment(func(tx *types.TxCreateDeployment) {
-			fmt.Printf("DEPLOYMENT CREATED\t%v created by %v\n", X(tx.Deployment.Address), X(tx.Deployment.Tenant))
+			fmt.Printf("DEPLOYMENT CREATED\t%v created by %v\n", X(state.DeploymentAddress(tx.Tenant, tx.Nonce)), X(tx.Tenant))
 		}).
 		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
 			fmt.Printf("ORDER CREATED\t%v/%v/%v\n",

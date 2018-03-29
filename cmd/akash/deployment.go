@@ -49,15 +49,27 @@ func createDeploymentCommand() *cobra.Command {
 	return cmd
 }
 
-func parseDeployment(file string, tenant []byte, nonce uint64) (*types.Deployment, *types.DeploymentGroups, error) {
+func parseDeployment(file string, nonce uint64) ([]*types.GroupSpec, int64, error) {
 	// todo: read and parse deployment yaml file
 
+	specs := []*types.GroupSpec{}
+
 	/* begin stub data */
-	deployment := testutil.Deployment(tenant, nonce)
-	groups := testutil.DeploymentGroups(deployment.Address, nonce)
+	groups := testutil.DeploymentGroups(*new(base.Bytes), nonce)
+
+	for _, group := range groups.GetItems() {
+		s := &types.GroupSpec{
+			Resources:    group.Resources,
+			Requirements: group.Requirements,
+		}
+		specs = append(specs, s)
+	}
+
+	ttl := int64(5)
+
 	/* end stub data */
 
-	return deployment, groups, nil
+	return specs, ttl, nil
 }
 
 func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) error {
@@ -71,14 +83,16 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 		return err
 	}
 
-	deployment, groups, err := parseDeployment(args[0], key.Address(), nonce)
+	groups, ttl, err := parseDeployment(args[0], nonce)
 	if err != nil {
 		return err
 	}
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateDeployment{
-		Deployment: deployment,
-		Groups:     groups,
+		Tenant:   key.Address(),
+		Nonce:    nonce,
+		OrderTTL: ttl,
+		Groups:   groups,
 	})
 	if err != nil {
 		return err
@@ -98,23 +112,25 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 		return errors.New(res.DeliverTx.GetLog())
 	}
 
-	fmt.Println(X(deployment.Address))
+	address := res.DeliverTx.Data
+
+	fmt.Println(X(address))
 
 	if ctx.Wait() {
 		fmt.Printf("Waiting...\n")
-		expected := len(groups.GetItems())
+		expected := len(groups)
 		handler := marketplace.NewBuilder().
 			OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
-				if bytes.Equal(tx.Fulfillment.Deployment, deployment.Address) {
+				if bytes.Equal(tx.Fulfillment.Deployment, address) {
 					f := tx.Fulfillment
-					fmt.Printf("Group %v/%v Fulfillment: %X\n", f.Group, len(groups.GetItems()),
+					fmt.Printf("Group %v/%v Fulfillment: %X\n", f.Group, len(groups),
 						state.FulfillmentID(f.Deployment, f.Group, f.Order, f.Provider))
 				}
 			}).
 			OnTxCreateLease(func(tx *types.TxCreateLease) {
-				if bytes.Equal(tx.Lease.Deployment, deployment.Address) {
+				if bytes.Equal(tx.Lease.Deployment, address) {
 					l := tx.Lease
-					fmt.Printf("Group %v/%v Lease: %X\n", l.Group, len(groups.GetItems()),
+					fmt.Printf("Group %v/%v Lease: %X\n", l.Group, len(groups),
 						state.FulfillmentID(l.Deployment, l.Group, l.Order, l.Provider))
 					expected--
 				}
