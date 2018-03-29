@@ -68,7 +68,9 @@ message Providers {
 }
 
 message TxCreateProvider {
-  Provider provider = 1 [(gogoproto.nullable) = false];
+  bytes  owner = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  repeated ProviderAttribute attributes = 2 [(gogoproto.nullable) = false];
+  uint64 nonce = 3;
 }
 
 /* END PROVIDER */

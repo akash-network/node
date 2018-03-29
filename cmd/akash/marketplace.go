@@ -38,7 +38,7 @@ func marketplaceMonitorHandler() marketplace.Handler {
 			fmt.Printf("TRANSFER\t%v tokens from %v to %v\n", tx.GetAmount(), X(tx.From), X(tx.To))
 		}).
 		OnTxCreateProvider(func(tx *types.TxCreateProvider) {
-			fmt.Printf("DATACENTER CREATED\t%v created by %v\n", X(tx.Provider.Address), X(tx.Provider.Owner))
+			fmt.Printf("DATACENTER CREATED\t%v created by %v\n", X(state.ProviderAddress(tx.Owner, tx.Nonce)), X(tx.Owner))
 		}).
 		OnTxCreateDeployment(func(tx *types.TxCreateDeployment) {
 			fmt.Printf("DEPLOYMENT CREATED\t%v created by %v\n", X(state.DeploymentAddress(tx.Tenant, tx.Nonce)), X(tx.Tenant))
