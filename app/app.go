@@ -212,6 +212,10 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 
 	// set new account nonce
 	if resp.IsOK() {
+		signer, err_ = app.state.Account().Get(ctx.Signer().Address().Bytes())
+		if err_ != nil {
+			return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
+		}
 		signer.Nonce = tx.Payload.Nonce
 		if err_ := app.state.Account().Save(signer); err_ != nil {
 			return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
