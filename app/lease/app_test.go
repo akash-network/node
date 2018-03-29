@@ -49,7 +49,7 @@ func TestValidTx(t *testing.T) {
 	papp, err := papp.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	paccount, pkey := testutil.CreateAccount(t, state)
-	pnonce := uint64(0)
+	pnonce := uint64(1)
 	provider := testutil.CreateProvider(t, papp, paccount, &pkey, pnonce)
 
 	// create tenant
@@ -116,7 +116,7 @@ func TestBilling(t *testing.T) {
 	papp, err := papp.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	paccount, pkey := testutil.CreateAccount(t, state)
-	pnonce := uint64(0)
+	pnonce := uint64(1)
 	provider := testutil.CreateProvider(t, papp, paccount, &pkey, pnonce)
 
 	// create tenant

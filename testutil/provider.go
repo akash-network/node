@@ -37,6 +37,7 @@ func ProviderTx(account *types.Account, key *crypto.PrivKey, nonce uint64) *type
 				TxCreateProvider: &types.TxCreateProvider{
 					Attributes: provider.Attributes,
 					Owner:      provider.Owner,
+					Nonce:      nonce,
 				},
 			},
 		},

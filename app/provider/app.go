@@ -170,7 +170,6 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmtype
 			Log:  "unknown source account",
 		}
 	}
-
 	if acct.Nonce >= tx.Nonce {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
