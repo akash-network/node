@@ -193,7 +193,7 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 		return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 	}
 
-	// XXX: Need separate create account tx which costs tokens to prevent spam
+	// XXX: Accouts should be implicity created when tokens are sent to it
 	if signer == nil {
 		signer = &types.Account{
 			Address: ctx.Signer().Address().Bytes(),
