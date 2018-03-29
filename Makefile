@@ -1,11 +1,19 @@
 PROTO_FILES  = $(wildcard types/*.proto)
 PROTOC_FILES = $(patsubst %.proto,%.pb.go, $(PROTO_FILES))
-PROGRAMS     = akash akashd
+
+BINS       := akash akashd
+IMAGE_BINS := akash-docker akashd-docker
 
 IMAGE_REPO ?= quay.io/ovrclk/akash
 IMAGE_TAG  ?= latest
 
-all: build $(PROGRAMS)
+IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
+ifdef TRAVIS
+	IMAGE_LDFLAGS += -X github.com/ovrclk/akash/version.version="$(TRAVIS_BRANCH)" \
+									 -X github.com/ovrclk/akash/version.commit="$(TRAVIS_COMMIT)"
+endif
+
+all: build $(BINS)
 
 build:
 	go build -i $$(glide novendor)
@@ -16,11 +24,12 @@ akash:
 akashd:
 	go build ./cmd/akashd
 
-image:
-	docker build --rm -t $(IMAGE_REPO):$(IMAGE_TAG) .
+image-bins:
+	$(IMAGE_BUILD_ENV) go build -ldflags '$(IMAGE_LDFLAGS)' -o akash-docker  ./cmd/akash
+	$(IMAGE_BUILD_ENV) go build -ldflags '$(IMAGE_LDFLAGS)' -o akashd-docker ./cmd/akashd
 
-image-push:
-	docker push $(IMAGE_REPO):$(IMAGE_TAG)
+image: image-bins
+	docker build --rm -t $(IMAGE_REPO):$(IMAGE_TAG) .
 
 image-minikube:
 	eval $$(minikube docker-env) && make image
@@ -51,7 +60,7 @@ coverdeps-install:
 	go get golang.org/x/tools/cmd/cover
 	go get github.com/mattn/goveralls
 
-test-integration: $(PROGRAMS)
+test-integration: $(BINS)
 	(cd _integration && make clean run)
 
 integrationdeps-install:
@@ -74,11 +83,11 @@ docs:
 	(cd _docs/dot && make)
 
 clean:
-	rm -f $(PROGRAMS)
+	rm -f $(BINS) $(IMAGE_BINS)
 
 .PHONY: all build \
 	akash akashd \
-	image image-push \
+	image image-bins \
 	test test-nocache test-full \
 	deps-install devdeps-install \
 	test-cover coverdeps-install \

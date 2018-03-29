@@ -8,6 +8,10 @@
 /akash
 /akashd
 
+# docker-specific binaries
+/akash-docker
+/akashd-docker
+
 # dev artifacts
 /devdata
 
