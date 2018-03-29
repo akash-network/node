@@ -1,10 +1,12 @@
 BINARY := run
 
+DIRS := data/client data/provider
+
 build:
 	go build -o $(BINARY) .
 
 init:
-	mkdir -p data/client
+	mkdir -p $(DIRS)
 
 run: build init
 	./run eval

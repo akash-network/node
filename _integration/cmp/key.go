@@ -4,15 +4,16 @@ import (
 	"github.com/ovrclk/gestalt"
 	g "github.com/ovrclk/gestalt/builder"
 	gx "github.com/ovrclk/gestalt/exec"
+	"github.com/ovrclk/gestalt/vars"
 )
 
-func keyCreate(key key) gestalt.Component {
-	return akash("key-create", "key", "create", key.name.Name()).
+func keyCreate(root vars.Ref, key key) gestalt.Component {
+	return akash_(root, "key-create", "key", "create", key.name.Name()).
 		FN(gx.Capture(key.addr.Name())).
 		WithMeta(g.Export(key.addr.Name()))
 }
 
-func keyList(key key) gestalt.Component {
+func keyList(root vars.Ref, key key) gestalt.Component {
 
 	parse := gx.ParseColumns("name", "address").
 		GrepField("name", key.name.Name()).
@@ -20,14 +21,18 @@ func keyList(key key) gestalt.Component {
 		EnsureCount(1).
 		Done()
 
-	return akash("key-list", "key", "list").
+	return akash_(root, "key-list", "key", "list").
 		FN(parse).
 		WithMeta(g.Require(key.addr.Name()))
 }
 
 func groupKey(key key) gestalt.Component {
+	return groupKey_(defaultAkashRoot, key)
+}
+
+func groupKey_(root vars.Ref, key key) gestalt.Component {
 	return g.Group("key").
-		Run(keyCreate(key)).
-		Run(keyList(key)).
+		Run(keyCreate(root, key)).
+		Run(keyList(root, key)).
 		WithMeta(g.Export(key.addr.Name()))
 }

@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-crypto/keys"
-	"github.com/tendermint/go-crypto/keys/cryptostore"
-	"github.com/tendermint/go-crypto/keys/storage/memstorage"
+	"github.com/tendermint/go-crypto/keys/words"
+	tmdb "github.com/tendermint/tmlibs/db"
 )
 
 const (
@@ -17,22 +17,19 @@ const (
 	KeyName   = "test"
 )
 
-func KeyManager(t *testing.T) cryptostore.Manager {
-	codec, err := keys.LoadCodec("english")
+func KeyManager(t *testing.T) keys.Keybase {
+	codec, err := words.LoadCodec("english")
 	require.NoError(t, err)
-
-	return cryptostore.New(
-		cryptostore.SecretBox,
-		memstorage.New(),
-		codec,
-	)
+	db := tmdb.NewMemDB()
+	return keys.New(db, codec)
 }
 
 func PrivateKey(t *testing.T) crypto.PrivKey {
-	secret := crypto.CRandBytes(16)
-	key, err := cryptostore.GenEd25519.Generate(secret)
-	require.NoError(t, err)
-	return key
+	return crypto.GenPrivKeyEd25519().Wrap()
+}
+
+func PublicKey(t *testing.T) crypto.PubKey {
+	return PrivateKey(t).PubKey()
 }
 
 func PrivateKeySigner(t *testing.T) (txutil.Signer, crypto.PrivKey) {
@@ -40,7 +37,7 @@ func PrivateKeySigner(t *testing.T) (txutil.Signer, crypto.PrivKey) {
 	return txutil.NewPrivateKeySigner(key), key
 }
 
-func NewNamedKey(t *testing.T) (keys.Info, cryptostore.Manager) {
+func NewNamedKey(t *testing.T) (keys.Info, keys.Keybase) {
 	kmgr := KeyManager(t)
 	info, _, err := kmgr.Create(KeyName, KeyPasswd, KeyAlgo)
 	require.NoError(t, err)

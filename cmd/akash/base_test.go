@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"testing"
 
 	"github.com/ovrclk/akash/cmd/akash/context"
@@ -13,29 +12,21 @@ import (
 )
 
 func TestRootDir_Env(t *testing.T) {
-	basedir := testutil.TempDir(t)
-	defer os.RemoveAll(basedir)
-	defer os.Unsetenv("AKASH_DATA")
-
-	os.Setenv("AKASH_DATA", basedir)
-
-	assertCommand(t, func(ctx context.Context, cmd *cobra.Command, args []string) error {
-		assert.Equal(t, basedir, ctx.RootDir())
-		return nil
+	testutil.WithAkashDir(t, func(basedir string) {
+		assertCommand(t, func(ctx context.Context, cmd *cobra.Command, args []string) error {
+			assert.Equal(t, basedir, ctx.RootDir())
+			return nil
+		})
 	})
 }
 
 func TestRootDir_Flag(t *testing.T) {
-	basedir := testutil.TempDir(t)
-	defer os.RemoveAll(basedir)
-	defer os.Unsetenv("AKASH_DATA")
-
-	os.Setenv("AKASH_DATA", basedir)
-
-	assertCommand(t, func(ctx context.Context, cmd *cobra.Command, args []string) error {
-		assert.Equal(t, basedir, ctx.RootDir())
-		return nil
-	}, "-d", basedir)
+	testutil.WithAkashDir(t, func(basedir string) {
+		assertCommand(t, func(ctx context.Context, cmd *cobra.Command, args []string) error {
+			assert.Equal(t, basedir, ctx.RootDir())
+			return nil
+		}, "-d", basedir)
+	})
 }
 
 func assertCommand(t *testing.T, fn context.Runner, args ...string) {

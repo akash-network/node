@@ -20,10 +20,8 @@ func CreateOrder(t *testing.T, app apptypes.Application, account *types.Account,
 		},
 	}
 
-	pubkey := base.PubKey(key.PubKey())
-
 	ctx := apptypes.NewContext(&types.Tx{
-		Key: &pubkey,
+		Key: key.PubKey().Bytes(),
 		Payload: types.TxPayload{
 			Payload: tx,
 		},

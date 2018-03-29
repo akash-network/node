@@ -1,16 +1,13 @@
 package account_test
 
 import (
-	"encoding/hex"
-	"fmt"
 	"testing"
 
 	"github.com/ovrclk/akash/app/account"
 	apptypes "github.com/ovrclk/akash/app/types"
-	pstate "github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmtypes "github.com/tendermint/abci/types"
@@ -23,32 +20,27 @@ func TestAccountApp(t *testing.T) {
 		amount  uint64 = 100
 	)
 
-	kmgr := testutil.KeyManager(t)
-
-	keyfrom, _, err := kmgr.Create("keyfrom", testutil.KeyPasswd, testutil.KeyAlgo)
-	require.NoError(t, err)
-
-	keyto, _, err := kmgr.Create("keyto", testutil.KeyPasswd, testutil.KeyAlgo)
-	require.NoError(t, err)
+	keyfrom := testutil.PrivateKey(t)
+	addrfrom := keyfrom.PubKey().Address().Bytes()
+	keyto := testutil.PrivateKey(t)
+	addrto := keyto.PubKey().Address().Bytes()
 
 	send := &types.TxPayload_TxSend{
 		TxSend: &types.TxSend{
-			From:   base.Bytes(keyfrom.Address),
-			To:     base.Bytes(keyto.Address),
+			From:   addrfrom,
+			To:     addrto,
 			Amount: amount,
 		},
 	}
 
 	state := testutil.NewState(t, &types.Genesis{
 		Accounts: []types.Account{
-			types.Account{Address: base.Bytes(keyfrom.Address), Balance: balance},
+			types.Account{Address: addrfrom, Balance: balance},
 		},
 	})
 
-	key := base.PubKey(keyfrom.PubKey)
-
 	ctx := apptypes.NewContext(&types.Tx{
-		Key: &key,
+		Key: keyfrom.PubKey().Bytes(),
 		Payload: types.TxPayload{
 			Payload: send,
 		},
@@ -57,23 +49,22 @@ func TestAccountApp(t *testing.T) {
 	app, err := account.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 
-	assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.AccountPath, hex.EncodeToString(keyfrom.Address))}))
-	assert.False(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", "/foo/", hex.EncodeToString(keyfrom.Address))}))
+	assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: query.AccountPath(addrfrom)}))
 
 	assert.True(t, app.AcceptTx(ctx, send))
 
 	{
 		resp := app.CheckTx(ctx, send)
-		assert.True(t, resp.IsOK())
+		assert.True(t, resp.IsOK(), resp.Log)
 	}
 
 	{
 		resp := app.DeliverTx(ctx, send)
-		assert.True(t, resp.IsOK())
+		assert.True(t, resp.IsOK(), resp.Log)
 	}
 
 	{
-		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.AccountPath, hex.EncodeToString(keyfrom.Address))})
+		resp := app.Query(tmtypes.RequestQuery{Path: query.AccountPath(addrfrom)})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 
@@ -85,7 +76,7 @@ func TestAccountApp(t *testing.T) {
 	}
 
 	{
-		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.AccountPath, hex.EncodeToString(keyto.Address))})
+		resp := app.Query(tmtypes.RequestQuery{Path: query.AccountPath(addrto)})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 

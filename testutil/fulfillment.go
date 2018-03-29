@@ -20,10 +20,8 @@ func CreateFulfillment(t *testing.T, app apptypes.Application, provider base.Byt
 		},
 	}
 
-	pubkey := base.PubKey(key.PubKey())
-
 	ctx := apptypes.NewContext(&types.Tx{
-		Key: &pubkey,
+		Key: key.PubKey().Bytes(),
 		Payload: types.TxPayload{
 			Payload: fulfillmenttx,
 		},

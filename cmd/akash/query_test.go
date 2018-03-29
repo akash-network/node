@@ -9,8 +9,8 @@ import (
 )
 
 func TestAccountQuery_NoNode(t *testing.T) {
-	info, _ := testutil.NewNamedKey(t)
-	args := []string{query.QueryCommand().Name(), "account", info.Address.String()}
+	hexaddr := testutil.HexAddress(t)
+	args := []string{query.QueryCommand().Name(), "account", hexaddr}
 	base := baseCommand()
 	base.AddCommand(query.QueryCommand())
 	base.SetArgs(args)
@@ -19,8 +19,8 @@ func TestAccountQuery_NoNode(t *testing.T) {
 }
 
 func TestDeploymentQuery_NoNode(t *testing.T) {
-	info, _ := testutil.NewNamedKey(t)
-	args := []string{query.QueryCommand().Name(), "deployment", info.Address.String()}
+	hexaddr := testutil.HexDeploymentAddress(t)
+	args := []string{query.QueryCommand().Name(), "deployment", hexaddr}
 	base := baseCommand()
 	base.AddCommand(query.QueryCommand())
 	base.SetArgs(args)
@@ -29,8 +29,8 @@ func TestDeploymentQuery_NoNode(t *testing.T) {
 }
 
 func TestOrderQuery_NoNode(t *testing.T) {
-	info, _ := testutil.NewNamedKey(t)
-	args := []string{query.QueryCommand().Name(), "order", info.Address.String()}
+	hexaddr := testutil.HexDeploymentAddress(t)
+	args := []string{query.QueryCommand().Name(), "order", hexaddr}
 	base := baseCommand()
 	base.AddCommand(query.QueryCommand())
 	base.SetArgs(args)
@@ -39,8 +39,8 @@ func TestOrderQuery_NoNode(t *testing.T) {
 }
 
 func TestProviderQuery_NoNode(t *testing.T) {
-	info, _ := testutil.NewNamedKey(t)
-	args := []string{query.QueryCommand().Name(), "provider", info.Address.String()}
+	hexaddr := testutil.HexDeploymentAddress(t)
+	args := []string{query.QueryCommand().Name(), "provider", hexaddr}
 	base := baseCommand()
 	base.AddCommand(query.QueryCommand())
 	base.SetArgs(args)

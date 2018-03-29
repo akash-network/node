@@ -7,29 +7,32 @@ import (
 	"github.com/ovrclk/gestalt/vars"
 )
 
-func providerCreate(key vars.Ref, paddr vars.Ref) gestalt.Component {
+func providerCreate(root vars.Ref, key vars.Ref, paddr vars.Ref) gestalt.Component {
 
-	check := akash("query", "query", "provider", paddr.Var()).
+	check := akash_(root, "query", "query", "provider", paddr.Var()).
 		FN(js.Do(js.Str(paddr.Var(), "address")))
 
 	return g.Group("provider-create").
 		Run(
-			akash("create", "provider", "create", "unused.yml", "-k", key.Name()).
+			akash_(root, "create", "provider", "create", "unused.yml", "-k", key.Name()).
 				FN(g.Capture(paddr.Name())).
 				WithMeta(g.Export(paddr.Name()))).
 		Run(g.Retry(5).Run(check)).
 		WithMeta(g.Export(paddr.Name()))
 }
 
-func providerRun(key vars.Ref, paddr vars.Ref) gestalt.Component {
-	return akash("provider-run", "provider", "run", paddr.Var(), "-k", key.Name()).
+func providerRun(root vars.Ref, key vars.Ref, paddr vars.Ref) gestalt.Component {
+	return akash_(root, "provider-run", "provider", "run", paddr.Var(), "-k", key.Name()).
 		WithMeta(g.Require(paddr.Name()))
 }
 
-func groupProvider(key vars.Ref, paddr vars.Ref) gestalt.Component {
+func groupProvider(paddr vars.Ref) gestalt.Component {
+	root := g.Ref("provider-root")
+	key := newKey("provider-master")
 	return g.Group("provider").
-		Run(providerCreate(key, paddr)).
+		Run(groupKey_(root, key)).
+		Run(providerCreate(root, key.name, paddr)).
 		Run(g.BG().
-			Run(providerRun(key, paddr))).
+			Run(providerRun(root, key.name, paddr))).
 		WithMeta(g.Export(paddr.Name()))
 }

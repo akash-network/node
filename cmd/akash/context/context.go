@@ -4,30 +4,30 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"sync"
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/common"
-	"github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/go-crypto/keys"
-	"github.com/tendermint/go-crypto/keys/cryptostore"
-	"github.com/tendermint/go-crypto/keys/storage/filestorage"
+	"github.com/tendermint/go-crypto/keys/words"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
+	tmdb "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/log"
 )
 
 type Context interface {
 	RootDir() string
-	KeyManager() (keys.Manager, error)
+	KeyManager() (keys.Keybase, error)
 	Node() string
 	Client() *tmclient.HTTP
 	KeyName() string
+	KeyType() (keys.CryptoAlgo, error)
 	Key() (keys.Info, error)
 	Nonce() (uint64, error)
 	Log() log.Logger
@@ -40,7 +40,8 @@ type Runner func(ctx Context, cmd *cobra.Command, args []string) error
 
 func WithContext(fn Runner) cmdRunner {
 	return func(cmd *cobra.Command, args []string) error {
-		ctx := NewContext(cmd)
+		ctx := newContext(cmd)
+		defer ctx.shutdown()
 		return fn(ctx, cmd, args)
 	}
 }
@@ -81,15 +82,24 @@ func RequireKey(fn Runner) Runner {
 	}
 }
 
-func NewContext(cmd *cobra.Command) Context {
+func newContext(cmd *cobra.Command) *context {
 	return &context{cmd: cmd, mtx: sync.Mutex{}}
 }
 
 type context struct {
 	cmd  *cobra.Command
-	kmgr keys.Manager
+	kmgr keys.Keybase
+	kdb  tmdb.DB
 	log  log.Logger
 	mtx  sync.Mutex
+}
+
+func (ctx *context) shutdown() {
+	ctx.mtx.Lock()
+	defer ctx.mtx.Unlock()
+	if ctx.kdb != nil {
+		ctx.kdb.Close()
+	}
 }
 
 func (ctx *context) Log() log.Logger {
@@ -109,7 +119,7 @@ func (ctx *context) RootDir() string {
 	return root
 }
 
-func (ctx *context) KeyManager() (keys.Manager, error) {
+func (ctx *context) KeyManager() (keys.Keybase, error) {
 	ctx.mtx.Lock()
 	defer ctx.mtx.Unlock()
 
@@ -121,8 +131,9 @@ func (ctx *context) KeyManager() (keys.Manager, error) {
 	if root == "" {
 		return nil, errors.New("root directory unset")
 	}
+
 	var err error
-	ctx.kmgr, err = loadKeyManager(root)
+	ctx.kmgr, ctx.kdb, err = loadKeyManager(root)
 
 	return ctx.kmgr, err
 }
@@ -141,6 +152,10 @@ func (ctx *context) Client() *tmclient.HTTP {
 func (ctx *context) KeyName() string {
 	val, _ := ctx.cmd.Flags().GetString(constants.FlagKey)
 	return val
+}
+
+func (ctx *context) KeyType() (keys.CryptoAlgo, error) {
+	return parseFlagKeyType(ctx.cmd.Flags())
 }
 
 func (ctx *context) Key() (keys.Info, error) {
@@ -192,7 +207,7 @@ func (ctx *context) Nonce() (uint64, error) {
 		res := new(types.Account)
 		client := ctx.Client()
 		key, _ := ctx.Key()
-		queryPath := state.AccountPath + key.Address.String()
+		queryPath := query.AccountPath(key.Address())
 		result, err := client.ABCIQuery(queryPath, nil)
 		if err != nil {
 			return 0, err
@@ -208,15 +223,14 @@ func (ctx *context) Wait() bool {
 	return val
 }
 
-func loadKeyManager(root string) (keys.Manager, error) {
-	codec, err := keys.LoadCodec(constants.Codec)
+func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {
+	codec, err := words.LoadCodec(constants.Codec)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	manager := cryptostore.New(
-		cryptostore.SecretBox,
-		filestorage.New(path.Join(root, constants.KeyDir)),
-		codec,
-	)
-	return manager, nil
+
+	db := tmdb.NewDB(constants.KeyDir, tmdb.GoLevelDBBackend, root)
+	manager := keys.New(db, codec)
+
+	return manager, db, nil
 }

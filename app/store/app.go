@@ -46,7 +46,6 @@ func (a *app) Query(req types.RequestQuery) types.ResponseQuery {
 			}
 		}
 		return types.ResponseQuery{
-			Key:    req.Data,
 			Value:  val,
 			Height: int64(db.Version()),
 			Proof:  proof.Bytes(),
@@ -55,7 +54,6 @@ func (a *app) Query(req types.RequestQuery) types.ResponseQuery {
 
 	val := db.Get(req.Data)
 	return types.ResponseQuery{
-		Key:    req.Data,
 		Value:  val,
 		Height: int64(db.Version()),
 	}

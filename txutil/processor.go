@@ -49,7 +49,17 @@ func (txp *txProcessor) Validate() error {
 		return err
 	}
 
-	if !txp.tx.Key.VerifyBytes(pbytes, crypto.Signature(*txp.tx.Signature)) {
+	key, err := crypto.PubKeyFromBytes(txp.tx.Key)
+	if err != nil {
+		return err
+	}
+
+	sig, err := crypto.SignatureFromBytes(txp.tx.Signature)
+	if err != nil {
+		return err
+	}
+
+	if !key.VerifyBytes(pbytes, sig) {
 		return fmt.Errorf("invalid signature")
 	}
 

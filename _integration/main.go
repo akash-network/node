@@ -21,6 +21,7 @@ func detectDefaults() vars.Meta {
 	return g.
 		Default("akash-path", "../akash").
 		Default("akash-root", "./data/client").
+		Default("provider-root", "./data/provider").
 		Default("akashd-path", "../akashd").
 		Default("akashd-root", "./data/node")
 }

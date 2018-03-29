@@ -32,10 +32,8 @@ func CreateDeployment(t *testing.T, app apptypes.Application, account *types.Acc
 		},
 	}
 
-	pubkey := base.PubKey(key.PubKey())
-
 	ctx := apptypes.NewContext(&types.Tx{
-		Key: &pubkey,
+		Key: key.PubKey().Bytes(),
 		Payload: types.TxPayload{
 			Payload: deploymenttx,
 		},
@@ -58,10 +56,8 @@ func CloseDeployment(t *testing.T, app apptypes.Application, deployment *base.By
 		},
 	}
 
-	pubkey := base.PubKey(key.PubKey())
-
 	ctx := apptypes.NewContext(&types.Tx{
-		Key: &pubkey,
+		Key: key.PubKey().Bytes(),
 		Payload: types.TxPayload{
 			Payload: tx,
 		},
@@ -82,10 +78,8 @@ func DeploymentClosed(t *testing.T, app apptypes.Application, deployment *base.B
 		},
 	}
 
-	pubkey := base.PubKey(key.PubKey())
-
 	ctx := apptypes.NewContext(&types.Tx{
-		Key: &pubkey,
+		Key: key.PubKey().Bytes(),
 		Payload: types.TxPayload{
 			Payload: tx,
 		},

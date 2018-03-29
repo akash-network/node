@@ -14,6 +14,7 @@ import (
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
+	. "github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
 )
 
@@ -70,7 +71,7 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 		return err
 	}
 
-	deployment, groups, err := parseDeployment(args[0], key.Address, nonce)
+	deployment, groups, err := parseDeployment(args[0], key.Address(), nonce)
 	if err != nil {
 		return err
 	}
@@ -97,7 +98,7 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 		return errors.New(res.DeliverTx.GetLog())
 	}
 
-	fmt.Printf("%X\n", deployment.Address)
+	fmt.Println(X(deployment.Address))
 
 	if ctx.Wait() {
 		fmt.Printf("Waiting...\n")
@@ -190,7 +191,7 @@ func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) err
 		handler := marketplace.NewBuilder().
 			OnTxDeploymentClosed(func(tx *types.TxDeploymentClosed) {
 				if bytes.Equal(tx.Deployment, *deployment) {
-					fmt.Printf("Closed deployment: %X\n", tx.Deployment)
+					fmt.Printf("Closed deployment: %v\n", X(tx.Deployment))
 					os.Exit(0)
 				}
 			}).Create()

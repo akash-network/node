@@ -1,10 +1,14 @@
 package context
 
 import (
+	"fmt"
+
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	crypto "github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-crypto/keys"
 )
 
 func AddFlagNode(cmd *cobra.Command, flags *pflag.FlagSet) {
@@ -27,4 +31,20 @@ func AddFlagKeyType(cmd *cobra.Command, flags *pflag.FlagSet) {
 
 func AddFlagWait(cmd *cobra.Command, flags *pflag.FlagSet) {
 	flags.BoolP(constants.FlagWait, "w", false, "Wait for market confirmation")
+}
+
+func parseFlagKeyType(flags *pflag.FlagSet) (keys.CryptoAlgo, error) {
+	ktype, err := flags.GetString(constants.FlagKeyType)
+	if err != nil {
+		return "", err
+	}
+
+	switch ktype {
+	case crypto.NameEd25519:
+		return keys.AlgoEd25519, nil
+	case crypto.NameSecp256k1:
+		return keys.AlgoSecp256k1, nil
+	default:
+		return "", fmt.Errorf("unknown key type: %v", ktype)
+	}
 }

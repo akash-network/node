@@ -7,7 +7,6 @@ import (
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
 	"github.com/stretchr/testify/require"
 )
@@ -19,14 +18,14 @@ func TestApp(t *testing.T) {
 	nonce := uint64(1)
 
 	signer, keyfrom := testutil.PrivateKeySigner(t)
-	keyf := base.PubKey(keyfrom.PubKey())
+	addrfrom := keyfrom.PubKey().Address().Bytes()
 
 	keyto := testutil.PrivateKey(t)
-	keyt := base.PubKey(keyto.PubKey())
+	addrto := keyto.PubKey().Address().Bytes()
 
 	state := testutil.NewState(t, &types.Genesis{
 		Accounts: []types.Account{
-			types.Account{Address: base.Bytes(keyf.Address()), Balance: balance, Nonce: nonce},
+			types.Account{Address: addrfrom, Balance: balance, Nonce: nonce},
 		},
 	})
 
@@ -36,8 +35,8 @@ func TestApp(t *testing.T) {
 	{
 		nonce := uint64(0)
 		tx, err := txutil.BuildTx(signer, nonce, &types.TxSend{
-			From:   base.Bytes(keyf.Address()),
-			To:     base.Bytes(keyt.Address()),
+			From:   addrfrom,
+			To:     addrto,
 			Amount: 0,
 		})
 		require.NoError(t, err)
@@ -50,8 +49,8 @@ func TestApp(t *testing.T) {
 	{
 		nonce := uint64(1)
 		tx, err := txutil.BuildTx(signer, nonce, &types.TxSend{
-			From:   base.Bytes(keyf.Address()),
-			To:     base.Bytes(keyt.Address()),
+			From:   addrfrom,
+			To:     addrto,
 			Amount: 0,
 		})
 		require.NoError(t, err)
@@ -64,8 +63,8 @@ func TestApp(t *testing.T) {
 	{
 		nonce := uint64(2)
 		tx, err := txutil.BuildTx(signer, nonce, &types.TxSend{
-			From:   base.Bytes(keyf.Address()),
-			To:     base.Bytes(keyt.Address()),
+			From:   addrfrom,
+			To:     addrto,
 			Amount: 0,
 		})
 		require.NoError(t, err)
@@ -78,8 +77,8 @@ func TestApp(t *testing.T) {
 	{
 		nonce := uint64(2)
 		tx, err := txutil.BuildTx(signer, nonce, &types.TxSend{
-			From:   base.Bytes(keyf.Address()),
-			To:     base.Bytes(keyt.Address()),
+			From:   addrfrom,
+			To:     addrto,
 			Amount: 0,
 		})
 		require.NoError(t, err)

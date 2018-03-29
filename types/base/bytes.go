@@ -3,11 +3,12 @@ package base
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 
-	"github.com/tendermint/go-wire/data"
+	"github.com/ovrclk/akash/util"
 )
 
-type Bytes data.Bytes
+type Bytes []byte
 
 func (t Bytes) Marshal() ([]byte, error) {
 	return t, nil
@@ -19,12 +20,15 @@ func (t *Bytes) Unmarshal(data []byte) error {
 }
 
 func (t Bytes) MarshalJSON() ([]byte, error) {
-	return data.Encoder.Marshal(t)
+	return json.Marshal(t.EncodeString())
 }
 
 func (t *Bytes) UnmarshalJSON(buf []byte) error {
-	ref := (*[]byte)(t)
-	return data.Encoder.Unmarshal(ref, buf)
+	var val string
+	if err := json.Unmarshal(buf, &val); err != nil {
+		return err
+	}
+	return t.DecodeString(val)
 }
 
 func (t *Bytes) DecodeString(buf string) error {
@@ -34,7 +38,7 @@ func (t *Bytes) DecodeString(buf string) error {
 }
 
 func (t Bytes) EncodeString() string {
-	return hex.EncodeToString(t)
+	return util.X(t)
 }
 
 func (this Bytes) Compare(that Bytes) int {

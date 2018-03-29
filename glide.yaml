@@ -9,37 +9,28 @@ import:
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
   version: master
-- package: github.com/tendermint/abci
-  subpackages:
-  - types
+
+# - package: github.com/tendermint/abci
+#   version: ~0.10.2
+
 - package: github.com/tendermint/go-crypto
-  subpackages:
-  - keys
-  - keys/cryptostore
-  - keys/storage/filestorage
-- package: github.com/tendermint/go-wire
-  subpackages:
-  - data
-- package: github.com/tendermint/iavl
-- package: github.com/tendermint/tendermint
-  version: ^0.16.0
-  subpackages:
-  - config
-  - node
-  - proxy
-  - rpc/core/types
-  - types
+  version: ~0.5.0
+
+# - package: github.com/tendermint/go-wire
+#   version: ~0.7.3
+#   repo: https://github.com/tendermint/go-amino.git
+
+# - package: github.com/tendermint/iavl
+
 - package: github.com/tendermint/tmlibs
-  subpackages:
-  - db
-  - log
+  version: ~0.7.1
+
+- package: github.com/tendermint/tendermint
+  version: develop
+
 - package: github.com/stretchr/testify
   version: ^1.2.1
   subpackages:
   - require
   - assert
   - mock
-- package: github.com/rcrowley/go-metrics
-- package: github.com/ethanfrey/hid
-  version: master
-  repo: https://github.com/boz/hid.git

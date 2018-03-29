@@ -20,10 +20,8 @@ func CreateLease(t *testing.T, app apptypes.Application, provider base.Bytes, ke
 		},
 	}
 
-	pubkey := base.PubKey(key.PubKey())
-
 	ctx := apptypes.NewContext(&types.Tx{
-		Key: &pubkey,
+		Key: key.PubKey().Bytes(),
 		Payload: types.TxPayload{
 			Payload: tx,
 		},

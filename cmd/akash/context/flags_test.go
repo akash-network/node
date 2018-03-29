@@ -59,32 +59,29 @@ func TestFlag_Nonce(t *testing.T) {
 }
 
 func assertCommand(t *testing.T, flagfn flagFn, fn context.Runner, args ...string) {
-	basedir := testutil.TempDir(t)
-	defer os.RemoveAll(basedir)
-	defer os.Unsetenv("AKASH_DATA")
+	testutil.WithAkashDir(t, func(basedir string) {
+		viper.Reset()
 
-	viper.Reset()
+		ran := false
 
-	ran := false
+		cmd := &cobra.Command{
+			Use: "test",
+			RunE: context.WithContext(func(ctx context.Context, cmd *cobra.Command, args []string) error {
+				ran = true
+				require.Equal(t, basedir, ctx.RootDir(), "unexpected home dir")
+				return fn(ctx, cmd, args)
+			}),
+		}
 
-	os.Setenv("AKASH_DATA", basedir)
+		context.SetupBaseCommand(cmd)
 
-	cmd := &cobra.Command{
-		Use: "test",
-		RunE: context.WithContext(func(ctx context.Context, cmd *cobra.Command, args []string) error {
-			ran = true
-			require.Equal(t, basedir, ctx.RootDir(), "unexpected home dir")
-			return fn(ctx, cmd, args)
-		}),
-	}
+		if flagfn != nil {
+			flagfn(cmd, cmd.Flags())
+		}
 
-	context.SetupBaseCommand(cmd)
+		cmd.SetArgs(args)
+		require.NoError(t, cmd.Execute())
+		assert.True(t, ran)
 
-	if flagfn != nil {
-		flagfn(cmd, cmd.Flags())
-	}
-
-	cmd.SetArgs(args)
-	require.NoError(t, cmd.Execute())
-	assert.True(t, ran)
+	})
 }

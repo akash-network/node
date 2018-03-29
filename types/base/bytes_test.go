@@ -10,10 +10,10 @@ import (
 
 func TestBytes_JSON(t *testing.T) {
 	obj := new(base.Bytes)
-	js := []byte(`"F8"`)
+	js := []byte(`"f8"`)
 
 	require.NoError(t, obj.UnmarshalJSON(js))
-	assert.Equal(t, (*obj)[0], uint8(0xF8))
+	assert.Equal(t, (*obj)[0], uint8(0xf8))
 	assert.Len(t, *obj, 1)
 
 	js_, err := obj.MarshalJSON()

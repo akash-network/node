@@ -2,24 +2,22 @@ package main
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/rand"
-	"strings"
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/cmd/akash/query"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/marketplace"
-	"github.com/ovrclk/akash/state"
+	qp "github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
+	. "github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
-	"github.com/tendermint/go-wire/data"
 )
 
 func providerCommand() *cobra.Command {
@@ -63,8 +61,8 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 	// XXX generate key for provider if doens't exist
 	key, err := ctx.Key()
 	if err != nil {
-		kname, _ := cmd.Flags().GetString(constants.FlagKey)
-		ktype, err := cmd.Flags().GetString(constants.FlagKeyType)
+		kname := ctx.KeyName()
+		ktype, err := ctx.KeyType()
 		if err != nil {
 			return err
 		}
@@ -74,16 +72,12 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 			return err
 		}
 
-		addr, err := data.ToText(info.Address)
-		if err != nil {
-			return err
-		}
 		key, err = kmgr.Get(kname)
 		if err != nil {
 			return err
 		}
 
-		fmt.Println("Key created:", addr)
+		fmt.Printf("Key created: %v\n", X(info.Address()))
 	}
 
 	signer, key, err := ctx.Signer()
@@ -96,7 +90,7 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	provider, err := parseProvider(args[0], key.Address, nonce)
+	provider, err := parseProvider(args[0], key.Address(), nonce)
 	if err != nil {
 		return err
 	}
@@ -121,8 +115,7 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		return errors.New(result.DeliverTx.GetLog())
 	}
 
-	fmt.Println(strings.ToUpper(hex.EncodeToString(provider.Address)))
-	//fmt.Println("Created provider: " + strings.ToUpper(hex.EncodeToString(provider.Address)))
+	fmt.Println(X(provider.Address))
 
 	return nil
 }
@@ -190,8 +183,8 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 				},
 			}
 
-			fmt.Printf("Bidding on order: %X/%v/%v\n",
-				tx.Order.Deployment, tx.Order.Group, tx.Order.Order)
+			fmt.Printf("Bidding on order: %v/%v/%v\n",
+				X(tx.Order.Deployment), tx.Order.Group, tx.Order.Order)
 
 			txbuf, err := txutil.BuildTx(signer, nonce, ordertx)
 			if err != nil {
@@ -218,14 +211,14 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 			leaseProvider, _ := tx.Lease.Provider.Marshal()
 			if bytes.Equal(leaseProvider, *provider) {
 				deployments[tx.Lease.Deployment.EncodeString()] = struct{}{}
-				fmt.Printf("Won lease for order: %X/%v/%v\n",
-					tx.Lease.Deployment, tx.Lease.Group, tx.Lease.Order)
+				fmt.Printf("Won lease for order: %v/%v/%v\n",
+					X(tx.Lease.Deployment), tx.Lease.Group, tx.Lease.Order)
 			}
 		}).
 		OnTxDeploymentClosed(func(tx *types.TxDeploymentClosed) {
 			_, ok := deployments[tx.Deployment.EncodeString()]
 			if ok {
-				fmt.Printf("Closed lease for deployment: %X\n", tx.Deployment)
+				fmt.Printf("Closed lease for deployment: %v\n", X(tx.Deployment))
 			}
 		}).Create()
 
@@ -235,7 +228,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 func getPrice(ctx context.Context, addr base.Bytes, seq uint64) (uint32, error) {
 	// get deployment group
 	price := uint32(0)
-	path := state.DeploymentGroupPath + hex.EncodeToString(state.DeploymentGroupID(addr, seq))
+	path := qp.DeploymentGroupPath(addr, seq)
 	group := new(types.DeploymentGroup)
 	result, err := query.Query(ctx, path)
 	if err != nil {

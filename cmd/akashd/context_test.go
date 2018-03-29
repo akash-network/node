@@ -12,61 +12,58 @@ import (
 )
 
 func TestContext_RootDir_Env(t *testing.T) {
-	basedir := testutil.TempDir(t)
-	defer os.RemoveAll(basedir)
-	defer os.Unsetenv("AKASHD_DATA")
-
-	os.Setenv("AKASHD_DATA", basedir)
-
-	assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
-		assert.Equal(t, basedir, ctx.RootDir())
-		return nil
+	testutil.WithTempDirEnv(t, "AKASHD_DATA", func(basedir string) {
+		assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
+			assert.Equal(t, basedir, ctx.RootDir())
+			return nil
+		})
 	})
 }
 
 func TestContext_RootDir_Arg(t *testing.T) {
-	basedir := testutil.TempDir(t)
-	defer os.RemoveAll(basedir)
-
-	assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
-		assert.Equal(t, basedir, ctx.RootDir())
-		return nil
-	}, "-d", basedir)
+	testutil.WithTempDir(t, func(basedir string) {
+		assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
+			assert.Equal(t, basedir, ctx.RootDir())
+			return nil
+		}, "-d", basedir)
+	})
 }
 
 func TestContext_EnvOverrides(t *testing.T) {
-	basedir := testutil.TempDir(t)
-	defer os.RemoveAll(basedir)
-	defer os.Unsetenv("AKASHD_DATA")
-	defer os.Unsetenv("AKASHD_GENESIS")
-	defer os.Unsetenv("AKASHD_VALIDATOR")
-	defer os.Unsetenv("AKASHD_MONIKER")
-	defer os.Unsetenv("AKASHD_P2P_SEEDS")
+	testutil.WithTempDir(t, func(basedir string) {
+		defer os.Unsetenv("AKASHD_DATA")
+		defer os.Unsetenv("AKASHD_GENESIS")
+		defer os.Unsetenv("AKASHD_VALIDATOR")
+		defer os.Unsetenv("AKASHD_MONIKER")
+		defer os.Unsetenv("AKASHD_P2P_SEEDS")
 
-	gpath := "/foo/bar/genesis.json"
-	vpath := "/foo/bar/private_validator.json"
-	seeds := "a,b,c"
-	moniker := "foobar"
+		gpath := "/foo/bar/genesis.json"
+		vpath := "/foo/bar/private_validator.json"
+		seeds := "a,b,c"
+		moniker := "foobar"
+		laddr := "tcp://0.0.0.0:25"
 
-	os.Setenv("AKASHD_DATA", basedir)
-	os.Setenv("AKASHD_GENESIS", gpath)
-	os.Setenv("AKASHD_VALIDATOR", vpath)
-	os.Setenv("AKASHD_MONIKER", moniker)
-	os.Setenv("AKASHD_P2P_SEEDS", seeds)
+		os.Setenv("AKASHD_DATA", basedir)
+		os.Setenv("AKASHD_GENESIS", gpath)
+		os.Setenv("AKASHD_VALIDATOR", vpath)
+		os.Setenv("AKASHD_MONIKER", moniker)
+		os.Setenv("AKASHD_P2P_SEEDS", seeds)
+		os.Setenv("AKASHD_RPC_LADDR", laddr)
 
-	assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
-		cfg, err := ctx.TMConfig()
-		require.NoError(t, err)
-		require.NotNil(t, cfg)
+		assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
+			cfg, err := ctx.TMConfig()
+			require.NoError(t, err)
+			require.NotNil(t, cfg)
 
-		assert.Equal(t, basedir, ctx.RootDir())
-		assert.Equal(t, gpath, cfg.GenesisFile())
-		assert.Equal(t, vpath, cfg.PrivValidatorFile())
-		assert.Equal(t, moniker, cfg.Moniker)
-		assert.Equal(t, seeds, cfg.P2P.Seeds)
-		return nil
+			assert.Equal(t, basedir, ctx.RootDir())
+			assert.Equal(t, gpath, cfg.GenesisFile())
+			assert.Equal(t, vpath, cfg.PrivValidatorFile())
+			assert.Equal(t, moniker, cfg.Moniker)
+			assert.Equal(t, seeds, cfg.P2P.Seeds)
+			assert.Equal(t, laddr, cfg.RPC.ListenAddress)
+			return nil
+		})
 	})
-
 }
 
 func assertCommand(t *testing.T, fn ctxRunner, args ...string) {

@@ -25,10 +25,9 @@ func CreateProvider(t *testing.T, app apptypes.Application, account *types.Accou
 }
 
 func ProviderTx(account *types.Account, key *crypto.PrivKey, nonce uint64) *types.Tx {
-	pubkey := base.PubKey(key.PubKey())
 	provider := Provider(account.Address, nonce)
 	return &types.Tx{
-		Key: &pubkey,
+		Key: key.PubKey().Bytes(),
 		Payload: types.TxPayload{
 			Payload: &types.TxPayload_TxCreateProvider{
 				TxCreateProvider: &types.TxCreateProvider{

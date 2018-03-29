@@ -1,12 +1,12 @@
 package order_test
 
 import (
-	"encoding/hex"
 	"testing"
 
 	deployment_ "github.com/ovrclk/akash/app/deployment"
 	"github.com/ovrclk/akash/app/order"
 	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/ovrclk/akash/query"
 	state "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/stretchr/testify/assert"
@@ -66,7 +66,7 @@ func TestTx(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, orders, 1)
 
-	path := state.OrderPath + hex.EncodeToString(state.OrderID(deployment.Address, groups.GetItems()[0].Seq, orderSeq))
+	path := query.OrderPath(deployment.Address, groups.GetItems()[0].Seq, orderSeq)
 	resp := app.Query(tmtypes.RequestQuery{Path: path})
 	assert.Empty(t, resp.Log)
 	require.True(t, resp.IsOK())

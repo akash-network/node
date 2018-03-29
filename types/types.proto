@@ -17,8 +17,8 @@ message Genesis {
 }
 
 message Tx {
-  bytes key         = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.PubKey"];
-  bytes signature   = 2 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Signature"];
+  bytes key         = 1;
+  bytes signature   = 2;
   TxPayload payload = 3 [(gogoproto.nullable) = false];
 }
 

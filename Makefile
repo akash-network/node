@@ -28,6 +28,9 @@ image-minikube:
 test:
 	go test $$(glide novendor)
 
+test-nocache:
+	go test -count=1 $$(glide novendor)
+
 test-full:
 	go test -race $$(glide novendor)
 
@@ -76,7 +79,7 @@ clean:
 .PHONY: all build \
 	akash akashd \
 	image image-push \
-	test test-full \
+	test test-nocache test-full \
 	deps-install devdeps-install \
 	test-cover coverdeps-install \
 	test-integraion integrationdeps-install \

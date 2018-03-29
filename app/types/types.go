@@ -2,8 +2,8 @@ package types
 
 import (
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	tmtypes "github.com/tendermint/abci/types"
+	crypto "github.com/tendermint/go-crypto"
 )
 
 type Application interface {
@@ -17,7 +17,7 @@ type Application interface {
 }
 
 type Context interface {
-	Signer() base.PubKey
+	Signer() crypto.PubKey
 }
 
 func NewContext(tx *types.Tx) Context {
@@ -28,6 +28,11 @@ type context struct {
 	tx *types.Tx
 }
 
-func (ctx context) Signer() base.PubKey {
-	return *ctx.tx.Key
+func (ctx context) Signer() crypto.PubKey {
+	key, err := crypto.PubKeyFromBytes(ctx.tx.Key)
+	// XXX handle errors
+	if err != nil {
+		panic(err)
+	}
+	return key
 }

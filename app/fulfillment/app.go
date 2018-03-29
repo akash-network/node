@@ -14,7 +14,6 @@ import (
 	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
-	"github.com/tendermint/go-wire/data"
 )
 
 const (
@@ -246,7 +245,6 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 
 	return tmtypes.ResponseQuery{
-		Key:    data.Bytes(a.State().Fulfillment().KeyFor(key)),
 		Value:  bytes,
 		Height: a.State().Version(),
 	}

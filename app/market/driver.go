@@ -3,12 +3,12 @@ package market
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/util"
 	tmtypes "github.com/tendermint/abci/types"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
 	tmtmtypes "github.com/tendermint/tendermint/types"
@@ -106,12 +106,12 @@ func (d *driver) checkCommit(state state.State) bool {
 	}
 
 	if bytes.Compare(d.actor.Address(), d.rs.Validators.GetProposer().PubKey.Address()) != 0 {
-		d.log.Debug("wrong address", "actor", hex.EncodeToString(d.actor.Address()), "proposer", hex.EncodeToString(d.rs.Validators.GetProposer().PubKey.Address()))
+		d.log.Debug("wrong address", "actor", util.X(d.actor.Address()), "proposer", util.X(d.rs.Validators.GetProposer().PubKey.Address()))
 		return false
 	}
 
 	if bytes.Compare(d.block.Hash, d.rs.ProposalBlock.Header.Hash()) != 0 {
-		d.log.Info("bad block hash", "block", hex.EncodeToString(d.block.Hash), "proposal", d.rs.ProposalBlock.Header.Hash())
+		d.log.Info("bad block hash", "block", util.X(d.block.Hash), "proposal", d.rs.ProposalBlock.Header.Hash())
 		return false
 	}
 
@@ -121,7 +121,7 @@ func (d *driver) checkCommit(state state.State) bool {
 func (d *driver) onProposalComplete(rs *ctypes.RoundState) {
 	d.log.Info("proposal complete",
 		"height", rs.Height,
-		"proposer", hex.EncodeToString(rs.Validators.GetProposer().PubKey.Address()),
+		"proposer", util.X(rs.Validators.GetProposer().PubKey.Address()),
 		"block-hash", rs.ProposalBlock.Header.Hash())
 	d.mtx.Lock()
 	defer d.mtx.Unlock()

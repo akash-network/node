@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/code"
+	"github.com/ovrclk/akash/util"
 	"github.com/ovrclk/akash/version"
 	tmtypes "github.com/tendermint/abci/types"
 	tmtmtypes "github.com/tendermint/tendermint/types"
@@ -167,7 +167,7 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 		return tmtypes.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
 	}
 
-	signer, err_ := app.state.Account().Get(ctx.Signer().Address())
+	signer, err_ := app.state.Account().Get(ctx.Signer().Address().Bytes())
 	if err_ != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -181,7 +181,7 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 		// 	Log:  "unknown signer account",
 		// }
 		signer = &types.Account{
-			Address: ctx.Signer().Address(),
+			Address: ctx.Signer().Address().Bytes(),
 			Balance: 0,
 			Nonce:   0,
 		}
@@ -208,7 +208,7 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 }
 
 func (app *app) BeginBlock(req tmtypes.RequestBeginBlock) tmtypes.ResponseBeginBlock {
-	app.trace("BeginBlock", "tmhash", hex.EncodeToString(req.Hash))
+	app.trace("BeginBlock", "tmhash", util.X(req.Hash))
 
 	if app.mfacilitator != nil {
 		app.mfacilitator.OnBeginBlock(req)
@@ -282,5 +282,5 @@ func (app *app) trace(meth string, keyvals ...interface{}) {
 }
 
 func (app *app) traceLog() log.Logger {
-	return app.log.With("height", app.state.Version(), "hash", hex.EncodeToString(app.state.Hash()), "logtype", "trace")
+	return app.log.With("height", app.state.Version(), "hash", util.X(app.state.Hash()), "logtype", "trace")
 }

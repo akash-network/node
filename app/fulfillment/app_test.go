@@ -9,6 +9,7 @@ import (
 	oapp "github.com/ovrclk/akash/app/order"
 	papp "github.com/ovrclk/akash/app/provider"
 	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/ovrclk/akash/query"
 	state_ "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
@@ -27,12 +28,12 @@ func TestAcceptQuery(t *testing.T) {
 	require.NoError(t, err)
 
 	{
-		path := fmt.Sprintf("%v%X", state_.FulfillmentPath, address)
+		path := query.FulfillmentPath(testutil.DeploymentAddress(t), 0, 0, testutil.Address(t))
 		assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: path}))
 	}
 
 	{
-		path := fmt.Sprintf("%v%X", "/foo/", address)
+		path := fmt.Sprintf("%v%x", "/foo/", address)
 		assert.False(t, app.AcceptQuery(tmtypes.RequestQuery{Path: path}))
 	}
 }
@@ -71,7 +72,7 @@ func TestValidTx(t *testing.T) {
 	fulfillment := testutil.CreateFulfillment(t, app, provider.Address, &pkey, daddress, groupSeq, oSeq, price)
 
 	{
-		path := fmt.Sprintf("%v%X", state_.FulfillmentPath, state.Fulfillment().IDFor(fulfillment))
+		path := query.FulfillmentPath(fulfillment.Deployment, fulfillment.Group, fulfillment.Order, fulfillment.Provider)
 		resp := app.Query(tmtypes.RequestQuery{Path: path})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())

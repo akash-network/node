@@ -48,7 +48,7 @@ func doSendCommand(ctx context.Context, cmd *cobra.Command, args []string) error
 	}
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxSend{
-		From:   base.Bytes(key.Address),
+		From:   key.Address(),
 		To:     *to,
 		Amount: amount,
 	})

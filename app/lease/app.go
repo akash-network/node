@@ -13,7 +13,6 @@ import (
 	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
-	"github.com/tendermint/go-wire/data"
 	tmcommon "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/log"
 )
@@ -249,7 +248,6 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 
 	return tmtypes.ResponseQuery{
-		Key:    data.Bytes(a.State().Lease().KeyFor(key)),
 		Value:  bytes,
 		Height: a.State().Version(),
 	}
@@ -275,7 +273,6 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 
 	return tmtypes.ResponseQuery{
-		Key:    data.Bytes(state.LeasePath),
 		Value:  bytes,
 		Height: a.State().Version(),
 	}

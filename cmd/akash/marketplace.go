@@ -8,6 +8,8 @@ import (
 	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/types"
 	"github.com/spf13/cobra"
+
+	. "github.com/ovrclk/akash/util"
 )
 
 func marketplaceCommand() *cobra.Command {
@@ -32,30 +34,30 @@ func doMarketplaceMonitorCommand(ctx context.Context, cmd *cobra.Command, args [
 func marketplaceMonitorHandler() marketplace.Handler {
 	return marketplace.NewBuilder().
 		OnTxSend(func(tx *types.TxSend) {
-			fmt.Printf("TRANSFER\t%v tokens from %X to %X\n", tx.GetAmount(), tx.From, tx.To)
+			fmt.Printf("TRANSFER\t%v tokens from %v to %v\n", tx.GetAmount(), X(tx.From), X(tx.To))
 		}).
 		OnTxCreateProvider(func(tx *types.TxCreateProvider) {
-			fmt.Printf("DATACENTER CREATED\t%X created by %X\n", tx.Provider.Address, tx.Provider.Owner)
+			fmt.Printf("DATACENTER CREATED\t%v created by %v\n", X(tx.Provider.Address), X(tx.Provider.Owner))
 		}).
 		OnTxCreateDeployment(func(tx *types.TxCreateDeployment) {
-			fmt.Printf("DEPLOYMENT CREATED\t%X created by %X\n", tx.Deployment.Address, tx.Deployment.Tenant)
+			fmt.Printf("DEPLOYMENT CREATED\t%v created by %v\n", X(tx.Deployment.Address), X(tx.Deployment.Tenant))
 		}).
 		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
-			fmt.Printf("ORDER CREATED\t%X/%v/%v\n",
-				tx.Order.Deployment, tx.Order.Group, tx.Order.Order)
+			fmt.Printf("ORDER CREATED\t%v/%v/%v\n",
+				X(tx.Order.Deployment), tx.Order.Group, tx.Order.Order)
 		}).
 		OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
-			fmt.Printf("FULFILLMENT CREATED\t%X/%v/%v by %X [price=%v]\n",
-				tx.Fulfillment.Deployment, tx.Fulfillment.Group, tx.Fulfillment.Order,
-				tx.Fulfillment.Provider, tx.Fulfillment.Price)
+			fmt.Printf("FULFILLMENT CREATED\t%v/%v/%v by %v [price=%v]\n",
+				X(tx.Fulfillment.Deployment), tx.Fulfillment.Group, tx.Fulfillment.Order,
+				X(tx.Fulfillment.Provider), tx.Fulfillment.Price)
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
-			fmt.Printf("LEASE CREATED\t%X/%v/%v by %X [price=%v]\n",
-				tx.Lease.Deployment, tx.Lease.Group, tx.Lease.Order,
-				tx.Lease.Provider, tx.Lease.Price)
+			fmt.Printf("LEASE CREATED\t%v/%v/%v by %x [price=%v]\n",
+				X(tx.Lease.Deployment), tx.Lease.Group, tx.Lease.Order,
+				X(tx.Lease.Provider), tx.Lease.Price)
 		}).
 		OnTxDeploymentClosed(func(tx *types.TxDeploymentClosed) {
-			fmt.Printf("DEPLOYMENT CLOSED\t%X", tx.Deployment)
+			fmt.Printf("DEPLOYMENT CLOSED\t%v", X(tx.Deployment))
 		}).
 		Create()
 }

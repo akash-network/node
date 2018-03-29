@@ -1,6 +1,7 @@
 package initgen
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/ovrclk/akash/types"
@@ -59,7 +60,14 @@ func (b *builder) Create() (Context, error) {
 	genesis := &tmtypes.GenesisDoc{
 		ChainID:    chainID,
 		Validators: validators,
-		AppOptions: b.pgenesis,
+	}
+
+	if b.pgenesis != nil {
+		buf, err := json.Marshal(b.pgenesis)
+		if err != nil {
+			return nil, err
+		}
+		genesis.AppOptions = buf
 	}
 
 	if err := genesis.ValidateAndComplete(); err != nil {

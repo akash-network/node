@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	crypto "github.com/tendermint/go-crypto"
 	tmtmtypes "github.com/tendermint/tendermint/types"
 )
 
@@ -46,7 +45,7 @@ func TestFacilitator(t *testing.T) {
 		tx, err := txutil.ProcessTx(txbuf)
 		require.NoError(t, err)
 
-		assert.Equal(t, key.PubKey(), crypto.PubKey(*tx.Key))
+		assert.Equal(t, key.PubKey().Bytes(), tx.Key)
 
 		payload := tx.GetPayload()
 		assert.Equal(t, nonce+1, payload.GetNonce())

@@ -13,6 +13,6 @@ func Suite() gestalt.Component {
 		Run(groupKey(key)).
 		Run(groupNodeRun(key)).
 		Run(groupAccountSend(key)).
-		Run(groupProvider(key.name, paddr)).
+		Run(groupProvider(paddr)).
 		Run(groupDeploy(key.name, daddr))
 }

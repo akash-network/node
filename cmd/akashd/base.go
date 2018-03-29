@@ -21,6 +21,7 @@ func initEnv(path string) error {
 	viper.SetEnvPrefix(envPrefix)
 
 	viper.BindEnv("p2p.seeds")
+	viper.BindEnv("rpc.laddr")
 
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))

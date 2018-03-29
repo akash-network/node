@@ -35,7 +35,7 @@ func LoadDB(pathname string) (DB, error) {
 
 	db := tmdb.NewDB(name, dbBackend, dir)
 	tree := iavl.NewVersionedTree(db, dbCacheSize)
-	if err := tree.Load(); err != nil {
+	if _, err := tree.Load(); err != nil {
 		return nil, err
 	}
 

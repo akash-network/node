@@ -12,7 +12,6 @@ import (
 	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
-	"github.com/tendermint/go-wire/data"
 	"github.com/tendermint/tmlibs/log"
 )
 
@@ -73,7 +72,6 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	}
 
 	return tmtypes.ResponseQuery{
-		Key:    data.Bytes(a.State().Account().KeyFor(*key)),
 		Value:  bytes,
 		Height: int64(a.State().Version()),
 	}

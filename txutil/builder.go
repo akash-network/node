@@ -5,14 +5,13 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	crypto "github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-crypto/keys"
 )
 
 type TxBuilder interface {
-	keys.Signable
-	Signature() *base.Signature
+	SignableTx
+	Signature() crypto.Signature
+	TxBytes() ([]byte, error)
 }
 
 func BuildTx(signer Signer, nonce uint64, payload interface{}) ([]byte, error) {
@@ -72,10 +71,8 @@ func (b *txBuilder) Sign(key crypto.PubKey, sig crypto.Signature) error {
 	if b.tx.Key != nil || b.tx.Signature != nil {
 		return fmt.Errorf("already signed")
 	}
-	key_ := base.PubKey(key)
-	b.tx.Key = &key_
-	sig_ := base.Signature(sig)
-	b.tx.Signature = &sig_
+	b.tx.Key = key.Bytes()
+	b.tx.Signature = sig.Bytes()
 	return nil
 }
 
@@ -83,11 +80,18 @@ func (b *txBuilder) Signers() ([]crypto.PubKey, error) {
 	if b.tx.Key == nil {
 		return nil, nil
 	}
-	return []crypto.PubKey{crypto.PubKey(*b.tx.Key)}, nil
+
+	key, err := crypto.PubKeyFromBytes(b.tx.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	return []crypto.PubKey{key}, nil
 }
 
-func (b *txBuilder) Signature() *base.Signature {
-	return b.tx.Signature
+func (b *txBuilder) Signature() crypto.Signature {
+	sig, _ := crypto.SignatureFromBytes(b.tx.Signature)
+	return sig
 }
 
 func (b *txBuilder) TxBytes() ([]byte, error) {

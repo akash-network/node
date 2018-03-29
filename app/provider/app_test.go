@@ -1,16 +1,15 @@
 package provider_test
 
 import (
-	"encoding/hex"
 	"fmt"
 	"testing"
 
 	app_ "github.com/ovrclk/akash/app/provider"
 	apptypes "github.com/ovrclk/akash/app/types"
-	pstate "github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
+	"github.com/ovrclk/akash/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmtypes "github.com/tendermint/abci/types"
@@ -27,12 +26,12 @@ func TestProviderApp(t *testing.T) {
 	provider := testutil.CreateProvider(t, app, account, &key, nonce)
 
 	{
-		assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.ProviderPath, hex.EncodeToString(provider.Address))}))
-		assert.False(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", "/foo/", hex.EncodeToString(provider.Address))}))
+		assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: query.ProviderPath(provider.Address)}))
+		assert.False(t, app.AcceptQuery(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", "/foo/", util.X(provider.Address))}))
 	}
 
 	{
-		resp := app.Query(tmtypes.RequestQuery{Path: fmt.Sprintf("%v%v", pstate.ProviderPath, hex.EncodeToString(provider.Address))})
+		resp := app.Query(tmtypes.RequestQuery{Path: query.ProviderPath(provider.Address)})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 
@@ -50,14 +49,14 @@ func TestTx_BadTxType(t *testing.T) {
 	state_ := testutil.NewState(t, nil)
 	app, err := app_.NewApp(state_, testutil.Logger())
 	account, key := testutil.CreateAccount(t, state_)
-	pubkey := base.PubKey(key.PubKey())
+
 	tx := &types.Tx{
-		Key: &pubkey,
+		Key: key.PubKey().Bytes(),
 		Payload: types.TxPayload{
 			Payload: &types.TxPayload_TxSend{
 				TxSend: &types.TxSend{
-					From:   base.Bytes(account.Address),
-					To:     base.Bytes(account.Address),
+					From:   account.Address,
+					To:     account.Address,
 					Amount: 0,
 				},
 			},

@@ -14,21 +14,16 @@ func TestTxBuilder_KeyManager(t *testing.T) {
 
 	const nonce = 1
 
-	manager := testutil.KeyManager(t)
-
-	keyfrom, _, err := manager.Create("keyfrom", testutil.KeyPasswd, testutil.KeyAlgo)
-	require.NoError(t, err)
-
-	keyto, _, err := manager.Create("keyto", testutil.KeyPasswd, testutil.KeyAlgo)
-	require.NoError(t, err)
+	signer, keyfrom := testutil.PrivateKeySigner(t)
+	keyto := testutil.PrivateKey(t)
 
 	send := &types.TxSend{
-		From:   base.Bytes(keyfrom.Address),
-		To:     base.Bytes(keyto.Address),
+		From:   keyfrom.PubKey().Address().Bytes(),
+		To:     keyto.PubKey().Address().Bytes(),
 		Amount: 100,
 	}
 
-	txbytes, err := txutil.BuildTx(txutil.NewKeystoreSigner(manager, keyfrom.Name, testutil.KeyPasswd), nonce, send)
+	txbytes, err := txutil.BuildTx(signer, nonce, send)
 
 	txp, err := txutil.NewTxProcessor(txbytes)
 	require.NoError(t, err)
@@ -37,7 +32,7 @@ func TestTxBuilder_KeyManager(t *testing.T) {
 
 	tx := txp.GetTx()
 
-	require.Equal(t, []byte(keyfrom.Address), tx.Key.Address())
+	require.Equal(t, keyfrom.PubKey().Bytes(), tx.Key)
 
 	rsend := tx.Payload.GetTxSend()
 	require.NotNil(t, rsend)
@@ -68,7 +63,7 @@ func TestTxBuilder_KeySigner(t *testing.T) {
 
 	tx := txp.GetTx()
 
-	require.Equal(t, []byte(keyfrom.PubKey().Address()), tx.Key.Address())
+	require.Equal(t, keyfrom.PubKey().Bytes(), tx.Key)
 
 	rsend := tx.Payload.GetTxSend()
 	require.NotNil(t, rsend)

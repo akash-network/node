@@ -9,7 +9,8 @@ import (
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/spf13/cobra"
-	"github.com/tendermint/go-wire/data"
+
+	. "github.com/ovrclk/akash/util"
 )
 
 func keyCommand() *cobra.Command {
@@ -42,7 +43,7 @@ func doKeyCreateCommand(ctx context.Context, cmd *cobra.Command, args []string) 
 		return err
 	}
 
-	ktype, err := cmd.Flags().GetString(constants.FlagKeyType)
+	ktype, err := ctx.KeyType()
 	if err != nil {
 		return err
 	}
@@ -52,12 +53,7 @@ func doKeyCreateCommand(ctx context.Context, cmd *cobra.Command, args []string) 
 		return err
 	}
 
-	addr, err := data.ToText(info.Address)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(addr)
+	fmt.Println(X(info.Address()))
 
 	return nil
 }
@@ -80,11 +76,7 @@ func doKeyListCommand(ctx context.Context, cmd *cobra.Command, args []string) er
 
 	tw := tabwriter.NewWriter(os.Stdout, 0, 4, 0, '\t', 0)
 	for _, info := range infos {
-		addr, err := data.ToText(info.Address)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(tw, "%v\t%v\n", info.Name, addr)
+		fmt.Fprintf(tw, "%v\t%v\n", info.Name, X(info.Address()))
 	}
 	tw.Flush()
 	return nil
