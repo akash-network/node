@@ -17,6 +17,9 @@ const (
 	// all key types should be standardized
 	FlagKeyType = "type"
 
+	// market commands
+	FlagWait = "wait"
+
 	// todo: interactive.
 	Password = "0123456789"
 )

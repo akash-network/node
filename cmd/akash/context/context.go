@@ -32,6 +32,7 @@ type Context interface {
 	Nonce() (uint64, error)
 	Log() log.Logger
 	Signer() (txutil.Signer, keys.Info, error)
+	Wait() bool
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -200,6 +201,11 @@ func (ctx *context) Nonce() (uint64, error) {
 		nonce = res.Nonce + 1
 	}
 	return nonce, nil
+}
+
+func (ctx *context) Wait() bool {
+	val, _ := ctx.cmd.Flags().GetBool(constants.FlagWait)
+	return val
 }
 
 func loadKeyManager(root string) (keys.Manager, error) {
