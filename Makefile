@@ -2,16 +2,9 @@ PROTO_FILES  = $(wildcard types/*.proto)
 PROTOC_FILES = $(patsubst %.proto,%.pb.go, $(PROTO_FILES))
 
 BINS       := akash akashd
-IMAGE_BINS := akash-docker akashd-docker
-
-IMAGE_REPO ?= quay.io/ovrclk/akash
-IMAGE_TAG  ?= latest
+IMAGE_BINS := _build/akash _build/akashd
 
 IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
-ifdef TRAVIS
-	IMAGE_LDFLAGS += -X github.com/ovrclk/akash/version.version="$(TRAVIS_BRANCH)" \
-									 -X github.com/ovrclk/akash/version.commit="$(TRAVIS_COMMIT)"
-endif
 
 all: build $(BINS)
 
@@ -25,11 +18,18 @@ akashd:
 	go build ./cmd/akashd
 
 image-bins:
-	$(IMAGE_BUILD_ENV) go build -ldflags '$(IMAGE_LDFLAGS)' -o akash-docker  ./cmd/akash
-	$(IMAGE_BUILD_ENV) go build -ldflags '$(IMAGE_LDFLAGS)' -o akashd-docker ./cmd/akashd
+	$(IMAGE_BUILD_ENV) go build -o _build/akash  ./cmd/akash
+	$(IMAGE_BUILD_ENV) go build -o _build/akashd ./cmd/akashd
 
 image: image-bins
-	docker build --rm -t $(IMAGE_REPO):$(IMAGE_TAG) .
+	docker build --rm            \
+		-t ovrclk/akash:latest     \
+		-f _build/Dockerfile.akash \
+		_build
+	docker build --rm             \
+		-t ovrclk/akashd:latest     \
+		-f _build/Dockerfile.akashd \
+		_build
 
 image-minikube:
 	eval $$(minikube docker-env) && make image

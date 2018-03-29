@@ -9,12 +9,6 @@ env:
   global:
     - TEST_DELAY_THREAD_START=10ms
 
-stages:
-  - test
-  - image
-  - test-skipped
-  - release
-
 jobs:
   include:
 
@@ -28,7 +22,7 @@ jobs:
         - make coverdeps-install
         - make test-cover
 
-    # linux/1.10 (mainline): tests, integration
+    # linux/1.10 (mainline): tests, integration, image-bins
     - name: test
       os: linux
       go: "1.10"
@@ -38,8 +32,9 @@ jobs:
         - make test
         - make integrationdeps-install
         - make test-integration
+        - make image-bins
 
-    # linux/master: tests, integration
+    # linux/master: tests, integration, image-bins
     - name: test
       os: linux
       go: master
@@ -49,6 +44,7 @@ jobs:
         - make test
         - make integrationdeps-install
         - make test-integration
+        - make image-bins
       if: type = cron
 
     # osx/1.10: tests, integration, image-bins
@@ -62,6 +58,7 @@ jobs:
         - make test
         - make integrationdeps-install
         - make test-integration
+        - make image-bins
       if: type = cron
 
     # linux/1.10 (mainline): build image
@@ -83,17 +80,23 @@ jobs:
         - go test -v -count=1 $(glide novendor)
       if: type = cron
 
+    # linux/1.10 (mainline): deploy bins, docker dry-run
+    - name: release-dryrun
+      os: linux
+      go: "1.10"
+      services: [docker]
+      script:
+        - go get github.com/goreleaser/goreleaser
+        - $GOPATH/bin/goreleaser --skip-publish
+      if: tag =~ ^v AND fork = false
+
     # linux/1.10 (mainline): deploy bins,docker
     - name: release
       os: linux
       go: "1.10"
       services: [docker]
       script:
-        - IMAGE_REPO=ovrclk/akash make image
         - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-        - docker push ovrclk/akash:latest
-        - docker tag ovrclk/akash "ovrclk/akash:$TRAVIS_TAG"
-        - docker push "ovrclk/akash:$TRAVIS_TAG"
         - go get github.com/goreleaser/goreleaser
         - $GOPATH/bin/goreleaser
       if: tag =~ ^v AND fork = false

@@ -5,7 +5,7 @@
 replicaCount: 1
 
 image:
-  repository: quay.io/ovrclk/akash
+  repository: ovrclk/akashd
   tag: latest
   pullPolicy: Never
 
