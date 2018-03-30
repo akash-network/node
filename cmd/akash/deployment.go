@@ -123,15 +123,15 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 			OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 				if bytes.Equal(tx.Fulfillment.Deployment, address) {
 					f := tx.Fulfillment
-					fmt.Printf("Group %v/%v Fulfillment: %X\n", f.Group, len(groups),
-						state.FulfillmentID(f.Deployment, f.Group, f.Order, f.Provider))
+					fmt.Printf("Group %v/%v Fulfillment: %v\n", f.Group, len(groups),
+						X(state.FulfillmentID(f.Deployment, f.Group, f.Order, f.Provider)))
 				}
 			}).
 			OnTxCreateLease(func(tx *types.TxCreateLease) {
 				if bytes.Equal(tx.Lease.Deployment, address) {
 					l := tx.Lease
-					fmt.Printf("Group %v/%v Lease: %X\n", l.Group, len(groups),
-						state.FulfillmentID(l.Deployment, l.Group, l.Order, l.Provider))
+					fmt.Printf("Group %v/%v Lease: %v\n", l.Group, len(groups),
+						X(state.FulfillmentID(l.Deployment, l.Group, l.Order, l.Provider)))
 					expected--
 				}
 				if expected == 0 {

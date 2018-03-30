@@ -4,18 +4,52 @@ builds:
   - binary: akash
     main: ./cmd/akash
     goarch: [amd64]
-    goos: [linux]
+    goos: [linux,darwin]
     ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
 
   - binary: akashd
     main: ./cmd/akashd
     goarch: [amd64]
-    goos: [linux]
+    goos: [linux,darwin]
     ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
 
 archive:
   files:
     - none*
+
+dockers:
+
+  - binary: akash
+    image:  ovrclk/akash
+    dockerfile: _build/Dockerfile.akash
+    goos: linux
+    goarch: amd64
+    tag_templates:
+      - "{{ .Version }}"
+      - latest
+
+  - binary: akashd
+    image:  ovrclk/akashd
+    dockerfile: _build/Dockerfile.akashd
+    goos: linux
+    goarch: amd64
+    tag_templates:
+      - "{{ .Version }}"
+      - latest
+
+brew:
+  name: akash
+
+  github:
+    owner: ovrclk
+    name: homebrew-tap
+
+  homepage: "https://akash.network"
+  description: "Blockchain-powered decentralized compute platform"
+
+  install: |
+    bin.install "akash"
+    bin.install "akashd"
 
 release:
   github:
