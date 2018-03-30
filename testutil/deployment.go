@@ -24,11 +24,23 @@ func RandUint64() uint64 {
 func CreateDeployment(t *testing.T, app apptypes.Application, account *types.Account, key *crypto.PrivKey, nonce uint64) (*types.Deployment, *types.DeploymentGroups) {
 	deployment := Deployment(account.Address, nonce)
 	groups := DeploymentGroups(deployment.Address, nonce)
+	ttl := int64(5)
+	specs := []*types.GroupSpec{}
+
+	for _, group := range groups.GetItems() {
+		s := &types.GroupSpec{
+			Resources:    group.Resources,
+			Requirements: group.Requirements,
+		}
+		specs = append(specs, s)
+	}
 
 	deploymenttx := &types.TxPayload_TxCreateDeployment{
 		TxCreateDeployment: &types.TxCreateDeployment{
-			Deployment: deployment,
-			Groups:     groups,
+			Tenant:   account.Address,
+			Nonce:    nonce,
+			OrderTTL: ttl,
+			Groups:   specs,
 		},
 	}
 

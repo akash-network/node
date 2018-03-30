@@ -21,7 +21,11 @@ func CreateProvider(t *testing.T, app apptypes.Application, account *types.Accou
 	dresp := app.DeliverTx(ctx, tx.Payload.Payload)
 	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
 	assert.True(t, dresp.IsOK())
-	return &tx.Payload.GetTxCreateProvider().Provider
+	return &types.Provider{
+		Address:    state.ProviderAddress(account.Address, nonce),
+		Attributes: tx.Payload.GetTxCreateProvider().Attributes,
+		Owner:      account.Address,
+	}
 }
 
 func ProviderTx(account *types.Account, key *crypto.PrivKey, nonce uint64) *types.Tx {
@@ -31,7 +35,9 @@ func ProviderTx(account *types.Account, key *crypto.PrivKey, nonce uint64) *type
 		Payload: types.TxPayload{
 			Payload: &types.TxPayload_TxCreateProvider{
 				TxCreateProvider: &types.TxCreateProvider{
-					Provider: *provider,
+					Attributes: provider.Attributes,
+					Owner:      provider.Owner,
+					Nonce:      nonce,
 				},
 			},
 		},

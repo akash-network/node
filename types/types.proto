@@ -68,7 +68,9 @@ message Providers {
 }
 
 message TxCreateProvider {
-  Provider provider = 1 [(gogoproto.nullable) = false];
+  bytes  owner = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  repeated ProviderAttribute attributes = 2 [(gogoproto.nullable) = false];
+  uint64 nonce = 3;
 }
 
 /* END PROVIDER */
@@ -92,6 +94,11 @@ message ProviderAttribute {
   option (gogoproto.compare) = true;
   string name  = 1;
   string value = 2;
+}
+
+message GroupSpec {
+  repeated ProviderAttribute requirements = 1 [(gogoproto.nullable) = false];
+  repeated ResourceGroup     resources    = 2 [(gogoproto.nullable) = false];
 }
 
 message DeploymentGroup {
@@ -148,8 +155,10 @@ message Deployments {
 }
 
 message TxCreateDeployment {
-  Deployment deployment = 1;
-  DeploymentGroups groups = 2;
+  bytes  tenant  = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  uint64 nonce = 2;
+  int64 orderTTL = 3;
+  repeated GroupSpec groups = 4;
 }
 
 message Order {

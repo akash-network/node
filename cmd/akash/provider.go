@@ -90,13 +90,15 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	provider, err := parseProvider(args[0], key.Address(), nonce)
+	attributes, err := parseProvider(args[0], nonce)
 	if err != nil {
 		return err
 	}
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateProvider{
-		Provider: *provider,
+		Owner:      key.Address(),
+		Attributes: attributes,
+		Nonce:      nonce,
 	})
 	if err != nil {
 		return err
@@ -115,19 +117,19 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		return errors.New(result.DeliverTx.GetLog())
 	}
 
-	fmt.Println(X(provider.Address))
+	fmt.Println(X(result.DeliverTx.Data))
 
 	return nil
 }
 
-func parseProvider(file string, tenant []byte, nonce uint64) (*types.Provider, error) {
+func parseProvider(file string, nonce uint64) ([]types.ProviderAttribute, error) {
 	// todo: read and parse deployment yaml file
 
 	/* begin stub data */
-	provider := testutil.Provider(tenant, nonce)
+	provider := testutil.Provider(*new(base.Bytes), nonce)
 	/* end stub data */
 
-	return provider, nil
+	return provider.Attributes, nil
 }
 
 func runCommand() *cobra.Command {

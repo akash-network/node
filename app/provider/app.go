@@ -149,14 +149,28 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 }
 
-// todo: break each type of check out into a named global exported funtion for all trasaction types to utilize
 func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmtypes.ResponseCheckTx {
-	if !bytes.Equal(ctx.Signer().Address(), tx.Provider.Owner) {
+	if !bytes.Equal(ctx.Signer().Address(), tx.Owner) {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Not signed by owner",
 		}
 	}
+
+	signer, err_ := a.State().Account().Get(tx.Owner)
+	if err_ != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "unknown source account",
+		}
+	}
+
+	if signer == nil && tx.Nonce != 1 {
+		return tmtypes.ResponseCheckTx{Code: code.INVALID_TRANSACTION, Log: "invalid nonce"}
+	} else if signer != nil && signer.Nonce >= tx.Nonce {
+		return tmtypes.ResponseCheckTx{Code: code.INVALID_TRANSACTION, Log: "invalid nonce"}
+	}
+
 	return tmtypes.ResponseCheckTx{}
 }
 
@@ -170,23 +184,13 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmty
 		}
 	}
 
-	acct, err := a.State().Account().Get(tx.Provider.Owner)
-	if err != nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err.Error(),
-		}
-	}
-	if acct == nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "unknown source account",
-		}
+	provider := &types.Provider{
+		Address:    state.ProviderAddress(tx.Owner, tx.Nonce),
+		Owner:      tx.Owner,
+		Attributes: tx.Attributes,
 	}
 
-	provider := tx.Provider
-
-	if err := a.State().Provider().Save(&provider); err != nil {
+	if err := a.State().Provider().Save(provider); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
@@ -195,5 +199,6 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmty
 
 	return tmtypes.ResponseDeliverTx{
 		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeProviderCreate),
+		Data: provider.Address,
 	}
 }

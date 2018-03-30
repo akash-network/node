@@ -200,21 +200,21 @@ func (a *app) doDeploymentGroupQuery(key base.Bytes) tmtypes.ResponseQuery {
 
 func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tmtypes.ResponseCheckTx {
 
-	if !bytes.Equal(ctx.Signer().Address(), tx.Deployment.Tenant) {
+	if !bytes.Equal(ctx.Signer().Address(), tx.Tenant) {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Not signed by sending address",
 		}
 	}
 
-	if len(tx.Groups.GetItems()) == 0 {
+	if len(tx.Groups) == 0 {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "No groups in deployment",
 		}
 	}
 
-	acct, err := a.State().Account().Get(tx.Deployment.Tenant)
+	acct, err := a.State().Account().Get(tx.Tenant)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -225,6 +225,13 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployment
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "unknown source account",
+		}
+	}
+
+	if acct.Nonce >= tx.Nonce {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "invalid nonce",
 		}
 	}
 
@@ -372,16 +379,26 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployme
 		}
 	}
 
-	deployment := tx.Deployment
+	deployment := &types.Deployment{
+		Address: state.DeploymentAddress(tx.Tenant, tx.Nonce),
+		Tenant:  tx.Tenant,
+		State:   types.Deployment_ACTIVE,
+	}
 
 	seq := a.State().Deployment().SequenceFor(deployment.Address)
 
-	groups := tx.Groups.GetItems()
+	groups := tx.Groups
 
 	for _, group := range groups {
-		group.Deployment = deployment.Address
-		group.Seq = seq.Advance()
-		a.State().DeploymentGroup().Save(group)
+		g := &types.DeploymentGroup{
+			Deployment:   deployment.Address,
+			Seq:          seq.Advance(),
+			State:        types.DeploymentGroup_OPEN,
+			Requirements: group.Requirements,
+			Resources:    group.Resources,
+			OrderTTL:     tx.OrderTTL,
+		}
+		a.State().DeploymentGroup().Save(g)
 	}
 
 	if err := a.State().Deployment().Save(deployment); err != nil {
@@ -393,6 +410,7 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployme
 
 	return tmtypes.ResponseDeliverTx{
 		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCreateDeployment),
+		Data: deployment.Address,
 	}
 }
 
