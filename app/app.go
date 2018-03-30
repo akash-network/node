@@ -158,9 +158,7 @@ func (app *app) checkNonce(address []byte, nonce uint64) apptypes.Error {
 		return apptypes.NewError(code.INVALID_TRANSACTION, err_.Error())
 	}
 	err := apptypes.NewError(code.INVALID_TRANSACTION, "invalid nonce")
-	if signer == nil && nonce != 1 {
-		return err
-	} else if signer.Nonce >= nonce {
+	if signer != nil && signer.Nonce >= nonce {
 		return err
 	}
 	return nil
@@ -171,11 +169,11 @@ func (app *app) CheckTx(buf []byte) tmtypes.ResponseCheckTx {
 	if err != nil {
 		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
+	app.traceTx("CheckTx", tx)
 	err = app.checkNonce(ctx.Signer().Address().Bytes(), tx.Payload.Nonce)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
-	app.traceTx("CheckTx", tx)
 	return app_.CheckTx(ctx, tx.Payload.Payload)
 }
 
@@ -184,6 +182,7 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
 	}
+	app.traceTx("DeliverTx", tx)
 	err = app.checkNonce(ctx.Signer().Address().Bytes(), tx.Payload.Nonce)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
@@ -206,8 +205,6 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 		return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 	}
 
-	// deliver tx
-	app.traceTx("DeliverTx", tx)
 	resp := app_.DeliverTx(ctx, tx.Payload.Payload)
 
 	// set new account nonce

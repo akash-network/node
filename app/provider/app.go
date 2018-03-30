@@ -157,24 +157,18 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmtype
 		}
 	}
 
-	acct, err := a.State().Account().Get(tx.Owner)
-	if err != nil {
-		return tmtypes.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err.Error(),
-		}
-	}
-	if acct == nil {
+	signer, err_ := a.State().Account().Get(tx.Owner)
+	if err_ != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "unknown source account",
 		}
 	}
-	if acct.Nonce >= tx.Nonce {
-		return tmtypes.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "invalid nonce",
-		}
+
+	if signer == nil && tx.Nonce != 1 {
+		return tmtypes.ResponseCheckTx{Code: code.INVALID_TRANSACTION, Log: "invalid nonce"}
+	} else if signer != nil && signer.Nonce >= tx.Nonce {
+		return tmtypes.ResponseCheckTx{Code: code.INVALID_TRANSACTION, Log: "invalid nonce"}
 	}
 
 	return tmtypes.ResponseCheckTx{}

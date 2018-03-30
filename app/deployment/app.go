@@ -393,8 +393,10 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployme
 		g := &types.DeploymentGroup{
 			Deployment:   deployment.Address,
 			Seq:          seq.Advance(),
+			State:        types.DeploymentGroup_OPEN,
 			Requirements: group.Requirements,
 			Resources:    group.Resources,
+			OrderTTL:     tx.OrderTTL,
 		}
 		a.State().DeploymentGroup().Save(g)
 	}
