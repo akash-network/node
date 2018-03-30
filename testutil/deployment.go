@@ -83,28 +83,6 @@ func CloseDeployment(t *testing.T, app apptypes.Application, deployment *base.By
 	assert.True(t, dresp.IsOK())
 }
 
-func DeploymentClosed(t *testing.T, app apptypes.Application, deployment *base.Bytes, key *crypto.PrivKey) {
-	tx := &types.TxPayload_TxDeploymentClosed{
-		TxDeploymentClosed: &types.TxDeploymentClosed{
-			Deployment: *deployment,
-		},
-	}
-
-	ctx := apptypes.NewContext(&types.Tx{
-		Key: key.PubKey().Bytes(),
-		Payload: types.TxPayload{
-			Payload: tx,
-		},
-	})
-
-	assert.True(t, app.AcceptTx(ctx, tx))
-	cresp := app.CheckTx(ctx, tx)
-	assert.True(t, cresp.IsOK())
-	dresp := app.DeliverTx(ctx, tx)
-	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
-	assert.True(t, dresp.IsOK())
-}
-
 func Deployment(tenant base.Bytes, nonce uint64) *types.Deployment {
 	return &types.Deployment{
 		Tenant:  tenant,

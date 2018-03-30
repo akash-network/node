@@ -43,8 +43,8 @@ func NewTxBuilder(nonce uint64, payload interface{}) (TxBuilder, error) {
 		tx.Payload.Payload = &types.TxPayload_TxCreateLease{TxCreateLease: payload}
 	case *types.TxCloseDeployment:
 		tx.Payload.Payload = &types.TxPayload_TxCloseDeployment{TxCloseDeployment: payload}
-	case *types.TxDeploymentClosed:
-		tx.Payload.Payload = &types.TxPayload_TxDeploymentClosed{TxDeploymentClosed: payload}
+	case *types.TxCloseLease:
+		tx.Payload.Payload = &types.TxPayload_TxCloseLease{TxCloseLease: payload}
 	default:
 		return nil, fmt.Errorf("unknown payload type: %T", payload)
 	}

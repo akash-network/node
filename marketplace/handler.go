@@ -11,7 +11,8 @@ type Handler interface {
 	OnTxCreateOrder(*types.TxCreateOrder)
 	OnTxCreateFulfillment(*types.TxCreateFulfillment)
 	OnTxCreateLease(*types.TxCreateLease)
-	OnTxDeploymentClosed(*types.TxDeploymentClosed)
+	OnTxCloseDeployment(*types.TxCloseDeployment)
+	OnTxCloseLease(*types.TxCloseLease)
 }
 
 type handler struct {
@@ -21,7 +22,8 @@ type handler struct {
 	onTxCreateOrder       func(*types.TxCreateOrder)
 	onTxCreateFulfillment func(*types.TxCreateFulfillment)
 	onTxCreateLease       func(*types.TxCreateLease)
-	onTxDeploymentClosed  func(*types.TxDeploymentClosed)
+	onTxCloseDeployment   func(*types.TxCloseDeployment)
+	onTxCloseLease        func(*types.TxCloseLease)
 }
 
 func (h handler) OnTxSend(tx *types.TxSend) {
@@ -60,9 +62,15 @@ func (h handler) OnTxCreateLease(tx *types.TxCreateLease) {
 	}
 }
 
-func (h handler) OnTxDeploymentClosed(tx *types.TxDeploymentClosed) {
-	if h.onTxDeploymentClosed != nil {
-		h.onTxDeploymentClosed(tx)
+func (h handler) OnTxCloseDeployment(tx *types.TxCloseDeployment) {
+	if h.onTxCloseDeployment != nil {
+		h.onTxCloseDeployment(tx)
+	}
+}
+
+func (h handler) OnTxCloseLease(tx *types.TxCloseLease) {
+	if h.onTxCloseLease != nil {
+		h.onTxCloseLease(tx)
 	}
 }
 
@@ -73,7 +81,8 @@ type Builder interface {
 	OnTxCreateOrder(func(*types.TxCreateOrder)) Builder
 	OnTxCreateFulfillment(func(*types.TxCreateFulfillment)) Builder
 	OnTxCreateLease(func(*types.TxCreateLease)) Builder
-	OnTxDeploymentClosed(func(*types.TxDeploymentClosed)) Builder
+	OnTxCloseDeployment(func(*types.TxCloseDeployment)) Builder
+	OnTxCloseLease(func(*types.TxCloseLease)) Builder
 	Create() Handler
 }
 
@@ -113,8 +122,13 @@ func (b *builder) OnTxCreateLease(fn func(*types.TxCreateLease)) Builder {
 	return b
 }
 
-func (b *builder) OnTxDeploymentClosed(fn func(*types.TxDeploymentClosed)) Builder {
-	b.onTxDeploymentClosed = fn
+func (b *builder) OnTxCloseDeployment(fn func(*types.TxCloseDeployment)) Builder {
+	b.onTxCloseDeployment = fn
+	return b
+}
+
+func (b *builder) OnTxCloseLease(fn func(*types.TxCloseLease)) Builder {
+	b.onTxCloseLease = fn
 	return b
 }
 

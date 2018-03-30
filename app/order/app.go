@@ -170,6 +170,14 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmt
 		}
 	}
 
+	// ensure deployment in correct state
+	if deployment.GetState() != types.Deployment_ACTIVE {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment not in active state",
+		}
+	}
+
 	// ensure deployment group exists
 	group, err := a.State().DeploymentGroup().Get(order.Deployment, order.Group)
 	if err != nil {
