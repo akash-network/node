@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -231,9 +232,9 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 						ctx.Log().Error("error getting nonce", "error", err)
 						return
 					}
-
+					l, _ := hex.DecodeString(lease)
 					closetx := &types.TxCloseLease{
-						Lease: base.Bytes(lease),
+						Lease: l,
 					}
 
 					txbuf, err := txutil.BuildTx(signer, nonce, closetx)

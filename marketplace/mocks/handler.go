@@ -9,6 +9,16 @@ type Handler struct {
 	mock.Mock
 }
 
+// OnTxCloseDeployment provides a mock function with given fields: _a0
+func (_m *Handler) OnTxCloseDeployment(_a0 *types.TxCloseDeployment) {
+	_m.Called(_a0)
+}
+
+// OnTxCloseLease provides a mock function with given fields: _a0
+func (_m *Handler) OnTxCloseLease(_a0 *types.TxCloseLease) {
+	_m.Called(_a0)
+}
+
 // OnTxCreateDeployment provides a mock function with given fields: _a0
 func (_m *Handler) OnTxCreateDeployment(_a0 *types.TxCreateDeployment) {
 	_m.Called(_a0)
@@ -31,11 +41,6 @@ func (_m *Handler) OnTxCreateOrder(_a0 *types.TxCreateOrder) {
 
 // OnTxCreateProvider provides a mock function with given fields: _a0
 func (_m *Handler) OnTxCreateProvider(_a0 *types.TxCreateProvider) {
-	_m.Called(_a0)
-}
-
-// OnTxDeploymentClosed provides a mock function with given fields: _a0
-func (_m *Handler) OnTxDeploymentClosed(_a0 *types.TxDeploymentClosed) {
 	_m.Called(_a0)
 }
 

@@ -11,6 +11,7 @@ type OrderAdapter interface {
 	Save(*types.Order) error
 	GetByKey(base.Bytes) (*types.Order, error)
 	Get(addr base.Bytes, group uint64, order uint64) (*types.Order, error)
+	ForDeployment(base.Bytes) ([]*types.Order, error)
 	ForGroup(*types.DeploymentGroup) ([]*types.Order, error)
 	All() ([]*types.Order, error)
 	KeyFor(base.Bytes) base.Bytes
@@ -43,6 +44,12 @@ func (d *orderAdapter) GetByKey(address base.Bytes) (*types.Order, error) {
 	return &depo, depo.Unmarshal(buf)
 }
 
+func (a *orderAdapter) ForDeployment(deployment base.Bytes) ([]*types.Order, error) {
+	min := a.deploymentMinRange(deployment)
+	max := a.deploymentMaxRange(deployment)
+	return a.forRange(min, max)
+}
+
 func (a *orderAdapter) ForGroup(group *types.DeploymentGroup) ([]*types.Order, error) {
 	min := a.groupMinRange(group)
 	max := a.groupMaxRange(group)
@@ -63,6 +70,16 @@ func (a *orderAdapter) KeyFor(id base.Bytes) base.Bytes {
 // {deployment-address}{group-sequence}{order-sequence}{provider-address}
 func (a *orderAdapter) IDFor(obj *types.Order) []byte {
 	return OrderID(obj.Deployment, obj.GetGroup(), obj.GetOrder())
+}
+
+// /deployment-orders/{deployment-address}{group-sequence}{order-sequence}
+func (a *orderAdapter) deploymentMinRange(deployment base.Bytes) []byte {
+	return a.KeyFor(OrderID(deployment, 0, 0))
+}
+
+// /deployment-orders/{deployment-address}{group-sequence}{max-order-sequence}
+func (a *orderAdapter) deploymentMaxRange(deployment base.Bytes) []byte {
+	return a.KeyFor(OrderID(deployment, math.MaxUint64, math.MaxUint64))
 }
 
 // /deployment-orders/{deployment-address}{group-sequence}{order-sequence}

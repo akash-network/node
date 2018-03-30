@@ -214,19 +214,18 @@ func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) err
 		leases := make(map[string]struct{})
 
 		for _, l := range ls.GetItems() {
-			if l.State == types.Lease_ACTIVE {
+			if l.State == types.Lease_CLOSING {
 				addr := X(state.LeaseID(l.Deployment, l.Group, l.Order, l.Provider))
 				leases[addr] = struct{}{}
 			}
 		}
-
 		expected := len(leases)
 
 		handler := marketplace.NewBuilder().
 			OnTxCloseLease(func(tx *types.TxCloseLease) {
 				_, ok := leases[X(tx.Lease)]
 				if ok {
-					fmt.Printf("Closed Lease: %v/%v\n", len(leases)-expected+1, len(leases),
+					fmt.Printf("Closed Lease %v/%v: %v\n", len(leases)-expected+1, len(leases),
 						X(tx.Lease))
 					expected--
 				}

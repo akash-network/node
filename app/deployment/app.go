@@ -347,78 +347,25 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 		}
 	}
 
-	deployment.State = types.Deployment_CLOSING
+	leases, err := a.State().Lease().ForDeployment(deployment.Address)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	deployment.State = types.Deployment_CLOSED
+	groupState := types.DeploymentGroup_CLOSED
+
+	if leases != nil {
+		deployment.State = types.Deployment_CLOSING
+		groupState = types.DeploymentGroup_CLOSING
+	}
 
 	for _, group := range groups {
-		// begin for each group
 		if group.State != types.DeploymentGroup_CLOSING {
-			group.State = types.DeploymentGroup_CLOSING
-		}
-
-		orders, err := a.State().Order().ForGroup(group)
-		if err != nil {
-			return tmtypes.ResponseDeliverTx{
-				Code: code.INVALID_TRANSACTION,
-				Log:  err.Error(),
-			}
-		}
-
-		for _, order := range orders {
-			// begin for each otder
-			if order.State != types.Order_CLOSED {
-				order.State = types.Order_CLOSED
-			}
-
-			fulfillments, err := a.State().Fulfillment().ForOrder(order)
-			if err != nil {
-				return tmtypes.ResponseDeliverTx{
-					Code: code.INVALID_TRANSACTION,
-					Log:  err.Error(),
-				}
-			}
-
-			for _, fulfillment := range fulfillments {
-				// begin for each fulfillment
-				if fulfillment.State != types.Fulfillment_CLOSED {
-					fulfillment.State = types.Fulfillment_CLOSED
-				}
-
-				lease, err := a.State().Lease().Get(deployment.Address, group.Seq, order.Order, fulfillment.Provider)
-				if err != nil {
-					return tmtypes.ResponseDeliverTx{
-						Code: code.INVALID_TRANSACTION,
-						Log:  err.Error(),
-					}
-				}
-				if lease != nil && lease.State == types.Lease_ACTIVE {
-					lease.State = types.Lease_CLOSING
-					err = a.State().Lease().Save(lease)
-					if err != nil {
-						return tmtypes.ResponseDeliverTx{
-							Code: code.INVALID_TRANSACTION,
-							Log:  err.Error(),
-						}
-					}
-				}
-
-				err = a.State().Fulfillment().Save(fulfillment)
-				if err != nil {
-					return tmtypes.ResponseDeliverTx{
-						Code: code.INVALID_TRANSACTION,
-						Log:  err.Error(),
-					}
-				}
-				// end for each fulfillment
-			}
-
-			err = a.State().Order().Save(order)
-			if err != nil {
-				return tmtypes.ResponseDeliverTx{
-					Code: code.INVALID_TRANSACTION,
-					Log:  err.Error(),
-				}
-			}
-			// end for each order
+			group.State = groupState
 		}
 		err = a.State().DeploymentGroup().Save(group)
 		if err != nil {
@@ -427,7 +374,57 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 				Log:  err.Error(),
 			}
 		}
-		// end for each group
+	}
+
+	orders, err := a.State().Order().ForDeployment(deployment.Address)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	for _, order := range orders {
+		order.State = types.Order_CLOSED
+		err = a.State().Order().Save(order)
+		if err != nil {
+			return tmtypes.ResponseDeliverTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  err.Error(),
+			}
+		}
+	}
+
+	fulfillments, err := a.State().Fulfillment().ForDeployment(deployment.Address)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	for _, fulfillment := range fulfillments {
+		fulfillment.State = types.Fulfillment_CLOSED
+		err = a.State().Fulfillment().Save(fulfillment)
+		if err != nil {
+			return tmtypes.ResponseDeliverTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  err.Error(),
+			}
+		}
+	}
+
+	if leases != nil {
+		for _, lease := range leases {
+			lease.State = types.Lease_CLOSING
+			err = a.State().Lease().Save(lease)
+			if err != nil {
+				return tmtypes.ResponseDeliverTx{
+					Code: code.INVALID_TRANSACTION,
+					Log:  err.Error(),
+				}
+			}
+		}
 	}
 
 	err = a.State().Deployment().Save(deployment)

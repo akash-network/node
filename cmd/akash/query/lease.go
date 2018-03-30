@@ -35,7 +35,8 @@ func doQueryLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string)
 
 func LeasesForDeployment(ctx context.Context, deployment *base.Bytes) (*types.Leases, error) {
 	leases := &types.Leases{}
-	result, err := Query(ctx, util.X(*deployment))
+	path := state.LeasePath + util.X(*deployment)
+	result, err := Query(ctx, path)
 	if err != nil {
 		return nil, err
 	}

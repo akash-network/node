@@ -12,6 +12,7 @@ type FulfillmentAdapter interface {
 	Save(*types.Fulfillment) error
 	Get(daddr base.Bytes, group uint64, order uint64, paddr base.Bytes) (*types.Fulfillment, error)
 	GetByKey(address base.Bytes) (*types.Fulfillment, error)
+	ForDeployment(base.Bytes) ([]*types.Fulfillment, error)
 	ForGroup(*types.DeploymentGroup) ([]*types.Fulfillment, error)
 	ForOrder(*types.Order) ([]*types.Fulfillment, error)
 	IDFor(*types.Fulfillment) []byte
@@ -51,6 +52,12 @@ func (a *fulfillmentAdapter) GetByKey(address base.Bytes) (*types.Fulfillment, e
 	return &ful, ful.Unmarshal(buf)
 }
 
+func (a *fulfillmentAdapter) ForDeployment(deployment base.Bytes) ([]*types.Fulfillment, error) {
+	min := a.deploymentMinRange(deployment)
+	max := a.deploymentMaxRange(deployment)
+	return a.forRange(min, max)
+}
+
 func (a *fulfillmentAdapter) ForGroup(group *types.DeploymentGroup) ([]*types.Fulfillment, error) {
 	min := a.groupMinRange(group)
 	max := a.groupMaxRange(group)
@@ -71,6 +78,16 @@ func (a *fulfillmentAdapter) KeyFor(id []byte) []byte {
 // {deployment-address}{group-sequence}{order-sequence}{provider-address}
 func (a *fulfillmentAdapter) IDFor(obj *types.Fulfillment) []byte {
 	return FulfillmentID(obj.Deployment, obj.GetGroup(), obj.GetOrder(), obj.Provider)
+}
+
+// /fulfillment-orders/{deployment-address}{group-sequence}{order-sequence}
+func (a *fulfillmentAdapter) deploymentMinRange(deployment base.Bytes) []byte {
+	return a.KeyFor(FulfillmentID(deployment, 0, 0, []byte{}))
+}
+
+// /fulfillment-orders/{deployment-address}{group-sequence}{max-order-sequence}{max-address}
+func (a *fulfillmentAdapter) deploymentMaxRange(deployment base.Bytes) []byte {
+	return a.KeyFor(FulfillmentID(deployment, math.MaxUint64, math.MaxUint64, MaxAddress()))
 }
 
 // /fulfillment-orders/{deployment-address}{group-sequence}{order-sequence}

@@ -94,7 +94,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	if len(id) == 0 {
 		return a.doRangeQuery(*key)
 	}
-	if len(id) == state.AddressSize {
+	if len(id) == state.AddressSize*2 {
 		return a.doDeploymentQuery(*key)
 	}
 	return a.doQuery(*key)
@@ -513,7 +513,7 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 }
 
 func (a *app) doDeploymentQuery(deployment base.Bytes) tmtypes.ResponseQuery {
-	items, err := a.State().Lease().GetByDeployment(deployment)
+	items, err := a.State().Lease().ForDeployment(deployment)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,

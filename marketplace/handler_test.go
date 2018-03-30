@@ -123,6 +123,7 @@ func TestHandler(t *testing.T) {
 		h := marketplace.NewBuilder().OnTxCloseDeployment(func(_ *types.TxCloseDeployment) {
 			called = true
 		}).Create()
+		h.OnTxCloseDeployment(nil)
 		assert.True(t, called, "OnTxCloseDeployment")
 		called = false
 		h.OnTxSend(nil)
@@ -137,9 +138,10 @@ func TestHandler(t *testing.T) {
 
 	{
 		called := false
-		h := marketplace.NewBuilder().OnTxCloseLease(func(_ *types.TxCloseDeployment) {
+		h := marketplace.NewBuilder().OnTxCloseLease(func(_ *types.TxCloseLease) {
 			called = true
 		}).Create()
+		h.OnTxCloseLease(nil)
 		assert.True(t, called, "OnTxCloseLease")
 		called = false
 		h.OnTxSend(nil)
