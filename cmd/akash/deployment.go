@@ -182,6 +182,7 @@ func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) err
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCloseDeployment{
 		Deployment: *deployment,
+		Reason:     types.TxCloseDeployment_TENANT_CLOSE,
 	})
 	if err != nil {
 		return err

@@ -161,6 +161,17 @@ message TxCreateDeployment {
   repeated GroupSpec groups = 4;
 }
 
+message TxCloseDeployment {
+  // deployment address
+  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  enum ReasonCode {
+    UNSET = 0;
+    TENANT_CLOSE  = 1;
+    INSUFFICIENT = 2;
+  }
+  ReasonCode reason = 2;
+}
+
 message Order {
   option (gogoproto.compare) = true;
 
@@ -265,22 +276,9 @@ message Leases {
   repeated Lease items = 1;
 }
 
-message TxCloseDeployment {
-  /* BEGIN ID FIELDS */
-
-  // deployment address
-  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
-
-  /* END ID FIELDS */
-}
-
 message TxCloseLease {
-  /* BEGIN ID FIELDS */
-
   // lease address
   bytes lease = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
-
-  /* END ID FIELDS */
 }
 
 message Bill {
