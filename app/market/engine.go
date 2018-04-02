@@ -48,16 +48,8 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 	nextSeq := state.Deployment().SequenceFor(deployment.Address).Next()
 	height := state.Version()
 
-	// process cancel deployment
-	if deployment.State == types.Deployment_CLOSED {
-		return nil
-	}
-
-	if deployment.State == types.Deployment_CLOSING {
-		// TODO: check for asyc shutdown process competion
-		w.put(&types.TxDeploymentClosed{
-			Deployment: deployment.Address,
-		})
+	// skip inactve deployments
+	if deployment.State != types.Deployment_ACTIVE {
 		return nil
 	}
 

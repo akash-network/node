@@ -149,12 +149,7 @@ func TestCloseTx_1(t *testing.T) {
 
 	testutil.CloseDeployment(t, app, &depl.Address, &key)
 
-	check(types.Deployment_CLOSING, types.DeploymentGroup_CLOSING)
-
-	testutil.DeploymentClosed(t, app, &depl.Address, &key)
-
 	check(types.Deployment_CLOSED, types.DeploymentGroup_CLOSED)
-
 }
 
 func TestCloseTx_2(t *testing.T) {
@@ -189,10 +184,6 @@ func TestCloseTx_2(t *testing.T) {
 	check(types.Deployment_ACTIVE, types.DeploymentGroup_OPEN, types.Order_OPEN)
 
 	testutil.CloseDeployment(t, app, &depl.Address, &key)
-
-	check(types.Deployment_CLOSING, types.DeploymentGroup_CLOSING, types.Order_CLOSING)
-
-	testutil.DeploymentClosed(t, app, &depl.Address, &key)
 
 	check(types.Deployment_CLOSED, types.DeploymentGroup_CLOSED, types.Order_CLOSED)
 }
@@ -236,10 +227,6 @@ func TestCloseTx_3(t *testing.T) {
 	check(types.Deployment_ACTIVE, types.DeploymentGroup_OPEN, types.Order_OPEN, types.Fulfillment_OPEN)
 
 	testutil.CloseDeployment(t, app, &depl.Address, &key)
-
-	check(types.Deployment_CLOSING, types.DeploymentGroup_CLOSING, types.Order_CLOSING, types.Fulfillment_CLOSING)
-
-	testutil.DeploymentClosed(t, app, &depl.Address, &key)
 
 	check(types.Deployment_CLOSED, types.DeploymentGroup_CLOSED, types.Order_CLOSED, types.Fulfillment_CLOSED)
 }
@@ -289,12 +276,7 @@ func TestCloseTx_4(t *testing.T) {
 
 	testutil.CloseDeployment(t, app, &depl.Address, &key)
 
-	check(types.Deployment_CLOSING, types.DeploymentGroup_CLOSING, types.Order_CLOSING, types.Fulfillment_CLOSING, types.Lease_CLOSING)
-
-	testutil.DeploymentClosed(t, app, &depl.Address, &key)
-
-	check(types.Deployment_CLOSED, types.DeploymentGroup_CLOSED, types.Order_CLOSED, types.Fulfillment_CLOSED, types.Lease_CLOSED)
-
+	check(types.Deployment_CLOSING, types.DeploymentGroup_CLOSING, types.Order_CLOSED, types.Fulfillment_CLOSED, types.Lease_CLOSING)
 }
 
 // check deployment and group query & status

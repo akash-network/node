@@ -9,15 +9,12 @@ digraph marketplace {
   "3"     [shape=box labeljust="1" label="Deployment: Active\lDeploymentGroup: Ordered\lOrder: Open\lFulfillment: Open\l"];
   "4"     [shape=box labeljust="1" label="Deployment: Active\lDeploymentGroup: Ordered\lOrder: Matched\lFulfillment: Matched\lLease: Active\l"];
 
-  "5"     [shape=box label="Deployment: Closing\lDeploymentGroup: Closing\l"];
-  "6"     [shape=box label="Deployment: Closing\lDeploymentGroup: Closing\lOrder: Closing\l"];
-  "7"     [shape=box label="Deployment: Closing\lDeploymentGroup: Closing\lOrder: Closing\lFulfillment: Closing\l"];
-  "8"     [shape=box label="Deployment: Closing\lDeploymentGroup: Closing\lOrder: Closing\lFulfillment: Closing\lLease: Closing\l"];
+  "5"     [shape=box label="Deployment: Closed\lDeploymentGroup: Closed\l"];
+  "6"     [shape=box label="Deployment: Closed\lDeploymentGroup: Closed\lOrder: Closed\l"];
+  "7"     [shape=box label="Deployment: Closed\lDeploymentGroup: Closed\lOrder: Closed\lFulfillment: Closed\l"];
+  "8"     [shape=box label="Deployment: Closing\lDeploymentGroup: Closing\lOrder: Closed\lFulfillment: Closed\lLease: Closing\l"];
 
-  "9"     [shape=box label="Deployment: Closed\lDeploymentGroup: Closed\l"];
-  "10"    [shape=box label="Deployment: Closed\lDeploymentGroup: Closed\lOrder: Closed\l"];
-  "11"    [shape=box label="Deployment: Closed\lDeploymentGroup: Closed\lOrder: Closed\lFulfillment: Closed\l"];
-  "12"    [shape=box label="Deployment: Closed\lDeploymentGroup: Closed\lOrder: Closed\lFulfillment: Closed\lLease: Closed\l"];
+  "9"    [shape=box label="Deployment: Closed\lDeploymentGroup: Closed\lOrder: Closed\lFulfillment: Closed\lLease: Closed\l"];
 
   "0" -> "1"           [label="TxCreateDeployment"];
   "1" -> "2"           [label="TxCreateOrder"];
@@ -29,13 +26,10 @@ digraph marketplace {
   "3" -> "7"           [label="TxCloseDeployment"];
   "4" -> "8"           [label="TxCloseDeployment"];
 
-  "5" -> "9"           [label="TxDeploymentClosed"];
-  "6" -> "10"          [label="TxDeploymentClosed"];
-  "7" -> "11"          [label="TxDeploymentClosed"];
-  "8" -> "12"          [label="TxDeploymentClosed"];
+  "8" -> "9"          [label="TxCloseLease"];
 
 
   { rank=same "1", "2", "3", "4" }
   { rank=same "5", "6", "7", "8" }
-  { rank=same "9", "10", "11", "12" }
+  { rank=same "9" }
 }

@@ -11,6 +11,7 @@ import (
 type LeaseAdapter interface {
 	Save(*types.Lease) error
 	Get(daddr base.Bytes, group uint64, order uint64, paddr base.Bytes) (*types.Lease, error)
+	ForDeployment(deployment base.Bytes) ([]*types.Lease, error)
 	GetByKey(address base.Bytes) (*types.Lease, error)
 	IDFor(obj *types.Lease) []byte
 	KeyFor(id []byte) []byte
@@ -58,6 +59,12 @@ func (a *leaseAdapter) KeyFor(id []byte) []byte {
 func (a *leaseAdapter) All() ([]*types.Lease, error) {
 	min := a.allMinRange()
 	max := a.allMaxRange()
+	return a.forRange(min, max)
+}
+
+func (a *leaseAdapter) ForDeployment(deployment base.Bytes) ([]*types.Lease, error) {
+	min := a.KeyFor(LeaseID(deployment, 0, 0, MinAddress()))
+	max := a.KeyFor(LeaseID(deployment, math.MaxUint64, math.MaxUint64, MaxAddress()))
 	return a.forRange(min, max)
 }
 

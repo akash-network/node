@@ -16,7 +16,6 @@ const (
 	TagAppDeployment       = "deployment"
 	TxTypeCreateDeployment = "deployment-create"
 	TxTypeCloseDeployment  = "deployment-close"
-	TxTypeDeploymentClosed = "closed-deployment"
 
 	TagAppOrder       = "order"
 	TxTypeCreateOrder = "order-create"
@@ -26,6 +25,7 @@ const (
 
 	TagAppLease       = "lease"
 	TxTypeCreateLease = "lease-create"
+	TxTypeCloseLease  = "lease-close"
 
 	TagAppProvider       = "provider"
 	TxTypeProviderCreate = "provider-create"

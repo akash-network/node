@@ -1,9 +1,12 @@
 package query
 
 import (
+	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
+	"github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
 )
 
@@ -28,4 +31,17 @@ func doQueryLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string)
 		structure := new(types.Leases)
 		return doQuery(ctx, path, structure)
 	}
+}
+
+func LeasesForDeployment(ctx context.Context, deployment *base.Bytes) (*types.Leases, error) {
+	leases := &types.Leases{}
+	path := state.LeasePath + util.X(*deployment)
+	result, err := Query(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	if err := proto.Unmarshal(result.Response.Value, leases); err != nil {
+		return nil, err
+	}
+	return leases, nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -12,6 +13,7 @@ import (
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/marketplace"
 	qp "github.com/ovrclk/akash/query"
+	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
@@ -155,7 +157,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 		return err
 	}
 
-	deployments := make(map[string]struct{})
+	deployments := make(map[string][]string)
 
 	handler := marketplace.NewBuilder().
 		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
@@ -212,18 +214,52 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
 			leaseProvider, _ := tx.Lease.Provider.Marshal()
 			if bytes.Equal(leaseProvider, *provider) {
-				deployments[tx.Lease.Deployment.EncodeString()] = struct{}{}
+				lease := X(state.LeaseID(tx.Lease.Deployment, tx.Lease.Group, tx.Lease.Order, tx.Lease.Provider))
+				leases, _ := deployments[tx.Lease.Deployment.EncodeString()]
+				deployments[tx.Lease.Deployment.EncodeString()] = append(leases, lease)
 				fmt.Printf("Won lease for order: %v/%v/%v\n",
 					X(tx.Lease.Deployment), tx.Lease.Group, tx.Lease.Order)
 			}
 		}).
-		OnTxDeploymentClosed(func(tx *types.TxDeploymentClosed) {
-			_, ok := deployments[tx.Deployment.EncodeString()]
+		OnTxCloseDeployment(func(tx *types.TxCloseDeployment) {
+			leases, ok := deployments[tx.Deployment.EncodeString()]
 			if ok {
-				fmt.Printf("Closed lease for deployment: %v\n", X(tx.Deployment))
+				for _, lease := range leases {
+					fmt.Printf("Closing lease %v\n", lease)
+					// send a tx here
+					nonce, err := ctx.Nonce()
+					if err != nil {
+						ctx.Log().Error("error getting nonce", "error", err)
+						return
+					}
+					l, _ := hex.DecodeString(lease)
+					closetx := &types.TxCloseLease{
+						Lease: l,
+					}
+
+					txbuf, err := txutil.BuildTx(signer, nonce, closetx)
+					if err != nil {
+						ctx.Log().Error("error building tx", "error", err)
+						return
+					}
+
+					// XXX: shutdown lease processes
+					resp, err := client.BroadcastTxCommit(txbuf)
+					if err != nil {
+						ctx.Log().Error("error broadcasting tx", "error", err)
+						return
+					}
+					if resp.CheckTx.IsErr() {
+						ctx.Log().Error("CheckTx error", "error", resp.CheckTx.Log)
+						return
+					}
+					if resp.DeliverTx.IsErr() {
+						ctx.Log().Error("DeliverTx error", "error", resp.DeliverTx.Log)
+						return
+					}
+				}
 			}
 		}).Create()
-
 	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
 }
 

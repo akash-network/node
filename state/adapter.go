@@ -24,7 +24,7 @@ const (
 
 	MaxRangeLimit = math.MaxInt64
 
-	addressSize = 32 // XXX: check
+	AddressSize = 32 // XXX: check
 )
 
 func GetMinStartRange() base.Bytes {
@@ -40,11 +40,11 @@ func GetMaxEndRange64() base.Bytes {
 }
 
 func MaxAddress() []byte {
-	return bytes.Repeat([]byte{0xff}, addressSize)
+	return bytes.Repeat([]byte{0xff}, AddressSize)
 }
 
 func MinAddress() []byte {
-	return make([]byte, addressSize)
+	return make([]byte, AddressSize)
 }
 
 type AccountAdapter interface {

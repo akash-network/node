@@ -31,7 +31,8 @@ func TestMonitorMarketplace(t *testing.T) {
 		{"OnTxCreateOrder", &types.TxCreateOrder{}},
 		{"OnTxCreateFulfillment", &types.TxCreateFulfillment{}},
 		{"OnTxCreateLease", &types.TxCreateLease{}},
-		{"OnTxDeploymentClosed", &types.TxDeploymentClosed{}},
+		{"OnTxCloseDeployment", &types.TxCloseDeployment{}},
+		{"OnTxCloseLease", &types.TxCloseLease{}},
 	}
 
 	ctx := context.Background()
