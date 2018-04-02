@@ -61,7 +61,7 @@ func (e engine) processLease(state state.State, w txBuffer, lease *types.Lease) 
 		return err
 	}
 	if deployment == nil {
-		errors.New("deployment not found")
+		return errors.New("deployment not found")
 	}
 
 	tenant, err := state.Account().Get(deployment.Tenant)
@@ -69,7 +69,7 @@ func (e engine) processLease(state state.State, w txBuffer, lease *types.Lease) 
 		return err
 	}
 	if tenant == nil {
-		errors.New("tenant not found")
+		return errors.New("tenant not found")
 	}
 
 	// close deployments if tenant has zero balance
