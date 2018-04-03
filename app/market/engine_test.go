@@ -67,9 +67,17 @@ func testLease(t *testing.T, state state.State, provider *types.Provider, deploy
 	require.Len(t, txs, 1)
 
 	leaseTx, ok := txs[0].(*types.TxCreateLease)
+	lease := &types.Lease{
+		Deployment: leaseTx.Deployment,
+		Group:      leaseTx.Group,
+		Order:      leaseTx.Order,
+		Provider:   leaseTx.Provider,
+		Price:      leaseTx.Price,
+		State:      types.Lease_ACTIVE,
+	}
 	require.True(t, ok)
-	require.NoError(t, state.Lease().Save(leaseTx.GetLease()))
-	require.NoError(t, state.Lease().Save(leaseTx.GetLease()))
+	require.NoError(t, state.Lease().Save(lease))
+	require.NoError(t, state.Lease().Save(lease))
 
 	return state
 }

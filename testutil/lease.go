@@ -16,7 +16,11 @@ func CreateLease(t *testing.T, app apptypes.Application, provider base.Bytes, ke
 
 	tx := &types.TxPayload_TxCreateLease{
 		TxCreateLease: &types.TxCreateLease{
-			Lease: lease,
+			Deployment: lease.Deployment,
+			Group:      lease.Group,
+			Order:      lease.Order,
+			Provider:   lease.Provider,
+			Price:      lease.Price,
 		},
 	}
 

@@ -54,8 +54,8 @@ func marketplaceMonitorHandler() marketplace.Handler {
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
 			fmt.Printf("LEASE CREATED\t%v/%v/%v by %x [price=%v]\n",
-				X(tx.Lease.Deployment), tx.Lease.Group, tx.Lease.Order,
-				X(tx.Lease.Provider), tx.Lease.Price)
+				X(tx.Deployment), tx.Group, tx.Order,
+				X(tx.Provider), tx.Price)
 		}).
 		OnTxCloseDeployment(func(tx *types.TxCloseDeployment) {
 			fmt.Printf("DEPLOYMENT CLOSED\t%v", X(tx.Deployment))

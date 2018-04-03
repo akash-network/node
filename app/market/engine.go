@@ -136,13 +136,11 @@ func (e engine) processOrder(state state.State, w txBuffer, order *types.Order) 
 	}
 
 	w.put(&types.TxCreateLease{
-		Lease: &types.Lease{
-			Deployment: fulfillment.Deployment,
-			Group:      fulfillment.Group,
-			Order:      fulfillment.Order,
-			Provider:   fulfillment.Provider,
-			Price:      fulfillment.Price,
-		},
+		Deployment: fulfillment.Deployment,
+		Group:      fulfillment.Group,
+		Order:      fulfillment.Order,
+		Provider:   fulfillment.Provider,
+		Price:      fulfillment.Price,
 	})
 
 	return nil

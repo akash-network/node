@@ -210,13 +210,13 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
-			leaseProvider, _ := tx.Lease.Provider.Marshal()
+			leaseProvider, _ := tx.Provider.Marshal()
 			if bytes.Equal(leaseProvider, *provider) {
-				lease := X(state.LeaseID(tx.Lease.Deployment, tx.Lease.Group, tx.Lease.Order, tx.Lease.Provider))
-				leases, _ := deployments[tx.Lease.Deployment.EncodeString()]
-				deployments[tx.Lease.Deployment.EncodeString()] = append(leases, lease)
+				lease := X(state.LeaseID(tx.Deployment, tx.Group, tx.Order, tx.Provider))
+				leases, _ := deployments[tx.Deployment.EncodeString()]
+				deployments[tx.Deployment.EncodeString()] = append(leases, lease)
 				fmt.Printf("Won lease for order: %v/%v/%v\n",
-					X(tx.Lease.Deployment), tx.Lease.Group, tx.Lease.Order)
+					X(tx.Deployment), tx.Group, tx.Order)
 			}
 		}).
 		OnTxCloseDeployment(func(tx *types.TxCloseDeployment) {
