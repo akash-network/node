@@ -154,27 +154,6 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmt
 		}
 	}
 
-	// if tx.Group == nil {
-	// 	return tmtypes.ResponseCheckTx{
-	// 		Code: code.INVALID_TRANSACTION,
-	// 		Log:  "No group specified",
-	// 	}
-	// }
-
-	// if tx.Seq == nil {
-	// 	return tmtypes.ResponseCheckTx{
-	// 		Code: code.INVALID_TRANSACTION,
-	// 		Log:  "No sequence specified",
-	// 	}
-	// }
-
-	// if tx.EndAt == nil {
-	// 	return tmtypes.ResponseCheckTx{
-	// 		Code: code.INVALID_TRANSACTION,
-	// 		Log:  "No EndAt specified",
-	// 	}
-	// }
-
 	// ensure deployment exists
 	deployment, err := a.State().Deployment().Get(tx.Deployment)
 	if err != nil {
