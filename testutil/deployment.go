@@ -65,6 +65,7 @@ func CloseDeployment(t *testing.T, app apptypes.Application, deployment *base.By
 	tx := &types.TxPayload_TxCloseDeployment{
 		TxCloseDeployment: &types.TxCloseDeployment{
 			Deployment: *deployment,
+			Reason:     types.TxCloseDeployment_TENANT_CLOSE,
 		},
 	}
 

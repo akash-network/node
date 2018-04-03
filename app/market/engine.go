@@ -1,6 +1,8 @@
 package market
 
 import (
+	"errors"
+
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tmlibs/log"
@@ -25,10 +27,63 @@ func (e engine) Run(state state.State) ([]interface{}, error) {
 		return buf.all(), err
 	}
 
+	if err := e.processLeases(state, buf); err != nil {
+		return buf.all(), err
+	}
+
 	return buf.all(), nil
 }
 
-// create orders as necessary
+// close leases as necessary
+func (e engine) processLeases(state state.State, w txBuffer) error {
+	leases, err := state.Lease().All()
+	if err != nil {
+		return err
+	}
+	for _, lease := range leases {
+		if err := e.processLease(state, w, lease); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// close lease
+func (e engine) processLease(state state.State, w txBuffer, lease *types.Lease) error {
+
+	// skip inactve leases
+	if lease.State != types.Lease_ACTIVE {
+		return nil
+	}
+
+	deployment, err := state.Deployment().Get(lease.Deployment)
+	if err != nil {
+		return err
+	}
+	if deployment == nil {
+		return errors.New("deployment not found")
+	}
+
+	tenant, err := state.Account().Get(deployment.Tenant)
+	if err != nil {
+		return err
+	}
+	if tenant == nil {
+		return errors.New("tenant not found")
+	}
+
+	// close deployments if tenant has zero balance
+	if tenant.Balance == uint64(0) {
+		w.put(&types.TxCloseDeployment{
+			Deployment: deployment.Address,
+			Reason:     types.TxCloseDeployment_INSUFFICIENT,
+		})
+	}
+
+	return nil
+}
+
+// create orders and leases as necessary
 func (e engine) processDeployments(state state.State, w txBuffer) error {
 	items, err := state.Deployment().GetMaxRange()
 	if err != nil {
@@ -42,7 +97,7 @@ func (e engine) processDeployments(state state.State, w txBuffer) error {
 	return nil
 }
 
-// only create leases for orders which are at or past thier EndAt
+// create orders and leases for deployment
 func (e engine) processDeployment(state state.State, w txBuffer, deployment types.Deployment) error {
 
 	nextSeq := state.Deployment().SequenceFor(deployment.Address).Next()
