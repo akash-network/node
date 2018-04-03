@@ -26,7 +26,7 @@ func deployCreate(key vars.Ref, daddr vars.Ref) gestalt.Component {
 }
 
 func deployClose(key vars.Ref, daddr vars.Ref) gestalt.Component {
-	check := deployQueryState(daddr, types.Deployment_CLOSING)
+	check := deployQueryState(daddr, types.Deployment_CLOSED)
 
 	return g.Group("deploy-close").
 		Run(

@@ -343,6 +343,15 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 		}
 	}
 
+	deployment.State = types.Deployment_CLOSED
+	err = a.State().Deployment().Save(deployment)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
 	groups, err := a.State().DeploymentGroup().ForDeployment(deployment.Address)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
@@ -350,7 +359,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 			Log:  err.Error(),
 		}
 	}
-	if deployment == nil {
+	if groups == nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Deployment groups",
@@ -365,18 +374,8 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 		}
 	}
 
-	deployment.State = types.Deployment_CLOSED
-	groupState := types.DeploymentGroup_CLOSED
-
-	if leases != nil {
-		deployment.State = types.Deployment_CLOSING
-		groupState = types.DeploymentGroup_CLOSING
-	}
-
 	for _, group := range groups {
-		if group.State != types.DeploymentGroup_CLOSING {
-			group.State = groupState
-		}
+		group.State = types.DeploymentGroup_CLOSED
 		err = a.State().DeploymentGroup().Save(group)
 		if err != nil {
 			return tmtypes.ResponseDeliverTx{
@@ -426,7 +425,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 
 	if leases != nil {
 		for _, lease := range leases {
-			lease.State = types.Lease_CLOSING
+			lease.State = types.Lease_CLOSED
 			err = a.State().Lease().Save(lease)
 			if err != nil {
 				return tmtypes.ResponseDeliverTx{
@@ -434,14 +433,6 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 					Log:  err.Error(),
 				}
 			}
-		}
-	}
-
-	err = a.State().Deployment().Save(deployment)
-	if err != nil {
-		return tmtypes.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err.Error(),
 		}
 	}
 

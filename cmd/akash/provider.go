@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -223,38 +222,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 			leases, ok := deployments[tx.Deployment.EncodeString()]
 			if ok {
 				for _, lease := range leases {
-					fmt.Printf("Closing lease %v\n", lease)
-					// send a tx here
-					nonce, err := ctx.Nonce()
-					if err != nil {
-						ctx.Log().Error("error getting nonce", "error", err)
-						return
-					}
-					l, _ := hex.DecodeString(lease)
-					closetx := &types.TxCloseLease{
-						Lease: l,
-					}
-
-					txbuf, err := txutil.BuildTx(signer, nonce, closetx)
-					if err != nil {
-						ctx.Log().Error("error building tx", "error", err)
-						return
-					}
-
-					// XXX: shutdown lease processes
-					resp, err := client.BroadcastTxCommit(txbuf)
-					if err != nil {
-						ctx.Log().Error("error broadcasting tx", "error", err)
-						return
-					}
-					if resp.CheckTx.IsErr() {
-						ctx.Log().Error("CheckTx error", "error", resp.CheckTx.Log)
-						return
-					}
-					if resp.DeliverTx.IsErr() {
-						ctx.Log().Error("DeliverTx error", "error", resp.DeliverTx.Log)
-						return
-					}
+					fmt.Printf("Closed lease %v\n", lease)
 				}
 			}
 		}).Create()

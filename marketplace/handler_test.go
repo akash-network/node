@@ -24,7 +24,6 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
 		h.OnTxCloseDeployment(nil)
-		h.OnTxCloseLease(nil)
 		assert.False(t, called, "OnTxSend")
 	}
 
@@ -42,7 +41,6 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
 		h.OnTxCloseDeployment(nil)
-		h.OnTxCloseLease(nil)
 		assert.False(t, called, "OnTxCreateProvider")
 	}
 
@@ -60,7 +58,6 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
 		h.OnTxCloseDeployment(nil)
-		h.OnTxCloseLease(nil)
 		assert.False(t, called, "OnTxCreateDeployment")
 	}
 
@@ -78,7 +75,6 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
 		h.OnTxCloseDeployment(nil)
-		h.OnTxCloseLease(nil)
 		assert.False(t, called, "OnTxCreateOrder")
 	}
 
@@ -96,7 +92,6 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateLease(nil)
 		h.OnTxCloseDeployment(nil)
-		h.OnTxCloseLease(nil)
 		assert.False(t, called, "OnTxCreateFulfillment")
 	}
 
@@ -114,7 +109,6 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCloseDeployment(nil)
-		h.OnTxCloseLease(nil)
 		assert.False(t, called, "OnTxCreateLease")
 	}
 
@@ -132,25 +126,6 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
-		h.OnTxCloseLease(nil)
 		assert.False(t, called, "OnTxCloseDeployment")
-	}
-
-	{
-		called := false
-		h := marketplace.NewBuilder().OnTxCloseLease(func(_ *types.TxCloseLease) {
-			called = true
-		}).Create()
-		h.OnTxCloseLease(nil)
-		assert.True(t, called, "OnTxCloseLease")
-		called = false
-		h.OnTxSend(nil)
-		h.OnTxCreateProvider(nil)
-		h.OnTxCreateDeployment(nil)
-		h.OnTxCreateOrder(nil)
-		h.OnTxCreateFulfillment(nil)
-		h.OnTxCreateLease(nil)
-		h.OnTxCloseDeployment(nil)
-		assert.False(t, called, "OnTxCloseLease")
 	}
 }

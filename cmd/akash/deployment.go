@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/ovrclk/akash/cmd/akash/context"
-	"github.com/ovrclk/akash/cmd/akash/query"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/state"
@@ -156,7 +155,6 @@ func closeDeploymentCommand() *cobra.Command {
 	context.AddFlagNode(cmd, cmd.Flags())
 	context.AddFlagKey(cmd, cmd.Flags())
 	context.AddFlagNonce(cmd, cmd.Flags())
-	context.AddFlagWait(cmd, cmd.Flags())
 
 	return cmd
 }
@@ -201,39 +199,5 @@ func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) err
 	}
 
 	fmt.Println("Closing deployment")
-
-	if ctx.Wait() {
-		fmt.Printf("Waiting...\n")
-
-		ls, err := query.LeasesForDeployment(ctx, deployment)
-		if err != nil {
-			return err
-		}
-
-		leases := make(map[string]struct{})
-
-		for _, l := range ls.GetItems() {
-			if l.State == types.Lease_CLOSING {
-				addr := X(state.LeaseID(l.Deployment, l.Group, l.Order, l.Provider))
-				leases[addr] = struct{}{}
-			}
-		}
-		expected := len(leases)
-
-		handler := marketplace.NewBuilder().
-			OnTxCloseLease(func(tx *types.TxCloseLease) {
-				_, ok := leases[X(tx.Lease)]
-				if ok {
-					fmt.Printf("Closed Lease %v/%v: %v\n", len(leases)-expected+1, len(leases),
-						X(tx.Lease))
-					expected--
-				}
-				if expected == 0 {
-					os.Exit(0)
-				}
-			}).Create()
-		return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
-	}
-
 	return nil
 }
