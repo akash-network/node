@@ -7,6 +7,7 @@ import (
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,11 +24,12 @@ func TestEngine_All(t *testing.T) {
 	groups := testutil.DeploymentGroups(deployment.Address, tenant.Nonce)
 	require.NoError(t, state_.Deployment().Save(deployment))
 
-	state_, tx := testOrder(t, state_, tenant, deployment, groups)
-	state_ = testLease(t, state_, provider, deployment, groups, tx)
+	state_, order := testCreateOrder(t, state_, tenant, deployment, groups)
+	state_ = testCreateLease(t, state_, provider, deployment, groups, order)
+	state_ = testCloseDeployment(t, state_, tenant.Address, deployment.Address)
 }
 
-func testOrder(t *testing.T, state state.State, tenant *types.Account, deployment *types.Deployment, groups *types.DeploymentGroups) (state.State, *types.TxCreateOrder) {
+func testCreateOrder(t *testing.T, state state.State, tenant *types.Account, deployment *types.Deployment, groups *types.DeploymentGroups) (state.State, *types.Order) {
 	for _, group := range groups.GetItems() {
 		require.NoError(t, state.DeploymentGroup().Save(group))
 	}
@@ -51,11 +53,11 @@ func testOrder(t *testing.T, state state.State, tenant *types.Account, deploymen
 	}
 	require.NoError(t, state.Order().Save(order))
 
-	return state, tx
+	return state, order
 }
 
-func testLease(t *testing.T, state state.State, provider *types.Provider, deployment *types.Deployment, groups *types.DeploymentGroups, tx *types.TxCreateOrder) state.State {
-	fulfillment := testutil.Fulfillment(provider.Address, deployment.Address, tx.Group, tx.Seq, 1)
+func testCreateLease(t *testing.T, state state.State, provider *types.Provider, deployment *types.Deployment, groups *types.DeploymentGroups, order *types.Order) state.State {
+	fulfillment := testutil.Fulfillment(provider.Address, deployment.Address, order.Group, order.Seq, 1)
 	require.NoError(t, state.Fulfillment().Save(fulfillment))
 
 	for i := int64(0); i <= groups.GetItems()[0].OrderTTL; i++ {
@@ -77,7 +79,28 @@ func testLease(t *testing.T, state state.State, provider *types.Provider, deploy
 	}
 	require.True(t, ok)
 	require.NoError(t, state.Lease().Save(lease))
-	require.NoError(t, state.Lease().Save(lease))
+
+	order.State = types.Order_MATCHED
+	require.NoError(t, state.Order().Save(order))
+
+	return state
+}
+
+func testCloseDeployment(t *testing.T, state state.State, address base.Bytes, deployment base.Bytes) state.State {
+	tenant, err := state.Account().Get(address)
+	require.NoError(t, err)
+
+	tenant.Balance = uint64(0)
+	require.NoError(t, state.Account().Save(tenant))
+
+	txs, err := market.NewEngine(testutil.Logger()).Run(state)
+	require.NoError(t, err)
+	require.Len(t, txs, 1)
+
+	tx, ok := txs[0].(*types.TxCloseDeployment)
+	require.True(t, ok)
+	require.Equal(t, types.TxCloseDeployment_INSUFFICIENT, tx.Reason)
+	require.Equal(t, deployment, tx.Deployment)
 
 	return state
 }

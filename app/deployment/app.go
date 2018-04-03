@@ -247,10 +247,20 @@ func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment) 
 		}
 	}
 
-	if !bytes.Equal(ctx.Signer().Address(), deployment.Tenant) {
+	switch tx.Reason {
+	case types.TxCloseDeployment_INSUFFICIENT:
+		// XXX: signer must be block's facilitator
+	case types.TxCloseDeployment_TENANT_CLOSE:
+		if !bytes.Equal(ctx.Signer().Address(), deployment.Tenant) {
+			return tmtypes.ResponseCheckTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  "Not signed by tenant address",
+			}
+		}
+	default:
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "Not signed by tenant address",
+			Log:  "Invalid reason",
 		}
 	}
 
