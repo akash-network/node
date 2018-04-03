@@ -60,8 +60,5 @@ func marketplaceMonitorHandler() marketplace.Handler {
 		OnTxCloseDeployment(func(tx *types.TxCloseDeployment) {
 			fmt.Printf("DEPLOYMENT CLOSED\t%v", X(tx.Deployment))
 		}).
-		OnTxCloseLease(func(tx *types.TxCloseLease) {
-			fmt.Printf("LEASE CLOSED\t%v", X(tx.Lease))
-		}).
 		Create()
 }

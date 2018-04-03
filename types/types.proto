@@ -32,7 +32,6 @@ message TxPayload {
     TxCreateLease            txCreateLease            = 6;
     TxCreateProvider         txCreateProvider         = 7;
     TxCloseDeployment        txCloseDeployment        = 8;
-    TxCloseLease             txCloseLease             = 9;
   }
 }
 /* END GLOBAL */
@@ -121,7 +120,6 @@ message DeploymentGroup {
   enum DeploymentGroupState {
     OPEN    = 0;
     ORDERED = 1;
-    CLOSING = 2;
     CLOSED  = 3;
   }
 
@@ -144,7 +142,6 @@ message Deployment {
   bytes  tenant  = 2 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
   enum DeploymentState {
     ACTIVE  = 0;
-    CLOSING = 1;
     CLOSED  = 2;
   }
   DeploymentState state = 3;
@@ -290,7 +287,6 @@ message Lease {
 
   enum LeaseState {
     ACTIVE  = 0;
-    CLOSING = 1;
     CLOSED  = 2;
   }
   LeaseState state = 6;
@@ -319,11 +315,6 @@ message TxCreateLease {
 
 message Leases {
   repeated Lease items = 1;
-}
-
-message TxCloseLease {
-  // lease address
-  bytes lease = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 }
 
 /* END EXCHANGE */

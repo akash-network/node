@@ -276,7 +276,7 @@ func TestCloseTx_4(t *testing.T) {
 
 	testutil.CloseDeployment(t, app, &depl.Address, &key)
 
-	check(types.Deployment_CLOSING, types.DeploymentGroup_CLOSING, types.Order_CLOSED, types.Fulfillment_CLOSED, types.Lease_CLOSING)
+	check(types.Deployment_CLOSED, types.DeploymentGroup_CLOSED, types.Order_CLOSED, types.Fulfillment_CLOSED, types.Lease_CLOSED)
 }
 
 // check deployment and group query & status
