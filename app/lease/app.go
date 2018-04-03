@@ -101,14 +101,22 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 }
 
 func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.ResponseCheckTx, *types.Order) {
-	lease := tx.GetLease()
+	if tx.Deployment == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Empty deployment",
+		}, nil
+	}
 
-	if lease == nil {
-		return tmtypes.ResponseCheckTx{Code: code.INVALID_TRANSACTION}, nil
+	if tx.Provider == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Empty provider",
+		}, nil
 	}
 
 	// lookup provider
-	provider, err := a.State().Provider().Get(lease.Provider)
+	provider, err := a.State().Provider().Get(tx.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -138,7 +146,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) (tm
 	}
 
 	// ensure order exists
-	order, err := a.State().Order().Get(lease.Deployment, lease.Group, lease.Order)
+	order, err := a.State().Order().Get(tx.Deployment, tx.Group, tx.Order)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -161,7 +169,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) (tm
 	}
 
 	// ensure fulfillment exists
-	fulfillment, err := a.State().Fulfillment().Get(lease.Deployment, lease.Group, lease.Order, lease.Provider)
+	fulfillment, err := a.State().Fulfillment().Get(tx.Deployment, tx.Group, tx.Order, tx.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -208,7 +216,16 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) t
 		}
 	}
 
-	if err := a.State().Lease().Save(tx.GetLease()); err != nil {
+	lease := &types.Lease{
+		Deployment: tx.Deployment,
+		Group:      tx.Group,
+		Order:      tx.Order,
+		Provider:   tx.Provider,
+		Price:      tx.Price,
+		State:      types.Lease_ACTIVE,
+	}
+
+	if err := a.State().Lease().Save(lease); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
@@ -223,7 +240,6 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) t
 		}
 	}
 
-	lease := tx.GetLease()
 	tags := apptypes.NewTags(a.Name(), apptypes.TxTypeCreateLease)
 	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameDeployment), Value: lease.Deployment})
 	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: state.IDForLease(lease)})

@@ -145,13 +145,10 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 		// if no active order for the group emit create tx
 		if !activeFound {
 			w.put(&types.TxCreateOrder{
-				Order: &types.Order{
-					Deployment: deployment.Address,
-					Group:      group.GetSeq(),
-					Order:      nextSeq,
-					State:      types.Order_OPEN,
-					EndAt:      group.OrderTTL + height,
-				},
+				Deployment: deployment.Address,
+				Group:      group.GetSeq(),
+				Seq:        nextSeq,
+				EndAt:      group.OrderTTL + height,
 			})
 			nextSeq++
 		}
@@ -194,13 +191,11 @@ func (e engine) processOrder(state state.State, w txBuffer, order *types.Order) 
 	}
 
 	w.put(&types.TxCreateLease{
-		Lease: &types.Lease{
-			Deployment: fulfillment.Deployment,
-			Group:      fulfillment.Group,
-			Order:      fulfillment.Order,
-			Provider:   fulfillment.Provider,
-			Price:      fulfillment.Price,
-		},
+		Deployment: fulfillment.Deployment,
+		Group:      fulfillment.Group,
+		Order:      fulfillment.Order,
+		Provider:   fulfillment.Provider,
+		Price:      fulfillment.Price,
 	})
 
 	return nil

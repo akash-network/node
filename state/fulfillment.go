@@ -102,12 +102,12 @@ func (a *fulfillmentAdapter) groupMaxRange(group *types.DeploymentGroup) []byte 
 
 // /fulfillment-orders/{deployment-address}{group-sequence}{order-sequence}
 func (a *fulfillmentAdapter) orderMinRange(order *types.Order) []byte {
-	return a.KeyFor(FulfillmentID(order.Deployment, order.GetGroup(), order.GetOrder(), []byte{}))
+	return a.KeyFor(FulfillmentID(order.Deployment, order.GetGroup(), order.GetSeq(), []byte{}))
 }
 
 // /fulfillment-orders/{deployment-address}{group-sequence}{order-sequence}{max-address}
 func (a *fulfillmentAdapter) orderMaxRange(order *types.Order) []byte {
-	return a.KeyFor(FulfillmentID(order.Deployment, order.GetGroup(), order.GetOrder(), MaxAddress()))
+	return a.KeyFor(FulfillmentID(order.Deployment, order.GetGroup(), order.GetSeq(), MaxAddress()))
 }
 
 func (a *fulfillmentAdapter) forRange(min, max []byte) ([]*types.Fulfillment, error) {

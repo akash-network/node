@@ -147,16 +147,15 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmt
 	// todo: ensure signed by last block creator / valid market facilitator
 
 	// ensure order provided
-	order := tx.Order
-	if order == nil {
+	if tx.Deployment == nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "No order specified",
+			Log:  "No deployment specified",
 		}
 	}
 
 	// ensure deployment exists
-	deployment, err := a.State().Deployment().Get(order.Deployment)
+	deployment, err := a.State().Deployment().Get(tx.Deployment)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -179,7 +178,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmt
 	}
 
 	// ensure deployment group exists
-	group, err := a.State().DeploymentGroup().Get(order.Deployment, order.Group)
+	group, err := a.State().DeploymentGroup().Get(tx.Deployment, tx.Group)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -232,10 +231,17 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) t
 		}
 	}
 
-	order := tx.Order
-
-	oseq := a.State().Deployment().SequenceFor(order.Deployment)
+	oseq := a.State().Deployment().SequenceFor(tx.Deployment)
 	oseq.Advance()
+
+	order := &types.Order{
+		Deployment: tx.Deployment,
+		Group:      tx.Group,
+		Seq:        tx.Seq,
+		EndAt:      tx.EndAt,
+		State:      types.Order_OPEN,
+	}
+
 	// order.Order = oseq.Advance()
 	order.State = types.Order_OPEN
 

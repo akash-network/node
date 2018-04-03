@@ -168,7 +168,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 				return
 			}
 
-			price, err := getPrice(ctx, tx.Order.Deployment, tx.Order.Group)
+			price, err := getPrice(ctx, tx.Deployment, tx.Group)
 			if err != nil {
 				ctx.Log().Error("error getting price", "error", err)
 				return
@@ -178,17 +178,15 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 			price = uint32(rand.Int31n(int32(price) + 1))
 
 			ordertx := &types.TxCreateFulfillment{
-				Fulfillment: &types.Fulfillment{
-					Deployment: tx.Order.Deployment,
-					Group:      tx.Order.Group,
-					Order:      tx.Order.Order,
-					Provider:   *provider,
-					Price:      price,
-				},
+				Deployment: tx.Deployment,
+				Group:      tx.Group,
+				Order:      tx.Seq,
+				Provider:   *provider,
+				Price:      price,
 			}
 
 			fmt.Printf("Bidding on order: %v/%v/%v\n",
-				X(tx.Order.Deployment), tx.Order.Group, tx.Order.Order)
+				X(tx.Deployment), tx.Group, tx.Seq)
 
 			txbuf, err := txutil.BuildTx(signer, nonce, ordertx)
 			if err != nil {
@@ -212,13 +210,13 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
-			leaseProvider, _ := tx.Lease.Provider.Marshal()
+			leaseProvider, _ := tx.Provider.Marshal()
 			if bytes.Equal(leaseProvider, *provider) {
-				lease := X(state.LeaseID(tx.Lease.Deployment, tx.Lease.Group, tx.Lease.Order, tx.Lease.Provider))
-				leases, _ := deployments[tx.Lease.Deployment.EncodeString()]
-				deployments[tx.Lease.Deployment.EncodeString()] = append(leases, lease)
+				lease := X(state.LeaseID(tx.Deployment, tx.Group, tx.Order, tx.Provider))
+				leases, _ := deployments[tx.Deployment.EncodeString()]
+				deployments[tx.Deployment.EncodeString()] = append(leases, lease)
 				fmt.Printf("Won lease for order: %v/%v/%v\n",
-					X(tx.Lease.Deployment), tx.Lease.Group, tx.Lease.Order)
+					X(tx.Deployment), tx.Group, tx.Order)
 			}
 		}).
 		OnTxCloseDeployment(func(tx *types.TxCloseDeployment) {

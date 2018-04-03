@@ -45,17 +45,17 @@ func marketplaceMonitorHandler() marketplace.Handler {
 		}).
 		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
 			fmt.Printf("ORDER CREATED\t%v/%v/%v\n",
-				X(tx.Order.Deployment), tx.Order.Group, tx.Order.Order)
+				X(tx.Deployment), tx.Group, tx.Seq)
 		}).
 		OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 			fmt.Printf("FULFILLMENT CREATED\t%v/%v/%v by %v [price=%v]\n",
-				X(tx.Fulfillment.Deployment), tx.Fulfillment.Group, tx.Fulfillment.Order,
-				X(tx.Fulfillment.Provider), tx.Fulfillment.Price)
+				X(tx.Deployment), tx.Group, tx.Order,
+				X(tx.Provider), tx.Price)
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
 			fmt.Printf("LEASE CREATED\t%v/%v/%v by %x [price=%v]\n",
-				X(tx.Lease.Deployment), tx.Lease.Group, tx.Lease.Order,
-				X(tx.Lease.Provider), tx.Lease.Price)
+				X(tx.Deployment), tx.Group, tx.Order,
+				X(tx.Provider), tx.Price)
 		}).
 		OnTxCloseDeployment(func(tx *types.TxCloseDeployment) {
 			fmt.Printf("DEPLOYMENT CLOSED\t%v", X(tx.Deployment))

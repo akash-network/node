@@ -69,7 +69,7 @@ func (a *orderAdapter) KeyFor(id base.Bytes) base.Bytes {
 
 // {deployment-address}{group-sequence}{order-sequence}{provider-address}
 func (a *orderAdapter) IDFor(obj *types.Order) []byte {
-	return OrderID(obj.Deployment, obj.GetGroup(), obj.GetOrder())
+	return OrderID(obj.Deployment, obj.GetGroup(), obj.GetSeq())
 }
 
 // /deployment-orders/{deployment-address}{group-sequence}{order-sequence}

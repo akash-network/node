@@ -88,14 +88,23 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 }
 
 func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseCheckTx {
-	fulfillment := tx.GetFulfillment()
 
-	if fulfillment == nil {
-		return tmtypes.ResponseCheckTx{Code: code.INVALID_TRANSACTION}
+	if tx.Deployment == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Empty deployment",
+		}
+	}
+
+	if tx.Provider == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Empty provider",
+		}
 	}
 
 	// lookup provider
-	provider, err := a.State().Provider().Get(fulfillment.Provider)
+	provider, err := a.State().Provider().Get(tx.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -133,7 +142,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmt
 	}
 
 	// ensure order exists
-	dorder, err := a.State().Order().Get(fulfillment.Deployment, fulfillment.Group, fulfillment.Order)
+	dorder, err := a.State().Order().Get(tx.Deployment, tx.Group, tx.Order)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -156,7 +165,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmt
 	}
 
 	// get deployment group
-	group, err := a.State().DeploymentGroup().Get(fulfillment.Deployment, fulfillment.Group)
+	group, err := a.State().DeploymentGroup().Get(tx.Deployment, tx.Group)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -181,7 +190,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmt
 	}
 
 	// ensure there are no other orders for this provider
-	other, err := a.State().Fulfillment().Get(fulfillment.Deployment, fulfillment.Group, fulfillment.Order, fulfillment.Provider)
+	other, err := a.State().Fulfillment().Get(tx.Deployment, tx.Group, tx.Order, tx.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -207,7 +216,16 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) t
 		}
 	}
 
-	if err := a.State().Fulfillment().Save(tx.GetFulfillment()); err != nil {
+	fulfillment := &types.Fulfillment{
+		Deployment: tx.Deployment,
+		Group:      tx.Group,
+		Order:      tx.Order,
+		Provider:   tx.Provider,
+		Price:      tx.Price,
+		State:      types.Fulfillment_OPEN,
+	}
+
+	if err := a.State().Fulfillment().Save(fulfillment); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),

@@ -24,12 +24,12 @@ func TestEngine_All(t *testing.T) {
 	groups := testutil.DeploymentGroups(deployment.Address, tenant.Nonce)
 	require.NoError(t, state_.Deployment().Save(deployment))
 
-	state_, tx := testCreateOrder(t, state_, tenant, deployment, groups)
-	state_ = testCreateLease(t, state_, provider, deployment, groups, tx)
+	state_, order := testCreateOrder(t, state_, tenant, deployment, groups)
+	state_ = testCreateLease(t, state_, provider, deployment, groups, order)
 	state_ = testCloseDeployment(t, state_, tenant.Address, deployment.Address)
 }
 
-func testCreateOrder(t *testing.T, state state.State, tenant *types.Account, deployment *types.Deployment, groups *types.DeploymentGroups) (state.State, *types.TxCreateOrder) {
+func testCreateOrder(t *testing.T, state state.State, tenant *types.Account, deployment *types.Deployment, groups *types.DeploymentGroups) (state.State, *types.Order) {
 	for _, group := range groups.GetItems() {
 		require.NoError(t, state.DeploymentGroup().Save(group))
 	}
@@ -42,16 +42,22 @@ func testCreateOrder(t *testing.T, state state.State, tenant *types.Account, dep
 	tx, ok := txs[0].(*types.TxCreateOrder)
 	require.True(t, ok)
 
-	require.Equal(t, deployment.Address, tx.Order.Deployment)
-	require.Equal(t, groups.GetItems()[0].Seq, tx.Order.GetGroup())
-	require.Equal(t, types.Order_OPEN, tx.Order.GetState())
-	require.NoError(t, state.Order().Save(tx.Order))
+	require.Equal(t, deployment.Address, tx.Deployment)
+	require.Equal(t, groups.GetItems()[0].Seq, tx.Group)
+	order := &types.Order{
+		Deployment: tx.Deployment,
+		Group:      tx.Group,
+		Seq:        tx.Seq,
+		EndAt:      tx.EndAt,
+		State:      types.Order_OPEN,
+	}
+	require.NoError(t, state.Order().Save(order))
 
-	return state, tx
+	return state, order
 }
 
-func testCreateLease(t *testing.T, state state.State, provider *types.Provider, deployment *types.Deployment, groups *types.DeploymentGroups, tx *types.TxCreateOrder) state.State {
-	fulfillment := testutil.Fulfillment(provider.Address, deployment.Address, tx.Order.GetGroup(), tx.Order.GetOrder(), 1)
+func testCreateLease(t *testing.T, state state.State, provider *types.Provider, deployment *types.Deployment, groups *types.DeploymentGroups, order *types.Order) state.State {
+	fulfillment := testutil.Fulfillment(provider.Address, deployment.Address, order.Group, order.Seq, 1)
 	require.NoError(t, state.Fulfillment().Save(fulfillment))
 
 	for i := int64(0); i <= groups.GetItems()[0].OrderTTL; i++ {
@@ -63,13 +69,19 @@ func testCreateLease(t *testing.T, state state.State, provider *types.Provider, 
 	require.Len(t, txs, 1)
 
 	leaseTx, ok := txs[0].(*types.TxCreateLease)
+	lease := &types.Lease{
+		Deployment: leaseTx.Deployment,
+		Group:      leaseTx.Group,
+		Order:      leaseTx.Order,
+		Provider:   leaseTx.Provider,
+		Price:      leaseTx.Price,
+		State:      types.Lease_ACTIVE,
+	}
 	require.True(t, ok)
-	require.NoError(t, state.Lease().Save(leaseTx.GetLease()))
-	require.NoError(t, state.Lease().Save(leaseTx.GetLease()))
+	require.NoError(t, state.Lease().Save(lease))
 
-	matchedOrder := tx.GetOrder()
-	matchedOrder.State = types.Order_MATCHED
-	require.NoError(t, state.Order().Save(matchedOrder))
+	order.State = types.Order_MATCHED
+	require.NoError(t, state.Order().Save(order))
 
 	return state
 }
