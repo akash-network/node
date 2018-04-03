@@ -238,7 +238,23 @@ message Fulfillment {
 }
 
 message TxCreateFulfillment {
-  Fulfillment fulfillment = 1;
+  /* BEGIN ID FIELDS */
+
+  // deployment address
+  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+
+  // deployment group sequence
+  uint64 group = 2;
+
+  // order sequence
+  uint64 order = 3;
+
+  // provider address
+  bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+
+  uint32 price = 5;
+
+  /* END ID FIELDS */
 }
 
 message Lease {

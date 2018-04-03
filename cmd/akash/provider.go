@@ -178,13 +178,11 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 			price = uint32(rand.Int31n(int32(price) + 1))
 
 			ordertx := &types.TxCreateFulfillment{
-				Fulfillment: &types.Fulfillment{
-					Deployment: tx.Deployment,
-					Group:      tx.Group,
-					Order:      tx.Seq,
-					Provider:   *provider,
-					Price:      price,
-				},
+				Deployment: tx.Deployment,
+				Group:      tx.Group,
+				Order:      tx.Seq,
+				Provider:   *provider,
+				Price:      price,
 			}
 
 			fmt.Printf("Bidding on order: %v/%v/%v\n",

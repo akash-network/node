@@ -16,7 +16,11 @@ func CreateFulfillment(t *testing.T, app apptypes.Application, provider base.Byt
 
 	fulfillmenttx := &types.TxPayload_TxCreateFulfillment{
 		TxCreateFulfillment: &types.TxCreateFulfillment{
-			Fulfillment: fulfillment,
+			Deployment: fulfillment.Deployment,
+			Group:      fulfillment.Group,
+			Order:      fulfillment.Order,
+			Provider:   fulfillment.Provider,
+			Price:      fulfillment.Price,
 		},
 	}
 
