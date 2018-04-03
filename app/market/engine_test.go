@@ -40,16 +40,22 @@ func testOrder(t *testing.T, state state.State, tenant *types.Account, deploymen
 	tx, ok := txs[0].(*types.TxCreateOrder)
 	require.True(t, ok)
 
-	require.Equal(t, deployment.Address, tx.Order.Deployment)
-	require.Equal(t, groups.GetItems()[0].Seq, tx.Order.GetGroup())
-	require.Equal(t, types.Order_OPEN, tx.Order.GetState())
-	require.NoError(t, state.Order().Save(tx.Order))
+	require.Equal(t, deployment.Address, tx.Deployment)
+	require.Equal(t, groups.GetItems()[0].Seq, tx.Group)
+	order := &types.Order{
+		Deployment: tx.Deployment,
+		Group:      tx.Group,
+		Seq:        tx.Seq,
+		EndAt:      tx.EndAt,
+		State:      types.Order_OPEN,
+	}
+	require.NoError(t, state.Order().Save(order))
 
 	return state, tx
 }
 
 func testLease(t *testing.T, state state.State, provider *types.Provider, deployment *types.Deployment, groups *types.DeploymentGroups, tx *types.TxCreateOrder) state.State {
-	fulfillment := testutil.Fulfillment(provider.Address, deployment.Address, tx.Order.GetGroup(), tx.Order.GetOrder(), 1)
+	fulfillment := testutil.Fulfillment(provider.Address, deployment.Address, tx.Group, tx.Seq, 1)
 	require.NoError(t, state.Fulfillment().Save(fulfillment))
 
 	for i := int64(0); i <= groups.GetItems()[0].OrderTTL; i++ {
@@ -64,10 +70,6 @@ func testLease(t *testing.T, state state.State, provider *types.Provider, deploy
 	require.True(t, ok)
 	require.NoError(t, state.Lease().Save(leaseTx.GetLease()))
 	require.NoError(t, state.Lease().Save(leaseTx.GetLease()))
-
-	matchedOrder := tx.GetOrder()
-	matchedOrder.State = types.Order_MATCHED
-	require.NoError(t, state.Order().Save(matchedOrder))
 
 	return state
 }

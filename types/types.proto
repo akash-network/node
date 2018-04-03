@@ -173,7 +173,7 @@ message Order {
   uint64 group = 2;
 
   // order sequence
-  uint64 order = 3;
+  uint64 seq = 3;
 
   /* END ID FIELDS */
 
@@ -189,7 +189,19 @@ message Order {
 }
 
 message TxCreateOrder {
-  Order order = 1;
+ // deployment address
+  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+
+  // deployment group sequence
+  uint64 group = 2;
+
+  // order sequence
+  uint64 seq = 3;
+
+  /* END ID FIELDS */
+
+  // maximum block number order can be open
+  int64 endAt = 4;
 }
 
 message Orders {

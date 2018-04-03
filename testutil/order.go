@@ -16,7 +16,10 @@ func CreateOrder(t *testing.T, app apptypes.Application, account *types.Account,
 
 	tx := &types.TxPayload_TxCreateOrder{
 		TxCreateOrder: &types.TxCreateOrder{
-			Order: order,
+			Deployment: order.Deployment,
+			Group:      order.Group,
+			Seq:        order.Seq,
+			EndAt:      order.EndAt,
 		},
 	}
 
@@ -40,7 +43,8 @@ func Order(deploymentAddress base.Bytes, groupSeq, orderSeq uint64) *types.Order
 	order := &types.Order{
 		Deployment: deploymentAddress,
 		Group:      groupSeq,
-		Order:      orderSeq,
+		Seq:        orderSeq,
+		EndAt:      int64(0),
 	}
 	return order
 }

@@ -26,9 +26,7 @@ func TestFacilitator(t *testing.T) {
 
 	daddr := state.DeploymentAddress(account.Address, nonce)
 	tx := &types.TxCreateOrder{
-		Order: &types.Order{
-			Deployment: daddr,
-		},
+		Deployment: daddr,
 	}
 
 	txs := []interface{}{tx}
