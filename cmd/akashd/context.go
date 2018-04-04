@@ -103,6 +103,7 @@ func (ctx *context) TMConfig() (*tmconfig.Config, error) {
 	}
 
 	cfg := tmconfig.DefaultConfig()
+	cfg.P2P.AuthEnc = false
 
 	if err := viper.Unmarshal(cfg); err != nil {
 		return nil, err
