@@ -12,6 +12,7 @@ type Handler interface {
 	OnTxCreateFulfillment(*types.TxCreateFulfillment)
 	OnTxCreateLease(*types.TxCreateLease)
 	OnTxCloseDeployment(*types.TxCloseDeployment)
+	OnTxCloseFulfillment(*types.TxCloseFulfillment)
 }
 
 type handler struct {
@@ -22,6 +23,7 @@ type handler struct {
 	onTxCreateFulfillment func(*types.TxCreateFulfillment)
 	onTxCreateLease       func(*types.TxCreateLease)
 	onTxCloseDeployment   func(*types.TxCloseDeployment)
+	onTxCloseFulfillment  func(*types.TxCloseFulfillment)
 }
 
 func (h handler) OnTxSend(tx *types.TxSend) {
@@ -66,6 +68,12 @@ func (h handler) OnTxCloseDeployment(tx *types.TxCloseDeployment) {
 	}
 }
 
+func (h handler) OnTxCloseFulfillment(tx *types.TxCloseFulfillment) {
+	if h.onTxCloseFulfillment != nil {
+		h.onTxCloseFulfillment(tx)
+	}
+}
+
 type Builder interface {
 	OnTxSend(func(*types.TxSend)) Builder
 	OnTxCreateProvider(func(*types.TxCreateProvider)) Builder
@@ -74,6 +82,7 @@ type Builder interface {
 	OnTxCreateFulfillment(func(*types.TxCreateFulfillment)) Builder
 	OnTxCreateLease(func(*types.TxCreateLease)) Builder
 	OnTxCloseDeployment(func(*types.TxCloseDeployment)) Builder
+	OnTxCloseFulfillment(func(*types.TxCloseFulfillment)) Builder
 	Create() Handler
 }
 
@@ -115,6 +124,11 @@ func (b *builder) OnTxCreateLease(fn func(*types.TxCreateLease)) Builder {
 
 func (b *builder) OnTxCloseDeployment(fn func(*types.TxCloseDeployment)) Builder {
 	b.onTxCloseDeployment = fn
+	return b
+}
+
+func (b *builder) OnTxCloseFulfillment(fn func(*types.TxCloseFulfillment)) Builder {
+	b.onTxCloseFulfillment = fn
 	return b
 }
 

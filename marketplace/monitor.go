@@ -96,6 +96,8 @@ func (m *monitor) runListener(ch <-chan interface{}, h Handler) {
 			h.OnTxCreateLease(tx.TxCreateLease)
 		case *types.TxPayload_TxCloseDeployment:
 			h.OnTxCloseDeployment(tx.TxCloseDeployment)
+		case *types.TxPayload_TxCloseFulfillment:
+			h.OnTxCloseFulfillment(tx.TxCloseFulfillment)
 		}
 	}
 }

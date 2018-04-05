@@ -24,6 +24,7 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
 		h.OnTxCloseDeployment(nil)
+		h.OnTxCloseFulfillment(nil)
 		assert.False(t, called, "OnTxSend")
 	}
 
@@ -41,6 +42,7 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
 		h.OnTxCloseDeployment(nil)
+		h.OnTxCloseFulfillment(nil)
 		assert.False(t, called, "OnTxCreateProvider")
 	}
 
@@ -58,6 +60,7 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
 		h.OnTxCloseDeployment(nil)
+		h.OnTxCloseFulfillment(nil)
 		assert.False(t, called, "OnTxCreateDeployment")
 	}
 
@@ -75,6 +78,7 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
 		h.OnTxCloseDeployment(nil)
+		h.OnTxCloseFulfillment(nil)
 		assert.False(t, called, "OnTxCreateOrder")
 	}
 
@@ -92,6 +96,7 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateLease(nil)
 		h.OnTxCloseDeployment(nil)
+		h.OnTxCloseFulfillment(nil)
 		assert.False(t, called, "OnTxCreateFulfillment")
 	}
 
@@ -109,6 +114,7 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCloseDeployment(nil)
+		h.OnTxCloseFulfillment(nil)
 		assert.False(t, called, "OnTxCreateLease")
 	}
 
@@ -126,6 +132,25 @@ func TestHandler(t *testing.T) {
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
+		h.OnTxCloseFulfillment(nil)
 		assert.False(t, called, "OnTxCloseDeployment")
+	}
+
+	{
+		called := false
+		h := marketplace.NewBuilder().OnTxCloseFulfillment(func(_ *types.TxCloseFulfillment) {
+			called = true
+		}).Create()
+		h.OnTxCloseFulfillment(nil)
+		assert.True(t, called, "OnTxCloseFulfillment")
+		called = false
+		h.OnTxSend(nil)
+		h.OnTxCreateProvider(nil)
+		h.OnTxCreateDeployment(nil)
+		h.OnTxCreateOrder(nil)
+		h.OnTxCreateFulfillment(nil)
+		h.OnTxCreateLease(nil)
+		h.OnTxCloseDeployment(nil)
+		assert.False(t, called, "OnTxCloseFulfillment")
 	}
 }

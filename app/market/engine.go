@@ -170,10 +170,19 @@ func BestFulfillment(state state.State, order *types.Order) (*types.Fulfillment,
 
 	// match with cheapest order
 	bestMatch := 0
+	found := false
 	for i, fulfillment := range fulfillments {
-		if fulfillment.Price < fulfillments[bestMatch].Price {
-			bestMatch = i
+		if fulfillment.State == types.Fulfillment_OPEN {
+			found = true
+			if fulfillment.Price < fulfillments[bestMatch].Price {
+				bestMatch = i
+			}
 		}
+	}
+
+	// no orders to match
+	if !found {
+		return nil, nil
 	}
 
 	return fulfillments[bestMatch], nil

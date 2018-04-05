@@ -22,10 +22,10 @@ const (
 
 	TagAppFulfillment       = "fulfillment"
 	TxTypeCreateFulfillment = "fulfillment-create"
+	TxTypeCloseFulfillment  = "fulfillment-close"
 
 	TagAppLease       = "lease"
 	TxTypeCreateLease = "lease-create"
-	TxTypeCloseLease  = "lease-close"
 
 	TagAppProvider       = "provider"
 	TxTypeProviderCreate = "provider-create"
