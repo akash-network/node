@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/assert"
@@ -38,6 +39,31 @@ func CreateFulfillment(t *testing.T, app apptypes.Application, provider base.Byt
 	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
 	assert.True(t, dresp.IsOK())
 	return fulfillment
+}
+
+func CloseFulfillment(t *testing.T, app apptypes.Application, key *crypto.PrivKey, fulfillment *types.Fulfillment) base.Bytes {
+	faddr := state.FulfillmentID(fulfillment.Deployment, fulfillment.Group, fulfillment.Order, fulfillment.Provider)
+
+	tx := &types.TxPayload_TxCloseFulfillment{
+		TxCloseFulfillment: &types.TxCloseFulfillment{
+			Fulfillment: faddr,
+		},
+	}
+
+	ctx := apptypes.NewContext(&types.Tx{
+		Key: key.PubKey().Bytes(),
+		Payload: types.TxPayload{
+			Payload: tx,
+		},
+	})
+
+	assert.True(t, app.AcceptTx(ctx, tx))
+	cresp := app.CheckTx(ctx, tx)
+	assert.True(t, cresp.IsOK())
+	dresp := app.DeliverTx(ctx, tx)
+	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
+	assert.True(t, dresp.IsOK())
+	return faddr
 }
 
 func Fulfillment(provider base.Bytes, deplyment base.Bytes, group, order uint64, price uint32) *types.Fulfillment {

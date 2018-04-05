@@ -35,6 +35,7 @@ func providerCommand() *cobra.Command {
 
 	cmd.AddCommand(createProviderCommand())
 	cmd.AddCommand(runCommand())
+	cmd.AddCommand(closeFulfillmentCommand())
 
 	return cmd
 }
@@ -187,6 +188,9 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 			fmt.Printf("Bidding on order: %v/%v/%v\n",
 				X(tx.Deployment), tx.Group, tx.Seq)
 
+			fmt.Printf("Fulfillment: %v\n",
+				X(state.FulfillmentID(tx.Deployment, tx.Group, tx.Seq, *provider)))
+
 			txbuf, err := txutil.BuildTx(signer, nonce, ordertx)
 			if err != nil {
 				ctx.Log().Error("error building tx", "error", err)
@@ -243,4 +247,55 @@ func getPrice(ctx context.Context, addr base.Bytes, seq uint64) (uint32, error) 
 		price += group.Price
 	}
 	return price, nil
+}
+
+func closeFulfillmentCommand() *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:   "closef",
+		Short: "close an open fulfillment",
+		Args:  cobra.ExactArgs(1),
+		RunE:  context.WithContext(context.RequireNode(doCloseFulfillmentCommand)),
+	}
+
+	context.AddFlagKeyType(cmd, cmd.Flags())
+
+	return cmd
+}
+
+func doCloseFulfillmentCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+	signer, _, err := ctx.Signer()
+	if err != nil {
+		return err
+	}
+
+	nonce, err := ctx.Nonce()
+	if err != nil {
+		return err
+	}
+
+	fulfillment := new(base.Bytes)
+	if err := fulfillment.DecodeString(args[0]); err != nil {
+		return err
+	}
+
+	tx, err := txutil.BuildTx(signer, nonce, &types.TxCloseFulfillment{
+		Fulfillment: *fulfillment,
+	})
+	if err != nil {
+		return err
+	}
+
+	result, err := ctx.Client().BroadcastTxCommit(tx)
+	if err != nil {
+		return err
+	}
+	if result.CheckTx.IsErr() {
+		return errors.New(result.CheckTx.GetLog())
+	}
+	if result.DeliverTx.IsErr() {
+		return errors.New(result.DeliverTx.GetLog())
+	}
+
+	return nil
 }

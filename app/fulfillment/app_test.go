@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmtypes "github.com/tendermint/abci/types"
+	crypto "github.com/tendermint/go-crypto"
 )
 
 func TestAcceptQuery(t *testing.T) {
@@ -68,23 +69,42 @@ func TestValidTx(t *testing.T) {
 	testutil.CreateOrder(t, oapp, taccount, &tkey, deployment.Address, groupSeq, oSeq)
 	price := uint32(0)
 
+	fulfillment := createFulfillment(t, app, provider, &pkey, daddress, groupSeq, oSeq, price)
+	closeFulfillment(t, app, &pkey, fulfillment)
+}
+
+func createFulfillment(t *testing.T, app apptypes.Application, provider *types.Provider,
+	pkey *crypto.PrivKey, deployment []byte, groupSeq uint64, oSeq uint64, price uint32) *types.Fulfillment {
 	// create fulfillment
-	fulfillment := testutil.CreateFulfillment(t, app, provider.Address, &pkey, daddress, groupSeq, oSeq, price)
+	fulfillment := testutil.CreateFulfillment(t, app, provider.Address, pkey, deployment, groupSeq, oSeq, price)
 
-	{
-		path := query.FulfillmentPath(fulfillment.Deployment, fulfillment.Group, fulfillment.Order, fulfillment.Provider)
-		resp := app.Query(tmtypes.RequestQuery{Path: path})
-		assert.Empty(t, resp.Log)
-		require.True(t, resp.IsOK())
-		ful := new(types.Fulfillment)
-		require.NoError(t, ful.Unmarshal(resp.Value))
+	path := query.FulfillmentPath(fulfillment.Deployment, fulfillment.Group, fulfillment.Order, fulfillment.Provider)
+	resp := app.Query(tmtypes.RequestQuery{Path: path})
+	assert.Empty(t, resp.Log)
+	require.True(t, resp.IsOK())
+	ful := new(types.Fulfillment)
+	require.NoError(t, ful.Unmarshal(resp.Value))
 
-		assert.Equal(t, fulfillment.Deployment, ful.Deployment)
-		assert.Equal(t, fulfillment.Group, ful.Group)
-		assert.Equal(t, fulfillment.Order, ful.Order)
-		assert.Equal(t, fulfillment.Provider, ful.Provider)
-		assert.Equal(t, fulfillment.Price, ful.Price)
-	}
+	assert.Equal(t, fulfillment.Deployment, ful.Deployment)
+	assert.Equal(t, fulfillment.Group, ful.Group)
+	assert.Equal(t, fulfillment.Order, ful.Order)
+	assert.Equal(t, fulfillment.Provider, ful.Provider)
+	assert.Equal(t, fulfillment.Price, ful.Price)
+	assert.Equal(t, fulfillment.State, ful.State)
+
+	return fulfillment
+}
+
+func closeFulfillment(t *testing.T, app apptypes.Application, key *crypto.PrivKey, fulfillment *types.Fulfillment) {
+	testutil.CloseFulfillment(t, app, key, fulfillment)
+	path := query.FulfillmentPath(fulfillment.Deployment, fulfillment.Group, fulfillment.Order, fulfillment.Provider)
+	resp := app.Query(tmtypes.RequestQuery{Path: path})
+	assert.Empty(t, resp.Log)
+	require.True(t, resp.IsOK())
+	ful := new(types.Fulfillment)
+	require.NoError(t, ful.Unmarshal(resp.Value))
+
+	assert.Equal(t, types.Fulfillment_CLOSED, ful.State)
 }
 
 func TestTx_BadTxType(t *testing.T) {

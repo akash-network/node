@@ -32,6 +32,7 @@ message TxPayload {
     TxCreateLease            txCreateLease            = 6;
     TxCreateProvider         txCreateProvider         = 7;
     TxCloseDeployment        txCloseDeployment        = 8;
+    TxCloseFulfillment       txCloseFulfillment       = 9;
   }
 }
 /* END GLOBAL */
@@ -263,6 +264,11 @@ message TxCreateFulfillment {
   uint32 price = 5;
 
   /* END ID FIELDS */
+}
+
+message TxCloseFulfillment {
+   // fulfillment address
+  bytes fulfillment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 }
 
 message Lease {

@@ -36,6 +36,8 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	switch tx.(type) {
 	case *types.TxPayload_TxCreateFulfillment:
 		return true
+	case *types.TxPayload_TxCloseFulfillment:
+		return true
 	}
 	return false
 }
@@ -43,7 +45,10 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateFulfillment:
-		return a.doCheckTx(ctx, tx.TxCreateFulfillment)
+		return a.doCheckCreateTx(ctx, tx.TxCreateFulfillment)
+	case *types.TxPayload_TxCloseFulfillment:
+		_, resp := a.doCheckCloseTx(ctx, tx.TxCloseFulfillment)
+		return resp
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -54,7 +59,9 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateFulfillment:
-		return a.doDeliverTx(ctx, tx.TxCreateFulfillment)
+		return a.doDeliverCreateTx(ctx, tx.TxCreateFulfillment)
+	case *types.TxPayload_TxCloseFulfillment:
+		return a.doDeliverCloseTx(ctx, tx.TxCloseFulfillment)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -87,7 +94,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	return a.doQuery(*key)
 }
 
-func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseCheckTx {
+func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseCheckTx {
 
 	if tx.Deployment == nil {
 		return tmtypes.ResponseCheckTx{
@@ -207,8 +214,8 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmt
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseDeliverTx {
-	cresp := a.doCheckTx(ctx, tx)
+func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseDeliverTx {
+	cresp := a.doCheckCreateTx(ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -234,6 +241,93 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) t
 
 	return tmtypes.ResponseDeliverTx{
 		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCreateFulfillment),
+	}
+}
+
+func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseFulfillment) (*types.Fulfillment, tmtypes.ResponseCheckTx) {
+
+	// lookup fulfillment
+	fulfillment, err := a.State().Fulfillment().GetByKey(tx.Fulfillment)
+	if err != nil {
+		return nil, tmtypes.ResponseCheckTx{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+	if fulfillment == nil {
+		return nil, tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "fulfillment not found",
+		}
+	}
+	if fulfillment.State != types.Fulfillment_OPEN {
+		return nil, tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "fulfillment not open",
+		}
+	}
+
+	// ensure provider exists
+	provider, err := a.State().Provider().Get(fulfillment.Provider)
+	if err != nil {
+		return nil, tmtypes.ResponseCheckTx{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+	if provider == nil {
+		return nil, tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Provider not found",
+		}
+	}
+
+	// ensure ownder exists
+	owner, err := a.State().Account().Get(provider.Owner)
+	if err != nil {
+		return nil, tmtypes.ResponseCheckTx{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+	if owner == nil {
+		return nil, tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Owner not found",
+		}
+	}
+
+	// ensure tx signed by provider
+	if !bytes.Equal(ctx.Signer().Address(), owner.Address) {
+		return nil, tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Not signed by provider",
+		}
+	}
+
+	return fulfillment, tmtypes.ResponseCheckTx{}
+}
+
+func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseFulfillment) tmtypes.ResponseDeliverTx {
+	fulfillment, cresp := a.doCheckCloseTx(ctx, tx)
+	if !cresp.IsOK() {
+		return tmtypes.ResponseDeliverTx{
+			Code: cresp.Code,
+			Log:  cresp.Log,
+		}
+	}
+
+	fulfillment.State = types.Fulfillment_CLOSED
+
+	if err := a.State().Fulfillment().Save(fulfillment); err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseDeliverTx{
+		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCloseFulfillment),
 	}
 }
 
