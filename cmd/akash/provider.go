@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
@@ -100,7 +101,7 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateProvider{
 		Owner:      key.Address(),
-		Attributes: attributes,
+		Attributes: *attributes,
 		Nonce:      nonce,
 	})
 	if err != nil {
@@ -125,23 +126,33 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 	return nil
 }
 
-func parseProvider(file string, nonce uint64) ([]types.ProviderAttribute, error) {
+func parseProvider(file string, nonce uint64) (*[]types.ProviderAttribute, error) {
+
+	testutil.at
+
 	// read in file
 	contents, err := ioutil.ReadFile(file)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	print(string(contents))
 
 	// marshal to object
-	attributes := &[]types.ProviderAttribute{}
+	attributes := &types.ProviderAttributes{}
 	err = yaml.Unmarshal([]byte(contents), attributes)
 	if err != nil {
 		return nil, err
 	}
 
-	return attributes, nil
+	println("attributes", attributes.String())
+
+	attrs := []types.ProviderAttribute{}
+	for _, attr := range attributes.Attributes {
+		attrs = append(attrs, attr)
+	}
+
+	return &attrs, nil
 }
 
 func runCommand() *cobra.Command {
