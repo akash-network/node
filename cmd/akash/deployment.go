@@ -16,6 +16,7 @@ import (
 	"github.com/ovrclk/akash/types/base"
 	. "github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 )
 
 func deploymentCommand() *cobra.Command {

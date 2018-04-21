@@ -19,6 +19,7 @@ import (
 	"github.com/ovrclk/akash/types/base"
 	. "github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 )
 
 func providerCommand() *cobra.Command {
@@ -125,13 +126,22 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 }
 
 func parseProvider(file string, nonce uint64) ([]types.ProviderAttribute, error) {
-	// todo: read and parse deployment yaml file
+	// read in file
+	contents, err := ioutil.ReadFile(file)
+	if err != nil {
+		return err
+	}
 
-	/* begin stub data */
-	provider := testutil.Provider(*new(base.Bytes), nonce)
-	/* end stub data */
+	print(string(contents))
 
-	return provider.Attributes, nil
+	// marshal to object
+	attributes := &[]types.ProviderAttribute{}
+	err = yaml.Unmarshal([]byte(contents), attributes)
+	if err != nil {
+		return nil, err
+	}
+
+	return attributes, nil
 }
 
 func runCommand() *cobra.Command {
