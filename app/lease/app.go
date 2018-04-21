@@ -207,7 +207,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) (tm
 }
 
 func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) tmtypes.ResponseDeliverTx {
-	cresp, order := a.doCheckCreateTx(ctx, tx)
+	cresp, matchedOrder := a.doCheckCreateTx(ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -231,11 +231,45 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) t
 		}
 	}
 
-	order.State = types.Order_MATCHED
-	if err := a.State().Order().Save(order); err != nil {
+	group, err := a.State().DeploymentGroup().Get(tx.Deployment, tx.Group)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+	if group == nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
+			Log:  "group not found",
+		}
+	}
+
+	orders, err := a.State().Order().ForGroup(group)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.ERROR,
 			Log:  err.Error(),
+		}
+	}
+	if orders == nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "orders not found",
+		}
+	}
+
+	for _, order := range orders {
+		if order.Seq != matchedOrder.Seq {
+			order.State = types.Order_CLOSED
+		} else {
+			order.State = types.Order_MATCHED
+		}
+		if err := a.State().Order().Save(order); err != nil {
+			return tmtypes.ResponseDeliverTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  err.Error(),
+			}
 		}
 	}
 
@@ -290,8 +324,51 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseLease) tmt
 		}
 	}
 
-	lease.State = types.Lease_CLOSED
+	group, err := a.State().DeploymentGroup().Get(lease.Deployment, lease.Group)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+	if group == nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "group not found",
+		}
+	}
 
+	order, err := a.State().Order().Get(lease.Deployment, lease.Group, lease.Order)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+	if order == nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "order not found",
+		}
+	}
+
+	order.State = types.Order_CLOSED
+	if err := a.State().Order().Save(order); err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	group.State = types.DeploymentGroup_OPEN
+	if err := a.State().DeploymentGroup().Save(group); err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	lease.State = types.Lease_CLOSED
 	if err := a.State().Lease().Save(lease); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,

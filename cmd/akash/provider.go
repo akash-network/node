@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strconv"
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/context"
@@ -304,9 +305,9 @@ func doCloseFulfillmentCommand(ctx context.Context, cmd *cobra.Command, args []s
 func closeLeaseCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "closel",
+		Use:   "closel <deployment> <group> <order> <provider>",
 		Short: "close an active lease",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(4),
 		RunE:  context.WithContext(context.RequireNode(doCloseLeaseCommand)),
 	}
 
@@ -326,13 +327,30 @@ func doCloseLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string)
 		return err
 	}
 
-	lease := new(base.Bytes)
-	if err := lease.DecodeString(args[0]); err != nil {
+	deployment := new(base.Bytes)
+	if err := deployment.DecodeString(args[0]); err != nil {
 		return err
 	}
 
+	group, err := strconv.ParseUint(args[1], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	order, err := strconv.ParseUint(args[2], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	provider := new(base.Bytes)
+	if err := provider.DecodeString(args[3]); err != nil {
+		return err
+	}
+
+	lease := state.LeaseID(*deployment, group, order, *provider)
+
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCloseLease{
-		Lease: *lease,
+		Lease: lease,
 	})
 	if err != nil {
 		return err
