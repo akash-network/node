@@ -26,6 +26,7 @@ const (
 
 	TagAppLease       = "lease"
 	TxTypeCreateLease = "lease-create"
+	TxTypeCloseLease  = "lease-clode"
 
 	TagAppProvider       = "provider"
 	TxTypeProviderCreate = "provider-create"

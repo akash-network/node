@@ -33,6 +33,7 @@ message TxPayload {
     TxCreateProvider         txCreateProvider         = 7;
     TxCloseDeployment        txCloseDeployment        = 8;
     TxCloseFulfillment       txCloseFulfillment       = 9;
+    TxCloseLease             txCloseLease             = 10;
   }
 }
 /* END GLOBAL */
@@ -317,6 +318,10 @@ message TxCreateLease {
   uint32 price = 5;
 
   /* END ID FIELDS */
+}
+
+message TxCloseLease {
+  bytes lease = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 }
 
 message Leases {

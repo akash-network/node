@@ -19,6 +19,11 @@ func (_m *Handler) OnTxCloseFulfillment(_a0 *types.TxCloseFulfillment) {
 	_m.Called(_a0)
 }
 
+// OnTxCloseLease provides a mock function with given fields: _a0
+func (_m *Handler) OnTxCloseLease(_a0 *types.TxCloseLease) {
+	_m.Called(_a0)
+}
+
 // OnTxCreateDeployment provides a mock function with given fields: _a0
 func (_m *Handler) OnTxCreateDeployment(_a0 *types.TxCreateDeployment) {
 	_m.Called(_a0)

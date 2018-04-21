@@ -37,6 +37,8 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	switch tx.(type) {
 	case *types.TxPayload_TxCreateLease:
 		return true
+	case *types.TxPayload_TxCloseLease:
+		return true
 	}
 	return false
 }
@@ -45,6 +47,9 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateLease:
 		resp, _ := a.doCheckCreateTx(ctx, tx.TxCreateLease)
+		return resp
+	case *types.TxPayload_TxCloseLease:
+		resp, _ := a.doCheckCloseTx(ctx, tx.TxCloseLease)
 		return resp
 	}
 	return tmtypes.ResponseCheckTx{
@@ -57,6 +62,8 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateLease:
 		return a.doDeliverCreateTx(ctx, tx.TxCreateLease)
+	case *types.TxPayload_TxCloseLease:
+		return a.doDeliverCloseTx(ctx, tx.TxCloseLease)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -234,6 +241,65 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) t
 
 	tags := apptypes.NewTags(a.Name(), apptypes.TxTypeCreateLease)
 	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameDeployment), Value: lease.Deployment})
+	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: state.IDForLease(lease)})
+
+	return tmtypes.ResponseDeliverTx{
+		Tags: tags,
+	}
+}
+
+func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseLease) (tmtypes.ResponseCheckTx, *types.Lease) {
+	if tx.Lease == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "empty lease",
+		}, nil
+	}
+
+	// lookup provider
+	lease, err := a.State().Lease().GetByKey(tx.Lease)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}, nil
+	}
+	if lease == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "lease not found",
+		}, nil
+	}
+
+	if lease.State != types.Lease_ACTIVE {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "lease not active",
+		}, nil
+	}
+
+	return tmtypes.ResponseCheckTx{}, lease
+}
+
+func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseLease) tmtypes.ResponseDeliverTx {
+	cresp, lease := a.doCheckCloseTx(ctx, tx)
+	if !cresp.IsOK() {
+		return tmtypes.ResponseDeliverTx{
+			Code: cresp.Code,
+			Log:  cresp.Log,
+		}
+	}
+
+	lease.State = types.Lease_CLOSED
+
+	if err := a.State().Lease().Save(lease); err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	tags := apptypes.NewTags(a.Name(), apptypes.TxTypeCloseLease)
 	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: state.IDForLease(lease)})
 
 	return tmtypes.ResponseDeliverTx{

@@ -36,6 +36,7 @@ func providerCommand() *cobra.Command {
 	cmd.AddCommand(createProviderCommand())
 	cmd.AddCommand(runCommand())
 	cmd.AddCommand(closeFulfillmentCommand())
+	cmd.AddCommand(closeLeaseCommand())
 
 	return cmd
 }
@@ -281,6 +282,57 @@ func doCloseFulfillmentCommand(ctx context.Context, cmd *cobra.Command, args []s
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCloseFulfillment{
 		Fulfillment: *fulfillment,
+	})
+	if err != nil {
+		return err
+	}
+
+	result, err := ctx.Client().BroadcastTxCommit(tx)
+	if err != nil {
+		return err
+	}
+	if result.CheckTx.IsErr() {
+		return errors.New(result.CheckTx.GetLog())
+	}
+	if result.DeliverTx.IsErr() {
+		return errors.New(result.DeliverTx.GetLog())
+	}
+
+	return nil
+}
+
+func closeLeaseCommand() *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:   "closel",
+		Short: "close an active lease",
+		Args:  cobra.ExactArgs(1),
+		RunE:  context.WithContext(context.RequireNode(doCloseLeaseCommand)),
+	}
+
+	context.AddFlagKeyType(cmd, cmd.Flags())
+
+	return cmd
+}
+
+func doCloseLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+	signer, _, err := ctx.Signer()
+	if err != nil {
+		return err
+	}
+
+	nonce, err := ctx.Nonce()
+	if err != nil {
+		return err
+	}
+
+	lease := new(base.Bytes)
+	if err := lease.DecodeString(args[0]); err != nil {
+		return err
+	}
+
+	tx, err := txutil.BuildTx(signer, nonce, &types.TxCloseLease{
+		Lease: *lease,
 	})
 	if err != nil {
 		return err
