@@ -1,5 +1,5 @@
-hash: 84e5eba7ca463f874ed89ddbcc7d13338c0280ba3ab6de443fd7079a3e0ef23a
-updated: 2018-04-21T09:30:16.393928864-07:00
+hash: 1d1c67f89c1fe0eee9635a0d0bdd08bbef90d56319772e0af769b23ba33c01de
+updated: 2018-03-28T00:20:20.172351076-07:00
 imports:
 - name: github.com/btcsuite/btcd
   version: 2be2f12b358dc57d70b8f501b00be450192efbc3
@@ -91,7 +91,7 @@ imports:
 - name: github.com/spf13/pflag
   version: ee5fd03fd6acfd43e44aea0b4135958546ed8e73
 - name: github.com/spf13/viper
-  version: aafc9e6bc7b7bb53ddaa75a5ef49a17d6e654be5
+  version: b5e8006cbee93ec955a89ab31e0e3ce3204f3736
 - name: github.com/stretchr/objx
   version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
 - name: github.com/stretchr/testify
@@ -128,8 +128,6 @@ imports:
   subpackages:
   - edwards25519
   - extra25519
-- name: github.com/tendermint/go-amino
-  version: e17a517177f14c7264661c6d9e4bfadd62fee989
 - name: github.com/tendermint/go-crypto
   version: c3e19f3ea26f5c3357e0bcbb799b0761ef923755
   subpackages:
@@ -138,14 +136,13 @@ imports:
   - keys/words
   - keys/words/wordlist
 - name: github.com/tendermint/go-wire
-  version: fa721242b042ecd4c6ed1a934ee740db4f74e45c
+  version: b8470691aa56b059e06dbfced95a4a21a407df81
   subpackages:
   - data
-  - data/base58
 - name: github.com/tendermint/iavl
   version: fd37a0fa3a7454423233bc3d5ea828f38e0af787
 - name: github.com/tendermint/tendermint
-  version: ece3f678da00de1c171e29f5f10afe88bfa416ec
+  version: 6f9956990c444d53f62f2a3905ed410cfe9afe77
   subpackages:
   - blockchain
   - config
@@ -176,6 +173,7 @@ imports:
   - types
   - types/priv_validator
   - version
+  - wire
 - name: github.com/tendermint/tmlibs
   version: 24da7009c3d8c019b40ba4287495749e3160caca
   subpackages:
@@ -251,5 +249,5 @@ imports:
   - tap
   - transport
 - name: gopkg.in/yaml.v2
-  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
+  version: 86f5ed62f8a0ee96bd888d2efdfd6d4fb100a4eb
 testImports: []
