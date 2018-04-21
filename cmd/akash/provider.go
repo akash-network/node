@@ -14,7 +14,6 @@ import (
 	"github.com/ovrclk/akash/marketplace"
 	qp "github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/state"
-	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
@@ -128,31 +127,18 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 
 func parseProvider(file string, nonce uint64) (*[]types.ProviderAttribute, error) {
 
-	testutil.at
-
-	// read in file
 	contents, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
 
-	print(string(contents))
-
-	// marshal to object
-	attributes := &types.ProviderAttributes{}
+	attributes := &[]types.ProviderAttribute{}
 	err = yaml.Unmarshal([]byte(contents), attributes)
 	if err != nil {
 		return nil, err
 	}
 
-	println("attributes", attributes.String())
-
-	attrs := []types.ProviderAttribute{}
-	for _, attr := range attributes.Attributes {
-		attrs = append(attrs, attr)
-	}
-
-	return &attrs, nil
+	return attributes, nil
 }
 
 func runCommand() *cobra.Command {

@@ -96,11 +96,6 @@ message ProviderAttribute {
   string value = 2;
 }
 
-message ProviderAttributes {
-  option (gogoproto.compare) = true;
-  repeated ProviderAttribute attributes = 1 [(gogoproto.nullable) = false];
-}
-
 message GroupSpec {
   repeated ProviderAttribute requirements = 1 [(gogoproto.nullable) = false];
   repeated ResourceGroup     resources    = 2 [(gogoproto.nullable) = false];

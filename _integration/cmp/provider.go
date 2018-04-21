@@ -14,7 +14,7 @@ func providerCreate(root vars.Ref, key vars.Ref, paddr vars.Ref) gestalt.Compone
 
 	return g.Group("provider-create").
 		Run(
-			akash_(root, "create", "provider", "create", "unused.yml", "-k", key.Name()).
+			akash_(root, "create", "provider", "create", "attributes.yaml", "-k", key.Name()).
 				FN(g.Capture(paddr.Name())).
 				WithMeta(g.Export(paddr.Name()))).
 		Run(g.Retry(5).Run(check)).
