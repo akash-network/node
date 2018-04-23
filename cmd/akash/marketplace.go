@@ -63,5 +63,8 @@ func marketplaceMonitorHandler() marketplace.Handler {
 		OnTxCloseFulfillment(func(tx *types.TxCloseFulfillment) {
 			fmt.Printf("FULFILLMENT CLOSED\t%v\n", X(tx.Fulfillment))
 		}).
+		OnTxCloseLease(func(tx *types.TxCloseLease) {
+			fmt.Printf("LEASE CLOSED\t%v\n", X(tx.Lease))
+		}).
 		Create()
 }
