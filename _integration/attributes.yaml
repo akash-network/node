@@ -1,0 +1,4 @@
+- name: region
+  value:  us-west
+- name: tier
+  value:  "5"

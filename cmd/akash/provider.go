@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"strconv"
 
@@ -14,12 +15,12 @@ import (
 	"github.com/ovrclk/akash/marketplace"
 	qp "github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/state"
-	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	. "github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 )
 
 func providerCommand() *cobra.Command {
@@ -101,7 +102,7 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateProvider{
 		Owner:      key.Address(),
-		Attributes: attributes,
+		Attributes: *attributes,
 		Nonce:      nonce,
 	})
 	if err != nil {
@@ -126,14 +127,20 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 	return nil
 }
 
-func parseProvider(file string, nonce uint64) ([]types.ProviderAttribute, error) {
-	// todo: read and parse deployment yaml file
+func parseProvider(file string, nonce uint64) (*[]types.ProviderAttribute, error) {
 
-	/* begin stub data */
-	provider := testutil.Provider(*new(base.Bytes), nonce)
-	/* end stub data */
+	contents, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
 
-	return provider.Attributes, nil
+	attributes := &[]types.ProviderAttribute{}
+	err = yaml.Unmarshal([]byte(contents), attributes)
+	if err != nil {
+		return nil, err
+	}
+
+	return attributes, nil
 }
 
 func runCommand() *cobra.Command {

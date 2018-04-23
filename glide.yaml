@@ -34,3 +34,6 @@ import:
   - require
   - assert
   - mock
+
+- package: gopkg.in/yaml.v2
+  version: v2.2.1
