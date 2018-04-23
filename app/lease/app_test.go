@@ -84,12 +84,25 @@ func TestValidTx(t *testing.T) {
 		require.True(t, resp.IsOK())
 		lea := new(types.Lease)
 		require.NoError(t, lea.Unmarshal(resp.Value))
-
 		assert.Equal(t, lease.Deployment, lea.Deployment)
 		assert.Equal(t, lease.Group, lea.Group)
 		assert.Equal(t, lease.Order, lea.Order)
 		assert.Equal(t, lease.Provider, lea.Provider)
 		assert.Equal(t, lease.Price, lea.Price)
+		assert.Equal(t, types.Lease_ACTIVE, lea.State)
+	}
+
+	// close lease
+	leaseAddr := state.Lease().IDFor(lease)
+	testutil.CloseLease(t, app, leaseAddr, &pkey)
+	{
+		path := query.LeasePath(lease.Deployment, lease.Group, lease.Order, lease.Provider)
+		resp := app.Query(tmtypes.RequestQuery{Path: path})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+		lea := new(types.Lease)
+		require.NoError(t, lea.Unmarshal(resp.Value))
+		assert.Equal(t, types.Lease_CLOSED, lea.State)
 	}
 }
 
