@@ -59,15 +59,15 @@ func TestValidTx(t *testing.T) {
 	dapp, err := dapp.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	tnonce := uint64(1)
-	deployment, groups := testutil.CreateDeployment(t, dapp, taccount, &tkey, tnonce)
-	groupSeq := groups.GetItems()[0].Seq
+	testutil.CreateDeployment(t, dapp, taccount, &tkey, tnonce)
+	groupSeq := uint64(1)
 	daddress := state_.DeploymentAddress(taccount.Address, tnonce)
 
 	// create order
 	oapp, err := oapp.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	oSeq := uint64(0)
-	testutil.CreateOrder(t, oapp, taccount, &tkey, deployment.Address, groupSeq, oSeq)
+	testutil.CreateOrder(t, oapp, taccount, &tkey, daddress, groupSeq, oSeq)
 	price := uint32(0)
 
 	// create fulfillment
@@ -84,12 +84,25 @@ func TestValidTx(t *testing.T) {
 		require.True(t, resp.IsOK())
 		lea := new(types.Lease)
 		require.NoError(t, lea.Unmarshal(resp.Value))
-
 		assert.Equal(t, lease.Deployment, lea.Deployment)
 		assert.Equal(t, lease.Group, lea.Group)
 		assert.Equal(t, lease.Order, lea.Order)
 		assert.Equal(t, lease.Provider, lea.Provider)
 		assert.Equal(t, lease.Price, lea.Price)
+		assert.Equal(t, types.Lease_ACTIVE, lea.State)
+	}
+
+	// close lease
+	leaseAddr := state.Lease().IDFor(lease)
+	testutil.CloseLease(t, app, leaseAddr, &pkey)
+	{
+		path := query.LeasePath(lease.Deployment, lease.Group, lease.Order, lease.Provider)
+		resp := app.Query(tmtypes.RequestQuery{Path: path})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+		lea := new(types.Lease)
+		require.NoError(t, lea.Unmarshal(resp.Value))
+		assert.Equal(t, types.Lease_CLOSED, lea.State)
 	}
 }
 
@@ -126,15 +139,15 @@ func TestBilling(t *testing.T) {
 	dapp, err := dapp.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	tnonce := uint64(1)
-	deployment, groups := testutil.CreateDeployment(t, dapp, tenant, &tkey, tnonce)
-	groupSeq := groups.GetItems()[0].Seq
+	testutil.CreateDeployment(t, dapp, tenant, &tkey, tnonce)
+	groupSeq := uint64(1)
 	daddress := state_.DeploymentAddress(tenant.Address, tnonce)
 
 	// create order
 	oapp, err := oapp.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	oSeq := uint64(0)
-	testutil.CreateOrder(t, oapp, tenant, &tkey, deployment.Address, groupSeq, oSeq)
+	testutil.CreateOrder(t, oapp, tenant, &tkey, daddress, groupSeq, oSeq)
 	price := uint32(1)
 	p := uint64(price)
 
