@@ -70,7 +70,7 @@ func (m *monitor) runListener(ch <-chan interface{}, h Handler) {
 			continue
 		}
 
-		evt, ok := ed.Unwrap().(tmtmtypes.EventDataTx)
+		evt, ok := ed.(tmtmtypes.EventDataTx)
 		if !ok {
 			continue
 		}

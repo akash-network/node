@@ -6,6 +6,7 @@ import (
 
 	"github.com/ovrclk/akash/types"
 	tmtypes "github.com/tendermint/tendermint/types"
+	privval "github.com/tendermint/tendermint/types/priv_validator"
 )
 
 const (
@@ -86,7 +87,7 @@ func (b *builder) generatePrivateValidators() []tmtypes.PrivValidator {
 	validators := make([]tmtypes.PrivValidator, 0, b.count)
 
 	for i := uint(0); i < b.count; i++ {
-		validators = append(validators, tmtypes.GenPrivValidatorFS(""))
+		validators = append(validators, privval.GenFilePV(""))
 	}
 	return validators
 }

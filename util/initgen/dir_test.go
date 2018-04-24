@@ -1,12 +1,12 @@
 package initgen_test
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
 
+	"github.com/ovrclk/akash/node"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/util/initgen"
 	"github.com/stretchr/testify/assert"
@@ -36,8 +36,8 @@ func TestDirWriter(t *testing.T) {
 		buf, err := ioutil.ReadFile(path)
 		require.NoError(t, err)
 
-		obj := new(tmtypes.GenesisDoc)
-		require.NoError(t, json.Unmarshal(buf, obj))
+		obj, err := tmtypes.GenesisDocFromJSON(buf)
+		require.NoError(t, err)
 
 		require.Equal(t, ctx.Genesis().Validators, obj.Validators)
 	}
@@ -46,11 +46,8 @@ func TestDirWriter(t *testing.T) {
 		path := path.Join(basedir, initgen.ConfigDir, initgen.PrivateValidatorFilename)
 		assert.FileExists(t, path)
 
-		buf, err := ioutil.ReadFile(path)
+		obj, err := node.PVFromFile(path)
 		require.NoError(t, err)
-
-		obj := new(tmtypes.PrivValidatorFS)
-		require.NoError(t, json.Unmarshal(buf, obj))
 		require.Equal(t, ctx.PrivateValidators()[0].GetPubKey(), obj.GetPubKey())
 	}
 }

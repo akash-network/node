@@ -46,7 +46,7 @@ func TestCreateTx(t *testing.T) {
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
 
-	depl, groups := testutil.CreateDeployment(t, app, account, &key, nonce)
+	depl, groups := testutil.CreateDeployment(t, app, account, key, nonce)
 
 	{
 		path := query.DeploymentPath(depl.Address)
@@ -119,7 +119,7 @@ func TestTx_BadTxType(t *testing.T) {
 	app, err := deployment.NewApp(state_, testutil.Logger())
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state_)
-	tx := testutil.ProviderTx(account, &key, 10)
+	tx := testutil.ProviderTx(account, key, 10)
 	ctx := apptypes.NewContext(tx)
 	assert.False(t, app.AcceptTx(ctx, tx.Payload.Payload))
 	cresp := app.CheckTx(ctx, tx.Payload.Payload)
@@ -136,7 +136,7 @@ func TestCloseTx_1(t *testing.T) {
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
 
-	depl, _ := testutil.CreateDeployment(t, app, account, &key, nonce)
+	depl, _ := testutil.CreateDeployment(t, app, account, key, nonce)
 
 	check := func(
 		dstate types.Deployment_DeploymentState,
@@ -147,7 +147,7 @@ func TestCloseTx_1(t *testing.T) {
 
 	check(types.Deployment_ACTIVE, types.DeploymentGroup_OPEN)
 
-	testutil.CloseDeployment(t, app, &depl.Address, &key)
+	testutil.CloseDeployment(t, app, &depl.Address, key)
 
 	check(types.Deployment_CLOSED, types.DeploymentGroup_CLOSED)
 }
@@ -165,12 +165,12 @@ func TestCloseTx_2(t *testing.T) {
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
 
-	depl, _ := testutil.CreateDeployment(t, app, account, &key, nonce)
+	depl, _ := testutil.CreateDeployment(t, app, account, key, nonce)
 
 	oapp, err := order.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 
-	testutil.CreateOrder(t, oapp, account, &key, depl.Address, gseq, oseq)
+	testutil.CreateOrder(t, oapp, account, key, depl.Address, gseq, oseq)
 
 	check := func(
 		dstate types.Deployment_DeploymentState,
@@ -183,7 +183,7 @@ func TestCloseTx_2(t *testing.T) {
 
 	check(types.Deployment_ACTIVE, types.DeploymentGroup_OPEN, types.Order_OPEN)
 
-	testutil.CloseDeployment(t, app, &depl.Address, &key)
+	testutil.CloseDeployment(t, app, &depl.Address, key)
 
 	check(types.Deployment_CLOSED, types.DeploymentGroup_CLOSED, types.Order_CLOSED)
 }
@@ -201,17 +201,17 @@ func TestCloseTx_3(t *testing.T) {
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
-	depl, _ := testutil.CreateDeployment(t, app, account, &key, nonce)
+	depl, _ := testutil.CreateDeployment(t, app, account, key, nonce)
 
 	orderapp, err := order.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
-	testutil.CreateOrder(t, orderapp, account, &key, depl.Address, gseq, oseq)
+	testutil.CreateOrder(t, orderapp, account, key, depl.Address, gseq, oseq)
 
 	providerapp, err := provider.NewApp(state, testutil.Logger())
-	prov := testutil.CreateProvider(t, providerapp, account, &key, nonce)
+	prov := testutil.CreateProvider(t, providerapp, account, key, nonce)
 
 	fulfillmentapp, err := fulfillment.NewApp(state, testutil.Logger())
-	testutil.CreateFulfillment(t, fulfillmentapp, prov.Address, &key, depl.Address, gseq, oseq, price)
+	testutil.CreateFulfillment(t, fulfillmentapp, prov.Address, key, depl.Address, gseq, oseq, price)
 
 	check := func(
 		dstate types.Deployment_DeploymentState,
@@ -226,7 +226,7 @@ func TestCloseTx_3(t *testing.T) {
 
 	check(types.Deployment_ACTIVE, types.DeploymentGroup_OPEN, types.Order_OPEN, types.Fulfillment_OPEN)
 
-	testutil.CloseDeployment(t, app, &depl.Address, &key)
+	testutil.CloseDeployment(t, app, &depl.Address, key)
 
 	check(types.Deployment_CLOSED, types.DeploymentGroup_CLOSED, types.Order_CLOSED, types.Fulfillment_CLOSED)
 }
@@ -244,20 +244,20 @@ func TestCloseTx_4(t *testing.T) {
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
-	depl, _ := testutil.CreateDeployment(t, app, account, &key, nonce)
+	depl, _ := testutil.CreateDeployment(t, app, account, key, nonce)
 
 	orderapp, err := order.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
-	testutil.CreateOrder(t, orderapp, account, &key, depl.Address, gseq, oseq)
+	testutil.CreateOrder(t, orderapp, account, key, depl.Address, gseq, oseq)
 
 	providerapp, err := provider.NewApp(state, testutil.Logger())
-	prov := testutil.CreateProvider(t, providerapp, account, &key, nonce)
+	prov := testutil.CreateProvider(t, providerapp, account, key, nonce)
 
 	fulfillmentapp, err := fulfillment.NewApp(state, testutil.Logger())
-	testutil.CreateFulfillment(t, fulfillmentapp, prov.Address, &key, depl.Address, gseq, oseq, price)
+	testutil.CreateFulfillment(t, fulfillmentapp, prov.Address, key, depl.Address, gseq, oseq, price)
 
 	leaseapp, err := lease.NewApp(state, testutil.Logger())
-	testutil.CreateLease(t, leaseapp, prov.Address, &key, depl.Address, gseq, oseq, price)
+	testutil.CreateLease(t, leaseapp, prov.Address, key, depl.Address, gseq, oseq, price)
 
 	check := func(
 		dstate types.Deployment_DeploymentState,
@@ -274,7 +274,7 @@ func TestCloseTx_4(t *testing.T) {
 
 	check(types.Deployment_ACTIVE, types.DeploymentGroup_OPEN, types.Order_MATCHED, types.Fulfillment_OPEN, types.Lease_ACTIVE)
 
-	testutil.CloseDeployment(t, app, &depl.Address, &key)
+	testutil.CloseDeployment(t, app, &depl.Address, key)
 
 	check(types.Deployment_CLOSED, types.DeploymentGroup_CLOSED, types.Order_CLOSED, types.Fulfillment_CLOSED, types.Lease_CLOSED)
 }

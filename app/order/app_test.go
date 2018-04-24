@@ -57,10 +57,10 @@ func TestTx(t *testing.T) {
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state_)
 
-	deployment, groups := testutil.CreateDeployment(t, dapp, account, &key, 10)
+	deployment, groups := testutil.CreateDeployment(t, dapp, account, key, 10)
 
 	orderSeq := uint64(0)
-	testutil.CreateOrder(t, app, account, &key, deployment.Address, groups.GetItems()[0].Seq, orderSeq)
+	testutil.CreateOrder(t, app, account, key, deployment.Address, groups.GetItems()[0].Seq, orderSeq)
 
 	orders, err := state_.Order().ForGroup(groups.GetItems()[0])
 	require.NoError(t, err)
@@ -80,7 +80,7 @@ func TestTx_BadTxType(t *testing.T) {
 	app, err := order.NewApp(state_, testutil.Logger())
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state_)
-	tx := testutil.ProviderTx(account, &key, 10)
+	tx := testutil.ProviderTx(account, key, 10)
 	ctx := apptypes.NewContext(tx)
 	assert.False(t, app.AcceptTx(ctx, tx.Payload.Payload))
 	cresp := app.CheckTx(ctx, tx.Payload.Payload)

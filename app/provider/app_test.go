@@ -23,7 +23,7 @@ func TestProviderApp(t *testing.T) {
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
 
-	provider := testutil.CreateProvider(t, app, account, &key, nonce)
+	provider := testutil.CreateProvider(t, app, account, key, nonce)
 
 	{
 		assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: query.ProviderPath(provider.Address)}))

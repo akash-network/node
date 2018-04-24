@@ -1,12 +1,12 @@
 package initgen_test
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
 
+	"github.com/ovrclk/akash/node"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/util/initgen"
 	"github.com/stretchr/testify/assert"
@@ -41,13 +41,13 @@ func TestHelmWriter(t *testing.T) {
 
 	require.Equal(t, hobj.Node.Name, ctx.Name())
 
-	gobj := new(tmtypes.GenesisDoc)
-	require.NoError(t, json.Unmarshal([]byte(hobj.Node.Genesis), gobj))
+	gobj, err := tmtypes.GenesisDocFromJSON([]byte(hobj.Node.Genesis))
+	require.NoError(t, err)
 
 	require.Equal(t, ctx.Genesis().Validators, gobj.Validators)
 
-	pobj := new(tmtypes.PrivValidatorFS)
-	require.NoError(t, json.Unmarshal([]byte(hobj.Node.Validator), pobj))
+	pobj, err := node.PVFromJSON([]byte(hobj.Node.Validator))
+	require.NoError(t, err)
 	require.Equal(t, ctx.PrivateValidators()[0].GetPubKey(), pobj.GetPubKey())
 }
 

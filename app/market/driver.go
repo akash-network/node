@@ -136,7 +136,7 @@ func (d *driver) onEvent(evt interface{}) {
 		return
 	}
 
-	edrs, ok := tmed.Unwrap().(tmtmtypes.EventDataRoundState)
+	edrs, ok := tmed.(tmtmtypes.EventDataRoundState)
 	if !ok {
 		d.log.Error("bad event data type", "type", fmt.Sprintf("%T", tmed))
 		return

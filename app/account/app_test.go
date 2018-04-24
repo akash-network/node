@@ -94,7 +94,7 @@ func TestTx_BadTxType(t *testing.T) {
 	app, err := account.NewApp(state_, testutil.Logger())
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state_)
-	tx := testutil.ProviderTx(account, &key, 10)
+	tx := testutil.ProviderTx(account, key, 10)
 	ctx := apptypes.NewContext(tx)
 	assert.False(t, app.AcceptTx(ctx, tx.Payload.Payload))
 	cresp := app.CheckTx(ctx, tx.Payload.Payload)

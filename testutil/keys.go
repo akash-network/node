@@ -25,7 +25,7 @@ func KeyManager(t *testing.T) keys.Keybase {
 }
 
 func PrivateKey(t *testing.T) crypto.PrivKey {
-	return crypto.GenPrivKeyEd25519().Wrap()
+	return crypto.GenPrivKeyEd25519()
 }
 
 func PublicKey(t *testing.T) crypto.PubKey {

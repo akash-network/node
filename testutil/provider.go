@@ -12,7 +12,7 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 )
 
-func CreateProvider(t *testing.T, app apptypes.Application, account *types.Account, key *crypto.PrivKey, nonce uint64) *types.Provider {
+func CreateProvider(t *testing.T, app apptypes.Application, account *types.Account, key crypto.PrivKey, nonce uint64) *types.Provider {
 	tx := ProviderTx(account, key, nonce)
 	ctx := apptypes.NewContext(tx)
 	assert.True(t, app.AcceptTx(ctx, tx.Payload.Payload))
@@ -28,7 +28,7 @@ func CreateProvider(t *testing.T, app apptypes.Application, account *types.Accou
 	}
 }
 
-func ProviderTx(account *types.Account, key *crypto.PrivKey, nonce uint64) *types.Tx {
+func ProviderTx(account *types.Account, key crypto.PrivKey, nonce uint64) *types.Tx {
 	provider := Provider(account.Address, nonce)
 	return &types.Tx{
 		Key: key.PubKey().Bytes(),

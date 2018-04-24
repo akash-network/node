@@ -11,7 +11,7 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 )
 
-func CreateLease(t *testing.T, app apptypes.Application, provider base.Bytes, key *crypto.PrivKey, deployment base.Bytes, group, order uint64, price uint32) *types.Lease {
+func CreateLease(t *testing.T, app apptypes.Application, provider base.Bytes, key crypto.PrivKey, deployment base.Bytes, group, order uint64, price uint32) *types.Lease {
 	lease := Lease(provider, deployment, group, order, price)
 
 	tx := &types.TxPayload_TxCreateLease{
@@ -40,7 +40,7 @@ func CreateLease(t *testing.T, app apptypes.Application, provider base.Bytes, ke
 	return lease
 }
 
-func CloseLease(t *testing.T, app apptypes.Application, lease base.Bytes, key *crypto.PrivKey) {
+func CloseLease(t *testing.T, app apptypes.Application, lease base.Bytes, key crypto.PrivKey) {
 	tx := &types.TxPayload_TxCloseLease{
 		TxCloseLease: &types.TxCloseLease{
 			Lease: lease,

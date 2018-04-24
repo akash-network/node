@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-crypto/keys"
 )
 
@@ -39,10 +38,10 @@ func parseFlagKeyType(flags *pflag.FlagSet) (keys.CryptoAlgo, error) {
 		return "", err
 	}
 
-	switch ktype {
-	case crypto.NameEd25519:
+	switch keys.CryptoAlgo(ktype) {
+	case keys.AlgoEd25519:
 		return keys.AlgoEd25519, nil
-	case crypto.NameSecp256k1:
+	case keys.AlgoSecp256k1:
 		return keys.AlgoSecp256k1, nil
 	default:
 		return "", fmt.Errorf("unknown key type: %v", ktype)

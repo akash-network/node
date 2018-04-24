@@ -1,12 +1,12 @@
 package initgen
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 
+	"github.com/ovrclk/akash/node"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -40,14 +40,14 @@ type helmWriter struct {
 
 func (w helmWriter) Write() error {
 
-	gbuf, err := json.MarshalIndent(w.ctx.Genesis(), "", "  ")
+	gbuf, err := node.TMGenesisToJSON(w.ctx.Genesis())
 	if err != nil {
 		return err
 	}
 
 	var vbuf []byte
 	if len(w.ctx.PrivateValidators()) > 0 {
-		vbuf, err = json.MarshalIndent(w.ctx.PrivateValidators()[0], "", "  ")
+		vbuf, err = node.PVToJSON(w.ctx.PrivateValidators()[0])
 		if err != nil {
 			return err
 		}

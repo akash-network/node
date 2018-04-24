@@ -21,7 +21,7 @@ func RandUint64() uint64 {
 	return uint64(rand.Int63n(100))
 }
 
-func CreateDeployment(t *testing.T, app apptypes.Application, account *types.Account, key *crypto.PrivKey, nonce uint64) (*types.Deployment, *types.DeploymentGroups) {
+func CreateDeployment(t *testing.T, app apptypes.Application, account *types.Account, key crypto.PrivKey, nonce uint64) (*types.Deployment, *types.DeploymentGroups) {
 	deployment := Deployment(account.Address, nonce)
 	groups := DeploymentGroups(deployment.Address, nonce)
 	ttl := int64(5)
@@ -60,7 +60,7 @@ func CreateDeployment(t *testing.T, app apptypes.Application, account *types.Acc
 	return deployment, groups
 }
 
-func CloseDeployment(t *testing.T, app apptypes.Application, deployment *base.Bytes, key *crypto.PrivKey) {
+func CloseDeployment(t *testing.T, app apptypes.Application, deployment *base.Bytes, key crypto.PrivKey) {
 
 	tx := &types.TxPayload_TxCloseDeployment{
 		TxCloseDeployment: &types.TxCloseDeployment{

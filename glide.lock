@@ -1,8 +1,8 @@
-hash: 1d1c67f89c1fe0eee9635a0d0bdd08bbef90d56319772e0af769b23ba33c01de
-updated: 2018-03-28T00:20:20.172351076-07:00
+hash: 003bda9cde013020cb5b98e58cd736e7107494697241e485a90ccdfcee056492
+updated: 2018-04-24T14:40:37.276378948-07:00
 imports:
 - name: github.com/btcsuite/btcd
-  version: 2be2f12b358dc57d70b8f501b00be450192efbc3
+  version: 675abc5df3c5531bc741b56a765e35623459da6d
   subpackages:
   - btcec
 - name: github.com/davecgh/go-spew
@@ -11,6 +11,10 @@ imports:
   - spew
 - name: github.com/ebuchman/fail-test
   version: 95f809107225be108efcf10a3509e4ea6ceef3c4
+- name: github.com/emirpasic/gods
+  version: f6c17b524822278a87e3b3bd809fec33b51f5b46
+  subpackages:
+  - trees/avltree
 - name: github.com/fsnotify/fsnotify
   version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: github.com/go-kit/kit
@@ -33,7 +37,7 @@ imports:
   - sortkeys
   - types
 - name: github.com/golang/protobuf
-  version: bbd03ef6da3a115852eaf24c8a1c46aeb39aa175
+  version: e09c5db296004fbe3f74490e84dcd62c3c5ddb1b
   subpackages:
   - proto
   - ptypes
@@ -45,9 +49,9 @@ imports:
 - name: github.com/gorilla/mux
   version: 53c1911da2b537f792e7cafcb446b05ffe33b996
 - name: github.com/gorilla/websocket
-  version: eb925808374e5ca90c83401a40d711dc08c0c0f6
+  version: 21ab95fa12b9bdd8fecf5fa3586aad941cc98785
 - name: github.com/hashicorp/hcl
-  version: f40e974e75af4e271d97ce0fc917af5898ae7bda
+  version: ef8a98b0bbce4a65b5aa4c368430a80ddc533168
   subpackages:
   - hcl/ast
   - hcl/parser
@@ -83,19 +87,19 @@ imports:
 - name: github.com/sirupsen/logrus
   version: c155da19408a8799da419ed3eeb0cb5db0ad5dbc
 - name: github.com/spf13/afero
-  version: a880a37ed1804d98f64b3b7d58b5e3f8fbf421c4
+  version: 63644898a8da0bc22138abf860edaf5277b6102e
   subpackages:
   - mem
 - name: github.com/spf13/cast
   version: 8965335b8c7107321228e3e3702cab9832751bac
 - name: github.com/spf13/cobra
-  version: a1f051bc3eba734da4772d60e2d677f47cf93ef4
+  version: 0ab5b6bcfcde193577634059f6f211c850a456ec
 - name: github.com/spf13/jwalterweatherman
   version: 7c0cea34c8ece3fbeb2b27ab9b59511d360fb394
 - name: github.com/spf13/pflag
-  version: ee5fd03fd6acfd43e44aea0b4135958546ed8e73
+  version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/spf13/viper
-  version: b5e8006cbee93ec955a89ab31e0e3ce3204f3736
+  version: 8dc2790b029dc41e2b8ff772c63c26adbb1db70d
 - name: github.com/stretchr/objx
   version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
 - name: github.com/stretchr/testify
@@ -105,7 +109,7 @@ imports:
   - mock
   - require
 - name: github.com/syndtr/goleveldb
-  version: 169b1b37be738edb2813dab48c97a549bcf99bb5
+  version: 714f901b98fdb3aa954b4193d8cbd64a28d80cad
   subpackages:
   - leveldb
   - leveldb/cache
@@ -120,7 +124,8 @@ imports:
   - leveldb/table
   - leveldb/util
 - name: github.com/tendermint/abci
-  version: c62aed95f2ce399ec815b0cafe478af002cdc4e6
+  version: 78a8905690ef54f9d57e3b2b0ee7ad3a04ef3f1f
+  repo: https://github.com/ovrclk/abci.git
   subpackages:
   - client
   - example/code
@@ -132,8 +137,12 @@ imports:
   subpackages:
   - edwards25519
   - extra25519
+- name: github.com/tendermint/go-amino
+  version: e17a517177f14c7264661c6d9e4bfadd62fee989
+  repo: https://github.com/ovrclk/go-amino.git
 - name: github.com/tendermint/go-crypto
-  version: c3e19f3ea26f5c3357e0bcbb799b0761ef923755
+  version: 915416979bf70efa4bcbf1c6cd5d64c5fff9fc19
+  repo: https://github.com/ovrclk/go-crypto.git
   subpackages:
   - keys
   - keys/bcrypt
@@ -141,12 +150,13 @@ imports:
   - keys/words/wordlist
 - name: github.com/tendermint/go-wire
   version: b8470691aa56b059e06dbfced95a4a21a407df81
-  subpackages:
-  - data
+  repo: https://github.com/ovrclk/go-wire.git
 - name: github.com/tendermint/iavl
   version: fd37a0fa3a7454423233bc3d5ea828f38e0af787
+  repo: https://github.com/ovrclk/iavl.git
 - name: github.com/tendermint/tendermint
-  version: 6f9956990c444d53f62f2a3905ed410cfe9afe77
+  version: 536107343948c164555b83a3ea9d10b8840eaf3e
+  repo: https://github.com/ovrclk/tendermint.git
   subpackages:
   - blockchain
   - config
@@ -177,9 +187,9 @@ imports:
   - types
   - types/priv_validator
   - version
-  - wire
 - name: github.com/tendermint/tmlibs
-  version: 24da7009c3d8c019b40ba4287495749e3160caca
+  version: cc5f287c4798ffe88c04d02df219ecb6932080fd
+  repo: https://github.com/ovrclk/tmlibs.git
   subpackages:
   - autofile
   - clist
@@ -191,7 +201,7 @@ imports:
   - pubsub
   - pubsub/query
 - name: golang.org/x/crypto
-  version: 88942b9c40a4c9d203b82b3731787b672d6e809b
+  version: 2b6c08872f4b66da917bb4ce98df4f0307330f78
   subpackages:
   - blowfish
   - curve25519
@@ -203,9 +213,10 @@ imports:
   - ripemd160
   - salsa20/salsa
 - name: golang.org/x/net
-  version: 6078986fec03a1dcc236c34816c71b0e05018fda
+  version: 5f9ae10d9af5b1c89ae6904293b14b064d4ada23
   subpackages:
   - context
+  - http/httpguts
   - http2
   - http2/hpack
   - idna
@@ -213,26 +224,27 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 13d03a9a82fba647c21a0ef8fba44a795d0f0835
+  version: 79b0c6888797020a994db17c8510466c72fe75d9
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: ece95c760240037f89ebcbdd7155ac8cb52e38fa
+  version: 7922cc490dd5a7dbaa7fd5d6196b49db59ac042f
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: ab0870e398d5dd054b868c0db1481ab029b9a9f2
+  version: 7fd901a49ba6a7f87732eb344f6e3c5b19d1b200
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: f72b28a6d170d0938afd483331ba4e5d733785ae
+  version: 9c2d308aed40f7e6283473d59966e5c19cb744f4
   subpackages:
   - balancer
   - balancer/base
   - balancer/roundrobin
+  - channelz
   - codes
   - connectivity
   - credentials
@@ -253,5 +265,5 @@ imports:
   - tap
   - transport
 - name: gopkg.in/yaml.v2
-  version: 86f5ed62f8a0ee96bd888d2efdfd6d4fb100a4eb
+  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 testImports: []

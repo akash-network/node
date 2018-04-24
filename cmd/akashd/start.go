@@ -12,6 +12,7 @@ import (
 	tmnode "github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/proxy"
 	tmtypes "github.com/tendermint/tendermint/types"
+	privval "github.com/tendermint/tendermint/types/priv_validator"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/log"
 )
@@ -68,7 +69,7 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	pvalidator := tmtypes.LoadOrGenPrivValidatorFS(cfg.PrivValidatorFile())
+	pvalidator := privval.LoadOrGenFilePV(cfg.PrivValidatorFile())
 	ccreator := proxy.NewLocalClientCreator(app)
 	dbprovider := tmnode.DefaultDBProvider
 

@@ -27,9 +27,9 @@ func doStatusCommand(ctx context.Context, cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	fmt.Printf("Block: %v\nBlock Hash: %v\n", result.LatestBlockHeight, result.LatestBlockHash)
+	fmt.Printf("Block: %v\nBlock Hash: %v\n", result.SyncInfo.LatestBlockHeight, result.SyncInfo.LatestBlockHash)
 
-	if result.LatestBlockHeight == 0 {
+	if result.SyncInfo.LatestBlockHeight == 0 {
 		os.Exit(1)
 	}
 

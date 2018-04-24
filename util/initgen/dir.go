@@ -1,11 +1,11 @@
 package initgen
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
+
+	"github.com/ovrclk/akash/node"
 )
 
 const (
@@ -55,13 +55,13 @@ func (w dirWriter) Write() error {
 
 	if len(w.ctx.PrivateValidators()) > 0 {
 		fpath := path.Join(w.basedir(), PrivateValidatorFilename)
-		if err := writeObj(fpath, 0400, w.ctx.PrivateValidators()[0]); err != nil {
+		if err := node.PVToFile(fpath, 0400, w.ctx.PrivateValidators()[0]); err != nil {
 			return err
 		}
 	}
 
 	fpath := path.Join(w.basedir(), GenesisFilename)
-	if err := writeObj(fpath, 0644, w.ctx.Genesis()); err != nil {
+	if err := w.ctx.Genesis().SaveAs(fpath); err != nil {
 		return err
 	}
 
@@ -70,20 +70,4 @@ func (w dirWriter) Write() error {
 
 func (w dirWriter) basedir() string {
 	return path.Join(w.ctx.Path(), ConfigDir)
-}
-
-func writeObj(path string, perm os.FileMode, obj interface{}) error {
-	data, err := json.MarshalIndent(obj, "", "  ")
-	if err != nil {
-		return err
-	}
-	_, err = os.Stat(path)
-	if !os.IsNotExist(err) {
-		return nil
-	}
-	err = ioutil.WriteFile(path, data, perm)
-	if err != nil {
-		return err
-	}
-	return nil
 }

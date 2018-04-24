@@ -50,7 +50,7 @@ func TestValidTx(t *testing.T) {
 	require.NoError(t, err)
 	paccount, pkey := testutil.CreateAccount(t, state)
 	pnonce := uint64(1)
-	provider := testutil.CreateProvider(t, papp, paccount, &pkey, pnonce)
+	provider := testutil.CreateProvider(t, papp, paccount, pkey, pnonce)
 
 	// create tenant
 	taccount, tkey := testutil.CreateAccount(t, state)
@@ -59,7 +59,7 @@ func TestValidTx(t *testing.T) {
 	dapp, err := dapp.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	tnonce := uint64(1)
-	testutil.CreateDeployment(t, dapp, taccount, &tkey, tnonce)
+	testutil.CreateDeployment(t, dapp, taccount, tkey, tnonce)
 	groupSeq := uint64(1)
 	daddress := state_.DeploymentAddress(taccount.Address, tnonce)
 
@@ -67,15 +67,15 @@ func TestValidTx(t *testing.T) {
 	oapp, err := oapp.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	oSeq := uint64(0)
-	testutil.CreateOrder(t, oapp, taccount, &tkey, daddress, groupSeq, oSeq)
+	testutil.CreateOrder(t, oapp, taccount, tkey, daddress, groupSeq, oSeq)
 	price := uint32(0)
 
 	// create fulfillment
 	fapp, err := fapp.NewApp(state, testutil.Logger())
-	testutil.CreateFulfillment(t, fapp, provider.Address, &pkey, daddress, groupSeq, oSeq, price)
+	testutil.CreateFulfillment(t, fapp, provider.Address, pkey, daddress, groupSeq, oSeq, price)
 
 	// create lease
-	lease := testutil.CreateLease(t, app, provider.Address, &pkey, daddress, groupSeq, oSeq, price)
+	lease := testutil.CreateLease(t, app, provider.Address, pkey, daddress, groupSeq, oSeq, price)
 
 	{
 		path := query.LeasePath(lease.Deployment, lease.Group, lease.Order, lease.Provider)
@@ -94,7 +94,7 @@ func TestValidTx(t *testing.T) {
 
 	// close lease
 	leaseAddr := state.Lease().IDFor(lease)
-	testutil.CloseLease(t, app, leaseAddr, &pkey)
+	testutil.CloseLease(t, app, leaseAddr, pkey)
 	{
 		path := query.LeasePath(lease.Deployment, lease.Group, lease.Order, lease.Provider)
 		resp := app.Query(tmtypes.RequestQuery{Path: path})
@@ -111,7 +111,7 @@ func TestTx_BadTxType(t *testing.T) {
 	app, err := app_.NewApp(state_, testutil.Logger())
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state_)
-	tx := testutil.ProviderTx(account, &key, 10)
+	tx := testutil.ProviderTx(account, key, 10)
 	ctx := apptypes.NewContext(tx)
 	assert.False(t, app.AcceptTx(ctx, tx.Payload.Payload))
 	cresp := app.CheckTx(ctx, tx.Payload.Payload)
@@ -130,7 +130,7 @@ func TestBilling(t *testing.T) {
 	require.NoError(t, err)
 	paccount, pkey := testutil.CreateAccount(t, state)
 	pnonce := uint64(1)
-	provider := testutil.CreateProvider(t, papp, paccount, &pkey, pnonce)
+	provider := testutil.CreateProvider(t, papp, paccount, pkey, pnonce)
 
 	// create tenant
 	tenant, tkey := testutil.CreateAccount(t, state)
@@ -139,7 +139,7 @@ func TestBilling(t *testing.T) {
 	dapp, err := dapp.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	tnonce := uint64(1)
-	testutil.CreateDeployment(t, dapp, tenant, &tkey, tnonce)
+	testutil.CreateDeployment(t, dapp, tenant, tkey, tnonce)
 	groupSeq := uint64(1)
 	daddress := state_.DeploymentAddress(tenant.Address, tnonce)
 
@@ -147,16 +147,16 @@ func TestBilling(t *testing.T) {
 	oapp, err := oapp.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	oSeq := uint64(0)
-	testutil.CreateOrder(t, oapp, tenant, &tkey, daddress, groupSeq, oSeq)
+	testutil.CreateOrder(t, oapp, tenant, tkey, daddress, groupSeq, oSeq)
 	price := uint32(1)
 	p := uint64(price)
 
 	// create fulfillment
 	fapp, err := fapp.NewApp(state, testutil.Logger())
-	testutil.CreateFulfillment(t, fapp, provider.Address, &pkey, daddress, groupSeq, oSeq, price)
+	testutil.CreateFulfillment(t, fapp, provider.Address, pkey, daddress, groupSeq, oSeq, price)
 
 	// create lease
-	testutil.CreateLease(t, app, provider.Address, &pkey, daddress, groupSeq, oSeq, price)
+	testutil.CreateLease(t, app, provider.Address, pkey, daddress, groupSeq, oSeq, price)
 
 	iTenBal := getBalance(t, state, tenant.Address)
 	iProBal := getBalance(t, state, provider.Owner)

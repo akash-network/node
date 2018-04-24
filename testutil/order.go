@@ -11,7 +11,7 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 )
 
-func CreateOrder(t *testing.T, app apptypes.Application, account *types.Account, key *crypto.PrivKey, deploymentAddress base.Bytes, groupSeq, orderSeq uint64) *types.Order {
+func CreateOrder(t *testing.T, app apptypes.Application, account *types.Account, key crypto.PrivKey, deploymentAddress base.Bytes, groupSeq, orderSeq uint64) *types.Order {
 	order := Order(deploymentAddress, groupSeq, orderSeq)
 
 	tx := &types.TxPayload_TxCreateOrder{
