@@ -37,7 +37,7 @@ func deploymentCommand() *cobra.Command {
 func createDeploymentCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "create <attributes> [manifest",
+		Use:   "create <deployment file> [manifest]",
 		Short: "create a deployment",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: context.WithContext(
@@ -139,9 +139,6 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 				if bytes.Equal(tx.Deployment, address) {
 					fmt.Printf("Group %v/%v Lease: %v\n", tx.Group, len(groups),
 						X(state.FulfillmentID(tx.Deployment, tx.Group, tx.Order, tx.Provider)))
-					expected--
-				}
-				if expected == 0 {
 					// get lease provider
 					prov, err := query.Provider(ctx, &tx.Provider)
 					if err != nil {
@@ -150,11 +147,14 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 
 					lease := state.LeaseID(tx.Deployment, tx.Group, tx.Order, tx.Provider)
 					// send manifest over http to provider netaddr
-					fmt.Printf("Sending manifest to %v...\n%v\n", prov.Netaddr, mani)
+					fmt.Printf("Sending manifest to %v...\n", prov.Netaddr)
 					err = mani.Send(signer, prov.Address, lease, prov.Netaddr)
 					if err != nil {
 						fmt.Printf("ERROR: %v", err)
 					}
+					expected--
+				}
+				if expected == 0 {
 					os.Exit(0)
 				}
 			}).Create()

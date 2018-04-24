@@ -1,4 +1,4 @@
-netaddr: localhost:3001
+netaddr: http://localhost:3001/manifest
 attributes:
   - name: region
     value:  us-west

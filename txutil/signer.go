@@ -1,7 +1,6 @@
 package txutil
 
 import crypto "github.com/tendermint/go-crypto"
-import "fmt"
 
 // Return a Signer backed by the given KeySigner (such as a crypto.PrivKey)
 func NewPrivateKeySigner(key KeySigner) Signer {
@@ -46,6 +45,5 @@ func (s keyStoreSigner) Sign(tx SignableTx) error {
 }
 
 func (s keyStoreSigner) SignBytes(bytes []byte) (crypto.Signature, crypto.PubKey, error) {
-	fmt.Printf("signbytes %s, %s, %s\n", s.keyName, s.password, bytes)
 	return s.store.Sign(s.keyName, s.password, bytes)
 }
