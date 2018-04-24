@@ -146,9 +146,9 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 					}
 
 					lease := state.LeaseID(tx.Deployment, tx.Group, tx.Order, tx.Provider)
-					// send manifest over http to provider netaddr
-					fmt.Printf("Sending manifest to %v...\n", prov.Netaddr)
-					err = mani.Send(signer, prov.Address, lease, prov.Netaddr)
+					// send manifest over http to provider uri
+					fmt.Printf("Sending manifest to %v...\n", prov.HostURI)
+					err = mani.Send(signer, prov.Address, lease, prov.HostURI)
 					if err != nil {
 						fmt.Printf("ERROR: %v", err)
 					}
@@ -263,7 +263,7 @@ func sendManifest(ctx context.Context, cmd *cobra.Command, args []string) error 
 		return err
 	}
 
-	err = mani.Send(signer, lease.Provider, leaseAddr, provider.Netaddr)
+	err = mani.Send(signer, lease.Provider, leaseAddr, provider.HostURI)
 	if err != nil {
 		return err
 	}

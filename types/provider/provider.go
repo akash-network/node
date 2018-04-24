@@ -8,7 +8,7 @@ import (
 )
 
 type Provider struct {
-	Netaddr    string
+	HostURI    string
 	Attributes []types.ProviderAttribute
 }
 

@@ -104,7 +104,7 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateProvider{
 		Owner:      key.Address(),
-		Netaddr:    prov.Netaddr,
+		HostURI:    prov.HostURI,
 		Attributes: prov.Attributes,
 		Nonce:      nonce,
 	})
