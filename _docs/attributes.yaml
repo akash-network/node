@@ -1,4 +1,6 @@
-- name: region
-  value:  us-west
-- name: tier
-  value:  "5"
+netaddr: localhost:3001
+attributes:
+  - name: region
+    value:  us-west
+  - name: tier
+    value:  "5"

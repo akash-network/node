@@ -7,7 +7,9 @@ import (
 	"os"
 
 	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/cmd/akash/query"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
@@ -27,6 +29,7 @@ func deploymentCommand() *cobra.Command {
 
 	cmd.AddCommand(createDeploymentCommand())
 	cmd.AddCommand(closeDeploymentCommand())
+	cmd.AddCommand(sendManifestCommand())
 
 	return cmd
 }
@@ -34,9 +37,9 @@ func deploymentCommand() *cobra.Command {
 func createDeploymentCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "create <file>",
+		Use:   "create <attributes> [manifest",
 		Short: "create a deployment",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.RangeArgs(1, 2),
 		RunE: context.WithContext(
 			context.RequireKey(context.RequireNode(createDeployment))),
 	}
@@ -50,8 +53,7 @@ func createDeploymentCommand() *cobra.Command {
 }
 
 func parseDeployment(file string, nonce uint64) ([]*types.GroupSpec, int64, error) {
-	// todo: read and parse deployment yaml file
-
+	// XXX: read and parse deployment yaml file
 	specs := []*types.GroupSpec{}
 
 	/* begin stub data */
@@ -66,7 +68,6 @@ func parseDeployment(file string, nonce uint64) ([]*types.GroupSpec, int64, erro
 	}
 
 	ttl := int64(5)
-
 	/* end stub data */
 
 	return specs, ttl, nil
@@ -86,6 +87,14 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 	groups, ttl, err := parseDeployment(args[0], nonce)
 	if err != nil {
 		return err
+	}
+
+	mani := &manifest.Manifest{}
+	if len(args) > 1 {
+		err = mani.Parse(args[1])
+		if err != nil {
+			return err
+		}
 	}
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateDeployment{
@@ -133,6 +142,19 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 					expected--
 				}
 				if expected == 0 {
+					// get lease provider
+					prov, err := query.Provider(ctx, &tx.Provider)
+					if err != nil {
+						fmt.Printf("ERROR: %v", err)
+					}
+
+					lease := state.LeaseID(tx.Deployment, tx.Group, tx.Order, tx.Provider)
+					// send manifest over http to provider netaddr
+					fmt.Printf("Sending manifest to %v...\n%v\n", prov.Netaddr, mani)
+					err = mani.Send(signer, prov.Address, lease, prov.Netaddr)
+					if err != nil {
+						fmt.Printf("ERROR: %v", err)
+					}
 					os.Exit(0)
 				}
 			}).Create()
@@ -199,5 +221,51 @@ func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) err
 	}
 
 	fmt.Println("Closing deployment")
+	return nil
+}
+
+func sendManifestCommand() *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:   "sendmani [manifest] [lease]",
+		Short: "send manifest to lease provider",
+		Args:  cobra.ExactArgs(2),
+		RunE: context.WithContext(
+			context.RequireKey(context.RequireNode(sendManifest))),
+	}
+
+	context.AddFlagNode(cmd, cmd.Flags())
+	context.AddFlagKey(cmd, cmd.Flags())
+
+	return cmd
+}
+
+func sendManifest(ctx context.Context, cmd *cobra.Command, args []string) error {
+	signer, _, err := ctx.Signer()
+	if err != nil {
+		return err
+	}
+
+	mani := &manifest.Manifest{}
+	err = mani.Parse(args[0])
+	if err != nil {
+		return err
+	}
+
+	leaseAddr := base.Bytes(args[1])
+	lease, err := query.Lease(ctx, &leaseAddr)
+	if err != nil {
+		return err
+	}
+
+	provider, err := query.Provider(ctx, &lease.Provider)
+	if err != nil {
+		return err
+	}
+
+	err = mani.Send(signer, lease.Provider, leaseAddr, provider.Netaddr)
+	if err != nil {
+		return err
+	}
 	return nil
 }

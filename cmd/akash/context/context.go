@@ -173,6 +173,7 @@ func (ctx *context) Key() (keys.Info, error) {
 	if err != nil {
 		return keys.Info{}, err
 	}
+
 	return info, nil
 }
 

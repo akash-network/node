@@ -171,6 +171,14 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmtype
 		return tmtypes.ResponseCheckTx{Code: code.INVALID_TRANSACTION, Log: "invalid nonce"}
 	}
 
+	// XXX: more address validation
+	if len(tx.Netaddr) == 0 {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "invalid network address",
+		}
+	}
+
 	return tmtypes.ResponseCheckTx{}
 }
 
@@ -187,6 +195,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmty
 	provider := &types.Provider{
 		Address:    state.ProviderAddress(tx.Owner, tx.Nonce),
 		Owner:      tx.Owner,
+		Netaddr:    tx.Netaddr,
 		Attributes: tx.Attributes,
 	}
 
