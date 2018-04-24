@@ -40,3 +40,6 @@ import:
 
 - package: github.com/gorilla/mux
   version: v1.6.1
+
+- package: github.com/sirupsen/logrus
+  version: v1.0.5

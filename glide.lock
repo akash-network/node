@@ -80,6 +80,8 @@ imports:
   - difflib
 - name: github.com/rcrowley/go-metrics
   version: 8732c616f52954686704c8645fe1a9d59e9df7c1
+- name: github.com/sirupsen/logrus
+  version: c155da19408a8799da419ed3eeb0cb5db0ad5dbc
 - name: github.com/spf13/afero
   version: a880a37ed1804d98f64b3b7d58b5e3f8fbf421c4
   subpackages:
