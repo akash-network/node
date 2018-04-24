@@ -61,7 +61,8 @@ message Provider {
   option (gogoproto.compare) = true;
   bytes  address = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
   bytes  owner = 2 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
-  repeated ProviderAttribute attributes = 3 [(gogoproto.nullable) = false];
+  string hostURI = 3;
+  repeated ProviderAttribute attributes = 4 [(gogoproto.nullable) = false];
 }
 
 message Providers {
@@ -70,8 +71,9 @@ message Providers {
 
 message TxCreateProvider {
   bytes  owner = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
-  repeated ProviderAttribute attributes = 2 [(gogoproto.nullable) = false];
-  uint64 nonce = 3;
+  string hostURI = 2;
+  repeated ProviderAttribute attributes = 3 [(gogoproto.nullable) = false];
+  uint64 nonce = 4;
 }
 
 /* END PROVIDER */

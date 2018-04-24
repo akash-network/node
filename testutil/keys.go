@@ -43,3 +43,7 @@ func NewNamedKey(t *testing.T) (keys.Info, keys.Keybase) {
 	require.NoError(t, err)
 	return info, kmgr
 }
+
+func Signer(t *testing.T, kmgr keys.Keybase) txutil.Signer {
+	return txutil.NewKeystoreSigner(kmgr, KeyName, KeyPasswd)
+}

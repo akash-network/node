@@ -3,6 +3,7 @@ package provider
 import (
 	"bytes"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
@@ -171,6 +172,13 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmtype
 		return tmtypes.ResponseCheckTx{Code: code.INVALID_TRANSACTION, Log: "invalid nonce"}
 	}
 
+	if _, err := url.Parse(tx.HostURI); err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "invalid network address",
+		}
+	}
+
 	return tmtypes.ResponseCheckTx{}
 }
 
@@ -187,6 +195,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmty
 	provider := &types.Provider{
 		Address:    state.ProviderAddress(tx.Owner, tx.Nonce),
 		Owner:      tx.Owner,
+		HostURI:    tx.HostURI,
 		Attributes: tx.Attributes,
 	}
 

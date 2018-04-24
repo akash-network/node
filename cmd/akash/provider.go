@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"strconv"
 
@@ -12,15 +11,16 @@ import (
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/cmd/akash/query"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/marketplace"
 	qp "github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
+	"github.com/ovrclk/akash/types/provider"
 	. "github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 )
 
 func providerCommand() *cobra.Command {
@@ -39,6 +39,7 @@ func providerCommand() *cobra.Command {
 	cmd.AddCommand(runCommand())
 	cmd.AddCommand(closeFulfillmentCommand())
 	cmd.AddCommand(closeLeaseCommand())
+	cmd.AddCommand(runManifestServerCommand())
 
 	return cmd
 }
@@ -46,7 +47,7 @@ func providerCommand() *cobra.Command {
 func createProviderCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "create [file] [flags]",
+		Use:   "create <file>",
 		Short: "create a provider",
 		Args:  cobra.ExactArgs(1),
 		RunE:  context.WithContext(context.RequireNode(doCreateProviderCommand)),
@@ -95,14 +96,16 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	attributes, err := parseProvider(args[0], nonce)
+	prov := &provider.Provider{}
+	err = prov.Parse(args[0])
 	if err != nil {
 		return err
 	}
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateProvider{
 		Owner:      key.Address(),
-		Attributes: *attributes,
+		HostURI:    prov.HostURI,
+		Attributes: prov.Attributes,
 		Nonce:      nonce,
 	})
 	if err != nil {
@@ -125,22 +128,6 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 	fmt.Println(X(result.DeliverTx.Data))
 
 	return nil
-}
-
-func parseProvider(file string, nonce uint64) (*[]types.ProviderAttribute, error) {
-
-	contents, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-
-	attributes := &[]types.ProviderAttribute{}
-	err = yaml.Unmarshal([]byte(contents), attributes)
-	if err != nil {
-		return nil, err
-	}
-
-	return attributes, nil
 }
 
 func runCommand() *cobra.Command {
@@ -374,5 +361,35 @@ func doCloseLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string)
 		return errors.New(result.DeliverTx.GetLog())
 	}
 
+	return nil
+}
+
+func runManifestServerCommand() *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:   "servmani [port] [loglevel = (debug|info|warn|error|fatal|panic)]",
+		Short: "receive deployment manifest",
+		Args:  cobra.RangeArgs(0, 2),
+		RunE:  context.WithContext(context.RequireNode(doRunManifestServerCommand)),
+	}
+
+	context.AddFlagKeyType(cmd, cmd.Flags())
+
+	return cmd
+}
+
+func doRunManifestServerCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+
+	port := "3001"
+	if len(args) == 1 {
+		port = args[0]
+	}
+
+	loglevel := "debug"
+	if len(args) == 2 {
+		loglevel = args[1]
+	}
+
+	manifest.RunServ(port, loglevel)
 	return nil
 }

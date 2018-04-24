@@ -45,3 +45,16 @@ func LeasesForDeployment(ctx context.Context, deployment *base.Bytes) (*types.Le
 	}
 	return leases, nil
 }
+
+func Lease(ctx context.Context, leaseAddr *base.Bytes) (*types.Lease, error) {
+	lease := &types.Lease{}
+	path := state.LeasePath + util.X(*leaseAddr)
+	result, err := Query(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	if err := proto.Unmarshal(result.Response.Value, lease); err != nil {
+		return nil, err
+	}
+	return lease, nil
+}

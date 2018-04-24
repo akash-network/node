@@ -5,6 +5,7 @@ import crypto "github.com/tendermint/go-crypto"
 // Transaction signer
 type Signer interface {
 	Sign(tx SignableTx) error
+	SignBytes(bytes []byte) (crypto.Signature, crypto.PubKey, error)
 }
 
 // Subset of crypto.PrivKey used to create Signer backed by

@@ -16,6 +16,11 @@ func (s privateKeySigner) Sign(tx SignableTx) error {
 	return tx.Sign(s.key.PubKey(), sig)
 }
 
+func (s privateKeySigner) SignBytes(bytes []byte) (crypto.Signature, crypto.PubKey, error) {
+	sig := s.key.Sign(bytes)
+	return sig, s.key.PubKey(), nil
+}
+
 type StoreSigner interface {
 	Sign(name, passphrase string, msg []byte) (crypto.Signature, crypto.PubKey, error)
 }
@@ -32,9 +37,13 @@ type keyStoreSigner struct {
 }
 
 func (s keyStoreSigner) Sign(tx SignableTx) error {
-	sig, pubkey, err := s.store.Sign(s.keyName, s.password, tx.SignBytes())
+	sig, pubkey, err := s.SignBytes(tx.SignBytes())
 	if err != nil {
 		return err
 	}
 	return tx.Sign(pubkey, sig)
+}
+
+func (s keyStoreSigner) SignBytes(bytes []byte) (crypto.Signature, crypto.PubKey, error) {
+	return s.store.Sign(s.keyName, s.password, bytes)
 }
