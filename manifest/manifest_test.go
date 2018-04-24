@@ -11,7 +11,6 @@ import (
 func TestManifest(t *testing.T) {
 	runServer(t)
 	sendManifest(t)
-	require.True(t, false)
 }
 
 func runServer(t *testing.T) {
@@ -36,4 +35,5 @@ func sendManifest(t *testing.T) {
 	lease := []byte("leaseaddress")
 
 	err = mani.Send(signer, provider.Address, lease, "http://localhost:3001/manifest")
+	require.NoError(t, err)
 }
