@@ -140,7 +140,7 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 					fmt.Printf("Group %v/%v Lease: %v\n", tx.Group, len(groups),
 						X(state.FulfillmentID(tx.Deployment, tx.Group, tx.Order, tx.Provider)))
 					// get lease provider
-					prov, err := query.Provider(ctx, &tx.Provider)
+					prov, err := query.Provider(ctx, tx.Provider)
 					if err != nil {
 						fmt.Printf("ERROR: %v", err)
 					}
@@ -192,14 +192,13 @@ func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	deployment := new(base.Bytes)
-	err = deployment.DecodeString(args[0])
+	deployment, err := base.DecodeString(args[0])
 	if err != nil {
 		return err
 	}
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCloseDeployment{
-		Deployment: *deployment,
+		Deployment: deployment,
 		Reason:     types.TxCloseDeployment_TENANT_CLOSE,
 	})
 	if err != nil {
@@ -252,13 +251,17 @@ func sendManifest(ctx context.Context, cmd *cobra.Command, args []string) error 
 		return err
 	}
 
-	leaseAddr := base.Bytes(args[1])
-	lease, err := query.Lease(ctx, &leaseAddr)
+	leaseAddr, err := base.DecodeString(args[1])
 	if err != nil {
 		return err
 	}
 
-	provider, err := query.Provider(ctx, &lease.Provider)
+	lease, err := query.Lease(ctx, leaseAddr)
+	if err != nil {
+		return err
+	}
+
+	provider, err := query.Provider(ctx, lease.Provider)
 	if err != nil {
 		return err
 	}

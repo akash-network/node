@@ -40,15 +40,15 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 	id := strings.TrimPrefix(req.Path, state.AccountPath)
-	key := new(base.Bytes)
-	if err := key.DecodeString(id); err != nil {
+	key, err := base.DecodeString(id)
+	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
 	}
 
-	acct, err := a.State().Account().Get(*key)
+	acct, err := a.State().Account().Get(key)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -59,7 +59,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	if acct == nil {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("account %x not found", *key),
+			Log:  fmt.Sprintf("account %x not found", key),
 		}
 	}
 

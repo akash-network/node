@@ -83,13 +83,13 @@ func doInitCommand(ctx Context, cmd *cobra.Command, args []string) error {
 }
 
 func generateAkashGenesis(cmd *cobra.Command, args []string) (*ptypes.Genesis, error) {
-	addr := new(base.Bytes)
-	if err := addr.DecodeString(args[0]); err != nil {
+	addr, err := base.DecodeString(args[0])
+	if err != nil {
 		return nil, err
 	}
 	return &ptypes.Genesis{
 		Accounts: []ptypes.Account{
-			ptypes.Account{Address: *addr, Balance: maxTokens},
+			ptypes.Account{Address: addr, Balance: maxTokens},
 		},
 	}, nil
 }

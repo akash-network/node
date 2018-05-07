@@ -1,5 +1,5 @@
-hash: 003bda9cde013020cb5b98e58cd736e7107494697241e485a90ccdfcee056492
-updated: 2018-04-24T14:40:37.276378948-07:00
+hash: d06de603cf4296cafebfef349c0279f32f78110e28afda1be52b15e7ee160707
+updated: 2018-05-09T14:35:28.146441248-07:00
 imports:
 - name: github.com/btcsuite/btcd
   version: 675abc5df3c5531bc741b56a765e35623459da6d
@@ -37,7 +37,7 @@ imports:
   - sortkeys
   - types
 - name: github.com/golang/protobuf
-  version: e09c5db296004fbe3f74490e84dcd62c3c5ddb1b
+  version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
   - proto
   - ptypes
@@ -46,6 +46,8 @@ imports:
   - ptypes/timestamp
 - name: github.com/golang/snappy
   version: 553a641470496b2327abcac10b36396bd98e45c9
+- name: github.com/gorilla/context
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/mux
   version: 53c1911da2b537f792e7cafcb446b05ffe33b996
 - name: github.com/gorilla/websocket
@@ -83,7 +85,7 @@ imports:
   subpackages:
   - difflib
 - name: github.com/rcrowley/go-metrics
-  version: 8732c616f52954686704c8645fe1a9d59e9df7c1
+  version: e2704e165165ec55d062f5919b4b29494e9fa790
 - name: github.com/sirupsen/logrus
   version: c155da19408a8799da419ed3eeb0cb5db0ad5dbc
 - name: github.com/spf13/afero
@@ -93,15 +95,15 @@ imports:
 - name: github.com/spf13/cast
   version: 8965335b8c7107321228e3e3702cab9832751bac
 - name: github.com/spf13/cobra
-  version: 0ab5b6bcfcde193577634059f6f211c850a456ec
+  version: ef82de70bb3f60c65fb8eebacbb2d122ef517385
 - name: github.com/spf13/jwalterweatherman
   version: 7c0cea34c8ece3fbeb2b27ab9b59511d360fb394
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/spf13/viper
-  version: 8dc2790b029dc41e2b8ff772c63c26adbb1db70d
+  version: 15738813a09db5c8e5b60a19d67d3f9bd38da3a4
 - name: github.com/stretchr/objx
-  version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
+  version: a5cfa15c000af5f09784e5355969ba7eb66ef0de
 - name: github.com/stretchr/testify
   version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
   subpackages:
@@ -109,7 +111,7 @@ imports:
   - mock
   - require
 - name: github.com/syndtr/goleveldb
-  version: 714f901b98fdb3aa954b4193d8cbd64a28d80cad
+  version: ae970a0732be3a1f5311da86118d37b9f4bd2a5a
   subpackages:
   - leveldb
   - leveldb/cache
@@ -201,7 +203,7 @@ imports:
   - pubsub
   - pubsub/query
 - name: golang.org/x/crypto
-  version: 2b6c08872f4b66da917bb4ce98df4f0307330f78
+  version: 2d027ae1dddd4694d54f7a8b6cbe78dca8720226
   subpackages:
   - blowfish
   - curve25519
@@ -212,8 +214,9 @@ imports:
   - poly1305
   - ripemd160
   - salsa20/salsa
+  - ssh/terminal
 - name: golang.org/x/net
-  version: 5f9ae10d9af5b1c89ae6904293b14b064d4ada23
+  version: f73e4c9ed3b7ebdd5f699a16a880c2b1994e50dd
   subpackages:
   - context
   - http/httpguts
@@ -221,12 +224,12 @@ imports:
   - http2/hpack
   - idna
   - internal/timeseries
-  - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 79b0c6888797020a994db17c8510466c72fe75d9
+  version: 64746a42f36bf0832f86b76004f1699dbeb33e4f
   subpackages:
   - unix
+  - windows
 - name: golang.org/x/text
   version: 7922cc490dd5a7dbaa7fd5d6196b49db59ac042f
   subpackages:
@@ -235,11 +238,11 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: 7fd901a49ba6a7f87732eb344f6e3c5b19d1b200
+  version: 86e600f69ee4704c6efbf6a2a40a5c10700e76c2
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 9c2d308aed40f7e6283473d59966e5c19cb744f4
+  version: 45d7f3a23f0b937ba711aa0e3e3426325d3b9ae4
   subpackages:
   - balancer
   - balancer/base

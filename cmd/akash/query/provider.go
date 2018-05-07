@@ -5,7 +5,6 @@ import (
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
 )
@@ -33,9 +32,9 @@ func doQueryProviderCommand(ctx context.Context, cmd *cobra.Command, args []stri
 	}
 }
 
-func Provider(ctx context.Context, paddr *base.Bytes) (*types.Provider, error) {
+func Provider(ctx context.Context, paddr []byte) (*types.Provider, error) {
 	provider := &types.Provider{}
-	path := state.ProviderPath + util.X(*paddr)
+	path := state.ProviderPath + util.X(paddr)
 	result, err := Query(ctx, path)
 	if err != nil {
 		return nil, err

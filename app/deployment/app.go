@@ -42,20 +42,20 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	// todo: need abtraction for multiple query types per app
 	if strings.HasPrefix(req.GetPath(), state.DeploymentGroupPath) {
 		id := strings.TrimPrefix(req.Path, state.DeploymentGroupPath)
-		key := new(base.Bytes)
-		if err := key.DecodeString(id); err != nil {
+		key, err := base.DecodeString(id)
+		if err != nil {
 			return tmtypes.ResponseQuery{
 				Code: code.ERROR,
 				Log:  err.Error(),
 			}
 		}
-		return a.doDeploymentGroupQuery(*key)
+		return a.doDeploymentGroupQuery(key)
 	}
 
 	// todo: abstractiion: all queries should have this
 	id := strings.TrimPrefix(req.Path, state.DeploymentPath)
-	key := new(base.Bytes)
-	if err := key.DecodeString(id); err != nil {
+	key, err := base.DecodeString(id)
+	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
@@ -64,9 +64,9 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 	// id is empty string, get full range
 	if len(id) == 0 {
-		return a.doRangeQuery(*key)
+		return a.doRangeQuery(key)
 	}
-	return a.doQuery(*key)
+	return a.doQuery(key)
 }
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {

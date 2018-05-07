@@ -1,56 +1,42 @@
 package: github.com/ovrclk/akash
 import:
-
 - package: github.com/gogo/protobuf
   version: ^1.0.0
   subpackages:
   - gogoproto
   - proto
   - jsonpb
-
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
   version: master
-
 - package: github.com/tendermint/go-crypto
   repo: https://github.com/ovrclk/go-crypto.git
-
 - package: github.com/tendermint/go-amino
   repo: https://github.com/ovrclk/go-amino.git
-
 - package: github.com/tendermint/iavl
   repo: https://github.com/ovrclk/iavl.git
-
 - package: github.com/tendermint/abci
   repo: https://github.com/ovrclk/abci.git
-
 - package: github.com/tendermint/go-wire
   repo: https://github.com/ovrclk/go-wire.git
-
 - package: github.com/tendermint/tmlibs
-  version: "~0.8.2-rc0"
+  version: ~0.8.2-rc0
   repo: https://github.com/ovrclk/tmlibs.git
-
 - package: github.com/tendermint/tendermint
   version: develop
   repo: https://github.com/ovrclk/tendermint.git
-
 - package: github.com/stretchr/testify
   version: ^1.2.1
   subpackages:
   - require
   - assert
   - mock
-
 - package: gopkg.in/yaml.v2
   version: v2.2.1
-
 - package: github.com/gorilla/mux
   version: v1.6.1
-
 - package: github.com/sirupsen/logrus
   version: v1.0.5
-
 - package: github.com/emirpasic/gods
   version: ^1.9.0
   subpackages:

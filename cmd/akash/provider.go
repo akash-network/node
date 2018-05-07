@@ -143,8 +143,8 @@ func runCommand() *cobra.Command {
 func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
 	client := ctx.Client()
 
-	provider := new(base.Bytes)
-	if err := provider.DecodeString(args[0]); err != nil {
+	provider, err := base.DecodeString(args[0])
+	if err != nil {
 		return err
 	}
 
@@ -177,7 +177,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 				Deployment: tx.Deployment,
 				Group:      tx.Group,
 				Order:      tx.Seq,
-				Provider:   *provider,
+				Provider:   provider,
 				Price:      price,
 			}
 
@@ -185,7 +185,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 				X(tx.Deployment), tx.Group, tx.Seq)
 
 			fmt.Printf("Fulfillment: %v\n",
-				X(state.FulfillmentID(tx.Deployment, tx.Group, tx.Seq, *provider)))
+				X(state.FulfillmentID(tx.Deployment, tx.Group, tx.Seq, provider)))
 
 			txbuf, err := txutil.BuildTx(signer, nonce, ordertx)
 			if err != nil {
@@ -210,7 +210,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
 			leaseProvider, _ := tx.Provider.Marshal()
-			if bytes.Equal(leaseProvider, *provider) {
+			if bytes.Equal(leaseProvider, provider) {
 				lease := X(state.LeaseID(tx.Deployment, tx.Group, tx.Order, tx.Provider))
 				leases, _ := deployments[tx.Deployment.EncodeString()]
 				deployments[tx.Deployment.EncodeString()] = append(leases, lease)
@@ -270,13 +270,13 @@ func doCloseFulfillmentCommand(ctx context.Context, cmd *cobra.Command, args []s
 		return err
 	}
 
-	fulfillment := new(base.Bytes)
-	if err := fulfillment.DecodeString(args[0]); err != nil {
+	fulfillment, err := base.DecodeString(args[0])
+	if err != nil {
 		return err
 	}
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCloseFulfillment{
-		Fulfillment: *fulfillment,
+		Fulfillment: fulfillment,
 	})
 	if err != nil {
 		return err
@@ -321,8 +321,8 @@ func doCloseLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string)
 		return err
 	}
 
-	deployment := new(base.Bytes)
-	if err := deployment.DecodeString(args[0]); err != nil {
+	deployment, err := base.DecodeString(args[0])
+	if err != nil {
 		return err
 	}
 
@@ -336,12 +336,12 @@ func doCloseLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string)
 		return err
 	}
 
-	provider := new(base.Bytes)
-	if err := provider.DecodeString(args[3]); err != nil {
+	provider, err := base.DecodeString(args[3])
+	if err != nil {
 		return err
 	}
 
-	lease := state.LeaseID(*deployment, group, order, *provider)
+	lease := state.LeaseID(deployment, group, order, provider)
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxCloseLease{
 		Lease: lease,

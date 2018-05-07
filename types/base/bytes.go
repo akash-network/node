@@ -46,3 +46,8 @@ func (this Bytes) Compare(that Bytes) int {
 	thatb, _ := that.Marshal()
 	return bytes.Compare(thisb, thatb)
 }
+
+func DecodeString(buf string) (Bytes, error) {
+	val := new(Bytes)
+	return *val, val.DecodeString(buf)
+}

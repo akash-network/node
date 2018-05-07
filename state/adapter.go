@@ -27,18 +27,6 @@ const (
 	AddressSize = 32 // XXX: check
 )
 
-func GetMinStartRange() base.Bytes {
-	minStartRange := new(base.Bytes)
-	minStartRange.DecodeString("")
-	return *minStartRange
-}
-
-func GetMaxEndRange64() base.Bytes {
-	maxEndRange64 := new(base.Bytes)
-	maxEndRange64.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
-	return *maxEndRange64
-}
-
 func MaxAddress() []byte {
 	return bytes.Repeat([]byte{0xff}, AddressSize)
 }
@@ -132,7 +120,7 @@ func (d *deploymentAdapter) Get(address base.Bytes) (*types.Deployment, error) {
 }
 
 func (d *deploymentAdapter) GetMaxRange() (*types.Deployments, error) {
-	_, deps, _, err := d.GetRangeWithProof(GetMinStartRange(), GetMaxEndRange64(), MaxRangeLimit)
+	_, deps, _, err := d.GetRangeWithProof(MinAddress(), MaxAddress(), MaxRangeLimit)
 	return deps, err
 }
 
@@ -212,7 +200,7 @@ func (d *providerAdapter) Get(address base.Bytes) (*types.Provider, error) {
 }
 
 func (d *providerAdapter) GetMaxRange() (*types.Providers, error) {
-	_, dcs, _, err := d.GetRangeWithProof(GetMinStartRange(), GetMaxEndRange64(), MaxRangeLimit)
+	_, dcs, _, err := d.GetRangeWithProof(MinAddress(), MaxAddress(), MaxRangeLimit)
 	return dcs, err
 }
 

@@ -42,14 +42,14 @@ func doSendCommand(ctx context.Context, cmd *cobra.Command, args []string) error
 		return err
 	}
 
-	to := new(base.Bytes)
-	if err := to.DecodeString(args[1]); err != nil {
+	to, err := base.DecodeString(args[1])
+	if err != nil {
 		return err
 	}
 
 	tx, err := txutil.BuildTx(signer, nonce, &types.TxSend{
 		From:   key.Address(),
-		To:     *to,
+		To:     to,
 		Amount: amount,
 	})
 	if err != nil {

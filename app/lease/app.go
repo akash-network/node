@@ -81,8 +81,8 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 	// todo: abstractiion: all queries should have this
 	id := strings.TrimPrefix(req.Path, state.LeasePath)
-	key := new(base.Bytes)
-	if err := key.DecodeString(id); err != nil {
+	key, err := base.DecodeString(id)
+	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
@@ -91,12 +91,12 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 	// id is empty string, get full range
 	if len(id) == 0 {
-		return a.doRangeQuery(*key)
+		return a.doRangeQuery(key)
 	}
 	if len(id) == state.AddressSize*2 {
-		return a.doDeploymentQuery(*key)
+		return a.doDeploymentQuery(key)
 	}
-	return a.doQuery(*key)
+	return a.doQuery(key)
 }
 
 func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.ResponseCheckTx, *types.Order) {
