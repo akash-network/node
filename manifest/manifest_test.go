@@ -1,39 +1,53 @@
-package manifest
+package manifest_test
 
 import (
+	"context"
+	"net/http"
 	"testing"
 
+	"github.com/ovrclk/akash/manifest"
+	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
-	_ "github.com/stretchr/testify/assert"
+	"github.com/ovrclk/akash/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestManifest(t *testing.T) {
-	runServer(t)
-	sendManifest(t)
+	withServer(t, func() {
+
+		sdl, err := sdl.ReadFile("../_docs/deployment.yml")
+		require.NoError(t, err)
+
+		mani, err := sdl.Manifest()
+		require.NoError(t, err)
+
+		_, kmgr := testutil.NewNamedKey(t)
+		signer := testutil.Signer(t, kmgr)
+
+		provider := &types.Provider{
+			HostURI: "http://localhost:3001/manifest",
+		}
+
+		deployment := testutil.DeploymentAddress(t)
+
+		err = manifest.Send(mani, signer, provider, deployment)
+		require.NoError(t, err)
+	})
 }
 
-func runServer(t *testing.T) {
+func withServer(t *testing.T, fn func()) {
+	donech := make(chan struct{})
+	defer func() { <-donech }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	go func() {
-		run("3001", "debug")
+		defer close(donech)
+		err := manifest.RunServer(ctx, testutil.Logger(), "3001")
+		assert.Error(t, http.ErrServerClosed, err)
 	}()
-}
 
-func sendManifest(t *testing.T) {
-	mani := &Manifest{}
-	path := "../_docs/manifest.yaml"
-	err := mani.Parse(path)
-	require.NoError(t, err)
-
-	_, kmgr := testutil.NewNamedKey(t)
-	signer := testutil.Signer(t, kmgr)
-
-	state := testutil.NewState(t, nil)
-	pacc, _ := testutil.CreateAccount(t, state)
-	provider := testutil.Provider(pacc.Address, uint64(1))
-
-	lease := []byte("leaseaddress")
-
-	err = mani.Send(signer, provider.Address, lease, "http://localhost:3001/manifest")
-	require.NoError(t, err)
+	fn()
 }
