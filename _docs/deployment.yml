@@ -48,36 +48,43 @@ services:
     expose:
       - port: 80
         to:
-          global: true
+          - global: true
       - port: 443
         to:
-          global: true
+          - global: true
 
 profiles:
 
   compute:
     web:
       cpu: 2
-      memory: 3GB
-      disk: 5GB
+      memory: 3
+      disk: 5
     db:
       cpu: 10
-      memory: 10GB
-      disk: 5GB
+      memory: 10
+      disk: 20
+    db-pool:
+      cpu: 5
+      memory: 10
+      disk: 5
 
-  infrastructure:
+  placement:
     westcoast:
       attributes:
         region: us-west
       pricing:
         web: 8
-        db: 15
+        db-master: 15
+        db-slave: 10
+        db-pool: 5
     eastcoast:
       attributes:
         region: us-east
       pricing:
         web: 5
-        db: 10
+        db-slave: 10
+        db-pool: 5
 
 deployment:
 

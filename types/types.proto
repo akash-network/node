@@ -331,3 +331,49 @@ message Leases {
 }
 
 /* END EXCHANGE */
+
+/* BEGIN MANIFEST */
+
+message ManifestRequest {
+  bytes key         = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes signature   = 2 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes deployment  = 3 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  Manifest manifest = 4;
+}
+
+message Manifest {
+  repeated ManifestGroup groups = 1;
+}
+
+message ManifestGroup {
+  // Placement profile name
+  string name = 1;
+
+  // Service definitions
+  repeated ManifestService services = 2;
+}
+
+message ManifestService {
+  // Service name
+  string       name  = 1;
+
+  // Docker image
+  string       image = 2;
+
+  // Resource requirements
+  ResourceUnit unit  = 3 [(gogoproto.nullable)=false];
+
+  // Number of instances
+  uint32       count = 4;
+
+  // Overlay Network Links
+  repeated ManifestServiceExpose expose = 5;
+}
+
+message ManifestServiceExpose {
+  uint32 port    = 1;
+  string proto   = 2;
+  string service = 3;
+  bool   global  = 4;
+}
+/* END MANIFEST */

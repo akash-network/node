@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	gcontext "context"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -310,11 +311,7 @@ func doRunManifestServerCommand(ctx context.Context, cmd *cobra.Command, args []
 		port = args[0]
 	}
 
-	loglevel := "debug"
-	if len(args) == 2 {
-		loglevel = args[1]
-	}
-
-	manifest.RunServ(port, loglevel)
-	return nil
+	return common.RunForever(func(gctx gcontext.Context) error {
+		return manifest.RunServer(gctx, ctx.Log(), port)
+	})
 }

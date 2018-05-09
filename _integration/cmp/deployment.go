@@ -18,11 +18,11 @@ func deployCreate(key vars.Ref, daddr vars.Ref) gestalt.Component {
 
 	return g.Group("deploy-create").
 		Run(
-			akash("create", "deployment", "create", "unused.yml", "-k", key.Name()).
+			akash("create", "deployment", "create", "{{deployment-path}}", "-k", key.Name()).
 				FN(g.Capture(daddr.Name())).
 				WithMeta(g.Export(daddr.Name()))).
 		Run(g.Retry(5).Run(check)).
-		WithMeta(g.Export(daddr.Name()))
+		WithMeta(g.Export(daddr.Name()).Require("deployment-path"))
 }
 
 func deployClose(key vars.Ref, daddr vars.Ref) gestalt.Component {

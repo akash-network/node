@@ -35,7 +35,7 @@ case "$1" in
     akash provider run "$(cat "$DATA_ROOT/other.dc")" -k other
     ;;
   deploy)
-    akash deployment create unused.yml -k master
+    akash deployment create ../deployment.yml -k master
     ;;
   *)
     echo "USAGE: $0 <init|akashd|send|query|marketplace|provider|deploy>" >&2

@@ -29,7 +29,7 @@ case "$1" in
     akash marketplace
     ;;
   deploy)
-    akash deployment create unused.yml -k master
+    akash deployment create ../deployment.yml -k master
     ;;
   *)
     echo "USAGE: $0 <init|send|query|marketplace|deploy>" >&2

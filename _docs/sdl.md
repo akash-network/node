@@ -81,7 +81,7 @@ If `global` is `false` then a service name must be given.
 
 ### profiles
 
-The `profiles` section contains named compute and infrastructure profiles to be used in the [deployment](#deployment).
+The `profiles` section contains named compute and placement profiles to be used in the [deployment](#deployment).
 
 #### profiles.compute
 
@@ -99,9 +99,9 @@ web:
 
 This defines a profile named `web` having resource requirements of 2 vCPUs, 2 gigabytes of memory, and 5 gigabytes of disk space available.
 
-#### profiles.infrastructure
+#### profiles.placement
 
-`profiles.infrastructure` is map of named datacenter profiles.  Each profile specifies required datacenter attributes and pricing
+`profiles.placement` is map of named datacenter profiles.  Each profile specifies required datacenter attributes and pricing
 configuration for each [compute profile](#profilescompute) that will be used within the datacenter.
 
 Example:
@@ -122,7 +122,7 @@ the `web` and `db` [compute profiles](#profilescompute) of 8 and 15 tokens an ho
 
 The `deployment` section defines how to deploy the services.  It is a mapping of service name to deployment configuration.
 
-Each service to be deployed has an entry in the `deployment`.  This entry is maps [datacenter profiles](#profilesinfrastructure) to
+Each service to be deployed has an entry in the `deployment`.  This entry is maps [datacenter profiles](#profilesplacement) to
 [compute profiles](#profilescompute) to create a final desired configuration for the resources required for the service.
 
 Example:
@@ -134,5 +134,5 @@ web:
     count: 20
 ```
 
-This says that the 20 instances of the `web` service should be deployed to a datacenter matching the `westcoast` [datacenter profile](#profilesinfrastructure).  Each instance will have 
+This says that the 20 instances of the `web` service should be deployed to a datacenter matching the `westcoast` [datacenter profile](#profilesplacement).  Each instance will have 
 the resources defined in the `web` [compute profile](#profilescompute) available to it.
