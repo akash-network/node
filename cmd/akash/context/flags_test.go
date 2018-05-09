@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tendermint/go-crypto/keys"
 )
 
 type flagFn func(cmd *cobra.Command, flags *pflag.FlagSet)
@@ -49,13 +50,27 @@ func TestKey_Flag(t *testing.T) {
 
 func TestFlag_Nonce(t *testing.T) {
 	const val uint64 = 10
+	const key = "foo"
 
-	assertCommand(t, context.AddFlagNonce, func(ctx context.Context, cmd *cobra.Command, args []string) error {
+	flagfn := func(cmd *cobra.Command, flags *pflag.FlagSet) {
+		context.AddFlagKey(cmd, flags)
+		context.AddFlagNonce(cmd, flags)
+		context.AddFlagNode(cmd, flags)
+	}
+
+	assertCommand(t, flagfn, func(ctx context.Context, cmd *cobra.Command, args []string) error {
+
+		kmgr, err := ctx.KeyManager()
+		require.NoError(t, err)
+
+		_, _, err = kmgr.Create(key, constants.Password, keys.AlgoEd25519)
+		require.NoError(t, err)
+
 		nonce, err := ctx.Nonce()
 		require.NoError(t, err)
 		require.Equal(t, val, nonce)
 		return nil
-	}, "--"+constants.FlagNonce, strconv.Itoa(int(val)))
+	}, "--"+constants.FlagNonce, strconv.Itoa(int(val)), "-k", key, "-n", "node.address")
 }
 
 func assertCommand(t *testing.T, flagfn flagFn, fn context.Runner, args ...string) {

@@ -29,7 +29,7 @@ func keyCreateCommand() *cobra.Command {
 		Short: "Create new key",
 		RunE:  context.WithContext(context.RequireRootDir(doKeyCreateCommand)),
 	}
-	cmd.Flags().StringP(constants.FlagKeyType, "t", "ed25519", "Type of key (ed25519|secp256k1|ledger)")
+	context.AddFlagKeyType(cmd, cmd.Flags())
 	return cmd
 }
 

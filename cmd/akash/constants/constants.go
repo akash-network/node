@@ -16,6 +16,7 @@ const (
 
 	// all key types should be standardized
 	FlagKeyType = "type"
+	KeyType     = "ed25519"
 
 	// market commands
 	FlagWait = "wait"

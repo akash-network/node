@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
-	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	. "github.com/ovrclk/akash/util"
@@ -74,12 +72,13 @@ func parseDeployment(file string, nonce uint64) ([]*types.GroupSpec, int64, erro
 }
 
 func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) error {
-	signer, key, err := ctx.Signer()
+
+	txclient, err := ctx.TxClient()
 	if err != nil {
 		return err
 	}
 
-	nonce, err := ctx.Nonce()
+	nonce, err := txclient.Nonce()
 	if err != nil {
 		return err
 	}
@@ -97,28 +96,16 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 		}
 	}
 
-	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateDeployment{
-		Tenant:   key.Address(),
+	res, err := txclient.BroadcastTxCommit(&types.TxCreateDeployment{
+		Tenant:   txclient.Key().Address(),
 		Nonce:    nonce,
 		OrderTTL: ttl,
 		Groups:   groups,
 	})
-	if err != nil {
-		return err
-	}
 
-	res, err := ctx.Client().BroadcastTxCommit(tx)
 	if err != nil {
 		ctx.Log().Error("error sending tx", "error", err)
 		return err
-	}
-	if !res.CheckTx.IsOK() {
-		ctx.Log().Error("error delivering tx", "error", res.CheckTx.GetLog())
-		return errors.New(res.CheckTx.GetLog())
-	}
-	if !res.DeliverTx.IsOK() {
-		ctx.Log().Error("error delivering tx", "error", res.DeliverTx.GetLog())
-		return errors.New(res.DeliverTx.GetLog())
 	}
 
 	address := res.DeliverTx.Data
@@ -148,7 +135,7 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 					lease := state.LeaseID(tx.Deployment, tx.Group, tx.Order, tx.Provider)
 					// send manifest over http to provider uri
 					fmt.Printf("Sending manifest to %v...\n", prov.HostURI)
-					err = mani.Send(signer, prov.Address, lease, prov.HostURI)
+					err = mani.Send(txclient.Signer(), prov.Address, lease, prov.HostURI)
 					if err != nil {
 						fmt.Printf("ERROR: %v", err)
 					}
@@ -182,12 +169,7 @@ func closeDeploymentCommand() *cobra.Command {
 }
 
 func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) error {
-	signer, _, err := ctx.Signer()
-	if err != nil {
-		return err
-	}
-
-	nonce, err := ctx.Nonce()
+	txclient, err := ctx.TxClient()
 	if err != nil {
 		return err
 	}
@@ -197,26 +179,14 @@ func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	tx, err := txutil.BuildTx(signer, nonce, &types.TxCloseDeployment{
+	_, err = txclient.BroadcastTxCommit(&types.TxCloseDeployment{
 		Deployment: deployment,
 		Reason:     types.TxCloseDeployment_TENANT_CLOSE,
 	})
-	if err != nil {
-		return err
-	}
 
-	res, err := ctx.Client().BroadcastTxCommit(tx)
 	if err != nil {
 		ctx.Log().Error("error sending tx", "error", err)
 		return err
-	}
-	if !res.CheckTx.IsOK() {
-		ctx.Log().Error("error delivering tx", "error", res.CheckTx.GetLog())
-		return errors.New(res.CheckTx.GetLog())
-	}
-	if !res.DeliverTx.IsOK() {
-		ctx.Log().Error("error delivering tx", "error", res.DeliverTx.GetLog())
-		return errors.New(res.DeliverTx.GetLog())
 	}
 
 	fmt.Println("Closing deployment")

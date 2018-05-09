@@ -8,9 +8,7 @@ import (
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/common"
-	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/txutil"
-	"github.com/ovrclk/akash/types"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -26,6 +24,7 @@ type Context interface {
 	KeyManager() (keys.Keybase, error)
 	Node() string
 	Client() *tmclient.HTTP
+	TxClient() (txutil.Client, error)
 	KeyName() string
 	KeyType() (keys.CryptoAlgo, error)
 	Key() (keys.Info, error)
@@ -149,6 +148,18 @@ func (ctx *context) Client() *tmclient.HTTP {
 	return tmclient.NewHTTP(ctx.Node(), "/websocket")
 }
 
+func (ctx *context) TxClient() (txutil.Client, error) {
+	signer, key, err := ctx.Signer()
+	if err != nil {
+		return nil, err
+	}
+	nonce, err := ctx.cmd.Flags().GetUint64(constants.FlagNonce)
+	if err != nil {
+		nonce = 0
+	}
+	return txutil.NewClient(ctx.Client(), signer, key, nonce), nil
+}
+
 func (ctx *context) KeyName() string {
 	val, _ := ctx.cmd.Flags().GetString(constants.FlagKey)
 	return val
@@ -203,20 +214,11 @@ func (ctx *context) Signer() (txutil.Signer, keys.Info, error) {
 }
 
 func (ctx *context) Nonce() (uint64, error) {
-	nonce, err := ctx.cmd.Flags().GetUint64(constants.FlagNonce)
-	if err != nil || nonce == uint64(0) {
-		res := new(types.Account)
-		client := ctx.Client()
-		key, _ := ctx.Key()
-		queryPath := query.AccountPath(key.Address())
-		result, err := client.ABCIQuery(queryPath, nil)
-		if err != nil {
-			return 0, err
-		}
-		res.Unmarshal(result.Response.Value)
-		nonce = res.Nonce + 1
+	txclient, err := ctx.TxClient()
+	if err != nil {
+		return 0, err
 	}
-	return nonce, nil
+	return txclient.Nonce()
 }
 
 func (ctx *context) Wait() bool {

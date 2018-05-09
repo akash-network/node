@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -15,7 +14,6 @@ import (
 	"github.com/ovrclk/akash/marketplace"
 	qp "github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/state"
-	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/provider"
@@ -86,12 +84,12 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		fmt.Printf("Key created: %v\n", X(info.Address()))
 	}
 
-	signer, key, err := ctx.Signer()
+	txclient, err := ctx.TxClient()
 	if err != nil {
 		return err
 	}
 
-	nonce, err := ctx.Nonce()
+	nonce, err := txclient.Nonce()
 	if err != nil {
 		return err
 	}
@@ -102,27 +100,15 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	tx, err := txutil.BuildTx(signer, nonce, &types.TxCreateProvider{
+	result, err := txclient.BroadcastTxCommit(&types.TxCreateProvider{
 		Owner:      key.Address(),
 		HostURI:    prov.HostURI,
 		Attributes: prov.Attributes,
 		Nonce:      nonce,
 	})
+
 	if err != nil {
 		return err
-	}
-
-	client := ctx.Client()
-
-	result, err := client.BroadcastTxCommit(tx)
-	if err != nil {
-		return err
-	}
-	if result.CheckTx.IsErr() {
-		return errors.New(result.CheckTx.GetLog())
-	}
-	if result.DeliverTx.IsErr() {
-		return errors.New(result.DeliverTx.GetLog())
 	}
 
 	fmt.Println(X(result.DeliverTx.Data))
@@ -141,14 +127,12 @@ func runCommand() *cobra.Command {
 }
 
 func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	client := ctx.Client()
-
-	provider, err := base.DecodeString(args[0])
+	txclient, err := ctx.TxClient()
 	if err != nil {
 		return err
 	}
 
-	signer, _, err := ctx.Signer()
+	provider, err := base.DecodeString(args[0])
 	if err != nil {
 		return err
 	}
@@ -157,12 +141,6 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 
 	handler := marketplace.NewBuilder().
 		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
-
-			nonce, err := ctx.Nonce()
-			if err != nil {
-				ctx.Log().Error("error getting nonce", "error", err)
-				return
-			}
 
 			price, err := getPrice(ctx, tx.Deployment, tx.Group)
 			if err != nil {
@@ -187,23 +165,9 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 			fmt.Printf("Fulfillment: %v\n",
 				X(state.FulfillmentID(tx.Deployment, tx.Group, tx.Seq, provider)))
 
-			txbuf, err := txutil.BuildTx(signer, nonce, ordertx)
-			if err != nil {
-				ctx.Log().Error("error building tx", "error", err)
-				return
-			}
-
-			resp, err := client.BroadcastTxCommit(txbuf)
+			_, err = txclient.BroadcastTxCommit(ordertx)
 			if err != nil {
 				ctx.Log().Error("error broadcasting tx", "error", err)
-				return
-			}
-			if resp.CheckTx.IsErr() {
-				ctx.Log().Error("CheckTx error", "error", resp.CheckTx.Log)
-				return
-			}
-			if resp.DeliverTx.IsErr() {
-				ctx.Log().Error("DeliverTx error", "error", resp.DeliverTx.Log)
 				return
 			}
 
@@ -260,12 +224,7 @@ func closeFulfillmentCommand() *cobra.Command {
 }
 
 func doCloseFulfillmentCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	signer, _, err := ctx.Signer()
-	if err != nil {
-		return err
-	}
-
-	nonce, err := ctx.Nonce()
+	txclient, err := ctx.TxClient()
 	if err != nil {
 		return err
 	}
@@ -275,25 +234,10 @@ func doCloseFulfillmentCommand(ctx context.Context, cmd *cobra.Command, args []s
 		return err
 	}
 
-	tx, err := txutil.BuildTx(signer, nonce, &types.TxCloseFulfillment{
+	_, err = txclient.BroadcastTxCommit(&types.TxCloseFulfillment{
 		Fulfillment: fulfillment,
 	})
-	if err != nil {
-		return err
-	}
-
-	result, err := ctx.Client().BroadcastTxCommit(tx)
-	if err != nil {
-		return err
-	}
-	if result.CheckTx.IsErr() {
-		return errors.New(result.CheckTx.GetLog())
-	}
-	if result.DeliverTx.IsErr() {
-		return errors.New(result.DeliverTx.GetLog())
-	}
-
-	return nil
+	return err
 }
 
 func closeLeaseCommand() *cobra.Command {
@@ -311,12 +255,7 @@ func closeLeaseCommand() *cobra.Command {
 }
 
 func doCloseLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	signer, _, err := ctx.Signer()
-	if err != nil {
-		return err
-	}
-
-	nonce, err := ctx.Nonce()
+	txclient, err := ctx.TxClient()
 	if err != nil {
 		return err
 	}
@@ -343,25 +282,11 @@ func doCloseLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string)
 
 	lease := state.LeaseID(deployment, group, order, provider)
 
-	tx, err := txutil.BuildTx(signer, nonce, &types.TxCloseLease{
+	_, err = txclient.BroadcastTxCommit(&types.TxCloseLease{
 		Lease: lease,
 	})
-	if err != nil {
-		return err
-	}
 
-	result, err := ctx.Client().BroadcastTxCommit(tx)
-	if err != nil {
-		return err
-	}
-	if result.CheckTx.IsErr() {
-		return errors.New(result.CheckTx.GetLog())
-	}
-	if result.DeliverTx.IsErr() {
-		return errors.New(result.DeliverTx.GetLog())
-	}
-
-	return nil
+	return err
 }
 
 func runManifestServerCommand() *cobra.Command {
