@@ -10,8 +10,8 @@ import (
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/marketplace"
+	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/state"
-	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	. "github.com/ovrclk/akash/util"
@@ -35,9 +35,9 @@ func deploymentCommand() *cobra.Command {
 func createDeploymentCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "create <deployment file> [manifest]",
+		Use:   "create <deployment-file>",
 		Short: "create a deployment",
-		Args:  cobra.RangeArgs(1, 2),
+		Args:  cobra.ExactArgs(1),
 		RunE: context.WithContext(
 			context.RequireKey(context.RequireNode(createDeployment))),
 	}
@@ -50,28 +50,9 @@ func createDeploymentCommand() *cobra.Command {
 	return cmd
 }
 
-func parseDeployment(file string, nonce uint64) ([]*types.GroupSpec, int64, error) {
-	// XXX: read and parse deployment yaml file
-	specs := []*types.GroupSpec{}
-
-	/* begin stub data */
-	groups := testutil.DeploymentGroups(*new(base.Bytes), nonce)
-
-	for _, group := range groups.GetItems() {
-		s := &types.GroupSpec{
-			Resources:    group.Resources,
-			Requirements: group.Requirements,
-		}
-		specs = append(specs, s)
-	}
-
-	ttl := int64(5)
-	/* end stub data */
-
-	return specs, ttl, nil
-}
-
 func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) error {
+
+	const ttl = int64(5)
 
 	txclient, err := ctx.TxClient()
 	if err != nil {
@@ -83,17 +64,19 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 		return err
 	}
 
-	groups, ttl, err := parseDeployment(args[0], nonce)
+	sdl, err := sdl.ReadFile(args[0])
 	if err != nil {
 		return err
 	}
 
-	mani := &manifest.Manifest{}
-	if len(args) > 1 {
-		err = mani.Parse(args[1])
-		if err != nil {
-			return err
-		}
+	groups, err := sdl.DeploymentGroups()
+	if err != nil {
+		return err
+	}
+
+	mani, err := sdl.Manifest()
+	if err != nil {
+		return err
 	}
 
 	res, err := txclient.BroadcastTxCommit(&types.TxCreateDeployment{
@@ -132,10 +115,9 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 						fmt.Printf("ERROR: %v", err)
 					}
 
-					lease := state.LeaseID(tx.Deployment, tx.Group, tx.Order, tx.Provider)
 					// send manifest over http to provider uri
 					fmt.Printf("Sending manifest to %v...\n", prov.HostURI)
-					err = mani.Send(txclient.Signer(), prov.Address, lease, prov.HostURI)
+					err = manifest.Send(mani, txclient.Signer(), prov, tx.Deployment)
 					if err != nil {
 						fmt.Printf("ERROR: %v", err)
 					}
@@ -154,7 +136,7 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 func closeDeploymentCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "close <deployment>",
+		Use:   "close <deployment-id>",
 		Short: "close a deployment",
 		Args:  cobra.ExactArgs(1),
 		RunE: context.WithContext(
@@ -215,8 +197,12 @@ func sendManifest(ctx context.Context, cmd *cobra.Command, args []string) error 
 		return err
 	}
 
-	mani := &manifest.Manifest{}
-	err = mani.Parse(args[0])
+	sdl, err := sdl.ReadFile(args[0])
+	if err != nil {
+		return err
+	}
+
+	mani, err := sdl.Manifest()
 	if err != nil {
 		return err
 	}
@@ -236,7 +222,7 @@ func sendManifest(ctx context.Context, cmd *cobra.Command, args []string) error 
 		return err
 	}
 
-	err = mani.Send(signer, lease.Provider, leaseAddr, provider.HostURI)
+	err = manifest.Send(mani, signer, provider, lease.Deployment)
 	if err != nil {
 		return err
 	}

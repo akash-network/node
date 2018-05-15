@@ -22,3 +22,16 @@ func WatchSignals(ctx context.Context, cancel context.CancelFunc) <-chan struct{
 	}()
 	return donech
 }
+
+func RunForever(fn func(ctx context.Context) error) error {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	donech := WatchSignals(ctx, cancel)
+
+	err := fn(ctx)
+
+	cancel()
+	<-donech
+
+	return err
+}
