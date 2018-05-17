@@ -6,9 +6,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/tmlibs/log"
@@ -68,26 +68,25 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	// todo: abstractiion: all queries should have this
+	// TODO: Partial Key Parsing
 	id := strings.TrimPrefix(req.Path, state.OrderPath)
-	key, err := base.DecodeString(id)
+	if len(id) == 0 {
+		return a.doRangeQuery()
+	}
+
+	key, err := keys.ParseOrderPath(id)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
 	}
-
-	// id is empty string, get full range
-	if len(id) == 0 {
-		return a.doRangeQuery(key)
-	}
 	return a.doQuery(key)
 }
 
-func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
+func (a *app) doQuery(key keys.Order) tmtypes.ResponseQuery {
 
-	depo, err := a.State().Order().GetByKey(key)
+	depo, err := a.State().Order().Get(key.ID())
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -99,7 +98,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	if depo == nil {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("order %x not found", key),
+			Log:  fmt.Sprintf("order %v not found", key.Path()),
 		}
 	}
 
@@ -117,7 +116,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 }
 
-func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
+func (a *app) doRangeQuery() tmtypes.ResponseQuery {
 	items, err := a.State().Order().All()
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -178,7 +177,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmt
 	}
 
 	// ensure deployment group exists
-	group, err := a.State().DeploymentGroup().Get(tx.Deployment, tx.Group)
+	group, err := a.State().DeploymentGroup().Get(tx.GroupID())
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -201,7 +200,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmt
 	}
 
 	// ensure no other open orders
-	others, err := a.State().Order().ForGroup(group)
+	others, err := a.State().Order().ForGroup(group.DeploymentGroupID)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -235,11 +234,9 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) t
 	oseq.Advance()
 
 	order := &types.Order{
-		Deployment: tx.Deployment,
-		Group:      tx.Group,
-		Seq:        tx.Seq,
-		EndAt:      tx.EndAt,
-		State:      types.Order_OPEN,
+		OrderID: tx.OrderID,
+		EndAt:   tx.EndAt,
+		State:   types.Order_OPEN,
 	}
 
 	// order.Order = oseq.Advance()

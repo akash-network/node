@@ -57,16 +57,18 @@ func TestTx(t *testing.T) {
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state_)
 
-	deployment, groups := testutil.CreateDeployment(t, dapp, account, key, 10)
+	deployment, groups := testutil.CreateDeployment(t, dapp, account, key, 1)
 
 	orderSeq := uint64(0)
 	testutil.CreateOrder(t, app, account, key, deployment.Address, groups.GetItems()[0].Seq, orderSeq)
 
-	orders, err := state_.Order().ForGroup(groups.GetItems()[0])
+	orders, err := state_.Order().ForGroup(groups.GetItems()[0].DeploymentGroupID)
 	require.NoError(t, err)
 	require.Len(t, orders, 1)
 
-	path := query.OrderPath(deployment.Address, groups.GetItems()[0].Seq, orderSeq)
+	order := orders[0]
+
+	path := query.OrderPath(order.OrderID)
 	resp := app.Query(tmtypes.RequestQuery{Path: path})
 	assert.Empty(t, resp.Log)
 	require.True(t, resp.IsOK())

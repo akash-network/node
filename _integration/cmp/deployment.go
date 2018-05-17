@@ -49,7 +49,7 @@ func deployQueryState(daddr vars.Ref, state types.Deployment_DeploymentState) ge
 
 func orderQuery(daddr vars.Ref) gestalt.Component {
 	parse := js.Do(
-		js.Str(daddr.Var(), "items", "[0]", "deployment"),
+		js.Str(daddr.Var(), "items", "[0]", "id", "deployment"),
 	)
 
 	return akash("order-query", "query", "order").
@@ -59,7 +59,7 @@ func orderQuery(daddr vars.Ref) gestalt.Component {
 
 func leaseQuery(daddr vars.Ref) gestalt.Component {
 	parse := js.Do(
-		js.Str(daddr.Var(), "items", "[0]", "deployment"),
+		js.Str(daddr.Var(), "items", "[0]", "id", "deployment"),
 	)
 
 	return akash("lease-query", "query", "lease").

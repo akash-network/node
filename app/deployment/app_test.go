@@ -10,6 +10,7 @@ import (
 	"github.com/ovrclk/akash/app/order"
 	"github.com/ovrclk/akash/app/provider"
 	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/query"
 	pstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
@@ -62,7 +63,7 @@ func TestCreateTx(t *testing.T) {
 	}
 
 	{
-		path := query.DeploymentGroupPath(depl.Address, groupseq)
+		path := query.DeploymentGroupPath(groups.Items[0].DeploymentGroupID)
 		resp := app.Query(tmtypes.RequestQuery{Path: path})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
@@ -81,24 +82,31 @@ func TestCreateTx(t *testing.T) {
 		require.True(t, resp.IsOK())
 	}
 
+	badgroup := types.DeploymentGroupID{
+		Deployment: depl.Address,
+		Seq:        2,
+	}
+
+	goodgroup := groups.GetItems()[0].DeploymentGroupID
+
 	{
-		path := fmt.Sprintf("%v%x",
+		path := fmt.Sprintf("%v%v",
 			pstate.DeploymentPath,
-			pstate.DeploymentGroupID(depl.Address, 1))
+			keys.DeploymentGroupID(badgroup).Path())
 		resp := app.Query(tmtypes.RequestQuery{Path: path})
 		assert.NotEmpty(t, resp.Log)
 		require.False(t, resp.IsOK())
 	}
 
 	{
-		path := query.DeploymentGroupPath(depl.Address, 1)
+		path := query.DeploymentGroupPath(goodgroup)
 		resp := app.Query(tmtypes.RequestQuery{Path: path})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 	}
 
 	{
-		path := query.DeploymentGroupPath(depl.Address, 0)
+		path := query.DeploymentGroupPath(badgroup)
 		resp := app.Query(tmtypes.RequestQuery{Path: path})
 		assert.NotEmpty(t, resp.Log)
 		require.False(t, resp.IsOK())
@@ -129,20 +137,21 @@ func TestTx_BadTxType(t *testing.T) {
 }
 
 func TestCloseTx_1(t *testing.T) {
-	const gseq = 1
 	state := testutil.NewState(t, nil)
 	app, err := deployment.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
 
-	depl, _ := testutil.CreateDeployment(t, app, account, key, nonce)
+	depl, groups := testutil.CreateDeployment(t, app, account, key, nonce)
+
+	group := groups.Items[0]
 
 	check := func(
 		dstate types.Deployment_DeploymentState,
 		gstate types.DeploymentGroup_DeploymentGroupState) {
 		assertDeploymentState(t, app, depl.Address, dstate)
-		assertDeploymentGroupState(t, app, depl.Address, gseq, gstate)
+		assertDeploymentGroupState(t, app, group.DeploymentGroupID, gstate)
 	}
 
 	check(types.Deployment_ACTIVE, types.DeploymentGroup_OPEN)
@@ -155,7 +164,6 @@ func TestCloseTx_1(t *testing.T) {
 func TestCloseTx_2(t *testing.T) {
 
 	const (
-		gseq = 1
 		oseq = 3
 	)
 
@@ -165,20 +173,21 @@ func TestCloseTx_2(t *testing.T) {
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
 
-	depl, _ := testutil.CreateDeployment(t, app, account, key, nonce)
+	depl, groups := testutil.CreateDeployment(t, app, account, key, nonce)
+	group := groups.Items[0]
 
 	oapp, err := order.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
 
-	testutil.CreateOrder(t, oapp, account, key, depl.Address, gseq, oseq)
+	order := testutil.CreateOrder(t, oapp, account, key, depl.Address, group.Seq, oseq)
 
 	check := func(
 		dstate types.Deployment_DeploymentState,
 		gstate types.DeploymentGroup_DeploymentGroupState,
 		ostate types.Order_OrderState) {
 		assertDeploymentState(t, app, depl.Address, dstate)
-		assertDeploymentGroupState(t, app, depl.Address, gseq, gstate)
-		assertOrderState(t, oapp, depl.Address, gseq, oseq, ostate)
+		assertDeploymentGroupState(t, app, order.GroupID(), gstate)
+		assertOrderState(t, oapp, order.OrderID, ostate)
 	}
 
 	check(types.Deployment_ACTIVE, types.DeploymentGroup_OPEN, types.Order_OPEN)
@@ -191,7 +200,6 @@ func TestCloseTx_2(t *testing.T) {
 func TestCloseTx_3(t *testing.T) {
 
 	const (
-		gseq  = 1
 		oseq  = 3
 		price = 0
 	)
@@ -201,17 +209,18 @@ func TestCloseTx_3(t *testing.T) {
 	require.NoError(t, err)
 	account, key := testutil.CreateAccount(t, state)
 	nonce := uint64(1)
-	depl, _ := testutil.CreateDeployment(t, app, account, key, nonce)
+	depl, groups := testutil.CreateDeployment(t, app, account, key, nonce)
+	group := groups.Items[0]
 
 	orderapp, err := order.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
-	testutil.CreateOrder(t, orderapp, account, key, depl.Address, gseq, oseq)
+	order := testutil.CreateOrder(t, orderapp, account, key, depl.Address, group.Seq, oseq)
 
 	providerapp, err := provider.NewApp(state, testutil.Logger())
 	prov := testutil.CreateProvider(t, providerapp, account, key, nonce)
 
 	fulfillmentapp, err := fulfillment.NewApp(state, testutil.Logger())
-	testutil.CreateFulfillment(t, fulfillmentapp, prov.Address, key, depl.Address, gseq, oseq, price)
+	fulfillment := testutil.CreateFulfillment(t, fulfillmentapp, prov.Address, key, depl.Address, group.Seq, order.Seq, price)
 
 	check := func(
 		dstate types.Deployment_DeploymentState,
@@ -219,9 +228,9 @@ func TestCloseTx_3(t *testing.T) {
 		ostate types.Order_OrderState,
 		fstate types.Fulfillment_FulfillmentState) {
 		assertDeploymentState(t, app, depl.Address, dstate)
-		assertDeploymentGroupState(t, app, depl.Address, gseq, gstate)
-		assertOrderState(t, orderapp, depl.Address, gseq, oseq, ostate)
-		assertFulfillmentState(t, fulfillmentapp, depl.Address, gseq, oseq, prov.Address, fstate)
+		assertDeploymentGroupState(t, app, group.DeploymentGroupID, gstate)
+		assertOrderState(t, orderapp, order.OrderID, ostate)
+		assertFulfillmentState(t, fulfillmentapp, fulfillment.FulfillmentID, fstate)
 	}
 
 	check(types.Deployment_ACTIVE, types.DeploymentGroup_OPEN, types.Order_OPEN, types.Fulfillment_OPEN)
@@ -248,16 +257,16 @@ func TestCloseTx_4(t *testing.T) {
 
 	orderapp, err := order.NewApp(state, testutil.Logger())
 	require.NoError(t, err)
-	testutil.CreateOrder(t, orderapp, account, key, depl.Address, gseq, oseq)
+	order := testutil.CreateOrder(t, orderapp, account, key, depl.Address, gseq, oseq)
 
 	providerapp, err := provider.NewApp(state, testutil.Logger())
 	prov := testutil.CreateProvider(t, providerapp, account, key, nonce)
 
 	fulfillmentapp, err := fulfillment.NewApp(state, testutil.Logger())
-	testutil.CreateFulfillment(t, fulfillmentapp, prov.Address, key, depl.Address, gseq, oseq, price)
+	fulfillment := testutil.CreateFulfillment(t, fulfillmentapp, prov.Address, key, depl.Address, gseq, oseq, price)
 
 	leaseapp, err := lease.NewApp(state, testutil.Logger())
-	testutil.CreateLease(t, leaseapp, prov.Address, key, depl.Address, gseq, oseq, price)
+	lease := testutil.CreateLease(t, leaseapp, prov.Address, key, depl.Address, gseq, oseq, price)
 
 	check := func(
 		dstate types.Deployment_DeploymentState,
@@ -266,10 +275,10 @@ func TestCloseTx_4(t *testing.T) {
 		fstate types.Fulfillment_FulfillmentState,
 		lstate types.Lease_LeaseState) {
 		assertDeploymentState(t, app, depl.Address, dstate)
-		assertDeploymentGroupState(t, app, depl.Address, gseq, gstate)
-		assertOrderState(t, orderapp, depl.Address, gseq, oseq, ostate)
-		assertFulfillmentState(t, fulfillmentapp, depl.Address, gseq, oseq, prov.Address, fstate)
-		assertLeaseState(t, leaseapp, depl.Address, gseq, oseq, prov.Address, lstate)
+		assertDeploymentGroupState(t, app, order.GroupID(), gstate)
+		assertOrderState(t, orderapp, order.OrderID, ostate)
+		assertFulfillmentState(t, fulfillmentapp, fulfillment.FulfillmentID, fstate)
+		assertLeaseState(t, leaseapp, lease.LeaseID, lstate)
 	}
 
 	check(types.Deployment_ACTIVE, types.DeploymentGroup_OPEN, types.Order_MATCHED, types.Fulfillment_OPEN, types.Lease_ACTIVE)
@@ -301,11 +310,10 @@ func assertDeploymentState(
 func assertDeploymentGroupState(
 	t *testing.T,
 	app apptypes.Application,
-	daddr []byte,
-	gseq uint64,
+	id types.DeploymentGroupID,
 	gstate types.DeploymentGroup_DeploymentGroupState) {
 
-	path := query.DeploymentGroupPath(daddr, gseq)
+	path := query.DeploymentGroupPath(id)
 	resp := app.Query(tmtypes.RequestQuery{Path: path})
 	assert.Empty(t, resp.Log)
 	require.True(t, resp.IsOK())
@@ -319,12 +327,10 @@ func assertDeploymentGroupState(
 func assertOrderState(
 	t *testing.T,
 	app apptypes.Application,
-	daddr []byte,
-	gseq uint64,
-	oseq uint64,
+	id types.OrderID,
 	ostate types.Order_OrderState) {
 
-	path := query.OrderPath(daddr, gseq, oseq)
+	path := query.OrderPath(id)
 	resp := app.Query(tmtypes.RequestQuery{Path: path})
 	assert.Empty(t, resp.Log)
 	require.True(t, resp.IsOK())
@@ -337,13 +343,10 @@ func assertOrderState(
 func assertFulfillmentState(
 	t *testing.T,
 	app apptypes.Application,
-	daddr []byte,
-	gseq uint64,
-	oseq uint64,
-	paddr []byte,
+	id types.FulfillmentID,
 	state types.Fulfillment_FulfillmentState) {
 
-	path := query.FulfillmentPath(daddr, gseq, oseq, paddr)
+	path := query.FulfillmentPath(id)
 	resp := app.Query(tmtypes.RequestQuery{Path: path})
 	assert.Empty(t, resp.Log)
 	require.True(t, resp.IsOK())
@@ -356,14 +359,11 @@ func assertFulfillmentState(
 func assertLeaseState(
 	t *testing.T,
 	app apptypes.Application,
-	daddr []byte,
-	gseq uint64,
-	oseq uint64,
-	paddr []byte,
+	id types.LeaseID,
 	state types.Lease_LeaseState) {
 
 	// check fulfillment state
-	path := query.LeasePath(daddr, gseq, oseq, paddr)
+	path := query.LeasePath(id)
 	resp := app.Query(tmtypes.RequestQuery{Path: path})
 	assert.Empty(t, resp.Log)
 	require.True(t, resp.IsOK())

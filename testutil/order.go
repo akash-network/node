@@ -16,10 +16,8 @@ func CreateOrder(t *testing.T, app apptypes.Application, account *types.Account,
 
 	tx := &types.TxPayload_TxCreateOrder{
 		TxCreateOrder: &types.TxCreateOrder{
-			Deployment: order.Deployment,
-			Group:      order.Group,
-			Seq:        order.Seq,
-			EndAt:      order.EndAt,
+			OrderID: order.OrderID,
+			EndAt:   order.EndAt,
 		},
 	}
 
@@ -33,6 +31,7 @@ func CreateOrder(t *testing.T, app apptypes.Application, account *types.Account,
 	assert.True(t, app.AcceptTx(ctx, tx))
 	cresp := app.CheckTx(ctx, tx)
 	assert.True(t, cresp.IsOK())
+	assert.Empty(t, cresp.Log)
 	dresp := app.DeliverTx(ctx, tx)
 	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
 	assert.True(t, dresp.IsOK())
@@ -41,10 +40,12 @@ func CreateOrder(t *testing.T, app apptypes.Application, account *types.Account,
 
 func Order(deploymentAddress base.Bytes, groupSeq, orderSeq uint64) *types.Order {
 	order := &types.Order{
-		Deployment: deploymentAddress,
-		Group:      groupSeq,
-		Seq:        orderSeq,
-		EndAt:      int64(0),
+		OrderID: types.OrderID{
+			Deployment: deploymentAddress,
+			Group:      groupSeq,
+			Seq:        orderSeq,
+		},
+		EndAt: int64(0),
 	}
 	return order
 }

@@ -93,7 +93,7 @@ func Deployment(tenant base.Bytes, nonce uint64) *types.Deployment {
 
 func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGroups {
 	orderTTL := int64(5)
-	nonce++
+	// nonce++
 
 	runit := types.ResourceUnit{
 		Cpu:    RandUint32(),
@@ -113,8 +113,10 @@ func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGrou
 	}
 
 	group := &types.DeploymentGroup{
-		Deployment:   deployment,
-		Seq:          nonce,
+		DeploymentGroupID: types.DeploymentGroupID{
+			Deployment: deployment,
+			Seq:        nonce,
+		},
 		Resources:    []types.ResourceGroup{rgroup},
 		Requirements: []types.ProviderAttribute{pattr},
 		OrderTTL:     orderTTL,

@@ -5,6 +5,7 @@ import (
 
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
@@ -61,10 +62,10 @@ func marketplaceMonitorHandler() marketplace.Handler {
 			fmt.Printf("DEPLOYMENT CLOSED\t%v\n", X(tx.Deployment))
 		}).
 		OnTxCloseFulfillment(func(tx *types.TxCloseFulfillment) {
-			fmt.Printf("FULFILLMENT CLOSED\t%v\n", X(tx.Fulfillment))
+			fmt.Printf("FULFILLMENT CLOSED\t%v\n", keys.FulfillmentID(tx.FulfillmentID).Path())
 		}).
 		OnTxCloseLease(func(tx *types.TxCloseLease) {
-			fmt.Printf("LEASE CLOSED\t%v\n", X(tx.Lease))
+			fmt.Printf("LEASE CLOSED\t%v\n", keys.LeaseID(tx.LeaseID).Path())
 		}).
 		Create()
 }

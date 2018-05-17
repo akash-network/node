@@ -41,19 +41,18 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	// todo: abstractiion: all queries should have this
+	// TODO: Partial Key Parsing
 	id := strings.TrimPrefix(req.Path, state.ProviderPath)
+	if len(id) == 0 {
+		return a.doRangeQuery()
+	}
+
 	key, err := base.DecodeString(id)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
-	}
-
-	// id is empty string, get full range
-	if len(id) == 0 {
-		return a.doRangeQuery(key)
 	}
 	return a.doQuery(key)
 }
@@ -120,7 +119,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 }
 
-func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
+func (a *app) doRangeQuery() tmtypes.ResponseQuery {
 	dcs, err := a.State().Provider().GetMaxRange()
 	if err != nil {
 		return tmtypes.ResponseQuery{

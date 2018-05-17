@@ -78,7 +78,7 @@ func TestValidTx(t *testing.T) {
 	lease := testutil.CreateLease(t, app, provider.Address, pkey, daddress, groupSeq, oSeq, price)
 
 	{
-		path := query.LeasePath(lease.Deployment, lease.Group, lease.Order, lease.Provider)
+		path := query.LeasePath(lease.LeaseID)
 		resp := app.Query(tmtypes.RequestQuery{Path: path})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
@@ -93,10 +93,9 @@ func TestValidTx(t *testing.T) {
 	}
 
 	// close lease
-	leaseAddr := state.Lease().IDFor(lease)
-	testutil.CloseLease(t, app, leaseAddr, pkey)
+	testutil.CloseLease(t, app, lease.LeaseID, pkey)
 	{
-		path := query.LeasePath(lease.Deployment, lease.Group, lease.Order, lease.Provider)
+		path := query.LeasePath(lease.LeaseID)
 		resp := app.Query(tmtypes.RequestQuery{Path: path})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
