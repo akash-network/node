@@ -45,11 +45,9 @@ func testCreateOrder(t *testing.T, state state.State, tenant *types.Account, dep
 	require.Equal(t, deployment.Address, tx.Deployment)
 	require.Equal(t, groups.GetItems()[0].Seq, tx.Group)
 	order := &types.Order{
-		Deployment: tx.Deployment,
-		Group:      tx.Group,
-		Seq:        tx.Seq,
-		EndAt:      tx.EndAt,
-		State:      types.Order_OPEN,
+		OrderID: tx.OrderID,
+		EndAt:   tx.EndAt,
+		State:   types.Order_OPEN,
 	}
 	require.NoError(t, state.Order().Save(order))
 
@@ -70,12 +68,9 @@ func testCreateLease(t *testing.T, state state.State, provider *types.Provider, 
 
 	leaseTx, ok := txs[0].(*types.TxCreateLease)
 	lease := &types.Lease{
-		Deployment: leaseTx.Deployment,
-		Group:      leaseTx.Group,
-		Order:      leaseTx.Order,
-		Provider:   leaseTx.Provider,
-		Price:      leaseTx.Price,
-		State:      types.Lease_ACTIVE,
+		LeaseID: leaseTx.LeaseID,
+		Price:   leaseTx.Price,
+		State:   types.Lease_ACTIVE,
 	}
 	require.True(t, ok)
 	require.NoError(t, state.Lease().Save(lease))

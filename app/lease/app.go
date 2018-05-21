@@ -8,9 +8,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/app/market"
 	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
 	tmcommon "github.com/tendermint/tmlibs/common"
@@ -79,24 +79,29 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	// todo: abstractiion: all queries should have this
+	// TODO: Partial Key Parsing
 	id := strings.TrimPrefix(req.Path, state.LeasePath)
-	key, err := base.DecodeString(id)
-	if err != nil {
-		return tmtypes.ResponseQuery{
-			Code: code.ERROR,
-			Log:  err.Error(),
+
+	if len(id) == 0 {
+		return a.doRangeQuery()
+	}
+
+	{
+		key, err := keys.ParseLeasePath(id)
+		if err == nil {
+			return a.doQuery(key)
 		}
 	}
 
-	// id is empty string, get full range
-	if len(id) == 0 {
-		return a.doRangeQuery(key)
-	}
-	if len(id) == state.AddressSize*2 {
+	key, err := keys.ParseDeploymentPath(id)
+	if err == nil {
 		return a.doDeploymentQuery(key)
 	}
-	return a.doQuery(key)
+
+	return tmtypes.ResponseQuery{
+		Code: code.ERROR,
+		Log:  err.Error(),
+	}
 }
 
 func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) (tmtypes.ResponseCheckTx, *types.Order) {
@@ -145,7 +150,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) (tm
 	}
 
 	// ensure order exists
-	order, err := a.State().Order().Get(tx.Deployment, tx.Group, tx.Order)
+	order, err := a.State().Order().Get(tx.OrderID())
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -168,7 +173,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) (tm
 	}
 
 	// ensure fulfillment exists
-	fulfillment, err := a.State().Fulfillment().Get(tx.Deployment, tx.Group, tx.Order, tx.Provider)
+	fulfillment, err := a.State().Fulfillment().Get(tx.FulfillmentID())
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -216,12 +221,9 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) t
 	}
 
 	lease := &types.Lease{
-		Deployment: tx.Deployment,
-		Group:      tx.Group,
-		Order:      tx.Order,
-		Provider:   tx.Provider,
-		Price:      tx.Price,
-		State:      types.Lease_ACTIVE,
+		LeaseID: tx.LeaseID,
+		Price:   tx.Price,
+		State:   types.Lease_ACTIVE,
 	}
 
 	if err := a.State().Lease().Save(lease); err != nil {
@@ -231,7 +233,7 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) t
 		}
 	}
 
-	group, err := a.State().DeploymentGroup().Get(tx.Deployment, tx.Group)
+	group, err := a.State().DeploymentGroup().Get(tx.GroupID())
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.ERROR,
@@ -245,7 +247,7 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) t
 		}
 	}
 
-	orders, err := a.State().Order().ForGroup(group)
+	orders, err := a.State().Order().ForGroup(group.DeploymentGroupID)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.ERROR,
@@ -275,7 +277,7 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) t
 
 	tags := apptypes.NewTags(a.Name(), apptypes.TxTypeCreateLease)
 	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameDeployment), Value: lease.Deployment})
-	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: state.IDForLease(lease)})
+	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: keys.LeaseID(lease.LeaseID).Bytes()})
 
 	return tmtypes.ResponseDeliverTx{
 		Tags: tags,
@@ -283,15 +285,9 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateLease) t
 }
 
 func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseLease) (tmtypes.ResponseCheckTx, *types.Lease) {
-	if tx.Lease == nil {
-		return tmtypes.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "empty lease",
-		}, nil
-	}
 
 	// lookup provider
-	lease, err := a.State().Lease().GetByKey(tx.Lease)
+	lease, err := a.State().Lease().Get(tx.LeaseID)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -324,7 +320,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseLease) tmt
 		}
 	}
 
-	group, err := a.State().DeploymentGroup().Get(lease.Deployment, lease.Group)
+	group, err := a.State().DeploymentGroup().Get(lease.GroupID())
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.ERROR,
@@ -338,7 +334,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseLease) tmt
 		}
 	}
 
-	order, err := a.State().Order().Get(lease.Deployment, lease.Group, lease.Order)
+	order, err := a.State().Order().Get(lease.OrderID())
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.ERROR,
@@ -377,15 +373,15 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseLease) tmt
 	}
 
 	tags := apptypes.NewTags(a.Name(), apptypes.TxTypeCloseLease)
-	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: state.IDForLease(lease)})
+	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: keys.LeaseID(lease.LeaseID).Bytes()})
 
 	return tmtypes.ResponseDeliverTx{
 		Tags: tags,
 	}
 }
 
-func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
-	lease, err := a.State().Lease().GetByKey(key)
+func (a *app) doQuery(key keys.Lease) tmtypes.ResponseQuery {
+	lease, err := a.State().Lease().Get(key.ID())
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -397,7 +393,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	if lease == nil {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("lease %x not found", key),
+			Log:  fmt.Sprintf("lease %v not found", key.Path()),
 		}
 	}
 
@@ -415,7 +411,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 }
 
-func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
+func (a *app) doRangeQuery() tmtypes.ResponseQuery {
 	items, err := a.State().Lease().All()
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -440,8 +436,8 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 }
 
-func (a *app) doDeploymentQuery(deployment base.Bytes) tmtypes.ResponseQuery {
-	items, err := a.State().Lease().ForDeployment(deployment)
+func (a *app) doDeploymentQuery(key keys.Deployment) tmtypes.ResponseQuery {
+	items, err := a.State().Lease().ForDeployment(key.Bytes())
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,

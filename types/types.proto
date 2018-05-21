@@ -104,18 +104,20 @@ message GroupSpec {
   repeated ResourceGroup     resources    = 2 [(gogoproto.nullable) = false];
 }
 
-message DeploymentGroup {
+message DeploymentGroupID {
   option (gogoproto.compare) = true;
-
-  /* BEGIN ID FIELDS */
 
   // deployment address
   bytes  deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 
   // unique sequence over deployment
   uint64 seq = 2;
+}
 
-  /* END ID FIELDS */
+message DeploymentGroup {
+  option (gogoproto.compare) = true;
+
+  DeploymentGroupID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 
   // max number of blocks orders are open
   int64 orderTTL = 3;
@@ -173,12 +175,10 @@ message TxCloseDeployment {
   ReasonCode reason = 2;
 }
 
-message Order {
+message OrderID {
   option (gogoproto.compare) = true;
 
-  /* BEGIN ID FIELDS */
-
-  // deployment address
+  // deployment
   bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 
   // deployment group sequence
@@ -186,44 +186,37 @@ message Order {
 
   // order sequence
   uint64 seq = 3;
+}
 
-  /* END ID FIELDS */
+message Order {
+  option (gogoproto.compare) = true;
+
+  OrderID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 
   // maximum block number order can be open
-  int64 endAt = 4;
+  int64 endAt = 2;
 
   enum OrderState {
     OPEN    = 0;
     MATCHED = 1;
     CLOSED  = 2;
   }
-  OrderState state = 5;
+  OrderState state = 3;
 }
 
 message TxCreateOrder {
- // deployment address
-  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
-
-  // deployment group sequence
-  uint64 group = 2;
-
-  // order sequence
-  uint64 seq = 3;
-
-  /* END ID FIELDS */
+  OrderID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 
   // maximum block number order can be open
-  int64 endAt = 4;
+  int64 endAt = 2;
 }
 
 message Orders {
   repeated Order items = 1;
 }
 
-message Fulfillment {
+message FulfillmentID {
   option (gogoproto.compare) = true;
-
-  /* BEGIN ID FIELDS */
 
   // deployment address
   bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
@@ -236,46 +229,35 @@ message Fulfillment {
 
   // provider address
   bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+}
 
-  uint32 price = 5;
+message Fulfillment {
+  option (gogoproto.compare) = true;
 
-  /* END ID FIELDS */
+  FulfillmentID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
+
+  uint32 price = 2;
 
   enum FulfillmentState {
     OPEN    = 0;
     MATCHED = 1;
     CLOSED  = 2;
   }
-  FulfillmentState state = 6;
+  FulfillmentState state = 3;
 }
 
 message TxCreateFulfillment {
-  /* BEGIN ID FIELDS */
+  FulfillmentID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 
-  // deployment address
-  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
-
-  // deployment group sequence
-  uint64 group = 2;
-
-  // order sequence
-  uint64 order = 3;
-
-  // provider address
-  bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
-
-  uint32 price = 5;
-
-  /* END ID FIELDS */
+  uint32 price = 2;
 }
 
 message TxCloseFulfillment {
-   // fulfillment address
-  bytes fulfillment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  FulfillmentID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 }
 
-message Lease {
-  /* BEGIN ID FIELDS */
+message LeaseID {
+  option (gogoproto.compare) = true;
 
   // deployment address
   bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
@@ -288,42 +270,31 @@ message Lease {
 
   // provider address
   bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+}
+
+message Lease {
+
+  LeaseID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 
   // price of matching fulfillment
-  uint32 price = 5;
-
-  /* END ID FIELDS */
+  uint32 price = 2;
 
   enum LeaseState {
     ACTIVE  = 0;
     CLOSED  = 2;
   }
-  LeaseState state = 6;
+  LeaseState state = 3;
 }
 
 message TxCreateLease {
-  /* BEGIN ID FIELDS */
-
-  // deployment address
-  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
-
-  // deployment group sequence
-  uint64 group = 2;
-
-  // order sequence
-  uint64 order = 3;
-
-  // provider address
-  bytes provider = 4 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  LeaseID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 
   // price of matching fulfillment
-  uint32 price = 5;
-
-  /* END ID FIELDS */
+  uint32 price = 2;
 }
 
 message TxCloseLease {
-  bytes lease = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  LeaseID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 }
 
 message Leases {

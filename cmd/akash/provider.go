@@ -5,16 +5,15 @@ import (
 	gcontext "context"
 	"fmt"
 	"math/rand"
-	"strconv"
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/cmd/akash/query"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/marketplace"
 	qp "github.com/ovrclk/akash/query"
-	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/provider"
@@ -138,12 +137,12 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 		return err
 	}
 
-	deployments := make(map[string][]string)
+	deployments := make(map[string][]types.LeaseID)
 
 	handler := marketplace.NewBuilder().
 		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
 
-			price, err := getPrice(ctx, tx.Deployment, tx.Group)
+			price, err := getPrice(ctx, tx.OrderID)
 			if err != nil {
 				ctx.Log().Error("error getting price", "error", err)
 				return
@@ -153,18 +152,20 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 			price = uint32(rand.Int31n(int32(price) + 1))
 
 			ordertx := &types.TxCreateFulfillment{
-				Deployment: tx.Deployment,
-				Group:      tx.Group,
-				Order:      tx.Seq,
-				Provider:   provider,
-				Price:      price,
+				FulfillmentID: types.FulfillmentID{
+					Deployment: tx.Deployment,
+					Group:      tx.Group,
+					Order:      tx.Seq,
+					Provider:   provider,
+				},
+				Price: price,
 			}
 
-			fmt.Printf("Bidding on order: %v/%v/%v\n",
-				X(tx.Deployment), tx.Group, tx.Seq)
+			fmt.Printf("Bidding on order: %v\n",
+				keys.OrderID(tx.OrderID).Path())
 
 			fmt.Printf("Fulfillment: %v\n",
-				X(state.FulfillmentID(tx.Deployment, tx.Group, tx.Seq, provider)))
+				keys.FulfillmentID(ordertx.FulfillmentID).Path())
 
 			_, err = txclient.BroadcastTxCommit(ordertx)
 			if err != nil {
@@ -176,28 +177,27 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
 			leaseProvider, _ := tx.Provider.Marshal()
 			if bytes.Equal(leaseProvider, provider) {
-				lease := X(state.LeaseID(tx.Deployment, tx.Group, tx.Order, tx.Provider))
 				leases, _ := deployments[tx.Deployment.EncodeString()]
-				deployments[tx.Deployment.EncodeString()] = append(leases, lease)
-				fmt.Printf("Won lease for order: %v/%v/%v\n",
-					X(tx.Deployment), tx.Group, tx.Order)
+				deployments[tx.Deployment.EncodeString()] = append(leases, tx.LeaseID)
+				fmt.Printf("Won lease for order: %v\n",
+					keys.LeaseID(tx.LeaseID).Path())
 			}
 		}).
 		OnTxCloseDeployment(func(tx *types.TxCloseDeployment) {
 			leases, ok := deployments[tx.Deployment.EncodeString()]
 			if ok {
 				for _, lease := range leases {
-					fmt.Printf("Closed lease %v\n", lease)
+					fmt.Printf("Closed lease %v\n", keys.LeaseID(lease).Path())
 				}
 			}
 		}).Create()
 	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
 }
 
-func getPrice(ctx context.Context, addr base.Bytes, seq uint64) (uint32, error) {
+func getPrice(ctx context.Context, id types.OrderID) (uint32, error) {
 	// get deployment group
 	price := uint32(0)
-	path := qp.DeploymentGroupPath(addr, seq)
+	path := qp.DeploymentGroupPath(id.GroupID())
 	group := new(types.DeploymentGroup)
 	result, err := query.Query(ctx, path)
 	if err != nil {
@@ -230,13 +230,13 @@ func doCloseFulfillmentCommand(ctx context.Context, cmd *cobra.Command, args []s
 		return err
 	}
 
-	fulfillment, err := base.DecodeString(args[0])
+	key, err := keys.ParseFulfillmentPath(args[0])
 	if err != nil {
 		return err
 	}
 
 	_, err = txclient.BroadcastTxCommit(&types.TxCloseFulfillment{
-		Fulfillment: fulfillment,
+		FulfillmentID: key.ID(),
 	})
 	return err
 }
@@ -261,30 +261,13 @@ func doCloseLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string)
 		return err
 	}
 
-	deployment, err := base.DecodeString(args[0])
+	key, err := keys.ParseLeasePath(args[0])
 	if err != nil {
 		return err
 	}
-
-	group, err := strconv.ParseUint(args[1], 10, 64)
-	if err != nil {
-		return err
-	}
-
-	order, err := strconv.ParseUint(args[2], 10, 64)
-	if err != nil {
-		return err
-	}
-
-	provider, err := base.DecodeString(args[3])
-	if err != nil {
-		return err
-	}
-
-	lease := state.LeaseID(deployment, group, order, provider)
 
 	_, err = txclient.BroadcastTxCommit(&types.TxCloseLease{
-		Lease: lease,
+		LeaseID: key.ID(),
 	})
 
 	return err

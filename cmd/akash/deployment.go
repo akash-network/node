@@ -8,10 +8,10 @@ import (
 	"github.com/ovrclk/akash/cmd/akash/context"
 	"github.com/ovrclk/akash/cmd/akash/query"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/sdl"
-	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	. "github.com/ovrclk/akash/util"
@@ -102,13 +102,13 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 			OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 				if bytes.Equal(tx.Deployment, address) {
 					fmt.Printf("Group %v/%v Fulfillment: %v\n", tx.Group, len(groups),
-						X(state.FulfillmentID(tx.Deployment, tx.Group, tx.Order, tx.Provider)))
+						keys.FulfillmentID(tx.FulfillmentID).Path())
 				}
 			}).
 			OnTxCreateLease(func(tx *types.TxCreateLease) {
 				if bytes.Equal(tx.Deployment, address) {
 					fmt.Printf("Group %v/%v Lease: %v\n", tx.Group, len(groups),
-						X(state.FulfillmentID(tx.Deployment, tx.Group, tx.Order, tx.Provider)))
+						keys.LeaseID(tx.LeaseID).Path())
 					// get lease provider
 					prov, err := query.Provider(ctx, tx.Provider)
 					if err != nil {

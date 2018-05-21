@@ -16,11 +16,8 @@ func CreateLease(t *testing.T, app apptypes.Application, provider base.Bytes, ke
 
 	tx := &types.TxPayload_TxCreateLease{
 		TxCreateLease: &types.TxCreateLease{
-			Deployment: lease.Deployment,
-			Group:      lease.Group,
-			Order:      lease.Order,
-			Provider:   lease.Provider,
-			Price:      lease.Price,
+			LeaseID: lease.LeaseID,
+			Price:   lease.Price,
 		},
 	}
 
@@ -40,10 +37,10 @@ func CreateLease(t *testing.T, app apptypes.Application, provider base.Bytes, ke
 	return lease
 }
 
-func CloseLease(t *testing.T, app apptypes.Application, lease base.Bytes, key crypto.PrivKey) {
+func CloseLease(t *testing.T, app apptypes.Application, id types.LeaseID, key crypto.PrivKey) {
 	tx := &types.TxPayload_TxCloseLease{
 		TxCloseLease: &types.TxCloseLease{
-			Lease: lease,
+			LeaseID: id,
 		},
 	}
 
@@ -64,11 +61,13 @@ func CloseLease(t *testing.T, app apptypes.Application, lease base.Bytes, key cr
 
 func Lease(provider base.Bytes, deplyment base.Bytes, group, order uint64, price uint32) *types.Lease {
 	lease := &types.Lease{
-		Deployment: deplyment,
-		Group:      group,
-		Order:      order,
-		Provider:   provider,
-		Price:      price,
+		LeaseID: types.LeaseID{
+			Deployment: deplyment,
+			Group:      group,
+			Order:      order,
+			Provider:   provider,
+		},
+		Price: price,
 	}
 	return lease
 }

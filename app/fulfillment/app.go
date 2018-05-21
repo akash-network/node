@@ -9,9 +9,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
 )
@@ -79,17 +79,12 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 	// todo: abstractiion: all queries should have this
 	id := strings.TrimPrefix(req.Path, state.FulfillmentPath)
-	key, err := base.DecodeString(id)
+	key, err := keys.ParseFulfillmentPath(id)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
-	}
-
-	// id is empty string, get full range
-	if len(id) == 0 {
-		return a.doRangeQuery(key)
 	}
 	return a.doQuery(key)
 }
@@ -149,7 +144,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillmen
 	}
 
 	// ensure order exists
-	dorder, err := a.State().Order().Get(tx.Deployment, tx.Group, tx.Order)
+	dorder, err := a.State().Order().Get(tx.OrderID())
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -172,7 +167,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillmen
 	}
 
 	// get deployment group
-	group, err := a.State().DeploymentGroup().Get(tx.Deployment, tx.Group)
+	group, err := a.State().DeploymentGroup().Get(tx.GroupID())
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -197,7 +192,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillmen
 	}
 
 	// ensure there are no other orders for this provider
-	other, err := a.State().Fulfillment().Get(tx.Deployment, tx.Group, tx.Order, tx.Provider)
+	other, err := a.State().Fulfillment().Get(tx.FulfillmentID)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -224,12 +219,8 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillm
 	}
 
 	fulfillment := &types.Fulfillment{
-		Deployment: tx.Deployment,
-		Group:      tx.Group,
-		Order:      tx.Order,
-		Provider:   tx.Provider,
-		Price:      tx.Price,
-		State:      types.Fulfillment_OPEN,
+		FulfillmentID: tx.FulfillmentID,
+		State:         types.Fulfillment_OPEN,
 	}
 
 	if err := a.State().Fulfillment().Save(fulfillment); err != nil {
@@ -247,7 +238,7 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillm
 func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseFulfillment) (*types.Fulfillment, tmtypes.ResponseCheckTx) {
 
 	// lookup fulfillment
-	fulfillment, err := a.State().Fulfillment().GetByKey(tx.Fulfillment)
+	fulfillment, err := a.State().Fulfillment().Get(tx.FulfillmentID)
 	if err != nil {
 		return nil, tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -331,8 +322,8 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseFulfillmen
 	}
 }
 
-func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
-	ful, err := a.State().Fulfillment().GetByKey(key)
+func (a *app) doQuery(key keys.Fulfillment) tmtypes.ResponseQuery {
+	ful, err := a.State().Fulfillment().Get(key.ID())
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -344,7 +335,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	if ful == nil {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("fulfillment %x not found", key),
+			Log:  fmt.Sprintf("fulfillment %v not found", key.Path()),
 		}
 	}
 
@@ -360,8 +351,4 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 		Value:  bytes,
 		Height: a.State().Version(),
 	}
-}
-
-func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
-	return tmtypes.ResponseQuery{}
 }

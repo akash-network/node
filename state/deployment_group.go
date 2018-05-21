@@ -4,16 +4,15 @@ import (
 	"math"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 )
 
 type DeploymentGroupAdapter interface {
 	Save(*types.DeploymentGroup) error
-	Get(addr base.Bytes, seq uint64) (*types.DeploymentGroup, error)
-	GetByKey(addr base.Bytes) (*types.DeploymentGroup, error)
+	Get(id types.DeploymentGroupID) (*types.DeploymentGroup, error)
 	ForDeployment(addr base.Bytes) ([]*types.DeploymentGroup, error)
-	KeyFor(base.Bytes) base.Bytes
 }
 
 func NewDeploymentGroupAdapter(db DB) DeploymentGroupAdapter {
@@ -25,25 +24,18 @@ type deploymentGroupAdapter struct {
 }
 
 func (a *deploymentGroupAdapter) Save(obj *types.DeploymentGroup) error {
-	path := a.KeyFor(a.IDFor(obj))
+	path := a.keyFor(obj.DeploymentGroupID)
 	return saveObject(a.db, path, obj)
 }
 
-func (a *deploymentGroupAdapter) Get(addr base.Bytes, seq uint64) (*types.DeploymentGroup, error) {
-	path := a.KeyFor(DeploymentGroupID(addr, seq))
+func (a *deploymentGroupAdapter) Get(id types.DeploymentGroupID) (*types.DeploymentGroup, error) {
+	path := a.keyFor(id)
 	buf := a.db.Get(path)
-	obj := new(types.DeploymentGroup)
-	return obj, proto.Unmarshal(buf, obj)
-}
-
-func (a *deploymentGroupAdapter) GetByKey(address base.Bytes) (*types.DeploymentGroup, error) {
-	obj := types.DeploymentGroup{}
-	key := a.KeyFor(address)
-	buf := a.db.Get(key)
 	if buf == nil {
 		return nil, nil
 	}
-	return &obj, obj.Unmarshal(buf)
+	obj := new(types.DeploymentGroup)
+	return obj, proto.Unmarshal(buf, obj)
 }
 
 func (a *deploymentGroupAdapter) ForDeployment(deployment base.Bytes) ([]*types.DeploymentGroup, error) {
@@ -68,22 +60,21 @@ func (a *deploymentGroupAdapter) ForDeployment(deployment base.Bytes) ([]*types.
 	return items, nil
 }
 
-// /deployment-groups/{deployment-address}{group-sequence}
-func (a *deploymentGroupAdapter) KeyFor(id base.Bytes) base.Bytes {
-	return append(base.Bytes(DeploymentGroupPath), id...)
+func (a *deploymentGroupAdapter) keyFor(id types.DeploymentGroupID) base.Bytes {
+	key := keys.DeploymentGroupID(id).Bytes()
+	return append(base.Bytes(DeploymentGroupPath), key...)
 }
 
-// {deployment-address}{group-sequence}
-func (a *deploymentGroupAdapter) IDFor(obj *types.DeploymentGroup) []byte {
-	return DeploymentGroupID(obj.Deployment, obj.GetSeq())
-}
-
-// /deployment-groups/{deployment-address}{0}
 func (a *deploymentGroupAdapter) deploymentMinRange(deployment []byte) []byte {
-	return a.KeyFor(DeploymentGroupID(deployment, 0))
+	return a.keyFor(types.DeploymentGroupID{
+		Deployment: deployment,
+		Seq:        0,
+	})
 }
 
-// /deployment-groups/{deployment-address}{max-uint}
 func (a *deploymentGroupAdapter) deploymentMaxRange(deployment []byte) []byte {
-	return a.KeyFor(DeploymentGroupID(deployment, math.MaxUint64))
+	return a.keyFor(types.DeploymentGroupID{
+		Deployment: deployment,
+		Seq:        math.MaxUint64,
+	})
 }

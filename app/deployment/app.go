@@ -7,9 +7,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/tmlibs/log"
@@ -39,10 +39,11 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	// todo: need abtraction for multiple query types per app
+	// TODO: Partial Key Parsing
+
 	if strings.HasPrefix(req.GetPath(), state.DeploymentGroupPath) {
 		id := strings.TrimPrefix(req.Path, state.DeploymentGroupPath)
-		key, err := base.DecodeString(id)
+		key, err := keys.ParseGroupPath(id)
 		if err != nil {
 			return tmtypes.ResponseQuery{
 				Code: code.ERROR,
@@ -52,9 +53,12 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		return a.doDeploymentGroupQuery(key)
 	}
 
-	// todo: abstractiion: all queries should have this
 	id := strings.TrimPrefix(req.Path, state.DeploymentPath)
-	key, err := base.DecodeString(id)
+	if len(id) == 0 {
+		return a.doRangeQuery()
+	}
+
+	key, err := keys.ParseDeploymentPath(id)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -62,10 +66,6 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	// id is empty string, get full range
-	if len(id) == 0 {
-		return a.doRangeQuery(key)
-	}
 	return a.doQuery(key)
 }
 
@@ -105,9 +105,9 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 	}
 }
 
-func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
+func (a *app) doQuery(key keys.Deployment) tmtypes.ResponseQuery {
 
-	dep, err := a.State().Deployment().Get(key)
+	dep, err := a.State().Deployment().Get(key.ID())
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -119,7 +119,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	if dep == nil {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("deployment %x not found", key),
+			Log:  fmt.Sprintf("deployment %v not found", key.Path()),
 		}
 	}
 
@@ -137,7 +137,7 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 }
 
-func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
+func (a *app) doRangeQuery() tmtypes.ResponseQuery {
 	deps, err := a.State().Deployment().GetMaxRange()
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -160,9 +160,9 @@ func (a *app) doRangeQuery(key base.Bytes) tmtypes.ResponseQuery {
 	}
 }
 
-func (a *app) doDeploymentGroupQuery(key base.Bytes) tmtypes.ResponseQuery {
+func (a *app) doDeploymentGroupQuery(key keys.DeploymentGroup) tmtypes.ResponseQuery {
 
-	dep, err := a.State().DeploymentGroup().GetByKey(key)
+	dep, err := a.State().DeploymentGroup().Get(key.ID())
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -174,7 +174,7 @@ func (a *app) doDeploymentGroupQuery(key base.Bytes) tmtypes.ResponseQuery {
 	if dep == nil {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("deployment group %x not found", key),
+			Log:  fmt.Sprintf("deployment group %v not found", key.Path()),
 		}
 	}
 
@@ -296,8 +296,10 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployme
 
 	for _, group := range groups {
 		g := &types.DeploymentGroup{
-			Deployment:   deployment.Address,
-			Seq:          seq.Advance(),
+			DeploymentGroupID: types.DeploymentGroupID{
+				Deployment: deployment.Address,
+				Seq:        seq.Advance(),
+			},
 			State:        types.DeploymentGroup_OPEN,
 			Requirements: group.Requirements,
 			Resources:    group.Resources,

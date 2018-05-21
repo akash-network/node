@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	apptypes "github.com/ovrclk/akash/app/types"
-	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/assert"
@@ -17,11 +16,8 @@ func CreateFulfillment(t *testing.T, app apptypes.Application, provider base.Byt
 
 	fulfillmenttx := &types.TxPayload_TxCreateFulfillment{
 		TxCreateFulfillment: &types.TxCreateFulfillment{
-			Deployment: fulfillment.Deployment,
-			Group:      fulfillment.Group,
-			Order:      fulfillment.Order,
-			Provider:   fulfillment.Provider,
-			Price:      fulfillment.Price,
+			FulfillmentID: fulfillment.FulfillmentID,
+			Price:         fulfillment.Price,
 		},
 	}
 
@@ -41,12 +37,11 @@ func CreateFulfillment(t *testing.T, app apptypes.Application, provider base.Byt
 	return fulfillment
 }
 
-func CloseFulfillment(t *testing.T, app apptypes.Application, key crypto.PrivKey, fulfillment *types.Fulfillment) base.Bytes {
-	faddr := state.FulfillmentID(fulfillment.Deployment, fulfillment.Group, fulfillment.Order, fulfillment.Provider)
+func CloseFulfillment(t *testing.T, app apptypes.Application, key crypto.PrivKey, fulfillment *types.Fulfillment) {
 
 	tx := &types.TxPayload_TxCloseFulfillment{
 		TxCloseFulfillment: &types.TxCloseFulfillment{
-			Fulfillment: faddr,
+			FulfillmentID: fulfillment.FulfillmentID,
 		},
 	}
 
@@ -63,16 +58,17 @@ func CloseFulfillment(t *testing.T, app apptypes.Application, key crypto.PrivKey
 	dresp := app.DeliverTx(ctx, tx)
 	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
 	assert.True(t, dresp.IsOK())
-	return faddr
 }
 
 func Fulfillment(provider base.Bytes, deplyment base.Bytes, group, order uint64, price uint32) *types.Fulfillment {
 	fulfillment := &types.Fulfillment{
-		Deployment: deplyment,
-		Group:      group,
-		Order:      order,
-		Provider:   provider,
-		Price:      price,
+		FulfillmentID: types.FulfillmentID{
+			Deployment: deplyment,
+			Group:      group,
+			Order:      order,
+			Provider:   provider,
+		},
+		Price: price,
 	}
 	return fulfillment
 }

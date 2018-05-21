@@ -120,7 +120,7 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 		}
 
 		// process current orders
-		orders, err := state.Order().ForGroup(group)
+		orders, err := state.Order().ForGroup(group.DeploymentGroupID)
 		if err != nil {
 			return err
 		}
@@ -145,10 +145,12 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 		// if no active order for the group emit create tx
 		if !activeFound {
 			w.put(&types.TxCreateOrder{
-				Deployment: deployment.Address,
-				Group:      group.GetSeq(),
-				Seq:        nextSeq,
-				EndAt:      group.OrderTTL + height,
+				OrderID: types.OrderID{
+					Deployment: deployment.Address,
+					Group:      group.GetSeq(),
+					Seq:        nextSeq,
+				},
+				EndAt: group.OrderTTL + height,
 			})
 			nextSeq++
 		}
@@ -158,7 +160,7 @@ func (e engine) processDeployment(state state.State, w txBuffer, deployment type
 }
 
 func BestFulfillment(state state.State, order *types.Order) (*types.Fulfillment, error) {
-	fulfillments, err := state.Fulfillment().ForOrder(order)
+	fulfillments, err := state.Fulfillment().ForOrder(order.OrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -200,11 +202,8 @@ func (e engine) processOrder(state state.State, w txBuffer, order *types.Order) 
 	}
 
 	w.put(&types.TxCreateLease{
-		Deployment: fulfillment.Deployment,
-		Group:      fulfillment.Group,
-		Order:      fulfillment.Order,
-		Provider:   fulfillment.Provider,
-		Price:      fulfillment.Price,
+		LeaseID: fulfillment.LeaseID(),
+		Price:   fulfillment.Price,
 	})
 
 	return nil

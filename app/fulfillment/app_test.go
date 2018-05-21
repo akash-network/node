@@ -29,7 +29,13 @@ func TestAcceptQuery(t *testing.T) {
 	require.NoError(t, err)
 
 	{
-		path := query.FulfillmentPath(testutil.DeploymentAddress(t), 0, 0, testutil.Address(t))
+		id := types.FulfillmentID{
+			Deployment: testutil.DeploymentAddress(t),
+			Group:      0,
+			Order:      0,
+			Provider:   testutil.Address(t),
+		}
+		path := query.FulfillmentPath(id)
 		assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: path}))
 	}
 
@@ -78,7 +84,7 @@ func createFulfillment(t *testing.T, app apptypes.Application, provider *types.P
 	// create fulfillment
 	fulfillment := testutil.CreateFulfillment(t, app, provider.Address, pkey, deployment, groupSeq, oSeq, price)
 
-	path := query.FulfillmentPath(fulfillment.Deployment, fulfillment.Group, fulfillment.Order, fulfillment.Provider)
+	path := query.FulfillmentPath(fulfillment.FulfillmentID)
 	resp := app.Query(tmtypes.RequestQuery{Path: path})
 	assert.Empty(t, resp.Log)
 	require.True(t, resp.IsOK())
@@ -97,7 +103,7 @@ func createFulfillment(t *testing.T, app apptypes.Application, provider *types.P
 
 func closeFulfillment(t *testing.T, app apptypes.Application, key crypto.PrivKey, fulfillment *types.Fulfillment) {
 	testutil.CloseFulfillment(t, app, key, fulfillment)
-	path := query.FulfillmentPath(fulfillment.Deployment, fulfillment.Group, fulfillment.Order, fulfillment.Provider)
+	path := query.FulfillmentPath(fulfillment.FulfillmentID)
 	resp := app.Query(tmtypes.RequestQuery{Path: path})
 	assert.Empty(t, resp.Log)
 	require.True(t, resp.IsOK())

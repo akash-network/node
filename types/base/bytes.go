@@ -41,10 +41,12 @@ func (t Bytes) EncodeString() string {
 	return util.X(t)
 }
 
+func (t Bytes) String() string {
+	return t.EncodeString()
+}
+
 func (this Bytes) Compare(that Bytes) int {
-	thisb, _ := this.Marshal()
-	thatb, _ := that.Marshal()
-	return bytes.Compare(thisb, thatb)
+	return bytes.Compare([]byte(this), []byte(that))
 }
 
 func DecodeString(buf string) (Bytes, error) {
