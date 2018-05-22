@@ -7,9 +7,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/tmlibs/log"
@@ -40,7 +40,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 	id := strings.TrimPrefix(req.Path, state.AccountPath)
-	key, err := base.DecodeString(id)
+	key, err := keys.ParseAccountPath(id)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -48,7 +48,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	acct, err := a.State().Account().Get(key)
+	acct, err := a.State().Account().Get(key.ID())
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,

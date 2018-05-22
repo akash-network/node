@@ -6,14 +6,12 @@ import (
 	"os"
 
 	"github.com/ovrclk/akash/cmd/akash/context"
-	"github.com/ovrclk/akash/cmd/akash/query"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	. "github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
 )
@@ -110,7 +108,7 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 					fmt.Printf("Group %v/%v Lease: %v\n", tx.Group, len(groups),
 						keys.LeaseID(tx.LeaseID).Path())
 					// get lease provider
-					prov, err := query.Provider(ctx, tx.Provider)
+					prov, err := ctx.QueryClient().Provider(ctx.Ctx(), tx.Provider)
 					if err != nil {
 						fmt.Printf("ERROR: %v", err)
 					}
@@ -156,13 +154,13 @@ func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	deployment, err := base.DecodeString(args[0])
+	deployment, err := keys.ParseDeploymentPath(args[0])
 	if err != nil {
 		return err
 	}
 
 	_, err = txclient.BroadcastTxCommit(&types.TxCloseDeployment{
-		Deployment: deployment,
+		Deployment: deployment.ID(),
 		Reason:     types.TxCloseDeployment_TENANT_CLOSE,
 	})
 
@@ -207,17 +205,17 @@ func sendManifest(ctx context.Context, cmd *cobra.Command, args []string) error 
 		return err
 	}
 
-	leaseAddr, err := base.DecodeString(args[1])
+	leaseAddr, err := keys.ParseLeasePath(args[1])
 	if err != nil {
 		return err
 	}
 
-	lease, err := query.Lease(ctx, leaseAddr)
+	lease, err := ctx.QueryClient().Lease(ctx.Ctx(), leaseAddr.ID())
 	if err != nil {
 		return err
 	}
 
-	provider, err := query.Provider(ctx, lease.Provider)
+	provider, err := ctx.QueryClient().Provider(ctx.Ctx(), lease.Provider)
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
@@ -47,14 +48,14 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		return a.doRangeQuery()
 	}
 
-	key, err := base.DecodeString(id)
+	key, err := keys.ParseProviderPath(id)
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
 	}
-	return a.doQuery(key)
+	return a.doQuery(key.ID())
 }
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {

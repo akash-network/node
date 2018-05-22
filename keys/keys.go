@@ -17,22 +17,28 @@ type Key interface {
 	Bytes() []byte
 }
 
-type Deployment base.Bytes
+type Address base.Bytes
 
-func DeploymentID(id base.Bytes) Deployment {
-	return Deployment(id)
+type (
+	Deployment = Address
+	Provider   = Address
+	Account    = Address
+)
+
+func (k Address) Path() string {
+	return util.X(k)
 }
 
-func (k Deployment) ID() base.Bytes {
-	return base.Bytes(k)
-}
-
-func (k Deployment) Bytes() []byte {
+func (k Address) Bytes() []byte {
 	return k
 }
 
-func (k Deployment) Path() string {
-	return util.X(k)
+func (k Address) ID() base.Bytes {
+	return base.Bytes(k)
+}
+
+func DeploymentID(id base.Bytes) Deployment {
+	return Address(id)
 }
 
 type DeploymentGroup struct {

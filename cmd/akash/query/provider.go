@@ -1,11 +1,8 @@
 package query
 
 import (
-	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/cmd/akash/context"
-	"github.com/ovrclk/akash/state"
-	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/util"
+	"github.com/ovrclk/akash/keys"
 	"github.com/spf13/cobra"
 )
 
@@ -21,26 +18,17 @@ func queryProviderCommand() *cobra.Command {
 }
 
 func doQueryProviderCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	path := state.ProviderPath
-	if len(args) > 0 {
-		structure := new(types.Provider)
-		path += args[0]
-		return doQuery(ctx, path, structure)
-	} else {
-		structure := new(types.Providers)
-		return doQuery(ctx, path, structure)
+	if len(args) == 0 {
+		handleMessage(ctx.QueryClient().Providers(ctx.Ctx()))
 	}
-}
-
-func Provider(ctx context.Context, paddr []byte) (*types.Provider, error) {
-	provider := &types.Provider{}
-	path := state.ProviderPath + util.X(paddr)
-	result, err := Query(ctx, path)
-	if err != nil {
-		return nil, err
+	for _, arg := range args {
+		key, err := keys.ParseProviderPath(arg)
+		if err != nil {
+			return err
+		}
+		if err := handleMessage(ctx.QueryClient().Provider(ctx.Ctx(), key.ID())); err != nil {
+			return err
+		}
 	}
-	if err := proto.Unmarshal(result.Response.Value, provider); err != nil {
-		return nil, err
-	}
-	return provider, nil
+	return nil
 }

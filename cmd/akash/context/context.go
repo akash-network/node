@@ -8,7 +8,10 @@ import (
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/txutil"
+
+	gctx "context"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -25,12 +28,14 @@ type Context interface {
 	Node() string
 	Client() *tmclient.HTTP
 	TxClient() (txutil.Client, error)
+	QueryClient() query.Client
 	KeyName() string
 	KeyType() (keys.CryptoAlgo, error)
 	Key() (keys.Info, error)
 	Nonce() (uint64, error)
 	Log() log.Logger
 	Signer() (txutil.Signer, keys.Info, error)
+	Ctx() gctx.Context
 	Wait() bool
 }
 
@@ -160,6 +165,10 @@ func (ctx *context) TxClient() (txutil.Client, error) {
 	return txutil.NewClient(ctx.Client(), signer, key, nonce), nil
 }
 
+func (ctx *context) QueryClient() query.Client {
+	return query.NewClient(ctx.Client())
+}
+
 func (ctx *context) KeyName() string {
 	val, _ := ctx.cmd.Flags().GetString(constants.FlagKey)
 	return val
@@ -224,6 +233,10 @@ func (ctx *context) Nonce() (uint64, error) {
 func (ctx *context) Wait() bool {
 	val, _ := ctx.cmd.Flags().GetBool(constants.FlagWait)
 	return val
+}
+
+func (ctx *context) Ctx() gctx.Context {
+	return gctx.Background()
 }
 
 func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {

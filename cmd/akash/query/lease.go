@@ -1,12 +1,8 @@
 package query
 
 import (
-	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/cmd/akash/context"
-	"github.com/ovrclk/akash/state"
-	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
-	"github.com/ovrclk/akash/util"
+	"github.com/ovrclk/akash/keys"
 	"github.com/spf13/cobra"
 )
 
@@ -22,39 +18,17 @@ func queryLeaseCommand() *cobra.Command {
 }
 
 func doQueryLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	path := state.LeasePath
-	if len(args) > 0 {
-		structure := new(types.Lease)
-		path += args[0]
-		return doQuery(ctx, path, structure)
-	} else {
-		structure := new(types.Leases)
-		return doQuery(ctx, path, structure)
+	if len(args) == 0 {
+		handleMessage(ctx.QueryClient().Leases(ctx.Ctx()))
 	}
-}
-
-func LeasesForDeployment(ctx context.Context, deployment *base.Bytes) (*types.Leases, error) {
-	leases := &types.Leases{}
-	path := state.LeasePath + util.X(*deployment)
-	result, err := Query(ctx, path)
-	if err != nil {
-		return nil, err
+	for _, arg := range args {
+		key, err := keys.ParseLeasePath(arg)
+		if err != nil {
+			return err
+		}
+		if err := handleMessage(ctx.QueryClient().Lease(ctx.Ctx(), key.ID())); err != nil {
+			return err
+		}
 	}
-	if err := proto.Unmarshal(result.Response.Value, leases); err != nil {
-		return nil, err
-	}
-	return leases, nil
-}
-
-func Lease(ctx context.Context, leaseAddr []byte) (*types.Lease, error) {
-	lease := &types.Lease{}
-	path := state.LeasePath + util.X(leaseAddr)
-	result, err := Query(ctx, path)
-	if err != nil {
-		return nil, err
-	}
-	if err := proto.Unmarshal(result.Response.Value, lease); err != nil {
-		return nil, err
-	}
-	return lease, nil
+	return nil
 }

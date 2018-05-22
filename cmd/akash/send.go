@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/spf13/cobra"
 )
 
@@ -38,21 +38,21 @@ func doSendCommand(ctx context.Context, cmd *cobra.Command, args []string) error
 		return err
 	}
 
-	to, err := base.DecodeString(args[1])
+	to, err := keys.ParseAccountPath(args[1])
 	if err != nil {
 		return err
 	}
 
 	result, err := txclient.BroadcastTxCommit(&types.TxSend{
 		From:   txclient.Key().Address(),
-		To:     to,
+		To:     to.ID(),
 		Amount: amount,
 	})
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Sent %v tokens to %v in block %v\n", amount, to.EncodeString(), result.Height)
+	fmt.Printf("Sent %v tokens to %v in block %v\n", amount, to.Path(), result.Height)
 
 	return nil
 }

@@ -11,9 +11,21 @@ import (
 
 // XXX: interim hack (iteration!)
 
-func ParseDeploymentPath(buf string) (Deployment, error) {
+func ParseAddressPath(buf string) (Address, error) {
 	obj, err := base.DecodeString(buf)
-	return Deployment(obj), err
+	return Address(obj), err
+}
+
+func ParseDeploymentPath(buf string) (Deployment, error) {
+	return ParseAddressPath(buf)
+}
+
+func ParseProviderPath(buf string) (Provider, error) {
+	return ParseAddressPath(buf)
+}
+
+func ParseAccountPath(buf string) (Account, error) {
+	return ParseAddressPath(buf)
 }
 
 func ParseGroupPath(buf string) (DeploymentGroup, error) {
@@ -79,7 +91,12 @@ func ParseFulfillmentPath(buf string) (Fulfillment, error) {
 	obj.Group = order.Group
 	obj.Order = order.Seq
 
-	obj.Provider, err = base.DecodeString(parts[3])
+	provider, err := ParseProviderPath(parts[3])
+	if err != nil {
+		return obj, fmt.Errorf("invalid fulfillment path '%v': %v", buf, err)
+	}
+
+	obj.Provider = provider.ID()
 
 	return obj, err
 }

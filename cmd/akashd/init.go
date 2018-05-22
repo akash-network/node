@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/ovrclk/akash/keys"
 	ptypes "github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/util/initgen"
 	"github.com/spf13/cobra"
 )
@@ -83,13 +83,13 @@ func doInitCommand(ctx Context, cmd *cobra.Command, args []string) error {
 }
 
 func generateAkashGenesis(cmd *cobra.Command, args []string) (*ptypes.Genesis, error) {
-	addr, err := base.DecodeString(args[0])
+	key, err := keys.ParseAccountPath(args[0])
 	if err != nil {
 		return nil, err
 	}
 	return &ptypes.Genesis{
 		Accounts: []ptypes.Account{
-			ptypes.Account{Address: addr, Balance: maxTokens},
+			ptypes.Account{Address: key.ID(), Balance: maxTokens},
 		},
 	}, nil
 }

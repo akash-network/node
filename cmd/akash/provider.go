@@ -8,14 +8,11 @@ import (
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/context"
-	"github.com/ovrclk/akash/cmd/akash/query"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/marketplace"
-	qp "github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/provider"
 	. "github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
@@ -132,7 +129,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 		return err
 	}
 
-	provider, err := base.DecodeString(args[0])
+	key, err := keys.ParseProviderPath(args[0])
 	if err != nil {
 		return err
 	}
@@ -156,7 +153,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 					Deployment: tx.Deployment,
 					Group:      tx.Group,
 					Order:      tx.Seq,
-					Provider:   provider,
+					Provider:   key.ID(),
 				},
 				Price: price,
 			}
@@ -176,7 +173,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
 			leaseProvider, _ := tx.Provider.Marshal()
-			if bytes.Equal(leaseProvider, provider) {
+			if bytes.Equal(leaseProvider, key.ID()) {
 				leases, _ := deployments[tx.Deployment.EncodeString()]
 				deployments[tx.Deployment.EncodeString()] = append(leases, tx.LeaseID)
 				fmt.Printf("Won lease for order: %v\n",
@@ -197,13 +194,10 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 func getPrice(ctx context.Context, id types.OrderID) (uint32, error) {
 	// get deployment group
 	price := uint32(0)
-	path := qp.DeploymentGroupPath(id.GroupID())
-	group := new(types.DeploymentGroup)
-	result, err := query.Query(ctx, path)
+	group, err := ctx.QueryClient().DeploymentGroup(ctx.Ctx(), id.GroupID())
 	if err != nil {
 		return 0, err
 	}
-	group.Unmarshal(result.Response.Value)
 	for _, group := range group.GetResources() {
 		price += group.Price
 	}
