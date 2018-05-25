@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/manifest"
@@ -36,23 +36,23 @@ func createDeploymentCommand() *cobra.Command {
 		Use:   "create <deployment-file>",
 		Short: "create a deployment",
 		Args:  cobra.ExactArgs(1),
-		RunE: context.WithContext(
-			context.RequireKey(context.RequireNode(createDeployment))),
+		RunE: session.WithSession(
+			session.RequireKey(session.RequireNode(createDeployment))),
 	}
 
-	context.AddFlagNode(cmd, cmd.Flags())
-	context.AddFlagKey(cmd, cmd.Flags())
-	context.AddFlagNonce(cmd, cmd.Flags())
-	context.AddFlagWait(cmd, cmd.Flags())
+	session.AddFlagNode(cmd, cmd.Flags())
+	session.AddFlagKey(cmd, cmd.Flags())
+	session.AddFlagNonce(cmd, cmd.Flags())
+	session.AddFlagWait(cmd, cmd.Flags())
 
 	return cmd
 }
 
-func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) error {
+func createDeployment(session session.Session, cmd *cobra.Command, args []string) error {
 
 	const ttl = int64(5)
 
-	txclient, err := ctx.TxClient()
+	txclient, err := session.TxClient()
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 	})
 
 	if err != nil {
-		ctx.Log().Error("error sending tx", "error", err)
+		session.Log().Error("error sending tx", "error", err)
 		return err
 	}
 
@@ -93,7 +93,7 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 
 	fmt.Println(X(address))
 
-	if ctx.Wait() {
+	if session.Wait() {
 		fmt.Printf("Waiting...\n")
 		expected := len(groups)
 		handler := marketplace.NewBuilder().
@@ -108,7 +108,7 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 					fmt.Printf("Group %v/%v Lease: %v\n", tx.Group, len(groups),
 						keys.LeaseID(tx.LeaseID).Path())
 					// get lease provider
-					prov, err := ctx.QueryClient().Provider(ctx.Ctx(), tx.Provider)
+					prov, err := session.QueryClient().Provider(session.Ctx(), tx.Provider)
 					if err != nil {
 						fmt.Printf("ERROR: %v", err)
 					}
@@ -125,7 +125,7 @@ func createDeployment(ctx context.Context, cmd *cobra.Command, args []string) er
 					os.Exit(0)
 				}
 			}).Create()
-		return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
+		return common.MonitorMarketplace(session.Log(), session.Client(), handler)
 	}
 
 	return nil
@@ -137,19 +137,19 @@ func closeDeploymentCommand() *cobra.Command {
 		Use:   "close <deployment-id>",
 		Short: "close a deployment",
 		Args:  cobra.ExactArgs(1),
-		RunE: context.WithContext(
-			context.RequireKey(context.RequireNode(closeDeployment))),
+		RunE: session.WithSession(
+			session.RequireKey(session.RequireNode(closeDeployment))),
 	}
 
-	context.AddFlagNode(cmd, cmd.Flags())
-	context.AddFlagKey(cmd, cmd.Flags())
-	context.AddFlagNonce(cmd, cmd.Flags())
+	session.AddFlagNode(cmd, cmd.Flags())
+	session.AddFlagKey(cmd, cmd.Flags())
+	session.AddFlagNonce(cmd, cmd.Flags())
 
 	return cmd
 }
 
-func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) error {
-	txclient, err := ctx.TxClient()
+func closeDeployment(session session.Session, cmd *cobra.Command, args []string) error {
+	txclient, err := session.TxClient()
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func closeDeployment(ctx context.Context, cmd *cobra.Command, args []string) err
 	})
 
 	if err != nil {
-		ctx.Log().Error("error sending tx", "error", err)
+		session.Log().Error("error sending tx", "error", err)
 		return err
 	}
 
@@ -179,18 +179,18 @@ func sendManifestCommand() *cobra.Command {
 		Use:   "sendmani [manifest] [lease]",
 		Short: "send manifest to lease provider",
 		Args:  cobra.ExactArgs(2),
-		RunE: context.WithContext(
-			context.RequireKey(context.RequireNode(sendManifest))),
+		RunE: session.WithSession(
+			session.RequireKey(session.RequireNode(sendManifest))),
 	}
 
-	context.AddFlagNode(cmd, cmd.Flags())
-	context.AddFlagKey(cmd, cmd.Flags())
+	session.AddFlagNode(cmd, cmd.Flags())
+	session.AddFlagKey(cmd, cmd.Flags())
 
 	return cmd
 }
 
-func sendManifest(ctx context.Context, cmd *cobra.Command, args []string) error {
-	signer, _, err := ctx.Signer()
+func sendManifest(session session.Session, cmd *cobra.Command, args []string) error {
+	signer, _, err := session.Signer()
 	if err != nil {
 		return err
 	}
@@ -210,12 +210,12 @@ func sendManifest(ctx context.Context, cmd *cobra.Command, args []string) error 
 		return err
 	}
 
-	lease, err := ctx.QueryClient().Lease(ctx.Ctx(), leaseAddr.ID())
+	lease, err := session.QueryClient().Lease(session.Ctx(), leaseAddr.ID())
 	if err != nil {
 		return err
 	}
 
-	provider, err := ctx.QueryClient().Provider(ctx.Ctx(), lease.Provider)
+	provider, err := session.QueryClient().Provider(session.Ctx(), lease.Provider)
 	if err != nil {
 		return err
 	}

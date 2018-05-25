@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
-	gcontext "context"
+	"context"
 	"fmt"
 	"math/rand"
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
-	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/manifest"
@@ -26,9 +26,9 @@ func providerCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 
-	context.AddFlagNode(cmd, cmd.PersistentFlags())
-	context.AddFlagKey(cmd, cmd.PersistentFlags())
-	context.AddFlagNonce(cmd, cmd.PersistentFlags())
+	session.AddFlagNode(cmd, cmd.PersistentFlags())
+	session.AddFlagKey(cmd, cmd.PersistentFlags())
+	session.AddFlagNonce(cmd, cmd.PersistentFlags())
 
 	cmd.AddCommand(createProviderCommand())
 	cmd.AddCommand(runCommand())
@@ -45,25 +45,25 @@ func createProviderCommand() *cobra.Command {
 		Use:   "create <file>",
 		Short: "create a provider",
 		Args:  cobra.ExactArgs(1),
-		RunE:  context.WithContext(context.RequireNode(doCreateProviderCommand)),
+		RunE:  session.WithSession(session.RequireNode(doCreateProviderCommand)),
 	}
 
-	context.AddFlagKeyType(cmd, cmd.Flags())
+	session.AddFlagKeyType(cmd, cmd.Flags())
 
 	return cmd
 }
 
-func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	kmgr, err := ctx.KeyManager()
+func doCreateProviderCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	kmgr, err := session.KeyManager()
 	if err != nil {
 		return err
 	}
 
 	// XXX generate key for provider if doens't exist
-	key, err := ctx.Key()
+	key, err := session.Key()
 	if err != nil {
-		kname := ctx.KeyName()
-		ktype, err := ctx.KeyType()
+		kname := session.KeyName()
+		ktype, err := session.KeyType()
 		if err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ func doCreateProviderCommand(ctx context.Context, cmd *cobra.Command, args []str
 		fmt.Printf("Key created: %v\n", X(info.Address()))
 	}
 
-	txclient, err := ctx.TxClient()
+	txclient, err := session.TxClient()
 	if err != nil {
 		return err
 	}
@@ -118,13 +118,13 @@ func runCommand() *cobra.Command {
 		Use:   "run <provider>",
 		Short: "respond to chain events",
 		Args:  cobra.ExactArgs(1),
-		RunE:  context.WithContext(context.RequireNode(doProviderRunCommand)),
+		RunE:  session.WithSession(session.RequireNode(doProviderRunCommand)),
 	}
 	return cmd
 }
 
-func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	txclient, err := ctx.TxClient()
+func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	txclient, err := session.TxClient()
 	if err != nil {
 		return err
 	}
@@ -139,9 +139,9 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 	handler := marketplace.NewBuilder().
 		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
 
-			price, err := getPrice(ctx, tx.OrderID)
+			price, err := getPrice(session, tx.OrderID)
 			if err != nil {
-				ctx.Log().Error("error getting price", "error", err)
+				session.Log().Error("error getting price", "error", err)
 				return
 			}
 
@@ -166,7 +166,7 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 
 			_, err = txclient.BroadcastTxCommit(ordertx)
 			if err != nil {
-				ctx.Log().Error("error broadcasting tx", "error", err)
+				session.Log().Error("error broadcasting tx", "error", err)
 				return
 			}
 
@@ -188,13 +188,13 @@ func doProviderRunCommand(ctx context.Context, cmd *cobra.Command, args []string
 				}
 			}
 		}).Create()
-	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
+	return common.MonitorMarketplace(session.Log(), session.Client(), handler)
 }
 
-func getPrice(ctx context.Context, id types.OrderID) (uint32, error) {
+func getPrice(session session.Session, id types.OrderID) (uint32, error) {
 	// get deployment group
 	price := uint32(0)
-	group, err := ctx.QueryClient().DeploymentGroup(ctx.Ctx(), id.GroupID())
+	group, err := session.QueryClient().DeploymentGroup(session.Ctx(), id.GroupID())
 	if err != nil {
 		return 0, err
 	}
@@ -210,16 +210,16 @@ func closeFulfillmentCommand() *cobra.Command {
 		Use:   "closef",
 		Short: "close an open fulfillment",
 		Args:  cobra.ExactArgs(1),
-		RunE:  context.WithContext(context.RequireNode(doCloseFulfillmentCommand)),
+		RunE:  session.WithSession(session.RequireNode(doCloseFulfillmentCommand)),
 	}
 
-	context.AddFlagKeyType(cmd, cmd.Flags())
+	session.AddFlagKeyType(cmd, cmd.Flags())
 
 	return cmd
 }
 
-func doCloseFulfillmentCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	txclient, err := ctx.TxClient()
+func doCloseFulfillmentCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	txclient, err := session.TxClient()
 	if err != nil {
 		return err
 	}
@@ -241,16 +241,16 @@ func closeLeaseCommand() *cobra.Command {
 		Use:   "closel <deployment> <group> <order> <provider>",
 		Short: "close an active lease",
 		Args:  cobra.ExactArgs(4),
-		RunE:  context.WithContext(context.RequireNode(doCloseLeaseCommand)),
+		RunE:  session.WithSession(session.RequireNode(doCloseLeaseCommand)),
 	}
 
-	context.AddFlagKeyType(cmd, cmd.Flags())
+	session.AddFlagKeyType(cmd, cmd.Flags())
 
 	return cmd
 }
 
-func doCloseLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	txclient, err := ctx.TxClient()
+func doCloseLeaseCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	txclient, err := session.TxClient()
 	if err != nil {
 		return err
 	}
@@ -273,22 +273,22 @@ func runManifestServerCommand() *cobra.Command {
 		Use:   "servmani [port] [loglevel = (debug|info|warn|error|fatal|panic)]",
 		Short: "receive deployment manifest",
 		Args:  cobra.RangeArgs(0, 2),
-		RunE:  context.WithContext(context.RequireNode(doRunManifestServerCommand)),
+		RunE:  session.WithSession(session.RequireNode(doRunManifestServerCommand)),
 	}
 
-	context.AddFlagKeyType(cmd, cmd.Flags())
+	session.AddFlagKeyType(cmd, cmd.Flags())
 
 	return cmd
 }
 
-func doRunManifestServerCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+func doRunManifestServerCommand(session session.Session, cmd *cobra.Command, args []string) error {
 
 	port := "3001"
 	if len(args) == 1 {
 		port = args[0]
 	}
 
-	return common.RunForever(func(gctx gcontext.Context) error {
-		return manifest.RunServer(gctx, ctx.Log(), port)
+	return common.RunForever(func(ctx context.Context) error {
+		return manifest.RunServer(ctx, session.Log(), port)
 	})
 }

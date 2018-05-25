@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/spf13/cobra"
 )
 
@@ -13,14 +13,14 @@ func statusCommand() *cobra.Command {
 		Use:   "status",
 		Short: "get remote node status",
 		Args:  cobra.NoArgs,
-		RunE:  context.WithContext(context.RequireNode(doStatusCommand)),
+		RunE:  session.WithSession(session.RequireNode(doStatusCommand)),
 	}
-	context.AddFlagNode(cmd, cmd.Flags())
+	session.AddFlagNode(cmd, cmd.Flags())
 	return cmd
 }
 
-func doStatusCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	client := ctx.Client()
+func doStatusCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	client := session.Client()
 
 	result, err := client.Status()
 	if err != nil {

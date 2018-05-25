@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/spf13/cobra"
 )
 
@@ -11,6 +11,6 @@ func baseCommand() *cobra.Command {
 		Short:        "Akash client",
 		SilenceUsage: true,
 	}
-	context.SetupBaseCommand(cmd)
+	session.SetupBaseCommand(cmd)
 	return cmd
 }
