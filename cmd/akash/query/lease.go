@@ -1,7 +1,7 @@
 package query
 
 import (
-	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/keys"
 	"github.com/spf13/cobra"
 )
@@ -11,22 +11,22 @@ func queryLeaseCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "lease [deployment]",
 		Short: "query lease",
-		RunE:  context.WithContext(context.RequireNode(doQueryLeaseCommand)),
+		RunE:  session.WithSession(session.RequireNode(doQueryLeaseCommand)),
 	}
 
 	return cmd
 }
 
-func doQueryLeaseCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+func doQueryLeaseCommand(session session.Session, cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		handleMessage(ctx.QueryClient().Leases(ctx.Ctx()))
+		handleMessage(session.QueryClient().Leases(session.Ctx()))
 	}
 	for _, arg := range args {
 		key, err := keys.ParseLeasePath(arg)
 		if err != nil {
 			return err
 		}
-		if err := handleMessage(ctx.QueryClient().Lease(ctx.Ctx(), key.ID())); err != nil {
+		if err := handleMessage(session.QueryClient().Lease(session.Ctx(), key.ID())); err != nil {
 			return err
 		}
 	}

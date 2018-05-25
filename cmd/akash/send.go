@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
 	"github.com/spf13/cobra"
@@ -16,19 +16,19 @@ func sendCommand() *cobra.Command {
 		Use:   "send [amount] [to account]",
 		Short: "send tokens",
 		Args:  cobra.ExactArgs(2),
-		RunE: context.WithContext(
-			context.RequireKey(context.RequireNode(doSendCommand))),
+		RunE: session.WithSession(
+			session.RequireKey(session.RequireNode(doSendCommand))),
 	}
 
-	context.AddFlagNode(cmd, cmd.Flags())
-	context.AddFlagKey(cmd, cmd.Flags())
-	context.AddFlagNonce(cmd, cmd.Flags())
+	session.AddFlagNode(cmd, cmd.Flags())
+	session.AddFlagKey(cmd, cmd.Flags())
+	session.AddFlagNonce(cmd, cmd.Flags())
 
 	return cmd
 }
 
-func doSendCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	txclient, err := ctx.TxClient()
+func doSendCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	txclient, err := session.TxClient()
 	if err != nil {
 		return err
 	}

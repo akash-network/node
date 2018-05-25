@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +17,7 @@ func QueryCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 
-	context.AddFlagNode(cmd, cmd.PersistentFlags())
+	session.AddFlagNode(cmd, cmd.PersistentFlags())
 
 	cmd.AddCommand(
 		queryAccountCommand(),

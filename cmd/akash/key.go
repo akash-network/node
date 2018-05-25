@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
-	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/spf13/cobra"
 
 	. "github.com/ovrclk/akash/util"
@@ -27,23 +27,23 @@ func keyCreateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [name]",
 		Short: "Create new key",
-		RunE:  context.WithContext(context.RequireRootDir(doKeyCreateCommand)),
+		RunE:  session.WithSession(session.RequireRootDir(doKeyCreateCommand)),
 	}
-	context.AddFlagKeyType(cmd, cmd.Flags())
+	session.AddFlagKeyType(cmd, cmd.Flags())
 	return cmd
 }
 
-func doKeyCreateCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+func doKeyCreateCommand(session session.Session, cmd *cobra.Command, args []string) error {
 	if len(args) != 1 {
 		return errors.New("name argument required")
 	}
 
-	kmgr, err := ctx.KeyManager()
+	kmgr, err := session.KeyManager()
 	if err != nil {
 		return err
 	}
 
-	ktype, err := ctx.KeyType()
+	ktype, err := session.KeyType()
 	if err != nil {
 		return err
 	}
@@ -62,12 +62,12 @@ func keyListCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "list keys",
-		RunE:  context.WithContext(context.RequireKeyManager(doKeyListCommand)),
+		RunE:  session.WithSession(session.RequireKeyManager(doKeyListCommand)),
 	}
 }
 
-func doKeyListCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
-	kmgr, _ := ctx.KeyManager()
+func doKeyListCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	kmgr, _ := session.KeyManager()
 
 	infos, err := kmgr.List()
 	if err != nil {

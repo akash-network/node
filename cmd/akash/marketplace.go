@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/ovrclk/akash/cmd/akash/context"
+	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/marketplace"
@@ -20,17 +20,17 @@ func marketplaceCommand() *cobra.Command {
 		Use:   "marketplace",
 		Short: "monitor marketplace",
 		Args:  cobra.NoArgs,
-		RunE:  context.WithContext(context.RequireNode(doMarketplaceMonitorCommand)),
+		RunE:  session.WithSession(session.RequireNode(doMarketplaceMonitorCommand)),
 	}
 
-	context.AddFlagNode(cmd, cmd.PersistentFlags())
+	session.AddFlagNode(cmd, cmd.PersistentFlags())
 
 	return cmd
 }
 
-func doMarketplaceMonitorCommand(ctx context.Context, cmd *cobra.Command, args []string) error {
+func doMarketplaceMonitorCommand(session session.Session, cmd *cobra.Command, args []string) error {
 	handler := marketplaceMonitorHandler()
-	return common.MonitorMarketplace(ctx.Log(), ctx.Client(), handler)
+	return common.MonitorMarketplace(session.Log(), session.Client(), handler)
 }
 
 func marketplaceMonitorHandler() marketplace.Handler {

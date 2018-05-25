@@ -1,6 +1,7 @@
-package context
+package session
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,8 +12,6 @@ import (
 	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/txutil"
 
-	gctx "context"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/go-crypto/keys"
@@ -22,7 +21,7 @@ import (
 	"github.com/tendermint/tmlibs/log"
 )
 
-type Context interface {
+type Session interface {
 	RootDir() string
 	KeyManager() (keys.Keybase, error)
 	Node() string
@@ -35,62 +34,62 @@ type Context interface {
 	Nonce() (uint64, error)
 	Log() log.Logger
 	Signer() (txutil.Signer, keys.Info, error)
-	Ctx() gctx.Context
+	Ctx() context.Context
 	Wait() bool
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
-type Runner func(ctx Context, cmd *cobra.Command, args []string) error
+type Runner func(sess Session, cmd *cobra.Command, args []string) error
 
-func WithContext(fn Runner) cmdRunner {
+func WithSession(fn Runner) cmdRunner {
 	return func(cmd *cobra.Command, args []string) error {
-		ctx := newContext(cmd)
+		ctx := newSession(cmd)
 		defer ctx.shutdown()
 		return fn(ctx, cmd, args)
 	}
 }
 
 func RequireRootDir(fn Runner) Runner {
-	return func(ctx Context, cmd *cobra.Command, args []string) error {
-		if root := ctx.RootDir(); root == "" {
+	return func(session Session, cmd *cobra.Command, args []string) error {
+		if root := session.RootDir(); root == "" {
 			return errors.New("root directory unset")
 		}
-		return fn(ctx, cmd, args)
+		return fn(session, cmd, args)
 	}
 }
 
 func RequireKeyManager(fn Runner) Runner {
-	return RequireRootDir(func(ctx Context, cmd *cobra.Command, args []string) error {
-		if _, err := ctx.KeyManager(); err != nil {
+	return RequireRootDir(func(session Session, cmd *cobra.Command, args []string) error {
+		if _, err := session.KeyManager(); err != nil {
 			return err
 		}
-		return fn(ctx, cmd, args)
+		return fn(session, cmd, args)
 	})
 }
 
 func RequireNode(fn Runner) Runner {
-	return func(ctx Context, cmd *cobra.Command, args []string) error {
-		if node := ctx.Node(); node == "" {
+	return func(session Session, cmd *cobra.Command, args []string) error {
+		if node := session.Node(); node == "" {
 			return fmt.Errorf("node required")
 		}
-		return fn(ctx, cmd, args)
+		return fn(session, cmd, args)
 	}
 }
 
 func RequireKey(fn Runner) Runner {
-	return func(ctx Context, cmd *cobra.Command, args []string) error {
-		if _, err := ctx.Key(); err != nil {
+	return func(session Session, cmd *cobra.Command, args []string) error {
+		if _, err := session.Key(); err != nil {
 			return err
 		}
-		return fn(ctx, cmd, args)
+		return fn(session, cmd, args)
 	}
 }
 
-func newContext(cmd *cobra.Command) *context {
-	return &context{cmd: cmd, mtx: sync.Mutex{}}
+func newSession(cmd *cobra.Command) *session {
+	return &session{cmd: cmd, mtx: sync.Mutex{}}
 }
 
-type context struct {
+type session struct {
 	cmd  *cobra.Command
 	kmgr keys.Keybase
 	kdb  tmdb.DB
@@ -98,7 +97,7 @@ type context struct {
 	mtx  sync.Mutex
 }
 
-func (ctx *context) shutdown() {
+func (ctx *session) shutdown() {
 	ctx.mtx.Lock()
 	defer ctx.mtx.Unlock()
 	if ctx.kdb != nil {
@@ -106,7 +105,7 @@ func (ctx *context) shutdown() {
 	}
 }
 
-func (ctx *context) Log() log.Logger {
+func (ctx *session) Log() log.Logger {
 	ctx.mtx.Lock()
 	defer ctx.mtx.Unlock()
 
@@ -118,12 +117,12 @@ func (ctx *context) Log() log.Logger {
 	return ctx.log
 }
 
-func (ctx *context) RootDir() string {
+func (ctx *session) RootDir() string {
 	root, _ := ctx.cmd.Flags().GetString(constants.FlagRootDir)
 	return root
 }
 
-func (ctx *context) KeyManager() (keys.Keybase, error) {
+func (ctx *session) KeyManager() (keys.Keybase, error) {
 	ctx.mtx.Lock()
 	defer ctx.mtx.Unlock()
 
@@ -142,18 +141,18 @@ func (ctx *context) KeyManager() (keys.Keybase, error) {
 	return ctx.kmgr, err
 }
 
-func (ctx *context) Node() string {
+func (ctx *session) Node() string {
 	if ctx.cmd.Flag(constants.FlagNode).Value.String() != ctx.cmd.Flag(constants.FlagNode).DefValue {
 		return ctx.cmd.Flag(constants.FlagNode).Value.String()
 	}
 	return viper.GetString(constants.FlagNode)
 }
 
-func (ctx *context) Client() *tmclient.HTTP {
+func (ctx *session) Client() *tmclient.HTTP {
 	return tmclient.NewHTTP(ctx.Node(), "/websocket")
 }
 
-func (ctx *context) TxClient() (txutil.Client, error) {
+func (ctx *session) TxClient() (txutil.Client, error) {
 	signer, key, err := ctx.Signer()
 	if err != nil {
 		return nil, err
@@ -165,20 +164,20 @@ func (ctx *context) TxClient() (txutil.Client, error) {
 	return txutil.NewClient(ctx.Client(), signer, key, nonce), nil
 }
 
-func (ctx *context) QueryClient() query.Client {
+func (ctx *session) QueryClient() query.Client {
 	return query.NewClient(ctx.Client())
 }
 
-func (ctx *context) KeyName() string {
+func (ctx *session) KeyName() string {
 	val, _ := ctx.cmd.Flags().GetString(constants.FlagKey)
 	return val
 }
 
-func (ctx *context) KeyType() (keys.CryptoAlgo, error) {
+func (ctx *session) KeyType() (keys.CryptoAlgo, error) {
 	return parseFlagKeyType(ctx.cmd.Flags())
 }
 
-func (ctx *context) Key() (keys.Info, error) {
+func (ctx *session) Key() (keys.Info, error) {
 	kmgr, err := ctx.KeyManager()
 	if err != nil {
 		return keys.Info{}, err
@@ -197,11 +196,11 @@ func (ctx *context) Key() (keys.Info, error) {
 	return info, nil
 }
 
-func (ctx *context) Password() (string, error) {
+func (ctx *session) Password() (string, error) {
 	return constants.Password, nil
 }
 
-func (ctx *context) Signer() (txutil.Signer, keys.Info, error) {
+func (ctx *session) Signer() (txutil.Signer, keys.Info, error) {
 	kmgr, err := ctx.KeyManager()
 	if err != nil {
 		return nil, keys.Info{}, err
@@ -222,7 +221,7 @@ func (ctx *context) Signer() (txutil.Signer, keys.Info, error) {
 	return signer, key, nil
 }
 
-func (ctx *context) Nonce() (uint64, error) {
+func (ctx *session) Nonce() (uint64, error) {
 	txclient, err := ctx.TxClient()
 	if err != nil {
 		return 0, err
@@ -230,13 +229,13 @@ func (ctx *context) Nonce() (uint64, error) {
 	return txclient.Nonce()
 }
 
-func (ctx *context) Wait() bool {
+func (ctx *session) Wait() bool {
 	val, _ := ctx.cmd.Flags().GetBool(constants.FlagWait)
 	return val
 }
 
-func (ctx *context) Ctx() gctx.Context {
-	return gctx.Background()
+func (ctx *session) Ctx() context.Context {
+	return context.Background()
 }
 
 func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {
