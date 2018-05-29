@@ -181,11 +181,11 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 			for _, expose := range svc.Expose {
 				for _, to := range expose.To {
 					msvc.Expose = append(msvc.Expose, &types.ManifestServiceExpose{
-						Service: to.Service,
-						Port:    expose.Port,
-						As:      expose.As,
-						Proto:   expose.Proto,
-						Global:  to.Global,
+						Service:      to.Service,
+						Port:         expose.Port,
+						ExternalPort: expose.As,
+						Proto:        expose.Proto,
+						Global:       to.Global,
 					})
 				}
 			}

@@ -343,7 +343,7 @@ message ManifestService {
 
 message ManifestServiceExpose {
   uint32 port    = 1;
-  uint32 as      = 2;
+  uint32 externalPort      = 2;
   string proto   = 3;
   string service = 4;
   bool   global  = 5;
