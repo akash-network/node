@@ -46,10 +46,8 @@ services:
     depends-on:
       - service: db-pool
     expose:
-      - port: 80
-        to:
-          - global: true
       - port: 443
+        as: 8080
         to:
           - global: true
 
