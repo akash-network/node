@@ -74,10 +74,15 @@ gentypes: $(PROTOC_FILES)
 		--gogo_out=plugins=grpc:. $<
 
 mocks:
-	mockery -case=underscore -dir app/market -output app/market/mocks -name Client
-	mockery -case=underscore -dir app/market -output app/market/mocks -name Engine
-	mockery -case=underscore -dir app/market -output app/market/mocks -name Facilitator
-	mockery -case=underscore -dir marketplace -output marketplace/mocks -name Handler
+	mockery -case=underscore -dir query             -output query/mocks             -name Client
+	mockery -case=underscore -dir txutil            -output txutil/mocks            -name Client
+	mockery -case=underscore -dir app/market        -output app/market/mocks        -name Client
+	mockery -case=underscore -dir app/market        -output app/market/mocks        -name Engine
+	mockery -case=underscore -dir app/market        -output app/market/mocks        -name Facilitator
+	mockery -case=underscore -dir marketplace       -output marketplace/mocks       -name Handler
+	mockery -case=underscore -dir provider/cluster  -output provider/cluster/mocks  -name Cluster
+	mockery -case=underscore -dir provider/cluster  -output provider/cluster/mocks  -name Reservation
+	mockery -case=underscore -dir provider/manifest -output provider/manifest/mocks -name Handler
 
 docs:
 	(cd _docs/dot && make)

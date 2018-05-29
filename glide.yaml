@@ -41,3 +41,4 @@ import:
   version: ^1.9.0
   subpackages:
   - trees/avltree
+- package: github.com/boz/go-lifecycle

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 
@@ -125,7 +126,10 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 					os.Exit(0)
 				}
 			}).Create()
-		return common.MonitorMarketplace(session.Log(), session.Client(), handler)
+
+		return common.RunForever(func(ctx context.Context) error {
+			return common.MonitorMarketplace(ctx, session.Log(), session.Client(), handler)
+		})
 	}
 
 	return nil

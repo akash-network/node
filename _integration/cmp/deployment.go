@@ -72,7 +72,7 @@ func groupDeploy(key vars.Ref, daddr vars.Ref) gestalt.Component {
 		Run(deployCreate(key, daddr)).
 		Run(g.Retry(5).
 			Run(orderQuery(daddr))).
-		Run(g.Retry(10).
+		Run(g.Retry(15).
 			Run(leaseQuery(daddr))).
 		Run(deployClose(key, daddr)).
 		WithMeta(g.Export(daddr.Name()))

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/ovrclk/akash/cmd/akash/session"
@@ -30,7 +31,9 @@ func marketplaceCommand() *cobra.Command {
 
 func doMarketplaceMonitorCommand(session session.Session, cmd *cobra.Command, args []string) error {
 	handler := marketplaceMonitorHandler()
-	return common.MonitorMarketplace(session.Log(), session.Client(), handler)
+	return common.RunForever(func(ctx context.Context) error {
+		return common.MonitorMarketplace(ctx, session.Log(), session.Client(), handler)
+	})
 }
 
 func marketplaceMonitorHandler() marketplace.Handler {
@@ -54,7 +57,7 @@ func marketplaceMonitorHandler() marketplace.Handler {
 				X(tx.Provider), tx.Price)
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
-			fmt.Printf("LEASE CREATED\t%v/%v/%v by %x [price=%v]\n",
+			fmt.Printf("LEASE CREATED\t%v/%v/%v by %v [price=%v]\n",
 				X(tx.Deployment), tx.Group, tx.Order,
 				X(tx.Provider), tx.Price)
 		}).
