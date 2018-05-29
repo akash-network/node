@@ -8,8 +8,8 @@ import (
 )
 
 type Provider struct {
-	HostURI    string
-	Attributes []types.ProviderAttribute
+	HostURI    string                    `yaml:"hostURI"`
+	Attributes []types.ProviderAttribute `yaml:"attributes"`
 }
 
 func (prov *Provider) Parse(file string) error {

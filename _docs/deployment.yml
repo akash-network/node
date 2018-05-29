@@ -48,6 +48,8 @@ services:
     expose:
       - port: 443
         as: 8080
+        accept:
+          - foo.com
         to:
           - global: true
 

@@ -1,0 +1,30 @@
+---
+services:
+  web:
+    image: gcr.io/google_containers/echoserver:1.8
+    expose:
+      - port: 8080
+        as: 80
+        accept:
+          - web.192.168.99.101.nip.io
+        to:
+          - global: true
+
+profiles:
+  compute:
+    web:
+      cpu: 2
+      memory: 3
+      disk: 5
+  placement:
+    westcoast:
+      attributes:
+        region: us-west
+      pricing:
+        web: 8
+
+deployment:
+  web:
+    westcoast:
+      profile: web
+      count: 5

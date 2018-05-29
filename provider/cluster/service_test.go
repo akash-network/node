@@ -19,7 +19,7 @@ func TestService(t *testing.T) {
 	bus := event.NewBus()
 	defer bus.Close()
 
-	c, err := cluster.NewService(log, ctx, bus)
+	c, err := cluster.NewService(log, ctx, bus, cluster.NullClient())
 	require.NoError(t, err)
 
 	group := testutil.DeploymentGroups(testutil.DeploymentAddress(t), 1).Items[0]

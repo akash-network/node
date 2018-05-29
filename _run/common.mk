@@ -6,6 +6,8 @@ AKASHD := $(AKASHD)/akashd
 DATA_ROOT = data
 NODE_ROOT = $(DATA_ROOT)/node
 
+all:
+	(cd $(AKASH_ROOT) && make all)
 build:
 	(cd $(AKASH_ROOT) && make build)
 akash:

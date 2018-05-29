@@ -114,6 +114,7 @@ func (ctx *session) Log() log.Logger {
 	}
 
 	ctx.log = common.NewLogger(os.Stdout).With("app", "akash")
+	ctx.log = log.NewFilter(ctx.log, log.AllowAll())
 	return ctx.log
 }
 

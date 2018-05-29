@@ -50,7 +50,9 @@ The top-level `services` entry contains a map of workloads to be ran on the Akas
 
 | Name | Required | Meaning |
 |--- | --- | --- |
-| `port` | Yes | Port to expose |
+| `port` | Yes | Container port to expose |
+| `as` | No | Port number to expose the container port as |
+| `accept` | No | List of hosts to accept connections for |
 | `proto` | No | Protocol type (`tcp`,`http`, or `https`) |
 | `to` | No | List of entities allowed to connect.  See [services.expose.to](#servicesexposeto) |
 

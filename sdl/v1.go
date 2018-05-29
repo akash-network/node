@@ -19,15 +19,18 @@ type v1 struct {
 
 type v1Service struct {
 	Image        string
+	Args         []string       `yaml:",omitempty"`
+	Env          []string       `yaml:",omitempty"`
 	Expose       []v1Expose     `yaml:",omitempty"`
 	Dependencies []v1Dependency `yaml:",omitempty"`
 }
 
 type v1Expose struct {
-	Port  uint32
-	As    uint32
-	Proto string       `yaml:",omitempty"`
-	To    []v1ExposeTo `yaml:",omitempty"`
+	Port   uint32
+	As     uint32
+	Proto  string       `yaml:",omitempty"`
+	To     []v1ExposeTo `yaml:",omitempty"`
+	Accept []string     `yaml:",omitempty"`
 }
 
 type v1ExposeTo struct {
@@ -170,6 +173,8 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 			msvc := &types.ManifestService{
 				Name:  svcName,
 				Image: svc.Image,
+				Args:  svc.Args,
+				Env:   svc.Env,
 				Unit: types.ResourceUnit{
 					Cpu:    compute.CPU,
 					Memory: compute.Memory,
@@ -186,6 +191,7 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 						ExternalPort: expose.As,
 						Proto:        expose.Proto,
 						Global:       to.Global,
+						Hosts:        expose.Accept,
 					})
 				}
 			}

@@ -18,6 +18,7 @@ import (
 // order manages bidding and general lifecycle handling of an order.
 type order struct {
 	order types.OrderID
+	group *types.DeploymentGroupID
 
 	session session.Session
 	cluster cluster.Cluster
@@ -41,8 +42,11 @@ func newOrder(e *service, ev *event.TxCreateOrder) (*order, error) {
 	log := session.Log().
 		With("order", keys.OrderID(ev.OrderID).Path())
 
+	group := ev.GroupID()
+
 	order := &order{
 		order:   ev.OrderID,
+		group:   &group,
 		session: session,
 		cluster: e.cluster,
 		bus:     e.bus,
@@ -109,7 +113,8 @@ loop:
 			case *event.TxCreateLease:
 
 				// different group
-				if o.order.Compare(ev.GroupID()) != 0 {
+				if o.group.Compare(ev.GroupID()) != 0 {
+					o.log.Info("ignoring group", "group", keys.DeploymentGroupID(ev.GroupID()).Path())
 					break
 				}
 
@@ -144,6 +149,7 @@ loop:
 			// Group details fetched.
 
 			groupch = nil
+			o.log.Info("group fetched")
 
 			if result.Error() != nil {
 				o.log.Error("fetching group", "err", result.Error())
@@ -162,6 +168,7 @@ loop:
 
 		case result := <-clusterch:
 			clusterch = nil
+			o.log.Info("reserve requested")
 
 			if result.Error() != nil {
 				o.log.Error("reserving resources", "err", result.Error())
@@ -189,6 +196,8 @@ loop:
 
 		case result := <-bidch:
 			bidch = nil
+			o.log.Info("bid complete")
+
 			if result.Error() != nil {
 				o.log.Error("submitting fulfillment", "err", result.Error())
 				break loop
@@ -200,6 +209,7 @@ loop:
 
 	// TODO: cancel reservation?
 
+	o.log.Info("shutting down")
 	cancel()
 	o.lc.ShutdownInitiated(nil)
 	o.sub.Close()

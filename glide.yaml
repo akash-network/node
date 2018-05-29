@@ -42,3 +42,17 @@ import:
   subpackages:
   - trees/avltree
 - package: github.com/boz/go-lifecycle
+- package: k8s.io/client-go
+  version: ^7.0.0
+  subpackages:
+  - '...'
+- package: k8s.io/apimachinery
+  subpackages:
+  - '...'
+- package: github.com/googleapis/gnostic
+  version: ~0.2.0
+  subpackages:
+  - OpenAPIv2
+- package: github.com/golang/protobuf
+  version: ~1.1.0
+- package: github.com/juju/errors

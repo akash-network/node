@@ -1,0 +1,41 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: echo
+  labels:
+    app: echo
+spec:
+  containers:
+  - image: gcr.io/google_containers/echoserver:1.8
+    name: envoy
+    ports:
+    - containerPort: 8080
+      name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo
+  labels:
+    app: echo
+spec:
+  selector:
+    app: echo
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: echo
+  labels:
+    app: echo
+spec:
+  backend:
+    serviceName: echo
+    servicePort: 80
+  rules:
+    - host: echo.192.168.99.101.nip.io

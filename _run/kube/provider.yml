@@ -1,0 +1,6 @@
+hostURI: http://localhost:3001/manifest
+attributes:
+  - name: region
+    value:  us-west
+  - name: tier
+    value:  "5"

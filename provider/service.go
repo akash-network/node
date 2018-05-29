@@ -18,13 +18,13 @@ type Service interface {
 }
 
 // Simple wrapper around various services needed for running a provider.
-func NewService(ctx context.Context, session session.Session, bus event.Bus) (Service, error) {
+func NewService(ctx context.Context, session session.Session, bus event.Bus, cclient cluster.Client) (Service, error) {
 
 	ctx, cancel := context.WithCancel(ctx)
 
 	session = session.ForModule("provider-service")
 
-	cluster, err := cluster.NewService(session.Log(), ctx, bus)
+	cluster, err := cluster.NewService(session.Log(), ctx, bus, cclient)
 	if err != nil {
 		cancel()
 		return nil, err

@@ -331,14 +331,17 @@ message ManifestService {
   // Docker image
   string       image = 2;
 
+  repeated string args = 3;
+  repeated string env  = 4;
+
   // Resource requirements
-  ResourceUnit unit  = 3 [(gogoproto.nullable)=false];
+  ResourceUnit unit  = 5 [(gogoproto.nullable)=false];
 
   // Number of instances
-  uint32       count = 4;
+  uint32       count = 6;
 
   // Overlay Network Links
-  repeated ManifestServiceExpose expose = 5;
+  repeated ManifestServiceExpose expose = 7;
 }
 
 message ManifestServiceExpose {
@@ -347,5 +350,8 @@ message ManifestServiceExpose {
   string proto        = 3;
   string service      = 4;
   bool   global       = 5;
+
+  // accepted hostnames
+  repeated string hosts = 6;
 }
 /* END MANIFEST */

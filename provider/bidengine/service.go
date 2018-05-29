@@ -78,6 +78,8 @@ loop:
 				// new order
 				opath := keys.OrderID(ev.OrderID).Path()
 
+				s.session.Log().Info("order detected", "order", opath)
+
 				// create an order object for managing the bid process and order lifecycle
 				order, err := newOrder(s, ev)
 

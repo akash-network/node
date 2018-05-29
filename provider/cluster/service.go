@@ -23,7 +23,7 @@ type Service interface {
 	Done() <-chan struct{}
 }
 
-func NewService(log log.Logger, ctx context.Context, bus event.Bus) (Service, error) {
+func NewService(log log.Logger, ctx context.Context, bus event.Bus, client Client) (Service, error) {
 
 	log = log.With("module", "provider-cluster")
 
@@ -33,6 +33,7 @@ func NewService(log log.Logger, ctx context.Context, bus event.Bus) (Service, er
 	}
 
 	s := &service{
+		client:    client,
 		bus:       bus,
 		sub:       sub,
 		reservech: make(chan reserveRequest),
@@ -47,6 +48,7 @@ func NewService(log log.Logger, ctx context.Context, bus event.Bus) (Service, er
 }
 
 type service struct {
+	client    Client
 	bus       event.Bus
 	sub       event.Subscriber
 	reservech chan reserveRequest
@@ -102,6 +104,24 @@ loop:
 			s.lc.ShutdownInitiated(err)
 			break loop
 
+		case ev := <-s.sub.Events():
+			switch ev := ev.(type) {
+			case event.ManifestReceived:
+				s.log.Info("manifest received")
+
+				// TODO: determine group to deploy.
+				if len(ev.Manifest.Groups) != 1 {
+					s.log.Error("indeterminate group")
+					break
+				}
+
+				if err := s.client.Deploy(ev.LeaseID.OrderID(), ev.Manifest.Groups[0]); err != nil {
+					s.log.Error("deploying", "err", err)
+				}
+
+				s.log.Info("deploy done")
+
+			}
 		case req := <-s.reservech:
 			// TODO
 			req.ch <- reserveResponse{newReservation(req.order, req.group), nil}

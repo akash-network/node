@@ -10,6 +10,8 @@ import (
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/provider"
+	"github.com/ovrclk/akash/provider/cluster"
+	"github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/manifest/http"
 	psession "github.com/ovrclk/akash/provider/session"
@@ -120,6 +122,8 @@ func runCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE:  session.WithSession(session.RequireNode(doProviderRunCommand)),
 	}
+
+	cmd.Flags().Bool("kube", false, "use kubernetes cluster")
 	return cmd
 }
 
@@ -144,6 +148,17 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 			pobj.Owner.EncodeString(), X(txclient.Key().Address()))
 	}
 
+	var cclient cluster.Client
+
+	if ok, _ := cmd.Flags().GetBool("kube"); ok {
+		cclient, err = kube.NewClient()
+		if err != nil {
+			return err
+		}
+	} else {
+		cclient = cluster.NullClient()
+	}
+
 	return common.RunForever(func(ctx context.Context) error {
 		ctx, cancel := context.WithCancel(ctx)
 
@@ -162,7 +177,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 			errch <- common.MonitorMarketplace(ctx, mlog, mclient, mhandler)
 		}()
 
-		service, err := provider.NewService(ctx, psession, bus)
+		service, err := provider.NewService(ctx, psession, bus, cclient)
 		if err != nil {
 			cancel()
 			<-errch

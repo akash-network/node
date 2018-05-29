@@ -1,11 +1,17 @@
-# Akash: Single-Node Local Setup
+# Akash: Single-Node Local Setup with Minikube
 
-Run a network with a single, local node.
+Run a network with a single, local node and execute workloads in Minikube.
 
 Running through the entire suite requires four terminals.
 Each command is marked __t1__-__t4__ to indicate a suggested terminal number.
 
 ## Setup
+
+__t1__: Start and initialize minikube
+```sh
+$ minikube start
+$ kubectl create -f contour.yml
+```
 
 __t1__: Build binaries
 ```sh
@@ -61,4 +67,9 @@ $ ./run.sh provider
 __t1__: Create Deployment
 ```sh
 $ ./run.sh deploy
+```
+
+__t1__: Ping workload
+```sh
+$ ./run.sh ping
 ```
