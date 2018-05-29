@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	pmanifest "github.com/ovrclk/akash/provider/manifest"
 	"github.com/tendermint/tmlibs/log"
 )
 
@@ -15,7 +16,8 @@ const (
 )
 
 type handler struct {
-	log log.Logger
+	phandler pmanifest.Handler
+	log      log.Logger
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +46,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h.log.Debug(fmt.Sprintf("%+v", obj))
 
+	h.phandler.HandleManifest(obj)
+
 	// XXX check if signer is tenant of lease
 
 	// respond with success
@@ -58,9 +62,10 @@ func (h *handler) error(w http.ResponseWriter, status int, message string) {
 	json.NewEncoder(w).Encode(map[string]string{"message": message})
 }
 
-func newHandler(log log.Logger) http.Handler {
+func newHandler(log log.Logger, phandler pmanifest.Handler) http.Handler {
 	return &handler{
-		log: log,
+		log:      log,
+		phandler: phandler,
 	}
 }
 
@@ -73,20 +78,20 @@ func requestLogger(log log.Logger) mux.MiddlewareFunc {
 	}
 }
 
-func createHandlers(log log.Logger) http.Handler {
+func createHandlers(log log.Logger, handler pmanifest.Handler) http.Handler {
 	r := mux.NewRouter()
-	r.Handle("/manifest", newHandler(log))
+	r.Handle("/manifest", newHandler(log, handler))
 	r.Use(requestLogger(log))
 	return r
 }
 
-func RunServer(ctx context.Context, log log.Logger, port string) error {
+func RunServer(ctx context.Context, log log.Logger, port string, handler pmanifest.Handler) error {
 
 	address := fmt.Sprintf(":%v", port)
 
 	server := &http.Server{
 		Addr:    address,
-		Handler: createHandlers(log),
+		Handler: createHandlers(log, handler),
 	}
 
 	ctx, cancel := context.WithCancel(ctx)

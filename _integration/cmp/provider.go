@@ -14,11 +14,12 @@ func providerCreate(root vars.Ref, key vars.Ref, paddr vars.Ref) gestalt.Compone
 
 	return g.Group("provider-create").
 		Run(
-			akash_(root, "create", "provider", "create", "attributes.yaml", "-k", key.Name()).
+			akash_(root, "create", "provider", "create", "{{provider-path}}", "-k", key.Name()).
 				FN(g.Capture(paddr.Name())).
 				WithMeta(g.Export(paddr.Name()))).
 		Run(g.Retry(5).Run(check)).
-		WithMeta(g.Export(paddr.Name()))
+		WithMeta(g.Export(paddr.Name()).
+			Require("provider-path"))
 }
 
 func providerRun(root vars.Ref, key vars.Ref, paddr vars.Ref) gestalt.Component {
