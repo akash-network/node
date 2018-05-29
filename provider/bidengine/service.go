@@ -15,6 +15,7 @@ type Service interface {
 	Done() <-chan struct{}
 }
 
+// Service handles bidding on orders.
 func NewService(ctx context.Context, session session.Session, cluster cluster.Cluster, bus event.Bus) (Service, error) {
 
 	sub, err := bus.Subscribe()
@@ -77,6 +78,7 @@ loop:
 				// new order
 				opath := keys.OrderID(ev.OrderID).Path()
 
+				// create an order object for managing the bid process and order lifecycle
 				order, err := newOrder(s, ev)
 
 				if err != nil {
@@ -94,7 +96,7 @@ loop:
 		}
 	}
 
-	// drain
+	// drain: wait for all order monitors to complete.
 	for len(s.orders) > 0 {
 		delete(s.orders, <-s.drainch)
 	}

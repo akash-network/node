@@ -10,6 +10,9 @@ import (
 )
 
 type (
+	// Transactions needed for provider services.  May not be necessary - they
+	// originally had more data/functionality but it was removed for simplicity.
+
 	TxCreateOrder       = types.TxCreateOrder
 	TxCreateFulfillment = types.TxCreateFulfillment
 	TxCreateLease       = types.TxCreateLease
@@ -17,6 +20,7 @@ type (
 	TxCloseFulfillment  = types.TxCloseFulfillment
 )
 
+// Wrap tendermint event bus - publish events from tendermint bus to our bus implementation.
 func MarketplaceTxPublisher(ctx context.Context, log log.Logger, tmbus tmtmtypes.EventBusSubscriber, bus Bus) (marketplace.Monitor, error) {
 	handler := MarketplaceTxHandler(bus)
 	return marketplace.NewMonitor(ctx, log, tmbus, "tx-publisher", handler, marketplace.TxQuery())

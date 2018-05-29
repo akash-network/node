@@ -17,6 +17,7 @@ type Service interface {
 	Done() <-chan struct{}
 }
 
+// Simple wrapper around various services needed for running a provider.
 func NewService(ctx context.Context, session session.Session, bus event.Bus) (Service, error) {
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -92,6 +93,7 @@ func (s *service) ManifestHandler() manifest.Handler {
 func (s *service) run() {
 	defer s.lc.ShutdownCompleted()
 
+	// Wait for any service to finish
 	select {
 	case <-s.lc.ShutdownRequest():
 	case <-s.cluster.Done():
@@ -99,9 +101,11 @@ func (s *service) run() {
 	case <-s.manifest.Done():
 	}
 
+	// Shut down all services
 	s.lc.ShutdownInitiated(nil)
 	s.cancel()
 
+	// Wait for all services to finish
 	<-s.cluster.Done()
 	<-s.bidengine.Done()
 	<-s.manifest.Done()

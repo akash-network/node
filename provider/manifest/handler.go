@@ -24,6 +24,7 @@ type Service interface {
 	Done() <-chan struct{}
 }
 
+// Manage incoming leases and manifests and pair the two together to construct and emit a ManifestReceived event.
 func NewHandler(ctx context.Context, session session.Session, bus event.Bus) (Service, error) {
 	sub, err := bus.Subscribe()
 	if err != nil {
@@ -61,6 +62,11 @@ type handler struct {
 	lc lifecycle.Lifecycle
 }
 
+// Track manifest state.
+// We may get a lease first or a manifest first.
+// In either case we need to both wait for the other and also download the deployment
+// to perform proper validation.  Once all three components are received and validated,
+// emit a ManifestReceived event to be consumed by other components.
 type manifestState struct {
 	request *types.ManifestRequest
 	leaseID *types.LeaseID
@@ -80,13 +86,18 @@ type manifestRequest struct {
 	ch    chan<- error
 }
 
+// Send incoming manifest request.
+// TODO: This method should only return once validation has completed (or timeout condition)
+// TODO: Add context.Context argument and/or timeout.
 func (h *handler) HandleManifest(mreq *types.ManifestRequest) error {
 	ch := make(chan error, 1)
 	req := manifestRequest{mreq, ch}
 	select {
 	case h.mreqch <- req:
+		// Request received by service.  Read and return response.
 		return <-ch
 	case <-h.lc.ShuttingDown():
+		// Service is shutting down; return error.
 		return ErrNotRunning
 	}
 }
@@ -112,6 +123,9 @@ loop:
 		case ev := <-h.sub.Events():
 			switch ev := ev.(type) {
 			case event.LeaseWon:
+
+				// We won a lease.  Look up state, add LeaseID, check state for completion.
+
 				did := ev.LeaseID.Deployment
 				mstate := h.getManifestState(did)
 
@@ -130,7 +144,7 @@ loop:
 			}
 
 		case req := <-h.mreqch:
-			// new manifest received
+			// Manifest received.  Look up state, add ManifestRequest, check state for completion.
 
 			did := req.value.Deployment
 			mstate := h.getManifestState(did)
@@ -146,6 +160,7 @@ loop:
 			req.ch <- nil
 
 		case req := <-h.deploymentch:
+			// Deployment fetched.  This should only happen if a lease was won or a manifest received.
 
 			if err := req.Error(); err != nil {
 				h.session.Log().Error("fetching deployment", "err", err)
@@ -173,6 +188,8 @@ loop:
 		}
 	}
 	cancel()
+
+	// Wait for all deployment fetches to complete.
 	h.wg.Wait()
 }
 
@@ -191,6 +208,8 @@ func (h *handler) getManifestState(did base.Bytes) *manifestState {
 func (h *handler) checkManifestState(ctx context.Context, mstate *manifestState, did base.Bytes) {
 	if mstate.complete() {
 
+		// If all information has been received, emit ManifestReceived event.
+
 		// TODO: validate manifest
 
 		// publish complete manifest
@@ -203,6 +222,7 @@ func (h *handler) checkManifestState(ctx context.Context, mstate *manifestState,
 		return
 	}
 
+	// If deployment has not begun to be fetched, begin fetching it now.
 	if mstate.deployment == nil && !mstate.deploymentPending {
 		mstate.deploymentPending = true
 		h.fetchDeployment(ctx, did)
@@ -218,7 +238,9 @@ func (h *handler) fetchDeployment(ctx context.Context, key base.Bytes) {
 		res, err := h.session.Query().Deployment(ctx, key)
 		select {
 		case h.deploymentch <- runner.NewResult(res, err):
+			// Result sent to service; do nothing else.
 		case <-h.lc.ShuttingDown():
+			// Service is shutting down; do nothing else.
 		}
 	}()
 }

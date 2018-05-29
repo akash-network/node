@@ -16,6 +16,7 @@ type Cluster interface {
 	Reserve(types.OrderID, *types.DeploymentGroup) (Reservation, error)
 }
 
+// Manage compute cluster for the provider.  Will eventually integrate with kubernetes, etc...
 type Service interface {
 	Cluster
 	Close() error

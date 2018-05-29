@@ -10,6 +10,11 @@ var ErrNotRunning = errors.New("not running")
 
 type Event interface{}
 
+// Bus is an async event bus that allows subscriptions to behave as a bus themselves.
+// When an event is published, it is sent to all subscribers asynchronously - a subscriber
+// cannot block other subscribers.
+//
+// NOTE: this should probably be in util/event or something (not in provider/event)
 type Bus interface {
 	Publish(Event) error
 	Subscribe() (Subscriber, error)
@@ -17,6 +22,10 @@ type Bus interface {
 	Done() <-chan struct{}
 }
 
+// Subscriber emits events it sees on the channel returned by Events().
+// A Clone() of a subscriber will emit all events that have not been emitted
+// from the cloned subscriber.  This is important so that events are not missed
+// when adding subscribers for sub-components (see `provider/bidengine/{service,order}.go`)
 type Subscriber interface {
 	Events() <-chan Event
 	Clone() (Subscriber, error)
@@ -99,9 +108,13 @@ loop:
 	for {
 
 		if b.eventch != nil && len(b.evbuf) > 0 {
+			// If we're emitting events (Subscriber mode) and there
+			// are events to emit, set up the output channel and output
+			// event accordingly.
 			outch = b.eventch
 			curev = b.evbuf[0]
 		} else {
+			// otherwise block the output (sending to a nil channel always blocks)
 			outch = nil
 		}
 
@@ -111,15 +124,18 @@ loop:
 			break loop
 
 		case outch <- curev:
+			// Event was emitted. Shrink current event buffer.
 			b.evbuf = b.evbuf[1:]
 
 		case ev := <-b.pubch:
 			// publish event
 
+			// Buffer event.
 			if b.eventch != nil {
 				b.evbuf = append(b.evbuf, ev)
 			}
 
+			// Publish to children.
 			for sub, _ := range b.subscriptions {
 				sub.Publish(ev)
 			}
@@ -153,6 +169,8 @@ loop:
 }
 
 func newSubscriber(parent *bus) *bus {
+	// Re-use bus struct, but populate output channel (eventch)
+	// to enable subscriber mode.
 
 	evbuf := make([]Event, len(parent.evbuf))
 	copy(evbuf, parent.evbuf)

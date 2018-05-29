@@ -15,6 +15,7 @@ import (
 	"github.com/tendermint/tmlibs/log"
 )
 
+// order manages bidding and general lifecycle handling of an order.
 type order struct {
 	order types.OrderID
 
@@ -29,6 +30,7 @@ type order struct {
 
 func newOrder(e *service, ev *event.TxCreateOrder) (*order, error) {
 
+	// Create a subscription that will see all events that have not been read from e.sub.Events()
 	sub, err := e.sub.Clone()
 	if err != nil {
 		return nil, err
@@ -49,9 +51,13 @@ func newOrder(e *service, ev *event.TxCreateOrder) (*order, error) {
 		lc:      lifecycle.New(),
 	}
 
+	// Shut down when parent begins shutting down
 	go order.lc.WatchChannel(e.lc.ShuttingDown())
+
+	// Run main loop in separate thread.
 	go order.run()
 
+	// Notify parent of completion (allows drain).
 	go func() {
 		<-order.lc.Done()
 		e.drainch <- order
@@ -66,6 +72,17 @@ func (o *order) run() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var (
+		// channels for async calculations.
+
+		// NOTE: these can/should all be done in a single operation such as
+		// go func(){
+		//   group, err := getGroup()
+		//   reservation, err := getGerservation()
+		//   bid, err := createBid()
+		// }()
+		// But we'd want to be able to cancel in the middle of operations
+		// and short-circuit if necessary.
+
 		groupch   <-chan runner.Result
 		clusterch <-chan runner.Result
 		bidch     <-chan runner.Result
@@ -75,7 +92,7 @@ func (o *order) run() {
 		price       uint32
 	)
 
-	// fetch group details
+	// Begin fetching group details immediately.
 	groupch = runner.Do(func() runner.Result {
 		return runner.NewResult(
 			o.session.Query().DeploymentGroup(ctx, o.order.GroupID()))
@@ -124,6 +141,8 @@ loop:
 			}
 
 		case result := <-groupch:
+			// Group details fetched.
+
 			groupch = nil
 
 			if result.Error() != nil {
@@ -136,6 +155,7 @@ loop:
 			// TODO: match requirements
 			// TODO: check if price is too low
 
+			// Begin reserving resources from cluster.
 			clusterch = runner.Do(func() runner.Result {
 				return runner.NewResult(o.cluster.Reserve(o.order, group))
 			})
@@ -148,10 +168,13 @@ loop:
 				break loop
 			}
 
+			// Resources reservied.  Calculate price and bid.
+
 			reservation = result.Value().(cluster.Reservation)
 
 			price := o.calculatePrice(reservation.Group())
 
+			// Begin submitting fulfillment
 			bidch = runner.Do(func() runner.Result {
 				return runner.NewResult(o.session.TX().BroadcastTxCommit(&types.TxCreateFulfillment{
 					FulfillmentID: types.FulfillmentID{
@@ -170,6 +193,8 @@ loop:
 				o.log.Error("submitting fulfillment", "err", result.Error())
 				break loop
 			}
+
+			// Fulfillment placed.  All done.
 		}
 	}
 
@@ -179,6 +204,7 @@ loop:
 	o.lc.ShutdownInitiated(nil)
 	o.sub.Close()
 
+	// Wait for all runners to complete.
 	if groupch != nil {
 		<-groupch
 	}
