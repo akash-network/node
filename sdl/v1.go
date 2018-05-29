@@ -25,6 +25,7 @@ type v1Service struct {
 
 type v1Expose struct {
 	Port  uint32
+	As    uint32
 	Proto string       `yaml:",omitempty"`
 	To    []v1ExposeTo `yaml:",omitempty"`
 }
@@ -182,6 +183,7 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 					msvc.Expose = append(msvc.Expose, &types.ManifestServiceExpose{
 						Service: to.Service,
 						Port:    expose.Port,
+						As:      expose.As,
 						Proto:   expose.Proto,
 						Global:  to.Global,
 					})

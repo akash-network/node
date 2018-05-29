@@ -343,8 +343,9 @@ message ManifestService {
 
 message ManifestServiceExpose {
   uint32 port    = 1;
-  string proto   = 2;
-  string service = 3;
-  bool   global  = 4;
+  uint32 as      = 2;
+  string proto   = 3;
+  string service = 4;
+  bool   global  = 5;
 }
 /* END MANIFEST */
