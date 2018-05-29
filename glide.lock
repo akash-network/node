@@ -1,6 +1,8 @@
-hash: d06de603cf4296cafebfef349c0279f32f78110e28afda1be52b15e7ee160707
-updated: 2018-05-09T14:35:28.146441248-07:00
+hash: 6a808703735bafc4f444e28f18049d10b4b8c510e016dc09749ec698794131eb
+updated: 2018-05-28T21:14:58.28543622-07:00
 imports:
+- name: github.com/boz/go-lifecycle
+  version: c39961a5a0ce6b046f15d62bcbed79701666a9e0
 - name: github.com/btcsuite/btcd
   version: 675abc5df3c5531bc741b56a765e35623459da6d
   subpackages:
@@ -214,7 +216,6 @@ imports:
   - poly1305
   - ripemd160
   - salsa20/salsa
-  - ssh/terminal
 - name: golang.org/x/net
   version: f73e4c9ed3b7ebdd5f699a16a880c2b1994e50dd
   subpackages:
@@ -229,7 +230,6 @@ imports:
   version: 64746a42f36bf0832f86b76004f1699dbeb33e4f
   subpackages:
   - unix
-  - windows
 - name: golang.org/x/text
   version: 7922cc490dd5a7dbaa7fd5d6196b49db59ac042f
   subpackages:

@@ -11,6 +11,8 @@ do_init() {
   akash key create master > "$DATA_ROOT/master.key"
   akash key create other  > "$DATA_ROOT/other.key"
   akashd init "$(cat "$DATA_ROOT/master.key")"
+
+  akash_provider key create master > "$DATA_ROOT/provider-master.key"
 }
 
 case "$1" in
@@ -31,8 +33,8 @@ case "$1" in
     akash marketplace
     ;;
   provider)
-    akash provider create unused.yml -k other > "$DATA_ROOT"/other.dc
-    akash provider run "$(cat "$DATA_ROOT/other.dc")" -k other
+    akash_provider provider create provider.yml -k master > "$DATA_ROOT"/master.dc
+    akash_provider provider run "$(cat "$DATA_ROOT/master.dc")" -k master
     ;;
   deploy)
     akash deployment create ../deployment.yml -k master

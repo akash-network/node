@@ -29,7 +29,7 @@ func TestMonitorMarketplace(t *testing.T) {
 		testutil.SleepForThreadStart(t)
 	}()
 
-	require.NoError(t, doMonitorMarketplace(ctx, testutil.Logger(), client, handler))
+	require.NoError(t, MonitorMarketplace(ctx, testutil.Logger(), client, handler))
 
 	<-ctx.Done()
 }

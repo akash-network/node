@@ -4,16 +4,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/rand"
 
 	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/manifest"
-	"github.com/ovrclk/akash/marketplace"
+	"github.com/ovrclk/akash/provider"
+	"github.com/ovrclk/akash/provider/event"
+	psession "github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/provider"
+	ptype "github.com/ovrclk/akash/types/provider"
 	. "github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +35,6 @@ func providerCommand() *cobra.Command {
 	cmd.AddCommand(runCommand())
 	cmd.AddCommand(closeFulfillmentCommand())
 	cmd.AddCommand(closeLeaseCommand())
-	cmd.AddCommand(runManifestServerCommand())
 
 	return cmd
 }
@@ -91,7 +91,7 @@ func doCreateProviderCommand(session session.Session, cmd *cobra.Command, args [
 		return err
 	}
 
-	prov := &provider.Provider{}
+	prov := &ptype.Provider{}
 	err = prov.Parse(args[0])
 	if err != nil {
 		return err
@@ -134,74 +134,62 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 		return err
 	}
 
-	deployments := make(map[string][]types.LeaseID)
-
-	handler := marketplace.NewBuilder().
-		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
-
-			price, err := getPrice(session, tx.OrderID)
-			if err != nil {
-				session.Log().Error("error getting price", "error", err)
-				return
-			}
-
-			// randomize price
-			price = uint32(rand.Int31n(int32(price) + 1))
-
-			ordertx := &types.TxCreateFulfillment{
-				FulfillmentID: types.FulfillmentID{
-					Deployment: tx.Deployment,
-					Group:      tx.Group,
-					Order:      tx.Seq,
-					Provider:   key.ID(),
-				},
-				Price: price,
-			}
-
-			fmt.Printf("Bidding on order: %v\n",
-				keys.OrderID(tx.OrderID).Path())
-
-			fmt.Printf("Fulfillment: %v\n",
-				keys.FulfillmentID(ordertx.FulfillmentID).Path())
-
-			_, err = txclient.BroadcastTxCommit(ordertx)
-			if err != nil {
-				session.Log().Error("error broadcasting tx", "error", err)
-				return
-			}
-
-		}).
-		OnTxCreateLease(func(tx *types.TxCreateLease) {
-			leaseProvider, _ := tx.Provider.Marshal()
-			if bytes.Equal(leaseProvider, key.ID()) {
-				leases, _ := deployments[tx.Deployment.EncodeString()]
-				deployments[tx.Deployment.EncodeString()] = append(leases, tx.LeaseID)
-				fmt.Printf("Won lease for order: %v\n",
-					keys.LeaseID(tx.LeaseID).Path())
-			}
-		}).
-		OnTxCloseDeployment(func(tx *types.TxCloseDeployment) {
-			leases, ok := deployments[tx.Deployment.EncodeString()]
-			if ok {
-				for _, lease := range leases {
-					fmt.Printf("Closed lease %v\n", keys.LeaseID(lease).Path())
-				}
-			}
-		}).Create()
-	return common.MonitorMarketplace(session.Log(), session.Client(), handler)
-}
-
-func getPrice(session session.Session, id types.OrderID) (uint32, error) {
-	// get deployment group
-	price := uint32(0)
-	group, err := session.QueryClient().DeploymentGroup(session.Ctx(), id.GroupID())
+	pobj, err := session.QueryClient().Provider(session.Ctx(), key.ID())
 	if err != nil {
-		return 0, err
+		return err
 	}
-	for _, group := range group.GetResources() {
-		price += group.Price
+
+	if bytes.Compare(pobj.Owner, txclient.Key().Address()) != 0 {
+		return fmt.Errorf("invalid key for provider (owner: %v, key: %v)",
+			pobj.Owner.EncodeString(), X(txclient.Key().Address()))
 	}
-	return price, nil
+
+	return common.RunForever(func(ctx context.Context) error {
+		ctx, cancel := context.WithCancel(ctx)
+
+		psession := psession.New(session.Log(), pobj, txclient, session.QueryClient())
+
+		bus := event.NewBus()
+		defer bus.Close()
+
+		errch := make(chan error, 3)
+
+		go func() {
+			defer cancel()
+			mclient := session.Client()
+			mlog := session.Log()
+			mhandler := event.MarketplaceTxHandler(bus)
+			errch <- common.MonitorMarketplace(ctx, mlog, mclient, mhandler)
+		}()
+
+		service, err := provider.NewService(ctx, psession, bus)
+		if err != nil {
+			cancel()
+			<-errch
+			return err
+		}
+
+		go func() {
+			defer cancel()
+			<-service.Done()
+			errch <- nil
+		}()
+
+		go func() {
+			defer cancel()
+			errch <- manifest.RunServer(ctx, session.Log(), "3001", service.ManifestHandler())
+		}()
+
+		var reterr error
+		for i := 0; i < 3; i++ {
+			if err := <-errch; err != nil {
+				session.Log().Error("error", "err", err)
+				reterr = err
+			}
+		}
+
+		return reterr
+	})
 }
 
 func closeFulfillmentCommand() *cobra.Command {
@@ -265,30 +253,4 @@ func doCloseLeaseCommand(session session.Session, cmd *cobra.Command, args []str
 	})
 
 	return err
-}
-
-func runManifestServerCommand() *cobra.Command {
-
-	cmd := &cobra.Command{
-		Use:   "servmani [port] [loglevel = (debug|info|warn|error|fatal|panic)]",
-		Short: "receive deployment manifest",
-		Args:  cobra.RangeArgs(0, 2),
-		RunE:  session.WithSession(session.RequireNode(doRunManifestServerCommand)),
-	}
-
-	session.AddFlagKeyType(cmd, cmd.Flags())
-
-	return cmd
-}
-
-func doRunManifestServerCommand(session session.Session, cmd *cobra.Command, args []string) error {
-
-	port := "3001"
-	if len(args) == 1 {
-		port = args[0]
-	}
-
-	return common.RunForever(func(ctx context.Context) error {
-		return manifest.RunServer(ctx, session.Log(), port)
-	})
 }
