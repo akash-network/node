@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	lifecycle "github.com/boz/go-lifecycle"
+	manifestUtil "github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
@@ -144,7 +145,11 @@ loop:
 			}
 
 		case req := <-h.mreqch:
-			// Manifest received.  Look up state, add ManifestRequest, check state for completion.
+			// Manifest received. Validate signature, look up state, add ManifestRequest, check state for completion.
+			if err := manifestUtil.VerifyRequestSig(req.value); err != nil {
+				req.ch <- err
+				break
+			}
 
 			did := req.value.Deployment
 			mstate := h.getManifestState(did)

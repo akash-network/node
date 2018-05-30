@@ -9,9 +9,9 @@ import (
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
-	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider"
 	"github.com/ovrclk/akash/provider/event"
+	"github.com/ovrclk/akash/provider/manifest/http"
 	psession "github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
 	ptype "github.com/ovrclk/akash/types/provider"
@@ -177,7 +177,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 
 		go func() {
 			defer cancel()
-			errch <- manifest.RunServer(ctx, session.Log(), "3001", service.ManifestHandler())
+			errch <- http.RunServer(ctx, session.Log(), "3001", service.ManifestHandler())
 		}()
 
 		var reterr error
