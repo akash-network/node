@@ -1,22 +1,91 @@
-package manifest_test
+package manifest
 
 import (
-	"context"
+	"bytes"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
-	"github.com/ovrclk/akash/manifest"
-	pmanifest "github.com/ovrclk/akash/provider/manifest"
-	pmock "github.com/ovrclk/akash/provider/manifest/mocks"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	crypto "github.com/tendermint/go-crypto"
 )
 
-func TestManifest(t *testing.T) {
+func TestSignManifest(t *testing.T) {
+	sdl, err := sdl.ReadFile("../_docs/deployment.yml")
+	require.NoError(t, err)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	_, kmgr := testutil.NewNamedKey(t)
+	signer := testutil.Signer(t, kmgr)
+
+	deployment := testutil.DeploymentAddress(t)
+
+	mr, buf, err := SignManifest(mani, signer, deployment)
+	assert.NoError(t, err)
+
+	gotmr, err := unmarshalRequest(bytes.NewReader(buf))
+	assert.NoError(t, err)
+
+	assert.Equal(t, mr.Key, gotmr.Key)
+	assert.Equal(t, mr.Signature, gotmr.Signature)
+	assert.Equal(t, mr.Deployment, gotmr.Deployment)
+
+	err = VerifyRequestSig(gotmr)
+	assert.NoError(t, err)
+}
+
+func TestVerifySig(t *testing.T) {
+	sdl, err := sdl.ReadFile("../_docs/deployment.yml")
+	require.NoError(t, err)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	_, kmgr := testutil.NewNamedKey(t)
+	signer := testutil.Signer(t, kmgr)
+
+	deployment := testutil.DeploymentAddress(t)
+
+	mr, _, err := SignManifest(mani, signer, deployment)
+	assert.NoError(t, err)
+
+	err = VerifyRequestSig(mr)
+	assert.NoError(t, err)
+}
+
+func TestVerifySig_InvalidSig(t *testing.T) {
+	sdl, err := sdl.ReadFile("../_docs/deployment.yml")
+	require.NoError(t, err)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	_, kmgr := testutil.NewNamedKey(t)
+	signer := testutil.Signer(t, kmgr)
+
+	deployment := testutil.DeploymentAddress(t)
+
+	mr, _, err := SignManifest(mani, signer, deployment)
+	assert.NoError(t, err)
+
+	_, otherKmgr := testutil.NewNamedKey(t)
+	otherSigner := testutil.Signer(t, otherKmgr)
+	otherMr, _, err := SignManifest(mani, otherSigner, deployment)
+	assert.NoError(t, err)
+
+	mr.Key = otherMr.Key
+
+	err = VerifyRequestSig(mr)
+	assert.Error(t, err)
+}
+
+func TestDoPost(t *testing.T) {
 
 	sdl, err := sdl.ReadFile("../_docs/deployment.yml")
 	require.NoError(t, err)
@@ -27,33 +96,37 @@ func TestManifest(t *testing.T) {
 	_, kmgr := testutil.NewNamedKey(t)
 	signer := testutil.Signer(t, kmgr)
 
-	provider := &types.Provider{
-		HostURI: "http://localhost:3001/manifest",
-	}
-
 	deployment := testutil.DeploymentAddress(t)
 
-	handler := new(pmock.Handler)
-	handler.On("HandleManifest", mock.Anything).Return(nil).Once()
+	mr, buf, err := SignManifest(mani, signer, deployment)
+	require.NoError(t, err)
 
-	withServer(t, func() {
-		err = manifest.Send(mani, signer, provider, deployment)
-		require.NoError(t, err)
-	}, handler)
-}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotmr, err := unmarshalRequest(bytes.NewReader(buf))
+		assert.NoError(t, err)
 
-func withServer(t *testing.T, fn func(), h pmanifest.Handler) {
-	donech := make(chan struct{})
-	defer func() { <-donech }()
+		assert.Equal(t, mr.Key, gotmr.Key)
+		assert.Equal(t, mr.Signature, gotmr.Signature)
+		assert.Equal(t, mr.Deployment, gotmr.Deployment)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+		pbytes, err := marshalRequest(&types.ManifestRequest{
+			Deployment: gotmr.Deployment,
+			Manifest:   gotmr.Manifest,
+		})
+		assert.NoError(t, err)
 
-	go func() {
-		defer close(donech)
-		err := manifest.RunServer(ctx, testutil.Logger(), "3001", h)
-		assert.Error(t, http.ErrServerClosed, err)
-	}()
+		key, err := crypto.PubKeyFromBytes(gotmr.Key)
+		assert.NoError(t, err)
 
-	fn()
+		sig, err := crypto.SignatureFromBytes(gotmr.Signature)
+		assert.NoError(t, err)
+
+		if !key.VerifyBytes(pbytes, sig) {
+			t.Error("invalid signature")
+		}
+	}))
+	defer ts.Close()
+
+	err = post(ts.URL, buf)
+	assert.NoError(t, err)
 }

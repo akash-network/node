@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	manifestUtil "github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/manifest"
 	"github.com/ovrclk/akash/provider/session"
@@ -89,6 +90,11 @@ func withHandler(t *testing.T, fn testfn) {
 		Deployment: deployment.Address,
 		Manifest:   mani,
 	}
+
+	_, kmgr := testutil.NewNamedKey(t)
+	signer := testutil.Signer(t, kmgr)
+	mreq, _, err = manifestUtil.SignManifest(mani, signer, deployment.Address)
+	require.NoError(t, err)
 
 	fn(h, bus, mreq, lease, dgroup)
 
