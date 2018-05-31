@@ -49,7 +49,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h.log.Debug(fmt.Sprintf("%+v", obj))
 
-	h.phandler.HandleManifest(obj)
+	if err := h.phandler.HandleManifest(obj); err != nil {
+		h.error(w, http.StatusBadRequest, "Invalid manifest")
+		return
+	}
 
 	// respond with success
 	w.WriteHeader(http.StatusOK)
