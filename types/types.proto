@@ -105,7 +105,7 @@ message GroupSpec {
 }
 
 message DeploymentGroupID {
-  option (gogoproto.compare) = true;
+  option (gogoproto.goproto_stringer) = false;
 
   // deployment address
   bytes  deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
@@ -176,7 +176,7 @@ message TxCloseDeployment {
 }
 
 message OrderID {
-  option (gogoproto.compare) = true;
+  option (gogoproto.goproto_stringer) = false;
 
   // deployment
   bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
@@ -216,7 +216,7 @@ message Orders {
 }
 
 message FulfillmentID {
-  option (gogoproto.compare) = true;
+  option (gogoproto.goproto_stringer) = false;
 
   // deployment address
   bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
@@ -257,7 +257,7 @@ message TxCloseFulfillment {
 }
 
 message LeaseID {
-  option (gogoproto.compare) = true;
+  option (gogoproto.goproto_stringer) = false;
 
   // deployment address
   bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];

@@ -10,7 +10,6 @@ import (
 	"github.com/ovrclk/akash/app/order"
 	"github.com/ovrclk/akash/app/provider"
 	apptypes "github.com/ovrclk/akash/app/types"
-	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/query"
 	pstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
@@ -90,9 +89,7 @@ func TestCreateTx(t *testing.T) {
 	goodgroup := groups.GetItems()[0].DeploymentGroupID
 
 	{
-		path := fmt.Sprintf("%v%v",
-			pstate.DeploymentPath,
-			keys.DeploymentGroupID(badgroup).Path())
+		path := fmt.Sprintf("%v%v", pstate.DeploymentPath, badgroup)
 		resp := app.Query(tmtypes.RequestQuery{Path: path})
 		assert.NotEmpty(t, resp.Log)
 		require.False(t, resp.IsOK())

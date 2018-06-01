@@ -18,7 +18,6 @@ import (
 // order manages bidding and general lifecycle handling of an order.
 type order struct {
 	order types.OrderID
-	group *types.DeploymentGroupID
 
 	session session.Session
 	cluster cluster.Cluster
@@ -42,11 +41,8 @@ func newOrder(e *service, ev *event.TxCreateOrder) (*order, error) {
 	log := session.Log().
 		With("order", keys.OrderID(ev.OrderID).Path())
 
-	group := ev.GroupID()
-
 	order := &order{
 		order:   ev.OrderID,
-		group:   &group,
 		session: session,
 		cluster: e.cluster,
 		bus:     e.bus,
@@ -113,20 +109,20 @@ loop:
 			case *event.TxCreateLease:
 
 				// different group
-				if o.group.Compare(ev.GroupID()) != 0 {
-					o.log.Info("ignoring group", "group", keys.DeploymentGroupID(ev.GroupID()).Path())
+				if o.order.GroupID().Compare(ev.GroupID()) != 0 {
+					o.log.Info("ignoring group", "group", ev.GroupID())
 					break
 				}
 
 				// check winning provider
 				if bytes.Compare(o.session.Provider().Address, ev.Provider) != 0 {
-					o.log.Info("lease lost", "lease-id", keys.LeaseID(ev.LeaseID).Path())
+					o.log.Info("lease lost", "lease-id", ev.LeaseID)
 					break loop
 				}
 
 				// TODO: sanity check (price, state, etc...)
 
-				o.log.Info("lease won", "lease-id", keys.LeaseID(ev.LeaseID).Path())
+				o.log.Info("lease won", "lease-id", ev.LeaseID)
 
 				o.bus.Publish(event.LeaseWon{
 					LeaseID: ev.LeaseID,

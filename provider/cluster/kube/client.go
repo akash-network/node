@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/juju/errors"
-	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	appsv1 "k8s.io/api/apps/v1"
@@ -204,7 +203,7 @@ func (c *client) deployServices(oid types.OrderID, group *types.ManifestGroup) e
 }
 
 func oidNS(oid types.OrderID) string {
-	path := strings.Replace(keys.OrderID(oid).Path(), "/", ".", -1)
+	path := oid.String()
 	sha := sha1.Sum([]byte(path))
 	return hex.EncodeToString(sha[:])
 }

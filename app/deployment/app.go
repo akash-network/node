@@ -119,7 +119,7 @@ func (a *app) doQuery(key keys.Deployment) tmtypes.ResponseQuery {
 	if dep == nil {
 		return tmtypes.ResponseQuery{
 			Code: code.NOT_FOUND,
-			Log:  fmt.Sprintf("deployment %v not found", key.Path()),
+			Log:  fmt.Sprintf("deployment %v not found", key),
 		}
 	}
 

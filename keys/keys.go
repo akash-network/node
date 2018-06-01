@@ -3,17 +3,14 @@ package keys
 import (
 	"bytes"
 	"encoding/binary"
-	"strconv"
 
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
-	"github.com/ovrclk/akash/util"
 )
 
 // XXX: interim hack (iteration!)
 
 type Key interface {
-	Path() string
 	Bytes() []byte
 }
 
@@ -24,10 +21,6 @@ type (
 	Provider   = Address
 	Account    = Address
 )
-
-func (k Address) Path() string {
-	return util.X(k)
-}
 
 func (k Address) Bytes() []byte {
 	return k
@@ -60,10 +53,6 @@ func (k DeploymentGroup) Bytes() []byte {
 	return buf.Bytes()
 }
 
-func (k DeploymentGroup) Path() string {
-	return util.X(k.Deployment) + "/" + strconv.FormatUint(k.Seq, 10)
-}
-
 type Order struct {
 	types.OrderID
 }
@@ -82,12 +71,6 @@ func (k Order) Bytes() []byte {
 	binary.Write(buf, binary.BigEndian, k.Group)
 	binary.Write(buf, binary.BigEndian, k.Seq)
 	return buf.Bytes()
-}
-
-func (k Order) Path() string {
-	return util.X(k.Deployment) + "/" +
-		strconv.FormatUint(k.Group, 10) + "/" +
-		strconv.FormatUint(k.Seq, 10)
 }
 
 func (k Order) GroupKey() DeploymentGroup {
@@ -118,13 +101,6 @@ func (k Fulfillment) Bytes() []byte {
 	return buf.Bytes()
 }
 
-func (k Fulfillment) Path() string {
-	return util.X(k.Deployment) + "/" +
-		strconv.FormatUint(k.Group, 10) + "/" +
-		strconv.FormatUint(k.Order, 10) + "/" +
-		util.X(k.Provider)
-}
-
 func (k Fulfillment) OrderKey() Order {
 	return OrderID(types.OrderID{
 		Deployment: k.Deployment,
@@ -151,10 +127,6 @@ func (k Lease) ID() types.LeaseID {
 
 func (k Lease) Bytes() []byte {
 	return k.FulfillmentKey().Bytes()
-}
-
-func (k Lease) Path() string {
-	return k.FulfillmentKey().Path()
 }
 
 func (k Lease) FulfillmentKey() Fulfillment {
