@@ -24,9 +24,12 @@
 ### September 2018
 - Testnet launch  
 - Provider certification program launch
-### Q3 2018
+### Later Q3 2018
 - Mainnet launch  
 - Akash token available on exchange(s)
+### Q4 2018
+- Onboard, ramp pilot users and providers
+- Iterate quickly in response to production usage and feedback
 ### Q1 2019
 - Launch of container-native PaaS  
    - *Akash Platform supports Heroku-like "push to deploy" functionality with SCM integration*  
