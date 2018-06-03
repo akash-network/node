@@ -178,8 +178,8 @@ func closeDeployment(session session.Session, cmd *cobra.Command, args []string)
 func sendManifestCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "sendmani [manifest] [lease]",
-		Short: "send manifest to lease provider",
+		Use:   "sendmani [manifest] [deployment]",
+		Short: "send manifest to all deployment providers",
 		Args:  cobra.ExactArgs(2),
 		RunE: session.WithSession(
 			session.RequireKey(session.RequireNode(sendManifest))),
@@ -207,24 +207,25 @@ func sendManifest(session session.Session, cmd *cobra.Command, args []string) er
 		return err
 	}
 
-	leaseAddr, err := keys.ParseLeasePath(args[1])
+	depAddr, err := keys.ParseDeploymentPath(args[1])
 	if err != nil {
 		return err
 	}
 
-	lease, err := session.QueryClient().Lease(session.Ctx(), leaseAddr.ID())
+	leases, err := session.QueryClient().DeploymentLeases(session.Ctx(), depAddr.ID())
 	if err != nil {
 		return err
 	}
 
-	provider, err := session.QueryClient().Provider(session.Ctx(), lease.Provider)
-	if err != nil {
-		return err
-	}
-
-	err = manifest.Send(mani, signer, provider, lease.Deployment)
-	if err != nil {
-		return err
+	for _, lease := range leases.Items {
+		provider, err := session.QueryClient().Provider(session.Ctx(), lease.Provider)
+		if err != nil {
+			return err
+		}
+		err = manifest.Send(mani, signer, provider, lease.Deployment)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

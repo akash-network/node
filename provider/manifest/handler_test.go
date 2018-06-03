@@ -55,7 +55,10 @@ func TestHandler_leaseFirst(t *testing.T) {
 type testfn func(manifest.Handler, event.Bus, *types.ManifestRequest, *types.Lease, *types.DeploymentGroup)
 
 func withHandler(t *testing.T, fn testfn) {
-	tenant := testutil.Address(t)
+	info, kmgr := testutil.NewNamedKey(t)
+	signer := testutil.Signer(t, kmgr)
+	tenant := info.Address()
+
 	deployment := testutil.Deployment(tenant, 1)
 	dgroup := testutil.DeploymentGroups(deployment.Address, 2).Items[0]
 	order := testutil.Order(deployment.Address, dgroup.Seq, 3)
@@ -91,8 +94,6 @@ func withHandler(t *testing.T, fn testfn) {
 		Manifest:   mani,
 	}
 
-	_, kmgr := testutil.NewNamedKey(t)
-	signer := testutil.Signer(t, kmgr)
 	mreq, _, err = manifestUtil.SignManifest(mani, signer, deployment.Address)
 	require.NoError(t, err)
 

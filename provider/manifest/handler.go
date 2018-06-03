@@ -146,7 +146,7 @@ loop:
 
 		case req := <-h.mreqch:
 			// Manifest received. Validate signature, look up state, add ManifestRequest, check state for completion.
-			if err := manifestUtil.VerifyRequestSig(req.value); err != nil {
+			if err := manifestUtil.VerifyRequest(req.value, h.session); err != nil {
 				req.ch <- err
 				break
 			}

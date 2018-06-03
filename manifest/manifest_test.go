@@ -36,7 +36,7 @@ func TestSignManifest(t *testing.T) {
 	assert.Equal(t, mr.Signature, gotmr.Signature)
 	assert.Equal(t, mr.Deployment, gotmr.Deployment)
 
-	err = VerifyRequestSig(gotmr)
+	_, err = verifySignature(gotmr)
 	assert.NoError(t, err)
 }
 
@@ -55,7 +55,7 @@ func TestVerifySig(t *testing.T) {
 	mr, _, err := SignManifest(mani, signer, deployment)
 	assert.NoError(t, err)
 
-	err = VerifyRequestSig(mr)
+	_, err = verifySignature(mr)
 	assert.NoError(t, err)
 }
 
@@ -81,7 +81,7 @@ func TestVerifySig_InvalidSig(t *testing.T) {
 
 	mr.Key = otherMr.Key
 
-	err = VerifyRequestSig(mr)
+	_, err = verifySignature(mr)
 	assert.Error(t, err)
 }
 
