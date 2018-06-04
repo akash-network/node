@@ -22,11 +22,6 @@ func marshalRequest(obj *types.ManifestRequest) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func unmarshal(r io.Reader) (*types.Manifest, error) {
-	obj := &types.Manifest{}
-	return obj, jsonpb.Unmarshal(r, obj)
-}
-
 func marshal(obj *types.Manifest) ([]byte, error) {
 	buf := bytes.Buffer{}
 	marshaler := jsonpb.Marshaler{}

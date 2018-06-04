@@ -232,7 +232,7 @@ func TestVerifyHash_Invalid(t *testing.T) {
 
 	otherHash, err := Hash(&types.Manifest{
 		Groups: []*types.ManifestGroup{
-			&types.ManifestGroup{
+			{
 				Name: "otherManifest",
 			},
 		},

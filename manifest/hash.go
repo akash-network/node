@@ -16,7 +16,10 @@ func Hash(m *types.Manifest) ([]byte, error) {
 		return nil, err
 	}
 	h := md5.New()
-	h.Write(bytes)
+	_, err = h.Write(bytes)
+	if err != nil {
+		return nil, err
+	}
 	return h.Sum(nil), err
 }
 
@@ -25,7 +28,7 @@ func verifyHash(m *types.Manifest, expectedHash []byte) error {
 	if err != nil {
 		return err
 	}
-	if bytes.Compare(hash, expectedHash) != 0 {
+	if !bytes.Equal(hash, expectedHash) {
 		return ErrDifferentHashes
 	}
 	return nil
