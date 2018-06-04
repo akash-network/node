@@ -2,7 +2,7 @@ package manifest
 
 import (
 	"bytes"
-	"crypto/md5"
+	"crypto/sha256"
 	"errors"
 
 	"github.com/ovrclk/akash/types"
@@ -15,7 +15,7 @@ func Hash(m *types.Manifest) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	h := md5.New()
+	h := sha256.New()
 	_, err = h.Write(bytes)
 	if err != nil {
 		return nil, err
