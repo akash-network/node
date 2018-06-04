@@ -176,25 +176,15 @@ func TestVerifyRequest(t *testing.T) {
 	info, kmgr := testutil.NewNamedKey(t)
 	signer := testutil.Signer(t, kmgr)
 	tenant := info.Address()
-
 	deployment := testutil.Deployment(tenant, 1)
-
 	providerID := testutil.Address(t)
 	provider := testutil.Provider(providerID, 4)
-
 	client := &qmocks.Client{}
 	client.On("Deployment",
 		mock.Anything,
 		[]byte(deployment.Address)).Return(deployment, nil)
-
 	sess := session.New(testutil.Logger(), provider, nil, client)
-
 	mani := &types.Manifest{}
-	mreq := &types.ManifestRequest{
-		Deployment: deployment.Address,
-		Manifest:   mani,
-	}
-
 	mreq, _, err := SignManifest(mani, signer, deployment.Address)
 	require.NoError(t, err)
 
