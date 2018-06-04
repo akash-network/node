@@ -84,10 +84,15 @@ func CloseDeployment(t *testing.T, app apptypes.Application, deployment *base.By
 	assert.True(t, dresp.IsOK())
 }
 
-func Deployment(tenant base.Bytes, nonce uint64) *types.Deployment {
+func Deployment(tenant base.Bytes, nonce uint64, version ...[]byte) *types.Deployment {
+	hash := []byte{}
+	if len(version) > 0 {
+		hash = version[0]
+	}
 	return &types.Deployment{
 		Tenant:  tenant,
 		Address: state.DeploymentAddress(tenant, nonce),
+		Version: hash,
 	}
 }
 

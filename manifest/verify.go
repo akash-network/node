@@ -11,8 +11,8 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 )
 
-var ErrInvalidSignature = errors.New("Invalid signature")
-var ErrInvalidKey = errors.New("Key is not deployment owner")
+var ErrInvalidSignature = errors.New("invalid signature")
+var ErrInvalidKey = errors.New("key is not deployment owner")
 
 func VerifyRequest(mr *types.ManifestRequest, session session.Session) error {
 	address, err := verifySignature(mr)
@@ -20,6 +20,9 @@ func VerifyRequest(mr *types.ManifestRequest, session session.Session) error {
 		return err
 	}
 	if err := verifyDeploymentTennant(mr, session, address); err != nil {
+		return err
+	}
+	if err := verifyManifestVersion(mr, session); err != nil {
 		return err
 	}
 	return nil
@@ -68,7 +71,7 @@ func verifyManifestVersion(mr *types.ManifestRequest, session session.Session) e
 	if err != nil {
 		return err
 	}
-	verifyHash(mr.Manifest, dep.Version)
+	err = verifyHash(mr.Manifest, dep.Version)
 	if err != nil {
 		return err
 	}

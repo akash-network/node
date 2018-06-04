@@ -146,12 +146,15 @@ loop:
 
 		case req := <-h.mreqch:
 			// Manifest received. Validate signature, look up state, add ManifestRequest, check state for completion.
+			did := req.value.Deployment
 			if err := manifestUtil.VerifyRequest(req.value, h.session); err != nil {
-				req.ch <- err
-				break
+				if err != manifestUtil.ErrDifferentHashes {
+					req.ch <- err
+					break
+				}
+				h.session.Log().Error("deployment", did.EncodeString(), err.Error())
 			}
 
-			did := req.value.Deployment
 			mstate := h.getManifestState(did)
 
 			h.session.Log().Info("manifest received", "deployment", did.EncodeString())
