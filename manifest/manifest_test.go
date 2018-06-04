@@ -191,3 +191,52 @@ func TestVerifyRequest(t *testing.T) {
 	err = VerifyRequest(mreq, sess)
 	assert.NoError(t, err)
 }
+
+func TestHash(t *testing.T) {
+	sdl, err := sdl.ReadFile("../_docs/deployment.yml")
+	require.NoError(t, err)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	_, err = Hash(mani)
+	assert.NoError(t, err)
+}
+
+func TestVerifyHash(t *testing.T) {
+	sdl, err := sdl.ReadFile("../_docs/deployment.yml")
+	require.NoError(t, err)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	hash, err := Hash(mani)
+	require.NoError(t, err)
+
+	otherHash, err := Hash(mani)
+	require.NoError(t, err)
+
+	assert.Equal(t, hash, otherHash)
+}
+
+func TestVerifyHash_Invalid(t *testing.T) {
+	sdl, err := sdl.ReadFile("../_docs/deployment.yml")
+	require.NoError(t, err)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	hash, err := Hash(mani)
+	require.NoError(t, err)
+
+	otherHash, err := Hash(&types.Manifest{
+		Groups: []*types.ManifestGroup{
+			&types.ManifestGroup{
+				Name: "otherManifest",
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	assert.NotEqual(t, hash, otherHash)
+}

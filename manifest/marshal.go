@@ -21,3 +21,17 @@ func marshalRequest(obj *types.ManifestRequest) ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
+
+func unmarshal(r io.Reader) (*types.Manifest, error) {
+	obj := &types.Manifest{}
+	return obj, jsonpb.Unmarshal(r, obj)
+}
+
+func marshal(obj *types.Manifest) ([]byte, error) {
+	buf := bytes.Buffer{}
+	marshaler := jsonpb.Marshaler{}
+	if err := marshaler.Marshal(&buf, obj); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}

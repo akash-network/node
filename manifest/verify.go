@@ -52,13 +52,25 @@ func verifySignature(mr *types.ManifestRequest) (crypto.Address, error) {
 	return key.Address(), err
 }
 
-func verifyDeploymentTennant(mr *types.ManifestRequest, session session.Session, address crypto.Address) error {
+func verifyDeploymentTennant(mr *types.ManifestRequest, session session.Session, signerAddress crypto.Address) error {
 	dep, err := session.Query().Deployment(context.TODO(), mr.Deployment)
 	if err != nil {
 		return err
 	}
-	if eq := bytes.Compare(dep.Tenant, address); eq != 0 {
+	if eq := bytes.Compare(dep.Tenant, signerAddress); eq != 0 {
 		return ErrInvalidKey
+	}
+	return nil
+}
+
+func verifyManifestVersion(mr *types.ManifestRequest, session session.Session) error {
+	dep, err := session.Query().Deployment(context.TODO(), mr.Deployment)
+	if err != nil {
+		return err
+	}
+	verifyHash(mr.Manifest, dep.Version)
+	if err != nil {
+		return err
 	}
 	return nil
 }

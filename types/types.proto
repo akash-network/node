@@ -151,6 +151,7 @@ message Deployment {
     CLOSED  = 2;
   }
   DeploymentState state = 3;
+  bytes Version = 4;  
 }
 
 message Deployments {
@@ -161,7 +162,8 @@ message TxCreateDeployment {
   bytes  tenant  = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
   uint64 nonce = 2;
   int64 orderTTL = 3;
-  repeated GroupSpec groups = 4;
+  bytes version = 4;
+  repeated GroupSpec groups = 5;
 }
 
 message TxCloseDeployment {
