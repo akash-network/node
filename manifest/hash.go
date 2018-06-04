@@ -5,12 +5,13 @@ import (
 	"crypto/sha256"
 	"errors"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/types"
 )
 
 var ErrDifferentHashes = errors.New("manifest hash does not match the expected hash")
 
-func Hash(m *types.Manifest) ([]byte, error) {
+func Hash(m proto.Message) ([]byte, error) {
 	bytes, err := marshal(m)
 	if err != nil {
 		return nil, err

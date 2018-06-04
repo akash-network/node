@@ -42,6 +42,9 @@ func SignManifest(manifest *types.Manifest, signer txutil.Signer, deployment []b
 // XXX assumes url is http/https
 func post(url string, data []byte) error {
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	if err != nil {
+		return err
+	}
 	req.Header.Set("X-Custom-Header", "Akash")
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
