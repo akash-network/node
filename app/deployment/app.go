@@ -288,6 +288,7 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployme
 		Address: state.DeploymentAddress(tx.Tenant, tx.Nonce),
 		Tenant:  tx.Tenant,
 		State:   types.Deployment_ACTIVE,
+		Version: tx.Version,
 	}
 
 	seq := a.State().Deployment().SequenceFor(deployment.Address)

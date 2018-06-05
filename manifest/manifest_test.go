@@ -176,7 +176,10 @@ func TestVerifyRequest(t *testing.T) {
 	info, kmgr := testutil.NewNamedKey(t)
 	signer := testutil.Signer(t, kmgr)
 	tenant := info.Address()
-	deployment := testutil.Deployment(tenant, 1)
+	mani := &types.Manifest{}
+	version, err := Hash(mani)
+	require.NoError(t, err)
+	deployment := testutil.Deployment(tenant, 1, version)
 	providerID := testutil.Address(t)
 	provider := testutil.Provider(providerID, 4)
 	client := &qmocks.Client{}
@@ -184,10 +187,57 @@ func TestVerifyRequest(t *testing.T) {
 		mock.Anything,
 		[]byte(deployment.Address)).Return(deployment, nil)
 	sess := session.New(testutil.Logger(), provider, nil, client)
-	mani := &types.Manifest{}
 	mreq, _, err := SignManifest(mani, signer, deployment.Address)
 	require.NoError(t, err)
-
 	err = VerifyRequest(mreq, sess)
 	assert.NoError(t, err)
+}
+
+func TestHash(t *testing.T) {
+	sdl, err := sdl.ReadFile("../_docs/deployment.yml")
+	require.NoError(t, err)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	_, err = Hash(mani)
+	assert.NoError(t, err)
+}
+
+func TestVerifyHash(t *testing.T) {
+	sdl, err := sdl.ReadFile("../_docs/deployment.yml")
+	require.NoError(t, err)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	hash, err := Hash(mani)
+	require.NoError(t, err)
+
+	otherHash, err := Hash(mani)
+	require.NoError(t, err)
+
+	assert.Equal(t, hash, otherHash)
+}
+
+func TestVerifyHash_Invalid(t *testing.T) {
+	sdl, err := sdl.ReadFile("../_docs/deployment.yml")
+	require.NoError(t, err)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	hash, err := Hash(mani)
+	require.NoError(t, err)
+
+	otherHash, err := Hash(&types.Manifest{
+		Groups: []*types.ManifestGroup{
+			{
+				Name: "otherManifest",
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	assert.NotEqual(t, hash, otherHash)
 }

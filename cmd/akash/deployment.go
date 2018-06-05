@@ -78,11 +78,17 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 		return err
 	}
 
+	hash, err := manifest.Hash(mani)
+	if err != nil {
+		return err
+	}
+
 	res, err := txclient.BroadcastTxCommit(&types.TxCreateDeployment{
 		Tenant:   txclient.Key().Address(),
 		Nonce:    nonce,
 		OrderTTL: ttl,
 		Groups:   groups,
+		Version:  hash,
 	})
 
 	if err != nil {
