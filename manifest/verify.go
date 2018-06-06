@@ -60,7 +60,7 @@ func verifyDeploymentTennant(mr *types.ManifestRequest, session session.Session,
 	if err != nil {
 		return err
 	}
-	if eq := bytes.Compare(dep.Tenant, signerAddress); eq != 0 {
+	if !bytes.Equal(dep.Tenant, signerAddress) {
 		return ErrInvalidKey
 	}
 	return nil

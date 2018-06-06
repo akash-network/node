@@ -100,8 +100,9 @@ message ProviderAttribute {
 }
 
 message GroupSpec {
-  repeated ProviderAttribute requirements = 1 [(gogoproto.nullable) = false];
-  repeated ResourceGroup     resources    = 2 [(gogoproto.nullable) = false];
+  string name = 1;
+  repeated ProviderAttribute requirements = 2 [(gogoproto.nullable) = false];
+  repeated ResourceGroup     resources    = 3 [(gogoproto.nullable) = false];
 }
 
 message DeploymentGroupID {
@@ -118,6 +119,8 @@ message DeploymentGroup {
   option (gogoproto.compare) = true;
 
   DeploymentGroupID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
+
+  string name = 2;
 
   // max number of blocks orders are open
   int64 orderTTL = 3;

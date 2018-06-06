@@ -105,12 +105,12 @@ func (d *driver) checkCommit(state state.State) bool {
 		return false
 	}
 
-	if bytes.Compare(d.actor.Address(), d.rs.Validators.GetProposer().PubKey.Address()) != 0 {
+	if !bytes.Equal(d.actor.Address(), d.rs.Validators.GetProposer().PubKey.Address()) {
 		d.log.Debug("wrong address", "actor", util.X(d.actor.Address()), "proposer", util.X(d.rs.Validators.GetProposer().PubKey.Address()))
 		return false
 	}
 
-	if bytes.Compare(d.block.Hash, d.rs.ProposalBlock.Header.Hash()) != 0 {
+	if !bytes.Equal(d.block.Hash, d.rs.ProposalBlock.Header.Hash()) {
 		d.log.Info("bad block hash", "block", util.X(d.block.Hash), "proposal", d.rs.ProposalBlock.Header.Hash())
 		return false
 	}

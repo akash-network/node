@@ -143,7 +143,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 		return err
 	}
 
-	if bytes.Compare(pobj.Owner, txclient.Key().Address()) != 0 {
+	if !bytes.Equal(pobj.Owner, txclient.Key().Address()) {
 		return fmt.Errorf("invalid key for provider (owner: %v, key: %v)",
 			pobj.Owner.EncodeString(), X(txclient.Key().Address()))
 	}
@@ -151,7 +151,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 	var cclient cluster.Client
 
 	if ok, _ := cmd.Flags().GetBool("kube"); ok {
-		cclient, err = kube.NewClient()
+		cclient, err = kube.NewClient(session.Log().With("cmp", "cluster-client"))
 		if err != nil {
 			return err
 		}

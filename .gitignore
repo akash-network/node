@@ -13,3 +13,6 @@
 
 # chain data
 *.tsd
+
+# test artifacts
+debug.test
