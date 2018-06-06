@@ -64,6 +64,10 @@ func (c *client) Deploy(oid types.OrderID, group *types.ManifestGroup) error {
 	return nil
 }
 
+func (c *client) Teardown(oid types.OrderID) error {
+	return c.kc.CoreV1().Namespaces().Delete(oidNS(oid), &metav1.DeleteOptions{})
+}
+
 func (c *client) deployNS(oid types.OrderID) error {
 	_, err := c.kc.CoreV1().Namespaces().Create(&corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{

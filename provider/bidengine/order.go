@@ -110,25 +110,27 @@ loop:
 
 				// different group
 				if o.order.GroupID().Compare(ev.GroupID()) != 0 {
-					o.log.Info("ignoring group", "group", ev.GroupID())
+					o.log.Debug("ignoring group", "group", ev.GroupID())
 					break
 				}
 
 				// check winning provider
 				if bytes.Compare(o.session.Provider().Address, ev.Provider) != 0 {
-					o.log.Info("lease lost", "lease-id", ev.LeaseID)
+					o.log.Info("lease lost", "lease", ev.LeaseID)
 					break loop
 				}
 
 				// TODO: sanity check (price, state, etc...)
 
-				o.log.Info("lease won", "lease-id", ev.LeaseID)
+				o.log.Info("lease won", "lease", ev.LeaseID)
 
 				o.bus.Publish(event.LeaseWon{
 					LeaseID: ev.LeaseID,
 					Group:   group,
 					Price:   price,
 				})
+
+				break loop
 
 			case *event.TxCloseDeployment:
 

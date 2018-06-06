@@ -301,6 +301,7 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployme
 				Deployment: deployment.Address,
 				Seq:        seq.Advance(),
 			},
+			Name:         group.Name,
 			State:        types.DeploymentGroup_OPEN,
 			Requirements: group.Requirements,
 			Resources:    group.Resources,

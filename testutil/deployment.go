@@ -3,6 +3,7 @@ package testutil
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"testing"
 
 	apptypes "github.com/ovrclk/akash/app/types"
@@ -118,6 +119,7 @@ func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGrou
 	}
 
 	group := &types.DeploymentGroup{
+		Name: strconv.FormatUint(nonce, 10),
 		DeploymentGroupID: types.DeploymentGroupID{
 			Deployment: deployment,
 			Seq:        nonce,
