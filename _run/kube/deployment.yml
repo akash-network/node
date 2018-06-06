@@ -6,6 +6,7 @@ services:
       - port: 8080
         as: 80
         accept:
+          - web.192.168.99.100.nip.io
           - web.192.168.99.101.nip.io
         to:
           - global: true

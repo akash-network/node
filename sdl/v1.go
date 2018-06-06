@@ -98,7 +98,9 @@ func (sdl *v1) DeploymentGroups() ([]*types.GroupSpec, error) {
 			group := groups[placementName]
 
 			if group == nil {
-				group = &types.GroupSpec{}
+				group = &types.GroupSpec{
+					Name: placementName,
+				}
 
 				for k, v := range infra.Attributes {
 					group.Requirements = append(group.Requirements, types.ProviderAttribute{

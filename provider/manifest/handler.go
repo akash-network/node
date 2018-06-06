@@ -70,7 +70,7 @@ type handler struct {
 // emit a ManifestReceived event to be consumed by other components.
 type manifestState struct {
 	request *types.ManifestRequest
-	leaseID *types.LeaseID
+	leases  []event.LeaseWon
 
 	deployment        *types.Deployment
 	deploymentPending bool
@@ -78,7 +78,7 @@ type manifestState struct {
 
 func (mstate *manifestState) complete() bool {
 	return mstate.request != nil &&
-		mstate.leaseID != nil &&
+		len(mstate.leases) > 0 &&
 		mstate.deployment != nil
 }
 
@@ -124,16 +124,24 @@ loop:
 		case ev := <-h.sub.Events():
 			switch ev := ev.(type) {
 			case event.LeaseWon:
+				h.session.Log().Info("lease won", "lease", ev.LeaseID)
 
 				// We won a lease.  Look up state, add LeaseID, check state for completion.
 
 				did := ev.LeaseID.Deployment
 				mstate := h.getManifestState(did)
 
-				h.session.Log().Info("lease won", "deployment", did.EncodeString())
+				found := false
+				for _, lev := range mstate.leases {
+					if lev.LeaseID.Compare(ev.LeaseID) == 0 {
+						found = true
+						h.session.Log().Error("duplicate lease found", "lease", lev.LeaseID)
+					}
+				}
 
-				// TODO: validate single lease
-				mstate.leaseID = &ev.LeaseID
+				if !found {
+					mstate.leases = append(mstate.leases, ev)
+				}
 
 				h.checkManifestState(ctx, mstate, did)
 
@@ -157,7 +165,7 @@ loop:
 
 			mstate := h.getManifestState(did)
 
-			h.session.Log().Info("manifest received", "deployment", did.EncodeString())
+			h.session.Log().Info("manifest received", "deployment", did)
 
 			// TODO: validate single manifest
 			mstate.request = req.value
@@ -177,7 +185,7 @@ loop:
 
 			deployment := req.Value().(*types.Deployment)
 			did := deployment.Address
-			key := did.EncodeString()
+			key := did.String()
 
 			mstate := h.mstates[key]
 
@@ -202,7 +210,7 @@ loop:
 }
 
 func (h *handler) getManifestState(did base.Bytes) *manifestState {
-	key := did.EncodeString()
+	key := did.String()
 	mstate := h.mstates[key]
 
 	if mstate == nil {
@@ -221,12 +229,17 @@ func (h *handler) checkManifestState(ctx context.Context, mstate *manifestState,
 		// TODO: validate manifest
 
 		// publish complete manifest
-		h.bus.Publish(event.ManifestReceived{
-			LeaseID:    *mstate.leaseID,
-			Manifest:   mstate.request.Manifest,
-			Deployment: mstate.deployment,
-		})
-		h.session.Log().Debug("manifest complete", "deployment", did.EncodeString())
+		for _, lev := range mstate.leases {
+			if err := h.bus.Publish(event.ManifestReceived{
+				LeaseID:    lev.LeaseID,
+				Group:      lev.Group,
+				Manifest:   mstate.request.Manifest,
+				Deployment: mstate.deployment,
+			}); err != nil {
+				h.session.Log().Error("publishing manifest", "lease", lev.LeaseID, "err", err)
+			}
+		}
+		h.session.Log().Debug("manifest complete", "deployment", did)
 		return
 	}
 
@@ -239,7 +252,7 @@ func (h *handler) checkManifestState(ctx context.Context, mstate *manifestState,
 }
 
 func (h *handler) fetchDeployment(ctx context.Context, key base.Bytes) {
-	h.session.Log().Debug("fetching deployment", "deployment", key.EncodeString())
+	h.session.Log().Debug("fetching deployment", "deployment", key)
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()

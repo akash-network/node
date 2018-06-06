@@ -44,7 +44,7 @@ case "$1" in
     ;;
   ping)
     curl "web.$(minikube ip).nip.io"
-
+    ;;
   *)
     echo "USAGE: $0 <init|akashd|send|query|marketplace|provider|deploy|manifest|ping>" >&2
     exit 1
