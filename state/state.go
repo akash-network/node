@@ -6,7 +6,6 @@ type State interface {
 	Commit() ([]byte, int64, error)
 
 	DB() DBReader
-
 	Account() AccountAdapter
 	Deployment() DeploymentAdapter
 	Provider() ProviderAdapter
