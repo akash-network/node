@@ -10,6 +10,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/api/extensions/v1beta1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -117,10 +118,25 @@ func (b *deploymentBuilder) update(obj *appsv1.Deployment) *appsv1.Deployment {
 }
 
 func (b *deploymentBuilder) container() corev1.Container {
+
+	qcpu := resource.NewQuantity(int64(b.service.Unit.Cpu), resource.DecimalSI)
+	qmem := resource.NewScaledQuantity(int64(b.service.Unit.Memory), resource.Mega)
+
 	kcontainer := corev1.Container{
 		Name:  b.service.Name,
 		Image: b.service.Image,
 		Args:  b.service.Args,
+		Resources: corev1.ResourceRequirements{
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    qcpu.DeepCopy(),
+				corev1.ResourceMemory: qmem.DeepCopy(),
+			},
+			// TODO: this prevents over-subscription.  skip for now.
+			// Requests: corev1.ResourceList{
+			// 	corev1.ResourceCPU:    qcpu.DeepCopy(),
+			// 	corev1.ResourceMemory: qmem.DeepCopy(),
+			// },
+		},
 	}
 
 	for _, env := range b.service.Env {

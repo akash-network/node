@@ -156,7 +156,11 @@ loop:
 
 			group = result.Value().(*types.DeploymentGroup)
 
-			// TODO: match requirements
+			if !matchProviderAttributes(o.session.Provider().Attributes, group.Requirements) {
+				o.log.Debug("unable to fulfill: incompatible attributes")
+				break loop
+			}
+
 			// TODO: check if price is too low
 
 			// Begin reserving resources from cluster.
