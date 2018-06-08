@@ -12,8 +12,6 @@ type DBReader interface {
 	Hash() []byte
 	Get(key []byte) []byte
 	GetRange([]byte, []byte, int) ([][]byte, [][]byte, error)
-	GetWithProof(key []byte) ([]byte, iavl.KeyProof, error)
-	GetRangeWithProof([]byte, []byte, int) ([][]byte, [][]byte, iavl.KeyRangeProof, error)
 }
 
 type DB interface {
@@ -71,22 +69,9 @@ func (db *iavlDB) Remove(key []byte) {
 	db.tree.Remove(key)
 }
 
-func (db *iavlDB) GetWithProof(key []byte) ([]byte, iavl.KeyProof, error) {
-	db.mtx.Lock()
-	defer db.mtx.Unlock()
-	return db.tree.GetWithProof(key)
-}
-
 func (db *iavlDB) GetRange(startKey []byte, endKey []byte, limit int) ([][]byte, [][]byte, error) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 	keys, deps, _, err := db.tree.GetRangeWithProof(startKey, endKey, MaxRangeLimit)
 	return keys, deps, err
-}
-
-func (db *iavlDB) GetRangeWithProof(startKey []byte, endKey []byte, limit int) ([][]byte, [][]byte, iavl.KeyRangeProof, error) {
-	db.mtx.Lock()
-	defer db.mtx.Unlock()
-	keys, deps, proof, err := db.tree.GetRangeWithProof(startKey, endKey, limit)
-	return keys, deps, *proof, err
 }

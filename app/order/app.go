@@ -7,7 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/akash/app/types"
 	"github.com/ovrclk/akash/keys"
-	"github.com/ovrclk/akash/state"
+	appstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
@@ -22,12 +22,12 @@ type app struct {
 	*apptypes.BaseApp
 }
 
-func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) {
-	return &app{apptypes.NewBaseApp(Name, state, logger)}, nil
+func NewApp(logger log.Logger) (apptypes.Application, error) {
+	return &app{apptypes.NewBaseApp(Name, logger)}, nil
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
-	return strings.HasPrefix(req.GetPath(), state.OrderPath)
+	return strings.HasPrefix(req.GetPath(), appstate.OrderPath)
 }
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
@@ -38,10 +38,10 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	return false
 }
 
-func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
+func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateOrder:
-		return a.doCheckCreateTx(ctx, tx.TxCreateOrder)
+		return a.doCheckCreateTx(state, ctx, tx.TxCreateOrder)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -49,10 +49,10 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 	}
 }
 
-func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
+func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateOrder:
-		return a.doDeliverCreateTx(ctx, tx.TxCreateOrder)
+		return a.doDeliverCreateTx(state, ctx, tx.TxCreateOrder)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -60,7 +60,7 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 	}
 }
 
-func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
+func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	if !a.AcceptQuery(req) {
 		return tmtypes.ResponseQuery{
 			Code: code.UNKNOWN_QUERY,
@@ -69,9 +69,9 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	}
 
 	// TODO: Partial Key Parsing
-	id := strings.TrimPrefix(req.Path, state.OrderPath)
+	id := strings.TrimPrefix(req.Path, appstate.OrderPath)
 	if len(id) == 0 {
-		return a.doRangeQuery()
+		return a.doRangeQuery(state)
 	}
 
 	key, err := keys.ParseOrderPath(id)
@@ -81,12 +81,12 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 			Log:  err.Error(),
 		}
 	}
-	return a.doQuery(key)
+	return a.doQuery(state, key)
 }
 
-func (a *app) doQuery(key keys.Order) tmtypes.ResponseQuery {
+func (a *app) doQuery(state appstate.State, key keys.Order) tmtypes.ResponseQuery {
 
-	depo, err := a.State().Order().Get(key.ID())
+	depo, err := state.Order().Get(key.ID())
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -112,12 +112,12 @@ func (a *app) doQuery(key keys.Order) tmtypes.ResponseQuery {
 
 	return tmtypes.ResponseQuery{
 		Value:  bytes,
-		Height: int64(a.State().Version()),
+		Height: int64(state.Version()),
 	}
 }
 
-func (a *app) doRangeQuery() tmtypes.ResponseQuery {
-	items, err := a.State().Order().All()
+func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
+	items, err := state.Order().All()
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -137,11 +137,11 @@ func (a *app) doRangeQuery() tmtypes.ResponseQuery {
 
 	return tmtypes.ResponseQuery{
 		Value:  bytes,
-		Height: a.State().Version(),
+		Height: state.Version(),
 	}
 }
 
-func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseCheckTx {
+func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseCheckTx {
 
 	// todo: ensure signed by last block creator / valid market facilitator
 
@@ -154,7 +154,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmt
 	}
 
 	// ensure deployment exists
-	deployment, err := a.State().Deployment().Get(tx.Deployment)
+	deployment, err := state.Deployment().Get(tx.Deployment)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -177,7 +177,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmt
 	}
 
 	// ensure deployment group exists
-	group, err := a.State().DeploymentGroup().Get(tx.GroupID())
+	group, err := state.DeploymentGroup().Get(tx.GroupID())
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -200,7 +200,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmt
 	}
 
 	// ensure no other open orders
-	others, err := a.State().Order().ForGroup(group.DeploymentGroupID)
+	others, err := state.Order().ForGroup(group.DeploymentGroupID)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -220,9 +220,9 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmt
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseDeliverTx {
 
-	cresp := a.doCheckCreateTx(ctx, tx)
+	cresp := a.doCheckCreateTx(state, ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -230,7 +230,7 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) t
 		}
 	}
 
-	oseq := a.State().Deployment().SequenceFor(tx.Deployment)
+	oseq := state.Deployment().SequenceFor(tx.Deployment)
 	oseq.Advance()
 
 	order := &types.Order{
@@ -242,7 +242,7 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateOrder) t
 	// order.Order = oseq.Advance()
 	order.State = types.Order_OPEN
 
-	if err := a.State().Order().Save(order); err != nil {
+	if err := state.Order().Save(order); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),

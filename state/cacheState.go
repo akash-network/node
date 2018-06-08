@@ -114,6 +114,7 @@ func (c *cache) Write() error {
 			c.db.Set([]byte(k), v.value)
 		}
 	}
+	c.cache = make(map[string]cacheValue)
 	return nil
 }
 

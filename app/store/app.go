@@ -6,7 +6,7 @@ import (
 	"github.com/tendermint/tmlibs/log"
 
 	apptypes "github.com/ovrclk/akash/app/types"
-	"github.com/ovrclk/akash/state"
+	appstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types/code"
 )
 
@@ -19,15 +19,15 @@ type app struct {
 	*apptypes.BaseApp
 }
 
-func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) {
-	return &app{apptypes.NewBaseApp(Name, state, logger)}, nil
+func NewApp(logger log.Logger) (apptypes.Application, error) {
+	return &app{apptypes.NewBaseApp(Name, logger)}, nil
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
 	return req.Path == QueryPath
 }
 
-func (a *app) Query(req types.RequestQuery) types.ResponseQuery {
+func (a *app) Query(state appstate.State, req types.RequestQuery) types.ResponseQuery {
 	if !a.AcceptQuery(req) {
 		return types.ResponseQuery{
 			Code: code.ERROR,
@@ -35,27 +35,10 @@ func (a *app) Query(req types.RequestQuery) types.ResponseQuery {
 		}
 	}
 
-	db := a.State().DB()
-
-	if req.Prove {
-		val, proof, err := db.GetWithProof(req.Data)
-		if err != nil {
-			return types.ResponseQuery{
-				Code: code.ERROR,
-				Log:  err.Error(),
-			}
-		}
-		return types.ResponseQuery{
-			Value:  val,
-			Height: int64(db.Version()),
-			Proof:  proof.Bytes(),
-		}
-	}
-
-	val := db.Get(req.Data)
+	val := state.Get(req.Data)
 	return types.ResponseQuery{
 		Value:  val,
-		Height: int64(db.Version()),
+		Height: state.Version(),
 	}
 }
 
@@ -63,14 +46,14 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	return false
 }
 
-func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) types.ResponseCheckTx {
+func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) types.ResponseCheckTx {
 	return types.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
 		Log:  "store app: unknown transaction",
 	}
 }
 
-func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) types.ResponseDeliverTx {
+func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) types.ResponseDeliverTx {
 	return types.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
 		Log:  "store app: unknown transaction",
