@@ -18,7 +18,7 @@ func TestDriver(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	state_ := testutil.NewState(t, nil)
+	commitState, _ := testutil.NewState(t, nil)
 	actor := market.NewActor(testutil.PrivateKey(t))
 
 	bus := tmtmtypes.NewEventBus()
@@ -26,7 +26,7 @@ func TestDriver(t *testing.T) {
 	defer func() { require.NoError(t, bus.Stop()) }()
 
 	facilitator := new(mocks.Facilitator)
-	facilitator.On("Run", state_).Return(nil)
+	facilitator.On("Run", commitState).Return(nil)
 
 	driver, err := market.NewDriverWithFacilitator(ctx, testutil.Logger(), actor, bus, facilitator)
 	require.NoError(t, err)
@@ -40,12 +40,12 @@ func TestDriver(t *testing.T) {
 	// make legit event
 	validators := []*tmtmtypes.Validator{tmtmtypes.NewValidator(actor.PubKey(), 10)}
 	vset := tmtmtypes.NewValidatorSet(validators)
-	blk := tmtmtypes.MakeBlock(state_.Version(), nil, &tmtmtypes.Commit{})
+	blk := tmtmtypes.MakeBlock(commitState.Version(), nil, &tmtmtypes.Commit{})
 	blk.Header.ValidatorsHash = vset.Hash()
 	bhash := blk.Hash()
 
 	bus.PublishEventCompleteProposal(tmtmtypes.EventDataRoundState{
-		Height: state_.Version(),
+		Height: commitState.Version(),
 		RoundState: &ctypes.RoundState{
 			Validators:    vset,
 			ProposalBlock: blk,
@@ -54,16 +54,16 @@ func TestDriver(t *testing.T) {
 	testutil.SleepForThreadStart(t)
 
 	// no commit
-	require.NoError(t, driver.OnCommit(state_))
+	require.NoError(t, driver.OnCommit(commitState))
 
 	driver.OnBeginBlock(types.RequestBeginBlock{
 		Hash: bhash,
 	})
 
 	// execute
-	require.NoError(t, driver.OnCommit(state_))
+	require.NoError(t, driver.OnCommit(commitState))
 
 	driver.Stop()
 
-	facilitator.AssertCalled(t, "Run", state_)
+	facilitator.AssertCalled(t, "Run", commitState)
 }

@@ -2,7 +2,6 @@ package state
 
 import (
 	"sort"
-	"strings"
 	"sync"
 )
 
@@ -51,8 +50,11 @@ func (c *cache) Get(key []byte) []byte {
 	k := string(key)
 	if v, ok := c.cache[k]; !ok {
 		val := c.db.Get(key)
-		c.cache[k] = cacheValue{val, false, false}
-		return val
+		if len(val) > 0 {
+			c.cache[k] = cacheValue{val, false, false}
+			return val
+		}
+		return nil
 	} else {
 		return v.value
 	}
@@ -76,7 +78,8 @@ func (c *cache) GetRange(start, end []byte, limit int) ([][]byte, [][]byte, erro
 	s, e := string(start), string(end)
 	keys, values := [][]byte{}, [][]byte{}
 	for k, v := range c.cache {
-		if strings.Compare(s, k) == -1 && strings.Compare(e, k) == 1 {
+		// start --- key --- end
+		if s <= k && e >= k {
 			// key is in range
 			keys = append(keys, []byte(k))
 			values = append(values, v.value)

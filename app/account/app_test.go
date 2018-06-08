@@ -33,7 +33,7 @@ func TestAccountApp(t *testing.T) {
 		},
 	}
 
-	state := testutil.NewState(t, &types.Genesis{
+	_, cacheState := testutil.NewState(t, &types.Genesis{
 		Accounts: []types.Account{
 			types.Account{Address: addrfrom, Balance: balance},
 		},
@@ -46,7 +46,7 @@ func TestAccountApp(t *testing.T) {
 		},
 	})
 
-	app, err := account.NewApp(state, testutil.Logger())
+	app, err := account.NewApp(testutil.Logger())
 	require.NoError(t, err)
 
 	assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: query.AccountPath(addrfrom)}))
@@ -54,17 +54,17 @@ func TestAccountApp(t *testing.T) {
 	assert.True(t, app.AcceptTx(ctx, send))
 
 	{
-		resp := app.CheckTx(ctx, send)
+		resp := app.CheckTx(cacheState, ctx, send)
 		assert.True(t, resp.IsOK(), resp.Log)
 	}
 
 	{
-		resp := app.DeliverTx(ctx, send)
+		resp := app.DeliverTx(cacheState, ctx, send)
 		assert.True(t, resp.IsOK(), resp.Log)
 	}
 
 	{
-		resp := app.Query(tmtypes.RequestQuery{Path: query.AccountPath(addrfrom)})
+		resp := app.Query(cacheState, tmtypes.RequestQuery{Path: query.AccountPath(addrfrom)})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 
@@ -76,7 +76,7 @@ func TestAccountApp(t *testing.T) {
 	}
 
 	{
-		resp := app.Query(tmtypes.RequestQuery{Path: query.AccountPath(addrto)})
+		resp := app.Query(cacheState, tmtypes.RequestQuery{Path: query.AccountPath(addrto)})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 
@@ -90,15 +90,15 @@ func TestAccountApp(t *testing.T) {
 }
 
 func TestTx_BadTxType(t *testing.T) {
-	state_ := testutil.NewState(t, nil)
-	app, err := account.NewApp(state_, testutil.Logger())
+	_, cacheState := testutil.NewState(t, nil)
+	app, err := account.NewApp(testutil.Logger())
 	require.NoError(t, err)
-	account, key := testutil.CreateAccount(t, state_)
+	account, key := testutil.CreateAccount(t, cacheState)
 	tx := testutil.ProviderTx(account, key, 10)
 	ctx := apptypes.NewContext(tx)
 	assert.False(t, app.AcceptTx(ctx, tx.Payload.Payload))
-	cresp := app.CheckTx(ctx, tx.Payload.Payload)
+	cresp := app.CheckTx(cacheState, ctx, tx.Payload.Payload)
 	assert.False(t, cresp.IsOK())
-	dresp := app.DeliverTx(ctx, tx.Payload.Payload)
+	dresp := app.DeliverTx(cacheState, ctx, tx.Payload.Payload)
 	assert.False(t, dresp.IsOK())
 }

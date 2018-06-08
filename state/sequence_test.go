@@ -9,19 +9,20 @@ import (
 
 func TestSequence(t *testing.T) {
 	db := state.NewMemDB()
-	seq := state.NewSequence(db, []byte("/foo"))
+	st := state.NewState(db)
+	seq := state.NewSequence(st, []byte("/foo"))
 
 	assert.Equal(t, uint64(0), seq.Current())
 	assert.Equal(t, uint64(1), seq.Advance())
 	assert.Equal(t, uint64(1), seq.Current())
 
 	{
-		seq := state.NewSequence(db, []byte("/foo"))
+		seq := state.NewSequence(st, []byte("/foo"))
 		assert.Equal(t, uint64(1), seq.Current())
 	}
 
 	{
-		seq := state.NewSequence(db, []byte("/bar"))
+		seq := state.NewSequence(st, []byte("/bar"))
 		assert.Equal(t, uint64(0), seq.Current())
 	}
 }

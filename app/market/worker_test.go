@@ -14,17 +14,17 @@ func TestMarketWorker(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	state_ := testutil.NewState(t, nil)
+	commitState, _ := testutil.NewState(t, nil)
 
 	delegate := new(mocks.Facilitator)
-	delegate.On("Run", state_).
+	delegate.On("Run", commitState).
 		Return(nil).Once()
 
 	worker := market.NewWorker(ctx, delegate)
 	testutil.SleepForThreadStart(t)
-	assert.NoError(t, worker.Run(state_))
+	assert.NoError(t, worker.Run(commitState))
 	cancel()
 
 	testutil.SleepForThreadStart(t)
-	assert.Error(t, worker.Run(state_))
+	assert.Error(t, worker.Run(commitState))
 }

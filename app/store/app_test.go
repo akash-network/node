@@ -16,11 +16,11 @@ import (
 
 func TestStoreApp(t *testing.T) {
 
-	state := testutil.NewState(t, nil)
+	state, _ := testutil.NewState(t, nil)
 	acct, _ := testutil.CreateAccount(t, state)
 	fromaddr := acct.Address
 
-	app, err := store.NewApp(state, testutil.Logger())
+	app, err := store.NewApp(testutil.Logger())
 	require.NoError(t, err)
 
 	assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: store.QueryPath}))
@@ -30,7 +30,7 @@ func TestStoreApp(t *testing.T) {
 
 	{
 		key := append([]byte(pstate.AccountPath), fromaddr...)
-		resp := app.Query(tmtypes.RequestQuery{
+		resp := app.Query(state, tmtypes.RequestQuery{
 			Path: store.QueryPath,
 			Data: key,
 		})
@@ -43,21 +43,19 @@ func TestStoreApp(t *testing.T) {
 
 	{
 		key := append([]byte(pstate.AccountPath), fromaddr...)
-		resp := app.Query(tmtypes.RequestQuery{
+		resp := app.Query(state, tmtypes.RequestQuery{
 			Path:  store.QueryPath,
 			Data:  key,
-			Prove: true,
 		})
 		acc := new(types.Account)
 		acc.Unmarshal(resp.Value)
 		assert.True(t, resp.IsOK())
 		assert.Equal(t, acct.Balance, acc.Balance)
-		assert.NotEmpty(t, resp.Proof)
 	}
 
 	{
 		key := append([]byte(pstate.AccountPath), fromaddr...)
-		resp := app.Query(tmtypes.RequestQuery{
+		resp := app.Query(state, tmtypes.RequestQuery{
 			Path: "/bad",
 			Data: key,
 		})
@@ -67,7 +65,7 @@ func TestStoreApp(t *testing.T) {
 
 	{
 		key := []byte("/bad")
-		resp := app.Query(tmtypes.RequestQuery{
+		resp := app.Query(state, tmtypes.RequestQuery{
 			Path: store.QueryPath,
 			Data: key,
 		})
@@ -77,13 +75,13 @@ func TestStoreApp(t *testing.T) {
 	}
 
 	{
-		resp := app.CheckTx(nil, nil)
+		resp := app.CheckTx(nil, nil, nil)
 		assert.False(t, resp.IsOK())
 		assert.Equal(t, code.UNKNOWN_TRANSACTION, resp.Code)
 	}
 
 	{
-		resp := app.DeliverTx(nil, nil)
+		resp := app.DeliverTx(nil, nil, nil)
 		assert.False(t, resp.IsOK())
 		assert.Equal(t, code.UNKNOWN_TRANSACTION, resp.Code)
 	}

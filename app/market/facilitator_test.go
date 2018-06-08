@@ -16,13 +16,13 @@ import (
 )
 
 func TestFacilitator(t *testing.T) {
-	state_ := testutil.NewState(t, nil)
-	account, key := testutil.CreateAccount(t, state_)
+	commitState, _ := testutil.NewState(t, nil)
+	account, key := testutil.CreateAccount(t, commitState)
 
 	nonce := uint64(10)
 
 	account.Nonce = nonce
-	state_.Account().Save(account)
+	commitState.Account().Save(account)
 
 	daddr := state.DeploymentAddress(account.Address, nonce)
 	tx := &types.TxCreateOrder{
@@ -34,7 +34,7 @@ func TestFacilitator(t *testing.T) {
 	txs := []interface{}{tx}
 
 	engine := new(mocks.Engine)
-	engine.On("Run", state_).
+	engine.On("Run", commitState).
 		Return(txs, nil).Once()
 
 	client := new(mocks.Client)
@@ -59,6 +59,6 @@ func TestFacilitator(t *testing.T) {
 
 	facilitator := market.NewFacilitator(testutil.Logger(), actor, engine, client)
 
-	require.NoError(t, facilitator.Run(state_))
+	require.NoError(t, facilitator.Run(commitState))
 
 }

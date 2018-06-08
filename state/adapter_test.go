@@ -11,7 +11,8 @@ import (
 
 func TestAccountAdapter(t *testing.T) {
 	db := state.NewMemDB()
-	adapter := state.NewAccountAdapter(db)
+	st := state.NewState(db)
+	adapter := state.NewAccountAdapter(st)
 
 	address := base.Bytes("foo")
 

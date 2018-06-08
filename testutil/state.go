@@ -10,9 +10,13 @@ import (
 )
 
 // NewState used only for testing
-func NewState(t *testing.T, gen *types.Genesis) state.CommitState, state.CacheState {
+func NewState(t *testing.T, gen *types.Genesis) (state.CommitState, state.CacheState) {
 	db := state.NewMemDB()
 	commitState, cacheState, err := state.LoadState(db, gen)
+	require.NoError(t, err)
+	// prime commit state so root is not nil
+	cacheState.Set([]byte("test"), []byte("Test"))
+	err = cacheState.Write()
 	require.NoError(t, err)
 	return commitState, cacheState
 }

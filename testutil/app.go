@@ -11,8 +11,8 @@ import (
 )
 
 func NewApp(t *testing.T, gen *types.Genesis) tmtypes.Application {
-	state := NewState(t, gen)
-	app, err := app.Create(state, Logger())
+	commit, cache := NewState(t, gen)
+	app, err := app.Create(commit, cache, Logger())
 	require.NoError(t, err)
 	return app
 }
