@@ -43,23 +43,26 @@ func LoadDB(pathname string) (DB, error) {
 	return &iavlDB{tree, mtx}, nil
 }
 
-func LoadState(db DB, gen *types.Genesis) (CommitState, error) {
+func LoadState(db DB, gen *types.Genesis) (CommitState, CacheState, error) {
 
-	state := NewState(db)
+	commitState := NewState(db)
+	cacheState := NewCache(db)
 
 	if gen == nil || !db.IsEmpty() {
-		return state, nil
+		return commitState, cacheState, nil
 	}
 
-	accounts := state.Account()
+	accounts := cacheState.Account()
 
 	for idx := range gen.Accounts {
 		if err := accounts.Save(&gen.Accounts[idx]); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return state, nil
+	cacheState.Write()
+
+	return commitState, cacheState, nil
 }
 
 func NewMemDB() DB {
@@ -68,13 +71,24 @@ func NewMemDB() DB {
 	return &iavlDB{tree, mtx}
 }
 
-// save object writes an object to the base db
-func saveObject(db DB, key []byte, obj proto.Message) error {
+// // save object writes an object to the base db
+// func saveObject(db DB, key []byte, obj proto.Message) error {
+// 	buf, err := proto.Marshal(obj)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	db.Set(key, buf)
+// 	return nil
+// }
+
+// save object writes an object to the state
+func saveObject(state State, key []byte, obj proto.Message) error {
 	buf, err := proto.Marshal(obj)
 	if err != nil {
 		return err
 	}
 
-	db.Set(key, buf)
+	state.Set(key, buf)
 	return nil
 }

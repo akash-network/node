@@ -16,23 +16,23 @@ type OrderAdapter interface {
 	All() ([]*types.Order, error)
 }
 
-func NewOrderAdapter(db DB) OrderAdapter {
-	return &orderAdapter{db}
+func NewOrderAdapter(state State) OrderAdapter {
+	return &orderAdapter{state}
 }
 
 type orderAdapter struct {
-	db DB
+	state State
 }
 
 func (a *orderAdapter) Save(obj *types.Order) error {
 	path := a.keyFor(obj.OrderID)
-	return saveObject(a.db, path, obj)
+	return saveObject(a.state, path, obj)
 }
 
 func (d *orderAdapter) Get(id types.OrderID) (*types.Order, error) {
 	key := d.keyFor(id)
 	depo := types.Order{}
-	buf := d.db.Get(key)
+	buf := d.state.Get(key)
 	if buf == nil {
 		return nil, nil
 	}
@@ -106,7 +106,7 @@ func (a *orderAdapter) allMaxRange() []byte {
 }
 
 func (a *orderAdapter) forRange(min, max []byte) ([]*types.Order, error) {
-	_, bufs, _, err := a.db.GetRangeWithProof(min, max, MaxRangeLimit)
+	_, bufs, err := a.state.GetRange(min, max, MaxRangeLimit)
 	if err != nil {
 		return nil, err
 	}

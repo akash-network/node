@@ -17,11 +17,11 @@ type DeploymentAdapter interface {
 }
 
 type deploymentAdapter struct {
-	db DB
+	state State
 }
 
-func NewDeploymentAdapter(db DB) DeploymentAdapter {
-	return &deploymentAdapter{db}
+func NewDeploymentAdapter(state State) DeploymentAdapter {
+	return &deploymentAdapter{state}
 }
 
 func (d *deploymentAdapter) Save(deployment *types.Deployment) error {
@@ -32,7 +32,7 @@ func (d *deploymentAdapter) Save(deployment *types.Deployment) error {
 		return err
 	}
 
-	d.db.Set(key, dbytes)
+	d.state.Set(key, dbytes)
 	return nil
 }
 
@@ -42,7 +42,7 @@ func (d *deploymentAdapter) Get(address base.Bytes) (*types.Deployment, error) {
 
 	key := d.KeyFor(address)
 
-	buf := d.db.Get(key)
+	buf := d.state.Get(key)
 	if buf == nil {
 		return nil, nil
 	}
@@ -57,6 +57,29 @@ func (d *deploymentAdapter) GetMaxRange() (*types.Deployments, error) {
 	return deps, err
 }
 
+func (d *deploymentAdapter) GetRange(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.Deployments, error) {
+	deps := types.Deployments{}
+
+	start := d.KeyFor(startKey)
+	end := d.KeyFor(endKey)
+
+	keys, dbytes, err := d.state.GetRange(start, end, limit)
+	if err != nil {
+		return nil, &deps, err
+	}
+	if keys == nil {
+		return nil, &deps, nil
+	}
+
+	for _, d := range dbytes {
+		dep := types.Deployment{}
+		dep.Unmarshal(d)
+		deps.Items = append(deps.Items, dep)
+	}
+
+	return keys, &deps, nil
+}
+
 func (d *deploymentAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.Deployments, iavl.KeyRangeProof, error) {
 	deps := types.Deployments{}
 	proof := iavl.KeyRangeProof{}
@@ -64,7 +87,7 @@ func (d *deploymentAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.B
 	start := d.KeyFor(startKey)
 	end := d.KeyFor(endKey)
 
-	keys, dbytes, proof, err := d.db.GetRangeWithProof(start, end, limit)
+	keys, dbytes, err := d.state.GetRange(start, end, limit)
 	if err != nil {
 		return nil, &deps, proof, err
 	}
@@ -87,5 +110,5 @@ func (a *deploymentAdapter) KeyFor(address base.Bytes) base.Bytes {
 
 func (a *deploymentAdapter) SequenceFor(address base.Bytes) Sequence {
 	path := append([]byte(DeploymentSequencePath), address...)
-	return NewSequence(a.db, path)
+	return NewSequence(a.state, path)
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/akash/app/types"
 	"github.com/ovrclk/akash/keys"
-	"github.com/ovrclk/akash/state"
+	appstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
@@ -23,15 +23,15 @@ type app struct {
 	*apptypes.BaseApp
 }
 
-func NewApp(commitState state.State, cacheState state.CacheState, logger log.Logger) (apptypes.Application, error) {
-	return &app{apptypes.NewBaseApp(Name, state, logger)}, nil
+func NewApp(logger log.Logger) (apptypes.Application, error) {
+	return &app{apptypes.NewBaseApp(Name, logger)}, nil
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
-	return strings.HasPrefix(req.GetPath(), state.AccountPath)
+	return strings.HasPrefix(req.GetPath(), appstate.AccountPath)
 }
 
-func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
+func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 	if !a.AcceptQuery(req) {
 		return tmtypes.ResponseQuery{
@@ -39,7 +39,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 			Log:  "invalid key",
 		}
 	}
-	id := strings.TrimPrefix(req.Path, state.AccountPath)
+	id := strings.TrimPrefix(req.Path, appstate.AccountPath)
 	key, err := keys.ParseAccountPath(id)
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -48,7 +48,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	acct, err := a.State().Account().Get(key.ID())
+	acct, err := state.Account().Get(key.ID())
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -73,7 +73,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 	return tmtypes.ResponseQuery{
 		Value:  bytes,
-		Height: int64(a.State().Version()),
+		Height: int64(state.Version()),
 	}
 }
 
@@ -85,10 +85,10 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	return false
 }
 
-func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
+func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxSend:
-		return a.doCheckTx(ctx, tx.TxSend)
+		return a.doCheckTx(state, ctx, tx.TxSend)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -96,10 +96,10 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 	}
 }
 
-func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
+func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxSend:
-		return a.doDeliverTx(ctx, tx.TxSend)
+		return a.doDeliverTx(state, ctx, tx.TxSend)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -107,7 +107,7 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 	}
 }
 
-func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.ResponseCheckTx {
+func (a *app) doCheckTx(state appstate.State, ctx apptypes.Context, tx *types.TxSend) tmtypes.ResponseCheckTx {
 
 	if !bytes.Equal(ctx.Signer().Address(), tx.From) {
 		return tmtypes.ResponseCheckTx{
@@ -123,7 +123,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.Response
 		}
 	}
 
-	acct, err := a.State().Account().Get(tx.From)
+	acct, err := state.Account().Get(tx.From)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -147,9 +147,9 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.Response
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverTx(state appstate.State, ctx apptypes.Context, tx *types.TxSend) tmtypes.ResponseDeliverTx {
 
-	cresp := a.doCheckTx(ctx, tx)
+	cresp := a.doCheckTx(state, ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -157,7 +157,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.Respon
 		}
 	}
 
-	acct, err := a.State().Account().Get(tx.From)
+	acct, err := state.Account().Get(tx.From)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -171,7 +171,7 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.Respon
 		}
 	}
 
-	toacct, err := a.State().Account().Get(tx.To)
+	toacct, err := state.Account().Get(tx.To)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -188,14 +188,14 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxSend) tmtypes.Respon
 	acct.Balance -= tx.Amount
 	toacct.Balance += tx.Amount
 
-	if err := a.State().Account().Save(acct); err != nil {
+	if err := state.Account().Save(acct); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
 		}
 	}
 
-	if err := a.State().Account().Save(toacct); err != nil {
+	if err := state.Account().Save(toacct); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),

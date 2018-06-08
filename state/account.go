@@ -12,16 +12,16 @@ type AccountAdapter interface {
 }
 
 type accountAdapter struct {
-	db DB
+	state State
 }
 
-func NewAccountAdapter(db DB) AccountAdapter {
-	return &accountAdapter{db}
+func NewAccountAdapter(state State) AccountAdapter {
+	return &accountAdapter{state}
 }
 
 func (a *accountAdapter) Save(account *types.Account) error {
 	key := a.KeyFor(account.Address)
-	return saveObject(a.db, key, account)
+	return saveObject(a.state, key, account)
 }
 
 func (a *accountAdapter) Get(address base.Bytes) (*types.Account, error) {
@@ -30,7 +30,7 @@ func (a *accountAdapter) Get(address base.Bytes) (*types.Account, error) {
 
 	key := a.KeyFor(address)
 
-	buf := a.db.Get(key)
+	buf := a.state.Get(key)
 	if buf == nil {
 		return nil, nil
 	}

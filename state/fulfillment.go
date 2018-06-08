@@ -17,22 +17,22 @@ type FulfillmentAdapter interface {
 	ForOrder(types.OrderID) ([]*types.Fulfillment, error)
 }
 
-func NewFulfillmentAdapter(db DB) FulfillmentAdapter {
-	return &fulfillmentAdapter{db}
+func NewFulfillmentAdapter(state State) FulfillmentAdapter {
+	return &fulfillmentAdapter{state}
 }
 
 type fulfillmentAdapter struct {
-	db DB
+	state State
 }
 
 func (a *fulfillmentAdapter) Save(obj *types.Fulfillment) error {
 	path := a.keyFor(obj.FulfillmentID)
-	return saveObject(a.db, path, obj)
+	return saveObject(a.state, path, obj)
 }
 
 func (a *fulfillmentAdapter) Get(id types.FulfillmentID) (*types.Fulfillment, error) {
 	path := a.keyFor(id)
-	buf := a.db.Get(path)
+	buf := a.state.Get(path)
 	if buf == nil {
 		return nil, nil
 	}
@@ -112,7 +112,7 @@ func (a *fulfillmentAdapter) orderMaxRange(id types.OrderID) []byte {
 }
 
 func (a *fulfillmentAdapter) forRange(min, max []byte) ([]*types.Fulfillment, error) {
-	_, bufs, _, err := a.db.GetRangeWithProof(min, max, MaxRangeLimit)
+	_, bufs, err := a.state.GetRange(min, max, MaxRangeLimit)
 	if err != nil {
 		return nil, err
 	}

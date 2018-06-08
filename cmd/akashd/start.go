@@ -54,12 +54,10 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	commitState, err := state.LoadState(db, genesis)
+	commitState, cacheState, err := state.LoadState(db, genesis)
 	if err != nil {
 		return err
 	}
-
-	cacheState := state.NewCache(db)
 
 	logger := log.NewFilter(ctx.Log(), log.AllowError(),
 		log.AllowDebugWith("module", "akash"))

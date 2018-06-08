@@ -1,17 +1,29 @@
 package state
 
 import (
-	"errors"
 	"sort"
 	"strings"
 	"sync"
 )
 
-type CacheState interface {
+type State interface {
 	Get(key []byte) []byte
 	Set(key, val []byte)
 	Remove(key []byte)
-	GetRange([]byte, []byte) ([][]byte, [][]byte, error)
+	GetRange([]byte, []byte, int) ([][]byte, [][]byte, error)
+	Version() int64
+
+	Account() AccountAdapter
+	Deployment() DeploymentAdapter
+	Provider() ProviderAdapter
+	Order() OrderAdapter
+	DeploymentGroup() DeploymentGroupAdapter
+	Fulfillment() FulfillmentAdapter
+	Lease() LeaseAdapter
+}
+
+type CacheState interface {
+	State
 	Write() error
 }
 
@@ -59,7 +71,8 @@ func (c *cache) Remove(key []byte) {
 }
 
 // Get values from cache and store. Merge results
-func (c *cache) GetRange(start, end []byte) ([][]byte, [][]byte, error) {
+func (c *cache) GetRange(start, end []byte, limit int) ([][]byte, [][]byte, error) {
+	ctr := 0
 	s, e := string(start), string(end)
 	keys, values := [][]byte{}, [][]byte{}
 	for k, v := range c.cache {
@@ -67,9 +80,13 @@ func (c *cache) GetRange(start, end []byte) ([][]byte, [][]byte, error) {
 			// key is in range
 			keys = append(keys, []byte(k))
 			values = append(values, v.value)
+			ctr++
+			if ctr >= limit {
+				return keys, values, nil
+			}
 		}
 	}
-	dbkeys, dbvalues, _, err := c.db.GetRangeWithProof(start, end, MaxRangeLimit)
+	dbkeys, dbvalues, err := c.db.GetRange(start, end, limit-len(keys))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,13 +109,42 @@ func (c *cache) Write() error {
 	for _, k := range keys {
 		v := c.cache[k]
 		if v.removed {
-			_, removed := c.db.Remove([]byte(k))
-			if !removed {
-				errors.New("remove should have removed but did not remove.")
-			}
+			c.db.Remove([]byte(k))
 		} else if v.dirty {
 			c.db.Set([]byte(k), v.value)
 		}
 	}
 	return nil
+}
+
+func (c *cache) Version() int64 {
+	return c.db.Version() + 1
+}
+
+func (c *cache) Account() AccountAdapter {
+	return NewAccountAdapter(c)
+}
+
+func (c *cache) Deployment() DeploymentAdapter {
+	return NewDeploymentAdapter(c)
+}
+
+func (c *cache) DeploymentGroup() DeploymentGroupAdapter {
+	return NewDeploymentGroupAdapter(c)
+}
+
+func (c *cache) Provider() ProviderAdapter {
+	return NewProviderAdapter(c)
+}
+
+func (c *cache) Order() OrderAdapter {
+	return NewOrderAdapter(c)
+}
+
+func (c *cache) Fulfillment() FulfillmentAdapter {
+	return NewFulfillmentAdapter(c)
+}
+
+func (c *cache) Lease() LeaseAdapter {
+	return NewLeaseAdapter(c)
 }

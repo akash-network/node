@@ -8,7 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/akash/app/types"
 	"github.com/ovrclk/akash/keys"
-	"github.com/ovrclk/akash/state"
+	appstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
@@ -23,15 +23,15 @@ type app struct {
 	*apptypes.BaseApp
 }
 
-func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) {
-	return &app{apptypes.NewBaseApp(Name, state, logger)}, nil
+func NewApp(logger log.Logger) (apptypes.Application, error) {
+	return &app{apptypes.NewBaseApp(Name, logger)}, nil
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
-	return strings.HasPrefix(req.GetPath(), state.DeploymentPath) || strings.HasPrefix(req.GetPath(), state.DeploymentGroupPath)
+	return strings.HasPrefix(req.GetPath(), appstate.DeploymentPath) || strings.HasPrefix(req.GetPath(), appstate.DeploymentGroupPath)
 }
 
-func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
+func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	if !a.AcceptQuery(req) {
 		return tmtypes.ResponseQuery{
 			Code: code.UNKNOWN_QUERY,
@@ -41,8 +41,8 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 	// TODO: Partial Key Parsing
 
-	if strings.HasPrefix(req.GetPath(), state.DeploymentGroupPath) {
-		id := strings.TrimPrefix(req.Path, state.DeploymentGroupPath)
+	if strings.HasPrefix(req.GetPath(), appstate.DeploymentGroupPath) {
+		id := strings.TrimPrefix(req.Path, appstate.DeploymentGroupPath)
 		key, err := keys.ParseGroupPath(id)
 		if err != nil {
 			return tmtypes.ResponseQuery{
@@ -50,12 +50,12 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 				Log:  err.Error(),
 			}
 		}
-		return a.doDeploymentGroupQuery(key)
+		return a.doDeploymentGroupQuery(state, key)
 	}
 
-	id := strings.TrimPrefix(req.Path, state.DeploymentPath)
+	id := strings.TrimPrefix(req.Path, appstate.DeploymentPath)
 	if len(id) == 0 {
-		return a.doRangeQuery()
+		return a.doRangeQuery(state)
 	}
 
 	key, err := keys.ParseDeploymentPath(id)
@@ -66,7 +66,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 		}
 	}
 
-	return a.doQuery(key)
+	return a.doQuery(state, key)
 }
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
@@ -79,12 +79,12 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	return false
 }
 
-func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
+func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateDeployment:
-		return a.doCheckCreateTx(ctx, tx.TxCreateDeployment)
+		return a.doCheckCreateTx(state, ctx, tx.TxCreateDeployment)
 	case *types.TxPayload_TxCloseDeployment:
-		return a.doCheckCloseTx(ctx, tx.TxCloseDeployment)
+		return a.doCheckCloseTx(state, ctx, tx.TxCloseDeployment)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -92,12 +92,12 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 	}
 }
 
-func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
+func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateDeployment:
-		return a.doDeliverCreateTx(ctx, tx.TxCreateDeployment)
+		return a.doDeliverCreateTx(state, ctx, tx.TxCreateDeployment)
 	case *types.TxPayload_TxCloseDeployment:
-		return a.doDeliverCloseTx(ctx, tx.TxCloseDeployment)
+		return a.doDeliverCloseTx(state, ctx, tx.TxCloseDeployment)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -105,9 +105,9 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 	}
 }
 
-func (a *app) doQuery(key keys.Deployment) tmtypes.ResponseQuery {
+func (a *app) doQuery(state appstate.State, key keys.Deployment) tmtypes.ResponseQuery {
 
-	dep, err := a.State().Deployment().Get(key.ID())
+	dep, err := state.Deployment().Get(key.ID())
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -133,12 +133,12 @@ func (a *app) doQuery(key keys.Deployment) tmtypes.ResponseQuery {
 
 	return tmtypes.ResponseQuery{
 		Value:  bytes,
-		Height: a.State().Version(),
+		Height: state.Version(),
 	}
 }
 
-func (a *app) doRangeQuery() tmtypes.ResponseQuery {
-	deps, err := a.State().Deployment().GetMaxRange()
+func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
+	deps, err := state.Deployment().GetMaxRange()
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -156,13 +156,13 @@ func (a *app) doRangeQuery() tmtypes.ResponseQuery {
 
 	return tmtypes.ResponseQuery{
 		Value:  bytes,
-		Height: a.State().Version(),
+		Height: state.Version(),
 	}
 }
 
-func (a *app) doDeploymentGroupQuery(key keys.DeploymentGroup) tmtypes.ResponseQuery {
+func (a *app) doDeploymentGroupQuery(state appstate.State, key keys.DeploymentGroup) tmtypes.ResponseQuery {
 
-	dep, err := a.State().DeploymentGroup().Get(key.ID())
+	dep, err := state.DeploymentGroup().Get(key.ID())
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -188,11 +188,11 @@ func (a *app) doDeploymentGroupQuery(key keys.DeploymentGroup) tmtypes.ResponseQ
 
 	return tmtypes.ResponseQuery{
 		Value:  bytes,
-		Height: a.State().Version(),
+		Height: state.Version(),
 	}
 }
 
-func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tmtypes.ResponseCheckTx {
+func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateDeployment) tmtypes.ResponseCheckTx {
 
 	if !bytes.Equal(ctx.Signer().Address(), tx.Tenant) {
 		return tmtypes.ResponseCheckTx{
@@ -208,7 +208,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployment
 		}
 	}
 
-	acct, err := a.State().Account().Get(tx.Tenant)
+	acct, err := state.Account().Get(tx.Tenant)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -232,8 +232,8 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployment
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment) tmtypes.ResponseCheckTx {
-	deployment, err := a.State().Deployment().Get(tx.Deployment)
+func (a *app) doCheckCloseTx(state appstate.State, ctx apptypes.Context, tx *types.TxCloseDeployment) tmtypes.ResponseCheckTx {
+	deployment, err := state.Deployment().Get(tx.Deployment)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -274,9 +274,9 @@ func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment) 
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployment) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateDeployment) tmtypes.ResponseDeliverTx {
 
-	cresp := a.doCheckCreateTx(ctx, tx)
+	cresp := a.doCheckCreateTx(state, ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -285,13 +285,13 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployme
 	}
 
 	deployment := &types.Deployment{
-		Address: state.DeploymentAddress(tx.Tenant, tx.Nonce),
+		Address: appstate.DeploymentAddress(tx.Tenant, tx.Nonce),
 		Tenant:  tx.Tenant,
 		State:   types.Deployment_ACTIVE,
 		Version: tx.Version,
 	}
 
-	seq := a.State().Deployment().SequenceFor(deployment.Address)
+	seq := state.Deployment().SequenceFor(deployment.Address)
 
 	groups := tx.Groups
 
@@ -307,10 +307,10 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployme
 			Resources:    group.Resources,
 			OrderTTL:     tx.OrderTTL,
 		}
-		a.State().DeploymentGroup().Save(g)
+		state.DeploymentGroup().Save(g)
 	}
 
-	if err := a.State().Deployment().Save(deployment); err != nil {
+	if err := state.Deployment().Save(deployment); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
@@ -323,9 +323,9 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateDeployme
 	}
 }
 
-func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverCloseTx(state appstate.State, ctx apptypes.Context, tx *types.TxCloseDeployment) tmtypes.ResponseDeliverTx {
 
-	cresp := a.doCheckCloseTx(ctx, tx)
+	cresp := a.doCheckCloseTx(state, ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -333,7 +333,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 		}
 	}
 
-	deployment, err := a.State().Deployment().Get(tx.Deployment)
+	deployment, err := state.Deployment().Get(tx.Deployment)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -348,7 +348,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 	}
 
 	deployment.State = types.Deployment_CLOSED
-	err = a.State().Deployment().Save(deployment)
+	err = state.Deployment().Save(deployment)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -356,7 +356,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 		}
 	}
 
-	groups, err := a.State().DeploymentGroup().ForDeployment(deployment.Address)
+	groups, err := state.DeploymentGroup().ForDeployment(deployment.Address)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -370,7 +370,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 		}
 	}
 
-	leases, err := a.State().Lease().ForDeployment(deployment.Address)
+	leases, err := state.Lease().ForDeployment(deployment.Address)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -380,7 +380,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 
 	for _, group := range groups {
 		group.State = types.DeploymentGroup_CLOSED
-		err = a.State().DeploymentGroup().Save(group)
+		err = state.DeploymentGroup().Save(group)
 		if err != nil {
 			return tmtypes.ResponseDeliverTx{
 				Code: code.INVALID_TRANSACTION,
@@ -389,7 +389,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 		}
 	}
 
-	orders, err := a.State().Order().ForDeployment(deployment.Address)
+	orders, err := state.Order().ForDeployment(deployment.Address)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -399,7 +399,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 
 	for _, order := range orders {
 		order.State = types.Order_CLOSED
-		err = a.State().Order().Save(order)
+		err = state.Order().Save(order)
 		if err != nil {
 			return tmtypes.ResponseDeliverTx{
 				Code: code.INVALID_TRANSACTION,
@@ -408,7 +408,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 		}
 	}
 
-	fulfillments, err := a.State().Fulfillment().ForDeployment(deployment.Address)
+	fulfillments, err := state.Fulfillment().ForDeployment(deployment.Address)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
@@ -418,7 +418,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 
 	for _, fulfillment := range fulfillments {
 		fulfillment.State = types.Fulfillment_CLOSED
-		err = a.State().Fulfillment().Save(fulfillment)
+		err = state.Fulfillment().Save(fulfillment)
 		if err != nil {
 			return tmtypes.ResponseDeliverTx{
 				Code: code.INVALID_TRANSACTION,
@@ -430,7 +430,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseDeployment
 	if leases != nil {
 		for _, lease := range leases {
 			lease.State = types.Lease_CLOSED
-			err = a.State().Lease().Save(lease)
+			err = state.Lease().Save(lease)
 			if err != nil {
 				return tmtypes.ResponseDeliverTx{
 					Code: code.INVALID_TRANSACTION,

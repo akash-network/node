@@ -4,23 +4,22 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
-	"github.com/tendermint/iavl"
 )
 
 type ProviderAdapter interface {
 	Save(provider *types.Provider) error
 	Get(base.Bytes) (*types.Provider, error)
 	GetMaxRange() (*types.Providers, error)
-	GetRangeWithProof(base.Bytes, base.Bytes, int) ([][]byte, *types.Providers, iavl.KeyRangeProof, error)
+	GetRange(base.Bytes, base.Bytes, int) ([][]byte, *types.Providers, error)
 	KeyFor(base.Bytes) base.Bytes
 }
 
 type providerAdapter struct {
-	db DB
+	state State
 }
 
-func NewProviderAdapter(db DB) ProviderAdapter {
-	return &providerAdapter{db}
+func NewProviderAdapter(state State) ProviderAdapter {
+	return &providerAdapter{state}
 }
 
 func (d *providerAdapter) Save(provider *types.Provider) error {
@@ -31,7 +30,7 @@ func (d *providerAdapter) Save(provider *types.Provider) error {
 		return err
 	}
 
-	d.db.Set(key, dbytes)
+	d.state.Set(key, dbytes)
 	return nil
 }
 
@@ -40,7 +39,7 @@ func (d *providerAdapter) Get(address base.Bytes) (*types.Provider, error) {
 	dc := types.Provider{}
 	key := d.KeyFor(address)
 
-	buf := d.db.Get(key)
+	buf := d.state.Get(key)
 	if buf == nil {
 		return nil, nil
 	}
@@ -50,22 +49,21 @@ func (d *providerAdapter) Get(address base.Bytes) (*types.Provider, error) {
 }
 
 func (d *providerAdapter) GetMaxRange() (*types.Providers, error) {
-	_, dcs, _, err := d.GetRangeWithProof(MinAddress(), MaxAddress(), MaxRangeLimit)
+	_, dcs, err := d.GetRange(MinAddress(), MaxAddress(), MaxRangeLimit)
 	return dcs, err
 }
 
-func (d *providerAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.Providers, iavl.KeyRangeProof, error) {
+func (d *providerAdapter) GetRange(startKey base.Bytes, endKey base.Bytes, limit int) ([][]byte, *types.Providers, error) {
 	dcs := types.Providers{}
-	proof := iavl.KeyRangeProof{}
 	start := d.KeyFor(startKey)
 	end := d.KeyFor(endKey)
 
-	keys, dbytes, proof, err := d.db.GetRangeWithProof(start, end, limit)
+	keys, dbytes, err := d.state.GetRange(start, end, limit)
 	if err != nil {
-		return nil, &dcs, proof, err
+		return nil, &dcs, err
 	}
 	if keys == nil {
-		return nil, &dcs, proof, nil
+		return nil, &dcs, nil
 	}
 
 	for _, d := range dbytes {
@@ -74,7 +72,7 @@ func (d *providerAdapter) GetRangeWithProof(startKey base.Bytes, endKey base.Byt
 		dcs.Providers = append(dcs.Providers, dc)
 	}
 
-	return keys, &dcs, proof, nil
+	return keys, &dcs, nil
 }
 
 func (a *providerAdapter) KeyFor(address base.Bytes) base.Bytes {

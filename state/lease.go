@@ -16,22 +16,22 @@ type LeaseAdapter interface {
 	All() ([]*types.Lease, error)
 }
 
-func NewLeaseAdapter(db DB) LeaseAdapter {
-	return &leaseAdapter{db}
+func NewLeaseAdapter(state State) LeaseAdapter {
+	return &leaseAdapter{state}
 }
 
 type leaseAdapter struct {
-	db DB
+	state State
 }
 
 func (a *leaseAdapter) Save(obj *types.Lease) error {
 	path := a.keyFor(obj.LeaseID)
-	return saveObject(a.db, path, obj)
+	return saveObject(a.state, path, obj)
 }
 
 func (a *leaseAdapter) Get(id types.LeaseID) (*types.Lease, error) {
 	path := a.keyFor(id)
-	buf := a.db.Get(path)
+	buf := a.state.Get(path)
 	if buf == nil {
 		return nil, nil
 	}
@@ -84,7 +84,7 @@ func (a *leaseAdapter) allMaxRange() []byte {
 }
 
 func (a *leaseAdapter) forRange(min, max []byte) ([]*types.Lease, error) {
-	_, bufs, _, err := a.db.GetRangeWithProof(min, max, MaxRangeLimit)
+	_, bufs, err := a.state.GetRange(min, max, MaxRangeLimit)
 	if err != nil {
 		return nil, err
 	}

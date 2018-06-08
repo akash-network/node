@@ -10,7 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/akash/app/types"
 	"github.com/ovrclk/akash/keys"
-	"github.com/ovrclk/akash/state"
+	appstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/code"
 	tmtypes "github.com/tendermint/abci/types"
@@ -24,12 +24,12 @@ type app struct {
 	*apptypes.BaseApp
 }
 
-func NewApp(state state.State, log log.Logger) (apptypes.Application, error) {
-	return &app{apptypes.NewBaseApp(Name, state, log)}, nil
+func NewApp(log log.Logger) (apptypes.Application, error) {
+	return &app{apptypes.NewBaseApp(Name, log)}, nil
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
-	return strings.HasPrefix(req.GetPath(), state.FulfillmentPath)
+	return strings.HasPrefix(req.GetPath(), appstate.FulfillmentPath)
 }
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
@@ -42,12 +42,12 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	return false
 }
 
-func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
+func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateFulfillment:
-		return a.doCheckCreateTx(ctx, tx.TxCreateFulfillment)
+		return a.doCheckCreateTx(state, ctx, tx.TxCreateFulfillment)
 	case *types.TxPayload_TxCloseFulfillment:
-		_, resp := a.doCheckCloseTx(ctx, tx.TxCloseFulfillment)
+		_, resp := a.doCheckCloseTx(state, ctx, tx.TxCloseFulfillment)
 		return resp
 	}
 	return tmtypes.ResponseCheckTx{
@@ -56,12 +56,12 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 	}
 }
 
-func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
+func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateFulfillment:
-		return a.doDeliverCreateTx(ctx, tx.TxCreateFulfillment)
+		return a.doDeliverCreateTx(state, ctx, tx.TxCreateFulfillment)
 	case *types.TxPayload_TxCloseFulfillment:
-		return a.doDeliverCloseTx(ctx, tx.TxCloseFulfillment)
+		return a.doDeliverCloseTx(state, ctx, tx.TxCloseFulfillment)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -69,7 +69,7 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 	}
 }
 
-func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
+func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	if !a.AcceptQuery(req) {
 		return tmtypes.ResponseQuery{
 			Code: code.UNKNOWN_QUERY,
@@ -78,7 +78,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	}
 
 	// todo: abstractiion: all queries should have this
-	id := strings.TrimPrefix(req.Path, state.FulfillmentPath)
+	id := strings.TrimPrefix(req.Path, appstate.FulfillmentPath)
 	key, err := keys.ParseFulfillmentPath(id)
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -86,10 +86,10 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 			Log:  err.Error(),
 		}
 	}
-	return a.doQuery(key)
+	return a.doQuery(state, key)
 }
 
-func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseCheckTx {
+func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseCheckTx {
 
 	if tx.Deployment == nil {
 		return tmtypes.ResponseCheckTx{
@@ -106,7 +106,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillmen
 	}
 
 	// lookup provider
-	provider, err := a.State().Provider().Get(tx.Provider)
+	provider, err := state.Provider().Get(tx.Provider)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -129,7 +129,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillmen
 	}
 
 	// ensure provider account exists
-	acct, err := a.State().Account().Get(provider.Owner)
+	acct, err := state.Account().Get(provider.Owner)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -144,7 +144,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillmen
 	}
 
 	// ensure order exists
-	dorder, err := a.State().Order().Get(tx.OrderID())
+	dorder, err := state.Order().Get(tx.OrderID())
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -167,7 +167,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillmen
 	}
 
 	// get deployment group
-	group, err := a.State().DeploymentGroup().Get(tx.GroupID())
+	group, err := state.DeploymentGroup().Get(tx.GroupID())
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -192,7 +192,7 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillmen
 	}
 
 	// ensure there are no other orders for this provider
-	other, err := a.State().Fulfillment().Get(tx.FulfillmentID)
+	other, err := state.Fulfillment().Get(tx.FulfillmentID)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -209,8 +209,8 @@ func (a *app) doCheckCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillmen
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseDeliverTx {
-	cresp := a.doCheckCreateTx(ctx, tx)
+func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseDeliverTx {
+	cresp := a.doCheckCreateTx(state, ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -223,7 +223,7 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillm
 		State:         types.Fulfillment_OPEN,
 	}
 
-	if err := a.State().Fulfillment().Save(fulfillment); err != nil {
+	if err := state.Fulfillment().Save(fulfillment); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
@@ -235,10 +235,10 @@ func (a *app) doDeliverCreateTx(ctx apptypes.Context, tx *types.TxCreateFulfillm
 	}
 }
 
-func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseFulfillment) (*types.Fulfillment, tmtypes.ResponseCheckTx) {
+func (a *app) doCheckCloseTx(state appstate.State, ctx apptypes.Context, tx *types.TxCloseFulfillment) (*types.Fulfillment, tmtypes.ResponseCheckTx) {
 
 	// lookup fulfillment
-	fulfillment, err := a.State().Fulfillment().Get(tx.FulfillmentID)
+	fulfillment, err := state.Fulfillment().Get(tx.FulfillmentID)
 	if err != nil {
 		return nil, tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -259,7 +259,7 @@ func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseFulfillment)
 	}
 
 	// ensure provider exists
-	provider, err := a.State().Provider().Get(fulfillment.Provider)
+	provider, err := state.Provider().Get(fulfillment.Provider)
 	if err != nil {
 		return nil, tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -274,7 +274,7 @@ func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseFulfillment)
 	}
 
 	// ensure ownder exists
-	owner, err := a.State().Account().Get(provider.Owner)
+	owner, err := state.Account().Get(provider.Owner)
 	if err != nil {
 		return nil, tmtypes.ResponseCheckTx{
 			Code: code.ERROR,
@@ -299,8 +299,8 @@ func (a *app) doCheckCloseTx(ctx apptypes.Context, tx *types.TxCloseFulfillment)
 	return fulfillment, tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseFulfillment) tmtypes.ResponseDeliverTx {
-	fulfillment, cresp := a.doCheckCloseTx(ctx, tx)
+func (a *app) doDeliverCloseTx(state appstate.State, ctx apptypes.Context, tx *types.TxCloseFulfillment) tmtypes.ResponseDeliverTx {
+	fulfillment, cresp := a.doCheckCloseTx(state, ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -310,7 +310,7 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseFulfillmen
 
 	fulfillment.State = types.Fulfillment_CLOSED
 
-	if err := a.State().Fulfillment().Save(fulfillment); err != nil {
+	if err := state.Fulfillment().Save(fulfillment); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
@@ -322,8 +322,8 @@ func (a *app) doDeliverCloseTx(ctx apptypes.Context, tx *types.TxCloseFulfillmen
 	}
 }
 
-func (a *app) doQuery(key keys.Fulfillment) tmtypes.ResponseQuery {
-	ful, err := a.State().Fulfillment().Get(key.ID())
+func (a *app) doQuery(state appstate.State, key keys.Fulfillment) tmtypes.ResponseQuery {
+	ful, err := state.Fulfillment().Get(key.ID())
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -349,6 +349,6 @@ func (a *app) doQuery(key keys.Fulfillment) tmtypes.ResponseQuery {
 
 	return tmtypes.ResponseQuery{
 		Value:  bytes,
-		Height: a.State().Version(),
+		Height: state.Version(),
 	}
 }

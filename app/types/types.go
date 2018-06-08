@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	tmtypes "github.com/tendermint/abci/types"
 	crypto "github.com/tendermint/go-crypto"
@@ -9,11 +10,11 @@ import (
 type Application interface {
 	Name() string
 	AcceptQuery(req tmtypes.RequestQuery) bool
-	Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery
+	Query(state state.State, req tmtypes.RequestQuery) tmtypes.ResponseQuery
 
 	AcceptTx(ctx Context, tx interface{}) bool
-	CheckTx(ctx Context, tx interface{}) tmtypes.ResponseCheckTx
-	DeliverTx(ctx Context, tx interface{}) tmtypes.ResponseDeliverTx
+	CheckTx(state state.State, ctx Context, tx interface{}) tmtypes.ResponseCheckTx
+	DeliverTx(state state.State, ctx Context, tx interface{}) tmtypes.ResponseDeliverTx
 }
 
 type Context interface {
