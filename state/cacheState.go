@@ -132,7 +132,7 @@ func (c *cache) Write() error {
 }
 
 func (c *cache) Version() int64 {
-	return c.db.Version() + 1
+	return c.db.Version()
 }
 
 func (c *cache) Account() AccountAdapter {
