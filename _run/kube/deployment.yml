@@ -14,8 +14,8 @@ services:
 profiles:
   compute:
     web:
-      cpu: 2
-      memory: 3
+      cpu: 1
+      memory: 512
       disk: 5
   placement:
     westcoast:
