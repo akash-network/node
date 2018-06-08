@@ -1,6 +1,6 @@
 package state
 
-type State interface {
+type CommitState interface {
 	Version() int64
 	Hash() []byte
 	Commit() ([]byte, int64, error)
@@ -15,54 +15,54 @@ type State interface {
 	Lease() LeaseAdapter
 }
 
-func NewState(db DB) State {
-	return &state{db}
+func NewState(db DB) CommitState {
+	return &commitState{db}
 }
 
-type state struct {
+type commitState struct {
 	db DB
 }
 
-func (s *state) Version() int64 {
+func (s *commitState) Version() int64 {
 	return s.db.Version()
 }
 
-func (s *state) Hash() []byte {
+func (s *commitState) Hash() []byte {
 	return s.db.Hash()
 }
 
-func (s *state) Commit() ([]byte, int64, error) {
+func (s *commitState) Commit() ([]byte, int64, error) {
 	return s.db.Commit()
 }
 
-func (s *state) DB() DBReader {
+func (s *commitState) DB() DBReader {
 	return s.db
 }
 
-func (s *state) Account() AccountAdapter {
+func (s *commitState) Account() AccountAdapter {
 	return NewAccountAdapter(s.db)
 }
 
-func (s *state) Deployment() DeploymentAdapter {
+func (s *commitState) Deployment() DeploymentAdapter {
 	return NewDeploymentAdapter(s.db)
 }
 
-func (s *state) DeploymentGroup() DeploymentGroupAdapter {
+func (s *commitState) DeploymentGroup() DeploymentGroupAdapter {
 	return NewDeploymentGroupAdapter(s.db)
 }
 
-func (s *state) Provider() ProviderAdapter {
+func (s *commitState) Provider() ProviderAdapter {
 	return NewProviderAdapter(s.db)
 }
 
-func (s *state) Order() OrderAdapter {
+func (s *commitState) Order() OrderAdapter {
 	return NewOrderAdapter(s.db)
 }
 
-func (s *state) Fulfillment() FulfillmentAdapter {
+func (s *commitState) Fulfillment() FulfillmentAdapter {
 	return NewFulfillmentAdapter(s.db)
 }
 
-func (s *state) Lease() LeaseAdapter {
+func (s *commitState) Lease() LeaseAdapter {
 	return NewLeaseAdapter(s.db)
 }

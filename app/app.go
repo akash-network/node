@@ -34,7 +34,8 @@ type Application interface {
 type app struct {
 	tmtypes.BaseApplication
 
-	state state.State
+	cacheState  state.CacheState
+	commitState state.CommitState
 
 	apps []apptypes.Application
 
@@ -43,12 +44,12 @@ type app struct {
 	log log.Logger
 }
 
-func Create(state state.State, logger log.Logger) (Application, error) {
+func Create(commitState state.CommitState, cacheState state.CacheState, logger log.Logger) (Application, error) {
 
 	var apps []apptypes.Application
 
 	{
-		app, err := account.NewApp(state, logger.With("app", account.Name))
+		app, err := account.NewApp(commitState, cacheState, logger.With("app", account.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -56,7 +57,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := store.NewApp(state, logger.With("app", store.Name))
+		app, err := store.NewApp(commitState, cacheState, logger.With("app", store.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -64,7 +65,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := deployment.NewApp(state, logger.With("app", deployment.Name))
+		app, err := deployment.NewApp(commitState, cacheState, logger.With("app", deployment.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +73,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := order.NewApp(state, logger.With("app", order.Name))
+		app, err := order.NewApp(commitState, cacheState, logger.With("app", order.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -80,7 +81,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := fulfillment.NewApp(state, logger.With("app", fulfillment.Name))
+		app, err := fulfillment.NewApp(commitState, cacheState, logger.With("app", fulfillment.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +89,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := lease.NewApp(state, logger.With("app", lease.Name))
+		app, err := lease.NewApp(commitState, cacheState, logger.With("app", lease.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -96,14 +97,14 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := provider.NewApp(state, logger.With("app", provider.Name))
+		app, err := provider.NewApp(commitState, cacheState, logger.With("app", provider.Name))
 		if err != nil {
 			return nil, err
 		}
 		apps = append(apps, app)
 	}
 
-	return &app{state: state, apps: apps, log: logger}, nil
+	return &app{commitState: commitState, cacheState: cacheState, apps: apps, log: logger}, nil
 }
 
 func (app *app) ActivateMarket(actor market.Actor, bus *tmtmtypes.EventBus) error {
@@ -112,7 +113,7 @@ func (app *app) ActivateMarket(actor market.Actor, bus *tmtmtypes.EventBus) erro
 		return errors.New("market already activated")
 	}
 
-	mapp, err := market.NewApp(app.state, app.log.With("app", market.Name))
+	mapp, err := market.NewApp(app.commitState, app.log.With("app", market.Name))
 	if err != nil {
 		return err
 	}
@@ -133,8 +134,8 @@ func (app *app) Info(req tmtypes.RequestInfo) tmtypes.ResponseInfo {
 	return tmtypes.ResponseInfo{
 		Data:             "{}",
 		Version:          version.Version(),
-		LastBlockHeight:  int64(app.state.Version()),
-		LastBlockAppHash: app.state.Hash(),
+		LastBlockHeight:  int64(app.commitState.Version()),
+		LastBlockAppHash: app.commitState.Hash(),
 	}
 }
 
@@ -152,8 +153,14 @@ func (app *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	return tmtypes.ResponseQuery{Code: code.UNKNOWN_QUERY, Log: "unknown query"}
 }
 
-func (app *app) checkNonce(address []byte, nonce uint64) apptypes.Error {
-	signer, err_ := app.state.Account().Get(address)
+func (app *app) checkNonce(isCheckTx bool, address []byte, nonce uint64) apptypes.Error {
+	var state state.CacheState
+	if isCheckTx {
+		state = app.cacheState
+	} else {
+		state = app.commitState
+	}
+	signer, err_ := state.Account().Get(address)
 	if err_ != nil {
 		return apptypes.NewError(code.INVALID_TRANSACTION, err_.Error())
 	}

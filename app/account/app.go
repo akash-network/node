@@ -23,7 +23,7 @@ type app struct {
 	*apptypes.BaseApp
 }
 
-func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) {
+func NewApp(commitState state.State, cacheState state.CacheState, logger log.Logger) (apptypes.Application, error) {
 	return &app{apptypes.NewBaseApp(Name, state, logger)}, nil
 }
 

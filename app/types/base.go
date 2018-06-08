@@ -6,16 +6,18 @@ import (
 )
 
 type BaseApp struct {
-	name  string
-	state state.State
-	log   log.Logger
+	name        string
+	cacheState  state.CacheState
+	commitState state.CommitState
+	log         log.Logger
 }
 
-func NewBaseApp(name string, state state.State, log log.Logger) *BaseApp {
+func NewBaseApp(name string, commitState state.CommitState, cacheState state.CacheState, log log.Logger) *BaseApp {
 	return &BaseApp{
-		name:  name,
-		state: state,
-		log:   log,
+		name:        name,
+		commitState: commitState,
+		cacheState:  cacheState,
+		log:         log,
 	}
 }
 
@@ -23,8 +25,12 @@ func (a *BaseApp) Name() string {
 	return a.name
 }
 
-func (a *BaseApp) State() state.State {
-	return a.state
+func (a *BaseApp) CommitState() state.CommitState {
+	return a.commitState
+}
+
+func (a *BaseApp) CacheState() state.CacheState {
+	return a.cacheState
 }
 
 func (a *BaseApp) Log() log.Logger {

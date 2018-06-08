@@ -43,7 +43,7 @@ func LoadDB(pathname string) (DB, error) {
 	return &iavlDB{tree, mtx}, nil
 }
 
-func LoadState(db DB, gen *types.Genesis) (State, error) {
+func LoadState(db DB, gen *types.Genesis) (CommitState, error) {
 
 	state := NewState(db)
 
@@ -68,6 +68,7 @@ func NewMemDB() DB {
 	return &iavlDB{tree, mtx}
 }
 
+// save object writes an object to the base db
 func saveObject(db DB, key []byte, obj proto.Message) error {
 	buf, err := proto.Marshal(obj)
 	if err != nil {
