@@ -134,7 +134,7 @@ func (app *app) Info(req tmtypes.RequestInfo) tmtypes.ResponseInfo {
 	return tmtypes.ResponseInfo{
 		Data:             "{}",
 		Version:          version.Version(),
-		LastBlockHeight:  int64(app.commitState.Version()),
+		LastBlockHeight:  app.commitState.Version(),
 		LastBlockAppHash: app.commitState.Hash(),
 	}
 }
@@ -243,7 +243,7 @@ func (app *app) Commit() tmtypes.ResponseCommit {
 
 	err := app.cacheState.Write()
 	if err != nil {
-		panic("failed to write cache")
+		app.log.Error("error when writing to cache")
 	}
 	data, _, err := app.commitState.Commit()
 
@@ -252,7 +252,10 @@ func (app *app) Commit() tmtypes.ResponseCommit {
 	}
 
 	if app.mfacilitator != nil {
-		app.mfacilitator.OnCommit(app.commitState)
+		err := app.mfacilitator.OnCommit(app.commitState)
+		if err != nil {
+			app.log.Error("error in facilitator.OnCommit", err.Error())
+		}
 	}
 
 	if err = lease.ProcessLeases(app.commitState); err != nil {

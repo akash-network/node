@@ -45,7 +45,9 @@ func (d *deploymentAdapter) Get(address base.Bytes) (*types.Deployment, error) {
 		return nil, nil
 	}
 
-	dep.Unmarshal(buf)
+	if err := dep.Unmarshal(buf); err != nil {
+		return nil, err
+	}
 
 	return &dep, nil
 }
@@ -71,7 +73,9 @@ func (d *deploymentAdapter) GetRange(startKey base.Bytes, endKey base.Bytes, lim
 
 	for _, d := range dbytes {
 		dep := types.Deployment{}
-		dep.Unmarshal(d)
+		if err := dep.Unmarshal(d); err != nil {
+			return nil, nil, err
+		}
 		deps.Items = append(deps.Items, dep)
 	}
 

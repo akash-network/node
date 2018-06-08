@@ -212,9 +212,11 @@ func TestCloseTx_3(t *testing.T) {
 	order := testutil.CreateOrder(t, cacheState, orderapp, account, key, depl.Address, group.Seq, oseq)
 
 	providerapp, err := provider.NewApp(testutil.Logger())
+	require.NoError(t, err)
 	prov := testutil.CreateProvider(t, cacheState, providerapp, account, key, nonce)
 
 	fulfillmentapp, err := fulfillment.NewApp(testutil.Logger())
+	require.NoError(t, err)
 	fulfillment := testutil.CreateFulfillment(t, cacheState, fulfillmentapp, prov.Address, key, depl.Address, group.Seq, order.Seq, price)
 
 	check := func(
@@ -255,12 +257,15 @@ func TestCloseTx_4(t *testing.T) {
 	order := testutil.CreateOrder(t, cacheState, orderapp, account, key, depl.Address, gseq, oseq)
 
 	providerapp, err := provider.NewApp(testutil.Logger())
+	require.NoError(t, err)
 	prov := testutil.CreateProvider(t, cacheState, providerapp, account, key, nonce)
 
 	fulfillmentapp, err := fulfillment.NewApp(testutil.Logger())
+	require.NoError(t, err)
 	fulfillment := testutil.CreateFulfillment(t, cacheState, fulfillmentapp, prov.Address, key, depl.Address, gseq, oseq, price)
 
 	leaseapp, err := lease.NewApp(testutil.Logger())
+	require.NoError(t, err)
 	lease := testutil.CreateLease(t, cacheState, leaseapp, prov.Address, key, depl.Address, gseq, oseq, price)
 
 	check := func(

@@ -162,7 +162,8 @@ func TestBilling(t *testing.T) {
 	require.NotZero(t, iTenBal)
 	require.NotZero(t, iProBal)
 
-	app_.ProcessLeases(cacheState)
+	err = app_.ProcessLeases(cacheState)
+	require.NoError(t, err)
 
 	fTenBal := getBalance(t, cacheState, tenant.Address)
 	fProBal := getBalance(t, cacheState, provider.Owner)

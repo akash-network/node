@@ -47,6 +47,8 @@ func NewCache(db DB) CacheState {
 
 // Get a value from cache or store
 func (c *cache) Get(key []byte) []byte {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
 	k := string(key)
 	if v, ok := c.cache[k]; !ok {
 		val := c.db.Get(key)
@@ -62,18 +64,24 @@ func (c *cache) Get(key []byte) []byte {
 
 // Set value in cache
 func (c *cache) Set(key, val []byte) {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
 	k := string(key)
 	c.cache[k] = cacheValue{val, true, false}
 }
 
 // Set value in cache as removed
 func (c *cache) Remove(key []byte) {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
 	k := string(key)
 	c.cache[k] = cacheValue{nil, true, true}
 }
 
 // Get values from cache and store. Merge results
 func (c *cache) GetRange(start, end []byte, limit int) ([][]byte, [][]byte, error) {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
 	ctr := 0
 	s, e := string(start), string(end)
 	keys, values := [][]byte{}, [][]byte{}
@@ -104,6 +112,8 @@ func (c *cache) GetRange(start, end []byte, limit int) ([][]byte, [][]byte, erro
 }
 
 func (c *cache) Write() error {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
 	keys := make([]string, 0, len(c.cache))
 	for k := range c.cache {
 		keys = append(keys, k)

@@ -22,7 +22,8 @@ func TestFacilitator(t *testing.T) {
 	nonce := uint64(10)
 
 	account.Nonce = nonce
-	commitState.Account().Save(account)
+	err := commitState.Account().Save(account)
+	require.NoError(t, err)
 
 	daddr := state.DeploymentAddress(account.Address, nonce)
 	tx := &types.TxCreateOrder{

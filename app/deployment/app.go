@@ -307,7 +307,13 @@ func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *
 			Resources:    group.Resources,
 			OrderTTL:     tx.OrderTTL,
 		}
-		state.DeploymentGroup().Save(g)
+		err := state.DeploymentGroup().Save(g)
+		if err != nil {
+			return tmtypes.ResponseDeliverTx{
+				Code: code.INVALID_TRANSACTION,
+				Log:  "error saving deployment group" + err.Error(),
+			}
+		}
 	}
 
 	if err := state.Deployment().Save(deployment); err != nil {

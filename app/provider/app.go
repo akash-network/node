@@ -146,7 +146,7 @@ func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
 
 	return tmtypes.ResponseQuery{
 		Value:  bytes,
-		Height: int64(state.Version()),
+		Height: state.Version(),
 	}
 }
 

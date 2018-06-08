@@ -35,7 +35,9 @@ func (a *accountAdapter) Get(address base.Bytes) (*types.Account, error) {
 		return nil, nil
 	}
 
-	acc.Unmarshal(buf)
+	if err := acc.Unmarshal(buf); err != nil {
+		return nil, err
+	}
 
 	return &acc, nil
 }

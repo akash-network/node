@@ -73,7 +73,7 @@ func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.Resp
 
 	return tmtypes.ResponseQuery{
 		Value:  bytes,
-		Height: int64(state.Version()),
+		Height: state.Version(),
 	}
 }
 

@@ -60,7 +60,9 @@ func LoadState(db DB, gen *types.Genesis) (CommitState, CacheState, error) {
 		}
 	}
 
-	cacheState.Write()
+	if err := cacheState.Write(); err != nil {
+		return nil, nil, err
+	}
 
 	return commitState, cacheState, nil
 }

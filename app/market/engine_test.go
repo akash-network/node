@@ -24,9 +24,9 @@ func TestEngine_All(t *testing.T) {
 	groups := testutil.DeploymentGroups(deployment.Address, tenant.Nonce)
 	require.NoError(t, commitState.Deployment().Save(deployment))
 
-	state_, order := testCreateOrder(t, commitState, tenant, deployment, groups)
-	state_ = testCreateLease(t, commitState, provider, deployment, groups, order)
-	state_ = testCloseDeployment(t, state_, tenant.Address, deployment.Address)
+	_, order := testCreateOrder(t, commitState, tenant, deployment, groups)
+	testCreateLease(t, commitState, provider, deployment, groups, order)
+	testCloseDeployment(t, commitState, tenant.Address, deployment.Address)
 }
 
 func testCreateOrder(t *testing.T, state state.State, tenant *types.Account, deployment *types.Deployment, groups *types.DeploymentGroups) (state.State, *types.Order) {
