@@ -34,6 +34,14 @@ func NewService(log log.Logger, ctx context.Context, bus event.Bus, client Clien
 		return nil, err
 	}
 
+	deployments, err := client.Deployments()
+	if err != nil {
+		log.Error("fetching deployments", "err", err)
+		sub.Close()
+		return nil, err
+	}
+	log.Info("found managed deployments", "count", len(deployments))
+
 	s := &service{
 		client:      client,
 		bus:         bus,
@@ -46,7 +54,7 @@ func NewService(log log.Logger, ctx context.Context, bus event.Bus, client Clien
 	}
 
 	go s.lc.WatchContext(ctx)
-	go s.run()
+	go s.run(deployments)
 
 	return s, nil
 }
@@ -107,9 +115,18 @@ type reserveResponse struct {
 	err   error
 }
 
-func (s *service) run() {
+func (s *service) run(deployments []Deployment) {
 	defer s.lc.ShutdownCompleted()
 	defer s.sub.Close()
+
+	for _, deployment := range deployments {
+		// TODO: recover reservation
+		key := deployment.LeaseID().OrderID().String()
+		s.deployments[key] = &managedDeployment{
+			monitor:     newDeploymentMonitor(s, deployment.LeaseID(), deployment.ManifestGroup()),
+			reservation: newReservation(deployment.LeaseID().OrderID(), nil),
+		}
+	}
 
 loop:
 	for {
@@ -139,12 +156,12 @@ loop:
 				}
 
 				if state.monitor == nil {
-					state.monitor = newDeploymentMonitor(s, ev.LeaseID, ev.Group, mgroup)
+					state.monitor = newDeploymentMonitor(s, ev.LeaseID, mgroup)
 					break
 				}
 
 				if err := state.monitor.update(mgroup); err != nil {
-					s.log.Error("updating deployment", "err", err)
+					s.log.Error("updating deployment", "err", err, "lease", ev.LeaseID)
 				}
 
 			case *event.TxCloseDeployment:

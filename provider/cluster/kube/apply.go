@@ -10,9 +10,15 @@ func applyNS(kc kubernetes.Interface, b *nsBuilder) error {
 	obj, err := kc.CoreV1().Namespaces().Get(b.name(), metav1.GetOptions{})
 	switch {
 	case err == nil:
-		_, err = kc.CoreV1().Namespaces().Update(b.update(obj))
+		obj, err = b.update(obj)
+		if err == nil {
+			_, err = kc.CoreV1().Namespaces().Update(obj)
+		}
 	case errors.IsNotFound(err):
-		_, err = kc.CoreV1().Namespaces().Create(b.create())
+		obj, err = b.create()
+		if err == nil {
+			_, err = kc.CoreV1().Namespaces().Create(obj)
+		}
 	}
 	return err
 }
@@ -21,9 +27,15 @@ func applyDeployment(kc kubernetes.Interface, b *deploymentBuilder) error {
 	obj, err := kc.AppsV1().Deployments(b.ns()).Get(b.name(), metav1.GetOptions{})
 	switch {
 	case err == nil:
-		_, err = kc.AppsV1().Deployments(b.ns()).Update(b.update(obj))
+		obj, err = b.update(obj)
+		if err == nil {
+			_, err = kc.AppsV1().Deployments(b.ns()).Update(obj)
+		}
 	case errors.IsNotFound(err):
-		_, err = kc.AppsV1().Deployments(b.ns()).Create(b.create())
+		obj, err = b.create()
+		if err == nil {
+			_, err = kc.AppsV1().Deployments(b.ns()).Create(obj)
+		}
 	}
 	return err
 }
@@ -32,9 +44,15 @@ func applyService(kc kubernetes.Interface, b *serviceBuilder) error {
 	obj, err := kc.CoreV1().Services(b.ns()).Get(b.name(), metav1.GetOptions{})
 	switch {
 	case err == nil:
-		_, err = kc.CoreV1().Services(b.ns()).Update(b.update(obj))
+		obj, err = b.update(obj)
+		if err == nil {
+			_, err = kc.CoreV1().Services(b.ns()).Update(obj)
+		}
 	case errors.IsNotFound(err):
-		_, err = kc.CoreV1().Services(b.ns()).Create(b.create())
+		obj, err = b.create()
+		if err == nil {
+			_, err = kc.CoreV1().Services(b.ns()).Create(obj)
+		}
 	}
 	return err
 }
@@ -43,9 +61,15 @@ func applyIngress(kc kubernetes.Interface, b *ingressBuilder) error {
 	obj, err := kc.ExtensionsV1beta1().Ingresses(b.ns()).Get(b.name(), metav1.GetOptions{})
 	switch {
 	case err == nil:
-		_, err = kc.ExtensionsV1beta1().Ingresses(b.ns()).Update(b.update(obj))
+		obj, err = b.update(obj)
+		if err == nil {
+			_, err = kc.ExtensionsV1beta1().Ingresses(b.ns()).Update(obj)
+		}
 	case errors.IsNotFound(err):
-		_, err = kc.ExtensionsV1beta1().Ingresses(b.ns()).Create(b.create())
+		obj, err = b.create()
+		if err == nil {
+			_, err = kc.ExtensionsV1beta1().Ingresses(b.ns()).Create(obj)
+		}
 	}
 	return err
 }

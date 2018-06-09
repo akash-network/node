@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"sync"
@@ -31,9 +32,18 @@ func NewHandler(ctx context.Context, session session.Session, bus event.Bus) (Se
 	if err != nil {
 		return nil, err
 	}
+	session = session.ForModule("provider-manifest")
+
+	leases, err := fetchExistingLeases(ctx, session)
+	if err != nil {
+		session.Log().Error("fetching existing leases", "err", err)
+		sub.Close()
+		return nil, err
+	}
+	session.Log().Info("found existing leases", "count", len(leases))
 
 	h := &handler{
-		session:      session.ForModule("provider-manifest"),
+		session:      session,
 		bus:          bus,
 		sub:          sub,
 		mreqch:       make(chan manifestRequest),
@@ -44,7 +54,7 @@ func NewHandler(ctx context.Context, session session.Session, bus event.Bus) (Se
 	}
 
 	go h.lc.WatchContext(ctx)
-	go h.run()
+	go h.run(leases)
 
 	return h, nil
 }
@@ -107,11 +117,20 @@ func (h *handler) Done() <-chan struct{} {
 	return h.lc.Done()
 }
 
-func (h *handler) run() {
+func (h *handler) run(leases []*types.Lease) {
 	defer h.lc.ShutdownCompleted()
 	defer h.sub.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
+
+	for _, lease := range leases {
+		mstate := h.getManifestState(lease.Deployment)
+		mstate.leases = append(mstate.leases, event.LeaseWon{
+			LeaseID: lease.LeaseID,
+			Price:   lease.Price,
+		})
+		h.checkManifestState(ctx, mstate, lease.Deployment)
+	}
 
 loop:
 	for {
@@ -264,4 +283,21 @@ func (h *handler) fetchDeployment(ctx context.Context, key base.Bytes) {
 			// Service is shutting down; do nothing else.
 		}
 	}()
+}
+
+func fetchExistingLeases(ctx context.Context, session session.Session) ([]*types.Lease, error) {
+	leases, err := session.Query().Leases(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var myLeases []*types.Lease
+
+	for _, lease := range leases.Items {
+		if bytes.Equal(lease.Provider, session.Provider().Address) {
+			myLeases = append(myLeases, lease)
+		}
+	}
+
+	return myLeases, nil
 }

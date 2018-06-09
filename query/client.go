@@ -24,6 +24,8 @@ type Client interface {
 	Orders(ctx context.Context) (*types.Orders, error)
 	Order(ctx context.Context, id types.OrderID) (*types.Order, error)
 
+	Fulfillment(ctx context.Context, id types.FulfillmentID) (*types.Fulfillment, error)
+
 	Leases(ctx context.Context) (*types.Leases, error)
 	Lease(ctx context.Context, id types.LeaseID) (*types.Lease, error)
 
@@ -113,6 +115,15 @@ func (c *client) Orders(ctx context.Context) (*types.Orders, error) {
 func (c *client) Order(ctx context.Context, id types.OrderID) (*types.Order, error) {
 	obj := &types.Order{}
 	path := OrderPath(id)
+	if err := c.Get(ctx, path, obj); err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+func (c *client) Fulfillment(ctx context.Context, id types.FulfillmentID) (*types.Fulfillment, error) {
+	obj := &types.Fulfillment{}
+	path := FulfillmentPath(id)
 	if err := c.Get(ctx, path, obj); err != nil {
 		return nil, err
 	}

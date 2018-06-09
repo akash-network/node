@@ -151,6 +151,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 	var cclient cluster.Client
 
 	if ok, _ := cmd.Flags().GetBool("kube"); ok {
+		session.Log().Debug("using kube client")
 		cclient, err = kube.NewClient(session.Log().With("cmp", "cluster-client"))
 		if err != nil {
 			return err

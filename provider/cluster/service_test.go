@@ -84,12 +84,16 @@ func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
 
 	client := new(mocks.Client)
 
-	client.On("Deploy", order.OrderID, manifest.Groups[0]).
+	client.On("Deploy", lease.LeaseID, manifest.Groups[0]).
 		Return(nil).
 		Once()
 
-	client.On("Teardown", order.OrderID).
+	client.On("Teardown", lease.LeaseID).
 		Return(nil).
+		Once()
+
+	client.On("Deployments").
+		Return(nil, nil).
 		Once()
 
 	c, err := cluster.NewService(log, ctx, bus, client)

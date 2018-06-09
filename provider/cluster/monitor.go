@@ -25,7 +25,6 @@ type deploymentMonitor struct {
 	state deploymentState
 
 	lease  types.LeaseID
-	dgroup *types.DeploymentGroup
 	mgroup *types.ManifestGroup
 
 	updatech   chan *types.ManifestGroup
@@ -35,18 +34,15 @@ type deploymentMonitor struct {
 	lc  lifecycle.Lifecycle
 }
 
-func newDeploymentMonitor(s *service, lease types.LeaseID, dgroup *types.DeploymentGroup, mgroup *types.ManifestGroup) *deploymentMonitor {
+func newDeploymentMonitor(s *service, lease types.LeaseID, mgroup *types.ManifestGroup) *deploymentMonitor {
 
-	log := s.log.With(
-		"cmp", "deployment-monitor",
-		"dgroup", dgroup.DeploymentGroupID,
-		"mgroup", mgroup.Name)
+	log := s.log.With("cmp", "deployment-monitor",
+		"lease", lease, "manifest-group", mgroup.Name)
 
 	dm := &deploymentMonitor{
 		client:     s.client,
 		state:      dsDeployActive,
 		lease:      lease,
-		dgroup:     dgroup,
 		mgroup:     mgroup,
 		updatech:   make(chan *types.ManifestGroup),
 		teardownch: make(chan struct{}),
@@ -183,11 +179,11 @@ loop:
 }
 
 func (dm *deploymentMonitor) doDeploy() error {
-	return dm.client.Deploy(dm.lease.OrderID(), dm.mgroup)
+	return dm.client.Deploy(dm.lease, dm.mgroup)
 }
 
 func (dm *deploymentMonitor) doTeardown() error {
-	return dm.client.Teardown(dm.lease.OrderID())
+	return dm.client.Teardown(dm.lease)
 }
 
 func (dm *deploymentMonitor) do(fn func() error) <-chan error {

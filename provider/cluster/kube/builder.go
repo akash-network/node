@@ -16,47 +16,65 @@ import (
 )
 
 const (
-	akashServiceLabelName = "akash.network/service"
+	akashManagedLabelName = "akash.network"
+
+	akashManifestServiceLabelName = "akash.network/manifest-service"
 )
 
 type builder struct {
-	oid   types.OrderID
+	lid   types.LeaseID
 	group *types.ManifestGroup
 }
 
 func (b *builder) ns() string {
-	return oidNS(b.oid)
+	return lidNS(b.lid)
 }
 
 func (b *builder) labels() map[string]string {
-	return map[string]string{}
+	return deploymentLabels()
 }
 
 type nsBuilder struct {
 	builder
 }
 
-func newNSBuilder(oid types.OrderID, group *types.ManifestGroup) *nsBuilder {
-	return &nsBuilder{builder: builder{oid, group}}
+func newNSBuilder(lid types.LeaseID, group *types.ManifestGroup) *nsBuilder {
+	return &nsBuilder{builder: builder{lid, group}}
+}
+
+func (b *nsBuilder) annotations() (map[string]string, error) {
+	return deploymentToAnnotation(newDeployment(b.lid, b.group))
 }
 
 func (b *nsBuilder) name() string {
 	return b.ns()
 }
 
-func (b *nsBuilder) create() *corev1.Namespace {
+func (b *nsBuilder) create() (*corev1.Namespace, error) {
+	annotations, err := b.annotations()
+	if err != nil {
+		return nil, err
+	}
+
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   b.ns(),
-			Labels: b.labels(),
+			Name:        b.ns(),
+			Labels:      b.labels(),
+			Annotations: annotations,
 		},
-	}
+	}, nil
 }
 
-func (b *nsBuilder) update(prev *corev1.Namespace) *corev1.Namespace {
-	prev.Name = b.ns()
-	prev.Labels = b.labels()
-	return prev
+func (b *nsBuilder) update(obj *corev1.Namespace) (*corev1.Namespace, error) {
+	annotations, err := b.annotations()
+	if err != nil {
+		return nil, err
+	}
+
+	obj.Name = b.ns()
+	obj.Labels = b.labels()
+	obj.Annotations = annotations
+	return obj, nil
 }
 
 // deployment
@@ -65,8 +83,8 @@ type deploymentBuilder struct {
 	service *types.ManifestService
 }
 
-func newDeploymentBuilder(oid types.OrderID, group *types.ManifestGroup, service *types.ManifestService) *deploymentBuilder {
-	return &deploymentBuilder{builder: builder{oid, group}, service: service}
+func newDeploymentBuilder(lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService) *deploymentBuilder {
+	return &deploymentBuilder{builder: builder{lid, group}, service: service}
 }
 
 func (b *deploymentBuilder) name() string {
@@ -75,11 +93,11 @@ func (b *deploymentBuilder) name() string {
 
 func (b *deploymentBuilder) labels() map[string]string {
 	obj := b.builder.labels()
-	obj[akashServiceLabelName] = b.service.Name
+	obj[akashManifestServiceLabelName] = b.service.Name
 	return obj
 }
 
-func (b *deploymentBuilder) create() *appsv1.Deployment {
+func (b *deploymentBuilder) create() (*appsv1.Deployment, error) {
 	replicas := int32(b.service.Count)
 
 	kdeployment := &appsv1.Deployment{
@@ -103,10 +121,10 @@ func (b *deploymentBuilder) create() *appsv1.Deployment {
 		},
 	}
 
-	return kdeployment
+	return kdeployment, nil
 }
 
-func (b *deploymentBuilder) update(obj *appsv1.Deployment) *appsv1.Deployment {
+func (b *deploymentBuilder) update(obj *appsv1.Deployment) (*appsv1.Deployment, error) {
 	replicas := int32(b.service.Count)
 
 	obj.Labels = b.labels()
@@ -114,7 +132,7 @@ func (b *deploymentBuilder) update(obj *appsv1.Deployment) *appsv1.Deployment {
 	obj.Spec.Replicas = &replicas
 	obj.Spec.Template.Labels = b.labels()
 	obj.Spec.Template.Spec.Containers = []corev1.Container{b.container()}
-	return obj
+	return obj, nil
 }
 
 func (b *deploymentBuilder) container() corev1.Container {
@@ -163,13 +181,13 @@ type serviceBuilder struct {
 	deploymentBuilder
 }
 
-func newServiceBuilder(oid types.OrderID, group *types.ManifestGroup, service *types.ManifestService) *serviceBuilder {
+func newServiceBuilder(lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService) *serviceBuilder {
 	return &serviceBuilder{
-		deploymentBuilder: deploymentBuilder{builder: builder{oid, group}, service: service},
+		deploymentBuilder: deploymentBuilder{builder: builder{lid, group}, service: service},
 	}
 }
 
-func (b *serviceBuilder) create() *corev1.Service {
+func (b *serviceBuilder) create() (*corev1.Service, error) {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   b.name(),
@@ -179,14 +197,14 @@ func (b *serviceBuilder) create() *corev1.Service {
 			Selector: b.labels(),
 			Ports:    b.ports(),
 		},
-	}
+	}, nil
 }
 
-func (b *serviceBuilder) update(obj *corev1.Service) *corev1.Service {
+func (b *serviceBuilder) update(obj *corev1.Service) (*corev1.Service, error) {
 	obj.Labels = b.labels()
 	obj.Spec.Selector = b.labels()
 	obj.Spec.Ports = b.ports()
-	return obj
+	return obj, nil
 }
 
 func (b *serviceBuilder) ports() []corev1.ServicePort {
@@ -207,14 +225,14 @@ type ingressBuilder struct {
 	expose *types.ManifestServiceExpose
 }
 
-func newIngressBuilder(oid types.OrderID, group *types.ManifestGroup, service *types.ManifestService, expose *types.ManifestServiceExpose) *ingressBuilder {
+func newIngressBuilder(lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService, expose *types.ManifestServiceExpose) *ingressBuilder {
 	return &ingressBuilder{
-		deploymentBuilder: deploymentBuilder{builder: builder{oid, group}, service: service},
+		deploymentBuilder: deploymentBuilder{builder: builder{lid, group}, service: service},
 		expose:            expose,
 	}
 }
 
-func (b *ingressBuilder) create() *extv1.Ingress {
+func (b *ingressBuilder) create() (*extv1.Ingress, error) {
 	return &extv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   b.name(),
@@ -227,14 +245,14 @@ func (b *ingressBuilder) create() *extv1.Ingress {
 			},
 			Rules: b.rules(),
 		},
-	}
+	}, nil
 }
 
-func (b *ingressBuilder) update(obj *extv1.Ingress) *extv1.Ingress {
+func (b *ingressBuilder) update(obj *extv1.Ingress) (*extv1.Ingress, error) {
 	obj.Labels = b.labels()
 	obj.Spec.Backend.ServicePort = intstr.FromInt(int(exposeExternalPort(b.expose)))
 	obj.Spec.Rules = b.rules()
-	return obj
+	return obj, nil
 }
 
 func (b *ingressBuilder) rules() []extv1.IngressRule {
@@ -252,8 +270,8 @@ func exposeExternalPort(expose *types.ManifestServiceExpose) int32 {
 	return int32(expose.ExternalPort)
 }
 
-func oidNS(oid types.OrderID) string {
-	path := oid.String()
+func lidNS(lid types.LeaseID) string {
+	path := lid.String()
 	sha := sha1.Sum([]byte(path))
 	return hex.EncodeToString(sha[:])
 }

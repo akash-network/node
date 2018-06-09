@@ -6,7 +6,6 @@ import (
 	"math/rand"
 
 	lifecycle "github.com/boz/go-lifecycle"
-	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
@@ -17,7 +16,8 @@ import (
 
 // order manages bidding and general lifecycle handling of an order.
 type order struct {
-	order types.OrderID
+	order       types.OrderID
+	fulfillment *types.Fulfillment
 
 	session session.Session
 	cluster cluster.Cluster
@@ -28,7 +28,7 @@ type order struct {
 	lc  lifecycle.Lifecycle
 }
 
-func newOrder(e *service, ev *event.TxCreateOrder) (*order, error) {
+func newOrder(e *service, oid types.OrderID, fulfillment *types.Fulfillment) (*order, error) {
 
 	// Create a subscription that will see all events that have not been read from e.sub.Events()
 	sub, err := e.sub.Clone()
@@ -38,17 +38,17 @@ func newOrder(e *service, ev *event.TxCreateOrder) (*order, error) {
 
 	session := e.session.ForModule("bidengine-order")
 
-	log := session.Log().
-		With("order", keys.OrderID(ev.OrderID).Path())
+	log := session.Log().With("order", oid)
 
 	order := &order{
-		order:   ev.OrderID,
-		session: session,
-		cluster: e.cluster,
-		bus:     e.bus,
-		sub:     sub,
-		log:     log,
-		lc:      lifecycle.New(),
+		order:       oid,
+		fulfillment: fulfillment,
+		session:     session,
+		cluster:     e.cluster,
+		bus:         e.bus,
+		sub:         sub,
+		log:         log,
+		lc:          lifecycle.New(),
 	}
 
 	// Shut down when parent begins shutting down
@@ -72,16 +72,7 @@ func (o *order) run() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var (
-		// channels for async calculations.
-
-		// NOTE: these can/should all be done in a single operation such as
-		// go func(){
-		//   group, err := getGroup()
-		//   reservation, err := getGerservation()
-		//   bid, err := createBid()
-		// }()
-		// But we'd want to be able to cancel in the middle of operations
-		// and short-circuit if necessary.
+		// channels for async operations.
 
 		groupch   <-chan runner.Result
 		clusterch <-chan runner.Result
@@ -89,7 +80,6 @@ func (o *order) run() {
 
 		group       *types.DeploymentGroup
 		reservation cluster.Reservation
-		price       uint32
 	)
 
 	// Begin fetching group details immediately.
@@ -127,7 +117,7 @@ loop:
 				o.bus.Publish(event.LeaseWon{
 					LeaseID: ev.LeaseID,
 					Group:   group,
-					Price:   price,
+					Price:   ev.Price,
 				})
 
 				break loop
@@ -183,18 +173,20 @@ loop:
 
 			price := o.calculatePrice(reservation.Group())
 
-			// Begin submitting fulfillment
-			bidch = runner.Do(func() runner.Result {
-				return runner.NewResult(o.session.TX().BroadcastTxCommit(&types.TxCreateFulfillment{
-					FulfillmentID: types.FulfillmentID{
-						Deployment: o.order.Deployment,
-						Group:      o.order.Group,
-						Order:      o.order.Seq,
-						Provider:   o.session.Provider().Address,
-					},
-					Price: price,
-				}))
-			})
+			if o.fulfillment == nil {
+				// Begin submitting fulfillment
+				bidch = runner.Do(func() runner.Result {
+					return runner.NewResult(o.session.TX().BroadcastTxCommit(&types.TxCreateFulfillment{
+						FulfillmentID: types.FulfillmentID{
+							Deployment: o.order.Deployment,
+							Group:      o.order.Group,
+							Order:      o.order.Seq,
+							Provider:   o.session.Provider().Address,
+						},
+						Price: price,
+					}))
+				})
+			}
 
 		case result := <-bidch:
 			bidch = nil

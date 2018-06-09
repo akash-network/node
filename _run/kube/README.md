@@ -10,6 +10,7 @@ Each command is marked __t1__-__t4__ to indicate a suggested terminal number.
 __t1__: Start and initialize minikube
 ```sh
 $ minikube start
+$ minikube addons enable ingress
 $ kubectl create -f contour.yml
 ```
 

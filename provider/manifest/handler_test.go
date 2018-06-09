@@ -79,9 +79,12 @@ func withHandler(t *testing.T, fn testfn) {
 	defer cancel()
 
 	client := &qmocks.Client{}
-	client.On("Deployment",
-		mock.Anything,
-		[]byte(deployment.Address)).Return(deployment, nil)
+	client.
+		On("Deployment", mock.Anything, []byte(deployment.Address)).
+		Return(deployment, nil)
+	client.
+		On("Leases", mock.Anything).
+		Return(&types.Leases{}, nil)
 
 	sess := session.New(testutil.Logger(), provider, nil, client)
 
