@@ -11,15 +11,14 @@ type DBReader interface {
 	Version() int64
 	Hash() []byte
 	Get(key []byte) []byte
-	GetWithProof(key []byte) ([]byte, iavl.KeyProof, error)
-	GetRangeWithProof([]byte, []byte, int) ([][]byte, [][]byte, iavl.KeyRangeProof, error)
+	GetRange([]byte, []byte, int) ([][]byte, [][]byte, error)
 }
 
 type DB interface {
 	DBReader
 	Commit() ([]byte, int64, error)
 	Set(key, val []byte)
-	Remove(key []byte) ([]byte, bool)
+	Remove(key []byte)
 }
 
 type iavlDB struct {
@@ -64,21 +63,15 @@ func (db *iavlDB) Set(key []byte, val []byte) {
 	db.tree.Set(key, val)
 }
 
-func (db *iavlDB) Remove(key []byte) ([]byte, bool) {
+func (db *iavlDB) Remove(key []byte) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
-	return db.tree.Remove(key)
+	db.tree.Remove(key)
 }
 
-func (db *iavlDB) GetWithProof(key []byte) ([]byte, iavl.KeyProof, error) {
+func (db *iavlDB) GetRange(startKey []byte, endKey []byte, limit int) ([][]byte, [][]byte, error) {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
-	return db.tree.GetWithProof(key)
-}
-
-func (db *iavlDB) GetRangeWithProof(startKey []byte, endKey []byte, limit int) ([][]byte, [][]byte, iavl.KeyRangeProof, error) {
-	db.mtx.Lock()
-	defer db.mtx.Unlock()
-	keys, deps, proof, err := db.tree.GetRangeWithProof(startKey, endKey, limit)
-	return keys, deps, *proof, err
+	keys, deps, _, err := db.tree.GetRangeWithProof(startKey, endKey, MaxRangeLimit)
+	return keys, deps, err
 }

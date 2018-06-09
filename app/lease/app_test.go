@@ -21,12 +21,12 @@ import (
 )
 
 func TestAcceptQuery(t *testing.T) {
-	state := testutil.NewState(t, nil)
+	_, cacheState := testutil.NewState(t, nil)
 
-	account, _ := testutil.CreateAccount(t, state)
+	account, _ := testutil.CreateAccount(t, cacheState)
 	address := account.Address
 
-	app, err := app_.NewApp(state, testutil.Logger())
+	app, err := app_.NewApp(testutil.Logger())
 	require.NoError(t, err)
 
 	{
@@ -42,44 +42,44 @@ func TestAcceptQuery(t *testing.T) {
 
 func TestValidTx(t *testing.T) {
 
-	state := testutil.NewState(t, nil)
-	app, err := app_.NewApp(state, testutil.Logger())
+	_, cacheState := testutil.NewState(t, nil)
+	app, err := app_.NewApp(testutil.Logger())
 
 	// create provider
-	papp, err := papp.NewApp(state, testutil.Logger())
+	papp, err := papp.NewApp(testutil.Logger())
 	require.NoError(t, err)
-	paccount, pkey := testutil.CreateAccount(t, state)
+	paccount, pkey := testutil.CreateAccount(t, cacheState)
 	pnonce := uint64(1)
-	provider := testutil.CreateProvider(t, papp, paccount, pkey, pnonce)
+	provider := testutil.CreateProvider(t, cacheState, papp, paccount, pkey, pnonce)
 
 	// create tenant
-	taccount, tkey := testutil.CreateAccount(t, state)
+	taccount, tkey := testutil.CreateAccount(t, cacheState)
 
 	// create deployment
-	dapp, err := dapp.NewApp(state, testutil.Logger())
+	dapp, err := dapp.NewApp(testutil.Logger())
 	require.NoError(t, err)
 	tnonce := uint64(1)
-	testutil.CreateDeployment(t, dapp, taccount, tkey, tnonce)
+	testutil.CreateDeployment(t, cacheState, dapp, taccount, tkey, tnonce)
 	groupSeq := uint64(1)
 	daddress := state_.DeploymentAddress(taccount.Address, tnonce)
 
 	// create order
-	oapp, err := oapp.NewApp(state, testutil.Logger())
+	oapp, err := oapp.NewApp(testutil.Logger())
 	require.NoError(t, err)
 	oSeq := uint64(0)
-	testutil.CreateOrder(t, oapp, taccount, tkey, daddress, groupSeq, oSeq)
+	testutil.CreateOrder(t, cacheState, oapp, taccount, tkey, daddress, groupSeq, oSeq)
 	price := uint32(0)
 
 	// create fulfillment
-	fapp, err := fapp.NewApp(state, testutil.Logger())
-	testutil.CreateFulfillment(t, fapp, provider.Address, pkey, daddress, groupSeq, oSeq, price)
+	fapp, err := fapp.NewApp(testutil.Logger())
+	testutil.CreateFulfillment(t, cacheState, fapp, provider.Address, pkey, daddress, groupSeq, oSeq, price)
 
 	// create lease
-	lease := testutil.CreateLease(t, app, provider.Address, pkey, daddress, groupSeq, oSeq, price)
+	lease := testutil.CreateLease(t, cacheState, app, provider.Address, pkey, daddress, groupSeq, oSeq, price)
 
 	{
 		path := query.LeasePath(lease.LeaseID)
-		resp := app.Query(tmtypes.RequestQuery{Path: path})
+		resp := app.Query(cacheState, tmtypes.RequestQuery{Path: path})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 		lea := new(types.Lease)
@@ -93,10 +93,10 @@ func TestValidTx(t *testing.T) {
 	}
 
 	// close lease
-	testutil.CloseLease(t, app, lease.LeaseID, pkey)
+	testutil.CloseLease(t, cacheState, app, lease.LeaseID, pkey)
 	{
 		path := query.LeasePath(lease.LeaseID)
-		resp := app.Query(tmtypes.RequestQuery{Path: path})
+		resp := app.Query(cacheState, tmtypes.RequestQuery{Path: path})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 		lea := new(types.Lease)
@@ -106,66 +106,67 @@ func TestValidTx(t *testing.T) {
 }
 
 func TestTx_BadTxType(t *testing.T) {
-	state_ := testutil.NewState(t, nil)
-	app, err := app_.NewApp(state_, testutil.Logger())
+	_, cacheState := testutil.NewState(t, nil)
+	app, err := app_.NewApp(testutil.Logger())
 	require.NoError(t, err)
-	account, key := testutil.CreateAccount(t, state_)
+	account, key := testutil.CreateAccount(t, cacheState)
 	tx := testutil.ProviderTx(account, key, 10)
 	ctx := apptypes.NewContext(tx)
 	assert.False(t, app.AcceptTx(ctx, tx.Payload.Payload))
-	cresp := app.CheckTx(ctx, tx.Payload.Payload)
+	cresp := app.CheckTx(cacheState, ctx, tx.Payload.Payload)
 	assert.False(t, cresp.IsOK())
-	dresp := app.DeliverTx(ctx, tx.Payload.Payload)
+	dresp := app.DeliverTx(cacheState, ctx, tx.Payload.Payload)
 	assert.False(t, dresp.IsOK())
 }
 
 func TestBilling(t *testing.T) {
 
-	state := testutil.NewState(t, nil)
-	app, err := app_.NewApp(state, testutil.Logger())
+	_, cacheState := testutil.NewState(t, nil)
+	app, err := app_.NewApp(testutil.Logger())
 
 	// create provider
-	papp, err := papp.NewApp(state, testutil.Logger())
+	papp, err := papp.NewApp(testutil.Logger())
 	require.NoError(t, err)
-	paccount, pkey := testutil.CreateAccount(t, state)
+	paccount, pkey := testutil.CreateAccount(t, cacheState)
 	pnonce := uint64(1)
-	provider := testutil.CreateProvider(t, papp, paccount, pkey, pnonce)
+	provider := testutil.CreateProvider(t, cacheState, papp, paccount, pkey, pnonce)
 
 	// create tenant
-	tenant, tkey := testutil.CreateAccount(t, state)
+	tenant, tkey := testutil.CreateAccount(t, cacheState)
 
 	// create deployment
-	dapp, err := dapp.NewApp(state, testutil.Logger())
+	dapp, err := dapp.NewApp(testutil.Logger())
 	require.NoError(t, err)
 	tnonce := uint64(1)
-	testutil.CreateDeployment(t, dapp, tenant, tkey, tnonce)
+	testutil.CreateDeployment(t, cacheState, dapp, tenant, tkey, tnonce)
 	groupSeq := uint64(1)
 	daddress := state_.DeploymentAddress(tenant.Address, tnonce)
 
 	// create order
-	oapp, err := oapp.NewApp(state, testutil.Logger())
+	oapp, err := oapp.NewApp(testutil.Logger())
 	require.NoError(t, err)
 	oSeq := uint64(0)
-	testutil.CreateOrder(t, oapp, tenant, tkey, daddress, groupSeq, oSeq)
+	testutil.CreateOrder(t, cacheState, oapp, tenant, tkey, daddress, groupSeq, oSeq)
 	price := uint32(1)
 	p := uint64(price)
 
 	// create fulfillment
-	fapp, err := fapp.NewApp(state, testutil.Logger())
-	testutil.CreateFulfillment(t, fapp, provider.Address, pkey, daddress, groupSeq, oSeq, price)
+	fapp, err := fapp.NewApp(testutil.Logger())
+	testutil.CreateFulfillment(t, cacheState, fapp, provider.Address, pkey, daddress, groupSeq, oSeq, price)
 
 	// create lease
-	testutil.CreateLease(t, app, provider.Address, pkey, daddress, groupSeq, oSeq, price)
+	testutil.CreateLease(t, cacheState, app, provider.Address, pkey, daddress, groupSeq, oSeq, price)
 
-	iTenBal := getBalance(t, state, tenant.Address)
-	iProBal := getBalance(t, state, provider.Owner)
+	iTenBal := getBalance(t, cacheState, tenant.Address)
+	iProBal := getBalance(t, cacheState, provider.Owner)
 	require.NotZero(t, iTenBal)
 	require.NotZero(t, iProBal)
 
-	app_.ProcessLeases(state)
+	err = app_.ProcessLeases(cacheState)
+	require.NoError(t, err)
 
-	fTenBal := getBalance(t, state, tenant.Address)
-	fProBal := getBalance(t, state, provider.Owner)
+	fTenBal := getBalance(t, cacheState, tenant.Address)
+	fProBal := getBalance(t, cacheState, provider.Owner)
 	require.Equal(t, iTenBal-p, fTenBal)
 	require.Equal(t, iProBal+p, fProBal)
 }

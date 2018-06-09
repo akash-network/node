@@ -9,11 +9,16 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 )
 
-func NewState(t *testing.T, gen *types.Genesis) state.State {
+// NewState used only for testing
+func NewState(t *testing.T, gen *types.Genesis) (state.CommitState, state.CacheState) {
 	db := state.NewMemDB()
-	state, err := state.LoadState(db, gen)
+	commitState, cacheState, err := state.LoadState(db, gen)
 	require.NoError(t, err)
-	return state
+	// prime commit state so root is not nil
+	cacheState.Set([]byte("test"), []byte("Test"))
+	err = cacheState.Write()
+	require.NoError(t, err)
+	return commitState, cacheState
 }
 
 func CreateAccount(t *testing.T, state state.State) (*types.Account, crypto.PrivKey) {

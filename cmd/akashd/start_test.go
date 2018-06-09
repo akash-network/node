@@ -32,7 +32,7 @@ func Test_Start(t *testing.T) {
 
 		viper.Reset()
 
-		state := testutil.NewState(t, nil)
+		state, _ := testutil.NewState(t, nil)
 		address, _ := testutil.CreateAccount(t, state)
 		addr := address.Address.EncodeString()
 

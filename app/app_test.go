@@ -23,13 +23,13 @@ func TestApp(t *testing.T) {
 	keyto := testutil.PrivateKey(t)
 	addrto := keyto.PubKey().Address().Bytes()
 
-	state := testutil.NewState(t, &types.Genesis{
+	commitState, cacheState := testutil.NewState(t, &types.Genesis{
 		Accounts: []types.Account{
 			types.Account{Address: addrfrom, Balance: balance, Nonce: nonce},
 		},
 	})
 
-	app, err := app_.Create(state, testutil.Logger())
+	app, err := app_.Create(commitState, cacheState, testutil.Logger())
 	require.NoError(t, err)
 
 	{

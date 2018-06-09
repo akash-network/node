@@ -54,7 +54,7 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	state, err := state.LoadState(db, genesis)
+	commitState, cacheState, err := state.LoadState(db, genesis)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func doStartCommand(ctx Context, cmd *cobra.Command, args []string) error {
 
 	applog := logger.With("module", "akash")
 
-	app, err := app.Create(state, applog)
+	app, err := app.Create(commitState, cacheState, applog)
 	if err != nil {
 		return err
 	}

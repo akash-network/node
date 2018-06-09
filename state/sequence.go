@@ -8,20 +8,20 @@ type Sequence interface {
 	Next() uint64
 }
 
-func NewSequence(db DB, path []byte) Sequence {
+func NewSequence(state State, path []byte) Sequence {
 	return sequence{
-		db:   db,
-		path: path,
+		state: state,
+		path:  path,
 	}
 }
 
 type sequence struct {
-	db   DB
-	path []byte
+	state State
+	path  []byte
 }
 
 func (s sequence) Current() uint64 {
-	buf := s.db.Get(s.path)
+	buf := s.state.Get(s.path)
 	if buf == nil {
 		return 0
 	}
@@ -36,6 +36,6 @@ func (s sequence) Advance() uint64 {
 	next := s.Next()
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, next)
-	s.db.Set(s.path, buf)
+	s.state.Set(s.path, buf)
 	return next
 }

@@ -15,22 +15,22 @@ type DeploymentGroupAdapter interface {
 	ForDeployment(addr base.Bytes) ([]*types.DeploymentGroup, error)
 }
 
-func NewDeploymentGroupAdapter(db DB) DeploymentGroupAdapter {
-	return &deploymentGroupAdapter{db}
+func NewDeploymentGroupAdapter(state State) DeploymentGroupAdapter {
+	return &deploymentGroupAdapter{state}
 }
 
 type deploymentGroupAdapter struct {
-	db DB
+	state State
 }
 
 func (a *deploymentGroupAdapter) Save(obj *types.DeploymentGroup) error {
 	path := a.keyFor(obj.DeploymentGroupID)
-	return saveObject(a.db, path, obj)
+	return saveObject(a.state, path, obj)
 }
 
 func (a *deploymentGroupAdapter) Get(id types.DeploymentGroupID) (*types.DeploymentGroup, error) {
 	path := a.keyFor(id)
-	buf := a.db.Get(path)
+	buf := a.state.Get(path)
 	if buf == nil {
 		return nil, nil
 	}
@@ -42,7 +42,7 @@ func (a *deploymentGroupAdapter) ForDeployment(deployment base.Bytes) ([]*types.
 	min := a.deploymentMinRange(deployment)
 	max := a.deploymentMaxRange(deployment)
 
-	_, bufs, _, err := a.db.GetRangeWithProof(min, max, MaxRangeLimit)
+	_, bufs, err := a.state.GetRange(min, max, MaxRangeLimit)
 	if err != nil {
 		return nil, err
 	}

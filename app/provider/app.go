@@ -9,7 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	apptypes "github.com/ovrclk/akash/app/types"
 	"github.com/ovrclk/akash/keys"
-	"github.com/ovrclk/akash/state"
+	appstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
@@ -25,15 +25,15 @@ type app struct {
 	*apptypes.BaseApp
 }
 
-func NewApp(state state.State, logger log.Logger) (apptypes.Application, error) {
-	return &app{apptypes.NewBaseApp(Name, state, logger)}, nil
+func NewApp(logger log.Logger) (apptypes.Application, error) {
+	return &app{apptypes.NewBaseApp(Name, logger)}, nil
 }
 
 func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
-	return strings.HasPrefix(req.GetPath(), state.ProviderPath)
+	return strings.HasPrefix(req.GetPath(), appstate.ProviderPath)
 }
 
-func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
+func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 
 	if !a.AcceptQuery(req) {
 		return tmtypes.ResponseQuery{
@@ -43,9 +43,9 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	}
 
 	// TODO: Partial Key Parsing
-	id := strings.TrimPrefix(req.Path, state.ProviderPath)
+	id := strings.TrimPrefix(req.Path, appstate.ProviderPath)
 	if len(id) == 0 {
-		return a.doRangeQuery()
+		return a.doRangeQuery(state)
 	}
 
 	key, err := keys.ParseProviderPath(id)
@@ -55,7 +55,7 @@ func (a *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 			Log:  err.Error(),
 		}
 	}
-	return a.doQuery(key.ID())
+	return a.doQuery(state, key.ID())
 }
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
@@ -66,10 +66,10 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	return false
 }
 
-func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
+func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateProvider:
-		return a.doCheckTx(ctx, tx.TxCreateProvider)
+		return a.doCheckTx(state, ctx, tx.TxCreateProvider)
 	}
 	return tmtypes.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -77,10 +77,10 @@ func (a *app) CheckTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseChec
 	}
 }
 
-func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
+func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateProvider:
-		return a.doDeliverTx(ctx, tx.TxCreateProvider)
+		return a.doDeliverTx(state, ctx, tx.TxCreateProvider)
 	}
 	return tmtypes.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
@@ -88,9 +88,9 @@ func (a *app) DeliverTx(ctx apptypes.Context, tx interface{}) tmtypes.ResponseDe
 	}
 }
 
-func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
+func (a *app) doQuery(state appstate.State, key base.Bytes) tmtypes.ResponseQuery {
 
-	provider, err := a.State().Provider().Get(key)
+	provider, err := state.Provider().Get(key)
 
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -116,12 +116,12 @@ func (a *app) doQuery(key base.Bytes) tmtypes.ResponseQuery {
 
 	return tmtypes.ResponseQuery{
 		Value:  bytes,
-		Height: a.State().Version(),
+		Height: state.Version(),
 	}
 }
 
-func (a *app) doRangeQuery() tmtypes.ResponseQuery {
-	dcs, err := a.State().Provider().GetMaxRange()
+func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
+	dcs, err := state.Provider().GetMaxRange()
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
@@ -146,11 +146,11 @@ func (a *app) doRangeQuery() tmtypes.ResponseQuery {
 
 	return tmtypes.ResponseQuery{
 		Value:  bytes,
-		Height: int64(a.State().Version()),
+		Height: state.Version(),
 	}
 }
 
-func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmtypes.ResponseCheckTx {
+func (a *app) doCheckTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateProvider) tmtypes.ResponseCheckTx {
 	if !bytes.Equal(ctx.Signer().Address(), tx.Owner) {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -158,7 +158,7 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmtype
 		}
 	}
 
-	signer, err_ := a.State().Account().Get(tx.Owner)
+	signer, err_ := state.Account().Get(tx.Owner)
 	if err_ != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -182,9 +182,9 @@ func (a *app) doCheckTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmtype
 	return tmtypes.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateProvider) tmtypes.ResponseDeliverTx {
 
-	cresp := a.doCheckTx(ctx, tx)
+	cresp := a.doCheckTx(state, ctx, tx)
 	if !cresp.IsOK() {
 		return tmtypes.ResponseDeliverTx{
 			Code: cresp.Code,
@@ -193,13 +193,13 @@ func (a *app) doDeliverTx(ctx apptypes.Context, tx *types.TxCreateProvider) tmty
 	}
 
 	provider := &types.Provider{
-		Address:    state.ProviderAddress(tx.Owner, tx.Nonce),
+		Address:    appstate.ProviderAddress(tx.Owner, tx.Nonce),
 		Owner:      tx.Owner,
 		HostURI:    tx.HostURI,
 		Attributes: tx.Attributes,
 	}
 
-	if err := a.State().Provider().Save(provider); err != nil {
+	if err := state.Provider().Save(provider); err != nil {
 		return tmtypes.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),

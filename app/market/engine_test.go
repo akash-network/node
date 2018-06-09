@@ -12,21 +12,21 @@ import (
 )
 
 func TestEngine_All(t *testing.T) {
-	state_ := testutil.NewState(t, nil)
+	commitState, _ := testutil.NewState(t, nil)
 
-	tenant, _ := testutil.CreateAccount(t, state_)
+	tenant, _ := testutil.CreateAccount(t, commitState)
 
-	pacc, _ := testutil.CreateAccount(t, state_)
+	pacc, _ := testutil.CreateAccount(t, commitState)
 	provider := testutil.Provider(pacc.Address, 0)
-	require.NoError(t, state_.Provider().Save(provider))
+	require.NoError(t, commitState.Provider().Save(provider))
 
 	deployment := testutil.Deployment(tenant.Address, tenant.Nonce)
 	groups := testutil.DeploymentGroups(deployment.Address, tenant.Nonce)
-	require.NoError(t, state_.Deployment().Save(deployment))
+	require.NoError(t, commitState.Deployment().Save(deployment))
 
-	state_, order := testCreateOrder(t, state_, tenant, deployment, groups)
-	state_ = testCreateLease(t, state_, provider, deployment, groups, order)
-	state_ = testCloseDeployment(t, state_, tenant.Address, deployment.Address)
+	_, order := testCreateOrder(t, commitState, tenant, deployment, groups)
+	testCreateLease(t, commitState, provider, deployment, groups, order)
+	testCloseDeployment(t, commitState, tenant.Address, deployment.Address)
 }
 
 func testCreateOrder(t *testing.T, state state.State, tenant *types.Account, deployment *types.Deployment, groups *types.DeploymentGroups) (state.State, *types.Order) {
@@ -54,7 +54,7 @@ func testCreateOrder(t *testing.T, state state.State, tenant *types.Account, dep
 	return state, order
 }
 
-func testCreateLease(t *testing.T, state state.State, provider *types.Provider, deployment *types.Deployment, groups *types.DeploymentGroups, order *types.Order) state.State {
+func testCreateLease(t *testing.T, state state.CommitState, provider *types.Provider, deployment *types.Deployment, groups *types.DeploymentGroups, order *types.Order) state.State {
 	fulfillment := testutil.Fulfillment(provider.Address, deployment.Address, order.Group, order.Seq, 1)
 	require.NoError(t, state.Fulfillment().Save(fulfillment))
 

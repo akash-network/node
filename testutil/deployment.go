@@ -22,7 +22,7 @@ func RandUint64() uint64 {
 	return uint64(rand.Int63n(100))
 }
 
-func CreateDeployment(t *testing.T, app apptypes.Application, account *types.Account, key crypto.PrivKey, nonce uint64) (*types.Deployment, *types.DeploymentGroups) {
+func CreateDeployment(t *testing.T, st state.State, app apptypes.Application, account *types.Account, key crypto.PrivKey, nonce uint64) (*types.Deployment, *types.DeploymentGroups) {
 	deployment := Deployment(account.Address, nonce)
 	groups := DeploymentGroups(deployment.Address, nonce)
 	ttl := int64(5)
@@ -53,15 +53,15 @@ func CreateDeployment(t *testing.T, app apptypes.Application, account *types.Acc
 	})
 
 	assert.True(t, app.AcceptTx(ctx, deploymenttx))
-	cresp := app.CheckTx(ctx, deploymenttx)
+	cresp := app.CheckTx(st, ctx, deploymenttx)
 	assert.True(t, cresp.IsOK())
-	dresp := app.DeliverTx(ctx, deploymenttx)
+	dresp := app.DeliverTx(st, ctx, deploymenttx)
 	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
 	assert.True(t, dresp.IsOK())
 	return deployment, groups
 }
 
-func CloseDeployment(t *testing.T, app apptypes.Application, deployment *base.Bytes, key crypto.PrivKey) {
+func CloseDeployment(t *testing.T, st state.State, app apptypes.Application, deployment *base.Bytes, key crypto.PrivKey) {
 
 	tx := &types.TxPayload_TxCloseDeployment{
 		TxCloseDeployment: &types.TxCloseDeployment{
@@ -78,9 +78,9 @@ func CloseDeployment(t *testing.T, app apptypes.Application, deployment *base.By
 	})
 
 	assert.True(t, app.AcceptTx(ctx, tx))
-	cresp := app.CheckTx(ctx, tx)
+	cresp := app.CheckTx(st, ctx, tx)
 	assert.True(t, cresp.IsOK())
-	dresp := app.DeliverTx(ctx, tx)
+	dresp := app.DeliverTx(st, ctx, tx)
 	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
 	assert.True(t, dresp.IsOK())
 }

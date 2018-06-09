@@ -15,7 +15,7 @@ import (
 	"github.com/ovrclk/akash/app/provider"
 	"github.com/ovrclk/akash/app/store"
 	apptypes "github.com/ovrclk/akash/app/types"
-	"github.com/ovrclk/akash/state"
+	appstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/code"
@@ -34,7 +34,8 @@ type Application interface {
 type app struct {
 	tmtypes.BaseApplication
 
-	state state.State
+	cacheState  appstate.CacheState
+	commitState appstate.CommitState
 
 	apps []apptypes.Application
 
@@ -43,12 +44,12 @@ type app struct {
 	log log.Logger
 }
 
-func Create(state state.State, logger log.Logger) (Application, error) {
+func Create(commitState appstate.CommitState, cacheState appstate.CacheState, logger log.Logger) (Application, error) {
 
 	var apps []apptypes.Application
 
 	{
-		app, err := account.NewApp(state, logger.With("app", account.Name))
+		app, err := account.NewApp(logger.With("app", account.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -56,7 +57,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := store.NewApp(state, logger.With("app", store.Name))
+		app, err := store.NewApp(logger.With("app", store.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -64,7 +65,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := deployment.NewApp(state, logger.With("app", deployment.Name))
+		app, err := deployment.NewApp(logger.With("app", deployment.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +73,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := order.NewApp(state, logger.With("app", order.Name))
+		app, err := order.NewApp(logger.With("app", order.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -80,7 +81,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := fulfillment.NewApp(state, logger.With("app", fulfillment.Name))
+		app, err := fulfillment.NewApp(logger.With("app", fulfillment.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +89,7 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := lease.NewApp(state, logger.With("app", lease.Name))
+		app, err := lease.NewApp(logger.With("app", lease.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -96,14 +97,14 @@ func Create(state state.State, logger log.Logger) (Application, error) {
 	}
 
 	{
-		app, err := provider.NewApp(state, logger.With("app", provider.Name))
+		app, err := provider.NewApp(logger.With("app", provider.Name))
 		if err != nil {
 			return nil, err
 		}
 		apps = append(apps, app)
 	}
 
-	return &app{state: state, apps: apps, log: logger}, nil
+	return &app{commitState: commitState, cacheState: cacheState, apps: apps, log: logger}, nil
 }
 
 func (app *app) ActivateMarket(actor market.Actor, bus *tmtmtypes.EventBus) error {
@@ -112,7 +113,7 @@ func (app *app) ActivateMarket(actor market.Actor, bus *tmtmtypes.EventBus) erro
 		return errors.New("market already activated")
 	}
 
-	mapp, err := market.NewApp(app.state, app.log.With("app", market.Name))
+	mapp, err := market.NewApp(app.log.With("app", market.Name))
 	if err != nil {
 		return err
 	}
@@ -133,8 +134,8 @@ func (app *app) Info(req tmtypes.RequestInfo) tmtypes.ResponseInfo {
 	return tmtypes.ResponseInfo{
 		Data:             "{}",
 		Version:          version.Version(),
-		LastBlockHeight:  int64(app.state.Version()),
-		LastBlockAppHash: app.state.Hash(),
+		LastBlockHeight:  app.commitState.Version(),
+		LastBlockAppHash: app.commitState.Hash(),
 	}
 }
 
@@ -144,16 +145,16 @@ func (app *app) SetOption(req tmtypes.RequestSetOption) tmtypes.ResponseSetOptio
 
 func (app *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
 	app.traceJs("Query", "req", req)
-	for _, app := range app.apps {
-		if app.AcceptQuery(req) {
-			return app.Query(req)
+	for _, subapp := range app.apps {
+		if subapp.AcceptQuery(req) {
+			return subapp.Query(app.commitState, req)
 		}
 	}
 	return tmtypes.ResponseQuery{Code: code.UNKNOWN_QUERY, Log: "unknown query"}
 }
 
-func (app *app) checkNonce(address []byte, nonce uint64) apptypes.Error {
-	signer, err_ := app.state.Account().Get(address)
+func (app *app) checkNonce(state appstate.State, address []byte, nonce uint64) apptypes.Error {
+	signer, err_ := state.Account().Get(address)
 	if err_ != nil {
 		return apptypes.NewError(code.INVALID_TRANSACTION, err_.Error())
 	}
@@ -170,11 +171,11 @@ func (app *app) CheckTx(buf []byte) tmtypes.ResponseCheckTx {
 		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
 	app.traceTx("CheckTx", tx)
-	err = app.checkNonce(ctx.Signer().Address().Bytes(), tx.Payload.Nonce)
+	err = app.checkNonce(app.commitState, ctx.Signer().Address().Bytes(), tx.Payload.Nonce)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
-	return app_.CheckTx(ctx, tx.Payload.Payload)
+	return app_.CheckTx(app.commitState, ctx, tx.Payload.Payload)
 }
 
 func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
@@ -183,11 +184,11 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 		return tmtypes.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
 	}
 	app.traceTx("DeliverTx", tx)
-	err = app.checkNonce(ctx.Signer().Address().Bytes(), tx.Payload.Nonce)
+	err = app.checkNonce(app.cacheState, ctx.Signer().Address().Bytes(), tx.Payload.Nonce)
 	if err != nil {
 		return tmtypes.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
 	}
-	signer, err_ := app.state.Account().Get(ctx.Signer().Address().Bytes())
+	signer, err_ := app.cacheState.Account().Get(ctx.Signer().Address().Bytes())
 	if err_ != nil {
 		return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 	}
@@ -201,20 +202,20 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 		}
 	}
 
-	if err_ := app.state.Account().Save(signer); err_ != nil {
+	if err_ := app.cacheState.Account().Save(signer); err_ != nil {
 		return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 	}
 
-	resp := app_.DeliverTx(ctx, tx.Payload.Payload)
+	resp := app_.DeliverTx(app.cacheState, ctx, tx.Payload.Payload)
 
 	// set new account nonce
 	if resp.IsOK() {
-		signer, err_ = app.state.Account().Get(ctx.Signer().Address().Bytes())
+		signer, err_ = app.cacheState.Account().Get(ctx.Signer().Address().Bytes())
 		if err_ != nil {
 			return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 		}
 		signer.Nonce = tx.Payload.Nonce
-		if err_ := app.state.Account().Save(signer); err_ != nil {
+		if err_ := app.cacheState.Account().Save(signer); err_ != nil {
 			return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 		}
 	}
@@ -240,17 +241,24 @@ func (app *app) EndBlock(req tmtypes.RequestEndBlock) tmtypes.ResponseEndBlock {
 func (app *app) Commit() tmtypes.ResponseCommit {
 	app.trace("Commit")
 
-	data, _, err := app.state.Commit()
+	err := app.cacheState.Write()
+	if err != nil {
+		app.log.Error("error when writing to cache")
+	}
+	data, _, err := app.commitState.Commit()
 
 	if err != nil {
 		return tmtypes.ResponseCommit{Data: data}
 	}
 
 	if app.mfacilitator != nil {
-		app.mfacilitator.OnCommit(app.state)
+		err := app.mfacilitator.OnCommit(app.commitState)
+		if err != nil {
+			app.log.Error("error in facilitator.OnCommit", err.Error())
+		}
 	}
 
-	if err = lease.ProcessLeases(app.state); err != nil {
+	if err = lease.ProcessLeases(app.commitState); err != nil {
 		app.log.Error("processing leases", "error", err)
 	}
 
@@ -297,5 +305,5 @@ func (app *app) trace(meth string, keyvals ...interface{}) {
 }
 
 func (app *app) traceLog() log.Logger {
-	return app.log.With("height", app.state.Version(), "hash", util.X(app.state.Hash()), "logtype", "trace")
+	return app.log.With("height", app.commitState.Version(), "hash", util.X(app.commitState.Hash()), "logtype", "trace")
 }

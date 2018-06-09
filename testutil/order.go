@@ -5,13 +5,14 @@ import (
 	"testing"
 
 	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/assert"
 	crypto "github.com/tendermint/go-crypto"
 )
 
-func CreateOrder(t *testing.T, app apptypes.Application, account *types.Account, key crypto.PrivKey, deploymentAddress base.Bytes, groupSeq, orderSeq uint64) *types.Order {
+func CreateOrder(t *testing.T, st state.State, app apptypes.Application, account *types.Account, key crypto.PrivKey, deploymentAddress base.Bytes, groupSeq, orderSeq uint64) *types.Order {
 	order := Order(deploymentAddress, groupSeq, orderSeq)
 
 	tx := &types.TxPayload_TxCreateOrder{
@@ -29,10 +30,10 @@ func CreateOrder(t *testing.T, app apptypes.Application, account *types.Account,
 	})
 
 	assert.True(t, app.AcceptTx(ctx, tx))
-	cresp := app.CheckTx(ctx, tx)
+	cresp := app.CheckTx(st, ctx, tx)
 	assert.True(t, cresp.IsOK())
 	assert.Empty(t, cresp.Log)
-	dresp := app.DeliverTx(ctx, tx)
+	dresp := app.DeliverTx(st, ctx, tx)
 	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
 	assert.True(t, dresp.IsOK())
 	return order

@@ -16,14 +16,14 @@ import (
 )
 
 func TestProviderApp(t *testing.T) {
-	state := testutil.NewState(t, nil)
-	app, err := app_.NewApp(state, testutil.Logger())
+	_, cacheState := testutil.NewState(t, nil)
+	app, err := app_.NewApp(testutil.Logger())
 	require.NoError(t, err)
 
-	account, key := testutil.CreateAccount(t, state)
+	account, key := testutil.CreateAccount(t, cacheState)
 	nonce := uint64(1)
 
-	provider := testutil.CreateProvider(t, app, account, key, nonce)
+	provider := testutil.CreateProvider(t, cacheState, app, account, key, nonce)
 
 	{
 		assert.True(t, app.AcceptQuery(tmtypes.RequestQuery{Path: query.ProviderPath(provider.Address)}))
@@ -31,7 +31,7 @@ func TestProviderApp(t *testing.T) {
 	}
 
 	{
-		resp := app.Query(tmtypes.RequestQuery{Path: query.ProviderPath(provider.Address)})
+		resp := app.Query(cacheState, tmtypes.RequestQuery{Path: query.ProviderPath(provider.Address)})
 		assert.Empty(t, resp.Log)
 		require.True(t, resp.IsOK())
 
@@ -46,9 +46,9 @@ func TestProviderApp(t *testing.T) {
 }
 
 func TestTx_BadTxType(t *testing.T) {
-	state_ := testutil.NewState(t, nil)
-	app, err := app_.NewApp(state_, testutil.Logger())
-	account, key := testutil.CreateAccount(t, state_)
+	_, cacheState := testutil.NewState(t, nil)
+	app, err := app_.NewApp(testutil.Logger())
+	account, key := testutil.CreateAccount(t, cacheState)
 
 	tx := &types.Tx{
 		Key: key.PubKey().Bytes(),
@@ -65,8 +65,8 @@ func TestTx_BadTxType(t *testing.T) {
 	ctx := apptypes.NewContext(tx)
 	require.NoError(t, err)
 	assert.False(t, app.AcceptTx(ctx, tx.Payload.Payload))
-	cresp := app.CheckTx(ctx, tx.Payload.Payload)
+	cresp := app.CheckTx(cacheState, ctx, tx.Payload.Payload)
 	assert.False(t, cresp.IsOK())
-	dresp := app.DeliverTx(ctx, tx.Payload.Payload)
+	dresp := app.DeliverTx(cacheState, ctx, tx.Payload.Payload)
 	assert.False(t, dresp.IsOK())
 }

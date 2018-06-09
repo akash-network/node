@@ -7,7 +7,7 @@ import (
 	"github.com/ovrclk/akash/app/order"
 	apptypes "github.com/ovrclk/akash/app/types"
 	"github.com/ovrclk/akash/query"
-	state "github.com/ovrclk/akash/state"
+	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,8 +15,7 @@ import (
 )
 
 func TestAcceptQuery(t *testing.T) {
-	state := testutil.NewState(t, nil)
-	app, err := order.NewApp(state, testutil.Logger())
+	app, err := order.NewApp(testutil.Logger())
 	require.NoError(t, err, "failed to create app")
 
 	{
@@ -51,42 +50,42 @@ func TestAcceptQuery(t *testing.T) {
 }
 
 func TestTx(t *testing.T) {
-	state_ := testutil.NewState(t, nil)
-	app, err := order.NewApp(state_, testutil.Logger())
-	dapp, err := deployment_.NewApp(state_, testutil.Logger())
+	_, cacheState := testutil.NewState(t, nil)
+	app, err := order.NewApp(testutil.Logger())
+	dapp, err := deployment_.NewApp(testutil.Logger())
 	require.NoError(t, err)
-	account, key := testutil.CreateAccount(t, state_)
+	account, key := testutil.CreateAccount(t, cacheState)
 
-	deployment, groups := testutil.CreateDeployment(t, dapp, account, key, 1)
+	deployment, groups := testutil.CreateDeployment(t, cacheState, dapp, account, key, 1)
 
 	orderSeq := uint64(0)
-	testutil.CreateOrder(t, app, account, key, deployment.Address, groups.GetItems()[0].Seq, orderSeq)
+	testutil.CreateOrder(t, cacheState, app, account, key, deployment.Address, groups.GetItems()[0].Seq, orderSeq)
 
-	orders, err := state_.Order().ForGroup(groups.GetItems()[0].DeploymentGroupID)
+	orders, err := cacheState.Order().ForGroup(groups.GetItems()[0].DeploymentGroupID)
 	require.NoError(t, err)
 	require.Len(t, orders, 1)
 
 	order := orders[0]
 
 	path := query.OrderPath(order.OrderID)
-	resp := app.Query(tmtypes.RequestQuery{Path: path})
+	resp := app.Query(cacheState, tmtypes.RequestQuery{Path: path})
 	assert.Empty(t, resp.Log)
 	require.True(t, resp.IsOK())
-	resp = app.Query(tmtypes.RequestQuery{Path: state.OrderPath})
+	resp = app.Query(cacheState, tmtypes.RequestQuery{Path: state.OrderPath})
 	assert.Empty(t, resp.Log)
 	require.True(t, resp.IsOK())
 }
 
 func TestTx_BadTxType(t *testing.T) {
-	state_ := testutil.NewState(t, nil)
-	app, err := order.NewApp(state_, testutil.Logger())
+	_, cacheState := testutil.NewState(t, nil)
+	app, err := order.NewApp(testutil.Logger())
 	require.NoError(t, err)
-	account, key := testutil.CreateAccount(t, state_)
+	account, key := testutil.CreateAccount(t, cacheState)
 	tx := testutil.ProviderTx(account, key, 10)
 	ctx := apptypes.NewContext(tx)
 	assert.False(t, app.AcceptTx(ctx, tx.Payload.Payload))
-	cresp := app.CheckTx(ctx, tx.Payload.Payload)
+	cresp := app.CheckTx(cacheState, ctx, tx.Payload.Payload)
 	assert.False(t, cresp.IsOK())
-	dresp := app.DeliverTx(ctx, tx.Payload.Payload)
+	dresp := app.DeliverTx(cacheState, ctx, tx.Payload.Payload)
 	assert.False(t, dresp.IsOK())
 }
