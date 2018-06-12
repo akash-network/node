@@ -58,7 +58,14 @@ func CreateDeployment(t *testing.T, st state.State, app apptypes.Application, ac
 	dresp := app.DeliverTx(st, ctx, deploymenttx)
 	assert.Len(t, dresp.Log, 0, fmt.Sprint("Log should be empty but is: ", dresp.Log))
 	assert.True(t, dresp.IsOK())
-	return deployment, groups
+
+	deployment, err := st.Deployment().Get(deployment.Address)
+	assert.NoError(t, err)
+
+	dgroups, err := st.DeploymentGroup().ForDeployment(deployment.Address)
+	assert.NoError(t, err)
+
+	return deployment, &types.DeploymentGroups{Items: dgroups}
 }
 
 func CloseDeployment(t *testing.T, st state.State, app apptypes.Application, deployment *base.Bytes, key crypto.PrivKey) {

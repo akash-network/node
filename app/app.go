@@ -29,6 +29,8 @@ import (
 type Application interface {
 	tmtypes.Application
 	ActivateMarket(market.Actor, *tmtmtypes.EventBus) error
+
+	App(name string) apptypes.Application
 }
 
 type app struct {
@@ -105,6 +107,15 @@ func Create(commitState appstate.CommitState, cacheState appstate.CacheState, lo
 	}
 
 	return &app{commitState: commitState, cacheState: cacheState, apps: apps, log: logger}, nil
+}
+
+func (app *app) App(name string) apptypes.Application {
+	for _, _app := range app.apps {
+		if _app.Name() == name {
+			return _app
+		}
+	}
+	return nil
 }
 
 func (app *app) ActivateMarket(actor market.Actor, bus *tmtmtypes.EventBus) error {
@@ -241,12 +252,15 @@ func (app *app) EndBlock(req tmtypes.RequestEndBlock) tmtypes.ResponseEndBlock {
 func (app *app) Commit() tmtypes.ResponseCommit {
 	app.trace("Commit")
 
-	err := app.cacheState.Write()
-	if err != nil {
-		app.log.Error("error when writing to cache")
+	if err := lease.ProcessLeases(app.cacheState); err != nil {
+		app.log.Error("processing leases", "error", err)
 	}
-	data, _, err := app.commitState.Commit()
 
+	if err := app.cacheState.Write(); err != nil {
+		panic("error when writing to cache")
+	}
+
+	data, _, err := app.commitState.Commit()
 	if err != nil {
 		return tmtypes.ResponseCommit{Data: data}
 	}
@@ -256,10 +270,6 @@ func (app *app) Commit() tmtypes.ResponseCommit {
 		if err != nil {
 			app.log.Error("error in facilitator.OnCommit", err.Error())
 		}
-	}
-
-	if err = lease.ProcessLeases(app.commitState); err != nil {
-		app.log.Error("processing leases", "error", err)
 	}
 
 	return tmtypes.ResponseCommit{Data: data}
