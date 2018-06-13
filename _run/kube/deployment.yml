@@ -1,9 +1,9 @@
 ---
 services:
   web:
-    image: gcr.io/google_containers/echoserver:1.8
+    image: quay.io/ovrclk/demo-app
     expose:
-      - port: 8080
+      - port: 80
         as: 80
         accept:
           - web.192.168.99.100.nip.io
