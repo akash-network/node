@@ -43,6 +43,11 @@ func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.Resp
 
 	if strings.HasPrefix(req.GetPath(), appstate.DeploymentGroupPath) {
 		id := strings.TrimPrefix(req.Path, appstate.DeploymentGroupPath)
+
+		if len(id) == 0 {
+			return a.doDeploymentGroupRangeQuery(state)
+		}
+
 		key, err := keys.ParseGroupPath(id)
 		if err != nil {
 			return tmtypes.ResponseQuery{
@@ -147,6 +152,31 @@ func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
 	}
 
 	bytes, err := proto.Marshal(deps)
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseQuery{
+		Value:  bytes,
+		Height: state.Version(),
+	}
+}
+
+func (a *app) doDeploymentGroupRangeQuery(state appstate.State) tmtypes.ResponseQuery {
+	objs, err := state.DeploymentGroup().All()
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	bytes, err := proto.Marshal(&types.DeploymentGroups{
+		Items: objs,
+	})
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,

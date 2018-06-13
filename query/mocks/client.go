@@ -81,6 +81,29 @@ func (_m *Client) DeploymentGroup(ctx context.Context, id types.DeploymentGroupI
 	return r0, r1
 }
 
+// DeploymentGroups provides a mock function with given fields: ctx
+func (_m *Client) DeploymentGroups(ctx context.Context) (*types.DeploymentGroups, error) {
+	ret := _m.Called(ctx)
+
+	var r0 *types.DeploymentGroups
+	if rf, ok := ret.Get(0).(func(context.Context) *types.DeploymentGroups); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.DeploymentGroups)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DeploymentLeases provides a mock function with given fields: ctx, id
 func (_m *Client) DeploymentLeases(ctx context.Context, id []byte) (*types.Leases, error) {
 	ret := _m.Called(ctx, id)

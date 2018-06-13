@@ -22,10 +22,11 @@ func QueryCommand() *cobra.Command {
 	cmd.AddCommand(
 		queryAccountCommand(),
 		queryDeploymentCommand(),
+		queryDeploymentGroupCommand(),
 		queryProviderCommand(),
 		queryOrderCommand(),
-		queryLeaseCommand(),
 		queryFulfillmentCommand(),
+		queryLeaseCommand(),
 	)
 
 	return cmd

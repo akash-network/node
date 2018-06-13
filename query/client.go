@@ -19,6 +19,7 @@ type Client interface {
 	Deployment(ctx context.Context, id []byte) (*types.Deployment, error)
 	DeploymentLeases(ctx context.Context, id []byte) (*types.Leases, error)
 
+	DeploymentGroups(ctx context.Context) (*types.DeploymentGroups, error)
 	DeploymentGroup(ctx context.Context, id types.DeploymentGroupID) (*types.DeploymentGroup, error)
 
 	Orders(ctx context.Context) (*types.Orders, error)
@@ -80,6 +81,15 @@ func (c *client) Deployments(ctx context.Context) (*types.Deployments, error) {
 func (c *client) Deployment(ctx context.Context, id []byte) (*types.Deployment, error) {
 	obj := &types.Deployment{}
 	path := DeploymentPath(id)
+	if err := c.Get(ctx, path, obj); err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+func (c *client) DeploymentGroups(ctx context.Context) (*types.DeploymentGroups, error) {
+	obj := &types.DeploymentGroups{}
+	path := DeploymentGroupsPath()
 	if err := c.Get(ctx, path, obj); err != nil {
 		return nil, err
 	}

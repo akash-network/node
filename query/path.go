@@ -31,6 +31,10 @@ func DeploymentLeasesPath(address []byte) string {
 	return state.LeasePath + util.X(address)
 }
 
+func DeploymentGroupsPath() string {
+	return state.DeploymentGroupPath
+}
+
 func DeploymentGroupPath(id types.DeploymentGroupID) string {
 	return state.DeploymentGroupPath + keys.DeploymentGroupID(id).Path()
 }
