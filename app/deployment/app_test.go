@@ -196,7 +196,7 @@ func TestCloseTx_3(t *testing.T) {
 
 	const (
 		oseq  = 3
-		price = 0
+		price = 1
 	)
 
 	_, cacheState := testutil.NewState(t, nil)
@@ -242,7 +242,7 @@ func TestCloseTx_4(t *testing.T) {
 	const (
 		gseq  = 1
 		oseq  = 3
-		price = 0
+		price = 1
 	)
 
 	_, cacheState := testutil.NewState(t, nil)

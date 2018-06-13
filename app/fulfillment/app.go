@@ -96,6 +96,13 @@ func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.Resp
 
 func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateFulfillment) tmtypes.ResponseCheckTx {
 
+	if tx.Price == 0 {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Fulfillments must have a non-zero price",
+		}
+	}
+
 	if tx.Deployment == nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
@@ -226,6 +233,7 @@ func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *
 	fulfillment := &types.Fulfillment{
 		FulfillmentID: tx.FulfillmentID,
 		State:         types.Fulfillment_OPEN,
+		Price:         tx.Price,
 	}
 
 	if err := state.Fulfillment().Save(fulfillment); err != nil {

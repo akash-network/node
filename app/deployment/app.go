@@ -238,6 +238,17 @@ func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *ty
 		}
 	}
 
+	for _, group := range tx.Groups {
+		for _, resource := range group.Resources {
+			if resource.Price == 0 {
+				return tmtypes.ResponseCheckTx{
+					Code: code.INVALID_TRANSACTION,
+					Log:  "Resources must have a non-zero price",
+				}
+			}
+		}
+	}
+
 	acct, err := state.Account().Get(tx.Tenant)
 	if err != nil {
 		return tmtypes.ResponseCheckTx{

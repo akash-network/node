@@ -73,7 +73,7 @@ func TestValidTx(t *testing.T) {
 	require.NoError(t, err)
 	oSeq := uint64(0)
 	testutil.CreateOrder(t, cacheState, oapp, taccount, tkey, deployment.Address, groupSeq, oSeq)
-	price := uint32(0)
+	price := uint32(1)
 
 	fulfillment := createFulfillment(t, cacheState, app, provider, pkey, daddress, groupSeq, oSeq, price)
 	closeFulfillment(t, cacheState, app, pkey, fulfillment)

@@ -15,11 +15,11 @@ import (
 )
 
 func RandUint32() uint32 {
-	return uint32(rand.Int31n(100))
+	return uint32(rand.Int31n(100) + 1)
 }
 
 func RandUint64() uint64 {
-	return uint64(rand.Int63n(100))
+	return uint64(rand.Int63n(100) + 1)
 }
 
 func CreateDeployment(t *testing.T, st state.State, app apptypes.Application, account *types.Account, key crypto.PrivKey, nonce uint64) (*types.Deployment, *types.DeploymentGroups) {

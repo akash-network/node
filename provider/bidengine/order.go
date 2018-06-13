@@ -112,7 +112,7 @@ loop:
 
 				// TODO: sanity check (price, state, etc...)
 
-				o.log.Info("lease won", "lease", ev.LeaseID)
+				o.log.Info("lease won", "lease", ev.LeaseID, "price", ev.Price)
 
 				o.bus.Publish(event.LeaseWon{
 					LeaseID: ev.LeaseID,
@@ -167,26 +167,31 @@ loop:
 				break loop
 			}
 
+			if o.fulfillment != nil {
+				// fulfillment already created (state recovered via queryExistingOrders)
+				break
+			}
+
 			// Resources reservied.  Calculate price and bid.
 
 			reservation = result.Value().(cluster.Reservation)
 
 			price := o.calculatePrice(reservation.Group())
 
-			if o.fulfillment == nil {
-				// Begin submitting fulfillment
-				bidch = runner.Do(func() runner.Result {
-					return runner.NewResult(o.session.TX().BroadcastTxCommit(&types.TxCreateFulfillment{
-						FulfillmentID: types.FulfillmentID{
-							Deployment: o.order.Deployment,
-							Group:      o.order.Group,
-							Order:      o.order.Seq,
-							Provider:   o.session.Provider().Address,
-						},
-						Price: price,
-					}))
-				})
-			}
+			o.log.Debug("submitting fulfillment", "price", price)
+
+			// Begin submitting fulfillment
+			bidch = runner.Do(func() runner.Result {
+				return runner.NewResult(o.session.TX().BroadcastTxCommit(&types.TxCreateFulfillment{
+					FulfillmentID: types.FulfillmentID{
+						Deployment: o.order.Deployment,
+						Group:      o.order.Group,
+						Order:      o.order.Seq,
+						Provider:   o.session.Provider().Address,
+					},
+					Price: price,
+				}))
+			})
 
 		case result := <-bidch:
 			bidch = nil
@@ -222,7 +227,7 @@ loop:
 
 func (o *order) calculatePrice(group *types.DeploymentGroup) uint32 {
 	max := o.groupMaxPrice(group)
-	return uint32(rand.Int31n(int32(max) + 1))
+	return uint32(rand.Int31n(int32(max)) + 1)
 }
 
 func (o *order) groupMaxPrice(group *types.DeploymentGroup) uint32 {
@@ -231,5 +236,6 @@ func (o *order) groupMaxPrice(group *types.DeploymentGroup) uint32 {
 	for _, group := range group.GetResources() {
 		price += group.Price
 	}
+	o.log.Debug("group max price", "price", price)
 	return price
 }
