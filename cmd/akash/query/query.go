@@ -25,6 +25,7 @@ func QueryCommand() *cobra.Command {
 		queryProviderCommand(),
 		queryOrderCommand(),
 		queryLeaseCommand(),
+		queryFulfillmentCommand(),
 	)
 
 	return cmd

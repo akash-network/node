@@ -79,6 +79,11 @@ func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.Resp
 
 	// todo: abstractiion: all queries should have this
 	id := strings.TrimPrefix(req.Path, appstate.FulfillmentPath)
+
+	if len(id) == 0 {
+		return a.doRangeQuery(state)
+	}
+
 	key, err := keys.ParseFulfillmentPath(id)
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -319,6 +324,31 @@ func (a *app) doDeliverCloseTx(state appstate.State, ctx apptypes.Context, tx *t
 
 	return tmtypes.ResponseDeliverTx{
 		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCloseFulfillment),
+	}
+}
+
+func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
+	items, err := state.Fulfillment().All()
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	coll := &types.Fulfillments{Items: items}
+
+	bytes, err := proto.Marshal(coll)
+	if err != nil {
+		return tmtypes.ResponseQuery{
+			Code: code.ERROR,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseQuery{
+		Value:  bytes,
+		Height: state.Version(),
 	}
 }
 

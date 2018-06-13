@@ -9,7 +9,7 @@ import (
 func queryAccountCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "account",
+		Use:   "account [account ...]",
 		Short: "query account",
 		Args:  cobra.ExactArgs(1),
 		RunE:  session.WithSession(session.RequireNode(doQueryAccountCommand)),

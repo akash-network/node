@@ -9,7 +9,7 @@ import (
 func queryOrderCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "order",
+		Use:   "order [order ...]",
 		Short: "query order",
 		RunE:  session.WithSession(session.RequireNode(doQueryOrderCommand)),
 	}

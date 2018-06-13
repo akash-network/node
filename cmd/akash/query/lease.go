@@ -9,7 +9,7 @@ import (
 func queryLeaseCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "lease [deployment]",
+		Use:   "lease [lease ...]",
 		Short: "query lease",
 		RunE:  session.WithSession(session.RequireNode(doQueryLeaseCommand)),
 	}

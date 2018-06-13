@@ -251,6 +251,10 @@ message Fulfillment {
   FulfillmentState state = 3;
 }
 
+message Fulfillments {
+  repeated Fulfillment items = 1;
+}
+
 message TxCreateFulfillment {
   FulfillmentID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 

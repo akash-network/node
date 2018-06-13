@@ -9,7 +9,7 @@ import (
 func queryProviderCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "provider",
+		Use:   "provider [provider ...]",
 		Short: "query provider",
 		RunE:  session.WithSession(session.RequireNode(doQueryProviderCommand)),
 	}

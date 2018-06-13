@@ -43,6 +43,10 @@ func OrderPath(id types.OrderID) string {
 	return state.OrderPath + keys.OrderID(id).Path()
 }
 
+func FulfillmentsPath() string {
+	return state.FulfillmentPath
+}
+
 func FulfillmentPath(id types.FulfillmentID) string {
 	return state.FulfillmentPath + keys.FulfillmentID(id).Path()
 }

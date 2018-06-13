@@ -15,6 +15,7 @@ type FulfillmentAdapter interface {
 	ForDeployment(base.Bytes) ([]*types.Fulfillment, error)
 	ForGroup(types.DeploymentGroupID) ([]*types.Fulfillment, error)
 	ForOrder(types.OrderID) ([]*types.Fulfillment, error)
+	All() ([]*types.Fulfillment, error)
 }
 
 func NewFulfillmentAdapter(state State) FulfillmentAdapter {
@@ -58,6 +59,12 @@ func (a *fulfillmentAdapter) ForOrder(order types.OrderID) ([]*types.Fulfillment
 	return a.forRange(min, max)
 }
 
+func (a *fulfillmentAdapter) All() ([]*types.Fulfillment, error) {
+	min := a.allMinRange()
+	max := a.allMaxRange()
+	return a.forRange(min, max)
+}
+
 func (a *fulfillmentAdapter) keyFor(id types.FulfillmentID) []byte {
 	path := keys.FulfillmentID(id).Bytes()
 	return append([]byte(FulfillmentPath), path...)
@@ -72,6 +79,22 @@ func (a *fulfillmentAdapter) deploymentMinRange(deployment base.Bytes) []byte {
 func (a *fulfillmentAdapter) deploymentMaxRange(deployment base.Bytes) []byte {
 	return a.keyFor(types.FulfillmentID{
 		Deployment: deployment,
+		Group:      math.MaxUint64,
+		Order:      math.MaxUint64,
+		Provider:   MaxAddress(),
+	})
+}
+
+func (a *fulfillmentAdapter) allMinRange() []byte {
+	return a.keyFor(types.FulfillmentID{
+		Deployment: MinAddress(),
+		Provider:   MinAddress(),
+	})
+}
+
+func (a *fulfillmentAdapter) allMaxRange() []byte {
+	return a.keyFor(types.FulfillmentID{
+		Deployment: MaxAddress(),
 		Group:      math.MaxUint64,
 		Order:      math.MaxUint64,
 		Provider:   MaxAddress(),

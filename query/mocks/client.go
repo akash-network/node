@@ -150,6 +150,29 @@ func (_m *Client) Fulfillment(ctx context.Context, id types.FulfillmentID) (*typ
 	return r0, r1
 }
 
+// Fulfillments provides a mock function with given fields: ctx
+func (_m *Client) Fulfillments(ctx context.Context) (*types.Fulfillments, error) {
+	ret := _m.Called(ctx)
+
+	var r0 *types.Fulfillments
+	if rf, ok := ret.Get(0).(func(context.Context) *types.Fulfillments); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.Fulfillments)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Get provides a mock function with given fields: ctx, path, obj
 func (_m *Client) Get(ctx context.Context, path string, obj proto.Message) error {
 	ret := _m.Called(ctx, path, obj)
