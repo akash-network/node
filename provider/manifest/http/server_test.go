@@ -2,10 +2,10 @@ package http
 
 import (
 	"context"
+	"io/ioutil"
 	"net/http"
 	"testing"
 
-	"github.com/ovrclk/akash/manifest"
 	pmanifest "github.com/ovrclk/akash/provider/manifest/mocks"
 	pmock "github.com/ovrclk/akash/provider/manifest/mocks"
 	"github.com/ovrclk/akash/sdl"
@@ -28,7 +28,7 @@ func TestManifest(t *testing.T) {
 	signer := testutil.Signer(t, kmgr)
 
 	provider := &types.Provider{
-		HostURI: "http://localhost:3001/manifest",
+		HostURI: "http://localhost:3001",
 	}
 
 	deployment := testutil.DeploymentAddress(t)
@@ -37,8 +37,20 @@ func TestManifest(t *testing.T) {
 	handler.On("HandleManifest", mock.Anything).Return(nil).Once()
 
 	withServer(t, func() {
-		err = manifest.Send(mani, signer, provider, deployment)
+		err = Send(mani, signer, provider, deployment)
 		require.NoError(t, err)
+	}, handler)
+}
+
+func TestStatus(t *testing.T) {
+	handler := new(pmock.Handler)
+
+	withServer(t, func() {
+		resp, err := http.Get("http://localhost:3001/status")
+		require.NoError(t, err)
+		body, err := ioutil.ReadAll(resp.Body)
+		require.NoError(t, err)
+		require.Equal(t, []byte("OK\n"), body)
 	}, handler)
 }
 

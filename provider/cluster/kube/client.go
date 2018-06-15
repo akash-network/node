@@ -2,6 +2,7 @@ package kube
 
 import (
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/ovrclk/akash/provider/cluster"
@@ -9,6 +10,7 @@ import (
 	"github.com/tendermint/tmlibs/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 )
@@ -24,9 +26,7 @@ type client struct {
 
 func NewClient(log log.Logger) (Client, error) {
 
-	kubeconfig := path.Join(homedir.HomeDir(), ".kube", "config")
-
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	config, err := openKubeConfig(log)
 	if err != nil {
 		return nil, fmt.Errorf("error building config flags: %v", err)
 	}
@@ -46,6 +46,18 @@ func NewClient(log log.Logger) (Client, error) {
 		log: log,
 	}, nil
 
+}
+
+func openKubeConfig(log log.Logger) (*rest.Config, error) {
+	cfgpath := path.Join(homedir.HomeDir(), ".kube", "config")
+
+	if _, err := os.Stat(cfgpath); err == nil {
+		log.Debug("reading kube config", "path", cfgpath)
+		return clientcmd.BuildConfigFromFlags("", cfgpath)
+	}
+
+	log.Info("using in-cluster config")
+	return rest.InClusterConfig()
 }
 
 func (c *client) Deployments() ([]cluster.Deployment, error) {

@@ -14,7 +14,9 @@ import (
 )
 
 const (
-	contentType = "application/json"
+	contentType  = "application/json"
+	manifestPath = "/manifest"
+	statusPath   = "/status"
 )
 
 type handler struct {
@@ -82,9 +84,25 @@ func requestLogger(log log.Logger) mux.MiddlewareFunc {
 	}
 }
 
+func newStatusHandler(log log.Logger,
+	phandler manifest.Handler) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=us-ascii")
+
+		if _, err := w.Write([]byte("OK\n")); err != nil {
+			log.Error("error in status response", "err", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
 func createHandlers(log log.Logger, handler manifest.Handler) http.Handler {
 	r := mux.NewRouter()
-	r.Handle("/manifest", newHandler(log, handler))
+	r.Handle(manifestPath, newHandler(log, handler))
+	r.HandleFunc(statusPath, newStatusHandler(log, handler))
 	r.Use(requestLogger(log))
 	return r
 }

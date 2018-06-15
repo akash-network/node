@@ -19,7 +19,7 @@ func queryProviderCommand() *cobra.Command {
 
 func doQueryProviderCommand(session session.Session, cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		handleMessage(session.QueryClient().Providers(session.Ctx()))
+		return handleMessage(session.QueryClient().Providers(session.Ctx()))
 	}
 	for _, arg := range args {
 		key, err := keys.ParseProviderPath(arg)

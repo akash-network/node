@@ -48,7 +48,7 @@ func TestDirWriter(t *testing.T) {
 
 		obj, err := node.PVFromFile(path)
 		require.NoError(t, err)
-		require.Equal(t, ctx.PrivateValidators()[0].GetPubKey(), obj.GetPubKey())
+		require.Equal(t, ctx.Nodes()[0].PrivateValidator.GetPubKey(), obj.GetPubKey())
 	}
 }
 

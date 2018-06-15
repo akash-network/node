@@ -19,7 +19,7 @@ func queryOrderCommand() *cobra.Command {
 
 func doQueryOrderCommand(session session.Session, cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		handleMessage(session.QueryClient().Orders(session.Ctx()))
+		return handleMessage(session.QueryClient().Orders(session.Ctx()))
 	}
 	for _, arg := range args {
 		key, err := keys.ParseOrderPath(arg)

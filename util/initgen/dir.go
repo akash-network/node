@@ -11,6 +11,7 @@ import (
 const (
 	GenesisFilename          = "genesis.json"
 	PrivateValidatorFilename = "priv_validator.json"
+	NodeKeyFilename          = "node_key.json"
 	ConfigDir                = "config"
 )
 
@@ -23,10 +24,9 @@ type multiDirWriter struct {
 }
 
 func (w multiDirWriter) Write() error {
-	for idx, pv := range w.ctx.PrivateValidators() {
-		name := fmt.Sprintf("%v-%v", w.ctx.Name(), idx)
-		path := path.Join(w.ctx.Path(), name)
-		nctx := NewContext(name, path, w.ctx.Genesis(), pv)
+	for _, node := range w.ctx.Nodes() {
+		path := path.Join(w.ctx.Path(), node.Name)
+		nctx := NewContext(node.Name, path, w.ctx.Genesis(), node)
 		nw := NewDirWriter(nctx)
 		if err := nw.Write(); err != nil {
 			return err
@@ -45,7 +45,7 @@ type dirWriter struct {
 
 func (w dirWriter) Write() error {
 
-	if len(w.ctx.PrivateValidators()) > 1 {
+	if len(w.ctx.Nodes()) > 1 {
 		return fmt.Errorf("%T: too many private validators", w)
 	}
 
@@ -53,9 +53,16 @@ func (w dirWriter) Write() error {
 		return err
 	}
 
-	if len(w.ctx.PrivateValidators()) > 0 {
+	if len(w.ctx.Nodes()) > 0 {
+		curNode := w.ctx.Nodes()[0]
+
 		fpath := path.Join(w.basedir(), PrivateValidatorFilename)
-		if err := node.PVToFile(fpath, 0400, w.ctx.PrivateValidators()[0]); err != nil {
+		if err := node.PVToFile(fpath, 0400, curNode.PrivateValidator); err != nil {
+			return err
+		}
+
+		fpath = path.Join(w.basedir(), NodeKeyFilename)
+		if err := node.NodeKeyToFile(fpath, 0400, curNode.NodeKey); err != nil {
 			return err
 		}
 	}

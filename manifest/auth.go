@@ -7,12 +7,37 @@ import (
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/akash/provider/session"
+	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	crypto "github.com/tendermint/go-crypto"
 )
 
-var ErrInvalidSignature = errors.New("invalid signature")
-var ErrInvalidKey = errors.New("key is not deployment owner")
+var (
+	ErrInvalidSignature = errors.New("invalid signature")
+	ErrInvalidKey       = errors.New("key is not deployment owner")
+)
+
+func SignManifest(manifest *types.Manifest, signer txutil.Signer, deployment []byte) (*types.ManifestRequest, []byte, error) {
+	mr := &types.ManifestRequest{
+		Deployment: deployment,
+		Manifest:   manifest,
+	}
+	buf, err := marshalRequest(mr)
+	if err != nil {
+		return nil, nil, err
+	}
+	sig, key, err := signer.SignBytes(buf)
+	if err != nil {
+		return nil, nil, err
+	}
+	mr.Signature = sig.Bytes()
+	mr.Key = key.Bytes()
+	buf, err = marshalRequest(mr)
+	if err != nil {
+		return nil, nil, err
+	}
+	return mr, buf, nil
+}
 
 func VerifyRequest(mr *types.ManifestRequest, session session.Session) error {
 	address, err := verifySignature(mr)

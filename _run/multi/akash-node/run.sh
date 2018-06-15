@@ -1,21 +1,35 @@
+# set -x
 
-getpeers() {
+env
 
-  p2p_port=46656
-  p2p_addr_env=AKASH_NODE_PORT_${p2p_port}_TCP_ADDR
+findseeds() {
+  cat /config/peers.txt | while read entry; do
+    name="${entry% *}-akash-node"
+    id="${entry#* }"
 
-  env                    | \
-    grep "$p2p_addr_env" | \
-    sed -e "s/.*=\(.*\)/\1:$p2p_port/" | \
-    paste -sd ',' -
+    env_name="$(echo "$name" | tr '[[:lower:]]' '[[:upper:]]' | tr '-' '_' )"
+
+    port="$(printenv "${env_name}_SERVICE_PORT_AKASHD_P2P")"
+    if [ $? -eq 0 ]; then
+      echo "${id}@${name}:${port}"
+    fi
+  done
 }
 
-export AKASHD_P2P_SEEDS=$(getpeers)
+makeseeds() {
+  findseeds | paste -sd ',' -
+}
 
-echo "found P2P peers: $AKASHD_P2P_SEEDS"
+seeds=$(makeseeds)
 
-mkdir -p $AKASHD_DATA/config
-cp /config/genesis.json $AKASHD_DATA/config
-cp /config/priv_validator.json $AKASHD_DATA/config
+echo "found seeds: $seeds"
+
+export AKASHD_P2P_SEEDS="$seeds"
+
+mkdir -p "$AKASHD_DATA/config"
+
+cp /config/genesis.json        "$AKASHD_DATA/config"
+cp /config/priv_validator.json "$AKASHD_DATA/config"
+cp /config/node_key.json       "$AKASHD_DATA/config"
 
 /akashd start

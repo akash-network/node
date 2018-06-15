@@ -19,7 +19,7 @@ func queryLeaseCommand() *cobra.Command {
 
 func doQueryLeaseCommand(session session.Session, cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		handleMessage(session.QueryClient().Leases(session.Ctx()))
+		return handleMessage(session.QueryClient().Leases(session.Ctx()))
 	}
 	for _, arg := range args {
 		key, err := keys.ParseLeasePath(arg)

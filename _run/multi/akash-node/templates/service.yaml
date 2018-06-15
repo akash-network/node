@@ -8,9 +8,12 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
-  type: {{ .Values.service.type }}
   ports:
-{{ toYaml .Values.service.ports | indent 4 }}
+    - port: {{ .Values.akashd.ports.p2p }}
+      name: akashd-p2p
+    - port: {{ .Values.akashd.ports.rpc }}
+      name: akashd-rpc
+      type: HTTP
   selector:
     app: {{ template "akash-node.name" . }}
     release: {{ .Release.Name }}

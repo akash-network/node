@@ -11,7 +11,6 @@ __t1__: Start and initialize minikube
 ```sh
 $ minikube start
 $ minikube addons enable ingress
-$ kubectl create -f contour.yml
 ```
 
 __t1__: Build binaries

@@ -36,7 +36,7 @@ func ProviderTx(account *types.Account, key crypto.PrivKey, nonce uint64) *types
 			Payload: &types.TxPayload_TxCreateProvider{
 				TxCreateProvider: &types.TxCreateProvider{
 					Attributes: provider.Attributes,
-					HostURI:    "http//localhost:3000/manifest",
+					HostURI:    "http//localhost:3000",
 					Owner:      provider.Owner,
 					Nonce:      nonce,
 				},

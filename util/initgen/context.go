@@ -6,24 +6,24 @@ type Context interface {
 	Name() string
 	Path() string
 
-	PrivateValidators() []tmtypes.PrivValidator
+	Nodes() []*Node
 	Genesis() *tmtypes.GenesisDoc
 }
 
-func NewContext(name, path string, genesis *tmtypes.GenesisDoc, pvalidators ...tmtypes.PrivValidator) Context {
+func NewContext(name, path string, genesis *tmtypes.GenesisDoc, nodes ...*Node) Context {
 	return context{
-		name:        name,
-		path:        path,
-		genesis:     genesis,
-		pvalidators: pvalidators,
+		name:    name,
+		path:    path,
+		genesis: genesis,
+		nodes:   nodes,
 	}
 }
 
 type context struct {
-	name        string
-	path        string
-	genesis     *tmtypes.GenesisDoc
-	pvalidators []tmtypes.PrivValidator
+	name    string
+	path    string
+	genesis *tmtypes.GenesisDoc
+	nodes   []*Node
 }
 
 func (ctx context) Name() string {
@@ -34,8 +34,8 @@ func (ctx context) Path() string {
 	return ctx.path
 }
 
-func (ctx context) PrivateValidators() []tmtypes.PrivValidator {
-	return ctx.pvalidators
+func (ctx context) Nodes() []*Node {
+	return ctx.nodes
 }
 
 func (ctx context) Genesis() *tmtypes.GenesisDoc {

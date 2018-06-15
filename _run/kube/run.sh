@@ -44,7 +44,7 @@ case "$1" in
     akash deployment sendmani deployment.yml "$2" -k master
     ;;
   ping)
-    curl "web.$(minikube ip).nip.io"
+    curl -I "hello.$(minikube ip).nip.io"
     ;;
   *)
     echo "USAGE: $0 <init|akashd|send|query|marketplace|provider|deploy|manifest|ping>" >&2

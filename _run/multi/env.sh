@@ -1,13 +1,7 @@
 source ../common.sh
 
-nodeport(){
-  nodeno=${1:-0}
-  echo $(kubectl get service node-${nodeno}-akash-node -o jsonpath='{.spec.ports[?(@.name == "akashd-rpc")].nodePort}')
-}
-
 nodeuri(){
-  port=$(nodeport "$@")
-  echo "http://$(minikube ip):$port"
+  echo "http://node-0.$(minikube ip).nip.io:80"
 }
 
 akash(){

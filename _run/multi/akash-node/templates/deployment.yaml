@@ -7,8 +7,8 @@ metadata:
     chart: {{ template "akash-node.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+    akash.network/component: akashd
 spec:
-  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       app: {{ template "akash-node.name" . }}
@@ -18,6 +18,7 @@ spec:
       labels:
         app: {{ template "akash-node.name" . }}
         release: {{ .Release.Name }}
+        akash.network/component: akashd
     spec:
       containers:
         - name: {{ .Chart.Name }}
@@ -27,12 +28,20 @@ spec:
           env:
             - name: AKASHD_DATA
               value: /data
+          ports:
+            - containerPort: {{ .Values.akashd.ports.p2p }}
+              name: akashd-p2p
+            - containerPort: {{ .Values.akashd.ports.rpc }}
+              name: akashd-rpc
           volumeMounts:
             - name: config
               mountPath: /config
-          ports:
-{{ toYaml .Values.akashd.ports | indent 12 }}
+            - name: data
+              mountPath: /data
       volumes:
         - name: config
           configMap:
             name: {{ template "akash-node.fullname" . }}
+        - name: data
+          PersistentVolumeClaim:
+            claimName: {{ template "akash-node.fullname" . }}

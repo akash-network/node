@@ -12,5 +12,11 @@ data:
 {{ .Values.node.genesis | indent 4 }}
   priv_validator.json: |-
 {{ .Values.node.priv_validator | indent 4 }}
+  node_key.json: |-
+{{ .Values.node.node_key | indent 4 }}
   run.sh: |-
 {{ .Files.Get "run.sh" | indent 4 }}
+  peers.txt: |-
+    {{- range $item := .Values.node.peers }}
+    {{ $item.name }} {{ $item.id }}
+    {{- end }}

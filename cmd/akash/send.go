@@ -52,7 +52,7 @@ func doSendCommand(session session.Session, cmd *cobra.Command, args []string) e
 		return err
 	}
 
-	fmt.Printf("Sent %v tokens to %v in block %v\n", amount, to, result.Height)
+	fmt.Printf("Sent %v tokens to %v in block %v\n", amount, to.ID(), result.Height)
 
 	return nil
 }

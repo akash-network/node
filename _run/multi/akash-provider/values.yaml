@@ -1,6 +1,11 @@
-replicaCount: 3
-
 image:
   repository: ovrclk/akash
   tag: latest
   pullPolicy: Never
+
+ingress:
+  domain: 192.168.99.101.nip.io
+
+provider:
+  port: 3001
+  region: us-west

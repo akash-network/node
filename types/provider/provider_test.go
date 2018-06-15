@@ -14,7 +14,7 @@ func TestParse(t *testing.T) {
 
 	require.NoError(t, prov.Parse(ppath))
 
-	assert.Equal(t, "http://localhost:3001/manifest", prov.HostURI)
+	assert.Equal(t, "http://localhost:3001", prov.HostURI)
 
 	assert.Len(t, prov.Attributes, 2)
 }

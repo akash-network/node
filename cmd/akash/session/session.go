@@ -43,9 +43,9 @@ type Runner func(sess Session, cmd *cobra.Command, args []string) error
 
 func WithSession(fn Runner) cmdRunner {
 	return func(cmd *cobra.Command, args []string) error {
-		ctx := newSession(cmd)
-		defer ctx.shutdown()
-		return fn(ctx, cmd, args)
+		session := newSession(cmd)
+		defer session.shutdown()
+		return fn(session, cmd, args)
 	}
 }
 

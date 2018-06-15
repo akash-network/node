@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/ovrclk/akash/types"
+	crypto "github.com/tendermint/go-crypto"
+	"github.com/tendermint/tendermint/p2p"
 	tmtypes "github.com/tendermint/tendermint/types"
 	privval "github.com/tendermint/tendermint/types/priv_validator"
 )
@@ -12,6 +14,13 @@ import (
 const (
 	chainID = "local"
 )
+
+type Node struct {
+	Name             string
+	PrivateValidator tmtypes.PrivValidator
+	NodeKey          *p2p.NodeKey
+	Peers            []*Node
+}
 
 type Builder interface {
 	WithName(string) Builder
@@ -57,6 +66,8 @@ func (b *builder) Create() (Context, error) {
 
 	pvalidators := b.generatePrivateValidators()
 	validators := b.generateValidators(pvalidators)
+	nodekeys := b.generateNodeKeys()
+	nodes := b.generateNodes(pvalidators, nodekeys)
 
 	genesis := &tmtypes.GenesisDoc{
 		ChainID:    chainID,
@@ -75,7 +86,7 @@ func (b *builder) Create() (Context, error) {
 		return nil, err
 	}
 
-	return NewContext(b.name, b.path, genesis, pvalidators...), nil
+	return NewContext(b.name, b.path, genesis, nodes...), nil
 }
 
 func (b *builder) generatePrivateValidators() []tmtypes.PrivValidator {
@@ -92,11 +103,55 @@ func (b *builder) generatePrivateValidators() []tmtypes.PrivValidator {
 	return validators
 }
 
+func (b *builder) generateNodeKeys() []*p2p.NodeKey {
+	if b.count == 0 {
+		return nil
+	}
+	keys := make([]*p2p.NodeKey, 0, b.count)
+	for i := uint(0); i < b.count; i++ {
+		key := &p2p.NodeKey{PrivKey: crypto.GenPrivKeyEd25519()}
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+func (b *builder) generateNodes(pvals []tmtypes.PrivValidator, nodekeys []*p2p.NodeKey) []*Node {
+	if b.count == 0 {
+		return nil
+	}
+
+	nodes := make([]*Node, 0, b.count)
+
+	if b.count == 1 {
+		return []*Node{
+			{Name: b.name, PrivateValidator: pvals[0], NodeKey: nodekeys[0]},
+		}
+	}
+
+	for n := uint(0); n < b.count; n++ {
+		nodes = append(nodes, &Node{
+			Name:             fmt.Sprintf("%v-%v", b.name, n),
+			PrivateValidator: pvals[n],
+			NodeKey:          nodekeys[n],
+		})
+	}
+
+	for n, node := range nodes {
+		for i := 0; i < len(nodes); i++ {
+			if n != i {
+				node.Peers = append(node.Peers, nodes[i])
+			}
+		}
+	}
+
+	return nodes
+}
+
 func (b *builder) generateValidators(pvalidators []tmtypes.PrivValidator) []tmtypes.GenesisValidator {
 
 	if len(pvalidators) == 1 {
 		return []tmtypes.GenesisValidator{
-			tmtypes.GenesisValidator{
+			{
 				Name:   b.name,
 				Power:  10,
 				PubKey: pvalidators[0].GetPubKey(),

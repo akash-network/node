@@ -1,10 +1,10 @@
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: {{ template "akash-node.fullname" . }}
+  name: {{ template "akash-provider.fullname" . }}
   labels:
-    app: {{ template "akash-node.name" . }}
-    chart: {{ template "akash-node.chart" . }}
+    app: {{ template "akash-provider.name" . }}
+    chart: {{ template "akash-provider.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
@@ -13,5 +13,5 @@ spec:
       http:
         paths:
           - backend:
-              serviceName: {{ template "akash-node.fullname" . }}
-              servicePort: akashd-rpc
+              serviceName: {{ template "akash-provider.fullname" . }}
+              servicePort: http

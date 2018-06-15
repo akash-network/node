@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ovrclk/akash/types"
+	"github.com/tendermint/tendermint/p2p"
 	tmtypes "github.com/tendermint/tendermint/types"
 	privval "github.com/tendermint/tendermint/types/priv_validator"
 )
@@ -57,7 +58,19 @@ func PVToJSON(obj tmtypes.PrivValidator) ([]byte, error) {
 }
 
 func PVToFile(path string, perm os.FileMode, obj tmtypes.PrivValidator) error {
-	data, err := PVToJSON(obj)
+	return writeConfigIfNotExist(path, perm, obj)
+}
+
+func NodeKeyToJSON(obj *p2p.NodeKey) ([]byte, error) {
+	return cdc.MarshalJSON(obj)
+}
+
+func NodeKeyToFile(path string, perm os.FileMode, obj *p2p.NodeKey) error {
+	return writeConfigIfNotExist(path, perm, obj)
+}
+
+func writeConfigIfNotExist(path string, perm os.FileMode, obj interface{}) error {
+	data, err := cdc.MarshalJSON(obj)
 	if err != nil {
 		return err
 	}

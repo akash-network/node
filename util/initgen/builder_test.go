@@ -16,7 +16,7 @@ func BuilderTestSingle(t *testing.T) {
 
 	require.NoError(t, err)
 
-	require.Len(t, ctx.PrivateValidators(), 1)
+	require.Len(t, ctx.Nodes(), 1)
 	require.Len(t, ctx.Genesis().Validators, 1)
 	require.Equal(t, "foo", ctx.Genesis().Validators[0])
 	require.Equal(t, "foo", ctx.Name())
@@ -32,7 +32,7 @@ func BuilderTestMulti(t *testing.T) {
 
 	require.NoError(t, err)
 
-	require.Len(t, ctx.PrivateValidators(), 5)
+	require.Len(t, ctx.Nodes(), 5)
 	require.Len(t, ctx.Genesis().Validators, 5)
 	require.Equal(t, "foo-0", ctx.Genesis().Validators[0])
 	require.Equal(t, "foo-4", ctx.Genesis().Validators[4])

@@ -19,7 +19,7 @@ func queryDeploymentCommand() *cobra.Command {
 
 func doQueryDeploymentCommand(session session.Session, cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		handleMessage(session.QueryClient().Deployments(session.Ctx()))
+		return handleMessage(session.QueryClient().Deployments(session.Ctx()))
 	}
 	for _, arg := range args {
 		key, err := keys.ParseDeploymentPath(arg)

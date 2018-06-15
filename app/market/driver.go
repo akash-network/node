@@ -106,7 +106,7 @@ func (d *driver) checkCommit(state state.State) bool {
 	}
 
 	if !bytes.Equal(d.actor.Address(), d.rs.Validators.GetProposer().PubKey.Address()) {
-		d.log.Debug("wrong address", "actor", util.X(d.actor.Address()), "proposer", util.X(d.rs.Validators.GetProposer().PubKey.Address()))
+		d.log.Debug("not our proposal.  skipping.", "actor", util.X(d.actor.Address()), "proposer", util.X(d.rs.Validators.GetProposer().PubKey.Address()))
 		return false
 	}
 

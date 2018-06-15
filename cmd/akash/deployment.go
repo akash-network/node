@@ -11,6 +11,7 @@ import (
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/marketplace"
+	mhttp "github.com/ovrclk/akash/provider/manifest/http"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/types"
 	. "github.com/ovrclk/akash/util"
@@ -120,7 +121,7 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 
 					// send manifest over http to provider uri
 					fmt.Printf("Sending manifest to %v...\n", prov.HostURI)
-					err = manifest.Send(mani, txclient.Signer(), prov, tx.Deployment)
+					err = mhttp.Send(mani, txclient.Signer(), prov, tx.Deployment)
 					if err != nil {
 						fmt.Printf("ERROR: %v", err)
 					}
@@ -184,7 +185,7 @@ func closeDeployment(session session.Session, cmd *cobra.Command, args []string)
 func sendManifestCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "sendmani [manifest] [deployment]",
+		Use:   "sendmani <manifest> <deployment>",
 		Short: "send manifest to all deployment providers",
 		Args:  cobra.ExactArgs(2),
 		RunE: session.WithSession(
@@ -228,7 +229,7 @@ func sendManifest(session session.Session, cmd *cobra.Command, args []string) er
 		if err != nil {
 			return err
 		}
-		err = manifest.Send(mani, signer, provider, lease.Deployment)
+		err = mhttp.Send(mani, signer, provider, lease.Deployment)
 		if err != nil {
 			return err
 		}

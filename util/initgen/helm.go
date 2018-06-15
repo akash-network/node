@@ -1,12 +1,12 @@
 package initgen
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 
 	"github.com/ovrclk/akash/node"
+	"github.com/tendermint/tendermint/p2p"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -19,9 +19,8 @@ type multiHelmWriter struct {
 }
 
 func (w multiHelmWriter) Write() error {
-	for idx, pv := range w.ctx.PrivateValidators() {
-		name := fmt.Sprintf("%v-%v", w.ctx.Name(), idx)
-		nctx := NewContext(name, w.ctx.Path(), w.ctx.Genesis(), pv)
+	for _, node := range w.ctx.Nodes() {
+		nctx := NewContext(node.Name, w.ctx.Path(), w.ctx.Genesis(), node)
 		nw := NewHelmWriter(nctx)
 		if err := nw.Write(); err != nil {
 			return err
@@ -46,18 +45,34 @@ func (w helmWriter) Write() error {
 	}
 
 	var vbuf []byte
-	if len(w.ctx.PrivateValidators()) > 0 {
-		vbuf, err = node.PVToJSON(w.ctx.PrivateValidators()[0])
+	var nkey []byte
+	var peers []helmNodePeer
+	if len(w.ctx.Nodes()) > 0 {
+
+		curNode := w.ctx.Nodes()[0]
+
+		vbuf, err = node.PVToJSON(curNode.PrivateValidator)
 		if err != nil {
 			return err
 		}
+
+		nkey, err = node.NodeKeyToJSON(curNode.NodeKey)
+		if err != nil {
+			return err
+		}
+
+		for _, node := range curNode.Peers {
+			peers = append(peers, helmNodePeer{Name: node.Name, ID: node.NodeKey.ID()})
+		}
 	}
 
-	obj := HelmConfig{
-		Node: HelmNodeConfig{
+	obj := helmConfig{
+		Node: helmNodeConfig{
 			Name:      w.ctx.Name(),
 			Genesis:   string(gbuf),
 			Validator: string(vbuf),
+			NodeKey:   string(nkey),
+			Peers:     peers,
 		},
 	}
 
@@ -75,12 +90,19 @@ func (w helmWriter) Write() error {
 	return ioutil.WriteFile(opath, buf, 0644)
 }
 
-type HelmNodeConfig struct {
+type helmNodeConfig struct {
 	Name      string
 	Genesis   string
 	Validator string `yaml:"priv_validator"`
+	NodeKey   string `yaml:"node_key"`
+	Peers     []helmNodePeer
 }
 
-type HelmConfig struct {
-	Node HelmNodeConfig
+type helmNodePeer struct {
+	Name string
+	ID   p2p.ID
+}
+
+type helmConfig struct {
+	Node helmNodeConfig
 }
