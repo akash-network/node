@@ -107,12 +107,12 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 		handler := marketplace.NewBuilder().
 			OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 				if bytes.Equal(tx.Deployment, address) {
-					fmt.Printf("Group %v/%v Fulfillment: %v\n", tx.Group, len(groups), tx.FulfillmentID)
+					fmt.Printf("Group %v/%v Fulfillment: %v [price=%v]\n", tx.Group, len(groups), tx.FulfillmentID, tx.Price)
 				}
 			}).
 			OnTxCreateLease(func(tx *types.TxCreateLease) {
 				if bytes.Equal(tx.Deployment, address) {
-					fmt.Printf("Group %v/%v Lease: %v\n", tx.Group, len(groups), tx.LeaseID)
+					fmt.Printf("Group %v/%v Lease: %v [price=%v]\n", tx.Group, len(groups), tx.LeaseID, tx.Price)
 					// get lease provider
 					prov, err := session.QueryClient().Provider(session.Ctx(), tx.Provider)
 					if err != nil {
