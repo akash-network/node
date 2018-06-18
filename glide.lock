@@ -299,6 +299,10 @@ imports:
   version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 - name: k8s.io/apiextensions-apiserver
   version: e8ab413e0ae1e19df66d60088a1e11c97b73fdd9
+- name: k8s.io/code-generator
+  version: 69d88fb997c52c32288a40f5efb62add0a7c8e04
+- name: k8s.io/gengo
+  version: 9667b67e4b895d34f09fad596d28f285e0197131
 - name: k8s.io/api
   version: 73d903622b7391f3312dcbac6483fed484e185f8
   subpackages:

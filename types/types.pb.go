@@ -1341,6 +1341,7 @@ func (m *Manifest) GetGroups() []*ManifestGroup {
 	return nil
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ManifestGroup struct {
 	// Placement profile name
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
