@@ -46,6 +46,7 @@ import:
   version: ^7.0.0
   subpackages:
   - '...'
+- package: k8s.io/apiextensions-apiserver
 - package: k8s.io/apimachinery
   subpackages:
   - '...'

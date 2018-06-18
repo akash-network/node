@@ -50,7 +50,7 @@ test-vet:
 	go vet $$(glide novendor)
 
 deps-install:
-	glide install
+	glide install -v
 
 devdeps-install:
 	go get github.com/gogo/protobuf/protoc-gen-gogo
