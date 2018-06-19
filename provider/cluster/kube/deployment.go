@@ -1,9 +1,6 @@
 package kube
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/ovrclk/akash/types"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -37,26 +34,4 @@ func deploymentLabels() map[string]string {
 
 func deploymentSelector() labels.Selector {
 	return labels.SelectorFromSet(deploymentLabels())
-}
-
-func deploymentFromAnnotation(anns map[string]string) (*deployment, error) {
-	buf := anns[akashDeploymentAnnotation]
-	if len(buf) == 0 {
-		return nil, fmt.Errorf("deployment annotation not found")
-	}
-
-	obj := &deployment{}
-
-	return obj, json.Unmarshal([]byte(buf), obj)
-}
-
-func deploymentToAnnotation(obj *deployment) (map[string]string, error) {
-	buf, err := json.Marshal(obj)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string]string{
-		akashDeploymentAnnotation: string(buf),
-	}, nil
 }

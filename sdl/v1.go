@@ -119,7 +119,7 @@ func (sdl *v1) DeploymentGroups() ([]*types.GroupSpec, error) {
 
 			group.Resources = append(group.Resources, types.ResourceGroup{
 				Unit: types.ResourceUnit{
-					Cpu:    compute.CPU,
+					CPU:    compute.CPU,
 					Memory: compute.Memory,
 					Disk:   compute.Disk,
 				},
@@ -178,7 +178,7 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 				Args:  svc.Args,
 				Env:   svc.Env,
 				Unit: types.ResourceUnit{
-					Cpu:    compute.CPU,
+					CPU:    compute.CPU,
 					Memory: compute.Memory,
 					Disk:   compute.Disk,
 				},

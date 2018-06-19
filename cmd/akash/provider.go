@@ -124,6 +124,7 @@ func runCommand() *cobra.Command {
 	}
 
 	cmd.Flags().Bool("kube", false, "use kubernetes cluster")
+	cmd.Flags().String("manifest-ns", "lease", "set manifest namespace")
 	return cmd
 }
 
@@ -152,7 +153,11 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 
 	if ok, _ := cmd.Flags().GetBool("kube"); ok {
 		session.Log().Debug("using kube client")
-		cclient, err = kube.NewClient(session.Log().With("cmp", "cluster-client"))
+		ns, err := cmd.Flags().GetString("manifest-ns")
+		if err != nil {
+			return err
+		}
+		cclient, err = kube.NewClient(session.Log().With("cmp", "cluster-client"), ns)
 		if err != nil {
 			return err
 		}

@@ -46,6 +46,7 @@ import:
   version: ^7.0.0
   subpackages:
   - '...'
+- package: k8s.io/apiextensions-apiserver
 - package: k8s.io/apimachinery
   subpackages:
   - '...'
@@ -56,3 +57,6 @@ import:
 - package: github.com/golang/protobuf
   version: ~1.1.0
 - package: github.com/juju/errors
+- package: k8s.io/code-generator
+- package: k8s.io/gengo
+- package: github.com/hashicorp/golang-lru

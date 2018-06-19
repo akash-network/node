@@ -67,5 +67,6 @@ func withServer(t *testing.T, fn func(), h *pmanifest.Handler) {
 		assert.Error(t, http.ErrServerClosed, err)
 	}()
 
+	testutil.SleepForThreadStart(t)
 	fn()
 }

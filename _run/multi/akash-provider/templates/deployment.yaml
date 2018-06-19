@@ -24,7 +24,7 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: [ "/bin/sh" , "/config/run.sh" ]
+          command: [ "/bin/sh" , "/config/run.sh", "{{ template "akash-provider.name" . }}" ]
           env:
             - name: AKASH_DATA
               value: /data

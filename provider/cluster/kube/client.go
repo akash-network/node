@@ -5,9 +5,12 @@ import (
 	"os"
 	"path"
 
+	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	manifestclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tmlibs/log"
+	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -21,10 +24,12 @@ type Client interface {
 
 type client struct {
 	kc  kubernetes.Interface
+	mc  *manifestclient.Clientset
+	ns  string
 	log log.Logger
 }
 
-func NewClient(log log.Logger) (Client, error) {
+func NewClient(log log.Logger, ns string) (Client, error) {
 
 	config, err := openKubeConfig(log)
 	if err != nil {
@@ -36,6 +41,26 @@ func NewClient(log log.Logger) (Client, error) {
 		return nil, fmt.Errorf("error creating kubernetes client: %v", err)
 	}
 
+	mc, err := manifestclient.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("error creating manifest client: %v", err)
+	}
+
+	mcr, err := apiextcs.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("error creating apiextcs client: %v", err)
+	}
+
+	err = akashv1.CreateCRD(mcr)
+	if err != nil {
+		panic(err)
+	}
+
+	err = prepareEnvironment(kc, ns)
+	if err != nil {
+		panic(err)
+	}
+
 	_, err = kc.CoreV1().Namespaces().List(metav1.ListOptions{Limit: 1})
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to kubernetes: %v", err)
@@ -43,6 +68,8 @@ func NewClient(log log.Logger) (Client, error) {
 
 	return &client{
 		kc:  kc,
+		mc:  mc,
+		ns:  ns,
 		log: log,
 	}, nil
 
@@ -62,23 +89,15 @@ func openKubeConfig(log log.Logger) (*rest.Config, error) {
 
 func (c *client) Deployments() ([]cluster.Deployment, error) {
 
-	// TODO: loop to more pages.
-	namespaces, err := c.kc.CoreV1().Namespaces().List(metav1.ListOptions{
-		LabelSelector: deploymentSelector().String(),
-	})
-
+	manifests, err := c.mc.AkashV1().Manifests(c.ns).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	var deployments []cluster.Deployment
 
-	for _, ns := range namespaces.Items {
-		obj, err := deploymentFromAnnotation(ns.Annotations)
-		if err != nil {
-			return nil, err
-		}
-		deployments = append(deployments, obj)
+	for _, manifest := range manifests.Items {
+		deployments = append(deployments, manifest)
 	}
 
 	return deployments, nil
@@ -88,6 +107,11 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 
 	if err := applyNS(c.kc, newNSBuilder(lid, group)); err != nil {
 		c.log.Error("applying namespace", "err", err, "lease", lid)
+		return err
+	}
+
+	if err := applyManifest(c, newManifestBuilder(lid, group)); err != nil {
+		c.log.Error("applying manifest", "err", err, "lease", lid)
 		return err
 	}
 

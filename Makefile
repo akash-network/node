@@ -47,10 +47,10 @@ test-cover:
 	goveralls -service=travis-ci -ignore="types/types.pb.go"
 
 test-vet:
-	go vet $$(glide novendor)
+	go vet $$(glide novendor | grep -v ./pkg/)
 
 deps-install:
-	glide install
+	glide install -v
 
 devdeps-install:
 	go get github.com/gogo/protobuf/protoc-gen-gogo
@@ -67,6 +67,11 @@ integrationdeps-install:
 	(cd _integration && make deps-install)
 
 gentypes: $(PROTOC_FILES)
+
+kubetypes:
+	vendor/k8s.io/code-generator/generate-groups.sh all \
+  	github.com/ovrclk/akash/pkg/client github.com/ovrclk/akash/pkg/apis \
+  	akash.network:v1
 
 %.pb.go: %.proto
 	protoc -I. \
@@ -102,4 +107,5 @@ clean:
 	test-vet \
 	mocks \
 	docs \
-	clean
+	clean \
+	kubetypes

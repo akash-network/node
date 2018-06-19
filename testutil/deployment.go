@@ -109,7 +109,7 @@ func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGrou
 	// nonce++
 
 	runit := types.ResourceUnit{
-		Cpu:    RandUint32(),
+		CPU:    RandUint32(),
 		Memory: RandUint32(),
 		Disk:   RandUint64(),
 	}

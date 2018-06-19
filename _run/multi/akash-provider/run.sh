@@ -36,4 +36,4 @@ fi
 
 echo "running provider $(cat "$providerKey")..."
 
-./akash provider run "$(cat "$providerKey")" -k master --kube
+./akash provider run "$(cat "$providerKey")" -k master --kube --manifest-ns "$1"

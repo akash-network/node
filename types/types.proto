@@ -81,7 +81,7 @@ message TxCreateProvider {
 /* BEGIN EXCHANGE */
 message ResourceUnit {
   option (gogoproto.compare) = true;
-  uint32 cpu    = 1;
+  uint32 CPU    = 1;
   uint32 memory = 2;
   uint64 disk   = 3;
 }

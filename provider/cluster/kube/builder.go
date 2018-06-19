@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	"github.com/ovrclk/akash/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,38 +43,22 @@ func newNSBuilder(lid types.LeaseID, group *types.ManifestGroup) *nsBuilder {
 	return &nsBuilder{builder: builder{lid, group}}
 }
 
-func (b *nsBuilder) annotations() (map[string]string, error) {
-	return deploymentToAnnotation(newDeployment(b.lid, b.group))
-}
-
 func (b *nsBuilder) name() string {
 	return b.ns()
 }
 
 func (b *nsBuilder) create() (*corev1.Namespace, error) {
-	annotations, err := b.annotations()
-	if err != nil {
-		return nil, err
-	}
-
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        b.ns(),
-			Labels:      b.labels(),
-			Annotations: annotations,
+			Name:   b.ns(),
+			Labels: b.labels(),
 		},
 	}, nil
 }
 
 func (b *nsBuilder) update(obj *corev1.Namespace) (*corev1.Namespace, error) {
-	annotations, err := b.annotations()
-	if err != nil {
-		return nil, err
-	}
-
 	obj.Name = b.ns()
 	obj.Labels = b.labels()
-	obj.Annotations = annotations
 	return obj, nil
 }
 
@@ -137,7 +122,7 @@ func (b *deploymentBuilder) update(obj *appsv1.Deployment) (*appsv1.Deployment, 
 
 func (b *deploymentBuilder) container() corev1.Container {
 
-	qcpu := resource.NewQuantity(int64(b.service.Unit.Cpu), resource.DecimalSI)
+	qcpu := resource.NewQuantity(int64(b.service.Unit.CPU), resource.DecimalSI)
 	qmem := resource.NewScaledQuantity(int64(b.service.Unit.Memory), resource.Mega)
 
 	kcontainer := corev1.Container{
@@ -274,4 +259,27 @@ func lidNS(lid types.LeaseID) string {
 	path := lid.String()
 	sha := sha1.Sum([]byte(path))
 	return hex.EncodeToString(sha[:])
+}
+
+// manifest
+type manifestBuilder struct {
+	builder
+}
+
+func newManifestBuilder(lid types.LeaseID, group *types.ManifestGroup) *manifestBuilder {
+	return &manifestBuilder{
+		builder: builder{lid, group},
+	}
+}
+
+func (b *manifestBuilder) create() (*akashv1.Manifest, error) {
+	return akashv1.NewManifest(b.ns(), &b.lid, b.group)
+}
+
+func (b *manifestBuilder) update(obj *akashv1.Manifest) (*akashv1.Manifest, error) {
+	return akashv1.NewManifest(b.ns(), &b.lid, b.group)
+}
+
+func (b *manifestBuilder) name() string {
+	return b.group.Name
 }
