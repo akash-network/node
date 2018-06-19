@@ -35,7 +35,7 @@ func TestAccountApp(t *testing.T) {
 
 	_, cacheState := testutil.NewState(t, &types.Genesis{
 		Accounts: []types.Account{
-			types.Account{Address: addrfrom, Balance: balance},
+			{Address: addrfrom, Balance: balance},
 		},
 	})
 

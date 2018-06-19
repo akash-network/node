@@ -136,7 +136,7 @@ loop:
 			}
 
 			// Publish to children.
-			for sub, _ := range b.subscriptions {
+			for sub := range b.subscriptions {
 				sub.Publish(ev)
 			}
 
@@ -154,7 +154,7 @@ loop:
 		}
 	}
 
-	for sub, _ := range b.subscriptions {
+	for sub := range b.subscriptions {
 		sub.lc.ShutdownAsync(nil)
 	}
 

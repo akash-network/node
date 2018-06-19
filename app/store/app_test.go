@@ -44,8 +44,8 @@ func TestStoreApp(t *testing.T) {
 	{
 		key := append([]byte(pstate.AccountPath), fromaddr...)
 		resp := app.Query(state, tmtypes.RequestQuery{
-			Path:  store.QueryPath,
-			Data:  key,
+			Path: store.QueryPath,
+			Data: key,
 		})
 		acc := new(types.Account)
 		acc.Unmarshal(resp.Value)

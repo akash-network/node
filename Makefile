@@ -46,6 +46,12 @@ test-full:
 test-cover:
 	goveralls -service=travis-ci -ignore="types/types.pb.go"
 
+test-lint:
+	golangci-lint run
+
+lintdeps-install:
+	go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+
 test-vet:
 	go vet $$(glide novendor | grep -v ./pkg/)
 
@@ -91,6 +97,10 @@ mocks:
 	mockery -case=underscore -dir provider/cluster  -output provider/cluster/mocks  -name Reservation
 	mockery -case=underscore -dir provider/manifest -output provider/manifest/mocks -name Handler
 
+gofmt:
+	find . -not -path './vendor*' -name '*.go' -type f | \
+		xargs gofmt -s -w
+
 docs:
 	(cd _docs/dot && make)
 
@@ -104,8 +114,10 @@ clean:
 	deps-install devdeps-install \
 	test-cover coverdeps-install \
 	test-integraion integrationdeps-install \
+	test-lint lintdeps-install \
 	test-vet \
 	mocks \
+	gofmt \
 	docs \
 	clean \
 	kubetypes

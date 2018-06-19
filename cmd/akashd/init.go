@@ -89,7 +89,7 @@ func generateAkashGenesis(cmd *cobra.Command, args []string) (*ptypes.Genesis, e
 	}
 	return &ptypes.Genesis{
 		Accounts: []ptypes.Account{
-			ptypes.Account{Address: key.ID(), Balance: maxTokens},
+			{Address: key.ID(), Balance: maxTokens},
 		},
 	}, nil
 }

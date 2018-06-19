@@ -68,5 +68,6 @@ func withServer(t *testing.T, fn func(), h *pmanifest.Handler) {
 	}()
 
 	testutil.SleepForThreadStart(t)
+
 	fn()
 }

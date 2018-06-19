@@ -1,0 +1,7 @@
+linters:
+  enable-all: true
+
+issues:
+  exclude:
+    - comment on exported (method|function|type|const|var)
+  exclude-use-default: true

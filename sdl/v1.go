@@ -132,7 +132,7 @@ func (sdl *v1) DeploymentGroups() ([]*types.GroupSpec, error) {
 
 	// keep ordering stable
 	names := make([]string, 0, len(groups))
-	for name, _ := range groups {
+	for name := range groups {
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -228,7 +228,7 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 
 	// stable ordering
 	names := make([]string, 0, len(groups))
-	for name, _ := range groups {
+	for name := range groups {
 		names = append(names, name)
 	}
 	sort.Strings(names)

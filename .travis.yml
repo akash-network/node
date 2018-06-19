@@ -34,6 +34,16 @@ jobs:
         - make test-integration
         - make image-bins
 
+    # linux/1.10 (mainline): print linting errors
+    - name: test-lint
+      os: linux
+      go: "1.10"
+      allow_failures: true
+      script:
+        - make lintdeps-install
+        - make test-lint
+      if: type = cron
+
     # linux/master: tests, integration, image-bins
     - name: test
       os: linux
@@ -104,6 +114,7 @@ jobs:
 matrix:
   allow_failures:
     - env: TEST_UNSKIP=true
+    - name: test-lint
 
 cache:
   directories:

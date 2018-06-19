@@ -204,7 +204,7 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 		return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 	}
 
-	// XXX: Accouts should be implicity created when tokens are sent to it
+	// XXX: Accouts should be implicitly created when tokens are sent to it
 	if signer == nil {
 		signer = &types.Account{
 			Address: ctx.Signer().Address().Bytes(),
