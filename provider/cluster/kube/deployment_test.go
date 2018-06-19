@@ -33,6 +33,7 @@ func TestDeploymentAnnotations(t *testing.T) {
 }
 
 func TestDeploy(t *testing.T) {
+	t.Skip()
 	lease := testutil.Lease(testutil.Address(t), testutil.Address(t), 1, 2, 3)
 
 	sdl, err := sdl.ReadFile("../../../_run/kube/deployment.yml")

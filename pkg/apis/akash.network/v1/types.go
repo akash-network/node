@@ -1,8 +1,11 @@
 package v1
 
 import (
+	"bytes"
+	"encoding/json"
+
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -18,27 +21,19 @@ type Manifest struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type LeaseID struct {
+type ManifestGroup struct {
 	metav1.TypeMeta `json:",inline"`
-	// deployment address
-	Deployment base.Bytes `protobuf:"bytes,1,opt,name=deployment,proto3,customtype=github.com/ovrclk/akash/types/base.Bytes" json:"deployment"`
-	// deployment group sequence
-	Group uint64 `protobuf:"varint,2,opt,name=group,proto3" json:"group,omitempty"`
-	// order sequence
-	Order uint64 `protobuf:"varint,3,opt,name=order,proto3" json:"order,omitempty"`
-	// provider address
-	Provider base.Bytes `protobuf:"bytes,4,opt,name=provider,proto3,customtype=github.com/ovrclk/akash/types/base.Bytes" json:"provider"`
+	// Placement profile name
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Service definitions
+	Services []*ManifestService `protobuf:"bytes,2,rep,name=services" json:"services,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type ManifestSpec struct {
 	metav1.TypeMeta `json:",inline"`
-	LID             LeaseID `json:"LeaseID"`
-	// Placement profile name
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Service definitions
-	Services []*ManifestService `protobuf:"bytes,2,rep,name=services" json:"services,omitempty"`
+	ManifestGroup   ManifestGroup `json:"manifest_group"`
 }
 
 type ManifestService struct {
@@ -86,24 +81,43 @@ type ManifestList struct {
 	Items             []Manifest `json:"items"`
 }
 
-func (m *Manifest) LeaseID() types.LeaseID {
-	return types.LeaseID{
-		Deployment: m.Spec.LID.Deployment,
-		Group:      m.Spec.LID.Group,
-		Order:      m.Spec.LID.Order,
-		Provider:   m.Spec.LID.Provider,
-	}
-}
-
-func (m *Manifest) ManifestGroup() *types.ManifestGroup {
-	json, err := m.Spec.Marshal()
+func (m *Manifest) ManifestGroup() (*types.ManifestGroup, error) {
+	buf, err := json.Marshal(m.Spec.ManifestGroup)
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
 	group := &types.ManifestGroup{}
-	err = group.Unmarshal(json)
+	unmarhsaler := &jsonpb.Unmarshaler{}
+	err = unmarhsaler.Unmarshal(bytes.NewReader(buf), group)
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
-	return group
+	return group, nil
+}
+
+func NewManifest(mgroup *types.ManifestGroup) (*Manifest, error) {
+	buf := bytes.NewBuffer(nil)
+	marshaler := &jsonpb.Marshaler{}
+	err := marshaler.Marshal(buf, mgroup)
+	if err != nil {
+		return nil, err
+	}
+	manifestGroup := &ManifestGroup{}
+	json.Unmarshal(buf.Bytes(), manifestGroup)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Manifest{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Manifest",
+			APIVersion: "akash.network/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "manifest",
+		},
+		Spec: ManifestSpec{
+			ManifestGroup: *manifestGroup,
+		},
+	}, nil
 }

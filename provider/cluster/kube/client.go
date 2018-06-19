@@ -111,36 +111,24 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 		return err
 	}
 
+	crd, err := akashv1.NewManifest(group)
+	if err != nil {
+		c.log.Error("creating crd", "err", err, "lease", lid)
+		return err
+	}
+
+	ns := lidNS(lid)
+	_, err = c.mc.AkashV1().Manifests(ns).Create(crd)
+	if err != nil {
+		c.log.Error("creating crd", "err", err, "lease", lid)
+		return err
+	}
+
 	for _, service := range group.Services {
 		if err := applyDeployment(c.kc, newDeploymentBuilder(lid, group, service)); err != nil {
 			c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
-		mcrd := &akashv1.Manifest{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Manifest",
-				APIVersion: "akash.network/v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "manifest",
-			},
-			Spec: akashv1.ManifestSpec{
-				Name: "manifest-spec",
-			},
-		}
-
-		ns := lidNS(lid)
-		res, err := c.mc.AkashV1().Manifests(ns).Create(mcrd)
-		if err != nil {
-			panic(err.Error())
-		}
-		fmt.Println(res)
-		ress, err := c.mc.AkashV1().Manifests(ns).Get("manifest", metav1.GetOptions{})
-		if err != nil {
-			panic(err.Error())
-		}
-
-		fmt.Println(ress)
 
 		if len(service.Expose) == 0 {
 			c.log.Debug("no services", "lease", lid, "service", service.Name)
