@@ -22,9 +22,8 @@ const (
 
 var (
 	// localSchemeBuilder and AddToScheme will stay in k8s.io/kubernetes.
-	SchemeBuilder      runtime.SchemeBuilder
-	localSchemeBuilder = &SchemeBuilder
-	AddToScheme        = localSchemeBuilder.AddToScheme
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
+	AddToScheme   = SchemeBuilder.AddToScheme
 )
 
 // Create a  Rest client with the new CRD Schema
@@ -32,11 +31,22 @@ var SchemeGroupVersion = schema.GroupVersion{Group: CRDGroup, Version: CRDVersio
 
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&ManifestCRD{},
-		&ManifestCRDList{},
+		&Manifest{},
+		&ManifestList{},
+	//	&metav1.GetOptions{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
+}
+
+// Kind takes an unqualified kind and returns back a Group qualified GroupKind
+func Kind(kind string) schema.GroupKind {
+	return SchemeGroupVersion.WithKind(kind).GroupKind()
+}
+
+// Resource takes an unqualified resource and returns a Group qualified GroupResource
+func Resource(resource string) schema.GroupResource {
+	return SchemeGroupVersion.WithResource(resource).GroupResource()
 }
 
 // Create the CRD resource, ignore error if it already exists
@@ -49,7 +59,7 @@ func CreateCRD(clientset apiextcs.Interface) error {
 			Scope:   apiextv1beta1.NamespaceScoped,
 			Names: apiextv1beta1.CustomResourceDefinitionNames{
 				Plural: CRDPlural,
-				Kind:   reflect.TypeOf(ManifestCRD{}).Name(),
+				Kind:   reflect.TypeOf(Manifest{}).Name(),
 			},
 		},
 	}

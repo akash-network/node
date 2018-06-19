@@ -28,8 +28,8 @@ type FakeAkashV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeAkashV1) ManifestCRDs(namespace string) v1.ManifestCRDInterface {
-	return &FakeManifestCRDs{c, namespace}
+func (c *FakeAkashV1) Manifests(namespace string) v1.ManifestInterface {
+	return &FakeManifests{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

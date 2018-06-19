@@ -41,12 +41,12 @@ func TestDeploy(t *testing.T) {
 	mani, err := sdl.Manifest()
 	require.NoError(t, err)
 
-	// _ := newDeployment(lease.LeaseID, mgroup)
-
 	log := log.NewTMLogger(os.Stdout)
 	client, err := NewClient(log)
 	assert.NoError(t, err)
 
 	err = client.Deploy(lease.LeaseID, mani.Groups[0])
 	assert.NoError(t, err)
+
+	t.Fail()
 }

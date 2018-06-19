@@ -5,10 +5,12 @@ import (
 	"os"
 	"path"
 
+	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	manifestclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tmlibs/log"
+	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -41,6 +43,16 @@ func NewClient(log log.Logger) (Client, error) {
 	mc, err := manifestclient.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("error creating manifest client: %v", err)
+	}
+
+	mcr, err := apiextcs.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("error creating apiextcs client: %v", err)
+	}
+
+	err = akashv1.CreateCRD(mcr)
+	if err != nil {
+		panic(err)
 	}
 
 	_, err = kc.CoreV1().Namespaces().List(metav1.ListOptions{Limit: 1})
@@ -104,20 +116,31 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 			c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
-		// mcrd := &akashv1.ManifestCRD{
-		// 	TypeMeta: metav1.TypeMeta{
-		// 		Kind:       "akashcrd",
-		// 		APIVersion: "1",
-		// 	},
-		// 	ObjectMeta: metav1.ObjectMeta{
-		// 		Name: "akashcrd",
-		// 	},
-		// 	Spec: akashv1.ManifestSpec{
-		// 		Name: "akashcrd",
-		// 	},
-		// }
-		// ns := lidNS(lid)
-		// c.mc.AkashV1().ManifestCRDs(ns).Create(mcrd)
+		mcrd := &akashv1.Manifest{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Manifest",
+				APIVersion: "akash.network/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "manifest",
+			},
+			Spec: akashv1.ManifestSpec{
+				Name: "manifest-spec",
+			},
+		}
+
+		ns := lidNS(lid)
+		res, err := c.mc.AkashV1().Manifests(ns).Create(mcrd)
+		if err != nil {
+			panic(err.Error())
+		}
+		fmt.Println(res)
+		ress, err := c.mc.AkashV1().Manifests(ns).Get("manifest", metav1.GetOptions{})
+		if err != nil {
+			panic(err.Error())
+		}
+
+		fmt.Println(ress)
 
 		if len(service.Expose) == 0 {
 			c.log.Debug("no services", "lease", lid, "service", service.Name)

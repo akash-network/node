@@ -31,59 +31,59 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// ManifestCRDInformer provides access to a shared informer and lister for
-// ManifestCRDs.
-type ManifestCRDInformer interface {
+// ManifestInformer provides access to a shared informer and lister for
+// Manifests.
+type ManifestInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.ManifestCRDLister
+	Lister() v1.ManifestLister
 }
 
-type manifestCRDInformer struct {
+type manifestInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewManifestCRDInformer constructs a new informer for ManifestCRD type.
+// NewManifestInformer constructs a new informer for Manifest type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewManifestCRDInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredManifestCRDInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewManifestInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredManifestInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredManifestCRDInformer constructs a new informer for ManifestCRD type.
+// NewFilteredManifestInformer constructs a new informer for Manifest type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredManifestCRDInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredManifestInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AkashV1().ManifestCRDs(namespace).List(options)
+				return client.AkashV1().Manifests(namespace).List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AkashV1().ManifestCRDs(namespace).Watch(options)
+				return client.AkashV1().Manifests(namespace).Watch(options)
 			},
 		},
-		&akash_network_v1.ManifestCRD{},
+		&akash_network_v1.Manifest{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *manifestCRDInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredManifestCRDInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *manifestInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredManifestInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *manifestCRDInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&akash_network_v1.ManifestCRD{}, f.defaultInformer)
+func (f *manifestInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&akash_network_v1.Manifest{}, f.defaultInformer)
 }
 
-func (f *manifestCRDInformer) Lister() v1.ManifestCRDLister {
-	return v1.NewManifestCRDLister(f.Informer().GetIndexer())
+func (f *manifestInformer) Lister() v1.ManifestLister {
+	return v1.NewManifestLister(f.Informer().GetIndexer())
 }

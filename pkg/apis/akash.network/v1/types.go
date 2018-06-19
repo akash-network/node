@@ -9,7 +9,7 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type ManifestCRD struct {
+type Manifest struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              ManifestSpec
@@ -80,13 +80,13 @@ type ManifestStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type ManifestCRDList struct {
+type ManifestList struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Items             []ManifestCRD `json:"items"`
+	Items             []Manifest `json:"items"`
 }
 
-func (m *ManifestCRD) LeaseID() types.LeaseID {
+func (m *Manifest) LeaseID() types.LeaseID {
 	return types.LeaseID{
 		Deployment: m.Spec.LID.Deployment,
 		Group:      m.Spec.LID.Group,
@@ -95,7 +95,7 @@ func (m *ManifestCRD) LeaseID() types.LeaseID {
 	}
 }
 
-func (m *ManifestCRD) ManifestGroup() *types.ManifestGroup {
+func (m *Manifest) ManifestGroup() *types.ManifestGroup {
 	json, err := m.Spec.Marshal()
 	if err != nil {
 		panic(err.Error())

@@ -24,8 +24,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// ManifestCRDs returns a ManifestCRDInformer.
-	ManifestCRDs() ManifestCRDInformer
+	// Manifests returns a ManifestInformer.
+	Manifests() ManifestInformer
 }
 
 type version struct {
@@ -39,7 +39,7 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// ManifestCRDs returns a ManifestCRDInformer.
-func (v *version) ManifestCRDs() ManifestCRDInformer {
-	return &manifestCRDInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+// Manifests returns a ManifestInformer.
+func (v *version) Manifests() ManifestInformer {
+	return &manifestInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

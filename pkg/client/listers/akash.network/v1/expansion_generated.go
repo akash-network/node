@@ -18,10 +18,10 @@ limitations under the License.
 
 package v1
 
-// ManifestCRDListerExpansion allows custom methods to be added to
-// ManifestCRDLister.
-type ManifestCRDListerExpansion interface{}
+// ManifestListerExpansion allows custom methods to be added to
+// ManifestLister.
+type ManifestListerExpansion interface{}
 
-// ManifestCRDNamespaceListerExpansion allows custom methods to be added to
-// ManifestCRDNamespaceLister.
-type ManifestCRDNamespaceListerExpansion interface{}
+// ManifestNamespaceListerExpansion allows custom methods to be added to
+// ManifestNamespaceLister.
+type ManifestNamespaceListerExpansion interface{}

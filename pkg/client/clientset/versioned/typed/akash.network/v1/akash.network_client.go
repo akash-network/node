@@ -27,7 +27,7 @@ import (
 
 type AkashV1Interface interface {
 	RESTClient() rest.Interface
-	ManifestCRDsGetter
+	ManifestsGetter
 }
 
 // AkashV1Client is used to interact with features provided by the akash.network group.
@@ -35,8 +35,8 @@ type AkashV1Client struct {
 	restClient rest.Interface
 }
 
-func (c *AkashV1Client) ManifestCRDs(namespace string) ManifestCRDInterface {
-	return newManifestCRDs(c, namespace)
+func (c *AkashV1Client) Manifests(namespace string) ManifestInterface {
+	return newManifests(c, namespace)
 }
 
 // NewForConfig creates a new AkashV1Client for the given config.
