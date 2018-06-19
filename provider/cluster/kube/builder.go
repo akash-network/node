@@ -42,38 +42,38 @@ func newNSBuilder(lid types.LeaseID, group *types.ManifestGroup) *nsBuilder {
 	return &nsBuilder{builder: builder{lid, group}}
 }
 
-func (b *nsBuilder) annotations() (map[string]string, error) {
-	return deploymentToAnnotation(newDeployment(b.lid, b.group))
-}
+// func (b *nsBuilder) annotations() (map[string]string, error) {
+// 	return deploymentToAnnotation(newDeployment(b.lid, b.group))
+// }
 
 func (b *nsBuilder) name() string {
 	return b.ns()
 }
 
 func (b *nsBuilder) create() (*corev1.Namespace, error) {
-	annotations, err := b.annotations()
-	if err != nil {
-		return nil, err
-	}
+	// annotations, err := b.annotations()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        b.ns(),
-			Labels:      b.labels(),
-			Annotations: annotations,
+			Name:   b.ns(),
+			Labels: b.labels(),
+			// Annotations: annotations,
 		},
 	}, nil
 }
 
 func (b *nsBuilder) update(obj *corev1.Namespace) (*corev1.Namespace, error) {
-	annotations, err := b.annotations()
-	if err != nil {
-		return nil, err
-	}
+	// annotations, err := b.annotations()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	obj.Name = b.ns()
 	obj.Labels = b.labels()
-	obj.Annotations = annotations
+	// obj.Annotations = annotations
 	return obj, nil
 }
 

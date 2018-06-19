@@ -59,3 +59,4 @@ import:
 - package: github.com/juju/errors
 - package: k8s.io/code-generator
 - package: k8s.io/gengo
+- package: github.com/hashicorp/golang-lru

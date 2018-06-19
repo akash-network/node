@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 
+	manifestclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tmlibs/log"
@@ -21,6 +22,7 @@ type Client interface {
 
 type client struct {
 	kc  kubernetes.Interface
+	mc  *manifestclient.Clientset
 	log log.Logger
 }
 
@@ -36,6 +38,11 @@ func NewClient(log log.Logger) (Client, error) {
 		return nil, fmt.Errorf("error creating kubernetes client: %v", err)
 	}
 
+	mc, err := manifestclient.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("error creating manifest client: %v", err)
+	}
+
 	_, err = kc.CoreV1().Namespaces().List(metav1.ListOptions{Limit: 1})
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to kubernetes: %v", err)
@@ -43,6 +50,7 @@ func NewClient(log log.Logger) (Client, error) {
 
 	return &client{
 		kc:  kc,
+		mc:  mc,
 		log: log,
 	}, nil
 
@@ -96,6 +104,20 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 			c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
+		// mcrd := &akashv1.ManifestCRD{
+		// 	TypeMeta: metav1.TypeMeta{
+		// 		Kind:       "akashcrd",
+		// 		APIVersion: "1",
+		// 	},
+		// 	ObjectMeta: metav1.ObjectMeta{
+		// 		Name: "akashcrd",
+		// 	},
+		// 	Spec: akashv1.ManifestSpec{
+		// 		Name: "akashcrd",
+		// 	},
+		// }
+		// ns := lidNS(lid)
+		// c.mc.AkashV1().ManifestCRDs(ns).Create(mcrd)
 
 		if len(service.Expose) == 0 {
 			c.log.Debug("no services", "lease", lid, "service", service.Name)

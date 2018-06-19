@@ -69,9 +69,9 @@ integrationdeps-install:
 gentypes: $(PROTOC_FILES)
 
 kubetypes:
-	vendor/k8s.io/code-generator/generate-groups.sh deepcopy \
+	vendor/k8s.io/code-generator/generate-groups.sh all \
   	github.com/ovrclk/akash/pkg/client github.com/ovrclk/akash/pkg/apis \
-  	akash.io:v1
+  	akash.network:v1
 
 %.pb.go: %.proto
 	protoc -I. \

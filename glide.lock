@@ -297,6 +297,8 @@ imports:
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/yaml.v2
   version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
+- name: github.com/hashicorp/golang-lru
+  version: 0fb14efe8c47ae851c0034ed7a448854d3d34cf3
 - name: k8s.io/apiextensions-apiserver
   version: e8ab413e0ae1e19df66d60088a1e11c97b73fdd9
 - name: k8s.io/code-generator
