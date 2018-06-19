@@ -4,10 +4,6 @@ package types;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
-/* +genclient */
-/* +genclient:noStatus */
-/* +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object */
-
 option (gogoproto.stable_marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.gostring_all) = true;
@@ -328,9 +324,6 @@ message ManifestRequest {
 message Manifest {
   repeated ManifestGroup groups = 1;
 }
-
-/* DEEPCOPY */
-/* +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object */
 
 message ManifestGroup {
   // Placement profile name

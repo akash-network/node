@@ -79,9 +79,9 @@ func applyIngress(kc kubernetes.Interface, b *ingressBuilder) error {
 }
 
 func applyLeaseNS(kc kubernetes.Interface) error {
-	obj, err := kc.CoreV1().Namespaces().Get(manifestNamespace, metav1.GetOptions{})
+	_, err := kc.CoreV1().Namespaces().Get(manifestNamespace, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
-		obj = &corev1.Namespace{
+		obj := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: manifestNamespace,
 			},
