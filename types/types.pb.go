@@ -973,6 +973,7 @@ func (m *Deployments) GetItems() []Deployment {
 	return nil
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type TxCreateDeployment struct {
 	Tenant   github_com_ovrclk_akash_types_base.Bytes `protobuf:"bytes,1,opt,name=tenant,proto3,customtype=github.com/ovrclk/akash/types/base.Bytes" json:"tenant"`
 	Nonce    uint64                                   `protobuf:"varint,2,opt,name=nonce,proto3" json:"nonce,omitempty"`
@@ -1341,7 +1342,6 @@ func (m *Manifest) GetGroups() []*ManifestGroup {
 	return nil
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ManifestGroup struct {
 	// Placement profile name
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
