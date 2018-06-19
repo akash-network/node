@@ -91,7 +91,7 @@ $ ./run.sh marketplace
 
 __t1__: Run providers
 ```sh
-$ make helm-install-provider
+$ make helm-install-providers
 ```
 
 __t1__: Create Deployment

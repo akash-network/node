@@ -47,7 +47,7 @@ test-cover:
 	goveralls -service=travis-ci -ignore="types/types.pb.go"
 
 test-vet:
-	go vet $$(glide novendor | sed '/\.\/pkg\/\.\.\./d')
+	go vet $$(glide novendor | grep -v ./pkg/)
 
 deps-install:
 	glide install -v
@@ -107,4 +107,5 @@ clean:
 	test-vet \
 	mocks \
 	docs \
-	clean
+	clean \
+	kubetypes
