@@ -47,7 +47,7 @@ test-cover:
 	goveralls -service=travis-ci -ignore="types/types.pb.go"
 
 test-vet:
-	go vet $$(glide novendor)
+	go vet $$(glide novendor | sed '/\.\/pkg\/\.\.\./d')
 
 deps-install:
 	glide install -v
