@@ -48,6 +48,4 @@ func TestDeploy(t *testing.T) {
 
 	err = client.Deploy(lease.LeaseID, mani.Groups[0])
 	assert.NoError(t, err)
-
-	t.Fail()
 }

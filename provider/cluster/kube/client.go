@@ -55,6 +55,11 @@ func NewClient(log log.Logger) (Client, error) {
 		panic(err)
 	}
 
+	err = applyLeaseNS(kc)
+	if err != nil {
+		panic(err)
+	}
+
 	_, err = kc.CoreV1().Namespaces().List(metav1.ListOptions{Limit: 1})
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to kubernetes: %v", err)
@@ -82,23 +87,15 @@ func openKubeConfig(log log.Logger) (*rest.Config, error) {
 
 func (c *client) Deployments() ([]cluster.Deployment, error) {
 
-	// TODO: loop to more pages.
-	namespaces, err := c.kc.CoreV1().Namespaces().List(metav1.ListOptions{
-		LabelSelector: deploymentSelector().String(),
-	})
-
+	manifests, err := c.mc.AkashV1().Manifests(manifestNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	var deployments []cluster.Deployment
 
-	for _, ns := range namespaces.Items {
-		obj, err := deploymentFromAnnotation(ns.Annotations)
-		if err != nil {
-			return nil, err
-		}
-		deployments = append(deployments, obj)
+	for _, manifest := range manifests.Items {
+		deployments = append(deployments, manifest)
 	}
 
 	return deployments, nil
@@ -111,16 +108,8 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 		return err
 	}
 
-	crd, err := akashv1.NewManifest(group)
-	if err != nil {
-		c.log.Error("creating crd", "err", err, "lease", lid)
-		return err
-	}
-
-	ns := lidNS(lid)
-	_, err = c.mc.AkashV1().Manifests(ns).Create(crd)
-	if err != nil {
-		c.log.Error("creating crd", "err", err, "lease", lid)
+	if err := applyManifest(c.mc, newManifestBuilder(lid, group)); err != nil {
+		c.log.Error("applying manifest", "err", err, "lease", lid)
 		return err
 	}
 

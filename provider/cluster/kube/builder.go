@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	"github.com/ovrclk/akash/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -274,4 +275,27 @@ func lidNS(lid types.LeaseID) string {
 	path := lid.String()
 	sha := sha1.Sum([]byte(path))
 	return hex.EncodeToString(sha[:])
+}
+
+// manifest
+type manifestBuilder struct {
+	builder
+}
+
+func newManifestBuilder(lid types.LeaseID, group *types.ManifestGroup) *manifestBuilder {
+	return &manifestBuilder{
+		builder: builder{lid, group},
+	}
+}
+
+func (b *manifestBuilder) create() (*akashv1.Manifest, error) {
+	return akashv1.NewManifest(b.ns(), &b.lid, b.group)
+}
+
+func (b *manifestBuilder) update(obj *akashv1.Manifest) (*akashv1.Manifest, error) {
+	return akashv1.NewManifest(b.ns(), &b.lid, b.group)
+}
+
+func (b *manifestBuilder) name() string {
+	return b.group.Name
 }
