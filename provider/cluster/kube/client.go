@@ -25,10 +25,11 @@ type Client interface {
 type client struct {
 	kc  kubernetes.Interface
 	mc  *manifestclient.Clientset
+	ns  string
 	log log.Logger
 }
 
-func NewClient(log log.Logger) (Client, error) {
+func NewClient(log log.Logger, ns string) (Client, error) {
 
 	config, err := openKubeConfig(log)
 	if err != nil {
@@ -55,7 +56,7 @@ func NewClient(log log.Logger) (Client, error) {
 		panic(err)
 	}
 
-	err = applyLeaseNS(kc)
+	err = prepareEnvironment(kc, ns)
 	if err != nil {
 		panic(err)
 	}
@@ -68,6 +69,7 @@ func NewClient(log log.Logger) (Client, error) {
 	return &client{
 		kc:  kc,
 		mc:  mc,
+		ns:  ns,
 		log: log,
 	}, nil
 
@@ -87,7 +89,7 @@ func openKubeConfig(log log.Logger) (*rest.Config, error) {
 
 func (c *client) Deployments() ([]cluster.Deployment, error) {
 
-	manifests, err := c.mc.AkashV1().Manifests(manifestNamespace).List(metav1.ListOptions{})
+	manifests, err := c.mc.AkashV1().Manifests(c.ns).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +110,7 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 		return err
 	}
 
-	if err := applyManifest(c.mc, newManifestBuilder(lid, group)); err != nil {
+	if err := applyManifest(c, newManifestBuilder(lid, group)); err != nil {
 		c.log.Error("applying manifest", "err", err, "lease", lid)
 		return err
 	}

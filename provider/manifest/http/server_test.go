@@ -37,6 +37,7 @@ func TestManifest(t *testing.T) {
 	handler.On("HandleManifest", mock.Anything).Return(nil).Once()
 
 	withServer(t, func() {
+		testutil.SleepForThreadStart(t)
 		err = Send(mani, signer, provider, deployment)
 		require.NoError(t, err)
 	}, handler)

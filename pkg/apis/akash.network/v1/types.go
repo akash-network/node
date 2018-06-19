@@ -75,9 +75,8 @@ type ManifestServiceExpose struct {
 	Hosts []string `protobuf:"bytes,6,rep,name=hosts" json:"hosts,omitempty"`
 }
 
-// BEGIN EXCHANGE
 type ResourceUnit struct {
-	Cpu    uint32 `protobuf:"varint,1,opt,name=cpu,proto3" json:"cpu,omitempty"`
+	CPU    uint32 `protobuf:"varint,1,opt,name=CPU,proto3" json:"CPU,omitempty"`
 	Memory uint32 `protobuf:"varint,2,opt,name=memory,proto3" json:"memory,omitempty"`
 	Disk   uint64 `protobuf:"varint,3,opt,name=disk,proto3" json:"disk,omitempty"`
 }

@@ -42,7 +42,7 @@ func Test_v1_Parse_simple(t *testing.T) {
 		Count: 20,
 		Price: 8,
 		Unit: types.ResourceUnit{
-			Cpu:    2,
+			CPU:    2,
 			Memory: 3,
 			Disk:   5,
 		},
@@ -60,7 +60,7 @@ func Test_v1_Parse_simple(t *testing.T) {
 				Name:  "web",
 				Image: "nginx",
 				Unit: types.ResourceUnit{
-					Cpu:    2,
+					CPU:    2,
 					Memory: 3,
 					Disk:   5,
 				},

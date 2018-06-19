@@ -43,38 +43,22 @@ func newNSBuilder(lid types.LeaseID, group *types.ManifestGroup) *nsBuilder {
 	return &nsBuilder{builder: builder{lid, group}}
 }
 
-// func (b *nsBuilder) annotations() (map[string]string, error) {
-// 	return deploymentToAnnotation(newDeployment(b.lid, b.group))
-// }
-
 func (b *nsBuilder) name() string {
 	return b.ns()
 }
 
 func (b *nsBuilder) create() (*corev1.Namespace, error) {
-	// annotations, err := b.annotations()
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   b.ns(),
 			Labels: b.labels(),
-			// Annotations: annotations,
 		},
 	}, nil
 }
 
 func (b *nsBuilder) update(obj *corev1.Namespace) (*corev1.Namespace, error) {
-	// annotations, err := b.annotations()
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	obj.Name = b.ns()
 	obj.Labels = b.labels()
-	// obj.Annotations = annotations
 	return obj, nil
 }
 
@@ -138,7 +122,7 @@ func (b *deploymentBuilder) update(obj *appsv1.Deployment) (*appsv1.Deployment, 
 
 func (b *deploymentBuilder) container() corev1.Container {
 
-	qcpu := resource.NewQuantity(int64(b.service.Unit.Cpu), resource.DecimalSI)
+	qcpu := resource.NewQuantity(int64(b.service.Unit.CPU), resource.DecimalSI)
 	qmem := resource.NewScaledQuantity(int64(b.service.Unit.Memory), resource.Mega)
 
 	kcontainer := corev1.Container{
