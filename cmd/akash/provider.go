@@ -13,7 +13,7 @@ import (
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/event"
-	"github.com/ovrclk/akash/provider/manifest/http"
+	"github.com/ovrclk/akash/provider/http"
 	psession "github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
 	ptype "github.com/ovrclk/akash/types/provider"
