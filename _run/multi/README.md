@@ -20,6 +20,7 @@ Ensure that you have installed the base dependencies and have set `GOPATH` [as d
  * [docker](https://www.docker.com/community-edition#/download)
  * [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
  * [minikube](https://github.com/kubernetes/minikube)
+ * [virtualbox](https://www.virtualbox.org/wiki/Downloads)
  * [helm](https://docs.helm.sh/using_helm/#installing-helm)
  * [kail](https://github.com/boz/kail) _(optional)_
 
@@ -115,7 +116,7 @@ $ make helm-install-providers
 
 __t1__: Create Deployment
 
-_Creates a deployment for the master acct using the sample deployment.yml file. Then:
+_Creates a deployment for the master acct using the sample deployment.yml file. Then:_
  * _orders are then created from deployments,_ 
  * _providers bid on them using fulfillments, which are printed in the format deployment-address/group-id/order-id/provider-address, along with bid price,_
  * _a lease is awarded to the lowest bid provider and printed_
