@@ -114,7 +114,6 @@ func (c *client) KubeDeployments(lid types.LeaseID) (*v1.DeploymentList, error) 
 }
 
 func (c *client) KubeDeployment(lid types.LeaseID, name string) (*v1.Deployment, error) {
-	fmt.Println(lid.GoString(), name)
 	deployment, err := c.kc.AppsV1().Deployments(lidNS(lid)).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err

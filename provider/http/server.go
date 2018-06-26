@@ -126,8 +126,9 @@ func newLeaseStatusHandler(log log.Logger, phandler manifest.Handler, client kub
 			errorResponse(w, log, http.StatusBadRequest, "service not found for lease")
 			return
 		}
-		json.NewEncoder(w).Encode(deployment.Status)
-		w.WriteHeader(http.StatusOK)
+		status := deployment.Status
+		status.Conditions = nil
+		json.NewEncoder(w).Encode(status)
 	}
 }
 
