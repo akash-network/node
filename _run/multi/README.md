@@ -28,7 +28,7 @@ Ensure that you have installed the base dependencies and have set `GOPATH` [as d
 __t1__: Start minikube
 
 ```sh
-$ cd $GOPATH/src/github.com/ovrclk/akash
+$ cd $GOPATH/src/github.com/ovrclk/akash/_run/multi
 $ minikube start --cpus 4 --memory 4096
 $ minikube addons enable ingress
 $ kubectl create -f rbac.yml
