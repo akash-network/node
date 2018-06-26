@@ -9,6 +9,7 @@ import (
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gorilla/mux"
+	"github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/manifest"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tmlibs/log"
@@ -19,61 +20,54 @@ const (
 	manifestPath     = "/manifest"
 	statusPathPrefix = "/status/"
 	statusPath       = statusPathPrefix + "{lease-id}"
+	leaseStatusPath  = statusPathPrefix + "{lease-id}/{service-name}"
 )
 
-type handler struct {
-	phandler manifest.Handler
-	log      log.Logger
-}
-
-func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		h.error(w,
-			http.StatusMethodNotAllowed,
-			http.StatusText(http.StatusMethodNotAllowed))
-		return
-	}
-	if r.Header.Get("Content-Type") != contentType {
-		h.error(w,
-			http.StatusUnsupportedMediaType,
-			fmt.Sprintf("Content-Type '%v' required", contentType))
-		return
-	}
-	if r.Body == nil {
-		h.error(w, http.StatusBadRequest, "Empty request body")
-		return
-	}
-
-	obj := &types.ManifestRequest{}
-	if err := jsonpb.Unmarshal(r.Body, obj); err != nil {
-		h.error(w, http.StatusBadRequest, "Error decoding body")
-		return
-	}
-	r.Body.Close()
-
-	h.log.Debug(fmt.Sprintf("%+v", obj))
-
-	if err := h.phandler.HandleManifest(obj); err != nil {
-		h.error(w, http.StatusBadRequest, "Invalid manifest")
-		return
-	}
-
-	// respond with success
-	w.WriteHeader(http.StatusOK)
-}
-
-func (h *handler) error(w http.ResponseWriter, status int, message string) {
-	h.log.Error("error", "status", status, "message", message)
+func errorResponse(w http.ResponseWriter, log log.Logger, status int, message string) {
+	log.Error("error", "status", status, "message", message)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(map[string]string{"message": message})
 }
 
-func newHandler(log log.Logger, phandler manifest.Handler) http.Handler {
-	return &handler{
-		log:      log,
-		phandler: phandler,
+func manifestHandler(log log.Logger, phandler manifest.Handler) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			errorResponse(w,
+				log,
+				http.StatusMethodNotAllowed,
+				http.StatusText(http.StatusMethodNotAllowed))
+			return
+		}
+		if r.Header.Get("Content-Type") != contentType {
+			errorResponse(w,
+				log,
+				http.StatusUnsupportedMediaType,
+				fmt.Sprintf("Content-Type '%v' required", contentType))
+			return
+		}
+		if r.Body == nil {
+			errorResponse(w, log, http.StatusBadRequest, "Empty request body")
+			return
+		}
+
+		obj := &types.ManifestRequest{}
+		if err := jsonpb.Unmarshal(r.Body, obj); err != nil {
+			errorResponse(w, log, http.StatusBadRequest, "Error decoding body")
+			return
+		}
+		r.Body.Close()
+
+		log.Debug(fmt.Sprintf("%+v", obj))
+
+		if err := phandler.HandleManifest(obj); err != nil {
+			errorResponse(w, log, http.StatusBadRequest, "Invalid manifest")
+			return
+		}
+
+		// respond with success
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -86,48 +80,46 @@ func requestLogger(log log.Logger) mux.MiddlewareFunc {
 	}
 }
 
-func newStatusHandler(log log.Logger,
-	phandler manifest.Handler) func(http.ResponseWriter, *http.Request) {
+func newStatusHandler(log log.Logger, phandler manifest.Handler, client kube.Client) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=us-ascii")
 
-		leaseID := strings.TrimPrefix(r.URL.RequestURI(), statusPathPrefix)
+		leaseID := strings.ToLower(strings.TrimPrefix(r.URL.RequestURI(), statusPathPrefix))
 		fmt.Println(leaseID)
 
-		deployments, err := s.Client.Deployments()
+		deployments, err := client.KubeDeployments(leaseID)
 		if err != nil {
-			return nil, types.ErrInternalError{Message: "internal error"}
+			errorResponse(w, log, http.StatusBadRequest, "internal error")
+			return
 		}
 		if deployments == nil {
-			return nil, types.ErrResourceNotFound{Message: "no deployments found for lease"}
+			errorResponse(w, log, http.StatusBadRequest, "no deployments found for lease")
+			return
 		}
-		var ownedManifests []*types.ManifestGroup
-		for _, deployment := range deployments {
-			leaseID := deployment.LeaseID()
-			if bytes.Equal(lease.Deployment, leaseID.Deployment) && lease.Group == leaseID.Group &&
-				lease.Order == lease.Order && bytes.Equal(lease.Provider, leaseID.Provider) {
-				ownedManifests = append(ownedManifests, deployment.ManifestGroup())
-			}
+		response := make(map[string]string)
+		for _, deployment := range deployments.Items {
+			response[deployment.Name] = fmt.Sprintf("available replicas: %v/%v", deployment.Status.AvailableReplicas, deployment.Status.Replicas)
 		}
+		json.NewEncoder(w).Encode(response)
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
-func createHandlers(log log.Logger, handler manifest.Handler) http.Handler {
+func createHandlers(log log.Logger, handler manifest.Handler, client kube.Client) http.Handler {
 	r := mux.NewRouter()
-	r.Handle(manifestPath, newHandler(log, handler))
-	r.HandleFunc(statusPath, newStatusHandler(log, handler))
+	r.HandleFunc(manifestPath, manifestHandler(log, handler))
+	r.HandleFunc(statusPath, newStatusHandler(log, handler, client))
 	r.Use(requestLogger(log))
 	return r
 }
 
-func RunServer(ctx context.Context, log log.Logger, port string, handler manifest.Handler) error {
+func RunServer(ctx context.Context, log log.Logger, port string, handler manifest.Handler, client kube.Client) error {
 
 	address := fmt.Sprintf(":%v", port)
 
 	server := &http.Server{
 		Addr:    address,
-		Handler: createHandlers(log, handler),
+		Handler: createHandlers(log, handler, client),
 	}
 
 	ctx, cancel := context.WithCancel(ctx)

@@ -10,6 +10,7 @@ import (
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tmlibs/log"
+	"k8s.io/api/apps/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -103,8 +104,16 @@ func (c *client) Deployments() ([]cluster.Deployment, error) {
 	return deployments, nil
 }
 
-func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
+func (c *client) KubeDeployments(lid string) (*v1.DeploymentList, error) {
+	deployments, err := c.kc.AppsV1().Deployments(lid).List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return deployments, nil
+}
 
+func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
+	fmt.Println("KUBE DEPLOYING 564v23c")
 	if err := applyNS(c.kc, newNSBuilder(lid, group)); err != nil {
 		c.log.Error("applying namespace", "err", err, "lease", lid)
 		return err

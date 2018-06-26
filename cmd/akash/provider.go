@@ -198,7 +198,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 
 		go func() {
 			defer cancel()
-			errch <- http.RunServer(ctx, session.Log(), "3001", service.ManifestHandler())
+			errch <- http.RunServer(ctx, session.Log(), "3001", service.ManifestHandler(), cclient)
 		}()
 
 		var reterr error

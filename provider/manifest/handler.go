@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	lifecycle "github.com/boz/go-lifecycle"
@@ -101,6 +102,7 @@ type manifestRequest struct {
 // TODO: This method should only return once validation has completed (or timeout condition)
 // TODO: Add context.Context argument and/or timeout.
 func (h *handler) HandleManifest(mreq *types.ManifestRequest) error {
+	fmt.Println("HANLDE MANIFEST 4v33yt")
 	ch := make(chan error, 1)
 	req := manifestRequest{mreq, ch}
 	select {
@@ -181,7 +183,7 @@ loop:
 				}
 				h.session.Log().Error("deployment", did.EncodeString(), err.Error())
 			}
-
+			fmt.Println("MANIFEST REQUEST VERIFIED SIGNITURE")
 			mstate := h.getManifestState(did)
 
 			h.session.Log().Info("manifest received", "deployment", did)
@@ -241,8 +243,9 @@ func (h *handler) getManifestState(did base.Bytes) *manifestState {
 }
 
 func (h *handler) checkManifestState(ctx context.Context, mstate *manifestState, did base.Bytes) {
+	fmt.Println("CHECK MANIFEST STATE")
 	if mstate.complete() {
-
+		fmt.Println("CHECK MANIFEST STATE: STATE IS COMPLETE")
 		// If all information has been received, emit ManifestReceived event.
 
 		// TODO: validate manifest
