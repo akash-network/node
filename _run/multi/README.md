@@ -28,10 +28,10 @@ Ensure that you have installed the base dependencies and have set `GOPATH` [as d
 __t1__: Start minikube
 
 ```sh
-$ cd $GOPATH/src/github.com/ovrclk/akash/_run/multi
+$ cd $GOPATH/src/github.com/ovrclk/akash
 $ minikube start --cpus 4 --memory 4096
 $ minikube addons enable ingress
-$ kubectl create -f rbac.yml
+$ kubectl create -f _run/multi/rbac.yml
 ```
 
 __t1__: Initialize helm
