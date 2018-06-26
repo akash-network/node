@@ -104,12 +104,22 @@ func (c *client) Deployments() ([]cluster.Deployment, error) {
 	return deployments, nil
 }
 
-func (c *client) KubeDeployments(lid string) (*v1.DeploymentList, error) {
-	deployments, err := c.kc.AppsV1().Deployments(lid).List(metav1.ListOptions{})
+// todo: limit number of results and do pagination / streaming
+func (c *client) KubeDeployments(lid types.LeaseID) (*v1.DeploymentList, error) {
+	deployments, err := c.kc.AppsV1().Deployments(lidNS(lid)).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 	return deployments, nil
+}
+
+func (c *client) KubeDeployment(lid types.LeaseID, name string) (*v1.Deployment, error) {
+	fmt.Println(lid.GoString(), name)
+	deployment, err := c.kc.AppsV1().Deployments(lidNS(lid)).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return deployment, nil
 }
 
 func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gorilla/mux"
+	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/manifest"
 	"github.com/ovrclk/akash/types"
@@ -16,11 +17,17 @@ import (
 )
 
 const (
-	contentType      = "application/json"
-	manifestPath     = "/manifest"
-	statusPathPrefix = "/status/"
-	statusPath       = statusPathPrefix + "{lease-id}"
-	leaseStatusPath  = statusPathPrefix + "{lease-id}/{service-name}"
+	contentType       = "application/json"
+	manifestPath      = "/manifest"
+	statusPathPrefix  = "/status/"
+	deployment        = "deployment"
+	group             = "group"
+	order             = "order"
+	provider          = "provider"
+	name              = "name"
+	leaseID           = "{" + deployment + "}/{" + group + "}/{" + order + "}/{" + provider + "}"
+	statusPath        = statusPathPrefix + leaseID
+	serviceStatusPath = statusPathPrefix + leaseID + "/{" + name + "}"
 )
 
 func errorResponse(w http.ResponseWriter, log log.Logger, status int, message string) {
@@ -83,13 +90,12 @@ func requestLogger(log log.Logger) mux.MiddlewareFunc {
 func newStatusHandler(log log.Logger, phandler manifest.Handler, client kube.Client) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=us-ascii")
-
-		leaseID := strings.ToLower(strings.TrimPrefix(r.URL.RequestURI(), statusPathPrefix))
-		fmt.Println(leaseID)
-
-		deployments, err := client.KubeDeployments(leaseID)
+		// todo: check TLS cert against lease owner
+		lease, err := keys.ParseLeasePath(strings.TrimPrefix(r.URL.RequestURI(), statusPathPrefix))
+		deployments, err := client.KubeDeployments(lease.LeaseID)
 		if err != nil {
-			errorResponse(w, log, http.StatusBadRequest, "internal error")
+			log.Error(err.Error())
+			errorResponse(w, log, http.StatusBadRequest, "no deployments found for lease")
 			return
 		}
 		if deployments == nil {
@@ -101,6 +107,26 @@ func newStatusHandler(log log.Logger, phandler manifest.Handler, client kube.Cli
 			response[deployment.Name] = fmt.Sprintf("available replicas: %v/%v", deployment.Status.AvailableReplicas, deployment.Status.Replicas)
 		}
 		json.NewEncoder(w).Encode(response)
+	}
+}
+
+func newLeaseStatusHandler(log log.Logger, phandler manifest.Handler, client kube.Client) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=us-ascii")
+		// todo: check TLS cert against lease owner
+		vars := mux.Vars(r)
+		lease, err := keys.ParseLeasePath(strings.TrimSuffix(strings.TrimPrefix(r.URL.RequestURI(), statusPathPrefix), "/"+vars[name]))
+		deployment, err := client.KubeDeployment(lease.LeaseID, vars[name])
+		if err != nil {
+			log.Error(err.Error())
+			errorResponse(w, log, http.StatusBadRequest, "service not found for lease")
+			return
+		}
+		if deployment == nil {
+			errorResponse(w, log, http.StatusBadRequest, "service not found for lease")
+			return
+		}
+		json.NewEncoder(w).Encode(deployment.Status)
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -109,6 +135,7 @@ func createHandlers(log log.Logger, handler manifest.Handler, client kube.Client
 	r := mux.NewRouter()
 	r.HandleFunc(manifestPath, manifestHandler(log, handler))
 	r.HandleFunc(statusPath, newStatusHandler(log, handler, client))
+	r.HandleFunc(serviceStatusPath, newLeaseStatusHandler(log, handler, client))
 	r.Use(requestLogger(log))
 	return r
 }

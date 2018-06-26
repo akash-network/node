@@ -41,22 +41,9 @@ func TestManifest(t *testing.T) {
 	client := new(cmock.Client)
 
 	withServer(t, func() {
-		err = Send(mani, signer, provider, deployment)
+		err = SendManifest(mani, signer, provider, deployment)
 		require.NoError(t, err)
 	}, handler, client)
-}
-
-func TestStatus(t *testing.T) {
-	t.Skip()
-	// handler := new(pmock.Handler)
-	// client := new(cmock.Client)
-	// withServer(t, func() {
-	// 	resp, err := http.Get("http://localhost:3001/status")
-	// 	require.NoError(t, err)
-	// 	body, err := ioutil.ReadAll(resp.Body)
-	// 	require.NoError(t, err)
-	// 	require.Equal(t, []byte("OK\n"), body)
-	// }, handler, client)
 }
 
 func withServer(t *testing.T, fn func(), h *pmanifest.Handler, c kube.Client) {

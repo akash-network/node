@@ -10,7 +10,8 @@ type Client interface {
 	Teardown(types.LeaseID) error
 
 	Deployments() ([]Deployment, error)
-	KubeDeployments(string) (*v1.DeploymentList, error)
+	KubeDeployments(types.LeaseID) (*v1.DeploymentList, error)
+	KubeDeployment(types.LeaseID, string) (*v1.Deployment, error)
 }
 
 type Deployment interface {
@@ -28,7 +29,11 @@ func (nullClient) Deploy(_ types.LeaseID, _ *types.ManifestGroup) error {
 	return nil
 }
 
-func (nullClient) KubeDeployments(_ string) (*v1.DeploymentList, error) {
+func (nullClient) KubeDeployments(_ types.LeaseID) (*v1.DeploymentList, error) {
+	return nil, nil
+}
+
+func (nullClient) KubeDeployment(_ types.LeaseID, _ string) (*v1.Deployment, error) {
 	return nil, nil
 }
 

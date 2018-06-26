@@ -48,6 +48,29 @@ func (_m *Client) Deployments() ([]cluster.Deployment, error) {
 	return r0, r1
 }
 
+// KubeDeployment provides a mock function with given fields: _a0, _a1
+func (_m *Client) KubeDeployment(_a0 string, _a1 string) (*v1.Deployment, error) {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 *v1.Deployment
+	if rf, ok := ret.Get(0).(func(string, string) *v1.Deployment); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*v1.Deployment)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // KubeDeployments provides a mock function with given fields: _a0
 func (_m *Client) KubeDeployments(_a0 string) (*v1.DeploymentList, error) {
 	ret := _m.Called(_a0)
