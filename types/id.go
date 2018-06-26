@@ -170,20 +170,3 @@ func (id LeaseID) GroupID() DeploymentGroupID {
 func (id LeaseID) DeploymentID() base.Bytes {
 	return id.Deployment
 }
-
-func NewLeaseID(deployment, group, order, provider string) (LeaseID, error) {
-	groupint, err := strconv.Atoi(group)
-	if err != nil {
-		return LeaseID{}, err
-	}
-	orderint, err := strconv.Atoi(order)
-	if err != nil {
-		return LeaseID{}, err
-	}
-	return LeaseID{
-		Deployment: base.Bytes(deployment),
-		Group:      uint64(groupint),
-		Order:      uint64(orderint),
-		Provider:   base.Bytes(provider),
-	}, nil
-}

@@ -3,11 +3,11 @@ package http
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"testing"
 
 	"github.com/ovrclk/akash/provider/cluster/kube"
-
 	cmock "github.com/ovrclk/akash/provider/cluster/kube/mocks"
 	pmanifest "github.com/ovrclk/akash/provider/manifest/mocks"
 	pmock "github.com/ovrclk/akash/provider/manifest/mocks"
@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/api/apps/v1"
 )
 
 func TestManifest(t *testing.T) {
@@ -46,6 +47,22 @@ func TestManifest(t *testing.T) {
 	}, handler, client)
 }
 
+func TestStatus(t *testing.T) {
+	handler := new(pmock.Handler)
+	client := new(cmock.Client)
+	mockResp := v1.DeploymentList{}
+	client.On("KubeDeployments", mock.Anything, mock.Anything).Return(&mockResp, nil).Once()
+
+	withServer(t, func() {
+		resp, err := http.Get("http://localhost:3001/status/deployment/group/order/provider")
+		require.NoError(t, err)
+		body, err := ioutil.ReadAll(resp.Body)
+		require.NoError(t, err)
+		fmt.Println(string(body))
+		require.Equal(t, []byte("{}\n"), body)
+	}, handler, client)
+}
+
 func withServer(t *testing.T, fn func(), h *pmanifest.Handler, c kube.Client) {
 	donech := make(chan struct{})
 	defer func() { <-donech }()
@@ -56,7 +73,6 @@ func withServer(t *testing.T, fn func(), h *pmanifest.Handler, c kube.Client) {
 	go func() {
 		defer close(donech)
 		err := RunServer(ctx, testutil.Logger(), "3001", h, c)
-		fmt.Println("server exited err:", err)
 		assert.Error(t, http.ErrServerClosed, err)
 	}()
 
