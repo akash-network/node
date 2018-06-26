@@ -50,11 +50,11 @@ func (_m *Client) Deployments() ([]cluster.Deployment, error) {
 }
 
 // KubeDeployment provides a mock function with given fields: _a0, _a1
-func (_m *Client) KubeDeployment(_a0 string, _a1 string) (*v1.Deployment, error) {
+func (_m *Client) KubeDeployment(_a0 types.LeaseID, _a1 string) (*v1.Deployment, error) {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 *v1.Deployment
-	if rf, ok := ret.Get(0).(func(string, string) *v1.Deployment); ok {
+	if rf, ok := ret.Get(0).(func(types.LeaseID, string) *v1.Deployment); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
@@ -63,7 +63,7 @@ func (_m *Client) KubeDeployment(_a0 string, _a1 string) (*v1.Deployment, error)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+	if rf, ok := ret.Get(1).(func(types.LeaseID, string) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
@@ -73,11 +73,11 @@ func (_m *Client) KubeDeployment(_a0 string, _a1 string) (*v1.Deployment, error)
 }
 
 // KubeDeployments provides a mock function with given fields: _a0
-func (_m *Client) KubeDeployments(_a0 string) (*v1.DeploymentList, error) {
+func (_m *Client) KubeDeployments(_a0 types.LeaseID) (*v1.DeploymentList, error) {
 	ret := _m.Called(_a0)
 
 	var r0 *v1.DeploymentList
-	if rf, ok := ret.Get(0).(func(string) *v1.DeploymentList); ok {
+	if rf, ok := ret.Get(0).(func(types.LeaseID) *v1.DeploymentList); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
@@ -86,7 +86,7 @@ func (_m *Client) KubeDeployments(_a0 string) (*v1.DeploymentList, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
+	if rf, ok := ret.Get(1).(func(types.LeaseID) error); ok {
 		r1 = rf(_a0)
 	} else {
 		r1 = ret.Error(1)
