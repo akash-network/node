@@ -113,7 +113,6 @@ func (c *client) KubeDeployments(lid string) (*v1.DeploymentList, error) {
 }
 
 func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
-	fmt.Println("KUBE DEPLOYING 564v23c")
 	if err := applyNS(c.kc, newNSBuilder(lid, group)); err != nil {
 		c.log.Error("applying namespace", "err", err, "lease", lid)
 		return err

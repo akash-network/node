@@ -125,7 +125,6 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 					if err != nil {
 						fmt.Printf("ERROR: %v", err)
 					}
-					fmt.Println("SENT MANIFEST")
 					expected--
 				}
 				if expected == 0 {
