@@ -41,9 +41,9 @@ $ helm init
 
 __t1__: Install akash binaries, push docker image into minikube
 
-`make install` installs akash binaries to `$GOPATH/bin`; make sure `$GOPATH/bin` is in your current path
-
 _Creates 6 providers: us-west-1, us-west-2, us-east-1, us-east-2, ap-southeast-1, ap-southeast-2_
+
+_`make install` installs akash binaries to `$GOPATH/bin`; make sure `$GOPATH/bin` is in your current path_
 ```sh
 $ make install # compile and install akash
 $ make image-minikube 
