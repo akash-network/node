@@ -6,7 +6,9 @@ IMAGE_BINS := _build/akash _build/akashd
 
 IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 
-all: build $(BINS)
+all: build bins
+
+bins: $(BINS)
 
 build:
 	go build -i $$(glide novendor)
@@ -120,7 +122,7 @@ docs:
 clean:
 	rm -f $(BINS) $(IMAGE_BINS)
 
-.PHONY: all build \
+.PHONY: all bins build \
 	akash akashd \
 	image image-bins \
 	test test-nocache test-full \

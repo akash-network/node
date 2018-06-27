@@ -1,0 +1,35 @@
+env:
+  AKASH_GO_PACKAGE: "github.com/ovrclk/akash"
+  TEST_DELAY_THREAD_START: 10ms
+steps:
+
+  - name: ":ferris_wheel: tests"
+    plugins:
+      golang#v2.0.0:
+        version: "1.10"
+        import: "${AKASH_GO_PACKAGE}"
+    command: .buildkite/script/test.sh test
+
+  - name: ":popcorn: coverage"
+    plugins:
+      golang#v2.0.0:
+        version: "1.10"
+        import: "${AKASH_GO_PACKAGE}"
+        environment:
+          - CI
+          - BUILDKITE
+          - BUILDKITE_BRANCH
+          - BUILDKITE_BUILD_NUMBER
+          - BUILDKITE_JOB_ID
+          - BUILDKITE_BUILD_URL
+          - BUILDKITE_PROJECT_SLUG
+          - BUILDKITE_COMMIT
+          - CODECOV_TOKEN
+    command: .buildkite/script/test.sh coverage
+
+  - name: ":man-juggling: integration"
+    plugins:
+      golang#v2.0.0:
+        version: "1.10"
+        import: "${AKASH_GO_PACKAGE}"
+    command: .buildkite/script/test.sh integration

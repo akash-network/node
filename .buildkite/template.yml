@@ -1,0 +1,6 @@
+---
+name: Akash Build
+repository: https://github.com/ovrclk/akash.git
+steps:
+  - name: ":pipeline:"
+    command: "buildkite-agent pipeline upload"
