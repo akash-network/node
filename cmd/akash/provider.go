@@ -13,7 +13,7 @@ import (
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/event"
-	"github.com/ovrclk/akash/provider/manifest/http"
+	"github.com/ovrclk/akash/provider/http"
 	psession "github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
 	ptype "github.com/ovrclk/akash/types/provider"
@@ -198,7 +198,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 
 		go func() {
 			defer cancel()
-			errch <- http.RunServer(ctx, session.Log(), "3001", service.ManifestHandler())
+			errch <- http.RunServer(ctx, session.Log(), "3001", service.ManifestHandler(), cclient)
 		}()
 
 		var reterr error

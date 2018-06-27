@@ -2,10 +2,13 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
 
+	"github.com/ovrclk/akash/provider/cluster/kube"
+	cmock "github.com/ovrclk/akash/provider/cluster/kube/mocks"
 	pmanifest "github.com/ovrclk/akash/provider/manifest/mocks"
 	pmock "github.com/ovrclk/akash/provider/manifest/mocks"
 	"github.com/ovrclk/akash/sdl"
@@ -14,11 +17,23 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/api/apps/v1"
 )
+
+func TestStatus(t *testing.T) {
+	withServer(t, func() {
+		resp, err := http.Get("http://localhost:3001/status")
+		require.NoError(t, err)
+		body, err := ioutil.ReadAll(resp.Body)
+		require.NoError(t, err)
+		fmt.Println(string(body))
+		require.Equal(t, []byte("OK\n"), body)
+	}, nil, nil)
+}
 
 func TestManifest(t *testing.T) {
 
-	sdl, err := sdl.ReadFile("../../../_docs/deployment.yml")
+	sdl, err := sdl.ReadFile("../../_run/multi/deployment.yml")
 	require.NoError(t, err)
 
 	mani, err := sdl.Manifest()
@@ -35,26 +50,31 @@ func TestManifest(t *testing.T) {
 
 	handler := new(pmock.Handler)
 	handler.On("HandleManifest", mock.Anything).Return(nil).Once()
+	client := new(cmock.Client)
 
 	withServer(t, func() {
-		err = Send(mani, signer, provider, deployment)
+		err = SendManifest(mani, signer, provider, deployment)
 		require.NoError(t, err)
-	}, handler)
+	}, handler, client)
 }
 
-func TestStatus(t *testing.T) {
+func TestLease(t *testing.T) {
 	handler := new(pmock.Handler)
+	client := new(cmock.Client)
+	mockResp := v1.DeploymentList{}
+	client.On("KubeDeployments", mock.Anything, mock.Anything).Return(&mockResp, nil).Once()
 
 	withServer(t, func() {
-		resp, err := http.Get("http://localhost:3001/status")
+		resp, err := http.Get("http://localhost:3001/lease/deployment/group/order/provider")
 		require.NoError(t, err)
 		body, err := ioutil.ReadAll(resp.Body)
 		require.NoError(t, err)
-		require.Equal(t, []byte("OK\n"), body)
-	}, handler)
+		fmt.Println(string(body))
+		require.Equal(t, []byte("{}\n"), body)
+	}, handler, client)
 }
 
-func withServer(t *testing.T, fn func(), h *pmanifest.Handler) {
+func withServer(t *testing.T, fn func(), h *pmanifest.Handler, c kube.Client) {
 	donech := make(chan struct{})
 	defer func() { <-donech }()
 
@@ -63,7 +83,7 @@ func withServer(t *testing.T, fn func(), h *pmanifest.Handler) {
 
 	go func() {
 		defer close(donech)
-		err := RunServer(ctx, testutil.Logger(), "3001", h)
+		err := RunServer(ctx, testutil.Logger(), "3001", h, c)
 		assert.Error(t, http.ErrServerClosed, err)
 	}()
 

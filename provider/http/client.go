@@ -10,7 +10,7 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
-func Send(manifest *types.Manifest, signer txutil.Signer, provider *types.Provider, deployment []byte) error {
+func SendManifest(manifest *types.Manifest, signer txutil.Signer, provider *types.Provider, deployment []byte) error {
 	_, buf, err := mutil.SignManifest(manifest, signer, deployment)
 	if err != nil {
 		return err

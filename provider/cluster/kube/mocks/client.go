@@ -2,6 +2,7 @@
 package mocks
 
 import cluster "github.com/ovrclk/akash/provider/cluster"
+
 import mock "github.com/stretchr/testify/mock"
 import types "github.com/ovrclk/akash/types"
 import v1 "k8s.io/api/apps/v1"

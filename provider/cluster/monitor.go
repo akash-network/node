@@ -81,7 +81,6 @@ func (dm *deploymentMonitor) teardown() error {
 
 func (dm *deploymentMonitor) run() {
 	defer dm.lc.ShutdownCompleted()
-
 	runch := dm.do(dm.doDeploy)
 
 loop:
@@ -103,7 +102,6 @@ loop:
 				dm.mgroup = mgroup
 			case dsDeployComplete:
 				dm.mgroup = mgroup
-
 				// start update
 				dm.state = dsDeployActive
 				runch = dm.do(dm.doDeploy)
@@ -125,7 +123,6 @@ loop:
 				dm.state = dsDeployComplete
 
 			case dsDeployPending:
-
 				// start update
 				dm.state = dsDeployActive
 				runch = dm.do(dm.doDeploy)

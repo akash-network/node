@@ -181,7 +181,6 @@ loop:
 				}
 				h.session.Log().Error("deployment", did.EncodeString(), err.Error())
 			}
-
 			mstate := h.getManifestState(did)
 
 			h.session.Log().Info("manifest received", "deployment", did)
@@ -242,7 +241,6 @@ func (h *handler) getManifestState(did base.Bytes) *manifestState {
 
 func (h *handler) checkManifestState(ctx context.Context, mstate *manifestState, did base.Bytes) {
 	if mstate.complete() {
-
 		// If all information has been received, emit ManifestReceived event.
 
 		// TODO: validate manifest
