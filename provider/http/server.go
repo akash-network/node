@@ -17,17 +17,18 @@ import (
 )
 
 const (
-	contentType       = "application/json"
-	manifestPath      = "/manifest"
-	statusPathPrefix  = "/status/"
-	deployment        = "deployment"
-	group             = "group"
-	order             = "order"
-	provider          = "provider"
-	name              = "name"
-	leaseID           = "{" + deployment + "}/{" + group + "}/{" + order + "}/{" + provider + "}"
-	statusPath        = statusPathPrefix + leaseID
-	serviceStatusPath = statusPathPrefix + leaseID + "/{" + name + "}"
+	contentType     = "application/json"
+	manifestPath    = "/manifest"
+	statusPath      = "/status"
+	leasePathPrefix = "/lease/"
+	deployment      = "deployment"
+	group           = "group"
+	order           = "order"
+	provider        = "provider"
+	name            = "name"
+	leaseID         = "{" + deployment + "}/{" + group + "}/{" + order + "}/{" + provider + "}"
+	leasePath       = leasePathPrefix + leaseID
+	servicePath     = leasePathPrefix + leaseID + "/{" + name + "}"
 )
 
 func errorResponse(w http.ResponseWriter, log log.Logger, status int, message string) {
@@ -87,11 +88,11 @@ func requestLogger(log log.Logger) mux.MiddlewareFunc {
 	}
 }
 
-func newStatusHandler(log log.Logger, phandler manifest.Handler, client kube.Client) func(http.ResponseWriter, *http.Request) {
+func newLeaseHandler(log log.Logger, phandler manifest.Handler, client kube.Client) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=us-ascii")
 		// todo: check TLS cert against lease owner
-		lease, err := keys.ParseLeasePath(strings.TrimPrefix(r.URL.RequestURI(), statusPathPrefix))
+		lease, err := keys.ParseLeasePath(strings.TrimPrefix(r.URL.RequestURI(), leasePathPrefix))
 		deployments, err := client.KubeDeployments(lease.LeaseID)
 		if err != nil {
 			log.Error(err.Error())
@@ -110,12 +111,19 @@ func newStatusHandler(log log.Logger, phandler manifest.Handler, client kube.Cli
 	}
 }
 
+func newStatusHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=us-ascii")
+		w.Write([]byte("OK\n"))
+	}
+}
+
 func newLeaseStatusHandler(log log.Logger, phandler manifest.Handler, client kube.Client) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=us-ascii")
 		// todo: check TLS cert against lease owner
 		vars := mux.Vars(r)
-		lease, err := keys.ParseLeasePath(strings.TrimSuffix(strings.TrimPrefix(r.URL.RequestURI(), statusPathPrefix), "/"+vars[name]))
+		lease, err := keys.ParseLeasePath(strings.TrimSuffix(strings.TrimPrefix(r.URL.RequestURI(), leasePathPrefix), "/"+vars[name]))
 		deployment, err := client.KubeDeployment(lease.LeaseID, vars[name])
 		if err != nil {
 			log.Error(err.Error())
@@ -134,9 +142,10 @@ func newLeaseStatusHandler(log log.Logger, phandler manifest.Handler, client kub
 
 func createHandlers(log log.Logger, handler manifest.Handler, client kube.Client) http.Handler {
 	r := mux.NewRouter()
+	r.HandleFunc(statusPath, newStatusHandler())
 	r.HandleFunc(manifestPath, manifestHandler(log, handler))
-	r.HandleFunc(statusPath, newStatusHandler(log, handler, client))
-	r.HandleFunc(serviceStatusPath, newLeaseStatusHandler(log, handler, client))
+	r.HandleFunc(leasePath, newLeaseHandler(log, handler, client))
+	r.HandleFunc(servicePath, newLeaseStatusHandler(log, handler, client))
 	r.Use(requestLogger(log))
 	return r
 }

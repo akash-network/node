@@ -20,6 +20,17 @@ import (
 	"k8s.io/api/apps/v1"
 )
 
+func TestStatus(t *testing.T) {
+	withServer(t, func() {
+		resp, err := http.Get("http://localhost:3001/status")
+		require.NoError(t, err)
+		body, err := ioutil.ReadAll(resp.Body)
+		require.NoError(t, err)
+		fmt.Println(string(body))
+		require.Equal(t, []byte("OK\n"), body)
+	}, nil, nil)
+}
+
 func TestManifest(t *testing.T) {
 
 	sdl, err := sdl.ReadFile("../../_run/multi/deployment.yml")
@@ -47,14 +58,14 @@ func TestManifest(t *testing.T) {
 	}, handler, client)
 }
 
-func TestStatus(t *testing.T) {
+func TestLease(t *testing.T) {
 	handler := new(pmock.Handler)
 	client := new(cmock.Client)
 	mockResp := v1.DeploymentList{}
 	client.On("KubeDeployments", mock.Anything, mock.Anything).Return(&mockResp, nil).Once()
 
 	withServer(t, func() {
-		resp, err := http.Get("http://localhost:3001/status/deployment/group/order/provider")
+		resp, err := http.Get("http://localhost:3001/lease/deployment/group/order/provider")
 		require.NoError(t, err)
 		body, err := ioutil.ReadAll(resp.Body)
 		require.NoError(t, err)
