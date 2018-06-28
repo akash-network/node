@@ -371,12 +371,12 @@ message ManifestServiceExpose {
 service Cluster {
   rpc Ping(Empty) returns(ServerStatus) {}
   rpc Deploy(ManifestRequest) returns(DeployRespone) {
-      option (google.api.http) = {
-        post: "/v1/example/echo",
-        body: "*"
-      }; 
   }
-  rpc LeaseStatus(LeaseStatusRequest) returns(LeaseStatusResponse) {}
+  rpc LeaseStatus(LeaseStatusRequest) returns(LeaseStatusResponse) {
+    option (google.api.http) = {
+      get: "/lease/{deployment}/{group}/{order}/{provider}",
+    }; 
+  }
 }
 
 message Empty{}

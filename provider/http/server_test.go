@@ -22,13 +22,13 @@ import (
 
 func TestStatus(t *testing.T) {
 	withServer(t, func() {
-		resp, err := http.Get("http://localhost:3001/status")
+		resp, err := http.Get("http://localhost:3003/status")
 		require.NoError(t, err)
 		body, err := ioutil.ReadAll(resp.Body)
 		require.NoError(t, err)
 		fmt.Println(string(body))
 		require.Equal(t, []byte("OK\n"), body)
-	}, nil, nil)
+	}, nil, nil, "3003")
 }
 
 func TestManifest(t *testing.T) {
@@ -43,7 +43,7 @@ func TestManifest(t *testing.T) {
 	signer := testutil.Signer(t, kmgr)
 
 	provider := &types.Provider{
-		HostURI: "http://localhost:3001",
+		HostURI: "http://localhost:3004",
 	}
 
 	deployment := testutil.DeploymentAddress(t)
@@ -55,7 +55,7 @@ func TestManifest(t *testing.T) {
 	withServer(t, func() {
 		err = SendManifest(mani, signer, provider, deployment)
 		require.NoError(t, err)
-	}, handler, client)
+	}, handler, client, "3004")
 }
 
 func TestLease(t *testing.T) {
@@ -65,16 +65,16 @@ func TestLease(t *testing.T) {
 	client.On("KubeDeployments", mock.Anything, mock.Anything).Return(&mockResp, nil).Once()
 
 	withServer(t, func() {
-		resp, err := http.Get("http://localhost:3001/lease/deployment/group/order/provider")
+		resp, err := http.Get("http://localhost:3002/lease/deployment/group/order/provider")
 		require.NoError(t, err)
 		body, err := ioutil.ReadAll(resp.Body)
 		require.NoError(t, err)
 		fmt.Println(string(body))
 		require.Equal(t, []byte("{}\n"), body)
-	}, handler, client)
+	}, handler, client, "3002")
 }
 
-func withServer(t *testing.T, fn func(), h *pmanifest.Handler, c kube.Client) {
+func withServer(t *testing.T, fn func(), h *pmanifest.Handler, c kube.Client, port string) {
 	donech := make(chan struct{})
 	defer func() { <-donech }()
 
@@ -83,7 +83,7 @@ func withServer(t *testing.T, fn func(), h *pmanifest.Handler, c kube.Client) {
 
 	go func() {
 		defer close(donech)
-		err := RunServer(ctx, testutil.Logger(), "3001", h, c)
+		err := RunServer(ctx, testutil.Logger(), port, h, c)
 		assert.Error(t, http.ErrServerClosed, err)
 	}()
 

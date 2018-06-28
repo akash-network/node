@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ovrclk/akash/manifest"
+	kmocks "github.com/ovrclk/akash/provider/cluster/kube/mocks"
 	"github.com/ovrclk/akash/provider/manifest/mocks"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
@@ -33,7 +34,9 @@ func TestDeployManifest(t *testing.T) {
 	handler := &mocks.Handler{}
 	handler.On("HandleManifest", mock.Anything).Return(nil)
 
-	server := NewServer(log.NewTMLogger(os.Stdout), "tcp", "0", handler)
+	client := &kmocks.Client{}
+
+	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "0", handler, client)
 
 	_, err = server.Deploy(context.TODO(), req)
 	assert.NoError(t, err)

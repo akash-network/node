@@ -2,13 +2,12 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/ovrclk/akash/manifest"
+	kmocks "github.com/ovrclk/akash/provider/cluster/kube/mocks"
 	"github.com/ovrclk/akash/provider/manifest/mocks"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
@@ -17,21 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tmlibs/log"
 )
-
-func TestMarshal(t *testing.T) {
-	sdl, err := sdl.ReadFile("../../_docs/deployment.yml")
-	require.NoError(t, err)
-
-	mani, err := sdl.Manifest()
-	require.NoError(t, err)
-
-	b := proto.NewBuffer([]byte{})
-	fmt.Println(mani.Groups[0].Services[0])
-	b.Marshal(mani)
-	fmt.Println(b)
-
-	t.Fail()
-}
 
 func TestSendManifest(t *testing.T) {
 	c, err := NewClient("localhost:3001")
@@ -54,9 +38,11 @@ func TestSendManifest(t *testing.T) {
 	handler := &mocks.Handler{}
 	handler.On("HandleManifest", mock.Anything).Return(nil)
 
-	server := NewServer(log.NewTMLogger(os.Stdout), "tcp", "3001", handler)
+	client := &kmocks.Client{}
+
+	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3001", handler, client)
 	go func() {
-		err := server.ListenAndServe()
+		err := server.listenAndServe()
 		require.NoError(t, err)
 	}()
 

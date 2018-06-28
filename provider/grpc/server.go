@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/manifest"
 	"github.com/ovrclk/akash/types"
@@ -15,7 +16,7 @@ import (
 )
 
 type server struct {
-	kube.Client
+	cluster.Client
 	*grpc.Server
 	handler manifest.Handler
 	network string
@@ -24,13 +25,14 @@ type server struct {
 }
 
 // NewServer network can be "tcp", "tcp4", "tcp6", "unix" or "unixpacket". phandler is the provider cluster handler
-func NewServer(log log.Logger, network, port string, handler manifest.Handler) *server {
+func newServer(log log.Logger, network, port string, handler manifest.Handler, client kube.Client) *server {
 	s := &server{
 		handler: handler,
 		network: network,
 		port:    port,
 		Server:  grpc.NewServer(grpc.MaxConcurrentStreams(2), grpc.MaxRecvMsgSize(500000)),
 		log:     log,
+		Client:  client,
 	}
 	types.RegisterClusterServer(s.Server, s)
 	return s
@@ -43,8 +45,8 @@ func (s server) Ping(context context.Context, req *types.Empty) (*types.ServerSt
 	}, nil
 }
 
-func (s *server) ListenAndServe() error {
-	l, err := net.Listen(s.network, ":"+s.port)
+func (s *server) listenAndServe() error {
+	l, err := net.Listen(s.network, s.port)
 	if err != nil {
 		return err
 	}
@@ -53,11 +55,11 @@ func (s *server) ListenAndServe() error {
 	return s.Server.Serve(l)
 }
 
-func RunServer(ctx context.Context, log log.Logger, network, port string, handler manifest.Handler) error {
+func RunServer(ctx context.Context, log log.Logger, network, port string, handler manifest.Handler, client kube.Client) error {
 
 	address := fmt.Sprintf(":%v", port)
 
-	server := NewServer(log, network, ":"+port, handler)
+	server := newServer(log, network, address, handler, client)
 
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -70,13 +72,13 @@ func RunServer(ctx context.Context, log log.Logger, network, port string, handle
 		server.GracefulStop()
 	}()
 
-	log.Info("Starting rpc server", "address", address)
-	err := server.ListenAndServe()
+	log.Info("Starting GRPC server", "address", address)
+	err := server.listenAndServe()
 	cancel()
 
 	<-donech
 
-	log.Info("Server shutdown")
+	log.Info("GRPC server shutdown")
 
 	return err
 }
