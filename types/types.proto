@@ -3,11 +3,13 @@ syntax = "proto3";
 package types;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "google/api/annotations.proto";
 
 option (gogoproto.stable_marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.gostring_all) = true;
 option (gogoproto.goproto_stringer_all) = true;
+
 
 //option (gogoproto.stringer_all) = true;
 
@@ -344,7 +346,7 @@ message ManifestService {
   repeated string env  = 4;
 
   // Resource requirements
-  ResourceUnit unit  = 5 [(gogoproto.nullable)=false];
+  ResourceUnit unit  = 5;
 
   // Number of instances
   uint32       count = 6;
@@ -364,3 +366,89 @@ message ManifestServiceExpose {
   repeated string hosts = 6;
 }
 /* END MANIFEST */
+
+/* BEGIN SERVICE */
+service Cluster {
+  rpc Status(Empty) returns(ServerStatus) {}
+  rpc Deploy(ManifestRequest) returns(DeployRespone) {
+    option (google.api.http) = {
+      post: "/manifest",
+      body: "*"
+    };
+  }
+  rpc LeaseStatus(LeaseStatusRequest) returns(LeaseStatusResponse) {
+    option (google.api.http) = {
+      get: "/lease/{deployment}/{group}/{order}/{provider}",
+    }; 
+  }
+  rpc ServiceStatus(ServiceStatusRequest) returns(ServiceStatusResponse) {
+    option (google.api.http) = {
+      get: "/lease/{deployment}/{group}/{order}/{provider}/{name}",
+    }; 
+  }
+}
+
+message Empty{}
+
+message ServerStatus {
+  int32 code = 1;
+  string message = 2;
+}
+
+message DeployRespone {
+  string message = 1;
+}
+
+message LeaseStatusRequest {
+  string deployment = 1;
+  string group      = 2;
+  string order      = 3;
+  string provider   = 4;
+}
+
+message LeaseStatusResponse {
+  repeated LeaseStatus services = 1; 
+}
+
+message ServiceStatusRequest {
+  string name       = 1;
+  string deployment = 2;
+  string group      = 3;
+  string order      = 4;
+  string provider   = 5;
+}
+
+message ServiceStatusResponse {
+   int64 observedGeneration = 1; 
+   int32 replicas           = 2; 
+   int32 updatedReplicas    = 3; 
+   int32 readyReplicas      = 4; 
+   int32 availableReplicas  = 5; 
+}
+
+message LeaseStatus {
+  string name = 1;
+  string status = 2;
+}
+
+message ManifestGetRequest {
+  bytes lease = 1;
+}
+
+message ManifestGetResponse {
+  Manifest manifest = 1;
+}
+
+message ErrInvalidPayload {
+  string message  = 1;
+}
+
+message ErrInternalError {
+  string message  = 1;
+}
+
+message ErrResourceNotFound {
+  string message = 1;
+}
+
+/* END SERVICE */

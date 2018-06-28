@@ -293,6 +293,8 @@ imports:
   - status
   - tap
   - transport
+- name: github.com/grpc-ecosystem/grpc-gateway
+  version: 92583770e3f01b09a0d3e9bdf64321d8bebd48f2
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/yaml.v2

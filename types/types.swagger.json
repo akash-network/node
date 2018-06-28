@@ -1,0 +1,340 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "types/types.proto",
+    "version": "version not set"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/lease/{deployment}/{group}/{order}/{provider}": {
+      "get": {
+        "operationId": "LeaseStatus",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/typesLeaseStatusResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "deployment",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "order",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Cluster"
+        ]
+      }
+    },
+    "/lease/{deployment}/{group}/{order}/{provider}/{name}": {
+      "get": {
+        "operationId": "ServiceStatus",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/typesServiceStatusResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "deployment",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "order",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Cluster"
+        ]
+      }
+    },
+    "/manifest": {
+      "post": {
+        "operationId": "Deploy",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/typesDeployRespone"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/typesManifestRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Cluster"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "typesDeployRespone": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "typesLeaseStatus": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "typesLeaseStatusResponse": {
+      "type": "object",
+      "properties": {
+        "services": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/typesLeaseStatus"
+          }
+        }
+      }
+    },
+    "typesManifest": {
+      "type": "object",
+      "properties": {
+        "groups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/typesManifestGroup"
+          }
+        }
+      }
+    },
+    "typesManifestGroup": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Placement profile name"
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/typesManifestService"
+          },
+          "title": "Service definitions"
+        }
+      }
+    },
+    "typesManifestRequest": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "format": "byte"
+        },
+        "signature": {
+          "type": "string",
+          "format": "byte"
+        },
+        "deployment": {
+          "type": "string",
+          "format": "byte"
+        },
+        "manifest": {
+          "$ref": "#/definitions/typesManifest"
+        }
+      }
+    },
+    "typesManifestService": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Service name"
+        },
+        "image": {
+          "type": "string",
+          "title": "Docker image"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "env": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unit": {
+          "$ref": "#/definitions/typesResourceUnit",
+          "title": "Resource requirements"
+        },
+        "count": {
+          "type": "integer",
+          "format": "int64",
+          "title": "Number of instances"
+        },
+        "expose": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/typesManifestServiceExpose"
+          },
+          "title": "Overlay Network Links"
+        }
+      }
+    },
+    "typesManifestServiceExpose": {
+      "type": "object",
+      "properties": {
+        "port": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "externalPort": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "proto": {
+          "type": "string"
+        },
+        "service": {
+          "type": "string"
+        },
+        "global": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "accepted hostnames"
+        }
+      }
+    },
+    "typesResourceUnit": {
+      "type": "object",
+      "properties": {
+        "CPU": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "memory": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "disk": {
+          "type": "string",
+          "format": "uint64"
+        }
+      },
+      "title": "BEGIN EXCHANGE"
+    },
+    "typesServerStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "typesServiceStatusResponse": {
+      "type": "object",
+      "properties": {
+        "observedGeneration": {
+          "type": "string",
+          "format": "int64"
+        },
+        "replicas": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "updatedReplicas": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "readyReplicas": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "availableReplicas": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    }
+  }
+}

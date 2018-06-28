@@ -60,3 +60,5 @@ import:
 - package: k8s.io/code-generator
 - package: k8s.io/gengo
 - package: github.com/hashicorp/golang-lru
+- package: github.com/grpc-ecosystem/grpc-gateway
+  version: ^1.4.1
