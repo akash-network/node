@@ -177,7 +177,7 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 				Image: svc.Image,
 				Args:  svc.Args,
 				Env:   svc.Env,
-				Unit: types.ResourceUnit{
+				Unit: &types.ResourceUnit{
 					CPU:    compute.CPU,
 					Memory: compute.Memory,
 					Disk:   compute.Disk,

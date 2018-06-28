@@ -346,7 +346,7 @@ message ManifestService {
   repeated string env  = 4;
 
   // Resource requirements
-  ResourceUnit unit  = 5 [(gogoproto.nullable)=false];
+  ResourceUnit unit  = 5;
 
   // Number of instances
   uint32       count = 6;

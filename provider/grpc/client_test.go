@@ -18,10 +18,6 @@ import (
 	"github.com/tendermint/tmlibs/log"
 )
 
-// table_marshal.go:956
-
-// table_marshal.go:2281
-
 func TestMarshal(t *testing.T) {
 	sdl, err := sdl.ReadFile("../../_docs/deployment.yml")
 	require.NoError(t, err)
@@ -30,6 +26,7 @@ func TestMarshal(t *testing.T) {
 	require.NoError(t, err)
 
 	b := proto.NewBuffer([]byte{})
+	fmt.Println(mani.Groups[0].Services[0])
 	b.Marshal(mani)
 	fmt.Println(b)
 
