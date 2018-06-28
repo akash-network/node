@@ -16,7 +16,7 @@ import (
 )
 
 func TestDeployManifest(t *testing.T) {
-	sdl, err := sdl.ReadFile("../../../_docs/deployment.yml")
+	sdl, err := sdl.ReadFile("../../_docs/deployment.yml")
 	require.NoError(t, err)
 
 	mani, err := sdl.Manifest()
@@ -27,7 +27,7 @@ func TestDeployManifest(t *testing.T) {
 
 	deployment := testutil.DeploymentAddress(t)
 
-	req, err := manifest.SignManifest(mani, signer, deployment)
+	req, _, err := manifest.SignManifest(mani, signer, deployment)
 	assert.NoError(t, err)
 
 	handler := &mocks.Handler{}
@@ -35,6 +35,6 @@ func TestDeployManifest(t *testing.T) {
 
 	server := NewServer(log.NewTMLogger(os.Stdout), "tcp", "0", handler)
 
-	_, err = server.DeployManifest(context.TODO(), req)
+	_, err = server.Deploy(context.TODO(), req)
 	assert.NoError(t, err)
 }

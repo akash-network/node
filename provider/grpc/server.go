@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 
-	grpcutil "github.com/ovrclk/akash/grpc"
 	"github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/manifest"
 	"github.com/ovrclk/akash/types"
@@ -33,11 +32,11 @@ func NewServer(log log.Logger, network, port string, handler manifest.Handler) *
 		Server:  grpc.NewServer(grpc.MaxConcurrentStreams(2), grpc.MaxRecvMsgSize(500000)),
 		log:     log,
 	}
-	types.RegisterManifestHandlerServer(s.Server, s)
+	types.RegisterClusterServer(s.Server, s)
 	return s
 }
 
-func (s server) Ping(context context.Context, req *types.GRPCRequest) (*types.ServerStatus, error) {
+func (s server) Ping(context context.Context, req *types.Empty) (*types.ServerStatus, error) {
 	return &types.ServerStatus{
 		Code:    http.StatusOK,
 		Message: "OK",
@@ -82,18 +81,17 @@ func RunServer(ctx context.Context, log log.Logger, network, port string, handle
 	return err
 }
 
-func (s server) DeployManifest(context context.Context, req *types.GRPCRequest) (*types.DeployManifestRespone, error) {
-	// todo: verify request using client cert
-	address, _ := grpcutil.VerifySignature(req)
-	// payload, ok := req.Payload.(*types.GRPCRequest_ManifestRequest)
-	// if !ok {
-	// 	return nil, types.ErrInvalidPayload{"invalid request payload"}
-	// }
-	req.ManifestRequest.Address = address.Bytes()
-	if err := s.handler.HandleManifest(req.ManifestRequest); err != nil {
+func (s server) Deploy(context context.Context, req *types.ManifestRequest) (*types.DeployRespone, error) {
+	if err := s.handler.HandleManifest(req); err != nil {
 		return nil, err
 	}
-	return &types.DeployManifestRespone{
+	return &types.DeployRespone{
 		Message: "manifest deployed",
+	}, nil
+}
+
+func (s server) LeaseStatus(context context.Context, req *types.LeaseStatusRequest) (*types.LeaseStatusResponse, error) {
+	return &types.LeaseStatusResponse{
+		Services: []*types.LeaseStatus{&types.LeaseStatus{"OK"}},
 	}, nil
 }

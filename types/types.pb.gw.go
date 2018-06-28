@@ -28,18 +28,22 @@ var _ status.Status
 var _ = runtime.String
 var _ = utilities.NewDoubleArray
 
-func request_YourService_Echo_0(ctx context.Context, marshaler runtime.Marshaler, client YourServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq Ping
+func request_Cluster_Deploy_0(ctx context.Context, marshaler runtime.Marshaler, client ClusterClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq ManifestRequest
 	var metadata runtime.ServerMetadata
 
-	msg, err := client.Echo(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := client.Deploy(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-// RegisterYourServiceHandlerFromEndpoint is same as RegisterYourServiceHandler but
+// RegisterClusterHandlerFromEndpoint is same as RegisterClusterHandler but
 // automatically dials to "endpoint" and closes the connection when "ctx" gets done.
-func RegisterYourServiceHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+func RegisterClusterHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
 	conn, err := grpc.Dial(endpoint, opts...)
 	if err != nil {
 		return err
@@ -59,23 +63,23 @@ func RegisterYourServiceHandlerFromEndpoint(ctx context.Context, mux *runtime.Se
 		}()
 	}()
 
-	return RegisterYourServiceHandler(ctx, mux, conn)
+	return RegisterClusterHandler(ctx, mux, conn)
 }
 
-// RegisterYourServiceHandler registers the http handlers for service YourService to "mux".
+// RegisterClusterHandler registers the http handlers for service Cluster to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterYourServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	return RegisterYourServiceHandlerClient(ctx, mux, NewYourServiceClient(conn))
+func RegisterClusterHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	return RegisterClusterHandlerClient(ctx, mux, NewClusterClient(conn))
 }
 
-// RegisterYourServiceHandlerClient registers the http handlers for service YourService
-// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "YourServiceClient".
-// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "YourServiceClient"
+// RegisterClusterHandlerClient registers the http handlers for service Cluster
+// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "ClusterClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "ClusterClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
-// "YourServiceClient" to call the correct interceptors.
-func RegisterYourServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client YourServiceClient) error {
+// "ClusterClient" to call the correct interceptors.
+func RegisterClusterHandlerClient(ctx context.Context, mux *runtime.ServeMux, client ClusterClient) error {
 
-	mux.Handle("GET", pattern_YourService_Echo_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_Cluster_Deploy_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
@@ -93,14 +97,14 @@ func RegisterYourServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_YourService_Echo_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Cluster_Deploy_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_YourService_Echo_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Cluster_Deploy_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -108,9 +112,9 @@ func RegisterYourServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 }
 
 var (
-	pattern_YourService_Echo_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "example", "echo"}, ""))
+	pattern_Cluster_Deploy_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "example", "echo"}, ""))
 )
 
 var (
-	forward_YourService_Echo_0 = runtime.ForwardResponseMessage
+	forward_Cluster_Deploy_0 = runtime.ForwardResponseMessage
 )

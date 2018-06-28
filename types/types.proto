@@ -367,18 +367,59 @@ message ManifestServiceExpose {
 }
 /* END MANIFEST */
 
-/* BEGIN gRPC */
-message Pong {
-  string value = 1;
-}
-
-message Ping{}
-
-service YourService {
-  rpc Echo(Ping) returns (Pong) {
-    option (google.api.http) = {
-      get: "/v1/example/echo"
-    };
+/* BEGIN SERVICE */
+service Cluster {
+  rpc Ping(Empty) returns(ServerStatus) {}
+  rpc Deploy(ManifestRequest) returns(DeployRespone) {
+      option (google.api.http) = {
+        post: "/v1/example/echo",
+        body: "*"
+      }; 
   }
+  rpc LeaseStatus(LeaseStatusRequest) returns(LeaseStatusResponse) {}
 }
-/* END gRPC */
+
+message Empty{}
+
+message ServerStatus {
+  int32 code = 1;
+  string message = 2;
+}
+
+message DeployRespone {
+  string message = 1;
+}
+
+message LeaseStatusRequest {
+  LeaseID lease  = 1;
+}
+
+message LeaseStatus {
+  string status = 1;
+}
+
+message LeaseStatusResponse {
+  repeated LeaseStatus services = 2; 
+}
+
+message ManifestGetRequest {
+  bytes lease = 1;
+}
+
+message ManifestGetResponse {
+  Manifest manifest = 1;
+}
+
+message ErrInvalidPayload {
+  string message  = 1;
+}
+
+message ErrInternalError {
+  string message  = 1;
+}
+
+message ErrResourceNotFound {
+  string message = 1;
+}
+
+/* END SERVICE */
