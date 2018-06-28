@@ -15,7 +15,97 @@
     "application/json"
   ],
   "paths": {
-    "/v1/example/echo": {
+    "/lease/{deployment}/{group}/{order}/{provider}": {
+      "get": {
+        "operationId": "LeaseStatus",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/typesLeaseStatusResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "deployment",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "order",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Cluster"
+        ]
+      }
+    },
+    "/lease/{deployment}/{group}/{order}/{provider}/{name}": {
+      "get": {
+        "operationId": "ServiceStatus",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/typesServiceStatusResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "deployment",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "order",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Cluster"
+        ]
+      }
+    },
+    "/manifest": {
       "post": {
         "operationId": "Deploy",
         "responses": {
@@ -51,34 +141,12 @@
         }
       }
     },
-    "typesLeaseID": {
-      "type": "object",
-      "properties": {
-        "deployment": {
-          "type": "string",
-          "format": "byte",
-          "title": "deployment address"
-        },
-        "group": {
-          "type": "string",
-          "format": "uint64",
-          "title": "deployment group sequence"
-        },
-        "order": {
-          "type": "string",
-          "format": "uint64",
-          "title": "order sequence"
-        },
-        "provider": {
-          "type": "string",
-          "format": "byte",
-          "title": "provider address"
-        }
-      }
-    },
     "typesLeaseStatus": {
       "type": "object",
       "properties": {
+        "name": {
+          "type": "string"
+        },
         "status": {
           "type": "string"
         }
@@ -240,6 +308,31 @@
         },
         "message": {
           "type": "string"
+        }
+      }
+    },
+    "typesServiceStatusResponse": {
+      "type": "object",
+      "properties": {
+        "observedGeneration": {
+          "type": "string",
+          "format": "int64"
+        },
+        "replicas": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "updatedReplicas": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "readyReplicas": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "availableReplicas": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     }

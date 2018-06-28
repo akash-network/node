@@ -1,7 +1,6 @@
 package json
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -56,9 +55,6 @@ func Run(ctx context.Context, log log.Logger, address, endpoint string) error {
 
 	log.Info("Starting GRPC JSON proxy server", "address", proxy.addr, "endpoint", proxy.endpoint)
 	err = proxy.listenAndServe()
-	if err != nil {
-		fmt.Println("asdasdasddsad", err.Error())
-	}
 	cancel()
 
 	log.Info("GRPC server shutdown")

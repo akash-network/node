@@ -15,7 +15,7 @@ func SendManifest(manifest *types.Manifest, signer txutil.Signer, provider *type
 	if err != nil {
 		return err
 	}
-	return post(provider.GetHostURI()+manifestPath, buf)
+	return post(provider.GetHostURI()+"/manifest", buf)
 }
 
 // XXX assumes url is http/https

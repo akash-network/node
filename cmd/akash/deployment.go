@@ -11,7 +11,7 @@ import (
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/marketplace"
-	http "github.com/ovrclk/akash/provider/http"
+	"github.com/ovrclk/akash/provider/http"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/types"
 	. "github.com/ovrclk/akash/util"

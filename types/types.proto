@@ -369,12 +369,21 @@ message ManifestServiceExpose {
 
 /* BEGIN SERVICE */
 service Cluster {
-  rpc Ping(Empty) returns(ServerStatus) {}
+  rpc Status(Empty) returns(ServerStatus) {}
   rpc Deploy(ManifestRequest) returns(DeployRespone) {
+    option (google.api.http) = {
+      post: "/manifest",
+      body: "*"
+    };
   }
   rpc LeaseStatus(LeaseStatusRequest) returns(LeaseStatusResponse) {
     option (google.api.http) = {
       get: "/lease/{deployment}/{group}/{order}/{provider}",
+    }; 
+  }
+  rpc ServiceStatus(ServiceStatusRequest) returns(ServiceStatusResponse) {
+    option (google.api.http) = {
+      get: "/lease/{deployment}/{group}/{order}/{provider}/{name}",
     }; 
   }
 }
@@ -391,15 +400,35 @@ message DeployRespone {
 }
 
 message LeaseStatusRequest {
-  LeaseID lease  = 1;
-}
-
-message LeaseStatus {
-  string status = 1;
+  string deployment = 1;
+  string group      = 2;
+  string order      = 3;
+  string provider   = 4;
 }
 
 message LeaseStatusResponse {
-  repeated LeaseStatus services = 2; 
+  repeated LeaseStatus services = 1; 
+}
+
+message ServiceStatusRequest {
+  string name       = 1;
+  string deployment = 2;
+  string group      = 3;
+  string order      = 4;
+  string provider   = 5;
+}
+
+message ServiceStatusResponse {
+   int64 observedGeneration = 1; 
+   int32 replicas           = 2; 
+   int32 updatedReplicas    = 3; 
+   int32 readyReplicas      = 4; 
+   int32 availableReplicas  = 5; 
+}
+
+message LeaseStatus {
+  string name = 1;
+  string status = 2;
 }
 
 message ManifestGetRequest {

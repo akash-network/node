@@ -1,19 +1,23 @@
 package grpc
 
 import (
-	"context"
+	"net/http"
 	"os"
 	"testing"
 
 	"github.com/ovrclk/akash/manifest"
 	kmocks "github.com/ovrclk/akash/provider/cluster/kube/mocks"
 	"github.com/ovrclk/akash/provider/manifest/mocks"
+	mmocks "github.com/ovrclk/akash/provider/manifest/mocks"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tmlibs/log"
+	"golang.org/x/net/context"
+	"k8s.io/api/apps/v1"
 )
 
 func TestDeployManifest(t *testing.T) {
@@ -40,4 +44,23 @@ func TestDeployManifest(t *testing.T) {
 
 	_, err = server.Deploy(context.TODO(), req)
 	assert.NoError(t, err)
+}
+func TestStatus(t *testing.T) {
+	server := newServer(nil, "tcp", "3002", nil, nil)
+	status, err := server.Status(context.TODO(), nil)
+	assert.NoError(t, err)
+	require.Equal(t, "OK", status.Message)
+	require.Equal(t, http.StatusOK, int(status.Code))
+}
+
+func TestLease(t *testing.T) {
+	handler := new(mmocks.Handler)
+	client := new(kmocks.Client)
+	mockResp := v1.DeploymentList{}
+	client.On("KubeDeployments", mock.Anything, mock.Anything).Return(&mockResp, nil).Once()
+
+	server := newServer(nil, "tcp", "3002", handler, client)
+	response, err := server.LeaseStatus(context.TODO(), &types.LeaseStatusRequest{})
+	assert.NoError(t, err)
+	assert.NotNil(t, response)
 }
