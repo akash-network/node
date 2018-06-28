@@ -61,6 +61,8 @@ deps-install:
 devdeps-install:
 	go get github.com/gogo/protobuf/protoc-gen-gogo
 	go get github.com/vektra/mockery/.../
+	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
+	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 
 coverdeps-install:
 	go get golang.org/x/tools/cmd/cover
@@ -82,7 +84,16 @@ kubetypes:
 %.pb.go: %.proto
 	protoc -I. \
 		-Ivendor -Ivendor/github.com/gogo/protobuf/protobuf \
+		-Ivendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
 		--gogo_out=plugins=grpc:. $<
+	protoc -I. \
+		-Ivendor -Ivendor/github.com/gogo/protobuf/protobuf \
+		-Ivendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
+		--grpc-gateway_out=logtostderr=true:. $<
+	protoc -I. \
+		-Ivendor -Ivendor/github.com/gogo/protobuf/protobuf \
+		-Ivendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
+		--swagger_out=logtostderr=true:. $<
 
 mocks:
 	mockery -case=underscore -dir query                 -output query/mocks                 -name Client
