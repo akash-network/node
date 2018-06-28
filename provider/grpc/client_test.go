@@ -40,7 +40,7 @@ func TestSendManifest(t *testing.T) {
 
 	client := &kmocks.Client{}
 
-	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3001", handler, client)
+	server := newServer(log.NewTMLogger(os.Stdout), "tcp", ":3001", handler, client)
 	go func() {
 		err := server.listenAndServe()
 		require.NoError(t, err)
