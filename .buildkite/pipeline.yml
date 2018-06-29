@@ -1,6 +1,6 @@
 env:
   AKASH_GO_PACKAGE: "github.com/ovrclk/akash"
-  TEST_DELAY_THREAD_START: 10ms
+  TEST_DELAY_THREAD_START: 20ms
 steps:
 
   - name: ":ferris_wheel: tests"
@@ -8,6 +8,8 @@ steps:
       golang#v2.0.0:
         version: "1.10"
         import: "${AKASH_GO_PACKAGE}"
+        environment:
+          - TEST_DELAY_THREAD_START
     command: .buildkite/script/test.sh test
 
   - name: ":popcorn: coverage"
@@ -16,6 +18,7 @@ steps:
         version: "1.10"
         import: "${AKASH_GO_PACKAGE}"
         environment:
+          - TEST_DELAY_THREAD_START
           - CI
           - BUILDKITE
           - BUILDKITE_BRANCH
@@ -33,3 +36,30 @@ steps:
         version: "1.10"
         import: "${AKASH_GO_PACKAGE}"
     command: .buildkite/script/test.sh integration
+
+  - name: ":hospital: hygiene checks"
+    plugins:
+      golang#v2.0.0:
+        version: "1.10"
+        import: "${AKASH_GO_PACKAGE}"
+    command: .buildkite/script/test.sh lint
+
+  - name: ":satellite: golang with rc"
+    branches: master
+    plugins:
+      golang#v2.0.0:
+        version: "rc"
+        import: "${AKASH_GO_PACKAGE}"
+        environment:
+          - TEST_DELAY_THREAD_START
+    command: .buildkite/script/test.sh test-lite
+
+  - name: ":wilted_flower: golang with 1.9"
+    branches: master
+    plugins:
+      golang#v2.0.0:
+        version: "1.9"
+        import: "${AKASH_GO_PACKAGE}"
+        environment:
+          - TEST_DELAY_THREAD_START
+    command: .buildkite/script/test.sh test-lite

@@ -1,6 +1,6 @@
 [![Akash](_docs/img/logo-label-black.svg "Akash")](#overview)
-[![Build Status](https://travis-ci.org/ovrclk/akash.svg?branch=master)](https://travis-ci.org/ovrclk/akash)
-[![Coverage Status](https://coveralls.io/repos/github/ovrclk/akash/badge.svg?branch=master)](https://coveralls.io/github/ovrclk/akash?branch=master)
+[![Build status](https://badge.buildkite.com/85e140e3e8c0257c63d976946b061b805f0f338cdca7b02a9c.svg)](https://buildkite.com/ovrclk/akash)
+[![Coverage](https://codecov.io/gh/ovrclk/akash/branch/master/graph/badge.svg)](https://codecov.io/gh/ovrclk/akash)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ovrclk/akash)](https://goreportcard.com/report/github.com/ovrclk/akash)
 
 # Overview

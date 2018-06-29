@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 do_glide(){
   echo "--- :building_construction: installing glide"
   curl https://glide.sh/get | sh
@@ -14,13 +16,27 @@ do_bins(){
 }
 
 do_vet(){
-  echo "--- :mag: linting"
+  echo "--- :female-police-officer::skin-tone-4: vet"
   make test-vet
+}
+
+do_lint(){
+  echo "--- :building_construction: installing lint deps"
+  make lintdeps-install
+
+  echo "--- :mag: linting"
+  make test-lint || {
+    echo "--- :rotating_light: excessive lint errors"
+  }
 }
 
 do_tests(){
   echo "--- :female-scientist: runnig unit tests"
-  # make test-full
+  make test-full
+}
+
+do_tests_lite(){
+  echo "--- :female-scientist: runnig unit tests"
   make test
 }
 
@@ -43,9 +59,12 @@ do_integration(){
 case "$1" in
   test)
     do_glide
-    do_bins
-    do_vet
     do_tests
+    ;;
+  test-lite)
+    do_glide
+    do_bins
+    do_tests_lite
     ;;
   coverage)
     do_glide
@@ -54,5 +73,11 @@ case "$1" in
   integration)
     do_glide
     do_integration
+    ;;
+  lint)
+    do_glide
+    do_bins
+    do_vet
+    do_lint
     ;;
 esac

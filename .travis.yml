@@ -12,51 +12,6 @@ env:
 jobs:
   include:
 
-    # linux/1.9: collect & submit test coverage
-    - name: test
-      os: linux
-      go: 1.9
-      script:
-        - make build
-        - make test-vet
-        - make coverdeps-install
-        - make test-cover
-
-    # linux/1.10 (mainline): tests, integration, image-bins
-    - name: test
-      os: linux
-      go: "1.10"
-      script:
-        - make build
-        - make test-vet
-        - make test
-        - make integrationdeps-install
-        - make test-integration
-        - make image-bins
-
-    # linux/1.10 (mainline): print linting errors
-    - name: test-lint
-      os: linux
-      go: "1.10"
-      allow_failures: true
-      script:
-        - make lintdeps-install
-        - make test-lint
-      if: type = cron
-
-    # linux/master: tests, integration, image-bins
-    - name: test
-      os: linux
-      go: master
-      script:
-        - make build
-        - make test-vet
-        - make test
-        - make integrationdeps-install
-        - make test-integration
-        - make image-bins
-      if: type = cron
-
     # osx/1.10: tests, integration, image-bins
     - name: test
       os: osx
@@ -69,15 +24,6 @@ jobs:
         - make integrationdeps-install
         - make test-integration
         - make image-bins
-      if: type = cron
-
-    # linux/1.10 (mainline): build image
-    - name: image
-      os: linux
-      go: "1.10"
-      services: [docker]
-      script:
-        - make image
       if: type = cron
 
     # linux/1.10 (mainline): run skipped tests
