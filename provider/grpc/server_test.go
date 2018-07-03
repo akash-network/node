@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tmlibs/log"
 	"golang.org/x/net/context"
-	"k8s.io/api/apps/v1"
 )
 
 func TestDeployManifest(t *testing.T) {
@@ -45,6 +44,7 @@ func TestDeployManifest(t *testing.T) {
 	_, err = server.Deploy(context.TODO(), req)
 	assert.NoError(t, err)
 }
+
 func TestStatus(t *testing.T) {
 	server := newServer(nil, "tcp", "3002", nil, nil)
 	status, err := server.Status(context.TODO(), nil)
@@ -53,14 +53,37 @@ func TestStatus(t *testing.T) {
 	require.Equal(t, http.StatusOK, int(status.Code))
 }
 
-func TestLease(t *testing.T) {
+func TestLeaseStatus(t *testing.T) {
 	handler := new(mmocks.Handler)
 	client := new(kmocks.Client)
-	mockResp := v1.DeploymentList{}
-	client.On("KubeDeployments", mock.Anything, mock.Anything).Return(&mockResp, nil).Once()
+	mockResp := types.LeaseStatusResponse{}
+	client.On("LeaseStatus", mock.Anything, mock.Anything).Return(&mockResp, nil).Once()
 
-	server := newServer(nil, "tcp", "3002", handler, client)
-	response, err := server.LeaseStatus(context.TODO(), &types.LeaseStatusRequest{})
+	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3002", handler, client)
+	response, err := server.LeaseStatus(context.TODO(), &types.LeaseStatusRequest{
+		Deployment: "d6f4b6728c7deb187a07afe8e145e214c716e287039a204e7fac1fc121dc0cef",
+		Group:      "1",
+		Order:      "2",
+		Provider:   "8224e14f903a2e136a6362527b19f11935197175cb69981940933aa04459a2a9",
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, response)
+}
+
+func TestServiceStatus(t *testing.T) {
+	handler := new(mmocks.Handler)
+	client := new(kmocks.Client)
+	mockResp := types.ServiceStatusResponse{}
+	client.On("ServiceStatus", mock.Anything, mock.Anything).Return(&mockResp, nil).Once()
+
+	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3002", handler, client)
+	response, err := server.ServiceStatus(context.TODO(), &types.ServiceStatusRequest{
+		Name:       "web",
+		Deployment: "d6f4b6728c7deb187a07afe8e145e214c716e287039a204e7fac1fc121dc0cef",
+		Group:      "1",
+		Order:      "2",
+		Provider:   "8224e14f903a2e136a6362527b19f11935197175cb69981940933aa04459a2a9",
+	})
 	assert.NoError(t, err)
 	assert.NotNil(t, response)
 }

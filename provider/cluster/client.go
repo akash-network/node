@@ -4,17 +4,17 @@ import (
 	"io"
 
 	"github.com/ovrclk/akash/types"
-	"k8s.io/api/apps/v1"
 )
 
 type Client interface {
 	Deploy(types.LeaseID, *types.ManifestGroup) error
-	Teardown(types.LeaseID) error
+	TeardownLease(types.LeaseID) error
+	TeardownNamespace(string) error
 
 	Deployments() ([]Deployment, error)
-	KubeDeployments(types.LeaseID) (*v1.DeploymentList, error)
-	KubeDeployment(types.LeaseID, string) (*v1.Deployment, error)
-	KubeLogs(types.LeaseID, int64) ([]io.ReadCloser, error)
+	LeaseStatus(types.LeaseID) (*types.LeaseStatusResponse, error)
+	ServiceStatus(types.LeaseID, string) (*types.ServiceStatusResponse, error)
+	ServiceLogs(types.LeaseID, int64) ([]*ServiceLog, error)
 }
 
 type Deployment interface {
@@ -26,25 +26,34 @@ func NullClient() Client {
 	return nullClient(0)
 }
 
+type ServiceLog struct {
+	Name   string
+	Stream io.ReadCloser
+}
+
 type nullClient int
 
 func (nullClient) Deploy(_ types.LeaseID, _ *types.ManifestGroup) error {
 	return nil
 }
 
-func (nullClient) KubeDeployments(_ types.LeaseID) (*v1.DeploymentList, error) {
+func (nullClient) LeaseStatus(_ types.LeaseID) (*types.LeaseStatusResponse, error) {
 	return nil, nil
 }
 
-func (nullClient) KubeDeployment(_ types.LeaseID, _ string) (*v1.Deployment, error) {
+func (nullClient) ServiceStatus(_ types.LeaseID, _ string) (*types.ServiceStatusResponse, error) {
 	return nil, nil
 }
 
-func (nullClient) KubeLogs(_ types.LeaseID, _ int64) ([]io.ReadCloser, error) {
+func (nullClient) ServiceLogs(_ types.LeaseID, _ int64) ([]*ServiceLog, error) {
 	return nil, nil
 }
 
-func (nullClient) Teardown(_ types.LeaseID) error {
+func (nullClient) TeardownLease(_ types.LeaseID) error {
+	return nil
+}
+
+func (nullClient) TeardownNamespace(_ string) error {
 	return nil
 }
 

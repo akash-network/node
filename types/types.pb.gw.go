@@ -176,7 +176,7 @@ func request_Cluster_ServiceLog_0(ctx context.Context, marshaler runtime.Marshal
 	var protoReq LogRequest
 	var metadata runtime.ServerMetadata
 
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.TailLines); err != nil && err != io.EOF {
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Options); err != nil && err != io.EOF {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 

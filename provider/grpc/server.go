@@ -73,57 +73,40 @@ func (s server) Deploy(ctx context.Context, req *types.ManifestRequest) (*types.
 
 func (s server) LeaseStatus(ctx context.Context, req *types.LeaseStatusRequest) (*types.LeaseStatusResponse, error) {
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
-	deployments, err := s.Client.KubeDeployments(lease.LeaseID)
 	if err != nil {
 		s.log.Error(err.Error())
 		return nil, types.ErrInternalError{Message: "internal error"}
 	}
-	if deployments == nil {
-		s.log.Error(err.Error())
-		return nil, types.ErrResourceNotFound{Message: "no deployments for lease"}
-	}
-	response := &types.LeaseStatusResponse{}
-	for _, deployment := range deployments.Items {
-		status := &types.LeaseStatus{Name: deployment.Name, Status: fmt.Sprintf("available replicas: %v/%v", deployment.Status.AvailableReplicas, deployment.Status.Replicas)}
-		response.Services = append(response.Services, status)
-	}
-	return response, nil
+	return s.Client.LeaseStatus(lease.LeaseID)
 }
 
 func (s server) ServiceStatus(ctx context.Context, req *types.ServiceStatusRequest) (*types.ServiceStatusResponse, error) {
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
-	deployment, err := s.Client.KubeDeployment(lease.LeaseID, req.Name)
 	if err != nil {
 		s.log.Error(err.Error())
 		return nil, types.ErrInternalError{Message: "internal error"}
 	}
-	if deployment == nil {
-		s.log.Error(err.Error())
-		return nil, types.ErrResourceNotFound{Message: "no deployment for lease"}
-	}
-	return &types.ServiceStatusResponse{
-		ObservedGeneration: deployment.Status.ObservedGeneration,
-		Replicas:           deployment.Status.Replicas,
-		UpdatedReplicas:    deployment.Status.UpdatedReplicas,
-		ReadyReplicas:      deployment.Status.ReadyReplicas,
-		AvailableReplicas:  deployment.Status.AvailableReplicas,
-	}, nil
+	return s.Client.ServiceStatus(lease.LeaseID, req.Name)
 }
 
 func (s server) ServiceLog(req *types.LogRequest, server types.Cluster_ServiceLogServer) error {
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
-	streams, err := s.Client.KubeLogs(lease.LeaseID, req.TailLines)
 	if err != nil {
 		s.log.Error(err.Error())
 		return types.ErrInternalError{Message: "internal error"}
 	}
-	if len(streams) == 0 {
+	logs, err := s.Client.ServiceLogs(lease.LeaseID, req.Options.TailLines)
+	if err != nil {
+		s.log.Error(err.Error())
+		return types.ErrInternalError{Message: "internal error"}
+	}
+	if len(logs) == 0 {
 		s.log.Error(err.Error())
 		return types.ErrResourceNotFound{Message: "no logs for lease"}
 	}
-	scanners := make([]*bufio.Scanner, len(streams))
-	for i, stream := range streams {
-		scanners[i] = bufio.NewScanner(stream)
+	scanners := make([]*bufio.Scanner, len(logs))
+	for i, log := range logs {
+		scanners[i] = bufio.NewScanner(log.Stream)
 	}
 LOOP:
 	for {
@@ -138,7 +121,11 @@ LOOP:
 			}
 		}
 	}
-
+	for _, log := range logs {
+		if err := log.Stream.Close(); err != nil {
+			s.log.Error(err.Error())
+		}
+	}
 	return nil
 }
 

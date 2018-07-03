@@ -152,8 +152,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "int64"
+              "$ref": "#/definitions/typesLogOptions"
             }
           }
         ],
@@ -225,6 +224,15 @@
       "properties": {
         "message": {
           "type": "string"
+        }
+      }
+    },
+    "typesLogOptions": {
+      "type": "object",
+      "properties": {
+        "tailLines": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },

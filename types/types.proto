@@ -389,7 +389,7 @@ service Cluster {
   rpc ServiceLog(LogRequest) returns(stream Log) {
     option (google.api.http) = {
       post: "/log/{deployment}/{group}/{order}/{provider}/{name}",
-      body: "tailLines"
+      body: "options"
     }; 
   }
 }
@@ -438,7 +438,11 @@ message LogRequest {
   string group      = 3;
   string order      = 4;
   string provider   = 5;
-  int64  tailLines  = 6;
+  LogOptions options = 6;
+}
+
+message LogOptions {
+  int64  tailLines  = 1;
 }
 
 message Log {

@@ -180,7 +180,7 @@ func (dm *deploymentMonitor) doDeploy() error {
 }
 
 func (dm *deploymentMonitor) doTeardown() error {
-	return dm.client.Teardown(dm.lease)
+	return dm.client.TeardownLease(dm.lease)
 }
 
 func (dm *deploymentMonitor) do(fn func() error) <-chan error {
