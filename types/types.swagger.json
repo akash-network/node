@@ -105,6 +105,63 @@
         ]
       }
     },
+    "/log/{deployment}/{group}/{order}/{provider}/{name}": {
+      "post": {
+        "operationId": "ServiceLog",
+        "responses": {
+          "200": {
+            "description": "(streaming responses)",
+            "schema": {
+              "$ref": "#/definitions/typesLog"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "deployment",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "order",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "int64"
+            }
+          }
+        ],
+        "tags": [
+          "Cluster"
+        ]
+      }
+    },
     "/manifest": {
       "post": {
         "operationId": "Deploy",
@@ -160,6 +217,14 @@
           "items": {
             "$ref": "#/definitions/typesLeaseStatus"
           }
+        }
+      }
+    },
+    "typesLog": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
         }
       }
     },

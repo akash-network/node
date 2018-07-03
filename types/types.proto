@@ -386,6 +386,12 @@ service Cluster {
       get: "/lease/{deployment}/{group}/{order}/{provider}/{name}",
     }; 
   }
+  rpc ServiceLog(LogRequest) returns(stream Log) {
+    option (google.api.http) = {
+      post: "/log/{deployment}/{group}/{order}/{provider}/{name}",
+      body: "tailLines"
+    }; 
+  }
 }
 
 message Empty{}
@@ -425,6 +431,20 @@ message ServiceStatusResponse {
    int32 readyReplicas      = 4; 
    int32 availableReplicas  = 5; 
 }
+
+message LogRequest {
+  string name       = 1;
+  string deployment = 2;
+  string group      = 3;
+  string order      = 4;
+  string provider   = 5;
+  int64  tailLines  = 6;
+}
+
+message Log {
+  string message = 1;
+}
+
 
 message LeaseStatus {
   string name = 1;

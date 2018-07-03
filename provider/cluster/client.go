@@ -1,6 +1,8 @@
 package cluster
 
 import (
+	"io"
+
 	"github.com/ovrclk/akash/types"
 	"k8s.io/api/apps/v1"
 )
@@ -12,6 +14,7 @@ type Client interface {
 	Deployments() ([]Deployment, error)
 	KubeDeployments(types.LeaseID) (*v1.DeploymentList, error)
 	KubeDeployment(types.LeaseID, string) (*v1.Deployment, error)
+	KubeLogs(types.LeaseID, int64) ([]io.ReadCloser, error)
 }
 
 type Deployment interface {
@@ -34,6 +37,10 @@ func (nullClient) KubeDeployments(_ types.LeaseID) (*v1.DeploymentList, error) {
 }
 
 func (nullClient) KubeDeployment(_ types.LeaseID, _ string) (*v1.Deployment, error) {
+	return nil, nil
+}
+
+func (nullClient) KubeLogs(_ types.LeaseID, _ int64) ([]io.ReadCloser, error) {
 	return nil, nil
 }
 

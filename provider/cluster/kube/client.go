@@ -2,6 +2,7 @@ package kube
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tmlibs/log"
 	"k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -102,6 +104,25 @@ func (c *client) Deployments() ([]cluster.Deployment, error) {
 	}
 
 	return deployments, nil
+}
+
+func (c *client) KubeLogs(lid types.LeaseID, tailLines int64) ([]io.ReadCloser, error) {
+	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	streams := make([]io.ReadCloser, len(pods.Items))
+	for i, pod := range pods.Items {
+		stream, err := c.kc.CoreV1().Pods(lidNS(lid)).GetLogs(pod.Name, &corev1.PodLogOptions{
+			Follow:    true,
+			TailLines: &tailLines,
+		}).Stream()
+		if err != nil {
+			return nil, err
+		}
+		streams[i] = stream
+	}
+	return streams, nil
 }
 
 // todo: limit number of results and do pagination / streaming

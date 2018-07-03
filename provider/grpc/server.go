@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"net/http"
@@ -54,14 +55,14 @@ func RunServer(ctx context.Context, log log.Logger, network, port string, handle
 	return err
 }
 
-func (s server) Status(context context.Context, req *types.Empty) (*types.ServerStatus, error) {
+func (s server) Status(ctx context.Context, req *types.Empty) (*types.ServerStatus, error) {
 	return &types.ServerStatus{
 		Code:    http.StatusOK,
 		Message: "OK",
 	}, nil
 }
 
-func (s server) Deploy(context context.Context, req *types.ManifestRequest) (*types.DeployRespone, error) {
+func (s server) Deploy(ctx context.Context, req *types.ManifestRequest) (*types.DeployRespone, error) {
 	if err := s.handler.HandleManifest(req); err != nil {
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func (s server) Deploy(context context.Context, req *types.ManifestRequest) (*ty
 	}, nil
 }
 
-func (s server) LeaseStatus(context context.Context, req *types.LeaseStatusRequest) (*types.LeaseStatusResponse, error) {
+func (s server) LeaseStatus(ctx context.Context, req *types.LeaseStatusRequest) (*types.LeaseStatusResponse, error) {
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
 	deployments, err := s.Client.KubeDeployments(lease.LeaseID)
 	if err != nil {
@@ -89,7 +90,7 @@ func (s server) LeaseStatus(context context.Context, req *types.LeaseStatusReque
 	return response, nil
 }
 
-func (s server) ServiceStatus(context context.Context, req *types.ServiceStatusRequest) (*types.ServiceStatusResponse, error) {
+func (s server) ServiceStatus(ctx context.Context, req *types.ServiceStatusRequest) (*types.ServiceStatusResponse, error) {
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
 	deployment, err := s.Client.KubeDeployment(lease.LeaseID, req.Name)
 	if err != nil {
@@ -107,6 +108,38 @@ func (s server) ServiceStatus(context context.Context, req *types.ServiceStatusR
 		ReadyReplicas:      deployment.Status.ReadyReplicas,
 		AvailableReplicas:  deployment.Status.AvailableReplicas,
 	}, nil
+}
+
+func (s server) ServiceLog(req *types.LogRequest, server types.Cluster_ServiceLogServer) error {
+	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
+	streams, err := s.Client.KubeLogs(lease.LeaseID, req.TailLines)
+	if err != nil {
+		s.log.Error(err.Error())
+		return types.ErrInternalError{Message: "internal error"}
+	}
+	if len(streams) == 0 {
+		s.log.Error(err.Error())
+		return types.ErrResourceNotFound{Message: "no logs for lease"}
+	}
+	scanners := make([]*bufio.Scanner, len(streams))
+	for i, stream := range streams {
+		scanners[i] = bufio.NewScanner(stream)
+	}
+LOOP:
+	for {
+		select {
+		case <-server.Context().Done():
+			break LOOP
+		default:
+			for _, scanner := range scanners {
+				if scanner.Scan() {
+					server.Send(&types.Log{Message: "pod:" + "service:" + scanner.Text()})
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // NewServer network can be "tcp", "tcp4", "tcp6", "unix" or "unixpacket". phandler is the provider cluster handler
