@@ -2,6 +2,7 @@ package kube
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -98,7 +99,7 @@ func TestServiceLog(t *testing.T) {
 
 	client := kubeClient(t)
 
-	logs, err := client.ServiceLogs(leaseID.LeaseID, 1000)
+	logs, err := client.ServiceLogs(context.TODO(), leaseID.LeaseID, 1000, true)
 	assert.NoError(t, err)
 
 	fmt.Println("got streams: ", (len(logs)))

@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"bufio"
+	"context"
 	"io"
 
 	"github.com/ovrclk/akash/types"
@@ -15,7 +16,7 @@ type Client interface {
 	Deployments() ([]Deployment, error)
 	LeaseStatus(types.LeaseID) (*types.LeaseStatusResponse, error)
 	ServiceStatus(types.LeaseID, string) (*types.ServiceStatusResponse, error)
-	ServiceLogs(types.LeaseID, int64, bool) ([]*ServiceLog, error)
+	ServiceLogs(context.Context, types.LeaseID, int64, bool) ([]*ServiceLog, error)
 }
 
 type Deployment interface {
@@ -47,7 +48,7 @@ func (nullClient) ServiceStatus(_ types.LeaseID, _ string) (*types.ServiceStatus
 	return nil, nil
 }
 
-func (nullClient) ServiceLogs(_ types.LeaseID, _ int64, _ bool) ([]*ServiceLog, error) {
+func (nullClient) ServiceLogs(_ context.Context, _ types.LeaseID, _ int64, _ bool) ([]*ServiceLog, error) {
 	return nil, nil
 }
 

@@ -5,7 +5,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/provider/cluster"
@@ -95,7 +94,7 @@ func (s server) ServiceLog(req *types.LogRequest, server types.Cluster_ServiceLo
 		s.log.Error(err.Error())
 		return types.ErrInternalError{Message: "internal error"}
 	}
-	logs, err := s.Client.ServiceLogs(lease.LeaseID, req.Options.TailLines, req.Options.Follow)
+	logs, err := s.Client.ServiceLogs(server.Context(), lease.LeaseID, req.Options.TailLines, req.Options.Follow)
 	if err != nil {
 		s.log.Error(err.Error())
 		return types.ErrInternalError{Message: "internal error"}
@@ -105,44 +104,31 @@ func (s server) ServiceLog(req *types.LogRequest, server types.Cluster_ServiceLo
 		return types.ErrResourceNotFound{Message: "no logs for lease"}
 	}
 
-	if req.Options.Follow {
-		for _, log := range logs {
-			go func(log *cluster.ServiceLog) {
-			LOOP:
-				for {
-					select {
-					case <-server.Context().Done():
-						break LOOP
-					default:
-						fmt.Println(log.Name)
-						if log.Scanner.Scan() {
-							server.Send(&types.Log{Name: log.Name, Message: log.Scanner.Text()})
-						}
-					}
-				}
-			}(log)
-		}
-		<-server.Context().Done()
-	} else {
-		var wg sync.WaitGroup
-		for _, log := range logs {
-			wg.Add(1)
-			go func(log *cluster.ServiceLog) {
-				fmt.Println(log.Name)
-				for log.Scanner.Scan() {
-					server.Send(&types.Log{Name: log.Name, Message: log.Scanner.Text()})
-				}
-				wg.Done()
-			}(log)
-		}
-		wg.Wait()
-	}
-	fmt.Println("CLOSING STREAMS")
+	errch := make(chan error, len(logs))
+	logch := make(chan *types.Log)
+
 	for _, log := range logs {
-		if err := log.Stream.Close(); err != nil {
-			s.log.Error(err.Error())
+		go func(log *cluster.ServiceLog) {
+			defer log.Stream.Close()
+			for log.Scanner.Scan() {
+				logch <- &types.Log{Name: log.Name, Message: log.Scanner.Text()}
+			}
+			errch <- log.Scanner.Err()
+		}(log)
+	}
+
+	for remaining := len(logs); remaining > 0; {
+		select {
+		case err := <-errch:
+			if err != nil {
+				s.log.Error(err.Error())
+			}
+			remaining--
+		case entry := <-logch:
+			server.Send(entry)
 		}
 	}
+
 	return nil
 }
 

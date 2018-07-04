@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,7 +26,7 @@ func logsCommand() *cobra.Command {
 	}
 
 	session.AddFlagNode(cmd, cmd.PersistentFlags())
-	cmd.Flags().Int64P("lines", "l", 50, "Number of lines from the end of the logs to show per service")
+	cmd.Flags().Int64P("lines", "l", 10, "Number of lines from the end of the logs to show per service")
 	cmd.Flags().BoolP("follow", "f", false, "Follow the log stream of the pod")
 
 	return cmd
@@ -60,49 +61,37 @@ func logs(session session.Session, cmd *cobra.Command, args []string) error {
 	}
 	url := provider.HostURI + "/logs/" + leasePath + "/" + serviceName
 	fmt.Println(url)
-	body, err := stream(url, b)
+	body, err := stream(session.Ctx(), url, b)
 	if err != nil {
 		return err
 	}
 	scanner := bufio.NewScanner(body)
-	// XXX listen for signint and break
-	if follow {
-		for {
-			if scanner.Scan() {
-				log := types.LogResponse{}
-				err := json.Unmarshal(scanner.Bytes(), &log)
-				if err != nil {
-					session.Log().Error(err.Error())
-				}
-				if log.Result != nil {
-					fmt.Printf("[%v]  %v\n", log.Result.Name, log.Result.Message)
-				}
-			}
-		}
-	} else {
-		for scanner.Scan() {
-			log := types.LogResponse{}
-			err := json.Unmarshal(scanner.Bytes(), &log)
-			if err != nil {
-				session.Log().Error(err.Error())
-			}
-			if log.Result != nil {
-				fmt.Printf("[%v]  %v\n", log.Result.Name, log.Result.Message)
-			}
-		}
+	for scanner.Scan() {
+		printLog(session, scanner)
 	}
-
 	defer body.Close()
 	return nil
 }
 
-func stream(url string, data []byte) (io.ReadCloser, error) {
+func printLog(session session.Session, scanner *bufio.Scanner) {
+	log := types.LogResponse{}
+	err := json.Unmarshal(scanner.Bytes(), &log)
+	if err != nil {
+		session.Log().Error(err.Error())
+	}
+	if log.Result != nil {
+		fmt.Printf("[%v]  %v\n", log.Result.Name, log.Result.Message)
+	}
+}
+
+func stream(ctx context.Context, url string, data []byte) (io.ReadCloser, error) {
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("X-Custom-Header", "Akash")
 	req.Header.Set("Content-Type", "application/json")
+	req.WithContext(ctx)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
