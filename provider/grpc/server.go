@@ -1,11 +1,11 @@
 package grpc
 
 import (
-	"bufio"
 	"fmt"
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/provider/cluster"
@@ -95,7 +95,7 @@ func (s server) ServiceLog(req *types.LogRequest, server types.Cluster_ServiceLo
 		s.log.Error(err.Error())
 		return types.ErrInternalError{Message: "internal error"}
 	}
-	logs, err := s.Client.ServiceLogs(lease.LeaseID, req.Options.TailLines)
+	logs, err := s.Client.ServiceLogs(lease.LeaseID, req.Options.TailLines, req.Options.Follow)
 	if err != nil {
 		s.log.Error(err.Error())
 		return types.ErrInternalError{Message: "internal error"}
@@ -104,23 +104,40 @@ func (s server) ServiceLog(req *types.LogRequest, server types.Cluster_ServiceLo
 		s.log.Error(err.Error())
 		return types.ErrResourceNotFound{Message: "no logs for lease"}
 	}
-	scanners := make([]*bufio.Scanner, len(logs))
-	for i, log := range logs {
-		scanners[i] = bufio.NewScanner(log.Stream)
-	}
-LOOP:
-	for {
-		select {
-		case <-server.Context().Done():
-			break LOOP
-		default:
-			for _, scanner := range scanners {
-				if scanner.Scan() {
-					server.Send(&types.Log{Message: "pod:" + "service:" + scanner.Text()})
+
+	if req.Options.Follow {
+		for _, log := range logs {
+			go func(log *cluster.ServiceLog) {
+			LOOP:
+				for {
+					select {
+					case <-server.Context().Done():
+						break LOOP
+					default:
+						fmt.Println(log.Name)
+						if log.Scanner.Scan() {
+							server.Send(&types.Log{Name: log.Name, Message: log.Scanner.Text()})
+						}
+					}
 				}
-			}
+			}(log)
 		}
+		<-server.Context().Done()
+	} else {
+		var wg sync.WaitGroup
+		for _, log := range logs {
+			wg.Add(1)
+			go func(log *cluster.ServiceLog) {
+				fmt.Println(log.Name)
+				for log.Scanner.Scan() {
+					server.Send(&types.Log{Name: log.Name, Message: log.Scanner.Text()})
+				}
+				wg.Done()
+			}(log)
+		}
+		wg.Wait()
 	}
+	fmt.Println("CLOSING STREAMS")
 	for _, log := range logs {
 		if err := log.Stream.Close(); err != nil {
 			s.log.Error(err.Error())

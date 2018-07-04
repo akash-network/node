@@ -18,6 +18,7 @@ func main() {
 	root.AddCommand(query.QueryCommand())
 	root.AddCommand(statusCommand())
 	root.AddCommand(marketplaceCommand())
+	root.AddCommand(logsCommand())
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)

@@ -388,7 +388,7 @@ service Cluster {
   }
   rpc ServiceLog(LogRequest) returns(stream Log) {
     option (google.api.http) = {
-      post: "/log/{deployment}/{group}/{order}/{provider}/{name}",
+      post: "/logs/{deployment}/{group}/{order}/{provider}/{name}",
       body: "options"
     }; 
   }
@@ -442,11 +442,17 @@ message LogRequest {
 }
 
 message LogOptions {
-  int64  tailLines  = 1;
+  int64 tailLines  = 1;
+  bool follow      = 2;
 }
 
 message Log {
-  string message = 1;
+  string name = 1;
+  string message = 2;
+}
+
+message LogResponse {
+  Log result = 1;
 }
 
 

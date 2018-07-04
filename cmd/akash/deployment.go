@@ -27,8 +27,7 @@ func deploymentCommand() *cobra.Command {
 
 	cmd.AddCommand(createDeploymentCommand())
 	cmd.AddCommand(closeDeploymentCommand())
-	// todo: this command is not working
-	// cmd.AddCommand(sendManifestCommand())
+	cmd.AddCommand(sendManifestCommand())
 
 	return cmd
 }
@@ -183,58 +182,57 @@ func closeDeployment(session session.Session, cmd *cobra.Command, args []string)
 	return nil
 }
 
-// todo: this command is not working
-// func sendManifestCommand() *cobra.Command {
+func sendManifestCommand() *cobra.Command {
 
-// 	cmd := &cobra.Command{
-// 		Use:   "sendmani <manifest> <deployment>",
-// 		Short: "send manifest to all deployment providers",
-// 		Args:  cobra.ExactArgs(2),
-// 		RunE: session.WithSession(
-// 			session.RequireKey(session.RequireNode(sendManifest))),
-// 	}
+	cmd := &cobra.Command{
+		Use:   "sendmani <manifest> <deployment>",
+		Short: "send manifest to all deployment providers",
+		Args:  cobra.ExactArgs(2),
+		RunE: session.WithSession(
+			session.RequireKey(session.RequireNode(sendManifest))),
+	}
 
-// 	session.AddFlagNode(cmd, cmd.Flags())
-// 	session.AddFlagKey(cmd, cmd.Flags())
+	session.AddFlagNode(cmd, cmd.Flags())
+	session.AddFlagKey(cmd, cmd.Flags())
 
-// 	return cmd
-// }
+	return cmd
+}
 
-// func sendManifest(session session.Session, cmd *cobra.Command, args []string) error {
-// 	signer, _, err := session.Signer()
-// 	if err != nil {
-// 		return err
-// 	}
+func sendManifest(session session.Session, cmd *cobra.Command, args []string) error {
+	signer, _, err := session.Signer()
+	if err != nil {
+		return err
+	}
 
-// 	sdl, err := sdl.ReadFile(args[0])
-// 	if err != nil {
-// 		return err
-// 	}
+	sdl, err := sdl.ReadFile(args[0])
+	if err != nil {
+		return err
+	}
 
-// 	mani, err := sdl.Manifest()
-// 	if err != nil {
-// 		return err
-// 	}
+	mani, err := sdl.Manifest()
+	if err != nil {
+		return err
+	}
 
-// 	depAddr, err := keys.ParseDeploymentPath(args[1])
-// 	if err != nil {
-// 		return err
-// 	}
+	depAddr, err := keys.ParseDeploymentPath(args[1])
+	if err != nil {
+		return err
+	}
 
-// 	leases, err := session.QueryClient().DeploymentLeases(session.Ctx(), depAddr.ID())
-// 	if err != nil {
-// 		return err
-// 	}
+	leases, err := session.QueryClient().DeploymentLeases(session.Ctx(), depAddr.ID())
+	if err != nil {
+		return err
+	}
 
-// 	for _, lease := range leases.Items {
-// 		provider, err := session.QueryClient().Provider(session.Ctx(), lease.Provider)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		err = http.SendManifest(mani, signer, provider, lease.Deployment)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
+	for _, lease := range leases.Items {
+		provider, err := session.QueryClient().Provider(session.Ctx(), lease.Provider)
+		if err != nil {
+			return err
+		}
+		err = http.SendManifest(mani, signer, provider, lease.Deployment)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

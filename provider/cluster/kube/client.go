@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path"
@@ -160,7 +161,8 @@ func (c *client) TeardownNamespace(ns string) error {
 }
 
 /* BEGIN GRPC STUFF */
-func (c *client) ServiceLogs(lid types.LeaseID, tailLines int64) ([]*cluster.ServiceLog, error) {
+func (c *client) ServiceLogs(lid types.LeaseID, tailLines int64, follow bool) ([]*cluster.ServiceLog, error) {
+	fmt.Println(tailLines)
 	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
@@ -170,7 +172,7 @@ func (c *client) ServiceLogs(lid types.LeaseID, tailLines int64) ([]*cluster.Ser
 	for i, pod := range pods.Items {
 		// XXX this API call will hang until a log is output by the container
 		stream, err := c.kc.CoreV1().Pods(lidNS(lid)).GetLogs(pod.Name, &corev1.PodLogOptions{
-			Follow:     true,
+			Follow:     follow,
 			TailLines:  &tailLines,
 			Timestamps: true,
 		}).Stream()
@@ -178,8 +180,10 @@ func (c *client) ServiceLogs(lid types.LeaseID, tailLines int64) ([]*cluster.Ser
 			c.log.Error(err.Error())
 			return nil, types.ErrInternalError{Message: "internal error"}
 		}
-		streams[i] = &cluster.ServiceLog{Name: pod.Name, Stream: stream}
+		streams[i] = &cluster.ServiceLog{Name: pod.Name, Stream: stream, Scanner: bufio.NewScanner(stream)}
 	}
+	fmt.Println(streams[0].Name, streams[1].Name)
+	fmt.Println(&streams[0].Stream, &streams[1].Stream)
 	return streams, nil
 }
 

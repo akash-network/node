@@ -105,7 +105,7 @@
         ]
       }
     },
-    "/log/{deployment}/{group}/{order}/{provider}/{name}": {
+    "/logs/{deployment}/{group}/{order}/{provider}/{name}": {
       "post": {
         "operationId": "ServiceLog",
         "responses": {
@@ -222,6 +222,9 @@
     "typesLog": {
       "type": "object",
       "properties": {
+        "name": {
+          "type": "string"
+        },
         "message": {
           "type": "string"
         }
@@ -233,6 +236,10 @@
         "tailLines": {
           "type": "string",
           "format": "int64"
+        },
+        "follow": {
+          "type": "boolean",
+          "format": "boolean"
         }
       }
     },
