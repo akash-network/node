@@ -107,7 +107,7 @@
     },
     "/logs/{deployment}/{group}/{order}/{provider}/{name}": {
       "post": {
-        "operationId": "ServiceLog",
+        "operationId": "ServiceLogs",
         "responses": {
           "200": {
             "description": "(streaming responses)",

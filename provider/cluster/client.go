@@ -24,10 +24,6 @@ type Deployment interface {
 	ManifestGroup() *types.ManifestGroup
 }
 
-func NullClient() Client {
-	return nullClient(0)
-}
-
 type ServiceLog struct {
 	Name    string
 	Stream  io.ReadCloser
@@ -35,6 +31,18 @@ type ServiceLog struct {
 }
 
 type nullClient int
+
+func NewServiceLog(name string, stream io.ReadCloser) *ServiceLog {
+	return &ServiceLog{
+		Name:    name,
+		Stream:  stream,
+		Scanner: bufio.NewScanner(stream),
+	}
+}
+
+func NullClient() Client {
+	return nullClient(0)
+}
 
 func (nullClient) Deploy(_ types.LeaseID, _ *types.ManifestGroup) error {
 	return nil

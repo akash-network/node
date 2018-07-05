@@ -1,7 +1,6 @@
 package kube
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -161,7 +160,6 @@ func (c *client) TeardownNamespace(ns string) error {
 	return c.kc.CoreV1().Namespaces().Delete(ns, &metav1.DeleteOptions{})
 }
 
-/* BEGIN GRPC STUFF */
 func (c *client) ServiceLogs(ctx context.Context, lid types.LeaseID, tailLines int64, follow bool) ([]*cluster.ServiceLog, error) {
 	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(metav1.ListOptions{})
 	if err != nil {
@@ -179,7 +177,7 @@ func (c *client) ServiceLogs(ctx context.Context, lid types.LeaseID, tailLines i
 			c.log.Error(err.Error())
 			return nil, types.ErrInternalError{Message: "internal error"}
 		}
-		streams[i] = &cluster.ServiceLog{Name: pod.Name, Stream: stream, Scanner: bufio.NewScanner(stream)}
+		streams[i] = cluster.NewServiceLog(pod.Name, stream)
 	}
 	return streams, nil
 }
@@ -219,5 +217,3 @@ func (c *client) ServiceStatus(lid types.LeaseID, name string) (*types.ServiceSt
 		AvailableReplicas:  deployment.Status.AvailableReplicas,
 	}, nil
 }
-
-/* END GRPC STUFF */

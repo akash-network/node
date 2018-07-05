@@ -60,7 +60,6 @@ func logs(session session.Session, cmd *cobra.Command, args []string) error {
 		return err
 	}
 	url := provider.HostURI + "/logs/" + leasePath + "/" + serviceName
-	fmt.Println(url)
 	body, err := stream(session.Ctx(), url, b)
 	if err != nil {
 		return err

@@ -1,11 +1,14 @@
 package grpc
 
 import (
+	"bytes"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/ovrclk/akash/manifest"
+	"github.com/ovrclk/akash/provider/cluster"
 	kmocks "github.com/ovrclk/akash/provider/cluster/kube/mocks"
 	"github.com/ovrclk/akash/provider/manifest/mocks"
 	mmocks "github.com/ovrclk/akash/provider/manifest/mocks"
@@ -86,4 +89,42 @@ func TestServiceStatus(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, response)
+}
+
+type mockCluserServiceLogServer struct {
+	testutil.MockGRPCStreamServer
+}
+
+var sent []*types.Log
+
+func (s mockCluserServiceLogServer) Send(log *types.Log) error {
+	sent = append(sent, log)
+	return nil
+}
+
+func TestServiceLogs(t *testing.T) {
+	handler := new(mmocks.Handler)
+	client := new(kmocks.Client)
+	message := "logs logs logs logs\n"
+	stream := testutil.ReadCloser{bytes.NewBuffer([]byte(message))}
+	serviceLog := cluster.NewServiceLog(t.Name(), stream)
+	mockResp := []*cluster.ServiceLog{serviceLog}
+	client.On("ServiceLogs", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResp, nil).Once()
+	streamServer := mockCluserServiceLogServer{}
+	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3002", handler, client)
+	err := server.ServiceLogs(&types.LogRequest{
+		Name:       t.Name(),
+		Deployment: "d6f4b6728c7deb187a07afe8e145e214c716e287039a204e7fac1fc121dc0cef",
+		Group:      "1",
+		Order:      "2",
+		Provider:   "8224e14f903a2e136a6362527b19f11935197175cb69981940933aa04459a2a9",
+		Options: &types.LogOptions{
+			TailLines: 1000,
+			Follow:    false,
+		},
+	}, streamServer)
+	assert.NoError(t, err)
+	assert.Len(t, sent, 1)
+	assert.Equal(t, strings.TrimSuffix(message, "\n"), sent[0].Message)
+	assert.Equal(t, t.Name(), sent[0].Name)
 }

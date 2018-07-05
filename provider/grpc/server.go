@@ -88,7 +88,7 @@ func (s server) ServiceStatus(ctx context.Context, req *types.ServiceStatusReque
 	return s.Client.ServiceStatus(lease.LeaseID, req.Name)
 }
 
-func (s server) ServiceLog(req *types.LogRequest, server types.Cluster_ServiceLogServer) error {
+func (s server) ServiceLogs(req *types.LogRequest, server types.Cluster_ServiceLogsServer) error {
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
 	if err != nil {
 		s.log.Error(err.Error())

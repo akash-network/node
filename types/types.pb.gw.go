@@ -172,7 +172,7 @@ func request_Cluster_ServiceStatus_0(ctx context.Context, marshaler runtime.Mars
 
 }
 
-func request_Cluster_ServiceLog_0(ctx context.Context, marshaler runtime.Marshaler, client ClusterClient, req *http.Request, pathParams map[string]string) (Cluster_ServiceLogClient, runtime.ServerMetadata, error) {
+func request_Cluster_ServiceLogs_0(ctx context.Context, marshaler runtime.Marshaler, client ClusterClient, req *http.Request, pathParams map[string]string) (Cluster_ServiceLogsClient, runtime.ServerMetadata, error) {
 	var protoReq LogRequest
 	var metadata runtime.ServerMetadata
 
@@ -242,7 +242,7 @@ func request_Cluster_ServiceLog_0(ctx context.Context, marshaler runtime.Marshal
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "name", err)
 	}
 
-	stream, err := client.ServiceLog(ctx, &protoReq)
+	stream, err := client.ServiceLogs(ctx, &protoReq)
 	if err != nil {
 		return nil, metadata, err
 	}
@@ -380,7 +380,7 @@ func RegisterClusterHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 
 	})
 
-	mux.Handle("POST", pattern_Cluster_ServiceLog_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_Cluster_ServiceLogs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
@@ -398,14 +398,14 @@ func RegisterClusterHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Cluster_ServiceLog_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Cluster_ServiceLogs_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_Cluster_ServiceLog_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_Cluster_ServiceLogs_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -419,7 +419,7 @@ var (
 
 	pattern_Cluster_ServiceStatus_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 1, 0, 4, 1, 5, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"lease", "deployment", "group", "order", "provider", "name"}, ""))
 
-	pattern_Cluster_ServiceLog_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 1, 0, 4, 1, 5, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"logs", "deployment", "group", "order", "provider", "name"}, ""))
+	pattern_Cluster_ServiceLogs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 1, 0, 4, 1, 5, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"logs", "deployment", "group", "order", "provider", "name"}, ""))
 )
 
 var (
@@ -429,5 +429,5 @@ var (
 
 	forward_Cluster_ServiceStatus_0 = runtime.ForwardResponseMessage
 
-	forward_Cluster_ServiceLog_0 = runtime.ForwardResponseStream
+	forward_Cluster_ServiceLogs_0 = runtime.ForwardResponseStream
 )
