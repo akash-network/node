@@ -27,7 +27,7 @@ func logsCommand() *cobra.Command {
 
 	session.AddFlagNode(cmd, cmd.PersistentFlags())
 	cmd.Flags().Int64P("lines", "l", 10, "Number of lines from the end of the logs to show per service")
-	cmd.Flags().BoolP("follow", "f", false, "Follow the log stream of the pod")
+	cmd.Flags().BoolP("follow", "f", false, "Follow the log stream of the service")
 
 	return cmd
 }
