@@ -54,14 +54,14 @@ func RunServer(ctx context.Context, log log.Logger, network, port string, handle
 	return err
 }
 
-func (s server) Status(context context.Context, req *types.Empty) (*types.ServerStatus, error) {
+func (s server) Status(ctx context.Context, req *types.Empty) (*types.ServerStatus, error) {
 	return &types.ServerStatus{
 		Code:    http.StatusOK,
 		Message: "OK",
 	}, nil
 }
 
-func (s server) Deploy(context context.Context, req *types.ManifestRequest) (*types.DeployRespone, error) {
+func (s server) Deploy(ctx context.Context, req *types.ManifestRequest) (*types.DeployRespone, error) {
 	if err := s.handler.HandleManifest(req); err != nil {
 		return nil, err
 	}
@@ -70,43 +70,69 @@ func (s server) Deploy(context context.Context, req *types.ManifestRequest) (*ty
 	}, nil
 }
 
-func (s server) LeaseStatus(context context.Context, req *types.LeaseStatusRequest) (*types.LeaseStatusResponse, error) {
+func (s server) LeaseStatus(ctx context.Context, req *types.LeaseStatusRequest) (*types.LeaseStatusResponse, error) {
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
-	deployments, err := s.Client.KubeDeployments(lease.LeaseID)
 	if err != nil {
 		s.log.Error(err.Error())
 		return nil, types.ErrInternalError{Message: "internal error"}
 	}
-	if deployments == nil {
-		s.log.Error(err.Error())
-		return nil, types.ErrResourceNotFound{Message: "no deployments for lease"}
-	}
-	response := &types.LeaseStatusResponse{}
-	for _, deployment := range deployments.Items {
-		status := &types.LeaseStatus{Name: deployment.Name, Status: fmt.Sprintf("available replicas: %v/%v", deployment.Status.AvailableReplicas, deployment.Status.Replicas)}
-		response.Services = append(response.Services, status)
-	}
-	return response, nil
+	return s.Client.LeaseStatus(lease.LeaseID)
 }
 
-func (s server) ServiceStatus(context context.Context, req *types.ServiceStatusRequest) (*types.ServiceStatusResponse, error) {
+func (s server) ServiceStatus(ctx context.Context,
+	req *types.ServiceStatusRequest) (*types.ServiceStatusResponse, error) {
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
-	deployment, err := s.Client.KubeDeployment(lease.LeaseID, req.Name)
 	if err != nil {
 		s.log.Error(err.Error())
 		return nil, types.ErrInternalError{Message: "internal error"}
 	}
-	if deployment == nil {
+	return s.Client.ServiceStatus(lease.LeaseID, req.Name)
+}
+
+func (s server) ServiceLogs(req *types.LogRequest, server types.Cluster_ServiceLogsServer) error {
+	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
+	if err != nil {
 		s.log.Error(err.Error())
-		return nil, types.ErrResourceNotFound{Message: "no deployment for lease"}
+		return types.ErrInternalError{Message: "internal error"}
 	}
-	return &types.ServiceStatusResponse{
-		ObservedGeneration: deployment.Status.ObservedGeneration,
-		Replicas:           deployment.Status.Replicas,
-		UpdatedReplicas:    deployment.Status.UpdatedReplicas,
-		ReadyReplicas:      deployment.Status.ReadyReplicas,
-		AvailableReplicas:  deployment.Status.AvailableReplicas,
-	}, nil
+	logs, err := s.Client.ServiceLogs(server.Context(), lease.LeaseID, req.Options.TailLines, req.Options.Follow)
+	if err != nil {
+		s.log.Error(err.Error())
+		return types.ErrInternalError{Message: "internal error"}
+	}
+	if len(logs) == 0 {
+		s.log.Error(err.Error())
+		return types.ErrResourceNotFound{Message: "no logs for lease"}
+	}
+
+	errch := make(chan error, len(logs))
+	logch := make(chan *types.Log)
+
+	for _, log := range logs {
+		go func(log *cluster.ServiceLog) {
+			defer log.Stream.Close()
+			for log.Scanner.Scan() {
+				logch <- &types.Log{Name: log.Name, Message: log.Scanner.Text()}
+			}
+			errch <- log.Scanner.Err()
+		}(log)
+	}
+
+	for remaining := len(logs); remaining > 0; {
+		select {
+		case err := <-errch:
+			if err != nil {
+				s.log.Error(err.Error())
+			}
+			remaining--
+		case entry := <-logch:
+			if err := server.Send(entry); err != nil {
+				s.log.Error(err.Error())
+			}
+		}
+	}
+
+	return nil
 }
 
 // NewServer network can be "tcp", "tcp4", "tcp6", "unix" or "unixpacket". phandler is the provider cluster handler

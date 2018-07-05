@@ -1,17 +1,22 @@
 package cluster
 
 import (
+	"bufio"
+	"context"
+	"io"
+
 	"github.com/ovrclk/akash/types"
-	"k8s.io/api/apps/v1"
 )
 
 type Client interface {
 	Deploy(types.LeaseID, *types.ManifestGroup) error
-	Teardown(types.LeaseID) error
+	TeardownLease(types.LeaseID) error
+	TeardownNamespace(string) error
 
 	Deployments() ([]Deployment, error)
-	KubeDeployments(types.LeaseID) (*v1.DeploymentList, error)
-	KubeDeployment(types.LeaseID, string) (*v1.Deployment, error)
+	LeaseStatus(types.LeaseID) (*types.LeaseStatusResponse, error)
+	ServiceStatus(types.LeaseID, string) (*types.ServiceStatusResponse, error)
+	ServiceLogs(context.Context, types.LeaseID, int64, bool) ([]*ServiceLog, error)
 }
 
 type Deployment interface {
@@ -19,25 +24,47 @@ type Deployment interface {
 	ManifestGroup() *types.ManifestGroup
 }
 
-func NullClient() Client {
-	return nullClient(0)
+type ServiceLog struct {
+	Name    string
+	Stream  io.ReadCloser
+	Scanner *bufio.Scanner
 }
 
 type nullClient int
+
+func NewServiceLog(name string, stream io.ReadCloser) *ServiceLog {
+	return &ServiceLog{
+		Name:    name,
+		Stream:  stream,
+		Scanner: bufio.NewScanner(stream),
+	}
+}
+
+func NullClient() Client {
+	return nullClient(0)
+}
 
 func (nullClient) Deploy(_ types.LeaseID, _ *types.ManifestGroup) error {
 	return nil
 }
 
-func (nullClient) KubeDeployments(_ types.LeaseID) (*v1.DeploymentList, error) {
+func (nullClient) LeaseStatus(_ types.LeaseID) (*types.LeaseStatusResponse, error) {
 	return nil, nil
 }
 
-func (nullClient) KubeDeployment(_ types.LeaseID, _ string) (*v1.Deployment, error) {
+func (nullClient) ServiceStatus(_ types.LeaseID, _ string) (*types.ServiceStatusResponse, error) {
 	return nil, nil
 }
 
-func (nullClient) Teardown(_ types.LeaseID) error {
+func (nullClient) ServiceLogs(_ context.Context, _ types.LeaseID, _ int64, _ bool) ([]*ServiceLog, error) {
+	return nil, nil
+}
+
+func (nullClient) TeardownLease(_ types.LeaseID) error {
+	return nil
+}
+
+func (nullClient) TeardownNamespace(_ string) error {
 	return nil
 }
 

@@ -88,7 +88,7 @@ func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
 		Return(nil).
 		Once()
 
-	client.On("Teardown", lease.LeaseID).
+	client.On("TeardownLease", lease.LeaseID).
 		Return(nil).
 		Once()
 

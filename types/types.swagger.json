@@ -105,6 +105,62 @@
         ]
       }
     },
+    "/logs/{deployment}/{group}/{order}/{provider}/{name}": {
+      "post": {
+        "operationId": "ServiceLogs",
+        "responses": {
+          "200": {
+            "description": "(streaming responses)",
+            "schema": {
+              "$ref": "#/definitions/typesLog"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "deployment",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "order",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/typesLogOptions"
+            }
+          }
+        ],
+        "tags": [
+          "Cluster"
+        ]
+      }
+    },
     "/manifest": {
       "post": {
         "operationId": "Deploy",
@@ -160,6 +216,30 @@
           "items": {
             "$ref": "#/definitions/typesLeaseStatus"
           }
+        }
+      }
+    },
+    "typesLog": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "typesLogOptions": {
+      "type": "object",
+      "properties": {
+        "tailLines": {
+          "type": "string",
+          "format": "int64"
+        },
+        "follow": {
+          "type": "boolean",
+          "format": "boolean"
         }
       }
     },
