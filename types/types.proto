@@ -433,11 +433,11 @@ message ServiceStatusResponse {
 }
 
 message LogRequest {
-  string name       = 1;
-  string deployment = 2;
-  string group      = 3;
-  string order      = 4;
-  string provider   = 5;
+  string name        = 1;
+  string deployment  = 2;
+  string group       = 3;
+  string order       = 4;
+  string provider    = 5;
   LogOptions options = 6;
 }
 

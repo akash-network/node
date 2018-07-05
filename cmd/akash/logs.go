@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/ovrclk/akash/cmd/akash/session"
+	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
 	"github.com/spf13/cobra"
@@ -64,22 +65,26 @@ func logs(session session.Session, cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	scanner := bufio.NewScanner(body)
-	for scanner.Scan() {
-		printLog(session, scanner)
-	}
+	common.RunForever(printLog(session, scanner))
+
 	defer body.Close()
 	return nil
 }
 
-func printLog(session session.Session, scanner *bufio.Scanner) {
-	log := types.LogResponse{}
-	err := json.Unmarshal(scanner.Bytes(), &log)
-	if err != nil {
-		session.Log().Error(err.Error())
-	}
-	if log.Result != nil {
-		fmt.Printf("[%v]  %v\n", log.Result.Name, log.Result.Message)
+func printLog(session session.Session, scanner *bufio.Scanner) func(context.Context) error {
+	return func(ctx context.Context) error {
+		for scanner.Scan() {
+			log := types.LogResponse{}
+			if err := json.Unmarshal(scanner.Bytes(), &log); err != nil {
+				session.Log().Error(err.Error())
+			}
+			if log.Result != nil {
+				fmt.Printf("[%v] %v\n", log.Result.Name, log.Result.Message)
+			}
+		}
+		return scanner.Err()
 	}
 }
 
