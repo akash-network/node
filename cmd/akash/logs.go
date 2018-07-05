@@ -67,7 +67,9 @@ func logs(session session.Session, cmd *cobra.Command, args []string) error {
 	}
 
 	scanner := bufio.NewScanner(body)
-	common.RunForever(printLog(session, scanner))
+	if err := common.RunForever(printLog(session, scanner)); err != nil {
+		fmt.Println(err.Error())
+	}
 
 	defer body.Close()
 	return nil
