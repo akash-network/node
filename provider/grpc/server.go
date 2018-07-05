@@ -79,7 +79,8 @@ func (s server) LeaseStatus(ctx context.Context, req *types.LeaseStatusRequest) 
 	return s.Client.LeaseStatus(lease.LeaseID)
 }
 
-func (s server) ServiceStatus(ctx context.Context, req *types.ServiceStatusRequest) (*types.ServiceStatusResponse, error) {
+func (s server) ServiceStatus(ctx context.Context,
+	req *types.ServiceStatusRequest) (*types.ServiceStatusResponse, error) {
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
 	if err != nil {
 		s.log.Error(err.Error())
@@ -125,7 +126,9 @@ func (s server) ServiceLogs(req *types.LogRequest, server types.Cluster_ServiceL
 			}
 			remaining--
 		case entry := <-logch:
-			server.Send(entry)
+			if err := server.Send(entry); err != nil {
+				s.log.Error(err.Error())
+			}
 		}
 	}
 

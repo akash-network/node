@@ -160,7 +160,8 @@ func (c *client) TeardownNamespace(ns string) error {
 	return c.kc.CoreV1().Namespaces().Delete(ns, &metav1.DeleteOptions{})
 }
 
-func (c *client) ServiceLogs(ctx context.Context, lid types.LeaseID, tailLines int64, follow bool) ([]*cluster.ServiceLog, error) {
+func (c *client) ServiceLogs(ctx context.Context, lid types.LeaseID,
+	tailLines int64, follow bool) ([]*cluster.ServiceLog, error) {
 	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
@@ -194,7 +195,11 @@ func (c *client) LeaseStatus(lid types.LeaseID) (*types.LeaseStatusResponse, err
 	}
 	response := &types.LeaseStatusResponse{}
 	for _, deployment := range deployments.Items {
-		status := &types.LeaseStatus{Name: deployment.Name, Status: fmt.Sprintf("available replicas: %v/%v", deployment.Status.AvailableReplicas, deployment.Status.Replicas)}
+		status := &types.LeaseStatus{
+			Name: deployment.Name,
+			Status: fmt.Sprintf("available replicas: %v/%v",
+				deployment.Status.AvailableReplicas, deployment.Status.Replicas),
+		}
 		response.Services = append(response.Services, status)
 	}
 	return response, nil
