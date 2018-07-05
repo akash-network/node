@@ -106,7 +106,7 @@ func TestServiceLogs(t *testing.T) {
 	handler := new(mmocks.Handler)
 	client := new(kmocks.Client)
 	message := "logs logs logs logs\n"
-	stream := testutil.ReadCloser{bytes.NewBuffer([]byte(message))}
+	stream := testutil.ReadCloser{Reader: bytes.NewBuffer([]byte(message))}
 	serviceLog := cluster.NewServiceLog(t.Name(), stream)
 	mockResp := []*cluster.ServiceLog{serviceLog}
 	client.On("ServiceLogs", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResp, nil).Once()
