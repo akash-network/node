@@ -39,10 +39,13 @@ __t1__: Initialize helm
 $ helm init
 ```
 
-__t1__: Build, push docker image into minikube
+__t1__: Install akash binaries, push docker image into minikube
 
 _Creates 6 providers: us-west-1, us-west-2, us-east-1, us-east-2, ap-southeast-1, ap-southeast-2_
+
+_`make install` installs akash binaries to `$GOPATH/bin`; make sure `$GOPATH/bin` is in your current path_
 ```sh
+$ make install # compile and install akash
 $ make image-minikube 
 ```
 
@@ -51,7 +54,6 @@ __t1__: Generate genesis and config
 _run.sh wraps various shell commands to make the prototype eaiser to run. The init command makes two wallets (named master and other), a genesis configuration giving master all the tokens, and configuration for four nodes located in data/node/_
 ```sh
 $ cd $GOPATH/src/github.com/ovrclk/akash/_run/multi
-$ make # make sure to compile latest akash binaries
 $ ./run.sh init 
 ```
 
@@ -160,7 +162,6 @@ _Please do not judge our lack of elegance. It's a prototype_
 ```sh
 $ ^c
 ```
-
 
 # Tinkering 
 
