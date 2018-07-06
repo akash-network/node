@@ -33,6 +33,10 @@ image: image-bins
 		-f _build/Dockerfile.akashd \
 		_build
 
+install: akash akashd
+	cp akash $(GOPATH)/bin
+	cp akashd $(GOPATH)/bin
+
 image-minikube:
 	eval $$(minikube docker-env) && make image
 
