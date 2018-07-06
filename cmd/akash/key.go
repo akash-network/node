@@ -20,9 +20,9 @@ func keyCommand() *cobra.Command {
 	}
 	cmd.AddCommand(keyCreateCommand())
 	cmd.AddCommand(keyListCommand())
+	cmd.AddCommand(keyShowCommand())
 	return cmd
 }
-
 func keyCreateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [name]",
@@ -79,5 +79,39 @@ func doKeyListCommand(session session.Session, cmd *cobra.Command, args []string
 		fmt.Fprintf(tw, "%v\t%v\n", info.Name, X(info.Address()))
 	}
 	tw.Flush()
+	return nil
+}
+
+func keyShowCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "show [name]",
+		Short: "display a key",
+		RunE:  session.WithSession(session.RequireRootDir(doKeyShowCommand)),
+	}
+	session.AddFlagKeyType(cmd, cmd.Flags())
+	return cmd
+}
+
+func doKeyShowCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	if len(args) != 1 {
+		return errors.New("name argument required")
+	}
+
+	kmgr, err := session.KeyManager()
+	if err != nil {
+		return err
+	}
+
+	info, err := kmgr.Get(args[0])
+	if err != nil {
+		return err
+	}
+
+	if len(info.Address()) == 0 {
+		fmt.Errorf("key not found %s", args[0])
+		return nil
+	}
+
+	fmt.Println(X(info.Address()))
 	return nil
 }
