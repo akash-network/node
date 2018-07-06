@@ -33,9 +33,9 @@ image: image-bins
 		-f _build/Dockerfile.akashd \
 		_build
 
-install: akash akashd
-	cp akash $(GOPATH)/bin
-	cp akashd $(GOPATH)/bin
+install:
+	go install ./cmd/akash
+	go install ./cmd/akashd
 
 image-minikube:
 	eval $$(minikube docker-env) && make image
@@ -139,4 +139,5 @@ clean:
 	gofmt \
 	docs \
 	clean \
-	kubetypes
+	kubetypes \
+	install
