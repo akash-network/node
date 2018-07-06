@@ -92,14 +92,44 @@ uses uses the profile.
 
 Example:
 
+This defines a profile named `web` having resource requirements of 2 vCPUs, 2 gigabytes of memory, and 5 gigabytes of disk space available.
+
+
 ```yaml
 web:
   cpu: 2
-  memory: 3GB
-  disk: 5GB
+  memory: "2Gi"
+  disk: "5Gi"
 ```
 
-This defines a profile named `web` having resource requirements of 2 vCPUs, 2 gigabytes of memory, and 5 gigabytes of disk space available.
+`cpu` units represent a vCPU share and can be fractional.  When no suffix is present the value represents
+a fraction of a whole CPU share.  With a `m` suffix, the value represnts the number of milli-CPU shares (1/1000 of a CPU share).
+
+Example:
+
+| Value | CPU-Share |
+| --- | --- |
+| `1` | 1 |
+| `0.5` | 1/2 |
+| `"100m"` | 1/10 |
+| `"50m"` | 1/20 |
+
+`memory`, `disk` units are described in bytes.  The following suffixes are allowed for simplification:
+
+| Suffix | Value |
+| --- | --- |
+| `k` | 1000 |
+| `Ki` | 1024 |
+| `M`  | 1000^2 |
+| `Mi`  | 1024^2 |
+| `G`  | 1000^3 |
+| `Gi`  | 1024^3 |
+| `T`  | 1000^4 |
+| `Ti`  | 1024^4 |
+| `P`  | 1000^5 |
+| `Pi`  | 1024^5 |
+| `E`  | 1000^6 |
+| `Ei`  | 1024^6 |
 
 #### profiles.placement
 

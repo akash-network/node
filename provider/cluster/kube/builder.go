@@ -122,8 +122,8 @@ func (b *deploymentBuilder) update(obj *appsv1.Deployment) (*appsv1.Deployment, 
 
 func (b *deploymentBuilder) container() corev1.Container {
 
-	qcpu := resource.NewQuantity(int64(b.service.Unit.CPU), resource.DecimalSI)
-	qmem := resource.NewScaledQuantity(int64(b.service.Unit.Memory), resource.Mega)
+	qcpu := resource.NewScaledQuantity(int64(b.service.Unit.CPU), resource.Milli)
+	qmem := resource.NewQuantity(int64(b.service.Unit.Memory), resource.DecimalSI)
 
 	kcontainer := corev1.Container{
 		Name:  b.service.Name,

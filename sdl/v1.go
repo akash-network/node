@@ -48,9 +48,9 @@ type v1Profiles struct {
 }
 
 type v1ComputeProfile struct {
-	CPU    uint32 `yaml:"cpu"`
-	Memory uint32
-	Disk   uint64
+	CPU    cpuQuantity `yaml:"cpu"`
+	Memory byteQuantity
+	Disk   byteQuantity
 }
 
 type v1PlacementProfile struct {
@@ -119,9 +119,9 @@ func (sdl *v1) DeploymentGroups() ([]*types.GroupSpec, error) {
 
 			group.Resources = append(group.Resources, types.ResourceGroup{
 				Unit: types.ResourceUnit{
-					CPU:    compute.CPU,
-					Memory: compute.Memory,
-					Disk:   compute.Disk,
+					CPU:    uint32(compute.CPU),
+					Memory: uint64(compute.Memory),
+					Disk:   uint64(compute.Disk),
 				},
 				Price: price,
 				Count: svcdepl.Count,
@@ -178,9 +178,9 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 				Args:  svc.Args,
 				Env:   svc.Env,
 				Unit: &types.ResourceUnit{
-					CPU:    compute.CPU,
-					Memory: compute.Memory,
-					Disk:   compute.Disk,
+					CPU:    uint32(compute.CPU),
+					Memory: uint64(compute.Memory),
+					Disk:   uint64(compute.Disk),
 				},
 				Count: svcdepl.Count,
 			}

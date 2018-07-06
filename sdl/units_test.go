@@ -1,0 +1,97 @@
+package sdl
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	yaml "gopkg.in/yaml.v2"
+)
+
+func TestCPUQuantity(t *testing.T) {
+
+	type vtype struct {
+		Val cpuQuantity `yaml:"val"`
+	}
+
+	tests := []struct {
+		text  string
+		value uint32
+		err   bool
+	}{
+		{`val: 1`, 1000, false},
+		{`val: -1`, 1000, true},
+
+		{`val: 0.5`, 500, false},
+		{`val: -0.5`, 500, true},
+
+		{`val: "100m"`, 100, false},
+		{`val: "-100m"`, 100, true},
+
+		{`val: ""`, 0, true},
+	}
+
+	for idx, test := range tests {
+		buf := []byte(test.text)
+		obj := &vtype{}
+
+		err := yaml.UnmarshalStrict(buf, obj)
+
+		if test.err {
+			assert.Error(t, err, "idx:%v text:`%v`", idx, test.text)
+			continue
+		}
+
+		if !assert.NoError(t, err, "idx:%v text:`%v`", idx, test.text) {
+			continue
+		}
+
+		assert.Equal(t, cpuQuantity(test.value), obj.Val, "idx:%v text:`%v`", idx, test.text)
+	}
+}
+
+func TestByteQuantity(t *testing.T) {
+	type vtype struct {
+		Val byteQuantity `yaml:"val"`
+	}
+
+	tests := []struct {
+		text  string
+		value uint64
+		err   bool
+	}{
+		{`val: 1`, 1, false},
+		{`val: -1`, 1, true},
+
+		{`val: "1M"`, unitM, false},
+		{`val: "-1M"`, 0, true},
+
+		{`val: "0.5M"`, unitM / 2, false},
+		{`val: "-0.5M"`, 0, true},
+
+		{`val: "3M"`, 3 * unitM, false},
+		{`val: "3G"`, 3 * unitG, false},
+		{`val: "3T"`, 3 * unitT, false},
+		{`val: "3P"`, 3 * unitP, false},
+		{`val: "3E"`, 3 * unitE, false},
+
+		{`val: ""`, 0, true},
+	}
+
+	for idx, test := range tests {
+		buf := []byte(test.text)
+		obj := &vtype{}
+
+		err := yaml.UnmarshalStrict(buf, obj)
+
+		if test.err {
+			assert.Error(t, err, "idx:%v text:`%v`", idx, test.text)
+			continue
+		}
+
+		if !assert.NoError(t, err, "idx:%v text:`%v`", idx, test.text) {
+			continue
+		}
+
+		assert.Equal(t, byteQuantity(test.value), obj.Val, "idx:%v text:`%v`", idx, test.text)
+	}
+}

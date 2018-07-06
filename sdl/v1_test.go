@@ -1,6 +1,7 @@
 package sdl_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/ovrclk/akash/sdl"
@@ -42,9 +43,9 @@ func Test_v1_Parse_simple(t *testing.T) {
 		Count: 20,
 		Price: 8,
 		Unit: types.ResourceUnit{
-			CPU:    2,
-			Memory: 3,
-			Disk:   5,
+			CPU:    2000,
+			Memory: 128 * uint64(math.Pow(1024, 2)),
+			Disk:   5 * uint64(math.Pow(1024, 3)),
 		},
 	}, group.GetResources()[0])
 
@@ -60,9 +61,9 @@ func Test_v1_Parse_simple(t *testing.T) {
 				Name:  "web",
 				Image: "nginx",
 				Unit: &types.ResourceUnit{
-					CPU:    2,
-					Memory: 3,
-					Disk:   5,
+					CPU:    2000,
+					Memory: 128 * uint64(math.Pow(1024, 2)),
+					Disk:   5 * uint64(math.Pow(1024, 3)),
 				},
 				Count: 20,
 				Expose: []*types.ManifestServiceExpose{
