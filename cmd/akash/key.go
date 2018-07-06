@@ -108,8 +108,7 @@ func doKeyShowCommand(session session.Session, cmd *cobra.Command, args []string
 	}
 
 	if len(info.Address()) == 0 {
-		fmt.Errorf("key not found %s", args[0])
-		return nil
+		return fmt.Errorf("key not found %s", args[0])
 	}
 
 	fmt.Println(X(info.Address()))
