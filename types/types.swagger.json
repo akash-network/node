@@ -186,6 +186,22 @@
           "Cluster"
         ]
       }
+    },
+    "/status": {
+      "get": {
+        "operationId": "Status",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/typesServerStatus"
+            }
+          }
+        },
+        "tags": [
+          "Cluster"
+        ]
+      }
     }
   },
   "definitions": {

@@ -369,7 +369,11 @@ message ManifestServiceExpose {
 
 /* BEGIN SERVICE */
 service Cluster {
-  rpc Status(Empty) returns(ServerStatus) {}
+  rpc Status(Empty) returns(ServerStatus) {
+    option (google.api.http) = {
+      get: "/status",
+    };
+  }
   rpc Deploy(ManifestRequest) returns(DeployRespone) {
     option (google.api.http) = {
       post: "/manifest",
