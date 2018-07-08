@@ -86,6 +86,7 @@ func keyShowCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show [name]",
 		Short: "display a key",
+		Args:  cobra.ExactArgs(1),
 		RunE:  session.WithSession(session.RequireRootDir(doKeyShowCommand)),
 	}
 	session.AddFlagKeyType(cmd, cmd.Flags())
@@ -102,13 +103,15 @@ func doKeyShowCommand(session session.Session, cmd *cobra.Command, args []string
 		return err
 	}
 
-	info, err := kmgr.Get(args[0])
+	name := args[0]
+
+	info, err := kmgr.Get(name)
 	if err != nil {
 		return err
 	}
 
 	if len(info.Address()) == 0 {
-		return fmt.Errorf("key not found %s", args[0])
+		return fmt.Errorf("key not found %s", name)
 	}
 
 	fmt.Println(X(info.Address()))
