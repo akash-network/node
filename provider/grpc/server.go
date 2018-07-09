@@ -101,7 +101,6 @@ func (s server) ServiceLogs(req *types.LogRequest, server types.Cluster_ServiceL
 		return types.ErrInternalError{Message: "internal error"}
 	}
 	if len(logs) == 0 {
-		s.log.Error(err.Error())
 		return types.ErrResourceNotFound{Message: "no logs for lease"}
 	}
 
