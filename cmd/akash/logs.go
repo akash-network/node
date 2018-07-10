@@ -20,7 +20,7 @@ import (
 func logsCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "logs <lease>",
+		Use:   "logs <service> <lease>",
 		Short: "service logs",
 		Args:  cobra.ExactArgs(2),
 		RunE:  session.WithSession(session.RequireNode(logs)),
