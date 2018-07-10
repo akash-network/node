@@ -74,17 +74,17 @@ profiles:
       attributes:
         region: us-west
       pricing:
-        web: 8
-        db-master: 15
-        db-slave: 10
-        db-pool: 5
+        web: 8A
+        db-master: 15A
+        db-slave: 10A
+        db-pool: 5A
     eastcoast:
       attributes:
         region: us-east
       pricing:
-        web: 5
-        db-slave: 10
-        db-pool: 5
+        web: 5A
+        db-slave: 10A
+        db-pool: 5A
 
 deployment:
 

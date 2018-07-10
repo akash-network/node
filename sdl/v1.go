@@ -55,7 +55,11 @@ type v1ComputeProfile struct {
 
 type v1PlacementProfile struct {
 	Attributes map[string]string
-	Pricing    map[string]uint32
+	Pricing    map[string]v1PricingProfile
+}
+
+type v1PricingProfile struct {
+	Value uint64
 }
 
 // placement-profile -> { compute-profile, count }
@@ -123,7 +127,7 @@ func (sdl *v1) DeploymentGroups() ([]*types.GroupSpec, error) {
 					Memory: uint64(compute.Memory),
 					Disk:   uint64(compute.Disk),
 				},
-				Price: price,
+				Price: price.Value,
 				Count: svcdepl.Count,
 			})
 

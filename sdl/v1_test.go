@@ -19,6 +19,7 @@ func Test_v1_Parse_docs(t *testing.T) {
 
 	_, err = sdl.Manifest()
 	require.NoError(t, err)
+	t.Fail()
 }
 
 func Test_v1_Parse_simple(t *testing.T) {

@@ -21,6 +21,9 @@ const (
 	// market commands
 	FlagWait = "wait"
 
+	// token transfering commands
+	FlagDenom = "denom"
+
 	// todo: interactive.
 	Password = "0123456789"
 )

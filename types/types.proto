@@ -92,7 +92,7 @@ message ResourceGroup {
   option (gogoproto.compare) = true;
   ResourceUnit unit  = 1 [(gogoproto.nullable) = false];
   uint32       count = 2;
-  uint32       price = 3; // price per unit.
+  uint64       price = 3; // price per unit.
 }
 
 message ProviderAttribute {
@@ -243,7 +243,7 @@ message Fulfillment {
 
   FulfillmentID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 
-  uint32 price = 2;
+  uint64 price = 2;
 
   enum FulfillmentState {
     OPEN    = 0;
@@ -260,7 +260,7 @@ message Fulfillments {
 message TxCreateFulfillment {
   FulfillmentID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 
-  uint32 price = 2;
+  uint64 price = 2;
 }
 
 message TxCloseFulfillment {
@@ -288,7 +288,7 @@ message Lease {
   LeaseID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 
   // price of matching fulfillment
-  uint32 price = 2;
+  uint64 price = 2;
 
   enum LeaseState {
     ACTIVE  = 0;
@@ -301,7 +301,7 @@ message TxCreateLease {
   LeaseID id = 1 [(gogoproto.embed)=true,(gogoproto.nullable)=false];
 
   // price of matching fulfillment
-  uint32 price = 2;
+  uint64 price = 2;
 }
 
 message TxCloseLease {
