@@ -7,7 +7,8 @@ import (
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
-	crypto "github.com/tendermint/go-crypto"
+	crypto "github.com/tendermint/tendermint/crypto"
+	camino "github.com/tendermint/tendermint/crypto/encoding/amino"
 )
 
 var (
@@ -28,7 +29,7 @@ func SignManifest(manifest *types.Manifest, signer txutil.Signer, deployment []b
 	if err != nil {
 		return nil, nil, err
 	}
-	mr.Signature = sig.Bytes()
+	mr.Signature = sig
 	mr.Key = key.Bytes()
 	buf, err = marshalRequest(mr)
 	if err != nil {
@@ -62,15 +63,12 @@ func verifySignature(mr *types.ManifestRequest) (crypto.Address, error) {
 		return nil, err
 	}
 
-	key, err := crypto.PubKeyFromBytes(mr.Key)
+	key, err := camino.PubKeyFromBytes(mr.Key)
 	if err != nil {
 		return nil, err
 	}
 
-	sig, err := crypto.SignatureFromBytes(mr.Signature)
-	if err != nil {
-		return nil, err
-	}
+	sig := mr.Signature
 
 	if !key.VerifyBytes(buf.Bytes(), sig) {
 		return nil, ErrInvalidSignature

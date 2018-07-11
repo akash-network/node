@@ -11,13 +11,12 @@ import (
 	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/txutil"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/tendermint/go-crypto/keys"
-	"github.com/tendermint/go-crypto/keys/words"
+	tmdb "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
-	tmdb "github.com/tendermint/tmlibs/db"
-	"github.com/tendermint/tmlibs/log"
 )
 
 type Session interface {
@@ -28,7 +27,7 @@ type Session interface {
 	TxClient() (txutil.Client, error)
 	QueryClient() query.Client
 	KeyName() string
-	KeyType() (keys.CryptoAlgo, error)
+	KeyType() (keys.SigningAlgo, error)
 	Key() (keys.Info, error)
 	Nonce() (uint64, error)
 	Log() log.Logger
@@ -184,24 +183,24 @@ func (ctx *session) KeyName() string {
 	return val
 }
 
-func (ctx *session) KeyType() (keys.CryptoAlgo, error) {
+func (ctx *session) KeyType() (keys.SigningAlgo, error) {
 	return parseFlagKeyType(ctx.cmd.Flags())
 }
 
 func (ctx *session) Key() (keys.Info, error) {
 	kmgr, err := ctx.KeyManager()
 	if err != nil {
-		return keys.Info{}, err
+		return nil, err
 	}
 
 	kname := ctx.KeyName()
 	if kname == "" {
-		return keys.Info{}, errors.New("no key specified")
+		return nil, errors.New("no key specified")
 	}
 
 	info, err := kmgr.Get(kname)
 	if err != nil {
-		return keys.Info{}, err
+		return nil, err
 	}
 
 	return info, nil
@@ -214,12 +213,12 @@ func (ctx *session) Password() (string, error) {
 func (ctx *session) Signer() (txutil.Signer, keys.Info, error) {
 	kmgr, err := ctx.KeyManager()
 	if err != nil {
-		return nil, keys.Info{}, err
+		return nil, nil, err
 	}
 
 	key, err := ctx.Key()
 	if err != nil {
-		return nil, keys.Info{}, err
+		return nil, nil, err
 	}
 
 	password, err := ctx.Password()
@@ -227,7 +226,7 @@ func (ctx *session) Signer() (txutil.Signer, keys.Info, error) {
 		return nil, key, err
 	}
 
-	signer := txutil.NewKeystoreSigner(kmgr, key.Name, password)
+	signer := txutil.NewKeystoreSigner(kmgr, key.GetName(), password)
 
 	return signer, key, nil
 }
@@ -250,13 +249,9 @@ func (ctx *session) Ctx() context.Context {
 }
 
 func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {
-	codec, err := words.LoadCodec(defaultCodec)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	db := tmdb.NewDB(keyDir, tmdb.GoLevelDBBackend, root)
-	manager := keys.New(db, codec)
+	manager := keys.New(db)
 
 	return manager, db, nil
 }

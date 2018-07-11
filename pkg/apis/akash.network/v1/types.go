@@ -169,9 +169,9 @@ type ManifestStatus struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type ManifestList struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata"`
-	Items             []Manifest `json:"items"`
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:",inline"`
+	Items           []Manifest `json:"items"`
 }
 
 func (m Manifest) ManifestGroup() *types.ManifestGroup {

@@ -22,7 +22,7 @@ func initCommand() *cobra.Command {
 		Use:   "init [address]",
 		Short: "Initialize node",
 		Args:  cobra.ExactArgs(1),
-		RunE:  withContext(doInitCommand),
+		RunE:  withSession(doInitCommand),
 	}
 
 	cmd.Flags().UintP(flagInitCount, "c", 1, "generate multiple init directories")
@@ -33,7 +33,7 @@ func initCommand() *cobra.Command {
 	return cmd
 }
 
-func doInitCommand(ctx Context, cmd *cobra.Command, args []string) error {
+func doInitCommand(session Session, cmd *cobra.Command, args []string) error {
 
 	b := initgen.NewBuilder()
 
@@ -48,7 +48,7 @@ func doInitCommand(ctx Context, cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if path == "" {
-		path = ctx.RootDir()
+		path = session.RootDir()
 	}
 	b = b.WithPath(path)
 

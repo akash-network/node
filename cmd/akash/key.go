@@ -7,6 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/ovrclk/akash/cmd/akash/session"
+	"github.com/ovrclk/akash/cmd/common"
 	"github.com/spf13/cobra"
 
 	. "github.com/ovrclk/akash/util"
@@ -52,12 +53,12 @@ func doKeyCreateCommand(session session.Session, cmd *cobra.Command, args []stri
 		return err
 	}
 
-	info, _, err := kmgr.Create(args[0], password, ktype)
+	info, _, err := kmgr.CreateMnemonic(args[0], common.DefaultCodec, password, ktype)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(X(info.Address()))
+	fmt.Println(X(info.GetPubKey().Address()))
 
 	return nil
 }
@@ -80,7 +81,7 @@ func doKeyListCommand(session session.Session, cmd *cobra.Command, args []string
 
 	tw := tabwriter.NewWriter(os.Stdout, 0, 4, 0, '\t', 0)
 	for _, info := range infos {
-		fmt.Fprintf(tw, "%v\t%v\n", info.Name, X(info.Address()))
+		fmt.Fprintf(tw, "%v\t%v\n", info.GetName(), X(info.GetPubKey().Address()))
 	}
 	tw.Flush()
 	return nil
@@ -114,10 +115,10 @@ func doKeyShowCommand(session session.Session, cmd *cobra.Command, args []string
 		return err
 	}
 
-	if len(info.Address()) == 0 {
+	if len(info.GetPubKey().Address()) == 0 {
 		return fmt.Errorf("key not found %s", name)
 	}
 
-	fmt.Println(X(info.Address()))
+	fmt.Println(X(info.GetPubKey().Address()))
 	return nil
 }

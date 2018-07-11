@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/ovrclk/akash/types"
-	crypto "github.com/tendermint/go-crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/p2p"
+	"github.com/tendermint/tendermint/privval"
 	tmtypes "github.com/tendermint/tendermint/types"
-	privval "github.com/tendermint/tendermint/types/priv_validator"
 )
 
 const (
@@ -79,7 +79,7 @@ func (b *builder) Create() (Context, error) {
 		if err != nil {
 			return nil, err
 		}
-		genesis.AppOptions = buf
+		genesis.AppState = buf
 	}
 
 	if err := genesis.ValidateAndComplete(); err != nil {
@@ -109,7 +109,7 @@ func (b *builder) generateNodeKeys() []*p2p.NodeKey {
 	}
 	keys := make([]*p2p.NodeKey, 0, b.count)
 	for i := uint(0); i < b.count; i++ {
-		key := &p2p.NodeKey{PrivKey: crypto.GenPrivKeyEd25519()}
+		key := &p2p.NodeKey{PrivKey: ed25519.GenPrivKey()}
 		keys = append(keys, key)
 	}
 	return keys

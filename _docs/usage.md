@@ -54,7 +54,7 @@ make
 example:
 
 ```sh
-./akash init --node=tcp://localhost:46657 --genesis=data/node/genesis.json
+./akash init --node=tcp://localhost:26657 --genesis=data/node/genesis.json
 ```
 
 ## Start node
@@ -211,7 +211,7 @@ For the `[p2p] seeds` field add each validators `[p2p]laddr` separated by comma
 
 Example:
 ```
-"0.0.0.0:46656,0.0.0.0:46666,0.0.0.0:46676,0.0.0.0:46686"
+"0.0.0.0:26656,0.0.0.0:26666,0.0.0.0:26676,0.0.0.0:26686"
 ```
 
 ## Start nodes

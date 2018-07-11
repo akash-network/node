@@ -31,7 +31,7 @@ func TestKeyCreateCommand(t *testing.T) {
 				RunE: session.WithSession(func(session session.Session, cmd *cobra.Command, args []string) error {
 					key, err := session.Key()
 					require.NoError(t, err)
-					require.Equal(t, keyName, key.Name)
+					require.Equal(t, keyName, key.GetName())
 					return nil
 				}),
 			}

@@ -22,7 +22,7 @@ type DB interface {
 }
 
 type iavlDB struct {
-	tree *iavl.VersionedTree
+	tree *iavl.MutableTree
 	mtx  *sync.RWMutex
 }
 
@@ -35,7 +35,7 @@ func (db *iavlDB) IsEmpty() bool {
 func (db *iavlDB) Version() int64 {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
-	return db.tree.Version64()
+	return db.tree.Version()
 }
 
 func (db *iavlDB) Hash() []byte {

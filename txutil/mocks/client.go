@@ -2,7 +2,7 @@
 package mocks
 
 import core_types "github.com/tendermint/tendermint/rpc/core/types"
-import keys "github.com/tendermint/go-crypto/keys"
+import keys "github.com/cosmos/cosmos-sdk/crypto/keys"
 import mock "github.com/stretchr/testify/mock"
 import txutil "github.com/ovrclk/akash/txutil"
 

@@ -13,8 +13,8 @@ import (
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/types/code"
-	tmtypes "github.com/tendermint/abci/types"
-	"github.com/tendermint/tmlibs/log"
+	abci_types "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 const (
@@ -29,14 +29,14 @@ func NewApp(logger log.Logger) (apptypes.Application, error) {
 	return &app{apptypes.NewBaseApp(Name, logger)}, nil
 }
 
-func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
+func (a *app) AcceptQuery(req abci_types.RequestQuery) bool {
 	return strings.HasPrefix(req.GetPath(), appstate.ProviderPath)
 }
 
-func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.ResponseQuery {
+func (a *app) Query(state appstate.State, req abci_types.RequestQuery) abci_types.ResponseQuery {
 
 	if !a.AcceptQuery(req) {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.UNKNOWN_QUERY,
 			Log:  "invalid key",
 		}
@@ -50,7 +50,7 @@ func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.Resp
 
 	key, err := keys.ParseProviderPath(id)
 	if err != nil {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
@@ -66,41 +66,41 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	return false
 }
 
-func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
+func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) abci_types.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateProvider:
 		return a.doCheckTx(state, ctx, tx.TxCreateProvider)
 	}
-	return tmtypes.ResponseCheckTx{
+	return abci_types.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
 		Log:  "unknown transaction",
 	}
 }
 
-func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
+func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) abci_types.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateProvider:
 		return a.doDeliverTx(state, ctx, tx.TxCreateProvider)
 	}
-	return tmtypes.ResponseDeliverTx{
+	return abci_types.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
 		Log:  "unknown transaction",
 	}
 }
 
-func (a *app) doQuery(state appstate.State, key base.Bytes) tmtypes.ResponseQuery {
+func (a *app) doQuery(state appstate.State, key base.Bytes) abci_types.ResponseQuery {
 
 	provider, err := state.Provider().Get(key)
 
 	if err != nil {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
 	}
 
 	if provider == nil {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.NOT_FOUND,
 			Log:  fmt.Sprintf("provider %x not found", key),
 		}
@@ -108,29 +108,29 @@ func (a *app) doQuery(state appstate.State, key base.Bytes) tmtypes.ResponseQuer
 
 	bytes, err := proto.Marshal(provider)
 	if err != nil {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
 	}
 
-	return tmtypes.ResponseQuery{
+	return abci_types.ResponseQuery{
 		Value:  bytes,
 		Height: state.Version(),
 	}
 }
 
-func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
+func (a *app) doRangeQuery(state appstate.State) abci_types.ResponseQuery {
 	dcs, err := state.Provider().GetMaxRange()
 	if err != nil {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
 	}
 
 	if len(dcs.Providers) == 0 {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.NOT_FOUND,
 			Log:  fmt.Sprintf("providers not found"),
 		}
@@ -138,21 +138,21 @@ func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
 
 	bytes, err := proto.Marshal(dcs)
 	if err != nil {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
 	}
 
-	return tmtypes.ResponseQuery{
+	return abci_types.ResponseQuery{
 		Value:  bytes,
 		Height: state.Version(),
 	}
 }
 
-func (a *app) doCheckTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateProvider) tmtypes.ResponseCheckTx {
+func (a *app) doCheckTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateProvider) abci_types.ResponseCheckTx {
 	if !bytes.Equal(ctx.Signer().Address(), tx.Owner) {
-		return tmtypes.ResponseCheckTx{
+		return abci_types.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Not signed by owner",
 		}
@@ -160,33 +160,33 @@ func (a *app) doCheckTx(state appstate.State, ctx apptypes.Context, tx *types.Tx
 
 	signer, err_ := state.Account().Get(tx.Owner)
 	if err_ != nil {
-		return tmtypes.ResponseCheckTx{
+		return abci_types.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "unknown source account",
 		}
 	}
 
 	if signer == nil && tx.Nonce != 1 {
-		return tmtypes.ResponseCheckTx{Code: code.INVALID_TRANSACTION, Log: "invalid nonce"}
+		return abci_types.ResponseCheckTx{Code: code.INVALID_TRANSACTION, Log: "invalid nonce"}
 	} else if signer != nil && signer.Nonce >= tx.Nonce {
-		return tmtypes.ResponseCheckTx{Code: code.INVALID_TRANSACTION, Log: "invalid nonce"}
+		return abci_types.ResponseCheckTx{Code: code.INVALID_TRANSACTION, Log: "invalid nonce"}
 	}
 
 	if _, err := url.Parse(tx.HostURI); err != nil {
-		return tmtypes.ResponseCheckTx{
+		return abci_types.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "invalid network address",
 		}
 	}
 
-	return tmtypes.ResponseCheckTx{}
+	return abci_types.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateProvider) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateProvider) abci_types.ResponseDeliverTx {
 
 	cresp := a.doCheckTx(state, ctx, tx)
 	if !cresp.IsOK() {
-		return tmtypes.ResponseDeliverTx{
+		return abci_types.ResponseDeliverTx{
 			Code: cresp.Code,
 			Log:  cresp.Log,
 		}
@@ -200,13 +200,13 @@ func (a *app) doDeliverTx(state appstate.State, ctx apptypes.Context, tx *types.
 	}
 
 	if err := state.Provider().Save(provider); err != nil {
-		return tmtypes.ResponseDeliverTx{
+		return abci_types.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
 		}
 	}
 
-	return tmtypes.ResponseDeliverTx{
+	return abci_types.ResponseDeliverTx{
 		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeProviderCreate),
 		Data: provider.Address,
 	}

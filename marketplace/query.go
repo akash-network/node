@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	apptypes "github.com/ovrclk/akash/app/types"
+	"github.com/tendermint/tendermint/libs/pubsub"
+	tmquery "github.com/tendermint/tendermint/libs/pubsub/query"
 	tmtmtypes "github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tmlibs/pubsub"
-	tmquery "github.com/tendermint/tmlibs/pubsub/query"
 )
 
 func TxQuery() pubsub.Query {

@@ -9,7 +9,7 @@ import (
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/util/runner"
-	"github.com/tendermint/tmlibs/log"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 var (

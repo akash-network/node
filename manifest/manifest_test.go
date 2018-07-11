@@ -85,31 +85,31 @@ func TestVerifySig_InvalidSig(t *testing.T) {
 func TestVerifyDeploymentTenant(t *testing.T) {
 	info, kmgr := testutil.NewNamedKey(t)
 	signer := testutil.Signer(t, kmgr)
-	tenant := info.Address()
+	tenant := info.GetPubKey().Address().Bytes()
 	deployment := testutil.Deployment(tenant, 1)
 	mani := &types.Manifest{}
 	_, _, err := SignManifest(mani, signer, deployment.Address)
 	require.NoError(t, err)
-	err = verifyDeploymentTenant(deployment, info.Address())
+	err = verifyDeploymentTenant(deployment, info.GetPubKey().Address().Bytes())
 	assert.NoError(t, err)
 }
 
 func TestVerifyDeploymentTenant_InvalidKey(t *testing.T) {
 	info, kmgr := testutil.NewNamedKey(t)
 	signer := testutil.Signer(t, kmgr)
-	tenant := info.Address()
+	tenant := info.GetPubKey().Address().Bytes()
 	deployment := testutil.Deployment(tenant, 1)
 	mani := &types.Manifest{}
 	_, _, err := SignManifest(mani, signer, deployment.Address)
 	require.NoError(t, err)
-	err = verifyDeploymentTenant(deployment, info.Address())
+	err = verifyDeploymentTenant(deployment, info.GetPubKey().Address().Bytes())
 	assert.NoError(t, err)
 }
 
 func TestVerifyRequest(t *testing.T) {
 	info, kmgr := testutil.NewNamedKey(t)
 	signer := testutil.Signer(t, kmgr)
-	tenant := info.Address()
+	tenant := info.GetPubKey().Address().Bytes()
 	mani := &types.Manifest{}
 	version, err := Hash(mani)
 	require.NoError(t, err)

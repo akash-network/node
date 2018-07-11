@@ -23,7 +23,7 @@ func doQueryDeploymentCommand(session session.Session, cmd *cobra.Command, args 
 		if err != nil {
 			return err
 		}
-		if err := handleMessage(session.QueryClient().TenantDeployments(session.Ctx(), info.PubKey.Address().Bytes())); err != nil {
+		if err := handleMessage(session.QueryClient().TenantDeployments(session.Ctx(), info.GetPubKey().Address().Bytes())); err != nil {
 			return err
 		}
 		return nil

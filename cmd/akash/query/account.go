@@ -23,7 +23,7 @@ func doQueryAccountCommand(session session.Session, cmd *cobra.Command, args []s
 		if err != nil {
 			return err
 		}
-		if err := handleMessage(session.QueryClient().Account(session.Ctx(), info.PubKey.Address().Bytes())); err != nil {
+		if err := handleMessage(session.QueryClient().Account(session.Ctx(), info.GetPubKey().Address().Bytes())); err != nil {
 			return err
 		}
 		return nil

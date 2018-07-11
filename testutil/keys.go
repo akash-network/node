@@ -3,29 +3,28 @@ package testutil
 import (
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/stretchr/testify/require"
-	crypto "github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-crypto/keys"
-	"github.com/tendermint/go-crypto/keys/words"
-	tmdb "github.com/tendermint/tmlibs/db"
+	crypto "github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+	tmdb "github.com/tendermint/tendermint/libs/db"
 )
 
 const (
 	KeyPasswd = "0123456789"
-	KeyAlgo   = "ed25519"
+	KeyAlgo   = keys.Secp256k1
 	KeyName   = "test"
+	Language  = keys.English
 )
 
 func KeyManager(t *testing.T) keys.Keybase {
-	codec, err := words.LoadCodec("english")
-	require.NoError(t, err)
 	db := tmdb.NewMemDB()
-	return keys.New(db, codec)
+	return keys.New(db)
 }
 
 func PrivateKey(t *testing.T) crypto.PrivKey {
-	return crypto.GenPrivKeyEd25519()
+	return ed25519.GenPrivKey()
 }
 
 func PublicKey(t *testing.T) crypto.PubKey {
@@ -39,7 +38,7 @@ func PrivateKeySigner(t *testing.T) (txutil.Signer, crypto.PrivKey) {
 
 func NewNamedKey(t *testing.T) (keys.Info, keys.Keybase) {
 	kmgr := KeyManager(t)
-	info, _, err := kmgr.Create(KeyName, KeyPasswd, KeyAlgo)
+	info, _, err := kmgr.CreateMnemonic(KeyName, Language, KeyPasswd, KeyAlgo)
 	require.NoError(t, err)
 	return info, kmgr
 }

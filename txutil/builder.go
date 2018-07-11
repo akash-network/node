@@ -5,12 +5,13 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/types"
-	crypto "github.com/tendermint/go-crypto"
+	crypto "github.com/tendermint/tendermint/crypto"
+	camino "github.com/tendermint/tendermint/crypto/encoding/amino"
 )
 
 type TxBuilder interface {
 	SignableTx
-	Signature() crypto.Signature
+	Signature() []byte
 	TxBytes() ([]byte, error)
 }
 
@@ -71,12 +72,12 @@ func (b *txBuilder) SignBytes() []byte {
 	return b.pbytes
 }
 
-func (b *txBuilder) Sign(key crypto.PubKey, sig crypto.Signature) error {
+func (b *txBuilder) Sign(key crypto.PubKey, sig []byte) error {
 	if b.tx.Key != nil || b.tx.Signature != nil {
 		return fmt.Errorf("already signed")
 	}
 	b.tx.Key = key.Bytes()
-	b.tx.Signature = sig.Bytes()
+	b.tx.Signature = sig
 	return nil
 }
 
@@ -85,7 +86,7 @@ func (b *txBuilder) Signers() ([]crypto.PubKey, error) {
 		return nil, nil
 	}
 
-	key, err := crypto.PubKeyFromBytes(b.tx.Key)
+	key, err := camino.PubKeyFromBytes(b.tx.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -93,9 +94,8 @@ func (b *txBuilder) Signers() ([]crypto.PubKey, error) {
 	return []crypto.PubKey{key}, nil
 }
 
-func (b *txBuilder) Signature() crypto.Signature {
-	sig, _ := crypto.SignatureFromBytes(b.tx.Signature)
-	return sig
+func (b *txBuilder) Signature() []byte {
+	return b.tx.Signature
 }
 
 func (b *txBuilder) TxBytes() ([]byte, error) {

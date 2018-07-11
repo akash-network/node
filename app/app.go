@@ -21,20 +21,19 @@ import (
 	"github.com/ovrclk/akash/types/code"
 	"github.com/ovrclk/akash/util"
 	"github.com/ovrclk/akash/version"
-	tmtypes "github.com/tendermint/abci/types"
-	tmtmtypes "github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tmlibs/log"
+	abci_types "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 type Application interface {
-	tmtypes.Application
-	ActivateMarket(market.Actor, *tmtmtypes.EventBus) error
+	abci_types.Application
+	ActivateMarket(market.Actor) error
 
 	App(name string) apptypes.Application
 }
 
 type app struct {
-	tmtypes.BaseApplication
+	abci_types.BaseApplication
 
 	cacheState  appstate.CacheState
 	commitState appstate.CommitState
@@ -118,7 +117,7 @@ func (app *app) App(name string) apptypes.Application {
 	return nil
 }
 
-func (app *app) ActivateMarket(actor market.Actor, bus *tmtmtypes.EventBus) error {
+func (app *app) ActivateMarket(actor market.Actor) error {
 
 	if app.mfacilitator != nil {
 		return errors.New("market already activated")
@@ -129,7 +128,7 @@ func (app *app) ActivateMarket(actor market.Actor, bus *tmtmtypes.EventBus) erro
 		return err
 	}
 
-	mfacilitator, err := market.NewDriver(context.Background(), app.log.With("app", "market-facilitator"), actor, bus)
+	mfacilitator, err := market.NewDriver(context.Background(), app.log.With("app", "market-facilitator"), actor)
 	if err != nil {
 		return err
 	}
@@ -141,9 +140,9 @@ func (app *app) ActivateMarket(actor market.Actor, bus *tmtmtypes.EventBus) erro
 	return nil
 }
 
-func (app *app) Info(req tmtypes.RequestInfo) tmtypes.ResponseInfo {
+func (app *app) Info(req abci_types.RequestInfo) abci_types.ResponseInfo {
 	vsn, _ := json.Marshal(version.Get())
-	return tmtypes.ResponseInfo{
+	return abci_types.ResponseInfo{
 		Data:             string(vsn),
 		Version:          version.Version(),
 		LastBlockHeight:  app.commitState.Version(),
@@ -151,18 +150,18 @@ func (app *app) Info(req tmtypes.RequestInfo) tmtypes.ResponseInfo {
 	}
 }
 
-func (app *app) SetOption(req tmtypes.RequestSetOption) tmtypes.ResponseSetOption {
-	return tmtypes.ResponseSetOption{Code: tmtypes.CodeTypeOK}
+func (app *app) SetOption(req abci_types.RequestSetOption) abci_types.ResponseSetOption {
+	return abci_types.ResponseSetOption{Code: abci_types.CodeTypeOK}
 }
 
-func (app *app) Query(req tmtypes.RequestQuery) tmtypes.ResponseQuery {
+func (app *app) Query(req abci_types.RequestQuery) abci_types.ResponseQuery {
 	app.traceJs("Query", "req", req)
 	for _, subapp := range app.apps {
 		if subapp.AcceptQuery(req) {
 			return subapp.Query(app.commitState, req)
 		}
 	}
-	return tmtypes.ResponseQuery{Code: code.UNKNOWN_QUERY, Log: "unknown query"}
+	return abci_types.ResponseQuery{Code: code.UNKNOWN_QUERY, Log: "unknown query"}
 }
 
 func (app *app) checkNonce(state appstate.State, address []byte, nonce uint64) apptypes.Error {
@@ -177,32 +176,32 @@ func (app *app) checkNonce(state appstate.State, address []byte, nonce uint64) a
 	return nil
 }
 
-func (app *app) CheckTx(buf []byte) tmtypes.ResponseCheckTx {
+func (app *app) CheckTx(buf []byte) abci_types.ResponseCheckTx {
 	ctx, app_, tx, err := app.appForTx(buf)
 	if err != nil {
-		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
+		return abci_types.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
 	app.traceTx("CheckTx", tx)
 	err = app.checkNonce(app.commitState, ctx.Signer().Address().Bytes(), tx.Payload.Nonce)
 	if err != nil {
-		return tmtypes.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
+		return abci_types.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
 	return app_.CheckTx(app.commitState, ctx, tx.Payload.Payload)
 }
 
-func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
+func (app *app) DeliverTx(buf []byte) abci_types.ResponseDeliverTx {
 	ctx, app_, tx, err := app.appForTx(buf)
 	if err != nil {
-		return tmtypes.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
+		return abci_types.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
 	}
 	app.traceTx("DeliverTx", tx)
 	err = app.checkNonce(app.cacheState, ctx.Signer().Address().Bytes(), tx.Payload.Nonce)
 	if err != nil {
-		return tmtypes.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
+		return abci_types.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
 	}
 	signer, err_ := app.cacheState.Account().Get(ctx.Signer().Address().Bytes())
 	if err_ != nil {
-		return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
+		return abci_types.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 	}
 
 	// XXX: Accouts should be implicitly created when tokens are sent to it
@@ -215,7 +214,7 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 	}
 
 	if err_ := app.cacheState.Account().Save(signer); err_ != nil {
-		return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
+		return abci_types.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 	}
 
 	resp := app_.DeliverTx(app.cacheState, ctx, tx.Payload.Payload)
@@ -224,33 +223,33 @@ func (app *app) DeliverTx(buf []byte) tmtypes.ResponseDeliverTx {
 	if resp.IsOK() {
 		signer, err_ = app.cacheState.Account().Get(ctx.Signer().Address().Bytes())
 		if err_ != nil {
-			return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
+			return abci_types.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 		}
 		signer.Nonce = tx.Payload.Nonce
 		if err_ := app.cacheState.Account().Save(signer); err_ != nil {
-			return tmtypes.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
+			return abci_types.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
 		}
 	}
 
 	return resp
 }
 
-func (app *app) BeginBlock(req tmtypes.RequestBeginBlock) tmtypes.ResponseBeginBlock {
+func (app *app) BeginBlock(req abci_types.RequestBeginBlock) abci_types.ResponseBeginBlock {
 	app.trace("BeginBlock", "tmhash", util.X(req.Hash))
 
 	if app.mfacilitator != nil {
 		app.mfacilitator.OnBeginBlock(req)
 	}
 
-	return tmtypes.ResponseBeginBlock{}
+	return abci_types.ResponseBeginBlock{}
 }
 
-func (app *app) EndBlock(req tmtypes.RequestEndBlock) tmtypes.ResponseEndBlock {
+func (app *app) EndBlock(req abci_types.RequestEndBlock) abci_types.ResponseEndBlock {
 	app.trace("EndBlock")
-	return tmtypes.ResponseEndBlock{}
+	return abci_types.ResponseEndBlock{}
 }
 
-func (app *app) Commit() tmtypes.ResponseCommit {
+func (app *app) Commit() abci_types.ResponseCommit {
 	app.trace("Commit")
 
 	if err := lease.ProcessLeases(app.cacheState); err != nil {
@@ -263,7 +262,7 @@ func (app *app) Commit() tmtypes.ResponseCommit {
 
 	data, _, err := app.commitState.Commit()
 	if err != nil {
-		return tmtypes.ResponseCommit{Data: data}
+		return abci_types.ResponseCommit{Data: data}
 	}
 
 	if app.mfacilitator != nil {
@@ -273,7 +272,7 @@ func (app *app) Commit() tmtypes.ResponseCommit {
 		}
 	}
 
-	return tmtypes.ResponseCommit{Data: data}
+	return abci_types.ResponseCommit{Data: data}
 }
 
 func (app *app) appForTx(buf []byte) (

@@ -24,6 +24,7 @@ func Test_Start_Fail(t *testing.T) {
 }
 
 func Test_Start(t *testing.T) {
+	// t.Skip("WTF")
 	testutil.WithTempDir(t, func(basedir string) {
 		// init genesis data
 		genesispath := basedir + "/config/genesis.json"
@@ -52,7 +53,7 @@ func Test_Start(t *testing.T) {
 		startargs := []string{startCommand().Name(), "-d", basedir}
 		startbase := baseCommand()
 		startbase.SetArgs(startargs)
-		testCtx := newContext(startbase)
+		testCtx := newSession(startbase)
 		startbase.AddCommand(testStartCommand(testCtx))
 
 		errch := make(chan error, 1)
@@ -70,7 +71,7 @@ func Test_Start(t *testing.T) {
 	})
 }
 
-func testStartCommand(ctx Context) *cobra.Command {
+func testStartCommand(ctx Session) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "start node",
@@ -79,7 +80,7 @@ func testStartCommand(ctx Context) *cobra.Command {
 	return cmd
 }
 
-func testWithContext(ctx Context, fn ctxRunner) cmdRunner {
+func testWithContext(ctx Session, fn sessionRunner) cmdRunner {
 	return func(cmd *cobra.Command, args []string) error {
 		return fn(ctx, cmd, args)
 	}

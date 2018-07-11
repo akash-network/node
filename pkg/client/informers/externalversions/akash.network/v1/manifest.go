@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ package v1
 import (
 	time "time"
 
-	akash_network_v1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	akashnetworkv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	versioned "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/ovrclk/akash/pkg/client/informers/externalversions/internalinterfaces"
 	v1 "github.com/ovrclk/akash/pkg/client/listers/akash.network/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
@@ -57,20 +57,20 @@ func NewManifestInformer(client versioned.Interface, namespace string, resyncPer
 func NewFilteredManifestInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
-			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
 				return client.AkashV1().Manifests(namespace).List(options)
 			},
-			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
 				return client.AkashV1().Manifests(namespace).Watch(options)
 			},
 		},
-		&akash_network_v1.Manifest{},
+		&akashnetworkv1.Manifest{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,7 +81,7 @@ func (f *manifestInformer) defaultInformer(client versioned.Interface, resyncPer
 }
 
 func (f *manifestInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&akash_network_v1.Manifest{}, f.defaultInformer)
+	return f.factory.InformerFor(&akashnetworkv1.Manifest{}, f.defaultInformer)
 }
 
 func (f *manifestInformer) Lister() v1.ManifestLister {

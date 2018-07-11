@@ -90,7 +90,7 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 	}
 
 	res, err := txclient.BroadcastTxCommit(&types.TxCreateDeployment{
-		Tenant:   txclient.Key().Address(),
+		Tenant:   txclient.Key().GetPubKey().Address().Bytes(),
 		Nonce:    nonce,
 		OrderTTL: ttl,
 		Groups:   groups,

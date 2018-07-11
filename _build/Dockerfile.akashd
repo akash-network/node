@@ -2,4 +2,4 @@ FROM busybox:glibc
 
 COPY ./akashd .
 
-EXPOSE 46656 46657 46658
+EXPOSE 26656 26657 26658

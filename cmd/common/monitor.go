@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/ovrclk/akash/marketplace"
+	"github.com/tendermint/tendermint/libs/log"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
-	"github.com/tendermint/tmlibs/log"
 )
 
 func MonitorMarketplace(ctx context.Context, log log.Logger, client *tmclient.HTTP, handler marketplace.Handler) error {

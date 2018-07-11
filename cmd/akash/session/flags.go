@@ -3,10 +3,10 @@ package session
 import (
 	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"github.com/tendermint/go-crypto/keys"
 )
 
 func AddFlagNode(cmd *cobra.Command, flags *pflag.FlagSet) {
@@ -28,7 +28,7 @@ func AddFlagNonce(cmd *cobra.Command, flags *pflag.FlagSet) {
 }
 
 func AddFlagKeyType(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.StringP(flagKeyType, "t", defaultKeyType, "Type of key (ed25519|secp256k1|ledger)")
+	flags.StringP(flagKeyType, "t", string(defaultKeyType), "Type of key (secp256k1|ed25519|ledger)")
 }
 
 func AddFlagWait(cmd *cobra.Command, flags *pflag.FlagSet) {
@@ -40,17 +40,17 @@ func AddFlagHost(cmd *cobra.Command, flags *pflag.FlagSet) {
 	viper.BindPFlag(flagHost, flags.Lookup(flagHost))
 }
 
-func parseFlagKeyType(flags *pflag.FlagSet) (keys.CryptoAlgo, error) {
+func parseFlagKeyType(flags *pflag.FlagSet) (keys.SigningAlgo, error) {
 	ktype, err := flags.GetString(flagKeyType)
 	if err != nil {
 		return "", err
 	}
 
-	switch keys.CryptoAlgo(ktype) {
-	case keys.AlgoEd25519:
-		return keys.AlgoEd25519, nil
-	case keys.AlgoSecp256k1:
-		return keys.AlgoSecp256k1, nil
+	switch keys.SigningAlgo(ktype) {
+	case keys.Ed25519:
+		return keys.Ed25519, nil
+	case keys.Secp256k1:
+		return keys.Secp256k1, nil
 	default:
 		return "", fmt.Errorf("unknown key type: %v", ktype)
 	}

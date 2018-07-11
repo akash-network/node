@@ -1,7 +1,7 @@
 package types
 
 import (
-	tmcommon "github.com/tendermint/tmlibs/common"
+	tmcommon "github.com/tendermint/tendermint/libs/common"
 )
 
 const (

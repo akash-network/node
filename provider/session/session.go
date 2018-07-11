@@ -1,7 +1,7 @@
 package session
 
 import (
-	"github.com/tendermint/tmlibs/log"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/txutil"

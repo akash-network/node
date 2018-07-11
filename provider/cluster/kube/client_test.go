@@ -7,7 +7,7 @@ import (
 
 	"github.com/ovrclk/akash/types"
 	"github.com/stretchr/testify/assert"
-	"github.com/tendermint/tmlibs/log"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 func kubeClient(t *testing.T) Client {

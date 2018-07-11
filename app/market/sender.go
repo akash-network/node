@@ -2,7 +2,7 @@ package market
 
 import (
 	"github.com/ovrclk/akash/txutil"
-	"github.com/tendermint/tmlibs/log"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 type Sender interface {

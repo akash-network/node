@@ -11,25 +11,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestContext_RootDir_Env(t *testing.T) {
+func TestSession_RootDir_Env(t *testing.T) {
 	testutil.WithTempDirEnv(t, "AKASHD_DATA", func(basedir string) {
-		assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
-			assert.Equal(t, basedir, ctx.RootDir())
+		assertCommand(t, func(session Session, cmd *cobra.Command, args []string) error {
+			assert.Equal(t, basedir, session.RootDir())
 			return nil
 		})
 	})
 }
 
-func TestContext_RootDir_Arg(t *testing.T) {
+func TestSession_RootDir_Arg(t *testing.T) {
 	testutil.WithTempDir(t, func(basedir string) {
-		assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
-			assert.Equal(t, basedir, ctx.RootDir())
+		assertCommand(t, func(session Session, cmd *cobra.Command, args []string) error {
+			assert.Equal(t, basedir, session.RootDir())
 			return nil
 		}, "-d", basedir)
 	})
 }
 
-func TestContext_EnvOverrides(t *testing.T) {
+func TestSession_EnvOverrides(t *testing.T) {
 	testutil.WithTempDir(t, func(basedir string) {
 		defer os.Unsetenv("AKASHD_DATA")
 		defer os.Unsetenv("AKASHD_GENESIS")
@@ -50,12 +50,12 @@ func TestContext_EnvOverrides(t *testing.T) {
 		os.Setenv("AKASHD_P2P_SEEDS", seeds)
 		os.Setenv("AKASHD_RPC_LADDR", laddr)
 
-		assertCommand(t, func(ctx Context, cmd *cobra.Command, args []string) error {
-			cfg, err := ctx.TMConfig()
+		assertCommand(t, func(session Session, cmd *cobra.Command, args []string) error {
+			cfg, err := session.TMConfig()
 			require.NoError(t, err)
 			require.NotNil(t, cfg)
 
-			assert.Equal(t, basedir, ctx.RootDir())
+			assert.Equal(t, basedir, session.RootDir())
 			assert.Equal(t, gpath, cfg.GenesisFile())
 			assert.Equal(t, vpath, cfg.PrivValidatorFile())
 			assert.Equal(t, moniker, cfg.Moniker)
@@ -66,7 +66,7 @@ func TestContext_EnvOverrides(t *testing.T) {
 	})
 }
 
-func assertCommand(t *testing.T, fn ctxRunner, args ...string) {
+func assertCommand(t *testing.T, fn sessionRunner, args ...string) {
 	viper.Reset()
 
 	ran := false
@@ -75,9 +75,9 @@ func assertCommand(t *testing.T, fn ctxRunner, args ...string) {
 
 	cmd := &cobra.Command{
 		Use: "test",
-		RunE: withContext(func(ctx Context, cmd *cobra.Command, args []string) error {
+		RunE: withSession(func(session Session, cmd *cobra.Command, args []string) error {
 			ran = true
-			return fn(ctx, cmd, args)
+			return fn(session, cmd, args)
 		}),
 	}
 

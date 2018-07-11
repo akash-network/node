@@ -8,5 +8,5 @@ ingress:
 
 akashd:
   ports:
-    p2p: 46656
-    rpc: 46657
+    p2p: 26656
+    rpc: 26657

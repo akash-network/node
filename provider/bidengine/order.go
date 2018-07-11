@@ -11,7 +11,7 @@ import (
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/util/runner"
 	"github.com/ovrclk/akash/validation"
-	"github.com/tendermint/tmlibs/log"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 // order manages bidding and general lifecycle handling of an order.

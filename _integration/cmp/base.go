@@ -28,6 +28,6 @@ func akash_(root vars.Ref, name string, args ...string) gx.Cmd {
 
 	cmd.WithMeta(g.
 		Require("akash-path", root.Name()).
-		Default("akash-node", "http://localhost:46657"))
+		Default("akash-node", "http://localhost:26657"))
 	return cmd
 }

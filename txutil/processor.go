@@ -5,7 +5,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/types"
-	crypto "github.com/tendermint/go-crypto"
+	camino "github.com/tendermint/tendermint/crypto/encoding/amino"
 )
 
 type TxProcessor interface {
@@ -49,17 +49,12 @@ func (txp *txProcessor) Validate() error {
 		return err
 	}
 
-	key, err := crypto.PubKeyFromBytes(txp.tx.Key)
+	key, err := camino.PubKeyFromBytes(txp.tx.Key)
 	if err != nil {
 		return err
 	}
 
-	sig, err := crypto.SignatureFromBytes(txp.tx.Signature)
-	if err != nil {
-		return err
-	}
-
-	if !key.VerifyBytes(pbytes, sig) {
+	if !key.VerifyBytes(pbytes, txp.tx.Signature) {
 		return fmt.Errorf("invalid signature")
 	}
 

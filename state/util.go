@@ -9,7 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/iavl"
-	tmdb "github.com/tendermint/tmlibs/db"
+	tmdb "github.com/tendermint/tendermint/libs/db"
 )
 
 const (
@@ -34,7 +34,7 @@ func LoadDB(pathname string) (DB, error) {
 	name := path.Base(pathname)
 
 	db := tmdb.NewDB(name, dbBackend, dir)
-	tree := iavl.NewVersionedTree(db, dbCacheSize)
+	tree := iavl.NewMutableTree(db, dbCacheSize)
 	if _, err := tree.Load(); err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func LoadState(db DB, gen *types.Genesis) (CommitState, CacheState, error) {
 
 func NewMemDB() DB {
 	mtx := new(sync.RWMutex)
-	tree := iavl.NewVersionedTree(tmdb.NewMemDB(), 0)
+	tree := iavl.NewMutableTree(tmdb.NewMemDB(), 0)
 	return &iavlDB{tree, mtx}
 }
 

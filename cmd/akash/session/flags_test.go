@@ -5,13 +5,13 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/go-crypto/keys"
 )
 
 type flagFn func(cmd *cobra.Command, flags *pflag.FlagSet)
@@ -95,7 +95,7 @@ func TestFlag_Nonce(t *testing.T) {
 		kmgr, err := sess.KeyManager()
 		require.NoError(t, err)
 
-		_, _, err = kmgr.Create(key, defaultPassword, keys.AlgoEd25519)
+		_, _, err = kmgr.CreateMnemonic(key, common.DefaultCodec, defaultPassword, defaultKeyType)
 		require.NoError(t, err)
 
 		nonce, err := sess.Nonce()

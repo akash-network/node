@@ -8,7 +8,7 @@ import (
 	"github.com/ovrclk/akash/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tmlibs/log"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 func TestDeploy(t *testing.T) {

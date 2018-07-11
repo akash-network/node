@@ -10,8 +10,8 @@ import (
 	appstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/code"
-	tmtypes "github.com/tendermint/abci/types"
-	"github.com/tendermint/tmlibs/log"
+	abci_types "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 const (
@@ -26,7 +26,7 @@ func NewApp(logger log.Logger) (apptypes.Application, error) {
 	return &app{apptypes.NewBaseApp(Name, logger)}, nil
 }
 
-func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
+func (a *app) AcceptQuery(req abci_types.RequestQuery) bool {
 	return strings.HasPrefix(req.GetPath(), appstate.OrderPath)
 }
 
@@ -38,31 +38,31 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	return false
 }
 
-func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
+func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) abci_types.ResponseCheckTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateOrder:
 		return a.doCheckCreateTx(state, ctx, tx.TxCreateOrder)
 	}
-	return tmtypes.ResponseCheckTx{
+	return abci_types.ResponseCheckTx{
 		Code: code.UNKNOWN_TRANSACTION,
 		Log:  "unknown transaction",
 	}
 }
 
-func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
+func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) abci_types.ResponseDeliverTx {
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateOrder:
 		return a.doDeliverCreateTx(state, ctx, tx.TxCreateOrder)
 	}
-	return tmtypes.ResponseDeliverTx{
+	return abci_types.ResponseDeliverTx{
 		Code: code.UNKNOWN_TRANSACTION,
 		Log:  "unknown transaction",
 	}
 }
 
-func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.ResponseQuery {
+func (a *app) Query(state appstate.State, req abci_types.RequestQuery) abci_types.ResponseQuery {
 	if !a.AcceptQuery(req) {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.UNKNOWN_QUERY,
 			Log:  "invalid key",
 		}
@@ -76,7 +76,7 @@ func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.Resp
 
 	key, err := keys.ParseOrderPath(id)
 	if err != nil {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
@@ -84,19 +84,19 @@ func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.Resp
 	return a.doQuery(state, key)
 }
 
-func (a *app) doQuery(state appstate.State, key keys.Order) tmtypes.ResponseQuery {
+func (a *app) doQuery(state appstate.State, key keys.Order) abci_types.ResponseQuery {
 
 	depo, err := state.Order().Get(key.ID())
 
 	if err != nil {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
 	}
 
 	if depo == nil {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.NOT_FOUND,
 			Log:  fmt.Sprintf("order %v not found", key.Path()),
 		}
@@ -104,22 +104,22 @@ func (a *app) doQuery(state appstate.State, key keys.Order) tmtypes.ResponseQuer
 
 	bytes, err := proto.Marshal(depo)
 	if err != nil {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
 	}
 
-	return tmtypes.ResponseQuery{
+	return abci_types.ResponseQuery{
 		Value:  bytes,
 		Height: int64(state.Version()),
 	}
 }
 
-func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
+func (a *app) doRangeQuery(state appstate.State) abci_types.ResponseQuery {
 	items, err := state.Order().All()
 	if err != nil {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
@@ -129,25 +129,25 @@ func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
 
 	bytes, err := proto.Marshal(coll)
 	if err != nil {
-		return tmtypes.ResponseQuery{
+		return abci_types.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
 	}
 
-	return tmtypes.ResponseQuery{
+	return abci_types.ResponseQuery{
 		Value:  bytes,
 		Height: state.Version(),
 	}
 }
 
-func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseCheckTx {
+func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateOrder) abci_types.ResponseCheckTx {
 
 	// todo: ensure signed by last block creator / valid market facilitator
 
 	// ensure order provided
 	if tx.Deployment == nil {
-		return tmtypes.ResponseCheckTx{
+		return abci_types.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "No deployment specified",
 		}
@@ -156,13 +156,13 @@ func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *ty
 	// ensure deployment exists
 	deployment, err := state.Deployment().Get(tx.Deployment)
 	if err != nil {
-		return tmtypes.ResponseCheckTx{
+		return abci_types.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
 		}
 	}
 	if deployment == nil {
-		return tmtypes.ResponseCheckTx{
+		return abci_types.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Deployment not found",
 		}
@@ -170,7 +170,7 @@ func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *ty
 
 	// ensure deployment in correct state
 	if deployment.GetState() != types.Deployment_ACTIVE {
-		return tmtypes.ResponseCheckTx{
+		return abci_types.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Deployment not in active state",
 		}
@@ -179,13 +179,13 @@ func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *ty
 	// ensure deployment group exists
 	group, err := state.DeploymentGroup().Get(tx.GroupID())
 	if err != nil {
-		return tmtypes.ResponseCheckTx{
+		return abci_types.ResponseCheckTx{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
 	}
 	if group == nil {
-		return tmtypes.ResponseCheckTx{
+		return abci_types.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Group not found",
 		}
@@ -193,7 +193,7 @@ func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *ty
 
 	// ensure deployment group in correct state
 	if group.GetState() != types.DeploymentGroup_OPEN {
-		return tmtypes.ResponseCheckTx{
+		return abci_types.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "Group not in open state",
 		}
@@ -202,7 +202,7 @@ func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *ty
 	// ensure no other open orders
 	others, err := state.Order().ForGroup(group.DeploymentGroupID)
 	if err != nil {
-		return tmtypes.ResponseCheckTx{
+		return abci_types.ResponseCheckTx{
 			Code: code.ERROR,
 			Log:  err.Error(),
 		}
@@ -210,21 +210,21 @@ func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *ty
 
 	for _, other := range others {
 		if other.GetState() == types.Order_OPEN {
-			return tmtypes.ResponseCheckTx{
+			return abci_types.ResponseCheckTx{
 				Code: code.INVALID_TRANSACTION,
 				Log:  "Order already exists for group",
 			}
 		}
 	}
 
-	return tmtypes.ResponseCheckTx{}
+	return abci_types.ResponseCheckTx{}
 }
 
-func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateOrder) tmtypes.ResponseDeliverTx {
+func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateOrder) abci_types.ResponseDeliverTx {
 
 	cresp := a.doCheckCreateTx(state, ctx, tx)
 	if !cresp.IsOK() {
-		return tmtypes.ResponseDeliverTx{
+		return abci_types.ResponseDeliverTx{
 			Code: cresp.Code,
 			Log:  cresp.Log,
 		}
@@ -243,13 +243,13 @@ func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *
 	order.State = types.Order_OPEN
 
 	if err := state.Order().Save(order); err != nil {
-		return tmtypes.ResponseDeliverTx{
+		return abci_types.ResponseDeliverTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  err.Error(),
 		}
 	}
 
-	return tmtypes.ResponseDeliverTx{
+	return abci_types.ResponseDeliverTx{
 		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCreateOrder),
 	}
 }

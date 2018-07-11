@@ -44,7 +44,7 @@ func doSendCommand(session session.Session, cmd *cobra.Command, args []string) e
 	}
 
 	result, err := txclient.BroadcastTxCommit(&types.TxSend{
-		From:   txclient.Key().Address(),
+		From:   txclient.Key().GetPubKey().Address().Bytes(),
 		To:     to.ID(),
 		Amount: amount,
 	})

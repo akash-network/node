@@ -11,7 +11,7 @@ import (
 	"github.com/ovrclk/akash/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	tmtypes "github.com/tendermint/abci/types"
+	tmtypes "github.com/tendermint/tendermint/abci/types"
 )
 
 func TestAcceptQuery(t *testing.T) {

@@ -28,7 +28,7 @@ func TestSendManifest(t *testing.T) {
 	key, kmgr := testutil.NewNamedKey(t)
 	signer := testutil.Signer(t, kmgr)
 
-	provider := testutil.Provider(key.Address(), 1)
+	provider := testutil.Provider(key.GetAddress().Bytes(), 1)
 	session := session.New(testutil.Logger(), provider, nil, nil)
 
 	deployment := testutil.DeploymentAddress(t)

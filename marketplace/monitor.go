@@ -5,9 +5,9 @@ import (
 
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
+	"github.com/tendermint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/libs/pubsub"
 	tmtmtypes "github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tmlibs/log"
-	"github.com/tendermint/tmlibs/pubsub"
 )
 
 type Monitor interface {

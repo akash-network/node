@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	akash_network_v1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	akashnetworkv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,20 +39,20 @@ var manifestsResource = schema.GroupVersionResource{Group: "akash.network", Vers
 var manifestsKind = schema.GroupVersionKind{Group: "akash.network", Version: "v1", Kind: "Manifest"}
 
 // Get takes name of the manifest, and returns the corresponding manifest object, and an error if there is any.
-func (c *FakeManifests) Get(name string, options v1.GetOptions) (result *akash_network_v1.Manifest, err error) {
+func (c *FakeManifests) Get(name string, options v1.GetOptions) (result *akashnetworkv1.Manifest, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(manifestsResource, c.ns, name), &akash_network_v1.Manifest{})
+		Invokes(testing.NewGetAction(manifestsResource, c.ns, name), &akashnetworkv1.Manifest{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*akash_network_v1.Manifest), err
+	return obj.(*akashnetworkv1.Manifest), err
 }
 
 // List takes label and field selectors, and returns the list of Manifests that match those selectors.
-func (c *FakeManifests) List(opts v1.ListOptions) (result *akash_network_v1.ManifestList, err error) {
+func (c *FakeManifests) List(opts v1.ListOptions) (result *akashnetworkv1.ManifestList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(manifestsResource, manifestsKind, c.ns, opts), &akash_network_v1.ManifestList{})
+		Invokes(testing.NewListAction(manifestsResource, manifestsKind, c.ns, opts), &akashnetworkv1.ManifestList{})
 
 	if obj == nil {
 		return nil, err
@@ -62,8 +62,8 @@ func (c *FakeManifests) List(opts v1.ListOptions) (result *akash_network_v1.Mani
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &akash_network_v1.ManifestList{}
-	for _, item := range obj.(*akash_network_v1.ManifestList).Items {
+	list := &akashnetworkv1.ManifestList{ListMeta: obj.(*akashnetworkv1.ManifestList).ListMeta}
+	for _, item := range obj.(*akashnetworkv1.ManifestList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -79,43 +79,43 @@ func (c *FakeManifests) Watch(opts v1.ListOptions) (watch.Interface, error) {
 }
 
 // Create takes the representation of a manifest and creates it.  Returns the server's representation of the manifest, and an error, if there is any.
-func (c *FakeManifests) Create(manifest *akash_network_v1.Manifest) (result *akash_network_v1.Manifest, err error) {
+func (c *FakeManifests) Create(manifest *akashnetworkv1.Manifest) (result *akashnetworkv1.Manifest, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(manifestsResource, c.ns, manifest), &akash_network_v1.Manifest{})
+		Invokes(testing.NewCreateAction(manifestsResource, c.ns, manifest), &akashnetworkv1.Manifest{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*akash_network_v1.Manifest), err
+	return obj.(*akashnetworkv1.Manifest), err
 }
 
 // Update takes the representation of a manifest and updates it. Returns the server's representation of the manifest, and an error, if there is any.
-func (c *FakeManifests) Update(manifest *akash_network_v1.Manifest) (result *akash_network_v1.Manifest, err error) {
+func (c *FakeManifests) Update(manifest *akashnetworkv1.Manifest) (result *akashnetworkv1.Manifest, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(manifestsResource, c.ns, manifest), &akash_network_v1.Manifest{})
+		Invokes(testing.NewUpdateAction(manifestsResource, c.ns, manifest), &akashnetworkv1.Manifest{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*akash_network_v1.Manifest), err
+	return obj.(*akashnetworkv1.Manifest), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeManifests) UpdateStatus(manifest *akash_network_v1.Manifest) (*akash_network_v1.Manifest, error) {
+func (c *FakeManifests) UpdateStatus(manifest *akashnetworkv1.Manifest) (*akashnetworkv1.Manifest, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(manifestsResource, "status", c.ns, manifest), &akash_network_v1.Manifest{})
+		Invokes(testing.NewUpdateSubresourceAction(manifestsResource, "status", c.ns, manifest), &akashnetworkv1.Manifest{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*akash_network_v1.Manifest), err
+	return obj.(*akashnetworkv1.Manifest), err
 }
 
 // Delete takes name of the manifest and deletes it. Returns an error if one occurs.
 func (c *FakeManifests) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(manifestsResource, c.ns, name), &akash_network_v1.Manifest{})
+		Invokes(testing.NewDeleteAction(manifestsResource, c.ns, name), &akashnetworkv1.Manifest{})
 
 	return err
 }
@@ -124,17 +124,17 @@ func (c *FakeManifests) Delete(name string, options *v1.DeleteOptions) error {
 func (c *FakeManifests) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(manifestsResource, c.ns, listOptions)
 
-	_, err := c.Fake.Invokes(action, &akash_network_v1.ManifestList{})
+	_, err := c.Fake.Invokes(action, &akashnetworkv1.ManifestList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched manifest.
-func (c *FakeManifests) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *akash_network_v1.Manifest, err error) {
+func (c *FakeManifests) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *akashnetworkv1.Manifest, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(manifestsResource, c.ns, name, data, subresources...), &akash_network_v1.Manifest{})
+		Invokes(testing.NewPatchSubresourceAction(manifestsResource, c.ns, name, data, subresources...), &akashnetworkv1.Manifest{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*akash_network_v1.Manifest), err
+	return obj.(*akashnetworkv1.Manifest), err
 }

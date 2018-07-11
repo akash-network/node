@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/tendermint/tmlibs/log"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 type BaseApp struct {

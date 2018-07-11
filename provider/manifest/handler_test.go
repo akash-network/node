@@ -74,7 +74,7 @@ type testfn func(manifest.Service, event.Bus, *types.ManifestRequest, *types.Lea
 func withHandler(t *testing.T, fn testfn) {
 	info, kmgr := testutil.NewNamedKey(t)
 	signer := testutil.Signer(t, kmgr)
-	tenant := info.Address()
+	tenant := info.GetPubKey().Address().Bytes()
 
 	deployment := testutil.Deployment(tenant, 1)
 	dgroups := testutil.DeploymentGroups(deployment.Address, 2)
@@ -145,5 +145,4 @@ func withHandler(t *testing.T, fn testfn) {
 			require.Fail(t, "event not found")
 		}
 	}
-
 }

@@ -7,8 +7,8 @@ import (
 
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tendermint/p2p"
+	"github.com/tendermint/tendermint/privval"
 	tmtypes "github.com/tendermint/tendermint/types"
-	privval "github.com/tendermint/tendermint/types/priv_validator"
 )
 
 // Tendermint genesis doc from file
@@ -30,7 +30,7 @@ func TMGenesisFromFile(path string) (*tmtypes.GenesisDoc, error) {
 // Akash genesis doc from file
 func GenesisFromTMGenesis(genesis *tmtypes.GenesisDoc) (*types.Genesis, error) {
 	obj := new(types.Genesis)
-	if err := json.Unmarshal(genesis.AppOptions, obj); err != nil {
+	if err := json.Unmarshal(genesis.AppState, obj); err != nil {
 		return nil, err
 	}
 	return obj, nil

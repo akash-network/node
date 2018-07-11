@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/go-kit/kit/log/term"
-	"github.com/tendermint/tmlibs/log"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 func Logger() log.Logger {

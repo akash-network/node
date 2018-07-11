@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ package v1
 import (
 	v1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	scheme "github.com/ovrclk/akash/pkg/client/clientset/versioned/scheme"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -38,11 +38,11 @@ type ManifestInterface interface {
 	Create(*v1.Manifest) (*v1.Manifest, error)
 	Update(*v1.Manifest) (*v1.Manifest, error)
 	UpdateStatus(*v1.Manifest) (*v1.Manifest, error)
-	Delete(name string, options *meta_v1.DeleteOptions) error
-	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
-	Get(name string, options meta_v1.GetOptions) (*v1.Manifest, error)
-	List(opts meta_v1.ListOptions) (*v1.ManifestList, error)
-	Watch(opts meta_v1.ListOptions) (watch.Interface, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.Manifest, error)
+	List(opts metav1.ListOptions) (*v1.ManifestList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Manifest, err error)
 	ManifestExpansion
 }
@@ -62,7 +62,7 @@ func newManifests(c *AkashV1Client, namespace string) *manifests {
 }
 
 // Get takes name of the manifest, and returns the corresponding manifest object, and an error if there is any.
-func (c *manifests) Get(name string, options meta_v1.GetOptions) (result *v1.Manifest, err error) {
+func (c *manifests) Get(name string, options metav1.GetOptions) (result *v1.Manifest, err error) {
 	result = &v1.Manifest{}
 	err = c.client.Get().
 		Namespace(c.ns).
@@ -75,7 +75,7 @@ func (c *manifests) Get(name string, options meta_v1.GetOptions) (result *v1.Man
 }
 
 // List takes label and field selectors, and returns the list of Manifests that match those selectors.
-func (c *manifests) List(opts meta_v1.ListOptions) (result *v1.ManifestList, err error) {
+func (c *manifests) List(opts metav1.ListOptions) (result *v1.ManifestList, err error) {
 	result = &v1.ManifestList{}
 	err = c.client.Get().
 		Namespace(c.ns).
@@ -87,7 +87,7 @@ func (c *manifests) List(opts meta_v1.ListOptions) (result *v1.ManifestList, err
 }
 
 // Watch returns a watch.Interface that watches the requested manifests.
-func (c *manifests) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (c *manifests) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
 		Namespace(c.ns).
@@ -138,7 +138,7 @@ func (c *manifests) UpdateStatus(manifest *v1.Manifest) (result *v1.Manifest, er
 }
 
 // Delete takes name of the manifest and deletes it. Returns an error if one occurs.
-func (c *manifests) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (c *manifests) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("manifests").
@@ -149,7 +149,7 @@ func (c *manifests) Delete(name string, options *meta_v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *manifests) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (c *manifests) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("manifests").

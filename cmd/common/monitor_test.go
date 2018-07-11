@@ -7,7 +7,7 @@ import (
 	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/abci/example/dummy"
+	"github.com/tendermint/tendermint/abci/example/counter"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/rpc/client"
 	rpctest "github.com/tendermint/tendermint/rpc/test"
@@ -40,7 +40,7 @@ func getTestHTTPClient() *client.HTTP {
 }
 
 func startTestServer(t *testing.T) *node.Node {
-	app := dummy.NewDummyApplication()
+	app := counter.NewCounterApplication(true)
 	node := rpctest.StartTendermint(app)
 	return node
 }

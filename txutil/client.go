@@ -4,9 +4,9 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/types"
-	"github.com/tendermint/go-crypto/keys"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 	tmctypes "github.com/tendermint/tendermint/rpc/core/types"
 )
@@ -90,7 +90,7 @@ func (c *client) currentNonce() (uint64, error) {
 	if c.nonce != 0 {
 		return c.nonce, nil
 	}
-	path := query.AccountPath(c.key.Address())
+	path := query.AccountPath(c.key.GetPubKey().Address())
 	result, err := c.parent.ABCIQuery(path, nil)
 	if err != nil {
 		return 0, err

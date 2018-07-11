@@ -3,7 +3,7 @@ AKASH_ROOT=../..
 DATA_ROOT=data
 AKASH_DIR=$DATA_ROOT/client
 AKASHD_DIR=$DATA_ROOT/node
-DEFAULT_AKASH_NODE="http://localhost:46657"
+DEFAULT_AKASH_NODE="http://localhost:26657"
 
 _akash() {
   AKASH_NODE="${AKASH_NODE:-$DEFAULT_AKASH_NODE}" \

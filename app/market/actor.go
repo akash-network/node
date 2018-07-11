@@ -1,11 +1,11 @@
 package market
 
 import (
-	crypto "github.com/tendermint/go-crypto"
+	crypto "github.com/tendermint/tendermint/crypto"
 )
 
 type Actor interface {
-	Sign([]byte) crypto.Signature
+	Sign([]byte) ([]byte, error)
 	PubKey() crypto.PubKey
 	Address() []byte
 }
@@ -26,6 +26,6 @@ func (a actor) Address() []byte {
 	return a.PubKey().Address()
 }
 
-func (a actor) Sign(msg []byte) crypto.Signature {
+func (a actor) Sign(msg []byte) ([]byte, error) {
 	return a.key.Sign(msg)
 }

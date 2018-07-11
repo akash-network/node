@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -19,8 +20,7 @@ const (
 	flagPassword = "password"
 	keyDir       = "keys"
 
-	defaultKeyType  = "ed25519"
-	defaultCodec    = "english"
+	defaultKeyType  = keys.Secp256k1
 	defaultPassword = "0123456789"
 	defaultHost     = "localhost"
 	defaultNode     = "http://api.akashtest.net:80"

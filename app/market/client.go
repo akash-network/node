@@ -13,7 +13,6 @@ type Client interface {
 // local mempool client
 func newLocalClient() Client {
 	return localClient{}
-	//return client.NewHTTP("http://localhost:46657", "/websocket")
 }
 
 type localClient struct{}

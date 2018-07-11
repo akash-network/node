@@ -1,7 +1,7 @@
 package: github.com/ovrclk/akash
 import:
 - package: github.com/gogo/protobuf
-  version: ^1.0.0
+  version: ^1.1.1
   subpackages:
   - gogoproto
   - proto
@@ -9,22 +9,18 @@ import:
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
   version: master
-- package: github.com/tendermint/go-crypto
-  repo: https://github.com/ovrclk/go-crypto.git
+
+- package: github.com/prometheus/client_golang
+  version: ae27198cdd90bf12cd134ad79d1366a6cf49f632
+
+- package: github.com/cosmos/cosmos-sdk/crypto
+  version: ~0.25.0
+
 - package: github.com/tendermint/go-amino
-  repo: https://github.com/ovrclk/go-amino.git
 - package: github.com/tendermint/iavl
-  repo: https://github.com/ovrclk/iavl.git
-- package: github.com/tendermint/abci
-  repo: https://github.com/ovrclk/abci.git
-- package: github.com/tendermint/go-wire
-  repo: https://github.com/ovrclk/go-wire.git
-- package: github.com/tendermint/tmlibs
-  version: ~0.8.2-rc0
-  repo: https://github.com/ovrclk/tmlibs.git
 - package: github.com/tendermint/tendermint
-  version: develop
-  repo: https://github.com/ovrclk/tendermint.git
+  version: ~0.25.0
+
 - package: github.com/stretchr/testify
   version: ^1.2.1
   subpackages:
@@ -42,29 +38,50 @@ import:
   subpackages:
   - trees/avltree
 - package: github.com/boz/go-lifecycle
+- package: github.com/googleapis/gnostic
+  # version: ~0.2.0
+  subpackages:
+  - OpenAPIv2
+
+- package: github.com/golang/protobuf
+  version: ~1.1.0
+- package: github.com/grpc-ecosystem/grpc-gateway
+- package: google.golang.org/grpc
+  version: ^1.13.0
+
+- package: github.com/juju/errors
+
+
 - package: k8s.io/client-go
+  # version: ~8.0.0
+  version: kubernetes-1.12.2
   subpackages:
   - '...'
 - package: k8s.io/apiextensions-apiserver
+  version: kubernetes-1.12.2
 - package: k8s.io/apimachinery
+  version: release-1.12
   subpackages:
   - '...'
-- package: github.com/googleapis/gnostic
-  version: ~0.2.0
-  subpackages:
-  - OpenAPIv2
-- package: github.com/golang/protobuf
-  version: ~1.1.0
-- package: github.com/juju/errors
 - package: k8s.io/code-generator
-- package: k8s.io/gengo
-- package: github.com/hashicorp/golang-lru
-- package: github.com/grpc-ecosystem/grpc-gateway
-  version: ^1.4.1
+  version: release-1.12
 - package: k8s.io/metrics
+  version: release-1.12
+- package: k8s.io/gengo
+
+- package: github.com/hashicorp/golang-lru
 - package: github.com/caarlos0/env
   version: ^3.3.0
 - package: github.com/blang/semver
   version: ^3.5.1
 - package: github.com/satori/go.uuid
   version: ~1.2.0
+
+- package: golang.org/x/sys
+  version: 1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded
+  subpackages:
+  - unix
+
+- package: golang.org/x/crypto
+  repo: https://github.com/tendermint/crypto
+  version: "3764759f34a542a3aef74d6b02e35be7ab893bba"

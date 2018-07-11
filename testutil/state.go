@@ -6,7 +6,7 @@ import (
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/stretchr/testify/require"
-	crypto "github.com/tendermint/go-crypto"
+	crypto "github.com/tendermint/tendermint/crypto"
 )
 
 // NewState used only for testing

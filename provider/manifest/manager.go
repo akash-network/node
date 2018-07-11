@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tendermint/tmlibs/log"
+	"github.com/tendermint/tendermint/libs/log"
 
 	lifecycle "github.com/boz/go-lifecycle"
 	mutil "github.com/ovrclk/akash/manifest"

@@ -3,8 +3,8 @@ package market
 import (
 	apptypes "github.com/ovrclk/akash/app/types"
 	appstate "github.com/ovrclk/akash/state"
-	tmtypes "github.com/tendermint/abci/types"
-	"github.com/tendermint/tmlibs/log"
+	abci_types "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 const (
@@ -23,22 +23,22 @@ func (a *app) Name() string {
 	return Name
 }
 
-func (a *app) AcceptQuery(req tmtypes.RequestQuery) bool {
+func (a *app) AcceptQuery(req abci_types.RequestQuery) bool {
 	return false
 }
 
-func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.ResponseQuery {
-	return tmtypes.ResponseQuery{}
+func (a *app) Query(state appstate.State, req abci_types.RequestQuery) abci_types.ResponseQuery {
+	return abci_types.ResponseQuery{}
 }
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	return false
 }
 
-func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseCheckTx {
-	return tmtypes.ResponseCheckTx{}
+func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) abci_types.ResponseCheckTx {
+	return abci_types.ResponseCheckTx{}
 }
 
-func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) tmtypes.ResponseDeliverTx {
-	return tmtypes.ResponseDeliverTx{}
+func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) abci_types.ResponseDeliverTx {
+	return abci_types.ResponseDeliverTx{}
 }

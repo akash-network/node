@@ -11,6 +11,7 @@ import (
 	"github.com/ovrclk/akash/util/initgen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tendermint/tendermint/p2p"
 	tmtypes "github.com/tendermint/tendermint/types"
 )
 
@@ -49,6 +50,15 @@ func TestDirWriter(t *testing.T) {
 		obj, err := node.PVFromFile(path)
 		require.NoError(t, err)
 		require.Equal(t, ctx.Nodes()[0].PrivateValidator.GetPubKey(), obj.GetPubKey())
+	}
+
+	{
+		path := path.Join(basedir, initgen.ConfigDir, initgen.NodeKeyFilename)
+		assert.FileExists(t, path)
+
+		obj, err := p2p.LoadNodeKey(path)
+		require.NoError(t, err)
+		require.Equal(t, ctx.Nodes()[0].NodeKey, obj)
 	}
 }
 

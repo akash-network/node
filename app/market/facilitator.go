@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/ovrclk/akash/state"
-	"github.com/tendermint/tmlibs/log"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 type Facilitator interface {

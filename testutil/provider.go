@@ -9,7 +9,7 @@ import (
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	"github.com/stretchr/testify/assert"
-	crypto "github.com/tendermint/go-crypto"
+	crypto "github.com/tendermint/tendermint/crypto"
 )
 
 func CreateProvider(t *testing.T, st state.State, app apptypes.Application, account *types.Account, key crypto.PrivKey, nonce uint64) *types.Provider {

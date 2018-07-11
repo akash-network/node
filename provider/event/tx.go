@@ -5,8 +5,8 @@ import (
 
 	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/types"
+	"github.com/tendermint/tendermint/libs/log"
 	tmtmtypes "github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tmlibs/log"
 )
 
 type (
