@@ -13,13 +13,11 @@ import (
 func Test_v1_Parse_docs(t *testing.T) {
 	sdl, err := sdl.ReadFile("../_docs/deployment.yml")
 	require.NoError(t, err)
-
 	_, err = sdl.DeploymentGroups()
 	require.NoError(t, err)
 
 	_, err = sdl.Manifest()
 	require.NoError(t, err)
-	t.Fail()
 }
 
 func Test_v1_Parse_simple(t *testing.T) {

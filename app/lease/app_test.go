@@ -68,7 +68,7 @@ func TestValidTx(t *testing.T) {
 	require.NoError(t, err)
 	oSeq := uint64(0)
 	testutil.CreateOrder(t, cacheState, oapp, taccount, tkey, daddress, groupSeq, oSeq)
-	price := uint32(1)
+	price := uint64(1)
 
 	// create fulfillment
 	fapp, err := fapp.NewApp(testutil.Logger())
@@ -147,7 +147,7 @@ func TestBilling(t *testing.T) {
 	require.NoError(t, err)
 	oSeq := uint64(0)
 	testutil.CreateOrder(t, cacheState, oapp, tenant, tkey, daddress, groupSeq, oSeq)
-	price := uint32(1)
+	price := uint64(1)
 	p := uint64(price)
 
 	// create fulfillment

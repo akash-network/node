@@ -12,7 +12,7 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 )
 
-func CreateLease(t *testing.T, st state.State, app apptypes.Application, provider base.Bytes, key crypto.PrivKey, deployment base.Bytes, group, order uint64, price uint32) *types.Lease {
+func CreateLease(t *testing.T, st state.State, app apptypes.Application, provider base.Bytes, key crypto.PrivKey, deployment base.Bytes, group, order, price uint64) *types.Lease {
 	lease := Lease(provider, deployment, group, order, price)
 
 	tx := &types.TxPayload_TxCreateLease{
@@ -60,7 +60,7 @@ func CloseLease(t *testing.T, st state.State, app apptypes.Application, id types
 	assert.True(t, dresp.IsOK())
 }
 
-func Lease(provider base.Bytes, deplyment base.Bytes, group, order uint64, price uint32) *types.Lease {
+func Lease(provider base.Bytes, deplyment base.Bytes, group, order uint64, price uint64) *types.Lease {
 	lease := &types.Lease{
 		LeaseID: types.LeaseID{
 			Deployment: deplyment,

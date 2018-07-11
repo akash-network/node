@@ -12,7 +12,7 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 )
 
-func CreateFulfillment(t *testing.T, st state.State, app apptypes.Application, provider base.Bytes, key crypto.PrivKey, deployment base.Bytes, group, order uint64, price uint32) *types.Fulfillment {
+func CreateFulfillment(t *testing.T, st state.State, app apptypes.Application, provider base.Bytes, key crypto.PrivKey, deployment base.Bytes, group, order, price uint64) *types.Fulfillment {
 	fulfillment := Fulfillment(provider, deployment, group, order, price)
 
 	fulfillmenttx := &types.TxPayload_TxCreateFulfillment{
@@ -61,7 +61,7 @@ func CloseFulfillment(t *testing.T, st state.State, app apptypes.Application, ke
 	assert.True(t, dresp.IsOK())
 }
 
-func Fulfillment(provider base.Bytes, deplyment base.Bytes, group, order uint64, price uint32) *types.Fulfillment {
+func Fulfillment(provider base.Bytes, deplyment base.Bytes, group, order uint64, price uint64) *types.Fulfillment {
 	fulfillment := &types.Fulfillment{
 		FulfillmentID: types.FulfillmentID{
 			Deployment: deplyment,
