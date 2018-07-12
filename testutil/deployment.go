@@ -117,7 +117,7 @@ func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGrou
 	rgroup := types.ResourceGroup{
 		Unit:  runit,
 		Count: RandUint32(),
-		Price: RandUint32(),
+		Price: RandUint64(),
 	}
 
 	pattr := types.ProviderAttribute{

@@ -225,14 +225,14 @@ loop:
 	}
 }
 
-func (o *order) calculatePrice(group *types.DeploymentGroup) uint32 {
+func (o *order) calculatePrice(group *types.DeploymentGroup) uint64 {
 	max := o.groupMaxPrice(group)
-	return uint32(rand.Int31n(int32(max)) + 1)
+	return uint64(rand.Int63n(int64(max)) + 1)
 }
 
-func (o *order) groupMaxPrice(group *types.DeploymentGroup) uint32 {
+func (o *order) groupMaxPrice(group *types.DeploymentGroup) uint64 {
 	// TODO: catch overflow
-	price := uint32(0)
+	price := uint64(0)
 	for _, group := range group.GetResources() {
 		price += group.Price
 	}

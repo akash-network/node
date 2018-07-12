@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/ovrclk/akash/cmd/akash/session"
+	"github.com/ovrclk/akash/denom"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
 	"github.com/spf13/cobra"
@@ -33,7 +33,7 @@ func doSendCommand(session session.Session, cmd *cobra.Command, args []string) e
 		return err
 	}
 
-	amount, err := strconv.ParseUint(args[0], 10, 64)
+	amount, err := denom.ToBase(args[0])
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func doSendCommand(session session.Session, cmd *cobra.Command, args []string) e
 		return err
 	}
 
-	fmt.Printf("Sent %v tokens to %s in block %v\n", amount, to.ID(), result.Height)
+	fmt.Printf("Sent %v tokens to %s in block %v\n", args[0], to.ID(), result.Height)
 
 	return nil
 }

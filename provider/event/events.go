@@ -7,7 +7,7 @@ import (
 type LeaseWon struct {
 	LeaseID types.LeaseID
 	Group   *types.DeploymentGroup
-	Price   uint32
+	Price   uint64
 }
 
 type ManifestReceived struct {

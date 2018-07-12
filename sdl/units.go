@@ -30,7 +30,7 @@ const (
 	unitEi = unitPi * unitKi
 )
 
-var suffixes = []struct {
+var unitSuffixes = []struct {
 	symbol string
 	unit   uint64
 }{
@@ -109,7 +109,7 @@ func (u *byteQuantity) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func parseWithSuffix(sval string) (uint64, error) {
-	for _, suffix := range suffixes {
+	for _, suffix := range unitSuffixes {
 		if !strings.HasSuffix(sval, suffix.symbol) {
 			continue
 		}
