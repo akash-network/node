@@ -19,7 +19,7 @@ func accountBalance(key key, amount int64) gestalt.Component {
 
 func accountSendTo(from key, to key, amount int64) gestalt.Component {
 	return akash("send-to",
-		"send", strconv.FormatInt(amount, 10), to.addr.Var(), "-k", from.name.Name()).
+		"send", strconv.FormatInt(amount, 10)+"m", to.addr.Var(), "-k", from.name.Name()).
 		WithMeta(g.Require(to.addr.Name()))
 }
 
