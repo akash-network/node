@@ -40,7 +40,7 @@ func Test_v1_Parse_simple(t *testing.T) {
 
 	assert.Equal(t, types.ResourceGroup{
 		Count: 20,
-		Price: 8,
+		Price: 800,
 		Unit: types.ResourceUnit{
 			CPU:    2000,
 			Memory: 128 * uint64(math.Pow(1024, 2)),
