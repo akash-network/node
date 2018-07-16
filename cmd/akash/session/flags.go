@@ -29,7 +29,7 @@ func AddFlagKeyType(cmd *cobra.Command, flags *pflag.FlagSet) {
 }
 
 func AddFlagWait(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.BoolP(constants.FlagWait, "w", false, "Wait for market confirmation")
+	flags.BoolP(constants.FlagWait, "w", true, "Wait for lease creation")
 }
 
 func parseFlagKeyType(flags *pflag.FlagSet) (keys.CryptoAlgo, error) {
