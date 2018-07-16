@@ -19,7 +19,7 @@ const (
 	KeyType     = "ed25519"
 
 	// market commands
-	FlagWait = "wait"
+	FlagNoWait = "no-wait"
 
 	// todo: interactive.
 	Password = "0123456789"

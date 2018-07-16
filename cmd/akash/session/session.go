@@ -35,7 +35,7 @@ type Session interface {
 	Log() log.Logger
 	Signer() (txutil.Signer, keys.Info, error)
 	Ctx() context.Context
-	Wait() bool
+	NoWait() bool
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -230,8 +230,8 @@ func (ctx *session) Nonce() (uint64, error) {
 	return txclient.Nonce()
 }
 
-func (ctx *session) Wait() bool {
-	val, _ := ctx.cmd.Flags().GetBool(constants.FlagWait)
+func (ctx *session) NoWait() bool {
+	val, _ := ctx.cmd.Flags().GetBool(constants.FlagNoWait)
 	return val
 }
 
