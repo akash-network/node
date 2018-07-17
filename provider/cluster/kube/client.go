@@ -25,13 +25,14 @@ type Client interface {
 }
 
 type client struct {
-	kc  kubernetes.Interface
-	mc  *manifestclient.Clientset
-	ns  string
-	log log.Logger
+	kc   kubernetes.Interface
+	mc   *manifestclient.Clientset
+	ns   string
+	host string
+	log  log.Logger
 }
 
-func NewClient(log log.Logger, ns string) (Client, error) {
+func NewClient(log log.Logger, host, ns string) (Client, error) {
 
 	config, err := openKubeConfig(log)
 	if err != nil {
@@ -142,7 +143,7 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 			if !c.shouldExpose(expose) {
 				continue
 			}
-			if err := applyIngress(c.kc, newIngressBuilder(lid, group, service, expose)); err != nil {
+			if err := applyIngress(c.kc, newIngressBuilder(c.host, lid, group, service, expose)); err != nil {
 				c.log.Error("applying ingress", "err", err, "lease", lid, "service", service.Name, "expose", expose)
 				return err
 			}
@@ -190,16 +191,36 @@ func (c *client) LeaseStatus(lid types.LeaseID) (*types.LeaseStatusResponse, err
 		c.log.Error(err.Error())
 		return nil, types.ErrInternalError{Message: "internal error"}
 	}
-	if deployments == nil {
+	if deployments == nil || len(deployments.Items) == 0 {
 		return nil, types.ErrResourceNotFound{Message: "no deployments for lease"}
 	}
-	response := &types.LeaseStatusResponse{}
+	serviceStatus := make(map[string]*types.ServiceStatus, len(deployments.Items))
 	for _, deployment := range deployments.Items {
-		status := &types.LeaseStatus{
-			Name: deployment.Name,
-			Status: fmt.Sprintf("available replicas: %v/%v",
-				deployment.Status.AvailableReplicas, deployment.Status.Replicas),
+		status := &types.ServiceStatus{
+			Name:      deployment.Name,
+			Available: deployment.Status.AvailableReplicas,
+			Total:     deployment.Status.Replicas,
 		}
+		serviceStatus[deployment.Name] = status
+	}
+	ingress, err := c.kc.ExtensionsV1beta1().Ingresses(lidNS(lid)).List(metav1.ListOptions{})
+	if err != nil {
+		c.log.Error(err.Error())
+		return nil, types.ErrInternalError{Message: "internal error"}
+	}
+	if ingress == nil || len(ingress.Items) == 0 {
+		return nil, types.ErrResourceNotFound{Message: "no ingress for lease"}
+	}
+	for _, ing := range ingress.Items {
+		service := serviceStatus[ing.Name]
+		hosts := []string{}
+		for _, rule := range ing.Spec.Rules {
+			hosts = append(hosts, rule.Host)
+		}
+		service.URIs = hosts
+	}
+	response := &types.LeaseStatusResponse{}
+	for _, status := range serviceStatus {
 		response.Services = append(response.Services, status)
 	}
 	return response, nil

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
@@ -20,6 +19,7 @@ import (
 	ptype "github.com/ovrclk/akash/types/provider"
 	. "github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func providerCommand() *cobra.Command {
@@ -71,7 +71,7 @@ func doCreateProviderCommand(session session.Session, cmd *cobra.Command, args [
 			return err
 		}
 
-		info, _, err := kmgr.Create(kname, constants.Password, ktype)
+		info, _, err := kmgr.Create(kname, viper.GetString("password"), ktype)
 		if err != nil {
 			return err
 		}
@@ -150,6 +150,11 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 			pobj.Owner.EncodeString(), X(txclient.Key().Address()))
 	}
 
+	host, err := session.Host()
+	if err != nil {
+		return err
+	}
+
 	var cclient cluster.Client
 
 	if ok, _ := cmd.Flags().GetBool("kube"); ok {
@@ -158,7 +163,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 		if err != nil {
 			return err
 		}
-		cclient, err = kube.NewClient(session.Log().With("cmp", "cluster-client"), ns)
+		cclient, err = kube.NewClient(session.Log().With("cmp", "cluster-client"), host, ns)
 		if err != nil {
 			return err
 		}

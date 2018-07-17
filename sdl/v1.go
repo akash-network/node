@@ -26,11 +26,13 @@ type v1Service struct {
 }
 
 type v1Expose struct {
-	Port   uint32
-	As     uint32
-	Proto  string       `yaml:",omitempty"`
-	To     []v1ExposeTo `yaml:",omitempty"`
-	Accept []string     `yaml:",omitempty"`
+	Port  uint32
+	As    uint32
+	Proto string       `yaml:",omitempty"`
+	To    []v1ExposeTo `yaml:",omitempty"`
+	// TODO: add one value to this as servicename.deploymentID.providerIP
+	// provider comes from startup configuration
+	Accept []string `yaml:",omitempty"`
 }
 
 type v1ExposeTo struct {

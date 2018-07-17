@@ -416,10 +416,6 @@ message LeaseStatusRequest {
   string provider   = 4;
 }
 
-message LeaseStatusResponse {
-  repeated LeaseStatus services = 1; 
-}
-
 message ServiceStatusRequest {
   string name       = 1;
   string deployment = 2;
@@ -459,10 +455,15 @@ message LogResponse {
   Log result = 1;
 }
 
+message LeaseStatusResponse {
+  repeated ServiceStatus services = 1; 
+}
 
-message LeaseStatus {
-  string name = 1;
-  string status = 2;
+message ServiceStatus {
+  string name          = 1;
+  repeated string URIs = 2;
+  int32 available      = 3;
+  int32 total          = 4;
 }
 
 message ManifestGetRequest {

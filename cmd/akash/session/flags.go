@@ -3,7 +3,6 @@ package session
 import (
 	"fmt"
 
-	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -11,29 +10,29 @@ import (
 )
 
 func AddFlagNode(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.StringP(constants.FlagNode, "n", "http://localhost:46657", "node host")
-	viper.BindPFlag(constants.FlagNode, flags.Lookup(constants.FlagNode))
+	flags.StringP(flagNode, "n", "http://localhost:46657", "node host")
+	viper.BindPFlag(flagNode, flags.Lookup(flagNode))
 }
 
 func AddFlagKey(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.StringP(constants.FlagKey, "k", "", "key name (required)")
-	cmd.MarkFlagRequired(constants.FlagKey)
+	flags.StringP(flagKey, "k", "", "key name (required)")
+	cmd.MarkFlagRequired(flagKey)
 }
 
 func AddFlagNonce(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.Uint64(constants.FlagNonce, 0, "nonce (optional)")
+	flags.Uint64(flagNonce, 0, "nonce (optional)")
 }
 
 func AddFlagKeyType(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.StringP(constants.FlagKeyType, "t", constants.KeyType, "Type of key (ed25519|secp256k1|ledger)")
+	flags.StringP(flagKeyType, "t", keyType, "Type of key (ed25519|secp256k1|ledger)")
 }
 
 func AddFlagWait(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.Bool(constants.FlagNoWait, false, "Do not wait for lease creation")
+	flags.Bool(flagNoWait, false, "Do not wait for lease creation")
 }
 
 func parseFlagKeyType(flags *pflag.FlagSet) (keys.CryptoAlgo, error) {
-	ktype, err := flags.GetString(constants.FlagKeyType)
+	ktype, err := flags.GetString(flagKeyType)
 	if err != nil {
 		return "", err
 	}
