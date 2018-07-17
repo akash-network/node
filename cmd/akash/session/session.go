@@ -7,7 +7,6 @@ import (
 	"os"
 	"sync"
 
-	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/txutil"
@@ -36,6 +35,8 @@ type Session interface {
 	Signer() (txutil.Signer, keys.Info, error)
 	Ctx() context.Context
 	NoWait() bool
+	Host() string
+	Password() (string, error)
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -45,6 +46,15 @@ func WithSession(fn Runner) cmdRunner {
 	return func(cmd *cobra.Command, args []string) error {
 		session := newSession(cmd)
 		defer session.shutdown()
+		return fn(session, cmd, args)
+	}
+}
+
+func RequireHost(fn Runner) Runner {
+	return func(session Session, cmd *cobra.Command, args []string) error {
+		if host := session.Host(); host == "" {
+			return errors.New("host unset")
+		}
 		return fn(session, cmd, args)
 	}
 }
@@ -119,7 +129,7 @@ func (ctx *session) Log() log.Logger {
 }
 
 func (ctx *session) RootDir() string {
-	root, _ := ctx.cmd.Flags().GetString(constants.FlagRootDir)
+	root, _ := ctx.cmd.Flags().GetString(flagRootDir)
 	return root
 }
 
@@ -143,10 +153,10 @@ func (ctx *session) KeyManager() (keys.Keybase, error) {
 }
 
 func (ctx *session) Node() string {
-	if ctx.cmd.Flag(constants.FlagNode).Value.String() != ctx.cmd.Flag(constants.FlagNode).DefValue {
-		return ctx.cmd.Flag(constants.FlagNode).Value.String()
+	if ctx.cmd.Flag(flagNode).Value.String() != ctx.cmd.Flag(flagNode).DefValue {
+		return ctx.cmd.Flag(flagNode).Value.String()
 	}
-	return viper.GetString(constants.FlagNode)
+	return viper.GetString(flagNode)
 }
 
 func (ctx *session) Client() *tmclient.HTTP {
@@ -158,7 +168,7 @@ func (ctx *session) TxClient() (txutil.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	nonce, err := ctx.cmd.Flags().GetUint64(constants.FlagNonce)
+	nonce, err := ctx.cmd.Flags().GetUint64(flagNonce)
 	if err != nil {
 		nonce = 0
 	}
@@ -170,7 +180,7 @@ func (ctx *session) QueryClient() query.Client {
 }
 
 func (ctx *session) KeyName() string {
-	val, _ := ctx.cmd.Flags().GetString(constants.FlagKey)
+	val, _ := ctx.cmd.Flags().GetString(flagKey)
 	return val
 }
 
@@ -198,7 +208,7 @@ func (ctx *session) Key() (keys.Info, error) {
 }
 
 func (ctx *session) Password() (string, error) {
-	return constants.Password, nil
+	return viper.GetString(flagPassword), nil
 }
 
 func (ctx *session) Signer() (txutil.Signer, keys.Info, error) {
@@ -231,7 +241,7 @@ func (ctx *session) Nonce() (uint64, error) {
 }
 
 func (ctx *session) NoWait() bool {
-	val, _ := ctx.cmd.Flags().GetBool(constants.FlagNoWait)
+	val, _ := ctx.cmd.Flags().GetBool(flagNoWait)
 	return val
 }
 
@@ -240,13 +250,20 @@ func (ctx *session) Ctx() context.Context {
 }
 
 func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {
-	codec, err := words.LoadCodec(constants.Codec)
+	codec, err := words.LoadCodec(defaultCodec)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	db := tmdb.NewDB(constants.KeyDir, tmdb.GoLevelDBBackend, root)
+	db := tmdb.NewDB(keyDir, tmdb.GoLevelDBBackend, root)
 	manager := keys.New(db, codec)
 
 	return manager, db, nil
+}
+
+func (ctx *session) Host() string {
+	if len(ctx.cmd.Flag(flagHost).Value.String()) > 0 {
+		return ctx.cmd.Flag(flagHost).Value.String()
+	}
+	return viper.GetString(flagHost)
 }

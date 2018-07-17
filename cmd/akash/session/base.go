@@ -4,24 +4,45 @@ import (
 	"os"
 	"path"
 
-	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
+const (
+	flagRootDir  = "data"
+	flagNode     = "node"
+	flagNonce    = "nonce"
+	flagKey      = "key"
+	flagKeyType  = "type"
+	flagNoWait   = "no-wait"
+	flagHost     = "host"
+	flagPassword = "password"
+	keyDir       = "keys"
+
+	defaultKeyType  = "ed25519"
+	defaultCodec    = "english"
+	defaultPassword = "0123456789"
+)
+
 func SetupBaseCommand(cmd *cobra.Command) {
 	cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
-		root, _ := cmd.Flags().GetString(constants.FlagRootDir)
+		root, _ := cmd.Flags().GetString(flagRootDir)
 		return initCommandConfig(root)
 	}
 	cmd.PersistentPostRunE = func(cmd *cobra.Command, args []string) error {
 		return saveCommandConfig()
 	}
-	cmd.PersistentFlags().StringP(constants.FlagRootDir, "d", defaultRootDir(), "data directory")
+	cmd.PersistentFlags().StringP(flagRootDir, "d", defaultRootDir(), "data directory")
 }
 
 func initCommandConfig(root string) error {
 	viper.SetEnvPrefix("AKASH")
+
+	viper.BindEnv(flagNode)
+
+	viper.BindEnv(flagPassword)
+	viper.SetDefault(flagPassword, defaultPassword)
+
 	viper.AutomaticEnv()
 	viper.SetConfigFile(path.Join(root, "akash.toml"))
 

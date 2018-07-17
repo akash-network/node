@@ -1,12 +1,10 @@
-package session_test
+package session
 
 import (
 	"os"
 	"strconv"
 	"testing"
 
-	"github.com/ovrclk/akash/cmd/akash/constants"
-	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -24,7 +22,7 @@ func TestNode_Env(t *testing.T) {
 
 	os.Setenv("AKASH_NODE", val)
 
-	assertCommand(t, session.AddFlagNode, func(sess session.Session, cmd *cobra.Command, args []string) error {
+	assertCommand(t, AddFlagNode, func(sess Session, cmd *cobra.Command, args []string) error {
 		assert.Equal(t, val, sess.Node())
 		return nil
 	})
@@ -33,19 +31,53 @@ func TestNode_Env(t *testing.T) {
 func TestNode_Flag(t *testing.T) {
 	const val = "foo.bar:123"
 
-	assertCommand(t, session.AddFlagNode, func(sess session.Session, cmd *cobra.Command, args []string) error {
+	assertCommand(t, AddFlagNode, func(sess Session, cmd *cobra.Command, args []string) error {
 		assert.Equal(t, val, sess.Node())
 		return nil
 	}, "-n", val)
 }
 
+func TestHost_Env(t *testing.T) {
+	const val = "bar"
+	defer os.Unsetenv("AKASH_HOST")
+
+	os.Setenv("AKASH_HOST", val)
+
+	assertCommand(t, AddFlagHost, func(sess Session, cmd *cobra.Command, args []string) error {
+		assert.Equal(t, val, sess.Host())
+		return nil
+	})
+}
+
+func TestHost_Flag(t *testing.T) {
+	const val = "foo"
+
+	assertCommand(t, AddFlagHost, func(sess Session, cmd *cobra.Command, args []string) error {
+		assert.Equal(t, val, sess.Host())
+		return nil
+	}, "--host", val)
+}
+
 func TestKey_Flag(t *testing.T) {
 	const val = "foo"
 
-	assertCommand(t, session.AddFlagKey, func(sess session.Session, cmd *cobra.Command, args []string) error {
+	assertCommand(t, AddFlagKey, func(sess Session, cmd *cobra.Command, args []string) error {
 		assert.Equal(t, val, sess.KeyName())
 		return nil
 	}, "-k", val)
+}
+func TestPassword_Env(t *testing.T) {
+	const val = "password"
+	defer os.Unsetenv("AKASH_PASSWORD")
+
+	os.Setenv("AKASH_PASSWORD", val)
+
+	assertCommand(t, AddFlagNode, func(sess Session, cmd *cobra.Command, args []string) error {
+		p, err := sess.Password()
+		assert.NoError(t, err)
+		assert.Equal(t, val, p)
+		return nil
+	})
 }
 
 func TestFlag_Nonce(t *testing.T) {
@@ -53,27 +85,27 @@ func TestFlag_Nonce(t *testing.T) {
 	const key = "foo"
 
 	flagfn := func(cmd *cobra.Command, flags *pflag.FlagSet) {
-		session.AddFlagKey(cmd, flags)
-		session.AddFlagNonce(cmd, flags)
-		session.AddFlagNode(cmd, flags)
+		AddFlagKey(cmd, flags)
+		AddFlagNonce(cmd, flags)
+		AddFlagNode(cmd, flags)
 	}
 
-	assertCommand(t, flagfn, func(sess session.Session, cmd *cobra.Command, args []string) error {
+	assertCommand(t, flagfn, func(sess Session, cmd *cobra.Command, args []string) error {
 
 		kmgr, err := sess.KeyManager()
 		require.NoError(t, err)
 
-		_, _, err = kmgr.Create(key, constants.Password, keys.AlgoEd25519)
+		_, _, err = kmgr.Create(key, defaultPassword, keys.AlgoEd25519)
 		require.NoError(t, err)
 
 		nonce, err := sess.Nonce()
 		require.NoError(t, err)
 		require.Equal(t, val, nonce)
 		return nil
-	}, "--"+constants.FlagNonce, strconv.Itoa(int(val)), "-k", key, "-n", "node.address")
+	}, "--"+flagNonce, strconv.Itoa(int(val)), "-k", key, "-n", "node.address")
 }
 
-func assertCommand(t *testing.T, flagfn flagFn, fn session.Runner, args ...string) {
+func assertCommand(t *testing.T, flagfn flagFn, fn Runner, args ...string) {
 	testutil.WithAkashDir(t, func(basedir string) {
 		viper.Reset()
 
@@ -81,14 +113,14 @@ func assertCommand(t *testing.T, flagfn flagFn, fn session.Runner, args ...strin
 
 		cmd := &cobra.Command{
 			Use: "test",
-			RunE: session.WithSession(func(sess session.Session, cmd *cobra.Command, args []string) error {
+			RunE: WithSession(func(sess Session, cmd *cobra.Command, args []string) error {
 				ran = true
 				require.Equal(t, basedir, sess.RootDir(), "unexpected home dir")
 				return fn(sess, cmd, args)
 			}),
 		}
 
-		session.SetupBaseCommand(cmd)
+		SetupBaseCommand(cmd)
 
 		if flagfn != nil {
 			flagfn(cmd, cmd.Flags())

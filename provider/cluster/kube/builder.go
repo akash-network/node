@@ -3,6 +3,7 @@ package kube
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -210,7 +211,8 @@ type ingressBuilder struct {
 	expose *types.ManifestServiceExpose
 }
 
-func newIngressBuilder(lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService, expose *types.ManifestServiceExpose) *ingressBuilder {
+func newIngressBuilder(host string, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService, expose *types.ManifestServiceExpose) *ingressBuilder {
+	expose.Hosts = append(expose.Hosts, fmt.Sprintf("%v.%v.%v", service.Name, lid.DeploymentID(), host))
 	return &ingressBuilder{
 		deploymentBuilder: deploymentBuilder{builder: builder{lid, group}, service: service},
 		expose:            expose,

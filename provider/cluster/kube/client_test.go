@@ -11,7 +11,7 @@ import (
 )
 
 func kubeClient(t *testing.T) Client {
-	client, err := NewClient(log.NewTMLogger(os.Stdout), strings.ToLower(t.Name()))
+	client, err := NewClient(log.NewTMLogger(os.Stdout), "host", strings.ToLower(t.Name()))
 	assert.NoError(t, err)
 	return client
 }

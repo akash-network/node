@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
@@ -71,7 +70,12 @@ func doCreateProviderCommand(session session.Session, cmd *cobra.Command, args [
 			return err
 		}
 
-		info, _, err := kmgr.Create(kname, constants.Password, ktype)
+		password, err := session.Password()
+		if err != nil {
+			return err
+		}
+
+		info, _, err := kmgr.Create(kname, password, ktype)
 		if err != nil {
 			return err
 		}
@@ -121,8 +125,10 @@ func runCommand() *cobra.Command {
 		Use:   "run <provider>",
 		Short: "respond to chain events",
 		Args:  cobra.ExactArgs(1),
-		RunE:  session.WithSession(session.RequireNode(doProviderRunCommand)),
+		RunE:  session.WithSession(session.RequireNode(session.RequireHost(doProviderRunCommand))),
 	}
+	
+	session.AddFlagHost(cmd, cmd.PersistentFlags())
 
 	cmd.Flags().Bool("kube", false, "use kubernetes cluster")
 	cmd.Flags().String("manifest-ns", "lease", "set manifest namespace")
@@ -158,7 +164,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 		if err != nil {
 			return err
 		}
-		cclient, err = kube.NewClient(session.Log().With("cmp", "cluster-client"), ns)
+		cclient, err = kube.NewClient(session.Log().With("cmp", "cluster-client"), session.Host(), ns)
 		if err != nil {
 			return err
 		}

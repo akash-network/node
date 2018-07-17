@@ -6,7 +6,6 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/ovrclk/akash/cmd/akash/constants"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/spf13/cobra"
 
@@ -48,7 +47,12 @@ func doKeyCreateCommand(session session.Session, cmd *cobra.Command, args []stri
 		return err
 	}
 
-	info, _, err := kmgr.Create(args[0], constants.Password, ktype)
+	password, err := session.Password()
+	if err != nil {
+		return err
+	}
+
+	info, _, err := kmgr.Create(args[0], password, ktype)
 	if err != nil {
 		return err
 	}
