@@ -8,7 +8,6 @@ import (
 
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	. "github.com/ovrclk/akash/util"
 )
@@ -48,7 +47,12 @@ func doKeyCreateCommand(session session.Session, cmd *cobra.Command, args []stri
 		return err
 	}
 
-	info, _, err := kmgr.Create(args[0], viper.GetString("PASSWORD"), ktype)
+	password, err := session.Password()
+	if err != nil {
+		return err
+	}
+
+	info, _, err := kmgr.Create(args[0], password, ktype)
 	if err != nil {
 		return err
 	}

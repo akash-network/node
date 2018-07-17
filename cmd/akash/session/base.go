@@ -9,17 +9,19 @@ import (
 )
 
 const (
-	flagRootDir = "data"
-	flagNode    = "node"
-	flagNonce   = "nonce"
-	flagKey     = "key"
-	keyDir      = "keys"
-	codec       = "english"
-	flagKeyType = "type"
-	keyType     = "ed25519"
-	flagNoWait  = "no-wait"
-	flagHost    = "host"
-	password    = "0123456789"
+	flagRootDir  = "data"
+	flagNode     = "node"
+	flagNonce    = "nonce"
+	flagKey      = "key"
+	flagKeyType  = "type"
+	flagNoWait   = "no-wait"
+	flagHost     = "host"
+	flagPassword = "password"
+	keyDir       = "keys"
+
+	defaultKeyType  = "ed25519"
+	defaultCodec    = "english"
+	defaultPassword = "0123456789"
 )
 
 func SetupBaseCommand(cmd *cobra.Command) {
@@ -37,12 +39,9 @@ func initCommandConfig(root string) error {
 	viper.SetEnvPrefix("AKASH")
 
 	viper.BindEnv(flagNode)
-	viper.SetDefault(flagNode, "http://localhost:46657")
 
-	viper.BindEnv("password")
-	viper.SetDefault("password", password)
-
-	viper.BindEnv("host")
+	viper.BindEnv(flagPassword)
+	viper.SetDefault(flagPassword, defaultPassword)
 
 	viper.AutomaticEnv()
 	viper.SetConfigFile(path.Join(root, "akash.toml"))

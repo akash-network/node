@@ -36,6 +36,7 @@ type Session interface {
 	Ctx() context.Context
 	NoWait() bool
 	Host() string
+	Password() (string, error)
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -207,7 +208,7 @@ func (ctx *session) Key() (keys.Info, error) {
 }
 
 func (ctx *session) Password() (string, error) {
-	return viper.GetString("PASSWORD"), nil
+	return viper.GetString(flagPassword), nil
 }
 
 func (ctx *session) Signer() (txutil.Signer, keys.Info, error) {
@@ -249,7 +250,7 @@ func (ctx *session) Ctx() context.Context {
 }
 
 func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {
-	codec, err := words.LoadCodec(codec)
+	codec, err := words.LoadCodec(defaultCodec)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -261,7 +262,7 @@ func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {
 }
 
 func (ctx *session) Host() string {
-	if ctx.cmd.Flag(flagHost).Value.String() != ctx.cmd.Flag(flagHost).DefValue {
+	if len(ctx.cmd.Flag(flagHost).Value.String()) > 0 {
 		return ctx.cmd.Flag(flagHost).Value.String()
 	}
 	return viper.GetString(flagHost)

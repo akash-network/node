@@ -24,11 +24,16 @@ func AddFlagNonce(cmd *cobra.Command, flags *pflag.FlagSet) {
 }
 
 func AddFlagKeyType(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.StringP(flagKeyType, "t", keyType, "Type of key (ed25519|secp256k1|ledger)")
+	flags.StringP(flagKeyType, "t", defaultKeyType, "Type of key (ed25519|secp256k1|ledger)")
 }
 
 func AddFlagWait(cmd *cobra.Command, flags *pflag.FlagSet) {
 	flags.Bool(flagNoWait, false, "Do not wait for lease creation")
+}
+
+func AddFlagHost(cmd *cobra.Command, flags *pflag.FlagSet) {
+	flags.String(flagHost, "", "cluster host")
+	viper.BindPFlag(flagHost, flags.Lookup(flagHost))
 }
 
 func parseFlagKeyType(flags *pflag.FlagSet) (keys.CryptoAlgo, error) {

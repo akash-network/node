@@ -19,7 +19,6 @@ import (
 	ptype "github.com/ovrclk/akash/types/provider"
 	. "github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func providerCommand() *cobra.Command {
@@ -71,7 +70,12 @@ func doCreateProviderCommand(session session.Session, cmd *cobra.Command, args [
 			return err
 		}
 
-		info, _, err := kmgr.Create(kname, viper.GetString("password"), ktype)
+		password, err := session.Password()
+		if err != nil {
+			return err
+		}
+
+		info, _, err := kmgr.Create(kname, password, ktype)
 		if err != nil {
 			return err
 		}
@@ -123,10 +127,11 @@ func runCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE:  session.WithSession(session.RequireNode(session.RequireHost(doProviderRunCommand))),
 	}
+	
+	session.AddFlagHost(cmd, cmd.PersistentFlags())
 
 	cmd.Flags().Bool("kube", false, "use kubernetes cluster")
 	cmd.Flags().String("manifest-ns", "lease", "set manifest namespace")
-	cmd.Flags().String("host", "", "cluster host")
 	return cmd
 }
 

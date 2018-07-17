@@ -37,6 +37,27 @@ func TestNode_Flag(t *testing.T) {
 	}, "-n", val)
 }
 
+func TestHost_Env(t *testing.T) {
+	const val = "bar"
+	defer os.Unsetenv("AKASH_HOST")
+
+	os.Setenv("AKASH_HOST", val)
+
+	assertCommand(t, AddFlagHost, func(sess Session, cmd *cobra.Command, args []string) error {
+		assert.Equal(t, val, sess.Host())
+		return nil
+	})
+}
+
+func TestHost_Flag(t *testing.T) {
+	const val = "foo"
+
+	assertCommand(t, AddFlagHost, func(sess Session, cmd *cobra.Command, args []string) error {
+		assert.Equal(t, val, sess.Host())
+		return nil
+	}, "--host", val)
+}
+
 func TestKey_Flag(t *testing.T) {
 	const val = "foo"
 
@@ -44,6 +65,19 @@ func TestKey_Flag(t *testing.T) {
 		assert.Equal(t, val, sess.KeyName())
 		return nil
 	}, "-k", val)
+}
+func TestPassword_Env(t *testing.T) {
+	const val = "password"
+	defer os.Unsetenv("AKASH_PASSWORD")
+
+	os.Setenv("AKASH_PASSWORD", val)
+
+	assertCommand(t, AddFlagNode, func(sess Session, cmd *cobra.Command, args []string) error {
+		p, err := sess.Password()
+		assert.NoError(t, err)
+		assert.Equal(t, val, p)
+		return nil
+	})
 }
 
 func TestFlag_Nonce(t *testing.T) {
@@ -61,7 +95,7 @@ func TestFlag_Nonce(t *testing.T) {
 		kmgr, err := sess.KeyManager()
 		require.NoError(t, err)
 
-		_, _, err = kmgr.Create(key, password, keys.AlgoEd25519)
+		_, _, err = kmgr.Create(key, defaultPassword, keys.AlgoEd25519)
 		require.NoError(t, err)
 
 		nonce, err := sess.Nonce()
