@@ -35,7 +35,7 @@ type Session interface {
 	Signer() (txutil.Signer, keys.Info, error)
 	Ctx() context.Context
 	NoWait() bool
-	Host() (string, error)
+	Host() string
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -45,6 +45,15 @@ func WithSession(fn Runner) cmdRunner {
 	return func(cmd *cobra.Command, args []string) error {
 		session := newSession(cmd)
 		defer session.shutdown()
+		return fn(session, cmd, args)
+	}
+}
+
+func RequireHost(fn Runner) Runner {
+	return func(session Session, cmd *cobra.Command, args []string) error {
+		if host := session.Host(); host == "" {
+			return errors.New("host unset")
+		}
 		return fn(session, cmd, args)
 	}
 }
@@ -251,10 +260,9 @@ func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {
 	return manager, db, nil
 }
 
-func (ctx *session) Host() (string, error) {
-	host := viper.GetString(flagHost)
-	if len(host) == 0 {
-		return "", errors.New("empty host")
+func (ctx *session) Host() string {
+	if ctx.cmd.Flag(flagHost).Value.String() != ctx.cmd.Flag(flagHost).DefValue {
+		return ctx.cmd.Flag(flagHost).Value.String()
 	}
-	return host, nil
+	return viper.GetString(flagHost)
 }

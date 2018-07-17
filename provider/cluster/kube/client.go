@@ -70,10 +70,11 @@ func NewClient(log log.Logger, host, ns string) (Client, error) {
 	}
 
 	return &client{
-		kc:  kc,
-		mc:  mc,
-		ns:  ns,
-		log: log,
+		kc:   kc,
+		mc:   mc,
+		ns:   ns,
+		host: host,
+		log:  log,
 	}, nil
 
 }

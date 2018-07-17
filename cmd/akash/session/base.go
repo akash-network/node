@@ -19,6 +19,7 @@ const (
 	keyType     = "ed25519"
 	flagNoWait  = "no-wait"
 	flagHost    = "host"
+	password    = "0123456789"
 )
 
 func SetupBaseCommand(cmd *cobra.Command) {
@@ -36,10 +37,10 @@ func initCommandConfig(root string) error {
 	viper.SetEnvPrefix("AKASH")
 
 	viper.BindEnv(flagNode)
-	viper.SetDefault(flagNode, "testnet.akash.network")
+	viper.SetDefault(flagNode, "http://localhost:46657")
 
 	viper.BindEnv("password")
-	viper.SetDefault("password", "0123456789")
+	viper.SetDefault("password", password)
 
 	viper.BindEnv("host")
 

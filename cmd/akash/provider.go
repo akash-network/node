@@ -121,11 +121,12 @@ func runCommand() *cobra.Command {
 		Use:   "run <provider>",
 		Short: "respond to chain events",
 		Args:  cobra.ExactArgs(1),
-		RunE:  session.WithSession(session.RequireNode(doProviderRunCommand)),
+		RunE:  session.WithSession(session.RequireNode(session.RequireHost(doProviderRunCommand))),
 	}
 
 	cmd.Flags().Bool("kube", false, "use kubernetes cluster")
 	cmd.Flags().String("manifest-ns", "lease", "set manifest namespace")
+	cmd.Flags().String("host", "", "cluster host")
 	return cmd
 }
 
@@ -150,11 +151,6 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 			pobj.Owner.EncodeString(), X(txclient.Key().Address()))
 	}
 
-	host, err := session.Host()
-	if err != nil {
-		return err
-	}
-
 	var cclient cluster.Client
 
 	if ok, _ := cmd.Flags().GetBool("kube"); ok {
@@ -163,7 +159,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 		if err != nil {
 			return err
 		}
-		cclient, err = kube.NewClient(session.Log().With("cmp", "cluster-client"), host, ns)
+		cclient, err = kube.NewClient(session.Log().With("cmp", "cluster-client"), session.Host(), ns)
 		if err != nil {
 			return err
 		}

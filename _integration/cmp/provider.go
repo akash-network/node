@@ -23,7 +23,7 @@ func providerCreate(root vars.Ref, key vars.Ref, paddr vars.Ref) gestalt.Compone
 }
 
 func providerRun(root vars.Ref, key vars.Ref, paddr vars.Ref) gestalt.Component {
-	return akash_(root, "provider-run", "provider", "run", paddr.Var(), "-k", key.Name()).
+	return akash_(root, "provider-run", "provider", "run", paddr.Var(), "-k", key.Name(), "--host", "localhost").
 		WithMeta(g.Require(paddr.Name()))
 }
 
