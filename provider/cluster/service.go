@@ -8,6 +8,7 @@ import (
 
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/provider/event"
+	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tmlibs/log"
 )
@@ -25,9 +26,9 @@ type Service interface {
 	Done() <-chan struct{}
 }
 
-func NewService(log log.Logger, ctx context.Context, bus event.Bus, client Client) (Service, error) {
+func NewService(ctx context.Context, session session.Session, bus event.Bus, client Client) (Service, error) {
 
-	log = log.With("module", "provider-cluster")
+	log := session.Log().With("module", "provider-cluster")
 
 	sub, err := bus.Subscribe()
 	if err != nil {
@@ -43,11 +44,12 @@ func NewService(log log.Logger, ctx context.Context, bus event.Bus, client Clien
 	log.Info("found managed deployments", "count", len(deployments))
 
 	s := &service{
+		session:     session,
 		client:      client,
 		bus:         bus,
 		sub:         sub,
 		deployments: make(map[string]*managedDeployment),
-		monitorch:   make(chan *deploymentMonitor),
+		managerch:   make(chan *deploymentManager),
 		reservech:   make(chan reserveRequest),
 		log:         log,
 		lc:          lifecycle.New(),
@@ -60,14 +62,15 @@ func NewService(log log.Logger, ctx context.Context, bus event.Bus, client Clien
 }
 
 type service struct {
-	client Client
-	bus    event.Bus
-	sub    event.Subscriber
+	session session.Session
+	client  Client
+	bus     event.Bus
+	sub     event.Subscriber
 
 	deployments map[string]*managedDeployment
 
 	reservech chan reserveRequest
-	monitorch chan *deploymentMonitor
+	managerch chan *deploymentManager
 
 	log log.Logger
 	lc  lifecycle.Lifecycle
@@ -75,7 +78,7 @@ type service struct {
 
 type managedDeployment struct {
 	reservation Reservation
-	monitor     *deploymentMonitor
+	manager     *deploymentManager
 }
 
 func (s *service) Close() error {
@@ -123,7 +126,7 @@ func (s *service) run(deployments []Deployment) {
 		// TODO: recover reservation
 		key := deployment.LeaseID().OrderID().String()
 		s.deployments[key] = &managedDeployment{
-			monitor:     newDeploymentMonitor(s, deployment.LeaseID(), deployment.ManifestGroup()),
+			manager:     newDeploymentManager(s, deployment.LeaseID(), deployment.ManifestGroup()),
 			reservation: newReservation(deployment.LeaseID().OrderID(), nil),
 		}
 	}
@@ -155,12 +158,12 @@ loop:
 					break
 				}
 
-				if state.monitor == nil {
-					state.monitor = newDeploymentMonitor(s, ev.LeaseID, mgroup)
+				if state.manager == nil {
+					state.manager = newDeploymentManager(s, ev.LeaseID, mgroup)
 					break
 				}
 
-				if err := state.monitor.update(mgroup); err != nil {
+				if err := state.manager.update(mgroup); err != nil {
 					s.log.Error("updating deployment", "err", err, "lease", ev.LeaseID)
 				}
 
@@ -175,6 +178,10 @@ loop:
 				}
 
 			case *event.TxCloseFulfillment:
+
+				s.teardownOrder(ev.OrderID())
+
+			case *event.TxCloseLease:
 
 				s.teardownOrder(ev.OrderID())
 
@@ -199,9 +206,9 @@ loop:
 
 			req.ch <- reserveResponse{state.reservation, nil}
 
-		case dm := <-s.monitorch:
+		case dm := <-s.managerch:
 
-			s.log.Debug("monitor done", "order", dm.lease.OrderID())
+			s.log.Debug("manager done", "order", dm.lease.OrderID())
 
 			// todo: unreserve resources
 
@@ -209,12 +216,12 @@ loop:
 		}
 	}
 
-	s.log.Debug("draining deployment monitors...")
+	s.log.Debug("draining deployment managers...")
 
 	for _, state := range s.deployments {
-		if state.monitor != nil {
-			dm := <-s.monitorch
-			s.log.Debug("monitor done", "order", dm.lease.OrderID())
+		if state.manager != nil {
+			dm := <-s.managerch
+			s.log.Debug("manager done", "order", dm.lease.OrderID())
 		}
 	}
 
@@ -229,12 +236,12 @@ func (s *service) teardownOrder(oid types.OrderID) {
 
 	s.log.Debug("unregistering order", "order", oid)
 
-	if state.monitor == nil {
+	if state.manager == nil {
 		delete(s.deployments, key)
 		return
 	}
 
-	if err := state.monitor.teardown(); err != nil {
+	if err := state.manager.teardown(); err != nil {
 		s.log.Error("tearing down deployment", "err", err, "order", oid)
 	}
 }

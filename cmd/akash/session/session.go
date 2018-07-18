@@ -262,7 +262,7 @@ func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {
 }
 
 func (ctx *session) Host() string {
-	if len(ctx.cmd.Flag(flagHost).Value.String()) > 0 {
+	if ctx.cmd.Flag(flagHost).Value.String() != ctx.cmd.Flag(flagHost).DefValue {
 		return ctx.cmd.Flag(flagHost).Value.String()
 	}
 	return viper.GetString(flagHost)

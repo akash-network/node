@@ -16,11 +16,6 @@ func kubeClient(t *testing.T) Client {
 	return client
 }
 
-func tearDown(client Client, t *testing.T) {
-	err := client.TeardownNamespace(strings.ToLower(t.Name()))
-	assert.NoError(t, err)
-}
-
 func leaseID(t *testing.T) types.LeaseID {
 	return types.LeaseID{
 		Deployment: []byte(t.Name()),

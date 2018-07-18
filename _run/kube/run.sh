@@ -38,7 +38,7 @@ case "$1" in
     akash_provider provider run "$(cat "$DATA_ROOT/master.dc")" -k master --kube
     ;;
   deploy)
-    akash deployment create deployment.yml -k master -w
+    akash deployment create deployment.yml -k master
     ;;
   manifest)
     akash deployment sendmani deployment.yml "$2" -k master

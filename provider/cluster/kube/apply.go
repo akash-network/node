@@ -1,6 +1,7 @@
 package kube
 
 import (
+	akashv1 "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,18 +89,18 @@ func prepareEnvironment(kc kubernetes.Interface, ns string) error {
 	return err
 }
 
-func applyManifest(c *client, b *manifestBuilder) error {
-	obj, err := c.mc.AkashV1().Manifests(c.ns).Get(b.name(), metav1.GetOptions{})
+func applyManifest(kc akashv1.Interface, b *manifestBuilder) error {
+	obj, err := kc.AkashV1().Manifests(b.ns()).Get(b.name(), metav1.GetOptions{})
 	switch {
 	case err == nil:
 		obj, err = b.update(obj)
 		if err == nil {
-			_, err = c.mc.AkashV1().Manifests(c.ns).Update(obj)
+			_, err = kc.AkashV1().Manifests(b.ns()).Update(obj)
 		}
 	case errors.IsNotFound(err):
 		obj, err = b.create()
 		if err == nil {
-			_, err = c.mc.AkashV1().Manifests(c.ns).Create(obj)
+			_, err = kc.AkashV1().Manifests(b.ns()).Create(obj)
 		}
 	}
 	return err

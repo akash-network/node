@@ -9,6 +9,7 @@ import (
 )
 
 func TestAccountQuery_NoNode(t *testing.T) {
+	testutil.Shrug(t, 283)
 	hexaddr := testutil.HexAddress(t)
 	args := []string{query.QueryCommand().Name(), "account", hexaddr}
 	base := baseCommand()
@@ -19,6 +20,7 @@ func TestAccountQuery_NoNode(t *testing.T) {
 }
 
 func TestDeploymentQuery_NoNode(t *testing.T) {
+	testutil.Shrug(t, 283)
 	hexaddr := testutil.HexDeploymentAddress(t)
 	args := []string{query.QueryCommand().Name(), "deployment", hexaddr}
 	base := baseCommand()
@@ -29,6 +31,7 @@ func TestDeploymentQuery_NoNode(t *testing.T) {
 }
 
 func TestOrderQuery_NoNode(t *testing.T) {
+	testutil.Shrug(t, 283)
 	hexaddr := testutil.HexDeploymentAddress(t)
 	args := []string{query.QueryCommand().Name(), "order", hexaddr}
 	base := baseCommand()
@@ -39,6 +42,7 @@ func TestOrderQuery_NoNode(t *testing.T) {
 }
 
 func TestProviderQuery_NoNode(t *testing.T) {
+	testutil.Shrug(t, 283)
 	hexaddr := testutil.HexDeploymentAddress(t)
 	args := []string{query.QueryCommand().Name(), "provider", hexaddr}
 	base := baseCommand()

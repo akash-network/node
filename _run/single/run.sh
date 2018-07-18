@@ -38,7 +38,7 @@ case "$1" in
     akash_provider provider run "$(cat "$DATA_ROOT/master.dc")" -k master
     ;;
   deploy)
-    akash deployment create ../deployment.yml -k master -w
+    akash deployment create ../deployment.yml -k master
     ;;
   *)
     echo "USAGE: $0 <init|akashd|send|query|marketplace|provider|deploy>" >&2

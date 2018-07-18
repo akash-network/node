@@ -266,20 +266,26 @@ func lidNS(lid types.LeaseID) string {
 // manifest
 type manifestBuilder struct {
 	builder
+	mns string
 }
 
-func newManifestBuilder(lid types.LeaseID, group *types.ManifestGroup) *manifestBuilder {
+func newManifestBuilder(ns string, lid types.LeaseID, group *types.ManifestGroup) *manifestBuilder {
 	return &manifestBuilder{
 		builder: builder{lid, group},
+		mns:     ns,
 	}
 }
 
+func (b *manifestBuilder) ns() string {
+	return b.mns
+}
+
 func (b *manifestBuilder) create() (*akashv1.Manifest, error) {
-	return akashv1.NewManifest(b.ns(), &b.lid, b.group)
+	return akashv1.NewManifest(lidNS(b.lid), &b.lid, b.group)
 }
 
 func (b *manifestBuilder) update(obj *akashv1.Manifest) (*akashv1.Manifest, error) {
-	return akashv1.NewManifest(b.ns(), &b.lid, b.group)
+	return akashv1.NewManifest(lidNS(b.lid), &b.lid, b.group)
 }
 
 func (b *manifestBuilder) name() string {

@@ -1,171 +1,122 @@
 package cluster
 
 import (
-	"fmt"
+	"math/rand"
+	"time"
 
 	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/util/runner"
 	"github.com/tendermint/tmlibs/log"
 )
 
-type deploymentState string
-
 const (
-	dsDeployActive     deploymentState = "deploy-active"
-	dsDeployPending                    = "deploy-pending"
-	dsDeployComplete                   = "deploy-complete"
-	dsTeardownActive                   = "teardown-active"
-	dsTeardownPending                  = "teardown-pending"
-	dsTeardownComplete                 = "teardown-complete"
+	monitorMaxRetries        = 20
+	monitorRetryPeriodMin    = time.Second * 2
+	monitorRetryPeriodJitter = time.Second * 5
+
+	monitorHealthcheckPeriodMin    = time.Second * 10
+	monitorHealthcheckPeriodJitter = time.Second * 5
 )
 
 type deploymentMonitor struct {
-	client Client
-
-	state deploymentState
+	session session.Session
+	client  Client
 
 	lease  types.LeaseID
 	mgroup *types.ManifestGroup
 
-	updatech   chan *types.ManifestGroup
-	teardownch chan struct{}
-
-	log log.Logger
-	lc  lifecycle.Lifecycle
+	attempts int
+	log      log.Logger
+	lc       lifecycle.Lifecycle
 }
 
-func newDeploymentMonitor(s *service, lease types.LeaseID, mgroup *types.ManifestGroup) *deploymentMonitor {
+func newDeploymentMonitor(log log.Logger,
+	donech <-chan struct{},
+	session session.Session,
+	client Client,
+	lease types.LeaseID,
+	mgroup *types.ManifestGroup,
+) *deploymentMonitor {
 
-	log := s.log.With("cmp", "deployment-monitor",
-		"lease", lease, "manifest-group", mgroup.Name)
-
-	dm := &deploymentMonitor{
-		client:     s.client,
-		state:      dsDeployActive,
-		lease:      lease,
-		mgroup:     mgroup,
-		updatech:   make(chan *types.ManifestGroup),
-		teardownch: make(chan struct{}),
-		log:        log,
-		lc:         lifecycle.New(),
+	m := &deploymentMonitor{
+		session: session,
+		client:  client,
+		lease:   lease,
+		mgroup:  mgroup,
+		log:     log.With("cmp", "deployment-monitor"),
+		lc:      lifecycle.New(),
 	}
 
-	go dm.lc.WatchChannel(s.lc.ShuttingDown())
-	go dm.run()
+	go m.lc.WatchChannel(donech)
+	go m.run()
 
-	go func() {
-		<-dm.lc.Done()
-		s.monitorch <- dm
-	}()
-
-	return dm
+	return m
 }
 
-func (dm *deploymentMonitor) update(mgroup *types.ManifestGroup) error {
-	select {
-	case dm.updatech <- mgroup:
-		return nil
-	case <-dm.lc.ShuttingDown():
-		return fmt.Errorf("not running")
-	}
+func (m *deploymentMonitor) shutdown() {
+	m.lc.ShutdownAsync(nil)
 }
 
-func (dm *deploymentMonitor) teardown() error {
-	select {
-	case dm.teardownch <- struct{}{}:
-		return nil
-	case <-dm.lc.ShuttingDown():
-		return fmt.Errorf("not running")
-	}
+func (m *deploymentMonitor) done() <-chan struct{} {
+	return m.lc.Done()
 }
 
-func (dm *deploymentMonitor) run() {
-	defer dm.lc.ShutdownCompleted()
-	runch := dm.do(dm.doDeploy)
+func (m *deploymentMonitor) run() {
+	defer m.lc.ShutdownCompleted()
+
+	var runch <-chan runner.Result
+
+	tickch := m.scheduleRetry()
 
 loop:
 	for {
 		select {
 
-		case err := <-dm.lc.ShutdownRequest():
-			dm.lc.ShutdownInitiated(err)
+		case err := <-m.lc.ShutdownRequest():
+			m.lc.ShutdownInitiated(err)
 			break loop
 
-		case mgroup := <-dm.updatech:
-
-			dm.mgroup = mgroup
-
-			switch dm.state {
-			case dsDeployActive:
-				dm.mgroup = mgroup
-			case dsDeployPending:
-				dm.mgroup = mgroup
-			case dsDeployComplete:
-				dm.mgroup = mgroup
-				// start update
-				dm.state = dsDeployActive
-				runch = dm.do(dm.doDeploy)
-
-			case dsTeardownActive, dsTeardownPending, dsTeardownComplete:
-			}
+		case <-tickch:
+			tickch = nil
+			runch = m.runCheck()
 
 		case result := <-runch:
 			runch = nil
 
-			if result != nil {
-				dm.log.Error("execution error", "state", dm.state, "err", result)
+			if err := result.Error(); err != nil {
+				m.log.Error("monitor check", "err", err)
 			}
 
-			switch dm.state {
-			case dsDeployActive:
-				dm.log.Debug("deploy complete")
+			ok := result.Value().(bool)
 
-				dm.state = dsDeployComplete
+			m.log.Info("check result", "ok", ok, "attempt", m.attempts)
 
-			case dsDeployPending:
-				// start update
-				dm.state = dsDeployActive
-				runch = dm.do(dm.doDeploy)
+			if ok {
+				// healthy
 
-			case dsDeployComplete:
-
-				panic(fmt.Errorf("INVALID STATE: runch read on %v", dm.state))
-
-			case dsTeardownActive:
-				dm.state = dsTeardownComplete
-				break loop
-
-			case dsTeardownPending:
-
-				// start teardown
-				dm.state = dsTeardownActive
-				runch = dm.do(dm.doTeardown)
-
-			case dsTeardownComplete:
-
-				panic(fmt.Errorf("INVALID STATE: runch read on %v", dm.state))
-
+				m.attempts = 0
+				tickch = m.scheduleHealthcheck()
+				break
 			}
 
-		case <-dm.teardownch:
-			dm.log.Debug("teardown request")
+			if m.attempts <= monitorMaxRetries {
+				// unhealthy.  retry
 
-			switch dm.state {
-			case dsDeployActive:
+				tickch = m.scheduleRetry()
+				break
+			}
 
-				dm.state = dsTeardownPending
+			// deployment failed.  cancel.
 
-			case dsDeployPending:
+			m.log.Info("deployment failed.  closing.")
 
-				dm.state = dsTeardownPending
-
-			case dsDeployComplete:
-
-				// start teardown
-				dm.state = dsTeardownActive
-				runch = dm.do(dm.doTeardown)
-
-			case dsTeardownActive, dsTeardownPending, dsTeardownComplete:
+			// TODO: retry.
+			if _, err := m.session.TX().BroadcastTxCommit(&types.TxCloseLease{
+				LeaseID: m.lease,
+			}); err != nil {
+				m.log.Error("closing deployment", "err", err)
 			}
 		}
 	}
@@ -175,18 +126,61 @@ loop:
 	}
 }
 
-func (dm *deploymentMonitor) doDeploy() error {
-	return dm.client.Deploy(dm.lease, dm.mgroup)
+func (m *deploymentMonitor) runCheck() <-chan runner.Result {
+	m.attempts++
+	m.log.Debug("running check", "attempt", m.attempts)
+	return runner.Do(func() runner.Result {
+		return runner.NewResult(m.doCheck())
+	})
 }
 
-func (dm *deploymentMonitor) doTeardown() error {
-	return dm.client.TeardownLease(dm.lease)
+func (m *deploymentMonitor) doCheck() (bool, error) {
+	status, err := m.client.LeaseStatus(m.lease)
+
+	if err != nil {
+		m.log.Error("lease status", "err", err)
+		return false, err
+	}
+
+	badsvc := 0
+
+	for _, spec := range m.mgroup.Services {
+
+		found := false
+		for _, svc := range status.Services {
+			if svc.Name != spec.Name {
+				continue
+			}
+			found = true
+
+			if uint32(svc.Available) < spec.Count {
+				badsvc++
+				m.log.Debug("service available replicas below target",
+					"service", spec.Name,
+					"available", svc.Available,
+					"target", spec.Count,
+				)
+			}
+		}
+
+		if !found {
+			badsvc++
+			m.log.Debug("service status found", "service", spec.Name)
+		}
+	}
+
+	return badsvc == 0, nil
 }
 
-func (dm *deploymentMonitor) do(fn func() error) <-chan error {
-	ch := make(chan error, 1)
-	go func() {
-		ch <- fn()
-	}()
-	return ch
+func (m *deploymentMonitor) scheduleRetry() <-chan time.Time {
+	return m.schedule(monitorRetryPeriodMin, monitorRetryPeriodJitter)
+}
+
+func (m *deploymentMonitor) scheduleHealthcheck() <-chan time.Time {
+	return m.schedule(monitorHealthcheckPeriodMin, monitorHealthcheckPeriodJitter)
+}
+
+func (m *deploymentMonitor) schedule(min, jitter time.Duration) <-chan time.Time {
+	period := min + time.Duration(rand.Int63n(int64(jitter)))
+	return time.After(period)
 }

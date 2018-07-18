@@ -18,6 +18,7 @@ type (
 	TxCreateLease       = types.TxCreateLease
 	TxCloseDeployment   = types.TxCloseDeployment
 	TxCloseFulfillment  = types.TxCloseFulfillment
+	TxCloseLease        = types.TxCloseLease
 )
 
 // Wrap tendermint event bus - publish events from tendermint bus to our bus implementation.
@@ -29,19 +30,22 @@ func MarketplaceTxPublisher(ctx context.Context, log log.Logger, tmbus tmtmtypes
 func MarketplaceTxHandler(bus Bus) marketplace.Handler {
 	return marketplace.NewBuilder().
 		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
-			bus.Publish((*TxCreateOrder)(tx))
+			bus.Publish(tx)
 		}).
 		OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
-			bus.Publish((*TxCreateFulfillment)(tx))
+			bus.Publish(tx)
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
-			bus.Publish((*TxCreateLease)(tx))
+			bus.Publish(tx)
 		}).
 		OnTxCloseDeployment(func(tx *types.TxCloseDeployment) {
-			bus.Publish((*TxCloseDeployment)(tx))
+			bus.Publish(tx)
 		}).
 		OnTxCloseFulfillment(func(tx *types.TxCloseFulfillment) {
-			bus.Publish((*TxCloseFulfillment)(tx))
+			bus.Publish(tx)
+		}).
+		OnTxCloseLease(func(tx *types.TxCloseLease) {
+			bus.Publish(tx)
 		}).
 		Create()
 }

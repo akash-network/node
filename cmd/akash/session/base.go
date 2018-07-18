@@ -22,6 +22,7 @@ const (
 	defaultKeyType  = "ed25519"
 	defaultCodec    = "english"
 	defaultPassword = "0123456789"
+	defaultHost     = "localhost"
 )
 
 func SetupBaseCommand(cmd *cobra.Command) {

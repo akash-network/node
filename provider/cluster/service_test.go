@@ -7,7 +7,10 @@ import (
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/mocks"
 	"github.com/ovrclk/akash/provider/event"
+	"github.com/ovrclk/akash/provider/session"
+	qmocks "github.com/ovrclk/akash/query/mocks"
 	"github.com/ovrclk/akash/testutil"
+	txumocks "github.com/ovrclk/akash/txutil/mocks"
 	"github.com/ovrclk/akash/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -15,14 +18,15 @@ import (
 )
 
 func TestService_Reserve(t *testing.T) {
-	log := testutil.Logger()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	bus := event.NewBus()
 	defer bus.Close()
 
-	c, err := cluster.NewService(log, ctx, bus, cluster.NullClient())
+	session := providerSession(t)
+
+	c, err := cluster.NewService(ctx, session, bus, cluster.NullClient())
 	require.NoError(t, err)
 
 	group := testutil.DeploymentGroups(testutil.DeploymentAddress(t), 1).Items[0]
@@ -59,8 +63,6 @@ func TestService_Teardown_TxCloseFulfillment(t *testing.T) {
 }
 
 func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
-
-	log := testutil.Logger()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -96,7 +98,11 @@ func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
 		Return(nil, nil).
 		Once()
 
-	c, err := cluster.NewService(log, ctx, bus, client)
+	client.On("LeaseStatus", lease.LeaseID).
+		Return(&types.LeaseStatusResponse{}, nil).
+		Maybe()
+
+	c, err := cluster.NewService(ctx, providerSession(t), bus, client)
 	require.NoError(t, err)
 
 	_, err = c.Reserve(order.OrderID, group)
@@ -117,4 +123,12 @@ func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
 
 	require.NoError(t, c.Close())
 	mock.AssertExpectationsForObjects(t, client)
+}
+
+func providerSession(t *testing.T) session.Session {
+	log := testutil.Logger()
+	txc := new(txumocks.Client)
+	qc := new(qmocks.Client)
+	provider := testutil.Provider(testutil.Address(t), 1)
+	return session.New(log, provider, txc, qc)
 }

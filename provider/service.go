@@ -24,7 +24,7 @@ func NewService(ctx context.Context, session session.Session, bus event.Bus, ccl
 
 	session = session.ForModule("provider-service")
 
-	cluster, err := cluster.NewService(session.Log(), ctx, bus, cclient)
+	cluster, err := cluster.NewService(ctx, session, bus, cclient)
 	if err != nil {
 		cancel()
 		return nil, err

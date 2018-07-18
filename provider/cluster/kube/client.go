@@ -11,6 +11,7 @@ import (
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tmlibs/log"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,12 +57,12 @@ func NewClient(log log.Logger, host, ns string) (Client, error) {
 
 	err = akashv1.CreateCRD(mcr)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error creating akashv1 CRD: %v", err)
 	}
 
 	err = prepareEnvironment(kc, ns)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error preparing environment %v", err)
 	}
 
 	_, err = kc.CoreV1().Namespaces().List(metav1.ListOptions{Limit: 1})
@@ -119,7 +120,7 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 		return err
 	}
 
-	if err := applyManifest(c, newManifestBuilder(lid, group)); err != nil {
+	if err := applyManifest(c.mc, newManifestBuilder(c.ns, lid, group)); err != nil {
 		c.log.Error("applying manifest", "err", err, "lease", lid)
 		return err
 	}
@@ -158,10 +159,6 @@ func (c *client) TeardownLease(lid types.LeaseID) error {
 	return c.kc.CoreV1().Namespaces().Delete(lidNS(lid), &metav1.DeleteOptions{})
 }
 
-func (c *client) TeardownNamespace(ns string) error {
-	return c.kc.CoreV1().Namespaces().Delete(ns, &metav1.DeleteOptions{})
-}
-
 func (c *client) ServiceLogs(ctx context.Context, lid types.LeaseID,
 	tailLines int64, follow bool) ([]*cluster.ServiceLog, error) {
 	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(metav1.ListOptions{})
@@ -187,16 +184,13 @@ func (c *client) ServiceLogs(ctx context.Context, lid types.LeaseID,
 
 // todo: limit number of results and do pagination / streaming
 func (c *client) LeaseStatus(lid types.LeaseID) (*types.LeaseStatusResponse, error) {
-	deployments, err := c.kc.AppsV1().Deployments(lidNS(lid)).List(metav1.ListOptions{})
+	deployments, err := c.deploymentsForLease(lid)
 	if err != nil {
 		c.log.Error(err.Error())
-		return nil, types.ErrInternalError{Message: "internal error"}
+		return nil, err
 	}
-	if deployments == nil || len(deployments.Items) == 0 {
-		return nil, types.ErrResourceNotFound{Message: "no deployments for lease"}
-	}
-	serviceStatus := make(map[string]*types.ServiceStatus, len(deployments.Items))
-	for _, deployment := range deployments.Items {
+	serviceStatus := make(map[string]*types.ServiceStatus, len(deployments))
+	for _, deployment := range deployments {
 		status := &types.ServiceStatus{
 			Name:      deployment.Name,
 			Available: deployment.Status.AvailableReplicas,
@@ -243,4 +237,82 @@ func (c *client) ServiceStatus(lid types.LeaseID, name string) (*types.ServiceSt
 		ReadyReplicas:      deployment.Status.ReadyReplicas,
 		AvailableReplicas:  deployment.Status.AvailableReplicas,
 	}, nil
+}
+
+func (c *client) Inventory() ([]cluster.Node, error) {
+	var nodes []cluster.Node
+
+	knodes, err := c.kc.CoreV1().Nodes().List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, knode := range knodes.Items {
+		if !c.nodeIsActive(&knode) {
+			continue
+		}
+
+		unit := types.ResourceUnit{
+			CPU:    uint32(knode.Status.Allocatable.Cpu().Value()),
+			Memory: uint64(knode.Status.Capacity.Memory().Value()),
+			Disk:   uint64(knode.Status.Capacity.StorageEphemeral().Value()),
+		}
+
+		nodes = append(nodes, cluster.NewNode(knode.Name, unit))
+	}
+
+	return nodes, nil
+}
+
+func (c *client) nodeIsActive(node *corev1.Node) bool {
+	ready := false
+	issues := 0
+
+	for _, cond := range node.Status.Conditions {
+		switch cond.Type {
+
+		case corev1.NodeReady:
+
+			if cond.Status == corev1.ConditionTrue {
+				ready = true
+			}
+
+		case corev1.NodeOutOfDisk:
+			fallthrough
+		case corev1.NodeMemoryPressure:
+			fallthrough
+		case corev1.NodeDiskPressure:
+			fallthrough
+		case corev1.NodePIDPressure:
+			fallthrough
+		case corev1.NodeNetworkUnavailable:
+
+			if cond.Status != corev1.ConditionFalse {
+
+				c.log.Error("node in poor condition",
+					"node", node.Name,
+					"condition", cond.Type,
+					"status", cond.Status)
+
+				issues++
+			}
+
+		case corev1.NodeKubeletConfigOk:
+			// ignored
+		}
+	}
+
+	return ready && issues == 0
+}
+
+func (c *client) deploymentsForLease(lid types.LeaseID) ([]appsv1.Deployment, error) {
+	deployments, err := c.kc.AppsV1().Deployments(lidNS(lid)).List(metav1.ListOptions{})
+	if err != nil {
+		c.log.Error(err.Error())
+		return nil, types.ErrInternalError{Message: "internal error"}
+	}
+	if deployments == nil {
+		return nil, types.ErrResourceNotFound{Message: "no deployments for lease"}
+	}
+	return deployments.Items, nil
 }

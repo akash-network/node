@@ -32,7 +32,7 @@ func AddFlagWait(cmd *cobra.Command, flags *pflag.FlagSet) {
 }
 
 func AddFlagHost(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.String(flagHost, "", "cluster host")
+	flags.String(flagHost, defaultHost, "cluster host")
 	viper.BindPFlag(flagHost, flags.Lookup(flagHost))
 }
 
