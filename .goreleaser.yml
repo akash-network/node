@@ -55,5 +55,5 @@ release:
   github:
     owner: ovrclk
     name: akash
-  prerelease: true
+  prerelease: false
   draft: false
