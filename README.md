@@ -20,6 +20,21 @@ is the ([tendermint](https://github.com/tendermint/tendermint)-powered) blockcha
 implements the decentralized exchange; `akash` is the client used to access the exchange and network
 in general.
 
+# Installing
+
+The [latest](https://github.com/ovrclk/akash/releases/latest) binary release can be installed with [Homebrew](https://brew.sh/):
+
+```sh
+$ brew tap ovrclk/tap
+$ brew install akash
+```
+
+Or [GoDownloader](https://github.com/goreleaser/godownloader):
+
+```sh
+$ curl https://raw.githubusercontent.com/ovrclk/akash/master/godownloader.sh | sh
+```
+
 # Building
 
  * [Dependencies](#dependencies)
@@ -84,15 +99,6 @@ make devdeps-install
 We use thin integration testing environments to simplify
 the development and testing process.  We currently have two environments:
 
-* [Single node](_run/single): simple single node running locally
-* [Multi node](_run/multi): multi-node setup within a virtual machine.
-
-Each of these environments can demonstrate:
-
-* Sending tokens from one account to another.
-* Creating provider accounts.
-* Running a provider which bids on open orders.
-* Creating deployments.
-* Obtaining leases for deployments.
-* Monitoring marketplace activity.
-* Querying details of all objects.
+* [Single node](_run/single): simple (no workloads) single node running locally.
+* [Single node with workloads](_run/kube): single node and provider running locally, running workloads within a virtual machine.
+* [Multi node](_run/multi): multiple nodes and providers running in a virtual machine.
