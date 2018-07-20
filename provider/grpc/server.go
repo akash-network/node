@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/provider/cluster"
@@ -70,13 +71,30 @@ func (s server) Deploy(ctx context.Context, req *types.ManifestRequest) (*types.
 	}, nil
 }
 
+// Lease status will retry for one minute
 func (s server) LeaseStatus(ctx context.Context, req *types.LeaseStatusRequest) (*types.LeaseStatusResponse, error) {
+	attempts := 12
+
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
 	if err != nil {
 		s.log.Error(err.Error())
 		return nil, types.ErrInternalError{Message: "internal error"}
 	}
-	return s.Client.LeaseStatus(lease.LeaseID)
+
+	response, err := s.Client.LeaseStatus(lease.LeaseID)
+	if err == nil {
+		return response, err
+	}
+
+	for i := 0; i < attempts; i++ {
+		time.Sleep(time.Second * 5)
+		response, err = s.Client.LeaseStatus(lease.LeaseID)
+		if err != cluster.ErrNoDeployments {
+			break
+		}
+	}
+
+	return response, err
 }
 
 func (s server) ServiceStatus(ctx context.Context,

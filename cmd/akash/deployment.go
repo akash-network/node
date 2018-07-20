@@ -107,6 +107,7 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 
 	fmt.Printf("Waiting...\n")
 	expected := len(groups)
+	providers := make(map[*types.Provider]types.LeaseID)
 	handler := marketplace.NewBuilder().
 		OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 			if bytes.Equal(tx.Deployment, address) {
@@ -127,10 +128,27 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 				err = http.SendManifest(mani, txclient.Signer(), prov, tx.Deployment)
 				if err != nil {
 					fmt.Printf("ERROR: %v", err)
+				} else {
+					providers[prov] = tx.LeaseID
 				}
 				expected--
 			}
 			if expected == 0 {
+
+				// get deployment addresses for each provider in lease.
+				for provider, leaseID := range providers {
+					fmt.Printf("Service URIs for provider: %x\n", provider.Address)
+					status, err := http.LeaseStatus(provider, leaseID)
+					if err != nil {
+						fmt.Printf("ERROR: %v", err)
+					} else {
+						for _, service := range status.Services {
+							for _, uri := range service.URIs {
+								fmt.Printf("\t%v: %v\n", service.Name, uri)
+							}
+						}
+					}
+				}
 				os.Exit(0)
 			}
 		}).Create()
