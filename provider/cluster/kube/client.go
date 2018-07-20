@@ -189,6 +189,9 @@ func (c *client) LeaseStatus(lid types.LeaseID) (*types.LeaseStatusResponse, err
 		c.log.Error(err.Error())
 		return nil, err
 	}
+	if len(deployments) == 0 {
+		return nil, cluster.ErrNoDeployments
+	}
 	serviceStatus := make(map[string]*types.ServiceStatus, len(deployments))
 	for _, deployment := range deployments {
 		status := &types.ServiceStatus{

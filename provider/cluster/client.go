@@ -3,11 +3,14 @@ package cluster
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"sync"
 
 	"github.com/ovrclk/akash/types"
 )
+
+var ErrNoDeployments = errors.New("no deployments")
 
 type Client interface {
 	Deploy(types.LeaseID, *types.ManifestGroup) error
