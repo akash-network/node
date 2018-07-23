@@ -21,7 +21,7 @@ profiles:
         web: .0002
 
 deployment:
-  web:
+  webapp:
     san-jose:
-      profile: webapp
+      profile: web
       count: 1
