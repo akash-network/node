@@ -1,0 +1,27 @@
+services:
+  webapp:
+    image: quay.io/ovrclk/demo-app
+    expose:
+      - port: 80
+        as: 80
+        to:
+          - global: true
+
+profiles:
+  compute:
+    web:
+      cpu: "100m"
+      memory: "512Mi"
+      disk: "512Mi"
+  placement:
+    san-jose:
+      attributes:
+        region: sjc
+      pricing:
+        web: .0002
+
+deployment:
+  web:
+    san-jose:
+      profile: webapp
+      count: 1
