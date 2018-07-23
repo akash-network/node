@@ -180,7 +180,7 @@ func (ctx *session) QueryClient() query.Client {
 }
 
 func (ctx *session) KeyName() string {
-	val, _ := ctx.cmd.Flags().GetString(flagKey)
+	val, _ := ctx.cmd.Flags().GetString(FlagKey)
 	return val
 }
 

@@ -15,8 +15,12 @@ func AddFlagNode(cmd *cobra.Command, flags *pflag.FlagSet) {
 }
 
 func AddFlagKey(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.StringP(flagKey, "k", "", "key name (required)")
-	cmd.MarkFlagRequired(flagKey)
+	flags.StringP(FlagKey, "k", "", "key name (required)")
+	cmd.MarkFlagRequired(FlagKey)
+}
+
+func AddFlagKeyOptional(cmd *cobra.Command, flags *pflag.FlagSet) {
+	flags.StringP(FlagKey, "k", "", "key name")
 }
 
 func AddFlagNonce(cmd *cobra.Command, flags *pflag.FlagSet) {
