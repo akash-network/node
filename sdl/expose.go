@@ -8,8 +8,7 @@ func (p *v1Accept) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	for _, item := range accept {
-		_, err := url.ParseRequestURI("http://" + item)
-		if err != nil {
+		if _, err := url.ParseRequestURI("http://" + item); err != nil {
 			return err
 		}
 	}
