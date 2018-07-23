@@ -60,7 +60,7 @@ func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.Resp
 
 	id := strings.TrimPrefix(req.Path, appstate.DeploymentPath)
 	if len(id) == 0 {
-		return a.doRangeQuery(state)
+		return a.doRangeQuery(state, req.Data)
 	}
 
 	key, err := keys.ParseDeploymentPath(id)
@@ -142,7 +142,7 @@ func (a *app) doQuery(state appstate.State, key keys.Deployment) tmtypes.Respons
 	}
 }
 
-func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
+func (a *app) doRangeQuery(state appstate.State, tenant []byte) tmtypes.ResponseQuery {
 	deps, err := state.Deployment().GetMaxRange()
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -151,6 +151,14 @@ func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
 		}
 	}
 
+	tenantDeps := []types.Deployment{}
+	for _, deployment := range deps.Items {
+		if bytes.Equal(deployment.Tenant, tenant) {
+			tenantDeps = append(tenantDeps, deployment)
+		}
+	}
+
+	deps.Items = tenantDeps
 	bytes, err := proto.Marshal(deps)
 	if err != nil {
 		return tmtypes.ResponseQuery{
