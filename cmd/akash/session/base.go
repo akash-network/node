@@ -12,7 +12,7 @@ const (
 	flagRootDir  = "data"
 	flagNode     = "node"
 	flagNonce    = "nonce"
-	FlagKey      = "key"
+	flagKey      = "key"
 	flagKeyType  = "type"
 	flagNoWait   = "no-wait"
 	flagHost     = "host"
