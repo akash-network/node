@@ -31,7 +31,10 @@ type Client interface {
 	Leases(ctx context.Context) (*types.Leases, error)
 	Lease(ctx context.Context, id types.LeaseID) (*types.Lease, error)
 
-	Get(ctx context.Context, path string, obj proto.Message) error
+	TenantDeployments(ctx context.Context, tenant []byte) (*types.Deployments, error)
+	TenantLeases(ctx context.Context, tenant []byte) (*types.Leases, error)
+
+	Get(ctx context.Context, path string, obj proto.Message, data []byte) error
 }
 
 type client struct {
@@ -45,7 +48,7 @@ func NewClient(tmc *tmclient.HTTP) Client {
 func (c *client) Account(ctx context.Context, id []byte) (*types.Account, error) {
 	obj := &types.Account{}
 	path := AccountPath(id)
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -54,7 +57,7 @@ func (c *client) Account(ctx context.Context, id []byte) (*types.Account, error)
 func (c *client) Providers(ctx context.Context) (*types.Providers, error) {
 	obj := &types.Providers{}
 	path := ProvidersPath()
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -63,7 +66,7 @@ func (c *client) Providers(ctx context.Context) (*types.Providers, error) {
 func (c *client) Provider(ctx context.Context, id []byte) (*types.Provider, error) {
 	obj := &types.Provider{}
 	path := ProviderPath(id)
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -72,7 +75,7 @@ func (c *client) Provider(ctx context.Context, id []byte) (*types.Provider, erro
 func (c *client) Deployments(ctx context.Context) (*types.Deployments, error) {
 	obj := &types.Deployments{}
 	path := DeploymentsPath()
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -81,7 +84,7 @@ func (c *client) Deployments(ctx context.Context) (*types.Deployments, error) {
 func (c *client) Deployment(ctx context.Context, id []byte) (*types.Deployment, error) {
 	obj := &types.Deployment{}
 	path := DeploymentPath(id)
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -90,7 +93,7 @@ func (c *client) Deployment(ctx context.Context, id []byte) (*types.Deployment, 
 func (c *client) DeploymentGroups(ctx context.Context) (*types.DeploymentGroups, error) {
 	obj := &types.DeploymentGroups{}
 	path := DeploymentGroupsPath()
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -99,7 +102,7 @@ func (c *client) DeploymentGroups(ctx context.Context) (*types.DeploymentGroups,
 func (c *client) DeploymentGroup(ctx context.Context, id types.DeploymentGroupID) (*types.DeploymentGroup, error) {
 	obj := &types.DeploymentGroup{}
 	path := DeploymentGroupPath(id)
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -108,7 +111,7 @@ func (c *client) DeploymentGroup(ctx context.Context, id types.DeploymentGroupID
 func (c *client) DeploymentLeases(ctx context.Context, id []byte) (*types.Leases, error) {
 	obj := &types.Leases{}
 	path := DeploymentLeasesPath(id)
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -117,7 +120,7 @@ func (c *client) DeploymentLeases(ctx context.Context, id []byte) (*types.Leases
 func (c *client) Orders(ctx context.Context) (*types.Orders, error) {
 	obj := &types.Orders{}
 	path := OrdersPath()
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -126,7 +129,7 @@ func (c *client) Orders(ctx context.Context) (*types.Orders, error) {
 func (c *client) Order(ctx context.Context, id types.OrderID) (*types.Order, error) {
 	obj := &types.Order{}
 	path := OrderPath(id)
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -135,7 +138,7 @@ func (c *client) Order(ctx context.Context, id types.OrderID) (*types.Order, err
 func (c *client) Fulfillments(ctx context.Context) (*types.Fulfillments, error) {
 	obj := &types.Fulfillments{}
 	path := FulfillmentsPath()
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -144,7 +147,7 @@ func (c *client) Fulfillments(ctx context.Context) (*types.Fulfillments, error) 
 func (c *client) Fulfillment(ctx context.Context, id types.FulfillmentID) (*types.Fulfillment, error) {
 	obj := &types.Fulfillment{}
 	path := FulfillmentPath(id)
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -153,7 +156,7 @@ func (c *client) Fulfillment(ctx context.Context, id types.FulfillmentID) (*type
 func (c *client) Leases(ctx context.Context) (*types.Leases, error) {
 	obj := &types.Leases{}
 	path := LeasesPath()
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
@@ -162,14 +165,31 @@ func (c *client) Leases(ctx context.Context) (*types.Leases, error) {
 func (c *client) Lease(ctx context.Context, id types.LeaseID) (*types.Lease, error) {
 	obj := &types.Lease{}
 	path := LeasePath(id)
-	if err := c.Get(ctx, path, obj); err != nil {
+	if err := c.Get(ctx, path, obj, nil); err != nil {
 		return nil, err
 	}
 	return obj, nil
 }
 
-func (c *client) Get(ctx context.Context, path string, obj proto.Message) error {
-	result, err := c.tmc.ABCIQuery(path, nil)
+func (c *client) TenantDeployments(ctx context.Context, tenant []byte) (*types.Deployments, error) {
+	obj := &types.Deployments{}
+	path := DeploymentsPath()
+	if err := c.Get(ctx, path, obj, tenant); err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+func (c *client) TenantLeases(ctx context.Context, tenant []byte) (*types.Leases, error) {
+	obj := &types.Leases{}
+	path := LeasesPath()
+	if err := c.Get(ctx, path, obj, tenant); err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+func (c *client) Get(ctx context.Context, path string, obj proto.Message, data []byte) error {
+	result, err := c.tmc.ABCIQuery(path, data)
 	if err != nil {
 		return err
 	}
