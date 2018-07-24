@@ -30,7 +30,11 @@ type v1Expose struct {
 	As     uint32
 	Proto  string       `yaml:",omitempty"`
 	To     []v1ExposeTo `yaml:",omitempty"`
-	Accept []string     `yaml:",omitempty"`
+	Accept v1Accept
+}
+
+type v1Accept struct {
+	Items []string `yaml:",omitempty"`
 }
 
 type v1ExposeTo struct {
@@ -197,7 +201,7 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 						ExternalPort: expose.As,
 						Proto:        expose.Proto,
 						Global:       to.Global,
-						Hosts:        expose.Accept,
+						Hosts:        expose.Accept.Items,
 					})
 				}
 			}
