@@ -1,5 +1,5 @@
-hash: e0f1feb407bf2e04acf3c07f8eec028b143c5e22af83f84c9f0100b0b73c773c
-updated: 2018-07-25T13:45:41.041433089-07:00
+hash: e9cbd88ff82355128afbcb6822163395b3e4441a86f0dd3e3ee25e7195d55734
+updated: 2018-07-25T14:52:08.920853867-07:00
 imports:
 - name: github.com/boz/go-lifecycle
   version: c39961a5a0ce6b046f15d62bcbed79701666a9e0
@@ -7,6 +7,8 @@ imports:
   version: 9a2f9524024889e129a5422aca2cff73cb3eabf6
   subpackages:
   - btcec
+- name: github.com/caarlos0/env
+  version: 1cddc31c48c56ecd700d873edb9fd5b6f5df922a
 - name: github.com/davecgh/go-spew
   version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
   subpackages:
@@ -485,4 +487,12 @@ imports:
   - pkg/util/proto
 - name: k8s.io/metrics
   version: 22022401af62d9a22b30b5b36a4227e60f404b17
+  subpackages:
+  - pkg/apis/metrics
+  - pkg/apis/metrics/v1alpha1
+  - pkg/apis/metrics/v1beta1
+  - pkg/client/clientset/versioned
+  - pkg/client/clientset/versioned/scheme
+  - pkg/client/clientset/versioned/typed/metrics/v1alpha1
+  - pkg/client/clientset/versioned/typed/metrics/v1beta1
 testImports: []

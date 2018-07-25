@@ -2,6 +2,7 @@ package bidengine_test
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/ovrclk/akash/provider/bidengine"
@@ -12,6 +13,7 @@ import (
 	"github.com/ovrclk/akash/testutil"
 	txmocks "github.com/ovrclk/akash/txutil/mocks"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/unit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -25,7 +27,7 @@ func TestService(t *testing.T) {
 	defer bus.Close()
 
 	deployment := testutil.Deployment(testutil.Address(t), 1)
-	group := testutil.DeploymentGroups(deployment.Address, 2).Items[0]
+	group := makeDeploymentGroup(deployment.Address, 2)
 	order := testutil.Order(deployment.Address, group.Seq, 3)
 	provider := testutil.Provider(testutil.Address(t), 4)
 
@@ -97,7 +99,7 @@ func TestService_Catchup(t *testing.T) {
 	defer bus.Close()
 
 	deployment := testutil.Deployment(testutil.Address(t), 1)
-	group := testutil.DeploymentGroups(deployment.Address, 2).Items[0]
+	group := makeDeploymentGroup(deployment.Address, 2)
 	order := testutil.Order(deployment.Address, group.Seq, 3)
 	provider := testutil.Provider(testutil.Address(t), 4)
 
@@ -155,4 +157,33 @@ func TestService_Catchup(t *testing.T) {
 	assert.NoError(t, service.Close())
 
 	mock.AssertExpectationsForObjects(t, qclient, txclient, creso, cluster)
+}
+
+func makeDeploymentGroup(daddr []byte, nonce uint64) *types.DeploymentGroup {
+	runit := types.ResourceUnit{
+		CPU:    500,
+		Memory: 256 * unit.Mi,
+		Disk:   5 * unit.Gi,
+	}
+
+	rgroup := types.ResourceGroup{
+		Unit:  runit,
+		Count: 2,
+		Price: 35,
+	}
+
+	pattr := types.ProviderAttribute{
+		Name:  "region",
+		Value: "us-west",
+	}
+
+	return &types.DeploymentGroup{
+		Name: strconv.FormatUint(nonce, 10),
+		DeploymentGroupID: types.DeploymentGroupID{
+			Deployment: daddr,
+			Seq:        nonce,
+		},
+		Resources:    []types.ResourceGroup{rgroup},
+		Requirements: []types.ProviderAttribute{pattr},
+	}
 }

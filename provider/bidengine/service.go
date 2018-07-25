@@ -4,6 +4,7 @@ import (
 	"context"
 
 	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/caarlos0/env"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
@@ -17,6 +18,11 @@ type Service interface {
 
 // Service handles bidding on orders.
 func NewService(ctx context.Context, session session.Session, cluster cluster.Cluster, bus event.Bus) (Service, error) {
+
+	config := config{}
+	if err := env.Parse(&config); err != nil {
+		return nil, err
+	}
 
 	sub, err := bus.Subscribe()
 	if err != nil {
@@ -34,6 +40,7 @@ func NewService(ctx context.Context, session session.Session, cluster cluster.Cl
 	session.Log().Info("found orders", "count", len(existingOrders))
 
 	s := &service{
+		config:  config,
 		session: session,
 		cluster: cluster,
 		bus:     bus,
@@ -50,6 +57,7 @@ func NewService(ctx context.Context, session session.Session, cluster cluster.Cl
 }
 
 type service struct {
+	config  config
 	session session.Session
 	cluster cluster.Cluster
 

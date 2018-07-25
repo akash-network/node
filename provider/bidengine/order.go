@@ -10,12 +10,14 @@ import (
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/unit"
 	"github.com/ovrclk/akash/util/runner"
 	"github.com/tendermint/tmlibs/log"
 )
 
 // order manages bidding and general lifecycle handling of an order.
 type order struct {
+	config      config
 	order       types.OrderID
 	fulfillment *types.Fulfillment
 
@@ -41,6 +43,7 @@ func newOrder(e *service, oid types.OrderID, fulfillment *types.Fulfillment) (*o
 	log := session.Log().With("order", oid)
 
 	order := &order{
+		config:      e.config,
 		order:       oid,
 		fulfillment: fulfillment,
 		session:     session,
@@ -148,12 +151,9 @@ loop:
 
 			group = result.Value().(*types.DeploymentGroup)
 
-			if !matchProviderAttributes(o.session.Provider().Attributes, group.Requirements) {
-				o.log.Debug("unable to fulfill: incompatible attributes")
-				break loop
+			if !o.shouldBid(group) {
+				break
 			}
-
-			// TODO: check if price is too low
 
 			// Begin reserving resources from cluster.
 			clusterch = runner.Do(func() runner.Result {
@@ -233,17 +233,65 @@ loop:
 	}
 }
 
-func (o *order) calculatePrice(resources types.ResourceList) uint64 {
-	max := o.resourcesMaxPrice(resources)
-	return uint64(rand.Int63n(int64(max)) + 1)
+func (o *order) shouldBid(group *types.DeploymentGroup) bool {
+
+	// does provider have required attributes?
+	if !matchProviderAttributes(o.session.Provider().Attributes, group.Requirements) {
+		o.log.Debug("unable to fulfill: incompatible attributes")
+		return false
+	}
+
+	// TODO: catch overflow
+	var (
+		cpu   int64
+		mem   int64
+		price int64
+	)
+	for _, rg := range group.GetResources() {
+		cpu += int64(rg.Unit.CPU * rg.Count)
+		mem += int64(rg.Unit.Memory * uint64(rg.Count))
+		price += int64(rg.Price)
+	}
+
+	// requesting too much cpu?
+	if cpu > int64(o.config.FulfillmentCPUMax) || cpu <= 0 {
+		o.log.Info("unable to fulfill: cpu request too high",
+			"cpu-requested", cpu)
+		return false
+	}
+
+	// price max too low?
+	if price*unit.Gi < mem*int64(o.config.FulfillmentMemPriceMin) {
+		o.log.Info("unable to fulfill: price too low",
+			"max-price", price,
+			"min-price", mem*int64(o.config.FulfillmentMemPriceMin)/unit.Gi)
+		return false
+	}
+
+	return true
 }
 
-func (o *order) resourcesMaxPrice(resources types.ResourceList) uint64 {
+func (o *order) calculatePrice(resources types.ResourceList) uint64 {
 	// TODO: catch overflow
-	price := uint64(0)
+	var (
+		mem  int64
+		rmax int64
+	)
+
 	for _, group := range resources.GetResources() {
-		price += group.Price
+		rmax += int64(group.Price)
+		mem += int64(group.Unit.Memory * uint64(group.Count))
 	}
-	o.log.Debug("group max price", "price", price)
-	return price
+
+	cmin := uint64(float64(mem) * float64(o.config.FulfillmentMemPriceMin) / float64(unit.Gi))
+	cmax := uint64(float64(mem) * float64(o.config.FulfillmentMemPriceMax) / float64(unit.Gi))
+
+	if cmax > uint64(rmax) {
+		cmax = uint64(rmax)
+	}
+	if cmax == 0 {
+		cmax = 1
+	}
+
+	return uint64(rand.Int63n(int64(cmax-cmin)) + int64(cmin))
 }
