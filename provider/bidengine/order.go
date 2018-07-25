@@ -73,13 +73,14 @@ func (o *order) run() {
 
 	var (
 		// channels for async operations.
-
 		groupch   <-chan runner.Result
 		clusterch <-chan runner.Result
 		bidch     <-chan runner.Result
 
 		group       *types.DeploymentGroup
 		reservation cluster.Reservation
+
+		won bool
 	)
 
 	// Begin fetching group details immediately.
@@ -119,6 +120,7 @@ loop:
 					Group:   group,
 					Price:   ev.Price,
 				})
+				won = true
 
 				break loop
 
@@ -176,7 +178,7 @@ loop:
 
 			reservation = result.Value().(cluster.Reservation)
 
-			price := o.calculatePrice(reservation.Group())
+			price := o.calculatePrice(reservation.Resources())
 
 			o.log.Debug("submitting fulfillment", "price", price)
 
@@ -206,12 +208,18 @@ loop:
 		}
 	}
 
-	// TODO: cancel reservation?
-
 	o.log.Info("shutting down")
 	cancel()
 	o.lc.ShutdownInitiated(nil)
 	o.sub.Close()
+
+	// cancel reservation
+	if !won && reservation != nil {
+		o.log.Debug("unreserving reservation")
+		if err := o.cluster.Unreserve(reservation.OrderID(), reservation.Resources()); err != nil {
+			o.log.Error("error unreserving reservation", "err", err)
+		}
+	}
 
 	// Wait for all runners to complete.
 	if groupch != nil {
@@ -225,15 +233,15 @@ loop:
 	}
 }
 
-func (o *order) calculatePrice(group *types.DeploymentGroup) uint64 {
-	max := o.groupMaxPrice(group)
+func (o *order) calculatePrice(resources types.ResourceList) uint64 {
+	max := o.resourcesMaxPrice(resources)
 	return uint64(rand.Int63n(int64(max)) + 1)
 }
 
-func (o *order) groupMaxPrice(group *types.DeploymentGroup) uint64 {
+func (o *order) resourcesMaxPrice(resources types.ResourceList) uint64 {
 	// TODO: catch overflow
 	price := uint64(0)
-	for _, group := range group.GetResources() {
+	for _, group := range resources.GetResources() {
 		price += group.Price
 	}
 	o.log.Debug("group max price", "price", price)

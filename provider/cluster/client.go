@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/unit"
 )
 
 var ErrNoDeployments = errors.New("no deployments")
@@ -59,8 +60,8 @@ type ServiceLog struct {
 
 const (
 	// 5 CPUs, 5Gi memory for null client.
-	nullClientCPU    = 5
-	nullClientMemory = 5 * 1024 * 1024 * 1024
+	nullClientCPU    = 5000
+	nullClientMemory = 32 * unit.Gi
 )
 
 type nullClient struct {

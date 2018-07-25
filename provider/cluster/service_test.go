@@ -36,12 +36,12 @@ func TestService_Reserve(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, order.OrderID, reservation.OrderID())
-	assert.Equal(t, group, reservation.Group())
+	assert.Equal(t, group, reservation.Resources())
 
 	require.NoError(t, c.Close())
 
 	_, err = c.Reserve(order.OrderID, group)
-	assert.Error(t, err, cluster.ErrNotRunning)
+	assert.Equal(t, cluster.ErrNotRunning, err)
 }
 
 func TestService_Teardown_TxCloseDeployment(t *testing.T) {
@@ -80,6 +80,12 @@ func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
 		Groups: []*types.ManifestGroup{
 			{
 				Name: group.Name,
+				Services: []*types.ManifestService{
+					{
+						Unit:  &group.Resources[0].Unit,
+						Count: group.Resources[0].Count,
+					},
+				},
 			},
 		},
 	}
@@ -102,8 +108,14 @@ func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
 		Return(&types.LeaseStatusResponse{}, nil).
 		Maybe()
 
+	client.On("Inventory").
+		Return(cluster.NullClient().Inventory()).
+		Maybe()
+
 	c, err := cluster.NewService(ctx, providerSession(t), bus, client)
 	require.NoError(t, err)
+
+	testutil.SleepForThreadStart(t)
 
 	_, err = c.Reserve(order.OrderID, group)
 	require.NoError(t, err)

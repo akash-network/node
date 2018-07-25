@@ -33,7 +33,9 @@ func (b *builder) ns() string {
 }
 
 func (b *builder) labels() map[string]string {
-	return deploymentLabels()
+	return map[string]string{
+		akashManagedLabelName: "true",
+	}
 }
 
 type nsBuilder struct {

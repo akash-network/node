@@ -54,12 +54,13 @@ func TestService(t *testing.T) {
 
 	creso := new(cmocks.Reservation)
 	creso.
-		On("Group").Return(group).Maybe().
+		On("Resources").Return(group).Maybe().
 		On("OrderID").Return(order.OrderID).Maybe()
 
 	cluster := new(cmocks.Cluster)
 	cluster.
-		On("Reserve", order.OrderID, group).Return(creso, nil).Once()
+		On("Reserve", order.OrderID, group).Return(creso, nil).Once().
+		On("Unreserve", order.OrderID, group).Return(nil).Once()
 
 	session := session.New(testutil.Logger(), provider, txclient, qclient)
 
@@ -129,12 +130,13 @@ func TestService_Catchup(t *testing.T) {
 
 	creso := new(cmocks.Reservation)
 	creso.
-		On("Group").Return(group).Maybe().
+		On("Resources").Return(group).Maybe().
 		On("OrderID").Return(order.OrderID).Maybe()
 
 	cluster := new(cmocks.Cluster)
 	cluster.
-		On("Reserve", order.OrderID, group).Return(creso, nil).Once()
+		On("Reserve", order.OrderID, group).Return(creso, nil).Once().
+		On("Unreserve", order.OrderID, group).Return(nil).Once()
 
 	session := session.New(testutil.Logger(), provider, txclient, qclient)
 

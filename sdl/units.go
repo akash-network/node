@@ -4,53 +4,35 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/ovrclk/akash/types/unit"
 )
 
 var (
 	errNegativeValue = fmt.Errorf("invalid: negative value not allowed")
 )
 
-const (
-	unitk  = 1000
-	unitKi = 1024
-
-	unitM  = unitk * unitk
-	unitMi = unitKi * unitKi
-
-	unitG  = unitM * unitk
-	unitGi = unitMi * unitKi
-
-	unitT  = unitG * unitk
-	unitTi = unitGi * unitKi
-
-	unitP  = unitT * unitk
-	unitPi = unitTi * unitKi
-
-	unitE  = unitP * unitk
-	unitEi = unitPi * unitKi
-)
-
 var unitSuffixes = []struct {
 	symbol string
 	unit   uint64
 }{
-	{"k", unitk},
-	{"Ki", unitKi},
+	{"k", unit.K},
+	{"Ki", unit.Ki},
 
-	{"M", unitM},
-	{"Mi", unitMi},
+	{"M", unit.M},
+	{"Mi", unit.Mi},
 
-	{"G", unitG},
-	{"Gi", unitGi},
+	{"G", unit.G},
+	{"Gi", unit.Gi},
 
-	{"T", unitT},
-	{"Ti", unitTi},
+	{"T", unit.T},
+	{"Ti", unit.Ti},
 
-	{"P", unitP},
-	{"Pi", unitPi},
+	{"P", unit.P},
+	{"Pi", unit.Pi},
 
-	{"E", unitE},
-	{"Ei", unitEi},
+	{"E", unit.E},
+	{"Ei", unit.Ei},
 }
 
 // CPU shares.  One CPUQuantity = 1/1000 of a CPU

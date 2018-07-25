@@ -77,7 +77,7 @@ type ManifestServiceExpose struct {
 
 type ResourceUnit struct {
 	CPU    uint32 `protobuf:"varint,1,opt,name=CPU,proto3" json:"CPU,omitempty"`
-	Memory uint32 `protobuf:"varint,2,opt,name=memory,proto3" json:"memory,omitempty"`
+	Memory uint64 `protobuf:"varint,2,opt,name=memory,proto3" json:"memory,omitempty"`
 	Disk   uint64 `protobuf:"varint,3,opt,name=disk,proto3" json:"disk,omitempty"`
 }
 

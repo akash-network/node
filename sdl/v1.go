@@ -84,9 +84,11 @@ func (sdl *v1) Validate() error {
 func (sdl *v1) DeploymentGroups() ([]*types.GroupSpec, error) {
 	groups := make(map[string]*types.GroupSpec)
 
-	for svcName, depl := range sdl.Deployments {
+	for _, svcName := range v1DeploymentSvcNames(sdl.Deployments) {
+		depl := sdl.Deployments[svcName]
 
-		for placementName, svcdepl := range depl {
+		for _, placementName := range v1DeploymentPlacementNames(depl) {
+			svcdepl := depl[placementName]
 
 			compute, ok := sdl.Profiles.Compute[svcdepl.Profile]
 			if !ok {
@@ -157,9 +159,11 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 
 	groups := make(map[string]*types.ManifestGroup)
 
-	for svcName, depl := range sdl.Deployments {
+	for _, svcName := range v1DeploymentSvcNames(sdl.Deployments) {
+		depl := sdl.Deployments[svcName]
 
-		for placementName, svcdepl := range depl {
+		for _, placementName := range v1DeploymentPlacementNames(depl) {
+			svcdepl := depl[placementName]
 
 			group := groups[placementName]
 
@@ -247,4 +251,24 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 	}
 
 	return &types.Manifest{Groups: result}, nil
+}
+
+// stable ordering
+func v1DeploymentSvcNames(m map[string]v1Deployment) []string {
+	names := make([]string, 0, len(m))
+	for name := range m {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// stable ordering
+func v1DeploymentPlacementNames(m v1Deployment) []string {
+	names := make([]string, 0, len(m))
+	for name := range m {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }

@@ -1,11 +1,11 @@
 package sdl_test
 
 import (
-	"math"
 	"testing"
 
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/unit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,12 +39,12 @@ func Test_v1_Parse_simple(t *testing.T) {
 	assert.Len(t, group.GetResources(), 1)
 
 	assert.Equal(t, types.ResourceGroup{
-		Count: 20,
+		Count: 2,
 		Price: 800,
 		Unit: types.ResourceUnit{
-			CPU:    2000,
-			Memory: 128 * uint64(math.Pow(1024, 2)),
-			Disk:   5 * uint64(math.Pow(1024, 3)),
+			CPU:    100,
+			Memory: 128 * unit.Mi,
+			Disk:   5 * unit.Gi,
 		},
 	}, group.GetResources()[0])
 
@@ -60,11 +60,11 @@ func Test_v1_Parse_simple(t *testing.T) {
 				Name:  "web",
 				Image: "nginx",
 				Unit: &types.ResourceUnit{
-					CPU:    2000,
-					Memory: 128 * uint64(math.Pow(1024, 2)),
-					Disk:   5 * uint64(math.Pow(1024, 3)),
+					CPU:    100,
+					Memory: 128 * unit.Mi,
+					Disk:   5 * unit.Gi,
 				},
-				Count: 20,
+				Count: 2,
 				Expose: []*types.ManifestServiceExpose{
 					{Port: 80, Global: true},
 				},

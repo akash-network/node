@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/provider/event"
@@ -17,6 +16,7 @@ var ErrNotRunning = errors.New("not running")
 
 type Cluster interface {
 	Reserve(types.OrderID, *types.DeploymentGroup) (Reservation, error)
+	Unreserve(types.OrderID, types.ResourceList) error
 }
 
 // Manage compute cluster for the provider.  Will eventually integrate with kubernetes, etc...
@@ -28,7 +28,9 @@ type Service interface {
 
 func NewService(ctx context.Context, session session.Session, bus event.Bus, client Client) (Service, error) {
 
-	log := session.Log().With("module", "provider-cluster")
+	log := session.Log().With("module", "provider-cluster", "cmp", "service")
+
+	lc := lifecycle.New()
 
 	sub, err := bus.Subscribe()
 	if err != nil {
@@ -43,16 +45,22 @@ func NewService(ctx context.Context, session session.Session, bus event.Bus, cli
 	}
 	log.Info("found managed deployments", "count", len(deployments))
 
+	inventory, err := newInventoryService(log, lc.ShuttingDown(), sub, client, deployments)
+	if err != nil {
+		sub.Close()
+		return nil, err
+	}
+
 	s := &service{
-		session:     session,
-		client:      client,
-		bus:         bus,
-		sub:         sub,
-		deployments: make(map[string]*managedDeployment),
-		managerch:   make(chan *deploymentManager),
-		reservech:   make(chan reserveRequest),
-		log:         log,
-		lc:          lifecycle.New(),
+		session:   session,
+		client:    client,
+		bus:       bus,
+		sub:       sub,
+		inventory: inventory,
+		managers:  make(map[string]*deploymentManager),
+		managerch: make(chan *deploymentManager),
+		log:       log,
+		lc:        lc,
 	}
 
 	go s.lc.WatchContext(ctx)
@@ -67,18 +75,13 @@ type service struct {
 	bus     event.Bus
 	sub     event.Subscriber
 
-	deployments map[string]*managedDeployment
+	inventory *inventoryService
 
-	reservech chan reserveRequest
+	managers  map[string]*deploymentManager
 	managerch chan *deploymentManager
 
 	log log.Logger
 	lc  lifecycle.Lifecycle
-}
-
-type managedDeployment struct {
-	reservation Reservation
-	manager     *deploymentManager
 }
 
 func (s *service) Close() error {
@@ -91,31 +94,12 @@ func (s *service) Done() <-chan struct{} {
 }
 
 func (s *service) Reserve(order types.OrderID, group *types.DeploymentGroup) (Reservation, error) {
-	ch := make(chan reserveResponse, 1)
-	req := reserveRequest{
-		order: order,
-		group: group,
-		ch:    ch,
-	}
-
-	select {
-	case s.reservech <- req:
-		response := <-ch
-		return response.value, response.err
-	case <-s.lc.ShuttingDown():
-		return nil, ErrNotRunning
-	}
+	return s.inventory.reserve(order, group)
 }
 
-type reserveRequest struct {
-	order types.OrderID
-	group *types.DeploymentGroup
-	ch    chan<- reserveResponse
-}
-
-type reserveResponse struct {
-	value Reservation
-	err   error
+func (s *service) Unreserve(order types.OrderID, resources types.ResourceList) error {
+	_, err := s.inventory.unreserve(order, resources)
+	return err
 }
 
 func (s *service) run(deployments []Deployment) {
@@ -123,12 +107,8 @@ func (s *service) run(deployments []Deployment) {
 	defer s.sub.Close()
 
 	for _, deployment := range deployments {
-		// TODO: recover reservation
-		key := deployment.LeaseID().OrderID().String()
-		s.deployments[key] = &managedDeployment{
-			manager:     newDeploymentManager(s, deployment.LeaseID(), deployment.ManifestGroup()),
-			reservation: newReservation(deployment.LeaseID().OrderID(), nil),
-		}
+		key := deployment.LeaseID().String()
+		s.managers[key] = newDeploymentManager(s, deployment.LeaseID(), deployment.ManifestGroup())
 	}
 
 loop:
@@ -149,99 +129,79 @@ loop:
 					break
 				}
 
-				key := ev.LeaseID.OrderID().String()
-
-				state := s.deployments[key]
-
-				if state == nil {
-					s.log.Error("lease received without reservation")
+				if _, err := s.inventory.lookup(ev.LeaseID.OrderID(), mgroup); err != nil {
+					s.log.Error("error looking up manifest", "err", err, "lease", ev.LeaseID, "group-name", mgroup.Name)
 					break
 				}
 
-				if state.manager == nil {
-					state.manager = newDeploymentManager(s, ev.LeaseID, mgroup)
+				key := ev.LeaseID.String()
+
+				if manager := s.managers[key]; manager != nil {
+					if err := manager.update(mgroup); err != nil {
+						s.log.Error("updating deployment", "err", err, "lease", ev.LeaseID, "group-name", mgroup.Name)
+					}
 					break
 				}
 
-				if err := state.manager.update(mgroup); err != nil {
-					s.log.Error("updating deployment", "err", err, "lease", ev.LeaseID)
-				}
+				manager := newDeploymentManager(s, ev.LeaseID, mgroup)
+				s.managers[key] = manager
 
 			case *event.TxCloseDeployment:
 
 				// teardown/undeploy managed deployments
 
-				for _, dm := range s.deployments {
-					if bytes.Equal(ev.Deployment, dm.reservation.OrderID().DeploymentID()) {
-						s.teardownOrder(dm.reservation.OrderID())
+				for _, manager := range s.managers {
+					if bytes.Equal(ev.Deployment, manager.lease.OrderID().DeploymentID()) {
+						s.teardownLease(manager.lease)
 					}
 				}
 
 			case *event.TxCloseFulfillment:
 
-				s.teardownOrder(ev.OrderID())
+				s.teardownLease(ev.FulfillmentID.LeaseID())
 
 			case *event.TxCloseLease:
 
-				s.teardownOrder(ev.OrderID())
+				s.teardownLease(ev.LeaseID)
 
 			}
-		case req := <-s.reservech:
-			// TODO: handle inventory
-
-			key := req.order.String()
-
-			state := s.deployments[key]
-			if state != nil {
-				s.log.Error("reservation exists", "order", req.order)
-				req.ch <- reserveResponse{nil, fmt.Errorf("reservation exists")}
-				break
-			}
-
-			state = &managedDeployment{
-				reservation: newReservation(req.order, req.group),
-			}
-
-			s.deployments[key] = state
-
-			req.ch <- reserveResponse{state.reservation, nil}
 
 		case dm := <-s.managerch:
 
-			s.log.Debug("manager done", "order", dm.lease.OrderID())
+			s.log.Debug("manager done", "lease", dm.lease)
+
+			if _, err := s.inventory.unreserve(dm.lease.OrderID(), dm.mgroup); err != nil {
+				s.log.Error("unreserving inventory", "err", err,
+					"lease", dm.lease, "group-name", dm.mgroup.Name)
+			}
 
 			// todo: unreserve resources
 
-			delete(s.deployments, dm.lease.OrderID().String())
+			delete(s.managers, dm.lease.String())
 		}
 	}
 
 	s.log.Debug("draining deployment managers...")
 
-	for _, state := range s.deployments {
-		if state.manager != nil {
-			dm := <-s.managerch
-			s.log.Debug("manager done", "order", dm.lease.OrderID())
+	for _, manager := range s.managers {
+		if manager != nil {
+			manager := <-s.managerch
+			s.log.Debug("manager done", "lease", manager.lease)
 		}
 	}
 
+	<-s.inventory.done()
+
 }
 
-func (s *service) teardownOrder(oid types.OrderID) {
-	key := oid.String()
-	state := s.deployments[key]
-	if state == nil {
+func (s *service) teardownLease(lid types.LeaseID) {
+	key := lid.String()
+	manager := s.managers[key]
+	if manager == nil {
 		return
 	}
 
-	s.log.Debug("unregistering order", "order", oid)
-
-	if state.manager == nil {
-		delete(s.deployments, key)
-		return
-	}
-
-	if err := state.manager.teardown(); err != nil {
-		s.log.Error("tearing down deployment", "err", err, "order", oid)
+	if err := manager.teardown(); err != nil {
+		s.log.Error("tearing down lease deployment", "err", err, "lease", lid)
 	}
 }
