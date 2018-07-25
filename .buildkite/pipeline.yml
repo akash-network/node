@@ -1,9 +1,11 @@
 env:
   AKASH_GO_PACKAGE: "github.com/ovrclk/akash"
-  TEST_DELAY_THREAD_START: 20ms
+  TEST_DELAY_THREAD_START: 60ms
 steps:
 
   - name: ":ferris_wheel: tests"
+    retry:
+      automatic: true
     plugins:
       golang#v2.0.0:
         version: "1.10"
@@ -13,6 +15,8 @@ steps:
     command: .buildkite/script/test.sh test
 
   - name: ":popcorn: coverage"
+    retry:
+      automatic: true
     plugins:
       golang#v2.0.0:
         version: "1.10"
@@ -45,6 +49,8 @@ steps:
     command: .buildkite/script/test.sh lint
 
   - name: ":satellite: golang with rc"
+    retry:
+      automatic: true
     branches: master
     plugins:
       golang#v2.0.0:
@@ -55,6 +61,8 @@ steps:
     command: .buildkite/script/test.sh test-lite
 
   - name: ":wilted_flower: golang with 1.9"
+    retry:
+      automatic: true
     branches: master
     plugins:
       golang#v2.0.0:
