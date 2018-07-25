@@ -64,3 +64,5 @@ import:
 - package: k8s.io/metrics
 - package: github.com/caarlos0/env
   version: ^3.3.0
+- package: github.com/blang/semver
+  version: ^3.5.1
