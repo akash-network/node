@@ -43,11 +43,12 @@ import:
   - trees/avltree
 - package: github.com/boz/go-lifecycle
 - package: k8s.io/client-go
-  version: ^7.0.0
+  # version: ^8.0.0
   subpackages:
   - '...'
 - package: k8s.io/apiextensions-apiserver
 - package: k8s.io/apimachinery
+  # version: 'kubernetes-1.11.1'
   subpackages:
   - '...'
 - package: github.com/googleapis/gnostic
@@ -62,3 +63,4 @@ import:
 - package: github.com/hashicorp/golang-lru
 - package: github.com/grpc-ecosystem/grpc-gateway
   version: ^1.4.1
+- package: k8s.io/metrics

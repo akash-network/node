@@ -299,9 +299,6 @@ func (c *client) nodeIsActive(node *corev1.Node) bool {
 
 				issues++
 			}
-
-		case corev1.NodeKubeletConfigOk:
-			// ignored
 		}
 	}
 
