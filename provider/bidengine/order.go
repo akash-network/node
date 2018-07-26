@@ -245,26 +245,42 @@ func (o *order) shouldBid(group *types.DeploymentGroup) bool {
 	var (
 		cpu   int64
 		mem   int64
+		disk  int64
 		price int64
 	)
 	for _, rg := range group.GetResources() {
 		cpu += int64(rg.Unit.CPU * rg.Count)
 		mem += int64(rg.Unit.Memory * uint64(rg.Count))
+		disk += int64(rg.Unit.Disk * uint64(rg.Count))
 		price += int64(rg.Price)
 	}
 
 	// requesting too much cpu?
-	if cpu > int64(o.config.FulfillmentCPUMax) || cpu <= 0 {
+	if cpu > o.config.FulfillmentCPUMax || cpu <= 0 {
 		o.log.Info("unable to fulfill: cpu request too high",
 			"cpu-requested", cpu)
 		return false
 	}
 
+	// requesting too much memory?
+	if mem > o.config.FulfillmentMemoryMax || mem <= 0 {
+		o.log.Info("unable to fulfill: memory request too high",
+			"memory-requested", mem)
+		return false
+	}
+
+	// requesting too much disk?
+	if disk > o.config.FulfillmentDiskMax || disk <= 0 {
+		o.log.Info("unable to fulfill: disk request too high",
+			"disk-requested", disk)
+		return false
+	}
+
 	// price max too low?
-	if price*unit.Gi < mem*int64(o.config.FulfillmentMemPriceMin) {
+	if price*unit.Gi < mem*o.config.FulfillmentMemPriceMin {
 		o.log.Info("unable to fulfill: price too low",
 			"max-price", price,
-			"min-price", mem*int64(o.config.FulfillmentMemPriceMin)/unit.Gi)
+			"min-price", mem*o.config.FulfillmentMemPriceMin/unit.Gi)
 		return false
 	}
 
@@ -272,6 +288,7 @@ func (o *order) shouldBid(group *types.DeploymentGroup) bool {
 }
 
 func (o *order) calculatePrice(resources types.ResourceList) uint64 {
+
 	// TODO: catch overflow
 	var (
 		mem  int64

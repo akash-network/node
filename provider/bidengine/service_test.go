@@ -163,7 +163,7 @@ func makeDeploymentGroup(daddr []byte, nonce uint64) *types.DeploymentGroup {
 	runit := types.ResourceUnit{
 		CPU:    500,
 		Memory: 256 * unit.Mi,
-		Disk:   5 * unit.Gi,
+		Disk:   1 * unit.Gi,
 	}
 
 	rgroup := types.ResourceGroup{

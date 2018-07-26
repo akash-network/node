@@ -1,8 +1,10 @@
 package bidengine
 
 type config struct {
-	FulfillmentCPUMax uint `env:"AKASH_PROVIDER_MAX_FULFILLMENT_CPU" envDefault:"1000"`
+	FulfillmentCPUMax    int64 `env:"AKASH_PROVIDER_FULFILLMENT_CPU_MAX" envDefault:"1000"`
+	FulfillmentMemoryMax int64 `env:"AKASH_PROVIDER_FULFILLMENT_MEMORY_MAX" envDefault:"1073741824"` // 1Gi
+	FulfillmentDiskMax   int64 `env:"AKASH_PROVIDER_FULFILLMENT_DISK_MAX" envDefault:"5368709120"`   // 5Gi
 
-	FulfillmentMemPriceMin uint `env:"AKASH_PROVIDER_MEM_PRICE_MIN" envDefault:"50"`
-	FulfillmentMemPriceMax uint `env:"AKASH_PROVIDER_MEM_PRICE_MAX" envDefault:"150"`
+	FulfillmentMemPriceMin int64 `env:"AKASH_PROVIDER_MEM_PRICE_MIN" envDefault:"50"`
+	FulfillmentMemPriceMax int64 `env:"AKASH_PROVIDER_MEM_PRICE_MAX" envDefault:"150"`
 }
