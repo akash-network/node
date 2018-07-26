@@ -23,6 +23,7 @@ type Cluster interface {
 type Service interface {
 	Cluster
 	Close() error
+	Ready() <-chan struct{}
 	Done() <-chan struct{}
 }
 
@@ -91,6 +92,10 @@ func (s *service) Close() error {
 
 func (s *service) Done() <-chan struct{} {
 	return s.lc.Done()
+}
+
+func (s *service) Ready() <-chan struct{} {
+	return s.inventory.ready()
 }
 
 func (s *service) Reserve(order types.OrderID, group *types.DeploymentGroup) (Reservation, error) {

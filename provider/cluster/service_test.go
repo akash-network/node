@@ -28,6 +28,7 @@ func TestService_Reserve(t *testing.T) {
 
 	c, err := cluster.NewService(ctx, session, bus, cluster.NullClient())
 	require.NoError(t, err)
+	testutil.WaitReady(t, c.Ready())
 
 	group := testutil.DeploymentGroup(testutil.DeploymentAddress(t), 1)
 	order := testutil.Order(group.DeploymentID(), group.Seq, 1)
@@ -114,6 +115,7 @@ func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
 
 	c, err := cluster.NewService(ctx, providerSession(t), bus, client)
 	require.NoError(t, err)
+	testutil.WaitReady(t, c.Ready())
 
 	testutil.SleepForThreadStart(t)
 

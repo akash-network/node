@@ -2,8 +2,11 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/caarlos0/env"
 	"github.com/ovrclk/akash/provider/bidengine"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/event"
@@ -20,6 +23,11 @@ type Service interface {
 // Simple wrapper around various services needed for running a provider.
 func NewService(ctx context.Context, session session.Session, bus event.Bus, cclient cluster.Client) (Service, error) {
 
+	config := config{}
+	if err := env.Parse(&config); err != nil {
+		return nil, err
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 
 	session = session.ForModule("provider-service")
@@ -28,6 +36,15 @@ func NewService(ctx context.Context, session session.Session, bus event.Bus, ccl
 	if err != nil {
 		cancel()
 		return nil, err
+	}
+
+	select {
+	case <-cluster.Ready():
+	case <-time.After(config.ClusterWaitReadyDuration):
+		session.Log().Error("timeout waiting for cluster ready")
+		cancel()
+		<-cluster.Done()
+		return nil, fmt.Errorf("timeout waiting for cluster ready")
 	}
 
 	bidengine, err := bidengine.NewService(ctx, session, cluster, bus)

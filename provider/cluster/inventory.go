@@ -28,6 +28,8 @@ type inventoryService struct {
 	reservech   chan inventoryRequest
 	unreservech chan inventoryRequest
 
+	readych chan struct{}
+
 	log log.Logger
 	lc  lifecycle.Lifecycle
 }
@@ -50,6 +52,7 @@ func newInventoryService(log log.Logger,
 		lookupch:    make(chan inventoryRequest),
 		reservech:   make(chan inventoryRequest),
 		unreservech: make(chan inventoryRequest),
+		readych:     make(chan struct{}),
 		log:         log.With("cmp", "inventory-service"),
 		lc:          lifecycle.New(),
 	}
@@ -68,6 +71,10 @@ func newInventoryService(log log.Logger,
 
 func (is *inventoryService) done() <-chan struct{} {
 	return is.lc.Done()
+}
+
+func (is *inventoryService) ready() <-chan struct{} {
+	return is.readych
 }
 
 func (is *inventoryService) lookup(order types.OrderID, resources types.ResourceList) (Reservation, error) {
@@ -141,6 +148,7 @@ func (is *inventoryService) run(reservations []*reservation) {
 	defer t.Stop()
 
 	var inventory []Node
+	ready := false
 	runch := is.runCheck()
 
 loop:
@@ -242,6 +250,12 @@ loop:
 			if err := res.Error(); err != nil {
 				is.log.Error("checking inventory", "err", err)
 				break
+			}
+
+			if !ready {
+				is.log.Debug("inventory ready")
+				ready = true
+				close(is.readych)
 			}
 
 			inventory = res.Value().([]Node)
