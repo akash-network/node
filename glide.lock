@@ -1,6 +1,8 @@
-hash: e9cbd88ff82355128afbcb6822163395b3e4441a86f0dd3e3ee25e7195d55734
-updated: 2018-07-25T14:52:08.920853867-07:00
+hash: 331591a3d80cf1be2293f7cfcc0867077c81f29ec2b6c40da5107cdcee68b69f
+updated: 2018-07-25T16:31:39.857735966-07:00
 imports:
+- name: github.com/blang/semver
+  version: 2ee87856327ba09384cabd113bc6b5d174e9ec0f
 - name: github.com/boz/go-lifecycle
   version: c39961a5a0ce6b046f15d62bcbed79701666a9e0
 - name: github.com/btcsuite/btcd

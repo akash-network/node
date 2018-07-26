@@ -14,7 +14,7 @@ An example deployment configuration can be found [here](deployment.yml).
 
 ### version
 
-Indicates version of Akash configuration file.  Currently only `"0.1"` is accepted.
+Indicates version of Akash configuration file.  Currently only `"1.0"` is accepted.
 
 ### include
 

@@ -4,11 +4,16 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/blang/semver"
 	"github.com/ovrclk/akash/types"
 )
 
+var (
+	allowedVersion = semver.MustParse("1.0.0")
+)
+
 type v1 struct {
-	Version  string   `yaml:",omitempty"`
+	Version  string
 	Include  []string `yaml:",omitempty"`
 	Services map[string]v1Service
 	Profiles v1Profiles
@@ -78,6 +83,27 @@ type v1ServiceDeployment struct {
 }
 
 func (sdl *v1) Validate() error {
+
+	if sdl.Version == "" {
+		return fmt.Errorf("invalid version: '%v' required", allowedVersion)
+	}
+
+	vsn, err := semver.ParseTolerant(sdl.Version)
+	if err != nil {
+		return err
+	}
+
+	if !allowedVersion.EQ(vsn) {
+		return fmt.Errorf("invalid version: '%v' required", allowedVersion)
+	}
+
+	if _, err := sdl.Manifest(); err != nil {
+		return err
+	}
+
+	if _, err := sdl.DeploymentGroups(); err != nil {
+		return err
+	}
 	return nil
 }
 

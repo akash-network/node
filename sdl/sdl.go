@@ -24,5 +24,8 @@ func ReadFile(path string) (SDL, error) {
 func Read(buf []byte) (SDL, error) {
 	// TODO: handle versions
 	obj := &v1{}
-	return obj, yaml.Unmarshal(buf, obj)
+	if err := yaml.Unmarshal(buf, obj); err != nil {
+		return nil, err
+	}
+	return obj, obj.Validate()
 }
