@@ -1,3 +1,6 @@
+---
+version: "1.0"
+
 services:
   webapp:
     image: quay.io/ovrclk/demo-app

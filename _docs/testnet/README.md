@@ -12,6 +12,11 @@ Finally, some warnings. The Akash testnet is at an alpha-level stage of developm
 ### Intended users
 Fundamentally, the Akash testnet is a deployment platform with a CLI and intended for relatively sophisticated users.  If you are comfortable managing instances via the AWS API and can build and deploy a Docker container, you will find the Akash testnet easy to use.  If not, please feel free to give it a shot, but you might find it confusing.
 
+### Installing the Akash client
+The Akash client has been tested on Linux and MacOS. It *should* also work on Windows, but we haven't tested it - let us know if you try!
+
+Instructions for installing the Akash client binary [may be found here](https://github.com/ovrclk/akash/#installing).
+
 ### Getting help
 First of course, run `akash -h` and RTFM, then please feel free to ask questions in our Telegram channel https://t.me/AkashNW.
 
@@ -69,7 +74,7 @@ In this step, you post your deployment, the Akash marketplace matches you with a
  $ akash key list
  $ akash deploy <deployment file path> -k <key name> #creates and sends the deployment
  ```
- The CLI client will print the deployment address, bid, lease, and deployment data to console, for example:
+ The client will print the deployment address, bid, lease, and deployment data to console, for example:
  ```
 $ akash deployment create ./testnet-deployment.yml -k my-key-name
 66809b2c537fcdd79bc6b5b6d28bbf2d51fbe59133a4ba0119b9e0160ab16357
@@ -126,17 +131,18 @@ Closing deployment
 ```
 
 
-### Testnet limitations
+## Testnet constraints
 
-#### Supported regions
+### Supported regions
 These regions are currently supported by the testnet. More will come online, so check back frequently.
- - SJC (San Jose, California, USA)
+ - AMS (Amsterdam, Netherlands)
  - NRT (Tokyo, Japan)
+ - SJC (San Jose, California, USA)
 
-#### Uptime and availability
+### Uptime and availability
 The Akash testnet is at an alpha-level stage of development and so **not intended for production use.**  New functionality and capacity is being added constantly, but is always presented to you as-is, so use at your own risk. Use is at our discretion and we reserve the right to bring down deployments or to re-initialize the chain at any time for any reason. 
 
-#### Resource consumption
+### Resource consumption
 TODO
 you are limited in such and such a way - a deployment that exceeds those limits will...
 
