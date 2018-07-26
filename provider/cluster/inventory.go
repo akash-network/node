@@ -314,11 +314,14 @@ func reservationAdjustInventory(prevInventory []Node, reservation *reservation) 
 		for _, resource := range resources {
 
 			for ; resource.Count > 0; resource.Count-- {
-				if available.CPU < resource.Unit.CPU || available.Memory < resource.Unit.Memory {
+				if available.CPU < resource.Unit.CPU ||
+					available.Memory < resource.Unit.Memory ||
+					available.Disk < resource.Unit.Disk {
 					break
 				}
 				available.CPU -= resource.Unit.CPU
 				available.Memory -= resource.Unit.Memory
+				available.Disk -= resource.Unit.Disk
 			}
 
 			if resource.Count > 0 {

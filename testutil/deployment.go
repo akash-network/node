@@ -2,7 +2,6 @@ package testutil
 
 import (
 	"fmt"
-	"math/rand"
 	"strconv"
 	"testing"
 
@@ -10,17 +9,10 @@ import (
 	"github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
+	"github.com/ovrclk/akash/types/unit"
 	"github.com/stretchr/testify/assert"
 	crypto "github.com/tendermint/go-crypto"
 )
-
-func RandUint32() uint32 {
-	return uint32(rand.Int31n(100) + 1)
-}
-
-func RandUint64() uint64 {
-	return uint64(rand.Int63n(100) + 1)
-}
 
 func CreateDeployment(t *testing.T, st state.State, app apptypes.Application, account *types.Account, key crypto.PrivKey, nonce uint64) (*types.Deployment, *types.DeploymentGroups) {
 	deployment := Deployment(account.Address, nonce)
@@ -104,39 +96,45 @@ func Deployment(tenant base.Bytes, nonce uint64, version ...[]byte) *types.Deplo
 	}
 }
 
-func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGroups {
-	orderTTL := int64(5)
-	// nonce++
-
-	runit := types.ResourceUnit{
-		CPU:    RandUint32(),
-		Memory: RandUint64(),
-		Disk:   RandUint64(),
+func ResourceUnit() types.ResourceUnit {
+	return types.ResourceUnit{
+		CPU:    500,
+		Memory: 256 * unit.Mi,
+		Disk:   1 * unit.Gi,
 	}
+}
 
-	rgroup := types.ResourceGroup{
-		Unit:  runit,
-		Count: uint32(rand.Intn(5) + 1),
-		Price: RandUint64(),
+func ResourceGroup() types.ResourceGroup {
+	return types.ResourceGroup{
+		Unit:  ResourceUnit(),
+		Count: 2,
+		Price: 35,
 	}
+}
 
+func DeploymentGroup(daddr []byte, nonce uint64) *types.DeploymentGroup {
+	const orderTTL = int64(5)
+
+	rgroup := ResourceGroup()
 	pattr := types.ProviderAttribute{
 		Name:  "region",
 		Value: "us-west",
 	}
 
-	group := &types.DeploymentGroup{
+	return &types.DeploymentGroup{
 		Name: strconv.FormatUint(nonce, 10),
 		DeploymentGroupID: types.DeploymentGroupID{
-			Deployment: deployment,
+			Deployment: daddr,
 			Seq:        nonce,
 		},
 		Resources:    []types.ResourceGroup{rgroup},
 		Requirements: []types.ProviderAttribute{pattr},
 		OrderTTL:     orderTTL,
 	}
+}
 
-	groups := []*types.DeploymentGroup{group}
-
-	return &types.DeploymentGroups{Items: groups}
+func DeploymentGroups(deployment base.Bytes, nonce uint64) *types.DeploymentGroups {
+	return &types.DeploymentGroups{
+		Items: []*types.DeploymentGroup{DeploymentGroup(deployment, nonce)},
+	}
 }

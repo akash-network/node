@@ -29,7 +29,7 @@ func TestService_Reserve(t *testing.T) {
 	c, err := cluster.NewService(ctx, session, bus, cluster.NullClient())
 	require.NoError(t, err)
 
-	group := testutil.DeploymentGroups(testutil.DeploymentAddress(t), 1).Items[0]
+	group := testutil.DeploymentGroup(testutil.DeploymentAddress(t), 1)
 	order := testutil.Order(group.DeploymentID(), group.Seq, 1)
 
 	reservation, err := c.Reserve(order.OrderID, group)
@@ -71,7 +71,7 @@ func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
 
 	deployment := testutil.Deployment(testutil.DeploymentAddress(t), 1)
 
-	group := testutil.DeploymentGroups(deployment.Address, 2).Items[0]
+	group := testutil.DeploymentGroup(deployment.Address, 2)
 	order := testutil.Order(deployment.Address, group.Seq, 3)
 
 	lease := testutil.Lease(testutil.Address(t), order.Deployment, order.Group, order.Seq, 10)

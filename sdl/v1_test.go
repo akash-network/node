@@ -44,7 +44,7 @@ func Test_v1_Parse_simple(t *testing.T) {
 		Unit: types.ResourceUnit{
 			CPU:    100,
 			Memory: 128 * unit.Mi,
-			Disk:   5 * unit.Gi,
+			Disk:   1 * unit.Gi,
 		},
 	}, group.GetResources()[0])
 
@@ -62,7 +62,7 @@ func Test_v1_Parse_simple(t *testing.T) {
 				Unit: &types.ResourceUnit{
 					CPU:    100,
 					Memory: 128 * unit.Mi,
-					Disk:   5 * unit.Gi,
+					Disk:   1 * unit.Gi,
 				},
 				Count: 2,
 				Expose: []*types.ManifestServiceExpose{

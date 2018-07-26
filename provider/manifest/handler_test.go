@@ -60,7 +60,7 @@ func withHandler(t *testing.T, fn testfn) {
 	tenant := info.Address()
 
 	deployment := testutil.Deployment(tenant, 1)
-	dgroup := testutil.DeploymentGroups(deployment.Address, 2).Items[0]
+	dgroup := testutil.DeploymentGroup(deployment.Address, 2)
 	order := testutil.Order(deployment.Address, dgroup.Seq, 3)
 
 	providerID := testutil.Address(t)

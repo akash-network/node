@@ -62,6 +62,7 @@ const (
 	// 5 CPUs, 5Gi memory for null client.
 	nullClientCPU    = 5000
 	nullClientMemory = 32 * unit.Gi
+	nullClientDisk   = 512 * unit.Gi
 )
 
 type nullClient struct {
@@ -137,6 +138,7 @@ func (c *nullClient) Inventory() ([]Node, error) {
 		NewNode("solo", types.ResourceUnit{
 			CPU:    nullClientCPU,
 			Memory: nullClientMemory,
+			Disk:   nullClientDisk,
 		}),
 	}, nil
 }
