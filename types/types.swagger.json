@@ -205,6 +205,20 @@
     }
   },
   "definitions": {
+    "typesAkashVersion": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        }
+      }
+    },
     "typesDeployRespone": {
       "type": "object",
       "properties": {
@@ -390,6 +404,9 @@
         "code": {
           "type": "integer",
           "format": "int32"
+        },
+        "version": {
+          "$ref": "#/definitions/typesAkashVersion"
         },
         "message": {
           "type": "string"

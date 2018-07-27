@@ -142,8 +142,9 @@ func (app *app) ActivateMarket(actor market.Actor, bus *tmtmtypes.EventBus) erro
 }
 
 func (app *app) Info(req tmtypes.RequestInfo) tmtypes.ResponseInfo {
+	vsn, _ := json.Marshal(version.Get())
 	return tmtypes.ResponseInfo{
-		Data:             "{}",
+		Data:             string(vsn),
 		Version:          version.Version(),
 		LastBlockHeight:  app.commitState.Version(),
 		LastBlockAppHash: app.commitState.Hash(),

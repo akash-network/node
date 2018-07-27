@@ -12,6 +12,7 @@ import (
 	"github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/manifest"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/version"
 	"github.com/tendermint/tmlibs/log"
 	"golang.org/x/net/context"
 	"golang.org/x/net/netutil"
@@ -58,6 +59,7 @@ func RunServer(ctx context.Context, log log.Logger, network, port string, handle
 func (s server) Status(ctx context.Context, req *types.Empty) (*types.ServerStatus, error) {
 	return &types.ServerStatus{
 		Code:    http.StatusOK,
+		Version: version.Get(),
 		Message: "OK",
 	}, nil
 }

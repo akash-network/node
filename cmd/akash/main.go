@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ovrclk/akash/cmd/akash/query"
+	"github.com/ovrclk/akash/cmd/common"
 )
 
 func main() {
@@ -19,6 +20,7 @@ func main() {
 	root.AddCommand(statusCommand())
 	root.AddCommand(marketplaceCommand())
 	root.AddCommand(logsCommand())
+	root.AddCommand(common.VersionCommand())
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)

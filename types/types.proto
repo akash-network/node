@@ -400,9 +400,16 @@ service Cluster {
 
 message Empty{}
 
+message AkashVersion {
+  string version = 1;
+  string commit  = 2;
+  string date    = 3;
+}
+
 message ServerStatus {
-  int32 code = 1;
-  string message = 2;
+  int32        code    = 1;
+  AkashVersion version = 2 [(gogoproto.nullable) = false];
+  string       message = 3;
 }
 
 message DeployRespone {

@@ -6,6 +6,11 @@ IMAGE_BINS := _build/akash _build/akashd
 
 IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 
+BUILD_FLAGS = -ldflags \
+							"-X github.com/ovrclk/akash/version.version=$(shell git rev-parse --abbrev-ref HEAD) \
+					     -X github.com/ovrclk/akash/version.commit=$(shell git rev-parse HEAD) \
+					     -X github.com/ovrclk/akash/version.date=$(shell date -Iseconds)"
+
 all: build bins
 
 bins: $(BINS)
@@ -14,14 +19,14 @@ build:
 	go build -i $$(glide novendor)
 
 akash:
-	go build ./cmd/akash
+	go build $(BUILD_FLAGS) ./cmd/akash
 
 akashd:
-	go build ./cmd/akashd
+	go build $(BUILD_FLAGS) ./cmd/akashd
 
 image-bins:
-	$(IMAGE_BUILD_ENV) go build -o _build/akash  ./cmd/akash
-	$(IMAGE_BUILD_ENV) go build -o _build/akashd ./cmd/akashd
+	$(IMAGE_BUILD_ENV) go build $(BUILD_FLAGS) -o _build/akash  ./cmd/akash
+	$(IMAGE_BUILD_ENV) go build $(BUILD_FLAGS) -o _build/akashd ./cmd/akashd
 
 image: image-bins
 	docker build --rm            \
@@ -34,8 +39,8 @@ image: image-bins
 		_build
 
 install:
-	go install ./cmd/akash
-	go install ./cmd/akashd
+	go install $(BUILD_FLAGS) ./cmd/akash
+	go install $(BUILD_FLAGS) ./cmd/akashd
 
 image-minikube:
 	eval $$(minikube docker-env) && make image
