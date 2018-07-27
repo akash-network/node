@@ -85,7 +85,7 @@ func TestVerifySig_InvalidSig(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestVerifyDeploymentTennant(t *testing.T) {
+func TestVerifyDeploymentTenant(t *testing.T) {
 	info, kmgr := testutil.NewNamedKey(t)
 	signer := testutil.Signer(t, kmgr)
 	tenant := info.Address()
@@ -100,11 +100,11 @@ func TestVerifyDeploymentTennant(t *testing.T) {
 	mani := &types.Manifest{}
 	mreq, _, err := SignManifest(mani, signer, deployment.Address)
 	require.NoError(t, err)
-	err = verifyDeploymentTennant(mreq, sess, info.Address())
+	err = verifyDeploymentTenant(mreq, sess, info.Address())
 	assert.NoError(t, err)
 }
 
-func TestVerifyDeploymentTennant_InvalidKey(t *testing.T) {
+func TestVerifyDeploymentTenant_InvalidKey(t *testing.T) {
 	info, kmgr := testutil.NewNamedKey(t)
 	signer := testutil.Signer(t, kmgr)
 	tenant := info.Address()
@@ -119,7 +119,7 @@ func TestVerifyDeploymentTennant_InvalidKey(t *testing.T) {
 	mani := &types.Manifest{}
 	mreq, _, err := SignManifest(mani, signer, deployment.Address)
 	require.NoError(t, err)
-	err = verifyDeploymentTennant(mreq, sess, info.Address())
+	err = verifyDeploymentTenant(mreq, sess, info.Address())
 	assert.NoError(t, err)
 }
 

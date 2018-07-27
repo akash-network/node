@@ -44,7 +44,7 @@ func VerifyRequest(mr *types.ManifestRequest, session session.Session) error {
 	if err != nil {
 		return err
 	}
-	if err := verifyDeploymentTennant(mr, session, address); err != nil {
+	if err := verifyDeploymentTenant(mr, session, address); err != nil {
 		return err
 	}
 	if err := verifyManifestVersion(mr, session); err != nil {
@@ -80,7 +80,7 @@ func verifySignature(mr *types.ManifestRequest) (crypto.Address, error) {
 	return key.Address(), err
 }
 
-func verifyDeploymentTennant(mr *types.ManifestRequest, session session.Session, signerAddress crypto.Address) error {
+func verifyDeploymentTenant(mr *types.ManifestRequest, session session.Session, signerAddress crypto.Address) error {
 	dep, err := session.Query().Deployment(context.TODO(), mr.Deployment)
 	if err != nil {
 		return err
