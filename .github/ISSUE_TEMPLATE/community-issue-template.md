@@ -16,6 +16,18 @@ If the matter is security related, please DM an admin on our Telegram channel at
 <!--  Bug or feature request? -->
 
 
+### Akash version
+<!-- output of:
+$ akash version
+-->
+
+
+### Akash token balance
+<!-- output of: 
+$ akash key list #returns your key names and values
+$ akash query account [key value] #returns your balance
+-->
+
 ### What happened
 
 
@@ -27,8 +39,16 @@ If the matter is security related, please DM an admin on our Telegram channel at
 
 
 ### Environment
-<!--  akashd: testnet or local?  If local, what version? 
-         akash: OS and other env info as appropriate -->
+<!--  Where are you running?
+akashd (server): testnet or local?
+akash (client): OS and other env info as appropriate 
+-->
 
 
 ### Anything else we need to know?
+<!-- For example:
+     - {deployment,lease} id as appropriate
+     - deployment.yml if appropriate
+-->
+
+
