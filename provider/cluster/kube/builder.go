@@ -9,6 +9,7 @@ import (
 
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	"github.com/ovrclk/akash/types"
+	"github.com/satori/go.uuid"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/api/extensions/v1beta1"
@@ -214,7 +215,8 @@ type ingressBuilder struct {
 }
 
 func newIngressBuilder(host string, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService, expose *types.ManifestServiceExpose) *ingressBuilder {
-	expose.Hosts = append(expose.Hosts, fmt.Sprintf("%v.%v.%v", service.Name, lid.DeploymentID(), host))
+	uid := uuid.NewV4()
+	expose.Hosts = append(expose.Hosts, fmt.Sprintf("%v.%s.%v", service.Name, uid, host))
 	return &ingressBuilder{
 		deploymentBuilder: deploymentBuilder{builder: builder{lid, group}, service: service},
 		expose:            expose,
