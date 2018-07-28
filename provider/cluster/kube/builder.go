@@ -215,7 +215,7 @@ type ingressBuilder struct {
 }
 
 func newIngressBuilder(host string, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService, expose *types.ManifestServiceExpose) *ingressBuilder {
-	uid := uuid.Must(uuid.NewV4())
+	uid := uuid.NewV4()
 	expose.Hosts = append(expose.Hosts, fmt.Sprintf("%v.%s.%v", service.Name, uid, host))
 	return &ingressBuilder{
 		deploymentBuilder: deploymentBuilder{builder: builder{lid, group}, service: service},

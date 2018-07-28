@@ -1,5 +1,5 @@
-hash: 331591a3d80cf1be2293f7cfcc0867077c81f29ec2b6c40da5107cdcee68b69f
-updated: 2018-07-25T16:31:39.857735966-07:00
+hash: 0c87ff7affe3cdef5c94810a29ab86ac5f73360aa0e41dd98ca107fbfa20c19e
+updated: 2018-07-27T19:57:05.312652522-07:00
 imports:
 - name: github.com/blang/semver
   version: 2ee87856327ba09384cabd113bc6b5d174e9ec0f
@@ -133,6 +133,8 @@ imports:
   - difflib
 - name: github.com/rcrowley/go-metrics
   version: e2704e165165ec55d062f5919b4b29494e9fa790
+- name: github.com/satori/go.uuid
+  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
   version: c155da19408a8799da419ed3eeb0cb5db0ad5dbc
 - name: github.com/spf13/afero
@@ -148,7 +150,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 3ebe029320b2676d667ae88da602a5f854788a8a
 - name: github.com/spf13/viper
-  version: d493c32b69b8c6f2377bf30bc4d70267ffbc0793
+  version: 15738813a09db5c8e5b60a19d67d3f9bd38da3a4
 - name: github.com/stretchr/objx
   version: b8b73a35e9830ae509858c10dec5866b4d5c8bff
 - name: github.com/stretchr/testify
