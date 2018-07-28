@@ -7,6 +7,7 @@ import:
   - proto
   - jsonpb
 - package: github.com/spf13/cobra
+- package: github.com/satori/go.uuid
 - package: github.com/spf13/viper
   version: master
 - package: github.com/tendermint/go-crypto
