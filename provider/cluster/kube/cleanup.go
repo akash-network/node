@@ -21,7 +21,7 @@ func cleanupStaleResources(kc kubernetes.Interface, lid types.LeaseID, group *ty
 	if err != nil {
 		return err
 	}
-	req2, err := labels.NewRequirement(akashManifestServiceLabelName, selection.Equals, []string{"true"})
+	req2, err := labels.NewRequirement(akashManagedLabelName, selection.Equals, []string{"true"})
 	if err != nil {
 		return err
 	}
