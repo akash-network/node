@@ -11,6 +11,7 @@ __t1__: Start and initialize minikube
 ```sh
 $ minikube start
 $ minikube addons enable ingress
+$ minikube addons enable metrics-server
 ```
 
 __t1__: Build binaries

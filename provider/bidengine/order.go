@@ -12,12 +12,12 @@ import (
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
 	"github.com/ovrclk/akash/util/runner"
+	"github.com/ovrclk/akash/validation"
 	"github.com/tendermint/tmlibs/log"
 )
 
 // order manages bidding and general lifecycle handling of an order.
 type order struct {
-	config      config
 	order       types.OrderID
 	fulfillment *types.Fulfillment
 
@@ -43,7 +43,6 @@ func newOrder(e *service, oid types.OrderID, fulfillment *types.Fulfillment) (*o
 	log := session.Log().With("order", oid)
 
 	order := &order{
-		config:      e.config,
 		order:       oid,
 		fulfillment: fulfillment,
 		session:     session,
@@ -241,50 +240,13 @@ func (o *order) shouldBid(group *types.DeploymentGroup) bool {
 		return false
 	}
 
-	// TODO: catch overflow
-	var (
-		cpu   int64
-		mem   int64
-		disk  int64
-		price int64
-	)
-	for _, rg := range group.GetResources() {
-		cpu += int64(rg.Unit.CPU * rg.Count)
-		mem += int64(rg.Unit.Memory * uint64(rg.Count))
-		disk += int64(rg.Unit.Disk * uint64(rg.Count))
-		price += int64(rg.Price * uint64(rg.Count))
-	}
-
-	// requesting too much cpu?
-	if cpu > o.config.FulfillmentCPUMax || cpu <= 0 {
-		o.log.Info("unable to fulfill: cpu request too high",
-			"cpu-requested", cpu)
+	if err := validation.ValidateDeploymentGroup(group); err != nil {
+		o.log.Error("unable to fulfill: group validation error",
+			"err", err)
 		return false
 	}
-
-	// requesting too much memory?
-	if mem > o.config.FulfillmentMemoryMax || mem <= 0 {
-		o.log.Info("unable to fulfill: memory request too high",
-			"memory-requested", mem)
-		return false
-	}
-
-	// requesting too much disk?
-	if disk > o.config.FulfillmentDiskMax || disk <= 0 {
-		o.log.Info("unable to fulfill: disk request too high",
-			"disk-requested", disk)
-		return false
-	}
-
-	// price max too low?
-	if price*unit.Gi < mem*o.config.FulfillmentMemPriceMin {
-		o.log.Info("unable to fulfill: price too low",
-			"max-price", price,
-			"min-price", mem*o.config.FulfillmentMemPriceMin/unit.Gi)
-		return false
-	}
-
 	return true
+
 }
 
 func (o *order) calculatePrice(resources types.ResourceList) uint64 {
@@ -295,13 +257,15 @@ func (o *order) calculatePrice(resources types.ResourceList) uint64 {
 		rmax int64
 	)
 
+	cfg := validation.Config()
+
 	for _, group := range resources.GetResources() {
 		rmax += int64(group.Price * uint64(group.Count))
 		mem += int64(group.Unit.Memory * uint64(group.Count))
 	}
 
-	cmin := uint64(float64(mem) * float64(o.config.FulfillmentMemPriceMin) / float64(unit.Gi))
-	cmax := uint64(float64(mem) * float64(o.config.FulfillmentMemPriceMax) / float64(unit.Gi))
+	cmin := uint64(float64(mem) * float64(cfg.MinGroupMemPrice) / float64(unit.Gi))
+	cmax := uint64(float64(mem) * float64(cfg.MaxGroupMemPrice) / float64(unit.Gi))
 
 	if cmax > uint64(rmax) {
 		cmax = uint64(rmax)
