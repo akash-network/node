@@ -11,16 +11,13 @@ import (
 	"github.com/tendermint/tmlibs/log"
 )
 
-const (
-	inventoryResourcePollPeriod = time.Second
-)
-
 var (
 	errNotFound             = errors.New("not found")
 	ErrInsufficientCapacity = errors.New("insufficient capacity")
 )
 
 type inventoryService struct {
+	config config
 	client Client
 	sub    event.Subscriber
 
@@ -34,7 +31,9 @@ type inventoryService struct {
 	lc  lifecycle.Lifecycle
 }
 
-func newInventoryService(log log.Logger,
+func newInventoryService(
+	config config,
+	log log.Logger,
 	donech <-chan struct{},
 	sub event.Subscriber,
 	client Client,
@@ -47,6 +46,7 @@ func newInventoryService(log log.Logger,
 	}
 
 	is := &inventoryService{
+		config:      config,
 		client:      client,
 		sub:         sub,
 		lookupch:    make(chan inventoryRequest),
@@ -151,6 +151,8 @@ func (is *inventoryService) run(reservations []*reservation) {
 	ready := false
 	runch := is.runCheck()
 
+	var fetchCount uint
+
 loop:
 	for {
 		select {
@@ -245,7 +247,7 @@ loop:
 			// inventory check returned
 
 			runch = nil
-			t.Reset(inventoryResourcePollPeriod)
+			t.Reset(is.config.InventoryResourcePollPeriod)
 
 			if err := res.Error(); err != nil {
 				is.log.Error("checking inventory", "err", err)
@@ -259,17 +261,18 @@ loop:
 			}
 
 			inventory = res.Value().([]Node)
-
-			is.log.Debug("inventory fetched", "nodes", len(inventory))
-
-			for _, node := range inventory {
-				available := node.Available()
-				is.log.Debug("node resources",
-					"node-id", node.ID(),
-					"available-cpu", available.CPU,
-					"available-memory", available.Memory,
-					"available-disk", available.Disk)
+			if fetchCount%is.config.InventoryResourceDebugFrequency == 0 {
+				is.log.Debug("inventory fetched", "nodes", len(inventory))
+				for _, node := range inventory {
+					available := node.Available()
+					is.log.Debug("node resources",
+						"node-id", node.ID(),
+						"available-cpu", available.CPU,
+						"available-memory", available.Memory,
+						"available-disk", available.Disk)
+				}
 			}
+			fetchCount++
 		}
 	}
 

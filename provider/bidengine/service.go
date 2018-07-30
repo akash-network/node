@@ -19,8 +19,11 @@ type Service interface {
 // Service handles bidding on orders.
 func NewService(ctx context.Context, session session.Session, cluster cluster.Cluster, bus event.Bus) (Service, error) {
 
+	session = session.ForModule("bidengine-service")
+
 	config := config{}
 	if err := env.Parse(&config); err != nil {
+		session.Log().Error("parsing config", "err", err)
 		return nil, err
 	}
 
@@ -28,8 +31,6 @@ func NewService(ctx context.Context, session session.Session, cluster cluster.Cl
 	if err != nil {
 		return nil, err
 	}
-
-	session = session.ForModule("bidengine-service")
 
 	existingOrders, err := queryExistingOrders(ctx, session)
 	if err != nil {

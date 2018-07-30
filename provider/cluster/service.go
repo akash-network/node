@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/caarlos0/env"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
@@ -31,6 +32,12 @@ func NewService(ctx context.Context, session session.Session, bus event.Bus, cli
 
 	log := session.Log().With("module", "provider-cluster", "cmp", "service")
 
+	config := config{}
+	if err := env.Parse(&config); err != nil {
+		log.Error("parsing config", "err", err)
+		return nil, err
+	}
+
 	lc := lifecycle.New()
 
 	sub, err := bus.Subscribe()
@@ -45,8 +52,11 @@ func NewService(ctx context.Context, session session.Session, bus event.Bus, cli
 		return nil, err
 	}
 	log.Info("found managed deployments", "count", len(deployments))
+	for _, deployment := range deployments {
+		log.Debug("deployment", "lease", deployment.LeaseID(), "mgroup", deployment.ManifestGroup().Name)
+	}
 
-	inventory, err := newInventoryService(log, lc.ShuttingDown(), sub, client, deployments)
+	inventory, err := newInventoryService(config, log, lc.ShuttingDown(), sub, client, deployments)
 	if err != nil {
 		sub.Close()
 		return nil, err

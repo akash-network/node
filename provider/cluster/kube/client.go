@@ -133,6 +133,11 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 		return err
 	}
 
+	if err := cleanupStaleResources(c.kc, lid, group); err != nil {
+		c.log.Error("cleaning stale resources", "err", err, "lease", lid)
+		return err
+	}
+
 	for _, service := range group.Services {
 		if err := applyDeployment(c.kc, newDeploymentBuilder(lid, group, service)); err != nil {
 			c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)

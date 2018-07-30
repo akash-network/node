@@ -29,13 +29,14 @@ message TxPayload {
   oneof payload {
     TxSend                   txSend                   = 2;
     TxCreateDeployment       txCreateDeployment       = 3;
-    TxCreateOrder            txCreateOrder            = 4;
-    TxCreateFulfillment      txCreateFulfillment      = 5;
-    TxCreateLease            txCreateLease            = 6;
-    TxCreateProvider         txCreateProvider         = 7;
-    TxCloseDeployment        txCloseDeployment        = 8;
-    TxCloseFulfillment       txCloseFulfillment       = 9;
-    TxCloseLease             txCloseLease             = 10;
+    TxUpdateDeployment       txUpdateDeployment       = 4;
+    TxCreateOrder            txCreateOrder            = 5;
+    TxCreateFulfillment      txCreateFulfillment      = 6;
+    TxCreateLease            txCreateLease            = 7;
+    TxCreateProvider         txCreateProvider         = 8;
+    TxCloseDeployment        txCloseDeployment        = 9;
+    TxCloseFulfillment       txCloseFulfillment       = 10;
+    TxCloseLease             txCloseLease             = 11;
   }
 }
 /* END GLOBAL */
@@ -83,7 +84,7 @@ message TxCreateProvider {
 /* BEGIN EXCHANGE */
 message ResourceUnit {
   option (gogoproto.compare) = true;
-  uint32 CPU    = 1;
+  uint32 CPU    = 1 [(gogoproto.jsontag)="cpu"];
   uint64 memory = 2;
   uint64 disk   = 3;
 }
@@ -169,6 +170,11 @@ message TxCreateDeployment {
   int64 orderTTL = 3;
   bytes version = 4 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
   repeated GroupSpec groups = 5;
+}
+
+message TxUpdateDeployment {
+  bytes deployment = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes version    = 2 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 }
 
 message TxCloseDeployment {
@@ -408,7 +414,7 @@ message AkashVersion {
 
 message ServerStatus {
   int32        code    = 1;
-  AkashVersion version = 2 [(gogoproto.nullable) = false];
+  AkashVersion version = 2;
   string       message = 3;
 }
 

@@ -144,5 +144,5 @@ clean:
 	gofmt \
 	docs \
 	clean \
-	kubetypes \
+	kubetypes gentypes $(PROTO_FILES) \
 	install

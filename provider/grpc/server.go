@@ -57,15 +57,16 @@ func RunServer(ctx context.Context, log log.Logger, network, port string, handle
 }
 
 func (s server) Status(ctx context.Context, req *types.Empty) (*types.ServerStatus, error) {
+	vsn := version.Get()
 	return &types.ServerStatus{
 		Code:    http.StatusOK,
-		Version: version.Get(),
+		Version: &vsn,
 		Message: "OK",
 	}, nil
 }
 
 func (s server) Deploy(ctx context.Context, req *types.ManifestRequest) (*types.DeployRespone, error) {
-	if err := s.handler.HandleManifest(req); err != nil {
+	if err := s.handler.HandleManifest(ctx, req); err != nil {
 		return nil, err
 	}
 	return &types.DeployRespone{

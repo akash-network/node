@@ -16,6 +16,7 @@ type (
 	TxCreateOrder       = types.TxCreateOrder
 	TxCreateFulfillment = types.TxCreateFulfillment
 	TxCreateLease       = types.TxCreateLease
+	TxUpdateDeployment  = types.TxUpdateDeployment
 	TxCloseDeployment   = types.TxCloseDeployment
 	TxCloseFulfillment  = types.TxCloseFulfillment
 	TxCloseLease        = types.TxCloseLease
@@ -36,6 +37,9 @@ func MarketplaceTxHandler(bus Bus) marketplace.Handler {
 			bus.Publish(tx)
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
+			bus.Publish(tx)
+		}).
+		OnTxUpdateDeployment(func(tx *types.TxUpdateDeployment) {
 			bus.Publish(tx)
 		}).
 		OnTxCloseDeployment(func(tx *types.TxCloseDeployment) {

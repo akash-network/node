@@ -1,6 +1,7 @@
 package query
 
 import (
+	"bytes"
 	"context"
 	"errors"
 
@@ -20,6 +21,7 @@ type Client interface {
 	DeploymentLeases(ctx context.Context, id []byte) (*types.Leases, error)
 
 	DeploymentGroups(ctx context.Context) (*types.DeploymentGroups, error)
+	DeploymentGroupsForDeployment(ctx context.Context, id []byte) (*types.DeploymentGroups, error)
 	DeploymentGroup(ctx context.Context, id types.DeploymentGroupID) (*types.DeploymentGroup, error)
 
 	Orders(ctx context.Context) (*types.Orders, error)
@@ -33,6 +35,7 @@ type Client interface {
 
 	TenantDeployments(ctx context.Context, tenant []byte) (*types.Deployments, error)
 	TenantLeases(ctx context.Context, tenant []byte) (*types.Leases, error)
+	ProviderLeases(ctx context.Context, provider []byte) (*types.Leases, error)
 
 	Get(ctx context.Context, path string, obj proto.Message, data []byte) error
 }
@@ -97,6 +100,26 @@ func (c *client) DeploymentGroups(ctx context.Context) (*types.DeploymentGroups,
 		return nil, err
 	}
 	return obj, nil
+}
+
+// TODO: server-side
+func (c *client) DeploymentGroupsForDeployment(ctx context.Context, id []byte) (*types.DeploymentGroups, error) {
+	obj, err := c.DeploymentGroups(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var items []*types.DeploymentGroup
+
+	for _, item := range obj.Items {
+		if bytes.Equal(item.Deployment, id) {
+			items = append(items, item)
+		}
+	}
+
+	return &types.DeploymentGroups{
+		Items: items,
+	}, nil
 }
 
 func (c *client) DeploymentGroup(ctx context.Context, id types.DeploymentGroupID) (*types.DeploymentGroup, error) {
@@ -186,6 +209,26 @@ func (c *client) TenantLeases(ctx context.Context, tenant []byte) (*types.Leases
 		return nil, err
 	}
 	return obj, nil
+}
+
+// TODO: server-side
+func (c *client) ProviderLeases(ctx context.Context, id []byte) (*types.Leases, error) {
+	obj, err := c.Leases(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var items []*types.Lease
+
+	for _, item := range obj.Items {
+		if bytes.Equal(item.Provider, id) {
+			items = append(items, item)
+		}
+	}
+
+	return &types.Leases{
+		Items: items,
+	}, nil
 }
 
 func (c *client) Get(ctx context.Context, path string, obj proto.Message, data []byte) error {

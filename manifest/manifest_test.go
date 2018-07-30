@@ -4,13 +4,10 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/ovrclk/akash/provider/session"
-	qmocks "github.com/ovrclk/akash/query/mocks"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -90,17 +87,10 @@ func TestVerifyDeploymentTenant(t *testing.T) {
 	signer := testutil.Signer(t, kmgr)
 	tenant := info.Address()
 	deployment := testutil.Deployment(tenant, 1)
-	providerID := testutil.Address(t)
-	provider := testutil.Provider(providerID, 4)
-	client := &qmocks.Client{}
-	client.On("Deployment",
-		mock.Anything,
-		[]byte(deployment.Address)).Return(deployment, nil)
-	sess := session.New(testutil.Logger(), provider, nil, client)
 	mani := &types.Manifest{}
-	mreq, _, err := SignManifest(mani, signer, deployment.Address)
+	_, _, err := SignManifest(mani, signer, deployment.Address)
 	require.NoError(t, err)
-	err = verifyDeploymentTenant(mreq, sess, info.Address())
+	err = verifyDeploymentTenant(deployment, info.Address())
 	assert.NoError(t, err)
 }
 
@@ -109,17 +99,10 @@ func TestVerifyDeploymentTenant_InvalidKey(t *testing.T) {
 	signer := testutil.Signer(t, kmgr)
 	tenant := info.Address()
 	deployment := testutil.Deployment(tenant, 1)
-	providerID := testutil.Address(t)
-	provider := testutil.Provider(providerID, 4)
-	client := &qmocks.Client{}
-	client.On("Deployment",
-		mock.Anything,
-		[]byte(deployment.Address)).Return(deployment, nil)
-	sess := session.New(testutil.Logger(), provider, nil, client)
 	mani := &types.Manifest{}
-	mreq, _, err := SignManifest(mani, signer, deployment.Address)
+	_, _, err := SignManifest(mani, signer, deployment.Address)
 	require.NoError(t, err)
-	err = verifyDeploymentTenant(mreq, sess, info.Address())
+	err = verifyDeploymentTenant(deployment, info.Address())
 	assert.NoError(t, err)
 }
 
@@ -131,16 +114,9 @@ func TestVerifyRequest(t *testing.T) {
 	version, err := Hash(mani)
 	require.NoError(t, err)
 	deployment := testutil.Deployment(tenant, 1, version)
-	providerID := testutil.Address(t)
-	provider := testutil.Provider(providerID, 4)
-	client := &qmocks.Client{}
-	client.On("Deployment",
-		mock.Anything,
-		[]byte(deployment.Address)).Return(deployment, nil)
-	sess := session.New(testutil.Logger(), provider, nil, client)
 	mreq, _, err := SignManifest(mani, signer, deployment.Address)
 	require.NoError(t, err)
-	err = VerifyRequest(mreq, sess)
+	err = VerifyRequest(mreq, deployment)
 	assert.NoError(t, err)
 }
 

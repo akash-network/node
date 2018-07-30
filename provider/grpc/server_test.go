@@ -38,7 +38,7 @@ func TestDeployManifest(t *testing.T) {
 	assert.NoError(t, err)
 
 	handler := &mocks.Handler{}
-	handler.On("HandleManifest", mock.Anything).Return(nil)
+	handler.On("HandleManifest", mock.Anything, mock.Anything).Return(nil)
 
 	client := &kmocks.Client{}
 

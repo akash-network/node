@@ -146,6 +146,10 @@ func (id LeaseID) Compare(that interface{}) int {
 	}
 }
 
+func (id LeaseID) Equal(that interface{}) bool {
+	return id.Compare(that) == 0
+}
+
 func (id LeaseID) FulfillmentID() FulfillmentID {
 	return FulfillmentID{
 		Deployment: id.Deployment,
@@ -169,4 +173,8 @@ func (id LeaseID) GroupID() DeploymentGroupID {
 
 func (id LeaseID) DeploymentID() base.Bytes {
 	return id.Deployment
+}
+
+func (r ResourceUnit) Equal(that interface{}) bool {
+	return (&r).Compare(that) == 0
 }

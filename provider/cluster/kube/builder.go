@@ -285,13 +285,18 @@ func (b *manifestBuilder) ns() string {
 }
 
 func (b *manifestBuilder) create() (*akashv1.Manifest, error) {
-	return akashv1.NewManifest(lidNS(b.lid), &b.lid, b.group)
+	return akashv1.NewManifest(lidNS(b.lid), b.lid, b.group)
 }
 
 func (b *manifestBuilder) update(obj *akashv1.Manifest) (*akashv1.Manifest, error) {
-	return akashv1.NewManifest(lidNS(b.lid), &b.lid, b.group)
+	m, err := akashv1.NewManifest(lidNS(b.lid), b.lid, b.group)
+	if err != nil {
+		return nil, err
+	}
+	obj.Spec = m.Spec
+	return obj, nil
 }
 
 func (b *manifestBuilder) name() string {
-	return b.group.Name
+	return lidNS(b.lid)
 }

@@ -57,6 +57,7 @@ func TestCreateTx(t *testing.T) {
 
 		assert.Equal(t, depl.Tenant, dep.Tenant)
 		assert.Equal(t, depl.Address, dep.Address)
+		assert.Equal(t, depl.Version, dep.Version)
 	}
 
 	{
@@ -114,6 +115,48 @@ func TestCreateTx(t *testing.T) {
 
 		assert.Equal(t, grps[0].Requirements, groups.GetItems()[0].Requirements)
 		assert.Equal(t, grps[0].Resources, groups.GetItems()[0].Resources)
+	}
+}
+
+func TestUpdateTx(t *testing.T) {
+	const groupseq = 1
+	_, cacheState := testutil.NewState(t, nil)
+	app, err := deployment.NewApp(testutil.Logger())
+	require.NoError(t, err)
+	account, key := testutil.CreateAccount(t, cacheState)
+	nonce := uint64(1)
+
+	depl, _ := testutil.CreateDeployment(t, cacheState, app, account, key, nonce)
+	nonce++
+
+	path := query.DeploymentPath(depl.Address)
+
+	{
+		resp := app.Query(cacheState, tmtypes.RequestQuery{Path: path})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, depl.Tenant, dep.Tenant)
+		assert.Equal(t, depl.Address, dep.Address)
+		assert.Equal(t, depl.Version, dep.Version)
+	}
+
+	itx := testutil.UpdateDeployment(t, cacheState, app, key, nonce, depl.Address)
+
+	{
+		resp := app.Query(cacheState, tmtypes.RequestQuery{Path: path})
+		assert.Empty(t, resp.Log)
+		require.True(t, resp.IsOK())
+
+		dep := new(types.Deployment)
+		require.NoError(t, dep.Unmarshal(resp.Value))
+
+		assert.Equal(t, depl.Tenant, dep.Tenant)
+		assert.Equal(t, depl.Address, dep.Address)
+		assert.Equal(t, itx.Version, dep.Version)
 	}
 }
 

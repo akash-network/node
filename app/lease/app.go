@@ -427,7 +427,7 @@ func (a *app) doRangeQuery(state appstate.State, tenant []byte) tmtypes.Response
 		if err != nil {
 			a.Log().Error("deployment doesn't exist for lease")
 		}
-		if bytes.Equal(deployment.Tenant, tenant) {
+		if len(tenant) == 0 || bytes.Equal(deployment.Tenant, tenant) {
 			items = append(items, lease)
 		}
 	}

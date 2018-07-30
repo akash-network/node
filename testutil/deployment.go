@@ -34,6 +34,7 @@ func CreateDeployment(t *testing.T, st state.State, app apptypes.Application, ac
 			Nonce:    nonce,
 			OrderTTL: ttl,
 			Groups:   specs,
+			Version:  Address(t),
 		},
 	}
 
@@ -58,6 +59,39 @@ func CreateDeployment(t *testing.T, st state.State, app apptypes.Application, ac
 	assert.NoError(t, err)
 
 	return deployment, &types.DeploymentGroups{Items: dgroups}
+}
+
+func UpdateDeployment(t *testing.T,
+	st state.State,
+	app apptypes.Application,
+	key crypto.PrivKey,
+	nonce uint64,
+	daddr []byte) *types.TxUpdateDeployment {
+
+	itx := &types.TxUpdateDeployment{
+		Deployment: daddr,
+		Version:    Address(t),
+	}
+
+	otx := &types.TxPayload_TxUpdateDeployment{
+		TxUpdateDeployment: itx,
+	}
+
+	ctx := apptypes.NewContext(&types.Tx{
+		Key: key.PubKey().Bytes(),
+		Payload: types.TxPayload{
+			Payload: otx,
+		},
+	})
+
+	assert.True(t, app.AcceptTx(ctx, otx))
+	cresp := app.CheckTx(st, ctx, otx)
+	assert.True(t, cresp.IsOK())
+	dresp := app.DeliverTx(st, ctx, otx)
+	assert.Len(t, dresp.Log, 0, "Log should be empty but is: %v", dresp.Log)
+	assert.True(t, dresp.IsOK())
+
+	return itx
 }
 
 func CloseDeployment(t *testing.T, st state.State, app apptypes.Application, deployment *base.Bytes, key crypto.PrivKey) {

@@ -46,6 +46,9 @@ func marketplaceMonitorHandler() marketplace.Handler {
 		OnTxCreateDeployment(func(tx *types.TxCreateDeployment) {
 			fmt.Printf("DEPLOYMENT CREATED\t%v created by %v\n", X(state.DeploymentAddress(tx.Tenant, tx.Nonce)), X(tx.Tenant))
 		}).
+		OnTxUpdateDeployment(func(tx *types.TxUpdateDeployment) {
+			fmt.Printf("DEPLOYMENT UPDATED\t%s version %v\n", tx.Deployment, tx.Version)
+		}).
 		OnTxCreateOrder(func(tx *types.TxCreateOrder) {
 			fmt.Printf("ORDER CREATED\t%v/%v/%v\n",
 				X(tx.Deployment), tx.Group, tx.Seq)

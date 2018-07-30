@@ -20,6 +20,7 @@ func TestHandler(t *testing.T) {
 		called = false
 		h.OnTxCreateProvider(nil)
 		h.OnTxCreateDeployment(nil)
+		h.OnTxUpdateDeployment(nil)
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
@@ -39,6 +40,7 @@ func TestHandler(t *testing.T) {
 		called = false
 		h.OnTxSend(nil)
 		h.OnTxCreateDeployment(nil)
+		h.OnTxUpdateDeployment(nil)
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
@@ -58,6 +60,27 @@ func TestHandler(t *testing.T) {
 		called = false
 		h.OnTxSend(nil)
 		h.OnTxCreateProvider(nil)
+		h.OnTxUpdateDeployment(nil)
+		h.OnTxCreateOrder(nil)
+		h.OnTxCreateFulfillment(nil)
+		h.OnTxCreateLease(nil)
+		h.OnTxCloseDeployment(nil)
+		h.OnTxCloseFulfillment(nil)
+		h.OnTxCloseLease(nil)
+		assert.False(t, called, "OnTxCreateDeployment")
+	}
+
+	{
+		called := false
+		h := marketplace.NewBuilder().OnTxUpdateDeployment(func(_ *types.TxUpdateDeployment) {
+			called = true
+		}).Create()
+		h.OnTxUpdateDeployment(nil)
+		assert.True(t, called, "OnTxCreateDeployment")
+		called = false
+		h.OnTxSend(nil)
+		h.OnTxCreateProvider(nil)
+		h.OnTxCreateDeployment(nil)
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
@@ -78,6 +101,7 @@ func TestHandler(t *testing.T) {
 		h.OnTxSend(nil)
 		h.OnTxCreateProvider(nil)
 		h.OnTxCreateDeployment(nil)
+		h.OnTxUpdateDeployment(nil)
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
 		h.OnTxCloseDeployment(nil)
@@ -97,6 +121,7 @@ func TestHandler(t *testing.T) {
 		h.OnTxSend(nil)
 		h.OnTxCreateProvider(nil)
 		h.OnTxCreateDeployment(nil)
+		h.OnTxUpdateDeployment(nil)
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateLease(nil)
 		h.OnTxCloseDeployment(nil)
@@ -116,6 +141,7 @@ func TestHandler(t *testing.T) {
 		h.OnTxSend(nil)
 		h.OnTxCreateProvider(nil)
 		h.OnTxCreateDeployment(nil)
+		h.OnTxUpdateDeployment(nil)
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCloseDeployment(nil)
@@ -135,6 +161,7 @@ func TestHandler(t *testing.T) {
 		h.OnTxSend(nil)
 		h.OnTxCreateProvider(nil)
 		h.OnTxCreateDeployment(nil)
+		h.OnTxUpdateDeployment(nil)
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
@@ -154,6 +181,7 @@ func TestHandler(t *testing.T) {
 		h.OnTxSend(nil)
 		h.OnTxCreateProvider(nil)
 		h.OnTxCreateDeployment(nil)
+		h.OnTxUpdateDeployment(nil)
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
@@ -173,6 +201,7 @@ func TestHandler(t *testing.T) {
 		h.OnTxSend(nil)
 		h.OnTxCreateProvider(nil)
 		h.OnTxCreateDeployment(nil)
+		h.OnTxUpdateDeployment(nil)
 		h.OnTxCreateOrder(nil)
 		h.OnTxCreateFulfillment(nil)
 		h.OnTxCreateLease(nil)
