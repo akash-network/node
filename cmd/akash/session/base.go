@@ -23,6 +23,7 @@ const (
 	defaultCodec    = "english"
 	defaultPassword = "0123456789"
 	defaultHost     = "localhost"
+	defaultNode     = "http://api.akashtest.net:80"
 )
 
 func SetupBaseCommand(cmd *cobra.Command) {

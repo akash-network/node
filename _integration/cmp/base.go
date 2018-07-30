@@ -23,8 +23,11 @@ func akashd(name string, args ...string) gx.Cmd {
 func akash_(root vars.Ref, name string, args ...string) gx.Cmd {
 	cmd := g.EXEC("akash-"+name,
 		"{{akash-path}}",
-		append([]string{"-d", root.Var()}, args...)...)
+		append([]string{"-d", root.Var()}, args...)...).
+		AddEnv("AKASH_NODE", "{{akash-node}}")
 
-	cmd.WithMeta(g.Require("akash-path", root.Name()))
+	cmd.WithMeta(g.
+		Require("akash-path", root.Name()).
+		Default("akash-node", "http://localhost:46657"))
 	return cmd
 }

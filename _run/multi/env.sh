@@ -5,8 +5,7 @@ nodeuri(){
 }
 
 akash(){
-  export AKASH_NODE=$(nodeuri)
-  _akash "$@"
+  AKASH_NODE=$(nodeuri) _akash "$@"
 }
 
 akashd(){

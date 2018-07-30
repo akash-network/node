@@ -10,7 +10,7 @@ import (
 )
 
 func AddFlagNode(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.StringP(flagNode, "n", "http://localhost:46657", "node host")
+	flags.StringP(flagNode, "n", defaultNode, "node host")
 	viper.BindPFlag(flagNode, flags.Lookup(flagNode))
 }
 
