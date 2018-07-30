@@ -119,9 +119,9 @@ func (sdl *v1) DeploymentGroups() ([]*types.GroupSpec, error) {
 				return nil, fmt.Errorf("%v.%v: no placement profile named %v", svcName, placementName, placementName)
 			}
 
-			price, ok := infra.Pricing[svcName]
+			price, ok := infra.Pricing[svcdepl.Profile]
 			if !ok {
-				return nil, fmt.Errorf("%v.%v: no pricing for service %v", svcName, placementName, svcName)
+				return nil, fmt.Errorf("%v.%v: no pricing for profile %v", svcName, placementName, svcdepl.Profile)
 			}
 
 			group := groups[placementName]

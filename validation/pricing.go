@@ -21,9 +21,11 @@ func validateResourceListPricing(config config, rlist types.ResourceList) error 
 		price += int64(resource.Price * uint64(resource.Count))
 	}
 
-	if price*unit.Gi < mem*config.MinGroupMemPrice {
+	minprice := int64(float64(mem*config.MinGroupMemPrice) / float64(unit.Gi))
+
+	if price < minprice {
 		return fmt.Errorf("group %v: price too low (%v >= %v fails)",
-			rlist.GetName(), price*unit.Gi, mem*config.MinGroupMemPrice)
+			rlist.GetName(), price, minprice)
 	}
 	return nil
 }

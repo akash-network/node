@@ -2,32 +2,29 @@
 version: "1.0"
 
 services:
-  web:
+  webapp:
     image: quay.io/ovrclk/demo-app
     expose:
       - port: 80
         as: 80
-        accept:
-          - hello.192.168.99.100.nip.io
-          - hello.192.168.99.101.nip.io
         to:
           - global: true
 
 profiles:
   compute:
     web:
-      cpu: 0.1
-      memory: 512Mi
-      disk: 1Gi
+      cpu: "100m"
+      memory: "512Mi"
+      disk: "512Mi"
   placement:
-    westcoast:
+    san-jose:
       attributes:
-        region: us-west
+        region: sjc
       pricing:
-        web: .002000
+        web: 0.000025
 
 deployment:
-  web:
-    westcoast:
+  webapp:
+    san-jose:
       profile: web
-      count: 2
+      count: 1

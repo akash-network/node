@@ -22,7 +22,7 @@ profiles:
       attributes:
         region: us-west
       pricing:
-        web: .8
+        web: 0.005000
 
 deployment:
   web:

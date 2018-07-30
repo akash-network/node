@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	miliAkashPerAkash = 1000
+	microAkashPerAkash = 1000000
 )
 
 // ToBase converts a unit of currency to its equivalent value in base denomination
@@ -14,6 +14,6 @@ func ToBase(sval string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	amount := akash * miliAkashPerAkash
+	amount := akash * microAkashPerAkash
 	return uint64(amount), nil
 }

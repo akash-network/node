@@ -74,17 +74,16 @@ profiles:
       attributes:
         region: us-west
       pricing:
-        web: .001
-        db-master: 0.05
-        db-slave: 0.05
-        db-pool: 0.03
+        web: 0.000010
+        db:  0.000050
+        db-pool: 0.000030
     eastcoast:
       attributes:
         region: us-east
       pricing:
-        web: .003
-        db-slave: 0.06
-        db-pool: 0.04
+        web: 0.000030
+        db:  0.000060
+        db-pool: 0.000040
 
 deployment:
 

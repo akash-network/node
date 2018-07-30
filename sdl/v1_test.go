@@ -40,7 +40,7 @@ func Test_v1_Parse_simple(t *testing.T) {
 
 	assert.Equal(t, types.ResourceGroup{
 		Count: 2,
-		Price: 800,
+		Price: 0x1388,
 		Unit: types.ResourceUnit{
 			CPU:    100,
 			Memory: 128 * unit.Mi,
@@ -72,4 +72,17 @@ func Test_v1_Parse_simple(t *testing.T) {
 		},
 	}, mani.GetGroups()[0])
 
+}
+
+func Test_v1_Parse_ProfileNameNotServiceName(t *testing.T) {
+	sdl, err := sdl.ReadFile("./_testdata/profile-svc-name-mismatch.yml")
+	require.NoError(t, err)
+
+	dgroups, err := sdl.DeploymentGroups()
+	require.NoError(t, err)
+	assert.Len(t, dgroups, 1)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+	assert.Len(t, mani.Groups, 1)
 }
