@@ -252,7 +252,7 @@ func (o *order) shouldBid(group *types.DeploymentGroup) bool {
 		cpu += int64(rg.Unit.CPU * rg.Count)
 		mem += int64(rg.Unit.Memory * uint64(rg.Count))
 		disk += int64(rg.Unit.Disk * uint64(rg.Count))
-		price += int64(rg.Price)
+		price += int64(rg.Price * uint64(rg.Count))
 	}
 
 	// requesting too much cpu?
@@ -296,7 +296,7 @@ func (o *order) calculatePrice(resources types.ResourceList) uint64 {
 	)
 
 	for _, group := range resources.GetResources() {
-		rmax += int64(group.Price)
+		rmax += int64(group.Price * uint64(group.Count))
 		mem += int64(group.Unit.Memory * uint64(group.Count))
 	}
 
