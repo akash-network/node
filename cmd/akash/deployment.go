@@ -16,6 +16,7 @@ import (
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	. "github.com/ovrclk/akash/util"
+	"github.com/ovrclk/akash/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -375,7 +376,7 @@ func manifestValidateResources(session session.Session, mani *types.Manifest, da
 	if err != nil {
 		return err
 	}
-	return manifest.ValidateWithDeployment(mani, dgroups.Items)
+	return validation.ValidateManifestWithDeployment(mani, dgroups.Items)
 }
 
 func doSendManifest(session session.Session, signer txutil.Signer, daddr []byte, mani *types.Manifest) error {

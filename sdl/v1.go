@@ -97,13 +97,6 @@ func (sdl *v1) Validate() error {
 		return fmt.Errorf("invalid version: '%v' required", allowedVersion)
 	}
 
-	if _, err := sdl.Manifest(); err != nil {
-		return err
-	}
-
-	if _, err := sdl.DeploymentGroups(); err != nil {
-		return err
-	}
 	return nil
 }
 

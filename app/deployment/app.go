@@ -11,6 +11,7 @@ import (
 	appstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/code"
+	"github.com/ovrclk/akash/validation"
 	tmtypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/tmlibs/log"
 )
@@ -245,10 +246,10 @@ func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *ty
 		}
 	}
 
-	if len(tx.Groups) == 0 {
+	if err := validation.ValidateGroupSpecs(tx.Groups); err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "No groups in deployment",
+			Log:  err.Error(),
 		}
 	}
 

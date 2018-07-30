@@ -1,13 +1,14 @@
-package manifest
+package validation_test
 
 import (
 	"testing"
 
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/validation"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_ValidateWithDeployment(t *testing.T) {
+func Test_ValidateManifest(t *testing.T) {
 
 	tests := []struct {
 		name    string
@@ -242,7 +243,7 @@ func Test_ValidateWithDeployment(t *testing.T) {
 
 	for _, test := range tests {
 		m := &types.Manifest{Groups: test.mgroups}
-		err := ValidateWithDeployment(m, test.dgroups)
+		err := validation.ValidateManifestWithDeployment(m, test.dgroups)
 
 		if test.ok {
 			assert.NoError(t, err, test.name)

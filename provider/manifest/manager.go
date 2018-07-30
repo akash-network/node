@@ -14,6 +14,7 @@ import (
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/util/runner"
+	"github.com/ovrclk/akash/validation"
 )
 
 func newManager(h *handler, daddr base.Bytes) (*manager, error) {
@@ -309,7 +310,7 @@ func (m *manager) validateRequests() {
 }
 
 func (m *manager) validateRequest(req manifestRequest) error {
-	if err := mutil.ValidateWithDeployment(req.value.Manifest, m.data.dgroups); err != nil {
+	if err := validation.ValidateManifestWithDeployment(req.value.Manifest, m.data.dgroups); err != nil {
 		return err
 	}
 	return mutil.VerifyRequest(req.value, m.data.deployment)

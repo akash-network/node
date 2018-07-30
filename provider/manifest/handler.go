@@ -12,6 +12,7 @@ import (
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/base"
 	"github.com/ovrclk/akash/util/runner"
+	"github.com/ovrclk/akash/validation"
 )
 
 var ErrNotRunning = errors.New("not running")
@@ -170,6 +171,13 @@ loop:
 			}
 
 		case req := <-h.mreqch:
+
+			if err := validation.ValidateManifest(req.value.Manifest); err != nil {
+				h.session.Log().Error("manifest validation failed",
+					"err", err, "deployment", req.value.Deployment)
+				req.ch <- err
+				break
+			}
 
 			manager, err := h.ensureManger(req.value.Deployment)
 			if err != nil {

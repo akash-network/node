@@ -157,7 +157,7 @@ message Deployment {
     CLOSED  = 2;
   }
   DeploymentState state = 3;
-  bytes Version = 4 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  bytes version = 4 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
 }
 
 message Deployments {

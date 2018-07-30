@@ -22,6 +22,7 @@ func CreateDeployment(t *testing.T, st state.State, app apptypes.Application, ac
 
 	for _, group := range groups.GetItems() {
 		s := &types.GroupSpec{
+			Name:         group.Name,
 			Resources:    group.Resources,
 			Requirements: group.Requirements,
 		}
