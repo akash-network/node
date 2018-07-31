@@ -15,10 +15,10 @@ Installation instructions for the client binary may be found [here](https://gith
 # The Akash testnet
 The Akash testnet is available for public use.  A description of the testnet, registration instructions, and a getting-started guide may be found [here](https://github.com/ovrclk/akash/_docs/testnet).
   
-# Akash commands
-Individual commmand instructions may be accessed at any time using the `-h` flag. 
+# Top-level commands
+These commands are presented as an overview of the features available via the Akash client. Individual command usage is described in subsequent sections.
 
-## Top-level commands
+## Available commands
 
 | Command | Description |
 |:--|:--|
@@ -42,8 +42,12 @@ Every command accepts the following flags. For brevity, they are omitted from th
 | -h | --help | None |  | Help for any command |
 | -d | --data | String | N |Data directory (defaults to `~/.akash`) **TODO** what is this |
 
+# Individual commands
+
 ## deployment
+
 ### Usage
+
 `akash deployment [command]`
 
 ### Available commands
