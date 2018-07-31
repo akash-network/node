@@ -3,14 +3,12 @@ package bidengine
 import (
 	"bytes"
 	"context"
-	"math/rand"
 
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/unit"
 	"github.com/ovrclk/akash/util/runner"
 	"github.com/ovrclk/akash/validation"
 	"github.com/tendermint/tmlibs/log"
@@ -177,7 +175,7 @@ loop:
 
 			reservation = result.Value().(cluster.Reservation)
 
-			price := o.calculatePrice(reservation.Resources())
+			price := calculatePrice(reservation.Resources())
 
 			o.log.Debug("submitting fulfillment", "price", price)
 
@@ -246,33 +244,4 @@ func (o *order) shouldBid(group *types.DeploymentGroup) bool {
 		return false
 	}
 	return true
-
-}
-
-func (o *order) calculatePrice(resources types.ResourceList) uint64 {
-
-	// TODO: catch overflow
-	var (
-		mem  int64
-		rmax int64
-	)
-
-	cfg := validation.Config()
-
-	for _, group := range resources.GetResources() {
-		rmax += int64(group.Price * uint64(group.Count))
-		mem += int64(group.Unit.Memory * uint64(group.Count))
-	}
-
-	cmin := uint64(float64(mem) * float64(cfg.MinGroupMemPrice) / float64(unit.Gi))
-	cmax := uint64(float64(mem) * float64(cfg.MaxGroupMemPrice) / float64(unit.Gi))
-
-	if cmax > uint64(rmax) {
-		cmax = uint64(rmax)
-	}
-	if cmax == 0 {
-		cmax = 1
-	}
-
-	return uint64(rand.Int63n(int64(cmax-cmin)) + int64(cmin))
 }
