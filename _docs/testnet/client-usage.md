@@ -65,6 +65,9 @@ Every command accepts the following flags. For brevity, they are omitted from th
 ### Command usage
 
 #### `close`
+Close one of your deployments. Deletes the pod(s) containing your container(s) and stops token transfer.
+
+
 **Usage**
 
 `akash deployment close <deployment-id> [flags]`
@@ -80,12 +83,15 @@ Every command accepts the following flags. For brevity, they are omitted from th
 
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
-| -k | --key | string | Y | Key name |
-| -n | --node | string | N | Node host (defaults to http://api.akashtest.net:80) |
+| -k | --key | string | Y | Name of one of your keys, for authentication. Tokens will be transferred from the account associated with this key. |
+| -n | --node | string | N | Node host (defaults to http://api.akashtest.net:80). |
 |  | --nonce | uint | N | Nonce |
 
 
 #### `create`
+Create a new deployment. Posts your requested to the chain for bidding and subsequent lease creation. Your manifest(s) are then sent to the winning provider(s), pod(s) created, and token transfer from your account to provider(s) initiated.
+
+
 **Usage**
 
 `akash deployment create <deployment-file> [flags]`
@@ -101,10 +107,32 @@ Every command accepts the following flags. For brevity, they are omitted from th
 
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
-| -k | --key | string | Y | Key name |
-|  | --no-wait | none | N | Exit before waiting for lease creation |
-| -n | --node | string | N | Node host (defaults to http://api.akashtest.net:80) |
+| -k | --key | string | Y | Name of one of your keys, for authentication. |
+|  | --no-wait | none | N | Exit before waiting for lease creation. |
+| -n | --node | string | N | Node host (defaults to http://api.akashtest.net:80). |
 |  | --nonce | uint | N | Nonce |
+
+#### `sendmani`
+What does this do?
+
+**Usage**
+
+`akash deployment sendmani <manifest> <deployment> [flags]`
+
+
+**Arguments**
+
+| Argument | Type | Required | Description |
+|:--|:--|:--|:--|
+| manifest | String | Y | ? |
+| deployment | UUID | Y | ID of the deployment to for which to send the manifest, returned by (`akash query deployment`  |
+
+
+**Flags**
+
+| Short | Verbose | Argument | Required | Description |
+|:--|:--|:--|:--|:--|
+|  |  |  |  |  |
 
 
 
