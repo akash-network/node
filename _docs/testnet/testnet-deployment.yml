@@ -21,7 +21,7 @@ profiles:
       attributes:
         region: sjc
       pricing:
-        web: .0002
+        web: 200u
 
 deployment:
   webapp:
