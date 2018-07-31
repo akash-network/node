@@ -59,7 +59,7 @@ Every command accepts the following flags. For brevity, they are omitted from th
 
 ### Command usage
 
-#### `close`
+#### `deployment close`
 **Usage**
 
 `akash deployment close <deployment-id> [flags]`
@@ -80,7 +80,7 @@ Every command accepts the following flags. For brevity, they are omitted from th
 |  | --nonce | uint | N | Nonce |
 
 
-#### `create`
+#### `deployment create`
 **Usage**
 
 `akash deployment create <deployment-file> [flags]`
