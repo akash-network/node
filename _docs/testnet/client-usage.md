@@ -59,7 +59,6 @@ Every command accepts the following flags. For brevity, they are omitted from th
 | create | create a deployment |
 | sendmani | send manifest to all deployment providers **TODO** wut |
 | status | get deployment status |
-| update | update a deployment (*EXPERIMENTAL*) |
 | validate | validate deployment file |
 
 ### Command usage
@@ -118,7 +117,7 @@ Service URIs for provider: 5ed78fbc526270c3501d09f88a3c442cf1bc6c869eb2d4d6c4f4e
 In the example above:
  - **deployment-id**: `619d25a730f8451b1ba3bf9c1bfabcb469068ad7d8da9a0d4b9bcd1080fb2450`
  - **lease**: `619d25a730f8451b1ba3bf9c1bfabcb469068ad7d8da9a0d4b9bcd1080fb2450/1/2/5ed78fbc526270c3501d09f88a3c442cf1bc6c869eb2d4d6c4f4eb4d41ee3f44` (in the form [deployment id]/[deployment group number]/[order number]/[provider address])
- - **service URL**: `webapp.48bc1ea9-c2aa-4de3-bbfb-5e8d409ae334.147-75-193-181.aksh.io`
+ - **service URI**: `webapp.48bc1ea9-c2aa-4de3-bbfb-5e8d409ae334.147-75-193-181.aksh.io`
 
 **Arguments**
 
@@ -153,7 +152,7 @@ $
 
 | Argument | Type | Required | Description |
 |:--|:--|:--|:--|
-| manifest | String | Y | ? |
+| manifest | String | Y | **?** |
 | deployment-id | UUID | Y | ID of the deployment to for which to send the manifest, returned by (`akash query deployment`  |
 
 
@@ -165,24 +164,72 @@ $
 | -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
 
 #### `status`
-Get the status of a deployment
+Get the lease and service URI(s) for an open deployment.
 
 **Usage**
 
-`thing`
+`akash deployment status <deployment-id> [flags]`
 
+**Example**
+
+Deployment is open
+```
+akash deployment status 619d25a730f8451b1ba3bf9c1bfabcb469068ad7d8da9a0d4b9bcd1080fb2450
+lease: 619d25a730f8451b1ba3bf9c1bfabcb469068ad7d8da9a0d4b9bcd1080fb2450/1/2/5ed78fbc526270c3501d09f88a3c442cf1bc6c869eb2d4d6c4f4eb4d41ee3f44
+	webapp: webapp.9060b8ae-1b62-47ff-a247-164f2f081681.147-75-193-181.aksh.io
+```
+
+Deployment is closed
+```
+$ akash deployment close 3be771d6ce0a9e0b5b8caa35d674cdd790f94500226433ab2794ee46d8886f42 -k my-key-name
+$
+```
 
 **Arguments**
 
 | Argument | Type | Required | Description |
 |:--|:--|:--|:--|
-|  |  |  |  |
+| deployment-id | UUID | Y | ID of the deployment to check, returned by (`akash query deployment`  |
 
 **Flags**
 
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
-|  |  |  |  |  |
+| -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
+
+#### `validate`
+Validate the syntax and structure of a deployment file.
+
+**Usage**
+
+`akash deployment validate <deployment-file> [flags]`
+
+**Example**
+
+File passes validation
+```
+$ akash deployment validate testnet-deployment.yml 
+ok
+```
+
+File does not pass validation (min price too low)
+```
+$ akash deployment validate badfile.yml
+Error: group specs: group san-jose: price too low (1 >= 25 fails)
+```
+
+**Arguments**
+
+| Argument | Type | Required | Description |
+|:--|:--|:--|:--|
+| deployment-file | string | Y | Absolute or relative path to your deployment file |
+
+**Flags**
+
+None
+
+
+
 
 
 #### `name`
