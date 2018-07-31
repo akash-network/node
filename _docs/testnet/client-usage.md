@@ -34,7 +34,9 @@ Individual commmand instructions may be accessed at any time using the `-h` flag
 | version | Print version |
 
 **Flags**
-Every command accepts the following flags. For brevity, they are omitted from the following documentation
+
+Every command accepts the following flags. For brevity, they are omitted from the following documentation.
+
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
 | -h | --help | None |  | Help for any command |
@@ -42,9 +44,10 @@ Every command accepts the following flags. For brevity, they are omitted from th
 
 ## deployment
 ### Usage
-`akash deployment` [command]
+`akash deployment [command]`
 
 ### Available commands
+
 | Command | Description |
 |:--|:--|
 | close | close a deployment |
@@ -56,18 +59,20 @@ Every command accepts the following flags. For brevity, they are omitted from th
 
 ### Command usage
 
-#### close
+#### `close`
 **Usage**
 
 `akash deployment close <deployment-id> [flags]`
 
 
 **Arguments**
+
 | Argument | Type | Required | Description |
 |:--|:--|:--|:--|
 | deployment-id | uuid | Y | ID of the deployment to close, returned by (`akash query deployment`) |
 
 **Flags**
+
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
 | -k | --key | string | Y | Key name |
@@ -75,18 +80,20 @@ Every command accepts the following flags. For brevity, they are omitted from th
 |  | --nonce | uint | N | Nonce |
 
 
-#### create
+#### `create`
 **Usage**
 
 `akash deployment create <deployment-file> [flags]`
 
 
 **Arguments**
+
 | Argument | Type | Required | Description |
 |:--|:--|:--|:--|
 | deployment-file | string | Y | Absolute or relative path to your deployment file |
 
 **Flags**
+
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
 | -k | --key | string | Y | Key name |
@@ -96,18 +103,20 @@ Every command accepts the following flags. For brevity, they are omitted from th
 
 
 
-#### name
+#### `name`
 **Usage**
 
 `thing`
 
 
 **Arguments**
+
 | Argument | Type | Required | Description |
 |:--|:--|:--|:--|
 |  |  |  |  |
 
 **Flags**
+
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
 |  |  |  |  |  |
