@@ -22,7 +22,7 @@ profiles:
       attributes:
         region: us-west
       pricing:
-        web: 0.005000
+        web: 5e-3
 
 deployment:
   web:

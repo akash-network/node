@@ -143,12 +143,22 @@ westcoast:
   attributes:
     region: us-west
   pricing:
-    web: 8
-    db: 15
+    web: 8u
+    db: 100u
 ```
 
 This defines a profile named `westcoast` having required attributes `{region="us-west"}`, and with a max price for
-the `web` and `db` [compute profiles](#profilescompute) of 8 and 15 tokens an hour, respectively.
+the `web` and `db` [compute profiles](#profilescompute) of 8 and 15 _micro_ (10^-6) tokens per block, respectively.
+
+Pricing may be expressed in decimal or scientific notation for Akash units, or may be suffixed with `mu`,`µ`, or `u` to represent _micro_ Akash.
+
+Examples:
+
+| Value | Micro Akash Tokens |
+| --- | --- |
+| `1`    | 1000000 |
+| `1e-4` | 100 |
+| `20u`  | 20 |
 
 ### deployment
 

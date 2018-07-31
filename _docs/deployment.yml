@@ -74,16 +74,16 @@ profiles:
       attributes:
         region: us-west
       pricing:
-        web: 0.000010
-        db:  0.000050
-        db-pool: 0.000030
+        web: 10u
+        db:  50u
+        db-pool: 30u
     eastcoast:
       attributes:
         region: us-east
       pricing:
-        web: 0.000030
-        db:  0.000060
-        db-pool: 0.000040
+        web: 30u
+        db:  60u
+        db-pool: 40u
 
 deployment:
 
