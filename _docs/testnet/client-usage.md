@@ -42,6 +42,7 @@ Every command accepts the following flags. For brevity, they are omitted from th
 | -h | --help | None |  | Help for any command |
 | -d | --data | String | N |Data directory (defaults to `~/.akash`) **TODO** what is this |
 
+
 # Individual commands
 
 ## deployment
@@ -63,7 +64,7 @@ Every command accepts the following flags. For brevity, they are omitted from th
 
 ### Command usage
 
-#### `deployment close`
+#### `close`
 **Usage**
 
 `akash deployment close <deployment-id> [flags]`
@@ -84,7 +85,7 @@ Every command accepts the following flags. For brevity, they are omitted from th
 |  | --nonce | uint | N | Nonce |
 
 
-#### `deployment create`
+#### `create`
 **Usage**
 
 `akash deployment create <deployment-file> [flags]`
