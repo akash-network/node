@@ -272,7 +272,7 @@ In the example above:
 
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
-| -t | --type | (ed25519|secp256k1|ledger) | N | Type of key (default "ed25519") |
+| -t | --type | (ed25519\|secp256k1\|ledger) | N | Type of key (default "ed25519") |
 
 #### `List`
 List all your local keys.
