@@ -26,8 +26,8 @@ These commands are presented as an overview of the features available via the Ak
 | help | Help about any command |
 | key | Manage keys |
 | logs | Service logs |
-| marketplace | **TODO** appropriate for client?  Monitor marketplace. |
-| provider | **TODO** appropriate for client?  Manage provider. |
+| marketplace | Monitor marketplace. |
+| provider | Manage provider. |
 | query | Query something **TODO** better |
 | send | Send tokens to an account |
 | status | Get remote node status |
@@ -46,6 +46,7 @@ Every command accepts the following flags. For brevity, they are omitted from th
 # Individual commands
 
 ## deployment
+Create, manage, and query your deployments.
 
 ### Usage
 
@@ -230,6 +231,7 @@ None
 
 
 ## key
+Create and manage your keys.
 
 ### Usage
 
@@ -354,6 +356,96 @@ In the example above, `webapp` is a simple web page serving static content.
 | -l | --lines | uint | N | Number of lines from the end of the logs to show per service (default 10). |
 | -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
 
+## marketplace
+Monitor marketplace transactions.
+
+**Usage**
+
+`akash marketplace [flags]`
+
+
+**Example**
+
+```
+$ akash marketplace
+DEPLOYMENT CREATED	4b24d14fe47d1b360fb6cebd883a5ba65f9876e62ba1ac27ace79001b42475e8 created by 35c055f1fa38cb1864920e2a7619d4f95d18c125
+ORDER CREATED	4b24d14fe47d1b360fb6cebd883a5ba65f9876e62ba1ac27ace79001b42475e8/1/2
+FULFILLMENT CREATED	4b24d14fe47d1b360fb6cebd883a5ba65f9876e62ba1ac27ace79001b42475e8/1/2 by 5ed78fbc526270c3501d09f88a3c442cf1bc6c869eb2d4d6c4f4eb4d41ee3f44 [price=48]
+FULFILLMENT CREATED	4b24d14fe47d1b360fb6cebd883a5ba65f9876e62ba1ac27ace79001b42475e8/1/2 by d56f1a59caabe9facd684ae7f1c887a2f0d0b136c9c096877188221e350e4737 [price=54]
+LEASE CREATED	4b24d14fe47d1b360fb6cebd883a5ba65f9876e62ba1ac27ace79001b42475e8/1/2 by 5ed78fbc526270c3501d09f88a3c442cf1bc6c869eb2d4d6c4f4eb4d41ee3f44 [price=48]
+```
+
+**Arguments**
+
+None
+
+**Flags**
+
+| Short | Verbose | Argument | Required | Description |
+|:--|:--|:--|:--|:--|
+| -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
+
+## provider
+Manage providers. This command is intended for providers, so this section will only address commands that are useful for a client creating and managing deployments.
+
+### Usage
+
+`akash provider [command]`
+
+### Available commands
+
+| Command | Description |
+|:--|:--|
+| closef | Close an open fulfillment. Used by providers; not documented here.|
+| closel | Close an active lease. Used by providers; not documented here. |
+| create | Create a provider. Used by providers; not documented here. |
+| run | Respond to chain events. Used by providers; not documented here. |
+| status | Print provider details. |
+
+### Command usage
+#### `status`
+Print the attributes and status of one or more providers.
+
+**Usage**
+
+`akash provider status [<provider-id> ...] [flags]`
+
+**Example**
+
+```
+$ akash provider status d714ecb330d5a3873bdc88e9fce10dab1a65287fac4fe55c80ac48776fa83276
+[
+ {
+  "Provider": {
+   "address": "d714ecb330d5a3873bdc88e9fce10dab1a65287fac4fe55c80ac48776fa83276",
+   "owner": "59e018689248c527ed8a755a9c67ec647ce77d28",
+   "hostURI": "http://provider.sjc.arrakis.akashtest.net",
+   "attributes": [
+    {
+     "name": "region",
+     "value": "sjc"
+    }
+   ]
+  },
+  "Status": {
+   "code": 200,
+   "version": {
+    "version": "0.3.3",
+    "commit": "4786994cf709e2829aadf64d05b07212e4a8ce28",
+    "date": "2018-07-31T20:43:05Z"
+   },
+   "message": "OK"
+  }
+ }
+```
+
+**Arguments**
+
+None
+
+**Flags**
+
+None
 
 
 
