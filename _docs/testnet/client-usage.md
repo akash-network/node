@@ -6,14 +6,17 @@ The Akash Network is a decentralized protocol for provisioning, scaling, and sec
 
 
 The Network contains two major functional elements:
- - **Marketplace**: A blockchain-based system that allocates capacity on Provider servers to Tenants wishing to deploy to them, and transfers payments from Tenant to Provider in the native Akash (AKSH) token.
- - **Deployment**: A Kubernetes-based system that provisions pods on Provider servers and deploys/orchestrates Tenant containers within them.
+ - **Marketplace**: A blockchain-based system that allocates capacity on provider servers to tenants wishing to deploy to them, and transfers payments from tenant to provider in the native Akash (AKSH) token.
+ - **Deployment**: A Kubernetes-based system that provisions pods on provider servers and deploys/orchestrates Tenant containers within them.
 
 # Installation
 Installation instructions for the client binary may be found [here](https://github.com/ovrclk/akash#installing). Each of these package managers will install both `akashd` (the server) and `akash` (the client). This document describes client usage only.
 
 # The Akash testnet
 The Akash testnet is available for public use.  A description of the testnet, registration instructions, and a getting-started guide may be found [here](https://github.com/ovrclk/akash/_docs/testnet).
+
+# Workflow
+**TODO**
   
 # Top-level commands
 These commands are presented as an overview of the features available via the Akash client. Individual command usage is described in subsequent sections.
@@ -39,7 +42,7 @@ Every command accepts the following flags. For brevity, they are omitted from th
 
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
-| -h | --help | None |  | Help for any command. |
+| -h | --help | None | N | Help for any command. |
 | -d | --data | String | N | Data directory (defaults to `~/.akash`). **TODO** what is this |
 
 
@@ -83,7 +86,7 @@ Closing deployment
 
 | Argument | Type | Required | Description |
 |:--|:--|:--|:--|
-| deployment-id | uuid | Y | ID of the deployment to close, returned by (`akash query deployment`) |
+| deployment-id | string | Y | ID of the deployment to close, returned by (`akash query deployment`) |
 
 **Flags**
 
@@ -119,6 +122,7 @@ In the example above:
  - **deployment-id**: `619d25a730f8451b1ba3bf9c1bfabcb469068ad7d8da9a0d4b9bcd1080fb2450`
  - **lease**: `619d25a730f8451b1ba3bf9c1bfabcb469068ad7d8da9a0d4b9bcd1080fb2450/1/2/5ed78fbc526270c3501d09f88a3c442cf1bc6c869eb2d4d6c4f4eb4d41ee3f44` (in the form [deployment id]/[deployment group number]/[order number]/[provider address])
  - **service URI**: `webapp.48bc1ea9-c2aa-4de3-bbfb-5e8d409ae334.147-75-193-181.aksh.io`
+ - **price**: Given in microAKSH (AKSH * 10^-6).
 
 **Arguments**
 
@@ -154,7 +158,7 @@ $
 | Argument | Type | Required | Description |
 |:--|:--|:--|:--|
 | manifest | String | Y | **?** |
-| deployment-id | UUID | Y | ID of the deployment to for which to send the manifest, returned by (`akash query deployment`.  |
+| deployment-id | string | Y | ID of the deployment to for which to send the manifest, returned by (`akash query deployment`.  |
 
 
 **Flags**
@@ -190,7 +194,7 @@ $
 
 | Argument | Type | Required | Description |
 |:--|:--|:--|:--|
-| deployment-id | UUID | Y | ID of the deployment to check, returned by `akash query deployment`  |
+| deployment-id | string | Y | ID of the deployment to check, returned by `akash query deployment`  |
 
 **Flags**
 
@@ -374,6 +378,7 @@ FULFILLMENT CREATED	4b24d14fe47d1b360fb6cebd883a5ba65f9876e62ba1ac27ace79001b424
 FULFILLMENT CREATED	4b24d14fe47d1b360fb6cebd883a5ba65f9876e62ba1ac27ace79001b42475e8/1/2 by d56f1a59caabe9facd684ae7f1c887a2f0d0b136c9c096877188221e350e4737 [price=54]
 LEASE CREATED	4b24d14fe47d1b360fb6cebd883a5ba65f9876e62ba1ac27ace79001b42475e8/1/2 by 5ed78fbc526270c3501d09f88a3c442cf1bc6c869eb2d4d6c4f4eb4d41ee3f44 [price=48]
 ```
+In the example above, `price` is given in microAKSH (AKSH * 10^-6).
 
 **Arguments**
 
@@ -404,7 +409,7 @@ Manage providers. This command is intended for providers, so this section will o
 
 ### Command usage
 #### `status`
-Print the attributes and status of one or more providers.
+Retrieve the attributes and status of one or more providers.
 
 **Usage**
 
@@ -447,6 +452,357 @@ None
 
 None
 
+## query
+Query all the things that need querying.
+
+### Usage
+
+`akash query [command]`
+
+### Available commands
+
+| Command | Description |
+|:--|:--|
+| account | Query account details. |
+| deployment | Query deployment details. |
+| deployment-group | Query deployment-group details. |
+| fulfillment | Query fulfillment details. |
+| lease | Query lease details. |
+| order | Query order details. |
+| provider | Query provider details. |
+
+### Command usage
+
+#### `account`
+Retrieve the details for one or more of your accounts, including token balance.
+
+**Usage**
+
+`akash query account [account ...] [flags]`
+
+**Example**
+
+```
+$ maisy:~ nalesandro$ akash query account -k my-key-name
+{
+  "address": "8d2cb35f05ec35666bbc841331718e31415926a1",
+  "balance": 90351025,
+  "nonce": 7
+}
+```
+In the example above, token balance is given in microAKSH (AKSH * 10^-6).
+
+
+**TODO** what exactly is the relationship between account/address/key
+
+
+**Arguments**
+
+| Argument | Type | Required | Description |
+|:--|:--|:--|:--|
+| account | string | N | One or more account addresses to query. Omitting this argument returns all your accounts. |
+
+**Flags**
+
+| Short | Verbose | Argument | Required | Description |
+|:--|:--|:--|:--|:--|
+| -k | --key | string | Y | Name of one of your keys, for authentication. |
+| -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
+
+#### `deployment`
+Retrieve the details for one or more of your deployments. A deployment represents a request for provider resources.
+
+**Usage**
+
+`akash query deployment [deployment ...] [flags]`
+
+**Example**
+
+```
+$ akash query deployment -k alpha
+{
+  "items": [
+    {
+      "address": "3be771d6ce0a9e0b5b8caa35d674cdd790f94500226433ab2794ee46d8886f42",
+      "tenant": "8d2cb35f05ec35666bbc841331718e31415926a1",
+      "state": 2,
+      "version": "8e02ba39187cbd2de194a7ac3b31ffe9889856d4b817fc039669e569fde6c647"
+    },
+    {
+      "address": "4b24d14fe47d1b360fb6cebd883a5ba65f9876e62ba1ac27ace79001b42475e8",
+      "tenant": "8d2cb35f05ec35666bbc841331718e31415926a1",
+      "version": "8e02ba39187cbd2de194a7ac3b31ffe9889856d4b817fc039669e569fde6c647"
+    },
+...
+  ]
+}
+```
+In the example above, `"state": 2` indicates a closed lease.  **TODO** what to say abt version?
+
+
+**Arguments**
+
+| Argument | Type | Required | Description |
+|:--|:--|:--|:--|
+| deployment | string | N | One or more deployment ids to query. Omitting this argument returns all your deployments. |
+
+**Flags**
+
+| Short | Verbose | Argument | Required | Description |
+|:--|:--|:--|:--|:--|
+| -k | --key | string | Y | Name of one of your keys, for authentication. |
+| -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
+
+
+#### `deployment-group`
+
+**TODO** this does not seem to work at all
+
+```
+$ akash query deployment-group -h
+query deployment groups
+
+Usage:
+  akash query deployment-group [deployment-group ...] [flags]
+
+Flags:
+  -h, --help   help for deployment-group
+
+Global Flags:
+  -d, --data string   data directory (default "/Users/nalesandro/.akash")
+  -n, --node string   node host (default "http://api.akashtest.net:80")
+
+$ akash query deployment group
+Error: encoding/hex: invalid byte: U+0067 'g'
+
+$ akash query deployment-group -k alpha
+Error: unknown shorthand flag: 'k' in -k
+```
+
+#### `fulfillment`
+Retrieve the details for one or more fulfillments made for your deployments. A fulfillment represents a provider's bid on your deployments. 
+
+**Usage**
+
+`akash query fulfillment [fulfillment ...] [flags]`
+
+**Example**
+
+```
+$ akash query fulfillment
+{
+  "items": [
+    {
+      "id": {
+        "deployment": "2a15e3d0a5ed9201f46f9d4c8e0a80579d202b6bee90ff7fac613f1b289bdf9d",
+        "group": 1,
+        "order": 2,
+        "provider": "4be226880fce4efd19f81c87cebc86bf001e05a7aae7b862d421f3ec36f9e345"
+      },
+      "price": 71
+    },
+    {
+      "id": {
+        "deployment": "3be771d6ce0a9e0b5b8caa35d674cdd790f94500226433ab2794ee46d8886f42",
+        "group": 1,
+        "order": 2,
+        "provider": "5ed78fbc526270c3501d09f88a3c442cf1bc6c869eb2d4d6c4f4eb4d41ee3f44"
+      },
+      "price": 73,
+      "state": 2
+    },
+...
+  ]
+}
+```
+In the example above, `"state": 2` indicates a closed lease.  **TODO** true?
+
+ **TODO** are all fulfillments shown or just the ones that resulted in leases?  Seems like the latter
+
+**Arguments**
+
+| Argument | Type | Required | Description |
+|:--|:--|:--|:--|
+| fulfillment | string | N | One or more fulfillment ids to query. Omitting this argument returns all fulfillments that resulted in leases. |
+
+**Flags**
+
+| Short | Verbose | Argument | Required | Description |
+|:--|:--|:--|:--|:--|
+| -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
+
+**TODO** why is key not required here but is for `deployment`?
+
+
+#### `lease`
+Retrieve the details for one or more of your leases. A lease represents an agreement between you and the lowest-bidding provider to provide resources as for the price specified in their  fullfillment.
+
+**Usage**
+
+`akash query lease [lease ...] [flags]`
+
+**Example**
+
+```
+$ akash query lease -k my-key-name
+{
+  "items": [
+    {
+      "id": {
+        "deployment": "3be771d6ce0a9e0b5b8caa35d674cdd790f94500226433ab2794ee46d8886f42",
+        "group": 1,
+        "order": 2,
+        "provider": "d56f1a59caabe9facd684ae7f1c887a2f0d0b136c9c096877188221e350e4737"
+      },
+      "price": 52,
+      "state": 2
+    },
+    {
+      "id": {
+        "deployment": "4b24d14fe47d1b360fb6cebd883a5ba65f9876e62ba1ac27ace79001b42475e8",
+        "group": 1,
+        "order": 2,
+        "provider": "5ed78fbc526270c3501d09f88a3c442cf1bc6c869eb2d4d6c4f4eb4d41ee3f44"
+      },
+      "price": 48
+    },
+...
+  ]
+}
+```
+In the example above, `"state": 2` indicates a closed lease.
+
+```
+$ akash query lease 3be771d6ce0a9e0b5b8caa35d674cdd790f94500226433ab2794ee46d8886f42/1/2/d56f1a59caabe9facd684ae7f1c887a2f0d0b136c9c096877188221e350e4737
+{
+  "id": {
+    "deployment": "3be771d6ce0a9e0b5b8caa35d674cdd790f94500226433ab2794ee46d8886f42",
+    "group": 1,
+    "order": 2,
+    "provider": "d56f1a59caabe9facd684ae7f1c887a2f0d0b136c9c096877188221e350e4737"
+  },
+  "price": 52,
+  "state": 2
+}
+```
+In the example above, the lease is specified in the form [deployment id]/[deployment group number]/[order number]/[provider address] and the `-k` flag is not required.
+
+
+**Arguments**
+
+| Argument | Type | Required | Description |
+|:--|:--|:--|:--|
+| lease | string | N | One or more leases to query. Omitting this argument returns all your leases. |
+
+**Flags**
+
+| Short | Verbose | Argument | Required | Description |
+|:--|:--|:--|:--|:--|
+| -k | --key | string | Conditional | Name of one of your keys, for authentication. Required when fetching all an account's leases, but not when fetching one lease. |
+| -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
+
+
+#### `order`
+**TODO** what's an order yo. and why isnt key required
+
+**Usage**
+
+`akash query order [order ...] [flags]`
+
+**Example**
+
+```
+$ $ akash query order
+{
+  "items": [
+    {
+      "id": {
+        "deployment": "16bfd04ba37ca64ba675e47d2fb5fcab6c5c3c3e949d71f0012cd65a81dd6507",
+        "group": 1,
+        "seq": 2
+      },
+      "endAt": 3519,
+      "state": 2
+    },
+    {
+      "id": {
+        "deployment": "2a15e3d0a5ed9201f46f9d4c8e0a80579d202b6bee90ff7fac613f1b289bdf9d",
+        "group": 1,
+        "seq": 2
+      },
+      "endAt": 204,
+      "state": 1
+    },
+...
+  ]
+}
+```
+In the example above, `"state": 2` indicates a closed lease. **TODO** what's `endAt`
+
+
+**Arguments**
+
+| Argument | Type | Required | Description |
+|:--|:--|:--|:--|
+| order | string | N | One or more order ids to query. Omitting this argument returns all your orders. |
+
+**Flags**
+
+| Short | Verbose | Argument | Required | Description |
+|:--|:--|:--|:--|:--|
+| -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
+
+#### `provider`
+Retrieve the attributes of one or more providers.
+
+**Usage**
+
+`akash query provider [provider ...] [flags]`
+
+**Example**
+
+```
+$ $ akash query provider
+{
+  "providers": [
+    {
+      "address": "0253c080e189825da0e072ed8213947bb5d9386f4504ab9c15a15f5776600e83",
+      "owner": "73ff91326664be3dad53b3b58e9d1fe08dfbec74",
+      "hostURI": "http://provider.ewr.caladan.akashtest.net",
+      "attributes": [
+        {
+          "name": "region",
+          "value": "ewr"
+        }
+      ]
+    },
+    {
+      "address": "4be226880fce4efd19f81c87cebc86bf001e05a7aae7b862d421f3ec36f9e345",
+      "owner": "e6956171534f8ffbcf47c6830788df4ebbb165a9",
+      "hostURI": "http://provider.sjc.arrakis.akashtest.net",
+      "attributes": [
+        {
+          "name": "region",
+          "value": "sjc"
+        }
+      ]
+    },
+...
+  ]
+}
+```
+
+**Arguments**
+
+| Argument | Type | Required | Description |
+|:--|:--|:--|:--|
+| provider | string | N | One or more provider ids to query. Omitting this argument returns all providers in the network. |
+
+**Flags**
+
+| Short | Verbose | Argument | Required | Description |
+|:--|:--|:--|:--|:--|
+| -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
 
 
 
@@ -479,6 +835,7 @@ In the example above:
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
 |  |  |  |  |  |
+
 
 
 

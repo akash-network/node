@@ -74,19 +74,19 @@ In this step, you post your deployment, the Akash marketplace matches you with a
  $ akash key list
  $ akash deploy <deployment file path> -k <key name> #creates and sends the deployment
  ```
- The client will print the deployment address, bid, lease, and deployment data to console, for example:
+ The client will print the deployment id, bid, lease, and deployment data to console, for example:
  ```
 $ akash deployment create ./testnet-deployment.yml -k my-key-name
 66809b2c537fcdd79bc6b5b6d28bbf2d51fbe59133a4ba0119b9e0160ab16357
 Waiting...
-Group 1/1 Fulfillment: 66809b2c537fcdd79bc6b5b6d28bbf2d51fbe59133a4ba0119b9e0160ab16357/1/2/49877504638723665f08dd57c2b0fbae79bd2abf65fe0d397e20880953b9befc [price=0.000011]
-Group 1/1 Fulfillment: 66809b2c537fcdd79bc6b5b6d28bbf2d51fbe59133a4ba0119b9e0160ab16357/1/2/a8954503bdd62134bf691c954d4eba3099952424ed708c7b69afeecaa8f9b38f [price=0.000013]
-Group 1/1 Lease: 66809b2c537fcdd79bc6b5b6d28bbf2d51fbe59133a4ba0119b9e0160ab16357/1/2/49877504638723665f08dd57c2b0fbae79bd2abf65fe0d397e20880953b9befc [price=0.000011]
+Group 1/1 Fulfillment: 66809b2c537fcdd79bc6b5b6d28bbf2d51fbe59133a4ba0119b9e0160ab16357/1/2/49877504638723665f08dd57c2b0fbae79bd2abf65fe0d397e20880953b9befc [price=11]
+Group 1/1 Fulfillment: 66809b2c537fcdd79bc6b5b6d28bbf2d51fbe59133a4ba0119b9e0160ab16357/1/2/a8954503bdd62134bf691c954d4eba3099952424ed708c7b69afeecaa8f9b38f [price=13]
+Group 1/1 Lease: 66809b2c537fcdd79bc6b5b6d28bbf2d51fbe59133a4ba0119b9e0160ab16357/1/2/49877504638723665f08dd57c2b0fbae79bd2abf65fe0d397e20880953b9befc [price=11]
 Sending manifest to http://sjc.147.75.70.13.aksh.io...
 Service URIs for provider: 38323234653134663930336132653133366136333632353237623139663131393335313937313735636236393938313934303933336161303434353961326139
 	webapp: webapp.a138530f21e98e88bfc449d6736798fbe5130fa99b748d7aeb5d08b15e326cb8.147.75.70.13.aksh.io
 ```
-The lease is returned in the form [deployment address]/[deployment group number]/[order number]/[provider address]. The public URL to each deployed service is also returned - you may use it as is or direct your own DNS to it.
+The lease is returned in the form [deployment id]/[deployment group number]/[order number]/[provider address]. The public URL to each deployed service is also returned - you may use it as is or direct your own DNS to it.
 
 You may also query your leases with `akash query lease`. For example:
 ```
@@ -100,16 +100,15 @@ $ akash query lease
         "order": 2,
         "provider": "49877504638723665f08dd57c2b0fbae79bd2abf65fe0d397e20880953b9befc"
       },
-      "price": 0.000011
+      "price": 11
     }
   ]
 }
-
 ```
 The price of your deployment is transferred from your account every second.
 
 #### 4.  Access your deployed application in whatever way makes sense to you
-You may also view your application logs with `akash logs <service name> <lease>`. For example, given a service named `webapp`:
+You may also view your application logs with `akash logs <service name> <lease>`. For example, given a service named `webapp` and the lease above:
 
 ```
 $ ./akash logs webapp 66809b2c537fcdd79bc6b5b6d28bbf2d51fbe59133a4ba0119b9e0160ab16357/1/2/49877504638723665f08dd57c2b0fbae79bd2abf65fe0d397e20880953b9befc -l 1 -f
@@ -121,7 +120,7 @@ $ ./akash logs webapp 66809b2c537fcdd79bc6b5b6d28bbf2d51fbe59133a4ba0119b9e0160a
 ### Close your deployment
 When you are done with your application, close the deployment. This will deprovision your container and stop the token transfer. This is a critical step to conserve both your tokens and testnet server capacity.
 ```
-$ akash deployment close <deployment address> -k <key name>
+$ akash deployment close <deployment id> -k <key name>
 ```
 
 For example:
