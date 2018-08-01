@@ -804,40 +804,87 @@ $ $ akash query provider
 |:--|:--|:--|:--|:--|
 | -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
 
-
-
-
-=====================
-#### `show`
-desc
+## send
+Send tokens from one account to another.
 
 **Usage**
 
-`xxx`
+`akash send <amount> <to-account> [flags]`
+
 
 **Example**
 
 ```
-$ 
+$ akash send 1.1 35c055f1fa38cb1864e484a1d733a58bbffb1156 -k alpha
+Sent 1.1 tokens to 35c055f1fa38cb1864e484a1d733a58bbffb1156 in block 61049
 ```
-In the example above:
- - **xxx**: `xxx`
-
+In the example above, the amount is given in AKSH.
 
 **Arguments**
 
 | Argument | Type | Required | Description |
 |:--|:--|:--|:--|
-|  |  |  |  |
+| amount | float | Y | The amount of tokens to send. |
+| to-account | string | Y | The key value for the recipient account.  |
+
 
 **Flags**
 
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
-|  |  |  |  |  |
+| -k | --key | string | Y | Name of one of your keys, for authentication. Tokens will be sent from this account. |
+| -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
+|  | --nonce | uint | N | Nonce. |
+
+## status
+Get the status of a remote node.
+
+**Usage**
+
+`akash status [flags]`
 
 
+**Example**
+
+```
+$ akash status
+Block: 61553
+Block Hash: 734FBC125E094CBC18311B85B3D278E820891D06
+```
+
+**Arguments**
+
+None
 
 
-        
-      
+**Flags**
+
+| Short | Verbose | Argument | Required | Description |
+|:--|:--|:--|:--|:--|
+| -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
+
+## version
+Get the client version.
+
+**Usage**
+
+`akash version [flags]`
+
+
+**Example**
+
+```
+$ akash version
+version:  0.3.4
+commit:   8e90774b47cc3791603d443301038e4dbf49c748
+date:     2018-08-01T06:45:59Z
+```
+
+**Arguments**
+
+None
+
+
+**Flags**
+
+None
