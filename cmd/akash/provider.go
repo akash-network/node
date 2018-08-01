@@ -209,7 +209,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 
 		go func() {
 			defer cancel()
-			errch <- grpc.RunServer(ctx, session.Log(), "tcp", "9090", service.ManifestHandler(), cclient)
+			errch <- grpc.RunServer(ctx, session.Log(), "tcp", "9090", service.ManifestHandler(), cclient, service)
 		}()
 
 		go func() {
@@ -266,8 +266,8 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 
 	type outputItem struct {
 		Provider *types.Provider
-		Status   *types.ServerStatus
-		Error    error `json:",omitempty"`
+		Status   *types.ServerStatusParseable
+		Error    string `json:",omitempty"`
 	}
 
 	output := []outputItem{}
@@ -275,10 +275,9 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 	for _, provider := range providers {
 		status, err := http.Status(session.Ctx(), &provider)
 		if err != nil {
-			output = append(output, outputItem{Provider: &provider, Error: err})
+			output = append(output, outputItem{Provider: &provider, Error: err.Error()})
 			continue
 		}
-
 		output = append(output, outputItem{Provider: &provider, Status: status})
 	}
 

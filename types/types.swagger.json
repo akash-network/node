@@ -380,6 +380,81 @@
         }
       }
     },
+    "typesProviderBidengineStatus": {
+      "type": "object",
+      "properties": {
+        "orders": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "typesProviderClusterStatus": {
+      "type": "object",
+      "properties": {
+        "leases": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "inventory": {
+          "$ref": "#/definitions/typesProviderInventoryStatus"
+        }
+      }
+    },
+    "typesProviderInventoryStatus": {
+      "type": "object",
+      "properties": {
+        "reservations": {
+          "$ref": "#/definitions/typesProviderInventoryStatusReservations"
+        },
+        "available": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/typesResourceUnit"
+          }
+        }
+      }
+    },
+    "typesProviderInventoryStatusReservations": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/typesResourceUnit"
+          }
+        },
+        "pending": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/typesResourceUnit"
+          }
+        }
+      }
+    },
+    "typesProviderManifestStatus": {
+      "type": "object",
+      "properties": {
+        "deployments": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "typesProviderStatus": {
+      "type": "object",
+      "properties": {
+        "cluster": {
+          "$ref": "#/definitions/typesProviderClusterStatus"
+        },
+        "manifest": {
+          "$ref": "#/definitions/typesProviderManifestStatus"
+        },
+        "bidengine": {
+          "$ref": "#/definitions/typesProviderBidengineStatus"
+        }
+      }
+    },
     "typesResourceUnit": {
       "type": "object",
       "properties": {
@@ -407,6 +482,9 @@
         },
         "version": {
           "$ref": "#/definitions/typesAkashVersion"
+        },
+        "provider": {
+          "$ref": "#/definitions/typesProviderStatus"
         },
         "message": {
           "type": "string"

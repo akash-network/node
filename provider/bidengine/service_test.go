@@ -84,6 +84,10 @@ func TestService(t *testing.T) {
 
 	testutil.SleepForThreadStart(t)
 
+	status, err := service.Status(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, status)
+
 	assert.NoError(t, service.Close())
 
 	mock.AssertExpectationsForObjects(t, qclient, txclient, creso, cluster)

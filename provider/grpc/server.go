@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ovrclk/akash/keys"
+	"github.com/ovrclk/akash/provider"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/manifest"
@@ -22,17 +23,20 @@ import (
 type server struct {
 	cluster.Client
 	*grpc.Server
+	status  provider.StatusClient
 	handler manifest.Handler
 	network string
 	port    string
 	log     log.Logger
 }
 
-func RunServer(ctx context.Context, log log.Logger, network, port string, handler manifest.Handler, client kube.Client) error {
+func RunServer(ctx context.Context, log log.Logger, network,
+	port string, handler manifest.Handler, client kube.Client,
+	status provider.StatusClient) error {
 
 	address := fmt.Sprintf(":%v", port)
 
-	server := newServer(log, network, address, handler, client)
+	server := newServer(log, network, address, handler, client, status)
 
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -57,11 +61,17 @@ func RunServer(ctx context.Context, log log.Logger, network, port string, handle
 }
 
 func (s server) Status(ctx context.Context, req *types.Empty) (*types.ServerStatus, error) {
+	status, err := s.status.Status(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	vsn := version.Get()
 	return &types.ServerStatus{
-		Code:    http.StatusOK,
-		Version: &vsn,
-		Message: "OK",
+		Code:     http.StatusOK,
+		Version:  &vsn,
+		Provider: status,
+		Message:  "OK",
 	}, nil
 }
 
@@ -156,8 +166,10 @@ func (s server) ServiceLogs(req *types.LogRequest, server types.Cluster_ServiceL
 }
 
 // NewServer network can be "tcp", "tcp4", "tcp6", "unix" or "unixpacket". phandler is the provider cluster handler
-func newServer(log log.Logger, network, port string, handler manifest.Handler, client kube.Client) *server {
+func newServer(log log.Logger, network, port string, handler manifest.Handler,
+	client kube.Client, status provider.StatusClient) *server {
 	s := &server{
+		status:  status,
 		handler: handler,
 		network: network,
 		port:    port,

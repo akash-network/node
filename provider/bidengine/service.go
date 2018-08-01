@@ -2,6 +2,7 @@ package bidengine
 
 import (
 	"context"
+	"errors"
 
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/provider/cluster"
@@ -10,7 +11,14 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
+var ErrNotRunning = errors.New("not running")
+
+type StatusClient interface {
+	Status(context.Context) (*types.ProviderBidengineStatus, error)
+}
+
 type Service interface {
+	StatusClient
 	Close() error
 	Done() <-chan struct{}
 }
@@ -34,13 +42,14 @@ func NewService(ctx context.Context, session session.Session, cluster cluster.Cl
 	session.Log().Info("found orders", "count", len(existingOrders))
 
 	s := &service{
-		session: session,
-		cluster: cluster,
-		bus:     bus,
-		sub:     sub,
-		orders:  make(map[string]*order),
-		drainch: make(chan *order),
-		lc:      lifecycle.New(),
+		session:  session,
+		cluster:  cluster,
+		bus:      bus,
+		sub:      sub,
+		statusch: make(chan chan<- *types.ProviderBidengineStatus),
+		orders:   make(map[string]*order),
+		drainch:  make(chan *order),
+		lc:       lifecycle.New(),
 	}
 
 	go s.lc.WatchContext(ctx)
@@ -56,8 +65,9 @@ type service struct {
 	bus event.Bus
 	sub event.Subscriber
 
-	orders  map[string]*order
-	drainch chan *order
+	statusch chan chan<- *types.ProviderBidengineStatus
+	orders   map[string]*order
+	drainch  chan *order
 
 	lc lifecycle.Lifecycle
 }
@@ -69,6 +79,27 @@ func (s *service) Close() error {
 
 func (s *service) Done() <-chan struct{} {
 	return s.lc.Done()
+}
+
+func (s *service) Status(ctx context.Context) (*types.ProviderBidengineStatus, error) {
+	ch := make(chan *types.ProviderBidengineStatus, 1)
+
+	select {
+	case <-s.lc.Done():
+		return nil, ErrNotRunning
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case s.statusch <- ch:
+	}
+
+	select {
+	case <-s.lc.Done():
+		return nil, ErrNotRunning
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case result := <-ch:
+		return result, nil
+	}
 }
 
 func (s *service) run(existingOrders []existingOrder) {
@@ -116,6 +147,10 @@ loop:
 
 				s.orders[key] = order
 
+			}
+		case ch := <-s.statusch:
+			ch <- &types.ProviderBidengineStatus{
+				Orders: uint32(len(s.orders)),
 			}
 		case order := <-s.drainch:
 			// child done

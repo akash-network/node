@@ -12,12 +12,19 @@ import (
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/manifest"
 	"github.com/ovrclk/akash/provider/session"
+	"github.com/ovrclk/akash/types"
 )
 
 type Service interface {
 	ManifestHandler() manifest.Handler
 	Close() error
 	Done() <-chan struct{}
+
+	StatusClient
+}
+
+type StatusClient interface {
+	Status(context.Context) (*types.ProviderStatus, error)
 }
 
 // Simple wrapper around various services needed for running a provider.
@@ -105,6 +112,26 @@ func (s *service) Done() <-chan struct{} {
 
 func (s *service) ManifestHandler() manifest.Handler {
 	return s.manifest
+}
+
+func (s *service) Status(ctx context.Context) (*types.ProviderStatus, error) {
+	cluster, err := s.cluster.Status(ctx)
+	if err != nil {
+		return nil, err
+	}
+	bidengine, err := s.bidengine.Status(ctx)
+	if err != nil {
+		return nil, err
+	}
+	manifest, err := s.manifest.Status(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &types.ProviderStatus{
+		Cluster:   cluster,
+		Bidengine: bidengine,
+		Manifest:  manifest,
+	}, nil
 }
 
 func (s *service) run() {

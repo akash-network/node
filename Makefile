@@ -113,6 +113,7 @@ mocks:
 	mockery -case=underscore -dir app/market            -output app/market/mocks            -name Engine
 	mockery -case=underscore -dir app/market            -output app/market/mocks            -name Facilitator
 	mockery -case=underscore -dir marketplace           -output marketplace/mocks           -name Handler
+	mockery -case=underscore -dir provider              -output provider/mocks              -name StatusClient
 	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Client
 	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Cluster
 	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Deployment

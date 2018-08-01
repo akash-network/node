@@ -20,8 +20,13 @@ type Cluster interface {
 	Unreserve(types.OrderID, types.ResourceList) error
 }
 
+type StatusClient interface {
+	Status(context.Context) (*types.ProviderClusterStatus, error)
+}
+
 // Manage compute cluster for the provider.  Will eventually integrate with kubernetes, etc...
 type Service interface {
+	StatusClient
 	Cluster
 	Close() error
 	Ready() <-chan struct{}
@@ -68,6 +73,7 @@ func NewService(ctx context.Context, session session.Session, bus event.Bus, cli
 		bus:       bus,
 		sub:       sub,
 		inventory: inventory,
+		statusch:  make(chan chan<- *types.ProviderClusterStatus),
 		managers:  make(map[string]*deploymentManager),
 		managerch: make(chan *deploymentManager),
 		log:       log,
@@ -88,6 +94,7 @@ type service struct {
 
 	inventory *inventoryService
 
+	statusch  chan chan<- *types.ProviderClusterStatus
 	managers  map[string]*deploymentManager
 	managerch chan *deploymentManager
 
@@ -115,6 +122,35 @@ func (s *service) Reserve(order types.OrderID, group *types.DeploymentGroup) (Re
 func (s *service) Unreserve(order types.OrderID, resources types.ResourceList) error {
 	_, err := s.inventory.unreserve(order, resources)
 	return err
+}
+
+func (s *service) Status(ctx context.Context) (*types.ProviderClusterStatus, error) {
+
+	istatus, err := s.inventory.status(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ch := make(chan *types.ProviderClusterStatus, 1)
+
+	select {
+	case <-s.lc.Done():
+		return nil, ErrNotRunning
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case s.statusch <- ch:
+	}
+
+	select {
+	case <-s.lc.Done():
+		return nil, ErrNotRunning
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case result := <-ch:
+		result.Inventory = istatus
+		return result, nil
+	}
+
 }
 
 func (s *service) run(deployments []Deployment) {
@@ -179,6 +215,12 @@ loop:
 
 				s.teardownLease(ev.LeaseID)
 
+			}
+
+		case ch := <-s.statusch:
+
+			ch <- &types.ProviderClusterStatus{
+				Leases: uint32(len(s.managers)),
 			}
 
 		case dm := <-s.managerch:

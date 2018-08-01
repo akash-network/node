@@ -12,6 +12,7 @@ import (
 	kmocks "github.com/ovrclk/akash/provider/cluster/kube/mocks"
 	"github.com/ovrclk/akash/provider/manifest/mocks"
 	mmocks "github.com/ovrclk/akash/provider/manifest/mocks"
+	pmocks "github.com/ovrclk/akash/provider/mocks"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
@@ -37,23 +38,30 @@ func TestDeployManifest(t *testing.T) {
 	req, _, err := manifest.SignManifest(mani, signer, deployment)
 	assert.NoError(t, err)
 
+	sclient := &pmocks.StatusClient{}
+
 	handler := &mocks.Handler{}
 	handler.On("HandleManifest", mock.Anything, mock.Anything).Return(nil)
 
 	client := &kmocks.Client{}
 
-	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "0", handler, client)
+	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "0", handler, client, sclient)
 
 	_, err = server.Deploy(context.TODO(), req)
 	assert.NoError(t, err)
 }
 
 func TestStatus(t *testing.T) {
-	server := newServer(nil, "tcp", "3002", nil, nil)
+	sclient := &pmocks.StatusClient{}
+	sclient.On("Status", mock.Anything).
+		Return(&types.ProviderStatus{}, nil)
+
+	server := newServer(nil, "tcp", "3002", nil, nil, sclient)
 	status, err := server.Status(context.TODO(), nil)
 	assert.NoError(t, err)
 	require.Equal(t, "OK", status.Message)
 	require.Equal(t, http.StatusOK, int(status.Code))
+	require.NotNil(t, status.Provider)
 }
 
 func TestLeaseStatus(t *testing.T) {
@@ -62,7 +70,7 @@ func TestLeaseStatus(t *testing.T) {
 	mockResp := types.LeaseStatusResponse{}
 	client.On("LeaseStatus", mock.Anything, mock.Anything).Return(&mockResp, nil).Once()
 
-	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3002", handler, client)
+	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3002", handler, client, nil)
 	response, err := server.LeaseStatus(context.TODO(), &types.LeaseStatusRequest{
 		Deployment: "d6f4b6728c7deb187a07afe8e145e214c716e287039a204e7fac1fc121dc0cef",
 		Group:      "1",
@@ -79,7 +87,7 @@ func TestServiceStatus(t *testing.T) {
 	mockResp := types.ServiceStatusResponse{}
 	client.On("ServiceStatus", mock.Anything, mock.Anything).Return(&mockResp, nil).Once()
 
-	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3002", handler, client)
+	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3002", handler, client, nil)
 	response, err := server.ServiceStatus(context.TODO(), &types.ServiceStatusRequest{
 		Name:       "web",
 		Deployment: "d6f4b6728c7deb187a07afe8e145e214c716e287039a204e7fac1fc121dc0cef",
@@ -111,7 +119,7 @@ func TestServiceLogs(t *testing.T) {
 	mockResp := []*cluster.ServiceLog{serviceLog}
 	client.On("ServiceLogs", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResp, nil).Once()
 	streamServer := mockCluserServiceLogServer{}
-	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3002", handler, client)
+	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3002", handler, client, nil)
 	err := server.ServiceLogs(&types.LogRequest{
 		Name:       t.Name(),
 		Deployment: "d6f4b6728c7deb187a07afe8e145e214c716e287039a204e7fac1fc121dc0cef",

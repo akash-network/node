@@ -42,12 +42,12 @@ func SendManifest(
 	return post(ctx, provider.GetHostURI()+"/manifest", buf)
 }
 
-func Status(ctx context.Context, provider *types.Provider) (*types.ServerStatus, error) {
+func Status(ctx context.Context, provider *types.Provider) (*types.ServerStatusParseable, error) {
 	resp, err := get(ctx, provider.GetHostURI()+"/status")
 	if err != nil {
 		return nil, err
 	}
-	status := &types.ServerStatus{}
+	status := &types.ServerStatusParseable{}
 	err = json.Unmarshal(resp, status)
 	if err != nil {
 		return nil, err

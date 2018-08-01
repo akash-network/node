@@ -9,6 +9,7 @@ import (
 	"github.com/ovrclk/akash/manifest"
 	kmocks "github.com/ovrclk/akash/provider/cluster/kube/mocks"
 	"github.com/ovrclk/akash/provider/manifest/mocks"
+	pmocks "github.com/ovrclk/akash/provider/mocks"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/stretchr/testify/assert"
@@ -35,12 +36,14 @@ func TestSendManifest(t *testing.T) {
 	req, _, err := manifest.SignManifest(mani, signer, deployment)
 	assert.NoError(t, err)
 
+	sclient := &pmocks.StatusClient{}
+
 	handler := &mocks.Handler{}
 	handler.On("HandleManifest", mock.Anything, mock.Anything).Return(nil)
 
 	client := &kmocks.Client{}
 
-	server := newServer(log.NewTMLogger(os.Stdout), "tcp", ":3001", handler, client)
+	server := newServer(log.NewTMLogger(os.Stdout), "tcp", ":3001", handler, client, sclient)
 	go func() {
 		err := server.listenAndServe()
 		require.NoError(t, err)

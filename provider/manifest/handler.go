@@ -17,11 +17,16 @@ import (
 
 var ErrNotRunning = errors.New("not running")
 
+type StatusClient interface {
+	Status(context.Context) (*types.ProviderManifestStatus, error)
+}
+
 type Handler interface {
 	HandleManifest(context.Context, *types.ManifestRequest) error
 }
 
 type Service interface {
+	StatusClient
 	Handler
 	Done() <-chan struct{}
 }
@@ -54,6 +59,7 @@ func NewHandler(ctx context.Context, session session.Session, bus event.Bus) (Se
 		session:   session,
 		bus:       bus,
 		sub:       sub,
+		statusch:  make(chan chan<- *types.ProviderManifestStatus),
 		mreqch:    make(chan manifestRequest),
 		managers:  make(map[string]*manager),
 		managerch: make(chan *manager),
@@ -72,7 +78,8 @@ type handler struct {
 	bus     event.Bus
 	sub     event.Subscriber
 
-	mreqch chan manifestRequest
+	statusch chan chan<- *types.ProviderManifestStatus
+	mreqch   chan manifestRequest
 
 	managers  map[string]*manager
 	managerch chan *manager
@@ -104,6 +111,27 @@ func (h *handler) HandleManifest(ctx context.Context, mreq *types.ManifestReques
 
 func (h *handler) Done() <-chan struct{} {
 	return h.lc.Done()
+}
+
+func (h *handler) Status(ctx context.Context) (*types.ProviderManifestStatus, error) {
+	ch := make(chan *types.ProviderManifestStatus, 1)
+
+	select {
+	case <-h.lc.Done():
+		return nil, ErrNotRunning
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case h.statusch <- ch:
+	}
+
+	select {
+	case <-h.lc.Done():
+		return nil, ErrNotRunning
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case result := <-ch:
+		return result, nil
+	}
 }
 
 func (h *handler) run(leases []event.LeaseWon) {
@@ -188,6 +216,12 @@ loop:
 			}
 
 			manager.handleManifest(req)
+
+		case ch := <-h.statusch:
+
+			ch <- &types.ProviderManifestStatus{
+				Deployments: uint32(len(h.managers)),
+			}
 
 		case manager := <-h.managerch:
 			h.session.Log().Info("manager done", "deployment", manager.daddr)

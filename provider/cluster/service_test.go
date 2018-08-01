@@ -39,6 +39,10 @@ func TestService_Reserve(t *testing.T) {
 	assert.Equal(t, order.OrderID, reservation.OrderID())
 	assert.Equal(t, group, reservation.Resources())
 
+	status, err := c.Status(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, status)
+
 	require.NoError(t, c.Close())
 
 	_, err = c.Reserve(order.OrderID, group)

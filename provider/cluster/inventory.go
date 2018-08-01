@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -21,6 +22,7 @@ type inventoryService struct {
 	client Client
 	sub    event.Subscriber
 
+	statusch    chan chan<- *types.ProviderInventoryStatus
 	lookupch    chan inventoryRequest
 	reservech   chan inventoryRequest
 	unreservech chan inventoryRequest
@@ -49,6 +51,7 @@ func newInventoryService(
 		config:      config,
 		client:      client,
 		sub:         sub,
+		statusch:    make(chan chan<- *types.ProviderInventoryStatus),
 		lookupch:    make(chan inventoryRequest),
 		reservech:   make(chan inventoryRequest),
 		unreservech: make(chan inventoryRequest),
@@ -125,6 +128,27 @@ func (is *inventoryService) unreserve(order types.OrderID, resources types.Resou
 		return response.value, response.err
 	case <-is.lc.ShuttingDown():
 		return nil, ErrNotRunning
+	}
+}
+
+func (is *inventoryService) status(ctx context.Context) (*types.ProviderInventoryStatus, error) {
+	ch := make(chan *types.ProviderInventoryStatus, 1)
+
+	select {
+	case <-is.lc.Done():
+		return nil, ErrNotRunning
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case is.statusch <- ch:
+	}
+
+	select {
+	case <-is.lc.Done():
+		return nil, ErrNotRunning
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case result := <-ch:
+		return result, nil
 	}
 }
 
@@ -237,6 +261,10 @@ loop:
 
 			req.ch <- inventoryResponse{err: errNotFound}
 
+		case ch := <-is.statusch:
+
+			ch <- is.getStatus(inventory, reservations)
+
 		case <-t.C:
 			// run cluster inventory check
 
@@ -285,6 +313,40 @@ func (is *inventoryService) runCheck() <-chan runner.Result {
 	return runner.Do(func() runner.Result {
 		return runner.NewResult(is.client.Inventory())
 	})
+}
+
+func (is *inventoryService) getStatus(
+	inventory []Node, reservations []*reservation) *types.ProviderInventoryStatus {
+
+	status := &types.ProviderInventoryStatus{
+		Reservations: &types.ProviderInventoryStatus_Reservations{},
+	}
+
+	for _, reservation := range reservations {
+		total := &types.ResourceUnit{}
+
+		for _, resource := range reservation.Resources().GetResources() {
+			total.CPU += resource.Unit.CPU
+			total.Memory += resource.Unit.Memory
+			total.Disk += resource.Unit.Disk
+		}
+
+		if reservation.allocated {
+			status.Reservations.Active = append(status.Reservations.Active, total)
+		} else {
+			status.Reservations.Pending = append(status.Reservations.Pending, total)
+		}
+	}
+
+	for _, node := range inventory {
+		status.Available = append(status.Available, &types.ResourceUnit{
+			CPU:    node.Available().CPU,
+			Memory: node.Available().Memory,
+			Disk:   node.Available().Disk,
+		})
+	}
+
+	return status
 }
 
 func reservationAllocateable(inventory []Node, reservations []*reservation, newReservation *reservation) bool {

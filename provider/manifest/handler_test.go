@@ -19,7 +19,7 @@ import (
 
 func TestHandler_manifestFirst(t *testing.T) {
 	withHandler(t, func(
-		h manifest.Handler,
+		h manifest.Service,
 		bus event.Bus,
 		mreq *types.ManifestRequest,
 		lease *types.Lease,
@@ -46,7 +46,7 @@ func TestHandler_manifestFirst(t *testing.T) {
 
 func TestHandler_leaseFirst(t *testing.T) {
 	withHandler(t, func(
-		h manifest.Handler,
+		h manifest.Service,
 		bus event.Bus,
 		mreq *types.ManifestRequest,
 		lease *types.Lease,
@@ -62,10 +62,14 @@ func TestHandler_leaseFirst(t *testing.T) {
 		defer cancel()
 
 		require.NoError(t, h.HandleManifest(ctx, mreq))
+
+		status, err := h.Status(ctx)
+		assert.NoError(t, err)
+		assert.NotNil(t, status)
 	})
 }
 
-type testfn func(manifest.Handler, event.Bus, *types.ManifestRequest, *types.Lease, *types.DeploymentGroup)
+type testfn func(manifest.Service, event.Bus, *types.ManifestRequest, *types.Lease, *types.DeploymentGroup)
 
 func withHandler(t *testing.T, fn testfn) {
 	info, kmgr := testutil.NewNamedKey(t)

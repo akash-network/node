@@ -413,9 +413,76 @@ message AkashVersion {
 }
 
 message ServerStatus {
-  int32        code    = 1;
-  AkashVersion version = 2;
-  string       message = 3;
+  int32          code     = 1;
+  AkashVersion   version  = 2;
+  ProviderStatus provider = 3;
+  string         message  = 4;
+}
+
+message ServerStatusParseable {
+
+  message ProviderStatus {
+    ProviderClusterStatus   cluster   = 1;
+    ProviderManifestStatus  manifest  = 2;
+    ProviderBidengineStatus bidengine = 3;
+  }
+
+  message ProviderClusterStatus {
+    uint32 leases                     = 1;
+    ProviderInventoryStatus inventory = 2;
+  }
+
+  message ProviderInventoryStatus {
+    message ResourceUnit {
+      uint32 CPU    = 1 [(gogoproto.jsontag)="cpu"];
+      string memory = 2;
+      string disk   = 3;
+    }
+    message Reservations {
+      repeated ResourceUnit active  = 1;
+      repeated ResourceUnit pending = 2;
+    }
+    Reservations reservations        = 1;
+    repeated ResourceUnit available  = 2;
+  }
+
+  int32          code     = 1;
+  AkashVersion   version  = 2;
+  ProviderStatus provider = 3;
+  string         message  = 4;
+}
+
+message ProviderStatus {
+  ProviderClusterStatus   cluster   = 1;
+  ProviderManifestStatus  manifest  = 2;
+  ProviderBidengineStatus bidengine = 3;
+}
+
+message ProviderManifestStatus {
+  uint32 deployments = 1;
+}
+
+message ProviderBidengineStatus {
+  uint32 orders = 1;
+}
+
+message ProviderClusterStatus {
+  uint32 leases                     = 1;
+  ProviderInventoryStatus inventory = 2;
+}
+
+message ProviderInventoryStatus {
+  message Resource {
+    uint32 CPU    = 1 [(gogoproto.jsontag)="cpu"];
+    uint32 memory = 2;
+    uint32 disk   = 3;
+  }
+  message Reservations {
+    repeated ResourceUnit active  = 1;
+    repeated ResourceUnit pending = 2;
+  }
+  Reservations reservations        = 1;
+  repeated ResourceUnit available  = 2;
 }
 
 message DeployRespone {
