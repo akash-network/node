@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -12,8 +13,11 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
-func LeaseStatus(provider *types.Provider, leaseID types.LeaseID) (*types.LeaseStatusResponse, error) {
-	resp, err := get(provider.GetHostURI() + "/lease/" + leaseID.String())
+func LeaseStatus(
+	ctx context.Context,
+	provider *types.Provider,
+	leaseID types.LeaseID) (*types.LeaseStatusResponse, error) {
+	resp, err := get(ctx, provider.GetHostURI()+"/lease/"+leaseID.String())
 	if err != nil {
 		return nil, err
 	}
@@ -25,20 +29,39 @@ func LeaseStatus(provider *types.Provider, leaseID types.LeaseID) (*types.LeaseS
 	return status, nil
 }
 
-func SendManifest(manifest *types.Manifest, signer txutil.Signer, provider *types.Provider, deployment []byte) error {
+func SendManifest(
+	ctx context.Context,
+	manifest *types.Manifest,
+	signer txutil.Signer,
+	provider *types.Provider,
+	deployment []byte) error {
 	_, buf, err := mutil.SignManifest(manifest, signer, deployment)
 	if err != nil {
 		return err
 	}
-	return post(provider.GetHostURI()+"/manifest", buf)
+	return post(ctx, provider.GetHostURI()+"/manifest", buf)
+}
+
+func Status(ctx context.Context, provider *types.Provider) (*types.ServerStatus, error) {
+	resp, err := get(ctx, provider.GetHostURI()+"/status")
+	if err != nil {
+		return nil, err
+	}
+	status := &types.ServerStatus{}
+	err = json.Unmarshal(resp, status)
+	if err != nil {
+		return nil, err
+	}
+	return status, nil
 }
 
 // XXX assumes url is http/https
-func post(url string, data []byte) error {
+func post(ctx context.Context, url string, data []byte) error {
 	req, err := nhttp.NewRequest("POST", url, bytes.NewBuffer(data))
 	if err != nil {
 		return err
 	}
+	req = req.WithContext(ctx)
 	req.Header.Set("X-Custom-Header", "Akash")
 	req.Header.Set("Content-Type", "application/json")
 	client := &nhttp.Client{}
@@ -55,11 +78,12 @@ func post(url string, data []byte) error {
 	return nil
 }
 
-func get(url string) ([]byte, error) {
+func get(ctx context.Context, url string) ([]byte, error) {
 	req, err := nhttp.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
+	req = req.WithContext(ctx)
 	req.Header.Set("X-Custom-Header", "Akash")
 	req.Header.Set("Content-Type", "application/json")
 	client := &nhttp.Client{

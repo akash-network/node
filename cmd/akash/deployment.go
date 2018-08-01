@@ -130,7 +130,7 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 
 				// send manifest over http to provider uri
 				fmt.Printf("Sending manifest to %v...\n", prov.HostURI)
-				err = http.SendManifest(mani, txclient.Signer(), prov, tx.Deployment)
+				err = http.SendManifest(session.Ctx(), mani, txclient.Signer(), prov, tx.Deployment)
 				if err != nil {
 					fmt.Printf("ERROR: %v", err)
 				} else {
@@ -142,7 +142,7 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 				// get deployment addresses for each provider in lease.
 				for provider, leaseID := range providers {
 					fmt.Printf("Service URIs for provider: %s\n", provider.Address)
-					status, err := http.LeaseStatus(provider, leaseID)
+					status, err := http.LeaseStatus(session.Ctx(), provider, leaseID)
 					if err != nil {
 						fmt.Printf("ERROR: %v", err)
 					} else {
@@ -315,7 +315,7 @@ func statusDeployment(session session.Session, cmd *cobra.Command, args []string
 			continue
 		}
 
-		status, err := http.LeaseStatus(provider, lease.LeaseID)
+		status, err := http.LeaseStatus(session.Ctx(), provider, lease.LeaseID)
 		if err != nil {
 			session.Log().Error("error fetching status ", "err", err, "lease", lease.LeaseID)
 			exitErr = err
@@ -414,7 +414,7 @@ func doSendManifest(session session.Session, signer txutil.Signer, daddr []byte,
 		if err != nil {
 			return err
 		}
-		err = http.SendManifest(mani, signer, provider, lease.Deployment)
+		err = http.SendManifest(session.Ctx(), mani, signer, provider, lease.Deployment)
 		if err != nil {
 			return err
 		}

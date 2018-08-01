@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
@@ -13,7 +15,8 @@ import (
 	"github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/grpc"
-	"github.com/ovrclk/akash/provider/grpc/json"
+	akash_json "github.com/ovrclk/akash/provider/grpc/json"
+	"github.com/ovrclk/akash/provider/http"
 	psession "github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
 	ptype "github.com/ovrclk/akash/types/provider"
@@ -35,6 +38,7 @@ func providerCommand() *cobra.Command {
 
 	cmd.AddCommand(createProviderCommand())
 	cmd.AddCommand(runCommand())
+	cmd.AddCommand(providerStatusCommand())
 	cmd.AddCommand(closeFulfillmentCommand())
 	cmd.AddCommand(closeLeaseCommand())
 
@@ -127,7 +131,7 @@ func runCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE:  session.WithSession(session.RequireNode(session.RequireHost(doProviderRunCommand))),
 	}
-	
+
 	session.AddFlagHost(cmd, cmd.PersistentFlags())
 
 	cmd.Flags().Bool("kube", false, "use kubernetes cluster")
@@ -210,7 +214,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 
 		go func() {
 			defer cancel()
-			errch <- json.Run(ctx, session.Log(), ":3001", "localhost:9090")
+			errch <- akash_json.Run(ctx, session.Log(), ":3001", "localhost:9090")
 		}()
 
 		var reterr error
@@ -223,6 +227,67 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 
 		return reterr
 	})
+}
+
+func providerStatusCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "status [<provider-id> ...]",
+		Short: "print status of (given) providers",
+		RunE:  session.WithSession(session.RequireNode(doProviderStatusCommand)),
+	}
+	return cmd
+}
+
+func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args []string) error {
+
+	plist, err := session.QueryClient().Providers(session.Ctx())
+	if err != nil {
+		return err
+	}
+
+	var providers []types.Provider
+
+	if len(args) == 0 {
+		providers = plist.Providers
+	} else {
+		for _, arg := range args {
+			pkey, err := keys.ParseAddressPath(arg)
+			if err != nil {
+				return err
+			}
+			pid := pkey.ID()
+			for _, provider := range plist.Providers {
+				if bytes.Equal(provider.Address, pid) {
+					providers = append(providers, provider)
+				}
+			}
+		}
+	}
+
+	type outputItem struct {
+		Provider *types.Provider
+		Status   *types.ServerStatus
+		Error    error `json:",omitempty"`
+	}
+
+	output := []outputItem{}
+
+	for _, provider := range providers {
+		status, err := http.Status(session.Ctx(), &provider)
+		if err != nil {
+			output = append(output, outputItem{Provider: &provider, Error: err})
+			continue
+		}
+
+		output = append(output, outputItem{Provider: &provider, Status: status})
+	}
+
+	buf, err := json.MarshalIndent(output, "", " ")
+	if err != nil {
+		return err
+	}
+	_, err = os.Stdout.Write(buf)
+	return err
 }
 
 func closeFulfillmentCommand() *cobra.Command {
