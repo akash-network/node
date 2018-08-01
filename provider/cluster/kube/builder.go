@@ -285,15 +285,21 @@ func (b *manifestBuilder) ns() string {
 }
 
 func (b *manifestBuilder) create() (*akashv1.Manifest, error) {
-	return akashv1.NewManifest(lidNS(b.lid), b.lid, b.group)
+	obj, err := akashv1.NewManifest(b.name(), b.lid, b.group)
+	if err != nil {
+		return nil, err
+	}
+	obj.Labels = b.labels()
+	return obj, nil
 }
 
 func (b *manifestBuilder) update(obj *akashv1.Manifest) (*akashv1.Manifest, error) {
-	m, err := akashv1.NewManifest(lidNS(b.lid), b.lid, b.group)
+	m, err := akashv1.NewManifest(b.name(), b.lid, b.group)
 	if err != nil {
 		return nil, err
 	}
 	obj.Spec = m.Spec
+	obj.Labels = b.labels()
 	return obj, nil
 }
 
