@@ -69,7 +69,7 @@ message Provider {
 }
 
 message Providers {
-  repeated Provider providers = 1 [(gogoproto.nullable) = false];
+  repeated Provider providers = 1;
 }
 
 message TxCreateProvider {
@@ -413,10 +413,11 @@ message AkashVersion {
 }
 
 message ServerStatus {
-  int32          code     = 1;
-  AkashVersion   version  = 2;
-  ProviderStatus provider = 3;
-  string         message  = 4;
+  bytes  provider         = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  AkashVersion   version  = 2 [(gogoproto.jsontag)="version"];
+  ProviderStatus status   = 3 [(gogoproto.jsontag)="status"];
+  int32          code     = 4;
+  string         message  = 5;
 }
 
 message ServerStatusParseable {
@@ -446,10 +447,11 @@ message ServerStatusParseable {
     repeated ResourceUnit available  = 2;
   }
 
-  int32          code     = 1;
-  AkashVersion   version  = 2;
-  ProviderStatus provider = 3;
-  string         message  = 4;
+  bytes          provider = 1 [(gogoproto.customtype)="github.com/ovrclk/akash/types/base.Bytes",(gogoproto.nullable) = false];
+  AkashVersion   version  = 2 [(gogoproto.jsontag)="version"];
+  ProviderStatus status   = 3 [(gogoproto.jsontag)="status"];
+  int32          code     = 4;
+  string         message  = 5;
 }
 
 message ProviderStatus {

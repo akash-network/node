@@ -2,20 +2,17 @@ package grpc
 
 import (
 	"context"
-	"os"
 	"testing"
-	"time"
 
 	"github.com/ovrclk/akash/manifest"
-	kmocks "github.com/ovrclk/akash/provider/cluster/kube/mocks"
+	cmocks "github.com/ovrclk/akash/provider/cluster/mocks"
 	"github.com/ovrclk/akash/provider/manifest/mocks"
-	pmocks "github.com/ovrclk/akash/provider/mocks"
+	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tmlibs/log"
 )
 
 func TestSendManifest(t *testing.T) {
@@ -28,29 +25,37 @@ func TestSendManifest(t *testing.T) {
 	mani, err := sdl.Manifest()
 	require.NoError(t, err)
 
-	_, kmgr := testutil.NewNamedKey(t)
+	key, kmgr := testutil.NewNamedKey(t)
 	signer := testutil.Signer(t, kmgr)
+
+	provider := testutil.Provider(key.Address(), 1)
+	session := session.New(testutil.Logger(), provider, nil, nil)
 
 	deployment := testutil.DeploymentAddress(t)
 
 	req, _, err := manifest.SignManifest(mani, signer, deployment)
 	assert.NoError(t, err)
 
-	sclient := &pmocks.StatusClient{}
-
 	handler := &mocks.Handler{}
 	handler.On("HandleManifest", mock.Anything, mock.Anything).Return(nil)
 
-	client := &kmocks.Client{}
+	client := &cmocks.Client{}
 
-	server := newServer(log.NewTMLogger(os.Stdout), "tcp", ":3001", handler, client, sclient)
+	donech := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+
 	go func() {
-		err := server.listenAndServe()
-		require.NoError(t, err)
+		defer close(donech)
+		assert.NoError(t, Run(ctx, ":3001", session, client, nil, handler))
 	}()
 
-	time.Sleep(1 * time.Second)
+	testutil.SleepForThreadStart(t)
 
 	_, err = c.Deploy(context.TODO(), req)
 	assert.NoError(t, err)
+
+	testutil.SleepForThreadStart(t)
+
+	cancel()
+	<-donech
 }

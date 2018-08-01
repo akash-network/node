@@ -476,15 +476,19 @@
     "typesServerStatus": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
+        "provider": {
+          "type": "string",
+          "format": "byte"
         },
         "version": {
           "$ref": "#/definitions/typesAkashVersion"
         },
-        "provider": {
+        "status": {
           "$ref": "#/definitions/typesProviderStatus"
+        },
+        "code": {
+          "type": "integer",
+          "format": "int32"
         },
         "message": {
           "type": "string"

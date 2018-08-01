@@ -67,7 +67,7 @@ func (d *providerAdapter) GetRange(startKey base.Bytes, endKey base.Bytes, limit
 	}
 
 	for _, d := range dbytes {
-		dc := types.Provider{}
+		dc := &types.Provider{}
 		dc.Unmarshal(d)
 		dcs.Providers = append(dcs.Providers, dc)
 	}

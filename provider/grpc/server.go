@@ -1,7 +1,6 @@
 package grpc
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -10,57 +9,35 @@ import (
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/provider"
 	"github.com/ovrclk/akash/provider/cluster"
-	"github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/manifest"
+	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/version"
 	"github.com/tendermint/tmlibs/log"
 	"golang.org/x/net/context"
-	"golang.org/x/net/netutil"
 	"google.golang.org/grpc"
 )
 
 type server struct {
-	cluster.Client
-	*grpc.Server
+	session session.Session
+	client  cluster.Client
 	status  provider.StatusClient
 	handler manifest.Handler
-	network string
-	port    string
 	log     log.Logger
 }
 
-func RunServer(ctx context.Context, log log.Logger, network,
-	port string, handler manifest.Handler, client kube.Client,
-	status provider.StatusClient) error {
-
-	address := fmt.Sprintf(":%v", port)
-
-	server := newServer(log, network, address, handler, client, status)
-
-	ctx, cancel := context.WithCancel(ctx)
-
-	donech := make(chan struct{})
-
-	go func() {
-		defer close(donech)
-		<-ctx.Done()
-		log.Info("Shutting down server")
-		server.GracefulStop()
-	}()
-
-	log.Info("Starting GRPC server", "address", address)
-	err := server.listenAndServe()
-	cancel()
-
-	<-donech
-
-	log.Info("GRPC server shutdown")
-
-	return err
+func Run(
+	ctx context.Context,
+	address string,
+	session session.Session,
+	client cluster.Client,
+	status provider.StatusClient,
+	handler manifest.Handler) error {
+	server := create(session, client, status, handler)
+	return run(ctx, server, address)
 }
 
-func (s server) Status(ctx context.Context, req *types.Empty) (*types.ServerStatus, error) {
+func (s *server) Status(ctx context.Context, req *types.Empty) (*types.ServerStatus, error) {
 	status, err := s.status.Status(ctx)
 	if err != nil {
 		return nil, err
@@ -68,9 +45,10 @@ func (s server) Status(ctx context.Context, req *types.Empty) (*types.ServerStat
 
 	vsn := version.Get()
 	return &types.ServerStatus{
-		Code:     http.StatusOK,
+		Provider: s.session.Provider().Address,
 		Version:  &vsn,
-		Provider: status,
+		Status:   status,
+		Code:     http.StatusOK,
 		Message:  "OK",
 	}, nil
 }
@@ -85,7 +63,7 @@ func (s server) Deploy(ctx context.Context, req *types.ManifestRequest) (*types.
 }
 
 // Lease status will retry for one minute
-func (s server) LeaseStatus(ctx context.Context, req *types.LeaseStatusRequest) (*types.LeaseStatusResponse, error) {
+func (s *server) LeaseStatus(ctx context.Context, req *types.LeaseStatusRequest) (*types.LeaseStatusResponse, error) {
 	attempts := 12
 
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
@@ -94,14 +72,14 @@ func (s server) LeaseStatus(ctx context.Context, req *types.LeaseStatusRequest) 
 		return nil, types.ErrInternalError{Message: "internal error"}
 	}
 
-	response, err := s.Client.LeaseStatus(lease.LeaseID)
+	response, err := s.client.LeaseStatus(lease.LeaseID)
 	if err == nil {
 		return response, err
 	}
 
 	for i := 0; i < attempts; i++ {
 		time.Sleep(time.Second * 5)
-		response, err = s.Client.LeaseStatus(lease.LeaseID)
+		response, err = s.client.LeaseStatus(lease.LeaseID)
 		if err != cluster.ErrNoDeployments {
 			break
 		}
@@ -110,23 +88,23 @@ func (s server) LeaseStatus(ctx context.Context, req *types.LeaseStatusRequest) 
 	return response, err
 }
 
-func (s server) ServiceStatus(ctx context.Context,
+func (s *server) ServiceStatus(ctx context.Context,
 	req *types.ServiceStatusRequest) (*types.ServiceStatusResponse, error) {
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
 	if err != nil {
 		s.log.Error(err.Error())
 		return nil, types.ErrInternalError{Message: "internal error"}
 	}
-	return s.Client.ServiceStatus(lease.LeaseID, req.Name)
+	return s.client.ServiceStatus(lease.LeaseID, req.Name)
 }
 
-func (s server) ServiceLogs(req *types.LogRequest, server types.Cluster_ServiceLogsServer) error {
+func (s *server) ServiceLogs(req *types.LogRequest, server types.Cluster_ServiceLogsServer) error {
 	lease, err := keys.ParseLeasePath(strings.Join([]string{req.Deployment, req.Group, req.Order, req.Provider}, "/"))
 	if err != nil {
 		s.log.Error(err.Error())
 		return types.ErrInternalError{Message: "internal error"}
 	}
-	logs, err := s.Client.ServiceLogs(server.Context(), lease.LeaseID, req.Options.TailLines, req.Options.Follow)
+	logs, err := s.client.ServiceLogs(server.Context(), lease.LeaseID, req.Options.TailLines, req.Options.Follow)
 	if err != nil {
 		s.log.Error(err.Error())
 		return types.ErrInternalError{Message: "internal error"}
@@ -165,28 +143,54 @@ func (s server) ServiceLogs(req *types.LogRequest, server types.Cluster_ServiceL
 	return nil
 }
 
-// NewServer network can be "tcp", "tcp4", "tcp6", "unix" or "unixpacket". phandler is the provider cluster handler
-func newServer(log log.Logger, network, port string, handler manifest.Handler,
-	client kube.Client, status provider.StatusClient) *server {
-	s := &server{
+func create(
+	session session.Session,
+	client cluster.Client,
+	status provider.StatusClient,
+	handler manifest.Handler) *server {
+
+	log := session.Log().With("cmp", "grpc-server")
+
+	return &server{
+		session: session,
+		client:  client,
 		status:  status,
 		handler: handler,
-		network: network,
-		port:    port,
-		Server:  grpc.NewServer(grpc.MaxConcurrentStreams(2), grpc.MaxRecvMsgSize(500000)),
 		log:     log,
-		Client:  client,
 	}
-	types.RegisterClusterServer(s.Server, s)
-	return s
 }
 
-func (s *server) listenAndServe() error {
-	l, err := net.Listen(s.network, s.port)
+func run(ctx context.Context, server *server, address string) error {
+
+	fd, err := net.Listen("tcp4", address)
 	if err != nil {
 		return err
 	}
-	l = netutil.LimitListener(l, 10)
-	s.log.Info("Running manifest server", "port", s.port, "network", s.network)
-	return s.Server.Serve(l)
+
+	gserver := grpc.NewServer(grpc.MaxConcurrentStreams(2), grpc.MaxRecvMsgSize(500000))
+	types.RegisterClusterServer(gserver, server)
+
+	ctx, cancel := context.WithCancel(ctx)
+	donech := make(chan struct{})
+
+	go func() {
+		defer close(donech)
+		<-ctx.Done()
+		server.log.Info("Shutting down server")
+		gserver.GracefulStop()
+	}()
+
+	server.log.Info("Starting GRPC server", "address", address)
+	err = gserver.Serve(fd)
+	server.log.Info("GRPC server shutdown.")
+	if ctx.Err() == context.Canceled {
+		err = nil
+	}
+	cancel()
+
+	<-donech
+
+	server.log.Info("GRPC done.")
+
+	return err
 }

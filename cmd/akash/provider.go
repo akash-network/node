@@ -33,8 +33,6 @@ func providerCommand() *cobra.Command {
 	}
 
 	session.AddFlagNode(cmd, cmd.PersistentFlags())
-	session.AddFlagKey(cmd, cmd.PersistentFlags())
-	session.AddFlagNonce(cmd, cmd.PersistentFlags())
 
 	cmd.AddCommand(createProviderCommand())
 	cmd.AddCommand(runCommand())
@@ -54,6 +52,8 @@ func createProviderCommand() *cobra.Command {
 		RunE:  session.WithSession(session.RequireNode(doCreateProviderCommand)),
 	}
 
+	session.AddFlagKey(cmd, cmd.Flags())
+	session.AddFlagNonce(cmd, cmd.Flags())
 	session.AddFlagKeyType(cmd, cmd.Flags())
 
 	return cmd
@@ -132,6 +132,8 @@ func runCommand() *cobra.Command {
 		RunE:  session.WithSession(session.RequireNode(session.RequireHost(doProviderRunCommand))),
 	}
 
+	session.AddFlagKey(cmd, cmd.Flags())
+	session.AddFlagNonce(cmd, cmd.Flags())
 	session.AddFlagHost(cmd, cmd.PersistentFlags())
 
 	cmd.Flags().Bool("kube", false, "use kubernetes cluster")
@@ -209,7 +211,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 
 		go func() {
 			defer cancel()
-			errch <- grpc.RunServer(ctx, session.Log(), "tcp", "9090", service.ManifestHandler(), cclient, service)
+			errch <- grpc.Run(ctx, ":9090", psession, cclient, service, service.ManifestHandler())
 		}()
 
 		go func() {
@@ -245,7 +247,7 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 		return err
 	}
 
-	var providers []types.Provider
+	var providers []*types.Provider
 
 	if len(args) == 0 {
 		providers = plist.Providers
@@ -265,20 +267,34 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 	}
 
 	type outputItem struct {
-		Provider *types.Provider
-		Status   *types.ServerStatusParseable
-		Error    string `json:",omitempty"`
+		Provider *types.Provider              `json:"provider,omitempty"`
+		Status   *types.ServerStatusParseable `json:"status,omitempty"`
+		Error    string                       `json:"error,omitempty"`
 	}
 
 	output := []outputItem{}
 
 	for _, provider := range providers {
-		status, err := http.Status(session.Ctx(), &provider)
+
+		status, err := http.Status(session.Ctx(), provider)
 		if err != nil {
-			output = append(output, outputItem{Provider: &provider, Error: err.Error()})
+			output = append(output, outputItem{Provider: provider, Error: err.Error()})
 			continue
 		}
-		output = append(output, outputItem{Provider: &provider, Status: status})
+
+		if !bytes.Equal(status.Provider, provider.Address) {
+			output = append(output, outputItem{
+				Provider: provider,
+				Status:   status,
+				Error:    "Status received from incorrect provider",
+			})
+			continue
+		}
+
+		output = append(output, outputItem{
+			Provider: provider,
+			Status:   status,
+		})
 	}
 
 	buf, err := json.MarshalIndent(output, "", " ")
@@ -298,7 +314,8 @@ func closeFulfillmentCommand() *cobra.Command {
 		RunE:  session.WithSession(session.RequireNode(doCloseFulfillmentCommand)),
 	}
 
-	session.AddFlagKeyType(cmd, cmd.Flags())
+	session.AddFlagKey(cmd, cmd.Flags())
+	session.AddFlagNonce(cmd, cmd.Flags())
 
 	return cmd
 }
@@ -328,8 +345,6 @@ func closeLeaseCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(4),
 		RunE:  session.WithSession(session.RequireNode(doCloseLeaseCommand)),
 	}
-
-	session.AddFlagKeyType(cmd, cmd.Flags())
 
 	return cmd
 }
