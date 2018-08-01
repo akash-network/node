@@ -55,11 +55,11 @@ Every command accepts the following flags. For brevity, they are omitted from th
 
 | Command | Description |
 |:--|:--|
-| close | close a deployment |
-| create | create a deployment |
-| sendmani | send manifest to all deployment providers **TODO** wut |
-| status | get deployment status |
-| validate | validate deployment file |
+| close | Close a deployment |
+| create | Create a deployment |
+| sendmani | Send manifest to all deployment providers **TODO** wut |
+| status | Get deployment status |
+| validate | Validate deployment file |
 
 ### Command usage
 
@@ -139,7 +139,7 @@ In the example above:
 
 **Usage**
 
-`akash deployment sendmani <manifest> <deployment-id> [flags]`
+`akash deployment sendmani <manifest> <deployment-id> [flags]` **todo rename to deployment-file?**
 
 **Example**
 
@@ -174,7 +174,7 @@ Get the lease and service URI(s) for an open deployment.
 
 Deployment is open
 ```
-akash deployment status 619d25a730f8451b1ba3bf9c1bfabcb469068ad7d8da9a0d4b9bcd1080fb2450
+$ akash deployment status 619d25a730f8451b1ba3bf9c1bfabcb469068ad7d8da9a0d4b9bcd1080fb2450
 lease: 619d25a730f8451b1ba3bf9c1bfabcb469068ad7d8da9a0d4b9bcd1080fb2450/1/2/5ed78fbc526270c3501d09f88a3c442cf1bc6c869eb2d4d6c4f4eb4d41ee3f44
 	webapp: webapp.9060b8ae-1b62-47ff-a247-164f2f081681.147-75-193-181.aksh.io
 ```
@@ -229,22 +229,114 @@ Error: group specs: group san-jose: price too low (1 >= 25 fails)
 None
 
 
+## key
 
+### Usage
 
+`akash key [command]`
 
-#### `name`
-desc
+### Available commands
+
+| Command | Description |
+|:--|:--|
+| create | Create new key |
+| list | List all your keys |
+| show | Display a single key |
+
+### Command usage
+
+#### `create`
+Create a new key to use in the Akash Network. A key links to an Akash account and is used to authenticate to the network.
 
 **Usage**
 
-`thing`
+`akash key create <key-name> [flags]`
 
 **Example**
 
 ```
-$ akash deployment close 3be771d6ce0a9e0b5b8caa35d674cdd790f94500226433ab2794ee46d8886f42 -k my-key-name
-Closing deployment
+$ akash key create my-key-name
+8d2cb35f05ec35666bbc841331718e31415926a1
 ```
+In the example above:
+ - **key value**: `8d2cb35f05ec35666bbc841331718e31415926a1`
+
+
+**Arguments**
+
+| Argument | Type | Required | Description |
+|:--|:--|:--|:--|
+| key-name | string | Y | A meaningful-to-you name for your key. |
+
+**Flags**
+
+| Short | Verbose | Argument | Required | Description |
+|:--|:--|:--|:--|:--|
+| -t | --type | (ed25519|secp256k1|ledger) | N | Type of key (default "ed25519") |
+
+#### `List`
+List all your local keys.
+
+**Usage**
+
+`akash key list [flags]`
+
+**Example**
+
+```
+$ akash key list
+my-key-name 		8d2cb35f05ec35666bbc841331718e31415926a1
+my-other-key-name 	35c055f1fa38cb1864e484a1d733a58bbffb1156
+```
+
+**Arguments**
+
+None
+
+**Flags**
+
+None
+
+
+#### `show`
+Show the key value belonging to a key name.
+
+**Usage**
+
+`akash key show <key-name> [flags]`
+
+**Example**
+
+```
+$ akash key show my-key-name
+8d2cb35f05ec35666bbc841331718e31415926a1
+```
+
+**Arguments**
+
+None
+
+**Flags**
+
+None
+
+
+=====================
+#### `show`
+desc
+
+**Usage**
+
+`xxx`
+
+**Example**
+
+```
+$ 
+```
+In the example above:
+ - **xxx**: `xxx`
+
 
 **Arguments**
 
@@ -257,8 +349,6 @@ Closing deployment
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
 |  |  |  |  |  |
-
-
 
 
 
