@@ -15,8 +15,6 @@ Installation instructions for the client binary may be found [here](https://gith
 # The Akash testnet
 The Akash testnet is available for public use.  A description of the testnet, registration instructions, and a getting-started guide may be found [here](https://github.com/ovrclk/akash/_docs/testnet).
 
-# Workflow
-**TODO**
   
 # Top-level commands
 These commands are presented as an overview of the features available via the Akash client. Individual command usage is described in subsequent sections.
@@ -25,16 +23,16 @@ These commands are presented as an overview of the features available via the Ak
 
 | Command | Description |
 |:--|:--|
-| deployment | Manage deployments |
-| help | Help about any command |
-| key | Manage keys |
+| deployment | Manage deployments. |
+| help | Help about any command. |
+| key | Manage keys. |
 | logs | Service logs |
 | marketplace | Monitor marketplace. |
 | provider | Manage provider. |
-| query | Query something **TODO** better |
-| send | Send tokens to an account |
-| status | Get remote node status |
-| version | Print version |
+| query | Query things that need querying. |
+| send | Send tokens to an account. |
+| status | Get remote node status. |
+| version | Print Akash version. |
 
 **Flags**
 
@@ -43,7 +41,7 @@ Every command accepts the following flags. For brevity, they are omitted from th
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
 | -h | --help | None | N | Help for any command. |
-| -d | --data | String | N | Data directory (defaults to `~/.akash`). **TODO** what is this |
+| -d | --data | String | N | User data directory (defaults to `~/.akash`).  |
 
 
 # Individual commands
@@ -59,11 +57,11 @@ Create, manage, and query your deployments.
 
 | Command | Description |
 |:--|:--|
-| close | Close a deployment |
-| create | Create a deployment |
-| sendmani | Send manifest to all deployment providers **TODO** wut |
-| status | Get deployment status |
-| validate | Validate deployment file |
+| close | Close a deployment. |
+| create | Create a deployment. |
+| sendmani | Send manifest to all deployment providers. |
+| status | Get deployment status. |
+| validate | Validate deployment file. |
 
 ### Command usage
 
@@ -140,11 +138,11 @@ In the example above:
 |  | --nonce | uint | N | Nonce |
 
 #### `sendmani`
-**TODO** What does this do?
+Sends manifest directly to a deployment's provider(s), using data from the deployment file. Use this command after creating a deployment using the `--no-wait` flag.
 
 **Usage**
 
-`akash deployment sendmani <manifest> <deployment-id> [flags]` **todo rename to deployment-file?**
+`akash deployment sendmani <deployment-file> <deployment-id> [flags]` 
 
 **Example**
 
@@ -493,14 +491,11 @@ $ maisy:~ nalesandro$ akash query account -k my-key-name
 In the example above, token balance is given in microAKSH (AKSH * 10^-6).
 
 
-**TODO** what exactly is the relationship between account/address/key
-
-
 **Arguments**
 
 | Argument | Type | Required | Description |
 |:--|:--|:--|:--|
-| account | string | N | One or more account addresses to query. Omitting this argument returns all your accounts. |
+| account | string | N | One or more account addresses to query. Omitting this argument returns all your accounts for the provided key. |
 
 **Flags**
 
@@ -537,7 +532,9 @@ $ akash query deployment -k alpha
   ]
 }
 ```
-In the example above, `"state": 2` indicates a closed lease.  **TODO** what to say abt version?
+In the example above:
+ - **"state": 2**: indicates a closed deployment.  
+ - **version**: is a hash of the manifest, used by provider to verify incoming manifest content
 
 
 **Arguments**
@@ -553,31 +550,6 @@ In the example above, `"state": 2` indicates a closed lease.  **TODO** what to s
 | -k | --key | string | Y | Name of one of your keys, for authentication. |
 | -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
 
-
-#### `deployment-group`
-
-**TODO** this does not seem to work at all
-
-```
-$ akash query deployment-group -h
-query deployment groups
-
-Usage:
-  akash query deployment-group [deployment-group ...] [flags]
-
-Flags:
-  -h, --help   help for deployment-group
-
-Global Flags:
-  -d, --data string   data directory (default "/Users/nalesandro/.akash")
-  -n, --node string   node host (default "http://api.akashtest.net:80")
-
-$ akash query deployment group
-Error: encoding/hex: invalid byte: U+0067 'g'
-
-$ akash query deployment-group -k alpha
-Error: unknown shorthand flag: 'k' in -k
-```
 
 #### `fulfillment`
 Retrieve the details for one or more fulfillments made for your deployments. A fulfillment represents a provider's bid on your deployments. 
@@ -615,9 +587,7 @@ $ akash query fulfillment
   ]
 }
 ```
-In the example above, `"state": 2` indicates a closed lease.  **TODO** true?
-
- **TODO** are all fulfillments shown or just the ones that resulted in leases?  Seems like the latter
+In the example above, `"state": 2` indicates a closed fulfillment.
 
 **Arguments**
 
@@ -630,8 +600,6 @@ In the example above, `"state": 2` indicates a closed lease.  **TODO** true?
 | Short | Verbose | Argument | Required | Description |
 |:--|:--|:--|:--|:--|
 | -n | --node | string | N | Node host (defaults to https://api.akashtest.net:80). |
-
-**TODO** why is key not required here but is for `deployment`?
 
 
 #### `lease`
@@ -703,7 +671,7 @@ In the example above, the lease is specified in the form [deployment id]/[deploy
 
 
 #### `order`
-**TODO** what's an order yo. and why isnt key required
+Retrieve the details for one or more of your orders.  An order is an internal representation of a deplyoyment group: the resources from your deployment that may be fulfilled by a single provider.
 
 **Usage**
 
@@ -737,7 +705,9 @@ $ $ akash query order
   ]
 }
 ```
-In the example above, `"state": 2` indicates a closed lease. **TODO** what's `endAt`
+In the example above:
+ - **"state": 2**: indicates a closed order. 
+ - **endAt**: indicates the block number upon which all fulfillments must be issued, prior to awarding a lease
 
 
 **Arguments**
