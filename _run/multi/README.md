@@ -31,6 +31,7 @@ __t1__: Start minikube
 $ cd $GOPATH/src/github.com/ovrclk/akash/_run/multi
 $ minikube start --cpus 4 --memory 4096
 $ minikube addons enable ingress
+$ minikube addons enable metrics-server
 $ kubectl create -f rbac.yml
 ```
 
@@ -124,7 +125,7 @@ _Creates a deployment for the master acct using the sample deployment.yml file. 
  * _a lease is awarded to the lowest bid provider and printed_
  * _the manifest file is then automatically sent to the winning provider_
 ```sh
-$ akash deployment create deployment.yml -k master -w
+$ akash deployment create deployment.yml -k master
 ```
 
 __t1__: Check/View deployed app
@@ -141,7 +142,7 @@ _Copies deployment.yml to world.yml, replacing the "hello" subdomains with "worl
 ```sh
 $ source env.sh
 $ sed -e 's/hello/world/g' -e 's/us-west/ap-southeast/g' -e 's/westcoast/singapore/g'< deployment.yml > world.yml
-$ akash deployment create world.yml -k master -w
+$ akash deployment create world.yml -k master
 $ curl -I world.$(minikube ip).nip.io
 $ open http://world.$(minikube ip).nip.io
 ```

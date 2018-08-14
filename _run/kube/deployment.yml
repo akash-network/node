@@ -1,4 +1,6 @@
 ---
+version: "1.0"
+
 services:
   web:
     image: quay.io/ovrclk/demo-app
@@ -16,13 +18,13 @@ profiles:
     web:
       cpu: 0.1
       memory: 512Mi
-      disk: 5Gi
+      disk: 1Gi
   placement:
     westcoast:
       attributes:
         region: us-west
       pricing:
-        web: .101
+        web: 2e-3
 
 deployment:
   web:

@@ -53,3 +53,8 @@ func (_m *Handler) OnTxCreateProvider(_a0 *types.TxCreateProvider) {
 func (_m *Handler) OnTxSend(_a0 *types.TxSend) {
 	_m.Called(_a0)
 }
+
+// OnTxUpdateDeployment provides a mock function with given fields: _a0
+func (_m *Handler) OnTxUpdateDeployment(_a0 *types.TxUpdateDeployment) {
+	_m.Called(_a0)
+}

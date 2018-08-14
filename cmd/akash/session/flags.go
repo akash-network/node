@@ -10,13 +10,17 @@ import (
 )
 
 func AddFlagNode(cmd *cobra.Command, flags *pflag.FlagSet) {
-	flags.StringP(flagNode, "n", "http://localhost:46657", "node host")
+	flags.StringP(flagNode, "n", defaultNode, "node host")
 	viper.BindPFlag(flagNode, flags.Lookup(flagNode))
 }
 
 func AddFlagKey(cmd *cobra.Command, flags *pflag.FlagSet) {
 	flags.StringP(flagKey, "k", "", "key name (required)")
 	cmd.MarkFlagRequired(flagKey)
+}
+
+func AddFlagKeyOptional(cmd *cobra.Command, flags *pflag.FlagSet) {
+	flags.StringP(flagKey, "k", "", "key name")
 }
 
 func AddFlagNonce(cmd *cobra.Command, flags *pflag.FlagSet) {

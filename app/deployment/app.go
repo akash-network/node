@@ -11,6 +11,7 @@ import (
 	appstate "github.com/ovrclk/akash/state"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/code"
+	"github.com/ovrclk/akash/validation"
 	tmtypes "github.com/tendermint/abci/types"
 	"github.com/tendermint/tmlibs/log"
 )
@@ -60,7 +61,7 @@ func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.Resp
 
 	id := strings.TrimPrefix(req.Path, appstate.DeploymentPath)
 	if len(id) == 0 {
-		return a.doRangeQuery(state)
+		return a.doRangeQuery(state, req.Data)
 	}
 
 	key, err := keys.ParseDeploymentPath(id)
@@ -78,6 +79,8 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	switch tx.(type) {
 	case *types.TxPayload_TxCreateDeployment:
 		return true
+	case *types.TxPayload_TxUpdateDeployment:
+		return true
 	case *types.TxPayload_TxCloseDeployment:
 		return true
 	}
@@ -88,6 +91,8 @@ func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateDeployment:
 		return a.doCheckCreateTx(state, ctx, tx.TxCreateDeployment)
+	case *types.TxPayload_TxUpdateDeployment:
+		return a.doCheckUpdateTx(state, ctx, tx.TxUpdateDeployment)
 	case *types.TxPayload_TxCloseDeployment:
 		return a.doCheckCloseTx(state, ctx, tx.TxCloseDeployment)
 	}
@@ -101,6 +106,8 @@ func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface
 	switch tx := tx.(type) {
 	case *types.TxPayload_TxCreateDeployment:
 		return a.doDeliverCreateTx(state, ctx, tx.TxCreateDeployment)
+	case *types.TxPayload_TxUpdateDeployment:
+		return a.doDeliverUpdateTx(state, ctx, tx.TxUpdateDeployment)
 	case *types.TxPayload_TxCloseDeployment:
 		return a.doDeliverCloseTx(state, ctx, tx.TxCloseDeployment)
 	}
@@ -142,7 +149,7 @@ func (a *app) doQuery(state appstate.State, key keys.Deployment) tmtypes.Respons
 	}
 }
 
-func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
+func (a *app) doRangeQuery(state appstate.State, tenant []byte) tmtypes.ResponseQuery {
 	deps, err := state.Deployment().GetMaxRange()
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -151,6 +158,14 @@ func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
 		}
 	}
 
+	tenantDeps := []types.Deployment{}
+	for _, deployment := range deps.Items {
+		if len(tenant) == 0 || bytes.Equal(deployment.Tenant, tenant) {
+			tenantDeps = append(tenantDeps, deployment)
+		}
+	}
+
+	deps.Items = tenantDeps
 	bytes, err := proto.Marshal(deps)
 	if err != nil {
 		return tmtypes.ResponseQuery{
@@ -231,10 +246,10 @@ func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *ty
 		}
 	}
 
-	if len(tx.Groups) == 0 {
+	if err := validation.ValidateGroupSpecs(tx.Groups); err != nil {
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
-			Log:  "No groups in deployment",
+			Log:  err.Error(),
 		}
 	}
 
@@ -267,6 +282,49 @@ func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *ty
 		return tmtypes.ResponseCheckTx{
 			Code: code.INVALID_TRANSACTION,
 			Log:  "invalid nonce",
+		}
+	}
+
+	return tmtypes.ResponseCheckTx{}
+}
+
+func (a *app) doCheckUpdateTx(
+	state appstate.State,
+	ctx apptypes.Context,
+	tx *types.TxUpdateDeployment) tmtypes.ResponseCheckTx {
+
+	if len(tx.Version) == 0 {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "invalid version: empty",
+		}
+	}
+
+	deployment, err := state.Deployment().Get(tx.Deployment)
+	if err != nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+	if deployment == nil {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment not found",
+		}
+	}
+
+	if !bytes.Equal(ctx.Signer().Address(), deployment.Tenant) {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment not owned by signer",
+		}
+	}
+
+	if deployment.State != types.Deployment_ACTIVE {
+		return tmtypes.ResponseCheckTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment not active",
 		}
 	}
 
@@ -366,6 +424,48 @@ func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *
 
 	return tmtypes.ResponseDeliverTx{
 		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCreateDeployment),
+		Data: deployment.Address,
+	}
+}
+
+func (a *app) doDeliverUpdateTx(
+	state appstate.State,
+	ctx apptypes.Context,
+	tx *types.TxUpdateDeployment) tmtypes.ResponseDeliverTx {
+
+	cresp := a.doCheckUpdateTx(state, ctx, tx)
+	if !cresp.IsOK() {
+		return tmtypes.ResponseDeliverTx{
+			Code: cresp.Code,
+			Log:  cresp.Log,
+		}
+	}
+
+	deployment, err := state.Deployment().Get(tx.Deployment)
+	if err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+	if deployment == nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  "Deployment not found",
+		}
+	}
+
+	deployment.Version = tx.Version
+
+	if err := state.Deployment().Save(deployment); err != nil {
+		return tmtypes.ResponseDeliverTx{
+			Code: code.INVALID_TRANSACTION,
+			Log:  err.Error(),
+		}
+	}
+
+	return tmtypes.ResponseDeliverTx{
+		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeUpdateDeployment),
 		Data: deployment.Address,
 	}
 }

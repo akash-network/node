@@ -9,6 +9,7 @@ import (
 
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	"github.com/ovrclk/akash/types"
+	"github.com/satori/go.uuid"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/api/extensions/v1beta1"
@@ -33,7 +34,9 @@ func (b *builder) ns() string {
 }
 
 func (b *builder) labels() map[string]string {
-	return deploymentLabels()
+	return map[string]string{
+		akashManagedLabelName: "true",
+	}
 }
 
 type nsBuilder struct {
@@ -212,7 +215,8 @@ type ingressBuilder struct {
 }
 
 func newIngressBuilder(host string, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService, expose *types.ManifestServiceExpose) *ingressBuilder {
-	expose.Hosts = append(expose.Hosts, fmt.Sprintf("%v.%v.%v", service.Name, lid.DeploymentID(), host))
+	uid := uuid.NewV4()
+	expose.Hosts = append(expose.Hosts, fmt.Sprintf("%v.%s.%v", service.Name, uid, host))
 	return &ingressBuilder{
 		deploymentBuilder: deploymentBuilder{builder: builder{lid, group}, service: service},
 		expose:            expose,
@@ -281,13 +285,24 @@ func (b *manifestBuilder) ns() string {
 }
 
 func (b *manifestBuilder) create() (*akashv1.Manifest, error) {
-	return akashv1.NewManifest(lidNS(b.lid), &b.lid, b.group)
+	obj, err := akashv1.NewManifest(b.name(), b.lid, b.group)
+	if err != nil {
+		return nil, err
+	}
+	obj.Labels = b.labels()
+	return obj, nil
 }
 
 func (b *manifestBuilder) update(obj *akashv1.Manifest) (*akashv1.Manifest, error) {
-	return akashv1.NewManifest(lidNS(b.lid), &b.lid, b.group)
+	m, err := akashv1.NewManifest(b.name(), b.lid, b.group)
+	if err != nil {
+		return nil, err
+	}
+	obj.Spec = m.Spec
+	obj.Labels = b.labels()
+	return obj, nil
 }
 
 func (b *manifestBuilder) name() string {
-	return b.group.Name
+	return lidNS(b.lid)
 }

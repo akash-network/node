@@ -8,6 +8,7 @@ type Handler interface {
 	OnTxSend(*types.TxSend)
 	OnTxCreateProvider(*types.TxCreateProvider)
 	OnTxCreateDeployment(*types.TxCreateDeployment)
+	OnTxUpdateDeployment(*types.TxUpdateDeployment)
 	OnTxCreateOrder(*types.TxCreateOrder)
 	OnTxCreateFulfillment(*types.TxCreateFulfillment)
 	OnTxCreateLease(*types.TxCreateLease)
@@ -20,6 +21,7 @@ type handler struct {
 	onTxSend              func(*types.TxSend)
 	onTxCreateProvider    func(*types.TxCreateProvider)
 	onTxCreateDeployment  func(*types.TxCreateDeployment)
+	onTxUpdateDeployment  func(*types.TxUpdateDeployment)
 	onTxCreateOrder       func(*types.TxCreateOrder)
 	onTxCreateFulfillment func(*types.TxCreateFulfillment)
 	onTxCreateLease       func(*types.TxCreateLease)
@@ -43,6 +45,12 @@ func (h handler) OnTxCreateProvider(tx *types.TxCreateProvider) {
 func (h handler) OnTxCreateDeployment(tx *types.TxCreateDeployment) {
 	if h.onTxCreateDeployment != nil {
 		h.onTxCreateDeployment(tx)
+	}
+}
+
+func (h handler) OnTxUpdateDeployment(tx *types.TxUpdateDeployment) {
+	if h.onTxUpdateDeployment != nil {
+		h.onTxUpdateDeployment(tx)
 	}
 }
 
@@ -86,6 +94,7 @@ type Builder interface {
 	OnTxSend(func(*types.TxSend)) Builder
 	OnTxCreateProvider(func(*types.TxCreateProvider)) Builder
 	OnTxCreateDeployment(func(*types.TxCreateDeployment)) Builder
+	OnTxUpdateDeployment(func(*types.TxUpdateDeployment)) Builder
 	OnTxCreateOrder(func(*types.TxCreateOrder)) Builder
 	OnTxCreateFulfillment(func(*types.TxCreateFulfillment)) Builder
 	OnTxCreateLease(func(*types.TxCreateLease)) Builder
@@ -113,6 +122,11 @@ func (b *builder) OnTxCreateProvider(fn func(*types.TxCreateProvider)) Builder {
 
 func (b *builder) OnTxCreateDeployment(fn func(*types.TxCreateDeployment)) Builder {
 	b.onTxCreateDeployment = fn
+	return b
+}
+
+func (b *builder) OnTxUpdateDeployment(fn func(*types.TxUpdateDeployment)) Builder {
+	b.onTxUpdateDeployment = fn
 	return b
 }
 

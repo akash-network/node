@@ -5,7 +5,7 @@ nodeuri(){
 }
 
 akash(){
-  _akash -n "$(nodeuri)" "$@"
+  AKASH_NODE=$(nodeuri) _akash "$@"
 }
 
 akashd(){

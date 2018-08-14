@@ -13,13 +13,20 @@ func queryLeaseCommand() *cobra.Command {
 		Short: "query lease",
 		RunE:  session.WithSession(session.RequireNode(doQueryLeaseCommand)),
 	}
-
+	session.AddFlagKeyOptional(cmd, cmd.Flags())
 	return cmd
 }
 
 func doQueryLeaseCommand(session session.Session, cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		return handleMessage(session.QueryClient().Leases(session.Ctx()))
+		_, info, err := session.Signer()
+		if err != nil {
+			return err
+		}
+		if err := handleMessage(session.QueryClient().TenantLeases(session.Ctx(), info.PubKey.Address().Bytes())); err != nil {
+			return err
+		}
+		return nil
 	}
 	for _, arg := range args {
 		key, err := keys.ParseLeasePath(arg)

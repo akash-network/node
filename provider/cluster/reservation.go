@@ -4,22 +4,23 @@ import "github.com/ovrclk/akash/types"
 
 type Reservation interface {
 	OrderID() types.OrderID
-	Group() *types.DeploymentGroup
+	Resources() types.ResourceList
 }
 
-func newReservation(order types.OrderID, group *types.DeploymentGroup) Reservation {
-	return &reservation{order, group}
+func newReservation(order types.OrderID, resources types.ResourceList) *reservation {
+	return &reservation{order: order, resources: resources}
 }
 
 type reservation struct {
-	order types.OrderID
-	group *types.DeploymentGroup
+	order     types.OrderID
+	resources types.ResourceList
+	allocated bool
 }
 
 func (r *reservation) OrderID() types.OrderID {
 	return r.order
 }
 
-func (r *reservation) Group() *types.DeploymentGroup {
-	return r.group
+func (r *reservation) Resources() types.ResourceList {
+	return r.resources
 }

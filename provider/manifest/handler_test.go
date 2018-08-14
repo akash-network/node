@@ -19,24 +19,34 @@ import (
 
 func TestHandler_manifestFirst(t *testing.T) {
 	withHandler(t, func(
-		h manifest.Handler,
+		h manifest.Service,
 		bus event.Bus,
 		mreq *types.ManifestRequest,
 		lease *types.Lease,
 		dgroup *types.DeploymentGroup) {
 
-		require.NoError(t, h.HandleManifest(mreq))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		donech := make(chan struct{})
+
+		go func() {
+			defer close(donech)
+			assert.NoError(t, h.HandleManifest(ctx, mreq))
+		}()
+
 		bus.Publish(event.LeaseWon{
 			LeaseID: lease.LeaseID,
 			Group:   dgroup,
 			Price:   20,
 		})
+
+		<-donech
 	})
 }
 
 func TestHandler_leaseFirst(t *testing.T) {
 	withHandler(t, func(
-		h manifest.Handler,
+		h manifest.Service,
 		bus event.Bus,
 		mreq *types.ManifestRequest,
 		lease *types.Lease,
@@ -48,11 +58,18 @@ func TestHandler_leaseFirst(t *testing.T) {
 			Price:   20,
 		})
 
-		require.NoError(t, h.HandleManifest(mreq))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+
+		require.NoError(t, h.HandleManifest(ctx, mreq))
+
+		status, err := h.Status(ctx)
+		assert.NoError(t, err)
+		assert.NotNil(t, status)
 	})
 }
 
-type testfn func(manifest.Handler, event.Bus, *types.ManifestRequest, *types.Lease, *types.DeploymentGroup)
+type testfn func(manifest.Service, event.Bus, *types.ManifestRequest, *types.Lease, *types.DeploymentGroup)
 
 func withHandler(t *testing.T, fn testfn) {
 	info, kmgr := testutil.NewNamedKey(t)
@@ -60,7 +77,8 @@ func withHandler(t *testing.T, fn testfn) {
 	tenant := info.Address()
 
 	deployment := testutil.Deployment(tenant, 1)
-	dgroup := testutil.DeploymentGroups(deployment.Address, 2).Items[0]
+	dgroups := testutil.DeploymentGroups(deployment.Address, 2)
+	dgroup := dgroups.Items[0]
 	order := testutil.Order(deployment.Address, dgroup.Seq, 3)
 
 	providerID := testutil.Address(t)
@@ -83,7 +101,10 @@ func withHandler(t *testing.T, fn testfn) {
 		On("Deployment", mock.Anything, []byte(deployment.Address)).
 		Return(deployment, nil)
 	client.
-		On("Leases", mock.Anything).
+		On("DeploymentGroupsForDeployment", mock.Anything, []byte(deployment.Address)).
+		Return(dgroups, nil)
+	client.
+		On("ProviderLeases", mock.Anything, []uint8(provider.Address)).
 		Return(&types.Leases{}, nil)
 
 	sess := session.New(testutil.Logger(), provider, nil, client)
@@ -91,7 +112,10 @@ func withHandler(t *testing.T, fn testfn) {
 	h, err := manifest.NewHandler(ctx, sess, bus)
 	require.NoError(t, err)
 
-	mani := &types.Manifest{}
+	mani := &types.Manifest{
+		Groups: testutil.ManifestGroupsForDeploymentGroups(t, dgroups.Items),
+	}
+
 	mreq := &types.ManifestRequest{
 		Deployment: deployment.Address,
 		Manifest:   mani,
@@ -99,6 +123,11 @@ func withHandler(t *testing.T, fn testfn) {
 
 	mreq, _, err = manifestUtil.SignManifest(mani, signer, deployment.Address)
 	require.NoError(t, err)
+
+	vsn, err := manifestUtil.Hash(mani)
+	require.NoError(t, err)
+
+	deployment.Version = vsn
 
 	fn(h, bus, mreq, lease, dgroup)
 

@@ -88,6 +88,8 @@ func (m *monitor) runListener(ch <-chan interface{}, h Handler) {
 			h.OnTxCreateProvider(tx.TxCreateProvider)
 		case *types.TxPayload_TxCreateDeployment:
 			h.OnTxCreateDeployment(tx.TxCreateDeployment)
+		case *types.TxPayload_TxUpdateDeployment:
+			h.OnTxUpdateDeployment(tx.TxUpdateDeployment)
 		case *types.TxPayload_TxCreateOrder:
 			h.OnTxCreateOrder(tx.TxCreateOrder)
 		case *types.TxPayload_TxCreateFulfillment:

@@ -57,12 +57,12 @@ func orderQuery(daddr vars.Ref) gestalt.Component {
 		WithMeta(g.Require(daddr.Name()))
 }
 
-func leaseQuery(daddr vars.Ref) gestalt.Component {
+func leaseQuery(key vars.Ref, daddr vars.Ref) gestalt.Component {
 	parse := js.Do(
 		js.Str(daddr.Var(), "items", "[0]", "id", "deployment"),
 	)
 
-	return akash("lease-query", "query", "lease").
+	return akash("lease-query", "query", "lease", "-k", key.Name()).
 		FN(parse).
 		WithMeta(g.Require(daddr.Name()))
 }
@@ -73,7 +73,7 @@ func groupDeploy(key vars.Ref, daddr vars.Ref) gestalt.Component {
 		Run(g.Retry(5).
 			Run(orderQuery(daddr))).
 		Run(g.Retry(15).
-			Run(leaseQuery(daddr))).
+			Run(leaseQuery(key, daddr))).
 		Run(deployClose(key, daddr)).
 		WithMeta(g.Export(daddr.Name()))
 }

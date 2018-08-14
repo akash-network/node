@@ -1,7 +1,7 @@
 package cmp
 
 import (
-	"strconv"
+	"fmt"
 
 	"github.com/ovrclk/gestalt"
 	g "github.com/ovrclk/gestalt/builder"
@@ -18,8 +18,9 @@ func accountBalance(key key, amount int64) gestalt.Component {
 }
 
 func accountSendTo(from key, to key, amount int64) gestalt.Component {
+	value := fmt.Sprintf("%0.06f", float64(amount)/float64(1000000))
 	return akash("send-to",
-		"send", strconv.FormatInt(amount, 10), to.addr.Var(), "-k", from.name.Name()).
+		"send", value, to.addr.Var(), "-k", from.name.Name()).
 		WithMeta(g.Require(to.addr.Name()))
 }
 
@@ -32,6 +33,6 @@ func groupAccountSend(key key) gestalt.Component {
 		Run(accountBalance(key, start)).
 		Run(accountSendTo(key, other, amount)).
 		Run(g.Retry(5).
-			Run(accountBalance(key, start-1000*amount))).
-		Run(accountBalance(other, 1000*amount))
+			Run(accountBalance(key, start-amount))).
+		Run(accountBalance(other, amount))
 }

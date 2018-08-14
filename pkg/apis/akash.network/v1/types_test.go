@@ -18,7 +18,7 @@ func TestToProto(t *testing.T) {
 	mani, err := sdl.Manifest()
 	require.NoError(t, err)
 
-	_, err = NewManifest("name", &lease.LeaseID, mani.Groups[0])
+	_, err = NewManifest("name", lease.LeaseID, mani.Groups[0])
 	assert.NoError(t, err)
 }
 
@@ -30,7 +30,7 @@ func TestFromProto(t *testing.T) {
 	mani, err := sdl.Manifest()
 	require.NoError(t, err)
 
-	kubeManifest, err := NewManifest("name", &lease.LeaseID, mani.Groups[0])
+	kubeManifest, err := NewManifest("name", lease.LeaseID, mani.Groups[0])
 	assert.NoError(t, err)
 
 	fromKube := kubeManifest.ManifestGroup()

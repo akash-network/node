@@ -5,6 +5,7 @@ import (
 	"time"
 
 	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/util/runner"
@@ -21,6 +22,7 @@ const (
 )
 
 type deploymentMonitor struct {
+	bus     event.Bus
 	session session.Session
 	client  Client
 
@@ -32,24 +34,19 @@ type deploymentMonitor struct {
 	lc       lifecycle.Lifecycle
 }
 
-func newDeploymentMonitor(log log.Logger,
-	donech <-chan struct{},
-	session session.Session,
-	client Client,
-	lease types.LeaseID,
-	mgroup *types.ManifestGroup,
-) *deploymentMonitor {
+func newDeploymentMonitor(dm *deploymentManager) *deploymentMonitor {
 
 	m := &deploymentMonitor{
-		session: session,
-		client:  client,
-		lease:   lease,
-		mgroup:  mgroup,
-		log:     log.With("cmp", "deployment-monitor"),
+		bus:     dm.bus,
+		session: dm.session,
+		client:  dm.client,
+		lease:   dm.lease,
+		mgroup:  dm.mgroup,
+		log:     dm.log.With("cmp", "deployment-monitor"),
 		lc:      lifecycle.New(),
 	}
 
-	go m.lc.WatchChannel(donech)
+	go m.lc.WatchChannel(dm.lc.ShuttingDown())
 	go m.run()
 
 	return m
@@ -66,7 +63,10 @@ func (m *deploymentMonitor) done() <-chan struct{} {
 func (m *deploymentMonitor) run() {
 	defer m.lc.ShutdownCompleted()
 
-	var runch <-chan runner.Result
+	var (
+		runch   <-chan runner.Result
+		closech <-chan runner.Result
+	)
 
 	tickch := m.scheduleRetry()
 
@@ -98,8 +98,13 @@ loop:
 
 				m.attempts = 0
 				tickch = m.scheduleHealthcheck()
+
+				m.publishStatus(event.ClusterDeploymentDeployed)
+
 				break
 			}
+
+			m.publishStatus(event.ClusterDeploymentPending)
 
 			if m.attempts <= monitorMaxRetries {
 				// unhealthy.  retry
@@ -108,21 +113,20 @@ loop:
 				break
 			}
 
-			// deployment failed.  cancel.
+			m.log.Info("deployment failed.  closing lease.")
+			closech = m.runCloseLease()
 
-			m.log.Info("deployment failed.  closing.")
-
-			// TODO: retry.
-			if _, err := m.session.TX().BroadcastTxCommit(&types.TxCloseLease{
-				LeaseID: m.lease,
-			}); err != nil {
-				m.log.Error("closing deployment", "err", err)
-			}
+		case <-closech:
+			closech = nil
 		}
 	}
 
 	if runch != nil {
 		<-runch
+	}
+
+	if closech != nil {
+		<-closech
 	}
 }
 
@@ -170,6 +174,31 @@ func (m *deploymentMonitor) doCheck() (bool, error) {
 	}
 
 	return badsvc == 0, nil
+}
+
+func (m *deploymentMonitor) runCloseLease() <-chan runner.Result {
+	return runner.Do(func() runner.Result {
+		// TODO: retry
+		res, err := m.session.TX().BroadcastTxCommit(&types.TxCloseLease{
+			LeaseID: m.lease,
+		})
+		if err != nil {
+			m.log.Error("closing deployment", "err", err)
+		} else {
+			m.log.Info("lease closed")
+		}
+		return runner.NewResult(res, err)
+	})
+}
+
+func (m *deploymentMonitor) publishStatus(status event.ClusterDeploymentStatus) {
+	if err := m.bus.Publish(event.ClusterDeployment{
+		LeaseID: m.lease,
+		Group:   m.mgroup,
+		Status:  status,
+	}); err != nil {
+		m.log.Error("publishing manifest group deployed event", "err", err, "status", status)
+	}
 }
 
 func (m *deploymentMonitor) scheduleRetry() <-chan time.Time {

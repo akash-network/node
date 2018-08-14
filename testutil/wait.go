@@ -20,6 +20,14 @@ func AfterThreadStart(t *testing.T) <-chan time.Time {
 	return time.After(delayThreadStart(t))
 }
 
+func WaitReady(t *testing.T, ch <-chan struct{}) {
+	select {
+	case <-ch:
+	case <-AfterThreadStart(t):
+		t.Fatal("time out waiting for channel")
+	}
+}
+
 func delayThreadStart(t *testing.T) time.Duration {
 	if val := os.Getenv("TEST_DELAY_THREAD_START"); val != "" {
 		d, err := time.ParseDuration(val)

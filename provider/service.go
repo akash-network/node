@@ -2,23 +2,38 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/caarlos0/env"
 	"github.com/ovrclk/akash/provider/bidengine"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/manifest"
 	"github.com/ovrclk/akash/provider/session"
+	"github.com/ovrclk/akash/types"
 )
 
 type Service interface {
 	ManifestHandler() manifest.Handler
 	Close() error
 	Done() <-chan struct{}
+
+	StatusClient
+}
+
+type StatusClient interface {
+	Status(context.Context) (*types.ProviderStatus, error)
 }
 
 // Simple wrapper around various services needed for running a provider.
 func NewService(ctx context.Context, session session.Session, bus event.Bus, cclient cluster.Client) (Service, error) {
+
+	config := config{}
+	if err := env.Parse(&config); err != nil {
+		return nil, err
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -28,6 +43,15 @@ func NewService(ctx context.Context, session session.Session, bus event.Bus, ccl
 	if err != nil {
 		cancel()
 		return nil, err
+	}
+
+	select {
+	case <-cluster.Ready():
+	case <-time.After(config.ClusterWaitReadyDuration):
+		session.Log().Error("timeout waiting for cluster ready")
+		cancel()
+		<-cluster.Done()
+		return nil, fmt.Errorf("timeout waiting for cluster ready")
 	}
 
 	bidengine, err := bidengine.NewService(ctx, session, cluster, bus)
@@ -88,6 +112,26 @@ func (s *service) Done() <-chan struct{} {
 
 func (s *service) ManifestHandler() manifest.Handler {
 	return s.manifest
+}
+
+func (s *service) Status(ctx context.Context) (*types.ProviderStatus, error) {
+	cluster, err := s.cluster.Status(ctx)
+	if err != nil {
+		return nil, err
+	}
+	bidengine, err := s.bidengine.Status(ctx)
+	if err != nil {
+		return nil, err
+	}
+	manifest, err := s.manifest.Status(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &types.ProviderStatus{
+		Cluster:   cluster,
+		Bidengine: bidengine,
+		Manifest:  manifest,
+	}, nil
 }
 
 func (s *service) run() {

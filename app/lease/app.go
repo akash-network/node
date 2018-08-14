@@ -1,6 +1,7 @@
 package lease
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -83,7 +84,7 @@ func (a *app) Query(state appstate.State, req tmtypes.RequestQuery) tmtypes.Resp
 	id := strings.TrimPrefix(req.Path, appstate.LeasePath)
 
 	if len(id) == 0 {
-		return a.doRangeQuery(state)
+		return a.doRangeQuery(state, req.Data)
 	}
 
 	{
@@ -411,12 +412,23 @@ func (a *app) doQuery(state appstate.State, key keys.Lease) tmtypes.ResponseQuer
 	}
 }
 
-func (a *app) doRangeQuery(state appstate.State) tmtypes.ResponseQuery {
-	items, err := state.Lease().All()
+func (a *app) doRangeQuery(state appstate.State, tenant []byte) tmtypes.ResponseQuery {
+	leases, err := state.Lease().All()
 	if err != nil {
 		return tmtypes.ResponseQuery{
 			Code: code.ERROR,
 			Log:  err.Error(),
+		}
+	}
+
+	items := []*types.Lease{}
+	for _, lease := range leases {
+		deployment, err := state.Deployment().Get(lease.Deployment)
+		if err != nil {
+			a.Log().Error("deployment doesn't exist for lease")
+		}
+		if len(tenant) == 0 || bytes.Equal(deployment.Tenant, tenant) {
+			items = append(items, lease)
 		}
 	}
 
