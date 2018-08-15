@@ -15,7 +15,6 @@ Installation instructions for the client binary may be found [here](https://gith
 # The Akash testnet
 The Akash testnet is available for public use.  A description of the testnet, registration instructions, and a getting-started guide may be found [here](https://github.com/ovrclk/akash/_docs/testnet).
 
-  
 # Top-level commands
 These commands are presented as an overview of the features available via the Akash client. Individual command usage is described in subsequent sections.
 
@@ -23,16 +22,15 @@ These commands are presented as an overview of the features available via the Ak
 
 | Command | Description |
 |:--|:--|
-| deployment | Manage deployments. |
-| help | Help about any command. |
-| key | Manage keys. |
-| logs | Service logs |
-| marketplace | Monitor marketplace. |
-| provider | Manage provider. |
-| query | Query things that need querying. |
-| send | Send tokens to an account. |
-| status | Get remote node status. |
-| version | Print Akash version. |
+| [#deployment](deployment) | Manage deployments. |
+| [#key](key) | Manage keys. |
+| [logs](logs) | Service logs |
+| [marketplace](marketplace) | Monitor marketplace. |
+| [provider](provider) | Manage provider. |
+| [query](query) | Query things that need querying. |
+| [send](send) | Send tokens to an account. |
+| [status](status) | Get remote node status. |
+| [version](version) | Print Akash version. |
 
 **Flags**
 
@@ -788,7 +786,7 @@ Send tokens from one account to another.
 $ akash send 1.1 35c055f1fa38cb1864e484a1d733a58bbffb1156 -k alpha
 Sent 1.1 tokens to 35c055f1fa38cb1864e484a1d733a58bbffb1156 in block 61049
 ```
-In the example above, the amount is given in AKSH.
+In the example above, the amount is given in AKSH.  You may also specify the amount in microAKSH (AKSH * 10^-6) using the `u` unit suffix (e.g. `100u` for 100 microAKSH).
 
 **Arguments**
 
