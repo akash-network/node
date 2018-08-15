@@ -12,13 +12,16 @@ Finally, some warnings. The Akash testnet is at an alpha-level stage of developm
 ### Intended users
 Fundamentally, the Akash testnet is a deployment platform with a CLI and intended for relatively sophisticated users.  If you are comfortable managing instances via the AWS API and can build and deploy a Docker container, you will find the Akash testnet easy to use.  If not, please feel free to give it a shot, but you might find it confusing.
 
+### Documentation
+Full usage docs may be found at https://github.com/ovrclk/akash/_docs/testnet/client-usage.md
+
 ### Installing the Akash client
 The Akash client has been tested on Linux and MacOS. It *should* also work on Windows, but we haven't tested it - let us know if you try!
 
-Instructions for installing the Akash client binary [may be found here](https://github.com/ovrclk/akash/#installing).
+Instructions for installing the Akash client binary may be found here at https://github.com/ovrclk/akash/#installing.
 
 ### Getting help
-First of course, run `akash -h` and RTFM, then please feel free to ask questions in our Telegram channel https://t.me/AkashNW.
+First of course, [RTFM](https://github.com/ovrclk/akash/_docs/testnet/client-usage.md), then please feel free to ask questions in our Telegram channel https://t.me/AkashNW.
 
 
 ## Getting started

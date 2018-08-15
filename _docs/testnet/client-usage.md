@@ -22,15 +22,15 @@ These commands are presented as an overview of the features available via the Ak
 
 | Command | Description |
 |:--|:--|
-| [#deployment](deployment) | Manage deployments. |
-| [#key](key) | Manage keys. |
-| [logs](logs) | Service logs |
-| [marketplace](marketplace) | Monitor marketplace. |
-| [provider](provider) | Manage provider. |
-| [query](query) | Query things that need querying. |
-| [send](send) | Send tokens to an account. |
-| [status](status) | Get remote node status. |
-| [version](version) | Print Akash version. |
+| [deployment](#deployment) | Manage deployments. |
+| [key](#key) | Manage keys. |
+| [logs](#logs) | Service logs |
+| [marketplace](#marketplace) | Monitor marketplace. |
+| [provider](#provider) | Manage provider. |
+| [query](#query) | Query things that need querying. |
+| [send](#send) | Send tokens to an account. |
+| [status](#status) | Get remote node status. |
+| [version](#version) | Print Akash version. |
 
 **Flags**
 
