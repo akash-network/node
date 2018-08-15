@@ -32,3 +32,17 @@ func (_m *Cluster) Reserve(_a0 types.OrderID, _a1 *types.DeploymentGroup) (clust
 
 	return r0, r1
 }
+
+// Unreserve provides a mock function with given fields: _a0, _a1
+func (_m *Cluster) Unreserve(_a0 types.OrderID, _a1 types.ResourceList) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(types.OrderID, types.ResourceList) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}

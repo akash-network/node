@@ -2,11 +2,9 @@ package manifest
 
 import (
 	"bytes"
-	"context"
 	"errors"
 
 	"github.com/gogo/protobuf/jsonpb"
-	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	crypto "github.com/tendermint/go-crypto"
@@ -39,15 +37,15 @@ func SignManifest(manifest *types.Manifest, signer txutil.Signer, deployment []b
 	return mr, buf, nil
 }
 
-func VerifyRequest(mr *types.ManifestRequest, session session.Session) error {
+func VerifyRequest(mr *types.ManifestRequest, deployment *types.Deployment) error {
 	address, err := verifySignature(mr)
 	if err != nil {
 		return err
 	}
-	if err := verifyDeploymentTennant(mr, session, address); err != nil {
+	if err := verifyDeploymentTenant(deployment, address); err != nil {
 		return err
 	}
-	if err := verifyManifestVersion(mr, session); err != nil {
+	if err := verifyManifestVersion(mr, deployment); err != nil {
 		return err
 	}
 	return nil
@@ -77,28 +75,21 @@ func verifySignature(mr *types.ManifestRequest) (crypto.Address, error) {
 	if !key.VerifyBytes(buf.Bytes(), sig) {
 		return nil, ErrInvalidSignature
 	}
-	return key.Address(), err
+
+	return key.Address(), nil
 }
 
-func verifyDeploymentTennant(mr *types.ManifestRequest, session session.Session, signerAddress crypto.Address) error {
-	dep, err := session.Query().Deployment(context.TODO(), mr.Deployment)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(dep.Tenant, signerAddress) {
+func verifyDeploymentTenant(
+	deployment *types.Deployment,
+	signerAddress crypto.Address) error {
+
+	if !bytes.Equal(deployment.Tenant, signerAddress) {
 		return ErrInvalidKey
 	}
+
 	return nil
 }
 
-func verifyManifestVersion(mr *types.ManifestRequest, session session.Session) error {
-	dep, err := session.Query().Deployment(context.TODO(), mr.Deployment)
-	if err != nil {
-		return err
-	}
-	err = verifyHash(mr.Manifest, dep.Version)
-	if err != nil {
-		return err
-	}
-	return nil
+func verifyManifestVersion(mr *types.ManifestRequest, deployment *types.Deployment) error {
+	return verifyHash(mr.Manifest, deployment.Version)
 }

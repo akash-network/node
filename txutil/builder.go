@@ -33,6 +33,8 @@ func NewTxBuilder(nonce uint64, payload interface{}) (TxBuilder, error) {
 		tx.Payload.Payload = &types.TxPayload_TxSend{TxSend: payload}
 	case *types.TxCreateDeployment:
 		tx.Payload.Payload = &types.TxPayload_TxCreateDeployment{TxCreateDeployment: payload}
+	case *types.TxUpdateDeployment:
+		tx.Payload.Payload = &types.TxPayload_TxUpdateDeployment{TxUpdateDeployment: payload}
 	case *types.TxCreateProvider:
 		tx.Payload.Payload = &types.TxPayload_TxCreateProvider{TxCreateProvider: payload}
 	case *types.TxCreateOrder:

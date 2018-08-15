@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
+	metricsclient "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
 type Client interface {
@@ -28,6 +29,7 @@ type Client interface {
 type client struct {
 	kc   kubernetes.Interface
 	mc   *manifestclient.Clientset
+	metc metricsclient.Interface
 	ns   string
 	host string
 	log  log.Logger
@@ -55,6 +57,11 @@ func NewClient(log log.Logger, host, ns string) (Client, error) {
 		return nil, fmt.Errorf("error creating apiextcs client: %v", err)
 	}
 
+	metc, err := metricsclient.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("error creating metrics client: %v", err)
+	}
+
 	err = akashv1.CreateCRD(mcr)
 	if err != nil {
 		return nil, fmt.Errorf("error creating akashv1 CRD: %v", err)
@@ -73,6 +80,7 @@ func NewClient(log log.Logger, host, ns string) (Client, error) {
 	return &client{
 		kc:   kc,
 		mc:   mc,
+		metc: metc,
 		ns:   ns,
 		host: host,
 		log:  log,
@@ -122,6 +130,11 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 
 	if err := applyManifest(c.mc, newManifestBuilder(c.ns, lid, group)); err != nil {
 		c.log.Error("applying manifest", "err", err, "lease", lid)
+		return err
+	}
+
+	if err := cleanupStaleResources(c.kc, lid, group); err != nil {
+		c.log.Error("cleaning stale resources", "err", err, "lease", lid)
 		return err
 	}
 
@@ -189,6 +202,9 @@ func (c *client) LeaseStatus(lid types.LeaseID) (*types.LeaseStatusResponse, err
 		c.log.Error(err.Error())
 		return nil, err
 	}
+	if len(deployments) == 0 {
+		return nil, cluster.ErrNoDeployments
+	}
 	serviceStatus := make(map[string]*types.ServiceStatus, len(deployments))
 	for _, deployment := range deployments {
 		status := &types.ServiceStatus{
@@ -242,26 +258,68 @@ func (c *client) ServiceStatus(lid types.LeaseID, name string) (*types.ServiceSt
 func (c *client) Inventory() ([]cluster.Node, error) {
 	var nodes []cluster.Node
 
-	knodes, err := c.kc.CoreV1().Nodes().List(metav1.ListOptions{})
+	knodes, err := c.activeNodes()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, knode := range knodes.Items {
-		if !c.nodeIsActive(&knode) {
+	mnodes, err := c.metc.MetricsV1beta1().NodeMetricses().List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, mnode := range mnodes.Items {
+
+		knode, ok := knodes[mnode.Name]
+		if !ok {
 			continue
 		}
 
+		cpu := knode.Status.Allocatable.Cpu().MilliValue()
+		cpu -= mnode.Usage.Cpu().MilliValue()
+		if cpu < 0 {
+			cpu = 0
+		}
+
+		memory := knode.Status.Allocatable.Memory().Value()
+		memory -= mnode.Usage.Memory().Value()
+		if memory < 0 {
+			memory = 0
+		}
+
+		disk := knode.Status.Allocatable.StorageEphemeral().Value()
+		disk -= mnode.Usage.StorageEphemeral().Value()
+		if disk < 0 {
+			disk = 0
+		}
+
 		unit := types.ResourceUnit{
-			CPU:    uint32(knode.Status.Allocatable.Cpu().Value()),
-			Memory: uint64(knode.Status.Capacity.Memory().Value()),
-			Disk:   uint64(knode.Status.Capacity.StorageEphemeral().Value()),
+			CPU:    uint32(cpu),
+			Memory: uint64(memory),
+			Disk:   uint64(disk),
 		}
 
 		nodes = append(nodes, cluster.NewNode(knode.Name, unit))
 	}
 
 	return nodes, nil
+}
+
+func (c *client) activeNodes() (map[string]*corev1.Node, error) {
+	knodes, err := c.kc.CoreV1().Nodes().List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	retnodes := make(map[string]*corev1.Node)
+
+	for _, knode := range knodes.Items {
+		if !c.nodeIsActive(&knode) {
+			continue
+		}
+		retnodes[knode.Name] = &knode
+	}
+	return retnodes, nil
 }
 
 func (c *client) nodeIsActive(node *corev1.Node) bool {
@@ -296,9 +354,6 @@ func (c *client) nodeIsActive(node *corev1.Node) bool {
 
 				issues++
 			}
-
-		case corev1.NodeKubeletConfigOk:
-			// ignored
 		}
 	}
 

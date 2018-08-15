@@ -3,6 +3,7 @@ package sdl
 import (
 	"testing"
 
+	"github.com/ovrclk/akash/types/unit"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -62,17 +63,17 @@ func TestByteQuantity(t *testing.T) {
 		{`val: 1`, 1, false},
 		{`val: -1`, 1, true},
 
-		{`val: "1M"`, unitM, false},
+		{`val: "1M"`, unit.M, false},
 		{`val: "-1M"`, 0, true},
 
-		{`val: "0.5M"`, unitM / 2, false},
+		{`val: "0.5M"`, unit.M / 2, false},
 		{`val: "-0.5M"`, 0, true},
 
-		{`val: "3M"`, 3 * unitM, false},
-		{`val: "3G"`, 3 * unitG, false},
-		{`val: "3T"`, 3 * unitT, false},
-		{`val: "3P"`, 3 * unitP, false},
-		{`val: "3E"`, 3 * unitE, false},
+		{`val: "3M"`, 3 * unit.M, false},
+		{`val: "3G"`, 3 * unit.G, false},
+		{`val: "3T"`, 3 * unit.T, false},
+		{`val: "3P"`, 3 * unit.P, false},
+		{`val: "3E"`, 3 * unit.E, false},
 
 		{`val: ""`, 0, true},
 	}

@@ -23,15 +23,13 @@ const (
 	defaultCodec    = "english"
 	defaultPassword = "0123456789"
 	defaultHost     = "localhost"
+	defaultNode     = "http://api.akashtest.net:80"
 )
 
 func SetupBaseCommand(cmd *cobra.Command) {
 	cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		root, _ := cmd.Flags().GetString(flagRootDir)
 		return initCommandConfig(root)
-	}
-	cmd.PersistentPostRunE = func(cmd *cobra.Command, args []string) error {
-		return saveCommandConfig()
 	}
 	cmd.PersistentFlags().StringP(flagRootDir, "d", defaultRootDir(), "data directory")
 }
@@ -51,10 +49,6 @@ func initCommandConfig(root string) error {
 		return err
 	}
 	return nil
-}
-
-func saveCommandConfig() error {
-	return viper.WriteConfig()
 }
 
 func defaultRootDir() string {

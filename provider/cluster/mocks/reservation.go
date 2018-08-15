@@ -9,22 +9,6 @@ type Reservation struct {
 	mock.Mock
 }
 
-// Group provides a mock function with given fields:
-func (_m *Reservation) Group() *types.DeploymentGroup {
-	ret := _m.Called()
-
-	var r0 *types.DeploymentGroup
-	if rf, ok := ret.Get(0).(func() *types.DeploymentGroup); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*types.DeploymentGroup)
-		}
-	}
-
-	return r0
-}
-
 // OrderID provides a mock function with given fields:
 func (_m *Reservation) OrderID() types.OrderID {
 	ret := _m.Called()
@@ -34,6 +18,22 @@ func (_m *Reservation) OrderID() types.OrderID {
 		r0 = rf()
 	} else {
 		r0 = ret.Get(0).(types.OrderID)
+	}
+
+	return r0
+}
+
+// Resources provides a mock function with given fields:
+func (_m *Reservation) Resources() types.ResourceList {
+	ret := _m.Called()
+
+	var r0 types.ResourceList
+	if rf, ok := ret.Get(0).(func() types.ResourceList); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(types.ResourceList)
+		}
 	}
 
 	return r0

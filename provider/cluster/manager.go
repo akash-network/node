@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tmlibs/log"
@@ -22,6 +23,7 @@ const (
 )
 
 type deploymentManager struct {
+	bus     event.Bus
 	client  Client
 	session session.Session
 
@@ -46,6 +48,7 @@ func newDeploymentManager(s *service, lease types.LeaseID, mgroup *types.Manifes
 		"lease", lease, "manifest-group", mgroup.Name)
 
 	dm := &deploymentManager{
+		bus:        s.bus,
 		client:     s.client,
 		session:    s.session,
 		state:      dsDeployActive,
@@ -189,7 +192,7 @@ loop:
 
 func (dm *deploymentManager) startMonitor() {
 	dm.wg.Add(1)
-	dm.monitor = newDeploymentMonitor(dm.log, dm.lc.ShuttingDown(), dm.session, dm.client, dm.lease, dm.mgroup)
+	dm.monitor = newDeploymentMonitor(dm)
 	go func(m *deploymentMonitor) {
 		defer dm.wg.Done()
 		<-m.done()

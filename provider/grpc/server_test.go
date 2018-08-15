@@ -3,66 +3,51 @@ package grpc
 import (
 	"bytes"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 
-	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/cluster"
-	kmocks "github.com/ovrclk/akash/provider/cluster/kube/mocks"
-	"github.com/ovrclk/akash/provider/manifest/mocks"
+	cmocks "github.com/ovrclk/akash/provider/cluster/mocks"
 	mmocks "github.com/ovrclk/akash/provider/manifest/mocks"
-	"github.com/ovrclk/akash/sdl"
+	pmocks "github.com/ovrclk/akash/provider/mocks"
+	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tmlibs/log"
 	"golang.org/x/net/context"
 )
 
-func TestDeployManifest(t *testing.T) {
-	sdl, err := sdl.ReadFile("../../_docs/deployment.yml")
-	require.NoError(t, err)
-
-	mani, err := sdl.Manifest()
-	require.NoError(t, err)
-
-	_, kmgr := testutil.NewNamedKey(t)
-	signer := testutil.Signer(t, kmgr)
-
-	deployment := testutil.DeploymentAddress(t)
-
-	req, _, err := manifest.SignManifest(mani, signer, deployment)
-	assert.NoError(t, err)
-
-	handler := &mocks.Handler{}
-	handler.On("HandleManifest", mock.Anything).Return(nil)
-
-	client := &kmocks.Client{}
-
-	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "0", handler, client)
-
-	_, err = server.Deploy(context.TODO(), req)
-	assert.NoError(t, err)
-}
-
 func TestStatus(t *testing.T) {
-	server := newServer(nil, "tcp", "3002", nil, nil)
+
+	sclient := &pmocks.StatusClient{}
+	sclient.On("Status", mock.Anything).
+		Return(&types.ProviderStatus{}, nil)
+
+	provider := &types.Provider{
+		Address: testutil.Address(t),
+	}
+
+	session := session.New(testutil.Logger(), provider, nil, nil)
+
+	server := create(session, nil, sclient, nil)
 	status, err := server.Status(context.TODO(), nil)
 	assert.NoError(t, err)
 	require.Equal(t, "OK", status.Message)
 	require.Equal(t, http.StatusOK, int(status.Code))
+	require.NotNil(t, status.Provider)
 }
 
 func TestLeaseStatus(t *testing.T) {
 	handler := new(mmocks.Handler)
-	client := new(kmocks.Client)
+	client := new(cmocks.Client)
 	mockResp := types.LeaseStatusResponse{}
 	client.On("LeaseStatus", mock.Anything, mock.Anything).Return(&mockResp, nil).Once()
 
-	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3002", handler, client)
+	session := session.New(testutil.Logger(), nil, nil, nil)
+	server := create(session, client, nil, handler)
+
 	response, err := server.LeaseStatus(context.TODO(), &types.LeaseStatusRequest{
 		Deployment: "d6f4b6728c7deb187a07afe8e145e214c716e287039a204e7fac1fc121dc0cef",
 		Group:      "1",
@@ -75,11 +60,13 @@ func TestLeaseStatus(t *testing.T) {
 
 func TestServiceStatus(t *testing.T) {
 	handler := new(mmocks.Handler)
-	client := new(kmocks.Client)
+	client := new(cmocks.Client)
 	mockResp := types.ServiceStatusResponse{}
 	client.On("ServiceStatus", mock.Anything, mock.Anything).Return(&mockResp, nil).Once()
 
-	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3002", handler, client)
+	session := session.New(testutil.Logger(), nil, nil, nil)
+	server := create(session, client, nil, handler)
+
 	response, err := server.ServiceStatus(context.TODO(), &types.ServiceStatusRequest{
 		Name:       "web",
 		Deployment: "d6f4b6728c7deb187a07afe8e145e214c716e287039a204e7fac1fc121dc0cef",
@@ -104,14 +91,17 @@ func (s mockCluserServiceLogServer) Send(log *types.Log) error {
 
 func TestServiceLogs(t *testing.T) {
 	handler := new(mmocks.Handler)
-	client := new(kmocks.Client)
+	client := new(cmocks.Client)
 	message := "logs logs logs logs\n"
 	stream := testutil.ReadCloser{Reader: bytes.NewBuffer([]byte(message))}
 	serviceLog := cluster.NewServiceLog(t.Name(), stream)
 	mockResp := []*cluster.ServiceLog{serviceLog}
 	client.On("ServiceLogs", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResp, nil).Once()
 	streamServer := mockCluserServiceLogServer{}
-	server := newServer(log.NewTMLogger(os.Stdout), "tcp", "3002", handler, client)
+
+	session := session.New(testutil.Logger(), nil, nil, nil)
+	server := create(session, client, nil, handler)
+
 	err := server.ServiceLogs(&types.LogRequest{
 		Name:       t.Name(),
 		Deployment: "d6f4b6728c7deb187a07afe8e145e214c716e287039a204e7fac1fc121dc0cef",

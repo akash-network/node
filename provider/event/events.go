@@ -25,3 +25,16 @@ func (ev ManifestReceived) ManifestGroup() *types.ManifestGroup {
 	}
 	return nil
 }
+
+type ClusterDeploymentStatus string
+
+const (
+	ClusterDeploymentPending  ClusterDeploymentStatus = "pending"
+	ClusterDeploymentDeployed ClusterDeploymentStatus = "deployed"
+)
+
+type ClusterDeployment struct {
+	LeaseID types.LeaseID
+	Group   *types.ManifestGroup
+	Status  ClusterDeploymentStatus
+}

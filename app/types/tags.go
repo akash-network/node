@@ -15,6 +15,7 @@ const (
 
 	TagAppDeployment       = "deployment"
 	TxTypeCreateDeployment = "deployment-create"
+	TxTypeUpdateDeployment = "deployment-update"
 	TxTypeCloseDeployment  = "deployment-close"
 
 	TagAppOrder       = "order"

@@ -14,6 +14,10 @@ func (t Bytes) Marshal() ([]byte, error) {
 	return t, nil
 }
 
+func (t *Bytes) MarshalTo(data []byte) (n int, err error) {
+	return copy(data, *t), nil
+}
+
 func (t *Bytes) Unmarshal(data []byte) error {
 	*t = data
 	return nil
@@ -45,8 +49,16 @@ func (t Bytes) String() string {
 	return t.EncodeString()
 }
 
-func (this Bytes) Compare(that Bytes) int {
-	return bytes.Compare([]byte(this), []byte(that))
+func (t Bytes) Compare(other Bytes) int {
+	return bytes.Compare([]byte(t), []byte(other))
+}
+
+func (t Bytes) Equal(other Bytes) bool {
+	return bytes.Equal([]byte(t), []byte(other))
+}
+
+func (t Bytes) Size() int {
+	return len(t)
 }
 
 func DecodeString(buf string) (Bytes, error) {

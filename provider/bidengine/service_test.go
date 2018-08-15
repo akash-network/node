@@ -25,7 +25,7 @@ func TestService(t *testing.T) {
 	defer bus.Close()
 
 	deployment := testutil.Deployment(testutil.Address(t), 1)
-	group := testutil.DeploymentGroups(deployment.Address, 2).Items[0]
+	group := testutil.DeploymentGroup(deployment.Address, 2)
 	order := testutil.Order(deployment.Address, group.Seq, 3)
 	provider := testutil.Provider(testutil.Address(t), 4)
 
@@ -54,12 +54,13 @@ func TestService(t *testing.T) {
 
 	creso := new(cmocks.Reservation)
 	creso.
-		On("Group").Return(group).Maybe().
+		On("Resources").Return(group).Maybe().
 		On("OrderID").Return(order.OrderID).Maybe()
 
 	cluster := new(cmocks.Cluster)
 	cluster.
-		On("Reserve", order.OrderID, group).Return(creso, nil).Once()
+		On("Reserve", order.OrderID, group).Return(creso, nil).Once().
+		On("Unreserve", order.OrderID, group).Return(nil).Once()
 
 	session := session.New(testutil.Logger(), provider, txclient, qclient)
 
@@ -83,6 +84,10 @@ func TestService(t *testing.T) {
 
 	testutil.SleepForThreadStart(t)
 
+	status, err := service.Status(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, status)
+
 	assert.NoError(t, service.Close())
 
 	mock.AssertExpectationsForObjects(t, qclient, txclient, creso, cluster)
@@ -96,7 +101,7 @@ func TestService_Catchup(t *testing.T) {
 	defer bus.Close()
 
 	deployment := testutil.Deployment(testutil.Address(t), 1)
-	group := testutil.DeploymentGroups(deployment.Address, 2).Items[0]
+	group := testutil.DeploymentGroup(deployment.Address, 2)
 	order := testutil.Order(deployment.Address, group.Seq, 3)
 	provider := testutil.Provider(testutil.Address(t), 4)
 
@@ -129,12 +134,13 @@ func TestService_Catchup(t *testing.T) {
 
 	creso := new(cmocks.Reservation)
 	creso.
-		On("Group").Return(group).Maybe().
+		On("Resources").Return(group).Maybe().
 		On("OrderID").Return(order.OrderID).Maybe()
 
 	cluster := new(cmocks.Cluster)
 	cluster.
-		On("Reserve", order.OrderID, group).Return(creso, nil).Once()
+		On("Reserve", order.OrderID, group).Return(creso, nil).Once().
+		On("Unreserve", order.OrderID, group).Return(nil).Once()
 
 	session := session.New(testutil.Logger(), provider, txclient, qclient)
 

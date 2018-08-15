@@ -43,11 +43,14 @@ case "$1" in
   manifest)
     akash deployment sendmani deployment.yml "$2" -k master
     ;;
+  status)
+    akash provider status
+    ;;
   ping)
     curl -I "hello.$(minikube ip).nip.io"
     ;;
   *)
-    echo "USAGE: $0 <init|akashd|send|query|marketplace|provider|deploy|manifest|ping>" >&2
+    echo "USAGE: $0 <init|akashd|send|query|marketplace|provider|deploy|manifest|status|ping>" >&2
     exit 1
     ;;
 esac

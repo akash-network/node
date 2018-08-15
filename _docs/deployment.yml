@@ -1,5 +1,5 @@
 ---
-version: "0.1"
+version: "1.0"
 
 include:
   - "foo.yml"
@@ -57,34 +57,33 @@ profiles:
 
   compute:
     web:
-      cpu: 2
+      cpu: "0.01"
       memory: "128Mi"
-      disk: "5Gi"
+      disk: "512Mi"
     db:
-      cpu: 10
-      memory: "10Gi"
-      disk: "20Gi"
+      cpu: "0.01"
+      memory: "128Mi"
+      disk: "1Gi"
     db-pool:
-      cpu: 5
-      memory: "3Gi"
-      disk: "5Gi"
+      cpu: "0.01"
+      memory: "128Mi"
+      disk: "512Mi"
 
   placement:
     westcoast:
       attributes:
         region: us-west
       pricing:
-        web: .8
-        db-master: 15
-        db-slave: 10
-        db-pool: 5
+        web: 10u
+        db:  50u
+        db-pool: 30u
     eastcoast:
       attributes:
         region: us-east
       pricing:
-        web: .5
-        db-slave: 10
-        db-pool: 5
+        web: 30u
+        db:  60u
+        db-pool: 40u
 
 deployment:
 
@@ -104,15 +103,15 @@ deployment:
   db-pool:
     westcoast:
       profile: db-pool
-      count: 10
+      count: 1
     eastcoast:
       profile: db-pool
-      count: 5
+      count: 1
 
   web:
     westcoast:
       profile: web
-      count: 20
+      count: 2
     eastcoast:
       profile: web
-      count: 10
+      count: 2

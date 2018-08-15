@@ -4,11 +4,16 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/blang/semver"
 	"github.com/ovrclk/akash/types"
 )
 
+var (
+	allowedVersion = semver.MustParse("1.0.0")
+)
+
 type v1 struct {
-	Version  string   `yaml:",omitempty"`
+	Version  string
 	Include  []string `yaml:",omitempty"`
 	Services map[string]v1Service
 	Profiles v1Profiles
@@ -26,13 +31,15 @@ type v1Service struct {
 }
 
 type v1Expose struct {
-	Port  uint32
-	As    uint32
-	Proto string       `yaml:",omitempty"`
-	To    []v1ExposeTo `yaml:",omitempty"`
-	// TODO: add one value to this as servicename.deploymentID.providerIP
-	// provider comes from startup configuration
-	Accept []string `yaml:",omitempty"`
+	Port   uint32
+	As     uint32
+	Proto  string       `yaml:",omitempty"`
+	To     []v1ExposeTo `yaml:",omitempty"`
+	Accept v1Accept
+}
+
+type v1Accept struct {
+	Items []string `yaml:",omitempty"`
 }
 
 type v1ExposeTo struct {
@@ -76,15 +83,31 @@ type v1ServiceDeployment struct {
 }
 
 func (sdl *v1) Validate() error {
+
+	if sdl.Version == "" {
+		return fmt.Errorf("invalid version: '%v' required", allowedVersion)
+	}
+
+	vsn, err := semver.ParseTolerant(sdl.Version)
+	if err != nil {
+		return err
+	}
+
+	if !allowedVersion.EQ(vsn) {
+		return fmt.Errorf("invalid version: '%v' required", allowedVersion)
+	}
+
 	return nil
 }
 
 func (sdl *v1) DeploymentGroups() ([]*types.GroupSpec, error) {
 	groups := make(map[string]*types.GroupSpec)
 
-	for svcName, depl := range sdl.Deployments {
+	for _, svcName := range v1DeploymentSvcNames(sdl.Deployments) {
+		depl := sdl.Deployments[svcName]
 
-		for placementName, svcdepl := range depl {
+		for _, placementName := range v1DeploymentPlacementNames(depl) {
+			svcdepl := depl[placementName]
 
 			compute, ok := sdl.Profiles.Compute[svcdepl.Profile]
 			if !ok {
@@ -96,9 +119,9 @@ func (sdl *v1) DeploymentGroups() ([]*types.GroupSpec, error) {
 				return nil, fmt.Errorf("%v.%v: no placement profile named %v", svcName, placementName, placementName)
 			}
 
-			price, ok := infra.Pricing[svcName]
+			price, ok := infra.Pricing[svcdepl.Profile]
 			if !ok {
-				return nil, fmt.Errorf("%v.%v: no pricing for service %v", svcName, placementName, svcName)
+				return nil, fmt.Errorf("%v.%v: no pricing for profile %v", svcName, placementName, svcdepl.Profile)
 			}
 
 			group := groups[placementName]
@@ -155,9 +178,11 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 
 	groups := make(map[string]*types.ManifestGroup)
 
-	for svcName, depl := range sdl.Deployments {
+	for _, svcName := range v1DeploymentSvcNames(sdl.Deployments) {
+		depl := sdl.Deployments[svcName]
 
-		for placementName, svcdepl := range depl {
+		for _, placementName := range v1DeploymentPlacementNames(depl) {
+			svcdepl := depl[placementName]
 
 			group := groups[placementName]
 
@@ -199,7 +224,7 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 						ExternalPort: expose.As,
 						Proto:        expose.Proto,
 						Global:       to.Global,
-						Hosts:        expose.Accept,
+						Hosts:        expose.Accept.Items,
 					})
 				}
 			}
@@ -245,4 +270,24 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 	}
 
 	return &types.Manifest{Groups: result}, nil
+}
+
+// stable ordering
+func v1DeploymentSvcNames(m map[string]v1Deployment) []string {
+	names := make([]string, 0, len(m))
+	for name := range m {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// stable ordering
+func v1DeploymentPlacementNames(m v1Deployment) []string {
+	names := make([]string, 0, len(m))
+	for name := range m {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }

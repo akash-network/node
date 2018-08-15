@@ -3,7 +3,6 @@ package bidengine
 import (
 	"bytes"
 	"context"
-	"math/rand"
 
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/provider/cluster"
@@ -11,6 +10,7 @@ import (
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/util/runner"
+	"github.com/ovrclk/akash/validation"
 	"github.com/tendermint/tmlibs/log"
 )
 
@@ -73,13 +73,14 @@ func (o *order) run() {
 
 	var (
 		// channels for async operations.
-
 		groupch   <-chan runner.Result
 		clusterch <-chan runner.Result
 		bidch     <-chan runner.Result
 
 		group       *types.DeploymentGroup
 		reservation cluster.Reservation
+
+		won bool
 	)
 
 	// Begin fetching group details immediately.
@@ -119,6 +120,7 @@ loop:
 					Group:   group,
 					Price:   ev.Price,
 				})
+				won = true
 
 				break loop
 
@@ -146,12 +148,9 @@ loop:
 
 			group = result.Value().(*types.DeploymentGroup)
 
-			if !matchProviderAttributes(o.session.Provider().Attributes, group.Requirements) {
-				o.log.Debug("unable to fulfill: incompatible attributes")
-				break loop
+			if !o.shouldBid(group) {
+				break
 			}
-
-			// TODO: check if price is too low
 
 			// Begin reserving resources from cluster.
 			clusterch = runner.Do(func() runner.Result {
@@ -176,7 +175,7 @@ loop:
 
 			reservation = result.Value().(cluster.Reservation)
 
-			price := o.calculatePrice(reservation.Group())
+			price := calculatePrice(reservation.Resources())
 
 			o.log.Debug("submitting fulfillment", "price", price)
 
@@ -206,12 +205,18 @@ loop:
 		}
 	}
 
-	// TODO: cancel reservation?
-
 	o.log.Info("shutting down")
 	cancel()
 	o.lc.ShutdownInitiated(nil)
 	o.sub.Close()
+
+	// cancel reservation
+	if !won && reservation != nil {
+		o.log.Debug("unreserving reservation")
+		if err := o.cluster.Unreserve(reservation.OrderID(), reservation.Resources()); err != nil {
+			o.log.Error("error unreserving reservation", "err", err)
+		}
+	}
 
 	// Wait for all runners to complete.
 	if groupch != nil {
@@ -225,17 +230,18 @@ loop:
 	}
 }
 
-func (o *order) calculatePrice(group *types.DeploymentGroup) uint64 {
-	max := o.groupMaxPrice(group)
-	return uint64(rand.Int63n(int64(max)) + 1)
-}
+func (o *order) shouldBid(group *types.DeploymentGroup) bool {
 
-func (o *order) groupMaxPrice(group *types.DeploymentGroup) uint64 {
-	// TODO: catch overflow
-	price := uint64(0)
-	for _, group := range group.GetResources() {
-		price += group.Price
+	// does provider have required attributes?
+	if !matchProviderAttributes(o.session.Provider().Attributes, group.Requirements) {
+		o.log.Debug("unable to fulfill: incompatible attributes")
+		return false
 	}
-	o.log.Debug("group max price", "price", price)
-	return price
+
+	if err := validation.ValidateDeploymentGroup(group); err != nil {
+		o.log.Error("unable to fulfill: group validation error",
+			"err", err)
+		return false
+	}
+	return true
 }
