@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	maxTokens uint64 = 1000000000000
+	maxTokens uint64 = 1000000000000000
 
 	flagInitCount  = "count"
 	flagInitType   = "type"
