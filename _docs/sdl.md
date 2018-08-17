@@ -2,35 +2,19 @@
 
 Deployment services, datacenters, pricing, etc.. are described by a [YAML](http://www.yaml.org/start.html) configuration file.  Configuration files may end in `.yml` or `.yaml`.
 
-Deployments can be composed of multiple files via the [include](#include) section.  A complete deployment has the following sections:
+A complete deployment has the following sections:
 
  * [version](#version)
- * [include](#include) (optional)
  * [services](#services)
  * [profiles](#profiles)
  * [deployment](#deployment)
 
-An example deployment configuration can be found [here](deployment.yml).
+An example deployment configuration for the Akash testnet can be found [here](testnet_deployment.yml). A full example deployment configuration can be found [here](../deployment.yml).
 
 ### version
 
 Indicates version of Akash configuration file.  Currently only `"1.0"` is accepted.
 
-### include
-
-List of external configuration files to include.  Remote files are accepted via `http(s)://` prefix.
-
-When a configuration file is included, its `include`, `services` and `deployment` structures are deply merged (note: show examples).
-
-All included configurations must have the same `version` field (note: relax this).
-
-Examples:
-
-| Included File | Effect |
-| --- | --- |
-| `"x.yml"` | Include file named "x.yml" in same directory as current file |
-| `"/tmp/x.yml"` | Include file at absolute path `/tmp/x.yml` |
-| `"https://test.com/x.yml"` | Include file hosted at `https://test.com/x.yml` |
 
 ### services
 
