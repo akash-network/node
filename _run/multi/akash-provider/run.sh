@@ -26,7 +26,7 @@ mkdir -p "$AKASH_DATA"
 masterKey="$AKASH_DATA/master.key"
 providerKey="$AKASH_DATA/provider.key"
 
-if [ ! -f "$masterKey" -o ! -f "$providerKey" ]; then
+if [ ! -s "$masterKey" ] || [ ! -s "$providerKey" ]; then
   ./akash key create master > "$masterKey"
   echo "created account: " $(cat "$masterKey")
 
