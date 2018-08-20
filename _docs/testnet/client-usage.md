@@ -13,7 +13,7 @@ The Network contains two major functional elements:
 Installation instructions for the client binary may be found [here](https://github.com/ovrclk/akash#installing). Each of these package managers will install both `akashd` (the server) and `akash` (the client). This document describes client usage only.
 
 # The Akash testnet
-The Akash testnet is available for public use.  A description of the testnet, registration instructions, and a getting-started guide may be found [here](https://github.com/ovrclk/akash/_docs/testnet).
+The Akash testnet is available for public use.  A description of the testnet, registration instructions, and a getting-started guide may be found [here](https://github.com/ovrclk/akash/tree/master/_docs/testnet).
 
 # Top-level commands
 These commands are presented as an overview of the features available via the Akash client. Individual command usage is described in subsequent sections.
