@@ -17,14 +17,12 @@ profiles:
       memory: "512Mi"
       disk: "512Mi"
   placement:
-    san-jose:
-      attributes:
-        region: sjc
+    global:
       pricing:
         web: 200u
 
 deployment:
   webapp:
-    san-jose:
+    global:
       profile: web
       count: 1
