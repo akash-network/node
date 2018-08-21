@@ -4,7 +4,7 @@ builds:
   - binary: akash
     main: ./cmd/akash
     goarch: [amd64]
-    goos: [linux,darwin]
+    goos: [linux,darwin,windows]
     ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
 
   - binary: akashd
