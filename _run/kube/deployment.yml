@@ -17,8 +17,8 @@ profiles:
   compute:
     web:
       cpu: 0.1
-      memory: 512Mi
-      disk: 1Gi
+      memory: 16Mi
+      disk: 128Mi
   placement:
     westcoast:
       attributes:
