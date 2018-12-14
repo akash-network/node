@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/ovrclk/akash/cmd/akash/session"
@@ -30,9 +29,7 @@ func marketplaceCommand() *cobra.Command {
 
 func doMarketplaceMonitorCommand(session session.Session, cmd *cobra.Command, args []string) error {
 	handler := marketplaceMonitorHandler()
-	return common.RunForever(func(ctx context.Context) error {
-		return common.MonitorMarketplace(ctx, session.Log(), session.Client(), handler)
-	})
+	return common.MonitorMarketplace(session.Ctx(), session.Log(), session.Client(), handler)
 }
 
 func marketplaceMonitorHandler() marketplace.Handler {
