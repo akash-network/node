@@ -178,57 +178,55 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 		cclient = cluster.NullClient()
 	}
 
-	return common.RunForever(func(ctx context.Context) error {
-		ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(session.Ctx())
 
-		psession := psession.New(session.Log(), pobj, txclient, session.QueryClient())
+	psession := psession.New(session.Log(), pobj, txclient, session.QueryClient())
 
-		bus := event.NewBus()
-		defer bus.Close()
+	bus := event.NewBus()
+	defer bus.Close()
 
-		errch := make(chan error, 3)
+	errch := make(chan error, 3)
 
-		go func() {
-			defer cancel()
-			mclient := session.Client()
-			mlog := session.Log()
-			mhandler := event.MarketplaceTxHandler(bus)
-			errch <- common.MonitorMarketplace(ctx, mlog, mclient, mhandler)
-		}()
+	go func() {
+		defer cancel()
+		mclient := session.Client()
+		mlog := session.Log()
+		mhandler := event.MarketplaceTxHandler(bus)
+		errch <- common.MonitorMarketplace(ctx, mlog, mclient, mhandler)
+	}()
 
-		service, err := provider.NewService(ctx, psession, bus, cclient)
-		if err != nil {
-			cancel()
-			<-errch
-			return err
+	service, err := provider.NewService(ctx, psession, bus, cclient)
+	if err != nil {
+		cancel()
+		<-errch
+		return err
+	}
+
+	go func() {
+		defer cancel()
+		<-service.Done()
+		errch <- nil
+	}()
+
+	go func() {
+		defer cancel()
+		errch <- grpc.Run(ctx, ":9090", psession, cclient, service, service.ManifestHandler())
+	}()
+
+	go func() {
+		defer cancel()
+		errch <- akash_json.Run(ctx, session.Log(), ":3001", "localhost:9090")
+	}()
+
+	var reterr error
+	for i := 0; i < 3; i++ {
+		if err := <-errch; err != nil {
+			session.Log().Error("error", "err", err)
+			reterr = err
 		}
+	}
 
-		go func() {
-			defer cancel()
-			<-service.Done()
-			errch <- nil
-		}()
-
-		go func() {
-			defer cancel()
-			errch <- grpc.Run(ctx, ":9090", psession, cclient, service, service.ManifestHandler())
-		}()
-
-		go func() {
-			defer cancel()
-			errch <- akash_json.Run(ctx, session.Log(), ":3001", "localhost:9090")
-		}()
-
-		var reterr error
-		for i := 0; i < 3; i++ {
-			if err := <-errch; err != nil {
-				session.Log().Error("error", "err", err)
-				reterr = err
-			}
-		}
-
-		return reterr
-	})
+	return reterr
 }
 
 func providerStatusCommand() *cobra.Command {

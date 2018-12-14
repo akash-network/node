@@ -43,9 +43,14 @@ type Runner func(sess Session, cmd *cobra.Command, args []string) error
 
 func WithSession(fn Runner) cmdRunner {
 	return func(cmd *cobra.Command, args []string) error {
-		session := newSession(cmd)
-		defer session.shutdown()
-		return fn(session, cmd, args)
+		return common.RunForever(func(ctx context.Context) error {
+			session := newSession(ctx, cmd)
+			defer session.shutdown()
+			if err := fn(session, cmd, args); err != context.Canceled {
+				return err
+			}
+			return nil
+		})
 	}
 }
 
@@ -94,8 +99,8 @@ func RequireKey(fn Runner) Runner {
 	}
 }
 
-func newSession(cmd *cobra.Command) *session {
-	return &session{cmd: cmd, mtx: sync.Mutex{}}
+func newSession(ctx context.Context, cmd *cobra.Command) *session {
+	return &session{ctx: ctx, cmd: cmd, mtx: sync.Mutex{}}
 }
 
 type session struct {
@@ -103,97 +108,98 @@ type session struct {
 	kmgr keys.Keybase
 	kdb  tmdb.DB
 	log  log.Logger
+	ctx  context.Context
 	mtx  sync.Mutex
 }
 
-func (ctx *session) shutdown() {
-	ctx.mtx.Lock()
-	defer ctx.mtx.Unlock()
-	if ctx.kdb != nil {
-		ctx.kdb.Close()
+func (s *session) shutdown() {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	if s.kdb != nil {
+		s.kdb.Close()
 	}
 }
 
-func (ctx *session) Log() log.Logger {
-	ctx.mtx.Lock()
-	defer ctx.mtx.Unlock()
+func (s *session) Log() log.Logger {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
 
-	if ctx.log != nil {
-		return ctx.log
+	if s.log != nil {
+		return s.log
 	}
 
-	ctx.log = common.NewLogger(os.Stdout).With("app", "akash")
-	ctx.log = log.NewFilter(ctx.log, log.AllowAll())
-	return ctx.log
+	s.log = common.NewLogger(os.Stdout).With("app", "akash")
+	s.log = log.NewFilter(s.log, log.AllowAll())
+	return s.log
 }
 
-func (ctx *session) RootDir() string {
-	root, _ := ctx.cmd.Flags().GetString(flagRootDir)
+func (s *session) RootDir() string {
+	root, _ := s.cmd.Flags().GetString(flagRootDir)
 	return root
 }
 
-func (ctx *session) KeyManager() (keys.Keybase, error) {
-	ctx.mtx.Lock()
-	defer ctx.mtx.Unlock()
+func (s *session) KeyManager() (keys.Keybase, error) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
 
-	if ctx.kmgr != nil {
-		return ctx.kmgr, nil
+	if s.kmgr != nil {
+		return s.kmgr, nil
 	}
 
-	root := ctx.RootDir()
+	root := s.RootDir()
 	if root == "" {
 		return nil, errors.New("root directory unset")
 	}
 
 	var err error
-	ctx.kmgr, ctx.kdb, err = loadKeyManager(root)
+	s.kmgr, s.kdb, err = loadKeyManager(root)
 
-	return ctx.kmgr, err
+	return s.kmgr, err
 }
 
-func (ctx *session) Node() string {
-	if ctx.cmd.Flag(flagNode).Value.String() != ctx.cmd.Flag(flagNode).DefValue {
-		return ctx.cmd.Flag(flagNode).Value.String()
+func (s *session) Node() string {
+	if s.cmd.Flag(flagNode).Value.String() != s.cmd.Flag(flagNode).DefValue {
+		return s.cmd.Flag(flagNode).Value.String()
 	}
 	return viper.GetString(flagNode)
 }
 
-func (ctx *session) Client() *tmclient.HTTP {
-	return tmclient.NewHTTP(ctx.Node(), "/websocket")
+func (s *session) Client() *tmclient.HTTP {
+	return tmclient.NewHTTP(s.Node(), "/websocket")
 }
 
-func (ctx *session) TxClient() (txutil.Client, error) {
-	signer, key, err := ctx.Signer()
+func (s *session) TxClient() (txutil.Client, error) {
+	signer, key, err := s.Signer()
 	if err != nil {
 		return nil, err
 	}
-	nonce, err := ctx.cmd.Flags().GetUint64(flagNonce)
+	nonce, err := s.cmd.Flags().GetUint64(flagNonce)
 	if err != nil {
 		nonce = 0
 	}
-	return txutil.NewClient(ctx.Client(), signer, key, nonce), nil
+	return txutil.NewClient(s.Client(), signer, key, nonce), nil
 }
 
-func (ctx *session) QueryClient() query.Client {
-	return query.NewClient(ctx.Client())
+func (s *session) QueryClient() query.Client {
+	return query.NewClient(s.Client())
 }
 
-func (ctx *session) KeyName() string {
-	val, _ := ctx.cmd.Flags().GetString(flagKey)
+func (s *session) KeyName() string {
+	val, _ := s.cmd.Flags().GetString(flagKey)
 	return val
 }
 
-func (ctx *session) KeyType() (keys.SigningAlgo, error) {
-	return parseFlagKeyType(ctx.cmd.Flags())
+func (s *session) KeyType() (keys.SigningAlgo, error) {
+	return parseFlagKeyType(s.cmd.Flags())
 }
 
-func (ctx *session) Key() (keys.Info, error) {
-	kmgr, err := ctx.KeyManager()
+func (s *session) Key() (keys.Info, error) {
+	kmgr, err := s.KeyManager()
 	if err != nil {
 		return nil, err
 	}
 
-	kname := ctx.KeyName()
+	kname := s.KeyName()
 	if kname == "" {
 		return nil, errors.New("no key specified")
 	}
@@ -206,22 +212,22 @@ func (ctx *session) Key() (keys.Info, error) {
 	return info, nil
 }
 
-func (ctx *session) Password() (string, error) {
+func (s *session) Password() (string, error) {
 	return viper.GetString(flagPassword), nil
 }
 
-func (ctx *session) Signer() (txutil.Signer, keys.Info, error) {
-	kmgr, err := ctx.KeyManager()
+func (s *session) Signer() (txutil.Signer, keys.Info, error) {
+	kmgr, err := s.KeyManager()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	key, err := ctx.Key()
+	key, err := s.Key()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	password, err := ctx.Password()
+	password, err := s.Password()
 	if err != nil {
 		return nil, key, err
 	}
@@ -231,21 +237,21 @@ func (ctx *session) Signer() (txutil.Signer, keys.Info, error) {
 	return signer, key, nil
 }
 
-func (ctx *session) Nonce() (uint64, error) {
-	txclient, err := ctx.TxClient()
+func (s *session) Nonce() (uint64, error) {
+	txclient, err := s.TxClient()
 	if err != nil {
 		return 0, err
 	}
 	return txclient.Nonce()
 }
 
-func (ctx *session) NoWait() bool {
-	val, _ := ctx.cmd.Flags().GetBool(flagNoWait)
+func (s *session) NoWait() bool {
+	val, _ := s.cmd.Flags().GetBool(flagNoWait)
 	return val
 }
 
-func (ctx *session) Ctx() context.Context {
-	return context.Background()
+func (s *session) Ctx() context.Context {
+	return s.ctx
 }
 
 func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {
@@ -256,9 +262,9 @@ func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {
 	return manager, db, nil
 }
 
-func (ctx *session) Host() string {
-	if ctx.cmd.Flag(flagHost).Value.String() != ctx.cmd.Flag(flagHost).DefValue {
-		return ctx.cmd.Flag(flagHost).Value.String()
+func (s *session) Host() string {
+	if s.cmd.Flag(flagHost).Value.String() != s.cmd.Flag(flagHost).DefValue {
+		return s.cmd.Flag(flagHost).Value.String()
 	}
 	return viper.GetString(flagHost)
 }
