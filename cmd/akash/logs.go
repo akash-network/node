@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -69,21 +68,33 @@ func logs(session session.Session, cmd *cobra.Command, args []string) error {
 	}
 	defer body.Close()
 
-	scanner := bufio.NewScanner(body)
-	return printLog(session, scanner)
+	return printLog(session, body)
 }
 
-func printLog(session session.Session, scanner *bufio.Scanner) error {
-	for scanner.Scan() {
-		log := types.LogResponse{}
-		if err := json.Unmarshal(scanner.Bytes(), &log); err != nil {
-			session.Log().Error(err.Error())
+func printLog(session session.Session, r io.Reader) error {
+
+	var (
+		err error
+		obj types.LogResponse
+	)
+
+	for dec := json.NewDecoder(r); ; {
+
+		if err = dec.Decode(&obj); err != nil {
+			break
 		}
-		if log.Result != nil {
-			fmt.Printf("[%v] %v\n", log.Result.Name, log.Result.Message)
-		}
+
+		fmt.Printf("[%v] %v\n", obj.Result.Name, obj.Result.Message)
+		obj.Reset()
 	}
-	return scanner.Err()
+
+	if err != io.EOF && err != context.Canceled {
+		session.Log().Error(err.Error())
+		return err
+	}
+
+	return nil
+
 }
 
 func stream(ctx context.Context, url string, data []byte) (io.ReadCloser, error) {
