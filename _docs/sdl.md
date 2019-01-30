@@ -9,7 +9,7 @@ A complete deployment has the following sections:
  * [profiles](#profiles)
  * [deployment](#deployment)
 
-An example deployment configuration for the Akash testnet can be found [here](testnet_deployment.yml). A full example deployment configuration can be found [here](../deployment.yml).
+An example deployment configuration for the Akash testnet can be found [here](testnet/testnet-deployment.yml). A full example deployment configuration can be found [here](deployment.yml).
 
 ### version
 
