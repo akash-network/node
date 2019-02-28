@@ -42,7 +42,7 @@ jobs:
       go: "1.11"
       services: [docker]
       script:
-        - go get github.com/goreleaser/goreleaser
+        - curl -sL https://git.io/goreleaser | bash
         - $GOPATH/bin/goreleaser --skip-publish
       if: tag =~ ^v AND fork = false
 
@@ -53,7 +53,7 @@ jobs:
       services: [docker]
       script:
         - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-        - go get github.com/goreleaser/goreleaser
+        - curl -sL https://git.io/goreleaser | bash
         - $GOPATH/bin/goreleaser
       if: tag =~ ^v AND fork = false
 
