@@ -43,7 +43,7 @@ services:
   web:
     image: foo:latest
     env:
-      "API_KEY":"996fb92427ae41e4649b934ca495991b785"
+      - "API_KEY=996fb92427ae41e4649b934ca495991b785"
     port: 80
     depends-on:
       - service: db-pool
