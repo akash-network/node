@@ -44,7 +44,7 @@ $ curl https://raw.githubusercontent.com/ovrclk/akash/master/godownloader.sh | s
 
 ## Dependencies
 
- Akash is developed and tested with [golang 1.10+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
+ Akash is developed and tested with [golang 1.11+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
 
  Additional requirements are:
 

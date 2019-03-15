@@ -16,7 +16,7 @@ jobs:
     - name: test
       os: osx
       osx_image: xcode9.3beta
-      go: "1.11"
+      go: "1.12"
       script:
         - make build
         - make test-vet
@@ -29,7 +29,7 @@ jobs:
     # linux/1.11 (mainline): run skipped tests
     - name: test-skipped
       os: linux
-      go: "1.11"
+      go: "1.12"
       sudo: required
       env: TEST_UNSKIP=true
       script:
@@ -39,7 +39,7 @@ jobs:
     # linux/1.11 (mainline): deploy bins, docker dry-run
     - name: release-dryrun
       os: linux
-      go: "1.11"
+      go: "1.12"
       services: [docker]
       script:
         - curl -sL https://git.io/goreleaser > $GOPATH/bin/goreleaser && chmod a+x $GOPATH/bin/goreleaser
@@ -49,7 +49,7 @@ jobs:
     # linux/1.11 (mainline): deploy bins,docker
     - name: release
       os: linux
-      go: "1.11"
+      go: "1.12"
       services: [docker]
       script:
         - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
