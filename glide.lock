@@ -1,5 +1,5 @@
-hash: bc87f693c9bbedc3b60b2d0c2db6223979fd883e49a2bba69c571249ebca842a
-updated: 2018-11-05T12:22:58.205748271-08:00
+hash: ed0d1e85f95631bd12a6465cd611412d48ca2213a384df56c9af92ace31aadb4
+updated: 2019-03-18T20:14:14.302069-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -62,7 +62,7 @@ imports:
 - name: github.com/go-stack/stack
   version: 2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a
 - name: github.com/gogo/protobuf
-  version: 636bf0302bc95575d69441b25a2603156ffdddf1
+  version: ba06b47c162d49f2af050fb4c75bcbc86a159d5c
   subpackages:
   - gogoproto
   - jsonpb
@@ -197,11 +197,11 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/spf13/viper
-  version: 62edee319679b6ceaec16de03b966102d2dea709
+  version: 9e56dacc08fbbf8c9ee2dbc717553c758ce42bc9
 - name: github.com/stretchr/objx
   version: ef50b0de28773081167c97fc27cf29a0bf8b8c71
 - name: github.com/stretchr/testify
-  version: f35b8ab0b5a2cef36673838d662e249dd9c94686
+  version: ffdc059bfe9ce6a4e144ba849dbedead332c6053
   subpackages:
   - assert
   - mock
@@ -378,22 +378,27 @@ imports:
   - googleapis/api/annotations
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 2e463a05d100327ca47ac218281906921038fd95
+  version: 2fdaae294f38ed9a121193c51ec99fecd3b13eb7
   subpackages:
   - balancer
   - balancer/base
   - balancer/roundrobin
+  - binarylog/grpc_binarylog_v1
   - codes
   - connectivity
   - credentials
+  - credentials/internal
   - encoding
   - encoding/proto
   - grpclog
   - internal
   - internal/backoff
+  - internal/binarylog
   - internal/channelz
   - internal/envconfig
   - internal/grpcrand
+  - internal/grpcsync
+  - internal/syscall
   - internal/transport
   - keepalive
   - metadata
@@ -575,7 +580,7 @@ imports:
   - pkg/util
   - pkg/util/proto
 - name: k8s.io/metrics
-  version: c6bb70553a8287cd6451211dd366fee12e088b95
+  version: 988b2e695787aced7a6750d97ccdf8e708d987b8
   subpackages:
   - pkg/apis/metrics
   - pkg/apis/metrics/v1alpha1

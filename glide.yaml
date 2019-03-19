@@ -51,22 +51,26 @@ import:
 
 - package: github.com/juju/errors
 
-
 - package: k8s.io/client-go
   # version: ~8.0.0
   version: kubernetes-1.12.2
   subpackages:
   - '...'
+
 - package: k8s.io/apiextensions-apiserver
   version: kubernetes-1.12.2
+
 - package: k8s.io/apimachinery
-  version: release-1.12
+  version: kubernetes-1.12.2
   subpackages:
   - '...'
+
 - package: k8s.io/code-generator
-  version: release-1.12
+  version: kubernetes-1.12.2
+  
 - package: k8s.io/metrics
-  version: release-1.12
+  version: kubernetes-1.12.2
+
 - package: k8s.io/gengo
 
 - package: github.com/hashicorp/golang-lru
