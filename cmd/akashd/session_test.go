@@ -57,7 +57,7 @@ func TestSession_EnvOverrides(t *testing.T) {
 
 			assert.Equal(t, basedir, session.RootDir())
 			assert.Equal(t, gpath, cfg.GenesisFile())
-			assert.Equal(t, vpath, cfg.PrivValidatorFile())
+			assert.Equal(t, vpath, cfg.PrivValidatorKeyFile())
 			assert.Equal(t, moniker, cfg.Moniker)
 			assert.Equal(t, seeds, cfg.P2P.Seeds)
 			assert.Equal(t, laddr, cfg.RPC.ListenAddress)

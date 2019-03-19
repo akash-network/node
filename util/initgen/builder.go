@@ -98,7 +98,7 @@ func (b *builder) generatePrivateValidators() []tmtypes.PrivValidator {
 	validators := make([]tmtypes.PrivValidator, 0, b.count)
 
 	for i := uint(0); i < b.count; i++ {
-		validators = append(validators, privval.GenFilePV(""))
+		validators = append(validators, privval.GenFilePV("", ""))
 	}
 	return validators
 }
