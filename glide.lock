@@ -1,5 +1,5 @@
-hash: 46d6cb2ba1e85d09c68cb3f0a320a5a2022a499e0a30fea2b80f110e034f1029
-updated: 2019-03-18T21:07:21.37452-07:00
+hash: 7e07e90e851d9a398dfb9b35685afe38e61a57709c06bc530205dbdfa7c39d68
+updated: 2019-03-25T18:20:23.227634-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -46,10 +46,6 @@ imports:
   version: 1615341f118ae12f353cc8a983f35b584342c9b3
   subpackages:
   - trees/avltree
-- name: github.com/ethereum/go-ethereum
-  version: fb458280d1b0b90156745202677dabbc74187697
-  subpackages:
-  - crypto/secp256k1
 - name: github.com/fsnotify/fsnotify
   version: ccc981bf80385c528a65fbfdd49bf2d8da22aa23
 - name: github.com/ghodss/yaml
@@ -239,7 +235,7 @@ imports:
 - name: github.com/tendermint/iavl
   version: 2f35d309e69ffec33c044a910acd9e8d739eb095
 - name: github.com/tendermint/tendermint
-  version: 976819537d199aa43c6ad55ec4e8958323322bb0
+  version: 0d985ede28bd6937fa9d3613618e42cab6fc871c
   subpackages:
   - abci/client
   - abci/example/code
@@ -258,6 +254,7 @@ imports:
   - crypto/multisig
   - crypto/multisig/bitarray
   - crypto/secp256k1
+  - crypto/secp256k1/internal/secp256k1
   - crypto/tmhash
   - crypto/xsalsa20symmetric
   - evidence
@@ -375,7 +372,7 @@ imports:
   - googleapis/api/annotations
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 2fdaae294f38ed9a121193c51ec99fecd3b13eb7
+  version: 3507fb8e1a5ad030303c106fef3a47c9fdad16ad
   subpackages:
   - balancer
   - balancer/base

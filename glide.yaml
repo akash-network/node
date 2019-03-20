@@ -21,7 +21,7 @@ import:
 - package: github.com/tendermint/iavl
   version: ~0.12.2
 - package: github.com/tendermint/tendermint
-  version: ~0.30.2
+  version: ~0.31.0
 
 - package: github.com/stretchr/testify
   version: ^1.2.1

@@ -15,13 +15,17 @@ const (
 	chainID = "local"
 )
 
+// Node represents an Akash node
 type Node struct {
 	Name             string
 	PrivateValidator tmtypes.PrivValidator
-	NodeKey          *p2p.NodeKey
-	Peers            []*Node
+	//FilePV is file pvs
+	FilePV  *privval.FilePV
+	NodeKey *p2p.NodeKey
+	Peers   []*Node
 }
 
+// Builder is the config builder
 type Builder interface {
 	WithName(string) Builder
 	WithPath(string) Builder
@@ -63,11 +67,11 @@ func (b *builder) WithAkashGenesis(pgenesis *types.Genesis) Builder {
 }
 
 func (b *builder) Create() (Context, error) {
-
 	pvalidators := b.generatePrivateValidators()
 	validators := b.generateValidators(pvalidators)
 	nodekeys := b.generateNodeKeys()
-	nodes := b.generateNodes(pvalidators, nodekeys)
+	pvkeys := b.generateFilePVKeys()
+	nodes := b.generateNodes(pvalidators, pvkeys, nodekeys)
 
 	genesis := &tmtypes.GenesisDoc{
 		ChainID:    chainID,
@@ -96,11 +100,22 @@ func (b *builder) generatePrivateValidators() []tmtypes.PrivValidator {
 	}
 
 	validators := make([]tmtypes.PrivValidator, 0, b.count)
-
 	for i := uint(0); i < b.count; i++ {
 		validators = append(validators, privval.GenFilePV("", ""))
 	}
 	return validators
+}
+
+func (b *builder) generateFilePVKeys() []*privval.FilePV {
+	if b.count == 0 {
+		return nil
+	}
+
+	filepvkeys := make([]*privval.FilePV, 0, b.count)
+	for i := uint(0); i < b.count; i++ {
+		filepvkeys = append(filepvkeys, privval.GenFilePV("", ""))
+	}
+	return filepvkeys
 }
 
 func (b *builder) generateNodeKeys() []*p2p.NodeKey {
@@ -115,7 +130,7 @@ func (b *builder) generateNodeKeys() []*p2p.NodeKey {
 	return keys
 }
 
-func (b *builder) generateNodes(pvals []tmtypes.PrivValidator, nodekeys []*p2p.NodeKey) []*Node {
+func (b *builder) generateNodes(pvals []tmtypes.PrivValidator, fvals []*privval.FilePV, nodekeys []*p2p.NodeKey) []*Node {
 	if b.count == 0 {
 		return nil
 	}
@@ -124,8 +139,7 @@ func (b *builder) generateNodes(pvals []tmtypes.PrivValidator, nodekeys []*p2p.N
 
 	if b.count == 1 {
 		return []*Node{
-			{Name: b.name, PrivateValidator: pvals[0], NodeKey: nodekeys[0]},
-		}
+			{Name: b.name, FilePV: fvals[0], PrivateValidator: pvals[0], NodeKey: nodekeys[0]}}
 	}
 
 	for n := uint(0); n < b.count; n++ {
@@ -133,6 +147,7 @@ func (b *builder) generateNodes(pvals []tmtypes.PrivValidator, nodekeys []*p2p.N
 			Name:             fmt.Sprintf("%v-%v", b.name, n),
 			PrivateValidator: pvals[n],
 			NodeKey:          nodekeys[n],
+			FilePV:           fvals[n],
 		})
 	}
 

@@ -61,6 +61,14 @@ func PVToFile(path string, perm os.FileMode, obj tmtypes.PrivValidator) error {
 	return writeConfigIfNotExist(path, perm, obj)
 }
 
+func PVKeyToFile(path string, perm os.FileMode, obj privval.FilePVKey) error {
+	return writeConfigIfNotExist(path, perm, obj)
+}
+
+func PVStateToFile(path string, perm os.FileMode, obj privval.FilePVLastSignState) error {
+	return writeConfigIfNotExist(path, perm, obj)
+}
+
 func NodeKeyToJSON(obj *p2p.NodeKey) ([]byte, error) {
 	return cdc.MarshalJSON(obj)
 }
@@ -70,7 +78,7 @@ func NodeKeyToFile(path string, perm os.FileMode, obj *p2p.NodeKey) error {
 }
 
 func writeConfigIfNotExist(path string, perm os.FileMode, obj interface{}) error {
-	data, err := cdc.MarshalJSON(obj)
+	data, err := cdc.MarshalJSONIndent(obj, "", "  ")
 	if err != nil {
 		return err
 	}
