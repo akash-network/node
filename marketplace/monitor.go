@@ -43,11 +43,14 @@ func NewMonitor(ctx context.Context, log log.Logger, bus tmtmtypes.EventBusSubsc
 	ch := make(chan interface{})
 	go m.runListener(ch, m.handler)
 
-	if err := m.bus.Subscribe(m.ctx, m.name, m.query, ch); err != nil {
-		close(ch)
-		<-m.donech
-		return nil, err
-	}
+	// TODO: error while tm 0.31.0 upgrade:
+	// cannot use ch (type chan interface {}) as type int in argument to m.bus.Subscribe
+	//
+	// if err := m.bus.Subscribe(m.ctx, m.name, m.query, ch); err != nil {
+	// 	close(ch)
+	// 	<-m.donech
+	// 	return nil, err
+	// }
 
 	return m, nil
 }

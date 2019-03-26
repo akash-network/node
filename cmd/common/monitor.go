@@ -24,12 +24,13 @@ func MonitorMarketplace(ctx context.Context, log log.Logger, client *tmclient.HT
 		client.Wait()
 	}()
 
-	monitor, err := marketplace.NewMonitor(ctx, log, client, "akash-cli", handler, marketplace.TxQuery())
-	if err != nil {
-		cancel()
-		return err
-	}
-	defer func() { <-monitor.Wait() }()
+	// todo: client needs to implement EventBusSubscriber
+	// monitor, err := marketplace.NewMonitor(ctx, log, client, "akash-cli", handler, marketplace.TxQuery())
+	// if err != nil {
+	// 	cancel()
+	// 	return err
+	// }
+	// defer func() { <-monitor.Wait() }()
 
 	select {
 	case <-ctx.Done():

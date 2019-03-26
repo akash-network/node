@@ -16,17 +16,17 @@ all: build bins
 bins: $(BINS)
 
 build:
-	go build -i $$(glide novendor)
+	GO111MODULE=off go build -i $$(glide novendor)
 
 akash:
-	go build $(BUILD_FLAGS) ./cmd/akash
+	GO111MODULE=off go build $(BUILD_FLAGS) ./cmd/akash
 
 akashd:
-	go build $(BUILD_FLAGS) ./cmd/akashd
+	GO111MODULE=off go build $(BUILD_FLAGS) ./cmd/akashd
 
 image-bins:
-	$(IMAGE_BUILD_ENV) go build $(BUILD_FLAGS) -o _build/akash  ./cmd/akash
-	$(IMAGE_BUILD_ENV) go build $(BUILD_FLAGS) -o _build/akashd ./cmd/akashd
+	$(IMAGE_BUILD_ENV) GO111MODULE=off go build $(BUILD_FLAGS) -o _build/akash  ./cmd/akash
+	$(IMAGE_BUILD_ENV) GO111MODULE=off go build $(BUILD_FLAGS) -o _build/akashd ./cmd/akashd
 
 image: image-bins
 	docker build --rm            \
