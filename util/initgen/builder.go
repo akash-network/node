@@ -5,10 +5,12 @@ import (
 	"fmt"
 
 	"github.com/ovrclk/akash/types"
+	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/privval"
 	tmtypes "github.com/tendermint/tendermint/types"
+	tmtime "github.com/tendermint/tendermint/types/time"
 )
 
 const (
@@ -17,8 +19,7 @@ const (
 
 // Node represents an Akash node
 type Node struct {
-	Name             string
-	PrivateValidator tmtypes.PrivValidator
+	Name string
 	//FilePV is file pvs
 	FilePV  *privval.FilePV
 	NodeKey *p2p.NodeKey
@@ -42,6 +43,7 @@ type builder struct {
 	type_    Type
 }
 
+// NewBuilder returns a new instance of the builder
 func NewBuilder() Builder {
 	return &builder{}
 }
@@ -66,18 +68,29 @@ func (b *builder) WithAkashGenesis(pgenesis *types.Genesis) Builder {
 	return b
 }
 
+// Create generates a configuration context
 func (b *builder) Create() (Context, error) {
-	pvalidators := b.generatePrivateValidators()
-	validators := b.generateValidators(pvalidators)
-	nodekeys := b.generateNodeKeys()
+
+	// Generate FilePVs
 	pvkeys := b.generateFilePVKeys()
-	nodes := b.generateNodes(pvalidators, pvkeys, nodekeys)
+	// Generate node keys
+	nodekeys := b.generateNodeKeys()
+	// Generate nodes
+	nodes := b.generateNodes(pvkeys, nodekeys)
 
-	genesis := &tmtypes.GenesisDoc{
-		ChainID:    chainID,
-		Validators: validators,
+	// Extract public keys from filePVs
+	pubkeys := make([]crypto.PubKey, 0, b.count)
+	for i := uint(0); i < b.count; i++ {
+		pubkeys = append(pubkeys, pvkeys[i].Key.PubKey)
 	}
-
+	// make public keys as validators in genesis doc
+	validators := b.generateValidators(pubkeys)
+	genesis := &tmtypes.GenesisDoc{
+		GenesisTime: tmtime.Now(),
+		ChainID:     chainID,
+		Validators:  validators,
+	}
+	// specify the account with balances in genesis
 	if b.pgenesis != nil {
 		buf, err := json.Marshal(b.pgenesis)
 		if err != nil {
@@ -130,7 +143,7 @@ func (b *builder) generateNodeKeys() []*p2p.NodeKey {
 	return keys
 }
 
-func (b *builder) generateNodes(pvals []tmtypes.PrivValidator, fvals []*privval.FilePV, nodekeys []*p2p.NodeKey) []*Node {
+func (b *builder) generateNodes(fvals []*privval.FilePV, nodekeys []*p2p.NodeKey) []*Node {
 	if b.count == 0 {
 		return nil
 	}
@@ -139,18 +152,16 @@ func (b *builder) generateNodes(pvals []tmtypes.PrivValidator, fvals []*privval.
 
 	if b.count == 1 {
 		return []*Node{
-			{Name: b.name, FilePV: fvals[0], PrivateValidator: pvals[0], NodeKey: nodekeys[0]}}
+			{Name: b.name, FilePV: fvals[0], NodeKey: nodekeys[0]}}
 	}
 
 	for n := uint(0); n < b.count; n++ {
 		nodes = append(nodes, &Node{
-			Name:             fmt.Sprintf("%v-%v", b.name, n),
-			PrivateValidator: pvals[n],
-			NodeKey:          nodekeys[n],
-			FilePV:           fvals[n],
+			Name:    fmt.Sprintf("%v-%v", b.name, n),
+			NodeKey: nodekeys[n],
+			FilePV:  fvals[n],
 		})
 	}
-
 	for n, node := range nodes {
 		for i := 0; i < len(nodes); i++ {
 			if n != i {
@@ -162,25 +173,25 @@ func (b *builder) generateNodes(pvals []tmtypes.PrivValidator, fvals []*privval.
 	return nodes
 }
 
-func (b *builder) generateValidators(pvalidators []tmtypes.PrivValidator) []tmtypes.GenesisValidator {
-
-	if len(pvalidators) == 1 {
+func (b *builder) generateValidators(pubKeys []crypto.PubKey) []tmtypes.GenesisValidator {
+	if len(pubKeys) == 1 {
 		return []tmtypes.GenesisValidator{
 			{
-				Name:   b.name,
-				Power:  10,
-				PubKey: pvalidators[0].GetPubKey(),
+				Power:   10,
+				PubKey:  pubKeys[0],
+				Address: pubKeys[0].Address(),
 			},
 		}
 	}
 
 	var gvalidators []tmtypes.GenesisValidator
 
-	for idx, gv := range pvalidators {
+	for idx, pk := range pubKeys {
 		gvalidators = append(gvalidators, tmtypes.GenesisValidator{
-			Name:   fmt.Sprintf("%v-%v", b.name, idx),
-			Power:  10,
-			PubKey: gv.GetPubKey(),
+			Name:    fmt.Sprintf("%v-%v", b.name, idx),
+			PubKey:  pk,
+			Address: pk.Address(),
+			Power:   10,
 		})
 	}
 

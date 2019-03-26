@@ -3,7 +3,6 @@ package initgen_test
 import (
 	"testing"
 
-	"github.com/ovrclk/akash/util/initgen"
 	"github.com/stretchr/testify/require"
 )
 

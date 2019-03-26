@@ -40,25 +40,21 @@ func TMGenesisToJSON(obj *tmtypes.GenesisDoc) ([]byte, error) {
 	return cdc.MarshalJSON(obj)
 }
 
-func PVFromFile(path string) (*privval.FilePV, error) {
+func FilePVFromFile(path string) (*privval.FilePV, error) {
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return PVFromJSON(buf)
+	return FilePVFromJSON(buf)
 }
 
-func PVFromJSON(buf []byte) (*privval.FilePV, error) {
+func FilePVFromJSON(buf []byte) (*privval.FilePV, error) {
 	obj := new(privval.FilePV)
 	return obj, cdc.UnmarshalJSON(buf, obj)
 }
 
-func PVToJSON(obj tmtypes.PrivValidator) ([]byte, error) {
+func FilePVToJSON(obj *privval.FilePV) ([]byte, error) {
 	return cdc.MarshalJSON(obj)
-}
-
-func PVToFile(path string, perm os.FileMode, obj tmtypes.PrivValidator) error {
-	return writeConfigIfNotExist(path, perm, obj)
 }
 
 func PVKeyToFile(path string, perm os.FileMode, obj privval.FilePVKey) error {

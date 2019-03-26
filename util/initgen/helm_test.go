@@ -1,4 +1,4 @@
-package initgen
+package initgen_test
 
 import (
 	"io/ioutil"

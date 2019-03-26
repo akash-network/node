@@ -17,7 +17,6 @@ const (
 )
 
 func initCommand() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "init [address]",
 		Short: "Initialize node",

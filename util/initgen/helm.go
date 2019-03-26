@@ -51,7 +51,7 @@ func (w helmWriter) Write() error {
 
 		curNode := w.ctx.Nodes()[0]
 
-		vbuf, err = node.PVToJSON(curNode.PrivateValidator)
+		vbuf, err = node.FilePVToJSON(curNode.FilePV)
 		if err != nil {
 			return err
 		}
@@ -68,11 +68,11 @@ func (w helmWriter) Write() error {
 
 	obj := helmConfig{
 		Node: helmNodeConfig{
-			Name:      w.ctx.Name(),
-			Genesis:   string(gbuf),
-			Validator: string(vbuf),
-			NodeKey:   string(nkey),
-			Peers:     peers,
+			Name:    w.ctx.Name(),
+			Genesis: string(gbuf),
+			PVKey:   string(vbuf),
+			NodeKey: string(nkey),
+			Peers:   peers,
 		},
 	}
 
@@ -91,11 +91,11 @@ func (w helmWriter) Write() error {
 }
 
 type helmNodeConfig struct {
-	Name      string
-	Genesis   string
-	Validator string `yaml:"priv_validator"`
-	NodeKey   string `yaml:"node_key"`
-	Peers     []helmNodePeer
+	Name    string
+	Genesis string
+	PVKey   string `yaml:"priv_validator_key"`
+	NodeKey string `yaml:"node_key"`
+	Peers   []helmNodePeer
 }
 
 type helmNodePeer struct {

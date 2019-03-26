@@ -47,7 +47,6 @@ type dirWriter struct {
 }
 
 func (w dirWriter) Write() error {
-
 	if len(w.ctx.Nodes()) > 1 {
 		return fmt.Errorf("%T: too many private validators", w)
 	}
