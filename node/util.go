@@ -57,6 +57,11 @@ func FilePVToJSON(obj *privval.FilePV) ([]byte, error) {
 	return cdc.MarshalJSON(obj)
 }
 
+func FilePVKeyFromJSON(buf []byte) (*privval.FilePVKey, error) {
+	obj := new(privval.FilePVKey)
+	return obj, cdc.UnmarshalJSON(buf, obj)
+}
+
 func FilePVKeyToJSON(obj privval.FilePVKey) ([]byte, error) {
 	return cdc.MarshalJSON(obj)
 }

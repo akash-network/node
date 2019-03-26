@@ -46,13 +46,13 @@ image-minikube:
 	eval $$(minikube docker-env) && make image
 
 test:
-	go test $$(glide novendor)
+	GO111MODULE=off go test $$(glide novendor)
 
 test-nocache:
-	go test -count=1 $$(glide novendor)
+	GO111MODULE=off go test -count=1 $$(glide novendor)
 
 test-full:
-	go test -race $$(glide novendor)
+	GO111MODULE=off go test -race $$(glide novendor)
 
 test-cover:
 	goveralls -service=travis-ci -ignore="types/types.pb.go"

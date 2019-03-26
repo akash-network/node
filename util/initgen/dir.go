@@ -9,13 +9,12 @@ import (
 )
 
 const (
-	GenesisFilename          = "genesis.json"
-	PrivateValidatorFilename = "priv_validator.json"
-	PVStateFilename          = "priv_validator_state.json"
-	PVKeyFileName            = "priv_validator_key.json"
-	NodeKeyFilename          = "node_key.json"
-	ConfigDir                = "config"
-	DataDir                  = "data"
+	GenesisFilename = "genesis.json"
+	PVStateFilename = "priv_validator_state.json"
+	PVKeyFilename   = "priv_validator_key.json"
+	NodeKeyFilename = "node_key.json"
+	ConfigDir       = "config"
+	DataDir         = "data"
 )
 
 func NewMultiDirWriter(ctx Context) Writer {
@@ -61,12 +60,7 @@ func (w dirWriter) Write() error {
 
 	if len(w.ctx.Nodes()) > 0 {
 		curNode := w.ctx.Nodes()[0]
-		// fpath := path.Join(w.basecfgdir(), PrivateValidatorFilename)
-		// if err := node.PVToFile(fpath, 0400, curNode.PrivateValidator); err != nil {
-		// 	return err
-		// }
-
-		fpath := path.Join(w.basecfgdir(), PVKeyFileName)
+		fpath := path.Join(w.basecfgdir(), PVKeyFilename)
 		if err := node.PVKeyToFile(fpath, 0400, curNode.FilePV.Key); err != nil {
 			return err
 		}
