@@ -57,6 +57,14 @@ func FilePVToJSON(obj *privval.FilePV) ([]byte, error) {
 	return cdc.MarshalJSON(obj)
 }
 
+func FilePVKeyToJSON(obj privval.FilePVKey) ([]byte, error) {
+	return cdc.MarshalJSON(obj)
+}
+
+func FilePVStateToJSON(obj privval.FilePVLastSignState) ([]byte, error) {
+	return cdc.MarshalJSON(obj)
+}
+
 func PVKeyToFile(path string, perm os.FileMode, obj privval.FilePVKey) error {
 	return writeConfigIfNotExist(path, perm, obj)
 }
