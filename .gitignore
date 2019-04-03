@@ -16,3 +16,6 @@
 
 # test artifacts
 debug.test
+
+go.mod
+go.sum

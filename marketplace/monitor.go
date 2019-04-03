@@ -7,6 +7,8 @@ import (
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/libs/pubsub"
+	tmclient "github.com/tendermint/tendermint/rpc/client"
+	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	tmtmtypes "github.com/tendermint/tendermint/types"
 )
 
@@ -20,7 +22,7 @@ type monitor struct {
 	handler Handler
 	query   pubsub.Query
 
-	bus tmtmtypes.EventBusSubscriber
+	bus tmclient.EventsClient
 
 	ctx context.Context
 	log log.Logger
@@ -28,8 +30,7 @@ type monitor struct {
 	donech chan struct{}
 }
 
-func NewMonitor(ctx context.Context, log log.Logger, bus tmtmtypes.EventBusSubscriber, name string, handler Handler, query pubsub.Query) (Monitor, error) {
-
+func NewMonitor(ctx context.Context, log log.Logger, bus tmclient.EventsClient, name string, handler Handler, query pubsub.Query) (Monitor, error) {
 	m := &monitor{
 		name:    name,
 		handler: handler,
@@ -40,40 +41,31 @@ func NewMonitor(ctx context.Context, log log.Logger, bus tmtmtypes.EventBusSubsc
 		donech:  make(chan struct{}),
 	}
 
-	ch := make(chan interface{})
-	go m.runListener(ch, m.handler)
+	resC, err := m.bus.Subscribe(m.ctx, m.name, m.query.String())
+	if err != nil {
+		<-m.donech
+		return nil, err
+	}
 
-	// TODO: error while tm 0.31.0 upgrade:
-	// cannot use ch (type chan interface {}) as type int in argument to m.bus.Subscribe
-	//
-	// if err := m.bus.Subscribe(m.ctx, m.name, m.query, ch); err != nil {
-	// 	close(ch)
-	// 	<-m.donech
-	// 	return nil, err
-	// }
+	go m.runListener(resC, m.handler)
 
 	return m, nil
 }
 
 func (m *monitor) Stop() error {
-	return m.bus.Unsubscribe(m.ctx, m.name, m.query)
+	return m.bus.Unsubscribe(m.ctx, m.name, m.query.String())
 }
 
 func (m *monitor) Wait() <-chan struct{} {
 	return m.donech
 }
 
-func (m *monitor) runListener(ch <-chan interface{}, h Handler) {
+func (m *monitor) runListener(ch <-chan ctypes.ResultEvent, h Handler) {
 	defer close(m.donech)
 
-	for ev := range ch {
-
-		ed, ok := ev.(tmtmtypes.TMEventData)
-		if !ok {
-			continue
-		}
-
-		evt, ok := ed.(tmtmtypes.EventDataTx)
+	for {
+		ed := <-ch
+		evt, ok := ed.Data.(tmtmtypes.EventDataTx)
 		if !ok {
 			continue
 		}

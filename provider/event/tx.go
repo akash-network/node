@@ -6,7 +6,7 @@ import (
 	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tendermint/libs/log"
-	tmtmtypes "github.com/tendermint/tendermint/types"
+	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
 type (
@@ -23,7 +23,7 @@ type (
 )
 
 // Wrap tendermint event bus - publish events from tendermint bus to our bus implementation.
-func MarketplaceTxPublisher(ctx context.Context, log log.Logger, tmbus tmtmtypes.EventBusSubscriber, bus Bus) (marketplace.Monitor, error) {
+func MarketplaceTxPublisher(ctx context.Context, log log.Logger, tmbus tmclient.EventsClient, bus Bus) (marketplace.Monitor, error) {
 	handler := MarketplaceTxHandler(bus)
 	return marketplace.NewMonitor(ctx, log, tmbus, "tx-publisher", handler, marketplace.TxQuery())
 }

@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/ovrclk/akash/marketplace"
-	"github.com/tendermint/tendermint/libs/log"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
-func MonitorMarketplace(ctx context.Context, log log.Logger, client *tmclient.HTTP, handler marketplace.Handler) error {
+func MonitorMarketplace(ctx context.Context, log tmlog.Logger, client *tmclient.HTTP, handler marketplace.Handler) error {
 	ctx, cancel := context.WithCancel(ctx)
 
 	if err := client.Start(); err != nil {
@@ -24,13 +24,12 @@ func MonitorMarketplace(ctx context.Context, log log.Logger, client *tmclient.HT
 		client.Wait()
 	}()
 
-	// todo: client needs to implement EventBusSubscriber
-	// monitor, err := marketplace.NewMonitor(ctx, log, client, "akash-cli", handler, marketplace.TxQuery())
-	// if err != nil {
-	// 	cancel()
-	// 	return err
-	// }
-	// defer func() { <-monitor.Wait() }()
+	monitor, err := marketplace.NewMonitor(ctx, log, client, "akash-cli", handler, marketplace.TxQuery())
+	if err != nil {
+		cancel()
+		return err
+	}
+	defer func() { <-monitor.Wait() }()
 
 	select {
 	case <-ctx.Done():
