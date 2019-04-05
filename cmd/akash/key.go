@@ -3,9 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
-	"text/tabwriter"
+	"strings"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keys"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/hd"
+	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/spf13/cobra"
@@ -21,6 +23,7 @@ func keyCommand() *cobra.Command {
 	cmd.AddCommand(keyCreateCommand())
 	cmd.AddCommand(keyListCommand())
 	cmd.AddCommand(keyShowCommand())
+	cmd.AddCommand(keyRecoverCommand())
 	return cmd
 }
 func keyCreateCommand() *cobra.Command {
@@ -53,12 +56,15 @@ func doKeyCreateCommand(session session.Session, cmd *cobra.Command, args []stri
 		return err
 	}
 
-	info, _, err := kmgr.CreateMnemonic(args[0], common.DefaultCodec, password, ktype)
+	info, seed, err := kmgr.CreateMnemonic(args[0], common.DefaultCodec, password, ktype)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(X(info.GetPubKey().Address()))
+	table := uitable.New()
+	table.AddRow("Public Key:", X(info.GetPubKey().Address()))
+	table.AddRow("Recovery Codes:", seed)
+	fmt.Println(table)
 
 	return nil
 }
@@ -71,19 +77,51 @@ func keyListCommand() *cobra.Command {
 	}
 }
 
-func doKeyListCommand(session session.Session, cmd *cobra.Command, args []string) error {
-	kmgr, _ := session.KeyManager()
+func keyRecoverCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:     "recover <name> <recovery-codes>...",
+		Short:   "Recover key from recovery codes",
+		Example: "akash key recover my-key today napkin arch picnic fox case thrive table journey ill any enforce awesome desert chapter regret narrow capable advice skull pipe giraffe clown outside",
+		Args:    cobra.ExactArgs(25),
+		RunE:    session.WithSession(session.RequireKeyManager(doKeyRecoverCommand)),
+	}
+}
 
-	infos, err := kmgr.List()
+func doKeyRecoverCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	// the first arg is the key name and the rest are mnemonic codes
+	name, args := args[0], args[1:]
+	seed := strings.Join(args, " ")
+
+	password, err := session.Password()
 	if err != nil {
 		return err
 	}
 
-	tw := tabwriter.NewWriter(os.Stdout, 0, 4, 0, '\t', 0)
-	for _, info := range infos {
-		fmt.Fprintf(tw, "%v\t%v\n", info.GetName(), X(info.GetPubKey().Address()))
+	kmgr, _ := session.KeyManager()
+
+	params := *hd.NewFundraiserParams(0, 0)
+	info, err := kmgr.Derive(name, seed, keys.DefaultBIP39Passphrase, password, params)
+	if err != nil {
+		return err
 	}
-	tw.Flush()
+	fmt.Println("import successful", X(info.GetPubKey().Address()))
+	return nil
+
+}
+
+func doKeyListCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	kmgr, _ := session.KeyManager()
+	infos, err := kmgr.List()
+	if err != nil {
+		return err
+	}
+	table := uitable.New()
+	table.MaxColWidth = 80
+	table.Wrap = true
+	for _, info := range infos {
+		table.AddRow(info.GetName(), X(info.GetPubKey().Address()))
+	}
+	fmt.Println(table)
 	return nil
 }
 

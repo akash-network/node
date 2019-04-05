@@ -1,5 +1,5 @@
-hash: 7e07e90e851d9a398dfb9b35685afe38e61a57709c06bc530205dbdfa7c39d68
-updated: 2019-03-25T18:20:23.227634-07:00
+hash: 43f4eafc13312667ea7649e7d54a9c02c0c206373c9a6b4f9f369256280593ec
+updated: 2019-04-05T15:16:03.041186-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -22,7 +22,7 @@ imports:
 - name: github.com/caarlos0/env
   version: 518fcfb943252f77846f92ce5794086d9cb4a1b5
 - name: github.com/cosmos/cosmos-sdk
-  version: 7b4104aced52aa5b59a96c28b5ebeea7877fc4f0
+  version: dba33693c4b714db7c01eb3926edf780be12a8e5
   subpackages:
   - codec
   - crypto
@@ -102,6 +102,11 @@ imports:
   version: 53c1911da2b537f792e7cafcb446b05ffe33b996
 - name: github.com/gorilla/websocket
   version: 66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d
+- name: github.com/gosuri/uitable
+  version: 36ee7e946282a3fb1cfecd476ddc9b35d8847e42
+  subpackages:
+  - util/strutil
+  - util/wordwrap
 - name: github.com/gregjones/httpcache
   version: 787624de3eb7bd915c329cba748687a3b22666a6
   subpackages:
@@ -142,6 +147,8 @@ imports:
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/magiconair/properties
   version: c2353362d570a7bfa228149c62842019201cfb71
+- name: github.com/mattn/go-runewidth
+  version: 703b5e6b11ae25aeb2af9ebb5d5fdf8fa2575211
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -235,7 +242,7 @@ imports:
 - name: github.com/tendermint/iavl
   version: 2f35d309e69ffec33c044a910acd9e8d739eb095
 - name: github.com/tendermint/tendermint
-  version: 0d985ede28bd6937fa9d3613618e42cab6fc871c
+  version: 6cc3f4d87cae6589aef0ac2b4707f1ebc8a669b2
   subpackages:
   - abci/client
   - abci/example/code
