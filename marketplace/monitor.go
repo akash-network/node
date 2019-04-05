@@ -67,11 +67,6 @@ func (m *monitor) Wait() <-chan struct{} {
 }
 
 func (m *monitor) runListener(ch <-chan ctypes.ResultEvent, h Handler) {
-	// defer func() {
-	// 	fmt.Println("monitor --> closing(m.donech)")
-	// 	close(m.donech)
-	// }()
-
 	for {
 		fmt.Println("monitor --> wait on event")
 		select {
@@ -112,6 +107,7 @@ func (m *monitor) runListener(ch <-chan ctypes.ResultEvent, h Handler) {
 			}
 			fmt.Println("monitor --> done processing event")
 		case <-m.donech:
+			fmt.Println("monitor --> donech closed")
 			return
 		}
 	}
