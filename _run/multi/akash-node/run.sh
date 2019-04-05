@@ -27,9 +27,11 @@ echo "found seeds: $seeds"
 export AKASHD_P2P_SEEDS="$seeds"
 
 mkdir -p "$AKASHD_DATA/config"
+mkdir -p "$AKASHD_DATA/data"
 
 cp /config/genesis.json        "$AKASHD_DATA/config"
-cp /config/priv_validator.json "$AKASHD_DATA/config"
+cp /config/priv_validator_key.json "$AKASHD_DATA/config"
+cp /config/priv_validator_state.json "$AKASHD_DATA/data"
 cp /config/node_key.json       "$AKASHD_DATA/config"
 
 /akashd start

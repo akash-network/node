@@ -1,5 +1,5 @@
-hash: bc87f693c9bbedc3b60b2d0c2db6223979fd883e49a2bba69c571249ebca842a
-updated: 2018-11-05T12:22:58.205748271-08:00
+hash: 7e07e90e851d9a398dfb9b35685afe38e61a57709c06bc530205dbdfa7c39d68
+updated: 2019-03-25T18:20:23.227634-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -22,7 +22,7 @@ imports:
 - name: github.com/caarlos0/env
   version: 518fcfb943252f77846f92ce5794086d9cb4a1b5
 - name: github.com/cosmos/cosmos-sdk
-  version: 7c5c14f289bef310bdfac2331d30ab0310c56597
+  version: 7b4104aced52aa5b59a96c28b5ebeea7877fc4f0
   subpackages:
   - codec
   - crypto
@@ -30,15 +30,18 @@ imports:
   - crypto/keys/hd
   - crypto/keys/keyerror
   - crypto/keys/mintkey
+  - store/gaskv
+  - store/types
+  - tests
   - types
 - name: github.com/cosmos/go-bip39
   version: 555e2067c45d9fcd7292bf3b8e732bc10ac8c58e
+- name: github.com/cosmos/ledger-cosmos-go
+  version: e2f595b3b7b222e1cbe9daf89e73e4dcab02d54c
 - name: github.com/davecgh/go-spew
   version: 782f4967f2dc4564575ca782fe2d04090b5faca8
   subpackages:
   - spew
-- name: github.com/ebuchman/fail-test
-  version: 95f809107225be108efcf10a3509e4ea6ceef3c4
 - name: github.com/emirpasic/gods
   version: 1615341f118ae12f353cc8a983f35b584342c9b3
   subpackages:
@@ -62,7 +65,7 @@ imports:
 - name: github.com/go-stack/stack
   version: 2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a
 - name: github.com/gogo/protobuf
-  version: 636bf0302bc95575d69441b25a2603156ffdddf1
+  version: ba06b47c162d49f2af050fb4c75bcbc86a159d5c
   subpackages:
   - gogoproto
   - jsonpb
@@ -180,6 +183,8 @@ imports:
   - xfs
 - name: github.com/rcrowley/go-metrics
   version: e2704e165165ec55d062f5919b4b29494e9fa790
+- name: github.com/rs/cors
+  version: 76f58f330d76a55c5badc74f6212e8a15e742c77
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
@@ -197,11 +202,11 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/spf13/viper
-  version: 62edee319679b6ceaec16de03b966102d2dea709
+  version: 9e56dacc08fbbf8c9ee2dbc717553c758ce42bc9
 - name: github.com/stretchr/objx
   version: ef50b0de28773081167c97fc27cf29a0bf8b8c71
 - name: github.com/stretchr/testify
-  version: f35b8ab0b5a2cef36673838d662e249dd9c94686
+  version: ffdc059bfe9ce6a4e144ba849dbedead332c6053
   subpackages:
   - assert
   - mock
@@ -225,17 +230,12 @@ imports:
   version: e5840949ff4fff0c56f9b6a541e22b63581ea9df
   subpackages:
   - btcec
-- name: github.com/tendermint/ed25519
-  version: d8387025d2b9d158cf4efb07e7ebf814bcce2057
-  subpackages:
-  - edwards25519
-  - extra25519
 - name: github.com/tendermint/go-amino
-  version: faa6e731944e2b7b6a46ad202902851e8ce85bee
+  version: dc14acf9ef15f85828bfbc561ed9dd9d2a284885
 - name: github.com/tendermint/iavl
-  version: 3acc91fb8811db2c5409a855ae1f8e441fe98e2d
+  version: 2f35d309e69ffec33c044a910acd9e8d739eb095
 - name: github.com/tendermint/tendermint
-  version: 0c9c3292c918617624f6f3fbcd95eceade18bcd5
+  version: 0d985ede28bd6937fa9d3613618e42cab6fc871c
   subpackages:
   - abci/client
   - abci/example/code
@@ -243,7 +243,6 @@ imports:
   - abci/example/kvstore
   - abci/types
   - blockchain
-  - cmd/tendermint/commands
   - config
   - consensus
   - consensus/types
@@ -255,39 +254,32 @@ imports:
   - crypto/multisig
   - crypto/multisig/bitarray
   - crypto/secp256k1
+  - crypto/secp256k1/internal/secp256k1
   - crypto/tmhash
   - crypto/xsalsa20symmetric
   - evidence
   - libs/autofile
   - libs/bech32
-  - libs/cli
-  - libs/cli/flags
   - libs/clist
   - libs/common
   - libs/db
-  - libs/errors
   - libs/events
+  - libs/fail
   - libs/flowrate
   - libs/log
   - libs/pubsub
   - libs/pubsub/query
-  - lite
-  - lite/client
-  - lite/errors
-  - lite/proxy
   - mempool
   - node
   - p2p
   - p2p/conn
   - p2p/pex
-  - p2p/upnp
   - privval
   - proxy
   - rpc/client
   - rpc/core
   - rpc/core/types
   - rpc/grpc
-  - rpc/lib
   - rpc/lib/client
   - rpc/lib/server
   - rpc/lib/types
@@ -299,10 +291,10 @@ imports:
   - types
   - types/time
   - version
-- name: github.com/ZondaX/hid-go
-  version: 48b08affede2cea076a3cf13b2e3f72ed262b743
-- name: github.com/zondax/ledger-goclient
-  version: 58598458c11bc0ad1c1b8dac3dc3e11eaf270b79
+- name: github.com/zondax/hid
+  version: 302fd402163c34626286195dfa9adac758334acc
+- name: github.com/zondax/ledger-go
+  version: 69c15f1333a9b6866e5f66096561c7d138894bc5
 - name: golang.org/x/crypto
   version: 3764759f34a542a3aef74d6b02e35be7ab893bba
   repo: https://github.com/tendermint/crypto
@@ -311,6 +303,8 @@ imports:
   - blowfish
   - chacha20poly1305
   - curve25519
+  - ed25519
+  - ed25519/internal/edwards25519
   - hkdf
   - internal/chacha20
   - internal/subtle
@@ -378,22 +372,27 @@ imports:
   - googleapis/api/annotations
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 2e463a05d100327ca47ac218281906921038fd95
+  version: 3507fb8e1a5ad030303c106fef3a47c9fdad16ad
   subpackages:
   - balancer
   - balancer/base
   - balancer/roundrobin
+  - binarylog/grpc_binarylog_v1
   - codes
   - connectivity
   - credentials
+  - credentials/internal
   - encoding
   - encoding/proto
   - grpclog
   - internal
   - internal/backoff
+  - internal/binarylog
   - internal/channelz
   - internal/envconfig
   - internal/grpcrand
+  - internal/grpcsync
+  - internal/syscall
   - internal/transport
   - keepalive
   - metadata
@@ -575,7 +574,7 @@ imports:
   - pkg/util
   - pkg/util/proto
 - name: k8s.io/metrics
-  version: c6bb70553a8287cd6451211dd366fee12e088b95
+  version: 988b2e695787aced7a6750d97ccdf8e708d987b8
   subpackages:
   - pkg/apis/metrics
   - pkg/apis/metrics/v1alpha1

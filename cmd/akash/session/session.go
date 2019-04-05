@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"sync"
 
 	"github.com/ovrclk/akash/cmd/common"
@@ -257,7 +258,8 @@ func (s *session) Ctx() context.Context {
 func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {
 
 	db := tmdb.NewDB(keyDir, tmdb.GoLevelDBBackend, root)
-	manager := keys.New(db)
+	// TODO: Code review required
+	manager := keys.New("default", path.Join(root, keyDir))
 
 	return manager, db, nil
 }

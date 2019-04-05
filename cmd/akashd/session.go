@@ -116,7 +116,7 @@ func (session *session) TMConfig() (*tmconfig.Config, error) {
 	}
 
 	if val := viper.GetString("validator"); val != "" {
-		cfg.PrivValidator = val
+		cfg.PrivValidatorKey = val
 	}
 
 	if val := viper.GetString("moniker"); val != "" {

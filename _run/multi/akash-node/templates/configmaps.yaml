@@ -10,8 +10,10 @@ metadata:
 data:
   genesis.json: |-
 {{ .Values.node.genesis | indent 4 }}
-  priv_validator.json: |-
-{{ .Values.node.priv_validator | indent 4 }}
+  priv_validator_key.json: |-
+{{ .Values.node.priv_validator_key | indent 4 }}
+  priv_validator_state.json: |-
+{{ .Values.node.priv_validator_state | indent 4 }}
   node_key.json: |-
 {{ .Values.node.node_key | indent 4 }}
   run.sh: |-

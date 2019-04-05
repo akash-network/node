@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	crypto "github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
-	tmdb "github.com/tendermint/tendermint/libs/db"
 )
 
 const (
@@ -19,8 +18,7 @@ const (
 )
 
 func KeyManager(t *testing.T) keys.Keybase {
-	db := tmdb.NewMemDB()
-	return keys.New(db)
+	return keys.NewInMemory()
 }
 
 func PrivateKey(t *testing.T) crypto.PrivKey {

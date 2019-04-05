@@ -14,12 +14,14 @@ import:
   version: ae27198cdd90bf12cd134ad79d1366a6cf49f632
 
 - package: github.com/cosmos/cosmos-sdk/crypto
-  version: ~0.25.0
+  version: ~0.33.0
 
 - package: github.com/tendermint/go-amino
+  version: ~0.14.1
 - package: github.com/tendermint/iavl
+  version: ~0.12.2
 - package: github.com/tendermint/tendermint
-  version: ~0.25.0
+  version: ~0.31.0
 
 - package: github.com/stretchr/testify
   version: ^1.2.1
@@ -51,22 +53,26 @@ import:
 
 - package: github.com/juju/errors
 
-
 - package: k8s.io/client-go
   # version: ~8.0.0
   version: kubernetes-1.12.2
   subpackages:
   - '...'
+
 - package: k8s.io/apiextensions-apiserver
   version: kubernetes-1.12.2
+
 - package: k8s.io/apimachinery
-  version: release-1.12
+  version: kubernetes-1.12.2
   subpackages:
   - '...'
+
 - package: k8s.io/code-generator
-  version: release-1.12
+  version: kubernetes-1.12.2
+  
 - package: k8s.io/metrics
-  version: release-1.12
+  version: kubernetes-1.12.2
+
 - package: k8s.io/gengo
 
 - package: github.com/hashicorp/golang-lru

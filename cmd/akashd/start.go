@@ -77,7 +77,7 @@ func doStartCommand(session Session, cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	pvalidator := privval.LoadOrGenFilePV(cfg.PrivValidatorFile())
+	pvalidator := privval.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile())
 	ccreator := proxy.NewLocalClientCreator(app)
 	dbprovider := tmnode.DefaultDBProvider
 	mprovider := tmnode.DefaultMetricsProvider(cfg.Instrumentation)
@@ -95,7 +95,7 @@ func doStartCommand(session Session, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	actor := market.NewActor(pvalidator.PrivKey)
+	actor := market.NewActor(pvalidator.Key.PrivKey)
 
 	fmt.Println("activating market...")
 

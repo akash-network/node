@@ -40,24 +40,41 @@ func TMGenesisToJSON(obj *tmtypes.GenesisDoc) ([]byte, error) {
 	return cdc.MarshalJSON(obj)
 }
 
-func PVFromFile(path string) (*privval.FilePV, error) {
+func FilePVFromFile(path string) (*privval.FilePV, error) {
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return PVFromJSON(buf)
+	return FilePVFromJSON(buf)
 }
 
-func PVFromJSON(buf []byte) (*privval.FilePV, error) {
+func FilePVFromJSON(buf []byte) (*privval.FilePV, error) {
 	obj := new(privval.FilePV)
 	return obj, cdc.UnmarshalJSON(buf, obj)
 }
 
-func PVToJSON(obj tmtypes.PrivValidator) ([]byte, error) {
+func FilePVToJSON(obj *privval.FilePV) ([]byte, error) {
 	return cdc.MarshalJSON(obj)
 }
 
-func PVToFile(path string, perm os.FileMode, obj tmtypes.PrivValidator) error {
+func FilePVKeyFromJSON(buf []byte) (*privval.FilePVKey, error) {
+	obj := new(privval.FilePVKey)
+	return obj, cdc.UnmarshalJSON(buf, obj)
+}
+
+func FilePVKeyToJSON(obj privval.FilePVKey) ([]byte, error) {
+	return cdc.MarshalJSON(obj)
+}
+
+func FilePVStateToJSON(obj privval.FilePVLastSignState) ([]byte, error) {
+	return cdc.MarshalJSON(obj)
+}
+
+func PVKeyToFile(path string, perm os.FileMode, obj privval.FilePVKey) error {
+	return writeConfigIfNotExist(path, perm, obj)
+}
+
+func PVStateToFile(path string, perm os.FileMode, obj privval.FilePVLastSignState) error {
 	return writeConfigIfNotExist(path, perm, obj)
 }
 
@@ -70,7 +87,7 @@ func NodeKeyToFile(path string, perm os.FileMode, obj *p2p.NodeKey) error {
 }
 
 func writeConfigIfNotExist(path string, perm os.FileMode, obj interface{}) error {
-	data, err := cdc.MarshalJSON(obj)
+	data, err := cdc.MarshalJSONIndent(obj, "", "  ")
 	if err != nil {
 		return err
 	}

@@ -2,13 +2,14 @@ package common
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ovrclk/akash/marketplace"
-	"github.com/tendermint/tendermint/libs/log"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
 
-func MonitorMarketplace(ctx context.Context, log log.Logger, client *tmclient.HTTP, handler marketplace.Handler) error {
+func MonitorMarketplace(ctx context.Context, log tmlog.Logger, client *tmclient.HTTP, handler marketplace.Handler) error {
 	ctx, cancel := context.WithCancel(ctx)
 
 	if err := client.Start(); err != nil {
@@ -21,6 +22,7 @@ func MonitorMarketplace(ctx context.Context, log log.Logger, client *tmclient.HT
 	defer func() { <-cdonech }()
 	go func() {
 		defer close(cdonech)
+		fmt.Println("cmn.Monitor: waiting on client to close")
 		client.Wait()
 	}()
 
@@ -29,15 +31,22 @@ func MonitorMarketplace(ctx context.Context, log log.Logger, client *tmclient.HT
 		cancel()
 		return err
 	}
-	defer func() { <-monitor.Wait() }()
+	defer func() {
+		fmt.Println("cmn.Monitor: waiting on monitor to close")
+		<-monitor.Wait()
+		fmt.Println("cmn.Monitor: no wait monitor stopped")
+	}()
 
 	select {
 	case <-ctx.Done():
+		monitor.Stop()
 		client.UnsubscribeAll(context.Background(), "akash-cli")
 		client.Stop()
 	case <-cdonech:
+		fmt.Println("cmn.Monitor: cdonech closed")
 	}
 
+	fmt.Println("cmn.Monitor: the end")
 	cancel()
 	return nil
 }
