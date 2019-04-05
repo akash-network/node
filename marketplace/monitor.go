@@ -2,7 +2,6 @@ package marketplace
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
@@ -42,13 +41,11 @@ func NewMonitor(ctx context.Context, log log.Logger, bus tmclient.EventsClient, 
 		donech:  make(chan struct{}),
 	}
 
-	fmt.Println("monitor --> before subscribe")
 	resC, err := m.bus.Subscribe(m.ctx, m.name, m.query.String())
 	if err != nil {
 		<-m.donech
 		return nil, err
 	}
-	fmt.Println("monitor --> after subscribe")
 
 	go m.runListener(resC, m.handler)
 
@@ -56,24 +53,20 @@ func NewMonitor(ctx context.Context, log log.Logger, bus tmclient.EventsClient, 
 }
 
 func (m *monitor) Stop() error {
-	fmt.Println("monitor --> stop")
 	close(m.donech)
 	return m.bus.Unsubscribe(m.ctx, m.name, m.query.String())
 }
 
 func (m *monitor) Wait() <-chan struct{} {
-	fmt.Println("monitor --> wait called")
 	return m.donech
 }
 
 func (m *monitor) runListener(ch <-chan ctypes.ResultEvent, h Handler) {
 	for {
-		fmt.Println("monitor --> wait on event")
 		select {
 		case ed := <-ch:
 			evt, ok := ed.Data.(tmtmtypes.EventDataTx)
 			if !ok {
-				fmt.Println("monitor --> runListener not ok EventDataTx", evt)
 				continue
 			}
 
@@ -105,9 +98,7 @@ func (m *monitor) runListener(ch <-chan ctypes.ResultEvent, h Handler) {
 			case *types.TxPayload_TxCloseLease:
 				h.OnTxCloseLease(tx.TxCloseLease)
 			}
-			fmt.Println("monitor --> done processing event")
 		case <-m.donech:
-			fmt.Println("monitor --> donech closed")
 			return
 		}
 	}

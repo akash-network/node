@@ -48,7 +48,7 @@ func TestMonitorMarketplace(t *testing.T) {
 	node := startTestServer(t)
 	defer stopTestServer(t, node)
 	lc := getLocalClient(node)
-	bus := lc.EventBus
+	bus := node.EventBus()
 
 	signer, _ := testutil.PrivateKeySigner(t)
 
