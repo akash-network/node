@@ -12,7 +12,7 @@ func TestPrinter(t *testing.T) {
 	var buf bytes.Buffer
 	w := io.MultiWriter(&buf)
 	p := NewPrinter(w)
-	p.Add("foo bar")
+	p.Add(bytes.NewBufferString("foo bar"))
 	err := p.Flush()
 	require.NoError(t, err)
 }

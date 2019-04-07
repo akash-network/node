@@ -26,3 +26,7 @@ func (t *Title) Bytes() []byte {
 	buf.WriteString("\n")
 	return buf.Bytes()
 }
+
+func (t *Title) String() string {
+	return string(t.Bytes())
+}
