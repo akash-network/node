@@ -10,6 +10,7 @@ import (
 	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/util/uiutil"
 	"github.com/spf13/cobra"
 
 	. "github.com/ovrclk/akash/util"
@@ -18,7 +19,7 @@ import (
 func keyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "key",
-		Short: "Key commands",
+		Short: "Manage keys",
 	}
 	cmd.AddCommand(keyCreateCommand())
 	cmd.AddCommand(keyListCommand())
@@ -28,19 +29,17 @@ func keyCommand() *cobra.Command {
 }
 func keyCreateCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create [name]",
-		Short: "Create new key",
-		RunE:  session.WithSession(session.RequireRootDir(doKeyCreateCommand)),
+		Use:     "create <name>",
+		Short:   "create a new key locally",
+		Example: keyCreateHelp,
+		Args:    cobra.ExactArgs(1),
+		RunE:    session.WithSession(session.RequireRootDir(doKeyCreateCommand)),
 	}
 	session.AddFlagKeyType(cmd, cmd.Flags())
 	return cmd
 }
 
 func doKeyCreateCommand(session session.Session, cmd *cobra.Command, args []string) error {
-	if len(args) != 1 {
-		return errors.New("name argument required")
-	}
-
 	kmgr, err := session.KeyManager()
 	if err != nil {
 		return err
@@ -61,6 +60,9 @@ func doKeyCreateCommand(session session.Session, cmd *cobra.Command, args []stri
 		return err
 	}
 
+	title := uiutil.NewTitle(fmt.Sprintf("Successfully created key for '%s'", args[0]))
+	fmt.Println(string(title.Bytes()))
+
 	table := uitable.New()
 	table.AddRow("Public Key:", X(info.GetPubKey().Address()))
 	table.AddRow("Recovery Codes:", seed)
@@ -72,7 +74,7 @@ func doKeyCreateCommand(session session.Session, cmd *cobra.Command, args []stri
 func keyListCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
-		Short: "list keys",
+		Short: "List all the keys stored locally",
 		RunE:  session.WithSession(session.RequireKeyManager(doKeyListCommand)),
 	}
 }
@@ -80,8 +82,8 @@ func keyListCommand() *cobra.Command {
 func keyRecoverCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:     "recover <name> <recovery-codes>...",
-		Short:   "Recover key from recovery codes",
-		Example: "akash key recover my-key today napkin arch picnic fox case thrive table journey ill any enforce awesome desert chapter regret narrow capable advice skull pipe giraffe clown outside",
+		Short:   "recover a key using recovery codes",
+		Example: "\n $ akash key recover my-key today napkin arch picnic fox case thrive table journey ill any enforce awesome desert chapter regret narrow capable advice skull pipe giraffe clown outside",
 		Args:    cobra.ExactArgs(25),
 		RunE:    session.WithSession(session.RequireKeyManager(doKeyRecoverCommand)),
 	}
@@ -160,3 +162,18 @@ func doKeyShowCommand(session session.Session, cmd *cobra.Command, args []string
 	fmt.Println(X(info.GetPubKey().Address()))
 	return nil
 }
+
+var (
+	keyCreateHelp = `
+- Create a key with the name 'greg'
+
+
+	$ akash key create greg
+
+	Successfully created key for 'greg'
+	===================================
+
+	Public Key:    	f4e03226c054b1adafaa2739bad720c095500a49
+	Recovery Codes:	figure share industry canal...
+`
+)

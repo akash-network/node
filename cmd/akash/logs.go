@@ -19,7 +19,7 @@ func logsCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "logs <service> <lease>",
-		Short: "service logs",
+		Short: "Service logs",
 		Args:  cobra.ExactArgs(2),
 		RunE:  session.WithSession(session.RequireNode(logs)),
 	}

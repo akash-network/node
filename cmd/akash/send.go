@@ -14,7 +14,7 @@ func sendCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "send [amount] [to account]",
-		Short: "send tokens",
+		Short: "Send tokens",
 		Args:  cobra.ExactArgs(2),
 		RunE: session.WithSession(
 			session.RequireKey(session.RequireNode(doSendCommand))),

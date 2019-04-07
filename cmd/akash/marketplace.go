@@ -17,7 +17,7 @@ func marketplaceCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "marketplace",
-		Short: "monitor marketplace",
+		Short: "Monitor marketplace",
 		Args:  cobra.NoArgs,
 		RunE:  session.WithSession(session.RequireNode(doMarketplaceMonitorCommand)),
 	}

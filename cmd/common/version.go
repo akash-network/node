@@ -10,7 +10,7 @@ import (
 func VersionCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: "Print version",
+		Short: "Display version",
 		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Println("version: ", version.Version())
 			fmt.Println("commit:  ", version.Commit())

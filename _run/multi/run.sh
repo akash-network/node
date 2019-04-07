@@ -8,8 +8,8 @@ do_init(){
   mkdir -p "$AKASH_DIR"
   mkdir -p "$AKASHD_DIR"
 
-  _akash key create master > "$DATA_ROOT/master.key"
-  _akash key create other  > "$DATA_ROOT/other.key"
+  _akash key create master | grep "Public Key" | awk '{print $3}' > "$DATA_ROOT/master.key"
+  _akash key create other | grep "Public Key" | awk '{print $3}'  > "$DATA_ROOT/other.key"
 
   _akashd init "$(cat "$DATA_ROOT/master.key")" -t helm -c "${HELM_NODE_COUNT:-4}"
 }
