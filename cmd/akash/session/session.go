@@ -11,6 +11,7 @@ import (
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/txutil"
+	"github.com/ovrclk/akash/util/uiutil"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/spf13/cobra"
@@ -19,6 +20,9 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 )
+
+// KeybaseName is the default name of the Keybase
+var KeybaseName = "akash"
 
 type Session interface {
 	RootDir() string
@@ -37,6 +41,7 @@ type Session interface {
 	NoWait() bool
 	Host() string
 	Password() (string, error)
+	Printer() uiutil.Printer
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -52,6 +57,13 @@ func WithSession(fn Runner) cmdRunner {
 			}
 			return nil
 		})
+	}
+}
+
+func WithPrinter(fn Runner) Runner {
+	return func(session Session, cmd *cobra.Command, args []string) error {
+		defer session.Printer().Flush()
+		return fn(session, cmd, args)
 	}
 }
 
@@ -105,12 +117,13 @@ func newSession(ctx context.Context, cmd *cobra.Command) *session {
 }
 
 type session struct {
-	cmd  *cobra.Command
-	kmgr keys.Keybase
-	kdb  tmdb.DB
-	log  log.Logger
-	ctx  context.Context
-	mtx  sync.Mutex
+	cmd     *cobra.Command
+	kmgr    keys.Keybase
+	kdb     tmdb.DB
+	log     log.Logger
+	ctx     context.Context
+	mtx     sync.Mutex
+	printer uiutil.Printer
 }
 
 func (s *session) shutdown() {
@@ -256,11 +269,8 @@ func (s *session) Ctx() context.Context {
 }
 
 func loadKeyManager(root string) (keys.Keybase, tmdb.DB, error) {
-
 	db := tmdb.NewDB(keyDir, tmdb.GoLevelDBBackend, root)
-	// TODO: Code review required
-	manager := keys.New("default", path.Join(root, keyDir))
-
+	manager := keys.New(KeybaseName, path.Join(root, keyDir))
 	return manager, db, nil
 }
 
@@ -269,4 +279,11 @@ func (s *session) Host() string {
 		return s.cmd.Flag(flagHost).Value.String()
 	}
 	return viper.GetString(flagHost)
+}
+
+func (s *session) Printer() uiutil.Printer {
+	if s.printer == nil {
+		s.printer = uiutil.NewPrinter(nil)
+	}
+	return s.printer
 }

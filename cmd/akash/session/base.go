@@ -18,6 +18,7 @@ const (
 	flagNoWait   = "no-wait"
 	flagHost     = "host"
 	flagPassword = "password"
+	flagMode     = "mode"
 	keyDir       = "keys"
 
 	defaultKeyType  = keys.Secp256k1
@@ -32,6 +33,7 @@ func SetupBaseCommand(cmd *cobra.Command) {
 		return initCommandConfig(root)
 	}
 	cmd.PersistentFlags().StringP(flagRootDir, "d", defaultRootDir(), "data directory")
+	cmd.PersistentFlags().StringP(flagMode, "m", "interactive", "output mode (interactive|text|json)")
 }
 
 func initCommandConfig(root string) error {

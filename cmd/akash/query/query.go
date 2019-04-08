@@ -13,7 +13,7 @@ func QueryCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "query [something]",
-		Short: "query something",
+		Short: "Query something",
 		Args:  cobra.ExactArgs(1),
 	}
 

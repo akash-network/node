@@ -39,8 +39,8 @@ image: image-bins
 		_build
 
 install:
-	go install $(BUILD_FLAGS) ./cmd/akash
-	go install $(BUILD_FLAGS) ./cmd/akashd
+	GO111MODULE=off go install $(BUILD_FLAGS) ./cmd/akash
+	GO111MODULE=off go install $(BUILD_FLAGS) ./cmd/akashd
 
 image-minikube:
 	eval $$(minikube docker-env) && make image

@@ -28,7 +28,7 @@ func providerCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "provider",
-		Short: "manage provider",
+		Short: "Manage provider",
 		Args:  cobra.ExactArgs(1),
 	}
 

@@ -9,20 +9,18 @@ import:
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
   version: master
-
 - package: github.com/prometheus/client_golang
   version: ae27198cdd90bf12cd134ad79d1366a6cf49f632
-
-- package: github.com/cosmos/cosmos-sdk/crypto
+- package: github.com/cosmos/cosmos-sdk
   version: ~0.33.0
-
+  subpackages:
+  - crypto
 - package: github.com/tendermint/go-amino
   version: ~0.14.1
 - package: github.com/tendermint/iavl
   version: ~0.12.2
 - package: github.com/tendermint/tendermint
   version: ~0.31.0
-
 - package: github.com/stretchr/testify
   version: ^1.2.1
   subpackages:
@@ -41,40 +39,29 @@ import:
   - trees/avltree
 - package: github.com/boz/go-lifecycle
 - package: github.com/googleapis/gnostic
-  # version: ~0.2.0
   subpackages:
   - OpenAPIv2
-
 - package: github.com/golang/protobuf
   version: ~1.1.0
 - package: github.com/grpc-ecosystem/grpc-gateway
 - package: google.golang.org/grpc
   version: ^1.13.0
-
 - package: github.com/juju/errors
-
 - package: k8s.io/client-go
-  # version: ~8.0.0
   version: kubernetes-1.12.2
   subpackages:
   - '...'
-
 - package: k8s.io/apiextensions-apiserver
   version: kubernetes-1.12.2
-
 - package: k8s.io/apimachinery
   version: kubernetes-1.12.2
   subpackages:
   - '...'
-
 - package: k8s.io/code-generator
   version: kubernetes-1.12.2
-  
 - package: k8s.io/metrics
   version: kubernetes-1.12.2
-
 - package: k8s.io/gengo
-
 - package: github.com/hashicorp/golang-lru
 - package: github.com/caarlos0/env
   version: ^3.3.0
@@ -82,12 +69,11 @@ import:
   version: ^3.5.1
 - package: github.com/satori/go.uuid
   version: ~1.2.0
-
 - package: golang.org/x/sys
   version: 1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded
   subpackages:
   - unix
-
 - package: golang.org/x/crypto
+  version: 3764759f34a542a3aef74d6b02e35be7ab893bba
   repo: https://github.com/tendermint/crypto
-  version: "3764759f34a542a3aef74d6b02e35be7ab893bba"
+- package: github.com/gosuri/uitable

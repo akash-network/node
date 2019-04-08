@@ -11,7 +11,7 @@ import (
 func statusCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "get remote node status",
+		Short: "Display node status",
 		Args:  cobra.NoArgs,
 		RunE:  session.WithSession(session.RequireNode(doStatusCommand)),
 	}

@@ -20,10 +20,9 @@ import (
 )
 
 func deploymentCommand() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "deployment",
-		Short: "manage deployments",
+		Short: "Manage deployments",
 	}
 
 	cmd.AddCommand(createDeploymentCommand())
@@ -40,7 +39,7 @@ func createDeploymentCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create <deployment-file>",
-		Short: "create a deployment",
+		Short: "Create a deployment",
 		Args:  cobra.ExactArgs(1),
 		RunE: session.WithSession(
 			session.RequireKey(session.RequireNode(createDeployment))),
