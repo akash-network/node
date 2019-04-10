@@ -148,7 +148,12 @@ func doKeyListCommand(s session.Session, cmd *cobra.Command, args []string) erro
 			i["public_key"] = X(info.GetPubKey().Address())
 			result = append(result, i)
 		}
-		b, err := json.Marshal(result)
+		type out struct {
+			Result interface{} `json:"result"`
+			Raw    interface{} `json:"raw"`
+		}
+		jout := out{Result: result, Raw: infos}
+		b, err := json.Marshal(jout)
 		if err != nil {
 			return err
 		}
