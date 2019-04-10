@@ -142,23 +142,21 @@ func doKeyListCommand(s session.Session, cmd *cobra.Command, args []string) erro
 		pdata.AddResultList(d)
 	}
 	pdata.Raw = infos
-	table := uitable.New()
+
 	s.Mode().When(session.ModeTypeInteractive, func() error {
-		table.MaxColWidth = 80
-		table.Wrap = true
-		table.AddRow(uiutil.NewTitle("Name").String(), uiutil.NewTitle("Public Key (Address)").String())
-		for _, info := range infos {
-			table.AddRow(info.GetName(), X(info.GetPubKey().Address()))
+		table := uitable.New()
+		table.AddRow(
+			uiutil.NewTitle("Name").String(),
+			uiutil.NewTitle("Public Key (Address)").String(),
+		)
+
+		for _, info := range pdata {
+			table.AddRow(info["name"], info["public_key_address"])
 		}
 		fmt.Println(table)
 		return nil
 	}).When(session.ModeTypeText, func() error {
-		table.AddRow("NAME", "PUBLIC_KEY_ADDRESS")
-		for _, info := range infos {
-			table.AddRow(info.GetName(), X(info.GetPubKey().Address()))
-		}
-		fmt.Println(table)
-		return nil
+		return session.NewTextPrinter(pdata, nil).Flush()
 	}).When(session.ModeTypeJSON, func() error {
 		return session.NewJSONPrinter(pdata, nil).Flush()
 	})
