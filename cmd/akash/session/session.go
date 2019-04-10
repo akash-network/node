@@ -42,6 +42,7 @@ type Session interface {
 	Host() string
 	Password() (string, error)
 	Printer() uiutil.Printer
+	Mode() Mode
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -52,6 +53,14 @@ func WithSession(fn Runner) cmdRunner {
 		return common.RunForever(func(ctx context.Context) error {
 			session := newSession(ctx, cmd)
 			defer session.shutdown()
+			mtypeS, err := session.cmd.Flags().GetString(flagMode)
+			if err != nil {
+				return err
+			}
+			session.mode, err = NewMode(ModeType(mtypeS))
+			if err != nil {
+				return err
+			}
 			if err := fn(session, cmd, args); err != context.Canceled {
 				return err
 			}
@@ -124,6 +133,7 @@ type session struct {
 	ctx     context.Context
 	mtx     sync.Mutex
 	printer uiutil.Printer
+	mode    Mode
 }
 
 func (s *session) shutdown() {
@@ -279,6 +289,10 @@ func (s *session) Host() string {
 		return s.cmd.Flag(flagHost).Value.String()
 	}
 	return viper.GetString(flagHost)
+}
+
+func (s *session) Mode() Mode {
+	return s.mode
 }
 
 func (s *session) Printer() uiutil.Printer {

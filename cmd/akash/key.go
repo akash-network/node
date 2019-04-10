@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
@@ -115,21 +117,45 @@ func doKeyRecoverCommand(session session.Session, cmd *cobra.Command, args []str
 
 }
 
-func doKeyListCommand(session session.Session, cmd *cobra.Command, args []string) error {
-	kmgr, _ := session.KeyManager()
+func doKeyListCommand(s session.Session, cmd *cobra.Command, args []string) error {
+	kmgr, _ := s.KeyManager()
 	infos, err := kmgr.List()
 	if err != nil {
 		return err
 	}
 	table := uitable.New()
-	table.MaxColWidth = 80
-	table.Wrap = true
-	table.AddRow(uiutil.NewTitle("NAME").String(), uiutil.NewTitle("PUBLIC KEY").String())
-	for _, info := range infos {
-		table.AddRow(info.GetName(), X(info.GetPubKey().Address()))
-	}
-	fmt.Println(table)
-	return nil
+	s.Mode().When(session.ModeTypeInteractive, func() error {
+		table.MaxColWidth = 80
+		table.Wrap = true
+		table.AddRow(uiutil.NewTitle("Name").String(), uiutil.NewTitle("Public Key (Address)").String())
+		for _, info := range infos {
+			table.AddRow(info.GetName(), X(info.GetPubKey().Address()))
+		}
+		fmt.Println(table)
+		return nil
+	}).When(session.ModeTypeText, func() error {
+		table.AddRow("NAME", "PUBLIC_KEY_ADDRESS")
+		for _, info := range infos {
+			table.AddRow(info.GetName(), X(info.GetPubKey().Address()))
+		}
+		fmt.Println(table)
+		return nil
+	}).When(session.ModeTypeJSON, func() error {
+		result := make([]map[string]string, 0, 1)
+		for _, info := range infos {
+			i := make(map[string]string)
+			i["name"] = info.GetName()
+			i["public_key"] = X(info.GetPubKey().Address())
+			result = append(result, i)
+		}
+		b, err := json.Marshal(result)
+		if err != nil {
+			return err
+		}
+		os.Stdout.Write(b)
+		return nil
+	})
+	return s.Mode().Run()
 }
 
 func keyShowCommand() *cobra.Command {
