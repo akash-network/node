@@ -60,26 +60,30 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 		return fmt.Errorf("required argument missing: name")
 	}
 
-	ses.Mode().When(session.ModeTypeText, func() error {
-		if len(args) == 0 {
-			return err
-		}
-		return nil
-	}).When(session.ModeTypeJSON, func() error {
-		return nil
-	})
 	info, seed, err := kmgr.CreateMnemonic(args[0], common.DefaultCodec, password, ktype)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(string(uiutil.NewTitle(fmt.Sprintf("Successfully created key for '%s'", args[0])).Bytes()))
-	table := uitable.New()
-	table.AddRow("Public Key:", X(info.GetPubKey().Address()))
-	table.AddRow("Recovery Codes:", seed)
-	fmt.Println(table)
+	pdata := session.NewPrinterDataKV().
+		AddResultKV("public_key_address", X(info.GetPubKey().Address())).
+		AddResultKV("recovery_seed", seed)
 
-	return nil
+	return ses.Mode().
+		When(session.ModeTypeText, func() error {
+			return session.NewTextPrinter(pdata, nil).Flush()
+		}).
+		When(session.ModeTypeJSON, func() error {
+			return session.NewJSONPrinter(pdata, nil).Flush()
+		}).
+		When(session.ModeTypeInteractive, func() error {
+			fmt.Println(string(uiutil.NewTitle(fmt.Sprintf("Successfully created key for '%s'", args[0])).Bytes()))
+			table := uitable.New()
+			table.AddRow("Public Key:", X(info.GetPubKey().Address()))
+			table.AddRow("Recovery Codes:", seed)
+			fmt.Println(table)
+			return nil
+		}).Run()
 }
 
 func keyListCommand() *cobra.Command {
@@ -150,7 +154,7 @@ func doKeyListCommand(s session.Session, cmd *cobra.Command, args []string) erro
 			uiutil.NewTitle("Public Key (Address)").String(),
 		)
 
-		for _, info := range pdata {
+		for _, info := range pdata.Result {
 			table.AddRow(info["name"], info["public_key_address"])
 		}
 		fmt.Println(table)
