@@ -22,11 +22,15 @@ type Mode interface {
 	When(ModeType, runF) Mode
 	// Run runs the functions
 	Run() error
+
+	// Ask returns an Asker
+	Ask() Asker
 }
 
 type mode struct {
 	modeType ModeType
 	runners  []runF
+	asker    Asker
 }
 
 func NewMode(mtype ModeType) (*mode, error) {
@@ -48,6 +52,13 @@ func (m *mode) When(mtype ModeType, fn runF) Mode {
 		m.runners = append(m.runners, fn)
 	}
 	return m
+}
+
+func (m *mode) Ask() Asker {
+	if m.asker == nil {
+		m.asker = NewInteractiveAsker(m.Type())
+	}
+	return m.asker
 }
 
 func (m *mode) Run() error {

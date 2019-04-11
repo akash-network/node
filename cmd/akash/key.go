@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/errors"
 	"github.com/ovrclk/akash/util/uiutil"
 	"github.com/spf13/cobra"
 
@@ -41,6 +41,15 @@ func keyCreateCommand() *cobra.Command {
 }
 
 func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) error {
+	var name string
+	if len(args) == 1 {
+		name = args[0]
+	}
+	name = ses.Mode().Ask().StringVar(name, "Key Name (required): ", true)
+	if len(name) == 0 {
+		return fmt.Errorf("required argument missing: name")
+	}
+
 	kmgr, err := ses.KeyManager()
 	if err != nil {
 		return err
@@ -55,19 +64,14 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 	if err != nil {
 		return err
 	}
-	args = session.AskStringArgs(ses.Mode(), session.ModeTypeInteractive, args, "Key Name (required): ", true)
 
-	if len(args) == 0 {
-		return fmt.Errorf("required argument missing: name")
-	}
-
-	info, seed, err := kmgr.CreateMnemonic(args[0], common.DefaultCodec, password, ktype)
+	info, seed, err := kmgr.CreateMnemonic(name, common.DefaultCodec, password, ktype)
 	if err != nil {
 		return err
 	}
 
 	pdata := session.NewPrinterDataKV().
-		AddResultKV("name", args[0]).
+		AddResultKV("name", name).
 		AddResultKV("public_key_address", X(info.GetPubKey().Address())).
 		AddResultKV("recovery_seed", seed)
 
@@ -79,7 +83,7 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 			return session.NewJSONPrinter(pdata, nil).Flush()
 		}).
 		When(session.ModeTypeInteractive, func() error {
-			fmt.Println(string(uiutil.NewTitle(fmt.Sprintf("Successfully created key for '%s'", args[0])).Bytes()))
+			fmt.Println(string(uiutil.NewTitle(fmt.Sprintf("Successfully created key for '%s'", name)).Bytes()))
 			table := uitable.New()
 			table.AddRow("Public Key:", X(info.GetPubKey().Address()))
 			table.AddRow("Recovery Codes:", seed)
@@ -94,43 +98,6 @@ func keyListCommand() *cobra.Command {
 		Short: "list all the keys stored locally",
 		RunE:  session.WithSession(session.RequireKeyManager(doKeyListCommand)),
 	}
-}
-
-func keyRecoverCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:     "recover <name> <recovery-codes>...",
-		Short:   "recover a key using recovery codes",
-		Long:    "Recover a key using the recovery code generated during key creation and store it locally. For help with creating a key, see 'akash help key create'",
-		Example: keyRecoverExample,
-		Args:    cobra.ExactArgs(25),
-		RunE:    session.WithSession(session.RequireKeyManager(doKeyRecoverCommand)),
-	}
-}
-
-func doKeyRecoverCommand(session session.Session, cmd *cobra.Command, args []string) error {
-	// the first arg is the key name and the rest are mnemonic codes
-	name, args := args[0], args[1:]
-	seed := strings.Join(args, " ")
-
-	password, err := session.Password()
-	if err != nil {
-		return err
-	}
-
-	kmgr, _ := session.KeyManager()
-	params := *hd.NewFundraiserParams(0, 0)
-	info, err := kmgr.Derive(name, seed, keys.DefaultBIP39Passphrase, password, params)
-	if err != nil {
-		return err
-	}
-
-	title := uiutil.NewTitle(fmt.Sprintf("Successfully recovered key, stored locally as '%s'", name))
-	fmt.Println(string(title.Bytes()))
-	table := uitable.New()
-	table.AddRow("Public Key:", X(info.GetPubKey().Address()))
-	fmt.Println(table)
-	return nil
-
 }
 
 func doKeyListCommand(s session.Session, cmd *cobra.Command, args []string) error {
@@ -169,6 +136,68 @@ func doKeyListCommand(s session.Session, cmd *cobra.Command, args []string) erro
 	return s.Mode().Run()
 }
 
+func keyRecoverCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:     "recover <name> <recovery-codes>...",
+		Short:   "recover a key using recovery codes",
+		Long:    "Recover a key using the recovery code generated during key creation and store it locally. For help with creating a key, see 'akash help key create'",
+		Example: keyRecoverExample,
+		RunE:    session.WithSession(session.RequireKeyManager(doKeyRecoverCommand)),
+	}
+}
+
+func doKeyRecoverCommand(ses session.Session, cmd *cobra.Command, args []string) error {
+	// the first arg is the key name and the rest are mnemonic codes
+	var name, seed string
+
+	if len(args) > 2 {
+		name, args = args[0], args[1:]
+		seed = strings.Join(args, " ")
+	}
+
+	name = ses.Mode().Ask().StringVar(name, "Key Name (required): ", true)
+	seed = ses.Mode().Ask().StringVar(seed, "Recovery Codes (required): ", true)
+	if len(name) == 0 {
+		return errors.NewArgumentError("required argument missing: name")
+	}
+	if len(seed) == 0 {
+		return errors.NewArgumentError("seed")
+	}
+
+	password, err := ses.Password()
+	if err != nil {
+		return err
+	}
+	kmgr, _ := ses.KeyManager()
+	params := *hd.NewFundraiserParams(0, 0)
+	info, err := kmgr.Derive(name, seed, keys.DefaultBIP39Passphrase, password, params)
+	if err != nil {
+		return err
+	}
+
+	pdata := session.NewPrinterDataKV().
+		AddResultKV("name", name).
+		AddResultKV("public_key_address", X(info.GetPubKey().Address()))
+	pdata.Raw = info
+
+	return ses.Mode().
+		When(session.ModeTypeText, func() error {
+			return session.NewTextPrinter(pdata, nil).Flush()
+		}).
+		When(session.ModeTypeJSON, func() error {
+			return session.NewJSONPrinter(pdata, nil).Flush()
+		}).
+		When(session.ModeTypeInteractive, func() error {
+			title := uiutil.NewTitle(fmt.Sprintf("Successfully recovered key, stored locally as '%s'", name))
+			fmt.Println(string(title.Bytes()))
+			table := uitable.New()
+			table.AddRow("Public Key:", X(info.GetPubKey().Address()))
+			fmt.Println(table)
+			return nil
+		}).
+		Run()
+}
+
 func keyShowCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show <name>",
@@ -181,15 +210,19 @@ func keyShowCommand() *cobra.Command {
 }
 
 func doKeyShowCommand(session session.Session, cmd *cobra.Command, args []string) error {
-	if len(args) != 1 {
-		return errors.New("name argument required")
+	var name string
+	if len(args) > 0 {
+		name = args[0]
 	}
+
+	if len(name) == 0 {
+		return errors.NewArgumentError("name")
+	}
+
 	kmgr, err := session.KeyManager()
 	if err != nil {
 		return err
 	}
-	name := args[0]
-
 	info, err := kmgr.Get(name)
 	if err != nil {
 		return err
