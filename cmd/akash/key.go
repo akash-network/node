@@ -83,11 +83,12 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 			return session.NewJSONPrinter(pdata, nil).Flush()
 		}).
 		When(session.ModeTypeInteractive, func() error {
-			fmt.Println(string(uiutil.NewTitle(fmt.Sprintf("Successfully created key for '%s'", name)).Bytes()))
-			table := uitable.New()
-			table.AddRow("Public Key:", X(info.GetPubKey().Address()))
-			table.AddRow("Recovery Codes:", seed)
-			fmt.Println(table)
+			return session.NewIPrinter(nil).
+				AddTitle(fmt.Sprintf("Successfully created key for '%s'", name)).
+				Add(uitable.New().
+					AddRow("Public Key:", X(info.GetPubKey().Address())).
+					AddRow("Recovery Codes:", seed)).
+				Flush()
 			return nil
 		}).Run()
 }

@@ -8,8 +8,8 @@ do_init(){
   mkdir -p "$AKASH_DIR"
   mkdir -p "$AKASHD_DIR"
 
-  _akash key create master | grep "Public Key" | awk '{print $3}' > "$DATA_ROOT/master.key"
-  _akash key create other | grep "Public Key" | awk '{print $3}'  > "$DATA_ROOT/other.key"
+  eval $(akash key create master -m text); echo $PUBLIC_KEY_ADDRESS > "$DATA_ROOT/master.key"
+  eval $(akash key create other -m text); echo $PUBLIC_KEY_ADDRESS > "$DATA_ROOT/other.key"
 
   _akashd init "$(cat "$DATA_ROOT/master.key")" -t helm -c "${HELM_NODE_COUNT:-4}"
 }
@@ -31,8 +31,14 @@ case "$1" in
   deploy)
     akash deployment create deployment.yml -k master
     ;;
+  minikube-start)
+    minikube start --cpus 4 --memory 4096
+    minikube addons enable ingress
+    minikube addons enable metrics-server
+    kubectl create -f rbac.yml
+    ;;
   *)
-    echo "USAGE: $0 <init|send|query|marketplace|deploy>" >&2
+    echo "USAGE: $0 <init|send|query|marketplace|deploy|minikube-start>" >&2
     exit 1
     ;;
 esac
