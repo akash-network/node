@@ -27,6 +27,7 @@ func keyCommand() *cobra.Command {
 	cmd.AddCommand(keyRecoverCommand())
 	return cmd
 }
+
 func keyCreateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "create <name>",
@@ -66,6 +67,7 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 	}
 
 	pdata := session.NewPrinterDataKV().
+		AddResultKV("name", args[0]).
 		AddResultKV("public_key_address", X(info.GetPubKey().Address())).
 		AddResultKV("recovery_seed", seed)
 
@@ -182,12 +184,10 @@ func doKeyShowCommand(session session.Session, cmd *cobra.Command, args []string
 	if len(args) != 1 {
 		return errors.New("name argument required")
 	}
-
 	kmgr, err := session.KeyManager()
 	if err != nil {
 		return err
 	}
-
 	name := args[0]
 
 	info, err := kmgr.Get(name)
