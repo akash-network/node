@@ -118,6 +118,9 @@ func doKeyListCommand(s session.Session, cmd *cobra.Command, args []string) erro
 
 	s.Mode().When(session.ModeTypeInteractive, func() error {
 		table := uitable.New()
+		table.MaxColWidth = 80
+		table.Wrap = true
+
 		table.AddRow(
 			uiutil.NewTitle("Name").String(),
 			uiutil.NewTitle("Public Key (Address)").String(),
@@ -209,7 +212,7 @@ func keyShowCommand() *cobra.Command {
 	return cmd
 }
 
-func doKeyShowCommand(session session.Session, cmd *cobra.Command, args []string) error {
+func doKeyShowCommand(ses session.Session, cmd *cobra.Command, args []string) error {
 	var name string
 	if len(args) > 0 {
 		name = args[0]
@@ -219,7 +222,7 @@ func doKeyShowCommand(session session.Session, cmd *cobra.Command, args []string
 		return errors.NewArgumentError("name")
 	}
 
-	kmgr, err := session.KeyManager()
+	kmgr, err := ses.KeyManager()
 	if err != nil {
 		return err
 	}
@@ -231,9 +234,22 @@ func doKeyShowCommand(session session.Session, cmd *cobra.Command, args []string
 	if len(info.GetPubKey().Address()) == 0 {
 		return fmt.Errorf("key not found %s", name)
 	}
+	pdata := session.NewPrinterDataKV().
+		AddResultKV("name", name).
+		AddResultKV("public_key_address", X(info.GetPubKey().Address()))
 
-	fmt.Println(X(info.GetPubKey().Address()))
-	return nil
+	return ses.Mode().
+		When(session.ModeTypeInteractive, func() error {
+			fmt.Println(pdata.Result[0]["public_key_address"])
+			return nil
+		}).
+		When(session.ModeTypeText, func() error {
+			return session.NewTextPrinter(pdata, nil).Flush()
+		}).
+		When(session.ModeTypeJSON, func() error {
+			return session.NewJSONPrinter(pdata, nil).Flush()
+		}).
+		Run()
 }
 
 var (

@@ -17,9 +17,11 @@ type runF func() error
 type Mode interface {
 	// Type must return the type of Mode
 	Type() ModeType
+
 	// When registers the events to run for the
 	// current Mode when Run is invoked. It returns the current Mode
 	When(ModeType, runF) Mode
+
 	// Run runs the functions
 	Run() error
 

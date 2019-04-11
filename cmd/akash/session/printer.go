@@ -16,10 +16,9 @@ const (
 )
 
 type PrinterData struct {
-	Result []map[string]string `json:"result,omitempty"`
-	Raw    interface{}         `json:"raw,omitempty"`
-	Log    []PrinterLog        `json:"log,omitempty"`
-
+	Result     []map[string]string `json:"result,omitempty"`
+	Raw        interface{}         `json:"raw,omitempty"`
+	Log        []PrinterLog        `json:"log,omitempty"`
 	resultMode PrinterResultMode
 }
 
