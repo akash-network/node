@@ -8,11 +8,10 @@ do_init() {
   mkdir -p "$AKASH_DIR"
   mkdir -p "$AKASHD_DIR"
 
-  akash key create master | grep "Public Key" | awk '{print $3}' > "$DATA_ROOT/master.key"
-  akash key create other | grep "Public Key" | awk '{print $3}' > "$DATA_ROOT/other.key"
+  eval $(akash key create master -m text); echo $PUBLIC_KEY_ADDRESS > "$DATA_ROOT/master.key"
+  eval $(akash key create other -m text); echo $PUBLIC_KEY_ADDRESS > "$DATA_ROOT/other.key"
   akashd init "$(cat "$DATA_ROOT/master.key")"
-
-  akash_provider key create master | grep "Public Key" | awk '{print $3}' > "$DATA_ROOT/provider-master.key"
+  eval $(akash_provider key create master -m text); echo $PUBLIC_KEY_ADDRESS > "$DATA_ROOT/provider-master.key"
 }
 
 case "$1" in
