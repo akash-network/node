@@ -14,7 +14,7 @@ import (
 
 func queryAccountCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "account <account ...>",
+		Use:     "account <account>...",
 		Short:   "query account balance",
 		Example: queryAccountExample,
 		RunE:    session.WithSession(session.RequireNode(doQueryAccountCommand)),
@@ -117,10 +117,28 @@ func doQueryAccountCommand(s session.Session, cmd *cobra.Command, args []string)
 
 var (
 	queryAccountExample = `
-- Query an account with a local key
-  
-- Query an acount with the public key
+- Query an account with a signer (local) key:
 
-  $ akash query acount 60b72b4c18710003f8b2d1ba2102fe64c9b33334
+  $ akash query account -k master 
+
+  Account Details
+  ===============
+
+  Public Key (Address): 8e1c5ffce48bf2c5c6193129a8e0977073a7f30f
+  Balance (mAKASH):     999999899247072
+
+  Please note, the token balance is denominated in microAKASH (AKASH * 10^-6)
+  
+- Query for multiple accounts using the public key:
+
+  $ akash query account 8e1c5ffce48bf2c5c6193129a8e0977073a7f30f 192a4aa8bce49bdd6e259310e7ff538bde916e8d
+
+  Public Key (Address)                      Balance (mAKASH)
+  ====================                      ================
+
+  8e1c5ffce48bf2c5c6193129a8e0977073a7f30f  999999899244499
+  192a4aa8bce49bdd6e259310e7ff538bde916e8d  100000000
+
+  Please note, the token balance is denominated in microAKASH (AKASH * 10^-6)
 	`
 )
