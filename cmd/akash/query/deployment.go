@@ -9,7 +9,7 @@ import (
 func queryDeploymentCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "deployment [deployment ...]",
+		Use:   "deployment <deployment>...",
 		Short: "query deployment",
 		RunE:  session.WithSession(session.RequireNode(doQueryDeploymentCommand)),
 	}
