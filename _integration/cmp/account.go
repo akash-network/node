@@ -9,7 +9,7 @@ import (
 )
 
 func accountBalance(key key, amount int64) gestalt.Component {
-	parse := js.Do(js.Int(amount, "balance"))
+	parse := js.Do(js.Int(amount, "result", "[0]", "balance"))
 
 	return akash("account-balance",
 		"query", "account", "-m", "json", key.addr.Var()).
