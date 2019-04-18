@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/gosuri/uilive"
+	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
@@ -54,6 +56,12 @@ func createDeploymentCommand() *cobra.Command {
 }
 
 func createDeployment(ses session.Session, cmd *cobra.Command, args []string) error {
+	writer := uilive.New()
+
+	// start listening for updates and render
+	writer.Start()
+	defer writer.Stop() // flush and stop rendering
+
 	var file string
 	if len(args) == 1 {
 		file = args[0]
@@ -92,6 +100,8 @@ func createDeployment(ses session.Session, cmd *cobra.Command, args []string) er
 		return err
 	}
 
+	fmt.Fprintln(writer, "Uploading Manifest...")
+
 	res, err := txclient.BroadcastTxCommit(&types.TxCreateDeployment{
 		Tenant:   txclient.Key().GetPubKey().Address().Bytes(),
 		Nonce:    nonce,
@@ -106,8 +116,7 @@ func createDeployment(ses session.Session, cmd *cobra.Command, args []string) er
 	}
 
 	address := res.DeliverTx.Data
-
-	fmt.Println(X(address))
+	fmt.Fprintln(writer.Bypass(), "Deployment Posted: ", X(address))
 
 	if ses.NoWait() {
 		return nil
@@ -118,50 +127,124 @@ func createDeployment(ses session.Session, cmd *cobra.Command, args []string) er
 
 	}).Run()
 
-	fmt.Printf("Waiting...\n")
+	fmt.Fprintln(writer, "Waiting on bids...")
 	expected := len(groups)
 	providers := make(map[*types.Provider]types.LeaseID)
+
+	outChan := make(chan string)
+	closeChan := make(chan int)
+	//bidsChan := make(chan *types.TxCreateFulfillment)
+	//deployChan := make(chan *types.TxCreateLease)
+	errC := make(chan error)
+	var bidsCount int
+
+	bidsTab := uitable.New()
+	bidsTab.AddRow("GROUP", "PRICE", "PROVIDER")
+
 	handler := marketplace.NewBuilder().
 		OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 			if bytes.Equal(tx.Deployment, address) {
-				fmt.Printf("Group %v/%v Fulfillment: %v [price=%v]\n", tx.Group, len(groups), tx.FulfillmentID, tx.Price)
+				//bidsChan <- tx
+				bidsCount++
+				fmt.Fprintf(writer, "Bid (%d): %s (%d AKASH) \n", bidsCount, tx.Provider.String(), tx.Price)
+				writer.Flush()
+				bidsTab.AddRow(tx.Group, tx.Price, tx.Provider.String())
+				//outChan <- fmt.Sprintf("Group %v/%v Fulfillment: %v [price=%v]", tx.Group, len(groups), tx.FulfillmentID, tx.Price)
 			}
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
 			if bytes.Equal(tx.Deployment, address) {
-				fmt.Printf("Group %v/%v Lease: %v [price=%v]\n", tx.Group, len(groups), tx.LeaseID, tx.Price)
+				//deployChan <- tx
+				//outChan <- fmt.Sprintf("Group %v/%v Lease: %v [price=%v]", tx.Group, len(groups), tx.LeaseID, tx.Price)
 				// get lease provider
+
+				session.NewIPrinter(writer.Bypass()).AddText("").AddTitle("Fulfillments").Add(bidsTab).Flush()
 				prov, err := ses.QueryClient().Provider(ses.Ctx(), tx.Provider)
 				if err != nil {
-					fmt.Printf("ERROR: %v", err)
+					errC <- err
 				}
 
 				// send manifest over http to provider uri
-				fmt.Printf("Sending manifest to %v...\n", prov.HostURI)
+				fmt.Fprintf(writer, "Uploading Manifest to %v... \n", prov.HostURI)
 				err = http.SendManifest(ses.Ctx(), mani, txclient.Signer(), prov, tx.Deployment)
 				if err != nil {
-					fmt.Printf("ERROR: %v", err)
+					errC <- err
 				} else {
 					providers[prov] = tx.LeaseID
 				}
+				fmt.Fprintf(writer, "Manifest accepted by Provider (%v) \n", prov.HostURI)
 				expected--
 			}
 			if expected == 0 {
+				writer.Flush()
+				ptable := uitable.New()
+				ptable.Wrap = true
+				ptable.MaxColWidth = 300
+				ptable.AddRow("SERVICE", "PROVIDER", "URI")
 				// get deployment addresses for each provider in lease.
 				for provider, leaseID := range providers {
-					fmt.Printf("Service URIs for provider: %s\n", provider.Address)
+					fmt.Fprintf(writer, "Fetching service URIs for Provider (%s)... \n", provider.Address)
 					status, err := http.LeaseStatus(ses.Ctx(), provider, leaseID)
 					if err != nil {
-						fmt.Printf("ERROR: %v", err)
+						errC <- err
+						return
 					} else {
-						printLeaseStatus(status)
+						for _, service := range status.Services {
+							for _, uri := range service.URIs {
+								ptable.AddRow(service.Name, provider.Address, uri)
+							}
+						}
+						//printLeaseStatus(status)
 					}
 				}
-				os.Exit(0)
+
+				dtable := uitable.New()
+				dtable.MaxColWidth = 400
+				dtable.Wrap = true
+				dtable.
+					AddRow("Group:", tx.Group).
+					AddRow("Lease ID:", tx.LeaseID).
+					AddRow("Price:", tx.Price).AddRow("Service URI(s):", ptable.String())
+
+				session.NewIPrinter(writer.Bypass()).
+					AddTitle("Deployment Info").
+					Add(dtable).
+					// AddText("").
+					// AddTitle("Service URI(s)").
+					// Add(ptable).
+					Flush()
+
+				closeChan <- 1
 			}
 		}).Create()
 
-	return common.MonitorMarketplace(ses.Ctx(), ses.Log(), ses.Client(), handler)
+	go func(errC chan error) {
+		if err = common.MonitorMarketplace(ses.Ctx(), ses.Log(), ses.Client(), handler); err != nil {
+			errC <- err
+		}
+	}(errC)
+
+	for {
+		select {
+		case <-outChan:
+			// if bidsCount == 0 {
+			// }
+			//fmt.Println(out)
+		// case <-deployChan:
+		// 	fmt.Fprintln(writer.Bypass(), bidsTab)
+		// case tx := <-bidsChan:
+		// 	bidsCount++
+		// 	fmt.Fprintf(writer, "Bids Recieved (%d): %s (%d AKASH) \n", bidsCount, tx.Provider.String(), tx.Price)
+		// 	writer.Flush()
+		// 	bidsTab.AddRow(tx.Group, tx.Price, tx.Provider.String())
+		case err := <-errC:
+			return err
+		case <-closeChan:
+			os.Exit(0)
+			return nil
+		}
+	}
+	//return
 }
 
 func updateDeploymentCommand() *cobra.Command {

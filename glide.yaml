@@ -77,3 +77,5 @@ import:
   version: 3764759f34a542a3aef74d6b02e35be7ab893bba
   repo: https://github.com/tendermint/crypto
 - package: github.com/gosuri/uitable
+- package: github.com/gosuri/uilive
+  version: 0.0.2

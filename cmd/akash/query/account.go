@@ -1,7 +1,6 @@
 package query
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/gosuri/uitable"
@@ -26,8 +25,6 @@ func queryAccountCommand() *cobra.Command {
 
 func doQueryAccountCommand(s session.Session, cmd *cobra.Command, args []string) error {
 	var account *types.Account
-	fmt.Println("DEBUG  ---> NODE:", s.Node())
-
 	// When a signer key is used instead of a public key(s) in the args
 	if len(args) == 0 {
 		_, info, err := s.Signer()
