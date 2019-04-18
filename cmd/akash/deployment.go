@@ -39,7 +39,7 @@ func createDeploymentCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create <deployment-file>",
-		Short: "Create a deployment",
+		Short: "create a deployment",
 		Args:  cobra.ExactArgs(1),
 		RunE: session.WithSession(
 			session.RequireKey(session.RequireNode(createDeployment))),
@@ -53,11 +53,16 @@ func createDeploymentCommand() *cobra.Command {
 	return cmd
 }
 
-func createDeployment(session session.Session, cmd *cobra.Command, args []string) error {
+func createDeployment(ses session.Session, cmd *cobra.Command, args []string) error {
+	var file string
+	if len(args) == 1 {
+		file = args[0]
+	}
+	file = ses.Mode().Ask().StringVar(file, "Deployment File Path (required): ", true)
 
 	const ttl = int64(5)
 
-	txclient, err := session.TxClient()
+	txclient, err := ses.TxClient()
 	if err != nil {
 		return err
 	}
@@ -67,7 +72,7 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 		return err
 	}
 
-	sdl, err := sdl.ReadFile(args[0])
+	sdl, err := sdl.ReadFile(file)
 	if err != nil {
 		return err
 	}
@@ -96,7 +101,7 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 	})
 
 	if err != nil {
-		session.Log().Error("error sending tx", "error", err)
+		ses.Log().Error("error sending tx", "error", err)
 		return err
 	}
 
@@ -104,9 +109,14 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 
 	fmt.Println(X(address))
 
-	if session.NoWait() {
+	if ses.NoWait() {
 		return nil
 	}
+
+	err = ses.Mode().When(session.ModeTypeInteractive, func() error {
+		return nil
+
+	}).Run()
 
 	fmt.Printf("Waiting...\n")
 	expected := len(groups)
@@ -121,14 +131,14 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 			if bytes.Equal(tx.Deployment, address) {
 				fmt.Printf("Group %v/%v Lease: %v [price=%v]\n", tx.Group, len(groups), tx.LeaseID, tx.Price)
 				// get lease provider
-				prov, err := session.QueryClient().Provider(session.Ctx(), tx.Provider)
+				prov, err := ses.QueryClient().Provider(ses.Ctx(), tx.Provider)
 				if err != nil {
 					fmt.Printf("ERROR: %v", err)
 				}
 
 				// send manifest over http to provider uri
 				fmt.Printf("Sending manifest to %v...\n", prov.HostURI)
-				err = http.SendManifest(session.Ctx(), mani, txclient.Signer(), prov, tx.Deployment)
+				err = http.SendManifest(ses.Ctx(), mani, txclient.Signer(), prov, tx.Deployment)
 				if err != nil {
 					fmt.Printf("ERROR: %v", err)
 				} else {
@@ -140,7 +150,7 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 				// get deployment addresses for each provider in lease.
 				for provider, leaseID := range providers {
 					fmt.Printf("Service URIs for provider: %s\n", provider.Address)
-					status, err := http.LeaseStatus(session.Ctx(), provider, leaseID)
+					status, err := http.LeaseStatus(ses.Ctx(), provider, leaseID)
 					if err != nil {
 						fmt.Printf("ERROR: %v", err)
 					} else {
@@ -151,13 +161,13 @@ func createDeployment(session session.Session, cmd *cobra.Command, args []string
 			}
 		}).Create()
 
-	return common.MonitorMarketplace(session.Ctx(), session.Log(), session.Client(), handler)
+	return common.MonitorMarketplace(ses.Ctx(), ses.Log(), ses.Client(), handler)
 }
 
 func updateDeploymentCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "update <manifest> <deployment>",
+		Use:   "update <manifest> <deployment-id>",
 		Short: "update a deployment (*EXPERIMENTAL*)",
 		Args:  cobra.ExactArgs(2),
 		RunE: session.WithSession(

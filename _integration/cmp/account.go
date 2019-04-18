@@ -12,7 +12,7 @@ func accountBalance(key key, amount int64) gestalt.Component {
 	parse := js.Do(js.Int(amount, "balance"))
 
 	return akash("account-balance",
-		"query", "account", key.addr.Var()).
+		"query", "account", "-m", "json", key.addr.Var()).
 		FN(parse).
 		WithMeta(g.Require(key.addr.Name()))
 }
