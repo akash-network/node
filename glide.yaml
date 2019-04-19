@@ -79,3 +79,7 @@ import:
 - package: github.com/gosuri/uitable
 - package: github.com/gosuri/uilive
   version: 0.0.2
+- package: github.com/fatih/color
+  version: ~1.7.0
+- package: github.com/mattn/go-colorable
+  version: ~0.1.1

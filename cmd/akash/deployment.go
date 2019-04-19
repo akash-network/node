@@ -3,8 +3,11 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
+	"time"
 
+	"github.com/fatih/color"
 	"github.com/gosuri/uilive"
 	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
@@ -19,6 +22,7 @@ import (
 	. "github.com/ovrclk/akash/util"
 	"github.com/ovrclk/akash/validation"
 	"github.com/spf13/cobra"
+	tmctypes "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 func deploymentCommand() *cobra.Command {
@@ -57,6 +61,7 @@ func createDeploymentCommand() *cobra.Command {
 
 func createDeployment(ses session.Session, cmd *cobra.Command, args []string) error {
 	writer := uilive.New()
+	//writer.RefreshInterval = 100 * time.Millisecond
 
 	// start listening for updates and render
 	writer.Start()
@@ -100,23 +105,51 @@ func createDeployment(ses session.Session, cmd *cobra.Command, args []string) er
 		return err
 	}
 
-	fmt.Fprintln(writer, "Uploading Manifest...")
+	resChan := make(chan *tmctypes.ResultBroadcastTxCommit, 1)
+	errChan := make(chan error)
+	errC := make(chan error)
+	var res *tmctypes.ResultBroadcastTxCommit
+	var address []byte
+	var start time.Time
+	var elapsed time.Duration
+	blue := color.New(color.FgCyan, color.Bold)
 
-	res, err := txclient.BroadcastTxCommit(&types.TxCreateDeployment{
-		Tenant:   txclient.Key().GetPubKey().Address().Bytes(),
-		Nonce:    nonce,
-		OrderTTL: ttl,
-		Groups:   groups,
-		Version:  hash,
-	})
+	go func() {
+		res, err := txclient.BroadcastTxCommit(&types.TxCreateDeployment{
+			Tenant:   txclient.Key().GetPubKey().Address().Bytes(),
+			Nonce:    nonce,
+			OrderTTL: ttl,
+			Groups:   groups,
+			Version:  hash,
+		})
+		if err != nil {
+			ses.Log().Error("error sending tx", "error", err)
+			errChan <- err
+			return
+		}
+		resChan <- res
+	}()
 
-	if err != nil {
-		ses.Log().Error("error sending tx", "error", err)
-		return err
+	lines := []rune{'—', '\\', '|', '/'}
+	start = time.Now()
+outloop:
+	for {
+		select {
+		case res = <-resChan:
+			address = res.DeliverTx.Data
+			fmt.Fprintln(writer.Bypass(), "(success) deployment posted with id:", X(address))
+			break outloop
+		case err := <-errChan:
+			ses.Log().Error("error sending tx", "error", err)
+			return err
+		default:
+			elapsed = time.Now().Sub(start)
+			m := math.Mod(float64(elapsed), float64(len(lines)))
+			spinner := blue.Sprintf("[%s]", string(lines[int(m)]))
+			fmt.Fprintf(writer, "%s (send) upload deployment manifent (elapsed: %v)\n", spinner, elapsed)
+			time.Sleep(250 * time.Millisecond)
+		}
 	}
-
-	address := res.DeliverTx.Data
-	fmt.Fprintln(writer.Bypass(), "Deployment Posted: ", X(address))
 
 	if ses.NoWait() {
 		return nil
@@ -124,10 +157,9 @@ func createDeployment(ses session.Session, cmd *cobra.Command, args []string) er
 
 	err = ses.Mode().When(session.ModeTypeInteractive, func() error {
 		return nil
-
 	}).Run()
 
-	fmt.Fprintln(writer, "Waiting on bids...")
+	fmt.Fprintln(writer, blue.Sprintf("[/] (wait) waiting on bids for %d deployment group(s)", len(groups)))
 	expected := len(groups)
 	providers := make(map[*types.Provider]types.LeaseID)
 
@@ -135,8 +167,8 @@ func createDeployment(ses session.Session, cmd *cobra.Command, args []string) er
 	closeChan := make(chan int)
 	//bidsChan := make(chan *types.TxCreateFulfillment)
 	//deployChan := make(chan *types.TxCreateLease)
-	errC := make(chan error)
 	var bidsCount int
+	fulfilmentsPinted := false
 
 	bidsTab := uitable.New()
 	bidsTab.AddRow("GROUP", "PRICE", "PROVIDER")
@@ -144,35 +176,40 @@ func createDeployment(ses session.Session, cmd *cobra.Command, args []string) er
 	handler := marketplace.NewBuilder().
 		OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 			if bytes.Equal(tx.Deployment, address) {
-				//bidsChan <- tx
 				bidsCount++
-				fmt.Fprintf(writer, "Bid (%d): %s (%d AKASH) \n", bidsCount, tx.Provider.String(), tx.Price)
 				writer.Flush()
+				fmt.Fprintln(writer, blue.Sprintf("(receive) bid (%d) received for group (%d) from provider (%s) for %d AKASH", bidsCount, tx.Group, tx.Provider.String(), tx.Price))
 				bidsTab.AddRow(tx.Group, tx.Price, tx.Provider.String())
 				//outChan <- fmt.Sprintf("Group %v/%v Fulfillment: %v [price=%v]", tx.Group, len(groups), tx.FulfillmentID, tx.Price)
+				time.Sleep(2 * time.Second)
 			}
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
 			if bytes.Equal(tx.Deployment, address) {
-				//deployChan <- tx
-				//outChan <- fmt.Sprintf("Group %v/%v Lease: %v [price=%v]", tx.Group, len(groups), tx.LeaseID, tx.Price)
-				// get lease provider
+				if !fulfilmentsPinted {
+					session.NewIPrinter(writer.Bypass()).AddText("").AddTitle("Fulfillments").Add(bidsTab).Flush()
+				}
+				fulfilmentsPinted = true
 
-				session.NewIPrinter(writer.Bypass()).AddText("").AddTitle("Fulfillments").Add(bidsTab).Flush()
+				// get lease provider
 				prov, err := ses.QueryClient().Provider(ses.Ctx(), tx.Provider)
 				if err != nil {
 					errC <- err
 				}
 
 				// send manifest over http to provider uri
-				fmt.Fprintf(writer, "Uploading Manifest to %v... \n", prov.HostURI)
+				writer.Flush()
+				fmt.Fprintln(writer, blue.Sprintf("[/] (send) upload manifest to provider (%s) at %s", prov.Address, prov.HostURI))
+				//time.Sleep(1 * time.Second)
 				err = http.SendManifest(ses.Ctx(), mani, txclient.Signer(), prov, tx.Deployment)
 				if err != nil {
 					errC <- err
 				} else {
 					providers[prov] = tx.LeaseID
 				}
-				fmt.Fprintf(writer, "Manifest accepted by Provider (%v) \n", prov.HostURI)
+				writer.Flush()
+				fmt.Fprintln(writer, blue.Sprintf("[/] (success) manifest accepted by provider (%s) at %s", prov.Address, prov.HostURI))
+				//time.Sleep(1 * time.Second)
 				expected--
 			}
 			if expected == 0 {
@@ -183,12 +220,15 @@ func createDeployment(ses session.Session, cmd *cobra.Command, args []string) er
 				ptable.AddRow("SERVICE", "PROVIDER", "URI")
 				// get deployment addresses for each provider in lease.
 				for provider, leaseID := range providers {
-					fmt.Fprintf(writer, "Fetching service URIs for Provider (%s)... \n", provider.Address)
+					writer.Flush()
+					fmt.Fprintln(writer, blue.Sprintf("[/] (wait) requesting service URIs from provider (%s)", provider.Address))
 					status, err := http.LeaseStatus(ses.Ctx(), provider, leaseID)
 					if err != nil {
 						errC <- err
 						return
 					} else {
+						writer.Flush()
+						fmt.Fprintln(writer, blue.Sprintf("(success) received service URIs from provider (%s)", provider.Address))
 						for _, service := range status.Services {
 							for _, uri := range service.URIs {
 								ptable.AddRow(service.Name, provider.Address, uri)
@@ -203,6 +243,7 @@ func createDeployment(ses session.Session, cmd *cobra.Command, args []string) er
 				dtable.Wrap = true
 				dtable.
 					AddRow("Group:", tx.Group).
+					AddRow("Deployment ID:", tx.Deployment).
 					AddRow("Lease ID:", tx.LeaseID).
 					AddRow("Price:", tx.Price).AddRow("Service URI(s):", ptable.String())
 

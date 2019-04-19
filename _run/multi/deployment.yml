@@ -25,9 +25,16 @@ profiles:
         region: us-west
       pricing:
         web: 100u
-
+    eastcoast:
+      attributes:
+        region: us-east
+      pricing:
+        web: 200u
 deployment:
   web:
     westcoast:
       profile: web
-      count: 2
+      count: 1
+    eastcoast:
+      profile: web
+      count: 1
