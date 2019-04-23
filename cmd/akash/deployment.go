@@ -159,14 +159,12 @@ outloop:
 		return nil
 	}).Run()
 
-	fmt.Fprintln(writer, blue.Sprintf("[/] (wait) waiting on bids for %d deployment group(s)", len(groups)))
 	expected := len(groups)
 	providers := make(map[*types.Provider]types.LeaseID)
 
-	outChan := make(chan string)
 	closeChan := make(chan int)
-	//bidsChan := make(chan *types.TxCreateFulfillment)
-	//deployChan := make(chan *types.TxCreateLease)
+	bidsChan := make(chan *types.TxCreateFulfillment)
+	leaseChan := make(chan *types.TxCreateLease)
 	var bidsCount int
 	fulfilmentsPinted := false
 
@@ -176,27 +174,17 @@ outloop:
 	handler := marketplace.NewBuilder().
 		OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 			if bytes.Equal(tx.Deployment, address) {
-				bidsCount++
-				writer.Flush()
-				fmt.Fprintln(writer, blue.Sprintf("(receive) bid (%d) received for group (%d) from provider (%s) for %d AKASH", bidsCount, tx.Group, tx.Provider.String(), tx.Price))
-				bidsTab.AddRow(tx.Group, tx.Price, tx.Provider.String())
-				//outChan <- fmt.Sprintf("Group %v/%v Fulfillment: %v [price=%v]", tx.Group, len(groups), tx.FulfillmentID, tx.Price)
-				time.Sleep(2 * time.Second)
+				bidsChan <- tx
 			}
 		}).
 		OnTxCreateLease(func(tx *types.TxCreateLease) {
 			if bytes.Equal(tx.Deployment, address) {
-				if !fulfilmentsPinted {
-					session.NewIPrinter(writer.Bypass()).AddText("").AddTitle("Fulfillments").Add(bidsTab).Flush()
-				}
-				fulfilmentsPinted = true
-
+				leaseChan <- tx
 				// get lease provider
 				prov, err := ses.QueryClient().Provider(ses.Ctx(), tx.Provider)
 				if err != nil {
 					errC <- err
 				}
-
 				// send manifest over http to provider uri
 				writer.Flush()
 				fmt.Fprintln(writer, blue.Sprintf("[/] (send) upload manifest to provider (%s) at %s", prov.Address, prov.HostURI))
@@ -267,29 +255,34 @@ outloop:
 
 	for {
 		select {
-		case <-outChan:
-			// if bidsCount == 0 {
-			// }
-			//fmt.Println(out)
-		// case <-deployChan:
-		// 	fmt.Fprintln(writer.Bypass(), bidsTab)
-		// case tx := <-bidsChan:
-		// 	bidsCount++
-		// 	fmt.Fprintf(writer, "Bids Recieved (%d): %s (%d AKASH) \n", bidsCount, tx.Provider.String(), tx.Price)
-		// 	writer.Flush()
-		// 	bidsTab.AddRow(tx.Group, tx.Price, tx.Provider.String())
+		case tx := <-bidsChan:
+			bidsCount++
+			writer.Flush()
+			fmt.Fprintln(writer, blue.Sprintf("(receive) bid (%d) received for group (%d) from provider (%s) for %d AKASH", bidsCount, tx.Group, tx.Provider.String(), tx.Price))
+			bidsTab.AddRow(tx.Group, tx.Price, tx.Provider.String())
+			time.Sleep(2 * time.Second)
 		case err := <-errC:
 			return err
 		case <-closeChan:
 			os.Exit(0)
 			return nil
+		default:
+			writer.Flush()
+			elapsed = time.Now().Sub(start)
+			m := math.Mod(float64(elapsed), float64(len(lines)))
+			spinner := blue.Sprintf("[%s]", string(lines[int(m)]))
+			fmt.Fprintln(writer, blue.Sprintf("%s (wait) waiting on bids for %d deployment group(s)", spinner, len(groups)))
+			time.Sleep(250 * time.Millisecond)
+			if !fulfilmentsPinted {
+				session.NewIPrinter(writer.Bypass()).AddText("").AddTitle("Fulfillments").Add(bidsTab).Flush()
+			}
+			fulfilmentsPinted = true
 		}
 	}
 	//return
 }
 
 func updateDeploymentCommand() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "update <manifest> <deployment-id>",
 		Short: "update a deployment (*EXPERIMENTAL*)",
