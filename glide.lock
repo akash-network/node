@@ -1,12 +1,12 @@
-hash: 43f4eafc13312667ea7649e7d54a9c02c0c206373c9a6b4f9f369256280593ec
-updated: 2019-04-05T15:16:03.041186-07:00
+hash: c6dd0a523f6960ee1dc646cf42230a8232609cca96b8c322e4465e776f450171
+updated: 2019-04-23T23:57:06.115554-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/blang/semver
-  version: 2ee87856327ba09384cabd113bc6b5d174e9ec0f
+  version: ba2c2ddd89069b46a7011d4106f6868f17ee1705
 - name: github.com/boz/go-lifecycle
   version: c39961a5a0ce6b046f15d62bcbed79701666a9e0
 - name: github.com/btcsuite/btcd
@@ -242,7 +242,7 @@ imports:
 - name: github.com/tendermint/iavl
   version: 2f35d309e69ffec33c044a910acd9e8d739eb095
 - name: github.com/tendermint/tendermint
-  version: 6cc3f4d87cae6589aef0ac2b4707f1ebc8a669b2
+  version: d2eab536ac1071b1b5f64283572397606326eb73
   subpackages:
   - abci/client
   - abci/example/code
@@ -379,7 +379,7 @@ imports:
   - googleapis/api/annotations
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 3507fb8e1a5ad030303c106fef3a47c9fdad16ad
+  version: 25c4f928eaa6d96443009bd842389fb4fa48664e
   subpackages:
   - balancer
   - balancer/base
@@ -394,6 +394,7 @@ imports:
   - grpclog
   - internal
   - internal/backoff
+  - internal/balancerload
   - internal/binarylog
   - internal/channelz
   - internal/envconfig
