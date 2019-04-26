@@ -1,5 +1,5 @@
-hash: c6dd0a523f6960ee1dc646cf42230a8232609cca96b8c322e4465e776f450171
-updated: 2019-04-23T23:57:06.115554-07:00
+hash: 372c7d846d85473346ceead6329c18662edeb2e78cb13ade927e8f33b4bababd
+updated: 2019-04-25T11:37:33.360956-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -217,7 +217,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/spf13/viper
-  version: 9e56dacc08fbbf8c9ee2dbc717553c758ce42bc9
+  version: 7a605a50e69cd1ea431c4a1e6eebe9b287ef6de4
 - name: github.com/stretchr/objx
   version: ef50b0de28773081167c97fc27cf29a0bf8b8c71
 - name: github.com/stretchr/testify
