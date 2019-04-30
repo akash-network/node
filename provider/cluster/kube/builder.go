@@ -9,7 +9,7 @@ import (
 
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	"github.com/ovrclk/akash/types"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/api/extensions/v1beta1"
@@ -183,6 +183,9 @@ func (b *serviceBuilder) create() (*corev1.Service, error) {
 			Labels: b.labels(),
 		},
 		Spec: corev1.ServiceSpec{
+			// use NodePort to support GCP. GCP provides a new IP address for every ingress
+			// and requires the service type to be either NodePort or LoadBalancer
+			Type:     corev1.ServiceTypeNodePort,
 			Selector: b.labels(),
 			Ports:    b.ports(),
 		},
