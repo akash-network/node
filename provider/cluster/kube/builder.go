@@ -185,7 +185,7 @@ func (b *serviceBuilder) create() (*corev1.Service, error) {
 		Spec: corev1.ServiceSpec{
 			// use NodePort to support GCP. GCP provides a new IP address for every ingress
 			// and requires the service type to be either NodePort or LoadBalancer
-			Type:     corev1.ServiceTypeNodePort,
+			Type:     config.DeploymentServiceType,
 			Selector: b.labels(),
 			Ports:    b.ports(),
 		},
@@ -219,7 +219,9 @@ type ingressBuilder struct {
 
 func newIngressBuilder(host string, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService, expose *types.ManifestServiceExpose) *ingressBuilder {
 	uid := uuid.NewV4()
-	expose.Hosts = append(expose.Hosts, fmt.Sprintf("%v.%s.%v", service.Name, uid, host))
+	if config.DeploymentIngressStaticHosts {
+		expose.Hosts = append(expose.Hosts, fmt.Sprintf("%v.%s.%v", service.Name, uid, host))
+	}
 	return &ingressBuilder{
 		deploymentBuilder: deploymentBuilder{builder: builder{lid, group}, service: service},
 		expose:            expose,
