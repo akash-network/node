@@ -225,9 +225,22 @@ func (c *client) LeaseStatus(lid types.LeaseID) (*types.LeaseStatusResponse, err
 	for _, ing := range ingress.Items {
 		service := serviceStatus[ing.Name]
 		hosts := []string{}
+
 		for _, rule := range ing.Spec.Rules {
 			hosts = append(hosts, rule.Host)
 		}
+
+		if config.DeploymentIngressExposeLBHosts {
+			for _, lbing := range ing.Status.LoadBalancer.Ingress {
+				if val := lbing.IP; val != "" {
+					hosts = append(hosts, val)
+				}
+				if val := lbing.Hostname; val != "" {
+					hosts = append(hosts, val)
+				}
+			}
+		}
+
 		service.URIs = hosts
 	}
 	response := &types.LeaseStatusResponse{}
