@@ -28,6 +28,9 @@ const (
 	eventDeployBegin deployEvent = iota + 1
 	eventBroadcastBegin
 	eventBroadcastDone
+	eventReceiveOrdersBegin
+	eventReceiveOrder
+	eventReceiveOrdersDone
 	eventReceiveFulfillmentsBegin
 	eventReceiveFulfillment
 	eventReceiveFulfillmentsDone
@@ -42,6 +45,7 @@ type deployState struct {
 	leases              []*types.TxCreateLease
 	providerLeaseStatus map[*types.Provider]*types.LeaseStatusResponse
 	groups              []*types.GroupSpec
+	orders              []*types.TxCreateOrder
 	mani                *types.Manifest
 	hash                []byte
 }
@@ -118,15 +122,28 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 		address := status.bcResult.DeliverTx.Data
 		statusChan <- status
 
-		// step 3: listen for fullfillments and leases
-		statusChan <- &deployStatus{Event: eventReceiveFulfillmentsBegin, Message: "OK"}
-		statusChan <- &deployStatus{Event: eventReceiveLeaseBegin, Message: "OK"}
-
+		// step 3: listen for buy orders
+		// step 4: listen for fullfillments on orders
+		// step 5: listen for leases on fulfillments
 		handler := marketplace.NewBuilder().
+			OnTxCreateOrder(func(tx *types.TxCreateOrder) {
+				if bytes.Equal(tx.Deployment, address) {
+					state.orders = append(state.orders, tx)
+					statusChan <- &deployStatus{Event: eventReceiveOrder, Result: tx}
+				}
+				// filfillments should begin when there is atleast 1 order
+				if len(state.orders) == 1 {
+					statusChan <- &deployStatus{Event: eventReceiveFulfillmentsBegin}
+				}
+			}).
 			OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 				if bytes.Equal(tx.Deployment, address) {
 					state.fulfilments = append(state.fulfilments, tx)
 					statusChan <- &deployStatus{Event: eventReceiveFulfillment, fulfilment: tx}
+				}
+				// receving leases begin when at alteast one fulfillment exists
+				if len(state.fulfilments) == 1 {
+					statusChan <- &deployStatus{Event: eventReceiveLeaseBegin, Message: "OK"}
 				}
 			}).
 			OnTxCreateLease(func(tx *types.TxCreateLease) {
@@ -162,6 +179,7 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 
 					// when there is a lease created for each deployment group, the deploy is complete
 					if len(state.groups) == len(state.leases) {
+						statusChan <- &deployStatus{Event: eventReceiveLeaseDone, Message: "OK"}
 						statusChan <- &deployStatus{Event: eventDeployDone, Message: "OK"}
 					}
 				}
@@ -184,44 +202,55 @@ func processStages(statusChan chan *deployStatus) {
 		status := <-statusChan
 		switch status.Event {
 		case eventDeployBegin:
-			fmt.Println("DEPLOY BEGIN")
-			fmt.Println(status.Event, status.Message)
-			if groups, ok := status.Result.([]*types.GroupSpec); ok {
-				session.NewIPrinter(writer).
-					AddText("(begin) deployment for groups(s)").
-					AddTitle("Groups").
-					AddText("").
-					Add(groupsUITable(groups)).
-					Flush()
-			}
+			logWait("start deployment with config: ...")
 		case eventBroadcastBegin:
-			fmt.Println("BROADCAST BEGIN")
-			fmt.Println(status.Event, status.Message)
+			var names []string
+			for _, g := range state.groups {
+				names = append(names, g.Name)
+			}
+			msg := make([]string, 0)
+			msg = append(msg, "[upload] deployment manifest")
+			msg = append(msg, "          groups: "+strings.Join(names, ","))
+			msg = append(msg, "          manifest: "+state.mani.String())
+			logWait(strings.Join(msg, "\n"))
+
 		case eventBroadcastDone:
-			fmt.Println("BROADCAST DONE")
 			address := status.bcResult.DeliverTx.Data
-			fmt.Fprintln(writer, "(success) deployment posted with id:", X(address))
-			fmt.Println(status.Event, status.Message)
+			logDone("[deploy] manifest accepted, deployment created with id: " + X(address))
+		case eventReceiveOrdersBegin:
+			logWait(fmt.Sprintf("[auction] waiting to create buy orders(s) for %d deployment groups(s)", len(state.groups)))
+		case eventReceiveOrder:
+			if tx, ok := status.Result.(*types.TxCreateOrder); ok {
+				logWait(fmt.Sprintf("[auction] buy order (%d) created with id: %s", len(state.orders), tx.OrderID.String()))
+			}
+		case eventReceiveOrdersDone:
+			logDone(fmt.Sprintf("[auction] %d order(s) created", len(state.orders)))
 		case eventReceiveFulfillmentsBegin:
-			fmt.Println("FULFIL BEGIN")
-			fmt.Println(status.Event, status.Message)
-		case eventReceiveFulfillmentsDone:
-			fmt.Println("FULFIL DONE")
-			fmt.Println(status.Event, status.Message)
+			logWait(fmt.Sprintf("[auction] waiting on fulfillment(s) for %d orders(s)", len(state.orders)))
 		case eventReceiveFulfillment:
 			tx := status.fulfilment
-			fmt.Println("GOT --> FULFIL", tx)
-			fmt.Println(status.Event, status.Message)
+			logWait(fmt.Sprintf("[auction] received fulfillment (%d/%d) with id: %s", len(state.fulfilments), len(state.orders), tx.FulfillmentID.String()))
+		case eventReceiveFulfillmentsDone:
+			logDone(fmt.Sprintf("[auction] complete; received %d fulfillment(s) for %d deployment groups(s)", len(state.fulfilments), len(state.groups)))
+		case eventReceiveLeaseBegin:
+			logWait(fmt.Sprintf("[contract] waiting on lease(s) for %d fulfillments(s)", len(state.fulfilments)))
 		case eventReceiveLease:
-			fmt.Println(status.Event, status.Message)
 			tx := status.lease
-			fmt.Println("GOT --> LEASE", tx, "PROVIDER", status.provider, "LEASE STATUS", status.leaseStatus)
+			logWait(fmt.Sprintf("[contract] received (%d/%d) lease(s) with id: %s", len(state.leases), len(state.fulfilments), tx.LeaseID.String()))
+		case eventReceiveLeaseDone:
+			logDone(fmt.Sprintf("[contract] complete; received %d lease(s) for %d fulfillment(s)", len(state.leases), len(state.fulfilments)))
 		case eventDeployDone:
-			fmt.Println("DEPLOY DONE")
+			logDone("[deploy] deployment complete")
 			session.NewIPrinter(writer).
 				AddText("").
-				AddTitle("Fulfillments").
+				AddTitle("Deployment Group(s)").
+				Add(groupsUITable(state.groups)).
+				AddText("").
+				AddTitle("Fulfillment(s)").
 				Add(fulfilmentsUITable(state.fulfilments)).
+				AddText("").
+				AddTitle("Lease(s)").
+				Add(tableLeases(state.leases)).
 				Flush()
 			return
 		}
@@ -285,6 +314,29 @@ func groupsUITable(groups []*types.GroupSpec) *uitable.Table {
 		t.AddRow(g.Name, strings.Join(reqs, "\n"), strings.Join(resources, "\n"))
 	}
 	return t
+}
+
+func tableLeases(leases []*types.TxCreateLease) *uitable.Table {
+	t := uitable.New().AddRow("LEASE ID", "PRICE")
+	for _, tx := range leases {
+		t.AddRow(tx.LeaseID.String(), tx.Price)
+	}
+	return t
+}
+
+func tableSummary(ls map[*types.Provider]*types.LeaseStatusResponse) {
+	ptable := uitable.New()
+	ptable.Wrap = true
+	ptable.MaxColWidth = 300
+	ptable.AddRow("SERVICE", "PROVIDER", "URI")
+	for provider, status := range ls {
+		for _, service := range status.Services {
+			for _, uri := range service.URIs {
+				ptable.AddRow(service.Name, provider.Address, uri)
+			}
+		}
+	}
+
 }
 
 func logDone(msg string) {

@@ -28,6 +28,10 @@ spec:
           env:
             - name: AKASH_DATA
               value: /data
+            - name: AKASH_DEPLOYMENT_SERVICE_TYPE
+              value: ClusterIP
+            - name: AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS
+              value: "false"
           ports:
             - containerPort: {{ .Values.provider.port }}
               name: http
