@@ -32,7 +32,7 @@ case "$1" in
     akash deployment create deployment.yml -k master
     ;;
   minikube-start)
-    minikube start --cpus 4 --memory 4096
+    minikube start --cpus 4 --memory 4096 --kubernetes-version v1.12.2
     minikube addons enable ingress
     minikube addons enable metrics-server
     kubectl create -f rbac.yml

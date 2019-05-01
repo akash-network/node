@@ -36,6 +36,8 @@ const (
 	eventReceiveFulfillmentsDone
 	eventReceiveLeaseBegin
 	eventReceiveLease
+	eventSendManifest
+	eventSendManifestDone
 	eventReceiveLeaseDone
 	eventDeployDone
 )
@@ -154,19 +156,22 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 						statusChan <- &deployStatus{Event: eventReceiveFulfillmentsDone}
 					}
 
-					status = &deployStatus{Event: eventReceiveLease, Message: "OK", lease: tx}
-
+					status = &deployStatus{Event: eventReceiveLease, lease: tx}
 					// get provider on the lease
 					if status.provider, status.Error = ses.QueryClient().Provider(ses.Ctx(), tx.Provider); err != nil {
 						statusChan <- status
 						return
 					}
+					statusChan <- status
 
 					// send manifest over http to provider uri
+					statusChan <- &deployStatus{Event: eventSendManifest, Message: status.provider.HostURI}
+					status = &deployStatus{Event: eventSendManifestDone, Message: status.provider.HostURI}
 					if status.Error = http.SendManifest(ses.Ctx(), state.mani, txclient.Signer(), status.provider, tx.Deployment); status.Error != nil {
 						statusChan <- status
 						return
 					}
+					statusChan <- status
 
 					// get lease status with deployment addresses (ips and hostnames) for the provider in lease.
 					if status.leaseStatus, status.Error = http.LeaseStatus(ses.Ctx(), status.provider, tx.LeaseID); err != nil {
@@ -178,7 +183,7 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 					statusChan <- status
 
 					// when there is a lease created for each deployment group, the deploy is complete
-					if len(state.groups) == len(state.leases) {
+					if len(state.orders) == len(state.leases) {
 						statusChan <- &deployStatus{Event: eventReceiveLeaseDone, Message: "OK"}
 						statusChan <- &deployStatus{Event: eventDeployDone, Message: "OK"}
 					}
@@ -233,12 +238,16 @@ func processStages(statusChan chan *deployStatus) {
 		case eventReceiveFulfillmentsDone:
 			logDone(fmt.Sprintf("[auction] complete; received %d fulfillment(s) for %d deployment groups(s)", len(state.fulfilments), len(state.groups)))
 		case eventReceiveLeaseBegin:
-			logWait(fmt.Sprintf("[contract] waiting on lease(s) for %d fulfillments(s)", len(state.fulfilments)))
+			logWait(fmt.Sprintf("[lease] waiting on lease(s) for %d fulfillments(s)", len(state.fulfilments)))
 		case eventReceiveLease:
 			tx := status.lease
-			logWait(fmt.Sprintf("[contract] received (%d/%d) lease(s) with id: %s", len(state.leases), len(state.fulfilments), tx.LeaseID.String()))
+			logWait(fmt.Sprintf("[lease] received (%d/%d) lease(s) with id: %s", len(state.leases), len(state.fulfilments), tx.LeaseID.String()))
 		case eventReceiveLeaseDone:
-			logDone(fmt.Sprintf("[contract] complete; received %d lease(s) for %d fulfillment(s)", len(state.leases), len(state.fulfilments)))
+			logDone(fmt.Sprintf("[lease] complete; received %d lease(s) for %d fulfillment(s)", len(state.leases), len(state.fulfilments)))
+		case eventSendManifest:
+			logWait(fmt.Sprintf("[lease] send manifest to provider at %s", status.Message))
+		case eventSendManifestDone:
+			logDone(fmt.Sprintf("[lease] manifest accepted by provider at %s", status.Message))
 		case eventDeployDone:
 			logDone("[deploy] deployment complete")
 			session.NewIPrinter(writer).
