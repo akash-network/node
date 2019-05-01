@@ -50,15 +50,10 @@ func NewService(ctx context.Context, session session.Session, bus event.Bus, cli
 		return nil, err
 	}
 
-	deployments, err := client.Deployments()
+	deployments, err := findDeployments(ctx, log, client, session)
 	if err != nil {
-		log.Error("fetching deployments", "err", err)
 		sub.Close()
 		return nil, err
-	}
-	log.Info("found managed deployments", "count", len(deployments))
-	for _, deployment := range deployments {
-		log.Debug("deployment", "lease", deployment.LeaseID(), "mgroup", deployment.ManifestGroup().Name)
 	}
 
 	inventory, err := newInventoryService(config, log, lc.ShuttingDown(), sub, client, deployments)
@@ -261,4 +256,46 @@ func (s *service) teardownLease(lid types.LeaseID) {
 	if err := manager.teardown(); err != nil {
 		s.log.Error("tearing down lease deployment", "err", err, "lease", lid)
 	}
+}
+
+func findDeployments(ctx context.Context, log log.Logger, client Client, session session.Session) ([]Deployment, error) {
+	deployments, err := client.Deployments()
+	if err != nil {
+		log.Error("fetching deployments", "err", err)
+		return nil, err
+	}
+
+	leaseList, err := session.Query().Leases(ctx)
+	if err != nil {
+		log.Error("fetching deployments", "err", err)
+		return nil, err
+	}
+
+	leases := make(map[string]*types.Lease, len(leaseList.Items))
+	for _, lease := range leaseList.Items {
+		if !lease.Provider.Equal(session.Provider().Address) {
+			continue
+		}
+		if lease.State != types.Lease_ACTIVE {
+			continue
+		}
+		leases[lease.Path()] = lease
+	}
+
+	log.Info("found leases", "num-active", len(leases), "num-skipped", len(leaseList.Items)-len(leases))
+
+	dcount := len(deployments)
+	for idx, deployment := range deployments {
+		if _, ok := leases[deployment.LeaseID().Path()]; !ok {
+			continue
+		}
+
+		deployments = append(deployments[:idx], deployments[idx+1:]...)
+
+		log.Debug("deployment", "lease", deployment.LeaseID(), "mgroup", deployment.ManifestGroup().Name)
+	}
+
+	log.Info("found deployments", "num-active", len(deployments), "num-skipped", dcount-len(deployments))
+
+	return deployments, nil
 }
