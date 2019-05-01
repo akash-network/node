@@ -66,7 +66,6 @@ type deployStatus struct {
 
 	bcResult    *tmctypes.ResultBroadcastTxCommit
 	fulfilment  *types.TxCreateFulfillment
-	provider    *types.Provider
 	lease       *types.TxCreateLease
 	leaseStatus *types.LeaseStatusResponse
 }
@@ -119,6 +118,7 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 		status = &deployStatus{Event: eventBroadcastDone}
 		status.bcResult, status.Error = createBroadcast(txclient, ttl, state.groups, state.mani, state.hash)
 		if status.Error != nil {
+			statusChan <- status
 			return
 		}
 		address := status.bcResult.DeliverTx.Data
@@ -158,27 +158,30 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 
 					status = &deployStatus{Event: eventReceiveLease, lease: tx}
 					// get provider on the lease
-					if status.provider, status.Error = ses.QueryClient().Provider(ses.Ctx(), tx.Provider); err != nil {
+					var provider *types.Provider
+
+					if provider, status.Error = ses.QueryClient().Provider(ses.Ctx(), tx.Provider); err != nil {
 						statusChan <- status
 						return
 					}
 					statusChan <- status
 
 					// send manifest over http to provider uri
-					statusChan <- &deployStatus{Event: eventSendManifest, Message: status.provider.HostURI}
-					status = &deployStatus{Event: eventSendManifestDone, Message: status.provider.HostURI}
-					if status.Error = http.SendManifest(ses.Ctx(), state.mani, txclient.Signer(), status.provider, tx.Deployment); status.Error != nil {
+					statusChan <- &deployStatus{Event: eventSendManifest, Message: provider.HostURI}
+
+					status = &deployStatus{Event: eventSendManifestDone, Message: provider.HostURI}
+					if status.Error = http.SendManifest(ses.Ctx(), state.mani, txclient.Signer(), provider, tx.Deployment); status.Error != nil {
 						statusChan <- status
 						return
 					}
 					statusChan <- status
 
 					// get lease status with deployment addresses (ips and hostnames) for the provider in lease.
-					if status.leaseStatus, status.Error = http.LeaseStatus(ses.Ctx(), status.provider, tx.LeaseID); err != nil {
+					if status.leaseStatus, status.Error = http.LeaseStatus(ses.Ctx(), provider, tx.LeaseID); err != nil {
 						statusChan <- status
 						return
 					}
-					state.providerLeaseStatus[status.provider] = status.leaseStatus
+					state.providerLeaseStatus[provider] = status.leaseStatus
 
 					statusChan <- status
 
@@ -197,14 +200,17 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 			return
 		}
 	}()
-	processStages(statusChan)
-	return nil
+	return processStages(statusChan)
 }
 
-func processStages(statusChan chan *deployStatus) {
+func processStages(statusChan chan *deployStatus) error {
 	writer := os.Stdout
 	for {
 		status := <-statusChan
+		if err := status.Error; err != nil {
+			fmt.Println("(error) event: ", status.Event)
+			return err
+		}
 		switch status.Event {
 		case eventDeployBegin:
 			logWait("start deployment with config: ...")
@@ -261,7 +267,7 @@ func processStages(statusChan chan *deployStatus) {
 				AddTitle("Lease(s)").
 				Add(tableLeases(state.leases)).
 				Flush()
-			return
+			return nil
 		}
 	}
 }
