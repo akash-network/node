@@ -21,8 +21,8 @@ profiles:
       disk: "1Gi"
   placement:
     westcoast:
-      attributes:
-        region: us-west
+      # attributes:
+      #   region: us-west
       pricing:
         web: 100u
 

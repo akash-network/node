@@ -63,11 +63,6 @@ type deployStatus struct {
 	Message string
 	Error   error
 	Result  interface{}
-
-	bcResult    *tmctypes.ResultBroadcastTxCommit
-	fulfilment  *types.TxCreateFulfillment
-	lease       *types.TxCreateLease
-	leaseStatus *types.LeaseStatusResponse
 }
 
 func createCmd() *cobra.Command {
@@ -116,12 +111,15 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 		statusChan <- status
 
 		status = &deployStatus{Event: eventBroadcastDone}
-		status.bcResult, status.Error = createBroadcast(txclient, ttl, state.groups, state.mani, state.hash)
+
+		var bcResult *tmctypes.ResultBroadcastTxCommit
+		bcResult, status.Error = createBroadcast(txclient, ttl, state.groups, state.mani, state.hash)
 		if status.Error != nil {
 			statusChan <- status
 			return
 		}
-		address := status.bcResult.DeliverTx.Data
+		address := bcResult.DeliverTx.Data
+		status.Message = X(address)
 		statusChan <- status
 
 		// step 3: listen for buy orders
@@ -141,7 +139,7 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 			OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 				if bytes.Equal(tx.Deployment, address) {
 					state.fulfilments = append(state.fulfilments, tx)
-					statusChan <- &deployStatus{Event: eventReceiveFulfillment, fulfilment: tx}
+					statusChan <- &deployStatus{Event: eventReceiveFulfillment, Result: tx}
 				}
 				// receving leases begin when at alteast one fulfillment exists
 				if len(state.fulfilments) == 1 {
@@ -156,7 +154,7 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 						statusChan <- &deployStatus{Event: eventReceiveFulfillmentsDone}
 					}
 
-					status = &deployStatus{Event: eventReceiveLease, lease: tx}
+					status = &deployStatus{Event: eventReceiveLease, Message: tx.LeaseID.String()}
 					// get provider on the lease
 					var provider *types.Provider
 
@@ -177,18 +175,20 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 					statusChan <- status
 
 					// get lease status with deployment addresses (ips and hostnames) for the provider in lease.
-					if status.leaseStatus, status.Error = http.LeaseStatus(ses.Ctx(), provider, tx.LeaseID); err != nil {
+					var leaseStatus *types.LeaseStatusResponse
+					if leaseStatus, status.Error = http.LeaseStatus(ses.Ctx(), provider, tx.LeaseID); err != nil {
 						statusChan <- status
 						return
 					}
-					state.providerLeaseStatus[provider] = status.leaseStatus
+					state.providerLeaseStatus[provider] = leaseStatus
 
+					status.Result = leaseStatus
 					statusChan <- status
 
-					// when there is a lease created for each deployment group, the deploy is complete
-					if len(state.orders) == len(state.leases) {
-						statusChan <- &deployStatus{Event: eventReceiveLeaseDone, Message: "OK"}
-						statusChan <- &deployStatus{Event: eventDeployDone, Message: "OK"}
+					// when there is a lease created for each order, the deploy is complete
+					if len(state.groups) == len(state.leases) {
+						statusChan <- &deployStatus{Event: eventReceiveLeaseDone}
+						statusChan <- &deployStatus{Event: eventDeployDone}
 					}
 				}
 			}).
@@ -213,21 +213,15 @@ func processStages(statusChan chan *deployStatus) error {
 		}
 		switch status.Event {
 		case eventDeployBegin:
-			logWait("start deployment with config: ...")
+			logWait("[deploy] begin deployment from config: (...)")
 		case eventBroadcastBegin:
 			var names []string
 			for _, g := range state.groups {
 				names = append(names, g.Name)
 			}
-			msg := make([]string, 0)
-			msg = append(msg, "[upload] deployment manifest")
-			msg = append(msg, "          groups: "+strings.Join(names, ","))
-			msg = append(msg, "          manifest: "+state.mani.String())
-			logWait(strings.Join(msg, "\n"))
-
+			logWait(fmt.Sprintf("[brodcast] request deployment for group(s): %s", strings.Join(names, ",")))
 		case eventBroadcastDone:
-			address := status.bcResult.DeliverTx.Data
-			logDone("[deploy] manifest accepted, deployment created with id: " + X(address))
+			logDone("[broadcast] request accepted, deployment created with id: " + status.Message)
 		case eventReceiveOrdersBegin:
 			logWait(fmt.Sprintf("[auction] waiting to create buy orders(s) for %d deployment groups(s)", len(state.groups)))
 		case eventReceiveOrder:
@@ -237,17 +231,17 @@ func processStages(statusChan chan *deployStatus) error {
 		case eventReceiveOrdersDone:
 			logDone(fmt.Sprintf("[auction] %d order(s) created", len(state.orders)))
 		case eventReceiveFulfillmentsBegin:
-			logWait(fmt.Sprintf("[auction] waiting on fulfillment(s) for %d orders(s)", len(state.orders)))
+			logWait(fmt.Sprintf("[auction] waiting on fulfillment(s)"))
 		case eventReceiveFulfillment:
-			tx := status.fulfilment
-			logWait(fmt.Sprintf("[auction] received fulfillment (%d/%d) with id: %s", len(state.fulfilments), len(state.orders), tx.FulfillmentID.String()))
+			if tx, ok := status.Result.(*types.TxCreateFulfillment); ok {
+				logWait(fmt.Sprintf("[auction] received fulfillment (%d/%d) with id: %s", len(state.fulfilments), len(state.orders), tx.FulfillmentID.String()))
+			}
 		case eventReceiveFulfillmentsDone:
-			logDone(fmt.Sprintf("[auction] complete; received %d fulfillment(s) for %d deployment groups(s)", len(state.fulfilments), len(state.groups)))
+			logDone(fmt.Sprintf("[auction] complete; received %d fulfillment(s) for %d order(s)", len(state.fulfilments), len(state.orders)))
 		case eventReceiveLeaseBegin:
-			logWait(fmt.Sprintf("[lease] waiting on lease(s) for %d fulfillments(s)", len(state.fulfilments)))
+			logWait(fmt.Sprintf("[lease] waiting on lease(s)"))
 		case eventReceiveLease:
-			tx := status.lease
-			logWait(fmt.Sprintf("[lease] received (%d/%d) lease(s) with id: %s", len(state.leases), len(state.fulfilments), tx.LeaseID.String()))
+			logWait(fmt.Sprintf("[lease] received lease (%d) with id: %s", len(state.leases), status.Message))
 		case eventReceiveLeaseDone:
 			logDone(fmt.Sprintf("[lease] complete; received %d lease(s) for %d fulfillment(s)", len(state.leases), len(state.fulfilments)))
 		case eventSendManifest:
