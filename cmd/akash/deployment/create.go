@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
@@ -56,6 +57,7 @@ var (
 	state = &deployState{
 		providerLeaseStatus: make(map[*types.Provider]*types.LeaseStatusResponse),
 	}
+	mtx sync.Mutex
 )
 
 type deployStatus struct {
@@ -122,13 +124,17 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 		status.Message = X(address)
 		statusChan <- status
 
+		statusChan <- &deployStatus{Event: eventReceiveOrdersBegin}
+
 		// step 3: listen for buy orders
 		// step 4: listen for fullfillments on orders
 		// step 5: listen for leases on fulfillments
 		handler := marketplace.NewBuilder().
 			OnTxCreateOrder(func(tx *types.TxCreateOrder) {
 				if bytes.Equal(tx.Deployment, address) {
+					mtx.Lock()
 					state.orders = append(state.orders, tx)
+					mtx.Unlock()
 					statusChan <- &deployStatus{Event: eventReceiveOrder, Result: tx}
 				}
 				// filfillments should begin when there is atleast 1 order
@@ -138,7 +144,9 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 			}).
 			OnTxCreateFulfillment(func(tx *types.TxCreateFulfillment) {
 				if bytes.Equal(tx.Deployment, address) {
+					mtx.Lock()
 					state.fulfilments = append(state.fulfilments, tx)
+					mtx.Unlock()
 					statusChan <- &deployStatus{Event: eventReceiveFulfillment, Result: tx}
 				}
 				// receving leases begin when at alteast one fulfillment exists
@@ -148,13 +156,15 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 			}).
 			OnTxCreateLease(func(tx *types.TxCreateLease) {
 				if bytes.Equal(tx.Deployment, address) {
+					mtx.Lock()
 					state.leases = append(state.leases, tx)
+					mtx.Unlock()
 					// fulfilments are complete when a lease is created
 					if len(state.leases) == 1 {
 						statusChan <- &deployStatus{Event: eventReceiveFulfillmentsDone}
 					}
 
-					status = &deployStatus{Event: eventReceiveLease, Message: tx.LeaseID.String()}
+					status = &deployStatus{Event: eventReceiveLease, Message: tx.LeaseID.String(), Result: tx}
 					// get provider on the lease
 					var provider *types.Provider
 
@@ -180,10 +190,9 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 						statusChan <- status
 						return
 					}
+					mtx.Lock()
 					state.providerLeaseStatus[provider] = leaseStatus
-
-					status.Result = leaseStatus
-					statusChan <- status
+					mtx.Unlock()
 
 					// when there is a lease created for each order, the deploy is complete
 					if len(state.groups) == len(state.leases) {
@@ -219,7 +228,7 @@ func processStages(statusChan chan *deployStatus) error {
 			for _, g := range state.groups {
 				names = append(names, g.Name)
 			}
-			logWait(fmt.Sprintf("[brodcast] request deployment for group(s): %s", strings.Join(names, ",")))
+			logWait(fmt.Sprintf("[broadcast] request deployment for group(s): %s", strings.Join(names, ",")))
 		case eventBroadcastDone:
 			logDone("[broadcast] request accepted, deployment created with id: " + status.Message)
 		case eventReceiveOrdersBegin:
@@ -241,9 +250,11 @@ func processStages(statusChan chan *deployStatus) error {
 		case eventReceiveLeaseBegin:
 			logWait(fmt.Sprintf("[lease] waiting on lease(s)"))
 		case eventReceiveLease:
-			logWait(fmt.Sprintf("[lease] received lease (%d) with id: %s", len(state.leases), status.Message))
+			if tx, ok := status.Result.(*types.TxCreateLease); ok {
+				logWait(fmt.Sprintf("[lease] received lease (%d) for group (%v/%v) [price %v] [id %s]", len(state.leases), tx.Group, len(state.groups), tx.Price, tx.LeaseID))
+			}
 		case eventReceiveLeaseDone:
-			logDone(fmt.Sprintf("[lease] complete; received %d lease(s) for %d fulfillment(s)", len(state.leases), len(state.fulfilments)))
+			logDone(fmt.Sprintf("[lease] complete; received %d lease(s) for %d groups(s)", len(state.leases), len(state.groups)))
 		case eventSendManifest:
 			logWait(fmt.Sprintf("[lease] send manifest to provider at %s", status.Message))
 		case eventSendManifestDone:
