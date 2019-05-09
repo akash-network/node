@@ -27,6 +27,9 @@ type Mode interface {
 
 	// Ask returns an Asker
 	Ask() Asker
+
+	// IsInteractive returns true if the current ModeType is ModeTypeInteractive
+	IsInteractive() bool
 }
 
 type mode struct {
@@ -72,4 +75,8 @@ func (m *mode) Run() error {
 		}
 	}
 	return nil
+}
+
+func (m *mode) IsInteractive() bool {
+	return m.modeType == ModeTypeInteractive
 }
