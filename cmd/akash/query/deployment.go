@@ -7,7 +7,6 @@ import (
 )
 
 func queryDeploymentCommand() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "deployment <deployment>...",
 		Short: "query deployment",
@@ -18,6 +17,9 @@ func queryDeploymentCommand() *cobra.Command {
 }
 
 func doQueryDeploymentCommand(session session.Session, cmd *cobra.Command, args []string) error {
+
+	//depIds := args
+
 	if len(args) == 0 {
 		_, info, err := session.Signer()
 		if err != nil {

@@ -44,7 +44,7 @@ func (t *textPrinter) formatKV() string {
 	}
 	var b strings.Builder
 	for k, v := range t.data.Result[0] {
-		fmt.Fprintf(&b, "%s=\"%s\"\n", strings.ToUpper(k), v)
+		fmt.Fprintf(&b, "AKASH_%s=\"%s\"\n", strings.ToUpper(k), v)
 	}
 	return b.String()
 }
@@ -56,7 +56,7 @@ func (t *textPrinter) formatList() string {
 	var b strings.Builder
 	for i, res := range t.data.Result {
 		for k, v := range res {
-			fmt.Fprintf(&b, "%s[%d]=\"%s\"\n", strings.ToUpper(k), i, v)
+			fmt.Fprintf(&b, "AKASH_%s[%d]=\"%s\"\n", strings.ToUpper(k), i+1, v)
 		}
 	}
 	return b.String()

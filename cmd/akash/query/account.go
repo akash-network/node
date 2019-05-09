@@ -1,7 +1,11 @@
 package query
 
 import (
+	"errors"
+	"fmt"
 	"strconv"
+
+	ckeys "github.com/cosmos/cosmos-sdk/crypto/keys"
 
 	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
@@ -23,15 +27,29 @@ func queryAccountCommand() *cobra.Command {
 	return cmd
 }
 
-func doQueryAccountCommand(s session.Session, cmd *cobra.Command, args []string) error {
+func doQueryAccountCommand(s session.Session, cmd *cobra.Command, args []string) (err error) {
+	var hasSigner, hasPubKeys bool
 	var account *types.Account
-	// When a signer key is used instead of a public key(s) in the args
-	if len(args) == 0 {
-		_, info, err := s.Signer()
-		if err != nil {
-			return err
+	var signerInfo ckeys.Info
+	var pubKey string
+	hasPubKeys = len(args) > 0
+	if _, signerInfo, err = s.Signer(); err == nil {
+		hasSigner = true
+	}
+
+	// When neither signer not public key is present, ask for the public key
+	if hasSigner == false && hasPubKeys == false {
+		pubKey = s.Mode().Ask().StringVar(pubKey, "Public Key (required): ", true)
+		if len(pubKey) == 0 {
+			return fmt.Errorf("required argument missing: name")
 		}
-		account, err = s.QueryClient().Account(s.Ctx(), info.GetPubKey().Address().Bytes())
+		args = []string{pubKey}
+		hasPubKeys = true
+	}
+
+	switch {
+	case hasSigner: // When a signer key is used instead of a public key(s) in the args
+		account, err = s.QueryClient().Account(s.Ctx(), signerInfo.GetPubKey().Address().Bytes())
 		if err != nil {
 			return err
 		}
@@ -48,6 +66,7 @@ func doQueryAccountCommand(s session.Session, cmd *cobra.Command, args []string)
 		return s.Mode().
 			When(session.ModeTypeInteractive, func() error {
 				return session.NewIPrinter(nil).
+					AddText("").
 					AddTitle("Account Details").
 					Add(uitable.New().
 						AddRow("Public Key (Address):", addr).
@@ -63,55 +82,58 @@ func doQueryAccountCommand(s session.Session, cmd *cobra.Command, args []string)
 				return session.NewJSONPrinter(pdata, nil).Flush()
 			}).
 			Run()
-	}
+	case hasPubKeys: // When public keys are provided as args
+		pdata := session.NewPrinterDataList()
+		raws := make([]interface{}, 0, 0)
 
-	// When public keys are provided as args
-	pdata := session.NewPrinterDataList()
-	raws := make([]interface{}, 0, 0)
-
-	for _, arg := range args {
-		key, err := keys.ParseAccountPath(arg)
-		if err != nil {
-			return err
-		}
-
-		account, err = s.QueryClient().Account(s.Ctx(), key.ID())
-		if err != nil {
-			return err
-		}
-
-		dat := map[string]string{
-			"public_key_address": X(account.Address),
-			"balance":            strconv.FormatUint(account.Balance, 10),
-			"nonce":              strconv.FormatUint(account.Nonce, 10),
-		}
-		pdata.AddResultList(dat)
-		raws = append(raws, account)
-	}
-	pdata.Raw = raws
-	return s.Mode().
-		When(session.ModeTypeInteractive, func() error {
-			table := uitable.New().
-				AddRow(uiutil.NewTitle("Public Key (Address)").String(), uiutil.NewTitle("Balance (mAKASH)"))
-			table.MaxColWidth = 100
-			table.Wrap = true
-			for _, dat := range pdata.Result {
-				table.AddRow(dat["public_key_address"], dat["balance"])
+		for _, arg := range args {
+			key, err := keys.ParseAccountPath(arg)
+			if err != nil {
+				return err
 			}
 
-			return session.NewIPrinter(nil).
-				Add(table).
-				AddText("").
-				AddText("Please note, the token balance is denominated in microAKASH (AKASH * 10^-6)").
-				Flush()
-		}).
-		When(session.ModeTypeText, func() error {
-			return session.NewTextPrinter(pdata, nil).Flush()
-		}).
-		When(session.ModeTypeJSON, func() error {
-			return session.NewJSONPrinter(pdata, nil).Flush()
-		}).
-		Run()
+			account, err = s.QueryClient().Account(s.Ctx(), key.ID())
+			if err != nil {
+				return err
+			}
+
+			dat := map[string]string{
+				"public_key_address": X(account.Address),
+				"balance":            strconv.FormatUint(account.Balance, 10),
+				"nonce":              strconv.FormatUint(account.Nonce, 10),
+			}
+			pdata.AddResultList(dat)
+			raws = append(raws, account)
+		}
+		pdata.Raw = raws
+		return s.Mode().
+			When(session.ModeTypeInteractive, func() error {
+				table := uitable.New().
+					AddRow(uiutil.NewTitle("Public Key (Address)").String(), uiutil.NewTitle("Balance (mAKASH)"))
+				table.MaxColWidth = 100
+				table.Wrap = true
+				for _, dat := range pdata.Result {
+					table.AddRow(dat["public_key_address"], dat["balance"])
+				}
+
+				return session.NewIPrinter(nil).
+					AddText("").
+					Add(table).
+					AddText("").
+					AddText("Please note, the token balance is denominated in microAKASH (AKASH * 10^-6)").
+					Flush()
+			}).
+			When(session.ModeTypeText, func() error {
+				return session.NewTextPrinter(pdata, nil).Flush()
+			}).
+			When(session.ModeTypeJSON, func() error {
+				return session.NewJSONPrinter(pdata, nil).Flush()
+			}).
+			Run()
+	case hasSigner && hasPubKeys:
+		return errors.New("Sign key and public keys cannot be present")
+	}
+	return nil
 }
 
 var (
