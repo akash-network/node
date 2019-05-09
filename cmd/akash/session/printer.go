@@ -1,6 +1,8 @@
 package session
 
-import "time"
+import (
+	"time"
+)
 
 type Printer interface {
 	Flush() error

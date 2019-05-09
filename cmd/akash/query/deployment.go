@@ -25,7 +25,7 @@ func queryDeploymentCommand() *cobra.Command {
 func doQueryDeploymentCommand(s session.Session, cmd *cobra.Command, args []string) error {
 	var hasSigner, hasDepIDs bool
 	var depID string
-	var deployments []*types.Deployment
+	deployments := make([]types.Deployment, 0, 0)
 	printerDat := session.NewPrinterDataList()
 	rawDat := make([]interface{}, 0, 0)
 
@@ -54,7 +54,7 @@ func doQueryDeploymentCommand(s session.Session, cmd *cobra.Command, args []stri
 			if err != nil {
 				return err
 			}
-			deployments = append(deployments, dep)
+			deployments = append(deployments, *dep)
 		}
 	case hasSigner:
 		tdeps, err := s.QueryClient().TenantDeployments(s.Ctx(), info.GetPubKey().Address().Bytes())
@@ -62,7 +62,7 @@ func doQueryDeploymentCommand(s session.Session, cmd *cobra.Command, args []stri
 			return err
 		}
 		for _, dep := range tdeps.Items {
-			deployments = append(deployments, &dep)
+			deployments = append(deployments, dep)
 		}
 	}
 
