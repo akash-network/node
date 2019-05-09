@@ -31,7 +31,7 @@ func AskStringVar(currentMode ModeType, targetMode ModeType, str string, questio
 	}
 	for len(str) == 0 {
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Print(question)
+		fmt.Print("\n", question)
 		res, _ := reader.ReadString('\n')
 		if res = strings.TrimSpace(res); res != "" {
 			str = res

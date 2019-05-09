@@ -17,8 +17,11 @@ func queryDeploymentCommand() *cobra.Command {
 }
 
 func doQueryDeploymentCommand(session session.Session, cmd *cobra.Command, args []string) error {
-
 	//depIds := args
+	// var hasSinger, hasDepIDs bool
+	// hasDepIDs = len(args) == 0
+	// _, info, err := session.Signer()
+	// if err == nil
 
 	if len(args) == 0 {
 		_, info, err := session.Signer()

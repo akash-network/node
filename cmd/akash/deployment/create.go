@@ -77,7 +77,7 @@ func createCmd() *cobra.Command {
 	}
 
 	session.AddFlagNode(cmd, cmd.Flags())
-	session.AddFlagKey(cmd, cmd.Flags())
+	session.AddFlagKeyOptional(cmd, cmd.Flags())
 	session.AddFlagNonce(cmd, cmd.Flags())
 	session.AddFlagWait(cmd, cmd.Flags())
 	return cmd

@@ -222,10 +222,19 @@ func (s *session) Key() (keys.Info, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	kname := s.KeyName()
 	if kname == "" {
-		return nil, errors.New("no key specified")
+		infos, err := kmgr.List()
+		if err != nil {
+			return nil, err
+		}
+		if len(infos) == 0 {
+			return nil, errors.New("no keys found locally, need at least one key")
+		}
+		if len(infos) > 1 {
+			return nil, errors.New("key name required (more than one signer key stored locally)")
+		}
+		kname = infos[0].GetName()
 	}
 
 	info, err := kmgr.Get(kname)
