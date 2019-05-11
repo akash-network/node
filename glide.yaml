@@ -85,3 +85,5 @@ import:
   version: ~0.1.1
 - package: github.com/dustin/go-humanize
   version: ~1.0.0
+- package: github.com/mattn/go-isatty
+  version: ^0.0.7

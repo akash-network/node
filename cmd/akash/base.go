@@ -7,10 +7,11 @@ import (
 
 func baseCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:          "akash",
-		Short:        "Akash CLI Utility",
-		Long:         baseLongDesc,
-		SilenceUsage: true,
+		Use:           "akash",
+		Short:         "Akash CLI Utility",
+		Long:          baseLongDesc,
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
 	session.SetupBaseCommand(cmd)
 	return cmd

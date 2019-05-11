@@ -1,5 +1,5 @@
-hash: 6873900cb8a34f3a2c07a4a4a45b12dfa2d6fabd689b822421483031314efdf1
-updated: 2019-05-10T20:58:29.803079-07:00
+hash: e2fd156c7b1d41eac799d72349a24022f120fb1afc1c7bb87d501cf589611bb6
+updated: 2019-05-11T03:20:25.990407-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -155,6 +155,8 @@ imports:
   version: c2353362d570a7bfa228149c62842019201cfb71
 - name: github.com/mattn/go-colorable
   version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
+- name: github.com/mattn/go-isatty
+  version: c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7
 - name: github.com/mattn/go-runewidth
   version: 703b5e6b11ae25aeb2af9ebb5d5fdf8fa2575211
 - name: github.com/matttproud/golang_protobuf_extensions

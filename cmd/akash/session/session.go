@@ -13,6 +13,7 @@ import (
 	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/util/uiutil"
+	"github.com/ovrclk/akash/util/ulog"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/spf13/cobra"
@@ -44,6 +45,7 @@ type Session interface {
 	Password() (string, error)
 	Printer() uiutil.Printer
 	Mode() Mode
+	ULog() ULog
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -62,8 +64,22 @@ func WithSession(fn Runner) cmdRunner {
 			if err != nil {
 				return err
 			}
-			if err := fn(session, cmd, args); err != context.Canceled {
-				return err
+			if err := fn(session, cmd, args); err != context.Canceled && err != nil {
+				printerDat := NewPrinterDataKV().AddResultKV("error", fmt.Sprintf("%v", err))
+				return session.Mode().
+					When(ModeTypeInteractive, func() error {
+						fmt.Fprintln(os.Stderr, "")
+						fmt.Fprintln(os.Stderr, ulog.Error(fmt.Sprintf("%v", err)))
+						return err
+					}).
+					When(ModeTypeText, func() error {
+						NewTextPrinter(printerDat, nil).Flush()
+						return err
+					}).
+					When(ModeTypeJSON, func() error {
+						NewJSONPrinter(printerDat, nil).Flush()
+						return err
+					}).Run()
 			}
 			return nil
 		})
@@ -256,9 +272,9 @@ func (s *session) Key() (keys.Info, error) {
 		}
 		switch size := len(infos); {
 		case size == 0:
-			return nil, errors.New("no keys found locally, need at least one key")
+			return nil, NoKeysForDefaultError{}
 		case size > 1:
-			return nil, errors.New("key name required (more than one signer key stored locally)")
+			return nil, &TooManyKeysForDefaultError{len(infos)}
 		default:
 			kname = infos[0].GetName()
 		}
@@ -329,6 +345,10 @@ func (s *session) Host() string {
 
 func (s *session) Mode() Mode {
 	return s.mode
+}
+
+func (s *session) ULog() ULog {
+	return NewUlogger(s)
 }
 
 func (s *session) Printer() uiutil.Printer {

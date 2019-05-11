@@ -11,6 +11,7 @@ import (
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
 	. "github.com/ovrclk/akash/util"
+	"github.com/ovrclk/akash/util/ulog"
 	"github.com/spf13/cobra"
 )
 
@@ -45,6 +46,7 @@ func doSendCommand(s session.Session, cmd *cobra.Command, args []string) error {
 	if len(argAmount) == 0 {
 		return errors.NewArgumentError("amount")
 	}
+
 	argTo = s.Mode().Ask().StringVar(argTo, "Receiver Address (required): ", true)
 	if len(argTo) == 0 {
 		return errors.NewArgumentError("receiver")
@@ -92,11 +94,13 @@ func doSendCommand(s session.Session, cmd *cobra.Command, args []string) error {
 				AddRow("Block (Height):", humanize.Comma(block)).
 				AddRow("Hash:", res["hash"])
 
-			return session.NewIPrinter(nil).
+			p := session.NewIPrinter(nil).
 				AddText("").
-				AddTitle("(success) tokens transfer complete").
+				AddTitle("Send Tokens").
 				Add(t).
-				Flush()
+				AddText("")
+			p.Flush()
+			return p.AddText(ulog.Success("transfer complete")).Flush()
 		}).
 		When(session.ModeTypeText, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
 		When(session.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
