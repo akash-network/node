@@ -1,5 +1,5 @@
-hash: e2fd156c7b1d41eac799d72349a24022f120fb1afc1c7bb87d501cf589611bb6
-updated: 2019-05-11T03:20:25.990407-07:00
+hash: 4ea27b923c19c98e3304d7a1062287720ef370c69740456318e85d8e51ecd8af
+updated: 2019-05-11T15:06:28.116557-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -109,7 +109,7 @@ imports:
 - name: github.com/gosuri/uilive
   version: 810653011da975cf3ac54bf7aea22d5c9e49e317
 - name: github.com/gosuri/uitable
-  version: 36ee7e946282a3fb1cfecd476ddc9b35d8847e42
+  version: 258423f5a69cb48fb4b34261f5f241987fa156cf
   subpackages:
   - util/strutil
   - util/wordwrap
