@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/ovrclk/akash/cmd/common"
@@ -113,11 +114,36 @@ func RequireNode(fn Runner) Runner {
 }
 
 func RequireKey(fn Runner) Runner {
-	return func(session Session, cmd *cobra.Command, args []string) error {
-		if _, err := session.Key(); err != nil {
-			return err
+	return func(s Session, cmd *cobra.Command, args []string) error {
+		if _, err := s.Key(); err != nil {
+			if !s.Mode().IsInteractive() {
+				return err
+			}
+
+			// when interactive, ask for the key
+			kmgr, err := s.KeyManager()
+			if err != nil {
+				return err
+			}
+
+			infos, err := kmgr.List()
+			if err != nil {
+				return err
+			}
+			knames := make([]string, 0)
+			for _, info := range infos {
+				knames = append(knames, info.GetName())
+			}
+			var kname string
+			kname = s.Mode().Ask().StringVar(kname, fmt.Sprintf("Signer Key (valid: %s): ", strings.Join(knames, ", ")), true)
+			if len(kname) == 0 {
+				return fmt.Errorf("required argument missing: key")
+			}
+			if err := cmd.Flags().Set(flagKey, kname); err != nil {
+				return err
+			}
 		}
-		return fn(session, cmd, args)
+		return fn(s, cmd, args)
 	}
 }
 
@@ -228,13 +254,14 @@ func (s *session) Key() (keys.Info, error) {
 		if err != nil {
 			return nil, err
 		}
-		if len(infos) == 0 {
+		switch size := len(infos); {
+		case size == 0:
 			return nil, errors.New("no keys found locally, need at least one key")
-		}
-		if len(infos) > 1 {
+		case size > 1:
 			return nil, errors.New("key name required (more than one signer key stored locally)")
+		default:
+			kname = infos[0].GetName()
 		}
-		kname = infos[0].GetName()
 	}
 
 	info, err := kmgr.Get(kname)

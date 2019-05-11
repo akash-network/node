@@ -71,7 +71,6 @@ func createCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create <deployment-file>",
 		Short: "create a deployment",
-		// Args:  cobra.ExactArgs(1),
 		RunE: session.WithSession(
 			session.RequireKey(session.RequireNode(create))),
 	}
