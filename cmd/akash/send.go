@@ -3,6 +3,7 @@ package main
 import (
 	"strconv"
 
+	"github.com/dustin/go-humanize"
 	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/denom"
@@ -70,6 +71,8 @@ func doSendCommand(s session.Session, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	block := result.Height
+
 	printerDat := session.NewPrinterDataKV().
 		AddResultKV("from", X(fromAddr)).
 		AddResultKV("to", argTo).
@@ -83,15 +86,15 @@ func doSendCommand(s session.Session, cmd *cobra.Command, args []string) error {
 		When(session.ModeTypeInteractive, func() error {
 			res := printerDat.Result[0]
 			t := uitable.New().
-				AddRow("From: ", res["from"]).
-				AddRow("To: ", res["to"]).
-				AddRow("Amount: ", res["amount"]).
-				AddRow("Block (Height): ", res["block"]).
-				AddRow("Hash: ", res["hash"])
+				AddRow("From:", res["from"]).
+				AddRow("To:", res["to"]).
+				AddRow("Amount:", res["amount"]).
+				AddRow("Block (Height):", humanize.Comma(block)).
+				AddRow("Hash:", res["hash"])
 
 			return session.NewIPrinter(nil).
 				AddText("").
-				AddTitle("Tokens transferred successfully").
+				AddTitle("(success) tokens transfer complete").
 				Add(t).
 				Flush()
 		}).
