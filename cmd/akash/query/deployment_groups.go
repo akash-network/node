@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	humanize "github.com/dustin/go-humanize"
@@ -24,12 +25,11 @@ func queryDeploymentGroupCommand() *cobra.Command {
 }
 
 func doQueryDeploymentGroupCommand(s session.Session, cmd *cobra.Command, args []string) error {
-	hasIDs := len(args) > 0
 	groups := make([]*types.DeploymentGroup, 0)
 	printerDat := session.NewPrinterDataList()
 	rawDat := make([]interface{}, 0, 0)
 
-	if hasIDs {
+	if len(args) > 0 {
 		for _, arg := range args {
 			key, err := keys.ParseGroupPath(arg)
 			if err != nil {
@@ -70,13 +70,14 @@ func makeUITableDeploymentGroups(groups []*types.DeploymentGroup) *uitable.Table
 			uiutil.NewTitle("Group (Deployment/Sequence)").String(),
 			uiutil.NewTitle("Name").String(),
 			uiutil.NewTitle("State").String(),
+			uiutil.NewTitle("Order TTL (Blocks)").String(),
 			uiutil.NewTitle("Requirements").String(),
 			uiutil.NewTitle("Resources").String(),
 		)
 	t.Wrap = true
 	for _, group := range groups {
 		res := makePrinterResultDeploymentGroup(group)
-		t.AddRow(res["group"], res["name"], res["state"], res["requirements"], res["resources"])
+		t.AddRow(res["group"], res["name"], res["state"], res["order_ttl"], res["requirements"], res["resources"])
 	}
 	return t
 }
@@ -101,6 +102,7 @@ func makePrinterResultDeploymentGroup(group *types.DeploymentGroup) session.Prin
 		"group":        group.DeploymentGroupID.String(),
 		"name":         group.Name,
 		"state":        group.State.String(),
+		"order_ttl":    strconv.FormatInt(group.OrderTTL, 10),
 		"requirements": strings.Join(reqs, "\n"),
 		"resources":    strings.Join(resources, "\n"),
 	}
