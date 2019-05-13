@@ -37,6 +37,9 @@ func doQueryDeploymentCommand(s session.Session, cmd *cobra.Command, args []stri
 		hasSigner = true
 	}
 
+	printer := s.Mode().Printer()
+	data := printer.NewSection("Deployment Query").NewData()
+
 	switch {
 	case hasSigner == false && hasDepIDs == false:
 		if err != nil && s.Mode().IsInteractive() {
@@ -80,6 +83,7 @@ func doQueryDeploymentCommand(s session.Session, cmd *cobra.Command, args []stri
 	}
 
 	for _, dep := range deployments {
+		data.Add("Deployment ID", X(dep.Address))
 		dat := map[string]string{
 			"deployment": X(dep.Address),
 			"tenant":     X(dep.Tenant),
