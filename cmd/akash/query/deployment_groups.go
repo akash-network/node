@@ -1,16 +1,12 @@
 package query
 
 import (
-	"fmt"
 	"strconv"
-	"strings"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/util/uiutil"
 	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
@@ -27,9 +23,7 @@ func queryDeploymentGroupCommand() *cobra.Command {
 
 func doQueryDeploymentGroupCommand(s session.Session, cmd *cobra.Command, args []string) error {
 	groups := make([]*types.DeploymentGroup, 0)
-	printerDat := session.NewPrinterDataList()
-	rawDat := make([]interface{}, 0, 0)
-
+	printer := s.Mode().Printer()
 	if len(args) > 0 {
 		for _, arg := range args {
 			key, err := keys.ParseGroupPath(arg)
@@ -49,62 +43,38 @@ func doQueryDeploymentGroupCommand(s session.Session, cmd *cobra.Command, args [
 		}
 		groups = depgroups.Items
 	}
-
+	data := printer.NewSection("Deployment Group(s)").NewData().WithTag("raw", groups)
+	if len(groups) > 1 {
+		data.AsList()
+	}
 	for _, group := range groups {
-		printerDat.AddResultList(makePrinterResultDeploymentGroup(group))
-		rawDat = append(rawDat, group)
-	}
-	printerDat.Raw = rawDat
+		data.
+			Add("Group ID", group.DeploymentGroupID.String()).
+			WithLabel("Group ID", "Group ID (Deployment/Sequence)").
+			Add("Name", group.Name)
+		if group.State == types.DeploymentGroup_OPEN {
+			data.Add("State", dsky.Color.Hi.Sprint(group.State.String()))
+		} else {
+			data.Add("State", group.State.String())
+		}
+		data.Add("Order TTL (Blocks)", strconv.FormatInt(group.OrderTTL, 10))
 
-	return s.Mode().
-		When(dsky.ModeTypeInteractive, func() error {
-			return session.NewIPrinter(nil).AddText("").Add(makeUITableDeploymentGroups(groups)).Flush()
-		}).
-		When(dsky.ModeTypeShell, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
-		When(dsky.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
-		Run()
-}
+		req := make(map[string]string)
+		for _, r := range group.Requirements {
+			req[r.Name] = r.Value
+		}
+		data.Add("Requirements", req)
 
-func makeUITableDeploymentGroups(groups []*types.DeploymentGroup) *uitable.Table {
-	t := uitable.New().
-		AddRow(
-			uiutil.NewTitle("Group (Deployment/Sequence)").String(),
-			uiutil.NewTitle("Name").String(),
-			uiutil.NewTitle("State").String(),
-			uiutil.NewTitle("Order TTL (Blocks)").String(),
-			uiutil.NewTitle("Requirements").String(),
-			uiutil.NewTitle("Resources").String(),
-		)
-	t.Wrap = true
-	for _, group := range groups {
-		res := makePrinterResultDeploymentGroup(group)
-		t.AddRow(res["group"], res["name"], res["state"], res["order_ttl"], res["requirements"], res["resources"])
-	}
-	return t
-}
+		rd := dsky.NewSectionData("").AsList()
+		for _, r := range group.Resources {
+			rd.Add("count", humanize.Comma(int64(r.Count))).
+				Add("price", humanize.Comma(int64(r.Price))).
+				Add("cpu", humanize.Comma(int64(r.Unit.CPU))).
+				Add("mem", humanize.Bytes(r.Unit.Memory)).
+				Add("disk", humanize.Bytes(r.Unit.Disk))
+		}
+		data.Add("Resources", rd)
 
-func makePrinterResultDeploymentGroup(group *types.DeploymentGroup) session.PrinterResult {
-	var reqs []string
-	for _, r := range group.Requirements {
-		reqs = append(reqs, fmt.Sprintf("%s:%s", r.Name, r.Value))
 	}
-	var resources []string
-	for _, r := range group.Resources {
-		count := humanize.Comma(int64(r.Count))
-		price := humanize.Comma(int64(r.Price))
-		cpu := humanize.Comma(int64(r.Unit.CPU))
-		mem := humanize.Bytes(r.Unit.Memory)
-		disk := humanize.Bytes(r.Unit.Disk)
-		rg := fmt.Sprintf("Count: %s, Price %s, CPU: %s, Memory: %s, Disk: %s", count, price, cpu, mem, disk)
-		resources = append(resources, rg)
-	}
-
-	return map[string]string{
-		"group":        group.DeploymentGroupID.String(),
-		"name":         group.Name,
-		"state":        group.State.String(),
-		"order_ttl":    strconv.FormatInt(group.OrderTTL, 10),
-		"requirements": strings.Join(reqs, "\n"),
-		"resources":    strings.Join(resources, "\n"),
-	}
+	return printer.Flush()
 }

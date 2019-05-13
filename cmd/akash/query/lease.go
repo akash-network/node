@@ -4,12 +4,9 @@ import (
 	"fmt"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/util/uiutil"
-	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
 
@@ -26,9 +23,6 @@ func queryLeaseCommand() *cobra.Command {
 
 func doQueryLeaseCommand(s session.Session, cmd *cobra.Command, args []string) error {
 	leases := make([]*types.Lease, 0)
-	printerDat := session.NewPrinterDataList()
-	rawDat := make([]interface{}, 0, 0)
-
 	var hasSigner, hasIDs bool
 	hasIDs = len(args) > 0
 	_, info, err := s.Signer()
@@ -66,35 +60,15 @@ func doQueryLeaseCommand(s session.Session, cmd *cobra.Command, args []string) e
 		leases = res.Items
 	}
 
+	data := s.Mode().Printer().NewSection("Lease(s) Query").NewData().WithTag("raw", leases)
+	if len(leases) > 1 {
+		data.AsList()
+	}
 	for _, l := range leases {
-		printerDat.AddResultList(makePrinterResultLease(l))
-		rawDat = append(rawDat, l)
+		data.
+			Add("Lease", l.LeaseID.String()).
+			Add("Price", humanize.Comma(int64(l.Price))).
+			Add("State", l.State.String())
 	}
-	printerDat.Raw = rawDat
-
-	return s.Mode().
-		When(dsky.ModeTypeInteractive, func() error {
-			t := uitable.New().AddRow(
-				uiutil.NewTitle("Lease ID (Deployment/Group/Order/Provider)").String(),
-				uiutil.NewTitle("Price").String(),
-				uiutil.NewTitle("State").String(),
-			)
-			t.Wrap = true
-			for _, l := range leases {
-				res := makePrinterResultLease(l)
-				t.AddRow(res["lease"], res["price"], res["state"])
-			}
-			return session.NewIPrinter(nil).AddText("").Add(t).Flush()
-		}).
-		When(dsky.ModeTypeShell, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
-		When(dsky.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
-		Run()
-}
-
-func makePrinterResultLease(lease *types.Lease) session.PrinterResult {
-	return session.PrinterResult{
-		"lease": lease.LeaseID.String(),
-		"price": humanize.Comma(int64(lease.Price)),
-		"state": lease.State.String(),
-	}
+	return s.Mode().Printer().Flush()
 }

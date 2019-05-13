@@ -17,6 +17,7 @@ import (
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/types"
 	. "github.com/ovrclk/akash/util"
+	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 	tmctypes "github.com/tendermint/tendermint/rpc/core/types"
 )
@@ -208,10 +209,11 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 			return
 		}
 	}()
-	return processStages(statusChan)
+	return processStages(statusChan, ses)
 }
 
-func processStages(statusChan chan *deployStatus) error {
+func processStages(statusChan chan *deployStatus, s session.Session) error {
+	log := s.Mode().Printer().Log().WithModule("deploy")
 	writer := os.Stdout
 	for {
 		status := <-statusChan
@@ -221,45 +223,58 @@ func processStages(statusChan chan *deployStatus) error {
 		}
 		switch status.Event {
 		case eventDeployBegin:
-			logWait("[deploy] begin deployment from config: (...)")
+			logWait(log, "deploy", "begin deployment from config: (...)")
 		case eventBroadcastBegin:
 			var names []string
 			for _, g := range state.groups {
 				names = append(names, g.Name)
 			}
-			logWait(fmt.Sprintf("[broadcast] request deployment for group(s): %s", strings.Join(names, ",")))
+			logWait(log, "broadcast", fmt.Sprintf("request deployment for group(s): %s", strings.Join(names, ",")))
 		case eventBroadcastDone:
-			logDone("[broadcast] request accepted, deployment created with id: " + status.Message)
+			msg := "request accepted, deployment created with id: " + status.Message
+			logDone(log, "broadcast", msg)
 		case eventReceiveOrdersBegin:
-			logWait(fmt.Sprintf("[auction] waiting to create buy orders(s) for %d deployment groups(s)", len(state.groups)))
+			msg := fmt.Sprintf("waiting to create buy orders(s) for %d deployment groups(s)", len(state.groups))
+			logWait(log, "auction", msg)
 		case eventReceiveOrder:
 			if tx, ok := status.Result.(*types.TxCreateOrder); ok {
-				logWait(fmt.Sprintf("[auction] buy order (%d) created with id: %s", len(state.orders), tx.OrderID.String()))
+				msg := fmt.Sprintf("buy order (%d) created with id: %s", len(state.orders), tx.OrderID.String())
+				logWait(log, "auction", msg)
 			}
 		case eventReceiveOrdersDone:
-			logDone(fmt.Sprintf("[auction] %d order(s) created", len(state.orders)))
+			msg := fmt.Sprintf("%d order(s) created", len(state.orders))
+			logDone(log, "auction", msg)
 		case eventReceiveFulfillmentsBegin:
-			logWait(fmt.Sprintf("[auction] waiting on fulfillment(s)"))
+			msg := fmt.Sprintf("waiting on fulfillment(s)")
+			logWait(log, "auction", msg)
 		case eventReceiveFulfillment:
 			if tx, ok := status.Result.(*types.TxCreateFulfillment); ok {
-				logWait(fmt.Sprintf("[auction] received fulfillment (%d/%d) with id: %s", len(state.fulfilments), len(state.orders), tx.FulfillmentID.String()))
+				msg := fmt.Sprintf("received fulfillment (%d/%d) with id: %s", len(state.fulfilments), len(state.orders), tx.FulfillmentID.String())
+				logWait(log, "auction", msg)
 			}
 		case eventReceiveFulfillmentsDone:
-			logDone(fmt.Sprintf("[auction] complete; received %d fulfillment(s) for %d order(s)", len(state.fulfilments), len(state.orders)))
+			msg := fmt.Sprintf("complete; received %d fulfillment(s) for %d order(s)", len(state.fulfilments), len(state.orders))
+			logDone(log, "auction", msg)
 		case eventReceiveLeaseBegin:
-			logWait(fmt.Sprintf("[lease] waiting on lease(s)"))
+			msg := fmt.Sprintf("waiting on lease(s)")
+			logWait(log, "lease", msg)
 		case eventReceiveLease:
 			if tx, ok := status.Result.(*types.TxCreateLease); ok {
-				logWait(fmt.Sprintf("[lease] received lease (%d) for group (%v/%v) [price %v] [id %s]", len(state.leases), tx.Group, len(state.groups), tx.Price, tx.LeaseID))
+				msg := fmt.Sprintf("received lease (%d) for group (%v/%v) [price %v] [id %s]", len(state.leases), tx.Group, len(state.groups), tx.Price, tx.LeaseID)
+				logWait(log, "lease", msg)
 			}
 		case eventReceiveLeaseDone:
-			logDone(fmt.Sprintf("[lease] complete; received %d lease(s) for %d groups(s)", len(state.leases), len(state.groups)))
+			msg := fmt.Sprintf("complete; received %d lease(s) for %d groups(s)", len(state.leases), len(state.groups))
+			logDone(log, "lease", msg)
 		case eventSendManifest:
-			logWait(fmt.Sprintf("[lease] send manifest to provider at %s", status.Message))
+			msg := fmt.Sprintf("send manifest to provider at %s", status.Message)
+			logWait(log, "lease", msg)
 		case eventSendManifestDone:
-			logDone(fmt.Sprintf("[lease] manifest accepted by provider at %s", status.Message))
+			msg := fmt.Sprintf("manifest accepted by provider at %s", status.Message)
+			logDone(log, "lease", msg)
 		case eventDeployDone:
-			logDone("[deploy] deployment complete")
+			msg := "deployment complete"
+			logDone(log, "deploy", msg)
 			session.NewIPrinter(writer).
 				AddText("").
 				AddTitle("Deployment Group(s)").
@@ -358,16 +373,14 @@ func tableSummary(ls map[*types.Provider]*types.LeaseStatusResponse) {
 
 }
 
-func logDone(msg string) {
-	fmt.Println("(done)", msg)
+func logDone(log dsky.Logger, module, msg string) {
+	log.WithAction(dsky.LogActionDone).WithModule(module).Info(msg)
 }
 
-func logWait(msg string) {
-	fmt.Println("[/] (wait)", msg)
+func logWait(log dsky.Logger, module, msg string) {
+	log.WithAction(dsky.LogActionWait).WithModule(module).Warn(msg)
 }
 
-func logError(msg string) {
-	fmt.Println("(error)", msg)
+func logError(log dsky.Logger, module, msg string) {
+	log.WithAction(dsky.LogActionFail).WithModule(module).Error(msg)
 }
-
-// func depSummaryTable(tx

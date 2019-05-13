@@ -2,11 +2,9 @@ package query
 
 import (
 	humanize "github.com/dustin/go-humanize"
-	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/util/uiutil"
 	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
@@ -24,8 +22,6 @@ func queryFulfillmentCommand() *cobra.Command {
 
 func doQueryFulfillmentCommand(s session.Session, cmd *cobra.Command, args []string) error {
 	fulfillments := make([]*types.Fulfillment, 0)
-	printerDat := session.NewPrinterDataList()
-	rawDat := make([]interface{}, 0, 0)
 
 	if len(args) == 0 {
 		res, err := s.QueryClient().Fulfillments(s.Ctx())
@@ -47,29 +43,22 @@ func doQueryFulfillmentCommand(s session.Session, cmd *cobra.Command, args []str
 		}
 	}
 
+	data := s.Mode().Printer().NewSection("Fulfillment(s)").NewData().WithTag("raw", fulfillments).AsList()
 	for _, f := range fulfillments {
-		printerDat.AddResultList(makePrinterResultFulfillment(f))
-		rawDat = append(rawDat, f)
-	}
-	printerDat.Raw = rawDat
+		data.
+			Add("Fulfillment ID", f.FulfillmentID.String()).
+			Add("Price", humanize.Comma(int64(f.Price)))
 
-	return s.Mode().
-		When(dsky.ModeTypeInteractive, func() error {
-			t := uitable.New().AddRow(
-				uiutil.NewTitle("Fulfillment ID (Deployment/Group/Order/Provider)").String(),
-				uiutil.NewTitle("Price").String(),
-				uiutil.NewTitle("State").String(),
-			)
-			t.Wrap = true
-			for _, f := range fulfillments {
-				res := makePrinterResultFulfillment(f)
-				t.AddRow(res["fulfillment"], res["price"], res["state"])
-			}
-			return session.NewIPrinter(nil).AddText("").Add(t).Flush()
-		}).
-		When(dsky.ModeTypeShell, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
-		When(dsky.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
-		Run()
+		switch f.State {
+		case types.Fulfillment_OPEN:
+			data.Add("State", dsky.Color.Hi.Sprint(f.State.String()))
+		case types.Fulfillment_MATCHED:
+			data.Add("State", dsky.Color.Notice.Sprint(f.State.String()))
+		default:
+			data.Add("State", f.State.String())
+		}
+	}
+	return s.Mode().Printer().Flush()
 }
 
 func makePrinterResultFulfillment(f *types.Fulfillment) session.PrinterResult {
