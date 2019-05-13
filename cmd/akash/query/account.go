@@ -13,6 +13,7 @@ import (
 	"github.com/ovrclk/akash/types"
 	. "github.com/ovrclk/akash/util"
 	"github.com/ovrclk/akash/util/uiutil"
+	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
 
@@ -70,7 +71,7 @@ func doQueryAccountCommand(s session.Session, cmd *cobra.Command, args []string)
 		}
 		pdata.Raw = raws
 		return s.Mode().
-			When(session.ModeTypeInteractive, func() error {
+			When(dsky.ModeTypeInteractive, func() error {
 				table := uitable.New().
 					AddRow(uiutil.NewTitle("Public Key (Address)").String(), uiutil.NewTitle("Balance (mAKASH)"))
 				table.MaxColWidth = 100
@@ -86,10 +87,10 @@ func doQueryAccountCommand(s session.Session, cmd *cobra.Command, args []string)
 					AddText("Please note, the token balance is denominated in microAKASH (AKASH * 10^-6)").
 					Flush()
 			}).
-			When(session.ModeTypeText, func() error {
+			When(dsky.ModeTypeShell, func() error {
 				return session.NewTextPrinter(pdata, nil).Flush()
 			}).
-			When(session.ModeTypeJSON, func() error {
+			When(dsky.ModeTypeJSON, func() error {
 				return session.NewJSONPrinter(pdata, nil).Flush()
 			}).
 			Run()
@@ -109,7 +110,7 @@ func doQueryAccountCommand(s session.Session, cmd *cobra.Command, args []string)
 		pdata.Raw = account
 
 		return s.Mode().
-			When(session.ModeTypeInteractive, func() error {
+			When(dsky.ModeTypeInteractive, func() error {
 				return session.NewIPrinter(nil).
 					AddText("").
 					AddTitle("Account Details").
@@ -120,10 +121,10 @@ func doQueryAccountCommand(s session.Session, cmd *cobra.Command, args []string)
 					AddText("Please note, the token balance is denominated in microAKASH (AKASH * 10^-6)").
 					Flush()
 			}).
-			When(session.ModeTypeText, func() error {
+			When(dsky.ModeTypeShell, func() error {
 				return session.NewTextPrinter(pdata, nil).Flush()
 			}).
-			When(session.ModeTypeJSON, func() error {
+			When(dsky.ModeTypeJSON, func() error {
 				return session.NewJSONPrinter(pdata, nil).Flush()
 			}).
 			Run()

@@ -10,6 +10,7 @@ import (
 	"github.com/ovrclk/akash/types"
 	. "github.com/ovrclk/akash/util"
 	"github.com/ovrclk/akash/util/uiutil"
+	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
 
@@ -53,7 +54,7 @@ func doQueryProviderCommand(s session.Session, cmd *cobra.Command, args []string
 	}
 	printerDat.Raw = rawDat
 	return s.Mode().
-		When(session.ModeTypeInteractive, func() error {
+		When(dsky.ModeTypeInteractive, func() error {
 			t := uitable.New().
 				AddRow(
 					uiutil.NewTitle("Address").String(),
@@ -68,8 +69,8 @@ func doQueryProviderCommand(s session.Session, cmd *cobra.Command, args []string
 			}
 			return session.NewIPrinter(nil).AddText("").Add(t).Flush()
 		}).
-		When(session.ModeTypeText, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
-		When(session.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
+		When(dsky.ModeTypeShell, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
+		When(dsky.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
 		Run()
 }
 

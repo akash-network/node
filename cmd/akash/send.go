@@ -12,6 +12,7 @@ import (
 	"github.com/ovrclk/akash/types"
 	. "github.com/ovrclk/akash/util"
 	"github.com/ovrclk/akash/util/ulog"
+	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
 
@@ -85,7 +86,7 @@ func doSendCommand(s session.Session, cmd *cobra.Command, args []string) error {
 	printerDat.Raw = result
 
 	return s.Mode().
-		When(session.ModeTypeInteractive, func() error {
+		When(dsky.ModeTypeInteractive, func() error {
 			res := printerDat.Result[0]
 			t := uitable.New().
 				AddRow("From:", res["from"]).
@@ -102,7 +103,7 @@ func doSendCommand(s session.Session, cmd *cobra.Command, args []string) error {
 			p.Flush()
 			return p.AddText(ulog.Success("transfer complete")).Flush()
 		}).
-		When(session.ModeTypeText, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
-		When(session.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
+		When(dsky.ModeTypeShell, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
+		When(dsky.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
 		Run()
 }

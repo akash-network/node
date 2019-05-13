@@ -14,6 +14,7 @@ import (
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/util/uiutil"
 	"github.com/ovrclk/akash/util/ulog"
+	"github.com/ovrclk/dsky"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/spf13/cobra"
@@ -44,7 +45,7 @@ type Session interface {
 	Host() string
 	Password() (string, error)
 	Printer() uiutil.Printer
-	Mode() Mode
+	Mode() dsky.Mode
 	ULog() ULog
 }
 
@@ -60,23 +61,23 @@ func WithSession(fn Runner) cmdRunner {
 			if err != nil {
 				return err
 			}
-			session.mode, err = NewMode(ModeType(mtypeS))
+			session.mode, err = dsky.NewMode(dsky.ModeType(mtypeS), nil, nil)
 			if err != nil {
 				return err
 			}
 			if err := fn(session, cmd, args); err != context.Canceled && err != nil {
 				printerDat := NewPrinterDataKV().AddResultKV("error", fmt.Sprintf("%v", err))
 				return session.Mode().
-					When(ModeTypeInteractive, func() error {
+					When(dsky.ModeTypeInteractive, func() error {
 						fmt.Fprintln(os.Stderr, "")
 						fmt.Fprintln(os.Stderr, ulog.Error(fmt.Sprintf("%v", err)))
 						return err
 					}).
-					When(ModeTypeText, func() error {
+					When(dsky.ModeTypeShell, func() error {
 						NewTextPrinter(printerDat, nil).Flush()
 						return err
 					}).
-					When(ModeTypeJSON, func() error {
+					When(dsky.ModeTypeJSON, func() error {
 						NewJSONPrinter(printerDat, nil).Flush()
 						return err
 					}).Run()
@@ -175,7 +176,7 @@ type session struct {
 	ctx     context.Context
 	mtx     sync.Mutex
 	printer uiutil.Printer
-	mode    Mode
+	mode    dsky.Mode
 }
 
 func (s *session) shutdown() {
@@ -343,7 +344,7 @@ func (s *session) Host() string {
 	return viper.GetString(flagHost)
 }
 
-func (s *session) Mode() Mode {
+func (s *session) Mode() dsky.Mode {
 	return s.mode
 }
 

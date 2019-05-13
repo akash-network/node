@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ovrclk/akash/util/ulog"
+	"github.com/ovrclk/dsky"
 )
 
 type ULog interface {
@@ -30,16 +31,16 @@ type ulogger struct {
 func (u *ulogger) Error(msg interface{}) {
 	printerDat := NewPrinterDataKV().AddResultKV("error", fmt.Sprintf("%v", msg))
 	u.s.Mode().
-		When(ModeTypeInteractive, func() error {
+		When(dsky.ModeTypeInteractive, func() error {
 			fmt.Fprintln(u.errOut, "")
 			fmt.Fprintln(u.errOut, ulog.Error(fmt.Sprintf("%v", msg)))
 			return nil
 		}).
-		When(ModeTypeText, func() error {
+		When(dsky.ModeTypeShell, func() error {
 			NewTextPrinter(printerDat, nil).Flush()
 			return nil
 		}).
-		When(ModeTypeJSON, func() error {
+		When(dsky.ModeTypeJSON, func() error {
 			NewJSONPrinter(printerDat, nil).Flush()
 			return nil
 		}).Run()
@@ -48,16 +49,16 @@ func (u *ulogger) Error(msg interface{}) {
 func (u *ulogger) Success(msg interface{}) {
 	printerDat := NewPrinterDataKV().AddResultKV("success", fmt.Sprintf("%v", msg))
 	u.s.Mode().
-		When(ModeTypeInteractive, func() error {
+		When(dsky.ModeTypeInteractive, func() error {
 			fmt.Fprintln(u.out, "")
 			fmt.Fprintln(u.out, ulog.Success(fmt.Sprintf("%v", msg)))
 			return nil
 		}).
-		When(ModeTypeText, func() error {
+		When(dsky.ModeTypeShell, func() error {
 			NewTextPrinter(printerDat, nil).Flush()
 			return nil
 		}).
-		When(ModeTypeJSON, func() error {
+		When(dsky.ModeTypeJSON, func() error {
 			NewJSONPrinter(printerDat, nil).Flush()
 			return nil
 		}).Run()

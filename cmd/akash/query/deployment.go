@@ -10,6 +10,7 @@ import (
 	. "github.com/ovrclk/akash/util"
 	"github.com/ovrclk/akash/util/uiutil"
 	"github.com/ovrclk/akash/util/ulog"
+	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
 
@@ -90,7 +91,7 @@ func doQueryDeploymentCommand(s session.Session, cmd *cobra.Command, args []stri
 	}
 	printerDat.Raw = rawDat
 	return s.Mode().
-		When(session.ModeTypeInteractive, func() error {
+		When(dsky.ModeTypeInteractive, func() error {
 			p := session.NewIPrinter(nil).AddText("")
 			lt := uiutil.NewListTable().AddHeader("State", "Deployment ID", "Version")
 
@@ -115,7 +116,7 @@ func doQueryDeploymentCommand(s session.Session, cmd *cobra.Command, args []stri
 			t.Wrap = true
 
 			return p.Add(t).Flush()
-		}).When(session.ModeTypeText, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
-		When(session.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
+		}).When(dsky.ModeTypeShell, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
+		When(dsky.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
 		Run()
 }

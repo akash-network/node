@@ -6,11 +6,9 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/hd"
-	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/errors"
-	"github.com/ovrclk/akash/util/uiutil"
 	"github.com/spf13/cobra"
 
 	. "github.com/ovrclk/akash/util"
@@ -71,27 +69,15 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 		return err
 	}
 
-	pdata := session.NewPrinterDataKV().
-		AddResultKV("name", name).
-		AddResultKV("public_key_address", X(info.GetPubKey().Address())).
-		AddResultKV("recovery_seed", seed)
-
-	return ses.Mode().
-		When(session.ModeTypeText, func() error {
-			return session.NewTextPrinter(pdata, nil).Flush()
-		}).
-		When(session.ModeTypeJSON, func() error {
-			return session.NewJSONPrinter(pdata, nil).Flush()
-		}).
-		When(session.ModeTypeInteractive, func() error {
-			return session.NewIPrinter(nil).
-				AddTitle(fmt.Sprintf("Successfully created key for '%s'", name)).
-				Add(uitable.New().
-					AddRow("Public Key:", X(info.GetPubKey().Address())).
-					AddRow("Recovery Codes:", seed)).
-				Flush()
-			return nil
-		}).Run()
+	printer := ses.Mode().Printer()
+	printer.Log().WithModule("key").Info("key created")
+	data := printer.NewSection("Create Key").NewData()
+	data.
+		WithTag("raw", info).
+		Add("Name", name).
+		Add("Public Key:", X(info.GetPubKey().Address())).
+		Add("Recovery Codes:", seed)
+	return printer.Flush()
 }
 
 func keyListCommand() *cobra.Command {
@@ -108,37 +94,16 @@ func doKeyListCommand(s session.Session, cmd *cobra.Command, args []string) erro
 	if err != nil {
 		return err
 	}
-	pdata := session.NewPrinterDataList()
+
+	printer := s.Mode().Printer()
+	data := printer.NewSection("Key List").NewData().AsList().WithTag("raw", infos)
 	for _, info := range infos {
-		d := map[string]string{
-			"name":               info.GetName(),
-			"public_key_address": X(info.GetPubKey().Address()),
-		}
-		pdata.AddResultList(d)
+		data.
+			Add("Name", info.GetName()).
+			Add("Public Key Address", X(info.GetPubKey().Address())).
+			WithLabel("Public Key Address", "Public Key (Address)")
 	}
-	pdata.Raw = infos
-
-	s.Mode().When(session.ModeTypeInteractive, func() error {
-		table := uitable.New()
-		table.MaxColWidth = 80
-		table.Wrap = true
-
-		table.AddRow(
-			uiutil.NewTitle("Name").String(),
-			uiutil.NewTitle("Public Key (Address)").String(),
-		)
-
-		for _, info := range pdata.Result {
-			table.AddRow(info["name"], info["public_key_address"])
-		}
-		fmt.Println(table)
-		return nil
-	}).When(session.ModeTypeText, func() error {
-		return session.NewTextPrinter(pdata, nil).Flush()
-	}).When(session.ModeTypeJSON, func() error {
-		return session.NewJSONPrinter(pdata, nil).Flush()
-	})
-	return s.Mode().Run()
+	return printer.Flush()
 }
 
 func keyRecoverCommand() *cobra.Command {
@@ -180,34 +145,21 @@ func doKeyRecoverCommand(ses session.Session, cmd *cobra.Command, args []string)
 		return err
 	}
 
-	pdata := session.NewPrinterDataKV().
-		AddResultKV("name", name).
-		AddResultKV("public_key_address", X(info.GetPubKey().Address()))
-	pdata.Raw = info
+	printer := ses.Mode().Printer()
+	printer.Log().Info(fmt.Sprintf("Successfully recovered key, stored locally as '%s'", name))
 
-	return ses.Mode().
-		When(session.ModeTypeText, func() error {
-			return session.NewTextPrinter(pdata, nil).Flush()
-		}).
-		When(session.ModeTypeJSON, func() error {
-			return session.NewJSONPrinter(pdata, nil).Flush()
-		}).
-		When(session.ModeTypeInteractive, func() error {
-			title := uiutil.NewTitle(fmt.Sprintf("Successfully recovered key, stored locally as '%s'", name))
-			fmt.Println(string(title.Bytes()))
-			table := uitable.New()
-			table.AddRow("Public Key:", X(info.GetPubKey().Address()))
-			fmt.Println(table)
-			return nil
-		}).
-		Run()
+	printer.NewSection("Recover Key").NewData().AsPane().
+		WithTag("raw", info).
+		Add("Name", name).
+		Add("Public Key Address", X(info.GetPubKey().Address())).
+		WithLabel("Public Key Address", "Public Key (Address)")
+	return printer.Flush()
 }
 
 func keyShowCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show <name>",
 		Short: "display a key",
-		Args:  cobra.ExactArgs(1),
 		RunE:  session.WithSession(session.RequireRootDir(doKeyShowCommand)),
 	}
 	session.AddFlagKeyType(cmd, cmd.Flags())
@@ -219,6 +171,7 @@ func doKeyShowCommand(ses session.Session, cmd *cobra.Command, args []string) er
 	if len(args) > 0 {
 		name = args[0]
 	}
+	name = ses.Mode().Ask().StringVar(name, "Key Name (required): ", true)
 
 	if len(name) == 0 {
 		return errors.NewArgumentError("name")
@@ -236,22 +189,15 @@ func doKeyShowCommand(ses session.Session, cmd *cobra.Command, args []string) er
 	if len(info.GetPubKey().Address()) == 0 {
 		return fmt.Errorf("key not found %s", name)
 	}
-	pdata := session.NewPrinterDataKV().
-		AddResultKV("name", name).
-		AddResultKV("public_key_address", X(info.GetPubKey().Address()))
 
-	return ses.Mode().
-		When(session.ModeTypeInteractive, func() error {
-			fmt.Println(pdata.Result[0]["public_key_address"])
-			return nil
-		}).
-		When(session.ModeTypeText, func() error {
-			return session.NewTextPrinter(pdata, nil).Flush()
-		}).
-		When(session.ModeTypeJSON, func() error {
-			return session.NewJSONPrinter(pdata, nil).Flush()
-		}).
-		Run()
+	printer := ses.Mode().Printer()
+	data := printer.NewSection("Display Key").NewData()
+	data.
+		WithTag("raw", info).
+		Add("Name", name).
+		Add("Public Key Address", X(info.GetPubKey().Address())).
+		WithLabel("Public Key Address", "Public Key (Address)")
+	return printer.Flush()
 }
 
 func keyRemoveCommand() *cobra.Command {
@@ -283,21 +229,15 @@ func doKeyRemoveCommand(ses session.Session, cmd *cobra.Command, args []string) 
 	if err != nil {
 		return err
 	}
-	return kmgr.Delete(name, password, true)
+	if err := kmgr.Delete(name, password, true); err != nil {
+		return nil
+	}
 
-	pdata := session.NewPrinterDataKV().AddResultKV("name", name)
-
-	return ses.Mode().
-		When(session.ModeTypeText, func() error {
-			return session.NewTextPrinter(pdata, nil).Flush()
-		}).
-		When(session.ModeTypeJSON, func() error {
-			return session.NewJSONPrinter(pdata, nil).Flush()
-		}).
-		When(session.ModeTypeInteractive, func() error {
-			return session.NewIPrinter(nil).AddText("(success) key removed from local: " + name).Flush()
-		}).Run()
-
+	p := ses.Mode().Printer()
+	p.Log().WithModule("key").Info("key removed")
+	p.NewSection("Remove Key").NewData().
+		Add("Name", name)
+	return p.Flush()
 }
 
 var (
