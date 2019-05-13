@@ -88,3 +88,5 @@ import:
   version: ~1.0.0
 - package: github.com/mattn/go-isatty
   version: ^0.0.7
+- package: github.com/ovrclk/dsky
+  version: ~0.0.1
