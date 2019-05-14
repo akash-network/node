@@ -1,7 +1,6 @@
 package deployment
 
 import (
-	"github.com/dustin/go-humanize"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/errors"
 	"github.com/ovrclk/akash/keys"
@@ -46,10 +45,7 @@ func statusDeployment(session session.Session, cmd *cobra.Command, args []string
 	ld := session.Mode().Printer().NewSection("Lease").WithLabel("Lease(s)").NewData()
 	var exitErr error
 	for _, lease := range leases.Items {
-		ld.Add("Lease ID", lease.LeaseID).
-			Add("State", lease.State.String()).
-			Add("Price", humanize.Comma(int64(lease.Price)))
-
+		AppendLeaseSD(lease, ld)
 		if lease.State != types.Lease_ACTIVE {
 			continue
 		}
