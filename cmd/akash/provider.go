@@ -23,6 +23,7 @@ import (
 	"github.com/ovrclk/akash/types"
 	ptype "github.com/ovrclk/akash/types/provider"
 	. "github.com/ovrclk/akash/util"
+	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
 
@@ -273,23 +274,17 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 		}
 	}
 
-	type outputItem struct {
-		Provider *types.Provider              `json:"provider,omitempty"`
-		Status   *types.ServerStatusParseable `json:"status,omitempty"`
-		Error    string                       `json:"error,omitempty"`
-	}
-
-	output := []outputItem{}
+	output := []*outputItem{}
 
 	for _, provider := range providers {
 		status, err := http.Status(session.Ctx(), provider)
 		if err != nil {
-			output = append(output, outputItem{Provider: provider, Error: err.Error()})
+			output = append(output, &outputItem{Provider: provider, Error: err.Error()})
 			continue
 		}
 
 		if !bytes.Equal(status.Provider, provider.Address) {
-			output = append(output, outputItem{
+			output = append(output, &outputItem{
 				Provider: provider,
 				Status:   status,
 				Error:    "Status received from incorrect provider",
@@ -297,23 +292,45 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 			continue
 		}
 
-		output = append(output, outputItem{
+		output = append(output, &outputItem{
 			Provider: provider,
 			Status:   status,
 		})
 	}
 
 	printer := session.Mode().Printer()
-	data := printer.
-		NewSection("Provider Status").
-		WithLabel("Provider(s) Status").
-		NewData().
-		WithTag("raw", output)
 
+	var active, passive []*outputItem
+
+	fmt.Println("got entries:", len(output))
+
+	for _, o := range output {
+		if len(o.Error) == 0 {
+			fmt.Println("found active")
+			active = append(active, o)
+			continue
+		}
+		passive = append(passive, o)
+	}
+	activedat := printer.NewSection("Active Providers").WithLabel("Active Provider(s) Status").NewData().WithTag("raw", active)
+	passivedat := printer.NewSection("Passive Providers").WithLabel("Passive Provider(s) Status").NewData().WithTag("raw", passive)
 	if len(output) > 1 {
-		data.AsList()
+		activedat.AsList()
+		passivedat.AsList()
 	}
 
+	applySectionData(active, activedat)
+	applySectionData(passive, passivedat)
+	return printer.Flush()
+}
+
+type outputItem struct {
+	Provider *types.Provider              `json:"provider,omitempty"`
+	Status   *types.ServerStatusParseable `json:"status,omitempty"`
+	Error    string                       `json:"error,omitempty"`
+}
+
+func applySectionData(output []*outputItem, data *dsky.SectionData) {
 	for _, result := range output {
 		var msg string
 		if len(result.Error) > 0 {
@@ -383,12 +400,11 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 				}
 			} else {
 				// Add empty rows
-				data.Add("Version", "").Add("Leases", "").Add("Deployments", "").Add("Orders", "").Add("Version", "").Add("Code", "").Add("Available", "")
+				data.Add("Version", "").Add("Leases", "").Add("Deployments", "").Add("Orders", "").Add("Version", "").Add("Available", "")
 			}
 			data.Add("Message(s)", wordwrap.WrapString(msg, 25))
 		}
 	}
-	return printer.Flush()
 }
 
 func closeFulfillmentCommand() *cobra.Command {
