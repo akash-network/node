@@ -45,7 +45,7 @@ func statusDeployment(session session.Session, cmd *cobra.Command, args []string
 	ld := session.Mode().Printer().NewSection("Lease").WithLabel("Lease(s)").NewData()
 	var exitErr error
 	for _, lease := range leases.Items {
-		AppendLeaseSD(lease, ld)
+		AppendLease(lease, ld)
 		if lease.State != types.Lease_ACTIVE {
 			continue
 		}

@@ -3,10 +3,12 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
+	"strconv"
 
+	"github.com/dustin/go-humanize"
+	"github.com/gosuri/uitable/util/strutil"
+	"github.com/gosuri/uitable/util/wordwrap"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/keys"
@@ -48,6 +50,7 @@ func createProviderCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create <file>",
 		Short: "create a provider",
+		Long:  "create a provider with the provided config file",
 		Args:  cobra.ExactArgs(1),
 		RunE:  session.WithSession(session.RequireNode(doCreateProviderCommand)),
 	}
@@ -65,6 +68,7 @@ func doCreateProviderCommand(session session.Session, cmd *cobra.Command, args [
 		return err
 	}
 
+	printer := session.Mode().Printer()
 	// XXX generate key for provider if doens't exist
 	key, err := session.Key()
 	if err != nil {
@@ -79,7 +83,7 @@ func doCreateProviderCommand(session session.Session, cmd *cobra.Command, args [
 			return err
 		}
 
-		info, _, err := kmgr.CreateMnemonic(kname, common.DefaultCodec, password, ktype)
+		info, seed, err := kmgr.CreateMnemonic(kname, common.DefaultCodec, password, ktype)
 		if err != nil {
 			return err
 		}
@@ -89,7 +93,14 @@ func doCreateProviderCommand(session session.Session, cmd *cobra.Command, args [
 			return err
 		}
 
-		fmt.Printf("Key created: %v\n", X(info.GetPubKey().Address()))
+		printer.Log().WithModule("key").Info("key created")
+		data := printer.NewSection("Create Key").NewData()
+		data.
+			WithTag("raw", info).
+			Add("Name", kname).
+			Add("Public Key", X(info.GetPubKey().Address())).
+			Add("Recovery Codes", seed)
+		printer.Flush()
 	}
 
 	txclient, err := session.TxClient()
@@ -114,14 +125,14 @@ func doCreateProviderCommand(session session.Session, cmd *cobra.Command, args [
 		Attributes: prov.Attributes,
 		Nonce:      nonce,
 	})
-
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(X(result.DeliverTx.Data))
-
-	return nil
+	printer.Log().WithModule("provider").Info("provider added")
+	data := printer.NewSection("Add Provider").NewData()
+	data.Add("Data", X(result.DeliverTx.Data))
+	return printer.Flush()
 }
 
 func runCommand() *cobra.Command {
@@ -239,12 +250,10 @@ func providerStatusCommand() *cobra.Command {
 }
 
 func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args []string) error {
-
 	plist, err := session.QueryClient().Providers(session.Ctx())
 	if err != nil {
 		return err
 	}
-
 	var providers []*types.Provider
 
 	if len(args) == 0 {
@@ -273,7 +282,6 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 	output := []outputItem{}
 
 	for _, provider := range providers {
-
 		status, err := http.Status(session.Ctx(), provider)
 		if err != nil {
 			output = append(output, outputItem{Provider: provider, Error: err.Error()})
@@ -295,12 +303,92 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 		})
 	}
 
-	buf, err := json.MarshalIndent(output, "", " ")
-	if err != nil {
-		return err
+	printer := session.Mode().Printer()
+	data := printer.
+		NewSection("Provider Status").
+		WithLabel("Provider(s) Status").
+		NewData().
+		WithTag("raw", output)
+
+	if len(output) > 1 {
+		data.AsList()
 	}
-	_, err = os.Stdout.Write(buf)
-	return err
+
+	for _, result := range output {
+		var msg string
+		if len(result.Error) > 0 {
+			msg = fmt.Sprintf("error=%v", result.Error)
+		}
+
+		if provider := result.Provider; provider != nil {
+			data.Add("Provider", X(result.Provider.Address))
+			if len(result.Provider.Attributes) > 0 {
+				attrs := make(map[string]string)
+				for _, a := range result.Provider.Attributes {
+					attrs[a.Name] = a.Value
+				}
+				data.Add("Attributes", attrs)
+			}
+
+			if s := result.Status; s != nil {
+				ver := make(map[string]string)
+				ver["version"] = s.Version.Version
+				// ver["date"] = s.Version.Date
+				if len(s.Version.Commit) > 1 {
+					ver["commit"] = strutil.Resize(s.Version.Commit, 10, false)
+				}
+				data.Add("Version", ver)
+				msg = msg + fmt.Sprintf(" code=%v", s.Code)
+				cluster := s.Status.Cluster
+				if cluster == nil {
+					continue
+				}
+				data.Add("Leases", cluster.Leases)
+				data.Add("Deployments", s.Status.Manifest.Deployments)
+				data.Add("Orders", s.Status.Bidengine.Orders)
+
+				cir := cluster.Inventory
+
+				acunits := make(map[string]string)
+				peunits := make(map[string]string)
+				avunits := make(map[string]string)
+				for _, r := range cir.Reservations.Active {
+					m, _ := strconv.Atoi(r.Memory)
+					d, _ := strconv.Atoi(r.Disk)
+					acunits["cpu"] = fmt.Sprint(r.CPU)
+					acunits["mem"] = humanize.Bytes(uint64(m))
+					acunits["disk"] = humanize.Bytes(uint64(d))
+				}
+				data.Add("Active", acunits)
+				for _, r := range cir.Reservations.Pending {
+					m, _ := strconv.Atoi(r.Memory)
+					d, _ := strconv.Atoi(r.Disk)
+					peunits["cpu"] = fmt.Sprint(r.CPU)
+					peunits["mem"] = humanize.Bytes(uint64(m))
+					peunits["disk"] = humanize.Bytes(uint64(d))
+				}
+				data.Add("Pending", peunits)
+
+				for _, r := range cir.Available {
+					m, _ := strconv.Atoi(r.Memory)
+					d, _ := strconv.Atoi(r.Disk)
+					avunits["cpu"] = fmt.Sprint(r.CPU)
+					avunits["mem"] = humanize.Bytes(uint64(m))
+					avunits["disk"] = humanize.Bytes(uint64(d))
+
+				}
+				data.Add("Available", avunits)
+				if len(s.Message) > 0 {
+					msg = msg + fmt.Sprintf(" msg=%v", s.Message)
+				}
+			} else {
+				// Add empty rows
+				data.Add("Version", "").Add("Leases", "").Add("Deployments", "").Add("Orders", "").Add("Version", "").Add("Code", "").Add("Available", "")
+			}
+			data.Add("Message(s)", wordwrap.WrapString(msg, 25))
+		}
+	}
+	return printer.Flush()
 }
 
 func closeFulfillmentCommand() *cobra.Command {

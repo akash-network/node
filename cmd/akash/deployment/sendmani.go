@@ -79,7 +79,7 @@ func doSendManifest(session session.Session, signer txutil.Signer, daddr []byte,
 	raw = append(raw, leases)
 	data := session.Mode().Printer().NewSection("Lease").WithLabel("Lease(s)").NewData()
 	for _, lease := range leases.Items {
-		AppendLeaseSD(lease, data)
+		AppendLease(lease, data)
 		if lease.State != types.Lease_ACTIVE {
 			continue
 		}
@@ -89,7 +89,7 @@ func doSendManifest(session session.Session, signer txutil.Signer, daddr []byte,
 		}
 
 		pd := dsky.NewSectionData("")
-		AppendProviderSD(provider, pd)
+		AppendProvider(provider, pd)
 		msg := fmt.Sprintf("upload manifest to provider (%s)", X(provider.Address))
 		log.WithAction(dsky.LogActionWait).Warn(msg)
 		err = http.SendManifest(session.Ctx(), mani, signer, provider, lease.Deployment)

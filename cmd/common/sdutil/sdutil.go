@@ -1,4 +1,4 @@
-package deployment
+package sdutil
 
 import (
 	"github.com/dustin/go-humanize"
