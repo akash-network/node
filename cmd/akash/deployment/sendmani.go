@@ -35,7 +35,6 @@ func sendManifest(session session.Session, cmd *cobra.Command, args []string) er
 		return err
 	}
 	var argPath, argAddr string
-
 	if len(args) > 0 {
 		argPath = args[0]
 	}

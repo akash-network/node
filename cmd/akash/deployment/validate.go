@@ -1,8 +1,6 @@
 package deployment
 
 import (
-	"fmt"
-
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/types"
@@ -14,7 +12,6 @@ func validateDeploymentCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "validate <deployment-file>",
 		Short: "validate deployment file",
-		Args:  cobra.ExactArgs(1),
 		RunE:  session.WithSession(doValidateDeploymentCommand),
 	}
 
@@ -22,12 +19,18 @@ func validateDeploymentCommand() *cobra.Command {
 }
 
 func doValidateDeploymentCommand(session session.Session, cmd *cobra.Command, args []string) error {
-	_, err := sdl.ReadFile(args[0])
+	var argPath string
+	if len(args) > 0 {
+		argPath = args[0]
+	}
+	argPath = session.Mode().Ask().StringVar(argPath, "Deployment File Path (required): ", true)
+	_, err := sdl.ReadFile(argPath)
 	if err != nil {
 		return err
 	}
-	fmt.Println("ok")
-	return nil
+	session.Mode().Printer().NewSection("Validate Deployment Config").NewData().
+		Add("Result", "Valid")
+	return session.Mode().Printer().Flush()
 }
 
 func manifestValidateResources(session session.Session, mani *types.Manifest, daddr []byte) error {

@@ -8,6 +8,7 @@ import (
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
 
@@ -28,32 +29,31 @@ func updateDeploymentCommand() *cobra.Command {
 }
 
 func updateDeployment(session session.Session, cmd *cobra.Command, args []string) error {
-
-	fmt.Println(`WARNING: this command is experimental and limited.
-
-	It is currently only possible to make small changes to your deployment.
-
-	Resources within a datacenter must remain the same.  You can change ports
-	and images;add and remove services; etc... so long as the overall
-	infrastructure requirements do not change.
-	`)
-
 	signer, _, err := session.Signer()
 	if err != nil {
 		return err
 	}
 
+	var argPath, argAddr string
+	if len(args) > 0 {
+		argPath = args[0]
+	}
+	argPath = session.Mode().Ask().StringVar(argPath, "Deployment File Path (required): ", true)
+	if len(args) > 1 {
+		argAddr = args[1]
+	}
+	argAddr = session.Mode().Ask().StringVar(argAddr, "Deployment ID (required): ", true)
 	txclient, err := session.TxClient()
 	if err != nil {
 		return err
 	}
 
-	daddr, err := keys.ParseDeploymentPath(args[1])
+	daddr, err := keys.ParseDeploymentPath(argAddr)
 	if err != nil {
 		return err
 	}
 
-	sdl, err := sdl.ReadFile(args[0])
+	sdl, err := sdl.ReadFile(argPath)
 	if err != nil {
 		return err
 	}
@@ -72,8 +72,7 @@ func updateDeployment(session session.Session, cmd *cobra.Command, args []string
 		return err
 	}
 
-	fmt.Println("updating deployment...")
-
+	log := session.Mode().Printer().Log().WithModule("deploy.update")
 	_, err = txclient.BroadcastTxCommit(&types.TxUpdateDeployment{
 		Deployment: daddr.ID(),
 		Version:    hash,
@@ -82,6 +81,17 @@ func updateDeployment(session session.Session, cmd *cobra.Command, args []string
 		session.Log().Error("error sending tx", "error", err)
 		return err
 	}
+	msg := fmt.Sprintf("upload manifest for deployment (%s)", argAddr)
+	log.WithAction(dsky.LogActionWait).Warn(msg)
 
 	return doSendManifest(session, signer, daddr.ID(), mani)
 }
+
+var updateWarnMsg = `warning: this command is experimental and limited; expect dragons.
+
+it is currently only possible to make small changes to your deployment.
+
+resources within a datacenter must remain the same.  you can change ports
+and images;add and remove services; etc... so long as the overall
+infrastructure requirements do not change.
+`
