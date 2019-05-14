@@ -10,6 +10,7 @@ services:
         accept:
           - hello.192.168.99.100.nip.io
           - hello.192.168.99.101.nip.io
+          - hello.192.168.99.127.nip.io
         to:
           - global: true
 

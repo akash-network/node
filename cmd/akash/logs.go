@@ -12,28 +12,34 @@ import (
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
 
 func logsCommand() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "logs <service> <lease>",
 		Short: "Service logs",
-		Args:  cobra.ExactArgs(2),
 		RunE:  session.WithSession(session.RequireNode(logs)),
 	}
 
 	session.AddFlagNode(cmd, cmd.PersistentFlags())
 	cmd.Flags().Int64P("lines", "l", 10, "Number of lines from the end of the logs to show per service")
 	cmd.Flags().BoolP("follow", "f", false, "Follow the log stream of the service")
-
 	return cmd
 }
 
 func logs(session session.Session, cmd *cobra.Command, args []string) error {
-	serviceName := args[0]
-	leasePath := args[1]
+	var serviceName, leasePath string
+	if len(args) > 0 {
+		serviceName = args[0]
+	}
+	serviceName = session.Mode().Ask().StringVar(serviceName, "Service Name (required): ", true)
+	if len(args) > 1 {
+		leasePath = args[1]
+	}
+	leasePath = session.Mode().Ask().StringVar(leasePath, "Lease Path (ID) (required): ", true)
+
 	lease, err := keys.ParseLeasePath(leasePath)
 	if err != nil {
 		return err
@@ -79,13 +85,21 @@ func printLog(session session.Session, r io.Reader) error {
 	)
 
 	for dec := json.NewDecoder(r); ; {
-
 		if err = dec.Decode(&obj); err != nil {
 			break
 		}
-
-		fmt.Printf("[%v] %v\n", obj.Result.Name, obj.Result.Message)
-		obj.Reset()
+		switch session.Mode().Type() {
+		case dsky.ModeTypeInteractive:
+			msg := fmt.Sprintf("[%v] %v\n", obj.Result.Name, obj.Result.Message)
+			fmt.Printf(msg)
+			obj.Reset()
+		default:
+			dat := session.Mode().Printer().NewSection("Log").NewData()
+			m := make(map[string]string)
+			m[obj.Result.Name] = obj.Result.Message
+			dat.Add("item", m)
+			session.Mode().Printer().Flush()
+		}
 	}
 
 	if err != io.EOF && err != context.Canceled {
