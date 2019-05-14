@@ -11,7 +11,7 @@ func baseCommand() *cobra.Command {
 		Short:         "Akash CLI Utility",
 		Long:          baseLongDesc,
 		SilenceUsage:  true,
-		SilenceErrors: true,
+		SilenceErrors: false,
 	}
 	session.SetupBaseCommand(cmd)
 	return cmd

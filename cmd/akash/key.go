@@ -75,8 +75,8 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 	data.
 		WithTag("raw", info).
 		Add("Name", name).
-		Add("Public Key:", X(info.GetPubKey().Address())).
-		Add("Recovery Codes:", seed)
+		Add("Public Key", X(info.GetPubKey().Address())).
+		Add("Recovery Codes", seed)
 	return printer.Flush()
 }
 

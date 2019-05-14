@@ -1,16 +1,10 @@
 package query
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
 	. "github.com/ovrclk/akash/util"
-	"github.com/ovrclk/akash/util/uiutil"
-	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
 
@@ -25,8 +19,6 @@ func queryProviderCommand() *cobra.Command {
 
 func doQueryProviderCommand(s session.Session, cmd *cobra.Command, args []string) error {
 	providers := make([]*types.Provider, 0)
-	printerDat := session.NewPrinterDataList()
-	rawDat := make([]interface{}, 0, 0)
 
 	if len(args) == 0 {
 		res, err := s.QueryClient().Providers(s.Ctx())
@@ -48,41 +40,21 @@ func doQueryProviderCommand(s session.Session, cmd *cobra.Command, args []string
 		}
 	}
 
+	data := s.Mode().Printer().NewSection("Provider(s)").NewData().WithTag("raw", providers)
+	if len(providers) > 1 {
+		data.AsList()
+	}
 	for _, p := range providers {
-		printerDat.AddResultList(makePrinterResultProvider(p))
-		rawDat = append(rawDat, p)
+		data.
+			Add("Address", X(p.Address)).
+			Add("Owner", X(p.Owner)).
+			Add("Host URI", p.HostURI)
+		attrs := make(map[string]string)
+		for _, a := range p.Attributes {
+			attrs[a.Name] = a.Value
+		}
+		data.Add("Attributes", attrs)
 	}
-	printerDat.Raw = rawDat
-	return s.Mode().
-		When(dsky.ModeTypeInteractive, func() error {
-			t := uitable.New().
-				AddRow(
-					uiutil.NewTitle("Address").String(),
-					uiutil.NewTitle("Owner").String(),
-					uiutil.NewTitle("Host URI").String(),
-					uiutil.NewTitle("Attributes").String(),
-				)
-			t.Wrap = true
-			for _, p := range providers {
-				res := makePrinterResultProvider(p)
-				t.AddRow(res["address"], res["owner"], res["host_uri"], res["attributes"])
-			}
-			return session.NewIPrinter(nil).AddText("").Add(t).Flush()
-		}).
-		When(dsky.ModeTypeShell, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
-		When(dsky.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
-		Run()
-}
 
-func makePrinterResultProvider(provider *types.Provider) session.PrinterResult {
-	var attrs []string
-	for _, a := range provider.Attributes {
-		attrs = append(attrs, fmt.Sprintf("%s:%s", a.Name, a.Value))
-	}
-	return session.PrinterResult{
-		"address":    X(provider.Address),
-		"owner":      X(provider.Owner),
-		"host_uri":   provider.HostURI,
-		"attributes": strings.Join(attrs, ", "),
-	}
+	return s.Mode().Printer().Flush()
 }

@@ -9,5 +9,9 @@ func Command() *cobra.Command {
 	}
 	cmd.AddCommand(createCmd())
 	cmd.AddCommand(closeCmd())
+	cmd.AddCommand(statusDeploymentCommand())
+	cmd.AddCommand(updateDeploymentCommand())
+	cmd.AddCommand(sendManifestCommand())
+	cmd.AddCommand(validateDeploymentCommand())
 	return cmd
 }

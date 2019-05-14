@@ -1,18 +1,15 @@
 package main
 
 import (
-	"strconv"
+	"fmt"
 
 	"github.com/dustin/go-humanize"
-	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/denom"
 	"github.com/ovrclk/akash/errors"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
 	. "github.com/ovrclk/akash/util"
-	"github.com/ovrclk/akash/util/ulog"
-	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
 
@@ -74,36 +71,15 @@ func doSendCommand(s session.Session, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	block := result.Height
-
-	printerDat := session.NewPrinterDataKV().
-		AddResultKV("from", X(fromAddr)).
-		AddResultKV("to", argTo).
-		AddResultKV("amount", argAmount).
-		AddResultKV("block", strconv.FormatInt(result.Height, 10)).
-		AddResultKV("hash", X(result.Hash))
-
-	printerDat.Raw = result
-
-	return s.Mode().
-		When(dsky.ModeTypeInteractive, func() error {
-			res := printerDat.Result[0]
-			t := uitable.New().
-				AddRow("From:", res["from"]).
-				AddRow("To:", res["to"]).
-				AddRow("Amount:", res["amount"]).
-				AddRow("Block (Height):", humanize.Comma(block)).
-				AddRow("Hash:", res["hash"])
-
-			p := session.NewIPrinter(nil).
-				AddText("").
-				AddTitle("Send Tokens").
-				Add(t).
-				AddText("")
-			p.Flush()
-			return p.AddText(ulog.Success("transfer complete")).Flush()
-		}).
-		When(dsky.ModeTypeShell, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
-		When(dsky.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
-		Run()
+	block := humanize.Comma(result.Height)
+	amountF := humanize.Comma(int64(amount))
+	s.Mode().Printer().Log().WithModule("tokens").Info(fmt.Sprintf("%d token(s) transfered to %v", amount, argTo))
+	data := s.Mode().Printer().NewSection("Tokens").WithLabel("Send Token(s)").NewData().WithTag("raw", result)
+	data.
+		Add("From", X(fromAddr)).
+		Add("To", argTo).
+		Add("Amount", amountF).
+		Add("Block", block).
+		Add("Hash", X(result.Hash))
+	return s.Mode().Printer().Flush()
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/util/uiutil"
-	"github.com/ovrclk/akash/util/ulog"
 	"github.com/ovrclk/dsky"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
@@ -66,21 +65,16 @@ func WithSession(fn Runner) cmdRunner {
 				return err
 			}
 			if err := fn(session, cmd, args); err != context.Canceled && err != nil {
-				printerDat := NewPrinterDataKV().AddResultKV("error", fmt.Sprintf("%v", err))
-				return session.Mode().
-					When(dsky.ModeTypeInteractive, func() error {
-						fmt.Fprintln(os.Stderr, "")
-						fmt.Fprintln(os.Stderr, ulog.Error(fmt.Sprintf("%v", err)))
-						return err
-					}).
-					When(dsky.ModeTypeShell, func() error {
-						NewTextPrinter(printerDat, nil).Flush()
-						return err
-					}).
-					When(dsky.ModeTypeJSON, func() error {
-						NewJSONPrinter(printerDat, nil).Flush()
-						return err
-					}).Run()
+				if session.Mode().IsInteractive() {
+					session.Mode().Printer().Log().Error(err)
+				} else {
+					dat := session.Mode().Printer().NewSection("Failure").NewData()
+					dat.Add("Error", err)
+				}
+				if err2 := session.Mode().Printer().Flush(); err2 != nil {
+					return err2
+				}
+				return err
 			}
 			return nil
 		})

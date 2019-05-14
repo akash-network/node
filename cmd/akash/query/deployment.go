@@ -8,8 +8,6 @@ import (
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/types"
 	. "github.com/ovrclk/akash/util"
-	"github.com/ovrclk/akash/util/uiutil"
-	"github.com/ovrclk/akash/util/ulog"
 	"github.com/ovrclk/dsky"
 	"github.com/spf13/cobra"
 )
@@ -28,18 +26,11 @@ func doQueryDeploymentCommand(s session.Session, cmd *cobra.Command, args []stri
 	var hasSigner, hasDepIDs bool
 	var depID string
 	deployments := make([]types.Deployment, 0, 0)
-	printerDat := session.NewPrinterDataList()
-	rawDat := make([]interface{}, 0, 0)
-
 	hasDepIDs = len(args) > 0
 	_, info, err := s.Signer()
 	if err == nil {
 		hasSigner = true
 	}
-
-	printer := s.Mode().Printer()
-	data := printer.NewSection("Deployment Query").NewData()
-
 	switch {
 	case hasSigner == false && hasDepIDs == false:
 		if err != nil && s.Mode().IsInteractive() {
@@ -51,7 +42,7 @@ func doQueryDeploymentCommand(s session.Session, cmd *cobra.Command, args []stri
 				warn = fmt.Sprintf("%v", err)
 			}
 			warn = warn + "\n\nEither re-run the command by providing a key using '-k <key>' or a deployment ID as attribute. Alternatively, you can also provide the below info to continue."
-			fmt.Printf("%s\n", ulog.Warn(warn))
+			s.Mode().Printer().Log().Warn(warn)
 			depID = s.Mode().Ask().StringVar(depID, "Deployment ID (required): ", true)
 			args = []string{depID}
 			hasDepIDs = true
@@ -82,45 +73,20 @@ func doQueryDeploymentCommand(s session.Session, cmd *cobra.Command, args []stri
 		}
 	}
 
-	for _, dep := range deployments {
-		data.Add("Deployment ID", X(dep.Address))
-		dat := map[string]string{
-			"deployment": X(dep.Address),
-			"tenant":     X(dep.Tenant),
-			"state":      dep.State.String(),
-			"version":    X(dep.Version),
-		}
-		printerDat.AddResultList(dat)
-		rawDat = append(rawDat, dep)
+	data := s.Mode().Printer().NewSection("Deployment").WithLabel("Deployment(s)").NewData().WithTag("raw", deployments)
+	if len(deployments) > 1 {
+		data.AsList()
 	}
-	printerDat.Raw = rawDat
-	return s.Mode().
-		When(dsky.ModeTypeInteractive, func() error {
-			p := session.NewIPrinter(nil).AddText("")
-			lt := uiutil.NewListTable().AddHeader("State", "Deployment ID", "Version")
-
-			// Display tenant ID only when signer is not present to avoid redudency
-			if hasDepIDs {
-				p.AddTitle("Deployments")
-				lt.AddHeader("Tenant ID")
-			} else {
-				p.AddTitle(fmt.Sprintf("Deployments for %s (%s)", X(info.GetPubKey().Address()), s.KeyName()))
-			}
-
-			for _, dat := range printerDat.Result {
-				row := []interface{}{dat["state"], dat["deployment"], dat["version"]}
-				if hasDepIDs {
-					row = append(row, dat["tenant"])
-				}
-				lt.AddRow(row...)
-			}
-
-			t := lt.UITable()
-			t.MaxColWidth = 100
-			t.Wrap = true
-
-			return p.Add(t).Flush()
-		}).When(dsky.ModeTypeShell, func() error { return session.NewTextPrinter(printerDat, nil).Flush() }).
-		When(dsky.ModeTypeJSON, func() error { return session.NewJSONPrinter(printerDat, nil).Flush() }).
-		Run()
+	for _, dep := range deployments {
+		data.
+			Add("Deployment ID", X(dep.Address)).
+			Add("Tenant ID", X(dep.Tenant))
+		if dep.State == types.Deployment_ACTIVE {
+			data.Add("State", dsky.Color.Hi.Sprint(dep.State.String()))
+		} else {
+			data.Add("State", dep.State.String())
+		}
+		data.Add("Version", X(dep.Version))
+	}
+	return s.Mode().Printer().Flush()
 }

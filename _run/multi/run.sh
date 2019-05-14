@@ -8,9 +8,10 @@ do_init(){
   mkdir -p "$AKASH_DIR"
   mkdir -p "$AKASHD_DIR"
 
-  eval $(akash key create master -m text); echo $PUBLIC_KEY_ADDRESS > "$DATA_ROOT/master.key"
-  eval $(akash key create other -m text); echo $PUBLIC_KEY_ADDRESS > "$DATA_ROOT/other.key"
-
+	eval $(akash key create master -m shell)
+	echo $akash_create_key_0_public_key > "$DATA_ROOT/master.key"
+	eval $(akash key create other -m shell)
+	echo $akash_create_key_0_public_key > "$DATA_ROOT/other.key"
   _akashd init "$(cat "$DATA_ROOT/master.key")" -t helm -c "${HELM_NODE_COUNT:-4}"
 }
 

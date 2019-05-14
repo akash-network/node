@@ -60,7 +60,7 @@ func doQueryLeaseCommand(s session.Session, cmd *cobra.Command, args []string) e
 		leases = res.Items
 	}
 
-	data := s.Mode().Printer().NewSection("Lease(s) Query").NewData().WithTag("raw", leases)
+	data := s.Mode().Printer().NewSection("Lease(s)").NewData().WithTag("raw", leases)
 	if len(leases) > 1 {
 		data.AsList()
 	}
