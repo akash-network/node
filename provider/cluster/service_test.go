@@ -117,7 +117,7 @@ func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
 		Return(cluster.NullClient().Inventory()).
 		Maybe()
 
-	c, err := cluster.NewService(ctx, providerSession(t), bus, client)
+	c, err := cluster.NewService(ctx, providerSession(t, lease), bus, client)
 	require.NoError(t, err)
 	testutil.WaitReady(t, c.Ready())
 
@@ -143,10 +143,14 @@ func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
 	mock.AssertExpectationsForObjects(t, client)
 }
 
-func providerSession(t *testing.T) session.Session {
+func providerSession(t *testing.T, leases ...*types.Lease) session.Session {
 	log := testutil.Logger()
 	txc := new(txumocks.Client)
 	qc := new(qmocks.Client)
+
+	qc.On("Leases", mock.Anything).
+		Return(&types.Leases{Items: leases}, nil)
+
 	provider := testutil.Provider(testutil.Address(t), 1)
 	return session.New(log, provider, txc, qc)
 }
