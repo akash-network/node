@@ -35,3 +35,44 @@ func AppendProvider(p *types.Provider, data dsky.SectionData) {
 	}
 	data.Add("Attributes", attrs)
 }
+
+func AppendLeaseStatus(status *types.LeaseStatusResponse, sd dsky.SectionData) {
+	for _, service := range status.Services {
+		sd.Add("Name", service.Name)
+		for _, uri := range service.URIs {
+			sd.Add("Hosts", uri).WithLabel("Hosts", "Host(s) / IP(s)")
+		}
+		sd.Add("Available", service.Available)
+		sd.Add("Total", service.Total)
+	}
+}
+
+func AppendTxCreateFulfilment(ff []*types.TxCreateFulfillment, data dsky.SectionData) {
+	for _, tx := range ff {
+		data.Add("Group", tx.Group).Add("Price", tx.Price).Add("Provider", tx.Provider.String())
+	}
+}
+
+func AppendGroupSpec(groups []*types.GroupSpec, data dsky.SectionData) {
+	for _, g := range groups {
+		data.Add("Group", g.Name)
+		reqs := make(map[string]string)
+		for _, a := range g.Requirements {
+			reqs[a.Name] = a.Value
+		}
+		data.Add("Requirements", reqs)
+		rd := dsky.NewSectionData(" ")
+		AppendResourceGroup(g.Resources, rd)
+		data.Add("Resources", rd)
+	}
+}
+
+func AppendResourceGroup(rg []types.ResourceGroup, data dsky.SectionData) {
+	for _, r := range rg {
+		data.Add("Count", r.Count)
+		data.Add("Price", r.Price)
+		data.Add("CPU", r.Unit.CPU)
+		data.Add("Memory", r.Unit.Memory)
+		data.Add("Disk", r.Unit.Disk)
+	}
+}

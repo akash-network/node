@@ -15,7 +15,6 @@ func main() {
 	root := baseCommand()
 	root.AddCommand(keyCommand())
 	root.AddCommand(sendCommand())
-	root.AddCommand(deploymentCommand())
 	root.AddCommand(deployment.Command())
 	root.AddCommand(providerCommand())
 	root.AddCommand(query.QueryCommand())

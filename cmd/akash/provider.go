@@ -373,9 +373,7 @@ func applySectionData(output []*outputItem, data dsky.SectionData, session sessi
 				data.Add("Leases", cluster.Leases)
 				data.Add("Deployments", s.Status.Manifest.Deployments)
 				data.Add("Orders", s.Status.Bidengine.Orders)
-
 				cir := cluster.Inventory
-
 				acunits := make(map[string]string)
 				peunits := make(map[string]string)
 				avunits := make(map[string]string)

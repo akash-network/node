@@ -2,6 +2,7 @@ package deployment
 
 import (
 	"github.com/ovrclk/akash/cmd/akash/session"
+	"github.com/ovrclk/akash/cmd/common/sdutil"
 	"github.com/ovrclk/akash/errors"
 	"github.com/ovrclk/akash/keys"
 	"github.com/ovrclk/akash/provider/http"
@@ -45,7 +46,7 @@ func statusDeployment(session session.Session, cmd *cobra.Command, args []string
 	ld := session.Mode().Printer().NewSection("Lease").WithLabel("Lease(s)").NewData()
 	var exitErr error
 	for _, lease := range leases.Items {
-		AppendLease(lease, ld)
+		sdutil.AppendLease(lease, ld)
 		if lease.State != types.Lease_ACTIVE {
 			continue
 		}
@@ -63,19 +64,10 @@ func statusDeployment(session session.Session, cmd *cobra.Command, args []string
 		}
 
 		sd := dsky.NewSectionData("").AsList()
-		for _, service := range status.Services {
-			sd.Add("Name", service.Name)
-			for _, uri := range service.URIs {
-				sd.Add("Hosts", uri).WithLabel("Hosts", "Host(s) / IP(s)")
-			}
-			sd.Add("Available", service.Available)
-			sd.Add("Total", service.Total)
-		}
-		ld.Add("Services", sd).WithLabel("Services", "Service(s)")
 
+		sdutil.AppendLeaseStatus(status, sd)
+		ld.Add("Services", sd).WithLabel("Services", "Service(s)")
 	}
-	// data := session.Mode().Printer().NewSection("Deployment Status").NewData()
-	// data.Add("Deployment ID", id)
 	if err := session.Mode().Printer().Flush(); err != nil {
 		return err
 	}

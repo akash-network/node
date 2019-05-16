@@ -3,13 +3,12 @@ package deployment
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 
-	"github.com/gosuri/uitable"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/cmd/common/sdutil"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/marketplace"
 	"github.com/ovrclk/akash/provider/http"
@@ -45,9 +44,10 @@ const (
 )
 
 type deployState struct {
+	id                  string
 	fulfilments         []*types.TxCreateFulfillment
 	leases              []*types.TxCreateLease
-	providerLeaseStatus map[*types.Provider]*types.LeaseStatusResponse
+	providerLeaseStatus map[*types.LeaseID]*types.LeaseStatusResponse
 	groups              []*types.GroupSpec
 	orders              []*types.TxCreateOrder
 	mani                *types.Manifest
@@ -56,7 +56,7 @@ type deployState struct {
 
 var (
 	state = &deployState{
-		providerLeaseStatus: make(map[*types.Provider]*types.LeaseStatusResponse),
+		providerLeaseStatus: make(map[*types.LeaseID]*types.LeaseStatusResponse),
 	}
 	mtx sync.Mutex
 )
@@ -122,6 +122,7 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 		}
 		address := bcResult.DeliverTx.Data
 		status.Message = X(address)
+		state.id = status.Message
 		statusChan <- status
 
 		statusChan <- &deployStatus{Event: eventReceiveOrdersBegin}
@@ -191,7 +192,7 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 						return
 					}
 					mtx.Lock()
-					state.providerLeaseStatus[provider] = leaseStatus
+					state.providerLeaseStatus[&tx.LeaseID] = leaseStatus
 					mtx.Unlock()
 
 					// when there is a lease created for each order, the deploy is complete
@@ -214,7 +215,6 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 
 func processStages(statusChan chan *deployStatus, s session.Session) error {
 	log := s.Mode().Printer().Log().WithModule("deploy")
-	writer := os.Stdout
 	for {
 		status := <-statusChan
 		if err := status.Error; err != nil {
@@ -275,18 +275,35 @@ func processStages(statusChan chan *deployStatus, s session.Session) error {
 		case eventDeployDone:
 			msg := "deployment complete"
 			logDone(log, "deploy", msg)
-			session.NewIPrinter(writer).
-				AddText("").
-				AddTitle("Deployment Group(s)").
-				Add(groupsUITable(state.groups)).
-				AddText("").
-				AddTitle("Fulfillment(s)").
-				Add(fulfilmentsUITable(state.fulfilments)).
-				AddText("").
-				AddTitle("Lease(s)").
-				Add(tableLeases(state.leases)).
-				Flush()
-			return nil
+			printer := s.Mode().Printer()
+
+			data := printer.NewSection("Deployment").NewData().Add("Deployment ID", state.id)
+
+			// add groups
+			gd := dsky.NewSectionData(" ")
+			if len(state.groups) > 1 {
+				gd.AsList()
+			}
+			sdutil.AppendGroupSpec(state.groups, gd)
+			data.Add("Deployment Groups", gd).WithLabel("Deployment Groups", "Deployment Groups(s)")
+
+			// add fulfillments
+			fd := dsky.NewSectionData(" ")
+			if len(state.fulfilments) > 1 {
+				fd.AsList()
+			}
+			sdutil.AppendTxCreateFulfilment(state.fulfilments, fd)
+			data.Add("Fulfillments", fd).WithLabel("Fulfillments", "Fulfillment(s)")
+
+			// add services
+			data = printer.NewSection("Leases").WithLabel("Lease(s)").NewData().AsList()
+			for lid, v := range state.providerLeaseStatus {
+				data.Add("Lease ID", lid.String())
+				sd := dsky.NewSectionData(" ").AsList()
+				sdutil.AppendLeaseStatus(v, sd)
+				data.Add("Services", sd).WithLabel("Services", "Services(s)")
+			}
+			return printer.Flush()
 		}
 	}
 }
@@ -320,57 +337,6 @@ func createBroadcast(client txutil.Client, ttl int64, groups []*types.GroupSpec,
 		Groups:   groups,
 		Version:  hash,
 	})
-}
-
-func fulfilmentsUITable(f []*types.TxCreateFulfillment) *uitable.Table {
-	t := uitable.New()
-	t.AddRow("GROUP", "PRICE", "PROVIDER")
-	for _, tx := range f {
-		t.AddRow(tx.Group, tx.Price, tx.Provider.String())
-	}
-	return t
-}
-
-func groupsUITable(groups []*types.GroupSpec) *uitable.Table {
-	t := uitable.New()
-	t.Wrap = true
-	t.AddRow("GROUP", "REQUIREMENTS", "RESOURCES")
-	for _, g := range groups {
-		var reqs []string
-		for _, r := range g.Requirements {
-			reqs = append(reqs, fmt.Sprintf("%s:%s", r.Name, r.Value))
-		}
-		var resources []string
-		for _, r := range g.Resources {
-			rg := fmt.Sprintf("Count: %d, Price %d, CPU: %d, Memory: %d, Disk: %d", r.Count, r.Price, r.Unit.CPU, r.Unit.Memory, r.Unit.Disk)
-			resources = append(resources, rg)
-		}
-		t.AddRow(g.Name, strings.Join(reqs, "\n"), strings.Join(resources, "\n"))
-	}
-	return t
-}
-
-func tableLeases(leases []*types.TxCreateLease) *uitable.Table {
-	t := uitable.New().AddRow("LEASE ID", "PRICE")
-	for _, tx := range leases {
-		t.AddRow(tx.LeaseID.String(), tx.Price)
-	}
-	return t
-}
-
-func tableSummary(ls map[*types.Provider]*types.LeaseStatusResponse) {
-	ptable := uitable.New()
-	ptable.Wrap = true
-	ptable.MaxColWidth = 300
-	ptable.AddRow("SERVICE", "PROVIDER", "URI")
-	for provider, status := range ls {
-		for _, service := range status.Services {
-			for _, uri := range service.URIs {
-				ptable.AddRow(service.Name, provider.Address, uri)
-			}
-		}
-	}
-
 }
 
 func logDone(log dsky.Logger, module, msg string) {
