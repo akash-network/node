@@ -33,7 +33,7 @@ func SetupBaseCommand(cmd *cobra.Command) {
 		return initCommandConfig(root)
 	}
 	cmd.PersistentFlags().StringP(flagRootDir, "d", defaultRootDir(), "data directory")
-	cmd.PersistentFlags().StringP(flagMode, "m", "interactive", "output mode (interactive|text|json)")
+	cmd.PersistentFlags().StringP(flagMode, "m", "interactive", "output mode (interactive|shell|json)")
 }
 
 func initCommandConfig(root string) error {

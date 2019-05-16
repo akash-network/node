@@ -1,5 +1,5 @@
-hash: c6dd0a523f6960ee1dc646cf42230a8232609cca96b8c322e4465e776f450171
-updated: 2019-04-23T23:57:06.115554-07:00
+hash: 961600c01577bd31412d5d385a33442863ec9ceeeb8aab8a60626b67b877ea9e
+updated: 2019-05-15T20:09:33.246655-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -42,10 +42,14 @@ imports:
   version: 782f4967f2dc4564575ca782fe2d04090b5faca8
   subpackages:
   - spew
+- name: github.com/dustin/go-humanize
+  version: 9f541cc9db5d55bce703bd99987c9d5cb8eea45e
 - name: github.com/emirpasic/gods
   version: 1615341f118ae12f353cc8a983f35b584342c9b3
   subpackages:
   - trees/avltree
+- name: github.com/fatih/color
+  version: 5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4
 - name: github.com/fsnotify/fsnotify
   version: ccc981bf80385c528a65fbfdd49bf2d8da22aa23
 - name: github.com/ghodss/yaml
@@ -102,8 +106,10 @@ imports:
   version: 53c1911da2b537f792e7cafcb446b05ffe33b996
 - name: github.com/gorilla/websocket
   version: 66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d
+- name: github.com/gosuri/uilive
+  version: 810653011da975cf3ac54bf7aea22d5c9e49e317
 - name: github.com/gosuri/uitable
-  version: 36ee7e946282a3fb1cfecd476ddc9b35d8847e42
+  version: 2cf933346b8370a3a3d8867ef5cf54b2129d8ecf
   subpackages:
   - util/strutil
   - util/wordwrap
@@ -133,6 +139,8 @@ imports:
   - json/parser
   - json/scanner
   - json/token
+- name: github.com/huandu/xstrings
+  version: 8bbcf2f9ccb55755e748b7644164cd4bdce94c1d
 - name: github.com/imdario/mergo
   version: 9316a62528ac99aaecb4e47eadd6dc8aa6533d58
 - name: github.com/inconshreveable/mousetrap
@@ -147,6 +155,10 @@ imports:
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/magiconair/properties
   version: c2353362d570a7bfa228149c62842019201cfb71
+- name: github.com/mattn/go-colorable
+  version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
+- name: github.com/mattn/go-isatty
+  version: c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7
 - name: github.com/mattn/go-runewidth
   version: 703b5e6b11ae25aeb2af9ebb5d5fdf8fa2575211
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -159,6 +171,8 @@ imports:
   version: bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94
 - name: github.com/modern-go/reflect2
   version: 05fbef0ca5da472bbf96c9322b84a53edc03c9fd
+- name: github.com/ovrclk/dsky
+  version: 1b2a21c88d2f7049996d34a5d6c03f308b091e84
 - name: github.com/pelletier/go-toml
   version: e33f6544292e42cce6432aad20ac1eb020e2a1d8
 - name: github.com/peterbourgon/diskv
@@ -209,7 +223,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/spf13/viper
-  version: 9e56dacc08fbbf8c9ee2dbc717553c758ce42bc9
+  version: 7a605a50e69cd1ea431c4a1e6eebe9b287ef6de4
 - name: github.com/stretchr/objx
   version: ef50b0de28773081167c97fc27cf29a0bf8b8c71
 - name: github.com/stretchr/testify

@@ -77,3 +77,16 @@ import:
   version: 3764759f34a542a3aef74d6b02e35be7ab893bba
   repo: https://github.com/tendermint/crypto
 - package: github.com/gosuri/uitable
+  version: ~0.0.2
+- package: github.com/gosuri/uilive
+  version: 0.0.2
+- package: github.com/fatih/color
+  version: ~1.7.0
+- package: github.com/mattn/go-colorable
+  version: ~0.1.1
+- package: github.com/dustin/go-humanize
+  version: ~1.0.0
+- package: github.com/mattn/go-isatty
+  version: ^0.0.7
+- package: github.com/ovrclk/dsky
+  version: ~0.0.1

@@ -10,7 +10,6 @@ services:
         accept:
           - hello.192.168.99.100.nip.io
           - hello.192.168.99.101.nip.io
-          - hello.192.168.99.127.nip.io
         to:
           - global: true
 
@@ -21,14 +20,12 @@ profiles:
       memory: "128Mi"
       disk: "1Gi"
   placement:
-    westcoast:
-      attributes:
-        region: us-west
+    global:
       pricing:
-        web: 100u
+        web: 1000u
 
 deployment:
   web:
-    westcoast:
+    global:
       profile: web
       count: 2

@@ -10,7 +10,6 @@ services:
         accept:
           - hello.192.168.99.100.nip.io
           - hello.192.168.99.101.nip.io
-          - hello.192.168.99.127.nip.io
         to:
           - global: true
 
@@ -26,9 +25,17 @@ profiles:
         region: us-west
       pricing:
         web: 100u
+    eastcoast:
+      attributes:
+        region: us-east
+      pricing:
+        web: 100u
 
 deployment:
   web:
     westcoast:
       profile: web
-      count: 2
+      count: 1
+    eastcoast:
+      profile: web
+      count: 1

@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"strconv"
 
+	"github.com/dustin/go-humanize"
 	"github.com/ovrclk/akash/cmd/akash/session"
+	. "github.com/ovrclk/akash/util"
 	"github.com/spf13/cobra"
 )
 
@@ -19,19 +20,26 @@ func statusCommand() *cobra.Command {
 	return cmd
 }
 
-func doStatusCommand(session session.Session, cmd *cobra.Command, args []string) error {
-	client := session.Client()
-
+func doStatusCommand(s session.Session, cmd *cobra.Command, args []string) error {
+	client := s.Client()
 	result, err := client.Status()
 	if err != nil {
 		return err
 	}
+	version := result.NodeInfo.Version
+	syncHeight := result.SyncInfo.LatestBlockHeight
+	syncHash := X(result.SyncInfo.LatestBlockHash)
+	syncBlockTime := result.SyncInfo.LatestBlockTime
 
-	fmt.Printf("Block: %v\nBlock Hash: %v\n", result.SyncInfo.LatestBlockHeight, result.SyncInfo.LatestBlockHash)
-
-	if result.SyncInfo.LatestBlockHeight == 0 {
-		os.Exit(1)
+	printer := s.Mode().Printer()
+	data := printer.NewSection("Status").NewData().AsPane().
+		Add("Node Version", version).
+		Add("Latest Block Height", strconv.FormatInt(syncHeight, 10))
+	if syncHeight > 0 {
+		data.
+			Add("Latest Block Hash", syncHash).
+			Add("Last Block Created", humanize.Time(syncBlockTime))
 	}
-
-	return nil
+	data.WithTag("raw", result)
+	return printer.Flush()
 }

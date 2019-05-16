@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/query"
 	"github.com/ovrclk/akash/txutil"
 	"github.com/ovrclk/akash/util/uiutil"
+	"github.com/ovrclk/dsky"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/spf13/cobra"
@@ -42,6 +44,8 @@ type Session interface {
 	Host() string
 	Password() (string, error)
 	Printer() uiutil.Printer
+	Mode() dsky.Mode
+	ULog() ULog
 }
 
 type cmdRunner func(cmd *cobra.Command, args []string) error
@@ -52,7 +56,24 @@ func WithSession(fn Runner) cmdRunner {
 		return common.RunForever(func(ctx context.Context) error {
 			session := newSession(ctx, cmd)
 			defer session.shutdown()
-			if err := fn(session, cmd, args); err != context.Canceled {
+			mtypeS, err := session.cmd.Flags().GetString(flagMode)
+			if err != nil {
+				return err
+			}
+			session.mode, err = dsky.NewMode(dsky.ModeType(mtypeS), nil, nil)
+			if err != nil {
+				return err
+			}
+			if err := fn(session, cmd, args); err != context.Canceled && err != nil {
+				if session.Mode().IsInteractive() {
+					session.Mode().Printer().Log().Error(err)
+				} else {
+					dat := session.Mode().Printer().NewSection("Failure").NewData()
+					dat.Add("Error", err)
+				}
+				if err2 := session.Mode().Printer().Flush(); err2 != nil {
+					return err2
+				}
 				return err
 			}
 			return nil
@@ -104,11 +125,36 @@ func RequireNode(fn Runner) Runner {
 }
 
 func RequireKey(fn Runner) Runner {
-	return func(session Session, cmd *cobra.Command, args []string) error {
-		if _, err := session.Key(); err != nil {
-			return err
+	return func(s Session, cmd *cobra.Command, args []string) error {
+		if _, err := s.Key(); err != nil {
+			if !s.Mode().IsInteractive() {
+				return err
+			}
+
+			// when interactive, ask for the key
+			kmgr, err := s.KeyManager()
+			if err != nil {
+				return err
+			}
+
+			infos, err := kmgr.List()
+			if err != nil {
+				return err
+			}
+			knames := make([]string, 0)
+			for _, info := range infos {
+				knames = append(knames, info.GetName())
+			}
+			var kname string
+			kname = s.Mode().Ask().StringVar(kname, fmt.Sprintf("Signer Key (valid: %s): ", strings.Join(knames, ", ")), true)
+			if len(kname) == 0 {
+				return fmt.Errorf("required argument missing: key")
+			}
+			if err := cmd.Flags().Set(flagKey, kname); err != nil {
+				return err
+			}
 		}
-		return fn(session, cmd, args)
+		return fn(s, cmd, args)
 	}
 }
 
@@ -124,6 +170,7 @@ type session struct {
 	ctx     context.Context
 	mtx     sync.Mutex
 	printer uiutil.Printer
+	mode    dsky.Mode
 }
 
 func (s *session) shutdown() {
@@ -212,10 +259,20 @@ func (s *session) Key() (keys.Info, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	kname := s.KeyName()
 	if kname == "" {
-		return nil, errors.New("no key specified")
+		infos, err := kmgr.List()
+		if err != nil {
+			return nil, err
+		}
+		switch size := len(infos); {
+		case size == 0:
+			return nil, NoKeysForDefaultError{}
+		case size > 1:
+			return nil, &TooManyKeysForDefaultError{len(infos)}
+		default:
+			kname = infos[0].GetName()
+		}
 	}
 
 	info, err := kmgr.Get(kname)
@@ -279,6 +336,14 @@ func (s *session) Host() string {
 		return s.cmd.Flag(flagHost).Value.String()
 	}
 	return viper.GetString(flagHost)
+}
+
+func (s *session) Mode() dsky.Mode {
+	return s.mode
+}
+
+func (s *session) ULog() ULog {
+	return NewUlogger(s)
 }
 
 func (s *session) Printer() uiutil.Printer {

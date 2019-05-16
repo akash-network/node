@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ovrclk/akash/cmd/akash/deployment"
 	"github.com/ovrclk/akash/cmd/akash/query"
 	"github.com/ovrclk/akash/cmd/common"
 )
@@ -14,7 +15,7 @@ func main() {
 	root := baseCommand()
 	root.AddCommand(keyCommand())
 	root.AddCommand(sendCommand())
-	root.AddCommand(deploymentCommand())
+	root.AddCommand(deployment.Command())
 	root.AddCommand(providerCommand())
 	root.AddCommand(query.QueryCommand())
 	root.AddCommand(statusCommand())
