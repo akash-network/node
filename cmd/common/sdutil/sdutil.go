@@ -7,7 +7,7 @@ import (
 	"github.com/ovrclk/dsky"
 )
 
-func AppendLease(lease *types.Lease, ld *dsky.SectionData) {
+func AppendLease(lease *types.Lease, ld dsky.SectionData) {
 	ld.Add("Lease ID", lease.LeaseID).
 		Add("Price", humanize.Comma(int64(lease.Price)))
 
@@ -18,13 +18,13 @@ func AppendLease(lease *types.Lease, ld *dsky.SectionData) {
 }
 
 // MakeLease creates a new SectionData for the Lease
-func MakeLease(lease *types.Lease) *dsky.SectionData {
+func MakeLease(lease *types.Lease) dsky.SectionData {
 	ld := dsky.NewSectionData("")
 	AppendLease(lease, ld)
 	return ld
 }
 
-func AppendProvider(p *types.Provider, data *dsky.SectionData) {
+func AppendProvider(p *types.Provider, data dsky.SectionData) {
 	data.
 		Add("Address", X(p.Address)).
 		Add("Owner", X(p.Owner)).

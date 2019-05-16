@@ -5,9 +5,9 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/dustin/go-humanize"
-	"github.com/gosuri/uitable/util/strutil"
 	"github.com/gosuri/uitable/util/wordwrap"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
@@ -299,28 +299,32 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 	}
 
 	printer := session.Mode().Printer()
-
 	var active, passive []*outputItem
-
-	fmt.Println("got entries:", len(output))
-
 	for _, o := range output {
 		if len(o.Error) == 0 {
-			fmt.Println("found active")
 			active = append(active, o)
 			continue
 		}
 		passive = append(passive, o)
 	}
-	activedat := printer.NewSection("Active Providers").WithLabel("Active Provider(s) Status").NewData().WithTag("raw", active)
-	passivedat := printer.NewSection("Passive Providers").WithLabel("Passive Provider(s) Status").NewData().WithTag("raw", passive)
-	if len(output) > 1 {
-		activedat.AsList()
-		passivedat.AsList()
+
+	if len(active) > 0 {
+		activedat := printer.NewSection("Active Providers").WithLabel("Active Provider(s) Status").NewData().WithTag("raw", active)
+		applySectionData(active, activedat, session)
+		if len(active) > 1 && session.Mode().IsInteractive() {
+			activedat.AsList()
+			activedat.Hide("Active", "Pending", "Available")
+		}
+	}
+	if len(passive) > 0 {
+		passivedat := printer.NewSection("Passive Providers").WithLabel("Passive Provider(s) Status").NewData().WithTag("raw", passive)
+		applySectionData(passive, passivedat, session)
+		if len(passive) > 1 && session.Mode().IsInteractive() {
+			passivedat.AsList()
+			passivedat.Hide("Active", "Pending", "Available")
+		}
 	}
 
-	applySectionData(active, activedat)
-	applySectionData(passive, passivedat)
 	return printer.Flush()
 }
 
@@ -330,11 +334,11 @@ type outputItem struct {
 	Error    string                       `json:"error,omitempty"`
 }
 
-func applySectionData(output []*outputItem, data *dsky.SectionData) {
+func applySectionData(output []*outputItem, data dsky.SectionData, session session.Session) {
 	for _, result := range output {
-		var msg string
+		var msg []string
 		if len(result.Error) > 0 {
-			msg = fmt.Sprintf("error=%v", result.Error)
+			msg = append(msg, fmt.Sprintf("error=%v", result.Error))
 		}
 
 		if provider := result.Provider; provider != nil {
@@ -348,14 +352,20 @@ func applySectionData(output []*outputItem, data *dsky.SectionData) {
 			}
 
 			if s := result.Status; s != nil {
-				ver := make(map[string]string)
-				ver["version"] = s.Version.Version
-				// ver["date"] = s.Version.Date
-				if len(s.Version.Commit) > 1 {
-					ver["commit"] = strutil.Resize(s.Version.Commit, 10, false)
+				// add the full version when there is a single item (pane mode),
+				// else just show the main version
+				if len(output) > 1 && session.Mode().IsInteractive() {
+					data.Add("Version", s.Version.Version)
+				} else {
+					ver := make(map[string]string)
+					ver["version"] = s.Version.Version
+					ver["date"] = s.Version.Date
+					if len(s.Version.Commit) > 1 {
+						ver["commit"] = s.Version.Commit
+					}
+					data.Add("Version", ver)
 				}
-				data.Add("Version", ver)
-				msg = msg + fmt.Sprintf(" code=%v", s.Code)
+				msg = append(msg, fmt.Sprintf("code=%v", s.Code))
 				cluster := s.Status.Cluster
 				if cluster == nil {
 					continue
@@ -396,13 +406,13 @@ func applySectionData(output []*outputItem, data *dsky.SectionData) {
 				}
 				data.Add("Available", avunits)
 				if len(s.Message) > 0 {
-					msg = msg + fmt.Sprintf(" msg=%v", s.Message)
+					msg = append(msg, fmt.Sprintf(" msg=%v", s.Message))
 				}
 			} else {
 				// Add empty rows
 				data.Add("Version", "").Add("Leases", "").Add("Deployments", "").Add("Orders", "").Add("Version", "").Add("Available", "")
 			}
-			data.Add("Message(s)", wordwrap.WrapString(msg, 25))
+			data.Add("Message(s)", wordwrap.WrapString(strings.Join(msg, " "), 25))
 		}
 	}
 }

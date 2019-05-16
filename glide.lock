@@ -1,5 +1,5 @@
 hash: 961600c01577bd31412d5d385a33442863ec9ceeeb8aab8a60626b67b877ea9e
-updated: 2019-05-13T17:03:42.288052-07:00
+updated: 2019-05-15T20:09:33.246655-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -172,7 +172,7 @@ imports:
 - name: github.com/modern-go/reflect2
   version: 05fbef0ca5da472bbf96c9322b84a53edc03c9fd
 - name: github.com/ovrclk/dsky
-  version: baae8e7d469513dfc0655c5aacf4f7bdb30a6053
+  version: 1b2a21c88d2f7049996d34a5d6c03f308b091e84
 - name: github.com/pelletier/go-toml
   version: e33f6544292e42cce6432aad20ac1eb020e2a1d8
 - name: github.com/peterbourgon/diskv
