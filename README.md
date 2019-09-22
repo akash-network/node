@@ -1,24 +1,31 @@
 [![Akash](_docs/img/logo-label-black.svg "Akash")](#overview)
-[![Build status](https://badge.buildkite.com/85e140e3e8c0257c63d976946b061b805f0f338cdca7b02a9c.svg?branch=master)](https://buildkite.com/ovrclk/akash)
-[![Coverage](https://codecov.io/gh/ovrclk/akash/branch/master/graph/badge.svg)](https://codecov.io/gh/ovrclk/akash)
+> [![Build status](https://badge.buildkite.com/85e140e3e8c0257c63d976946b061b805f0f338cdca7b02a9c.svg?branch=master)](https://buildkite.com/ovrclk/akash)
+> [![Coverage](https://codecov.io/gh/ovrclk/akash/branch/master/graph/badge.svg)](https://codecov.io/gh/ovrclk/akash)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ovrclk/akash)](https://goreportcard.com/report/github.com/ovrclk/akash)
 
-# Overview
+[Akash](https://akash.network) is a secure, transparent, and decentralized cloud computing marketplace that 
+connects those who need computing resources (tenants) with those that have computing capacity to lease (providers).
 
-Akash is a cloud infrastructure platform whose resources are provided
-by independent datacenters.  A high-level overview of the Akash Protocol
-can be found [here](https://akash.network/paper.pdf); a detailed
-protocol definition can be found [here](_docs/design.md); and the target
-workload definition spec is [here](_docs/sdl.md).
+For a high-level overview of the Akash protocol and network economics, 
+check out the [whitepapers](https://akash.network/research); a detailed protocol definition can be 
+found in the [design documentation](_docs/design.md); and the target workload definition spec is [here](_docs/sdl.md).
 
-This repository contains Akash Suite, the reference implementation of the
-[Akash Protocol](https://akash.network/paper.pdf).  It is an actively-developed
-prototype currently focused on the distributed marketplace functionality.
+## Akash Suite
 
-The Akash Suite is composed of two applications: `akash` and `akashd`.  `akashd`
-is the ([tendermint](https://github.com/tendermint/tendermint)-powered) blockchain node that
-implements the decentralized exchange; `akash` is the client used to access the exchange and network
+This repository contains Akash Suite, the reference implementation of the [Akash Protocol](https://akash.network/l/whitepaper).  
+
+It is an actively-developed prototype currently focused on the distributed marketplace functionality.
+
+The Akash Suite is composed of two applications: `akash` and `akashd`:
+
+- `akashd` is the ([tendermint](https://github.com/tendermint/tendermint)-powered) blockchain node that
+implements the decentralized exchange.
+- `akash` is the client used to access the exchange and network
 in general.
+
+## Get Started
+
+The easiest way to get started with akash is by trying Testnet. Sign up [here](https://akash.network/signup) to get started. 
 
 # Installing
 
