@@ -33,10 +33,11 @@ case "$1" in
     akash deployment create deployment.yml -k master
     ;;
   minikube-start)
-    minikube start --cpus 4 --memory 4096 --kubernetes-version v1.12.2
+    minikube start --cpus 4 --memory 4096 --kubernetes-version v1.15.4
     minikube addons enable ingress
     minikube addons enable metrics-server
     kubectl create -f rbac.yml
+    helm init
     ;;
   *)
     echo "USAGE: $0 <init|send|query|marketplace|deploy|minikube-start>" >&2
