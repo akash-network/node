@@ -20,14 +20,12 @@ profiles:
       memory: "128Mi"
       disk: "1Gi"
   placement:
-    westcoast:
-      attributes:
-        region: us-west
+    global:
       pricing:
         web: 100u
 
 deployment:
   web:
-    westcoast:
+    global:
       profile: web
       count: 2

@@ -163,9 +163,11 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 	if err != nil {
 		return err
 	}
+	session.Mode().Printer().Log().WithModule("provider").Info(fmt.Sprintf("Running Provider %v", args[0]))
 
 	pobj, err := session.QueryClient().Provider(session.Ctx(), key.ID())
 	if err != nil {
+		session.Mode().Printer().Log().WithModule("provider").Error(fmt.Sprintf("Unable to query with key %v", args[0]))
 		return err
 	}
 

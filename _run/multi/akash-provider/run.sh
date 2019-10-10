@@ -27,11 +27,14 @@ masterKey="$AKASH_DATA/master.key"
 providerKey="$AKASH_DATA/provider.key"
 
 if [ ! -s "$masterKey" ] || [ ! -s "$providerKey" ]; then
-  ./akash key create master > "$masterKey"
-  echo "created account: " $(cat "$masterKey")
+	eval $(./akash key create master -m shell)
+	echo $akash_create_key_0_public_key > "$masterKey"
+  echo "created master key: " $(cat "$masterKey")
 
-  ./akash provider create /config/provider.yml -k master > "$providerKey"
-  echo "created provider: " $(cat "$providerKey")
+  echo "adding provider"
+  eval $(./akash provider create /config/provider.yml -k master -m shell)
+  echo $akash_add_provider_0_data > "$providerKey"
+  echo "added provider: " $(cat "$providerKey")
 fi
 
 echo "running provider $(cat "$providerKey")..."
