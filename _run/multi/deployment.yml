@@ -8,9 +8,7 @@ services:
       - port: 80
         as: 80
         accept:
-          - hello.192.168.99.100.nip.io
-          - hello.192.168.99.101.nip.io
-          - hello.192.168.99.127.nip.io
+          - hello.192.168.99.130.nip.io
         to:
           - global: true
 
