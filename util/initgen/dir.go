@@ -28,7 +28,7 @@ type multiDirWriter struct {
 func (w multiDirWriter) Write() error {
 	for _, node := range w.ctx.Nodes() {
 		path := path.Join(w.ctx.Path(), node.Name)
-		nctx := NewContext(node.Name, path, w.ctx.Genesis(), node)
+		nctx := NewContext(path, w.ctx.Genesis(), node)
 		nw := NewDirWriter(nctx)
 		if err := nw.Write(); err != nil {
 			return err
