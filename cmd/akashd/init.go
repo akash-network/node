@@ -8,12 +8,10 @@ import (
 )
 
 const (
-	maxTokens uint64 = 1000000000000000
-
-	flagInitCount  = "count"
-	flagInitType   = "type"
-	flagInitOutput = "out"
-	flagInitName   = "name"
+	maxTokens      uint64 = 1000000000
+	flagInitType          = "type"
+	flagInitOutput        = "out"
+	flagInitNames         = "names"
 )
 
 func initCommand() *cobra.Command {
@@ -24,23 +22,20 @@ func initCommand() *cobra.Command {
 		RunE:  withSession(doInitCommand),
 	}
 
-	cmd.Flags().UintP(flagInitCount, "c", 1, "generate multiple init directories")
 	cmd.Flags().StringP(flagInitType, "t", string(initgen.TypeDirectory), "output type (dir,helm)")
 	cmd.Flags().StringP(flagInitOutput, "o", "", "output directory (default to -d value)")
-	cmd.Flags().StringP(flagInitName, "n", "node", "node name")
-
+	cmd.Flags().StringSliceP(flagInitNames, "n", []string{"node"}, "Node name(s)")
 	return cmd
 }
 
 func doInitCommand(session Session, cmd *cobra.Command, args []string) error {
-
 	b := initgen.NewBuilder()
 
-	name, err := cmd.Flags().GetString(flagInitName)
+	names, err := cmd.Flags().GetStringSlice(flagInitNames)
 	if err != nil {
 		return err
 	}
-	b = b.WithName(name)
+	b = b.WithNames(names)
 
 	path, err := cmd.Flags().GetString(flagInitOutput)
 	if err != nil {
@@ -50,12 +45,6 @@ func doInitCommand(session Session, cmd *cobra.Command, args []string) error {
 		path = session.RootDir()
 	}
 	b = b.WithPath(path)
-
-	count, err := cmd.Flags().GetUint(flagInitCount)
-	if err != nil {
-		return err
-	}
-	b = b.WithCount(count)
 
 	type_, err := cmd.Flags().GetString(flagInitType)
 	if err != nil {

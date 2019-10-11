@@ -20,7 +20,7 @@ type multiHelmWriter struct {
 
 func (w multiHelmWriter) Write() error {
 	for _, node := range w.ctx.Nodes() {
-		nctx := NewContext(node.Name, w.ctx.Path(), w.ctx.Genesis(), node)
+		nctx := NewContext(w.ctx.Path(), w.ctx.Genesis(), node)
 		nw := NewHelmWriter(nctx)
 		if err := nw.Write(); err != nil {
 			return err
@@ -38,7 +38,6 @@ type helmWriter struct {
 }
 
 func (w helmWriter) Write() error {
-
 	gbuf, err := node.TMGenesisToJSON(w.ctx.Genesis())
 	if err != nil {
 		return err
@@ -48,6 +47,11 @@ func (w helmWriter) Write() error {
 	var sbuf []byte
 	var nkey []byte
 	var peers []helmNodePeer
+
+	if err := os.MkdirAll(w.ctx.Path(), 0755); err != nil {
+		return err
+	}
+
 	if len(w.ctx.Nodes()) > 0 {
 		curNode := w.ctx.Nodes()[0]
 
@@ -69,11 +73,12 @@ func (w helmWriter) Write() error {
 		for _, node := range curNode.Peers {
 			peers = append(peers, helmNodePeer{Name: node.Name, ID: node.NodeKey.ID()})
 		}
+
 	}
 
 	obj := helmConfig{
 		Node: helmNodeConfig{
-			Name:    w.ctx.Name(),
+			Name:    w.ctx.Nodes()[0].Name,
 			Genesis: string(gbuf),
 			PVKey:   string(kbuf),
 			PVState: string(sbuf),
@@ -87,11 +92,7 @@ func (w helmWriter) Write() error {
 		return err
 	}
 
-	if err := os.MkdirAll(w.ctx.Path(), 0755); err != nil {
-		return err
-	}
-
-	opath := path.Join(w.ctx.Path(), w.ctx.Name()+".yaml")
+	opath := path.Join(w.ctx.Path(), w.ctx.Nodes()[0].Name+".yaml")
 
 	return ioutil.WriteFile(opath, buf, 0644)
 }

@@ -2,7 +2,6 @@ package initgen
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tendermint/crypto"
@@ -28,17 +27,15 @@ type Node struct {
 
 // Builder is the config builder
 type Builder interface {
-	WithName(string) Builder
+	WithNames([]string) Builder
 	WithPath(string) Builder
-	WithCount(uint) Builder
 	WithAkashGenesis(*types.Genesis) Builder
 	Create() (Context, error)
 }
 
 type builder struct {
-	name     string
+	names    []string
 	path     string
-	count    uint
 	pgenesis *types.Genesis
 	type_    Type
 }
@@ -48,18 +45,13 @@ func NewBuilder() Builder {
 	return &builder{}
 }
 
-func (b *builder) WithName(name string) Builder {
-	b.name = name
+func (b *builder) WithNames(names []string) Builder {
+	b.names = names
 	return b
 }
 
 func (b *builder) WithPath(path string) Builder {
 	b.path = path
-	return b
-}
-
-func (b *builder) WithCount(count uint) Builder {
-	b.count = count
 	return b
 }
 
@@ -79,8 +71,8 @@ func (b *builder) Create() (Context, error) {
 	nodes := b.generateNodes(pvkeys, nodekeys)
 
 	// Extract public keys from filePVs
-	pubkeys := make([]crypto.PubKey, 0, b.count)
-	for i := uint(0); i < b.count; i++ {
+	pubkeys := make([]crypto.PubKey, 0, len(b.names))
+	for i := 0; i < len(b.names); i++ {
 		pubkeys = append(pubkeys, pvkeys[i].Key.PubKey)
 	}
 	// make public keys as validators in genesis doc
@@ -103,40 +95,40 @@ func (b *builder) Create() (Context, error) {
 		return nil, err
 	}
 
-	return NewContext(b.name, b.path, genesis, nodes...), nil
+	return NewContext(b.path, genesis, nodes...), nil
 }
 
 func (b *builder) generatePrivateValidators() []tmtypes.PrivValidator {
 
-	if b.count == 0 {
+	if len(b.names) == 0 {
 		return nil
 	}
 
-	validators := make([]tmtypes.PrivValidator, 0, b.count)
-	for i := uint(0); i < b.count; i++ {
+	validators := make([]tmtypes.PrivValidator, 0, len(b.names))
+	for i := 0; i < len(b.names); i++ {
 		validators = append(validators, privval.GenFilePV("", ""))
 	}
 	return validators
 }
 
 func (b *builder) generateFilePVKeys() []*privval.FilePV {
-	if b.count == 0 {
+	if len(b.names) == 0 {
 		return nil
 	}
 
-	filepvkeys := make([]*privval.FilePV, 0, b.count)
-	for i := uint(0); i < b.count; i++ {
+	filepvkeys := make([]*privval.FilePV, 0, len(b.names))
+	for i := 0; i < len(b.names); i++ {
 		filepvkeys = append(filepvkeys, privval.GenFilePV("", ""))
 	}
 	return filepvkeys
 }
 
 func (b *builder) generateNodeKeys() []*p2p.NodeKey {
-	if b.count == 0 {
+	if len(b.names) == 0 {
 		return nil
 	}
-	keys := make([]*p2p.NodeKey, 0, b.count)
-	for i := uint(0); i < b.count; i++ {
+	keys := make([]*p2p.NodeKey, 0, len(b.names))
+	for i := 0; i < len(b.names); i++ {
 		key := &p2p.NodeKey{PrivKey: ed25519.GenPrivKey()}
 		keys = append(keys, key)
 	}
@@ -144,20 +136,20 @@ func (b *builder) generateNodeKeys() []*p2p.NodeKey {
 }
 
 func (b *builder) generateNodes(fvals []*privval.FilePV, nodekeys []*p2p.NodeKey) []*Node {
-	if b.count == 0 {
+	if len(b.names) == 0 {
 		return nil
 	}
 
-	nodes := make([]*Node, 0, b.count)
+	nodes := make([]*Node, 0, len(b.names))
 
-	if b.count == 1 {
+	if len(b.names) == 1 {
 		return []*Node{
-			{Name: b.name, FilePV: fvals[0], NodeKey: nodekeys[0]}}
+			{Name: b.names[0], FilePV: fvals[0], NodeKey: nodekeys[0]}}
 	}
 
-	for n := uint(0); n < b.count; n++ {
+	for n := 0; n < len(b.names); n++ {
 		nodes = append(nodes, &Node{
-			Name:    fmt.Sprintf("%v-%v", b.name, n),
+			Name:    b.names[n],
 			NodeKey: nodekeys[n],
 			FilePV:  fvals[n],
 		})
@@ -188,7 +180,7 @@ func (b *builder) generateValidators(pubKeys []crypto.PubKey) []tmtypes.GenesisV
 
 	for idx, pk := range pubKeys {
 		gvalidators = append(gvalidators, tmtypes.GenesisValidator{
-			Name:    fmt.Sprintf("%v-%v", b.name, idx),
+			Name:    b.names[idx],
 			PubKey:  pk,
 			Address: pk.Address(),
 			Power:   10,

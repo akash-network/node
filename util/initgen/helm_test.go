@@ -18,8 +18,7 @@ func TestHelmWriter(t *testing.T) {
 	defer os.RemoveAll(basedir)
 
 	ctx, err := NewBuilder().
-		WithName("foo").
-		WithCount(1).
+		WithNames([]string{"foo"}).
 		WithPath(basedir).
 		Create()
 	require.NoError(t, err)
@@ -28,7 +27,7 @@ func TestHelmWriter(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, w.Write())
 
-	path := path.Join(basedir, ctx.Name()+".yaml")
+	path := path.Join(basedir, "foo.yaml")
 	assert.FileExists(t, path)
 
 	buf, err := ioutil.ReadFile(path)
@@ -37,7 +36,7 @@ func TestHelmWriter(t *testing.T) {
 	hobj := new(helmConfig)
 	require.NoError(t, yaml.Unmarshal(buf, &hobj))
 
-	require.Equal(t, hobj.Node.Name, ctx.Name())
+	require.Equal(t, hobj.Node.Name, "foo")
 
 	gobj, err := tmtypes.GenesisDocFromJSON([]byte(hobj.Node.Genesis))
 	require.NoError(t, err)
@@ -55,8 +54,7 @@ func TestMultiHelmWriter(t *testing.T) {
 	defer os.RemoveAll(basedir)
 
 	ctx, err := NewBuilder().
-		WithName("foo").
-		WithCount(2).
+		WithNames([]string{"foo", "bar"}).
 		WithPath(basedir).
 		Create()
 	require.NoError(t, err)
@@ -65,6 +63,6 @@ func TestMultiHelmWriter(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, w.Write())
 
-	assert.FileExists(t, path.Join(basedir, "foo-0.yaml"))
-	assert.FileExists(t, path.Join(basedir, "foo-1.yaml"))
+	assert.FileExists(t, path.Join(basedir, "foo.yaml"))
+	assert.FileExists(t, path.Join(basedir, "bar.yaml"))
 }

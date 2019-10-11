@@ -9,9 +9,8 @@ import (
 
 func BuilderTestSingle(t *testing.T) {
 	ctx, err := initgen.NewBuilder().
-		WithName("foo").
-		WithCount(1).
-		WithPath("/bar").
+		WithNames([]string{"foo"}).
+		WithPath("/baz").
 		Create()
 
 	require.NoError(t, err)
@@ -19,23 +18,20 @@ func BuilderTestSingle(t *testing.T) {
 	require.Len(t, ctx.Nodes(), 1)
 	require.Len(t, ctx.Genesis().Validators, 1)
 	require.Equal(t, "foo", ctx.Genesis().Validators[0])
-	require.Equal(t, "foo", ctx.Name())
-	require.Equal(t, "/bar", ctx.Path())
+	require.Equal(t, "/baz", ctx.Path())
 }
 
 func BuilderTestMulti(t *testing.T) {
 	ctx, err := initgen.NewBuilder().
-		WithName("foo").
-		WithCount(5).
-		WithPath("/bar").
+		WithNames([]string{"foo", "bar"}).
+		WithPath("/baz").
 		Create()
 
 	require.NoError(t, err)
 
-	require.Len(t, ctx.Nodes(), 5)
-	require.Len(t, ctx.Genesis().Validators, 5)
-	require.Equal(t, "foo-0", ctx.Genesis().Validators[0])
-	require.Equal(t, "foo-4", ctx.Genesis().Validators[4])
-	require.Equal(t, "foo", ctx.Name())
-	require.Equal(t, "/bar", ctx.Path())
+	require.Len(t, ctx.Nodes(), 2)
+	require.Len(t, ctx.Genesis().Validators, 2)
+	require.Equal(t, "foo", ctx.Genesis().Validators[0])
+	require.Equal(t, "bar", ctx.Genesis().Validators[1])
+	require.Equal(t, "/baz", ctx.Path())
 }

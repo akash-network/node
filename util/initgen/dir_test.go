@@ -17,10 +17,8 @@ import (
 func TestDirWriter(t *testing.T) {
 	basedir := testutil.TempDir(t)
 	defer os.RemoveAll(basedir)
-
 	ctx, err := initgen.NewBuilder().
-		WithName("foo").
-		WithCount(1).
+		WithNames([]string{"foo"}).
 		WithPath(basedir).
 		Create()
 	require.NoError(t, err)
@@ -67,8 +65,7 @@ func TestMultiDirWriter(t *testing.T) {
 	defer os.RemoveAll(basedir)
 
 	ctx, err := initgen.NewBuilder().
-		WithName("foo").
-		WithCount(2).
+		WithNames([]string{"foo", "bar"}).
 		WithPath(basedir).
 		Create()
 	require.NoError(t, err)
@@ -77,9 +74,9 @@ func TestMultiDirWriter(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, w.Write())
 
-	assert.FileExists(t, path.Join(basedir, "foo-0", initgen.ConfigDir, initgen.GenesisFilename))
-	assert.FileExists(t, path.Join(basedir, "foo-0", initgen.ConfigDir, initgen.PVKeyFilename))
+	assert.FileExists(t, path.Join(basedir, "foo", initgen.ConfigDir, initgen.GenesisFilename))
+	assert.FileExists(t, path.Join(basedir, "foo", initgen.ConfigDir, initgen.PVKeyFilename))
 
-	assert.FileExists(t, path.Join(basedir, "foo-1", initgen.ConfigDir, initgen.GenesisFilename))
-	assert.FileExists(t, path.Join(basedir, "foo-1", initgen.ConfigDir, initgen.PVKeyFilename))
+	assert.FileExists(t, path.Join(basedir, "bar", initgen.ConfigDir, initgen.GenesisFilename))
+	assert.FileExists(t, path.Join(basedir, "bar", initgen.ConfigDir, initgen.PVKeyFilename))
 }
