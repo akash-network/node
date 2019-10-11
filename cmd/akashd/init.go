@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/ovrclk/akash/keys"
 	ptypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/util/initgen"
@@ -26,19 +24,17 @@ func initCommand() *cobra.Command {
 
 	cmd.Flags().StringP(flagInitType, "t", string(initgen.TypeDirectory), "output type (dir,helm)")
 	cmd.Flags().StringP(flagInitOutput, "o", "", "output directory (default to -d value)")
-	cmd.Flags().StringSliceP(flagInitNames, "n", []string{"node1", "node2"}, "Node name(s)")
+	cmd.Flags().StringSliceP(flagInitNames, "n", []string{"node"}, "Node name(s)")
 	return cmd
 }
 
 func doInitCommand(session Session, cmd *cobra.Command, args []string) error {
-
 	b := initgen.NewBuilder()
 
 	names, err := cmd.Flags().GetStringSlice(flagInitNames)
 	if err != nil {
 		return err
 	}
-	fmt.Println("----- node size", len(names))
 	b = b.WithNames(names)
 
 	path, err := cmd.Flags().GetString(flagInitOutput)
