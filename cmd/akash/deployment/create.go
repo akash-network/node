@@ -68,7 +68,7 @@ type deployStatus struct {
 	Result  interface{}
 }
 
-func createCmd() *cobra.Command {
+func CreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create <deployment-file>",
 		Short: "create a deployment",

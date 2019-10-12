@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/ovrclk/akash/cmd/akash/deployment"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -19,20 +20,6 @@ func TestProviderRun_NoNode(t *testing.T) {
 	hexaddr := testutil.HexAddress(t)
 	doTest_NoNode(t, providerCommand(),
 		runCommand().Name(), hexaddr, "-k", "keyname")
-}
-
-func TestCreateDeployment_NoNode(t *testing.T) {
-	testutil.Shrug(t, 338)
-	path := "deployment.yaml"
-	doTest_NoNode(t, deploymentCommand(),
-		createDeploymentCommand().Name(), path, "-k", "keyname")
-}
-
-func TestCloseDeployment_NoNode(t *testing.T) {
-	testutil.Shrug(t, 338)
-	deployment := testutil.HexDeploymentAddress(t)
-	doTest_NoNode(t, deploymentCommand(),
-		closeDeploymentCommand().Name(), deployment, "-k", "keyname")
 }
 
 func TestMarketplace_NoNode(t *testing.T) {
@@ -63,4 +50,18 @@ func doTest_NoNode(t *testing.T, cmd *cobra.Command, args ...string) {
 		err := base.Execute()
 		assert.Error(t, err)
 	})
+}
+
+func TestCreateDeployment_NoNode(t *testing.T) {
+	testutil.Shrug(t, 338)
+	path := "deployment.yaml"
+	doTest_NoNode(t, deployment.Command(),
+		deployment.CreateCmd().Name(), path, "-k", "keyname")
+}
+
+func TestCloseDeployment_NoNode(t *testing.T) {
+	testutil.Shrug(t, 338)
+	dep := testutil.HexDeploymentAddress(t)
+	doTest_NoNode(t, deployment.Command(),
+		deployment.CloseCmd().Name(), dep, "-k", "keyname")
 }

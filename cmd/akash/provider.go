@@ -28,7 +28,6 @@ import (
 )
 
 func providerCommand() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "provider",
 		Short: "Manage provider",

@@ -7,8 +7,8 @@ func Command() *cobra.Command {
 		Use:   "deployment",
 		Short: "Manage deployments",
 	}
-	cmd.AddCommand(createCmd())
-	cmd.AddCommand(closeCmd())
+	cmd.AddCommand(CreateCmd())
+	cmd.AddCommand(CloseCmd())
 	cmd.AddCommand(statusDeploymentCommand())
 	cmd.AddCommand(updateDeploymentCommand())
 	cmd.AddCommand(sendManifestCommand())
