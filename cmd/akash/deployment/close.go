@@ -10,8 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func closeCmd() *cobra.Command {
-
+func CloseCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "close <deployment-id>",
 		Short: "close a deployment",
