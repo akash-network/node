@@ -39,7 +39,7 @@ case "$1" in
     ;;
   provider)
     [ -f "$DATA_ROOT/master.dc" ] ||
-      eval $(akash_provider provider create provider.yml -k master -m shell) \
+      eval $(akash_provider provider add provider.yml -k master -m shell) \
       && echo $akash_add_provider_0_data > "$DATA_ROOT/master.dc"
     akash_provider provider run "$(cat "$DATA_ROOT/master.dc")" -k master
     ;;

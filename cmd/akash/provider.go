@@ -49,9 +49,9 @@ func providerCommand() *cobra.Command {
 func createProviderCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "create <config>",
-		Short: "create a provider",
-		Long:  "create a provider with the provided config file",
+		Use:   "add <config>",
+		Short: "add a new provider",
+		Long:  "register a provider with the provided config file",
 		RunE: session.WithSession(
 			session.RequireKey(session.RequireNode(doCreateProviderCommand))),
 	}
@@ -101,7 +101,7 @@ func doCreateProviderCommand(ses session.Session, cmd *cobra.Command, args []str
 
 	printer.Log().WithModule("provider").Info("provider added")
 	data := printer.NewSection("Add Provider").NewData()
-	data.Add("Data", X(result.DeliverTx.Data))
+	data.Add("Key", X(result.DeliverTx.Data))
 	return printer.Flush()
 }
 

@@ -64,5 +64,4 @@ func close(session session.Session, cmd *cobra.Command, args []string) error {
 	}
 
 	return session.Mode().Printer().Flush()
-	return nil
 }

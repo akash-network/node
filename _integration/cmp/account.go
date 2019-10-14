@@ -9,10 +9,10 @@ import (
 )
 
 func accountBalance(key key, amount int64) gestalt.Component {
-	parse := js.Do(js.Int(amount, "result", "[0]", "balance"))
+	parse := js.Do(js.Int(amount, "raw", "[0]", "balance"))
 
 	return akash("account-balance",
-		"query", "account", "-m", "json", key.addr.Var()).
+		"query", "account", key.addr.Var()).
 		FN(parse).
 		WithMeta(g.Require(key.addr.Name()))
 }
