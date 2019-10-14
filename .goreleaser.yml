@@ -1,29 +1,35 @@
 # See documentation at http://goreleaser.com
 builds:
-  - binary: akash
+  - id: akash
+    binary: akash
     main: ./cmd/akash
-    goarch: [amd64]
+    goarch: [amd64, arm64]
     goos: [linux,darwin,windows]
     ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
 
-  - binary: akashd
+  - id: akashd
+    binary: akashd
     main: ./cmd/akashd
-    goarch: [amd64]
+    goarch: [amd64, arm64]
     goos: [linux,darwin]
     ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
 
-archive:
-  files:
-    - none*
+archives:
+  - id: akash
+    builds:
+    - akash
+    - akashd
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    replacements:
+      amd64: 64-bit
+      386: 32-bit
+      darwin: macOS
+      linux: Tux
+    wrap_in_directory: true
+    format: zip
 
 checksum:
-  # You can change the name of the checksums file.
-  # Default is `{{ .ProjectName }}_{{ .Version }}_checksums.txt`.
-  name_template: "{{ .ProjectName }}_checksums.txt"
-
-  # Algorithm to be used.
-  # Accepted options are sha256, sha512, sha1, crc32, md5, sha224 and sha384.
-  # Default is sha256.
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
   algorithm: sha256
 
 dockers:
@@ -34,7 +40,8 @@ dockers:
     goarch: amd64
     image_templates:  
     - "ovrclk/akash:latest"
-    - "ovrclk/akash:{{ .Tag }}"
+    - "ovrclk/akash:{{ .ShortCommit }}"
+    - "ovrclk/akash:{{ .Version }}"
     - "ovrclk/akash:v{{ .Major }}"
     - "ovrclk/akash:v{{ .Major }}{{ .Minor }}"
 
@@ -45,24 +52,24 @@ dockers:
     goarch: amd64
     image_templates:  
     - "ovrclk/akashd:latest"
-    - "ovrclk/akashd:{{ .Tag }}"
-    - "ovrclk/akashd:{{ .Tag }}"
+    - "ovrclk/akashd:{{ .ShortCommit }}"
+    - "ovrclk/akashd:{{ .Version }}"
     - "ovrclk/akashd:v{{ .Major }}"
     - "ovrclk/akashd:v{{ .Major }}{{ .Minor }}"
 
-brew:
-  name: akash
-
-  github:
-    owner: ovrclk
-    name: homebrew-tap
-
-  homepage: "https://akash.network"
-  description: "Blockchain-powered decentralized compute platform"
-
-  install: |
-    bin.install "akash"
-    bin.install "akashd"
+brews:
+  - name: akash
+    ids:
+    - akash
+    - akashd
+    github:
+      owner: ovrclk
+      name: homebrew-tap
+    homepage: "https://akash.network"
+    description: "Blockchain-powered decentralized compute platform"
+    install: |
+      bin.install "akash"
+      bin.install "akashd"
 
 release:
   github:
