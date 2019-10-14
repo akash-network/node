@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
@@ -24,6 +25,7 @@ func keyCommand() *cobra.Command {
 	cmd.AddCommand(keyShowCommand())
 	cmd.AddCommand(keyRecoverCommand())
 	cmd.AddCommand(keyRemoveCommand())
+	cmd.AddCommand(keyImportCommand())
 	return cmd
 }
 
@@ -77,7 +79,11 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 		Add("Name", name).
 		Add("Public Key", X(info.GetPubKey().Address())).
 		Add("Recovery Codes", seed)
-	return printer.Flush()
+
+	printer.Flush()
+	notice := "Write these Recovery codes in a safe place. It is the only way to recover your account."
+	printer.Log().WithModule("Important").Warn(notice)
+	return nil
 }
 
 func keyListCommand() *cobra.Command {
@@ -162,7 +168,8 @@ func keyShowCommand() *cobra.Command {
 		Short: "display a key",
 		RunE:  session.WithSession(session.RequireRootDir(doKeyShowCommand)),
 	}
-	session.AddFlagKeyType(cmd, cmd.Flags())
+	cmd.Flags().Bool("public", false, "display only public key")
+	cmd.Flags().Bool("private", false, "display only private key")
 	return cmd
 }
 
@@ -191,6 +198,26 @@ func doKeyShowCommand(ses session.Session, cmd *cobra.Command, args []string) er
 	}
 
 	printer := ses.Mode().Printer()
+
+	if ok, _ := cmd.Flags().GetBool("public"); ok {
+		fmt.Println(X(info.GetPubKey().Address()))
+		return nil
+	}
+
+	if ok, _ := cmd.Flags().GetBool("private"); ok {
+		info, err := kmgr.Export(name)
+		if err != nil {
+			return err
+		}
+		fmt.Println(info)
+		return nil
+	}
+
+	if ok, _ := cmd.Flags().GetBool("private"); ok {
+		fmt.Println(X(info.GetPubKey().Address()))
+		return nil
+	}
+
 	data := printer.NewSection("Display Key").NewData()
 	data.
 		WithTag("raw", info).
@@ -209,6 +236,58 @@ func keyRemoveCommand() *cobra.Command {
 	}
 	session.AddFlagKeyType(cmd, cmd.Flags())
 	return cmd
+}
+
+func keyImportCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "import <name> <path>",
+		Short: "import a private key",
+		Long:  "import a private key with the name from the given path",
+		RunE:  session.WithSession(session.RequireRootDir(doKeyImportCommand)),
+	}
+	session.AddFlagKeyType(cmd, cmd.Flags())
+	return cmd
+}
+
+func doKeyImportCommand(ses session.Session, cmd *cobra.Command, args []string) error {
+	var name, path string
+	if len(args) > 1 {
+		name = args[0]
+		path = args[1]
+	}
+	name = ses.Mode().Ask().StringVar(name, "Key Name (required): ", true)
+	path = ses.Mode().Ask().StringVar(path, "Path (required): ", true)
+
+	if len(name) == 0 {
+		return errors.NewArgumentError("name")
+	}
+
+	if len(path) == 0 {
+		return errors.NewArgumentError("path")
+	}
+
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	kmgr, err := ses.KeyManager()
+	if err != nil {
+		return err
+	}
+
+	err = kmgr.Import(name, string(b))
+	if err != nil {
+		return err
+	}
+
+	p := ses.Mode().Printer()
+	p.Log().WithModule("key").Info("key imported")
+	data := p.NewSection("Import Key").NewData()
+	data.
+		Add("Name", name).
+		Add("Path", path)
+	return p.Flush()
 }
 
 func doKeyRemoveCommand(ses session.Session, cmd *cobra.Command, args []string) error {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"strconv"
 	"strings"
 
@@ -48,62 +49,31 @@ func providerCommand() *cobra.Command {
 func createProviderCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "create <file>",
+		Use:   "create <config>",
 		Short: "create a provider",
 		Long:  "create a provider with the provided config file",
-		Args:  cobra.ExactArgs(1),
-		RunE:  session.WithSession(session.RequireNode(doCreateProviderCommand)),
+		RunE: session.WithSession(
+			session.RequireKey(session.RequireNode(doCreateProviderCommand))),
 	}
 
 	session.AddFlagKey(cmd, cmd.Flags())
 	session.AddFlagNonce(cmd, cmd.Flags())
 	session.AddFlagKeyType(cmd, cmd.Flags())
-
 	return cmd
 }
 
-func doCreateProviderCommand(session session.Session, cmd *cobra.Command, args []string) error {
-	kmgr, err := session.KeyManager()
-	if err != nil {
-		return err
+func doCreateProviderCommand(ses session.Session, cmd *cobra.Command, args []string) error {
+	var config string
+	if len(args) == 1 {
+		config = args[0]
+	}
+	config = ses.Mode().Ask().StringVar(config, "Config Path (required): ", true)
+	if len(config) == 0 {
+		return fmt.Errorf("required argument missing: config")
 	}
 
-	printer := session.Mode().Printer()
-	// XXX generate key for provider if doens't exist
-	key, err := session.Key()
-	if err != nil {
-		kname := session.KeyName()
-		ktype, err := session.KeyType()
-		if err != nil {
-			return err
-		}
-
-		password, err := session.Password()
-		if err != nil {
-			return err
-		}
-
-		info, seed, err := kmgr.CreateMnemonic(kname, common.DefaultCodec, password, ktype)
-		if err != nil {
-			return err
-		}
-
-		key, err = kmgr.Get(kname)
-		if err != nil {
-			return err
-		}
-
-		printer.Log().WithModule("key").Info("key created")
-		data := printer.NewSection("Create Key").NewData()
-		data.
-			WithTag("raw", info).
-			Add("Name", kname).
-			Add("Public Key", X(info.GetPubKey().Address())).
-			Add("Recovery Codes", seed)
-		printer.Flush()
-	}
-
-	txclient, err := session.TxClient()
+	printer := ses.Mode().Printer()
+	txclient, err := ses.TxClient()
 	if err != nil {
 		return err
 	}
@@ -114,13 +84,13 @@ func doCreateProviderCommand(session session.Session, cmd *cobra.Command, args [
 	}
 
 	prov := &ptype.Provider{}
-	err = prov.Parse(args[0])
+	err = prov.Parse(config)
 	if err != nil {
 		return err
 	}
 
 	result, err := txclient.BroadcastTxCommit(&types.TxCreateProvider{
-		Owner:      key.GetPubKey().Address().Bytes(),
+		Owner:      txclient.Key().GetPubKey().Address().Bytes(),
 		HostURI:    prov.HostURI,
 		Attributes: prov.Attributes,
 		Nonce:      nonce,
@@ -147,12 +117,32 @@ func runCommand() *cobra.Command {
 	session.AddFlagNonce(cmd, cmd.Flags())
 	session.AddFlagHost(cmd, cmd.PersistentFlags())
 
+	cmd.Flags().String("private-key", "", "import private key")
 	cmd.Flags().Bool("kube", false, "use kubernetes cluster")
 	cmd.Flags().String("manifest-ns", "lease", "set manifest namespace")
 	return cmd
 }
 
 func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	log := session.Mode().Printer().Log().WithModule("provider")
+	if pk, err := cmd.Flags().GetString("private-key"); len(pk) > 0 && err == nil {
+		log.Info(fmt.Sprintf("Import private key from: %v", pk))
+		b, err := ioutil.ReadFile(pk)
+		if err != nil {
+			return err
+		}
+
+		kmgr, err := session.KeyManager()
+		if err != nil {
+			return err
+		}
+
+		err = kmgr.Import(session.KeyName(), string(b))
+		if err != nil {
+			return err
+		}
+	}
+
 	txclient, err := session.TxClient()
 	if err != nil {
 		return err
@@ -162,7 +152,7 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 	if err != nil {
 		return err
 	}
-	session.Mode().Printer().Log().WithModule("provider").Info(fmt.Sprintf("Running Provider %v", args[0]))
+	log.Info(fmt.Sprintf("Running Provider %v", args[0]))
 
 	pobj, err := session.QueryClient().Provider(session.Ctx(), key.ID())
 	if err != nil {
