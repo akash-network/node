@@ -1,9 +1,8 @@
 # See documentation at http://goreleaser.com
 builds:
-
   - binary: akash
     main: ./cmd/akash
-    goarch: [amd64, arm64]
+    goarch: [amd64]
     goos: [linux,darwin,windows]
     ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
 
@@ -17,25 +16,39 @@ archive:
   files:
     - none*
 
-dockers:
+checksum:
+  # You can change the name of the checksums file.
+  # Default is `{{ .ProjectName }}_{{ .Version }}_checksums.txt`.
+  name_template: "{{ .ProjectName }}_checksums.txt"
 
-  - binary: akash
-    image:  ovrclk/akash
+  # Algorithm to be used.
+  # Accepted options are sha256, sha512, sha1, crc32, md5, sha224 and sha384.
+  # Default is sha256.
+  algorithm: sha256
+
+dockers:
+  - binaries: 
+    - akash
     dockerfile: _build/Dockerfile.akash
     goos: linux
     goarch: amd64
-    tag_templates:
-      - "{{ .Version }}"
-      - latest
+    image_templates:  
+    - "ovrclk/akash:latest"
+    - "ovrclk/akash:{{ .Tag }}"
+    - "ovrclk/akash:v{{ .Major }}"
+    - "ovrclk/akash:v{{ .Major }}{{ .Minor }}"
 
-  - binary: akashd
-    image:  ovrclk/akashd
+  - binaries: 
+    - akashd
     dockerfile: _build/Dockerfile.akashd
     goos: linux
     goarch: amd64
-    tag_templates:
-      - "{{ .Version }}"
-      - latest
+    image_templates:  
+    - "ovrclk/akashd:latest"
+    - "ovrclk/akashd:{{ .Tag }}"
+    - "ovrclk/akashd:{{ .Tag }}"
+    - "ovrclk/akashd:v{{ .Major }}"
+    - "ovrclk/akashd:v{{ .Major }}{{ .Minor }}"
 
 brew:
   name: akash
@@ -55,5 +68,5 @@ release:
   github:
     owner: ovrclk
     name: akash
-  prerelease: true
+  prerelease: auto
   draft: false
