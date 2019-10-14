@@ -36,8 +36,6 @@ archives:
     format: zip
     files:
       - none*
-signs:
-  - artifacts: checksum
 
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
