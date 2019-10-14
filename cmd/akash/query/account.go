@@ -67,7 +67,7 @@ func doQueryAccountCommand(s session.Session, cmd *cobra.Command, args []string)
 			raws = append(raws, account)
 		}
 		data.WithTag("raw", raws)
-		printer.Log().Warn("please note, the token balance is denominated in microAKASH (AKASH * 10^-6)")
+		printer.Log().Warn("please note, the token balance is denominated in uAKT (AKT * 10^-6)")
 		return printer.Flush()
 	// When a signer key is used instead of a public key(s) in the args
 	case hasSigner:

@@ -73,7 +73,7 @@ func doSendCommand(s session.Session, cmd *cobra.Command, args []string) error {
 
 	block := humanize.Comma(result.Height)
 	amountF := humanize.Comma(int64(amount))
-	s.Mode().Printer().Log().WithModule("tokens").Info(fmt.Sprintf("%d token(s) transfered to %v", amount, argTo))
+	s.Mode().Printer().Log().WithModule("tokens").Info(fmt.Sprintf("%d uAKT(s) transfered to %v", amount, argTo))
 	data := s.Mode().Printer().NewSection("Tokens").WithLabel("Send Token(s)").NewData().WithTag("raw", result)
 	data.
 		Add("From", X(fromAddr)).
