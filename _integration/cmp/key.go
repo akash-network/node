@@ -14,7 +14,7 @@ func keyList(root vars.Ref, key key) gestalt.Component {
 		GrepField("address", key.addr.Var()).
 		EnsureCount(1).
 		Done()
-	return akash_(root, "key-list", "key", "list").
+	return akash_(root, "key-list", "key", "list", "-m", "interactive").
 		FN(parse).
 		WithMeta(g.Require(key.addr.Name()))
 }
@@ -33,7 +33,7 @@ func groupKey_(root vars.Ref, key key) gestalt.Component {
 func keyCreate(root vars.Ref, key key) gestalt.Component {
 	return akash_(root, "key-create", "key", "create", "-m", "json", key.name.Name()).
 		FN(js.Do(
-			js.Str(key.name.Name(), "result", "[0]", "name"),
-			js.Any("result", "[0]", "public_key_address").Export(key.addr.Name()),
+			js.Str(key.name.Name(), "create_key", "[0]", "name"),
+			js.Any("create_key", "[0]", "public_key").Export(key.addr.Name()),
 		)).WithMeta(g.Export(key.addr.Name()))
 }

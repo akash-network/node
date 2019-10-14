@@ -3,7 +3,7 @@ builds:
 
   - binary: akash
     main: ./cmd/akash
-    goarch: [amd64]
+    goarch: [amd64, arm64]
     goos: [linux,darwin,windows]
     ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
 
@@ -55,5 +55,5 @@ release:
   github:
     owner: ovrclk
     name: akash
-  prerelease: false
+  prerelease: true
   draft: false

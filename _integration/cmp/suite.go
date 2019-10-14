@@ -7,12 +7,12 @@ import (
 
 func Suite() gestalt.Component {
 	key := newKey("master")
-	paddr := g.Ref("provider-id")
-	daddr := g.Ref("deployment-id")
+	// paddr := g.Ref("provider-id")
+	// daddr := g.Ref("deployment-id")
 	return g.Suite("main").
 		Run(groupKey(key)).
-		Run(groupNodeRun(key)).
-		Run(groupAccountSend(key)).
-		Run(groupProvider(paddr)).
-		Run(groupDeploy(key.name, daddr))
+		Run(groupNodeRun(key))
+	// Run(groupAccountSend(key)).
+	// Run(groupProvider(paddr)).
+	// Run(groupDeploy(key.name, daddr))
 }
