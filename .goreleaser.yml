@@ -54,7 +54,7 @@ dockers:
     - "ovrclk/akash:{{ .ShortCommit }}"
     - "ovrclk/akash:{{ .Version }}"
     - "ovrclk/akash:v{{ .Major }}"
-    - "ovrclk/akash:v{{ .Major }}{{ .Minor }}"
+    - "ovrclk/akash:v{{ .Major }}.{{ .Minor }}"
 
   - binaries: 
     - akashd
