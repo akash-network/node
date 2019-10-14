@@ -42,6 +42,17 @@ install:
 	GO111MODULE=off go install $(BUILD_FLAGS) ./cmd/akash
 	GO111MODULE=off go install $(BUILD_FLAGS) ./cmd/akashd
 
+release:
+	docker run --rm --privileged \
+	-v $(PWD):/go/src/github.com/ovrclk/akash \
+	-v /var/run/docker.sock:/var/run/docker.sock \
+	-w /go/src/github.com/ovrclk/akash \
+	-e GITHUB_TOKEN \
+	-e DOCKER_USERNAME \
+	-e DOCKER_PASSWORD \
+	-e DOCKER_REGISTRY \
+	goreleaser/goreleaser release
+
 image-minikube:
 	eval $$(minikube docker-env) && make image
 

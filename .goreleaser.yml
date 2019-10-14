@@ -1,10 +1,17 @@
 # See documentation at http://goreleaser.com
+env:
+  - GO111MODULE=off
 builds:
   - id: akash
     binary: akash
     main: ./cmd/akash
     goarch: [amd64, arm64]
     goos: [linux,darwin,windows]
+    ignore:
+      - goos: darwin
+        goarch: 386
+      - goos: windows
+        goarch: arm
     ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
 
   - id: akashd
@@ -12,6 +19,11 @@ builds:
     main: ./cmd/akashd
     goarch: [amd64, arm64]
     goos: [linux,darwin]
+    ignore:
+      - goos: darwin
+        goarch: 386
+      - goos: windows
+        goarch: arm
     ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
 
 archives:
@@ -20,13 +32,12 @@ archives:
     - akash
     - akashd
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    replacements:
-      amd64: 64-bit
-      386: 32-bit
-      darwin: macOS
-      linux: Tux
     wrap_in_directory: true
     format: zip
+    files:
+      - none*
+signs:
+  - artifacts: checksum
 
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
