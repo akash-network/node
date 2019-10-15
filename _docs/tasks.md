@@ -29,3 +29,8 @@ The facilitator engine cannot modify the state.  At the same time, it needs to e
 The sequence is currently based on the deployment.  This sequence is also used for deployment groups.  This all leads to the possibility of sequence generation being out of sync and consensus taking forever or impossible.
 
 A quick fix might be to have a sequence for each deployment group.
+
+
+## Conflicting ingress routes
+
+There is good way to resolve conflicting ingress hostnames, results in odd behaviour
