@@ -19,9 +19,9 @@ import (
 )
 
 const (
-	akashManagedLabelName = "akash.network"
-
+	akashManagedLabelName         = "akash.network"
 	akashManifestServiceLabelName = "akash.network/manifest-service"
+	akashDefaultIngressBackend    = "http"
 )
 
 type builder struct {
@@ -88,7 +88,6 @@ func (b *deploymentBuilder) labels() map[string]string {
 
 func (b *deploymentBuilder) create() (*appsv1.Deployment, error) {
 	replicas := int32(b.service.Count)
-
 	kdeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   b.name(),
@@ -115,7 +114,6 @@ func (b *deploymentBuilder) create() (*appsv1.Deployment, error) {
 
 func (b *deploymentBuilder) update(obj *appsv1.Deployment) (*appsv1.Deployment, error) {
 	replicas := int32(b.service.Count)
-
 	obj.Labels = b.labels()
 	obj.Spec.Selector.MatchLabels = b.labels()
 	obj.Spec.Replicas = &replicas
@@ -125,7 +123,6 @@ func (b *deploymentBuilder) update(obj *appsv1.Deployment) (*appsv1.Deployment, 
 }
 
 func (b *deploymentBuilder) container() corev1.Container {
-
 	qcpu := resource.NewScaledQuantity(int64(b.service.Unit.CPU), resource.Milli)
 	qmem := resource.NewQuantity(int64(b.service.Unit.Memory), resource.DecimalSI)
 
@@ -235,10 +232,6 @@ func (b *ingressBuilder) create() (*extv1.Ingress, error) {
 			Labels: b.labels(),
 		},
 		Spec: extv1.IngressSpec{
-			Backend: &extv1.IngressBackend{
-				ServiceName: b.name(),
-				ServicePort: intstr.FromInt(int(exposeExternalPort(b.expose))),
-			},
 			Rules: b.rules(),
 		},
 	}, nil
@@ -253,8 +246,20 @@ func (b *ingressBuilder) update(obj *extv1.Ingress) (*extv1.Ingress, error) {
 
 func (b *ingressBuilder) rules() []extv1.IngressRule {
 	rules := make([]extv1.IngressRule, 0, len(b.expose.Hosts))
+	httpRule := &extv1.HTTPIngressRuleValue{
+		Paths: []extv1.HTTPIngressPath{extv1.HTTPIngressPath{
+			Backend: extv1.IngressBackend{
+				ServiceName: b.expose.Service,
+				ServicePort: intstr.FromInt(int(exposeExternalPort(b.expose))),
+			}},
+		},
+	}
+
 	for _, host := range b.expose.Hosts {
-		rules = append(rules, extv1.IngressRule{Host: host})
+		rules = append(rules, extv1.IngressRule{
+			Host:             host,
+			IngressRuleValue: extv1.IngressRuleValue{httpRule},
+		})
 	}
 	return rules
 }
