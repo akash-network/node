@@ -43,9 +43,7 @@ type deploymentManager struct {
 }
 
 func newDeploymentManager(s *service, lease types.LeaseID, mgroup *types.ManifestGroup) *deploymentManager {
-
-	log := s.log.With("cmp", "deployment-manager",
-		"lease", lease, "manifest-group", mgroup.Name)
+	log := s.log.With("cmp", "deployment-manager", "lease", lease, "manifest-group", mgroup.Name)
 
 	dm := &deploymentManager{
 		bus:        s.bus,
@@ -92,7 +90,6 @@ func (dm *deploymentManager) teardown() error {
 
 func (dm *deploymentManager) run() {
 	defer dm.lc.ShutdownCompleted()
-
 	runch := dm.startDeploy()
 
 loop:
@@ -104,7 +101,6 @@ loop:
 			break loop
 
 		case mgroup := <-dm.updatech:
-
 			dm.mgroup = mgroup
 
 			switch dm.state {
@@ -115,69 +111,48 @@ loop:
 				dm.mgroup = mgroup
 			case dsDeployComplete:
 				dm.mgroup = mgroup
-
 				// start update
 				runch = dm.startDeploy()
-
 			case dsTeardownActive, dsTeardownPending, dsTeardownComplete:
+				// do nothing
 			}
 
 		case result := <-runch:
 			runch = nil
-
 			if result != nil {
 				dm.log.Error("execution error", "state", dm.state, "err", result)
 			}
-
 			switch dm.state {
 			case dsDeployActive:
 				dm.log.Debug("deploy complete")
 				dm.state = dsDeployComplete
-
 				dm.startMonitor()
-
 			case dsDeployPending:
 				// start update
 				runch = dm.startDeploy()
-
 			case dsDeployComplete:
-
 				panic(fmt.Errorf("INVALID STATE: runch read on %v", dm.state))
-
 			case dsTeardownActive:
 				dm.state = dsTeardownComplete
 				break loop
-
 			case dsTeardownPending:
-
 				// start teardown
 				runch = dm.startTeardown()
-
 			case dsTeardownComplete:
-
 				panic(fmt.Errorf("INVALID STATE: runch read on %v", dm.state))
-
 			}
 
 		case <-dm.teardownch:
 			dm.log.Debug("teardown request")
-
 			dm.stopMonitor()
-
 			switch dm.state {
 			case dsDeployActive:
-
 				dm.state = dsTeardownPending
-
 			case dsDeployPending:
-
 				dm.state = dsTeardownPending
-
 			case dsDeployComplete:
-
 				// start teardown
 				runch = dm.startTeardown()
-
 			case dsTeardownActive, dsTeardownPending, dsTeardownComplete:
 			}
 		}

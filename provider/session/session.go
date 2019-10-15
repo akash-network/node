@@ -10,12 +10,9 @@ import (
 
 type Session interface {
 	Provider() *types.Provider
-
 	TX() txutil.Client
 	Query() query.Client
-
 	Log() log.Logger
-
 	ForModule(string) Session
 }
 

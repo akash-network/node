@@ -36,7 +36,6 @@ type client struct {
 }
 
 func NewClient(log log.Logger, host, ns string) (Client, error) {
-
 	config, err := openKubeConfig(log)
 	if err != nil {
 		return nil, fmt.Errorf("error building config flags: %v", err)
@@ -83,7 +82,7 @@ func NewClient(log log.Logger, host, ns string) (Client, error) {
 		metc: metc,
 		ns:   ns,
 		host: host,
-		log:  log,
+		log:  log.With("module", "provider-cluster-kube"),
 	}, nil
 
 }
@@ -128,7 +127,7 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 		return err
 	}
 
-	if err := applyManifest(c.mc, newManifestBuilder(c.ns, lid, group)); err != nil {
+	if err := applyManifest(c.mc, newManifestBuilder(c.log, c.ns, lid, group)); err != nil {
 		c.log.Error("applying manifest", "err", err, "lease", lid)
 		return err
 	}
@@ -139,7 +138,7 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 	}
 
 	for _, service := range group.Services {
-		if err := applyDeployment(c.kc, newDeploymentBuilder(lid, group, service)); err != nil {
+		if err := applyDeployment(c.kc, newDeploymentBuilder(c.log, lid, group, service)); err != nil {
 			c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
@@ -149,7 +148,7 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 			continue
 		}
 
-		if err := applyService(c.kc, newServiceBuilder(lid, group, service)); err != nil {
+		if err := applyService(c.kc, newServiceBuilder(c.log, lid, group, service)); err != nil {
 			c.log.Error("applying service", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
@@ -158,7 +157,7 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 			if !c.shouldExpose(expose) {
 				continue
 			}
-			if err := applyIngress(c.kc, newIngressBuilder(c.host, lid, group, service, expose)); err != nil {
+			if err := applyIngress(c.kc, newIngressBuilder(c.log, c.host, lid, group, service, expose)); err != nil {
 				c.log.Error("applying ingress", "err", err, "lease", lid, "service", service.Name, "expose", expose)
 				return err
 			}

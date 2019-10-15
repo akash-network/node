@@ -123,8 +123,8 @@ func runCommand() *cobra.Command {
 	return cmd
 }
 
-func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []string) error {
-	log := session.Mode().Printer().Log().WithModule("provider")
+func doProviderRunCommand(ses session.Session, cmd *cobra.Command, args []string) error {
+	log := ses.Mode().Printer().Log().WithModule("provider")
 	if pk, err := cmd.Flags().GetString("private-key"); len(pk) > 0 && err == nil {
 		log.Info(fmt.Sprintf("Import private key from: %v", pk))
 		b, err := ioutil.ReadFile(pk)
@@ -132,18 +132,18 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 			return err
 		}
 
-		kmgr, err := session.KeyManager()
+		kmgr, err := ses.KeyManager()
 		if err != nil {
 			return err
 		}
 
-		err = kmgr.Import(session.KeyName(), string(b))
+		err = kmgr.Import(ses.KeyName(), string(b))
 		if err != nil {
 			return err
 		}
 	}
 
-	txclient, err := session.TxClient()
+	txclient, err := ses.TxClient()
 	if err != nil {
 		return err
 	}
@@ -152,11 +152,11 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 	if err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("Running Provider %v", args[0]))
+	log.Info(fmt.Sprintf("Staring provider with address: %v", args[0]))
 
-	pobj, err := session.QueryClient().Provider(session.Ctx(), key.ID())
+	pobj, err := ses.QueryClient().Provider(ses.Ctx(), key.ID())
 	if err != nil {
-		session.Mode().Printer().Log().WithModule("provider").Error(fmt.Sprintf("Unable to query with key %v", args[0]))
+		ses.Mode().Printer().Log().WithModule("provider").Error(fmt.Sprintf("unable to query with key %v", args[0]))
 		return err
 	}
 
@@ -165,25 +165,31 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 			pobj.Owner.EncodeString(), X(txclient.Key().GetPubKey().Address()))
 	}
 
-	var cclient cluster.Client
+	var clusterClient cluster.Client
 
+	// use kubeclient as cluster client when kube is enabled
 	if ok, _ := cmd.Flags().GetBool("kube"); ok {
-		session.Log().Debug("using kube client")
+		ses.Log().Debug("using kube client")
 		ns, err := cmd.Flags().GetString("manifest-ns")
 		if err != nil {
 			return err
 		}
-		cclient, err = kube.NewClient(session.Log().With("cmp", "cluster-client"), session.Host(), ns)
+		clusterClient, err = kube.NewClient(ses.Log().With("cmp", "cluster-client"), ses.Host(), ns)
 		if err != nil {
+			ses.Log().Error("error creating kubeClient", err)
 			return err
 		}
-	} else {
-		cclient = cluster.NullClient()
 	}
 
-	ctx, cancel := context.WithCancel(session.Ctx())
+	// fall back on null client if no client is specified
+	// used for testing
 
-	psession := psession.New(session.Log(), pobj, txclient, session.QueryClient())
+	if clusterClient == nil {
+		clusterClient = cluster.NullClient()
+	}
+
+	ctx, cancel := context.WithCancel(ses.Ctx())
+	psession := psession.New(ses.Log(), pobj, txclient, ses.QueryClient())
 
 	bus := event.NewBus()
 	defer bus.Close()
@@ -192,13 +198,13 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 
 	go func() {
 		defer cancel()
-		mclient := session.Client()
-		mlog := session.Log()
+		mclient := ses.Client()
+		mlog := ses.Log()
 		mhandler := event.MarketplaceTxHandler(bus)
 		errch <- common.MonitorMarketplace(ctx, mlog, mclient, mhandler)
 	}()
 
-	service, err := provider.NewService(ctx, psession, bus, cclient)
+	service, err := provider.NewService(ctx, psession, bus, clusterClient)
 	if err != nil {
 		cancel()
 		<-errch
@@ -213,18 +219,18 @@ func doProviderRunCommand(session session.Session, cmd *cobra.Command, args []st
 
 	go func() {
 		defer cancel()
-		errch <- grpc.Run(ctx, ":9090", psession, cclient, service, service.ManifestHandler())
+		errch <- grpc.Run(ctx, ":9090", psession, clusterClient, service, service.ManifestHandler())
 	}()
 
 	go func() {
 		defer cancel()
-		errch <- akash_json.Run(ctx, session.Log(), ":3001", "localhost:9090")
+		errch <- akash_json.Run(ctx, ses.Log(), ":3001", "localhost:9090")
 	}()
 
 	var reterr error
 	for i := 0; i < 3; i++ {
 		if err := <-errch; err != nil {
-			session.Log().Error("error", "err", err)
+			ses.Log().Error("error", "err", err)
 			reterr = err
 		}
 	}
