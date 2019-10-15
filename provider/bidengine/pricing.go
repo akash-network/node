@@ -19,7 +19,6 @@ func calculatePrice(resources types.ResourceList) uint64 {
 }
 
 func calculatePriceRange(resources types.ResourceList) (uint64, uint64) {
-
 	// TODO: catch overflow
 	var (
 		mem  uint64
@@ -44,5 +43,4 @@ func calculatePriceRange(resources types.ResourceList) (uint64, uint64) {
 	}
 
 	return cmin, cmax
-
 }
