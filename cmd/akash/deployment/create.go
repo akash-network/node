@@ -296,7 +296,7 @@ func processStages(statusChan chan *deployStatus, s session.Session) error {
 			data.Add("Fulfillments", fd).WithLabel("Fulfillments", "Fulfillment(s)")
 
 			// add services
-			data = printer.NewSection("Leases").WithLabel("Lease(s)").NewData().AsList()
+			data = printer.NewSection("Leases").WithLabel("Lease(s)").NewData().AsPane()
 			for lid, v := range state.providerLeaseStatus {
 				data.Add("Lease ID", lid.String())
 				sd := dsky.NewSectionData(" ").AsList()
