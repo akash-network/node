@@ -1,7 +1,7 @@
 package: github.com/ovrclk/akash
 import:
 - package: github.com/gogo/protobuf
-  version: ^1.1.1
+  version: 1.1.1
   subpackages:
   - gogoproto
   - proto
@@ -12,17 +12,17 @@ import:
 - package: github.com/prometheus/client_golang
   version: ae27198cdd90bf12cd134ad79d1366a6cf49f632
 - package: github.com/cosmos/cosmos-sdk
-  version: ~0.33.0
+  version: 0.33.0
   subpackages:
   - crypto
 - package: github.com/tendermint/go-amino
-  version: ~0.14.1
+  version: 0.14.1
 - package: github.com/tendermint/iavl
-  version: ~0.12.2
+  version: 0.12.2
 - package: github.com/tendermint/tendermint
-  version: ~0.31.5
+  version: 0.31.5
 - package: github.com/stretchr/testify
-  version: ^1.2.1
+  version: 1.2.1
   subpackages:
   - require
   - assert
@@ -42,10 +42,10 @@ import:
   subpackages:
   - OpenAPIv2
 - package: github.com/golang/protobuf
-  version: ~1.1.0
+  version: 1.1.0
 - package: github.com/grpc-ecosystem/grpc-gateway
 - package: google.golang.org/grpc
-  version: ^1.13.0
+  version: 1.13.0
 - package: github.com/juju/errors
 - package: k8s.io/client-go
   version: kubernetes-1.12.2
@@ -64,11 +64,11 @@ import:
 - package: k8s.io/gengo
 - package: github.com/hashicorp/golang-lru
 - package: github.com/caarlos0/env
-  version: ^3.3.0
+  version: 3.3.0
 - package: github.com/blang/semver
-  version: ^3.5.1
+  version: 3.5.1
 - package: github.com/satori/go.uuid
-  version: ~1.2.0
+  version: 1.2.0
 - package: golang.org/x/sys
   version: 1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded
   subpackages:
@@ -77,7 +77,7 @@ import:
   version: 3764759f34a542a3aef74d6b02e35be7ab893bba
   repo: https://github.com/tendermint/crypto
 - package: github.com/gosuri/uitable
-  version: ~0.0.2
+  version: 0.0.2
 - package: github.com/gosuri/uilive
   version: 0.0.2
 - package: github.com/fatih/color
@@ -90,3 +90,7 @@ import:
   version: ^0.0.7
 - package: github.com/ovrclk/dsky
   version: ~0.0.1
+- package: github.com/lithammer/shortuuid
+  version: 3.0.3
+  subpackages:
+  - '...'

@@ -42,12 +42,14 @@ helm-install-provider-%:
 	helm install "$(PROVIDER_CHART)"                     \
 		-n "$(@:helm-install-provider-%=%)"                \
 		--set "ingress.domain=$(shell minikube ip).nip.io" \
+		--set "deployment.ingress.domain=$(shell minikube ip).nip.io" \
 		--set "provider.region=$(shell echo "$@" | sed -e 's/.*-\(.*-.*\)-[0-9][0-9]*/\1/')"
 
 helm-upgrade-provider-%:
 	helm upgrade "$(@:helm-upgrade-provider-%=%)" "$(PROVIDER_CHART)" \
 		--recreate-pods                                                 \
 		--set "ingress.domain=$(shell minikube ip).nip.io"              \
+		--set "deployment.ingress.domain=$(shell minikube ip).nip.io" \
 		--set "provider.region=$(shell echo "$@" | sed -e 's/.*-\(.*-.*\)-[0-9][0-9]*/\1/')"
 
 helm-delete-provider-%:
