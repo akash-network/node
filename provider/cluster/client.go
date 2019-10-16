@@ -16,12 +16,10 @@ var ErrNoDeployments = errors.New("no deployments")
 type Client interface {
 	Deploy(types.LeaseID, *types.ManifestGroup) error
 	TeardownLease(types.LeaseID) error
-
 	Deployments() ([]Deployment, error)
 	LeaseStatus(types.LeaseID) (*types.LeaseStatusResponse, error)
 	ServiceStatus(types.LeaseID, string) (*types.ServiceStatusResponse, error)
 	ServiceLogs(context.Context, types.LeaseID, int64, bool) ([]*ServiceLog, error)
-
 	Inventory() ([]Node, error)
 }
 

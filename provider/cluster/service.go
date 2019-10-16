@@ -34,7 +34,6 @@ type Service interface {
 }
 
 func NewService(ctx context.Context, session session.Session, bus event.Bus, client Client) (Service, error) {
-
 	log := session.Log().With("module", "provider-cluster", "cmp", "service")
 
 	config := config{}

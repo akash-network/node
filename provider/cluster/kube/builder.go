@@ -10,6 +10,8 @@ import (
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	"github.com/ovrclk/akash/types"
 	uuid "github.com/satori/go.uuid"
+	"github.com/tendermint/tendermint/libs/log"
+	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/api/extensions/v1beta1"
@@ -25,6 +27,7 @@ const (
 )
 
 type builder struct {
+	log   log.Logger
 	lid   types.LeaseID
 	group *types.ManifestGroup
 }
@@ -44,7 +47,7 @@ type nsBuilder struct {
 }
 
 func newNSBuilder(lid types.LeaseID, group *types.ManifestGroup) *nsBuilder {
-	return &nsBuilder{builder: builder{lid, group}}
+	return &nsBuilder{builder: builder{lid: lid, group: group}}
 }
 
 func (b *nsBuilder) name() string {
@@ -72,8 +75,11 @@ type deploymentBuilder struct {
 	service *types.ManifestService
 }
 
-func newDeploymentBuilder(lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService) *deploymentBuilder {
-	return &deploymentBuilder{builder: builder{lid, group}, service: service}
+func newDeploymentBuilder(log log.Logger, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService) *deploymentBuilder {
+	return &deploymentBuilder{
+		builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group},
+		service: service,
+	}
 }
 
 func (b *deploymentBuilder) name() string {
@@ -167,9 +173,9 @@ type serviceBuilder struct {
 	deploymentBuilder
 }
 
-func newServiceBuilder(lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService) *serviceBuilder {
+func newServiceBuilder(log log.Logger, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService) *serviceBuilder {
 	return &serviceBuilder{
-		deploymentBuilder: deploymentBuilder{builder: builder{lid, group}, service: service},
+		deploymentBuilder: deploymentBuilder{builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group}, service: service},
 	}
 }
 
@@ -214,13 +220,13 @@ type ingressBuilder struct {
 	expose *types.ManifestServiceExpose
 }
 
-func newIngressBuilder(host string, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService, expose *types.ManifestServiceExpose) *ingressBuilder {
-	uid := uuid.NewV4()
+func newIngressBuilder(log log.Logger, host string, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService, expose *types.ManifestServiceExpose) *ingressBuilder {
 	if config.DeploymentIngressStaticHosts {
+		uid := uuid.NewV4()
 		expose.Hosts = append(expose.Hosts, fmt.Sprintf("%v.%s.%v", service.Name, uid, host))
 	}
 	return &ingressBuilder{
-		deploymentBuilder: deploymentBuilder{builder: builder{lid, group}, service: service},
+		deploymentBuilder: deploymentBuilder{builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group}, service: service},
 		expose:            expose,
 	}
 }
@@ -239,7 +245,7 @@ func (b *ingressBuilder) create() (*extv1.Ingress, error) {
 
 func (b *ingressBuilder) update(obj *extv1.Ingress) (*extv1.Ingress, error) {
 	obj.Labels = b.labels()
-	obj.Spec.Backend.ServicePort = intstr.FromInt(int(exposeExternalPort(b.expose)))
+	//obj.Spec.Backend.ServicePort = intstr.FromInt(int(exposeExternalPort(b.expose)))
 	obj.Spec.Rules = b.rules()
 	return obj, nil
 }
@@ -261,6 +267,8 @@ func (b *ingressBuilder) rules() []extv1.IngressRule {
 			IngressRuleValue: extv1.IngressRuleValue{httpRule},
 		})
 	}
+	ym, _ := yaml.Marshal(rules)
+	b.log.Debug("provider/cluster/kube/builder: created rules: %v", string(ym))
 	return rules
 }
 
@@ -283,9 +291,9 @@ type manifestBuilder struct {
 	mns string
 }
 
-func newManifestBuilder(ns string, lid types.LeaseID, group *types.ManifestGroup) *manifestBuilder {
+func newManifestBuilder(log log.Logger, ns string, lid types.LeaseID, group *types.ManifestGroup) *manifestBuilder {
 	return &manifestBuilder{
-		builder: builder{lid, group},
+		builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group},
 		mns:     ns,
 	}
 }

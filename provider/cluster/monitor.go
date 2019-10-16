@@ -35,7 +35,6 @@ type deploymentMonitor struct {
 }
 
 func newDeploymentMonitor(dm *deploymentManager) *deploymentMonitor {
-
 	m := &deploymentMonitor{
 		bus:     dm.bus,
 		session: dm.session,
@@ -95,12 +94,9 @@ loop:
 
 			if ok {
 				// healthy
-
 				m.attempts = 0
 				tickch = m.scheduleHealthcheck()
-
 				m.publishStatus(event.ClusterDeploymentDeployed)
-
 				break
 			}
 
@@ -108,12 +104,11 @@ loop:
 
 			if m.attempts <= monitorMaxRetries {
 				// unhealthy.  retry
-
 				tickch = m.scheduleRetry()
 				break
 			}
 
-			m.log.Info("deployment failed.  closing lease.")
+			m.log.Error("deployment failed.  closing lease.")
 			closech = m.runCloseLease()
 
 		case <-closech:
@@ -149,7 +144,6 @@ func (m *deploymentMonitor) doCheck() (bool, error) {
 	badsvc := 0
 
 	for _, spec := range m.mgroup.Services {
-
 		found := false
 		for _, svc := range status.Services {
 			if svc.Name != spec.Name {
