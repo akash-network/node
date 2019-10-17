@@ -1,6 +1,8 @@
 package sdutil
 
 import (
+	"fmt"
+
 	"github.com/dustin/go-humanize"
 	"github.com/ovrclk/akash/types"
 	. "github.com/ovrclk/akash/util"
@@ -38,12 +40,23 @@ func AppendProvider(p *types.Provider, data dsky.SectionData) {
 
 func AppendLeaseStatus(status *types.LeaseStatusResponse, sd dsky.SectionData) {
 	for _, service := range status.Services {
-		sd.Add("Name", service.Name)
-		for _, uri := range service.URIs {
-			sd.Add("Hosts", uri).WithLabel("Hosts", "Host(s) / IP(s)")
+		name, avail, total := " ", "0", "0"
+		if len(service.Name) > 0 {
+			name = service.Name
 		}
-		sd.Add("Available", service.Available)
-		sd.Add("Total", service.Total)
+		if service.Available > 0 {
+			avail = fmt.Sprintf("%d", service.Available)
+		}
+
+		if service.Total > 0 {
+			total = fmt.Sprintf("%d", service.Total)
+		}
+		for _, uri := range service.URIs {
+			sd.Add("Name", name)
+			sd.Add("Hosts", uri).WithLabel("Hosts", "Host(s) / IP(s)")
+			sd.Add("Available", avail)
+			sd.Add("Total", total)
+		}
 	}
 }
 
