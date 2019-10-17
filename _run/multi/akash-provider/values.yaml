@@ -1,11 +1,39 @@
+akash:
+  node: http://api.akashtest.net:80
+
+provider:
+  # Host URI to advertise
+  hostURI: http://example.com
+
+  # Create a key using: `akash key create`
+  privateKeyName: "KEY_NAME"
+
+  # Generate an address by registering the provider
+  # using: `akash provider add -k KEY_NAME`
+  address: "ADDRESS"
+
+  # name of the secret storing private key
+  privateKeySecretName: "PRIVATE_KEY_NAME"
+
+  # port to listen on
+  port: 3001
+
+deployment:
+  # ServiceType of the deployment. Some cloud providers 
+  # (like aws or gcp) require either LoadBalancer / NodeHost
+  serviceType: ClusterIP 
+  ingress:
+    # will generate a unique url for each deployment. 
+    # [uuid].domain
+    staticHosts: true
+    domain: example.com
+
 image:
   repository: ovrclk/akash
   tag: latest
   pullPolicy: Never
 
 ingress:
-  domain: 192.168.99.101.nip.io
-
-provider:
-  port: 3001
-  region: us-west
+  # Pubic routable Hostname of the the provider, 
+  # should match provider.hostURI
+  domain: example.com

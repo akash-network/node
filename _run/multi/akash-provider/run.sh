@@ -33,7 +33,7 @@ if [ ! -s "$masterKey" ] || [ ! -s "$providerKey" ]; then
 
   echo "adding provider"
   eval $(./akash provider add /config/provider.yml -k master -m shell)
-  echo $akash_add_provider_0_data > "$providerKey"
+  echo $akash_add_provider_0_key > "$providerKey"
   echo "added provider: " $(cat "$providerKey")
 fi
 

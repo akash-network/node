@@ -7,11 +7,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lithammer/shortuuid"
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	"github.com/ovrclk/akash/types"
-	uuid "github.com/satori/go.uuid"
 	"github.com/tendermint/tendermint/libs/log"
-	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/api/extensions/v1beta1"
@@ -175,7 +174,10 @@ type serviceBuilder struct {
 
 func newServiceBuilder(log log.Logger, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService) *serviceBuilder {
 	return &serviceBuilder{
-		deploymentBuilder: deploymentBuilder{builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group}, service: service},
+		deploymentBuilder: deploymentBuilder{
+			builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group},
+			service: service,
+		},
 	}
 }
 
@@ -222,12 +224,21 @@ type ingressBuilder struct {
 
 func newIngressBuilder(log log.Logger, host string, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService, expose *types.ManifestServiceExpose) *ingressBuilder {
 	if config.DeploymentIngressStaticHosts {
-		uid := uuid.NewV4()
-		expose.Hosts = append(expose.Hosts, fmt.Sprintf("%v.%s.%v", service.Name, uid, host))
+		uid := strings.ToLower(shortuuid.New())
+		h := fmt.Sprintf("%s.%s", uid, config.DeploymentIngressDomain)
+		log.Debug("IngressBuilder: map host:", h)
+		expose.Hosts = append(expose.Hosts, h)
 	}
 	return &ingressBuilder{
-		deploymentBuilder: deploymentBuilder{builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group}, service: service},
-		expose:            expose,
+		deploymentBuilder: deploymentBuilder{
+			builder: builder{
+				log:   log.With("module", "kube-builder"),
+				lid:   lid,
+				group: group,
+			},
+			service: service,
+		},
+		expose: expose,
 	}
 }
 
@@ -245,7 +256,6 @@ func (b *ingressBuilder) create() (*extv1.Ingress, error) {
 
 func (b *ingressBuilder) update(obj *extv1.Ingress) (*extv1.Ingress, error) {
 	obj.Labels = b.labels()
-	//obj.Spec.Backend.ServicePort = intstr.FromInt(int(exposeExternalPort(b.expose)))
 	obj.Spec.Rules = b.rules()
 	return obj, nil
 }
@@ -255,7 +265,7 @@ func (b *ingressBuilder) rules() []extv1.IngressRule {
 	httpRule := &extv1.HTTPIngressRuleValue{
 		Paths: []extv1.HTTPIngressPath{extv1.HTTPIngressPath{
 			Backend: extv1.IngressBackend{
-				ServiceName: b.expose.Service,
+				ServiceName: b.name(),
 				ServicePort: intstr.FromInt(int(exposeExternalPort(b.expose))),
 			}},
 		},
@@ -264,11 +274,10 @@ func (b *ingressBuilder) rules() []extv1.IngressRule {
 	for _, host := range b.expose.Hosts {
 		rules = append(rules, extv1.IngressRule{
 			Host:             host,
-			IngressRuleValue: extv1.IngressRuleValue{httpRule},
+			IngressRuleValue: extv1.IngressRuleValue{HTTP: httpRule},
 		})
 	}
-	ym, _ := yaml.Marshal(rules)
-	b.log.Debug("provider/cluster/kube/builder: created rules: %v", string(ym))
+	b.log.Debug("provider/cluster/kube/builder: created rules:", rules)
 	return rules
 }
 

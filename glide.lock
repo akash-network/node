@@ -1,5 +1,5 @@
-hash: 961600c01577bd31412d5d385a33442863ec9ceeeb8aab8a60626b67b877ea9e
-updated: 2019-05-15T20:09:33.246655-07:00
+hash: d5ed37e74bc3cbafcd22f4afd0989257ad50be8d2552aad92548b411cbe45d9d
+updated: 2019-10-16T16:48:58.342839-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -22,7 +22,7 @@ imports:
 - name: github.com/caarlos0/env
   version: 518fcfb943252f77846f92ce5794086d9cb4a1b5
 - name: github.com/cosmos/cosmos-sdk
-  version: dba33693c4b714db7c01eb3926edf780be12a8e5
+  version: 7b4104aced52aa5b59a96c28b5ebeea7877fc4f0
   subpackages:
   - codec
   - crypto
@@ -69,7 +69,7 @@ imports:
 - name: github.com/go-stack/stack
   version: 2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a
 - name: github.com/gogo/protobuf
-  version: ba06b47c162d49f2af050fb4c75bcbc86a159d5c
+  version: 636bf0302bc95575d69441b25a2603156ffdddf1
   subpackages:
   - gogoproto
   - jsonpb
@@ -96,6 +96,8 @@ imports:
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
+- name: github.com/google/uuid
+  version: 0cd6bf5da1e1c83f8b45653022c74f71af0538a4
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
@@ -153,12 +155,16 @@ imports:
   version: 22422dad46e14561a0854ad42497a75af9b61909
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
+- name: github.com/lithammer/shortuuid
+  version: 1be5ab5d90f6624ae0484197d1bb079a399712f0
+  subpackages:
+  - '...'
 - name: github.com/magiconair/properties
   version: c2353362d570a7bfa228149c62842019201cfb71
 - name: github.com/mattn/go-colorable
-  version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
+  version: 98ec13f34aabf44cc914c65a1cfb7b9bc815aef1
 - name: github.com/mattn/go-isatty
-  version: c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7
+  version: 88ba11cfdc67c7588b30042edf244b2875f892b6
 - name: github.com/mattn/go-runewidth
   version: 703b5e6b11ae25aeb2af9ebb5d5fdf8fa2575211
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -223,15 +229,17 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/spf13/viper
-  version: 7a605a50e69cd1ea431c4a1e6eebe9b287ef6de4
+  version: 40e41dd2240a2ae3f6b0a908ad9ddc6cefd5e456
 - name: github.com/stretchr/objx
   version: ef50b0de28773081167c97fc27cf29a0bf8b8c71
 - name: github.com/stretchr/testify
-  version: ffdc059bfe9ce6a4e144ba849dbedead332c6053
+  version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
   subpackages:
   - assert
   - mock
   - require
+- name: github.com/subosito/gotenv
+  version: de67a6614a4de71ad5e380b6946e56ab957d58c5
 - name: github.com/syndtr/goleveldb
   version: ae2bd5eed72d46b28834ec3f60db3a3ebedd8dbd
   subpackages:
@@ -393,29 +401,21 @@ imports:
   - googleapis/api/annotations
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 25c4f928eaa6d96443009bd842389fb4fa48664e
+  version: 168a6198bcb0ef175f7dacec0b8691fc141dc9b8
   subpackages:
   - balancer
   - balancer/base
   - balancer/roundrobin
-  - binarylog/grpc_binarylog_v1
   - codes
   - connectivity
   - credentials
-  - credentials/internal
   - encoding
   - encoding/proto
   - grpclog
   - internal
   - internal/backoff
-  - internal/balancerload
-  - internal/binarylog
   - internal/channelz
-  - internal/envconfig
   - internal/grpcrand
-  - internal/grpcsync
-  - internal/syscall
-  - internal/transport
   - keepalive
   - metadata
   - naming
@@ -426,6 +426,7 @@ imports:
   - stats
   - status
   - tap
+  - transport
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/yaml.v2
