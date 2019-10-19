@@ -8,11 +8,16 @@ do_init() {
   mkdir -p "$AKASH_DIR"
   mkdir -p "$AKASHD_DIR"
 
-  akash key create master > "$DATA_ROOT/master.key"
-  akash key create other  > "$DATA_ROOT/other.key"
-  akashd init "$(cat "$DATA_ROOT/master.key")"
+  eval $(akash key create master -m shell)
+  echo $akash_create_key_0_public_key > "$DATA_ROOT/master.key"
 
-  akash_provider key create master > "$DATA_ROOT/provider-master.key"
+  eval $(akash key create other -m shell)
+  echo $akash_create_key_0_public_key > "$DATA_ROOT/other.key"
+
+  eval $(akash_provider key create master -m shell)
+  echo $akash_create_key_0_public_key > "$DATA_ROOT/provider-master.key"
+
+  akashd init "$(cat "$DATA_ROOT/master.key")"
 }
 
 case "$1" in
@@ -33,9 +38,12 @@ case "$1" in
     akash marketplace
     ;;
   provider)
-    [ -f "$DATA_ROOT/master.dc" ] ||
-      akash_provider provider add provider.yml -k master > "$DATA_ROOT"/master.dc
-    akash_provider provider run "$(cat "$DATA_ROOT/master.dc")" -k master --kube
+    address_loc="$DATA_ROOT/provider.addr"
+    if [ ! -f "$address_loc" ]; then
+      eval "$(akash_provider provider add provider.yml -k master -m shell)" &&
+        echo "$akash_add_provider_0_key" > "$address_loc"
+    fi
+    akash_provider provider run "$(cat $address_loc)" -k master --kube
     ;;
   deploy)
     akash deployment create deployment.yml -k master

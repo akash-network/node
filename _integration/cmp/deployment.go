@@ -10,7 +10,7 @@ import (
 
 func deployCreate(key vars.Ref, daddr vars.Ref) gestalt.Component {
 	parse := js.Do(
-		js.Str(daddr.Var(), "address"),
+		js.Str(daddr.Var(), "deployment", "[0]", "deployment_id"),
 	)
 
 	check := akash("check", "query", "deployment", daddr.Var()).
@@ -19,7 +19,8 @@ func deployCreate(key vars.Ref, daddr vars.Ref) gestalt.Component {
 	return g.Group("deploy-create").
 		Run(
 			akash("create", "deployment", "create", "{{deployment-path}}", "-k", key.Name(), "--no-wait").
-				FN(g.Capture(daddr.Name())).
+				FN(js.Do(
+					js.Any("deployment", "[0]", "deployment_id").Export(daddr.Name()))).
 				WithMeta(g.Export(daddr.Name()))).
 		Run(g.Retry(5).Run(check)).
 		WithMeta(g.Export(daddr.Name()).Require("deployment-path"))
@@ -38,8 +39,8 @@ func deployClose(key vars.Ref, daddr vars.Ref) gestalt.Component {
 
 func deployQueryState(daddr vars.Ref, state types.Deployment_DeploymentState) gestalt.Component {
 	parse := js.Do(
-		js.Str(daddr.Var(), "address"),
-		js.Int(int64(state), "state"),
+		js.Str(daddr.Var(), "raw", "[0]", "address"),
+		js.Int(int64(state), "raw", "[0]", "state"),
 	)
 
 	return akash("deploy-query", "query", "deployment", daddr.Var()).
@@ -49,7 +50,7 @@ func deployQueryState(daddr vars.Ref, state types.Deployment_DeploymentState) ge
 
 func orderQuery(daddr vars.Ref) gestalt.Component {
 	parse := js.Do(
-		js.Str(daddr.Var(), "items", "[0]", "id", "deployment"),
+		js.Str(daddr.Var(), "raw", "[0]", "id", "deployment"),
 	)
 
 	return akash("order-query", "query", "order").
@@ -59,7 +60,7 @@ func orderQuery(daddr vars.Ref) gestalt.Component {
 
 func leaseQuery(key vars.Ref, daddr vars.Ref) gestalt.Component {
 	parse := js.Do(
-		js.Str(daddr.Var(), "items", "[0]", "id", "deployment"),
+		js.Str(daddr.Var(), "raw", "[0]", "id", "deployment"),
 	)
 
 	return akash("lease-query", "query", "lease", "-k", key.Name()).

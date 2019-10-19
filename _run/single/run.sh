@@ -38,10 +38,12 @@ case "$1" in
     akash marketplace
     ;;
   provider)
-    [ -f "$DATA_ROOT/master.dc" ] ||
-      eval $(akash_provider provider add provider.yml -k master -m shell) \
-      && echo $akash_add_provider_0_data > "$DATA_ROOT/master.dc"
-    akash_provider provider run "$(cat "$DATA_ROOT/master.dc")" -k master
+    address_loc="$DATA_ROOT/provider.addr"
+    if [ ! -f "$address_loc" ]; then
+      eval "$(akash_provider provider add provider.yml -k master -m shell)" &&
+        echo "$akash_add_provider_0_key" > "$address_loc"
+    fi
+    akash_provider provider run "$(cat $address_loc)" -k master
     ;;
   deploy)
     akash deployment create ../deployment.yml -k master

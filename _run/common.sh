@@ -14,6 +14,3 @@ _akashd() {
   "$AKASH_ROOT/akashd" -d "$AKASHD_DIR" "$@"
 }
 
-stripkey() {
-  sed -e 's/.*: //'
-}
