@@ -89,7 +89,7 @@ import:
 - package: github.com/mattn/go-isatty
   version: ^0.0.7
 - package: github.com/ovrclk/dsky
-  version: ~0.0.1
+  version: 0.0.6
 - package: github.com/lithammer/shortuuid
   version: 3.0.3
   subpackages:

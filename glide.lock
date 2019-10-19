@@ -1,12 +1,12 @@
-hash: d5ed37e74bc3cbafcd22f4afd0989257ad50be8d2552aad92548b411cbe45d9d
-updated: 2019-10-16T16:48:58.342839-07:00
+hash: 796e50c209da7fca6a935f891a7eb992eb377de2946739f06c24775c4b3091f9
+updated: 2019-10-18T23:34:47.357101-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/blang/semver
-  version: ba2c2ddd89069b46a7011d4106f6868f17ee1705
+  version: 2ee87856327ba09384cabd113bc6b5d174e9ec0f
 - name: github.com/boz/go-lifecycle
   version: c39961a5a0ce6b046f15d62bcbed79701666a9e0
 - name: github.com/btcsuite/btcd
@@ -20,7 +20,7 @@ imports:
   - bloom
   - hdkeychain
 - name: github.com/caarlos0/env
-  version: 518fcfb943252f77846f92ce5794086d9cb4a1b5
+  version: 1cddc31c48c56ecd700d873edb9fd5b6f5df922a
 - name: github.com/cosmos/cosmos-sdk
   version: 7b4104aced52aa5b59a96c28b5ebeea7877fc4f0
   subpackages:
@@ -111,7 +111,7 @@ imports:
 - name: github.com/gosuri/uilive
   version: 810653011da975cf3ac54bf7aea22d5c9e49e317
 - name: github.com/gosuri/uitable
-  version: 2cf933346b8370a3a3d8867ef5cf54b2129d8ecf
+  version: 258423f5a69cb48fb4b34261f5f241987fa156cf
   subpackages:
   - util/strutil
   - util/wordwrap
@@ -178,7 +178,7 @@ imports:
 - name: github.com/modern-go/reflect2
   version: 05fbef0ca5da472bbf96c9322b84a53edc03c9fd
 - name: github.com/ovrclk/dsky
-  version: 1b2a21c88d2f7049996d34a5d6c03f308b091e84
+  version: 674a3b717cfe0e94ddc97f304611934df0da4542
 - name: github.com/pelletier/go-toml
   version: e33f6544292e42cce6432aad20ac1eb020e2a1d8
 - name: github.com/peterbourgon/diskv
