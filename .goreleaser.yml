@@ -1,6 +1,4 @@
 # See documentation at http://goreleaser.com
-env:
-  - GO111MODULE=off
 builds:
   - id: akash
     binary: akash
