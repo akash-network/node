@@ -250,6 +250,6 @@ func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *
 	}
 
 	return abci_types.ResponseDeliverTx{
-		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCreateOrder),
+		Events: apptypes.Events(a.Name(), apptypes.TxTypeCreateOrder),
 	}
 }

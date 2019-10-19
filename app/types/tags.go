@@ -1,6 +1,7 @@
 package types
 
 import (
+	abci_types "github.com/tendermint/tendermint/abci/types"
 	tmcommon "github.com/tendermint/tendermint/libs/common"
 )
 
@@ -33,19 +34,17 @@ const (
 	TxTypeProviderCreate = "provider-create"
 )
 
-func NewTagApp(name string) tmcommon.KVPair {
-	return kvPair(TagNameApp, name)
-}
-
-func NewTagTxType(name string) tmcommon.KVPair {
-	return kvPair(TagNameTxType, name)
-}
-
-func NewTags(appName, txType string) []tmcommon.KVPair {
-	return []tmcommon.KVPair{
-		NewTagApp(appName),
-		NewTagTxType(txType),
+func Events(appName, txType string, attrs ...tmcommon.KVPair) []abci_types.Event {
+	return []abci_types.Event{
+		{
+			Type:       txType,
+			Attributes: append(attrs, newTagApp(appName)),
+		},
 	}
+}
+
+func newTagApp(name string) tmcommon.KVPair {
+	return kvPair(TagNameApp, name)
 }
 
 func kvPair(k, v string) tmcommon.KVPair {

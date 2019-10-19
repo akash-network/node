@@ -176,8 +176,8 @@ func (app *app) checkNonce(state appstate.State, address []byte, nonce uint64) a
 	return nil
 }
 
-func (app *app) CheckTx(buf []byte) abci_types.ResponseCheckTx {
-	ctx, app_, tx, err := app.appForTx(buf)
+func (app *app) CheckTx(req abci_types.RequestCheckTx) abci_types.ResponseCheckTx {
+	ctx, app_, tx, err := app.appForTx(req.Tx)
 	if err != nil {
 		return abci_types.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
 	}
@@ -189,8 +189,8 @@ func (app *app) CheckTx(buf []byte) abci_types.ResponseCheckTx {
 	return app_.CheckTx(app.commitState, ctx, tx.Payload.Payload)
 }
 
-func (app *app) DeliverTx(buf []byte) abci_types.ResponseDeliverTx {
-	ctx, app_, tx, err := app.appForTx(buf)
+func (app *app) DeliverTx(req abci_types.RequestDeliverTx) abci_types.ResponseDeliverTx {
+	ctx, app_, tx, err := app.appForTx(req.Tx)
 	if err != nil {
 		return abci_types.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
 	}

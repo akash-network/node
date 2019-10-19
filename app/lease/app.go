@@ -276,12 +276,11 @@ func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *
 		}
 	}
 
-	tags := apptypes.NewTags(a.Name(), apptypes.TxTypeCreateLease)
-	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameDeployment), Value: lease.Deployment})
-	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: keys.LeaseID(lease.LeaseID).Bytes()})
-
 	return abci_types.ResponseDeliverTx{
-		Tags: tags,
+		Events: apptypes.Events(a.Name(), apptypes.TxTypeCreateLease,
+			tmcommon.KVPair{Key: []byte(apptypes.TagNameDeployment), Value: lease.Deployment},
+			tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: keys.LeaseID(lease.LeaseID).Bytes()},
+		),
 	}
 }
 
@@ -373,11 +372,9 @@ func (a *app) doDeliverCloseTx(state appstate.State, ctx apptypes.Context, tx *t
 		}
 	}
 
-	tags := apptypes.NewTags(a.Name(), apptypes.TxTypeCloseLease)
-	tags = append(tags, tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: keys.LeaseID(lease.LeaseID).Bytes()})
-
 	return abci_types.ResponseDeliverTx{
-		Tags: tags,
+		Events: apptypes.Events(a.Name(), apptypes.TxTypeCloseLease,
+			tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: keys.LeaseID(lease.LeaseID).Bytes()}),
 	}
 }
 

@@ -145,7 +145,8 @@ func doKeyRecoverCommand(ses session.Session, cmd *cobra.Command, args []string)
 		return err
 	}
 	kmgr, _ := ses.KeyManager()
-	params := *hd.NewFundraiserParams(0, 0)
+	// XXX: how to use?
+	params := *hd.NewFundraiserParams(0, 0, 0)
 	info, err := kmgr.Derive(name, seed, keys.DefaultBIP39Passphrase, password, params)
 	if err != nil {
 		return err

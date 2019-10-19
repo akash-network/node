@@ -423,8 +423,8 @@ func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *
 	}
 
 	return abci_types.ResponseDeliverTx{
-		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCreateDeployment),
-		Data: deployment.Address,
+		Events: apptypes.Events(a.Name(), apptypes.TxTypeCreateDeployment),
+		Data:   deployment.Address,
 	}
 }
 
@@ -465,8 +465,8 @@ func (a *app) doDeliverUpdateTx(
 	}
 
 	return abci_types.ResponseDeliverTx{
-		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeUpdateDeployment),
-		Data: deployment.Address,
+		Events: apptypes.Events(a.Name(), apptypes.TxTypeUpdateDeployment),
+		Data:   deployment.Address,
 	}
 }
 
@@ -588,6 +588,6 @@ func (a *app) doDeliverCloseTx(state appstate.State, ctx apptypes.Context, tx *t
 	}
 
 	return abci_types.ResponseDeliverTx{
-		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCloseDeployment),
+		Events: apptypes.Events(a.Name(), apptypes.TxTypeCloseDeployment),
 	}
 }

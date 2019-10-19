@@ -9,7 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/iavl"
-	tmdb "github.com/tendermint/tendermint/libs/db"
+	tmdb "github.com/tendermint/tm-db"
 )
 
 const (

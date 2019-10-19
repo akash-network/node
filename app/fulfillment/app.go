@@ -244,7 +244,7 @@ func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *
 	}
 
 	return abci_types.ResponseDeliverTx{
-		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCreateFulfillment),
+		Events: apptypes.Events(a.Name(), apptypes.TxTypeCreateFulfillment),
 	}
 }
 
@@ -331,7 +331,7 @@ func (a *app) doDeliverCloseTx(state appstate.State, ctx apptypes.Context, tx *t
 	}
 
 	return abci_types.ResponseDeliverTx{
-		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeCloseFulfillment),
+		Events: apptypes.Events(a.Name(), apptypes.TxTypeCloseFulfillment),
 	}
 }
 

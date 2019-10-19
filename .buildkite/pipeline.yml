@@ -8,10 +8,11 @@ steps:
       automatic: true
     plugins:
       golang#v2.0.0:
-        version: "1.12"
+        version: "1.13"
         import: "${AKASH_GO_PACKAGE}"
         environment:
           - TEST_DELAY_THREAD_START
+          - GO111MODULE=on
     command: .buildkite/script/test.sh test
 
   - name: ":popcorn: coverage"
@@ -19,7 +20,7 @@ steps:
       automatic: true
     plugins:
       golang#v2.0.0:
-        version: "1.12"
+        version: "1.13"
         import: "${AKASH_GO_PACKAGE}"
         environment:
           - TEST_DELAY_THREAD_START
@@ -32,20 +33,25 @@ steps:
           - BUILDKITE_PROJECT_SLUG
           - BUILDKITE_COMMIT
           - CODECOV_TOKEN
+          - GO111MODULE=on
     command: .buildkite/script/test.sh coverage
 
   - name: ":man-juggling: integration"
     plugins:
       golang#v2.0.0:
-        version: "1.12"
+        version: "1.13"
         import: "${AKASH_GO_PACKAGE}"
+        environment:
+          - GO111MODULE=on
     command: .buildkite/script/test.sh integration
 
   - name: ":hospital: hygiene checks"
     plugins:
       golang#v2.0.0:
-        version: "1.12"
+        version: "1.13"
         import: "${AKASH_GO_PACKAGE}"
+        environment:
+          - GO111MODULE=on
     command: .buildkite/script/test.sh lint
 
   - name: ":satellite: golang with rc"
@@ -58,6 +64,7 @@ steps:
         import: "${AKASH_GO_PACKAGE}"
         environment:
           - TEST_DELAY_THREAD_START
+          - GO111MODULE=on
     command: .buildkite/script/test.sh test-lite
 
   - name: ":wilted_flower: golang with 1.11"
@@ -70,4 +77,5 @@ steps:
         import: "${AKASH_GO_PACKAGE}"
         environment:
           - TEST_DELAY_THREAD_START
+          - GO111MODULE=on
     command: .buildkite/script/test.sh test-lite
