@@ -16,7 +16,7 @@ akash:
 
 deps-install:
 	go get github.com/buger/jsonparser
-	go get github.com/ovrclk/gestalt/
+	go get github.com/ovrclk/gestalt
 
 clean:
 	rm -rf data $(BINARY)

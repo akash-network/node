@@ -4,6 +4,8 @@ PROTOC_FILES = $(patsubst %.proto,%.pb.go, $(PROTO_FILES))
 BINS       := akash akashd
 IMAGE_BINS := _build/akash _build/akashd
 
+GO := GO111MODULE=on go
+
 IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 
 BUILD_FLAGS = -ldflags \
@@ -16,17 +18,17 @@ all: build bins
 bins: $(BINS)
 
 build:
-	GO111MODULE=off go build -i $$(glide novendor)
+	$(GO) build ./...
 
 akash:
-	GO111MODULE=off go build $(BUILD_FLAGS) ./cmd/akash
+	$(GO) build $(BUILD_FLAGS) ./cmd/akash
 
 akashd:
-	GO111MODULE=off go build $(BUILD_FLAGS) ./cmd/akashd
+	$(GO) build $(BUILD_FLAGS) ./cmd/akashd
 
 image-bins:
-	$(IMAGE_BUILD_ENV) GO111MODULE=off go build $(BUILD_FLAGS) -o _build/akash  ./cmd/akash
-	$(IMAGE_BUILD_ENV) GO111MODULE=off go build $(BUILD_FLAGS) -o _build/akashd ./cmd/akashd
+	$(IMAGE_BUILD_ENV) $(GO) build $(BUILD_FLAGS) -o _build/akash  ./cmd/akash
+	$(IMAGE_BUILD_ENV) $(GO) build $(BUILD_FLAGS) -o _build/akashd ./cmd/akashd
 
 image: image-bins
 	docker build --rm            \
@@ -39,8 +41,8 @@ image: image-bins
 		_build
 
 install:
-	GO111MODULE=off go install $(BUILD_FLAGS) ./cmd/akash
-	GO111MODULE=off go install $(BUILD_FLAGS) ./cmd/akashd
+	$(GO) install $(BUILD_FLAGS) ./cmd/akash
+	$(GO) install $(BUILD_FLAGS) ./cmd/akashd
 
 release:
 	docker run --rm --privileged \
@@ -57,38 +59,31 @@ image-minikube:
 	eval $$(minikube docker-env) && make image
 
 test:
-	GO111MODULE=off go test $$(glide novendor)
+	$(GO) test ./...
 
 test-nocache:
-	GO111MODULE=off go test -count=1 $$(glide novendor)
+	$(GO) test -count=1 ./...
 
 test-full:
-	GO111MODULE=off go test -race $$(glide novendor)
-
-test-cover:
-	goveralls -service=travis-ci -ignore="types/types.pb.go"
+	$(GO) test -race ./...
 
 test-lint:
 	golangci-lint run
 
 lintdeps-install:
-	go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint
 
 test-vet:
-	go vet $$(glide novendor | grep -v ./pkg/)
+	$(GO) vet ./...
 
 deps-install:
-	glide install -v
+	$(GO) mod download
 
 devdeps-install:
 	go get github.com/gogo/protobuf/protoc-gen-gogo
 	go get github.com/vektra/mockery/.../
 	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
-
-coverdeps-install:
-	go get golang.org/x/tools/cmd/cover
-	go get github.com/mattn/goveralls
 
 test-integration: $(BINS)
 	(cd _integration && make clean run)
@@ -148,7 +143,6 @@ clean:
 	image image-bins \
 	test test-nocache test-full \
 	deps-install devdeps-install \
-	test-cover coverdeps-install \
 	test-integraion integrationdeps-install \
 	test-lint lintdeps-install \
 	test-vet \

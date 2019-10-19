@@ -18,9 +18,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	tmdb "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
+	tmdb "github.com/tendermint/tm-db"
 )
 
 // KeybaseName is the default name of the Keybase

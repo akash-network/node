@@ -2,10 +2,7 @@
 
 set -euo pipefail
 
-do_glide(){
-  echo "--- :building_construction: installing glide"
-  curl https://glide.sh/get | sh
-
+do_deps(){
   echo "--- :inbox_tray: installing deps"
   make deps-install
 }
@@ -60,24 +57,24 @@ do_integration(){
 
 case "$1" in
   test)
-    do_glide
+    do_deps
     do_tests
     ;;
   test-lite)
-    do_glide
+    do_deps
     do_bins
     do_tests_lite
     ;;
   coverage)
-    do_glide
+    do_deps
     do_coverage
     ;;
   integration)
-    do_glide
+    do_deps
     do_integration
     ;;
   lint)
-    do_glide
+    do_deps
     do_bins
     do_vet
     do_lint

@@ -203,6 +203,6 @@ func (a *app) doDeliverTx(state appstate.State, ctx apptypes.Context, tx *types.
 	}
 
 	return abci_types.ResponseDeliverTx{
-		Tags: apptypes.NewTags(a.Name(), apptypes.TxTypeSend),
+		Events: apptypes.Events(a.Name(), apptypes.TxTypeSend),
 	}
 }

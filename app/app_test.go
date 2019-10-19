@@ -15,6 +15,7 @@ import (
 	"github.com/ovrclk/akash/types/code"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	abci_types "github.com/tendermint/tendermint/abci/types"
 )
 
 func TestApp(t *testing.T) {
@@ -46,7 +47,7 @@ func TestApp(t *testing.T) {
 			Amount: 0,
 		})
 		require.NoError(t, err)
-		resp := app.DeliverTx(tx)
+		resp := app.DeliverTx(abci_types.RequestDeliverTx{Tx: tx})
 		require.Equal(t, code.INVALID_TRANSACTION, resp.Code)
 		require.True(t, resp.IsErr())
 		require.False(t, resp.IsOK())
@@ -60,7 +61,7 @@ func TestApp(t *testing.T) {
 			Amount: 0,
 		})
 		require.NoError(t, err)
-		resp := app.DeliverTx(tx)
+		resp := app.DeliverTx(abci_types.RequestDeliverTx{Tx: tx})
 		require.Equal(t, code.INVALID_TRANSACTION, resp.Code)
 		require.True(t, resp.IsErr())
 		require.False(t, resp.IsOK())
@@ -74,7 +75,7 @@ func TestApp(t *testing.T) {
 			Amount: 0,
 		})
 		require.NoError(t, err)
-		resp := app.DeliverTx(tx)
+		resp := app.DeliverTx(abci_types.RequestDeliverTx{Tx: tx})
 		require.Equal(t, code.OK, resp.Code)
 		require.False(t, resp.IsErr())
 		require.True(t, resp.IsOK())
@@ -88,7 +89,7 @@ func TestApp(t *testing.T) {
 			Amount: 0,
 		})
 		require.NoError(t, err)
-		resp := app.CheckTx(tx)
+		resp := app.CheckTx(abci_types.RequestCheckTx{Tx: tx})
 		require.Equal(t, code.OK, resp.Code)
 		require.False(t, resp.IsErr())
 		require.True(t, resp.IsOK())
