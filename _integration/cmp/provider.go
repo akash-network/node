@@ -10,12 +10,13 @@ import (
 func providerCreate(root vars.Ref, key vars.Ref, paddr vars.Ref) gestalt.Component {
 
 	check := akash_(root, "query", "query", "provider", paddr.Var()).
-		FN(js.Do(js.Str(paddr.Var(), "raw", "address")))
+		FN(js.Do(js.Str(paddr.Var(), "raw", "[0]", "address")))
 
 	return g.Group("provider-create").
 		Run(
 			akash_(root, "create", "provider", "add", "{{provider-path}}", "-k", key.Name()).
-				FN(js.Do(js.Str(paddr.Name(), "add_provider", "[0]", "key"))).
+				FN(js.Do(
+					js.Any("add_provider", "[0]", "key").Export(paddr.Name()))).
 				WithMeta(g.Export(paddr.Name()))).
 		Run(g.Retry(5).Run(check)).
 		WithMeta(g.Export(paddr.Name()).

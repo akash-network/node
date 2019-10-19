@@ -12,6 +12,7 @@ do_init(){
 	echo $akash_create_key_0_public_key > "$DATA_ROOT/master.key"
 	eval $(akash key create other -m shell)
 	echo $akash_create_key_0_public_key > "$DATA_ROOT/other.key"
+
   _akashd init "$(cat "$DATA_ROOT/master.key")" -t helm -n "node-0,node-1,node-2"
 }
 
