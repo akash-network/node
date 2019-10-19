@@ -207,8 +207,7 @@ func (a *app) doDeliverTx(state appstate.State, ctx apptypes.Context, tx *types.
 	}
 
 	return abci_types.ResponseDeliverTx{
-		// TODO: Tags -> Events
-		// Events: apptypes.NewTags(a.Name(), apptypes.TxTypeProviderCreate),
-		Data: provider.Address,
+		Events: apptypes.Events(a.Name(), apptypes.TxTypeProviderCreate),
+		Data:   provider.Address,
 	}
 }
