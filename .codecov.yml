@@ -1,3 +1,4 @@
 ignore:
   - **/*.pb.go
   - **/mocks/.*
+  - pkg

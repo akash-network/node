@@ -15,7 +15,7 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/fsnotify/fsnotify v1.4.8-0.20191012010759-4bf2d1fec783 // indirect
 	github.com/go-kit/kit v0.9.1-0.20191018122245-9f5354e50d79
-	github.com/gogo/protobuf v1.3.0
+	github.com/gogo/protobuf v1.3.1
 	github.com/golang/protobuf v1.3.2
 	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
 	github.com/golangci/golangci-lint v1.21.0
@@ -23,7 +23,7 @@ require (
 	github.com/googleapis/gnostic v0.0.0-20170729233727-0c5108395e2d // indirect
 	github.com/gosuri/uitable v0.0.2
 	github.com/gregjones/httpcache v0.0.0-20170728041850-787624de3eb7 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.9.0
+	github.com/grpc-ecosystem/grpc-gateway v1.11.3
 	github.com/hashicorp/golang-lru v0.0.0-20160207214719-a0d98a5f2880 // indirect
 	github.com/hashicorp/hcl v1.0.1-0.20191016231534-914dc3f8dd7c // indirect
 	github.com/huandu/xstrings v1.2.1-0.20180906151751-8bbcf2f9ccb5 // indirect
@@ -58,6 +58,7 @@ require (
 	github.com/tendermint/iavl v0.12.5-0.20191011080022-7a2b96e4c989
 	github.com/tendermint/tendermint v0.32.6
 	github.com/tendermint/tm-db v0.2.1-0.20191018125020-d60ea1312b4b
+	github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5 // indirect
 	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
 	google.golang.org/appengine v1.6.6-0.20191016204603-16bce7d3dc4e // indirect
 	google.golang.org/genproto v0.0.0-20181029155118-b69ba1387ce2

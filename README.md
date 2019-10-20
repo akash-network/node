@@ -52,29 +52,26 @@ $ curl https://raw.githubusercontent.com/ovrclk/akash/master/godownloader.sh | s
 
 ## Dependencies
 
- Akash is developed and tested with [golang 1.11+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
-
- Additional requirements are:
-
- * [glide](https://github.com/Masterminds/glide): Golang library management.
+ Akash is developed and tested with [golang 1.12+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
 
 For development environments, requirements include:
 
  * [protocol buffers](https://developers.google.com/protocol-buffers/): Protobuf compiler.
 
- Most golang libraries will be packaged in the local `vendor/` directory via [glide](https://github.com/Masterminds/glide), however the following packages will
+ Most golang libraries will be installed via [`go modules`](https://github.com/golang/go/wiki/Modules),
+ however the following packages will
  be installed globally with their binaries placed in `$GOPATH/bin` by `make devdeps-install`:
 
  * [gogoprotobuf](https://github.com/gogo/protobuf): Golang protobuf compiler plugin.
  * [mockery](https://github.com/vektra/mockery): Mock generator.
+ * [grpc-gateway](https://github.com/grpc-ecosystem/grpc-gateway): HTTP<->gRPC proxy.
+ * [golangci-lint](https://github.com/golangci/golangci-lint): golang static analysis tool.
 
  See below for dependency installation instructions for various platforms.
 
 ### MacOS:
 
 ```sh
-brew install glide
-
 # dev environment only:
 brew install protobuf
 ```
@@ -82,8 +79,6 @@ brew install protobuf
 ### Arch Linux:
 
 ```sh
-curl https://glide.sh/get | sh
-
 # dev environment only:
 sudo pacman -Sy protobuf
 ```

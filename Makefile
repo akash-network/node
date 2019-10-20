@@ -80,10 +80,10 @@ deps-install:
 	$(GO) mod download
 
 devdeps-install:
-	go get github.com/gogo/protobuf/protoc-gen-gogo
-	go get github.com/vektra/mockery/.../
-	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
-	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+	$(GO) install github.com/gogo/protobuf/protoc-gen-gogo
+	$(GO) install github.com/vektra/mockery/.../
+	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
+	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 
 test-integration: $(BINS)
 	(cd _integration && make clean run)
