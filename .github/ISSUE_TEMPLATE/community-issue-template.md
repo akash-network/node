@@ -6,17 +6,18 @@ about: Bug reports and feature requests from the Akash community
 
 <!-- This form is for bug reports and feature requests ONLY!
 
-If you're looking for help, run `akash -h`, check testnet documentation at https://github.com/ovrclk/akash/_docs/testnet, or our general documentation at https://github.com/ovrclk/akash/_docs.
+If you're looking for help, run `akash -h`, check out documentation at https://docs.akash.network.
 
-If the matter is security related, please DM an admin on our Telegram channel at https://t.me/AkashNW.
+Join our chat at http://akash.network/chat to speak with a team member.
+
+If the matter is security related, please DM an admin on our Telegram channel at https://akash.network/chat
 -->
-
 
 ### Issue type
 <!--  Bug or feature request? -->
 
-
 ### Akash version
+
 <!-- output of:
 $ akash version
 -->
@@ -50,5 +51,3 @@ akash (client): OS and other env info as appropriate
      - {deployment,lease} id as appropriate
      - deployment.yml if appropriate
 -->
-
-
