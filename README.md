@@ -3,7 +3,6 @@
 [![Build status](https://badge.buildkite.com/85e140e3e8c0257c63d976946b061b805f0f338cdca7b02a9c.svg?branch=master)](https://buildkite.com/ovrclk/akash)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ovrclk/akash)](https://goreportcard.com/report/github.com/ovrclk/akash)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Join Chat](https://img.shields.io/matrix/akashnet:matrix.org)](http://akash.network/chat)
 
 [![Akash](_docs/img/logo-label-black.svg "Akash")](#overview)
 
@@ -57,7 +56,7 @@ $ curl https://raw.githubusercontent.com/ovrclk/akash/master/godownloader.sh | s
 
 Akash is written in Golang and is Apache 2.0 licensed - contributions are welcomed whether that means providing feedback, testing existing and new feature or hacking on the source.
 
-To become a contributor, please see the guide on [ontributing](.github/CONTRIBUTING)
+To become a contributor, please see the guide on [contributing](.github/CONTRIBUTING)
 
 ## Building from Source
 
@@ -98,7 +97,6 @@ brew install protobuf
 # dev environment only:
 sudo pacman -Sy protobuf
 ```
-
 ### Akash Suite
 
 Download and build `akash` and `akashd`:
