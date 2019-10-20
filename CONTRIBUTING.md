@@ -298,14 +298,13 @@ This project is written in Golang but many of the community contributions so far
 
 ### Chat
 
-There is an Matrix community which you are welcome to join to discuss Akash Network, Kubernetes, Serverless, FaaS, Blockchain
+There is an Matrix community which you are welcome to join to discuss Akash Network, Kubernetes, Serverless, FaaS, Blockchain.
 
-[Join Chat here](https://akash.network)
+[Join Developer Chat here](https://akash.network/chat)
 
 ### Roadmap
 
 * See the [2019 Project Update](https://github.com/orgs/ovrclk/projects/2)
-
 * Browse open issues in [overclock/akash](https://github.com/ovrclk/akash/issues)
 
 ## License
