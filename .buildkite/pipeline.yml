@@ -68,8 +68,8 @@ steps:
     command: .buildkite/script/test.sh test-lite
 
   - name: ":wilted_flower: golang with 1.12"
-    retry:
-      automatic: true
+    # retry:
+    #   automatic: true
     soft_fail: true
     branches: master
     plugins:
