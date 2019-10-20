@@ -283,18 +283,17 @@ func findDeployments(ctx context.Context, log log.Logger, client Client, session
 
 	log.Info("found leases", "num-active", len(leases), "num-skipped", len(leaseList.Items)-len(leases))
 
-	dcount := len(deployments)
-	for idx, deployment := range deployments {
+	active := make([]Deployment, 0, len(deployments))
+
+	for _, deployment := range deployments {
 		if _, ok := leases[deployment.LeaseID().Path()]; !ok {
 			continue
 		}
-
-		deployments = append(deployments[:idx], deployments[idx+1:]...)
-
+		active = append(active, deployment)
 		log.Debug("deployment", "lease", deployment.LeaseID(), "mgroup", deployment.ManifestGroup().Name)
 	}
 
-	log.Info("found deployments", "num-active", len(deployments), "num-skipped", dcount-len(deployments))
+	log.Info("found deployments", "num-active", len(active), "num-skipped", len(deployments)-len(active))
 
-	return deployments, nil
+	return active, nil
 }
