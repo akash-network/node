@@ -70,6 +70,7 @@ steps:
   - name: ":wilted_flower: golang with 1.12"
     retry:
       automatic: true
+    soft_fail: true
     branches: master
     plugins:
       golang#v2.0.0:
