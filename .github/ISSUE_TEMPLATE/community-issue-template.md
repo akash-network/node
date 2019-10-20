@@ -1,6 +1,9 @@
 ---
 name: Community issue template
 about: Bug reports and feature requests from the Akash community
+title: ''
+labels: ''
+assignees: ''
 
 ---
 
