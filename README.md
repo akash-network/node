@@ -56,7 +56,7 @@ $ curl https://raw.githubusercontent.com/ovrclk/akash/master/godownloader.sh | s
 
 Akash is written in Golang and is Apache 2.0 licensed - contributions are welcomed whether that means providing feedback, testing existing and new feature or hacking on the source.
 
-To become a contributor, please see the guide on [contributing](CONTRIBUTING)
+To become a contributor, please see the guide on [contributing](CONTRIBUTING.md)
 
 ## Building from Source
 
