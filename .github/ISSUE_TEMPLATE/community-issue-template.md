@@ -34,9 +34,7 @@ $ akash query account [key value] #returns your balance
 
 ### What happened
 
-
 ### What did you expect to happen
-
 
 ### How to reproduce it
 <!--  Steps to reproduce, as minimally and precisely as possible -->
@@ -54,3 +52,8 @@ akash (client): OS and other env info as appropriate
      - {deployment,lease} id as appropriate
      - deployment.yml if appropriate
 -->
+
+## Next steps
+
+You may [join developer chat](https://akash.network/chat) for community support.
+
