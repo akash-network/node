@@ -39,6 +39,12 @@ func AppendProvider(p *types.Provider, data dsky.SectionData) {
 }
 
 func AppendLeaseStatus(status *types.LeaseStatusResponse, sd dsky.SectionData) {
+	if status == nil {
+		return
+	}
+	if sd == nil {
+		return
+	}
 	for _, service := range status.Services {
 		name, avail, total := " ", "0", "0"
 		if len(service.Name) > 0 {

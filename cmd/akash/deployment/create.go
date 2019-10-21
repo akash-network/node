@@ -298,6 +298,9 @@ func processStages(statusChan chan *deployStatus, s session.Session) error {
 			// add services
 			data = printer.NewSection("Leases").WithLabel("Lease(s)").NewData().AsPane()
 			for lid, v := range state.providerLeaseStatus {
+				if v == nil {
+					continue
+				}
 				data.Add("Lease ID", lid.String())
 				sd := dsky.NewSectionData(" ").AsList()
 				sdutil.AppendLeaseStatus(v, sd)
