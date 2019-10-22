@@ -5,7 +5,7 @@ NODE_FILES = $(sort $(wildcard $(NODE_ROOT)/*.yaml))
 NODES      = $(patsubst $(NODE_ROOT)/%.yaml,%,$(NODE_FILES))
 
 PROVIDER_CHART = akash-provider
-PROVIDERS      = us-west-1 us-west-2 us-east-1 us-east-2 ap-southeast-1 ap-southeast-2
+PROVIDERS      = us-west-1 us-west-2 us-east-1 # us-east-2 ap-southeast-1 ap-southeast-2
 
 helm-install-nodes: $(patsubst %,helm-install-node-%,$(NODES))
 helm-upgrade-nodes: $(patsubst %,helm-upgrade-node-%,$(NODES))
