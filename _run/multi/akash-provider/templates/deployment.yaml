@@ -31,7 +31,7 @@ spec:
             - name: AKASH_DEPLOYMENT_SERVICE_TYPE
               value: ClusterIP
             - name: AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS
-              value: "false"
+              value: "true"
             - name: AKASH_DEPLOYMENT_INGRESS_DOMAIN
               value: "{{ .Values.deployment.ingress.domain }}"
           ports:
