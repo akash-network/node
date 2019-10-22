@@ -28,6 +28,8 @@ spec:
           env:
             - name: AKASHD_DATA
               value: /data
+            - name: AKASHD_RPC_LADDR
+              value: "tcp://0.0.0.0:{{ .Values.akashd.ports.rpc }}"
           ports:
             - containerPort: {{ .Values.akashd.ports.p2p }}
               name: akashd-p2p
