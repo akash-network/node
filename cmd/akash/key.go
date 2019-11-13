@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
@@ -12,7 +10,6 @@ import (
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/errors"
-	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 
 	. "github.com/ovrclk/akash/util"
@@ -57,22 +54,6 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 	kmgr, err := ses.KeyManager()
 	if err != nil {
 		return err
-	}
-
-	info, err := kmgr.Get(name)
-	if err != nil {
-		return err
-	}
-
-	inBuf := bufio.NewReader(cmd.InOrStdin())
-	if len(info.GetPubKey().Address()) != 0 {
-		res, err := getConfirmation(fmt.Sprintf("override the existing name %s", name), inBuf)
-		if err != nil {
-			return err
-		}
-		if !res {
-			return errors.NewArgumentError("received no").WithMessage("aborted")
-		}
 	}
 
 	ktype, err := ses.KeyType()
@@ -362,27 +343,3 @@ var (
 	 clown outside
 `
 )
-
-func getConfirmation(prompt string, buf *bufio.Reader) (bool, error) {
-	if isatty.IsTerminal(os.Stdin.Fd()) || isatty.IsCygwinTerminal(os.Stdin.Fd()) {
-		fmt.Print(fmt.Sprintf("%s [y/N]: ", prompt))
-	}
-
-	response, err := buf.ReadString('\n')
-	if err != nil {
-		return false, err
-	}
-
-	response = strings.TrimSpace(response)
-	if len(response) == 0 {
-		return false, nil
-	}
-
-	response = strings.ToLower(response)
-	if response[0] == 'y' {
-		return true, nil
-	}
-
-	return false, nil
-}
-
