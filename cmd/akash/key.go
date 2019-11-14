@@ -7,12 +7,18 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/hd"
+	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/errors"
 	"github.com/spf13/cobra"
 
 	. "github.com/ovrclk/akash/util"
+)
+
+const (
+	// BIP44 HD path used to generate HD wallets
+	BIP44Path = "44'/118'/0'/0/0"
 )
 
 func keyCommand() *cobra.Command {
@@ -66,6 +72,7 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 		return err
 	}
 
+	types.GetConfig().SetFullFundraiserPath(BIP44Path)
 	info, seed, err := kmgr.CreateMnemonic(name, common.DefaultCodec, password, ktype)
 	if err != nil {
 		return err
@@ -145,9 +152,13 @@ func doKeyRecoverCommand(ses session.Session, cmd *cobra.Command, args []string)
 		return err
 	}
 	kmgr, _ := ses.KeyManager()
-	// XXX: how to use?
-	params := *hd.NewFundraiserParams(0, 0, 0)
-	info, err := kmgr.Derive(name, seed, keys.DefaultBIP39Passphrase, password, params)
+
+	params, err := hd.NewParamsFromPath(BIP44Path)
+	if err != nil {
+		return err
+	}
+
+	info, err := kmgr.Derive(name, seed, keys.DefaultBIP39Passphrase, password, *params)
 	if err != nil {
 		return err
 	}
