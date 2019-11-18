@@ -13,9 +13,8 @@ import (
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/errors"
-	"github.com/spf13/cobra"
-
 	. "github.com/ovrclk/akash/util"
+	"github.com/spf13/cobra"
 )
 
 func keyCommand() *cobra.Command {
@@ -60,27 +59,27 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 	}
 
 	info, err := kmgr.Get(name)
-	if err != nil {
-		return err
-	}
 
 	inBuf := bufio.NewReader(cmd.InOrStdin())
-	if len(info.GetPubKey().Address()) != 0 {
+
+	// Check if a key already exists with given name
+	if err == nil && len(info.GetPubKey().Address()) != 0 {
+
+		// Confirmation should happen in interactive mode only
+		// for other modes(shell and json) it should fail
 		if ses.Mode().IsInteractive() {
-			//Confirmation should happen in interactive mode only,for other modes(shell and json) create keys is aborted
 			res, err := getConfirmation(fmt.Sprintf(
-				"Key already exists. Do you want to override the key anyway? %s", name), inBuf)
+				"Key `%s` already exists. Do you want to override the key anyway?", name), inBuf)
+
 			if err != nil {
 				return err
 			}
 			if !res {
 				return errors.NewArgumentError("received no").WithMessage("aborted")
 			}
-		} else {
+		} else { // Abort key creation
 			return errors.NewArgumentError("Key already exists").WithMessage("aborted")
-
 		}
-
 	}
 
 	ktype, err := ses.KeyType()

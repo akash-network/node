@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
-	github.com/btcsuite/btcd v0.20.0-beta // indirect
+	github.com/btcsuite/btcd v0.20.1-beta // indirect
 	github.com/caarlos0/env v3.3.0+incompatible
 	github.com/cosmos/cosmos-sdk v0.37.3
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d // indirect
