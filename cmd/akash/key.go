@@ -9,8 +9,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/hd"
-	"github.com/mattn/go-isatty"
 	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/mattn/go-isatty"
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/errors"
@@ -80,7 +80,7 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 				return err
 			}
 
-			if res != true { // If user chose to abort
+			if !res { // If user chose to abort
 				return errors.NewArgumentError("received no").WithMessage("aborted")
 			}
 		} else { // Abort key creation
