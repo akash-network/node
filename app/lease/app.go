@@ -2,12 +2,10 @@ package lease
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/ovrclk/akash/app/market"
 	apptypes "github.com/ovrclk/akash/app/types"
 	"github.com/ovrclk/akash/keys"
 	appstate "github.com/ovrclk/akash/state"
@@ -36,8 +34,6 @@ func (a *app) AcceptQuery(req abci_types.RequestQuery) bool {
 
 func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 	switch tx.(type) {
-	case *types.TxPayload_TxCreateLease:
-		return true
 	case *types.TxPayload_TxCloseLease:
 		return true
 	}
@@ -46,9 +42,6 @@ func (a *app) AcceptTx(ctx apptypes.Context, tx interface{}) bool {
 
 func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}) abci_types.ResponseCheckTx {
 	switch tx := tx.(type) {
-	case *types.TxPayload_TxCreateLease:
-		resp, _ := a.doCheckCreateTx(state, ctx, tx.TxCreateLease)
-		return resp
 	case *types.TxPayload_TxCloseLease:
 		resp, _ := a.doCheckCloseTx(state, ctx, tx.TxCloseLease)
 		return resp
@@ -61,8 +54,6 @@ func (a *app) CheckTx(state appstate.State, ctx apptypes.Context, tx interface{}
 
 func (a *app) DeliverTx(state appstate.State, ctx apptypes.Context, tx interface{}) abci_types.ResponseDeliverTx {
 	switch tx := tx.(type) {
-	case *types.TxPayload_TxCreateLease:
-		return a.doDeliverCreateTx(state, ctx, tx.TxCreateLease)
 	case *types.TxPayload_TxCloseLease:
 		return a.doDeliverCloseTx(state, ctx, tx.TxCloseLease)
 	}
@@ -102,185 +93,6 @@ func (a *app) Query(state appstate.State, req abci_types.RequestQuery) abci_type
 	return abci_types.ResponseQuery{
 		Code: code.ERROR,
 		Log:  err.Error(),
-	}
-}
-
-func (a *app) doCheckCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateLease) (abci_types.ResponseCheckTx, *types.Order) {
-	if tx.Deployment == nil {
-		return abci_types.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "Empty deployment",
-		}, nil
-	}
-
-	if tx.Provider == nil {
-		return abci_types.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "Empty provider",
-		}, nil
-	}
-
-	// lookup provider
-	provider, err := state.Provider().Get(tx.Provider)
-	if err != nil {
-		return abci_types.ResponseCheckTx{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}, nil
-	}
-	if provider == nil {
-		return abci_types.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "provider not found",
-		}, nil
-	}
-
-	// ensure provider account exists
-	acct, err := state.Account().Get(provider.Owner)
-	if err != nil {
-		return abci_types.ResponseCheckTx{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}, nil
-	}
-	if acct == nil {
-		return abci_types.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "Provider account not found",
-		}, nil
-	}
-
-	// ensure order exists
-	order, err := state.Order().Get(tx.OrderID())
-	if err != nil {
-		return abci_types.ResponseCheckTx{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}, nil
-	}
-	if order == nil {
-		return abci_types.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "order not found",
-		}, nil
-	}
-
-	// ensure order in correct state
-	if order.State != types.Order_OPEN {
-		return abci_types.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "order not open",
-		}, nil
-	}
-
-	// ensure fulfillment exists
-	fulfillment, err := state.Fulfillment().Get(tx.FulfillmentID())
-	if err != nil {
-		return abci_types.ResponseCheckTx{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}, nil
-	}
-	if fulfillment == nil {
-		return abci_types.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "Fulfillment not found",
-		}, nil
-	}
-	if fulfillment.State != types.Fulfillment_OPEN {
-		return abci_types.ResponseCheckTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "Fulfillment not open",
-		}, nil
-	}
-
-	bestFulfillment, err := market.BestFulfillment(state, order)
-	if err != nil {
-		return abci_types.ResponseCheckTx{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}, nil
-	}
-
-	if bestFulfillment.Compare(fulfillment) != 0 {
-		return abci_types.ResponseCheckTx{
-			Code: code.ERROR,
-			Log:  "Unexpected fulfillment",
-		}, nil
-	}
-
-	return abci_types.ResponseCheckTx{}, order
-}
-
-func (a *app) doDeliverCreateTx(state appstate.State, ctx apptypes.Context, tx *types.TxCreateLease) abci_types.ResponseDeliverTx {
-	cresp, matchedOrder := a.doCheckCreateTx(state, ctx, tx)
-	if !cresp.IsOK() {
-		return abci_types.ResponseDeliverTx{
-			Code: cresp.Code,
-			Log:  cresp.Log,
-		}
-	}
-
-	lease := &types.Lease{
-		LeaseID: tx.LeaseID,
-		Price:   tx.Price,
-		State:   types.Lease_ACTIVE,
-	}
-
-	if err := state.Lease().Save(lease); err != nil {
-		return abci_types.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  err.Error(),
-		}
-	}
-
-	group, err := state.DeploymentGroup().Get(tx.GroupID())
-	if err != nil {
-		return abci_types.ResponseDeliverTx{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}
-	}
-	if group == nil {
-		return abci_types.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "group not found",
-		}
-	}
-
-	orders, err := state.Order().ForGroup(group.DeploymentGroupID)
-	if err != nil {
-		return abci_types.ResponseDeliverTx{
-			Code: code.ERROR,
-			Log:  err.Error(),
-		}
-	}
-	if orders == nil {
-		return abci_types.ResponseDeliverTx{
-			Code: code.INVALID_TRANSACTION,
-			Log:  "orders not found",
-		}
-	}
-
-	for _, order := range orders {
-		if order.Seq != matchedOrder.Seq {
-			order.State = types.Order_CLOSED
-		} else {
-			order.State = types.Order_MATCHED
-		}
-		if err := state.Order().Save(order); err != nil {
-			return abci_types.ResponseDeliverTx{
-				Code: code.INVALID_TRANSACTION,
-				Log:  err.Error(),
-			}
-		}
-	}
-
-	return abci_types.ResponseDeliverTx{
-		Events: apptypes.Events(a.Name(), apptypes.TxTypeCreateLease,
-			tmcommon.KVPair{Key: []byte(apptypes.TagNameDeployment), Value: lease.Deployment},
-			tmcommon.KVPair{Key: []byte(apptypes.TagNameLease), Value: keys.LeaseID(lease.LeaseID).Bytes()},
-		),
 	}
 }
 
@@ -468,73 +280,4 @@ func (a *app) doDeploymentQuery(state appstate.State, key keys.Deployment) abci_
 		Value:  bytes,
 		Height: state.Version(),
 	}
-}
-
-// billing for leases
-func ProcessLeases(state appstate.State) error {
-	leases, err := state.Lease().All()
-	if err != nil {
-		return err
-	}
-	for _, lease := range leases {
-		if lease.State == types.Lease_ACTIVE {
-			if err := processLease(state, *lease); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func processLease(state appstate.State, lease types.Lease) error {
-	deployment, err := state.Deployment().Get(lease.Deployment)
-	if err != nil {
-		return err
-	}
-	if deployment == nil {
-		return errors.New("deployment not found")
-	}
-	tenant, err := state.Account().Get(deployment.Tenant)
-	if err != nil {
-		return err
-	}
-	if tenant == nil {
-		return errors.New("tenant not found")
-	}
-	provider, err := state.Provider().Get(lease.Provider)
-	if err != nil {
-		return err
-	}
-	if provider == nil {
-		return errors.New("provider not found")
-	}
-	owner, err := state.Account().Get(provider.Owner)
-	if err != nil {
-		return err
-	}
-	if owner == nil {
-		return errors.New("owner not found")
-	}
-
-	p := uint64(lease.Price)
-
-	if tenant.Balance >= p {
-		owner.Balance += p
-		tenant.Balance -= p
-	} else {
-		owner.Balance += tenant.Balance
-		tenant.Balance = 0
-	}
-
-	err = state.Account().Save(tenant)
-	if err != nil {
-		return err
-	}
-
-	err = state.Account().Save(owner)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
