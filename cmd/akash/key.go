@@ -66,13 +66,18 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 
 	inBuf := bufio.NewReader(cmd.InOrStdin())
 	if len(info.GetPubKey().Address()) != 0 {
-		res, err := getConfirmation(fmt.Sprintf("override the existing name %s", name), inBuf)
-		if err != nil {
-			return err
+		if ses.Mode().IsInteractive() {
+			res, err := getConfirmation(fmt.Sprintf("override the existing name %s", name), inBuf)
+			if err != nil {
+				return err
+			}
+			if !res {
+				return errors.NewArgumentError("received no").WithMessage("aborted")
+			}
+		} else {
+			return errors.NewArgumentError("Key already exists").WithMessage("aborted")
 		}
-		if !res {
-			return errors.NewArgumentError("received no").WithMessage("aborted")
-		}
+
 	}
 
 	ktype, err := ses.KeyType()
