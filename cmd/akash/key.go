@@ -64,7 +64,6 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 
 	// Check if a key already exists with given name
 	if err == nil && len(info.GetPubKey().Address()) != 0 {
-
 		// Confirmation should happen in interactive mode only
 		// for other modes(shell and json) it should fail
 		if ses.Mode().IsInteractive() {
@@ -74,7 +73,8 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 			if err != nil {
 				return err
 			}
-			if !res {
+
+			if res != true { // If user chose to abort
 				return errors.NewArgumentError("received no").WithMessage("aborted")
 			}
 		} else { // Abort key creation
