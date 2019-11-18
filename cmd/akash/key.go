@@ -67,7 +67,7 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 	inBuf := bufio.NewReader(cmd.InOrStdin())
 	if len(info.GetPubKey().Address()) != 0 {
 		if ses.Mode().IsInteractive() {
-			//Confirmation should happen in interactive mode only
+			//Confirmation should happen in interactive mode only,for other modes(shell and json) create keys is aborted
 			res, err := getConfirmation(fmt.Sprintf(
 				"Key already exists. Do you want to override the key anyway? %s", name), inBuf)
 			if err != nil {
@@ -77,7 +77,6 @@ func doKeyCreateCommand(ses session.Session, cmd *cobra.Command, args []string) 
 				return errors.NewArgumentError("received no").WithMessage("aborted")
 			}
 		} else {
-			//Create keys is aborted in other modes(shell and json)
 			return errors.NewArgumentError("Key already exists").WithMessage("aborted")
 
 		}
