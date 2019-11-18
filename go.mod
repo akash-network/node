@@ -5,9 +5,9 @@ go 1.13
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
-	github.com/btcsuite/btcd v0.20.0-beta // indirect
+	github.com/btcsuite/btcd v0.20.1-beta // indirect
 	github.com/caarlos0/env v3.3.0+incompatible
-	github.com/cosmos/cosmos-sdk v0.37.3
+	github.com/cosmos/cosmos-sdk v0.37.4
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d // indirect
 	github.com/cosmos/ledger-cosmos-go v0.10.4-0.20191015201938-c03f491cbf17 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -21,7 +21,8 @@ require (
 	github.com/golangci/golangci-lint v1.21.0
 	github.com/google/uuid v1.1.2-0.20190416172445-c2e93f3ae59f // indirect
 	github.com/googleapis/gnostic v0.0.0-20170729233727-0c5108395e2d // indirect
-	github.com/gosuri/uitable v0.0.2
+	github.com/gosuri/uilive v0.0.3 // indirect
+	github.com/gosuri/uitable v0.0.4
 	github.com/gregjones/httpcache v0.0.0-20170728041850-787624de3eb7 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.11.3
 	github.com/hashicorp/golang-lru v0.0.0-20160207214719-a0d98a5f2880 // indirect
@@ -34,7 +35,7 @@ require (
 	github.com/lithammer/shortuuid v1.0.1-0.20190319200910-1be5ab5d90f6
 	github.com/magiconair/properties v1.8.2-0.20191019074931-a586bb8b7dea // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
-	github.com/mattn/go-runewidth v0.0.5-0.20181218000649-703b5e6b11ae // indirect
+	github.com/mattn/go-runewidth v0.0.6 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v0.0.0-20180320133207-05fbef0ca5da // indirect
 	github.com/ovrclk/dsky v0.0.6
@@ -56,10 +57,11 @@ require (
 	github.com/tecbot/gorocksdb v0.0.0-20191019123150-400c56251341 // indirect
 	github.com/tendermint/go-amino v0.15.0
 	github.com/tendermint/iavl v0.12.5-0.20191011080022-7a2b96e4c989
-	github.com/tendermint/tendermint v0.32.6
+	github.com/tendermint/tendermint v0.32.7
 	github.com/tendermint/tm-db v0.2.1-0.20191018125020-d60ea1312b4b
 	github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5 // indirect
 	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
+	golang.org/x/sys v0.0.0-20191112214154-59a1497f0cea // indirect
 	google.golang.org/appengine v1.6.6-0.20191016204603-16bce7d3dc4e // indirect
 	google.golang.org/genproto v0.0.0-20181029155118-b69ba1387ce2
 	google.golang.org/grpc v1.24.0
