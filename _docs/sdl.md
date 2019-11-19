@@ -9,11 +9,11 @@ A complete deployment has the following sections:
  * [profiles](#profiles)
  * [deployment](#deployment)
 
-An example deployment configuration for the Akash testnet can be found [here](testnet/testnet-deployment.yml). A full example deployment configuration can be found [here](deployment.yml).
+An example deployment configuration can be found [here](deployment.yml).
 
 ### version
 
-Indicates version of Akash configuration file.  Currently only `"1.0"` is accepted.
+Indicates version of Akash configuration file.  Currently only `"1.5"` is accepted.
 
 
 ### services
@@ -76,14 +76,14 @@ uses uses the profile.
 
 Example:
 
-This defines a profile named `web` having resource requirements of 2 vCPUs, 2 gigabytes of memory, and 5 gigabytes of disk space available.
+This defines a profile named `web` having resource requirements of 2 vCPUs, 2 gigabytes of memory, and 5 gigabytes of storage space available.
 
 
 ```yaml
 web:
   cpu: 2
   memory: "2Gi"
-  disk: "5Gi"
+  storage: "5Gi"
 ```
 
 `cpu` units represent a vCPU share and can be fractional.  When no suffix is present the value represents
@@ -98,7 +98,7 @@ Example:
 | `"100m"` | 1/10 |
 | `"50m"` | 1/20 |
 
-`memory`, `disk` units are described in bytes.  The following suffixes are allowed for simplification:
+`memory`, `storage` units are described in bytes.  The following suffixes are allowed for simplification:
 
 | Suffix | Value |
 | --- | --- |
@@ -127,22 +127,16 @@ westcoast:
   attributes:
     region: us-west
   pricing:
-    web: 8u
-    db: 100u
+    web:
+      denom: akash
+      amount: 8
+    db:
+      denom: akash
+      amount: 100
 ```
 
 This defines a profile named `westcoast` having required attributes `{region="us-west"}`, and with a max price for
-the `web` and `db` [compute profiles](#profilescompute) of 8 and 15 _micro_ (10^-6) tokens per block, respectively.
-
-Pricing may be expressed in decimal or scientific notation for Akash units, or may be suffixed with `mu`,`µ`, or `u` to represent _micro_ Akash.
-
-Examples:
-
-| Value | Micro Akash Tokens |
-| --- | --- |
-| `1`    | 1000000 |
-| `1e-4` | 100 |
-| `20u`  | 20 |
+the `web` and `db` [compute profiles](#profilescompute) of 8 and 15 tokens per block, respectively.
 
 ### deployment
 

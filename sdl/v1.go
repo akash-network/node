@@ -5,11 +5,14 @@ import (
 	"sort"
 
 	"github.com/blang/semver"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	"github.com/tendermint/tendermint/libs/common"
 )
 
 var (
-	allowedVersion = semver.MustParse("1.0.0")
+	allowedVersion = semver.MustParse("1.5.0")
 )
 
 type v1 struct {
@@ -57,9 +60,9 @@ type v1Profiles struct {
 }
 
 type v1ComputeProfile struct {
-	CPU    cpuQuantity `yaml:"cpu"`
-	Memory byteQuantity
-	Disk   byteQuantity
+	CPU     cpuQuantity `yaml:"cpu"`
+	Memory  byteQuantity
+	Storage byteQuantity
 }
 
 type v1PlacementProfile struct {
@@ -67,8 +70,16 @@ type v1PlacementProfile struct {
 	Pricing    map[string]v1PricingProfile
 }
 
+// TODO: make coin parsing "just work".  wtf.
 type v1PricingProfile struct {
-	Value uint64
+	Denom  string
+	Amount string
+}
+
+func (pp v1PricingProfile) ToCoin() sdk.Coin {
+	amt, _ := sdk.NewIntFromString(pp.Amount)
+	coin := sdk.NewCoin(pp.Denom, amt)
+	return coin
 }
 
 // placement-profile -> { compute-profile, count }
@@ -100,8 +111,8 @@ func (sdl *v1) Validate() error {
 	return nil
 }
 
-func (sdl *v1) DeploymentGroups() ([]*types.GroupSpec, error) {
-	groups := make(map[string]*types.GroupSpec)
+func (sdl *v1) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
+	groups := make(map[string]*dtypes.GroupSpec)
 
 	for _, svcName := range v1DeploymentSvcNames(sdl.Deployments) {
 		depl := sdl.Deployments[svcName]
@@ -127,32 +138,32 @@ func (sdl *v1) DeploymentGroups() ([]*types.GroupSpec, error) {
 			group := groups[placementName]
 
 			if group == nil {
-				group = &types.GroupSpec{
+				group = &dtypes.GroupSpec{
 					Name: placementName,
 				}
 
 				for k, v := range infra.Attributes {
-					group.Requirements = append(group.Requirements, types.ProviderAttribute{
-						Name:  k,
-						Value: v,
+					group.Requirements = append(group.Requirements, common.KVPair{
+						Key:   []byte(k),
+						Value: []byte(v),
 					})
 				}
 
 				// keep ordering stable
 				sort.Slice(group.Requirements, func(i, j int) bool {
-					return group.Requirements[i].Name < group.Requirements[j].Name
+					return string(group.Requirements[i].Key) < string(group.Requirements[j].Key)
 				})
 
 				groups[placementName] = group
 			}
 
-			group.Resources = append(group.Resources, types.ResourceGroup{
-				Unit: types.ResourceUnit{
-					CPU:    uint32(compute.CPU),
-					Memory: uint64(compute.Memory),
-					Disk:   uint64(compute.Disk),
+			group.Resources = append(group.Resources, dtypes.Resource{
+				Unit: dtypes.Unit{
+					CPU:     uint32(compute.CPU),
+					Memory:  uint64(compute.Memory),
+					Storage: uint64(compute.Storage),
 				},
-				Price: price.Value,
+				Price: price.ToCoin(),
 				Count: svcdepl.Count,
 			})
 
@@ -166,7 +177,7 @@ func (sdl *v1) DeploymentGroups() ([]*types.GroupSpec, error) {
 	}
 	sort.Strings(names)
 
-	result := make([]*types.GroupSpec, 0, len(names))
+	result := make([]*dtypes.GroupSpec, 0, len(names))
 	for _, name := range names {
 		result = append(result, groups[name])
 	}
@@ -211,7 +222,7 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 				Unit: &types.ResourceUnit{
 					CPU:    uint32(compute.CPU),
 					Memory: uint64(compute.Memory),
-					Disk:   uint64(compute.Disk),
+					Disk:   uint64(compute.Storage),
 				},
 				Count: svcdepl.Count,
 			}

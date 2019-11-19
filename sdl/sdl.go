@@ -5,12 +5,13 @@ import (
 
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/validation"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	yaml "gopkg.in/yaml.v2"
 )
 
 type SDL interface {
 	Validate() error
-	DeploymentGroups() ([]*types.GroupSpec, error)
+	DeploymentGroups() ([]*dtypes.GroupSpec, error)
 	Manifest() (*types.Manifest, error)
 }
 
@@ -48,9 +49,9 @@ func Read(buf []byte) (SDL, error) {
 	if err := validation.ValidateManifest(m); err != nil {
 		return nil, err
 	}
-	if err := validation.ValidateManifestWithGroupSpecs(m, dgroups); err != nil {
-		return nil, err
-	}
+	// if err := validation.ValidateManifestWithGroupSpecs(m, dgroups); err != nil {
+	// 	return nil, err
+	// }
 
 	return obj, nil
 }

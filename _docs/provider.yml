@@ -1,6 +1,6 @@
-hostURI: http://localhost:3001
+host: http://localhost:3001
 attributes:
-  - name: region
+  - key: region
     value:  us-west
-  - name: tier
+  - key: tier
     value:  "5"

@@ -7,6 +7,7 @@ require (
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
 	github.com/btcsuite/btcd v0.20.1-beta // indirect
 	github.com/caarlos0/env v3.3.0+incompatible
+	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/cosmos/cosmos-sdk v0.37.4
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d // indirect
 	github.com/cosmos/ledger-cosmos-go v0.10.4-0.20191015201938-c03f491cbf17 // indirect
@@ -21,6 +22,7 @@ require (
 	github.com/golangci/golangci-lint v1.21.0
 	github.com/google/uuid v1.1.2-0.20190416172445-c2e93f3ae59f // indirect
 	github.com/googleapis/gnostic v0.0.0-20170729233727-0c5108395e2d // indirect
+	github.com/gorilla/mux v1.7.3
 	github.com/gosuri/uitable v0.0.4
 	github.com/gregjones/httpcache v0.0.0-20170728041850-787624de3eb7 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.11.3
@@ -48,12 +50,12 @@ require (
 	github.com/spf13/cast v1.3.1-0.20190531093228-c01685bb8421 // indirect
 	github.com/spf13/cobra v0.0.6-0.20191014031137-8a4b46fadf75
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.4.1-0.20191016082920-40e41dd2240a
+	github.com/spf13/viper v1.5.0 // indirect
 	github.com/stretchr/objx v0.2.1-0.20190415111823-35313a95ee26 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/subosito/gotenv v1.2.1-0.20190917103637-de67a6614a4d // indirect
 	github.com/tecbot/gorocksdb v0.0.0-20191019123150-400c56251341 // indirect
-	github.com/tendermint/go-amino v0.15.0
+	github.com/tendermint/go-amino v0.15.1
 	github.com/tendermint/iavl v0.12.5-0.20191011080022-7a2b96e4c989
 	github.com/tendermint/tendermint v0.32.7
 	github.com/tendermint/tm-db v0.2.1-0.20191018125020-d60ea1312b4b

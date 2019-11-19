@@ -321,7 +321,7 @@ func (c *client) Inventory() ([]cluster.Node, error) {
 			cluster.NewNode("minikube", types.ResourceUnit{
 				CPU:    uint32(cfg.MaxUnitCPU * 100),
 				Memory: uint64(cfg.MaxUnitMemory * 100),
-				Disk:   uint64(cfg.MaxUnitDisk * 100),
+				Disk:   uint64(cfg.MaxUnitStorage * 100),
 			}),
 		}, nil
 	}

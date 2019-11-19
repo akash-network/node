@@ -1,5 +1,5 @@
 ---
-version: "1.0"
+version: "1.5"
 
 include:
   - "foo.yml"
@@ -61,15 +61,15 @@ profiles:
     web:
       cpu: "0.01"
       memory: "128Mi"
-      disk: "512Mi"
+      storage: "512Mi"
     db:
       cpu: "0.01"
       memory: "128Mi"
-      disk: "1Gi"
+      storage: "1Gi"
     db-pool:
       cpu: "0.01"
       memory: "128Mi"
-      disk: "512Mi"
+      storage: "512Mi"
 
   placement:
     westcoast:
@@ -78,14 +78,22 @@ profiles:
       pricing:
         web: 10u
         db:  50u
-        db-pool: 30u
+        db-pool:
+          denom: akash
+          amount: 30
     eastcoast:
       attributes:
         region: us-east
       pricing:
-        web: 30u
-        db:  60u
-        db-pool: 40u
+        web:
+          denom: akash
+          amount: 30
+        db:
+          denom: akash
+          amount: 60
+        db-pool:
+          denom: akash
+          amount: 40
 
 deployment:
 

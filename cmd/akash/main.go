@@ -1,29 +1,99 @@
 package main
 
 import (
-	"math/rand"
-	"os"
-	"time"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/keys"
+	"github.com/cosmos/cosmos-sdk/client/lcd"
+	"github.com/cosmos/cosmos-sdk/client/rpc"
+	"github.com/cosmos/cosmos-sdk/version"
+	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
+	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 
-	"github.com/ovrclk/akash/cmd/akash/deployment"
-	"github.com/ovrclk/akash/cmd/akash/query"
+	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/spf13/cobra"
+	"github.com/tendermint/go-amino"
+	"github.com/tendermint/tendermint/libs/cli"
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-	root := baseCommand()
-	root.AddCommand(keyCommand())
-	root.AddCommand(sendCommand())
-	root.AddCommand(deployment.Command())
-	root.AddCommand(providerCommand())
-	root.AddCommand(query.QueryCommand())
-	root.AddCommand(statusCommand())
-	root.AddCommand(marketplaceCommand())
-	root.AddCommand(logsCommand())
-	root.AddCommand(common.VersionCommand())
 
-	if err := root.Execute(); err != nil {
-		os.Exit(1)
+	common.InitSDKConfig()
+
+	cdc := app.MakeCodec()
+
+	root := &cobra.Command{
+		Use: "akash",
 	}
+
+	root.AddCommand(
+		rpc.StatusCommand(),
+		client.ConfigCmd(common.DefaultCLIHome()),
+		queryCmd(cdc),
+		txCmd(cdc),
+		client.LineBreak,
+		lcd.ServeCommand(cdc, lcdRoutes),
+		client.LineBreak,
+		keys.Commands(),
+		client.LineBreak,
+		version.Cmd,
+		client.NewCompletionCmd(root, true),
+	)
+
+	executor := cli.PrepareMainCmd(root, "AKASH", common.DefaultCLIHome())
+	err := executor.Execute()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func queryCmd(cdc *amino.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "query",
+		Aliases: []string{"q"},
+		Short:   "Querying subcommands",
+	}
+
+	cmd.AddCommand(
+		authcmd.GetAccountCmd(cdc),
+		client.LineBreak,
+		rpc.ValidatorCommand(cdc),
+		rpc.BlockCommand(),
+		authcmd.QueryTxsByEventsCmd(cdc),
+		authcmd.QueryTxCmd(cdc),
+		client.LineBreak,
+	)
+
+	app.ModuleBasics().AddQueryCommands(cmd, cdc)
+	return cmd
+}
+
+func txCmd(cdc *amino.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "tx",
+		Short: "Transactions subcommands",
+	}
+
+	cmd.AddCommand(
+		bankcmd.SendTxCmd(cdc),
+		client.LineBreak,
+		authcmd.GetSignCommand(cdc),
+		authcmd.GetMultiSignCommand(cdc),
+		client.LineBreak,
+		authcmd.GetBroadcastCommand(cdc),
+		authcmd.GetEncodeCommand(cdc),
+		client.LineBreak,
+	)
+
+	// add modules' tx commands
+	app.ModuleBasics().AddTxCommands(cmd, cdc)
+
+	return cmd
+}
+
+func lcdRoutes(rs *lcd.RestServer) {
+	client.RegisterRoutes(rs.CliCtx, rs.Mux)
+	authrest.RegisterTxRoutes(rs.CliCtx, rs.Mux)
+	app.ModuleBasics().RegisterRESTRoutes(rs.CliCtx, rs.Mux)
 }

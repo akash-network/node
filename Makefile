@@ -9,9 +9,11 @@ GO := GO111MODULE=on go
 IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 
 BUILD_FLAGS = -ldflags \
-							"-X github.com/ovrclk/akash/version.version=$(shell git rev-parse --abbrev-ref HEAD) \
-					     -X github.com/ovrclk/akash/version.commit=$(shell git rev-parse HEAD) \
-					     -X github.com/ovrclk/akash/version.date=$(shell date +%Y-%m-%dT%H:%M:%S%z)"
+ "-X github.com/cosmos/cosmos-sdk/version.Name=akash \
+  -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd \
+  -X github.com/cosmos/cosmos-sdk/version.ClientName=akash \
+  -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git rev-parse --abbrev-ref HEAD) \
+  -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git rev-parse HEAD)"
 
 all: build bins
 

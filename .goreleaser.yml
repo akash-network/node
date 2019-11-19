@@ -8,8 +8,13 @@ builds:
     ignore:
       - goos: darwin
         goarch: 386
-    ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
-
+    ldflags: >
+      -s -w 
+      -X github.com/cosmos/cosmos-sdk/version.Name=akash 
+      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd 
+      -X github.com/cosmos/cosmos-sdk/version.ClientName=akash 
+      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} 
+      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}} 
   - id: akashd
     binary: akashd
     main: ./cmd/akashd
@@ -20,7 +25,13 @@ builds:
         goarch: 386
       - goos: windows
         goarch: arm
-    ldflags: -s -w -X github.com/ovrclk/akash/version.version={{.Version}} -X github.com/ovrclk/akash/version.commit={{.Commit}} -X github.com/ovrclk/akash/version.date={{.Date}}
+    ldflags: >
+      -s -w 
+      -X github.com/cosmos/cosmos-sdk/version.Name=akash 
+      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd 
+      -X github.com/cosmos/cosmos-sdk/version.ClientName=akash 
+      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} 
+      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}} 
 
 archives:
   - id: akash

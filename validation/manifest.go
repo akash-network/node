@@ -11,13 +11,13 @@ func ValidateManifest(m *types.Manifest) error {
 }
 
 func validateManifestGroups(groups []*types.ManifestGroup) error {
-	rlists := make([]types.ResourceList, 0, len(groups))
-	for _, group := range groups {
-		rlists = append(rlists, group)
-	}
-	if err := validateResourceLists(defaultConfig, rlists); err != nil {
-		return fmt.Errorf("manifest groups: %v", err)
-	}
+	// rlists := make([]hasResources, 0, len(groups))
+	// for _, group := range groups {
+	// 	rlists = append(rlists, group)
+	// }
+	// if err := validateResourceLists(defaultConfig, rlists); err != nil {
+	// 	return fmt.Errorf("manifest groups: %v", err)
+	// }
 	return nil
 }
 

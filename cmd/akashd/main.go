@@ -1,18 +1,81 @@
 package main
 
 import (
-	"os"
+	"encoding/json"
+	"io"
+	"io/ioutil"
 
+	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/x/genaccounts"
+	genaccscli "github.com/cosmos/cosmos-sdk/x/genaccounts/client/cli"
+	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
+	"github.com/cosmos/cosmos-sdk/x/staking"
+	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/spf13/cobra"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/cli"
+	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
 )
 
 func main() {
-	root := baseCommand()
-	root.AddCommand(initCommand())
-	root.AddCommand(startCommand())
-	root.AddCommand(common.VersionCommand())
+	common.InitSDKConfig()
 
-	if err := root.Execute(); err != nil {
-		os.Exit(1)
+	cdc := app.MakeCodec()
+	ctx := server.NewDefaultContext()
+
+	root := &cobra.Command{
+		Use:               "akashd",
+		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
 	}
+
+	root.AddCommand(
+		genutilcli.InitCmd(ctx, cdc, app.ModuleBasics(), common.DefaultNodeHome()),
+
+		genutilcli.CollectGenTxsCmd(ctx, cdc, genaccounts.AppModuleBasic{}, common.DefaultNodeHome()),
+
+		genutilcli.GenTxCmd(
+			ctx, cdc,
+			app.ModuleBasics(),
+			staking.AppModuleBasic{},
+			genaccounts.AppModuleBasic{},
+			common.DefaultNodeHome(),
+			common.DefaultCLIHome(),
+		),
+
+		genutilcli.ValidateGenesisCmd(ctx, cdc, app.ModuleBasics()),
+		genaccscli.AddGenesisAccountCmd(ctx, cdc, common.DefaultNodeHome(), common.DefaultCLIHome()),
+	)
+
+	server.AddCommands(ctx, cdc, root, newApp, exportAppStateAndTMValidators)
+
+	executor := cli.PrepareBaseCmd(root, "AKASHD", common.DefaultNodeHome())
+	err := executor.Execute()
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func newApp(logger log.Logger, db dbm.DB, tio io.Writer) abci.Application {
+	return app.NewApp(logger, db, tio)
+}
+
+func exportAppStateAndTMValidators(
+	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailWhiteList []string,
+) (json.RawMessage, []tmtypes.GenesisValidator, error) {
+
+	app := app.NewApp(logger, db, ioutil.Discard)
+
+	if height != -1 {
+		err := app.LoadHeight(height)
+		if err != nil {
+			return nil, nil, err
+		}
+		return app.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
+	}
+
+	return app.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 }

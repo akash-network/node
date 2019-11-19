@@ -3,11 +3,16 @@ package validation
 import (
 	"fmt"
 
-	"github.com/ovrclk/akash/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
-func ValidateDeploymentGroups(groups []*types.DeploymentGroup) error {
-	rlists := make([]types.ResourceList, 0, len(groups))
+type hasResources interface {
+	GetName() string
+	GetResources() []dtypes.Resource
+}
+
+func ValidateDeploymentGroups(groups []dtypes.GroupSpec) error {
+	rlists := make([]hasResources, 0, len(groups))
 	for _, group := range groups {
 		rlists = append(rlists, group)
 	}
@@ -17,7 +22,7 @@ func ValidateDeploymentGroups(groups []*types.DeploymentGroup) error {
 	return nil
 }
 
-func ValidateDeploymentGroup(group *types.DeploymentGroup) error {
+func ValidateDeploymentGroup(group dtypes.Group) error {
 	if err := validateResourceList(defaultConfig, group); err != nil {
 		return err
 	}
@@ -27,8 +32,8 @@ func ValidateDeploymentGroup(group *types.DeploymentGroup) error {
 	return nil
 }
 
-func ValidateGroupSpecs(groups []*types.GroupSpec) error {
-	rlists := make([]types.ResourceList, 0, len(groups))
+func ValidateGroupSpecs(groups []*dtypes.GroupSpec) error {
+	rlists := make([]hasResources, 0, len(groups))
 	for _, group := range groups {
 		rlists = append(rlists, group)
 	}
@@ -38,7 +43,7 @@ func ValidateGroupSpecs(groups []*types.GroupSpec) error {
 	return nil
 }
 
-func validateDeploymentResourceLists(config config, rlists []types.ResourceList) error {
+func validateDeploymentResourceLists(config config, rlists []hasResources) error {
 	if err := validateResourceLists(defaultConfig, rlists); err != nil {
 		return err
 	}

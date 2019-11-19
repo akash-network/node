@@ -1,0 +1,33 @@
+---
+version: "1.5"
+
+services:
+  web:
+    image: nginx
+    expose:
+      - port: 80
+        to:
+          - global: true
+
+profiles:
+
+  compute:
+    web:
+      cpu: "100m"
+      memory: "128Mi"
+      disk: "1Gi"
+
+  placement:
+    westcoast:
+      attributes:
+        region: us-west
+      pricing:
+        web:
+          denom: akash
+          amount: 20
+
+deployment:
+  web:
+    westcoast:
+      profile: web
+      count: 2

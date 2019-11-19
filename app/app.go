@@ -2,282 +2,358 @@ package app
 
 import (
 	"encoding/json"
+	"io"
 
-	"github.com/gogo/protobuf/jsonpb"
-	"github.com/ovrclk/akash/app/account"
-	"github.com/ovrclk/akash/app/deployment"
-	"github.com/ovrclk/akash/app/fulfillment"
-	"github.com/ovrclk/akash/app/lease"
-	"github.com/ovrclk/akash/app/market"
-	"github.com/ovrclk/akash/app/order"
-	"github.com/ovrclk/akash/app/provider"
-	"github.com/ovrclk/akash/app/store"
-	apptypes "github.com/ovrclk/akash/app/types"
-	appstate "github.com/ovrclk/akash/state"
-	"github.com/ovrclk/akash/txutil"
-	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/code"
-	"github.com/ovrclk/akash/util"
-	"github.com/ovrclk/akash/version"
-	abci_types "github.com/tendermint/tendermint/abci/types"
+	bam "github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/simapp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/genaccounts"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
+	"github.com/cosmos/cosmos-sdk/x/mint"
+
+	"github.com/cosmos/cosmos-sdk/x/params"
+	"github.com/cosmos/cosmos-sdk/x/staking"
+
+	"github.com/ovrclk/akash/x/deployment"
+	"github.com/ovrclk/akash/x/market"
+	"github.com/ovrclk/akash/x/provider"
+
 	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
+
+	abci "github.com/tendermint/tendermint/abci/types"
+	cmn "github.com/tendermint/tendermint/libs/common"
+
+	"github.com/cosmos/cosmos-sdk/version"
+	distr "github.com/cosmos/cosmos-sdk/x/distribution"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
+	"github.com/cosmos/cosmos-sdk/x/supply"
 )
 
-type Application interface {
-	abci_types.Application
+const (
+	appName = "akash"
+)
 
-	App(name string) apptypes.Application
+var (
+	mbasics = module.NewBasicManager(
+		genaccounts.AppModuleBasic{},
+		genutil.AppModuleBasic{},
+
+		// accounts, fees.
+		auth.AppModuleBasic{},
+
+		// tokens, token balance.
+		bank.AppModuleBasic{},
+
+		// total supply of the chain
+		supply.AppModuleBasic{},
+
+		// inflation
+		mint.AppModuleBasic{},
+
+		staking.AppModuleBasic{},
+
+		slashing.AppModuleBasic{},
+
+		distr.AppModuleBasic{},
+
+		params.AppModuleBasic{},
+
+		// akash
+		deployment.AppModuleBasic{},
+		market.AppModuleBasic{},
+		provider.AppModuleBasic{},
+	)
+)
+
+type AkashApp struct {
+	*bam.BaseApp
+	cdc *codec.Codec
+
+	keys  map[string]*sdk.KVStoreKey
+	tkeys map[string]*sdk.TransientStoreKey
+
+	keeper struct {
+		acct       auth.AccountKeeper
+		bank       bank.Keeper
+		params     params.Keeper
+		supply     supply.Keeper
+		staking    staking.Keeper
+		distr      distr.Keeper
+		slashing   slashing.Keeper
+		mint       mint.Keeper
+		deployment deployment.Keeper
+		market     market.Keeper
+		provider   provider.Keeper
+	}
+
+	mm *module.Manager
 }
 
-type app struct {
-	abci_types.BaseApplication
-
-	cacheState  appstate.CacheState
-	commitState appstate.CommitState
-
-	apps []apptypes.Application
-
-	log log.Logger
+func ModuleBasics() module.BasicManager {
+	return mbasics
 }
 
-func Create(commitState appstate.CommitState, cacheState appstate.CacheState, logger log.Logger) (Application, error) {
+func MakeCodec() *codec.Codec {
+	var cdc = codec.New()
 
-	var apps []apptypes.Application
+	mbasics.RegisterCodec(cdc)
 
-	{
-		app, err := account.NewApp(logger.With("app", account.Name))
-		if err != nil {
-			return nil, err
-		}
-		apps = append(apps, app)
-	}
+	sdk.RegisterCodec(cdc)
+	codec.RegisterCrypto(cdc)
+	codec.RegisterEvidences(cdc)
 
-	{
-		app, err := store.NewApp(logger.With("app", store.Name))
-		if err != nil {
-			return nil, err
-		}
-		apps = append(apps, app)
-	}
-
-	{
-		app, err := deployment.NewApp(logger.With("app", deployment.Name))
-		if err != nil {
-			return nil, err
-		}
-		apps = append(apps, app)
-	}
-
-	{
-		app, err := order.NewApp(logger.With("app", order.Name))
-		if err != nil {
-			return nil, err
-		}
-		apps = append(apps, app)
-	}
-
-	{
-		app, err := fulfillment.NewApp(logger.With("app", fulfillment.Name))
-		if err != nil {
-			return nil, err
-		}
-		apps = append(apps, app)
-	}
-
-	{
-		app, err := lease.NewApp(logger.With("app", lease.Name))
-		if err != nil {
-			return nil, err
-		}
-		apps = append(apps, app)
-	}
-
-	{
-		app, err := provider.NewApp(logger.With("app", provider.Name))
-		if err != nil {
-			return nil, err
-		}
-		apps = append(apps, app)
-	}
-
-	return &app{commitState: commitState, cacheState: cacheState, apps: apps, log: logger}, nil
+	return cdc.Seal()
 }
 
-func (app *app) App(name string) apptypes.Application {
-	for _, _app := range app.apps {
-		if _app.Name() == name {
-			return _app
-		}
-	}
-	return nil
-}
+// https://github.com/cosmos/sdk-tutorials/blob/c6754a1e313eb1ed973c5c91dcc606f2fd288811/app.go#L73
 
-func (app *app) Info(req abci_types.RequestInfo) abci_types.ResponseInfo {
-	vsn, _ := json.Marshal(version.Get())
-	return abci_types.ResponseInfo{
-		Data:             string(vsn),
-		Version:          version.Version(),
-		LastBlockHeight:  app.commitState.Version(),
-		LastBlockAppHash: app.commitState.Hash(),
-	}
-}
+// NewApp creates and returns a new Akash App.
+func NewApp(
+	logger log.Logger, db dbm.DB, tio io.Writer, options ...func(*bam.BaseApp),
+) *AkashApp {
 
-func (app *app) SetOption(req abci_types.RequestSetOption) abci_types.ResponseSetOption {
-	return abci_types.ResponseSetOption{Code: abci_types.CodeTypeOK}
-}
+	cdc := MakeCodec()
 
-func (app *app) Query(req abci_types.RequestQuery) abci_types.ResponseQuery {
-	app.traceJs("Query", "req", req)
-	for _, subapp := range app.apps {
-		if subapp.AcceptQuery(req) {
-			return subapp.Query(app.commitState, req)
-		}
-	}
-	return abci_types.ResponseQuery{Code: code.UNKNOWN_QUERY, Log: "unknown query"}
-}
+	keys := sdk.NewKVStoreKeys(
+		bam.MainStoreKey,
+		auth.StoreKey,
+		params.StoreKey,
+		slashing.StoreKey,
+		distr.StoreKey,
+		supply.StoreKey,
+		staking.StoreKey,
+		mint.StoreKey,
+		deployment.StoreKey,
+		market.StoreKey,
+		provider.StoreKey,
+	)
 
-func (app *app) checkNonce(state appstate.State, address []byte, nonce uint64) apptypes.Error {
-	signer, err_ := state.Account().Get(address)
-	if err_ != nil {
-		return apptypes.NewError(code.INVALID_TRANSACTION, err_.Error())
-	}
-	err := apptypes.NewError(code.INVALID_TRANSACTION, "invalid nonce")
-	if signer != nil && signer.Nonce >= nonce {
-		return err
-	}
-	return nil
-}
+	tkeys := sdk.NewTransientStoreKeys(params.TStoreKey)
 
-func (app *app) CheckTx(req abci_types.RequestCheckTx) abci_types.ResponseCheckTx {
-	ctx, app_, tx, err := app.appForTx(req.Tx)
+	bapp := bam.NewBaseApp(appName, logger, db, auth.DefaultTxDecoder(cdc), options...)
+	bapp.SetCommitMultiStoreTracer(tio)
+	bapp.SetAppVersion(version.Version)
+
+	app := &AkashApp{
+		BaseApp: bapp,
+		cdc:     cdc,
+		keys:    keys,
+		tkeys:   tkeys,
+	}
+
+	app.keeper.params = params.NewKeeper(
+		cdc,
+		keys[params.StoreKey],
+		tkeys[params.TStoreKey],
+		params.DefaultCodespace,
+	)
+
+	app.keeper.acct = auth.NewAccountKeeper(
+		cdc,
+		keys[auth.StoreKey],
+		app.keeper.params.Subspace(auth.DefaultParamspace),
+		auth.ProtoBaseAccount,
+	)
+
+	app.keeper.bank = bank.NewBaseKeeper(
+		app.keeper.acct,
+		app.keeper.params.Subspace(bank.DefaultParamspace),
+		bank.DefaultCodespace,
+		macAddrs(),
+	)
+
+	app.keeper.supply = supply.NewKeeper(
+		cdc,
+		keys[supply.StoreKey],
+		app.keeper.acct,
+		app.keeper.bank,
+		macPerms(),
+	)
+
+	skeeper := staking.NewKeeper(
+		cdc,
+		keys[staking.StoreKey],
+		tkeys[staking.TStoreKey],
+		app.keeper.supply,
+		app.keeper.params.Subspace(staking.DefaultParamspace),
+		staking.DefaultCodespace,
+	)
+
+	app.keeper.distr = distr.NewKeeper(
+		cdc,
+		keys[distr.StoreKey],
+		app.keeper.params.Subspace(distr.DefaultParamspace),
+		skeeper,
+		app.keeper.supply,
+		distr.DefaultCodespace,
+		auth.FeeCollectorName,
+		macAddrs(),
+	)
+
+	app.keeper.slashing = slashing.NewKeeper(
+		cdc,
+		keys[slashing.StoreKey],
+		skeeper,
+		app.keeper.params.Subspace(slashing.DefaultParamspace),
+		slashing.DefaultCodespace,
+	)
+
+	app.keeper.staking = *skeeper.SetHooks(
+		staking.NewMultiStakingHooks(
+			app.keeper.distr.Hooks(),
+			app.keeper.slashing.Hooks(),
+		),
+	)
+
+	app.keeper.mint = mint.NewKeeper(
+		cdc,
+		keys[mint.StoreKey],
+		app.keeper.params.Subspace(mint.DefaultParamspace),
+		&app.keeper.staking,
+		app.keeper.supply,
+		auth.FeeCollectorName,
+	)
+
+	app.keeper.deployment = deployment.NewKeeper(
+		cdc,
+		keys[deployment.StoreKey],
+	)
+
+	app.keeper.market = market.NewKeeper(
+		cdc,
+		keys[market.StoreKey],
+	)
+
+	app.keeper.provider = provider.NewKeeper(
+		cdc,
+		keys[provider.StoreKey],
+	)
+
+	app.mm = module.NewManager(
+		genaccounts.NewAppModule(app.keeper.acct),
+		genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx),
+		auth.NewAppModule(app.keeper.acct),
+		bank.NewAppModule(app.keeper.bank, app.keeper.acct),
+
+		supply.NewAppModule(app.keeper.supply, app.keeper.acct),
+		distr.NewAppModule(app.keeper.distr, app.keeper.supply),
+
+		mint.NewAppModule(app.keeper.mint),
+		slashing.NewAppModule(app.keeper.slashing, app.keeper.staking),
+
+		staking.NewAppModule(app.keeper.staking, app.keeper.distr, app.keeper.acct, app.keeper.supply),
+
+		// akash
+		deployment.NewAppModule(
+			app.keeper.deployment,
+			app.keeper.market,
+			app.keeper.bank,
+		),
+
+		market.NewAppModule(
+			app.keeper.market,
+			app.keeper.deployment,
+			app.keeper.provider,
+			app.keeper.bank,
+		),
+
+		provider.NewAppModule(app.keeper.provider, app.keeper.bank),
+	)
+
+	app.mm.SetOrderBeginBlockers(mint.ModuleName, distr.ModuleName, slashing.ModuleName)
+	app.mm.SetOrderEndBlockers(staking.ModuleName, deployment.ModuleName, market.ModuleName)
+
+	// NOTE: The genutils module must occur after staking so that pools are
+	//       properly initialized with tokens from genesis accounts.
+	app.mm.SetOrderInitGenesis(
+		genaccounts.ModuleName,
+		distr.ModuleName,
+		staking.ModuleName,
+		auth.ModuleName,
+		bank.ModuleName,
+		slashing.ModuleName,
+		mint.ModuleName,
+		supply.ModuleName,
+		genutil.ModuleName,
+
+		// akash
+		deployment.ModuleName,
+		provider.ModuleName,
+		market.ModuleName,
+	)
+
+	app.mm.RegisterRoutes(app.Router(), app.QueryRouter())
+
+	// initialize stores
+	app.MountKVStores(keys)
+	app.MountTransientStores(tkeys)
+
+	// initialize BaseApp
+	app.SetInitChainer(app.initChainer)
+	app.SetBeginBlocker(app.beginBlocker)
+
+	app.SetAnteHandler(
+		auth.NewAnteHandler(
+			app.keeper.acct,
+			app.keeper.supply,
+			auth.DefaultSigVerificationGasConsumer,
+		),
+	)
+
+	app.SetEndBlocker(app.endBlocker)
+
+	err := app.LoadLatestVersion(app.keys[bam.MainStoreKey])
 	if err != nil {
-		return abci_types.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
+		cmn.Exit("app initialization:" + err.Error())
 	}
-	app.traceTx("CheckTx", tx)
-	err = app.checkNonce(app.commitState, ctx.Signer().Address().Bytes(), tx.Payload.Nonce)
+
+	return app
+}
+
+func (app *AkashApp) initChainer(
+	ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+	var genesisState simapp.GenesisState
+	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
+
+	return app.mm.InitGenesis(ctx, genesisState)
+}
+
+// application updates every begin block
+func (app *AkashApp) beginBlocker(
+	ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+	return app.mm.BeginBlock(ctx, req)
+}
+
+// application updates every end block
+func (app *AkashApp) endBlocker(
+	ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
+	return app.mm.EndBlock(ctx, req)
+}
+
+func (app *AkashApp) LoadHeight(height int64) error {
+	return app.LoadVersion(height, app.keys[bam.MainStoreKey])
+}
+
+func (app *AkashApp) ExportAppStateAndValidators(
+	forZeroHeight bool, jailWhiteList []string,
+) (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {
+
+	// as if they could withdraw from the start of the next block
+	ctx := app.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
+
+	genState := app.mm.ExportGenesis(ctx)
+	appState, err = codec.MarshalJSONIndent(app.cdc, genState)
 	if err != nil {
-		return abci_types.ResponseCheckTx{Code: err.Code(), Log: err.Error()}
-	}
-	return app_.CheckTx(app.commitState, ctx, tx.Payload.Payload)
-}
-
-func (app *app) DeliverTx(req abci_types.RequestDeliverTx) abci_types.ResponseDeliverTx {
-	ctx, app_, tx, err := app.appForTx(req.Tx)
-	if err != nil {
-		return abci_types.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
-	}
-	app.traceTx("DeliverTx", tx)
-	err = app.checkNonce(app.cacheState, ctx.Signer().Address().Bytes(), tx.Payload.Nonce)
-	if err != nil {
-		return abci_types.ResponseDeliverTx{Code: err.Code(), Log: err.Error()}
-	}
-	signer, err_ := app.cacheState.Account().Get(ctx.Signer().Address().Bytes())
-	if err_ != nil {
-		return abci_types.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
+		return nil, nil, err
 	}
 
-	// XXX: Accouts should be implicitly created when tokens are sent to it
-	if signer == nil {
-		signer = &types.Account{
-			Address: ctx.Signer().Address().Bytes(),
-			Balance: 0,
-			Nonce:   0,
-		}
-	}
+	validators = staking.WriteValidators(ctx, app.keeper.staking)
 
-	if err_ := app.cacheState.Account().Save(signer); err_ != nil {
-		return abci_types.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
-	}
-
-	resp := app_.DeliverTx(app.cacheState, ctx, tx.Payload.Payload)
-
-	// set new account nonce
-	if resp.IsOK() {
-		signer, err_ = app.cacheState.Account().Get(ctx.Signer().Address().Bytes())
-		if err_ != nil {
-			return abci_types.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
-		}
-		signer.Nonce = tx.Payload.Nonce
-		if err_ := app.cacheState.Account().Save(signer); err_ != nil {
-			return abci_types.ResponseDeliverTx{Code: code.INVALID_TRANSACTION, Log: err_.Error()}
-		}
-	}
-
-	return resp
-}
-
-func (app *app) BeginBlock(req abci_types.RequestBeginBlock) abci_types.ResponseBeginBlock {
-	app.trace("BeginBlock", "tmhash", util.X(req.Hash))
-	return abci_types.ResponseBeginBlock{}
-}
-
-func (app *app) EndBlock(req abci_types.RequestEndBlock) abci_types.ResponseEndBlock {
-	app.trace("EndBlock")
-
-	events, err := market.NewEngine(app.log).Run(app.cacheState)
-	if err != nil {
-		app.log.Error("ERROR RUNNING ENGINE: ", "error", err)
-	}
-
-	return abci_types.ResponseEndBlock{
-		Events: events,
-	}
-}
-
-func (app *app) Commit() abci_types.ResponseCommit {
-	app.trace("Commit")
-
-	if err := app.cacheState.Write(); err != nil {
-		panic("error when writing to cache")
-	}
-
-	data, _, err := app.commitState.Commit()
-	if err != nil {
-		return abci_types.ResponseCommit{Data: data}
-	}
-
-	return abci_types.ResponseCommit{Data: data}
-}
-
-func (app *app) appForTx(buf []byte) (
-	apptypes.Context, apptypes.Application, *types.Tx, apptypes.Error) {
-	tx, err := txutil.ProcessTx(buf)
-	if err != nil {
-		return nil, nil, nil, apptypes.WrapError(code.ERROR, err)
-	}
-	ctx := apptypes.NewContext(tx)
-	for _, app := range app.apps {
-		if app.AcceptTx(ctx, tx.Payload.Payload) {
-			return ctx, app, tx, nil
-		}
-	}
-
-	return nil, nil, nil, apptypes.ErrUnknownTransaction()
-}
-
-func (app *app) traceJs(meth string, name string, obj interface{}) {
-	js, err := json.Marshal(obj)
-	if err != nil {
-		app.traceLog().Error(meth, "trace-error", err)
-		return
-	}
-	app.traceLog().Debug(meth, name, string(js))
-}
-
-func (app *app) traceTx(meth string, obj *types.Tx) {
-	m := jsonpb.Marshaler{}
-	js, err := m.MarshalToString(obj)
-	if err != nil {
-		app.traceLog().Error(meth, "trace-error", err)
-		return
-	}
-	app.traceLog().Debug(meth, "tx", js)
-}
-
-func (app *app) trace(meth string, keyvals ...interface{}) {
-	app.traceLog().Debug(meth, keyvals...)
-}
-
-func (app *app) traceLog() log.Logger {
-	return app.log.With("height", app.commitState.Version(), "hash", util.X(app.commitState.Hash()), "logtype", "trace")
+	return appState, validators, nil
 }
