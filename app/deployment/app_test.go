@@ -6,7 +6,6 @@ import (
 
 	"github.com/ovrclk/akash/app/deployment"
 	"github.com/ovrclk/akash/app/fulfillment"
-	"github.com/ovrclk/akash/app/lease"
 	"github.com/ovrclk/akash/app/order"
 	"github.com/ovrclk/akash/app/provider"
 	apptypes "github.com/ovrclk/akash/app/types"
@@ -278,57 +277,6 @@ func TestCloseTx_3(t *testing.T) {
 	testutil.CloseDeployment(t, cacheState, app, &depl.Address, key)
 
 	check(types.Deployment_CLOSED, types.DeploymentGroup_CLOSED, types.Order_CLOSED, types.Fulfillment_CLOSED)
-}
-
-func TestCloseTx_4(t *testing.T) {
-
-	const (
-		gseq  = 1
-		oseq  = 3
-		price = 1
-	)
-
-	_, cacheState := testutil.NewState(t, nil)
-	app, err := deployment.NewApp(testutil.Logger())
-	require.NoError(t, err)
-	account, key := testutil.CreateAccount(t, cacheState)
-	nonce := uint64(1)
-	depl, _ := testutil.CreateDeployment(t, cacheState, app, account, key, nonce)
-
-	orderapp, err := order.NewApp(testutil.Logger())
-	require.NoError(t, err)
-	order := testutil.CreateOrder(t, cacheState, orderapp, account, key, depl.Address, gseq, oseq)
-
-	providerapp, err := provider.NewApp(testutil.Logger())
-	require.NoError(t, err)
-	prov := testutil.CreateProvider(t, cacheState, providerapp, account, key, nonce)
-
-	fulfillmentapp, err := fulfillment.NewApp(testutil.Logger())
-	require.NoError(t, err)
-	fulfillment := testutil.CreateFulfillment(t, cacheState, fulfillmentapp, prov.Address, key, depl.Address, gseq, oseq, price)
-
-	leaseapp, err := lease.NewApp(testutil.Logger())
-	require.NoError(t, err)
-	lease := testutil.CreateLease(t, cacheState, leaseapp, prov.Address, key, depl.Address, gseq, oseq, price)
-
-	check := func(
-		dstate types.Deployment_DeploymentState,
-		gstate types.DeploymentGroup_DeploymentGroupState,
-		ostate types.Order_OrderState,
-		fstate types.Fulfillment_FulfillmentState,
-		lstate types.Lease_LeaseState) {
-		assertDeploymentState(t, cacheState, app, depl.Address, dstate)
-		assertDeploymentGroupState(t, cacheState, app, order.GroupID(), gstate)
-		assertOrderState(t, cacheState, orderapp, order.OrderID, ostate)
-		assertFulfillmentState(t, cacheState, fulfillmentapp, fulfillment.FulfillmentID, fstate)
-		assertLeaseState(t, cacheState, leaseapp, lease.LeaseID, lstate)
-	}
-
-	check(types.Deployment_ACTIVE, types.DeploymentGroup_OPEN, types.Order_MATCHED, types.Fulfillment_OPEN, types.Lease_ACTIVE)
-
-	testutil.CloseDeployment(t, cacheState, app, &depl.Address, key)
-
-	check(types.Deployment_CLOSED, types.DeploymentGroup_CLOSED, types.Order_CLOSED, types.Fulfillment_CLOSED, types.Lease_CLOSED)
 }
 
 // check deployment and group query & status
