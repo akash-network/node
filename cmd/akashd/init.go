@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	maxTokens      uint64 = 1000000000000000 // 1B x 10^-6 (uAKT)
+	maxTokens      uint64 = 100000000000000 // 100M x 10^-6 (uAKT)
 	flagInitType          = "type"
 	flagInitOutput        = "out"
 	flagInitNames         = "names"
