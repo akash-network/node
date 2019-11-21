@@ -226,7 +226,7 @@ func newIngressBuilder(log log.Logger, host string, lid types.LeaseID, group *ty
 	if config.DeploymentIngressStaticHosts {
 		uid := strings.ToLower(shortuuid.New())
 		h := fmt.Sprintf("%s.%s", uid, config.DeploymentIngressDomain)
-		log.Debug("IngressBuilder: map host:", h)
+		log.Debug("IngressBuilder: map", "host", h)
 		expose.Hosts = append(expose.Hosts, h)
 	}
 	return &ingressBuilder{
@@ -277,7 +277,7 @@ func (b *ingressBuilder) rules() []extv1.IngressRule {
 			IngressRuleValue: extv1.IngressRuleValue{HTTP: httpRule},
 		})
 	}
-	b.log.Debug("provider/cluster/kube/builder: created rules:", rules)
+	b.log.Debug("provider/cluster/kube/builder: created rules", "rules", rules)
 	return rules
 }
 
