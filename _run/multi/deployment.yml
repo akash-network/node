@@ -11,6 +11,7 @@ services:
           - hello.192.168.99.132.nip.io
           - hello.192.168.99.130.nip.io
           - hello.192.168.99.112.nip.io
+          - hello.192.168.64.2.nip.io
         to:
           - global: true
 
