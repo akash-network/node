@@ -18,3 +18,7 @@
 debug.test
 
 dist
+
+#IDE
+.idea/
+*.iml
