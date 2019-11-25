@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ovrclk/akash/cmd/akash/session"
 	"github.com/ovrclk/akash/cmd/common"
@@ -21,33 +22,34 @@ import (
 	tmctypes "github.com/tendermint/tendermint/rpc/core/types"
 )
 
-type deployEvent uint
+type deployEvent string
 
 const (
 	ttl = int64(5)
 
-	eventDeployBegin deployEvent = iota + 1
-	eventBroadcastBegin
-	eventBroadcastDone
-	eventReceiveOrdersBegin
-	eventReceiveOrder
-	eventReceiveOrdersDone
-	eventReceiveFulfillmentsBegin
-	eventReceiveFulfillment
-	eventReceiveFulfillmentsDone
-	eventReceiveLeaseBegin
-	eventReceiveLease
-	eventSendManifest
-	eventSendManifestDone
-	eventReceiveLeaseDone
-	eventDeployDone
+	eventDeployBegin              deployEvent = "eventDeployBegin"
+	eventBroadcastBegin           deployEvent = "eventBroadcastBegin"
+	eventBroadcastDone            deployEvent = "eventBroadcastDone"
+	eventReceiveOrdersBegin       deployEvent = "eventReceiveOrdersBegin"
+	eventReceiveOrder             deployEvent = "eventReceiveOrder"
+	eventReceiveOrdersDone        deployEvent = "eventReceiveOrdersDone"
+	eventReceiveFulfillmentsBegin deployEvent = "eventReceiveFulfillmentsBegin"
+	eventReceiveFulfillment       deployEvent = "eventReceiveFulfillment"
+	eventReceiveFulfillmentsDone  deployEvent = "eventReceiveFulfillmentsDone"
+	eventReceiveLeaseBegin        deployEvent = "eventReceiveLeaseBegin"
+	eventReceiveLease             deployEvent = "eventReceiveLease"
+	eventSendManifest             deployEvent = "eventSendManifest"
+	eventSendManifestDone         deployEvent = "eventSendManifestDone"
+	eventLeaseStatusFetch         deployEvent = "eventLeaseStatusFetch"
+	eventReceiveLeaseDone         deployEvent = "eventReceiveLeaseDone"
+	eventDeployDone               deployEvent = "eventDeployDone"
 )
 
 type deployState struct {
 	id                  string
 	fulfilments         []*types.TxCreateFulfillment
 	leases              []*types.TxCreateLease
-	providerLeaseStatus map[*types.LeaseID]*types.LeaseStatusResponse
+	providerLeaseStatus map[string]*types.LeaseStatusResponse
 	groups              []*types.GroupSpec
 	orders              []*types.TxCreateOrder
 	mani                *types.Manifest
@@ -56,7 +58,7 @@ type deployState struct {
 
 var (
 	state = &deployState{
-		providerLeaseStatus: make(map[*types.LeaseID]*types.LeaseStatusResponse),
+		providerLeaseStatus: make(map[string]*types.LeaseStatusResponse),
 	}
 	mtx sync.Mutex
 )
@@ -169,7 +171,7 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 					// get provider on the lease
 					var provider *types.Provider
 
-					if provider, status.Error = ses.QueryClient().Provider(ses.Ctx(), tx.Provider); err != nil {
+					if provider, status.Error = ses.QueryClient().Provider(ses.Ctx(), tx.Provider); status.Error != nil {
 						statusChan <- status
 						return
 					}
@@ -185,14 +187,39 @@ func create(ses session.Session, cmd *cobra.Command, args []string) error {
 					}
 					statusChan <- status
 
+					const (
+						statusRetryCount = 5
+						statusRetryDelay = time.Second / statusRetryCount
+					)
+
 					// get lease status with deployment addresses (ips and hostnames) for the provider in lease.
 					var leaseStatus *types.LeaseStatusResponse
-					if leaseStatus, status.Error = http.LeaseStatus(ses.Ctx(), provider, tx.LeaseID); err != nil {
+					for i := 0; i < statusRetryCount; i++ {
+
+						status = &deployStatus{Event: eventLeaseStatusFetch, Message: fmt.Sprintf("Fetching lease status [attempt %v/%v]", i+1, statusRetryCount)}
+
+						leaseStatus, err = http.LeaseStatus(ses.Ctx(), provider, tx.LeaseID)
+
+						if err != nil {
+							status.Message += fmt.Sprintf(": error %v", err)
+							if i == statusRetryCount-1 {
+								status.Error = err
+							}
+						} else {
+							status.Message += ": ok"
+						}
+
 						statusChan <- status
-						return
+
+						if err == nil {
+							break
+						}
+
+						time.Sleep(statusRetryDelay)
 					}
+
 					mtx.Lock()
-					state.providerLeaseStatus[&tx.LeaseID] = leaseStatus
+					state.providerLeaseStatus[tx.LeaseID.String()] = leaseStatus
 					mtx.Unlock()
 
 					// when there is a lease created for each order, the deploy is complete
@@ -272,6 +299,8 @@ func processStages(statusChan chan *deployStatus, s session.Session) error {
 		case eventSendManifestDone:
 			msg := fmt.Sprintf("manifest accepted by provider at %s", status.Message)
 			logDone(log, "lease", msg)
+		case eventLeaseStatusFetch:
+			logWait(log, "lease", status.Message)
 		case eventDeployDone:
 			msg := "deployment complete"
 			logDone(log, "deploy", msg)
@@ -298,10 +327,10 @@ func processStages(statusChan chan *deployStatus, s session.Session) error {
 			// add services
 			data = printer.NewSection("Leases").WithLabel("Lease(s)").NewData().AsPane()
 			for lid, v := range state.providerLeaseStatus {
+				data.Add("Lease ID", lid)
 				if v == nil {
 					continue
 				}
-				data.Add("Lease ID", lid.String())
 				sd := dsky.NewSectionData(" ").AsList()
 				sdutil.AppendLeaseStatus(v, sd)
 				data.Add("Services", sd).WithLabel("Services", "Services(s)")

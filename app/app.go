@@ -1,9 +1,7 @@
 package app
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/ovrclk/akash/app/account"
@@ -27,7 +25,6 @@ import (
 
 type Application interface {
 	abci_types.Application
-	ActivateMarket(market.Actor) error
 
 	App(name string) apptypes.Application
 }
@@ -39,8 +36,6 @@ type app struct {
 	commitState appstate.CommitState
 
 	apps []apptypes.Application
-
-	mfacilitator market.Driver
 
 	log log.Logger
 }
@@ -114,29 +109,6 @@ func (app *app) App(name string) apptypes.Application {
 			return _app
 		}
 	}
-	return nil
-}
-
-func (app *app) ActivateMarket(actor market.Actor) error {
-
-	if app.mfacilitator != nil {
-		return errors.New("market already activated")
-	}
-
-	mapp, err := market.NewApp(app.log.With("app", market.Name))
-	if err != nil {
-		return err
-	}
-
-	mfacilitator, err := market.NewDriver(context.Background(), app.log.With("app", "market-facilitator"), actor)
-	if err != nil {
-		return err
-	}
-
-	app.mfacilitator = mfacilitator
-
-	app.apps = append(app.apps, mapp)
-
 	return nil
 }
 
@@ -236,25 +208,24 @@ func (app *app) DeliverTx(req abci_types.RequestDeliverTx) abci_types.ResponseDe
 
 func (app *app) BeginBlock(req abci_types.RequestBeginBlock) abci_types.ResponseBeginBlock {
 	app.trace("BeginBlock", "tmhash", util.X(req.Hash))
-
-	if app.mfacilitator != nil {
-		app.mfacilitator.OnBeginBlock(req)
-	}
-
 	return abci_types.ResponseBeginBlock{}
 }
 
 func (app *app) EndBlock(req abci_types.RequestEndBlock) abci_types.ResponseEndBlock {
 	app.trace("EndBlock")
-	return abci_types.ResponseEndBlock{}
+
+	events, err := market.NewEngine(app.log).Run(app.cacheState)
+	if err != nil {
+		app.log.Error("ERROR RUNNING ENGINE: ", "error", err)
+	}
+
+	return abci_types.ResponseEndBlock{
+		Events: events,
+	}
 }
 
 func (app *app) Commit() abci_types.ResponseCommit {
 	app.trace("Commit")
-
-	if err := lease.ProcessLeases(app.cacheState); err != nil {
-		app.log.Error("processing leases", "error", err)
-	}
 
 	if err := app.cacheState.Write(); err != nil {
 		panic("error when writing to cache")
@@ -263,13 +234,6 @@ func (app *app) Commit() abci_types.ResponseCommit {
 	data, _, err := app.commitState.Commit()
 	if err != nil {
 		return abci_types.ResponseCommit{Data: data}
-	}
-
-	if app.mfacilitator != nil {
-		err := app.mfacilitator.OnCommit(app.commitState)
-		if err != nil {
-			app.log.Error("error in facilitator.OnCommit", err.Error())
-		}
 	}
 
 	return abci_types.ResponseCommit{Data: data}

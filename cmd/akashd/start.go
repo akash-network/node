@@ -6,7 +6,6 @@ import (
 	"path"
 
 	"github.com/ovrclk/akash/app"
-	"github.com/ovrclk/akash/app/market"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/node"
 	"github.com/ovrclk/akash/state"
@@ -95,15 +94,9 @@ func doStartCommand(session Session, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	actor := market.NewActor(pvalidator.Key.PrivKey)
-
 	fmt.Println("activating market...")
 
 	return common.RunForeverWithContext(session.Context(), func(ctx context.Context) error {
-
-		if err := app.ActivateMarket(actor); err != nil {
-			return err
-		}
 
 		if err := n.Start(); err != nil {
 			return fmt.Errorf("Failed to start node: %v", err)

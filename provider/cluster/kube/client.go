@@ -10,6 +10,7 @@ import (
 	manifestclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/validation"
 	"github.com/tendermint/tendermint/libs/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -312,6 +313,17 @@ func (c *client) Inventory() ([]cluster.Node, error) {
 		}
 
 		nodes = append(nodes, cluster.NewNode(knode.Name, unit))
+	}
+
+	if os.Getenv("AKASH_PROVIDER_FAKE_CAPACITY") == "true" {
+		cfg := validation.Config()
+		return []cluster.Node{
+			cluster.NewNode("minikube", types.ResourceUnit{
+				CPU:    uint32(cfg.MaxUnitCPU * 100),
+				Memory: uint64(cfg.MaxUnitMemory * 100),
+				Disk:   uint64(cfg.MaxUnitDisk * 100),
+			}),
+		}, nil
 	}
 
 	return nodes, nil

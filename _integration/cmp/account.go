@@ -25,7 +25,7 @@ func accountSendTo(from key, to key, amount int64) gestalt.Component {
 }
 
 func groupAccountSend(key key) gestalt.Component {
-	start := int64(1000000000000000)
+	start := int64(100000000000000)
 	amount := int64(100)
 	other := newKey("other")
 	return g.Group("account-send").
