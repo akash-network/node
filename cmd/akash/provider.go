@@ -244,11 +244,16 @@ func providerStatusCommand() *cobra.Command {
 		Short: "print status of (given) providers",
 		RunE:  session.WithSession(session.RequireNode(doProviderStatusCommand)),
 	}
+
+	cmd.Flags().String("state", "active", "Query providers with state")
+
 	return cmd
 }
 
 func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	providerState, _ := cmd.Flags().GetString("state")
 	plist, err := session.QueryClient().Providers(session.Ctx())
+
 	if err != nil {
 		return err
 	}
@@ -298,11 +303,14 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 	printer := session.Mode().Printer()
 	var active, passive []*outputItem
 	for _, o := range output {
-		if len(o.Error) == 0 {
+		if len(o.Error) == 0 && providerState != "passive" {
 			active = append(active, o)
 			continue
 		}
-		passive = append(passive, o)
+
+		if providerState != "active" {
+			passive = append(passive, o)
+		}
 	}
 
 	if len(active) > 0 {
