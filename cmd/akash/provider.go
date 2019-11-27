@@ -251,12 +251,13 @@ func providerStatusCommand() *cobra.Command {
 }
 
 func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args []string) error {
+	providerState, _ := cmd.Flags().GetString("state")
 	plist, err := session.QueryClient().Providers(session.Ctx())
+
 	if err != nil {
 		return err
 	}
 	var providers []*types.Provider
-	providerState, _ := cmd.Flags().GetString("state")
 
 	if len(args) == 0 {
 		providers = plist.Providers
