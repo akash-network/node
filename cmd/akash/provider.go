@@ -32,7 +32,6 @@ func providerCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "provider",
 		Short: "Manage provider",
-		Args:  cobra.ExactArgs(1),
 	}
 
 	session.AddFlagNode(cmd, cmd.PersistentFlags())
@@ -253,7 +252,6 @@ func providerStatusCommand() *cobra.Command {
 func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args []string) error {
 	providerState, _ := cmd.Flags().GetString("state")
 	plist, err := session.QueryClient().Providers(session.Ctx())
-
 	if err != nil {
 		return err
 	}
@@ -277,6 +275,7 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 	}
 
 	output := []*outputItem{}
+	//  var wg sync.WaitGroup
 
 	for _, provider := range providers {
 		status, err := http.Status(session.Ctx(), provider)
