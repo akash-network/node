@@ -79,6 +79,9 @@ test-vet:
 deps-install:
 	$(GO) mod download
 
+deps-tidy:
+	$(GO) mod tidy
+
 devdeps-install:
 	$(GO) install github.com/gogo/protobuf/protoc-gen-gogo
 	$(GO) install github.com/vektra/mockery/.../

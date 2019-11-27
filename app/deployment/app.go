@@ -347,8 +347,6 @@ func (a *app) doCheckCloseTx(state appstate.State, ctx apptypes.Context, tx *typ
 	}
 
 	switch tx.Reason {
-	case types.TxCloseDeployment_INSUFFICIENT:
-		// XXX: signer must be block's facilitator
 	case types.TxCloseDeployment_TENANT_CLOSE:
 		if !bytes.Equal(ctx.Signer().Address(), deployment.Tenant) {
 			return abci_types.ResponseCheckTx{

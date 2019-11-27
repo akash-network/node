@@ -1,4 +1,4 @@
-apiVersion: apps/v1beta2
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ template "akash-provider.fullname" . }}
@@ -34,6 +34,8 @@ spec:
               value: "true"
             - name: AKASH_DEPLOYMENT_INGRESS_DOMAIN
               value: "{{ .Values.deployment.ingress.domain }}"
+            - name: AKASH_PROVIDER_FAKE_CAPACITY
+              value: "true"
           ports:
             - containerPort: {{ .Values.provider.port }}
               name: http
