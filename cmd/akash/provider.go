@@ -32,7 +32,6 @@ func providerCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "provider",
 		Short: "Manage provider",
-		Args:  cobra.ExactArgs(1),
 	}
 
 	session.AddFlagNode(cmd, cmd.PersistentFlags())
@@ -253,12 +252,12 @@ func providerStatusCommand() *cobra.Command {
 func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args []string) error {
 	providerState, _ := cmd.Flags().GetString("state")
 	plist, err := session.QueryClient().Providers(session.Ctx())
-
 	if err != nil {
 		return err
 	}
-	var providers []*types.Provider
 
+	// determine providers to check status for
+	var providers []*types.Provider
 	if len(args) == 0 {
 		providers = plist.Providers
 	} else {
@@ -277,27 +276,32 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 	}
 
 	output := []*outputItem{}
-
+	outChan := make(chan *outputItem)
 	for _, provider := range providers {
-		status, err := http.Status(session.Ctx(), provider)
-		if err != nil {
-			output = append(output, &outputItem{Provider: provider, Error: err.Error()})
-			continue
-		}
+		go func(provider *types.Provider, outChan chan *outputItem) {
+			status, err := http.Status(session.Ctx(), provider)
+			var op *outputItem
+			switch {
+			case err != nil:
+				op = &outputItem{Provider: provider, Error: err.Error()}
+			case !bytes.Equal(status.Provider, provider.Address):
+				op = &outputItem{
+					Provider: provider,
+					Status:   status,
+					Error:    "Status received from incorrect provider",
+				}
+			default:
+				op = &outputItem{
+					Provider: provider,
+					Status:   status,
+				}
+			}
+			outChan <- op
+		}(provider, outChan)
+	}
 
-		if !bytes.Equal(status.Provider, provider.Address) {
-			output = append(output, &outputItem{
-				Provider: provider,
-				Status:   status,
-				Error:    "Status received from incorrect provider",
-			})
-			continue
-		}
-
-		output = append(output, &outputItem{
-			Provider: provider,
-			Status:   status,
-		})
+	for i := 0; i < len(providers); i++ {
+		output = append(output, <-outChan)
 	}
 
 	printer := session.Mode().Printer()
