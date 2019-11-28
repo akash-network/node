@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io/ioutil"
 	nhttp "net/http"
+	"time"
 
 	mutil "github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/txutil"
@@ -43,7 +44,7 @@ func SendManifest(
 }
 
 func Status(ctx context.Context, provider *types.Provider) (*types.ServerStatusParseable, error) {
-	resp, err := get(ctx, provider.GetHostURI()+"/status")
+	resp, err := getWithTimeout(ctx, provider.GetHostURI()+"/status", time.Second*2)
 	if err != nil {
 		return nil, err
 	}
@@ -79,6 +80,10 @@ func post(ctx context.Context, url string, data []byte) error {
 }
 
 func get(ctx context.Context, url string) ([]byte, error) {
+	return getWithTimeout(ctx, url, time.Second*0)
+}
+
+func getWithTimeout(ctx context.Context, url string, timeout time.Duration) ([]byte, error) {
 	req, err := nhttp.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -87,7 +92,7 @@ func get(ctx context.Context, url string) ([]byte, error) {
 	req.Header.Set("X-Custom-Header", "Akash")
 	req.Header.Set("Content-Type", "application/json")
 	client := &nhttp.Client{
-		Timeout: 0,
+		Timeout: timeout,
 	}
 	resp, err := client.Do(req)
 	if err != nil {
