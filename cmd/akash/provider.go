@@ -303,8 +303,11 @@ func doProviderStatusCommand(session session.Session, cmd *cobra.Command, args [
 	printer := session.Mode().Printer()
 	var active, passive []*outputItem
 	for _, o := range output {
-		if len(o.Error) == 0 && providerState != "passive" {
-			active = append(active, o)
+		if len(o.Error) == 0 {
+			if providerState != "passive" {
+				active = append(active, o)
+			}
+
 			continue
 		}
 
