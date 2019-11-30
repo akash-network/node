@@ -53,7 +53,7 @@ release:
 	-e DOCKER_USERNAME \
 	-e DOCKER_PASSWORD \
 	-e DOCKER_REGISTRY \
-	goreleaser/goreleaser release
+	goreleaser/goreleaser release --rm-dist
 
 image-minikube:
 	eval $$(minikube docker-env) && make image
