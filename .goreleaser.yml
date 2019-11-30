@@ -33,10 +33,6 @@ archives:
     files:
       - none*
 
-checksum:
-  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
-  algorithm: sha256
-
 dockers:
   - binaries: 
     - akash
@@ -47,8 +43,6 @@ dockers:
     - "ovrclk/akash:latest"
     - "ovrclk/akash:{{ .ShortCommit }}"
     - "ovrclk/akash:{{ .Version }}"
-    - "ovrclk/akash:v{{ .Major }}"
-    - "ovrclk/akash:v{{ .Major }}.{{ .Minor }}"
 
   - binaries: 
     - akashd
@@ -59,8 +53,6 @@ dockers:
     - "ovrclk/akashd:latest"
     - "ovrclk/akashd:{{ .ShortCommit }}"
     - "ovrclk/akashd:{{ .Version }}"
-    - "ovrclk/akashd:v{{ .Major }}"
-    - "ovrclk/akashd:v{{ .Major }}{{ .Minor }}"
 
 brews:
   - name: akash
@@ -75,6 +67,16 @@ brews:
     install: |
       bin.install "akash"
       bin.install "akashd"
+
+nfpms:
+  - 
+    vendor: Overclock Labs Inc.
+    homepage: http://ovrclk.com
+    maintainer: Greg Osuri <greg@akash.network>
+    formats:
+      - deb
+      - rpm
+    license: Apache 2.0
 
 release:
   github:
