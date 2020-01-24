@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -34,13 +32,9 @@ func cmdDeployments(key string, cdc *codec.Codec) *cobra.Command {
 		Use:  "deployments",
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var obj query.Deployments
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			buf, _, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", key, query.DeploymentsPath()), nil)
+			obj, err := query.NewClient(ctx, key).Deployments()
 			if err != nil {
-				return err
-			}
-			if err := cdc.UnmarshalJSON(buf, &obj); err != nil {
 				return err
 			}
 			return ctx.PrintOutput(obj)
@@ -54,7 +48,6 @@ func cmdDeployment(key string, cdc *codec.Codec) *cobra.Command {
 		Short: "Query deployment",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var obj query.Deployment
 			ctx := context.NewCLIContext().WithCodec(cdc)
 
 			id, err := DeploymentIDFromFlags(cmd.Flags(), ctx.FromAddress.String())
@@ -62,13 +55,11 @@ func cmdDeployment(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			buf, _, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", key, query.DeploymentPath(id)), nil)
+			obj, err := query.NewClient(ctx, key).Deployment(id)
 			if err != nil {
 				return err
 			}
-			if err := cdc.UnmarshalJSON(buf, &obj); err != nil {
-				return err
-			}
+
 			return ctx.PrintOutput(obj)
 		},
 	}

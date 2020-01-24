@@ -58,6 +58,10 @@ func (AppModuleBasic) GetTxCmd(cdc *codec.Codec) *cobra.Command {
 	return cli.GetTxCmd(StoreKey, cdc)
 }
 
+func (AppModuleBasic) GetQueryClient(ctx context.CLIContext) query.Client {
+	return query.NewClient(ctx, StoreKey)
+}
+
 type AppModule struct {
 	AppModuleBasic
 	keeper  keeper.Keeper

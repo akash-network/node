@@ -63,7 +63,11 @@ func (AppModuleBasic) GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 
 // Get the root tx command of this module
 func (AppModuleBasic) GetTxCmd(cdc *codec.Codec) *cobra.Command {
-	return cli.GetTxCmd(types.StoreKey, cdc)
+	return cli.GetTxCmd(StoreKey, cdc)
+}
+
+func (AppModuleBasic) GetQueryClient(ctx context.CLIContext) query.Client {
+	return query.NewClient(ctx, StoreKey)
 }
 
 type AppModule struct {

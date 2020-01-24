@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -34,13 +32,9 @@ func cmdGetOrders(key string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use: "orders",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var obj query.Orders
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			buf, _, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", key, query.OrdersPath()), nil)
+			obj, err := query.NewClient(ctx, key).Orders()
 			if err != nil {
-				return err
-			}
-			if err := cdc.UnmarshalJSON(buf, &obj); err != nil {
 				return err
 			}
 			return ctx.PrintOutput(obj)
@@ -52,13 +46,9 @@ func cmdGetBids(key string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use: "bids",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var obj query.Bids
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			buf, _, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", key, query.BidsPath()), nil)
+			obj, err := query.NewClient(ctx, key).Bids()
 			if err != nil {
-				return err
-			}
-			if err := cdc.UnmarshalJSON(buf, &obj); err != nil {
 				return err
 			}
 			return ctx.PrintOutput(obj)
@@ -70,13 +60,9 @@ func cmdGetLeases(key string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use: "leases",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var obj query.Leases
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			buf, _, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", key, query.LeasesPath()), nil)
+			obj, err := query.NewClient(ctx, key).Leases()
 			if err != nil {
-				return err
-			}
-			if err := cdc.UnmarshalJSON(buf, &obj); err != nil {
 				return err
 			}
 			return ctx.PrintOutput(obj)

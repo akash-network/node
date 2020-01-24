@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -32,13 +30,9 @@ func cmdGetProviders(key string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use: "providers",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var obj query.Providers
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			buf, _, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", key, query.ProvidersPath()), nil)
+			obj, err := query.NewClient(ctx, key).Providers()
 			if err != nil {
-				return err
-			}
-			if err := cdc.UnmarshalJSON(buf, &obj); err != nil {
 				return err
 			}
 			return ctx.PrintOutput(obj)
