@@ -1,10 +1,11 @@
 package validation
 
 import (
+	"github.com/ovrclk/akash/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
-func validateResourceListPricing(config config, rlist hasResources) error {
+func validateResourceListPricing(config config, rlist types.ResourceGroup) error {
 	// var (
 	// 	mem   int64
 	// 	price int64

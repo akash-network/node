@@ -3,6 +3,10 @@ module github.com/ovrclk/akash
 go 1.13
 
 require (
+	github.com/Azure/azure-sdk-for-go v39.2.0+incompatible
+	github.com/Azure/go-autorest/autorest v0.9.6 // indirect
+	github.com/Azure/go-autorest/autorest/to v0.3.0 // indirect
+	github.com/Azure/go-autorest/autorest/validation v0.2.0 // indirect
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
 	github.com/btcsuite/btcd v0.20.1-beta // indirect
@@ -55,6 +59,7 @@ require (
 	github.com/tendermint/tm-db v0.4.0
 	github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
 	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	google.golang.org/appengine v1.6.6-0.20191016204603-16bce7d3dc4e // indirect
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 	google.golang.org/grpc v1.26.0

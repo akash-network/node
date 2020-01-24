@@ -7,8 +7,10 @@ import (
 
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/provider/event"
-	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/pubsub"
+	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/util/runner"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
 )
 
@@ -20,9 +22,9 @@ var (
 type inventoryService struct {
 	config config
 	client Client
-	sub    event.Subscriber
+	sub    pubsub.Subscriber
 
-	statusch    chan chan<- *types.ProviderInventoryStatus
+	statusch    chan chan<- InventoryStatus
 	lookupch    chan inventoryRequest
 	reservech   chan inventoryRequest
 	unreservech chan inventoryRequest
@@ -37,7 +39,7 @@ func newInventoryService(
 	config config,
 	log log.Logger,
 	donech <-chan struct{},
-	sub event.Subscriber,
+	sub pubsub.Subscriber,
 	client Client,
 	deployments []Deployment,
 ) (*inventoryService, error) {
@@ -51,7 +53,7 @@ func newInventoryService(
 		config:      config,
 		client:      client,
 		sub:         sub,
-		statusch:    make(chan chan<- *types.ProviderInventoryStatus),
+		statusch:    make(chan chan<- InventoryStatus),
 		lookupch:    make(chan inventoryRequest),
 		reservech:   make(chan inventoryRequest),
 		unreservech: make(chan inventoryRequest),
@@ -80,7 +82,7 @@ func (is *inventoryService) ready() <-chan struct{} {
 	return is.readych
 }
 
-func (is *inventoryService) lookup(order types.OrderID, resources types.ResourceList) (Reservation, error) {
+func (is *inventoryService) lookup(order mtypes.OrderID, resources atypes.ResourceGroup) (Reservation, error) {
 	ch := make(chan inventoryResponse, 1)
 	req := inventoryRequest{
 		order:     order,
@@ -97,7 +99,7 @@ func (is *inventoryService) lookup(order types.OrderID, resources types.Resource
 	}
 }
 
-func (is *inventoryService) reserve(order types.OrderID, resources types.ResourceList) (Reservation, error) {
+func (is *inventoryService) reserve(order mtypes.OrderID, resources atypes.ResourceGroup) (Reservation, error) {
 	ch := make(chan inventoryResponse, 1)
 	req := inventoryRequest{
 		order:     order,
@@ -114,7 +116,7 @@ func (is *inventoryService) reserve(order types.OrderID, resources types.Resourc
 	}
 }
 
-func (is *inventoryService) unreserve(order types.OrderID, resources types.ResourceList) (Reservation, error) {
+func (is *inventoryService) unreserve(order mtypes.OrderID, resources atypes.ResourceGroup) (Reservation, error) {
 	ch := make(chan inventoryResponse, 1)
 	req := inventoryRequest{
 		order:     order,
@@ -131,30 +133,30 @@ func (is *inventoryService) unreserve(order types.OrderID, resources types.Resou
 	}
 }
 
-func (is *inventoryService) status(ctx context.Context) (*types.ProviderInventoryStatus, error) {
-	ch := make(chan *types.ProviderInventoryStatus, 1)
+func (is *inventoryService) status(ctx context.Context) (InventoryStatus, error) {
+	ch := make(chan InventoryStatus, 1)
 
 	select {
 	case <-is.lc.Done():
-		return nil, ErrNotRunning
+		return InventoryStatus{}, ErrNotRunning
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return InventoryStatus{}, ctx.Err()
 	case is.statusch <- ch:
 	}
 
 	select {
 	case <-is.lc.Done():
-		return nil, ErrNotRunning
+		return InventoryStatus{}, ErrNotRunning
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return InventoryStatus{}, ctx.Err()
 	case result := <-ch:
 		return result, nil
 	}
 }
 
 type inventoryRequest struct {
-	order     types.OrderID
-	resources types.ResourceList
+	order     mtypes.OrderID
+	resources atypes.ResourceGroup
 	ch        chan<- inventoryResponse
 }
 
@@ -191,7 +193,7 @@ loop:
 				// mark reservation allocated if deployment successful
 
 				for _, res := range reservations {
-					if res.OrderID().Compare(ev.LeaseID.OrderID()) != 0 {
+					if !res.OrderID().Equals(ev.LeaseID.OrderID()) {
 						continue
 					}
 					if res.Resources().GetName() != ev.Group.Name {
@@ -230,7 +232,7 @@ loop:
 			// lookup registration
 
 			for _, res := range reservations {
-				if res.OrderID().Compare(req.order) != 0 {
+				if !res.OrderID().Equals(req.order) {
 					continue
 				}
 				if res.Resources().GetName() != req.resources.GetName() {
@@ -246,7 +248,7 @@ loop:
 			// remove reservation
 
 			for idx, res := range reservations {
-				if res.OrderID().Compare(req.order) != 0 {
+				if !res.OrderID().Equals(req.order) {
 					continue
 				}
 				if res.Resources().GetName() != req.resources.GetName() {
@@ -297,7 +299,7 @@ loop:
 						"node-id", node.ID(),
 						"available-cpu", available.CPU,
 						"available-memory", available.Memory,
-						"available-disk", available.Disk)
+						"available-storage", available.Storage)
 				}
 			}
 			fetchCount++
@@ -316,33 +318,31 @@ func (is *inventoryService) runCheck() <-chan runner.Result {
 }
 
 func (is *inventoryService) getStatus(
-	inventory []Node, reservations []*reservation) *types.ProviderInventoryStatus {
+	inventory []Node, reservations []*reservation) InventoryStatus {
 
-	status := &types.ProviderInventoryStatus{
-		Reservations: &types.ProviderInventoryStatus_Reservations{},
-	}
+	status := InventoryStatus{}
 
 	for _, reservation := range reservations {
-		total := &types.ResourceUnit{}
+		total := atypes.Unit{}
 
 		for _, resource := range reservation.Resources().GetResources() {
 			total.CPU += resource.Unit.CPU
 			total.Memory += resource.Unit.Memory
-			total.Disk += resource.Unit.Disk
+			total.Storage += resource.Unit.Storage
 		}
 
 		if reservation.allocated {
-			status.Reservations.Active = append(status.Reservations.Active, total)
+			status.Active = append(status.Active, total)
 		} else {
-			status.Reservations.Pending = append(status.Reservations.Pending, total)
+			status.Pending = append(status.Pending, total)
 		}
 	}
 
 	for _, node := range inventory {
-		status.Available = append(status.Available, &types.ResourceUnit{
-			CPU:    node.Available().CPU,
-			Memory: node.Available().Memory,
-			Disk:   node.Available().Disk,
+		status.Available = append(status.Available, atypes.Unit{
+			CPU:     node.Available().CPU,
+			Memory:  node.Available().Memory,
+			Storage: node.Available().Storage,
 		})
 	}
 
@@ -380,7 +380,7 @@ func reservationAdjustInventory(prevInventory []Node, reservation *reservation) 
 	//   remove resource capacity that fit in node capacity from requested resource capacity
 	// return remaining inventory, true iff all resources were able to fit
 
-	resources := make([]types.ResourceGroup, len(reservation.resources.GetResources()))
+	resources := make([]atypes.Resource, len(reservation.resources.GetResources()))
 	copy(resources, reservation.resources.GetResources())
 
 	inventory := make([]Node, 0, len(prevInventory))
@@ -395,12 +395,12 @@ func reservationAdjustInventory(prevInventory []Node, reservation *reservation) 
 			for ; resource.Count > 0; resource.Count-- {
 				if available.CPU < resource.Unit.CPU ||
 					available.Memory < resource.Unit.Memory ||
-					available.Disk < resource.Unit.Disk {
+					available.Storage < resource.Unit.Storage {
 					break
 				}
 				available.CPU -= resource.Unit.CPU
 				available.Memory -= resource.Unit.Memory
-				available.Disk -= resource.Unit.Disk
+				available.Storage -= resource.Unit.Storage
 			}
 
 			if resource.Count > 0 {

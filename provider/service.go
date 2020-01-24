@@ -9,10 +9,9 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/ovrclk/akash/provider/bidengine"
 	"github.com/ovrclk/akash/provider/cluster"
-	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/manifest"
 	"github.com/ovrclk/akash/provider/session"
-	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/pubsub"
 )
 
 type Service interface {
@@ -24,11 +23,11 @@ type Service interface {
 }
 
 type StatusClient interface {
-	Status(context.Context) (*types.ProviderStatus, error)
+	Status(context.Context) (*Status, error)
 }
 
 // Simple wrapper around various services needed for running a provider.
-func NewService(ctx context.Context, session session.Session, bus event.Bus, cclient cluster.Client) (Service, error) {
+func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cclient cluster.Client) (Service, error) {
 
 	config := config{}
 	if err := env.Parse(&config); err != nil {
@@ -90,7 +89,7 @@ func NewService(ctx context.Context, session session.Session, bus event.Bus, ccl
 
 type service struct {
 	session session.Session
-	bus     event.Bus
+	bus     pubsub.Bus
 
 	cluster   cluster.Service
 	bidengine bidengine.Service
@@ -114,7 +113,7 @@ func (s *service) ManifestHandler() manifest.Handler {
 	return s.manifest
 }
 
-func (s *service) Status(ctx context.Context) (*types.ProviderStatus, error) {
+func (s *service) Status(ctx context.Context) (*Status, error) {
 	cluster, err := s.cluster.Status(ctx)
 	if err != nil {
 		return nil, err
@@ -127,7 +126,7 @@ func (s *service) Status(ctx context.Context) (*types.ProviderStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &types.ProviderStatus{
+	return &Status{
 		Cluster:   cluster,
 		Bidengine: bidengine,
 		Manifest:  manifest,

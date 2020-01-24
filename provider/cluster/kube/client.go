@@ -2,15 +2,18 @@ package kube
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path"
 
+	"github.com/ovrclk/akash/manifest"
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	manifestclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/validation"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -100,7 +103,7 @@ func openKubeConfig(log log.Logger) (*rest.Config, error) {
 	return rest.InClusterConfig()
 }
 
-func (c *client) shouldExpose(expose *types.ManifestServiceExpose) bool {
+func (c *client) shouldExpose(expose *manifest.ServiceExpose) bool {
 	return expose.Global &&
 		(expose.ExternalPort == 80 ||
 			(expose.ExternalPort == 0 && expose.Port == 80))
@@ -122,7 +125,7 @@ func (c *client) Deployments() ([]cluster.Deployment, error) {
 	return deployments, nil
 }
 
-func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
+func (c *client) Deploy(lid mtypes.LeaseID, group *manifest.Group) error {
 	if err := applyNS(c.kc, newNSBuilder(lid, group)); err != nil {
 		c.log.Error("applying namespace", "err", err, "lease", lid)
 		return err
@@ -139,7 +142,7 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 	}
 
 	for _, service := range group.Services {
-		if err := applyDeployment(c.kc, newDeploymentBuilder(c.log, lid, group, service)); err != nil {
+		if err := applyDeployment(c.kc, newDeploymentBuilder(c.log, lid, group, &service)); err != nil {
 			c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
@@ -149,16 +152,16 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 			continue
 		}
 
-		if err := applyService(c.kc, newServiceBuilder(c.log, lid, group, service)); err != nil {
+		if err := applyService(c.kc, newServiceBuilder(c.log, lid, group, &service)); err != nil {
 			c.log.Error("applying service", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
 
 		for _, expose := range service.Expose {
-			if !c.shouldExpose(expose) {
+			if !c.shouldExpose(&expose) {
 				continue
 			}
-			if err := applyIngress(c.kc, newIngressBuilder(c.log, c.host, lid, group, service, expose)); err != nil {
+			if err := applyIngress(c.kc, newIngressBuilder(c.log, c.host, lid, group, &service, &expose)); err != nil {
 				c.log.Error("applying ingress", "err", err, "lease", lid, "service", service.Name, "expose", expose)
 				return err
 			}
@@ -168,16 +171,16 @@ func (c *client) Deploy(lid types.LeaseID, group *types.ManifestGroup) error {
 	return nil
 }
 
-func (c *client) TeardownLease(lid types.LeaseID) error {
+func (c *client) TeardownLease(lid mtypes.LeaseID) error {
 	return c.kc.CoreV1().Namespaces().Delete(lidNS(lid), &metav1.DeleteOptions{})
 }
 
-func (c *client) ServiceLogs(ctx context.Context, lid types.LeaseID,
+func (c *client) ServiceLogs(ctx context.Context, lid mtypes.LeaseID,
 	tailLines int64, follow bool) ([]*cluster.ServiceLog, error) {
 	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
-		return nil, types.ErrInternalError{Message: "internal error"}
+		return nil, errors.New("internal error")
 	}
 	streams := make([]*cluster.ServiceLog, len(pods.Items))
 	for i, pod := range pods.Items {
@@ -188,7 +191,7 @@ func (c *client) ServiceLogs(ctx context.Context, lid types.LeaseID,
 		}).Context(ctx).Stream()
 		if err != nil {
 			c.log.Error(err.Error())
-			return nil, types.ErrInternalError{Message: "internal error"}
+			return nil, errors.New("internal error")
 		}
 		streams[i] = cluster.NewServiceLog(pod.Name, stream)
 	}
@@ -196,7 +199,7 @@ func (c *client) ServiceLogs(ctx context.Context, lid types.LeaseID,
 }
 
 // todo: limit number of results and do pagination / streaming
-func (c *client) LeaseStatus(lid types.LeaseID) (*types.LeaseStatusResponse, error) {
+func (c *client) LeaseStatus(lid mtypes.LeaseID) (*cluster.LeaseStatus, error) {
 	deployments, err := c.deploymentsForLease(lid)
 	if err != nil {
 		c.log.Error(err.Error())
@@ -205,9 +208,9 @@ func (c *client) LeaseStatus(lid types.LeaseID) (*types.LeaseStatusResponse, err
 	if len(deployments) == 0 {
 		return nil, cluster.ErrNoDeployments
 	}
-	serviceStatus := make(map[string]*types.ServiceStatus, len(deployments))
+	serviceStatus := make(map[string]*cluster.ServiceStatus, len(deployments))
 	for _, deployment := range deployments {
-		status := &types.ServiceStatus{
+		status := &cluster.ServiceStatus{
 			Name:      deployment.Name,
 			Available: deployment.Status.AvailableReplicas,
 			Total:     deployment.Status.Replicas,
@@ -217,10 +220,10 @@ func (c *client) LeaseStatus(lid types.LeaseID) (*types.LeaseStatusResponse, err
 	ingress, err := c.kc.ExtensionsV1beta1().Ingresses(lidNS(lid)).List(metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
-		return nil, types.ErrInternalError{Message: "internal error"}
+		return nil, errors.New("internal error")
 	}
 	if ingress == nil || len(ingress.Items) == 0 {
-		return nil, types.ErrResourceNotFound{Message: "no ingress for lease"}
+		return nil, errors.New("no ingress for lease")
 	}
 	for _, ing := range ingress.Items {
 		service := serviceStatus[ing.Name]
@@ -243,23 +246,23 @@ func (c *client) LeaseStatus(lid types.LeaseID) (*types.LeaseStatusResponse, err
 
 		service.URIs = hosts
 	}
-	response := &types.LeaseStatusResponse{}
+	response := &cluster.LeaseStatus{}
 	for _, status := range serviceStatus {
 		response.Services = append(response.Services, status)
 	}
 	return response, nil
 }
 
-func (c *client) ServiceStatus(lid types.LeaseID, name string) (*types.ServiceStatusResponse, error) {
+func (c *client) ServiceStatus(lid mtypes.LeaseID, name string) (*cluster.ServiceStatus, error) {
 	deployment, err := c.kc.AppsV1().Deployments(lidNS(lid)).Get(name, metav1.GetOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
-		return nil, types.ErrInternalError{Message: "internal error"}
+		return nil, errors.New("internal error")
 	}
 	if deployment == nil {
-		return nil, types.ErrResourceNotFound{Message: "no deployment for lease"}
+		return nil, errors.New("no deployment for lease")
 	}
-	return &types.ServiceStatusResponse{
+	return &cluster.ServiceStatus{
 		ObservedGeneration: deployment.Status.ObservedGeneration,
 		Replicas:           deployment.Status.Replicas,
 		UpdatedReplicas:    deployment.Status.UpdatedReplicas,
@@ -306,10 +309,10 @@ func (c *client) Inventory() ([]cluster.Node, error) {
 			disk = 0
 		}
 
-		unit := types.ResourceUnit{
-			CPU:    uint32(cpu),
-			Memory: uint64(memory),
-			Disk:   uint64(disk),
+		unit := types.Unit{
+			CPU:     uint32(cpu),
+			Memory:  uint64(memory),
+			Storage: uint64(disk),
 		}
 
 		nodes = append(nodes, cluster.NewNode(knode.Name, unit))
@@ -318,10 +321,10 @@ func (c *client) Inventory() ([]cluster.Node, error) {
 	if os.Getenv("AKASH_PROVIDER_FAKE_CAPACITY") == "true" {
 		cfg := validation.Config()
 		return []cluster.Node{
-			cluster.NewNode("minikube", types.ResourceUnit{
-				CPU:    uint32(cfg.MaxUnitCPU * 100),
-				Memory: uint64(cfg.MaxUnitMemory * 100),
-				Disk:   uint64(cfg.MaxUnitStorage * 100),
+			cluster.NewNode("minikube", types.Unit{
+				CPU:     uint32(cfg.MaxUnitCPU * 100),
+				Memory:  uint64(cfg.MaxUnitMemory * 100),
+				Storage: uint64(cfg.MaxUnitStorage * 100),
 			}),
 		}, nil
 	}
@@ -384,14 +387,14 @@ func (c *client) nodeIsActive(node *corev1.Node) bool {
 	return ready && issues == 0
 }
 
-func (c *client) deploymentsForLease(lid types.LeaseID) ([]appsv1.Deployment, error) {
+func (c *client) deploymentsForLease(lid mtypes.LeaseID) ([]appsv1.Deployment, error) {
 	deployments, err := c.kc.AppsV1().Deployments(lidNS(lid)).List(metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
-		return nil, types.ErrInternalError{Message: "internal error"}
+		return nil, errors.New("internal error")
 	}
 	if deployments == nil {
-		return nil, types.ErrResourceNotFound{Message: "no deployments for lease"}
+		return nil, errors.New("no deployments for lease")
 	}
 	return deployments.Items, nil
 }

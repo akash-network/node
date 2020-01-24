@@ -1,14 +1,15 @@
 package kube
 
 import (
-	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/manifest"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/kubernetes"
 )
 
-func cleanupStaleResources(kc kubernetes.Interface, lid types.LeaseID, group *types.ManifestGroup) error {
+func cleanupStaleResources(kc kubernetes.Interface, lid mtypes.LeaseID, group *manifest.Group) error {
 	ns := lidNS(lid)
 
 	// build label selector for objects not in current manifest group

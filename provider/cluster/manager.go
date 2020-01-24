@@ -5,9 +5,10 @@ import (
 	"sync"
 
 	lifecycle "github.com/boz/go-lifecycle"
-	"github.com/ovrclk/akash/provider/event"
+	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/session"
-	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/pubsub"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
 )
 
@@ -23,26 +24,26 @@ const (
 )
 
 type deploymentManager struct {
-	bus     event.Bus
+	bus     pubsub.Bus
 	client  Client
 	session session.Session
 
 	state deploymentState
 
-	lease  types.LeaseID
-	mgroup *types.ManifestGroup
+	lease  mtypes.LeaseID
+	mgroup *manifest.Group
 
 	monitor *deploymentMonitor
 	wg      sync.WaitGroup
 
-	updatech   chan *types.ManifestGroup
+	updatech   chan *manifest.Group
 	teardownch chan struct{}
 
 	log log.Logger
 	lc  lifecycle.Lifecycle
 }
 
-func newDeploymentManager(s *service, lease types.LeaseID, mgroup *types.ManifestGroup) *deploymentManager {
+func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Group) *deploymentManager {
 	log := s.log.With("cmp", "deployment-manager", "lease", lease, "manifest-group", mgroup.Name)
 
 	dm := &deploymentManager{
@@ -53,7 +54,7 @@ func newDeploymentManager(s *service, lease types.LeaseID, mgroup *types.Manifes
 		lease:      lease,
 		mgroup:     mgroup,
 		wg:         sync.WaitGroup{},
-		updatech:   make(chan *types.ManifestGroup),
+		updatech:   make(chan *manifest.Group),
 		teardownch: make(chan struct{}),
 		log:        log,
 		lc:         lifecycle.New(),
@@ -70,7 +71,7 @@ func newDeploymentManager(s *service, lease types.LeaseID, mgroup *types.Manifes
 	return dm
 }
 
-func (dm *deploymentManager) update(mgroup *types.ManifestGroup) error {
+func (dm *deploymentManager) update(mgroup *manifest.Group) error {
 	select {
 	case dm.updatech <- mgroup:
 		return nil

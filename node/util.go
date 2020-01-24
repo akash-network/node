@@ -1,11 +1,9 @@
 package node
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
 
-	"github.com/ovrclk/akash/types"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/privval"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -24,15 +22,6 @@ func TMGenesisFromFile(path string) (*tmtypes.GenesisDoc, error) {
 		return nil, err
 	}
 
-	return obj, nil
-}
-
-// Akash genesis doc from file
-func GenesisFromTMGenesis(genesis *tmtypes.GenesisDoc) (*types.Genesis, error) {
-	obj := new(types.Genesis)
-	if err := json.Unmarshal(genesis.AppState, obj); err != nil {
-		return nil, err
-	}
 	return obj, nil
 }
 

@@ -1,7 +1,9 @@
 package v1
 
 import (
+	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,24 +27,24 @@ type ManifestGroup struct {
 	Services []*ManifestService `protobuf:"bytes,2,rep,name=services" json:"services,omitempty"`
 }
 
-func (m ManifestGroup) ToAkash() *types.ManifestGroup {
-	ma := &types.ManifestGroup{Name: m.Name}
+func (m ManifestGroup) ToAkash() *manifest.Group {
+	ma := &manifest.Group{Name: m.Name}
 
 	for _, svc := range m.Services {
-		masvc := &types.ManifestService{
+		masvc := manifest.Service{
 			Name:  svc.Name,
 			Image: svc.Image,
 			Args:  svc.Args[:],
 			Env:   svc.Env[:],
-			Unit: &types.ResourceUnit{
-				CPU:    svc.Unit.CPU,
-				Memory: svc.Unit.Memory,
-				Disk:   svc.Unit.Disk,
+			Unit: types.Unit{
+				CPU:     svc.Unit.CPU,
+				Memory:  svc.Unit.Memory,
+				Storage: svc.Unit.Storage,
 			},
 			Count: svc.Count,
 		}
 		for _, expose := range svc.Expose {
-			masvc.Expose = append(masvc.Expose, &types.ManifestServiceExpose{
+			masvc.Expose = append(masvc.Expose, manifest.ServiceExpose{
 				Port:         expose.Port,
 				ExternalPort: expose.ExternalPort,
 				Proto:        expose.Proto,
@@ -58,7 +60,7 @@ func (m ManifestGroup) ToAkash() *types.ManifestGroup {
 	return ma
 }
 
-func ManifestGroupFromAkash(m *types.ManifestGroup) ManifestGroup {
+func ManifestGroupFromAkash(m *manifest.Group) ManifestGroup {
 	ma := ManifestGroup{Name: m.Name}
 
 	for _, svc := range m.Services {
@@ -68,9 +70,9 @@ func ManifestGroupFromAkash(m *types.ManifestGroup) ManifestGroup {
 			Args:  svc.Args[:],
 			Env:   svc.Env[:],
 			Unit: ResourceUnit{
-				CPU:    svc.Unit.CPU,
-				Memory: svc.Unit.Memory,
-				Disk:   svc.Unit.Disk,
+				CPU:     svc.Unit.CPU,
+				Memory:  svc.Unit.Memory,
+				Storage: svc.Unit.Storage,
 			},
 			Count: svc.Count,
 		}
@@ -104,21 +106,23 @@ type LeaseID struct {
 	Provider []byte `protobuf:"bytes,4,opt,name=provider,proto3,customtype=github.com/ovrclk/akash/types/base.Bytes" json:"provider"`
 }
 
-func (id LeaseID) ToAkash() types.LeaseID {
-	return types.LeaseID{
-		Deployment: id.Deployment,
-		Group:      id.Group,
-		Order:      id.Order,
-		Provider:   id.Provider,
+func (id LeaseID) ToAkash() mtypes.LeaseID {
+	return mtypes.LeaseID{
+		// TODO
+		// Deployment: id.Deployment,
+		// Group:      id.Group,
+		// Order:      id.Order,
+		// Provider:   id.Provider,
 	}
 }
 
-func LeaseIDFromAkash(id types.LeaseID) LeaseID {
+func LeaseIDFromAkash(id mtypes.LeaseID) LeaseID {
 	return LeaseID{
-		Deployment: id.Deployment,
-		Group:      id.Group,
-		Order:      id.Order,
-		Provider:   id.Provider,
+		// TODO
+		// Deployment: id.Deployment,
+		// Group:      id.Group,
+		// Order:      id.Order,
+		// Provider:   id.Provider,
 	}
 }
 
@@ -156,9 +160,9 @@ type ManifestServiceExpose struct {
 }
 
 type ResourceUnit struct {
-	CPU    uint32 `protobuf:"varint,1,opt,name=CPU,proto3" json:"CPU,omitempty"`
-	Memory uint64 `protobuf:"varint,2,opt,name=memory,proto3" json:"memory,omitempty"`
-	Disk   uint64 `protobuf:"varint,3,opt,name=disk,proto3" json:"disk,omitempty"`
+	CPU     uint32 `protobuf:"varint,1,opt,name=CPU,proto3" json:"CPU,omitempty"`
+	Memory  uint64 `protobuf:"varint,2,opt,name=memory,proto3" json:"memory,omitempty"`
+	Storage uint64 `protobuf:"varint,3,opt,name=storage,proto3" json:"storage,omitempty"`
 }
 
 type ManifestStatus struct {
@@ -174,15 +178,15 @@ type ManifestList struct {
 	Items           []Manifest `json:"items"`
 }
 
-func (m Manifest) ManifestGroup() *types.ManifestGroup {
-	return m.Spec.ManifestGroup.ToAkash()
+func (m Manifest) ManifestGroup() manifest.Group {
+	return *m.Spec.ManifestGroup.ToAkash()
 }
 
-func (m Manifest) LeaseID() types.LeaseID {
+func (m Manifest) LeaseID() mtypes.LeaseID {
 	return m.Spec.LeaseID.ToAkash()
 }
 
-func NewManifest(name string, lid types.LeaseID, mgroup *types.ManifestGroup) (*Manifest, error) {
+func NewManifest(name string, lid mtypes.LeaseID, mgroup *manifest.Group) (*Manifest, error) {
 	return &Manifest{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Manifest",

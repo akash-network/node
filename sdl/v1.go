@@ -6,6 +6,7 @@ import (
 
 	"github.com/blang/semver"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	tmkv "github.com/tendermint/tendermint/libs/kv"
@@ -158,7 +159,7 @@ func (sdl *v1) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 			}
 
 			group.Resources = append(group.Resources, dtypes.Resource{
-				Unit: dtypes.Unit{
+				Unit: types.Unit{
 					CPU:     uint32(compute.CPU),
 					Memory:  uint64(compute.Memory),
 					Storage: uint64(compute.Storage),
@@ -185,9 +186,9 @@ func (sdl *v1) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 	return result, nil
 }
 
-func (sdl *v1) Manifest() (*types.Manifest, error) {
+func (sdl *v1) Manifest() (manifest.Manifest, error) {
 
-	groups := make(map[string]*types.ManifestGroup)
+	groups := make(map[string]*manifest.Group)
 
 	for _, svcName := range v1DeploymentSvcNames(sdl.Deployments) {
 		depl := sdl.Deployments[svcName]
@@ -198,7 +199,7 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 			group := groups[placementName]
 
 			if group == nil {
-				group = &types.ManifestGroup{
+				group = &manifest.Group{
 					Name: placementName,
 				}
 				groups[group.Name] = group
@@ -214,22 +215,22 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 				return nil, fmt.Errorf("%v.%v: no service profile named %v", svcName, placementName, svcName)
 			}
 
-			msvc := &types.ManifestService{
+			msvc := &manifest.Service{
 				Name:  svcName,
 				Image: svc.Image,
 				Args:  svc.Args,
 				Env:   svc.Env,
-				Unit: &types.ResourceUnit{
-					CPU:    uint32(compute.CPU),
-					Memory: uint64(compute.Memory),
-					Disk:   uint64(compute.Storage),
+				Unit: types.Unit{
+					CPU:     uint32(compute.CPU),
+					Memory:  uint64(compute.Memory),
+					Storage: uint64(compute.Storage),
 				},
 				Count: svcdepl.Count,
 			}
 
 			for _, expose := range svc.Expose {
 				for _, to := range expose.To {
-					msvc.Expose = append(msvc.Expose, &types.ManifestServiceExpose{
+					msvc.Expose = append(msvc.Expose, manifest.ServiceExpose{
 						Service:      to.Service,
 						Port:         expose.Port,
 						ExternalPort: expose.As,
@@ -263,7 +264,7 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 				return false
 			})
 
-			group.Services = append(group.Services, msvc)
+			group.Services = append(group.Services, *msvc)
 
 		}
 	}
@@ -275,12 +276,12 @@ func (sdl *v1) Manifest() (*types.Manifest, error) {
 	}
 	sort.Strings(names)
 
-	result := make([]*types.ManifestGroup, 0, len(names))
+	result := make([]manifest.Group, 0, len(names))
 	for _, name := range names {
-		result = append(result, groups[name])
+		result = append(result, *groups[name])
 	}
 
-	return &types.Manifest{Groups: result}, nil
+	return result, nil
 }
 
 // stable ordering

@@ -7,33 +7,36 @@ import (
 	"io"
 	"sync"
 
-	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/manifest"
+	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
+	mquery "github.com/ovrclk/akash/x/market/query"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 var ErrNoDeployments = errors.New("no deployments")
 
 type Client interface {
-	Deploy(types.LeaseID, *types.ManifestGroup) error
-	TeardownLease(types.LeaseID) error
+	Deploy(mtypes.LeaseID, *manifest.Group) error
+	TeardownLease(mtypes.LeaseID) error
 	Deployments() ([]Deployment, error)
-	LeaseStatus(types.LeaseID) (*types.LeaseStatusResponse, error)
-	ServiceStatus(types.LeaseID, string) (*types.ServiceStatusResponse, error)
-	ServiceLogs(context.Context, types.LeaseID, int64, bool) ([]*ServiceLog, error)
+	LeaseStatus(mtypes.LeaseID) (*LeaseStatus, error)
+	ServiceStatus(mtypes.LeaseID, string) (*ServiceStatus, error)
+	ServiceLogs(context.Context, mtypes.LeaseID, int64, bool) ([]*ServiceLog, error)
 	Inventory() ([]Node, error)
 }
 
 type Node interface {
 	ID() string
-	Available() types.ResourceUnit
+	Available() atypes.Unit
 }
 
 type node struct {
 	id        string
-	available types.ResourceUnit
+	available atypes.Unit
 }
 
-func NewNode(id string, available types.ResourceUnit) Node {
+func NewNode(id string, available atypes.Unit) Node {
 	return &node{id: id, available: available}
 }
 
@@ -41,13 +44,13 @@ func (n *node) ID() string {
 	return n.id
 }
 
-func (n *node) Available() types.ResourceUnit {
+func (n *node) Available() atypes.Unit {
 	return n.available
 }
 
 type Deployment interface {
-	LeaseID() types.LeaseID
-	ManifestGroup() *types.ManifestGroup
+	LeaseID() mtypes.LeaseID
+	ManifestGroup() manifest.Group
 }
 
 type ServiceLog struct {
@@ -64,7 +67,7 @@ const (
 )
 
 type nullClient struct {
-	leases map[string]*types.ManifestGroup
+	leases map[string]*manifest.Group
 	mtx    sync.Mutex
 }
 
@@ -78,30 +81,30 @@ func NewServiceLog(name string, stream io.ReadCloser) *ServiceLog {
 
 func NullClient() Client {
 	return &nullClient{
-		leases: make(map[string]*types.ManifestGroup),
+		leases: make(map[string]*manifest.Group),
 		mtx:    sync.Mutex{},
 	}
 }
 
-func (c *nullClient) Deploy(lid types.LeaseID, mgroup *types.ManifestGroup) error {
+func (c *nullClient) Deploy(lid mtypes.LeaseID, mgroup *manifest.Group) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	c.leases[lid.String()] = mgroup
+	c.leases[mquery.LeasePath(lid)] = mgroup
 	return nil
 }
 
-func (c *nullClient) LeaseStatus(lid types.LeaseID) (*types.LeaseStatusResponse, error) {
+func (c *nullClient) LeaseStatus(lid mtypes.LeaseID) (*LeaseStatus, error) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
-	mgroup, ok := c.leases[lid.String()]
+	mgroup, ok := c.leases[mquery.LeasePath(lid)]
 	if !ok {
 		return nil, nil
 	}
 
-	resp := &types.LeaseStatusResponse{}
+	resp := &LeaseStatus{}
 	for _, svc := range mgroup.Services {
-		resp.Services = append(resp.Services, &types.ServiceStatus{
+		resp.Services = append(resp.Services, &ServiceStatus{
 			Name:      svc.Name,
 			Available: int32(svc.Count),
 			Total:     int32(svc.Count),
@@ -111,19 +114,19 @@ func (c *nullClient) LeaseStatus(lid types.LeaseID) (*types.LeaseStatusResponse,
 	return resp, nil
 }
 
-func (c *nullClient) ServiceStatus(_ types.LeaseID, _ string) (*types.ServiceStatusResponse, error) {
+func (c *nullClient) ServiceStatus(_ mtypes.LeaseID, _ string) (*ServiceStatus, error) {
 	return nil, nil
 }
 
-func (c *nullClient) ServiceLogs(_ context.Context, _ types.LeaseID, _ int64, _ bool) ([]*ServiceLog, error) {
+func (c *nullClient) ServiceLogs(_ context.Context, _ mtypes.LeaseID, _ int64, _ bool) ([]*ServiceLog, error) {
 	return nil, nil
 }
 
-func (c *nullClient) TeardownLease(lid types.LeaseID) error {
+func (c *nullClient) TeardownLease(lid mtypes.LeaseID) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
-	delete(c.leases, lid.String())
+	delete(c.leases, mquery.LeasePath(lid))
 	return nil
 }
 
@@ -133,10 +136,10 @@ func (c *nullClient) Deployments() ([]Deployment, error) {
 
 func (c *nullClient) Inventory() ([]Node, error) {
 	return []Node{
-		NewNode("solo", types.ResourceUnit{
-			CPU:    nullClientCPU,
-			Memory: nullClientMemory,
-			Disk:   nullClientDisk,
+		NewNode("solo", atypes.Unit{
+			CPU:     nullClientCPU,
+			Memory:  nullClientMemory,
+			Storage: nullClientDisk,
 		}),
 	}, nil
 }

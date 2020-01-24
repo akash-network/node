@@ -4,14 +4,14 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	"github.com/ovrclk/akash/types"
 )
 
-func ValidateResourceList(rlist hasResources) error {
+func ValidateResourceList(rlist types.ResourceGroup) error {
 	return validateResourceList(defaultConfig, rlist)
 }
 
-func validateResourceLists(config config, rlists []hasResources) error {
+func validateResourceLists(config config, rlists []types.ResourceGroup) error {
 
 	if len(rlists) == 0 {
 		return fmt.Errorf("error: no groups present")
@@ -37,7 +37,7 @@ func validateResourceLists(config config, rlists []hasResources) error {
 	return nil
 }
 
-func validateResourceList(config config, rlist hasResources) error {
+func validateResourceList(config config, rlist types.ResourceGroup) error {
 	if rlist.GetName() == "" {
 		return fmt.Errorf("group: empty name")
 	}
@@ -55,11 +55,9 @@ func validateResourceList(config config, rlist hasResources) error {
 		cpu     = sdk.ZeroUint()
 		mem     = sdk.ZeroUint()
 		storage = sdk.ZeroUint()
-
-		price sdk.Coin
 	)
 
-	for idx, resource := range units {
+	for _, resource := range units {
 		if err := validateResourceGroup(config, resource); err != nil {
 			return fmt.Errorf("group %v: %v", rlist.GetName(), err)
 		}
@@ -68,13 +66,14 @@ func validateResourceList(config config, rlist hasResources) error {
 		mem = mem.Add(sdk.NewUint(resource.Unit.Memory).MulUint64(uint64(resource.Count)))
 		storage = storage.Add(sdk.NewUint(resource.Unit.Storage).MulUint64(uint64(resource.Count)))
 
-		if idx == 0 {
-			price = resource.Price
-		} else {
-			if resource.Price.Denom != price.Denom {
-				return fmt.Errorf("mixed denonimations: (%v != %v)", price.Denom, resource.Price.Denom)
-			}
-		}
+		// TODO: validate pricing
+		// if idx == 0 {
+		// 	price = resource.Price
+		// } else {
+		// 	if resource.Price.Denom != price.Denom {
+		// 		return fmt.Errorf("mixed denonimations: (%v != %v)", price.Denom, resource.Price.Denom)
+		// 	}
+		// }
 	}
 
 	if cpu.GT(sdk.NewUint(uint64(config.MaxGroupCPU))) || cpu.LTE(sdk.ZeroUint()) {
@@ -95,7 +94,7 @@ func validateResourceList(config config, rlist hasResources) error {
 	return nil
 }
 
-func validateResourceGroup(config config, rg dtypes.Resource) error {
+func validateResourceGroup(config config, rg types.Resource) error {
 	if err := validateResourceUnit(config, rg.Unit); err != nil {
 		return nil
 	}
@@ -104,14 +103,15 @@ func validateResourceGroup(config config, rg dtypes.Resource) error {
 			config.MaxUnitCount, rg.Count, config.MinUnitCount)
 	}
 
-	if !rg.Price.IsPositive() {
-		return fmt.Errorf("error: invalid unit price (not positive fails)")
-	}
+	// TODO: validate pricing
+	// if !rg.Price.IsPositive() {
+	// 	return fmt.Errorf("error: invalid unit price (not positive fails)")
+	// }
 
 	return nil
 }
 
-func validateResourceUnit(config config, unit dtypes.Unit) error {
+func validateResourceUnit(config config, unit types.Unit) error {
 	if unit.CPU > uint32(config.MaxUnitCPU) || unit.CPU < uint32(config.MinUnitCPU) {
 		return fmt.Errorf("error: invalide unit cpu (%v > %v > %v fails)",
 			config.MaxUnitCPU, unit.CPU, config.MinUnitCPU)

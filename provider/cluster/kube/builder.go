@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/lithammer/shortuuid"
+	"github.com/ovrclk/akash/manifest"
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
-	"github.com/ovrclk/akash/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,8 +28,8 @@ const (
 
 type builder struct {
 	log   log.Logger
-	lid   types.LeaseID
-	group *types.ManifestGroup
+	lid   mtypes.LeaseID
+	group *manifest.Group
 }
 
 func (b *builder) ns() string {
@@ -45,7 +46,7 @@ type nsBuilder struct {
 	builder
 }
 
-func newNSBuilder(lid types.LeaseID, group *types.ManifestGroup) *nsBuilder {
+func newNSBuilder(lid mtypes.LeaseID, group *manifest.Group) *nsBuilder {
 	return &nsBuilder{builder: builder{lid: lid, group: group}}
 }
 
@@ -71,10 +72,10 @@ func (b *nsBuilder) update(obj *corev1.Namespace) (*corev1.Namespace, error) {
 // deployment
 type deploymentBuilder struct {
 	builder
-	service *types.ManifestService
+	service *manifest.Service
 }
 
-func newDeploymentBuilder(log log.Logger, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService) *deploymentBuilder {
+func newDeploymentBuilder(log log.Logger, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service) *deploymentBuilder {
 	return &deploymentBuilder{
 		builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group},
 		service: service,
@@ -172,7 +173,7 @@ type serviceBuilder struct {
 	deploymentBuilder
 }
 
-func newServiceBuilder(log log.Logger, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService) *serviceBuilder {
+func newServiceBuilder(log log.Logger, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service) *serviceBuilder {
 	return &serviceBuilder{
 		deploymentBuilder: deploymentBuilder{
 			builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group},
@@ -209,7 +210,7 @@ func (b *serviceBuilder) ports() []corev1.ServicePort {
 	for _, expose := range b.service.Expose {
 		ports = append(ports, corev1.ServicePort{
 			Name:       strconv.Itoa(int(expose.Port)),
-			Port:       exposeExternalPort(expose),
+			Port:       exposeExternalPort(&expose),
 			TargetPort: intstr.FromInt(int(expose.Port)),
 		})
 	}
@@ -219,10 +220,10 @@ func (b *serviceBuilder) ports() []corev1.ServicePort {
 // ingress
 type ingressBuilder struct {
 	deploymentBuilder
-	expose *types.ManifestServiceExpose
+	expose *manifest.ServiceExpose
 }
 
-func newIngressBuilder(log log.Logger, host string, lid types.LeaseID, group *types.ManifestGroup, service *types.ManifestService, expose *types.ManifestServiceExpose) *ingressBuilder {
+func newIngressBuilder(log log.Logger, host string, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service, expose *manifest.ServiceExpose) *ingressBuilder {
 	if config.DeploymentIngressStaticHosts {
 		uid := strings.ToLower(shortuuid.New())
 		h := fmt.Sprintf("%s.%s", uid, config.DeploymentIngressDomain)
@@ -281,15 +282,17 @@ func (b *ingressBuilder) rules() []extv1.IngressRule {
 	return rules
 }
 
-func exposeExternalPort(expose *types.ManifestServiceExpose) int32 {
+func exposeExternalPort(expose *manifest.ServiceExpose) int32 {
 	if expose.ExternalPort == 0 {
 		return int32(expose.Port)
 	}
 	return int32(expose.ExternalPort)
 }
 
-func lidNS(lid types.LeaseID) string {
-	path := lid.String()
+func lidNS(lid mtypes.LeaseID) string {
+	// TODO
+	var path string
+	// path := lid.String()
 	sha := sha1.Sum([]byte(path))
 	return hex.EncodeToString(sha[:])
 }
@@ -300,7 +303,7 @@ type manifestBuilder struct {
 	mns string
 }
 
-func newManifestBuilder(log log.Logger, ns string, lid types.LeaseID, group *types.ManifestGroup) *manifestBuilder {
+func newManifestBuilder(log log.Logger, ns string, lid mtypes.LeaseID, group *manifest.Group) *manifestBuilder {
 	return &manifestBuilder{
 		builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group},
 		mns:     ns,

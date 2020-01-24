@@ -3,57 +3,44 @@ package session
 import (
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/ovrclk/akash/query"
-	"github.com/ovrclk/akash/txutil"
-	"github.com/ovrclk/akash/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/client"
 )
 
 type Session interface {
-	Provider() *types.Provider
-	TX() txutil.Client
-	Query() query.Client
 	Log() log.Logger
+	Client() client.Client
+	Provider() sdk.AccAddress
 	ForModule(string) Session
 }
 
-func New(log log.Logger, provider *types.Provider, txc txutil.Client, qc query.Client) Session {
-	return &session{
+func New(log log.Logger, client client.Client, provider sdk.AccAddress) Session {
+	return session{
+		client:   client,
 		provider: provider,
-		txc:      txc,
-		qc:       qc,
 		log:      log,
 	}
 }
 
 type session struct {
-	provider *types.Provider
-
-	txc txutil.Client
-	qc  query.Client
-	log log.Logger
+	client   client.Client
+	provider sdk.AccAddress
+	log      log.Logger
 }
 
-func (s *session) Provider() *types.Provider {
-	return s.provider
-}
-
-func (s *session) TX() txutil.Client {
-	return s.txc
-}
-
-func (s *session) Query() query.Client {
-	return s.qc
-}
-
-func (s *session) Log() log.Logger {
+func (s session) Log() log.Logger {
 	return s.log
 }
 
-func (s *session) ForModule(name string) Session {
-	return &session{
-		provider: s.provider,
-		txc:      s.txc,
-		qc:       s.qc,
-		log:      s.log.With("module", name),
-	}
+func (s session) Client() client.Client {
+	return s.client
+}
+
+func (s session) Provider() sdk.AccAddress {
+	return s.provider
+}
+
+func (s session) ForModule(name string) Session {
+	s.log = s.log.With("module", name)
+	return s
 }

@@ -55,6 +55,15 @@ func MakeBidID(id OrderID, provider sdk.AccAddress) BidID {
 	}
 }
 
+func (id BidID) Equals(other BidID) bool {
+	return id.OrderID().Equals(other.OrderID()) &&
+		id.Provider.Equals(other.Provider)
+}
+
+func (id BidID) LeaseID() LeaseID {
+	return LeaseID(id)
+}
+
 func (id BidID) OrderID() OrderID {
 	return OrderID{
 		Owner: id.Owner,
@@ -63,16 +72,37 @@ func (id BidID) OrderID() OrderID {
 		OSeq:  id.OSeq,
 	}
 }
+
+func (id BidID) GroupID() dtypes.GroupID {
+	return id.OrderID().GroupID()
+}
+
+func (id BidID) DeploymentID() dtypes.DeploymentID {
+	return id.GroupID().DeploymentID()
+}
+
 func (id BidID) Validate() error {
 	return nil
 }
 
 type LeaseID BidID
 
+func (id LeaseID) Equals(other LeaseID) bool {
+	return id.BidID().Equals(other.BidID())
+}
+
+func (id LeaseID) BidID() BidID {
+	return BidID(id)
+}
+
+func (id LeaseID) OrderID() OrderID {
+	return id.BidID().OrderID()
+}
+
 func (id LeaseID) GroupID() dtypes.GroupID {
-	return dtypes.GroupID{
-		Owner: id.Owner,
-		DSeq:  id.DSeq,
-		GSeq:  id.GSeq,
-	}
+	return id.OrderID().GroupID()
+}
+
+func (id LeaseID) DeploymentID() dtypes.DeploymentID {
+	return id.GroupID().DeploymentID()
 }

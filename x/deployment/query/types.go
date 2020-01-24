@@ -40,3 +40,5 @@ func (ds Deployments) String() string {
 
 	return buf.String()
 }
+
+type Group types.Group
