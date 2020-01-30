@@ -34,7 +34,12 @@ func LoadDB(pathname string) (DB, error) {
 	name := path.Base(pathname)
 
 	db := tmdb.NewDB(name, dbBackend, dir)
-	tree := iavl.NewMutableTree(db, dbCacheSize)
+	tree, err := iavl.NewMutableTree(db, dbCacheSize)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load the tree and return error if needed
 	if _, err := tree.Load(); err != nil {
 		return nil, err
 	}
@@ -67,9 +72,13 @@ func LoadState(db DB, gen *types.Genesis) (CommitState, CacheState, error) {
 	return commitState, cacheState, nil
 }
 
+// NewMemDB returns a new in memory representation of the database
 func NewMemDB() DB {
 	mtx := new(sync.RWMutex)
-	tree := iavl.NewMutableTree(tmdb.NewMemDB(), 0)
+	tree, err := iavl.NewMutableTree(tmdb.NewMemDB(), 0)
+	if err != nil {
+		panic(err)
+	}
 	return &iavlDB{tree, mtx}
 }
 

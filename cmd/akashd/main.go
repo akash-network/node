@@ -6,8 +6,7 @@ import (
 	"io/ioutil"
 
 	"github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/x/genaccounts"
-	genaccscli "github.com/cosmos/cosmos-sdk/x/genaccounts/client/cli"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/ovrclk/akash/app"
@@ -34,19 +33,19 @@ func main() {
 	root.AddCommand(
 		genutilcli.InitCmd(ctx, cdc, app.ModuleBasics(), common.DefaultNodeHome()),
 
-		genutilcli.CollectGenTxsCmd(ctx, cdc, genaccounts.AppModuleBasic{}, common.DefaultNodeHome()),
+		genutilcli.CollectGenTxsCmd(ctx, cdc, auth.GenesisAccountIterator{}, common.DefaultNodeHome()),
 
 		genutilcli.GenTxCmd(
 			ctx, cdc,
 			app.ModuleBasics(),
 			staking.AppModuleBasic{},
-			genaccounts.AppModuleBasic{},
+			auth.GenesisAccountIterator{},
 			common.DefaultNodeHome(),
 			common.DefaultCLIHome(),
 		),
 
 		genutilcli.ValidateGenesisCmd(ctx, cdc, app.ModuleBasics()),
-		genaccscli.AddGenesisAccountCmd(ctx, cdc, common.DefaultNodeHome(), common.DefaultCLIHome()),
+		AddGenesisAccountCmd(ctx, cdc, common.DefaultNodeHome(), common.DefaultCLIHome()),
 	)
 
 	server.AddCommands(ctx, cdc, root, newApp, exportAppStateAndTMValidators)

@@ -22,17 +22,17 @@ func (msg MsgCreate) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 
-func (msg MsgCreate) ValidateBasic() sdk.Error {
+func (msg MsgCreate) ValidateBasic() error {
 	switch {
 	case msg.Owner.Empty():
-		return sdk.NewError(DefaultCodespace, CodeInvalidRequest, "owner account missing")
+		return ErrOwnerAcctMissing
 	// case msg.Sequence == 0:
 	// 	return sdk.NewError(DefaultCodespace, CodeInvalidRequest, "invalid sequence: 0")
 	// TODO: version
 	// case msg.Version.Empty():
 	// 	return sdk.NewError(DefaultCodespace, CodeInvalidRequest, "invalid: empty version")
 	case len(msg.Groups) == 0:
-		return sdk.NewError(DefaultCodespace, CodeInvalidRequest, "invalid: empty groups")
+		return ErrEmptyGroups
 	}
 	return nil
 }
@@ -45,13 +45,13 @@ type MsgUpdate struct {
 func (msg MsgUpdate) Route() string { return RouterKey }
 func (msg MsgUpdate) Type() string  { return "update" }
 
-func (msg MsgUpdate) ValidateBasic() sdk.Error {
+func (msg MsgUpdate) ValidateBasic() error {
 	if err := msg.ID.Validate(); err != nil {
-		return sdk.NewError(DefaultCodespace, CodeInvalidRequest, "invalid deployment id")
+		return ErrInvalidDeploymentID
 	}
 	switch {
 	case msg.Version.Empty():
-		return sdk.NewError(DefaultCodespace, CodeInvalidRequest, "invalid: empty version")
+		return ErrEmptyVersion
 	}
 	return nil
 }
@@ -73,9 +73,9 @@ type MsgClose struct {
 func (msg MsgClose) Route() string { return RouterKey }
 func (msg MsgClose) Type() string  { return "update" }
 
-func (msg MsgClose) ValidateBasic() sdk.Error {
+func (msg MsgClose) ValidateBasic() error {
 	if err := msg.ID.Validate(); err != nil {
-		return sdk.NewError(DefaultCodespace, CodeInvalidRequest, "invalid deployment id")
+		return ErrInvalidDeploymentID
 	}
 	return nil
 }

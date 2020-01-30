@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/lcd"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
@@ -32,13 +33,13 @@ func main() {
 		client.ConfigCmd(common.DefaultCLIHome()),
 		queryCmd(cdc),
 		txCmd(cdc),
-		client.LineBreak,
+		flags.LineBreak,
 		lcd.ServeCommand(cdc, lcdRoutes),
-		client.LineBreak,
+		flags.LineBreak,
 		keys.Commands(),
-		client.LineBreak,
+		flags.LineBreak,
 		version.Cmd,
-		client.NewCompletionCmd(root, true),
+		flags.NewCompletionCmd(root, true),
 	)
 
 	executor := cli.PrepareMainCmd(root, "AKASH", common.DefaultCLIHome())
@@ -57,12 +58,12 @@ func queryCmd(cdc *amino.Codec) *cobra.Command {
 
 	cmd.AddCommand(
 		authcmd.GetAccountCmd(cdc),
-		client.LineBreak,
+		flags.LineBreak,
 		rpc.ValidatorCommand(cdc),
 		rpc.BlockCommand(),
 		authcmd.QueryTxsByEventsCmd(cdc),
 		authcmd.QueryTxCmd(cdc),
-		client.LineBreak,
+		flags.LineBreak,
 	)
 
 	app.ModuleBasics().AddQueryCommands(cmd, cdc)
@@ -77,13 +78,13 @@ func txCmd(cdc *amino.Codec) *cobra.Command {
 
 	cmd.AddCommand(
 		bankcmd.SendTxCmd(cdc),
-		client.LineBreak,
+		flags.LineBreak,
 		authcmd.GetSignCommand(cdc),
 		authcmd.GetMultiSignCommand(cdc),
-		client.LineBreak,
+		flags.LineBreak,
 		authcmd.GetBroadcastCommand(cdc),
 		authcmd.GetEncodeCommand(cdc),
-		client.LineBreak,
+		flags.LineBreak,
 	)
 
 	// add modules' tx commands

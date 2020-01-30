@@ -1,15 +1,14 @@
 package handler
 
 import (
-	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/ovrclk/akash/x/provider/keeper"
 	"github.com/ovrclk/akash/x/provider/types"
 )
 
 func NewHandler(keeper keeper.Keeper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		switch msg := msg.(type) {
 		case types.MsgCreate:
 			return handleMsgCreate(ctx, keeper, msg)
@@ -18,34 +17,37 @@ func NewHandler(keeper keeper.Keeper) sdk.Handler {
 		case types.MsgDelete:
 			return handleMsgDelete(ctx, keeper, msg)
 		default:
-			errMsg := fmt.Sprintf("Unrecognized message type: %v", msg.Type())
-			return sdk.ErrUnknownRequest(errMsg).Result()
+			return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized bank message type: %T", msg)
 		}
 	}
 }
 
-func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgCreate) sdk.Result {
+var (
+	ErrInternal = sdkerrors.Register(types.ModuleName, 1, "internal error")
+)
+
+func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgCreate) (*sdk.Result, error) {
 	if err := keeper.Create(ctx, types.Provider(msg)); err != nil {
-		return sdk.ErrInternal(err.Error()).Result()
+		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
 	}
 
-	return sdk.Result{
+	return &sdk.Result{
 		Events: ctx.EventManager().Events(),
-	}
+	}, nil
 }
 
-func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgUpdate) sdk.Result {
+func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgUpdate) (*sdk.Result, error) {
 	if err := keeper.Update(ctx, types.Provider(msg)); err != nil {
-		return sdk.ErrInternal(err.Error()).Result()
+		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
 	}
 	// TODO: cancel now-invalid leases?
-	return sdk.Result{
+	return &sdk.Result{
 		Events: ctx.EventManager().Events(),
-	}
+	}, nil
 }
 
-func handleMsgDelete(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgDelete) sdk.Result {
+func handleMsgDelete(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgDelete) (*sdk.Result, error) {
 	// TODO: validate exists
 	// TODO: cancel leases
-	return sdk.ErrInternal("NOT IMPLEMENTED").Result()
+	return &sdk.Result{}, sdkerrors.Wrapf(ErrInternal, "NOTIMPLEMENTED", "")
 }

@@ -8,7 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/tendermint/tendermint/libs/common"
+	tmkv "github.com/tendermint/tendermint/libs/kv"
 )
 
 var (
@@ -143,7 +143,7 @@ func (sdl *v1) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 				}
 
 				for k, v := range infra.Attributes {
-					group.Requirements = append(group.Requirements, common.KVPair{
+					group.Requirements = append(group.Requirements, tmkv.Pair{
 						Key:   []byte(k),
 						Value: []byte(v),
 					})

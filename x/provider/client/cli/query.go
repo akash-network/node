@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/ovrclk/akash/x/provider/query"
 	"github.com/ovrclk/akash/x/provider/types"
@@ -19,7 +20,7 @@ func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	cmd.AddCommand(client.GetCommands(
+	cmd.AddCommand(flags.GetCommands(
 		cmdGetProviders(key, cdc),
 	)...)
 

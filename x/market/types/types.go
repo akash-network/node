@@ -5,7 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/tendermint/tendermint/libs/common"
+	tmkv "github.com/tendermint/tendermint/libs/kv"
 )
 
 type OrderState uint8
@@ -44,7 +44,7 @@ func (o Order) Price() sdk.Coin {
 	return o.Spec.Price()
 }
 
-func (o Order) MatchAttributes(attrs []common.KVPair) bool {
+func (o Order) MatchAttributes(attrs []tmkv.Pair) bool {
 	return o.Spec.MatchAttributes(attrs)
 }
 
