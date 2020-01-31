@@ -11,7 +11,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/genaccounts"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 
@@ -27,7 +26,7 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	abci "github.com/tendermint/tendermint/abci/types"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	tmos "github.com/tendermint/tendermint/libs/os"
 
 	"github.com/cosmos/cosmos-sdk/version"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
@@ -41,7 +40,6 @@ const (
 
 var (
 	mbasics = module.NewBasicManager(
-		genaccounts.AppModuleBasic{},
 		genutil.AppModuleBasic{},
 
 		// accounts, fees.
@@ -151,7 +149,6 @@ func NewApp(
 		cdc,
 		keys[params.StoreKey],
 		tkeys[params.TStoreKey],
-		params.DefaultCodespace,
 	)
 
 	app.keeper.acct = auth.NewAccountKeeper(
@@ -164,7 +161,6 @@ func NewApp(
 	app.keeper.bank = bank.NewBaseKeeper(
 		app.keeper.acct,
 		app.keeper.params.Subspace(bank.DefaultParamspace),
-		bank.DefaultCodespace,
 		macAddrs(),
 	)
 
@@ -179,10 +175,8 @@ func NewApp(
 	skeeper := staking.NewKeeper(
 		cdc,
 		keys[staking.StoreKey],
-		tkeys[staking.TStoreKey],
 		app.keeper.supply,
 		app.keeper.params.Subspace(staking.DefaultParamspace),
-		staking.DefaultCodespace,
 	)
 
 	app.keeper.distr = distr.NewKeeper(
@@ -191,7 +185,6 @@ func NewApp(
 		app.keeper.params.Subspace(distr.DefaultParamspace),
 		skeeper,
 		app.keeper.supply,
-		distr.DefaultCodespace,
 		auth.FeeCollectorName,
 		macAddrs(),
 	)
@@ -201,7 +194,6 @@ func NewApp(
 		keys[slashing.StoreKey],
 		skeeper,
 		app.keeper.params.Subspace(slashing.DefaultParamspace),
-		slashing.DefaultCodespace,
 	)
 
 	app.keeper.staking = *skeeper.SetHooks(
@@ -236,18 +228,17 @@ func NewApp(
 	)
 
 	app.mm = module.NewManager(
-		genaccounts.NewAppModule(app.keeper.acct),
 		genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx),
 		auth.NewAppModule(app.keeper.acct),
 		bank.NewAppModule(app.keeper.bank, app.keeper.acct),
 
 		supply.NewAppModule(app.keeper.supply, app.keeper.acct),
-		distr.NewAppModule(app.keeper.distr, app.keeper.supply),
+		distr.NewAppModule(app.keeper.distr, app.keeper.acct, app.keeper.supply, app.keeper.staking),
 
 		mint.NewAppModule(app.keeper.mint),
-		slashing.NewAppModule(app.keeper.slashing, app.keeper.staking),
+		slashing.NewAppModule(app.keeper.slashing, app.keeper.acct, app.keeper.staking),
 
-		staking.NewAppModule(app.keeper.staking, app.keeper.distr, app.keeper.acct, app.keeper.supply),
+		staking.NewAppModule(app.keeper.staking, app.keeper.acct, app.keeper.supply),
 
 		// akash
 		deployment.NewAppModule(
@@ -272,7 +263,6 @@ func NewApp(
 	// NOTE: The genutils module must occur after staking so that pools are
 	//       properly initialized with tokens from genesis accounts.
 	app.mm.SetOrderInitGenesis(
-		genaccounts.ModuleName,
 		distr.ModuleName,
 		staking.ModuleName,
 		auth.ModuleName,
@@ -310,7 +300,7 @@ func NewApp(
 
 	err := app.LoadLatestVersion(app.keys[bam.MainStoreKey])
 	if err != nil {
-		cmn.Exit("app initialization:" + err.Error())
+		tmos.Exit("app initialization:" + err.Error())
 	}
 
 	return app

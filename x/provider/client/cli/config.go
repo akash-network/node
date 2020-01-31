@@ -3,7 +3,7 @@ package cli
 import (
 	"io/ioutil"
 
-	"github.com/tendermint/tendermint/libs/common"
+	tmkv "github.com/tendermint/tendermint/libs/kv"
 	"gopkg.in/yaml.v2"
 )
 
@@ -15,10 +15,10 @@ type config struct {
 	} `json:"attributes"`
 }
 
-func (c config) getAttributes() []common.KVPair {
-	pairs := make([]common.KVPair, 0, len(c.Attributes))
+func (c config) getAttributes() []tmkv.Pair {
+	pairs := make([]tmkv.Pair, 0, len(c.Attributes))
 	for _, attr := range c.Attributes {
-		pairs = append(pairs, common.KVPair{
+		pairs = append(pairs, tmkv.Pair{
 			Key:   []byte(attr.Key),
 			Value: []byte(attr.Value),
 		})

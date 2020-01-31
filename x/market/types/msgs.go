@@ -19,17 +19,17 @@ func (msg MsgCreateBid) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Provider}
 }
 
-func (msg MsgCreateBid) ValidateBasic() sdk.Error {
+func (msg MsgCreateBid) ValidateBasic() error {
 	if err := msg.Order.Validate(); err != nil {
-		return sdk.ErrInternal(err.Error())
+		return ErrInvalidOrder
 	}
 
 	if msg.Provider.Empty() {
-		return sdk.ErrInternal("empty provider")
+		return ErrEmptyProvider
 	}
 
 	if msg.Provider.Equals(msg.Order.Owner) {
-		return sdk.ErrInternal("owner and provider are the same account")
+		return ErrSameAccount
 	}
 
 	return nil
@@ -47,7 +47,7 @@ func (msg MsgCloseBid) GetSignBytes() []byte {
 func (msg MsgCloseBid) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Provider}
 }
-func (msg MsgCloseBid) ValidateBasic() sdk.Error {
+func (msg MsgCloseBid) ValidateBasic() error {
 	return nil
 }
 
@@ -63,6 +63,6 @@ func (msg MsgCloseOrder) GetSignBytes() []byte {
 func (msg MsgCloseOrder) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
-func (msg MsgCloseOrder) ValidateBasic() sdk.Error {
+func (msg MsgCloseOrder) ValidateBasic() error {
 	return nil
 }

@@ -2,6 +2,7 @@ package query
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/x/market/keeper"
 	"github.com/ovrclk/akash/x/market/types"
@@ -9,7 +10,7 @@ import (
 )
 
 func NewQuerier(keeper keeper.Keeper) sdk.Querier {
-	return func(ctx sdk.Context, path []string, req abci.RequestQuery) ([]byte, sdk.Error) {
+	return func(ctx sdk.Context, path []string, req abci.RequestQuery) ([]byte, error) {
 		switch path[0] {
 		case ordersPath:
 			return queryOrders(ctx, path[1:], req, keeper)
@@ -18,11 +19,11 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 		case leasesPath:
 			return queryLeases(ctx, path[1:], req, keeper)
 		}
-		return []byte{}, sdk.ErrUnknownRequest("unknown query path")
+		return []byte{}, sdkerrors.ErrUnknownRequest
 	}
 }
 
-func queryOrders(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, sdk.Error) {
+func queryOrders(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 	var values Orders
 	keeper.WithOrders(ctx, func(obj types.Order) bool {
 		values = append(values, Order(obj))
@@ -31,7 +32,7 @@ func queryOrders(ctx sdk.Context, path []string, req abci.RequestQuery, keeper k
 	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
 }
 
-func queryBids(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, sdk.Error) {
+func queryBids(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 	var values Bids
 	keeper.WithBids(ctx, func(obj types.Bid) bool {
 		values = append(values, Bid(obj))
@@ -40,7 +41,7 @@ func queryBids(ctx sdk.Context, path []string, req abci.RequestQuery, keeper kee
 	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
 }
 
-func queryLeases(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, sdk.Error) {
+func queryLeases(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 	var values Leases
 	keeper.WithLeases(ctx, func(obj types.Lease) bool {
 		values = append(values, Lease(obj))

@@ -1,16 +1,15 @@
 package handler
 
 import (
-	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/ovrclk/akash/validation"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
 func NewHandler(keeper keeper.Keeper, mkeeper MarketKeeper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		switch msg := msg.(type) {
 		case types.MsgCreate:
 			return handleMsgCreate(ctx, keeper, mkeeper, msg)
@@ -19,13 +18,12 @@ func NewHandler(keeper keeper.Keeper, mkeeper MarketKeeper) sdk.Handler {
 		case types.MsgClose:
 			return handleMsgClose(ctx, keeper, mkeeper, msg)
 		default:
-			errMsg := fmt.Sprintf("Unrecognized nameservice Msg type: %v", msg.Type())
-			return sdk.ErrUnknownRequest(errMsg).Result()
+			return nil, sdkerrors.ErrUnknownRequest
 		}
 	}
 }
 
-func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgCreate) sdk.Result {
+func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgCreate) (*sdk.Result, error) {
 
 	deployment := types.Deployment{
 		DeploymentID: types.DeploymentID{
@@ -38,11 +36,11 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper
 	}
 
 	if _, found := keeper.GetDeployment(ctx, deployment.ID()); found {
-		return types.ErrDeploymentExists().Result()
+		return nil, types.ErrDeploymentExists
 	}
 
 	if err := validation.ValidateDeploymentGroups(msg.Groups); err != nil {
-		return sdk.ErrInternal(err.Error()).Result()
+		return nil, types.ErrEmptyGroups
 	}
 
 	groups := make([]types.Group, 0, len(msg.Groups))
@@ -57,15 +55,15 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper
 
 	keeper.Create(ctx, deployment, groups)
 
-	return sdk.Result{
+	return &sdk.Result{
 		Events: ctx.EventManager().Events(),
-	}
+	}, nil
 }
 
-func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgUpdate) sdk.Result {
+func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgUpdate) (*sdk.Result, error) {
 	deployment, found := keeper.GetDeployment(ctx, msg.ID)
 	if !found {
-		return types.ErrDeploymentNotFound().Result()
+		return nil, types.ErrDeploymentNotFound
 	}
 
 	// TODO: version
@@ -73,20 +71,20 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper
 
 	keeper.UpdateDeployment(ctx, deployment)
 
-	return sdk.Result{
+	return &sdk.Result{
 		Events: ctx.EventManager().Events(),
-	}
+	}, nil
 }
 
-func handleMsgClose(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgClose) sdk.Result {
+func handleMsgClose(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgClose) (*sdk.Result, error) {
 
 	deployment, found := keeper.GetDeployment(ctx, msg.ID)
 	if !found {
-		return types.ErrDeploymentNotFound().Result()
+		return nil, types.ErrDeploymentNotFound
 	}
 
 	if deployment.State == types.DeploymentClosed {
-		return types.ErrDeploymentClosed().Result()
+		return nil, types.ErrDeploymentClosed
 	}
 
 	deployment.State = types.DeploymentClosed
@@ -97,7 +95,7 @@ func handleMsgClose(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper,
 		mkeeper.OnGroupClosed(ctx, group.ID())
 	}
 
-	return sdk.Result{
+	return &sdk.Result{
 		Events: ctx.EventManager().Events(),
-	}
+	}, nil
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/tendermint/tendermint/libs/common"
+	tmkv "github.com/tendermint/tendermint/libs/kv"
 )
 
 type DeploymentState uint8
@@ -36,9 +36,9 @@ const (
 )
 
 type GroupSpec struct {
-	Name         string          `json:"name"`
-	Requirements []common.KVPair `json:"requirements"`
-	Resources    []Resource      `json:"resources"`
+	Name         string      `json:"name"`
+	Requirements []tmkv.Pair `json:"requirements"`
+	Resources    []Resource  `json:"resources"`
 }
 
 func (g GroupSpec) GetResources() []Resource {
@@ -61,7 +61,7 @@ func (g GroupSpec) Price() sdk.Coin {
 	return price
 }
 
-func (g GroupSpec) MatchAttributes(attrs []common.KVPair) bool {
+func (g GroupSpec) MatchAttributes(attrs []tmkv.Pair) bool {
 loop:
 	for _, req := range g.Requirements {
 		for _, attr := range attrs {

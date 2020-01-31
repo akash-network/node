@@ -8,11 +8,11 @@ type MsgCreate Provider
 
 func (msg MsgCreate) Route() string { return RouterKey }
 func (msg MsgCreate) Type() string  { return "create" }
-func (msg MsgCreate) ValidateBasic() sdk.Error {
+func (msg MsgCreate) ValidateBasic() error {
 	switch {
 	case len(msg.HostURI) == 0:
 		// TODO: better uri validation
-		return sdk.ErrInternal("invalid provider: empty host uri")
+		return ErrInvalidProviderURI
 	}
 	return nil
 }
@@ -31,11 +31,11 @@ type MsgUpdate Provider
 
 func (msg MsgUpdate) Route() string { return RouterKey }
 func (msg MsgUpdate) Type() string  { return "update" }
-func (msg MsgUpdate) ValidateBasic() sdk.Error {
+func (msg MsgUpdate) ValidateBasic() error {
 	switch {
 	case len(msg.HostURI) == 0:
 		// TODO: better uri validation
-		return sdk.ErrInternal("invalid provider: empty host uri")
+		return ErrInvalidProviderURI
 	}
 	return nil
 }
@@ -56,7 +56,7 @@ type MsgDelete struct {
 
 func (msg MsgDelete) Route() string { return RouterKey }
 func (msg MsgDelete) Type() string  { return "delete" }
-func (msg MsgDelete) ValidateBasic() sdk.Error {
+func (msg MsgDelete) ValidateBasic() error {
 	return nil
 }
 
