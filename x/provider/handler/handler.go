@@ -23,7 +23,7 @@ func NewHandler(keeper keeper.Keeper) sdk.Handler {
 }
 
 var (
-	ErrInternal = sdkerrors.Register(types.ModuleName, 1, "internal error")
+	ErrInternal = sdkerrors.Register(types.ModuleName, 10, "internal error")
 )
 
 func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgCreate) (*sdk.Result, error) {
