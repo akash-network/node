@@ -1,5 +1,8 @@
 language: go
 
+go:
+  - "1.13"
+
 sudo: false
 
 git:
@@ -12,7 +15,6 @@ env:
 
 jobs:
   include:
-
     # osx/1.13: tests, integration, image-bins
     - name: test
       os: osx
@@ -62,10 +64,6 @@ matrix:
   allow_failures:
     - env: TEST_UNSKIP=true
     - name: test-lint
-
-cache:
-  directories:
-    - $HOME/.glide
 
 install:
   - mkdir -p "$GOPATH/bin"
