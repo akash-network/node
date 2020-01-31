@@ -13,6 +13,6 @@ var (
 	ErrDeploymentClosed    = sdkerrors.Register(ModuleName, 5, "Deployment closed")
 	ErrOwnerAcctMissing    = sdkerrors.Register(ModuleName, 6, "Owner account missing")
 	ErrEmptyGroups         = sdkerrors.Register(ModuleName, 7, "Invalid: empty groups")
-	ErrInvalidDeploymentID = sdkerrors.Register(ModuleName, 2, "Invalid: deployment id")
-	ErrEmptyVersion        = sdkerrors.Register(ModuleName, 2, "Invalid: empty version")
+	ErrInvalidDeploymentID = sdkerrors.Register(ModuleName, 8, "Invalid: deployment id")
+	ErrEmptyVersion        = sdkerrors.Register(ModuleName, 9, "Invalid: empty version")
 )
