@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/types"
 	tmkv "github.com/tendermint/tendermint/libs/kv"
 )
 
@@ -41,8 +42,15 @@ type GroupSpec struct {
 	Resources    []Resource  `json:"resources"`
 }
 
-func (g GroupSpec) GetResources() []Resource {
-	return g.Resources
+func (g GroupSpec) GetResources() []types.Resource {
+	resources := make([]types.Resource, 0, len(g.Resources))
+	for _, r := range g.Resources {
+		resources = append(resources, types.Resource{
+			Unit:  r.Unit,
+			Count: r.Count,
+		})
+	}
+	return resources
 }
 
 func (g GroupSpec) GetName() string {
@@ -94,13 +102,14 @@ func (d Group) ValidateOrderable() error {
 }
 
 type Resource struct {
-	Unit  Unit     `json:"unit"`
-	Count uint32   `json:"count"`
-	Price sdk.Coin `json:"price"`
+	Unit  types.Unit `json:"unit"`
+	Count uint32     `json:"count"`
+	Price sdk.Coin   `json:"price"`
 }
 
-type Unit struct {
-	CPU     uint32 `json:"cpu"`
-	Memory  uint64 `json:"memory"`
-	Storage uint64 `json:"storage"`
+func (r Resource) GetUnit() types.Unit {
+	return r.Unit
+}
+func (r Resource) GetCount() uint32 {
+	return r.Count
 }

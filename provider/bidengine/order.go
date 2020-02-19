@@ -1,33 +1,35 @@
 package bidengine
 
 import (
-	"bytes"
-	"context"
-
 	lifecycle "github.com/boz/go-lifecycle"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
-	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/util/runner"
+	dquery "github.com/ovrclk/akash/x/deployment/query"
+	mquery "github.com/ovrclk/akash/x/market/query"
+	mtypes "github.com/ovrclk/akash/x/market/types"
+	tmkv "github.com/tendermint/tendermint/libs/kv"
 	"github.com/tendermint/tendermint/libs/log"
 )
 
 // order manages bidding and general lifecycle handling of an order.
 type order struct {
-	order       types.OrderID
-	fulfillment *types.Fulfillment
+	order mtypes.OrderID
+	bid   *mquery.Bid
 
 	session session.Session
 	cluster cluster.Cluster
-	bus     event.Bus
-	sub     event.Subscriber
+	bus     pubsub.Bus
+	sub     pubsub.Subscriber
 
 	log log.Logger
 	lc  lifecycle.Lifecycle
 }
 
-func newOrder(e *service, oid types.OrderID, fulfillment *types.Fulfillment) (*order, error) {
+func newOrder(e *service, oid mtypes.OrderID, bid *mquery.Bid) (*order, error) {
 
 	// Create a subscription that will see all events that have not been read from e.sub.Events()
 	sub, err := e.sub.Clone()
@@ -40,14 +42,14 @@ func newOrder(e *service, oid types.OrderID, fulfillment *types.Fulfillment) (*o
 	log := session.Log().With("order", oid)
 
 	order := &order{
-		order:       oid,
-		fulfillment: fulfillment,
-		session:     session,
-		cluster:     e.cluster,
-		bus:         e.bus,
-		sub:         sub,
-		log:         log,
-		lc:          lifecycle.New(),
+		order:   oid,
+		bid:     bid,
+		session: session,
+		cluster: e.cluster,
+		bus:     e.bus,
+		sub:     sub,
+		log:     log,
+		lc:      lifecycle.New(),
 	}
 
 	// Shut down when parent begins shutting down
@@ -68,15 +70,13 @@ func newOrder(e *service, oid types.OrderID, fulfillment *types.Fulfillment) (*o
 func (o *order) run() {
 	defer o.lc.ShutdownCompleted()
 
-	ctx, cancel := context.WithCancel(context.Background())
-
 	var (
 		// channels for async operations.
 		groupch   <-chan runner.Result
 		clusterch <-chan runner.Result
 		bidch     <-chan runner.Result
 
-		group       *types.DeploymentGroup
+		group       *dquery.Group
 		reservation cluster.Reservation
 
 		won bool
@@ -85,7 +85,7 @@ func (o *order) run() {
 	// Begin fetching group details immediately.
 	groupch = runner.Do(func() runner.Result {
 		return runner.NewResult(
-			o.session.Query().DeploymentGroup(ctx, o.order.GroupID()))
+			o.session.Client().Query().Group(o.order.GroupID()))
 	})
 
 loop:
@@ -96,41 +96,41 @@ loop:
 
 		case ev := <-o.sub.Events():
 			switch ev := ev.(type) {
-			case *event.TxCreateLease:
+			case mtypes.EventLeaseCreated:
 
 				// different group
-				if o.order.GroupID().Compare(ev.GroupID()) != 0 {
-					o.log.Debug("ignoring group", "group", ev.GroupID())
+				if !o.order.GroupID().Equals(ev.ID.GroupID()) {
+					o.log.Debug("ignoring group", "group", ev.ID.GroupID())
 					break
 				}
 
 				// check winning provider
-				if !bytes.Equal(o.session.Provider().Address, ev.Provider) {
-					o.log.Info("lease lost", "lease", ev.LeaseID)
+				if !ev.ID.Provider.Equals(o.session.Provider()) {
+					o.log.Info("lease lost", "lease", ev.ID)
 					break loop
 				}
 
 				// TODO: sanity check (price, state, etc...)
 
-				o.log.Info("lease won", "lease", ev.LeaseID, "price", ev.Price)
+				o.log.Info("lease won", "lease", ev.ID)
 
 				o.bus.Publish(event.LeaseWon{
-					LeaseID: ev.LeaseID,
+					LeaseID: ev.ID,
 					Group:   group,
-					Price:   ev.Price,
+					// Price:   ev.Price,
 				})
 				won = true
 
 				break loop
 
-			case *event.TxCloseDeployment:
+			case mtypes.EventOrderClosed:
 
 				// different deployment
-				if !bytes.Equal(o.order.Deployment, ev.Deployment) {
+				if !ev.ID.Equals(o.order) {
 					break
 				}
 
-				o.log.Info("deployment closed")
+				o.log.Info("order closed")
 				break loop
 			}
 
@@ -145,7 +145,8 @@ loop:
 				break loop
 			}
 
-			group = result.Value().(*types.DeploymentGroup)
+			res := result.Value().(dquery.Group)
+			group = &res
 
 			if !o.shouldBid(group) {
 				break
@@ -165,7 +166,7 @@ loop:
 				break loop
 			}
 
-			if o.fulfillment != nil {
+			if o.bid != nil {
 				// fulfillment already created (state recovered via queryExistingOrders)
 				break
 			}
@@ -174,20 +175,19 @@ loop:
 
 			reservation = result.Value().(cluster.Reservation)
 
-			price := calculatePrice(reservation.Resources())
+			// TODO: price
+			// price := calculatePrice(reservation.Resources())
+			price := sdk.NewCoin("akash", sdk.NewInt(0))
 
 			o.log.Debug("submitting fulfillment", "price", price)
 
 			// Begin submitting fulfillment
 			bidch = runner.Do(func() runner.Result {
-				return runner.NewResult(o.session.TX().BroadcastTxCommit(&types.TxCreateFulfillment{
-					FulfillmentID: types.FulfillmentID{
-						Deployment: o.order.Deployment,
-						Group:      o.order.Group,
-						Order:      o.order.Seq,
-						Provider:   o.session.Provider().Address,
-					},
-					Price: price,
+				return runner.NewResult(nil, o.session.Client().Tx().Broadcast(&mtypes.MsgCreateBid{
+					Order:    o.order,
+					Provider: o.session.Provider(),
+					// TODO: price
+					// Price:    price,
 				}))
 			})
 
@@ -205,7 +205,6 @@ loop:
 	}
 
 	o.log.Info("shutting down")
-	cancel()
 	o.lc.ShutdownInitiated(nil)
 	o.sub.Close()
 
@@ -229,10 +228,11 @@ loop:
 	}
 }
 
-func (o *order) shouldBid(group *types.DeploymentGroup) bool {
+func (o *order) shouldBid(group *dquery.Group) bool {
 
 	// does provider have required attributes?
-	if !matchProviderAttributes(o.session.Provider().Attributes, group.Requirements) {
+	// TODO: put on session.Provider()
+	if !group.MatchAttributes([]tmkv.Pair{}) {
 		o.log.Debug("unable to fulfill: incompatible attributes")
 		return false
 	}

@@ -8,16 +8,18 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	lifecycle "github.com/boz/go-lifecycle"
-	mutil "github.com/ovrclk/akash/manifest"
+	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
-	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/base"
+	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/util/runner"
 	"github.com/ovrclk/akash/validation"
+	dquery "github.com/ovrclk/akash/x/deployment/query"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
-func newManager(h *handler, daddr base.Bytes) (*manager, error) {
+func newManager(h *handler, daddr dtypes.DeploymentID) (*manager, error) {
 	session := h.session.ForModule("manifest-manager")
 
 	sub, err := h.sub.Clone()
@@ -32,9 +34,9 @@ func newManager(h *handler, daddr base.Bytes) (*manager, error) {
 		bus:        h.bus,
 		sub:        sub,
 		leasech:    make(chan event.LeaseWon),
-		rmleasech:  make(chan types.LeaseID),
+		rmleasech:  make(chan mtypes.LeaseID),
 		manifestch: make(chan manifestRequest),
-		updatech:   make(chan base.Bytes),
+		updatech:   make(chan []byte),
 		log:        session.Log().With("deployment", daddr),
 		lc:         lifecycle.New(),
 	}
@@ -45,28 +47,23 @@ func newManager(h *handler, daddr base.Bytes) (*manager, error) {
 	return m, nil
 }
 
-type managerChainData struct {
-	deployment *types.Deployment
-	dgroups    []*types.DeploymentGroup
-}
-
 type manager struct {
 	config  config
-	daddr   base.Bytes
+	daddr   dtypes.DeploymentID
 	session session.Session
-	bus     event.Bus
-	sub     event.Subscriber
+	bus     pubsub.Bus
+	sub     pubsub.Subscriber
 
 	leasech    chan event.LeaseWon
-	rmleasech  chan types.LeaseID
+	rmleasech  chan mtypes.LeaseID
 	manifestch chan manifestRequest
-	updatech   chan base.Bytes
+	updatech   chan []byte
 
-	data      *managerChainData
+	data      *dquery.Deployment
 	requests  []manifestRequest
 	leases    []event.LeaseWon
-	manifests []*types.Manifest
-	versions  []base.Bytes
+	manifests []*manifest.Manifest
+	versions  [][]byte
 
 	stoptimer *time.Timer
 
@@ -86,7 +83,7 @@ func (m *manager) handleLease(ev event.LeaseWon) {
 	}
 }
 
-func (m *manager) removeLease(id types.LeaseID) {
+func (m *manager) removeLease(id mtypes.LeaseID) {
 	select {
 	case m.rmleasech <- id:
 	case <-m.lc.ShuttingDown():
@@ -103,7 +100,7 @@ func (m *manager) handleManifest(req manifestRequest) {
 	}
 }
 
-func (m *manager) handleUpdate(version base.Bytes) {
+func (m *manager) handleUpdate(version []byte) {
 	select {
 	case m.updatech <- version:
 	case <-m.lc.ShuttingDown():
@@ -150,7 +147,7 @@ loop:
 			m.log.Info("lease removed", "lease", id)
 
 			for idx, lease := range m.leases {
-				if id.Equal(lease.LeaseID) {
+				if id.Equals(lease.LeaseID) {
 					m.leases = append(m.leases[:idx], m.leases[idx+1:]...)
 				}
 			}
@@ -173,7 +170,7 @@ loop:
 
 			m.versions = append(m.versions, version)
 			if m.data != nil {
-				m.data.deployment.Version = version
+				m.data.Version = version
 			}
 
 		case result := <-runch:
@@ -184,9 +181,9 @@ loop:
 				break
 			}
 
-			m.data = result.Value().(*managerChainData)
+			m.data = result.Value().(*dquery.Deployment)
 
-			m.log.Info("data received", "version", m.data.deployment.Version)
+			m.log.Info("data received", "version", m.data.Version)
 
 			m.validateRequests()
 			m.emitReceivedEvents()
@@ -227,21 +224,12 @@ func (m *manager) fetchData(ctx context.Context) <-chan runner.Result {
 	})
 }
 
-func (m *manager) doFetchData(ctx context.Context) (*managerChainData, error) {
-	deployment, err := m.session.Query().Deployment(ctx, m.daddr)
+func (m *manager) doFetchData(ctx context.Context) (*dquery.Deployment, error) {
+	deployment, err := m.session.Client().Query().Deployment(m.daddr)
 	if err != nil {
 		return nil, err
 	}
-
-	dgroups, err := m.session.Query().DeploymentGroupsForDeployment(ctx, m.daddr)
-	if err != nil {
-		return nil, err
-	}
-
-	return &managerChainData{
-		deployment: deployment,
-		dgroups:    dgroups.Items,
-	}, nil
+	return &deployment, nil
 }
 
 func (m *manager) maybeScheduleStop() bool {
@@ -276,7 +264,7 @@ func (m *manager) emitReceivedEvents() {
 			LeaseID:    lease.LeaseID,
 			Group:      lease.Group,
 			Manifest:   manifest,
-			Deployment: m.data.deployment,
+			Deployment: m.data,
 		}); err != nil {
 			m.log.Error("publishing event", "err", err, "lease", lease.LeaseID)
 		}
@@ -288,7 +276,7 @@ func (m *manager) validateRequests() {
 		return
 	}
 
-	var manifests []*types.Manifest
+	var manifests []*manifest.Manifest
 
 	for _, req := range m.requests {
 		if err := m.validateRequest(req); err != nil {
@@ -296,7 +284,7 @@ func (m *manager) validateRequests() {
 			req.ch <- err
 			continue
 		}
-		manifests = append(manifests, req.value.Manifest)
+		manifests = append(manifests, &req.value.Manifest)
 		req.ch <- nil
 	}
 	m.requests = nil
@@ -310,8 +298,10 @@ func (m *manager) validateRequests() {
 }
 
 func (m *manager) validateRequest(req manifestRequest) error {
-	if err := validation.ValidateManifestWithDeployment(req.value.Manifest, m.data.dgroups); err != nil {
+	if err := validation.ValidateManifestWithDeployment(&req.value.Manifest, m.data.Groups); err != nil {
 		return err
 	}
-	return mutil.VerifyRequest(req.value, m.data.deployment)
+	// TODO
+	// return mutil.VerifyRequest(req.value, m.data.deployment)
+	return nil
 }

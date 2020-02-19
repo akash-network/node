@@ -94,6 +94,11 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 		gkey := groupKey(group.ID())
 		store.Set(gkey, k.cdc.MustMarshalBinaryBare(group))
 	}
+
+	ctx.EventManager().EmitEvent(
+		types.EventDeploymentCreate{ID: deployment.ID()}.ToSDKEvent(),
+	)
+
 	return nil
 }
 
@@ -104,6 +109,10 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 	if !store.Has(key) {
 		return fmt.Errorf("deployment not found")
 	}
+
+	ctx.EventManager().EmitEvent(
+		types.EventDeploymentUpdate{ID: deployment.ID()}.ToSDKEvent(),
+	)
 
 	store.Set(key, k.cdc.MustMarshalBinaryBare(deployment))
 	return nil

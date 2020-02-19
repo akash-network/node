@@ -16,6 +16,8 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 			return queryDeployments(ctx, path[1:], req, keeper)
 		case deploymentPath:
 			return queryDeployment(ctx, path[1:], req, keeper)
+		case groupPath:
+			return queryGroup(ctx, path[1:], req, keeper)
 		}
 		return []byte{}, sdkerrors.ErrUnknownRequest
 	}
@@ -53,6 +55,23 @@ func queryDeployment(ctx sdk.Context, path []string, req abci.RequestQuery, keep
 		Deployment: deployment,
 		Groups:     keeper.GetGroups(ctx, deployment.ID()),
 	}
+
+	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
+}
+
+func queryGroup(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+
+	id, err := ParseGroupPath(path)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "internal error")
+	}
+
+	group, ok := keeper.GetGroup(ctx, id)
+	if !ok {
+		return nil, sdkerrors.Wrap(err, "group not found")
+	}
+
+	value := Group(group)
 
 	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
 }

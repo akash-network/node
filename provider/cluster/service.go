@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"bytes"
 	"context"
 	"errors"
 
@@ -9,19 +8,22 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
-	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/pubsub"
+	atypes "github.com/ovrclk/akash/types"
+	mquery "github.com/ovrclk/akash/x/market/query"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
 )
 
 var ErrNotRunning = errors.New("not running")
 
 type Cluster interface {
-	Reserve(types.OrderID, *types.DeploymentGroup) (Reservation, error)
-	Unreserve(types.OrderID, types.ResourceList) error
+	Reserve(mtypes.OrderID, atypes.ResourceGroup) (Reservation, error)
+	Unreserve(mtypes.OrderID, atypes.ResourceGroup) error
 }
 
 type StatusClient interface {
-	Status(context.Context) (*types.ProviderClusterStatus, error)
+	Status(context.Context) (*Status, error)
 }
 
 // Manage compute cluster for the provider.  Will eventually integrate with kubernetes, etc...
@@ -33,7 +35,7 @@ type Service interface {
 	Done() <-chan struct{}
 }
 
-func NewService(ctx context.Context, session session.Session, bus event.Bus, client Client) (Service, error) {
+func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, client Client) (Service, error) {
 	log := session.Log().With("module", "provider-cluster", "cmp", "service")
 
 	config := config{}
@@ -67,7 +69,7 @@ func NewService(ctx context.Context, session session.Session, bus event.Bus, cli
 		bus:       bus,
 		sub:       sub,
 		inventory: inventory,
-		statusch:  make(chan chan<- *types.ProviderClusterStatus),
+		statusch:  make(chan chan<- *Status),
 		managers:  make(map[string]*deploymentManager),
 		managerch: make(chan *deploymentManager),
 		log:       log,
@@ -83,12 +85,12 @@ func NewService(ctx context.Context, session session.Session, bus event.Bus, cli
 type service struct {
 	session session.Session
 	client  Client
-	bus     event.Bus
-	sub     event.Subscriber
+	bus     pubsub.Bus
+	sub     pubsub.Subscriber
 
 	inventory *inventoryService
 
-	statusch  chan chan<- *types.ProviderClusterStatus
+	statusch  chan chan<- *Status
 	managers  map[string]*deploymentManager
 	managerch chan *deploymentManager
 
@@ -109,23 +111,23 @@ func (s *service) Ready() <-chan struct{} {
 	return s.inventory.ready()
 }
 
-func (s *service) Reserve(order types.OrderID, group *types.DeploymentGroup) (Reservation, error) {
-	return s.inventory.reserve(order, group)
+func (s *service) Reserve(order mtypes.OrderID, resources atypes.ResourceGroup) (Reservation, error) {
+	return s.inventory.reserve(order, resources)
 }
 
-func (s *service) Unreserve(order types.OrderID, resources types.ResourceList) error {
+func (s *service) Unreserve(order mtypes.OrderID, resources atypes.ResourceGroup) error {
 	_, err := s.inventory.unreserve(order, resources)
 	return err
 }
 
-func (s *service) Status(ctx context.Context) (*types.ProviderClusterStatus, error) {
+func (s *service) Status(ctx context.Context) (*Status, error) {
 
 	istatus, err := s.inventory.status(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	ch := make(chan *types.ProviderClusterStatus, 1)
+	ch := make(chan *Status, 1)
 
 	select {
 	case <-s.lc.Done():
@@ -152,8 +154,9 @@ func (s *service) run(deployments []Deployment) {
 	defer s.sub.Close()
 
 	for _, deployment := range deployments {
-		key := deployment.LeaseID().String()
-		s.managers[key] = newDeploymentManager(s, deployment.LeaseID(), deployment.ManifestGroup())
+		key := mquery.LeasePath(deployment.LeaseID())
+		mgroup := deployment.ManifestGroup()
+		s.managers[key] = newDeploymentManager(s, deployment.LeaseID(), &mgroup)
 	}
 
 loop:
@@ -179,7 +182,7 @@ loop:
 					break
 				}
 
-				key := ev.LeaseID.String()
+				key := mquery.LeasePath(ev.LeaseID)
 
 				if manager := s.managers[key]; manager != nil {
 					if err := manager.update(mgroup); err != nil {
@@ -191,29 +194,15 @@ loop:
 				manager := newDeploymentManager(s, ev.LeaseID, mgroup)
 				s.managers[key] = manager
 
-			case *event.TxCloseDeployment:
+			case mtypes.EventLeaseClosed:
 
-				// teardown/undeploy managed deployments
-
-				for _, manager := range s.managers {
-					if bytes.Equal(ev.Deployment, manager.lease.OrderID().DeploymentID()) {
-						s.teardownLease(manager.lease)
-					}
-				}
-
-			case *event.TxCloseFulfillment:
-
-				s.teardownLease(ev.FulfillmentID.LeaseID())
-
-			case *event.TxCloseLease:
-
-				s.teardownLease(ev.LeaseID)
+				s.teardownLease(ev.ID)
 
 			}
 
 		case ch := <-s.statusch:
 
-			ch <- &types.ProviderClusterStatus{
+			ch <- &Status{
 				Leases: uint32(len(s.managers)),
 			}
 
@@ -228,7 +217,7 @@ loop:
 
 			// todo: unreserve resources
 
-			delete(s.managers, dm.lease.String())
+			delete(s.managers, mquery.LeasePath(dm.lease))
 		}
 	}
 
@@ -245,8 +234,8 @@ loop:
 
 }
 
-func (s *service) teardownLease(lid types.LeaseID) {
-	key := lid.String()
+func (s *service) teardownLease(lid mtypes.LeaseID) {
+	key := mquery.LeasePath(lid)
 	manager := s.managers[key]
 	if manager == nil {
 		return
@@ -264,29 +253,24 @@ func findDeployments(ctx context.Context, log log.Logger, client Client, session
 		return nil, err
 	}
 
-	leaseList, err := session.Query().Leases(ctx)
+	leaseList, err := session.Client().Query().ActiveLeasesForProvider(session.Provider())
 	if err != nil {
 		log.Error("fetching deployments", "err", err)
 		return nil, err
 	}
 
-	leases := make(map[string]*types.Lease, len(leaseList.Items))
-	for _, lease := range leaseList.Items {
-		if !lease.Provider.Equal(session.Provider().Address) {
-			continue
-		}
-		if lease.State != types.Lease_ACTIVE {
-			continue
-		}
-		leases[lease.Path()] = lease
+	var leases map[string]bool
+
+	for _, lease := range leaseList {
+		leases[mquery.LeasePath(lease.LeaseID)] = true
 	}
 
-	log.Info("found leases", "num-active", len(leases), "num-skipped", len(leaseList.Items)-len(leases))
+	log.Info("found leases", "num-active", len(leases))
 
 	active := make([]Deployment, 0, len(deployments))
 
 	for _, deployment := range deployments {
-		if _, ok := leases[deployment.LeaseID().Path()]; !ok {
+		if _, ok := leases[mquery.LeasePath(deployment.LeaseID())]; !ok {
 			continue
 		}
 		active = append(active, deployment)

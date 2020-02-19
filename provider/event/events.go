@@ -1,26 +1,29 @@
 package event
 
 import (
-	"github.com/ovrclk/akash/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/manifest"
+	dquery "github.com/ovrclk/akash/x/deployment/query"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 type LeaseWon struct {
-	LeaseID types.LeaseID
-	Group   *types.DeploymentGroup
-	Price   uint64
+	LeaseID mtypes.LeaseID
+	Group   *dquery.Group
+	Price   sdk.Coin
 }
 
 type ManifestReceived struct {
-	LeaseID    types.LeaseID
-	Manifest   *types.Manifest
-	Deployment *types.Deployment
-	Group      *types.DeploymentGroup
+	LeaseID    mtypes.LeaseID
+	Manifest   *manifest.Manifest
+	Deployment *dquery.Deployment
+	Group      *dquery.Group
 }
 
-func (ev ManifestReceived) ManifestGroup() *types.ManifestGroup {
-	for _, mgroup := range ev.Manifest.Groups {
+func (ev ManifestReceived) ManifestGroup() *manifest.Group {
+	for _, mgroup := range *ev.Manifest {
 		if mgroup.Name == ev.Group.Name {
-			return mgroup
+			return &mgroup
 		}
 	}
 	return nil
@@ -34,7 +37,7 @@ const (
 )
 
 type ClusterDeployment struct {
-	LeaseID types.LeaseID
-	Group   *types.ManifestGroup
+	LeaseID mtypes.LeaseID
+	Group   *manifest.Group
 	Status  ClusterDeploymentStatus
 }

@@ -3,7 +3,7 @@ package sdl
 import (
 	"io/ioutil"
 
-	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/validation"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	yaml "gopkg.in/yaml.v2"
@@ -12,7 +12,7 @@ import (
 type SDL interface {
 	Validate() error
 	DeploymentGroups() ([]*dtypes.GroupSpec, error)
-	Manifest() (*types.Manifest, error)
+	Manifest() (manifest.Manifest, error)
 }
 
 func ReadFile(path string) (SDL, error) {

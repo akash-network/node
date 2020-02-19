@@ -3,14 +3,16 @@ package validation
 import (
 	"fmt"
 
+	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
-func ValidateManifest(m *types.Manifest) error {
-	return validateManifestGroups(m.Groups)
+func ValidateManifest(m manifest.Manifest) error {
+	return validateManifestGroups(m.GetGroups())
 }
 
-func validateManifestGroups(groups []*types.ManifestGroup) error {
+func validateManifestGroups(groups []manifest.Group) error {
 	// rlists := make([]hasResources, 0, len(groups))
 	// for _, group := range groups {
 	// 	rlists = append(rlists, group)
@@ -21,23 +23,25 @@ func validateManifestGroups(groups []*types.ManifestGroup) error {
 	return nil
 }
 
-func ValidateManifestWithGroupSpecs(m *types.Manifest, gspecs []*types.GroupSpec) error {
-	rlists := make([]types.ResourceList, 0, len(gspecs))
+func ValidateManifestWithGroupSpecs(m *manifest.Manifest, gspecs []*dtypes.GroupSpec) error {
+	rlists := make([]types.ResourceGroup, 0, len(gspecs))
 	for _, gspec := range gspecs {
 		rlists = append(rlists, gspec)
 	}
-	return validateManifestDeploymentGroups(m.Groups, rlists)
+	return validateManifestDeploymentGroups(m.GetGroups(), rlists)
 }
 
-func ValidateManifestWithDeployment(m *types.Manifest, dgroups []*types.DeploymentGroup) error {
-	rlists := make([]types.ResourceList, 0, len(dgroups))
-	for _, dgroup := range dgroups {
-		rlists = append(rlists, dgroup)
-	}
-	return validateManifestDeploymentGroups(m.Groups, rlists)
+func ValidateManifestWithDeployment(m *manifest.Manifest, dgroups []dtypes.Group) error {
+	// TODO
+	// rlists := make([]types.ResourceList, 0, len(dgroups))
+	// for _, dgroup := range dgroups {
+	// 	rlists = append(rlists, dgroup)
+	// }
+	// return validateManifestDeploymentGroups(m, rlists)
+	return nil
 }
 
-func validateManifestDeploymentGroups(mgroups []*types.ManifestGroup, dgroups []types.ResourceList) error {
+func validateManifestDeploymentGroups(mgroups []manifest.Group, dgroups []types.ResourceGroup) error {
 
 	if len(mgroups) != len(dgroups) {
 		return fmt.Errorf("invalid manifest: group count mismatch (%v != %v)", len(mgroups), len(dgroups))
@@ -59,8 +63,8 @@ mainloop:
 	return nil
 }
 
-func validateManifestDeploymentGroup(mgroup types.ResourceList, dgroup types.ResourceList) error {
-	mlist := make([]types.ResourceGroup, len(mgroup.GetResources()))
+func validateManifestDeploymentGroup(mgroup types.ResourceGroup, dgroup types.ResourceGroup) error {
+	mlist := make([]types.Resource, len(mgroup.GetResources()))
 	copy(mlist, mgroup.GetResources())
 
 mainloop:
@@ -73,7 +77,7 @@ mainloop:
 				continue
 			}
 
-			if !drec.Unit.Equal(mrec.Unit) {
+			if !drec.Unit.Equals(mrec.Unit) {
 				continue
 			}
 

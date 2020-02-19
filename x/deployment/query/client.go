@@ -10,6 +10,7 @@ import (
 type Client interface {
 	Deployments() (Deployments, error)
 	Deployment(types.DeploymentID) (Deployment, error)
+	Group(types.GroupID) (Group, error)
 }
 
 func NewClient(ctx context.CLIContext, key string) Client {
@@ -33,6 +34,15 @@ func (c *client) Deployments() (Deployments, error) {
 func (c *client) Deployment(id types.DeploymentID) (Deployment, error) {
 	var obj Deployment
 	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, DeploymentPath(id)), nil)
+	if err != nil {
+		return obj, err
+	}
+	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+}
+
+func (c *client) Group(id types.GroupID) (Group, error) {
+	var obj Group
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, GroupPath(id)), nil)
 	if err != nil {
 		return obj, err
 	}

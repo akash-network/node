@@ -5,10 +5,12 @@ import (
 	"time"
 
 	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
-	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/util/runner"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
 )
 
@@ -22,12 +24,12 @@ const (
 )
 
 type deploymentMonitor struct {
-	bus     event.Bus
+	bus     pubsub.Bus
 	session session.Session
 	client  Client
 
-	lease  types.LeaseID
-	mgroup *types.ManifestGroup
+	lease  mtypes.LeaseID
+	mgroup *manifest.Group
 
 	attempts int
 	log      log.Logger
@@ -173,15 +175,15 @@ func (m *deploymentMonitor) doCheck() (bool, error) {
 func (m *deploymentMonitor) runCloseLease() <-chan runner.Result {
 	return runner.Do(func() runner.Result {
 		// TODO: retry
-		res, err := m.session.TX().BroadcastTxCommit(&types.TxCloseLease{
-			LeaseID: m.lease,
+		err := m.session.Client().Tx().Broadcast(mtypes.MsgCloseBid{
+			BidID: m.lease.BidID(),
 		})
 		if err != nil {
 			m.log.Error("closing deployment", "err", err)
 		} else {
 			m.log.Info("lease closed")
 		}
-		return runner.NewResult(res, err)
+		return runner.NewResult(nil, err)
 	})
 }
 

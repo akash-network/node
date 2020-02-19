@@ -4,11 +4,13 @@ import (
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/ovrclk/akash/x/market/types"
 )
 
 type Client interface {
 	Orders() (Orders, error)
 	Bids() (Bids, error)
+	Bid(id types.BidID) (Bid, error)
 	Leases() (Leases, error)
 }
 
@@ -37,6 +39,10 @@ func (c *client) Bids() (Bids, error) {
 		return obj, err
 	}
 	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+}
+
+func (c *client) Bid(id types.BidID) (Bid, error) {
+	return Bid{}, fmt.Errorf("TODO: not implemented")
 }
 
 func (c *client) Leases() (Leases, error) {
