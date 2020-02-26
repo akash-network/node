@@ -5,6 +5,7 @@ import (
 	tmkv "github.com/tendermint/tendermint/libs/kv"
 )
 
+// Provider stores owner and host details
 type Provider struct {
 	Owner      sdk.AccAddress  `json:"owner"`
 	HostURI    string          `json:"host-uri"`

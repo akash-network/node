@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// GetQueryCmd returns the transaction commands for the provider module
 func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Provider query commands",

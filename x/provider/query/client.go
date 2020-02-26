@@ -6,10 +6,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 )
 
+// Client interface
 type Client interface {
 	Providers() (Providers, error)
 }
 
+// NewClient creates a client instance with provided context and key
 func NewClient(ctx context.CLIContext, key string) Client {
 	return &client{ctx: ctx, key: key}
 }
