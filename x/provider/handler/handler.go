@@ -7,6 +7,7 @@ import (
 	"github.com/ovrclk/akash/x/provider/types"
 )
 
+// NewHandler returns a handler for "provider" type messages.
 func NewHandler(keeper keeper.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		switch msg := msg.(type) {
