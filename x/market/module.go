@@ -24,21 +24,26 @@ var (
 	_ module.AppModuleBasic = AppModuleBasic{}
 )
 
+// AppModuleBasic defines the basic application module used by the market module.
 type AppModuleBasic struct{}
 
+// Name returns market module's name
 func (AppModuleBasic) Name() string {
 	return types.ModuleName
 }
 
+// RegisterCodec registers the market module's types for the given codec.
 func (AppModuleBasic) RegisterCodec(cdc *codec.Codec) {
 	types.RegisterCodec(cdc)
 }
 
+// DefaultGenesis returns default genesis state as raw bytes for the market
+// module.
 func (AppModuleBasic) DefaultGenesis() json.RawMessage {
 	return types.MustMarshalJSON(DefaultGenesisState())
 }
 
-// Validation check of the Genesis
+// ValidateGenesis validation check of the Genesis
 func (AppModuleBasic) ValidateGenesis(bz json.RawMessage) error {
 	var data GenesisState
 	err := types.UnmarshalJSON(bz, &data)
@@ -48,7 +53,7 @@ func (AppModuleBasic) ValidateGenesis(bz json.RawMessage) error {
 	return ValidateGenesis(data)
 }
 
-// Register rest routes
+// RegisterRESTRoutes registers rest routes for this module
 func (AppModuleBasic) RegisterRESTRoutes(ctx context.CLIContext, rtr *mux.Router) {
 	// rest.RegisterRoutes(ctx, rtr, StoreKey)
 }
@@ -63,6 +68,7 @@ func (AppModuleBasic) GetTxCmd(cdc *codec.Codec) *cobra.Command {
 	return cli.GetTxCmd(StoreKey, cdc)
 }
 
+// GetQueryClient returns a new query client for this module
 func (AppModuleBasic) GetQueryClient(ctx context.CLIContext) query.Client {
 	return query.NewClient(ctx, StoreKey)
 }
