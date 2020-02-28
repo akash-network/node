@@ -65,6 +65,7 @@ type Clientset struct {
 	discovery *fakediscovery.FakeDiscovery
 }
 
+// Discovery returns discovery data from clientset
 func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	return c.discovery
 }

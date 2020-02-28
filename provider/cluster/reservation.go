@@ -5,6 +5,7 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
+// Reservation interface implements orders and resources
 type Reservation interface {
 	OrderID() mtypes.OrderID
 	Resources() atypes.ResourceGroup

@@ -27,7 +27,7 @@ func (msg MsgCreateBid) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Provider}
 }
 
-// ValidateBasic does basic validation of a HostURI
+// ValidateBasic does basic validation of provider and order
 func (msg MsgCreateBid) ValidateBasic() error {
 	if err := msg.Order.Validate(); err != nil {
 		return ErrInvalidOrder
@@ -65,7 +65,7 @@ func (msg MsgCloseBid) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Provider}
 }
 
-// ValidateBasic does basic validation of a HostURI
+// ValidateBasic method for MsgCloseBid
 func (msg MsgCloseBid) ValidateBasic() error {
 	return nil
 }
@@ -91,7 +91,7 @@ func (msg MsgCloseOrder) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 
-// ValidateBasic does basic validation of a HostURI
+// ValidateBasic method for MsgCloseOrder
 func (msg MsgCloseOrder) ValidateBasic() error {
 	return nil
 }

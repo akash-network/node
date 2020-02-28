@@ -14,6 +14,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 )
 
+// Declaring new errors
 var (
 	errNotFound             = errors.New("not found")
 	ErrInsufficientCapacity = errors.New("insufficient capacity")

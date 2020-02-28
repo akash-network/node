@@ -7,7 +7,7 @@ import (
 	"syscall"
 )
 
-func WatchSignals(ctx context.Context, cancel context.CancelFunc) <-chan struct{} {
+func watchSignals(ctx context.Context, cancel context.CancelFunc) <-chan struct{} {
 	donech := make(chan struct{})
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGHUP, syscall.SIGTERM)
@@ -23,14 +23,15 @@ func WatchSignals(ctx context.Context, cancel context.CancelFunc) <-chan struct{
 	return donech
 }
 
+// RunForever runs a function in the background, forever. Returns error in case of failure.
 func RunForever(fn func(ctx context.Context) error) error {
-	return RunForeverWithContext(context.Background(), fn)
+	return runForeverWithContext(context.Background(), fn)
 }
 
-func RunForeverWithContext(ctx context.Context, fn func(ctx context.Context) error) error {
+func runForeverWithContext(ctx context.Context, fn func(ctx context.Context) error) error {
 	ctx, cancel := context.WithCancel(ctx)
 
-	donech := WatchSignals(ctx, cancel)
+	donech := watchSignals(ctx, cancel)
 
 	err := fn(ctx)
 

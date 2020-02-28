@@ -25,6 +25,7 @@ import (
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
 )
 
+// Interface interface is predefined with Discovery, AkashV1 and Akash methods
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	AkashV1() akashv1.AkashV1Interface
@@ -45,6 +46,8 @@ func (c *Clientset) AkashV1() akashv1.AkashV1Interface {
 }
 
 // Deprecated: Akash retrieves the default version of AkashClient.
+
+// Akash retrieves the default version of AkashClient.
 // Please explicitly pick a version.
 func (c *Clientset) Akash() akashv1.AkashV1Interface {
 	return c.akashV1

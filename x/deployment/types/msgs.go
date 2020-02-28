@@ -28,7 +28,7 @@ func (msg MsgCreate) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 
-// ValidateBasic does basic validation of a HostURI
+// ValidateBasic does basic validation like check owner and groups length
 func (msg MsgCreate) ValidateBasic() error {
 	switch {
 	case msg.Owner.Empty():
