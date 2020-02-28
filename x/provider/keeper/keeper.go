@@ -55,6 +55,7 @@ func (k Keeper) Create(ctx sdk.Context, provider types.Provider) error {
 	return nil
 }
 
+// WithProviders iterates all providers
 func (k Keeper) WithProviders(ctx sdk.Context, fn func(types.Provider) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := store.Iterator(nil, nil)

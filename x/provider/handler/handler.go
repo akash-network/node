@@ -23,6 +23,7 @@ func NewHandler(keeper keeper.Keeper) sdk.Handler {
 	}
 }
 
+// ErrInternal defines registered error code for internal error
 var (
 	ErrInternal = sdkerrors.Register(types.ModuleName, 10, "internal error")
 )
