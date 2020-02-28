@@ -7,6 +7,7 @@ import (
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
+// Deployment stores deployment and groups details
 type Deployment struct {
 	types.Deployment `json:"deployment"`
 	Groups           []types.Group `json:"groups"`
@@ -22,6 +23,7 @@ func (d Deployment) String() string {
 	`, d.Owner, d.DSeq, d.State, d.Version, len(d.Groups))
 }
 
+// Deployments - Slice of deployment struct
 type Deployments []Deployment
 
 func (ds Deployments) String() string {
@@ -41,4 +43,5 @@ func (ds Deployments) String() string {
 	return buf.String()
 }
 
+// Group stores group ID, state and other specifications
 type Group types.Group

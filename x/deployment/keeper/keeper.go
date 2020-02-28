@@ -9,11 +9,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+// Keeper of the deployment store
 type Keeper struct {
 	skey sdk.StoreKey
 	cdc  *codec.Codec
 }
 
+// NewKeeper creates and returns an instance for deployment keeper
 func NewKeeper(cdc *codec.Codec, skey sdk.StoreKey) Keeper {
 	return Keeper{
 		skey: skey,
@@ -21,10 +23,12 @@ func NewKeeper(cdc *codec.Codec, skey sdk.StoreKey) Keeper {
 	}
 }
 
+// Codec returns keeper codec
 func (k Keeper) Codec() *codec.Codec {
 	return k.cdc
 }
 
+// GetDeployment returns deployment details with provided DeploymentID
 func (k Keeper) GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Deployment, bool) {
 	store := ctx.KVStore(k.skey)
 
@@ -43,6 +47,7 @@ func (k Keeper) GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Dep
 	return val, true
 }
 
+// GetGroup returns group details with given GroupID from deployment store
 func (k Keeper) GetGroup(ctx sdk.Context, id types.GroupID) (types.Group, bool) {
 	store := ctx.KVStore(k.skey)
 
@@ -61,6 +66,7 @@ func (k Keeper) GetGroup(ctx sdk.Context, id types.GroupID) (types.Group, bool) 
 	return val, true
 }
 
+// GetGroups returns all groups of a deployment with given DeploymentID from deployment store
 func (k Keeper) GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group {
 	store := ctx.KVStore(k.skey)
 	key := groupsKey(id)
@@ -79,6 +85,7 @@ func (k Keeper) GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group 
 	return vals
 }
 
+// Create - creates a new deployment with given deployment and group specifications
 func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []types.Group) error {
 	store := ctx.KVStore(k.skey)
 
@@ -102,6 +109,7 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 	return nil
 }
 
+// UpdateDeployment updates deployment details
 func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) error {
 	store := ctx.KVStore(k.skey)
 	key := deploymentKey(deployment.ID())
@@ -118,6 +126,7 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 	return nil
 }
 
+// WithDeployments iterates all deployments in deployment store
 func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, deploymentPrefix)
@@ -130,12 +139,14 @@ func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool)
 	}
 }
 
+// OnOrderCreated updates group state to group ordered
 func (k Keeper) OnOrderCreated(ctx sdk.Context, group types.Group) {
 	// TODO: assert state transition
 	group.State = types.GroupOrdered
 	k.updateGroup(ctx, group)
 }
 
+// OnLeaseCreated updates group state to group matched
 func (k Keeper) OnLeaseCreated(ctx sdk.Context, id types.GroupID) {
 	// TODO: assert state transition
 	group, _ := k.GetGroup(ctx, id)
@@ -143,6 +154,7 @@ func (k Keeper) OnLeaseCreated(ctx sdk.Context, id types.GroupID) {
 	k.updateGroup(ctx, group)
 }
 
+// OnLeaseInsufficientFunds updates group state to group insufficient funds
 func (k Keeper) OnLeaseInsufficientFunds(ctx sdk.Context, id types.GroupID) {
 	// TODO: assert state transition
 	group, _ := k.GetGroup(ctx, id)
@@ -150,6 +162,7 @@ func (k Keeper) OnLeaseInsufficientFunds(ctx sdk.Context, id types.GroupID) {
 	k.updateGroup(ctx, group)
 }
 
+// OnLeaseClosed updates group state to group opened
 func (k Keeper) OnLeaseClosed(ctx sdk.Context, id types.GroupID) {
 	// TODO: assert state transition
 	group, _ := k.GetGroup(ctx, id)
@@ -157,6 +170,7 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, id types.GroupID) {
 	k.updateGroup(ctx, group)
 }
 
+// OnDeploymentClosed updates group state to group closed
 func (k Keeper) OnDeploymentClosed(ctx sdk.Context, group types.Group) {
 	if group.State == types.GroupClosed {
 		return

@@ -8,6 +8,7 @@ import (
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
+// NewHandler returns a handler for "deployment" type messages
 func NewHandler(keeper keeper.Keeper, mkeeper MarketKeeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		switch msg := msg.(type) {

@@ -1,5 +1,6 @@
 package types
 
+// x/deployment module keys
 const (
 	ModuleName = "deployment"
 

@@ -9,25 +9,31 @@ import (
 	tmkv "github.com/tendermint/tendermint/libs/kv"
 )
 
+// DeploymentState defines state of deployment
 type DeploymentState uint8
 
+// Deployment states
 const (
 	DeploymentActive DeploymentState = iota
 	DeploymentClosed DeploymentState = iota
 )
 
+// Deployment stores deploymentID, state and version details
 type Deployment struct {
 	DeploymentID `json:"id"`
 	State        DeploymentState `json:"state"`
 	Version      []byte          `json:"version"`
 }
 
+// ID method returns DeploymentID details of specific deployment
 func (obj Deployment) ID() DeploymentID {
 	return obj.DeploymentID
 }
 
+// GroupState defines state of group
 type GroupState uint8
 
+// Group States
 const (
 	GroupOpen              GroupState = iota
 	GroupOrdered           GroupState = iota
@@ -36,12 +42,14 @@ const (
 	GroupClosed            GroupState = iota
 )
 
+// GroupSpec stores group specifications
 type GroupSpec struct {
 	Name         string      `json:"name"`
 	Requirements []tmkv.Pair `json:"requirements"`
 	Resources    []Resource  `json:"resources"`
 }
 
+// GetResources method returns resources list in group
 func (g GroupSpec) GetResources() []types.Resource {
 	resources := make([]types.Resource, 0, len(g.Resources))
 	for _, r := range g.Resources {
@@ -53,10 +61,12 @@ func (g GroupSpec) GetResources() []types.Resource {
 	return resources
 }
 
+// GetName method returns group name
 func (g GroupSpec) GetName() string {
 	return g.Name
 }
 
+// Price method returns price of group
 func (g GroupSpec) Price() sdk.Coin {
 	var price sdk.Coin
 	for idx, resource := range g.Resources {
@@ -69,6 +79,7 @@ func (g GroupSpec) Price() sdk.Coin {
 	return price
 }
 
+// MatchAttributes method compares provided attributes with specific group attributes
 func (g GroupSpec) MatchAttributes(attrs []tmkv.Pair) bool {
 loop:
 	for _, req := range g.Requirements {
@@ -82,16 +93,19 @@ loop:
 	return true
 }
 
+// Group stores groupID, state and other specifications
 type Group struct {
 	GroupID   `json:"id"`
 	State     GroupState `json:"state"`
 	GroupSpec `json:"spec"`
 }
 
-func (obj Group) ID() GroupID {
-	return obj.GroupID
+// ID method returns GroupID details of specific group
+func (d Group) ID() GroupID {
+	return d.GroupID
 }
 
+// ValidateOrderable method checks whether group opened or not
 func (d Group) ValidateOrderable() error {
 	switch d.State {
 	case GroupOpen:
@@ -101,15 +115,19 @@ func (d Group) ValidateOrderable() error {
 	}
 }
 
+// Resource stores unit, count and price of each resource
 type Resource struct {
 	Unit  types.Unit `json:"unit"`
 	Count uint32     `json:"count"`
 	Price sdk.Coin   `json:"price"`
 }
 
+// GetUnit method returns unit of resource
 func (r Resource) GetUnit() types.Unit {
 	return r.Unit
 }
+
+// GetCount method returns count of resource
 func (r Resource) GetCount() uint32 {
 	return r.Count
 }
