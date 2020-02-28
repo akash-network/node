@@ -15,6 +15,7 @@ const (
 	bech32PrefixConsPub  = "akashvalconspub"
 )
 
+// InitSDKConfig configures address prefixes for validator, accounts and consensus nodes
 func InitSDKConfig() {
 	config := sdk.GetConfig()
 	config.SetBech32PrefixForAccount(bech32PrefixAccAddr, bech32PrefixAccPub)

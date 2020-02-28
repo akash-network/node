@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// Denom constants
 const (
 	Mega = 1000000
 )

@@ -4,6 +4,7 @@ import (
 	"errors"
 )
 
+// Declaring new errors
 var (
 	ErrInvalidSignature = errors.New("invalid signature")
 	ErrInvalidKey       = errors.New("key is not deployment owner")
