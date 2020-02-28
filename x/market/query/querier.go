@@ -9,6 +9,7 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
+// NewQuerier creates and returns a new market querier instance
 func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) ([]byte, error) {
 		switch path[0] {

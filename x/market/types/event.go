@@ -20,10 +20,12 @@ const (
 	evProviderKey = "provider"
 )
 
+// EventOrderCreated struct
 type EventOrderCreated struct {
 	ID OrderID
 }
 
+// ToSDKEvent method creates new sdk event for EventOrderCreated struct
 func (e EventOrderCreated) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdk.EventTypeMessage,
 		append([]sdk.Attribute{
@@ -33,10 +35,12 @@ func (e EventOrderCreated) ToSDKEvent() sdk.Event {
 	)
 }
 
+// EventOrderClosed struct
 type EventOrderClosed struct {
 	ID OrderID
 }
 
+// ToSDKEvent method creates new sdk event for EventOrderClosed struct
 func (e EventOrderClosed) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdk.EventTypeMessage,
 		append([]sdk.Attribute{
@@ -46,10 +50,12 @@ func (e EventOrderClosed) ToSDKEvent() sdk.Event {
 	)
 }
 
+// EventBidCreated struct
 type EventBidCreated struct {
 	ID BidID
 }
 
+// ToSDKEvent method creates new sdk event for EventBidCreated struct
 func (e EventBidCreated) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdk.EventTypeMessage,
 		append([]sdk.Attribute{
@@ -59,10 +65,12 @@ func (e EventBidCreated) ToSDKEvent() sdk.Event {
 	)
 }
 
+// EventBidClosed struct
 type EventBidClosed struct {
 	ID BidID
 }
 
+// ToSDKEvent method creates new sdk event for EventBidClosed struct
 func (e EventBidClosed) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdk.EventTypeMessage,
 		append([]sdk.Attribute{
@@ -72,10 +80,12 @@ func (e EventBidClosed) ToSDKEvent() sdk.Event {
 	)
 }
 
+// EventLeaseCreated struct
 type EventLeaseCreated struct {
 	ID LeaseID
 }
 
+// ToSDKEvent method creates new sdk event for EventLeaseCreated struct
 func (e EventLeaseCreated) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdk.EventTypeMessage,
 		append([]sdk.Attribute{
@@ -85,10 +95,12 @@ func (e EventLeaseCreated) ToSDKEvent() sdk.Event {
 	)
 }
 
+// EventLeaseClosed struct
 type EventLeaseClosed struct {
 	ID LeaseID
 }
 
+// ToSDKEvent method creates new sdk event for EventLeaseClosed struct
 func (e EventLeaseClosed) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdk.EventTypeMessage,
 		append([]sdk.Attribute{
@@ -98,11 +110,13 @@ func (e EventLeaseClosed) ToSDKEvent() sdk.Event {
 	)
 }
 
+// OrderIDEVAttributes returns event attribues for given orderID
 func OrderIDEVAttributes(id OrderID) []sdk.Attribute {
 	return append(dtypes.GroupIDEVAttributes(id.GroupID()),
 		sdk.NewAttribute(evOSeqKey, strconv.FormatUint(uint64(id.OSeq), 10)))
 }
 
+// ParseEVOrderID returns orderID for given event attributes
 func ParseEVOrderID(attrs []sdk.Attribute) (OrderID, error) {
 	gid, err := dtypes.ParseEVGroupID(attrs)
 	if err != nil {
@@ -122,11 +136,13 @@ func ParseEVOrderID(attrs []sdk.Attribute) (OrderID, error) {
 
 }
 
+// BidIDEVAttributes returns event attribues for given bidID
 func BidIDEVAttributes(id BidID) []sdk.Attribute {
 	return append(OrderIDEVAttributes(id.OrderID()),
 		sdk.NewAttribute(evProviderKey, id.Provider.String()))
 }
 
+// ParseEVBidID returns bidID for given event attributes
 func ParseEVBidID(attrs []sdk.Attribute) (BidID, error) {
 	oid, err := ParseEVOrderID(attrs)
 	if err != nil {
@@ -147,11 +163,13 @@ func ParseEVBidID(attrs []sdk.Attribute) (BidID, error) {
 	}, nil
 }
 
+// LeaseIDEVAttributes returns event attribues for given LeaseID
 func LeaseIDEVAttributes(id LeaseID) []sdk.Attribute {
 	return append(OrderIDEVAttributes(id.OrderID()),
 		sdk.NewAttribute(evProviderKey, id.Provider.String()))
 }
 
+// ParseEVLeaseID returns leaseID for given event attributes
 func ParseEVLeaseID(attrs []sdk.Attribute) (LeaseID, error) {
 	bid, err := ParseEVBidID(attrs)
 	if err != nil {
@@ -160,6 +178,7 @@ func ParseEVLeaseID(attrs []sdk.Attribute) (LeaseID, error) {
 	return LeaseID(bid), nil
 }
 
+// ParseEvent parses event and returns details of event and error if occured
 func ParseEvent(ev sdkutil.Event) (interface{}, error) {
 	if ev.Type != sdk.EventTypeMessage {
 		return nil, sdkutil.ErrUnknownType

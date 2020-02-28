@@ -3,13 +3,19 @@ package query
 import "github.com/ovrclk/akash/x/market/types"
 
 type (
-	Order  types.Order
+	//Order type
+	Order types.Order
+	//Orders - Slice of Order Struct
 	Orders []Order
 
-	Bid  types.Bid
+	// Bid type
+	Bid types.Bid
+	// Bids - Slice of Bid Struct
 	Bids []Bid
 
-	Lease  types.Lease
+	//Lease type
+	Lease types.Lease
+	// Leases - Slice of Lease Struct
 	Leases []Lease
 )
 

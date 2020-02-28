@@ -4,6 +4,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
+// ErrInvalidOrder - Register error code for invalid order id
 var (
 	ErrInvalidOrder       = sdkerrors.Register(ModuleName, 1, "invalid: order id")
 	ErrEmptyProvider      = sdkerrors.Register(ModuleName, 2, "empty provider")

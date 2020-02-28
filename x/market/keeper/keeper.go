@@ -12,19 +12,23 @@ const (
 	orderTTL = 5 // blocks
 )
 
+// Keeper of the market store
 type Keeper struct {
 	cdc  *codec.Codec
 	skey sdk.StoreKey
 }
 
+// NewKeeper creates and returns an instance for Market keeper
 func NewKeeper(cdc *codec.Codec, skey sdk.StoreKey) Keeper {
 	return Keeper{cdc: cdc, skey: skey}
 }
 
+// Codec returns keeper codec
 func (k Keeper) Codec() *codec.Codec {
 	return k.cdc
 }
 
+// CreateOrder creates a new order with given group id and specifications. It returns created order
 func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.GroupSpec) types.Order {
 	store := ctx.KVStore(k.skey)
 
@@ -52,6 +56,7 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 	return order
 }
 
+// CreateBid creates a bid for a order with given orderID, price for bid and provider
 func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.Coin) {
 
 	store := ctx.KVStore(k.skey)
@@ -71,6 +76,7 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 	)
 }
 
+// CreateLease creates lease for bid with given bidID
 func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 	store := ctx.KVStore(k.skey)
 
@@ -88,24 +94,28 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 	)
 }
 
+// OnOrderMatched updates order state to matched
 func (k Keeper) OnOrderMatched(ctx sdk.Context, order types.Order) {
 	// TODO: assert state transition
 	order.State = types.OrderMatched
 	k.updateOrder(ctx, order)
 }
 
+// OnBidMatched updates bid state to matched
 func (k Keeper) OnBidMatched(ctx sdk.Context, bid types.Bid) {
 	// TODO: assert state transition
 	bid.State = types.BidMatched
 	k.updateBid(ctx, bid)
 }
 
+// OnBidLost updates bid state to bid lost
 func (k Keeper) OnBidLost(ctx sdk.Context, bid types.Bid) {
 	// TODO: assert state transition
 	bid.State = types.BidLost
 	k.updateBid(ctx, bid)
 }
 
+// OnBidClosed updates bid state to closed
 func (k Keeper) OnBidClosed(ctx sdk.Context, bid types.Bid) {
 	// TODO: assert state transition
 	switch bid.State {
@@ -119,6 +129,7 @@ func (k Keeper) OnBidClosed(ctx sdk.Context, bid types.Bid) {
 	)
 }
 
+// OnOrderClosed updates order state to closed
 func (k Keeper) OnOrderClosed(ctx sdk.Context, order types.Order) {
 	// TODO: assert state transition
 	switch order.State {
@@ -132,6 +143,7 @@ func (k Keeper) OnOrderClosed(ctx sdk.Context, order types.Order) {
 	)
 }
 
+// OnInsufficientFunds updates lease state to insufficient funds
 func (k Keeper) OnInsufficientFunds(ctx sdk.Context, lease types.Lease) {
 	// TODO: assert state transition
 	switch lease.State {
@@ -145,6 +157,7 @@ func (k Keeper) OnInsufficientFunds(ctx sdk.Context, lease types.Lease) {
 	)
 }
 
+// OnLeaseClosed updates lease state to closed
 func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease types.Lease) {
 	// TODO: assert state transition
 	switch lease.State {
@@ -159,6 +172,7 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease types.Lease) {
 	)
 }
 
+// OnGroupClosed updates state of all orders, bids and leases in group to closed
 func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) {
 	k.WithOrdersForGroup(ctx, id, func(order types.Order) bool {
 		k.OnOrderClosed(ctx, order)
@@ -174,6 +188,7 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) {
 	})
 }
 
+// GetOrder returns order with given orderID from market store
 func (k Keeper) GetOrder(ctx sdk.Context, id types.OrderID) (types.Order, bool) {
 	store := ctx.KVStore(k.skey)
 	key := orderKey(id)
@@ -188,6 +203,7 @@ func (k Keeper) GetOrder(ctx sdk.Context, id types.OrderID) (types.Order, bool) 
 	return val, true
 }
 
+// GetBid returns bid with given bidID from market store
 func (k Keeper) GetBid(ctx sdk.Context, id types.BidID) (types.Bid, bool) {
 	store := ctx.KVStore(k.skey)
 	key := bidKey(id)
@@ -202,6 +218,7 @@ func (k Keeper) GetBid(ctx sdk.Context, id types.BidID) (types.Bid, bool) {
 	return val, true
 }
 
+// GetLease returns lease with given leaseID from market store
 func (k Keeper) GetLease(ctx sdk.Context, id types.LeaseID) (types.Lease, bool) {
 	store := ctx.KVStore(k.skey)
 	key := leaseKey(id)
@@ -216,6 +233,7 @@ func (k Keeper) GetLease(ctx sdk.Context, id types.LeaseID) (types.Lease, bool) 
 	return val, true
 }
 
+// LeaseForOrder returns lease for order with given ID and lease found status
 func (k Keeper) LeaseForOrder(ctx sdk.Context, oid types.OrderID) (types.Lease, bool) {
 	var (
 		value types.Lease
@@ -236,6 +254,7 @@ func (k Keeper) LeaseForOrder(ctx sdk.Context, oid types.OrderID) (types.Lease, 
 	return value, found
 }
 
+// WithOrders iterates all orders in market
 func (k Keeper) WithOrders(ctx sdk.Context, fn func(types.Order) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, orderPrefix)
@@ -247,6 +266,8 @@ func (k Keeper) WithOrders(ctx sdk.Context, fn func(types.Order) bool) {
 		}
 	}
 }
+
+// WithBids iterates all bids in market
 func (k Keeper) WithBids(ctx sdk.Context, fn func(types.Bid) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, bidPrefix)
@@ -258,6 +279,8 @@ func (k Keeper) WithBids(ctx sdk.Context, fn func(types.Bid) bool) {
 		}
 	}
 }
+
+// WithLeases iterates all leases in market
 func (k Keeper) WithLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, leasePrefix)
@@ -270,6 +293,7 @@ func (k Keeper) WithLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 	}
 }
 
+// WithOrdersForGroup iterates all orders of a group in market with given GroupID
 func (k Keeper) WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, fn func(types.Order) bool) {
 	// TODO: do it correctly with prefix search
 	k.WithOrders(ctx, func(item types.Order) bool {
@@ -280,6 +304,7 @@ func (k Keeper) WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, fn func(t
 	})
 }
 
+// WithBidsForOrder iterates all bids of a group in market with given GroupID
 func (k Keeper) WithBidsForOrder(ctx sdk.Context, id types.OrderID, fn func(types.Bid) bool) {
 	// TODO: do it correctly with prefix search
 	k.WithBids(ctx, func(item types.Bid) bool {

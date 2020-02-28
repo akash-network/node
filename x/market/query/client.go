@@ -7,6 +7,7 @@ import (
 	"github.com/ovrclk/akash/x/market/types"
 )
 
+// Client interface
 type Client interface {
 	Orders() (Orders, error)
 	Bids() (Bids, error)
@@ -14,6 +15,7 @@ type Client interface {
 	Leases() (Leases, error)
 }
 
+// NewClient creates a client instance with provided context and key
 func NewClient(ctx context.CLIContext, key string) Client {
 	return &client{ctx: ctx, key: key}
 }

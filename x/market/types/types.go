@@ -8,14 +8,17 @@ import (
 	tmkv "github.com/tendermint/tendermint/libs/kv"
 )
 
+// OrderState defines state of order
 type OrderState uint8
 
+// OrderOpen defines order open state value
 const (
 	OrderOpen    OrderState = iota
 	OrderMatched OrderState = iota
 	OrderClosed  OrderState = iota
 )
 
+// Order stores orderID, state of order and other details
 type Order struct {
 	OrderID `json:"id"`
 	State   OrderState `json:"state"`
@@ -25,10 +28,13 @@ type Order struct {
 	Spec    dtypes.GroupSpec `json:"spec"`
 }
 
-func (obj Order) ID() OrderID {
-	return obj.OrderID
+// ID method returns OrderID details of specific order
+func (o Order) ID() OrderID {
+	return o.OrderID
 }
 
+// ValidateCanBid method validates whether order is open or not and
+// returns error if not
 func (o Order) ValidateCanBid() error {
 	switch o.State {
 	case OrderOpen:
@@ -40,14 +46,17 @@ func (o Order) ValidateCanBid() error {
 	}
 }
 
+// Price method returns price of specific order
 func (o Order) Price() sdk.Coin {
 	return o.Spec.Price()
 }
 
+// MatchAttributes method compares provided attributes with specific order attributes
 func (o Order) MatchAttributes(attrs []tmkv.Pair) bool {
 	return o.Spec.MatchAttributes(attrs)
 }
 
+// ValidateCanMatch method validates whether to match order for provided height
 func (o Order) ValidateCanMatch(height int64) error {
 	if err := o.validateMatchableState(); err != nil {
 		return err
@@ -70,8 +79,10 @@ func (o Order) validateMatchableState() error {
 	}
 }
 
+// BidState defines state of bid
 type BidState uint8
 
+// BidOpen defines bid open state value
 const (
 	BidOpen    BidState = iota
 	BidMatched BidState = iota
@@ -79,30 +90,36 @@ const (
 	BidClosed  BidState = iota
 )
 
+// Bid stores BidID, state of bid and price
 type Bid struct {
 	BidID `json:"id"`
 	State BidState `json:"state"`
 	Price sdk.Coin `json:"price"`
 }
 
+// ID method returns BidID details of specific bid
 func (obj Bid) ID() BidID {
 	return obj.BidID
 }
 
+// LeaseState defines state of Lease
 type LeaseState uint8
 
+// LeaseActive defines lease active state value
 const (
 	LeaseActive            LeaseState = iota
 	LeaseInsufficientFunds LeaseState = iota
 	LeaseClosed            LeaseState = iota
 )
 
+// Lease stores LeaseID, state of lease and price
 type Lease struct {
 	LeaseID `json:"id"`
 	State   LeaseState `json:"state"`
 	Price   sdk.Coin   `json:"price"`
 }
 
+// ID method returns LeaseID details of specific lease
 func (obj Lease) ID() LeaseID {
 	return obj.LeaseID
 }
