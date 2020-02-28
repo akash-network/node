@@ -11,7 +11,7 @@ import (
 // OrderState defines state of order
 type OrderState uint8
 
-// OrderOpen defines order open state value
+// Order States
 const (
 	OrderOpen    OrderState = iota
 	OrderMatched OrderState = iota
@@ -82,7 +82,7 @@ func (o Order) validateMatchableState() error {
 // BidState defines state of bid
 type BidState uint8
 
-// BidOpen defines bid open state value
+// Bid States
 const (
 	BidOpen    BidState = iota
 	BidMatched BidState = iota
@@ -105,7 +105,7 @@ func (obj Bid) ID() BidID {
 // LeaseState defines state of Lease
 type LeaseState uint8
 
-// LeaseActive defines lease active state value
+// Lease States
 const (
 	LeaseActive            LeaseState = iota
 	LeaseInsufficientFunds LeaseState = iota

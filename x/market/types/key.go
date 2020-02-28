@@ -1,6 +1,6 @@
 package types
 
-// ModuleName defines name of current module
+// x/market module keys
 const (
 	ModuleName = "market"
 	RouterKey  = ModuleName
