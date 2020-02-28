@@ -12,7 +12,9 @@ const (
 )
 
 // Keeper defines keeper of market module
-type Keeper keeper.Keeper
+type (
+	Keeper = keeper.Keeper
+)
 
 // NewKeeper creates new keeper instance of market module
 var (
