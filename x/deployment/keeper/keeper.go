@@ -85,7 +85,7 @@ func (k Keeper) GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group 
 	return vals
 }
 
-// Create - creates a new deployment with given deployment and group specifications
+// Create creates a new deployment with given deployment and group specifications
 func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []types.Group) error {
 	store := ctx.KVStore(k.skey)
 

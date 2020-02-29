@@ -37,7 +37,7 @@ func (id OrderID) Equals(other OrderID) bool {
 	return id.GroupID().Equals(other.GroupID()) && id.OSeq == other.OSeq
 }
 
-// Validate method for OrderID
+// Validate method for OrderID and returns nil
 func (id OrderID) Validate() error {
 	return nil
 }
@@ -93,7 +93,7 @@ func (id BidID) DeploymentID() dtypes.DeploymentID {
 	return id.GroupID().DeploymentID()
 }
 
-// Validate bid instance
+// Validate validates bid instance and returns nil
 func (id BidID) Validate() error {
 	return nil
 }

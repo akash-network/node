@@ -13,7 +13,7 @@ type GenesisState struct {
 	Leases []types.Lease `json:"leases"`
 }
 
-// ValidateGenesis - validation check of the Genesis
+// ValidateGenesis does validation check of the Genesis
 func ValidateGenesis(data GenesisState) error {
 	return nil
 }

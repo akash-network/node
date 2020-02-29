@@ -12,7 +12,7 @@ type GenesisState struct {
 	Providers []types.Provider `json:"providers"`
 }
 
-// ValidateGenesis - validation check of the Genesis
+// ValidateGenesis does validation check of the Genesis and returns error incase of failure
 func ValidateGenesis(data GenesisState) error {
 	return nil
 }

@@ -45,7 +45,7 @@ func (AppModuleBasic) DefaultGenesis() json.RawMessage {
 	return types.MustMarshalJSON(DefaultGenesisState())
 }
 
-// ValidateGenesis - Validation check of the Genesis
+// ValidateGenesis does validation check of the Genesis and returns error incase of failure
 func (AppModuleBasic) ValidateGenesis(bz json.RawMessage) error {
 	var data GenesisState
 	err := types.UnmarshalJSON(bz, &data)
@@ -60,12 +60,12 @@ func (AppModuleBasic) RegisterRESTRoutes(ctx context.CLIContext, rtr *mux.Router
 	rest.RegisterRoutes(ctx, rtr, StoreKey)
 }
 
-// GetQueryCmd - Get the root query command of this module
+// GetQueryCmd get the root query command of this module
 func (AppModuleBasic) GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 	return cli.GetQueryCmd(StoreKey, cdc)
 }
 
-// GetTxCmd - Get the root tx command of this module
+// GetTxCmd get the root tx command of this module
 func (AppModuleBasic) GetTxCmd(cdc *codec.Codec) *cobra.Command {
 	return cli.GetTxCmd(StoreKey, cdc)
 }

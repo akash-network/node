@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// AddDeploymentIDFlags - Add flags for deployment
+// AddDeploymentIDFlags add flags for deployment
 func AddDeploymentIDFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "Deployment Owner")
 	flags.Uint64("dseq", 0, "Deployment Sequence")
@@ -32,7 +32,7 @@ func DeploymentIDFromFlags(flags *pflag.FlagSet, defaultOwner string) (types.Dep
 	return id, nil
 }
 
-// AddGroupIDFlags - Add flags for Group
+// AddGroupIDFlags add flags for Group
 func AddGroupIDFlags(flags *pflag.FlagSet) {
 	AddDeploymentIDFlags(flags)
 	flags.Uint32("gseq", 0, "Group Sequence")

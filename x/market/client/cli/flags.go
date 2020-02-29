@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// AddOrderIDFlags - Add flags for order
+// AddOrderIDFlags add flags for order
 func AddOrderIDFlags(flags *pflag.FlagSet) {
 	dcli.AddGroupIDFlags(flags)
 	flags.Uint32("oseq", 0, "Order Sequence")
@@ -26,7 +26,7 @@ func OrderIDFromFlags(flags *pflag.FlagSet) (types.OrderID, error) {
 	return types.MakeOrderID(prev, val), nil
 }
 
-// AddBidIDFlags - Add flags for bid
+// AddBidIDFlags add flags for bid
 func AddBidIDFlags(flags *pflag.FlagSet) {
 	AddOrderIDFlags(flags)
 }

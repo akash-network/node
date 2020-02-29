@@ -5,18 +5,19 @@ import (
 	"github.com/ovrclk/akash/x/provider/types"
 )
 
-// StoreKey defines storekey of provider module
 const (
-	StoreKey   = types.StoreKey
+	// StoreKey represents storekey of provider module
+	StoreKey = types.StoreKey
+	// ModuleName represents current module name
 	ModuleName = types.ModuleName
 )
 
-// Keeper defines keeper of provider module
 type (
+	// Keeper defines keeper of provider module
 	Keeper = keeper.Keeper
 )
 
-// NewKeeper creates new keeper instance of provider module
 var (
+	// NewKeeper creates new keeper instance of provider module
 	NewKeeper = keeper.NewKeeper
 )

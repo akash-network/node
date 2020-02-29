@@ -5,18 +5,19 @@ import (
 	"github.com/ovrclk/akash/x/market/types"
 )
 
-// StoreKey defines storekey of market module
 const (
-	StoreKey   = types.StoreKey
+	// StoreKey represents storekey of market module
+	StoreKey = types.StoreKey
+	// ModuleName represents current module name
 	ModuleName = types.ModuleName
 )
 
-// Keeper defines keeper of market module
 type (
+	// Keeper defines keeper of market module
 	Keeper = keeper.Keeper
 )
 
-// NewKeeper creates new keeper instance of market module
 var (
+	// NewKeeper creates new keeper instance of market module
 	NewKeeper = keeper.NewKeeper
 )

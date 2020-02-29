@@ -4,10 +4,11 @@ import (
 	"errors"
 )
 
-// Declaring new errors
 var (
+	// ErrInvalidSignature represents new error with message "invalid signature"
 	ErrInvalidSignature = errors.New("invalid signature")
-	ErrInvalidKey       = errors.New("key is not deployment owner")
+	// ErrInvalidKey represents new error with message "key is not deployment owner"
+	ErrInvalidKey = errors.New("key is not deployment owner")
 )
 
 // func SignManifest(manifest *types.Manifest, signer txutil.Signer, deployment []byte) (*types.ManifestRequest, []byte, error) {

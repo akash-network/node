@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// Denom constants
 const (
+	// Mega represents mega (10^6) units of the denomination
 	Mega = 1000000
 )
 

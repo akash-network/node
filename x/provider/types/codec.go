@@ -10,7 +10,7 @@ func init() {
 	RegisterCodec(cdc)
 }
 
-// RegisterCodec - Register concrete types on codec codec
+// RegisterCodec register concrete types on codec
 func RegisterCodec(cdc *codec.Codec) {
 	cdc.RegisterConcrete(MsgCreate{}, ModuleName+"/msg-create", nil)
 }

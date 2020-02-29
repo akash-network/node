@@ -12,9 +12,10 @@ import (
 // DeploymentState defines state of deployment
 type DeploymentState uint8
 
-// Deployment states
 const (
+	// DeploymentActive is used when state of deployment is active
 	DeploymentActive DeploymentState = iota
+	// DeploymentClosed is used when state of deployment is closed
 	DeploymentClosed DeploymentState = iota
 )
 
@@ -33,13 +34,17 @@ func (obj Deployment) ID() DeploymentID {
 // GroupState defines state of group
 type GroupState uint8
 
-// Group States
 const (
-	GroupOpen              GroupState = iota
-	GroupOrdered           GroupState = iota
-	GroupMatched           GroupState = iota
+	// GroupOpen is used when state of group is open
+	GroupOpen GroupState = iota
+	// GroupOrdered is used when state of group is ordered
+	GroupOrdered GroupState = iota
+	// GroupMatched is used when state of group is matched
+	GroupMatched GroupState = iota
+	// GroupInsufficientFunds is used when group has insufficient funds
 	GroupInsufficientFunds GroupState = iota
-	GroupClosed            GroupState = iota
+	// GroupClosed is used when state of group is closed
+	GroupClosed GroupState = iota
 )
 
 // GroupSpec stores group specifications

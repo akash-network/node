@@ -26,7 +26,7 @@ type GenesisState struct {
 // 	}
 // }
 
-// ValidateGenesis - validation check of the Genesis
+// ValidateGenesis does validation check of the Genesis and return error incase of failure
 func ValidateGenesis(data GenesisState) error {
 	for _, record := range data.Deployments {
 		if err := record.Validate(); err != nil {

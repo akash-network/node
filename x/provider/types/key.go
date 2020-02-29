@@ -5,7 +5,7 @@ const (
 	ModuleName = "provider"
 
 	// StoreKey is the store key string for provider
-	StoreKey  = ModuleName
+	StoreKey = ModuleName
 
 	// RouterKey is the message route for provider
 	RouterKey = ModuleName

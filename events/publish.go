@@ -15,7 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Publish - publishes events along tm buses to clients
+// Publish publishes events along tm buses to clients
 func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus pubsub.Bus) error {
 
 	const (

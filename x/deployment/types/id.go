@@ -13,7 +13,7 @@ func (id DeploymentID) Equals(other DeploymentID) bool {
 	return id.Owner.Equals(other.Owner) && id.DSeq == other.DSeq
 }
 
-// Validate method for DeploymentID
+// Validate method for DeploymentID and returns nil
 func (id DeploymentID) Validate() error {
 	return nil
 }
@@ -48,7 +48,7 @@ func (id GroupID) Equals(other GroupID) bool {
 	return id.DeploymentID().Equals(other.DeploymentID()) && id.GSeq == other.GSeq
 }
 
-// Validate method for GroupID
+// Validate method for GroupID and returns nil
 func (id GroupID) Validate() error {
 	return nil
 }

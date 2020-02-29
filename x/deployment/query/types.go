@@ -23,7 +23,7 @@ func (d Deployment) String() string {
 	`, d.Owner, d.DSeq, d.State, d.Version, len(d.Groups))
 }
 
-// Deployments - Slice of deployment struct
+// Deployments represents slice of deployment struct
 type Deployments []Deployment
 
 func (ds Deployments) String() string {

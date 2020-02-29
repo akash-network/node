@@ -11,18 +11,22 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// CRD constants
 const (
-	CRDPlural   string = "manifests"
-	CRDGroup    string = "akash.network"
-	CRDVersion  string = "v1"
+	// CRDPlural represents CRD resource Plural
+	CRDPlural string = "manifests"
+	// CRDGroup represents CRD resource Group
+	CRDGroup string = "akash.network"
+	// CRDVersion represents CRD resource Version
+	CRDVersion string = "v1"
+	// FullCRDName represents CRD resource fullname
 	FullCRDName string = CRDPlural + "." + CRDGroup
 )
 
-// Declaring Scheme variables
 var (
+	// SchemeBuilder represents new CRD scheme builder
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
-	AddToScheme   = SchemeBuilder.AddToScheme
+	// AddToScheme applies all the stored functions to the scheme
+	AddToScheme = SchemeBuilder.AddToScheme
 )
 
 // Create a  Rest client with the new CRD Schema
@@ -47,7 +51,7 @@ func Resource(resource string) schema.GroupResource {
 	return SchemeGroupVersion.WithResource(resource).GroupResource()
 }
 
-// CreateCRD - Create the CRD resource, ignore error if it already exists
+// CreateCRD creates the CRD resource, ignore error if it already exists
 func CreateCRD(clientset apiextcs.Interface) error {
 	crd := &apiextv1beta1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: FullCRDName},
