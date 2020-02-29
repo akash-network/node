@@ -1,6 +1,8 @@
 package types
 
 import (
+	"net/url"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -9,8 +11,9 @@ type MsgCreate Provider
 func (msg MsgCreate) Route() string { return RouterKey }
 func (msg MsgCreate) Type() string  { return "create" }
 func (msg MsgCreate) ValidateBasic() error {
+	_, err := url.Parse(msg.HostURI)
 	switch {
-	case len(msg.HostURI) == 0:
+	case err != nil:
 		// TODO: better uri validation
 		return ErrInvalidProviderURI
 	}
@@ -32,8 +35,9 @@ type MsgUpdate Provider
 func (msg MsgUpdate) Route() string { return RouterKey }
 func (msg MsgUpdate) Type() string  { return "update" }
 func (msg MsgUpdate) ValidateBasic() error {
+	_, err := url.Parse(msg.HostURI)
 	switch {
-	case len(msg.HostURI) == 0:
+	case err != nil:
 		// TODO: better uri validation
 		return ErrInvalidProviderURI
 	}
