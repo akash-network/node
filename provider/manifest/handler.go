@@ -17,22 +17,27 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
+// ErrNotRunning is the error when service is not running
 var ErrNotRunning = errors.New("not running")
 
+// StatusClient is the interface which includes status of service
 type StatusClient interface {
 	Status(context.Context) (*Status, error)
 }
 
+// Handler is the interface that wraps HandleManifest method
 type Handler interface {
 	HandleManifest(context.Context, *manifest.Request) error
 }
 
+// Service is the interface that includes StatusClient and Handler interfaces. It also wraps Done method
 type Service interface {
 	StatusClient
 	Handler
 	Done() <-chan struct{}
 }
 
+// NewHandler creates and returns new Service instance
 // Manage incoming leases and manifests and pair the two together to construct and emit a ManifestReceived event.
 func NewHandler(ctx context.Context, session session.Session, bus pubsub.Bus) (Service, error) {
 

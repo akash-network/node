@@ -88,6 +88,7 @@ func NewServiceLog(name string, stream io.ReadCloser) *ServiceLog {
 	}
 }
 
+// NullClient returns nullClient instance
 func NullClient() Client {
 	return &nullClient{
 		leases: make(map[string]*manifest.Group),

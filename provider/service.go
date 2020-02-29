@@ -14,6 +14,8 @@ import (
 	"github.com/ovrclk/akash/pubsub"
 )
 
+// Service is the interface that includes StatusClient interface.
+// It also wraps ManifestHandler, Close and Done methods.
 type Service interface {
 	ManifestHandler() manifest.Handler
 	Close() error
@@ -22,10 +24,12 @@ type Service interface {
 	StatusClient
 }
 
+// StatusClient is the interface which includes status of service
 type StatusClient interface {
 	Status(context.Context) (*Status, error)
 }
 
+// NewService creates and returns new Service instance
 // Simple wrapper around various services needed for running a provider.
 func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cclient cluster.Client) (Service, error) {
 
