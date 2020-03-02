@@ -5,6 +5,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
+// RenderQueryResponse uses codec to render query response. Returns error incase of failure.
 func RenderQueryResponse(cdc *codec.Codec, obj interface{}) ([]byte, *sdkerrors.Error) {
 	response, err := codec.MarshalJSONIndent(cdc, obj)
 	if err != nil {

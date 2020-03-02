@@ -6,8 +6,10 @@ import (
 	lifecycle "github.com/boz/go-lifecycle"
 )
 
+// ErrNotRunning is the error with message "not running"
 var ErrNotRunning = errors.New("not running")
 
+// Event interface
 type Event interface{}
 
 // Bus is an async event bus that allows subscriptions to behave as a bus themselves.
@@ -48,6 +50,7 @@ type bus struct {
 	lc lifecycle.Lifecycle
 }
 
+// NewBus runs a new bus and returns bus details
 func NewBus() Bus {
 	bus := &bus{
 		subscriptions: make(map[*bus]bool),

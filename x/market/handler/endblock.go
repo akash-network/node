@@ -7,6 +7,8 @@ import (
 	"github.com/ovrclk/akash/x/market/types"
 )
 
+// OnEndBlock transfer funds for active leases and update order states
+// Executed at the end of block
 func OnEndBlock(ctx sdk.Context, keepers Keepers) error {
 	if err := transferFundsForActiveLeases(ctx, keepers); err != nil {
 		return err

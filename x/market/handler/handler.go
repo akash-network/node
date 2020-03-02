@@ -6,6 +6,7 @@ import (
 	"github.com/ovrclk/akash/x/market/types"
 )
 
+// NewHandler returns a handler for "market" type messages
 func NewHandler(keepers Keepers) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		switch msg := msg.(type) {

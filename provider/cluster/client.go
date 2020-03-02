@@ -14,8 +14,10 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
+// Declaring new error with message "no deployments"
 var ErrNoDeployments = errors.New("no deployments")
 
+// Client interface lease and deployment methods
 type Client interface {
 	Deploy(mtypes.LeaseID, *manifest.Group) error
 	TeardownLease(mtypes.LeaseID) error
@@ -26,6 +28,7 @@ type Client interface {
 	Inventory() ([]Node, error)
 }
 
+// Node interface predefined with ID and Available methods
 type Node interface {
 	ID() string
 	Available() atypes.Unit
@@ -36,23 +39,28 @@ type node struct {
 	available atypes.Unit
 }
 
+// NewNode returns new Node instance with provided details
 func NewNode(id string, available atypes.Unit) Node {
 	return &node{id: id, available: available}
 }
 
+// ID returns id of node
 func (n *node) ID() string {
 	return n.id
 }
 
+// Available returns available units of node
 func (n *node) Available() atypes.Unit {
 	return n.available
 }
 
+// Deployment interface defined with LeaseID and ManifestGroup methods
 type Deployment interface {
 	LeaseID() mtypes.LeaseID
 	ManifestGroup() manifest.Group
 }
 
+// ServiceLog stores name, stream and scanner
 type ServiceLog struct {
 	Name    string
 	Stream  io.ReadCloser
@@ -71,6 +79,7 @@ type nullClient struct {
 	mtx    sync.Mutex
 }
 
+// NewServiceLog creates and returns a service log with provided details
 func NewServiceLog(name string, stream io.ReadCloser) *ServiceLog {
 	return &ServiceLog{
 		Name:    name,
@@ -79,6 +88,7 @@ func NewServiceLog(name string, stream io.ReadCloser) *ServiceLog {
 	}
 }
 
+// NullClient returns nullClient instance
 func NullClient() Client {
 	return &nullClient{
 		leases: make(map[string]*manifest.Group),

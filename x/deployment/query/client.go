@@ -7,12 +7,14 @@ import (
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
+// Client interface
 type Client interface {
 	Deployments() (Deployments, error)
 	Deployment(types.DeploymentID) (Deployment, error)
 	Group(types.GroupID) (Group, error)
 }
 
+// NewClient creates a client instance with provided context and key
 func NewClient(ctx context.CLIContext, key string) Client {
 	return &client{ctx: ctx, key: key}
 }

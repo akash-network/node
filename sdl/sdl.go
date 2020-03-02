@@ -9,12 +9,14 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+// SDL is the interface which wraps Validate, Deployment and Manifest methods
 type SDL interface {
 	Validate() error
 	DeploymentGroups() ([]*dtypes.GroupSpec, error)
 	Manifest() (manifest.Manifest, error)
 }
 
+// ReadFile read from given path and returns SDL instance
 func ReadFile(path string) (SDL, error) {
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -23,6 +25,7 @@ func ReadFile(path string) (SDL, error) {
 	return Read(buf)
 }
 
+// Read reads buffer data and returns SDL instance
 func Read(buf []byte) (SDL, error) {
 	// TODO: handle versions
 	obj := &v1{}

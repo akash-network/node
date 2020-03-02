@@ -7,6 +7,7 @@ import (
 	"github.com/ovrclk/akash/client"
 )
 
+// Session interface wraps Log, Client, Provider and ForModule methods
 type Session interface {
 	Log() log.Logger
 	Client() client.Client
@@ -14,6 +15,7 @@ type Session interface {
 	ForModule(string) Session
 }
 
+// New returns new session instance with provided details
 func New(log log.Logger, client client.Client, provider sdk.AccAddress) Session {
 	return session{
 		client:   client,

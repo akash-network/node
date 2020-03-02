@@ -4,6 +4,7 @@ import (
 	"errors"
 )
 
+// ErrDifferentHashes represent new error for "manifest hash not matched with expected hash"
 var ErrDifferentHashes = errors.New("manifest hash does not match the expected hash")
 
 // func Hash(m proto.Message) ([]byte, error) {

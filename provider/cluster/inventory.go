@@ -15,7 +15,9 @@ import (
 )
 
 var (
-	errNotFound             = errors.New("not found")
+	// errNotFound is the new error with message "not found"
+	errNotFound = errors.New("not found")
+	// ErrInsufficientCapacity is the new error when capacity is insufficient
 	ErrInsufficientCapacity = errors.New("insufficient capacity")
 )
 

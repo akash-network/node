@@ -69,6 +69,7 @@ var (
 	)
 )
 
+// AkashApp extends ABCI appplication
 type AkashApp struct {
 	*bam.BaseApp
 	cdc *codec.Codec
@@ -93,10 +94,12 @@ type AkashApp struct {
 	mm *module.Manager
 }
 
+// ModuleBasics returns all app modules basics
 func ModuleBasics() module.BasicManager {
 	return mbasics
 }
 
+// MakeCodec returns registered codecs
 func MakeCodec() *codec.Codec {
 	var cdc = codec.New()
 
@@ -326,10 +329,12 @@ func (app *AkashApp) endBlocker(
 	return app.mm.EndBlock(ctx, req)
 }
 
+// LoadHeight method of AkashApp loads baseapp application version with given height
 func (app *AkashApp) LoadHeight(height int64) error {
 	return app.LoadVersion(height, app.keys[bam.MainStoreKey])
 }
 
+// ExportAppStateAndValidators returns application state json and slice of validators
 func (app *AkashApp) ExportAppStateAndValidators(
 	forZeroHeight bool, jailWhiteList []string,
 ) (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {

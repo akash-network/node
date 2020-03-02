@@ -5,5 +5,6 @@ import (
 )
 
 var (
+	// ErrInvalidProviderURI register error code for invalid provider uri
 	ErrInvalidProviderURI = sdkerrors.Register(ModuleName, 1, "invalid provider: empty host uri")
 )
