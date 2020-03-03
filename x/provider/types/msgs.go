@@ -14,7 +14,6 @@ func (msg MsgCreate) ValidateBasic() error {
 	_, err := url.Parse(msg.HostURI)
 	switch {
 	case err != nil:
-		// TODO: better uri validation
 		return ErrInvalidProviderURI
 	}
 	return nil
@@ -38,7 +37,6 @@ func (msg MsgUpdate) ValidateBasic() error {
 	_, err := url.Parse(msg.HostURI)
 	switch {
 	case err != nil:
-		// TODO: better uri validation
 		return ErrInvalidProviderURI
 	}
 	return nil
