@@ -5,5 +5,6 @@ import (
 )
 
 var (
-	ErrInvalidProviderURI = sdkerrors.Register(ModuleName, 1, "invalid provider: empty host uri")
+	ErrInvalidProviderURI = sdkerrors.Register(ModuleName, 1, "invalid provider: invalid host uri")
+	ErrNotAbsProviderURI  = sdkerrors.Register(ModuleName, 2, "invalid provider: not absoulte host uri")
 )

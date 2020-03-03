@@ -11,10 +11,12 @@ type MsgCreate Provider
 func (msg MsgCreate) Route() string { return RouterKey }
 func (msg MsgCreate) Type() string  { return "create" }
 func (msg MsgCreate) ValidateBasic() error {
-	_, err := url.Parse(msg.HostURI)
-	switch {
-	case err != nil:
+	u, err := url.Parse(msg.HostURI)
+	if err != nil {
 		return ErrInvalidProviderURI
+	}
+	if !u.IsAbs() {
+		return ErrNotAbsProviderURI
 	}
 	return nil
 }
@@ -34,10 +36,12 @@ type MsgUpdate Provider
 func (msg MsgUpdate) Route() string { return RouterKey }
 func (msg MsgUpdate) Type() string  { return "update" }
 func (msg MsgUpdate) ValidateBasic() error {
-	_, err := url.Parse(msg.HostURI)
-	switch {
-	case err != nil:
+	u, err := url.Parse(msg.HostURI)
+	if err != nil {
 		return ErrInvalidProviderURI
+	}
+	if !u.IsAbs() {
+		return ErrNotAbsProviderURI
 	}
 	return nil
 }
