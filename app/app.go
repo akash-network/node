@@ -16,6 +16,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/staking"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/ovrclk/akash/x/deployment"
 	"github.com/ovrclk/akash/x/market"
@@ -36,6 +37,7 @@ import (
 
 const (
 	appName = "akash"
+	denom   = "akt"
 )
 
 var (
@@ -351,4 +353,18 @@ func (app *AkashApp) ExportAppStateAndValidators(
 	validators = staking.WriteValidators(ctx, app.keeper.staking)
 
 	return appState, validators, nil
+}
+
+func init() {
+	setGenesisDefaults()
+}
+
+func setGenesisDefaults() {
+	staking.DefaultGenesisState = stakingGenesisState
+}
+
+func stakingGenesisState() stakingtypes.GenesisState {
+	genesisState := stakingtypes.DefaultGenesisState()
+	genesisState.Params.BondDenom = denom
+	return genesisState
 }
