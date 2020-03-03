@@ -36,6 +36,7 @@ func init() {
 	}
 }
 
+// Config returns default configuration
 func Config() config {
 	return defaultConfig
 }

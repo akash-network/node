@@ -6,6 +6,8 @@ import (
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
+// OnEndBlock create order and update order state for each deployment
+// Executed at the end of block
 func OnEndBlock(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper) {
 
 	// create orders as necessary

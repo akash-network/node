@@ -12,19 +12,22 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
+// Declaring new error with message "not running"
 var ErrNotRunning = errors.New("not running")
 
+// StatusClient interface predefined with Status method
 type StatusClient interface {
 	Status(context.Context) (*Status, error)
 }
 
+// Service handles bidding on orders.
 type Service interface {
 	StatusClient
 	Close() error
 	Done() <-chan struct{}
 }
 
-// Service handles bidding on orders.
+// NewService creates new service instance and returns error incase of failure
 func NewService(ctx context.Context, session session.Session, cluster cluster.Cluster, bus pubsub.Bus) (Service, error) {
 
 	session = session.ForModule("bidengine-service")

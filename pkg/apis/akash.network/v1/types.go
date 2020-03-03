@@ -10,6 +10,7 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// Manifest store metadata, specifications and status of manifest
 type Manifest struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -19,6 +20,7 @@ type Manifest struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// ManifestGroup store metadata, name and list of manifest services
 type ManifestGroup struct {
 	metav1.TypeMeta `json:",inline"`
 	// Placement profile name
@@ -27,6 +29,7 @@ type ManifestGroup struct {
 	Services []*ManifestService `protobuf:"bytes,2,rep,name=services" json:"services,omitempty"`
 }
 
+// ToAkash returns akash group details formatted from manifest group
 func (m ManifestGroup) ToAkash() *manifest.Group {
 	ma := &manifest.Group{Name: m.Name}
 
@@ -60,6 +63,7 @@ func (m ManifestGroup) ToAkash() *manifest.Group {
 	return ma
 }
 
+// ManifestGroupFromAkash returns manifest group instance from akash group
 func ManifestGroupFromAkash(m *manifest.Group) ManifestGroup {
 	ma := ManifestGroup{Name: m.Name}
 
@@ -94,6 +98,8 @@ func ManifestGroupFromAkash(m *manifest.Group) ManifestGroup {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// LeaseID stores deployment, group sequence, order, provider and metadata
 type LeaseID struct {
 	metav1.TypeMeta `json:",inline"`
 	// deployment address
@@ -106,6 +112,7 @@ type LeaseID struct {
 	Provider []byte `protobuf:"bytes,4,opt,name=provider,proto3,customtype=github.com/ovrclk/akash/types/base.Bytes" json:"provider"`
 }
 
+// ToAkash returns LeaseID from LeaseID details
 func (id LeaseID) ToAkash() mtypes.LeaseID {
 	return mtypes.LeaseID{
 		// TODO
@@ -116,6 +123,7 @@ func (id LeaseID) ToAkash() mtypes.LeaseID {
 	}
 }
 
+// LeaseIDFromAkash returns LeaseID instance from akash
 func LeaseIDFromAkash(id mtypes.LeaseID) LeaseID {
 	return LeaseID{
 		// TODO
@@ -128,12 +136,14 @@ func LeaseIDFromAkash(id mtypes.LeaseID) LeaseID {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// ManifestSpec stores LeaseID, Group and metadata details
 type ManifestSpec struct {
 	metav1.TypeMeta `json:",inline"`
 	LeaseID         LeaseID       `json:"lease_id"`
 	ManifestGroup   ManifestGroup `json:"manifest_group"`
 }
 
+// ManifestService stores name, image, args, env, unit, count and expose list of service
 type ManifestService struct {
 	// Service name
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -149,6 +159,7 @@ type ManifestService struct {
 	Expose []*ManifestServiceExpose `protobuf:"bytes,7,rep,name=expose" json:"expose,omitempty"`
 }
 
+// ManifestServiceExpose stores exposed ports and accepted hosts details
 type ManifestServiceExpose struct {
 	Port         uint32 `protobuf:"varint,1,opt,name=port,proto3" json:"port,omitempty"`
 	ExternalPort uint32 `protobuf:"varint,2,opt,name=externalPort,proto3" json:"externalPort,omitempty"`
@@ -159,12 +170,14 @@ type ManifestServiceExpose struct {
 	Hosts []string `protobuf:"bytes,6,rep,name=hosts" json:"hosts,omitempty"`
 }
 
+// ResourceUnit stores cpu, memory and storage details
 type ResourceUnit struct {
 	CPU     uint32 `protobuf:"varint,1,opt,name=CPU,proto3" json:"CPU,omitempty"`
 	Memory  uint64 `protobuf:"varint,2,opt,name=memory,proto3" json:"memory,omitempty"`
 	Storage uint64 `protobuf:"varint,3,opt,name=storage,proto3" json:"storage,omitempty"`
 }
 
+// ManifestStatus stores state and message of manifest
 type ManifestStatus struct {
 	State   string `json:"state,omitempty"`
 	Message string `json:"message,omitempty"`
@@ -172,20 +185,24 @@ type ManifestStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// ManifestList stores metadata and items list of manifest
 type ManifestList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:",inline"`
 	Items           []Manifest `json:"items"`
 }
 
+// ManifestGroup returns Group details from manifest
 func (m Manifest) ManifestGroup() manifest.Group {
 	return *m.Spec.ManifestGroup.ToAkash()
 }
 
+// LeaseID returns lease details from manifest
 func (m Manifest) LeaseID() mtypes.LeaseID {
 	return m.Spec.LeaseID.ToAkash()
 }
 
+// NewManifest creates new manifest with provided details. Returns error incase of failure.
 func NewManifest(name string, lid mtypes.LeaseID, mgroup *manifest.Group) (*Manifest, error) {
 	return &Manifest{
 		TypeMeta: metav1.TypeMeta{

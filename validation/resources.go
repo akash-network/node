@@ -7,6 +7,7 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
+// ValidateResourceList does basic validation for resources list
 func ValidateResourceList(rlist types.ResourceGroup) error {
 	return validateResourceList(defaultConfig, rlist)
 }

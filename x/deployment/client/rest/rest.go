@@ -10,6 +10,7 @@ import (
 	"github.com/ovrclk/akash/x/deployment/query"
 )
 
+// RegisterRoutes registers all query routes
 func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
 	r.HandleFunc(fmt.Sprintf("/%s/deployments", ns), listDeploymentsHandler(ctx, ns)).Methods("GET")
 }

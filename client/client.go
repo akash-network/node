@@ -14,8 +14,10 @@ import (
 	pquery "github.com/ovrclk/akash/x/provider/query"
 )
 
+// ErrClientNotFound is a new error with message "Client not found"
 var ErrClientNotFound = errors.New("Client not found")
 
+// QueryClient interface includes query clients of deployment, market and provider modules
 type QueryClient interface {
 	dquery.Client
 	mquery.Client
@@ -25,15 +27,18 @@ type QueryClient interface {
 	ActiveLeasesForProvider(id sdk.AccAddress) (mquery.Leases, error)
 }
 
+// TxClient interface
 type TxClient interface {
 	Broadcast(...sdk.Msg) error
 }
 
+// Client interface pre-defined with query and tx interfaces
 type Client interface {
 	Query() QueryClient
 	Tx() TxClient
 }
 
+// NewClient creates new client instance
 func NewClient(
 	cctx ccontext.CLIContext,
 	txbldr auth.TxBuilder,
@@ -82,6 +87,7 @@ type qclient struct {
 	pclient pquery.Client
 }
 
+// NewQueryClient creates new query client instance
 func NewQueryClient(
 	dclient dquery.Client,
 	mclient mquery.Client,

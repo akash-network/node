@@ -7,6 +7,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 )
 
+// NewLogger returns formatted new log
 func NewLogger(w io.Writer) log.Logger {
 	return log.NewTMLoggerWithColorFn(log.NewSyncWriter(w), logColorFn)
 }

@@ -6,6 +6,7 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
+// MarketKeeper Interface includes market methods
 type MarketKeeper interface {
 	CreateOrder(ctx sdk.Context, id types.GroupID, spec types.GroupSpec) mtypes.Order
 	OnGroupClosed(ctx sdk.Context, id types.GroupID)

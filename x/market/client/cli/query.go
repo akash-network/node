@@ -2,14 +2,15 @@ package cli
 
 import (
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/ovrclk/akash/x/market/query"
 	"github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 )
 
+// GetQueryCmd returns the transaction commands for the market module
 func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{

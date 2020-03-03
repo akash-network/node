@@ -26,22 +26,26 @@ var (
 	_ module.AppModuleBasic = AppModuleBasic{}
 )
 
-// app module Basics object
+// AppModuleBasic defines the basic application module used by the deployment module.
 type AppModuleBasic struct{}
 
+// Name returns deployment module's name
 func (AppModuleBasic) Name() string {
 	return types.ModuleName
 }
 
+// RegisterCodec registers the deployment module's types for the given codec.
 func (AppModuleBasic) RegisterCodec(cdc *codec.Codec) {
 	types.RegisterCodec(cdc)
 }
 
+// DefaultGenesis returns default genesis state as raw bytes for the deployment
+// module.
 func (AppModuleBasic) DefaultGenesis() json.RawMessage {
 	return types.MustMarshalJSON(DefaultGenesisState())
 }
 
-// Validation check of the Genesis
+// ValidateGenesis does validation check of the Genesis and returns error incase of failure
 func (AppModuleBasic) ValidateGenesis(bz json.RawMessage) error {
 	var data GenesisState
 	err := types.UnmarshalJSON(bz, &data)
@@ -51,25 +55,27 @@ func (AppModuleBasic) ValidateGenesis(bz json.RawMessage) error {
 	return ValidateGenesis(data)
 }
 
-// Register rest routes
+// RegisterRESTRoutes registers rest routes for this module
 func (AppModuleBasic) RegisterRESTRoutes(ctx context.CLIContext, rtr *mux.Router) {
 	rest.RegisterRoutes(ctx, rtr, StoreKey)
 }
 
-// Get the root query command of this module
+// GetQueryCmd get the root query command of this module
 func (AppModuleBasic) GetQueryCmd(cdc *codec.Codec) *cobra.Command {
 	return cli.GetQueryCmd(StoreKey, cdc)
 }
 
-// Get the root tx command of this module
+// GetTxCmd get the root tx command of this module
 func (AppModuleBasic) GetTxCmd(cdc *codec.Codec) *cobra.Command {
 	return cli.GetTxCmd(StoreKey, cdc)
 }
 
+// GetQueryClient returns a new query client for this module
 func (AppModuleBasic) GetQueryClient(ctx context.CLIContext) query.Client {
 	return query.NewClient(ctx, StoreKey)
 }
 
+// AppModule implements an application module for the deployment module.
 type AppModule struct {
 	AppModuleBasic
 	keeper     keeper.Keeper
@@ -87,29 +93,39 @@ func NewAppModule(k keeper.Keeper, mkeeper handler.MarketKeeper, bankKeeper bank
 	}
 }
 
+// Name returns the deployment module name
 func (AppModule) Name() string {
 	return types.ModuleName
 }
 
+// RegisterInvariants registers module invariants
 func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
 
+// Route returns the message routing key for the deployment module
 func (am AppModule) Route() string {
 	return types.RouterKey
 }
 
+// NewHandler returns an sdk.Handler for the deployment module.
 func (am AppModule) NewHandler() sdk.Handler {
 	return handler.NewHandler(am.keeper, am.mkeeper)
 }
+
+// QuerierRoute returns the deployment module's querier route name.
 func (am AppModule) QuerierRoute() string {
 	return types.ModuleName
 }
 
+// NewQuerierHandler returns the sdk.Querier for deployment module
 func (am AppModule) NewQuerierHandler() sdk.Querier {
 	return query.NewQuerier(am.keeper)
 }
 
+// BeginBlock performs no-op
 func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 
+// EndBlock returns the end blocker for the deployment module. It returns no validator
+// updates.
 func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 
 	handler.OnEndBlock(ctx, am.keeper, am.mkeeper)
@@ -117,12 +133,16 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 	return []abci.ValidatorUpdate{}
 }
 
+// InitGenesis performs genesis initialization for the deployment module. It returns
+// no validator updates.
 func (am AppModule) InitGenesis(ctx sdk.Context, data json.RawMessage) []abci.ValidatorUpdate {
 	var genesisState GenesisState
 	types.MustUnmarshalJSON(data, &genesisState)
 	return InitGenesis(ctx, am.keeper, genesisState)
 }
 
+// ExportGenesis returns the exported genesis state as raw bytes for the deployment
+// module.
 func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
 	gs := ExportGenesis(ctx, am.keeper)
 	return types.MustMarshalJSON(gs)

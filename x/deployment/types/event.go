@@ -16,10 +16,12 @@ const (
 	evGSeqKey                = "gseq"
 )
 
+// EventDeploymentCreate struct
 type EventDeploymentCreate struct {
 	ID DeploymentID
 }
 
+// ToSDKEvent method creates new sdk event for EventDeploymentCreate struct
 func (ev EventDeploymentCreate) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdk.EventTypeMessage,
 		append([]sdk.Attribute{
@@ -29,11 +31,13 @@ func (ev EventDeploymentCreate) ToSDKEvent() sdk.Event {
 	)
 }
 
+// EventDeploymentUpdate struct
 type EventDeploymentUpdate struct {
 	ID      DeploymentID
 	Version []byte // TODO
 }
 
+// ToSDKEvent method creates new sdk event for EventDeploymentUpdate struct
 func (ev EventDeploymentUpdate) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdk.EventTypeMessage,
 		append([]sdk.Attribute{
@@ -43,10 +47,12 @@ func (ev EventDeploymentUpdate) ToSDKEvent() sdk.Event {
 	)
 }
 
+// EventDeploymentClose struct
 type EventDeploymentClose struct {
 	ID DeploymentID
 }
 
+// ToSDKEvent method creates new sdk event for EventDeploymentClose struct
 func (ev EventDeploymentClose) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdk.EventTypeMessage,
 		append([]sdk.Attribute{
@@ -56,6 +62,7 @@ func (ev EventDeploymentClose) ToSDKEvent() sdk.Event {
 	)
 }
 
+// DeploymentIDEVAttributes returns event attribues for given DeploymentID
 func DeploymentIDEVAttributes(id DeploymentID) []sdk.Attribute {
 	return []sdk.Attribute{
 		sdk.NewAttribute(evOwnerKey, id.Owner.String()),
@@ -63,6 +70,7 @@ func DeploymentIDEVAttributes(id DeploymentID) []sdk.Attribute {
 	}
 }
 
+// ParseEVDeploymentID returns deploymentID details for given event attributes
 func ParseEVDeploymentID(attrs []sdk.Attribute) (DeploymentID, error) {
 	owner, err := sdkutil.GetAccAddress(attrs, evOwnerKey)
 	if err != nil {
@@ -79,11 +87,13 @@ func ParseEVDeploymentID(attrs []sdk.Attribute) (DeploymentID, error) {
 	}, nil
 }
 
+// GroupIDEVAttributes returns event attribues for given GroupID
 func GroupIDEVAttributes(id GroupID) []sdk.Attribute {
 	return append(DeploymentIDEVAttributes(id.DeploymentID()),
 		sdk.NewAttribute(evGSeqKey, strconv.FormatUint(uint64(id.GSeq), 10)))
 }
 
+// ParseEVGroupID returns GroupID details for given event attributes
 func ParseEVGroupID(attrs []sdk.Attribute) (GroupID, error) {
 	did, err := ParseEVDeploymentID(attrs)
 	if err != nil {
@@ -102,6 +112,7 @@ func ParseEVGroupID(attrs []sdk.Attribute) (GroupID, error) {
 	}, nil
 }
 
+// ParseEvent parses event and returns details of event and error if occured
 func ParseEvent(ev sdkutil.Event) (interface{}, error) {
 	if ev.Type != sdk.EventTypeMessage {
 		return nil, sdkutil.ErrUnknownType

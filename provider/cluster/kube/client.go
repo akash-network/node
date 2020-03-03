@@ -26,6 +26,7 @@ import (
 	metricsclient "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
+// Client interface includes cluster client
 type Client interface {
 	cluster.Client
 }
@@ -39,6 +40,7 @@ type client struct {
 	log  log.Logger
 }
 
+// NewClient returns new Client instance with provided logger, host and ns. Returns error incase of failure
 func NewClient(log log.Logger, host, ns string) (Client, error) {
 	config, err := openKubeConfig(log)
 	if err != nil {

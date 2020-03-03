@@ -3,7 +3,9 @@ package query
 import "github.com/ovrclk/akash/x/provider/types"
 
 type (
-	Provider  types.Provider
+	// Provider type
+	Provider types.Provider
+	// Providers - Slice of Provider Struct
 	Providers []Provider
 )
 

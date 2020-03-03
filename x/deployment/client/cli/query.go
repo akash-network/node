@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// GetQueryCmd returns the query commands for the deployment module
 func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
 
 	cmd := &cobra.Command{

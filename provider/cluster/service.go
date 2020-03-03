@@ -15,18 +15,21 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 )
 
+// ErrNotRunning is the error when service is not running
 var ErrNotRunning = errors.New("not running")
 
+// Cluster is the interface that wraps Reserve and Unreserve methods
 type Cluster interface {
 	Reserve(mtypes.OrderID, atypes.ResourceGroup) (Reservation, error)
 	Unreserve(mtypes.OrderID, atypes.ResourceGroup) error
 }
 
+// StatusClient is the interface which includes status of service
 type StatusClient interface {
 	Status(context.Context) (*Status, error)
 }
 
-// Manage compute cluster for the provider.  Will eventually integrate with kubernetes, etc...
+// Service manage compute cluster for the provider.  Will eventually integrate with kubernetes, etc...
 type Service interface {
 	StatusClient
 	Cluster
@@ -35,6 +38,7 @@ type Service interface {
 	Done() <-chan struct{}
 }
 
+// NewService returns new Service instance
 func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, client Client) (Service, error) {
 	log := session.Log().With("module", "provider-cluster", "cmp", "service")
 

@@ -15,6 +15,8 @@ type Component interface {
 	Bytes() []byte
 }
 
+// Printer is the interface that wraps AddTitle, Add and Flush methods.
+// It includes Component interface.
 type Printer interface {
 	Component
 	AddTitle(string) Printer

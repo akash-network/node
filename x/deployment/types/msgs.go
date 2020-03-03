@@ -4,6 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+// MsgCreate defines an SDK message for creating deployment
 type MsgCreate struct {
 	Owner sdk.AccAddress `json:"owner"`
 	// Sequence uint64         `json:"sequence"`
@@ -11,17 +12,23 @@ type MsgCreate struct {
 	Groups []GroupSpec `json:"groups"`
 }
 
+// Route implements the sdk.Msg interface
 func (msg MsgCreate) Route() string { return RouterKey }
-func (msg MsgCreate) Type() string  { return "create" }
 
+// Type implements the sdk.Msg interface
+func (msg MsgCreate) Type() string { return "create" }
+
+// GetSignBytes encodes the message for signing
 func (msg MsgCreate) GetSignBytes() []byte {
 	return sdk.MustSortJSON(cdc.MustMarshalJSON(msg))
 }
 
+// GetSigners defines whose signature is required
 func (msg MsgCreate) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 
+// ValidateBasic does basic validation like check owner and groups length
 func (msg MsgCreate) ValidateBasic() error {
 	switch {
 	case msg.Owner.Empty():
@@ -37,14 +44,19 @@ func (msg MsgCreate) ValidateBasic() error {
 	return nil
 }
 
+// MsgUpdate defines an SDK message for updating deployment
 type MsgUpdate struct {
 	ID      DeploymentID
 	Version sdk.Address
 }
 
+// Route implements the sdk.Msg interface
 func (msg MsgUpdate) Route() string { return RouterKey }
-func (msg MsgUpdate) Type() string  { return "update" }
 
+// Type implements the sdk.Msg interface
+func (msg MsgUpdate) Type() string { return "update" }
+
+// ValidateBasic does basic validation
 func (msg MsgUpdate) ValidateBasic() error {
 	if err := msg.ID.Validate(); err != nil {
 		return ErrInvalidDeploymentID
@@ -66,13 +78,18 @@ func (msg MsgUpdate) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.ID.Owner}
 }
 
+// MsgClose defines an SDK message for closing deployment
 type MsgClose struct {
 	ID DeploymentID
 }
 
+// Route implements the sdk.Msg interface
 func (msg MsgClose) Route() string { return RouterKey }
-func (msg MsgClose) Type() string  { return "update" }
 
+// Type implements the sdk.Msg interface
+func (msg MsgClose) Type() string { return "update" }
+
+// ValidateBasic does basic validation with deployment details
 func (msg MsgClose) ValidateBasic() error {
 	if err := msg.ID.Validate(); err != nil {
 		return ErrInvalidDeploymentID

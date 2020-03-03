@@ -8,6 +8,7 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
+// ValidateManifest does validation for manifest
 func ValidateManifest(m manifest.Manifest) error {
 	return validateManifestGroups(m.GetGroups())
 }
@@ -23,6 +24,7 @@ func validateManifestGroups(groups []manifest.Group) error {
 	return nil
 }
 
+// ValidateManifestWithGroupSpecs does validation for manifest with group specifications
 func ValidateManifestWithGroupSpecs(m *manifest.Manifest, gspecs []*dtypes.GroupSpec) error {
 	rlists := make([]types.ResourceGroup, 0, len(gspecs))
 	for _, gspec := range gspecs {
@@ -31,6 +33,7 @@ func ValidateManifestWithGroupSpecs(m *manifest.Manifest, gspecs []*dtypes.Group
 	return validateManifestDeploymentGroups(m.GetGroups(), rlists)
 }
 
+// ValidateManifestWithDeployment does basic validation and returns nil
 func ValidateManifestWithDeployment(m *manifest.Manifest, dgroups []dtypes.Group) error {
 	// TODO
 	// rlists := make([]types.ResourceList, 0, len(dgroups))
