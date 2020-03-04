@@ -1,9 +1,9 @@
 package query
 
 import (
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/x/market/keeper"
 	"github.com/ovrclk/akash/x/market/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -30,7 +30,7 @@ func queryOrders(ctx sdk.Context, path []string, req abci.RequestQuery, keeper k
 		values = append(values, Order(obj))
 		return false
 	})
-	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
+	return codec.MarshalJSONIndent(keeper.Codec(), values)
 }
 
 func queryBids(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
@@ -39,7 +39,7 @@ func queryBids(ctx sdk.Context, path []string, req abci.RequestQuery, keeper kee
 		values = append(values, Bid(obj))
 		return false
 	})
-	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
+	return codec.MarshalJSONIndent(keeper.Codec(), values)
 }
 
 func queryLeases(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
@@ -48,5 +48,5 @@ func queryLeases(ctx sdk.Context, path []string, req abci.RequestQuery, keeper k
 		values = append(values, Lease(obj))
 		return false
 	})
-	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
+	return codec.MarshalJSONIndent(keeper.Codec(), values)
 }

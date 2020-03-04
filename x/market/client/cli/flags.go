@@ -4,13 +4,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
 	"github.com/ovrclk/akash/x/market/types"
+	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
 // AddOrderIDFlags add flags for order
-func AddOrderIDFlags(flags *pflag.FlagSet) {
-	dcli.AddGroupIDFlags(flags)
-	flags.Uint32("oseq", 0, "Order Sequence")
+func AddOrderIDFlags(cmd *cobra.Command) {
+	dcli.AddGroupIDFlags(cmd)
+	cmd.Flags().Uint32("oseq", 0, "Order Sequence")
 }
 
 // OrderIDFromFlags returns OrderID with given flags and error if occured
@@ -27,8 +28,8 @@ func OrderIDFromFlags(flags *pflag.FlagSet) (types.OrderID, error) {
 }
 
 // AddBidIDFlags add flags for bid
-func AddBidIDFlags(flags *pflag.FlagSet) {
-	AddOrderIDFlags(flags)
+func AddBidIDFlags(cmd *cobra.Command) {
+	AddOrderIDFlags(cmd)
 }
 
 // BidIDFromFlags returns BidID with given flags and error if occured

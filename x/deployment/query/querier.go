@@ -1,9 +1,9 @@
 package query
 
 import (
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -37,7 +37,7 @@ func queryDeployments(ctx sdk.Context, path []string, req abci.RequestQuery, kee
 		return false
 	})
 
-	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
+	return codec.MarshalJSONIndent(keeper.Codec(), values)
 }
 
 func queryDeployment(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
@@ -57,7 +57,7 @@ func queryDeployment(ctx sdk.Context, path []string, req abci.RequestQuery, keep
 		Groups:     keeper.GetGroups(ctx, deployment.ID()),
 	}
 
-	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
+	return codec.MarshalJSONIndent(keeper.Codec(), value)
 }
 
 func queryGroup(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
@@ -74,5 +74,5 @@ func queryGroup(ctx sdk.Context, path []string, req abci.RequestQuery, keeper ke
 
 	value := Group(group)
 
-	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
+	return codec.MarshalJSONIndent(keeper.Codec(), value)
 }
