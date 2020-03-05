@@ -1,6 +1,11 @@
 package query
 
-import "github.com/ovrclk/akash/x/provider/types"
+import (
+	"bytes"
+	"fmt"
+
+	"github.com/ovrclk/akash/x/provider/types"
+)
 
 type (
 	// Provider type
@@ -10,9 +15,26 @@ type (
 )
 
 func (obj Provider) String() string {
-	return "TODO see deployment/query/types.go"
+	return fmt.Sprintf(`Deployment
+	Owner:   %s
+	HostURI: %s
+	Attributes: %v
+	`, obj.Owner, obj.HostURI, obj.Attributes)
 }
 
 func (obj Providers) String() string {
-	return "TODO see deployment/query/types.go"
+	var buf bytes.Buffer
+
+	const sep = "\n\n"
+
+	for _, p := range obj {
+		buf.WriteString(p.String())
+		buf.WriteString(sep)
+	}
+
+	if len(obj) > 0 {
+		buf.Truncate(buf.Len() - len(sep))
+	}
+
+	return buf.String()
 }
