@@ -15,6 +15,8 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 		switch path[0] {
 		case providersPath:
 			return queryProviders(ctx, path[1:], req, keeper)
+		case providerPath:
+			return queryProviders(ctx, path[1:], req, keeper)
 		}
 		return []byte{}, sdkerrors.ErrUnknownRequest
 	}
@@ -27,4 +29,23 @@ func queryProviders(ctx sdk.Context, path []string, req abci.RequestQuery, keepe
 		return false
 	})
 	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
+}
+
+func queryProvider(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+
+	if len(path) != 1 {
+		return nil, sdkerrors.ErrInvalidRequest
+	}
+
+	id, err := sdk.AccAddressFromBech32(path[0])
+	if err != nil {
+		return nil, types.ErrInvalidAddress
+	}
+
+	provider, ok := keeper.Get(ctx, id)
+	if !ok {
+		return nil, types.ErrProviderNotFound
+	}
+
+	return sdkutil.RenderQueryResponse(keeper.Codec(), Provider(provider))
 }
