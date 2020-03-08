@@ -155,3 +155,10 @@ func (c *qclient) Providers() (pquery.Providers, error) {
 	}
 	return c.pclient.Providers()
 }
+
+func (c *qclient) Provider(id sdk.AccAddress) (*pquery.Provider, error) {
+	if c.pclient == nil {
+		return nil, ErrClientNotFound
+	}
+	return c.pclient.Provider(id)
+}
