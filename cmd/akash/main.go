@@ -25,7 +25,9 @@ func main() {
 	cdc := app.MakeCodec()
 
 	root := &cobra.Command{
-		Use: "akash",
+		Use:   "akash",
+		Short: "Akash is a supercloud for serverless computing",
+		Long:  "Akash Network CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
 	}
 
 	root.AddCommand(
@@ -33,11 +35,8 @@ func main() {
 		client.ConfigCmd(common.DefaultCLIHome()),
 		queryCmd(cdc),
 		txCmd(cdc),
-		flags.LineBreak,
 		lcd.ServeCommand(cdc, lcdRoutes),
-		flags.LineBreak,
 		keys.Commands(),
-		flags.LineBreak,
 		version.Cmd,
 		flags.NewCompletionCmd(root, true),
 	)
