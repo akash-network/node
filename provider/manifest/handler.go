@@ -183,7 +183,7 @@ loop:
 
 			case mtypes.EventLeaseClosed:
 
-				if !bytes.Equal(ev.ID.Provider, h.session.Provider()) {
+				if !bytes.Equal(ev.ID.Provider, h.session.Provider().Address()) {
 					continue
 				}
 
@@ -265,7 +265,7 @@ func (h *handler) ensureManger(did dtypes.DeploymentID) (manager *manager, err e
 }
 
 func fetchExistingLeases(ctx context.Context, session session.Session) ([]event.LeaseWon, error) {
-	leases, err := session.Client().Query().ActiveLeasesForProvider(session.Provider())
+	leases, err := session.Client().Query().ActiveLeasesForProvider(session.Provider().Address())
 	if err != nil {
 		return nil, err
 	}

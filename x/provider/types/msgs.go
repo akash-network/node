@@ -1,6 +1,8 @@
 package types
 
 import (
+	"net/url"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -15,10 +17,12 @@ func (msg MsgCreate) Type() string  { return "create" }
 
 // ValidateBasic does basic validation of a HostURI
 func (msg MsgCreate) ValidateBasic() error {
-	switch {
-	case len(msg.HostURI) == 0:
-		// TODO: better uri validation
+	u, err := url.Parse(msg.HostURI)
+	if err != nil {
 		return ErrInvalidProviderURI
+	}
+	if !u.IsAbs() {
+		return ErrNotAbsProviderURI
 	}
 	return nil
 }
@@ -44,10 +48,12 @@ func (msg MsgUpdate) Type() string  { return "update" }
 
 // ValidateBasic does basic validation of a ProviderURI
 func (msg MsgUpdate) ValidateBasic() error {
-	switch {
-	case len(msg.HostURI) == 0:
-		// TODO: better uri validation
+	u, err := url.Parse(msg.HostURI)
+	if err != nil {
 		return ErrInvalidProviderURI
+	}
+	if !u.IsAbs() {
+		return ErrNotAbsProviderURI
 	}
 	return nil
 }

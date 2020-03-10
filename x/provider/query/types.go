@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/x/provider/types"
 )
 
@@ -14,12 +15,12 @@ type (
 	Providers []Provider
 )
 
-func (obj Provider) String() string {
+func (p Provider) String() string {
 	return fmt.Sprintf(`Deployment
 	Owner:   %s
 	HostURI: %s
 	Attributes: %v
-	`, obj.Owner, obj.HostURI, obj.Attributes)
+	`, p.Owner, p.HostURI, p.Attributes)
 }
 
 func (obj Providers) String() string {
@@ -37,4 +38,9 @@ func (obj Providers) String() string {
 	}
 
 	return buf.String()
+}
+
+// Address implements provider and returns owner of provider
+func (p *Provider) Address() sdk.AccAddress {
+	return p.Owner
 }

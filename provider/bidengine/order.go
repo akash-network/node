@@ -11,7 +11,6 @@ import (
 	dquery "github.com/ovrclk/akash/x/deployment/query"
 	mquery "github.com/ovrclk/akash/x/market/query"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	tmkv "github.com/tendermint/tendermint/libs/kv"
 	"github.com/tendermint/tendermint/libs/log"
 )
 
@@ -105,7 +104,7 @@ loop:
 				}
 
 				// check winning provider
-				if !ev.ID.Provider.Equals(o.session.Provider()) {
+				if !ev.ID.Provider.Equals(o.session.Provider().Address()) {
 					o.log.Info("lease lost", "lease", ev.ID)
 					break loop
 				}
@@ -185,7 +184,7 @@ loop:
 			bidch = runner.Do(func() runner.Result {
 				return runner.NewResult(nil, o.session.Client().Tx().Broadcast(&mtypes.MsgCreateBid{
 					Order:    o.order,
-					Provider: o.session.Provider(),
+					Provider: o.session.Provider().Address(),
 					// TODO: price
 					// Price:    price,
 				}))
@@ -231,8 +230,7 @@ loop:
 func (o *order) shouldBid(group *dquery.Group) bool {
 
 	// does provider have required attributes?
-	// TODO: put on session.Provider()
-	if !group.MatchAttributes([]tmkv.Pair{}) {
+	if !group.MatchAttributes(o.session.Provider().Attributes) {
 		o.log.Debug("unable to fulfill: incompatible attributes")
 		return false
 	}

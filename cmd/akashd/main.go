@@ -27,6 +27,7 @@ func main() {
 
 	root := &cobra.Command{
 		Use:               "akashd",
+		Long:              "Akash Daemon CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
 		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
 	}
 
