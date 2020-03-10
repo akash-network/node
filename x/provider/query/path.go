@@ -16,6 +16,7 @@ func ProvidersPath() string {
 	return providersPath
 }
 
+// ProviderPath returns provider path for specific provider
 func ProviderPath(id sdk.AccAddress) string {
 	return fmt.Sprintf("%s/%s", providerPath, id)
 }
