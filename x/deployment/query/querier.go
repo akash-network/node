@@ -3,6 +3,7 @@ package query
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
 	abci "github.com/tendermint/tendermint/abci/types"
