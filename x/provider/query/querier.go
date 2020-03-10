@@ -1,7 +1,6 @@
 package query
 
 import (
-	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/ovrclk/akash/x/provider/keeper"
@@ -26,5 +25,5 @@ func queryProviders(ctx sdk.Context, path []string, req abci.RequestQuery, keepe
 		values = append(values, Provider(obj))
 		return false
 	})
-	return codec.MarshalJSONIndent(keeper.Codec(), values)
+	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
 }
