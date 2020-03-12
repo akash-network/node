@@ -32,7 +32,7 @@ func (s *TestSuite) TestKeeper() {
 	s.Require().True(s.bankKeeper.GetCoins(s.ctx, ownerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin("stake", 10000))))
 
 	s.T().Log("verify deployment is created")
-	sdl, readError := sdl.ReadFile("../../../_testdata/deployment.yml")
+	sdl, readError := sdl.ReadFile("../testdata/deployment.yml")
 	s.Require().NoError(readError, "Error in reading file")
 	groupSpecs, err := sdl.DeploymentGroups()
 	s.Require().NoError(err, "Error in getting groups from file")
