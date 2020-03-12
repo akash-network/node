@@ -1,4 +1,4 @@
-package cli
+package config
 
 import (
 	"io/ioutil"
@@ -7,7 +7,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type config struct {
+// Config is the struct that stores provider config
+type Config struct {
 	Host       string `json:"host"`
 	Attributes []struct {
 		Key   string `json:"key"`
@@ -15,7 +16,8 @@ type config struct {
 	} `json:"attributes"`
 }
 
-func (c config) getAttributes() []tmkv.Pair {
+// GetAttributes returns config attributes into key value pairs
+func (c Config) GetAttributes() []tmkv.Pair {
 	pairs := make([]tmkv.Pair, 0, len(c.Attributes))
 	for _, attr := range c.Attributes {
 		pairs = append(pairs, tmkv.Pair{
@@ -26,14 +28,15 @@ func (c config) getAttributes() []tmkv.Pair {
 	return pairs
 }
 
-func readConfigPath(path string) (config, error) {
+// ReadConfigPath reads and parses file
+func ReadConfigPath(path string) (Config, error) {
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
-		return config{}, err
+		return Config{}, err
 	}
-	var val config
+	var val Config
 	if err := yaml.Unmarshal(buf, &val); err != nil {
-		return config{}, err
+		return Config{}, err
 	}
 	return val, err
 }
