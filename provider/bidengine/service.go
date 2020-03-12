@@ -193,7 +193,7 @@ func queryExistingOrders(ctx context.Context, session session.Session) ([]existi
 		eo := existingOrder{order: &order}
 
 		bid, _ := session.Client().Query().Bid(
-			mtypes.MakeBidID(order.OrderID, session.Provider()),
+			mtypes.MakeBidID(order.OrderID, session.Provider().Address()),
 		)
 
 		eo.bid = &bid
