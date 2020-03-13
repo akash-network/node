@@ -54,9 +54,14 @@ func providerCmd(cdc *codec.Codec) *cobra.Command {
 				),
 			)
 
+			pinfo, err := aclient.Query().Provider(info.GetAddress())
+			if err != nil {
+				return err
+			}
+
 			log := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 
-			session := session.New(log, aclient, cctx.FromAddress)
+			session := session.New(log, aclient, pinfo)
 
 			bus := pubsub.NewBus()
 			defer bus.Close()

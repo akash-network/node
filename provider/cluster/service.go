@@ -257,7 +257,7 @@ func findDeployments(ctx context.Context, log log.Logger, client Client, session
 		return nil, err
 	}
 
-	leaseList, err := session.Client().Query().ActiveLeasesForProvider(session.Provider())
+	leaseList, err := session.Client().Query().ActiveLeasesForProvider(session.Provider().Address())
 	if err != nil {
 		log.Error("fetching deployments", "err", err)
 		return nil, err
