@@ -48,6 +48,9 @@ func (s *TestSuite) TestKeeper() {
 		DeploymentID: deploymentID,
 		State:        types.DeploymentActive,
 	}
+	for _, spec := range groupSpecs {
+		msg.Groups = append(msg.Groups, *spec)
+	}
 	groups := make([]types.Group, 0, len(msg.Groups))
 	for idx, spec := range msg.Groups {
 		groups = append(groups, types.Group{
@@ -67,11 +70,37 @@ func (s *TestSuite) TestKeeper() {
 	})
 	s.Require().False(ok, "Get deployment failed")
 
-	s.T().Log("verify update deployment")
-	deploymentID = types.DeploymentID{
-		Owner: ownerAddr,
-		DSeq:  uint64(131),
+	if len(groups) > 0 {
+		s.T().Log("verify get groups with deploymentID")
+		depGroups := s.keeper.GetGroups(s.ctx, deploymentID)
+		s.Require().Equal(groups, depGroups, "Get Groups failed")
+
+		s.T().Log("verify get group with groupID")
+		_, ok = s.keeper.GetGroup(s.ctx, groups[0].GroupID)
+		s.Require().True(ok, "Get Group failed")
+
+		s.T().Log("verify on order created")
+		s.keeper.OnOrderCreated(s.ctx, groups[0])
+		details, _ := s.keeper.GetGroup(s.ctx, groups[0].GroupID)
+		s.Require().Equal(types.GroupOrdered, details.State, "OnOrderCreated failed")
 	}
+
+	s.T().Log("verify get groups with wrong deploymentID")
+	depGroups := s.keeper.GetGroups(s.ctx, types.DeploymentID{
+		Owner: addr2,
+		DSeq:  uint64(136),
+	})
+	s.Require().Equal([]types.Group(nil), depGroups, "Get Groups failed with wrong data")
+
+	s.T().Log("verify get group with wrong groupID")
+	_, ok = s.keeper.GetGroup(s.ctx, types.GroupID{
+		Owner: addr2,
+		DSeq:  135,
+		GSeq:  12,
+	})
+	s.Require().False(ok, "Get Group failed with wrong data")
+
+	s.T().Log("verify update deployment")
 	deployment = types.Deployment{
 		DeploymentID: deploymentID,
 		State:        types.DeploymentClosed,
