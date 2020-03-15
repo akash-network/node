@@ -1,0 +1,30 @@
+---
+version: "1.5"
+
+services:
+  web:
+    image: bubuntux/riot-web
+    expose:
+      - port: 80
+        to:
+          - global: true
+
+profiles:
+  compute:
+    web:
+      cpu: "0.01"
+      memory: "128Mi"
+      storage: "512Mi"
+
+  placement:
+    global:
+      pricing:
+        web:
+          denom: akash
+          amount: 30
+
+deployment:
+  web:
+    global:
+      profile: web
+      count: 1
