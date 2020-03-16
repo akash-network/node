@@ -46,6 +46,13 @@ func (s *TestSuite) TestKeeper() {
 	s.T().Log("verify get provider with wrong owner")
 	_, ok = s.keeper.Get(s.ctx, addr2)
 	s.Require().False(ok, "Get Provider failed")
+
+	s.T().Log("verify update provider")
+	host := "akash.domain.com"
+	msg.HostURI = host
+	s.keeper.Update(s.ctx, types.Provider(msg))
+	provider, _ := s.keeper.Get(s.ctx, ownerAddr)
+	s.Require().Equal(host, provider.HostURI, "Provider not updated")
 }
 
 func TestTestSuite(t *testing.T) {

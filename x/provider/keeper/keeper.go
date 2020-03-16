@@ -73,7 +73,7 @@ func (k Keeper) Update(ctx sdk.Context, provider types.Provider) error {
 	store := ctx.KVStore(k.skey)
 	key := providerKey(provider.Owner)
 
-	if store.Has(key) {
+	if !store.Has(key) {
 		return fmt.Errorf("provider not found")
 	}
 	store.Set(key, k.cdc.MustMarshalBinaryBare(provider))
