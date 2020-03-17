@@ -83,6 +83,26 @@ func (s *TestSuite) TestKeeper() {
 		s.keeper.OnOrderCreated(s.ctx, groups[0])
 		details, _ := s.keeper.GetGroup(s.ctx, groups[0].GroupID)
 		s.Require().Equal(types.GroupOrdered, details.State, "OnOrderCreated failed")
+
+		s.T().Log("verify on lease created")
+		s.keeper.OnLeaseCreated(s.ctx, groups[0].GroupID)
+		details, _ = s.keeper.GetGroup(s.ctx, groups[0].GroupID)
+		s.Require().Equal(types.GroupMatched, details.State, "OnLeaseCreated failed")
+
+		s.T().Log("verify on lease insufficient funds")
+		s.keeper.OnLeaseInsufficientFunds(s.ctx, groups[0].GroupID)
+		details, _ = s.keeper.GetGroup(s.ctx, groups[0].GroupID)
+		s.Require().Equal(types.GroupInsufficientFunds, details.State, "OnLeaseInsufficientFunds failed")
+
+		s.T().Log("verify on lease closed")
+		s.keeper.OnLeaseClosed(s.ctx, groups[0].GroupID)
+		details, _ = s.keeper.GetGroup(s.ctx, groups[0].GroupID)
+		s.Require().Equal(types.GroupOpen, details.State, "OnLeaseClosed failed")
+
+		s.T().Log("verify on deployment closed")
+		s.keeper.OnDeploymentClosed(s.ctx, groups[0])
+		details, _ = s.keeper.GetGroup(s.ctx, groups[0].GroupID)
+		s.Require().Equal(types.GroupClosed, details.State, "OnDeploymentClosed failed")
 	}
 
 	s.T().Log("verify get groups with wrong deploymentID")
