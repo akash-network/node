@@ -9,29 +9,32 @@ import (
 	"github.com/cosmos/cosmos-sdk/simapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/auth/ante"
+	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/crisis"
+	distr "github.com/cosmos/cosmos-sdk/x/distribution"
+	"github.com/cosmos/cosmos-sdk/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
+	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/mint"
-
 	"github.com/cosmos/cosmos-sdk/x/params"
+	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
+	"github.com/cosmos/cosmos-sdk/x/supply"
 
 	"github.com/ovrclk/akash/x/deployment"
 	"github.com/ovrclk/akash/x/market"
 	"github.com/ovrclk/akash/x/provider"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
+	tmos "github.com/tendermint/tendermint/libs/os"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmos "github.com/tendermint/tendermint/libs/os"
-
-	"github.com/cosmos/cosmos-sdk/version"
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	"github.com/cosmos/cosmos-sdk/x/slashing"
-	"github.com/cosmos/cosmos-sdk/x/supply"
 )
 
 const (
@@ -39,34 +42,46 @@ const (
 )
 
 var (
-	mbasics = module.NewBasicManager(
-		genutil.AppModuleBasic{},
 
-		// accounts, fees.
+	// ModuleBasics defines the module BasicManager is in charge of setting up basic,
+	// non-dependant module elements, such as codec registration
+	// and genesis verification.
+	ModuleBasics = module.NewBasicManager(
 		auth.AppModuleBasic{},
-
-		// tokens, token balance.
-		bank.AppModuleBasic{},
-
-		// total supply of the chain
 		supply.AppModuleBasic{},
-
-		// inflation
-		mint.AppModuleBasic{},
-
+		genutil.AppModuleBasic{},
+		bank.AppModuleBasic{},
 		staking.AppModuleBasic{},
-
-		slashing.AppModuleBasic{},
-
+		mint.AppModuleBasic{},
 		distr.AppModuleBasic{},
-
+		gov.NewAppModuleBasic(
+			paramsclient.ProposalHandler, distr.ProposalHandler,
+		),
 		params.AppModuleBasic{},
+		crisis.AppModuleBasic{},
+		slashing.AppModuleBasic{},
+		evidence.AppModuleBasic{},
 
 		// akash
 		deployment.AppModuleBasic{},
 		market.AppModuleBasic{},
 		provider.AppModuleBasic{},
 	)
+
+	// module account permissions
+	maccPerms = map[string][]string{
+		auth.FeeCollectorName:     nil,
+		distr.ModuleName:          nil,
+		mint.ModuleName:           {supply.Minter},
+		staking.BondedPoolName:    {supply.Burner, supply.Staking},
+		staking.NotBondedPoolName: {supply.Burner, supply.Staking},
+		gov.ModuleName:            {supply.Burner},
+	}
+
+	// module accounts that are allowed to receive tokens
+	allowedReceivingModAcc = map[string]bool{
+		distr.ModuleName: true,
+	}
 )
 
 // AkashApp extends ABCI appplication
@@ -74,211 +89,175 @@ type AkashApp struct {
 	*bam.BaseApp
 	cdc *codec.Codec
 
+	invCheckPeriod uint
+
+	// keys to access the substores
 	keys  map[string]*sdk.KVStoreKey
 	tkeys map[string]*sdk.TransientStoreKey
 
-	keeper struct {
-		acct       auth.AccountKeeper
-		bank       bank.Keeper
-		params     params.Keeper
-		supply     supply.Keeper
-		staking    staking.Keeper
-		distr      distr.Keeper
-		slashing   slashing.Keeper
-		mint       mint.Keeper
-		deployment deployment.Keeper
-		market     market.Keeper
-		provider   provider.Keeper
-	}
+	// subspaces
+	subspaces map[string]params.Subspace
 
+	// keepers
+	AccountKeeper    auth.AccountKeeper
+	BankKeeper       bank.Keeper
+	SupplyKeeper     supply.Keeper
+	StakingKeeper    staking.Keeper
+	SlashingKeeper   slashing.Keeper
+	MintKeeper       mint.Keeper
+	DistrKeeper      distr.Keeper
+	GovKeeper        gov.Keeper
+	CrisisKeeper     crisis.Keeper
+	ParamsKeeper     params.Keeper
+	EvidenceKeeper   evidence.Keeper
+	DeploymentKeeper deployment.Keeper
+	MarketKeeper     market.Keeper
+	ProviderKeeper   provider.Keeper
+
+	// the module manager
 	mm *module.Manager
-}
-
-// ModuleBasics returns all app modules basics
-func ModuleBasics() module.BasicManager {
-	return mbasics
 }
 
 // MakeCodec returns registered codecs
 func MakeCodec() *codec.Codec {
 	var cdc = codec.New()
-
-	mbasics.RegisterCodec(cdc)
-
+	ModuleBasics.RegisterCodec(cdc)
+	vesting.RegisterCodec(cdc)
 	sdk.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
-	codec.RegisterEvidences(cdc)
-
 	return cdc.Seal()
 }
 
 // https://github.com/cosmos/sdk-tutorials/blob/c6754a1e313eb1ed973c5c91dcc606f2fd288811/app.go#L73
 
-// NewApp creates and returns a new Akash App.
-func NewApp(
-	logger log.Logger, db dbm.DB, tio io.Writer, options ...func(*bam.BaseApp),
+// NewAkashApp creates and returns a new Akash App.
+func NewAkashApp(
+	logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest bool,
+	invCheckPeriod uint, baseAppOptions ...func(*bam.BaseApp),
 ) *AkashApp {
-
 	cdc := MakeCodec()
 
+	bApp := bam.NewBaseApp(appName, logger, db, auth.DefaultTxDecoder(cdc), baseAppOptions...)
+	bApp.SetCommitMultiStoreTracer(traceStore)
+	bApp.SetAppVersion(version.Version)
+
 	keys := sdk.NewKVStoreKeys(
-		bam.MainStoreKey,
-		auth.StoreKey,
-		params.StoreKey,
-		slashing.StoreKey,
-		distr.StoreKey,
-		supply.StoreKey,
-		staking.StoreKey,
-		mint.StoreKey,
-		deployment.StoreKey,
-		market.StoreKey,
-		provider.StoreKey,
+		bam.MainStoreKey, auth.StoreKey, staking.StoreKey,
+		supply.StoreKey, mint.StoreKey, distr.StoreKey, slashing.StoreKey,
+		gov.StoreKey, params.StoreKey, evidence.StoreKey,
+		deployment.StoreKey, market.StoreKey, provider.StoreKey,
 	)
 
 	tkeys := sdk.NewTransientStoreKeys(params.TStoreKey)
 
-	bapp := bam.NewBaseApp(appName, logger, db, auth.DefaultTxDecoder(cdc), options...)
-	bapp.SetCommitMultiStoreTracer(tio)
-	bapp.SetAppVersion(version.Version)
-
 	app := &AkashApp{
-		BaseApp: bapp,
-		cdc:     cdc,
-		keys:    keys,
-		tkeys:   tkeys,
+		BaseApp:        bApp,
+		cdc:            cdc,
+		invCheckPeriod: invCheckPeriod,
+		keys:           keys,
+		tkeys:          tkeys,
+		subspaces:      make(map[string]params.Subspace),
 	}
 
-	app.keeper.params = params.NewKeeper(
-		cdc,
-		keys[params.StoreKey],
-		tkeys[params.TStoreKey],
+	// init params keeper and subspaces
+	app.ParamsKeeper = params.NewKeeper(app.cdc, keys[params.StoreKey], tkeys[params.TStoreKey])
+	app.subspaces[auth.ModuleName] = app.ParamsKeeper.Subspace(auth.DefaultParamspace)
+	app.subspaces[bank.ModuleName] = app.ParamsKeeper.Subspace(bank.DefaultParamspace)
+	app.subspaces[staking.ModuleName] = app.ParamsKeeper.Subspace(staking.DefaultParamspace)
+	app.subspaces[mint.ModuleName] = app.ParamsKeeper.Subspace(mint.DefaultParamspace)
+	app.subspaces[distr.ModuleName] = app.ParamsKeeper.Subspace(distr.DefaultParamspace)
+	app.subspaces[slashing.ModuleName] = app.ParamsKeeper.Subspace(slashing.DefaultParamspace)
+	app.subspaces[gov.ModuleName] = app.ParamsKeeper.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable())
+	app.subspaces[crisis.ModuleName] = app.ParamsKeeper.Subspace(crisis.DefaultParamspace)
+	app.subspaces[evidence.ModuleName] = app.ParamsKeeper.Subspace(evidence.DefaultParamspace)
+
+	// add keepers
+	app.AccountKeeper = auth.NewAccountKeeper(
+		app.cdc, keys[auth.StoreKey], app.subspaces[auth.ModuleName], auth.ProtoBaseAccount,
+	)
+	app.BankKeeper = bank.NewBaseKeeper(
+		app.AccountKeeper, app.subspaces[bank.ModuleName], app.BlacklistedAccAddrs(),
+	)
+	app.SupplyKeeper = supply.NewKeeper(
+		app.cdc, keys[supply.StoreKey], app.AccountKeeper, app.BankKeeper, maccPerms,
+	)
+	stakingKeeper := staking.NewKeeper(
+		app.cdc, keys[staking.StoreKey], app.SupplyKeeper, app.subspaces[staking.ModuleName],
+	)
+	app.MintKeeper = mint.NewKeeper(
+		app.cdc, keys[mint.StoreKey], app.subspaces[mint.ModuleName], &stakingKeeper,
+		app.SupplyKeeper, auth.FeeCollectorName,
+	)
+	app.DistrKeeper = distr.NewKeeper(
+		app.cdc, keys[distr.StoreKey], app.subspaces[distr.ModuleName], &stakingKeeper,
+		app.SupplyKeeper, auth.FeeCollectorName, app.ModuleAccountAddrs(),
+	)
+	app.SlashingKeeper = slashing.NewKeeper(
+		app.cdc, keys[slashing.StoreKey], &stakingKeeper, app.subspaces[slashing.ModuleName],
+	)
+	app.CrisisKeeper = crisis.NewKeeper(
+		app.subspaces[crisis.ModuleName], invCheckPeriod, app.SupplyKeeper, auth.FeeCollectorName,
 	)
 
-	app.keeper.acct = auth.NewAccountKeeper(
-		cdc,
-		keys[auth.StoreKey],
-		app.keeper.params.Subspace(auth.DefaultParamspace),
-		auth.ProtoBaseAccount,
+	// create evidence keeper with router
+	evidenceKeeper := evidence.NewKeeper(
+		app.cdc, keys[evidence.StoreKey], app.subspaces[evidence.ModuleName], &app.StakingKeeper, app.SlashingKeeper,
+	)
+	evidenceRouter := evidence.NewRouter()
+	// TODO: Register evidence routes.
+	evidenceKeeper.SetRouter(evidenceRouter)
+	app.EvidenceKeeper = *evidenceKeeper
+
+	// register the proposal types
+	govRouter := gov.NewRouter()
+	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).
+		AddRoute(params.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper)).
+		AddRoute(distr.RouterKey, distr.NewCommunityPoolSpendProposalHandler(app.DistrKeeper))
+
+	app.GovKeeper = gov.NewKeeper(
+		app.cdc, keys[gov.StoreKey], app.subspaces[gov.ModuleName], app.SupplyKeeper,
+		&stakingKeeper, govRouter,
 	)
 
-	app.keeper.bank = bank.NewBaseKeeper(
-		app.keeper.acct,
-		app.keeper.params.Subspace(bank.DefaultParamspace),
-		macAddrs(),
+	// register the staking hooks
+	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
+	app.StakingKeeper = *stakingKeeper.SetHooks(
+		staking.NewMultiStakingHooks(app.DistrKeeper.Hooks(), app.SlashingKeeper.Hooks()),
 	)
 
-	app.keeper.supply = supply.NewKeeper(
-		cdc,
-		keys[supply.StoreKey],
-		app.keeper.acct,
-		app.keeper.bank,
-		macPerms(),
-	)
-
-	skeeper := staking.NewKeeper(
-		cdc,
-		keys[staking.StoreKey],
-		app.keeper.supply,
-		app.keeper.params.Subspace(staking.DefaultParamspace),
-	)
-
-	app.keeper.distr = distr.NewKeeper(
-		cdc,
-		keys[distr.StoreKey],
-		app.keeper.params.Subspace(distr.DefaultParamspace),
-		skeeper,
-		app.keeper.supply,
-		auth.FeeCollectorName,
-		macAddrs(),
-	)
-
-	app.keeper.slashing = slashing.NewKeeper(
-		cdc,
-		keys[slashing.StoreKey],
-		skeeper,
-		app.keeper.params.Subspace(slashing.DefaultParamspace),
-	)
-
-	app.keeper.staking = *skeeper.SetHooks(
-		staking.NewMultiStakingHooks(
-			app.keeper.distr.Hooks(),
-			app.keeper.slashing.Hooks(),
-		),
-	)
-
-	app.keeper.mint = mint.NewKeeper(
-		cdc,
-		keys[mint.StoreKey],
-		app.keeper.params.Subspace(mint.DefaultParamspace),
-		&app.keeper.staking,
-		app.keeper.supply,
-		auth.FeeCollectorName,
-	)
-
-	app.keeper.deployment = deployment.NewKeeper(
-		cdc,
-		keys[deployment.StoreKey],
-	)
-
-	app.keeper.market = market.NewKeeper(
-		cdc,
-		keys[market.StoreKey],
-	)
-
-	app.keeper.provider = provider.NewKeeper(
-		cdc,
-		keys[provider.StoreKey],
-	)
+	app.DeploymentKeeper = deployment.NewKeeper(cdc, keys[deployment.StoreKey])
+	app.MarketKeeper = market.NewKeeper(cdc, keys[market.StoreKey])
+	app.ProviderKeeper = provider.NewKeeper(cdc, keys[provider.StoreKey])
 
 	app.mm = module.NewManager(
-		genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx),
-		auth.NewAppModule(app.keeper.acct),
-		bank.NewAppModule(app.keeper.bank, app.keeper.acct),
-
-		supply.NewAppModule(app.keeper.supply, app.keeper.acct),
-		distr.NewAppModule(app.keeper.distr, app.keeper.acct, app.keeper.supply, app.keeper.staking),
-
-		mint.NewAppModule(app.keeper.mint),
-		slashing.NewAppModule(app.keeper.slashing, app.keeper.acct, app.keeper.staking),
-
-		staking.NewAppModule(app.keeper.staking, app.keeper.acct, app.keeper.supply),
+		genutil.NewAppModule(app.AccountKeeper, app.StakingKeeper, app.BaseApp.DeliverTx),
+		auth.NewAppModule(app.AccountKeeper),
+		bank.NewAppModule(app.BankKeeper, app.AccountKeeper),
+		crisis.NewAppModule(&app.CrisisKeeper),
+		supply.NewAppModule(app.SupplyKeeper, app.AccountKeeper),
+		gov.NewAppModule(app.GovKeeper, app.AccountKeeper, app.SupplyKeeper),
+		mint.NewAppModule(app.MintKeeper),
+		slashing.NewAppModule(app.SlashingKeeper, app.AccountKeeper, app.StakingKeeper),
+		distr.NewAppModule(app.DistrKeeper, app.AccountKeeper, app.SupplyKeeper, app.StakingKeeper),
+		staking.NewAppModule(app.StakingKeeper, app.AccountKeeper, app.SupplyKeeper),
+		evidence.NewAppModule(app.EvidenceKeeper),
 
 		// akash
-		deployment.NewAppModule(
-			app.keeper.deployment,
-			app.keeper.market,
-			app.keeper.bank,
-		),
-
-		market.NewAppModule(
-			app.keeper.market,
-			app.keeper.deployment,
-			app.keeper.provider,
-			app.keeper.bank,
-		),
-
-		provider.NewAppModule(app.keeper.provider, app.keeper.bank),
+		deployment.NewAppModule(app.DeploymentKeeper, app.MarketKeeper, app.BankKeeper),
+		market.NewAppModule(app.MarketKeeper, app.DeploymentKeeper, app.ProviderKeeper, app.BankKeeper),
+		provider.NewAppModule(app.ProviderKeeper, app.BankKeeper),
 	)
 
 	app.mm.SetOrderBeginBlockers(mint.ModuleName, distr.ModuleName, slashing.ModuleName)
 	app.mm.SetOrderEndBlockers(staking.ModuleName, deployment.ModuleName, market.ModuleName)
 
-	// NOTE: The genutils module must occur after staking so that pools are
-	//       properly initialized with tokens from genesis accounts.
+	// NOTE: The genutils moodule must occur after staking so that pools are
+	// properly initialized with tokens from genesis accounts.
 	app.mm.SetOrderInitGenesis(
-		distr.ModuleName,
-		staking.ModuleName,
-		auth.ModuleName,
-		bank.ModuleName,
-		slashing.ModuleName,
-		mint.ModuleName,
-		supply.ModuleName,
-		genutil.ModuleName,
-
-		// akash
-		deployment.ModuleName,
-		provider.ModuleName,
-		market.ModuleName,
+		auth.ModuleName, distr.ModuleName, staking.ModuleName, bank.ModuleName,
+		slashing.ModuleName, gov.ModuleName, mint.ModuleName, supply.ModuleName,
+		crisis.ModuleName, genutil.ModuleName, evidence.ModuleName,
+		deployment.ModuleName, provider.ModuleName, market.ModuleName, // akash
 	)
 
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter())
@@ -288,18 +267,10 @@ func NewApp(
 	app.MountTransientStores(tkeys)
 
 	// initialize BaseApp
-	app.SetInitChainer(app.initChainer)
-	app.SetBeginBlocker(app.beginBlocker)
-
-	app.SetAnteHandler(
-		auth.NewAnteHandler(
-			app.keeper.acct,
-			app.keeper.supply,
-			auth.DefaultSigVerificationGasConsumer,
-		),
-	)
-
-	app.SetEndBlocker(app.endBlocker)
+	app.SetInitChainer(app.InitChainer)
+	app.SetBeginBlocker(app.BeginBlocker)
+	app.SetAnteHandler(ante.NewAnteHandler(app.AccountKeeper, app.SupplyKeeper, auth.DefaultSigVerificationGasConsumer))
+	app.SetEndBlocker(app.EndBlocker)
 
 	err := app.LoadLatestVersion(app.keys[bam.MainStoreKey])
 	if err != nil {
@@ -309,24 +280,24 @@ func NewApp(
 	return app
 }
 
-func (app *AkashApp) initChainer(
-	ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
-	var genesisState simapp.GenesisState
-	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
+// Name returns the name of the App
+func (app *AkashApp) Name() string { return app.BaseApp.Name() }
 
-	return app.mm.InitGenesis(ctx, genesisState)
-}
-
-// application updates every begin block
-func (app *AkashApp) beginBlocker(
-	ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+// BeginBlocker application updates every begin block
+func (app *AkashApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
 	return app.mm.BeginBlock(ctx, req)
 }
 
-// application updates every end block
-func (app *AkashApp) endBlocker(
-	ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
+// EndBlocker application updates every end block
+func (app *AkashApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
 	return app.mm.EndBlock(ctx, req)
+}
+
+// InitChainer application update at chain initialization
+func (app *AkashApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+	var genesisState simapp.GenesisState
+	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
+	return app.mm.InitGenesis(ctx, genesisState)
 }
 
 // LoadHeight method of AkashApp loads baseapp application version with given height
@@ -348,7 +319,65 @@ func (app *AkashApp) ExportAppStateAndValidators(
 		return nil, nil, err
 	}
 
-	validators = staking.WriteValidators(ctx, app.keeper.staking)
+	validators = staking.WriteValidators(ctx, app.StakingKeeper)
 
 	return appState, validators, nil
+}
+
+// ModuleAccountAddrs returns all the app's module account addresses.
+func (app *AkashApp) ModuleAccountAddrs() map[string]bool {
+	modAccAddrs := make(map[string]bool)
+	for acc := range maccPerms {
+		modAccAddrs[supply.NewModuleAddress(acc).String()] = true
+	}
+
+	return modAccAddrs
+}
+
+// BlacklistedAccAddrs returns all the app's module account addresses black listed for receiving tokens.
+func (app *AkashApp) BlacklistedAccAddrs() map[string]bool {
+	blacklistedAddrs := make(map[string]bool)
+	for acc := range maccPerms {
+		blacklistedAddrs[supply.NewModuleAddress(acc).String()] = !allowedReceivingModAcc[acc]
+	}
+
+	return blacklistedAddrs
+}
+
+// Codec returns AkashApp's codec.
+//
+// NOTE: This is solely to be used for testing purposes as it may be desirable
+// for modules to register their own custom testing types.
+func (app *AkashApp) Codec() *codec.Codec {
+	return app.cdc
+}
+
+// GetKey returns the KVStoreKey for the provided store key.
+//
+// NOTE: This is solely to be used for testing purposes.
+func (app *AkashApp) GetKey(storeKey string) *sdk.KVStoreKey {
+	return app.keys[storeKey]
+}
+
+// GetTKey returns the TransientStoreKey for the provided store key.
+//
+// NOTE: This is solely to be used for testing purposes.
+func (app *AkashApp) GetTKey(storeKey string) *sdk.TransientStoreKey {
+	return app.tkeys[storeKey]
+}
+
+// GetSubspace returns a param subspace for a given module name.
+//
+// NOTE: This is solely to be used for testing purposes.
+func (app *AkashApp) GetSubspace(moduleName string) params.Subspace {
+	return app.subspaces[moduleName]
+}
+
+// GetMaccPerms returns a copy of the module account permissions
+func GetMaccPerms() map[string][]string {
+	dupMaccPerms := make(map[string][]string)
+	for k, v := range maccPerms {
+		dupMaccPerms[k] = v
+	}
+	return dupMaccPerms
 }

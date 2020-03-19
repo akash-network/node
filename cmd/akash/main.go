@@ -65,7 +65,7 @@ func queryCmd(cdc *amino.Codec) *cobra.Command {
 		flags.LineBreak,
 	)
 
-	app.ModuleBasics().AddQueryCommands(cmd, cdc)
+	app.ModuleBasics.AddQueryCommands(cmd, cdc)
 	return cmd
 }
 
@@ -87,7 +87,7 @@ func txCmd(cdc *amino.Codec) *cobra.Command {
 	)
 
 	// add modules' tx commands
-	app.ModuleBasics().AddTxCommands(cmd, cdc)
+	app.ModuleBasics.AddTxCommands(cmd, cdc)
 
 	return cmd
 }
@@ -95,5 +95,5 @@ func txCmd(cdc *amino.Codec) *cobra.Command {
 func lcdRoutes(rs *lcd.RestServer) {
 	client.RegisterRoutes(rs.CliCtx, rs.Mux)
 	authrest.RegisterTxRoutes(rs.CliCtx, rs.Mux)
-	app.ModuleBasics().RegisterRESTRoutes(rs.CliCtx, rs.Mux)
+	app.ModuleBasics.RegisterRESTRoutes(rs.CliCtx, rs.Mux)
 }
