@@ -1,0 +1,3 @@
+Akash node created.  Query status with:
+
+curl http://{{ .Values.ingress.domain }}/status
