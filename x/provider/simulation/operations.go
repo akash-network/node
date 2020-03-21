@@ -1,16 +1,19 @@
 package simulation
 
 import (
-	"errors"
+	"fmt"
+	"math/rand"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/simapp/helpers"
-	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
-	"github.com/ovrclk/akash/x/provider/keeper/keeper"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	simappparams "github.com/ovrclk/akash/simapp/params"
+	"github.com/ovrclk/akash/x/provider/config"
+	"github.com/ovrclk/akash/x/provider/keeper"
 	"github.com/ovrclk/akash/x/provider/types"
-	"github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 // Simulation operation weights constants
@@ -19,49 +22,57 @@ const (
 	OpWeightMsgUpdate = "op_weight_msg_update"
 )
 
+// DENOM represents bond denom
+const DENOM = "stake"
+
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simulation.AppParams, cdc *codec.Codec, k keeper.Keeper
-) simlation.WeightedOperations {
-	
+	appParams simulation.AppParams, cdc *codec.Codec, ak stakingtypes.AccountKeeper, k keeper.Keeper,
+) simulation.WeightedOperations {
+
 	var weightMsgCreate int
 	var weightMsgUpdate int
 
 	appParams.GetOrGenerate(
 		cdc, OpWeightMsgCreate, &weightMsgCreate, nil, func(r *rand.Rand) {
-			weightMsgCreate = simappparams.DefaultWeightMsgCreate
-		}
+			weightMsgCreate = simappparams.DefaultWeightMsgCreateValidator
+		},
 	)
 
 	appParams.GetOrGenerate(
 		cdc, OpWeightMsgUpdate, &weightMsgUpdate, nil, func(r *rand.Rand) {
-			weightMsgUpdate = simappparams.DefaultWeightMsgUpdate
-		}
+			weightMsgUpdate = simappparams.DefaultWeightMsgEditValidator
+		},
 	)
 
 	return simulation.WeightedOperations{
 		simulation.NewWeightedOperation(
 			weightMsgCreate,
-			SimulateMsgCreate(k)
+			SimulateMsgCreate(ak, k),
 		),
 		simulation.NewWeightedOperation(
 			weightMsgUpdate,
-			SimulateMsgUpdate(k)
-		)
+			SimulateMsgUpdate(ak, k),
+		),
 	}
 }
 
 // SimulateMsgCreate generates a MsgCreate with random values
 // nolint:funlen
 
-func SimulateMsgCreate(k keeper.Keeper) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, 
-		accounts []simulation.Account, chainID string) 
-	(OperationMsg simulation.OperationMsg, futureOps []simulation.FutureOperation, err error) {
-		msg := types.MsgCreate
+func SimulateMsgCreate(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
+		accounts []simulation.Account, chainID string,
+	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 
-		denom := k.GetParams(ctx).BondDenom
-		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(denom)
+		simAccount, _ := simulation.RandomAcc(r, accounts)
+
+		cfg, readError := config.ReadConfigPath("../testdata/provider.yml")
+		if readError != nil {
+			return simulation.NoOpMsg(types.ModuleName), nil, readError
+		}
+
+		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
 		if !amount.IsPositive() {
 			return simulation.NoOpMsg(types.ModuleName), nil, nil
 		}
@@ -71,7 +82,7 @@ func SimulateMsgCreate(k keeper.Keeper) simulation.Operation {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		selfDelegation := sdk.NewCoin(denom, amount)
+		selfDelegation := sdk.NewCoin(DENOM, amount)
 
 		account := ak.GetAccount(ctx, simAccount.Address)
 		coins := account.SpendableCoins(ctx.BlockTime())
@@ -83,6 +94,12 @@ func SimulateMsgCreate(k keeper.Keeper) simulation.Operation {
 			if err != nil {
 				return simulation.NoOpMsg(types.ModuleName), nil, err
 			}
+		}
+
+		msg := types.MsgCreate{
+			Owner:      simAccount.Address,
+			HostURI:    cfg.Host,
+			Attributes: cfg.GetAttributes(),
 		}
 
 		tx := helpers.GenTx(
@@ -103,20 +120,35 @@ func SimulateMsgCreate(k keeper.Keeper) simulation.Operation {
 		return simulation.NewOperationMsg(msg, true, ""), nil, nil
 	}
 }
-
-
 
 // SimulateMsgUpdate generates a MsgUpdate with random values
 // nolint:funlen
 
-func SimulateMsgUpdate(k keeper.Keeper) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, 
-		accounts []simulation.Account, chainID string) 
-	(OperationMsg simulation.OperationMsg, futureOps []simulation.FutureOperation, err error) {
-		msg := types.MsgUpdate
+func SimulateMsgUpdate(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
+		accounts []simulation.Account, chainID string,
+	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 
-		denom := k.GetParams(ctx).BondDenom
-		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(denom)
+		var providers []types.Provider
+		k.WithProviders(ctx, func(provider types.Provider) bool {
+			providers = append(providers, provider)
+			return false
+		})
+
+		if len(providers) == 0 {
+			return simulation.NoOpMsg(types.ModuleName), nil, nil
+		}
+
+		// Get random deployment
+		i := r.Intn(len(providers))
+		provider := providers[i]
+
+		simAccount, found := simulation.FindAccount(accounts, provider.Owner)
+		if !found {
+			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("provider with %s not found", provider.Owner)
+		}
+
+		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
 		if !amount.IsPositive() {
 			return simulation.NoOpMsg(types.ModuleName), nil, nil
 		}
@@ -126,7 +158,7 @@ func SimulateMsgUpdate(k keeper.Keeper) simulation.Operation {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		selfDelegation := sdk.NewCoin(denom, amount)
+		selfDelegation := sdk.NewCoin(DENOM, amount)
 
 		account := ak.GetAccount(ctx, simAccount.Address)
 		coins := account.SpendableCoins(ctx.BlockTime())
@@ -138,6 +170,12 @@ func SimulateMsgUpdate(k keeper.Keeper) simulation.Operation {
 			if err != nil {
 				return simulation.NoOpMsg(types.ModuleName), nil, err
 			}
+		}
+
+		msg := types.MsgUpdate{
+			Owner:      simAccount.Address,
+			HostURI:    provider.HostURI,
+			Attributes: provider.Attributes,
 		}
 
 		tx := helpers.GenTx(
@@ -158,4 +196,3 @@ func SimulateMsgUpdate(k keeper.Keeper) simulation.Operation {
 		return simulation.NewOperationMsg(msg, true, ""), nil, nil
 	}
 }
-
