@@ -20,4 +20,8 @@ const (
 	DefaultWeightCommunitySpendProposal int = 5
 	DefaultWeightTextProposal           int = 5
 	DefaultWeightParamChangeProposal    int = 5
+
+	DefaultWeightMsgCreateDeployment int = 100
+	DefaultWeightMsgUpdateDeployment int = 10
+	DefaultWeightMsgCloseDeployment  int = 100
 )
