@@ -34,6 +34,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/supply"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
+
+	"github.com/ovrclk/akash/x/provider"
 )
 
 const appName = "SimApp"
@@ -178,6 +180,7 @@ func NewSimApp(
 	app.subspaces[gov.ModuleName] = app.ParamsKeeper.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable())
 	app.subspaces[crisis.ModuleName] = app.ParamsKeeper.Subspace(crisis.DefaultParamspace)
 	app.subspaces[evidence.ModuleName] = app.ParamsKeeper.Subspace(evidence.DefaultParamspace)
+	app.subspaces[provider.ModuleName] = app.ParamsKeeper.Subspace(provider.DefaultParamspace)
 
 	// add keepers
 	app.AccountKeeper = auth.NewAccountKeeper(
@@ -238,6 +241,8 @@ func NewSimApp(
 		staking.NewMultiStakingHooks(app.DistrKeeper.Hooks(), app.SlashingKeeper.Hooks()),
 	)
 
+	app.ProviderKeeper = provider.NewKeeper(app.cdc, keys[provider.StoreKey])
+
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
 	app.mm = module.NewManager(
@@ -292,6 +297,7 @@ func NewSimApp(
 		params.NewAppModule(), // NOTE: only used for simulation to generate randomized param change proposals
 		deployment.NewAppModule(app.DeploymentKeeper, app.MarketKeeper, app.BankKeeper),
 		// market.NewAppModule(app.MarketKeeper, app.DeploymentKeeper, app.ProviderKeeper, app.BankKeeper),
+		provider.NewAppModule(app.ProviderKeeper, app.BankKeeper),
 	)
 
 	app.sm.RegisterStoreDecoders()
