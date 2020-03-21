@@ -28,12 +28,13 @@ const DENOM = "stake"
 
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simulation.AppParams, cdc *codec.Codec, ak stakingtypes.AccountKeeper, k keeper.Keeper,
+	appParams simulation.AppParams, cdc *codec.Codec, k keeper.Keeper,
 ) simulation.WeightedOperations {
 
 	var weightMsgCreateDeployment int
 	var weightMsgUpdateDeployment int
 	var weightMsgCloseDeployment int
+	var ak stakingtypes.AccountKeeper
 
 	appParams.GetOrGenerate(
 		cdc, OpWeightMsgCreateDeployment, &weightMsgCreateDeployment, nil, func(r *rand.Rand) {
@@ -77,7 +78,7 @@ func SimulateMsgCreateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper)
 
 		simAccount, _ := simulation.RandomAcc(r, accounts)
 
-		sdl, readError := sdl.ReadFile("../testdata/deployment.yml")
+		sdl, readError := sdl.ReadFile("../x/deployment/testdata/deployment.yml")
 		if readError != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, readError
 		}
