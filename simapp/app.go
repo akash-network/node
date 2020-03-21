@@ -34,8 +34,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/supply"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
-
-	"github.com/ovrclk/akash/x/provider"
 )
 
 const appName = "SimApp"
@@ -180,7 +178,7 @@ func NewSimApp(
 	app.subspaces[gov.ModuleName] = app.ParamsKeeper.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable())
 	app.subspaces[crisis.ModuleName] = app.ParamsKeeper.Subspace(crisis.DefaultParamspace)
 	app.subspaces[evidence.ModuleName] = app.ParamsKeeper.Subspace(evidence.DefaultParamspace)
-	app.subspaces[provider.ModuleName] = app.ParamsKeeper.Subspace(provider.DefaultParamspace)
+	// app.subspaces[provider.ModuleName] = app.ParamsKeeper.Subspace(provider.DefaultParamspace)
 
 	// add keepers
 	app.AccountKeeper = auth.NewAccountKeeper(
