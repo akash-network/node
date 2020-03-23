@@ -10,6 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	"github.com/ovrclk/akash/x/provider/config"
 	"github.com/ovrclk/akash/x/provider/types"
 	"github.com/spf13/cobra"
 )
@@ -39,7 +40,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 			ctx := context.NewCLIContext().WithCodec(cdc)
 			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
 
-			cfg, err := readConfigPath(args[0])
+			cfg, err := config.ReadConfigPath(args[0])
 			if err != nil {
 				return err
 			}
@@ -47,7 +48,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 			msg := types.MsgCreate{
 				Owner:      ctx.GetFromAddress(),
 				HostURI:    cfg.Host,
-				Attributes: cfg.getAttributes(),
+				Attributes: cfg.GetAttributes(),
 			}
 
 			if err := msg.ValidateBasic(); err != nil {
@@ -70,7 +71,7 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 			ctx := context.NewCLIContext().WithCodec(cdc)
 			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
 
-			cfg, err := readConfigPath(args[0])
+			cfg, err := config.ReadConfigPath(args[0])
 			if err != nil {
 				return err
 			}
@@ -78,7 +79,7 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 			msg := types.MsgUpdate{
 				Owner:      ctx.GetFromAddress(),
 				HostURI:    cfg.Host,
-				Attributes: cfg.getAttributes(),
+				Attributes: cfg.GetAttributes(),
 			}
 
 			if err := msg.ValidateBasic(); err != nil {
