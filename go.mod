@@ -11,7 +11,7 @@ require (
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
 	github.com/btcsuite/btcd v0.20.1-beta // indirect
 	github.com/caarlos0/env v3.3.0+incompatible
-	github.com/cosmos/cosmos-sdk v0.38.0
+	github.com/cosmos/cosmos-sdk v0.38.1
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fatih/color v1.7.0 // indirect
@@ -72,5 +72,3 @@ require (
 	k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d // indirect
 	k8s.io/metrics v0.0.0-20181026191550-988b2e695787
 )
-
-replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
