@@ -27,7 +27,11 @@ func main() {
 	root := &cobra.Command{
 		Use:   "akash",
 		Short: "Akash is a supercloud for serverless computing",
-		Long:  "Akash Network CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
+		Long: `Akash Network CLI Utility.
+	
+	Akash is a peer-to-peer marketplace for computing resources and
+	a deployment platform for heavily distributed applications.
+	Find out more at https://akash.network`,
 	}
 
 	root.AddCommand(
@@ -83,6 +87,7 @@ func txCmd(cdc *amino.Codec) *cobra.Command {
 		flags.LineBreak,
 		authcmd.GetBroadcastCommand(cdc),
 		authcmd.GetEncodeCommand(cdc),
+		authcmd.GetDecodeCommand(cdc),
 		flags.LineBreak,
 	)
 
