@@ -1,6 +1,9 @@
 package types
 
-import sdk "github.com/cosmos/cosmos-sdk/types"
+import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+)
 
 // DeploymentID stores owner and sequence number
 type DeploymentID struct {
@@ -15,6 +18,12 @@ func (id DeploymentID) Equals(other DeploymentID) bool {
 
 // Validate method for DeploymentID and returns nil
 func (id DeploymentID) Validate() error {
+	if id.Owner.Empty() {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "owner cannot be empty")
+	}
+	if id.DSeq == 0 {
+		return sdkerrors.Wrap(ErrInvalidDeploymentID, "dseq id must be > 0")
+	}
 	return nil
 }
 
@@ -50,5 +59,11 @@ func (id GroupID) Equals(other GroupID) bool {
 
 // Validate method for GroupID and returns nil
 func (id GroupID) Validate() error {
+	if id.Owner.Empty() {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "owner cannot be empty")
+	}
+	if id.DSeq == 0 && id.GSeq == 0 {
+		return sdkerrors.Wrap(ErrInvalidGroupID, "atleast one id must be > 0")
+	}
 	return nil
 }

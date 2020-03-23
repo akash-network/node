@@ -45,7 +45,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.MsgCreate{
+			msg := types.MsgCreateProvider{
 				Owner:      ctx.GetFromAddress(),
 				HostURI:    cfg.Host,
 				Attributes: cfg.GetAttributes(),
@@ -76,7 +76,7 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.MsgUpdate{
+			msg := types.MsgUpdateProvider{
 				Owner:      ctx.GetFromAddress(),
 				HostURI:    cfg.Host,
 				Attributes: cfg.GetAttributes(),
