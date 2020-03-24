@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/gorilla/mux"
 	"github.com/ovrclk/akash/x/market/client/cli"
+	"github.com/ovrclk/akash/x/market/client/rest"
 	"github.com/ovrclk/akash/x/market/handler"
 	"github.com/ovrclk/akash/x/market/keeper"
 	"github.com/ovrclk/akash/x/market/query"
@@ -55,7 +56,7 @@ func (AppModuleBasic) ValidateGenesis(bz json.RawMessage) error {
 
 // RegisterRESTRoutes registers rest routes for this module
 func (AppModuleBasic) RegisterRESTRoutes(ctx context.CLIContext, rtr *mux.Router) {
-	// rest.RegisterRoutes(ctx, rtr, StoreKey)
+	rest.RegisterRoutes(ctx, rtr, StoreKey)
 }
 
 // GetQueryCmd returns the root query command of this module

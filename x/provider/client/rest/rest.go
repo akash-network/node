@@ -7,17 +7,17 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/gorilla/mux"
-	"github.com/ovrclk/akash/x/deployment/query"
+	"github.com/ovrclk/akash/x/provider/query"
 )
 
 // RegisterRoutes registers all query routes
 func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
-	r.HandleFunc(fmt.Sprintf("/%s/deployments", ns), listDeploymentsHandler(ctx, ns)).Methods("GET")
+	r.HandleFunc(fmt.Sprintf("/%s/providers", ns), listProvidersHandler(ctx, ns)).Methods("GET")
 }
 
-func listDeploymentsHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
+func listProvidersHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res, err := query.NewRawClient(ctx, ns).Deployments()
+		res, err := query.NewRawClient(ctx, ns).Providers()
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
 			return

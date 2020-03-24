@@ -16,7 +16,7 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 		case providersPath:
 			return queryProviders(ctx, path[1:], req, keeper)
 		case providerPath:
-			return queryProviders(ctx, path[1:], req, keeper)
+			return queryProvider(ctx, path[1:], req, keeper)
 		}
 		return []byte{}, sdkerrors.ErrUnknownRequest
 	}
