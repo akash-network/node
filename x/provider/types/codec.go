@@ -13,6 +13,8 @@ func init() {
 // RegisterCodec register concrete types on codec
 func RegisterCodec(cdc *codec.Codec) {
 	cdc.RegisterConcrete(MsgCreateProvider{}, ModuleName+"/MsgCreateProvider", nil)
+	cdc.RegisterConcrete(MsgUpdateProvider{}, ModuleName+"/MsgUpdateProvider", nil)
+	cdc.RegisterConcrete(MsgDeleteProvider{}, ModuleName+"/MsgDeleteProvider", nil)
 }
 
 // MustMarshalJSON panics if an error occurs. Besides that it behaves exactly like MarshalJSON
