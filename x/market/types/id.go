@@ -103,13 +103,10 @@ func (id BidID) DeploymentID() dtypes.DeploymentID {
 
 // Validate validates bid instance and returns nil
 func (id BidID) Validate() error {
-	if id.Owner.Empty() {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "owner cannot be empty")
+	if id.Provider.Empty() {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "provider cannot be empty")
 	}
-	if id.DSeq == 0 && id.GSeq == 0 && id.OSeq == 0 {
-		return sdkerrors.Wrap(ErrInvalidOrder, "at least one id must be > 0")
-	}
-	return nil
+	return id.OrderID().Validate()
 }
 
 // LeaseID stores bid details of lease

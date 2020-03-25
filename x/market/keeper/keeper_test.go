@@ -1,42 +1,54 @@
-package keeper
+package keeper_test
 
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/params"
+
+	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/sdl"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/types"
-	"github.com/stretchr/testify/suite"
+)
+
+// testing vars
+var (
+	ownerPub     = ed25519.GenPrivKey().PubKey()
+	ownerAddr    = sdk.AccAddress(ownerPub.Address())
+	providerPub  = ed25519.GenPrivKey().PubKey()
+	providerAddr = sdk.AccAddress(providerPub.Address())
+	addr2Pub     = ed25519.GenPrivKey().PubKey()
+	addr2        = sdk.AccAddress(addr2Pub.Address())
 )
 
 type TestSuite struct {
 	suite.Suite
-	ctx           sdk.Context
-	accountKeeper auth.AccountKeeper
-	paramsKeeper  params.Keeper
-	bankKeeper    bank.Keeper
-	keeper        Keeper
+	ctx sdk.Context
+	app *app.App
 }
 
 func (s *TestSuite) SetupTest() {
-	s.ctx, s.accountKeeper, s.paramsKeeper, s.bankKeeper, s.keeper = SetupTestInput()
+	isCheckTx := false
+	s.app = app.Setup(isCheckTx)
+	s.ctx = s.app.BaseApp.NewContext(isCheckTx, abci.Header{})
 }
 
 func (s *TestSuite) TestKeeper() {
 	const DENOM string = "stake"
 	s.T().Log("Adding balance to owner account")
-	err := s.bankKeeper.SetCoins(s.ctx, ownerAddr, sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000)))
+	err := s.app.Keepers.Bank.SetCoins(s.ctx, ownerAddr, sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000)))
 	s.Require().Nil(err)
-	s.Require().True(s.bankKeeper.GetCoins(s.ctx, ownerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000))))
+	s.Require().True(s.app.Keepers.Bank.GetCoins(s.ctx, ownerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000))))
 
 	s.T().Log("Adding balance to provider account")
-	err = s.bankKeeper.SetCoins(s.ctx, providerAddr, sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000)))
+	err = s.app.Keepers.Bank.SetCoins(s.ctx, providerAddr, sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000)))
 	s.Require().Nil(err)
-	s.Require().True(s.bankKeeper.GetCoins(s.ctx, providerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000))))
+	s.Require().True(s.app.Keepers.Bank.GetCoins(s.ctx, providerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000))))
 
 	s.T().Log("verify deployment is created")
 	sdl, readError := sdl.ReadFile("../../deployment/testdata/deployment.yml")
@@ -69,8 +81,8 @@ func (s *TestSuite) TestKeeper() {
 
 	if len(groups) > 0 {
 		s.T().Log("verify create order")
-		order := s.keeper.CreateOrder(s.ctx, groups[0].GroupID, groups[0].GroupSpec)
-		_, ok := s.keeper.GetOrder(s.ctx, order.ID())
+		order := s.app.Keepers.Market.CreateOrder(s.ctx, groups[0].GroupID, groups[0].GroupSpec)
+		_, ok := s.app.Keepers.Market.GetOrder(s.ctx, order.ID())
 		s.Require().True(ok, "Order not created")
 
 		s.T().Log("verify create bid")
@@ -81,62 +93,62 @@ func (s *TestSuite) TestKeeper() {
 			OSeq:     order.OrderID.OSeq,
 			Provider: providerAddr,
 		}
-		s.keeper.CreateBid(s.ctx, order.ID(), providerAddr, sdk.NewInt64Coin(DENOM, 10))
-		bid, ok := s.keeper.GetBid(s.ctx, bidID)
+		s.app.Keepers.Market.CreateBid(s.ctx, order.ID(), providerAddr, sdk.NewInt64Coin(DENOM, 10))
+		bid, ok := s.app.Keepers.Market.GetBid(s.ctx, bidID)
 		s.Require().True(ok, "Bid not created")
 
 		s.T().Log("verify create lease")
-		s.keeper.CreateLease(s.ctx, bid)
+		s.app.Keepers.Market.CreateLease(s.ctx, bid)
 		lease := types.Lease{
 			LeaseID: types.LeaseID(bid.ID()),
 			Price:   bid.Price,
 		}
-		_, ok = s.keeper.GetLease(s.ctx, lease.LeaseID)
+		_, ok = s.app.Keepers.Market.GetLease(s.ctx, lease.LeaseID)
 		s.Require().True(ok, "Lease not created")
 
 		s.T().Log("verify on bid matched")
-		s.keeper.OnBidMatched(s.ctx, bid)
-		bidDetails, _ := s.keeper.GetBid(s.ctx, bidID)
+		s.app.Keepers.Market.OnBidMatched(s.ctx, bid)
+		bidDetails, _ := s.app.Keepers.Market.GetBid(s.ctx, bidID)
 		s.Require().Equal(types.BidMatched, bidDetails.State, "OnBidMatched failed")
 
 		s.T().Log("verify lease for order")
-		_, ok = s.keeper.LeaseForOrder(s.ctx, order.ID())
+		_, ok = s.app.Keepers.Market.LeaseForOrder(s.ctx, order.ID())
 		s.Require().True(ok, "LeaseForOrder failed")
 
 		s.T().Log("verify lease on insufficient funds")
-		s.keeper.OnInsufficientFunds(s.ctx, lease)
-		leaseDetails, _ := s.keeper.GetLease(s.ctx, lease.LeaseID)
+		s.app.Keepers.Market.OnInsufficientFunds(s.ctx, lease)
+		leaseDetails, _ := s.app.Keepers.Market.GetLease(s.ctx, lease.LeaseID)
 		s.Require().Equal(types.LeaseInsufficientFunds, leaseDetails.State, "OnInsufficientFunds failed")
 
 		s.T().Log("verify lease on closed")
-		s.keeper.CreateLease(s.ctx, bid)
-		s.keeper.OnLeaseClosed(s.ctx, lease)
-		leaseDetails, _ = s.keeper.GetLease(s.ctx, lease.LeaseID)
+		s.app.Keepers.Market.CreateLease(s.ctx, bid)
+		s.app.Keepers.Market.OnLeaseClosed(s.ctx, lease)
+		leaseDetails, _ = s.app.Keepers.Market.GetLease(s.ctx, lease.LeaseID)
 		s.Require().Equal(types.LeaseClosed, leaseDetails.State, "LeaseOnClosed failed")
 
 		s.T().Log("verify on bid closed")
-		s.keeper.OnBidClosed(s.ctx, bid)
-		bidDetails, _ = s.keeper.GetBid(s.ctx, bidID)
+		s.app.Keepers.Market.OnBidClosed(s.ctx, bid)
+		bidDetails, _ = s.app.Keepers.Market.GetBid(s.ctx, bidID)
 		s.Require().Equal(types.BidClosed, bidDetails.State, "OnBidClosed failed")
 
 		s.T().Log("verify on bid lost")
-		s.keeper.OnBidLost(s.ctx, bid)
-		bidDetails, _ = s.keeper.GetBid(s.ctx, bidID)
+		s.app.Keepers.Market.OnBidLost(s.ctx, bid)
+		bidDetails, _ = s.app.Keepers.Market.GetBid(s.ctx, bidID)
 		s.Require().Equal(types.BidLost, bidDetails.State, "OnBidLost failed")
 
 		s.T().Log("verify on order matched")
-		s.keeper.OnOrderMatched(s.ctx, order)
-		orderDetails, _ := s.keeper.GetOrder(s.ctx, order.ID())
+		s.app.Keepers.Market.OnOrderMatched(s.ctx, order)
+		orderDetails, _ := s.app.Keepers.Market.GetOrder(s.ctx, order.ID())
 		s.Require().Equal(types.OrderMatched, orderDetails.State, "OnOrderMatched failed")
 
 		s.T().Log("verify on order closed")
-		s.keeper.OnOrderClosed(s.ctx, order)
-		orderDetails, _ = s.keeper.GetOrder(s.ctx, order.ID())
+		s.app.Keepers.Market.OnOrderClosed(s.ctx, order)
+		orderDetails, _ = s.app.Keepers.Market.GetOrder(s.ctx, order.ID())
 		s.Require().Equal(types.OrderClosed, orderDetails.State, "OnOrderClosed failed")
 	}
 
 	s.T().Log("verify get order with wrong orderID")
-	_, ok := s.keeper.GetOrder(s.ctx, types.OrderID{
+	_, ok := s.app.Keepers.Market.GetOrder(s.ctx, types.OrderID{
 		Owner: addr2,
 		DSeq:  134,
 		GSeq:  20,
@@ -152,11 +164,11 @@ func (s *TestSuite) TestKeeper() {
 		OSeq:     2,
 		Provider: addr2,
 	}
-	_, ok = s.keeper.GetBid(s.ctx, bidID2)
+	_, ok = s.app.Keepers.Market.GetBid(s.ctx, bidID2)
 	s.Require().False(ok, "Get bid failed")
 
 	s.T().Log("verify get lease with wrong LeaseID")
-	_, ok = s.keeper.GetLease(s.ctx, types.LeaseID(bidID2))
+	_, ok = s.app.Keepers.Market.GetLease(s.ctx, types.LeaseID(bidID2))
 	s.Require().False(ok, "Get Lease Failed")
 }
 

@@ -30,7 +30,7 @@ var (
 
 func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgCreateProvider) (*sdk.Result, error) {
 	if err := keeper.Create(ctx, types.Provider(msg)); err != nil {
-		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
+		return nil, err
 	}
 
 	return &sdk.Result{
@@ -40,7 +40,7 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgCreateP
 
 func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgUpdateProvider) (*sdk.Result, error) {
 	if err := keeper.Update(ctx, types.Provider(msg)); err != nil {
-		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
+		return nil, err
 	}
 	// TODO: cancel now-invalid leases?
 	return &sdk.Result{
@@ -51,5 +51,5 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgUpdateP
 func handleMsgDelete(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgDeleteProvider) (*sdk.Result, error) {
 	// TODO: validate exists
 	// TODO: cancel leases
-	return &sdk.Result{}, sdkerrors.Wrapf(ErrInternal, "NOTIMPLEMENTED", "")
+	return &sdk.Result{}, sdkerrors.Wrap(ErrInternal, "NOT IMPLEMENTED")
 }
