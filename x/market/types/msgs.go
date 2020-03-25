@@ -7,9 +7,9 @@ import (
 
 // msg types
 const (
-	TypeMsgCreateBid  = "create_bid"
-	TypeMsgCloseBid   = "close_bid"
-	TypeMsgCloseOrder = "close_order"
+	typeMsgCreateBid  = "create_bid"
+	typeMsgCloseBid   = "close_bid"
+	typeMsgCloseOrder = "close_order"
 )
 
 // MsgCreateBid defines an SDK message for creating Bid
@@ -23,7 +23,7 @@ type MsgCreateBid struct {
 func (msg MsgCreateBid) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCreateBid) Type() string { return TypeMsgCreateBid }
+func (msg MsgCreateBid) Type() string { return typeMsgCreateBid }
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCreateBid) GetSignBytes() []byte {
@@ -61,7 +61,7 @@ type MsgCloseBid struct {
 func (msg MsgCloseBid) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCloseBid) Type() string { return TypeMsgCloseBid }
+func (msg MsgCloseBid) Type() string { return typeMsgCloseBid }
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCloseBid) GetSignBytes() []byte {
@@ -87,7 +87,7 @@ type MsgCloseOrder struct {
 func (msg MsgCloseOrder) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCloseOrder) Type() string { return TypeMsgCloseOrder }
+func (msg MsgCloseOrder) Type() string { return typeMsgCloseOrder }
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCloseOrder) GetSignBytes() []byte {

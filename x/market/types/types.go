@@ -12,12 +12,12 @@ import (
 type OrderState uint8
 
 const (
-	// OrderOpen is used when state of order is open
-	OrderOpen OrderState = iota
-	// OrderMatched is used when state of order is matched
-	OrderMatched OrderState = iota
 	// OrderClosed is used when state of order is closed
-	OrderClosed OrderState = iota
+	OrderClosed OrderState = iota // default (0)
+	// OrderOpen is used when state of order is open
+	OrderOpen
+	// OrderMatched is used when state of order is matched
+	OrderMatched
 )
 
 // Order stores orderID, state of order and other details
@@ -85,14 +85,14 @@ func (o Order) validateMatchableState() error {
 type BidState uint8
 
 const (
-	// BidOpen is used when state of bid is opened
-	BidOpen BidState = iota
-	// BidMatched is used when state of bid is matched
-	BidMatched BidState = iota
-	// BidLost is used when state of bid is lost
-	BidLost BidState = iota
 	// BidClosed is used when state of bid is closed
 	BidClosed BidState = iota
+	// BidOpen is used when state of bid is opened
+	BidOpen
+	// BidMatched is used when state of bid is matched
+	BidMatched
+	// BidLost is used when state of bid is lost
+	BidLost
 )
 
 // Bid stores BidID, state of bid and price
@@ -111,12 +111,12 @@ func (obj Bid) ID() BidID {
 type LeaseState uint8
 
 const (
-	// LeaseActive is used when state of lease is active
-	LeaseActive LeaseState = iota
-	// LeaseInsufficientFunds is used when lease has insufficient funds
-	LeaseInsufficientFunds LeaseState = iota
 	// LeaseClosed is used when state of lease is closed
 	LeaseClosed LeaseState = iota
+	// LeaseActive is used when state of lease is active
+	LeaseActive
+	// LeaseInsufficientFunds is used when lease has insufficient funds
+	LeaseInsufficientFunds
 )
 
 // Lease stores LeaseID, state of lease and price

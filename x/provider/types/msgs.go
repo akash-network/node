@@ -9,9 +9,9 @@ import (
 
 // msg types
 const (
-	TypeMsgCreateProvider = "create_provider"
-	TypeMsgUpdateProvider = "update_provider"
-	TypeMsgDeleteProvider = "delete_provider"
+	typeMsgCreateProvider = "create_provider"
+	typeMsgUpdateProvider = "update_provider"
+	typeMsgDeleteProvider = "delete_provider"
 )
 
 // MsgCreateProvider defines an SDK message for creating a provider
@@ -21,7 +21,7 @@ type MsgCreateProvider Provider
 func (msg MsgCreateProvider) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCreateProvider) Type() string { return TypeMsgCreateProvider }
+func (msg MsgCreateProvider) Type() string { return typeMsgCreateProvider }
 
 // ValidateBasic does basic validation of a HostURI
 func (msg MsgCreateProvider) ValidateBasic() error {
@@ -55,7 +55,7 @@ type MsgUpdateProvider Provider
 func (msg MsgUpdateProvider) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgUpdateProvider) Type() string { return TypeMsgUpdateProvider }
+func (msg MsgUpdateProvider) Type() string { return typeMsgUpdateProvider }
 
 // ValidateBasic does basic validation of a ProviderURI
 func (msg MsgUpdateProvider) ValidateBasic() error {
@@ -91,7 +91,7 @@ type MsgDeleteProvider struct {
 func (msg MsgDeleteProvider) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgDeleteProvider) Type() string { return TypeMsgDeleteProvider }
+func (msg MsgDeleteProvider) Type() string { return typeMsgDeleteProvider }
 
 // ValidateBasic does basic validation
 func (msg MsgDeleteProvider) ValidateBasic() error {

@@ -7,9 +7,9 @@ import (
 
 // msg types
 const (
-	TypeMsgCreateDeployment = "create_deployment"
-	TypeMsgUpdateDeployment = "update_deployment"
-	TypeMsgCloseDeployment  = "close_deployment"
+	typeMsgCreateDeployment = "create_deployment"
+	typeMsgUpdateDeployment = "update_deployment"
+	typeMsgCloseDeployment  = "close_deployment"
 )
 
 // MsgCreateDeployment defines an SDK message for creating deployment
@@ -22,7 +22,7 @@ type MsgCreateDeployment struct {
 func (msg MsgCreateDeployment) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCreateDeployment) Type() string { return TypeMsgCreateDeployment }
+func (msg MsgCreateDeployment) Type() string { return typeMsgCreateDeployment }
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCreateDeployment) GetSignBytes() []byte {
@@ -57,7 +57,7 @@ type MsgUpdateDeployment struct {
 func (msg MsgUpdateDeployment) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgUpdateDeployment) Type() string { return TypeMsgUpdateDeployment }
+func (msg MsgUpdateDeployment) Type() string { return typeMsgUpdateDeployment }
 
 // ValidateBasic does basic validation
 func (msg MsgUpdateDeployment) ValidateBasic() error {
@@ -86,7 +86,7 @@ type MsgCloseDeployment struct {
 func (msg MsgCloseDeployment) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCloseDeployment) Type() string { return TypeMsgCloseDeployment }
+func (msg MsgCloseDeployment) Type() string { return typeMsgCloseDeployment }
 
 // ValidateBasic does basic validation with deployment details
 func (msg MsgCloseDeployment) ValidateBasic() error {

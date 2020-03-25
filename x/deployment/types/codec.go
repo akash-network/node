@@ -12,9 +12,9 @@ func init() {
 
 // RegisterCodec register concrete types on codec
 func RegisterCodec(cdc *codec.Codec) {
-	cdc.RegisterConcrete(MsgCreateDeployment{}, "deployment/msg-create", nil)
-	cdc.RegisterConcrete(MsgCloseDeployment{}, "deployment/msg-close", nil)
-	cdc.RegisterConcrete(MsgUpdateDeployment{}, "deployment/msg-update", nil)
+	cdc.RegisterConcrete(MsgCreateDeployment{}, ModuleName+"/MsgCreateDeployment", nil)
+	cdc.RegisterConcrete(MsgCloseDeployment{}, ModuleName+"/MsgCloseDeployment", nil)
+	cdc.RegisterConcrete(MsgUpdateDeployment{}, ModuleName+"/MsgUpdateDeployment", nil)
 }
 
 // MustMarshalJSON panics if an error occurs. Besides that it behaves exactly like MarshalJSON
