@@ -24,7 +24,7 @@ type rawclient struct {
 }
 
 func (c *rawclient) Providers() ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, ProvidersPath()), nil)
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getProvidersPath()), nil)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -32,7 +32,7 @@ func (c *rawclient) Providers() ([]byte, error) {
 }
 
 func (c *rawclient) Provider(id sdk.AccAddress) ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, ProviderPath(id)), nil)
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getProviderPath(id)), nil)
 	if err != nil {
 		return []byte{}, err
 	}

@@ -25,7 +25,7 @@ type rawclient struct {
 }
 
 func (c *rawclient) Deployments() ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, DeploymentsPath()), nil)
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getDeploymentsPath()), nil)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -41,7 +41,7 @@ func (c *rawclient) Deployment(id types.DeploymentID) ([]byte, error) {
 }
 
 func (c *rawclient) Group(id types.GroupID) ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, GroupPath(id)), nil)
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getGroupPath(id)), nil)
 	if err != nil {
 		return []byte{}, err
 	}

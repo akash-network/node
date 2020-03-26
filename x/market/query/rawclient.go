@@ -26,7 +26,7 @@ type rawclient struct {
 }
 
 func (c *rawclient) Orders() ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, OrdersPath()), nil)
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getOrdersPath()), nil)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -34,7 +34,7 @@ func (c *rawclient) Orders() ([]byte, error) {
 }
 
 func (c *rawclient) Bids() ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, BidsPath()), nil)
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getBidsPath()), nil)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -46,7 +46,7 @@ func (c *rawclient) Bid(id types.BidID) ([]byte, error) {
 }
 
 func (c *rawclient) Leases() ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, LeasesPath()), nil)
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getLeasesPath()), nil)
 	if err != nil {
 		return []byte{}, err
 	}

@@ -42,7 +42,7 @@ func queryDeployments(ctx sdk.Context, path []string, req abci.RequestQuery, kee
 
 func queryDeployment(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
-	id, err := ParseDeploymentPath(path)
+	id, err := getParseDeploymentPath(path)
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "internal error")
 	}
@@ -62,7 +62,7 @@ func queryDeployment(ctx sdk.Context, path []string, req abci.RequestQuery, keep
 
 func queryGroup(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
-	id, err := ParseGroupPath(path)
+	id, err := getParseGroupPath(path)
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "internal error")
 	}
