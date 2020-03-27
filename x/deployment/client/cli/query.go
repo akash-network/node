@@ -30,19 +30,27 @@ func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
 }
 
 func cmdDeployments(key string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Query for all deployments",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			obj, err := query.NewClient(ctx, key).Deployments()
+
+			id, err := DeploymentIDFromFlags(cmd.Flags(), ctx.FromAddress.String())
+			if err != nil {
+				return err
+			}
+
+			obj, err := query.NewClient(ctx, key).Deployments(id)
 			if err != nil {
 				return err
 			}
 			return ctx.PrintOutput(obj)
 		},
 	}
+	AddDeploymentIDFlags(cmd.Flags())
+	return cmd
 }
 
 func cmdDeployment(key string, cdc *codec.Codec) *cobra.Command {
@@ -67,5 +75,6 @@ func cmdDeployment(key string, cdc *codec.Codec) *cobra.Command {
 		},
 	}
 	AddDeploymentIDFlags(cmd.Flags())
+	MarkReqDeploymentIDFlags(cmd)
 	return cmd
 }

@@ -100,11 +100,11 @@ func NewQueryClient(
 	}
 }
 
-func (c *qclient) Deployments() (dquery.Deployments, error) {
+func (c *qclient) Deployments(id dtypes.DeploymentID) (dquery.Deployments, error) {
 	if c.dclient == nil {
 		return dquery.Deployments{}, ErrClientNotFound
 	}
-	return c.dclient.Deployments()
+	return c.dclient.Deployments(id)
 }
 
 func (c *qclient) Deployment(id dtypes.DeploymentID) (dquery.Deployment, error) {

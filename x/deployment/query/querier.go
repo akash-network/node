@@ -25,15 +25,29 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 }
 
 func queryDeployments(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
-
+	id, err := ParseDeploymentPath(path)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "internal error")
+	}
 	var values Deployments
 
 	keeper.WithDeployments(ctx, func(deployment types.Deployment) bool {
-		value := Deployment{
-			Deployment: deployment,
-			Groups:     keeper.GetGroups(ctx, deployment.ID()),
+		if id.Owner.Empty() && id.DSeq == 0 {
+			value := Deployment{
+				Deployment: deployment,
+				Groups:     keeper.GetGroups(ctx, deployment.ID()),
+			}
+			values = append(values, value)
+		} else {
+			// Filtering deployments based on flags
+			if deployment.DeploymentID.Owner.Equals(id.Owner) || deployment.DeploymentID.DSeq == id.DSeq {
+				value := Deployment{
+					Deployment: deployment,
+					Groups:     keeper.GetGroups(ctx, deployment.ID()),
+				}
+				values = append(values, value)
+			}
 		}
-		values = append(values, value)
 		return false
 	})
 

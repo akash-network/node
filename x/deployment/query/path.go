@@ -15,13 +15,13 @@ const (
 )
 
 // DeploymentsPath returns deployments path for queries
-func DeploymentsPath() string {
-	return deploymentsPath
+func DeploymentsPath(id types.DeploymentID) string {
+	return fmt.Sprintf("%s/%s", deploymentsPath, deploymentParts(id))
 }
 
 // DeploymentPath return deployment path of given deployment id for queries
 func DeploymentPath(id types.DeploymentID) string {
-	return fmt.Sprintf("%s/%s/%v", deploymentPath, id.Owner, id.DSeq)
+	return fmt.Sprintf("%s/%s", deploymentPath, deploymentParts(id))
 }
 
 // GroupPath return group path of given group id for queries
@@ -67,4 +67,8 @@ func ParseGroupPath(parts []string) (types.GroupID, error) {
 	gseq, err := strconv.ParseUint(parts[2], 10, 32)
 
 	return types.MakeGroupID(did, uint32(gseq)), nil
+}
+
+func deploymentParts(id types.DeploymentID) string {
+	return fmt.Sprintf("%s/%v", id.Owner, id.DSeq)
 }

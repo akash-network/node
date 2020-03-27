@@ -9,7 +9,7 @@ import (
 
 // Client interface
 type Client interface {
-	Deployments() (Deployments, error)
+	Deployments(types.DeploymentID) (Deployments, error)
 	Deployment(types.DeploymentID) (Deployment, error)
 	Group(types.GroupID) (Group, error)
 }
@@ -24,9 +24,9 @@ type client struct {
 	key string
 }
 
-func (c *client) Deployments() (Deployments, error) {
+func (c *client) Deployments(id types.DeploymentID) (Deployments, error) {
 	var obj Deployments
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, DeploymentsPath()), nil)
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, DeploymentsPath(id)), nil)
 	if err != nil {
 		return obj, err
 	}
