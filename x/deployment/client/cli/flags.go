@@ -3,18 +3,13 @@ package cli
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/x/deployment/types"
-	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
 // AddDeploymentIDFlags add flags for deployment
-func AddDeploymentIDFlags(cmd *cobra.Command) {
-	cmd.Flags().String("owner", "", "Deployment Owner")
-	// owner flag required for command
-	cmd.MarkFlagRequired("owner")
-	cmd.Flags().Uint64("dseq", 0, "Deployment Sequence")
-	// dseq flag required for command
-	cmd.MarkFlagRequired("dseq")
+func AddDeploymentIDFlags(flags *pflag.FlagSet) {
+	flags.String("owner", "", "Deployment Owner")
+	flags.Uint64("dseq", 0, "Deployment Sequence")
 }
 
 // DeploymentIDFromFlags returns DeploymentID with given flags, owner and error if occured
@@ -38,9 +33,9 @@ func DeploymentIDFromFlags(flags *pflag.FlagSet, defaultOwner string) (types.Dep
 }
 
 // AddGroupIDFlags add flags for Group
-func AddGroupIDFlags(cmd *cobra.Command) {
-	AddDeploymentIDFlags(cmd)
-	cmd.Flags().Uint32("gseq", 0, "Group Sequence")
+func AddGroupIDFlags(flags *pflag.FlagSet) {
+	AddDeploymentIDFlags(flags)
+	flags.Uint32("gseq", 0, "Group Sequence")
 }
 
 // GroupIDFromFlags returns GroupID with given flags and error if occured

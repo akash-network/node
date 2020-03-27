@@ -66,6 +66,6 @@ func cmdDeployment(key string, cdc *codec.Codec) *cobra.Command {
 			return ctx.PrintOutput(obj)
 		},
 	}
-	AddDeploymentIDFlags(cmd)
+	AddDeploymentIDFlags(cmd.Flags())
 	return cmd
 }

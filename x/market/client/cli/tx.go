@@ -67,7 +67,7 @@ func cmdCreateBid(key string, cdc *codec.Codec) *cobra.Command {
 			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
-	AddOrderIDFlags(cmd)
+	AddOrderIDFlags(cmd.Flags())
 	cmd.Flags().String("price", "", "Bid Price")
 	return cmd
 }
@@ -94,7 +94,7 @@ func cmdCloseBid(key string, cdc *codec.Codec) *cobra.Command {
 			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
-	AddBidIDFlags(cmd)
+	AddBidIDFlags(cmd.Flags())
 	return cmd
 }
 
@@ -122,6 +122,6 @@ func cmdCloseOrder(key string, cdc *codec.Codec) *cobra.Command {
 			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
-	AddOrderIDFlags(cmd)
+	AddOrderIDFlags(cmd.Flags())
 	return cmd
 }

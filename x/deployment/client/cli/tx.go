@@ -95,7 +95,7 @@ func cmdClose(key string, cdc *codec.Codec) *cobra.Command {
 			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
-	AddDeploymentIDFlags(cmd)
+	AddDeploymentIDFlags(cmd.Flags())
 	return cmd
 }
 
@@ -120,6 +120,6 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
-	AddDeploymentIDFlags(cmd)
+	AddDeploymentIDFlags(cmd.Flags())
 	return cmd
 }
