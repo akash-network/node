@@ -31,8 +31,9 @@ func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
 
 func cmdDeployments(key string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:  "deployments",
-		Args: cobra.ExactArgs(0),
+		Use:   "list",
+		Short: "Query for all deployments",
+		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
 			obj, err := query.NewClient(ctx, key).Deployments()
@@ -46,7 +47,7 @@ func cmdDeployments(key string, cdc *codec.Codec) *cobra.Command {
 
 func cmdDeployment(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "deployment",
+		Use:   "get",
 		Short: "Query deployment",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
