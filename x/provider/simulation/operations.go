@@ -61,7 +61,6 @@ func WeightedOperations(
 
 // SimulateMsgCreate generates a MsgCreate with random values
 // nolint:funlen
-
 func SimulateMsgCreate(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
 		accounts []simulation.Account, chainID string,
@@ -125,7 +124,6 @@ func SimulateMsgCreate(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulatio
 
 // SimulateMsgUpdate generates a MsgUpdate with random values
 // nolint:funlen
-
 func SimulateMsgUpdate(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
 		accounts []simulation.Account, chainID string,
