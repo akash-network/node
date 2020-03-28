@@ -17,7 +17,7 @@ func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
 
 func listDeploymentsHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res, _, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", ns, query.DeploymentsPath()), nil)
+		res, err := query.NewRawClient(ctx, ns).Deployments()
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
 			return
