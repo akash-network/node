@@ -13,6 +13,7 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	cosmosSimApp "github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/simapp/helpers"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -29,7 +30,7 @@ import (
 
 // Get flags every time the simulator is run
 func init() {
-	GetSimulatorFlags()
+	cosmosSimApp.GetSimulatorFlags()
 }
 
 type StoreKeysPrefixes struct {
@@ -51,7 +52,7 @@ func interBlockCacheOpt() func(*baseapp.BaseApp) {
 }
 
 func TestFullAppSimulation(t *testing.T) {
-	config, db, dir, logger, skip, err := SetupSimulation("leveldb-app-sim", "Simulation")
+	config, db, dir, logger, skip, err := cosmosSimApp.SetupSimulation("leveldb-app-sim", "Simulation")
 	if skip {
 		t.Skip("skipping application simulation")
 	}
@@ -62,28 +63,28 @@ func TestFullAppSimulation(t *testing.T) {
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 
-	app := NewSimApp(logger, db, nil, true, map[int64]bool{}, FlagPeriodValue, fauxMerkleModeOpt)
+	app := NewSimApp(logger, db, nil, true, map[int64]bool{}, cosmosSimApp.FlagPeriodValue, fauxMerkleModeOpt)
 	require.Equal(t, "SimApp", app.Name())
 
 	// run randomized simulation
 	_, simParams, simErr := simulation.SimulateFromSeed(
-		t, os.Stdout, app.BaseApp, AppStateFn(app.Codec(), app.SimulationManager()),
-		SimulationOperations(app, app.Codec(), config),
+		t, os.Stdout, app.BaseApp, cosmosSimApp.AppStateFn(app.Codec(), app.SimulationManager()),
+		cosmosSimApp.SimulationOperations(app, app.Codec(), config),
 		app.ModuleAccountAddrs(), config,
 	)
 
 	// export state and simParams before the simulation error is checked
-	err = CheckExportSimulation(app, config, simParams)
+	err = cosmosSimApp.CheckExportSimulation(app, config, simParams)
 	require.NoError(t, err)
 	require.NoError(t, simErr)
 
 	if config.Commit {
-		PrintStats(db)
+		cosmosSimApp.PrintStats(db)
 	}
 }
 
 func TestAppImportExport(t *testing.T) {
-	config, db, dir, logger, skip, err := SetupSimulation("leveldb-app-sim", "Simulation")
+	config, db, dir, logger, skip, err := cosmosSimApp.SetupSimulation("leveldb-app-sim", "Simulation")
 	if skip {
 		t.Skip("skipping application import/export simulation")
 	}
@@ -94,23 +95,23 @@ func TestAppImportExport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 
-	app := NewSimApp(logger, db, nil, true, map[int64]bool{}, FlagPeriodValue, fauxMerkleModeOpt)
+	app := NewSimApp(logger, db, nil, true, map[int64]bool{}, cosmosSimApp.FlagPeriodValue, fauxMerkleModeOpt)
 	require.Equal(t, "SimApp", app.Name())
 
 	// Run randomized simulation
 	_, simParams, simErr := simulation.SimulateFromSeed(
-		t, os.Stdout, app.BaseApp, AppStateFn(app.Codec(), app.SimulationManager()),
-		SimulationOperations(app, app.Codec(), config),
+		t, os.Stdout, app.BaseApp, cosmosSimApp.AppStateFn(app.Codec(), app.SimulationManager()),
+		cosmosSimApp.SimulationOperations(app, app.Codec(), config),
 		app.ModuleAccountAddrs(), config,
 	)
 
 	// export state and simParams before the simulation error is checked
-	err = CheckExportSimulation(app, config, simParams)
+	err = cosmosSimApp.CheckExportSimulation(app, config, simParams)
 	require.NoError(t, err)
 	require.NoError(t, simErr)
 
 	if config.Commit {
-		PrintStats(db)
+		cosmosSimApp.PrintStats(db)
 	}
 
 	fmt.Printf("exporting genesis...\n")
@@ -120,7 +121,7 @@ func TestAppImportExport(t *testing.T) {
 
 	fmt.Printf("importing genesis...\n")
 
-	_, newDB, newDir, _, _, err := SetupSimulation("leveldb-app-sim-2", "Simulation-2")
+	_, newDB, newDir, _, _, err := cosmosSimApp.SetupSimulation("leveldb-app-sim-2", "Simulation-2")
 	require.NoError(t, err, "simulation setup failed")
 
 	defer func() {
@@ -128,10 +129,10 @@ func TestAppImportExport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
-	newApp := NewSimApp(log.NewNopLogger(), newDB, nil, true, map[int64]bool{}, FlagPeriodValue, fauxMerkleModeOpt)
+	newApp := NewSimApp(log.NewNopLogger(), newDB, nil, true, map[int64]bool{}, cosmosSimApp.FlagPeriodValue, fauxMerkleModeOpt)
 	require.Equal(t, "SimApp", newApp.Name())
 
-	var genesisState GenesisState
+	var genesisState cosmosSimApp.GenesisState
 	err = app.Codec().UnmarshalJSON(appState, &genesisState)
 	require.NoError(t, err)
 
@@ -164,12 +165,12 @@ func TestAppImportExport(t *testing.T) {
 		require.Equal(t, len(failedKVAs), len(failedKVBs), "unequal sets of key-values to compare")
 
 		fmt.Printf("compared %d key/value pairs between %s and %s\n", len(failedKVAs), skp.A, skp.B)
-		require.Equal(t, len(failedKVAs), 0, GetSimulationLog(skp.A.Name(), app.SimulationManager().StoreDecoders, app.Codec(), failedKVAs, failedKVBs))
+		require.Equal(t, len(failedKVAs), 0, cosmosSimApp.GetSimulationLog(skp.A.Name(), app.SimulationManager().StoreDecoders, app.Codec(), failedKVAs, failedKVBs))
 	}
 }
 
 func TestAppSimulationAfterImport(t *testing.T) {
-	config, db, dir, logger, skip, err := SetupSimulation("leveldb-app-sim", "Simulation")
+	config, db, dir, logger, skip, err := cosmosSimApp.SetupSimulation("leveldb-app-sim", "Simulation")
 	if skip {
 		t.Skip("skipping application simulation after import")
 	}
@@ -180,23 +181,23 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 
-	app := NewSimApp(logger, db, nil, true, map[int64]bool{}, FlagPeriodValue, fauxMerkleModeOpt)
+	app := NewSimApp(logger, db, nil, true, map[int64]bool{}, cosmosSimApp.FlagPeriodValue, fauxMerkleModeOpt)
 	require.Equal(t, "SimApp", app.Name())
 
 	// Run randomized simulation
 	stopEarly, simParams, simErr := simulation.SimulateFromSeed(
-		t, os.Stdout, app.BaseApp, AppStateFn(app.Codec(), app.SimulationManager()),
-		SimulationOperations(app, app.Codec(), config),
+		t, os.Stdout, app.BaseApp, cosmosSimApp.AppStateFn(app.Codec(), app.SimulationManager()),
+		cosmosSimApp.SimulationOperations(app, app.Codec(), config),
 		app.ModuleAccountAddrs(), config,
 	)
 
 	// export state and simParams before the simulation error is checked
-	err = CheckExportSimulation(app, config, simParams)
+	err = cosmosSimApp.CheckExportSimulation(app, config, simParams)
 	require.NoError(t, err)
 	require.NoError(t, simErr)
 
 	if config.Commit {
-		PrintStats(db)
+		cosmosSimApp.PrintStats(db)
 	}
 
 	if stopEarly {
@@ -211,7 +212,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 
 	fmt.Printf("importing genesis...\n")
 
-	_, newDB, newDir, _, _, err := SetupSimulation("leveldb-app-sim-2", "Simulation-2")
+	_, newDB, newDir, _, _, err := cosmosSimApp.SetupSimulation("leveldb-app-sim-2", "Simulation-2")
 	require.NoError(t, err, "simulation setup failed")
 
 	defer func() {
@@ -219,7 +220,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
-	newApp := NewSimApp(log.NewNopLogger(), newDB, nil, true, map[int64]bool{}, FlagPeriodValue, fauxMerkleModeOpt)
+	newApp := NewSimApp(log.NewNopLogger(), newDB, nil, true, map[int64]bool{}, cosmosSimApp.FlagPeriodValue, fauxMerkleModeOpt)
 	require.Equal(t, "SimApp", newApp.Name())
 
 	newApp.InitChain(abci.RequestInitChain{
@@ -227,8 +228,8 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	})
 
 	_, _, err = simulation.SimulateFromSeed(
-		t, os.Stdout, newApp.BaseApp, AppStateFn(app.Codec(), app.SimulationManager()),
-		SimulationOperations(newApp, newApp.Codec(), config),
+		t, os.Stdout, newApp.BaseApp, cosmosSimApp.AppStateFn(app.Codec(), app.SimulationManager()),
+		cosmosSimApp.SimulationOperations(newApp, newApp.Codec(), config),
 		newApp.ModuleAccountAddrs(), config,
 	)
 	require.NoError(t, err)
@@ -237,11 +238,11 @@ func TestAppSimulationAfterImport(t *testing.T) {
 // TODO: Make another test for the fuzzer itself, which just has noOp txs
 // and doesn't depend on the application.
 func TestAppStateDeterminism(t *testing.T) {
-	if !FlagEnabledValue {
+	if !cosmosSimApp.FlagEnabledValue {
 		t.Skip("skipping application simulation")
 	}
 
-	config := NewConfigFromFlags()
+	config := cosmosSimApp.NewConfigFromFlags()
 	config.InitialBlockHeight = 1
 	config.ExportParamsPath = ""
 	config.OnOperation = false
@@ -257,7 +258,7 @@ func TestAppStateDeterminism(t *testing.T) {
 
 		for j := 0; j < numTimesToRunPerSeed; j++ {
 			var logger log.Logger
-			if FlagVerboseValue {
+			if cosmosSimApp.FlagVerboseValue {
 				logger = log.TestingLogger()
 			} else {
 				logger = log.NewNopLogger()
@@ -265,7 +266,7 @@ func TestAppStateDeterminism(t *testing.T) {
 
 			db := dbm.NewMemDB()
 
-			app := NewSimApp(logger, db, nil, true, map[int64]bool{}, FlagPeriodValue, interBlockCacheOpt())
+			app := NewSimApp(logger, db, nil, true, map[int64]bool{}, cosmosSimApp.FlagPeriodValue, interBlockCacheOpt())
 
 			fmt.Printf(
 				"running non-determinism simulation; seed %d: %d/%d, attempt: %d/%d\n",
@@ -273,14 +274,14 @@ func TestAppStateDeterminism(t *testing.T) {
 			)
 
 			_, _, err := simulation.SimulateFromSeed(
-				t, os.Stdout, app.BaseApp, AppStateFn(app.Codec(), app.SimulationManager()),
-				SimulationOperations(app, app.Codec(), config),
+				t, os.Stdout, app.BaseApp, cosmosSimApp.AppStateFn(app.Codec(), app.SimulationManager()),
+				cosmosSimApp.SimulationOperations(app, app.Codec(), config),
 				app.ModuleAccountAddrs(), config,
 			)
 			require.NoError(t, err)
 
 			if config.Commit {
-				PrintStats(db)
+				cosmosSimApp.PrintStats(db)
 			}
 
 			appHash := app.LastCommitID().Hash

@@ -14,6 +14,7 @@ import (
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
+	cosmosSimApp "github.com/cosmos/cosmos-sdk/simapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -96,7 +97,7 @@ func MakeCodec() *codec.Codec {
 }
 
 // Verify app interface at compile time
-var _ App = (*SimApp)(nil)
+var _ cosmosSimApp.App = (*SimApp)(nil)
 
 // SimApp extends an ABCI application, but with most of its parameters exported.
 // They are exported for convenience in creating helper functions, as object
@@ -295,7 +296,7 @@ func NewSimApp(
 		params.NewAppModule(), // NOTE: only used for simulation to generate randomized param change proposals
 		deployment.NewAppModule(app.DeploymentKeeper, app.MarketKeeper, app.BankKeeper),
 		// market.NewAppModule(app.MarketKeeper, app.DeploymentKeeper, app.ProviderKeeper, app.BankKeeper),
-		provider.NewAppModule(app.ProviderKeeper, app.BankKeeper),
+		// provider.NewAppModule(app.ProviderKeeper, app.BankKeeper),
 	)
 
 	app.sm.RegisterStoreDecoders()
@@ -335,7 +336,7 @@ func (app *SimApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.Re
 
 // InitChainer application update at chain initialization
 func (app *SimApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
-	var genesisState GenesisState
+	var genesisState cosmosSimApp.GenesisState
 	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
 	return app.mm.InitGenesis(ctx, genesisState)
 }
