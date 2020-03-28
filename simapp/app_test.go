@@ -10,7 +10,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 
-	cosmosSimApp "github.com/cosmos/cosmos-sdk/simapp"
+	simapp "github.com/cosmos/cosmos-sdk/simapp"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -18,7 +18,7 @@ func TestSimAppExport(t *testing.T) {
 	db := dbm.NewMemDB()
 	app := NewSimApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, true, map[int64]bool{}, 0)
 
-	genesisState := cosmosSimApp.NewDefaultGenesisState()
+	genesisState := simapp.NewDefaultGenesisState()
 	stateBytes, err := codec.MarshalJSONIndent(app.Codec(), genesisState)
 	require.NoError(t, err)
 
