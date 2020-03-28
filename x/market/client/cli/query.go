@@ -39,6 +39,7 @@ func getOrderCmd(key string, cdc *codec.Codec) *cobra.Command {
 
 	cmd.AddCommand(flags.GetCommands(
 		cmdGetOrders(key, cdc),
+		cmdGetOrder(key, cdc),
 	)...)
 
 	return cmd
@@ -55,6 +56,7 @@ func getBidCmd(key string, cdc *codec.Codec) *cobra.Command {
 
 	cmd.AddCommand(flags.GetCommands(
 		cmdGetBids(key, cdc),
+		cmdGetBid(key, cdc),
 	)...)
 
 	return cmd
@@ -71,6 +73,7 @@ func getLeaseCmd(key string, cdc *codec.Codec) *cobra.Command {
 
 	cmd.AddCommand(flags.GetCommands(
 		cmdGetLeases(key, cdc),
+		cmdGetLease(key, cdc),
 	)...)
 
 	return cmd

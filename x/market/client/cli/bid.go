@@ -21,3 +21,29 @@ func cmdGetBids(key string, cdc *codec.Codec) *cobra.Command {
 		},
 	}
 }
+
+func cmdGetBid(key string, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "get",
+		Short: "Query order",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCLIContext().WithCodec(cdc)
+
+			bid, err := BidIDFromFlagsWithoutCtx(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			obj, err := query.NewClient(ctx, key).Bid(bid)
+			if err != nil {
+				return err
+			}
+
+			return ctx.PrintOutput(obj)
+		},
+	}
+	AddQueryBidIDFlags(cmd.Flags())
+	MarkReqBidIDFlags(cmd)
+	return cmd
+}

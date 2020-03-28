@@ -10,9 +10,11 @@ import (
 // Client interface
 type Client interface {
 	Orders() (Orders, error)
+	Order(id types.OrderID) (Order, error)
 	Bids() (Bids, error)
 	Bid(id types.BidID) (Bid, error)
 	Leases() (Leases, error)
+	Lease(id types.LeaseID) (Lease, error)
 }
 
 // NewClient creates a client instance with provided context and key
@@ -34,6 +36,15 @@ func (c *client) Orders() (Orders, error) {
 	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
 }
 
+func (c *client) Order(id types.OrderID) (Order, error) {
+	var obj Order
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, OrderPath(id)), nil)
+	if err != nil {
+		return obj, err
+	}
+	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+}
+
 func (c *client) Bids() (Bids, error) {
 	var obj Bids
 	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, BidsPath()), nil)
@@ -44,12 +55,26 @@ func (c *client) Bids() (Bids, error) {
 }
 
 func (c *client) Bid(id types.BidID) (Bid, error) {
-	return Bid{}, fmt.Errorf("TODO: not implemented")
+	var obj Bid
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, BidPath(id)), nil)
+	if err != nil {
+		return obj, err
+	}
+	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
 }
 
 func (c *client) Leases() (Leases, error) {
 	var obj Leases
 	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, LeasesPath()), nil)
+	if err != nil {
+		return obj, err
+	}
+	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+}
+
+func (c *client) Lease(id types.LeaseID) (Lease, error) {
+	var obj Lease
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, LeasePath(id)), nil)
 	if err != nil {
 		return obj, err
 	}

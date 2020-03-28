@@ -27,7 +27,7 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 func queryDeployments(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 	id, err := ParseDeploymentPath(path)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "internal error")
+		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
 	}
 	var values Deployments
 
@@ -58,12 +58,12 @@ func queryDeployment(ctx sdk.Context, path []string, req abci.RequestQuery, keep
 
 	id, err := ParseDeploymentPath(path)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "internal error")
+		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
 	}
 
 	deployment, ok := keeper.GetDeployment(ctx, id)
 	if !ok {
-		return nil, sdkerrors.Wrap(err, "deployment not found")
+		return nil, types.ErrDeploymentNotFound
 	}
 
 	value := Deployment{

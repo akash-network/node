@@ -15,10 +15,16 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 		switch path[0] {
 		case ordersPath:
 			return queryOrders(ctx, path[1:], req, keeper)
+		case orderPath:
+			return queryOrder(ctx, path[1:], req, keeper)
 		case bidsPath:
 			return queryBids(ctx, path[1:], req, keeper)
+		case bidPath:
+			return queryBid(ctx, path[1:], req, keeper)
 		case leasesPath:
 			return queryLeases(ctx, path[1:], req, keeper)
+		case leasePath:
+			return queryLease(ctx, path[1:], req, keeper)
 		}
 		return []byte{}, sdkerrors.ErrUnknownRequest
 	}
@@ -33,6 +39,23 @@ func queryOrders(ctx sdk.Context, path []string, req abci.RequestQuery, keeper k
 	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
 }
 
+func queryOrder(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+
+	id, err := ParseOrderPath(path)
+	if err != nil {
+		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
+	}
+
+	order, ok := keeper.GetOrder(ctx, id)
+	if !ok {
+		return nil, types.ErrOrderNotFound
+	}
+
+	value := Order(order)
+
+	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
+}
+
 func queryBids(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 	var values Bids
 	keeper.WithBids(ctx, func(obj types.Bid) bool {
@@ -42,6 +65,23 @@ func queryBids(ctx sdk.Context, path []string, req abci.RequestQuery, keeper kee
 	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
 }
 
+func queryBid(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+
+	id, err := ParseBidPath(path)
+	if err != nil {
+		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
+	}
+
+	bid, ok := keeper.GetBid(ctx, id)
+	if !ok {
+		return nil, types.ErrBidNotFound
+	}
+
+	value := Bid(bid)
+
+	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
+}
+
 func queryLeases(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 	var values Leases
 	keeper.WithLeases(ctx, func(obj types.Lease) bool {
@@ -49,4 +89,21 @@ func queryLeases(ctx sdk.Context, path []string, req abci.RequestQuery, keeper k
 		return false
 	})
 	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
+}
+
+func queryLease(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+
+	id, err := ParseLeasePath(path)
+	if err != nil {
+		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
+	}
+
+	lease, ok := keeper.GetLease(ctx, id)
+	if !ok {
+		return nil, types.ErrLeaseNotFound
+	}
+
+	value := Lease(lease)
+
+	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
 }

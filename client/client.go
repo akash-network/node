@@ -128,6 +128,13 @@ func (c *qclient) Orders() (mquery.Orders, error) {
 	return c.mclient.Orders()
 }
 
+func (c *qclient) Order(id mtypes.OrderID) (mquery.Order, error) {
+	if c.mclient == nil {
+		return mquery.Order{}, ErrClientNotFound
+	}
+	return c.mclient.Order(id)
+}
+
 func (c *qclient) Bids() (mquery.Bids, error) {
 	if c.mclient == nil {
 		return mquery.Bids{}, ErrClientNotFound
@@ -147,6 +154,13 @@ func (c *qclient) Leases() (mquery.Leases, error) {
 		return mquery.Leases{}, ErrClientNotFound
 	}
 	return c.mclient.Leases()
+}
+
+func (c *qclient) Lease(id mtypes.LeaseID) (mquery.Lease, error) {
+	if c.mclient == nil {
+		return mquery.Lease{}, ErrClientNotFound
+	}
+	return c.mclient.Lease(id)
 }
 
 func (c *qclient) Providers() (pquery.Providers, error) {

@@ -101,6 +101,17 @@ func (id BidID) Validate() error {
 // LeaseID stores bid details of lease
 type LeaseID BidID
 
+// MakeLeaseID returns LeaseID instance with provided bid details
+func MakeLeaseID(id BidID) LeaseID {
+	return LeaseID{
+		Owner:    id.Owner,
+		DSeq:     id.DSeq,
+		GSeq:     id.GSeq,
+		OSeq:     id.OSeq,
+		Provider: id.Provider,
+	}
+}
+
 // Equals method compares specific lease with provided lease
 func (id LeaseID) Equals(other LeaseID) bool {
 	return id.BidID().Equals(other.BidID())

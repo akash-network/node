@@ -31,4 +31,10 @@ var (
 	ErrUnknownOrder = sdkerrors.Register(ModuleName, 12, "unknown order")
 	// ErrNoLeaseForOrder is the error when there is no lease for order
 	ErrNoLeaseForOrder = sdkerrors.Register(ModuleName, 13, "no lease for order")
+	// ErrOrderNotFound order not found
+	ErrOrderNotFound = sdkerrors.Register(ModuleName, 14, "invalid order: order not found")
+	// ErrBidNotFound bid not found
+	ErrBidNotFound = sdkerrors.Register(ModuleName, 15, "invalid bid: bid not found")
+	// ErrLeaseNotFound lease not found
+	ErrLeaseNotFound = sdkerrors.Register(ModuleName, 16, "invalid lease: lease not found")
 )

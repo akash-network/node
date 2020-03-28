@@ -9,7 +9,7 @@ import (
 
 func cmdGetOrders(key string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use: "list",
+		Use:   "list",
 		Short: "Query for all orders",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
@@ -20,4 +20,30 @@ func cmdGetOrders(key string, cdc *codec.Codec) *cobra.Command {
 			return ctx.PrintOutput(obj)
 		},
 	}
+}
+
+func cmdGetOrder(key string, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "get",
+		Short: "Query order",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCLIContext().WithCodec(cdc)
+
+			id, err := OrderIDFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			obj, err := query.NewClient(ctx, key).Order(id)
+			if err != nil {
+				return err
+			}
+
+			return ctx.PrintOutput(obj)
+		},
+	}
+	AddOrderIDFlags(cmd.Flags())
+	MarkReqOrderIDFlags(cmd)
+	return cmd
 }
