@@ -41,7 +41,7 @@ func queryOrders(ctx sdk.Context, path []string, req abci.RequestQuery, keeper k
 
 func queryOrder(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
-	id, err := ParseOrderPath(path)
+	id, err := parseOrderPath(path)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
 	}
@@ -67,7 +67,7 @@ func queryBids(ctx sdk.Context, path []string, req abci.RequestQuery, keeper kee
 
 func queryBid(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
-	id, err := ParseBidPath(path)
+	id, err := parseBidPath(path)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
 	}
@@ -93,7 +93,7 @@ func queryLeases(ctx sdk.Context, path []string, req abci.RequestQuery, keeper k
 
 func queryLease(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
-	id, err := ParseLeasePath(path)
+	id, err := parseLeasePath(path)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
 	}

@@ -14,11 +14,9 @@ require (
 	github.com/cosmos/cosmos-sdk v0.38.1
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
-	github.com/fatih/color v1.7.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.8-0.20191012010759-4bf2d1fec783 // indirect
 	github.com/go-kit/kit v0.9.1-0.20191018122245-9f5354e50d79
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
 	github.com/golangci/golangci-lint v1.21.0
 	github.com/google/uuid v1.1.2-0.20190416172445-c2e93f3ae59f // indirect
@@ -54,15 +52,11 @@ require (
 	github.com/subosito/gotenv v1.2.1-0.20190917103637-de67a6614a4d // indirect
 	github.com/tecbot/gorocksdb v0.0.0-20191019123150-400c56251341 // indirect
 	github.com/tendermint/go-amino v0.15.1
-	github.com/tendermint/iavl v0.13.0 // indirect
 	github.com/tendermint/tendermint v0.33.0
 	github.com/tendermint/tm-db v0.4.0
 	github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
-	golang.org/x/net v0.0.0-20190923162816-aa69164e4478 // indirect
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	google.golang.org/appengine v1.6.6-0.20191016204603-16bce7d3dc4e // indirect
-	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55 // indirect
-	google.golang.org/grpc v1.26.0 // indirect
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.0.0-20181026184759-d1dc89ebaebe

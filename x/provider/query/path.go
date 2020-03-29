@@ -11,12 +11,11 @@ const (
 	providerPath  = "provider"
 )
 
-// ProvidersPath returns providers path for queries
-func ProvidersPath() string {
+// getProvidersPath returns providers path for queries
+func getProvidersPath() string {
 	return providersPath
 }
 
-// ProviderPath returns provider path for specific provider
-func ProviderPath(id sdk.AccAddress) string {
+func getProviderPath(id sdk.AccAddress) string {
 	return fmt.Sprintf("%s/%s", providerPath, id)
 }

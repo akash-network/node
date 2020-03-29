@@ -1,8 +1,6 @@
 package query
 
 import (
-	"fmt"
-
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
@@ -26,7 +24,7 @@ type client struct {
 
 func (c *client) Deployments(id types.DeploymentID) (Deployments, error) {
 	var obj Deployments
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, DeploymentsPath(id)), nil)
+	buf, err := NewRawClient(c.ctx, c.key).Deployments(id)
 	if err != nil {
 		return obj, err
 	}
@@ -35,7 +33,7 @@ func (c *client) Deployments(id types.DeploymentID) (Deployments, error) {
 
 func (c *client) Deployment(id types.DeploymentID) (Deployment, error) {
 	var obj Deployment
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, DeploymentPath(id)), nil)
+	buf, err := NewRawClient(c.ctx, c.key).Deployment(id)
 	if err != nil {
 		return obj, err
 	}
@@ -44,7 +42,7 @@ func (c *client) Deployment(id types.DeploymentID) (Deployment, error) {
 
 func (c *client) Group(id types.GroupID) (Group, error) {
 	var obj Group
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, GroupPath(id)), nil)
+	buf, err := NewRawClient(c.ctx, c.key).Group(id)
 	if err != nil {
 		return obj, err
 	}
