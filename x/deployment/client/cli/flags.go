@@ -65,3 +65,47 @@ func GroupIDFromFlags(flags *pflag.FlagSet) (types.GroupID, error) {
 	}
 	return types.MakeGroupID(prev, gseq), nil
 }
+
+// AddDeploymentFilterFlags add flags to filter for deployment list
+func AddDeploymentFilterFlags(flags *pflag.FlagSet) {
+	flags.String("owner", "", "deployment owner address to filter")
+	flags.Uint8("state", 100, "deployment state to filter (0|1)")
+}
+
+// DepFiltersFromFlags returns DeploymentFilters with given flags and error if occured
+func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, error) {
+	var id types.DeploymentFilters
+	owner, err := flags.GetString("owner")
+	if err != nil {
+		return id, err
+	}
+	id.Owner, err = sdk.AccAddressFromBech32(owner)
+	if err != nil {
+		return id, err
+	}
+	state, err := flags.GetUint8("state")
+	if err != nil {
+		return id, err
+	}
+	id.State = types.DeploymentState(state)
+	return id, nil
+}
+
+// AddGroupFilterFlags add flags to filter for group list
+func AddGroupFilterFlags(flags *pflag.FlagSet) {
+	flags.String("owner", "", "group owner address to filter")
+	flags.Uint8("state", 100, "group state to filter (0-4)")
+}
+
+// GroupFiltersFromFlags returns GroupFilters with given flags and error if occured
+func GroupFiltersFromFlags(flags *pflag.FlagSet) (types.GroupFilters, error) {
+	prev, err := DepFiltersFromFlags(flags)
+	if err != nil {
+		return types.GroupFilters{}, err
+	}
+	id := types.GroupFilters{
+		Owner: prev.Owner,
+		State: types.GroupState(prev.State),
+	}
+	return id, nil
+}

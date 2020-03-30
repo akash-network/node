@@ -19,6 +19,12 @@ const (
 	DeploymentClosed DeploymentState = iota
 )
 
+// DeploymentFilters defines flags for deployment list filter
+type DeploymentFilters struct {
+	Owner sdk.AccAddress
+	State DeploymentState `default:100`
+}
+
 // Deployment stores deploymentID, state and version details
 type Deployment struct {
 	DeploymentID `json:"id"`
@@ -46,6 +52,12 @@ const (
 	// GroupClosed is used when state of group is closed
 	GroupClosed GroupState = iota
 )
+
+// GroupFilters defines flags for group list filter
+type GroupFilters struct {
+	Owner sdk.AccAddress
+	State GroupState
+}
 
 // GroupSpec stores group specifications
 type GroupSpec struct {

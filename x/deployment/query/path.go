@@ -12,11 +12,17 @@ const (
 	deploymentsPath = "deployments"
 	deploymentPath  = "deployment"
 	groupPath       = "group"
+	filterDepsPath  = "filter_deployments"
 )
 
 // getDeploymentsPath returns deployments path for queries
-func getDeploymentsPath(id types.DeploymentID) string {
-	return fmt.Sprintf("%s/%s", deploymentsPath, deploymentParts(id))
+func getDeploymentsPath() string {
+	return deploymentsPath
+}
+
+// getDepFiltersPath returns deployments path for queries
+func getDepFiltersPath(id types.DeploymentFilters) string {
+	return fmt.Sprintf("%s/%s/%v", filterDepsPath, id.Owner, id.State)
 }
 
 // DeploymentPath return deployment path of given deployment id for queries
@@ -29,9 +35,9 @@ func getGroupPath(id types.GroupID) string {
 	return fmt.Sprintf("%s/%s/%v/%v", groupPath, id.Owner, id.DSeq, id.GSeq)
 }
 
-// ParseDeploymentPath returns DeploymentID details with provided queries, and return
+// parseDeploymentPath returns DeploymentID details with provided queries, and return
 // error if occured due to wrong query
-func ParseDeploymentPath(parts []string) (types.DeploymentID, error) {
+func parseDeploymentPath(parts []string) (types.DeploymentID, error) {
 	if len(parts) < 2 {
 		return types.DeploymentID{}, fmt.Errorf("invalid path")
 	}
@@ -52,6 +58,29 @@ func ParseDeploymentPath(parts []string) (types.DeploymentID, error) {
 	}, nil
 }
 
+// ParseDepFiltersPath returns DeploymentFilters details with provided queries, and return
+// error if occured due to wrong query
+func ParseDepFiltersPath(parts []string) (types.DeploymentFilters, error) {
+	if len(parts) < 2 {
+		return types.DeploymentFilters{}, fmt.Errorf("invalid path")
+	}
+
+	owner, err := sdk.AccAddressFromBech32(parts[0])
+	if err != nil {
+		return types.DeploymentFilters{}, err
+	}
+
+	state, err := strconv.ParseUint(parts[1], 10, 8)
+	if err != nil {
+		return types.DeploymentFilters{}, err
+	}
+
+	return types.DeploymentFilters{
+		Owner: owner,
+		State: types.DeploymentState(state),
+	}, nil
+}
+
 // ParseGroupPath returns GroupID details with provided queries, and return
 // error if occured due to wrong query
 func ParseGroupPath(parts []string) (types.GroupID, error) {
@@ -59,7 +88,7 @@ func ParseGroupPath(parts []string) (types.GroupID, error) {
 		return types.GroupID{}, fmt.Errorf("invalid path")
 	}
 
-	did, err := ParseDeploymentPath(parts[0:2])
+	did, err := parseDeploymentPath(parts[0:2])
 	if err != nil {
 		return types.GroupID{}, err
 	}

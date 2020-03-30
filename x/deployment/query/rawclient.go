@@ -9,7 +9,8 @@ import (
 
 // RawClient interface
 type RawClient interface {
-	Deployments(types.DeploymentID) ([]byte, error)
+	Deployments() ([]byte, error)
+	FilterDeployments(types.DeploymentFilters) ([]byte, error)
 	Deployment(types.DeploymentID) ([]byte, error)
 	Group(types.GroupID) ([]byte, error)
 }
@@ -24,8 +25,16 @@ type rawclient struct {
 	key string
 }
 
-func (c *rawclient) Deployments(id types.DeploymentID) ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getDeploymentsPath(id)), nil)
+func (c *rawclient) Deployments() ([]byte, error) {
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getDeploymentsPath()), nil)
+	if err != nil {
+		return []byte{}, err
+	}
+	return buf, nil
+}
+
+func (c *rawclient) FilterDeployments(id types.DeploymentFilters) ([]byte, error) {
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getDepFiltersPath(id)), nil)
 	if err != nil {
 		return []byte{}, err
 	}

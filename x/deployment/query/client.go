@@ -7,7 +7,8 @@ import (
 
 // Client interface
 type Client interface {
-	Deployments(types.DeploymentID) (Deployments, error)
+	Deployments() (Deployments, error)
+	FilterDeployments(types.DeploymentFilters) (Deployments, error)
 	Deployment(types.DeploymentID) (Deployment, error)
 	Group(types.GroupID) (Group, error)
 }
@@ -22,9 +23,18 @@ type client struct {
 	key string
 }
 
-func (c *client) Deployments(id types.DeploymentID) (Deployments, error) {
+func (c *client) Deployments() (Deployments, error) {
 	var obj Deployments
-	buf, err := NewRawClient(c.ctx, c.key).Deployments(id)
+	buf, err := NewRawClient(c.ctx, c.key).Deployments()
+	if err != nil {
+		return obj, err
+	}
+	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+}
+
+func (c *client) FilterDeployments(id types.DeploymentFilters) (Deployments, error) {
+	var obj Deployments
+	buf, err := NewRawClient(c.ctx, c.key).FilterDeployments(id)
 	if err != nil {
 		return obj, err
 	}

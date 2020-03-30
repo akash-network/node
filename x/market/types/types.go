@@ -20,6 +20,12 @@ const (
 	OrderClosed OrderState = iota
 )
 
+// OrderFilters defines flags for order list filter
+type OrderFilters struct {
+	Owner sdk.AccAddress
+	State OrderState
+}
+
 // Order stores orderID, state of order and other details
 type Order struct {
 	OrderID `json:"id"`
@@ -95,6 +101,12 @@ const (
 	BidClosed BidState = iota
 )
 
+// BidFilters defines flags for bid list filter
+type BidFilters struct {
+	Owner sdk.AccAddress
+	State BidState
+}
+
 // Bid stores BidID, state of bid and price
 type Bid struct {
 	BidID `json:"id"`
@@ -118,6 +130,12 @@ const (
 	// LeaseClosed is used when state of lease is closed
 	LeaseClosed LeaseState = iota
 )
+
+// LeaseFilters defines flags for lease list filter
+type LeaseFilters struct {
+	Owner sdk.AccAddress
+	State LeaseState
+}
 
 // Lease stores LeaseID, state of lease and price
 type Lease struct {

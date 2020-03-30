@@ -9,18 +9,33 @@ import (
 )
 
 func cmdGetLeases(key string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Query for all leases",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			obj, err := query.NewClient(ctx, key).Leases()
+
+			id, err := LeaseFiltersFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			var obj query.Leases
+
+			if id.Owner.Empty() && id.State == 100 {
+				obj, err = query.NewClient(ctx, key).Leases()
+			} else {
+				obj, err = query.NewClient(ctx, key).FilterLeases(id)
+			}
+
 			if err != nil {
 				return err
 			}
 			return ctx.PrintOutput(obj)
 		},
 	}
+	AddLeaseFilterFlags(cmd.Flags())
+	return cmd
 }
 
 func cmdGetLease(key string, cdc *codec.Codec) *cobra.Command {

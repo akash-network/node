@@ -37,19 +37,26 @@ func cmdDeployments(key string, cdc *codec.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
 
-			id, err := DeploymentIDFromFlags(cmd.Flags(), ctx.FromAddress.String())
+			id, err := DepFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			obj, err := query.NewClient(ctx, key).Deployments(id)
+			var obj query.Deployments
+
+			if id.Owner.Empty() && id.State == 100 {
+				obj, err = query.NewClient(ctx, key).Deployments()
+			} else {
+				obj, err = query.NewClient(ctx, key).FilterDeployments(id)
+			}
+
 			if err != nil {
 				return err
 			}
 			return ctx.PrintOutput(obj)
 		},
 	}
-	AddDeploymentIDFlags(cmd.Flags())
+	AddDeploymentFilterFlags(cmd.Flags())
 	return cmd
 }
 
