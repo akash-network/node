@@ -28,13 +28,12 @@ const DENOM = "stake"
 
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simulation.AppParams, cdc *codec.Codec, k keeper.Keeper,
+	appParams simulation.AppParams, cdc *codec.Codec, ak stakingtypes.AccountKeeper, k keeper.Keeper,
 ) simulation.WeightedOperations {
 
 	var weightMsgCreateDeployment int
 	var weightMsgUpdateDeployment int
 	var weightMsgCloseDeployment int
-	var ak stakingtypes.AccountKeeper
 
 	appParams.GetOrGenerate(
 		cdc, OpWeightMsgCreateDeployment, &weightMsgCreateDeployment, nil, func(r *rand.Rand) {
@@ -59,10 +58,10 @@ func WeightedOperations(
 			weightMsgCreateDeployment,
 			SimulateMsgCreateDeployment(ak, k),
 		),
-		simulation.NewWeightedOperation(
-			weightMsgUpdateDeployment,
-			SimulateMsgUpdateDeployment(ak, k),
-		),
+		// simulation.NewWeightedOperation(
+		// 	weightMsgUpdateDeployment,
+		// 	SimulateMsgUpdateDeployment(ak, k),
+		// ),
 		simulation.NewWeightedOperation(
 			weightMsgCloseDeployment,
 			SimulateMsgCloseDeployment(ak, k),
@@ -203,7 +202,9 @@ func SimulateMsgCloseDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper) 
 		var deployments []types.Deployment
 
 		k.WithDeployments(ctx, func(deployment types.Deployment) bool {
-			deployments = append(deployments, deployment)
+			if deployment.State == types.DeploymentActive {
+				deployments = append(deployments, deployment)
+			}
 			return false
 		})
 

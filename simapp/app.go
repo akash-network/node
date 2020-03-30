@@ -257,9 +257,9 @@ func NewSimApp(
 		staking.NewAppModule(app.StakingKeeper, app.AccountKeeper, app.SupplyKeeper),
 		upgrade.NewAppModule(app.UpgradeKeeper),
 		evidence.NewAppModule(app.EvidenceKeeper),
-		deployment.NewAppModule(app.DeploymentKeeper, app.MarketKeeper, app.BankKeeper),
+		deployment.NewAppModule(app.DeploymentKeeper, app.AccountKeeper, app.MarketKeeper, app.BankKeeper),
 		market.NewAppModule(app.MarketKeeper, app.DeploymentKeeper, app.ProviderKeeper, app.BankKeeper),
-		provider.NewAppModule(app.ProviderKeeper, app.BankKeeper),
+		provider.NewAppModule(app.ProviderKeeper, app.AccountKeeper, app.BankKeeper),
 	)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
@@ -294,9 +294,9 @@ func NewSimApp(
 		distr.NewAppModule(app.DistrKeeper, app.AccountKeeper, app.SupplyKeeper, app.StakingKeeper),
 		slashing.NewAppModule(app.SlashingKeeper, app.AccountKeeper, app.StakingKeeper),
 		params.NewAppModule(), // NOTE: only used for simulation to generate randomized param change proposals
-		deployment.NewAppModule(app.DeploymentKeeper, app.MarketKeeper, app.BankKeeper),
+		deployment.NewAppModule(app.DeploymentKeeper, app.AccountKeeper, app.MarketKeeper, app.BankKeeper),
 		// market.NewAppModule(app.MarketKeeper, app.DeploymentKeeper, app.ProviderKeeper, app.BankKeeper),
-		// provider.NewAppModule(app.ProviderKeeper, app.BankKeeper),
+		provider.NewAppModule(app.ProviderKeeper, app.AccountKeeper, app.BankKeeper),
 	)
 
 	app.sm.RegisterStoreDecoders()

@@ -246,6 +246,7 @@ func NewApp(
 		// akash
 		deployment.NewAppModule(
 			app.keeper.deployment,
+			app.keeper.acct,
 			app.keeper.market,
 			app.keeper.bank,
 		),
@@ -257,7 +258,7 @@ func NewApp(
 			app.keeper.bank,
 		),
 
-		provider.NewAppModule(app.keeper.provider, app.keeper.bank),
+		provider.NewAppModule(app.keeper.provider, app.keeper.acct, app.keeper.bank),
 	)
 
 	app.mm.SetOrderBeginBlockers(mint.ModuleName, distr.ModuleName, slashing.ModuleName)

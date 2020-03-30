@@ -27,13 +27,11 @@ const DENOM = "stake"
 
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simulation.AppParams, cdc *codec.Codec, k keeper.Keeper,
+	appParams simulation.AppParams, cdc *codec.Codec, ak stakingtypes.AccountKeeper, k keeper.Keeper,
 ) simulation.WeightedOperations {
 
 	var weightMsgCreate int
 	var weightMsgUpdate int
-
-	var ak stakingtypes.AccountKeeper
 
 	appParams.GetOrGenerate(
 		cdc, OpWeightMsgCreate, &weightMsgCreate, nil, func(r *rand.Rand) {

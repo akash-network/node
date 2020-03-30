@@ -6,6 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sim "github.com/cosmos/cosmos-sdk/x/simulation"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -82,14 +83,16 @@ type AppModule struct {
 	AppModuleBasic
 	keeper  keeper.Keeper
 	bkeeper bank.Keeper
+	akeeper stakingtypes.AccountKeeper
 }
 
 // NewAppModule creates a new AppModule object
-func NewAppModule(k keeper.Keeper, bkeeper bank.Keeper) AppModule {
+func NewAppModule(k keeper.Keeper, akeeper stakingtypes.AccountKeeper, bkeeper bank.Keeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
 		keeper:         k,
 		bkeeper:        bkeeper,
+		akeeper:        akeeper,
 	}
 }
 
@@ -172,5 +175,5 @@ func (AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
 // WeightedOperations returns the all the staking module operations with their respective weights.
 func (am AppModule) WeightedOperations(simState module.SimulationState) []sim.WeightedOperation {
 	return simulation.WeightedOperations(simState.AppParams, simState.Cdc,
-		am.keeper)
+		am.akeeper, am.keeper)
 }

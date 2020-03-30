@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/gorilla/mux"
 	"github.com/ovrclk/akash/x/deployment/client/cli"
 	"github.com/ovrclk/akash/x/deployment/client/rest"
@@ -16,6 +17,7 @@ import (
 	"github.com/ovrclk/akash/x/deployment/query"
 	"github.com/ovrclk/akash/x/deployment/simulation"
 	"github.com/ovrclk/akash/x/deployment/types"
+
 	"github.com/spf13/cobra"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -83,17 +85,19 @@ func (AppModuleBasic) GetQueryClient(ctx context.CLIContext) query.Client {
 type AppModule struct {
 	AppModuleBasic
 	keeper     keeper.Keeper
+	akeeper    stakingtypes.AccountKeeper
 	mkeeper    handler.MarketKeeper
 	coinKeeper bank.Keeper
 }
 
 // NewAppModule creates a new AppModule Object
-func NewAppModule(k keeper.Keeper, mkeeper handler.MarketKeeper, bankKeeper bank.Keeper) AppModule {
+func NewAppModule(k keeper.Keeper, akeeper stakingtypes.AccountKeeper, mkeeper handler.MarketKeeper, bankKeeper bank.Keeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
 		keeper:         k,
 		mkeeper:        mkeeper,
 		coinKeeper:     bankKeeper,
+		akeeper:        akeeper,
 	}
 }
 
@@ -179,5 +183,5 @@ func (AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
 // WeightedOperations returns the all the staking module operations with their respective weights.
 func (am AppModule) WeightedOperations(simState module.SimulationState) []sim.WeightedOperation {
 	return simulation.WeightedOperations(simState.AppParams, simState.Cdc,
-		am.keeper)
+		am.akeeper, am.keeper)
 }
