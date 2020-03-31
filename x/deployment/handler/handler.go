@@ -12,11 +12,11 @@ import (
 func NewHandler(keeper keeper.Keeper, mkeeper MarketKeeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		switch msg := msg.(type) {
-		case types.MsgCreate:
+		case types.MsgCreateDeployment:
 			return handleMsgCreate(ctx, keeper, mkeeper, msg)
-		case types.MsgUpdate:
+		case types.MsgUpdateDeployment:
 			return handleMsgUpdate(ctx, keeper, mkeeper, msg)
-		case types.MsgClose:
+		case types.MsgCloseDeployment:
 			return handleMsgClose(ctx, keeper, mkeeper, msg)
 		default:
 			return nil, sdkerrors.ErrUnknownRequest
@@ -24,7 +24,7 @@ func NewHandler(keeper keeper.Keeper, mkeeper MarketKeeper) sdk.Handler {
 	}
 }
 
-func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgCreate) (*sdk.Result, error) {
+func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgCreateDeployment) (*sdk.Result, error) {
 
 	deployment := types.Deployment{
 		DeploymentID: types.DeploymentID{
@@ -61,7 +61,7 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper
 	}, nil
 }
 
-func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgUpdate) (*sdk.Result, error) {
+func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgUpdateDeployment) (*sdk.Result, error) {
 	deployment, found := keeper.GetDeployment(ctx, msg.ID)
 	if !found {
 		return nil, types.ErrDeploymentNotFound
@@ -77,7 +77,7 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper
 	}, nil
 }
 
-func handleMsgClose(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgClose) (*sdk.Result, error) {
+func handleMsgClose(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgCloseDeployment) (*sdk.Result, error) {
 
 	deployment, found := keeper.GetDeployment(ctx, msg.ID)
 	if !found {

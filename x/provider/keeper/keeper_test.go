@@ -34,7 +34,7 @@ func (s *TestSuite) TestKeeper() {
 	s.T().Log("verify provider is created")
 	cfg, err := config.ReadConfigPath("../testdata/provider.yml")
 	s.Require().NoError(err, "Error in reading file")
-	msg := types.MsgCreate{
+	msg := types.MsgCreateProvider{
 		Owner:      ownerAddr,
 		HostURI:    cfg.Host,
 		Attributes: cfg.GetAttributes(),
