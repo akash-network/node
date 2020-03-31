@@ -56,10 +56,18 @@ func WeightedOperations(
 			weightMsgCreateBid,
 			SimulateMsgCreateBid(ak, ks),
 		),
+		simulation.NewWeightedOperation(
+			weightMsgCloseBid,
+			SimulateMsgCloseBid(ak, ks),
+		),
+		simulation.NewWeightedOperation(
+			weightMsgCloseOrder,
+			SimulateMsgCloseOrder(ak, ks),
+		),
 	}
 }
 
-// SimulateMsgCreateBid generates a MsgCreate with random values
+// SimulateMsgCreateBid generates a MsgCreateBid with random values
 func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
 		accounts []simulation.Account, chainID string,
@@ -91,7 +99,7 @@ func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) sim
 			}
 		}
 
-		orderId := types.OrderID{
+		orderID := types.OrderID{
 			Owner: simAccount.Address,
 			DSeq:  rand.Uint64(),
 			GSeq:  rand.Uint32(),
@@ -99,9 +107,134 @@ func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) sim
 		}
 
 		msg := types.MsgCreateBid{
-			Order:    orderId,
+			Order:    orderID,
 			Provider: simAccount.Address,
 			Price:    coins[0],
+		}
+
+		tx := helpers.GenTx(
+			[]sdk.Msg{msg},
+			fees,
+			helpers.DefaultGenTxGas,
+			chainID,
+			[]uint64{account.GetAccountNumber()},
+			[]uint64{account.GetSequence()},
+			simAccount.PrivKey,
+		)
+
+		_, _, err = app.Deliver(tx)
+		if err != nil {
+			return simulation.NoOpMsg(types.ModuleName), nil, err
+		}
+
+		return simulation.NewOperationMsg(msg, true, ""), nil, nil
+	}
+}
+
+// SimulateMsgCloseBid generates a MsgCloseBid with random values
+func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
+		accounts []simulation.Account, chainID string,
+	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+		simAccount, _ := simulation.RandomAcc(r, accounts)
+
+		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
+
+		if !amount.IsPositive() {
+			return simulation.NoOpMsg(types.ModuleName), nil, nil
+		}
+
+		amount, err := simulation.RandPositiveInt(r, amount)
+		if err != nil {
+			return simulation.NoOpMsg(types.ModuleName), nil, err
+		}
+
+		selfDelegation := sdk.NewCoin(DENOM, amount)
+
+		account := ak.GetAccount(ctx, simAccount.Address)
+		coins := account.SpendableCoins(ctx.BlockTime())
+
+		var fees sdk.Coins
+		coins, hasNeg := coins.SafeSub(sdk.Coins{selfDelegation})
+		if !hasNeg {
+			fees, err = simulation.RandomFees(r, ctx, coins)
+			if err != nil {
+				return simulation.NoOpMsg(types.ModuleName), nil, err
+			}
+		}
+
+		bidID := types.BidID{
+			Owner:    simAccount.Address,
+			DSeq:     rand.Uint64(),
+			GSeq:     rand.Uint32(),
+			OSeq:     rand.Uint32(),
+			Provider: simAccount.Address,
+		}
+
+		msg := types.MsgCloseBid{
+			BidID: bidID,
+		}
+
+		tx := helpers.GenTx(
+			[]sdk.Msg{msg},
+			fees,
+			helpers.DefaultGenTxGas,
+			chainID,
+			[]uint64{account.GetAccountNumber()},
+			[]uint64{account.GetSequence()},
+			simAccount.PrivKey,
+		)
+
+		_, _, err = app.Deliver(tx)
+		if err != nil {
+			return simulation.NoOpMsg(types.ModuleName), nil, err
+		}
+
+		return simulation.NewOperationMsg(msg, true, ""), nil, nil
+	}
+}
+
+// SimulateMsgCloseOrder generates a MsgCloseOrder with random values
+func SimulateMsgCloseOrder(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
+		accounts []simulation.Account, chainID string,
+	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+		simAccount, _ := simulation.RandomAcc(r, accounts)
+
+		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
+
+		if !amount.IsPositive() {
+			return simulation.NoOpMsg(types.ModuleName), nil, nil
+		}
+
+		amount, err := simulation.RandPositiveInt(r, amount)
+		if err != nil {
+			return simulation.NoOpMsg(types.ModuleName), nil, err
+		}
+
+		selfDelegation := sdk.NewCoin(DENOM, amount)
+
+		account := ak.GetAccount(ctx, simAccount.Address)
+		coins := account.SpendableCoins(ctx.BlockTime())
+
+		var fees sdk.Coins
+		coins, hasNeg := coins.SafeSub(sdk.Coins{selfDelegation})
+		if !hasNeg {
+			fees, err = simulation.RandomFees(r, ctx, coins)
+			if err != nil {
+				return simulation.NoOpMsg(types.ModuleName), nil, err
+			}
+		}
+
+		orderID := types.OrderID{
+			Owner: simAccount.Address,
+			DSeq:  rand.Uint64(),
+			GSeq:  rand.Uint32(),
+			OSeq:  rand.Uint32(),
+		}
+
+		msg := types.MsgCloseOrder{
+			OrderID: orderID,
 		}
 
 		tx := helpers.GenTx(
