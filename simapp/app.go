@@ -295,7 +295,7 @@ func NewSimApp(
 		slashing.NewAppModule(app.SlashingKeeper, app.AccountKeeper, app.StakingKeeper),
 		params.NewAppModule(), // NOTE: only used for simulation to generate randomized param change proposals
 		deployment.NewAppModule(app.DeploymentKeeper, app.AccountKeeper, app.MarketKeeper, app.BankKeeper),
-		// market.NewAppModule(app.MarketKeeper, app.DeploymentKeeper, app.ProviderKeeper, app.BankKeeper),
+		market.NewAppModule(app.MarketKeeper, app.DeploymentKeeper, app.ProviderKeeper, app.BankKeeper),
 		provider.NewAppModule(app.ProviderKeeper, app.AccountKeeper, app.BankKeeper),
 	)
 
