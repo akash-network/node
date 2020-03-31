@@ -253,6 +253,7 @@ func NewApp(
 
 		market.NewAppModule(
 			app.keeper.market,
+			app.keeper.acct,
 			app.keeper.deployment,
 			app.keeper.provider,
 			app.keeper.bank,

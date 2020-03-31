@@ -87,6 +87,7 @@ type AppModule struct {
 // NewAppModule creates a new AppModule object
 func NewAppModule(
 	keeper keeper.Keeper,
+	akeeper stakingtypes.AccountKeeper,
 	dkeeper handler.DeploymentKeeper,
 	pkeeper handler.ProviderKeeper,
 	bkeeper bank.Keeper,
@@ -99,6 +100,7 @@ func NewAppModule(
 			Provider:   pkeeper,
 			Bank:       bkeeper,
 		},
+		akeeper: akeeper,
 	}
 }
 
@@ -181,6 +183,6 @@ func (AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
 
 // WeightedOperations returns the all the staking module operations with their respective weights.
 func (am AppModule) WeightedOperations(simState module.SimulationState) []sim.WeightedOperation {
-	return simulation.WeightedOperations(simState.AppParams, simState.Cdc, 
+	return simulation.WeightedOperations(simState.AppParams, simState.Cdc,
 		am.akeeper, am.keepers)
 }
