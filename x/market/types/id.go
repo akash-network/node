@@ -2,6 +2,8 @@ package types
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -39,7 +41,10 @@ func (id OrderID) Equals(other OrderID) bool {
 
 // Validate method for OrderID and returns nil
 func (id OrderID) Validate() error {
-	return nil
+	if id.OSeq == 0 {
+		return sdkerrors.Wrap(ErrInvalidOrder, "oseq id must be > 0")
+	}
+	return id.GroupID().Validate()
 }
 
 // BidID stores owner, provider and all other seq numbers
@@ -95,7 +100,10 @@ func (id BidID) DeploymentID() dtypes.DeploymentID {
 
 // Validate validates bid instance and returns nil
 func (id BidID) Validate() error {
-	return nil
+	if id.Provider.Empty() {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "provider cannot be empty")
+	}
+	return id.OrderID().Validate()
 }
 
 // LeaseID stores bid details of lease
