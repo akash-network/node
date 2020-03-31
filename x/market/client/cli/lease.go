@@ -15,19 +15,12 @@ func cmdGetLeases(key string, cdc *codec.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
 
-			id, err := LeaseFiltersFromFlags(cmd.Flags())
+			lfilters, err := LeaseFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			var obj query.Leases
-
-			if id.Owner.Empty() && id.State == 100 {
-				obj, err = query.NewClient(ctx, key).Leases()
-			} else {
-				obj, err = query.NewClient(ctx, key).FilterLeases(id)
-			}
-
+			obj, err := query.NewClient(ctx, key).Leases(lfilters)
 			if err != nil {
 				return err
 			}

@@ -22,7 +22,16 @@ const (
 // DeploymentFilters defines flags for deployment list filter
 type DeploymentFilters struct {
 	Owner sdk.AccAddress
-	State DeploymentState `default:100`
+	// State flag value given
+	StateFlagVal string
+	// Actual state value decoded from DeploymentStateMap
+	State DeploymentState
+}
+
+// DeploymentStateMap is used to decode deployment state flag value
+var DeploymentStateMap = map[string]DeploymentState{
+	"active": DeploymentActive,
+	"closed": DeploymentClosed,
 }
 
 // Deployment stores deploymentID, state and version details
@@ -56,7 +65,19 @@ const (
 // GroupFilters defines flags for group list filter
 type GroupFilters struct {
 	Owner sdk.AccAddress
+	// State flag value given
+	StateFlagVal string
+	// Actual state value decoded from GroupStateMap
 	State GroupState
+}
+
+// GroupStateMap is used to decode group state flag value
+var GroupStateMap = map[string]GroupState{
+	"open":         GroupOpen,
+	"ordered":      GroupOrdered,
+	"matched":      GroupMatched,
+	"insufficient": GroupInsufficientFunds,
+	"closed":       GroupClosed,
 }
 
 // GroupSpec stores group specifications

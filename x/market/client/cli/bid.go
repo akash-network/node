@@ -14,19 +14,12 @@ func cmdGetBids(key string, cdc *codec.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
 
-			id, err := BidFiltersFromFlags(cmd.Flags())
+			bfilters, err := BidFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			var obj query.Bids
-
-			if id.Owner.Empty() && id.State == 100 {
-				obj, err = query.NewClient(ctx, key).Bids()
-			} else {
-				obj, err = query.NewClient(ctx, key).FilterBids(id)
-			}
-
+			obj, err := query.NewClient(ctx, key).Bids(bfilters)
 			if err != nil {
 				return err
 			}

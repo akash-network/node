@@ -10,25 +10,17 @@ import (
 )
 
 const (
-	ordersPath       = "orders"
-	filterordersPath = "filter_orders"
-	orderPath        = "order"
-	bidsPath         = "bids"
-	filterbidsPath   = "filter_bids"
-	bidPath          = "bid"
-	leasesPath       = "leases"
-	filterleasesPath = "filter_leases"
-	leasePath        = "lease"
+	ordersPath = "orders"
+	orderPath  = "order"
+	bidsPath   = "bids"
+	bidPath    = "bid"
+	leasesPath = "leases"
+	leasePath  = "lease"
 )
 
 // getOrdersPath returns orders path for queries
-func getOrdersPath() string {
-	return ordersPath
-}
-
-// getOrdersFilterPath returns orders path for queries with filter
-func getOrdersFilterPath(id types.OrderFilters) string {
-	return fmt.Sprintf("%s/%s/%v", filterordersPath, id.Owner, id.State)
+func getOrdersPath(ofilters types.OrderFilters) string {
+	return fmt.Sprintf("%s/%s/%v", ordersPath, ofilters.Owner, ofilters.StateFlagVal)
 }
 
 // OrderPath return order path of given order id for queries
@@ -37,13 +29,8 @@ func OrderPath(id types.OrderID) string {
 }
 
 //getBidsPath returns bids path for queries
-func getBidsPath() string {
-	return bidsPath
-}
-
-//getBidsFilterPath returns bids path for queries with filter
-func getBidsFilterPath(id types.BidFilters) string {
-	return fmt.Sprintf("%s/%s/%v", filterbidsPath, id.Owner, id.State)
+func getBidsPath(bfilters types.BidFilters) string {
+	return fmt.Sprintf("%s/%s/%v", bidsPath, bfilters.Owner, bfilters.StateFlagVal)
 }
 
 // getBidPath return bid path of given bid id for queries
@@ -52,13 +39,8 @@ func getBidPath(id types.BidID) string {
 }
 
 // getLeasesPath returns leases path for queries
-func getLeasesPath() string {
-	return leasesPath
-}
-
-// getLeasesFilterPath returns leases path for queries with filter
-func getLeasesFilterPath(id types.LeaseFilters) string {
-	return fmt.Sprintf("%s/%s/%v", filterleasesPath, id.Owner, id.State)
+func getLeasesPath(lfilters types.LeaseFilters) string {
+	return fmt.Sprintf("%s/%s/%v", leasesPath, lfilters.Owner, lfilters.StateFlagVal)
 }
 
 // LeasePath return lease path of given lease id for queries
@@ -89,20 +71,27 @@ func parseOrderPath(parts []string) (types.OrderID, error) {
 
 // parseOrderFiltersPath returns OrderFilters details with provided queries, and return
 // error if occured due to wrong query
-func parseOrderFiltersPath(parts []string) (types.OrderFilters, error) {
+func parseOrderFiltersPath(parts []string) (types.OrderFilters, bool, error) {
 	if len(parts) < 2 {
-		return types.OrderFilters{}, fmt.Errorf("invalid path")
+		return types.OrderFilters{}, false, fmt.Errorf("invalid path")
 	}
 
-	prev, err := dpath.ParseDepFiltersPath(parts[0:2])
+	owner, err := sdk.AccAddressFromBech32(parts[0])
 	if err != nil {
-		return types.OrderFilters{}, err
+		return types.OrderFilters{}, false, err
+	}
+
+	state, ok := types.OrderStateMap[parts[1]]
+
+	if !ok && (parts[1] != "") {
+		return types.OrderFilters{}, false, fmt.Errorf("invalid state value")
 	}
 
 	return types.OrderFilters{
-		Owner: prev.Owner,
-		State: types.OrderState(prev.State),
-	}, nil
+		Owner:        owner,
+		StateFlagVal: parts[1],
+		State:        state,
+	}, ok, nil
 }
 
 // parseBidPath returns bidID details with provided queries, and return
@@ -127,20 +116,27 @@ func parseBidPath(parts []string) (types.BidID, error) {
 
 // parseBidFiltersPath returns BidFilters details with provided queries, and return
 // error if occured due to wrong query
-func parseBidFiltersPath(parts []string) (types.BidFilters, error) {
+func parseBidFiltersPath(parts []string) (types.BidFilters, bool, error) {
 	if len(parts) < 2 {
-		return types.BidFilters{}, fmt.Errorf("invalid path")
+		return types.BidFilters{}, false, fmt.Errorf("invalid path")
 	}
 
-	prev, err := parseOrderFiltersPath(parts[0:2])
+	owner, err := sdk.AccAddressFromBech32(parts[0])
 	if err != nil {
-		return types.BidFilters{}, err
+		return types.BidFilters{}, false, err
+	}
+
+	state, ok := types.BidStateMap[parts[1]]
+
+	if !ok && (parts[1] != "") {
+		return types.BidFilters{}, false, fmt.Errorf("invalid state value")
 	}
 
 	return types.BidFilters{
-		Owner: prev.Owner,
-		State: types.BidState(prev.State),
-	}, nil
+		Owner:        owner,
+		StateFlagVal: parts[1],
+		State:        state,
+	}, ok, nil
 }
 
 // parseLeasePath returns leaseID details with provided queries, and return
@@ -156,18 +152,25 @@ func parseLeasePath(parts []string) (types.LeaseID, error) {
 
 // parseLeaseFiltersPath returns LeaseFilters details with provided queries, and return
 // error if occured due to wrong query
-func parseLeaseFiltersPath(parts []string) (types.LeaseFilters, error) {
+func parseLeaseFiltersPath(parts []string) (types.LeaseFilters, bool, error) {
 	if len(parts) < 2 {
-		return types.LeaseFilters{}, fmt.Errorf("invalid path")
+		return types.LeaseFilters{}, false, fmt.Errorf("invalid path")
 	}
 
-	prev, err := parseOrderFiltersPath(parts[0:2])
+	owner, err := sdk.AccAddressFromBech32(parts[0])
 	if err != nil {
-		return types.LeaseFilters{}, err
+		return types.LeaseFilters{}, false, err
+	}
+
+	state, ok := types.LeaseStateMap[parts[1]]
+
+	if !ok && (parts[1] != "") {
+		return types.LeaseFilters{}, false, fmt.Errorf("invalid state value")
 	}
 
 	return types.LeaseFilters{
-		Owner: prev.Owner,
-		State: types.LeaseState(prev.State),
-	}, nil
+		Owner:        owner,
+		StateFlagVal: parts[1],
+		State:        state,
+	}, ok, nil
 }

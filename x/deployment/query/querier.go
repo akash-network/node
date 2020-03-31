@@ -15,8 +15,6 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 		switch path[0] {
 		case deploymentsPath:
 			return queryDeployments(ctx, path[1:], req, keeper)
-		case filterDepsPath:
-			return queryFilterDeployments(ctx, path[1:], req, keeper)
 		case deploymentPath:
 			return queryDeployment(ctx, path[1:], req, keeper)
 		case groupPath:
@@ -27,51 +25,45 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 }
 
 func queryDeployments(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
-	var values Deployments
-	keeper.WithDeployments(ctx, func(deployment types.Deployment) bool {
-		value := Deployment{
-			Deployment: deployment,
-			Groups:     keeper.GetGroups(ctx, deployment.ID()),
-		}
-		values = append(values, value)
-		return false
-	})
-
-	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
-}
-
-func queryFilterDeployments(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
-	filter, err := ParseDepFiltersPath(path)
+	// isValidState denotes whether given state flag is valid or not
+	filters, isValidState, err := parseDepFiltersPath(path)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
 	}
 
 	var values Deployments
-
 	keeper.WithDeployments(ctx, func(deployment types.Deployment) bool {
-		if filter.Owner.Empty() {
-			if deployment.State == filter.State {
-				value := Deployment{
-					Deployment: deployment,
-					Groups:     keeper.GetGroups(ctx, deployment.ID()),
-				}
-				values = append(values, value)
+		if filters.Owner.Empty() && !isValidState {
+			value := Deployment{
+				Deployment: deployment,
+				Groups:     keeper.GetGroups(ctx, deployment.ID()),
 			}
-		} else if filter.State == 100 {
-			if deployment.DeploymentID.Owner.Equals(filter.Owner) {
-				value := Deployment{
-					Deployment: deployment,
-					Groups:     keeper.GetGroups(ctx, deployment.ID()),
-				}
-				values = append(values, value)
-			}
+			values = append(values, value)
 		} else {
-			if deployment.DeploymentID.Owner.Equals(filter.Owner) && deployment.State == filter.State {
-				value := Deployment{
-					Deployment: deployment,
-					Groups:     keeper.GetGroups(ctx, deployment.ID()),
+			if filters.Owner.Empty() {
+				if deployment.State == filters.State {
+					value := Deployment{
+						Deployment: deployment,
+						Groups:     keeper.GetGroups(ctx, deployment.ID()),
+					}
+					values = append(values, value)
 				}
-				values = append(values, value)
+			} else if !isValidState {
+				if deployment.DeploymentID.Owner.Equals(filters.Owner) {
+					value := Deployment{
+						Deployment: deployment,
+						Groups:     keeper.GetGroups(ctx, deployment.ID()),
+					}
+					values = append(values, value)
+				}
+			} else {
+				if deployment.DeploymentID.Owner.Equals(filters.Owner) && deployment.State == filters.State {
+					value := Deployment{
+						Deployment: deployment,
+						Groups:     keeper.GetGroups(ctx, deployment.ID()),
+					}
+					values = append(values, value)
+				}
 			}
 		}
 		return false

@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/gorilla/mux"
 	"github.com/ovrclk/akash/x/deployment/query"
+	"github.com/ovrclk/akash/x/deployment/types"
 )
 
 // RegisterRoutes registers all query routes
@@ -17,7 +18,7 @@ func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
 
 func listDeploymentsHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res, err := query.NewRawClient(ctx, ns).Deployments()
+		res, err := query.NewRawClient(ctx, ns).Deployments(types.DeploymentFilters{})
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
 			return

@@ -82,56 +82,56 @@ func BidIDFromFlagsWithoutCtx(flags *pflag.FlagSet) (types.BidID, error) {
 // AddOrderFilterFlags add flags to filter for order list
 func AddOrderFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "order owner address to filter")
-	flags.Uint8("state", 100, "order state to filter (0-2)")
+	flags.String("state", "", "order state to filter (open,matched,closed)")
 }
 
 // OrderFiltersFromFlags returns OrderFilters with given flags and error if occured
 func OrderFiltersFromFlags(flags *pflag.FlagSet) (types.OrderFilters, error) {
-	prev, err := dcli.GroupFiltersFromFlags(flags)
+	gfilters, err := dcli.GroupFiltersFromFlags(flags)
 	if err != nil {
 		return types.OrderFilters{}, err
 	}
-	id := types.OrderFilters{
-		Owner: prev.Owner,
-		State: types.OrderState(prev.State),
+	ofilters := types.OrderFilters{
+		Owner:        gfilters.Owner,
+		StateFlagVal: gfilters.StateFlagVal,
 	}
-	return id, nil
+	return ofilters, nil
 }
 
 // AddBidFilterFlags add flags to filter for bid list
 func AddBidFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "bid owner address to filter")
-	flags.Uint8("state", 100, "bid state to filter (0-3)")
+	flags.String("state", "", "bid state to filter (open,matched,lost,closed)")
 }
 
 // BidFiltersFromFlags returns BidFilters with given flags and error if occured
 func BidFiltersFromFlags(flags *pflag.FlagSet) (types.BidFilters, error) {
-	prev, err := OrderFiltersFromFlags(flags)
+	ofilters, err := OrderFiltersFromFlags(flags)
 	if err != nil {
 		return types.BidFilters{}, err
 	}
-	id := types.BidFilters{
-		Owner: prev.Owner,
-		State: types.BidState(prev.State),
+	bfilters := types.BidFilters{
+		Owner:        ofilters.Owner,
+		StateFlagVal: ofilters.StateFlagVal,
 	}
-	return id, nil
+	return bfilters, nil
 }
 
 // AddLeaseFilterFlags add flags to filter for lease list
 func AddLeaseFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "lease owner address to filter")
-	flags.Uint8("state", 100, "lease state to filter (0-2)")
+	flags.String("state", "", "lease state to filter (active,insufficient,closed)")
 }
 
 // LeaseFiltersFromFlags returns LeaseFilters with given flags and error if occured
 func LeaseFiltersFromFlags(flags *pflag.FlagSet) (types.LeaseFilters, error) {
-	prev, err := OrderFiltersFromFlags(flags)
+	ofilters, err := OrderFiltersFromFlags(flags)
 	if err != nil {
 		return types.LeaseFilters{}, err
 	}
-	id := types.LeaseFilters{
-		Owner: prev.Owner,
-		State: types.LeaseState(prev.State),
+	lfilters := types.LeaseFilters{
+		Owner:        ofilters.Owner,
+		StateFlagVal: ofilters.StateFlagVal,
 	}
-	return id, nil
+	return lfilters, nil
 }

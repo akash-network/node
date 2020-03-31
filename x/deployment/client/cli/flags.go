@@ -69,43 +69,42 @@ func GroupIDFromFlags(flags *pflag.FlagSet) (types.GroupID, error) {
 // AddDeploymentFilterFlags add flags to filter for deployment list
 func AddDeploymentFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "deployment owner address to filter")
-	flags.Uint8("state", 100, "deployment state to filter (0|1)")
+	flags.String("state", "", "deployment state to filter (active,closed)")
 }
 
 // DepFiltersFromFlags returns DeploymentFilters with given flags and error if occured
 func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, error) {
-	var id types.DeploymentFilters
+	var dfilters types.DeploymentFilters
 	owner, err := flags.GetString("owner")
 	if err != nil {
-		return id, err
+		return dfilters, err
 	}
-	id.Owner, err = sdk.AccAddressFromBech32(owner)
+	dfilters.Owner, err = sdk.AccAddressFromBech32(owner)
 	if err != nil {
-		return id, err
+		return dfilters, err
 	}
-	state, err := flags.GetUint8("state")
+	dfilters.StateFlagVal, err = flags.GetString("state")
 	if err != nil {
-		return id, err
+		return dfilters, err
 	}
-	id.State = types.DeploymentState(state)
-	return id, nil
+	return dfilters, nil
 }
 
 // AddGroupFilterFlags add flags to filter for group list
 func AddGroupFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "group owner address to filter")
-	flags.Uint8("state", 100, "group state to filter (0-4)")
+	flags.String("state", "", "group state to filter (open,ordered,matched,insufficient,closed)")
 }
 
 // GroupFiltersFromFlags returns GroupFilters with given flags and error if occured
 func GroupFiltersFromFlags(flags *pflag.FlagSet) (types.GroupFilters, error) {
-	prev, err := DepFiltersFromFlags(flags)
+	dfilters, err := DepFiltersFromFlags(flags)
 	if err != nil {
 		return types.GroupFilters{}, err
 	}
-	id := types.GroupFilters{
-		Owner: prev.Owner,
-		State: types.GroupState(prev.State),
+	gfilters := types.GroupFilters{
+		Owner:        dfilters.Owner,
+		StateFlagVal: dfilters.StateFlagVal,
 	}
-	return id, nil
+	return gfilters, nil
 }

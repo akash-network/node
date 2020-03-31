@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/gorilla/mux"
 	"github.com/ovrclk/akash/x/market/query"
+	"github.com/ovrclk/akash/x/market/types"
 )
 
 // RegisterRoutes registers all query routes
@@ -22,7 +23,7 @@ func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
 
 func listOrdersHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res, err := query.NewRawClient(ctx, ns).Orders()
+		res, err := query.NewRawClient(ctx, ns).Orders(types.OrderFilters{})
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
 			return
@@ -33,7 +34,7 @@ func listOrdersHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 
 func listBidsHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res, err := query.NewRawClient(ctx, ns).Bids()
+		res, err := query.NewRawClient(ctx, ns).Bids(types.BidFilters{})
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
 			return
@@ -44,7 +45,7 @@ func listBidsHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 
 func listLeasesHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res, err := query.NewRawClient(ctx, ns).Leases()
+		res, err := query.NewRawClient(ctx, ns).Leases(types.LeaseFilters{})
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
 			return

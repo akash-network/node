@@ -16,13 +16,8 @@ const (
 )
 
 // getDeploymentsPath returns deployments path for queries
-func getDeploymentsPath() string {
-	return deploymentsPath
-}
-
-// getDepFiltersPath returns deployments path for queries
-func getDepFiltersPath(id types.DeploymentFilters) string {
-	return fmt.Sprintf("%s/%s/%v", filterDepsPath, id.Owner, id.State)
+func getDeploymentsPath(dfilters types.DeploymentFilters) string {
+	return fmt.Sprintf("%s/%s/%v", deploymentsPath, dfilters.Owner, dfilters.StateFlagVal)
 }
 
 // DeploymentPath return deployment path of given deployment id for queries
@@ -58,27 +53,29 @@ func parseDeploymentPath(parts []string) (types.DeploymentID, error) {
 	}, nil
 }
 
-// ParseDepFiltersPath returns DeploymentFilters details with provided queries, and return
+// parseDepFiltersPath returns DeploymentFilters details with provided queries, and return
 // error if occured due to wrong query
-func ParseDepFiltersPath(parts []string) (types.DeploymentFilters, error) {
+func parseDepFiltersPath(parts []string) (types.DeploymentFilters, bool, error) {
 	if len(parts) < 2 {
-		return types.DeploymentFilters{}, fmt.Errorf("invalid path")
+		return types.DeploymentFilters{}, false, fmt.Errorf("invalid path")
 	}
 
 	owner, err := sdk.AccAddressFromBech32(parts[0])
 	if err != nil {
-		return types.DeploymentFilters{}, err
+		return types.DeploymentFilters{}, false, err
 	}
 
-	state, err := strconv.ParseUint(parts[1], 10, 8)
-	if err != nil {
-		return types.DeploymentFilters{}, err
+	state, ok := types.DeploymentStateMap[parts[1]]
+
+	if !ok && (parts[1] != "") {
+		return types.DeploymentFilters{}, false, fmt.Errorf("invalid state value")
 	}
 
 	return types.DeploymentFilters{
-		Owner: owner,
-		State: types.DeploymentState(state),
-	}, nil
+		Owner:        owner,
+		StateFlagVal: parts[1],
+		State:        state,
+	}, ok, nil
 }
 
 // ParseGroupPath returns GroupID details with provided queries, and return

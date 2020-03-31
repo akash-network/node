@@ -9,14 +9,11 @@ import (
 
 // RawClient interface
 type RawClient interface {
-	Orders() ([]byte, error)
-	FilterOrders(filters types.OrderFilters) ([]byte, error)
+	Orders(filters types.OrderFilters) ([]byte, error)
 	Order(id types.OrderID) ([]byte, error)
-	Bids() ([]byte, error)
-	FilterBids(filters types.BidFilters) ([]byte, error)
+	Bids(filters types.BidFilters) ([]byte, error)
 	Bid(id types.BidID) ([]byte, error)
-	Leases() ([]byte, error)
-	FilterLeases(filters types.LeaseFilters) ([]byte, error)
+	Leases(filters types.LeaseFilters) ([]byte, error)
 	Lease(id types.LeaseID) ([]byte, error)
 }
 
@@ -30,16 +27,8 @@ type rawclient struct {
 	key string
 }
 
-func (c *rawclient) Orders() ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getOrdersPath()), nil)
-	if err != nil {
-		return []byte{}, err
-	}
-	return buf, nil
-}
-
-func (c *rawclient) FilterOrders(filters types.OrderFilters) ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getOrdersFilterPath(filters)), nil)
+func (c *rawclient) Orders(ofilters types.OrderFilters) ([]byte, error) {
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getOrdersPath(ofilters)), nil)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -54,16 +43,8 @@ func (c *rawclient) Order(id types.OrderID) ([]byte, error) {
 	return buf, nil
 }
 
-func (c *rawclient) Bids() ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getBidsPath()), nil)
-	if err != nil {
-		return []byte{}, err
-	}
-	return buf, nil
-}
-
-func (c *rawclient) FilterBids(filters types.BidFilters) ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getBidsFilterPath(filters)), nil)
+func (c *rawclient) Bids(bfilters types.BidFilters) ([]byte, error) {
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getBidsPath(bfilters)), nil)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -78,16 +59,8 @@ func (c *rawclient) Bid(id types.BidID) ([]byte, error) {
 	return buf, nil
 }
 
-func (c *rawclient) Leases() ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getLeasesPath()), nil)
-	if err != nil {
-		return []byte{}, err
-	}
-	return buf, nil
-}
-
-func (c *rawclient) FilterLeases(filters types.LeaseFilters) ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getLeasesFilterPath(filters)), nil)
+func (c *rawclient) Leases(lfilters types.LeaseFilters) ([]byte, error) {
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getLeasesPath(lfilters)), nil)
 	if err != nil {
 		return []byte{}, err
 	}

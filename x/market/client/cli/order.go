@@ -14,19 +14,12 @@ func cmdGetOrders(key string, cdc *codec.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
 
-			id, err := OrderFiltersFromFlags(cmd.Flags())
+			ofilters, err := OrderFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			var obj query.Orders
-
-			if id.Owner.Empty() && id.State == 100 {
-				obj, err = query.NewClient(ctx, key).Orders()
-			} else {
-				obj, err = query.NewClient(ctx, key).FilterOrders(id)
-			}
-
+			obj, err := query.NewClient(ctx, key).Orders(ofilters)
 			if err != nil {
 				return err
 			}
