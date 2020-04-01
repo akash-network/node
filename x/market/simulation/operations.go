@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -12,6 +13,7 @@ import (
 	simappparams "github.com/ovrclk/akash/simapp/params"
 	keepers "github.com/ovrclk/akash/x/market/handler"
 	"github.com/ovrclk/akash/x/market/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
 // Simulation operation weights constants
@@ -72,7 +74,41 @@ func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) sim
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
 		accounts []simulation.Account, chainID string,
 	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
-		simAccount, _ := simulation.RandomAcc(r, accounts)
+		var orders []types.Order
+
+		ks.Market.WithOrders(ctx, func(order types.Order) bool {
+			if order.State == types.OrderOpen {
+				orders = append(orders, order)
+			}
+			return false
+		})
+
+		if len(orders) == 0 {
+			return simulation.NoOpMsg(types.ModuleName), nil, nil
+		}
+
+		// Get random order
+		i := r.Intn(len(orders))
+		order := orders[i]
+
+		var providers []ptypes.Provider
+		ks.Provider.WithProviders(ctx, func(provider ptypes.Provider) bool {
+			providers = append(providers, provider)
+			return false
+		})
+
+		if len(providers) == 0 {
+			return simulation.NoOpMsg(types.ModuleName), nil, nil
+		}
+
+		// Get random deployment
+		i = r.Intn(len(providers))
+		provider := providers[i]
+
+		simAccount, found := simulation.FindAccount(accounts, provider.Owner)
+		if !found {
+			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("provider with %s not found", provider.Owner)
+		}
 
 		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
 
@@ -99,17 +135,10 @@ func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) sim
 			}
 		}
 
-		orderID := types.OrderID{
-			Owner: simAccount.Address,
-			DSeq:  rand.Uint64(),
-			GSeq:  rand.Uint32(),
-			OSeq:  rand.Uint32(),
-		}
-
 		msg := types.MsgCreateBid{
-			Order:    orderID,
+			Order:    order.OrderID,
 			Provider: simAccount.Address,
-			Price:    coins[0],
+			Price:    order.Price(),
 		}
 
 		tx := helpers.GenTx(
@@ -136,7 +165,27 @@ func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simu
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
 		accounts []simulation.Account, chainID string,
 	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
-		simAccount, _ := simulation.RandomAcc(r, accounts)
+		var bids []types.Bid
+
+		ks.Market.WithBids(ctx, func(bid types.Bid) bool {
+			if bid.State == types.BidMatched {
+				bids = append(bids, bid)
+			}
+			return false
+		})
+
+		if len(bids) == 0 {
+			return simulation.NoOpMsg(types.ModuleName), nil, nil
+		}
+
+		// Get random bid
+		i := r.Intn(len(bids))
+		bid := bids[i]
+
+		simAccount, found := simulation.FindAccount(accounts, bid.Provider)
+		if !found {
+			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("bid with %s not found", bid.Provider)
+		}
 
 		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
 
@@ -163,16 +212,8 @@ func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simu
 			}
 		}
 
-		bidID := types.BidID{
-			Owner:    simAccount.Address,
-			DSeq:     rand.Uint64(),
-			GSeq:     rand.Uint32(),
-			OSeq:     rand.Uint32(),
-			Provider: simAccount.Address,
-		}
-
 		msg := types.MsgCloseBid{
-			BidID: bidID,
+			BidID: bid.BidID,
 		}
 
 		tx := helpers.GenTx(
@@ -199,7 +240,27 @@ func SimulateMsgCloseOrder(ak stakingtypes.AccountKeeper, ks keepers.Keepers) si
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
 		accounts []simulation.Account, chainID string,
 	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
-		simAccount, _ := simulation.RandomAcc(r, accounts)
+		var orders []types.Order
+
+		ks.Market.WithOrders(ctx, func(order types.Order) bool {
+			if order.State == types.OrderMatched {
+				orders = append(orders, order)
+			}
+			return false
+		})
+
+		if len(orders) == 0 {
+			return simulation.NoOpMsg(types.ModuleName), nil, nil
+		}
+
+		// Get random order
+		i := r.Intn(len(orders))
+		order := orders[i]
+
+		simAccount, found := simulation.FindAccount(accounts, order.ID().Owner)
+		if !found {
+			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("order with %s not found", order.ID().Owner)
+		}
 
 		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
 
@@ -226,15 +287,8 @@ func SimulateMsgCloseOrder(ak stakingtypes.AccountKeeper, ks keepers.Keepers) si
 			}
 		}
 
-		orderID := types.OrderID{
-			Owner: simAccount.Address,
-			DSeq:  rand.Uint64(),
-			GSeq:  rand.Uint32(),
-			OSeq:  rand.Uint32(),
-		}
-
 		msg := types.MsgCloseOrder{
-			OrderID: orderID,
+			OrderID: order.OrderID,
 		}
 
 		tx := helpers.GenTx(

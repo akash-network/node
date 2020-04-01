@@ -66,6 +66,12 @@ func SimulateMsgCreate(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulatio
 
 		simAccount, _ := simulation.RandomAcc(r, accounts)
 
+		// ensure the provider doesn't exist already
+		_, found := k.Get(ctx, simAccount.Address)
+		if found {
+			return simulation.NoOpMsg(types.ModuleName), nil, nil
+		}
+
 		cfg, readError := config.ReadConfigPath("../x/provider/testdata/provider.yml")
 		if readError != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, readError
