@@ -77,6 +77,17 @@ func SimulateMsgCreateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper)
 
 		simAccount, _ := simulation.RandomAcc(r, accounts)
 
+		dID := types.DeploymentID{
+			Owner: simAccount.Address,
+			DSeq:  uint64(ctx.BlockHeight()),
+		}
+
+		// ensure the provider doesn't exist already
+		_, found := k.GetDeployment(ctx, dID)
+		if found {
+			return simulation.NoOpMsg(types.ModuleName), nil, nil
+		}
+
 		sdl, readError := sdl.ReadFile("../x/deployment/testdata/deployment.yml")
 		if readError != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, readError
@@ -86,28 +97,10 @@ func SimulateMsgCreateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper)
 			return simulation.NoOpMsg(types.ModuleName), nil, groupErr
 		}
 
-		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
-		if !amount.IsPositive() {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
-		}
-
-		amount, err := simulation.RandPositiveInt(r, amount)
+		account := ak.GetAccount(ctx, simAccount.Address)
+		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
-		}
-
-		selfDelegation := sdk.NewCoin(DENOM, amount)
-
-		account := ak.GetAccount(ctx, simAccount.Address)
-		coins := account.SpendableCoins(ctx.BlockTime())
-
-		var fees sdk.Coins
-		coins, hasNeg := coins.SafeSub(sdk.Coins{selfDelegation})
-		if !hasNeg {
-			fees, err = simulation.RandomFees(r, ctx, coins)
-			if err != nil {
-				return simulation.NoOpMsg(types.ModuleName), nil, err
-			}
 		}
 
 		msg := types.MsgCreate{
@@ -171,7 +164,8 @@ func SimulateMsgUpdateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper)
 		}
 
 		msg := types.MsgUpdate{
-			ID: deployment.ID(),
+			ID:      deployment.ID(),
+			Version: simAccount.Address,
 		}
 
 		tx := helpers.GenTx(
