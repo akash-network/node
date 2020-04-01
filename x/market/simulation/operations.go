@@ -110,29 +110,10 @@ func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) sim
 			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("provider with %s not found", provider.Owner)
 		}
 
-		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
-
-		if !amount.IsPositive() {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
-		}
-
-		amount, err := simulation.RandPositiveInt(r, amount)
+		account := ak.GetAccount(ctx, simAccount.Address)
+		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
-		}
-
-		selfDelegation := sdk.NewCoin(DENOM, amount)
-
-		account := ak.GetAccount(ctx, simAccount.Address)
-		coins := account.SpendableCoins(ctx.BlockTime())
-
-		var fees sdk.Coins
-		coins, hasNeg := coins.SafeSub(sdk.Coins{selfDelegation})
-		if !hasNeg {
-			fees, err = simulation.RandomFees(r, ctx, coins)
-			if err != nil {
-				return simulation.NoOpMsg(types.ModuleName), nil, err
-			}
 		}
 
 		msg := types.MsgCreateBid{
@@ -169,7 +150,10 @@ func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simu
 
 		ks.Market.WithBids(ctx, func(bid types.Bid) bool {
 			if bid.State == types.BidMatched {
-				bids = append(bids, bid)
+				lease, ok := ks.Market.GetLease(ctx, types.LeaseID(bid.BidID))
+				if ok && lease.State == types.LeaseActive {
+					bids = append(bids, bid)
+				}
 			}
 			return false
 		})
@@ -187,29 +171,10 @@ func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simu
 			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("bid with %s not found", bid.Provider)
 		}
 
-		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
-
-		if !amount.IsPositive() {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
-		}
-
-		amount, err := simulation.RandPositiveInt(r, amount)
+		account := ak.GetAccount(ctx, simAccount.Address)
+		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
-		}
-
-		selfDelegation := sdk.NewCoin(DENOM, amount)
-
-		account := ak.GetAccount(ctx, simAccount.Address)
-		coins := account.SpendableCoins(ctx.BlockTime())
-
-		var fees sdk.Coins
-		coins, hasNeg := coins.SafeSub(sdk.Coins{selfDelegation})
-		if !hasNeg {
-			fees, err = simulation.RandomFees(r, ctx, coins)
-			if err != nil {
-				return simulation.NoOpMsg(types.ModuleName), nil, err
-			}
 		}
 
 		msg := types.MsgCloseBid{
@@ -262,29 +227,10 @@ func SimulateMsgCloseOrder(ak stakingtypes.AccountKeeper, ks keepers.Keepers) si
 			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("order with %s not found", order.ID().Owner)
 		}
 
-		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
-
-		if !amount.IsPositive() {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
-		}
-
-		amount, err := simulation.RandPositiveInt(r, amount)
+		account := ak.GetAccount(ctx, simAccount.Address)
+		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
-		}
-
-		selfDelegation := sdk.NewCoin(DENOM, amount)
-
-		account := ak.GetAccount(ctx, simAccount.Address)
-		coins := account.SpendableCoins(ctx.BlockTime())
-
-		var fees sdk.Coins
-		coins, hasNeg := coins.SafeSub(sdk.Coins{selfDelegation})
-		if !hasNeg {
-			fees, err = simulation.RandomFees(r, ctx, coins)
-			if err != nil {
-				return simulation.NoOpMsg(types.ModuleName), nil, err
-			}
 		}
 
 		msg := types.MsgCloseOrder{

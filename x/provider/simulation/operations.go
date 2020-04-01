@@ -77,28 +77,10 @@ func SimulateMsgCreate(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulatio
 			return simulation.NoOpMsg(types.ModuleName), nil, readError
 		}
 
-		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
-		if !amount.IsPositive() {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
-		}
-
-		amount, err := simulation.RandPositiveInt(r, amount)
+		account := ak.GetAccount(ctx, simAccount.Address)
+		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
-		}
-
-		selfDelegation := sdk.NewCoin(DENOM, amount)
-
-		account := ak.GetAccount(ctx, simAccount.Address)
-		coins := account.SpendableCoins(ctx.BlockTime())
-
-		var fees sdk.Coins
-		coins, hasNeg := coins.SafeSub(sdk.Coins{selfDelegation})
-		if !hasNeg {
-			fees, err = simulation.RandomFees(r, ctx, coins)
-			if err != nil {
-				return simulation.NoOpMsg(types.ModuleName), nil, err
-			}
 		}
 
 		msg := types.MsgCreate{
@@ -152,28 +134,10 @@ func SimulateMsgUpdate(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulatio
 			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("provider with %s not found", provider.Owner)
 		}
 
-		amount := ak.GetAccount(ctx, simAccount.Address).GetCoins().AmountOf(DENOM)
-		if !amount.IsPositive() {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
-		}
-
-		amount, err := simulation.RandPositiveInt(r, amount)
+		account := ak.GetAccount(ctx, simAccount.Address)
+		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
-		}
-
-		selfDelegation := sdk.NewCoin(DENOM, amount)
-
-		account := ak.GetAccount(ctx, simAccount.Address)
-		coins := account.SpendableCoins(ctx.BlockTime())
-
-		var fees sdk.Coins
-		coins, hasNeg := coins.SafeSub(sdk.Coins{selfDelegation})
-		if !hasNeg {
-			fees, err = simulation.RandomFees(r, ctx, coins)
-			if err != nil {
-				return simulation.NoOpMsg(types.ModuleName), nil, err
-			}
 		}
 
 		msg := types.MsgUpdate{
