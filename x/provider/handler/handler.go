@@ -51,5 +51,5 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgUpdate)
 func handleMsgDelete(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgDelete) (*sdk.Result, error) {
 	// TODO: validate exists
 	// TODO: cancel leases
-	return &sdk.Result{}, sdkerrors.Wrapf(ErrInternal, "NOTIMPLEMENTED", "")
+	return &sdk.Result{}, sdkerrors.Wrapf(ErrInternal, "NOTIMPLEMENTED")
 }

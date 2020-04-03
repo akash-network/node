@@ -1,156 +1,139 @@
 package cluster_test
 
-import (
-	"context"
-	"testing"
+// func TestService_Reserve(t *testing.T) {
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	defer cancel()
 
-	"github.com/ovrclk/akash/provider/cluster"
-	"github.com/ovrclk/akash/provider/cluster/mocks"
-	"github.com/ovrclk/akash/provider/event"
-	"github.com/ovrclk/akash/provider/session"
-	qmocks "github.com/ovrclk/akash/query/mocks"
-	"github.com/ovrclk/akash/testutil"
-	txumocks "github.com/ovrclk/akash/txutil/mocks"
-	"github.com/ovrclk/akash/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-)
+// 	bus := event.NewBus()
+// 	defer bus.Close()
 
-func TestService_Reserve(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+// 	session := providerSession(t)
 
-	bus := event.NewBus()
-	defer bus.Close()
+// 	c, err := cluster.NewService(ctx, session, bus, cluster.NullClient())
+// 	require.NoError(t, err)
+// 	testutil.WaitReady(t, c.Ready())
 
-	session := providerSession(t)
+// 	group := testutil.DeploymentGroup(testutil.DeploymentAddress(t), 1)
+// 	order := testutil.Order(group.DeploymentID(), group.Seq, 1)
 
-	c, err := cluster.NewService(ctx, session, bus, cluster.NullClient())
-	require.NoError(t, err)
-	testutil.WaitReady(t, c.Ready())
+// 	reservation, err := c.Reserve(order.OrderID, group)
+// 	require.NoError(t, err)
 
-	group := testutil.DeploymentGroup(testutil.DeploymentAddress(t), 1)
-	order := testutil.Order(group.DeploymentID(), group.Seq, 1)
+// 	assert.Equal(t, order.OrderID, reservation.OrderID())
+// 	assert.Equal(t, group, reservation.Resources())
 
-	reservation, err := c.Reserve(order.OrderID, group)
-	require.NoError(t, err)
+// 	status, err := c.Status(ctx)
+// 	assert.NoError(t, err)
+// 	assert.NotNil(t, status)
 
-	assert.Equal(t, order.OrderID, reservation.OrderID())
-	assert.Equal(t, group, reservation.Resources())
+// 	require.NoError(t, c.Close())
 
-	status, err := c.Status(ctx)
-	assert.NoError(t, err)
-	assert.NotNil(t, status)
+// 	_, err = c.Reserve(order.OrderID, group)
+// 	assert.Equal(t, cluster.ErrNotRunning, err)
+// }
 
-	require.NoError(t, c.Close())
+// func TestService_Teardown_TxCloseDeployment(t *testing.T) {
+// 	withServiceTestSetup(t, func(bus event.Bus, leaseID types.LeaseID) {
+// 		err := bus.Publish(&event.TxCloseDeployment{
+// 			Deployment: leaseID.Deployment,
+// 		})
+// 		require.NoError(t, err)
+// 	})
+// }
 
-	_, err = c.Reserve(order.OrderID, group)
-	assert.Equal(t, cluster.ErrNotRunning, err)
-}
+// func TestService_Teardown_TxCloseFulfillment(t *testing.T) {
+// 	withServiceTestSetup(t, func(bus event.Bus, leaseID types.LeaseID) {
+// 		err := bus.Publish(&event.TxCloseFulfillment{
+// 			FulfillmentID: leaseID.FulfillmentID(),
+// 		})
+// 		require.NoError(t, err)
+// 	})
+// }
 
-func TestService_Teardown_TxCloseDeployment(t *testing.T) {
-	withServiceTestSetup(t, func(bus event.Bus, leaseID types.LeaseID) {
-		err := bus.Publish(&event.TxCloseDeployment{
-			Deployment: leaseID.Deployment,
-		})
-		require.NoError(t, err)
-	})
-}
+// func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	defer cancel()
 
-func TestService_Teardown_TxCloseFulfillment(t *testing.T) {
-	withServiceTestSetup(t, func(bus event.Bus, leaseID types.LeaseID) {
-		err := bus.Publish(&event.TxCloseFulfillment{
-			FulfillmentID: leaseID.FulfillmentID(),
-		})
-		require.NoError(t, err)
-	})
-}
+// 	bus := event.NewBus()
+// 	defer bus.Close()
 
-func withServiceTestSetup(t *testing.T, fn func(event.Bus, types.LeaseID)) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+// 	deployment := testutil.Deployment(testutil.DeploymentAddress(t), 1)
 
-	bus := event.NewBus()
-	defer bus.Close()
+// 	group := testutil.DeploymentGroup(deployment.Address, 2)
+// 	order := testutil.Order(deployment.Address, group.Seq, 3)
 
-	deployment := testutil.Deployment(testutil.DeploymentAddress(t), 1)
+// 	lease := testutil.Lease(testutil.Address(t), order.Deployment, order.Group, order.Seq, 10)
 
-	group := testutil.DeploymentGroup(deployment.Address, 2)
-	order := testutil.Order(deployment.Address, group.Seq, 3)
+// 	manifest := &types.Manifest{
+// 		Groups: []*types.ManifestGroup{
+// 			{
+// 				Name: group.Name,
+// 				Services: []*types.ManifestService{
+// 					{
+// 						Unit:  &group.Resources[0].Unit,
+// 						Count: group.Resources[0].Count,
+// 					},
+// 				},
+// 			},
+// 		},
+// 	}
 
-	lease := testutil.Lease(testutil.Address(t), order.Deployment, order.Group, order.Seq, 10)
+// 	client := new(mocks.Client)
 
-	manifest := &types.Manifest{
-		Groups: []*types.ManifestGroup{
-			{
-				Name: group.Name,
-				Services: []*types.ManifestService{
-					{
-						Unit:  &group.Resources[0].Unit,
-						Count: group.Resources[0].Count,
-					},
-				},
-			},
-		},
-	}
+// 	client.On("Deploy", lease.LeaseID, manifest.Groups[0]).
+// 		Return(nil).
+// 		Once()
 
-	client := new(mocks.Client)
+// 	client.On("TeardownLease", lease.LeaseID).
+// 		Return(nil).
+// 		Once()
 
-	client.On("Deploy", lease.LeaseID, manifest.Groups[0]).
-		Return(nil).
-		Once()
+// 	client.On("Deployments").
+// 		Return(nil, nil).
+// 		Once()
 
-	client.On("TeardownLease", lease.LeaseID).
-		Return(nil).
-		Once()
+// 	client.On("LeaseStatus", lease.LeaseID).
+// 		Return(&types.LeaseStatusResponse{}, nil).
+// 		Maybe()
 
-	client.On("Deployments").
-		Return(nil, nil).
-		Once()
+// 	client.On("Inventory").
+// 		Return(cluster.NullClient().Inventory()).
+// 		Maybe()
 
-	client.On("LeaseStatus", lease.LeaseID).
-		Return(&types.LeaseStatusResponse{}, nil).
-		Maybe()
+// 	c, err := cluster.NewService(ctx, providerSession(t, lease), bus, client)
+// 	require.NoError(t, err)
+// 	testutil.WaitReady(t, c.Ready())
 
-	client.On("Inventory").
-		Return(cluster.NullClient().Inventory()).
-		Maybe()
+// 	testutil.SleepForThreadStart(t)
 
-	c, err := cluster.NewService(ctx, providerSession(t, lease), bus, client)
-	require.NoError(t, err)
-	testutil.WaitReady(t, c.Ready())
+// 	_, err = c.Reserve(order.OrderID, group)
+// 	require.NoError(t, err)
 
-	testutil.SleepForThreadStart(t)
+// 	err = bus.Publish(event.ManifestReceived{
+// 		LeaseID:    lease.LeaseID,
+// 		Manifest:   manifest,
+// 		Deployment: deployment,
+// 		Group:      group,
+// 	})
+// 	require.NoError(t, err)
 
-	_, err = c.Reserve(order.OrderID, group)
-	require.NoError(t, err)
+// 	testutil.SleepForThreadStart(t)
 
-	err = bus.Publish(event.ManifestReceived{
-		LeaseID:    lease.LeaseID,
-		Manifest:   manifest,
-		Deployment: deployment,
-		Group:      group,
-	})
-	require.NoError(t, err)
+// 	fn(bus, lease.LeaseID)
+// 	testutil.SleepForThreadStart(t)
 
-	testutil.SleepForThreadStart(t)
+// 	require.NoError(t, c.Close())
+// 	mock.AssertExpectationsForObjects(t, client)
+// }
 
-	fn(bus, lease.LeaseID)
-	testutil.SleepForThreadStart(t)
+// func providerSession(t *testing.T, leases ...*types.Lease) session.Session {
+// 	log := testutil.Logger()
+// 	txc := new(txumocks.Client)
+// 	qc := new(qmocks.Client)
 
-	require.NoError(t, c.Close())
-	mock.AssertExpectationsForObjects(t, client)
-}
+// 	qc.On("Leases", mock.Anything).
+// 		Return(&types.Leases{Items: leases}, nil)
 
-func providerSession(t *testing.T, leases ...*types.Lease) session.Session {
-	log := testutil.Logger()
-	txc := new(txumocks.Client)
-	qc := new(qmocks.Client)
-
-	qc.On("Leases", mock.Anything).
-		Return(&types.Leases{Items: leases}, nil)
-
-	provider := testutil.Provider(testutil.Address(t), 1)
-	return session.New(log, provider, txc, qc)
-}
+// 	provider := testutil.Provider(testutil.Address(t), 1)
+// 	return session.New(log, provider, txc, qc)
+// }

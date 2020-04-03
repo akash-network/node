@@ -4,16 +4,26 @@ import (
 	"os"
 	"testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/sdl"
-	"github.com/ovrclk/akash/testutil"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/libs/log"
 )
 
 func TestDeploy(t *testing.T) {
 	t.Skip()
-	lease := testutil.Lease(testutil.Address(t), testutil.Address(t), 1, 2, 3)
+	owner := ed25519.GenPrivKey().PubKey().Address()
+	provider := ed25519.GenPrivKey().PubKey().Address()
+	leaseID := mtypes.LeaseID{
+		Owner:    sdk.AccAddress(owner),
+		DSeq:     1,
+		GSeq:     1,
+		OSeq:     1,
+		Provider: sdk.AccAddress(provider),
+	}
 
 	sdl, err := sdl.ReadFile("../../../_run/kube/deployment.yml")
 	require.NoError(t, err)
@@ -25,6 +35,6 @@ func TestDeploy(t *testing.T) {
 	client, err := NewClient(log, "host", "lease")
 	assert.NoError(t, err)
 
-	err = client.Deploy(lease.LeaseID, mani.Groups[0])
+	err = client.Deploy(leaseID, &mani.GetGroups()[0])
 	assert.NoError(t, err)
 }

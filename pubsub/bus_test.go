@@ -1,19 +1,25 @@
 package pubsub_test
 
 import (
+	"os"
 	"testing"
+	"time"
 
-	"github.com/ovrclk/akash/provider/event"
-	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/pubsub"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+)
+
+const (
+	defaultDelayThreadStart = time.Millisecond * 6
 )
 
 func TestBus(t *testing.T) {
-	bus := event.NewBus()
+	bus := pubsub.NewBus()
 	defer bus.Close()
 
-	did := testutil.DeploymentAddress(t)
+	did := ed25519.GenPrivKey().PubKey().Address()
 
 	ev := newEvent(did)
 
@@ -30,14 +36,14 @@ func TestBus(t *testing.T) {
 	select {
 	case ev_ := <-sub1.Events():
 		assert.Equal(t, ev, ev_)
-	case <-testutil.AfterThreadStart(t):
+	case <-AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}
 
 	select {
 	case ev_ := <-sub2.Events():
 		assert.Equal(t, ev, ev_)
-	case <-testutil.AfterThreadStart(t):
+	case <-AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}
 
@@ -45,7 +51,7 @@ func TestBus(t *testing.T) {
 
 	select {
 	case <-sub2.Done():
-	case <-testutil.AfterThreadStart(t):
+	case <-AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}
 
@@ -54,36 +60,36 @@ func TestBus(t *testing.T) {
 	select {
 	case ev_ := <-sub1.Events():
 		assert.Equal(t, ev, ev_)
-	case <-testutil.AfterThreadStart(t):
+	case <-AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}
 
 	select {
 	case <-sub2.Events():
 		require.Fail(t, "spurious event")
-	case <-testutil.AfterThreadStart(t):
+	case <-AfterThreadStart(t):
 	}
 
 	bus.Close()
 
 	select {
 	case <-sub1.Done():
-	case <-testutil.AfterThreadStart(t):
+	case <-AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}
 
-	assert.Equal(t, event.ErrNotRunning, bus.Publish(ev))
+	assert.Equal(t, pubsub.ErrNotRunning, bus.Publish(ev))
 
 }
 
 func TestClone(t *testing.T) {
-	bus := event.NewBus()
+	bus := pubsub.NewBus()
 	defer bus.Close()
 
-	did1 := testutil.DeploymentAddress(t)
+	did1 := ed25519.GenPrivKey().PubKey().Address()
 	ev1 := newEvent(did1)
 
-	did2 := testutil.DeploymentAddress(t)
+	did2 := ed25519.GenPrivKey().PubKey().Address()
 	ev2 := newEvent(did2)
 
 	assert.NoError(t, bus.Publish(ev1))
@@ -94,14 +100,14 @@ func TestClone(t *testing.T) {
 	select {
 	case <-sub1.Events():
 		require.Fail(t, "spurious event")
-	case <-testutil.AfterThreadStart(t):
+	case <-AfterThreadStart(t):
 	}
 
 	assert.NoError(t, bus.Publish(ev1))
 	assert.NoError(t, bus.Publish(ev2))
 
 	// allow event propagation
-	testutil.SleepForThreadStart(t)
+	SleepForThreadStart(t)
 
 	// clone subscription
 	sub2, err := sub1.Clone()
@@ -109,18 +115,18 @@ func TestClone(t *testing.T) {
 
 	// both subscriptions should receive both events
 
-	for i, pev := range []event.Event{ev1, ev2} {
+	for i, pev := range []pubsub.Event{ev1, ev2} {
 		select {
 		case ev := <-sub1.Events():
 			assert.Equal(t, pev, ev, "sub1 event %v", i+1)
-		case <-testutil.AfterThreadStart(t):
+		case <-AfterThreadStart(t):
 			require.Fail(t, "timeout sub1 event %v", i+1)
 		}
 
 		select {
 		case ev := <-sub2.Events():
 			assert.Equal(t, pev, ev, "sub2 event %v", i+1)
-		case <-testutil.AfterThreadStart(t):
+		case <-AfterThreadStart(t):
 			require.Fail(t, "timeout sub2 event %v", i+1)
 		}
 	}
@@ -130,13 +136,13 @@ func TestClone(t *testing.T) {
 
 	select {
 	case <-sub2.Done():
-	case <-testutil.AfterThreadStart(t):
+	case <-AfterThreadStart(t):
 		require.Fail(t, "time out closing sub2")
 	}
 
 	select {
 	case <-sub1.Done():
-	case <-testutil.AfterThreadStart(t):
+	case <-AfterThreadStart(t):
 		require.Fail(t, "time out closing sub1")
 	}
 
@@ -146,4 +152,21 @@ type testEvent []byte
 
 func newEvent(addr []byte) testEvent {
 	return testEvent(addr)
+}
+
+func AfterThreadStart(t *testing.T) <-chan time.Time {
+	return time.After(delayThreadStart(t))
+}
+
+func SleepForThreadStart(t *testing.T) {
+	time.Sleep(delayThreadStart(t))
+}
+
+func delayThreadStart(t *testing.T) time.Duration {
+	if val := os.Getenv("TEST_DELAY_THREAD_START"); val != "" {
+		d, err := time.ParseDuration(val)
+		require.NoError(t, err)
+		return d
+	}
+	return defaultDelayThreadStart
 }

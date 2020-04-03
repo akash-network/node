@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ovrclk/akash/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/libs/log"
 )
@@ -16,11 +16,6 @@ func kubeClient(t *testing.T) Client {
 	return client
 }
 
-func leaseID(t *testing.T) types.LeaseID {
-	return types.LeaseID{
-		Deployment: []byte(t.Name()),
-		Group:      0,
-		Order:      0,
-		Provider:   []byte(t.Name()),
-	}
+func leaseID(t *testing.T) mtypes.LeaseID {
+	return mtypes.LeaseID{}
 }

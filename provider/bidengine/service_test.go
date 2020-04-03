@@ -1,162 +1,145 @@
 package bidengine_test
 
-import (
-	"context"
-	"testing"
+// func TestService(t *testing.T) {
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	defer cancel()
 
-	"github.com/ovrclk/akash/provider/bidengine"
-	cmocks "github.com/ovrclk/akash/provider/cluster/mocks"
-	"github.com/ovrclk/akash/provider/event"
-	"github.com/ovrclk/akash/provider/session"
-	qmocks "github.com/ovrclk/akash/query/mocks"
-	"github.com/ovrclk/akash/testutil"
-	txmocks "github.com/ovrclk/akash/txutil/mocks"
-	"github.com/ovrclk/akash/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-)
+// 	bus := event.NewBus()
+// 	defer bus.Close()
 
-func TestService(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+// 	deployment := testutil.Deployment(testutil.Address(t), 1)
+// 	group := testutil.DeploymentGroup(deployment.Address, 2)
+// 	order := testutil.Order(deployment.Address, group.Seq, 3)
+// 	provider := testutil.Provider(testutil.Address(t), 4)
 
-	bus := event.NewBus()
-	defer bus.Close()
+// 	qclient := new(qmocks.Client)
+// 	qclient.On("DeploymentGroup", mock.Anything, group.DeploymentGroupID).
+// 		Return(group, nil).Once()
+// 	qclient.On("Orders", mock.Anything).
+// 		Return(&types.Orders{}, nil).Once()
+// 	qclient.On("Fulfillment", mock.Anything, mock.Anything).
+// 		Return(nil, nil).Maybe()
 
-	deployment := testutil.Deployment(testutil.Address(t), 1)
-	group := testutil.DeploymentGroup(deployment.Address, 2)
-	order := testutil.Order(deployment.Address, group.Seq, 3)
-	provider := testutil.Provider(testutil.Address(t), 4)
+// 	txsent := make(chan struct{})
 
-	qclient := new(qmocks.Client)
-	qclient.On("DeploymentGroup", mock.Anything, group.DeploymentGroupID).
-		Return(group, nil).Once()
-	qclient.On("Orders", mock.Anything).
-		Return(&types.Orders{}, nil).Once()
-	qclient.On("Fulfillment", mock.Anything, mock.Anything).
-		Return(nil, nil).Maybe()
+// 	txclient := new(txmocks.Client)
+// 	txclient.On("BroadcastTxCommit", mock.Anything).Run(func(args mock.Arguments) {
+// 		defer close(txsent)
+// 		arg, ok := args.Get(0).(*types.TxCreateFulfillment)
+// 		require.True(t, ok)
+// 		require.NotNil(t, arg)
 
-	txsent := make(chan struct{})
+// 		require.Equal(t, order.OrderID, arg.OrderID())
+// 		require.Equal(t, provider.Address, arg.Provider)
 
-	txclient := new(txmocks.Client)
-	txclient.On("BroadcastTxCommit", mock.Anything).Run(func(args mock.Arguments) {
-		defer close(txsent)
-		arg, ok := args.Get(0).(*types.TxCreateFulfillment)
-		require.True(t, ok)
-		require.NotNil(t, arg)
+// 		require.True(t, arg.Price > 0)
+// 	}).Return(nil, nil)
 
-		require.Equal(t, order.OrderID, arg.OrderID())
-		require.Equal(t, provider.Address, arg.Provider)
+// 	creso := new(cmocks.Reservation)
+// 	creso.
+// 		On("Resources").Return(group).Maybe().
+// 		On("OrderID").Return(order.OrderID).Maybe()
 
-		require.True(t, arg.Price > 0)
-	}).Return(nil, nil)
+// 	cluster := new(cmocks.Cluster)
+// 	cluster.
+// 		On("Reserve", order.OrderID, group).Return(creso, nil).Once().
+// 		On("Unreserve", order.OrderID, group).Return(nil).Once()
 
-	creso := new(cmocks.Reservation)
-	creso.
-		On("Resources").Return(group).Maybe().
-		On("OrderID").Return(order.OrderID).Maybe()
+// 	session := session.New(testutil.Logger(), provider, txclient, qclient)
 
-	cluster := new(cmocks.Cluster)
-	cluster.
-		On("Reserve", order.OrderID, group).Return(creso, nil).Once().
-		On("Unreserve", order.OrderID, group).Return(nil).Once()
+// 	service, err := bidengine.NewService(ctx, session, cluster, bus)
+// 	require.NoError(t, err)
+// 	defer service.Close()
 
-	session := session.New(testutil.Logger(), provider, txclient, qclient)
+// 	bus.Publish(&event.TxCreateOrder{
+// 		OrderID: order.OrderID,
+// 	})
 
-	service, err := bidengine.NewService(ctx, session, cluster, bus)
-	require.NoError(t, err)
-	defer service.Close()
+// 	select {
+// 	case <-txsent:
+// 	case <-testutil.AfterThreadStart(t):
+// 		assert.Fail(t, "timeout: tx never sent")
+// 	}
 
-	bus.Publish(&event.TxCreateOrder{
-		OrderID: order.OrderID,
-	})
+// 	bus.Publish(&event.TxCloseDeployment{
+// 		Deployment: order.Deployment,
+// 	})
 
-	select {
-	case <-txsent:
-	case <-testutil.AfterThreadStart(t):
-		assert.Fail(t, "timeout: tx never sent")
-	}
+// 	testutil.SleepForThreadStart(t)
 
-	bus.Publish(&event.TxCloseDeployment{
-		Deployment: order.Deployment,
-	})
+// 	status, err := service.Status(ctx)
+// 	assert.NoError(t, err)
+// 	assert.NotNil(t, status)
 
-	testutil.SleepForThreadStart(t)
+// 	assert.NoError(t, service.Close())
 
-	status, err := service.Status(ctx)
-	assert.NoError(t, err)
-	assert.NotNil(t, status)
+// 	mock.AssertExpectationsForObjects(t, qclient, txclient, creso, cluster)
+// }
 
-	assert.NoError(t, service.Close())
+// func TestService_Catchup(t *testing.T) {
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	defer cancel()
 
-	mock.AssertExpectationsForObjects(t, qclient, txclient, creso, cluster)
-}
+// 	bus := event.NewBus()
+// 	defer bus.Close()
 
-func TestService_Catchup(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+// 	deployment := testutil.Deployment(testutil.Address(t), 1)
+// 	group := testutil.DeploymentGroup(deployment.Address, 2)
+// 	order := testutil.Order(deployment.Address, group.Seq, 3)
+// 	provider := testutil.Provider(testutil.Address(t), 4)
 
-	bus := event.NewBus()
-	defer bus.Close()
+// 	qclient := new(qmocks.Client)
+// 	qclient.On("DeploymentGroup", mock.Anything, group.DeploymentGroupID).
+// 		Return(group, nil).Once()
 
-	deployment := testutil.Deployment(testutil.Address(t), 1)
-	group := testutil.DeploymentGroup(deployment.Address, 2)
-	order := testutil.Order(deployment.Address, group.Seq, 3)
-	provider := testutil.Provider(testutil.Address(t), 4)
+// 	qclient.On("Orders", mock.Anything).
+// 		Return(&types.Orders{
+// 			Items: []*types.Order{order},
+// 		}, nil).Once()
 
-	qclient := new(qmocks.Client)
-	qclient.On("DeploymentGroup", mock.Anything, group.DeploymentGroupID).
-		Return(group, nil).Once()
+// 	qclient.On("Fulfillment", mock.Anything, mock.Anything).
+// 		Return(nil, nil).Maybe()
 
-	qclient.On("Orders", mock.Anything).
-		Return(&types.Orders{
-			Items: []*types.Order{order},
-		}, nil).Once()
+// 	txsent := make(chan struct{})
 
-	qclient.On("Fulfillment", mock.Anything, mock.Anything).
-		Return(nil, nil).Maybe()
+// 	txclient := new(txmocks.Client)
+// 	txclient.On("BroadcastTxCommit", mock.Anything).Run(func(args mock.Arguments) {
+// 		defer close(txsent)
+// 		arg, ok := args.Get(0).(*types.TxCreateFulfillment)
+// 		require.True(t, ok)
+// 		require.NotNil(t, arg)
 
-	txsent := make(chan struct{})
+// 		require.Equal(t, order.OrderID, arg.OrderID())
+// 		require.Equal(t, provider.Address, arg.Provider)
 
-	txclient := new(txmocks.Client)
-	txclient.On("BroadcastTxCommit", mock.Anything).Run(func(args mock.Arguments) {
-		defer close(txsent)
-		arg, ok := args.Get(0).(*types.TxCreateFulfillment)
-		require.True(t, ok)
-		require.NotNil(t, arg)
+// 		require.True(t, arg.Price > 0)
+// 	}).Return(nil, nil)
 
-		require.Equal(t, order.OrderID, arg.OrderID())
-		require.Equal(t, provider.Address, arg.Provider)
+// 	creso := new(cmocks.Reservation)
+// 	creso.
+// 		On("Resources").Return(group).Maybe().
+// 		On("OrderID").Return(order.OrderID).Maybe()
 
-		require.True(t, arg.Price > 0)
-	}).Return(nil, nil)
+// 	cluster := new(cmocks.Cluster)
+// 	cluster.
+// 		On("Reserve", order.OrderID, group).Return(creso, nil).Once().
+// 		On("Unreserve", order.OrderID, group).Return(nil).Once()
 
-	creso := new(cmocks.Reservation)
-	creso.
-		On("Resources").Return(group).Maybe().
-		On("OrderID").Return(order.OrderID).Maybe()
+// 	session := session.New(testutil.Logger(), provider, txclient, qclient)
 
-	cluster := new(cmocks.Cluster)
-	cluster.
-		On("Reserve", order.OrderID, group).Return(creso, nil).Once().
-		On("Unreserve", order.OrderID, group).Return(nil).Once()
+// 	service, err := bidengine.NewService(ctx, session, cluster, bus)
+// 	require.NoError(t, err)
+// 	defer service.Close()
 
-	session := session.New(testutil.Logger(), provider, txclient, qclient)
+// 	select {
+// 	case <-txsent:
+// 	case <-testutil.AfterThreadStart(t):
+// 		assert.Fail(t, "timeout: tx never sent")
+// 	}
 
-	service, err := bidengine.NewService(ctx, session, cluster, bus)
-	require.NoError(t, err)
-	defer service.Close()
+// 	testutil.SleepForThreadStart(t)
 
-	select {
-	case <-txsent:
-	case <-testutil.AfterThreadStart(t):
-		assert.Fail(t, "timeout: tx never sent")
-	}
+// 	assert.NoError(t, service.Close())
 
-	testutil.SleepForThreadStart(t)
-
-	assert.NoError(t, service.Close())
-
-	mock.AssertExpectationsForObjects(t, qclient, txclient, creso, cluster)
-}
+// 	mock.AssertExpectationsForObjects(t, qclient, txclient, creso, cluster)
+// }

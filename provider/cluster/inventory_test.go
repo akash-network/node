@@ -5,14 +5,15 @@ import (
 
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestInventory_reservationAllocateable(t *testing.T) {
 
-	mkrg := func(cpu uint32, memory uint64, count uint32) types.ResourceGroup {
-		return types.ResourceGroup{
-			Unit: types.ResourceUnit{
+	mkrg := func(cpu uint32, memory uint64, count uint32) dtypes.Resource {
+		return dtypes.Resource{
+			Unit: types.Unit{
 				CPU:    cpu,
 				Memory: memory,
 			},
@@ -20,16 +21,16 @@ func TestInventory_reservationAllocateable(t *testing.T) {
 		}
 	}
 
-	mkres := func(allocated bool, res ...types.ResourceGroup) *reservation {
+	mkres := func(allocated bool, res ...dtypes.Resource) *reservation {
 		return &reservation{
 			allocated: allocated,
-			resources: &types.DeploymentGroup{Resources: res},
+			resources: &dtypes.GroupSpec{Resources: res},
 		}
 	}
 
 	inventory := []Node{
-		NewNode("a", types.ResourceUnit{CPU: 1000, Memory: 10 * unit.Gi}),
-		NewNode("b", types.ResourceUnit{CPU: 1000, Memory: 10 * unit.Gi}),
+		NewNode("a", types.Unit{CPU: 1000, Memory: 10 * unit.Gi}),
+		NewNode("b", types.Unit{CPU: 1000, Memory: 10 * unit.Gi}),
 	}
 
 	reservations := []*reservation{
