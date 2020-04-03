@@ -166,7 +166,9 @@ func delayThreadStart(t *testing.T) time.Duration {
 	if val := os.Getenv("TEST_DELAY_THREAD_START"); val != "" {
 		d, err := time.ParseDuration(val)
 		require.NoError(t, err)
+
 		return d
 	}
+
 	return defaultDelayThreadStart
 }

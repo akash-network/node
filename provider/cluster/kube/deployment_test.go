@@ -15,13 +15,15 @@ import (
 
 func TestDeploy(t *testing.T) {
 	t.Skip()
+
 	owner := ed25519.GenPrivKey().PubKey().Address()
 	provider := ed25519.GenPrivKey().PubKey().Address()
+
 	leaseID := mtypes.LeaseID{
 		Owner:    sdk.AccAddress(owner),
-		DSeq:     1,
-		GSeq:     1,
-		OSeq:     1,
+		DSeq:     uint64(1),
+		GSeq:     uint32(2),
+		OSeq:     uint32(3),
 		Provider: sdk.AccAddress(provider),
 	}
 
