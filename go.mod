@@ -66,3 +66,5 @@ require (
 	k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d // indirect
 	k8s.io/metrics v0.0.0-20181026191550-988b2e695787
 )
+
+replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
