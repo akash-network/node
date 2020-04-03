@@ -1,5 +1,5 @@
 ---
-version: "1.0"
+version: "1.5"
 
 services:
   web:
@@ -15,14 +15,16 @@ profiles:
     web:
       cpu: "100m"
       memory: "128Mi"
-      disk: "1Gi"
+      storage: "1Gi"
 
   placement:
     westcoast:
       attributes:
         region: us-west
       pricing:
-        web: 5e-3
+        web:
+          denom: akash
+          amount: 50
 
 deployment:
   web:
