@@ -163,7 +163,6 @@ func NewSimApp(
 	app.subspaces[distr.ModuleName] = app.ParamsKeeper.Subspace(distr.DefaultParamspace)
 	app.subspaces[slashing.ModuleName] = app.ParamsKeeper.Subspace(slashing.DefaultParamspace)
 	app.subspaces[crisis.ModuleName] = app.ParamsKeeper.Subspace(crisis.DefaultParamspace)
-	// app.subspaces[provider.ModuleName] = app.ParamsKeeper.Subspace(provider.DefaultParamspace)
 
 	// add keepers
 	app.AccountKeeper = auth.NewAccountKeeper(
@@ -217,9 +216,9 @@ func NewSimApp(
 		slashing.NewAppModule(app.SlashingKeeper, app.AccountKeeper, app.StakingKeeper),
 		distr.NewAppModule(app.DistrKeeper, app.AccountKeeper, app.SupplyKeeper, app.StakingKeeper),
 		staking.NewAppModule(app.StakingKeeper, app.AccountKeeper, app.SupplyKeeper),
-		deployment.NewAppModule(app.DeploymentKeeper, app.AccountKeeper, app.MarketKeeper, app.BankKeeper),
-		market.NewAppModule(app.MarketKeeper, app.AccountKeeper, app.DeploymentKeeper, app.ProviderKeeper, app.BankKeeper),
-		provider.NewAppModule(app.ProviderKeeper, app.AccountKeeper, app.BankKeeper),
+		deployment.NewAppModule(app.DeploymentKeeper, app.MarketKeeper, app.BankKeeper),
+		market.NewAppModule(app.MarketKeeper, app.DeploymentKeeper, app.ProviderKeeper, app.BankKeeper),
+		provider.NewAppModule(app.ProviderKeeper, app.BankKeeper),
 	)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
@@ -253,9 +252,9 @@ func NewSimApp(
 		distr.NewAppModule(app.DistrKeeper, app.AccountKeeper, app.SupplyKeeper, app.StakingKeeper),
 		slashing.NewAppModule(app.SlashingKeeper, app.AccountKeeper, app.StakingKeeper),
 		params.NewAppModule(), // NOTE: only used for simulation to generate randomized param change proposals
-		deployment.NewAppModule(app.DeploymentKeeper, app.AccountKeeper, app.MarketKeeper, app.BankKeeper),
-		market.NewAppModule(app.MarketKeeper, app.AccountKeeper, app.DeploymentKeeper, app.ProviderKeeper, app.BankKeeper),
-		provider.NewAppModule(app.ProviderKeeper, app.AccountKeeper, app.BankKeeper),
+		deployment.NewAppModuleSimulation(app.DeploymentKeeper, app.AccountKeeper),
+		market.NewAppModuleSimulation(app.MarketKeeper, app.AccountKeeper, app.DeploymentKeeper, app.ProviderKeeper, app.BankKeeper),
+		provider.NewAppModuleSimulation(app.ProviderKeeper, app.AccountKeeper),
 	)
 
 	app.sm.RegisterStoreDecoders()
