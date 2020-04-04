@@ -24,17 +24,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	"github.com/cosmos/cosmos-sdk/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
-	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	"github.com/cosmos/cosmos-sdk/x/params"
-	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/supply"
-	"github.com/cosmos/cosmos-sdk/x/upgrade"
-	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 )
 
 const appName = "SimApp"
@@ -57,14 +52,9 @@ var (
 		staking.AppModuleBasic{},
 		mint.AppModuleBasic{},
 		distr.AppModuleBasic{},
-		gov.NewAppModuleBasic(
-			paramsclient.ProposalHandler, distr.ProposalHandler, upgradeclient.ProposalHandler,
-		),
 		params.AppModuleBasic{},
 		crisis.AppModuleBasic{},
 		slashing.AppModuleBasic{},
-		upgrade.AppModuleBasic{},
-		evidence.AppModuleBasic{},
 		deployment.AppModuleBasic{},
 		market.AppModuleBasic{},
 		provider.AppModuleBasic{},
@@ -77,7 +67,6 @@ var (
 		mint.ModuleName:           {supply.Minter},
 		staking.BondedPoolName:    {supply.Burner, supply.Staking},
 		staking.NotBondedPoolName: {supply.Burner, supply.Staking},
-		gov.ModuleName:            {supply.Burner},
 	}
 
 	// module accounts that are allowed to receive tokens
@@ -123,11 +112,8 @@ type SimApp struct {
 	SlashingKeeper   slashing.Keeper
 	MintKeeper       mint.Keeper
 	DistrKeeper      distr.Keeper
-	GovKeeper        gov.Keeper
 	CrisisKeeper     crisis.Keeper
-	UpgradeKeeper    upgrade.Keeper
 	ParamsKeeper     params.Keeper
-	EvidenceKeeper   evidence.Keeper
 	DeploymentKeeper deployment.Keeper
 	MarketKeeper     market.Keeper
 	ProviderKeeper   provider.Keeper
@@ -154,7 +140,7 @@ func NewSimApp(
 	keys := sdk.NewKVStoreKeys(
 		bam.MainStoreKey, auth.StoreKey, staking.StoreKey,
 		supply.StoreKey, mint.StoreKey, distr.StoreKey, slashing.StoreKey,
-		gov.StoreKey, params.StoreKey, upgrade.StoreKey, evidence.StoreKey,
+		params.StoreKey,
 		deployment.StoreKey, market.StoreKey, provider.StoreKey,
 	)
 	tkeys := sdk.NewTransientStoreKeys(params.TStoreKey)
@@ -176,9 +162,7 @@ func NewSimApp(
 	app.subspaces[mint.ModuleName] = app.ParamsKeeper.Subspace(mint.DefaultParamspace)
 	app.subspaces[distr.ModuleName] = app.ParamsKeeper.Subspace(distr.DefaultParamspace)
 	app.subspaces[slashing.ModuleName] = app.ParamsKeeper.Subspace(slashing.DefaultParamspace)
-	app.subspaces[gov.ModuleName] = app.ParamsKeeper.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable())
 	app.subspaces[crisis.ModuleName] = app.ParamsKeeper.Subspace(crisis.DefaultParamspace)
-	app.subspaces[evidence.ModuleName] = app.ParamsKeeper.Subspace(evidence.DefaultParamspace)
 	// app.subspaces[provider.ModuleName] = app.ParamsKeeper.Subspace(provider.DefaultParamspace)
 
 	// add keepers
@@ -208,27 +192,6 @@ func NewSimApp(
 	app.CrisisKeeper = crisis.NewKeeper(
 		app.subspaces[crisis.ModuleName], invCheckPeriod, app.SupplyKeeper, auth.FeeCollectorName,
 	)
-	app.UpgradeKeeper = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], app.cdc)
-
-	// create evidence keeper with router
-	evidenceKeeper := evidence.NewKeeper(
-		app.cdc, keys[evidence.StoreKey], app.subspaces[evidence.ModuleName], &app.StakingKeeper, app.SlashingKeeper,
-	)
-	evidenceRouter := evidence.NewRouter()
-	// TODO: Register evidence routes.
-	evidenceKeeper.SetRouter(evidenceRouter)
-	app.EvidenceKeeper = *evidenceKeeper
-
-	// register the proposal types
-	govRouter := gov.NewRouter()
-	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).
-		AddRoute(params.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper)).
-		AddRoute(distr.RouterKey, distr.NewCommunityPoolSpendProposalHandler(app.DistrKeeper)).
-		AddRoute(upgrade.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.UpgradeKeeper))
-	app.GovKeeper = gov.NewKeeper(
-		app.cdc, keys[gov.StoreKey], app.subspaces[gov.ModuleName], app.SupplyKeeper,
-		&stakingKeeper, govRouter,
-	)
 
 	app.DeploymentKeeper = deployment.NewKeeper(cdc, keys[deployment.StoreKey])
 	app.MarketKeeper = market.NewKeeper(cdc, keys[market.StoreKey])
@@ -250,13 +213,10 @@ func NewSimApp(
 		bank.NewAppModule(app.BankKeeper, app.AccountKeeper),
 		crisis.NewAppModule(&app.CrisisKeeper),
 		supply.NewAppModule(app.SupplyKeeper, app.AccountKeeper),
-		gov.NewAppModule(app.GovKeeper, app.AccountKeeper, app.SupplyKeeper),
 		mint.NewAppModule(app.MintKeeper),
 		slashing.NewAppModule(app.SlashingKeeper, app.AccountKeeper, app.StakingKeeper),
 		distr.NewAppModule(app.DistrKeeper, app.AccountKeeper, app.SupplyKeeper, app.StakingKeeper),
 		staking.NewAppModule(app.StakingKeeper, app.AccountKeeper, app.SupplyKeeper),
-		upgrade.NewAppModule(app.UpgradeKeeper),
-		evidence.NewAppModule(app.EvidenceKeeper),
 		deployment.NewAppModule(app.DeploymentKeeper, app.AccountKeeper, app.MarketKeeper, app.BankKeeper),
 		market.NewAppModule(app.MarketKeeper, app.AccountKeeper, app.DeploymentKeeper, app.ProviderKeeper, app.BankKeeper),
 		provider.NewAppModule(app.ProviderKeeper, app.AccountKeeper, app.BankKeeper),
@@ -265,15 +225,15 @@ func NewSimApp(
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
 	// CanWithdrawInvariant invariant.
-	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName, evidence.ModuleName)
-	app.mm.SetOrderEndBlockers(crisis.ModuleName, gov.ModuleName, staking.ModuleName, deployment.ModuleName, market.ModuleName)
+	app.mm.SetOrderBeginBlockers(mint.ModuleName, distr.ModuleName, slashing.ModuleName)
+	app.mm.SetOrderEndBlockers(crisis.ModuleName, staking.ModuleName, deployment.ModuleName, market.ModuleName)
 
 	// NOTE: The genutils moodule must occur after staking so that pools are
 	// properly initialized with tokens from genesis accounts.
 	app.mm.SetOrderInitGenesis(
 		auth.ModuleName, distr.ModuleName, staking.ModuleName, bank.ModuleName,
-		slashing.ModuleName, gov.ModuleName, mint.ModuleName, supply.ModuleName,
-		crisis.ModuleName, genutil.ModuleName, evidence.ModuleName,
+		slashing.ModuleName, mint.ModuleName, supply.ModuleName,
+		crisis.ModuleName, genutil.ModuleName,
 		deployment.ModuleName, market.ModuleName, provider.ModuleName,
 	)
 
@@ -288,7 +248,6 @@ func NewSimApp(
 		auth.NewAppModule(app.AccountKeeper),
 		bank.NewAppModule(app.BankKeeper, app.AccountKeeper),
 		supply.NewAppModule(app.SupplyKeeper, app.AccountKeeper),
-		gov.NewAppModule(app.GovKeeper, app.AccountKeeper, app.SupplyKeeper),
 		mint.NewAppModule(app.MintKeeper),
 		staking.NewAppModule(app.StakingKeeper, app.AccountKeeper, app.SupplyKeeper),
 		distr.NewAppModule(app.DistrKeeper, app.AccountKeeper, app.SupplyKeeper, app.StakingKeeper),
