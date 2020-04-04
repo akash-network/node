@@ -1,18 +1,12 @@
 package pubsub_test
 
 import (
-	"os"
 	"testing"
-	"time"
 
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/crypto/ed25519"
-)
-
-const (
-	defaultDelayThreadStart = time.Millisecond * 6
 )
 
 func TestBus(t *testing.T) {
@@ -36,14 +30,14 @@ func TestBus(t *testing.T) {
 	select {
 	case ev_ := <-sub1.Events():
 		assert.Equal(t, ev, ev_)
-	case <-AfterThreadStart(t):
+	case <-pubsub.AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}
 
 	select {
 	case ev_ := <-sub2.Events():
 		assert.Equal(t, ev, ev_)
-	case <-AfterThreadStart(t):
+	case <-pubsub.AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}
 
@@ -51,7 +45,7 @@ func TestBus(t *testing.T) {
 
 	select {
 	case <-sub2.Done():
-	case <-AfterThreadStart(t):
+	case <-pubsub.AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}
 
@@ -60,21 +54,21 @@ func TestBus(t *testing.T) {
 	select {
 	case ev_ := <-sub1.Events():
 		assert.Equal(t, ev, ev_)
-	case <-AfterThreadStart(t):
+	case <-pubsub.AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}
 
 	select {
 	case <-sub2.Events():
 		require.Fail(t, "spurious event")
-	case <-AfterThreadStart(t):
+	case <-pubsub.AfterThreadStart(t):
 	}
 
 	bus.Close()
 
 	select {
 	case <-sub1.Done():
-	case <-AfterThreadStart(t):
+	case <-pubsub.AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}
 
@@ -100,14 +94,14 @@ func TestClone(t *testing.T) {
 	select {
 	case <-sub1.Events():
 		require.Fail(t, "spurious event")
-	case <-AfterThreadStart(t):
+	case <-pubsub.AfterThreadStart(t):
 	}
 
 	assert.NoError(t, bus.Publish(ev1))
 	assert.NoError(t, bus.Publish(ev2))
 
 	// allow event propagation
-	SleepForThreadStart(t)
+	pubsub.SleepForThreadStart(t)
 
 	// clone subscription
 	sub2, err := sub1.Clone()
@@ -119,14 +113,14 @@ func TestClone(t *testing.T) {
 		select {
 		case ev := <-sub1.Events():
 			assert.Equal(t, pev, ev, "sub1 event %v", i+1)
-		case <-AfterThreadStart(t):
+		case <-pubsub.AfterThreadStart(t):
 			require.Fail(t, "timeout sub1 event %v", i+1)
 		}
 
 		select {
 		case ev := <-sub2.Events():
 			assert.Equal(t, pev, ev, "sub2 event %v", i+1)
-		case <-AfterThreadStart(t):
+		case <-pubsub.AfterThreadStart(t):
 			require.Fail(t, "timeout sub2 event %v", i+1)
 		}
 	}
@@ -136,13 +130,13 @@ func TestClone(t *testing.T) {
 
 	select {
 	case <-sub2.Done():
-	case <-AfterThreadStart(t):
+	case <-pubsub.AfterThreadStart(t):
 		require.Fail(t, "time out closing sub2")
 	}
 
 	select {
 	case <-sub1.Done():
-	case <-AfterThreadStart(t):
+	case <-pubsub.AfterThreadStart(t):
 		require.Fail(t, "time out closing sub1")
 	}
 
@@ -152,23 +146,4 @@ type testEvent []byte
 
 func newEvent(addr []byte) testEvent {
 	return testEvent(addr)
-}
-
-func AfterThreadStart(t *testing.T) <-chan time.Time {
-	return time.After(delayThreadStart(t))
-}
-
-func SleepForThreadStart(t *testing.T) {
-	time.Sleep(delayThreadStart(t))
-}
-
-func delayThreadStart(t *testing.T) time.Duration {
-	if val := os.Getenv("TEST_DELAY_THREAD_START"); val != "" {
-		d, err := time.ParseDuration(val)
-		require.NoError(t, err)
-
-		return d
-	}
-
-	return defaultDelayThreadStart
 }

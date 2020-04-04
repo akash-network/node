@@ -10,13 +10,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	randCPU1    uint32 = 10
+	randCPU2    uint32 = 5
+	randMemory  uint64 = 20
+	randStorage uint64 = 5
+)
+
 func Test_ValidateManifest(t *testing.T) {
 
 	tests := []struct {
 		name    string
 		ok      bool
 		mgroups []manifest.Group
-		dgroups []dtypes.Group
+		dgroups []*dtypes.GroupSpec
 	}{
 		{
 			name: "empty",
@@ -33,28 +40,26 @@ func Test_ValidateManifest(t *testing.T) {
 						{
 							Name: "svc1",
 							Unit: types.Unit{
-								CPU:     10,
-								Memory:  20,
-								Storage: 5,
+								CPU:     randCPU1,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
 							Count: 3,
 						},
 					},
 				},
 			},
-			dgroups: []dtypes.Group{
+			dgroups: []*dtypes.GroupSpec{
 				{
-					GroupSpec: dtypes.GroupSpec{
-						Name: "foo",
-						Resources: []dtypes.Resource{
-							{
-								Unit: types.Unit{
-									CPU:     10,
-									Memory:  20,
-									Storage: 5,
-								},
-								Count: 3,
+					Name: "foo",
+					Resources: []dtypes.Resource{
+						{
+							Unit: types.Unit{
+								CPU:     randCPU1,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
+							Count: 3,
 						},
 					},
 				},
@@ -71,37 +76,35 @@ func Test_ValidateManifest(t *testing.T) {
 						{
 							Name: "svc1",
 							Unit: types.Unit{
-								CPU:     10,
-								Memory:  20,
-								Storage: 5,
+								CPU:     randCPU1,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
 							Count: 1,
 						},
 						{
 							Name: "svc1",
 							Unit: types.Unit{
-								CPU:     10,
-								Memory:  20,
-								Storage: 5,
+								CPU:     randCPU1,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
 							Count: 2,
 						},
 					},
 				},
 			},
-			dgroups: []dtypes.Group{
+			dgroups: []*dtypes.GroupSpec{
 				{
-					GroupSpec: dtypes.GroupSpec{
-						Name: "foo",
-						Resources: []dtypes.Resource{
-							{
-								Unit: types.Unit{
-									CPU:     10,
-									Memory:  20,
-									Storage: 5,
-								},
-								Count: 3,
+					Name: "foo",
+					Resources: []dtypes.Resource{
+						{
+							Unit: types.Unit{
+								CPU:     randCPU1,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
+							Count: 3,
 						},
 					},
 				},
@@ -118,36 +121,34 @@ func Test_ValidateManifest(t *testing.T) {
 						{
 							Name: "svc1",
 							Unit: types.Unit{
-								CPU:     10,
-								Memory:  20,
-								Storage: 5,
+								CPU:     randCPU1,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
 							Count: 3,
 						},
 					},
 				},
 			},
-			dgroups: []dtypes.Group{
+			dgroups: []*dtypes.GroupSpec{
 				{
-					GroupSpec: dtypes.GroupSpec{
-						Name: "foo",
-						Resources: []dtypes.Resource{
-							{
-								Unit: types.Unit{
-									CPU:     10,
-									Memory:  20,
-									Storage: 5,
-								},
-								Count: 2,
+					Name: "foo",
+					Resources: []dtypes.Resource{
+						{
+							Unit: types.Unit{
+								CPU:     randCPU1,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
-							{
-								Unit: types.Unit{
-									CPU:     10,
-									Memory:  20,
-									Storage: 5,
-								},
-								Count: 1,
+							Count: 2,
+						},
+						{
+							Unit: types.Unit{
+								CPU:     randCPU1,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
+							Count: 1,
 						},
 					},
 				},
@@ -164,28 +165,26 @@ func Test_ValidateManifest(t *testing.T) {
 						{
 							Name: "svc1",
 							Unit: types.Unit{
-								CPU:     10,
-								Memory:  20,
-								Storage: 5,
+								CPU:     randCPU1,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
 							Count: 3,
 						},
 					},
 				},
 			},
-			dgroups: []dtypes.Group{
+			dgroups: []*dtypes.GroupSpec{
 				{
-					GroupSpec: dtypes.GroupSpec{
-						Name: "foo",
-						Resources: []dtypes.Resource{
-							{
-								Unit: types.Unit{
-									CPU:     10,
-									Memory:  20,
-									Storage: 5,
-								},
-								Count: 3,
+					Name: "foo",
+					Resources: []dtypes.Resource{
+						{
+							Unit: types.Unit{
+								CPU:     randCPU1,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
+							Count: 3,
 						},
 					},
 				},
@@ -202,28 +201,26 @@ func Test_ValidateManifest(t *testing.T) {
 						{
 							Name: "svc1",
 							Unit: types.Unit{
-								CPU:     5,
-								Memory:  20,
-								Storage: 5,
+								CPU:     randCPU2,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
 							Count: 3,
 						},
 					},
 				},
 			},
-			dgroups: []dtypes.Group{
+			dgroups: []*dtypes.GroupSpec{
 				{
-					GroupSpec: dtypes.GroupSpec{
-						Name: "foo",
-						Resources: []dtypes.Resource{
-							{
-								Unit: types.Unit{
-									CPU:     10,
-									Memory:  20,
-									Storage: 5,
-								},
-								Count: 3,
+					Name: "foo",
+					Resources: []dtypes.Resource{
+						{
+							Unit: types.Unit{
+								CPU:     randCPU1,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
+							Count: 3,
 						},
 					},
 				},
@@ -240,28 +237,27 @@ func Test_ValidateManifest(t *testing.T) {
 						{
 							Name: "svc1",
 							Unit: types.Unit{
-								CPU:     5,
-								Memory:  20,
-								Storage: 5,
+								CPU:     randCPU2,
+								Memory:  randMemory,
+								Storage: randStorage,
 							},
 							Count: 3,
 						},
 					},
 				},
 			},
-			dgroups: []dtypes.Group{},
+			dgroups: []*dtypes.GroupSpec{},
 		},
 	}
 
 	for _, test := range tests {
 		m := manifest.Manifest(test.mgroups)
-		err := validation.ValidateManifestWithDeployment(&m, test.dgroups)
-		assert.NoError(t, err, test.name)
-		// if test.ok {
-		// 	assert.NoError(t, err, test.name)
-		// } else {
-		// 	assert.Error(t, err, test.name)
-		// }
+		err := validation.ValidateManifestWithGroupSpecs(&m, test.dgroups)
+		if test.ok {
+			assert.NoError(t, err, test.name)
+		} else {
+			assert.Error(t, err, test.name)
+		}
 	}
 
 }

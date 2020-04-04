@@ -9,6 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	randCPU    uint32 = 1000
+	randMemory uint64 = 10 * unit.Gi
+)
+
 func TestInventory_reservationAllocateable(t *testing.T) {
 
 	mkrg := func(cpu uint32, memory uint64, count uint32) dtypes.Resource {
@@ -29,8 +34,8 @@ func TestInventory_reservationAllocateable(t *testing.T) {
 	}
 
 	inventory := []Node{
-		NewNode("a", types.Unit{CPU: 1000, Memory: 10 * unit.Gi}),
-		NewNode("b", types.Unit{CPU: 1000, Memory: 10 * unit.Gi}),
+		NewNode("a", types.Unit{CPU: randCPU, Memory: randMemory}),
+		NewNode("b", types.Unit{CPU: randCPU, Memory: randMemory}),
 	}
 
 	reservations := []*reservation{

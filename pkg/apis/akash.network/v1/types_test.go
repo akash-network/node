@@ -11,15 +11,21 @@ import (
 	"github.com/tendermint/tendermint/crypto/ed25519"
 )
 
+const (
+	randDSeq uint64 = 1
+	randGSeq uint32 = 2
+	randOSeq uint32 = 3
+)
+
 func TestToProto(t *testing.T) {
 	owner := ed25519.GenPrivKey().PubKey().Address()
 	provider := ed25519.GenPrivKey().PubKey().Address()
 
 	leaseID := mtypes.LeaseID{
 		Owner:    sdk.AccAddress(owner),
-		DSeq:     uint64(1),
-		GSeq:     uint32(2),
-		OSeq:     uint32(3),
+		DSeq:     randDSeq,
+		GSeq:     randGSeq,
+		OSeq:     randOSeq,
 		Provider: sdk.AccAddress(provider),
 	}
 
@@ -39,9 +45,9 @@ func TestFromProto(t *testing.T) {
 
 	leaseID := mtypes.LeaseID{
 		Owner:    sdk.AccAddress(owner),
-		DSeq:     uint64(1),
-		GSeq:     uint32(2),
-		OSeq:     uint32(3),
+		DSeq:     randDSeq,
+		GSeq:     randGSeq,
+		OSeq:     randOSeq,
 		Provider: sdk.AccAddress(provider),
 	}
 	sdl, err := sdl.ReadFile("../../../../_run/kube/deployment.yml")

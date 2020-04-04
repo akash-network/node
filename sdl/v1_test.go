@@ -10,6 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	randCPU     uint32 = 100
+	randMemory  uint64 = 128 * unit.Mi
+	randStorage uint64 = 1 * unit.Gi
+)
+
 func Test_v1_Parse_docs(t *testing.T) {
 	sdl, err := sdl.ReadFile("../x/deployment/testdata/deployment.yml")
 	require.NoError(t, err)
@@ -41,9 +47,9 @@ func Test_v1_Parse_simple(t *testing.T) {
 	assert.Equal(t, types.Resource{
 		Count: 2,
 		Unit: types.Unit{
-			CPU:     100,
-			Memory:  128 * unit.Mi,
-			Storage: 1 * unit.Gi,
+			CPU:     randCPU,
+			Memory:  randMemory,
+			Storage: randStorage,
 		},
 	}, group.GetResources()[0])
 

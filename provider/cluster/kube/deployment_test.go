@@ -13,6 +13,12 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 )
 
+const (
+	randDSeq uint64 = 1
+	randGSeq uint32 = 2
+	randOSeq uint32 = 3
+)
+
 func TestDeploy(t *testing.T) {
 	t.Skip()
 
@@ -21,9 +27,9 @@ func TestDeploy(t *testing.T) {
 
 	leaseID := mtypes.LeaseID{
 		Owner:    sdk.AccAddress(owner),
-		DSeq:     uint64(1),
-		GSeq:     uint32(2),
-		OSeq:     uint32(3),
+		DSeq:     randDSeq,
+		GSeq:     randGSeq,
+		OSeq:     randOSeq,
 		Provider: sdk.AccAddress(provider),
 	}
 
