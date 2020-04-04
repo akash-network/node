@@ -110,6 +110,10 @@ func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) sim
 			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("provider with %s not found", provider.Owner)
 		}
 
+		if provider.Owner.Equals(order.Owner) {
+			return simulation.NoOpMsg(types.ModuleName), nil, nil
+		}
+
 		account := ak.GetAccount(ctx, simAccount.Address)
 		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {

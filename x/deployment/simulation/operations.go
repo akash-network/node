@@ -58,10 +58,10 @@ func WeightedOperations(
 			weightMsgCreateDeployment,
 			SimulateMsgCreateDeployment(ak, k),
 		),
-		// simulation.NewWeightedOperation(
-		// 	weightMsgUpdateDeployment,
-		// 	SimulateMsgUpdateDeployment(ak, k),
-		// ),
+		simulation.NewWeightedOperation(
+			weightMsgUpdateDeployment,
+			SimulateMsgUpdateDeployment(ak, k),
+		),
 		simulation.NewWeightedOperation(
 			weightMsgCloseDeployment,
 			SimulateMsgCloseDeployment(ak, k),
