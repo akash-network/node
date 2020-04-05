@@ -14,8 +14,8 @@ const (
 	groupPath       = "group"
 )
 
-// DeploymentsPath returns deployments path for queries
-func DeploymentsPath() string {
+// getDeploymentsPath returns deployments path for queries
+func getDeploymentsPath() string {
 	return deploymentsPath
 }
 
@@ -24,14 +24,14 @@ func DeploymentPath(id types.DeploymentID) string {
 	return fmt.Sprintf("%s/%s/%v", deploymentPath, id.Owner, id.DSeq)
 }
 
-// GroupPath return group path of given group id for queries
-func GroupPath(id types.GroupID) string {
+// getGroupPath return group path of given group id for queries
+func getGroupPath(id types.GroupID) string {
 	return fmt.Sprintf("%s/%s/%v/%v", groupPath, id.Owner, id.DSeq, id.GSeq)
 }
 
-// ParseDeploymentPath returns DeploymentID details with provided queries, and return
+// parseDeploymentPath returns DeploymentID details with provided queries, and return
 // error if occured due to wrong query
-func ParseDeploymentPath(parts []string) (types.DeploymentID, error) {
+func parseDeploymentPath(parts []string) (types.DeploymentID, error) {
 	if len(parts) < 2 {
 		return types.DeploymentID{}, fmt.Errorf("invalid path")
 	}
@@ -52,14 +52,14 @@ func ParseDeploymentPath(parts []string) (types.DeploymentID, error) {
 	}, nil
 }
 
-// ParseGroupPath returns GroupID details with provided queries, and return
+// parseGroupPath returns GroupID details with provided queries, and return
 // error if occured due to wrong query
-func ParseGroupPath(parts []string) (types.GroupID, error) {
+func parseGroupPath(parts []string) (types.GroupID, error) {
 	if len(parts) < 3 {
 		return types.GroupID{}, fmt.Errorf("invalid path")
 	}
 
-	did, err := ParseDeploymentPath(parts[0:2])
+	did, err := parseDeploymentPath(parts[0:2])
 	if err != nil {
 		return types.GroupID{}, err
 	}

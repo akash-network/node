@@ -47,7 +47,7 @@ func (msg MsgCreate) ValidateBasic() error {
 // MsgUpdate defines an SDK message for updating deployment
 type MsgUpdate struct {
 	ID      DeploymentID
-	Version sdk.Address
+	Version sdk.AccAddress
 }
 
 // Route implements the sdk.Msg interface
