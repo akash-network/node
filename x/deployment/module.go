@@ -29,7 +29,7 @@ import (
 var (
 	_ module.AppModule           = AppModule{}
 	_ module.AppModuleBasic      = AppModuleBasic{}
-	_ module.AppModuleSimulation = AppModule{}
+	_ module.AppModuleSimulation = AppModuleSimulation{}
 )
 
 // AppModuleBasic defines the basic application module used by the deployment module.
@@ -85,19 +85,17 @@ func (AppModuleBasic) GetQueryClient(ctx context.CLIContext) query.Client {
 type AppModule struct {
 	AppModuleBasic
 	keeper     keeper.Keeper
-	akeeper    stakingtypes.AccountKeeper
 	mkeeper    handler.MarketKeeper
 	coinKeeper bank.Keeper
 }
 
 // NewAppModule creates a new AppModule Object
-func NewAppModule(k keeper.Keeper, akeeper stakingtypes.AccountKeeper, mkeeper handler.MarketKeeper, bankKeeper bank.Keeper) AppModule {
+func NewAppModule(k keeper.Keeper, mkeeper handler.MarketKeeper, bankKeeper bank.Keeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
 		keeper:         k,
 		mkeeper:        mkeeper,
 		coinKeeper:     bankKeeper,
-		akeeper:        akeeper,
 	}
 }
 
@@ -158,30 +156,44 @@ func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
 
 //____________________________________________________________________________
 
+// AppModuleSimulation implements an application simulation module for the deployment module.
+type AppModuleSimulation struct {
+	keeper  keeper.Keeper
+	akeeper stakingtypes.AccountKeeper
+}
+
+// NewAppModule creates a new AppModuleSimulation instance
+func NewAppModuleSimulation(k keeper.Keeper, akeeper stakingtypes.AccountKeeper) AppModuleSimulation {
+	return AppModuleSimulation{
+		keeper:  k,
+		akeeper: akeeper,
+	}
+}
+
 // AppModuleSimulation functions
 
 // GenerateGenesisState creates a randomized GenState of the staking module.
-func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
+func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
 	simulation.RandomizedGenState(simState)
 }
 
 // ProposalContents doesn't return any content functions for governance proposals.
-func (AppModule) ProposalContents(_ module.SimulationState) []sim.WeightedProposalContent {
+func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []sim.WeightedProposalContent {
 	return nil
 }
 
 // RandomizedParams creates randomized staking param changes for the simulator.
-func (AppModule) RandomizedParams(r *rand.Rand) []sim.ParamChange {
+func (AppModuleSimulation) RandomizedParams(r *rand.Rand) []sim.ParamChange {
 	return nil
 }
 
 // RegisterStoreDecoder registers a decoder for staking module's types
-func (AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
+func (AppModuleSimulation) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
 	// sdr[StoreKey] = simulation.DecodeStore
 }
 
 // WeightedOperations returns the all the staking module operations with their respective weights.
-func (am AppModule) WeightedOperations(simState module.SimulationState) []sim.WeightedOperation {
+func (am AppModuleSimulation) WeightedOperations(simState module.SimulationState) []sim.WeightedOperation {
 	return simulation.WeightedOperations(simState.AppParams, simState.Cdc,
 		am.akeeper, am.keeper)
 }
