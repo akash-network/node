@@ -1,5 +1,5 @@
 ---
-version: "1.0"
+version: "1.5"
 
 services:
   webapp:
@@ -15,13 +15,15 @@ profiles:
     web:
       cpu: "100m"
       memory: "512Mi"
-      disk: "512Mi"
+      storage: "512Mi"
   placement:
     san-jose:
       attributes:
         region: sjc
       pricing:
-        web: 25u
+        web:
+          denom: akash
+          amount: 25
 
 deployment:
   webapp:
