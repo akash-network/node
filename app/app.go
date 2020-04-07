@@ -92,6 +92,9 @@ type AkashApp struct {
 	}
 
 	mm *module.Manager
+
+	// simulation manager
+	sm *module.SimulationManager
 }
 
 // ModuleBasics returns all app modules basics
@@ -116,7 +119,10 @@ func MakeCodec() *codec.Codec {
 
 // NewApp creates and returns a new Akash App.
 func NewApp(
-	logger log.Logger, db dbm.DB, tio io.Writer, options ...func(*bam.BaseApp),
+	logger log.Logger,
+	db dbm.DB,
+	tio io.Writer,
+	options ...func(*bam.BaseApp),
 ) *AkashApp {
 
 	cdc := MakeCodec()
@@ -289,7 +295,7 @@ func NewApp(
 
 	// initialize BaseApp
 	app.SetInitChainer(app.initChainer)
-	app.SetBeginBlocker(app.beginBlocker)
+	app.SetBeginBlocker(app.BeginBlocker)
 
 	app.SetAnteHandler(
 		auth.NewAnteHandler(
@@ -299,7 +305,7 @@ func NewApp(
 		),
 	)
 
-	app.SetEndBlocker(app.endBlocker)
+	app.SetEndBlocker(app.EndBlocker)
 
 	err := app.LoadLatestVersion(app.keys[bam.MainStoreKey])
 	if err != nil {
@@ -318,15 +324,41 @@ func (app *AkashApp) initChainer(
 }
 
 // application updates every begin block
-func (app *AkashApp) beginBlocker(
+func (app *AkashApp) BeginBlocker(
 	ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
 	return app.mm.BeginBlock(ctx, req)
 }
 
 // application updates every end block
-func (app *AkashApp) endBlocker(
+func (app *AkashApp) EndBlocker(
 	ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
 	return app.mm.EndBlock(ctx, req)
+}
+
+func (app *AkashApp) Codec() *codec.Codec {
+	return app.cdc
+}
+
+// ModuleAccountAddrs returns all the app's module account addresses.
+func (app *AkashApp) ModuleAccountAddrs() map[string]bool {
+	modAccAddrs := make(map[string]bool)
+	for acc := range macPerms() {
+		modAccAddrs[supply.NewModuleAddress(acc).String()] = true
+	}
+
+	return modAccAddrs
+}
+
+// SimulationManager implements the SimulationApp interface
+func (app *AkashApp) SimulationManager() *module.SimulationManager {
+	return app.sm
+}
+
+// InitChainer application update at chain initialization
+func (app *AkashApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+	var genesisState simapp.GenesisState
+	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
+	return app.mm.InitGenesis(ctx, genesisState)
 }
 
 // LoadHeight method of AkashApp loads baseapp application version with given height
