@@ -2,12 +2,12 @@ package bidengine
 
 import (
 	lifecycle "github.com/boz/go-lifecycle"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/util/runner"
+	"github.com/ovrclk/akash/validation"
 	dquery "github.com/ovrclk/akash/x/deployment/query"
 	mquery "github.com/ovrclk/akash/x/market/query"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -116,7 +116,7 @@ loop:
 				o.bus.Publish(event.LeaseWon{
 					LeaseID: ev.ID,
 					Group:   group,
-					// Price:   ev.Price,
+					Price:   ev.Price,
 				})
 				won = true
 
@@ -174,9 +174,11 @@ loop:
 
 			reservation = result.Value().(cluster.Reservation)
 
-			// TODO: price
-			// price := calculatePrice(reservation.Resources())
-			price := sdk.NewCoin("akash", sdk.NewInt(0))
+			price, err := calculatePrice(&group.GroupSpec)
+			if err != nil {
+				o.log.Error("error calculating price", "err", err)
+				break loop
+			}
 
 			o.log.Debug("submitting fulfillment", "price", price)
 
@@ -185,8 +187,7 @@ loop:
 				return runner.NewResult(nil, o.session.Client().Tx().Broadcast(&mtypes.MsgCreateBid{
 					Order:    o.order,
 					Provider: o.session.Provider().Address(),
-					// TODO: price
-					// Price:    price,
+					Price:    price,
 				}))
 			})
 
@@ -235,11 +236,10 @@ func (o *order) shouldBid(group *dquery.Group) bool {
 		return false
 	}
 
-	// XXX
-	// if err := validation.ValidateDeploymentGroup(group); err != nil {
-	// 	o.log.Error("unable to fulfill: group validation error",
-	// 		"err", err)
-	// 	return false
-	// }
+	if err := validation.ValidateDeploymentGroup(group.GroupSpec); err != nil {
+		o.log.Error("unable to fulfill: group validation error",
+			"err", err)
+		return false
+	}
 	return true
 }

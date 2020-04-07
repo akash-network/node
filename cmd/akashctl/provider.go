@@ -32,7 +32,6 @@ func providerCmd(cdc *codec.Codec) *cobra.Command {
 
 			txbldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
 
-			// TODO: lookup provider & ensure exists.
 			keyname := cctx.GetFromName()
 			info, err := txbldr.Keybase().Get(keyname)
 			if err != nil {
