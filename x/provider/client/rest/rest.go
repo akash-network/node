@@ -17,7 +17,7 @@ func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
 	r.HandleFunc(fmt.Sprintf("/%s/list", ns), listProvidersHandler(ctx, ns)).Methods("GET")
 
 	// Get single provider info
-	r.HandleFunc(fmt.Sprintf("/%s/{providerOwner}/info", ns), getProviderHandler(ctx, ns)).Methods("GET")
+	r.HandleFunc(fmt.Sprintf("/%s/info/{providerOwner}", ns), getProviderHandler(ctx, ns)).Methods("GET")
 }
 
 func listProvidersHandler(ctx context.CLIContext, ns string) http.HandlerFunc {

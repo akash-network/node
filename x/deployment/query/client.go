@@ -7,7 +7,7 @@ import (
 
 // Client interface
 type Client interface {
-	Deployments() (Deployments, error)
+	Deployments(types.DeploymentFilters) (Deployments, error)
 	Deployment(types.DeploymentID) (Deployment, error)
 	Group(types.GroupID) (Group, error)
 }
@@ -22,9 +22,9 @@ type client struct {
 	key string
 }
 
-func (c *client) Deployments() (Deployments, error) {
+func (c *client) Deployments(dfilters types.DeploymentFilters) (Deployments, error) {
 	var obj Deployments
-	buf, err := NewRawClient(c.ctx, c.key).Deployments()
+	buf, err := NewRawClient(c.ctx, c.key).Deployments(dfilters)
 	if err != nil {
 		return obj, err
 	}

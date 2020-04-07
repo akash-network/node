@@ -3,6 +3,7 @@ package cli
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/x/deployment/types"
+	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
@@ -10,6 +11,12 @@ import (
 func AddDeploymentIDFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "Deployment Owner")
 	flags.Uint64("dseq", 0, "Deployment Sequence")
+}
+
+// MarkReqDeploymentIDFlags marks flags required for deployment
+func MarkReqDeploymentIDFlags(cmd *cobra.Command) {
+	cmd.MarkFlagRequired("owner")
+	cmd.MarkFlagRequired("dseq")
 }
 
 // DeploymentIDFromFlags returns DeploymentID with given flags, owner and error if occured
@@ -38,6 +45,12 @@ func AddGroupIDFlags(flags *pflag.FlagSet) {
 	flags.Uint32("gseq", 0, "Group Sequence")
 }
 
+// MarkReqGroupIDFlags marks flags required for group
+func MarkReqGroupIDFlags(cmd *cobra.Command) {
+	MarkReqDeploymentIDFlags(cmd)
+	cmd.MarkFlagRequired("gseq")
+}
+
 // GroupIDFromFlags returns GroupID with given flags and error if occured
 func GroupIDFromFlags(flags *pflag.FlagSet) (types.GroupID, error) {
 	var id types.GroupID
@@ -51,4 +64,47 @@ func GroupIDFromFlags(flags *pflag.FlagSet) (types.GroupID, error) {
 		return id, err
 	}
 	return types.MakeGroupID(prev, gseq), nil
+}
+
+// AddDeploymentFilterFlags add flags to filter for deployment list
+func AddDeploymentFilterFlags(flags *pflag.FlagSet) {
+	flags.String("owner", "", "deployment owner address to filter")
+	flags.String("state", "", "deployment state to filter (active,closed)")
+}
+
+// DepFiltersFromFlags returns DeploymentFilters with given flags and error if occured
+func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, error) {
+	var dfilters types.DeploymentFilters
+	owner, err := flags.GetString("owner")
+	if err != nil {
+		return dfilters, err
+	}
+	dfilters.Owner, err = sdk.AccAddressFromBech32(owner)
+	if err != nil {
+		return dfilters, err
+	}
+	dfilters.StateFlagVal, err = flags.GetString("state")
+	if err != nil {
+		return dfilters, err
+	}
+	return dfilters, nil
+}
+
+// AddGroupFilterFlags add flags to filter for group list
+func AddGroupFilterFlags(flags *pflag.FlagSet) {
+	flags.String("owner", "", "group owner address to filter")
+	flags.String("state", "", "group state to filter (open,ordered,matched,insufficient,closed)")
+}
+
+// GroupFiltersFromFlags returns GroupFilters with given flags and error if occured
+func GroupFiltersFromFlags(flags *pflag.FlagSet) (types.GroupFilters, error) {
+	dfilters, err := DepFiltersFromFlags(flags)
+	if err != nil {
+		return types.GroupFilters{}, err
+	}
+	gfilters := types.GroupFilters{
+		Owner:        dfilters.Owner,
+		StateFlagVal: dfilters.StateFlagVal,
+	}
+	return gfilters, nil
 }

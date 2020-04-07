@@ -9,10 +9,12 @@ import (
 
 // RawClient interface
 type RawClient interface {
-	Orders() ([]byte, error)
-	Bids() ([]byte, error)
+	Orders(filters types.OrderFilters) ([]byte, error)
+	Order(id types.OrderID) ([]byte, error)
+	Bids(filters types.BidFilters) ([]byte, error)
 	Bid(id types.BidID) ([]byte, error)
-	Leases() ([]byte, error)
+	Leases(filters types.LeaseFilters) ([]byte, error)
+	Lease(id types.LeaseID) ([]byte, error)
 }
 
 // NewRawClient creates a raw client instance with provided context and key
@@ -25,16 +27,24 @@ type rawclient struct {
 	key string
 }
 
-func (c *rawclient) Orders() ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getOrdersPath()), nil)
+func (c *rawclient) Orders(ofilters types.OrderFilters) ([]byte, error) {
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getOrdersPath(ofilters)), nil)
 	if err != nil {
 		return []byte{}, err
 	}
 	return buf, nil
 }
 
-func (c *rawclient) Bids() ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getBidsPath()), nil)
+func (c *rawclient) Order(id types.OrderID) ([]byte, error) {
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, OrderPath(id)), nil)
+	if err != nil {
+		return []byte{}, err
+	}
+	return buf, nil
+}
+
+func (c *rawclient) Bids(bfilters types.BidFilters) ([]byte, error) {
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getBidsPath(bfilters)), nil)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -42,11 +52,23 @@ func (c *rawclient) Bids() ([]byte, error) {
 }
 
 func (c *rawclient) Bid(id types.BidID) ([]byte, error) {
-	return []byte{}, fmt.Errorf("TODO: not implemented")
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getBidPath(id)), nil)
+	if err != nil {
+		return []byte{}, err
+	}
+	return buf, nil
 }
 
-func (c *rawclient) Leases() ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getLeasesPath()), nil)
+func (c *rawclient) Leases(lfilters types.LeaseFilters) ([]byte, error) {
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getLeasesPath(lfilters)), nil)
+	if err != nil {
+		return []byte{}, err
+	}
+	return buf, nil
+}
+
+func (c *rawclient) Lease(id types.LeaseID) ([]byte, error) {
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, LeasePath(id)), nil)
 	if err != nil {
 		return []byte{}, err
 	}

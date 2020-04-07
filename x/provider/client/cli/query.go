@@ -31,9 +31,11 @@ func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
 
 func cmdGetProviders(key string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use: "providers",
+		Use:   "list",
+		Short: "Query for all providers",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
+
 			obj, err := query.NewClient(ctx, key).Providers()
 			if err != nil {
 				return err
@@ -45,8 +47,9 @@ func cmdGetProviders(key string, cdc *codec.Codec) *cobra.Command {
 
 func cmdGetProvider(key string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:  "provider <address>",
-		Args: cobra.ExactArgs(1),
+		Use:   "get [address]",
+		Short: "Query provider",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
 

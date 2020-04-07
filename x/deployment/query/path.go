@@ -12,16 +12,17 @@ const (
 	deploymentsPath = "deployments"
 	deploymentPath  = "deployment"
 	groupPath       = "group"
+	filterDepsPath  = "filter_deployments"
 )
 
 // getDeploymentsPath returns deployments path for queries
-func getDeploymentsPath() string {
-	return deploymentsPath
+func getDeploymentsPath(dfilters types.DeploymentFilters) string {
+	return fmt.Sprintf("%s/%s/%v", deploymentsPath, dfilters.Owner, dfilters.StateFlagVal)
 }
 
 // DeploymentPath return deployment path of given deployment id for queries
 func DeploymentPath(id types.DeploymentID) string {
-	return fmt.Sprintf("%s/%s/%v", deploymentPath, id.Owner, id.DSeq)
+	return fmt.Sprintf("%s/%s", deploymentPath, deploymentParts(id))
 }
 
 // getGroupPath return group path of given group id for queries
@@ -52,9 +53,34 @@ func parseDeploymentPath(parts []string) (types.DeploymentID, error) {
 	}, nil
 }
 
-// parseGroupPath returns GroupID details with provided queries, and return
+// parseDepFiltersPath returns DeploymentFilters details with provided queries, and return
 // error if occured due to wrong query
-func parseGroupPath(parts []string) (types.GroupID, error) {
+func parseDepFiltersPath(parts []string) (types.DeploymentFilters, bool, error) {
+	if len(parts) < 2 {
+		return types.DeploymentFilters{}, false, fmt.Errorf("invalid path")
+	}
+
+	owner, err := sdk.AccAddressFromBech32(parts[0])
+	if err != nil {
+		return types.DeploymentFilters{}, false, err
+	}
+
+	state, ok := types.DeploymentStateMap[parts[1]]
+
+	if !ok && (parts[1] != "") {
+		return types.DeploymentFilters{}, false, fmt.Errorf("invalid state value")
+	}
+
+	return types.DeploymentFilters{
+		Owner:        owner,
+		StateFlagVal: parts[1],
+		State:        state,
+	}, ok, nil
+}
+
+// ParseGroupPath returns GroupID details with provided queries, and return
+// error if occured due to wrong query
+func ParseGroupPath(parts []string) (types.GroupID, error) {
 	if len(parts) < 3 {
 		return types.GroupID{}, fmt.Errorf("invalid path")
 	}
@@ -67,4 +93,8 @@ func parseGroupPath(parts []string) (types.GroupID, error) {
 	gseq, err := strconv.ParseUint(parts[2], 10, 32)
 
 	return types.MakeGroupID(did, uint32(gseq)), nil
+}
+
+func deploymentParts(id types.DeploymentID) string {
+	return fmt.Sprintf("%s/%v", id.Owner, id.DSeq)
 }
