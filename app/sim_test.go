@@ -27,8 +27,6 @@ var (
 	}()
 )
 
-const one int = 1
-
 // fauxMerkleModeOpt returns a BaseApp option to use a dbStoreAdapter instead of
 // an IAVLStore for faster simulation speed.
 func fauxMerkleModeOpt(bapp *baseapp.BaseApp) {
@@ -171,7 +169,7 @@ func TestAppStateDeterminism(t *testing.T) {
 
 			fmt.Printf(
 				"running non-determinism simulation; seed %d: %d/%d, attempt: %d/%d\n",
-				config.Seed, i+one, numSeeds, j+one, numTimesToRunPerSeed,
+				config.Seed, i+1, numSeeds, j+1, numTimesToRunPerSeed,
 			)
 
 			_, _, err := simulateFromSeedFunc(t, app, config)
@@ -188,7 +186,7 @@ func TestAppStateDeterminism(t *testing.T) {
 				require.Equal(
 					t, appHashList[0], appHashList[j],
 					"non-determinism in seed %d: %d/%d, attempt: %d/%d\n",
-					config.Seed, i+one, numSeeds, j+one, numTimesToRunPerSeed,
+					config.Seed, i+1, numSeeds, j+1, numTimesToRunPerSeed,
 				)
 			}
 		}
