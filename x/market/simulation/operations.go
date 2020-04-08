@@ -13,7 +13,6 @@ import (
 	simappparams "github.com/ovrclk/akash/app/params"
 	keepers "github.com/ovrclk/akash/x/market/handler"
 	"github.com/ovrclk/akash/x/market/types"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
 // Simulation operation weights constants
@@ -30,11 +29,10 @@ const DENOM = "stake"
 func WeightedOperations(
 	appParams simulation.AppParams, cdc *codec.Codec, ak stakingtypes.AccountKeeper,
 	ks keepers.Keepers) simulation.WeightedOperations {
-
 	var (
-		weightMsgCreateBid  int = 0
-		weightMsgCloseBid   int = 0
-		weightMsgCloseOrder int = 0
+		weightMsgCreateBid  int
+		weightMsgCloseBid   int
+		weightMsgCloseOrder int
 	)
 
 	appParams.GetOrGenerate(
@@ -75,17 +73,7 @@ func WeightedOperations(
 func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
-
-		var orders []types.Order
-
-		ks.Market.WithOrders(ctx, func(order types.Order) bool {
-			if order.State == types.OrderOpen {
-				orders = append(orders, order)
-			}
-
-			return false
-		})
-
+		orders := getOrdersWithState(ctx, ks, types.OrderOpen)
 		if len(orders) == 0 {
 			return simulation.NoOpMsg(types.ModuleName), nil, nil
 		}
@@ -93,13 +81,9 @@ func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) sim
 		// Get random order
 		i := r.Intn(len(orders))
 		order := orders[i]
-		var providers []ptypes.Provider
 
-		ks.Provider.WithProviders(ctx, func(provider ptypes.Provider) bool {
-			providers = append(providers, provider)
+		providers := getProviders(ctx, ks)
 
-			return false
-		})
 		if len(providers) == 0 {
 			return simulation.NoOpMsg(types.ModuleName), nil, nil
 		}
@@ -153,7 +137,6 @@ func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) sim
 func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
-
 		var bids []types.Bid
 
 		ks.Market.WithBids(ctx, func(bid types.Bid) bool {
@@ -214,16 +197,7 @@ func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simu
 func SimulateMsgCloseOrder(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
-
-		var orders []types.Order
-
-		ks.Market.WithOrders(ctx, func(order types.Order) bool {
-			if order.State == types.OrderMatched {
-				orders = append(orders, order)
-			}
-
-			return false
-		})
+		orders := getOrdersWithState(ctx, ks, types.OrderMatched)
 		if len(orders) == 0 {
 			return simulation.NoOpMsg(types.ModuleName), nil, nil
 		}

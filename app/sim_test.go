@@ -20,9 +20,12 @@ import (
 )
 
 // Get flags every time the simulator is run
-func init() {
-	simapp.GetSimulatorFlags()
-}
+var (
+	_ = func() interface{} {
+		simapp.GetSimulatorFlags()
+		return nil
+	}()
+)
 
 // fauxMerkleModeOpt returns a BaseApp option to use a dbStoreAdapter instead of
 // an IAVLStore for faster simulation speed.
@@ -168,12 +171,9 @@ func TestAppStateDeterminism(t *testing.T) {
 
 			app := NewApp(logger, db, nil, interBlockCacheOpt())
 
-			curSeed := i + 1
-			curRunPerSeed := j + 1
-
 			fmt.Printf(
 				"running non-determinism simulation; seed %d: %d/%d, attempt: %d/%d\n",
-				config.Seed, curSeed, numSeeds, curRunPerSeed, numTimesToRunPerSeed,
+				config.Seed, i+1, numSeeds, j+1, numTimesToRunPerSeed,
 			)
 
 			_, _, err := simulation.SimulateFromSeed(
@@ -193,7 +193,8 @@ func TestAppStateDeterminism(t *testing.T) {
 			if j != 0 {
 				require.Equal(
 					t, appHashList[0], appHashList[j],
-					"non-determinism in seed %d: %d/%d, attempt: %d/%d\n", config.Seed, curSeed, numSeeds, curRunPerSeed, numTimesToRunPerSeed,
+					"non-determinism in seed %d: %d/%d, attempt: %d/%d\n",
+					config.Seed, i+1, numSeeds, j+1, numTimesToRunPerSeed,
 				)
 			}
 		}

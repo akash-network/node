@@ -30,7 +30,6 @@ const DENOM = "stake"
 func WeightedOperations(
 	appParams simulation.AppParams, cdc *codec.Codec,
 	ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.WeightedOperations {
-
 	var (
 		weightMsgCreateDeployment int = 0
 		weightMsgUpdateDeployment int = 0
@@ -75,7 +74,6 @@ func WeightedOperations(
 func SimulateMsgCreateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
-
 		simAccount, _ := simulation.RandomAcc(r, accounts)
 
 		dID := types.DeploymentID{
@@ -138,7 +136,6 @@ func SimulateMsgCreateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper)
 func SimulateMsgUpdateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
-
 		var deployments []types.Deployment
 
 		k.WithDeployments(ctx, func(deployment types.Deployment) bool {
@@ -195,7 +192,6 @@ func SimulateMsgUpdateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper)
 func SimulateMsgCloseDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
-
 		var deployments []types.Deployment
 
 		k.WithDeployments(ctx, func(deployment types.Deployment) bool {
@@ -220,6 +216,7 @@ func SimulateMsgCloseDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper) 
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+
 		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
