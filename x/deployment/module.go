@@ -8,7 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/gorilla/mux"
 	"github.com/ovrclk/akash/x/deployment/client/cli"
 	"github.com/ovrclk/akash/x/deployment/client/rest"
@@ -159,11 +159,11 @@ func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
 // AppModuleSimulation implements an application simulation module for the deployment module.
 type AppModuleSimulation struct {
 	keeper  keeper.Keeper
-	akeeper stakingtypes.AccountKeeper
+	akeeper govtypes.AccountKeeper
 }
 
 // NewAppModule creates a new AppModuleSimulation instance
-func NewAppModuleSimulation(k keeper.Keeper, akeeper stakingtypes.AccountKeeper) AppModuleSimulation {
+func NewAppModuleSimulation(k keeper.Keeper, akeeper govtypes.AccountKeeper) AppModuleSimulation {
 	return AppModuleSimulation{
 		keeper:  k,
 		akeeper: akeeper,

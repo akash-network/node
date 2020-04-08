@@ -21,13 +21,13 @@ import (
 
 // Get flags every time the simulator is run
 var (
-	_ = func() interface{} {
+	_ = func() string {
 		simapp.GetSimulatorFlags()
 		return ""
 	}()
-
-	one = 1
 )
+
+const one int = 1
 
 // fauxMerkleModeOpt returns a BaseApp option to use a dbStoreAdapter instead of
 // an IAVLStore for faster simulation speed.
@@ -39,6 +39,14 @@ func fauxMerkleModeOpt(bapp *baseapp.BaseApp) {
 // inter-block write-through cache.
 func interBlockCacheOpt() func(*baseapp.BaseApp) {
 	return baseapp.SetInterBlockCache(store.NewCommitKVStoreCacheManager())
+}
+
+func simulateFromSeedFunc(t *testing.T, app *AkashApp, config simulation.Config) (bool, simulation.Params, error) {
+	return simulation.SimulateFromSeed(
+		t, os.Stdout, app.BaseApp, simapp.AppStateFn(app.Codec(), app.SimulationManager()),
+		simapp.SimulationOperations(app, app.Codec(), config),
+		app.ModuleAccountAddrs(), config,
+	)
 }
 
 func TestFullAppSimulation(t *testing.T) {
@@ -59,11 +67,7 @@ func TestFullAppSimulation(t *testing.T) {
 
 	fmt.Printf("config-------- %v", config)
 	// run randomized simulation
-	_, simParams, simErr := simulation.SimulateFromSeed(
-		t, os.Stdout, app.BaseApp, simapp.AppStateFn(app.Codec(), app.SimulationManager()),
-		simapp.SimulationOperations(app, app.Codec(), config),
-		app.ModuleAccountAddrs(), config,
-	)
+	_, simParams, simErr := simulateFromSeedFunc(t, app, config)
 
 	// export state and simParams before the simulation error is checked
 	err = simapp.CheckExportSimulation(app, config, simParams)
@@ -80,6 +84,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	if skip {
 		t.Skip("skipping application simulation after import")
 	}
+
 	require.NoError(t, err, "simulation setup failed")
 
 	defer func() {
@@ -91,15 +96,13 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	require.Equal(t, "akash", app.Name())
 
 	// Run randomized simulation
-	stopEarly, simParams, simErr := simulation.SimulateFromSeed(
-		t, os.Stdout, app.BaseApp, simapp.AppStateFn(app.Codec(), app.SimulationManager()),
-		simapp.SimulationOperations(app, app.Codec(), config),app.ModuleAccountAddrs(), config,
-	)
+	stopEarly, simParams, simErr := simulateFromSeedFunc(t, app, config)
 
 	// export state and simParams before the simulation error is checked
 	err = simapp.CheckExportSimulation(app, config, simParams)
 	require.NoError(t, err)
 	require.NoError(t, simErr)
+
 	if config.Commit {
 		simapp.PrintStats(db)
 	}
@@ -108,8 +111,9 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		fmt.Println("can't export or import a zero-validator genesis, exiting test...")
 		return
 	}
+
 	fmt.Printf("exporting genesis...\n")
-	
+
 	appState, _, err := app.ExportAppStateAndValidators(true, []string{})
 	require.NoError(t, err)
 
@@ -130,9 +134,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		AppStateBytes: appState,
 	})
 
-	_, _, err = simulation.SimulateFromSeed(
-		t, os.Stdout, newApp.BaseApp, simapp.AppStateFn(app.Codec(), app.SimulationManager()),
-		simapp.SimulationOperations(newApp, newApp.Codec(), config),newApp.ModuleAccountAddrs(), config)
+	_, _, err = simulateFromSeedFunc(t, newApp, config)
 	require.NoError(t, err)
 }
 
@@ -172,11 +174,7 @@ func TestAppStateDeterminism(t *testing.T) {
 				config.Seed, i+one, numSeeds, j+one, numTimesToRunPerSeed,
 			)
 
-			_, _, err := simulation.SimulateFromSeed(
-				t, os.Stdout, app.BaseApp, simapp.AppStateFn(app.Codec(), app.SimulationManager()),
-				simapp.SimulationOperations(app, app.Codec(), config),
-				app.ModuleAccountAddrs(), config,
-			)
+			_, _, err := simulateFromSeedFunc(t, app, config)
 			require.NoError(t, err)
 
 			if config.Commit {
@@ -190,7 +188,7 @@ func TestAppStateDeterminism(t *testing.T) {
 				require.Equal(
 					t, appHashList[0], appHashList[j],
 					"non-determinism in seed %d: %d/%d, attempt: %d/%d\n",
-					config.Seed, i+1, numSeeds, j+1, numTimesToRunPerSeed,
+					config.Seed, i+one, numSeeds, j+one, numTimesToRunPerSeed,
 				)
 			}
 		}

@@ -19,8 +19,8 @@ import (
 	"github.com/spf13/cobra"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	sim "github.com/cosmos/cosmos-sdk/x/simulation"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -161,13 +161,13 @@ func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
 // AppModuleSimulation implements an application simulation module for the market module.
 type AppModuleSimulation struct {
 	keepers handler.Keepers
-	akeeper stakingtypes.AccountKeeper
+	akeeper govtypes.AccountKeeper
 }
 
 // NewAppModule creates a new AppModuleSimulation instance
 func NewAppModuleSimulation(
 	keeper keeper.Keeper,
-	akeeper stakingtypes.AccountKeeper,
+	akeeper govtypes.AccountKeeper,
 	dkeeper handler.DeploymentKeeper,
 	pkeeper handler.ProviderKeeper,
 	bkeeper bank.Keeper,

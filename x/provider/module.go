@@ -5,8 +5,8 @@ import (
 	"math/rand"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	sim "github.com/cosmos/cosmos-sdk/x/simulation"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -152,11 +152,11 @@ func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
 // AppModuleSimulation implements an application simulation module for the provider module.
 type AppModuleSimulation struct {
 	keeper  keeper.Keeper
-	akeeper stakingtypes.AccountKeeper
+	akeeper govtypes.AccountKeeper
 }
 
 // NewAppModule creates a new AppModuleSimulation instance
-func NewAppModuleSimulation(k keeper.Keeper, akeeper stakingtypes.AccountKeeper) AppModuleSimulation {
+func NewAppModuleSimulation(k keeper.Keeper, akeeper govtypes.AccountKeeper) AppModuleSimulation {
 	return AppModuleSimulation{
 		keeper:  k,
 		akeeper: akeeper,

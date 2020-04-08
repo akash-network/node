@@ -8,8 +8,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/simapp/helpers"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	simappparams "github.com/ovrclk/akash/app/params"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/x/deployment/keeper"
@@ -23,17 +23,14 @@ const (
 	OpWeightMsgCloseDeployment  = "op_weight_msg_close_deployment"
 )
 
-// DENOM represents bond denom
-const DENOM = "stake"
-
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
 	appParams simulation.AppParams, cdc *codec.Codec,
-	stk stakingtypes.AccountKeeper, k keeper.Keeper) simulation.WeightedOperations {
+	ak govtypes.AccountKeeper, k keeper.Keeper) simulation.WeightedOperations {
 	var (
-		weightMsgCreateDeployment int = 0
-		weightMsgUpdateDeployment int = 0
-		weightMsgCloseDeployment  int = 0
+		weightMsgCreateDeployment int
+		weightMsgUpdateDeployment int
+		weightMsgCloseDeployment  int
 	)
 
 	appParams.GetOrGenerate(
@@ -57,21 +54,21 @@ func WeightedOperations(
 	return simulation.WeightedOperations{
 		simulation.NewWeightedOperation(
 			weightMsgCreateDeployment,
-			SimulateMsgCreateDeployment(stk, k),
+			SimulateMsgCreateDeployment(ak, k),
 		),
 		simulation.NewWeightedOperation(
 			weightMsgUpdateDeployment,
-			SimulateMsgUpdateDeployment(stk, k),
+			SimulateMsgUpdateDeployment(ak, k),
 		),
 		simulation.NewWeightedOperation(
 			weightMsgCloseDeployment,
-			SimulateMsgCloseDeployment(stk, k),
+			SimulateMsgCloseDeployment(ak, k),
 		),
 	}
 }
 
 // SimulateMsgCreateDeployment generates a MsgCreate with random values
-func SimulateMsgCreateDeployment(stk stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
+func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 		simAccount, _ := simulation.RandomAcc(r, accounts)
@@ -97,7 +94,7 @@ func SimulateMsgCreateDeployment(stk stakingtypes.AccountKeeper, k keeper.Keeper
 			return simulation.NoOpMsg(types.ModuleName), nil, groupErr
 		}
 
-		account := stk.GetAccount(ctx, simAccount.Address)
+		account := ak.GetAccount(ctx, simAccount.Address)
 
 		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
@@ -133,7 +130,7 @@ func SimulateMsgCreateDeployment(stk stakingtypes.AccountKeeper, k keeper.Keeper
 }
 
 // SimulateMsgUpdateDeployment generates a MsgUpdate with random values
-func SimulateMsgUpdateDeployment(stk stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
+func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 		var deployments []types.Deployment
@@ -157,7 +154,7 @@ func SimulateMsgUpdateDeployment(stk stakingtypes.AccountKeeper, k keeper.Keeper
 			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("deployment with %s not found", deployment.ID().Owner)
 		}
 
-		account := stk.GetAccount(ctx, simAccount.Address)
+		account := ak.GetAccount(ctx, simAccount.Address)
 
 		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
@@ -189,7 +186,7 @@ func SimulateMsgUpdateDeployment(stk stakingtypes.AccountKeeper, k keeper.Keeper
 }
 
 // SimulateMsgCloseDeployment generates a MsgClose with random values
-func SimulateMsgCloseDeployment(stk stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
+func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 		var deployments []types.Deployment
@@ -215,7 +212,7 @@ func SimulateMsgCloseDeployment(stk stakingtypes.AccountKeeper, k keeper.Keeper)
 			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("deployment with %s not found", deployment.ID().Owner)
 		}
 
-		account := stk.GetAccount(ctx, simAccount.Address)
+		account := ak.GetAccount(ctx, simAccount.Address)
 
 		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {

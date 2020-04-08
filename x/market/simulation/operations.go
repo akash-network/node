@@ -8,8 +8,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/simapp/helpers"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	simappparams "github.com/ovrclk/akash/app/params"
 	keepers "github.com/ovrclk/akash/x/market/handler"
 	"github.com/ovrclk/akash/x/market/types"
@@ -22,12 +22,9 @@ const (
 	OpWeightMsgCloseOrder = "op_weight_msg_close_order"
 )
 
-// DENOM represents bond denom
-const DENOM = "stake"
-
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simulation.AppParams, cdc *codec.Codec, ak stakingtypes.AccountKeeper,
+	appParams simulation.AppParams, cdc *codec.Codec, ak govtypes.AccountKeeper,
 	ks keepers.Keepers) simulation.WeightedOperations {
 	var (
 		weightMsgCreateBid  int
@@ -70,7 +67,7 @@ func WeightedOperations(
 }
 
 // SimulateMsgCreateBid generates a MsgCreateBid with random values
-func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
+func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 		orders := getOrdersWithState(ctx, ks, types.OrderOpen)
@@ -134,7 +131,7 @@ func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) sim
 }
 
 // SimulateMsgCloseBid generates a MsgCloseBid with random values
-func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
+func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 		var bids []types.Bid
@@ -194,7 +191,7 @@ func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simu
 }
 
 // SimulateMsgCloseOrder generates a MsgCloseOrder with random values
-func SimulateMsgCloseOrder(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
+func SimulateMsgCloseOrder(ak govtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 		orders := getOrdersWithState(ctx, ks, types.OrderMatched)

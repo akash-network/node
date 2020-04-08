@@ -8,8 +8,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/simapp/helpers"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	simappparams "github.com/ovrclk/akash/app/params"
 	"github.com/ovrclk/akash/x/provider/config"
 	"github.com/ovrclk/akash/x/provider/keeper"
@@ -22,16 +22,13 @@ const (
 	OpWeightMsgUpdate = "op_weight_msg_update"
 )
 
-// DENOM represents bond denom
-const DENOM = "stake"
-
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simulation.AppParams, cdc *codec.Codec, ak stakingtypes.AccountKeeper,
+	appParams simulation.AppParams, cdc *codec.Codec, ak govtypes.AccountKeeper,
 	k keeper.Keeper) simulation.WeightedOperations {
 	var (
-		weightMsgCreate int = 0
-		weightMsgUpdate int = 0
+		weightMsgCreate int
+		weightMsgUpdate int
 	)
 
 	appParams.GetOrGenerate(
@@ -60,7 +57,7 @@ func WeightedOperations(
 
 // SimulateMsgCreate generates a MsgCreate with random values
 // nolint:funlen
-func SimulateMsgCreate(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
+func SimulateMsgCreate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 		simAccount, _ := simulation.RandomAcc(r, accounts)
@@ -110,7 +107,7 @@ func SimulateMsgCreate(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulatio
 
 // SimulateMsgUpdate generates a MsgUpdate with random values
 // nolint:funlen
-func SimulateMsgUpdate(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
+func SimulateMsgUpdate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
 		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 		var providers []types.Provider
