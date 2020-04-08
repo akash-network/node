@@ -160,12 +160,11 @@ clean:
 	install
 
 test-simapp:
-	go test ./simapp \
+	go test ./app \
 	-run=TestFullAppSimulation \
 	-Enabled=true \
 	-NumBlocks=50 \
 	-BlockSize=100 \
 	-Commit=true \
 	-Seed=99 \
-	-Period=10 \
 	-v -timeout 24h

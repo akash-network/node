@@ -10,7 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	simappparams "github.com/ovrclk/akash/simapp/params"
+	simappparams "github.com/ovrclk/akash/app/params"
 	"github.com/ovrclk/akash/x/provider/config"
 	"github.com/ovrclk/akash/x/provider/keeper"
 	"github.com/ovrclk/akash/x/provider/types"
@@ -35,13 +35,13 @@ func WeightedOperations(
 
 	appParams.GetOrGenerate(
 		cdc, OpWeightMsgCreate, &weightMsgCreate, nil, func(r *rand.Rand) {
-			weightMsgCreate = simappparams.DefaultWeightMsgCreateValidator
+			weightMsgCreate = simappparams.DefaultWeightMsgCreateProvider
 		},
 	)
 
 	appParams.GetOrGenerate(
 		cdc, OpWeightMsgUpdate, &weightMsgUpdate, nil, func(r *rand.Rand) {
-			weightMsgUpdate = simappparams.DefaultWeightMsgEditValidator
+			weightMsgUpdate = simappparams.DefaultWeightMsgUpdateProvider
 		},
 	)
 
