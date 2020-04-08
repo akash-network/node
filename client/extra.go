@@ -9,7 +9,7 @@ import (
 // TODO: implement with search parameters
 
 func (c *qclient) ActiveLeasesForProvider(id sdk.AccAddress) (mquery.Leases, error) {
-	leases, err := c.Leases()
+	leases, err := c.Leases(types.LeaseFilters{})
 	if err != nil {
 		return nil, err
 	}

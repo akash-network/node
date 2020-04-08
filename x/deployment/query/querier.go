@@ -25,15 +25,47 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 }
 
 func queryDeployments(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+	// isValidState denotes whether given state flag is valid or not
+	filters, isValidState, err := parseDepFiltersPath(path)
+	if err != nil {
+		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
+	}
 
 	var values Deployments
-
 	keeper.WithDeployments(ctx, func(deployment types.Deployment) bool {
-		value := Deployment{
-			Deployment: deployment,
-			Groups:     keeper.GetGroups(ctx, deployment.ID()),
+		if filters.Owner.Empty() && !isValidState {
+			value := Deployment{
+				Deployment: deployment,
+				Groups:     keeper.GetGroups(ctx, deployment.ID()),
+			}
+			values = append(values, value)
+		} else {
+			if filters.Owner.Empty() {
+				if deployment.State == filters.State {
+					value := Deployment{
+						Deployment: deployment,
+						Groups:     keeper.GetGroups(ctx, deployment.ID()),
+					}
+					values = append(values, value)
+				}
+			} else if !isValidState {
+				if deployment.DeploymentID.Owner.Equals(filters.Owner) {
+					value := Deployment{
+						Deployment: deployment,
+						Groups:     keeper.GetGroups(ctx, deployment.ID()),
+					}
+					values = append(values, value)
+				}
+			} else {
+				if deployment.DeploymentID.Owner.Equals(filters.Owner) && deployment.State == filters.State {
+					value := Deployment{
+						Deployment: deployment,
+						Groups:     keeper.GetGroups(ctx, deployment.ID()),
+					}
+					values = append(values, value)
+				}
+			}
 		}
-		values = append(values, value)
 		return false
 	})
 
@@ -44,12 +76,12 @@ func queryDeployment(ctx sdk.Context, path []string, req abci.RequestQuery, keep
 
 	id, err := parseDeploymentPath(path)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "internal error")
+		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
 	}
 
 	deployment, ok := keeper.GetDeployment(ctx, id)
 	if !ok {
-		return nil, sdkerrors.Wrap(err, "deployment not found")
+		return nil, types.ErrDeploymentNotFound
 	}
 
 	value := Deployment{
@@ -62,7 +94,7 @@ func queryDeployment(ctx sdk.Context, path []string, req abci.RequestQuery, keep
 
 func queryGroup(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
-	id, err := parseGroupPath(path)
+	id, err := ParseGroupPath(path)
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "internal error")
 	}

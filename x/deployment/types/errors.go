@@ -23,4 +23,6 @@ var (
 	ErrInvalidDeploymentID = sdkerrors.Register(ModuleName, 8, "Invalid: deployment id")
 	// ErrEmptyVersion is the error when version is empty
 	ErrEmptyVersion = sdkerrors.Register(ModuleName, 9, "Invalid: empty version")
+	// ErrInternal is the error for internal error
+	ErrInternal = sdkerrors.Register(ModuleName, 10, "internal error")
 )
