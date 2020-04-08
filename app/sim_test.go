@@ -23,8 +23,10 @@ import (
 var (
 	_ = func() interface{} {
 		simapp.GetSimulatorFlags()
-		return nil
+		return ""
 	}()
+
+	one = 1
 )
 
 // fauxMerkleModeOpt returns a BaseApp option to use a dbStoreAdapter instead of
@@ -78,7 +80,6 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	if skip {
 		t.Skip("skipping application simulation after import")
 	}
-
 	require.NoError(t, err, "simulation setup failed")
 
 	defer func() {
@@ -92,15 +93,13 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	// Run randomized simulation
 	stopEarly, simParams, simErr := simulation.SimulateFromSeed(
 		t, os.Stdout, app.BaseApp, simapp.AppStateFn(app.Codec(), app.SimulationManager()),
-		simapp.SimulationOperations(app, app.Codec(), config),
-		app.ModuleAccountAddrs(), config,
+		simapp.SimulationOperations(app, app.Codec(), config),app.ModuleAccountAddrs(), config,
 	)
 
 	// export state and simParams before the simulation error is checked
 	err = simapp.CheckExportSimulation(app, config, simParams)
 	require.NoError(t, err)
 	require.NoError(t, simErr)
-
 	if config.Commit {
 		simapp.PrintStats(db)
 	}
@@ -109,9 +108,8 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		fmt.Println("can't export or import a zero-validator genesis, exiting test...")
 		return
 	}
-
 	fmt.Printf("exporting genesis...\n")
-
+	
 	appState, _, err := app.ExportAppStateAndValidators(true, []string{})
 	require.NoError(t, err)
 
@@ -134,9 +132,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 
 	_, _, err = simulation.SimulateFromSeed(
 		t, os.Stdout, newApp.BaseApp, simapp.AppStateFn(app.Codec(), app.SimulationManager()),
-		simapp.SimulationOperations(newApp, newApp.Codec(), config),
-		newApp.ModuleAccountAddrs(), config,
-	)
+		simapp.SimulationOperations(newApp, newApp.Codec(), config),newApp.ModuleAccountAddrs(), config)
 	require.NoError(t, err)
 }
 
@@ -173,7 +169,7 @@ func TestAppStateDeterminism(t *testing.T) {
 
 			fmt.Printf(
 				"running non-determinism simulation; seed %d: %d/%d, attempt: %d/%d\n",
-				config.Seed, i+1, numSeeds, j+1, numTimesToRunPerSeed,
+				config.Seed, i+one, numSeeds, j+one, numTimesToRunPerSeed,
 			)
 
 			_, _, err := simulation.SimulateFromSeed(
