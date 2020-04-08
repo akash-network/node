@@ -28,12 +28,14 @@ const DENOM = "stake"
 
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simulation.AppParams, cdc *codec.Codec, ak stakingtypes.AccountKeeper, k keeper.Keeper,
-) simulation.WeightedOperations {
+	appParams simulation.AppParams, cdc *codec.Codec,
+	ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.WeightedOperations {
 
-	var weightMsgCreateDeployment int
-	var weightMsgUpdateDeployment int
-	var weightMsgCloseDeployment int
+	var (
+		weightMsgCreateDeployment int = 0
+		weightMsgUpdateDeployment int = 0
+		weightMsgCloseDeployment  int = 0
+	)
 
 	appParams.GetOrGenerate(
 		cdc, OpWeightMsgCreateDeployment, &weightMsgCreateDeployment, nil, func(r *rand.Rand) {
@@ -71,9 +73,8 @@ func WeightedOperations(
 
 // SimulateMsgCreateDeployment generates a MsgCreate with random values
 func SimulateMsgCreateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
-		accounts []simulation.Account, chainID string,
-	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
+		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 
 		simAccount, _ := simulation.RandomAcc(r, accounts)
 
@@ -92,12 +93,14 @@ func SimulateMsgCreateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper)
 		if readError != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, readError
 		}
+
 		groupSpecs, groupErr := sdl.DeploymentGroups()
 		if groupErr != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, groupErr
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+
 		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
@@ -133,14 +136,14 @@ func SimulateMsgCreateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper)
 
 // SimulateMsgUpdateDeployment generates a MsgUpdate with random values
 func SimulateMsgUpdateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
-		accounts []simulation.Account, chainID string,
-	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
+		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 
 		var deployments []types.Deployment
 
 		k.WithDeployments(ctx, func(deployment types.Deployment) bool {
 			deployments = append(deployments, deployment)
+
 			return false
 		})
 
@@ -158,6 +161,7 @@ func SimulateMsgUpdateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper)
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+
 		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
@@ -189,9 +193,8 @@ func SimulateMsgUpdateDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper)
 
 // SimulateMsgCloseDeployment generates a MsgClose with random values
 func SimulateMsgCloseDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
-		accounts []simulation.Account, chainID string,
-	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
+		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
 
 		var deployments []types.Deployment
 
@@ -199,6 +202,7 @@ func SimulateMsgCloseDeployment(ak stakingtypes.AccountKeeper, k keeper.Keeper) 
 			if deployment.State == types.DeploymentActive {
 				deployments = append(deployments, deployment)
 			}
+
 			return false
 		})
 

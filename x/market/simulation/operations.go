@@ -28,12 +28,14 @@ const DENOM = "stake"
 
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simulation.AppParams, cdc *codec.Codec, ak stakingtypes.AccountKeeper, ks keepers.Keepers,
-) simulation.WeightedOperations {
+	appParams simulation.AppParams, cdc *codec.Codec, ak stakingtypes.AccountKeeper,
+	ks keepers.Keepers) simulation.WeightedOperations {
 
-	var weightMsgCreateBid int
-	var weightMsgCloseBid int
-	var weightMsgCloseOrder int
+	var (
+		weightMsgCreateBid  int = 0
+		weightMsgCloseBid   int = 0
+		weightMsgCloseOrder int = 0
+	)
 
 	appParams.GetOrGenerate(
 		cdc, OpWeightMsgCreateBid, &weightMsgCreateBid, nil, func(r *rand.Rand) {
@@ -71,15 +73,16 @@ func WeightedOperations(
 
 // SimulateMsgCreateBid generates a MsgCreateBid with random values
 func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
-		accounts []simulation.Account, chainID string,
-	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
+		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+
 		var orders []types.Order
 
 		ks.Market.WithOrders(ctx, func(order types.Order) bool {
 			if order.State == types.OrderOpen {
 				orders = append(orders, order)
 			}
+
 			return false
 		})
 
@@ -90,13 +93,13 @@ func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) sim
 		// Get random order
 		i := r.Intn(len(orders))
 		order := orders[i]
-
 		var providers []ptypes.Provider
+
 		ks.Provider.WithProviders(ctx, func(provider ptypes.Provider) bool {
 			providers = append(providers, provider)
+
 			return false
 		})
-
 		if len(providers) == 0 {
 			return simulation.NoOpMsg(types.ModuleName), nil, nil
 		}
@@ -115,6 +118,7 @@ func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) sim
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+
 		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
@@ -147,9 +151,9 @@ func SimulateMsgCreateBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) sim
 
 // SimulateMsgCloseBid generates a MsgCloseBid with random values
 func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
-		accounts []simulation.Account, chainID string,
-	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
+		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+
 		var bids []types.Bid
 
 		ks.Market.WithBids(ctx, func(bid types.Bid) bool {
@@ -159,6 +163,7 @@ func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simu
 					bids = append(bids, bid)
 				}
 			}
+
 			return false
 		})
 
@@ -176,6 +181,7 @@ func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simu
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+
 		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, err
@@ -206,18 +212,18 @@ func SimulateMsgCloseBid(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simu
 
 // SimulateMsgCloseOrder generates a MsgCloseOrder with random values
 func SimulateMsgCloseOrder(ak stakingtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context,
-		accounts []simulation.Account, chainID string,
-	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
+		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+
 		var orders []types.Order
 
 		ks.Market.WithOrders(ctx, func(order types.Order) bool {
 			if order.State == types.OrderMatched {
 				orders = append(orders, order)
 			}
+
 			return false
 		})
-
 		if len(orders) == 0 {
 			return simulation.NoOpMsg(types.ModuleName), nil, nil
 		}
@@ -232,6 +238,7 @@ func SimulateMsgCloseOrder(ak stakingtypes.AccountKeeper, ks keepers.Keepers) si
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+
 		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, err

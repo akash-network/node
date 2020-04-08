@@ -16,19 +16,12 @@ import (
 	simapp "github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/simapp/helpers"
 	"github.com/cosmos/cosmos-sdk/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 )
 
 // Get flags every time the simulator is run
 func init() {
 	simapp.GetSimulatorFlags()
-}
-
-type StoreKeysPrefixes struct {
-	A        sdk.StoreKey
-	B        sdk.StoreKey
-	Prefixes [][]byte
 }
 
 // fauxMerkleModeOpt returns a BaseApp option to use a dbStoreAdapter instead of
@@ -48,6 +41,7 @@ func TestFullAppSimulation(t *testing.T) {
 	if skip {
 		t.Skip("skipping application simulation")
 	}
+
 	require.NoError(t, err, "simulation setup failed")
 
 	defer func() {
@@ -81,6 +75,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	if skip {
 		t.Skip("skipping application simulation after import")
 	}
+
 	require.NoError(t, err, "simulation setup failed")
 
 	defer func() {
@@ -119,8 +114,8 @@ func TestAppSimulationAfterImport(t *testing.T) {
 
 	fmt.Printf("importing genesis...\n")
 
-	_, newDB, newDir, _, _, err := simapp.SetupSimulation("leveldb-app-sim-2", "Simulation-2")
-	require.NoError(t, err, "simulation setup failed")
+	_, newDB, newDir, _, val, err := simapp.SetupSimulation("leveldb-app-sim-2", "Simulation-2")
+	require.NoError(t, err, "simulation setup failed", val)
 
 	defer func() {
 		newDB.Close()
@@ -142,8 +137,6 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// TODO: Make another test for the fuzzer itself, which just has noOp txs
-// and doesn't depend on the application.
 func TestAppStateDeterminism(t *testing.T) {
 	if !simapp.FlagEnabledValue {
 		t.Skip("skipping application simulation")
@@ -175,9 +168,12 @@ func TestAppStateDeterminism(t *testing.T) {
 
 			app := NewApp(logger, db, nil, interBlockCacheOpt())
 
+			curSeed := i + 1
+			curRunPerSeed := j + 1
+
 			fmt.Printf(
 				"running non-determinism simulation; seed %d: %d/%d, attempt: %d/%d\n",
-				config.Seed, i+1, numSeeds, j+1, numTimesToRunPerSeed,
+				config.Seed, curSeed, numSeeds, curRunPerSeed, numTimesToRunPerSeed,
 			)
 
 			_, _, err := simulation.SimulateFromSeed(
@@ -197,7 +193,7 @@ func TestAppStateDeterminism(t *testing.T) {
 			if j != 0 {
 				require.Equal(
 					t, appHashList[0], appHashList[j],
-					"non-determinism in seed %d: %d/%d, attempt: %d/%d\n", config.Seed, i+1, numSeeds, j+1, numTimesToRunPerSeed,
+					"non-determinism in seed %d: %d/%d, attempt: %d/%d\n", config.Seed, curSeed, numSeeds, curRunPerSeed, numTimesToRunPerSeed,
 				)
 			}
 		}
