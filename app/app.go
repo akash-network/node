@@ -236,6 +236,7 @@ func NewApp(
 		AddRoute(params.RouterKey, params.NewParamChangeProposalHandler(app.keeper.params)).
 		AddRoute(distr.RouterKey, distr.NewCommunityPoolSpendProposalHandler(app.keeper.distr)).
 		AddRoute(upgrade.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.keeper.upgrade))
+
 	app.keeper.gov = gov.NewKeeper(
 		cdc,
 		keys[gov.StoreKey],

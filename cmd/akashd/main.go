@@ -65,6 +65,7 @@ func newApp(logger log.Logger, db dbm.DB, tio io.Writer) abci.Application {
 	for _, h := range viper.GetIntSlice(server.FlagUnsafeSkipUpgrades) {
 		skipUpgradeHeights[int64(h)] = true
 	}
+
 	return app.NewApp(logger, db, tio, skipUpgradeHeights)
 }
 
