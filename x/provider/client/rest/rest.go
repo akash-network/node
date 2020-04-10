@@ -18,6 +18,10 @@ func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
 
 	// Get single provider info
 	r.HandleFunc(fmt.Sprintf("/%s/info/{providerOwner}", ns), getProviderHandler(ctx, ns)).Methods("GET")
+
+	// Get provider status
+	r.HandleFunc(fmt.Sprintf("/%s/{providerOwner}/status", ns), getProviderStatus(ctx, ns)).Methods("GET")
+
 }
 
 func listProvidersHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
@@ -46,5 +50,30 @@ func getProviderHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 			return
 		}
 		rest.PostProcessResponse(w, ctx, res)
+	}
+}
+
+func getProviderStatus(ctx context.CLIContext, ns string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		bech32Addr := mux.Vars(r)["providerOwner"]
+
+		id, err := sdk.AccAddressFromBech32(bech32Addr)
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
+			return
+		}
+		provider, err := query.NewClient(ctx, ns).Provider(id)
+		if err != nil {
+			rest.WriteErrorResponse(w, http.StatusNotFound, "Provider not found")
+			return
+		}
+
+		body, status, fetchErr := fetchURL(fmt.Sprintf("%s/status", provider.HostURI))
+		if fetchErr != "" {
+			rest.WriteErrorResponse(w, status, fetchErr)
+			return
+		}
+
+		rest.PostProcessResponseBare(w, ctx, body)
 	}
 }
