@@ -12,6 +12,7 @@ import (
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
@@ -60,14 +61,18 @@ func main() {
 }
 
 func newApp(logger log.Logger, db dbm.DB, tio io.Writer) abci.Application {
-	return app.NewApp(logger, db, tio)
+	skipUpgradeHeights := make(map[int64]bool)
+	for _, h := range viper.GetIntSlice(server.FlagUnsafeSkipUpgrades) {
+		skipUpgradeHeights[int64(h)] = true
+	}
+	return app.NewApp(logger, db, tio, skipUpgradeHeights)
 }
 
 func exportAppStateAndTMValidators(
 	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailWhiteList []string,
 ) (json.RawMessage, []tmtypes.GenesisValidator, error) {
 
-	app := app.NewApp(logger, db, ioutil.Discard)
+	app := app.NewApp(logger, db, ioutil.Discard, map[int64]bool{})
 
 	if height != -1 {
 		err := app.LoadHeight(height)
