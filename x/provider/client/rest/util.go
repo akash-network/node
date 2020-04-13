@@ -18,8 +18,9 @@ func fetchURL(url string) (interface{}, int, string) {
 		return nil, http.StatusBadRequest, "Error in parsing data"
 	}
 
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, resp.StatusCode, string(body)
 	}
+
 	return body, http.StatusOK, ""
 }

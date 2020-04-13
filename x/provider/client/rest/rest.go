@@ -37,7 +37,6 @@ func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
 	// Get lease service logs of provider
 	r.HandleFunc(fmt.Sprintf("/%s/{providerOwner}/lease/{leaseID}/service/{serviceName}/logs", ns),
 		getServiceLogs(ctx, ns)).Methods("GET")
-
 }
 
 func listProvidersHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
@@ -47,6 +46,7 @@ func listProvidersHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
 			return
 		}
+
 		rest.PostProcessResponse(w, ctx, res)
 	}
 }
@@ -60,11 +60,13 @@ func getProviderHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
 			return
 		}
+
 		res, err := query.NewRawClient(ctx, ns).Provider(id)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
 			return
 		}
+
 		rest.PostProcessResponse(w, ctx, res)
 	}
 }
@@ -78,6 +80,7 @@ func getProviderStatus(ctx context.CLIContext, ns string) http.HandlerFunc {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
 			return
 		}
+
 		provider, err := query.NewClient(ctx, ns).Provider(id)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Provider not found")
@@ -104,6 +107,7 @@ func getManifestHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
 			return
 		}
+
 		provider, err := query.NewClient(ctx, ns).Provider(id)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Provider not found")
@@ -130,6 +134,7 @@ func getLeaseStatus(ctx context.CLIContext, ns string) http.HandlerFunc {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
 			return
 		}
+
 		provider, err := query.NewClient(ctx, ns).Provider(id)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Provider not found")
@@ -157,6 +162,7 @@ func getServiceStatus(ctx context.CLIContext, ns string) http.HandlerFunc {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
 			return
 		}
+
 		provider, err := query.NewClient(ctx, ns).Provider(id)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Provider not found")
@@ -185,6 +191,7 @@ func getServiceLogs(ctx context.CLIContext, ns string) http.HandlerFunc {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
 			return
 		}
+
 		provider, err := query.NewClient(ctx, ns).Provider(id)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusNotFound, "Provider not found")
