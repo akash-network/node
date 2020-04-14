@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
+	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/supply"
@@ -15,7 +16,7 @@ func macPerms() map[string][]string {
 		mint.ModuleName:           {supply.Minter},
 		staking.BondedPoolName:    {supply.Burner, supply.Staking},
 		staking.NotBondedPoolName: {supply.Burner, supply.Staking},
-		// gov.ModuleName:            {supply.Burner},
+		gov.ModuleName:            {supply.Burner},
 	}
 }
 
