@@ -158,3 +158,6 @@ clean:
 	clean \
 	kubetypes gentypes $(PROTO_FILES) \
 	install
+
+test-build: image-bins
+	@go test -mod=readonly -p 4 `go list ./integration/...` -tags=integration -v
