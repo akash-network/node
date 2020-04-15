@@ -17,7 +17,7 @@ import (
 func TestSimAppExport(t *testing.T) {
 	db := dbm.NewMemDB()
 	app := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)),
-		db, nil)
+		db, nil, map[int64]bool{})
 
 	genesisState := simapp.NewDefaultGenesisState()
 	stateBytes, err := codec.MarshalJSONIndent(app.Codec(), genesisState)
@@ -33,7 +33,16 @@ func TestSimAppExport(t *testing.T) {
 	app.Commit()
 
 	// Making a new app object with the db, so that initchain hasn't been called
-	app2 := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil)
+	app2 := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, map[int64]bool{})
 	_, _, err = app2.ExportAppStateAndValidators(false, []string{})
 	require.NoError(t, err, "ExportAppStateAndValidators should not have an error")
+}
+
+func TestBlackListedAddrs(t *testing.T) {
+	db := dbm.NewMemDB()
+	app := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, map[int64]bool{})
+
+	for acc := range macPerms() {
+		require.True(t, app.keeper.bank.BlacklistedAddr(app.keeper.supply.GetModuleAddress(acc)))
+	}
 }
