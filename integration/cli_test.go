@@ -7,18 +7,46 @@ import (
 	"path/filepath"
 	"testing"
 
-	tmtypes "github.com/tendermint/tendermint/types"
+	"github.com/cosmos/cosmos-sdk/tests"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/cmd/common"
+	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/stretchr/testify/require"
 )
 
-// var (
-// 	cdc      = app.MakeCodec()
-// )
-
-func init(){
+func init() {
 	common.InitSDKConfig()
+}
+
+func TestGaiaCLISend(t *testing.T) {
+	t.Parallel()
+	f := InitFixtures(t)
+
+	// start gaiad server
+	proc := f.AkashdStart()
+	defer proc.Stop(false)
+
+	// Save key addresses for later use
+	fooAddr := f.KeyAddress(keyFoo)
+	barAddr := f.KeyAddress(keyBar)
+
+	fooAcc := f.QueryAccount(fooAddr)
+	startTokens := sdk.TokensFromConsensusPower(150)
+	require.Equal(t, startTokens, fooAcc.GetCoins().AmountOf(denom))
+
+	// Send some tokens from one account to the other
+	sendTokens := sdk.TokensFromConsensusPower(10)
+	f.TxSend(keyFoo, barAddr, sdk.NewCoin(denom, sendTokens), "-y")
+	tests.WaitForNextNBlocksTM(1, f.Port)
+
+	// Ensure account balances match expected
+	barAcc := f.QueryAccount(barAddr)
+	require.Equal(t, sendTokens, barAcc.GetCoins().AmountOf(denom))
+	fooAcc = f.QueryAccount(fooAddr)
+	require.Equal(t, startTokens.Sub(sendTokens), fooAcc.GetCoins().AmountOf(denom))
+
+	f.Cleanup()
 }
 
 func TestAkashConfig(t *testing.T) {

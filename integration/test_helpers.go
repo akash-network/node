@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	clientkeys "github.com/cosmos/cosmos-sdk/client/keys"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -41,6 +42,12 @@ var (
 		sdk.NewCoin(fooDenom, sdk.TokensFromConsensusPower(1000)),
 		sdk.NewCoin(denom, sdk.TokensFromConsensusPower(150)),
 	)
+
+	// To add a key only once in process
+	isKeyAddCalledOnce = map[string]bool{
+		keyFoo: false,
+		keyBar: false,
+	}
 )
 
 //___________________________________________________________________________________
@@ -154,6 +161,11 @@ func (f *Fixtures) Flags() string {
 	return fmt.Sprintf("--home=%s --node=%s", f.AkashHome, f.RPCAddr)
 }
 
+// KeyFlags returns the flags necessary for making most key CLI calls
+func (f *Fixtures) KeyFlags() string {
+	return fmt.Sprintf("--keyring-backend test")
+}
+
 //___________________________________________________________________________________
 // akashd
 
@@ -185,13 +197,14 @@ func (f *Fixtures) AkashdInit(moniker string, flags ...string) {
 
 // AddGenesisAccount is akashd add-genesis-account
 func (f *Fixtures) AddGenesisAccount(address sdk.AccAddress, coins sdk.Coins, flags ...string) {
-	cmd := fmt.Sprintf("%s add-genesis-account %s %s --home=%s", f.AkashdBinary, address, coins, f.AkashdHome)
+	cmd := fmt.Sprintf("%s add-genesis-account %s %s --home=%s %s", f.AkashdBinary, address, coins, f.AkashdHome, f.KeyFlags())
 	executeWriteCheckErr(f.T, addFlags(cmd, flags))
 }
 
 // GenTx is akashd gentx
 func (f *Fixtures) GenTx(name string, flags ...string) {
-	cmd := fmt.Sprintf("%s gentx --name=%s --home=%s --home-client=%s", f.AkashdBinary, name, f.AkashdHome, f.AkashHome)
+	cmd := fmt.Sprintf("%s gentx --name=%s --home=%s --home-client=%s %s", f.AkashdBinary, name, f.AkashdHome,
+		f.AkashHome, f.KeyFlags())
 	executeWriteCheckErr(f.T, addFlags(cmd, flags), clientkeys.DefaultKeyPass)
 }
 
@@ -230,25 +243,28 @@ func (f *Fixtures) CLIConfig(key, value string, flags ...string) {
 
 // KeysAdd is akash keys add
 func (f *Fixtures) KeysAdd(name string, flags ...string) {
-	cmd := fmt.Sprintf("%s keys add --home=%s %s", f.AkashBinary, f.AkashHome, name)
-	executeWriteCheckErr(f.T, addFlags(cmd, flags), clientkeys.DefaultKeyPass)
+	// if isKeyAddCalledOnce[name] == false {
+	// 	isKeyAddCalledOnce[name] = true
+	cmd := fmt.Sprintf("%s keys add --home=%s %s %s", f.AkashBinary, f.AkashHome, name, f.KeyFlags())
+	executeWriteCheckErr(f.T, addFlags(cmd, flags), "y")
+	// }
 }
 
 // KeysDelete is akash keys delete
 func (f *Fixtures) KeysDelete(name string, flags ...string) {
-	cmd := fmt.Sprintf("%s keys delete --home=%s %s", f.AkashBinary, f.AkashHome, name)
+	cmd := fmt.Sprintf("%s keys delete --home=%s %s %s", f.AkashBinary, f.AkashHome, name, f.KeyFlags())
 	executeWrite(f.T, addFlags(cmd, append(append(flags, "-y"), "-f")))
 }
 
 // KeysAddRecover prepares akash keys add --recover
 func (f *Fixtures) KeysAddRecover(name, mnemonic string, flags ...string) (exitSuccess bool, stdout, stderr string) {
-	cmd := fmt.Sprintf("%s keys add --home=%s --recover %s", f.AkashBinary, f.AkashHome, name)
+	cmd := fmt.Sprintf("%s keys add --home=%s --recover %s %s", f.AkashBinary, f.AkashHome, name, f.KeyFlags())
 	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags), clientkeys.DefaultKeyPass, mnemonic)
 }
 
 // KeysShow is akash keys show
 func (f *Fixtures) KeysShow(name string, flags ...string) keys.KeyOutput {
-	cmd := fmt.Sprintf("%s keys show --home=%s %s", f.AkashBinary, f.AkashHome, name)
+	cmd := fmt.Sprintf("%s keys show --home=%s %s -o json %s", f.AkashBinary, f.AkashHome, name, f.KeyFlags())
 	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
 	var ko keys.KeyOutput
 	err := clientkeys.UnmarshalJSON([]byte(out), &ko)
@@ -262,6 +278,34 @@ func (f *Fixtures) KeyAddress(name string) sdk.AccAddress {
 	accAddr, err := sdk.AccAddressFromBech32(ko.Address)
 	require.NoError(f.T, err)
 	return accAddr
+}
+
+//___________________________________________________________________________________
+// akash query account
+
+// QueryAccount is akash query account
+func (f *Fixtures) QueryAccount(address sdk.AccAddress, flags ...string) auth.BaseAccount {
+	cmd := fmt.Sprintf("%s query account %s %v", f.AkashBinary, address, f.Flags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	var initRes map[string]json.RawMessage
+	err := json.Unmarshal([]byte(out), &initRes)
+	require.NoError(f.T, err, "out %v, err %v", out, err)
+	value := initRes["value"]
+	var acc auth.BaseAccount
+	cdc := codec.New()
+	codec.RegisterCrypto(cdc)
+	err = cdc.UnmarshalJSON(value, &acc)
+	require.NoError(f.T, err, "value %v, err %v", string(value), err)
+	return acc
+}
+
+//___________________________________________________________________________________
+// akash tx send/sign/broadcast
+
+// TxSend is akash tx send
+func (f *Fixtures) TxSend(from string, to sdk.AccAddress, amount sdk.Coin, flags ...string) (bool, string, string) {
+	cmd := fmt.Sprintf("%s tx send %s %s %s %v %s -y", f.AkashBinary, from, to, amount, f.Flags(), f.KeyFlags())
+	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
 }
 
 //___________________________________________________________________________________
