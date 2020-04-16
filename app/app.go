@@ -10,6 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
@@ -103,6 +104,9 @@ type AkashApp struct {
 	}
 
 	mm *module.Manager
+
+	// simulation manager
+	sm *module.SimulationManager
 }
 
 // ModuleBasics returns all app modules basics
@@ -117,6 +121,7 @@ func MakeCodec() *codec.Codec {
 	mbasics.RegisterCodec(cdc)
 
 	sdk.RegisterCodec(cdc)
+	vesting.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
 	codec.RegisterEvidences(cdc)
 
@@ -318,13 +323,30 @@ func NewApp(
 
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter())
 
+	app.sm = module.NewSimulationManager(
+		auth.NewAppModule(app.keeper.acct),
+		bank.NewAppModule(app.keeper.bank, app.keeper.acct),
+		supply.NewAppModule(app.keeper.supply, app.keeper.acct),
+		mint.NewAppModule(app.keeper.mint),
+		staking.NewAppModule(app.keeper.staking, app.keeper.acct, app.keeper.supply),
+		distr.NewAppModule(app.keeper.distr, app.keeper.acct, app.keeper.supply, app.keeper.staking),
+		slashing.NewAppModule(app.keeper.slashing, app.keeper.acct, app.keeper.staking),
+		params.NewAppModule(), // NOTE: only used for simulation to generate randomized param change proposals
+		deployment.NewAppModuleSimulation(app.keeper.deployment, app.keeper.acct),
+		market.NewAppModuleSimulation(app.keeper.market, app.keeper.acct, app.keeper.deployment,
+			app.keeper.provider, app.keeper.bank),
+		provider.NewAppModuleSimulation(app.keeper.provider, app.keeper.acct),
+	)
+
+	app.sm.RegisterStoreDecoders()
+
 	// initialize stores
 	app.MountKVStores(keys)
 	app.MountTransientStores(tkeys)
 
 	// initialize BaseApp
-	app.SetInitChainer(app.initChainer)
-	app.SetBeginBlocker(app.beginBlocker)
+	app.SetInitChainer(app.InitChainer)
+	app.SetBeginBlocker(app.BeginBlocker)
 
 	app.SetAnteHandler(
 		auth.NewAnteHandler(
@@ -334,7 +356,7 @@ func NewApp(
 		),
 	)
 
-	app.SetEndBlocker(app.endBlocker)
+	app.SetEndBlocker(app.EndBlocker)
 
 	err := app.LoadLatestVersion(app.keys[bam.MainStoreKey])
 	if err != nil {
@@ -344,7 +366,8 @@ func NewApp(
 	return app
 }
 
-func (app *AkashApp) initChainer(
+// InitChainer application update at chain initialization
+func (app *AkashApp) InitChainer(
 	ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 	var genesisState simapp.GenesisState
 	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
@@ -352,16 +375,31 @@ func (app *AkashApp) initChainer(
 	return app.mm.InitGenesis(ctx, genesisState)
 }
 
-// application updates every begin block
-func (app *AkashApp) beginBlocker(
+// BeginBlocker is a function in which application updates every begin block
+func (app *AkashApp) BeginBlocker(
 	ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
 	return app.mm.BeginBlock(ctx, req)
 }
 
-// application updates every end block
-func (app *AkashApp) endBlocker(
+// EndBlocker is a function in which application updates every end block
+func (app *AkashApp) EndBlocker(
 	ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
 	return app.mm.EndBlock(ctx, req)
+}
+
+// Codec returns SimApp's codec.
+func (app *AkashApp) Codec() *codec.Codec {
+	return app.cdc
+}
+
+// ModuleAccountAddrs returns all the app's module account addresses.
+func (app *AkashApp) ModuleAccountAddrs() map[string]bool {
+	return macAddrs()
+}
+
+// SimulationManager implements the SimulationApp interface
+func (app *AkashApp) SimulationManager() *module.SimulationManager {
+	return app.sm
 }
 
 // LoadHeight method of AkashApp loads baseapp application version with given height
