@@ -31,23 +31,11 @@ const (
 )
 
 var (
-	totalCoins = sdk.NewCoins(
-		sdk.NewCoin(feeDenom, sdk.TokensFromConsensusPower(2000000)),
-		sdk.NewCoin(fooDenom, sdk.TokensFromConsensusPower(2000)),
-		sdk.NewCoin(denom, sdk.TokensFromConsensusPower(300).Add(sdk.NewInt(12))), // add coins from inflation
-	)
-
 	startCoins = sdk.NewCoins(
 		sdk.NewCoin(feeDenom, sdk.TokensFromConsensusPower(1000000)),
 		sdk.NewCoin(fooDenom, sdk.TokensFromConsensusPower(1000)),
 		sdk.NewCoin(denom, sdk.TokensFromConsensusPower(150)),
 	)
-
-	// To add a key only once in process
-	isKeyAddCalledOnce = map[string]bool{
-		keyFoo: false,
-		keyBar: false,
-	}
 )
 
 //___________________________________________________________________________________
@@ -111,7 +99,9 @@ func (f Fixtures) GenesisState() simapp.GenesisState {
 	require.NoError(f.T, err)
 
 	var appState simapp.GenesisState
+
 	require.NoError(f.T, cdc.UnmarshalJSON(genDoc.AppState, &appState))
+
 	return appState
 }
 
@@ -183,8 +173,10 @@ func (f *Fixtures) AkashdInit(moniker string, flags ...string) {
 	cmd := fmt.Sprintf("%s init -o --home=%s %s", f.AkashdBinary, f.AkashdHome, moniker)
 	_, stderr := tests.ExecuteT(f.T, addFlags(cmd, flags), clientkeys.DefaultKeyPass)
 
-	var chainID string
-	var initRes map[string]json.RawMessage
+	var (
+		chainID string
+		initRes map[string]json.RawMessage
+	)
 
 	err := json.Unmarshal([]byte(stderr), &initRes)
 	require.NoError(f.T, err)
@@ -197,7 +189,8 @@ func (f *Fixtures) AkashdInit(moniker string, flags ...string) {
 
 // AddGenesisAccount is akashd add-genesis-account
 func (f *Fixtures) AddGenesisAccount(address sdk.AccAddress, coins sdk.Coins, flags ...string) {
-	cmd := fmt.Sprintf("%s add-genesis-account %s %s --home=%s %s", f.AkashdBinary, address, coins, f.AkashdHome, f.KeyFlags())
+	cmd := fmt.Sprintf("%s add-genesis-account %s %s --home=%s %s", f.AkashdBinary, address,
+		coins, f.AkashdHome, f.KeyFlags())
 	executeWriteCheckErr(f.T, addFlags(cmd, flags))
 }
 
@@ -216,10 +209,12 @@ func (f *Fixtures) CollectGenTxs(flags ...string) {
 
 // AkashdStart runs akashd start with the appropriate flags and returns a process
 func (f *Fixtures) AkashdStart(flags ...string) *tests.Process {
-	cmd := fmt.Sprintf("%s start --home=%s --rpc.laddr=%v --p2p.laddr=%v", f.AkashdBinary, f.AkashdHome, f.RPCAddr, f.P2PAddr)
+	cmd := fmt.Sprintf("%s start --home=%s --rpc.laddr=%v --p2p.laddr=%v", f.AkashdBinary,
+		f.AkashdHome, f.RPCAddr, f.P2PAddr)
 	proc := tests.GoExecuteTWithStdout(f.T, addFlags(cmd, flags))
 	tests.WaitForTMStart(f.Port)
 	tests.WaitForNextNBlocksTM(1, f.Port)
+
 	return proc
 }
 
@@ -243,11 +238,8 @@ func (f *Fixtures) CLIConfig(key, value string, flags ...string) {
 
 // KeysAdd is akash keys add
 func (f *Fixtures) KeysAdd(name string, flags ...string) {
-	// if isKeyAddCalledOnce[name] == false {
-	// 	isKeyAddCalledOnce[name] = true
 	cmd := fmt.Sprintf("%s keys add --home=%s %s %s", f.AkashBinary, f.AkashHome, name, f.KeyFlags())
 	executeWriteCheckErr(f.T, addFlags(cmd, flags), "y")
-	// }
 }
 
 // KeysDelete is akash keys delete
@@ -266,9 +258,12 @@ func (f *Fixtures) KeysAddRecover(name, mnemonic string, flags ...string) (exitS
 func (f *Fixtures) KeysShow(name string, flags ...string) keys.KeyOutput {
 	cmd := fmt.Sprintf("%s keys show --home=%s %s -o json %s", f.AkashBinary, f.AkashHome, name, f.KeyFlags())
 	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
 	var ko keys.KeyOutput
+
 	err := clientkeys.UnmarshalJSON([]byte(out), &ko)
 	require.NoError(f.T, err)
+
 	return ko
 }
 
@@ -287,15 +282,20 @@ func (f *Fixtures) KeyAddress(name string) sdk.AccAddress {
 func (f *Fixtures) QueryAccount(address sdk.AccAddress, flags ...string) auth.BaseAccount {
 	cmd := fmt.Sprintf("%s query account %s %v", f.AkashBinary, address, f.Flags())
 	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
 	var initRes map[string]json.RawMessage
 	err := json.Unmarshal([]byte(out), &initRes)
 	require.NoError(f.T, err, "out %v, err %v", out, err)
+
 	value := initRes["value"]
+
 	var acc auth.BaseAccount
+
 	cdc := codec.New()
 	codec.RegisterCrypto(cdc)
 	err = cdc.UnmarshalJSON(value, &acc)
 	require.NoError(f.T, err, "value %v, err %v", string(value), err)
+
 	return acc
 }
 
@@ -339,6 +339,7 @@ func executeWriteRetStdStreams(t *testing.T, cmdStr string, writes ...string) (b
 	if len(stdout) > 0 {
 		t.Log("Stdout:", string(stdout))
 	}
+
 	if len(stderr) > 0 {
 		t.Log("Stderr:", string(stderr))
 	}

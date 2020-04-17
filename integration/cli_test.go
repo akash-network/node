@@ -15,9 +15,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func init() {
+var _ = func() string {
 	common.InitSDKConfig()
-}
+	return ""
+}()
 
 func TestGaiaCLISend(t *testing.T) {
 	t.Parallel()
@@ -25,7 +26,9 @@ func TestGaiaCLISend(t *testing.T) {
 
 	// start gaiad server
 	proc := f.AkashdStart()
-	defer proc.Stop(false)
+	defer func() {
+		_ = proc.Stop(false)
+	}()
 
 	// Save key addresses for later use
 	fooAddr := f.KeyAddress(keyFoo)
@@ -43,6 +46,7 @@ func TestGaiaCLISend(t *testing.T) {
 	// Ensure account balances match expected
 	barAcc := f.QueryAccount(barAddr)
 	require.Equal(t, sendTokens, barAcc.GetCoins().AmountOf(denom))
+
 	fooAcc = f.QueryAccount(fooAddr)
 	require.Equal(t, startTokens.Sub(sendTokens), fooAcc.GetCoins().AmountOf(denom))
 
@@ -65,6 +69,7 @@ func TestAkashConfig(t *testing.T) {
 
 	config, err := ioutil.ReadFile(path.Join(f.AkashHome, "config", "config.toml"))
 	require.NoError(t, err)
+
 	expectedConfig := fmt.Sprintf(`broadcast-mode = "block"
 chain-id = "%s"
 indent = true
@@ -107,7 +112,7 @@ func TestAkashdCollectGentxs(t *testing.T) {
 	require.NoError(t, err)
 	genDoc.ConsensusParams.Block.MaxBytes = customMaxBytes
 	genDoc.ConsensusParams.Block.MaxGas = customMaxGas
-	genDoc.SaveAs(genFile)
+	_ = genDoc.SaveAs(genFile)
 
 	// Add account to genesis.json
 	f.AddGenesisAccount(f.KeyAddress(keyFoo), startCoins)
@@ -132,7 +137,9 @@ func TestValidateGenesis(t *testing.T) {
 
 	// start akashd server
 	proc := f.AkashdStart()
-	defer proc.Stop(false)
+	defer func() {
+		_ = proc.Stop(false)
+	}()
 
 	f.ValidateGenesis()
 

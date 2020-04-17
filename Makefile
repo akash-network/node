@@ -159,5 +159,15 @@ clean:
 	kubetypes gentypes $(PROTO_FILES) \
 	install
 
+test-simapp:
+	go test ./app \
+	-run=TestFullAppSimulation \
+	-Enabled=true \
+	-NumBlocks=50 \
+	-BlockSize=100 \
+	-Commit=true \
+	-Seed=99 \
+	-v -timeout 24h
+
 test-build: image-bins
 	@go test -mod=readonly -p 4 `go list ./integration/...` -tags=integration -v
