@@ -11,6 +11,12 @@ import (
 
 	clientkeys "github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/ovrclk/akash/app"
+	"github.com/ovrclk/akash/cmd/common"
+	dquery "github.com/ovrclk/akash/x/deployment/query"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -23,19 +29,27 @@ import (
 )
 
 const (
-	denom    = "akash"
-	keyFoo   = "foo"
-	keyBar   = "bar"
-	fooDenom = "footoken"
-	feeDenom = "stake"
+	denom              = "akash"
+	denomStartValue    = 150
+	keyFoo             = "foo"
+	keyBar             = "bar"
+	keyBaz             = "baz"
+	fooDenom           = "footoken"
+	feeDenom           = "stake"
+	deploymentFilePath = "./../x/deployment/testdata/deployment.yml"
+	providerFilePath   = "./../x/provider/testdata/provider.yml"
 )
 
 var (
 	startCoins = sdk.NewCoins(
 		sdk.NewCoin(feeDenom, sdk.TokensFromConsensusPower(1000000)),
 		sdk.NewCoin(fooDenom, sdk.TokensFromConsensusPower(1000)),
-		sdk.NewCoin(denom, sdk.TokensFromConsensusPower(150)),
+		sdk.NewCoin(denom, sdk.TokensFromConsensusPower(denomStartValue)),
 	)
+	_ = func() string {
+		common.InitSDKConfig()
+		return ""
+	}()
 )
 
 //___________________________________________________________________________________
@@ -116,8 +130,10 @@ func InitFixtures(t *testing.T) (f *Fixtures) {
 	// ensure keystore has foo and bar keys
 	f.KeysDelete(keyFoo)
 	f.KeysDelete(keyBar)
+	f.KeysDelete(keyBaz)
 	f.KeysAdd(keyFoo)
 	f.KeysAdd(keyBar)
+	f.KeysAdd(keyBaz)
 
 	// ensure that CLI output is in JSON format
 	f.CLIConfig("output", "json")
@@ -131,6 +147,7 @@ func InitFixtures(t *testing.T) (f *Fixtures) {
 
 	// start an account with tokens
 	f.AddGenesisAccount(f.KeyAddress(keyFoo), startCoins)
+	f.AddGenesisAccount(f.KeyAddress(keyBar), startCoins)
 
 	f.GenTx(keyFoo)
 	f.CollectGenTxs()
@@ -272,6 +289,7 @@ func (f *Fixtures) KeyAddress(name string) sdk.AccAddress {
 	ko := f.KeysShow(name)
 	accAddr, err := sdk.AccAddressFromBech32(ko.Address)
 	require.NoError(f.T, err)
+
 	return accAddr
 }
 
@@ -304,8 +322,209 @@ func (f *Fixtures) QueryAccount(address sdk.AccAddress, flags ...string) auth.Ba
 
 // TxSend is akash tx send
 func (f *Fixtures) TxSend(from string, to sdk.AccAddress, amount sdk.Coin, flags ...string) (bool, string, string) {
-	cmd := fmt.Sprintf("%s tx send %s %s %s %v %s -y", f.AkashBinary, from, to, amount, f.Flags(), f.KeyFlags())
+	cmd := fmt.Sprintf("%s tx send %s %s %s %v %s", f.AkashBinary, from, to, amount, f.Flags(), f.KeyFlags())
 	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
+}
+
+//___________________________________________________________________________________
+// akash tx deployment
+
+// TxCreateDeployment is akash create deployment
+func (f *Fixtures) TxCreateDeployment(flags ...string) (bool, string, string) {
+	cmd := fmt.Sprintf("%s tx deployment create %s %v %s", f.AkashBinary, deploymentFilePath, f.Flags(), f.KeyFlags())
+	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
+}
+
+// TxCloseDeployment is akash close deployment
+func (f *Fixtures) TxCloseDeployment(flags ...string) (bool, string, string) {
+	cmd := fmt.Sprintf("%s tx deployment close %v %s", f.AkashBinary, f.Flags(), f.KeyFlags())
+	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
+}
+
+//___________________________________________________________________________________
+// akash query deployment
+
+// QueryDeployments is akash query deployments
+func (f *Fixtures) QueryDeployments(flags ...string) dquery.Deployments {
+	cmd := fmt.Sprintf("%s query deployment list %v", f.AkashBinary, f.Flags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
+	var deployments dquery.Deployments
+
+	cdc := app.MakeCodec()
+	err := cdc.UnmarshalJSON([]byte(out), &deployments)
+	require.NoError(f.T, err, "out %v\n, err %v", out, err)
+
+	return deployments
+}
+
+// QueryDeployment is akash query deployment
+func (f *Fixtures) QueryDeployment(depID dtypes.DeploymentID, flags ...string) dquery.Deployment {
+	cmd := fmt.Sprintf("%s query deployment get --owner %s --dseq %v %v", f.AkashBinary,
+		depID.Owner.String(), depID.DSeq, f.Flags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
+	var deployment dquery.Deployment
+
+	cdc := app.MakeCodec()
+	err := cdc.UnmarshalJSON([]byte(out), &deployment)
+	require.NoError(f.T, err, "out %v\n, err %v", out, err)
+
+	return deployment
+}
+
+//___________________________________________________________________________________
+// akash tx market
+
+// TxCreateBid is akash create bid
+func (f *Fixtures) TxCreateBid(oid mtypes.OrderID, price sdk.Coin, flags ...string) (bool, string, string) {
+	cmd := fmt.Sprintf("%s tx market bid-create --owner %s --dseq %v --gseq %v --oseq %v --price %s %v %s",
+		f.AkashBinary, oid.Owner.String(), oid.DSeq, oid.GSeq, oid.OSeq, price, f.Flags(), f.KeyFlags())
+	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
+}
+
+// TxCloseBid is akash close bid
+func (f *Fixtures) TxCloseBid(oid mtypes.OrderID, flags ...string) (bool, string, string) {
+	cmd := fmt.Sprintf("%s tx market bid-close --owner %s --dseq %v --gseq %v --oseq %v %v %s",
+		f.AkashBinary, oid.Owner.String(), oid.DSeq, oid.GSeq, oid.OSeq, f.Flags(), f.KeyFlags())
+	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
+}
+
+// TxCloseOrder is akash close order
+func (f *Fixtures) TxCloseOrder(oid mtypes.OrderID, flags ...string) (bool, string, string) {
+	cmd := fmt.Sprintf("%s tx market order-close --owner %s --dseq %v --gseq %v --oseq %v %v %s",
+		f.AkashBinary, oid.Owner.String(), oid.DSeq, oid.GSeq, oid.OSeq, f.Flags(), f.KeyFlags())
+	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
+}
+
+//___________________________________________________________________________________
+// akash query market
+
+// QueryOrders is akash query orders
+func (f *Fixtures) QueryOrders(flags ...string) []mtypes.Order {
+	cmd := fmt.Sprintf("%s query market order list %v", f.AkashBinary, f.Flags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
+	var orders []mtypes.Order
+
+	cdc := app.MakeCodec()
+	err := cdc.UnmarshalJSON([]byte(out), &orders)
+	require.NoError(f.T, err, "out %v\n, err %v", out, err)
+
+	return orders
+}
+
+// QueryOrder is akash query order
+func (f *Fixtures) QueryOrder(orderID mtypes.OrderID, flags ...string) mtypes.Order {
+	cmd := fmt.Sprintf("%s query market order get --owner %s --dseq %v --gseq %v --oseq %v %v", f.AkashBinary,
+		orderID.Owner.String(), orderID.DSeq, orderID.GSeq, orderID.OSeq, f.Flags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
+	var order mtypes.Order
+
+	cdc := app.MakeCodec()
+	err := cdc.UnmarshalJSON([]byte(out), &order)
+	require.NoError(f.T, err, "out %v\n, err %v", out, err)
+
+	return order
+}
+
+// QueryBids is akash query bids
+func (f *Fixtures) QueryBids(flags ...string) []mtypes.Bid {
+	cmd := fmt.Sprintf("%s query market bid list %v", f.AkashBinary, f.Flags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
+	var bids []mtypes.Bid
+
+	cdc := app.MakeCodec()
+	err := cdc.UnmarshalJSON([]byte(out), &bids)
+	require.NoError(f.T, err, "out %v\n, err %v", out, err)
+
+	return bids
+}
+
+// QueryBid is akash query bid
+func (f *Fixtures) QueryBid(bidID mtypes.BidID, flags ...string) mtypes.Bid {
+	cmd := fmt.Sprintf("%s query market bid get --owner %s --dseq %v --gseq %v --oseq %v --provider %s %v", f.AkashBinary,
+		bidID.Owner.String(), bidID.DSeq, bidID.GSeq, bidID.OSeq, bidID.Provider.String(), f.Flags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
+	var bid mtypes.Bid
+
+	cdc := app.MakeCodec()
+	err := cdc.UnmarshalJSON([]byte(out), &bid)
+	require.NoError(f.T, err, "out %v\n, err %v", out, err)
+
+	return bid
+}
+
+// QueryLeases is akash query leases
+func (f *Fixtures) QueryLeases(flags ...string) []mtypes.Lease {
+	cmd := fmt.Sprintf("%s query market lease list %v", f.AkashBinary, f.Flags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
+	var leases []mtypes.Lease
+
+	cdc := app.MakeCodec()
+	err := cdc.UnmarshalJSON([]byte(out), &leases)
+	require.NoError(f.T, err, "out %v\n, err %v", out, err)
+
+	return leases
+}
+
+// QueryLease is akash query lease
+func (f *Fixtures) QueryLease(leaseID mtypes.LeaseID, flags ...string) mtypes.Lease {
+	cmd := fmt.Sprintf("%s query market lease get --owner %s --dseq %v --gseq %v --oseq %v --provider %s %v", f.AkashBinary,
+		leaseID.Owner.String(), leaseID.DSeq, leaseID.GSeq, leaseID.OSeq, leaseID.Provider.String(), f.Flags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
+	var lease mtypes.Lease
+
+	cdc := app.MakeCodec()
+	err := cdc.UnmarshalJSON([]byte(out), &lease)
+	require.NoError(f.T, err, "out %v\n, err %v", out, err)
+
+	return lease
+}
+
+//___________________________________________________________________________________
+// akash tx provider
+
+// TxCreateProvider is akash create provider
+func (f *Fixtures) TxCreateProvider(flags ...string) (bool, string, string) {
+	cmd := fmt.Sprintf("%s tx provider create %s %v %s", f.AkashBinary, providerFilePath, f.Flags(), f.KeyFlags())
+	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
+}
+
+//___________________________________________________________________________________
+// akash query provider
+
+// QueryProviders is akash query providers
+func (f *Fixtures) QueryProviders(flags ...string) []ptypes.Provider {
+	cmd := fmt.Sprintf("%s query provider list %v", f.AkashBinary, f.Flags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
+	var providers []ptypes.Provider
+
+	cdc := app.MakeCodec()
+	err := cdc.UnmarshalJSON([]byte(out), &providers)
+	require.NoError(f.T, err, "out %v\n, err %v", out, err)
+
+	return providers
+}
+
+// QueryProvider is akash query provider
+func (f *Fixtures) QueryProvider(owner sdk.AccAddress, flags ...string) ptypes.Provider {
+	cmd := fmt.Sprintf("%s query provider get %s %v", f.AkashBinary, owner.String(), f.Flags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
+	var provider ptypes.Provider
+
+	cdc := app.MakeCodec()
+	err := cdc.UnmarshalJSON([]byte(out), &provider)
+	require.NoError(f.T, err, "out %v\n, err %v", out, err)
+
+	return provider
 }
 
 //___________________________________________________________________________________
@@ -358,5 +577,6 @@ func addFlags(cmd string, flags []string) string {
 	for _, f := range flags {
 		cmd += " " + f
 	}
+
 	return strings.TrimSpace(cmd)
 }
