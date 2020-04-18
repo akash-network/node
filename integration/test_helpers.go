@@ -35,7 +35,9 @@ const (
 	keyBar             = "bar"
 	keyBaz             = "baz"
 	fooDenom           = "footoken"
+	fooStartValue      = 1000
 	feeDenom           = "stake"
+	feeStartValue      = 1000000
 	deploymentFilePath = "./../x/deployment/testdata/deployment.yml"
 	providerFilePath   = "./../x/provider/testdata/provider.yml"
 )
@@ -49,8 +51,8 @@ var (
 
 func startCoins() sdk.Coins {
 	return sdk.NewCoins(
-		sdk.NewCoin(feeDenom, sdk.TokensFromConsensusPower(1000000)),
-		sdk.NewCoin(fooDenom, sdk.TokensFromConsensusPower(1000)),
+		sdk.NewCoin(feeDenom, sdk.TokensFromConsensusPower(feeStartValue)),
+		sdk.NewCoin(fooDenom, sdk.TokensFromConsensusPower(fooStartValue)),
 		sdk.NewCoin(denom, sdk.TokensFromConsensusPower(denomStartValue)),
 	)
 }

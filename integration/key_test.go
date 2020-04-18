@@ -15,7 +15,10 @@ func TestAkashKeysAddRecover(t *testing.T) {
 	exitSuccess, _, _ := f.KeysAddRecover("empty-mnemonic", "")
 	require.False(t, exitSuccess)
 
-	exitSuccess, _, _ = f.KeysAddRecover("test-recover", "donate behave film hero magnet disagree sock talk alarm loop stone imitate apology weird desert member trouble warrior book man alien mixed remain hold")
+	mnemonic := "donate behave film hero magnet disagree sock talk alarm loop stone imitate"
+	mnemonic += " apology weird desert member trouble warrior book man alien mixed remain hold"
+
+	exitSuccess, _, _ = f.KeysAddRecover("test-recover", mnemonic)
 	require.True(t, exitSuccess)
 	require.Equal(t, "akash1m37wsknc9qluzkqxrec965unxlukuprgg0pxdj", f.KeyAddress("test-recover").String())
 
