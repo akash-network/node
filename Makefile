@@ -91,8 +91,11 @@ devdeps-install:
 	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 
-test-integration: $(BINS)
-	(cd _integration && make clean run)
+# test-integration: $(BINS)
+# 	(cd _integration && make clean run)
+
+test-integration: image-bins
+	@go test -mod=readonly -p 4 `go list ./integration/...` -tags=integration -v
 
 integrationdeps-install:
 	(cd _integration && make deps-install)
@@ -168,6 +171,3 @@ test-simapp:
 	-Commit=true \
 	-Seed=99 \
 	-v -timeout 24h
-
-test-build: image-bins
-	@go test -mod=readonly -p 4 `go list ./integration/...` -tags=integration -v

@@ -41,16 +41,19 @@ const (
 )
 
 var (
-	startCoins = sdk.NewCoins(
-		sdk.NewCoin(feeDenom, sdk.TokensFromConsensusPower(1000000)),
-		sdk.NewCoin(fooDenom, sdk.TokensFromConsensusPower(1000)),
-		sdk.NewCoin(denom, sdk.TokensFromConsensusPower(denomStartValue)),
-	)
 	_ = func() string {
 		common.InitSDKConfig()
 		return ""
 	}()
 )
+
+func startCoins() sdk.Coins {
+	return sdk.NewCoins(
+		sdk.NewCoin(feeDenom, sdk.TokensFromConsensusPower(1000000)),
+		sdk.NewCoin(fooDenom, sdk.TokensFromConsensusPower(1000)),
+		sdk.NewCoin(denom, sdk.TokensFromConsensusPower(denomStartValue)),
+	)
+}
 
 //___________________________________________________________________________________
 // Fixtures
@@ -146,13 +149,13 @@ func InitFixtures(t *testing.T) (f *Fixtures) {
 	f.CLIConfig("trust-node", "true")
 
 	// start an account with tokens
-	f.AddGenesisAccount(f.KeyAddress(keyFoo), startCoins)
-	f.AddGenesisAccount(f.KeyAddress(keyBar), startCoins)
+	f.AddGenesisAccount(f.KeyAddress(keyFoo), startCoins())
+	f.AddGenesisAccount(f.KeyAddress(keyBar), startCoins())
 
 	f.GenTx(keyFoo)
 	f.CollectGenTxs()
 
-	return
+	return f
 }
 
 // Cleanup is meant to be run at the end of a test to clean up an remaining test state
@@ -188,7 +191,7 @@ func (f *Fixtures) UnsafeResetAll(flags ...string) {
 // NOTE: AkashdInit sets the ChainID for the Fixtures instance
 func (f *Fixtures) AkashdInit(moniker string, flags ...string) {
 	cmd := fmt.Sprintf("%s init -o --home=%s %s", f.AkashdBinary, f.AkashdHome, moniker)
-	_, stderr := tests.ExecuteT(f.T, addFlags(cmd, flags), clientkeys.DefaultKeyPass)
+	_, stderr := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
 
 	var (
 		chainID string
@@ -215,13 +218,13 @@ func (f *Fixtures) AddGenesisAccount(address sdk.AccAddress, coins sdk.Coins, fl
 func (f *Fixtures) GenTx(name string, flags ...string) {
 	cmd := fmt.Sprintf("%s gentx --name=%s --home=%s --home-client=%s %s", f.AkashdBinary, name, f.AkashdHome,
 		f.AkashHome, f.KeyFlags())
-	executeWriteCheckErr(f.T, addFlags(cmd, flags), clientkeys.DefaultKeyPass)
+	executeWriteCheckErr(f.T, addFlags(cmd, flags), "")
 }
 
 // CollectGenTxs is akashd collect-gentxs
 func (f *Fixtures) CollectGenTxs(flags ...string) {
 	cmd := fmt.Sprintf("%s collect-gentxs --home=%s", f.AkashdBinary, f.AkashdHome)
-	executeWriteCheckErr(f.T, addFlags(cmd, flags), clientkeys.DefaultKeyPass)
+	executeWriteCheckErr(f.T, addFlags(cmd, flags), "")
 }
 
 // AkashdStart runs akashd start with the appropriate flags and returns a process
@@ -230,7 +233,7 @@ func (f *Fixtures) AkashdStart(flags ...string) *tests.Process {
 		f.AkashdHome, f.RPCAddr, f.P2PAddr)
 	proc := tests.GoExecuteTWithStdout(f.T, addFlags(cmd, flags))
 	tests.WaitForTMStart(f.Port)
-	tests.WaitForNextNBlocksTM(1, f.Port)
+	tests.WaitForNextNBlocksTM(2, f.Port)
 
 	return proc
 }
@@ -268,7 +271,7 @@ func (f *Fixtures) KeysDelete(name string, flags ...string) {
 // KeysAddRecover prepares akash keys add --recover
 func (f *Fixtures) KeysAddRecover(name, mnemonic string, flags ...string) (exitSuccess bool, stdout, stderr string) {
 	cmd := fmt.Sprintf("%s keys add --home=%s --recover %s %s", f.AkashBinary, f.AkashHome, name, f.KeyFlags())
-	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags), clientkeys.DefaultKeyPass, mnemonic)
+	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags), mnemonic)
 }
 
 // KeysShow is akash keys show
@@ -282,6 +285,19 @@ func (f *Fixtures) KeysShow(name string, flags ...string) keys.KeyOutput {
 	require.NoError(f.T, err)
 
 	return ko
+}
+
+// KeysList is akash keys list
+func (f *Fixtures) KeysList(flags ...string) []keys.KeyOutput {
+	cmd := fmt.Sprintf("%s keys list --home=%s -o json %s", f.AkashBinary, f.AkashHome, f.KeyFlags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
+	var list []keys.KeyOutput
+
+	err := clientkeys.UnmarshalJSON([]byte(out), &list)
+	require.NoError(f.T, err)
+
+	return list
 }
 
 // KeyAddress returns the SDK account address from the key
@@ -445,8 +461,10 @@ func (f *Fixtures) QueryBids(flags ...string) []mtypes.Bid {
 
 // QueryBid is akash query bid
 func (f *Fixtures) QueryBid(bidID mtypes.BidID, flags ...string) mtypes.Bid {
-	cmd := fmt.Sprintf("%s query market bid get --owner %s --dseq %v --gseq %v --oseq %v --provider %s %v", f.AkashBinary,
-		bidID.Owner.String(), bidID.DSeq, bidID.GSeq, bidID.OSeq, bidID.Provider.String(), f.Flags())
+	cmd := fmt.Sprintf("%s query market bid get --owner %s --dseq %v", f.AkashBinary,
+		bidID.Owner.String(), bidID.DSeq)
+	cmd += fmt.Sprintf(" --gseq %v --oseq %v --provider %s %v", bidID.GSeq, bidID.OSeq,
+		bidID.Provider.String(), f.Flags())
 	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
 
 	var bid mtypes.Bid
@@ -474,8 +492,10 @@ func (f *Fixtures) QueryLeases(flags ...string) []mtypes.Lease {
 
 // QueryLease is akash query lease
 func (f *Fixtures) QueryLease(leaseID mtypes.LeaseID, flags ...string) mtypes.Lease {
-	cmd := fmt.Sprintf("%s query market lease get --owner %s --dseq %v --gseq %v --oseq %v --provider %s %v", f.AkashBinary,
-		leaseID.Owner.String(), leaseID.DSeq, leaseID.GSeq, leaseID.OSeq, leaseID.Provider.String(), f.Flags())
+	cmd := fmt.Sprintf("%s query market lease get --owner %s --dseq %v", f.AkashBinary,
+		leaseID.Owner.String(), leaseID.DSeq)
+	cmd += fmt.Sprintf(" --gseq %v --oseq %v --provider %s %v", leaseID.GSeq, leaseID.OSeq,
+		leaseID.Provider.String(), f.Flags())
 	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
 
 	var lease mtypes.Lease
@@ -514,8 +534,8 @@ func (f *Fixtures) QueryProviders(flags ...string) []ptypes.Provider {
 }
 
 // QueryProvider is akash query provider
-func (f *Fixtures) QueryProvider(owner sdk.AccAddress, flags ...string) ptypes.Provider {
-	cmd := fmt.Sprintf("%s query provider get %s %v", f.AkashBinary, owner.String(), f.Flags())
+func (f *Fixtures) QueryProvider(owner string, flags ...string) ptypes.Provider {
+	cmd := fmt.Sprintf("%s query provider get %s %v", f.AkashBinary, owner, f.Flags())
 	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
 
 	var provider ptypes.Provider
@@ -554,14 +574,14 @@ func executeWriteRetStdStreams(t *testing.T, cmdStr string, writes ...string) (b
 		fmt.Println("Err on proc.ReadAll()", err, cmdStr)
 	}
 
-	// Log output.
-	if len(stdout) > 0 {
-		t.Log("Stdout:", string(stdout))
-	}
+	// // Log output.
+	// if len(stdout) > 0 {
+	// 	t.Log("Stdout:", string(stdout))
+	// }
 
-	if len(stderr) > 0 {
-		t.Log("Stderr:", string(stderr))
-	}
+	// if len(stderr) > 0 {
+	// 	t.Log("Stderr:", string(stderr))
+	// }
 
 	// Wait for process to exit
 	proc.Wait()
