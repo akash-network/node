@@ -1,3 +1,5 @@
 # docker binaries
 /akash
 /akashd
+/config
+/data
