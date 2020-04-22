@@ -94,7 +94,8 @@ devdeps-install:
 # test-integration: $(BINS)
 # 	(cd _integration && make clean run)
 
-test-integration: image-bins
+test-integration: $(BINS)
+	cp akash akashd ./_build
 	@go test -mod=readonly -p 4 `go list ./integration/...` -tags=integration -v
 
 integrationdeps-install:
