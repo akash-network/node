@@ -13,6 +13,12 @@ tags:
     description: Authenticate accounts
   - name: Bank
     description: Create and broadcast transactions
+  - name: Deployment
+    description: Deployment module APIs
+  - name: Market
+    description: Market module APIs
+  - name: Provider
+    description: Provider module APIs  
   - name: Staking
     description: Stake module APIs
   - name: Governance
@@ -23,11 +29,8 @@ tags:
     description: Fee distribution module APIs
   - name: Supply
     description: Supply module APIs
-  - name: version
   - name: Mint
     description: Minting module APIs
-  - name: Misc
-    description: Query app version
 schemes:
   - http
 host: localhost:1317
@@ -251,13 +254,13 @@ paths:
         - in: query
           name: message.action
           type: string
-          description: "transaction events such as 'message.action=send' which results in the following endpoint: 'GET /txs?message.action=send'. note that each module documents its own events. look for xx_events.md in the corresponding cosmos-sdk/docs/spec directory"
+          description: "transaction events such as 'message.action=send' which results in the following endpoint: 'GET /txs?message.action=send'. note that each module documents its own events. look for xx_events.md in the corresponding akash-sdk/docs/spec directory"
           x-example: "send"
         - in: query
           name: message.sender
           type: string
-          description: "transaction tags with sender: 'GET /txs?message.action=send&message.sender=cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv'"
-          x-example: "cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv"
+          description: "transaction tags with sender: 'GET /txs?message.action=send&message.sender=akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv'"
+          x-example: "akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv"
         - in: query
           name: page
           description: Page number
@@ -382,7 +385,7 @@ paths:
           description: Account address in bech32 format
           required: true
           type: string
-          x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+          x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
       responses:
         200:
           description: Account balances
@@ -407,7 +410,7 @@ paths:
           description: Account address in bech32 format
           required: true
           type: string
-          x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+          x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
         - in: body
           name: account
           description: The sender and tx information
@@ -443,7 +446,7 @@ paths:
           description: Account address
           required: true
           type: string
-          x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+          x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
       responses:
         200:
           description: Account information on the blockchain
@@ -469,6 +472,560 @@ paths:
                     type: string
         500:
           description: Server internel error
+  /deployment/list:
+    get:
+      summary: Get deployments list
+      tags:
+        - Deployment
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: owner
+          description: Owner address
+          required: false
+          type: string
+          x-example: akash1zsgzee6vvx942c4c69vl859w9azn77j8uhduug
+        - in: query
+          name: state
+          description: Deployment state to filter (active,closed)
+          required: false
+          type: string
+          x-example: active
+      responses:
+        200:
+          description: Deployments list
+          schema:
+            type: object
+            properties:
+              height:
+                type: string
+                example: 0
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/DeploymentResult"
+        400:
+          description: Bad Request
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "decoding bech32 failed: invalid bech32 string length 2"
+        404:
+          description: Not Found
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Not Found"
+  /deployment/info:
+    get:
+      summary: Get single deployment info
+      tags:
+        - Deployment
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: owner
+          description: Owner address
+          required: true
+          type: string
+          x-example: akash1zsgzee6vvx942c4c69vl859w9azn77j8uhduug
+        - in: query
+          name: dseq
+          description: Deployment sequence number
+          required: true
+          type: string
+          x-example: 14
+      responses:
+        200:
+          description: Deployment information
+          schema:
+            type: object
+            properties:
+              height:
+                type: string
+                example: 0
+              result:
+                $ref: "#/definitions/DeploymentResult"
+        400:
+          description: Bad Request
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Missing owner query"
+        404:
+          description: Not Found
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Not Found"
+  /deployment/group/info:
+    get:
+      summary: Get deployment group info
+      tags:
+        - Deployment
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: owner
+          description: Owner address
+          required: true
+          type: string
+          x-example: akash1zsgzee6vvx942c4c69vl859w9azn77j8uhduug
+        - in: query
+          name: dseq
+          description: Deployment sequence number
+          required: true
+          type: string
+          x-example: 14
+        - in: query
+          name: gseq
+          description: Group sequence number
+          required: true
+          type: string
+          x-example: 1
+      responses:
+        200:
+          description: Group information
+          schema:
+            type: object
+            properties:
+              height:
+                type: string
+                example: 0
+              result:
+                $ref: "#/definitions/Group"
+        400:
+          description: Bad Request
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Missing gseq query"
+        404:
+          description: Not Found
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Not Found"
+  /market/order/list:
+    get:
+      summary: Get orders list
+      tags:
+        - Market
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: owner
+          description: Owner address
+          required: false
+          type: string
+          x-example: akash1zsgzee6vvx942c4c69vl859w9azn77j8uhduug
+        - in: query
+          name: state
+          description: Order state to filter (open,matched,closed)
+          required: false
+          type: string
+          x-example: active
+      responses:
+        200:
+          description: Orders list
+          schema:
+            type: object
+            properties:
+              height:
+                type: string
+                example: 0
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Order"
+        400:
+          description: Bad Request
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "decoding bech32 failed: invalid bech32 string length 2"
+        404:
+          description: Not Found
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Not Found"
+  /market/order/info:
+    get:
+      summary: Get single order info
+      tags:
+        - Market
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: owner
+          description: Owner address
+          required: true
+          type: string
+          x-example: akash1zsgzee6vvx942c4c69vl859w9azn77j8uhduug
+        - in: query
+          name: dseq
+          description: Deployment sequence number
+          required: true
+          type: string
+          x-example: 14
+        - in: query
+          name: gseq
+          description: Group sequence number
+          required: true
+          type: string
+          x-example: 1
+        - in: query
+          name: oseq
+          description: Order sequence number
+          required: true
+          type: string
+          x-example: 1
+      responses:
+        200:
+          description: Order information
+          schema:
+            type: object
+            properties:
+              height:
+                type: string
+                example: 0
+              result:
+                $ref: "#/definitions/Order"
+        400:
+          description: Bad Request
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Missing oseq query"
+        404:
+          description: Not Found
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Not Found"
+  /market/bid/list:
+    get:
+      summary: Get bids list
+      tags:
+        - Market
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: owner
+          description: Owner address
+          required: false
+          type: string
+          x-example: akash1zsgzee6vvx942c4c69vl859w9azn77j8uhduug
+        - in: query
+          name: state
+          description: Bid state to filter (open,matched,lost,closed)
+          required: false
+          type: string
+          x-example: active
+      responses:
+        200:
+          description: Bids list
+          schema:
+            type: object
+            properties:
+              height:
+                type: string
+                example: 0
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Bid"
+        400:
+          description: Bad Request
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "decoding bech32 failed: invalid bech32 string length 2"
+        404:
+          description: Not Found
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Not Found"
+  /market/bid/info:
+    get:
+      summary: Get single bid info
+      tags:
+        - Market
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: owner
+          description: Owner address
+          required: true
+          type: string
+          x-example: akash1zsgzee6vvx942c4c69vl859w9azn77j8uhduug
+        - in: query
+          name: dseq
+          description: Deployment sequence number
+          required: true
+          type: string
+          x-example: 14
+        - in: query
+          name: gseq
+          description: Group sequence number
+          required: true
+          type: string
+          x-example: 1
+        - in: query
+          name: oseq
+          description: Order sequence number
+          required: true
+          type: string
+          x-example: 1
+        - in: query
+          name: provider
+          description: Provider address
+          required: true
+          type: string
+          x-example: akash16q6s0tauc3cks5us7f57wds8c8lqg4jqs0qtaf
+      responses:
+        200:
+          description: Bid information
+          schema:
+            type: object
+            properties:
+              height:
+                type: string
+                example: 0
+              result:
+                $ref: "#/definitions/Bid"
+        400:
+          description: Bad Request
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Missing provider query"
+        404:
+          description: Not Found
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Not Found"
+  /market/lease/list:
+    get:
+      summary: Get leases list
+      tags:
+        - Market
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: owner
+          description: Owner address
+          required: false
+          type: string
+          x-example: akash1zsgzee6vvx942c4c69vl859w9azn77j8uhduug
+        - in: query
+          name: state
+          description: Order state to filter (active,insufficient,closed)
+          required: false
+          type: string
+          x-example: active
+      responses:
+        200:
+          description: Leases list
+          schema:
+            type: object
+            properties:
+              height:
+                type: string
+                example: 0
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Bid"
+        400:
+          description: Bad Request
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "decoding bech32 failed: invalid bech32 string length 2"
+        404:
+          description: Not Found
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Not Found"
+  /market/lease/info:
+    get:
+      summary: Get single lease info
+      tags:
+        - Market
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: owner
+          description: Owner address
+          required: true
+          type: string
+          x-example: akash1zsgzee6vvx942c4c69vl859w9azn77j8uhduug
+        - in: query
+          name: dseq
+          description: Deployment sequence number
+          required: true
+          type: string
+          x-example: 14
+        - in: query
+          name: gseq
+          description: Group sequence number
+          required: true
+          type: string
+          x-example: 1
+        - in: query
+          name: oseq
+          description: Order sequence number
+          required: true
+          type: string
+          x-example: 1
+        - in: query
+          name: provider
+          description: Provider address
+          required: true
+          type: string
+          x-example: akash16q6s0tauc3cks5us7f57wds8c8lqg4jqs0qtaf
+      responses:
+        200:
+          description: Lease information
+          schema:
+            type: object
+            properties:
+              height:
+                type: string
+                example: 0
+              result:
+                $ref: "#/definitions/Bid"
+        400:
+          description: Bad Request
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Missing provider query"
+        404:
+          description: Not Found
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Not Found"
+  /provider/list:
+    get:
+      summary: Get providers list
+      tags:
+        - Provider
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Providers list
+          schema:
+            type: object
+            properties:
+              height:
+                type: string
+                example: 0
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Provider"
+        404:
+          description: Not Found
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Not Found"
+  /provider/info/{providerOwner}:
+    get:
+      summary: Get single lease info
+      tags:
+        - Provider
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: providerOwner
+          description: Provider owner address
+          required: true
+          type: string
+          x-example: akash1zsgzee6vvx942c4c69vl859w9azn77j8uhduug
+      responses:
+        200:
+          description: Provider information
+          schema:
+            type: object
+            properties:
+              height:
+                type: string
+                example: 0
+              result:
+                $ref: "#/definitions/Provider"
+        400:
+          description: Bad Request
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Invalid Address"
+        404:
+          description: Not Found
+          schema: 
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Not Found"
   /staking/delegators/{delegatorAddr}/delegations:
     parameters:
       - in: path
@@ -476,7 +1033,7 @@ paths:
         description: Bech32 AccAddress of Delegator
         required: true
         type: string
-        x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+        x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
     get:
       summary: Get all delegations from a delegator
       tags:
@@ -535,13 +1092,13 @@ paths:
         description: Bech32 AccAddress of Delegator
         required: true
         type: string
-        x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+        x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
       - in: path
         name: validatorAddr
         description: Bech32 OperatorAddress of validator
         required: true
         type: string
-        x-example: cosmosvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
+        x-example: akashvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
     get:
       summary: Query the current delegation between a delegator and a validator
       tags:
@@ -564,7 +1121,7 @@ paths:
         description: Bech32 AccAddress of Delegator
         required: true
         type: string
-        x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+        x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
     get:
       summary: Get all unbonding delegations from a delegator
       tags:
@@ -624,13 +1181,13 @@ paths:
         description: Bech32 AccAddress of Delegator
         required: true
         type: string
-        x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+        x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
       - in: path
         name: validatorAddr
         description: Bech32 OperatorAddress of validator
         required: true
         type: string
-        x-example: cosmosvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
+        x-example: akashvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
     get:
       summary: Query all unbonding delegations between a delegator and a validator
       tags:
@@ -685,7 +1242,7 @@ paths:
         description: Bech32 AccAddress of Delegator
         required: true
         type: string
-        x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+        x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
     post:
       summary: Submit a redelegation
       parameters:
@@ -728,7 +1285,7 @@ paths:
         description: Bech32 AccAddress of Delegator
         required: true
         type: string
-        x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+        x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
     get:
       summary: Query all validators that a delegator is bonded to
       tags:
@@ -753,13 +1310,13 @@ paths:
         description: Bech32 AccAddress of Delegator
         required: true
         type: string
-        x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+        x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
       - in: path
         name: validatorAddr
         description: Bech32 ValAddress of Delegator
         required: true
         type: string
-        x-example: cosmosvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
+        x-example: akashvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
     get:
       summary: Query a validator that a delegator is bonded to
       tags:
@@ -814,7 +1371,7 @@ paths:
         description: Bech32 OperatorAddress of validator
         required: true
         type: string
-        x-example: cosmosvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
+        x-example: akashvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
     get:
       summary: Query the information from a single validator
       tags:
@@ -837,7 +1394,7 @@ paths:
         description: Bech32 OperatorAddress of validator
         required: true
         type: string
-        x-example: cosmosvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
+        x-example: akashvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
     get:
       summary: Get all delegations from a validator
       tags:
@@ -862,7 +1419,7 @@ paths:
         description: Bech32 OperatorAddress of validator
         required: true
         type: string
-        x-example: cosmosvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
+        x-example: akashvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
     get:
       summary: Get all unbonding delegations from a validator
       tags:
@@ -951,7 +1508,7 @@ paths:
   #          name: validatorPubKey
   #          required: true
   #          in: path
-  #          x-example: cosmosvalconspub1zcjduepq0vu2zgkgk49efa0nqwzndanq5m4c7pa3u4apz4g2r9gspqg6g9cs3k9cuf
+  #          x-example: akashvalconspub1zcjduepq0vu2zgkgk49efa0nqwzndanq5m4c7pa3u4apz4g2r9gspqg6g9cs3k9cuf
   #      responses:
   #        200:
   #          description: OK
@@ -1009,7 +1566,7 @@ paths:
           name: validatorAddr
           required: true
           in: path
-          x-example: cosmosvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
+          x-example: akashvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
         - description: ""
           name: UnjailBody
           in: body
@@ -1311,7 +1868,7 @@ paths:
           name: depositor
           required: true
           in: path
-          x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+          x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
       responses:
         200:
           description: OK
@@ -1410,7 +1967,7 @@ paths:
           name: voter
           required: true
           in: path
-          x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+          x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
       responses:
         200:
           description: OK
@@ -1530,7 +2087,7 @@ paths:
         description: Bech32 AccAddress of Delegator
         required: true
         type: string
-        x-example: cosmos167w96tdvmazakdwkw2u57227eduula2cy572lf
+        x-example: akash167w96tdvmazakdwkw2u57227eduula2cy572lf
     get:
       summary: Get the total rewards balance from all delegations
       description: Get the sum of all the rewards earned by delegations by a single delegator
@@ -1581,13 +2138,13 @@ paths:
         description: Bech32 AccAddress of Delegator
         required: true
         type: string
-        x-example: cosmos16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
+        x-example: akash16xyempempp92x9hyzz9wrgf94r6j9h5f06pxxv
       - in: path
         name: validatorAddr
         description: Bech32 OperatorAddress of validator
         required: true
         type: string
-        x-example: cosmosvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
+        x-example: akashvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
     get:
       summary: Query a delegation reward
       description: Query a single delegation reward by a delegator
@@ -1640,7 +2197,7 @@ paths:
         description: Bech32 AccAddress of Delegator
         required: true
         type: string
-        x-example: cosmos167w96tdvmazakdwkw2u57227eduula2cy572lf
+        x-example: akash167w96tdvmazakdwkw2u57227eduula2cy572lf
     get:
       summary: Get the rewards withdrawal address
       description: Get the delegations' rewards withdrawal address. This is the address in which the user will receive the reward funds
@@ -1693,7 +2250,7 @@ paths:
         description: Bech32 OperatorAddress of validator
         required: true
         type: string
-        x-example: cosmosvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
+        x-example: akashvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
     get:
       summary: Validator distribution information
       description: Query the distribution information of a single validator
@@ -1717,7 +2274,7 @@ paths:
         description: Bech32 OperatorAddress of validator
         required: true
         type: string
-        x-example: cosmosvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
+        x-example: akashvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
     get:
       summary: Fee distribution outstanding rewards of a single validator
       tags:
@@ -1740,7 +2297,7 @@ paths:
         description: Bech32 OperatorAddress of validator
         required: true
         type: string
-        x-example: cosmosvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
+        x-example: akashvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
     get:
       summary: Commission and self-delegation rewards of a single validator
       description: Query the commission and self-delegation rewards of validator.
@@ -1908,7 +2465,7 @@ paths:
         200:
           description: OK
           schema:
-             type: string
+            type: string
         400:
           description: Invalid coin denomination
         500:
@@ -1995,11 +2552,11 @@ definitions:
   Address:
     type: string
     description: bech32 encoded address
-    example: cosmos1depk54cuajgkzea6zpgkq36tnjwdzv4afc3d27
+    example: akash1zsgzee6vvx942c4c69vl859w9azn77j8uhduug
   ValidatorAddress:
     type: string
     description: bech32 encoded address
-    example: cosmosvaloper16xyempempp92x9hyzz9wrgf94r6j9h5f2w4n2l
+    example: akashvaloper1kzpa4zlvxyqlz4kqe0rneap3l5c9r2x3knkkf9
   Coin:
     type: object
     properties:
@@ -2117,7 +2674,7 @@ definitions:
     properties:
       chain_id:
         type: string
-        example: cosmoshub-2
+        example: akashhub-2
       height:
         type: number
         example: 1
@@ -2241,7 +2798,7 @@ definitions:
     properties:
       from:
         type: string
-        example: "cosmos1g9ahr6xhht5rmqven628nklxluzyv8z9jqjcmc"
+        example: "akash1g9ahr6xhht5rmqven628nklxluzyv8z9jqjcmc"
         description: Sender address or Keybase name to generate a transaction
       memo:
         type: string
@@ -2276,7 +2833,7 @@ definitions:
         $ref: "#/definitions/ValidatorAddress"
       pub_key:
         type: string
-        example: cosmosvalconspub1zcjduepq0vu2zgkgk49efa0nqwzndanq5m4c7pa3u4apz4g2r9gspqg6g9cs3k9cuf
+        example: akashvalconspub1zcjduepq0vu2zgkgk49efa0nqwzndanq5m4c7pa3u4apz4g2r9gspqg6g9cs3k9cuf
       voting_power:
         type: string
         example: "1000"
@@ -2355,7 +2912,7 @@ definitions:
         $ref: "#/definitions/ValidatorAddress"
       consensus_pubkey:
         type: string
-        example: cosmosvalconspub1zcjduepq0vu2zgkgk49efa0nqwzndanq5m4c7pa3u4apz4g2r9gspqg6g9cs3k9cuf
+        example: akashvalconspub1zcjduepq0vu2zgkgk49efa0nqwzndanq5m4c7pa3u4apz4g2r9gspqg6g9cs3k9cuf
       jailed:
         type: boolean
       status:
@@ -2530,4 +3087,165 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/Coin"
-
+  Unit:
+    type: object
+    properties:
+      cpu:
+        type: integer
+        example: 10
+      memory:
+        type: string
+        example: "134217728"
+      storage:
+        type: string
+        example: "536870912"
+  Resource:
+    type: object
+    properties:
+      unit:
+        $ref: "#/definitions/Unit"
+      count:
+        type: string
+        example: 1
+      price:
+        $ref: "#/definitions/Coin"
+  Spec:
+    type: object
+    properties:
+      name:
+        type: string
+        example: "global"
+      requirements:
+        type: string
+        example: null
+      resources:
+        type: array
+        items:
+          $ref: "#/definitions/Resource"
+  DSeq:
+    type: string
+    description: Deployment sequence number
+    example: "14"
+  GSeq:
+    type: number
+    description: Group sequence number
+    example: 1
+  OSeq:
+    type: number
+    description: Group sequence number
+    example: 1
+  GroupID:
+    type: object
+    properties:
+      owner:
+        $ref: "#/definitions/Address"
+      dseq:
+        $ref: "#/definitions/DSeq"
+      gseq:
+        $ref: "#/definitions/GSeq"
+  Group:
+    type: object
+    properties:
+      id:
+        $ref: "#/definitions/GroupID"
+      state:
+        type: integer
+        example: 1
+      spec:
+        $ref: "#/definitions/Spec"
+  DeploymentID:
+    type: object
+    properties:
+      owner:
+        $ref: "#/definitions/Address"
+      dseq:
+        $ref: "#/definitions/DSeq"
+  Deployment:
+    type: object
+    properties:
+      id:
+        $ref: "#/definitions/GroupID"
+      state:
+        type: integer
+        example: 1
+      version:
+        type: string
+        example: null
+  DeploymentResult:
+    type: object
+    properties:
+      deployment:
+        $ref: "#/definitions/Deployment"
+      groups:
+        type: array
+        items:
+          $ref: "#/definitions/Group"
+  OrderID:
+    type: object
+    properties:
+      owner:
+        $ref: "#/definitions/Address"
+      dseq:
+        $ref: "#/definitions/DSeq"
+      gseq:
+        $ref: "#/definitions/GSeq"
+      oseq:
+        $ref: "#/definitions/OSeq"
+  Order:
+    type: object
+    properties:
+      id:
+        $ref: "#/definitions/OrderID"
+      state:
+        type: integer
+        example: 1
+      start-at:
+        type: string
+        example: "18"
+      spec:
+        $ref: "#/definitions/Spec"
+  BidID:
+    type: object
+    properties:
+      owner:
+        $ref: "#/definitions/Address"
+      dseq:
+        $ref: "#/definitions/DSeq"
+      gseq:
+        $ref: "#/definitions/GSeq"
+      oseq:
+        $ref: "#/definitions/OSeq"
+      provider:
+        type: string
+        example: akash16q6s0tauc3cks5us7f57wds8c8lqg4jqs0qtaf
+  Bid:
+    type: object
+    properties:
+      id:
+        $ref: "#/definitions/BidID"
+      state:
+        type: integer
+        example: 2
+      price:
+        $ref: "#/definitions/Coin"
+  Attribute:
+    type: object
+    properties:
+      key:
+        type: string
+        example: "cmVnaW9u"
+      value:
+        type: string
+        example: "c2Zv"
+  Provider:
+    type: object
+    properties:
+      owner:
+        $ref: "#/definitions/Address"
+      host-uri:
+        type: string
+        example: "akash.ovrclk.com"
+      attibutes:
+        type: array
+        items:
+          $ref: "#/definitions/Attribute"
