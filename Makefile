@@ -91,8 +91,12 @@ devdeps-install:
 	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 
+# test-integration: $(BINS)
+# 	(cd _integration && make clean run)
+
 test-integration: $(BINS)
-	(cd _integration && make clean run)
+	cp akash akashd ./_build
+	@go test -mod=readonly -p 4 `go list ./integration/...` -tags=integration -v
 
 integrationdeps-install:
 	(cd _integration && make deps-install)
