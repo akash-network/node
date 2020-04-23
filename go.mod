@@ -39,6 +39,7 @@ require (
 	github.com/ovrclk/dsky v0.0.6 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/rakyll/statik v0.1.7
 	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563 // indirect
 	github.com/rs/cors v1.7.1-0.20191011001009-dcbccb712443 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
