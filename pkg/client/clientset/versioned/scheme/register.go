@@ -27,13 +27,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
-// Creating new scheme using runtime
 var Scheme = runtime.NewScheme()
-
-// Declaring new codec factory with created scheme using serializer
 var Codecs = serializer.NewCodecFactory(Scheme)
-
-// Declaring new parameter codec  with created scheme using runtime
 var ParameterCodec = runtime.NewParameterCodec(Scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
 	akashv1.AddToScheme,
