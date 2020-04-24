@@ -10,7 +10,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/x/deployment/types"
 
@@ -41,7 +41,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(authclient.GetTxEncoder(cdc))
 
 			sdl, err := sdl.ReadFile(args[0])
 			if err != nil {
@@ -67,7 +67,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return authclient.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
 
@@ -81,7 +81,7 @@ func cmdClose(key string, cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(authclient.GetTxEncoder(cdc))
 
 			id, err := DeploymentIDFromFlags(cmd.Flags(), ctx.GetFromAddress().String())
 			if err != nil {
@@ -92,7 +92,7 @@ func cmdClose(key string, cdc *codec.Codec) *cobra.Command {
 				ID: id,
 			}
 
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return authclient.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
 	AddDeploymentIDFlags(cmd.Flags())
@@ -106,7 +106,7 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(authclient.GetTxEncoder(cdc))
 
 			id, err := DeploymentIDFromFlags(cmd.Flags(), ctx.GetFromAddress().String())
 			if err != nil {
@@ -117,7 +117,7 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 				ID: id,
 			}
 
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return authclient.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
 	AddDeploymentIDFlags(cmd.Flags())

@@ -50,7 +50,7 @@ func handleMsgCreateBid(ctx sdk.Context, keepers Keepers, msg types.MsgCreateBid
 	keepers.Market.CreateBid(ctx, msg.Order, msg.Provider, msg.Price)
 
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }
 
@@ -84,7 +84,7 @@ func handleMsgCloseBid(ctx sdk.Context, keepers Keepers, msg types.MsgCloseBid) 
 	keepers.Deployment.OnLeaseClosed(ctx, order.GroupID())
 
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }
 
@@ -102,6 +102,6 @@ func handleMsgCloseOrder(ctx sdk.Context, keepers Keepers, msg types.MsgCloseOrd
 	keepers.Market.OnLeaseClosed(ctx, lease)
 	keepers.Deployment.OnLeaseClosed(ctx, order.GroupID())
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }

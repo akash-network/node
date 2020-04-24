@@ -60,7 +60,7 @@ func TestFullAppSimulation(t *testing.T) {
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 
-	app := NewApp(logger, db, nil, map[int64]bool{}, fauxMerkleModeOpt)
+	app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, "", fauxMerkleModeOpt)
 	require.Equal(t, "akash", app.Name())
 
 	fmt.Printf("config-------- %v", config)
@@ -90,7 +90,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 
-	app := NewApp(logger, db, nil, map[int64]bool{}, fauxMerkleModeOpt)
+	app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, "", fauxMerkleModeOpt)
 	require.Equal(t, "akash", app.Name())
 
 	// Run randomized simulation
@@ -125,7 +125,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
-	newApp := NewApp(log.NewNopLogger(), newDB, nil, map[int64]bool{}, fauxMerkleModeOpt)
+	newApp := NewApp(log.NewNopLogger(), newDB, nil, simapp.FlagPeriodValue, map[int64]bool{}, "", fauxMerkleModeOpt)
 	require.Equal(t, "akash", newApp.Name())
 
 	newApp.InitChain(abci.RequestInitChain{
@@ -165,7 +165,7 @@ func TestAppStateDeterminism(t *testing.T) {
 
 			db := dbm.NewMemDB()
 
-			app := NewApp(logger, db, nil, map[int64]bool{}, interBlockCacheOpt())
+			app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, "", interBlockCacheOpt())
 
 			fmt.Printf(
 				"running non-determinism simulation; seed %d: %d/%d, attempt: %d/%d\n",

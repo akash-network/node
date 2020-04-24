@@ -20,7 +20,7 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/crypto/keys"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/tests"
@@ -277,11 +277,11 @@ func (f *Fixtures) KeysAddRecover(name, mnemonic string, flags ...string) (exitS
 }
 
 // KeysShow is akash keys show
-func (f *Fixtures) KeysShow(name string, flags ...string) keys.KeyOutput {
+func (f *Fixtures) KeysShow(name string, flags ...string) keyring.KeyOutput {
 	cmd := fmt.Sprintf("%s keys show --home=%s %s -o json %s", f.AkashBinary, f.AkashHome, name, f.KeyFlags())
 	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
 
-	var ko keys.KeyOutput
+	var ko keyring.KeyOutput
 
 	err := clientkeys.UnmarshalJSON([]byte(out), &ko)
 	require.NoError(f.T, err)
@@ -290,11 +290,11 @@ func (f *Fixtures) KeysShow(name string, flags ...string) keys.KeyOutput {
 }
 
 // KeysList is akash keys list
-func (f *Fixtures) KeysList(flags ...string) []keys.KeyOutput {
+func (f *Fixtures) KeysList(flags ...string) []keyring.KeyOutput {
 	cmd := fmt.Sprintf("%s keys list --home=%s -o json %s", f.AkashBinary, f.AkashHome, f.KeyFlags())
 	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
 
-	var list []keys.KeyOutput
+	var list []keyring.KeyOutput
 
 	err := clientkeys.UnmarshalJSON([]byte(out), &list)
 	require.NoError(f.T, err)

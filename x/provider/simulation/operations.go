@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/simapp/helpers"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simappparams "github.com/ovrclk/akash/app/params"
@@ -24,7 +25,7 @@ const (
 
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simulation.AppParams, cdc *codec.Codec, ak govtypes.AccountKeeper,
+	appParams simtypes.AppParams, cdc *codec.Codec, ak govtypes.AccountKeeper,
 	k keeper.Keeper) simulation.WeightedOperations {
 	var (
 		weightMsgCreate int
@@ -57,27 +58,27 @@ func WeightedOperations(
 
 // SimulateMsgCreate generates a MsgCreate with random values
 // nolint:funlen
-func SimulateMsgCreate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
-		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
-		simAccount, _ := simulation.RandomAcc(r, accounts)
+func SimulateMsgCreate(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
+		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+		simAccount, _ := simtypes.RandomAcc(r, accounts)
 
 		// ensure the provider doesn't exist already
 		_, found := k.Get(ctx, simAccount.Address)
 		if found {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName), nil, nil
 		}
 
 		cfg, readError := config.ReadConfigPath("../x/provider/testdata/provider.yml")
 		if readError != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, readError
+			return simtypes.NoOpMsg(types.ModuleName), nil, readError
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
 
-		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
 		msg := types.MsgCreate{
@@ -98,18 +99,18 @@ func SimulateMsgCreate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Op
 
 		_, _, err = app.Deliver(tx)
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		return simulation.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
 	}
 }
 
 // SimulateMsgUpdate generates a MsgUpdate with random values
 // nolint:funlen
-func SimulateMsgUpdate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
-		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+func SimulateMsgUpdate(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
+		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var providers []types.Provider
 
 		k.WithProviders(ctx, func(provider types.Provider) bool {
@@ -119,23 +120,23 @@ func SimulateMsgUpdate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Op
 		})
 
 		if len(providers) == 0 {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName), nil, nil
 		}
 
 		// Get random deployment
 		i := r.Intn(len(providers))
 		provider := providers[i]
 
-		simAccount, found := simulation.FindAccount(accounts, provider.Owner)
+		simAccount, found := simtypes.FindAccount(accounts, provider.Owner)
 		if !found {
-			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("provider with %s not found", provider.Owner)
+			return simtypes.NoOpMsg(types.ModuleName), nil, fmt.Errorf("provider with %s not found", provider.Owner)
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
 
-		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
 		msg := types.MsgUpdate{
@@ -156,9 +157,9 @@ func SimulateMsgUpdate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Op
 
 		_, _, err = app.Deliver(tx)
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		return simulation.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
 	}
 }

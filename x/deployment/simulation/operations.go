@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/simapp/helpers"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simappparams "github.com/ovrclk/akash/app/params"
@@ -25,7 +26,7 @@ const (
 
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simulation.AppParams, cdc *codec.Codec,
+	appParams simtypes.AppParams, cdc *codec.Codec,
 	ak govtypes.AccountKeeper, k keeper.Keeper) simulation.WeightedOperations {
 	var (
 		weightMsgCreateDeployment int
@@ -68,10 +69,10 @@ func WeightedOperations(
 }
 
 // SimulateMsgCreateDeployment generates a MsgCreate with random values
-func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
-		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
-		simAccount, _ := simulation.RandomAcc(r, accounts)
+func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
+		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+		simAccount, _ := simtypes.RandomAcc(r, accounts)
 
 		dID := types.DeploymentID{
 			Owner: simAccount.Address,
@@ -81,24 +82,24 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 		// ensure the provider doesn't exist already
 		_, found := k.GetDeployment(ctx, dID)
 		if found {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName), nil, nil
 		}
 
 		sdl, readError := sdl.ReadFile("../x/deployment/testdata/deployment.yml")
 		if readError != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, readError
+			return simtypes.NoOpMsg(types.ModuleName), nil, readError
 		}
 
 		groupSpecs, groupErr := sdl.DeploymentGroups()
 		if groupErr != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, groupErr
+			return simtypes.NoOpMsg(types.ModuleName), nil, groupErr
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
 
-		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
 		msg := types.MsgCreate{
@@ -122,17 +123,17 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 
 		_, _, err = app.Deliver(tx)
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		return simulation.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
 	}
 }
 
 // SimulateMsgUpdateDeployment generates a MsgUpdate with random values
-func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
-		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
+		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var deployments []types.Deployment
 
 		k.WithDeployments(ctx, func(deployment types.Deployment) bool {
@@ -142,23 +143,23 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 		})
 
 		if len(deployments) == 0 {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName), nil, nil
 		}
 
 		// Get random deployment
 		i := r.Intn(len(deployments))
 		deployment := deployments[i]
 
-		simAccount, found := simulation.FindAccount(accounts, deployment.ID().Owner)
+		simAccount, found := simtypes.FindAccount(accounts, deployment.ID().Owner)
 		if !found {
-			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("deployment with %s not found", deployment.ID().Owner)
+			return simtypes.NoOpMsg(types.ModuleName), nil, fmt.Errorf("deployment with %s not found", deployment.ID().Owner)
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
 
-		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
 		msg := types.MsgUpdate{
@@ -178,17 +179,17 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 
 		_, _, err = app.Deliver(tx)
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		return simulation.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
 	}
 }
 
 // SimulateMsgCloseDeployment generates a MsgClose with random values
-func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
-		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
+		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var deployments []types.Deployment
 
 		k.WithDeployments(ctx, func(deployment types.Deployment) bool {
@@ -200,23 +201,23 @@ func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simu
 		})
 
 		if len(deployments) == 0 {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName), nil, nil
 		}
 
 		// Get random deployment
 		i := r.Intn(len(deployments))
 		deployment := deployments[i]
 
-		simAccount, found := simulation.FindAccount(accounts, deployment.ID().Owner)
+		simAccount, found := simtypes.FindAccount(accounts, deployment.ID().Owner)
 		if !found {
-			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("deployment with %s not found", deployment.ID().Owner)
+			return simtypes.NoOpMsg(types.ModuleName), nil, fmt.Errorf("deployment with %s not found", deployment.ID().Owner)
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
 
-		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
 		msg := types.MsgClose{
@@ -235,9 +236,9 @@ func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simu
 
 		_, _, err = app.Deliver(tx)
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		return simulation.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
 	}
 }

@@ -34,7 +34,7 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgCreate)
 	}
 
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }
 
@@ -44,7 +44,7 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgUpdate)
 	}
 	// TODO: cancel now-invalid leases?
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }
 

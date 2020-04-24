@@ -33,7 +33,7 @@ require (
 	github.com/magiconair/properties v1.8.2-0.20191019074931-a586bb8b7dea // indirect
 	github.com/mattn/go-runewidth v0.0.6 // indirect
 	github.com/ovrclk/dsky v0.0.6 // indirect
-	github.com/ovrclk/gestalt v0.1.0 // indirect
+	github.com/ovrclk/gestalt v0.1.0
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rs/cors v1.7.1-0.20191011001009-dcbccb712443 // indirect

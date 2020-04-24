@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
@@ -19,6 +20,10 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 )
+
+const flagInvCheckPeriod = "inv-check-period"
+
+var invCheckPeriod uint
 
 func main() {
 	common.InitSDKConfig()
@@ -53,6 +58,8 @@ func main() {
 	server.AddCommands(ctx, cdc, root, newApp, exportAppStateAndTMValidators)
 
 	executor := cli.PrepareBaseCmd(root, "AKASHD", common.DefaultNodeHome())
+	root.PersistentFlags().UintVar(&invCheckPeriod, flagInvCheckPeriod,
+		0, "Assert registered invariants every N blocks")
 	err := executor.Execute()
 	if err != nil {
 		panic(err)
@@ -66,14 +73,14 @@ func newApp(logger log.Logger, db dbm.DB, tio io.Writer) abci.Application {
 		skipUpgradeHeights[int64(h)] = true
 	}
 
-	return app.NewApp(logger, db, tio, skipUpgradeHeights)
+	return app.NewApp(logger, db, tio, invCheckPeriod, skipUpgradeHeights, viper.GetString(flags.FlagHome))
 }
 
 func exportAppStateAndTMValidators(
 	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailWhiteList []string,
 ) (json.RawMessage, []tmtypes.GenesisValidator, error) {
 
-	app := app.NewApp(logger, db, ioutil.Discard, map[int64]bool{})
+	app := app.NewApp(logger, db, ioutil.Discard, uint(1), map[int64]bool{}, "")
 
 	if height != -1 {
 		err := app.LoadHeight(height)

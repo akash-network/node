@@ -9,7 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 	"github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +38,7 @@ func cmdCreateBid(key string, cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(authclient.GetTxEncoder(cdc))
 
 			price, err := cmd.Flags().GetString("price")
 			if err != nil {
@@ -64,7 +64,7 @@ func cmdCreateBid(key string, cdc *codec.Codec) *cobra.Command {
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return authclient.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
 	AddOrderIDFlags(cmd.Flags())
@@ -79,7 +79,7 @@ func cmdCloseBid(key string, cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(authclient.GetTxEncoder(cdc))
 
 			id, err := BidIDFromFlags(ctx, cmd.Flags())
 			if err != nil {
@@ -91,7 +91,7 @@ func cmdCloseBid(key string, cdc *codec.Codec) *cobra.Command {
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return authclient.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
 	AddBidIDFlags(cmd.Flags())
@@ -105,7 +105,7 @@ func cmdCloseOrder(key string, cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(authclient.GetTxEncoder(cdc))
 
 			id, err := OrderIDFromFlags(cmd.Flags())
 			if err != nil {
@@ -119,7 +119,7 @@ func cmdCloseOrder(key string, cdc *codec.Codec) *cobra.Command {
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return authclient.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
 	AddOrderIDFlags(cmd.Flags())

@@ -57,7 +57,7 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper
 	keeper.Create(ctx, deployment, groups)
 
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }
 
@@ -73,7 +73,7 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper
 	keeper.UpdateDeployment(ctx, deployment)
 
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }
 
@@ -97,6 +97,6 @@ func handleMsgClose(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper,
 	}
 
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }

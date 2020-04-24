@@ -8,7 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 	"github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/events"
 	"github.com/ovrclk/akash/provider"
@@ -30,7 +30,7 @@ func providerCmd(cdc *codec.Codec) *cobra.Command {
 			cctx := ccontext.NewCLIContext().WithCodec(cdc)
 			ctx := context.Background()
 
-			txbldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			txbldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(authclient.GetTxEncoder(cdc))
 
 			// TODO: lookup provider & ensure exists.
 			keyname := cctx.GetFromName()

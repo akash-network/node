@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/simapp/helpers"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simappparams "github.com/ovrclk/akash/app/params"
@@ -24,7 +25,7 @@ const (
 
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simulation.AppParams, cdc *codec.Codec, ak govtypes.AccountKeeper,
+	appParams simtypes.AppParams, cdc *codec.Codec, ak govtypes.AccountKeeper,
 	ks keepers.Keepers) simulation.WeightedOperations {
 	var (
 		weightMsgCreateBid  int
@@ -67,12 +68,12 @@ func WeightedOperations(
 }
 
 // SimulateMsgCreateBid generates a MsgCreateBid with random values
-func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
-		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
+		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		orders := getOrdersWithState(ctx, ks, types.OrderOpen)
 		if len(orders) == 0 {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName), nil, nil
 		}
 
 		// Get random order
@@ -82,27 +83,27 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simulat
 		providers := getProviders(ctx, ks)
 
 		if len(providers) == 0 {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName), nil, nil
 		}
 
 		// Get random deployment
 		i = r.Intn(len(providers))
 		provider := providers[i]
 
-		simAccount, found := simulation.FindAccount(accounts, provider.Owner)
+		simAccount, found := simtypes.FindAccount(accounts, provider.Owner)
 		if !found {
-			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("provider with %s not found", provider.Owner)
+			return simtypes.NoOpMsg(types.ModuleName), nil, fmt.Errorf("provider with %s not found", provider.Owner)
 		}
 
 		if provider.Owner.Equals(order.Owner) {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName), nil, nil
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
 
-		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
 		msg := types.MsgCreateBid{
@@ -123,17 +124,17 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simulat
 
 		_, _, err = app.Deliver(tx)
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		return simulation.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
 	}
 }
 
 // SimulateMsgCloseBid generates a MsgCloseBid with random values
-func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
-		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
+		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var bids []types.Bid
 
 		ks.Market.WithBids(ctx, func(bid types.Bid) bool {
@@ -148,23 +149,23 @@ func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simulati
 		})
 
 		if len(bids) == 0 {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName), nil, nil
 		}
 
 		// Get random bid
 		i := r.Intn(len(bids))
 		bid := bids[i]
 
-		simAccount, found := simulation.FindAccount(accounts, bid.Provider)
+		simAccount, found := simtypes.FindAccount(accounts, bid.Provider)
 		if !found {
-			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("bid with %s not found", bid.Provider)
+			return simtypes.NoOpMsg(types.ModuleName), nil, fmt.Errorf("bid with %s not found", bid.Provider)
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
 
-		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
 		msg := types.MsgCloseBid{
@@ -183,36 +184,36 @@ func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simulati
 
 		_, _, err = app.Deliver(tx)
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		return simulation.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
 	}
 }
 
 // SimulateMsgCloseOrder generates a MsgCloseOrder with random values
-func SimulateMsgCloseOrder(ak govtypes.AccountKeeper, ks keepers.Keepers) simulation.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
-		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+func SimulateMsgCloseOrder(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
+		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		orders := getOrdersWithState(ctx, ks, types.OrderMatched)
 		if len(orders) == 0 {
-			return simulation.NoOpMsg(types.ModuleName), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName), nil, nil
 		}
 
 		// Get random order
 		i := r.Intn(len(orders))
 		order := orders[i]
 
-		simAccount, found := simulation.FindAccount(accounts, order.ID().Owner)
+		simAccount, found := simtypes.FindAccount(accounts, order.ID().Owner)
 		if !found {
-			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("order with %s not found", order.ID().Owner)
+			return simtypes.NoOpMsg(types.ModuleName), nil, fmt.Errorf("order with %s not found", order.ID().Owner)
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
 
-		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
 		msg := types.MsgCloseOrder{
@@ -231,9 +232,9 @@ func SimulateMsgCloseOrder(ak govtypes.AccountKeeper, ks keepers.Keepers) simula
 
 		_, _, err = app.Deliver(tx)
 		if err != nil {
-			return simulation.NoOpMsg(types.ModuleName), nil, err
+			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		return simulation.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
 	}
 }

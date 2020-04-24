@@ -9,7 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 	"github.com/ovrclk/akash/x/provider/config"
 	"github.com/ovrclk/akash/x/provider/types"
 	"github.com/spf13/cobra"
@@ -38,7 +38,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(authclient.GetTxEncoder(cdc))
 
 			cfg, err := config.ReadConfigPath(args[0])
 			if err != nil {
@@ -55,7 +55,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return authclient.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
 
@@ -69,7 +69,7 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(authclient.GetTxEncoder(cdc))
 
 			cfg, err := config.ReadConfigPath(args[0])
 			if err != nil {
@@ -86,7 +86,7 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return authclient.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
 

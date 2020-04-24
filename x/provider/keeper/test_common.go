@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	codecstd "github.com/cosmos/cosmos-sdk/codec/std"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -48,12 +49,16 @@ func SetupTestInput() (sdk.Context, auth.AccountKeeper, params.Keeper, bank.Base
 
 	ctx := sdk.NewContext(ms, abci.Header{Time: time.Unix(0, 0)}, false, log.NewNopLogger())
 	cdc := createTestCodec()
+	appCodec := codecstd.NewAppCodec(cdc)
 
 	blacklistedAddrs := make(map[string]bool)
+	macPerms := make(map[string][]string)
 
-	paramsKeeper := params.NewKeeper(params.ModuleCdc, keyParams, tkeyParams)
-	authKeeper := auth.NewAccountKeeper(cdc, keyAcc, paramsKeeper.Subspace(auth.DefaultParamspace), auth.ProtoBaseAccount)
-	bankKeeper := bank.NewBaseKeeper(authKeeper, paramsKeeper.Subspace(bank.DefaultParamspace), blacklistedAddrs)
+	paramsKeeper := params.NewKeeper(appCodec, keyParams, tkeyParams)
+	authKeeper := auth.NewAccountKeeper(appCodec, keyAcc, paramsKeeper.Subspace(auth.DefaultParamspace),
+		auth.ProtoBaseAccount, macPerms)
+	bankKeeper := bank.NewBaseKeeper(appCodec, keyBank, authKeeper,
+		paramsKeeper.Subspace(bank.DefaultParamspace), blacklistedAddrs)
 	bankKeeper.SetSendEnabled(ctx, true)
 
 	providerKeeper := NewKeeper(cdc, keyProvider)

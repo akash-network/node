@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	ccontext "github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/crypto/keys"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	dquery "github.com/ovrclk/akash/x/deployment/query"
@@ -42,7 +42,7 @@ type Client interface {
 func NewClient(
 	cctx ccontext.CLIContext,
 	txbldr auth.TxBuilder,
-	info keys.Info,
+	info keyring.Info,
 	passphrase string,
 	qclient QueryClient,
 ) Client {
@@ -58,7 +58,7 @@ func NewClient(
 type client struct {
 	cctx       ccontext.CLIContext
 	txbldr     auth.TxBuilder
-	info       keys.Info
+	info       keyring.Info
 	passphrase string
 	qclient    QueryClient
 }
