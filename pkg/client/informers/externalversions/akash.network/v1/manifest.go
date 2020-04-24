@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	time "time"
 
 	akashnetworkv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
@@ -61,13 +62,13 @@ func NewFilteredManifestInformer(client versioned.Interface, namespace string, r
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AkashV1().Manifests(namespace).List(options)
+				return client.AkashV1().Manifests(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AkashV1().Manifests(namespace).Watch(options)
+				return client.AkashV1().Manifests(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&akashnetworkv1.Manifest{},

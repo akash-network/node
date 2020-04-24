@@ -19,6 +19,9 @@ limitations under the License.
 package v1
 
 import (
+	"context"
+	"time"
+
 	v1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	scheme "github.com/ovrclk/akash/pkg/client/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,15 +38,15 @@ type ManifestsGetter interface {
 
 // ManifestInterface has methods to work with Manifest resources.
 type ManifestInterface interface {
-	Create(*v1.Manifest) (*v1.Manifest, error)
-	Update(*v1.Manifest) (*v1.Manifest, error)
-	UpdateStatus(*v1.Manifest) (*v1.Manifest, error)
-	Delete(name string, options *metav1.DeleteOptions) error
-	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	Get(name string, options metav1.GetOptions) (*v1.Manifest, error)
-	List(opts metav1.ListOptions) (*v1.ManifestList, error)
-	Watch(opts metav1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Manifest, err error)
+	Create(ctx context.Context, manifest *v1.Manifest, opts metav1.CreateOptions) (*v1.Manifest, error)
+	Update(ctx context.Context, manifest *v1.Manifest, opts metav1.UpdateOptions) (*v1.Manifest, error)
+	UpdateStatus(ctx context.Context, manifest *v1.Manifest, opts metav1.UpdateOptions) (*v1.Manifest, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Manifest, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*v1.ManifestList, error)
+	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Manifest, err error)
 	ManifestExpansion
 }
 
@@ -62,113 +65,131 @@ func newManifests(c *AkashV1Client, namespace string) *manifests {
 }
 
 // Get takes name of the manifest, and returns the corresponding manifest object, and an error if there is any.
-func (c *manifests) Get(name string, options metav1.GetOptions) (result *v1.Manifest, err error) {
+func (c *manifests) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Manifest, err error) {
 	result = &v1.Manifest{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("manifests").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of Manifests that match those selectors.
-func (c *manifests) List(opts metav1.ListOptions) (result *v1.ManifestList, err error) {
+func (c *manifests) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ManifestList, err error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	result = &v1.ManifestList{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("manifests").
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Do().
+		Timeout(timeout).
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested manifests.
-func (c *manifests) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+func (c *manifests) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	opts.Watch = true
 	return c.client.Get().
 		Namespace(c.ns).
 		Resource("manifests").
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Watch()
+		Timeout(timeout).
+		Watch(ctx)
 }
 
 // Create takes the representation of a manifest and creates it.  Returns the server's representation of the manifest, and an error, if there is any.
-func (c *manifests) Create(manifest *v1.Manifest) (result *v1.Manifest, err error) {
+func (c *manifests) Create(ctx context.Context, manifest *v1.Manifest, opts metav1.CreateOptions) (result *v1.Manifest, err error) {
 	result = &v1.Manifest{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("manifests").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(manifest).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a manifest and updates it. Returns the server's representation of the manifest, and an error, if there is any.
-func (c *manifests) Update(manifest *v1.Manifest) (result *v1.Manifest, err error) {
+func (c *manifests) Update(ctx context.Context, manifest *v1.Manifest, opts metav1.UpdateOptions) (result *v1.Manifest, err error) {
 	result = &v1.Manifest{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("manifests").
 		Name(manifest.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(manifest).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *manifests) UpdateStatus(manifest *v1.Manifest) (result *v1.Manifest, err error) {
+func (c *manifests) UpdateStatus(ctx context.Context, manifest *v1.Manifest, opts metav1.UpdateOptions) (result *v1.Manifest, err error) {
 	result = &v1.Manifest{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("manifests").
 		Name(manifest.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(manifest).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the manifest and deletes it. Returns an error if one occurs.
-func (c *manifests) Delete(name string, options *metav1.DeleteOptions) error {
+func (c *manifests) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("manifests").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *manifests) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+func (c *manifests) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+	var timeout time.Duration
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
+	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("manifests").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
-		Body(options).
-		Do().
+		VersionedParams(&listOpts, scheme.ParameterCodec).
+		Timeout(timeout).
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched manifest.
-func (c *manifests) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Manifest, err error) {
+func (c *manifests) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Manifest, err error) {
 	result = &v1.Manifest{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("manifests").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

@@ -41,7 +41,7 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 		}
 	}
 
-	cs := &Clientset{}
+	cs := &Clientset{tracker: o}
 	cs.discovery = &fakediscovery.FakeDiscovery{Fake: &cs.Fake}
 	cs.AddReactor("*", "*", testing.ObjectReaction(o))
 	cs.AddWatchReactor("*", func(action testing.Action) (handled bool, ret watch.Interface, err error) {
@@ -63,21 +63,20 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 type Clientset struct {
 	testing.Fake
 	discovery *fakediscovery.FakeDiscovery
+	tracker   testing.ObjectTracker
 }
 
-// Discovery returns discovery data from clientset
 func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	return c.discovery
+}
+
+func (c *Clientset) Tracker() testing.ObjectTracker {
+	return c.tracker
 }
 
 var _ clientset.Interface = &Clientset{}
 
 // AkashV1 retrieves the AkashV1Client
 func (c *Clientset) AkashV1() akashv1.AkashV1Interface {
-	return &fakeakashv1.FakeAkashV1{Fake: &c.Fake}
-}
-
-// Akash retrieves the AkashV1Client
-func (c *Clientset) Akash() akashv1.AkashV1Interface {
 	return &fakeakashv1.FakeAkashV1{Fake: &c.Fake}
 }
