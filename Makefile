@@ -61,13 +61,13 @@ release:
 image-minikube:
 	eval $$(minikube docker-env) && make image
 
-test:
+test: image-bins
 	$(GO) test ./...
 
-test-nocache:
+test-nocache: image-bins
 	$(GO) test -count=1 ./...
 
-test-full:
+test-full: image-bins
 	$(GO) test -race ./...
 
 test-lint:
