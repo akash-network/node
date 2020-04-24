@@ -12,8 +12,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/capability"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+
+	"github.com/cosmos/cosmos-sdk/x/ibc"
+	transfer "github.com/cosmos/cosmos-sdk/x/ibc/20-transfer"
+
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
@@ -35,6 +40,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/version"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
+	"github.com/cosmos/cosmos-sdk/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/supply"
 )
@@ -44,6 +50,9 @@ const (
 )
 
 var (
+	// mbasics defines the module BasicManager is in charge of setting up basic,
+	// non-dependant module elements, such as codec registration
+	// and genesis verification.
 	mbasics = module.NewBasicManager(
 		genutil.AppModuleBasic{},
 
@@ -53,6 +62,8 @@ var (
 		// tokens, token balance.
 		bank.AppModuleBasic{},
 
+		capability.AppModuleBasic{},
+
 		// total supply of the chain
 		supply.AppModuleBasic{},
 
@@ -60,17 +71,15 @@ var (
 		mint.AppModuleBasic{},
 
 		staking.AppModuleBasic{},
-
 		slashing.AppModuleBasic{},
-
 		distr.AppModuleBasic{},
-
 		gov.NewAppModuleBasic(
 			paramsclient.ProposalHandler, distr.ProposalHandler, upgradeclient.ProposalHandler,
 		),
-
 		params.AppModuleBasic{},
+		ibc.AppModuleBasic{},
 		upgrade.AppModuleBasic{},
+		evidence.AppModuleBasic{},
 
 		// akash
 		deployment.AppModuleBasic{},
@@ -84,12 +93,14 @@ type AkashApp struct {
 	*bam.BaseApp
 	cdc *codec.Codec
 
-	keys  map[string]*sdk.KVStoreKey
-	tkeys map[string]*sdk.TransientStoreKey
+	keys    map[string]*sdk.KVStoreKey
+	tkeys   map[string]*sdk.TransientStoreKey
+	memKeys map[string]*sdk.MemoryStoreKey
 
 	keeper struct {
 		acct       auth.AccountKeeper
 		bank       bank.Keeper
+		capability *capability.Keeper
 		params     params.Keeper
 		supply     supply.Keeper
 		staking    staking.Keeper
@@ -97,6 +108,13 @@ type AkashApp struct {
 		slashing   slashing.Keeper
 		mint       mint.Keeper
 		gov        gov.Keeper
+		evidence	evidence.Keeper
+		ibc        *ibc.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
+		transfer   transfer.Keeper
+		// make scoped keepers public for test purposes
+		keeper.scopedIBC      capability.ScopedKeeper
+		keeper.scopedTransfer capability.ScopedKeeper
+
 		upgrade    upgrade.Keeper
 		deployment deployment.Keeper
 		market     market.Keeper
@@ -132,7 +150,7 @@ func MakeCodec() *codec.Codec {
 
 // NewApp creates and returns a new Akash App.
 func NewApp(
-	logger log.Logger, db dbm.DB, tio io.Writer, skipUpgradeHeights map[int64]bool, options ...func(*bam.BaseApp),
+	logger log.Logger, db dbm.DB, tio io.Writer, skipUpgradeHeights map[int64]bool, home string, options ...func(*bam.BaseApp),
 ) *AkashApp {
 
 	cdc := MakeCodec()
@@ -143,9 +161,13 @@ func NewApp(
 		params.StoreKey,
 		slashing.StoreKey,
 		distr.StoreKey,
+		evidence.StoreKey,
 		supply.StoreKey,
 		staking.StoreKey,
 		mint.StoreKey,
+		ibc.StoreKey,
+		transfer.StoreKey,
+		capability.StoreKey,
 		gov.StoreKey,
 		upgrade.StoreKey,
 		deployment.StoreKey,
@@ -154,6 +176,7 @@ func NewApp(
 	)
 
 	tkeys := sdk.NewTransientStoreKeys(params.TStoreKey)
+	memKeys := sdk.NewMemoryStoreKeys(capability.MemStoreKey)
 
 	bapp := bam.NewBaseApp(appName, logger, db, auth.DefaultTxDecoder(cdc), options...)
 	bapp.SetCommitMultiStoreTracer(tio)
@@ -164,6 +187,7 @@ func NewApp(
 		cdc:     cdc,
 		keys:    keys,
 		tkeys:   tkeys,
+		memKeys: memKeys,
 	}
 
 	app.keeper.params = params.NewKeeper(
@@ -171,6 +195,11 @@ func NewApp(
 		keys[params.StoreKey],
 		tkeys[params.TStoreKey],
 	)
+
+	app.keeper.capability = capability.NewKeeper(appCodec, keys[capability.StoreKey], memKeys[capability.MemStoreKey])
+
+	keeper.scopedIBC := app.keeper.capability.ScopeToModule(ibc.ModuleName)
+	keeper.scopedTransfer := app.capabilityKeeper.ScopeToModule(transfer.ModuleName)
 
 	app.keeper.acct = auth.NewAccountKeeper(
 		cdc,
@@ -233,7 +262,37 @@ func NewApp(
 		auth.FeeCollectorName,
 	)
 
-	app.keeper.upgrade = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], cdc)
+	// Create IBC Keeper
+	app.keeper.ibc = ibc.NewKeeper(
+		app.cdc, keys[ibc.StoreKey], app.stakingKeeper, keeper.scopedIBC,
+	)
+
+	// Create Transfer Keepers
+	app.keeper.transfer = transfer.NewKeeper(
+		app.cdc, keys[transfer.StoreKey],
+		app.keeper.ibc.ChannelKeeper, &app.keeper.ibc.PortKeeper,
+		app.accountKeeper, app.bankKeeper,
+		keeper.scopedTransfer,
+	)
+	transferModule := transfer.NewAppModule(app.keeper.transfer)
+
+	// Create static IBC router, add transfer route, then set and seal it
+	ibcRouter := port.NewRouter()
+	ibcRouter.AddRoute(transfer.ModuleName, transferModule)
+	app.keeper.ibc.SetRouter(ibcRouter)
+
+
+	// create evidence keeper with router
+	evidenceKeeper := evidence.NewKeeper(
+		appCodec, keys[evidence.StoreKey], &app.stakingKeeper, app.slashingKeeper,
+	)
+	evidenceRouter := evidence.NewRouter().
+		AddRoute(ibcclient.RouterKey, ibcclient.HandlerClientMisbehaviour(app.keeper.ibc.ClientKeeper))
+
+	evidenceKeeper.SetRouter(evidenceRouter)
+	app.keeper.evidence = *evidenceKeeper
+
+	app.keeper.upgrade = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], cdc, home)
 
 	// register the proposal types
 	govRouter := gov.NewRouter()
@@ -270,7 +329,7 @@ func NewApp(
 		genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx),
 		auth.NewAppModule(app.keeper.acct),
 		bank.NewAppModule(app.keeper.bank, app.keeper.acct),
-
+		capability.NewAppModule(*app.keeper.capability),
 		supply.NewAppModule(app.keeper.supply, app.keeper.acct),
 		distr.NewAppModule(app.keeper.distr, app.keeper.acct, app.keeper.supply, app.keeper.staking),
 
@@ -278,8 +337,11 @@ func NewApp(
 		slashing.NewAppModule(app.keeper.slashing, app.keeper.acct, app.keeper.staking),
 
 		staking.NewAppModule(app.keeper.staking, app.keeper.acct, app.keeper.supply),
-
+		evidence.NewAppModule(appCodec, app.evidenceKeeper),
 		gov.NewAppModule(app.keeper.gov, app.keeper.acct, app.keeper.supply),
+		ibc.NewAppModule(app.keeper.ibc),
+		params.NewAppModule(app.paramsKeeper),
+		transferModule,
 		upgrade.NewAppModule(app.keeper.upgrade),
 
 		// akash
@@ -299,21 +361,24 @@ func NewApp(
 		provider.NewAppModule(app.keeper.provider, app.keeper.bank),
 	)
 
-	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName)
+	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName, evidence.ModuleName, staking.ModuleName, ibc.ModuleName)
 	app.mm.SetOrderEndBlockers(staking.ModuleName, gov.ModuleName, deployment.ModuleName, market.ModuleName)
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	//       properly initialized with tokens from genesis accounts.
 	app.mm.SetOrderInitGenesis(
+		auth.ModuleName,
 		distr.ModuleName,
 		staking.ModuleName,
-		auth.ModuleName,
 		bank.ModuleName,
 		slashing.ModuleName,
-		mint.ModuleName,
 		supply.ModuleName,
-		genutil.ModuleName,
 		gov.ModuleName,
+		mint.ModuleName,
+		ibc.ModuleName,
+		genutil.ModuleName,
+		evidence.ModuleName, 
+		transfer.ModuleName,
 
 		// akash
 		deployment.ModuleName,
@@ -343,6 +408,7 @@ func NewApp(
 	// initialize stores
 	app.MountKVStores(keys)
 	app.MountTransientStores(tkeys)
+	app.MountMemoryStores(memKeys)
 
 	// initialize BaseApp
 	app.SetInitChainer(app.InitChainer)
@@ -351,6 +417,8 @@ func NewApp(
 	app.SetAnteHandler(
 		auth.NewAnteHandler(
 			app.keeper.acct,
+			app.keeper.bank,
+			*app.keeper.ibc,
 			app.keeper.supply,
 			auth.DefaultSigVerificationGasConsumer,
 		),
@@ -362,6 +430,9 @@ func NewApp(
 	if err != nil {
 		tmos.Exit("app initialization:" + err.Error())
 	}
+
+	app.keeper.scopedIBC = keeper.scopedIBC
+	app.keeper.scopedTransfer = keeper.scopedTransfer
 
 	return app
 }
