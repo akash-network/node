@@ -5,8 +5,8 @@ import (
 	"math/rand"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sim "github.com/cosmos/cosmos-sdk/types/simulation"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	sim "github.com/cosmos/cosmos-sdk/x/simulation"
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -31,7 +31,9 @@ var (
 )
 
 // AppModuleBasic defines the basic application module used by the provider module.
-type AppModuleBasic struct{}
+type AppModuleBasic struct {
+	cdc codec.Marshaler
+}
 
 // Name returns provider module's name
 func (AppModuleBasic) Name() string {
@@ -45,12 +47,12 @@ func (AppModuleBasic) RegisterCodec(cdc *codec.Codec) {
 
 // DefaultGenesis returns default genesis state as raw bytes for the provider
 // module.
-func (AppModuleBasic) DefaultGenesis() json.RawMessage {
+func (AppModuleBasic) DefaultGenesis(cdc codec.JSONMarshaler) json.RawMessage {
 	return types.MustMarshalJSON(DefaultGenesisState())
 }
 
 // ValidateGenesis validation check of the Genesis
-func (AppModuleBasic) ValidateGenesis(bz json.RawMessage) error {
+func (AppModuleBasic) ValidateGenesis(cdc codec.JSONMarshaler, bz json.RawMessage) error {
 	var data GenesisState
 	err := types.UnmarshalJSON(bz, &data)
 	if err != nil {
@@ -134,7 +136,7 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 
 // InitGenesis performs genesis initialization for the provider module. It returns
 // no validator updates.
-func (am AppModule) InitGenesis(ctx sdk.Context, data json.RawMessage) []abci.ValidatorUpdate {
+func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONMarshaler, data json.RawMessage) []abci.ValidatorUpdate {
 	var genesisState GenesisState
 	types.MustUnmarshalJSON(data, &genesisState)
 	return InitGenesis(ctx, am.keeper, genesisState)
@@ -142,7 +144,7 @@ func (am AppModule) InitGenesis(ctx sdk.Context, data json.RawMessage) []abci.Va
 
 // ExportGenesis returns the exported genesis state as raw bytes for the provider
 // module.
-func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
+func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONMarshaler) json.RawMessage {
 	gs := ExportGenesis(ctx, am.keeper)
 	return types.MustMarshalJSON(gs)
 }
@@ -153,13 +155,15 @@ func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
 type AppModuleSimulation struct {
 	keeper  keeper.Keeper
 	akeeper govtypes.AccountKeeper
+	bkeeper govtypes.BankKeeper
 }
 
 // NewAppModule creates a new AppModuleSimulation instance
-func NewAppModuleSimulation(k keeper.Keeper, akeeper govtypes.AccountKeeper) AppModuleSimulation {
+func NewAppModuleSimulation(k keeper.Keeper, akeeper govtypes.AccountKeeper, bkeeper govtypes.BankKeeper) AppModuleSimulation {
 	return AppModuleSimulation{
 		keeper:  k,
 		akeeper: akeeper,
+		bkeeper: bkeeper,
 	}
 }
 
@@ -188,5 +192,5 @@ func (AppModuleSimulation) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
 // WeightedOperations returns the all the staking module operations with their respective weights.
 func (am AppModuleSimulation) WeightedOperations(simState module.SimulationState) []sim.WeightedOperation {
 	return simulation.WeightedOperations(simState.AppParams, simState.Cdc,
-		am.akeeper, am.keeper)
+		am.akeeper, am.bkeeper, am.keeper)
 }

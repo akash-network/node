@@ -31,7 +31,9 @@ func transferFundsForActiveLeases(ctx sdk.Context, keepers Keepers) error {
 
 		amt := sdk.NewCoins(lease.Price)
 
-		if !keepers.Bank.HasCoins(ctx, lease.Owner, amt) {
+		balance := keepers.Bank.GetBalance(ctx, lease.Owner, lease.Price.Denom)
+
+		if balance.Amount.IsZero() {
 			keepers.Deployment.OnLeaseInsufficientFunds(ctx, lease.GroupID())
 			keepers.Market.OnInsufficientFunds(ctx, lease)
 			return false

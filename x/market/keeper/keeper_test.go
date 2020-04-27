@@ -29,14 +29,14 @@ func (s *TestSuite) SetupTest() {
 func (s *TestSuite) TestKeeper() {
 	const DENOM string = "stake"
 	s.T().Log("Adding balance to owner account")
-	err := s.bankKeeper.SetCoins(s.ctx, ownerAddr, sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000)))
+	err := s.bankKeeper.SetBalances(s.ctx, ownerAddr, sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000)))
 	s.Require().Nil(err)
-	s.Require().True(s.bankKeeper.GetCoins(s.ctx, ownerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000))))
+	s.Require().True(s.bankKeeper.GetAllBalances(s.ctx, ownerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000))))
 
 	s.T().Log("Adding balance to provider account")
-	err = s.bankKeeper.SetCoins(s.ctx, providerAddr, sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000)))
+	err = s.bankKeeper.SetBalances(s.ctx, providerAddr, sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000)))
 	s.Require().Nil(err)
-	s.Require().True(s.bankKeeper.GetCoins(s.ctx, providerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000))))
+	s.Require().True(s.bankKeeper.GetAllBalances(s.ctx, providerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin(DENOM, 10000))))
 
 	s.T().Log("verify deployment is created")
 	sdl, readError := sdl.ReadFile("../../deployment/testdata/deployment.yml")

@@ -34,7 +34,7 @@ func TestSimAppExport(t *testing.T) {
 
 	// Making a new app object with the db, so that initchain hasn't been called
 	app2 := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{}, "")
-	_, _, err = app2.ExportAppStateAndValidators(false, []string{})
+	_, _, _, err = app2.ExportAppStateAndValidators(false, []string{})
 	require.NoError(t, err, "ExportAppStateAndValidators should not have an error")
 }
 
@@ -43,6 +43,6 @@ func TestBlackListedAddrs(t *testing.T) {
 	app := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{}, "")
 
 	for acc := range macPerms() {
-		require.True(t, app.keeper.bank.BlacklistedAddr(app.keeper.supply.GetModuleAddress(acc)))
+		require.True(t, app.keeper.bank.BlacklistedAddr(app.keeper.acct.GetModuleAddress(acc)))
 	}
 }

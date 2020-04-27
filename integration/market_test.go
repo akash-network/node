@@ -24,9 +24,9 @@ func TestMarket(t *testing.T) {
 	fooAddr := f.KeyAddress(keyFoo)
 	barAddr := f.KeyAddress(keyBar)
 
-	fooAcc := f.QueryAccount(fooAddr)
+	// fooAcc := f.QueryAccount(fooAddr)
 	startTokens := sdk.TokensFromConsensusPower(denomStartValue)
-	require.Equal(t, startTokens, fooAcc.GetCoins().AmountOf(denom))
+	require.Equal(t, startTokens, f.QueryBalances(fooAddr).AmountOf(denom))
 
 	// Create deployment
 	f.TxCreateDeployment(fmt.Sprintf("--from=%s", keyFoo), "-y")

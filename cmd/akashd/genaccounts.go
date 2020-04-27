@@ -12,12 +12,14 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
+	codecstd "github.com/cosmos/cosmos-sdk/codec/std"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authexported "github.com/cosmos/cosmos-sdk/x/auth/exported"
 	authvesting "github.com/cosmos/cosmos-sdk/x/auth/vesting"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 )
 
@@ -30,7 +32,7 @@ const (
 
 // AddGenesisAccountCmd returns add-genesis-account cobra Command.
 func AddGenesisAccountCmd(
-	ctx *server.Context, cdc *codec.Codec, defaultNodeHome, defaultClientHome string,
+	ctx *server.Context, cdc *codec.Codec, appCodec *codecstd.Codec, defaultNodeHome, defaultClientHome string,
 ) *cobra.Command {
 
 	cmd := &cobra.Command{
@@ -60,7 +62,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 					return err
 				}
 
-				info, err := kb.Get(args[0])
+				info, err := kb.Key(args[0])
 				if err != nil {
 					return fmt.Errorf("failed to get address from Keybase: %w", err)
 				}
@@ -83,11 +85,14 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 			// create concrete account type based on input parameters
 			var genAccount authexported.GenesisAccount
 
-			baseAccount := auth.NewBaseAccount(addr, coins.Sort(), nil, 0, 0)
+			balances := bank.Balance{Address: addr, Coins: coins.Sort()}
+			baseAccount := auth.NewBaseAccount(addr, nil, 0, 0)
 			if !vestingAmt.IsZero() {
-				baseVestingAccount, err := authvesting.NewBaseVestingAccount(baseAccount, vestingAmt.Sort(), vestingEnd)
-				if err != nil {
-					return fmt.Errorf("failed to create base vesting account: %w", err)
+				baseVestingAccount := authvesting.NewBaseVestingAccount(baseAccount, vestingAmt.Sort(), vestingEnd)
+
+				if (balances.Coins.IsZero() && !baseVestingAccount.OriginalVesting.IsZero()) ||
+					baseVestingAccount.OriginalVesting.IsAnyGT(balances.Coins) {
+					return errors.New("vesting amount cannot be greater than total amount")
 				}
 
 				switch {
@@ -114,25 +119,41 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 				return fmt.Errorf("failed to unmarshal genesis state: %w", err)
 			}
 
-			authGenState := auth.GetGenesisStateFromAppState(cdc, appState)
+			authGenState := auth.GetGenesisStateFromAppState(appCodec, appState)
+			bankGenState := bank.GetGenesisStateFromAppState(cdc, appState)
 
 			if authGenState.Accounts.Contains(addr) {
 				return fmt.Errorf("cannot add account at existing address %s", addr)
 			}
+
+			if balancesContains(bankGenState.Balances, addr) {
+				return fmt.Errorf("cannot add account at existing address %s", addr)
+			}
+
+			balance := bank.Balance{Address: addr, Coins: coins}
+
+			bankGenState.Balances = append(bankGenState.Balances, balance)
+			bankGenState.Balances = bank.SanitizeGenesisBalances(bankGenState.Balances)
 
 			// Add the new account to the set of genesis accounts and sanitize the
 			// accounts afterwards.
 			authGenState.Accounts = append(authGenState.Accounts, genAccount)
 			authGenState.Accounts = auth.SanitizeGenesisAccounts(authGenState.Accounts)
 
-			authGenStateBz, err := cdc.MarshalJSON(authGenState)
+			authGenStateBz, err := appCodec.MarshalJSON(authGenState)
 			if err != nil {
 				return fmt.Errorf("failed to marshal auth genesis state: %w", err)
 			}
 
-			appState[auth.ModuleName] = authGenStateBz
+			bankGenStateBz, err := appCodec.MarshalJSON(bankGenState)
+			if err != nil {
+				return fmt.Errorf("failed to marshal bank genesis state: %w", err)
+			}
 
-			appStateJSON, err := cdc.MarshalJSON(appState)
+			appState[auth.ModuleName] = authGenStateBz
+			appState[bank.ModuleName] = bankGenStateBz
+
+			appStateJSON, err := appCodec.MarshalJSON(appState)
 			if err != nil {
 				return fmt.Errorf("failed to marshal application genesis state: %w", err)
 			}
@@ -150,4 +171,13 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 	cmd.Flags().Uint64(flagVestingEnd, 0, "schedule end time (unix epoch) for vesting accounts")
 
 	return cmd
+}
+
+func balancesContains(bal []bank.Balance, addr sdk.AccAddress) bool {
+	for _, b := range bal {
+		if b.Address.Equals(addr) {
+			return true
+		}
+	}
+	return false
 }

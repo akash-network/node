@@ -27,7 +27,7 @@ const (
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
 	appParams simtypes.AppParams, cdc *codec.Codec,
-	ak govtypes.AccountKeeper, k keeper.Keeper) simulation.WeightedOperations {
+	ak govtypes.AccountKeeper, bk govtypes.BankKeeper, k keeper.Keeper) simulation.WeightedOperations {
 	var (
 		weightMsgCreateDeployment int
 		weightMsgUpdateDeployment int
@@ -55,21 +55,21 @@ func WeightedOperations(
 	return simulation.WeightedOperations{
 		simulation.NewWeightedOperation(
 			weightMsgCreateDeployment,
-			SimulateMsgCreateDeployment(ak, k),
+			SimulateMsgCreateDeployment(ak, bk, k),
 		),
 		simulation.NewWeightedOperation(
 			weightMsgUpdateDeployment,
-			SimulateMsgUpdateDeployment(ak, k),
+			SimulateMsgUpdateDeployment(ak, bk, k),
 		),
 		simulation.NewWeightedOperation(
 			weightMsgCloseDeployment,
-			SimulateMsgCloseDeployment(ak, k),
+			SimulateMsgCloseDeployment(ak, bk, k),
 		),
 	}
 }
 
 // SimulateMsgCreateDeployment generates a MsgCreate with random values
-func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Operation {
+func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk govtypes.BankKeeper, k keeper.Keeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
 		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		simAccount, _ := simtypes.RandomAcc(r, accounts)
@@ -96,8 +96,9 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+		spendable := bk.SpendableCoins(ctx, account.GetAddress())
 
-		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, spendable)
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
@@ -131,7 +132,7 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 }
 
 // SimulateMsgUpdateDeployment generates a MsgUpdate with random values
-func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Operation {
+func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, bk govtypes.BankKeeper, k keeper.Keeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
 		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var deployments []types.Deployment
@@ -156,8 +157,9 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+		spendable := bk.SpendableCoins(ctx, account.GetAddress())
 
-		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, spendable)
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
@@ -187,7 +189,7 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 }
 
 // SimulateMsgCloseDeployment generates a MsgClose with random values
-func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Operation {
+func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, bk govtypes.BankKeeper, k keeper.Keeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
 		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var deployments []types.Deployment
@@ -214,8 +216,9 @@ func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simt
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+		spendable := bk.SpendableCoins(ctx, account.GetAddress())
 
-		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, spendable)
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}

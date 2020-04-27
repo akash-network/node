@@ -26,7 +26,7 @@ const (
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
 	appParams simtypes.AppParams, cdc *codec.Codec, ak govtypes.AccountKeeper,
-	k keeper.Keeper) simulation.WeightedOperations {
+	bk govtypes.BankKeeper, k keeper.Keeper) simulation.WeightedOperations {
 	var (
 		weightMsgCreate int
 		weightMsgUpdate int
@@ -47,18 +47,18 @@ func WeightedOperations(
 	return simulation.WeightedOperations{
 		simulation.NewWeightedOperation(
 			weightMsgCreate,
-			SimulateMsgCreate(ak, k),
+			SimulateMsgCreate(ak, bk, k),
 		),
 		simulation.NewWeightedOperation(
 			weightMsgUpdate,
-			SimulateMsgUpdate(ak, k),
+			SimulateMsgUpdate(ak, bk, k),
 		),
 	}
 }
 
 // SimulateMsgCreate generates a MsgCreate with random values
 // nolint:funlen
-func SimulateMsgCreate(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Operation {
+func SimulateMsgCreate(ak govtypes.AccountKeeper, bk govtypes.BankKeeper, k keeper.Keeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
 		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		simAccount, _ := simtypes.RandomAcc(r, accounts)
@@ -75,8 +75,9 @@ func SimulateMsgCreate(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Oper
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+		spendable := bk.SpendableCoins(ctx, account.GetAddress())
 
-		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, spendable)
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
@@ -108,7 +109,7 @@ func SimulateMsgCreate(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Oper
 
 // SimulateMsgUpdate generates a MsgUpdate with random values
 // nolint:funlen
-func SimulateMsgUpdate(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Operation {
+func SimulateMsgUpdate(ak govtypes.AccountKeeper, bk govtypes.BankKeeper, k keeper.Keeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
 		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var providers []types.Provider
@@ -133,8 +134,9 @@ func SimulateMsgUpdate(ak govtypes.AccountKeeper, k keeper.Keeper) simtypes.Oper
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+		spendable := bk.SpendableCoins(ctx, account.GetAddress())
 
-		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, spendable)
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}

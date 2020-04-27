@@ -100,8 +100,9 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtype
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+		spendable := ks.Bank.SpendableCoins(ctx, account.GetAddress())
 
-		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, spendable)
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
@@ -162,8 +163,9 @@ func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+		spendable := ks.Bank.SpendableCoins(ctx, account.GetAddress())
 
-		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, spendable)
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}
@@ -210,8 +212,9 @@ func SimulateMsgCloseOrder(ak govtypes.AccountKeeper, ks keepers.Keepers) simtyp
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
+		spendable := ks.Bank.SpendableCoins(ctx, account.GetAddress())
 
-		fees, err := simtypes.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		fees, err := simtypes.RandomFees(r, ctx, spendable)
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName), nil, err
 		}

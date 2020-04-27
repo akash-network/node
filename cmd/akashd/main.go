@@ -6,8 +6,9 @@ import (
 	"io/ioutil"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	codecstd "github.com/cosmos/cosmos-sdk/codec/std"
 	"github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/ovrclk/akash/app"
@@ -29,6 +30,7 @@ func main() {
 	common.InitSDKConfig()
 
 	cdc := app.MakeCodec()
+	appCodec := codecstd.NewAppCodec(cdc)
 	ctx := server.NewDefaultContext()
 
 	root := &cobra.Command{
@@ -40,19 +42,19 @@ func main() {
 	root.AddCommand(
 		genutilcli.InitCmd(ctx, cdc, app.ModuleBasics(), common.DefaultNodeHome()),
 
-		genutilcli.CollectGenTxsCmd(ctx, cdc, auth.GenesisAccountIterator{}, common.DefaultNodeHome()),
+		genutilcli.CollectGenTxsCmd(ctx, cdc, bank.GenesisBalancesIterator{}, common.DefaultNodeHome()),
 
 		genutilcli.GenTxCmd(
 			ctx, cdc,
 			app.ModuleBasics(),
 			staking.AppModuleBasic{},
-			auth.GenesisAccountIterator{},
+			bank.GenesisBalancesIterator{},
 			common.DefaultNodeHome(),
 			common.DefaultCLIHome(),
 		),
 
 		genutilcli.ValidateGenesisCmd(ctx, cdc, app.ModuleBasics()),
-		AddGenesisAccountCmd(ctx, cdc, common.DefaultNodeHome(), common.DefaultCLIHome()),
+		AddGenesisAccountCmd(ctx, cdc, appCodec, common.DefaultNodeHome(), common.DefaultCLIHome()),
 	)
 
 	server.AddCommands(ctx, cdc, root, newApp, exportAppStateAndTMValidators)
@@ -78,14 +80,14 @@ func newApp(logger log.Logger, db dbm.DB, tio io.Writer) abci.Application {
 
 func exportAppStateAndTMValidators(
 	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailWhiteList []string,
-) (json.RawMessage, []tmtypes.GenesisValidator, error) {
+) (json.RawMessage, []tmtypes.GenesisValidator, *abci.ConsensusParams, error) {
 
 	app := app.NewApp(logger, db, ioutil.Discard, uint(1), map[int64]bool{}, "")
 
 	if height != -1 {
 		err := app.LoadHeight(height)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		return app.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 	}

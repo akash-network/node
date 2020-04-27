@@ -7,13 +7,25 @@ import (
 	"path/filepath"
 	"testing"
 
+	codecstd "github.com/cosmos/cosmos-sdk/codec/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/ovrclk/akash/app"
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/stretchr/testify/require"
 )
+
+var (
+	cdc      = codecstd.MakeCodec(app.ModuleBasics())
+	appCodec = codecstd.NewAppCodec(cdc)
+)
+
+func init() {
+	authclient.Codec = appCodec
+}
 
 func TestAddGenesisAccount(t *testing.T) {
 	t.Parallel()
@@ -46,13 +58,18 @@ func TestAddGenesisAccount(t *testing.T) {
 	f.AddGenesisAccount(f.KeyAddress(keyBar), bazCoins)
 	genesisState := f.GenesisState()
 
-	cdc := app.MakeCodec()
-	accounts := auth.GetGenesisStateFromAppState(cdc, genesisState)
-	// t.Logf("Accounts:%v\n", accounts)
-	require.Equal(t, accounts.Accounts[0].GetAddress(), f.KeyAddress(keyFoo))
-	require.Equal(t, accounts.Accounts[1].GetAddress(), f.KeyAddress(keyBar))
-	require.True(t, accounts.Accounts[0].GetCoins().IsEqual(startCoins()))
-	require.True(t, accounts.Accounts[1].GetCoins().IsEqual(bazCoins))
+	accounts := auth.GetGenesisStateFromAppState(appCodec, genesisState).Accounts
+	balances := bank.GetGenesisStateFromAppState(cdc, genesisState).Balances
+	balancesSet := make(map[string]sdk.Coins)
+
+	for _, b := range balances {
+		balancesSet[b.GetAddress().String()] = b.Coins
+	}
+
+	require.Equal(t, accounts[0].GetAddress(), f.KeyAddress(keyFoo))
+	require.Equal(t, accounts[1].GetAddress(), f.KeyAddress(keyBar))
+	require.True(t, balancesSet[accounts[0].GetAddress().String()].IsEqual(startCoins()))
+	require.True(t, balancesSet[accounts[1].GetAddress().String()].IsEqual(bazCoins))
 
 	// Cleanup testing directories
 	f.Cleanup()

@@ -27,9 +27,9 @@ func (s *TestSuite) SetupTest() {
 
 func (s *TestSuite) TestKeeper() {
 	s.T().Log("Adding balance to account")
-	err := s.bankKeeper.SetCoins(s.ctx, ownerAddr, sdk.NewCoins(sdk.NewInt64Coin("stake", 10000)))
+	err := s.bankKeeper.SetBalances(s.ctx, ownerAddr, sdk.NewCoins(sdk.NewInt64Coin("stake", 10000)))
 	s.Require().Nil(err)
-	s.Require().True(s.bankKeeper.GetCoins(s.ctx, ownerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin("stake", 10000))))
+	s.Require().True(s.bankKeeper.GetAllBalances(s.ctx, ownerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin("stake", 10000))))
 
 	s.T().Log("verify provider is created")
 	cfg, err := config.ReadConfigPath("../testdata/provider.yml")

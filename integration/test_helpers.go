@@ -26,6 +26,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/tests"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
+
+	codecstd "github.com/cosmos/cosmos-sdk/codec/std"
 )
 
 const (
@@ -73,6 +75,8 @@ type Fixtures struct {
 	AkashHome    string
 	P2PAddr      string
 	T            *testing.T
+
+	cdc *codec.Codec
 }
 
 // NewFixtures creates a new instance of Fixtures with many vars set
@@ -92,6 +96,8 @@ func NewFixtures(t *testing.T) *Fixtures {
 		require.NoError(t, err)
 	}
 
+	cdc := codecstd.MakeCodec(app.ModuleBasics())
+
 	return &Fixtures{
 		T:            t,
 		BuildDir:     buildDir,
@@ -103,6 +109,7 @@ func NewFixtures(t *testing.T) *Fixtures {
 		RPCAddr:      servAddr,
 		P2PAddr:      p2pAddr,
 		Port:         port,
+		cdc:          cdc,
 	}
 }
 
@@ -333,6 +340,18 @@ func (f *Fixtures) QueryAccount(address sdk.AccAddress, flags ...string) auth.Ba
 	require.NoError(f.T, err, "value %v, err %v", string(value), err)
 
 	return acc
+}
+
+// QueryBalances executes the bank query balances command for a given address and
+// flag set.
+func (f *Fixtures) QueryBalances(address sdk.AccAddress, flags ...string) sdk.Coins {
+	cmd := fmt.Sprintf("%s query bank balances %s %v", f.AkashBinary, address, f.Flags())
+	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+
+	var balances sdk.Coins
+
+	require.NoError(f.T, f.cdc.UnmarshalJSON([]byte(out), &balances), "out %v\n", out)
+	return balances
 }
 
 //___________________________________________________________________________________

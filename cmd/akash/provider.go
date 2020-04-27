@@ -34,7 +34,7 @@ func providerCmd(cdc *codec.Codec) *cobra.Command {
 
 			// TODO: lookup provider & ensure exists.
 			keyname := cctx.GetFromName()
-			info, err := txbldr.Keybase().Get(keyname)
+			info, err := txbldr.Keybase().Key(keyname)
 			if err != nil {
 				return err
 			}

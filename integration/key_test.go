@@ -60,9 +60,8 @@ func TestAkashSend(t *testing.T) {
 	fooAddr := f.KeyAddress(keyFoo)
 	bazAddr := f.KeyAddress(keyBaz)
 
-	fooAcc := f.QueryAccount(fooAddr)
 	startTokens := sdk.TokensFromConsensusPower(denomStartValue)
-	require.Equal(t, startTokens, fooAcc.GetCoins().AmountOf(denom))
+	require.Equal(t, startTokens, f.QueryBalances(fooAddr).AmountOf(denom))
 
 	// Send some tokens from one account to the other
 	sendTokens := sdk.TokensFromConsensusPower(10)
@@ -70,11 +69,10 @@ func TestAkashSend(t *testing.T) {
 	tests.WaitForNextNBlocksTM(1, f.Port)
 
 	// Ensure account balances match expected
-	barAcc := f.QueryAccount(bazAddr)
-	require.Equal(t, sendTokens, barAcc.GetCoins().AmountOf(denom))
+	// barAcc := f.QueryAccount(bazAddr)
 
-	fooAcc = f.QueryAccount(fooAddr)
-	require.Equal(t, startTokens.Sub(sendTokens), fooAcc.GetCoins().AmountOf(denom))
+	require.Equal(t, sendTokens, f.QueryBalances(bazAddr).AmountOf(denom))
+	require.Equal(t, startTokens.Sub(sendTokens), f.QueryBalances(fooAddr).AmountOf(denom))
 
 	f.Cleanup()
 }
