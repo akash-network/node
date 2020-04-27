@@ -4,7 +4,7 @@ import "os"
 
 // DefaultCLIHome default home directories for the application CLI
 func DefaultCLIHome() string {
-	return os.ExpandEnv("$HOME/.akash")
+	return os.ExpandEnv("$HOME/.akashctl")
 }
 
 // DefaultNodeHome default home directories for the application daemon

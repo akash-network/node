@@ -64,7 +64,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 
 func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create [config-file]",
+		Use:   "update [config-file]",
 		Short: "Update provider",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
