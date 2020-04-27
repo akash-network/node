@@ -2,6 +2,8 @@ package main
 
 import (
 	"net/http"
+	"os"
+	"path"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -17,6 +19,7 @@ import (
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/cli"
 
@@ -34,6 +37,12 @@ func main() {
 		Use:   "akashctl",
 		Short: "Akash is a supercloud for serverless computing",
 		Long:  "Akash Network CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
+	}
+
+	// Add --chain-id to persistent flags and mark it required
+	root.PersistentFlags().String(flags.FlagChainID, "", "Chain ID of tendermint node")
+	root.PersistentPreRunE = func(_ *cobra.Command, _ []string) error {
+		return initConfig(root)
 	}
 
 	root.AddCommand(
@@ -112,4 +121,27 @@ func registerSwaggerUI(rs *lcd.RestServer) {
 	}
 	staticServer := http.FileServer(statikFS)
 	rs.Mux.PathPrefix("/").Handler(staticServer)
+}
+
+func initConfig(cmd *cobra.Command) error {
+	home, err := cmd.PersistentFlags().GetString(cli.HomeFlag)
+	if err != nil {
+		return err
+	}
+
+	cfgFile := path.Join(home, "config", "config.toml")
+	if _, err := os.Stat(cfgFile); err == nil {
+		viper.SetConfigFile(cfgFile)
+
+		if err := viper.ReadInConfig(); err != nil {
+			return err
+		}
+	}
+	if err := viper.BindPFlag(flags.FlagChainID, cmd.PersistentFlags().Lookup(flags.FlagChainID)); err != nil {
+		return err
+	}
+	if err := viper.BindPFlag(cli.EncodingFlag, cmd.PersistentFlags().Lookup(cli.EncodingFlag)); err != nil {
+		return err
+	}
+	return viper.BindPFlag(cli.OutputFlag, cmd.PersistentFlags().Lookup(cli.OutputFlag))
 }
