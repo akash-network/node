@@ -12,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/mint"
@@ -71,6 +72,7 @@ var (
 
 		params.AppModuleBasic{},
 		upgrade.AppModuleBasic{},
+		crisis.AppModuleBasic{},
 
 		// akash
 		deployment.AppModuleBasic{},
@@ -83,6 +85,8 @@ var (
 type AkashApp struct {
 	*bam.BaseApp
 	cdc *codec.Codec
+
+	invCheckPeriod uint
 
 	keys  map[string]*sdk.KVStoreKey
 	tkeys map[string]*sdk.TransientStoreKey
@@ -98,6 +102,7 @@ type AkashApp struct {
 		mint       mint.Keeper
 		gov        gov.Keeper
 		upgrade    upgrade.Keeper
+		crisis     crisis.Keeper
 		deployment deployment.Keeper
 		market     market.Keeper
 		provider   provider.Keeper
@@ -132,7 +137,7 @@ func MakeCodec() *codec.Codec {
 
 // NewApp creates and returns a new Akash App.
 func NewApp(
-	logger log.Logger, db dbm.DB, tio io.Writer, skipUpgradeHeights map[int64]bool, options ...func(*bam.BaseApp),
+	logger log.Logger, db dbm.DB, tio io.Writer, invCheckPeriod uint, skipUpgradeHeights map[int64]bool, options ...func(*bam.BaseApp),
 ) *AkashApp {
 
 	cdc := MakeCodec()
@@ -160,10 +165,11 @@ func NewApp(
 	bapp.SetAppVersion(version.Version)
 
 	app := &AkashApp{
-		BaseApp: bapp,
-		cdc:     cdc,
-		keys:    keys,
-		tkeys:   tkeys,
+		BaseApp:        bapp,
+		cdc:            cdc,
+		invCheckPeriod: invCheckPeriod,
+		keys:           keys,
+		tkeys:          tkeys,
 	}
 
 	app.keeper.params = params.NewKeeper(
@@ -235,6 +241,13 @@ func NewApp(
 
 	app.keeper.upgrade = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], cdc)
 
+	app.keeper.crisis = crisis.NewKeeper(
+		app.keeper.params.Subspace(crisis.DefaultParamspace),
+		invCheckPeriod,
+		app.keeper.supply,
+		auth.FeeCollectorName,
+	)
+
 	// register the proposal types
 	govRouter := gov.NewRouter()
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).
@@ -281,6 +294,7 @@ func NewApp(
 
 		gov.NewAppModule(app.keeper.gov, app.keeper.acct, app.keeper.supply),
 		upgrade.NewAppModule(app.keeper.upgrade),
+		crisis.NewAppModule(&app.keeper.crisis),
 
 		// akash
 		deployment.NewAppModule(
@@ -300,7 +314,7 @@ func NewApp(
 	)
 
 	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName)
-	app.mm.SetOrderEndBlockers(staking.ModuleName, gov.ModuleName, deployment.ModuleName, market.ModuleName)
+	app.mm.SetOrderEndBlockers(staking.ModuleName, gov.ModuleName, crisis.ModuleName, deployment.ModuleName, market.ModuleName)
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	//       properly initialized with tokens from genesis accounts.
@@ -314,6 +328,7 @@ func NewApp(
 		supply.ModuleName,
 		genutil.ModuleName,
 		gov.ModuleName,
+		crisis.ModuleName,
 
 		// akash
 		deployment.ModuleName,
@@ -321,6 +336,7 @@ func NewApp(
 		market.ModuleName,
 	)
 
+	app.mm.RegisterInvariants(&app.keeper.crisis)
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter())
 
 	app.sm = module.NewSimulationManager(
