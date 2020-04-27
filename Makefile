@@ -1,8 +1,8 @@
 PROTO_FILES  = $(wildcard types/*.proto)
 PROTOC_FILES = $(patsubst %.proto,%.pb.go, $(PROTO_FILES))
 
-BINS       := akash akashd
-IMAGE_BINS := _build/akash _build/akashd
+BINS       := akashctl akashd
+IMAGE_BINS := _build/akashctl _build/akashd
 
 GO := GO111MODULE=on go
 
@@ -11,7 +11,7 @@ IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 BUILD_FLAGS = -mod=readonly -tags "netgo ledger" -ldflags \
  '-X github.com/cosmos/cosmos-sdk/version.Name=akash \
   -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd \
-  -X github.com/cosmos/cosmos-sdk/version.ClientName=akash \
+  -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl \
   -X "github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger" \
   -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git rev-parse --abbrev-ref HEAD) \
   -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git rev-parse HEAD)'
@@ -23,14 +23,14 @@ bins: $(BINS)
 build:
 	$(GO) build ./...
 
-akash:
-	$(GO) build $(BUILD_FLAGS) ./cmd/akash
+akashctl:
+	$(GO) build $(BUILD_FLAGS) ./cmd/akashctl
 
 akashd:
 	$(GO) build $(BUILD_FLAGS) ./cmd/akashd
 
 image-bins:
-	$(IMAGE_BUILD_ENV) $(GO) build $(BUILD_FLAGS) -o _build/akash  ./cmd/akash
+	$(IMAGE_BUILD_ENV) $(GO) build $(BUILD_FLAGS) -o _build/akashctl  ./cmd/akashctl
 	$(IMAGE_BUILD_ENV) $(GO) build $(BUILD_FLAGS) -o _build/akashd ./cmd/akashd
 
 image: image-bins
@@ -44,7 +44,7 @@ image: image-bins
 		_build
 
 install:
-	$(GO) install $(BUILD_FLAGS) ./cmd/akash
+	$(GO) install $(BUILD_FLAGS) ./cmd/akashctl
 	$(GO) install $(BUILD_FLAGS) ./cmd/akashd
 
 release:
@@ -95,7 +95,7 @@ devdeps-install:
 # 	(cd _integration && make clean run)
 
 test-integration: $(BINS)
-	cp akash akashd ./_build
+	cp akashctl akashd ./_build
 	@go test -mod=readonly -p 4 `go list ./integration/...` -tags=integration -v
 
 integrationdeps-install:
@@ -150,7 +150,7 @@ clean:
 	rm -f $(BINS) $(IMAGE_BINS)
 
 .PHONY: all bins build \
-	akash akashd \
+	akashctl akashd \
 	image image-bins \
 	test test-nocache test-full \
 	deps-install devdeps-install \
