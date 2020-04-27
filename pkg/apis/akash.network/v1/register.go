@@ -1,12 +1,14 @@
 package v1
 
 import (
+	"context"
 	"reflect"
 
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -53,6 +55,7 @@ func Resource(resource string) schema.GroupResource {
 
 // CreateCRD creates the CRD resource, ignore error if it already exists
 func CreateCRD(clientset apiextcs.Interface) error {
+	ctx := context.Background()
 	crd := &apiextv1beta1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: FullCRDName},
 		Spec: apiextv1beta1.CustomResourceDefinitionSpec{
@@ -66,7 +69,11 @@ func CreateCRD(clientset apiextcs.Interface) error {
 		},
 	}
 
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(
+		ctx,
+		crd,
+		v1.CreateOptions{},
+	)
 	if err != nil && apierrors.IsAlreadyExists(err) {
 		return nil
 	}
