@@ -24,12 +24,10 @@ import (
 	testing "k8s.io/client-go/testing"
 )
 
-// FakeAkashV1 struct
 type FakeAkashV1 struct {
 	*testing.Fake
 }
 
-// Manifests implements FakeAkashV1 interface
 func (c *FakeAkashV1) Manifests(namespace string) v1.ManifestInterface {
 	return &FakeManifests{c, namespace}
 }

@@ -104,6 +104,7 @@ integrationdeps-install:
 gentypes: $(PROTOC_FILES)
 
 kubetypes:
+	chmod +x vendor/k8s.io/code-generator/generate-groups.sh
 	vendor/k8s.io/code-generator/generate-groups.sh all \
   	github.com/ovrclk/akash/pkg/client github.com/ovrclk/akash/pkg/apis \
   	akash.network:v1
