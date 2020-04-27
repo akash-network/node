@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
@@ -10,12 +12,16 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
+	"github.com/rakyll/statik/fs"
 
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/spf13/cobra"
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/cli"
+
+	// unnamed import of statik for swagger UI support
+	_ "github.com/ovrclk/akash/cmd/statik"
 )
 
 func main() {
@@ -96,4 +102,14 @@ func lcdRoutes(rs *lcd.RestServer) {
 	client.RegisterRoutes(rs.CliCtx, rs.Mux)
 	authrest.RegisterTxRoutes(rs.CliCtx, rs.Mux)
 	app.ModuleBasics().RegisterRESTRoutes(rs.CliCtx, rs.Mux)
+	registerSwaggerUI(rs)
+}
+
+func registerSwaggerUI(rs *lcd.RestServer) {
+	statikFS, err := fs.New()
+	if err != nil {
+		panic(err)
+	}
+	staticServer := http.FileServer(statikFS)
+	rs.Mux.PathPrefix("/").Handler(staticServer)
 }

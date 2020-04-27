@@ -61,13 +61,13 @@ release:
 image-minikube:
 	eval $$(minikube docker-env) && make image
 
-test:
+test: image-bins
 	$(GO) test ./...
 
-test-nocache:
+test-nocache: image-bins
 	$(GO) test -count=1 ./...
 
-test-full:
+test-full: image-bins
 	$(GO) test -race ./...
 
 test-lint:
@@ -173,3 +173,12 @@ test-simapp:
 	-Commit=true \
 	-Seed=99 \
 	-v -timeout 24h
+
+update-swagger-docs:
+	statik -src=cmd/swagger-ui -dest=cmd -f -m
+	@if [ -n "$(git status --porcelain)" ]; then \
+        echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
+        exit 1;\
+    else \
+    	echo "\033[92mSwagger docs are in sync\033[0m";\
+    fi
