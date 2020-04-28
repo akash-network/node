@@ -41,6 +41,7 @@ do_tests_lite(){
 
 do_coverage(){
   echo "--- :female-scientist: capturing test coverage"
+  make image-bins
   go test -coverprofile=coverage.txt -covermode=count -coverpkg="./..." ./...
 
   echo "--- :satellite_antenna: uploading test coverage"

@@ -2,6 +2,7 @@ package market
 
 import (
 	"encoding/json"
+	"math/rand"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -13,16 +14,20 @@ import (
 	"github.com/ovrclk/akash/x/market/handler"
 	"github.com/ovrclk/akash/x/market/keeper"
 	"github.com/ovrclk/akash/x/market/query"
+	"github.com/ovrclk/akash/x/market/simulation"
 	"github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	sim "github.com/cosmos/cosmos-sdk/x/simulation"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 var (
-	_ module.AppModule      = AppModule{}
-	_ module.AppModuleBasic = AppModuleBasic{}
+	_ module.AppModule           = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
+	_ module.AppModuleSimulation = AppModuleSimulation{}
 )
 
 // AppModuleBasic defines the basic application module used by the market module.
@@ -149,4 +154,59 @@ func (am AppModule) InitGenesis(ctx sdk.Context, data json.RawMessage) []abci.Va
 func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
 	gs := ExportGenesis(ctx, am.keepers.Market)
 	return types.MustMarshalJSON(gs)
+}
+
+//____________________________________________________________________________
+
+// AppModuleSimulation implements an application simulation module for the market module.
+type AppModuleSimulation struct {
+	keepers handler.Keepers
+	akeeper govtypes.AccountKeeper
+}
+
+// NewAppModule creates a new AppModuleSimulation instance
+func NewAppModuleSimulation(
+	keeper keeper.Keeper,
+	akeeper govtypes.AccountKeeper,
+	dkeeper handler.DeploymentKeeper,
+	pkeeper handler.ProviderKeeper,
+	bkeeper bank.Keeper,
+) AppModuleSimulation {
+	return AppModuleSimulation{
+		keepers: handler.Keepers{
+			Market:     keeper,
+			Deployment: dkeeper,
+			Provider:   pkeeper,
+			Bank:       bkeeper,
+		},
+		akeeper: akeeper,
+	}
+}
+
+// AppModuleSimulation functions
+
+// GenerateGenesisState creates a randomized GenState of the staking module.
+func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
+	simulation.RandomizedGenState(simState)
+}
+
+// ProposalContents doesn't return any content functions for governance proposals.
+func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []sim.WeightedProposalContent {
+	return nil
+}
+
+// RandomizedParams creates randomized staking param changes for the simulator.
+func (AppModuleSimulation) RandomizedParams(r *rand.Rand) []sim.ParamChange {
+	return nil
+}
+
+// RegisterStoreDecoder registers a decoder for staking module's types
+func (AppModuleSimulation) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
+	// sdr[StoreKey] = simulation.DecodeStore
+}
+
+// WeightedOperations returns the all the staking module operations with their respective weights.
+func (am AppModuleSimulation) WeightedOperations(simState module.SimulationState) []sim.WeightedOperation {
+	return simulation.WeightedOperations(simState.AppParams, simState.Cdc,
+		am.akeeper, am.keepers)
 }

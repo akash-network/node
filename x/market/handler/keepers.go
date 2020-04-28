@@ -11,6 +11,7 @@ import (
 // ProviderKeeper Interface includes provider methods
 type ProviderKeeper interface {
 	Get(ctx sdk.Context, id sdk.Address) (ptypes.Provider, bool)
+	WithProviders(ctx sdk.Context, fn func(ptypes.Provider) bool)
 }
 
 // DeploymentKeeper Interface includes deployment methods

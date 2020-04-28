@@ -19,18 +19,17 @@ limitations under the License.
 package versioned
 
 import (
+	"fmt"
+
 	akashv1 "github.com/ovrclk/akash/pkg/client/clientset/versioned/typed/akash.network/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
 )
 
-// Interface interface is predefined with Discovery, AkashV1 and Akash methods
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	AkashV1() akashv1.AkashV1Interface
-	// Deprecated: please explicitly pick a version if possible.
-	Akash() akashv1.AkashV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -45,14 +44,6 @@ func (c *Clientset) AkashV1() akashv1.AkashV1Interface {
 	return c.akashV1
 }
 
-// Deprecated: Akash retrieves the default version of AkashClient.
-
-// Akash retrieves the default version of AkashClient.
-// Please explicitly pick a version.
-func (c *Clientset) Akash() akashv1.AkashV1Interface {
-	return c.akashV1
-}
-
 // Discovery retrieves the DiscoveryClient
 func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	if c == nil {
@@ -62,9 +53,14 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 }
 
 // NewForConfig creates a new Clientset for the given config.
+// If config's RateLimiter is not set and QPS and Burst are acceptable,
+// NewForConfig will generate a rate-limiter in configShallowCopy.
 func NewForConfig(c *rest.Config) (*Clientset, error) {
 	configShallowCopy := *c
 	if configShallowCopy.RateLimiter == nil && configShallowCopy.QPS > 0 {
+		if configShallowCopy.Burst <= 0 {
+			return nil, fmt.Errorf("burst is required to be greater than 0 when RateLimiter is not set and QPS is set to greater than 0")
+		}
 		configShallowCopy.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(configShallowCopy.QPS, configShallowCopy.Burst)
 	}
 	var cs Clientset
