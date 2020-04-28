@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "akash-provider.fullname" . }}
+  labels:
+    app: {{ template "akash-provider.name" . }}
+    chart: {{ template "akash-provider.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    akash.network/component: provider
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "akash-provider.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "akash-provider.name" . }}
+        release: {{ .Release.Name }}
+        akash.network/component: provider
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - "/akash"
+            - "provider"
+            - "run"
+            - {{ .Values.provider.address | quote}}
+            - "--key"
+            - {{ .Values.provider.privateKeyName | default .Release.Name | quote }}
+            - "--private-key"
+            - "/private/private.key"
+            - "--node"
+            - {{ .Values.akash.node | quote }}
+            - "--kube"
+          env:
+            - name: AKASH_HOST
+              value: {{- if .Values.provider.ssl}} https{{ else }} http{{- end }}://{{ .Values.provider.host | default .Values.ingress.domain }}
+            - name: AKASH_NODE
+              value: {{ .Values.akash.node | quote }}
+            - name: AKASH_DEPLOYMENT_SERVICE_TYPE
+              value: {{ .Values.deployment.serviceType | quote }}
+            - name: AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS
+              value: {{ .Values.deployment.ingress.staticHosts | quote }}
+            - name: AKASH_DEPLOYMENT_INGRESS_DOMAIN
+              value: {{ .Values.deployment.ingress.domain | default .Values.ingress.domain }}
+          ports:
+            - containerPort: {{ .Values.provider.port }}
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /private
+              readOnly: true
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ .Values.provider.privateKeySecretName | default (printf "%s-private-key" (include "akash-provider.fullname" .)) }} 
+            items:
+              - key: {{ .Release.Name }}.private
+                path: private.key

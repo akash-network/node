@@ -1,0 +1,6 @@
+Akash provider {{ .Release.Name }} deployed
+
+curl -I http://{{ .Values.ingress.domain }}/status
+
+For more information on running Akash, visit:
+https://akash.network/
