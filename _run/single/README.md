@@ -30,6 +30,7 @@ __t1__: Start minikube
 
 ```sh
 make kube-start
+make image-minikube
 ```
 
 ## Initialize a new chain
@@ -38,12 +39,6 @@ You can run `make init` to perform the below set of steps. The below task create
 
 ```
 make init
-```
-
-## Start minikube
-
-```
-make kube-start
 ```
 
 # Install Nodes

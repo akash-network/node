@@ -16,18 +16,18 @@ dirs:
 
 init-genesis: dirs
 	$(akashd) init node0 --chain-id local
-	$(akashd) add-genesis-account $(shell $(akash) $(KEY_OPTS) keys show main -a) 100000akash,100000000stake
-	$(akashd) add-genesis-account $(shell $(akash) $(KEY_OPTS) keys show provider -a) 100000akash,100000000stake
+	$(akashd) add-genesis-account $(shell $(akash) $(KEY_OPTS) keys show validator -a) 100000000stake
+	$(akashd) add-genesis-account $(shell $(akash) $(KEY_OPTS) keys show provider -a) 100000000stake
 
 init-gentx:
-	$(akashd) $(KEY_OPTS) gentx --name main --home-client $(CLIENT_HOME)
+	$(akashd) $(KEY_OPTS) gentx --name validator --home-client $(CLIENT_HOME)
 
 init-collect-gentx:
 	$(akashd) collect-gentxs
 	$(akashd) validate-genesis
 
 init-config: dirs
-	$(akash) config chain-id akash-testnet
+	$(akash) config chain-id local
 	$(akash) config output json
 	$(akash) config indent true
 	$(akash) config trust-node true
