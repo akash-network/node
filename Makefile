@@ -90,7 +90,7 @@ devdeps-install:
 
 test-integration: $(BINS)
 	cp akashctl akashd ./_build
-	@go test -mod=readonly -p 4 `go list ./integration/...` -tags=integration -v
+	@go test -mod=readonly -p 4 -tags=integration -v ./integration/...
 
 integrationdeps-install:
 	(cd _integration && make deps-install)
