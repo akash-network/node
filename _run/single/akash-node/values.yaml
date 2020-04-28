@@ -1,0 +1,15 @@
+image:
+  repository: ovrclk/akashd
+  tag: latest
+  pullPolicy: IfNotPresent
+
+ingress:
+  domain: api.akashtest.net
+
+akashd:
+  ports:
+    p2p: 26656
+    rpc: 26657
+
+node:
+  peers: {}
