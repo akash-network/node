@@ -41,7 +41,13 @@ func Read(buf []byte) (SDL, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := validation.ValidateGroupSpecs(dgroups); err != nil {
+
+	vgroups := make([]dtypes.GroupSpec, 0, len(dgroups))
+	for _, dgroup := range dgroups {
+		vgroups = append(vgroups, *dgroup)
+	}
+
+	if err := validation.ValidateDeploymentGroups(vgroups); err != nil {
 		return nil, err
 	}
 

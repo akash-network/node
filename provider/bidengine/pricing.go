@@ -1,40 +1,68 @@
 package bidengine
 
-// TODO: price
+import (
+	"crypto/rand"
 
-// func calculatePrice(resources types.ResourceGroup) uint64 {
-// 	min, max := calculatePriceRange(resources)
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/types/unit"
+	"github.com/ovrclk/akash/validation"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
+)
 
-// 	if max == min {
-// 		return max
-// 	}
+func calculatePrice(gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 
-// 	return uint64(rand.Int63n(int64(max-min)) + int64(min))
-// }
+	min, max := calculatePriceRange(gspec)
 
-// func calculatePriceRange(resources types.ResourceGroup) (uint64, uint64) {
-// 	// TODO: catch overflow
-// 	var (
-// 		mem  uint64
-// 		rmax uint64
-// 	)
+	if min.IsEqual(max) {
+		return max, nil
+	}
 
-// 	cfg := validation.Config()
+	delta := max.Amount.Sub(min.Amount)
 
-// 	for _, group := range resources.GetResources() {
-// 		rmax += group.Price * uint64(group.Count)
-// 		mem += group.Unit.Memory * uint64(group.Count)
-// 	}
+	val, err := rand.Int(rand.Reader, delta.BigInt())
+	if err != nil {
+		return sdk.Coin{}, err
+	}
 
-// 	cmin := uint64(float64(mem) * float64(cfg.MinGroupMemPrice) / float64(unit.Gi))
-// 	cmax := uint64(float64(mem) * float64(cfg.MaxGroupMemPrice) / float64(unit.Gi))
+	return sdk.NewCoin(min.Denom, min.Amount.Add(sdk.NewIntFromBigInt(val))), nil
+}
 
-// 	if cmax > rmax {
-// 		cmax = rmax
-// 	}
-// 	if cmax == 0 {
-// 		cmax = 1
-// 	}
+func calculatePriceRange(gspec *dtypes.GroupSpec) (sdk.Coin, sdk.Coin) {
+	// memory-based pricing:
+	//   min: requested memory * configured min price per Gi
+	//   max: requested memory * configured max price per Gi
 
-// 	return cmin, cmax
-// }
+	// assumption: group.Count > 0
+	// assumption: all same denom (returned by gspec.Price())
+	// assumption: gspec.Price() > 0
+
+	mem := sdk.NewInt(0)
+
+	cfg := validation.Config()
+
+	for _, group := range gspec.Resources {
+		mem = mem.Add(
+			sdk.NewIntFromUint64(group.Unit.Memory).
+				MulRaw(int64(group.Count)))
+	}
+
+	rmax := gspec.Price()
+
+	cmin := mem.MulRaw(
+		cfg.MinGroupMemPrice).
+		Quo(sdk.NewInt(unit.Gi))
+
+	cmax := mem.MulRaw(
+		cfg.MaxGroupMemPrice).
+		Quo(sdk.NewInt(unit.Gi))
+
+	if cmax.GT(rmax.Amount) {
+		cmax = rmax.Amount
+	}
+
+	if cmax.IsZero() {
+		cmax = sdk.NewInt(1)
+	}
+
+	return sdk.NewCoin(rmax.Denom, cmin), sdk.NewCoin(rmax.Denom, cmax)
+}

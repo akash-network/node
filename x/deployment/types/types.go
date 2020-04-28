@@ -109,10 +109,10 @@ func (g GroupSpec) Price() sdk.Coin {
 	var price sdk.Coin
 	for idx, resource := range g.Resources {
 		if idx == 0 {
-			price = resource.Price
+			price = resource.FullPrice()
 			continue
 		}
-		price = price.Add(resource.Price)
+		price = price.Add(resource.FullPrice())
 	}
 	return price
 }
@@ -168,4 +168,8 @@ func (r Resource) GetUnit() types.Unit {
 // GetCount method returns count of resource
 func (r Resource) GetCount() uint32 {
 	return r.Count
+}
+
+func (r Resource) FullPrice() sdk.Coin {
+	return sdk.NewCoin(r.Price.Denom, r.Price.Amount.MulRaw(int64(r.Count)))
 }

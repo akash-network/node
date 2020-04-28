@@ -8,7 +8,7 @@ steps:
       automatic: true
     plugins:
       golang#v2.0.0:
-        version: "1.13"
+        version: "1.14"
         import: "${AKASH_GO_PACKAGE}"
         environment:
           - TEST_DELAY_THREAD_START
@@ -20,7 +20,7 @@ steps:
       automatic: true
     plugins:
       golang#v2.0.0:
-        version: "1.13"
+        version: "1.14"
         import: "${AKASH_GO_PACKAGE}"
         environment:
           - TEST_DELAY_THREAD_START
@@ -39,7 +39,7 @@ steps:
   - name: ":man-juggling: integration"
     plugins:
       golang#v2.0.0:
-        version: "1.13"
+        version: "1.14"
         import: "${AKASH_GO_PACKAGE}"
         environment:
           - GO111MODULE=on
@@ -48,7 +48,7 @@ steps:
   - name: ":hospital: hygiene checks"
     plugins:
       golang#v2.0.0:
-        version: "1.13"
+        version: "1.14"
         import: "${AKASH_GO_PACKAGE}"
         environment:
           - GO111MODULE=on
@@ -67,14 +67,14 @@ steps:
           - GO111MODULE=on
     command: .buildkite/script/test.sh test-lite
 
-  - name: ":wilted_flower: golang with 1.12"
+  - name: ":wilted_flower: golang with 1.13"
     # retry:
     #   automatic: true
     soft_fail: true
     branches: master
     plugins:
       golang#v2.0.0:
-        version: "1.12"
+        version: "1.13"
         import: "${AKASH_GO_PACKAGE}"
         environment:
           - TEST_DELAY_THREAD_START

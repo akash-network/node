@@ -43,8 +43,6 @@ func validateResourceList(config config, rlist types.ResourceGroup) error {
 		return fmt.Errorf("group: empty name")
 	}
 
-	// XXX: check overflow.
-
 	units := rlist.GetResources()
 
 	if count := len(units); count > config.MaxGroupUnits {
@@ -59,6 +57,7 @@ func validateResourceList(config config, rlist types.ResourceGroup) error {
 	)
 
 	for _, resource := range units {
+
 		if err := validateResourceGroup(config, resource); err != nil {
 			return fmt.Errorf("group %v: %v", rlist.GetName(), err)
 		}

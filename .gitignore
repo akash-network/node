@@ -5,7 +5,6 @@
 /vendor
 
 # binaries
-/akash
 /akashd
 /akashctl
 
