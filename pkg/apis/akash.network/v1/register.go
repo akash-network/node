@@ -4,9 +4,9 @@ import (
 	"context"
 	"reflect"
 
-	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,6 +14,8 @@ import (
 )
 
 const (
+	// CRDSingular the singleton name
+	CRDSingular string = "manifest"
 	// CRDPlural represents CRD resource Plural
 	CRDPlural string = "manifests"
 	// CRDGroup represents CRD resource Group
@@ -54,27 +56,43 @@ func Resource(resource string) schema.GroupResource {
 }
 
 // CreateCRD creates the CRD resource, ignore error if it already exists
-func CreateCRD(clientset apiextcs.Interface) error {
-	ctx := context.Background()
-	crd := &apiextv1beta1.CustomResourceDefinition{
+func CreateCRD(ctx context.Context, clientset apiextcs.Interface) error {
+	crd := &apiextv1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: FullCRDName},
-		Spec: apiextv1beta1.CustomResourceDefinitionSpec{
-			Group:   CRDGroup,
-			Version: CRDVersion,
-			Scope:   apiextv1beta1.NamespaceScoped,
-			Names: apiextv1beta1.CustomResourceDefinitionNames{
-				Plural: CRDPlural,
-				Kind:   reflect.TypeOf(Manifest{}).Name(),
+		Spec: apiextv1.CustomResourceDefinitionSpec{
+			Group: CRDGroup,
+			Versions: []apiextv1.CustomResourceDefinitionVersion{
+				apiextv1.CustomResourceDefinitionVersion{
+					Name:    CRDVersion,
+					Served:  true,
+					Storage: true,
+					/* TODO: Re-enable once we have test around the schema format
+					Schema: &apiextv1.CustomResourceValidation{
+						OpenAPIV3Schema: &apiextv1.JSONSchemaProps{},
+					},
+					*/
+					Subresources:             nil,
+					AdditionalPrinterColumns: nil,
+				},
+			},
+			Conversion: nil,
+			Scope:      apiextv1.NamespaceScoped,
+			Names: apiextv1.CustomResourceDefinitionNames{
+				Plural:     CRDPlural,
+				Singular:   CRDSingular,
+				Kind:       reflect.TypeOf(Manifest{}).Name(),
+				ShortNames: []string{"ams"},
 			},
 		},
 	}
 
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(
+	var err error
+	_, err = clientset.ApiextensionsV1().CustomResourceDefinitions().Create(
 		ctx,
 		crd,
 		v1.CreateOptions{},
 	)
-	if err != nil && apierrors.IsAlreadyExists(err) {
+	if err != nil && k8serrors.IsAlreadyExists(err) {
 		return nil
 	}
 	return err
