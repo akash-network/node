@@ -6,7 +6,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/lcd"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
+	codecstd "github.com/cosmos/cosmos-sdk/codec/std"
 	"github.com/cosmos/cosmos-sdk/version"
+	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
@@ -18,11 +20,20 @@ import (
 	"github.com/tendermint/tendermint/libs/cli"
 )
 
+var (
+	cdc      = codecstd.MakeCodec(app.ModuleBasics())
+	appCodec = codecstd.NewAppCodec(cdc)
+)
+
+func init() {
+	authclient.Codec = appCodec
+}
+
 func main() {
 
 	common.InitSDKConfig()
 
-	cdc := app.MakeCodec()
+	// cdc := app.MakeCodec()
 
 	root := &cobra.Command{
 		Use:   "akash",
