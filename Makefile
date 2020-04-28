@@ -1,8 +1,5 @@
-PROTO_FILES  = $(wildcard types/*.proto)
-PROTOC_FILES = $(patsubst %.proto,%.pb.go, $(PROTO_FILES))
-
-BINS       := akash akashd
-IMAGE_BINS := _build/akash _build/akashd
+BINS       := akashctl akashd
+IMAGE_BINS := _build/akashctl _build/akashd
 
 GO := GO111MODULE=on go
 
@@ -11,7 +8,7 @@ IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 BUILD_FLAGS = -mod=readonly -tags "netgo ledger" -ldflags \
  '-X github.com/cosmos/cosmos-sdk/version.Name=akash \
   -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd \
-  -X github.com/cosmos/cosmos-sdk/version.ClientName=akash \
+  -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl \
   -X "github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger" \
   -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git rev-parse --abbrev-ref HEAD) \
   -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git rev-parse HEAD)'
@@ -23,14 +20,14 @@ bins: $(BINS)
 build:
 	$(GO) build ./...
 
-akash:
-	$(GO) build $(BUILD_FLAGS) ./cmd/akash
+akashctl:
+	$(GO) build $(BUILD_FLAGS) ./cmd/akashctl
 
 akashd:
 	$(GO) build $(BUILD_FLAGS) ./cmd/akashd
 
 image-bins:
-	$(IMAGE_BUILD_ENV) $(GO) build $(BUILD_FLAGS) -o _build/akash  ./cmd/akash
+	$(IMAGE_BUILD_ENV) $(GO) build $(BUILD_FLAGS) -o _build/akashctl  ./cmd/akashctl
 	$(IMAGE_BUILD_ENV) $(GO) build $(BUILD_FLAGS) -o _build/akashd ./cmd/akashd
 
 image: image-bins
@@ -44,7 +41,7 @@ image: image-bins
 		_build
 
 install:
-	$(GO) install $(BUILD_FLAGS) ./cmd/akash
+	$(GO) install $(BUILD_FLAGS) ./cmd/akashctl
 	$(GO) install $(BUILD_FLAGS) ./cmd/akashd
 
 release:
@@ -61,13 +58,13 @@ release:
 image-minikube:
 	eval $$(minikube docker-env) && make image
 
-test:
+test: image-bins
 	$(GO) test ./...
 
-test-nocache:
+test-nocache: image-bins
 	$(GO) test -count=1 ./...
 
-test-full:
+test-full: image-bins
 	$(GO) test -race ./...
 
 test-lint:
@@ -86,41 +83,23 @@ deps-tidy:
 	$(GO) mod tidy
 
 devdeps-install:
-	$(GO) install github.com/gogo/protobuf/protoc-gen-gogo
 	$(GO) install github.com/vektra/mockery/.../
-	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
-	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 
 # test-integration: $(BINS)
 # 	(cd _integration && make clean run)
 
 test-integration: $(BINS)
-	cp akash akashd ./_build
-	@go test -mod=readonly -p 4 `go list ./integration/...` -tags=integration -v
+	cp akashctl akashd ./_build
+	@go test -mod=readonly -p 4 -tags=integration -v ./integration/...
 
 integrationdeps-install:
 	(cd _integration && make deps-install)
 
-gentypes: $(PROTOC_FILES)
-
 kubetypes:
+	chmod +x vendor/k8s.io/code-generator/generate-groups.sh
 	vendor/k8s.io/code-generator/generate-groups.sh all \
   	github.com/ovrclk/akash/pkg/client github.com/ovrclk/akash/pkg/apis \
   	akash.network:v1
-
-%.pb.go: %.proto
-	protoc -I. \
-		-Ivendor -Ivendor/github.com/gogo/protobuf/protobuf \
-		-Ivendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
-		--gogo_out=plugins=grpc:. $<
-	protoc -I. \
-		-Ivendor -Ivendor/github.com/gogo/protobuf/protobuf \
-		-Ivendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
-		--grpc-gateway_out=logtostderr=true:. $<
-	protoc -I. \
-		-Ivendor -Ivendor/github.com/gogo/protobuf/protobuf \
-		-Ivendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
-		--swagger_out=logtostderr=true:. $<
 
 mocks:
 	mockery -case=underscore -dir query                 -output query/mocks                 -name Client
@@ -149,7 +128,7 @@ clean:
 	rm -f $(BINS) $(IMAGE_BINS)
 
 .PHONY: all bins build \
-	akash akashd \
+	akashctl akashd \
 	image image-bins \
 	test test-nocache test-full \
 	deps-install devdeps-install \
@@ -160,7 +139,7 @@ clean:
 	gofmt \
 	docs \
 	clean \
-	kubetypes gentypes $(PROTO_FILES) \
+	kubetypes \
 	install
 
 test-simapp:
@@ -172,3 +151,12 @@ test-simapp:
 	-Commit=true \
 	-Seed=99 \
 	-v -timeout 24h
+
+update-swagger-docs:
+	statik -src=cmd/swagger-ui -dest=cmd -f -m
+	@if [ -n "$(git status --porcelain)" ]; then \
+        echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
+        exit 1;\
+    else \
+    	echo "\033[92mSwagger docs are in sync\033[0m";\
+    fi

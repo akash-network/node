@@ -1,3 +1,5 @@
+// +build integration
+
 package integration
 
 import (
@@ -103,9 +105,9 @@ func NewFixtures(t *testing.T) *Fixtures {
 		BuildDir:     buildDir,
 		RootDir:      tmpDir,
 		AkashdBinary: filepath.Join(buildDir, "akashd"),
-		AkashBinary:  filepath.Join(buildDir, "akash"),
+		AkashBinary:  filepath.Join(buildDir, "akashctl"),
 		AkashdHome:   filepath.Join(tmpDir, ".akashd"),
-		AkashHome:    filepath.Join(tmpDir, ".akash"),
+		AkashHome:    filepath.Join(tmpDir, ".akashctl"),
 		RPCAddr:      servAddr,
 		P2PAddr:      p2pAddr,
 		Port:         port,

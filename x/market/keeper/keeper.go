@@ -72,7 +72,10 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 	store.Set(key, k.cdc.MustMarshalBinaryBare(bid))
 
 	ctx.EventManager().EmitEvent(
-		types.EventBidCreated{ID: bid.ID()}.ToSDKEvent(),
+		types.EventBidCreated{
+			ID:    bid.ID(),
+			Price: price,
+		}.ToSDKEvent(),
 	)
 }
 
@@ -90,7 +93,10 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 	store.Set(key, k.cdc.MustMarshalBinaryBare(lease))
 	ctx.Logger().Info("created lease", "lease", lease.ID())
 	ctx.EventManager().EmitEvent(
-		types.EventLeaseCreated{ID: lease.ID()}.ToSDKEvent(),
+		types.EventLeaseCreated{
+			ID:    lease.ID(),
+			Price: lease.Price,
+		}.ToSDKEvent(),
 	)
 }
 
@@ -125,7 +131,10 @@ func (k Keeper) OnBidClosed(ctx sdk.Context, bid types.Bid) {
 	bid.State = types.BidClosed
 	k.updateBid(ctx, bid)
 	ctx.EventManager().EmitEvent(
-		types.EventBidClosed{ID: bid.ID()}.ToSDKEvent(),
+		types.EventBidClosed{
+			ID:    bid.ID(),
+			Price: bid.Price,
+		}.ToSDKEvent(),
 	)
 }
 
@@ -153,7 +162,10 @@ func (k Keeper) OnInsufficientFunds(ctx sdk.Context, lease types.Lease) {
 	lease.State = types.LeaseInsufficientFunds
 	k.updateLease(ctx, lease)
 	ctx.EventManager().EmitEvent(
-		types.EventLeaseClosed{ID: lease.ID()}.ToSDKEvent(),
+		types.EventLeaseClosed{
+			ID:    lease.ID(),
+			Price: lease.Price,
+		}.ToSDKEvent(),
 	)
 }
 
@@ -168,7 +180,10 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease types.Lease) {
 	k.updateLease(ctx, lease)
 	ctx.Logger().Info("closed lease", "lease", lease.ID())
 	ctx.EventManager().EmitEvent(
-		types.EventLeaseClosed{ID: lease.ID()}.ToSDKEvent(),
+		types.EventLeaseClosed{
+			ID:    lease.ID(),
+			Price: lease.Price,
+		}.ToSDKEvent(),
 	)
 }
 
