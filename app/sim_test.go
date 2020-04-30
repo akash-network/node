@@ -143,6 +143,8 @@ func TestAppImportExport(t *testing.T) {
 
 	ctxA := app.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
 	ctxB := newApp.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
+
+	app.mm.InitGenesis(ctxA, genesisState)
 	newApp.mm.InitGenesis(ctxB, genesisState)
 
 	fmt.Printf("comparing stores...\n")
@@ -166,10 +168,12 @@ func TestAppImportExport(t *testing.T) {
 		storeA := ctxA.KVStore(skp.A)
 		storeB := ctxB.KVStore(skp.B)
 
-		kvA, kvB := sdk.DiffKVStores(storeA, storeB, skp.Prefixes)
-		fmt.Printf("compared %d key/value pairs between %s and %s\n", len(kvA), skp.A, skp.B)
-		require.Equal(t, len(kvA), len(kvB), simapp.GetSimulationLog(skp.A.Name(),
-			app.SimulationManager().StoreDecoders, app.Codec(), kvA, kvB))
+		failedKVAs, failedKVBs := sdk.DiffKVStores(storeA, storeB, skp.Prefixes)
+		require.Equal(t, len(failedKVAs), len(failedKVBs), "unequal sets of key-values to compare")
+
+		fmt.Printf("compared %d key/value pairs between %s and %s\n", len(failedKVAs), skp.A, skp.B)
+		require.Equal(t, len(failedKVAs), 0, simapp.GetSimulationLog(skp.A.Name(),
+			app.SimulationManager().StoreDecoders, app.Codec(), failedKVAs, failedKVBs))
 	}
 }
 
