@@ -46,7 +46,7 @@ archives:
 
 dockers:
   - binaries: 
-    - akash
+    - akashctl
     dockerfile: _build/Dockerfile.akash
     goos: linux
     goarch: amd64
@@ -76,7 +76,7 @@ brews:
     homepage: "https://akash.network"
     description: "Blockchain-powered decentralized compute platform"
     install: |
-      bin.install "akash"
+      bin.install "akashctl"
       bin.install "akashd"
 
 nfpms:
