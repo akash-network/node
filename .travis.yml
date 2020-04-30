@@ -60,10 +60,10 @@ jobs:
         - $GOPATH/bin/goreleaser
       if: tag =~ ^v AND fork = false
 
-matrix:
-  allow_failures:
-    - env: TEST_UNSKIP=true
-    - name: test-lint
+# matrix:
+#   allow_failures:
+#     - env: TEST_UNSKIP=true
+#     - name: test-lint
 
 install:
   - mkdir -p "$GOPATH/bin"
