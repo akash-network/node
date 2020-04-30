@@ -1,8 +1,8 @@
 # See documentation at http://goreleaser.com
 builds:
-  - id: akash
-    binary: akash
-    main: ./cmd/akash
+  - id: akashctl
+    binary: akashctl
+    main: ./cmd/akashctl
     goarch: [amd64, arm64]
     goos: [linux, darwin]
     ignore:
@@ -10,9 +10,10 @@ builds:
         goarch: 386
     ldflags: >
       -s -w 
-      -X github.com/cosmos/cosmos-sdk/version.Name=akash 
+      -X github.com/cosmos/cosmos-sdk/version.Name=akashctl 
       -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd 
-      -X github.com/cosmos/cosmos-sdk/version.ClientName=akash 
+      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl 
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
       -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} 
       -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}} 
   - id: akashd
@@ -27,16 +28,17 @@ builds:
         goarch: arm
     ldflags: >
       -s -w 
-      -X github.com/cosmos/cosmos-sdk/version.Name=akash 
+      -X github.com/cosmos/cosmos-sdk/version.Name=akashctl 
       -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd 
-      -X github.com/cosmos/cosmos-sdk/version.ClientName=akash 
+      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl 
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
       -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} 
       -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}} 
 
 archives:
   - id: akash
     builds:
-    - akash
+    - akashctl
     - akashd
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
@@ -51,9 +53,9 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:  
-    - "ovrclk/akash:latest"
-    - "ovrclk/akash:{{ .ShortCommit }}"
-    - "ovrclk/akash:{{ .Version }}"
+    - "ovrclk/akashctl:latest"
+    - "ovrclk/akashctl:{{ .ShortCommit }}"
+    - "ovrclk/akashctl:{{ .Version }}"
 
   - binaries: 
     - akashd
@@ -67,9 +69,6 @@ dockers:
 
 brews:
   - name: akash
-    ids:
-    - akash
-    - akashd
     github:
       owner: ovrclk
       name: homebrew-tap
