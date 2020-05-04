@@ -1,6 +1,6 @@
 AKASH_ROOT := ../..
 
-AKASH  := $(AKASH)/akash
+AKASHCTL  := $(AKASHCTL)/akashctl
 AKASHD := $(AKASHD)/akashd
 
 DATA_ROOT 	= cache
@@ -13,8 +13,8 @@ all:
 build:
 	(cd $(AKASH_ROOT) && make build)
 
-akash:
-	(cd $(AKASH_ROOT) && make akash)
+akashctl:
+	(cd $(AKASH_ROOT) && make akashctl)
 
 akashd:
 	(cd $(AKASH_ROOT) && make akashd)
