@@ -10,7 +10,7 @@ BUILD_FLAGS = -mod=readonly -tags "netgo ledger" -ldflags \
   -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd \
   -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl \
   -X "github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger" \
-  -X github.com/cosmos/cosmos-sdk/version.Version=$(shell echo $(shell git describe --tags) | sed 's/^v//') \
+  -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
   -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
 
 all: build bins
