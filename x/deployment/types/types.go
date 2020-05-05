@@ -14,9 +14,9 @@ type DeploymentState uint8
 
 const (
 	// DeploymentActive is used when state of deployment is active
-	DeploymentActive DeploymentState = iota
+	DeploymentActive DeploymentState = iota + 1
 	// DeploymentClosed is used when state of deployment is closed
-	DeploymentClosed DeploymentState = iota
+	DeploymentClosed
 )
 
 // DeploymentFilters defines flags for deployment list filter
@@ -51,15 +51,15 @@ type GroupState uint8
 
 const (
 	// GroupOpen is used when state of group is open
-	GroupOpen GroupState = iota
+	GroupOpen GroupState = iota + 1
 	// GroupOrdered is used when state of group is ordered
-	GroupOrdered GroupState = iota
+	GroupOrdered
 	// GroupMatched is used when state of group is matched
-	GroupMatched GroupState = iota
+	GroupMatched
 	// GroupInsufficientFunds is used when group has insufficient funds
-	GroupInsufficientFunds GroupState = iota
+	GroupInsufficientFunds
 	// GroupClosed is used when state of group is closed
-	GroupClosed GroupState = iota
+	GroupClosed
 )
 
 // GroupFilters defines flags for group list filter

@@ -8,6 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/tests"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,7 +55,7 @@ func TestDeployment(t *testing.T) {
 	// test query deployments
 	deployments = f.QueryDeployments()
 	require.Len(t, deployments, 1)
-	require.Equal(t, uint8(1), uint8(deployments[0].Deployment.State), "Deployment Close Failed")
+	require.Equal(t, dtypes.DeploymentClosed, deployments[0].Deployment.State, "Deployment Close Failed")
 
 	// test query deployments with state filter closed
 	deployments = f.QueryDeployments("--state=closed")
