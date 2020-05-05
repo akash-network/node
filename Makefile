@@ -59,13 +59,13 @@ release:
 image-minikube:
 	eval $$(minikube docker-env) && make image
 
-test: image-bins
+test:
 	$(GO) test ./...
 
-test-nocache: image-bins
+test-nocache:
 	$(GO) test -count=1 ./...
 
-test-full: image-bins
+test-full:
 	$(GO) test -race ./...
 
 test-lint:
@@ -86,15 +86,9 @@ deps-tidy:
 devdeps-install:
 	$(GO) install github.com/vektra/mockery/.../
 
-# test-integration: $(BINS)
-# 	(cd _integration && make clean run)
-
 test-integration: $(BINS)
 	cp akashctl akashd ./_build
-	@go test -mod=readonly -p 4 -tags=integration -v ./integration/...
-
-integrationdeps-install:
-	(cd _integration && make deps-install)
+	go test -mod=readonly -p 4 -tags=integration -v ./integration/...
 
 kubetypes:
 	chmod +x vendor/k8s.io/code-generator/generate-groups.sh
@@ -133,7 +127,7 @@ clean:
 	image image-bins \
 	test test-nocache test-full \
 	deps-install devdeps-install \
-	test-integraion integrationdeps-install \
+	test-integraion \
 	test-lint lintdeps-install \
 	test-vet \
 	mocks \
