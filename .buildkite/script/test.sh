@@ -23,15 +23,13 @@ do_vet(){
 }
 
 do_lint(){
-  echo "--- :rotating_light: lint disabled.  see #360"
+  echo "--- :building_construction: installing lint deps"
+  make lintdeps-install
 
-  # echo "--- :building_construction: installing lint deps"
-  # make lintdeps-install
-
-  # echo "--- :mag: linting"
-  # make test-lint || {
-  #   echo "--- :rotating_light: excessive lint errors"
-  # }
+  echo "--- :mag: linting"
+  make test-lint || {
+    echo "--- :rotating_light: excessive lint errors"
+  }
 }
 
 do_tests(){
