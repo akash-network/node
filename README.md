@@ -1,6 +1,8 @@
 # Akash - Decentralized Serverless Network
 
-[![Build status](https://badge.buildkite.com/85e140e3e8c0257c63d976946b061b805f0f338cdca7b02a9c.svg?branch=master)](https://buildkite.com/ovrclk/akash)
+![tests](https://github.com/ovrclk/akash/workflows/tests/badge.svg)
+![simulations](https://github.com/ovrclk/akash/workflows/Sims/badge.svg)
+
 [![Go Report Card](https://goreportcard.com/badge/github.com/ovrclk/akash)](https://goreportcard.com/report/github.com/ovrclk/akash)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 

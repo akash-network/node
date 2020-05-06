@@ -70,6 +70,12 @@ test-nocache:
 test-full:
 	$(GO) test -race ./...
 
+test-coverage:
+	$(GO) test -coverprofile=coverage.txt \
+		-covermode=count \
+		-coverpkg="./..." \
+		./...
+
 test-lint:
 	golangci-lint run
 
@@ -119,16 +125,13 @@ gofmt:
 	find . -not -path './vendor*' -name '*.go' -type f | \
 		xargs gofmt -s -w
 
-docs:
-	(cd _docs/dot && make)
-
 clean:
 	rm -f $(BINS) $(IMAGE_BINS)
 
 .PHONY: all bins build \
 	akashctl akashd \
 	image image-bins \
-	test test-nocache test-full \
+	test test-nocache test-full test-coverage \
 	deps-install devdeps-install \
 	test-integraion \
 	test-lint lintdeps-install \
@@ -155,20 +158,20 @@ update-swagger-docs:
 
 test-sim-fullapp:
 	@echo "Running app simulation test..."
-	@go test -mod=readonly ${APP_DIR} -run=TestFullAppSimulation -Enabled=true \
-		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 24h
+	go test -mod=readonly ${APP_DIR} -run=TestFullAppSimulation -Enabled=true \
+		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
 test-sim-nondeterminism:
 	@echo "Running non-determinism test. This may take several minutes..."
-	@go test -mod=readonly $(APP_DIR) -run TestAppStateDeterminism -Enabled=true \
+	go test -mod=readonly $(APP_DIR) -run TestAppStateDeterminism -Enabled=true \
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Period=0 -v -timeout 24h
 
 test-sim-import-export:
 	@echo "Running application import/export simulation..."
-	@go test -mod=readonly $(APP_DIR) -run=TestAppImportExport -Enabled=true \
-		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 24h
+	go test -mod=readonly $(APP_DIR) -run=TestAppImportExport -Enabled=true \
+		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
 test-sim-after-import:
 	@echo "Running application simulation-after-import..."
-	@go test -mod=readonly $(APP_DIR) -run=TestAppSimulationAfterImport -Enabled=true \
-		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 24h
+	go test -mod=readonly $(APP_DIR) -run=TestAppSimulationAfterImport -Enabled=true \
+		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m

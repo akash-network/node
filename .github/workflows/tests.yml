@@ -1,0 +1,49 @@
+name: tests
+
+on:
+  push:
+    branches: ['*']
+
+jobs:
+
+  build-bins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - run: make bins
+      - run: make image-bins
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - run: make test-full
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - run: make test-coverage
+      - uses: codecov/codecov-action@v1
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - run: make test-integration
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - run: make test-vet
+      - uses: actions-contrib/golangci-lint@v1
+        with:
+          golangci_lint_version: "v1.26.0"
+          args: run ./...
+        continue-on-error: true
