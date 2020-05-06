@@ -12,21 +12,24 @@ do_bins(){
   make bins
 }
 
+do_image_bins(){
+  echo "--- :hammer_and_pick: building image binaries"
+  make image-bins
+}
+
 do_vet(){
   echo "--- :female-police-officer::skin-tone-4: vet"
   make test-vet
 }
 
 do_lint(){
-  echo "--- :rotating_light: lint disabled.  see #360"
+  echo "--- :building_construction: installing lint deps"
+  make lintdeps-install
 
-  # echo "--- :building_construction: installing lint deps"
-  # make lintdeps-install
-
-  # echo "--- :mag: linting"
-  # make test-lint || {
-  #   echo "--- :rotating_light: excessive lint errors"
-  # }
+  echo "--- :mag: linting"
+  make test-lint || {
+    echo "--- :rotating_light: excessive lint errors"
+  }
 }
 
 do_tests(){
@@ -41,7 +44,6 @@ do_tests_lite(){
 
 do_coverage(){
   echo "--- :female-scientist: capturing test coverage"
-  make image-bins
   go test -coverprofile=coverage.txt -covermode=count -coverpkg="./..." ./...
 
   echo "--- :satellite_antenna: uploading test coverage"
@@ -49,9 +51,6 @@ do_coverage(){
 }
 
 do_integration(){
-  echo "--- :building_construction: installing integration dependencies"
-  make integrationdeps-install
-
   echo "--- :juggling: running integration tests"
   make test-integration
 }
@@ -77,6 +76,7 @@ case "$1" in
   lint)
     do_deps
     do_bins
+    do_image_bins
     do_vet
     do_lint
     ;;

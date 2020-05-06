@@ -41,6 +41,7 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 	order := types.Order{
 		OrderID: types.MakeOrderID(gid, oseq),
 		Spec:    spec,
+		State:   types.OrderOpen,
 		StartAt: ctx.BlockHeight() + orderTTL, // TODO: check overflow
 	}
 
@@ -63,6 +64,7 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 
 	bid := types.Bid{
 		BidID: types.MakeBidID(oid, provider),
+		State: types.BidOpen,
 		Price: price,
 	}
 
@@ -85,6 +87,7 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 
 	lease := types.Lease{
 		LeaseID: types.LeaseID(bid.ID()),
+		State:   types.LeaseActive,
 		Price:   bid.Price,
 	}
 	key := leaseKey(lease.ID())

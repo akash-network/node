@@ -2,6 +2,7 @@ package types
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -39,6 +40,12 @@ func (id OrderID) Equals(other OrderID) bool {
 
 // Validate method for OrderID and returns nil
 func (id OrderID) Validate() error {
+	if err := id.GroupID().Validate(); err != nil {
+		return sdkerrors.Wrap(err, "OrderID: Invalid GroupID")
+	}
+	if id.OSeq == 0 {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidSequence, "OrderID: Invalid Order Sequence")
+	}
 	return nil
 }
 
@@ -95,6 +102,12 @@ func (id BidID) DeploymentID() dtypes.DeploymentID {
 
 // Validate validates bid instance and returns nil
 func (id BidID) Validate() error {
+	if err := id.OrderID().Validate(); err != nil {
+		return sdkerrors.Wrap(err, "BidID: Invalid OrderID")
+	}
+	if id.Provider.Empty() {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "BidID: Invalid Provider Address")
+	}
 	return nil
 }
 
@@ -115,6 +128,13 @@ func MakeLeaseID(id BidID) LeaseID {
 // Equals method compares specific lease with provided lease
 func (id LeaseID) Equals(other LeaseID) bool {
 	return id.BidID().Equals(other.BidID())
+}
+
+func (id LeaseID) Validate() error {
+	if err := id.BidID().Validate(); err != nil {
+		return sdkerrors.Wrap(err, "LeaseID: Invalid BidID")
+	}
+	return nil
 }
 
 // BidID method returns BidID details with specific LeaseID

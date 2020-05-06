@@ -59,7 +59,7 @@ func (msg MsgUpdate) Type() string { return "update" }
 // ValidateBasic does basic validation
 func (msg MsgUpdate) ValidateBasic() error {
 	if err := msg.ID.Validate(); err != nil {
-		return ErrInvalidDeploymentID
+		return err
 	}
 	switch {
 	case msg.Version.Empty():
@@ -92,7 +92,7 @@ func (msg MsgClose) Type() string { return "update" }
 // ValidateBasic does basic validation with deployment details
 func (msg MsgClose) ValidateBasic() error {
 	if err := msg.ID.Validate(); err != nil {
-		return ErrInvalidDeploymentID
+		return err
 	}
 	return nil
 }
