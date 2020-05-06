@@ -4,6 +4,8 @@ APP_DIR := ./app
 
 GO := GO111MODULE=on go
 
+GOLANGCI_LINT_VERSION = v1.26.0
+
 IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 
 BUILD_FLAGS = -mod=readonly -tags "netgo ledger" -ldflags \
@@ -72,7 +74,8 @@ test-lint:
 	golangci-lint run
 
 lintdeps-install:
-	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+		sh -s -- -b $(shell go env GOPATH)/bin $(GOLANGCI_LINT_VERSION)
 
 test-vet:
 	$(GO) vet ./...
