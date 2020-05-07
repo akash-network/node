@@ -68,7 +68,7 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 }
 
 // CreateBid creates a bid for a order with given orderID, price for bid and provider
-func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.Coin) {
+func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.Coin) (types.Bid, error) {
 
 	store := ctx.KVStore(k.skey)
 
@@ -80,6 +80,10 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 
 	key := bidKey(bid.ID())
 
+	if store.Has(key) {
+		return types.Bid{}, types.ErrBidExists
+	}
+
 	// XXX TODO: check not overwrite
 	store.Set(key, k.cdc.MustMarshalBinaryBare(bid))
 
@@ -89,6 +93,8 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 			Price: price,
 		}.ToSDKEvent(),
 	)
+
+	return bid, nil
 }
 
 // CreateLease creates lease for bid with given bidID
