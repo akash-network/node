@@ -34,7 +34,7 @@ func GetTxCmd(key string, cdc *codec.Codec) *cobra.Command {
 func cmdCreateBid(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "bid-create",
-		Short: "Create bid",
+		Short: "Create a bid",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
@@ -75,7 +75,7 @@ func cmdCreateBid(key string, cdc *codec.Codec) *cobra.Command {
 func cmdCloseBid(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "bid-close",
-		Short: "Close bid",
+		Short: "Close a bid",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
@@ -101,7 +101,7 @@ func cmdCloseBid(key string, cdc *codec.Codec) *cobra.Command {
 func cmdCloseOrder(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "order-close",
-		Short: "Create bid",
+		Short: "Close an order",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)

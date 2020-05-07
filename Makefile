@@ -4,6 +4,8 @@ APP_DIR := ./app
 
 GO := GO111MODULE=on go
 
+GOLANGCI_LINT_VERSION = v1.26.0
+
 IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 
 BUILD_FLAGS = -mod=readonly -tags "netgo ledger" -ldflags \
@@ -11,8 +13,8 @@ BUILD_FLAGS = -mod=readonly -tags "netgo ledger" -ldflags \
   -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd \
   -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl \
   -X "github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger" \
-  -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git rev-parse --abbrev-ref HEAD) \
-  -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git rev-parse HEAD)'
+  -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
+  -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
 
 all: build bins
 
@@ -59,20 +61,27 @@ release:
 image-minikube:
 	eval $$(minikube docker-env) && make image
 
-test: image-bins
+test:
 	$(GO) test ./...
 
-test-nocache: image-bins
+test-nocache:
 	$(GO) test -count=1 ./...
 
-test-full: image-bins
+test-full:
 	$(GO) test -race ./...
+
+test-coverage:
+	$(GO) test -coverprofile=coverage.txt \
+		-covermode=count \
+		-coverpkg="./..." \
+		./...
 
 test-lint:
 	golangci-lint run
 
 lintdeps-install:
-	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+		sh -s -- -b $(shell go env GOPATH)/bin $(GOLANGCI_LINT_VERSION)
 
 test-vet:
 	$(GO) vet ./...
@@ -86,15 +95,9 @@ deps-tidy:
 devdeps-install:
 	$(GO) install github.com/vektra/mockery/.../
 
-# test-integration: $(BINS)
-# 	(cd _integration && make clean run)
-
 test-integration: $(BINS)
 	cp akashctl akashd ./_build
-	@go test -mod=readonly -p 4 -tags=integration -v ./integration/...
-
-integrationdeps-install:
-	(cd _integration && make deps-install)
+	go test -mod=readonly -p 4 -tags=integration -v ./integration/...
 
 kubetypes:
 	chmod +x vendor/k8s.io/code-generator/generate-groups.sh
@@ -122,18 +125,15 @@ gofmt:
 	find . -not -path './vendor*' -name '*.go' -type f | \
 		xargs gofmt -s -w
 
-docs:
-	(cd _docs/dot && make)
-
 clean:
 	rm -f $(BINS) $(IMAGE_BINS)
 
 .PHONY: all bins build \
 	akashctl akashd \
 	image image-bins \
-	test test-nocache test-full \
+	test test-nocache test-full test-coverage \
 	deps-install devdeps-install \
-	test-integraion integrationdeps-install \
+	test-integraion \
 	test-lint lintdeps-install \
 	test-vet \
 	mocks \
@@ -158,20 +158,20 @@ update-swagger-docs:
 
 test-sim-fullapp:
 	@echo "Running app simulation test..."
-	@go test -mod=readonly ${APP_DIR} -run=TestFullAppSimulation -Enabled=true \
-		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 24h
+	go test -mod=readonly ${APP_DIR} -run=TestFullAppSimulation -Enabled=true \
+		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
 test-sim-nondeterminism:
 	@echo "Running non-determinism test. This may take several minutes..."
-	@go test -mod=readonly $(APP_DIR) -run TestAppStateDeterminism -Enabled=true \
+	go test -mod=readonly $(APP_DIR) -run TestAppStateDeterminism -Enabled=true \
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Period=0 -v -timeout 24h
 
 test-sim-import-export:
 	@echo "Running application import/export simulation..."
-	@go test -mod=readonly $(APP_DIR) -run=TestAppImportExport -Enabled=true \
-		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 24h
+	go test -mod=readonly $(APP_DIR) -run=TestAppImportExport -Enabled=true \
+		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
 test-sim-after-import:
 	@echo "Running application simulation-after-import..."
-	@go test -mod=readonly $(APP_DIR) -run=TestAppSimulationAfterImport -Enabled=true \
-		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 24h
+	go test -mod=readonly $(APP_DIR) -run=TestAppSimulationAfterImport -Enabled=true \
+		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m

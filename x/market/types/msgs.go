@@ -30,7 +30,7 @@ func (msg MsgCreateBid) GetSigners() []sdk.AccAddress {
 // ValidateBasic does basic validation of provider and order
 func (msg MsgCreateBid) ValidateBasic() error {
 	if err := msg.Order.Validate(); err != nil {
-		return ErrInvalidOrder
+		return err
 	}
 
 	if msg.Provider.Empty() {
@@ -67,7 +67,7 @@ func (msg MsgCloseBid) GetSigners() []sdk.AccAddress {
 
 // ValidateBasic method for MsgCloseBid
 func (msg MsgCloseBid) ValidateBasic() error {
-	return nil
+	return msg.BidID.Validate()
 }
 
 // MsgCloseOrder defines an SDK message for closing order
@@ -93,5 +93,5 @@ func (msg MsgCloseOrder) GetSigners() []sdk.AccAddress {
 
 // ValidateBasic method for MsgCloseOrder
 func (msg MsgCloseOrder) ValidateBasic() error {
-	return nil
+	return msg.OrderID.Validate()
 }

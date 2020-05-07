@@ -5,6 +5,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/types"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -29,18 +30,28 @@ func (k Keeper) Codec() *codec.Codec {
 }
 
 // CreateOrder creates a new order with given group id and specifications. It returns created order
-func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.GroupSpec) types.Order {
+func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.GroupSpec) (types.Order, error) {
 	store := ctx.KVStore(k.skey)
 
 	oseq := uint32(1)
-	k.WithOrdersForGroup(ctx, gid, func(types.Order) bool {
+	var err error
+
+	k.WithOrdersForGroup(ctx, gid, func(order types.Order) bool {
+		if err = order.ValidateInactive(); err != nil {
+			return true
+		}
 		oseq++
 		return false
 	})
 
+	if err != nil {
+		return types.Order{}, errors.Wrap(err, "create order: active order exists")
+	}
+
 	order := types.Order{
 		OrderID: types.MakeOrderID(gid, oseq),
 		Spec:    spec,
+		State:   types.OrderOpen,
 		StartAt: ctx.BlockHeight() + orderTTL, // TODO: check overflow
 	}
 
@@ -53,20 +64,25 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 	ctx.EventManager().EmitEvent(
 		types.EventOrderCreated{ID: order.ID()}.ToSDKEvent(),
 	)
-	return order
+	return order, nil
 }
 
 // CreateBid creates a bid for a order with given orderID, price for bid and provider
-func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.Coin) {
+func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.Coin) (types.Bid, error) {
 
 	store := ctx.KVStore(k.skey)
 
 	bid := types.Bid{
 		BidID: types.MakeBidID(oid, provider),
+		State: types.BidOpen,
 		Price: price,
 	}
 
 	key := bidKey(bid.ID())
+
+	if store.Has(key) {
+		return types.Bid{}, types.ErrBidExists
+	}
 
 	// XXX TODO: check not overwrite
 	store.Set(key, k.cdc.MustMarshalBinaryBare(bid))
@@ -77,6 +93,8 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 			Price: price,
 		}.ToSDKEvent(),
 	)
+
+	return bid, nil
 }
 
 // CreateLease creates lease for bid with given bidID
@@ -85,6 +103,7 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 
 	lease := types.Lease{
 		LeaseID: types.LeaseID(bid.ID()),
+		State:   types.LeaseActive,
 		Price:   bid.Price,
 	}
 	key := leaseKey(lease.ID())
