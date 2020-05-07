@@ -25,10 +25,11 @@ func OnEndBlock(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper) {
 				continue
 			}
 
-			// TODO: check for active order.
-
 			// create order.
-			mkeeper.CreateOrder(ctx, group.ID(), group.GroupSpec)
+			if _, err := mkeeper.CreateOrder(ctx, group.ID(), group.GroupSpec); err != nil {
+				ctx.Logger().With("group", group.ID(), "error", err).Error("creating order")
+				continue
+			}
 
 			// set state to ordered
 			keeper.OnOrderCreated(ctx, group)

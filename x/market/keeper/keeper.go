@@ -5,6 +5,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/types"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -29,14 +30,23 @@ func (k Keeper) Codec() *codec.Codec {
 }
 
 // CreateOrder creates a new order with given group id and specifications. It returns created order
-func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.GroupSpec) types.Order {
+func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.GroupSpec) (types.Order, error) {
 	store := ctx.KVStore(k.skey)
 
 	oseq := uint32(1)
-	k.WithOrdersForGroup(ctx, gid, func(types.Order) bool {
+	var err error
+
+	k.WithOrdersForGroup(ctx, gid, func(order types.Order) bool {
+		if err = order.ValidateInactive(); err != nil {
+			return true
+		}
 		oseq++
 		return false
 	})
+
+	if err != nil {
+		return types.Order{}, errors.Wrap(err, "create order: active order exists")
+	}
 
 	order := types.Order{
 		OrderID: types.MakeOrderID(gid, oseq),
@@ -54,7 +64,7 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 	ctx.EventManager().EmitEvent(
 		types.EventOrderCreated{ID: order.ID()}.ToSDKEvent(),
 	)
-	return order
+	return order, nil
 }
 
 // CreateBid creates a bid for a order with given orderID, price for bid and provider

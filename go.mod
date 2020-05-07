@@ -24,6 +24,7 @@ require (
 	github.com/lithammer/shortuuid v1.0.1-0.20190319200910-1be5ab5d90f6
 	github.com/magiconair/properties v1.8.2-0.20191019074931-a586bb8b7dea // indirect
 	github.com/mattn/go-runewidth v0.0.6 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rakyll/statik v0.1.7
 	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563 // indirect

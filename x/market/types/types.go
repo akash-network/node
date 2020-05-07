@@ -64,6 +64,17 @@ func (o Order) ValidateCanBid() error {
 	}
 }
 
+func (o Order) ValidateInactive() error {
+	switch o.State {
+	case OrderClosed:
+		return nil
+	case OrderMatched:
+		return fmt.Errorf("order matched")
+	default:
+		return fmt.Errorf("order open")
+	}
+}
+
 // Price method returns price of specific order
 func (o Order) Price() sdk.Coin {
 	return o.Spec.Price()
