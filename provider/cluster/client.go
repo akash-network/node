@@ -14,18 +14,20 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
-// Declaring new error with message "no deployments"
+var _ Client = (*nullClient)(nil)
+
+// ErrNoDeployments indicates no deployments exist
 var ErrNoDeployments = errors.New("no deployments")
 
 // Client interface lease and deployment methods
 type Client interface {
-	Deploy(mtypes.LeaseID, *manifest.Group) error
-	TeardownLease(mtypes.LeaseID) error
-	Deployments() ([]Deployment, error)
-	LeaseStatus(mtypes.LeaseID) (*LeaseStatus, error)
-	ServiceStatus(mtypes.LeaseID, string) (*ServiceStatus, error)
+	Deploy(context.Context, mtypes.LeaseID, *manifest.Group) error
+	TeardownLease(context.Context, mtypes.LeaseID) error
+	Deployments(context.Context) ([]Deployment, error)
+	LeaseStatus(context.Context, mtypes.LeaseID) (*LeaseStatus, error)
+	ServiceStatus(context.Context, mtypes.LeaseID, string) (*ServiceStatus, error)
 	ServiceLogs(context.Context, mtypes.LeaseID, int64, bool) ([]*ServiceLog, error)
-	Inventory() ([]Node, error)
+	Inventory(context.Context) ([]Node, error)
 }
 
 // Node interface predefined with ID and Available methods
@@ -96,14 +98,14 @@ func NullClient() Client {
 	}
 }
 
-func (c *nullClient) Deploy(lid mtypes.LeaseID, mgroup *manifest.Group) error {
+func (c *nullClient) Deploy(ctx context.Context, lid mtypes.LeaseID, mgroup *manifest.Group) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 	c.leases[mquery.LeasePath(lid)] = mgroup
 	return nil
 }
 
-func (c *nullClient) LeaseStatus(lid mtypes.LeaseID) (*LeaseStatus, error) {
+func (c *nullClient) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*LeaseStatus, error) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -124,7 +126,7 @@ func (c *nullClient) LeaseStatus(lid mtypes.LeaseID) (*LeaseStatus, error) {
 	return resp, nil
 }
 
-func (c *nullClient) ServiceStatus(_ mtypes.LeaseID, _ string) (*ServiceStatus, error) {
+func (c *nullClient) ServiceStatus(ctx context.Context, _ mtypes.LeaseID, _ string) (*ServiceStatus, error) {
 	return nil, nil
 }
 
@@ -132,7 +134,7 @@ func (c *nullClient) ServiceLogs(_ context.Context, _ mtypes.LeaseID, _ int64, _
 	return nil, nil
 }
 
-func (c *nullClient) TeardownLease(lid mtypes.LeaseID) error {
+func (c *nullClient) TeardownLease(ctx context.Context, lid mtypes.LeaseID) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -140,11 +142,11 @@ func (c *nullClient) TeardownLease(lid mtypes.LeaseID) error {
 	return nil
 }
 
-func (c *nullClient) Deployments() ([]Deployment, error) {
+func (c *nullClient) Deployments(ctx context.Context) ([]Deployment, error) {
 	return nil, nil
 }
 
-func (c *nullClient) Inventory() ([]Node, error) {
+func (c *nullClient) Inventory(ctx context.Context) ([]Node, error) {
 	return []Node{
 		NewNode("solo", atypes.Unit{
 			CPU:     nullClientCPU,
