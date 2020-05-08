@@ -64,11 +64,30 @@ Please read this whole guide and make sure you agree to the Developer Certificat
 * Complete the whole template for issues and pull requests
 * [Reference addressed issues](https://help.github.com/articles/closing-issues-using-keywords/) in the PR description & commit messages - use 'Fixes #IssueNo'
 * Always give instructions for testing
- * Provide us CLI commands and output or screenshots where you can
+* Provide us CLI commands and output or screenshots where you can
 
 ##### Commit messages
 
-The first line of the commit message is the *subject*, this should be followed by a blank line and then a message describing the intent and purpose of the commit. These guidelines are based upon a [post by Chris Beams](https://chris.beams.io/posts/git-commit/).
+The first line of the commit message is the *subject*, this should be followed by a blank line and then a message describing the intent and purpose of the commit.
+The first line MUST comply with conventional commits approach.
+```
+<type>[optional scope]: <description>
+
+[body]
+```
+
+The type field MUST be one of the following:
+```
+fix, feat, build, chore, ci, docs, style, refactor, perf, test
+```
+
+The body MAY include module/list of modules it affects.
+```
+feat: read akashd config from some config system
+
+cmd/akashd
+```
+The specification can be found [here](https://www.conventionalcommits.org/en/v1.0.0/#specification).
 
 * When you run `git commit` make sure you sign-off the commit by typing `git commit --signoff` or `git commit -s`
 * The commit subject-line should start with an uppercase letter
