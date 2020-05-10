@@ -37,4 +37,6 @@ var (
 	ErrBidNotFound = sdkerrors.Register(ModuleName, 15, "invalid bid: bid not found")
 	// ErrLeaseNotFound lease not found
 	ErrLeaseNotFound = sdkerrors.Register(ModuleName, 16, "invalid lease: lease not found")
+	// ErrBidExists bid exists
+	ErrBidExists = sdkerrors.Register(ModuleName, 17, "invalid bid: bid exists from provider")
 )

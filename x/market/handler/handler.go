@@ -45,9 +45,9 @@ func handleMsgCreateBid(ctx sdk.Context, keepers Keepers, msg types.MsgCreateBid
 		return nil, types.ErrAtributeMismatch
 	}
 
-	// TODO: ensure not a current bid from this provider
-
-	keepers.Market.CreateBid(ctx, msg.Order, msg.Provider, msg.Price)
+	if _, err := keepers.Market.CreateBid(ctx, msg.Order, msg.Provider, msg.Price); err != nil {
+		return nil, err
+	}
 
 	return &sdk.Result{
 		Events: ctx.EventManager().Events(),

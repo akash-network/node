@@ -1,0 +1,47 @@
+name: simulation tests
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  cleanup-runs:
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/master'
+    steps:
+      - uses: rokroskar/workflow-run-cleanup-action@master
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+  test-sim-nondeterminism:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2-beta
+      - name: test-sim-nondeterminism
+        run: make test-sim-nondeterminism
+
+  test-sim-import-export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - name: test-sim-import-export
+        run: make test-sim-import-export
+
+  test-sim-after-import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - name: test-sim-after-import
+        run: make test-sim-after-import
+
+  test-sim-fullapp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - name: test-sim-fullapp
+        run: make test-sim-fullapp

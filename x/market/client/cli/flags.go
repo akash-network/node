@@ -61,7 +61,7 @@ func BidIDFromFlags(ctx context.CLIContext, flags *pflag.FlagSet) (types.BidID, 
 	return types.MakeBidID(prev, ctx.GetFromAddress()), nil
 }
 
-// BidIDFromFlagsWithoutCtx returns BidID with given flags and error if occured
+// BidIDFromFlagsWithoutCtx returns BidID with given flags and error if occurred
 // Here provider value is taken from flags
 func BidIDFromFlagsWithoutCtx(flags *pflag.FlagSet) (types.BidID, error) {
 	prev, err := OrderIDFromFlags(flags)

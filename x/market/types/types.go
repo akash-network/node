@@ -13,11 +13,11 @@ type OrderState uint8
 
 const (
 	// OrderOpen is used when state of order is open
-	OrderOpen OrderState = iota
+	OrderOpen OrderState = iota + 1
 	// OrderMatched is used when state of order is matched
-	OrderMatched OrderState = iota
+	OrderMatched
 	// OrderClosed is used when state of order is closed
-	OrderClosed OrderState = iota
+	OrderClosed
 )
 
 // OrderFilters defines flags for order list filter
@@ -64,6 +64,17 @@ func (o Order) ValidateCanBid() error {
 	}
 }
 
+func (o Order) ValidateInactive() error {
+	switch o.State {
+	case OrderClosed:
+		return nil
+	case OrderMatched:
+		return fmt.Errorf("order matched")
+	default:
+		return fmt.Errorf("order open")
+	}
+}
+
 // Price method returns price of specific order
 func (o Order) Price() sdk.Coin {
 	return o.Spec.Price()
@@ -102,13 +113,13 @@ type BidState uint8
 
 const (
 	// BidOpen is used when state of bid is opened
-	BidOpen BidState = iota
+	BidOpen BidState = iota + 1
 	// BidMatched is used when state of bid is matched
-	BidMatched BidState = iota
+	BidMatched
 	// BidLost is used when state of bid is lost
-	BidLost BidState = iota
+	BidLost
 	// BidClosed is used when state of bid is closed
-	BidClosed BidState = iota
+	BidClosed
 )
 
 // BidFilters defines flags for bid list filter
@@ -145,11 +156,11 @@ type LeaseState uint8
 
 const (
 	// LeaseActive is used when state of lease is active
-	LeaseActive LeaseState = iota
+	LeaseActive LeaseState = iota + 1
 	// LeaseInsufficientFunds is used when lease has insufficient funds
-	LeaseInsufficientFunds LeaseState = iota
+	LeaseInsufficientFunds
 	// LeaseClosed is used when state of lease is closed
-	LeaseClosed LeaseState = iota
+	LeaseClosed
 )
 
 // LeaseFilters defines flags for lease list filter
