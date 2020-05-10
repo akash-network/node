@@ -12,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
+	"github.com/cosmos/cosmos-sdk/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/mint"
@@ -71,6 +72,7 @@ var (
 		params.AppModuleBasic{},
 		upgrade.AppModuleBasic{},
 		crisis.AppModuleBasic{},
+		evidence.AppModuleBasic{},
 
 		// akash
 		deployment.AppModuleBasic{},
@@ -101,6 +103,7 @@ type AkashApp struct {
 		gov        gov.Keeper
 		upgrade    upgrade.Keeper
 		crisis     crisis.Keeper
+		evidence   evidence.Keeper
 		deployment deployment.Keeper
 		market     market.Keeper
 		provider   provider.Keeper
@@ -151,6 +154,7 @@ func NewApp(
 		mint.StoreKey,
 		gov.StoreKey,
 		upgrade.StoreKey,
+		evidence.StoreKey,
 		deployment.StoreKey,
 		market.StoreKey,
 		provider.StoreKey,
@@ -262,6 +266,16 @@ func NewApp(
 		govRouter,
 	)
 
+	// create evidence keeper with router
+	evidenceKeeper := evidence.NewKeeper(
+		cdc, keys[evidence.StoreKey], app.keeper.params.Subspace(evidence.DefaultParamspace),
+		&app.keeper.staking, app.keeper.slashing,
+	)
+	evidenceRouter := evidence.NewRouter()
+
+	evidenceKeeper.SetRouter(evidenceRouter)
+	app.keeper.evidence = *evidenceKeeper
+
 	app.keeper.deployment = deployment.NewKeeper(
 		cdc,
 		keys[deployment.StoreKey],
@@ -293,6 +307,7 @@ func NewApp(
 		gov.NewAppModule(app.keeper.gov, app.keeper.acct, app.keeper.supply),
 		upgrade.NewAppModule(app.keeper.upgrade),
 		crisis.NewAppModule(&app.keeper.crisis),
+		evidence.NewAppModule(app.keeper.evidence),
 
 		// akash
 		deployment.NewAppModule(
@@ -311,7 +326,7 @@ func NewApp(
 		provider.NewAppModule(app.keeper.provider, app.keeper.bank),
 	)
 
-	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName)
+	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName, evidence.ModuleName)
 	app.mm.SetOrderEndBlockers(staking.ModuleName, gov.ModuleName, crisis.ModuleName, deployment.ModuleName, market.ModuleName)
 
 	// NOTE: The genutils module must occur after staking so that pools are
@@ -327,6 +342,7 @@ func NewApp(
 		genutil.ModuleName,
 		gov.ModuleName,
 		crisis.ModuleName,
+		evidence.ModuleName,
 
 		// akash
 		deployment.ModuleName,
