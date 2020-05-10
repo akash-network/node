@@ -81,11 +81,6 @@ var (
 		market.AppModuleBasic{},
 		provider.AppModuleBasic{},
 	)
-
-	// module accounts that are allowed to receive tokens
-	allowedReceivingModAcc = map[string]bool{
-		distr.ModuleName: true,
-	}
 )
 
 // AkashApp extends ABCI appplication
@@ -436,16 +431,6 @@ func (app *AkashApp) Codec() *codec.Codec {
 // ModuleAccountAddrs returns all the app's module account addresses.
 func (app *AkashApp) ModuleAccountAddrs() map[string]bool {
 	return macAddrs()
-}
-
-// BlacklistedAccAddrs returns all the app's module account addresses black listed for receiving tokens.
-func (app *AkashApp) BlacklistedAccAddrs() map[string]bool {
-	blacklistedAddrs := make(map[string]bool)
-	for acc := range macPerms() {
-		blacklistedAddrs[supply.NewModuleAddress(acc).String()] = !allowedReceivingModAcc[acc]
-	}
-
-	return blacklistedAddrs
 }
 
 // SimulationManager implements the SimulationApp interface
