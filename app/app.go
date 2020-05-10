@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
+	"github.com/cosmos/cosmos-sdk/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/mint"
@@ -72,6 +73,7 @@ var (
 
 		params.AppModuleBasic{},
 		upgrade.AppModuleBasic{},
+		evidence.AppModuleBasic{},
 		crisis.AppModuleBasic{},
 
 		// akash
@@ -79,6 +81,11 @@ var (
 		market.AppModuleBasic{},
 		provider.AppModuleBasic{},
 	)
+
+	// module accounts that are allowed to receive tokens
+	allowedReceivingModAcc = map[string]bool{
+		distr.ModuleName: true,
+	}
 )
 
 // AkashApp extends ABCI appplication
@@ -103,6 +110,7 @@ type AkashApp struct {
 		gov        gov.Keeper
 		upgrade    upgrade.Keeper
 		crisis     crisis.Keeper
+		evidence   evidence.Keeper
 		deployment deployment.Keeper
 		market     market.Keeper
 		provider   provider.Keeper
@@ -153,6 +161,7 @@ func NewApp(
 		mint.StoreKey,
 		gov.StoreKey,
 		upgrade.StoreKey,
+		evidence.StoreKey,
 		deployment.StoreKey,
 		market.StoreKey,
 		provider.StoreKey,
@@ -248,6 +257,20 @@ func NewApp(
 		auth.FeeCollectorName,
 	)
 
+	// create evidence keeper with evidence router
+	evidenceKeeper := evidence.NewKeeper(
+		app.cdc, keys[evidence.StoreKey],
+		app.keeper.params.Subspace(evidence.DefaultParamspace),
+		&app.keeper.staking,
+		app.keeper.slashing,
+	)
+	evidenceRouter := evidence.NewRouter()
+
+	// TODO: register evidence routes
+	evidenceKeeper.SetRouter(evidenceRouter)
+
+	app.keeper.evidence = *evidenceKeeper
+
 	// register the proposal types
 	govRouter := gov.NewRouter()
 	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).
@@ -294,6 +317,7 @@ func NewApp(
 
 		gov.NewAppModule(app.keeper.gov, app.keeper.acct, app.keeper.supply),
 		upgrade.NewAppModule(app.keeper.upgrade),
+		evidence.NewAppModule(app.keeper.evidence),
 		crisis.NewAppModule(&app.keeper.crisis),
 
 		// akash
@@ -313,7 +337,7 @@ func NewApp(
 		provider.NewAppModule(app.keeper.provider, app.keeper.bank),
 	)
 
-	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName)
+	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName, evidence.ModuleName)
 	app.mm.SetOrderEndBlockers(staking.ModuleName, gov.ModuleName, crisis.ModuleName, deployment.ModuleName, market.ModuleName)
 
 	// NOTE: The genutils module must occur after staking so that pools are
@@ -324,11 +348,12 @@ func NewApp(
 		auth.ModuleName,
 		bank.ModuleName,
 		slashing.ModuleName,
+		gov.ModuleName,
 		mint.ModuleName,
 		supply.ModuleName,
-		genutil.ModuleName,
-		gov.ModuleName,
 		crisis.ModuleName,
+		genutil.ModuleName,
+		evidence.ModuleName,
 
 		// akash
 		deployment.ModuleName,
@@ -411,6 +436,16 @@ func (app *AkashApp) Codec() *codec.Codec {
 // ModuleAccountAddrs returns all the app's module account addresses.
 func (app *AkashApp) ModuleAccountAddrs() map[string]bool {
 	return macAddrs()
+}
+
+// BlacklistedAccAddrs returns all the app's module account addresses black listed for receiving tokens.
+func (app *AkashApp) BlacklistedAccAddrs() map[string]bool {
+	blacklistedAddrs := make(map[string]bool)
+	for acc := range macPerms() {
+		blacklistedAddrs[supply.NewModuleAddress(acc).String()] = !allowedReceivingModAcc[acc]
+	}
+
+	return blacklistedAddrs
 }
 
 // SimulationManager implements the SimulationApp interface
