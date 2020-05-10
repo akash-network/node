@@ -219,7 +219,7 @@ func NewApp(
 		cdc,
 		keys[distr.StoreKey],
 		app.keeper.params.Subspace(distr.DefaultParamspace),
-		skeeper,
+		&skeeper,
 		app.keeper.supply,
 		auth.FeeCollectorName,
 		macAddrs(),
@@ -228,7 +228,7 @@ func NewApp(
 	app.keeper.slashing = slashing.NewKeeper(
 		cdc,
 		keys[slashing.StoreKey],
-		skeeper,
+		&skeeper,
 		app.keeper.params.Subspace(slashing.DefaultParamspace),
 	)
 
@@ -243,7 +243,7 @@ func NewApp(
 		cdc,
 		keys[mint.StoreKey],
 		app.keeper.params.Subspace(mint.DefaultParamspace),
-		&app.keeper.staking,
+		&skeeper,
 		app.keeper.supply,
 		auth.FeeCollectorName,
 	)
