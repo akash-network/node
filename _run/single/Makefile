@@ -4,6 +4,8 @@ KEY_OPTS 	= --keyring-backend test
 akash 		= ../../akashctl --home $(CLIENT_HOME) 
 akashd 		= ../../akashd --home $(NODE_HOME)
 
+MINIKUBE_IP ?= $(shell minikube ip)
+
 kube-start:
 	minikube start --cpus 4 --memory 4096
 	minikube addons enable ingress
@@ -39,7 +41,7 @@ init-keys: dirs
 deploy:
 	 helm install node0 akash-node \
 		 --set image.pullPolicy=Never \
-		 --set "ingress.domain=$(shell minikube ip).nip.io" \
+		 --set "ingress.domain=$(MINIKUBE_IP).nip.io" \
 		 --set-file node.genesis=$(NODE_HOME)/config/genesis.json \
 		 --set-file node.priv_validator_key=$(NODE_HOME)/config/priv_validator_key.json \
 		 --set-file node.priv_validator_state=$(NODE_HOME)/data/priv_validator_state.json \

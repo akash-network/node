@@ -36,7 +36,7 @@ image-bins:
 image: image-bins
 	docker build --rm            \
 		-t ovrclk/akash:latest     \
-		-f _build/Dockerfile.akash \
+		-f _build/Dockerfile.akashctl \
 		_build
 	docker build --rm             \
 		-t ovrclk/akashd:latest     \
@@ -99,6 +99,11 @@ test-integration: $(BINS)
 	cp akashctl akashd ./_build
 	go test -mod=readonly -p 4 -tags=integration -v ./integration/...
 
+gentypes: $(PROTOC_FILES)
+
+vendor:
+	go mod vendor
+
 kubetypes:
 	chmod +x vendor/k8s.io/code-generator/generate-groups.sh
 	vendor/k8s.io/code-generator/generate-groups.sh all \
@@ -136,6 +141,7 @@ clean:
 	test-integraion \
 	test-lint lintdeps-install \
 	test-vet \
+	vendor \
 	mocks \
 	gofmt \
 	docs \

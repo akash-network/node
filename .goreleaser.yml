@@ -49,7 +49,7 @@ archives:
 dockers:
   - binaries: 
     - akashctl
-    dockerfile: _build/Dockerfile.akash
+    dockerfile: _build/Dockerfile.akashctl
     goos: linux
     goarch: amd64
     image_templates:  

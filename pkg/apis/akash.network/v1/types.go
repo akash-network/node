@@ -1,16 +1,24 @@
 package v1
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/cosmos/cosmos-sdk/codec"
+
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +resource:path=akash
 
-// Manifest store metadata, specifications and status of manifest
+// Manifest store metadata, specifications and status of the Lease
+// ./k8s.io/code-generator/generate-groups.sh all github.com/ovrclk/akash/pkg/client github.com/ovrclk/akash/pkg/apis akash.network:v1
+// For more details of code-generator, please visit https://github.com/kubernetes/code-generator
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type Manifest struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -20,7 +28,7 @@ type Manifest struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ManifestGroup store metadata, name and list of manifest services
+// ManifestGroup stores metadata, name and list of SDL manifest services
 type ManifestGroup struct {
 	metav1.TypeMeta `json:",inline"`
 	// Placement profile name
@@ -98,43 +106,53 @@ func ManifestGroupFromAkash(m *manifest.Group) ManifestGroup {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +resource:path=akash
 
 // LeaseID stores deployment, group sequence, order, provider and metadata
 type LeaseID struct {
-	metav1.TypeMeta `json:",inline"`
-	// deployment address
+	metav1.ObjectMeta `json:"metadata"`
+	metav1.TypeMeta   `json:",inline"`
+
+	// Deployment Sequence ID + Owner Account address marshalled
 	Deployment []byte `protobuf:"bytes,1,opt,name=deployment,proto3,customtype=github.com/ovrclk/akash/types/base.Bytes" json:"deployment"`
-	// deployment group sequence
+
+	// Group sequence
 	Group uint64 `protobuf:"varint,2,opt,name=group,proto3" json:"group,omitempty"`
-	// order sequence
+
+	// Order sequence
 	Order uint64 `protobuf:"varint,3,opt,name=order,proto3" json:"order,omitempty"`
-	// provider address
+
+	// Provider address
 	Provider []byte `protobuf:"bytes,4,opt,name=provider,proto3,customtype=github.com/ovrclk/akash/types/base.Bytes" json:"provider"`
 }
 
 // ToAkash returns LeaseID from LeaseID details
 func (id LeaseID) ToAkash() mtypes.LeaseID {
+	cdc := codec.New()
+	var d *dtypes.Deployment
+	cdc.MustUnmarshalBinaryBare(id.Deployment, d)
+
 	return mtypes.LeaseID{
-		// TODO
-		// Deployment: id.Deployment,
-		// Group:      id.Group,
-		// Order:      id.Order,
-		// Provider:   id.Provider,
+		Owner:    d.Owner,
+		DSeq:     d.DSeq,
+		GSeq:     uint32(id.Group),
+		OSeq:     uint32(id.Order),
+		Provider: id.Provider,
 	}
 }
 
 // LeaseIDFromAkash returns LeaseID instance from akash
 func LeaseIDFromAkash(id mtypes.LeaseID) LeaseID {
 	return LeaseID{
-		// TODO
-		// Deployment: id.Deployment,
-		// Group:      id.Group,
-		// Order:      id.Order,
-		// Provider:   id.Provider,
+		//Deployment: deployBytes,
+		Group:    uint64(id.GSeq),
+		Order:    uint64(id.OSeq),
+		Provider: id.Provider,
 	}
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +resource:path=akash
 
 // ManifestSpec stores LeaseID, Group and metadata details
 type ManifestSpec struct {
@@ -184,6 +202,7 @@ type ManifestStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +resource:path=akash
 
 // ManifestList stores metadata and items list of manifest
 type ManifestList struct {

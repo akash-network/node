@@ -11,9 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func cleanupStaleResources(kc kubernetes.Interface, lid mtypes.LeaseID, group *manifest.Group) error {
-	// TODO: accept context as parameter
-	ctx := context.Background()
+func cleanupStaleResources(ctx context.Context, kc kubernetes.Interface, lid mtypes.LeaseID, group *manifest.Group) error {
 	ns := lidNS(lid)
 
 	// build label selector for objects not in current manifest group
