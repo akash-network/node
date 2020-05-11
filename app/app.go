@@ -243,6 +243,11 @@ func NewApp(
 
 	app.keeper.upgrade = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], cdc)
 
+	// no-op handler for "sirius-upgrade"
+	app.keeper.upgrade.SetUpgradeHandler("sirius-upgrade", func(ctx sdk.Context, plan upgrade.Plan) {
+
+	})
+
 	app.keeper.crisis = crisis.NewKeeper(
 		app.keeper.params.Subspace(crisis.DefaultParamspace),
 		invCheckPeriod,
