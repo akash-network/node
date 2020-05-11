@@ -3,12 +3,14 @@ package v1
 import (
 	"testing"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/sdl"
-	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/crypto/ed25519"
+
+	"github.com/ovrclk/akash/sdl"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 const (
@@ -58,9 +60,14 @@ func TestFromProto(t *testing.T) {
 
 	kubeManifest, err := NewManifest("name", leaseID, &mani.GetGroups()[0])
 	assert.NoError(t, err)
+	t.Logf("kubeManifest: %#v", kubeManifest)
 
 	fromKube := kubeManifest.ManifestGroup()
-	assert.NoError(t, err)
+	rcs := fromKube.GetResources()
+	for _, r := range rcs {
+		t.Logf("%+v", r)
+	}
 
+	assert.Equal(t, fromKube.GetResources()[0].Unit.CPU, uint32(100))
 	assert.Equal(t, mani.GetGroups()[0].Name, fromKube.Name)
 }

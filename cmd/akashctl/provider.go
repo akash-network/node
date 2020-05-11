@@ -4,11 +4,15 @@ import (
 	"context"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	ccontext "github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	"github.com/tendermint/tendermint/libs/log"
+
 	"github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/events"
 	"github.com/ovrclk/akash/provider"
@@ -18,8 +22,6 @@ import (
 	dmodule "github.com/ovrclk/akash/x/deployment"
 	mmodule "github.com/ovrclk/akash/x/market"
 	pmodule "github.com/ovrclk/akash/x/provider"
-	"github.com/spf13/cobra"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
 func providerCmd(cdc *codec.Codec) *cobra.Command {

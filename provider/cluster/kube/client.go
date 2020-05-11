@@ -7,14 +7,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/ovrclk/akash/manifest"
-	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
-	manifestclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
-	"github.com/ovrclk/akash/provider/cluster"
-	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/validation"
-	mtypes "github.com/ovrclk/akash/x/market/types"
-	"github.com/tendermint/tendermint/libs/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -24,6 +16,16 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	metricsclient "k8s.io/metrics/pkg/client/clientset/versioned"
+
+	"github.com/tendermint/tendermint/libs/log"
+
+	"github.com/ovrclk/akash/manifest"
+	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	manifestclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
+	"github.com/ovrclk/akash/provider/cluster"
+	"github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/validation"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 // Client interface includes cluster client
@@ -32,6 +34,7 @@ type Client interface {
 }
 
 type client struct {
+	ctx  context.Context
 	kc   kubernetes.Interface
 	mc   *manifestclient.Clientset
 	metc metricsclient.Interface
@@ -69,12 +72,12 @@ func NewClient(log log.Logger, host, ns string) (Client, error) {
 		return nil, fmt.Errorf("error creating metrics client: %v", err)
 	}
 
-	err = akashv1.CreateCRD(mcr)
+	err = akashv1.CreateCRD(ctx, mcr)
 	if err != nil {
 		return nil, fmt.Errorf("error creating akashv1 CRD: %v", err)
 	}
 
-	err = prepareEnvironment(kc, ns)
+	err = prepareEnvironment(ctx, kc, ns)
 	if err != nil {
 		return nil, fmt.Errorf("error preparing environment %v", err)
 	}
@@ -85,6 +88,7 @@ func NewClient(log log.Logger, host, ns string) (Client, error) {
 	}
 
 	return &client{
+		ctx:  ctx,
 		kc:   kc,
 		mc:   mc,
 		metc: metc,
@@ -114,9 +118,7 @@ func (c *client) shouldExpose(expose *manifest.ServiceExpose) bool {
 }
 
 func (c *client) Deployments() ([]cluster.Deployment, error) {
-	// TODO: accept context as parameter
-	ctx := context.Background()
-	manifests, err := c.mc.AkashV1().Manifests(c.ns).List(ctx, metav1.ListOptions{})
+	manifests, err := c.mc.AkashV1().Manifests(c.ns).List(c.ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -131,23 +133,23 @@ func (c *client) Deployments() ([]cluster.Deployment, error) {
 }
 
 func (c *client) Deploy(lid mtypes.LeaseID, group *manifest.Group) error {
-	if err := applyNS(c.kc, newNSBuilder(lid, group)); err != nil {
+	if err := applyNS(c.ctx, c.kc, newNSBuilder(lid, group)); err != nil {
 		c.log.Error("applying namespace", "err", err, "lease", lid)
 		return err
 	}
 
-	if err := applyManifest(c.mc, newManifestBuilder(c.log, c.ns, lid, group)); err != nil {
+	if err := applyManifest(c.ctx, c.mc, newManifestBuilder(c.log, c.ns, lid, group)); err != nil {
 		c.log.Error("applying manifest", "err", err, "lease", lid)
 		return err
 	}
 
-	if err := cleanupStaleResources(c.kc, lid, group); err != nil {
+	if err := cleanupStaleResources(c.ctx, c.kc, lid, group); err != nil {
 		c.log.Error("cleaning stale resources", "err", err, "lease", lid)
 		return err
 	}
 
 	for _, service := range group.Services {
-		if err := applyDeployment(c.kc, newDeploymentBuilder(c.log, lid, group, &service)); err != nil {
+		if err := applyDeployment(c.ctx, c.kc, newDeploymentBuilder(c.log, lid, group, &service)); err != nil {
 			c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
@@ -157,7 +159,7 @@ func (c *client) Deploy(lid mtypes.LeaseID, group *manifest.Group) error {
 			continue
 		}
 
-		if err := applyService(c.kc, newServiceBuilder(c.log, lid, group, &service)); err != nil {
+		if err := applyService(c.ctx, c.kc, newServiceBuilder(c.log, lid, group, &service)); err != nil {
 			c.log.Error("applying service", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
@@ -166,7 +168,7 @@ func (c *client) Deploy(lid mtypes.LeaseID, group *manifest.Group) error {
 			if !c.shouldExpose(&expose) {
 				continue
 			}
-			if err := applyIngress(c.kc, newIngressBuilder(c.log, c.host, lid, group, &service, &expose)); err != nil {
+			if err := applyIngress(c.ctx, c.kc, newIngressBuilder(c.log, c.host, lid, group, &service, &expose)); err != nil {
 				c.log.Error("applying ingress", "err", err, "lease", lid, "service", service.Name, "expose", expose)
 				return err
 			}
@@ -177,9 +179,7 @@ func (c *client) Deploy(lid mtypes.LeaseID, group *manifest.Group) error {
 }
 
 func (c *client) TeardownLease(lid mtypes.LeaseID) error {
-	// TODO: accept context as parameter or part of `client` type
-	ctx := context.Background()
-	return c.kc.CoreV1().Namespaces().Delete(ctx, lidNS(lid), metav1.DeleteOptions{})
+	return c.kc.CoreV1().Namespaces().Delete(c.ctx, lidNS(lid), metav1.DeleteOptions{})
 }
 
 func (c *client) ServiceLogs(ctx context.Context, lid mtypes.LeaseID,
@@ -207,8 +207,6 @@ func (c *client) ServiceLogs(ctx context.Context, lid mtypes.LeaseID,
 
 // todo: limit number of results and do pagination / streaming
 func (c *client) LeaseStatus(lid mtypes.LeaseID) (*cluster.LeaseStatus, error) {
-	// TODO: accept context as parameter
-	ctx := context.Background()
 	deployments, err := c.deploymentsForLease(lid)
 	if err != nil {
 		c.log.Error(err.Error())
@@ -226,7 +224,7 @@ func (c *client) LeaseStatus(lid mtypes.LeaseID) (*cluster.LeaseStatus, error) {
 		}
 		serviceStatus[deployment.Name] = status
 	}
-	ingress, err := c.kc.ExtensionsV1beta1().Ingresses(lidNS(lid)).List(ctx, metav1.ListOptions{})
+	ingress, err := c.kc.ExtensionsV1beta1().Ingresses(lidNS(lid)).List(c.ctx, metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
 		return nil, errors.New("internal error")
@@ -263,9 +261,7 @@ func (c *client) LeaseStatus(lid mtypes.LeaseID) (*cluster.LeaseStatus, error) {
 }
 
 func (c *client) ServiceStatus(lid mtypes.LeaseID, name string) (*cluster.ServiceStatus, error) {
-	// TODO: accept context as parameter
-	ctx := context.Background()
-	deployment, err := c.kc.AppsV1().Deployments(lidNS(lid)).Get(ctx, name, metav1.GetOptions{})
+	deployment, err := c.kc.AppsV1().Deployments(lidNS(lid)).Get(c.ctx, name, metav1.GetOptions{})
 
 	if err != nil {
 		c.log.Error(err.Error())
@@ -284,8 +280,6 @@ func (c *client) ServiceStatus(lid mtypes.LeaseID, name string) (*cluster.Servic
 }
 
 func (c *client) Inventory() ([]cluster.Node, error) {
-	// TODO: accept context as parameter
-	ctx := context.Background()
 	var nodes []cluster.Node
 
 	knodes, err := c.activeNodes()
@@ -293,7 +287,7 @@ func (c *client) Inventory() ([]cluster.Node, error) {
 		return nil, err
 	}
 
-	mnodes, err := c.metc.MetricsV1beta1().NodeMetricses().List(ctx, metav1.ListOptions{})
+	mnodes, err := c.metc.MetricsV1beta1().NodeMetricses().List(c.ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -347,9 +341,7 @@ func (c *client) Inventory() ([]cluster.Node, error) {
 }
 
 func (c *client) activeNodes() (map[string]*corev1.Node, error) {
-	// TODO: accept context as parameter
-	ctx := context.Background()
-	knodes, err := c.kc.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	knodes, err := c.kc.CoreV1().Nodes().List(c.ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -402,9 +394,7 @@ func (c *client) nodeIsActive(node *corev1.Node) bool {
 }
 
 func (c *client) deploymentsForLease(lid mtypes.LeaseID) ([]appsv1.Deployment, error) {
-	// TODO: accept context as parameter
-	ctx := context.Background()
-	deployments, err := c.kc.AppsV1().Deployments(lidNS(lid)).List(ctx, metav1.ListOptions{})
+	deployments, err := c.kc.AppsV1().Deployments(lidNS(lid)).List(c.ctx, metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
 		return nil, errors.New("internal error")

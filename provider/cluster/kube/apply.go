@@ -10,9 +10,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func applyNS(kc kubernetes.Interface, b *nsBuilder) error {
-	// TODO: accept context as parameter
-	ctx := context.Background()
+func applyNS(ctx context.Context, kc kubernetes.Interface, b *nsBuilder) error {
 	obj, err := kc.CoreV1().Namespaces().Get(ctx, b.name(), metav1.GetOptions{})
 	switch {
 	case err == nil:
@@ -29,9 +27,7 @@ func applyNS(kc kubernetes.Interface, b *nsBuilder) error {
 	return err
 }
 
-func applyDeployment(kc kubernetes.Interface, b *deploymentBuilder) error {
-	// TODO: accept context as parameter
-	ctx := context.Background()
+func applyDeployment(ctx context.Context, kc kubernetes.Interface, b *deploymentBuilder) error {
 	obj, err := kc.AppsV1().Deployments(b.ns()).Get(ctx, b.name(), metav1.GetOptions{})
 	switch {
 	case err == nil:
@@ -48,9 +44,7 @@ func applyDeployment(kc kubernetes.Interface, b *deploymentBuilder) error {
 	return err
 }
 
-func applyService(kc kubernetes.Interface, b *serviceBuilder) error {
-	// TODO: accept context as parameter
-	ctx := context.Background()
+func applyService(ctx context.Context, kc kubernetes.Interface, b *serviceBuilder) error {
 	obj, err := kc.CoreV1().Services(b.ns()).Get(ctx, b.name(), metav1.GetOptions{})
 	switch {
 	case err == nil:
@@ -67,9 +61,7 @@ func applyService(kc kubernetes.Interface, b *serviceBuilder) error {
 	return err
 }
 
-func applyIngress(kc kubernetes.Interface, b *ingressBuilder) error {
-	// TODO: accept context as parameter
-	ctx := context.Background()
+func applyIngress(ctx context.Context, kc kubernetes.Interface, b *ingressBuilder) error {
 	obj, err := kc.ExtensionsV1beta1().Ingresses(b.ns()).Get(ctx, b.name(), metav1.GetOptions{})
 	switch {
 	case err == nil:
@@ -86,9 +78,7 @@ func applyIngress(kc kubernetes.Interface, b *ingressBuilder) error {
 	return err
 }
 
-func prepareEnvironment(kc kubernetes.Interface, ns string) error {
-	// TODO: accept context as parameter
-	ctx := context.Background()
+func prepareEnvironment(ctx context.Context, kc kubernetes.Interface, ns string) error {
 	_, err := kc.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		obj := &corev1.Namespace{
@@ -101,9 +91,7 @@ func prepareEnvironment(kc kubernetes.Interface, ns string) error {
 	return err
 }
 
-func applyManifest(kc akashv1.Interface, b *manifestBuilder) error {
-	// TODO: accept context as parameter
-	ctx := context.Background()
+func applyManifest(ctx context.Context, kc akashv1.Interface, b *manifestBuilder) error {
 	obj, err := kc.AkashV1().Manifests(b.ns()).Get(ctx, b.name(), metav1.GetOptions{})
 	switch {
 	case err == nil:
