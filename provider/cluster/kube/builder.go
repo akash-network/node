@@ -264,7 +264,7 @@ func (b *ingressBuilder) update(obj *extv1.Ingress) (*extv1.Ingress, error) {
 func (b *ingressBuilder) rules() []extv1.IngressRule {
 	rules := make([]extv1.IngressRule, 0, len(b.expose.Hosts))
 	httpRule := &extv1.HTTPIngressRuleValue{
-		Paths: []extv1.HTTPIngressPath{extv1.HTTPIngressPath{
+		Paths: []extv1.HTTPIngressPath{{
 			Backend: extv1.IngressBackend{
 				ServiceName: b.name(),
 				ServicePort: intstr.FromInt(int(exposeExternalPort(b.expose))),
