@@ -24,6 +24,7 @@ const (
 	monitorHealthcheckPeriodJitter = time.Second * 5
 )
 
+// wtf does this do....
 type deploymentMonitor struct {
 	bus     pubsub.Bus
 	session session.Session
@@ -37,18 +38,21 @@ type deploymentMonitor struct {
 	lc       lifecycle.Lifecycle
 }
 
-func newDeploymentMonitor(dm *deploymentManager) *deploymentMonitor {
+func newDeploymentMonitor(ctx context.Context, bus pubsub.Bus,
+	session session.Session, client Client,
+	lease mtypes.LeaseID, mgroup *manifest.Group,
+	log log.Logger) *deploymentMonitor {
 	m := &deploymentMonitor{
-		bus:     dm.bus,
-		session: dm.session,
-		client:  dm.client,
-		lease:   dm.lease,
-		mgroup:  dm.mgroup,
-		log:     dm.log.With("cmp", "deployment-monitor"),
+		bus:     bus,
+		session: session,
+		client:  client,
+		lease:   lease,
+		mgroup:  mgroup,
+		log:     log.With("cmp", "deployment-monitor"),
 		lc:      lifecycle.New(),
 	}
 
-	go m.lc.WatchChannel(dm.lc.ShuttingDown())
+	go m.lc.WatchChannel(ctx.Done())
 	go m.run()
 
 	return m

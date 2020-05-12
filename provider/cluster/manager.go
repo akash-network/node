@@ -66,7 +66,7 @@ func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Gro
 
 	go func() {
 		<-dm.lc.Done()
-		s.managerch <- dm
+		s.managerch <- dm // inform `service{}` that the deployment released and no longer served
 	}()
 
 	return dm
@@ -91,7 +91,7 @@ func (dm *deploymentManager) teardown() error {
 }
 
 func (dm *deploymentManager) run() {
-	defer dm.lc.ShutdownCompleted()
+	defer dm.lc.ShutdownCompleted() // triggers lc.Done()
 	runch := dm.startDeploy()
 
 loop:
@@ -169,7 +169,7 @@ loop:
 
 func (dm *deploymentManager) startMonitor() {
 	dm.wg.Add(1)
-	dm.monitor = newDeploymentMonitor(dm)
+	//dm.monitor = newDeploymentMonitor(dm)
 	go func(m *deploymentMonitor) {
 		defer dm.wg.Done()
 		<-m.done()

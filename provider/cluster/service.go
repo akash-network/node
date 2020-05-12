@@ -87,6 +87,8 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 	return s, nil
 }
 
+var _ Service = (*service)(nil)
+
 type service struct {
 	session session.Session
 	client  Client
@@ -220,7 +222,7 @@ loop:
 					"lease", dm.lease, "group-name", dm.mgroup.Name)
 			}
 
-			// todo: unreserve resources
+			// TODO: unreserve resources
 
 			delete(s.managers, mquery.LeasePath(dm.lease))
 		}
@@ -232,6 +234,7 @@ loop:
 		if manager != nil {
 			manager := <-s.managerch
 			s.log.Debug("manager done", "lease", manager.lease)
+			// TODO: ??? shutdown each manager?
 		}
 	}
 
