@@ -24,6 +24,8 @@ import (
 	pmodule "github.com/ovrclk/akash/x/provider"
 )
 
+var _ = providerCmd(codec.New()) // Disables deadcode lint check until provderCmd is ready for use.
+
 func providerCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "provider",

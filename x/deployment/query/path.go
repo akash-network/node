@@ -12,7 +12,6 @@ const (
 	deploymentsPath = "deployments"
 	deploymentPath  = "deployment"
 	groupPath       = "group"
-	filterDepsPath  = "filter_deployments"
 )
 
 // getDeploymentsPath returns deployments path for queries
