@@ -62,7 +62,7 @@ func CreateCRD(ctx context.Context, clientset apiextcs.Interface) error {
 		Spec: apiextv1.CustomResourceDefinitionSpec{
 			Group: CRDGroup,
 			Versions: []apiextv1.CustomResourceDefinitionVersion{
-				apiextv1.CustomResourceDefinitionVersion{
+				{
 					Name:    CRDVersion,
 					Served:  true,
 					Storage: true,
