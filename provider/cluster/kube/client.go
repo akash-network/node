@@ -148,8 +148,9 @@ func (c *client) Deploy(lid mtypes.LeaseID, group *manifest.Group) error {
 		return err
 	}
 
-	for _, service := range group.Services {
-		if err := applyDeployment(c.ctx, c.kc, newDeploymentBuilder(c.log, lid, group, &service)); err != nil {
+	for svcIdx := range group.Services {
+		service := &group.Services[svcIdx]
+		if err := applyDeployment(c.ctx, c.kc, newDeploymentBuilder(c.log, lid, group, service)); err != nil {
 			c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
@@ -159,16 +160,17 @@ func (c *client) Deploy(lid mtypes.LeaseID, group *manifest.Group) error {
 			continue
 		}
 
-		if err := applyService(c.ctx, c.kc, newServiceBuilder(c.log, lid, group, &service)); err != nil {
+		if err := applyService(c.ctx, c.kc, newServiceBuilder(c.log, lid, group, service)); err != nil {
 			c.log.Error("applying service", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
 
-		for _, expose := range service.Expose {
-			if !c.shouldExpose(&expose) {
+		for expIdx := range service.Expose {
+			expose := &service.Expose[expIdx]
+			if !c.shouldExpose(expose) {
 				continue
 			}
-			if err := applyIngress(c.ctx, c.kc, newIngressBuilder(c.log, c.host, lid, group, &service, &expose)); err != nil {
+			if err := applyIngress(c.ctx, c.kc, newIngressBuilder(c.log, c.host, lid, group, service, expose)); err != nil {
 				c.log.Error("applying ingress", "err", err, "lease", lid, "service", service.Name, "expose", expose)
 				return err
 			}
@@ -348,12 +350,14 @@ func (c *client) activeNodes() (map[string]*corev1.Node, error) {
 
 	retnodes := make(map[string]*corev1.Node)
 
-	for _, knode := range knodes.Items {
-		if !c.nodeIsActive(&knode) {
+	for i := range knodes.Items {
+		knode := &knodes.Items[i]
+		if !c.nodeIsActive(knode) {
 			continue
 		}
-		retnodes[knode.Name] = &knode
+		retnodes[knode.Name] = knode
 	}
+
 	return retnodes, nil
 }
 

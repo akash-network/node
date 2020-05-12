@@ -207,10 +207,10 @@ func (b *serviceBuilder) update(obj *corev1.Service) (*corev1.Service, error) {
 
 func (b *serviceBuilder) ports() []corev1.ServicePort {
 	ports := make([]corev1.ServicePort, 0, len(b.service.Expose))
-	for _, expose := range b.service.Expose {
+	for i, expose := range b.service.Expose {
 		ports = append(ports, corev1.ServicePort{
 			Name:       strconv.Itoa(int(expose.Port)),
-			Port:       exposeExternalPort(&expose),
+			Port:       exposeExternalPort(&b.service.Expose[i]),
 			TargetPort: intstr.FromInt(int(expose.Port)),
 		})
 	}
