@@ -5,3 +5,10 @@ issues:
   exclude:
     - comment on exported (method|function|type|const|var)
   exclude-use-default: true
+
+# Skip generated k8s code
+skip-dirs:
+  - pkg/client/clientset
+
+# Skip vendor/ etc
+skip-dirs-use-default: true

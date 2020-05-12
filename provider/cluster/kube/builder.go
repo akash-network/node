@@ -23,7 +23,6 @@ import (
 const (
 	akashManagedLabelName         = "akash.network"
 	akashManifestServiceLabelName = "akash.network/manifest-service"
-	akashDefaultIngressBackend    = "http"
 )
 
 type builder struct {

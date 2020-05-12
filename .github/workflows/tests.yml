@@ -48,8 +48,8 @@ jobs:
       - name: lint all
         run: $(go env GOPATH)/bin/golangci-lint run ./... --issues-exit-code=0
       - name: lint deadcode
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable deadcode
-        continue-on-error: true
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config  --disable-all --enable deadcode --skip-dirs=pkg/client/clientset 
+        continue-on-error: false
       - name: lint misspell
         run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable misspell
         continue-on-error: true
