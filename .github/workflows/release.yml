@@ -19,11 +19,11 @@ jobs:
           args: --skip-validate --skip-publish
           version: v0.133.0
 
-      - if: github.ref != 'refs/heads/master'
+      - if: github.ref != 'refs/heads/master' && github.repository == 'ovrclk/akash'
         name: docker login
         run: echo '${{secrets.DOCKERHUB_PASSWORD}}' | docker login --username '${{secrets.DOCKERHUB_USERNAME}}' --password-stdin
 
-      - if: github.ref != 'refs/heads/master'
+      - if: github.ref != 'refs/heads/master' && github.repository == 'ovrclk/akash'
         name: release publish
         uses: goreleaser/goreleaser-action@v1
         with:
