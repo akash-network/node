@@ -101,7 +101,7 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 			return simulation.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		msg := types.MsgCreate{
+		msg := types.MsgCreateDeployment{
 			Owner:  simAccount.Address,
 			Groups: make([]types.GroupSpec, 0, len(groupSpecs)),
 		}
@@ -161,7 +161,7 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 			return simulation.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		msg := types.MsgUpdate{
+		msg := types.MsgUpdateDeployment{
 			ID:      deployment.ID(),
 			Version: simAccount.Address,
 		}
@@ -219,7 +219,7 @@ func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simu
 			return simulation.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		msg := types.MsgClose{
+		msg := types.MsgCloseDeployment{
 			ID: deployment.ID(),
 		}
 

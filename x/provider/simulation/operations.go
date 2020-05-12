@@ -55,7 +55,7 @@ func WeightedOperations(
 	}
 }
 
-// SimulateMsgCreate generates a MsgCreate with random values
+// SimulateMsgCreate generates a MsgCreateProvider with random values
 // nolint:funlen
 func SimulateMsgCreate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
@@ -80,7 +80,7 @@ func SimulateMsgCreate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Op
 			return simulation.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		msg := types.MsgCreate{
+		msg := types.MsgCreateProvider{
 			Owner:      simAccount.Address,
 			HostURI:    cfg.Host,
 			Attributes: cfg.GetAttributes(),
@@ -105,7 +105,7 @@ func SimulateMsgCreate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Op
 	}
 }
 
-// SimulateMsgUpdate generates a MsgUpdate with random values
+// SimulateMsgUpdate generates a MsgUpdateProvider with random values
 // nolint:funlen
 func SimulateMsgUpdate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
@@ -138,7 +138,7 @@ func SimulateMsgUpdate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Op
 			return simulation.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		msg := types.MsgUpdate{
+		msg := types.MsgUpdateProvider{
 			Owner:      simAccount.Address,
 			HostURI:    provider.HostURI,
 			Attributes: provider.Attributes,

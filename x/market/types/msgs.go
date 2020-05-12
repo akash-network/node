@@ -4,6 +4,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+const (
+	msgTypeCreateBid  = "create-bid"
+	msgTypeCloseBid   = "close-bid"
+	msgTypeCloseOrder = "close-order"
+)
+
 // MsgCreateBid defines an SDK message for creating Bid
 type MsgCreateBid struct {
 	Order    OrderID        `json:"order"`
@@ -15,7 +21,7 @@ type MsgCreateBid struct {
 func (msg MsgCreateBid) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCreateBid) Type() string { return "create-bid" }
+func (msg MsgCreateBid) Type() string { return msgTypeCreateBid }
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCreateBid) GetSignBytes() []byte {
@@ -53,7 +59,7 @@ type MsgCloseBid struct {
 func (msg MsgCloseBid) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCloseBid) Type() string { return "close-bid" }
+func (msg MsgCloseBid) Type() string { return msgTypeCloseBid }
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCloseBid) GetSignBytes() []byte {
@@ -79,7 +85,7 @@ type MsgCloseOrder struct {
 func (msg MsgCloseOrder) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCloseOrder) Type() string { return "close-order" }
+func (msg MsgCloseOrder) Type() string { return msgTypeCloseOrder }
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCloseOrder) GetSignBytes() []byte {

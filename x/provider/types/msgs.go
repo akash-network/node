@@ -7,17 +7,23 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
+const (
+	msgTypeCreateProvider = "create-provider"
+	msgTypeUpdateProvider = "update-provider"
+	msgTypeDeleteProvider = "delete-provider"
+)
+
 // MsgCreate defines an SDK message for creating a provider
-type MsgCreate Provider
+type MsgCreateProvider Provider
 
 // Route implements the sdk.Msg interface
-func (msg MsgCreate) Route() string { return RouterKey }
+func (msg MsgCreateProvider) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCreate) Type() string { return "create" }
+func (msg MsgCreateProvider) Type() string { return msgTypeCreateProvider }
 
 // ValidateBasic does basic validation of a HostURI
-func (msg MsgCreate) ValidateBasic() error {
+func (msg MsgCreateProvider) ValidateBasic() error {
 	if err := validateProviderURI(msg.HostURI); err != nil {
 		return err
 	}
@@ -28,26 +34,26 @@ func (msg MsgCreate) ValidateBasic() error {
 }
 
 // GetSignBytes encodes the message for signing
-func (msg MsgCreate) GetSignBytes() []byte {
+func (msg MsgCreateProvider) GetSignBytes() []byte {
 	return sdk.MustSortJSON(cdc.MustMarshalJSON(msg))
 }
 
 // GetSigners defines whose signature is required
-func (msg MsgCreate) GetSigners() []sdk.AccAddress {
+func (msg MsgCreateProvider) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 
 // MsgUpdate defines an SDK message for updating a provider
-type MsgUpdate Provider
+type MsgUpdateProvider Provider
 
 // Route implements the sdk.Msg interface
-func (msg MsgUpdate) Route() string { return RouterKey }
+func (msg MsgUpdateProvider) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgUpdate) Type() string { return "update" }
+func (msg MsgUpdateProvider) Type() string { return msgTypeUpdateProvider }
 
 // ValidateBasic does basic validation of a ProviderURI
-func (msg MsgUpdate) ValidateBasic() error {
+func (msg MsgUpdateProvider) ValidateBasic() error {
 	if err := validateProviderURI(msg.HostURI); err != nil {
 		return err
 	}
@@ -58,28 +64,28 @@ func (msg MsgUpdate) ValidateBasic() error {
 }
 
 // GetSignBytes encodes the message for signing
-func (msg MsgUpdate) GetSignBytes() []byte {
+func (msg MsgUpdateProvider) GetSignBytes() []byte {
 	return sdk.MustSortJSON(cdc.MustMarshalJSON(msg))
 }
 
 // GetSigners defines whose signature is required
-func (msg MsgUpdate) GetSigners() []sdk.AccAddress {
+func (msg MsgUpdateProvider) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 
 // MsgDelete defines an SDK message for deleting a provider
-type MsgDelete struct {
+type MsgDeleteProvider struct {
 	Owner sdk.AccAddress `json:"owner"`
 }
 
 // Route implements the sdk.Msg interface
-func (msg MsgDelete) Route() string { return RouterKey }
+func (msg MsgDeleteProvider) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgDelete) Type() string { return "delete" }
+func (msg MsgDeleteProvider) Type() string { return msgTypeDeleteProvider }
 
 // ValidateBasic does basic validation
-func (msg MsgDelete) ValidateBasic() error {
+func (msg MsgDeleteProvider) ValidateBasic() error {
 	if msg.Owner.Empty() {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgDelete: Invalid Provider Address")
 	}
@@ -87,12 +93,12 @@ func (msg MsgDelete) ValidateBasic() error {
 }
 
 // GetSignBytes encodes the message for signing
-func (msg MsgDelete) GetSignBytes() []byte {
+func (msg MsgDeleteProvider) GetSignBytes() []byte {
 	return sdk.MustSortJSON(cdc.MustMarshalJSON(msg))
 }
 
 // GetSigners defines whose signature is required
-func (msg MsgDelete) GetSigners() []sdk.AccAddress {
+func (msg MsgDeleteProvider) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 

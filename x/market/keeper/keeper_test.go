@@ -44,7 +44,7 @@ func (s *TestSuite) TestKeeper() {
 	s.Require().NoError(readError, "Error in reading file")
 	groupSpecs, err := sdl.DeploymentGroups()
 	s.Require().NoError(err, "Error in getting groups from file")
-	msg := dtypes.MsgCreate{
+	msg := dtypes.MsgCreateDeployment{
 		Owner:  ownerAddr,
 		Groups: make([]dtypes.GroupSpec, 0, len(groupSpecs)),
 	}

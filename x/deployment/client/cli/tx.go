@@ -53,7 +53,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.MsgCreate{
+			msg := types.MsgCreateDeployment{
 				Owner: ctx.GetFromAddress(),
 				// Version:  []byte{0x1, 0x2},
 				Groups: make([]types.GroupSpec, 0, len(groups)),
@@ -88,7 +88,7 @@ func cmdClose(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.MsgClose{
+			msg := types.MsgCloseDeployment{
 				ID: id,
 			}
 
@@ -113,7 +113,7 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.MsgUpdate{
+			msg := types.MsgUpdateDeployment{
 				ID: id,
 			}
 

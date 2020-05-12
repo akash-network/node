@@ -4,8 +4,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// MsgCreate defines an SDK message for creating deployment
-type MsgCreate struct {
+const (
+	msgTypeCreateDeployment = "create-deployment"
+	msgTypeUpdateDeployment = "update-deployment"
+	msgTypeCloseDeployment  = "close-deployment"
+)
+
+// MsgCreateDeployment defines an SDK message for creating deployment
+type MsgCreateDeployment struct {
 	Owner sdk.AccAddress `json:"owner"`
 	// Sequence uint64         `json:"sequence"`
 	// Version []byte      `json:"version"`
@@ -13,23 +19,23 @@ type MsgCreate struct {
 }
 
 // Route implements the sdk.Msg interface
-func (msg MsgCreate) Route() string { return RouterKey }
+func (msg MsgCreateDeployment) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCreate) Type() string { return "create" }
+func (msg MsgCreateDeployment) Type() string { return msgTypeCreateDeployment }
 
 // GetSignBytes encodes the message for signing
-func (msg MsgCreate) GetSignBytes() []byte {
+func (msg MsgCreateDeployment) GetSignBytes() []byte {
 	return sdk.MustSortJSON(cdc.MustMarshalJSON(msg))
 }
 
 // GetSigners defines whose signature is required
-func (msg MsgCreate) GetSigners() []sdk.AccAddress {
+func (msg MsgCreateDeployment) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 
 // ValidateBasic does basic validation like check owner and groups length
-func (msg MsgCreate) ValidateBasic() error {
+func (msg MsgCreateDeployment) ValidateBasic() error {
 	switch {
 	case msg.Owner.Empty():
 		return ErrOwnerAcctMissing
@@ -44,20 +50,20 @@ func (msg MsgCreate) ValidateBasic() error {
 	return nil
 }
 
-// MsgUpdate defines an SDK message for updating deployment
-type MsgUpdate struct {
+// MsgUpdateDeployment defines an SDK message for updating deployment
+type MsgUpdateDeployment struct {
 	ID      DeploymentID
 	Version sdk.AccAddress
 }
 
 // Route implements the sdk.Msg interface
-func (msg MsgUpdate) Route() string { return RouterKey }
+func (msg MsgUpdateDeployment) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgUpdate) Type() string { return "update" }
+func (msg MsgUpdateDeployment) Type() string { return msgTypeUpdateDeployment }
 
 // ValidateBasic does basic validation
-func (msg MsgUpdate) ValidateBasic() error {
+func (msg MsgUpdateDeployment) ValidateBasic() error {
 	if err := msg.ID.Validate(); err != nil {
 		return err
 	}
@@ -69,28 +75,28 @@ func (msg MsgUpdate) ValidateBasic() error {
 }
 
 // GetSignBytes encodes the message for signing
-func (msg MsgUpdate) GetSignBytes() []byte {
+func (msg MsgUpdateDeployment) GetSignBytes() []byte {
 	return sdk.MustSortJSON(cdc.MustMarshalJSON(msg))
 }
 
 // GetSigners defines whose signature is required
-func (msg MsgUpdate) GetSigners() []sdk.AccAddress {
+func (msg MsgUpdateDeployment) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.ID.Owner}
 }
 
-// MsgClose defines an SDK message for closing deployment
-type MsgClose struct {
+// MsgCloseDeployment defines an SDK message for closing deployment
+type MsgCloseDeployment struct {
 	ID DeploymentID
 }
 
 // Route implements the sdk.Msg interface
-func (msg MsgClose) Route() string { return RouterKey }
+func (msg MsgCloseDeployment) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgClose) Type() string { return "update" }
+func (msg MsgCloseDeployment) Type() string { return msgTypeCloseDeployment }
 
 // ValidateBasic does basic validation with deployment details
-func (msg MsgClose) ValidateBasic() error {
+func (msg MsgCloseDeployment) ValidateBasic() error {
 	if err := msg.ID.Validate(); err != nil {
 		return err
 	}
@@ -98,11 +104,11 @@ func (msg MsgClose) ValidateBasic() error {
 }
 
 // GetSignBytes encodes the message for signing
-func (msg MsgClose) GetSignBytes() []byte {
+func (msg MsgCloseDeployment) GetSignBytes() []byte {
 	return sdk.MustSortJSON(cdc.MustMarshalJSON(msg))
 }
 
 // GetSigners defines whose signature is required
-func (msg MsgClose) GetSigners() []sdk.AccAddress {
+func (msg MsgCloseDeployment) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.ID.Owner}
 }
