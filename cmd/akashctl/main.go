@@ -50,6 +50,7 @@ func main() {
 		client.ConfigCmd(common.DefaultCLIHome()),
 		queryCmd(cdc),
 		txCmd(cdc),
+		providerCmd(cdc),
 		lcd.ServeCommand(cdc, lcdRoutes),
 		keys.Commands(),
 		version.Cmd,
@@ -137,6 +138,7 @@ func initConfig(cmd *cobra.Command) error {
 			return err
 		}
 	}
+
 	if err := viper.BindPFlag(flags.FlagChainID, cmd.PersistentFlags().Lookup(flags.FlagChainID)); err != nil {
 		return err
 	}

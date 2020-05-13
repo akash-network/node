@@ -10,6 +10,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.38.3
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.4.8-0.20191012010759-4bf2d1fec783 // indirect
+	github.com/go-chi/chi v4.1.1+incompatible
 	github.com/go-kit/kit v0.10.0
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
