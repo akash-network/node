@@ -64,6 +64,8 @@ func (o Order) ValidateCanBid() error {
 	}
 }
 
+// ValidateInactive method validates whether order is open or not and
+// returns error if not
 func (o Order) ValidateInactive() error {
 	switch o.State {
 	case OrderClosed:

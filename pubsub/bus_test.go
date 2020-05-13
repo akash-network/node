@@ -28,15 +28,15 @@ func TestBus(t *testing.T) {
 	bus.Publish(ev)
 
 	select {
-	case ev_ := <-sub1.Events():
-		assert.Equal(t, ev, ev_)
+	case newEv := <-sub1.Events():
+		assert.Equal(t, ev, newEv)
 	case <-pubsub.AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}
 
 	select {
-	case ev_ := <-sub2.Events():
-		assert.Equal(t, ev, ev_)
+	case newEv := <-sub2.Events():
+		assert.Equal(t, ev, newEv)
 	case <-pubsub.AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}
@@ -52,8 +52,8 @@ func TestBus(t *testing.T) {
 	bus.Publish(ev)
 
 	select {
-	case ev_ := <-sub1.Events():
-		assert.Equal(t, ev, ev_)
+	case newEv := <-sub1.Events():
+		assert.Equal(t, ev, newEv)
 	case <-pubsub.AfterThreadStart(t):
 		require.Fail(t, "time out")
 	}

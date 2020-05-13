@@ -5,7 +5,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-type config_ struct {
+// Config is the struct that stores kube config
+type Config struct {
 	// gcp:    NodePort
 	// others: ClusterIP
 	DeploymentServiceType corev1.ServiceType `env:"AKASH_DEPLOYMENT_SERVICE_TYPE" envDefault:"NodePort"`
@@ -19,7 +20,7 @@ type config_ struct {
 	DeploymentIngressExposeLBHosts bool `env:"AKASH_DEPLOYMENT_INGRESS_EXPOSE_LB_HOSTS" envDefault:"true"`
 }
 
-var config = config_{}
+var config = Config{}
 
 func init() {
 	if err := env.Parse(&config); err != nil {

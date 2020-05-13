@@ -80,14 +80,14 @@ func PVStateToFile(path string, perm os.FileMode, obj privval.FilePVLastSignStat
 	return writeConfigIfNotExist(path, perm, obj)
 }
 
-// NodeKeyToJSON converts node key to json. Returns error in case of failure.
-func NodeKeyToJSON(obj *p2p.NodeKey) ([]byte, error) {
+// NKeyToJSON converts node key to json. Returns error in case of failure.
+func NKeyToJSON(obj *p2p.NodeKey) ([]byte, error) {
 	return cdc.MarshalJSON(obj)
 }
 
-// NodeKeyToFile writes node key to a file with given filemode permissions.
+// NKeyToFile writes node key to a file with given filemode permissions.
 // Written File is saved into path provided. Returns error in case of failure.
-func NodeKeyToFile(path string, perm os.FileMode, obj *p2p.NodeKey) error {
+func NKeyToFile(path string, perm os.FileMode, obj *p2p.NodeKey) error {
 	return writeConfigIfNotExist(path, perm, obj)
 }
 

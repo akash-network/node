@@ -30,9 +30,9 @@ import (
 	testing "k8s.io/client-go/testing"
 )
 
-// FakeManifests implements ManifestInterface
-type FakeManifests struct {
-	Fake *FakeAkashV1
+// ManifestsFake implements ManifestInterface
+type ManifestsFake struct {
+	Fake *AkashV1Fake
 	ns   string
 }
 
@@ -41,7 +41,7 @@ var manifestsResource = schema.GroupVersionResource{Group: "akash.network", Vers
 var manifestsKind = schema.GroupVersionKind{Group: "akash.network", Version: "v1", Kind: "Manifest"}
 
 // Get takes name of the manifest, and returns the corresponding manifest object, and an error if there is any.
-func (c *FakeManifests) Get(ctx context.Context, name string, options v1.GetOptions) (result *akashnetworkv1.Manifest, err error) {
+func (c *ManifestsFake) Get(ctx context.Context, name string, options v1.GetOptions) (result *akashnetworkv1.Manifest, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(manifestsResource, c.ns, name), &akashnetworkv1.Manifest{})
 
@@ -52,7 +52,7 @@ func (c *FakeManifests) Get(ctx context.Context, name string, options v1.GetOpti
 }
 
 // List takes label and field selectors, and returns the list of Manifests that match those selectors.
-func (c *FakeManifests) List(ctx context.Context, opts v1.ListOptions) (result *akashnetworkv1.ManifestList, err error) {
+func (c *ManifestsFake) List(ctx context.Context, opts v1.ListOptions) (result *akashnetworkv1.ManifestList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(manifestsResource, manifestsKind, c.ns, opts), &akashnetworkv1.ManifestList{})
 
@@ -74,14 +74,14 @@ func (c *FakeManifests) List(ctx context.Context, opts v1.ListOptions) (result *
 }
 
 // Watch returns a watch.Interface that watches the requested manifests.
-func (c *FakeManifests) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *ManifestsFake) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(manifestsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a manifest and creates it.  Returns the server's representation of the manifest, and an error, if there is any.
-func (c *FakeManifests) Create(ctx context.Context, manifest *akashnetworkv1.Manifest, opts v1.CreateOptions) (result *akashnetworkv1.Manifest, err error) {
+func (c *ManifestsFake) Create(ctx context.Context, manifest *akashnetworkv1.Manifest, opts v1.CreateOptions) (result *akashnetworkv1.Manifest, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(manifestsResource, c.ns, manifest), &akashnetworkv1.Manifest{})
 
@@ -92,7 +92,7 @@ func (c *FakeManifests) Create(ctx context.Context, manifest *akashnetworkv1.Man
 }
 
 // Update takes the representation of a manifest and updates it. Returns the server's representation of the manifest, and an error, if there is any.
-func (c *FakeManifests) Update(ctx context.Context, manifest *akashnetworkv1.Manifest, opts v1.UpdateOptions) (result *akashnetworkv1.Manifest, err error) {
+func (c *ManifestsFake) Update(ctx context.Context, manifest *akashnetworkv1.Manifest, opts v1.UpdateOptions) (result *akashnetworkv1.Manifest, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(manifestsResource, c.ns, manifest), &akashnetworkv1.Manifest{})
 
@@ -104,7 +104,7 @@ func (c *FakeManifests) Update(ctx context.Context, manifest *akashnetworkv1.Man
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeManifests) UpdateStatus(ctx context.Context, manifest *akashnetworkv1.Manifest, opts v1.UpdateOptions) (*akashnetworkv1.Manifest, error) {
+func (c *ManifestsFake) UpdateStatus(ctx context.Context, manifest *akashnetworkv1.Manifest, opts v1.UpdateOptions) (*akashnetworkv1.Manifest, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(manifestsResource, "status", c.ns, manifest), &akashnetworkv1.Manifest{})
 
@@ -115,7 +115,7 @@ func (c *FakeManifests) UpdateStatus(ctx context.Context, manifest *akashnetwork
 }
 
 // Delete takes name of the manifest and deletes it. Returns an error if one occurs.
-func (c *FakeManifests) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *ManifestsFake) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(manifestsResource, c.ns, name), &akashnetworkv1.Manifest{})
 
@@ -123,7 +123,7 @@ func (c *FakeManifests) Delete(ctx context.Context, name string, opts v1.DeleteO
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeManifests) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *ManifestsFake) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(manifestsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &akashnetworkv1.ManifestList{})
@@ -131,7 +131,7 @@ func (c *FakeManifests) DeleteCollection(ctx context.Context, opts v1.DeleteOpti
 }
 
 // Patch applies the patch and returns the patched manifest.
-func (c *FakeManifests) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *akashnetworkv1.Manifest, err error) {
+func (c *ManifestsFake) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *akashnetworkv1.Manifest, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(manifestsResource, c.ns, name, pt, data, subresources...), &akashnetworkv1.Manifest{})
 

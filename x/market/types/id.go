@@ -130,6 +130,7 @@ func (id LeaseID) Equals(other LeaseID) bool {
 	return id.BidID().Equals(other.BidID())
 }
 
+// Validate method validates bidID of lease
 func (id LeaseID) Validate() error {
 	if err := id.BidID().Validate(); err != nil {
 		return sdkerrors.Wrap(err, "LeaseID: Invalid BidID")
