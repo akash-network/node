@@ -14,7 +14,7 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
-// Declaring new error with message "no deployments"
+// ErrNoDeployments declares new error with message "no deployments"
 var ErrNoDeployments = errors.New("no deployments")
 
 // Client interface lease and deployment methods
