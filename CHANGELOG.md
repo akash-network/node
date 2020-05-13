@@ -40,8 +40,8 @@ Ref: https://keepachangelog.com/en/1.0.0/
 
 ### Improvements
 
-* (sdk) Bump Cosmos SDK version to [v0.38.1](https://github.com/cosmos/cosmos-sdk/releases/tag/v0.38.1)
+* (sdk) Bump Cosmos SDK version to [v0.38.3](https://github.com/cosmos/cosmos-sdk/releases/tag/v0.38.3)
 
 ### Bug Fixes
 
-* upstream/uitable: fix IOR error during empty listing
+* Fix bug in ditribution and querying rewards

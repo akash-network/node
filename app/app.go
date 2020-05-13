@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/json"
 	"io"
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
@@ -13,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
+	"github.com/cosmos/cosmos-sdk/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/mint"
@@ -28,7 +28,6 @@ import (
 	"github.com/ovrclk/akash/x/provider"
 
 	"github.com/tendermint/tendermint/libs/log"
-	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -72,6 +71,7 @@ var (
 
 		params.AppModuleBasic{},
 		upgrade.AppModuleBasic{},
+		evidence.AppModuleBasic{},
 		crisis.AppModuleBasic{},
 
 		// akash
@@ -103,6 +103,7 @@ type AkashApp struct {
 		gov        gov.Keeper
 		upgrade    upgrade.Keeper
 		crisis     crisis.Keeper
+		evidence   evidence.Keeper
 		deployment deployment.Keeper
 		market     market.Keeper
 		provider   provider.Keeper
@@ -153,6 +154,7 @@ func NewApp(
 		mint.StoreKey,
 		gov.StoreKey,
 		upgrade.StoreKey,
+		evidence.StoreKey,
 		deployment.StoreKey,
 		market.StoreKey,
 		provider.StoreKey,
@@ -210,7 +212,7 @@ func NewApp(
 		cdc,
 		keys[distr.StoreKey],
 		app.keeper.params.Subspace(distr.DefaultParamspace),
-		skeeper,
+		&skeeper,
 		app.keeper.supply,
 		auth.FeeCollectorName,
 		macAddrs(),
@@ -219,7 +221,7 @@ func NewApp(
 	app.keeper.slashing = slashing.NewKeeper(
 		cdc,
 		keys[slashing.StoreKey],
-		skeeper,
+		&skeeper,
 		app.keeper.params.Subspace(slashing.DefaultParamspace),
 	)
 
@@ -234,12 +236,17 @@ func NewApp(
 		cdc,
 		keys[mint.StoreKey],
 		app.keeper.params.Subspace(mint.DefaultParamspace),
-		&app.keeper.staking,
+		&skeeper,
 		app.keeper.supply,
 		auth.FeeCollectorName,
 	)
 
 	app.keeper.upgrade = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], cdc)
+
+	// no-op handler for "sirius-upgrade"
+	app.keeper.upgrade.SetUpgradeHandler("sirius-upgrade", func(ctx sdk.Context, plan upgrade.Plan) {
+
+	})
 
 	app.keeper.crisis = crisis.NewKeeper(
 		app.keeper.params.Subspace(crisis.DefaultParamspace),
@@ -247,6 +254,20 @@ func NewApp(
 		app.keeper.supply,
 		auth.FeeCollectorName,
 	)
+
+	// create evidence keeper with evidence router
+	evidenceKeeper := evidence.NewKeeper(
+		app.cdc, keys[evidence.StoreKey],
+		app.keeper.params.Subspace(evidence.DefaultParamspace),
+		&app.keeper.staking,
+		app.keeper.slashing,
+	)
+	evidenceRouter := evidence.NewRouter()
+
+	// TODO: register evidence routes
+	evidenceKeeper.SetRouter(evidenceRouter)
+
+	app.keeper.evidence = *evidenceKeeper
 
 	// register the proposal types
 	govRouter := gov.NewRouter()
@@ -294,6 +315,7 @@ func NewApp(
 
 		gov.NewAppModule(app.keeper.gov, app.keeper.acct, app.keeper.supply),
 		upgrade.NewAppModule(app.keeper.upgrade),
+		evidence.NewAppModule(app.keeper.evidence),
 		crisis.NewAppModule(&app.keeper.crisis),
 
 		// akash
@@ -313,7 +335,7 @@ func NewApp(
 		provider.NewAppModule(app.keeper.provider, app.keeper.bank),
 	)
 
-	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName)
+	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName, evidence.ModuleName)
 	app.mm.SetOrderEndBlockers(staking.ModuleName, gov.ModuleName, crisis.ModuleName, deployment.ModuleName, market.ModuleName)
 
 	// NOTE: The genutils module must occur after staking so that pools are
@@ -324,11 +346,12 @@ func NewApp(
 		auth.ModuleName,
 		bank.ModuleName,
 		slashing.ModuleName,
+		gov.ModuleName,
 		mint.ModuleName,
 		supply.ModuleName,
-		genutil.ModuleName,
-		gov.ModuleName,
 		crisis.ModuleName,
+		genutil.ModuleName,
+		evidence.ModuleName,
 
 		// akash
 		deployment.ModuleName,
@@ -421,23 +444,4 @@ func (app *AkashApp) SimulationManager() *module.SimulationManager {
 // LoadHeight method of AkashApp loads baseapp application version with given height
 func (app *AkashApp) LoadHeight(height int64) error {
 	return app.LoadVersion(height, app.keys[bam.MainStoreKey])
-}
-
-// ExportAppStateAndValidators returns application state json and slice of validators
-func (app *AkashApp) ExportAppStateAndValidators(
-	forZeroHeight bool, jailWhiteList []string,
-) (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {
-
-	// as if they could withdraw from the start of the next block
-	ctx := app.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
-
-	genState := app.mm.ExportGenesis(ctx)
-	appState, err = codec.MarshalJSONIndent(app.cdc, genState)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	validators = staking.WriteValidators(ctx, app.keeper.staking)
-
-	return appState, validators, nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	lifecycle "github.com/boz/go-lifecycle"
+
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
@@ -184,16 +185,16 @@ func queryExistingOrders(ctx context.Context, session session.Session) ([]existi
 
 	var existingOrders []existingOrder
 
-	for _, order := range orders {
-
-		if order.State != mtypes.OrderOpen {
+	for i := range orders {
+		pOrder := &orders[i]
+		if pOrder.State != mtypes.OrderOpen {
 			continue
 		}
 
-		eo := existingOrder{order: &order}
+		eo := existingOrder{order: pOrder}
 
 		bid, _ := session.Client().Query().Bid(
-			mtypes.MakeBidID(order.OrderID, session.Provider().Address()),
+			mtypes.MakeBidID(pOrder.OrderID, session.Provider().Address()),
 		)
 
 		eo.bid = &bid

@@ -23,7 +23,6 @@ import (
 const (
 	akashManagedLabelName         = "akash.network"
 	akashManifestServiceLabelName = "akash.network/manifest-service"
-	akashDefaultIngressBackend    = "http"
 )
 
 type builder struct {
@@ -207,10 +206,10 @@ func (b *serviceBuilder) update(obj *corev1.Service) (*corev1.Service, error) {
 
 func (b *serviceBuilder) ports() []corev1.ServicePort {
 	ports := make([]corev1.ServicePort, 0, len(b.service.Expose))
-	for _, expose := range b.service.Expose {
+	for i, expose := range b.service.Expose {
 		ports = append(ports, corev1.ServicePort{
 			Name:       strconv.Itoa(int(expose.Port)),
-			Port:       exposeExternalPort(&expose),
+			Port:       exposeExternalPort(&b.service.Expose[i]),
 			TargetPort: intstr.FromInt(int(expose.Port)),
 		})
 	}
@@ -264,7 +263,7 @@ func (b *ingressBuilder) update(obj *extv1.Ingress) (*extv1.Ingress, error) {
 func (b *ingressBuilder) rules() []extv1.IngressRule {
 	rules := make([]extv1.IngressRule, 0, len(b.expose.Hosts))
 	httpRule := &extv1.HTTPIngressRuleValue{
-		Paths: []extv1.HTTPIngressPath{extv1.HTTPIngressPath{
+		Paths: []extv1.HTTPIngressPath{{
 			Backend: extv1.IngressBackend{
 				ServiceName: b.name(),
 				ServicePort: intstr.FromInt(int(exposeExternalPort(b.expose))),

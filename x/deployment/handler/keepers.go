@@ -8,6 +8,6 @@ import (
 
 // MarketKeeper Interface includes market methods
 type MarketKeeper interface {
-	CreateOrder(ctx sdk.Context, id types.GroupID, spec types.GroupSpec) mtypes.Order
+	CreateOrder(ctx sdk.Context, id types.GroupID, spec types.GroupSpec) (mtypes.Order, error)
 	OnGroupClosed(ctx sdk.Context, id types.GroupID)
 }

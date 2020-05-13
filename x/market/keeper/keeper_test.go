@@ -10,6 +10,7 @@ import (
 	"github.com/ovrclk/akash/sdl"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/types"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -43,7 +44,7 @@ func (s *TestSuite) TestKeeper() {
 	s.Require().NoError(readError, "Error in reading file")
 	groupSpecs, err := sdl.DeploymentGroups()
 	s.Require().NoError(err, "Error in getting groups from file")
-	msg := dtypes.MsgCreate{
+	msg := dtypes.MsgCreateDeployment{
 		Owner:  ownerAddr,
 		Groups: make([]dtypes.GroupSpec, 0, len(groupSpecs)),
 	}
@@ -69,7 +70,8 @@ func (s *TestSuite) TestKeeper() {
 
 	if len(groups) > 0 {
 		s.T().Log("verify create order")
-		order := s.keeper.CreateOrder(s.ctx, groups[0].GroupID, groups[0].GroupSpec)
+		order, err := s.keeper.CreateOrder(s.ctx, groups[0].GroupID, groups[0].GroupSpec)
+		require.NoError(s.T(), err)
 		_, ok := s.keeper.GetOrder(s.ctx, order.ID())
 		s.Require().True(ok, "Order not created")
 

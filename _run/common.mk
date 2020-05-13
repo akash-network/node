@@ -1,7 +1,7 @@
 AKASH_ROOT := ../..
 
-AKASH  := $(AKASH)/akash
-AKASHD := $(AKASHD)/akashd
+AKASHCTL := $(AKASH_ROOT)/akashctl
+AKASHD   := $(AKASH_ROOT)/akashd
 
 DATA_ROOT 	= cache
 NODE_HOME 	= $(DATA_ROOT)/node
@@ -10,11 +10,11 @@ CLIENT_HOME = $(DATA_ROOT)/client
 all:
 	(cd $(AKASH_ROOT) && make all)
 
-build:
-	(cd $(AKASH_ROOT) && make build)
+bins:
+	(cd $(AKASH_ROOT) && make bins)
 
-akash:
-	(cd $(AKASH_ROOT) && make akash)
+akashctl:
+	(cd $(AKASH_ROOT) && make akashctl)
 
 akashd:
 	(cd $(AKASH_ROOT) && make akashd)

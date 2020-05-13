@@ -1,0 +1,33 @@
+name: release
+
+on:
+  push:
+    branches: [ master ]
+    tags:     [  v*    ]
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch --prune --unshallow
+      - uses: actions/setup-go@v2
+
+      - name: release dry-run
+        uses: goreleaser/goreleaser-action@v1
+        with:
+          args: --skip-validate --skip-publish
+          version: v0.133.0
+
+      - if: github.ref != 'refs/heads/master' && github.repository == 'ovrclk/akash'
+        name: docker login
+        run: echo '${{secrets.DOCKERHUB_PASSWORD}}' | docker login --username '${{secrets.DOCKERHUB_USERNAME}}' --password-stdin
+
+      - if: github.ref != 'refs/heads/master' && github.repository == 'ovrclk/akash'
+        name: release publish
+        uses: goreleaser/goreleaser-action@v1
+        with:
+          version: v0.133.0
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GORELEASER_ACCESS_TOKEN }}

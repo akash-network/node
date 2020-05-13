@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 
@@ -122,11 +123,15 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simulat
 		)
 
 		_, _, err = app.Deliver(tx)
-		if err != nil {
+		switch {
+		case err == nil:
+			return simulation.NewOperationMsg(msg, true, ""), nil, nil
+		case errors.Is(err, types.ErrBidExists):
+			return simulation.NewOperationMsg(msg, false, ""), nil, nil
+		default:
 			return simulation.NoOpMsg(types.ModuleName), nil, err
 		}
 
-		return simulation.NewOperationMsg(msg, true, ""), nil, nil
 	}
 }
 
