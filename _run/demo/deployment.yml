@@ -15,7 +15,7 @@ profiles:
     web:
       cpu: "100m"
       memory: "128Mi"
-      disk: "1Gi"
+      storage: "1Gi"
 
   placement:
     westcoast:
