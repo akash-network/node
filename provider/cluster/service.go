@@ -263,8 +263,7 @@ func findDeployments(ctx context.Context, log log.Logger, client Client, session
 		return nil, err
 	}
 
-	var leases map[string]bool
-
+	leases := make(map[string]bool)
 	for _, lease := range leaseList {
 		leases[mquery.LeasePath(lease.LeaseID)] = true
 	}
