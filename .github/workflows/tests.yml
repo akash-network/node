@@ -88,4 +88,4 @@ jobs:
         continue-on-error: false
       - name: lint prealloc
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable prealloc
-        continue-on-error: true
+        continue-on-error: false
