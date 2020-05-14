@@ -64,7 +64,7 @@ jobs:
         continue-on-error: true
       - name: lint goconst
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable goconst
-        continue-on-error: true
+        continue-on-error: false
       - name: lint gochecknoglobals
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable gochecknoglobals
         continue-on-error: true
