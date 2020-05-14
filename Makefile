@@ -94,6 +94,7 @@ deps-tidy:
 
 devdeps-install:
 	$(GO) install github.com/vektra/mockery/.../
+	$(GO) install k8s.io/code-generator/...
 
 test-integration: $(BINS)
 	cp akashctl akashd ./_build
