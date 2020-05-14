@@ -170,6 +170,7 @@ type inventoryResponse struct {
 func (is *inventoryService) run(reservations []*reservation) {
 	defer is.lc.ShutdownCompleted()
 	defer is.sub.Close()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	t := time.NewTimer(time.Hour)
 	t.Stop()
@@ -177,7 +178,7 @@ func (is *inventoryService) run(reservations []*reservation) {
 
 	var inventory []Node
 	ready := false
-	runch := is.runCheck()
+	runch := is.runCheck(ctx)
 
 	var fetchCount uint
 
@@ -273,7 +274,7 @@ loop:
 			// run cluster inventory check
 
 			t.Stop()
-			runch = is.runCheck()
+			runch = is.runCheck(ctx)
 
 		case res := <-runch:
 			// inventory check returned
@@ -307,15 +308,16 @@ loop:
 			fetchCount++
 		}
 	}
+	cancel()
 
 	if runch != nil {
 		<-runch
 	}
 }
 
-func (is *inventoryService) runCheck() <-chan runner.Result {
+func (is *inventoryService) runCheck(ctx context.Context) <-chan runner.Result {
 	return runner.Do(func() runner.Result {
-		return runner.NewResult(is.client.Inventory())
+		return runner.NewResult(is.client.Inventory(ctx))
 	})
 }
 

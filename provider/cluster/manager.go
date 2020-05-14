@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -194,11 +195,13 @@ func (dm *deploymentManager) startTeardown() <-chan error {
 }
 
 func (dm *deploymentManager) doDeploy() error {
-	return dm.client.Deploy(dm.lease, dm.mgroup)
+	ctx := context.Background() // TODO: refactor management
+	return dm.client.Deploy(ctx, dm.lease, dm.mgroup)
 }
 
 func (dm *deploymentManager) doTeardown() error {
-	return dm.client.TeardownLease(dm.lease)
+	ctx := context.Background() // TODO: refactor management
+	return dm.client.TeardownLease(ctx, dm.lease)
 }
 
 func (dm *deploymentManager) do(fn func() error) <-chan error {

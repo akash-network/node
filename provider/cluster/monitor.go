@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"context"
 	"math/rand"
 	"time"
 
@@ -136,7 +137,8 @@ func (m *deploymentMonitor) runCheck() <-chan runner.Result {
 }
 
 func (m *deploymentMonitor) doCheck() (bool, error) {
-	status, err := m.client.LeaseStatus(m.lease)
+	ctx := context.Background() // TODO: manage context within the deploymentMonitor{}
+	status, err := m.client.LeaseStatus(ctx, m.lease)
 
 	if err != nil {
 		m.log.Error("lease status", "err", err)

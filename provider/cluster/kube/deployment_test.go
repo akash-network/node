@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -21,6 +22,7 @@ const (
 
 func TestDeploy(t *testing.T) {
 	t.Skip()
+	ctx := context.Background()
 
 	owner := ed25519.GenPrivKey().PubKey().Address()
 	provider := ed25519.GenPrivKey().PubKey().Address()
@@ -43,6 +45,6 @@ func TestDeploy(t *testing.T) {
 	client, err := NewClient(log, "host", "lease")
 	assert.NoError(t, err)
 
-	err = client.Deploy(leaseID, &mani.GetGroups()[0])
+	err = client.Deploy(ctx, leaseID, &mani.GetGroups()[0])
 	assert.NoError(t, err)
 }
