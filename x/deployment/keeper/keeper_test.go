@@ -126,7 +126,7 @@ func (s *TestSuite) TestKeeper() {
 		State:        types.DeploymentClosed,
 	}
 	s.keeper.UpdateDeployment(s.ctx, deployment)
-	deploymentDetails, ok := s.keeper.GetDeployment(s.ctx, deploymentID)
+	deploymentDetails, _ := s.keeper.GetDeployment(s.ctx, deploymentID)
 	s.Require().Equal(types.DeploymentClosed, deploymentDetails.State, "Update deployment failed")
 
 	s.T().Log("verify update deployment with wrong deploymentID")
