@@ -48,44 +48,44 @@ jobs:
       - name: lint all
         run: $(go env GOPATH)/bin/golangci-lint run ./... --issues-exit-code=0
       - name: lint deadcode
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config  --disable-all --enable deadcode --skip-dirs=pkg/client/clientset 
+        run: $(go env GOPATH)/bin/golangci-lint run ./...  --disable-all --enable deadcode
         continue-on-error: false
       - name: lint misspell
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable misspell
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable misspell
         continue-on-error: true
       - name: lint goerr113
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable goerr113
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable goerr113
         continue-on-error: true
       - name: lint gofmt
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable gofmt
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable gofmt
         continue-on-error: false
       - name: lint gocritic
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable gocritic
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable gocritic
         continue-on-error: true
       - name: lint goconst
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable goconst
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable goconst
         continue-on-error: true
       - name: lint gochecknoglobals
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable gochecknoglobals
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable gochecknoglobals
         continue-on-error: true
       - name: lint ineffassign
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable ineffassign
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable ineffassign
         continue-on-error: true
       - name: lint unparam
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable unparam
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable unparam
         continue-on-error: true
       - name: lint staticcheck
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable staticcheck
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable staticcheck
         continue-on-error: true
       - name: lint golint
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable golint
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable golint
         continue-on-error: true
       - name: lint gosec
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable gosec
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable gosec
         continue-on-error: true
       - name: lint scopelint
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable scopelint
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable scopelint
         continue-on-error: false
       - name: lint prealloc
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable prealloc
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable prealloc
         continue-on-error: true
