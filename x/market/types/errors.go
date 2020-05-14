@@ -16,7 +16,7 @@ var (
 	// ErrBidOverOrder is the error when bid price is above max order price
 	ErrBidOverOrder = sdkerrors.Register(ModuleName, 5, "bid price above max order price")
 	// ErrAtributeMismatch is the error for attribute mismatch
-	ErrAtributeMismatch = sdkerrors.Register(ModuleName, 6, "atribute mismatch")
+	ErrAtributeMismatch = sdkerrors.Register(ModuleName, 6, "attribute mismatch")
 	// ErrUnknownBid is the error for unknown bid
 	ErrUnknownBid = sdkerrors.Register(ModuleName, 7, "unknown bid")
 	// ErrUnknownLeaseForBid is the error when lease is unknown for bid
