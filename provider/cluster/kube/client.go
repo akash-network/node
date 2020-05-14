@@ -313,16 +313,16 @@ func (c *client) Inventory() ([]cluster.Node, error) {
 			memory = 0
 		}
 
-		disk := knode.Status.Allocatable.StorageEphemeral().Value()
-		disk -= mnode.Usage.StorageEphemeral().Value()
-		if disk < 0 {
-			disk = 0
+		storage := knode.Status.Allocatable.StorageEphemeral().Value()
+		storage -= mnode.Usage.StorageEphemeral().Value()
+		if storage < 0 {
+			storage = 0
 		}
 
 		unit := types.Unit{
 			CPU:     uint32(cpu),
 			Memory:  uint64(memory),
-			Storage: uint64(disk),
+			Storage: uint64(storage),
 		}
 
 		nodes = append(nodes, cluster.NewNode(knode.Name, unit))

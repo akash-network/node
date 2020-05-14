@@ -87,7 +87,7 @@ func validateResourceList(config config, rlist types.ResourceGroup) error {
 	}
 
 	if storage.GT(sdk.NewUint(uint64(config.MaxGroupStorage))) || storage.LTE(sdk.ZeroUint()) {
-		return fmt.Errorf("group %v: invalid total disk (%v > %v > %v fails)",
+		return fmt.Errorf("group %v: invalid total storage (%v > %v > %v fails)",
 			rlist.GetName(), config.MaxGroupStorage, storage, 0)
 	}
 
@@ -121,7 +121,7 @@ func validateResourceUnit(config config, unit types.Unit) error {
 			config.MaxUnitMemory, unit.Memory, config.MinUnitMemory)
 	}
 	if unit.Storage > uint64(config.MaxUnitStorage) || unit.Storage < uint64(config.MinUnitStorage) {
-		return fmt.Errorf("error: invalid unit disk (%v > %v > %v fails)",
+		return fmt.Errorf("error: invalid unit storage (%v > %v > %v fails)",
 			config.MaxUnitStorage, unit.Storage, config.MinUnitStorage)
 	}
 	return nil

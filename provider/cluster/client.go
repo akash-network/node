@@ -69,9 +69,9 @@ type ServiceLog struct {
 
 const (
 	// 5 CPUs, 5Gi memory for null client.
-	nullClientCPU    = 5000
-	nullClientMemory = 32 * unit.Gi
-	nullClientDisk   = 512 * unit.Gi
+	nullClientCPU     = 5000
+	nullClientMemory  = 32 * unit.Gi
+	nullClientStorage = 512 * unit.Gi
 )
 
 type nullClient struct {
@@ -149,7 +149,7 @@ func (c *nullClient) Inventory() ([]Node, error) {
 		NewNode("solo", atypes.Unit{
 			CPU:     nullClientCPU,
 			Memory:  nullClientMemory,
-			Storage: nullClientDisk,
+			Storage: nullClientStorage,
 		}),
 	}, nil
 }

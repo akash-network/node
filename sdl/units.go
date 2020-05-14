@@ -74,7 +74,7 @@ func (u *cpuQuantity) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-// Memory,Disk size in bytes.
+// Memory,Storage size in bytes.
 type byteQuantity uint64
 
 func (u *byteQuantity) UnmarshalYAML(unmarshal func(interface{}) error) error {
