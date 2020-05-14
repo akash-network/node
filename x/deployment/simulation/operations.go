@@ -1,8 +1,9 @@
 package simulation
 
 import (
-	"fmt"
 	"math/rand"
+
+	"github.com/pkg/errors"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -10,6 +11,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
+
 	simappparams "github.com/ovrclk/akash/app/params"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/x/deployment/keeper"
@@ -151,7 +153,7 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 
 		simAccount, found := simulation.FindAccount(accounts, deployment.ID().Owner)
 		if !found {
-			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("deployment with %s not found", deployment.ID().Owner)
+			return simulation.NoOpMsg(types.ModuleName), nil, errors.Errorf("deployment with %s not found", deployment.ID().Owner)
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
@@ -209,7 +211,7 @@ func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simu
 
 		simAccount, found := simulation.FindAccount(accounts, deployment.ID().Owner)
 		if !found {
-			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("deployment with %s not found", deployment.ID().Owner)
+			return simulation.NoOpMsg(types.ModuleName), nil, errors.Errorf("deployment with %s not found", deployment.ID().Owner)
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)

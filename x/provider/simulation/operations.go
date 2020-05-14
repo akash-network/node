@@ -1,7 +1,6 @@
 package simulation
 
 import (
-	"fmt"
 	"math/rand"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -10,6 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
+	"github.com/pkg/errors"
+
 	simappparams "github.com/ovrclk/akash/app/params"
 	"github.com/ovrclk/akash/x/provider/config"
 	"github.com/ovrclk/akash/x/provider/keeper"
@@ -128,7 +129,7 @@ func SimulateMsgUpdate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Op
 
 		simAccount, found := simulation.FindAccount(accounts, provider.Owner)
 		if !found {
-			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("provider with %s not found", provider.Owner)
+			return simulation.NoOpMsg(types.ModuleName), nil, errors.Errorf("provider with %s not found", provider.Owner)
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)

@@ -1,6 +1,7 @@
 package query
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -12,6 +13,11 @@ const (
 	deploymentsPath = "deployments"
 	deploymentPath  = "deployment"
 	groupPath       = "group"
+)
+
+var (
+	ErrInvalidPath = errors.New("query: invalid path")
+	ErrStateValue  = errors.New("query: invalid state value")
 )
 
 // getDeploymentsPath returns deployments path for queries
@@ -33,7 +39,7 @@ func getGroupPath(id types.GroupID) string {
 // error if occured due to wrong query
 func parseDeploymentPath(parts []string) (types.DeploymentID, error) {
 	if len(parts) < 2 {
-		return types.DeploymentID{}, fmt.Errorf("invalid path")
+		return types.DeploymentID{}, ErrInvalidPath
 	}
 
 	owner, err := sdk.AccAddressFromBech32(parts[0])
@@ -56,7 +62,7 @@ func parseDeploymentPath(parts []string) (types.DeploymentID, error) {
 // error if occured due to wrong query
 func parseDepFiltersPath(parts []string) (types.DeploymentFilters, bool, error) {
 	if len(parts) < 2 {
-		return types.DeploymentFilters{}, false, fmt.Errorf("invalid path")
+		return types.DeploymentFilters{}, false, ErrInvalidPath
 	}
 
 	owner, err := sdk.AccAddressFromBech32(parts[0])
@@ -67,7 +73,7 @@ func parseDepFiltersPath(parts []string) (types.DeploymentFilters, bool, error) 
 	state, ok := types.DeploymentStateMap[parts[1]]
 
 	if !ok && (parts[1] != "") {
-		return types.DeploymentFilters{}, false, fmt.Errorf("invalid state value")
+		return types.DeploymentFilters{}, false, ErrStateValue
 	}
 
 	return types.DeploymentFilters{
@@ -81,7 +87,7 @@ func parseDepFiltersPath(parts []string) (types.DeploymentFilters, bool, error) 
 // error if occured due to wrong query
 func ParseGroupPath(parts []string) (types.GroupID, error) {
 	if len(parts) < 3 {
-		return types.GroupID{}, fmt.Errorf("invalid path")
+		return types.GroupID{}, ErrInvalidPath
 	}
 
 	did, err := parseDeploymentPath(parts[0:2])

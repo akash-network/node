@@ -2,9 +2,9 @@ package manifest
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/libs/log"
 
 	lifecycle "github.com/boz/go-lifecycle"
@@ -17,6 +17,10 @@ import (
 	dquery "github.com/ovrclk/akash/x/deployment/query"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+)
+
+var (
+	ErrShutdownTimerExpired = errors.New("shutdown timer expired")
 )
 
 func newManager(h *handler, daddr dtypes.DeploymentID) (*manager, error) {
@@ -131,8 +135,8 @@ loop:
 			break loop
 
 		case <-stopch:
-			m.log.Error("shutdown timer expired")
-			m.lc.ShutdownInitiated(fmt.Errorf("shutdown timer expired"))
+			m.log.Error(ErrShutdownTimerExpired.Error())
+			m.lc.ShutdownInitiated(ErrShutdownTimerExpired)
 			break loop
 
 		case ev := <-m.leasech:
