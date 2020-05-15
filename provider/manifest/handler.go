@@ -264,7 +264,7 @@ func (h *handler) ensureManger(did dtypes.DeploymentID) (manager *manager, err e
 	return manager, nil
 }
 
-func fetchExistingLeases(ctx context.Context, session session.Session) ([]event.LeaseWon, error) {
+func fetchExistingLeases(_ context.Context, session session.Session) ([]event.LeaseWon, error) {
 	leases, err := session.Client().Query().ActiveLeasesForProvider(session.Provider().Address())
 	if err != nil {
 		return nil, err
