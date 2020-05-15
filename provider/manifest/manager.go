@@ -276,8 +276,7 @@ func (m *manager) validateRequests() {
 		return
 	}
 
-	var manifests []*manifest.Manifest
-
+	manifests := make([]*manifest.Manifest, 0)
 	for _, req := range m.requests {
 		if err := m.validateRequest(req); err != nil {
 			m.log.Error("invalid manifest", "err", err)
