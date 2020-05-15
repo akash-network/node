@@ -183,8 +183,7 @@ func queryExistingOrders(ctx context.Context, session session.Session) ([]existi
 		return nil, err
 	}
 
-	var existingOrders []existingOrder
-
+	existingOrders := make([]existingOrder, 0)
 	for i := range orders {
 		pOrder := &orders[i]
 		if pOrder.State != mtypes.OrderOpen {

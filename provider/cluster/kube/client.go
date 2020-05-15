@@ -122,8 +122,7 @@ func (c *client) Deployments(ctx context.Context) ([]cluster.Deployment, error) 
 		return nil, err
 	}
 
-	var deployments []cluster.Deployment
-
+	deployments := make([]cluster.Deployment, 0, len(manifests.Items))
 	for _, manifest := range manifests.Items {
 		deployments = append(deployments, manifest)
 	}
@@ -281,7 +280,6 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 }
 
 func (c *client) Inventory(ctx context.Context) ([]cluster.Node, error) {
-	var nodes []cluster.Node
 
 	knodes, err := c.activeNodes(ctx)
 	if err != nil {
@@ -293,6 +291,7 @@ func (c *client) Inventory(ctx context.Context) ([]cluster.Node, error) {
 		return nil, err
 	}
 
+	nodes := make([]cluster.Node, 0, len(mnodes.Items))
 	for _, mnode := range mnodes.Items {
 
 		knode, ok := knodes[mnode.Name]

@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
@@ -49,7 +51,8 @@ func (id OrderID) Validate() error {
 	return nil
 }
 
-// BidID stores owner, provider and all other seq numbers
+// BidID stores owner, provider and all other seq numbers.
+// A successful bid becomes a Lease(ID).
 type BidID struct {
 	Owner    sdk.AccAddress `json:"owner"`
 	DSeq     uint64         `json:"dseq"`
@@ -111,6 +114,11 @@ func (id BidID) Validate() error {
 	return nil
 }
 
+// BidIDString provides consistent conversion to string values for BidID/LeaseIDs.
+func BidIDString(id BidID) string {
+	return fmt.Sprintf("%s-%d-%d-%d-%s", id.Owner.String(), id.DSeq, id.GSeq, id.OSeq, id.Provider.String())
+}
+
 // LeaseID stores bid details of lease
 type LeaseID BidID
 
@@ -130,7 +138,7 @@ func (id LeaseID) Equals(other LeaseID) bool {
 	return id.BidID().Equals(other.BidID())
 }
 
-// Validate method validates bidID of lease
+// Validate calls the BidID's validator and returns any error.
 func (id LeaseID) Validate() error {
 	if err := id.BidID().Validate(); err != nil {
 		return sdkerrors.Wrap(err, "LeaseID: Invalid BidID")
