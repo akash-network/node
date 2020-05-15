@@ -1,0 +1,4 @@
+host: http://localhost:3001
+attributes:
+  - key: region
+    value: us-west

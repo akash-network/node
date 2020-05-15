@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 	"github.com/ovrclk/akash/x/provider/config"
 	"github.com/ovrclk/akash/x/provider/types"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -35,14 +36,16 @@ func GetTxCmd(key string, cdc *codec.Codec) *cobra.Command {
 func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [config-file]",
-		Short: fmt.Sprintf("Create %s", key),
+		Short: fmt.Sprintf("Create a %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
 			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
 
+			// TODO: enable reading files with non-local URIs
 			cfg, err := config.ReadConfigPath(args[0])
 			if err != nil {
+				err = errors.Wrapf(err, "ReadConfigPath err: %q", args[0])
 				return err
 			}
 
