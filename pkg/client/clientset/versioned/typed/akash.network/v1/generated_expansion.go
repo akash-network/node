@@ -18,5 +18,4 @@ limitations under the License.
 
 package v1
 
-// ManifestExpansion is an empty interface
 type ManifestExpansion interface{}

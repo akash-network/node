@@ -27,7 +27,6 @@ import (
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
 )
 
-// Interface represents discovery and akashv1 interfaces
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	AkashV1() akashv1.AkashV1Interface

@@ -66,7 +66,6 @@ type Clientset struct {
 	tracker   testing.ObjectTracker
 }
 
-// Discovery method returns the discovery of clientset
 func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	return c.discovery
 }
@@ -80,5 +79,5 @@ var _ clientset.Interface = &Clientset{}
 
 // AkashV1 retrieves the AkashV1Client
 func (c *Clientset) AkashV1() akashv1.AkashV1Interface {
-	return &fakeakashv1.AkashV1Fake{Fake: &c.Fake}
+	return &fakeakashv1.FakeAkashV1{Fake: &c.Fake}
 }

@@ -24,19 +24,17 @@ import (
 	testing "k8s.io/client-go/testing"
 )
 
-// AkashV1Fake represents fake akashv1 for testing
-type AkashV1Fake struct {
+type FakeAkashV1 struct {
 	*testing.Fake
 }
 
-// Manifests returns fake manifests with namespace as input
-func (c *AkashV1Fake) Manifests(namespace string) v1.ManifestInterface {
-	return &ManifestsFake{c, namespace}
+func (c *FakeAkashV1) Manifests(namespace string) v1.ManifestInterface {
+	return &FakeManifests{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *AkashV1Fake) RESTClient() rest.Interface {
+func (c *FakeAkashV1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

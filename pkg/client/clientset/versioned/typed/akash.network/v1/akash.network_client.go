@@ -24,7 +24,6 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-// AkashV1Interface is the interface with rest client and manifests getter interfaces
 type AkashV1Interface interface {
 	RESTClient() rest.Interface
 	ManifestsGetter
@@ -35,7 +34,6 @@ type AkashV1Client struct {
 	restClient rest.Interface
 }
 
-// Manifests returns new manifest of akashv1client with namespace as input
 func (c *AkashV1Client) Manifests(namespace string) ManifestInterface {
 	return newManifests(c, namespace)
 }
