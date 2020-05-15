@@ -5,8 +5,9 @@ run:
     exclude-use-default: true
 
   # Skip generated k8s code
-  skip-dirs:
-    - pkg/client
+  run:
+    skip-dirs:
+      - pkg/client
 
   # Skip vendor/ etc
   skip-dirs-use-default: true
