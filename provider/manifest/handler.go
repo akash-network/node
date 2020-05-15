@@ -270,10 +270,8 @@ func fetchExistingLeases(ctx context.Context, session session.Session) ([]event.
 		return nil, err
 	}
 
-	var items []event.LeaseWon
-
+	items := make([]event.LeaseWon, 0, len(leases))
 	for _, lease := range leases {
-
 		dgroup, err := session.Client().Query().Group(lease.GroupID())
 		if err != nil {
 			session.Log().Error("can't fetch deployment group", "err", err, "lease", lease)

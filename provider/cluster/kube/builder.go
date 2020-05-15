@@ -1,7 +1,7 @@
 package kube
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -288,18 +288,18 @@ func exposeExternalPort(expose *manifest.ServiceExpose) int32 {
 	return int32(expose.ExternalPort)
 }
 
+// lidNS generates a unique sha256 sum for identifying a provider's object name.
 func lidNS(lid mtypes.LeaseID) string {
-	// TODO
-	var path string
-	// path := lid.String()
-	sha := sha1.Sum([]byte(path))
+	path := mtypes.BidIDString(lid.BidID())
+	sha := sha256.Sum256([]byte(path))
 	return hex.EncodeToString(sha[:])
 }
 
-// manifest
+// manifestBuilder composes the k8s akashv1.Manifest type from LeaseID and
+// manifest.Group data.
 type manifestBuilder struct {
 	builder
-	mns string
+	mns string // Q: is this supposed to be the k8s Namespace? It's the Object name now.
 }
 
 func newManifestBuilder(log log.Logger, ns string, lid mtypes.LeaseID, group *manifest.Group) *manifestBuilder {

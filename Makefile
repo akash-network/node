@@ -4,7 +4,7 @@ APP_DIR := ./app
 
 GO := GO111MODULE=on go
 
-GOLANGCI_LINT_VERSION = v1.26.0
+GOLANGCI_LINT_VERSION = v1.27.0
 
 IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 
@@ -94,6 +94,7 @@ deps-tidy:
 
 devdeps-install:
 	$(GO) install github.com/vektra/mockery/.../
+	$(GO) install k8s.io/code-generator/...
 
 test-integration: $(BINS)
 	cp akashctl akashd ./_build
