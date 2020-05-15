@@ -6,7 +6,7 @@ run:
 
   # Skip generated k8s code
   skip-dirs:
-    - pkg/client/clientset
+    - pkg/client
 
   # Skip vendor/ etc
   skip-dirs-use-default: true

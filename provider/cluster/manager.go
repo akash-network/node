@@ -77,7 +77,7 @@ func (dm *deploymentManager) update(mgroup *manifest.Group) error {
 	case dm.updatech <- mgroup:
 		return nil
 	case <-dm.lc.ShuttingDown():
-		return fmt.Errorf("not running")
+		return ErrNotRunning
 	}
 }
 
@@ -86,7 +86,7 @@ func (dm *deploymentManager) teardown() error {
 	case dm.teardownch <- struct{}{}:
 		return nil
 	case <-dm.lc.ShuttingDown():
-		return fmt.Errorf("not running")
+		return ErrNotRunning
 	}
 }
 
@@ -133,7 +133,7 @@ loop:
 				// start update
 				runch = dm.startDeploy()
 			case dsDeployComplete:
-				panic(fmt.Errorf("INVALID STATE: runch read on %v", dm.state))
+				panic(fmt.Sprintf("INVALID STATE: runch read on %v", dm.state))
 			case dsTeardownActive:
 				dm.state = dsTeardownComplete
 				break loop
@@ -141,7 +141,7 @@ loop:
 				// start teardown
 				runch = dm.startTeardown()
 			case dsTeardownComplete:
-				panic(fmt.Errorf("INVALID STATE: runch read on %v", dm.state))
+				panic(fmt.Sprintf("INVALID STATE: runch read on %v", dm.state))
 			}
 
 		case <-dm.teardownch:

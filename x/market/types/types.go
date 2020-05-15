@@ -1,9 +1,9 @@
 package types
 
 import (
-	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/pkg/errors"
+
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	tmkv "github.com/tendermint/tendermint/libs/kv"
 )
@@ -18,6 +18,12 @@ const (
 	OrderMatched
 	// OrderClosed is used when state of order is closed
 	OrderClosed
+)
+
+var (
+	ErrOrderMatched = errors.New("order matched")
+	ErrOrderClosed  = errors.New("order closed")
+	ErrOrderOpen    = errors.New("order open")
 )
 
 // OrderFilters defines flags for order list filter
@@ -58,9 +64,9 @@ func (o Order) ValidateCanBid() error {
 	case OrderOpen:
 		return nil
 	case OrderMatched:
-		return fmt.Errorf("order matched")
+		return ErrOrderMatched
 	default:
-		return fmt.Errorf("order closed")
+		return ErrOrderClosed
 	}
 }
 
@@ -69,9 +75,9 @@ func (o Order) ValidateInactive() error {
 	case OrderClosed:
 		return nil
 	case OrderMatched:
-		return fmt.Errorf("order matched")
+		return ErrOrderMatched
 	default:
-		return fmt.Errorf("order open")
+		return ErrOrderClosed
 	}
 }
 
@@ -92,7 +98,7 @@ func (o Order) ValidateCanMatch(height int64) error {
 	}
 
 	if o.StartAt > height {
-		return fmt.Errorf("too early to match order (%v > %v)", o.StartAt, height)
+		return errors.Errorf("too early to match order (%v > %v)", o.StartAt, height)
 	}
 	return nil
 }
@@ -102,9 +108,9 @@ func (o Order) validateMatchableState() error {
 	case OrderOpen:
 		return nil
 	case OrderMatched:
-		return fmt.Errorf("order matched")
+		return ErrOrderMatched
 	default:
-		return fmt.Errorf("order closed")
+		return ErrOrderClosed
 	}
 }
 

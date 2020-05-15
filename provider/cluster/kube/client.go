@@ -2,11 +2,10 @@ package kube
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"os"
 	"path"
 
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -26,6 +25,12 @@ import (
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/validation"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+)
+
+var (
+	ErrNoDeploymentForLease = errors.New("kube: no deployments for lease")
+	ErrNoIngressForLease    = errors.New("kube: no ingress for lease")
+	ErrInternalError        = errors.New("kube: internal error")
 )
 
 // Client interface includes cluster client
@@ -49,42 +54,39 @@ func NewClient(log log.Logger, host, ns string) (Client, error) {
 	ctx := context.Background()
 	config, err := openKubeConfig(log)
 	if err != nil {
-		return nil, fmt.Errorf("error building config flags: %v", err)
+		return nil, errors.Wrap(err, "kube: error building config flags")
 	}
 
 	kc, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("error creating kubernetes client: %v", err)
+		return nil, errors.Wrap(err, "kube: error creating kubernetes client")
 	}
 
 	mc, err := manifestclient.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("error creating manifest client: %v", err)
+		return nil, errors.Wrap(err, "kube: error creating manifest client")
 	}
 
 	mcr, err := apiextcs.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("error creating apiextcs client: %v", err)
+		return nil, errors.Wrap(err, "kube: error creating apiextcs client")
 	}
 
 	metc, err := metricsclient.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("error creating metrics client: %v", err)
+		return nil, errors.Wrap(err, "kube: error creating metrics client")
 	}
 
-	err = akashv1.CreateCRD(ctx, mcr)
-	if err != nil {
-		return nil, fmt.Errorf("error creating akashv1 CRD: %v", err)
+	if err := akashv1.CreateCRD(ctx, mcr); err != nil {
+		return nil, errors.Wrap(err, "kube: error creating akashv1 CRD")
 	}
 
-	err = prepareEnvironment(ctx, kc, ns)
-	if err != nil {
-		return nil, fmt.Errorf("error preparing environment %v", err)
+	if err := prepareEnvironment(ctx, kc, ns); err != nil {
+		return nil, errors.Wrap(err, "kube: error preparing environment")
 	}
 
-	_, err = kc.CoreV1().Namespaces().List(ctx, metav1.ListOptions{Limit: 1})
-	if err != nil {
-		return nil, fmt.Errorf("error connecting to kubernetes: %v", err)
+	if _, err := kc.CoreV1().Namespaces().List(ctx, metav1.ListOptions{Limit: 1}); err != nil {
+		return nil, errors.Wrap(err, "kube: error connecting to kubernetes")
 	}
 
 	return &client{
@@ -187,7 +189,7 @@ func (c *client) ServiceLogs(ctx context.Context, lid mtypes.LeaseID,
 	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
-		return nil, errors.New("internal error")
+		return nil, errors.Wrap(err, ErrInternalError.Error())
 	}
 	streams := make([]*cluster.ServiceLog, len(pods.Items))
 	for i, pod := range pods.Items {
@@ -198,7 +200,7 @@ func (c *client) ServiceLogs(ctx context.Context, lid mtypes.LeaseID,
 		}).Stream(ctx)
 		if err != nil {
 			c.log.Error(err.Error())
-			return nil, errors.New("internal error")
+			return nil, errors.Wrap(err, ErrInternalError.Error())
 		}
 		streams[i] = cluster.NewServiceLog(pod.Name, stream)
 	}
@@ -227,10 +229,10 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*cluster.
 	ingress, err := c.kc.ExtensionsV1beta1().Ingresses(lidNS(lid)).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
-		return nil, errors.New("internal error")
+		return nil, errors.Wrap(err, ErrInternalError.Error())
 	}
 	if ingress == nil || len(ingress.Items) == 0 {
-		return nil, errors.New("no ingress for lease")
+		return nil, ErrNoIngressForLease
 	}
 	for _, ing := range ingress.Items {
 		service := serviceStatus[ing.Name]
@@ -265,10 +267,10 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 
 	if err != nil {
 		c.log.Error(err.Error())
-		return nil, errors.New("internal error")
+		return nil, errors.Wrap(err, ErrInternalError.Error())
 	}
 	if deployment == nil {
-		return nil, errors.New("no deployment for lease")
+		return nil, ErrNoDeploymentForLease
 	}
 	return &cluster.ServiceStatus{
 		ObservedGeneration: deployment.Status.ObservedGeneration,
@@ -399,10 +401,10 @@ func (c *client) deploymentsForLease(ctx context.Context, lid mtypes.LeaseID) ([
 	deployments, err := c.kc.AppsV1().Deployments(lidNS(lid)).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
-		return nil, errors.New("internal error")
+		return nil, errors.Wrap(err, ErrInternalError.Error())
 	}
 	if deployments == nil {
-		return nil, errors.New("no deployments for lease")
+		return nil, ErrNoDeploymentForLease
 	}
 	return deployments.Items, nil
 }

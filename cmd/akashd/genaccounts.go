@@ -2,9 +2,9 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -26,6 +26,10 @@ const (
 	flagVestingStart = "vesting-start-time"
 	flagVestingEnd   = "vesting-end-time"
 	flagVestingAmt   = "vesting-amount"
+)
+
+var (
+	ErrInvalidVestingParameters = errors.New("invalid vesting parameters")
 )
 
 // AddGenesisAccountCmd returns add-genesis-account cobra Command.
@@ -98,7 +102,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 					genAccount = authvesting.NewDelayedVestingAccountRaw(baseVestingAccount)
 
 				default:
-					return errors.New("invalid vesting parameters; must supply start and end time or end time")
+					return errors.Wrap(ErrInvalidVestingParameters, "must supply start and end time or end time")
 				}
 			} else {
 				genAccount = baseAccount
@@ -111,13 +115,13 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 			genFile := config.GenesisFile()
 			appState, genDoc, err := genutil.GenesisStateFromGenFile(cdc, genFile)
 			if err != nil {
-				return fmt.Errorf("failed to unmarshal genesis state: %w", err)
+				return errors.Wrap(err, "failed to unmarshal genesis state")
 			}
 
 			authGenState := auth.GetGenesisStateFromAppState(cdc, appState)
 
 			if authGenState.Accounts.Contains(addr) {
-				return fmt.Errorf("cannot add account at existing address %s", addr)
+				return errors.Errorf("cannot add account at existing address %s", addr)
 			}
 
 			// Add the new account to the set of genesis accounts and sanitize the
@@ -127,14 +131,14 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 
 			authGenStateBz, err := cdc.MarshalJSON(authGenState)
 			if err != nil {
-				return fmt.Errorf("failed to marshal auth genesis state: %w", err)
+				return errors.Wrap(err, "failed to marshal auth genesis state")
 			}
 
 			appState[auth.ModuleName] = authGenStateBz
 
 			appStateJSON, err := cdc.MarshalJSON(appState)
 			if err != nil {
-				return fmt.Errorf("failed to marshal application genesis state: %w", err)
+				return errors.Wrap(err, "failed to marshal application genesis state")
 			}
 
 			genDoc.AppState = appStateJSON
