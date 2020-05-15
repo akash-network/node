@@ -96,6 +96,9 @@ func ParseGroupPath(parts []string) (types.GroupID, error) {
 	}
 
 	gseq, err := strconv.ParseUint(parts[2], 10, 32)
+	if err != nil {
+		return types.GroupID{}, err
+	}
 
 	return types.MakeGroupID(did, uint32(gseq)), nil
 }

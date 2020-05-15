@@ -72,6 +72,9 @@ func parseOrderPath(parts []string) (types.OrderID, error) {
 	}
 
 	oseq, err := strconv.ParseUint(parts[3], 10, 32)
+	if err != nil {
+		return types.OrderID{}, err
+	}
 
 	return types.MakeOrderID(did, uint32(oseq)), nil
 }

@@ -228,7 +228,7 @@ func (m *manager) fetchData(ctx context.Context) <-chan runner.Result {
 	})
 }
 
-func (m *manager) doFetchData(ctx context.Context) (*dquery.Deployment, error) {
+func (m *manager) doFetchData(_ context.Context) (*dquery.Deployment, error) {
 	deployment, err := m.session.Client().Query().Deployment(m.daddr)
 	if err != nil {
 		return nil, err
@@ -236,7 +236,7 @@ func (m *manager) doFetchData(ctx context.Context) (*dquery.Deployment, error) {
 	return &deployment, nil
 }
 
-func (m *manager) maybeScheduleStop() bool {
+func (m *manager) maybeScheduleStop() bool { // nolint:golint,unparam
 	if len(m.leases) > 0 || len(m.manifests) > 0 {
 		if m.stoptimer != nil {
 			m.log.Info("stopping stop timer")
@@ -280,8 +280,7 @@ func (m *manager) validateRequests() {
 		return
 	}
 
-	var manifests []*manifest.Manifest
-
+	manifests := make([]*manifest.Manifest, 0)
 	for _, req := range m.requests {
 		if err := m.validateRequest(req); err != nil {
 			m.log.Error("invalid manifest", "err", err)

@@ -17,11 +17,11 @@ type deploymentState string
 
 const (
 	dsDeployActive     deploymentState = "deploy-active"
-	dsDeployPending                    = "deploy-pending"
-	dsDeployComplete                   = "deploy-complete"
-	dsTeardownActive                   = "teardown-active"
-	dsTeardownPending                  = "teardown-pending"
-	dsTeardownComplete                 = "teardown-complete"
+	dsDeployPending    deploymentState = "deploy-pending"
+	dsDeployComplete   deploymentState = "deploy-complete"
+	dsTeardownActive   deploymentState = "teardown-active"
+	dsTeardownPending  deploymentState = "teardown-pending"
+	dsTeardownComplete deploymentState = "teardown-complete"
 )
 
 type deploymentManager struct {

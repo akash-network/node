@@ -11,12 +11,9 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.4.8-0.20191012010759-4bf2d1fec783 // indirect
 	github.com/go-kit/kit v0.10.0
-	github.com/gogo/protobuf v1.3.1
 	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
-	github.com/golangci/golangci-lint v1.21.0
 	github.com/google/uuid v1.1.2-0.20190416172445-c2e93f3ae59f // indirect
 	github.com/gorilla/mux v1.7.3
-	github.com/grpc-ecosystem/grpc-gateway v1.11.3
 	github.com/hashicorp/hcl v1.0.1-0.20191016231534-914dc3f8dd7c // indirect
 	github.com/jmhodges/levigo v1.0.1-0.20191019112844-b572e7f4cdac // indirect
 	github.com/libp2p/go-buffer-pool v0.0.3-0.20190619091711-d94255cb3dfc // indirect

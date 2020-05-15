@@ -24,7 +24,7 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 	}
 }
 
-func queryDeployments(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 	// isValidState denotes whether given state flag is valid or not
 	filters, isValidState, err := parseDepFiltersPath(path)
 	if err != nil {
@@ -72,7 +72,7 @@ func queryDeployments(ctx sdk.Context, path []string, req abci.RequestQuery, kee
 	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
 }
 
-func queryDeployment(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryDeployment(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
 	id, err := parseDeploymentPath(path)
 	if err != nil {
@@ -92,7 +92,7 @@ func queryDeployment(ctx sdk.Context, path []string, req abci.RequestQuery, keep
 	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
 }
 
-func queryGroup(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryGroup(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
 	id, err := ParseGroupPath(path)
 	if err != nil {
