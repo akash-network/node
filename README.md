@@ -55,7 +55,13 @@ $ brew install akash
 Or [GoDownloader](https://github.com/goreleaser/godownloader):
 
 ```sh
-$ curl https://raw.githubusercontent.com/ovrclk/akash/master/godownloader.sh | sh
+$ curl -sSfL https://raw.githubusercontent.com/ovrclk/akash/master/godownloader.sh | sh
+```
+
+Or install a specific version with [GoDownloader](https://github.com/goreleaser/godownloader)
+
+```sh
+$ curl -sSfL https://raw.githubusercontent.com/ovrclk/akash/master/godownloader.sh | sh -s -- v0.6.4
 ```
 
 # Roadmap and contributing
