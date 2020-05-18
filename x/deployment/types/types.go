@@ -2,11 +2,12 @@ package types
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/types"
 	tmkv "github.com/tendermint/tendermint/libs/kv"
+
+	"github.com/ovrclk/akash/types"
 )
 
 // DeploymentState defines state of deployment
@@ -17,6 +18,10 @@ const (
 	DeploymentActive DeploymentState = iota + 1
 	// DeploymentClosed is used when state of deployment is closed
 	DeploymentClosed
+)
+
+var (
+	ErrGroupNotOpen = errors.New("group not open")
 )
 
 // DeploymentFilters defines flags for deployment list filter
@@ -149,7 +154,7 @@ func (d Group) ValidateOrderable() error {
 	case GroupOpen:
 		return nil
 	default:
-		return fmt.Errorf("group not open")
+		return ErrGroupNotOpen
 	}
 }
 

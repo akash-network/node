@@ -30,7 +30,7 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 	}
 }
 
-func queryOrders(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryOrders(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 	// isValidState denotes whether given state flag is valid or not
 	filters, isValidState, err := parseOrderFiltersPath(path)
 	if err != nil {
@@ -62,7 +62,7 @@ func queryOrders(ctx sdk.Context, path []string, req abci.RequestQuery, keeper k
 	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
 }
 
-func queryOrder(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryOrder(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
 	id, err := parseOrderPath(path)
 	if err != nil {
@@ -79,7 +79,7 @@ func queryOrder(ctx sdk.Context, path []string, req abci.RequestQuery, keeper ke
 	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
 }
 
-func queryBids(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryBids(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 	// isValidState denotes whether given state flag is valid or not
 	filters, isValidState, err := parseBidFiltersPath(path)
 	if err != nil {
@@ -110,7 +110,7 @@ func queryBids(ctx sdk.Context, path []string, req abci.RequestQuery, keeper kee
 	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
 }
 
-func queryBid(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryBid(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
 	id, err := parseBidPath(path)
 	if err != nil {
@@ -127,7 +127,7 @@ func queryBid(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keep
 	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
 }
 
-func queryLeases(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryLeases(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 	// isValidState denotes whether given state flag is valid or not
 	filters, isValidState, err := parseLeaseFiltersPath(path)
 	if err != nil {
@@ -158,7 +158,7 @@ func queryLeases(ctx sdk.Context, path []string, req abci.RequestQuery, keeper k
 	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
 }
 
-func queryLease(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryLease(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
 	id, err := parseLeasePath(path)
 	if err != nil {

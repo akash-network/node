@@ -1,12 +1,17 @@
 package keeper
 
 import (
-	"fmt"
-
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/pkg/errors"
+
 	"github.com/ovrclk/akash/x/deployment/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+)
+
+var (
+	ErrDeploymentAlreadyExists = errors.New("keeper: deployment already exists")
+	ErrDeploymentNotFound      = errors.New("keeper: deployment not found")
 )
 
 // Keeper of the deployment store
@@ -92,7 +97,7 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 	key := deploymentKey(deployment.ID())
 
 	if store.Has(key) {
-		return fmt.Errorf("deployment already exists")
+		return ErrDeploymentAlreadyExists
 	}
 
 	store.Set(key, k.cdc.MustMarshalBinaryBare(deployment))
@@ -115,7 +120,7 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 	key := deploymentKey(deployment.ID())
 
 	if !store.Has(key) {
-		return fmt.Errorf("deployment not found")
+		return ErrDeploymentNotFound
 	}
 
 	ctx.EventManager().EmitEvent(

@@ -1,8 +1,6 @@
 package simulation
 
 import (
-	"errors"
-	"fmt"
 	"math/rand"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -11,6 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
+	"github.com/pkg/errors"
+
 	simappparams "github.com/ovrclk/akash/app/params"
 	keepers "github.com/ovrclk/akash/x/market/handler"
 	"github.com/ovrclk/akash/x/market/types"
@@ -92,7 +92,7 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simulat
 
 		simAccount, found := simulation.FindAccount(accounts, provider.Owner)
 		if !found {
-			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("provider with %s not found", provider.Owner)
+			return simulation.NoOpMsg(types.ModuleName), nil, errors.Errorf("provider with %s not found", provider.Owner)
 		}
 
 		if provider.Owner.Equals(order.Owner) {
@@ -162,7 +162,7 @@ func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simulati
 
 		simAccount, found := simulation.FindAccount(accounts, bid.Provider)
 		if !found {
-			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("bid with %s not found", bid.Provider)
+			return simulation.NoOpMsg(types.ModuleName), nil, errors.Errorf("bid with %s not found", bid.Provider)
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
@@ -210,7 +210,7 @@ func SimulateMsgCloseOrder(ak govtypes.AccountKeeper, ks keepers.Keepers) simula
 
 		simAccount, found := simulation.FindAccount(accounts, order.ID().Owner)
 		if !found {
-			return simulation.NoOpMsg(types.ModuleName), nil, fmt.Errorf("order with %s not found", order.ID().Owner)
+			return simulation.NoOpMsg(types.ModuleName), nil, errors.Errorf("order with %s not found", order.ID().Owner)
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)

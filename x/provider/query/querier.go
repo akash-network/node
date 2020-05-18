@@ -22,7 +22,7 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 	}
 }
 
-func queryProviders(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryProviders(ctx sdk.Context, _ []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 	var values Providers
 	keeper.WithProviders(ctx, func(obj types.Provider) bool {
 		values = append(values, Provider(obj))
@@ -31,7 +31,7 @@ func queryProviders(ctx sdk.Context, path []string, req abci.RequestQuery, keepe
 	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
 }
 
-func queryProvider(ctx sdk.Context, path []string, req abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryProvider(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
 	if len(path) != 1 {
 		return nil, sdkerrors.ErrInvalidRequest

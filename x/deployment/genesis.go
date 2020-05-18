@@ -1,9 +1,9 @@
 package deployment
 
 import (
-	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/pkg/errors"
+
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -30,7 +30,7 @@ type GenesisState struct {
 func ValidateGenesis(data GenesisState) error {
 	for _, record := range data.Deployments {
 		if err := record.Validate(); err != nil {
-			return fmt.Errorf("invalid deployment: missing ID")
+			return errors.Wrap(err, types.ErrInvalidDeployment.Error())
 		}
 	}
 	return nil

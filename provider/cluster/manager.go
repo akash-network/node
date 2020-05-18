@@ -17,11 +17,11 @@ type deploymentState string
 
 const (
 	dsDeployActive     deploymentState = "deploy-active"
-	dsDeployPending                    = "deploy-pending"
-	dsDeployComplete                   = "deploy-complete"
-	dsTeardownActive                   = "teardown-active"
-	dsTeardownPending                  = "teardown-pending"
-	dsTeardownComplete                 = "teardown-complete"
+	dsDeployPending    deploymentState = "deploy-pending"
+	dsDeployComplete   deploymentState = "deploy-complete"
+	dsTeardownActive   deploymentState = "teardown-active"
+	dsTeardownPending  deploymentState = "teardown-pending"
+	dsTeardownComplete deploymentState = "teardown-complete"
 )
 
 type deploymentManager struct {
@@ -77,7 +77,7 @@ func (dm *deploymentManager) update(mgroup *manifest.Group) error {
 	case dm.updatech <- mgroup:
 		return nil
 	case <-dm.lc.ShuttingDown():
-		return fmt.Errorf("not running")
+		return ErrNotRunning
 	}
 }
 
@@ -86,7 +86,7 @@ func (dm *deploymentManager) teardown() error {
 	case dm.teardownch <- struct{}{}:
 		return nil
 	case <-dm.lc.ShuttingDown():
-		return fmt.Errorf("not running")
+		return ErrNotRunning
 	}
 }
 
@@ -133,7 +133,7 @@ loop:
 				// start update
 				runch = dm.startDeploy()
 			case dsDeployComplete:
-				panic(fmt.Errorf("INVALID STATE: runch read on %v", dm.state))
+				panic(fmt.Sprintf("INVALID STATE: runch read on %v", dm.state))
 			case dsTeardownActive:
 				dm.state = dsTeardownComplete
 				break loop
@@ -141,7 +141,7 @@ loop:
 				// start teardown
 				runch = dm.startTeardown()
 			case dsTeardownComplete:
-				panic(fmt.Errorf("INVALID STATE: runch read on %v", dm.state))
+				panic(fmt.Sprintf("INVALID STATE: runch read on %v", dm.state))
 			}
 
 		case <-dm.teardownch:
