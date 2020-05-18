@@ -2,9 +2,9 @@ package manifest
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/libs/log"
 
 	lifecycle "github.com/boz/go-lifecycle"
@@ -17,6 +17,10 @@ import (
 	dquery "github.com/ovrclk/akash/x/deployment/query"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+)
+
+var (
+	ErrShutdownTimerExpired = errors.New("shutdown timer expired")
 )
 
 func newManager(h *handler, daddr dtypes.DeploymentID) (*manager, error) {
@@ -131,8 +135,8 @@ loop:
 			break loop
 
 		case <-stopch:
-			m.log.Error("shutdown timer expired")
-			m.lc.ShutdownInitiated(fmt.Errorf("shutdown timer expired"))
+			m.log.Error(ErrShutdownTimerExpired.Error())
+			m.lc.ShutdownInitiated(ErrShutdownTimerExpired)
 			break loop
 
 		case ev := <-m.leasech:
@@ -224,7 +228,7 @@ func (m *manager) fetchData(ctx context.Context) <-chan runner.Result {
 	})
 }
 
-func (m *manager) doFetchData(ctx context.Context) (*dquery.Deployment, error) {
+func (m *manager) doFetchData(_ context.Context) (*dquery.Deployment, error) {
 	deployment, err := m.session.Client().Query().Deployment(m.daddr)
 	if err != nil {
 		return nil, err
@@ -232,7 +236,7 @@ func (m *manager) doFetchData(ctx context.Context) (*dquery.Deployment, error) {
 	return &deployment, nil
 }
 
-func (m *manager) maybeScheduleStop() bool {
+func (m *manager) maybeScheduleStop() bool { // nolint:golint,unparam
 	if len(m.leases) > 0 || len(m.manifests) > 0 {
 		if m.stoptimer != nil {
 			m.log.Info("stopping stop timer")

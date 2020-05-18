@@ -1,8 +1,9 @@
 package sdl
 
 import (
-	"fmt"
 	"sort"
+
+	"github.com/pkg/errors"
 
 	"github.com/blang/semver"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -97,7 +98,7 @@ type v1ServiceDeployment struct {
 func (sdl *v1) Validate() error {
 
 	if sdl.Version == "" {
-		return fmt.Errorf("invalid version: '%v' required", allowedVersion)
+		return errors.Errorf("invalid version: '%v' required", allowedVersion)
 	}
 
 	vsn, err := semver.ParseTolerant(sdl.Version)
@@ -106,7 +107,7 @@ func (sdl *v1) Validate() error {
 	}
 
 	if !allowedVersion.EQ(vsn) {
-		return fmt.Errorf("invalid version: '%v' required", allowedVersion)
+		return errors.Errorf("invalid version: '%v' required", allowedVersion)
 	}
 
 	return nil
@@ -123,17 +124,17 @@ func (sdl *v1) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 
 			compute, ok := sdl.Profiles.Compute[svcdepl.Profile]
 			if !ok {
-				return nil, fmt.Errorf("%v.%v: no compute profile named %v", svcName, placementName, svcdepl.Profile)
+				return nil, errors.Errorf("%v.%v: no compute profile named %v", svcName, placementName, svcdepl.Profile)
 			}
 
 			infra, ok := sdl.Profiles.Placement[placementName]
 			if !ok {
-				return nil, fmt.Errorf("%v.%v: no placement profile named %v", svcName, placementName, placementName)
+				return nil, errors.Errorf("%v.%v: no placement profile named %v", svcName, placementName, placementName)
 			}
 
 			price, ok := infra.Pricing[svcdepl.Profile]
 			if !ok {
-				return nil, fmt.Errorf("%v.%v: no pricing for profile %v", svcName, placementName, svcdepl.Profile)
+				return nil, errors.Errorf("%v.%v: no pricing for profile %v", svcName, placementName, svcdepl.Profile)
 			}
 
 			group := groups[placementName]
@@ -207,12 +208,12 @@ func (sdl *v1) Manifest() (manifest.Manifest, error) {
 
 			compute, ok := sdl.Profiles.Compute[svcdepl.Profile]
 			if !ok {
-				return nil, fmt.Errorf("%v.%v: no compute profile named %v", svcName, placementName, svcdepl.Profile)
+				return nil, errors.Errorf("%v.%v: no compute profile named %v", svcName, placementName, svcdepl.Profile)
 			}
 
 			svc, ok := sdl.Services[svcName]
 			if !ok {
-				return nil, fmt.Errorf("%v.%v: no service profile named %v", svcName, placementName, svcName)
+				return nil, errors.Errorf("%v.%v: no service profile named %v", svcName, placementName, svcName)
 			}
 
 			msvc := &manifest.Service{

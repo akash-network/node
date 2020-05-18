@@ -2,16 +2,21 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/caarlos0/env"
+	"github.com/pkg/errors"
+
 	"github.com/ovrclk/akash/provider/bidengine"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/manifest"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
+)
+
+var (
+	ErrClusterReadTimedout = errors.New("timeout waiting for cluster ready")
 )
 
 // Service is the interface that includes StatusClient interface.
@@ -51,18 +56,19 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 	select {
 	case <-cluster.Ready():
 	case <-time.After(config.ClusterWaitReadyDuration):
-		session.Log().Error("timeout waiting for cluster ready")
+		session.Log().Error(ErrClusterReadTimedout.Error())
 		cancel()
 		<-cluster.Done()
-		return nil, fmt.Errorf("timeout waiting for cluster ready")
+		return nil, ErrClusterReadTimedout
 	}
 
 	bidengine, err := bidengine.NewService(ctx, session, cluster, bus)
 	if err != nil {
-		session.Log().Error("creating bidengine service", "err", err)
+		errmsg := "creating bidengine service"
+		session.Log().Error(errmsg, "err", err)
 		cancel()
 		<-cluster.Done()
-		return nil, err
+		return nil, errors.Wrap(err, errmsg)
 	}
 
 	manifest, err := manifest.NewHandler(ctx, session, bus)
