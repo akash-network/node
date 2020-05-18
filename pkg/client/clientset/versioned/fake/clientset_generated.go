@@ -70,7 +70,6 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	return c.discovery
 }
 
-// Tracker method returns the tracker of clientset
 func (c *Clientset) Tracker() testing.ObjectTracker {
 	return c.tracker
 }
