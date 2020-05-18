@@ -78,7 +78,7 @@ jobs:
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable staticcheck
         continue-on-error: true
       - name: lint golint
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable golint
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable golint
         continue-on-error: false
       - name: lint gosec
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable gosec
