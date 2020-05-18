@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -34,7 +35,7 @@ func GetTxCmd(key string, cdc *codec.Codec) *cobra.Command {
 func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [config-file]",
-		Short: "Create provider",
+		Short: fmt.Sprintf("Create %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
@@ -65,7 +66,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update [config-file]",
-		Short: "Update provider",
+		Short: fmt.Sprintf("Update %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)

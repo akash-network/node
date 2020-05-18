@@ -24,7 +24,7 @@ func NewHandler(keeper keeper.Keeper, mkeeper MarketKeeper) sdk.Handler {
 	}
 }
 
-func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgCreateDeployment) (*sdk.Result, error) {
+func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg types.MsgCreateDeployment) (*sdk.Result, error) {
 
 	deployment := types.Deployment{
 		DeploymentID: types.DeploymentID{
@@ -61,7 +61,7 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper
 	}, nil
 }
 
-func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgUpdateDeployment) (*sdk.Result, error) {
+func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg types.MsgUpdateDeployment) (*sdk.Result, error) {
 	deployment, found := keeper.GetDeployment(ctx, msg.ID)
 	if !found {
 		return nil, types.ErrDeploymentNotFound

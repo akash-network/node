@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -37,7 +38,7 @@ func GetTxCmd(key string, cdc *codec.Codec) *cobra.Command {
 func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [sdl-file]",
-		Short: "Create deployment",
+		Short: fmt.Sprintf("Create %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
@@ -77,7 +78,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 func cmdClose(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "close",
-		Short: "Close deployment",
+		Short: fmt.Sprintf("Close %s", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
@@ -102,7 +103,7 @@ func cmdClose(key string, cdc *codec.Codec) *cobra.Command {
 func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update [sdl-file]",
-		Short: "update deployment",
+		Short: fmt.Sprintf("update %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)

@@ -51,9 +51,6 @@ func (u *cpuQuantity) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		if val < 0 {
-			return errNegativeValue
-		}
 		*u = cpuQuantity(val)
 		return nil
 	}

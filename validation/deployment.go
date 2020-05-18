@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
@@ -15,7 +15,7 @@ func ValidateDeploymentGroups(gspecs []dtypes.GroupSpec) error {
 	}
 
 	if err := validateResourceLists(defaultConfig, rlists); err != nil {
-		return fmt.Errorf("deployment groups: %v", err)
+		return errors.Wrap(err, "validate deployment group")
 	}
 
 	for _, group := range gspecs {

@@ -1,7 +1,7 @@
 package kube
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -53,7 +53,7 @@ func (b *nsBuilder) name() string {
 	return b.ns()
 }
 
-func (b *nsBuilder) create() (*corev1.Namespace, error) {
+func (b *nsBuilder) create() (*corev1.Namespace, error) { // nolint:golint,unparam
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   b.ns(),
@@ -62,7 +62,7 @@ func (b *nsBuilder) create() (*corev1.Namespace, error) {
 	}, nil
 }
 
-func (b *nsBuilder) update(obj *corev1.Namespace) (*corev1.Namespace, error) {
+func (b *nsBuilder) update(obj *corev1.Namespace) (*corev1.Namespace, error) { // nolint:golint,unparam
 	obj.Name = b.ns()
 	obj.Labels = b.labels()
 	return obj, nil
@@ -91,7 +91,7 @@ func (b *deploymentBuilder) labels() map[string]string {
 	return obj
 }
 
-func (b *deploymentBuilder) create() (*appsv1.Deployment, error) {
+func (b *deploymentBuilder) create() (*appsv1.Deployment, error) { // nolint:golint,unparam
 	replicas := int32(b.service.Count)
 	kdeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -117,7 +117,7 @@ func (b *deploymentBuilder) create() (*appsv1.Deployment, error) {
 	return kdeployment, nil
 }
 
-func (b *deploymentBuilder) update(obj *appsv1.Deployment) (*appsv1.Deployment, error) {
+func (b *deploymentBuilder) update(obj *appsv1.Deployment) (*appsv1.Deployment, error) { // nolint:golint,unparam
 	replicas := int32(b.service.Count)
 	obj.Labels = b.labels()
 	obj.Spec.Selector.MatchLabels = b.labels()
@@ -181,7 +181,7 @@ func newServiceBuilder(log log.Logger, lid mtypes.LeaseID, group *manifest.Group
 	}
 }
 
-func (b *serviceBuilder) create() (*corev1.Service, error) {
+func (b *serviceBuilder) create() (*corev1.Service, error) { // nolint:golint,unparam
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   b.name(),
@@ -197,7 +197,7 @@ func (b *serviceBuilder) create() (*corev1.Service, error) {
 	}, nil
 }
 
-func (b *serviceBuilder) update(obj *corev1.Service) (*corev1.Service, error) {
+func (b *serviceBuilder) update(obj *corev1.Service) (*corev1.Service, error) { // nolint:golint,unparam
 	obj.Labels = b.labels()
 	obj.Spec.Selector = b.labels()
 	obj.Spec.Ports = b.ports()
@@ -226,7 +226,7 @@ func newIngressBuilder(log log.Logger, host string, lid mtypes.LeaseID, group *m
 	if config.DeploymentIngressStaticHosts {
 		uid := strings.ToLower(shortuuid.New())
 		h := fmt.Sprintf("%s.%s", uid, config.DeploymentIngressDomain)
-		log.Debug("IngressBuilder: map", "host", h)
+		log.Debug("IngressBuilder: map ", h, " host ", host)
 		expose.Hosts = append(expose.Hosts, h)
 	}
 	return &ingressBuilder{
@@ -242,7 +242,7 @@ func newIngressBuilder(log log.Logger, host string, lid mtypes.LeaseID, group *m
 	}
 }
 
-func (b *ingressBuilder) create() (*extv1.Ingress, error) {
+func (b *ingressBuilder) create() (*extv1.Ingress, error) { // nolint:golint,unparam
 	return &extv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   b.name(),
@@ -254,7 +254,7 @@ func (b *ingressBuilder) create() (*extv1.Ingress, error) {
 	}, nil
 }
 
-func (b *ingressBuilder) update(obj *extv1.Ingress) (*extv1.Ingress, error) {
+func (b *ingressBuilder) update(obj *extv1.Ingress) (*extv1.Ingress, error) { // nolint:golint,unparam
 	obj.Labels = b.labels()
 	obj.Spec.Rules = b.rules()
 	return obj, nil
@@ -288,18 +288,18 @@ func exposeExternalPort(expose *manifest.ServiceExpose) int32 {
 	return int32(expose.ExternalPort)
 }
 
+// lidNS generates a unique sha256 sum for identifying a provider's object name.
 func lidNS(lid mtypes.LeaseID) string {
-	// TODO
-	var path string
-	// path := lid.String()
-	sha := sha1.Sum([]byte(path))
+	path := mtypes.BidIDString(lid.BidID())
+	sha := sha256.Sum256([]byte(path))
 	return hex.EncodeToString(sha[:])
 }
 
-// manifest
+// manifestBuilder composes the k8s akashv1.Manifest type from LeaseID and
+// manifest.Group data.
 type manifestBuilder struct {
 	builder
-	mns string
+	mns string // Q: is this supposed to be the k8s Namespace? It's the Object name now.
 }
 
 func newManifestBuilder(log log.Logger, ns string, lid mtypes.LeaseID, group *manifest.Group) *manifestBuilder {

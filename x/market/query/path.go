@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/pkg/errors"
+
 	dpath "github.com/ovrclk/akash/x/deployment/query"
 	"github.com/ovrclk/akash/x/market/types"
 )
@@ -16,6 +18,11 @@ const (
 	bidPath    = "bid"
 	leasesPath = "leases"
 	leasePath  = "lease"
+)
+
+var (
+	ErrInvalidPath = errors.New("query: invalid path")
+	ErrStateValue  = errors.New("query: invalid state value")
 )
 
 // getOrdersPath returns orders path for queries
@@ -56,7 +63,7 @@ func orderParts(id types.OrderID) string {
 // error if occured due to wrong query
 func parseOrderPath(parts []string) (types.OrderID, error) {
 	if len(parts) < 4 {
-		return types.OrderID{}, fmt.Errorf("invalid path")
+		return types.OrderID{}, ErrInvalidPath
 	}
 
 	did, err := dpath.ParseGroupPath(parts[0:3])
@@ -65,6 +72,9 @@ func parseOrderPath(parts []string) (types.OrderID, error) {
 	}
 
 	oseq, err := strconv.ParseUint(parts[3], 10, 32)
+	if err != nil {
+		return types.OrderID{}, err
+	}
 
 	return types.MakeOrderID(did, uint32(oseq)), nil
 }
@@ -73,7 +83,7 @@ func parseOrderPath(parts []string) (types.OrderID, error) {
 // error if occured due to wrong query
 func parseOrderFiltersPath(parts []string) (types.OrderFilters, bool, error) {
 	if len(parts) < 2 {
-		return types.OrderFilters{}, false, fmt.Errorf("invalid path")
+		return types.OrderFilters{}, false, ErrInvalidPath
 	}
 
 	owner, err := sdk.AccAddressFromBech32(parts[0])
@@ -84,7 +94,7 @@ func parseOrderFiltersPath(parts []string) (types.OrderFilters, bool, error) {
 	state, ok := types.OrderStateMap[parts[1]]
 
 	if !ok && (parts[1] != "") {
-		return types.OrderFilters{}, false, fmt.Errorf("invalid state value")
+		return types.OrderFilters{}, false, ErrStateValue
 	}
 
 	return types.OrderFilters{
@@ -98,7 +108,7 @@ func parseOrderFiltersPath(parts []string) (types.OrderFilters, bool, error) {
 // error if occured due to wrong query
 func parseBidPath(parts []string) (types.BidID, error) {
 	if len(parts) < 5 {
-		return types.BidID{}, fmt.Errorf("invalid path")
+		return types.BidID{}, ErrInvalidPath
 	}
 
 	oid, err := parseOrderPath(parts[0:4])
@@ -118,7 +128,7 @@ func parseBidPath(parts []string) (types.BidID, error) {
 // error if occured due to wrong query
 func parseBidFiltersPath(parts []string) (types.BidFilters, bool, error) {
 	if len(parts) < 2 {
-		return types.BidFilters{}, false, fmt.Errorf("invalid path")
+		return types.BidFilters{}, false, ErrInvalidPath
 	}
 
 	owner, err := sdk.AccAddressFromBech32(parts[0])
@@ -129,7 +139,7 @@ func parseBidFiltersPath(parts []string) (types.BidFilters, bool, error) {
 	state, ok := types.BidStateMap[parts[1]]
 
 	if !ok && (parts[1] != "") {
-		return types.BidFilters{}, false, fmt.Errorf("invalid state value")
+		return types.BidFilters{}, false, ErrStateValue
 	}
 
 	return types.BidFilters{
@@ -154,7 +164,7 @@ func parseLeasePath(parts []string) (types.LeaseID, error) {
 // error if occured due to wrong query
 func parseLeaseFiltersPath(parts []string) (types.LeaseFilters, bool, error) {
 	if len(parts) < 2 {
-		return types.LeaseFilters{}, false, fmt.Errorf("invalid path")
+		return types.LeaseFilters{}, false, ErrInvalidPath
 	}
 
 	owner, err := sdk.AccAddressFromBech32(parts[0])
@@ -165,7 +175,7 @@ func parseLeaseFiltersPath(parts []string) (types.LeaseFilters, bool, error) {
 	state, ok := types.LeaseStateMap[parts[1]]
 
 	if !ok && (parts[1] != "") {
-		return types.LeaseFilters{}, false, fmt.Errorf("invalid state value")
+		return types.LeaseFilters{}, false, ErrStateValue
 	}
 
 	return types.LeaseFilters{

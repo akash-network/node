@@ -19,23 +19,30 @@ type (
 	Leases []Lease
 )
 
+const (
+	todo = "TODO see deployment/query/types.go"
+)
+
 func (obj Order) String() string {
-	return "TODO see deployment/query/types.go"
+	return todo
 }
+
 func (obj Orders) String() string {
-	return "TODO see deployment/query/types.go"
+	return todo
 }
 
 func (obj Bid) String() string {
-	return "TODO see deployment/query/types.go"
+	return todo
 }
+
 func (obj Bids) String() string {
-	return "TODO see deployment/query/types.go"
+	return todo
 }
 
 func (obj Lease) String() string {
-	return "TODO see deployment/query/types.go"
+	return todo
 }
+
 func (obj Leases) String() string {
-	return "TODO see deployment/query/types.go"
+	return todo
 }

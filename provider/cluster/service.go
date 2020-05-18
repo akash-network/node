@@ -2,10 +2,11 @@ package cluster
 
 import (
 	"context"
-	"errors"
 
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/caarlos0/env"
+	"github.com/pkg/errors"
+
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
@@ -45,7 +46,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 	config := config{}
 	if err := env.Parse(&config); err != nil {
 		log.Error("parsing config", "err", err)
-		return nil, err
+		return nil, errors.Wrap(err, "parsing config")
 	}
 
 	lc := lifecycle.New()
@@ -263,8 +264,7 @@ func findDeployments(ctx context.Context, log log.Logger, client Client, session
 		return nil, err
 	}
 
-	var leases map[string]bool
-
+	leases := make(map[string]bool)
 	for _, lease := range leaseList {
 		leases[mquery.LeasePath(lease.LeaseID)] = true
 	}

@@ -176,15 +176,14 @@ type existingOrder struct {
 	bid   *mquery.Bid
 }
 
-func queryExistingOrders(ctx context.Context, session session.Session) ([]existingOrder, error) {
+func queryExistingOrders(_ context.Context, session session.Session) ([]existingOrder, error) {
 	orders, err := session.Client().Query().Orders(mtypes.OrderFilters{})
 	if err != nil {
 		session.Log().Error("error querying open orders:", "err", err)
 		return nil, err
 	}
 
-	var existingOrders []existingOrder
-
+	existingOrders := make([]existingOrder, 0)
 	for i := range orders {
 		pOrder := &orders[i]
 		if pOrder.State != mtypes.OrderOpen {
