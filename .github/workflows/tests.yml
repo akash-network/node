@@ -55,7 +55,7 @@ jobs:
         continue-on-error: false
       - name: lint goerr113
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable goerr113
-        continue-on-error: true
+        continue-on-error: false
       - name: lint gofmt
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable gofmt
         continue-on-error: false
@@ -73,10 +73,10 @@ jobs:
         continue-on-error: true
       - name: lint unparam
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable unparam
-        continue-on-error: true
+        continue-on-error: false
       - name: lint staticcheck
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable staticcheck
-        continue-on-error: true
+        continue-on-error: false
       - name: lint golint
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable golint
         continue-on-error: true

@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
@@ -47,7 +47,7 @@ func ValidateManifestWithDeployment(m *manifest.Manifest, dgroups []dtypes.Group
 func validateManifestDeploymentGroups(mgroups []manifest.Group, dgroups []types.ResourceGroup) error {
 
 	if len(mgroups) != len(dgroups) {
-		return fmt.Errorf("invalid manifest: group count mismatch (%v != %v)", len(mgroups), len(dgroups))
+		return errors.Errorf("invalid manifest: group count mismatch (%v != %v)", len(mgroups), len(dgroups))
 	}
 
 mainloop:
@@ -61,7 +61,7 @@ mainloop:
 			}
 			continue mainloop
 		}
-		return fmt.Errorf("invalid manifest: unknown deployment group ('%v')", mgroup.GetName())
+		return errors.Errorf("invalid manifest: unknown deployment group ('%v')", mgroup.GetName())
 	}
 	return nil
 }
@@ -98,12 +98,12 @@ mainloop:
 				continue mainloop
 			}
 		}
-		return fmt.Errorf("invalid manifest: unused deployment resources ('%v')", dgroup.GetName())
+		return errors.Errorf("invalid manifest: unused deployment resources ('%v')", dgroup.GetName())
 	}
 
 	for _, mrec := range mlist {
 		if mrec.Count > 0 {
-			return fmt.Errorf("invalid manifest: excess manifest resources ('%v')", mgroup.GetName())
+			return errors.Errorf("invalid manifest: excess manifest resources ('%v')", mgroup.GetName())
 		}
 	}
 

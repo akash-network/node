@@ -1,10 +1,11 @@
 package types
 
 import (
-	"fmt"
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/pkg/errors"
+
 	"github.com/ovrclk/akash/sdkutil"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
@@ -21,6 +22,10 @@ const (
 	evProviderKey    = "provider"
 	evPriceDenomKey  = "price-denom"
 	evPriceAmountKey = "price-amount"
+)
+
+var (
+	ErrParsingPrice = errors.New("error parsing price")
 )
 
 // EventOrderCreated struct
@@ -211,7 +216,7 @@ func parseEVPriceAttributes(attrs []sdk.Attribute) (sdk.Coin, error) {
 
 	amount, ok := sdk.NewIntFromString(amounts)
 	if !ok {
-		return sdk.Coin{}, fmt.Errorf("error parsing price")
+		return sdk.Coin{}, ErrParsingPrice
 	}
 
 	return sdk.NewCoin(denom, amount), nil

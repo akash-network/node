@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -34,7 +35,7 @@ func GetTxCmd(key string, cdc *codec.Codec) *cobra.Command {
 func cmdCreateBid(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "bid-create",
-		Short: "Create a bid",
+		Short: fmt.Sprintf("Create a %s bid", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
@@ -75,7 +76,7 @@ func cmdCreateBid(key string, cdc *codec.Codec) *cobra.Command {
 func cmdCloseBid(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "bid-close",
-		Short: "Close a bid",
+		Short: fmt.Sprintf("Close a %s bid", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
@@ -101,7 +102,7 @@ func cmdCloseBid(key string, cdc *codec.Codec) *cobra.Command {
 func cmdCloseOrder(key string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "order-close",
-		Short: "Close an order",
+		Short: fmt.Sprintf("Close a %s order", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCLIContext().WithCodec(cdc)
