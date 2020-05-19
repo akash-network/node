@@ -175,6 +175,7 @@ func (r Resource) GetCount() uint32 {
 	return r.Count
 }
 
+// FullPrice method returns full price of resource
 func (r Resource) FullPrice() sdk.Coin {
 	return sdk.NewCoin(r.Price.Denom, r.Price.Amount.MulRaw(int64(r.Count)))
 }

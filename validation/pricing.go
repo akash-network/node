@@ -10,7 +10,7 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
-func validateGroupPricing(config config, gspec dtypes.GroupSpec) error {
+func validateGroupPricing(config ValConfig, gspec dtypes.GroupSpec) error {
 
 	var price sdk.Coin
 
@@ -45,7 +45,7 @@ func validateGroupPricing(config config, gspec dtypes.GroupSpec) error {
 	return nil
 }
 
-func validateUnitPricing(config config, rg dtypes.Resource) error {
+func validateUnitPricing(config ValConfig, rg dtypes.Resource) error {
 
 	if rg.Price.Amount.GT(sdk.NewIntFromUint64(uint64(config.MaxUnitPrice))) {
 		return errors.Errorf("error: invalid unit price (%v > %v fails)", config.MaxUnitPrice, rg.Price)

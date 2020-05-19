@@ -19,7 +19,7 @@ func ValidateResourceList(rlist types.ResourceGroup) error {
 	return validateResourceList(defaultConfig, rlist)
 }
 
-func validateResourceLists(config config, rlists []types.ResourceGroup) error {
+func validateResourceLists(config ValConfig, rlists []types.ResourceGroup) error {
 
 	if len(rlists) == 0 {
 		return ErrNoGroupsPresent
@@ -45,7 +45,7 @@ func validateResourceLists(config config, rlists []types.ResourceGroup) error {
 	return nil
 }
 
-func validateResourceList(config config, rlist types.ResourceGroup) error {
+func validateResourceList(config ValConfig, rlist types.ResourceGroup) error {
 	if rlist.GetName() == "" {
 		return ErrGroupEmptyName
 	}
@@ -100,7 +100,7 @@ func validateResourceList(config config, rlist types.ResourceGroup) error {
 	return nil
 }
 
-func validateResourceGroup(config config, rg types.Resource) error {
+func validateResourceGroup(config ValConfig, rg types.Resource) error {
 	if err := validateResourceUnit(config, rg.Unit); err != nil {
 		return nil
 	}
@@ -117,7 +117,7 @@ func validateResourceGroup(config config, rg types.Resource) error {
 	return nil
 }
 
-func validateResourceUnit(config config, unit types.Unit) error {
+func validateResourceUnit(config ValConfig, unit types.Unit) error {
 	if unit.CPU > uint32(config.MaxUnitCPU) || unit.CPU < uint32(config.MinUnitCPU) {
 		return errors.Errorf("error: invalide unit cpu (%v > %v > %v fails)",
 			config.MaxUnitCPU, unit.CPU, config.MinUnitCPU)

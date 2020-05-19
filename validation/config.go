@@ -4,7 +4,8 @@ import (
 	"github.com/caarlos0/env"
 )
 
-type config struct {
+// ValConfig represents validation config
+type ValConfig struct {
 	MaxUnitCPU     uint `env:"AKASH_MAX_UNIT_CPU"     envDefault:"500"`
 	MaxUnitMemory  uint `env:"AKASH_MAX_UNIT_MEMORY"  envDefault:"1073741824"` // 1Gi
 	MaxUnitStorage uint `env:"AKASH_MAX_UNIT_STORAGE" envDefault:"1073741824"` // 1Gi
@@ -28,7 +29,7 @@ type config struct {
 	MaxGroupMemPrice int64 `env:"AKASH_MEM_PRICE_MAX" envDefault:"150"`
 }
 
-var defaultConfig = config{}
+var defaultConfig = ValConfig{}
 
 func init() {
 	if err := env.Parse(&defaultConfig); err != nil {
@@ -37,6 +38,6 @@ func init() {
 }
 
 // Config returns default configuration
-func Config() config {
+func Config() ValConfig {
 	return defaultConfig
 }
