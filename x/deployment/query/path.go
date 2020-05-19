@@ -36,7 +36,7 @@ func getGroupPath(id types.GroupID) string {
 }
 
 // parseDeploymentPath returns DeploymentID details with provided queries, and return
-// error if occured due to wrong query
+// error if occurred due to wrong query
 func parseDeploymentPath(parts []string) (types.DeploymentID, error) {
 	if len(parts) < 2 {
 		return types.DeploymentID{}, ErrInvalidPath
@@ -59,7 +59,7 @@ func parseDeploymentPath(parts []string) (types.DeploymentID, error) {
 }
 
 // parseDepFiltersPath returns DeploymentFilters details with provided queries, and return
-// error if occured due to wrong query
+// error if occurred due to wrong query
 func parseDepFiltersPath(parts []string) (types.DeploymentFilters, bool, error) {
 	if len(parts) < 2 {
 		return types.DeploymentFilters{}, false, ErrInvalidPath
@@ -84,7 +84,7 @@ func parseDepFiltersPath(parts []string) (types.DeploymentFilters, bool, error) 
 }
 
 // ParseGroupPath returns GroupID details with provided queries, and return
-// error if occured due to wrong query
+// error if occurred due to wrong query
 func ParseGroupPath(parts []string) (types.GroupID, error) {
 	if len(parts) < 3 {
 		return types.GroupID{}, ErrInvalidPath

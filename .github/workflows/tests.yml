@@ -51,8 +51,8 @@ jobs:
         run: $(go env GOPATH)/bin/golangci-lint run ./...  --disable-all --enable deadcode
         continue-on-error: false
       - name: lint misspell
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable misspell
-        continue-on-error: true
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable misspell
+        continue-on-error: false
       - name: lint goerr113
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable goerr113
         continue-on-error: false

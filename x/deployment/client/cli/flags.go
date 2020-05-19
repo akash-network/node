@@ -19,7 +19,7 @@ func MarkReqDeploymentIDFlags(cmd *cobra.Command) {
 	cmd.MarkFlagRequired("dseq")
 }
 
-// DeploymentIDFromFlags returns DeploymentID with given flags, owner and error if occured
+// DeploymentIDFromFlags returns DeploymentID with given flags, owner and error if occurred
 func DeploymentIDFromFlags(flags *pflag.FlagSet, defaultOwner string) (types.DeploymentID, error) {
 	var id types.DeploymentID
 	owner, err := flags.GetString("owner")
@@ -51,7 +51,7 @@ func MarkReqGroupIDFlags(cmd *cobra.Command) {
 	cmd.MarkFlagRequired("gseq")
 }
 
-// GroupIDFromFlags returns GroupID with given flags and error if occured
+// GroupIDFromFlags returns GroupID with given flags and error if occurred
 func GroupIDFromFlags(flags *pflag.FlagSet) (types.GroupID, error) {
 	var id types.GroupID
 	prev, err := DeploymentIDFromFlags(flags, "")
@@ -72,7 +72,7 @@ func AddDeploymentFilterFlags(flags *pflag.FlagSet) {
 	flags.String("state", "", "deployment state to filter (active,closed)")
 }
 
-// DepFiltersFromFlags returns DeploymentFilters with given flags and error if occured
+// DepFiltersFromFlags returns DeploymentFilters with given flags and error if occurred
 func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, error) {
 	var dfilters types.DeploymentFilters
 	owner, err := flags.GetString("owner")
@@ -96,7 +96,7 @@ func AddGroupFilterFlags(flags *pflag.FlagSet) {
 	flags.String("state", "", "group state to filter (open,ordered,matched,insufficient,closed)")
 }
 
-// GroupFiltersFromFlags returns GroupFilters with given flags and error if occured
+// GroupFiltersFromFlags returns GroupFilters with given flags and error if occurred
 func GroupFiltersFromFlags(flags *pflag.FlagSet) (types.GroupFilters, error) {
 	dfilters, err := DepFiltersFromFlags(flags)
 	if err != nil {

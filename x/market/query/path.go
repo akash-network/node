@@ -60,7 +60,7 @@ func orderParts(id types.OrderID) string {
 }
 
 // parseOrderPath returns orderID details with provided queries, and return
-// error if occured due to wrong query
+// error if occurred due to wrong query
 func parseOrderPath(parts []string) (types.OrderID, error) {
 	if len(parts) < 4 {
 		return types.OrderID{}, ErrInvalidPath
@@ -80,7 +80,7 @@ func parseOrderPath(parts []string) (types.OrderID, error) {
 }
 
 // parseOrderFiltersPath returns OrderFilters details with provided queries, and return
-// error if occured due to wrong query
+// error if occurred due to wrong query
 func parseOrderFiltersPath(parts []string) (types.OrderFilters, bool, error) {
 	if len(parts) < 2 {
 		return types.OrderFilters{}, false, ErrInvalidPath
@@ -105,7 +105,7 @@ func parseOrderFiltersPath(parts []string) (types.OrderFilters, bool, error) {
 }
 
 // parseBidPath returns bidID details with provided queries, and return
-// error if occured due to wrong query
+// error if occurred due to wrong query
 func parseBidPath(parts []string) (types.BidID, error) {
 	if len(parts) < 5 {
 		return types.BidID{}, ErrInvalidPath
@@ -125,7 +125,7 @@ func parseBidPath(parts []string) (types.BidID, error) {
 }
 
 // parseBidFiltersPath returns BidFilters details with provided queries, and return
-// error if occured due to wrong query
+// error if occurred due to wrong query
 func parseBidFiltersPath(parts []string) (types.BidFilters, bool, error) {
 	if len(parts) < 2 {
 		return types.BidFilters{}, false, ErrInvalidPath
@@ -150,7 +150,7 @@ func parseBidFiltersPath(parts []string) (types.BidFilters, bool, error) {
 }
 
 // parseLeasePath returns leaseID details with provided queries, and return
-// error if occured due to wrong query
+// error if occurred due to wrong query
 func parseLeasePath(parts []string) (types.LeaseID, error) {
 	bid, err := parseBidPath(parts)
 	if err != nil {
@@ -161,7 +161,7 @@ func parseLeasePath(parts []string) (types.LeaseID, error) {
 }
 
 // parseLeaseFiltersPath returns LeaseFilters details with provided queries, and return
-// error if occured due to wrong query
+// error if occurred due to wrong query
 func parseLeaseFiltersPath(parts []string) (types.LeaseFilters, bool, error) {
 	if len(parts) < 2 {
 		return types.LeaseFilters{}, false, ErrInvalidPath
