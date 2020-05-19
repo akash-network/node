@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/client/debug"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -44,6 +46,8 @@ func main() {
 
 		genutilcli.CollectGenTxsCmd(ctx, cdc, auth.GenesisAccountIterator{}, common.DefaultNodeHome()),
 
+		genutilcli.MigrateGenesisCmd(ctx,cdc),
+
 		genutilcli.GenTxCmd(
 			ctx, cdc,
 			app.ModuleBasics(),
@@ -55,6 +59,9 @@ func main() {
 
 		genutilcli.ValidateGenesisCmd(ctx, cdc, app.ModuleBasics()),
 		AddGenesisAccountCmd(ctx, cdc, common.DefaultNodeHome(), common.DefaultCLIHome()),
+
+		flags.NewCompletionCmd(root, true),
+		debug.Cmd(cdc),
 	)
 
 	server.AddCommands(ctx, cdc, root, newApp, exportAppStateAndTMValidators)
