@@ -69,8 +69,8 @@ jobs:
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable gochecknoglobals
         continue-on-error: true
       - name: lint ineffassign
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable ineffassign
-        continue-on-error: true
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --no-config --disable-all --enable ineffassign
+        continue-on-error: false
       - name: lint unparam
         run: $(go env GOPATH)/bin/golangci-lint run ./... --disable-all --enable unparam
         continue-on-error: false
