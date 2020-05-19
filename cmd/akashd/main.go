@@ -5,7 +5,10 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/store"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/staking"
@@ -67,12 +70,25 @@ func main() {
 }
 
 func newApp(logger log.Logger, db dbm.DB, tio io.Writer) abci.Application {
+	var cache sdk.MultiStorePersistentCache
+
+	if viper.GetBool(server.FlagInterBlockCache) {
+		cache = store.NewCommitKVStoreCacheManager()
+	}
+
 	skipUpgradeHeights := make(map[int64]bool)
 	for _, h := range viper.GetIntSlice(server.FlagUnsafeSkipUpgrades) {
 		skipUpgradeHeights[int64(h)] = true
 	}
 
-	return app.NewApp(logger, db, tio, invCheckPeriod, skipUpgradeHeights)
+	return app.NewApp(
+		logger, db, tio, invCheckPeriod, skipUpgradeHeights,
+		baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))),
+		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
+		baseapp.SetHaltHeight(viper.GetUint64(server.FlagHaltHeight)),
+		baseapp.SetHaltTime(viper.GetUint64(server.FlagHaltTime)),
+		baseapp.SetInterBlockCache(cache),
+	)
 }
 
 func exportAppStateAndTMValidators(

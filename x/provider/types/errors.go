@@ -9,7 +9,7 @@ var (
 	ErrInvalidProviderURI = sdkerrors.Register(ModuleName, 1, "invalid provider: invalid host uri")
 
 	// ErrNotAbsProviderURI register error code for not absolute provider uri
-	ErrNotAbsProviderURI = sdkerrors.Register(ModuleName, 2, "invalid provider: not absoulte host uri")
+	ErrNotAbsProviderURI = sdkerrors.Register(ModuleName, 2, "invalid provider: not absolute host uri")
 
 	// ErrProviderNotFound provider not found
 	ErrProviderNotFound = sdkerrors.Register(ModuleName, 3, "invalid provider: address not found")
