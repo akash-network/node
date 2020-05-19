@@ -65,9 +65,9 @@ func Test_v1_Parse_simple(t *testing.T) {
 	// 			Name:  "web",
 	// 			Image: "nginx",
 	// 			Unit: &types.ResourceUnit{
-	// 				CPU:    100,
-	// 				Memory: 128 * unit.Mi,
-	// 				Disk:   1 * unit.Gi,
+	// 				CPU:     100,
+	// 				Memory:  128 * unit.Mi,
+	// 				Storage: 1 * unit.Gi,
 	// 			},
 	// 			Count: 2,
 	// 			Expose: []*types.ManifestServiceExpose{
