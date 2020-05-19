@@ -22,6 +22,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
 	"github.com/cosmos/cosmos-sdk/x/staking"
+	stakingTypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/ovrclk/akash/x/deployment"
 	"github.com/ovrclk/akash/x/market"
@@ -243,9 +244,27 @@ func NewApp(
 
 	app.keeper.upgrade = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], cdc)
 
-	// no-op handler for "sirius-upgrade"
-	app.keeper.upgrade.SetUpgradeHandler("test-upgrade", func(ctx sdk.Context, plan upgrade.Plan) {
+	// no-op handler for "eridani" upgrade
+	app.keeper.upgrade.SetUpgradeHandler("eridani", func(ctx sdk.Context, plan upgrade.Plan) {
+		faucetAddr, _ := sdk.AccAddressFromBech32("akash1dz70tfxxrsh8fned6len7feu3atz7k59zgz77n")
+		personalAcc1, _ := sdk.AccAddressFromBech32("akash1dz70tfxxrsh8fned6len7feu3atz7k59zgz77n")
+		personalAcc2, _ := sdk.AccAddressFromBech32("akash1y4uskp4v6s086pdg6phufqcg82g9xd494kdwmn")
+		valAddr, _ := sdk.ValAddressFromBech32("akashvaloper1753ew9z7cfhu6awyp6ff7qtm9ex30kg3r7zd7j")
 
+		_, _ = app.keeper.bank.AddCoins(ctx, faucetAddr, sdk.Coins{sdk.Coin{Denom: "uakt", Amount: sdk.NewInt(10000000000)}})
+		_, _ = app.keeper.bank.AddCoins(ctx, personalAcc1, sdk.Coins{sdk.Coin{Denom: "uakt", Amount: sdk.NewInt(10000000000)}})
+		_, _ = app.keeper.bank.AddCoins(ctx, personalAcc2, sdk.Coins{sdk.Coin{Denom: "uakt", Amount: sdk.NewInt(10000000000)}})
+
+		delegation := stakingTypes.Delegation{
+			DelegatorAddress: faucetAddr,
+			ValidatorAddress: valAddr,
+			Shares:           sdk.NewDec(100000000000),
+		}
+
+		app.keeper.staking.SetDelegation(ctx, delegation)
+
+		votingParams := gov.NewVotingParams(6000000000)
+		app.keeper.params.Subspace(gov.DefaultParamspace).Set(ctx, gov.ParamStoreKeyVotingParams, &votingParams)
 	})
 
 	app.keeper.crisis = crisis.NewKeeper(
