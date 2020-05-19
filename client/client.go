@@ -7,11 +7,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	authutils "github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 	dquery "github.com/ovrclk/akash/x/deployment/query"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mquery "github.com/ovrclk/akash/x/market/query"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	pquery "github.com/ovrclk/akash/x/provider/query"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 // ErrClientNotFound is a new error with message "Client not found"
@@ -40,6 +42,7 @@ type Client interface {
 
 // NewClient creates new client instance
 func NewClient(
+	log log.Logger,
 	cctx ccontext.CLIContext,
 	txbldr auth.TxBuilder,
 	info keys.Info,
@@ -52,6 +55,7 @@ func NewClient(
 		info:       info,
 		passphrase: passphrase,
 		qclient:    qclient,
+		log:        log.With("cmp", "client/client"),
 	}
 }
 
@@ -61,6 +65,7 @@ type client struct {
 	info       keys.Info
 	passphrase string
 	qclient    QueryClient
+	log        log.Logger
 }
 
 func (c *client) Tx() TxClient {
@@ -68,13 +73,27 @@ func (c *client) Tx() TxClient {
 }
 
 func (c *client) Broadcast(msgs ...sdk.Msg) error {
-	bytes, err := c.txbldr.BuildAndSign(c.info.GetName(), c.passphrase, msgs)
+	txbldr, err := authutils.PrepareTxBuilder(c.txbldr, c.cctx)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.cctx.BroadcastTx(bytes)
-	return err
+	bytes, err := txbldr.BuildAndSign(c.info.GetName(), c.passphrase, msgs)
+	if err != nil {
+		return err
+	}
+
+	response, err := c.cctx.BroadcastTxSync(bytes)
+	if err != nil {
+		return err
+	}
+
+	if response.Code != 0 {
+		c.log.Error("error broadcasting transaction", "response", response)
+		return errors.New("error broadcasting transaction")
+	}
+
+	return nil
 }
 
 func (c *client) Query() QueryClient {
