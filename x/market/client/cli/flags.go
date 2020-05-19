@@ -21,7 +21,7 @@ func MarkReqOrderIDFlags(cmd *cobra.Command) {
 	cmd.MarkFlagRequired("oseq")
 }
 
-// OrderIDFromFlags returns OrderID with given flags and error if occured
+// OrderIDFromFlags returns OrderID with given flags and error if occurred
 func OrderIDFromFlags(flags *pflag.FlagSet) (types.OrderID, error) {
 	prev, err := dcli.GroupIDFromFlags(flags)
 	if err != nil {
@@ -52,7 +52,7 @@ func MarkReqBidIDFlags(cmd *cobra.Command) {
 	cmd.MarkFlagRequired("provider")
 }
 
-// BidIDFromFlags returns BidID with given flags and error if occured
+// BidIDFromFlags returns BidID with given flags and error if occurred
 func BidIDFromFlags(ctx context.CLIContext, flags *pflag.FlagSet) (types.BidID, error) {
 	prev, err := OrderIDFromFlags(flags)
 	if err != nil {
@@ -85,7 +85,7 @@ func AddOrderFilterFlags(flags *pflag.FlagSet) {
 	flags.String("state", "", "order state to filter (open,matched,closed)")
 }
 
-// OrderFiltersFromFlags returns OrderFilters with given flags and error if occured
+// OrderFiltersFromFlags returns OrderFilters with given flags and error if occurred
 func OrderFiltersFromFlags(flags *pflag.FlagSet) (types.OrderFilters, error) {
 	gfilters, err := dcli.GroupFiltersFromFlags(flags)
 	if err != nil {
@@ -104,7 +104,7 @@ func AddBidFilterFlags(flags *pflag.FlagSet) {
 	flags.String("state", "", "bid state to filter (open,matched,lost,closed)")
 }
 
-// BidFiltersFromFlags returns BidFilters with given flags and error if occured
+// BidFiltersFromFlags returns BidFilters with given flags and error if occurred
 func BidFiltersFromFlags(flags *pflag.FlagSet) (types.BidFilters, error) {
 	ofilters, err := OrderFiltersFromFlags(flags)
 	if err != nil {
@@ -123,7 +123,7 @@ func AddLeaseFilterFlags(flags *pflag.FlagSet) {
 	flags.String("state", "", "lease state to filter (active,insufficient,closed)")
 }
 
-// LeaseFiltersFromFlags returns LeaseFilters with given flags and error if occured
+// LeaseFiltersFromFlags returns LeaseFilters with given flags and error if occurred
 func LeaseFiltersFromFlags(flags *pflag.FlagSet) (types.LeaseFilters, error) {
 	ofilters, err := OrderFiltersFromFlags(flags)
 	if err != nil {

@@ -33,7 +33,7 @@ var (
 	AddToScheme = SchemeBuilder.AddToScheme
 )
 
-// Create a  Rest client with the new CRD Schema
+// SchemeGroupVersion creates a Rest client with the new CRD Schema
 var SchemeGroupVersion = schema.GroupVersion{Group: CRDGroup, Version: CRDVersion}
 
 func addKnownTypes(scheme *runtime.Scheme) error {

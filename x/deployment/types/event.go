@@ -112,7 +112,7 @@ func ParseEVGroupID(attrs []sdk.Attribute) (GroupID, error) {
 	}, nil
 }
 
-// ParseEvent parses event and returns details of event and error if occured
+// ParseEvent parses event and returns details of event and error if occurred
 func ParseEvent(ev sdkutil.Event) (interface{}, error) {
 	if ev.Type != sdk.EventTypeMessage {
 		return nil, sdkutil.ErrUnknownType
