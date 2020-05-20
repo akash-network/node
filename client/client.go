@@ -1,7 +1,7 @@
 package client
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 
 	ccontext "github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
@@ -16,8 +16,13 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 )
 
-// ErrClientNotFound is a new error with message "Client not found"
-var ErrClientNotFound = errors.New("Client not found")
+var (
+	// ErrClientNotFound is a new error with message "Client not found"
+	ErrClientNotFound = errors.New("Client not found")
+
+	// ErrBroadcastTx is used when a broadcast fails due to tendermint errors
+	ErrBroadcastTx = errors.New("broadcast tx error")
+)
 
 // QueryClient interface includes query clients of deployment, market and provider modules
 type QueryClient interface {
@@ -90,7 +95,7 @@ func (c *client) Broadcast(msgs ...sdk.Msg) error {
 
 	if response.Code != 0 {
 		c.log.Error("error broadcasting transaction", "response", response)
-		return errors.New("error broadcasting transaction")
+		return ErrBroadcastTx
 	}
 
 	return nil
