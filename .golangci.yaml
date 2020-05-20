@@ -1,10 +1,10 @@
-run:
-  issues:
-    exclude:
-      - comment on exported (method|function|type|const|var)
-    exclude-use-default: true
+issues:
+  exclude:
+    - comment on exported (method|function|type|const|var)
+  exclude-use-default: true
 
-  # Skip generated k8s code
+# Skip generated k8s code
+run:
   skip-dirs:
     - pkg/client
 
