@@ -76,7 +76,7 @@ func TestFullAppSimulation(t *testing.T) {
 	}()
 
 	app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, fauxMerkleModeOpt)
-	require.Equal(t, "akash", app.Name())
+	require.Equal(t, appName, app.Name())
 
 	fmt.Printf("config-------- %v", config)
 	// run randomized simulation
@@ -105,7 +105,7 @@ func TestAppImportExport(t *testing.T) {
 	}()
 
 	app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, fauxMerkleModeOpt)
-	require.Equal(t, "akash", app.Name())
+	require.Equal(t, appName, app.Name())
 
 	// Run randomized simulation
 	_, simParams, simErr := simulateFromSeedFunc(t, app, config)
@@ -134,8 +134,8 @@ func TestAppImportExport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
-	newApp := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, fauxMerkleModeOpt)
-	require.Equal(t, "akash", newApp.Name())
+	newApp := NewApp(log.NewNopLogger(), newDB, nil, simapp.FlagPeriodValue, map[int64]bool{}, fauxMerkleModeOpt)
+	require.Equal(t, appName, newApp.Name())
 
 	var genesisState simapp.GenesisState
 	err = app.Codec().UnmarshalJSON(appState, &genesisState)
@@ -144,7 +144,6 @@ func TestAppImportExport(t *testing.T) {
 	ctxA := app.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
 	ctxB := newApp.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
 
-	app.mm.InitGenesis(ctxA, genesisState)
 	newApp.mm.InitGenesis(ctxB, genesisState)
 
 	fmt.Printf("comparing stores...\n")
@@ -191,7 +190,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	}()
 
 	app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, fauxMerkleModeOpt)
-	require.Equal(t, "akash", app.Name())
+	require.Equal(t, appName, app.Name())
 
 	// Run randomized simulation
 	stopEarly, simParams, simErr := simulateFromSeedFunc(t, app, config)
@@ -226,7 +225,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	}()
 
 	newApp := NewApp(log.NewNopLogger(), newDB, nil, simapp.FlagPeriodValue, map[int64]bool{}, fauxMerkleModeOpt)
-	require.Equal(t, "akash", newApp.Name())
+	require.Equal(t, appName, newApp.Name())
 
 	newApp.InitChain(abci.RequestInitChain{
 		AppStateBytes: appState,
