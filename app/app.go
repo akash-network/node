@@ -355,14 +355,14 @@ func NewApp(
 	)
 
 	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName, evidence.ModuleName)
-	app.mm.SetOrderEndBlockers(staking.ModuleName, gov.ModuleName, crisis.ModuleName, deployment.ModuleName, market.ModuleName)
+	app.mm.SetOrderEndBlockers(crisis.ModuleName, gov.ModuleName, staking.ModuleName, deployment.ModuleName, market.ModuleName)
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	//       properly initialized with tokens from genesis accounts.
 	app.mm.SetOrderInitGenesis(
+		auth.ModuleName,
 		distr.ModuleName,
 		staking.ModuleName,
-		auth.ModuleName,
 		bank.ModuleName,
 		slashing.ModuleName,
 		gov.ModuleName,
