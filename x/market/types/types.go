@@ -5,7 +5,6 @@ import (
 	"github.com/pkg/errors"
 
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	tmkv "github.com/tendermint/tendermint/libs/kv"
 )
 
 // OrderState defines state of order
@@ -89,7 +88,7 @@ func (o Order) Price() sdk.Coin {
 }
 
 // MatchAttributes method compares provided attributes with specific order attributes
-func (o Order) MatchAttributes(attrs []tmkv.Pair) bool {
+func (o Order) MatchAttributes(attrs []sdk.Attribute) bool {
 	return o.Spec.MatchAttributes(attrs)
 }
 

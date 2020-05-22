@@ -10,7 +10,6 @@ import (
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	tmkv "github.com/tendermint/tendermint/libs/kv"
 )
 
 var (
@@ -145,9 +144,9 @@ func (sdl *v1) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 				}
 
 				for k, v := range infra.Attributes {
-					group.Requirements = append(group.Requirements, tmkv.Pair{
-						Key:   []byte(k),
-						Value: []byte(v),
+					group.Requirements = append(group.Requirements, sdk.Attribute{
+						Key:   k,
+						Value: v,
 					})
 				}
 

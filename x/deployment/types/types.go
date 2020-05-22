@@ -1,11 +1,9 @@
 package types
 
 import (
-	"bytes"
 	"errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	tmkv "github.com/tendermint/tendermint/libs/kv"
 
 	"github.com/ovrclk/akash/types"
 )
@@ -87,9 +85,9 @@ var GroupStateMap = map[string]GroupState{
 
 // GroupSpec stores group specifications
 type GroupSpec struct {
-	Name         string      `json:"name"`
-	Requirements []tmkv.Pair `json:"requirements"`
-	Resources    []Resource  `json:"resources"`
+	Name         string          `json:"name"`
+	Requirements []sdk.Attribute `json:"requirements"`
+	Resources    []Resource      `json:"resources"`
 }
 
 // GetResources method returns resources list in group
@@ -123,11 +121,11 @@ func (g GroupSpec) Price() sdk.Coin {
 }
 
 // MatchAttributes method compares provided attributes with specific group attributes
-func (g GroupSpec) MatchAttributes(attrs []tmkv.Pair) bool {
+func (g GroupSpec) MatchAttributes(attrs []sdk.Attribute) bool {
 loop:
 	for _, req := range g.Requirements {
 		for _, attr := range attrs {
-			if bytes.Equal(req.Key, attr.Key) && bytes.Equal(req.Value, attr.Value) {
+			if req.Key == attr.Key && req.Value == attr.Value {
 				continue loop
 			}
 		}
