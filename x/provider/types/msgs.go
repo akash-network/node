@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -108,7 +109,7 @@ func validateProviderURI(val string) error {
 		return ErrInvalidProviderURI
 	}
 	if !u.IsAbs() {
-		return ErrNotAbsProviderURI
+		return errors.Wrapf(ErrNotAbsProviderURI, "validating %q for absolute URI", val)
 	}
 	return nil
 }

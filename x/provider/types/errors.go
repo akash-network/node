@@ -16,4 +16,7 @@ var (
 
 	// ErrInvalidAddress invalid provider address
 	ErrInvalidAddress = sdkerrors.Register(ModuleName, 4, "invalid address")
+
+	// ErrAttributes error code for provider attribute problems
+	ErrAttributes = sdkerrors.Register(ModuleName, 5, "attribute specification error")
 )
