@@ -11,10 +11,11 @@ import (
 )
 
 func TestConfigPath(t *testing.T) {
-	tests := []struct {
+	type testConfigPath struct {
 		path   string
 		expErr error
-	}{
+	}
+	tests := []testConfigPath{
 		{
 			path:   "/home/ropes/go/src/github.com/ovrclk/akash/_run/kube/provider.yml",
 			expErr: ErrNotAbsProviderURI,
@@ -41,28 +42,102 @@ func TestConfigPath(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(fmt.Sprintf("->%q", test.path), func(t *testing.T) {
-			err := validateProviderURI(test.path)
-			if test.expErr != nil && !errors.Is(err, test.expErr) ||
-				err != nil && test.expErr == nil {
-				t.Errorf("unexpected error occurred: %v", err)
+	for i, testUnit := range tests {
+		closure := func(test testConfigPath) func(t *testing.T) {
+			testFunc := func(t *testing.T) {
+				err := validateProviderURI(test.path)
+				if test.expErr != nil && !errors.Is(err, test.expErr) ||
+					err != nil && test.expErr == nil {
+					t.Errorf("unexpected error occurred: %v", err)
 
-				p, err := url.Parse(test.path)
-				if err != nil {
-					t.Errorf("url.Parse() of %q err: %v", test.path, err)
+					p, err := url.Parse(test.path)
+					if err != nil {
+						t.Errorf("url.Parse() of %q err: %v", test.path, err)
+					}
+					t.Logf("%#v", p)
 				}
-				t.Logf("%#v", p)
 			}
-		})
+			return testFunc
+		}
+		tf := closure(testUnit)
+		t.Run(fmt.Sprintf("%d->%q", i, testUnit.path), tf)
 	}
 }
 
-var msgCreateTests = []struct {
+type providerTestParams struct {
 	msg    Provider
 	expErr error
 	delErr error
-}{
+}
+
+func (test providerTestParams) testCreate() func(t *testing.T) {
+	msg := MsgCreateProvider{
+		Owner:      test.msg.Owner,
+		HostURI:    test.msg.HostURI,
+		Attributes: test.msg.Attributes,
+	}
+	vErr := msg.ValidateBasic()
+	return func(t *testing.T) {
+		if test.expErr != nil && !errors.Is(vErr, test.expErr) {
+			t.Errorf("error expected: '%v' VS: %v", test.expErr, vErr)
+			return
+		}
+		sb := msg.GetSignBytes()
+		if len(sb) == 0 {
+			t.Error("no signed bytes returned")
+		}
+		ob := msg.GetSigners()
+		if len(ob) == 0 {
+			t.Error("no owners returned from valid message")
+		}
+	}
+}
+
+func (test providerTestParams) testUpdate() func(t *testing.T) {
+	msg := MsgUpdateProvider{
+		Owner:      test.msg.Owner,
+		HostURI:    test.msg.HostURI,
+		Attributes: test.msg.Attributes,
+	}
+	vErr := msg.ValidateBasic()
+	return func(t *testing.T) {
+		if test.expErr != nil && !errors.Is(vErr, test.expErr) {
+			t.Errorf("error expected: '%v' VS: %v", test.expErr, vErr)
+			return
+		}
+		sb := msg.GetSignBytes()
+		if len(sb) == 0 {
+			t.Error("no signed bytes returned")
+		}
+		ob := msg.GetSigners()
+		if len(ob) == 0 {
+			t.Error("no owners returned from valid message")
+		}
+	}
+}
+
+func (test providerTestParams) testDelete() func(t *testing.T) {
+	msg := MsgDeleteProvider{
+		Owner: test.msg.Owner,
+	}
+	vErr := msg.ValidateBasic()
+	return func(t *testing.T) {
+		if test.delErr != nil && !errors.Is(vErr, test.delErr) {
+			t.Errorf("error expected: '%v' VS: %v", test.expErr, vErr)
+			return
+		}
+		sb := msg.GetSignBytes()
+		if len(sb) == 0 {
+			t.Error("no signed bytes returned")
+		}
+		ob := msg.GetSigners()
+		if len(ob) == 0 {
+			t.Error("no owners returned from valid message")
+		}
+	}
+}
+
+var msgCreateTests = []providerTestParams{
 	{
 		msg: Provider{
 			Owner:   sdk.AccAddress("hihi"),
@@ -120,65 +195,14 @@ var msgCreateTests = []struct {
 
 func TestMsgStarValidation(t *testing.T) {
 	for i, test := range msgCreateTests {
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			t.Run("msg-create", func(t *testing.T) {
-				msg := MsgCreateProvider{
-					Owner:      test.msg.Owner,
-					HostURI:    test.msg.HostURI,
-					Attributes: test.msg.Attributes,
-				}
-				vErr := msg.ValidateBasic()
-				if test.expErr != nil && !errors.Is(vErr, test.expErr) {
-					t.Errorf("error expected: '%v' VS: %v", test.expErr, vErr)
-					return
-				}
-				sb := msg.GetSignBytes()
-				if len(sb) == 0 {
-					t.Error("no signed bytes returned")
-				}
-				ob := msg.GetSigners()
-				if len(ob) == 0 {
-					t.Error("no owners returned from valid message")
-				}
-			})
-			t.Run("msg-update", func(t *testing.T) {
-				msg := MsgUpdateProvider{
-					Owner:      test.msg.Owner,
-					HostURI:    test.msg.HostURI,
-					Attributes: test.msg.Attributes,
-				}
-				vErr := msg.ValidateBasic()
-				if test.expErr != nil && !errors.Is(vErr, test.expErr) {
-					t.Errorf("error expected: '%v' VS: %v", test.expErr, vErr)
-					return
-				}
-				sb := msg.GetSignBytes()
-				if len(sb) == 0 {
-					t.Error("no signed bytes returned")
-				}
-				ob := msg.GetSigners()
-				if len(ob) == 0 {
-					t.Error("no owners returned from valid message")
-				}
-			})
-			t.Run("msg-delete", func(t *testing.T) {
-				msg := MsgDeleteProvider{
-					Owner: test.msg.Owner,
-				}
-				vErr := msg.ValidateBasic()
-				if test.delErr != nil && !errors.Is(vErr, test.delErr) {
-					t.Errorf("error expected: '%v' VS: %v", test.expErr, vErr)
-					return
-				}
-				sb := msg.GetSignBytes()
-				if len(sb) == 0 {
-					t.Error("no signed bytes returned")
-				}
-				ob := msg.GetSigners()
-				if len(ob) == 0 {
-					t.Error("no owners returned from valid message")
-				}
-			})
-		})
+		main := func(test providerTestParams) func(t *testing.T) {
+			return func(t *testing.T) {
+				t.Run("msg-create", test.testCreate())
+				t.Run("msg-update", test.testUpdate())
+				t.Run("msg-delete", test.testDelete())
+			}
+		}
+		f := main(test)
+		t.Run(fmt.Sprintf("%d", i), f)
 	}
 }
