@@ -78,6 +78,7 @@ func processEvents(bus pubsub.Bus, events []abci.Event) {
 	for _, ev := range events {
 		if mev, ok := processEvent(ev); ok {
 			bus.Publish(mev)
+			continue
 		}
 	}
 }

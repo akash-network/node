@@ -28,7 +28,7 @@ type Event struct {
 
 // ParseEvent parses string to event
 func ParseEvent(sev sdk.StringEvent) (Event, error) {
-	ev := Event{Type: sev.Type}
+	ev := Event{Type: sev.Type, Attributes: sev.Attributes}
 	var err error
 
 	if ev.Module, err = GetString(sev.Attributes, sdk.AttributeKeyModule); err != nil {

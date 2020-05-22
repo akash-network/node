@@ -41,6 +41,8 @@ init-keys: dirs
 run-daemon:
 	$(akashd) start
 
+run-provider:
+	$(akashctl) $(KEY_OPTS) --from provider provider run
 
 MAIN_ADDR ?= $(shell $(akashctl) keys $(KEY_OPTS) show main -a)
 PROV_ADDR ?= $(shell $(akashctl) keys $(KEY_OPTS) show provider -a)
