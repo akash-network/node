@@ -19,19 +19,24 @@ var (
 	ErrClusterReadTimedout = errors.New("timeout waiting for cluster ready")
 )
 
-// Service is the interface that includes StatusClient interface.
-// It also wraps ManifestHandler, Close and Done methods.
-type Service interface {
-	ManifestHandler() manifest.Handler
-	Close() error
-	Done() <-chan struct{}
-
-	StatusClient
-}
-
 // StatusClient is the interface which includes status of service
 type StatusClient interface {
 	Status(context.Context) (*Status, error)
+}
+
+type Client interface {
+	StatusClient
+	Manifest() manifest.Client
+	Cluster() cluster.Client
+}
+
+// Service is the interface that includes StatusClient interface.
+// It also wraps ManifestHandler, Close and Done methods.
+type Service interface {
+	Client
+
+	Close() error
+	Done() <-chan struct{}
 }
 
 // NewService creates and returns new Service instance
@@ -71,7 +76,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 		return nil, errors.Wrap(err, errmsg)
 	}
 
-	manifest, err := manifest.NewHandler(ctx, session, bus)
+	manifest, err := manifest.NewService(ctx, session, bus)
 	if err != nil {
 		session.Log().Error("creating manifest handler", "err", err)
 		cancel()
@@ -100,6 +105,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 type service struct {
 	session session.Session
 	bus     pubsub.Bus
+	cclient cluster.Client
 
 	cluster   cluster.Service
 	bidengine bidengine.Service
@@ -119,8 +125,12 @@ func (s *service) Done() <-chan struct{} {
 	return s.lc.Done()
 }
 
-func (s *service) ManifestHandler() manifest.Handler {
+func (s *service) Manifest() manifest.Client {
 	return s.manifest
+}
+
+func (s *service) Cluster() cluster.Client {
+	return s.cclient
 }
 
 func (s *service) Status(ctx context.Context) (*Status, error) {

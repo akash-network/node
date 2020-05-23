@@ -19,6 +19,9 @@ debug.test
 
 dist
 
+# mocks
+**/mocks/*.go
+
 #IDE
 .idea/
 *.iml
