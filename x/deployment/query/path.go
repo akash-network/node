@@ -38,7 +38,7 @@ func getGroupPath(id types.GroupID) string {
 
 // parseDeploymentPath returns DeploymentID details with provided queries, and return
 // error if occurred due to wrong query
-func parseDeploymentPath(parts []string) (types.DeploymentID, error) {
+func ParseDeploymentPath(parts []string) (types.DeploymentID, error) {
 	if len(parts) < 2 {
 		return types.DeploymentID{}, ErrInvalidPath
 	}
@@ -91,7 +91,7 @@ func ParseGroupPath(parts []string) (types.GroupID, error) {
 		return types.GroupID{}, ErrInvalidPath
 	}
 
-	did, err := parseDeploymentPath(parts[0:2])
+	did, err := ParseDeploymentPath(parts[0:2])
 	if err != nil {
 		return types.GroupID{}, err
 	}

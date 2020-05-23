@@ -151,7 +151,7 @@ func parseBidFiltersPath(parts []string) (BidFilters, bool, error) {
 
 // parseLeasePath returns leaseID details with provided queries, and return
 // error if occurred due to wrong query
-func parseLeasePath(parts []string) (types.LeaseID, error) {
+func ParseLeasePath(parts []string) (types.LeaseID, error) {
 	bid, err := parseBidPath(parts)
 	if err != nil {
 		return types.LeaseID{}, err

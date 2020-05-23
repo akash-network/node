@@ -6,7 +6,7 @@ KEY_OPTS       = --keyring-backend=test
 CHAIN_NAME     = local
 CHAIN_OPTS     = --chain-id $(CHAIN_NAME)
 
-init: bins init-keys init-genesis init-gentx init-collect-gentx
+init: bins init-keys init-genesis init-gentx init-collect-gentx init-config
 
 dirs: 
 	mkdir -p $(CLIENT_HOME) $(NODE_HOME)

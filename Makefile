@@ -112,20 +112,12 @@ kubetypes:
   	akash.network:v1
 
 mocks:
-	mockery -case=underscore -dir query                 -output query/mocks                 -name Client
-	mockery -case=underscore -dir txutil                -output txutil/mocks                -name Client
-	mockery -case=underscore -dir app/market            -output app/market/mocks            -name Client
-	mockery -case=underscore -dir app/market            -output app/market/mocks            -name Engine
-	mockery -case=underscore -dir app/market            -output app/market/mocks            -name Facilitator
-	mockery -case=underscore -dir marketplace           -output marketplace/mocks           -name Handler
 	mockery -case=underscore -dir provider              -output provider/mocks              -name StatusClient
+	mockery -case=underscore -dir provider              -output provider/mocks              -name Client
 	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Client
-	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Cluster
-	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Deployment
-	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Reservation
-	mockery -case=underscore -dir provider/cluster/kube -output provider/cluster/kube/mocks -name Client
-	mockery -case=underscore -dir provider/manifest     -output provider/manifest/mocks     -name Handler
-
+	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name ReadClient
+	mockery -case=underscore -dir provider/manifest     -output provider/manifest/mocks     -name Client
+	mockery -case=underscore -dir provider/manifest     -output provider/manifest/mocks     -name StatusClient
 
 gofmt:
 	find . -not -path './vendor*' -name '*.go' -type f | \

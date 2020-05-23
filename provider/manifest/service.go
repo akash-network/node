@@ -7,7 +7,6 @@ import (
 
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/caarlos0/env"
-	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
@@ -26,20 +25,20 @@ type StatusClient interface {
 }
 
 // Handler is the interface that wraps HandleManifest method
-type Handler interface {
-	HandleManifest(context.Context, *manifest.Request) error
+type Client interface {
+	Submit(context.Context, *SubmitRequest) error
 }
 
 // Service is the interface that includes StatusClient and Handler interfaces. It also wraps Done method
 type Service interface {
 	StatusClient
-	Handler
+	Client
 	Done() <-chan struct{}
 }
 
 // NewHandler creates and returns new Service instance
 // Manage incoming leases and manifests and pair the two together to construct and emit a ManifestReceived event.
-func NewHandler(ctx context.Context, session session.Session, bus pubsub.Bus) (Service, error) {
+func NewService(ctx context.Context, session session.Session, bus pubsub.Bus) (Service, error) {
 
 	session = session.ForModule("provider-manifest")
 
@@ -62,7 +61,7 @@ func NewHandler(ctx context.Context, session session.Session, bus pubsub.Bus) (S
 	}
 	session.Log().Info("found existing leases", "count", len(leases))
 
-	h := &handler{
+	s := &service{
 		session:   session,
 		bus:       bus,
 		sub:       sub,
@@ -73,13 +72,13 @@ func NewHandler(ctx context.Context, session session.Session, bus pubsub.Bus) (S
 		lc:        lifecycle.New(),
 	}
 
-	go h.lc.WatchContext(ctx)
-	go h.run(leases)
+	go s.lc.WatchContext(ctx)
+	go s.run(leases)
 
-	return h, nil
+	return s, nil
 }
 
-type handler struct {
+type service struct {
 	config  config
 	session session.Session
 	bus     pubsub.Bus
@@ -97,42 +96,42 @@ type handler struct {
 }
 
 type manifestRequest struct {
-	value *manifest.Request
+	value *SubmitRequest
 	ch    chan<- error
 	ctx   context.Context
 }
 
 // Send incoming manifest request.
-func (h *handler) HandleManifest(ctx context.Context, mreq *manifest.Request) error {
+func (s *service) Submit(ctx context.Context, mreq *SubmitRequest) error {
 	ch := make(chan error, 1)
 	req := manifestRequest{value: mreq, ch: ch, ctx: ctx}
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case h.mreqch <- req:
+	case s.mreqch <- req:
 		return <-ch
-	case <-h.lc.ShuttingDown():
+	case <-s.lc.ShuttingDown():
 		return ErrNotRunning
 	}
 }
 
-func (h *handler) Done() <-chan struct{} {
-	return h.lc.Done()
+func (s *service) Done() <-chan struct{} {
+	return s.lc.Done()
 }
 
-func (h *handler) Status(ctx context.Context) (*Status, error) {
+func (s *service) Status(ctx context.Context) (*Status, error) {
 	ch := make(chan *Status, 1)
 
 	select {
-	case <-h.lc.Done():
+	case <-s.lc.Done():
 		return nil, ErrNotRunning
 	case <-ctx.Done():
 		return nil, ctx.Err()
-	case h.statusch <- ch:
+	case s.statusch <- ch:
 	}
 
 	select {
-	case <-h.lc.Done():
+	case <-s.lc.Done():
 		return nil, ErrNotRunning
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -141,110 +140,109 @@ func (h *handler) Status(ctx context.Context) (*Status, error) {
 	}
 }
 
-func (h *handler) run(leases []event.LeaseWon) {
-	defer h.lc.ShutdownCompleted()
-	defer h.sub.Close()
+func (s *service) run(leases []event.LeaseWon) {
+	defer s.lc.ShutdownCompleted()
+	defer s.sub.Close()
 
-	h.managePreExistingLease(leases)
+	s.managePreExistingLease(leases)
 
 loop:
 	for {
 		select {
 
-		case err := <-h.lc.ShutdownRequest():
-			h.lc.ShutdownInitiated(err)
+		case err := <-s.lc.ShutdownRequest():
+			s.lc.ShutdownInitiated(err)
 			break loop
 
-		case ev := <-h.sub.Events():
+		case ev := <-s.sub.Events():
 			switch ev := ev.(type) {
 
 			case event.LeaseWon:
-				h.session.Log().Info("lease won", "lease", ev.LeaseID)
+				s.session.Log().Info("lease won", "lease", ev.LeaseID)
 
-				h.handleLease(ev)
+				s.handleLease(ev)
 
 			case dtypes.EventDeploymentUpdate:
 
-				h.session.Log().Info("update received", "deployment", ev.ID, "version", ev.Version)
+				s.session.Log().Info("update received", "deployment", ev.ID, "version", ev.Version)
 
 				key := dquery.DeploymentPath(ev.ID)
-				if manager := h.managers[key]; manager != nil {
-					h.session.Log().Info("deployment updated", "deployment", ev.ID, "version", ev.Version)
+				if manager := s.managers[key]; manager != nil {
+					s.session.Log().Info("deployment updated", "deployment", ev.ID, "version", ev.Version)
 					manager.handleUpdate(ev.Version)
 				}
 
 			case dtypes.EventDeploymentClose:
 
 				key := dquery.DeploymentPath(ev.ID)
-				if manager := h.managers[key]; manager != nil {
-					h.session.Log().Info("deployment closed", "deployment", ev.ID)
+				if manager := s.managers[key]; manager != nil {
+					s.session.Log().Info("deployment closed", "deployment", ev.ID)
 					manager.stop()
 				}
 
 			case mtypes.EventLeaseClosed:
 
-				if !bytes.Equal(ev.ID.Provider, h.session.Provider().Address()) {
+				if !bytes.Equal(ev.ID.Provider, s.session.Provider().Address()) {
 					continue
 				}
 
 				key := dquery.DeploymentPath(ev.ID.DeploymentID())
-				if manager := h.managers[key]; manager != nil {
-					h.session.Log().Info("lease closed", "lease", ev.ID)
+				if manager := s.managers[key]; manager != nil {
+					s.session.Log().Info("lease closed", "lease", ev.ID)
 					manager.removeLease(ev.ID)
 				}
 
 			}
 
-		// case req := <-h.mreqch:
-		// TODO
+		case req := <-s.mreqch:
 
-		// if err := validation.ValidateManifest(req.value.Manifest); err != nil {
-		// 	h.session.Log().Error("manifest validation failed",
-		// 		"err", err, "deployment", req.value.Deployment)
-		// 	req.ch <- err
-		// 	break
-		// }
+			// TODO: validate manifest according to rules in github.com/ovrclk/validation
+			// if err := validation.ValidateManifest(req.value.Manifest); err != nil {
+			// 	h.session.Log().Error("manifest validation failed",
+			// 		"err", err, "deployment", req.value.Deployment)
+			// 	req.ch <- err
+			// 	break
+			// }
 
-		// manager, err := h.ensureManger(req.value.Deployment)
-		// if err != nil {
-		// 	h.session.Log().Error("error fetching manager for manifest",
-		// 		"err", err, "deployment", req.value.Deployment)
-		// 	req.ch <- err
-		// 	break
-		// }
+			manager, err := s.ensureManger(req.value.Deployment)
+			if err != nil {
+				s.session.Log().Error("error fetching manager for manifest",
+					"err", err, "deployment", req.value.Deployment)
+				req.ch <- err
+				break
+			}
+			manager.handleManifest(req)
 
-		// manager.handleManifest(req)
-
-		case ch := <-h.statusch:
+		case ch := <-s.statusch:
 
 			ch <- &Status{
-				Deployments: uint32(len(h.managers)),
+				Deployments: uint32(len(s.managers)),
 			}
 
-		case manager := <-h.managerch:
-			h.session.Log().Info("manager done", "deployment", manager.daddr)
+		case manager := <-s.managerch:
+			s.session.Log().Info("manager done", "deployment", manager.daddr)
 
-			delete(h.managers, dquery.DeploymentPath(manager.daddr))
+			delete(s.managers, dquery.DeploymentPath(manager.daddr))
 		}
 	}
 
-	for len(h.managers) > 0 {
-		manager := <-h.managerch
-		delete(h.managers, dquery.DeploymentPath(manager.daddr))
+	for len(s.managers) > 0 {
+		manager := <-s.managerch
+		delete(s.managers, dquery.DeploymentPath(manager.daddr))
 	}
 
 }
 
-func (h *handler) managePreExistingLease(leases []event.LeaseWon) {
+func (s *service) managePreExistingLease(leases []event.LeaseWon) {
 	for _, lease := range leases {
-		h.handleLease(lease)
+		s.handleLease(lease)
 	}
 }
 
-func (h *handler) handleLease(ev event.LeaseWon) {
-	manager, err := h.ensureManger(ev.LeaseID.DeploymentID())
+func (s *service) handleLease(ev event.LeaseWon) {
+	manager, err := s.ensureManger(ev.LeaseID.DeploymentID())
 	if err != nil {
-		h.session.Log().Error("error creating manager",
+		s.session.Log().Error("error creating manager",
 			"err", err, "lease", ev.LeaseID)
 		return
 	}
@@ -252,14 +250,14 @@ func (h *handler) handleLease(ev event.LeaseWon) {
 	manager.handleLease(ev)
 }
 
-func (h *handler) ensureManger(did dtypes.DeploymentID) (manager *manager, err error) {
-	manager = h.managers[dquery.DeploymentPath(did)]
+func (s *service) ensureManger(did dtypes.DeploymentID) (manager *manager, err error) {
+	manager = s.managers[dquery.DeploymentPath(did)]
 	if manager == nil {
-		manager, err = newManager(h, did)
+		manager, err = newManager(s, did)
 		if err != nil {
 			return nil, err
 		}
-		h.managers[dquery.DeploymentPath(did)] = manager
+		s.managers[dquery.DeploymentPath(did)] = manager
 	}
 	return manager, nil
 }

@@ -13,6 +13,7 @@ func RootCmd(cdc *codec.Codec) *cobra.Command {
 		Short: "Akash provider commands",
 	}
 
+	cmd.AddCommand(sendManifestCmd(cdc))
 	cmd.AddCommand(flags.PostCommands(
 		runCmd(cdc),
 	)...)

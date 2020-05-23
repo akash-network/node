@@ -38,12 +38,12 @@ func OrderIDFromFlags(flags *pflag.FlagSet) (types.OrderID, error) {
 // AddBidIDFlags add flags for bid
 func AddBidIDFlags(flags *pflag.FlagSet) {
 	AddOrderIDFlags(flags)
+	flags.String("provider", "", "Provider")
 }
 
 // AddQueryBidIDFlags add flags for bid in query commands
 func AddQueryBidIDFlags(flags *pflag.FlagSet) {
-	AddOrderIDFlags(flags)
-	flags.String("provider", "", "Bid Provider")
+	AddBidIDFlags(flags)
 }
 
 // MarkReqBidIDFlags marks flags required for bid

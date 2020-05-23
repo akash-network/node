@@ -15,19 +15,22 @@ import (
 	"github.com/ovrclk/akash/provider"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/kube"
+	"github.com/ovrclk/akash/provider/gateway"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	dmodule "github.com/ovrclk/akash/x/deployment"
 	mmodule "github.com/ovrclk/akash/x/market"
 	pmodule "github.com/ovrclk/akash/x/provider"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/log"
 	"golang.org/x/sync/errgroup"
 )
 
 const (
-	flagClusterK8s    = "cluster-k8s"
-	flagK8sManifestNS = "k8s-manifest-ns"
+	flagClusterK8s           = "cluster-k8s"
+	flagK8sManifestNS        = "k8s-manifest-ns"
+	flagGatewayListenAddress = "gateway-listen-address"
 )
 
 func runCmd(cdc *codec.Codec) *cobra.Command {
@@ -43,6 +46,8 @@ func runCmd(cdc *codec.Codec) *cobra.Command {
 
 	cmd.Flags().Bool(flagClusterK8s, false, "Use Kubernetes cluster")
 	cmd.Flags().String(flagK8sManifestNS, "lease", "Cluster manifest namespace")
+	cmd.Flags().String(flagGatewayListenAddress, "0.0.0.0:8080", "Gateway listen address")
+	viper.BindPFlag(flagGatewayListenAddress, cmd.Flags().Lookup(flagGatewayListenAddress))
 
 	return cmd
 }
@@ -58,6 +63,8 @@ func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []str
 	if err != nil {
 		return err
 	}
+
+	gwaddr := viper.GetString(flagGatewayListenAddress)
 
 	log := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 
@@ -105,6 +112,8 @@ func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []str
 		return err
 	}
 
+	gateway := gateway.NewServer(ctx, log, service, gwaddr)
+
 	group.Go(func() error {
 		return events.Publish(ctx, cctx.Client, "provider-cli", bus)
 	})
@@ -112,6 +121,13 @@ func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []str
 	group.Go(func() error {
 		<-service.Done()
 		return nil
+	})
+
+	group.Go(gateway.ListenAndServe)
+
+	group.Go(func() error {
+		<-ctx.Done()
+		return gateway.Close()
 	})
 
 	return group.Wait()

@@ -116,7 +116,7 @@ func queryLeases(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper kee
 
 func queryLease(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
-	id, err := parseLeasePath(path)
+	id, err := ParseLeasePath(path)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
 	}
