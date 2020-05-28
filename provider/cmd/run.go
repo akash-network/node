@@ -47,6 +47,7 @@ func runCmd(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
+// doRunCmd initializes all of the Provider functionality, hangs, and awaits shutdown signals.
 func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []string) error {
 	cctx := ccontext.NewCLIContext().WithCodec(cdc)
 
@@ -81,6 +82,7 @@ func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []str
 		return err
 	}
 
+	// k8s client creation
 	cclient, err := createClusterClient(log, cmd, pinfo.HostURI)
 	if err != nil {
 		return err
@@ -117,6 +119,7 @@ func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []str
 
 func createClusterClient(log log.Logger, cmd *cobra.Command, host string) (cluster.Client, error) {
 	if val, _ := cmd.Flags().GetBool(flagClusterK8s); !val {
+		// Condition that there is no Kubernetes API to work with.
 		return cluster.NullClient(), nil
 	}
 	ns, err := cmd.Flags().GetString(flagK8sManifestNS)
