@@ -7,6 +7,7 @@ issues:
 run:
   skip-dirs:
     - pkg/client
+    - ".*/mocks"
 
   # Skip vendor/ etc
   skip-dirs-use-default: true
