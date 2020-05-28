@@ -18,7 +18,7 @@ tags:
   - name: Market
     description: Market module APIs
   - name: Provider
-    description: Provider module APIs  
+    description: Provider module APIs
   - name: Staking
     description: Stake module APIs
   - name: Governance
@@ -180,12 +180,18 @@ paths:
           schema:
             type: object
             properties:
-              block_height:
+              height:
                 type: string
-              validators:
-                type: array
-                items:
-                  $ref: "#/definitions/TendermintValidator"
+                example: "0"
+              result:
+                type: object
+                properties:
+                  block_height:
+                    type: string
+                  validators:
+                    type: array
+                    items:
+                      $ref: "#/definitions/TendermintValidator"
         500:
           description: Server internal error
   /validatorsets/{height}:
@@ -208,12 +214,18 @@ paths:
           schema:
             type: object
             properties:
-              block_height:
+              height:
                 type: string
-              validators:
-                type: array
-                items:
-                  $ref: "#/definitions/TendermintValidator"
+                example: "0"
+              result:
+                type: object
+                properties:
+                  block_height:
+                    type: string
+                  validators:
+                    type: array
+                    items:
+                      $ref: "#/definitions/TendermintValidator"
         404:
           description: Block at height not available
         400:
@@ -390,9 +402,15 @@ paths:
         200:
           description: Account balances
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/Coin"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "0"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Coin"
         500:
           description: Server internal error
   /bank/accounts/{address}/transfers:
@@ -453,23 +471,29 @@ paths:
           schema:
             type: object
             properties:
-              type:
+              height:
                 type: string
-              value:
+                example: "0"
+              result:
                 type: object
                 properties:
-                  account_number:
+                  type:
                     type: string
-                  address:
-                    type: string
-                  coins:
-                    type: array
-                    items:
-                      $ref: "#/definitions/Coin"
-                  public_key:
-                    $ref: "#/definitions/PublicKey"
-                  sequence:
-                    type: string
+                  value:
+                    type: object
+                    properties:
+                      address:
+                        type: string
+                      coins:
+                        type: array
+                        items:
+                          $ref: "#/definitions/Coin"
+                      public_key:
+                        $ref: "#/definitions/PublicKey"
+                      account_number:
+                        type: string
+                      sequence:
+                        type: string
         500:
           description: Server internel error
   /deployment/list:
@@ -507,7 +531,7 @@ paths:
                   $ref: "#/definitions/DeploymentResult"
         400:
           description: Bad Request
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -515,7 +539,7 @@ paths:
                 example: "decoding bech32 failed: invalid bech32 string length 2"
         404:
           description: Not Found
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -554,7 +578,7 @@ paths:
                 $ref: "#/definitions/DeploymentResult"
         400:
           description: Bad Request
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -562,7 +586,7 @@ paths:
                 example: "Missing owner query"
         404:
           description: Not Found
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -607,7 +631,7 @@ paths:
                 $ref: "#/definitions/Group"
         400:
           description: Bad Request
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -615,7 +639,7 @@ paths:
                 example: "Missing gseq query"
         404:
           description: Not Found
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -656,7 +680,7 @@ paths:
                   $ref: "#/definitions/Order"
         400:
           description: Bad Request
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -664,7 +688,7 @@ paths:
                 example: "decoding bech32 failed: invalid bech32 string length 2"
         404:
           description: Not Found
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -715,7 +739,7 @@ paths:
                 $ref: "#/definitions/Order"
         400:
           description: Bad Request
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -723,7 +747,7 @@ paths:
                 example: "Missing oseq query"
         404:
           description: Not Found
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -764,7 +788,7 @@ paths:
                   $ref: "#/definitions/Bid"
         400:
           description: Bad Request
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -772,7 +796,7 @@ paths:
                 example: "decoding bech32 failed: invalid bech32 string length 2"
         404:
           description: Not Found
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -829,7 +853,7 @@ paths:
                 $ref: "#/definitions/Bid"
         400:
           description: Bad Request
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -837,7 +861,7 @@ paths:
                 example: "Missing provider query"
         404:
           description: Not Found
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -878,7 +902,7 @@ paths:
                   $ref: "#/definitions/Bid"
         400:
           description: Bad Request
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -886,7 +910,7 @@ paths:
                 example: "decoding bech32 failed: invalid bech32 string length 2"
         404:
           description: Not Found
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -943,7 +967,7 @@ paths:
                 $ref: "#/definitions/Bid"
         400:
           description: Bad Request
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -951,7 +975,7 @@ paths:
                 example: "Missing provider query"
         404:
           description: Not Found
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -979,7 +1003,7 @@ paths:
                   $ref: "#/definitions/Provider"
         404:
           description: Not Found
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -1012,7 +1036,7 @@ paths:
                 $ref: "#/definitions/Provider"
         400:
           description: Bad Request
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -1020,7 +1044,7 @@ paths:
                 example: "Invalid Address"
         404:
           description: Not Found
-          schema: 
+          schema:
             type: object
             properties:
               error:
@@ -1044,9 +1068,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/Delegation"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Delegation"
         400:
           description: Invalid delegator address
         500:
@@ -1109,7 +1139,13 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/Delegation"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "1234"
+              result:
+                $ref: "#/definitions/Delegation"
         400:
           description: Invalid delegator address or validator address
         500:
@@ -1132,9 +1168,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/UnbondingDelegation"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/UnbondingDelegation"
         400:
           description: Invalid delegator address
         500:
@@ -1198,7 +1240,13 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/UnbondingDelegationPair"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                $ref: "#/definitions/UnbondingDelegationPair"
         400:
           description: Invalid delegator address or validator address
         500:
@@ -1230,9 +1278,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/Redelegation"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Redelegation"
         500:
           description: Internal Server Error
   /staking/delegators/{delegatorAddr}/redelegations:
@@ -1296,9 +1350,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/Validator"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Validator"
         400:
           description: Invalid delegator address
         500:
@@ -1327,7 +1387,13 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/Validator"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                $ref: "#/definitions/Validator"
         400:
           description: Invalid delegator address or validator address
         500:
@@ -1359,9 +1425,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/Validator"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Validator"
         500:
           description: Internal Server Error
   /staking/validators/{validatorAddr}:
@@ -1382,7 +1454,13 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/Validator"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                $ref: "#/definitions/Validator"
         400:
           description: Invalid validator address
         500:
@@ -1405,9 +1483,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/Delegation"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Delegation"
         400:
           description: Invalid validator address
         500:
@@ -1430,9 +1514,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/UnbondingDelegation"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/UnbondingDelegation"
         400:
           description: Invalid validator address
         500:
@@ -1450,18 +1540,16 @@ paths:
           schema:
             type: object
             properties:
-              loose_tokens:
+              height:
                 type: string
-              bonded_tokens:
-                type: string
-              inflation_last_time:
-                type: string
-              inflation:
-                type: string
-              date_last_commission_reset:
-                type: string
-              prev_bonded_shares:
-                type: string
+                example: "124"
+              result:
+                type: object
+                properties:
+                  bonded_tokens:
+                    type: string
+                  not_bonded_tokens:
+                    type: string
         500:
           description: Internal Server Error
   /staking/parameters:
@@ -1477,20 +1565,22 @@ paths:
           schema:
             type: object
             properties:
-              inflation_rate_change:
+              height:
                 type: string
-              inflation_max:
-                type: string
-              inflation_min:
-                type: string
-              goal_bonded:
-                type: string
-              unbonding_time:
-                type: string
-              max_validators:
-                type: integer
-              bond_denom:
-                type: string
+                example: "124"
+              result:
+                type: object
+                properties:
+                  unbonding_time:
+                    type: string
+                  max_validators:
+                    type: integer
+                  max_entries:
+                    type: integer
+                  historical_entries:
+                    type: integer
+                  bond_denom:
+                    type: string
         500:
           description: Internal Server Error
   # TODO: We need to either fix this route when the validator is not found or add a slashed validator in the contract tests
@@ -2562,7 +2652,7 @@ definitions:
     properties:
       denom:
         type: string
-        example: stake
+        example: uakt
       amount:
         type: string
         example: "50"
@@ -2572,29 +2662,28 @@ definitions:
   TxQuery:
     type: object
     properties:
-      hash:
-        type: string
-        example: "D085138D913993919295FF4B0A9107F1F2CDE0D37A87CE0644E217CBF3B49656"
       height:
         type: number
-        example: 368
+        example: 368h
+      txhash:
+        type: string
+        example: "D085138D913993919295FF4B0A9107F1F2CDE0D37A87CE0644E217CBF3B49656"
+      raw_log:
+        type: string
       tx:
         $ref: "#/definitions/StdTx"
-      result:
-        type: object
-        properties:
-          log:
-            type: string
-          gas_wanted:
-            type: string
-            example: "200000"
-          gas_used:
-            type: string
-            example: "26354"
-          tags:
-            type: array
-            items:
-              $ref: "#/definitions/KVPair"
+      logs:
+        type: array
+        example: []
+      gas_wanted:
+        type: string
+        example: "200000"
+      gas_used:
+        type: string
+        example: "26354"
+      timestamp:
+        type: string
+        example: "2020-05-16T15:16:21Z"
   PaginatedQueryTxs:
     type: object
     properties:
@@ -2672,23 +2761,26 @@ definitions:
   BlockHeader:
     type: object
     properties:
+      version:
+        type: object
+        properties:
+          block:
+            type: string
+            example: 10
+          app:
+            type: string
+            example: 0
       chain_id:
         type: string
-        example: akashhub-2
+        example: akashian
       height:
         type: number
         example: 1
       time:
         type: string
         example: "2017-12-30T05:53:09.287+01:00"
-      num_txs:
-        type: number
-        example: 0
       last_block_id:
         $ref: "#/definitions/BlockID"
-      total_txs:
-        type: number
-        example: 35
       last_commit_hash:
         $ref: "#/definitions/Hash"
       data_hash:
@@ -2706,25 +2798,19 @@ definitions:
       evidence_hash:
         $ref: "#/definitions/Hash"
       proposer_address:
-        $ref: "#/definitions/Address"
-      version:
-        type: object
-        properties:
-          block:
-            type: string
-            example: 10
-          app:
-            type: string
-            example: 0
+        $ref: "#/definitions/Hash"
   Block:
     type: object
     properties:
       header:
         $ref: "#/definitions/BlockHeader"
-      txs:
-        type: array
-        items:
-          type: string
+      data:
+        type: object
+        properties:
+          txs:
+            type: array
+            items:
+              type: string
       evidence:
         type: array
         items:
@@ -2732,45 +2818,35 @@ definitions:
       last_commit:
         type: object
         properties:
+          height:
+            type: string
+            example: "0"
+          round:
+            type: string
+            example: "0"
           block_id:
             $ref: "#/definitions/BlockID"
-          precommits:
+          signatures:
             type: array
             items:
               type: object
               properties:
+                block_id_flag:
+                  type: number
+                  example: 2
                 validator_address:
-                  type: string
-                validator_index:
-                  type: string
-                  example: "0"
-                height:
-                  type: string
-                  example: "0"
-                round:
-                  type: string
-                  example: "0"
+                  $ref: "#/definitions/Hash"
                 timestamp:
                   type: string
                   example: "2017-12-30T05:53:09.287+01:00"
-                type:
-                  type: number
-                  example: 2
-                block_id:
-                  $ref: "#/definitions/BlockID"
                 signature:
                   type: string
                   example: "7uTC74QlknqYWEwg7Vn6M8Om7FuZ0EO4bjvuj6rwH1mTUJrRuMMZvAAqT9VjNgP0RA/TDp6u/92AqrZfXJSpBQ=="
   BlockQuery:
     type: object
     properties:
-      block_meta:
-        type: object
-        properties:
-          header:
-            $ref: "#/definitions/BlockHeader"
-          block_id:
-            $ref: "#/definitions/BlockID"
+      block_id:
+        $ref: "#/definitions/BlockID"
       block:
         $ref: "#/definitions/Block"
   DelegationDelegatorReward:
@@ -2934,12 +3010,6 @@ definitions:
             type: string
           details:
             type: string
-      bond_height:
-        type: string
-        example: "0"
-      bond_intra_tx_counter:
-        type: integer
-        example: 0
       unbonding_height:
         type: string
         example: "0"
@@ -2961,13 +3031,16 @@ definitions:
           update_time:
             type: string
             example: "1970-01-01T00:00:00Z"
+      min_self_delegation:
+        type: string
+        example: "1"
   Delegation:
     type: object
     properties:
       delegator_address:
-        type: string
+        $ref: "#/definitions/Address"
       validator_address:
-        type: string
+        $ref: "#/definitions/ValidatorAddress"
       shares:
         type: string
       balance:
@@ -3049,12 +3122,8 @@ definitions:
         items:
           $ref: "#/definitions/Coin"
   PublicKey:
-    type: object
-    properties:
-      type:
-        type: string
-      value:
-        type: string
+    type: string
+    example: "akashpub1addwnpepqv3mqqnlj7y9u9453cxaxqkka8lwhs6ll22622y6595y8fxutcfkcpssvzz"
   SigningInfo:
     type: object
     properties:
