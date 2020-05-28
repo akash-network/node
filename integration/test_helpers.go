@@ -28,8 +28,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/tests"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
-
-	codecstd "github.com/cosmos/cosmos-sdk/codec/std"
 )
 
 const (
@@ -98,7 +96,7 @@ func NewFixtures(t *testing.T) *Fixtures {
 		require.NoError(t, err)
 	}
 
-	cdc := codecstd.MakeCodec(app.ModuleBasics())
+	_, cdc := app.MakeCodecs()
 
 	return &Fixtures{
 		T:            t,

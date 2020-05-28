@@ -1,20 +1,12 @@
 package keeper
 
 import (
-	"time"
-
 	"github.com/cosmos/cosmos-sdk/codec"
-	codecstd "github.com/cosmos/cosmos-sdk/codec/std"
-	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/ovrclk/akash/x/deployment/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/libs/log"
-	dbm "github.com/tendermint/tm-db"
 )
 
 func createTestCodec() *codec.Codec {
@@ -28,44 +20,44 @@ func createTestCodec() *codec.Codec {
 	return cdc
 }
 
-// SetupTestInput will setup test inputs and return context and keeper
-func SetupTestInput() (sdk.Context, auth.AccountKeeper, params.Keeper, bank.BaseKeeper, Keeper) {
-	db := dbm.NewMemDB()
+// // SetupTestInput will setup test inputs and return context and keeper
+// func SetupTestInput() (sdk.Context, auth.AccountKeeper, params.Keeper, bank.BaseKeeper, Keeper) {
+// 	db := dbm.NewMemDB()
 
-	keyAcc := sdk.NewKVStoreKey(auth.StoreKey)
-	keyParams := sdk.NewKVStoreKey(params.StoreKey)
-	keyBank := sdk.NewKVStoreKey(bank.ModuleName)
-	keyDeployment := sdk.NewKVStoreKey(types.StoreKey)
-	tkeyParams := sdk.NewTransientStoreKey(params.TStoreKey)
+// 	keyAcc := sdk.NewKVStoreKey(auth.StoreKey)
+// 	keyParams := sdk.NewKVStoreKey(params.StoreKey)
+// 	keyBank := sdk.NewKVStoreKey(bank.ModuleName)
+// 	keyDeployment := sdk.NewKVStoreKey(types.StoreKey)
+// 	tkeyParams := sdk.NewTransientStoreKey(params.TStoreKey)
 
-	ms := store.NewCommitMultiStore(db)
-	ms.MountStoreWithDB(keyAcc, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keyParams, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keyBank, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keyDeployment, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(tkeyParams, sdk.StoreTypeTransient, db)
+// 	ms := store.NewCommitMultiStore(db)
+// 	ms.MountStoreWithDB(keyAcc, sdk.StoreTypeIAVL, db)
+// 	ms.MountStoreWithDB(keyParams, sdk.StoreTypeIAVL, db)
+// 	ms.MountStoreWithDB(keyBank, sdk.StoreTypeIAVL, db)
+// 	ms.MountStoreWithDB(keyDeployment, sdk.StoreTypeIAVL, db)
+// 	ms.MountStoreWithDB(tkeyParams, sdk.StoreTypeTransient, db)
 
-	ms.LoadLatestVersion()
+// 	ms.LoadLatestVersion()
 
-	ctx := sdk.NewContext(ms, abci.Header{Time: time.Unix(0, 0)}, false, log.NewNopLogger())
-	cdc := createTestCodec()
-	appCodec := codecstd.NewAppCodec(cdc)
+// 	ctx := sdk.NewContext(ms, abci.Header{Time: time.Unix(0, 0)}, false, log.NewNopLogger())
+// 	cdc := createTestCodec()
+// 	appCodec, _ := app.MakeCodecs()
 
-	blacklistedAddrs := make(map[string]bool)
-	macPerms := make(map[string][]string)
+// 	blacklistedAddrs := make(map[string]bool)
+// 	macPerms := make(map[string][]string)
 
-	paramsKeeper := params.NewKeeper(appCodec, keyParams, tkeyParams)
-	authKeeper := auth.NewAccountKeeper(appCodec, keyAcc, paramsKeeper.Subspace(auth.DefaultParamspace),
-		auth.ProtoBaseAccount, macPerms)
-	bankKeeper := bank.NewBaseKeeper(appCodec, keyBank, authKeeper,
-		paramsKeeper.Subspace(bank.DefaultParamspace), blacklistedAddrs)
-	bankKeeper.SetSendEnabled(ctx, true)
+// 	paramsKeeper := params.NewKeeper(appCodec, keyParams, tkeyParams)
+// 	authKeeper := auth.NewAccountKeeper(appCodec, keyAcc, paramsKeeper.Subspace(auth.DefaultParamspace),
+// 		auth.ProtoBaseAccount, macPerms)
+// 	bankKeeper := bank.NewBaseKeeper(appCodec, keyBank, authKeeper,
+// 		paramsKeeper.Subspace(bank.DefaultParamspace), blacklistedAddrs)
+// 	bankKeeper.SetSendEnabled(ctx, true)
 
-	deploymentKeeper := NewKeeper(cdc, keyDeployment)
+// 	deploymentKeeper := NewKeeper(cdc, keyDeployment)
 
-	return ctx, authKeeper, paramsKeeper, bankKeeper, deploymentKeeper
+// 	return ctx, authKeeper, paramsKeeper, bankKeeper, deploymentKeeper
 
-}
+// }
 
 var (
 	ownerPub  = ed25519.GenPrivKey().PubKey()

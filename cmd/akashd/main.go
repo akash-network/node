@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	codecstd "github.com/cosmos/cosmos-sdk/codec/std"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
@@ -29,8 +28,7 @@ var invCheckPeriod uint
 func main() {
 	common.InitSDKConfig()
 
-	cdc := app.MakeCodec()
-	appCodec := codecstd.NewAppCodec(cdc)
+	appCodec, cdc := app.MakeCodecs()
 	ctx := server.NewDefaultContext()
 
 	root := &cobra.Command{
@@ -75,22 +73,23 @@ func newApp(logger log.Logger, db dbm.DB, tio io.Writer) abci.Application {
 		skipUpgradeHeights[int64(h)] = true
 	}
 
-	return app.NewApp(logger, db, tio, invCheckPeriod, skipUpgradeHeights, viper.GetString(flags.FlagHome))
+	return app.NewApp(logger, db, tio, true, invCheckPeriod, skipUpgradeHeights, viper.GetString(flags.FlagHome))
 }
 
 func exportAppStateAndTMValidators(
 	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailWhiteList []string,
 ) (json.RawMessage, []tmtypes.GenesisValidator, *abci.ConsensusParams, error) {
 
-	app := app.NewApp(logger, db, ioutil.Discard, uint(1), map[int64]bool{}, "")
-
 	if height != -1 {
+		app := app.NewApp(logger, db, ioutil.Discard, false, uint(1), map[int64]bool{}, "")
 		err := app.LoadHeight(height)
 		if err != nil {
 			return nil, nil, nil, err
 		}
+
 		return app.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 	}
 
+	app := app.NewApp(logger, db, ioutil.Discard, true, uint(1), map[int64]bool{}, "")
 	return app.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 }

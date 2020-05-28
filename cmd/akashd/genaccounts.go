@@ -12,9 +12,9 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
-	codecstd "github.com/cosmos/cosmos-sdk/codec/std"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authexported "github.com/cosmos/cosmos-sdk/x/auth/exported"
@@ -32,7 +32,7 @@ const (
 
 // AddGenesisAccountCmd returns add-genesis-account cobra Command.
 func AddGenesisAccountCmd(
-	ctx *server.Context, cdc *codec.Codec, appCodec *codecstd.Codec, defaultNodeHome, defaultClientHome string,
+	ctx *server.Context, cdc *codec.Codec, appCodec *std.Codec, defaultNodeHome, defaultClientHome string,
 ) *cobra.Command {
 
 	cmd := &cobra.Command{
