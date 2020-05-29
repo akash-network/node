@@ -35,7 +35,7 @@ type EventOrderCreated struct {
 
 // ToSDKEvent method creates new sdk event for EventOrderCreated struct
 func (e EventOrderCreated) ToSDKEvent() sdk.Event {
-	return sdk.NewEvent(sdk.EventTypeMessage,
+	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
 			sdk.NewAttribute(sdk.AttributeKeyAction, evActionOrderCreated),
@@ -50,7 +50,7 @@ type EventOrderClosed struct {
 
 // ToSDKEvent method creates new sdk event for EventOrderClosed struct
 func (e EventOrderClosed) ToSDKEvent() sdk.Event {
-	return sdk.NewEvent(sdk.EventTypeMessage,
+	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
 			sdk.NewAttribute(sdk.AttributeKeyAction, evActionOrderClosed),
@@ -66,7 +66,7 @@ type EventBidCreated struct {
 
 // ToSDKEvent method creates new sdk event for EventBidCreated struct
 func (e EventBidCreated) ToSDKEvent() sdk.Event {
-	return sdk.NewEvent(sdk.EventTypeMessage,
+	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append(
 			append([]sdk.Attribute{
 				sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
@@ -84,7 +84,7 @@ type EventBidClosed struct {
 
 // ToSDKEvent method creates new sdk event for EventBidClosed struct
 func (e EventBidClosed) ToSDKEvent() sdk.Event {
-	return sdk.NewEvent(sdk.EventTypeMessage,
+	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append(
 			append([]sdk.Attribute{
 				sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
@@ -102,7 +102,7 @@ type EventLeaseCreated struct {
 
 // ToSDKEvent method creates new sdk event for EventLeaseCreated struct
 func (e EventLeaseCreated) ToSDKEvent() sdk.Event {
-	return sdk.NewEvent(sdk.EventTypeMessage,
+	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append(
 			append([]sdk.Attribute{
 				sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
@@ -119,7 +119,7 @@ type EventLeaseClosed struct {
 
 // ToSDKEvent method creates new sdk event for EventLeaseClosed struct
 func (e EventLeaseClosed) ToSDKEvent() sdk.Event {
-	return sdk.NewEvent(sdk.EventTypeMessage,
+	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append(
 			append([]sdk.Attribute{
 				sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
@@ -224,7 +224,7 @@ func parseEVPriceAttributes(attrs []sdk.Attribute) (sdk.Coin, error) {
 
 // ParseEvent parses event and returns details of event and error if occurred
 func ParseEvent(ev sdkutil.Event) (interface{}, error) {
-	if ev.Type != sdk.EventTypeMessage {
+	if ev.Type != sdkutil.EventTypeMessage {
 		return nil, sdkutil.ErrUnknownType
 	}
 	if ev.Module != ModuleName {
