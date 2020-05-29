@@ -263,7 +263,11 @@ func NewApp(
 
 		// Update minimum deposit to 1000000uakt
 		depositParams := gov.NewDepositParams(sdk.Coins{sdk.Coin{Denom: "uakt", Amount: sdk.NewInt(1000000)}}, 172800000000000)
-		app.keeper.params.Subspace(gov.DefaultParamspace).Set(ctx, gov.ParamStoreKeyDepositParams, &depositParams)
+		govSubspace, ok := app.keeper.params.GetSubspace(gov.DefaultParamspace)
+
+		if ok {
+			govSubspace.Set(ctx, gov.ParamStoreKeyDepositParams, &depositParams)
+		}
 	})
 
 	app.keeper.crisis = crisis.NewKeeper(
