@@ -1633,9 +1633,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/SigningInfo"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/SigningInfo"
         400:
           description: Invalid validator public key for one of the validators
         500:
@@ -1688,20 +1694,22 @@ paths:
           schema:
             type: object
             properties:
-              max_evidence_age:
+              height:
                 type: string
-              signed_blocks_window:
-                type: string
-              min_signed_per_window:
-                type: string
-              double_sign_unbond_duration:
-                type: string
-              downtime_unbond_duration:
-                type: string
-              slash_fraction_double_sign:
-                type: string
-              slash_fraction_downtime:
-                type: string
+                example: "124"
+              result:
+                type: object
+                properties:
+                  signed_blocks_window:
+                    type: string
+                  min_signed_per_window:
+                    type: string
+                  downtime_unbond_duration:
+                    type: string
+                  slash_fraction_double_sign:
+                    type: string
+                  slash_fraction_downtime:
+                    type: string
         500:
           description: Internal Server Error
   /gov/proposals:
@@ -1773,9 +1781,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/TextProposal"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/TextProposal"
         400:
           description: Invalid query parameters
         500:
@@ -1843,7 +1857,13 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/TextProposal"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                $ref: "#/definitions/TextProposal"
         400:
           description: Invalid proposal id
         500:
@@ -2088,7 +2108,13 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/TallyResult"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                $ref: "#/definitions/TallyResult"
         400:
           description: Invalid proposal id
         500:
@@ -2107,13 +2133,19 @@ paths:
           schema:
             type: object
             properties:
-              min_deposit:
-                type: array
-                items:
-                  $ref: "#/definitions/Coin"
-              max_deposit_period:
+              height:
                 type: string
-                example: "86400000000000"
+                example: "124"
+              result:
+                type: object
+                properties:
+                  min_deposit:
+                    type: array
+                    items:
+                      $ref: "#/definitions/Coin"
+                  max_deposit_period:
+                    type: string
+                    example: "86400000000000"
         400:
           description: <other_path> is not a valid query request path
         404:
@@ -2132,16 +2164,23 @@ paths:
         200:
           description: OK
           schema:
+            type: object
             properties:
-              threshold:
+              height:
                 type: string
-                example: "0.5000000000"
-              veto:
-                type: string
-                example: "0.3340000000"
-              governance_penalty:
-                type: string
-                example: "0.0100000000"
+                example: "124"
+              result:
+                properties:
+                  quorum:
+                    type: string
+                    example: "0.0100000000"
+                  threshold:
+                    type: string
+                    example: "0.5000000000"
+                  veto:
+                    type: string
+                    example: "0.3340000000"
+
         400:
           description: <other_path> is not a valid query request path
         404:
@@ -2160,10 +2199,17 @@ paths:
         200:
           description: OK
           schema:
+            type: object
             properties:
-              voting_period:
+              height:
                 type: string
-                example: "86400000000000"
+                example: "124"
+              result:
+                type: object
+                properties:
+                  voting_period:
+                    type: string
+                    example: "86400000000000"
         400:
           description: <other_path> is not a valid query request path
         404:
@@ -2189,7 +2235,13 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/DelegatorTotalRewards"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                $ref: "#/definitions/DelegatorTotalRewards"
         400:
           description: Invalid delegator address
         500:
@@ -2246,9 +2298,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/Coin"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Coin"
         400:
           description: Invalid delegator address
         500:
@@ -2299,7 +2357,13 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/Address"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                $ref: "#/definitions/Address"
         400:
           description: Invalid delegator address
         500:
@@ -2352,7 +2416,13 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/ValidatorDistInfo"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                $ref: "#/definitions/ValidatorDistInfo"
         400:
           description: Invalid validator address
         500:
@@ -2375,9 +2445,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/Coin"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Coin"
         500:
           description: Internal Server Error
   /distribution/validators/{validatorAddr}/rewards:
@@ -2399,9 +2475,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/Coin"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Coin"
         400:
           description: Invalid validator address
         500:
@@ -2444,9 +2526,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/Coin"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Coin"
         500:
           description: Internal Server Error
   /distribution/parameters:
@@ -2461,12 +2549,14 @@ paths:
           description: OK
           schema:
             properties:
+              community_tax:
+                type: string
               base_proposer_reward:
                 type: string
               bonus_proposer_reward:
                 type: string
-              community_tax:
-                type: string
+              withdraw_addr_enabled:
+                type: boolean
         500:
           description: Internal Server Error
   /minting/parameters:
@@ -2480,19 +2570,26 @@ paths:
         200:
           description: OK
           schema:
+            type: object
             properties:
-              mint_denom:
+              height:
                 type: string
-              inflation_rate_change:
-                type: string
-              inflation_max:
-                type: string
-              inflation_min:
-                type: string
-              goal_bonded:
-                type: string
-              blocks_per_year:
-                type: string
+                example: "124"
+              result:
+                type: object
+                properties:
+                  mint_denom:
+                    type: string
+                  inflation_rate_change:
+                    type: string
+                  inflation_max:
+                    type: string
+                  inflation_min:
+                    type: string
+                  goal_bonded:
+                    type: string
+                  blocks_per_year:
+                    type: string
         500:
           description: Internal Server Error
   /minting/inflation:
@@ -2506,7 +2603,14 @@ paths:
         200:
           description: OK
           schema:
-            type: string
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: string
+                example: "0.1304895"
         500:
           description: Internal Server Error
   /minting/annual-provisions:
@@ -2520,7 +2624,14 @@ paths:
         200:
           description: OK
           schema:
-            type: string
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: string
+                example: "3942543757065.627166986455532500"
         500:
           description: Internal Server Error
   /supply/total:
@@ -2555,7 +2666,13 @@ paths:
         200:
           description: OK
           schema:
-            type: string
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: string
         400:
           description: Invalid coin denomination
         500:
@@ -3127,12 +3244,18 @@ definitions:
   SigningInfo:
     type: object
     properties:
+      address:
+        $ref: "#/definitions/ValidatorAddress"
       start_height:
         type: string
       index_offset:
         type: string
       jailed_until:
         type: string
+        example: "1970-01-01T00:00:00Z"
+      tombstoned:
+        type: boolean
+        example: false
       missed_blocks_counter:
         type: string
   ParamChange:
@@ -3152,7 +3275,10 @@ definitions:
   Supply:
     type: object
     properties:
-      total:
+      height:
+        type: string
+        example: "124"
+      result:
         type: array
         items:
           $ref: "#/definitions/Coin"
