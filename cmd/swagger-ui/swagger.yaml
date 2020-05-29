@@ -1886,7 +1886,13 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/Proposer"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                $ref: "#/definitions/Proposer"
         400:
           description: Invalid proposal ID
         500:
@@ -1909,9 +1915,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/Deposit"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Deposit"
         400:
           description: Invalid proposal id
         500:
@@ -1983,7 +1995,13 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/Deposit"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                $ref: "#/definitions/Deposit"
         400:
           description: Invalid proposal id or depositor address
         404:
@@ -2009,9 +2027,15 @@ paths:
         200:
           description: OK
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/Vote"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Vote"
         400:
           description: Invalid proposal id
         500:
@@ -2082,7 +2106,13 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/Vote"
+            type: object
+            properties:
+              height:
+                type: string
+                example: "124"
+              result:
+                $ref: "#/definitions/Vote"
         400:
           description: Invalid proposal id or voter address
         404:
@@ -3062,7 +3092,7 @@ definitions:
       proposal_id:
         type: string
       proposer:
-        type: string
+        $ref: "#/definitions/Address"
   Deposit:
     type: object
     properties:
@@ -3093,7 +3123,7 @@ definitions:
     type: object
     properties:
       voter:
-        type: string
+        $ref: "#/definitions/Address"
       proposal_id:
         type: string
       option:
