@@ -244,27 +244,26 @@ func NewApp(
 
 	app.keeper.upgrade = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], cdc)
 
-	// no-op handler for "eridani" upgrade
-	app.keeper.upgrade.SetUpgradeHandler("eridani", func(ctx sdk.Context, plan upgrade.Plan) {
-		faucetAddr, _ := sdk.AccAddressFromBech32("akash1dz70tfxxrsh8fned6len7feu3atz7k59zgz77n")
-		personalAcc1, _ := sdk.AccAddressFromBech32("akash1dz70tfxxrsh8fned6len7feu3atz7k59zgz77n")
-		personalAcc2, _ := sdk.AccAddressFromBech32("akash1y4uskp4v6s086pdg6phufqcg82g9xd494kdwmn")
-		valAddr, _ := sdk.ValAddressFromBech32("akashvaloper1753ew9z7cfhu6awyp6ff7qtm9ex30kg3r7zd7j")
+	// no-op handler for "cygni" upgrade
+	app.keeper.upgrade.SetUpgradeHandler("cygni", func(ctx sdk.Context, plan upgrade.Plan) {
+		faucetAddr, _ := sdk.AccAddressFromBech32("akash1czxh6ewhuy00tsv5zu50gz7lz2cxcpufdrarty")
+		delegatorAddr, _ := sdk.AccAddressFromBech32("akash1qdcgvqq4g20lwrdxj8x2rn79w9z7ra6tq64afa")
+		valAddr, _ := sdk.ValAddressFromBech32("akashvaloper1qdcgvqq4g20lwrdxj8x2rn79w9z7ra6t2cmmeh")
 
-		_, _ = app.keeper.bank.AddCoins(ctx, faucetAddr, sdk.Coins{sdk.Coin{Denom: "uakt", Amount: sdk.NewInt(10000000000)}})
-		_, _ = app.keeper.bank.AddCoins(ctx, personalAcc1, sdk.Coins{sdk.Coin{Denom: "uakt", Amount: sdk.NewInt(10000000000)}})
-		_, _ = app.keeper.bank.AddCoins(ctx, personalAcc2, sdk.Coins{sdk.Coin{Denom: "uakt", Amount: sdk.NewInt(10000000000)}})
+		// mint remaining tokens to match with total initial supply, i.e., 100m
+		_, _ = app.keeper.bank.AddCoins(ctx, faucetAddr, sdk.Coins{sdk.Coin{Denom: "uakt", Amount: sdk.NewInt(69899000000000)}})
 
+		// Set self delegation of "supermini" validator to match with other validators (i.e., 10AKT)
 		delegation := stakingTypes.Delegation{
-			DelegatorAddress: faucetAddr,
+			DelegatorAddress: delegatorAddr,
 			ValidatorAddress: valAddr,
-			Shares:           sdk.NewDec(100000000000),
+			Shares:           sdk.NewDec(10000000),
 		}
-
 		app.keeper.staking.SetDelegation(ctx, delegation)
 
-		votingParams := gov.NewVotingParams(6000000000)
-		app.keeper.params.Subspace(gov.DefaultParamspace).Set(ctx, gov.ParamStoreKeyVotingParams, &votingParams)
+		// Update minimum deposit to 1000000uakt
+		depositParams := gov.NewDepositParams(sdk.Coins{sdk.Coin{Denom: "uakt", Amount: sdk.NewInt(1000000)}}, 172800000000000)
+		app.keeper.params.Subspace(gov.DefaultParamspace).Set(ctx, gov.ParamStoreKeyDepositParams, &depositParams)
 	})
 
 	app.keeper.crisis = crisis.NewKeeper(
