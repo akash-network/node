@@ -3,6 +3,7 @@ IMAGE_BINS := _build/akashctl _build/akashd
 APP_DIR := ./app
 
 GO := GO111MODULE=on go
+GOBIN := $(shell go env GOPATH)/bin
 
 GOLANGCI_LINT_VERSION = v1.27.0
 
@@ -79,9 +80,41 @@ test-coverage:
 test-lint:
 	golangci-lint run
 
+
 lintdeps-install:
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
 		sh -s -- -b $(shell go env GOPATH)/bin $(GOLANGCI_LINT_VERSION)
+
+SUBLINTERS = deadcode \
+			misspell \
+			goerr113 \
+			gofmt \
+			gocritic \
+			goconst \
+			ineffassign \
+			unparam \
+			staticcheck \
+			golint \
+			gosec \
+			scopelint \
+			prealloc	
+
+# TODO: ^ gochecknoglobals
+
+LINT = $(GOBIN)/golangci-lint run ./... --disable-all --enable 
+
+# Execute the same lint methods as configured in .github/workflows/tests.yml
+# Clear feedback from each method as it fails.
+test-sublinters: $(patsubst %, test-sublinter-%,$(SUBLINTERS))
+
+test-sublinter-misspell:
+	$(LINT) misspell --no-config
+
+test-sublinter-ineffassign:
+	$(LINT) ineffassign --no-config
+
+test-sublinter-%:
+	$(LINT) "$(@:test-sublinter-%=%)"
 
 test-vet:
 	$(GO) vet ./...
