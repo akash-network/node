@@ -26,7 +26,7 @@ var (
 )
 
 // getOrdersPath returns orders path for queries
-func getOrdersPath(ofilters types.OrderFilters) string {
+func getOrdersPath(ofilters OrderFilters) string {
 	return fmt.Sprintf("%s/%s/%v", ordersPath, ofilters.Owner, ofilters.StateFlagVal)
 }
 
@@ -36,7 +36,7 @@ func OrderPath(id types.OrderID) string {
 }
 
 //getBidsPath returns bids path for queries
-func getBidsPath(bfilters types.BidFilters) string {
+func getBidsPath(bfilters BidFilters) string {
 	return fmt.Sprintf("%s/%s/%v", bidsPath, bfilters.Owner, bfilters.StateFlagVal)
 }
 
@@ -46,7 +46,7 @@ func getBidPath(id types.BidID) string {
 }
 
 // getLeasesPath returns leases path for queries
-func getLeasesPath(lfilters types.LeaseFilters) string {
+func getLeasesPath(lfilters LeaseFilters) string {
 	return fmt.Sprintf("%s/%s/%v", leasesPath, lfilters.Owner, lfilters.StateFlagVal)
 }
 
@@ -81,23 +81,23 @@ func parseOrderPath(parts []string) (types.OrderID, error) {
 
 // parseOrderFiltersPath returns OrderFilters details with provided queries, and return
 // error if occurred due to wrong query
-func parseOrderFiltersPath(parts []string) (types.OrderFilters, bool, error) {
+func parseOrderFiltersPath(parts []string) (OrderFilters, bool, error) {
 	if len(parts) < 2 {
-		return types.OrderFilters{}, false, ErrInvalidPath
+		return OrderFilters{}, false, ErrInvalidPath
 	}
 
 	owner, err := sdk.AccAddressFromBech32(parts[0])
 	if err != nil {
-		return types.OrderFilters{}, false, err
+		return OrderFilters{}, false, err
 	}
 
 	state, ok := types.OrderStateMap[parts[1]]
 
 	if !ok && (parts[1] != "") {
-		return types.OrderFilters{}, false, ErrStateValue
+		return OrderFilters{}, false, ErrStateValue
 	}
 
-	return types.OrderFilters{
+	return OrderFilters{
 		Owner:        owner,
 		StateFlagVal: parts[1],
 		State:        state,
@@ -126,23 +126,23 @@ func parseBidPath(parts []string) (types.BidID, error) {
 
 // parseBidFiltersPath returns BidFilters details with provided queries, and return
 // error if occurred due to wrong query
-func parseBidFiltersPath(parts []string) (types.BidFilters, bool, error) {
+func parseBidFiltersPath(parts []string) (BidFilters, bool, error) {
 	if len(parts) < 2 {
-		return types.BidFilters{}, false, ErrInvalidPath
+		return BidFilters{}, false, ErrInvalidPath
 	}
 
 	owner, err := sdk.AccAddressFromBech32(parts[0])
 	if err != nil {
-		return types.BidFilters{}, false, err
+		return BidFilters{}, false, err
 	}
 
 	state, ok := types.BidStateMap[parts[1]]
 
 	if !ok && (parts[1] != "") {
-		return types.BidFilters{}, false, ErrStateValue
+		return BidFilters{}, false, ErrStateValue
 	}
 
-	return types.BidFilters{
+	return BidFilters{
 		Owner:        owner,
 		StateFlagVal: parts[1],
 		State:        state,
@@ -162,23 +162,23 @@ func parseLeasePath(parts []string) (types.LeaseID, error) {
 
 // parseLeaseFiltersPath returns LeaseFilters details with provided queries, and return
 // error if occurred due to wrong query
-func parseLeaseFiltersPath(parts []string) (types.LeaseFilters, bool, error) {
+func parseLeaseFiltersPath(parts []string) (LeaseFilters, bool, error) {
 	if len(parts) < 2 {
-		return types.LeaseFilters{}, false, ErrInvalidPath
+		return LeaseFilters{}, false, ErrInvalidPath
 	}
 
 	owner, err := sdk.AccAddressFromBech32(parts[0])
 	if err != nil {
-		return types.LeaseFilters{}, false, err
+		return LeaseFilters{}, false, err
 	}
 
 	state, ok := types.LeaseStateMap[parts[1]]
 
 	if !ok && (parts[1] != "") {
-		return types.LeaseFilters{}, false, ErrStateValue
+		return LeaseFilters{}, false, ErrStateValue
 	}
 
-	return types.LeaseFilters{
+	return LeaseFilters{
 		Owner:        owner,
 		StateFlagVal: parts[1],
 		State:        state,

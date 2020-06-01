@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/ovrclk/akash/x/deployment/query"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -37,15 +39,15 @@ func DeploymentIDFromRequest(r *http.Request) (types.DeploymentID, string) {
 }
 
 // DepFiltersFromRequest  returns DeploymentFilters with given params in request
-func DepFiltersFromRequest(r *http.Request) (types.DeploymentFilters, string) {
+func DepFiltersFromRequest(r *http.Request) (query.DeploymentFilters, string) {
 	ownerAddr := r.URL.Query().Get("owner")
 	state := r.URL.Query().Get("state")
-	var dfilters types.DeploymentFilters
+	var dfilters query.DeploymentFilters
 
 	if len(ownerAddr) != 0 {
 		owner, err := sdk.AccAddressFromBech32(ownerAddr)
 		if err != nil {
-			return types.DeploymentFilters{}, err.Error()
+			return query.DeploymentFilters{}, err.Error()
 		}
 		dfilters.Owner = owner
 	}
@@ -79,13 +81,13 @@ func GroupIDFromRequest(r *http.Request) (types.GroupID, string) {
 }
 
 // GroupFiltersFromRequest  returns GroupFilters with given params in request
-func GroupFiltersFromRequest(r *http.Request) (types.GroupFilters, string) {
+func GroupFiltersFromRequest(r *http.Request) (query.GroupFilters, string) {
 	dfilters, errMsg := DepFiltersFromRequest(r)
 	if len(errMsg) != 0 {
-		return types.GroupFilters{}, errMsg
+		return query.GroupFilters{}, errMsg
 	}
 
-	gfilters := types.GroupFilters{
+	gfilters := query.GroupFilters{
 		Owner:        dfilters.Owner,
 		StateFlagVal: dfilters.StateFlagVal,
 	}

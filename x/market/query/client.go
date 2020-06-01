@@ -7,11 +7,11 @@ import (
 
 // Client interface
 type Client interface {
-	Orders(filters types.OrderFilters) (Orders, error)
+	Orders(filters OrderFilters) (Orders, error)
 	Order(id types.OrderID) (Order, error)
-	Bids(filters types.BidFilters) (Bids, error)
+	Bids(filters BidFilters) (Bids, error)
 	Bid(id types.BidID) (Bid, error)
-	Leases(filters types.LeaseFilters) (Leases, error)
+	Leases(filters LeaseFilters) (Leases, error)
 	Lease(id types.LeaseID) (Lease, error)
 }
 
@@ -25,7 +25,7 @@ type client struct {
 	key string
 }
 
-func (c *client) Orders(ofilters types.OrderFilters) (Orders, error) {
+func (c *client) Orders(ofilters OrderFilters) (Orders, error) {
 	var obj Orders
 	buf, err := NewRawClient(c.ctx, c.key).Orders(ofilters)
 	if err != nil {
@@ -43,7 +43,7 @@ func (c *client) Order(id types.OrderID) (Order, error) {
 	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
 }
 
-func (c *client) Bids(bfilters types.BidFilters) (Bids, error) {
+func (c *client) Bids(bfilters BidFilters) (Bids, error) {
 	var obj Bids
 	buf, err := NewRawClient(c.ctx, c.key).Bids(bfilters)
 	if err != nil {
@@ -61,7 +61,7 @@ func (c *client) Bid(id types.BidID) (Bid, error) {
 	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
 }
 
-func (c *client) Leases(lfilters types.LeaseFilters) (Leases, error) {
+func (c *client) Leases(lfilters LeaseFilters) (Leases, error) {
 	var obj Leases
 	buf, err := NewRawClient(c.ctx, c.key).Leases(lfilters)
 	if err != nil {

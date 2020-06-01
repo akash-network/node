@@ -175,7 +175,7 @@ type existingOrder struct {
 }
 
 func queryExistingOrders(_ context.Context, session session.Session) ([]existingOrder, error) {
-	orders, err := session.Client().Query().Orders(mtypes.OrderFilters{})
+	orders, err := session.Client().Query().Orders(mquery.OrderFilters{})
 	if err != nil {
 		session.Log().Error("error querying open orders:", "err", err)
 		return nil, err

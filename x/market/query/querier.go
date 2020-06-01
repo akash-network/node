@@ -39,7 +39,7 @@ func queryOrders(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper kee
 
 	var values Orders
 	keeper.WithOrders(ctx, func(obj types.Order) bool {
-		if obj.Filter(filters, isValidState) {
+		if filters.Accept(obj, isValidState) {
 			values = append(values, Order(obj))
 		}
 
@@ -73,7 +73,7 @@ func queryBids(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keepe
 	}
 	var values Bids
 	keeper.WithBids(ctx, func(obj types.Bid) bool {
-		if obj.Filter(filters, isValidState) {
+		if filters.Accept(obj, isValidState) {
 			values = append(values, Bid(obj))
 		}
 		return false
@@ -106,7 +106,7 @@ func queryLeases(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper kee
 	}
 	var values Leases
 	keeper.WithLeases(ctx, func(obj types.Lease) bool {
-		if obj.Filter(filters, isValidState) {
+		if filters.Accept(obj, isValidState) {
 			values = append(values, Lease(obj))
 		}
 		return false
