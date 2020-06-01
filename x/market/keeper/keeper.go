@@ -160,10 +160,10 @@ func (k Keeper) OnBidClosed(ctx sdk.Context, bid types.Bid) {
 // OnOrderClosed updates order state to closed
 func (k Keeper) OnOrderClosed(ctx sdk.Context, order types.Order) {
 	// TODO: assert state transition
-	switch order.State {
-	case types.OrderClosed:
+	if order.State == types.OrderClosed {
 		return
 	}
+
 	order.State = types.OrderClosed
 	k.updateOrder(ctx, order)
 	ctx.EventManager().EmitEvent(

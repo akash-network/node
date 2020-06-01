@@ -129,10 +129,9 @@ loop:
 			break loop
 
 		case ev := <-s.sub.Events():
-			switch ev := ev.(type) {
+			switch ev := ev.(type) { // nolint: gocritic
 			case mtypes.EventOrderCreated:
 				// new order
-
 				key := mquery.OrderPath(ev.ID)
 
 				s.session.Log().Info("order detected", "order", key)
@@ -141,9 +140,9 @@ loop:
 					s.session.Log().Debug("existing order", "order", key)
 					break
 				}
+
 				// create an order object for managing the bid process and order lifecycle
 				order, err := newOrder(s, ev.ID, nil)
-
 				if err != nil {
 					// todo: handle error
 					s.session.Log().Error("handling order", "order", key, "err", err)
@@ -151,7 +150,6 @@ loop:
 				}
 
 				s.orders[key] = order
-
 			}
 		case ch := <-s.statusch:
 			ch <- &Status{

@@ -67,10 +67,11 @@ func (msg MsgUpdateDeployment) ValidateBasic() error {
 	if err := msg.ID.Validate(); err != nil {
 		return err
 	}
-	switch {
-	case msg.Version.Empty():
+
+	if msg.Version.Empty() {
 		return ErrEmptyVersion
 	}
+
 	return nil
 }
 

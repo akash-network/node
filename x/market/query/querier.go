@@ -39,24 +39,10 @@ func queryOrders(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper kee
 
 	var values Orders
 	keeper.WithOrders(ctx, func(obj types.Order) bool {
-		if filters.Owner.Empty() && !isValidState {
+		if obj.Filter(filters, isValidState) {
 			values = append(values, Order(obj))
-		} else {
-			// Filtering orders based on flags
-			if filters.Owner.Empty() {
-				if obj.State == filters.State {
-					values = append(values, Order(obj))
-				}
-			} else if !isValidState {
-				if obj.OrderID.Owner.Equals(filters.Owner) {
-					values = append(values, Order(obj))
-				}
-			} else {
-				if obj.OrderID.Owner.Equals(filters.Owner) && obj.State == filters.State {
-					values = append(values, Order(obj))
-				}
-			}
 		}
+
 		return false
 	})
 	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
@@ -87,23 +73,8 @@ func queryBids(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keepe
 	}
 	var values Bids
 	keeper.WithBids(ctx, func(obj types.Bid) bool {
-		if filters.Owner.Empty() && !isValidState {
+		if obj.Filter(filters, isValidState) {
 			values = append(values, Bid(obj))
-		} else {
-			// Filtering bids based on flags
-			if filters.Owner.Empty() {
-				if obj.State == filters.State {
-					values = append(values, Bid(obj))
-				}
-			} else if !isValidState {
-				if obj.BidID.Owner.Equals(filters.Owner) {
-					values = append(values, Bid(obj))
-				}
-			} else {
-				if obj.BidID.Owner.Equals(filters.Owner) && obj.State == filters.State {
-					values = append(values, Bid(obj))
-				}
-			}
 		}
 		return false
 	})
@@ -135,23 +106,8 @@ func queryLeases(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper kee
 	}
 	var values Leases
 	keeper.WithLeases(ctx, func(obj types.Lease) bool {
-		if filters.Owner.Empty() && !isValidState {
+		if obj.Filter(filters, isValidState) {
 			values = append(values, Lease(obj))
-		} else {
-			// Filtering deployments based on flags
-			if filters.Owner.Empty() {
-				if obj.State == filters.State {
-					values = append(values, Lease(obj))
-				}
-			} else if !isValidState {
-				if obj.LeaseID.Owner.Equals(filters.Owner) {
-					values = append(values, Lease(obj))
-				}
-			} else {
-				if obj.LeaseID.Owner.Equals(filters.Owner) && obj.State == filters.State {
-					values = append(values, Lease(obj))
-				}
-			}
 		}
 		return false
 	})
