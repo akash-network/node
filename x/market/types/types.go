@@ -56,6 +56,18 @@ func (o Order) ID() OrderID {
 	return o.OrderID
 }
 
+// ID method returns BidID details of specific bid
+func (o Order) Filter(filters OrderFilters, isValidState bool) bool {
+	if (filters.Owner.Empty() && !isValidState) ||
+		(filters.Owner.Empty() && (o.State == filters.State)) ||
+		(!isValidState && o.OrderID.Owner.Equals(filters.Owner)) ||
+		(o.OrderID.Owner.Equals(filters.Owner) && o.State == filters.State) {
+		return true
+	}
+
+	return false
+}
+
 // ValidateCanBid method validates whether order is open or not and
 // returns error if not
 func (o Order) ValidateCanBid() error {
@@ -158,6 +170,18 @@ func (obj Bid) ID() BidID {
 	return obj.BidID
 }
 
+// Filter returns true if object matches filter requirements
+func (obj Bid) Filter(filters BidFilters, isValidState bool) bool {
+	if (filters.Owner.Empty() && !isValidState) ||
+		(filters.Owner.Empty() && (obj.State == filters.State)) ||
+		(!isValidState && obj.BidID.Owner.Equals(filters.Owner)) ||
+		(obj.BidID.Owner.Equals(filters.Owner) && obj.State == filters.State) {
+		return true
+	}
+
+	return false
+}
+
 // LeaseState defines state of Lease
 type LeaseState uint8
 
@@ -196,4 +220,15 @@ type Lease struct {
 // ID method returns LeaseID details of specific lease
 func (obj Lease) ID() LeaseID {
 	return obj.LeaseID
+}
+
+// Filter returns true if object matches filter requirements
+func (obj Lease) Filter(filters LeaseFilters, isValidState bool) bool {
+	if (filters.Owner.Empty() && !isValidState) ||
+		(filters.Owner.Empty() && (obj.State == filters.State)) ||
+		(!isValidState && (obj.LeaseID.Owner.Equals(filters.Owner))) ||
+		(obj.LeaseID.Owner.Equals(filters.Owner) && obj.State == filters.State) {
+		return true
+	}
+	return false
 }

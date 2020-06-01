@@ -33,39 +33,17 @@ func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, keepe
 
 	var values Deployments
 	keeper.WithDeployments(ctx, func(deployment types.Deployment) bool {
-		if filters.Owner.Empty() && !isValidState {
+		if (filters.Owner.Empty() && !isValidState) ||
+			(filters.Owner.Empty() && (deployment.State == filters.State)) ||
+			(!isValidState && (deployment.DeploymentID.Owner.Equals(filters.Owner))) ||
+			(deployment.DeploymentID.Owner.Equals(filters.Owner) && deployment.State == filters.State) {
 			value := Deployment{
 				Deployment: deployment,
 				Groups:     keeper.GetGroups(ctx, deployment.ID()),
 			}
 			values = append(values, value)
-		} else {
-			if filters.Owner.Empty() {
-				if deployment.State == filters.State {
-					value := Deployment{
-						Deployment: deployment,
-						Groups:     keeper.GetGroups(ctx, deployment.ID()),
-					}
-					values = append(values, value)
-				}
-			} else if !isValidState {
-				if deployment.DeploymentID.Owner.Equals(filters.Owner) {
-					value := Deployment{
-						Deployment: deployment,
-						Groups:     keeper.GetGroups(ctx, deployment.ID()),
-					}
-					values = append(values, value)
-				}
-			} else {
-				if deployment.DeploymentID.Owner.Equals(filters.Owner) && deployment.State == filters.State {
-					value := Deployment{
-						Deployment: deployment,
-						Groups:     keeper.GetGroups(ctx, deployment.ID()),
-					}
-					values = append(values, value)
-				}
-			}
 		}
+
 		return false
 	})
 

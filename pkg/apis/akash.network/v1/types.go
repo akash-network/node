@@ -45,8 +45,8 @@ func (m ManifestGroup) ToAkash() *manifest.Group {
 		masvc := manifest.Service{
 			Name:  svc.Name,
 			Image: svc.Image,
-			Args:  svc.Args[:],
-			Env:   svc.Env[:],
+			Args:  svc.Args,
+			Env:   svc.Env,
 			Unit: types.Unit{
 				CPU:     svc.Unit.CPU,
 				Memory:  svc.Unit.Memory,
@@ -61,7 +61,7 @@ func (m ManifestGroup) ToAkash() *manifest.Group {
 				Proto:        expose.Proto,
 				Service:      expose.Service,
 				Global:       expose.Global,
-				Hosts:        expose.Hosts[:],
+				Hosts:        expose.Hosts,
 			})
 		}
 
@@ -79,8 +79,8 @@ func ManifestGroupFromAkash(m *manifest.Group) ManifestGroup {
 		masvc := &ManifestService{
 			Name:  svc.Name,
 			Image: svc.Image,
-			Args:  svc.Args[:],
-			Env:   svc.Env[:],
+			Args:  svc.Args,
+			Env:   svc.Env,
 			Unit: ResourceUnit{
 				CPU:     svc.Unit.CPU,
 				Memory:  svc.Unit.Memory,
@@ -95,7 +95,7 @@ func ManifestGroupFromAkash(m *manifest.Group) ManifestGroup {
 				Proto:        expose.Proto,
 				Service:      expose.Service,
 				Global:       expose.Global,
-				Hosts:        expose.Hosts[:],
+				Hosts:        expose.Hosts,
 			})
 		}
 
