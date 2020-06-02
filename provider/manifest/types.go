@@ -7,10 +7,10 @@ import (
 
 // Status is the data structure
 type Status struct {
-	Deployments uint32
+	Deployments uint32 `json:"deployments"`
 }
 
 type SubmitRequest struct {
-	Deployment dtypes.DeploymentID
-	Manifest   manifest.Manifest `json:"manifest"`
+	Deployment dtypes.DeploymentID `json:"deployment"`
+	Manifest   manifest.Manifest   `json:"manifest"`
 }

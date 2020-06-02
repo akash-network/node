@@ -8,7 +8,7 @@ import (
 
 // Status is the data structure that stores Cluster, Bidengine and Manifest details.
 type Status struct {
-	Cluster   *cluster.Status
-	Bidengine *bidengine.Status
-	Manifest  *manifest.Status
+	Cluster   *cluster.Status   `json:"cluster"`
+	Bidengine *bidengine.Status `json:"bidengine"`
+	Manifest  *manifest.Status  `json:"manifest"`
 }

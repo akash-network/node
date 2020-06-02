@@ -6,68 +6,26 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-
-	"github.com/ovrclk/akash/sdl"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	"github.com/ovrclk/akash/testutil"
 )
 
-const (
-	randDSeq uint64 = 1
-	randGSeq uint32 = 2
-	randOSeq uint32 = 3
-)
+func Test_Manifest_encoding(t *testing.T) {
+	for _, spec := range testutil.ManifestGenerators {
 
-func TestToProto(t *testing.T) {
-	owner := ed25519.GenPrivKey().PubKey().Address()
-	provider := ed25519.GenPrivKey().PubKey().Address()
+		// ensure decode(encode(obj)) == obj
 
-	leaseID := mtypes.LeaseID{
-		Owner:    sdk.AccAddress(owner),
-		DSeq:     randDSeq,
-		GSeq:     randGSeq,
-		OSeq:     randOSeq,
-		Provider: sdk.AccAddress(provider),
+		var (
+			lid  = testutil.LeaseID(t)
+			mgrp = spec.Generator.Group(t)
+		)
+
+		kmani, err := NewManifest("foo", lid, &mgrp)
+		require.NoError(t, err, spec.Name)
+
+		deployment, err := kmani.Deployment()
+		require.NoError(t, err, spec.Name)
+
+		assert.Equal(t, lid, deployment.LeaseID(), spec.Name)
+		assert.Equal(t, mgrp, deployment.ManifestGroup(), spec.Name)
 	}
-
-	sdl, err := sdl.ReadFile("../../../../_run/kube/deployment.yml")
-	require.NoError(t, err)
-
-	mani, err := sdl.Manifest()
-	require.NoError(t, err)
-
-	_, err = NewManifest("name", leaseID, &mani.GetGroups()[0])
-	assert.NoError(t, err)
-}
-
-func TestFromProto(t *testing.T) {
-	owner := ed25519.GenPrivKey().PubKey().Address()
-	provider := ed25519.GenPrivKey().PubKey().Address()
-
-	leaseID := mtypes.LeaseID{
-		Owner:    sdk.AccAddress(owner),
-		DSeq:     randDSeq,
-		GSeq:     randGSeq,
-		OSeq:     randOSeq,
-		Provider: sdk.AccAddress(provider),
-	}
-	sdl, err := sdl.ReadFile("../../../../_run/kube/deployment.yml")
-	require.NoError(t, err)
-
-	mani, err := sdl.Manifest()
-	require.NoError(t, err)
-
-	kubeManifest, err := NewManifest("name", leaseID, &mani.GetGroups()[0])
-	assert.NoError(t, err)
-	t.Logf("kubeManifest: %#v", kubeManifest)
-
-	fromKube := kubeManifest.ManifestGroup()
-	rcs := fromKube.GetResources()
-	for _, r := range rcs {
-		t.Logf("%+v", r)
-	}
-
-	assert.Equal(t, fromKube.GetResources()[0].Unit.CPU, uint32(100))
-	assert.Equal(t, mani.GetGroups()[0].Name, fromKube.Name)
 }

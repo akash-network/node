@@ -11,7 +11,7 @@ __t1__: Start and initialize minikube
 ```sh
 $ make minikube
 $ minikube addons enable ingress
-$ TODO: Debug why addon no longer exists: `minikube addons enable metrics-server`
+$ minikube addons enable metrics-server
 ```
 
 __t1__: Build binaries
@@ -30,6 +30,30 @@ Creates various accounts, genesis file, configuration, and account keys stored i
 __t2__: Run `akashd`
 ```sh
 $ make run-daemon
+```
+
+```sh
+make provider
+```
+
+```sh
+make run-provider
+```
+
+```sh
+make provider-status
+```
+
+```sh
+make deploy
+```
+
+```sh
+make provider-status
+```
+
+```
+ ../../akashctl --home cache/client provider send-manifest deployment.yml --owner "akash1r72zrnqd6t7kk6euwfslwccj7pz8s3ez4lmmt5" --dseq 620 --gseq 1 --oseq 1 --provider "akash1czw297jwpk8dymjqzzwduqchwwvh2k3l6zggn3"
 ```
 
 __t1__: See status of accounts created, market orders, providers, and deployments.

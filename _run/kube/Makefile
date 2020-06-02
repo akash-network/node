@@ -7,7 +7,7 @@ KEY_OPTS       = --keyring-backend=test
 CHAIN_NAME     = local
 CHAIN_OPTS     = --chain-id $(CHAIN_NAME)
 
-init: bins init-keys init-genesis init-gentx init-collect-gentx
+init: bins init-keys init-genesis init-gentx init-collect-gentx init-config
 
 dirs: 
 	mkdir -p $(CLIENT_HOME) $(NODE_HOME)
@@ -39,11 +39,19 @@ init-keys: dirs
 	$(akashctl) keys $(KEY_OPTS) add main 
 	$(akashctl) keys $(KEY_OPTS) add other
 
+provider:
+	$(akashctl) tx $(KEY_OPTS) provider $(CHAIN_OPTS) create provider.yaml --from provider -y
+
 run-daemon:
 	$(akashd) start
 
 run-provider:
-	$(akashctl) $(KEY_OPTS) --from provider  provider run
+	$(akashctl) $(KEY_OPTS) provider run \
+		--from provider \
+		--cluster-k8s
+
+provider-status:
+	curl -s http://localhost:8080/status | jq
 
 minikube:
 	minikube start --cpus 2 --memory 3064

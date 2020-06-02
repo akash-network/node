@@ -128,15 +128,32 @@ deps-tidy:
 devdeps-install:
 	$(GO) install github.com/vektra/mockery/.../
 	$(GO) install k8s.io/code-generator/...
+	$(GO) install sigs.k8s.io/kind
 
 test-integration: $(BINS)
 	cp akashctl akashd ./_build
 	go test -mod=readonly -p 4 -tags=integration -v ./integration/...
 
+test-k8s-integration:
+	# ASSUMES:
+	# 1. cluster created - `kind create cluster`
+	# 2. cluster setup   - ./script/setup-kind.sh
+	go test -v -tags k8s_integration ./pkg/apis/akash.network/v1
+
 gentypes: $(PROTOC_FILES)
 
 vendor:
 	go mod vendor
+
+kubetypes-deps-install:
+	if [ -d "$(shell go env GOPATH)/src/k8s.io/code-generator" ]; then    \
+		cd "$(shell go env GOPATH)/src/k8s.io/code-generator" && git pull;  \
+		exit 0;                                                             \
+	fi;                                                                   \
+	mkdir -p "$(shell go env GOPATH)/src/k8s.io" && \
+	git clone                                       \
+	  git@github.com:kubernetes/code-generator.git  \
+		"$(shell go env GOPATH)/src/k8s.io/code-generator"
 
 kubetypes:
 	chmod +x vendor/k8s.io/code-generator/generate-groups.sh
@@ -166,13 +183,14 @@ clean:
 	deps-install devdeps-install \
 	test-integraion \
 	test-lint lintdeps-install \
+	test-k8s-integration \
 	test-vet \
 	vendor \
 	mocks \
 	gofmt \
 	docs \
 	clean \
-	kubetypes \
+	kubetypes kubetypes-deps-install \
 	install
 
 update-swagger-docs:

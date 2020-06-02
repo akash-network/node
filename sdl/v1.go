@@ -35,8 +35,8 @@ type v1Service struct {
 }
 
 type v1Expose struct {
-	Port   uint32
-	As     uint32
+	Port   uint16
+	As     uint16
 	Proto  string       `yaml:",omitempty"`
 	To     []v1ExposeTo `yaml:",omitempty"`
 	Accept v1Accept
