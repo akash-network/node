@@ -33,10 +33,7 @@ func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, keepe
 
 	var values Deployments
 	keeper.WithDeployments(ctx, func(deployment types.Deployment) bool {
-		if (filters.Owner.Empty() && !isValidState) ||
-			(filters.Owner.Empty() && (deployment.State == filters.State)) ||
-			(!isValidState && (deployment.DeploymentID.Owner.Equals(filters.Owner))) ||
-			(deployment.DeploymentID.Owner.Equals(filters.Owner) && deployment.State == filters.State) {
+		if filters.Accept(deployment, isValidState) {
 			value := Deployment{
 				Deployment: deployment,
 				Groups:     keeper.GetGroups(ctx, deployment.ID()),

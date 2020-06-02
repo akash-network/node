@@ -6,6 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	drest "github.com/ovrclk/akash/x/deployment/client/rest"
+	"github.com/ovrclk/akash/x/market/query"
 	"github.com/ovrclk/akash/x/market/types"
 )
 
@@ -32,13 +33,13 @@ func OrderIDFromRequest(r *http.Request) (types.OrderID, string) {
 }
 
 // OrderFiltersFromRequest  returns OrderFilters with given params in request
-func OrderFiltersFromRequest(r *http.Request) (types.OrderFilters, string) {
+func OrderFiltersFromRequest(r *http.Request) (query.OrderFilters, string) {
 	gfilters, errMsg := drest.GroupFiltersFromRequest(r)
 	if len(errMsg) != 0 {
-		return types.OrderFilters{}, errMsg
+		return query.OrderFilters{}, errMsg
 	}
 
-	ofilters := types.OrderFilters{
+	ofilters := query.OrderFilters{
 		Owner:        gfilters.Owner,
 		StateFlagVal: gfilters.StateFlagVal,
 	}
@@ -69,13 +70,13 @@ func BidIDFromRequest(r *http.Request) (types.BidID, string) {
 }
 
 // BidFiltersFromRequest  returns BidFilters with given params in request
-func BidFiltersFromRequest(r *http.Request) (types.BidFilters, string) {
+func BidFiltersFromRequest(r *http.Request) (query.BidFilters, string) {
 	ofilters, errMsg := drest.GroupFiltersFromRequest(r)
 	if len(errMsg) != 0 {
-		return types.BidFilters{}, errMsg
+		return query.BidFilters{}, errMsg
 	}
 
-	bfilters := types.BidFilters{
+	bfilters := query.BidFilters{
 		Owner:        ofilters.Owner,
 		StateFlagVal: ofilters.StateFlagVal,
 	}
@@ -93,13 +94,13 @@ func LeaseIDFromRequest(r *http.Request) (types.LeaseID, string) {
 }
 
 // LeaseFiltersFromRequest  returns LeaseFilters with given params in request
-func LeaseFiltersFromRequest(r *http.Request) (types.LeaseFilters, string) {
+func LeaseFiltersFromRequest(r *http.Request) (query.LeaseFilters, string) {
 	bfilters, errMsg := drest.GroupFiltersFromRequest(r)
 	if len(errMsg) != 0 {
-		return types.LeaseFilters{}, errMsg
+		return query.LeaseFilters{}, errMsg
 	}
 
-	lfilters := types.LeaseFilters{
+	lfilters := query.LeaseFilters{
 		Owner:        bfilters.Owner,
 		StateFlagVal: bfilters.StateFlagVal,
 	}

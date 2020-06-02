@@ -4,8 +4,30 @@ import (
 	"bytes"
 	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/ovrclk/akash/x/deployment/types"
 )
+
+// DeploymentFilters defines flags for deployment list filter
+type DeploymentFilters struct {
+	Owner sdk.AccAddress
+	// State flag value given
+	StateFlagVal string
+	// Actual state value decoded from DeploymentStateMap
+	State types.DeploymentState
+}
+
+func (filters DeploymentFilters) Accept(obj types.Deployment, isValidState bool) bool {
+	if (filters.Owner.Empty() && !isValidState) ||
+		(filters.Owner.Empty() && (obj.State == filters.State)) ||
+		(!isValidState && (obj.DeploymentID.Owner.Equals(filters.Owner))) ||
+		(obj.DeploymentID.Owner.Equals(filters.Owner) && obj.State == filters.State) {
+		return true
+	}
+
+	return false
+}
 
 // Deployment stores deployment and groups details
 type Deployment struct {
@@ -45,3 +67,12 @@ func (ds Deployments) String() string {
 
 // Group stores group ID, state and other specifications
 type Group types.Group
+
+// GroupFilters defines flags for group list filter
+type GroupFilters struct {
+	Owner sdk.AccAddress
+	// State flag value given
+	StateFlagVal string
+	// Actual state value decoded from GroupStateMap
+	State types.GroupState
+}

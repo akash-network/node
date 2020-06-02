@@ -124,7 +124,7 @@ func NewQueryClient(
 	}
 }
 
-func (c *qclient) Deployments(filters dtypes.DeploymentFilters) (dquery.Deployments, error) {
+func (c *qclient) Deployments(filters dquery.DeploymentFilters) (dquery.Deployments, error) {
 	if c.dclient == nil {
 		return dquery.Deployments{}, ErrClientNotFound
 	}
@@ -145,7 +145,7 @@ func (c *qclient) Group(id dtypes.GroupID) (dquery.Group, error) {
 	return c.dclient.Group(id)
 }
 
-func (c *qclient) Orders(filters mtypes.OrderFilters) (mquery.Orders, error) {
+func (c *qclient) Orders(filters mquery.OrderFilters) (mquery.Orders, error) {
 	if c.mclient == nil {
 		return mquery.Orders{}, ErrClientNotFound
 	}
@@ -159,7 +159,7 @@ func (c *qclient) Order(id mtypes.OrderID) (mquery.Order, error) {
 	return c.mclient.Order(id)
 }
 
-func (c *qclient) Bids(filters mtypes.BidFilters) (mquery.Bids, error) {
+func (c *qclient) Bids(filters mquery.BidFilters) (mquery.Bids, error) {
 	if c.mclient == nil {
 		return mquery.Bids{}, ErrClientNotFound
 	}
@@ -173,7 +173,7 @@ func (c *qclient) Bid(id mtypes.BidID) (mquery.Bid, error) {
 	return c.mclient.Bid(id)
 }
 
-func (c *qclient) Leases(filters mtypes.LeaseFilters) (mquery.Leases, error) {
+func (c *qclient) Leases(filters mquery.LeaseFilters) (mquery.Leases, error) {
 	if c.mclient == nil {
 		return mquery.Leases{}, ErrClientNotFound
 	}
