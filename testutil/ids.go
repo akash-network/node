@@ -4,12 +4,12 @@ import (
 	"math/rand"
 	"testing"
 
-	ckeys "github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	"github.com/stretchr/testify/require"
 )
 
 func Keyring(t testing.TB) keys.Keybase {
@@ -17,11 +17,12 @@ func Keyring(t testing.TB) keys.Keybase {
 	return obj
 }
 
+// AccAddress provides an Account's Address bytes from a ed25519 generated
+// private key.
 func AccAddress(t testing.TB) sdk.AccAddress {
 	t.Helper()
-	info, _, err := Keyring(t).CreateMnemonic("test", keys.English, ckeys.DefaultKeyPass, keys.Secp256k1)
-	require.NoError(t, err)
-	return info.GetAddress()
+	privKey := ed25519.GenPrivKey()
+	return sdk.AccAddress(privKey.PubKey().Address())
 }
 
 func DeploymentID(t testing.TB) dtypes.DeploymentID {
