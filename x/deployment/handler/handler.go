@@ -36,10 +36,6 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg 
 		// Version: sdk.Address.Bytes(),
 	}
 
-	if _, found := keeper.GetDeployment(ctx, deployment.ID()); found {
-		return nil, types.ErrDeploymentExists
-	}
-
 	if err := validation.ValidateDeploymentGroups(msg.Groups); err != nil {
 		return nil, types.ErrEmptyGroups
 	}
@@ -54,7 +50,9 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg 
 		})
 	}
 
-	keeper.Create(ctx, deployment, groups)
+	if err := keeper.Create(ctx, deployment, groups); err != nil {
+		panic(err)
+	}
 
 	return &sdk.Result{
 		Events: ctx.EventManager().Events(),
@@ -70,7 +68,9 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg 
 	// TODO: version
 	// deployment.Version = msg.Version
 
-	keeper.UpdateDeployment(ctx, deployment)
+	if err := keeper.UpdateDeployment(ctx, deployment); err != nil {
+		panic(err)
+	}
 
 	return &sdk.Result{
 		Events: ctx.EventManager().Events(),
@@ -89,7 +89,10 @@ func handleMsgClose(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper,
 	}
 
 	deployment.State = types.DeploymentClosed
-	keeper.UpdateDeployment(ctx, deployment)
+
+	if err := keeper.UpdateDeployment(ctx, deployment); err != nil {
+		panic(err)
+	}
 
 	for _, group := range keeper.GetGroups(ctx, deployment.ID()) {
 		keeper.OnDeploymentClosed(ctx, group)

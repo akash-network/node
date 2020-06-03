@@ -25,6 +25,8 @@ import (
 	stakingTypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/ovrclk/akash/x/deployment"
+	dante "github.com/ovrclk/akash/x/deployment/ante"
+
 	"github.com/ovrclk/akash/x/market"
 	"github.com/ovrclk/akash/x/provider"
 
@@ -136,7 +138,6 @@ func MakeCodec() *codec.Codec {
 }
 
 // https://github.com/cosmos/sdk-tutorials/blob/c6754a1e313eb1ed973c5c91dcc606f2fd288811/app.go#L73
-
 // NewApp creates and returns a new Akash App.
 func NewApp(
 	logger log.Logger, db dbm.DB, tio io.Writer, invCheckPeriod uint, skipUpgradeHeights map[int64]bool, options ...func(*bam.BaseApp),
@@ -410,10 +411,15 @@ func NewApp(
 	app.SetBeginBlocker(app.BeginBlocker)
 
 	app.SetAnteHandler(
-		auth.NewAnteHandler(
-			app.keeper.acct,
-			app.keeper.supply,
-			auth.DefaultSigVerificationGasConsumer,
+		chainAnteHandlers(
+			auth.NewAnteHandler(
+				app.keeper.acct,
+				app.keeper.supply,
+				auth.DefaultSigVerificationGasConsumer,
+			),
+			sdk.ChainAnteDecorators(
+				dante.NewDecorator(app.keeper.deployment),
+			),
 		),
 	)
 
