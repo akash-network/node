@@ -2,7 +2,7 @@ package kube
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
+	"encoding/base32"
 	"fmt"
 	"strconv"
 	"strings"
@@ -291,8 +291,8 @@ func exposeExternalPort(expose *manifest.ServiceExpose) int32 {
 // lidNS generates a unique sha256 sum for identifying a provider's object name.
 func lidNS(lid mtypes.LeaseID) string {
 	path := mtypes.BidIDString(lid.BidID())
-	sha := sha256.Sum256([]byte(path))
-	return hex.EncodeToString(sha[:])
+	sha := sha256.Sum224([]byte(path))
+	return base32.HexEncoding.EncodeToString(sha[:])
 }
 
 // manifestBuilder composes the k8s akashv1.Manifest type from LeaseID and
