@@ -8,6 +8,9 @@ import (
 	"github.com/ovrclk/akash/manifest"
 )
 
+// RandManifestGenerator generates a manifest with random values
+var RandManifestGenerator ManifestGenerator = manifestGeneratorRand{}
+
 type manifestGeneratorRand struct{}
 
 func (mg manifestGeneratorRand) Manifest(t testing.TB) manifest.Manifest {

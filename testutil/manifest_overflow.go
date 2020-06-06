@@ -8,6 +8,9 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
+// OverflowManifestGenerator generates a manifest maximum integer values
+var OverflowManifestGenerator ManifestGenerator = manifestGeneratorOverflow{}
+
 type manifestGeneratorOverflow struct{}
 
 func (mg manifestGeneratorOverflow) Manifest(t testing.TB) manifest.Manifest {

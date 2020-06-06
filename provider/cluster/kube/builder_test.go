@@ -21,7 +21,7 @@ func TestLidNsSanity(t *testing.T) {
 	assert.Less(t, len(ns), int(64))
 
 	g := &manifest.Group{}
-	mb := newManifestBuilder(log, ns, leaseID, g)
+	mb := newManifestBuilder(log, settings{}, ns, leaseID, g)
 
 	m, err := mb.create()
 	assert.NoError(t, err)

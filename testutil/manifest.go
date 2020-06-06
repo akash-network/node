@@ -7,10 +7,6 @@ import (
 )
 
 var (
-	// OverflowManifestGenerator generates a manifest maximum integer values
-	OverflowManifestGenerator ManifestGenerator = manifestGeneratorOverflow{}
-	// RandManifestGenerator generates a manifest with random values
-	RandManifestGenerator ManifestGenerator = manifestGeneratorRand{}
 	// DefaultManifestGenerator is the default test manifest generator
 	DefaultManifestGenerator ManifestGenerator = RandManifestGenerator
 
@@ -21,6 +17,7 @@ var (
 	}{
 		{"overflow", OverflowManifestGenerator},
 		{"random", RandManifestGenerator},
+		{"app", AppManifestGenerator},
 	}
 )
 

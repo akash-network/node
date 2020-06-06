@@ -2,10 +2,12 @@ name: k8s-integration
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
   pull_request:
     paths:
       - pkg/**
+      - provider/cluster/kube
 
 jobs:
   crd:
@@ -15,6 +17,6 @@ jobs:
       - uses: actions/setup-go@v2
       - uses: engineerd/setup-kind@v0.4.0
       - name: Setup K8S
-        run: ./script/setup-kind.sh metrics
+        run: ./script/setup-kind.sh
       - name: Run Tests
         run: make test-k8s-integration

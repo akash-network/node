@@ -16,6 +16,11 @@ install_metrics() {
   # https://github.com/kubernetes-sigs/kind/issues/398#issuecomment-621143252
   kubectl apply -f "$(dirname "$0")/kind-metrics-server.yaml"
 
+  kubectl wait pod --namespace kube-system \
+    --for=condition=ready \
+    --selector=k8s-app=metrics-server \
+    --timeout=90s
+
   while ! kubectl top nodes; do
     echo "waiting for metrics..."
     sleep 1
@@ -36,7 +41,7 @@ EOF
   exit 1
 }
 
-case "${1:-crd}" in
+case "${1:-metrics}" in
   crd)
     install_crd
     ;;

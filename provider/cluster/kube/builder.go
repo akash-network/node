@@ -26,9 +26,10 @@ const (
 )
 
 type builder struct {
-	log   log.Logger
-	lid   mtypes.LeaseID
-	group *manifest.Group
+	log      log.Logger
+	settings settings
+	lid      mtypes.LeaseID
+	group    *manifest.Group
 }
 
 func (b *builder) ns() string {
@@ -45,8 +46,8 @@ type nsBuilder struct {
 	builder
 }
 
-func newNSBuilder(lid mtypes.LeaseID, group *manifest.Group) *nsBuilder {
-	return &nsBuilder{builder: builder{lid: lid, group: group}}
+func newNSBuilder(settings settings, lid mtypes.LeaseID, group *manifest.Group) *nsBuilder {
+	return &nsBuilder{builder: builder{settings: settings, lid: lid, group: group}}
 }
 
 func (b *nsBuilder) name() string {
@@ -74,9 +75,14 @@ type deploymentBuilder struct {
 	service *manifest.Service
 }
 
-func newDeploymentBuilder(log log.Logger, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service) *deploymentBuilder {
+func newDeploymentBuilder(log log.Logger, settings settings, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service) *deploymentBuilder {
 	return &deploymentBuilder{
-		builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group},
+		builder: builder{
+			settings: settings,
+			log:      log.With("module", "kube-builder"),
+			lid:      lid,
+			group:    group,
+		},
 		service: service,
 	}
 }
@@ -172,10 +178,15 @@ type serviceBuilder struct {
 	deploymentBuilder
 }
 
-func newServiceBuilder(log log.Logger, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service) *serviceBuilder {
+func newServiceBuilder(log log.Logger, settings settings, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service) *serviceBuilder {
 	return &serviceBuilder{
 		deploymentBuilder: deploymentBuilder{
-			builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group},
+			builder: builder{
+				log:      log.With("module", "kube-builder"),
+				settings: settings,
+				lid:      lid,
+				group:    group,
+			},
 			service: service,
 		},
 	}
@@ -190,7 +201,7 @@ func (b *serviceBuilder) create() (*corev1.Service, error) { // nolint:golint,un
 		Spec: corev1.ServiceSpec{
 			// use NodePort to support GCP. GCP provides a new IP address for every ingress
 			// and requires the service type to be either NodePort or LoadBalancer
-			Type:     config.DeploymentServiceType,
+			Type:     b.settings.DeploymentServiceType,
 			Selector: b.labels(),
 			Ports:    b.ports(),
 		},
@@ -222,19 +233,20 @@ type ingressBuilder struct {
 	expose *manifest.ServiceExpose
 }
 
-func newIngressBuilder(log log.Logger, host string, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service, expose *manifest.ServiceExpose) *ingressBuilder {
-	if config.DeploymentIngressStaticHosts {
+func newIngressBuilder(log log.Logger, settings settings, host string, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service, expose *manifest.ServiceExpose) *ingressBuilder {
+	if settings.DeploymentIngressStaticHosts {
 		uid := strings.ToLower(shortuuid.New())
-		h := fmt.Sprintf("%s.%s", uid, config.DeploymentIngressDomain)
+		h := fmt.Sprintf("%s.%s", uid, settings.DeploymentIngressDomain)
 		log.Debug("IngressBuilder: map ", h, " host ", host)
 		expose.Hosts = append(expose.Hosts, h)
 	}
 	return &ingressBuilder{
 		deploymentBuilder: deploymentBuilder{
 			builder: builder{
-				log:   log.With("module", "kube-builder"),
-				lid:   lid,
-				group: group,
+				log:      log.With("module", "kube-builder"),
+				settings: settings,
+				lid:      lid,
+				group:    group,
 			},
 			service: service,
 		},
@@ -306,10 +318,15 @@ type manifestBuilder struct {
 	mns string // Q: is this supposed to be the k8s Namespace? It's the Object name now.
 }
 
-func newManifestBuilder(log log.Logger, ns string, lid mtypes.LeaseID, group *manifest.Group) *manifestBuilder {
+func newManifestBuilder(log log.Logger, settings settings, ns string, lid mtypes.LeaseID, group *manifest.Group) *manifestBuilder {
 	return &manifestBuilder{
-		builder: builder{log: log.With("module", "kube-builder"), lid: lid, group: group},
-		mns:     ns,
+		builder: builder{
+			log:      log.With("module", "kube-builder"),
+			settings: settings,
+			lid:      lid,
+			group:    group,
+		},
+		mns: ns,
 	}
 }
 
