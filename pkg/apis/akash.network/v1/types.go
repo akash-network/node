@@ -1,198 +1,27 @@
 package v1
 
 import (
+	"strconv"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/manifest"
+	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=akash
 
 // Manifest store metadata, specifications and status of the Lease
-// ./k8s.io/code-generator/generate-groups.sh all github.com/ovrclk/akash/pkg/client github.com/ovrclk/akash/pkg/apis akash.network:v1
-// For more details of code-generator, please visit https://github.com/kubernetes/code-generator
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type Manifest struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              ManifestSpec
-	Status            ManifestStatus
-}
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ManifestGroup stores metadata, name and list of SDL manifest services
-type ManifestGroup struct {
-	metav1.TypeMeta `json:",inline"`
-	// Placement profile name
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Service definitions
-	Services []*ManifestService `protobuf:"bytes,2,rep,name=services" json:"services,omitempty"`
-}
-
-// ToAkash returns akash group details formatted from manifest group
-func (m ManifestGroup) ToAkash() *manifest.Group {
-	ma := &manifest.Group{Name: m.Name}
-
-	for _, svc := range m.Services {
-		masvc := manifest.Service{
-			Name:  svc.Name,
-			Image: svc.Image,
-			Args:  svc.Args,
-			Env:   svc.Env,
-			Unit: types.Unit{
-				CPU:     svc.Unit.CPU,
-				Memory:  svc.Unit.Memory,
-				Storage: svc.Unit.Storage,
-			},
-			Count: svc.Count,
-		}
-		for _, expose := range svc.Expose {
-			masvc.Expose = append(masvc.Expose, manifest.ServiceExpose{
-				Port:         expose.Port,
-				ExternalPort: expose.ExternalPort,
-				Proto:        expose.Proto,
-				Service:      expose.Service,
-				Global:       expose.Global,
-				Hosts:        expose.Hosts,
-			})
-		}
-
-		ma.Services = append(ma.Services, masvc)
-	}
-
-	return ma
-}
-
-// ManifestGroupFromAkash returns manifest group instance from akash group
-func ManifestGroupFromAkash(m *manifest.Group) ManifestGroup {
-	ma := ManifestGroup{Name: m.Name}
-
-	for _, svc := range m.Services {
-		masvc := &ManifestService{
-			Name:  svc.Name,
-			Image: svc.Image,
-			Args:  svc.Args,
-			Env:   svc.Env,
-			Unit: ResourceUnit{
-				CPU:     svc.Unit.CPU,
-				Memory:  svc.Unit.Memory,
-				Storage: svc.Unit.Storage,
-			},
-			Count: svc.Count,
-		}
-		for _, expose := range svc.Expose {
-			masvc.Expose = append(masvc.Expose, &ManifestServiceExpose{
-				Port:         expose.Port,
-				ExternalPort: expose.ExternalPort,
-				Proto:        expose.Proto,
-				Service:      expose.Service,
-				Global:       expose.Global,
-				Hosts:        expose.Hosts,
-			})
-		}
-
-		ma.Services = append(ma.Services, masvc)
-	}
-
-	return ma
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=akash
-
-// LeaseID stores deployment, group sequence, order, provider and metadata
-type LeaseID struct {
-	metav1.ObjectMeta `json:"metadata"`
-	metav1.TypeMeta   `json:",inline"`
-
-	// Deployment Sequence ID + Owner Account address marshalled
-	Deployment []byte `protobuf:"bytes,1,opt,name=deployment,proto3,customtype=github.com/ovrclk/akash/types/base.Bytes" json:"deployment"`
-
-	// Group sequence
-	Group uint64 `protobuf:"varint,2,opt,name=group,proto3" json:"group,omitempty"`
-
-	// Order sequence
-	Order uint64 `protobuf:"varint,3,opt,name=order,proto3" json:"order,omitempty"`
-
-	// Provider address
-	Provider []byte `protobuf:"bytes,4,opt,name=provider,proto3,customtype=github.com/ovrclk/akash/types/base.Bytes" json:"provider"`
-}
-
-// ToAkash returns LeaseID from LeaseID details
-func (id LeaseID) ToAkash() mtypes.LeaseID {
-	cdc := codec.New()
-	var d *dtypes.Deployment
-	cdc.MustUnmarshalBinaryBare(id.Deployment, d)
-
-	return mtypes.LeaseID{
-		Owner:    d.Owner,
-		DSeq:     d.DSeq,
-		GSeq:     uint32(id.Group),
-		OSeq:     uint32(id.Order),
-		Provider: id.Provider,
-	}
-}
-
-// LeaseIDFromAkash returns LeaseID instance from akash
-func LeaseIDFromAkash(id mtypes.LeaseID) LeaseID {
-	return LeaseID{
-		//Deployment: deployBytes,
-		Group:    uint64(id.GSeq),
-		Order:    uint64(id.OSeq),
-		Provider: id.Provider,
-	}
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=akash
-
-// ManifestSpec stores LeaseID, Group and metadata details
-type ManifestSpec struct {
-	metav1.TypeMeta `json:",inline"`
-	LeaseID         LeaseID       `json:"lease_id"`
-	ManifestGroup   ManifestGroup `json:"manifest_group"`
-}
-
-// ManifestService stores name, image, args, env, unit, count and expose list of service
-type ManifestService struct {
-	// Service name
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Docker image
-	Image string   `protobuf:"bytes,2,opt,name=image,proto3" json:"image,omitempty"`
-	Args  []string `protobuf:"bytes,3,rep,name=args" json:"args,omitempty"`
-	Env   []string `protobuf:"bytes,4,rep,name=env" json:"env,omitempty"`
-	// Resource requirements
-	Unit ResourceUnit `protobuf:"bytes,5,opt,name=unit" json:"unit"`
-	// Number of instances
-	Count uint32 `protobuf:"varint,6,opt,name=count,proto3" json:"count,omitempty"`
-	// Overlay Network Links
-	Expose []*ManifestServiceExpose `protobuf:"bytes,7,rep,name=expose" json:"expose,omitempty"`
-}
-
-// ManifestServiceExpose stores exposed ports and accepted hosts details
-type ManifestServiceExpose struct {
-	Port         uint32 `protobuf:"varint,1,opt,name=port,proto3" json:"port,omitempty"`
-	ExternalPort uint32 `protobuf:"varint,2,opt,name=externalPort,proto3" json:"externalPort,omitempty"`
-	Proto        string `protobuf:"bytes,3,opt,name=proto,proto3" json:"proto,omitempty"`
-	Service      string `protobuf:"bytes,4,opt,name=service,proto3" json:"service,omitempty"`
-	Global       bool   `protobuf:"varint,5,opt,name=global,proto3" json:"global,omitempty"`
-	// accepted hostnames
-	Hosts []string `protobuf:"bytes,6,rep,name=hosts" json:"hosts,omitempty"`
-}
-
-// ResourceUnit stores cpu, memory and storage details
-type ResourceUnit struct {
-	CPU     uint32 `protobuf:"varint,1,opt,name=CPU,proto3" json:"CPU,omitempty"`
-	Memory  uint64 `protobuf:"varint,2,opt,name=memory,proto3" json:"memory,omitempty"`
-	Storage uint64 `protobuf:"varint,3,opt,name=storage,proto3" json:"storage,omitempty"`
+	Spec   ManifestSpec   `json:"spec,omitempty"`
+	Status ManifestStatus `json:"status,omitempty"`
 }
 
 // ManifestStatus stores state and message of manifest
@@ -201,24 +30,37 @@ type ManifestStatus struct {
 	Message string `json:"message,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=akash
-
-// ManifestList stores metadata and items list of manifest
-type ManifestList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:",inline"`
-	Items           []Manifest `json:"items"`
+// ManifestSpec stores LeaseID, Group and metadata details
+type ManifestSpec struct {
+	LeaseID LeaseID       `json:"lease-id"`
+	Group   ManifestGroup `json:"group"`
 }
 
-// ManifestGroup returns Group details from manifest
-func (m Manifest) ManifestGroup() manifest.Group {
-	return *m.Spec.ManifestGroup.ToAkash()
+// Deployment returns the cluster.Deployment that the saved manifest represents.
+func (m Manifest) Deployment() (cluster.Deployment, error) {
+	lid, err := m.Spec.LeaseID.toAkash()
+	if err != nil {
+		return nil, err
+	}
+
+	group, err := m.Spec.Group.toAkash()
+	if err != nil {
+		return nil, err
+	}
+	return deployment{lid: lid, group: group}, nil
 }
 
-// LeaseID returns lease details from manifest
-func (m Manifest) LeaseID() mtypes.LeaseID {
-	return m.Spec.LeaseID.ToAkash()
+type deployment struct {
+	lid   mtypes.LeaseID
+	group manifest.Group
+}
+
+func (d deployment) LeaseID() mtypes.LeaseID {
+	return d.lid
+}
+
+func (d deployment) ManifestGroup() manifest.Group {
+	return d.group
 }
 
 // NewManifest creates new manifest with provided details. Returns error incase of failure.
@@ -232,8 +74,224 @@ func NewManifest(name string, lid mtypes.LeaseID, mgroup *manifest.Group) (*Mani
 			Name: name,
 		},
 		Spec: ManifestSpec{
-			ManifestGroup: ManifestGroupFromAkash(mgroup),
-			LeaseID:       LeaseIDFromAkash(lid),
+			Group:   manifestGroupFromAkash(mgroup),
+			LeaseID: leaseIDFromAkash(lid),
 		},
 	}, nil
+}
+
+// LeaseID stores deployment, group sequence, order, provider and metadata
+type LeaseID struct {
+	Owner    string `json:"owner"`
+	DSeq     string `json:"dseq"`
+	GSeq     uint32 `json:"gseq"`
+	OSeq     uint32 `json:"oseq"`
+	Provider string `json:"provider"`
+}
+
+// ToAkash returns LeaseID from LeaseID details
+func (id LeaseID) toAkash() (mtypes.LeaseID, error) {
+	owner, err := sdk.AccAddressFromBech32(id.Owner)
+	if err != nil {
+		return mtypes.LeaseID{}, err
+	}
+
+	provider, err := sdk.AccAddressFromBech32(id.Provider)
+	if err != nil {
+		return mtypes.LeaseID{}, err
+	}
+
+	dseq, err := strconv.ParseUint(id.DSeq, 10, 64)
+	if err != nil {
+		return mtypes.LeaseID{}, err
+	}
+
+	return mtypes.LeaseID{
+		Owner:    owner,
+		DSeq:     dseq,
+		GSeq:     id.GSeq,
+		OSeq:     id.OSeq,
+		Provider: provider,
+	}, nil
+}
+
+// LeaseIDFromAkash returns LeaseID instance from akash
+func leaseIDFromAkash(id mtypes.LeaseID) LeaseID {
+	return LeaseID{
+		Owner:    id.Owner.String(),
+		DSeq:     strconv.FormatUint(id.DSeq, 10),
+		GSeq:     id.GSeq,
+		OSeq:     id.OSeq,
+		Provider: id.Provider.String(),
+	}
+}
+
+// ManifestGroup stores metadata, name and list of SDL manifest services
+type ManifestGroup struct {
+	// Placement profile name
+	Name string `json:"name,omitempty"`
+	// Service definitions
+	Services []ManifestService `json:"services,omitempty"`
+}
+
+// ToAkash returns akash group details formatted from manifest group
+func (m ManifestGroup) toAkash() (manifest.Group, error) {
+	am := manifest.Group{
+		Name:     m.Name,
+		Services: make([]manifest.Service, 0, len(m.Services)),
+	}
+
+	for _, svc := range m.Services {
+		asvc, err := svc.toAkash()
+		if err != nil {
+			return am, err
+		}
+		am.Services = append(am.Services, asvc)
+	}
+
+	return am, nil
+}
+
+// ManifestGroupFromAkash returns manifest group instance from akash group
+func manifestGroupFromAkash(m *manifest.Group) ManifestGroup {
+	ma := ManifestGroup{
+		Name:     m.Name,
+		Services: make([]ManifestService, 0, len(m.Services)),
+	}
+
+	for _, svc := range m.Services {
+		ma.Services = append(ma.Services, manifestServiceFromAkash(svc))
+	}
+
+	return ma
+}
+
+// ManifestService stores name, image, args, env, unit, count and expose list of service
+type ManifestService struct {
+	// Service name
+	Name string `json:"name,omitempty"`
+	// Docker image
+	Image string   `json:"image,omitempty"`
+	Args  []string `json:"args,omitempty"`
+	Env   []string `json:"env,omitempty"`
+	// Resource requirements
+	Unit ResourceUnit `json:"unit"`
+	// Number of instances
+	Count uint32 `json:"count,omitempty"`
+	// Overlay Network Links
+	Expose []ManifestServiceExpose `json:"expose,omitempty"`
+}
+
+func (ms ManifestService) toAkash() (manifest.Service, error) {
+	unit, err := ms.Unit.toAkash()
+	if err != nil {
+		return manifest.Service{}, err
+	}
+	ams := &manifest.Service{
+		Name:   ms.Name,
+		Image:  ms.Image,
+		Args:   ms.Args,
+		Env:    ms.Env,
+		Unit:   unit,
+		Count:  ms.Count,
+		Expose: make([]manifest.ServiceExpose, 0, len(ms.Expose)),
+	}
+
+	for _, expose := range ms.Expose {
+		ams.Expose = append(ams.Expose, expose.toAkash())
+	}
+
+	return *ams, nil
+}
+
+func manifestServiceFromAkash(ams manifest.Service) ManifestService {
+	ms := ManifestService{
+		Name:   ams.Name,
+		Image:  ams.Image,
+		Args:   ams.Args,
+		Env:    ams.Env,
+		Unit:   resourceUnitFromAkash(ams.Unit),
+		Count:  ams.Count,
+		Expose: make([]ManifestServiceExpose, 0, len(ams.Expose)),
+	}
+
+	for _, expose := range ams.Expose {
+		ms.Expose = append(ms.Expose, manifestServiceExposeFromAkash(expose))
+	}
+
+	return ms
+}
+
+// ManifestServiceExpose stores exposed ports and accepted hosts details
+type ManifestServiceExpose struct {
+	Port         uint16 `json:"port,omitempty"`
+	ExternalPort uint16 `json:"external-port,omitempty"`
+	Proto        string `json:"proto,omitempty"`
+	Service      string `json:"service,omitempty"`
+	Global       bool   `json:"global,omitempty"`
+	// accepted hostnames
+	Hosts []string `json:"hosts,omitempty"`
+}
+
+func (mse ManifestServiceExpose) toAkash() manifest.ServiceExpose {
+	return manifest.ServiceExpose{
+		Port:         mse.Port,
+		ExternalPort: mse.ExternalPort,
+		Proto:        mse.Proto,
+		Service:      mse.Service,
+		Global:       mse.Global,
+		Hosts:        mse.Hosts,
+	}
+}
+
+func manifestServiceExposeFromAkash(amse manifest.ServiceExpose) ManifestServiceExpose {
+	return ManifestServiceExpose{
+		Port:         amse.Port,
+		ExternalPort: amse.ExternalPort,
+		Proto:        amse.Proto,
+		Service:      amse.Service,
+		Global:       amse.Global,
+		Hosts:        amse.Hosts,
+	}
+}
+
+// ResourceUnit stores cpu, memory and storage details
+type ResourceUnit struct {
+	CPU     uint32 `json:"cpu,omitempty"`
+	Memory  string `json:"memory,omitempty"`
+	Storage string `json:"storage,omitempty"`
+}
+
+func (ru ResourceUnit) toAkash() (types.Unit, error) {
+	memory, err := strconv.ParseUint(ru.Memory, 10, 64)
+	if err != nil {
+		return types.Unit{}, err
+	}
+	storage, err := strconv.ParseUint(ru.Storage, 10, 64)
+	if err != nil {
+		return types.Unit{}, err
+	}
+
+	return types.Unit{
+		CPU:     ru.CPU,
+		Memory:  memory,
+		Storage: storage,
+	}, nil
+}
+
+func resourceUnitFromAkash(aru types.Unit) ResourceUnit {
+	return ResourceUnit{
+		CPU:     aru.CPU,
+		Memory:  strconv.FormatUint(aru.Memory, 10),
+		Storage: strconv.FormatUint(aru.Storage, 10),
+	}
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ManifestList stores metadata and items list of manifest
+type ManifestList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:",inline"`
+	Items           []Manifest `json:"items"`
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -19,8 +18,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/ovrclk/akash/manifest"
-	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
-	manifestclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
+	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/validation"
@@ -42,7 +40,7 @@ var _ Client = (*client)(nil)
 
 type client struct {
 	kc   kubernetes.Interface
-	mc   *manifestclient.Clientset
+	mc   akashclient.Interface
 	metc metricsclient.Interface
 	ns   string
 	host string
@@ -62,23 +60,14 @@ func NewClient(log log.Logger, host, ns string) (Client, error) {
 		return nil, errors.Wrap(err, "kube: error creating kubernetes client")
 	}
 
-	mc, err := manifestclient.NewForConfig(config)
+	mc, err := akashclient.NewForConfig(config)
 	if err != nil {
 		return nil, errors.Wrap(err, "kube: error creating manifest client")
-	}
-
-	mcr, err := apiextcs.NewForConfig(config)
-	if err != nil {
-		return nil, errors.Wrap(err, "kube: error creating apiextcs client")
 	}
 
 	metc, err := metricsclient.NewForConfig(config)
 	if err != nil {
 		return nil, errors.Wrap(err, "kube: error creating metrics client")
-	}
-
-	if err := akashv1.CreateCRD(ctx, mcr); err != nil {
-		return nil, errors.Wrap(err, "kube: error creating akashv1 CRD")
 	}
 
 	if err := prepareEnvironment(ctx, kc, ns); err != nil {
@@ -126,7 +115,11 @@ func (c *client) Deployments(ctx context.Context) ([]cluster.Deployment, error) 
 
 	deployments := make([]cluster.Deployment, 0, len(manifests.Items))
 	for _, manifest := range manifests.Items {
-		deployments = append(deployments, manifest)
+		deployment, err := manifest.Deployment()
+		if err != nil {
+			return deployments, err
+		}
+		deployments = append(deployments, deployment)
 	}
 
 	return deployments, nil

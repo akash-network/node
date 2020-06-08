@@ -21,10 +21,9 @@ package externalversions
 import (
 	"fmt"
 
+	v1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
-
-	v1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other
@@ -52,10 +51,11 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // ForResource gives generic access to a shared informer of the matching type
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
-	switch resource { // nolint: gocritic
+	switch resource {
 	// Group=akash.network, Version=v1
 	case v1.SchemeGroupVersion.WithResource("manifests"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Akash().V1().Manifests().Informer()}, nil
+
 	}
 
 	return nil, fmt.Errorf("no informer found for %v", resource)

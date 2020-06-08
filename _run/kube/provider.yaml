@@ -1,4 +1,4 @@
-host: http://localhost:3001
+host: http://localhost:8080
 attributes:
   - key: region
     value: us-west

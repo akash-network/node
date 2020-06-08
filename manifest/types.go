@@ -58,8 +58,8 @@ func (s Service) GetCount() uint32 {
 
 // ServiceExpose stores exposed ports and hosts details
 type ServiceExpose struct {
-	Port         uint32
-	ExternalPort uint32
+	Port         uint16
+	ExternalPort uint16
 	Proto        string
 	Service      string
 	Global       bool
