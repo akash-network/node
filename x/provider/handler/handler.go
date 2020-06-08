@@ -3,6 +3,7 @@ package handler
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
 	"github.com/ovrclk/akash/x/provider/keeper"
 	"github.com/ovrclk/akash/x/provider/types"
 )
@@ -42,6 +43,7 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgUpdateP
 	if err := keeper.Update(ctx, types.Provider(msg)); err != nil {
 		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
 	}
+
 	// TODO: cancel now-invalid leases?
 	return &sdk.Result{
 		Events: ctx.EventManager().Events(),
@@ -49,7 +51,6 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgUpdateP
 }
 
 func handleMsgDelete(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgDeleteProvider) (*sdk.Result, error) {
-	// TODO: validate exists
 	// TODO: cancel leases
 	return &sdk.Result{}, sdkerrors.Wrapf(ErrInternal, "NOTIMPLEMENTED")
 }

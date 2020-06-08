@@ -23,28 +23,6 @@ func NewHandler(keepers Keepers) sdk.Handler {
 }
 
 func handleMsgCreateBid(ctx sdk.Context, keepers Keepers, msg types.MsgCreateBid) (*sdk.Result, error) {
-	order, ok := keepers.Market.GetOrder(ctx, msg.Order)
-	if !ok {
-		return nil, types.ErrInvalidOrder
-	}
-
-	if err := order.ValidateCanBid(); err != nil {
-		return nil, types.ErrInternal
-	}
-
-	if order.Price().IsLT(msg.Price) {
-		return nil, types.ErrBidOverOrder
-	}
-
-	provider, ok := keepers.Provider.Get(ctx, msg.Provider)
-	if !ok {
-		return nil, types.ErrEmptyProvider
-	}
-
-	if !order.MatchAttributes(provider.Attributes) {
-		return nil, types.ErrAtributeMismatch
-	}
-
 	if _, err := keepers.Market.CreateBid(ctx, msg.Order, msg.Provider, msg.Price); err != nil {
 		return nil, err
 	}
@@ -57,25 +35,25 @@ func handleMsgCreateBid(ctx sdk.Context, keepers Keepers, msg types.MsgCreateBid
 func handleMsgCloseBid(ctx sdk.Context, keepers Keepers, msg types.MsgCloseBid) (*sdk.Result, error) {
 	bid, ok := keepers.Market.GetBid(ctx, msg.BidID)
 	if !ok {
-		return nil, types.ErrUnknownBid
+		panic(types.ErrUnknownBid)
 	}
 
 	lease, ok := keepers.Market.GetLease(ctx, types.LeaseID(msg.BidID))
 	if !ok {
-		return nil, types.ErrUnknownLeaseForBid
+		panic(types.ErrUnknownLeaseForBid)
 	}
 
 	order, ok := keepers.Market.GetOrder(ctx, msg.OrderID())
 	if !ok {
-		return nil, types.ErrUnknownOrderForBid
+		panic(types.ErrUnknownOrderForBid)
 	}
 
 	if lease.State != types.LeaseActive {
-		return nil, types.ErrLeaseNotActive
+		panic(types.ErrLeaseNotActive)
 	}
 
 	if bid.State != types.BidMatched {
-		return nil, types.ErrBidNotMatched
+		panic(types.ErrBidNotMatched)
 	}
 
 	keepers.Market.OnBidClosed(ctx, bid)
@@ -91,12 +69,12 @@ func handleMsgCloseBid(ctx sdk.Context, keepers Keepers, msg types.MsgCloseBid) 
 func handleMsgCloseOrder(ctx sdk.Context, keepers Keepers, msg types.MsgCloseOrder) (*sdk.Result, error) {
 	order, ok := keepers.Market.GetOrder(ctx, msg.OrderID)
 	if !ok {
-		return nil, types.ErrUnknownOrder
+		panic(types.ErrUnknownOrder)
 	}
 
 	lease, ok := keepers.Market.LeaseForOrder(ctx, order.ID())
 	if !ok {
-		return nil, types.ErrNoLeaseForOrder
+		panic(types.ErrNoLeaseForOrder)
 	}
 	keepers.Market.OnOrderClosed(ctx, order)
 	keepers.Market.OnLeaseClosed(ctx, lease)

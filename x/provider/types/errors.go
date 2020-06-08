@@ -14,6 +14,9 @@ var (
 	// ErrProviderNotFound provider not found
 	ErrProviderNotFound = sdkerrors.Register(ModuleName, 3, "invalid provider: address not found")
 
+	// ErrProviderExists provider already exists
+	ErrProviderExists = sdkerrors.Register(ModuleName, 6, "invalid provider: already exists")
+
 	// ErrInvalidAddress invalid provider address
 	ErrInvalidAddress = sdkerrors.Register(ModuleName, 4, "invalid address")
 
