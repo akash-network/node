@@ -1,9 +1,6 @@
 package handler
 
 import (
-	"encoding/hex"
-	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/pkg/errors"
@@ -44,10 +41,8 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgCreateP
 }
 
 func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgUpdateProvider) (*sdk.Result, error) {
-	fmt.Printf("\nanteHandleMsgUpdate: %s\n", hex.EncodeToString(msg.Owner))
-
-	if _, ok := keeper.Get(ctx, msg.Owner); ok {
-		return nil, errors.New("anteHandleMsgUpdate provider does not exist " + hex.EncodeToString(msg.Owner))
+	if _, ok := keeper.Get(ctx, msg.Owner); !ok {
+		return nil, errors.Wrapf(types.ErrProviderNotFound, "id: %s", msg.Owner)
 	}
 
 	if err := keeper.Update(ctx, types.Provider(msg)); err != nil {

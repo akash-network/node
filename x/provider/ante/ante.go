@@ -44,7 +44,7 @@ func (dd providerDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool
 
 func (dd providerDecorator) handleMsgCreate(ctx sdk.Context, msg types.MsgCreateProvider) error {
 	if _, ok := dd.keeper.Get(ctx, msg.Owner); ok {
-		return errors.Wrapf(keeper.ErrProviderAlreadyExists, "id: %s", hex.EncodeToString(msg.Owner))
+		return errors.Wrapf(types.ErrProviderExists, "id: %s", hex.EncodeToString(msg.Owner))
 	}
 
 	return nil
@@ -52,15 +52,15 @@ func (dd providerDecorator) handleMsgCreate(ctx sdk.Context, msg types.MsgCreate
 
 func (dd providerDecorator) handleMsgUpdate(ctx sdk.Context, msg types.MsgUpdateProvider) error {
 	if _, ok := dd.keeper.Get(ctx, msg.Owner); ok {
-		return errors.Wrapf(keeper.ErrProviderNotFound, "id: %s", hex.EncodeToString(msg.Owner))
+		return errors.Wrapf(types.ErrProviderNotFound, "id: %s", msg.Owner)
 	}
 
 	return nil
 }
 
 func (dd providerDecorator) handleMsgDelete(ctx sdk.Context, msg types.MsgDeleteProvider) error {
-	if _, ok := dd.keeper.Get(ctx, msg.Owner); ok {
-		return keeper.ErrProviderNotFound
+	if _, ok := dd.keeper.Get(ctx, msg.Owner); !ok {
+		return types.ErrProviderNotFound
 	}
 
 	return nil

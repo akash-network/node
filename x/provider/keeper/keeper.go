@@ -3,14 +3,8 @@ package keeper
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/x/provider/types"
-)
-
-var (
-	ErrProviderAlreadyExists = errors.New("keeper: provider already exists")
-	ErrProviderNotFound      = errors.New("keeper: provider not found")
 )
 
 // Keeper of the provider store
@@ -53,7 +47,7 @@ func (k Keeper) Create(ctx sdk.Context, provider types.Provider) error {
 	key := providerKey(provider.Owner)
 
 	if store.Has(key) {
-		return ErrProviderAlreadyExists
+		return types.ErrProviderExists
 	}
 
 	store.Set(key, k.cdc.MustMarshalBinaryBare(provider))
@@ -79,7 +73,7 @@ func (k Keeper) Update(ctx sdk.Context, provider types.Provider) error {
 	key := providerKey(provider.Owner)
 
 	if !store.Has(key) {
-		return ErrProviderNotFound
+		return types.ErrProviderNotFound
 	}
 	store.Set(key, k.cdc.MustMarshalBinaryBare(provider))
 	return nil
