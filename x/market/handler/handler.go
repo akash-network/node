@@ -3,7 +3,9 @@ package handler
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
 	"github.com/ovrclk/akash/x/market/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
 // NewHandler returns a handler for "market" type messages
@@ -23,6 +25,28 @@ func NewHandler(keepers Keepers) sdk.Handler {
 }
 
 func handleMsgCreateBid(ctx sdk.Context, keepers Keepers, msg types.MsgCreateBid) (*sdk.Result, error) {
+	order, ok := keepers.Market.GetOrder(ctx, msg.Order)
+	if !ok {
+		return nil, types.ErrInvalidOrder
+	}
+
+	if err := order.ValidateCanBid(); err != nil {
+		return nil, types.ErrInternal
+	}
+
+	if order.Price().IsLT(msg.Price) {
+		return nil, types.ErrBidOverOrder
+	}
+
+	var prov ptypes.Provider
+	if prov, ok = keepers.Provider.Get(ctx, msg.Provider); !ok {
+		return nil, types.ErrEmptyProvider
+	}
+
+	if !order.MatchAttributes(prov.Attributes) {
+		return nil, types.ErrAtributeMismatch
+	}
+
 	if _, err := keepers.Market.CreateBid(ctx, msg.Order, msg.Provider, msg.Price); err != nil {
 		return nil, err
 	}
@@ -35,25 +59,25 @@ func handleMsgCreateBid(ctx sdk.Context, keepers Keepers, msg types.MsgCreateBid
 func handleMsgCloseBid(ctx sdk.Context, keepers Keepers, msg types.MsgCloseBid) (*sdk.Result, error) {
 	bid, ok := keepers.Market.GetBid(ctx, msg.BidID)
 	if !ok {
-		panic(types.ErrUnknownBid)
+		return nil, types.ErrUnknownBid
 	}
 
 	lease, ok := keepers.Market.GetLease(ctx, types.LeaseID(msg.BidID))
 	if !ok {
-		panic(types.ErrUnknownLeaseForBid)
+		return nil, types.ErrUnknownLeaseForBid
 	}
 
 	order, ok := keepers.Market.GetOrder(ctx, msg.OrderID())
 	if !ok {
-		panic(types.ErrUnknownOrderForBid)
+		return nil, types.ErrUnknownOrderForBid
 	}
 
 	if lease.State != types.LeaseActive {
-		panic(types.ErrLeaseNotActive)
+		return nil, types.ErrLeaseNotActive
 	}
 
 	if bid.State != types.BidMatched {
-		panic(types.ErrBidNotMatched)
+		return nil, types.ErrBidNotMatched
 	}
 
 	keepers.Market.OnBidClosed(ctx, bid)
@@ -69,13 +93,14 @@ func handleMsgCloseBid(ctx sdk.Context, keepers Keepers, msg types.MsgCloseBid) 
 func handleMsgCloseOrder(ctx sdk.Context, keepers Keepers, msg types.MsgCloseOrder) (*sdk.Result, error) {
 	order, ok := keepers.Market.GetOrder(ctx, msg.OrderID)
 	if !ok {
-		panic(types.ErrUnknownOrder)
+		return nil, types.ErrUnknownOrder
 	}
 
 	lease, ok := keepers.Market.LeaseForOrder(ctx, order.ID())
 	if !ok {
-		panic(types.ErrNoLeaseForOrder)
+		return nil, types.ErrNoLeaseForOrder
 	}
+
 	keepers.Market.OnOrderClosed(ctx, order)
 	keepers.Market.OnLeaseClosed(ctx, lease)
 	keepers.Deployment.OnLeaseClosed(ctx, order.GroupID())

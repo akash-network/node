@@ -3,6 +3,7 @@ package handler
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
 	"github.com/ovrclk/akash/validation"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
@@ -25,6 +26,9 @@ func NewHandler(keeper keeper.Keeper, mkeeper MarketKeeper) sdk.Handler {
 }
 
 func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg types.MsgCreateDeployment) (*sdk.Result, error) {
+	if _, found := keeper.GetDeployment(ctx, msg.ID); found {
+		return nil, types.ErrDeploymentExists
+	}
 
 	deployment := types.Deployment{
 		DeploymentID: msg.ID,
@@ -57,6 +61,10 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg 
 }
 
 func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg types.MsgUpdateDeployment) (*sdk.Result, error) {
+	if _, found := keeper.GetDeployment(ctx, msg.ID); !found {
+		return nil, types.ErrDeploymentNotFound
+	}
+
 	deployment, found := keeper.GetDeployment(ctx, msg.ID)
 	if !found {
 		return nil, types.ErrDeploymentNotFound
@@ -75,7 +83,6 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg 
 }
 
 func handleMsgClose(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgCloseDeployment) (*sdk.Result, error) {
-
 	deployment, found := keeper.GetDeployment(ctx, msg.ID)
 	if !found {
 		return nil, types.ErrDeploymentNotFound
