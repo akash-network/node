@@ -2,8 +2,11 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
+
+	fuzz "github.com/google/gofuzz"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -96,24 +99,51 @@ func TestBidWinner(t *testing.T) {
 		t.Run(test.desc, test.testFunc)
 	}
 }
+func absZeroLimit(x int) int {
+	limit := 150
+	r := 0
+	if x < 0 {
+		r = -x
+	} else {
+		r = x
+	}
+
+	if r > limit {
+		r %= limit
+	}
+
+	if r == 0 {
+		r = 1
+	}
+
+	return r
+}
 
 type testDist struct {
 	desc      string
-	bidNum    int
-	rounds    int
+	BidNum    int
+	Rounds    int
 	expErr    error
 	expUneven bool
 }
 
 func (td *testDist) testFunc(t *testing.T) {
 	originOID := testutil.OrderID(t)
+	td.BidNum = absZeroLimit(td.BidNum)
+	td.Rounds = absZeroLimit(td.Rounds)
 
-	distributionSpread := make(map[int]int, td.bidNum)
-	for i := 0; i < td.rounds; i++ {
-		bIndex := make(map[string]int, td.bidNum)
-		bids := make([]types.Bid, 0, td.bidNum)
+	t.Logf("bids: %d rounds: %d", td.BidNum, td.Rounds)
+	if (float64(td.BidNum) / float64(td.Rounds)) > 0.2 {
+		t.Logf("configuring uneven distribution expected")
+		td.expUneven = true
+	}
+
+	distributionSpread := make(map[int]int, td.BidNum)
+	for i := 0; i < td.Rounds; i++ {
+		bIndex := make(map[string]int)
+		bids := make([]types.Bid, 0)
 		// generate N bids all with the same bidding amount
-		for j := 0; j < td.bidNum; j++ {
+		for j := 0; j < td.BidNum; j++ {
 			b := createBid(t, originOID, 5)
 			bIndex[b.Provider.String()] = j
 			bids = append(bids, b)
@@ -130,9 +160,9 @@ func (td *testDist) testFunc(t *testing.T) {
 
 	// calculate a reasonable low expectation of wins given the number of
 	// test rounds and number of bidders
-	r := float64(td.rounds/td.bidNum) * 0.5
+	r := float64(td.Rounds/td.BidNum) * 0.3
 
-	for i := 0; i < td.bidNum; i++ {
+	for i := 0; i < td.BidNum; i++ {
 
 		t.Logf("[%d] winner distribution %v (%v expected)", i, distributionSpread[i], r)
 
@@ -155,32 +185,42 @@ func TestWinningDistribution(t *testing.T) {
 	tests := []testDist{
 		{
 			desc:   "one bidder",
-			bidNum: 1,
-			rounds: 50,
+			BidNum: 1,
+			Rounds: 50,
 			expErr: nil,
 		},
 		{
 			desc:   "five winners",
-			bidNum: 5,
-			rounds: 150,
+			BidNum: 5,
+			Rounds: 150,
 			expErr: nil,
 		},
 		{
 			desc:   "ten winners",
-			bidNum: 10,
-			rounds: 300,
+			BidNum: 10,
+			Rounds: 300,
 			expErr: nil,
 		},
 		{
 			desc:      "too many bidders",
-			bidNum:    100,
-			rounds:    100,
+			BidNum:    100,
+			Rounds:    100,
 			expUneven: true,
 		},
 	}
 
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), test.testFunc)
+	}
+
+	for i := 0; i < 50; i++ {
+		t.Run(fmt.Sprintf("fuzzer-%d", i), func(t *testing.T) {
+			f := fuzz.New()
+			test := &testDist{}
+			f.Fuzz(test)
+			t.Logf("fuzzed testDist: %+v", test)
+			test.testFunc(t)
+		})
 	}
 }
 
