@@ -18,7 +18,7 @@ var (
 	// ErrOwnerAcctMissing is the error for owner account missing
 	ErrOwnerAcctMissing = sdkerrors.Register(ModuleName, 6, "Owner account missing")
 	// ErrEmptyGroups is the error when groups are empty
-	ErrEmptyGroups = sdkerrors.Register(ModuleName, 7, "Invalid: empty groups")
+	ErrInvalidGroups = sdkerrors.Register(ModuleName, 7, "Invalid groups")
 	// ErrInvalidDeploymentID is the error for invalid deployment id
 	ErrInvalidDeploymentID = sdkerrors.Register(ModuleName, 8, "Invalid: deployment id")
 	// ErrEmptyVersion is the error when version is empty

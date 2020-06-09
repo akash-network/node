@@ -39,7 +39,7 @@ func (msg MsgCreateDeployment) ValidateBasic() error {
 		return err
 	}
 	if len(msg.Groups) == 0 {
-		return ErrEmptyGroups
+		return ErrInvalidGroups
 	}
 	// TODO: version
 	return nil
