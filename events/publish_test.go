@@ -18,6 +18,7 @@ func Test_processEvent(t *testing.T) {
 		dtypes.EventDeploymentCreate{ID: testutil.DeploymentID(t)},
 		dtypes.EventDeploymentUpdate{ID: testutil.DeploymentID(t)},
 		dtypes.EventDeploymentClose{ID: testutil.DeploymentID(t)},
+		dtypes.EventGroupClose{ID: testutil.GroupID(t)},
 
 		// x/market events
 		mtypes.EventOrderCreated{ID: testutil.OrderID(t)},

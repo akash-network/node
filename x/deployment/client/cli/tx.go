@@ -31,6 +31,7 @@ func GetTxCmd(key string, cdc *codec.Codec) *cobra.Command {
 		cmdCreate(key, cdc),
 		cmdUpdate(key, cdc),
 		cmdClose(key, cdc),
+		cmdGroupClose(key, cdc),
 	)...)
 	return cmd
 }
@@ -133,5 +134,36 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 		},
 	}
 	AddDeploymentIDFlags(cmd.Flags())
+	return cmd
+}
+
+func cmdGroupClose(_ string, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "group-close",
+		Short:   "close a Deployment's specific Group",
+		Example: "akashctl tx deployment group-close --owner=[Account Address] --dseq=[uint64] --gseq=[uint32]",
+		Args:    cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCLIContext().WithCodec(cdc)
+			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			id, err := GroupIDFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			msg := types.MsgCloseGroup{
+				ID: id,
+			}
+			err = msg.ValidateBasic()
+			if err != nil {
+				return err
+			}
+
+			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+		},
+	}
+	AddGroupIDFlags(cmd.Flags())
+	MarkReqGroupIDFlags(cmd)
+
 	return cmd
 }

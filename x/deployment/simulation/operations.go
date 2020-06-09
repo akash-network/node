@@ -23,6 +23,7 @@ const (
 	OpWeightMsgCreateDeployment = "op_weight_msg_create_deployment"
 	OpWeightMsgUpdateDeployment = "op_weight_msg_update_deployment"
 	OpWeightMsgCloseDeployment  = "op_weight_msg_close_deployment"
+	OpWeightMsgCloseGroup       = "op_weight_msg_close_group"
 )
 
 // WeightedOperations returns all the operations from the module with their respective weights
@@ -33,6 +34,7 @@ func WeightedOperations(
 		weightMsgCreateDeployment int
 		weightMsgUpdateDeployment int
 		weightMsgCloseDeployment  int
+		weightMsgCloseGroup       int
 	)
 
 	appParams.GetOrGenerate(
@@ -53,6 +55,12 @@ func WeightedOperations(
 		},
 	)
 
+	appParams.GetOrGenerate(
+		cdc, OpWeightMsgCloseGroup, &weightMsgCloseGroup, nil, func(r *rand.Rand) {
+			weightMsgCloseGroup = simappparams.DefaultWeightMsgCloseGroup
+		},
+	)
+
 	return simulation.WeightedOperations{
 		simulation.NewWeightedOperation(
 			weightMsgCreateDeployment,
@@ -65,6 +73,10 @@ func WeightedOperations(
 		simulation.NewWeightedOperation(
 			weightMsgCloseDeployment,
 			SimulateMsgCloseDeployment(ak, k),
+		),
+		simulation.NewWeightedOperation(
+			weightMsgCloseGroup,
+			SimulateMsgCloseGroup(ak, k),
 		),
 	}
 }
@@ -241,5 +253,80 @@ func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) simu
 		}
 
 		return simulation.NewOperationMsg(msg, true, ""), nil, nil
+	}
+}
+
+// SimulateMsgCloseGroup generates a MsgCloseGroup for a random deployment
+func SimulateMsgCloseGroup(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simulation.Account,
+		chainID string) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+		var deployments []types.Deployment
+
+		k.WithDeployments(ctx, func(deployment types.Deployment) bool {
+			if deployment.State == types.DeploymentActive {
+				deployments = append(deployments, deployment)
+			}
+
+			return false
+		})
+
+		if len(deployments) == 0 {
+			return simulation.NoOpMsg(types.ModuleName), nil, nil
+		}
+
+		// Get random deployment
+		i := r.Intn(len(deployments))
+		deployment := deployments[i]
+
+		simAccount, found := simulation.FindAccount(accounts, deployment.ID().Owner)
+		if !found {
+			err := errors.Errorf("deployment with %s not found", deployment.ID().Owner)
+			return simulation.NoOpMsg(err.Error()), nil, err
+		}
+
+		account := ak.GetAccount(ctx, simAccount.Address)
+
+		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
+		if err != nil {
+			return simulation.NoOpMsg(types.ModuleName), nil, err
+		}
+
+		// Select Group to close
+		groups := k.GetGroups(ctx, deployment.ID())
+		if len(groups) < 1 {
+			// No groups to close
+			err := errors.Errorf("no groups for deployment ID: %v", deployment.ID())
+			return simulation.NoOpMsg(err.Error()), nil, err
+		}
+		i = r.Intn(len(groups))
+		group := groups[i]
+		if group.State == types.GroupClosed {
+			return simulation.NoOpMsg("group already closed"), nil, nil
+		}
+
+		msg := types.MsgCloseGroup{
+			ID: group.ID(),
+		}
+		err = msg.ValidateBasic()
+		if err != nil {
+			return simulation.NoOpMsg(errors.Wrapf(err, "%q close-group msg validation failure", types.ModuleName).Error()), nil, err
+		}
+
+		tx := helpers.GenTx(
+			[]sdk.Msg{msg},
+			fees,
+			helpers.DefaultGenTxGas,
+			chainID,
+			[]uint64{account.GetAccountNumber()},
+			[]uint64{account.GetSequence()},
+			simAccount.PrivKey,
+		)
+
+		_, _, err = app.Deliver(tx)
+		if err != nil {
+			err = errors.Wrapf(err, "%s: msg delivery error closing group: %v", types.ModuleName, group.ID())
+			return simulation.NoOpMsg(err.Error()), nil, err
+		}
+		return simulation.NewOperationMsg(msg, true, "submitting MsgCloseGroup"), nil, nil
 	}
 }

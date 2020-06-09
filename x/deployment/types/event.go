@@ -11,6 +11,7 @@ const (
 	evActionDeploymentCreate = "deployment-create"
 	evActionDeploymentUpdate = "deployment-update"
 	evActionDeploymentClose  = "deployment-close"
+	evActionGroupClose       = "group-close"
 	evOwnerKey               = "owner"
 	evDSeqKey                = "dseq"
 	evGSeqKey                = "gseq"
@@ -87,6 +88,21 @@ func ParseEVDeploymentID(attrs []sdk.Attribute) (DeploymentID, error) {
 	}, nil
 }
 
+// EventGroupClose provides SDK event to signal group termination
+type EventGroupClose struct {
+	ID GroupID
+}
+
+// ToSDKEvent produces the SDK notification for Event
+func (ev EventGroupClose) ToSDKEvent() sdk.Event {
+	return sdk.NewEvent(sdkutil.EventTypeMessage,
+		append([]sdk.Attribute{
+			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
+			sdk.NewAttribute(sdk.AttributeKeyAction, evActionGroupClose),
+		}, GroupIDEVAttributes(ev.ID)...)...,
+	)
+}
+
 // GroupIDEVAttributes returns event attribues for given GroupID
 func GroupIDEVAttributes(id GroupID) []sdk.Attribute {
 	return append(DeploymentIDEVAttributes(id.DeploymentID()),
@@ -140,6 +156,12 @@ func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 			return nil, err
 		}
 		return EventDeploymentClose{ID: did}, nil
+	case evActionGroupClose:
+		gid, err := ParseEVGroupID(ev.Attributes)
+		if err != nil {
+			return nil, err
+		}
+		return EventGroupClose{ID: gid}, nil
 	default:
 		return nil, sdkutil.ErrUnknownAction
 	}

@@ -1,8 +1,6 @@
 package types
 
 import (
-	"errors"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/types"
@@ -18,10 +16,6 @@ const (
 	DeploymentActive DeploymentState = iota + 1 // active
 	// DeploymentClosed is used when state of deployment is closed
 	DeploymentClosed // closed
-)
-
-var (
-	ErrGroupNotOpen = errors.New("group not open")
 )
 
 // DeploymentStateMap is used to decode deployment state flag value
@@ -57,15 +51,6 @@ const (
 	// GroupClosed is used when state of group is closed
 	GroupClosed // closed
 )
-
-// GroupStateMap is used to decode group state flag value
-var GroupStateMap = map[string]GroupState{
-	"open":               GroupOpen,
-	"ordered":            GroupOrdered,
-	"matched":            GroupMatched,
-	"insufficient-funds": GroupInsufficientFunds,
-	"closed":             GroupClosed,
-}
 
 // GroupSpec stores group specifications
 type GroupSpec struct {
@@ -126,17 +111,28 @@ type Group struct {
 }
 
 // ID method returns GroupID details of specific group
-func (d Group) ID() GroupID {
-	return d.GroupID
+func (g Group) ID() GroupID {
+	return g.GroupID
 }
 
-// ValidateOrderable method checks whether group opened or not
-func (d Group) ValidateOrderable() error {
-	switch d.State {
+// ValidateOrderable method checks whether group status is Open or not
+func (g Group) ValidateOrderable() error {
+	switch g.State {
 	case GroupOpen:
 		return nil
 	default:
 		return ErrGroupNotOpen
+	}
+}
+
+// ValidateClosable provides error response if group is already closed,
+// and thus should not be closed again, else nil.
+func (g Group) ValidateClosable() error {
+	switch g.State {
+	case GroupClosed:
+		return ErrGroupClosed
+	default:
+		return nil
 	}
 }
 
