@@ -128,18 +128,25 @@ func (td *testDist) testFunc(t *testing.T) {
 		distributionSpread[slot]++
 	}
 
+	// calculate a reasonable low expectation of wins given the number of
+	// test rounds and number of bidders
+	r := float64(td.rounds/td.bidNum) * 0.5
+
 	for i := 0; i < td.bidNum; i++ {
-		v := distributionSpread[i]
-		if v == 0 && !td.expUneven {
-			t.Errorf("index[%d] had no winners when even distribution was expected", i)
+
+		t.Logf("[%d] winner distribution %v (%v expected)", i, distributionSpread[i], r)
+
+		v := float64(distributionSpread[i])
+
+		if v >= r {
 			continue
 		}
-		// calculate a reasonable low expectation of wins given the number of test rounds and number of bidders
-		r := float64(td.rounds/td.bidNum) * 0.5
-		if float64(v) < r {
-			t.Errorf("less than %d winnings of [%d]", td.bidNum, i)
+
+		if td.expUneven {
+			continue
 		}
-		t.Logf("winner distribution: %d: %d", i, v)
+
+		t.Errorf("[%d] expectation failed (%v < %v)", i, v, r)
 	}
 
 }
@@ -155,19 +162,19 @@ func TestWinningDistribution(t *testing.T) {
 		{
 			desc:   "five winners",
 			bidNum: 5,
-			rounds: 50,
+			rounds: 150,
 			expErr: nil,
 		},
 		{
 			desc:   "ten winners",
 			bidNum: 10,
-			rounds: 500,
+			rounds: 300,
 			expErr: nil,
 		},
 		{
 			desc:      "too many bidders",
 			bidNum:    100,
-			rounds:    50,
+			rounds:    100,
 			expUneven: true,
 		},
 	}
