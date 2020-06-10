@@ -23,7 +23,7 @@ func (mg manifestGeneratorOverflow) Manifest(t testing.TB) manifest.Manifest {
 func (mg manifestGeneratorOverflow) Group(t testing.TB) manifest.Group {
 	t.Helper()
 	return manifest.Group{
-		Name: "left-coast",
+		Name: Name(t, "manifest-group"),
 		Services: []manifest.Service{
 			mg.Service(t),
 		},
@@ -58,7 +58,7 @@ func (mg manifestGeneratorOverflow) ServiceExpose(t testing.TB) manifest.Service
 		Service:      "svc",
 		Global:       true,
 		Hosts: []string{
-			"foo.com",
+			Hostname(t),
 		},
 	}
 }

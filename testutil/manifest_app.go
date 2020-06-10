@@ -23,7 +23,7 @@ func (mg manifestGeneratorApp) Manifest(t testing.TB) manifest.Manifest {
 func (mg manifestGeneratorApp) Group(t testing.TB) manifest.Group {
 	t.Helper()
 	return manifest.Group{
-		Name: "left-coast",
+		Name: Name(t, "manifest-group"),
 		Services: []manifest.Service{
 			mg.Service(t),
 		},
@@ -47,13 +47,13 @@ func (mg manifestGeneratorApp) Service(t testing.TB) manifest.Service {
 	}
 }
 
-func (mg manifestGeneratorApp) ServiceExpose(_ testing.TB) manifest.ServiceExpose {
+func (mg manifestGeneratorApp) ServiceExpose(t testing.TB) manifest.ServiceExpose {
 	return manifest.ServiceExpose{
 		Port:    80,
 		Service: "demo",
 		Global:  true,
 		Hosts: []string{
-			"foo.com",
+			Hostname(t),
 		},
 	}
 }

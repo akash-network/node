@@ -9,7 +9,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
@@ -17,10 +16,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
-	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 
 	"github.com/cosmos/cosmos-sdk/x/params"
-	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingTypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
@@ -46,44 +43,6 @@ import (
 
 const (
 	appName = "akash"
-)
-
-var (
-	mbasics = module.NewBasicManager(
-		genutil.AppModuleBasic{},
-
-		// accounts, fees.
-		auth.AppModuleBasic{},
-
-		// tokens, token balance.
-		bank.AppModuleBasic{},
-
-		// total supply of the chain
-		supply.AppModuleBasic{},
-
-		// inflation
-		mint.AppModuleBasic{},
-
-		staking.AppModuleBasic{},
-
-		slashing.AppModuleBasic{},
-
-		distr.AppModuleBasic{},
-
-		gov.NewAppModuleBasic(
-			paramsclient.ProposalHandler, distr.ProposalHandler, upgradeclient.ProposalHandler,
-		),
-
-		params.AppModuleBasic{},
-		upgrade.AppModuleBasic{},
-		evidence.AppModuleBasic{},
-		crisis.AppModuleBasic{},
-
-		// akash
-		deployment.AppModuleBasic{},
-		market.AppModuleBasic{},
-		provider.AppModuleBasic{},
-	)
 )
 
 // AkashApp extends ABCI appplication
@@ -120,25 +79,6 @@ type AkashApp struct {
 	sm *module.SimulationManager
 }
 
-// ModuleBasics returns all app modules basics
-func ModuleBasics() module.BasicManager {
-	return mbasics
-}
-
-// MakeCodec returns registered codecs
-func MakeCodec() *codec.Codec {
-	var cdc = codec.New()
-
-	mbasics.RegisterCodec(cdc)
-
-	sdk.RegisterCodec(cdc)
-	vesting.RegisterCodec(cdc)
-	codec.RegisterCrypto(cdc)
-	codec.RegisterEvidences(cdc)
-
-	return cdc.Seal()
-}
-
 // https://github.com/cosmos/sdk-tutorials/blob/c6754a1e313eb1ed973c5c91dcc606f2fd288811/app.go#L73
 // NewApp creates and returns a new Akash App.
 func NewApp(
@@ -147,28 +87,12 @@ func NewApp(
 
 	cdc := MakeCodec()
 
-	keys := sdk.NewKVStoreKeys(
-		bam.MainStoreKey,
-		auth.StoreKey,
-		params.StoreKey,
-		slashing.StoreKey,
-		distr.StoreKey,
-		supply.StoreKey,
-		staking.StoreKey,
-		mint.StoreKey,
-		gov.StoreKey,
-		upgrade.StoreKey,
-		evidence.StoreKey,
-		deployment.StoreKey,
-		market.StoreKey,
-		provider.StoreKey,
-	)
-
-	tkeys := sdk.NewTransientStoreKeys(params.TStoreKey)
-
 	bapp := bam.NewBaseApp(appName, logger, db, auth.DefaultTxDecoder(cdc), options...)
 	bapp.SetCommitMultiStoreTracer(tio)
 	bapp.SetAppVersion(version.Version)
+
+	keys := kvStoreKeys()
+	tkeys := transientStoreKeys()
 
 	app := &AkashApp{
 		BaseApp:        bapp,

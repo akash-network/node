@@ -12,8 +12,7 @@ const (
 
 // MsgCreateDeployment defines an SDK message for creating deployment
 type MsgCreateDeployment struct {
-	Owner sdk.AccAddress `json:"owner"`
-	// Sequence uint64         `json:"sequence"`
+	ID DeploymentID `json:"id"`
 	// Version []byte      `json:"version"`
 	Groups []GroupSpec `json:"groups"`
 }
@@ -31,22 +30,18 @@ func (msg MsgCreateDeployment) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgCreateDeployment) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.Owner}
+	return []sdk.AccAddress{msg.ID.Owner}
 }
 
 // ValidateBasic does basic validation like check owner and groups length
 func (msg MsgCreateDeployment) ValidateBasic() error {
-	switch {
-	case msg.Owner.Empty():
-		return ErrOwnerAcctMissing
-	// case msg.Sequence == 0:
-	// 	return sdk.NewError(DefaultCodespace, CodeInvalidRequest, "invalid sequence: 0")
-	// TODO: version
-	// case msg.Version.Empty():
-	// 	return sdk.NewError(DefaultCodespace, CodeInvalidRequest, "invalid: empty version")
-	case len(msg.Groups) == 0:
+	if err := msg.ID.Validate(); err != nil {
+		return err
+	}
+	if len(msg.Groups) == 0 {
 		return ErrEmptyGroups
 	}
+	// TODO: version
 	return nil
 }
 

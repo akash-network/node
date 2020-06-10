@@ -23,7 +23,7 @@ func (mg manifestGeneratorRand) Manifest(t testing.TB) manifest.Manifest {
 func (mg manifestGeneratorRand) Group(t testing.TB) manifest.Group {
 	t.Helper()
 	return manifest.Group{
-		Name: "left-coast",
+		Name: Name(t, "manifest-group"),
 		Services: []manifest.Service{
 			mg.Service(t),
 		},
@@ -45,7 +45,7 @@ func (mg manifestGeneratorRand) Service(t testing.TB) manifest.Service {
 	}
 }
 
-func (mg manifestGeneratorRand) ServiceExpose(_ testing.TB) manifest.ServiceExpose {
+func (mg manifestGeneratorRand) ServiceExpose(t testing.TB) manifest.ServiceExpose {
 	return manifest.ServiceExpose{
 		Port:         uint16(rand.Intn(math.MaxUint16)),
 		ExternalPort: uint16(rand.Intn(math.MaxUint16)),
@@ -53,7 +53,7 @@ func (mg manifestGeneratorRand) ServiceExpose(_ testing.TB) manifest.ServiceExpo
 		Service:      "svc",
 		Global:       true,
 		Hosts: []string{
-			"foo.com",
+			Hostname(t),
 		},
 	}
 }

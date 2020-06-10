@@ -40,10 +40,7 @@ func (dd deploymentDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bo
 }
 
 func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgCreateDeployment) error {
-	if _, found := keeper.GetDeployment(ctx, types.DeploymentID{
-		Owner: msg.Owner,
-		DSeq:  uint64(ctx.BlockHeight()),
-	}); found {
+	if _, found := keeper.GetDeployment(ctx, msg.ID); found {
 		return types.ErrDeploymentExists
 	}
 

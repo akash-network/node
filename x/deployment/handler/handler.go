@@ -27,11 +27,8 @@ func NewHandler(keeper keeper.Keeper, mkeeper MarketKeeper) sdk.Handler {
 func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg types.MsgCreateDeployment) (*sdk.Result, error) {
 
 	deployment := types.Deployment{
-		DeploymentID: types.DeploymentID{
-			Owner: msg.Owner,
-			DSeq:  uint64(ctx.BlockHeight()),
-		},
-		State: types.DeploymentActive,
+		DeploymentID: msg.ID,
+		State:        types.DeploymentActive,
 		// TODO: version
 		// Version: sdk.Address.Bytes(),
 	}

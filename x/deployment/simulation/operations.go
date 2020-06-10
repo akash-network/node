@@ -104,7 +104,7 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 		}
 
 		msg := types.MsgCreateDeployment{
-			Owner:  simAccount.Address,
+			ID:     dID,
 			Groups: make([]types.GroupSpec, 0, len(groupSpecs)),
 		}
 
