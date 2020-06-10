@@ -28,15 +28,13 @@ func Test_Create(t *testing.T) {
 	// assert event emitted
 	assert.Len(t, ctx.EventManager().Events(), 1)
 
-	// assert deployment written
-	{
+	t.Run("deployment written", func(t *testing.T) {
 		result, ok := keeper.GetDeployment(ctx, deployment.ID())
 		assert.True(t, ok)
 		assert.Equal(t, deployment, result)
-	}
+	})
 
-	// assert one deployment exists
-	{
+	t.Run("one deployment exists", func(t *testing.T) {
 		count := 0
 		keeper.WithDeployments(ctx, func(d types.Deployment) bool {
 			if assert.Equal(t, deployment.ID(), d.ID()) {
@@ -45,7 +43,7 @@ func Test_Create(t *testing.T) {
 			return false
 		})
 		assert.Equal(t, 1, count)
-	}
+	})
 
 	// write more data.
 	{
@@ -54,11 +52,10 @@ func Test_Create(t *testing.T) {
 		keeper.Create(ctx, deployment, groups)
 	}
 
-	// assert groups written - read all
-	{
+	t.Run("groups written - read all", func(t *testing.T) {
 		result := keeper.GetGroups(ctx, deployment.ID())
 		assert.Equal(t, groups, result)
-	}
+	})
 
 	// assert groups written - read single
 	for i := 0; i < len(groups); i++ {
@@ -67,12 +64,10 @@ func Test_Create(t *testing.T) {
 		assert.Equal(t, groups[i], result)
 	}
 
-	// check non-existent group
-	{
+	t.Run("non-existent group", func(t *testing.T) {
 		_, ok := keeper.GetGroup(ctx, testutil.GroupID(t))
 		assert.False(t, ok)
-	}
-
+	})
 }
 
 func Test_Create_dupe(t *testing.T) {
@@ -162,17 +157,17 @@ func Test_OnInsufficientFunds(t *testing.T) {
 
 	keeper.OnLeaseInsufficientFunds(ctx, groups[0].ID())
 
-	{
+	t.Run("target group changed", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[0].ID())
 		assert.True(t, ok)
 		assert.Equal(t, types.GroupInsufficientFunds, group.State)
-	}
+	})
 
-	{
+	t.Run("non-target group state unchanged", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[1].ID())
 		assert.True(t, ok)
 		assert.Equal(t, types.GroupMatched, group.State)
-	}
+	})
 }
 
 func Test_OnLeaseClosed(t *testing.T) {
@@ -182,17 +177,17 @@ func Test_OnLeaseClosed(t *testing.T) {
 
 	keeper.OnLeaseClosed(ctx, groups[0].ID())
 
-	{
+	t.Run("target group changed", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[0].ID())
 		assert.True(t, ok)
 		assert.Equal(t, types.GroupOpen, group.State)
-	}
+	})
 
-	{
+	t.Run("non-target group state unchanged", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[1].ID())
 		assert.True(t, ok)
 		assert.Equal(t, types.GroupMatched, group.State)
-	}
+	})
 }
 
 func Test_OnDeploymentClosed(t *testing.T) {
@@ -202,17 +197,17 @@ func Test_OnDeploymentClosed(t *testing.T) {
 
 	keeper.OnDeploymentClosed(ctx, groups[0])
 
-	{
+	t.Run("target group changed", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[0].ID())
 		assert.True(t, ok)
 		assert.Equal(t, types.GroupClosed, group.State)
-	}
+	})
 
-	{
+	t.Run("non-target group state unchanged", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[1].ID())
 		assert.True(t, ok)
 		assert.Equal(t, types.GroupMatched, group.State)
-	}
+	})
 }
 
 func createActiveDeployment(t testing.TB, ctx sdk.Context, keeper keeper.Keeper) []types.Group {

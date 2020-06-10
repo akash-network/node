@@ -89,7 +89,7 @@ func Test_GetBid(t *testing.T) {
 
 	// non-existent
 	{
-		_, ok = keeper.GetBid(ctx, testutil.BidID(t))
+		_, ok := keeper.GetBid(ctx, testutil.BidID(t))
 		require.False(t, ok)
 	}
 }
@@ -135,7 +135,7 @@ func Test_GetLease(t *testing.T) {
 
 	// non-existent
 	{
-		_, ok = keeper.GetLease(ctx, testutil.LeaseID(t))
+		_, ok := keeper.GetLease(ctx, testutil.LeaseID(t))
 		require.False(t, ok)
 	}
 }
