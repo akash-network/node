@@ -23,8 +23,15 @@ func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus 
 		queuesz = 100
 	)
 	var (
+		txname  = name + "-tx"
 		blkname = name + "-blk"
 	)
+
+	txch, err := tmbus.Subscribe(ctx, txname, txQuery().String(), queuesz)
+	if err != nil {
+		return err
+	}
+	defer tmbus.UnsubscribeAll(ctx, txname)
 
 	blkch, err := tmbus.Subscribe(ctx, blkname, blkQuery().String(), queuesz)
 	if err != nil {
@@ -33,6 +40,10 @@ func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus 
 	defer tmbus.UnsubscribeAll(ctx, blkname)
 
 	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		return publishEvents(ctx, txch, bus)
+	})
 
 	g.Go(func() error {
 		return publishEvents(ctx, blkch, bus)

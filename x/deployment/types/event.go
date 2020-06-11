@@ -134,6 +134,12 @@ func ParseEvent(ev sdkutil.Event) (interface{}, error) {
 			return nil, err
 		}
 		return EventDeploymentUpdate{ID: did}, nil
+	case evActionDeploymentClose:
+		did, err := ParseEVDeploymentID(ev.Attributes)
+		if err != nil {
+			return nil, err
+		}
+		return EventDeploymentClose{ID: did}, nil
 	default:
 		return nil, sdkutil.ErrUnknownAction
 	}

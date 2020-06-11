@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	"github.com/go-kit/kit/log/term"
 	"github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/events"
@@ -66,7 +67,7 @@ func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []str
 
 	gwaddr := viper.GetString(flagGatewayListenAddress)
 
-	log := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
+	log := openLogger()
 
 	// TODO: actually get the passphrase?
 	// passphrase, err := keys.GetPassphrase(fromName)
@@ -131,6 +132,13 @@ func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []str
 	})
 
 	return group.Wait()
+}
+
+func openLogger() log.Logger {
+	// logger with no color output - current debug colors are invisible for me.
+	return log.NewTMLoggerWithColorFn(log.NewSyncWriter(os.Stdout), func(_ ...interface{}) term.FgBgColor {
+		return term.FgBgColor{}
+	})
 }
 
 func createClusterClient(log log.Logger, cmd *cobra.Command, host string) (cluster.Client, error) {
