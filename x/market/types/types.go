@@ -25,15 +25,6 @@ var (
 	ErrOrderOpen    = errors.New("order open")
 )
 
-// OrderFilters defines flags for order list filter
-type OrderFilters struct {
-	Owner sdk.AccAddress
-	// State flag value given
-	StateFlagVal string
-	// Actual state value decoded from OrderStateMap
-	State OrderState
-}
-
 // OrderStateMap is used to decode order state flag value
 var OrderStateMap = map[string]OrderState{
 	"open":    OrderOpen,
@@ -129,15 +120,6 @@ const (
 	BidClosed
 )
 
-// BidFilters defines flags for bid list filter
-type BidFilters struct {
-	Owner sdk.AccAddress
-	// State flag value given
-	StateFlagVal string
-	// Actual state value decoded from BidStateMap
-	State BidState
-}
-
 // BidStateMap is used to decode bid state flag value
 var BidStateMap = map[string]BidState{
 	"open":    BidOpen,
@@ -169,15 +151,6 @@ const (
 	// LeaseClosed is used when state of lease is closed
 	LeaseClosed
 )
-
-// LeaseFilters defines flags for lease list filter
-type LeaseFilters struct {
-	Owner sdk.AccAddress
-	// State flag value given
-	StateFlagVal string
-	// Actual state value decoded from LeaseStateMap
-	State LeaseState
-}
 
 // LeaseStateMap is used to decode lease state flag value
 var LeaseStateMap = map[string]LeaseState{

@@ -33,39 +33,14 @@ func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, keepe
 
 	var values Deployments
 	keeper.WithDeployments(ctx, func(deployment types.Deployment) bool {
-		if filters.Owner.Empty() && !isValidState {
+		if filters.Accept(deployment, isValidState) {
 			value := Deployment{
 				Deployment: deployment,
 				Groups:     keeper.GetGroups(ctx, deployment.ID()),
 			}
 			values = append(values, value)
-		} else {
-			if filters.Owner.Empty() {
-				if deployment.State == filters.State {
-					value := Deployment{
-						Deployment: deployment,
-						Groups:     keeper.GetGroups(ctx, deployment.ID()),
-					}
-					values = append(values, value)
-				}
-			} else if !isValidState {
-				if deployment.DeploymentID.Owner.Equals(filters.Owner) {
-					value := Deployment{
-						Deployment: deployment,
-						Groups:     keeper.GetGroups(ctx, deployment.ID()),
-					}
-					values = append(values, value)
-				}
-			} else {
-				if deployment.DeploymentID.Owner.Equals(filters.Owner) && deployment.State == filters.State {
-					value := Deployment{
-						Deployment: deployment,
-						Groups:     keeper.GetGroups(ctx, deployment.ID()),
-					}
-					values = append(values, value)
-				}
-			}
 		}
+
 		return false
 	})
 
@@ -74,7 +49,7 @@ func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, keepe
 
 func queryDeployment(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
 
-	id, err := parseDeploymentPath(path)
+	id, err := ParseDeploymentPath(path)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
 	}

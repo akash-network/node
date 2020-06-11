@@ -54,8 +54,20 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
+			id, err := DeploymentIDFromFlags(cmd.Flags(), ctx.GetFromAddress().String())
+			if err != nil {
+				return err
+			}
+
+			// Default DSeq to the current block height
+			if id.DSeq == 0 {
+				if id.DSeq, err = currentBlockHeight(ctx); err != nil {
+					return err
+				}
+			}
+
 			msg := types.MsgCreateDeployment{
-				Owner: ctx.GetFromAddress(),
+				ID: id,
 				// Version:  []byte{0x1, 0x2},
 				Groups: make([]types.GroupSpec, 0, len(groups)),
 			}
@@ -71,6 +83,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},
 	}
+	AddDeploymentIDFlags(cmd.Flags())
 
 	return cmd
 }
@@ -89,9 +102,7 @@ func cmdClose(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.MsgCloseDeployment{
-				ID: id,
-			}
+			msg := types.MsgCloseDeployment{ID: id}
 
 			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
 		},

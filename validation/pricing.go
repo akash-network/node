@@ -46,6 +46,9 @@ func validateGroupPricing(config ValConfig, gspec dtypes.GroupSpec) error {
 }
 
 func validateUnitPricing(config ValConfig, rg dtypes.Resource) error {
+	if !rg.Price.IsValid() {
+		return errors.Errorf("error: invalid price object")
+	}
 
 	if rg.Price.Amount.GT(sdk.NewIntFromUint64(uint64(config.MaxUnitPrice))) {
 		return errors.Errorf("error: invalid unit price (%v > %v fails)", config.MaxUnitPrice, rg.Price)

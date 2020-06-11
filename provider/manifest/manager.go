@@ -23,7 +23,7 @@ var (
 	ErrShutdownTimerExpired = errors.New("shutdown timer expired")
 )
 
-func newManager(h *handler, daddr dtypes.DeploymentID) (*manager, error) {
+func newManager(h *service, daddr dtypes.DeploymentID) (*manager, error) {
 	session := h.session.ForModule("manifest-manager")
 
 	sub, err := h.sub.Clone()
@@ -301,10 +301,9 @@ func (m *manager) validateRequests() {
 }
 
 func (m *manager) validateRequest(req manifestRequest) error {
+	// TODO: hash(manifest) == m.data.Version
 	if err := validation.ValidateManifestWithDeployment(&req.value.Manifest, m.data.Groups); err != nil {
 		return err
 	}
-	// TODO
-	// return mutil.VerifyRequest(req.value, m.data.deployment)
 	return nil
 }

@@ -6,12 +6,13 @@ import (
 	"time"
 
 	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/tendermint/tendermint/libs/log"
+
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/pubsub"
 	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/util/runner"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
 var (
@@ -190,11 +191,9 @@ loop:
 			break loop
 
 		case ev := <-is.sub.Events():
-
-			switch ev := ev.(type) {
+			switch ev := ev.(type) { // nolint: gocritic
 			case event.ClusterDeployment:
 				// mark reservation allocated if deployment successful
-
 				for _, res := range reservations {
 					if !res.OrderID().Equals(ev.LeaseID.OrderID()) {
 						continue

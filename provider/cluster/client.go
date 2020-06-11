@@ -19,14 +19,18 @@ var _ Client = (*nullClient)(nil)
 // ErrNoDeployments indicates no deployments exist
 var ErrNoDeployments = errors.New("no deployments")
 
-// Client interface lease and deployment methods
-type Client interface {
-	Deploy(context.Context, mtypes.LeaseID, *manifest.Group) error
-	TeardownLease(context.Context, mtypes.LeaseID) error
-	Deployments(context.Context) ([]Deployment, error)
+type ReadClient interface {
 	LeaseStatus(context.Context, mtypes.LeaseID) (*LeaseStatus, error)
 	ServiceStatus(context.Context, mtypes.LeaseID, string) (*ServiceStatus, error)
 	ServiceLogs(context.Context, mtypes.LeaseID, int64, bool) ([]*ServiceLog, error)
+}
+
+// Client interface lease and deployment methods
+type Client interface {
+	ReadClient
+	Deploy(context.Context, mtypes.LeaseID, *manifest.Group) error
+	TeardownLease(context.Context, mtypes.LeaseID) error
+	Deployments(context.Context) ([]Deployment, error)
 	Inventory(context.Context) ([]Node, error)
 }
 

@@ -2,6 +2,7 @@ package cli
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/x/deployment/query"
 	"github.com/ovrclk/akash/x/deployment/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -73,8 +74,8 @@ func AddDeploymentFilterFlags(flags *pflag.FlagSet) {
 }
 
 // DepFiltersFromFlags returns DeploymentFilters with given flags and error if occurred
-func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, error) {
-	var dfilters types.DeploymentFilters
+func DepFiltersFromFlags(flags *pflag.FlagSet) (query.DeploymentFilters, error) {
+	var dfilters query.DeploymentFilters
 	owner, err := flags.GetString("owner")
 	if err != nil {
 		return dfilters, err
@@ -97,12 +98,12 @@ func AddGroupFilterFlags(flags *pflag.FlagSet) {
 }
 
 // GroupFiltersFromFlags returns GroupFilters with given flags and error if occurred
-func GroupFiltersFromFlags(flags *pflag.FlagSet) (types.GroupFilters, error) {
+func GroupFiltersFromFlags(flags *pflag.FlagSet) (query.GroupFilters, error) {
 	dfilters, err := DepFiltersFromFlags(flags)
 	if err != nil {
-		return types.GroupFilters{}, err
+		return query.GroupFilters{}, err
 	}
-	gfilters := types.GroupFilters{
+	gfilters := query.GroupFilters{
 		Owner:        dfilters.Owner,
 		StateFlagVal: dfilters.StateFlagVal,
 	}

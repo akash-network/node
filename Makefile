@@ -3,6 +3,7 @@ IMAGE_BINS := _build/akashctl _build/akashd
 APP_DIR := ./app
 
 GO := GO111MODULE=on go
+GOBIN := $(shell go env GOPATH)/bin
 
 GOLANGCI_LINT_VERSION = v1.27.0
 
@@ -79,9 +80,41 @@ test-coverage:
 test-lint:
 	golangci-lint run
 
+
 lintdeps-install:
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
 		sh -s -- -b $(shell go env GOPATH)/bin $(GOLANGCI_LINT_VERSION)
+
+SUBLINTERS = deadcode \
+			misspell \
+			goerr113 \
+			gofmt \
+			gocritic \
+			goconst \
+			ineffassign \
+			unparam \
+			staticcheck \
+			golint \
+			gosec \
+			scopelint \
+			prealloc	
+
+# TODO: ^ gochecknoglobals
+
+LINT = $(GOBIN)/golangci-lint run ./... --disable-all --enable 
+
+# Execute the same lint methods as configured in .github/workflows/tests.yml
+# Clear feedback from each method as it fails.
+test-sublinters: $(patsubst %, test-sublinter-%,$(SUBLINTERS))
+
+test-sublinter-misspell:
+	$(LINT) misspell --no-config
+
+test-sublinter-ineffassign:
+	$(LINT) ineffassign --no-config
+
+test-sublinter-%:
+	$(LINT) "$(@:test-sublinter-%=%)"
 
 test-vet:
 	$(GO) vet ./...
@@ -95,15 +128,33 @@ deps-tidy:
 devdeps-install:
 	$(GO) install github.com/vektra/mockery/.../
 	$(GO) install k8s.io/code-generator/...
+	$(GO) install sigs.k8s.io/kind
 
 test-integration: $(BINS)
 	cp akashctl akashd ./_build
 	go test -mod=readonly -p 4 -tags=integration -v ./integration/...
 
+test-k8s-integration:
+	# ASSUMES:
+	# 1. cluster created - `kind create cluster`
+	# 2. cluster setup   - ./script/setup-kind.sh
+	go test -v -tags k8s_integration ./pkg/apis/akash.network/v1
+	go test -v -tags k8s_integration ./provider/cluster/kube
+
 gentypes: $(PROTOC_FILES)
 
 vendor:
 	go mod vendor
+
+kubetypes-deps-install:
+	if [ -d "$(shell go env GOPATH)/src/k8s.io/code-generator" ]; then    \
+		cd "$(shell go env GOPATH)/src/k8s.io/code-generator" && git pull;  \
+		exit 0;                                                             \
+	fi;                                                                   \
+	mkdir -p "$(shell go env GOPATH)/src/k8s.io" && \
+	git clone                                       \
+	  git@github.com:kubernetes/code-generator.git  \
+		"$(shell go env GOPATH)/src/k8s.io/code-generator"
 
 kubetypes:
 	chmod +x vendor/k8s.io/code-generator/generate-groups.sh
@@ -112,20 +163,12 @@ kubetypes:
   	akash.network:v1
 
 mocks:
-	mockery -case=underscore -dir query                 -output query/mocks                 -name Client
-	mockery -case=underscore -dir txutil                -output txutil/mocks                -name Client
-	mockery -case=underscore -dir app/market            -output app/market/mocks            -name Client
-	mockery -case=underscore -dir app/market            -output app/market/mocks            -name Engine
-	mockery -case=underscore -dir app/market            -output app/market/mocks            -name Facilitator
-	mockery -case=underscore -dir marketplace           -output marketplace/mocks           -name Handler
 	mockery -case=underscore -dir provider              -output provider/mocks              -name StatusClient
+	mockery -case=underscore -dir provider              -output provider/mocks              -name Client
 	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Client
-	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Cluster
-	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Deployment
-	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Reservation
-	mockery -case=underscore -dir provider/cluster/kube -output provider/cluster/kube/mocks -name Client
-	mockery -case=underscore -dir provider/manifest     -output provider/manifest/mocks     -name Handler
-
+	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name ReadClient
+	mockery -case=underscore -dir provider/manifest     -output provider/manifest/mocks     -name Client
+	mockery -case=underscore -dir provider/manifest     -output provider/manifest/mocks     -name StatusClient
 
 gofmt:
 	find . -not -path './vendor*' -name '*.go' -type f | \
@@ -141,13 +184,14 @@ clean:
 	deps-install devdeps-install \
 	test-integraion \
 	test-lint lintdeps-install \
+	test-k8s-integration \
 	test-vet \
 	vendor \
 	mocks \
 	gofmt \
 	docs \
 	clean \
-	kubetypes \
+	kubetypes kubetypes-deps-install \
 	install
 
 update-swagger-docs:

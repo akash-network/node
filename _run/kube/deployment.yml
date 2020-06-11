@@ -32,4 +32,4 @@ deployment:
   web:
     westcoast:
       profile: web
-      count: 2
+      count: 1

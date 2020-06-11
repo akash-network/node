@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -21,7 +22,7 @@ var (
 )
 
 // getDeploymentsPath returns deployments path for queries
-func getDeploymentsPath(dfilters types.DeploymentFilters) string {
+func getDeploymentsPath(dfilters DeploymentFilters) string {
 	return fmt.Sprintf("%s/%s/%v", deploymentsPath, dfilters.Owner, dfilters.StateFlagVal)
 }
 
@@ -37,7 +38,7 @@ func getGroupPath(id types.GroupID) string {
 
 // parseDeploymentPath returns DeploymentID details with provided queries, and return
 // error if occurred due to wrong query
-func parseDeploymentPath(parts []string) (types.DeploymentID, error) {
+func ParseDeploymentPath(parts []string) (types.DeploymentID, error) {
 	if len(parts) < 2 {
 		return types.DeploymentID{}, ErrInvalidPath
 	}
@@ -60,23 +61,23 @@ func parseDeploymentPath(parts []string) (types.DeploymentID, error) {
 
 // parseDepFiltersPath returns DeploymentFilters details with provided queries, and return
 // error if occurred due to wrong query
-func parseDepFiltersPath(parts []string) (types.DeploymentFilters, bool, error) {
+func parseDepFiltersPath(parts []string) (DeploymentFilters, bool, error) {
 	if len(parts) < 2 {
-		return types.DeploymentFilters{}, false, ErrInvalidPath
+		return DeploymentFilters{}, false, ErrInvalidPath
 	}
 
 	owner, err := sdk.AccAddressFromBech32(parts[0])
 	if err != nil {
-		return types.DeploymentFilters{}, false, err
+		return DeploymentFilters{}, false, err
 	}
 
 	state, ok := types.DeploymentStateMap[parts[1]]
 
 	if !ok && (parts[1] != "") {
-		return types.DeploymentFilters{}, false, ErrStateValue
+		return DeploymentFilters{}, false, ErrStateValue
 	}
 
-	return types.DeploymentFilters{
+	return DeploymentFilters{
 		Owner:        owner,
 		StateFlagVal: parts[1],
 		State:        state,
@@ -90,7 +91,7 @@ func ParseGroupPath(parts []string) (types.GroupID, error) {
 		return types.GroupID{}, ErrInvalidPath
 	}
 
-	did, err := parseDeploymentPath(parts[0:2])
+	did, err := ParseDeploymentPath(parts[0:2])
 	if err != nil {
 		return types.GroupID{}, err
 	}

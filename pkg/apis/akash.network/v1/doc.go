@@ -1,4 +1,4 @@
-// +k8s:deepcopy-gen=package,register
+// +k8s:deepcopy-gen=package
 // +k8s:defaulter-gen=TypeMeta
 // +k8s:openapi-gen=true
 // +groupName=akash.network

@@ -84,6 +84,9 @@ func prepareEnvironment(ctx context.Context, kc kubernetes.Interface, ns string)
 		obj := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: ns,
+				Labels: map[string]string{
+					akashManagedLabelName: "true",
+				},
 			},
 		}
 		_, err = kc.CoreV1().Namespaces().Create(ctx, obj, metav1.CreateOptions{})

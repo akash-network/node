@@ -23,7 +23,7 @@ type EventDeploymentCreate struct {
 
 // ToSDKEvent method creates new sdk event for EventDeploymentCreate struct
 func (ev EventDeploymentCreate) ToSDKEvent() sdk.Event {
-	return sdk.NewEvent(sdk.EventTypeMessage,
+	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
 			sdk.NewAttribute(sdk.AttributeKeyAction, evActionDeploymentCreate),
@@ -39,7 +39,7 @@ type EventDeploymentUpdate struct {
 
 // ToSDKEvent method creates new sdk event for EventDeploymentUpdate struct
 func (ev EventDeploymentUpdate) ToSDKEvent() sdk.Event {
-	return sdk.NewEvent(sdk.EventTypeMessage,
+	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
 			sdk.NewAttribute(sdk.AttributeKeyAction, evActionDeploymentUpdate),
@@ -54,7 +54,7 @@ type EventDeploymentClose struct {
 
 // ToSDKEvent method creates new sdk event for EventDeploymentClose struct
 func (ev EventDeploymentClose) ToSDKEvent() sdk.Event {
-	return sdk.NewEvent(sdk.EventTypeMessage,
+	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
 			sdk.NewAttribute(sdk.AttributeKeyAction, evActionDeploymentClose),
@@ -113,8 +113,9 @@ func ParseEVGroupID(attrs []sdk.Attribute) (GroupID, error) {
 }
 
 // ParseEvent parses event and returns details of event and error if occurred
+// TODO: Enable returning actual events.
 func ParseEvent(ev sdkutil.Event) (interface{}, error) {
-	if ev.Type != sdk.EventTypeMessage {
+	if ev.Type != sdkutil.EventTypeMessage {
 		return nil, sdkutil.ErrUnknownType
 	}
 	if ev.Module != ModuleName {

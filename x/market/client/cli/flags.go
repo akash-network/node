@@ -4,6 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
+	"github.com/ovrclk/akash/x/market/query"
 	"github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -37,12 +38,12 @@ func OrderIDFromFlags(flags *pflag.FlagSet) (types.OrderID, error) {
 // AddBidIDFlags add flags for bid
 func AddBidIDFlags(flags *pflag.FlagSet) {
 	AddOrderIDFlags(flags)
+	flags.String("provider", "", "Provider")
 }
 
 // AddQueryBidIDFlags add flags for bid in query commands
 func AddQueryBidIDFlags(flags *pflag.FlagSet) {
-	AddOrderIDFlags(flags)
-	flags.String("provider", "", "Bid Provider")
+	AddBidIDFlags(flags)
 }
 
 // MarkReqBidIDFlags marks flags required for bid
@@ -86,12 +87,12 @@ func AddOrderFilterFlags(flags *pflag.FlagSet) {
 }
 
 // OrderFiltersFromFlags returns OrderFilters with given flags and error if occurred
-func OrderFiltersFromFlags(flags *pflag.FlagSet) (types.OrderFilters, error) {
+func OrderFiltersFromFlags(flags *pflag.FlagSet) (query.OrderFilters, error) {
 	gfilters, err := dcli.GroupFiltersFromFlags(flags)
 	if err != nil {
-		return types.OrderFilters{}, err
+		return query.OrderFilters{}, err
 	}
-	ofilters := types.OrderFilters{
+	ofilters := query.OrderFilters{
 		Owner:        gfilters.Owner,
 		StateFlagVal: gfilters.StateFlagVal,
 	}
@@ -105,12 +106,12 @@ func AddBidFilterFlags(flags *pflag.FlagSet) {
 }
 
 // BidFiltersFromFlags returns BidFilters with given flags and error if occurred
-func BidFiltersFromFlags(flags *pflag.FlagSet) (types.BidFilters, error) {
+func BidFiltersFromFlags(flags *pflag.FlagSet) (query.BidFilters, error) {
 	ofilters, err := OrderFiltersFromFlags(flags)
 	if err != nil {
-		return types.BidFilters{}, err
+		return query.BidFilters{}, err
 	}
-	bfilters := types.BidFilters{
+	bfilters := query.BidFilters{
 		Owner:        ofilters.Owner,
 		StateFlagVal: ofilters.StateFlagVal,
 	}
@@ -124,12 +125,12 @@ func AddLeaseFilterFlags(flags *pflag.FlagSet) {
 }
 
 // LeaseFiltersFromFlags returns LeaseFilters with given flags and error if occurred
-func LeaseFiltersFromFlags(flags *pflag.FlagSet) (types.LeaseFilters, error) {
+func LeaseFiltersFromFlags(flags *pflag.FlagSet) (query.LeaseFilters, error) {
 	ofilters, err := OrderFiltersFromFlags(flags)
 	if err != nil {
-		return types.LeaseFilters{}, err
+		return query.LeaseFilters{}, err
 	}
-	lfilters := types.LeaseFilters{
+	lfilters := query.LeaseFilters{
 		Owner:        ofilters.Owner,
 		StateFlagVal: ofilters.StateFlagVal,
 	}

@@ -103,6 +103,9 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 	store.Set(key, k.cdc.MustMarshalBinaryBare(deployment))
 
 	for _, group := range groups {
+		if !group.ID().DeploymentID().Equals(deployment.ID()) {
+			return types.ErrInvalidGroupID
+		}
 		gkey := groupKey(group.ID())
 		store.Set(gkey, k.cdc.MustMarshalBinaryBare(group))
 	}

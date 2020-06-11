@@ -27,4 +27,6 @@ var (
 	ErrInternal = sdkerrors.Register(ModuleName, 10, "internal error")
 	// ErrInvalidDeployment = is the error when deployment does not pass validation
 	ErrInvalidDeployment = sdkerrors.Register(ModuleName, 11, "Invalid deployment")
+	// ErrInvalidGroupID is the error when already deployment exists
+	ErrInvalidGroupID = sdkerrors.Register(ModuleName, 12, "Deployment exists")
 )

@@ -15,22 +15,16 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Publish publishes events along tm buses to clients
+// Publish events using tm buses to clients. Waits on context
+// shutdown signals to exit.
 func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus pubsub.Bus) error {
 
 	const (
 		queuesz = 100
 	)
 	var (
-		txname  = name + "-tx"
 		blkname = name + "-blk"
 	)
-
-	txch, err := tmbus.Subscribe(ctx, txname, txQuery().String(), queuesz)
-	if err != nil {
-		return err
-	}
-	defer tmbus.UnsubscribeAll(ctx, txname)
 
 	blkch, err := tmbus.Subscribe(ctx, blkname, blkQuery().String(), queuesz)
 	if err != nil {
@@ -40,9 +34,6 @@ func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus 
 
 	g, ctx := errgroup.WithContext(ctx)
 
-	g.Go(func() error {
-		return publishEvents(ctx, txch, bus)
-	})
 	g.Go(func() error {
 		return publishEvents(ctx, blkch, bus)
 	})

@@ -7,6 +7,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+const (
+	akashEventMessageV1 = "akash.v1"
+
+	// EventTypeMessage defines the Akash message string
+	EventTypeMessage = akashEventMessageV1
+)
+
 var (
 	// ErrNotFound is the error with message "Not found"
 	ErrNotFound = errors.New("Not found")

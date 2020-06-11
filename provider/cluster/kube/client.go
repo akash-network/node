@@ -5,10 +5,10 @@ import (
 	"os"
 	"path"
 
+	"github.com/caarlos0/env"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -19,8 +19,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/ovrclk/akash/manifest"
-	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
-	manifestclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
+	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/validation"
@@ -41,16 +40,28 @@ type Client interface {
 var _ Client = (*client)(nil)
 
 type client struct {
-	kc   kubernetes.Interface
-	mc   *manifestclient.Clientset
-	metc metricsclient.Interface
-	ns   string
-	host string
-	log  log.Logger
+	kc       kubernetes.Interface
+	ac       akashclient.Interface
+	metc     metricsclient.Interface
+	ns       string
+	host     string
+	settings settings
+	log      log.Logger
 }
 
 // NewClient returns new Client instance with provided logger, host and ns. Returns error incase of failure
 func NewClient(log log.Logger, host, ns string) (Client, error) {
+	var settings settings
+	if err := env.Parse(&settings); err != nil {
+		return nil, err
+	}
+	if err := validateSettings(settings); err != nil {
+		return nil, err
+	}
+	return newClientWithSettings(log, host, ns, settings)
+}
+
+func newClientWithSettings(log log.Logger, host, ns string, settings settings) (Client, error) {
 	ctx := context.Background()
 	config, err := openKubeConfig(log)
 	if err != nil {
@@ -62,23 +73,14 @@ func NewClient(log log.Logger, host, ns string) (Client, error) {
 		return nil, errors.Wrap(err, "kube: error creating kubernetes client")
 	}
 
-	mc, err := manifestclient.NewForConfig(config)
+	mc, err := akashclient.NewForConfig(config)
 	if err != nil {
 		return nil, errors.Wrap(err, "kube: error creating manifest client")
-	}
-
-	mcr, err := apiextcs.NewForConfig(config)
-	if err != nil {
-		return nil, errors.Wrap(err, "kube: error creating apiextcs client")
 	}
 
 	metc, err := metricsclient.NewForConfig(config)
 	if err != nil {
 		return nil, errors.Wrap(err, "kube: error creating metrics client")
-	}
-
-	if err := akashv1.CreateCRD(ctx, mcr); err != nil {
-		return nil, errors.Wrap(err, "kube: error creating akashv1 CRD")
 	}
 
 	if err := prepareEnvironment(ctx, kc, ns); err != nil {
@@ -90,12 +92,13 @@ func NewClient(log log.Logger, host, ns string) (Client, error) {
 	}
 
 	return &client{
-		kc:   kc,
-		mc:   mc,
-		metc: metc,
-		ns:   ns,
-		host: host,
-		log:  log.With("module", "provider-cluster-kube"),
+		settings: settings,
+		kc:       kc,
+		ac:       mc,
+		metc:     metc,
+		ns:       ns,
+		host:     host,
+		log:      log.With("module", "provider-cluster-kube"),
 	}, nil
 
 }
@@ -119,26 +122,30 @@ func (c *client) shouldExpose(expose *manifest.ServiceExpose) bool {
 }
 
 func (c *client) Deployments(ctx context.Context) ([]cluster.Deployment, error) {
-	manifests, err := c.mc.AkashV1().Manifests(c.ns).List(ctx, metav1.ListOptions{})
+	manifests, err := c.ac.AkashV1().Manifests(c.ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	deployments := make([]cluster.Deployment, 0, len(manifests.Items))
 	for _, manifest := range manifests.Items {
-		deployments = append(deployments, manifest)
+		deployment, err := manifest.Deployment()
+		if err != nil {
+			return deployments, err
+		}
+		deployments = append(deployments, deployment)
 	}
 
 	return deployments, nil
 }
 
 func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest.Group) error {
-	if err := applyNS(ctx, c.kc, newNSBuilder(lid, group)); err != nil {
+	if err := applyNS(ctx, c.kc, newNSBuilder(c.settings, lid, group)); err != nil {
 		c.log.Error("applying namespace", "err", err, "lease", lid)
 		return err
 	}
 
-	if err := applyManifest(ctx, c.mc, newManifestBuilder(c.log, c.ns, lid, group)); err != nil {
+	if err := applyManifest(ctx, c.ac, newManifestBuilder(c.log, c.settings, c.ns, lid, group)); err != nil {
 		c.log.Error("applying manifest", "err", err, "lease", lid)
 		return err
 	}
@@ -150,7 +157,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 
 	for svcIdx := range group.Services {
 		service := &group.Services[svcIdx]
-		if err := applyDeployment(ctx, c.kc, newDeploymentBuilder(c.log, lid, group, service)); err != nil {
+		if err := applyDeployment(ctx, c.kc, newDeploymentBuilder(c.log, c.settings, lid, group, service)); err != nil {
 			c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
@@ -160,7 +167,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 			continue
 		}
 
-		if err := applyService(ctx, c.kc, newServiceBuilder(c.log, lid, group, service)); err != nil {
+		if err := applyService(ctx, c.kc, newServiceBuilder(c.log, c.settings, lid, group, service)); err != nil {
 			c.log.Error("applying service", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
@@ -170,7 +177,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 			if !c.shouldExpose(expose) {
 				continue
 			}
-			if err := applyIngress(ctx, c.kc, newIngressBuilder(c.log, c.host, lid, group, service, expose)); err != nil {
+			if err := applyIngress(ctx, c.kc, newIngressBuilder(c.log, c.settings, c.host, lid, group, service, expose)); err != nil {
 				c.log.Error("applying ingress", "err", err, "lease", lid, "service", service.Name, "expose", expose)
 				return err
 			}
@@ -242,7 +249,7 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*cluster.
 			hosts = append(hosts, rule.Host)
 		}
 
-		if config.DeploymentIngressExposeLBHosts {
+		if c.settings.DeploymentIngressExposeLBHosts {
 			for _, lbing := range ing.Status.LoadBalancer.Ingress {
 				if val := lbing.IP; val != "" {
 					hosts = append(hosts, val)
