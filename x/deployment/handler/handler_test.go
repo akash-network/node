@@ -12,8 +12,6 @@ import (
 	"github.com/tendermint/tendermint/libs/rand"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/tendermint/tendermint/libs/log"
-
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
 	atypes "github.com/ovrclk/akash/types"
@@ -38,7 +36,6 @@ func setupTestSuite(t *testing.T) *testSuite {
 		t: t,
 	}
 
-	testutil.AccAddress(t)
 	dKey := sdk.NewKVStoreKey(types.StoreKey)
 	mKey := sdk.NewKVStoreKey(mtypes.StoreKey)
 
@@ -50,7 +47,7 @@ func setupTestSuite(t *testing.T) *testSuite {
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
 
-	suite.ctx = sdk.NewContext(suite.ms, abci.Header{}, true, log.NewNopLogger())
+	suite.ctx = sdk.NewContext(suite.ms, abci.Header{}, true, testutil.Logger(t))
 
 	suite.mkeeper = mkeeper.NewKeeper(app.MakeCodec(), mKey)
 	suite.dkeeper = keeper.NewKeeper(app.MakeCodec(), dKey)
@@ -85,7 +82,7 @@ func TestCreateDeployment(t *testing.T) {
 
 	res, err := suite.handler(suite.ctx, msg)
 	require.NoError(t, err)
-	require.IsType(t, &sdk.Result{}, res)
+	require.NotNil(t, res)
 
 	_, exists := suite.dkeeper.GetDeployment(suite.ctx, deployment.ID())
 	require.True(t, exists)
@@ -139,7 +136,7 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 
 	res, err := suite.handler(suite.ctx, msg)
 	require.NoError(t, err)
-	require.IsType(t, &sdk.Result{}, res)
+	require.NotNil(t, res)
 
 	msgUpdate := types.MsgUpdateDeployment{
 		ID: deployment.ID(),
@@ -180,7 +177,7 @@ func TestCloseDeploymentExisting(t *testing.T) {
 
 	res, err := suite.handler(suite.ctx, msg)
 	require.NoError(t, err)
-	require.IsType(t, &sdk.Result{}, res)
+	require.NotNil(t, res)
 
 	msgClose := types.MsgCloseDeployment{
 		ID: deployment.ID(),

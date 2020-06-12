@@ -94,7 +94,7 @@ func TestCreateBidValid(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
-	require.IsType(t, &sdk.Result{}, res)
+	require.NotNil(t, res)
 	require.NoError(t, err)
 
 	_, found := suite.mkeeper.GetBid(suite.ctx, types.MakeBidID(order.ID(), provider))
@@ -222,7 +222,7 @@ func TestCreateBidAlreadyExists(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
-	require.IsType(t, &sdk.Result{}, res)
+	require.NotNil(t, res)
 	require.NoError(t, err)
 
 	res, err = suite.handler(suite.ctx, msg)
@@ -267,7 +267,7 @@ func TestCloseOrderValid(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
-	require.IsType(t, &sdk.Result{}, res)
+	require.NotNil(t, res)
 	require.NoError(t, err)
 }
 
@@ -311,7 +311,7 @@ func TestCloseBidValid(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
-	require.IsType(t, &sdk.Result{}, res)
+	require.NotNil(t, res)
 	require.NoError(t, err)
 }
 
