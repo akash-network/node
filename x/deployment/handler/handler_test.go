@@ -9,12 +9,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/rand"
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
-	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/x/deployment/handler"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
@@ -84,6 +82,15 @@ func TestCreateDeployment(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
+	t.Run("ensure event created", func(t *testing.T) {
+		iev := testutil.ParseDeploymentEvent(t, res.Events)
+		require.IsType(t, types.EventDeploymentCreate{}, iev)
+
+		dev := iev.(types.EventDeploymentCreate)
+
+		require.Equal(t, msg.ID, dev.ID)
+	})
+
 	_, exists := suite.dkeeper.GetDeployment(suite.ctx, deployment.ID())
 	require.True(t, exists)
 
@@ -145,6 +152,15 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 	res, err = suite.handler(suite.ctx, msgUpdate)
 	require.NotNil(t, res)
 	require.NoError(t, err)
+
+	t.Run("ensure event created", func(t *testing.T) {
+		iev := testutil.ParseDeploymentEvent(t, res.Events[1:])
+		require.IsType(t, types.EventDeploymentUpdate{}, iev)
+
+		dev := iev.(types.EventDeploymentUpdate)
+
+		require.Equal(t, msg.ID, dev.ID)
+	})
 }
 
 func TestCloseDeploymentNonExisting(t *testing.T) {
@@ -187,6 +203,17 @@ func TestCloseDeploymentExisting(t *testing.T) {
 	require.NotNil(t, res)
 	require.NoError(t, err)
 
+	t.Run("ensure event created", func(t *testing.T) {
+		// TODO: this should emit a DeploymentClose
+
+		iev := testutil.ParseDeploymentEvent(t, res.Events[1:])
+		require.IsType(t, types.EventDeploymentUpdate{}, iev)
+
+		dev := iev.(types.EventDeploymentUpdate)
+
+		require.Equal(t, msg.ID, dev.ID)
+	})
+
 	res, err = suite.handler(suite.ctx, msgClose)
 	require.Nil(t, res)
 	require.EqualError(t, err, types.ErrDeploymentClosed.Error())
@@ -199,13 +226,9 @@ func (st *testSuite) createDeployment() (types.Deployment, []types.Group) {
 	group := testutil.DeploymentGroup(st.t, deployment.ID(), 0)
 	group.Resources = []types.Resource{
 		{
-			Unit: atypes.Unit{
-				CPU:     100,
-				Memory:  100,
-				Storage: 10,
-			},
+			Unit:  testutil.Unit(st.t),
 			Count: 1,
-			Price: sdk.NewCoin("thepricedcoin", sdk.NewInt(int64(rand.Intn(10000)))),
+			Price: testutil.Coin(st.t),
 		},
 	}
 	groups := []types.Group{

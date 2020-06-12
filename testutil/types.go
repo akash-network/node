@@ -9,8 +9,8 @@ import (
 
 func Unit(_ testing.TB) types.Unit {
 	return types.Unit{
-		CPU:     rand.Uint32(),
-		Memory:  rand.Uint64(),
-		Storage: rand.Uint64(),
+		CPU:     uint32(rand.Intn(999) + 1),
+		Memory:  uint64(rand.Intn(999) + 1),
+		Storage: uint64(rand.Intn(999) + 1),
 	}
 }
