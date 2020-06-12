@@ -50,7 +50,7 @@ akash (client): OS and other env info as appropriate
 ### Anything else we need to know?
 <!-- For example:
      - {deployment,lease} id as appropriate
-     - deployment.yml if appropriate
+     - deployment.yaml if appropriate
 -->
 
 ## Next steps

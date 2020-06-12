@@ -69,7 +69,7 @@ func SimulateMsgCreate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Op
 			return simulation.NoOpMsg(types.ModuleName), nil, nil
 		}
 
-		cfg, readError := config.ReadConfigPath("../x/provider/testdata/provider.yml")
+		cfg, readError := config.ReadConfigPath("../x/provider/testdata/provider.yaml")
 		if readError != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, readError
 		}

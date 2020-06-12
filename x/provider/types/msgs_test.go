@@ -17,11 +17,11 @@ func TestConfigPath(t *testing.T) {
 	}
 	tests := []testConfigPath{
 		{
-			path:   "/home/ropes/go/src/github.com/ovrclk/akash/_run/kube/provider.yml",
+			path:   "/home/ropes/go/src/github.com/ovrclk/akash/_run/kube/provider.yaml",
 			expErr: ErrNotAbsProviderURI,
 		},
 		{
-			path:   "foo.yml",
+			path:   "foo.yaml",
 			expErr: ErrNotAbsProviderURI,
 		},
 		/*{
@@ -29,7 +29,7 @@ func TestConfigPath(t *testing.T) {
 			expErr: ErrNotAbsProviderURI,
 		},*/
 		{
-			path:   "file:///foo.yml",
+			path:   "file:///foo.yaml",
 			expErr: nil,
 		},
 		{

@@ -40,13 +40,13 @@ case "$1" in
   provider)
     address_loc="$DATA_ROOT/provider.addr"
     if [ ! -f "$address_loc" ]; then
-      eval "$(akash_provider provider add provider.yml -k master -m shell)" &&
+      eval "$(akash_provider provider add provider.yaml -k master -m shell)" &&
         echo "$akash_add_provider_0_key" > "$address_loc"
     fi
     akash_provider provider run "$(cat $address_loc)" -k master
     ;;
   deploy)
-    akash deployment create ../deployment.yml -k master
+    akash deployment create ../deployment.yaml -k master
     ;;
   *)
     echo "USAGE: $0 <init|akashd|send|query|marketplace|provider|deploy>" >&2

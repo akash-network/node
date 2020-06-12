@@ -32,7 +32,7 @@ func (s *TestSuite) TestKeeper() {
 	s.Require().True(s.bankKeeper.GetCoins(s.ctx, ownerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin("stake", 10000))))
 
 	s.T().Log("verify provider is created")
-	cfg, err := config.ReadConfigPath("../testdata/provider.yml")
+	cfg, err := config.ReadConfigPath("../testdata/provider.yaml")
 	s.Require().NoError(err, "Error in reading file")
 	msg := types.MsgCreateProvider{
 		Owner:      ownerAddr,
