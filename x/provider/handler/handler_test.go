@@ -28,7 +28,7 @@ type testuite struct {
 
 func setupTestSuite(t *testing.T) *testuite {
 	suite := &testuite{}
-	testutil.AccAddress(t)
+
 	keyProvider := sdk.NewTransientStoreKey(types.StoreKey)
 
 	db := dbm.NewMemDB()
