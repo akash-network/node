@@ -5,6 +5,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: gentx-validation
+      - name: check-yml-count
         run: |
-          if [[ $(git ls-files '*.yml'| wc -l) -ne 0 ]]; then exit 1;fi
+          if [[ $(git ls-files '*.yml'| wc -l) -ne 23 ]]; then exit 1;fi
