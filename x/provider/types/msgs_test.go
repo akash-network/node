@@ -24,17 +24,17 @@ func TestConfigPath(t *testing.T) {
 			path:   "foo.yml",
 			expErr: ErrNotAbsProviderURI,
 		},
-		/*{
-			path:   "localhost:80/foo", // would expect this to cause error, but it does not.
-			expErr: ErrNotAbsProviderURI,
-		},*/
+		{
+			path:   "localhost:80/foo",
+			expErr: ErrInvalidProviderURI,
+		},
 		{
 			path:   "file:///foo.yml",
-			expErr: nil,
+			expErr: ErrInvalidProviderURI,
 		},
 		{
 			path:   "http://localhost:80/foo",
-			expErr: nil,
+			expErr: ErrInvalidProviderURI,
 		},
 		{
 			path:   "http://localhost:3001/",
