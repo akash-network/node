@@ -11,6 +11,7 @@ const (
 	errProviderExists
 	errInvalidAddress
 	errAttributes
+	errIncompatibleAttributes
 )
 
 var (
@@ -31,4 +32,7 @@ var (
 
 	// ErrAttributes error code for provider attribute problems
 	ErrAttributes = sdkerrors.Register(ModuleName, errAttributes, "attribute specification error")
+
+	// ErrIncompatibleAttributes error code for attributes update
+	ErrIncompatibleAttributes = sdkerrors.Register(ModuleName, errIncompatibleAttributes, "attributes cannot be changed")
 )
