@@ -1,3 +1,4 @@
+#!/bin/sh
 # set -x
 env
 
@@ -15,4 +16,4 @@ cp /config/priv_validator_state.json "$AKASHD_DATA/data"
 
 rm -rf "$AKASHD_DATA/config/addrbook.json"
 
-/akashd start --home $AKASHD_DATA
+/akashd start --home "$AKASHD_DATA"

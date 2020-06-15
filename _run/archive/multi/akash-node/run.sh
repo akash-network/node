@@ -1,19 +1,21 @@
+#!/bin/sh
+# shellcheck disable=SC2181
 # set -x
 
 env
 
 findseeds() {
-  cat /config/peers.txt | while read entry; do
+  while read -r entry; do
     name="${entry% *}-akash-node"
     id="${entry#* }"
 
-    env_name="$(echo "$name" | tr '[[:lower:]]' '[[:upper:]]' | tr '-' '_' )"
+    env_name="$(echo "$name" | tr '[:lower:]' '[:upper:]' | tr '-' '_' )"
 
     port="$(printenv "${env_name}_SERVICE_PORT_AKASHD_P2P")"
     if [ $? -eq 0 ]; then
       echo "${id}@${name}:${port}"
     fi
-  done
+  done < /config/peers.txt
 }
 
 makeseeds() {

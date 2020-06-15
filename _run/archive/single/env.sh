@@ -1,3 +1,5 @@
+#!/bin/sh
+#shellcheck disable=SC2039
 source ../common.sh
 
 PROVIDER_DIR=$DATA_ROOT/provider

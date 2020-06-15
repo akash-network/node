@@ -343,7 +343,7 @@ EOF
 PROJECT_NAME="akash"
 OWNER=ovrclk
 REPO="akash"
-BINARY=akashctl
+#BINARY=akashctl
 FORMAT=zip
 OS=$(uname_os)
 ARCH=$(uname_arch)

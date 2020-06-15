@@ -62,6 +62,13 @@ release:
 image-minikube:
 	eval $$(minikube docker-env) && make image
 
+shellcheck:
+	docker run --rm --privileged \
+	--volume ${PWD}:/shellcheck \
+	--entrypoint sh \
+	koalaman/shellcheck-alpine:stable \
+	-x /shellcheck/script/shellcheck.sh
+
 test:
 	$(GO) test ./...
 
