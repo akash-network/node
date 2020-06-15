@@ -120,8 +120,7 @@ func validateProviderURI(val string) error {
 		return errors.Wrapf(ErrInvalidProviderURI, "validating %q for valid host", val)
 	}
 
-	// Considering "/" path as emp&&
-	if u.Path != "" && u.Path != "/" {
+	if u.Path != "" {
 		return errors.Wrapf(ErrInvalidProviderURI, "path in %q should be empty", val)
 	}
 

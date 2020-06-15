@@ -25,7 +25,35 @@ func TestConfigPath(t *testing.T) {
 			expErr: ErrNotAbsProviderURI,
 		},
 		{
+			path:   "localhost",
+			expErr: ErrNotAbsProviderURI,
+		},
+		{
+			path:   "localhost/foo",
+			expErr: ErrNotAbsProviderURI,
+		},
+		{
+			path:   "localhost:80",
+			expErr: ErrInvalidProviderURI,
+		},
+		{
 			path:   "localhost:80/foo",
+			expErr: ErrInvalidProviderURI,
+		},
+		{
+			path:   "127.0.0.1",
+			expErr: ErrNotAbsProviderURI,
+		},
+		{
+			path:   "127.0.0.1/foo",
+			expErr: ErrNotAbsProviderURI,
+		},
+		{
+			path:   "127.0.0.1:80",
+			expErr: ErrInvalidProviderURI,
+		},
+		{
+			path:   "127.0.0.1:80/foo",
 			expErr: ErrInvalidProviderURI,
 		},
 		{
@@ -33,12 +61,32 @@ func TestConfigPath(t *testing.T) {
 			expErr: ErrInvalidProviderURI,
 		},
 		{
+			path:   "http://localhost",
+			expErr: nil,
+		},
+		{
+			path:   "http://localhost/foo",
+			expErr: ErrInvalidProviderURI,
+		},
+		{
+			path:   "http://localhost:80",
+			expErr: nil,
+		},
+		{
 			path:   "http://localhost:80/foo",
 			expErr: ErrInvalidProviderURI,
 		},
 		{
 			path:   "http://localhost:3001/",
+			expErr: ErrInvalidProviderURI,
+		},
+		{
+			path:   "https://localhost:80",
 			expErr: nil,
+		},
+		{
+			path:   "https://localhost:80/foo",
+			expErr: ErrInvalidProviderURI,
 		},
 	}
 
