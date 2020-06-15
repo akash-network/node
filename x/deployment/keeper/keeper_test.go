@@ -6,14 +6,15 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/app"
-	"github.com/ovrclk/akash/testutil"
-	"github.com/ovrclk/akash/x/deployment/keeper"
-	"github.com/ovrclk/akash/x/deployment/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tm-db"
+
+	"github.com/ovrclk/akash/app"
+	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/x/deployment/keeper"
+	"github.com/ovrclk/akash/x/deployment/types"
 )
 
 func Test_Create(t *testing.T) {
@@ -234,7 +235,8 @@ func setupKeeper(t testing.TB) (sdk.Context, keeper.Keeper) {
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
 	ms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
-	ms.LoadLatestVersion()
+	err := ms.LoadLatestVersion()
+	require.NoError(t, err)
 	ctx := sdk.NewContext(ms, abci.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))
 	return ctx, keeper.NewKeeper(app.MakeCodec(), key)
 }
