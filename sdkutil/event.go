@@ -25,6 +25,10 @@ var (
 	ErrUnknownAction = errors.New("Unknown action")
 )
 
+type ModuleEvent interface {
+	ToSDKEvent() sdk.Event
+}
+
 // Event stores type, module, action and attributes list of sdk
 type Event struct {
 	Type       string

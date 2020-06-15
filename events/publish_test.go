@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/testutil"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -11,9 +12,7 @@ import (
 )
 
 func Test_processEvent(t *testing.T) {
-	tests := []interface {
-		ToSDKEvent() sdk.Event
-	}{
+	tests := []sdkutil.ModuleEvent{
 		// x/deployment events
 		dtypes.EventDeploymentCreate{ID: testutil.DeploymentID(t)},
 		dtypes.EventDeploymentUpdate{ID: testutil.DeploymentID(t)},

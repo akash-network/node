@@ -3,6 +3,7 @@ package handler
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/x/provider/keeper"
 	"github.com/ovrclk/akash/x/provider/types"
@@ -30,6 +31,10 @@ var (
 )
 
 func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgCreateProvider) (*sdk.Result, error) {
+	if _, ok := keeper.Get(ctx, msg.Owner); ok {
+		return nil, errors.Wrapf(types.ErrProviderExists, "id: %s", msg.Owner)
+	}
+
 	if err := keeper.Create(ctx, types.Provider(msg)); err != nil {
 		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
 	}
@@ -40,6 +45,10 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgCreateP
 }
 
 func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgUpdateProvider) (*sdk.Result, error) {
+	if _, ok := keeper.Get(ctx, msg.Owner); !ok {
+		return nil, errors.Wrapf(types.ErrProviderNotFound, "id: %s", msg.Owner)
+	}
+
 	if err := keeper.Update(ctx, types.Provider(msg)); err != nil {
 		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
 	}
@@ -51,6 +60,10 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgUpdateP
 }
 
 func handleMsgDelete(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgDeleteProvider) (*sdk.Result, error) {
+	if _, ok := keeper.Get(ctx, msg.Owner); !ok {
+		return nil, types.ErrProviderNotFound
+	}
+
 	// TODO: cancel leases
-	return &sdk.Result{}, sdkerrors.Wrapf(ErrInternal, "NOTIMPLEMENTED")
+	return nil, sdkerrors.Wrapf(ErrInternal, "NOTIMPLEMENTED")
 }
