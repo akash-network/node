@@ -4,29 +4,44 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
+const (
+	errNameDoesNotExist uint32 = iota + 1
+	errInvalidRequest
+	errDeploymentExists
+	errDeploymentNotFound
+	errDeploymentClosed
+	errOwnerAcctMissing
+	errInvalidGroups
+	errInvalidDeploymentID
+	errEmptyVersion
+	errInternal
+	errInvalidDeployment
+	errInvalidGroupID
+)
+
 var (
 	// ErrNameDoesNotExist is the error when name does not exist
-	ErrNameDoesNotExist = sdkerrors.Register(ModuleName, 1, "Name does not exist")
+	ErrNameDoesNotExist = sdkerrors.Register(ModuleName, errNameDoesNotExist, "Name does not exist")
 	// ErrInvalidRequest is the error for invalid request
-	ErrInvalidRequest = sdkerrors.Register(ModuleName, 2, "Invalid request")
+	ErrInvalidRequest = sdkerrors.Register(ModuleName, errInvalidRequest, "Invalid request")
 	// ErrDeploymentExists is the error when already deployment exists
-	ErrDeploymentExists = sdkerrors.Register(ModuleName, 3, "Deployment exists")
+	ErrDeploymentExists = sdkerrors.Register(ModuleName, errDeploymentExists, "Deployment exists")
 	// ErrDeploymentNotFound is the error when deployment not found
-	ErrDeploymentNotFound = sdkerrors.Register(ModuleName, 4, "Deployment not found")
+	ErrDeploymentNotFound = sdkerrors.Register(ModuleName, errDeploymentNotFound, "Deployment not found")
 	// ErrDeploymentClosed is the error when deployment is closed
-	ErrDeploymentClosed = sdkerrors.Register(ModuleName, 5, "Deployment closed")
+	ErrDeploymentClosed = sdkerrors.Register(ModuleName, errDeploymentClosed, "Deployment closed")
 	// ErrOwnerAcctMissing is the error for owner account missing
-	ErrOwnerAcctMissing = sdkerrors.Register(ModuleName, 6, "Owner account missing")
+	ErrOwnerAcctMissing = sdkerrors.Register(ModuleName, errOwnerAcctMissing, "Owner account missing")
 	// ErrEmptyGroups is the error when groups are empty
-	ErrInvalidGroups = sdkerrors.Register(ModuleName, 7, "Invalid groups")
+	ErrInvalidGroups = sdkerrors.Register(ModuleName, errInvalidGroups, "Invalid groups")
 	// ErrInvalidDeploymentID is the error for invalid deployment id
-	ErrInvalidDeploymentID = sdkerrors.Register(ModuleName, 8, "Invalid: deployment id")
+	ErrInvalidDeploymentID = sdkerrors.Register(ModuleName, errInvalidDeploymentID, "Invalid: deployment id")
 	// ErrEmptyVersion is the error when version is empty
-	ErrEmptyVersion = sdkerrors.Register(ModuleName, 9, "Invalid: empty version")
+	ErrEmptyVersion = sdkerrors.Register(ModuleName, errEmptyVersion, "Invalid: empty version")
 	// ErrInternal is the error for internal error
-	ErrInternal = sdkerrors.Register(ModuleName, 10, "internal error")
+	ErrInternal = sdkerrors.Register(ModuleName, errInternal, "internal error")
 	// ErrInvalidDeployment = is the error when deployment does not pass validation
-	ErrInvalidDeployment = sdkerrors.Register(ModuleName, 11, "Invalid deployment")
+	ErrInvalidDeployment = sdkerrors.Register(ModuleName, errInvalidDeployment, "Invalid deployment")
 	// ErrInvalidGroupID is the error when already deployment exists
-	ErrInvalidGroupID = sdkerrors.Register(ModuleName, 12, "Deployment exists")
+	ErrInvalidGroupID = sdkerrors.Register(ModuleName, errInvalidGroupID, "Deployment exists")
 )
