@@ -22,10 +22,6 @@ import (
 	stakingTypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/ovrclk/akash/x/deployment"
-	dante "github.com/ovrclk/akash/x/deployment/ante"
-	mante "github.com/ovrclk/akash/x/market/ante"
-	pante "github.com/ovrclk/akash/x/provider/ante"
-
 	"github.com/ovrclk/akash/x/market"
 	"github.com/ovrclk/akash/x/provider"
 
@@ -337,17 +333,10 @@ func NewApp(
 	app.SetBeginBlocker(app.BeginBlocker)
 
 	app.SetAnteHandler(
-		chainAnteHandlers(
-			auth.NewAnteHandler(
-				app.keeper.acct,
-				app.keeper.supply,
-				auth.DefaultSigVerificationGasConsumer,
-			),
-			sdk.ChainAnteDecorators(
-				mante.NewDecorator(app.keeper.market, app.keeper.provider),
-				pante.NewDecorator(app.keeper.provider),
-				dante.NewDecorator(app.keeper.deployment),
-			),
+		auth.NewAnteHandler(
+			app.keeper.acct,
+			app.keeper.supply,
+			auth.DefaultSigVerificationGasConsumer,
 		),
 	)
 

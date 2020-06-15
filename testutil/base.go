@@ -2,10 +2,13 @@ package testutil
 
 import (
 	"fmt"
-	"math/rand"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/tendermint/tendermint/libs/rand"
+
+	"github.com/ovrclk/akash/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
 // Name generates a random name with the given prefix
@@ -35,4 +38,24 @@ func Attributes(t testing.TB) []sdk.Attribute {
 	}
 	return vals
 
+}
+
+func Resources(t testing.TB) []dtypes.Resource {
+	t.Helper()
+	count := rand.Intn(10) + 1
+
+	vals := make([]dtypes.Resource, 0, count)
+	for i := 0; i < count; i++ {
+		res := dtypes.Resource{
+			Unit: types.Unit{
+				CPU:     100,
+				Memory:  100,
+				Storage: 10,
+			},
+			Count: 1,
+			Price: sdk.NewCoin("thepricedcoin", sdk.NewInt(int64(rand.Uint16()))),
+		}
+		vals = append(vals, res)
+	}
+	return vals
 }

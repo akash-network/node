@@ -2,6 +2,7 @@
 
 ![tests](https://github.com/ovrclk/akash/workflows/tests/badge.svg)
 ![simulations](https://github.com/ovrclk/akash/workflows/Sims/badge.svg)
+[![codecov](https://codecov.io/github/ovrclk/akash/coverage.svg?branch=master)](https://codecov.io/github/ovrclk/akash?branch=master)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/ovrclk/akash)](https://goreportcard.com/report/github.com/ovrclk/akash)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)

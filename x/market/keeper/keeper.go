@@ -69,7 +69,6 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 
 // CreateBid creates a bid for a order with given orderID, price for bid and provider
 func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.Coin) (types.Bid, error) {
-
 	store := ctx.KVStore(k.skey)
 
 	bid := types.Bid{

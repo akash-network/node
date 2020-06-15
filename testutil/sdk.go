@@ -8,5 +8,5 @@ import (
 )
 
 func Coin(_ testing.TB) sdk.Coin {
-	return sdk.NewCoin("testcoin", sdk.NewInt(rand.Int63()))
+	return sdk.NewCoin("testcoin", sdk.NewInt(int64(rand.Intn(999)+1)))
 }
