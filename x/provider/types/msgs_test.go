@@ -189,7 +189,7 @@ var msgCreateTests = []providerTestParams{
 	{
 		msg: Provider{
 			Owner:   sdk.AccAddress("hihi"),
-			HostURI: "http://localhost:3001/",
+			HostURI: "http://localhost:3001",
 			Attributes: []sdk.Attribute{
 				{
 					Key:   "hihi",
@@ -202,7 +202,7 @@ var msgCreateTests = []providerTestParams{
 	{
 		msg: Provider{
 			Owner:   sdk.AccAddress(""),
-			HostURI: "http://localhost:3001/",
+			HostURI: "http://localhost:3001",
 			Attributes: []sdk.Attribute{
 				{
 					Key:   "hihi",
