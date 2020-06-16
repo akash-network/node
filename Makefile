@@ -97,9 +97,8 @@ SUBLINTERS = deadcode \
 			golint \
 			gosec \
 			scopelint \
-			prealloc	
-
-# TODO: ^ gochecknoglobals
+			prealloc \
+			gochecknoglobals	
 
 LINT = $(GOBIN)/golangci-lint run ./... --disable-all --enable 
 
