@@ -1,60 +1,156 @@
-package keeper
+package keeper_test
 
 import (
+	"reflect"
 	"testing"
+	"time"
 
+	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/params"
-	"github.com/ovrclk/akash/x/provider/config"
+	"github.com/stretchr/testify/require"
+	abci "github.com/tendermint/tendermint/abci/types"
+	dbm "github.com/tendermint/tm-db"
+
+	"github.com/ovrclk/akash/app"
+	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/x/provider/keeper"
 	"github.com/ovrclk/akash/x/provider/types"
-	"github.com/stretchr/testify/suite"
 )
 
-type TestSuite struct {
-	suite.Suite
-	ctx           sdk.Context
-	accountKeeper auth.AccountKeeper
-	paramsKeeper  params.Keeper
-	bankKeeper    bank.Keeper
-	keeper        Keeper
+func TestProviderCreate(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	prov := testutil.Provider(t)
+
+	err := keeper.Create(ctx, prov)
+	require.NoError(t, err)
+
+	foundProv, found := keeper.Get(ctx, prov.Owner)
+	require.True(t, found)
+	require.Equal(t, prov, foundProv)
 }
 
-func (s *TestSuite) SetupTest() {
-	s.ctx, s.accountKeeper, s.paramsKeeper, s.bankKeeper, s.keeper = SetupTestInput()
+func TestProviderDuplicate(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	prov := testutil.Provider(t)
+
+	err := keeper.Create(ctx, prov)
+	require.NoError(t, err)
+
+	err = keeper.Create(ctx, prov)
+	require.EqualError(t, err, types.ErrProviderExists.Error())
 }
 
-func (s *TestSuite) TestKeeper() {
-	s.T().Log("Adding balance to account")
-	err := s.bankKeeper.SetCoins(s.ctx, ownerAddr, sdk.NewCoins(sdk.NewInt64Coin("stake", 10000)))
-	s.Require().Nil(err)
-	s.Require().True(s.bankKeeper.GetCoins(s.ctx, ownerAddr).IsEqual(sdk.NewCoins(sdk.NewInt64Coin("stake", 10000))))
+func TestProviderGetNonExisting(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	prov := testutil.Provider(t)
 
-	s.T().Log("verify provider is created")
-	cfg, err := config.ReadConfigPath("../testdata/provider.yml")
-	s.Require().NoError(err, "Error in reading file")
-	msg := types.MsgCreateProvider{
-		Owner:      ownerAddr,
-		HostURI:    cfg.Host,
-		Attributes: cfg.GetAttributes(),
-	}
-	s.keeper.Create(s.ctx, types.Provider(msg))
-	_, ok := s.keeper.Get(s.ctx, ownerAddr)
-	s.Require().True(ok, "Provider not created")
-
-	s.T().Log("verify get provider with wrong owner")
-	_, ok = s.keeper.Get(s.ctx, addr2)
-	s.Require().False(ok, "Get Provider failed")
-
-	s.T().Log("verify update provider")
-	host := "akash.domain.com"
-	msg.HostURI = host
-	s.keeper.Update(s.ctx, types.Provider(msg))
-	provider, _ := s.keeper.Get(s.ctx, ownerAddr)
-	s.Require().Equal(host, provider.HostURI, "Provider not updated")
+	foundProv, found := keeper.Get(ctx, prov.Owner)
+	require.False(t, found)
+	require.Equal(t, types.Provider{}, foundProv)
 }
 
-func TestTestSuite(t *testing.T) {
-	suite.Run(t, new(TestSuite))
+func TestProviderDeleteExisting(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	prov := testutil.Provider(t)
+
+	err := keeper.Create(ctx, prov)
+	require.NoError(t, err)
+
+	require.Panics(t, func() {
+		keeper.Delete(ctx, prov.Owner)
+	})
+
+	foundProv, found := keeper.Get(ctx, prov.Owner)
+	require.True(t, found)
+	require.Equal(t, prov, foundProv)
+}
+
+func TestProviderUpdateNonExisting(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	prov := testutil.Provider(t)
+
+	err := keeper.Update(ctx, prov)
+	require.EqualError(t, err, types.ErrProviderNotFound.Error())
+}
+
+func TestProviderUpdateExisting(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	prov := testutil.Provider(t)
+
+	err := keeper.Create(ctx, prov)
+	require.NoError(t, err)
+
+	prov.HostURI = "akash.domain.com"
+	err = keeper.Update(ctx, prov)
+	require.NoError(t, err)
+
+	foundProv, found := keeper.Get(ctx, prov.Owner)
+	require.True(t, found)
+	require.Equal(t, prov, foundProv)
+}
+
+func TestWithProviders(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	prov := testutil.Provider(t)
+	prov2 := testutil.Provider(t)
+
+	err := keeper.Create(ctx, prov)
+	require.NoError(t, err)
+
+	err = keeper.Create(ctx, prov2)
+	require.NoError(t, err)
+
+	count := 0
+
+	keeper.WithProviders(ctx, func(provider types.Provider) bool {
+		if !reflect.DeepEqual(provider, prov) && !reflect.DeepEqual(provider, prov2) {
+			require.Fail(t, "unknown provider")
+		}
+		count++
+		return false
+	})
+
+	require.Equal(t, 2, count)
+}
+
+func TestWithProvidersBreak(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	prov := testutil.Provider(t)
+	prov2 := testutil.Provider(t)
+
+	err := keeper.Create(ctx, prov)
+	require.NoError(t, err)
+
+	err = keeper.Create(ctx, prov2)
+	require.NoError(t, err)
+
+	count := 0
+
+	keeper.WithProviders(ctx, func(provider types.Provider) bool {
+		if !reflect.DeepEqual(provider, prov) && !reflect.DeepEqual(provider, prov2) {
+			require.Fail(t, "unknown provider")
+		}
+		count++
+		return true
+	})
+
+	require.Equal(t, 1, count)
+}
+
+func TestKeeperCoder(t *testing.T) {
+	_, keeper := setupKeeper(t)
+	codec := keeper.Codec()
+	require.NotNil(t, codec)
+}
+
+func setupKeeper(t testing.TB) (sdk.Context, keeper.Keeper) {
+	t.Helper()
+	key := sdk.NewKVStoreKey(types.StoreKey)
+	db := dbm.NewMemDB()
+	ms := store.NewCommitMultiStore(db)
+	ms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
+	err := ms.LoadLatestVersion()
+	require.NoError(t, err)
+	ctx := sdk.NewContext(ms, abci.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))
+	return ctx, keeper.NewKeeper(app.MakeCodec(), key)
 }
