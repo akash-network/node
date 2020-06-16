@@ -223,7 +223,7 @@ func parseEVPriceAttributes(attrs []sdk.Attribute) (sdk.Coin, error) {
 }
 
 // ParseEvent parses event and returns details of event and error if occurred
-func ParseEvent(ev sdkutil.Event) (interface{}, error) {
+func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 	if ev.Type != sdkutil.EventTypeMessage {
 		return nil, sdkutil.ErrUnknownType
 	}

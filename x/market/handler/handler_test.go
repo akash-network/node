@@ -97,7 +97,18 @@ func TestCreateBidValid(t *testing.T) {
 	require.NotNil(t, res)
 	require.NoError(t, err)
 
-	_, found := suite.mkeeper.GetBid(suite.ctx, types.MakeBidID(order.ID(), provider))
+	bid := types.MakeBidID(order.ID(), provider)
+
+	t.Run("ensure event created", func(t *testing.T) {
+		iev := testutil.ParseMarketEvent(t, res.Events, 2)
+		require.IsType(t, types.EventBidCreated{}, iev)
+
+		dev := iev.(types.EventBidCreated)
+
+		require.Equal(t, bid, dev.ID)
+	})
+
+	_, found := suite.mkeeper.GetBid(suite.ctx, bid)
 	require.True(t, found)
 }
 
