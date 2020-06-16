@@ -19,7 +19,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/staking"
-	stakingTypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/ovrclk/akash/x/deployment"
 	"github.com/ovrclk/akash/x/market"
@@ -166,32 +165,6 @@ func NewApp(
 	)
 
 	app.keeper.upgrade = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], cdc)
-
-	// no-op handler for "cygni" upgrade
-	app.keeper.upgrade.SetUpgradeHandler("cygni", func(ctx sdk.Context, plan upgrade.Plan) {
-		faucetAddr, _ := sdk.AccAddressFromBech32("akash1czxh6ewhuy00tsv5zu50gz7lz2cxcpufdrarty")
-		delegatorAddr, _ := sdk.AccAddressFromBech32("akash1qdcgvqq4g20lwrdxj8x2rn79w9z7ra6tq64afa")
-		valAddr, _ := sdk.ValAddressFromBech32("akashvaloper1qdcgvqq4g20lwrdxj8x2rn79w9z7ra6t2cmmeh")
-
-		// mint remaining tokens to match with total initial supply, i.e., 100m
-		_, _ = app.keeper.bank.AddCoins(ctx, faucetAddr, sdk.Coins{sdk.Coin{Denom: "uakt", Amount: sdk.NewInt(69899000000000)}})
-
-		// Set self delegation of "supermini" validator to match with other validators (i.e., 10AKT)
-		delegation := stakingTypes.Delegation{
-			DelegatorAddress: delegatorAddr,
-			ValidatorAddress: valAddr,
-			Shares:           sdk.NewDec(10000000),
-		}
-		app.keeper.staking.SetDelegation(ctx, delegation)
-
-		// Update minimum deposit to 1000000uakt
-		depositParams := gov.NewDepositParams(sdk.Coins{sdk.Coin{Denom: "uakt", Amount: sdk.NewInt(1000000)}}, 172800000000000)
-		govSubspace, ok := app.keeper.params.GetSubspace(gov.DefaultParamspace)
-
-		if ok {
-			govSubspace.Set(ctx, gov.ParamStoreKeyDepositParams, &depositParams)
-		}
-	})
 
 	app.keeper.crisis = crisis.NewKeeper(
 		app.keeper.params.Subspace(crisis.DefaultParamspace),
