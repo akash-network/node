@@ -1,11 +1,11 @@
 #!/bin/sh
-
+# shellcheck disable=SC2181
 #set -x
 # set -e
 # set -o pipefail
 
 getnodes() {
-  env | grep "AKASH_NODE_SERVICE_HOST=" | while read entry; do
+  env | grep "AKASH_NODE_SERVICE_HOST=" | while read -r entry; do
     prefix="${entry%_HOST=*}"
     host="${entry#*=}"
     port="$(printenv "${prefix}_PORT_AKASHD_RPC")"
@@ -27,14 +27,16 @@ masterKey="$AKASH_DATA/master.key"
 providerKey="$AKASH_DATA/provider.key"
 
 if [ ! -s "$masterKey" ] || [ ! -s "$providerKey" ]; then
-	eval $(./akash key create master -m shell)
-	echo $akash_create_key_0_public_key > "$masterKey"
-  echo "created master key: " $(cat "$masterKey")
+	eval "$(./akash key create master -m shell)"
+  #shellcheck disable=SC2154
+	echo "$akash_create_key_0_public_key" > "$masterKey"
+  echo "created master key: " "$(cat "$masterKey")"
 
   echo "adding provider"
-  eval $(./akash provider add /config/provider.yaml -k master -m shell)
-  echo $akash_add_provider_0_key > "$providerKey"
-  echo "added provider: " $(cat "$providerKey")
+  eval "$(./akash provider add /config/provider.yml -k master -m shell)"
+  #shellcheck disable=SC2154
+  echo "$akash_add_provider_0_key" > "$providerKey"
+  echo "added provider: " "$(cat "$providerKey")"
 fi
 
 echo "running provider $(cat "$providerKey")..."

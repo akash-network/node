@@ -1,3 +1,4 @@
+#!/bin/sh
 AKASH_ROOT=../..
 
 DATA_ROOT=data
