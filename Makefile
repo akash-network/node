@@ -63,7 +63,7 @@ image-minikube:
 	eval $$(minikube docker-env) && make image
 
 shellcheck:
-	docker run --rm --privileged \
+	docker run --rm \
 	--volume ${PWD}:/shellcheck \
 	--entrypoint sh \
 	koalaman/shellcheck-alpine:stable \
