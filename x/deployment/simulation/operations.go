@@ -86,7 +86,7 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 			return simulation.NoOpMsg(types.ModuleName), nil, nil
 		}
 
-		sdl, readError := sdl.ReadFile("../x/deployment/testdata/deployment.yml")
+		sdl, readError := sdl.ReadFile("../x/deployment/testdata/deployment.yaml")
 		if readError != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, readError
 		}

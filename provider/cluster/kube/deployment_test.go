@@ -35,7 +35,7 @@ func TestDeploy(t *testing.T) {
 		Provider: sdk.AccAddress(provider),
 	}
 
-	sdl, err := sdl.ReadFile("../../../_run/kube/deployment.yml")
+	sdl, err := sdl.ReadFile("../../../_run/kube/deployment.yaml")
 	require.NoError(t, err)
 
 	mani, err := sdl.Manifest()

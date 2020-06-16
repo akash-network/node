@@ -94,10 +94,10 @@ send-to-main:
 	$(akashctl) tx send $(OTHR_ADDR) $(MAIN_ADDR) 117akash $(KEY_OPTS) $(CHAIN_OPTS) --memo "send monies to main" -y --fees 10akash --trace
 
 deploy:
-	$(akashctl) tx  deployment create deployment.yml --from main $(CHAIN_OPTS) $(KEY_OPTS) -y
+	$(akashctl) tx  deployment create deployment.yaml --from main $(CHAIN_OPTS) $(KEY_OPTS) -y
 
 provider-create:
-	$(akashctl) tx $(KEY_OPTS) provider $(CHAIN_OPTS) create provider.yml --from provider -y
+	$(akashctl) tx $(KEY_OPTS) provider $(CHAIN_OPTS) create provider.yaml --from provider -y
 
 provider-get:
 	$(AKASHCTL) query provider get $(PROV_ADDR) $(CHAIN_OPTS)

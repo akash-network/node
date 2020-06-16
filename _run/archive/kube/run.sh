@@ -43,16 +43,16 @@ case "$1" in
     address_loc="$DATA_ROOT/provider.addr"
     if [ ! -f "$address_loc" ]; then
       #shellcheck disable=SC2154
-      eval "$(akash_provider provider add provider.yml -k master -m shell)" &&
+      eval "$(akash_provider provider add provider.yaml -k master -m shell)" &&
         echo "$akash_add_provider_0_key" > "$address_loc"
     fi
     akash_provider provider run "$(cat "$address_loc")" -k master --kube
     ;;
   deploy)
-    akash deployment create deployment.yml -k master
+    akash deployment create deployment.yaml -k master
     ;;
   manifest)
-    akash deployment sendmani deployment.yml "$2" -k master
+    akash deployment sendmani deployment.yaml "$2" -k master
     ;;
   status)
     akash provider status

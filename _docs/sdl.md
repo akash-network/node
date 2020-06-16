@@ -9,7 +9,7 @@ A complete deployment has the following sections:
  * [profiles](#profiles)
  * [deployment](#deployment)
 
-An example deployment configuration can be found [here](deployment.yml).
+An example deployment configuration can be found [here](deployment.yaml).
 
 ### version
 

@@ -33,13 +33,13 @@ case "$1" in
     akash marketplace
     ;;
   deploy)
-    akash deployment create deployment.yml -k master
+    akash deployment create deployment.yaml -k master
     ;;
   minikube-start)
     minikube start --cpus 4 --memory 4096 --kubernetes-version v1.15.4
     minikube addons enable ingress
     minikube addons enable metrics-server
-    kubectl create -f rbac.yml
+    kubectl create -f rbac.yaml
     helm init
     ;;
   *)
