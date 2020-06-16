@@ -57,7 +57,7 @@ func TestConfigPath(t *testing.T) {
 			expErr: ErrInvalidProviderURI,
 		},
 		{
-			path:   "file:///foo.yml",
+			path:   "file:///foo.yaml",
 			expErr: ErrInvalidProviderURI,
 		},
 		{
