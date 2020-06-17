@@ -271,7 +271,7 @@ func TestCloseOrderWithoutLease(t *testing.T) {
 func TestCloseOrderValid(t *testing.T) {
 	suite := setupTestSuite(t)
 
-	_, _, order := suite.createLease()
+	lid, _, order := suite.createLease()
 
 	msg := types.MsgCloseOrder{
 		OrderID: order.ID(),
@@ -280,6 +280,15 @@ func TestCloseOrderValid(t *testing.T) {
 	res, err := suite.handler(suite.ctx, msg)
 	require.NotNil(t, res)
 	require.NoError(t, err)
+
+	t.Run("ensure event created", func(t *testing.T) {
+		iev := testutil.ParseMarketEvent(t, res.Events, 5)
+		require.IsType(t, types.EventLeaseClosed{}, iev)
+
+		dev := iev.(types.EventLeaseClosed)
+
+		require.Equal(t, lid, dev.ID)
+	})
 }
 
 func TestCloseBidNonExisting(t *testing.T) {
@@ -315,7 +324,7 @@ func TestCloseBidUnknownLease(t *testing.T) {
 func TestCloseBidValid(t *testing.T) {
 	suite := setupTestSuite(t)
 
-	_, bid, _ := suite.createLease()
+	_, bid, order := suite.createLease()
 
 	msg := types.MsgCloseBid{
 		BidID: bid.ID(),
@@ -324,6 +333,15 @@ func TestCloseBidValid(t *testing.T) {
 	res, err := suite.handler(suite.ctx, msg)
 	require.NotNil(t, res)
 	require.NoError(t, err)
+
+	t.Run("ensure event created", func(t *testing.T) {
+		iev := testutil.ParseMarketEvent(t, res.Events, 6)
+		require.IsType(t, types.EventOrderClosed{}, iev)
+
+		dev := iev.(types.EventOrderClosed)
+
+		require.Equal(t, order.ID(), dev.ID)
+	})
 }
 
 func TestCloseBidNotActiveLease(t *testing.T) {

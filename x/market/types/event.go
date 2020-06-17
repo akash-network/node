@@ -18,6 +18,9 @@ const (
 	evActionLeaseCreated = "lease-created"
 	evActionLeaseClosed  = "lease-closed"
 
+	evOwnerKey       = "owner"
+	evDSeqKey        = "dseq"
+	evGSeqKey        = "gseq"
 	evOSeqKey        = "oseq"
 	evProviderKey    = "provider"
 	evPriceDenomKey  = "price-denom"
