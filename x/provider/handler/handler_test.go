@@ -13,35 +13,45 @@ import (
 
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
+	mkeeper "github.com/ovrclk/akash/x/market/keeper"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/ovrclk/akash/x/provider/handler"
 
 	"github.com/ovrclk/akash/x/provider/keeper"
 	"github.com/ovrclk/akash/x/provider/types"
 )
 
-type testuite struct {
+type testSuite struct {
+	t       testing.TB
 	ms      sdk.CommitMultiStore
 	ctx     sdk.Context
 	keeper  keeper.Keeper
+	mkeeper mkeeper.Keeper
 	handler sdk.Handler
 }
 
-func setupTestSuite(t *testing.T) *testuite {
-	suite := &testuite{}
+func setupTestSuite(t *testing.T) *testSuite {
+	suite := &testSuite{
+		t: t,
+	}
 
-	keyProvider := sdk.NewTransientStoreKey(types.StoreKey)
+	pKey := sdk.NewTransientStoreKey(types.StoreKey)
+	mKey := sdk.NewTransientStoreKey(mtypes.StoreKey)
 
 	db := dbm.NewMemDB()
 	suite.ms = store.NewCommitMultiStore(db)
-	suite.ms.MountStoreWithDB(keyProvider, sdk.StoreTypeIAVL, db)
+	suite.ms.MountStoreWithDB(pKey, sdk.StoreTypeIAVL, db)
+	suite.ms.MountStoreWithDB(mKey, sdk.StoreTypeIAVL, db)
 
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
 
 	suite.ctx = sdk.NewContext(suite.ms, abci.Header{}, true, testutil.Logger(t))
 
-	suite.keeper = keeper.NewKeeper(app.MakeCodec(), keyProvider)
-	suite.handler = handler.NewHandler(suite.keeper)
+	suite.keeper = keeper.NewKeeper(app.MakeCodec(), pKey)
+	suite.mkeeper = mkeeper.NewKeeper(app.MakeCodec(), mKey)
+
+	suite.handler = handler.NewHandler(suite.keeper, suite.mkeeper)
 
 	return suite
 }
@@ -78,13 +88,15 @@ func TestProviderUpdateExisting(t *testing.T) {
 	addr := testutil.AccAddress(t)
 
 	createMsg := types.MsgCreateProvider{
-		Owner:   addr,
-		HostURI: testutil.Hostname(t),
+		Owner:      addr,
+		HostURI:    testutil.Hostname(t),
+		Attributes: testutil.Attributes(t),
 	}
 
 	updateMsg := types.MsgUpdateProvider{
-		Owner:   addr,
-		HostURI: testutil.Hostname(t),
+		Owner:      addr,
+		HostURI:    testutil.Hostname(t),
+		Attributes: createMsg.Attributes,
 	}
 
 	err := suite.keeper.Create(suite.ctx, types.Provider(createMsg))
@@ -106,6 +118,51 @@ func TestProviderUpdateNotExisting(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, res)
 	require.True(t, errors.Is(err, types.ErrProviderNotFound))
+}
+
+func TestProviderUpdateAttributes(t *testing.T) {
+	suite := setupTestSuite(t)
+
+	addr := testutil.AccAddress(t)
+
+	createMsg := types.MsgCreateProvider{
+		Owner:      addr,
+		HostURI:    testutil.Hostname(t),
+		Attributes: testutil.Attributes(t),
+	}
+
+	updateMsg := types.MsgUpdateProvider{
+		Owner:      addr,
+		HostURI:    testutil.Hostname(t),
+		Attributes: createMsg.Attributes,
+	}
+
+	err := suite.keeper.Create(suite.ctx, types.Provider(createMsg))
+	require.NoError(t, err)
+
+	group := testutil.DeploymentGroup(t, testutil.DeploymentID(t), 0)
+
+	group.Resources = testutil.Resources(t)
+	group.Requirements = createMsg.Attributes
+
+	order, err := suite.mkeeper.CreateOrder(suite.ctx, group.ID(), group.GroupSpec)
+	require.NoError(t, err)
+
+	price := testutil.Coin(t)
+
+	bid, err := suite.mkeeper.CreateBid(suite.ctx, order.ID(), addr, price)
+	require.NoError(t, err)
+
+	suite.mkeeper.CreateLease(suite.ctx, bid)
+
+	res, err := suite.handler(suite.ctx, updateMsg)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	updateMsg.Attributes = nil
+	res, err = suite.handler(suite.ctx, updateMsg)
+	require.Error(t, err, types.ErrIncompatibleAttributes.Error())
+	require.Nil(t, res)
 }
 
 func TestProviderDeleteExisting(t *testing.T) {

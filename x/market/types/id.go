@@ -93,6 +93,11 @@ func (id BidID) OrderID() OrderID {
 	}
 }
 
+// OrderIDString provides consistent conversion to string values for OrderID.
+func OrderIDString(id OrderID) string {
+	return fmt.Sprintf("%s-%d-%d-%d", id.Owner.String(), id.DSeq, id.GSeq, id.OSeq)
+}
+
 // GroupID method returns GroupID details with specific bid details
 func (id BidID) GroupID() dtypes.GroupID {
 	return id.OrderID().GroupID()

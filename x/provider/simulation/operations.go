@@ -140,9 +140,8 @@ func SimulateMsgUpdate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Op
 		}
 
 		msg := types.MsgUpdateProvider{
-			Owner:      simAccount.Address,
-			HostURI:    provider.HostURI,
-			Attributes: provider.Attributes,
+			Owner:   simAccount.Address,
+			HostURI: provider.HostURI,
 		}
 
 		tx := helpers.GenTx(
