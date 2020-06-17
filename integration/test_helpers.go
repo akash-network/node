@@ -40,8 +40,8 @@ const (
 	fooStartValue      = 1000
 	feeDenom           = "stake"
 	feeStartValue      = 1000000
-	deploymentFilePath = "./../x/deployment/testdata/deployment.yml"
-	providerFilePath   = "./../x/provider/testdata/provider.yml"
+	deploymentFilePath = "./../x/deployment/testdata/deployment.yaml"
+	providerFilePath   = "./../x/provider/testdata/provider.yaml"
 )
 
 var (

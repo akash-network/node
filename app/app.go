@@ -250,7 +250,7 @@ func NewApp(
 			app.keeper.bank,
 		),
 
-		provider.NewAppModule(app.keeper.provider, app.keeper.bank),
+		provider.NewAppModule(app.keeper.provider, app.keeper.bank, app.keeper.market),
 	)
 
 	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName, evidence.ModuleName)

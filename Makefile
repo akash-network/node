@@ -62,6 +62,13 @@ release:
 image-minikube:
 	eval $$(minikube docker-env) && make image
 
+shellcheck:
+	docker run --rm \
+	--volume ${PWD}:/shellcheck \
+	--entrypoint sh \
+	koalaman/shellcheck-alpine:stable \
+	-x /shellcheck/script/shellcheck.sh
+
 test:
 	$(GO) test ./...
 
@@ -103,7 +110,7 @@ SUBLINTERS = deadcode \
 
 LINT = $(GOBIN)/golangci-lint run ./... --disable-all --enable 
 
-# Execute the same lint methods as configured in .github/workflows/tests.yml
+# Execute the same lint methods as configured in .github/workflows/tests.yaml
 # Clear feedback from each method as it fails.
 test-sublinters: $(patsubst %, test-sublinter-%,$(SUBLINTERS))
 

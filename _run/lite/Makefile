@@ -56,7 +56,7 @@ query-status:
 	$(akashctl) query deployment list 
 
 deploy:
-	$(akashctl) tx $(KEY_OPTS) deployment $(CHAIN_OPTS) create deployment.yml --from main -y
+	$(akashctl) tx $(KEY_OPTS) deployment $(CHAIN_OPTS) create deployment.yaml --from main -y
 
 provider:
 	$(akashctl) tx $(KEY_OPTS) provider $(CHAIN_OPTS) create provider.yaml --from provider -y

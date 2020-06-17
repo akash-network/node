@@ -2,8 +2,8 @@
 version: "1.5"
 
 include:
-  - "foo.yml"
-  - "https://foo.yml"
+  - "foo.yaml"
+  - "https://foo.yaml"
 
 services:
 

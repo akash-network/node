@@ -69,7 +69,7 @@ func SimulateMsgCreate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Op
 			return simulation.NoOpMsg(types.ModuleName), nil, nil
 		}
 
-		cfg, readError := config.ReadConfigPath("../x/provider/testdata/provider.yml")
+		cfg, readError := config.ReadConfigPath("../x/provider/testdata/provider.yaml")
 		if readError != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, readError
 		}
@@ -140,9 +140,8 @@ func SimulateMsgUpdate(ak govtypes.AccountKeeper, k keeper.Keeper) simulation.Op
 		}
 
 		msg := types.MsgUpdateProvider{
-			Owner:      simAccount.Address,
-			HostURI:    provider.HostURI,
-			Attributes: provider.Attributes,
+			Owner:   simAccount.Address,
+			HostURI: provider.HostURI,
 		}
 
 		tx := helpers.GenTx(

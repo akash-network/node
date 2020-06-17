@@ -14,6 +14,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/gorilla/mux"
+	"github.com/spf13/cobra"
+
+	mkeeper "github.com/ovrclk/akash/x/market/keeper"
 	"github.com/ovrclk/akash/x/provider/client/cli"
 	"github.com/ovrclk/akash/x/provider/client/rest"
 	"github.com/ovrclk/akash/x/provider/handler"
@@ -21,7 +24,6 @@ import (
 	"github.com/ovrclk/akash/x/provider/query"
 	"github.com/ovrclk/akash/x/provider/simulation"
 	"github.com/ovrclk/akash/x/provider/types"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -84,14 +86,16 @@ type AppModule struct {
 	AppModuleBasic
 	keeper  keeper.Keeper
 	bkeeper bank.Keeper
+	mkeeper mkeeper.Keeper
 }
 
 // NewAppModule creates a new AppModule object
-func NewAppModule(k keeper.Keeper, bkeeper bank.Keeper) AppModule {
+func NewAppModule(k keeper.Keeper, bkeeper bank.Keeper, mkeeper mkeeper.Keeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
 		keeper:         k,
 		bkeeper:        bkeeper,
+		mkeeper:        mkeeper,
 	}
 }
 
@@ -110,7 +114,7 @@ func (am AppModule) Route() string {
 
 // NewHandler returns an sdk.Handler for the provider module.
 func (am AppModule) NewHandler() sdk.Handler {
-	return handler.NewHandler(am.keeper)
+	return handler.NewHandler(am.keeper, am.mkeeper)
 }
 
 // QuerierRoute returns the provider module's querier route name.
@@ -147,7 +151,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
 	return types.MustMarshalJSON(gs)
 }
 
-//____________________________________________________________________________
+// ____________________________________________________________________________
 
 // AppModuleSimulation implements an application simulation module for the provider module.
 type AppModuleSimulation struct {
