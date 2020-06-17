@@ -20,9 +20,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 
-	"github.com/ovrclk/akash/x/deployment"
-	"github.com/ovrclk/akash/x/market"
-	"github.com/ovrclk/akash/x/provider"
+	// AKASH-REMOVAL
+	// "github.com/ovrclk/akash/x/deployment"
+	// "github.com/ovrclk/akash/x/market"
+	// "github.com/ovrclk/akash/x/provider"
 
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
@@ -51,21 +52,22 @@ type AkashApp struct {
 	tkeys map[string]*sdk.TransientStoreKey
 
 	keeper struct {
-		acct       auth.AccountKeeper
-		bank       bank.Keeper
-		params     params.Keeper
-		supply     supply.Keeper
-		staking    staking.Keeper
-		distr      distr.Keeper
-		slashing   slashing.Keeper
-		mint       mint.Keeper
-		gov        gov.Keeper
-		upgrade    upgrade.Keeper
-		crisis     crisis.Keeper
-		evidence   evidence.Keeper
-		deployment deployment.Keeper
-		market     market.Keeper
-		provider   provider.Keeper
+		acct     auth.AccountKeeper
+		bank     bank.Keeper
+		params   params.Keeper
+		supply   supply.Keeper
+		staking  staking.Keeper
+		distr    distr.Keeper
+		slashing slashing.Keeper
+		mint     mint.Keeper
+		gov      gov.Keeper
+		upgrade  upgrade.Keeper
+		crisis   crisis.Keeper
+		evidence evidence.Keeper
+		// AKASH-REMOVAL
+		// deployment deployment.Keeper
+		// market     market.Keeper
+		// provider   provider.Keeper
 	}
 
 	mm *module.Manager
@@ -203,20 +205,19 @@ func NewApp(
 		govRouter,
 	)
 
-	app.keeper.deployment = deployment.NewKeeper(
-		cdc,
-		keys[deployment.StoreKey],
-	)
-
-	app.keeper.market = market.NewKeeper(
-		cdc,
-		keys[market.StoreKey],
-	)
-
-	app.keeper.provider = provider.NewKeeper(
-		cdc,
-		keys[provider.StoreKey],
-	)
+	// AKASH-REMOVAL
+	// app.keeper.deployment = deployment.NewKeeper(
+	// 	cdc,
+	// 	keys[deployment.StoreKey],
+	// )
+	// app.keeper.market = market.NewKeeper(
+	// 	cdc,
+	// 	keys[market.StoreKey],
+	// )
+	// app.keeper.provider = provider.NewKeeper(
+	// 	cdc,
+	// 	keys[provider.StoreKey],
+	// )
 
 	app.mm = module.NewManager(
 		genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx),
@@ -236,25 +237,27 @@ func NewApp(
 		evidence.NewAppModule(app.keeper.evidence),
 		crisis.NewAppModule(&app.keeper.crisis),
 
-		// akash
-		deployment.NewAppModule(
-			app.keeper.deployment,
-			app.keeper.market,
-			app.keeper.bank,
-		),
+		// AKASH-REMOVAL
+		// deployment.NewAppModule(
+		// 	app.keeper.deployment,
+		// 	app.keeper.market,
+		// 	app.keeper.bank,
+		// ),
 
-		market.NewAppModule(
-			app.keeper.market,
-			app.keeper.deployment,
-			app.keeper.provider,
-			app.keeper.bank,
-		),
+		// market.NewAppModule(
+		// 	app.keeper.market,
+		// 	app.keeper.deployment,
+		// 	app.keeper.provider,
+		// 	app.keeper.bank,
+		// ),
 
-		provider.NewAppModule(app.keeper.provider, app.keeper.bank, app.keeper.market),
+		// provider.NewAppModule(app.keeper.provider, app.keeper.bank, app.keeper.market),
 	)
 
 	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName, evidence.ModuleName)
-	app.mm.SetOrderEndBlockers(crisis.ModuleName, gov.ModuleName, staking.ModuleName, deployment.ModuleName, market.ModuleName)
+	// AKASH-REMOVAL
+	// app.mm.SetOrderEndBlockers(crisis.ModuleName, gov.ModuleName, staking.ModuleName, deployment.ModuleName, market.ModuleName)
+	app.mm.SetOrderEndBlockers(crisis.ModuleName, gov.ModuleName, staking.ModuleName)
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	//       properly initialized with tokens from genesis accounts.
@@ -271,10 +274,10 @@ func NewApp(
 		genutil.ModuleName,
 		evidence.ModuleName,
 
-		// akash
-		deployment.ModuleName,
-		provider.ModuleName,
-		market.ModuleName,
+		// AKASH-REMOVAL
+		// deployment.ModuleName,
+		// provider.ModuleName,
+		// market.ModuleName,
 	)
 
 	app.mm.RegisterInvariants(&app.keeper.crisis)
@@ -289,10 +292,12 @@ func NewApp(
 		distr.NewAppModule(app.keeper.distr, app.keeper.acct, app.keeper.supply, app.keeper.staking),
 		slashing.NewAppModule(app.keeper.slashing, app.keeper.acct, app.keeper.staking),
 		params.NewAppModule(), // NOTE: only used for simulation to generate randomized param change proposals
-		deployment.NewAppModuleSimulation(app.keeper.deployment, app.keeper.acct),
-		market.NewAppModuleSimulation(app.keeper.market, app.keeper.acct, app.keeper.deployment,
-			app.keeper.provider, app.keeper.bank),
-		provider.NewAppModuleSimulation(app.keeper.provider, app.keeper.acct),
+
+		// AKASH-REMOVAL
+		// deployment.NewAppModuleSimulation(app.keeper.deployment, app.keeper.acct),
+		// market.NewAppModuleSimulation(app.keeper.market, app.keeper.acct, app.keeper.deployment,
+		// 	app.keeper.provider, app.keeper.bank),
+		// provider.NewAppModuleSimulation(app.keeper.provider, app.keeper.acct),
 	)
 
 	app.sm.RegisterStoreDecoders()
