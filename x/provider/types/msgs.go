@@ -111,5 +111,18 @@ func validateProviderURI(val string) error {
 	if !u.IsAbs() {
 		return errors.Wrapf(ErrNotAbsProviderURI, "validating %q for absolute URI", val)
 	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return errors.Wrapf(ErrInvalidProviderURI, "scheme in %q should be http or https", val)
+	}
+
+	if u.Host == "" {
+		return errors.Wrapf(ErrInvalidProviderURI, "validating %q for valid host", val)
+	}
+
+	if u.Path != "" {
+		return errors.Wrapf(ErrInvalidProviderURI, "path in %q should be empty", val)
+	}
+
 	return nil
 }

@@ -53,7 +53,7 @@ make provider-status
 ```
 
 ```
- ../../akashctl --home cache/client provider send-manifest deployment.yml --owner "akash1r72zrnqd6t7kk6euwfslwccj7pz8s3ez4lmmt5" --dseq 620 --gseq 1 --oseq 1 --provider "akash1czw297jwpk8dymjqzzwduqchwwvh2k3l6zggn3"
+ ../../akashctl --home cache/client provider send-manifest deployment.yaml --owner "akash1r72zrnqd6t7kk6euwfslwccj7pz8s3ez4lmmt5" --dseq 620 --gseq 1 --oseq 1 --provider "akash1czw297jwpk8dymjqzzwduqchwwvh2k3l6zggn3"
 ```
 
 __t1__: See status of accounts created, market orders, providers, and deployments.

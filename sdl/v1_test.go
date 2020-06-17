@@ -17,7 +17,7 @@ const (
 )
 
 func Test_v1_Parse_docs(t *testing.T) {
-	sdl, err := sdl.ReadFile("../x/deployment/testdata/deployment.yml")
+	sdl, err := sdl.ReadFile("../x/deployment/testdata/deployment.yaml")
 	require.NoError(t, err)
 	_, err = sdl.DeploymentGroups()
 	require.NoError(t, err)
@@ -27,7 +27,7 @@ func Test_v1_Parse_docs(t *testing.T) {
 }
 
 func Test_v1_Parse_simple(t *testing.T) {
-	sdl, err := sdl.ReadFile("./_testdata/simple.yml")
+	sdl, err := sdl.ReadFile("./_testdata/simple.yaml")
 	require.NoError(t, err)
 
 	groups, err := sdl.DeploymentGroups()
@@ -80,7 +80,7 @@ func Test_v1_Parse_simple(t *testing.T) {
 }
 
 func Test_v1_Parse_ProfileNameNotServiceName(t *testing.T) {
-	sdl, err := sdl.ReadFile("./_testdata/profile-svc-name-mismatch.yml")
+	sdl, err := sdl.ReadFile("./_testdata/profile-svc-name-mismatch.yaml")
 	require.NoError(t, err)
 
 	dgroups, err := sdl.DeploymentGroups()

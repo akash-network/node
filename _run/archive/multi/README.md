@@ -32,7 +32,7 @@ $ cd $GOPATH/src/github.com/ovrclk/akash/_run/multi
 $ minikube start --cpus 4 --memory 4096
 $ minikube addons enable ingress
 $ minikube addons enable metrics-server
-$ kubectl create -f rbac.yml
+$ kubectl create -f rbac.yaml
 ```
 
 __t1__: Initialize helm
@@ -119,13 +119,13 @@ $ make helm-install-providers
 
 __t1__: Create Deployment
 
-_Creates a deployment for the master acct using the sample deployment.yml file. Then:_
+_Creates a deployment for the master acct using the sample deployment.yaml file. Then:_
  * _orders are then created from deployments,_ 
  * _providers bid on them using fulfillments, which are printed in the format deployment-address/group-id/order-id/provider-address, along with bid price,_
  * _a lease is awarded to the lowest bid provider and printed_
  * _the manifest file is then automatically sent to the winning provider_
 ```sh
-$ akash deployment create deployment.yml -k master
+$ akash deployment create deployment.yaml -k master
 ```
 
 __t1__: Check/View deployed app
@@ -138,11 +138,11 @@ $ open http://hello.$(minikube ip).nip.io
 
 __t1__: Create, deploy, view a second app in a different region
 
-_Copies deployment.yml to world.yml, replacing the "hello" subdomains with "world" subdomains and the us-west region with ap-southeast. Then sends the deployment and checks the sample app as before_
+_Copies deployment.yaml to world.yaml, replacing the "hello" subdomains with "world" subdomains and the us-west region with ap-southeast. Then sends the deployment and checks the sample app as before_
 ```sh
 $ source env.sh
-$ sed -e 's/hello/world/g' -e 's/us-west/ap-southeast/g' -e 's/westcoast/singapore/g'< deployment.yml > world.yml
-$ akash deployment create world.yml -k master
+$ sed -e 's/hello/world/g' -e 's/us-west/ap-southeast/g' -e 's/westcoast/singapore/g'< deployment.yaml > world.yaml
+$ akash deployment create world.yaml -k master
 $ curl -I world.$(minikube ip).nip.io
 $ open http://world.$(minikube ip).nip.io
 ```

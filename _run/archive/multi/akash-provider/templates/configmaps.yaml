@@ -10,7 +10,7 @@ metadata:
 data:
   run.sh: |-
 {{ .Files.Get "run.sh" | indent 4 }}
-  provider.yml: |-
+  provider.yaml: |-
     hostURI: http://{{ .Release.Name }}.{{ .Values.ingress.domain }}
     attributes:
       - name:  region

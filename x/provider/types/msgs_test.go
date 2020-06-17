@@ -17,28 +17,76 @@ func TestConfigPath(t *testing.T) {
 	}
 	tests := []testConfigPath{
 		{
-			path:   "/home/ropes/go/src/github.com/ovrclk/akash/_run/kube/provider.yml",
+			path:   "/home/ropes/go/src/github.com/ovrclk/akash/_run/kube/provider.yaml",
 			expErr: ErrNotAbsProviderURI,
 		},
 		{
-			path:   "foo.yml",
+			path:   "foo.yaml",
 			expErr: ErrNotAbsProviderURI,
 		},
-		/*{
-			path:   "localhost:80/foo", // would expect this to cause error, but it does not.
-			expErr: ErrNotAbsProviderURI,
-		},*/
 		{
-			path:   "file:///foo.yml",
+			path:   "localhost",
+			expErr: ErrNotAbsProviderURI,
+		},
+		{
+			path:   "localhost/foo",
+			expErr: ErrNotAbsProviderURI,
+		},
+		{
+			path:   "localhost:80",
+			expErr: ErrInvalidProviderURI,
+		},
+		{
+			path:   "localhost:80/foo",
+			expErr: ErrInvalidProviderURI,
+		},
+		{
+			path:   "127.0.0.1",
+			expErr: ErrNotAbsProviderURI,
+		},
+		{
+			path:   "127.0.0.1/foo",
+			expErr: ErrNotAbsProviderURI,
+		},
+		{
+			path:   "127.0.0.1:80",
+			expErr: ErrInvalidProviderURI,
+		},
+		{
+			path:   "127.0.0.1:80/foo",
+			expErr: ErrInvalidProviderURI,
+		},
+		{
+			path:   "file:///foo.yaml",
+			expErr: ErrInvalidProviderURI,
+		},
+		{
+			path:   "http://localhost",
+			expErr: nil,
+		},
+		{
+			path:   "http://localhost/foo",
+			expErr: ErrInvalidProviderURI,
+		},
+		{
+			path:   "http://localhost:80",
 			expErr: nil,
 		},
 		{
 			path:   "http://localhost:80/foo",
-			expErr: nil,
+			expErr: ErrInvalidProviderURI,
 		},
 		{
 			path:   "http://localhost:3001/",
+			expErr: ErrInvalidProviderURI,
+		},
+		{
+			path:   "https://localhost:80",
 			expErr: nil,
+		},
+		{
+			path:   "https://localhost:80/foo",
+			expErr: ErrInvalidProviderURI,
 		},
 	}
 
@@ -141,7 +189,7 @@ var msgCreateTests = []providerTestParams{
 	{
 		msg: Provider{
 			Owner:   sdk.AccAddress("hihi"),
-			HostURI: "http://localhost:3001/",
+			HostURI: "http://localhost:3001",
 			Attributes: []sdk.Attribute{
 				{
 					Key:   "hihi",
@@ -154,7 +202,7 @@ var msgCreateTests = []providerTestParams{
 	{
 		msg: Provider{
 			Owner:   sdk.AccAddress(""),
-			HostURI: "http://localhost:3001/",
+			HostURI: "http://localhost:3001",
 			Attributes: []sdk.Attribute{
 				{
 					Key:   "hihi",
