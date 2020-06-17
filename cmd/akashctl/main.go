@@ -18,7 +18,9 @@ import (
 
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/cmd/common"
-	pcmd "github.com/ovrclk/akash/provider/cmd"
+
+	// AKASH-REMOVAL
+	// pcmd "github.com/ovrclk/akash/provider/cmd"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/go-amino"
@@ -53,7 +55,8 @@ func main() {
 		txCmd(cdc),
 		lcd.ServeCommand(cdc, lcdRoutes),
 		keys.Commands(),
-		pcmd.RootCmd(cdc),
+		// AKASH-REMOVAL
+		// pcmd.RootCmd(cdc),
 		version.Cmd,
 		flags.NewCompletionCmd(root, true),
 	)
