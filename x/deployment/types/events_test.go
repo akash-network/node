@@ -6,6 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 
 	"github.com/ovrclk/akash/sdkutil"
 )
@@ -25,15 +26,12 @@ type testEventParsing struct {
 func (tep testEventParsing) testMessageType() func(t *testing.T) {
 	_, err := ParseEvent(tep.msg)
 	return func(t *testing.T) {
-		t.Logf("ERR: %v", err)
-		// expected error doesn't match returned    || error returned but not expected
-		if (tep.expErr != nil && errors.Is(err, tep.expErr)) || (err != nil && tep.expErr == nil) {
-			// if the error expected is errWildcard to catch untyped errors, don't fail the test, the error was expected.
-			if errors.Is(tep.expErr, errWildcard) {
-				t.Errorf("unexpected error: %v exp: %v", err, tep.expErr)
-				t.Logf("%T %v", errors.Cause(err), err)
-				t.Logf("%+v", tep)
-			}
+		t.Logf("%+v", tep)
+		// if the error expected is errWildcard to catch untyped errors, don't fail the test, the error was expected.
+		if errors.Is(tep.expErr, errWildcard) {
+			require.Error(t, err)
+		} else {
+			require.Equal(t, tep.expErr, err)
 		}
 	}
 }
