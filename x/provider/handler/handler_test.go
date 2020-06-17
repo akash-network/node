@@ -76,6 +76,16 @@ func TestProviderCreate(t *testing.T) {
 	require.NotNil(t, res)
 	require.NoError(t, err)
 
+	t.Run("ensure event created", func(t *testing.T) {
+
+		iev := testutil.ParseProviderEvent(t, res.Events)
+		require.IsType(t, types.EventProviderCreate{}, iev)
+
+		dev := iev.(types.EventProviderCreate)
+
+		require.Equal(t, msg.Owner, dev.Owner)
+	})
+
 	res, err = suite.handler(suite.ctx, msg)
 	require.Nil(t, res)
 	require.Error(t, err)
@@ -103,6 +113,17 @@ func TestProviderUpdateExisting(t *testing.T) {
 	require.NoError(t, err)
 
 	res, err := suite.handler(suite.ctx, updateMsg)
+
+	t.Run("ensure event created", func(t *testing.T) {
+
+		iev := testutil.ParseProviderEvent(t, res.Events[1:])
+		require.IsType(t, types.EventProviderUpdate{}, iev)
+
+		dev := iev.(types.EventProviderUpdate)
+
+		require.Equal(t, updateMsg.Owner, dev.Owner)
+	})
+
 	require.NoError(t, err)
 	require.NotNil(t, res)
 }
@@ -159,6 +180,16 @@ func TestProviderUpdateAttributes(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
+	t.Run("ensure event created", func(t *testing.T) {
+
+		iev := testutil.ParseProviderEvent(t, res.Events[4:])
+		require.IsType(t, types.EventProviderUpdate{}, iev)
+
+		dev := iev.(types.EventProviderUpdate)
+
+		require.Equal(t, updateMsg.Owner, dev.Owner)
+	})
+
 	updateMsg.Attributes = nil
 	res, err = suite.handler(suite.ctx, updateMsg)
 	require.Error(t, err, types.ErrIncompatibleAttributes.Error())
@@ -186,6 +217,10 @@ func TestProviderDeleteExisting(t *testing.T) {
 	require.Nil(t, res)
 	require.EqualError(t, err, handler.ErrInternal.Error()+": NOTIMPLEMENTED")
 	require.True(t, errors.Is(err, handler.ErrInternal))
+
+	t.Run("ensure event created", func(t *testing.T) {
+		// TODO: this should emit a ProviderDelete
+	})
 }
 
 func TestProviderDeleteNonExisting(t *testing.T) {

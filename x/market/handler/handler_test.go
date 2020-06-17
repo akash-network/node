@@ -100,7 +100,7 @@ func TestCreateBidValid(t *testing.T) {
 	bid := types.MakeBidID(order.ID(), provider)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		iev := testutil.ParseMarketEvent(t, res.Events, 2)
+		iev := testutil.ParseMarketEvent(t, res.Events[2:])
 		require.IsType(t, types.EventBidCreated{}, iev)
 
 		dev := iev.(types.EventBidCreated)
@@ -271,7 +271,7 @@ func TestCloseOrderWithoutLease(t *testing.T) {
 func TestCloseOrderValid(t *testing.T) {
 	suite := setupTestSuite(t)
 
-	lid, _, order := suite.createLease()
+	_, _, order := suite.createLease()
 
 	msg := types.MsgCloseOrder{
 		OrderID: order.ID(),
@@ -282,12 +282,12 @@ func TestCloseOrderValid(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		iev := testutil.ParseMarketEvent(t, res.Events, 5)
-		require.IsType(t, types.EventLeaseClosed{}, iev)
+		iev := testutil.ParseMarketEvent(t, res.Events[3:4])
+		require.IsType(t, types.EventOrderClosed{}, iev)
 
-		dev := iev.(types.EventLeaseClosed)
+		dev := iev.(types.EventOrderClosed)
 
-		require.Equal(t, lid, dev.ID)
+		require.Equal(t, msg.OrderID, dev.ID)
 	})
 }
 
@@ -324,7 +324,7 @@ func TestCloseBidUnknownLease(t *testing.T) {
 func TestCloseBidValid(t *testing.T) {
 	suite := setupTestSuite(t)
 
-	_, bid, order := suite.createLease()
+	_, bid, _ := suite.createLease()
 
 	msg := types.MsgCloseBid{
 		BidID: bid.ID(),
@@ -335,12 +335,12 @@ func TestCloseBidValid(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		iev := testutil.ParseMarketEvent(t, res.Events, 6)
-		require.IsType(t, types.EventOrderClosed{}, iev)
+		iev := testutil.ParseMarketEvent(t, res.Events[3:4])
+		require.IsType(t, types.EventBidClosed{}, iev)
 
-		dev := iev.(types.EventOrderClosed)
+		dev := iev.(types.EventBidClosed)
 
-		require.Equal(t, order.ID(), dev.ID)
+		require.Equal(t, msg.BidID, dev.ID)
 	})
 }
 
