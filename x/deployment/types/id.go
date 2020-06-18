@@ -18,8 +18,9 @@ func (id DeploymentID) Equals(other DeploymentID) bool {
 
 // Validate method for DeploymentID and returns nil
 func (id DeploymentID) Validate() error {
+	err := sdk.VerifyAddressFormat(id.Owner)
 	switch {
-	case id.Owner.Empty():
+	case err != nil:
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "DeploymentID: Invalid Owner Address")
 	case id.DSeq == 0:
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidSequence, "DeploymentID: Invalid Deployment Sequence")

@@ -18,9 +18,11 @@ type DeploymentFilters struct {
 	State types.DeploymentState
 }
 
+// Accept returns whether deployment filters valid or not
 func (filters DeploymentFilters) Accept(obj types.Deployment, isValidState bool) bool {
-	if (filters.Owner.Empty() && !isValidState) ||
-		(filters.Owner.Empty() && (obj.State == filters.State)) ||
+	err := sdk.VerifyAddressFormat(filters.Owner)
+	if (err != nil && !isValidState) ||
+		(err != nil && (obj.State == filters.State)) ||
 		(!isValidState && (obj.DeploymentID.Owner.Equals(filters.Owner))) ||
 		(obj.DeploymentID.Owner.Equals(filters.Owner) && obj.State == filters.State) {
 		return true
