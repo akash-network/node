@@ -17,6 +17,9 @@ var (
 	//keyParams = sdk.NewKVStoreKey(params.StoreKey)
 
 	errWildcard = errors.New("wildcard string error can't be matched")
+	evOwnerKey  = "owner"
+	evDSeqKey   = "dseq"
+	evGSeqKey   = "gseq"
 )
 
 type testEventParsing struct {
