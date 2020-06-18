@@ -292,6 +292,8 @@ func TestCloseBidUnknownLease(t *testing.T) {
 
 	bid, _ := suite.createBid()
 
+	suite.mkeeper.OnBidMatched(suite.ctx, bid)
+
 	msg := types.MsgCloseBid{
 		BidID: bid.ID(),
 	}
