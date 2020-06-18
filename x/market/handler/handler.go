@@ -66,6 +66,13 @@ func handleMsgCloseBid(ctx sdk.Context, keepers Keepers, msg types.MsgCloseBid) 
 		return nil, types.ErrUnknownBid
 	}
 
+	if bid.State == types.BidOpen {
+		keepers.Market.OnBidClosed(ctx, bid)
+		return &sdk.Result{
+			Events: ctx.EventManager().Events(),
+		}, nil
+	}
+
 	lease, found := keepers.Market.GetLease(ctx, types.LeaseID(msg.BidID))
 	if !found {
 		return nil, types.ErrUnknownLeaseForBid
