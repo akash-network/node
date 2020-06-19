@@ -56,9 +56,8 @@ type LeaseFilters struct {
 
 // Accept returns true if object matches filter requirements
 func (f OrderFilters) Accept(obj types.Order, isValidState bool) bool {
-	err := sdk.VerifyAddressFormat(f.Owner)
-	if (err != nil && !isValidState) ||
-		(err != nil && (obj.State == f.State)) ||
+	if (f.Owner.Empty() && !isValidState) ||
+		(f.Owner.Empty() && (obj.State == f.State)) ||
 		(!isValidState && obj.OrderID.Owner.Equals(f.Owner)) ||
 		(obj.OrderID.Owner.Equals(f.Owner) && obj.State == f.State) {
 		return true
@@ -69,9 +68,8 @@ func (f OrderFilters) Accept(obj types.Order, isValidState bool) bool {
 
 // Accept returns true if object matches filter requirements
 func (f BidFilters) Accept(obj types.Bid, isValidState bool) bool {
-	err := sdk.VerifyAddressFormat(f.Owner)
-	if (err != nil && !isValidState) ||
-		(err != nil && (obj.State == f.State)) ||
+	if (f.Owner.Empty() && !isValidState) ||
+		(f.Owner.Empty() && (obj.State == f.State)) ||
 		(!isValidState && obj.BidID.Owner.Equals(f.Owner)) ||
 		(obj.BidID.Owner.Equals(f.Owner) && obj.State == f.State) {
 		return true
@@ -82,9 +80,8 @@ func (f BidFilters) Accept(obj types.Bid, isValidState bool) bool {
 
 // Accept returns true if object matches filter requirements
 func (f LeaseFilters) Accept(obj types.Lease, isValidState bool) bool {
-	err := sdk.VerifyAddressFormat(f.Owner)
-	if (err != nil && !isValidState) ||
-		(err != nil && (obj.State == f.State)) ||
+	if (f.Owner.Empty() && !isValidState) ||
+		(f.Owner.Empty() && (obj.State == f.State)) ||
 		(!isValidState && (obj.LeaseID.Owner.Equals(f.Owner))) ||
 		(obj.LeaseID.Owner.Equals(f.Owner) && obj.State == f.State) {
 		return true
