@@ -312,6 +312,8 @@ func TestCloseBidUnknownLease(t *testing.T) {
 
 	bid, _ := suite.createBid()
 
+	suite.mkeeper.OnBidMatched(suite.ctx, bid)
+
 	msg := types.MsgCloseBid{
 		BidID: bid.ID(),
 	}
@@ -336,6 +338,29 @@ func TestCloseBidValid(t *testing.T) {
 
 	t.Run("ensure event created", func(t *testing.T) {
 		iev := testutil.ParseMarketEvent(t, res.Events[3:4])
+		require.IsType(t, types.EventBidClosed{}, iev)
+
+		dev := iev.(types.EventBidClosed)
+
+		require.Equal(t, msg.BidID, dev.ID)
+	})
+}
+
+func TestCloseBidWithStateOpen(t *testing.T) {
+	suite := setupTestSuite(t)
+
+	bid, _ := suite.createBid()
+
+	msg := types.MsgCloseBid{
+		BidID: bid.ID(),
+	}
+
+	res, err := suite.handler(suite.ctx, msg)
+	require.NotNil(t, res)
+	require.NoError(t, err)
+
+	t.Run("ensure event created", func(t *testing.T) {
+		iev := testutil.ParseMarketEvent(t, res.Events[2:])
 		require.IsType(t, types.EventBidClosed{}, iev)
 
 		dev := iev.(types.EventBidClosed)
