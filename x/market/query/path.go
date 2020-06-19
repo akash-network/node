@@ -22,6 +22,7 @@ const (
 
 var (
 	ErrInvalidPath = errors.New("query: invalid path")
+	ErrOwnerValue  = errors.New("query: invalid owner value")
 	ErrStateValue  = errors.New("query: invalid state value")
 )
 
@@ -91,6 +92,10 @@ func parseOrderFiltersPath(parts []string) (OrderFilters, bool, error) {
 		return OrderFilters{}, false, err
 	}
 
+	if !owner.Empty() && sdk.VerifyAddressFormat(owner) != nil {
+		return OrderFilters{}, false, ErrOwnerValue
+	}
+
 	state, ok := types.OrderStateMap[parts[1]]
 
 	if !ok && (parts[1] != "") {
@@ -136,6 +141,10 @@ func parseBidFiltersPath(parts []string) (BidFilters, bool, error) {
 		return BidFilters{}, false, err
 	}
 
+	if !owner.Empty() && sdk.VerifyAddressFormat(owner) != nil {
+		return BidFilters{}, false, ErrOwnerValue
+	}
+
 	state, ok := types.BidStateMap[parts[1]]
 
 	if !ok && (parts[1] != "") {
@@ -170,6 +179,10 @@ func parseLeaseFiltersPath(parts []string) (LeaseFilters, bool, error) {
 	owner, err := sdk.AccAddressFromBech32(parts[0])
 	if err != nil {
 		return LeaseFilters{}, false, err
+	}
+
+	if !owner.Empty() && sdk.VerifyAddressFormat(owner) != nil {
+		return LeaseFilters{}, false, ErrOwnerValue
 	}
 
 	state, ok := types.LeaseStateMap[parts[1]]

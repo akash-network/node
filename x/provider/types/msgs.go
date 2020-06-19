@@ -28,7 +28,7 @@ func (msg MsgCreateProvider) ValidateBasic() error {
 	if err := validateProviderURI(msg.HostURI); err != nil {
 		return err
 	}
-	if msg.Owner.Empty() {
+	if err := sdk.VerifyAddressFormat(msg.Owner); err != nil {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgCreate: Invalid Provider Address")
 	}
 	return nil
@@ -58,7 +58,7 @@ func (msg MsgUpdateProvider) ValidateBasic() error {
 	if err := validateProviderURI(msg.HostURI); err != nil {
 		return err
 	}
-	if msg.Owner.Empty() {
+	if err := sdk.VerifyAddressFormat(msg.Owner); err != nil {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgUpdate: Invalid Provider Address")
 	}
 	return nil
@@ -87,7 +87,7 @@ func (msg MsgDeleteProvider) Type() string { return msgTypeDeleteProvider }
 
 // ValidateBasic does basic validation
 func (msg MsgDeleteProvider) ValidateBasic() error {
-	if msg.Owner.Empty() {
+	if err := sdk.VerifyAddressFormat(msg.Owner); err != nil {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgDelete: Invalid Provider Address")
 	}
 	return nil

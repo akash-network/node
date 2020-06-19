@@ -365,7 +365,7 @@ func (f *Fixtures) TxCloseDeployment(flags ...string) (bool, string, string) {
 // akash query deployment
 
 // QueryDeployments is akash query deployments
-func (f *Fixtures) QueryDeployments(flags ...string) dquery.Deployments {
+func (f *Fixtures) QueryDeployments(flags ...string) (dquery.Deployments, error) {
 	cmd := fmt.Sprintf("%s query deployment list %v", f.AkashBinary, f.Flags())
 	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
 
@@ -373,9 +373,8 @@ func (f *Fixtures) QueryDeployments(flags ...string) dquery.Deployments {
 
 	cdc := app.MakeCodec()
 	err := cdc.UnmarshalJSON([]byte(out), &deployments)
-	require.NoError(f.T, err, "out %v\n, err %v", out, err)
 
-	return deployments
+	return deployments, err
 }
 
 // QueryDeployment is akash query deployment
@@ -421,7 +420,7 @@ func (f *Fixtures) TxCloseOrder(oid mtypes.OrderID, flags ...string) (bool, stri
 // akash query market
 
 // QueryOrders is akash query orders
-func (f *Fixtures) QueryOrders(flags ...string) []mtypes.Order {
+func (f *Fixtures) QueryOrders(flags ...string) ([]mtypes.Order, error) {
 	cmd := fmt.Sprintf("%s query market order list %v", f.AkashBinary, f.Flags())
 	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
 
@@ -429,9 +428,8 @@ func (f *Fixtures) QueryOrders(flags ...string) []mtypes.Order {
 
 	cdc := app.MakeCodec()
 	err := cdc.UnmarshalJSON([]byte(out), &orders)
-	require.NoError(f.T, err, "out %v\n, err %v", out, err)
 
-	return orders
+	return orders, err
 }
 
 // QueryOrder is akash query order
@@ -450,7 +448,7 @@ func (f *Fixtures) QueryOrder(orderID mtypes.OrderID, flags ...string) mtypes.Or
 }
 
 // QueryBids is akash query bids
-func (f *Fixtures) QueryBids(flags ...string) []mtypes.Bid {
+func (f *Fixtures) QueryBids(flags ...string) ([]mtypes.Bid, error) {
 	cmd := fmt.Sprintf("%s query market bid list %v", f.AkashBinary, f.Flags())
 	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
 
@@ -458,9 +456,8 @@ func (f *Fixtures) QueryBids(flags ...string) []mtypes.Bid {
 
 	cdc := app.MakeCodec()
 	err := cdc.UnmarshalJSON([]byte(out), &bids)
-	require.NoError(f.T, err, "out %v\n, err %v", out, err)
 
-	return bids
+	return bids, err
 }
 
 // QueryBid is akash query bid
@@ -481,7 +478,7 @@ func (f *Fixtures) QueryBid(bidID mtypes.BidID, flags ...string) mtypes.Bid {
 }
 
 // QueryLeases is akash query leases
-func (f *Fixtures) QueryLeases(flags ...string) []mtypes.Lease {
+func (f *Fixtures) QueryLeases(flags ...string) ([]mtypes.Lease, error) {
 	cmd := fmt.Sprintf("%s query market lease list %v", f.AkashBinary, f.Flags())
 	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
 
@@ -489,9 +486,8 @@ func (f *Fixtures) QueryLeases(flags ...string) []mtypes.Lease {
 
 	cdc := app.MakeCodec()
 	err := cdc.UnmarshalJSON([]byte(out), &leases)
-	require.NoError(f.T, err, "out %v\n, err %v", out, err)
 
-	return leases
+	return leases, err
 }
 
 // QueryLease is akash query lease

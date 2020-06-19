@@ -63,7 +63,7 @@ func (msg MsgUpdateDeployment) ValidateBasic() error {
 		return err
 	}
 
-	if msg.Version.Empty() {
+	if err := sdk.VerifyAddressFormat(msg.Version); err != nil {
 		return ErrEmptyVersion
 	}
 
