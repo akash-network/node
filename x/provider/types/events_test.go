@@ -78,15 +78,11 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionDeploymentCreate,
+			Action: evActionProviderCreate,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
 					Value: keyAcc.String(),
-				},
-				{
-					Key:   evDSeqKey,
-					Value: "5",
 				},
 			},
 		},
@@ -96,15 +92,11 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionDeploymentCreate,
+			Action: evActionProviderCreate,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
-				},
-				{
-					Key:   evDSeqKey,
-					Value: "abc",
+					Value: "hello",
 				},
 			},
 		},
@@ -112,15 +104,10 @@ var TEPS = []testEventParsing{
 	},
 	{
 		msg: sdkutil.Event{
-			Type:   sdkutil.EventTypeMessage,
-			Module: ModuleName,
-			Action: evActionDeploymentCreate,
-			Attributes: []sdk.Attribute{
-				{
-					Key:   evOwnerKey,
-					Value: keyAcc.String(),
-				},
-			},
+			Type:       sdkutil.EventTypeMessage,
+			Module:     ModuleName,
+			Action:     evActionProviderCreate,
+			Attributes: []sdk.Attribute{},
 		},
 		expErr: errWildcard,
 	},
@@ -129,15 +116,11 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionDeploymentUpdate,
+			Action: evActionProviderUpdate,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
 					Value: keyAcc.String(),
-				},
-				{
-					Key:   evDSeqKey,
-					Value: "5",
 				},
 			},
 		},
@@ -147,15 +130,11 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionDeploymentUpdate,
+			Action: evActionProviderUpdate,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: "neh",
-				},
-				{
-					Key:   evDSeqKey,
-					Value: "5",
+					Value: "hello",
 				},
 			},
 		},
@@ -163,15 +142,48 @@ var TEPS = []testEventParsing{
 	},
 	{
 		msg: sdkutil.Event{
+			Type:       sdkutil.EventTypeMessage,
+			Module:     ModuleName,
+			Action:     evActionProviderUpdate,
+			Attributes: []sdk.Attribute{},
+		},
+		expErr: errWildcard,
+	},
+
+	{
+		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionDeploymentUpdate,
+			Action: evActionProviderDelete,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
 					Value: keyAcc.String(),
 				},
 			},
+		},
+		expErr: nil,
+	},
+	{
+		msg: sdkutil.Event{
+			Type:   sdkutil.EventTypeMessage,
+			Module: ModuleName,
+			Action: evActionProviderDelete,
+			Attributes: []sdk.Attribute{
+				{
+					Key:   evOwnerKey,
+					Value: "hello",
+				},
+			},
+		},
+		expErr: errWildcard,
+	},
+	{
+		msg: sdkutil.Event{
+			Type:       sdkutil.EventTypeMessage,
+			Module:     ModuleName,
+			Action:     evActionProviderDelete,
+			Attributes: []sdk.Attribute{},
 		},
 		expErr: errWildcard,
 	},

@@ -97,7 +97,18 @@ func TestCreateBidValid(t *testing.T) {
 	require.NotNil(t, res)
 	require.NoError(t, err)
 
-	_, found := suite.mkeeper.GetBid(suite.ctx, types.MakeBidID(order.ID(), provider))
+	bid := types.MakeBidID(order.ID(), provider)
+
+	t.Run("ensure event created", func(t *testing.T) {
+		iev := testutil.ParseMarketEvent(t, res.Events[2:])
+		require.IsType(t, types.EventBidCreated{}, iev)
+
+		dev := iev.(types.EventBidCreated)
+
+		require.Equal(t, bid, dev.ID)
+	})
+
+	_, found := suite.mkeeper.GetBid(suite.ctx, bid)
 	require.True(t, found)
 }
 
@@ -269,6 +280,15 @@ func TestCloseOrderValid(t *testing.T) {
 	res, err := suite.handler(suite.ctx, msg)
 	require.NotNil(t, res)
 	require.NoError(t, err)
+
+	t.Run("ensure event created", func(t *testing.T) {
+		iev := testutil.ParseMarketEvent(t, res.Events[3:4])
+		require.IsType(t, types.EventOrderClosed{}, iev)
+
+		dev := iev.(types.EventOrderClosed)
+
+		require.Equal(t, msg.OrderID, dev.ID)
+	})
 }
 
 func TestCloseBidNonExisting(t *testing.T) {
@@ -313,6 +333,15 @@ func TestCloseBidValid(t *testing.T) {
 	res, err := suite.handler(suite.ctx, msg)
 	require.NotNil(t, res)
 	require.NoError(t, err)
+
+	t.Run("ensure event created", func(t *testing.T) {
+		iev := testutil.ParseMarketEvent(t, res.Events[3:4])
+		require.IsType(t, types.EventBidClosed{}, iev)
+
+		dev := iev.(types.EventBidClosed)
+
+		require.Equal(t, msg.BidID, dev.ID)
+	})
 }
 
 func TestCloseBidNotActiveLease(t *testing.T) {
