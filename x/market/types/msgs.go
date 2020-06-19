@@ -39,7 +39,7 @@ func (msg MsgCreateBid) ValidateBasic() error {
 		return err
 	}
 
-	if msg.Provider.Empty() {
+	if err := sdk.VerifyAddressFormat(msg.Provider); err != nil {
 		return ErrEmptyProvider
 	}
 

@@ -35,7 +35,8 @@ func TestDeployment(t *testing.T) {
 	tests.WaitForNextNBlocksTM(1, f.Port)
 
 	// test query deployments
-	deployments := f.QueryDeployments()
+	deployments, err := f.QueryDeployments()
+	require.NoError(t, err)
 	require.Len(t, deployments, 1, "Deployment Create Failed")
 	require.Equal(t, fooAddr.String(), deployments[0].Deployment.DeploymentID.Owner.String())
 
@@ -44,21 +45,37 @@ func TestDeployment(t *testing.T) {
 	deployment := f.QueryDeployment(createdDep.Deployment.DeploymentID)
 	require.Equal(t, createdDep, deployment)
 
+	// test query deployments with owner filter
+	deployments, err = f.QueryDeployments(fmt.Sprintf("--owner=%s", fooAddr.String()))
+	require.NoError(t, err, "Error when fetching deployments with owner filter")
+	require.Len(t, deployments, 1)
+
+	// test query deployments with wrong owner value
+	deployments, err = f.QueryDeployments("--owner=cosmos102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt")
+	require.Error(t, err)
+
 	// test query deployments with filters
-	deployments = f.QueryDeployments("--state=closed")
+	deployments, err = f.QueryDeployments("--state=closed")
+	require.NoError(t, err)
 	require.Len(t, deployments, 0)
+
+	// test query deployments with wrong state filter
+	deployments, err = f.QueryDeployments("--state=hello")
+	require.Error(t, err)
 
 	// Close deployment
 	f.TxCloseDeployment(fmt.Sprintf("--from=%s --dseq=%v", keyFoo, createdDep.Deployment.DeploymentID.DSeq), "-y")
 	tests.WaitForNextNBlocksTM(1, f.Port)
 
 	// test query deployments
-	deployments = f.QueryDeployments()
+	deployments, err = f.QueryDeployments()
+	require.NoError(t, err)
 	require.Len(t, deployments, 1)
 	require.Equal(t, dtypes.DeploymentClosed, deployments[0].Deployment.State, "Deployment Close Failed")
 
 	// test query deployments with state filter closed
-	deployments = f.QueryDeployments("--state=closed")
+	deployments, err = f.QueryDeployments("--state=closed")
+	require.NoError(t, err)
 	require.Len(t, deployments, 1)
 
 	f.Cleanup()

@@ -18,6 +18,7 @@ const (
 
 var (
 	ErrInvalidPath = errors.New("query: invalid path")
+	ErrOwnerValue  = errors.New("query: invalid owner value")
 	ErrStateValue  = errors.New("query: invalid state value")
 )
 
@@ -69,6 +70,10 @@ func parseDepFiltersPath(parts []string) (DeploymentFilters, bool, error) {
 	owner, err := sdk.AccAddressFromBech32(parts[0])
 	if err != nil {
 		return DeploymentFilters{}, false, err
+	}
+
+	if !owner.Empty() && sdk.VerifyAddressFormat(owner) != nil {
+		return DeploymentFilters{}, false, ErrOwnerValue
 	}
 
 	state, ok := types.DeploymentStateMap[parts[1]]

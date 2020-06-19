@@ -113,7 +113,7 @@ func (id BidID) Validate() error {
 	if err := id.OrderID().Validate(); err != nil {
 		return sdkerrors.Wrap(err, "BidID: Invalid OrderID")
 	}
-	if id.Provider.Empty() {
+	if err := sdk.VerifyAddressFormat(id.Provider); err != nil {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "BidID: Invalid Provider Address")
 	}
 	return nil
