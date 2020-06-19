@@ -3,24 +3,30 @@ include ../common.mk
 akashctl       = $(AKASHCTL) --home $(CLIENT_HOME) 
 akashd         = $(AKASHD) --home $(NODE_HOME)
 KEY_OPTS       = --keyring-backend=test
-CHAIN_NAME     = local
-CHAIN_OPTS     = --chain-id $(CHAIN_NAME)
 
 init: bins init-keys init-genesis init-gentx init-collect-gentx init-config
 
 dirs: 
-	mkdir -p $(CLIENT_HOME) $(NODE_HOME)
+	mkdir -p "$(CLIENT_HOME)" "$(NODE_HOME)"
 
-init-genesis: dirs
+init-node: dirs
 	$(akashd) init node0 $(CHAIN_OPTS)
-	$(akashd) add-genesis-account $(shell $(akashctl) $(KEY_OPTS) keys show provider -a) 100000akash,100000000stake
-	$(akashd) add-genesis-account $(shell $(akashctl) $(KEY_OPTS) keys show validator -a) 100000akash,100000000stake
-	$(akashd) add-genesis-account $(shell $(akashctl) $(KEY_OPTS) keys show main -a) 100000akash,100000000stake
-	$(akashd) add-genesis-account $(shell $(akashctl) $(KEY_OPTS) keys show other -a) 1akash,1stake
+	cp "$(GENESIS_PATH)" "$(GENESIS_PATH).orig"
+	cat "$(GENESIS_PATH).orig" | \
+		jq -rM '(..|objects|select(has("denom"))).denom           |= "$(CHAIN_TOKEN_DENOM)"' | \
+		jq -rM '(..|objects|select(has("bond_denom"))).bond_denom |= "$(CHAIN_TOKEN_DENOM)"' | \
+		jq -rM '(..|objects|select(has("mint_denom"))).mint_denom |= "$(CHAIN_TOKEN_DENOM)"' > \
+		"$(GENESIS_PATH)"
+
+init-genesis: init-node
+	$(akashd) add-genesis-account "$(shell $(akashctl) $(KEY_OPTS) keys show provider -a)"  "$(CHAIN_ACCOUNT_DEPOSIT)$(CHAIN_TOKEN_DENOM)"
+	$(akashd) add-genesis-account "$(shell $(akashctl) $(KEY_OPTS) keys show validator -a)" "$(CHAIN_ACCOUNT_DEPOSIT)$(CHAIN_TOKEN_DENOM)"
+	$(akashd) add-genesis-account "$(shell $(akashctl) $(KEY_OPTS) keys show main -a)"      "$(CHAIN_ACCOUNT_DEPOSIT)$(CHAIN_TOKEN_DENOM)"
+	$(akashd) add-genesis-account "$(shell $(akashctl) $(KEY_OPTS) keys show other -a)"     "1$(CHAIN_TOKEN_DENOM)"
 	$(akashd) validate-genesis
 
 init-gentx:
-	$(akashd) $(KEY_OPTS) gentx --name main --home-client $(CLIENT_HOME)
+	$(akashd) $(KEY_OPTS) gentx --name main --home-client "$(CLIENT_HOME)" --amount "$(CHAIN_MIN_DEPOSIT)$(CHAIN_TOKEN_DENOM)"
 
 init-collect-gentx:
 	$(akashd) collect-gentxs
