@@ -8,6 +8,7 @@ import (
 	"github.com/ovrclk/akash/sdkutil"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
@@ -96,6 +97,10 @@ func processEvent(bev abci.Event) (interface{}, bool) {
 	}
 
 	if mev, err := mtypes.ParseEvent(ev); err == nil {
+		return mev, true
+	}
+
+	if mev, err := ptypes.ParseEvent(ev); err == nil {
 		return mev, true
 	}
 

@@ -8,6 +8,7 @@ import (
 	"github.com/ovrclk/akash/testutil"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,6 +26,11 @@ func Test_processEvent(t *testing.T) {
 		mtypes.EventBidClosed{ID: testutil.BidID(t), Price: testutil.Coin(t)},
 		mtypes.EventLeaseCreated{ID: testutil.LeaseID(t), Price: testutil.Coin(t)},
 		mtypes.EventLeaseClosed{ID: testutil.LeaseID(t), Price: testutil.Coin(t)},
+
+		// x/provider events
+		ptypes.EventProviderCreate{Owner: testutil.AccAddress(t)},
+		ptypes.EventProviderUpdate{Owner: testutil.AccAddress(t)},
+		ptypes.EventProviderDelete{Owner: testutil.AccAddress(t)},
 	}
 
 	for _, test := range tests {
