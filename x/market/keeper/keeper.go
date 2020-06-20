@@ -328,24 +328,28 @@ func (k Keeper) WithLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 
 // WithOrdersForGroup iterates all orders of a group in market with given GroupID
 func (k Keeper) WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, fn func(types.Order) bool) {
-	// TODO: do it correctly with prefix search
-	k.WithOrders(ctx, func(item types.Order) bool {
-		if item.GroupID().Equals(id) {
-			return fn(item)
+	store := ctx.KVStore(k.skey)
+	iter := sdk.KVStorePrefixIterator(store, ordersForGroupPrefix(id))
+	for ; iter.Valid(); iter.Next() {
+		var val types.Order
+		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		if stop := fn(val); stop {
+			break
 		}
-		return false
-	})
+	}
 }
 
-// WithBidsForOrder iterates all bids of a group in market with given GroupID
+// WithBidsForOrder iterates all bids of a order in market with given OrderID
 func (k Keeper) WithBidsForOrder(ctx sdk.Context, id types.OrderID, fn func(types.Bid) bool) {
-	// TODO: do it correctly with prefix search
-	k.WithBids(ctx, func(item types.Bid) bool {
-		if item.OrderID().Equals(id) {
-			return fn(item)
+	store := ctx.KVStore(k.skey)
+	iter := sdk.KVStorePrefixIterator(store, bidsForOrderPrefix(id))
+	for ; iter.Valid(); iter.Next() {
+		var val types.Bid
+		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		if stop := fn(val); stop {
+			break
 		}
-		return false
-	})
+	}
 }
 
 func (k Keeper) updateOrder(ctx sdk.Context, order types.Order) {
