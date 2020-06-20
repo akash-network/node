@@ -8,8 +8,7 @@ services:
       - port: 80
         as: 80
         accept:
-          - hello.192.168.99.100.nip.io
-          - hello.192.168.99.101.nip.io
+          - hello.localhost
         to:
           - global: true
 
@@ -26,7 +25,7 @@ profiles:
       pricing:
         web: 
           denom: akash
-          amount: 2
+          amount: 1000
 
 deployment:
   web:

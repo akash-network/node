@@ -1,7 +1,10 @@
-# Tutorial: "Lite" configuration
+# Dev Environment: "Lite" configuration
 
-This example showcases Akash blockchain operations with a
-single-node network.
+The _Lite_ development environment builds a single-node network
+for testing blockchain operations.
+
+An Akash Provider Daemon may optionally be run, but
+it will not execute workloads for leases that it acquires.
 
 The [instructions](#runbook) below will illustrate how to:
 
@@ -46,8 +49,12 @@ this example.
 The following steps will bring up a network and allow for interacting
 with it.
 
+Running through the entire runbook requires four terminals.
+Each command is marked __t1__-__t3__ to indicate a suggested terminal number.
+
 If at any time you'd like to start over with a fresh chain, simply run:
 
+__t1__
 ```sh
 make clean init
 ```
@@ -60,6 +67,7 @@ The following command will
 * create configuration directories
 * create a genesis file with [accounts](#setup) and single validator.
 
+__t1__
 ```sh
 make init
 ```
@@ -67,11 +75,15 @@ make init
 ### Run local network
 
 In a separate terminal, the following command will run the `akashd` node:
+
+__t2__
 ```sh
 make node-run
 ```
 
 You can check the status of the network with:
+
+__t1__
 ```sh
 make node-status
 ```
@@ -80,6 +92,7 @@ You should see blocks being produced - the block height should be increasing.
 
 You can now view genesis accounts that were created:
 
+__t1__
 ```sh
 make query-accounts
 ```
@@ -87,11 +100,15 @@ make query-accounts
 ### Create a provider
 
 Create a provider on the network with the following command:
+
+__t1__
 ```sh
 make provider-create
 ```
 
 View the on-chain representation of the provider with:
+
+__t1__
 ```sh
 make query-provider
 ```
@@ -103,12 +120,14 @@ yourself, skip this step.
 
 In a separate terminal, run the following command
 
+__t3__
 ```sh
 make provider-run
 ```
 
 Query the provider service gateway for its status:
 
+__t1__
 ```sh
 make provider-status
 ```
@@ -117,6 +136,7 @@ make provider-status
 
 Create a deployment from the `main` account with:
 
+__t1__
 ```sh
 make deployment-create
 ```
@@ -124,11 +144,15 @@ make deployment-create
 This particular deployment is created from the sdl file in this directory ([`deployment.yaml`](deployment.yaml)).
 
 Check that the deployment was created.  Take note of the `dseq` - deployment sequence:
+
+__t1__
 ```sh
 make query-deployments
 ```
 
 After a short time, you should see an order created for this deployment with the following command:
+
+__t1__
 ```sh
 make query-orders
 ```
@@ -140,24 +164,28 @@ by the provider daemon.
 
 Create a bid for the order from the provider:
 
+__t1__
 ```sh
 make bid-create
 ```
 
 You should be able to see the bid with
 
+__t1__
 ```sh
 make query-bid
 ```
 
 Eventually a lease will be generated.  You can see it with:
 
+__t1__
 ```sh
 make query-leases
 ```
 
-
 _if_ you are running provider services, query the provider gateway:
+
+__t1__
 ```sh
 make provider-status
 ```
@@ -168,18 +196,21 @@ There are a number of ways that a lease can be terminated.
 
 #### Provider closes the bid:
 
+__t1__
 ```sh
 make bid-close
 ```
 
 #### Tenant closes the order
 
+__t1__
 ```sh
 make order-close
 ```
 
 #### Tenant closes the deployment
 
+__t1__
 ```sh
 make deployment-close
 ```
@@ -230,7 +261,7 @@ make query-deployments
 Query a single deployment:
 
 ```sh
-DSEQ=4 make query-deployments
+DSEQ=4 make query-deployment
 ```
 
 ### Orders
@@ -244,7 +275,7 @@ make query-orders
 Query a single order:
 
 ```sh
-DSEQ=4 GSEQ=1 OSEQ=1 make query-deployment
+DSEQ=4 GSEQ=1 OSEQ=1 make query-order
 ```
 
 ### Bids
@@ -339,3 +370,7 @@ Fully-customized provider creation
 PROVIDER_KEY_NAME=validator PROVIDER_CONFIG_PATH=rogue.yaml make provider-create
 ```
 
+Fully-customized provider update
+```sh
+PROVIDER_KEY_NAME=validator PROVIDER_CONFIG_PATH=rogue.yaml make provider-update
+```

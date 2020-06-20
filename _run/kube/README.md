@@ -1,4 +1,24 @@
-# Akash: Single-Node Local Setup with Minikube
+# Dev Environment: "Kube" configuration
+
+The _Kube_ dev environment builds:
+
+* A single-node blockchain network
+* An Akash Provider Services Daemon (PSD) for bidding and running workloads.
+* A Kubernetes cluster for the PSD to run workloads on.
+
+The [instructions](#runbook) below will illustrate how to:
+
+* [Initialize blockchain node and client](#initialize)
+* [Run a single-node network](#run-local-network)
+* [Query objects on the network](#run-query)
+* [Create a provider](#create-a-provider)
+* [Run provider services](#run-provider-services)
+* [Create a deployment](#create-a-deployment)
+* [Bid on an order](#create-a-bid)
+* [Terminate a lease](#terminate-lease)
+
+See [commands](#commands) for a full list of utilities meant
+for interacting with the network.
 
 Run a network with a single, local node and execute workloads in Minikube.
 
@@ -7,143 +27,206 @@ Each command is marked __t1__-__t4__ to indicate a suggested terminal number.
 
 ## Setup
 
-__t1__: Start and initialize minikube
+Four keys and accounts are created.  The key names are:
+
+|Key Name|Use|
+|---|---|
+|`main`|Primary account (creating deployments, etc...)|
+|`provider`|The provider account (bidding on orders, etc...)|
+|`validator`|The sole validator for the created network|
+|`other`|Misc. account to (receives tokens, etc...)|
+
+Most `make` commands are configurable and have defaults to make it
+such that you don't need to override them for a simple pass-through of
+this example.
+
+|Name|Default|Description|
+|---|---|---|
+|`KEY_NAME`|`main`|standard key name|
+|`PROVIDER_KEY_NAME`|`provider`|name of key to use for provider|
+|`DSEQ`|1|deployment sequence|
+|`GSEQ`|1|group sequence|
+|`OSEQ`|1|order sequence|
+|`PRICE`|10akash|price to bid|
+
+## Runbook
+
+The following steps will bring up a network and allow for interacting
+with it.
+
+Running through the entire runbook requires four terminals.
+Each command is marked __t1__-__t3__ to indicate a suggested terminal number.
+
+If at any time you'd like to start over with a fresh chain, simply run:
+
+__t1__
 ```sh
-$ make minikube
-$ minikube addons enable ingress
-$ minikube addons enable metrics-server
+make clean kind-cluster-clean init
 ```
 
-__t1__: Build binaries
+### Initialize
+
+Start and initialize kind
+
+__t1__
 ```sh
-$ make bins
+make kind-cluster-create
 ```
 
-__t1__: Initialize environment
-```sh
-$ make init
-```
-Creates various accounts, genesis file, configuration, and account keys stored in the `test` keyring.
+Build Akash binaries and initialize network
 
-## Start Network
-
-__t2__: Run `akashd`
+__t1__
 ```sh
-$ make run-daemon
+make init
 ```
 
+### Run local network
+
+In a separate terminal, the following command will run the `akashd` node:
+
+__t2__
 ```sh
-make provider
+make node-run
 ```
 
+You can check the status of the network with:
+
+__t1__
 ```sh
-make run-provider
+make node-status
 ```
 
+You should see blocks being produced - the block height should be increasing.
+
+You can now view genesis accounts that were created:
+
+__t1__
+```sh
+make query-accounts
+```
+
+### Create a provider
+
+Create a provider on the network with the following command:
+
+__t1__
+```sh
+make provider-create
+```
+
+View the on-chain representation of the provider with:
+
+__t1__
+```sh
+make query-provider
+```
+
+### Run provider services
+
+In a separate terminal, run the following command
+
+__t3__
+```sh
+make provider-run
+```
+
+Query the provider service gateway for its status:
+
+__t1__
 ```sh
 make provider-status
 ```
 
+### Create a deployment
+
+Create a deployment from the `main` account with:
+
+__t1__
 ```sh
-make deploy
+make deployment-create
 ```
 
+This particular deployment is created from the sdl file in this directory ([`deployment.yaml`](deployment.yaml)).
+
+Check that the deployment was created.  Take note of the `dseq` - deployment sequence:
+
+__t1__
+```sh
+make query-deployments
+```
+
+After a short time, you should see an order created for this deployment with the following command:
+
+__t1__
+```sh
+make query-orders
+```
+
+The Provider Services Daemon should see this order and bid on it.
+
+__t1__
+```sh
+make query-bids
+```
+
+And when the order is ready to be matched, a lease will be created:
+
+__t1__
+```sh
+make query-leases
+```
+
+You should now see "pending" inventory inventory in the provider status:
+
+__t1__
 ```sh
 make provider-status
 ```
 
-```
- ../../akashctl --home cache/client provider send-manifest deployment.yaml --owner "akash1r72zrnqd6t7kk6euwfslwccj7pz8s3ez4lmmt5" --dseq 620 --gseq 1 --oseq 1 --provider "akash1czw297jwpk8dymjqzzwduqchwwvh2k3l6zggn3"
-```
+### Distribute Manifest
 
-__t1__: See status of accounts created, market orders, providers, and deployments.
+Now that you have a lease with a provider, you need to send your
+workload configuration to that provider by sending it the manifest:
+
+__t1__
 ```sh
-$ make query-status
+make deployment-send-manifest
 ```
 
-## Transfer Tokens
+You can check the status of your deployment with:
 
-__t1__: Send tokens to the _main_ account from _other_
-Example of transfering tokens from one account to another.
+__t1__
 ```sh
-$ make send-to-main
+make provider-lease-status
 ```
-Transfers `117akash` to the `main` account from `other` account.
 
-__t1__: Query Transaction status
-Note the `txhash` from the output of `make send-to-main` command above; use it to set the `TXN=<txhash>` value.
+You can reach your app with the following (Note: `Host:` header tomfoolery abound)
+__t1__
 ```sh
-$ TXN=37E016553DFC9305E8B56D5A8A9EA7E00B9CD6BF860055F7EDC1A2CE3ABCC6EE make query-txn
+make provider-lease-ping
 ```
-Displays information and status of the transaction. Useful for debugging why a transaction failed to execute.
 
-__t1__: Query _master_ account
+### Terminate lease
+
+There are a number of ways that a lease can be terminated.
+
+#### Provider closes the bid:
+
+__t1__
 ```sh
-$ NAME=main make query-account
+make bid-close
 ```
 
-## Marketplace
+#### Tenant closes the order
 
-__t3__: Query the market
+__t1__
 ```sh
-$ make query-status
+make order-close
 ```
 
-__t4__: Create provider
+#### Tenant closes the deployment
+
+__t1__
 ```sh
-$ make provider-create
-```
-
-__t1__: Query the created provider
-```sh
-$ make provider-get
-```
-
-__t1__: Create Deployment
-```sh
-$ make deploy
-```
-Then view the order created from the deployment via `make query-market` or in __t3__. There will be a new Order created.
-
-Bid on the new Order by referencing its sequence IDs:
-```sh
-../../akashctl --home cache/client query market order list                                    
-  {
-    "id": {
-      "owner": "akash169zth98pgdq8ju0whzvg7zevzaahcvkutsv2sf",
-      "dseq": "2010",
-      "gseq": 1,
-      "oseq": 1,
-...
-```
-
-Use the `dseq`, `gseq`, and `oseq` variables to configure the `make bid` command. eg:
-
-`DSEQ=2010 GSEQ=1 OSEQ=1 PRICE=2akash make bid` will place a Bid on the Order. This will inform the running Provider to create a Lease if won.
-```
-../../akashctl --home cache/client  query market lease list                                    
-[
-  {
-    "id": {
-      "owner": "akash169zth98pgdq8ju0whzvg7zevzaahcvkutsv2sf",
-      "dseq": "2010",
-      "gseq": 1,
-      "oseq": 1,
-      "provider": "akash1caq7dslu2uc3gjg5ys3ulrc8u56k8f6jfm30m3"
-    },
-    "state": 1,
-    "price": {
-      "denom": "akash",
-      "amount": "2"
-    }
-  }
-]
-```
-
-TODO: Provider picking up and running Lease...
-
-__t1__: Ping workload
-TODO: Update
-```sh
-$ make ping
+make deployment-close
 ```

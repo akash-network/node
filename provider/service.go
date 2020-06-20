@@ -89,6 +89,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 		session:   session,
 		bus:       bus,
 		cluster:   cluster,
+		cclient:   cclient,
 		bidengine: bidengine,
 		manifest:  manifest,
 		ctx:       ctx,

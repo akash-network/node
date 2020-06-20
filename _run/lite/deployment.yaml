@@ -24,7 +24,7 @@ profiles:
       pricing:
         web:
           denom: akash
-          amount: 20
+          amount: 1000
 
 deployment:
   web:

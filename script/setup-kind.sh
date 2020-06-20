@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #
 # Set up a kubernetes environment with kind.
@@ -21,8 +21,9 @@ install_metrics() {
     --selector=k8s-app=metrics-server \
     --timeout=90s
 
+  count=1
   while ! kubectl top nodes; do
-    echo "waiting for metrics..."
+    echo "[$((count++))] waiting for metrics..."
     sleep 1
   done
 
