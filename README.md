@@ -14,6 +14,7 @@
 For a high-level overview of the Akash protocol and network economics, check out the [whitepapers](https://akash.network/research); a detailed protocol definition can be 
 found in the [design documentation](_docs/design.md); and the target workload definition spec is [here](_docs/sdl.md).
 
+
 # NOTE
 
 The `master` branch is currently unstable as we migrate to [cosmos-sdk](https://github.com/cosmos/cosmos-sdk) from the previous tendermint-core implementation.   The previous, stable branch can be found at [stable](https://github.com/ovrclk/akash/tree/stable).
