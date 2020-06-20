@@ -7,16 +7,18 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
+//go:generate stringer -linecomment -output=state.go -type=OrderState,BidState,LeaseState
+
 // OrderState defines state of order
 type OrderState uint8
 
 const (
 	// OrderOpen is used when state of order is open
-	OrderOpen OrderState = iota + 1
+	OrderOpen OrderState = iota + 1 // order
 	// OrderMatched is used when state of order is matched
-	OrderMatched
+	OrderMatched // matched
 	// OrderClosed is used when state of order is closed
-	OrderClosed
+	OrderClosed // closed
 )
 
 var (
@@ -111,13 +113,13 @@ type BidState uint8
 
 const (
 	// BidOpen is used when state of bid is opened
-	BidOpen BidState = iota + 1
+	BidOpen BidState = iota + 1 // open
 	// BidMatched is used when state of bid is matched
-	BidMatched
+	BidMatched // matched
 	// BidLost is used when state of bid is lost
-	BidLost
+	BidLost // lost
 	// BidClosed is used when state of bid is closed
-	BidClosed
+	BidClosed // closed
 )
 
 // BidStateMap is used to decode bid state flag value
@@ -145,11 +147,11 @@ type LeaseState uint8
 
 const (
 	// LeaseActive is used when state of lease is active
-	LeaseActive LeaseState = iota + 1
+	LeaseActive LeaseState = iota + 1 // active
 	// LeaseInsufficientFunds is used when lease has insufficient funds
-	LeaseInsufficientFunds
+	LeaseInsufficientFunds // insufficient
 	// LeaseClosed is used when state of lease is closed
-	LeaseClosed
+	LeaseClosed // closed
 )
 
 // LeaseStateMap is used to decode lease state flag value

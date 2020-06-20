@@ -24,6 +24,12 @@ bins: $(BINS)
 build:
 	$(GO) build ./...
 
+generate: stringer
+	$(GO) generate ./...
+
+stringer:
+	$(GO) install golang.org/x/tools/cmd/stringer 
+
 akashctl:
 	$(GO) build $(BUILD_FLAGS) ./cmd/akashctl
 
