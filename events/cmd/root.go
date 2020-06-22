@@ -28,7 +28,7 @@ func EventCmd(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func getEvents(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []string) error {
+func getEvents(ctx context.Context, cdc *codec.Codec, _ *cobra.Command, _ []string) error {
 	cctx := ccontext.NewCLIContext().WithCodec(cdc)
 
 	if err := cctx.Client.Start(); err != nil {
