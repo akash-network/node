@@ -24,11 +24,8 @@ bins: $(BINS)
 build:
 	$(GO) build ./...
 
-generate: stringer
+generate:
 	$(GO) generate ./...
-
-stringer:
-	$(GO) install golang.org/x/tools/cmd/stringer 
 
 akashctl:
 	$(GO) build $(BUILD_FLAGS) ./cmd/akashctl
@@ -142,6 +139,7 @@ devdeps-install:
 	$(GO) install github.com/vektra/mockery/.../
 	$(GO) install k8s.io/code-generator/...
 	$(GO) install sigs.k8s.io/kind
+	$(GO) install golang.org/x/tools/cmd/stringer
 
 test-integration: $(BINS)
 	cp akashctl akashd ./_build

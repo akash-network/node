@@ -883,7 +883,7 @@ paths:
           x-example: akash1zsgzee6vvx942c4c69vl859w9azn77j8uhduug
         - in: query
           name: state
-          description: Order state to filter (active,insufficient,closed)
+          description: Order state to filter (active,insufficient-funds,closed)
           required: false
           type: string
           x-example: active

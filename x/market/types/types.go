@@ -7,7 +7,7 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
-//go:generate stringer -linecomment -output=state.go -type=OrderState,BidState,LeaseState
+//go:generate stringer -linecomment -output=autogen_stringer.go -type=OrderState,BidState,LeaseState
 
 // OrderState defines state of order
 type OrderState uint8
@@ -149,16 +149,16 @@ const (
 	// LeaseActive is used when state of lease is active
 	LeaseActive LeaseState = iota + 1 // active
 	// LeaseInsufficientFunds is used when lease has insufficient funds
-	LeaseInsufficientFunds // insufficient
+	LeaseInsufficientFunds // insufficient-funds
 	// LeaseClosed is used when state of lease is closed
 	LeaseClosed // closed
 )
 
 // LeaseStateMap is used to decode lease state flag value
 var LeaseStateMap = map[string]LeaseState{
-	"active":       LeaseActive,
-	"insufficient": LeaseInsufficientFunds,
-	"closed":       LeaseClosed,
+	"active":             LeaseActive,
+	"insufficient-funds": LeaseInsufficientFunds,
+	"closed":             LeaseClosed,
 }
 
 // Lease stores LeaseID, state of lease and price
