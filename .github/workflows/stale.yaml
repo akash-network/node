@@ -1,0 +1,19 @@
+name: "Stale Reaper"
+on:
+  schedule:
+  - cron: "0 0 * * *"
+
+jobs:
+  stale-pr:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/stale@v3
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        stale-pr-label: stale
+        days-before-stale: 10
+        days-before-close: 5
+        stale-pr-message: |
+          Marked as stale; will be closed in five days.
+
+          Cut bait or go fishing!
