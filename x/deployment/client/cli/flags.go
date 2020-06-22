@@ -94,7 +94,7 @@ func DepFiltersFromFlags(flags *pflag.FlagSet) (query.DeploymentFilters, error) 
 // AddGroupFilterFlags add flags to filter for group list
 func AddGroupFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "group owner address to filter")
-	flags.String("state", "", "group state to filter (open,ordered,matched,insufficient,closed)")
+	flags.String("state", "", "group state to filter (open,ordered,matched,insufficient-funds,closed)")
 }
 
 // GroupFiltersFromFlags returns GroupFilters with given flags and error if occurred

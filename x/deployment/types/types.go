@@ -8,14 +8,16 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
+//go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
+
 // DeploymentState defines state of deployment
 type DeploymentState uint8
 
 const (
 	// DeploymentActive is used when state of deployment is active
-	DeploymentActive DeploymentState = iota + 1
+	DeploymentActive DeploymentState = iota + 1 // active
 	// DeploymentClosed is used when state of deployment is closed
-	DeploymentClosed
+	DeploymentClosed // closed
 )
 
 var (
@@ -45,24 +47,24 @@ type GroupState uint8
 
 const (
 	// GroupOpen is used when state of group is open
-	GroupOpen GroupState = iota + 1
+	GroupOpen GroupState = iota + 1 // open
 	// GroupOrdered is used when state of group is ordered
-	GroupOrdered
+	GroupOrdered // ordered
 	// GroupMatched is used when state of group is matched
-	GroupMatched
+	GroupMatched // matched
 	// GroupInsufficientFunds is used when group has insufficient funds
-	GroupInsufficientFunds
+	GroupInsufficientFunds // insufficient-funds
 	// GroupClosed is used when state of group is closed
-	GroupClosed
+	GroupClosed // closed
 )
 
 // GroupStateMap is used to decode group state flag value
 var GroupStateMap = map[string]GroupState{
-	"open":         GroupOpen,
-	"ordered":      GroupOrdered,
-	"matched":      GroupMatched,
-	"insufficient": GroupInsufficientFunds,
-	"closed":       GroupClosed,
+	"open":               GroupOpen,
+	"ordered":            GroupOrdered,
+	"matched":            GroupMatched,
+	"insufficient-funds": GroupInsufficientFunds,
+	"closed":             GroupClosed,
 }
 
 // GroupSpec stores group specifications
