@@ -56,7 +56,7 @@ func main() {
 		flags.NewCompletionCmd(root, true),
 	)
 
-	addOtherCommands(root,cdc)
+	addOtherCommands(root, cdc)
 
 	executor := cli.PrepareMainCmd(root, "AKASHCTL", common.DefaultCLIHome())
 	err := executor.Execute()
