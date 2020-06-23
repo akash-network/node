@@ -18,8 +18,6 @@ import (
 
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/cmd/common"
-	ecmd "github.com/ovrclk/akash/events/cmd"
-	pcmd "github.com/ovrclk/akash/provider/cmd"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/go-amino"
@@ -54,11 +52,11 @@ func main() {
 		txCmd(cdc),
 		lcd.ServeCommand(cdc, lcdRoutes),
 		keys.Commands(),
-		pcmd.RootCmd(cdc),
-		ecmd.EventCmd(cdc),
 		version.Cmd,
 		flags.NewCompletionCmd(root, true),
 	)
+
+	addOtherCommands(root,cdc)
 
 	executor := cli.PrepareMainCmd(root, "AKASHCTL", common.DefaultCLIHome())
 	err := executor.Execute()

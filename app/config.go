@@ -1,7 +1,6 @@
 package app
 
 import (
-	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -11,57 +10,16 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	"github.com/cosmos/cosmos-sdk/x/params"
-	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/supply"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
-	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	"github.com/ovrclk/akash/x/deployment"
 	"github.com/ovrclk/akash/x/market"
 	"github.com/ovrclk/akash/x/provider"
-)
-
-var (
-	mbasics = module.NewBasicManager(
-		genutil.AppModuleBasic{},
-
-		// accounts, fees.
-		auth.AppModuleBasic{},
-
-		// tokens, token balance.
-		bank.AppModuleBasic{},
-
-		// total supply of the chain
-		supply.AppModuleBasic{},
-
-		// inflation
-		mint.AppModuleBasic{},
-
-		staking.AppModuleBasic{},
-
-		slashing.AppModuleBasic{},
-
-		distr.AppModuleBasic{},
-
-		gov.NewAppModuleBasic(
-			paramsclient.ProposalHandler, distr.ProposalHandler, upgradeclient.ProposalHandler,
-		),
-
-		params.AppModuleBasic{},
-		upgrade.AppModuleBasic{},
-		evidence.AppModuleBasic{},
-		crisis.AppModuleBasic{},
-
-		// akash
-		deployment.AppModuleBasic{},
-		market.AppModuleBasic{},
-		provider.AppModuleBasic{},
-	)
 )
 
 // ModuleBasics returns all app modules basics
@@ -83,25 +41,131 @@ func MakeCodec() *codec.Codec {
 	return cdc.Seal()
 }
 
-func kvStoreKeys() map[string]*sdk.KVStoreKey {
-	return sdk.NewKVStoreKeys(
-		bam.MainStoreKey,
-		auth.StoreKey,
-		params.StoreKey,
-		slashing.StoreKey,
-		distr.StoreKey,
-		supply.StoreKey,
-		staking.StoreKey,
-		mint.StoreKey,
-		gov.StoreKey,
-		upgrade.StoreKey,
-		evidence.StoreKey,
-		deployment.StoreKey,
-		market.StoreKey,
-		provider.StoreKey,
+func transientStoreKeys() map[string]*sdk.TransientStoreKey {
+	return sdk.NewTransientStoreKeys(params.TStoreKey)
+}
+
+func (app *AkashApp) setSDKKeepers(skipUpgradeHeights map[int64]bool) {
+	app.keeper.params = params.NewKeeper(
+		app.cdc,
+		app.keys[params.StoreKey],
+		app.tkeys[params.TStoreKey],
+	)
+
+	app.keeper.acct = auth.NewAccountKeeper(
+		app.cdc,
+		app.keys[auth.StoreKey],
+		app.keeper.params.Subspace(auth.DefaultParamspace),
+		auth.ProtoBaseAccount,
+	)
+
+	app.keeper.bank = bank.NewBaseKeeper(
+		app.keeper.acct,
+		app.keeper.params.Subspace(bank.DefaultParamspace),
+		macAddrs(),
+	)
+
+	app.keeper.supply = supply.NewKeeper(
+		app.cdc,
+		app.keys[supply.StoreKey],
+		app.keeper.acct,
+		app.keeper.bank,
+		macPerms(),
+	)
+
+	skeeper := staking.NewKeeper(
+		app.cdc,
+		app.keys[staking.StoreKey],
+		app.keeper.supply,
+		app.keeper.params.Subspace(staking.DefaultParamspace),
+	)
+
+	app.keeper.distr = distr.NewKeeper(
+		app.cdc,
+		app.keys[distr.StoreKey],
+		app.keeper.params.Subspace(distr.DefaultParamspace),
+		&skeeper,
+		app.keeper.supply,
+		auth.FeeCollectorName,
+		macAddrs(),
+	)
+
+	app.keeper.slashing = slashing.NewKeeper(
+		app.cdc,
+		app.keys[slashing.StoreKey],
+		&skeeper,
+		app.keeper.params.Subspace(slashing.DefaultParamspace),
+	)
+
+	app.keeper.staking = *skeeper.SetHooks(
+		staking.NewMultiStakingHooks(
+			app.keeper.distr.Hooks(),
+			app.keeper.slashing.Hooks(),
+		),
+	)
+
+	app.keeper.mint = mint.NewKeeper(
+		app.cdc,
+		app.keys[mint.StoreKey],
+		app.keeper.params.Subspace(mint.DefaultParamspace),
+		&skeeper,
+		app.keeper.supply,
+		auth.FeeCollectorName,
+	)
+
+	app.keeper.upgrade = upgrade.NewKeeper(skipUpgradeHeights, app.keys[upgrade.StoreKey], app.cdc)
+
+	app.keeper.crisis = crisis.NewKeeper(
+		app.keeper.params.Subspace(crisis.DefaultParamspace),
+		app.invCheckPeriod,
+		app.keeper.supply,
+		auth.FeeCollectorName,
+	)
+
+	// create evidence keeper with evidence router
+	evidenceKeeper := evidence.NewKeeper(
+		app.cdc, app.keys[evidence.StoreKey],
+		app.keeper.params.Subspace(evidence.DefaultParamspace),
+		&app.keeper.staking,
+		app.keeper.slashing,
+	)
+	evidenceRouter := evidence.NewRouter()
+
+	// TODO: register evidence routes
+	evidenceKeeper.SetRouter(evidenceRouter)
+
+	app.keeper.evidence = *evidenceKeeper
+
+	// register the proposal types
+	govRouter := gov.NewRouter()
+	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).
+		AddRoute(params.RouterKey, params.NewParamChangeProposalHandler(app.keeper.params)).
+		AddRoute(distr.RouterKey, distr.NewCommunityPoolSpendProposalHandler(app.keeper.distr)).
+		AddRoute(upgrade.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.keeper.upgrade))
+
+	app.keeper.gov = gov.NewKeeper(
+		app.cdc,
+		app.keys[gov.StoreKey],
+		app.keeper.params.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable()),
+		app.keeper.supply,
+		&skeeper,
+		govRouter,
 	)
 }
 
-func transientStoreKeys() map[string]*sdk.TransientStoreKey {
-	return sdk.NewTransientStoreKeys(params.TStoreKey)
+func (app *AkashApp) setAkashKeepers() {
+	app.keeper.deployment = deployment.NewKeeper(
+		app.cdc,
+		app.keys[deployment.StoreKey],
+	)
+
+	app.keeper.market = market.NewKeeper(
+		app.cdc,
+		app.keys[market.StoreKey],
+	)
+
+	app.keeper.provider = provider.NewKeeper(
+		app.cdc,
+		app.keys[provider.StoreKey],
+	)
 }
