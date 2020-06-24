@@ -8,6 +8,7 @@ The _Kube_ dev environment builds:
 
 The [instructions](#runbook) below will illustrate how to:
 
+* [Requirements](#requirements)
 * [Initialize blockchain node and client](#initialize)
 * [Run a single-node network](#run-local-network)
 * [Query objects on the network](#run-query)
@@ -16,6 +17,18 @@ The [instructions](#runbook) below will illustrate how to:
 * [Create a deployment](#create-a-deployment)
 * [Bid on an order](#create-a-bid)
 * [Terminate a lease](#terminate-lease)
+
+## Requirements
+[kind](https://kind.sigs.k8s.io) must be installed
+### go way
+```go
+go get sigs.k8s.io/kind
+```
+
+### via homebrew on macOS
+```bash
+brew install kind
+```
 
 See [commands](#commands) for a full list of utilities meant
 for interacting with the network.

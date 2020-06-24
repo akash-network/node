@@ -4,6 +4,7 @@ KIND_HTTP_PORT  = $(shell docker inspect \
 										--type container "$(KIND_NAME)-control-plane" \
 										--format '{{index .HostConfig.PortBindings "80/tcp" 0 "HostPort"}}')
 
+
 KIND_CONFIG       ?= kind-config.yaml
 
 PROVIDER_HOSTNAME ?= localhost
@@ -11,6 +12,10 @@ PROVIDER_HOST     ?= $(PROVIDER_HOSTNAME):$(KIND_HTTP_PORT)
 PROVIDER_ENDPOINT ?= http://$(PROVIDER_HOST)
 
 INGRESS_CONFIG_PATH ?= https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
+
+ifeq (, $(shell which kind))
+$(error "No kind in $(PATH), consider install?")
+endif
 
 kind-port:
 	echo $(KIND_HTTP_PORT)
