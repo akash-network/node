@@ -83,9 +83,21 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 	)
 }
 
-func (app *AkashApp) setKeepers(skipUpgradeHeights map[int64]bool) {
-	app.setSDKKeepers(skipUpgradeHeights)
-	app.setAkashKeepers()
+func (app *AkashApp) setAkashKeepers() {
+	app.keeper.deployment = deployment.NewKeeper(
+		app.cdc,
+		app.keys[deployment.StoreKey],
+	)
+
+	app.keeper.market = market.NewKeeper(
+		app.cdc,
+		app.keys[market.StoreKey],
+	)
+
+	app.keeper.provider = provider.NewKeeper(
+		app.cdc,
+		app.keys[provider.StoreKey],
+	)
 }
 
 func (app *AkashApp) setModuleManager() {

@@ -96,7 +96,112 @@ func NewApp(
 		tkeys:          tkeys,
 	}
 
-	app.setKeepers(skipUpgradeHeights)
+	app.keeper.params = params.NewKeeper(
+		app.cdc,
+		app.keys[params.StoreKey],
+		app.tkeys[params.TStoreKey],
+	)
+
+	app.keeper.acct = auth.NewAccountKeeper(
+		app.cdc,
+		app.keys[auth.StoreKey],
+		app.keeper.params.Subspace(auth.DefaultParamspace),
+		auth.ProtoBaseAccount,
+	)
+
+	app.keeper.bank = bank.NewBaseKeeper(
+		app.keeper.acct,
+		app.keeper.params.Subspace(bank.DefaultParamspace),
+		macAddrs(),
+	)
+
+	app.keeper.supply = supply.NewKeeper(
+		app.cdc,
+		app.keys[supply.StoreKey],
+		app.keeper.acct,
+		app.keeper.bank,
+		macPerms(),
+	)
+
+	skeeper := staking.NewKeeper(
+		app.cdc,
+		app.keys[staking.StoreKey],
+		app.keeper.supply,
+		app.keeper.params.Subspace(staking.DefaultParamspace),
+	)
+
+	app.keeper.distr = distr.NewKeeper(
+		app.cdc,
+		app.keys[distr.StoreKey],
+		app.keeper.params.Subspace(distr.DefaultParamspace),
+		&skeeper,
+		app.keeper.supply,
+		auth.FeeCollectorName,
+		macAddrs(),
+	)
+
+	app.keeper.slashing = slashing.NewKeeper(
+		app.cdc,
+		app.keys[slashing.StoreKey],
+		&skeeper,
+		app.keeper.params.Subspace(slashing.DefaultParamspace),
+	)
+
+	app.keeper.staking = *skeeper.SetHooks(
+		staking.NewMultiStakingHooks(
+			app.keeper.distr.Hooks(),
+			app.keeper.slashing.Hooks(),
+		),
+	)
+
+	app.keeper.mint = mint.NewKeeper(
+		app.cdc,
+		app.keys[mint.StoreKey],
+		app.keeper.params.Subspace(mint.DefaultParamspace),
+		&skeeper,
+		app.keeper.supply,
+		auth.FeeCollectorName,
+	)
+
+	app.keeper.upgrade = upgrade.NewKeeper(skipUpgradeHeights, app.keys[upgrade.StoreKey], app.cdc)
+
+	app.keeper.crisis = crisis.NewKeeper(
+		app.keeper.params.Subspace(crisis.DefaultParamspace),
+		app.invCheckPeriod,
+		app.keeper.supply,
+		auth.FeeCollectorName,
+	)
+
+	// create evidence keeper with evidence router
+	evidenceKeeper := evidence.NewKeeper(
+		app.cdc, app.keys[evidence.StoreKey],
+		app.keeper.params.Subspace(evidence.DefaultParamspace),
+		&app.keeper.staking,
+		app.keeper.slashing,
+	)
+	evidenceRouter := evidence.NewRouter()
+
+	evidenceKeeper.SetRouter(evidenceRouter)
+
+	app.keeper.evidence = *evidenceKeeper
+
+	// register the proposal types
+	govRouter := gov.NewRouter()
+	govRouter.AddRoute(gov.RouterKey, gov.ProposalHandler).
+		AddRoute(params.RouterKey, params.NewParamChangeProposalHandler(app.keeper.params)).
+		AddRoute(distr.RouterKey, distr.NewCommunityPoolSpendProposalHandler(app.keeper.distr)).
+		AddRoute(upgrade.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.keeper.upgrade))
+
+	app.keeper.gov = gov.NewKeeper(
+		app.cdc,
+		app.keys[gov.StoreKey],
+		app.keeper.params.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable()),
+		app.keeper.supply,
+		&skeeper,
+		govRouter,
+	)
+
+	app.setAkashKeepers()
 
 	app.setModuleManager()
 

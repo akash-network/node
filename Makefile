@@ -7,7 +7,6 @@ GOBIN := $(shell go env GOPATH)/bin
 
 # Setting mainnet flag based on env value
 # export MAINNET=true to set build tag mainnet
-BUILD_MAINNET = !mainnet
 ifeq ($(MAINNET),true)
 	BUILD_MAINNET=mainnet
 endif
@@ -150,7 +149,7 @@ devdeps-install:
 
 test-integration: $(BINS)
 	cp akashctl akashd ./_build
-	go test -mod=readonly -p 4 -tags=integration,$(BUILD_MAINNET) -v ./integration/...
+	go test -mod=readonly -p 4 -tags "integration $(BUILD_MAINNET)" -v ./integration/...
 
 test-k8s-integration:
 	# ASSUMES:
