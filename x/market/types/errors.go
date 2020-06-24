@@ -23,6 +23,8 @@ const (
 	errCodeLeaseNotFound
 	errCodeBidExists
 	errCodeInvalidPrice
+	errCodeOrderMatched
+	errCodeOrderClosed
 )
 
 var (
@@ -62,4 +64,8 @@ var (
 	ErrBidExists = sdkerrors.Register(ModuleName, errCodeBidExists, "invalid bid: bid exists from provider")
 	// ErrBidInvalidPrice bid invalid price
 	ErrBidInvalidPrice = sdkerrors.Register(ModuleName, errCodeInvalidPrice, "bid price is invalid")
+	// ErrOrderMatched order matched
+	ErrOrderMatched = sdkerrors.New(ModuleName, errCodeOrderMatched, "order matched")
+	// ErrOrderClosed order closed
+	ErrOrderClosed = sdkerrors.New(ModuleName, errCodeOrderClosed, "order closed")
 )
