@@ -19,6 +19,12 @@ func deploymentKey(id types.DeploymentID) []byte {
 	return buf.Bytes()
 }
 
+func deploymentStateKey(d types.Deployment) []byte {
+	buf := bytes.NewBuffer(deploymentPrefix)
+	binary.Write(buf, binary.BigEndian, d.State)
+	return buf.Bytes()
+}
+
 func groupKey(id types.GroupID) []byte {
 	buf := bytes.NewBuffer(groupPrefix)
 	buf.Write(id.Owner.Bytes())
