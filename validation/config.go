@@ -26,7 +26,7 @@ type ValConfig struct {
 	MaxGroupStorage int64 `env:"AKASH_MAX_GROUP_STORAGE"   envDefault:"5368709120"` // 5Gi
 
 	MinGroupMemPrice int64 `env:"AKASH_MEM_PRICE_MIN" envDefault:"50"`
-	MaxGroupMemPrice int64 `env:"AKASH_MEM_PRICE_MAX" envDefault:"150"`
+	MaxGroupMemPrice int64 `env:"AKASH_MEM_PRICE_MAX" envDefault:"1048576"`
 }
 
 var defaultConfig = ValConfig{}

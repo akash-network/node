@@ -21,12 +21,6 @@ const (
 	OrderClosed // closed
 )
 
-var (
-	ErrOrderMatched = errors.New("order matched")
-	ErrOrderClosed  = errors.New("order closed")
-	ErrOrderOpen    = errors.New("order open")
-)
-
 // OrderStateMap is used to decode order state flag value
 var OrderStateMap = map[string]OrderState{
 	"open":    OrderOpen,

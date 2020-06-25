@@ -17,8 +17,8 @@ provider-run:
 provider-status:
 	curl -s "$(GATEWAY_ENDPOINT)/status" | jq
 
-.PHONY: provider-send-manifest
-provider-send-manifest:
+.PHONY: send-manifest
+send-manifest:
 	$(AKASHCTL) provider send-manifest "$(SDL_PATH)" \
 		--owner     "$(KEY_ADDRESS)" \
 		--dseq      "$(DSEQ)"        \
@@ -34,4 +34,4 @@ provider-lease-status:
 
 .PHONY: provider-lease-ping
 provider-lease-ping:
-	curl -sIH "Host: hello.localhost" localhost:8081
+	curl -sIH "Host: hello.localhost" localhost:$(KIND_HTTP_PORT)

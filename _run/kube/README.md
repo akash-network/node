@@ -66,11 +66,33 @@ make clean kind-cluster-clean init
 
 ### Initialize
 
-Start and initialize kind
+Start and initialize kind.
+
+Kubernetes ingress objects present some difficulties for creating development
+environments.  Two options are offered below - the first (random port) is less error-prone
+and can have multiple instances run concurrently, while the second option arguably
+has a better payoff.
+
+**note**: this step waits for kubernetes metrics to be available, which can take some time.
+The counter on the left side of the messages is regularly in the 120 range.  If it goes beyond 250,
+there may be a problem.
+
+#### Map a random local port to port 80 of your workload
+
+This is less error-prone, but makes it difficult to access your app through the browser.
 
 __t1__
 ```sh
 make kind-cluster-create
+```
+
+#### Map local port 80 to to port 80 of your workload
+
+If anything else is listening on port 80 (any other web server), this method
+will fail.  If it does succeed, you will be able to browse your app from the browser.
+
+```sh
+KIND_CONFIG=kind-config-80.yaml make kind-cluster-create
 ```
 
 Build Akash binaries and initialize network
@@ -190,7 +212,7 @@ workload configuration to that provider by sending it the manifest:
 
 __t1__
 ```sh
-make deployment-send-manifest
+make send-manifest
 ```
 
 You can check the status of your deployment with:
@@ -205,6 +227,9 @@ __t1__
 ```sh
 make provider-lease-ping
 ```
+
+If you chose to use port 80 when setting up kind, you can browse to your
+deployed workload at http://hello.localhost
 
 ### Terminate lease
 

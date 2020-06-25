@@ -1,6 +1,6 @@
 include ../common-base.mk
 
-DATA_ROOT    := $(PWD)/cache
+DATA_ROOT    := ./cache
 NODE_HOME    := $(DATA_ROOT)/node
 CLIENT_HOME  := $(DATA_ROOT)/client
 
