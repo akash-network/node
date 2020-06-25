@@ -1,0 +1,37 @@
+resources:
+  - rbac.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+commonLabels:
+  app: akash-provider
+  akash.network/component: akash-provider
+
+configMapGenerator:
+  - name: akash-provider-boot
+    files:
+      - run.sh
+
+  - name: akash-client-config
+    literals:
+      - home=/home
+      - from=main
+      - node=tcp://akashd:26657
+      - chain-id=local
+      - keyring-backend=test
+      - trust-node=true
+
+  - name: akash-provider-config
+    literals:
+      - ingress-static-hosts=false
+      - ingress-domain=app.localhost
+
+secretGenerator:
+  ##
+  # required values:
+  ##
+  - name: akash-provider-keys
+    files:
+    # - key.txt
+    # - key-pass.txt

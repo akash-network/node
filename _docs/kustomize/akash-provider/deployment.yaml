@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: akash-provider
+spec:
+  selector:
+    matchLabels:
+      app: akash-provider
+  template:
+    metadata:
+      labels:
+        app: akash-provider
+    spec:
+      containers:
+        - name: akash-provider
+          image: ovrclk/akashctl:latest
+          imagePullPolicy: IfNotPresent
+          command: [ "/bin/sh", "/boot/run.sh" ]
+          env:
+
+            ##
+            # boot config
+            ##
+
+            # location of key export. must contain two files:
+            #
+            # key.txt:      exported wallet key
+            # key-pass.txt: password used to encrypt exported key
+            - name: AKASHCTL_BOOT_KEYS
+              value: /boot-keys
+
+            ##
+            # cosmos-sdk client config
+            ##
+
+            # --home
+            - name: AKASHCTL_HOME
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-client-config
+                  key: home
+
+            # --from
+            - name: AKASHCTL_FROM
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-client-config
+                  key: from
+
+            # --node
+            - name: AKASHCTL_NODE
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-client-config
+                  key: node
+
+            # --chain-id
+            - name: AKASHCTL_CHAIN_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-client-config
+                  key: chain-id
+
+            # --keyring-backend
+            - name: AKASHCTL_KEYRING_BACKEND
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-client-config
+                  key: keyring-backend
+
+            # --trust-node
+            - name: AKASHCTL_TRUST_NODE
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-client-config
+                  key: trust-node
+
+            ##
+            # akash-provider config
+            ##
+
+            # include unique hostnames for apps
+            - name: AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: ingress-static-hosts
+
+            # domain to host unique app hostnames on
+            # (required if AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS is "true")
+            - name: AKASH_DEPLOYMENT_INGRESS_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: ingress-domain
+
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: boot
+              mountPath: /boot
+              readOnly: true
+            - name: keys
+              mountPath: /boot-keys
+              readOnly: true
+      volumes:
+        - name: boot
+          configMap:
+            name: akash-provider-boot
+        - name: keys
+          secret:
+            secretName: akash-provider-keys

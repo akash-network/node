@@ -1,55 +1,65 @@
 include ../common.mk
+include ../common-commands.mk
+include ../common-kind.mk
 
-KEY_OPTS 	= --keyring-backend test
-akash 		= ../../akashctl --home $(CLIENT_HOME) 
-akashd 		= ../../akashd --home $(NODE_HOME)
+KUSTOMIZE_DIR            ?= ./kustomize
+KUSTOMIZE_PROVIDER_DIR   ?= $(KUSTOMIZE_DIR)/akash-provider
+KUSTOMIZE_PROVIDER_CACHE ?= $(KUSTOMIZE_PROVIDER_DIR)/cache
+KUSTOMIZE_AKASHD_DIR     ?= $(KUSTOMIZE_DIR)/akashd
+KUSTOMIZE_AKASHD_CACHE   ?= $(KUSTOMIZE_AKASHD_DIR)/cache
+CLIENT_EXPORT_PASSWORD   ?= 12345678
 
-MINIKUBE_IP ?= $(shell minikube ip)
+PROVIDER_HOSTNAME = akash-provider.localhost
+AKASHCTL_NODE     = tcp://akashd.localhost:80
 
-kube-start:
-	minikube start --cpus 4 --memory 4096
-	minikube addons enable ingress
-	minikube addons enable metrics-server
+GATEWAY_ENDPOINT ?= http://akash-provider.localhost
 
-init: init-keys init-genesis init-gentx init-collect-gentx
+AKASHCTL += --node "$(AKASHCTL_NODE)"
 
-dirs: 
-	mkdir -p $(CLIENT_HOME) $(NODE_HOME)
+.PHONY: kustomize-init
+kustomize-init: kustomize-init-akashd kustomize-init-provider
 
-init-genesis: dirs
-	$(akashd) init node0 --chain-id local
-	$(akashd) add-genesis-account $(shell $(akash) $(KEY_OPTS) keys show validator -a) 100000000stake
-	$(akashd) add-genesis-account $(shell $(akash) $(KEY_OPTS) keys show provider -a) 100000000stake
+.PHONY: kustomize-init-akashd
+kustomize-init-akashd:
+	mkdir -p "$(KUSTOMIZE_AKASHD_CACHE)"
+	cp -r "$(NODE_HOME)/"* "$(KUSTOMIZE_AKASHD_CACHE)/"
 
-init-gentx:
-	$(akashd) $(KEY_OPTS) gentx --name validator --home-client $(CLIENT_HOME)
+.PHONY: kustomize-init-provider
+kustomize-init-provider:
+	mkdir -p "$(KUSTOMIZE_PROVIDER_CACHE)"
+	cp -r "$(CLIENT_HOME)/config" "$(KUSTOMIZE_PROVIDER_CACHE)/"
+	echo "$(CLIENT_EXPORT_PASSWORD)" > "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt"
+	( \
+		cat "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt" ; \
+		cat "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt"   \
+	) | $(AKASHCTL_NONODE) keys export provider 2> "$(KUSTOMIZE_PROVIDER_CACHE)/key.txt"
 
-init-collect-gentx:
-	$(akashd) collect-gentxs
-	$(akashd) validate-genesis
+.PHONY: kustomize-install-akashd
+kustomize-install-akashd:
+	kubectl kustomize kustomize/akashd | kubectl apply -f-
 
-init-config: dirs
-	$(akash) config chain-id local
-	$(akash) config output json
-	$(akash) config indent true
-	$(akash) config trust-node true
+.PHONY: send-manifest
+send-manifest:
+	$(AKASHCTL) provider send-manifest "$(SDL_PATH)" \
+		--owner     "$(KEY_ADDRESS)" \
+		--dseq      "$(DSEQ)"        \
+		--gseq      "$(GSEQ)"        \
+		--oseq      "$(OSEQ)"        \
+		--provider  "$(PROVIDER_ADDRESS)"
 
-init-keys: dirs
-	$(akash) $(KEY_OPTS) keys add validator 
-	$(akash) $(KEY_OPTS) keys add provider
+.PHONY: provider-status
+provider-status:
+	$(AKASHCTL) provider status
 
-deploy:
-	 helm install node0 akash-node \
-		 --set image.pullPolicy=Never \
-		 --set "ingress.domain=$(MINIKUBE_IP).nip.io" \
-		 --set-file node.genesis=$(NODE_HOME)/config/genesis.json \
-		 --set-file node.priv_validator_key=$(NODE_HOME)/config/priv_validator_key.json \
-		 --set-file node.priv_validator_state=$(NODE_HOME)/data/priv_validator_state.json \
-		 --set-file node.node_key=$(NODE_HOME)/config/node_key.json \
-		 --set-file node.app=$(NODE_HOME)/config/app.toml \
-		 --set-file node.config=$(NODE_HOME)/config/config.toml
+.PHONY: provider-lease-status
+provider-lease-status:
+	$(AKASHCTL) provider status lease-status \
+		--owner     "$(KEY_ADDRESS)" \
+		--dseq      "$(DSEQ)"        \
+		--gseq      "$(GSEQ)"        \
+		--oseq      "$(OSEQ)"        \
+		--provider  "$(PROVIDER_ADDRESS)"
 
-remove:
-	helm uninstall node0
-
-.PHONY: kube-start init dirs clean init-keys init-config init-collect-gentx init-gentx deploy remove
+.PHONY:
+clean-all: clean
+	git clean -fdX

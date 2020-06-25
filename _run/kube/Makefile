@@ -1,6 +1,6 @@
 include ../common.mk
 include ../common-commands.mk
-include kind.mk
+include ../common-kind.mk
 
 GATEWAY_HOST     ?= localhost:8080
 GATEWAY_ENDPOINT ?= http://$(GATEWAY_HOST)
@@ -15,7 +15,7 @@ provider-run:
 
 .PHONY: provider-status
 provider-status:
-	curl -s "$(GATEWAY_ENDPOINT)/status" | jq
+	$(AKASHCTL) provider status
 
 .PHONY: send-manifest
 send-manifest:
@@ -28,9 +28,12 @@ send-manifest:
 
 .PHONY: provider-lease-status
 provider-lease-status:
-	curl -s \
-		"$(GATEWAY_ENDPOINT)/lease/$(KEY_ADDRESS)/$(DSEQ)/$(GSEQ)/$(OSEQ)/$(PROVIDER_ADDRESS)/status" | \
-		jq
+	$(AKASHCTL) provider status lease-status \
+		--owner     "$(KEY_ADDRESS)" \
+		--dseq      "$(DSEQ)"        \
+		--gseq      "$(GSEQ)"        \
+		--oseq      "$(OSEQ)"        \
+		--provider  "$(PROVIDER_ADDRESS)"
 
 .PHONY: provider-lease-ping
 provider-lease-ping:
