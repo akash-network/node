@@ -12,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
@@ -203,12 +204,72 @@ func NewApp(
 
 	app.setAkashKeepers()
 
-	app.setModuleManager()
+	app.mm = module.NewManager(
+		append([]module.AppModule{
+			genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx),
+			auth.NewAppModule(app.keeper.acct),
+			bank.NewAppModule(app.keeper.bank, app.keeper.acct),
+			supply.NewAppModule(app.keeper.supply, app.keeper.acct),
+			distr.NewAppModule(app.keeper.distr, app.keeper.acct, app.keeper.supply, app.keeper.staking),
+			mint.NewAppModule(app.keeper.mint),
+			slashing.NewAppModule(app.keeper.slashing, app.keeper.acct, app.keeper.staking),
+			staking.NewAppModule(app.keeper.staking, app.keeper.acct, app.keeper.supply),
+			gov.NewAppModule(app.keeper.gov, app.keeper.acct, app.keeper.supply),
+			upgrade.NewAppModule(app.keeper.upgrade),
+			evidence.NewAppModule(app.keeper.evidence),
+			crisis.NewAppModule(&app.keeper.crisis),
+		},
+
+			app.akashAppModules()...,
+		)...,
+	)
+
+	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName, evidence.ModuleName)
+	app.mm.SetOrderEndBlockers(
+		append([]string{
+			crisis.ModuleName, gov.ModuleName, staking.ModuleName},
+			app.akashEndBlockModules()...,
+		)...,
+	)
+
+	// NOTE: The genutils module must occur after staking so that pools are
+	//       properly initialized with tokens from genesis accounts.
+	app.mm.SetOrderInitGenesis(
+		append([]string{
+			auth.ModuleName,
+			distr.ModuleName,
+			staking.ModuleName,
+			bank.ModuleName,
+			slashing.ModuleName,
+			gov.ModuleName,
+			mint.ModuleName,
+			supply.ModuleName,
+			crisis.ModuleName,
+			genutil.ModuleName,
+			evidence.ModuleName,
+		},
+
+			app.akashInitGenesisOrder()...,
+		)...,
+	)
 
 	app.mm.RegisterInvariants(&app.keeper.crisis)
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter())
 
-	app.setSimulationManager()
+	app.sm = module.NewSimulationManager(
+		append([]module.AppModuleSimulation{
+			auth.NewAppModule(app.keeper.acct),
+			bank.NewAppModule(app.keeper.bank, app.keeper.acct),
+			supply.NewAppModule(app.keeper.supply, app.keeper.acct),
+			mint.NewAppModule(app.keeper.mint),
+			staking.NewAppModule(app.keeper.staking, app.keeper.acct, app.keeper.supply),
+			distr.NewAppModule(app.keeper.distr, app.keeper.acct, app.keeper.supply, app.keeper.staking),
+			slashing.NewAppModule(app.keeper.slashing, app.keeper.acct, app.keeper.staking),
+			params.NewAppModule(), // NOTE: only used for simulation to generate randomized param change proposals
+		},
+			app.akashSimModules()...,
+		)...,
+	)
 
 	app.sm.RegisterStoreDecoders()
 
