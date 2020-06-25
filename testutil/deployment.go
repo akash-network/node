@@ -26,6 +26,7 @@ func DeploymentGroup(t testing.TB, did dtypes.DeploymentID, gseq uint32) dtypes.
 		GroupSpec: dtypes.GroupSpec{
 			Name:         Name(t, "dgroup"),
 			Requirements: Attributes(t),
+			Resources:    Resources(t),
 		},
 	}
 }

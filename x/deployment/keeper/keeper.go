@@ -147,6 +147,22 @@ func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool)
 	}
 }
 
+// WithDeploymentsActive filters to only those with State: Active
+func (k Keeper) WithDeploymentsActive(ctx sdk.Context, fn func(types.Deployment) bool) {
+	store := ctx.KVStore(k.skey)
+	iter := sdk.KVStorePrefixIterator(store, deploymentPrefix)
+	for ; iter.Valid(); iter.Next() {
+		var val types.Deployment
+		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		if val.State != types.DeploymentActive {
+			continue
+		}
+		if stop := fn(val); stop {
+			break
+		}
+	}
+}
+
 // OnOrderCreated updates group state to group ordered
 func (k Keeper) OnOrderCreated(ctx sdk.Context, group types.Group) {
 	// TODO: assert state transition

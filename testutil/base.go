@@ -11,6 +11,10 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
+// CoinDenom provides ability to create coins in test functions and
+// pass them into testutil functionality.
+const CoinDenom = "akash"
+
 // Name generates a random name with the given prefix
 func Name(_ testing.TB, prefix string) string {
 	return fmt.Sprintf("%s-%v", prefix, rand.Uint64())
@@ -40,12 +44,15 @@ func Attributes(t testing.TB) []sdk.Attribute {
 
 }
 
+// Resources produces an attribute list for populating a Group's
+// 'Resources' fields.
 func Resources(t testing.TB) []dtypes.Resource {
 	t.Helper()
 	count := rand.Intn(10) + 1
 
 	vals := make([]dtypes.Resource, 0, count)
 	for i := 0; i < count; i++ {
+		coin := sdk.NewCoin(CoinDenom, sdk.NewInt(rand.Int63n(9999)))
 		res := dtypes.Resource{
 			Unit: types.Unit{
 				CPU:     100,
@@ -53,7 +60,7 @@ func Resources(t testing.TB) []dtypes.Resource {
 				Storage: 10,
 			},
 			Count: 1,
-			Price: sdk.NewCoin("thepricedcoin", sdk.NewInt(int64(rand.Uint16()))),
+			Price: coin,
 		}
 		vals = append(vals, res)
 	}

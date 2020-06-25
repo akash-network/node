@@ -10,14 +10,8 @@ import (
 // Executed at the end of block
 func OnEndBlock(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper) {
 
-	// create orders as necessary
-	keeper.WithDeployments(ctx, func(d types.Deployment) bool {
-
-		// active deployments only
-		if d.State != types.DeploymentActive {
-			return false
-		}
-
+	// create orders as necessary for Active Deployment
+	keeper.WithDeploymentsActive(ctx, func(d types.Deployment) bool {
 		for _, group := range keeper.GetGroups(ctx, d.ID()) {
 
 			// open groups only
@@ -34,8 +28,6 @@ func OnEndBlock(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper) {
 			// set state to ordered
 			keeper.OnOrderCreated(ctx, group)
 		}
-
 		return false
 	})
-
 }
