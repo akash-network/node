@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEndBlock(t *testing.T) {
+func TestEndBlockNominal(t *testing.T) {
 	suite := setupTestSuite(t)
 	d0 := testutil.Deployment(suite.t)
 	g0 := testutil.DeploymentGroup(suite.t, d0.DeploymentID, uint32(5))

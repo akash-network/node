@@ -31,7 +31,7 @@ func (k Keeper) Codec() *codec.Codec {
 func (k Keeper) GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Deployment, bool) {
 	store := ctx.KVStore(k.skey)
 
-	key := deploymentKey(id)
+	key := deploymentIDKey(id)
 
 	if !store.Has(key) {
 		return types.Deployment{}, false
@@ -88,7 +88,10 @@ func (k Keeper) GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group 
 func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []types.Group) error {
 	store := ctx.KVStore(k.skey)
 
-	key := deploymentKey(deployment.ID())
+	key, err := deploymentKey(deployment)
+	if err != nil {
+		return err
+	}
 
 	if store.Has(key) {
 		return types.ErrDeploymentExists
@@ -114,7 +117,10 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 // UpdateDeployment updates deployment details
 func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) error {
 	store := ctx.KVStore(k.skey)
-	key := deploymentKey(deployment.ID())
+	key, err := deploymentKey(deployment)
+	if err != nil {
+		return err
+	}
 
 	if !store.Has(key) {
 		return types.ErrDeploymentNotFound

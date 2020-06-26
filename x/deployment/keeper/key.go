@@ -8,21 +8,39 @@ import (
 )
 
 var (
-	deploymentPrefix = []byte{0x01}
+	deploymentPrefix = []byte{0x01, 0x00}
 	groupPrefix      = []byte{0x02}
+
+	deploymentActivePrefix = []byte{0x01, 0x01}
+	deploymentClosedPrefix = []byte{0x01, 0x02}
 )
 
-func deploymentKey(id types.DeploymentID) []byte {
+func deploymentIDKey(id types.DeploymentID) []byte {
 	buf := bytes.NewBuffer(deploymentPrefix)
 	buf.Write(id.Owner.Bytes())
 	binary.Write(buf, binary.BigEndian, id.DSeq)
 	return buf.Bytes()
 }
 
-func deploymentStateKey(d types.Deployment) []byte {
-	buf := bytes.NewBuffer(deploymentPrefix)
-	binary.Write(buf, binary.BigEndian, d.State)
-	return buf.Bytes()
+func deploymentKey(d types.Deployment) ([]byte, error) {
+	var buf *bytes.Buffer
+	var err error
+
+	switch d.State {
+	case types.DeploymentActive:
+		_, err = buf.Write(deploymentActivePrefix)
+	case types.DeploymentClosed:
+		_, err = buf.Write(deploymentClosedPrefix)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	err = binary.Write(buf, binary.BigEndian, d.ID().DSeq)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func groupKey(id types.GroupID) []byte {
