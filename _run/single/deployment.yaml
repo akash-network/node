@@ -1,0 +1,34 @@
+---
+version: "1.5"
+
+services:
+  web:
+    image: quay.io/ovrclk/demo-app
+    expose:
+      - port: 80
+        as: 80
+        accept:
+          - hello.localhost
+        to:
+          - global: true
+
+profiles:
+  compute:
+    web:
+      cpu: 0.1
+      memory: 16Mi
+      storage: 128Mi
+  placement:
+    westcoast:
+      attributes:
+        region: us-west
+      pricing:
+        web: 
+          denom: akash
+          amount: 1000
+
+deployment:
+  web:
+    westcoast:
+      profile: web
+      count: 1

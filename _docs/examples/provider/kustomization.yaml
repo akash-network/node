@@ -1,0 +1,67 @@
+bases:
+  - github.com/ovrclk/akash/_docs/kustomize/akash-provider?ref=master
+  # - ../../kustomize/akash-provider
+
+images:
+  - name: ovrclk/akashctl
+
+    ##
+    # akashctl version
+    ##
+
+    newTag: 0.7.4
+
+configMapGenerator:
+
+  ##
+  # cosmos-sdk client (config.toml) options
+  ##
+  - name: akash-client-config
+    behavior: merge
+    ##
+    # place overrides in client-config.txt
+    #
+    # node=tcp://akashd:26657
+    # chain-id=local
+    ##
+    env: client-config.txt
+
+  ##
+  # Akash provider service option overrides
+  ##
+  - name: akash-provider-config
+    behavior: merge
+    ##
+    # place overrides in provider-config.txt
+    #
+    # ingress-static-hosts=false
+    # ingress-domain=app.localhost
+    ##
+    env: provider-config.txt
+
+patchesJson6902:
+
+  ##
+  #  Configure gateway host in `gateway-host.yaml`.  Its value
+  #  should be the hostname from the on-chain Provider.HostURI
+  #  field.
+  ##
+
+  - path: gateway-host.yaml
+    target:
+      group: networking.k8s.io
+      version: v1beta1
+      kind: Ingress
+      name: akash-provider
+
+secretGenerator:
+
+  ##
+  # Account key material
+  ##
+
+  - name: akash-provider-keys
+    behavior: replace
+    files:
+      - key.txt
+      - key-pass.txt

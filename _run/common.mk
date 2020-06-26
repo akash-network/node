@@ -12,7 +12,8 @@ CHAIN_MIN_DEPOSIT     := 10000000
 CHAIN_ACCOUNT_DEPOSIT := $(shell echo $$(($(CHAIN_MIN_DEPOSIT) * 10)))
 CHAIN_TOKEN_DENOM     := akash
 
-AKASHCTL := $(AKASHCTL_BIN) --home "$(CLIENT_HOME)"
+AKASHCTL_NONODE := $(AKASHCTL_BIN) --home "$(CLIENT_HOME)"
+AKASHCTL := $(AKASHCTL_NONODE)
 AKASHD   := $(AKASHD_BIN)   --home "$(NODE_HOME)"
 KEY_OPTS := --keyring-backend=test
 
@@ -30,19 +31,19 @@ init-dirs:
 
 .PHONY: client-init-config
 client-init-config:
-	$(AKASHCTL) config chain-id        "$(CHAIN_NAME)"
-	$(AKASHCTL) config output          json
-	$(AKASHCTL) config indent          true
-	$(AKASHCTL) config trust-node      true
-	$(AKASHCTL) config keyring-backend test
-	$(AKASHCTL) config broadcast-mode  block
+	$(AKASHCTL_NONODE) config chain-id        "$(CHAIN_NAME)"
+	$(AKASHCTL_NONODE) config output          json
+	$(AKASHCTL_NONODE) config indent          true
+	$(AKASHCTL_NONODE) config trust-node      true
+	$(AKASHCTL_NONODE) config keyring-backend test
+	$(AKASHCTL_NONODE) config broadcast-mode  block
 
 .PHONY: client-init-keys
 client-init-keys: $(patsubst %,client-init-key-%,$(KEY_NAMES))
 
 .PHONY: client-init-key-%
 client-init-key-%:
-	$(AKASHCTL) keys add "$(@:client-init-key-%=%)"
+	$(AKASHCTL_NONODE) keys add "$(@:client-init-key-%=%)"
 
 .PHONY: node-init
 node-init: node-init-genesis node-init-genesis-accounts node-init-gentx node-init-finalize
@@ -64,7 +65,7 @@ node-init-genesis-accounts: $(patsubst %,node-init-genesis-account-%,$(KEY_NAMES
 .PHONY: node-init-genesis-account-%
 node-init-genesis-account-%:
 	$(AKASHD) add-genesis-account \
-		"$(shell $(AKASHCTL) keys show "$(@:node-init-genesis-account-%=%)" -a)" \
+		"$(shell $(AKASHCTL_NONODE) keys show "$(@:node-init-genesis-account-%=%)" -a)" \
 		"$(CHAIN_MIN_DEPOSIT)$(CHAIN_TOKEN_DENOM)"
 
 .PHONY: node-init-gentx

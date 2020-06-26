@@ -1,8 +1,8 @@
 KEY_NAME          ?= main
-KEY_ADDRESS       ?= $(shell $(AKASHCTL) keys show "$(KEY_NAME)" -a)
+KEY_ADDRESS       ?= $(shell $(AKASHCTL_NONODE) keys show "$(KEY_NAME)" -a)
 
 PROVIDER_KEY_NAME    ?= provider
-PROVIDER_ADDRESS     ?= $(shell $(AKASHCTL) keys show "$(PROVIDER_KEY_NAME)" -a)
+PROVIDER_ADDRESS     ?= $(shell $(AKASHCTL_NONODE) keys show "$(PROVIDER_KEY_NAME)" -a)
 PROVIDER_CONFIG_PATH ?= provider.yaml
 
 SDL_PATH ?= deployment.yaml
@@ -68,7 +68,7 @@ query-accounts: $(patsubst %, query-account-%,$(KEY_NAMES))
 
 .PHONY: query-account-%
 query-account-%:
-	$(AKASHCTL) query account "$(shell $(AKASHCTL) keys show -a "$(@:query-account-%=%)")"
+	$(AKASHCTL) query account "$(shell $(AKASHCTL_NONODE) keys show -a "$(@:query-account-%=%)")"
 
 .PHONY: query-provider
 query-provider:

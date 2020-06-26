@@ -1,0 +1,58 @@
+bases:
+  # - github.com/ovrclk/akash/_docs/kustomize/akashd?ref=boz/kustomize
+  - ../../../../_docs/kustomize/akashd
+
+images:
+  - name: ovrclk/akashd
+
+    ##
+    # akashctl version
+    ##
+
+    newTag: 0.7.4
+
+configMapGenerator:
+
+
+  ##
+  # cosmos-sdk app config (app.toml) overrides
+  ##
+  - name: akashd-app-config
+    behavior: merge
+    literals:
+      # - pruning=syncable
+
+  ##
+  # tendermint node config (config.toml) overrides
+  ##
+  - name: akashd-config
+    behavior: merge
+    literals:
+      # - moniker=node0
+
+  - name: akashd-data
+    behavior: merge
+    files:
+      - cache/config/genesis.json
+
+secretGenerator:
+  - name: akashd-keys
+    behavior: replace
+    files:
+      - cache/config/node_key.json
+      - cache/config/priv_validator_key.json
+      - cache/data/priv_validator_state.json
+
+patchesJson6902:
+
+  ##
+  #  Configure gateway host in `gateway-host.yaml`.  This
+  #  will be the hostname for rpc over port 80.
+  ##
+
+  - path: gateway-host.yaml
+    target:
+      group: networking.k8s.io
+      version: v1beta1
+      kind: Ingress
+      name: akashd
