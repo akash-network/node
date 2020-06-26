@@ -103,6 +103,7 @@ func (c *client) LeaseStatus(ctx context.Context, host string, id mtypes.LeaseID
 
 	return &obj, nil
 }
+
 func (c *client) ServiceStatus(ctx context.Context, host string, id mtypes.LeaseID, service string) (*cluster.ServiceStatus, error) {
 	uri, err := makeURI(host, serviceStatusPath(id, service))
 	if err != nil {
