@@ -14,4 +14,10 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
       - run: make test-integration
+  integration-mainnet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+      - run: MAINNET=true make test-integration
 

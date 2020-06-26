@@ -5,11 +5,17 @@ APP_DIR := ./app
 GO := GO111MODULE=on go
 GOBIN := $(shell go env GOPATH)/bin
 
+# Setting mainnet flag based on env value
+# export MAINNET=true to set build tag mainnet
+ifeq ($(MAINNET),true)
+	BUILD_MAINNET=mainnet
+endif
+
 GOLANGCI_LINT_VERSION = v1.27.0
 
 IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 
-BUILD_FLAGS = -mod=readonly -tags "netgo ledger" -ldflags \
+BUILD_FLAGS = -mod=readonly -tags "netgo ledger $(BUILD_MAINNET)" -ldflags \
  '-X github.com/cosmos/cosmos-sdk/version.Name=akash \
   -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd \
   -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl \
@@ -73,16 +79,16 @@ shellcheck:
 	-x /shellcheck/script/shellcheck.sh
 
 test:
-	$(GO) test ./...
+	$(GO) test -tags=$(BUILD_MAINNET) ./...
 
 test-nocache:
-	$(GO) test -count=1 ./...
+	$(GO) test -tags=$(BUILD_MAINNET) -count=1 ./...
 
 test-full:
-	$(GO) test -race ./...
+	$(GO) test -tags=$(BUILD_MAINNET) -race ./...
 
 test-coverage:
-	$(GO) test -coverprofile=coverage.txt \
+	$(GO) test -tags=$(BUILD_MAINNET) -coverprofile=coverage.txt \
 		-covermode=count \
 		-coverpkg="./..." \
 		./...
@@ -143,7 +149,7 @@ devdeps-install:
 
 test-integration: $(BINS)
 	cp akashctl akashd ./_build
-	go test -mod=readonly -p 4 -tags=integration -v ./integration/...
+	go test -mod=readonly -p 4 -tags "integration $(BUILD_MAINNET)" -v ./integration/...
 
 test-k8s-integration:
 	# ASSUMES:
@@ -220,20 +226,20 @@ update-swagger-docs:
 
 test-sim-fullapp:
 	@echo "Running app simulation test..."
-	go test -mod=readonly ${APP_DIR} -run=TestFullAppSimulation -Enabled=true \
+	go test -mod=readonly -tags=$(BUILD_MAINNET) ${APP_DIR} -run=TestFullAppSimulation -Enabled=true \
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
 test-sim-nondeterminism:
 	@echo "Running non-determinism test. This may take several minutes..."
-	go test -mod=readonly $(APP_DIR) -run TestAppStateDeterminism -Enabled=true \
+	go test -mod=readonly -tags=$(BUILD_MAINNET) $(APP_DIR) -run TestAppStateDeterminism -Enabled=true \
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Period=0 -v -timeout 24h
 
 test-sim-import-export:
 	@echo "Running application import/export simulation..."
-	go test -mod=readonly $(APP_DIR) -run=TestAppImportExport -Enabled=true \
+	go test -mod=readonly -tags=$(BUILD_MAINNET) $(APP_DIR) -run=TestAppImportExport -Enabled=true \
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
 test-sim-after-import:
 	@echo "Running application simulation-after-import..."
-	go test -mod=readonly $(APP_DIR) -run=TestAppSimulationAfterImport -Enabled=true \
+	go test -mod=readonly -tags=$(BUILD_MAINNET) $(APP_DIR) -run=TestAppSimulationAfterImport -Enabled=true \
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m

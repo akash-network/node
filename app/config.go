@@ -21,46 +21,43 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/supply"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
-	"github.com/ovrclk/akash/x/deployment"
-	"github.com/ovrclk/akash/x/market"
-	"github.com/ovrclk/akash/x/provider"
 )
 
 var (
 	mbasics = module.NewBasicManager(
-		genutil.AppModuleBasic{},
+		append([]module.AppModuleBasic{
+			genutil.AppModuleBasic{},
 
-		// accounts, fees.
-		auth.AppModuleBasic{},
+			// accounts, fees.
+			auth.AppModuleBasic{},
 
-		// tokens, token balance.
-		bank.AppModuleBasic{},
+			// tokens, token balance.
+			bank.AppModuleBasic{},
 
-		// total supply of the chain
-		supply.AppModuleBasic{},
+			// total supply of the chain
+			supply.AppModuleBasic{},
 
-		// inflation
-		mint.AppModuleBasic{},
+			// inflation
+			mint.AppModuleBasic{},
 
-		staking.AppModuleBasic{},
+			staking.AppModuleBasic{},
 
-		slashing.AppModuleBasic{},
+			slashing.AppModuleBasic{},
 
-		distr.AppModuleBasic{},
+			distr.AppModuleBasic{},
 
-		gov.NewAppModuleBasic(
-			paramsclient.ProposalHandler, distr.ProposalHandler, upgradeclient.ProposalHandler,
-		),
+			gov.NewAppModuleBasic(
+				paramsclient.ProposalHandler, distr.ProposalHandler, upgradeclient.ProposalHandler,
+			),
 
-		params.AppModuleBasic{},
-		upgrade.AppModuleBasic{},
-		evidence.AppModuleBasic{},
-		crisis.AppModuleBasic{},
-
-		// akash
-		deployment.AppModuleBasic{},
-		market.AppModuleBasic{},
-		provider.AppModuleBasic{},
+			params.AppModuleBasic{},
+			upgrade.AppModuleBasic{},
+			evidence.AppModuleBasic{},
+			crisis.AppModuleBasic{},
+		},
+			// akash
+			akashModuleBasics()...,
+		)...,
 	)
 )
 
@@ -85,20 +82,22 @@ func MakeCodec() *codec.Codec {
 
 func kvStoreKeys() map[string]*sdk.KVStoreKey {
 	return sdk.NewKVStoreKeys(
-		bam.MainStoreKey,
-		auth.StoreKey,
-		params.StoreKey,
-		slashing.StoreKey,
-		distr.StoreKey,
-		supply.StoreKey,
-		staking.StoreKey,
-		mint.StoreKey,
-		gov.StoreKey,
-		upgrade.StoreKey,
-		evidence.StoreKey,
-		deployment.StoreKey,
-		market.StoreKey,
-		provider.StoreKey,
+		append([]string{
+			bam.MainStoreKey,
+			auth.StoreKey,
+			params.StoreKey,
+			slashing.StoreKey,
+			distr.StoreKey,
+			supply.StoreKey,
+			staking.StoreKey,
+			mint.StoreKey,
+			gov.StoreKey,
+			upgrade.StoreKey,
+			evidence.StoreKey,
+		},
+
+			akashKVStoreKeys()...,
+		)...,
 	)
 }
 

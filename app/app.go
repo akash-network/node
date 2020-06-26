@@ -98,14 +98,14 @@ func NewApp(
 	}
 
 	app.keeper.params = params.NewKeeper(
-		cdc,
-		keys[params.StoreKey],
-		tkeys[params.TStoreKey],
+		app.cdc,
+		app.keys[params.StoreKey],
+		app.tkeys[params.TStoreKey],
 	)
 
 	app.keeper.acct = auth.NewAccountKeeper(
-		cdc,
-		keys[auth.StoreKey],
+		app.cdc,
+		app.keys[auth.StoreKey],
 		app.keeper.params.Subspace(auth.DefaultParamspace),
 		auth.ProtoBaseAccount,
 	)
@@ -117,23 +117,23 @@ func NewApp(
 	)
 
 	app.keeper.supply = supply.NewKeeper(
-		cdc,
-		keys[supply.StoreKey],
+		app.cdc,
+		app.keys[supply.StoreKey],
 		app.keeper.acct,
 		app.keeper.bank,
 		macPerms(),
 	)
 
 	skeeper := staking.NewKeeper(
-		cdc,
-		keys[staking.StoreKey],
+		app.cdc,
+		app.keys[staking.StoreKey],
 		app.keeper.supply,
 		app.keeper.params.Subspace(staking.DefaultParamspace),
 	)
 
 	app.keeper.distr = distr.NewKeeper(
-		cdc,
-		keys[distr.StoreKey],
+		app.cdc,
+		app.keys[distr.StoreKey],
 		app.keeper.params.Subspace(distr.DefaultParamspace),
 		&skeeper,
 		app.keeper.supply,
@@ -142,8 +142,8 @@ func NewApp(
 	)
 
 	app.keeper.slashing = slashing.NewKeeper(
-		cdc,
-		keys[slashing.StoreKey],
+		app.cdc,
+		app.keys[slashing.StoreKey],
 		&skeeper,
 		app.keeper.params.Subspace(slashing.DefaultParamspace),
 	)
@@ -156,33 +156,32 @@ func NewApp(
 	)
 
 	app.keeper.mint = mint.NewKeeper(
-		cdc,
-		keys[mint.StoreKey],
+		app.cdc,
+		app.keys[mint.StoreKey],
 		app.keeper.params.Subspace(mint.DefaultParamspace),
 		&skeeper,
 		app.keeper.supply,
 		auth.FeeCollectorName,
 	)
 
-	app.keeper.upgrade = upgrade.NewKeeper(skipUpgradeHeights, keys[upgrade.StoreKey], cdc)
+	app.keeper.upgrade = upgrade.NewKeeper(skipUpgradeHeights, app.keys[upgrade.StoreKey], app.cdc)
 
 	app.keeper.crisis = crisis.NewKeeper(
 		app.keeper.params.Subspace(crisis.DefaultParamspace),
-		invCheckPeriod,
+		app.invCheckPeriod,
 		app.keeper.supply,
 		auth.FeeCollectorName,
 	)
 
 	// create evidence keeper with evidence router
 	evidenceKeeper := evidence.NewKeeper(
-		app.cdc, keys[evidence.StoreKey],
+		app.cdc, app.keys[evidence.StoreKey],
 		app.keeper.params.Subspace(evidence.DefaultParamspace),
 		&app.keeper.staking,
 		app.keeper.slashing,
 	)
 	evidenceRouter := evidence.NewRouter()
 
-	// TODO: register evidence routes
 	evidenceKeeper.SetRouter(evidenceRouter)
 
 	app.keeper.evidence = *evidenceKeeper
@@ -195,104 +194,81 @@ func NewApp(
 		AddRoute(upgrade.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.keeper.upgrade))
 
 	app.keeper.gov = gov.NewKeeper(
-		cdc,
-		keys[gov.StoreKey],
+		app.cdc,
+		app.keys[gov.StoreKey],
 		app.keeper.params.Subspace(gov.DefaultParamspace).WithKeyTable(gov.ParamKeyTable()),
 		app.keeper.supply,
 		&skeeper,
 		govRouter,
 	)
 
-	app.keeper.deployment = deployment.NewKeeper(
-		cdc,
-		keys[deployment.StoreKey],
-	)
-
-	app.keeper.market = market.NewKeeper(
-		cdc,
-		keys[market.StoreKey],
-	)
-
-	app.keeper.provider = provider.NewKeeper(
-		cdc,
-		keys[provider.StoreKey],
-	)
+	app.setAkashKeepers()
 
 	app.mm = module.NewManager(
-		genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx),
-		auth.NewAppModule(app.keeper.acct),
-		bank.NewAppModule(app.keeper.bank, app.keeper.acct),
+		append([]module.AppModule{
+			genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx),
+			auth.NewAppModule(app.keeper.acct),
+			bank.NewAppModule(app.keeper.bank, app.keeper.acct),
+			supply.NewAppModule(app.keeper.supply, app.keeper.acct),
+			distr.NewAppModule(app.keeper.distr, app.keeper.acct, app.keeper.supply, app.keeper.staking),
+			mint.NewAppModule(app.keeper.mint),
+			slashing.NewAppModule(app.keeper.slashing, app.keeper.acct, app.keeper.staking),
+			staking.NewAppModule(app.keeper.staking, app.keeper.acct, app.keeper.supply),
+			gov.NewAppModule(app.keeper.gov, app.keeper.acct, app.keeper.supply),
+			upgrade.NewAppModule(app.keeper.upgrade),
+			evidence.NewAppModule(app.keeper.evidence),
+			crisis.NewAppModule(&app.keeper.crisis),
+		},
 
-		supply.NewAppModule(app.keeper.supply, app.keeper.acct),
-		distr.NewAppModule(app.keeper.distr, app.keeper.acct, app.keeper.supply, app.keeper.staking),
-
-		mint.NewAppModule(app.keeper.mint),
-		slashing.NewAppModule(app.keeper.slashing, app.keeper.acct, app.keeper.staking),
-
-		staking.NewAppModule(app.keeper.staking, app.keeper.acct, app.keeper.supply),
-
-		gov.NewAppModule(app.keeper.gov, app.keeper.acct, app.keeper.supply),
-		upgrade.NewAppModule(app.keeper.upgrade),
-		evidence.NewAppModule(app.keeper.evidence),
-		crisis.NewAppModule(&app.keeper.crisis),
-
-		// akash
-		deployment.NewAppModule(
-			app.keeper.deployment,
-			app.keeper.market,
-			app.keeper.bank,
-		),
-
-		market.NewAppModule(
-			app.keeper.market,
-			app.keeper.deployment,
-			app.keeper.provider,
-			app.keeper.bank,
-		),
-
-		provider.NewAppModule(app.keeper.provider, app.keeper.bank, app.keeper.market),
+			app.akashAppModules()...,
+		)...,
 	)
 
 	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distr.ModuleName, slashing.ModuleName, evidence.ModuleName)
-	app.mm.SetOrderEndBlockers(crisis.ModuleName, gov.ModuleName, staking.ModuleName, deployment.ModuleName, market.ModuleName)
+	app.mm.SetOrderEndBlockers(
+		append([]string{
+			crisis.ModuleName, gov.ModuleName, staking.ModuleName},
+			app.akashEndBlockModules()...,
+		)...,
+	)
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	//       properly initialized with tokens from genesis accounts.
 	app.mm.SetOrderInitGenesis(
-		auth.ModuleName,
-		distr.ModuleName,
-		staking.ModuleName,
-		bank.ModuleName,
-		slashing.ModuleName,
-		gov.ModuleName,
-		mint.ModuleName,
-		supply.ModuleName,
-		crisis.ModuleName,
-		genutil.ModuleName,
-		evidence.ModuleName,
+		append([]string{
+			auth.ModuleName,
+			distr.ModuleName,
+			staking.ModuleName,
+			bank.ModuleName,
+			slashing.ModuleName,
+			gov.ModuleName,
+			mint.ModuleName,
+			supply.ModuleName,
+			crisis.ModuleName,
+			genutil.ModuleName,
+			evidence.ModuleName,
+		},
 
-		// akash
-		deployment.ModuleName,
-		provider.ModuleName,
-		market.ModuleName,
+			app.akashInitGenesisOrder()...,
+		)...,
 	)
 
 	app.mm.RegisterInvariants(&app.keeper.crisis)
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter())
 
 	app.sm = module.NewSimulationManager(
-		auth.NewAppModule(app.keeper.acct),
-		bank.NewAppModule(app.keeper.bank, app.keeper.acct),
-		supply.NewAppModule(app.keeper.supply, app.keeper.acct),
-		mint.NewAppModule(app.keeper.mint),
-		staking.NewAppModule(app.keeper.staking, app.keeper.acct, app.keeper.supply),
-		distr.NewAppModule(app.keeper.distr, app.keeper.acct, app.keeper.supply, app.keeper.staking),
-		slashing.NewAppModule(app.keeper.slashing, app.keeper.acct, app.keeper.staking),
-		params.NewAppModule(), // NOTE: only used for simulation to generate randomized param change proposals
-		deployment.NewAppModuleSimulation(app.keeper.deployment, app.keeper.acct),
-		market.NewAppModuleSimulation(app.keeper.market, app.keeper.acct, app.keeper.deployment,
-			app.keeper.provider, app.keeper.bank),
-		provider.NewAppModuleSimulation(app.keeper.provider, app.keeper.acct),
+		append([]module.AppModuleSimulation{
+			auth.NewAppModule(app.keeper.acct),
+			bank.NewAppModule(app.keeper.bank, app.keeper.acct),
+			supply.NewAppModule(app.keeper.supply, app.keeper.acct),
+			mint.NewAppModule(app.keeper.mint),
+			staking.NewAppModule(app.keeper.staking, app.keeper.acct, app.keeper.supply),
+			distr.NewAppModule(app.keeper.distr, app.keeper.acct, app.keeper.supply, app.keeper.staking),
+			slashing.NewAppModule(app.keeper.slashing, app.keeper.acct, app.keeper.staking),
+			params.NewAppModule(), // NOTE: only used for simulation to generate randomized param change proposals
+		},
+			app.akashSimModules()...,
+		)...,
 	)
 
 	app.sm.RegisterStoreDecoders()
