@@ -45,6 +45,16 @@ func Test_Create(t *testing.T) {
 		})
 		assert.Equal(t, 1, count)
 	})
+	t.Run("one active deployment exists", func(t *testing.T) {
+		count := 0
+		keeper.WithDeploymentsActive(ctx, func(d types.Deployment) bool {
+			if assert.Equal(t, deployment.ID(), d.ID()) {
+				count++
+			}
+			return false
+		})
+		assert.Equal(t, 1, count)
+	})
 
 	// write more data.
 	{
