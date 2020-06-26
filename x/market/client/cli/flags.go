@@ -22,6 +22,16 @@ func MarkReqOrderIDFlags(cmd *cobra.Command) {
 	cmd.MarkFlagRequired("oseq")
 }
 
+// AddProviderFlag add provider flag to command flags set
+func AddProviderFlag(flags *pflag.FlagSet) {
+	flags.String("provider", "", "Provider")
+}
+
+// MarkReqProviderFlag marks provider flag as required
+func MarkReqProviderFlag(cmd *cobra.Command) {
+	_ = cmd.MarkFlagRequired("provider")
+}
+
 // OrderIDFromFlags returns OrderID with given flags and error if occurred
 func OrderIDFromFlags(flags *pflag.FlagSet) (types.OrderID, error) {
 	prev, err := dcli.GroupIDFromFlags(flags)
@@ -38,7 +48,7 @@ func OrderIDFromFlags(flags *pflag.FlagSet) (types.OrderID, error) {
 // AddBidIDFlags add flags for bid
 func AddBidIDFlags(flags *pflag.FlagSet) {
 	AddOrderIDFlags(flags)
-	flags.String("provider", "", "Provider")
+	AddProviderFlag(flags)
 }
 
 // AddQueryBidIDFlags add flags for bid in query commands
@@ -50,7 +60,7 @@ func AddQueryBidIDFlags(flags *pflag.FlagSet) {
 // Used in get bid query command
 func MarkReqBidIDFlags(cmd *cobra.Command) {
 	MarkReqOrderIDFlags(cmd)
-	cmd.MarkFlagRequired("provider")
+	MarkReqProviderFlag(cmd)
 }
 
 // BidIDFromFlags returns BidID with given flags and error if occurred
@@ -78,6 +88,19 @@ func BidIDFromFlagsWithoutCtx(flags *pflag.FlagSet) (types.BidID, error) {
 		return types.BidID{}, err
 	}
 	return types.MakeBidID(prev, addr), nil
+}
+
+// ProviderFromFlagsWithoutCtx returns Provider address with given flags and error if occurred
+func ProviderFromFlagsWithoutCtx(flags *pflag.FlagSet) (sdk.AccAddress, error) {
+	provider, err := flags.GetString("provider")
+	if err != nil {
+		return sdk.AccAddress{}, err
+	}
+	addr, err := sdk.AccAddressFromBech32(provider)
+	if err != nil {
+		return sdk.AccAddress{}, err
+	}
+	return addr, nil
 }
 
 // AddOrderFilterFlags add flags to filter for order list
