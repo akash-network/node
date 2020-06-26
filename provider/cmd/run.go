@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 
 	ccontext "github.com/cosmos/cosmos-sdk/client/context"
@@ -34,6 +36,10 @@ const (
 	flagGatewayListenAddress = "gateway-listen-address"
 )
 
+var (
+	errInvalidConfig = errors.New("Invalid configuration")
+)
+
 func runCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run",
@@ -46,7 +52,11 @@ func runCmd(cdc *codec.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().Bool(flagClusterK8s, false, "Use Kubernetes cluster")
+	viper.BindPFlag(flagClusterK8s, cmd.Flags().Lookup(flagClusterK8s))
+
 	cmd.Flags().String(flagK8sManifestNS, "lease", "Cluster manifest namespace")
+	viper.BindPFlag(flagK8sManifestNS, cmd.Flags().Lookup(flagK8sManifestNS))
+
 	cmd.Flags().String(flagGatewayListenAddress, "0.0.0.0:8080", "Gateway listen address")
 	viper.BindPFlag(flagGatewayListenAddress, cmd.Flags().Lookup(flagGatewayListenAddress))
 
@@ -141,14 +151,14 @@ func openLogger() log.Logger {
 	})
 }
 
-func createClusterClient(log log.Logger, cmd *cobra.Command, host string) (cluster.Client, error) {
-	if val, _ := cmd.Flags().GetBool(flagClusterK8s); !val {
+func createClusterClient(log log.Logger, _ *cobra.Command, host string) (cluster.Client, error) {
+	if !viper.GetBool(flagClusterK8s) {
 		// Condition that there is no Kubernetes API to work with.
 		return cluster.NullClient(), nil
 	}
-	ns, err := cmd.Flags().GetString(flagK8sManifestNS)
-	if err != nil {
-		return nil, err
+	ns := viper.GetString(flagK8sManifestNS)
+	if ns == "" {
+		return nil, fmt.Errorf("%w: --%s required", errInvalidConfig, flagK8sManifestNS)
 	}
 	return kube.NewClient(log, host, ns)
 }
