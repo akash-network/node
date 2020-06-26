@@ -81,6 +81,7 @@ host: http://provider.$PROVIDER_DOMAIN
 attributes:
   - key: region
     value: us-west
+EOF
 ```
 
 
@@ -98,6 +99,7 @@ Note: you may need tokens sent to your wallet to pay gas.
 cat <<EOF > client-config.txt
 node=$AKASHCTL_NODE
 chain-id=$AKASHCTL_CHAIN_ID
+EOF
 ```
 
 ### Configure provider services
@@ -106,6 +108,7 @@ chain-id=$AKASHCTL_CHAIN_ID
 cat <<EOF > provider-config.txt
 ingress-static-hosts=true
 ingress-domain=$PROVIDER_DOMAIN
+EOF
 ```
 
 ### Configure Provider gateway endpoint
@@ -118,6 +121,7 @@ cat <<EOF > gateway-host.yaml
 - op: replace
   path: /spec/rules/0/host
   value: provider.$PROVIDER_DOMAIN
+EOF
 ```
 
 ### Export keys
