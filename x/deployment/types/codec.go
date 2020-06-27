@@ -15,6 +15,7 @@ func RegisterCodec(cdc *codec.Codec) {
 	cdc.RegisterConcrete(MsgCreateDeployment{}, ModuleName+"/"+msgTypeCreateDeployment, nil)
 	cdc.RegisterConcrete(MsgUpdateDeployment{}, ModuleName+"/"+msgTypeUpdateDeployment, nil)
 	cdc.RegisterConcrete(MsgCloseDeployment{}, ModuleName+"/"+msgTypeCloseDeployment, nil)
+	cdc.RegisterConcrete(MsgCloseGroup{}, ModuleName+"/"+msgTypeCloseGroup, nil)
 }
 
 // MustMarshalJSON panics if an error occurs. Besides that it behaves exactly like MarshalJSON

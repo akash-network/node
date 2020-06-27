@@ -8,6 +8,7 @@ const (
 	msgTypeCreateDeployment = "create-deployment"
 	msgTypeUpdateDeployment = "update-deployment"
 	msgTypeCloseDeployment  = "close-deployment"
+	msgTypeCloseGroup       = "close-group"
 )
 
 // MsgCreateDeployment defines an SDK message for creating deployment
@@ -106,5 +107,34 @@ func (msg MsgCloseDeployment) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgCloseDeployment) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{msg.ID.Owner}
+}
+
+// MsgCloseGroup defines SDK message to close a single Group within a Deployment.
+type MsgCloseGroup struct {
+	ID GroupID
+}
+
+// Route implements the sdk.Msg interface for routing
+func (msg MsgCloseGroup) Route() string { return RouterKey }
+
+// Type implements the sdk.Msg interface exposing message type
+func (msg MsgCloseGroup) Type() string { return msgTypeCloseGroup }
+
+// ValidateBasic calls underlying GroupID.Validate() check and returns result
+func (msg MsgCloseGroup) ValidateBasic() error {
+	if err := msg.ID.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetSignBytes encodes the message for signing
+func (msg MsgCloseGroup) GetSignBytes() []byte {
+	return sdk.MustSortJSON(cdc.MustMarshalJSON(msg))
+}
+
+// GetSigners defines whose signature is required
+func (msg MsgCloseGroup) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.ID.Owner}
 }

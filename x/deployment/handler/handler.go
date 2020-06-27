@@ -19,7 +19,9 @@ func NewHandler(keeper keeper.Keeper, mkeeper MarketKeeper) sdk.Handler {
 		case types.MsgUpdateDeployment:
 			return handleMsgUpdate(ctx, keeper, mkeeper, msg)
 		case types.MsgCloseDeployment:
-			return handleMsgClose(ctx, keeper, mkeeper, msg)
+			return handleMsgCloseDeployment(ctx, keeper, mkeeper, msg)
+		case types.MsgCloseGroup:
+			return handleMsgCloseGroup(ctx, keeper, mkeeper, msg)
 		default:
 			return nil, sdkerrors.ErrUnknownRequest
 		}
@@ -79,7 +81,8 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg 
 	}, nil
 }
 
-func handleMsgClose(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgCloseDeployment) (*sdk.Result, error) {
+func handleMsgCloseDeployment(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgCloseDeployment) (*sdk.Result, error) {
+
 	deployment, found := keeper.GetDeployment(ctx, msg.ID)
 	if !found {
 		return nil, types.ErrDeploymentNotFound
@@ -99,6 +102,30 @@ func handleMsgClose(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper,
 		keeper.OnDeploymentClosed(ctx, group)
 		mkeeper.OnGroupClosed(ctx, group.ID())
 	}
+
+	return &sdk.Result{
+		Events: ctx.EventManager().Events(),
+	}, nil
+}
+
+func handleMsgCloseGroup(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgCloseGroup) (*sdk.Result, error) {
+	group, found := keeper.GetGroup(ctx, msg.ID)
+	if !found {
+		return nil, types.ErrGroupNotFound
+	}
+
+	// if Group already closed; return the validation error
+	err := group.ValidateClosable()
+	if err != nil {
+		return nil, err
+	}
+
+	// Update the Group's state
+	err = keeper.OnCloseGroup(ctx, group)
+	if err != nil {
+		return nil, err
+	}
+	mkeeper.OnGroupClosed(ctx, group.ID())
 
 	return &sdk.Result{
 		Events: ctx.EventManager().Events(),

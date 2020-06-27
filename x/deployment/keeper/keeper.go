@@ -2,16 +2,10 @@ package keeper
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/x/deployment/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-)
-
-var (
-	ErrDeploymentAlreadyExists = errors.New("keeper: deployment already exists")
-	ErrDeploymentNotFound      = errors.New("keeper: deployment not found")
 )
 
 // Keeper of the deployment store
@@ -97,7 +91,7 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 	key := deploymentKey(deployment.ID())
 
 	if store.Has(key) {
-		return ErrDeploymentAlreadyExists
+		return types.ErrDeploymentExists
 	}
 
 	store.Set(key, k.cdc.MustMarshalBinaryBare(deployment))
@@ -123,7 +117,7 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 	key := deploymentKey(deployment.ID())
 
 	if !store.Has(key) {
-		return ErrDeploymentNotFound
+		return types.ErrDeploymentNotFound
 	}
 
 	ctx.EventManager().EmitEvent(
@@ -131,6 +125,24 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 	)
 
 	store.Set(key, k.cdc.MustMarshalBinaryBare(deployment))
+	return nil
+}
+
+// OnCloseGroup provides shutdown API for a Group
+func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group) error {
+	store := ctx.KVStore(k.skey)
+	key := groupKey(group.ID())
+
+	if !store.Has(key) {
+		return types.ErrGroupNotFound
+	}
+	group.State = types.GroupClosed
+
+	ctx.EventManager().EmitEvent(
+		types.EventGroupClose{ID: group.ID()}.ToSDKEvent(),
+	)
+
+	store.Set(key, k.cdc.MustMarshalBinaryBare(group))
 	return nil
 }
 

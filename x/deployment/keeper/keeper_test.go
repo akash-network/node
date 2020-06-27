@@ -221,6 +221,53 @@ func Test_OnDeploymentClosed(t *testing.T) {
 	})
 }
 
+func Test_CloseGroup(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	groups := createActiveDeployment(t, ctx, keeper)
+
+	t.Run("assert group 0 state closed", func(t *testing.T) {
+		assert.NoError(t, keeper.OnCloseGroup(ctx, groups[0]))
+		group, ok := keeper.GetGroup(ctx, groups[0].ID())
+		assert.True(t, ok)
+		assert.Equal(t, types.GroupClosed, group.State)
+
+		keeper.OnDeploymentClosed(ctx, group) // coverage: catch an additional code path
+		assert.Equal(t, types.GroupClosed, group.State)
+	})
+	t.Run("group 1 matched-state not-orderable", func(t *testing.T) {
+		group := groups[1]
+		assert.Equal(t, group.ValidateOrderable(), types.ErrGroupNotOpen, group.State.String())
+	})
+}
+
+func Test_CloseOpenGroups(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	groups := createDeploymentsWithState(t, ctx, types.GroupOpen, keeper)
+
+	t.Run("assert group 0 state closed", func(t *testing.T) {
+		assert.NoError(t, keeper.OnCloseGroup(ctx, groups[0]))
+		group, ok := keeper.GetGroup(ctx, groups[0].ID())
+		assert.True(t, ok)
+		assert.Equal(t, types.GroupClosed, group.State)
+	})
+	t.Run("group 1 matched-state still orderable", func(t *testing.T) {
+		group := groups[1]
+		assert.Equal(t, group.ValidateOrderable(), nil, group.State.String())
+	})
+}
+
+func Test_Empty_CloseGroup(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	group := types.Group{
+		GroupID: testutil.GroupID(t),
+	}
+
+	t.Run("assert non-existent group returns error", func(t *testing.T) {
+		err := keeper.OnCloseGroup(ctx, group)
+		assert.Error(t, err, "'group not found' error should be returned")
+	})
+}
+
 func createActiveDeployment(t testing.TB, ctx sdk.Context, keeper keeper.Keeper) []types.Group {
 	t.Helper()
 
@@ -231,6 +278,24 @@ func createActiveDeployment(t testing.TB, ctx sdk.Context, keeper keeper.Keeper)
 	}
 	for i := range groups {
 		groups[i].State = types.GroupMatched
+	}
+
+	err := keeper.Create(ctx, deployment, groups)
+	require.NoError(t, err)
+
+	return groups
+}
+
+func createDeploymentsWithState(t testing.TB, ctx sdk.Context, gState types.GroupState, keeper keeper.Keeper) []types.Group {
+	t.Helper()
+
+	deployment := testutil.Deployment(t)
+	groups := []types.Group{
+		testutil.DeploymentGroup(t, deployment.ID(), 0),
+		testutil.DeploymentGroup(t, deployment.ID(), 1),
+	}
+	for i := range groups {
+		groups[i].State = gState
 	}
 
 	err := keeper.Create(ctx, deployment, groups)

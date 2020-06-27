@@ -17,6 +17,9 @@ const (
 	errInternal
 	errInvalidDeployment
 	errInvalidGroupID
+	errGroupNotFound
+	errGroupClosed
+	errGroupNotOpen
 )
 
 var (
@@ -32,7 +35,7 @@ var (
 	ErrDeploymentClosed = sdkerrors.Register(ModuleName, errDeploymentClosed, "Deployment closed")
 	// ErrOwnerAcctMissing is the error for owner account missing
 	ErrOwnerAcctMissing = sdkerrors.Register(ModuleName, errOwnerAcctMissing, "Owner account missing")
-	// ErrEmptyGroups is the error when groups are empty
+	// ErrInvalidGroups is the error when groups are empty
 	ErrInvalidGroups = sdkerrors.Register(ModuleName, errInvalidGroups, "Invalid groups")
 	// ErrInvalidDeploymentID is the error for invalid deployment id
 	ErrInvalidDeploymentID = sdkerrors.Register(ModuleName, errInvalidDeploymentID, "Invalid: deployment id")
@@ -44,4 +47,10 @@ var (
 	ErrInvalidDeployment = sdkerrors.Register(ModuleName, errInvalidDeployment, "Invalid deployment")
 	// ErrInvalidGroupID is the error when already deployment exists
 	ErrInvalidGroupID = sdkerrors.Register(ModuleName, errInvalidGroupID, "Deployment exists")
+	// ErrGroupNotFound is the keeper's error for not finding a group
+	ErrGroupNotFound = sdkerrors.Register(ModuleName, errGroupNotFound, "Group not found")
+	// ErrGroupClosed is the error when deployment is closed
+	ErrGroupClosed = sdkerrors.Register(ModuleName, errGroupClosed, "Group already closed")
+	// ErrGroupNotOpen indicates the Group state has progressed beyond initial Open.
+	ErrGroupNotOpen = sdkerrors.Register(ModuleName, errGroupNotOpen, "Group not open")
 )
