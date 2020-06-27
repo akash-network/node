@@ -4,3 +4,8 @@
 /provider-config.txt
 /key.txt
 /key-pass.txt
+/gateway-host.yaml
+/provider.yaml
+/deployment.yaml.bak
+/kubeconfig
+/tmp
