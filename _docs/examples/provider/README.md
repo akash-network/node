@@ -91,9 +91,25 @@ attributes:
 EOF
 ```
 
+### Fund your provider account
+
+View your address with
+
+```sh
+./bin/akashctl keys show provider -a
+```
+
+You can fund the address at the testnet [faucet](https://akash.vitwit.com/faucet).
+
+Ensure you have funds with:
+
+```sh
+./bin/akashctl query account "$(./bin/akashctl keys show provider -a)"
+```
+
 ### Create Akash Provider
 
-Note: you may need tokens sent to your wallet to pay gas.
+Register your provider on the Akash Network:
 
 ```sh
 ./bin/akashctl tx provider create provider.yaml --from provider
@@ -169,7 +185,7 @@ kubectl kustomize . | kubectl apply -f-
 ./bin/akashctl keys add deploy
 ```
 
-### Fund your account
+### Fund your deployment account
 
 View your address with
 
@@ -177,7 +193,7 @@ View your address with
 ./bin/akashctl keys show deploy -a
 ```
 
-You can fund the address at the testnet [faucet](faucet.akashtest.net).
+You can fund the address at the testnet [faucet](https://akash.vitwit.com/faucet).
 
 Ensure you have funds with:
 
