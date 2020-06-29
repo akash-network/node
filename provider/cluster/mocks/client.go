@@ -102,13 +102,13 @@ func (_m *Client) LeaseStatus(_a0 context.Context, _a1 types.LeaseID) (*cluster.
 	return r0, r1
 }
 
-// ServiceLogs provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *Client) ServiceLogs(_a0 context.Context, _a1 types.LeaseID, _a2 int64, _a3 bool) ([]*cluster.ServiceLog, error) {
-	ret := _m.Called(_a0, _a1, _a2, _a3)
+// ServiceLogs provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4
+func (_m *Client) ServiceLogs(_a0 context.Context, _a1 types.LeaseID, _a2 string, _a3 bool, _a4 *int64) ([]*cluster.ServiceLog, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4)
 
 	var r0 []*cluster.ServiceLog
-	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, int64, bool) []*cluster.ServiceLog); ok {
-		r0 = rf(_a0, _a1, _a2, _a3)
+	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, string, bool, *int64) []*cluster.ServiceLog); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*cluster.ServiceLog)
@@ -116,8 +116,8 @@ func (_m *Client) ServiceLogs(_a0 context.Context, _a1 types.LeaseID, _a2 int64,
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, types.LeaseID, int64, bool) error); ok {
-		r1 = rf(_a0, _a1, _a2, _a3)
+	if rf, ok := ret.Get(1).(func(context.Context, types.LeaseID, string, bool, *int64) error); ok {
+		r1 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		r1 = ret.Error(1)
 	}

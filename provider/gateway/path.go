@@ -27,3 +27,7 @@ func leaseStatusPath(id mtypes.LeaseID) string {
 func serviceStatusPath(id mtypes.LeaseID, service string) string {
 	return mquery.LeasePath(id) + "/service/" + service + "/status"
 }
+
+func serviceLogsPath(id mtypes.LeaseID, service string) string {
+	return mquery.LeasePath(id) + "/service/" + service + "/logs"
+}

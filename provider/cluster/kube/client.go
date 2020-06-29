@@ -192,7 +192,7 @@ func (c *client) TeardownLease(ctx context.Context, lid mtypes.LeaseID) error {
 }
 
 func (c *client) ServiceLogs(ctx context.Context, lid mtypes.LeaseID,
-	tailLines int64, follow bool) ([]*cluster.ServiceLog, error) {
+	_ string, follow bool, tailLines *int64) ([]*cluster.ServiceLog, error) {
 	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
@@ -202,8 +202,8 @@ func (c *client) ServiceLogs(ctx context.Context, lid mtypes.LeaseID,
 	for i, pod := range pods.Items {
 		stream, err := c.kc.CoreV1().Pods(lidNS(lid)).GetLogs(pod.Name, &corev1.PodLogOptions{
 			Follow:     follow,
-			TailLines:  &tailLines,
-			Timestamps: true,
+			TailLines:  tailLines,
+			Timestamps: false,
 		}).Stream(ctx)
 		if err != nil {
 			c.log.Error(err.Error())

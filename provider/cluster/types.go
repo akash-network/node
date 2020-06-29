@@ -29,10 +29,6 @@ type ServiceStatus struct {
 	AvailableReplicas  int32 `json:"available-replicas"`
 }
 
-type ServiceLogs struct {
-	Name string `json:"name"`
-}
-
 // LeaseStatus includes list of services with their status
 type LeaseStatus struct {
 	Services []*ServiceStatus `json:"services"`

@@ -15,7 +15,7 @@ provider-run:
 
 .PHONY: provider-status
 provider-status:
-	$(AKASHCTL) provider status
+	$(AKASHCTL) provider status --provider "$(PROVIDER_ADDRESS)"
 
 .PHONY: send-manifest
 send-manifest:
@@ -28,12 +28,33 @@ send-manifest:
 
 .PHONY: provider-lease-status
 provider-lease-status:
-	$(AKASHCTL) provider status lease-status \
+	$(AKASHCTL) provider lease-status \
 		--owner     "$(KEY_ADDRESS)" \
 		--dseq      "$(DSEQ)"        \
 		--gseq      "$(GSEQ)"        \
 		--oseq      "$(OSEQ)"        \
 		--provider  "$(PROVIDER_ADDRESS)"
+
+.PHONY: provider-service-status
+provider-service-status:
+	$(AKASHCTL) provider service-status   \
+		--owner     "$(KEY_ADDRESS)"      \
+		--dseq      "$(DSEQ)"             \
+		--gseq      "$(GSEQ)"             \
+		--oseq      "$(OSEQ)"             \
+		--provider  "$(PROVIDER_ADDRESS)"
+
+.PHONY: provider-service-logs
+provider-service-logs:
+	$(AKASHCTL) provider service-logs     \
+		--owner     "$(KEY_ADDRESS)"      \
+		--dseq      "$(DSEQ)"             \
+		--gseq      "$(GSEQ)"             \
+		--oseq      "$(OSEQ)"             \
+		--provider  "$(PROVIDER_ADDRESS)" \
+		--follow    false                 \
+		--service   "web"                 \
+		--tail      "100"
 
 .PHONY: provider-lease-ping
 provider-lease-ping:

@@ -3,16 +3,18 @@
 package kube
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"math/rand"
 	"testing"
 	"time"
 
-	"github.com/ovrclk/akash/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/ovrclk/akash/testutil"
 )
 
 func TestNewClient(t *testing.T) {
@@ -88,6 +90,30 @@ func TestNewClient(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotEqual(t, maxtries, tries)
+
+	logs, err := client.ServiceLogs(ctx, lid, svcname, true, nil)
+	require.NoError(t, err)
+	require.Equal(t, int(sstat.AvailableReplicas), len(logs))
+
+	log := make(chan string, 1)
+
+	go func(scan *bufio.Scanner) {
+		for scan.Scan() {
+			log <- scan.Text()
+			break
+		}
+	}(logs[0].Scanner)
+
+	select {
+	case line := <-log:
+		assert.NotEmpty(t, line)
+	case <-time.After(10 * time.Second):
+		assert.Fail(t, "timed out waiting for logs")
+	}
+
+	for _, lg := range logs {
+		assert.NoError(t, lg.Stream.Close(), lg.Name)
+	}
 
 	// ensure inventory used
 	// XXX: not working with kind. might be a delay issue?

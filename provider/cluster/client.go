@@ -22,7 +22,7 @@ var ErrNoDeployments = errors.New("no deployments")
 type ReadClient interface {
 	LeaseStatus(context.Context, mtypes.LeaseID) (*LeaseStatus, error)
 	ServiceStatus(context.Context, mtypes.LeaseID, string) (*ServiceStatus, error)
-	ServiceLogs(context.Context, mtypes.LeaseID, int64, bool) ([]*ServiceLog, error)
+	ServiceLogs(context.Context, mtypes.LeaseID, string, bool, *int64) ([]*ServiceLog, error)
 }
 
 // Client interface lease and deployment methods
@@ -134,7 +134,7 @@ func (c *nullClient) ServiceStatus(ctx context.Context, _ mtypes.LeaseID, _ stri
 	return nil, nil
 }
 
-func (c *nullClient) ServiceLogs(_ context.Context, _ mtypes.LeaseID, _ int64, _ bool) ([]*ServiceLog, error) {
+func (c *nullClient) ServiceLogs(_ context.Context, _ mtypes.LeaseID, _ string, _ bool, _ *int64) ([]*ServiceLog, error) {
 	return nil, nil
 }
 

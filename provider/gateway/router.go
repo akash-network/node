@@ -1,20 +1,51 @@
 package gateway
 
 import (
+	"bufio"
+	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
+	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/gorilla/mux"
+
 	"github.com/ovrclk/akash/provider"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/manifest"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 const (
 	contentTypeJSON = "application/json; charset=UTF-8"
+
+	// Time allowed to write the file to the client.
+	pingWait = 15 * time.Second
+
+	// Time allowed to read the next pong message from the client.
+	pongWait = 15 * time.Second
+
+	// Send pings to client with this period. Must be less than pongWait.
+	pingPeriod = 10 * time.Second
 )
+
+const (
+	// as per RFC https://www.iana.org/assignments/websocket/websocket.xhtml#close-code-number
+	// errors from private use staring
+	websocketInternalServerErrorCode = 4000
+)
+
+type wsLogsConfig struct {
+	lid       mtypes.LeaseID
+	service   string
+	follow    bool
+	tailLines *int64
+	log       log.Logger
+	client    cluster.ReadClient
+}
 
 func newRouter(log log.Logger, pclient provider.Client) *mux.Router {
 	router := mux.NewRouter()
@@ -39,13 +70,19 @@ func newRouter(log log.Logger, pclient provider.Client) *mux.Router {
 		leaseStatusHandler(log, pclient.Cluster())).
 		Methods("GET")
 
+	srouter := lrouter.PathPrefix("/service/{serviceName}").Subrouter()
+	srouter.Use(requireService())
+
 	// GET /lease/<lease-id>/service/<service-name>/status
-	lrouter.HandleFunc("/service/{serviceName}/status",
+	srouter.HandleFunc("/status",
 		leaseServiceStatusHandler(log, pclient.Cluster())).
 		Methods("GET")
 
+	logRouter := srouter.PathPrefix("/logs").Subrouter()
+	logRouter.Use(requestLogParams())
+
 	// GET /lease/<lease-id>/service/<service-name>/logs
-	lrouter.HandleFunc("/service/{serviceName}/logs",
+	logRouter.HandleFunc("",
 		leaseServiceLogsHandler(log, pclient.Cluster())).
 		Methods("GET")
 
@@ -101,12 +138,7 @@ func leaseStatusHandler(log log.Logger, cclient cluster.ReadClient) http.Handler
 
 func leaseServiceStatusHandler(log log.Logger, cclient cluster.ReadClient) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		service := mux.Vars(req)["serviceName"]
-		if service == "" {
-			http.Error(w, "invalid request", http.StatusBadRequest)
-			return
-		}
-		status, err := cclient.ServiceStatus(req.Context(), requestLeaseID(req), service)
+		status, err := cclient.ServiceStatus(req.Context(), requestLeaseID(req), requestService(req))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -116,9 +148,135 @@ func leaseServiceStatusHandler(log log.Logger, cclient cluster.ReadClient) http.
 }
 
 func leaseServiceLogsHandler(log log.Logger, cclient cluster.ReadClient) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		http.Error(w, "unimplemented", http.StatusNotImplemented)
+	return func(w http.ResponseWriter, r *http.Request) {
+		upgrader := websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+		}
+
+		ws, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			if _, ok := err.(websocket.HandshakeError); !ok {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+
+		wsLogWriter(r.Context(), ws, wsLogsConfig{
+			lid:       requestLeaseID(r),
+			service:   requestService(r),
+			follow:    requestLogFollow(r),
+			tailLines: requestLogTailLines(r),
+			log:       log,
+			client:    cclient,
+		})
 	}
+}
+
+func wsLogWriter(ctx context.Context, ws *websocket.Conn, cfg wsLogsConfig) {
+	pingTicker := time.NewTicker(pingPeriod)
+
+	cctx, cancel := context.WithCancel(ctx)
+	defer func() {
+		pingTicker.Stop()
+		cancel()
+		_ = ws.Close()
+	}()
+
+	logs, err := cfg.client.ServiceLogs(cctx, cfg.lid, cfg.service, cfg.follow, cfg.tailLines)
+	if err != nil {
+		cfg.log.Error("couldn't fetch logs: %s", err.Error())
+		err = ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocketInternalServerErrorCode, err.Error()))
+		if err != nil {
+			cfg.log.Error("couldn't push control message through websocket: %s", err.Error())
+		}
+		return
+	}
+
+	if len(logs) == 0 {
+		_ = ws.WriteMessage(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocketInternalServerErrorCode, "service "+cfg.service+" does not have running pods"))
+		return
+	}
+
+	_ = ws.SetReadDeadline(time.Now().Add(pongWait))
+	ws.SetPongHandler(func(string) error {
+		_ = ws.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
+	go func() {
+		for {
+			if _, _, e := ws.ReadMessage(); e != nil {
+				if _, ok := e.(*websocket.CloseError); !ok {
+					_ = ws.Close()
+				}
+				break
+			}
+		}
+	}()
+
+	var scanners sync.WaitGroup
+
+	logch := make(chan ServiceLogMessage)
+
+	scanners.Add(len(logs))
+
+	for _, lg := range logs {
+		go func(name string, scan *bufio.Scanner) {
+			defer scanners.Done()
+
+			for scan.Scan() && ctx.Err() == nil {
+				logch <- ServiceLogMessage{
+					Name:    name,
+					Message: scan.Text(),
+				}
+			}
+		}(lg.Name, lg.Scanner)
+	}
+
+	donech := make(chan struct{})
+
+	go func() {
+		scanners.Wait()
+		close(donech)
+	}()
+
+	alive := true
+
+	for alive {
+		select {
+		case line := <-logch:
+			if err = ws.WriteJSON(line); err != nil {
+				alive = false
+			}
+		case <-pingTicker.C:
+			if err = ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				alive = false
+			}
+		case <-donech:
+			alive = false
+		}
+	}
+
+	cancel()
+
+	for i := range logs {
+		_ = logs[i].Stream.Close()
+	}
+
+	// drain logs channel in separate goroutine to unblock seeders waiting for write space
+	go func() {
+	drain:
+		for {
+			select {
+			case <-donech:
+				break drain
+			case <-logch:
+			}
+		}
+	}()
 }
 
 func writeJSON(log log.Logger, w http.ResponseWriter, obj interface{}) {

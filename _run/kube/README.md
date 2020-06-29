@@ -208,6 +208,20 @@ __t1 status__
 make provider-lease-ping
 ```
 
+Get service status
+
+__t1 service status__
+```sh
+make provider-service-status
+```
+
+Fetch logs from deployed service (all pods)
+
+__t1 service logs__
+```sh
+make provider-service-logs
+```
+
 If you chose to use port 80 when setting up kind, you can browse to your
 deployed workload at http://hello.localhost
 
