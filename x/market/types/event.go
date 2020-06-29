@@ -30,7 +30,18 @@ var (
 
 // EventOrderCreated struct
 type EventOrderCreated struct {
-	ID OrderID
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	ID      OrderID                 `json:"id"`
+}
+
+func NewEventOrderCreated(id OrderID) EventOrderCreated {
+	return EventOrderCreated{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionOrderCreated,
+		},
+		ID: id,
+	}
 }
 
 // ToSDKEvent method creates new sdk event for EventOrderCreated struct
@@ -45,7 +56,18 @@ func (e EventOrderCreated) ToSDKEvent() sdk.Event {
 
 // EventOrderClosed struct
 type EventOrderClosed struct {
-	ID OrderID
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	ID      OrderID                 `json:"id"`
+}
+
+func NewEventOrderClosed(id OrderID) EventOrderClosed {
+	return EventOrderClosed{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionOrderClosed,
+		},
+		ID: id,
+	}
 }
 
 // ToSDKEvent method creates new sdk event for EventOrderClosed struct
@@ -60,8 +82,20 @@ func (e EventOrderClosed) ToSDKEvent() sdk.Event {
 
 // EventBidCreated struct
 type EventBidCreated struct {
-	ID    BidID
-	Price sdk.Coin
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	ID      BidID                   `json:"id"`
+	Price   sdk.Coin                `json:"price"`
+}
+
+func NewEventBidCreated(id BidID, price sdk.Coin) EventBidCreated {
+	return EventBidCreated{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionBidCreated,
+		},
+		ID:    id,
+		Price: price,
+	}
 }
 
 // ToSDKEvent method creates new sdk event for EventBidCreated struct
@@ -78,8 +112,20 @@ func (e EventBidCreated) ToSDKEvent() sdk.Event {
 
 // EventBidClosed struct
 type EventBidClosed struct {
-	ID    BidID
-	Price sdk.Coin
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	ID      BidID                   `json:"id"`
+	Price   sdk.Coin                `json:"price"`
+}
+
+func NewEventBidClosed(id BidID, price sdk.Coin) EventBidClosed {
+	return EventBidClosed{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionBidClosed,
+		},
+		ID:    id,
+		Price: price,
+	}
 }
 
 // ToSDKEvent method creates new sdk event for EventBidClosed struct
@@ -96,8 +142,20 @@ func (e EventBidClosed) ToSDKEvent() sdk.Event {
 
 // EventLeaseCreated struct
 type EventLeaseCreated struct {
-	ID    LeaseID
-	Price sdk.Coin
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	ID      LeaseID                 `json:"id"`
+	Price   sdk.Coin                `json:"price"`
+}
+
+func NewEventLeaseCreated(id LeaseID, price sdk.Coin) EventLeaseCreated {
+	return EventLeaseCreated{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionLeaseCreated,
+		},
+		ID:    id,
+		Price: price,
+	}
 }
 
 // ToSDKEvent method creates new sdk event for EventLeaseCreated struct
@@ -113,8 +171,20 @@ func (e EventLeaseCreated) ToSDKEvent() sdk.Event {
 
 // EventLeaseClosed struct
 type EventLeaseClosed struct {
-	ID    LeaseID
-	Price sdk.Coin
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	ID      LeaseID                 `json:"id"`
+	Price   sdk.Coin                `json:"price"`
+}
+
+func NewEventLeaseClosed(id LeaseID, price sdk.Coin) EventLeaseClosed {
+	return EventLeaseClosed{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionLeaseClosed,
+		},
+		ID:    id,
+		Price: price,
+	}
 }
 
 // ToSDKEvent method creates new sdk event for EventLeaseClosed struct
@@ -237,13 +307,13 @@ func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 		if err != nil {
 			return nil, err
 		}
-		return EventOrderCreated{ID: id}, nil
+		return NewEventOrderCreated(id), nil
 	case evActionOrderClosed:
 		id, err := parseEVOrderID(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
-		return EventOrderClosed{ID: id}, nil
+		return NewEventOrderClosed(id), nil
 
 	case evActionBidCreated:
 		id, err := parseEVBidID(ev.Attributes)
@@ -254,7 +324,7 @@ func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 		if err != nil {
 			return nil, err
 		}
-		return EventBidCreated{ID: id, Price: price}, nil
+		return NewEventBidCreated(id, price), nil
 	case evActionBidClosed:
 		id, err := parseEVBidID(ev.Attributes)
 		if err != nil {
@@ -262,7 +332,7 @@ func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 		}
 		// optional price
 		price, _ := parseEVPriceAttributes(ev.Attributes)
-		return EventBidClosed{ID: id, Price: price}, nil
+		return NewEventBidClosed(id, price), nil
 
 	case evActionLeaseCreated:
 		id, err := parseEVLeaseID(ev.Attributes)
@@ -273,7 +343,7 @@ func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 		if err != nil {
 			return nil, err
 		}
-		return EventLeaseCreated{ID: id, Price: price}, nil
+		return NewEventLeaseCreated(id, price), nil
 	case evActionLeaseClosed:
 		id, err := parseEVLeaseID(ev.Attributes)
 		if err != nil {
@@ -281,7 +351,7 @@ func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 		}
 		// optional price
 		price, _ := parseEVPriceAttributes(ev.Attributes)
-		return EventLeaseClosed{ID: id, Price: price}, nil
+		return NewEventLeaseClosed(id, price), nil
 
 	default:
 		return nil, sdkutil.ErrUnknownAction

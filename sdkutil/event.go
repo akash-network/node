@@ -25,6 +25,11 @@ var (
 	ErrUnknownAction = errors.New("Unknown action")
 )
 
+type BaseModuleEvent struct {
+	Module string `json:"module"`
+	Action string `json:"action"`
+}
+
 type ModuleEvent interface {
 	ToSDKEvent() sdk.Event
 }

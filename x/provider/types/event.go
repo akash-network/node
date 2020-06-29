@@ -14,7 +14,18 @@ const (
 
 // EventProviderCreate struct
 type EventProviderCreate struct {
-	Owner sdk.AccAddress
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	Owner   sdk.AccAddress          `json:"owner"`
+}
+
+func NewEventProviderCreate(owner sdk.AccAddress) EventProviderCreate {
+	return EventProviderCreate{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionProviderCreate,
+		},
+		Owner: owner,
+	}
 }
 
 // ToSDKEvent method creates new sdk event for EventProviderCreate struct
@@ -29,7 +40,18 @@ func (ev EventProviderCreate) ToSDKEvent() sdk.Event {
 
 // EventProviderUpdate struct
 type EventProviderUpdate struct {
-	Owner sdk.AccAddress
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	Owner   sdk.AccAddress          `json:"owner"`
+}
+
+func NewEventProviderUpdate(owner sdk.AccAddress) EventProviderUpdate {
+	return EventProviderUpdate{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionProviderUpdate,
+		},
+		Owner: owner,
+	}
 }
 
 // ToSDKEvent method creates new sdk event for EventProviderUpdate struct
@@ -44,7 +66,18 @@ func (ev EventProviderUpdate) ToSDKEvent() sdk.Event {
 
 // EventProviderDelete struct
 type EventProviderDelete struct {
-	Owner sdk.AccAddress
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	Owner   sdk.AccAddress          `json:"owner"`
+}
+
+func NewEventProviderDelete(owner sdk.AccAddress) EventProviderDelete {
+	return EventProviderDelete{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionProviderDelete,
+		},
+		Owner: owner,
+	}
 }
 
 // ToSDKEvent method creates new sdk event for EventProviderDelete struct
@@ -89,19 +122,19 @@ func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 		if err != nil {
 			return nil, err
 		}
-		return EventProviderCreate{Owner: owner}, nil
+		return NewEventProviderCreate(owner), nil
 	case evActionProviderUpdate:
 		owner, err := ParseEVProvider(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
-		return EventProviderUpdate{Owner: owner}, nil
+		return NewEventProviderUpdate(owner), nil
 	case evActionProviderDelete:
 		owner, err := ParseEVProvider(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
-		return EventProviderDelete{Owner: owner}, nil
+		return NewEventProviderDelete(owner), nil
 	default:
 		return nil, sdkutil.ErrUnknownAction
 	}
