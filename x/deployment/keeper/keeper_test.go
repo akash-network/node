@@ -47,7 +47,7 @@ func Test_Create(t *testing.T) {
 	})
 	t.Run("one active deployment exists", func(t *testing.T) {
 		count := 0
-		keeper.WithDeploymentsActive(ctx, func(d types.Deployment) bool {
+		keeper.WithDeploymentsInState(ctx, types.DeploymentActive, func(d types.Deployment) bool {
 			if assert.Equal(t, deployment.ID(), d.ID()) {
 				count++
 			}
@@ -60,7 +60,8 @@ func Test_Create(t *testing.T) {
 	{
 		deployment := testutil.Deployment(t)
 		groups := testutil.DeploymentGroups(t, deployment.ID(), 0)
-		keeper.Create(ctx, deployment, groups)
+		err := keeper.Create(ctx, deployment, groups)
+		assert.NoError(t, err, "error creating deployment")
 	}
 
 	t.Run("groups written - read all", func(t *testing.T) {
@@ -78,6 +79,58 @@ func Test_Create(t *testing.T) {
 	t.Run("non-existent group", func(t *testing.T) {
 		_, ok := keeper.GetGroup(ctx, testutil.GroupID(t))
 		assert.False(t, ok)
+	})
+}
+
+func TestDeploymentsMulti(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	deploymentN := 10
+	dSlice := make([]types.Deployment, 0, deploymentN)
+
+	for i := 0; i < deploymentN; i++ {
+		deployment := testutil.Deployment(t)
+		dSlice = append(dSlice, deployment)
+		groups := testutil.DeploymentGroups(t, deployment.ID(), 0)
+
+		err := keeper.Create(ctx, deployment, groups)
+		require.NoError(t, err)
+
+		// assert event emitted
+		assert.GreaterOrEqual(t, len(ctx.EventManager().Events()), 1)
+	}
+
+	t.Run("assert active deployment count", func(t *testing.T) {
+		activeDeployments := 0
+		keeper.WithDeploymentsInState(ctx, types.DeploymentActive, func(d types.Deployment) bool {
+			activeDeployments++
+			return false
+		})
+		assert.Equal(t, activeDeployments, deploymentN, "all deployments should be in active state")
+	})
+
+	expClosed := deploymentN / 2
+	for _, d := range dSlice[expClosed:] {
+		d.State = types.DeploymentClosed
+		err := keeper.UpdateDeployment(ctx, d)
+		require.NoError(t, err, "error updating deployment")
+
+		getDep, ok := keeper.GetDeployment(ctx, d.ID())
+		assert.True(t, ok)
+		assert.Equal(t, getDep.State, d.State)
+	}
+
+	t.Run("assert closed deployment count", func(t *testing.T) {
+		closedDeployments := 0
+		keeper.WithDeploymentsInState(ctx, types.DeploymentClosed, func(d types.Deployment) bool {
+			closedDeployments++
+
+			getDep, ok := keeper.GetDeployment(ctx, d.ID())
+			assert.True(t, ok)
+			assert.Equal(t, getDep.State, d.State)
+
+			return false
+		})
+		assert.Equal(t, expClosed, closedDeployments)
 	})
 }
 

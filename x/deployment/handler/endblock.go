@@ -4,14 +4,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
+	"sigs.k8s.io/kind/pkg/errors"
 )
 
 // OnEndBlock create order and update order state for each deployment
 // Executed at the end of block
 func OnEndBlock(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper) {
-
 	// create orders as necessary for Active Deployment
-	keeper.WithDeploymentsActive(ctx, func(d types.Deployment) bool {
+	err := keeper.WithDeploymentsInState(ctx, types.DeploymentActive, func(d types.Deployment) bool {
 		for _, group := range keeper.GetGroups(ctx, d.ID()) {
 
 			// open groups only
@@ -30,4 +30,7 @@ func OnEndBlock(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper) {
 		}
 		return false
 	})
+	if err != nil {
+		panic(errors.Wrap(err, "deployment endblock execution error"))
+	}
 }

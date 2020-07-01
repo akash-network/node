@@ -8,35 +8,66 @@ import (
 )
 
 var (
-	deploymentPrefix = []byte{0x01, 0x00}
-	groupPrefix      = []byte{0x02}
+	deploymentPrefixBase = []byte{0x01}
+	groupPrefix          = []byte{0x02}
 
-	deploymentActivePrefix = []byte{0x01, 0x01}
-	deploymentClosedPrefix = []byte{0x01, 0x02}
+	possibleDeploymentStates = []types.DeploymentState{
+		types.DeploymentActive,
+		types.DeploymentClosed,
+	}
 )
 
-func deploymentIDKey(id types.DeploymentID) []byte {
-	buf := bytes.NewBuffer(deploymentPrefix)
-	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
-	return buf.Bytes()
+// deploymentStatelessIDKeys provides all possible keys in expected short-circuiting
+// order for querying a Deployment with only the ID.
+//  0x01[State][OwnerID][DSeq]
+func deploymentStatelessIDKeys(id types.DeploymentID) ([][]byte, error) {
+	out := make([][]byte, 0, len(possibleDeploymentStates))
+	// Prioritize "Active" state first as it will be the most common, then closed.
+	for _, v := range possibleDeploymentStates {
+		prefix, err := deploymentStateKey(v)
+		if err != nil {
+			return nil, err
+		}
+		buf := bytes.NewBuffer(prefix)
+		_, err = buf.Write(id.Owner.Bytes())
+		if err != nil {
+			return nil, err
+		}
+		err = binary.Write(buf, binary.BigEndian, id.DSeq)
+		if err != nil {
+			return nil, err
+		}
+
+		out = append(out, buf.Bytes())
+	}
+	return out, nil
 }
 
-func deploymentKey(d types.Deployment) ([]byte, error) {
-	var buf *bytes.Buffer
+// deploymentStateKey returns 0x01[State] component of the Deployment index.
+func deploymentStateKey(d types.DeploymentState) ([]byte, error) {
+	buf := bytes.NewBuffer(deploymentPrefixBase)
 	var err error
-
-	switch d.State {
-	case types.DeploymentActive:
-		_, err = buf.Write(deploymentActivePrefix)
-	case types.DeploymentClosed:
-		_, err = buf.Write(deploymentClosedPrefix)
-	}
+	err = binary.Write(buf, binary.BigEndian, d)
 	if err != nil {
 		return nil, err
 	}
+	return buf.Bytes(), nil
+}
 
-	err = binary.Write(buf, binary.BigEndian, d.ID().DSeq)
+// deploymentStateIDKey returns 0x01[State][OwnerID][DSeq] complete
+// Deployment index value.
+func deploymentStateIDKey(d types.Deployment) ([]byte, error) {
+	b, err := deploymentStateKey(d.State)
+	if err != nil {
+		return nil, err
+	}
+	buf := bytes.NewBuffer(b)
+
+	_, err = buf.Write(d.ID().Owner.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	err = binary.Write(buf, binary.BigEndian, d.DSeq)
 	if err != nil {
 		return nil, err
 	}

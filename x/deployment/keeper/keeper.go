@@ -2,10 +2,9 @@ package keeper
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/x/deployment/types"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // Keeper of the deployment store
@@ -31,19 +30,21 @@ func (k Keeper) Codec() *codec.Codec {
 func (k Keeper) GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Deployment, bool) {
 	store := ctx.KVStore(k.skey)
 
-	key := deploymentIDKey(id)
-
-	if !store.Has(key) {
+	keys, err := deploymentStatelessIDKeys(id)
+	if err != nil {
 		return types.Deployment{}, false
 	}
 
-	buf := store.Get(key)
+	for _, key := range keys {
+		if store.Has(key) {
+			buf := store.Get(key)
+			var val types.Deployment
+			k.cdc.MustUnmarshalBinaryBare(buf, &val)
+			return val, true
+		}
+	}
 
-	var val types.Deployment
-
-	k.cdc.MustUnmarshalBinaryBare(buf, &val)
-
-	return val, true
+	return types.Deployment{}, false
 }
 
 // GetGroup returns group details with given GroupID from deployment store
@@ -88,7 +89,7 @@ func (k Keeper) GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group 
 func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []types.Group) error {
 	store := ctx.KVStore(k.skey)
 
-	key, err := deploymentKey(deployment)
+	key, err := deploymentStateIDKey(deployment)
 	if err != nil {
 		return err
 	}
@@ -117,12 +118,10 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 // UpdateDeployment updates deployment details
 func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) error {
 	store := ctx.KVStore(k.skey)
-	key, err := deploymentKey(deployment)
-	if err != nil {
-		return err
-	}
 
-	if !store.Has(key) {
+	// Locate the original Deployment
+	d0, ok := k.GetDeployment(ctx, deployment.ID())
+	if !ok {
 		return types.ErrDeploymentNotFound
 	}
 
@@ -130,7 +129,19 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 		types.EventDeploymentUpdate{ID: deployment.ID()}.ToSDKEvent(),
 	)
 
+	key, err := deploymentStateIDKey(deployment)
+	if err != nil {
+		return err
+	}
+	if d0.State != deployment.State { // indexing key value is different, cull prev value
+		prevKey, err := deploymentStateIDKey(d0)
+		if err != nil {
+			return err
+		}
+		store.Delete(prevKey)
+	}
 	store.Set(key, k.cdc.MustMarshalBinaryBare(deployment))
+
 	return nil
 }
 
@@ -155,7 +166,7 @@ func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group) error {
 // WithDeployments iterates all deployments in deployment store
 func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, deploymentPrefix)
+	iter := sdk.KVStorePrefixIterator(store, deploymentPrefixBase)
 	for ; iter.Valid(); iter.Next() {
 		var val types.Deployment
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
@@ -165,20 +176,22 @@ func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool)
 	}
 }
 
-// WithDeploymentsActive filters to only those with State: Active
-func (k Keeper) WithDeploymentsActive(ctx sdk.Context, fn func(types.Deployment) bool) {
+// WithDeploymentsInState filters to only those with parameterized State
+func (k Keeper) WithDeploymentsInState(ctx sdk.Context, d types.DeploymentState, fn func(types.Deployment) bool) error {
+	kvPrefix, err := deploymentStateKey(d)
+	if err != nil {
+		return err
+	}
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, deploymentPrefix)
+	iter := sdk.KVStorePrefixIterator(store, kvPrefix)
 	for ; iter.Valid(); iter.Next() {
 		var val types.Deployment
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
-		if val.State != types.DeploymentActive {
-			continue
-		}
 		if stop := fn(val); stop {
 			break
 		}
 	}
+	return nil
 }
 
 // OnOrderCreated updates group state to group ordered
