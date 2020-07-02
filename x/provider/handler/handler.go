@@ -63,6 +63,7 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper mkeeper.Keep
 	var err error
 
 	// all filtering code below is madness!. should make an index to not melt the cpu
+	// TODO: use WithActiveLeases, filter by lease.Provider
 	mkeeper.WithLeases(ctx, func(lease mtypes.Lease) bool {
 		if prov.Owner.Equals(lease.Provider) && (lease.State == mtypes.LeaseActive) {
 			var order mtypes.Order

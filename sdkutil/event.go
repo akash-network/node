@@ -1,10 +1,10 @@
 package sdkutil
 
 import (
-	"errors"
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -23,6 +23,10 @@ var (
 	ErrUnknownModule = errors.New("Unknown module")
 	// ErrUnknownAction is the error with message "Unknown action"
 	ErrUnknownAction = errors.New("Unknown action")
+	// ErrParsingBlockID indicates one of the uint parsers failed to convert a value.
+	ErrParsingBlockID = errors.New("error parsing block id values")
+	// ErrInvalidParseBlockIDInput indicates the splitting of block path failed.
+	ErrInvalidParseBlockIDInput = errors.New("error parsing block id input string")
 )
 
 type BaseModuleEvent struct {

@@ -11,6 +11,12 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
+func init() {
+	config := sdk.GetConfig()
+	config.SetBech32PrefixForAccount(CoinDenom, CoinDenom)
+	config.Seal()
+}
+
 // CoinDenom provides ability to create coins in test functions and
 // pass them into testutil functionality.
 const CoinDenom = "akash"

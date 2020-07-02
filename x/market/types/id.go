@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/ovrclk/akash/sdkutil"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -51,6 +52,11 @@ func (id OrderID) Validate() error {
 	return nil
 }
 
+// String provides stringer interface to save reflected formatting.
+func (id OrderID) String() string {
+	return sdkutil.FmtBlockID(&id.Owner, &id.DSeq, &id.GSeq, &id.OSeq, nil)
+}
+
 // BidID stores owner, provider and all other seq numbers.
 // A successful bid becomes a Lease(ID).
 type BidID struct {
@@ -91,6 +97,11 @@ func (id BidID) OrderID() OrderID {
 		GSeq:  id.GSeq,
 		OSeq:  id.OSeq,
 	}
+}
+
+// String method for consistent output.
+func (id BidID) String() string {
+	return sdkutil.FmtBlockID(&id.Owner, &id.DSeq, &id.GSeq, &id.OSeq, nil)
 }
 
 // OrderIDString provides consistent conversion to string values for OrderID.
@@ -169,4 +180,9 @@ func (id LeaseID) GroupID() dtypes.GroupID {
 // DeploymentID method returns deployment details with specific lease details
 func (id LeaseID) DeploymentID() dtypes.DeploymentID {
 	return id.GroupID().DeploymentID()
+}
+
+// String method provides human readable representation of LeaseID.
+func (id LeaseID) String() string {
+	return sdkutil.FmtBlockID(&id.Owner, &id.DSeq, &id.GSeq, &id.OSeq, &id.Provider)
 }
