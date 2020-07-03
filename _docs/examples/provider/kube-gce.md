@@ -113,7 +113,7 @@ dig +short "test.$GCLOUD_DNS_DOMAIN"
 ## Clean up
 
 ```sh
-gcloud instances delete p1
+gcloud compute instances delete p1
 gcloud compute firewall-rules delete k3s
 gcloud compute firewall-rules delete inbound-http
 
