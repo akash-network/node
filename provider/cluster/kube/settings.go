@@ -13,13 +13,16 @@ type settings struct {
 	// others: ClusterIP
 	DeploymentServiceType corev1.ServiceType `env:"AKASH_DEPLOYMENT_SERVICE_TYPE" envDefault:"ClusterIP"`
 
-	// gcp:    False
+	// gcp:    false
 	// others: true
 	DeploymentIngressStaticHosts bool `env:"AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS" envDefault:"true"`
 	// Ingress domain to map deployments to
 	DeploymentIngressDomain string `env:"AKASH_DEPLOYMENT_INGRESS_DOMAIN"`
 
-	DeploymentIngressExposeLBHosts bool `env:"AKASH_DEPLOYMENT_INGRESS_EXPOSE_LB_HOSTS" envDefault:"true"`
+	// Return load balancer host in lease status command ?
+	// gcp:    true
+	// others: optional
+	DeploymentIngressExposeLBHosts bool `env:"AKASH_DEPLOYMENT_INGRESS_EXPOSE_LB_HOSTS" envDefault:"false"`
 }
 
 var errSettingsValidation = errors.New("settings validation")

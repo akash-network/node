@@ -14,6 +14,14 @@ Installed commands:
 * [`jq`](https://stedolan.github.io/jq/)
 * [`curl`](https://curl.haxx.se/)
 
+### Working Directory
+
+Create staging directory and cd into it
+
+```sh
+mkdir akash-demo && cd akash-demo
+```
+
 ### Kubernetes Cluster
 
 * A Kubernetes cluster with `kubectl` connected to it.
@@ -21,7 +29,7 @@ Installed commands:
 * A "star" domain pointing to the cluster route-able IP.
 
 See [here](./kube-gce.md) for seting up these prerequisites
-using [GCP](https://cloud.google.com).
+using [GCE](https://cloud.google.com/compute).
 
 In this tutorial, we will be using the domain `akashian.io`.
 
@@ -34,17 +42,11 @@ PROVIDER_DOMAIN=akashian.io
 We'll be connecting to the testnet.
 
 ```sh
-AKASHCTL_NODE=tcp://sentry-1.akashtest.net:26657
-AKASHCTL_CHAIN_ID=testnet
+AKASHCTL_NODE=tcp://sentry-1.v2.akashtest.net:26657
+AKASHCTL_CHAIN_ID=testnet-v2
 ```
 
 ## Deploy Provider Services
-
-### Create staging directory and cd into it
-
-```sh
-mkdir akash-provider && cd akash-provider
-```
 
 ### Download akashctl
 
@@ -238,11 +240,22 @@ sed -i.bak "s/us-west/us-west-demo-$(whoami)/g" deployment.yaml
 ./bin/akashctl query market lease list --owner "$(./bin/akashctl keys show deploy -a)"
 ```
 
+### Capture Deployment Sequence
+
+__note:__ This can be set when creating the deployment.  It defaults to the
+block height at that time.
+
+```sh
+DSEQ="$(./bin/akashctl query market lease list    \
+  --owner "$(./bin/akashctl keys show deploy -a)" \
+  | jq -r '.[0].id.dseq')"
+```
+
 ### Send Manifest
 
 ```sh
 ./bin/akashctl provider send-manifest deployment.yaml \
-  --dseq $DSEQ \
+  --dseq "$DSEQ" \
   --oseq 1 \
   --gseq 1 \
   --owner    "$(./bin/akashctl keys show deploy -a)" \
@@ -253,7 +266,7 @@ sed -i.bak "s/us-west/us-west-demo-$(whoami)/g" deployment.yaml
 
 ```sh
 ./bin/akashctl provider lease-status \
-  --dseq $DSEQ \
+  --dseq "$DSEQ" \
   --oseq 1 \
   --gseq 1 \
   --owner    "$(./bin/akashctl keys show deploy -a)" \
@@ -264,11 +277,21 @@ sed -i.bak "s/us-west/us-west-demo-$(whoami)/g" deployment.yaml
 
 ```sh
 ./bin/akashctl provider lease-status \
-  --dseq $DSEQ \
+  --dseq "$DSEQ" \
   --oseq 1 \
   --gseq 1 \
   --owner    "$(./bin/akashctl keys show deploy -a)"     \
   --provider "$(./bin/akashctl keys show provider -a)" | \
-  jq '.services[0].uris[0]' | \
-  xargs open
+  jq -r '.services[0].uris[0]' | \
+  while read -r line; do 
+    open "http://$line" 
+  done
 ```
+
+### Delete Deployment
+
+```sh
+./bin/akashctl tx deployment close --dseq $DSEQ --from deploy
+```
+
+

@@ -26,6 +26,7 @@ configMapGenerator:
     literals:
       - ingress-static-hosts=false
       - ingress-domain=app.localhost
+      - ingress-expose-lb-hosts=false
 
 secretGenerator:
   ##

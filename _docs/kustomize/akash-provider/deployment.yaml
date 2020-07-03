@@ -94,6 +94,13 @@ spec:
                   name: akash-provider-config
                   key: ingress-domain
 
+            # return load balancer host in lease status command
+            - name: AKASH_DEPLOYMENT_INGRESS_EXPOSE_LB_HOSTS
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: ingress-expose-lb-hosts
+
           ports:
             - name: http
               containerPort: 8080

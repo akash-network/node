@@ -1,7 +1,7 @@
-# Kubernetes cluster on GCP
+# Kubernetes cluster on GCE
 
 Follow these steps to create a Kubernetes cluster on
-[GCP](https://cloud.google.com/) using [`gcloud`](https://cloud.google.com/sdk/gcloud).
+[GCE](https://cloud.google.com/compute) using [`gcloud`](https://cloud.google.com/sdk/gcloud).
 
 The K3S portions of this are based off of [this](https://starkandwayne.com/blog/trying-tiny-k3s-on-google-cloud-with-k3sup/)
 tutorial.
@@ -23,13 +23,12 @@ GCLOUD_DNS_ZONE=akashian-io
 GCLOUD_DNS_DOMAIN=akashian.io
 ```
 
-```sh
-gcloud config set project "$GCLOUD_PROJECT"
-```
+Configure `gcloud` project and default regions
 
 ```sh
+gcloud config set project "$GCLOUD_PROJECT"
 gcloud compute project-info add-metadata \
-    --metadata google-compute-default-region=europe-west1,google-compute-default-zone=europe-west1-b
+    --metadata google-compute-default-region=us-west1,google-compute-default-zone=us-west1-a
 gcloud init
 ```
 
@@ -44,7 +43,13 @@ gcloud compute instances create p1 \
 ### Download `k3sup`
 
 ```sh
-(cd bin && curl -sLS https://get.k3sup.dev | sh )
+curl -sLS https://get.k3sup.dev
+```
+
+On Linux, install the binary to somewhere in your path, or use `./k3sup`:
+
+```sh
+sudo install k3sup /usr/local/bin
 ```
 
 ### Setup remote settings
@@ -62,7 +67,7 @@ INSTANCE_PUBLIC_IP="$(gcloud compute instances list \
 ### Create Kubernetes cluster
 
 ```sh
-./bin/k3sup install --ip "$INSTANCE_PUBLIC_IP" --context k3s --ssh-key ~/.ssh/google_compute_engine --user "$(whoami)"
+k3sup install --ip "$INSTANCE_PUBLIC_IP" --context k3s --ssh-key ~/.ssh/google_compute_engine --user "$(whoami)"
 ```
 
 ### Configure firewall rules
@@ -103,4 +108,29 @@ gcloud dns record-sets transaction execute --zone="$GCLOUD_DNS_ZONE"
 
 ```sh
 dig +short "test.$GCLOUD_DNS_DOMAIN"
+```
+
+## Clean up
+
+```sh
+gcloud instances delete p1
+gcloud compute firewall-rules delete k3s
+gcloud compute firewall-rules delete inbound-http
+
+gcloud dns record-sets transaction start --zone="$GCLOUD_DNS_ZONE"
+
+gcloud dns record-sets list                \
+  --filter=name="$GCLOUD_DNS_DOMAIN."      \
+  --filter=type=A                          \
+  --zone="$GCLOUD_DNS_ZONE"                \
+  --format="get[separator=|](name,DATA)" | \
+  while read -r line; do
+    gcloud dns record-sets transaction remove "${line##*|}" \
+      --zone="$GCLOUD_DNS_ZONE"                             \
+      --type=A                                              \
+      --name="${line%%|*}"                                  \
+      --ttl=60
+done
+
+gcloud dns record-sets transaction execute --zone="$GCLOUD_DNS_ZONE"
 ```
