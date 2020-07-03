@@ -43,7 +43,7 @@ gcloud compute instances create p1 \
 ### Download `k3sup`
 
 ```sh
-curl -sLS https://get.k3sup.dev
+curl -sLS https://get.k3sup.dev | sh
 ```
 
 On Linux, install the binary to somewhere in your path, or use `./k3sup`:
