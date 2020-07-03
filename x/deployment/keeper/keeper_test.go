@@ -244,6 +244,48 @@ func Test_CloseOpenGroups(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
 	groups := createDeploymentsWithState(t, ctx, types.GroupOpen, keeper)
 
+	t.Run("assert open groups", func(t *testing.T) {
+		og := keeper.GetGroups(ctx, groups[0].ID().DeploymentID())
+		assert.Len(t, og, 2)
+		for _, g := range og {
+			assert.Equal(t, g.State, types.GroupOpen)
+		}
+	})
+
+	t.Run("assert group 0 state closed", func(t *testing.T) {
+		assert.NoError(t, keeper.OnCloseGroup(ctx, groups[0]))
+		group, ok := keeper.GetGroup(ctx, groups[0].ID())
+		assert.True(t, ok)
+		assert.Equal(t, types.GroupClosed, group.State)
+	})
+	t.Run("group 1 matched-state still orderable", func(t *testing.T) {
+		group := groups[1]
+		assert.Equal(t, group.ValidateOrderable(), nil, group.State.String())
+	})
+}
+
+func Test_CloseOpenGroupsCheckIndexes(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	groups := createDeploymentsWithState(t, ctx, types.GroupOpen, keeper)
+
+	t.Run("assert iterating over one group", func(t *testing.T) {
+		i := 0
+		keeper.WithOpenGroups(ctx, func(g types.Group) bool {
+			i++
+			return true // aborts the iteration after one group is read and increments i
+		})
+		assert.Equal(t, i, 1)
+	})
+
+	t.Run("assert groups open", func(t *testing.T) {
+		openCnt := 0
+		keeper.WithOpenGroups(ctx, func(g types.Group) bool {
+			openCnt++
+			return false
+		})
+		assert.Equal(t, 2, openCnt)
+	})
+
 	t.Run("assert group 0 state closed", func(t *testing.T) {
 		assert.NoError(t, keeper.OnCloseGroup(ctx, groups[0]))
 		group, ok := keeper.GetGroup(ctx, groups[0].ID())
