@@ -92,7 +92,7 @@ func (c *client) SubmitManifest(ctx context.Context, host string, mreq *manifest
 	if err != nil {
 		return err
 	}
-	io.Copy(ioutil.Discard, resp.Body)
+	_, _ = io.Copy(ioutil.Discard, resp.Body)
 	if err := resp.Body.Close(); err != nil {
 		return err
 	}
@@ -134,18 +134,22 @@ func (c *client) ServiceStatus(ctx context.Context, host string, id mtypes.Lease
 
 func (c *client) getStatus(ctx context.Context, uri string, obj interface{}) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", uri, nil)
-	req.Header.Set("Content-Type", contentTypeJSON)
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Content-Type", contentTypeJSON)
 
 	resp, err := c.hclient.Do(req)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
 	if resp.StatusCode != http.StatusOK {
-		io.Copy(ioutil.Discard, resp.Body)
+		_, _ = io.Copy(ioutil.Discard, resp.Body)
 		return fmt.Errorf("%w: %v", ErrServerResponse, resp.Status)
 	}
 
@@ -195,7 +199,7 @@ func (c *client) ServiceLogs(ctx context.Context,
 		return nil, err
 	}
 
-	// todo check status?
+	// todo (#732) check status
 
 	streamch := make(chan ServiceLogMessage)
 	logs := &ServiceLogs{

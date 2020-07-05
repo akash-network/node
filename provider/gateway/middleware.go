@@ -46,7 +46,7 @@ func requestService(req *http.Request) string {
 	return context.Get(req, serviceContextKey).(string)
 }
 
-func requireDeploymentID(log log.Logger) mux.MiddlewareFunc {
+func requireDeploymentID(_ log.Logger) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			id, err := parseDeploymentID(req)
@@ -60,7 +60,7 @@ func requireDeploymentID(log log.Logger) mux.MiddlewareFunc {
 	}
 }
 
-func requireLeaseID(log log.Logger) mux.MiddlewareFunc {
+func requireLeaseID(_ log.Logger) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			id, err := parseLeaseID(req)
