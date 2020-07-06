@@ -17,6 +17,7 @@ import (
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/manifest"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -131,7 +132,11 @@ func leaseStatusHandler(log log.Logger, cclient cluster.ReadClient) http.Handler
 	return func(w http.ResponseWriter, req *http.Request) {
 		status, err := cclient.LeaseStatus(req.Context(), requestLeaseID(req))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			if kerrors.IsNotFound(err) {
+				http.Error(w, err.Error(), http.StatusNotFound)
+			} else {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 		writeJSON(log, w, status)
@@ -142,7 +147,11 @@ func leaseServiceStatusHandler(log log.Logger, cclient cluster.ReadClient) http.
 	return func(w http.ResponseWriter, req *http.Request) {
 		status, err := cclient.ServiceStatus(req.Context(), requestLeaseID(req), requestService(req))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			if kerrors.IsNotFound(err) {
+				http.Error(w, err.Error(), http.StatusNotFound)
+			} else {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 		writeJSON(log, w, status)
