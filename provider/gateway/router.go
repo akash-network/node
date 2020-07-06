@@ -105,7 +105,9 @@ func createManifestHandler(_ log.Logger, mclient manifest.Client) http.HandlerFu
 		var mreq manifest.SubmitRequest
 
 		decoder := json.NewDecoder(req.Body)
-		defer req.Body.Close()
+		defer func() {
+			_ = req.Body.Close()
+		}()
 
 		if err := decoder.Decode(&mreq); err != nil {
 			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
