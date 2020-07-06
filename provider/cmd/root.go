@@ -17,6 +17,7 @@ func RootCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.AddCommand(statusCmd(cdc))
 	cmd.AddCommand(leaseStatusCmd(cdc))
 	cmd.AddCommand(serviceStatusCmd(cdc))
+	cmd.AddCommand(serviceLogsCmd(cdc))
 	cmd.AddCommand(flags.PostCommands(
 		runCmd(cdc),
 	)...)

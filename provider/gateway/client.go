@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
+	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/provider"
 	"github.com/ovrclk/akash/provider/cluster"
@@ -26,6 +30,16 @@ type Client interface {
 	SubmitManifest(ctx context.Context, host string, req *manifest.SubmitRequest) error
 	LeaseStatus(ctx context.Context, host string, id mtypes.LeaseID) (*cluster.LeaseStatus, error)
 	ServiceStatus(ctx context.Context, host string, id mtypes.LeaseID, service string) (*cluster.ServiceStatus, error)
+	ServiceLogs(ctx context.Context, host string, id mtypes.LeaseID, service string, follow bool, tailLines int64) (*ServiceLogs, error)
+}
+
+type ServiceLogMessage struct {
+	Name    string `json:"name"`
+	Message string `json:"message"`
+}
+
+type ServiceLogs struct {
+	Stream <-chan ServiceLogMessage
 }
 
 // NewClient returns a new Client
@@ -144,5 +158,81 @@ func makeURI(host string, path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return endpoint.String(), nil
+}
+
+func (c *client) ServiceLogs(ctx context.Context,
+	host string,
+	id mtypes.LeaseID,
+	service string,
+	follow bool,
+	tailLines int64) (*ServiceLogs, error) {
+
+	endpoint, err := url.Parse(host + "/" + serviceLogsPath(id, service))
+	if err != nil {
+		return nil, err
+	}
+
+	switch endpoint.Scheme {
+	case "ws", "http", "":
+		endpoint.Scheme = "ws"
+	case "wss", "https":
+		endpoint.Scheme = "wss"
+	default:
+		return nil, errors.Errorf("invalid uri scheme \"%s\"", endpoint.Scheme)
+	}
+
+	query := url.Values{}
+
+	query.Set("follow", strconv.FormatBool(follow))
+	query.Set("tail", strconv.FormatInt(tailLines, 10))
+
+	endpoint.RawQuery = query.Encode()
+
+	conn, _, err := websocket.DefaultDialer.DialContext(ctx, endpoint.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// todo check status?
+
+	streamch := make(chan ServiceLogMessage)
+	logs := &ServiceLogs{
+		Stream: streamch,
+	}
+
+	go func(conn *websocket.Conn) {
+		defer func() {
+			close(streamch)
+			_ = conn.Close()
+		}()
+
+		for {
+			_ = conn.SetReadDeadline(time.Now().Add(pingWait))
+			mType, msg, e := conn.ReadMessage()
+			if e != nil {
+				return
+			}
+
+			switch mType {
+			case websocket.PingMessage:
+				if e = conn.WriteMessage(websocket.PongMessage, []byte{}); e != nil {
+					return
+				}
+			case websocket.TextMessage:
+				var logLine ServiceLogMessage
+				if e = json.Unmarshal(msg, &logLine); e != nil {
+					return
+				}
+
+				streamch <- logLine
+			case websocket.CloseMessage:
+				return
+			default:
+			}
+		}
+	}(conn)
+
+	return logs, nil
 }

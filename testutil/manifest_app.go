@@ -34,7 +34,7 @@ func (mg manifestGeneratorApp) Service(t testing.TB) manifest.Service {
 	t.Helper()
 	return manifest.Service{
 		Name:  "demo",
-		Image: "quay.io/ovrclk/demo-app",
+		Image: "chentex/random-logger:latest",
 		Unit: types.Unit{
 			CPU:     100,
 			Memory:  128 * unit.Mi,
