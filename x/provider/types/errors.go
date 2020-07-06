@@ -12,6 +12,7 @@ const (
 	errInvalidAddress
 	errAttributes
 	errIncompatibleAttributes
+	errDuplicateAttributes
 )
 
 var (
@@ -35,4 +36,7 @@ var (
 
 	// ErrIncompatibleAttributes error code for attributes update
 	ErrIncompatibleAttributes = sdkerrors.Register(ModuleName, errIncompatibleAttributes, "attributes cannot be changed")
+
+	// ErrDuplicateAttributes duplicates are prohibited
+	ErrDuplicateAttributes = sdkerrors.Register(ModuleName, errDuplicateAttributes, "attributes cannot have duplicates")
 )

@@ -92,6 +92,47 @@ func TestProviderCreate(t *testing.T) {
 	require.True(t, errors.Is(err, types.ErrProviderExists))
 }
 
+func TestProviderCreateWithDuplicated(t *testing.T) {
+	suite := setupTestSuite(t)
+
+	msg := types.MsgCreateProvider{
+		Owner:      testutil.AccAddress(t),
+		HostURI:    testutil.Hostname(t),
+		Attributes: testutil.Attributes(t),
+	}
+
+	msg.Attributes = append(msg.Attributes, msg.Attributes[0])
+
+	res, err := suite.handler(suite.ctx, msg)
+	require.Nil(t, res)
+	require.EqualError(t, err, types.ErrDuplicateAttributes.Error())
+}
+
+func TestProviderUpdateWithDuplicated(t *testing.T) {
+	suite := setupTestSuite(t)
+
+	createMsg := types.MsgCreateProvider{
+		Owner:      testutil.AccAddress(t),
+		HostURI:    testutil.Hostname(t),
+		Attributes: testutil.Attributes(t),
+	}
+
+	updateMsg := types.MsgUpdateProvider{
+		Owner:      createMsg.Owner,
+		HostURI:    testutil.Hostname(t),
+		Attributes: createMsg.Attributes,
+	}
+
+	updateMsg.Attributes = append(updateMsg.Attributes, updateMsg.Attributes[0])
+
+	err := suite.keeper.Create(suite.ctx, types.Provider(createMsg))
+	require.NoError(t, err)
+
+	res, err := suite.handler(suite.ctx, updateMsg)
+	require.Nil(t, res)
+	require.EqualError(t, err, types.ErrDuplicateAttributes.Error())
+}
+
 func TestProviderUpdateExisting(t *testing.T) {
 	suite := setupTestSuite(t)
 

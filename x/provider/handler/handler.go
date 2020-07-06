@@ -37,6 +37,10 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgCreateP
 		return nil, errors.Wrapf(types.ErrProviderExists, "id: %s", msg.Owner)
 	}
 
+	if err := msg.Attributes.Validate(); err != nil {
+		return nil, err
+	}
+
 	if err := keeper.Create(ctx, types.Provider(msg)); err != nil {
 		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
 	}
@@ -50,6 +54,10 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper mkeeper.Keep
 	prov, found := keeper.Get(ctx, msg.Owner)
 	if !found {
 		return nil, errors.Wrapf(types.ErrProviderNotFound, "id: %s", msg.Owner)
+	}
+
+	if err := msg.Attributes.Validate(); err != nil {
+		return nil, err
 	}
 
 	var err error
