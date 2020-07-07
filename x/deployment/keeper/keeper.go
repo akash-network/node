@@ -126,7 +126,8 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 	}
 
 	ctx.EventManager().EmitEvent(
-		types.EventDeploymentCreate{ID: deployment.ID()}.ToSDKEvent(),
+		types.NewEventDeploymentCreate(deployment.ID()).
+			ToSDKEvent(),
 	)
 
 	return nil
@@ -142,7 +143,8 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 	}
 
 	ctx.EventManager().EmitEvent(
-		types.EventDeploymentUpdate{ID: deployment.ID()}.ToSDKEvent(),
+		types.NewEventDeploymentUpdate(deployment.ID()).
+			ToSDKEvent(),
 	)
 
 	store.Set(key, k.cdc.MustMarshalBinaryBare(deployment))
@@ -160,7 +162,8 @@ func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group) error {
 	group.State = types.GroupClosed
 
 	ctx.EventManager().EmitEvent(
-		types.EventGroupClose{ID: group.ID()}.ToSDKEvent(),
+		types.NewEventGroupClose(group.ID()).
+			ToSDKEvent(),
 	)
 
 	store.Set(key, k.cdc.MustMarshalBinaryBare(group))

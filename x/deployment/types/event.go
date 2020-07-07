@@ -19,7 +19,18 @@ const (
 
 // EventDeploymentCreate struct
 type EventDeploymentCreate struct {
-	ID DeploymentID
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	ID      DeploymentID            `json:"id"`
+}
+
+func NewEventDeploymentCreate(id DeploymentID) EventDeploymentCreate {
+	return EventDeploymentCreate{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionDeploymentCreate,
+		},
+		ID: id,
+	}
 }
 
 // ToSDKEvent method creates new sdk event for EventDeploymentCreate struct
@@ -34,8 +45,19 @@ func (ev EventDeploymentCreate) ToSDKEvent() sdk.Event {
 
 // EventDeploymentUpdate struct
 type EventDeploymentUpdate struct {
-	ID      DeploymentID
-	Version []byte // TODO
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	ID      DeploymentID            `json:"id"`
+	Version []byte                  `json:"version,omitempty"` // TODO: #565
+}
+
+func NewEventDeploymentUpdate(id DeploymentID) EventDeploymentUpdate {
+	return EventDeploymentUpdate{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionDeploymentUpdate,
+		},
+		ID: id,
+	}
 }
 
 // ToSDKEvent method creates new sdk event for EventDeploymentUpdate struct
@@ -50,7 +72,18 @@ func (ev EventDeploymentUpdate) ToSDKEvent() sdk.Event {
 
 // EventDeploymentClose struct
 type EventDeploymentClose struct {
-	ID DeploymentID
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	ID      DeploymentID            `json:"id"`
+}
+
+func NewEventDeploymentClose(id DeploymentID) EventDeploymentClose {
+	return EventDeploymentClose{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionDeploymentClose,
+		},
+		ID: id,
+	}
 }
 
 // ToSDKEvent method creates new sdk event for EventDeploymentClose struct
@@ -90,7 +123,18 @@ func ParseEVDeploymentID(attrs []sdk.Attribute) (DeploymentID, error) {
 
 // EventGroupClose provides SDK event to signal group termination
 type EventGroupClose struct {
-	ID GroupID
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	ID      GroupID                 `json:"id"`
+}
+
+func NewEventGroupClose(id GroupID) EventGroupClose {
+	return EventGroupClose{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionGroupClose,
+		},
+		ID: id,
+	}
 }
 
 // ToSDKEvent produces the SDK notification for Event
@@ -143,25 +187,25 @@ func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 		if err != nil {
 			return nil, err
 		}
-		return EventDeploymentCreate{ID: did}, nil
+		return NewEventDeploymentCreate(did), nil
 	case evActionDeploymentUpdate:
 		did, err := ParseEVDeploymentID(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
-		return EventDeploymentUpdate{ID: did}, nil
+		return NewEventDeploymentUpdate(did), nil
 	case evActionDeploymentClose:
 		did, err := ParseEVDeploymentID(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
-		return EventDeploymentClose{ID: did}, nil
+		return NewEventDeploymentClose(did), nil
 	case evActionGroupClose:
 		gid, err := ParseEVGroupID(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
-		return EventGroupClose{ID: gid}, nil
+		return NewEventGroupClose(gid), nil
 	default:
 		return nil, sdkutil.ErrUnknownAction
 	}
