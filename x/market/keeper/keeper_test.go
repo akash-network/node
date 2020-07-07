@@ -152,6 +152,18 @@ func Test_WithLeases(t *testing.T) {
 		return false
 	})
 	assert.Equal(t, 1, count)
+
+	t.Run("active-count", func(t *testing.T) {
+		activeCount := 0
+		keeper.WithActiveLeases(ctx, func(result types.Lease) bool {
+			if assert.Equal(t, id, result.ID()) {
+				activeCount++
+			}
+			return false
+		})
+
+		assert.Equal(t, 1, activeCount)
+	})
 }
 
 func Test_LeaseForOrder(t *testing.T) {

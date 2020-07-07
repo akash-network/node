@@ -45,7 +45,7 @@ func groupOpenKey(id types.GroupID) []byte {
 // group key prefix for accessing the Group's data.
 func groupOpenKeyConvert(openKey []byte) ([]byte, error) {
 	buf := bytes.NewBuffer(groupPrefix)
-	_, err := buf.Write(openKey[1:])
+	_, err := buf.Write(openKey[len(groupPrefix):])
 	if err != nil {
 		return nil, err
 	}

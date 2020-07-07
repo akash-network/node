@@ -22,14 +22,9 @@ func OnEndBlock(ctx sdk.Context, keepers Keepers) error {
 }
 
 func transferFundsForActiveLeases(ctx sdk.Context, keepers Keepers) error {
-
 	// for all active leases, transfer funds
 	count := 0
-	keepers.Market.WithLeases(ctx, func(lease types.Lease) bool {
-
-		if lease.State != types.LeaseActive {
-			return false
-		}
+	keepers.Market.WithActiveLeases(ctx, func(lease types.Lease) bool {
 
 		amt := sdk.NewCoins(lease.Price)
 
