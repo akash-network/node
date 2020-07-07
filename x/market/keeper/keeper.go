@@ -95,7 +95,8 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 	return bid, nil
 }
 
-// CreateLease creates lease for bid with given bidID
+// CreateLease creates lease for bid with given bidID.
+// Should only be called by the EndBlock handler or unit tests.
 func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 	store := ctx.KVStore(k.skey)
 
@@ -104,10 +105,12 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 		State:   types.LeaseActive,
 		Price:   bid.Price,
 	}
-	key := leaseKey(lease.ID())
 
-	// XXX TODO: check not overwrite
+	// create (active) lease in store
+	key := leaseKey(lease.ID())
 	store.Set(key, k.cdc.MustMarshalBinaryBare(lease))
+	k.updateActiveLeaseIndex(store, lease)
+
 	ctx.Logger().Info("created lease", "lease", lease.ID())
 	ctx.EventManager().EmitEvent(
 		types.NewEventLeaseCreated(lease.ID(), lease.Price).
@@ -318,6 +321,26 @@ func (k Keeper) WithLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 	}
 }
 
+// WithActiveLeases iterates through all leases that were marked as Active
+// and
+func (k Keeper) WithActiveLeases(ctx sdk.Context, fn func(types.Lease) bool) {
+	store := ctx.KVStore(k.skey)
+	iter := sdk.KVStorePrefixIterator(store, leaseActivePrefix)
+	for ; iter.Valid(); iter.Next() {
+		dataKey, err := convertLeaseActiveKey(iter.Key())
+		if err != nil {
+			continue
+		}
+
+		buf := store.Get(dataKey)
+		var val types.Lease
+		k.cdc.MustUnmarshalBinaryBare(buf, &val)
+		if stop := fn(val); stop {
+			break
+		}
+	}
+}
+
 // WithOrdersForGroup iterates all orders of a group in market with given GroupID
 func (k Keeper) WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, fn func(types.Order) bool) {
 	store := ctx.KVStore(k.skey)
@@ -360,4 +383,17 @@ func (k Keeper) updateLease(ctx sdk.Context, lease types.Lease) {
 	store := ctx.KVStore(k.skey)
 	key := leaseKey(lease.ID())
 	store.Set(key, k.cdc.MustMarshalBinaryBare(lease))
+	k.updateActiveLeaseIndex(store, lease)
+}
+
+func (k Keeper) updateActiveLeaseIndex(store sdk.KVStore, lease types.Lease) {
+	key := leaseKeyActive(lease.ID())
+
+	switch lease.State {
+	case types.LeaseActive:
+		store.Set(key, []byte{})
+	default:
+		store.Delete(key)
+
+	}
 }
