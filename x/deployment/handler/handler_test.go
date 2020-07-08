@@ -195,6 +195,15 @@ func TestCloseDeploymentExisting(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
+	t.Run("ensure event created", func(t *testing.T) {
+		iev := testutil.ParseDeploymentEvent(t, res.Events)
+		require.IsType(t, types.EventDeploymentCreated{}, iev)
+
+		dev := iev.(types.EventDeploymentCreated)
+
+		require.Equal(t, msg.ID, dev.ID)
+	})
+
 	msgClose := types.MsgCloseDeployment{
 		ID: deployment.ID(),
 	}
@@ -203,13 +212,20 @@ func TestCloseDeploymentExisting(t *testing.T) {
 	require.NotNil(t, res)
 	require.NoError(t, err)
 
-	t.Run("ensure event created", func(t *testing.T) {
-		// TODO: this should emit a DeploymentClose
-
-		iev := testutil.ParseDeploymentEvent(t, res.Events[1:])
+	t.Run("ensure event updated", func(t *testing.T) {
+		iev := testutil.ParseDeploymentEvent(t, res.Events[1:2])
 		require.IsType(t, types.EventDeploymentUpdated{}, iev)
 
 		dev := iev.(types.EventDeploymentUpdated)
+
+		require.Equal(t, msg.ID, dev.ID)
+	})
+
+	t.Run("ensure event close", func(t *testing.T) {
+		iev := testutil.ParseDeploymentEvent(t, res.Events[2:])
+		require.IsType(t, types.EventDeploymentClosed{}, iev)
+
+		dev := iev.(types.EventDeploymentClosed)
 
 		require.Equal(t, msg.ID, dev.ID)
 	})
