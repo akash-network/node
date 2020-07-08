@@ -8,90 +8,90 @@ import (
 )
 
 const (
-	evActionDeploymentCreate = "deployment-create"
-	evActionDeploymentUpdate = "deployment-update"
-	evActionDeploymentClose  = "deployment-close"
-	evActionGroupClose       = "group-close"
-	evOwnerKey               = "owner"
-	evDSeqKey                = "dseq"
-	evGSeqKey                = "gseq"
+	evActionDeploymentCreated = "deployment-created"
+	evActionDeploymentUpdated = "deployment-updated"
+	evActionDeploymentClosed  = "deployment-closed"
+	evActionGroupClosed       = "group-closed"
+	evOwnerKey                = "owner"
+	evDSeqKey                 = "dseq"
+	evGSeqKey                 = "gseq"
 )
 
-// EventDeploymentCreate struct
-type EventDeploymentCreate struct {
+// EventDeploymentCreated struct
+type EventDeploymentCreated struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
 	ID      DeploymentID            `json:"id"`
 }
 
-func NewEventDeploymentCreate(id DeploymentID) EventDeploymentCreate {
-	return EventDeploymentCreate{
+func NewEventDeploymentCreated(id DeploymentID) EventDeploymentCreated {
+	return EventDeploymentCreated{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
-			Action: evActionDeploymentCreate,
+			Action: evActionDeploymentCreated,
 		},
 		ID: id,
 	}
 }
 
-// ToSDKEvent method creates new sdk event for EventDeploymentCreate struct
-func (ev EventDeploymentCreate) ToSDKEvent() sdk.Event {
+// ToSDKEvent method creates new sdk event for EventDeploymentCreated struct
+func (ev EventDeploymentCreated) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-			sdk.NewAttribute(sdk.AttributeKeyAction, evActionDeploymentCreate),
+			sdk.NewAttribute(sdk.AttributeKeyAction, evActionDeploymentCreated),
 		}, DeploymentIDEVAttributes(ev.ID)...)...,
 	)
 }
 
-// EventDeploymentUpdate struct
-type EventDeploymentUpdate struct {
+// EventDeploymentUpdated struct
+type EventDeploymentUpdated struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
 	ID      DeploymentID            `json:"id"`
 	Version []byte                  `json:"version,omitempty"` // TODO: #565
 }
 
-func NewEventDeploymentUpdate(id DeploymentID) EventDeploymentUpdate {
-	return EventDeploymentUpdate{
+func NewEventDeploymentUpdated(id DeploymentID) EventDeploymentUpdated {
+	return EventDeploymentUpdated{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
-			Action: evActionDeploymentUpdate,
+			Action: evActionDeploymentUpdated,
 		},
 		ID: id,
 	}
 }
 
-// ToSDKEvent method creates new sdk event for EventDeploymentUpdate struct
-func (ev EventDeploymentUpdate) ToSDKEvent() sdk.Event {
+// ToSDKEvent method creates new sdk event for EventDeploymentUpdated struct
+func (ev EventDeploymentUpdated) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-			sdk.NewAttribute(sdk.AttributeKeyAction, evActionDeploymentUpdate),
+			sdk.NewAttribute(sdk.AttributeKeyAction, evActionDeploymentUpdated),
 		}, DeploymentIDEVAttributes(ev.ID)...)...,
 	)
 }
 
-// EventDeploymentClose struct
-type EventDeploymentClose struct {
+// EventDeploymentClosed struct
+type EventDeploymentClosed struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
 	ID      DeploymentID            `json:"id"`
 }
 
-func NewEventDeploymentClose(id DeploymentID) EventDeploymentClose {
-	return EventDeploymentClose{
+func NewEventDeploymentClosed(id DeploymentID) EventDeploymentClosed {
+	return EventDeploymentClosed{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
-			Action: evActionDeploymentClose,
+			Action: evActionDeploymentClosed,
 		},
 		ID: id,
 	}
 }
 
-// ToSDKEvent method creates new sdk event for EventDeploymentClose struct
-func (ev EventDeploymentClose) ToSDKEvent() sdk.Event {
+// ToSDKEvent method creates new sdk event for EventDeploymentClosed struct
+func (ev EventDeploymentClosed) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-			sdk.NewAttribute(sdk.AttributeKeyAction, evActionDeploymentClose),
+			sdk.NewAttribute(sdk.AttributeKeyAction, evActionDeploymentClosed),
 		}, DeploymentIDEVAttributes(ev.ID)...)...,
 	)
 }
@@ -121,28 +121,28 @@ func ParseEVDeploymentID(attrs []sdk.Attribute) (DeploymentID, error) {
 	}, nil
 }
 
-// EventGroupClose provides SDK event to signal group termination
-type EventGroupClose struct {
+// EventGroupClosed provides SDK event to signal group termination
+type EventGroupClosed struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
 	ID      GroupID                 `json:"id"`
 }
 
-func NewEventGroupClose(id GroupID) EventGroupClose {
-	return EventGroupClose{
+func NewEventGroupClosed(id GroupID) EventGroupClosed {
+	return EventGroupClosed{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
-			Action: evActionGroupClose,
+			Action: evActionGroupClosed,
 		},
 		ID: id,
 	}
 }
 
 // ToSDKEvent produces the SDK notification for Event
-func (ev EventGroupClose) ToSDKEvent() sdk.Event {
+func (ev EventGroupClosed) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-			sdk.NewAttribute(sdk.AttributeKeyAction, evActionGroupClose),
+			sdk.NewAttribute(sdk.AttributeKeyAction, evActionGroupClosed),
 		}, GroupIDEVAttributes(ev.ID)...)...,
 	)
 }
@@ -182,30 +182,30 @@ func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 		return nil, sdkutil.ErrUnknownModule
 	}
 	switch ev.Action {
-	case evActionDeploymentCreate:
+	case evActionDeploymentCreated:
 		did, err := ParseEVDeploymentID(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
-		return NewEventDeploymentCreate(did), nil
-	case evActionDeploymentUpdate:
+		return NewEventDeploymentCreated(did), nil
+	case evActionDeploymentUpdated:
 		did, err := ParseEVDeploymentID(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
-		return NewEventDeploymentUpdate(did), nil
-	case evActionDeploymentClose:
+		return NewEventDeploymentUpdated(did), nil
+	case evActionDeploymentClosed:
 		did, err := ParseEVDeploymentID(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
-		return NewEventDeploymentClose(did), nil
-	case evActionGroupClose:
+		return NewEventDeploymentClosed(did), nil
+	case evActionGroupClosed:
 		gid, err := ParseEVGroupID(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
-		return NewEventGroupClose(gid), nil
+		return NewEventGroupClosed(gid), nil
 	default:
 		return nil, sdkutil.ErrUnknownAction
 	}

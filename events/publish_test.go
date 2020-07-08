@@ -15,10 +15,10 @@ import (
 func Test_processEvent(t *testing.T) {
 	tests := []sdkutil.ModuleEvent{
 		// x/deployment events
-		dtypes.NewEventDeploymentCreate(testutil.DeploymentID(t)),
-		dtypes.NewEventDeploymentUpdate(testutil.DeploymentID(t)),
-		dtypes.NewEventDeploymentClose(testutil.DeploymentID(t)),
-		dtypes.NewEventGroupClose(testutil.GroupID(t)),
+		dtypes.NewEventDeploymentCreated(testutil.DeploymentID(t)),
+		dtypes.NewEventDeploymentUpdated(testutil.DeploymentID(t)),
+		dtypes.NewEventDeploymentClosed(testutil.DeploymentID(t)),
+		dtypes.NewEventGroupClosed(testutil.GroupID(t)),
 
 		// x/market events
 		mtypes.NewEventOrderCreated(testutil.OrderID(t)),
@@ -29,9 +29,9 @@ func Test_processEvent(t *testing.T) {
 		mtypes.NewEventLeaseClosed(testutil.LeaseID(t), testutil.Coin(t)),
 
 		// x/provider events
-		ptypes.NewEventProviderCreate(testutil.AccAddress(t)),
-		ptypes.NewEventProviderUpdate(testutil.AccAddress(t)),
-		ptypes.NewEventProviderDelete(testutil.AccAddress(t)),
+		ptypes.NewEventProviderCreated(testutil.AccAddress(t)),
+		ptypes.NewEventProviderUpdated(testutil.AccAddress(t)),
+		ptypes.NewEventProviderDeleted(testutil.AccAddress(t)),
 	}
 
 	for _, test := range tests {
