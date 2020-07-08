@@ -78,7 +78,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionProviderCreate,
+			Action: evActionProviderCreated,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -92,7 +92,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionProviderCreate,
+			Action: evActionProviderCreated,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -106,7 +106,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:       sdkutil.EventTypeMessage,
 			Module:     ModuleName,
-			Action:     evActionProviderCreate,
+			Action:     evActionProviderCreated,
 			Attributes: []sdk.Attribute{},
 		},
 		expErr: errWildcard,
@@ -116,7 +116,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionProviderUpdate,
+			Action: evActionProviderUpdated,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -130,7 +130,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionProviderUpdate,
+			Action: evActionProviderUpdated,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -144,7 +144,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:       sdkutil.EventTypeMessage,
 			Module:     ModuleName,
-			Action:     evActionProviderUpdate,
+			Action:     evActionProviderUpdated,
 			Attributes: []sdk.Attribute{},
 		},
 		expErr: errWildcard,
@@ -154,7 +154,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionProviderDelete,
+			Action: evActionProviderDeleted,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -168,7 +168,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionProviderDelete,
+			Action: evActionProviderDeleted,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -182,7 +182,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:       sdkutil.EventTypeMessage,
 			Module:     ModuleName,
-			Action:     evActionProviderDelete,
+			Action:     evActionProviderDeleted,
 			Attributes: []sdk.Attribute{},
 		},
 		expErr: errWildcard,

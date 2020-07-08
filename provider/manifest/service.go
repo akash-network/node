@@ -162,7 +162,7 @@ loop:
 
 				s.handleLease(ev)
 
-			case dtypes.EventDeploymentUpdate:
+			case dtypes.EventDeploymentUpdated:
 
 				s.session.Log().Info("update received", "deployment", ev.ID, "version", ev.Version)
 
@@ -172,7 +172,7 @@ loop:
 					manager.handleUpdate(ev.Version)
 				}
 
-			case dtypes.EventDeploymentClose:
+			case dtypes.EventDeploymentClosed:
 
 				key := dquery.DeploymentPath(ev.ID)
 				if manager := s.managers[key]; manager != nil {

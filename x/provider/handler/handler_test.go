@@ -79,9 +79,9 @@ func TestProviderCreate(t *testing.T) {
 	t.Run("ensure event created", func(t *testing.T) {
 
 		iev := testutil.ParseProviderEvent(t, res.Events)
-		require.IsType(t, types.EventProviderCreate{}, iev)
+		require.IsType(t, types.EventProviderCreated{}, iev)
 
-		dev := iev.(types.EventProviderCreate)
+		dev := iev.(types.EventProviderCreated)
 
 		require.Equal(t, msg.Owner, dev.Owner)
 	})
@@ -158,9 +158,9 @@ func TestProviderUpdateExisting(t *testing.T) {
 	t.Run("ensure event created", func(t *testing.T) {
 
 		iev := testutil.ParseProviderEvent(t, res.Events[1:])
-		require.IsType(t, types.EventProviderUpdate{}, iev)
+		require.IsType(t, types.EventProviderUpdated{}, iev)
 
-		dev := iev.(types.EventProviderUpdate)
+		dev := iev.(types.EventProviderUpdated)
 
 		require.Equal(t, updateMsg.Owner, dev.Owner)
 	})
@@ -224,9 +224,9 @@ func TestProviderUpdateAttributes(t *testing.T) {
 	t.Run("ensure event created", func(t *testing.T) {
 
 		iev := testutil.ParseProviderEvent(t, res.Events[4:])
-		require.IsType(t, types.EventProviderUpdate{}, iev)
+		require.IsType(t, types.EventProviderUpdated{}, iev)
 
-		dev := iev.(types.EventProviderUpdate)
+		dev := iev.(types.EventProviderUpdated)
 
 		require.Equal(t, updateMsg.Owner, dev.Owner)
 	})
