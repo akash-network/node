@@ -7,6 +7,7 @@ import (
 
 	"github.com/blang/semver"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
@@ -28,6 +29,7 @@ type v1 struct {
 
 type v1Service struct {
 	Image        string
+	Command      []string       `yaml:",omitempty"`
 	Args         []string       `yaml:",omitempty"`
 	Env          []string       `yaml:",omitempty"`
 	Expose       []v1Expose     `yaml:",omitempty"`
