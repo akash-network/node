@@ -256,6 +256,11 @@ func (k Keeper) OnDeploymentClosed(ctx sdk.Context, group types.Group) {
 	}
 	group.State = types.GroupClosed
 	k.updateGroup(ctx, group)
+
+	ctx.EventManager().EmitEvent(
+		types.NewEventDeploymentClosed(group.DeploymentID()).
+			ToSDKEvent(),
+	)
 }
 
 func (k Keeper) updateGroup(ctx sdk.Context, group types.Group) {
