@@ -76,7 +76,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionDeploymentCreate,
+			Action: evActionDeploymentCreated,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -94,7 +94,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionDeploymentCreate,
+			Action: evActionDeploymentCreated,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -112,7 +112,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionDeploymentCreate,
+			Action: evActionDeploymentCreated,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -127,7 +127,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionDeploymentUpdate,
+			Action: evActionDeploymentUpdated,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -145,7 +145,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionGroupClose,
+			Action: evActionGroupClosed,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -167,7 +167,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionGroupClose,
+			Action: evActionGroupClosed,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -185,7 +185,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionGroupClose,
+			Action: evActionGroupClosed,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -203,7 +203,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionDeploymentUpdate,
+			Action: evActionDeploymentUpdated,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
@@ -221,7 +221,7 @@ var TEPS = []testEventParsing{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
 			Module: ModuleName,
-			Action: evActionDeploymentUpdate,
+			Action: evActionDeploymentUpdated,
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,

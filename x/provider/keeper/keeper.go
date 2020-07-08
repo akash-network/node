@@ -53,7 +53,7 @@ func (k Keeper) Create(ctx sdk.Context, provider types.Provider) error {
 	store.Set(key, k.cdc.MustMarshalBinaryBare(provider))
 
 	ctx.EventManager().EmitEvent(
-		types.EventProviderCreate{Owner: provider.Owner}.ToSDKEvent(),
+		types.EventProviderCreated{Owner: provider.Owner}.ToSDKEvent(),
 	)
 
 	return nil
@@ -83,7 +83,7 @@ func (k Keeper) Update(ctx sdk.Context, provider types.Provider) error {
 	store.Set(key, k.cdc.MustMarshalBinaryBare(provider))
 
 	ctx.EventManager().EmitEvent(
-		types.EventProviderUpdate{Owner: provider.Owner}.ToSDKEvent(),
+		types.EventProviderUpdated{Owner: provider.Owner}.ToSDKEvent(),
 	)
 
 	return nil

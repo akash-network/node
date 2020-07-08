@@ -84,9 +84,9 @@ func TestCreateDeployment(t *testing.T) {
 
 	t.Run("ensure event created", func(t *testing.T) {
 		iev := testutil.ParseDeploymentEvent(t, res.Events)
-		require.IsType(t, types.EventDeploymentCreate{}, iev)
+		require.IsType(t, types.EventDeploymentCreated{}, iev)
 
-		dev := iev.(types.EventDeploymentCreate)
+		dev := iev.(types.EventDeploymentCreated)
 
 		require.Equal(t, msg.ID, dev.ID)
 	})
@@ -155,9 +155,9 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 
 	t.Run("ensure event created", func(t *testing.T) {
 		iev := testutil.ParseDeploymentEvent(t, res.Events[1:])
-		require.IsType(t, types.EventDeploymentUpdate{}, iev)
+		require.IsType(t, types.EventDeploymentUpdated{}, iev)
 
-		dev := iev.(types.EventDeploymentUpdate)
+		dev := iev.(types.EventDeploymentUpdated)
 
 		require.Equal(t, msg.ID, dev.ID)
 	})
@@ -207,9 +207,9 @@ func TestCloseDeploymentExisting(t *testing.T) {
 		// TODO: this should emit a DeploymentClose
 
 		iev := testutil.ParseDeploymentEvent(t, res.Events[1:])
-		require.IsType(t, types.EventDeploymentUpdate{}, iev)
+		require.IsType(t, types.EventDeploymentUpdated{}, iev)
 
-		dev := iev.(types.EventDeploymentUpdate)
+		dev := iev.(types.EventDeploymentUpdated)
 
 		require.Equal(t, msg.ID, dev.ID)
 	})

@@ -126,7 +126,7 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 	}
 
 	ctx.EventManager().EmitEvent(
-		types.NewEventDeploymentCreate(deployment.ID()).
+		types.NewEventDeploymentCreated(deployment.ID()).
 			ToSDKEvent(),
 	)
 
@@ -143,7 +143,7 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 	}
 
 	ctx.EventManager().EmitEvent(
-		types.NewEventDeploymentUpdate(deployment.ID()).
+		types.NewEventDeploymentUpdated(deployment.ID()).
 			ToSDKEvent(),
 	)
 
@@ -162,7 +162,7 @@ func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group) error {
 	group.State = types.GroupClosed
 
 	ctx.EventManager().EmitEvent(
-		types.NewEventGroupClose(group.ID()).
+		types.NewEventGroupClosed(group.ID()).
 			ToSDKEvent(),
 	)
 
