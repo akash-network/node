@@ -41,6 +41,10 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgCreateP
 		return nil, err
 	}
 
+	if err := msg.ReqAttributes.Validate(); err != nil {
+		return nil, err
+	}
+
 	if err := keeper.Create(ctx, types.Provider(msg)); err != nil {
 		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
 	}
@@ -60,6 +64,10 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper mkeeper.Keep
 		return nil, err
 	}
 
+	if err := msg.ReqAttributes.Validate(); err != nil {
+		return nil, err
+	}
+
 	var err error
 
 	// all filtering code below is madness!. should make an index to not melt the cpu
@@ -74,7 +82,7 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper mkeeper.Keep
 					mtypes.BidIDString(mtypes.BidID(lease.ID())))
 				return true
 			}
-			if !order.MatchAttributes(msg.Attributes) {
+			if !order.MatchAttributes(append(msg.Attributes, msg.ReqAttributes...)) {
 				err = types.ErrIncompatibleAttributes
 				return true
 			}

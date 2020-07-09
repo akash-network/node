@@ -230,8 +230,13 @@ loop:
 
 func (o *order) shouldBid(group *dquery.Group) bool {
 
-	// does provider have required attributes?
-	if !group.MatchAttributes(o.session.Provider().Attributes) {
+	if !o.session.Provider().MatchReqAttributes(group.Requirements) {
+		o.log.Debug("unable to fulfill: required attributes not matched")
+		return false
+	}
+
+	// compares group requirements with provider attributes and required attributes
+	if !group.MatchAttributes(o.session.Provider().GetAllAttributes()) {
 		o.log.Debug("unable to fulfill: incompatible attributes")
 		return false
 	}

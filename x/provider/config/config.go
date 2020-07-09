@@ -10,13 +10,19 @@ import (
 
 // Config is the struct that stores provider config
 type Config struct {
-	Host       string          `json:"host"`
-	Attributes []sdk.Attribute `json:"attributes"`
+	Host          string          `json:"host"`
+	Attributes    []sdk.Attribute `json:"attributes"`
+	ReqAttributes []sdk.Attribute `json:"req-attributes" yaml:"req-attributes"`
 }
 
 // GetAttributes returns config attributes into key value pairs
 func (c Config) GetAttributes() []sdk.Attribute {
 	return c.Attributes
+}
+
+// GetReqAttributes returns config require attributes into key value pairs
+func (c Config) GetReqAttributes() []sdk.Attribute {
+	return c.ReqAttributes
 }
 
 // ReadConfigPath reads and parses file

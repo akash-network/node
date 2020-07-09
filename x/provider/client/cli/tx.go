@@ -50,9 +50,10 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 			}
 
 			msg := types.MsgCreateProvider{
-				Owner:      ctx.GetFromAddress(),
-				HostURI:    cfg.Host,
-				Attributes: cfg.GetAttributes(),
+				Owner:         ctx.GetFromAddress(),
+				HostURI:       cfg.Host,
+				Attributes:    cfg.GetAttributes(),
+				ReqAttributes: cfg.GetReqAttributes(),
 			}
 
 			if err := msg.ValidateBasic(); err != nil {
@@ -81,9 +82,10 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 			}
 
 			msg := types.MsgUpdateProvider{
-				Owner:      ctx.GetFromAddress(),
-				HostURI:    cfg.Host,
-				Attributes: cfg.GetAttributes(),
+				Owner:         ctx.GetFromAddress(),
+				HostURI:       cfg.Host,
+				Attributes:    cfg.GetAttributes(),
+				ReqAttributes: cfg.GetReqAttributes(),
 			}
 
 			if err := msg.ValidateBasic(); err != nil {

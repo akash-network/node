@@ -47,7 +47,11 @@ func handleMsgCreateBid(ctx sdk.Context, keepers Keepers, msg types.MsgCreateBid
 		return nil, types.ErrEmptyProvider
 	}
 
-	if !order.MatchAttributes(prov.Attributes) {
+	if !order.MatchAttributes(prov.GetAllAttributes()) {
+		return nil, types.ErrAttributeMismatch
+	}
+
+	if !prov.MatchReqAttributes(order.Spec.Requirements) {
 		return nil, types.ErrAttributeMismatch
 	}
 
