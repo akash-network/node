@@ -54,6 +54,9 @@ func makeItSoCommand(key string, cdc *codec.Codec) *cobra.Command {
 			// Setup CLI context and transaction builder
 			ctx := context.NewCLIContext().WithCodec(cdc)
 			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			if err := ctx.Client.Start(); err != nil {
+				return err
+			}
 
 			// Read in manifest file
 			sdl, err := sdl.ReadFile(args[0])
@@ -93,8 +96,8 @@ func makeItSoCommand(key string, cdc *codec.Codec) *cobra.Command {
 			// Create an error group to handle chain listener
 			group, cctx := errgroup.WithContext(ccontext.Background())
 
+			// Listen to the events on chain and publish them to the pubsub bus
 			group.Go(func() error {
-				// Listen to the events on chain and publish them to the pubsub bus
 				return events.Publish(cctx, ctx.Client, "deployment-create", bus)
 			})
 
@@ -107,16 +110,14 @@ func makeItSoCommand(key string, cdc *codec.Codec) *cobra.Command {
 			// start goroutine to listen for events
 			leases := len(groups)
 			group.Go(func() error {
-				fmt.Println("Starting event listener")
 				for {
 					select {
 					case <-sub.Done():
 						return nil
 					case ev := <-sub.Events():
-						fmt.Println("getting event")
 						switch msg := ev.(type) {
 						case types.EventDeploymentCreated:
-							fmt.Printf("Deployment %d created...\n", msg.ID)
+							fmt.Printf("Deployment %d created...\n", msg.ID.DSeq)
 						case mtypes.EventOrderCreated:
 							fmt.Printf("Order %d for deployement %d created...\n", msg.ID.OSeq, msg.ID.DSeq)
 						case mtypes.EventBidCreated:
@@ -143,8 +144,10 @@ func makeItSoCommand(key string, cdc *codec.Codec) *cobra.Command {
 								return err
 							}
 
-							if leases += -1; leases == 0 {
+							if leases = leases - 1; leases == 0 {
+								fmt.Printf("Leases left %d...\n", leases)
 								sub.Close()
+								return nil
 							}
 						}
 					}
