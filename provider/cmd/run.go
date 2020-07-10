@@ -34,6 +34,7 @@ const (
 	flagClusterK8s           = "cluster-k8s"
 	flagK8sManifestNS        = "k8s-manifest-ns"
 	flagGatewayListenAddress = "gateway-listen-address"
+	flagConfig               = "config"
 )
 
 var (
@@ -59,6 +60,9 @@ func runCmd(cdc *codec.Codec) *cobra.Command {
 
 	cmd.Flags().String(flagGatewayListenAddress, "0.0.0.0:8080", "Gateway listen address")
 	viper.BindPFlag(flagGatewayListenAddress, cmd.Flags().Lookup(flagGatewayListenAddress))
+
+	cmd.Flags().String(flagConfig, "", "Path of config file with required attributes for provider")
+	viper.BindPFlag(flagConfig, cmd.Flags().Lookup(flagConfig))
 
 	return cmd
 }
@@ -106,7 +110,18 @@ func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []str
 		return err
 	}
 
-	session := session.New(log, aclient, pinfo)
+	configPath := viper.GetString(flagConfig)
+
+	var cfg Config
+
+	if configPath != "" {
+		cfg, err = ReadConfigPath(configPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	session := session.New(log, aclient, pinfo, cfg.GetAttributes())
 
 	if err := cctx.Client.Start(); err != nil {
 		return err

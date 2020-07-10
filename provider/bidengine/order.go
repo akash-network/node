@@ -185,9 +185,10 @@ loop:
 			// Begin submitting fulfillment
 			bidch = runner.Do(func() runner.Result {
 				return runner.NewResult(nil, o.session.Client().Tx().Broadcast(&mtypes.MsgCreateBid{
-					Order:    o.order,
-					Provider: o.session.Provider().Address(),
-					Price:    price,
+					Order:         o.order,
+					Provider:      o.session.Provider().Address(),
+					Price:         price,
+					RequiredAttrs: o.session.RequiredAttributes(),
 				}))
 			})
 
@@ -230,13 +231,13 @@ loop:
 
 func (o *order) shouldBid(group *dquery.Group) bool {
 
-	if !o.session.Provider().MatchReqAttributes(group.Requirements) {
+	if !o.session.MatchAttributes(group.Requirements) {
 		o.log.Debug("unable to fulfill: required attributes not matched")
 		return false
 	}
 
 	// compares group requirements with provider attributes and required attributes
-	if !group.MatchAttributes(o.session.Provider().GetAllAttributes()) {
+	if !group.MatchAttributes(append(o.session.Provider().Attributes, o.session.RequiredAttributes()...)) {
 		o.log.Debug("unable to fulfill: incompatible attributes")
 		return false
 	}

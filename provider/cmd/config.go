@@ -1,21 +1,20 @@
-package config
+package cmd
 
 import (
 	"io/ioutil"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 
 	"gopkg.in/yaml.v2"
 )
 
-// Config is the struct that stores provider config
+// Config is the struct that stores provider daemon config
 type Config struct {
-	Host       string          `json:"host"`
-	Attributes []sdk.Attribute `json:"attributes"`
+	Attributes ptypes.Attributes `json:"attributes" yaml:"attributes"`
 }
 
 // GetAttributes returns config attributes into key value pairs
-func (c Config) GetAttributes() []sdk.Attribute {
+func (c Config) GetAttributes() ptypes.Attributes {
 	return c.Attributes
 }
 
@@ -29,5 +28,11 @@ func ReadConfigPath(path string) (Config, error) {
 	if err := yaml.Unmarshal(buf, &val); err != nil {
 		return Config{}, err
 	}
+
+	err = val.Attributes.Validate()
+	if err := yaml.Unmarshal(buf, &val); err != nil {
+		return Config{}, err
+	}
+
 	return val, err
 }

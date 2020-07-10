@@ -12,9 +12,10 @@ const (
 
 // MsgCreateBid defines an SDK message for creating Bid
 type MsgCreateBid struct {
-	Order    OrderID        `json:"order"`
-	Provider sdk.AccAddress `json:"owner"`
-	Price    sdk.Coin       `json:"price"`
+	Order         OrderID         `json:"order"`
+	Provider      sdk.AccAddress  `json:"owner"`
+	Price         sdk.Coin        `json:"price"`
+	RequiredAttrs []sdk.Attribute `json:"attributes"`
 }
 
 // Route implements the sdk.Msg interface

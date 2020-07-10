@@ -87,3 +87,17 @@ func GetString(attrs []sdk.Attribute, key string) (string, error) {
 	}
 	return "", ErrNotFound
 }
+
+// MatchAttributes method compares one pair of attributes with specific attributes
+func MatchAttributes(a []sdk.Attribute, b []sdk.Attribute) bool {
+loop:
+	for _, attr1 := range a {
+		for _, attr2 := range b {
+			if attr1.Key == attr2.Key && attr1.Value == attr2.Value {
+				continue loop
+			}
+		}
+		return false
+	}
+	return true
+}

@@ -3,6 +3,7 @@ package types
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/types"
 )
 
@@ -91,16 +92,7 @@ func (g GroupSpec) Price() sdk.Coin {
 
 // MatchAttributes method compares provided attributes with specific group attributes
 func (g GroupSpec) MatchAttributes(attrs []sdk.Attribute) bool {
-loop:
-	for _, req := range g.Requirements {
-		for _, attr := range attrs {
-			if req.Key == attr.Key && req.Value == attr.Value {
-				continue loop
-			}
-		}
-		return false
-	}
-	return true
+	return sdkutil.MatchAttributes(g.Requirements, attrs)
 }
 
 // Group stores groupID, state and other specifications

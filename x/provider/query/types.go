@@ -20,8 +20,7 @@ func (p Provider) String() string {
 	Owner:   %s
 	HostURI: %s
 	Attributes: %v
-	ReqAttributes:%v
-	`, p.Owner, p.HostURI, p.Attributes, p.ReqAttributes)
+	`, p.Owner, p.HostURI, p.Attributes)
 }
 
 func (obj Providers) String() string {
@@ -44,14 +43,4 @@ func (obj Providers) String() string {
 // Address implements provider and returns owner of provider
 func (p *Provider) Address() sdk.AccAddress {
 	return p.Owner
-}
-
-// MatchReqAttributes method compares provided attributes with specific provider require attributes
-func (p Provider) MatchReqAttributes(attrs []sdk.Attribute) bool {
-	return types.Provider(p).MatchReqAttributes(attrs)
-}
-
-// GetAllAttributes appends normal and required attributes of provider
-func (p Provider) GetAllAttributes() []sdk.Attribute {
-	return types.Provider(p).GetAllAttributes()
 }
