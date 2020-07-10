@@ -11,6 +11,23 @@ const (
 	msgTypeCloseGroup       = "close-group"
 )
 
+// NewMsgCreateDeployment constructor for MsgCreateDeployment
+func NewMsgCreateDeployment(id DeploymentID, groups []*GroupSpec) MsgCreateDeployment {
+	// Create the deployment message
+	msg := MsgCreateDeployment{
+		ID: id,
+		// Version:  []byte{0x1, 0x2},
+		Groups: make([]GroupSpec, 0, len(groups)),
+	}
+
+	// Append the groups to the message
+	for _, group := range groups {
+		msg.Groups = append(msg.Groups, *group)
+	}
+
+	return msg
+}
+
 // MsgCreateDeployment defines an SDK message for creating deployment
 type MsgCreateDeployment struct {
 	ID DeploymentID `json:"id"`

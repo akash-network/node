@@ -18,6 +18,7 @@ import (
 
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/deploy"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/go-amino"
@@ -52,6 +53,7 @@ func main() {
 		txCmd(cdc),
 		lcd.ServeCommand(cdc, lcdRoutes),
 		keys.Commands(),
+		flags.PostCommands(deploy.CMD(cdc))[0],
 		version.Cmd,
 		flags.NewCompletionCmd(root, true),
 	)
