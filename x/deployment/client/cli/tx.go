@@ -95,6 +95,7 @@ func makeItSoCommand(key string, cdc *codec.Codec) *cobra.Command {
 
 			// Create an error group to handle chain listener
 			group, cctx := errgroup.WithContext(ccontext.Background())
+			cctx, cancel := ccontext.WithCancel(cctx)
 
 			// Listen to the events on chain and publish them to the pubsub bus
 			group.Go(func() error {
@@ -147,6 +148,7 @@ func makeItSoCommand(key string, cdc *codec.Codec) *cobra.Command {
 							if leases = leases - 1; leases == 0 {
 								fmt.Printf("Leases left %d...\n", leases)
 								sub.Close()
+								cancel()
 								return nil
 							}
 						}
