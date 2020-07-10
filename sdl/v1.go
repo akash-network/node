@@ -17,8 +17,10 @@ var (
 	allowedVersion = semver.MustParse("1.5.0")
 )
 
+var _ SDL = (*v1)(nil) // Assert interface implementation
+
 type v1 struct {
-	Version  string
+	Version  string   `yaml:"version"`
 	Include  []string `yaml:",omitempty"`
 	Services map[string]v1Service
 	Profiles v1Profiles

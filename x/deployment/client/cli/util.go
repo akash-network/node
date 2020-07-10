@@ -1,6 +1,8 @@
 package cli
 
-import "github.com/cosmos/cosmos-sdk/client/context"
+import (
+	"github.com/cosmos/cosmos-sdk/client/context"
+)
 
 func currentBlockHeight(ctx context.CLIContext) (uint64, error) {
 	client, err := ctx.GetNode()

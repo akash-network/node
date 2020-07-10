@@ -1,19 +1,23 @@
 package types
 
 import (
+	"crypto/sha256"
 	"strconv"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ovrclk/akash/sdkutil"
 )
 
 var (
-	keyAcc, _   = sdk.AccAddressFromBech32("akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr")
-	errWildcard = errors.New("wildcard string error can't be matched")
+	keyAcc, _         = sdk.AccAddressFromBech32("akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr")
+	errWildcard       = errors.New("wildcard string error can't be matched")
+	tmpSum            = sha256.Sum256([]byte(keyAcc))
+	deploymentVersion = tmpSum[:]
 )
 
 type testEventParsing struct {
@@ -86,6 +90,10 @@ var TEPS = []testEventParsing{
 					Key:   evDSeqKey,
 					Value: "5",
 				},
+				{
+					Key:   evVersionKey,
+					Value: string(deploymentVersion),
+				},
 			},
 		},
 		expErr: nil,
@@ -122,7 +130,47 @@ var TEPS = []testEventParsing{
 		},
 		expErr: errWildcard,
 	},
+	{
+		msg: sdkutil.Event{
+			Type:   sdkutil.EventTypeMessage,
+			Module: ModuleName,
+			Action: evActionDeploymentCreated,
+			Attributes: []sdk.Attribute{
+				{
+					Key:   evOwnerKey,
+					Value: keyAcc.String(),
+				},
+				{
+					Key:   evDSeqKey,
+					Value: "5",
+				},
+			},
+		},
+		expErr: errWildcard,
+	},
 
+	{
+		msg: sdkutil.Event{
+			Type:   sdkutil.EventTypeMessage,
+			Module: ModuleName,
+			Action: evActionDeploymentUpdated,
+			Attributes: []sdk.Attribute{
+				{
+					Key:   evOwnerKey,
+					Value: keyAcc.String(),
+				},
+				{
+					Key:   evDSeqKey,
+					Value: "5",
+				},
+				{
+					Key:   evVersionKey,
+					Value: string(deploymentVersion),
+				},
+			},
+		},
+		expErr: nil,
+	},
 	{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
@@ -139,7 +187,7 @@ var TEPS = []testEventParsing{
 				},
 			},
 		},
-		expErr: nil,
+		expErr: errWildcard,
 	},
 	{
 		msg: sdkutil.Event{
@@ -162,6 +210,42 @@ var TEPS = []testEventParsing{
 			},
 		},
 		expErr: nil,
+	},
+	{
+		msg: sdkutil.Event{
+			Type:   sdkutil.EventTypeMessage,
+			Module: ModuleName,
+			Action: evActionDeploymentClosed,
+			Attributes: []sdk.Attribute{
+				{
+					Key:   evOwnerKey,
+					Value: keyAcc.String(),
+				},
+				{
+					Key:   evDSeqKey,
+					Value: "5",
+				},
+			},
+		},
+		expErr: nil,
+	},
+	{
+		msg: sdkutil.Event{
+			Type:   sdkutil.EventTypeMessage,
+			Module: ModuleName,
+			Action: evActionDeploymentClosed,
+			Attributes: []sdk.Attribute{
+				{
+					Key:   evOwnerKey,
+					Value: keyAcc.String(),
+				},
+				{
+					Key:   evDSeqKey,
+					Value: "abc",
+				},
+			},
+		},
+		expErr: errWildcard,
 	},
 	{
 		msg: sdkutil.Event{
@@ -213,6 +297,10 @@ var TEPS = []testEventParsing{
 					Key:   evDSeqKey,
 					Value: "5",
 				},
+				{
+					Key:   evVersionKey,
+					Value: string(deploymentVersion),
+				},
 			},
 		},
 		expErr: errWildcard,
@@ -237,4 +325,11 @@ func TestEventParsing(t *testing.T) {
 	for i, test := range TEPS {
 		t.Run(strconv.Itoa(i), test.testMessageType())
 	}
+}
+
+func TestVersionEncoding(t *testing.T) {
+	versionHex := encodeHex(deploymentVersion)
+	assert.Len(t, versionHex, encodedVersionHexLen)
+	decodedVersion := decodeHex(versionHex)
+	assert.Equal(t, deploymentVersion, decodedVersion)
 }

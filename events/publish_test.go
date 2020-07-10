@@ -15,8 +15,8 @@ import (
 func Test_processEvent(t *testing.T) {
 	tests := []sdkutil.ModuleEvent{
 		// x/deployment events
-		dtypes.NewEventDeploymentCreated(testutil.DeploymentID(t)),
-		dtypes.NewEventDeploymentUpdated(testutil.DeploymentID(t)),
+		dtypes.NewEventDeploymentCreated(testutil.DeploymentID(t), testutil.DeploymentVersion(t)),
+		dtypes.NewEventDeploymentUpdated(testutil.DeploymentID(t), testutil.DeploymentVersion(t)),
 		dtypes.NewEventDeploymentClosed(testutil.DeploymentID(t)),
 		dtypes.NewEventGroupClosed(testutil.GroupID(t)),
 

@@ -1,11 +1,18 @@
 package testutil
 
 import (
+	"crypto/sha256"
 	"math/rand"
 	"testing"
 
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
+
+// sum256Seed provides a consistent sha256 value for initial Deployment.Version
+const sum256Seed = "hihi"
+
+// DefaultDeploymentVersion provides consistent sha256 sum for initial Deployment.Version
+var DefaultDeploymentVersion = sha256.Sum256([]byte(sum256Seed))
 
 // Deployment generates a dtype.Deployment in state `DeploymentActive`
 func Deployment(t testing.TB) dtypes.Deployment {
@@ -13,6 +20,7 @@ func Deployment(t testing.TB) dtypes.Deployment {
 	return dtypes.Deployment{
 		DeploymentID: DeploymentID(t),
 		State:        dtypes.DeploymentActive,
+		Version:      DefaultDeploymentVersion[:],
 	}
 }
 

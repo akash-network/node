@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"bytes"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/pkg/errors"
@@ -36,8 +38,7 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg 
 	deployment := types.Deployment{
 		DeploymentID: msg.ID,
 		State:        types.DeploymentActive,
-		// TODO: version
-		// Version: sdk.Address.Bytes(),
+		Version:      msg.Version,
 	}
 
 	if err := validation.ValidateDeploymentGroups(msg.Groups); err != nil {
@@ -69,8 +70,9 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg 
 		return nil, types.ErrDeploymentNotFound
 	}
 
-	// TODO: version
-	// deployment.Version = msg.Version
+	if bytes.Compare(msg.Version, deployment.Version) != 0 {
+		deployment.Version = msg.Version
+	}
 
 	if err := keeper.UpdateDeployment(ctx, deployment); err != nil {
 		return nil, errors.Wrap(types.ErrInternal, err.Error())

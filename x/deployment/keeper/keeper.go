@@ -126,7 +126,7 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 	}
 
 	ctx.EventManager().EmitEvent(
-		types.NewEventDeploymentCreated(deployment.ID()).
+		types.NewEventDeploymentCreated(deployment.ID(), deployment.Version).
 			ToSDKEvent(),
 	)
 
@@ -143,7 +143,7 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 	}
 
 	ctx.EventManager().EmitEvent(
-		types.NewEventDeploymentUpdated(deployment.ID()).
+		types.NewEventDeploymentUpdated(deployment.ID(), deployment.Version).
 			ToSDKEvent(),
 	)
 

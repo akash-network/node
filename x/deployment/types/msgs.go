@@ -13,9 +13,9 @@ const (
 
 // MsgCreateDeployment defines an SDK message for creating deployment
 type MsgCreateDeployment struct {
-	ID DeploymentID `json:"id"`
-	// Version []byte      `json:"version"`
-	Groups []GroupSpec `json:"groups"`
+	ID      DeploymentID `json:"id"`
+	Groups  []GroupSpec  `json:"groups"`
+	Version []byte       `json:"version"`
 }
 
 // Route implements the sdk.Msg interface
@@ -42,14 +42,17 @@ func (msg MsgCreateDeployment) ValidateBasic() error {
 	if len(msg.Groups) == 0 {
 		return ErrInvalidGroups
 	}
-	// TODO: version
+	if len(msg.Version) == 0 {
+		return ErrEmptyVersion
+	}
 	return nil
 }
 
 // MsgUpdateDeployment defines an SDK message for updating deployment
 type MsgUpdateDeployment struct {
 	ID      DeploymentID
-	Version sdk.AccAddress
+	Groups  []GroupSpec
+	Version []byte
 }
 
 // Route implements the sdk.Msg interface
@@ -64,7 +67,7 @@ func (msg MsgUpdateDeployment) ValidateBasic() error {
 		return err
 	}
 
-	if err := sdk.VerifyAddressFormat(msg.Version); err != nil {
+	if len(msg.Version) == 0 {
 		return ErrEmptyVersion
 	}
 

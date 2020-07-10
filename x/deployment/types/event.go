@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/hex"
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -15,30 +16,37 @@ const (
 	evOwnerKey                = "owner"
 	evDSeqKey                 = "dseq"
 	evGSeqKey                 = "gseq"
+	evVersionKey              = "version"
+	encodedVersionHexLen      = 64
 )
 
 // EventDeploymentCreated struct
 type EventDeploymentCreated struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
 	ID      DeploymentID            `json:"id"`
+	Version []byte                  `json:"version"`
 }
 
-func NewEventDeploymentCreated(id DeploymentID) EventDeploymentCreated {
+// NewEventDeploymentCreated initializes creation event.
+func NewEventDeploymentCreated(id DeploymentID, version []byte) EventDeploymentCreated {
 	return EventDeploymentCreated{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
 			Action: evActionDeploymentCreated,
 		},
-		ID: id,
+		ID:      id,
+		Version: version,
 	}
 }
 
 // ToSDKEvent method creates new sdk event for EventDeploymentCreated struct
 func (ev EventDeploymentCreated) ToSDKEvent() sdk.Event {
+	version := encodeHex(ev.Version)
 	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
 			sdk.NewAttribute(sdk.AttributeKeyAction, evActionDeploymentCreated),
+			sdk.NewAttribute(evVersionKey, string(version)),
 		}, DeploymentIDEVAttributes(ev.ID)...)...,
 	)
 }
@@ -47,25 +55,29 @@ func (ev EventDeploymentCreated) ToSDKEvent() sdk.Event {
 type EventDeploymentUpdated struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
 	ID      DeploymentID            `json:"id"`
-	Version []byte                  `json:"version,omitempty"` // TODO: #565
+	Version []byte                  `json:"version"`
 }
 
-func NewEventDeploymentUpdated(id DeploymentID) EventDeploymentUpdated {
+// NewEventDeploymentUpdated initializes SDK type
+func NewEventDeploymentUpdated(id DeploymentID, version []byte) EventDeploymentUpdated {
 	return EventDeploymentUpdated{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
 			Action: evActionDeploymentUpdated,
 		},
-		ID: id,
+		ID:      id,
+		Version: version,
 	}
 }
 
 // ToSDKEvent method creates new sdk event for EventDeploymentUpdated struct
 func (ev EventDeploymentUpdated) ToSDKEvent() sdk.Event {
+	version := encodeHex(ev.Version)
 	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
 			sdk.NewAttribute(sdk.AttributeKeyAction, evActionDeploymentUpdated),
+			sdk.NewAttribute(evVersionKey, string(version)),
 		}, DeploymentIDEVAttributes(ev.ID)...)...,
 	)
 }
@@ -121,6 +133,28 @@ func ParseEVDeploymentID(attrs []sdk.Attribute) (DeploymentID, error) {
 	}, nil
 }
 
+// ParseEVDeploymentVersion returns the Deployment's SDL sha256 sum
+func ParseEVDeploymentVersion(attrs []sdk.Attribute) ([]byte, error) {
+	v, err := sdkutil.GetString(attrs, evVersionKey)
+	if err != nil {
+		return nil, err
+	}
+	version := decodeHex([]byte(v))
+	return version, nil
+}
+
+func encodeHex(src []byte) []byte {
+	dst := make([]byte, hex.EncodedLen(len(src)))
+	hex.Encode(dst, src)
+	return dst
+}
+
+func decodeHex(src []byte) []byte {
+	dst := make([]byte, hex.DecodedLen(len(src)))
+	hex.Decode(dst, src)
+	return dst
+}
+
 // EventGroupClosed provides SDK event to signal group termination
 type EventGroupClosed struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
@@ -173,7 +207,6 @@ func ParseEVGroupID(attrs []sdk.Attribute) (GroupID, error) {
 }
 
 // ParseEvent parses event and returns details of event and error if occurred
-// TODO: Enable returning actual events.
 func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 	if ev.Type != sdkutil.EventTypeMessage {
 		return nil, sdkutil.ErrUnknownType
@@ -187,13 +220,21 @@ func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 		if err != nil {
 			return nil, err
 		}
-		return NewEventDeploymentCreated(did), nil
+		ver, err := ParseEVDeploymentVersion(ev.Attributes)
+		if err != nil {
+			return nil, err
+		}
+		return NewEventDeploymentCreated(did, ver), nil
 	case evActionDeploymentUpdated:
 		did, err := ParseEVDeploymentID(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
-		return NewEventDeploymentUpdated(did), nil
+		ver, err := ParseEVDeploymentVersion(ev.Attributes)
+		if err != nil {
+			return nil, err
+		}
+		return NewEventDeploymentUpdated(did, ver), nil
 	case evActionDeploymentClosed:
 		did, err := ParseEVDeploymentID(ev.Attributes)
 		if err != nil {
