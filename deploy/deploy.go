@@ -128,7 +128,7 @@ func CMD(cdc *codec.Codec) *cobra.Command {
 								return err
 							}
 
-							if leases = leases - 1; leases == 0 {
+							if leases--; leases == 0 {
 								fmt.Printf("Leases left %d...\n", leases)
 								sub.Close()
 								cancel()
