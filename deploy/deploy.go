@@ -1,18 +1,20 @@
 package deploy
 
 import (
-	ccontext "context"
+	"context"
 	"fmt"
 	"os"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
+	clientCtx "github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	authUtils "github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+
 	"github.com/ovrclk/akash/events"
 	"github.com/ovrclk/akash/provider/gateway"
 	"github.com/ovrclk/akash/provider/manifest"
@@ -32,9 +34,10 @@ func CMD(cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Setup CLI context and transaction builder
-			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
-			if err := ctx.Client.Start(); err != nil {
+			cliCtx := clientCtx.NewCLIContext().WithCodec(cdc)
+
+			// Start the tendermint client
+			if err := cliCtx.Client.Start(); err != nil {
 				return err
 			}
 
@@ -57,14 +60,14 @@ func CMD(cdc *codec.Codec) *cobra.Command {
 			}
 
 			// Get the deployment ID (defaults to height)
-			id, err := dclient.DeploymentIDFromFlags(cmd.Flags(), ctx.GetFromAddress().String())
+			id, err := dclient.DeploymentIDFromFlags(cmd.Flags(), cliCtx.GetFromAddress().String())
 			if err != nil {
 				return err
 			}
 
 			// Default DSeq to the current block height
 			if id.DSeq == 0 {
-				if id.DSeq, err = dclient.CurrentBlockHeight(ctx); err != nil {
+				if id.DSeq, err = dclient.CurrentBlockHeight(cliCtx); err != nil {
 					return err
 				}
 			}
@@ -73,20 +76,20 @@ func CMD(cdc *codec.Codec) *cobra.Command {
 			bus := pubsub.NewBus()
 			defer bus.Close()
 
-			// Create an error group to handle chain listener
-			group, cctx := errgroup.WithContext(ccontext.Background())
-			cctx, cancel := ccontext.WithCancel(cctx)
-
-			// Listen to the events on chain and publish them to the pubsub bus
-			group.Go(func() error {
-				return events.Publish(cctx, ctx.Client, "deployment-create", bus)
-			})
-
 			// expose event channel
 			sub, err := bus.Subscribe()
 			if err != nil {
 				return err
 			}
+
+			// Create an error group to handle chain listener
+			group, ctx := errgroup.WithContext(context.Background())
+			ctx, cancel := context.WithCancel(ctx)
+
+			// Listen to the events on chain and publish them to the pubsub bus
+			group.Go(func() error {
+				return events.Publish(ctx, cliCtx.Client, "deployment-create", bus)
+			})
 
 			// start goroutine to listen for events
 			leases := len(groups)
@@ -105,7 +108,7 @@ func CMD(cdc *codec.Codec) *cobra.Command {
 							fmt.Printf("Bid of %s for order %d:%d created...\n", msg.Price, msg.ID.DSeq, msg.ID.OSeq)
 						case mtypes.EventLeaseCreated:
 							fmt.Printf("Lease for order %d:%d created...\n", msg.ID.DSeq, msg.ID.OSeq)
-							pclient := pmodule.AppModuleBasic{}.GetQueryClient(ctx)
+							pclient := pmodule.AppModuleBasic{}.GetQueryClient(cliCtx)
 							provider, err := pclient.Provider(msg.ID.Provider)
 							if err != nil {
 								return err
@@ -115,7 +118,7 @@ func CMD(cdc *codec.Codec) *cobra.Command {
 
 							fmt.Printf("Sending manifest to provider %s...\n", msg.ID.Provider)
 							if err = gclient.SubmitManifest(
-								ccontext.Background(),
+								context.Background(),
 								provider.HostURI,
 								&manifest.SubmitRequest{
 									Deployment: msg.ID.DeploymentID(),
@@ -144,14 +147,18 @@ func CMD(cdc *codec.Codec) *cobra.Command {
 			// broadcast the message
 			// TODO: set transaction broadcast defaults on the ctx to ensure
 			// that GenerateOrBroadcastMsgs exits when tx is sent to chain
-			if err = utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg}); err != nil {
+			if err = authUtils.GenerateOrBroadcastMsgs(
+				cliCtx,
+				auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(authUtils.GetTxEncoder(cdc)),
+				[]sdk.Msg{msg},
+			); err != nil {
 				return err
 			}
 
 			return group.Wait()
 		},
 	}
-	dclient.AddDeploymentIDFlags(cmd.Flags())
 
-	return cmd
+	dclient.AddDeploymentIDFlags(cmd.Flags())
+	return flags.PostCommands(cmd)[0]
 }

@@ -53,7 +53,7 @@ func main() {
 		txCmd(cdc),
 		lcd.ServeCommand(cdc, lcdRoutes),
 		keys.Commands(),
-		flags.PostCommands(deploy.CMD(cdc))[0],
+		deploy.CMD(cdc),
 		version.Cmd,
 		flags.NewCompletionCmd(root, true),
 	)
