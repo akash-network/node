@@ -24,9 +24,10 @@ The top-level `services` entry contains a map of workloads to be ran on the Akas
 | --- | --- | --- |
 | `image` | Yes | Docker image of the container |
 | `depends-on` | No | List of services which must be brought up before the current service |
-| `args` | No | Arguments to use when executing the container |
+| `command` | No | Custom command use when executing container |
+| `args` | No | Arguments to custom command use when executing the container |
 | `env` |  No | Environment variables to set in running container |
-| `expose` | No | Entities allowed to connec to to the services.  See [services.expose](#servicesexpose). |
+| `expose` | No | Entities allowed to connect to to the services.  See [services.expose](#servicesexpose). |
 
 #### services.expose
 

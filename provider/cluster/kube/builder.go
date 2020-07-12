@@ -138,9 +138,10 @@ func (b *deploymentBuilder) container() corev1.Container {
 	qmem := resource.NewQuantity(int64(b.service.Unit.Memory), resource.DecimalSI)
 
 	kcontainer := corev1.Container{
-		Name:  b.service.Name,
-		Image: b.service.Image,
-		Args:  b.service.Args,
+		Name:    b.service.Name,
+		Image:   b.service.Image,
+		Command: b.service.Command,
+		Args:    b.service.Args,
 		Resources: corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
 				corev1.ResourceCPU:    qcpu.DeepCopy(),
