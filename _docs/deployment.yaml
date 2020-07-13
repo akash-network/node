@@ -76,8 +76,12 @@ profiles:
       attributes:
         region: us-west
       pricing:
-        web: 10akash
-        db:  50akash
+        web:
+          denom: akash
+          amount: 10
+        db:
+          denom: akash
+          amount: 50
         db-pool:
           denom: akash
           amount: 30
