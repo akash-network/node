@@ -37,13 +37,14 @@ func (g Group) GetResources() []types.Resource {
 
 // Service stores name, image, args, env, unit, count and expose list of service
 type Service struct {
-	Name   string
-	Image  string
-	Args   []string
-	Env    []string
-	Unit   types.Unit
-	Count  uint32
-	Expose []ServiceExpose
+	Name    string
+	Image   string
+	Command []string
+	Args    []string
+	Env     []string
+	Unit    types.Unit
+	Count   uint32
+	Expose  []ServiceExpose
 }
 
 // GetUnit returns unit of service
