@@ -88,9 +88,14 @@ func newApp(logger log.Logger, db dbm.DB, tio io.Writer) abci.Application {
 		skipUpgradeHeights[int64(h)] = true
 	}
 
+	pruningOpts, err := server.GetPruningOptionsFromFlags()
+	if err != nil {
+		panic(err)
+	}
+
 	return app.NewApp(
 		logger, db, tio, invCheckPeriod, skipUpgradeHeights,
-		baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))),
+		baseapp.SetPruning(pruningOpts),
 		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
 		baseapp.SetHaltHeight(viper.GetUint64(server.FlagHaltHeight)),
 		baseapp.SetHaltTime(viper.GetUint64(server.FlagHaltTime)),
