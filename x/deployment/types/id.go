@@ -3,6 +3,7 @@ package types
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/ovrclk/akash/sdkutil"
 )
 
 // DeploymentID stores owner and sequence number
@@ -26,6 +27,11 @@ func (id DeploymentID) Validate() error {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidSequence, "DeploymentID: Invalid Deployment Sequence")
 	}
 	return nil
+}
+
+// String method for deployment IDs
+func (id DeploymentID) String() string {
+	return sdkutil.FmtBlockID(&id.Owner, &id.DSeq, nil, nil, nil)
 }
 
 // GroupID stores owner, deployment sequence number and group sequence number
@@ -67,4 +73,9 @@ func (id GroupID) Validate() error {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidSequence, "GroupID: Invalid Group Sequence")
 	}
 	return nil
+}
+
+// String method provides human readable representation of GroupID.
+func (id GroupID) String() string {
+	return sdkutil.FmtBlockID(&id.Owner, &id.DSeq, &id.GSeq, nil, nil)
 }
