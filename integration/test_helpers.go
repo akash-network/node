@@ -31,17 +31,18 @@ import (
 )
 
 const (
-	denom              = "akash"
-	denomStartValue    = 150
-	keyFoo             = "foo"
-	keyBar             = "bar"
-	keyBaz             = "baz"
-	fooDenom           = "footoken"
-	fooStartValue      = 1000
-	feeDenom           = "stake"
-	feeStartValue      = 1000000
-	deploymentFilePath = "./../x/deployment/testdata/deployment.yaml"
-	providerFilePath   = "./../x/provider/testdata/provider.yaml"
+	denom                = "akash"
+	denomStartValue      = 150
+	keyFoo               = "foo"
+	keyBar               = "bar"
+	keyBaz               = "baz"
+	fooDenom             = "footoken"
+	fooStartValue        = 1000
+	feeDenom             = "stake"
+	feeStartValue        = 1000000
+	deploymentFilePath   = "./../x/deployment/testdata/deployment.yaml"
+	deploymentV2FilePath = "./../x/deployment/testdata/deployment-v2.yaml"
+	providerFilePath     = "./../x/provider/testdata/provider.yaml"
 )
 
 var (
@@ -349,13 +350,19 @@ func (f *Fixtures) TxSend(from string, to sdk.AccAddress, amount sdk.Coin, flags
 //___________________________________________________________________________________
 // akash tx deployment
 
-// TxCreateDeployment is akash create deployment
+// TxCreateDeployment is akashctl create deployment
 func (f *Fixtures) TxCreateDeployment(flags ...string) (bool, string, string) {
 	cmd := fmt.Sprintf("%s tx deployment create %s %v %s", f.AkashBinary, deploymentFilePath, f.Flags(), f.KeyFlags())
 	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
 }
 
-// TxCloseDeployment is akash close deployment
+// TxUpdateDeployment is akashctl update deployment
+func (f *Fixtures) TxUpdateDeployment(flags ...string) (bool, string, string) {
+	cmd := fmt.Sprintf("%s tx deployment update %s %v %s", f.AkashBinary, deploymentV2FilePath, f.Flags(), f.KeyFlags())
+	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
+}
+
+// TxCloseDeployment is akashctl close deployment
 func (f *Fixtures) TxCloseDeployment(flags ...string) (bool, string, string) {
 	cmd := fmt.Sprintf("%s tx deployment close %v %s", f.AkashBinary, f.Flags(), f.KeyFlags())
 	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))

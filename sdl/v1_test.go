@@ -3,7 +3,7 @@ package sdl_test
 import (
 	"testing"
 
-	"github.com/ovrclk/akash/sdl"
+	sdlv1 "github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
 	"github.com/stretchr/testify/assert"
@@ -16,18 +16,34 @@ const (
 	randStorage uint64 = 1 * unit.Gi
 )
 
-func Test_v1_Parse_docs(t *testing.T) {
-	sdl, err := sdl.ReadFile("../x/deployment/testdata/deployment.yaml")
+func Test_v1_Parse_Deployments(t *testing.T) {
+	sdl1, err := sdlv1.ReadFile("../x/deployment/testdata/deployment.yaml")
 	require.NoError(t, err)
-	_, err = sdl.DeploymentGroups()
+	_, err = sdl1.DeploymentGroups()
 	require.NoError(t, err)
 
-	_, err = sdl.Manifest()
+	_, err = sdl1.Manifest()
 	require.NoError(t, err)
+
+	sha1, err := sdlv1.Version(sdl1)
+	require.NoError(t, err)
+	assert.Len(t, sha1, 32)
+
+	sha2, err := sdlv1.Version(sdl1)
+	require.NoError(t, err)
+	assert.Len(t, sha2, 32)
+
+	require.Equal(t, sha1, sha2)
+
+	sdl2, err := sdlv1.ReadFile("../x/deployment/testdata/deployment-v2.yaml")
+	require.NoError(t, err)
+	sha3, err := sdlv1.Version(sdl2)
+	require.NoError(t, err)
+	require.NotEqual(t, sha1, sha3)
 }
 
 func Test_v1_Parse_simple(t *testing.T) {
-	sdl, err := sdl.ReadFile("./_testdata/simple.yaml")
+	sdl, err := sdlv1.ReadFile("./_testdata/simple.yaml")
 	require.NoError(t, err)
 
 	groups, err := sdl.DeploymentGroups()
@@ -80,7 +96,7 @@ func Test_v1_Parse_simple(t *testing.T) {
 }
 
 func Test_v1_Parse_ProfileNameNotServiceName(t *testing.T) {
-	sdl, err := sdl.ReadFile("./_testdata/profile-svc-name-mismatch.yaml")
+	sdl, err := sdlv1.ReadFile("./_testdata/profile-svc-name-mismatch.yaml")
 	require.NoError(t, err)
 
 	dgroups, err := sdl.DeploymentGroups()

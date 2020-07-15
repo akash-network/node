@@ -13,7 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 
 	simappparams "github.com/ovrclk/akash/app/params"
-	"github.com/ovrclk/akash/sdl"
+	sdlv1 "github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
@@ -98,7 +98,7 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 			return simulation.NoOpMsg(types.ModuleName), nil, nil
 		}
 
-		sdl, readError := sdl.ReadFile("../x/deployment/testdata/deployment.yaml")
+		sdl, readError := sdlv1.ReadFile("../x/deployment/testdata/deployment.yaml")
 		if readError != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, readError
 		}
@@ -106,6 +106,10 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 		groupSpecs, groupErr := sdl.DeploymentGroups()
 		if groupErr != nil {
 			return simulation.NoOpMsg(types.ModuleName), nil, groupErr
+		}
+		sdlSum, err := sdlv1.Version(sdl)
+		if err != nil {
+			return simulation.NoOpMsg(types.ModuleName), nil, errors.Wrap(err, "error parsing deployment version sum")
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
@@ -116,8 +120,9 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 		}
 
 		msg := types.MsgCreateDeployment{
-			ID:     dID,
-			Groups: make([]types.GroupSpec, 0, len(groupSpecs)),
+			ID:      dID,
+			Groups:  make([]types.GroupSpec, 0, len(groupSpecs)),
+			Version: sdlSum,
 		}
 
 		for _, spec := range groupSpecs {
@@ -168,6 +173,21 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 			return simulation.NoOpMsg(types.ModuleName), nil, errors.Errorf("deployment with %s not found", deployment.ID().Owner)
 		}
 
+		sdl, readError := sdlv1.ReadFile("../x/deployment/testdata/deployment-v2.yaml")
+		if readError != nil {
+			return simulation.NoOpMsg(types.ModuleName), nil, readError
+		}
+
+		groupSpecs, groupErr := sdl.DeploymentGroups()
+		if groupErr != nil {
+			return simulation.NoOpMsg(types.ModuleName), nil, groupErr
+		}
+
+		sdlSum, err := sdlv1.Version(sdl)
+		if err != nil {
+			return simulation.NoOpMsg(types.ModuleName), nil, errors.Wrap(err, "error parsing deployment version sum")
+		}
+
 		account := ak.GetAccount(ctx, simAccount.Address)
 
 		fees, err := simulation.RandomFees(r, ctx, account.SpendableCoins(ctx.BlockTime()))
@@ -177,7 +197,12 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, k keeper.Keeper) sim
 
 		msg := types.MsgUpdateDeployment{
 			ID:      deployment.ID(),
-			Version: simAccount.Address,
+			Groups:  make([]types.GroupSpec, 0, len(groupSpecs)),
+			Version: sdlSum,
+		}
+
+		for _, spec := range groupSpecs {
+			msg.Groups = append(msg.Groups, *spec)
 		}
 
 		tx := helpers.GenTx(

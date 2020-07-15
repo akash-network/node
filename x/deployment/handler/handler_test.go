@@ -1,12 +1,14 @@
 package handler_test
 
 import (
+	"crypto/sha256"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tm-db"
@@ -133,8 +135,9 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 	deployment, groups := suite.createDeployment()
 
 	msg := types.MsgCreateDeployment{
-		ID:     deployment.ID(),
-		Groups: make([]types.GroupSpec, 0, len(groups)),
+		ID:      deployment.ID(),
+		Groups:  make([]types.GroupSpec, 0, len(groups)),
+		Version: testutil.DefaultDeploymentVersion[:],
 	}
 
 	for _, group := range groups {
@@ -145,8 +148,17 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
+	t.Run("assert deployment version", func(t *testing.T) {
+		d, ok := suite.dkeeper.GetDeployment(suite.ctx, deployment.DeploymentID)
+		require.True(t, ok)
+		assert.Equal(t, d.Version, testutil.DefaultDeploymentVersion[:])
+	})
+
+	depSum := sha256.Sum256(testutil.DefaultDeploymentVersion[:])
+
 	msgUpdate := types.MsgUpdateDeployment{
-		ID: deployment.ID(),
+		ID:      deployment.ID(),
+		Version: depSum[:],
 	}
 
 	res, err = suite.handler(suite.ctx, msgUpdate)
@@ -160,6 +172,11 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 		dev := iev.(types.EventDeploymentUpdated)
 
 		require.Equal(t, msg.ID, dev.ID)
+	})
+	t.Run("assert version updated", func(t *testing.T) {
+		d, ok := suite.dkeeper.GetDeployment(suite.ctx, deployment.DeploymentID)
+		require.True(t, ok)
+		assert.Equal(t, d.Version, depSum[:])
 	})
 }
 

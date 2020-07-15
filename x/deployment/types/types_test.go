@@ -3,9 +3,15 @@ package types_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	abci "github.com/tendermint/tendermint/abci/types"
+
+	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/x/deployment/types"
-	"github.com/stretchr/testify/assert"
 )
 
 type gStateTest struct {
@@ -53,4 +59,49 @@ func TestGroupState(t *testing.T) {
 
 		assert.Equal(t, group.ValidateClosable(), test.expValidateClosable, group.State)
 	}
+}
+
+func TestDeploymentVersionAttributeLifecycle(t *testing.T) {
+	d := testutil.Deployment(t)
+
+	t.Run("deployment created", func(t *testing.T) {
+		edc := types.NewEventDeploymentCreated(d.ID(), d.Version)
+		sdkEvent := edc.ToSDKEvent()
+		strEvent := sdk.StringifyEvent(abci.Event(sdkEvent))
+
+		ev, err := sdkutil.ParseEvent(strEvent)
+		require.NoError(t, err)
+
+		versionString, err := types.ParseEVDeploymentVersion(ev.Attributes)
+		require.NoError(t, err)
+		assert.Equal(t, d.Version, versionString)
+	})
+
+	t.Run("deployment updated", func(t *testing.T) {
+		edu := types.NewEventDeploymentUpdated(d.ID(), d.Version)
+
+		sdkEvent := edu.ToSDKEvent()
+		strEvent := sdk.StringifyEvent(abci.Event(sdkEvent))
+
+		ev, err := sdkutil.ParseEvent(strEvent)
+		require.NoError(t, err)
+
+		versionString, err := types.ParseEVDeploymentVersion(ev.Attributes)
+		require.NoError(t, err)
+		assert.Equal(t, d.Version, versionString)
+	})
+
+	t.Run("deployment closed error", func(t *testing.T) {
+		edc := types.NewEventDeploymentClosed(d.ID())
+
+		sdkEvent := edc.ToSDKEvent()
+		strEvent := sdk.StringifyEvent(abci.Event(sdkEvent))
+
+		ev, err := sdkutil.ParseEvent(strEvent)
+		require.NoError(t, err)
+
+		versionString, err := types.ParseEVDeploymentVersion(ev.Attributes)
+		require.Error(t, err)
+		assert.NotEqual(t, d.Version, versionString)
+	})
 }

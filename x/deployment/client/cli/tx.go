@@ -45,12 +45,12 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 			ctx := context.NewCLIContext().WithCodec(cdc)
 			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
 
-			sdl, err := sdl.ReadFile(args[0])
+			sdlManifest, err := sdl.ReadFile(args[0])
 			if err != nil {
 				return err
 			}
 
-			groups, err := sdl.DeploymentGroups()
+			groups, err := sdlManifest.DeploymentGroups()
 			if err != nil {
 				return err
 			}
@@ -67,10 +67,15 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 				}
 			}
 
+			version, err := sdl.Version(sdlManifest)
+			if err != nil {
+				return err
+			}
+
 			msg := types.MsgCreateDeployment{
-				ID: id,
-				// Version:  []byte{0x1, 0x2},
-				Groups: make([]types.GroupSpec, 0, len(groups)),
+				ID:      id,
+				Version: version,
+				Groups:  make([]types.GroupSpec, 0, len(groups)),
 			}
 
 			for _, group := range groups {
@@ -126,8 +131,28 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
+			sdlManifest, err := sdl.ReadFile(args[0])
+			if err != nil {
+				return err
+			}
+			groups, err := sdlManifest.DeploymentGroups()
+			if err != nil {
+				return err
+			}
+
+			version, err := sdl.Version(sdlManifest)
+			if err != nil {
+				return err
+			}
+
 			msg := types.MsgUpdateDeployment{
-				ID: id,
+				ID:      id,
+				Version: version,
+				Groups:  make([]types.GroupSpec, 0, len(groups)),
+			}
+
+			for _, group := range groups {
+				msg.Groups = append(msg.Groups, *group)
 			}
 
 			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})

@@ -1,6 +1,8 @@
 package testutil
 
 import (
+	cryptorand "crypto/rand"
+	"crypto/sha256"
 	"math/rand"
 	"testing"
 
@@ -31,6 +33,18 @@ func DeploymentID(t testing.TB) dtypes.DeploymentID {
 		Owner: AccAddress(t),
 		DSeq:  uint64(rand.Uint32()),
 	}
+}
+
+// DeploymentVersion provides a random sha256 sum for simulating Deployments.
+func DeploymentVersion(t testing.TB) []byte {
+	t.Helper()
+	src := make([]byte, 128)
+	_, err := cryptorand.Read(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(src)
+	return sum[:]
 }
 
 func GroupID(t testing.TB) dtypes.GroupID {

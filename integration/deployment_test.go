@@ -50,6 +50,16 @@ func TestDeployment(t *testing.T) {
 	require.NoError(t, err, "Error when fetching deployments with owner filter")
 	require.Len(t, deployments, 1)
 
+	// test updating deployment
+	execSuccess, stdOut, stdErr := f.TxUpdateDeployment(fmt.Sprintf("--from=%s --dseq=%d",
+		keyFoo, deployment.DeploymentID.DSeq), "-y")
+	require.True(t, execSuccess)
+	require.Empty(t, stdErr)
+	require.NotEmpty(t, stdOut)
+
+	deploymentV2 := f.QueryDeployment(createdDep.Deployment.DeploymentID)
+	require.NotEqual(t, deployment.Version, deploymentV2.Version)
+
 	// test query deployments with wrong owner value
 	deployments, err = f.QueryDeployments("--owner=cosmos102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt")
 	require.Error(t, err)
