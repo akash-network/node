@@ -2,8 +2,6 @@ package main
 
 import (
 	"net/http"
-	"os"
-	"path"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -16,12 +14,13 @@ import (
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	"github.com/rakyll/statik/fs"
 
-	"github.com/ovrclk/akash/app"
-	"github.com/ovrclk/akash/cmd/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/cli"
+
+	"github.com/ovrclk/akash/app"
+	"github.com/ovrclk/akash/cmd/common"
 
 	// unnamed import of statik for swagger UI support
 	_ "github.com/ovrclk/akash/cmd/statik"
@@ -41,8 +40,23 @@ func main() {
 
 	// Add --chain-id to persistent flags and mark it required
 	root.PersistentFlags().String(flags.FlagChainID, "", "Chain ID of tendermint node")
+
 	root.PersistentPreRunE = func(_ *cobra.Command, _ []string) error {
-		return initConfig(root)
+		// viper bindings below should be applied to root command rather then
+		// to an argument from this function. otherwise viper won't able to find them
+		if err := viper.BindPFlag(flags.FlagChainID, root.PersistentFlags().Lookup(flags.FlagChainID)); err != nil {
+			return err
+		}
+
+		if err := viper.BindPFlag(cli.EncodingFlag, root.PersistentFlags().Lookup(cli.EncodingFlag)); err != nil {
+			return err
+		}
+
+		if err := viper.BindPFlag(cli.OutputFlag, root.PersistentFlags().Lookup(cli.OutputFlag)); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	root.AddCommand(
@@ -123,27 +137,4 @@ func registerSwaggerUI(rs *lcd.RestServer) {
 	}
 	staticServer := http.FileServer(statikFS)
 	rs.Mux.PathPrefix("/").Handler(staticServer)
-}
-
-func initConfig(cmd *cobra.Command) error {
-	home, err := cmd.PersistentFlags().GetString(cli.HomeFlag)
-	if err != nil {
-		return err
-	}
-
-	cfgFile := path.Join(home, "config", "config.toml")
-	if _, err := os.Stat(cfgFile); err == nil {
-		viper.SetConfigFile(cfgFile)
-
-		if err := viper.ReadInConfig(); err != nil {
-			return err
-		}
-	}
-	if err := viper.BindPFlag(flags.FlagChainID, cmd.PersistentFlags().Lookup(flags.FlagChainID)); err != nil {
-		return err
-	}
-	if err := viper.BindPFlag(cli.EncodingFlag, cmd.PersistentFlags().Lookup(cli.EncodingFlag)); err != nil {
-		return err
-	}
-	return viper.BindPFlag(cli.OutputFlag, cmd.PersistentFlags().Lookup(cli.OutputFlag))
 }
