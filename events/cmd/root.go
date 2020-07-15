@@ -3,14 +3,16 @@ package cmd
 import (
 	"context"
 
-	"github.com/spf13/cobra"
-
 	ccontext "github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/events"
 	"github.com/ovrclk/akash/pubsub"
-	"golang.org/x/sync/errgroup"
 )
 
 // EventCmd prints out events in real time
@@ -24,6 +26,9 @@ func EventCmd(cdc *codec.Codec) *cobra.Command {
 			})
 		},
 	}
+
+	cmd.Flags().String(flags.FlagNode, "", "The node address")
+	_ = viper.BindPFlag(flags.FlagNode, cmd.Flags().Lookup(flags.FlagNode))
 
 	return cmd
 }
