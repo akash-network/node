@@ -55,7 +55,6 @@ func TestEndBlock(t *testing.T) {
 	for _, g := range gx {
 		orderCreated := false
 		suite.mkeeper.WithOrdersForGroup(suite.ctx, g.ID(), func(o mtypes.Order) bool {
-			suite.t.Logf("Order for group: %#v found", o.GroupID())
 			orderCreated = true
 			return true
 		})
