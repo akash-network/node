@@ -184,6 +184,20 @@ func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool)
 	}
 }
 
+func (k Keeper) WithDeploymentsAfter(ctx sdk.Context, prefix []byte, fn func(types.Deployment) bool) {
+	store := ctx.KVStore(k.skey)
+	iter := sdk.KVStorePrefixIterator(store, prefix)
+
+	for ; iter.Valid(); iter.Next() {
+		var val types.Deployment
+		// fixme unmarshal after query?
+		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		if stop := fn(val); stop {
+			break
+		}
+	}
+}
+
 // WithDeploymentsActive filters to only those with State: Active
 func (k Keeper) WithDeploymentsActive(ctx sdk.Context, fn func(types.Deployment) bool) {
 	store := ctx.KVStore(k.skey)

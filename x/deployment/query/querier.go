@@ -3,10 +3,15 @@ package query
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	abci "github.com/tendermint/tendermint/abci/types"
+
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
-	abci "github.com/tendermint/tendermint/abci/types"
+)
+
+const (
+	queryLimit = 10
 )
 
 // NewQuerier creates and returns a new deployment querier instance
@@ -24,7 +29,7 @@ func NewQuerier(keeper keeper.Keeper) sdk.Querier {
 	}
 }
 
-func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, k keeper.Keeper) ([]byte, error) {
 	// isValidState denotes whether given state flag is valid or not
 	filters, isValidState, err := parseDepFiltersPath(path)
 	if err != nil {
@@ -32,23 +37,38 @@ func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, keepe
 	}
 
 	var values Deployments
-	keeper.WithDeployments(ctx, func(deployment types.Deployment) bool {
-		if filters.Accept(deployment, isValidState) {
+
+	if !filters.After {
+		k.WithDeployments(ctx, func(deployment types.Deployment) bool {
+			if filters.Accept(deployment, isValidState) {
+				value := Deployment{
+					Deployment: deployment,
+					Groups:     k.GetGroups(ctx, deployment.ID()),
+				}
+				values = append(values, value)
+			}
+			return false
+		})
+	} else {
+		limit := queryLimit
+		k.WithDeploymentsAfter(ctx, keeper.OwnerKey(filters.Owner), func(deployment types.Deployment) bool {
 			value := Deployment{
 				Deployment: deployment,
-				Groups:     keeper.GetGroups(ctx, deployment.ID()),
+				Groups:     k.GetGroups(ctx, deployment.ID()),
 			}
 			values = append(values, value)
-		}
 
-		return false
-	})
+			if limit--; limit == 0 {
+				return true
+			}
+			return false
+		})
+	}
 
-	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
+	return sdkutil.RenderQueryResponse(k.Codec(), values)
 }
 
 func queryDeployment(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
-
 	id, err := ParseDeploymentPath(path)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrInternal, err.Error())
@@ -68,7 +88,6 @@ func queryDeployment(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper
 }
 
 func queryGroup(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
-
 	id, err := ParseGroupPath(path)
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "internal error")

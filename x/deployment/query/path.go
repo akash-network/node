@@ -17,14 +17,20 @@ const (
 )
 
 var (
-	ErrInvalidPath = errors.New("query: invalid path")
-	ErrOwnerValue  = errors.New("query: invalid owner value")
-	ErrStateValue  = errors.New("query: invalid state value")
+	ErrInvalidPath  = errors.New("query: invalid path")
+	ErrOwnerValue   = errors.New("query: invalid owner value")
+	ErrStateValue   = errors.New("query: invalid state value")
+	ErrInvalidParam = errors.New("query: invalid param")
 )
 
 // getDeploymentsPath returns deployments path for queries
 func getDeploymentsPath(dfilters DeploymentFilters) string {
-	return fmt.Sprintf("%s/%s/%v", deploymentsPath, dfilters.Owner, dfilters.StateFlagVal)
+	res := fmt.Sprintf("%s/%s/%v", deploymentsPath, dfilters.Owner, dfilters.StateFlagVal)
+	if dfilters.After {
+		res += "/after"
+	}
+
+	return res
 }
 
 // DeploymentPath return deployment path of given deployment id for queries
@@ -82,10 +88,20 @@ func parseDepFiltersPath(parts []string) (DeploymentFilters, bool, error) {
 		return DeploymentFilters{}, false, ErrStateValue
 	}
 
+	after := false
+
+	if len(parts) > 2 {
+		if parts[2] != "after" {
+			return DeploymentFilters{}, false, ErrInvalidParam
+		}
+		after = true
+	}
+
 	return DeploymentFilters{
 		Owner:        owner,
 		StateFlagVal: parts[1],
 		State:        state,
+		After:        after,
 	}, ok, nil
 }
 

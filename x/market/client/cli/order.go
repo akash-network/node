@@ -3,7 +3,10 @@ package cli
 import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
+
 	"github.com/ovrclk/akash/x/market/query"
+	xtypes "github.com/ovrclk/akash/x/types"
+
 	"github.com/spf13/cobra"
 )
 
@@ -27,6 +30,7 @@ func cmdGetOrders(key string, cdc *codec.Codec) *cobra.Command {
 		},
 	}
 	AddOrderFilterFlags(cmd.Flags())
+	xtypes.AddPaginationFlags(cmd.Flags())
 	return cmd
 }
 

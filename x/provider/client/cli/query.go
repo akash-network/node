@@ -6,8 +6,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/ovrclk/akash/x/provider/query"
 	"github.com/ovrclk/akash/x/provider/types"
+	xtypes "github.com/ovrclk/akash/x/types"
+
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +33,7 @@ func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
 }
 
 func cmdGetProviders(key string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Query for all providers",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -43,6 +46,10 @@ func cmdGetProviders(key string, cdc *codec.Codec) *cobra.Command {
 			return ctx.PrintOutput(obj)
 		},
 	}
+
+	xtypes.AddPaginationFlags(cmd.Flags())
+
+	return cmd
 }
 
 func cmdGetProvider(key string, cdc *codec.Codec) *cobra.Command {

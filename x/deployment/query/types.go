@@ -16,6 +16,8 @@ type DeploymentFilters struct {
 	StateFlagVal string
 	// Actual state value decoded from DeploymentStateMap
 	State types.DeploymentState
+
+	After bool
 }
 
 // Accept returns whether deployment filters valid or not

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -14,6 +16,12 @@ var (
 	// groupOpenPrefix is used only to track the set of Groups in Open state which need to have orders assigned.
 	groupOpenPrefix = []byte{0x03}
 )
+
+func OwnerKey(id sdk.AccAddress) []byte {
+	buf := bytes.NewBuffer(deploymentPrefix)
+	buf.Write(id.Bytes())
+	return buf.Bytes()
+}
 
 func deploymentKey(id types.DeploymentID) []byte {
 	buf := bytes.NewBuffer(deploymentPrefix)

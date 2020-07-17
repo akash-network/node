@@ -8,6 +8,8 @@ import (
 	"github.com/ovrclk/akash/x/deployment/query"
 	"github.com/ovrclk/akash/x/deployment/types"
 	"github.com/spf13/cobra"
+
+	xtypes "github.com/ovrclk/akash/x/types"
 )
 
 // GetQueryCmd returns the query commands for the deployment module
@@ -51,7 +53,10 @@ func cmdDeployments(key string, cdc *codec.Codec) *cobra.Command {
 			return ctx.PrintOutput(obj)
 		},
 	}
+
 	AddDeploymentFilterFlags(cmd.Flags())
+	xtypes.AddPaginationFlags(cmd.Flags())
+
 	return cmd
 }
 
