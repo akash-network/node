@@ -1,74 +1,87 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"os"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 )
 
-const flagInvCheckPeriod = "inv-check-period"
-
-var invCheckPeriod uint
-
-func main() {
-	common.InitSDKConfig()
-
-	cdc := app.MakeCodec()
-	ctx := server.NewDefaultContext()
-
-	root := &cobra.Command{
-		Use:               "akashd",
-		Long:              "Akash Daemon CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
-		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
+var (
+	root = &cobra.Command{
+		Use:  "akashd",
+		Long: "Akash Daemon CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
+				return err
+			}
+			return server.InterceptConfigsPreRunHandler(cmd)
+		},
 	}
 
+	encodingConfig = simapp.MakeEncodingConfig()
+	initClientCtx  = client.Context{}.
+			WithJSONMarshaler(encodingConfig.Marshaler).
+			WithTxConfig(encodingConfig.TxConfig).
+			WithCodec(encodingConfig.Amino).
+			WithInput(os.Stdin).
+			WithAccountRetriever(authtypes.NewAccountRetriever(encodingConfig.Marshaler)).
+			WithBroadcastMode(flags.BroadcastBlock).
+			WithHomeDir(common.DefaultNodeHome())
+)
+
+func main() {
+	authclient.Codec = encodingConfig.Marshaler
+
+	common.InitSDKConfig()
+
 	root.AddCommand(
-		genutilcli.InitCmd(ctx, cdc, app.ModuleBasics(), common.DefaultNodeHome()),
+		genutilcli.InitCmd(app.ModuleBasics(), common.DefaultNodeHome()),
 
-		genutilcli.CollectGenTxsCmd(ctx, cdc, auth.GenesisAccountIterator{}, common.DefaultNodeHome()),
+		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, common.DefaultNodeHome()),
 
-		genutilcli.MigrateGenesisCmd(ctx, cdc),
+		genutilcli.MigrateGenesisCmd(),
 
 		genutilcli.GenTxCmd(
-			ctx, cdc,
 			app.ModuleBasics(),
-			staking.AppModuleBasic{},
-			auth.GenesisAccountIterator{},
-			common.DefaultNodeHome(),
-			common.DefaultCLIHome(),
-		),
+			banktypes.GenesisBalancesIterator{},
+			common.DefaultNodeHome()),
 
-		genutilcli.ValidateGenesisCmd(ctx, cdc, app.ModuleBasics()),
-		AddGenesisAccountCmd(ctx, cdc, common.DefaultNodeHome(), common.DefaultCLIHome()),
+		genutilcli.ValidateGenesisCmd(app.ModuleBasics()),
+		AddGenesisAccountCmd(common.DefaultNodeHome(), common.DefaultCLIHome()),
 
-		flags.NewCompletionCmd(root, true),
-		debug.Cmd(cdc),
+		cli.NewCompletionCmd(root, true),
+		debug.Cmd(),
 	)
 
-	server.AddCommands(ctx, cdc, root, newApp, exportAppStateAndTMValidators)
+	server.AddCommands(root, newApp, exportAppStateAndTMValidators)
+
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, client.ClientContextKey, &client.Context{})
+	ctx = context.WithValue(ctx, server.ServerContextKey, server.NewDefaultContext())
 
 	executor := cli.PrepareBaseCmd(root, "AKASHD", common.DefaultNodeHome())
-	root.PersistentFlags().UintVar(&invCheckPeriod, flagInvCheckPeriod,
-		0, "Assert registered invariants every N blocks")
 	err := executor.Execute()
 	if err != nil {
 		panic(err)
@@ -76,25 +89,31 @@ func main() {
 
 }
 
-func newApp(logger log.Logger, db dbm.DB, tio io.Writer) abci.Application {
+func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts server.AppOptions) server.Application {
 	var cache sdk.MultiStorePersistentCache
 
-	if viper.GetBool(server.FlagInterBlockCache) {
+	if cast.ToBool(appOpts.Get(server.FlagInterBlockCache)) {
 		cache = store.NewCommitKVStoreCacheManager()
 	}
 
 	skipUpgradeHeights := make(map[int64]bool)
-	for _, h := range viper.GetIntSlice(server.FlagUnsafeSkipUpgrades) {
+	for _, h := range cast.ToIntSlice(appOpts.Get(server.FlagUnsafeSkipUpgrades)) {
 		skipUpgradeHeights[int64(h)] = true
 	}
 
+	pruningOpts, err := server.GetPruningOptionsFromFlags(appOpts)
+	if err != nil {
+		panic(err)
+	}
+
 	return app.NewApp(
-		logger, db, tio, invCheckPeriod, skipUpgradeHeights,
-		baseapp.SetPruning(store.NewPruningOptionsFromString(viper.GetString("pruning"))),
-		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
-		baseapp.SetHaltHeight(viper.GetUint64(server.FlagHaltHeight)),
-		baseapp.SetHaltTime(viper.GetUint64(server.FlagHaltTime)),
+		logger, db, traceStore, cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)), skipUpgradeHeights,
+		baseapp.SetPruning(pruningOpts),
+		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(server.FlagMinGasPrices))),
+		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(server.FlagHaltHeight))),
+		baseapp.SetHaltTime(cast.ToUint64(appOpts.Get(server.FlagHaltTime))),
 		baseapp.SetInterBlockCache(cache),
+		baseapp.SetTrace(cast.ToBool(appOpts.Get(server.FlagTrace))),
 	)
 }
 

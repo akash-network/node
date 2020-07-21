@@ -1,0 +1,20 @@
+syntax = "proto3";
+package akash.deployment;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types";
+
+message DeploymentID {
+    option (gogoproto.equal) = true;
+    option (gogoproto.goproto_stringer) = false;
+
+    bytes owner = 1 [
+        (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.moretags) = "yaml:\"owner\""
+    ];
+
+    uint64 d_seq = 2 [
+        (gogoproto.moretags) = "yaml:\"dseq\""
+    ];
+}

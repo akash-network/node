@@ -6,11 +6,11 @@ import (
 	"github.com/ovrclk/akash/sdkutil"
 )
 
-// DeploymentID stores owner and sequence number
-type DeploymentID struct {
-	Owner sdk.AccAddress `json:"owner"`
-	DSeq  uint64         `json:"dseq"`
-}
+// // DeploymentID stores owner and sequence number
+// type DeploymentID struct {
+// 	Owner sdk.AccAddress `json:"owner"`
+// 	DSeq  uint64         `json:"dseq"`
+// }
 
 // Equals method compares specific deployment with provided deployment
 func (id DeploymentID) Equals(other DeploymentID) bool {

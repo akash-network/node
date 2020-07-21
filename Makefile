@@ -245,3 +245,33 @@ test-sim-after-import:
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
 test-sims: test-sim-fullapp test-sim-nondeterminism test-sim-import-export test-sim-after-import
+
+proto-gen:
+	@./script/protocgen.sh
+
+# This generates the SDK's custom wrapper for google.protobuf.Any. It should only be run manually when needed
+proto-gen-any:
+	@./script/protocgen-any.sh
+
+proto-lint:
+	@buf check lint --error-format=json
+
+proto-check-breaking:
+	@buf check breaking --against-input '.git#branch=master'
+
+TM_URL           = https://raw.githubusercontent.com/tendermint/tendermint/v0.33.1
+GOGO_PROTO_URL   = https://raw.githubusercontent.com/regen-network/protobuf/cosmos
+COSMOS_PROTO_URL = https://raw.githubusercontent.com/regen-network/cosmos-proto/master
+
+TM_KV_TYPES         = third_party/proto/tendermint/libs/kv
+TM_MERKLE_TYPES     = third_party/proto/tendermint/crypto/merkle
+TM_ABCI_TYPES       = third_party/proto/tendermint/abci/types
+GOGO_PROTO_TYPES    = third_party/proto/gogoproto
+COSMOS_PROTO_TYPES  = third_party/proto/cosmos_proto
+
+proto-update-deps:
+	@mkdir -p $(GOGO_PROTO_TYPES)
+	@curl -sSL $(GOGO_PROTO_URL)/gogoproto/gogo.proto > $(GOGO_PROTO_TYPES)/gogo.proto
+
+	@mkdir -p $(COSMOS_PROTO_TYPES)
+	@curl -sSL $(COSMOS_PROTO_URL)/cosmos.proto > $(COSMOS_PROTO_TYPES)/cosmos.proto
