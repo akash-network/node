@@ -220,21 +220,24 @@ func TestBlockReflectionID(t *testing.T) {
 
 	t.Run("bid-id", func(t *testing.T) {
 		id := testutil.BidID(t)
-		block := sdkutil.ReflectBlockID(id)
 
-		assert.Equal(t, id.Owner, *block.Owner)
-		assert.Equal(t, id.DSeq, *block.DSeq)
-		assert.Equal(t, id.GSeq, *block.GSeq)
-		assert.Equal(t, id.OSeq, *block.OSeq)
-		assert.Equal(t, id.Provider, *block.Provider)
-
-		pb, err := sdkutil.ParseBlockID(block.String())
+		pb, err := sdkutil.ParseBlockID(id.String())
 		assert.NoError(t, err)
 		assert.Equal(t, id.Owner, *pb.Owner)
 		assert.Equal(t, id.DSeq, *pb.DSeq)
 		assert.Equal(t, id.GSeq, *pb.GSeq)
 		assert.Equal(t, id.OSeq, *pb.OSeq)
 		assert.Equal(t, id.Provider, *pb.Provider)
+
+		t.Run("reflect", func(t *testing.T) {
+			block := sdkutil.ReflectBlockID(id)
+			assert.Equal(t, id.Owner, *block.Owner)
+			assert.Equal(t, id.DSeq, *block.DSeq)
+			assert.Equal(t, id.GSeq, *block.GSeq)
+			assert.Equal(t, id.OSeq, *block.OSeq)
+			assert.Equal(t, id.Provider, *block.Provider)
+		})
+
 	})
 }
 
