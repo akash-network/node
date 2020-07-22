@@ -1,0 +1,22 @@
+syntax = "proto3";
+package akash.deployment;
+
+import "gogoproto/gogo.proto";
+import "akash/deployment/deployment.proto";
+import "akash/deployment/group.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types";
+
+// Query defines the gRPC querier service
+service Query {
+    // Deployments queries deployments
+    rpc Deployments (QueryDeploymentsRequest) returns (QueryDeploymentsResponse) {}
+}
+
+// QueryDeploymentsRequest is request type for the Query/Deployments RPC method
+message QueryDeploymentsRequest{
+}
+
+// QueryDeploymentsResponse is response type for the Query/Account RPC method
+message QueryDeploymentsResponse{
+}

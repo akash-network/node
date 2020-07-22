@@ -1,0 +1,25 @@
+syntax = "proto3";
+package akash;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/ovrclk/akash/types";
+
+// Unit stores cpu, memory and storage metrics
+message Unit {
+    option (gogoproto.equal) = true;
+
+    uint32 cpu = 1 [
+        (gogoproto.customname) = "CPU",
+        (gogoproto.jsontag)    = "cpu",
+        (gogoproto.moretags)   = "yaml:\"cpu\""
+    ];
+    uint64 memory = 2 [
+        (gogoproto.jsontag)    = "memory",
+        (gogoproto.moretags)   = "yaml:\"memory\""
+    ];
+    uint64 storage = 3 [
+        (gogoproto.jsontag)    = "storage",
+        (gogoproto.moretags)   = "yaml:\"storage\""
+    ];
+}

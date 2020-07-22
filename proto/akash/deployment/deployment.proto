@@ -2,19 +2,60 @@ syntax = "proto3";
 package akash.deployment;
 
 import "gogoproto/gogo.proto";
+import "akash/deployment/group.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";
 
+// DeploymentID stores owner and sequence number
 message DeploymentID {
     option (gogoproto.equal) = true;
     option (gogoproto.goproto_stringer) = false;
 
     bytes owner = 1 [
-        (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-        (gogoproto.moretags) = "yaml:\"owner\""
+        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)    = "owner",
+        (gogoproto.moretags)   = "yaml:\"owner\""
     ];
+    uint64 dseq = 2 [
+        (gogoproto.customname) = "DSeq",
+        (gogoproto.jsontag)    = "dseq",
+        (gogoproto.moretags)   = "yaml:\"dseq\""
+    ];
+}
 
-    uint64 d_seq = 2 [
-        (gogoproto.moretags) = "yaml:\"dseq\""
+// Deployment stores deploymentID, state and version details
+message Deployment {
+    option (gogoproto.equal) = true;
+
+    DeploymentID deployment_id = 1 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.customname) = "DeploymentID",
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+    uint32 state = 2 [
+        (gogoproto.casttype) = "github.com/ovrclk/akash/x/deployment/types.DeploymentState",
+        (gogoproto.jsontag)  = "state",
+        (gogoproto.moretags)   = "yaml:\"state\""
+    ];
+    repeated bytes version = 3 [
+        (gogoproto.jsontag)    = "version",
+        (gogoproto.moretags)   = "yaml:\"version\""
+    ];
+}
+
+message DeploymentResponse {
+    option (gogoproto.equal) = false;
+    option (gogoproto.goproto_stringer) = false;
+
+    Deployment deployment = 1 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "deployment",
+        (gogoproto.moretags)   = "yaml:\"deployment\""
+    ];
+    repeated Group groups = 2 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "groups",
+        (gogoproto.moretags)   = "yaml:\"groups\""
     ];
 }

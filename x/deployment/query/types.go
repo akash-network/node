@@ -43,7 +43,8 @@ func (d Deployment) String() string {
 	State:   %v
 	Version: %s
 	Num Groups: %d
-	`, d.Owner, d.DSeq, d.State, d.Version, len(d.Groups))
+	`, d.Deployment.DeploymentID.Owner, d.Deployment.DeploymentID.DSeq,
+		d.Deployment.State, d.Deployment.Version, len(d.Groups))
 }
 
 // Deployments represents slice of deployment struct

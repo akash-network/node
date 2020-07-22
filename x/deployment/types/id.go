@@ -35,11 +35,11 @@ func (id DeploymentID) String() string {
 }
 
 // GroupID stores owner, deployment sequence number and group sequence number
-type GroupID struct {
-	Owner sdk.AccAddress `json:"owner"`
-	DSeq  uint64         `json:"dseq"`
-	GSeq  uint32         `json:"gseq"`
-}
+// type GroupID struct {
+// 	Owner sdk.AccAddress `json:"owner"`
+// 	DSeq  uint64         `json:"dseq"`
+// 	GSeq  uint32         `json:"gseq"`
+// }
 
 // MakeGroupID returns GroupID instance with provided deployment details
 // and group sequence number.
