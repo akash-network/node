@@ -290,6 +290,7 @@ func (k Keeper) LeaseForOrder(ctx sdk.Context, oid types.OrderID) (types.Lease, 
 func (k Keeper) WithOrders(ctx sdk.Context, fn func(types.Order) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, orderPrefix)
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Order
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
@@ -303,6 +304,7 @@ func (k Keeper) WithOrders(ctx sdk.Context, fn func(types.Order) bool) {
 func (k Keeper) WithOpenOrders(ctx sdk.Context, fn func(types.Order) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, orderOpenPrefix)
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		dataKey, err := convertOrderOpenKey(iter.Key())
 		if err != nil {
@@ -322,6 +324,7 @@ func (k Keeper) WithOpenOrders(ctx sdk.Context, fn func(types.Order) bool) {
 func (k Keeper) WithBids(ctx sdk.Context, fn func(types.Bid) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, bidPrefix)
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Bid
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
@@ -335,6 +338,7 @@ func (k Keeper) WithBids(ctx sdk.Context, fn func(types.Bid) bool) {
 func (k Keeper) WithLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, leasePrefix)
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Lease
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
@@ -349,6 +353,7 @@ func (k Keeper) WithLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 func (k Keeper) WithActiveLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, leaseActivePrefix)
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		dataKey, err := convertLeaseActiveKey(iter.Key())
 		if err != nil {
@@ -368,6 +373,7 @@ func (k Keeper) WithActiveLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 func (k Keeper) WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, fn func(types.Order) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, ordersForGroupPrefix(id))
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Order
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
@@ -381,6 +387,7 @@ func (k Keeper) WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, fn func(t
 func (k Keeper) WithBidsForOrder(ctx sdk.Context, id types.OrderID, fn func(types.Bid) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, bidsForOrderPrefix(id))
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Bid
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
