@@ -52,11 +52,15 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 		OrderID: types.MakeOrderID(gid, oseq),
 		Spec:    spec,
 		State:   types.OrderOpen,
-		StartAt: ctx.BlockHeight() + orderTTL, // TODO: check overflow
+		StartAt: ctx.BlockHeight() + orderTTL,                         // TODO: check overflow
+		CloseAt: ctx.BlockHeight() + orderTTL + spec.OrderBidDuration, // TODO: check overflow, set via parameter
 	}
 
 	key := orderKey(order.ID())
-	// XXX TODO: check not overwrite
+	if store.Has(key) { // check no overwrite
+		return types.Order{}, types.ErrOrderExists
+	}
+
 	store.Set(key, k.cdc.MustMarshalBinaryBare(order))
 	k.updateOpenOrderIndex(store, order)
 

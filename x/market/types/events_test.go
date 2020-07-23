@@ -30,7 +30,6 @@ type testEventParsing struct {
 func (tep testEventParsing) testMessageType() func(t *testing.T) {
 	_, err := ParseEvent(tep.msg)
 	return func(t *testing.T) {
-		t.Logf("%+v", tep)
 		// if the error expected is errWildcard to catch untyped errors, don't fail the test, the error was expected.
 		if errors.Is(tep.expErr, errWildcard) {
 			require.Error(t, err)

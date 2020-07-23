@@ -6,6 +6,14 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
+// DefaultOrderBiddingDuration is the default time limit for an Order being active.
+// After the duration, the Order is automatically closed.
+// ( 24(hr) * 3600(seconds per hour) ) / 7s-Block
+const DefaultOrderBiddingDuration int64 = int64(12342)
+
+// MaxBiddingDuration is roughly 30 days of block height
+const MaxBiddingDuration int64 = DefaultOrderBiddingDuration * int64(30)
+
 //go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
 
 // DeploymentState defines state of deployment
@@ -54,9 +62,24 @@ const (
 
 // GroupSpec stores group specifications
 type GroupSpec struct {
-	Name         string          `json:"name"`
-	Requirements []sdk.Attribute `json:"requirements"`
-	Resources    []Resource      `json:"resources"`
+	Name             string          `json:"name"`
+	Requirements     []sdk.Attribute `json:"requirements"`
+	Resources        []Resource      `json:"resources"`
+	OrderBidDuration int64           `json:"bid-duration"`
+}
+
+// ValidateBasic asserts non-zero values
+func (g GroupSpec) ValidateBasic() error {
+	if g.OrderBidDuration < 1 {
+		return ErrInvalidGroups
+	}
+	if g.OrderBidDuration > MaxBiddingDuration {
+		return ErrInvalidGroups
+	}
+	if g.Name == "" {
+		return ErrInvalidGroups
+	}
+	return nil
 }
 
 // GetResources method returns resources list in group
