@@ -1,9 +1,9 @@
 syntax = "proto3";
 package akash.deployment;
 
-// import "gogoproto/gogo.proto";
-// import "akash/deployment/deployment.proto";
-// import "akash/deployment/group.proto";
+import "gogoproto/gogo.proto";
+import "cosmos/query/pagination.proto";
+import "akash/deployment/deployment.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";
 
@@ -11,12 +11,31 @@ option go_package = "github.com/ovrclk/akash/x/deployment/types";
 service Query {
     // Deployments queries deployments
     rpc Deployments (QueryDeploymentsRequest) returns (QueryDeploymentsResponse) {}
+
+    // Deployment queries deployment details
+    rpc Deployment (QueryDeploymentRequest) returns (QueryDeploymentResponse) {}
 }
 
 // QueryDeploymentsRequest is request type for the Query/Deployments RPC method
 message QueryDeploymentsRequest{
+    cosmos.query.PageRequest pagination = 1;
 }
 
-// QueryDeploymentsResponse is response type for the Query/Account RPC method
+// QueryDeploymentsResponse is response type for the Query/Deployments RPC method
 message QueryDeploymentsResponse{
+    repeated DeploymentResponse Deployments = 1 [(gogoproto.nullable) = false];
+
+    cosmos.query.PageResponse pagination = 2;
+}
+
+// QueryDeploymentRequest is request type for the Query/Deployment RPC method
+message QueryDeploymentRequest{
+    DeploymentID ID = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryDeploymentResponse is response type for the Query/Deployment RPC method
+message QueryDeploymentResponse{
+    DeploymentResponse Deployment = 1 [(gogoproto.nullable) = false];
+
+
 }

@@ -258,7 +258,7 @@ proto-check-breaking:
 TM_URL           = https://raw.githubusercontent.com/tendermint/tendermint/v0.33.1
 GOGO_PROTO_URL   = https://raw.githubusercontent.com/regen-network/protobuf/cosmos
 COSMOS_PROTO_URL = https://raw.githubusercontent.com/regen-network/cosmos-proto/master
-COSMOS_SDK_PROTO_URL = https://raw.githubusercontent.com/cosmos/cosmos-sdk/master
+COSMOS_SDK_PROTO_URL = https://raw.githubusercontent.com/cosmos/cosmos-sdk/master/proto/cosmos
 
 TM_KV_TYPES         = third_party/proto/tendermint/libs/kv
 TM_MERKLE_TYPES     = third_party/proto/tendermint/crypto/merkle
@@ -293,4 +293,7 @@ proto-update-deps:
 	@sed -i '7 s|third_party/proto/||g' $(TM_MERKLE_TYPES)/merkle.proto
 
 	@mkdir -p $(COSMOS_SDK_PROTO_TYPES)
-	@curl -sSL $(COSMOS_SDK_PROTO_URL)/proto/cosmos/cosmos.proto > $(COSMOS_SDK_PROTO_TYPES)/cosmos.proto
+	@curl -sSL $(COSMOS_SDK_PROTO_URL)/cosmos.proto > $(COSMOS_SDK_PROTO_TYPES)/cosmos.proto
+
+	@mkdir -p $(COSMOS_SDK_PROTO_TYPES)/query
+	@curl -sSL $(COSMOS_SDK_PROTO_URL)/query/pagination.proto > $(COSMOS_SDK_PROTO_TYPES)/query/pagination.proto
