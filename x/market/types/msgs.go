@@ -10,12 +10,16 @@ const (
 	msgTypeCloseOrder = "close-order"
 )
 
+var (
+	_, _, _ sdk.Msg = &MsgCreateBid{}, &MsgCloseBid{}, &MsgCloseOrder{}
+)
+
 // MsgCreateBid defines an SDK message for creating Bid
-type MsgCreateBid struct {
-	Order    OrderID        `json:"order"`
-	Provider sdk.AccAddress `json:"owner"`
-	Price    sdk.Coin       `json:"price"`
-}
+// type MsgCreateBid struct {
+// 	Order    OrderID        `json:"order"`
+// 	Provider sdk.AccAddress `json:"owner"`
+// 	Price    sdk.Coin       `json:"price"`
+// }
 
 // Route implements the sdk.Msg interface
 func (msg MsgCreateBid) Route() string { return RouterKey }
@@ -51,9 +55,9 @@ func (msg MsgCreateBid) ValidateBasic() error {
 }
 
 // MsgCloseBid defines an SDK message for closing bid
-type MsgCloseBid struct {
-	BidID `json:"id"`
-}
+// type MsgCloseBid struct {
+// 	BidID `json:"id"`
+// }
 
 // Route implements the sdk.Msg interface
 func (msg MsgCloseBid) Route() string { return RouterKey }
@@ -68,7 +72,7 @@ func (msg MsgCloseBid) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgCloseBid) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.Provider}
+	return []sdk.AccAddress{msg.BidID.Provider}
 }
 
 // ValidateBasic method for MsgCloseBid
@@ -77,9 +81,9 @@ func (msg MsgCloseBid) ValidateBasic() error {
 }
 
 // MsgCloseOrder defines an SDK message for closing order
-type MsgCloseOrder struct {
-	OrderID `json:"id"`
-}
+// type MsgCloseOrder struct {
+// 	OrderID `json:"id"`
+// }
 
 // Route implements the sdk.Msg interface
 func (msg MsgCloseOrder) Route() string { return RouterKey }
@@ -94,7 +98,7 @@ func (msg MsgCloseOrder) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgCloseOrder) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.Owner}
+	return []sdk.AccAddress{msg.OrderID.Owner}
 }
 
 // ValidateBasic method for MsgCloseOrder

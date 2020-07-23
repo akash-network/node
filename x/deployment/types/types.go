@@ -11,7 +11,7 @@ import (
 //go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
 
 // DeploymentState defines state of deployment
-type DeploymentState uint8
+type DeploymentState uint32
 
 const (
 	// DeploymentActive is used when state of deployment is active
@@ -39,7 +39,7 @@ func (obj Deployment) ID() DeploymentID {
 }
 
 // GroupState defines state of group
-type GroupState uint8
+type GroupState uint32
 
 const (
 	// GroupOpen is used when state of group is open

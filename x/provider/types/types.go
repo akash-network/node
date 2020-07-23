@@ -4,16 +4,16 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-type Attributes []sdk.Attribute
+// type Attributes []sdk.Attribute
 
 // Provider stores owner and host details
-type Provider struct {
-	Owner      sdk.AccAddress `json:"owner"`
-	HostURI    string         `json:"host-uri"`
-	Attributes Attributes     `json:"attributes"`
-}
+// type Provider struct {
+// 	Owner      sdk.AccAddress `json:"owner"`
+// 	HostURI    string         `json:"host-uri"`
+// 	Attributes Attributes     `json:"attributes"`
+// }
 
-func (attr Attributes) Validate() error {
+func ValidateAttributes(attr []sdk.Attribute) error {
 	store := make(map[string]bool)
 
 	for i := range attr {

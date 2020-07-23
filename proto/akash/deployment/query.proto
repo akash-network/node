@@ -1,9 +1,9 @@
 syntax = "proto3";
 package akash.deployment;
 
-import "gogoproto/gogo.proto";
-import "akash/deployment/deployment.proto";
-import "akash/deployment/group.proto";
+// import "gogoproto/gogo.proto";
+// import "akash/deployment/deployment.proto";
+// import "akash/deployment/group.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";
 

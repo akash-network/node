@@ -14,8 +14,12 @@ const (
 	msgTypeDeleteProvider = "delete-provider"
 )
 
+var (
+	_, _, _ sdk.Msg = &MsgCreateProvider{}, &MsgUpdateProvider{}, &MsgDeleteProvider{}
+)
+
 // MsgCreateProvider defines an SDK message for creating a provider
-type MsgCreateProvider Provider
+// type MsgCreateProvider Provider
 
 // Route implements the sdk.Msg interface
 func (msg MsgCreateProvider) Route() string { return RouterKey }
@@ -45,7 +49,7 @@ func (msg MsgCreateProvider) GetSigners() []sdk.AccAddress {
 }
 
 // MsgUpdateProvider defines an SDK message for updating a provider
-type MsgUpdateProvider Provider
+// type MsgUpdateProvider Provider
 
 // Route implements the sdk.Msg interface
 func (msg MsgUpdateProvider) Route() string { return RouterKey }
@@ -75,9 +79,9 @@ func (msg MsgUpdateProvider) GetSigners() []sdk.AccAddress {
 }
 
 // MsgDeleteProvider defines an SDK message for deleting a provider
-type MsgDeleteProvider struct {
-	Owner sdk.AccAddress `json:"owner"`
-}
+// type MsgDeleteProvider struct {
+// 	Owner sdk.AccAddress `json:"owner"`
+// }
 
 // Route implements the sdk.Msg interface
 func (msg MsgDeleteProvider) Route() string { return RouterKey }

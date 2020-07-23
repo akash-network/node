@@ -11,12 +11,16 @@ const (
 	msgTypeCloseGroup       = "close-group"
 )
 
+var (
+	_, _, _, _ sdk.Msg = &MsgCreateDeployment{}, &MsgUpdateDeployment{}, &MsgCloseDeployment{}, &MsgCloseGroup{}
+)
+
 // MsgCreateDeployment defines an SDK message for creating deployment
-type MsgCreateDeployment struct {
-	ID      DeploymentID `json:"id"`
-	Groups  []GroupSpec  `json:"groups"`
-	Version []byte       `json:"version"`
-}
+// type MsgCreateDeployment struct {
+// 	ID      DeploymentID `json:"id"`
+// 	Groups  []GroupSpec  `json:"groups"`
+// 	Version []byte       `json:"version"`
+// }
 
 // Route implements the sdk.Msg interface
 func (msg MsgCreateDeployment) Route() string { return RouterKey }
@@ -49,11 +53,11 @@ func (msg MsgCreateDeployment) ValidateBasic() error {
 }
 
 // MsgUpdateDeployment defines an SDK message for updating deployment
-type MsgUpdateDeployment struct {
-	ID      DeploymentID
-	Groups  []GroupSpec
-	Version []byte
-}
+// type MsgUpdateDeployment struct {
+// 	ID      DeploymentID
+// 	Groups  []GroupSpec
+// 	Version []byte
+// }
 
 // Route implements the sdk.Msg interface
 func (msg MsgUpdateDeployment) Route() string { return RouterKey }
@@ -85,9 +89,9 @@ func (msg MsgUpdateDeployment) GetSigners() []sdk.AccAddress {
 }
 
 // MsgCloseDeployment defines an SDK message for closing deployment
-type MsgCloseDeployment struct {
-	ID DeploymentID
-}
+// type MsgCloseDeployment struct {
+// 	ID DeploymentID
+// }
 
 // Route implements the sdk.Msg interface
 func (msg MsgCloseDeployment) Route() string { return RouterKey }
@@ -114,9 +118,9 @@ func (msg MsgCloseDeployment) GetSigners() []sdk.AccAddress {
 }
 
 // MsgCloseGroup defines SDK message to close a single Group within a Deployment.
-type MsgCloseGroup struct {
-	ID GroupID
-}
+// type MsgCloseGroup struct {
+// 	ID GroupID
+// }
 
 // Route implements the sdk.Msg interface for routing
 func (msg MsgCloseGroup) Route() string { return RouterKey }

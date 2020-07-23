@@ -10,12 +10,12 @@ import (
 )
 
 // OrderID stores owner and all other seq numbers
-type OrderID struct {
-	Owner sdk.AccAddress `json:"owner"`
-	DSeq  uint64         `json:"dseq"`
-	GSeq  uint32         `json:"gseq"`
-	OSeq  uint32         `json:"oseq"`
-}
+// type OrderID struct {
+// 	Owner sdk.AccAddress `json:"owner"`
+// 	DSeq  uint64         `json:"dseq"`
+// 	GSeq  uint32         `json:"gseq"`
+// 	OSeq  uint32         `json:"oseq"`
+// }
 
 // MakeOrderID returns OrderID instance with provided groupID details and oseq
 func MakeOrderID(id dtypes.GroupID, oseq uint32) OrderID {
@@ -59,13 +59,13 @@ func (id OrderID) String() string {
 
 // BidID stores owner, provider and all other seq numbers.
 // A successful bid becomes a Lease(ID).
-type BidID struct {
-	Owner    sdk.AccAddress `json:"owner"`
-	DSeq     uint64         `json:"dseq"`
-	GSeq     uint32         `json:"gseq"`
-	OSeq     uint32         `json:"oseq"`
-	Provider sdk.AccAddress `json:"provider"`
-}
+// type BidID struct {
+// 	Owner    sdk.AccAddress `json:"owner"`
+// 	DSeq     uint64         `json:"dseq"`
+// 	GSeq     uint32         `json:"gseq"`
+// 	OSeq     uint32         `json:"oseq"`
+// 	Provider sdk.AccAddress `json:"provider"`
+// }
 
 // MakeBidID returns BidID instance with provided order details and provider
 func MakeBidID(id OrderID, provider sdk.AccAddress) BidID {
@@ -136,7 +136,7 @@ func BidIDString(id BidID) string {
 }
 
 // LeaseID stores bid details of lease
-type LeaseID BidID
+// type LeaseID BidID
 
 // MakeLeaseID returns LeaseID instance with provided bid details
 func MakeLeaseID(id BidID) LeaseID {

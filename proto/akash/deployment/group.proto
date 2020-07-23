@@ -7,6 +7,18 @@ import "cosmos/cosmos.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";
 
+// MsgCloseGroup defines SDK message to close a single Group within a Deployment.
+message MsgCloseGroup {
+    option (gogoproto.equal) = false;
+
+    GroupID id = 1 [
+        (gogoproto.customname) = "ID",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+}
+
 // GroupID stores owner, deployment sequence number and group sequence number
 message GroupID {
     option (gogoproto.equal) = true;
@@ -59,7 +71,8 @@ message Group {
         (gogoproto.moretags)   = "yaml:\"id\""
     ];
     uint32 state = 2 [
-        (gogoproto.casttype)   = "github.com/ovrclk/akash/x/deployment/types.GroupState",
+        (gogoproto.customtype) = "GroupState",
+        (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];

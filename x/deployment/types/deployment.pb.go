@@ -9,7 +9,6 @@ import (
 	github_com_cosmos_cosmos_sdk_types "github.com/cosmos/cosmos-sdk/types"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	github_com_ovrclk_akash_x_deployment_types "github.com/ovrclk/akash/x/deployment/types"
 	io "io"
 	math "math"
 	math_bits "math/bits"
@@ -26,6 +25,173 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+// MsgCreateDeployment defines an SDK message for creating deployment
+type MsgCreateDeployment struct {
+	ID      DeploymentID `protobuf:"bytes,1,opt,name=id,proto3" json:"id" yaml:"id"`
+	Groups  []GroupSpec  `protobuf:"bytes,2,rep,name=groups,proto3" json:"groups" yaml:"groups"`
+	Version []byte       `protobuf:"bytes,3,opt,name=version,proto3" json:"version" yaml:"version"`
+}
+
+func (m *MsgCreateDeployment) Reset()         { *m = MsgCreateDeployment{} }
+func (m *MsgCreateDeployment) String() string { return proto.CompactTextString(m) }
+func (*MsgCreateDeployment) ProtoMessage()    {}
+func (*MsgCreateDeployment) Descriptor() ([]byte, []int) {
+	return fileDescriptor_6fa46316c88021b3, []int{0}
+}
+func (m *MsgCreateDeployment) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgCreateDeployment) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgCreateDeployment.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgCreateDeployment) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgCreateDeployment.Merge(m, src)
+}
+func (m *MsgCreateDeployment) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgCreateDeployment) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgCreateDeployment.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgCreateDeployment proto.InternalMessageInfo
+
+func (m *MsgCreateDeployment) GetID() DeploymentID {
+	if m != nil {
+		return m.ID
+	}
+	return DeploymentID{}
+}
+
+func (m *MsgCreateDeployment) GetGroups() []GroupSpec {
+	if m != nil {
+		return m.Groups
+	}
+	return nil
+}
+
+func (m *MsgCreateDeployment) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
+
+// MsgUpdateDeployment defines an SDK message for updating deployment
+type MsgUpdateDeployment struct {
+	ID      DeploymentID `protobuf:"bytes,1,opt,name=id,proto3" json:"id" yaml:"id"`
+	Groups  []GroupSpec  `protobuf:"bytes,2,rep,name=groups,proto3" json:"groups" yaml:"groups"`
+	Version []byte       `protobuf:"bytes,3,opt,name=version,proto3" json:"version" yaml:"version"`
+}
+
+func (m *MsgUpdateDeployment) Reset()         { *m = MsgUpdateDeployment{} }
+func (m *MsgUpdateDeployment) String() string { return proto.CompactTextString(m) }
+func (*MsgUpdateDeployment) ProtoMessage()    {}
+func (*MsgUpdateDeployment) Descriptor() ([]byte, []int) {
+	return fileDescriptor_6fa46316c88021b3, []int{1}
+}
+func (m *MsgUpdateDeployment) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgUpdateDeployment) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgUpdateDeployment.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgUpdateDeployment) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgUpdateDeployment.Merge(m, src)
+}
+func (m *MsgUpdateDeployment) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgUpdateDeployment) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgUpdateDeployment.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgUpdateDeployment proto.InternalMessageInfo
+
+func (m *MsgUpdateDeployment) GetID() DeploymentID {
+	if m != nil {
+		return m.ID
+	}
+	return DeploymentID{}
+}
+
+func (m *MsgUpdateDeployment) GetGroups() []GroupSpec {
+	if m != nil {
+		return m.Groups
+	}
+	return nil
+}
+
+func (m *MsgUpdateDeployment) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
+
+// MsgCloseDeployment defines an SDK message for closing deployment
+type MsgCloseDeployment struct {
+	ID DeploymentID `protobuf:"bytes,1,opt,name=id,proto3" json:"id" yaml:"id"`
+}
+
+func (m *MsgCloseDeployment) Reset()         { *m = MsgCloseDeployment{} }
+func (m *MsgCloseDeployment) String() string { return proto.CompactTextString(m) }
+func (*MsgCloseDeployment) ProtoMessage()    {}
+func (*MsgCloseDeployment) Descriptor() ([]byte, []int) {
+	return fileDescriptor_6fa46316c88021b3, []int{2}
+}
+func (m *MsgCloseDeployment) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgCloseDeployment) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgCloseDeployment.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgCloseDeployment) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgCloseDeployment.Merge(m, src)
+}
+func (m *MsgCloseDeployment) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgCloseDeployment) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgCloseDeployment.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgCloseDeployment proto.InternalMessageInfo
+
+func (m *MsgCloseDeployment) GetID() DeploymentID {
+	if m != nil {
+		return m.ID
+	}
+	return DeploymentID{}
+}
+
 // DeploymentID stores owner and sequence number
 type DeploymentID struct {
 	Owner github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=owner,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"owner" yaml:"owner"`
@@ -35,7 +201,7 @@ type DeploymentID struct {
 func (m *DeploymentID) Reset()      { *m = DeploymentID{} }
 func (*DeploymentID) ProtoMessage() {}
 func (*DeploymentID) Descriptor() ([]byte, []int) {
-	return fileDescriptor_6fa46316c88021b3, []int{0}
+	return fileDescriptor_6fa46316c88021b3, []int{3}
 }
 func (m *DeploymentID) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -80,16 +246,16 @@ func (m *DeploymentID) GetDSeq() uint64 {
 
 // Deployment stores deploymentID, state and version details
 type Deployment struct {
-	DeploymentID DeploymentID                                               `protobuf:"bytes,1,opt,name=deployment_id,json=deploymentId,proto3" json:"id" yaml:"id"`
-	State        github_com_ovrclk_akash_x_deployment_types.DeploymentState `protobuf:"varint,2,opt,name=state,proto3,casttype=github.com/ovrclk/akash/x/deployment/types.DeploymentState" json:"state" yaml:"state"`
-	Version      [][]byte                                                   `protobuf:"bytes,3,rep,name=version,proto3" json:"version" yaml:"version"`
+	DeploymentID DeploymentID    `protobuf:"bytes,1,opt,name=deployment_id,json=deploymentId,proto3" json:"id" yaml:"id"`
+	State        DeploymentState `protobuf:"varint,2,opt,name=state,proto3,customtype=DeploymentState" json:"state" yaml:"state"`
+	Version      []byte          `protobuf:"bytes,3,opt,name=version,proto3" json:"version" yaml:"version"`
 }
 
 func (m *Deployment) Reset()         { *m = Deployment{} }
 func (m *Deployment) String() string { return proto.CompactTextString(m) }
 func (*Deployment) ProtoMessage()    {}
 func (*Deployment) Descriptor() ([]byte, []int) {
-	return fileDescriptor_6fa46316c88021b3, []int{1}
+	return fileDescriptor_6fa46316c88021b3, []int{4}
 }
 func (m *Deployment) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -125,14 +291,7 @@ func (m *Deployment) GetDeploymentID() DeploymentID {
 	return DeploymentID{}
 }
 
-func (m *Deployment) GetState() github_com_ovrclk_akash_x_deployment_types.DeploymentState {
-	if m != nil {
-		return m.State
-	}
-	return 0
-}
-
-func (m *Deployment) GetVersion() [][]byte {
+func (m *Deployment) GetVersion() []byte {
 	if m != nil {
 		return m.Version
 	}
@@ -147,7 +306,7 @@ type DeploymentResponse struct {
 func (m *DeploymentResponse) Reset()      { *m = DeploymentResponse{} }
 func (*DeploymentResponse) ProtoMessage() {}
 func (*DeploymentResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_6fa46316c88021b3, []int{2}
+	return fileDescriptor_6fa46316c88021b3, []int{5}
 }
 func (m *DeploymentResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -191,6 +350,9 @@ func (m *DeploymentResponse) GetGroups() []Group {
 }
 
 func init() {
+	proto.RegisterType((*MsgCreateDeployment)(nil), "akash.deployment.MsgCreateDeployment")
+	proto.RegisterType((*MsgUpdateDeployment)(nil), "akash.deployment.MsgUpdateDeployment")
+	proto.RegisterType((*MsgCloseDeployment)(nil), "akash.deployment.MsgCloseDeployment")
 	proto.RegisterType((*DeploymentID)(nil), "akash.deployment.DeploymentID")
 	proto.RegisterType((*Deployment)(nil), "akash.deployment.Deployment")
 	proto.RegisterType((*DeploymentResponse)(nil), "akash.deployment.DeploymentResponse")
@@ -199,40 +361,69 @@ func init() {
 func init() { proto.RegisterFile("akash/deployment/deployment.proto", fileDescriptor_6fa46316c88021b3) }
 
 var fileDescriptor_6fa46316c88021b3 = []byte{
-	// 488 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x53, 0x31, 0x6f, 0xd3, 0x40,
-	0x18, 0xf5, 0x25, 0x69, 0x81, 0x4b, 0x82, 0xe0, 0x84, 0x44, 0x54, 0x15, 0x7f, 0xe1, 0x16, 0x22,
-	0xa4, 0xda, 0x52, 0x3b, 0x20, 0x65, 0xab, 0x15, 0x09, 0x95, 0x09, 0xb9, 0x03, 0x12, 0x0b, 0xa4,
-	0xbe, 0x53, 0x6a, 0x25, 0xce, 0xb9, 0x3e, 0xb7, 0x90, 0x7f, 0xc1, 0xc8, 0xd8, 0x91, 0x8d, 0xbf,
-	0xd1, 0xb1, 0x1b, 0x4c, 0x27, 0xe4, 0x2c, 0xc8, 0xa3, 0x47, 0x26, 0xe4, 0x3b, 0x37, 0x36, 0x54,
-	0x42, 0x4c, 0xbe, 0xef, 0xbd, 0xef, 0xde, 0xbd, 0x7b, 0xdf, 0x19, 0x3f, 0x9d, 0xce, 0xa7, 0xf2,
-	0xd4, 0x65, 0x3c, 0x5e, 0x88, 0x55, 0xc4, 0x97, 0x69, 0x63, 0xe9, 0xc4, 0x89, 0x48, 0x05, 0x79,
-	0xa0, 0x5b, 0x9c, 0x1a, 0xdf, 0x79, 0x34, 0x13, 0x33, 0xa1, 0x49, 0xb7, 0x5c, 0x99, 0xbe, 0x9d,
-	0xdd, 0x5b, 0x52, 0xb3, 0x44, 0x9c, 0xc7, 0x86, 0xa5, 0x5f, 0x11, 0xee, 0x4d, 0x36, 0xd4, 0xd1,
-	0x84, 0xbc, 0xc7, 0x5b, 0xe2, 0xc3, 0x92, 0x27, 0x03, 0x34, 0x44, 0xa3, 0x9e, 0xf7, 0x2a, 0x57,
-	0x60, 0x80, 0x42, 0x41, 0x6f, 0x35, 0x8d, 0x16, 0x63, 0xaa, 0x4b, 0xfa, 0x4b, 0xc1, 0xde, 0x2c,
-	0x4c, 0x4f, 0xcf, 0x4f, 0x9c, 0x40, 0x44, 0x6e, 0x20, 0x64, 0x24, 0x64, 0xf5, 0xd9, 0x93, 0x6c,
-	0xee, 0xa6, 0xab, 0x98, 0x4b, 0xe7, 0x30, 0x08, 0x0e, 0x19, 0x4b, 0xb8, 0x94, 0xbe, 0xd1, 0x21,
-	0x07, 0xb8, 0xc3, 0x24, 0x3f, 0x1b, 0xb4, 0x86, 0x68, 0xd4, 0xf1, 0x20, 0x53, 0xd0, 0x99, 0x1c,
-	0xf3, 0xb3, 0x5c, 0x81, 0xc6, 0x0b, 0x05, 0x5d, 0x73, 0x4e, 0x59, 0x51, 0x5f, 0x83, 0xe3, 0xbb,
-	0x9f, 0x2f, 0xc1, 0xfa, 0x79, 0x09, 0x88, 0x7e, 0x69, 0x61, 0x5c, 0x3b, 0x26, 0x0b, 0xdc, 0xaf,
-	0xaf, 0xf6, 0x2e, 0x64, 0xda, 0x77, 0x77, 0xdf, 0x76, 0xfe, 0x8e, 0xc7, 0x69, 0x5e, 0xd3, 0x7b,
-	0x76, 0xa5, 0xc0, 0xca, 0x14, 0xfc, 0x71, 0xf9, 0x5c, 0x41, 0x2b, 0x64, 0x85, 0x82, 0x7b, 0xc6,
-	0x40, 0xc8, 0xa8, 0xdf, 0xab, 0x15, 0x8e, 0x18, 0x89, 0xf0, 0x96, 0x4c, 0xa7, 0x29, 0xd7, 0xe6,
-	0xfb, 0xde, 0x9b, 0x32, 0x1d, 0x0d, 0xd4, 0xe9, 0xe8, 0xb2, 0x4c, 0x67, 0xdc, 0x48, 0x47, 0x5c,
-	0x24, 0xc1, 0x62, 0xee, 0x9a, 0x51, 0x7c, 0x6c, 0x0e, 0xc3, 0xa4, 0x54, 0xbb, 0x38, 0x2e, 0xb7,
-	0xfb, 0x46, 0x94, 0xbc, 0xc0, 0x77, 0x2e, 0x78, 0x22, 0x43, 0xb1, 0x1c, 0xb4, 0x87, 0xed, 0x51,
-	0xcf, 0x7b, 0x92, 0x2b, 0xb8, 0x81, 0x0a, 0x05, 0xf7, 0xcd, 0x91, 0x15, 0x40, 0xfd, 0x1b, 0x6a,
-	0xdc, 0xd1, 0x51, 0x7d, 0x43, 0x98, 0xd4, 0xca, 0x3e, 0x97, 0xb1, 0x58, 0x4a, 0x4e, 0x38, 0xc6,
-	0xb5, 0x81, 0x2a, 0xaf, 0xdd, 0x7f, 0xe5, 0x65, 0xd2, 0xca, 0x15, 0x34, 0xf6, 0x15, 0x0a, 0x1e,
-	0x56, 0x63, 0xda, 0x60, 0xd4, 0x6f, 0x34, 0x90, 0xd7, 0x78, 0x5b, 0xbf, 0x34, 0x39, 0x68, 0x0d,
-	0xdb, 0xa3, 0xee, 0xfe, 0xe3, 0xdb, 0x47, 0xbc, 0x2c, 0x79, 0x0f, 0x2a, 0xf5, 0xaa, 0xbd, 0x50,
-	0xd0, 0x37, 0xca, 0xa6, 0xa6, 0x7e, 0x45, 0x6c, 0x1e, 0x81, 0xe5, 0x4d, 0xae, 0x32, 0x1b, 0x5d,
-	0x67, 0x36, 0xfa, 0x91, 0xd9, 0xe8, 0xd3, 0xda, 0xb6, 0xae, 0xd7, 0xb6, 0xf5, 0x7d, 0x6d, 0x5b,
-	0x6f, 0x9f, 0xff, 0x7f, 0xea, 0x27, 0xdb, 0xfa, 0x1f, 0x38, 0xf8, 0x1d, 0x00, 0x00, 0xff, 0xff,
-	0x7d, 0xfa, 0x20, 0x32, 0x6e, 0x03, 0x00, 0x00,
+	// 564 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe4, 0x54, 0xbf, 0x6f, 0xd3, 0x40,
+	0x14, 0xb6, 0xdd, 0xb4, 0xc0, 0x25, 0xe1, 0xc7, 0x81, 0x44, 0x54, 0x5a, 0xbf, 0xe0, 0x85, 0x08,
+	0xa9, 0x0e, 0x6a, 0x07, 0xa4, 0x6c, 0x35, 0x11, 0x28, 0x48, 0x95, 0x90, 0x03, 0x0b, 0x0b, 0xa4,
+	0xbe, 0x53, 0x6a, 0xe5, 0xc7, 0xb9, 0x3e, 0xb7, 0x90, 0x91, 0xff, 0x80, 0x91, 0xb1, 0xff, 0x01,
+	0xff, 0x46, 0xc7, 0x6e, 0x20, 0x86, 0x13, 0x4a, 0x16, 0xe4, 0xd1, 0x1b, 0x4c, 0xc8, 0x77, 0x4e,
+	0x6c, 0x5a, 0x40, 0x95, 0x10, 0x53, 0x27, 0xfb, 0x7d, 0xef, 0xbd, 0xef, 0xbb, 0xf7, 0xdd, 0x0f,
+	0x74, 0xb7, 0x37, 0xe8, 0xf1, 0xbd, 0x26, 0xa1, 0xc1, 0x90, 0x4d, 0x46, 0x74, 0x1c, 0x15, 0x7e,
+	0xed, 0x20, 0x64, 0x11, 0xc3, 0xd7, 0x65, 0x89, 0x9d, 0xe3, 0xab, 0xb7, 0xfa, 0xac, 0xcf, 0x64,
+	0xb2, 0x99, 0xfe, 0xa9, 0xba, 0xd5, 0xb5, 0x33, 0x54, 0xfd, 0x90, 0x1d, 0x04, 0x2a, 0x6b, 0x7d,
+	0xd7, 0xd1, 0xcd, 0x1d, 0xde, 0x7f, 0x14, 0xd2, 0x5e, 0x44, 0xdb, 0x8b, 0x1a, 0xbc, 0x83, 0x0c,
+	0x9f, 0xd4, 0xf4, 0xba, 0xde, 0x28, 0x6f, 0x9a, 0xf6, 0x69, 0x29, 0x3b, 0xaf, 0xec, 0xb4, 0x9d,
+	0xf5, 0x63, 0x01, 0xda, 0x54, 0x80, 0xd1, 0x69, 0xc7, 0x02, 0x0c, 0x9f, 0x24, 0x02, 0xae, 0x4c,
+	0x7a, 0xa3, 0x61, 0xcb, 0xf2, 0x89, 0xe5, 0x1a, 0x3e, 0xc1, 0xcf, 0xd1, 0x8a, 0x54, 0xe5, 0x35,
+	0xa3, 0xbe, 0xd4, 0x28, 0x6f, 0xde, 0x39, 0x4b, 0xf9, 0x24, 0xcd, 0x77, 0x03, 0xea, 0x39, 0x90,
+	0xf2, 0xc5, 0x02, 0xb2, 0x96, 0x44, 0x40, 0x55, 0xb1, 0xa9, 0xd8, 0x72, 0xb3, 0x04, 0x7e, 0x88,
+	0x2e, 0x1d, 0xd2, 0x90, 0xfb, 0x6c, 0x5c, 0x5b, 0xaa, 0xeb, 0x8d, 0x8a, 0xb3, 0x1e, 0x0b, 0x98,
+	0x43, 0x89, 0x80, 0xab, 0xaa, 0x2d, 0x03, 0x2c, 0x77, 0x9e, 0x6a, 0x95, 0xbe, 0x1d, 0x81, 0x36,
+	0x9f, 0xfd, 0x45, 0x40, 0x2e, 0xde, 0xec, 0x3e, 0xc2, 0xe9, 0xb6, 0x0f, 0x19, 0xff, 0x7f, 0x93,
+	0x4b, 0x29, 0xdd, 0xfa, 0xa8, 0xa3, 0x4a, 0xb1, 0x13, 0xbf, 0x46, 0xcb, 0xec, 0xcd, 0x98, 0x86,
+	0x52, 0xa8, 0xe2, 0x3c, 0x8d, 0x05, 0x28, 0x20, 0x11, 0x50, 0x51, 0x0c, 0x32, 0xb4, 0x7e, 0x08,
+	0xd8, 0xe8, 0xfb, 0xd1, 0xde, 0xc1, 0xae, 0xed, 0xb1, 0x51, 0xd3, 0x63, 0x7c, 0xc4, 0x78, 0xf6,
+	0xd9, 0xe0, 0x64, 0xd0, 0x8c, 0x26, 0x01, 0xe5, 0xf6, 0xb6, 0xe7, 0x6d, 0x13, 0x12, 0x52, 0xce,
+	0x5d, 0xc5, 0x83, 0xb7, 0x50, 0x89, 0x70, 0xba, 0x5f, 0x33, 0xea, 0x7a, 0xa3, 0xe4, 0xc0, 0x54,
+	0x40, 0xa9, 0xdd, 0xa5, 0xfb, 0xb1, 0x00, 0x89, 0x27, 0x02, 0xca, 0x4a, 0x27, 0x8d, 0x2c, 0x57,
+	0x82, 0xad, 0xcb, 0x1f, 0x8e, 0x40, 0x93, 0x2b, 0x7e, 0x67, 0x20, 0x54, 0x70, 0x65, 0x88, 0xaa,
+	0xb9, 0x09, 0xaf, 0xce, 0x6d, 0xd0, 0xbd, 0xcc, 0xa0, 0x5f, 0x86, 0xff, 0x9d, 0x55, 0x95, 0x9c,
+	0xa1, 0x43, 0xf0, 0x63, 0xb4, 0xcc, 0xa3, 0x5e, 0x44, 0xe5, 0xe2, 0xab, 0xce, 0x83, 0x94, 0xe5,
+	0x8b, 0x80, 0x6b, 0x39, 0x4b, 0x37, 0x4d, 0xa7, 0xa6, 0xc9, 0xba, 0xdc, 0x34, 0x19, 0x5a, 0xae,
+	0x82, 0xff, 0xf5, 0x80, 0x7c, 0xd2, 0x11, 0xce, 0x25, 0x5d, 0xca, 0x03, 0x36, 0xe6, 0x14, 0x53,
+	0x84, 0xf2, 0xd5, 0x66, 0x46, 0xac, 0xfd, 0xcd, 0x08, 0x65, 0x43, 0x2c, 0xa0, 0xd0, 0x97, 0x08,
+	0xb8, 0x91, 0xf9, 0xbf, 0xc0, 0x2c, 0xb7, 0x50, 0x80, 0x9f, 0x9d, 0xba, 0x33, 0xb7, 0xff, 0x70,
+	0x67, 0xce, 0x7d, 0x5f, 0x16, 0xbb, 0xab, 0x39, 0xed, 0xe3, 0xa9, 0xa9, 0x9f, 0x4c, 0x4d, 0xfd,
+	0xeb, 0xd4, 0xd4, 0xdf, 0xcf, 0x4c, 0xed, 0x64, 0x66, 0x6a, 0x9f, 0x67, 0xa6, 0xf6, 0xf2, 0x7e,
+	0xe1, 0xb0, 0xb1, 0xc3, 0xd0, 0x1b, 0x0e, 0x9a, 0xea, 0xf1, 0x7c, 0x5b, 0x7c, 0x3e, 0xe5, 0xa1,
+	0xdb, 0x5d, 0x91, 0xef, 0xe7, 0xd6, 0xcf, 0x00, 0x00, 0x00, 0xff, 0xff, 0xc6, 0xa9, 0x7e, 0x5e,
+	0xaa, 0x05, 0x00, 0x00,
 }
 
+func (this *MsgCloseDeployment) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*MsgCloseDeployment)
+	if !ok {
+		that2, ok := that.(MsgCloseDeployment)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.ID.Equal(&that1.ID) {
+		return false
+	}
+	return true
+}
 func (this *DeploymentID) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -260,41 +451,147 @@ func (this *DeploymentID) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Deployment) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
+func (m *MsgCreateDeployment) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
 	}
-
-	that1, ok := that.(*Deployment)
-	if !ok {
-		that2, ok := that.(Deployment)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.DeploymentID.Equal(&that1.DeploymentID) {
-		return false
-	}
-	if this.State != that1.State {
-		return false
-	}
-	if len(this.Version) != len(that1.Version) {
-		return false
-	}
-	for i := range this.Version {
-		if !bytes.Equal(this.Version[i], that1.Version[i]) {
-			return false
-		}
-	}
-	return true
+	return dAtA[:n], nil
 }
+
+func (m *MsgCreateDeployment) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgCreateDeployment) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Version) > 0 {
+		i -= len(m.Version)
+		copy(dAtA[i:], m.Version)
+		i = encodeVarintDeployment(dAtA, i, uint64(len(m.Version)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Groups) > 0 {
+		for iNdEx := len(m.Groups) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Groups[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintDeployment(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	{
+		size, err := m.ID.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintDeployment(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgUpdateDeployment) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgUpdateDeployment) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgUpdateDeployment) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Version) > 0 {
+		i -= len(m.Version)
+		copy(dAtA[i:], m.Version)
+		i = encodeVarintDeployment(dAtA, i, uint64(len(m.Version)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Groups) > 0 {
+		for iNdEx := len(m.Groups) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Groups[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintDeployment(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	{
+		size, err := m.ID.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintDeployment(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgCloseDeployment) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgCloseDeployment) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgCloseDeployment) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	{
+		size, err := m.ID.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintDeployment(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
 func (m *DeploymentID) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -351,13 +648,11 @@ func (m *Deployment) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	var l int
 	_ = l
 	if len(m.Version) > 0 {
-		for iNdEx := len(m.Version) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Version[iNdEx])
-			copy(dAtA[i:], m.Version[iNdEx])
-			i = encodeVarintDeployment(dAtA, i, uint64(len(m.Version[iNdEx])))
-			i--
-			dAtA[i] = 0x1a
-		}
+		i -= len(m.Version)
+		copy(dAtA[i:], m.Version)
+		i = encodeVarintDeployment(dAtA, i, uint64(len(m.Version)))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if m.State != 0 {
 		i = encodeVarintDeployment(dAtA, i, uint64(m.State))
@@ -435,6 +730,59 @@ func encodeVarintDeployment(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
+func (m *MsgCreateDeployment) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.ID.Size()
+	n += 1 + l + sovDeployment(uint64(l))
+	if len(m.Groups) > 0 {
+		for _, e := range m.Groups {
+			l = e.Size()
+			n += 1 + l + sovDeployment(uint64(l))
+		}
+	}
+	l = len(m.Version)
+	if l > 0 {
+		n += 1 + l + sovDeployment(uint64(l))
+	}
+	return n
+}
+
+func (m *MsgUpdateDeployment) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.ID.Size()
+	n += 1 + l + sovDeployment(uint64(l))
+	if len(m.Groups) > 0 {
+		for _, e := range m.Groups {
+			l = e.Size()
+			n += 1 + l + sovDeployment(uint64(l))
+		}
+	}
+	l = len(m.Version)
+	if l > 0 {
+		n += 1 + l + sovDeployment(uint64(l))
+	}
+	return n
+}
+
+func (m *MsgCloseDeployment) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.ID.Size()
+	n += 1 + l + sovDeployment(uint64(l))
+	return n
+}
+
 func (m *DeploymentID) Size() (n int) {
 	if m == nil {
 		return 0
@@ -462,11 +810,9 @@ func (m *Deployment) Size() (n int) {
 	if m.State != 0 {
 		n += 1 + sovDeployment(uint64(m.State))
 	}
-	if len(m.Version) > 0 {
-		for _, b := range m.Version {
-			l = len(b)
-			n += 1 + l + sovDeployment(uint64(l))
-		}
+	l = len(m.Version)
+	if l > 0 {
+		n += 1 + l + sovDeployment(uint64(l))
 	}
 	return n
 }
@@ -493,6 +839,400 @@ func sovDeployment(x uint64) (n int) {
 }
 func sozDeployment(x uint64) (n int) {
 	return sovDeployment(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+}
+func (m *MsgCreateDeployment) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowDeployment
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgCreateDeployment: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgCreateDeployment: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ID", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDeployment
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ID.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Groups", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDeployment
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Groups = append(m.Groups, GroupSpec{})
+			if err := m.Groups[len(m.Groups)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDeployment
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Version = append(m.Version[:0], dAtA[iNdEx:postIndex]...)
+			if m.Version == nil {
+				m.Version = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipDeployment(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgUpdateDeployment) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowDeployment
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgUpdateDeployment: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgUpdateDeployment: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ID", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDeployment
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ID.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Groups", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDeployment
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Groups = append(m.Groups, GroupSpec{})
+			if err := m.Groups[len(m.Groups)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDeployment
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Version = append(m.Version[:0], dAtA[iNdEx:postIndex]...)
+			if m.Version == nil {
+				m.Version = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipDeployment(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgCloseDeployment) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowDeployment
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgCloseDeployment: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgCloseDeployment: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ID", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDeployment
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ID.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipDeployment(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthDeployment
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
 }
 func (m *DeploymentID) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -676,7 +1416,7 @@ func (m *Deployment) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.State |= github_com_ovrclk_akash_x_deployment_types.DeploymentState(b&0x7F) << shift
+				m.State |= DeploymentState(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -710,8 +1450,10 @@ func (m *Deployment) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Version = append(m.Version, make([]byte, postIndex-iNdEx))
-			copy(m.Version[len(m.Version)-1], dAtA[iNdEx:postIndex])
+			m.Version = append(m.Version[:0], dAtA[iNdEx:postIndex]...)
+			if m.Version == nil {
+				m.Version = []byte{}
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

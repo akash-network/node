@@ -3,14 +3,12 @@ package types
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
-
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
 //go:generate stringer -linecomment -output=autogen_stringer.go -type=OrderState,BidState,LeaseState
 
 // OrderState defines state of order
-type OrderState uint8
+type OrderState uint32
 
 const (
 	// OrderOpen is used when state of order is open
@@ -29,14 +27,14 @@ var OrderStateMap = map[string]OrderState{
 }
 
 // Order stores orderID, state of order and other details
-type Order struct {
-	OrderID `json:"id"`
-	State   OrderState `json:"state"`
+// type Order struct {
+// 	OrderID `json:"id"`
+// 	State   OrderState `json:"state"`
 
-	// block height to start matching
-	StartAt int64            `json:"start-at"`
-	Spec    dtypes.GroupSpec `json:"spec"`
-}
+// 	// block height to start matching
+// 	StartAt int64            `json:"start-at"`
+// 	Spec    dtypes.GroupSpec `json:"spec"`
+// }
 
 // ID method returns OrderID details of specific order
 func (o Order) ID() OrderID {
@@ -103,7 +101,7 @@ func (o Order) validateMatchableState() error {
 }
 
 // BidState defines state of bid
-type BidState uint8
+type BidState uint32
 
 const (
 	// BidOpen is used when state of bid is opened
@@ -125,11 +123,11 @@ var BidStateMap = map[string]BidState{
 }
 
 // Bid stores BidID, state of bid and price
-type Bid struct {
-	BidID `json:"id"`
-	State BidState `json:"state"`
-	Price sdk.Coin `json:"price"`
-}
+// type Bid struct {
+// 	BidID `json:"id"`
+// 	State BidState `json:"state"`
+// 	Price sdk.Coin `json:"price"`
+// }
 
 // ID method returns BidID details of specific bid
 func (obj Bid) ID() BidID {
@@ -137,7 +135,7 @@ func (obj Bid) ID() BidID {
 }
 
 // LeaseState defines state of Lease
-type LeaseState uint8
+type LeaseState uint32
 
 const (
 	// LeaseActive is used when state of lease is active
@@ -156,11 +154,11 @@ var LeaseStateMap = map[string]LeaseState{
 }
 
 // Lease stores LeaseID, state of lease and price
-type Lease struct {
-	LeaseID `json:"id"`
-	State   LeaseState `json:"state"`
-	Price   sdk.Coin   `json:"price"`
-}
+// type Lease struct {
+// 	LeaseID `json:"id"`
+// 	State   LeaseState `json:"state"`
+// 	Price   sdk.Coin   `json:"price"`
+// }
 
 // ID method returns LeaseID details of specific lease
 func (obj Lease) ID() LeaseID {

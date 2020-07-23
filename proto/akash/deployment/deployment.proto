@@ -6,6 +6,60 @@ import "akash/deployment/group.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";
 
+// MsgCreateDeployment defines an SDK message for creating deployment
+message MsgCreateDeployment {
+    option (gogoproto.equal) = false;
+
+    DeploymentID id = 1 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.customname) = "ID",
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+    repeated GroupSpec groups = 2 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "groups",
+        (gogoproto.moretags)   = "yaml:\"groups\""
+    ];
+    bytes version = 3 [
+        (gogoproto.jsontag)    = "version",
+        (gogoproto.moretags)   = "yaml:\"version\""
+    ];
+}
+
+// MsgUpdateDeployment defines an SDK message for updating deployment
+message MsgUpdateDeployment {
+    option (gogoproto.equal) = false;
+
+    DeploymentID id = 1 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.customname) = "ID",
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+    repeated GroupSpec groups = 2 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "groups",
+        (gogoproto.moretags)   = "yaml:\"groups\""
+    ];
+    bytes version = 3 [
+        (gogoproto.jsontag)    = "version",
+        (gogoproto.moretags)   = "yaml:\"version\""
+    ];
+}
+
+// MsgCloseDeployment defines an SDK message for closing deployment
+message MsgCloseDeployment {
+    option (gogoproto.equal) = true;
+
+    DeploymentID id = 1 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.customname) = "ID",
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+}
+
 // DeploymentID stores owner and sequence number
 message DeploymentID {
     option (gogoproto.equal) = true;
@@ -25,7 +79,7 @@ message DeploymentID {
 
 // Deployment stores deploymentID, state and version details
 message Deployment {
-    option (gogoproto.equal) = true;
+    option (gogoproto.equal) = false;
 
     DeploymentID deployment_id = 1 [
         (gogoproto.nullable)   = false,
@@ -34,11 +88,12 @@ message Deployment {
         (gogoproto.moretags)   = "yaml:\"id\""
     ];
     uint32 state = 2 [
-        (gogoproto.casttype) = "github.com/ovrclk/akash/x/deployment/types.DeploymentState",
-        (gogoproto.jsontag)  = "state",
+        (gogoproto.customtype) = "DeploymentState",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];
-    repeated bytes version = 3 [
+    bytes version = 3 [
         (gogoproto.jsontag)    = "version",
         (gogoproto.moretags)   = "yaml:\"version\""
     ];
