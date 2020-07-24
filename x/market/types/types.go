@@ -1,8 +1,11 @@
 package types
 
 import (
+	"strings"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v2"
 )
 
 //go:generate stringer -linecomment -output=autogen_stringer.go -type=OrderState,BidState,LeaseState
@@ -39,6 +42,25 @@ var OrderStateMap = map[string]OrderState{
 // ID method returns OrderID details of specific order
 func (o Order) ID() OrderID {
 	return o.OrderID
+}
+
+// String implements the Stringer interface for a Order object.
+func (o Order) String() string {
+	out, _ := yaml.Marshal(o)
+	return string(out)
+}
+
+// Orders is a collection of Order
+type Orders []Order
+
+// String implements the Stringer interface for a Orders object.
+func (o Orders) String() string {
+	var out string
+	for _, order := range o {
+		out += order.String() + "\n"
+	}
+
+	return strings.TrimSpace(out)
 }
 
 // ValidateCanBid method validates whether order is open or not and
@@ -100,6 +122,36 @@ func (o Order) validateMatchableState() error {
 	}
 }
 
+// Accept returns whether order filters valid or not
+func (filters OrderFilters) Accept(obj Order) bool {
+	// Checking owner filter
+	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.OrderID.Owner) {
+		return false
+	}
+
+	// Checking dseq filter
+	if filters.DSeq != 0 && filters.DSeq != obj.OrderID.DSeq {
+		return false
+	}
+
+	// Checking gseq filter
+	if filters.GSeq != 0 && filters.GSeq != obj.OrderID.GSeq {
+		return false
+	}
+
+	// Checking oseq filter
+	if filters.OSeq != 0 && filters.OSeq != obj.OrderID.OSeq {
+		return false
+	}
+
+	// Checking state filter
+	if filters.State != 0 && filters.State != obj.State {
+		return false
+	}
+
+	return true
+}
+
 // BidState defines state of bid
 type BidState uint32
 
@@ -134,6 +186,60 @@ func (obj Bid) ID() BidID {
 	return obj.BidID
 }
 
+// String implements the Stringer interface for a Bid object.
+func (obj Bid) String() string {
+	out, _ := yaml.Marshal(obj)
+	return string(out)
+}
+
+// Bids is a collection of Bid
+type Bids []Bid
+
+// String implements the Stringer interface for a Bids object.
+func (b Bids) String() string {
+	var out string
+	for _, bid := range b {
+		out += bid.String() + "\n"
+	}
+
+	return strings.TrimSpace(out)
+}
+
+// Accept returns whether bid filters valid or not
+func (filters BidFilters) Accept(obj Bid) bool {
+	// Checking owner filter
+	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.BidID.Owner) {
+		return false
+	}
+
+	// Checking dseq filter
+	if filters.DSeq != 0 && filters.DSeq != obj.BidID.DSeq {
+		return false
+	}
+
+	// Checking gseq filter
+	if filters.GSeq != 0 && filters.GSeq != obj.BidID.GSeq {
+		return false
+	}
+
+	// Checking oseq filter
+	if filters.OSeq != 0 && filters.OSeq != obj.BidID.OSeq {
+		return false
+	}
+
+	// Checking provider filter
+	if !filters.Provider.Empty() && !filters.Provider.Equals(obj.BidID.Provider) {
+		return false
+	}
+
+	// Checking state filter
+	if filters.State != 0 && filters.State != obj.State {
+		return false
+	}
+
+	return true
+}
+
 // LeaseState defines state of Lease
 type LeaseState uint32
 
@@ -163,4 +269,58 @@ var LeaseStateMap = map[string]LeaseState{
 // ID method returns LeaseID details of specific lease
 func (obj Lease) ID() LeaseID {
 	return obj.LeaseID
+}
+
+// String implements the Stringer interface for a Lease object.
+func (obj Lease) String() string {
+	out, _ := yaml.Marshal(obj)
+	return string(out)
+}
+
+// Leases is a collection of Lease
+type Leases []Lease
+
+// String implements the Stringer interface for a Leases object.
+func (l Leases) String() string {
+	var out string
+	for _, order := range l {
+		out += order.String() + "\n"
+	}
+
+	return strings.TrimSpace(out)
+}
+
+// Accept returns whether lease filters valid or not
+func (filters LeaseFilters) Accept(obj Lease) bool {
+	// Checking owner filter
+	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.LeaseID.Owner) {
+		return false
+	}
+
+	// Checking dseq filter
+	if filters.DSeq != 0 && filters.DSeq != obj.LeaseID.DSeq {
+		return false
+	}
+
+	// Checking gseq filter
+	if filters.GSeq != 0 && filters.GSeq != obj.LeaseID.GSeq {
+		return false
+	}
+
+	// Checking oseq filter
+	if filters.OSeq != 0 && filters.OSeq != obj.LeaseID.OSeq {
+		return false
+	}
+
+	// Checking provider filter
+	if !filters.Provider.Empty() && !filters.Provider.Equals(obj.LeaseID.Provider) {
+		return false
+	}
+
+	// Checking state filter
+	if filters.State != 0 && filters.State != obj.State {
+		return false
+	}
+
+	return true
 }

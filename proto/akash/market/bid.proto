@@ -77,6 +77,7 @@ message BidID {
 // Bid stores BidID, state of bid and price
 message Bid {
     option (gogoproto.equal) = false;
+    option (gogoproto.goproto_stringer) = false;
 
     BidID bid_id = 1 [
         (gogoproto.customname) = "BidID",
@@ -94,5 +95,42 @@ message Bid {
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "price",
         (gogoproto.moretags)   = "yaml:\"price\""
+    ];
+}
+
+// BidFilters defines flags for bid list filter
+message BidFilters {
+    option (gogoproto.equal) = false;
+
+    bytes owner = 1 [
+        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)    = "owner",
+        (gogoproto.moretags)   = "yaml:\"owner\""
+    ];
+    uint64 dseq = 2 [
+        (gogoproto.customname) = "DSeq",
+        (gogoproto.jsontag)    = "dseq",
+        (gogoproto.moretags)   = "yaml:\"dseq\""
+    ];
+    uint32 gseq = 3 [
+        (gogoproto.customname) = "GSeq",
+        (gogoproto.jsontag)    = "gseq",
+        (gogoproto.moretags)   = "yaml:\"gseq\""
+    ];
+    uint32 oseq = 4 [
+        (gogoproto.customname) = "OSeq",
+        (gogoproto.jsontag)    = "oseq",
+        (gogoproto.moretags)   = "yaml:\"oseq\""
+    ];
+    bytes provider = 5 [
+        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)    = "provider",
+        (gogoproto.moretags)   = "yaml:\"provider\""
+    ];
+    uint32 state = 6 [
+        (gogoproto.customtype) = "BidState",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "state",
+        (gogoproto.moretags)   = "yaml:\"state\""
     ];
 }

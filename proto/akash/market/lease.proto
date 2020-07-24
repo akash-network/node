@@ -41,6 +41,7 @@ message LeaseID {
 // Lease stores LeaseID, state of lease and price
 message Lease {
     option (gogoproto.equal) = false;
+    option (gogoproto.goproto_stringer) = false;
 
     LeaseID lease_id = 1 [
         (gogoproto.customname) = "LeaseID",
@@ -58,5 +59,42 @@ message Lease {
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "price",
         (gogoproto.moretags)   = "yaml:\"price\""
+    ];
+}
+
+// LeaseFilters defines flags for lease list filter
+message LeaseFilters {
+    option (gogoproto.equal) = false;
+
+    bytes owner = 1 [
+        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)    = "owner",
+        (gogoproto.moretags)   = "yaml:\"owner\""
+    ];
+    uint64 dseq = 2 [
+        (gogoproto.customname) = "DSeq",
+        (gogoproto.jsontag)    = "dseq",
+        (gogoproto.moretags)   = "yaml:\"dseq\""
+    ];
+    uint32 gseq = 3 [
+        (gogoproto.customname) = "GSeq",
+        (gogoproto.jsontag)    = "gseq",
+        (gogoproto.moretags)   = "yaml:\"gseq\""
+    ];
+    uint32 oseq = 4 [
+        (gogoproto.customname) = "OSeq",
+        (gogoproto.jsontag)    = "oseq",
+        (gogoproto.moretags)   = "yaml:\"oseq\""
+    ];
+    bytes provider = 5 [
+        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)    = "provider",
+        (gogoproto.moretags)   = "yaml:\"provider\""
+    ];
+    uint32 state = 6 [
+        (gogoproto.customtype) = "LeaseState",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "state",
+        (gogoproto.moretags)   = "yaml:\"state\""
     ];
 }

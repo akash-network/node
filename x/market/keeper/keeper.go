@@ -269,7 +269,7 @@ func (k Keeper) LeaseForOrder(ctx sdk.Context, oid types.OrderID) (types.Lease, 
 	)
 
 	k.WithBidsForOrder(ctx, oid, func(item types.Bid) bool {
-		if !item.OrderID().Equals(oid) {
+		if !item.ID().OrderID().Equals(oid) {
 			return false
 		}
 		if item.State != types.BidMatched {

@@ -48,6 +48,7 @@ message OrderID {
 // Order stores orderID, state of order and other details
 message Order {
     option (gogoproto.equal) = false;
+    option (gogoproto.goproto_stringer) = false;
 
     OrderID order_id = 1 [
         (gogoproto.customname) = "OrderID",
@@ -69,5 +70,37 @@ message Order {
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "spec",
         (gogoproto.moretags)   = "yaml:\"spec\""
+    ];
+}
+
+// OrderFilters defines flags for order list filter
+message OrderFilters {
+    option (gogoproto.equal) = false;
+
+    bytes owner = 1 [
+        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)    = "owner",
+        (gogoproto.moretags)   = "yaml:\"owner\""
+    ];
+    uint64 dseq = 2 [
+        (gogoproto.customname) = "DSeq",
+        (gogoproto.jsontag)    = "dseq",
+        (gogoproto.moretags)   = "yaml:\"dseq\""
+    ];
+    uint32 gseq = 3 [
+        (gogoproto.customname) = "GSeq",
+        (gogoproto.jsontag)    = "gseq",
+        (gogoproto.moretags)   = "yaml:\"gseq\""
+    ];
+    uint32 oseq = 4 [
+        (gogoproto.customname) = "OSeq",
+        (gogoproto.jsontag)    = "oseq",
+        (gogoproto.moretags)   = "yaml:\"oseq\""
+    ];
+    uint32 state = 5 [
+        (gogoproto.customtype) = "OrderState",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "state",
+        (gogoproto.moretags)   = "yaml:\"state\""
     ];
 }

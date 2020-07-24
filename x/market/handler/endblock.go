@@ -28,13 +28,13 @@ func transferFundsForActiveLeases(ctx sdk.Context, keepers Keepers) error {
 
 		amt := sdk.NewCoins(lease.Price)
 
-		if !keepers.Bank.HasCoins(ctx, lease.Owner, amt) {
-			keepers.Deployment.OnLeaseInsufficientFunds(ctx, lease.GroupID())
+		if !keepers.Bank.HasCoins(ctx, lease.ID().Owner, amt) {
+			keepers.Deployment.OnLeaseInsufficientFunds(ctx, lease.ID().GroupID())
 			keepers.Market.OnInsufficientFunds(ctx, lease)
 			return false
 		}
 
-		err := keepers.Bank.SendCoins(ctx, lease.Owner, lease.Provider, amt)
+		err := keepers.Bank.SendCoins(ctx, lease.ID().Owner, lease.ID().Provider, amt)
 
 		if err != nil {
 			ctx.Logger().Error("error transferring funds", "err", err)
@@ -79,7 +79,7 @@ func pickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 	// FNV hash provider addresses all of the bids
 	h := fnv.New32a()
 	bidIndex := 0
-	_, err = h.Write(bids[bidIndex+1].Provider.Bytes())
+	_, err = h.Write(bids[bidIndex+1].ID().Provider.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func pickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 		if !bids[bidIndex].Price.IsEqual(bids[bidIndex+1].Price) {
 			break
 		}
-		_, err := h.Write(bids[bidIndex+1].Provider.Bytes())
+		_, err := h.Write(bids[bidIndex+1].ID().Provider.Bytes())
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +136,7 @@ func matchOrders(ctx sdk.Context, keepers Keepers) error {
 		// set losing bids to state lost
 		// Set all but winning bid to State: Lost
 		for _, bid := range bids {
-			if winner.Equals(bid.BidID) {
+			if winner.ID().Equals(bid.BidID) {
 				continue // skip setting state to lost
 			}
 			keepers.Market.OnBidLost(ctx, bid)
@@ -146,7 +146,7 @@ func matchOrders(ctx sdk.Context, keepers Keepers) error {
 		keepers.Market.OnOrderMatched(ctx, order)
 
 		// notify group of match
-		keepers.Deployment.OnLeaseCreated(ctx, order.GroupID())
+		keepers.Deployment.OnLeaseCreated(ctx, order.ID().GroupID())
 
 		return false
 	})

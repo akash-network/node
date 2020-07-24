@@ -23,7 +23,7 @@ func (w *winnerTest) testFunc(t *testing.T) {
 	if !errors.Is(err, w.expErr) {
 		t.Errorf("returned err: %v does not match %v", err, w.expErr)
 	}
-	if w.expWinner != nil && !winner.Equals(w.expWinner.ID()) {
+	if w.expWinner != nil && !winner.ID().Equals(w.expWinner.ID()) {
 		t.Errorf("unexpected winner: %#v\n%q : %v", winner, types.BidIDString(winner.BidID), winner.Price)
 		t.Logf("winner: %+v coin: %s", winner.ID(), winner.Price.String())
 	}
@@ -115,7 +115,7 @@ func (td *testDist) testFunc(t *testing.T) {
 		// generate N bids all with the same bidding amount
 		for j := 0; j < td.bidNum; j++ {
 			b := createBid(t, originOID, 5)
-			bIndex[b.Provider.String()] = j
+			bIndex[b.ID().Provider.String()] = j
 			bids = append(bids, b)
 		}
 
@@ -124,7 +124,7 @@ func (td *testDist) testFunc(t *testing.T) {
 			t.Errorf("returned err: %v does not match %v", err, td.expErr)
 		}
 		// Check provider
-		slot := bIndex[winner.Provider.String()]
+		slot := bIndex[winner.ID().Provider.String()]
 		distributionSpread[slot]++
 	}
 
