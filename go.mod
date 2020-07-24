@@ -10,12 +10,13 @@ require (
 	github.com/caarlos0/env v3.3.0+incompatible
 	github.com/confio/ics23-iavl v0.6.0 // indirect
 	github.com/confio/ics23/go v0.0.0-20200604202538-6e2c36a74465 // indirect
-	github.com/cosmos/cosmos-sdk v0.34.4-0.20200720202246-efa73c7edb31
+	github.com/cosmos/cosmos-sdk v0.39.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/enigmampc/btcutil v1.0.3-0.20200723161021-e2fb6adb2a25 // indirect
 	github.com/fsnotify/fsnotify v1.4.8-0.20191012010759-4bf2d1fec783 // indirect
 	github.com/gibson042/canonicaljson-go v1.0.3 // indirect
-	github.com/gogo/protobuf v1.3.1
 	github.com/go-kit/kit v0.10.0
+	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.4.3 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
@@ -48,10 +49,10 @@ require (
 	github.com/tendermint/tendermint v0.33.6
 	github.com/tendermint/tm-db v0.5.1
 	github.com/vektra/mockery v1.1.2
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/tools v0.0.0-20200323144430-8dcfad9e016e
 	google.golang.org/appengine v1.6.6-0.20191016204603-16bce7d3dc4e // indirect
+	google.golang.org/grpc v1.30.0
 	google.golang.org/protobuf v1.24.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.18.2
@@ -63,4 +64,5 @@ require (
 )
 
 replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
-replace github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.34.4-0.20200720202246-efa73c7edb31
+
+replace github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.34.4-0.20200724024534-1538e65478d8
