@@ -1,7 +1,8 @@
 package types
 
 import (
-	fmt "fmt"
+	"bytes"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -160,7 +161,7 @@ func (r Resource) FullPrice() sdk.Coin {
 	return sdk.NewCoin(r.Price.Denom, r.Price.Amount.MulRaw(int64(r.Count)))
 }
 
-func (d *DeploymentResponse) String() string {
+func (d DeploymentResponse) String() string {
 	return fmt.Sprintf(`Deployment
 	Owner:   %s
 	DSeq:    %d
@@ -169,4 +170,44 @@ func (d *DeploymentResponse) String() string {
 	Num Groups: %d
 	`, d.Deployment.DeploymentID.Owner, d.Deployment.DeploymentID.DSeq,
 		d.Deployment.State, d.Deployment.Version, len(d.Groups))
+}
+
+// DeploymentResponses is a collection of DeploymentResponse
+type DeploymentResponses []DeploymentResponse
+
+func (ds DeploymentResponses) String() string {
+	var buf bytes.Buffer
+
+	const sep = "\n\n"
+
+	for _, d := range ds {
+		buf.WriteString(d.String())
+		buf.WriteString(sep)
+	}
+
+	if len(ds) > 0 {
+		buf.Truncate(buf.Len() - len(sep))
+	}
+
+	return buf.String()
+}
+
+// Accept returns whether deployment filters valid or not
+func (filters DeploymentFilters) Accept(obj Deployment) bool {
+	// Checking owner filter
+	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.DeploymentID.Owner) {
+		return false
+	}
+
+	// Checking dseq filter
+	if filters.DSeq != 0 && filters.DSeq != obj.DeploymentID.DSeq {
+		return false
+	}
+
+	// Checking state filter
+	if filters.State != 0 && filters.State != obj.State {
+		return false
+	}
+
+	return true
 }

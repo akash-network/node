@@ -4,6 +4,7 @@ package akash.deployment;
 import "gogoproto/gogo.proto";
 import "cosmos/query/pagination.proto";
 import "akash/deployment/deployment.proto";
+import "akash/deployment/group.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";
 
@@ -14,16 +15,21 @@ service Query {
 
     // Deployment queries deployment details
     rpc Deployment (QueryDeploymentRequest) returns (QueryDeploymentResponse) {}
+
+    // Group queries group details
+    rpc Group (QueryGroupRequest) returns (QueryGroupResponse) {}
 }
 
 // QueryDeploymentsRequest is request type for the Query/Deployments RPC method
 message QueryDeploymentsRequest{
-    cosmos.query.PageRequest pagination = 1;
+    DeploymentFilters Filters = 1 [(gogoproto.nullable) = false];
+
+    cosmos.query.PageRequest pagination = 2;
 }
 
 // QueryDeploymentsResponse is response type for the Query/Deployments RPC method
 message QueryDeploymentsResponse{
-    repeated DeploymentResponse Deployments = 1 [(gogoproto.nullable) = false];
+    repeated DeploymentResponse Deployments = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="DeploymentResponses"];
 
     cosmos.query.PageResponse pagination = 2;
 }
@@ -36,6 +42,14 @@ message QueryDeploymentRequest{
 // QueryDeploymentResponse is response type for the Query/Deployment RPC method
 message QueryDeploymentResponse{
     DeploymentResponse Deployment = 1 [(gogoproto.nullable) = false];
+}
 
+// QueryGroupRequest is request type for the Query/Group RPC method
+message QueryGroupRequest{
+    GroupID ID = 1 [(gogoproto.nullable) = false];
+}
 
+// QueryGroupResponse is response type for the Query/Group RPC method
+message QueryGroupResponse{
+    Group Group = 1 [(gogoproto.nullable) = false];
 }
