@@ -64,6 +64,7 @@ message MsgDeleteProvider {
 // Provider stores owner and host details
 message Provider {
     option (gogoproto.equal) = false;
+    option (gogoproto.goproto_stringer) = false;
 
     bytes owner = 1 [
         (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
