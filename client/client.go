@@ -45,7 +45,7 @@ type Client interface {
 	Tx() TxClient
 }
 
-// NewClient creates new client instance
+// NewClient creates new client instance to interface with terndermint.
 func NewClient(
 	log log.Logger,
 	cctx ccontext.CLIContext,
