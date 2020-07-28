@@ -110,6 +110,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts server.A
 
 	return app.NewApp(
 		logger, db, traceStore, cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)), skipUpgradeHeights,
+		cast.ToString(appOpts.Get(flags.FlagHome)),
 		baseapp.SetPruning(pruningOpts),
 		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(server.FlagMinGasPrices))),
 		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(server.FlagHaltHeight))),
@@ -123,7 +124,7 @@ func exportAppStateAndTMValidators(
 	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailWhiteList []string,
 ) (json.RawMessage, []tmtypes.GenesisValidator, *abci.ConsensusParams, error) {
 
-	app := app.NewApp(logger, db, ioutil.Discard, uint(1), map[int64]bool{})
+	app := app.NewApp(logger, db, ioutil.Discard, uint(1), map[int64]bool{}, "")
 
 	if height != -1 {
 		err := app.LoadHeight(height)
