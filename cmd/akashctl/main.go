@@ -1,18 +1,13 @@
 package main
 
 import (
-	"net/http"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
-	"github.com/cosmos/cosmos-sdk/client/lcd"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/version"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
-	"github.com/rakyll/statik/fs"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -64,7 +59,7 @@ func main() {
 		client.ConfigCmd(common.DefaultCLIHome()),
 		queryCmd(cdc),
 		txCmd(cdc),
-		lcd.ServeCommand(cdc, lcdRoutes),
+		// lcd.ServeCommand(cdc, lcdRoutes),
 		keys.Commands(),
 		version.Cmd,
 		flags.NewCompletionCmd(root, true),
@@ -123,18 +118,18 @@ func txCmd(cdc *amino.Codec) *cobra.Command {
 	return cmd
 }
 
-func lcdRoutes(rs *lcd.RestServer) {
-	client.RegisterRoutes(rs.CliCtx, rs.Mux)
-	authrest.RegisterTxRoutes(rs.CliCtx, rs.Mux)
-	app.ModuleBasics().RegisterRESTRoutes(rs.CliCtx, rs.Mux)
-	registerSwaggerUI(rs)
-}
+// func lcdRoutes(rs *lcd.RestServer) {
+// 	client.RegisterRoutes(rs.CliCtx, rs.Mux)
+// 	authrest.RegisterTxRoutes(rs.CliCtx, rs.Mux)
+// 	app.ModuleBasics().RegisterRESTRoutes(rs.CliCtx, rs.Mux)
+// 	registerSwaggerUI(rs)
+// }
 
-func registerSwaggerUI(rs *lcd.RestServer) {
-	statikFS, err := fs.New()
-	if err != nil {
-		panic(err)
-	}
-	staticServer := http.FileServer(statikFS)
-	rs.Mux.PathPrefix("/").Handler(staticServer)
-}
+// func registerSwaggerUI(rs *lcd.RestServer) {
+// 	statikFS, err := fs.New()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	staticServer := http.FileServer(statikFS)
+// 	rs.Mux.PathPrefix("/").Handler(staticServer)
+// }

@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/crypto/keys"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 
@@ -14,8 +14,8 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
-func Keyring(t testing.TB) keys.Keybase {
-	obj := keys.NewInMemory()
+func Keyring(t testing.TB) keyring.Keyring {
+	obj := keyring.NewInMemory()
 	return obj
 }
 

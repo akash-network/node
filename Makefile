@@ -245,3 +245,106 @@ test-sim-after-import:
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
 test-sims: test-sim-fullapp test-sim-nondeterminism test-sim-import-export test-sim-after-import
+
+###############################################################################
+###                           Protobuf                                    ###
+###############################################################################
+
+proto-gen:
+	@./script/protocgen.sh
+
+proto-lint:
+	@buf check lint --error-format=json
+
+proto-check-breaking:
+	@buf check breaking --against-input '.git#branch=master'
+
+TM_URL           = https://raw.githubusercontent.com/tendermint/tendermint/v0.33.1
+GOGO_PROTO_URL   = https://raw.githubusercontent.com/regen-network/protobuf/cosmos
+COSMOS_PROTO_URL = https://raw.githubusercontent.com/regen-network/cosmos-proto/master
+COSMOS_SDK_PROTO_URL = https://raw.githubusercontent.com/cosmos/cosmos-sdk/master/proto/cosmos
+
+TM_KV_TYPES         = third_party/proto/tendermint/libs/kv
+TM_MERKLE_TYPES     = third_party/proto/tendermint/crypto/merkle
+TM_ABCI_TYPES       = third_party/proto/tendermint/abci/types
+GOGO_PROTO_TYPES    = third_party/proto/gogoproto
+COSMOS_PROTO_TYPES  = third_party/proto/cosmos_proto
+COSMOS_SDK_PROTO_TYPES  = third_party/proto/cosmos
+
+proto-update-deps:
+	@mkdir -p $(GOGO_PROTO_TYPES)
+	@curl -sSL $(GOGO_PROTO_URL)/gogoproto/gogo.proto > $(GOGO_PROTO_TYPES)/gogo.proto
+
+	@mkdir -p $(COSMOS_PROTO_TYPES)
+	@curl -sSL $(COSMOS_PROTO_URL)/cosmos.proto > $(COSMOS_PROTO_TYPES)/cosmos.proto
+
+	## Importing of tendermint protobuf definitions currently requires the
+## use of `sed` in order to build properly with cosmos-sdk's proto file layout
+## (which is the standard Buf.build FILE_LAYOUT)
+## Issue link: https://github.com/tendermint/tendermint/issues/5021
+	@mkdir -p $(TM_ABCI_TYPES)
+	@curl -sSL $(TM_URL)/abci/types/types.proto > $(TM_ABCI_TYPES)/types.proto
+	@sed -i '7 s|third_party/proto/||g' $(TM_ABCI_TYPES)/types.proto
+	@sed -i '8 s|crypto/merkle/merkle.proto|tendermint/crypto/merkle/merkle.proto|g' $(TM_ABCI_TYPES)/types.proto
+	@sed -i '9 s|libs/kv/types.proto|tendermint/libs/kv/types.proto|g' $(TM_ABCI_TYPES)/types.proto
+
+	@mkdir -p $(TM_KV_TYPES)
+	@curl -sSL $(TM_URL)/libs/kv/types.proto > $(TM_KV_TYPES)/types.proto
+	@sed -i '5 s|third_party/proto/||g' $(TM_KV_TYPES)/types.proto
+
+	@mkdir -p $(TM_MERKLE_TYPES)
+	@curl -sSL $(TM_URL)/crypto/merkle/merkle.proto > $(TM_MERKLE_TYPES)/merkle.proto
+	@sed -i '7 s|third_party/proto/||g' $(TM_MERKLE_TYPES)/merkle.proto
+
+	@mkdir -p $(COSMOS_SDK_PROTO_TYPES)
+	@curl -sSL $(COSMOS_SDK_PROTO_URL)/cosmos.proto > $(COSMOS_SDK_PROTO_TYPES)/cosmos.proto
+
+	@mkdir -p $(COSMOS_SDK_PROTO_TYPES)/query
+	@curl -sSL $(COSMOS_SDK_PROTO_URL)/query/pagination.proto > $(COSMOS_SDK_PROTO_TYPES)/query/pagination.proto
+
+PREFIX ?= /usr/local
+BIN ?= $(PREFIX)/bin
+UNAME_S ?= $(shell uname -s)
+UNAME_M ?= $(shell uname -m)
+
+BUF_VERSION ?= 0.11.0
+
+PROTOC_VERSION ?= 3.11.2
+ifeq ($(UNAME_S),Linux)
+  PROTOC_ZIP ?= protoc-3.11.2-linux-x86_64.zip
+endif
+ifeq ($(UNAME_S),Darwin)
+  PROTOC_ZIP ?= protoc-3.11.2-osx-x86_64.zip
+endif
+
+proto-tools: proto-tools-stamp buf
+
+proto-tools-stamp:
+	@echo "Installing protoc compiler..."
+	@(cd /tmp; \
+	curl -OL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
+	unzip -o ${PROTOC_ZIP} -d $(PREFIX) bin/protoc; \
+	unzip -o ${PROTOC_ZIP} -d $(PREFIX) 'include/*'; \
+	rm -f ${PROTOC_ZIP})
+
+	@echo "Installing protoc-gen-gocosmos..."
+	@go install github.com/regen-network/cosmos-proto/protoc-gen-gocosmos
+
+	# Create dummy file to satisfy dependency and avoid
+	# rebuilding when this Makefile target is hit twice
+	# in a row
+	touch $@
+
+buf: buf-stamp
+
+buf-stamp:
+	@echo "Installing buf..."
+	@curl -sSL \
+    "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-${UNAME_S}-${UNAME_M}" \
+    -o "${BIN}/buf" && \
+	chmod +x "${BIN}/buf"
+
+	touch $@
+
+tools-clean:
+	rm -f proto-tools-stamp buf-stamp

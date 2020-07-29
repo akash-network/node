@@ -1,0 +1,103 @@
+syntax = "proto3";
+package akash.deployment;
+
+import "gogoproto/gogo.proto";
+import "akash/resource.proto";
+import "cosmos/cosmos.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types";
+
+// MsgCloseGroup defines SDK message to close a single Group within a Deployment.
+message MsgCloseGroup {
+    option (gogoproto.equal) = false;
+
+    GroupID id = 1 [
+        (gogoproto.customname) = "ID",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+}
+
+// GroupID stores owner, deployment sequence number and group sequence number
+message GroupID {
+    option (gogoproto.equal) = true;
+    option (gogoproto.goproto_stringer) = false;
+
+    bytes owner = 1 [
+        (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)  = "owner",
+        (gogoproto.moretags) = "yaml:\"owner\""
+    ];
+    uint64 dseq = 2 [
+        (gogoproto.customname) = "DSeq",
+        (gogoproto.jsontag)    = "dseq",
+        (gogoproto.moretags)   = "yaml:\"dseq\""
+    ];
+    uint32 gseq = 3 [
+        (gogoproto.customname) = "GSeq",
+        (gogoproto.jsontag)    = "gseq",
+        (gogoproto.moretags)   = "yaml:\"gseq\""
+    ];
+}
+
+message GroupSpec {
+    option (gogoproto.equal) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    string name = 1 [
+        (gogoproto.jsontag)    = "name",
+        (gogoproto.moretags)   = "yaml:\"name\""
+    ];
+    repeated cosmos.Attribute requirements = 2 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "requirements",
+        (gogoproto.moretags)   = "yaml:\"requirements\""
+    ];
+    repeated Resource resources = 3 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "resources",
+        (gogoproto.moretags)   = "yaml:\"resources\""
+    ];
+}
+
+message Group {
+    option (gogoproto.equal) = false;
+
+    GroupID group_id = 1 [
+        (gogoproto.customname) = "GroupID",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+    uint32 state = 2 [
+        (gogoproto.customtype) = "GroupState",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "state",
+        (gogoproto.moretags)   = "yaml:\"state\""
+    ];
+    GroupSpec group_spec = 3 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "spec",
+        (gogoproto.moretags)   = "yaml:\"spec\""
+    ];
+}
+
+message Resource {
+    option (gogoproto.equal) = true;
+    
+    akash.Unit unit = 1 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "unit",
+        (gogoproto.moretags)   = "yaml:\"unit\""
+    ];
+    uint32 count = 2 [
+        (gogoproto.jsontag)    = "count",
+        (gogoproto.moretags)   = "yaml:\"count\""
+    ];
+    cosmos.Coin price = 3 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "price",
+        (gogoproto.moretags)   = "yaml:\"price\""
+    ];
+}

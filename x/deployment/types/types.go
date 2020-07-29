@@ -1,6 +1,8 @@
 package types
 
 import (
+	fmt "fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/types"
@@ -9,7 +11,7 @@ import (
 //go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
 
 // DeploymentState defines state of deployment
-type DeploymentState uint8
+type DeploymentState uint32
 
 const (
 	// DeploymentActive is used when state of deployment is active
@@ -25,11 +27,11 @@ var DeploymentStateMap = map[string]DeploymentState{
 }
 
 // Deployment stores deploymentID, state and version details
-type Deployment struct {
-	DeploymentID `json:"id"`
-	State        DeploymentState `json:"state"`
-	Version      []byte          `json:"version"`
-}
+// type Deployment struct {
+// 	DeploymentID `json:"id"`
+// 	State        DeploymentState `json:"state"`
+// 	Version      []byte          `json:"version"`
+// }
 
 // ID method returns DeploymentID details of specific deployment
 func (obj Deployment) ID() DeploymentID {
@@ -37,7 +39,7 @@ func (obj Deployment) ID() DeploymentID {
 }
 
 // GroupState defines state of group
-type GroupState uint8
+type GroupState uint32
 
 const (
 	// GroupOpen is used when state of group is open
@@ -53,11 +55,11 @@ const (
 )
 
 // GroupSpec stores group specifications
-type GroupSpec struct {
-	Name         string          `json:"name"`
-	Requirements []sdk.Attribute `json:"requirements"`
-	Resources    []Resource      `json:"resources"`
-}
+// type GroupSpec struct {
+// 	Name         string          `json:"name"`
+// 	Requirements []sdk.Attribute `json:"requirements"`
+// 	Resources    []Resource      `json:"resources"`
+// }
 
 // GetResources method returns resources list in group
 func (g GroupSpec) GetResources() []types.Resource {
@@ -104,11 +106,11 @@ loop:
 }
 
 // Group stores groupID, state and other specifications
-type Group struct {
-	GroupID   `json:"id"`
-	State     GroupState `json:"state"`
-	GroupSpec `json:"spec"`
-}
+// type Group struct {
+// 	GroupID   `json:"id"`
+// 	State     GroupState `json:"state"`
+// 	GroupSpec `json:"spec"`
+// }
 
 // ID method returns GroupID details of specific group
 func (g Group) ID() GroupID {
@@ -136,24 +138,35 @@ func (g Group) ValidateClosable() error {
 	}
 }
 
-// Resource stores unit, count and price of each resource
-type Resource struct {
-	Unit  types.Unit `json:"unit"`
-	Count uint32     `json:"count"`
-	Price sdk.Coin   `json:"price"`
-}
+// // Resource stores unit, count and price of each resource
+// type Resource struct {
+// 	Unit  types.Unit `json:"unit"`
+// 	Count uint32     `json:"count"`
+// 	Price sdk.Coin   `json:"price"`
+// }
 
-// GetUnit method returns unit of resource
-func (r Resource) GetUnit() types.Unit {
-	return r.Unit
-}
+// // GetUnit method returns unit of resource
+// func (r Resource) GetUnit() types.Unit {
+// 	return r.Unit
+// }
 
-// GetCount method returns count of resource
-func (r Resource) GetCount() uint32 {
-	return r.Count
-}
+// // GetCount method returns count of resource
+// func (r Resource) GetCount() uint32 {
+// 	return r.Count
+// }
 
 // FullPrice method returns full price of resource
 func (r Resource) FullPrice() sdk.Coin {
 	return sdk.NewCoin(r.Price.Denom, r.Price.Amount.MulRaw(int64(r.Count)))
+}
+
+func (d *DeploymentResponse) String() string {
+	return fmt.Sprintf(`Deployment
+	Owner:   %s
+	DSeq:    %d
+	State:   %v
+	Version: %s
+	Num Groups: %d
+	`, d.Deployment.DeploymentID.Owner, d.Deployment.DeploymentID.DSeq,
+		d.Deployment.State, d.Deployment.Version, len(d.Groups))
 }
