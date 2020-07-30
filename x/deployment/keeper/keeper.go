@@ -10,11 +10,11 @@ import (
 // Keeper of the deployment store
 type Keeper struct {
 	skey sdk.StoreKey
-	cdc  *codec.Codec
+	cdc  codec.BinaryMarshaler
 }
 
 // NewKeeper creates and returns an instance for deployment keeper
-func NewKeeper(cdc *codec.Codec, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey) Keeper {
 	return Keeper{
 		skey: skey,
 		cdc:  cdc,
@@ -22,7 +22,7 @@ func NewKeeper(cdc *codec.Codec, skey sdk.StoreKey) Keeper {
 }
 
 // Codec returns keeper codec
-func (k Keeper) Codec() *codec.Codec {
+func (k Keeper) Codec() codec.BinaryMarshaler {
 	return k.cdc
 }
 
@@ -114,14 +114,14 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 		return types.ErrDeploymentExists
 	}
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(deployment))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&deployment))
 
 	for _, group := range groups {
 		if !group.ID().DeploymentID().Equals(deployment.ID()) {
 			return types.ErrInvalidGroupID
 		}
 		gkey := groupKey(group.ID())
-		store.Set(gkey, k.cdc.MustMarshalBinaryBare(group))
+		store.Set(gkey, k.cdc.MustMarshalBinaryBare(&group))
 		k.updateOpenGroupsIndex(ctx, group)
 	}
 
@@ -147,7 +147,7 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(deployment))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&deployment))
 	return nil
 }
 
@@ -166,7 +166,7 @@ func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group) error {
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(group))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&group))
 	k.updateOpenGroupsIndex(ctx, group)
 	return nil
 }
@@ -258,7 +258,7 @@ func (k Keeper) OnDeploymentClosed(ctx sdk.Context, group types.Group) {
 	k.updateGroup(ctx, group)
 
 	ctx.EventManager().EmitEvent(
-		types.NewEventDeploymentClosed(group.DeploymentID()).
+		types.NewEventDeploymentClosed(group.ID().DeploymentID()).
 			ToSDKEvent(),
 	)
 }
@@ -267,7 +267,7 @@ func (k Keeper) updateGroup(ctx sdk.Context, group types.Group) {
 	store := ctx.KVStore(k.skey)
 	key := groupKey(group.ID())
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(group))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&group))
 	k.updateOpenGroupsIndex(ctx, group)
 }
 

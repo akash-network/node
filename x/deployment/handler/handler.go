@@ -15,14 +15,16 @@ import (
 // NewHandler returns a handler for "deployment" type messages
 func NewHandler(keeper keeper.Keeper, mkeeper MarketKeeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
+		ctx = ctx.WithEventManager(sdk.NewEventManager())
+
 		switch msg := msg.(type) {
-		case types.MsgCreateDeployment:
+		case *types.MsgCreateDeployment:
 			return handleMsgCreate(ctx, keeper, mkeeper, msg)
-		case types.MsgUpdateDeployment:
+		case *types.MsgUpdateDeployment:
 			return handleMsgUpdate(ctx, keeper, mkeeper, msg)
-		case types.MsgCloseDeployment:
+		case *types.MsgCloseDeployment:
 			return handleMsgCloseDeployment(ctx, keeper, mkeeper, msg)
-		case types.MsgCloseGroup:
+		case *types.MsgCloseGroup:
 			return handleMsgCloseGroup(ctx, keeper, mkeeper, msg)
 		default:
 			return nil, sdkerrors.ErrUnknownRequest
@@ -30,7 +32,7 @@ func NewHandler(keeper keeper.Keeper, mkeeper MarketKeeper) sdk.Handler {
 	}
 }
 
-func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg types.MsgCreateDeployment) (*sdk.Result, error) {
+func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg *types.MsgCreateDeployment) (*sdk.Result, error) {
 	if _, found := keeper.GetDeployment(ctx, msg.ID); found {
 		return nil, types.ErrDeploymentExists
 	}
@@ -60,11 +62,11 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg 
 	}
 
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }
 
-func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg types.MsgUpdateDeployment) (*sdk.Result, error) {
+func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg *types.MsgUpdateDeployment) (*sdk.Result, error) {
 	deployment, found := keeper.GetDeployment(ctx, msg.ID)
 	if !found {
 		return nil, types.ErrDeploymentNotFound
@@ -79,11 +81,11 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg 
 	}
 
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }
 
-func handleMsgCloseDeployment(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgCloseDeployment) (*sdk.Result, error) {
+func handleMsgCloseDeployment(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg *types.MsgCloseDeployment) (*sdk.Result, error) {
 
 	deployment, found := keeper.GetDeployment(ctx, msg.ID)
 	if !found {
@@ -106,11 +108,11 @@ func handleMsgCloseDeployment(ctx sdk.Context, keeper keeper.Keeper, mkeeper Mar
 	}
 
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }
 
-func handleMsgCloseGroup(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg types.MsgCloseGroup) (*sdk.Result, error) {
+func handleMsgCloseGroup(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper, msg *types.MsgCloseGroup) (*sdk.Result, error) {
 	group, found := keeper.GetGroup(ctx, msg.ID)
 	if !found {
 		return nil, types.ErrGroupNotFound
@@ -130,6 +132,6 @@ func handleMsgCloseGroup(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKe
 	mkeeper.OnGroupClosed(ctx, group.ID())
 
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }
