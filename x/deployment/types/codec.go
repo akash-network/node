@@ -33,7 +33,7 @@ func RegisterCodec(cdc *codec.Codec) {
 	cdc.RegisterConcrete(&MsgCloseGroup{}, ModuleName+"/"+MsgTypeCloseGroup, nil)
 }
 
-// RegisterInterfaces registers the x/market interfaces types with the interface registry
+// RegisterInterfaces registers the x/deployment interfaces types with the interface registry
 func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	registry.RegisterImplementations((*sdk.Msg)(nil),
 		&MsgCreateDeployment{},

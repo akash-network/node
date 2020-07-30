@@ -134,7 +134,7 @@ func (am AppModule) QuerierRoute() string {
 	return types.ModuleName
 }
 
-// LegacyQuerierHandler returns the sdk.Querier for market module
+// LegacyQuerierHandler returns the sdk.Querier for deployment module
 func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc codec.JSONMarshaler) sdk.Querier {
 	return query.NewQuerier(am.keeper, legacyQuerierCdc)
 }
