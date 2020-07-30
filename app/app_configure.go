@@ -37,7 +37,7 @@ func (app *AkashApp) setAkashKeepers() {
 	)
 
 	app.keeper.provider = provider.NewKeeper(
-		app.cdc,
+		app.appCodec,
 		app.keys[provider.StoreKey],
 	)
 }
@@ -57,7 +57,7 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 			app.keeper.bank,
 		),
 
-		provider.NewAppModule(app.keeper.provider, app.keeper.bank, app.keeper.market),
+		provider.NewAppModule(app.appCodec, app.keeper.provider, app.keeper.bank, app.keeper.market),
 	}
 }
 
@@ -80,6 +80,6 @@ func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 		deployment.NewAppModuleSimulation(app.keeper.deployment, app.keeper.acct),
 		market.NewAppModuleSimulation(app.keeper.market, app.keeper.acct, app.keeper.deployment,
 			app.keeper.provider, app.keeper.bank),
-		provider.NewAppModuleSimulation(app.keeper.provider, app.keeper.acct),
+		provider.NewAppModuleSimulation(app.keeper.provider, app.keeper.acct, app.keeper.bank),
 	}
 }
