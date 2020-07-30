@@ -12,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -67,10 +68,11 @@ func main() {
 
 		genutilcli.GenTxCmd(
 			app.ModuleBasics(),
+			encodingConfig.TxConfig,
 			banktypes.GenesisBalancesIterator{},
 			common.DefaultNodeHome()),
 
-		genutilcli.ValidateGenesisCmd(app.ModuleBasics()),
+		genutilcli.ValidateGenesisCmd(app.ModuleBasics(), encodingConfig.TxConfig),
 		AddGenesisAccountCmd(common.DefaultNodeHome(), common.DefaultCLIHome()),
 
 		cli.NewCompletionCmd(root, true),
@@ -91,7 +93,7 @@ func main() {
 
 }
 
-func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts server.AppOptions) server.Application {
+func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
 	var cache sdk.MultiStorePersistentCache
 
 	if cast.ToBool(appOpts.Get(server.FlagInterBlockCache)) {
