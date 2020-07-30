@@ -98,16 +98,15 @@ func pickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 	return &bids[n], nil
 }
 
+// matchOrders that are open, picks a winning Bid, creates a Lease, and closes
+// originating Order.
 func matchOrders(ctx sdk.Context, keepers Keepers) error {
-
-	// match unmatched orders.
-	keepers.Market.WithOrders(ctx, func(order types.Order) bool {
+	keepers.Market.WithOpenOrders(ctx, func(order types.Order) bool {
 		if err := order.ValidateCanMatch(ctx.BlockHeight()); err != nil {
 			return false
 		}
 
 		var bids []types.Bid
-
 		keepers.Market.WithBidsForOrder(ctx, order.ID(), func(bid types.Bid) bool {
 			if bid.State != types.BidOpen {
 				return false
