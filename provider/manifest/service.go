@@ -163,7 +163,6 @@ loop:
 				s.handleLease(ev)
 
 			case dtypes.EventDeploymentUpdated:
-
 				s.session.Log().Info("update received", "deployment", ev.ID, "version", ev.Version)
 
 				key := dquery.DeploymentPath(ev.ID)

@@ -73,13 +73,17 @@ func Read(buf []byte) (SDL, error) {
 }
 
 // Version creates the deterministic Deployment Version hash from the SDL.
-// Sha256 returns 32 byte  sum of the SDL.
 func Version(s SDL) ([]byte, error) {
 	manifest, err := s.Manifest()
 	if err != nil {
 		return nil, err
 	}
+	return ManifestVersion(manifest)
+}
 
+// ManifestVersion calculates the identifying deterministic hash for an SDL.
+// Sha256 returns 32 byte  sum of the SDL.
+func ManifestVersion(manifest manifest.Manifest) ([]byte, error) {
 	m, err := json.Marshal(manifest)
 	if err != nil {
 		return nil, err

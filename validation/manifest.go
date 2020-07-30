@@ -35,7 +35,7 @@ func ValidateManifestWithGroupSpecs(m *manifest.Manifest, gspecs []*dtypes.Group
 
 // ValidateManifestWithDeployment does basic validation and returns nil
 func ValidateManifestWithDeployment(m *manifest.Manifest, dgroups []dtypes.Group) error {
-	// TODO
+	// TODO: re-enable
 	// rlists := make([]types.ResourceList, 0, len(dgroups))
 	// for _, dgroup := range dgroups {
 	// 	rlists = append(rlists, dgroup)
