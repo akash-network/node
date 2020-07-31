@@ -7,7 +7,7 @@ import (
 	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
-func getOrdersWithState(ctx sdk.Context, ks keepers.Keepers, state types.OrderState) []types.Order {
+func getOrdersWithState(ctx sdk.Context, ks keepers.Keepers, state types.Order_State) []types.Order {
 	var orders []types.Order
 
 	ks.Market.WithOrders(ctx, func(order types.Order) bool {

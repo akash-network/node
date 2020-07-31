@@ -56,9 +56,26 @@ message Order {
         (gogoproto.jsontag)    = "id",
         (gogoproto.moretags)   = "yaml:\"id\""
     ];
-    uint32 state = 2 [
-        (gogoproto.customtype) = "OrderState",
-        (gogoproto.nullable)   = false,
+
+    enum State {
+        option (gogoproto.goproto_enum_prefix) = false;
+
+        // Prefix should start with 0 in enum. So declaring dummy state
+        all = 0 [
+            (gogoproto.enumvalue_customname) = "OrderStateDefault"
+        ];
+        open = 1 [
+            (gogoproto.enumvalue_customname) = "OrderOpen"
+        ];
+        matched = 2 [
+            (gogoproto.enumvalue_customname) = "OrderMatched"
+        ]; 
+        closed = 3 [
+            (gogoproto.enumvalue_customname) = "OrderClosed"
+        ];
+    }
+
+    State state = 2 [
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];
@@ -97,9 +114,8 @@ message OrderFilters {
         (gogoproto.jsontag)    = "oseq",
         (gogoproto.moretags)   = "yaml:\"oseq\""
     ];
-    uint32 state = 5 [
-        (gogoproto.customtype) = "OrderState",
-        (gogoproto.nullable)   = false,
+    int32 state = 5 [
+        (gogoproto.casttype)   = "Order_State",
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];

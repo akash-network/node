@@ -85,9 +85,29 @@ message Bid {
         (gogoproto.jsontag)    = "id",
         (gogoproto.moretags)   = "yaml:\"id\""
     ];
-    uint32 state = 2 [
-        (gogoproto.customtype) = "BidState",
-        (gogoproto.nullable)   = false,
+
+    enum State {
+        option (gogoproto.goproto_enum_prefix) = false;
+
+        // Prefix should start with 0 in enum. So declaring dummy state
+        all = 0 [
+            (gogoproto.enumvalue_customname) = "BidStateDefault"
+        ];
+        open = 1 [
+            (gogoproto.enumvalue_customname) = "BidOpen"
+        ];
+        matched = 2 [
+            (gogoproto.enumvalue_customname) = "BidMatched"
+        ];
+        lost = 3 [
+            (gogoproto.enumvalue_customname) = "BidLost"
+        ];
+        closed = 4 [
+            (gogoproto.enumvalue_customname) = "BidClosed"
+        ];
+    }
+
+    State state = 2 [
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];
@@ -127,9 +147,8 @@ message BidFilters {
         (gogoproto.jsontag)    = "provider",
         (gogoproto.moretags)   = "yaml:\"provider\""
     ];
-    uint32 state = 6 [
-        (gogoproto.customtype) = "BidState",
-        (gogoproto.nullable)   = false,
+    int32 state = 6 [
+        (gogoproto.casttype)   = "Bid_State",
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];

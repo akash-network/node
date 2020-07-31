@@ -8,26 +8,26 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-//go:generate stringer -linecomment -output=autogen_stringer.go -type=OrderState,BidState,LeaseState
+// //go:generate stringer -linecomment -output=autogen_stringer.go -type=OrderState,BidState,LeaseState
 
-// OrderState defines state of order
-type OrderState uint32
+// // OrderState defines state of order
+// type OrderState uint32
 
-const (
-	// OrderOpen is used when state of order is open
-	OrderOpen OrderState = iota + 1 // order
-	// OrderMatched is used when state of order is matched
-	OrderMatched // matched
-	// OrderClosed is used when state of order is closed
-	OrderClosed // closed
-)
+// const (
+// 	// OrderOpen is used when state of order is open
+// 	OrderOpen OrderState = iota + 1 // open
+// 	// OrderMatched is used when state of order is matched
+// 	OrderMatched // matched
+// 	// OrderClosed is used when state of order is closed
+// 	OrderClosed // closed
+// )
 
-// OrderStateMap is used to decode order state flag value
-var OrderStateMap = map[string]OrderState{
-	"open":    OrderOpen,
-	"matched": OrderMatched,
-	"closed":  OrderClosed,
-}
+// // OrderStateMap is used to decode order state flag value
+// var OrderStateMap = map[string]OrderState{
+// 	"open":    OrderOpen,
+// 	"matched": OrderMatched,
+// 	"closed":  OrderClosed,
+// }
 
 // Order stores orderID, state of order and other details
 // type Order struct {
@@ -152,27 +152,27 @@ func (filters OrderFilters) Accept(obj Order) bool {
 	return true
 }
 
-// BidState defines state of bid
-type BidState uint32
+// // BidState defines state of bid
+// type BidState uint32
 
-const (
-	// BidOpen is used when state of bid is opened
-	BidOpen BidState = iota + 1 // open
-	// BidMatched is used when state of bid is matched
-	BidMatched // matched
-	// BidLost is used when state of bid is lost
-	BidLost // lost
-	// BidClosed is used when state of bid is closed
-	BidClosed // closed
-)
+// const (
+// 	// BidOpen is used when state of bid is opened
+// 	BidOpen BidState = iota + 1 // open
+// 	// BidMatched is used when state of bid is matched
+// 	BidMatched // matched
+// 	// BidLost is used when state of bid is lost
+// 	BidLost // lost
+// 	// BidClosed is used when state of bid is closed
+// 	BidClosed // closed
+// )
 
-// BidStateMap is used to decode bid state flag value
-var BidStateMap = map[string]BidState{
-	"open":    BidOpen,
-	"matched": BidMatched,
-	"lost":    BidLost,
-	"closed":  BidClosed,
-}
+// // BidStateMap is used to decode bid state flag value
+// var BidStateMap = map[string]BidState{
+// 	"open":    BidOpen,
+// 	"matched": BidMatched,
+// 	"lost":    BidLost,
+// 	"closed":  BidClosed,
+// }
 
 // Bid stores BidID, state of bid and price
 // type Bid struct {
@@ -240,24 +240,24 @@ func (filters BidFilters) Accept(obj Bid) bool {
 	return true
 }
 
-// LeaseState defines state of Lease
-type LeaseState uint32
+// // LeaseState defines state of Lease
+// type LeaseState uint32
 
-const (
-	// LeaseActive is used when state of lease is active
-	LeaseActive LeaseState = iota + 1 // active
-	// LeaseInsufficientFunds is used when lease has insufficient funds
-	LeaseInsufficientFunds // insufficient-funds
-	// LeaseClosed is used when state of lease is closed
-	LeaseClosed // closed
-)
+// const (
+// 	// LeaseActive is used when state of lease is active
+// 	LeaseActive LeaseState = iota + 1 // active
+// 	// LeaseInsufficientFunds is used when lease has insufficient funds
+// 	LeaseInsufficientFunds // insufficient_funds
+// 	// LeaseClosed is used when state of lease is closed
+// 	LeaseClosed // closed
+// )
 
-// LeaseStateMap is used to decode lease state flag value
-var LeaseStateMap = map[string]LeaseState{
-	"active":             LeaseActive,
-	"insufficient-funds": LeaseInsufficientFunds,
-	"closed":             LeaseClosed,
-}
+// // LeaseStateMap is used to decode lease state flag value
+// var LeaseStateMap = map[string]LeaseState{
+// 	"active":             LeaseActive,
+// 	"insufficient_funds": LeaseInsufficientFunds,
+// 	"closed":             LeaseClosed,
+// }
 
 // Lease stores LeaseID, state of lease and price
 // type Lease struct {
