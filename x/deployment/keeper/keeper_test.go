@@ -328,7 +328,7 @@ func createActiveDeployment(t testing.TB, ctx sdk.Context, keeper keeper.Keeper)
 	return groups
 }
 
-func createDeploymentsWithState(t testing.TB, ctx sdk.Context, gState types.GroupState, keeper keeper.Keeper) []types.Group {
+func createDeploymentsWithState(t testing.TB, ctx sdk.Context, gState types.Group_State, keeper keeper.Keeper) []types.Group {
 	t.Helper()
 
 	deployment := testutil.Deployment(t)

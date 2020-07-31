@@ -76,7 +76,7 @@ func parseDepFiltersPath(parts []string) (DeploymentFilters, bool, error) {
 		return DeploymentFilters{}, false, ErrOwnerValue
 	}
 
-	state, ok := types.DeploymentStateMap[parts[1]]
+	state, ok := types.Deployment_State_value[parts[1]]
 
 	if !ok && (parts[1] != "") {
 		return DeploymentFilters{}, false, ErrStateValue
@@ -85,7 +85,7 @@ func parseDepFiltersPath(parts []string) (DeploymentFilters, bool, error) {
 	return DeploymentFilters{
 		Owner:        owner,
 		StateFlagVal: parts[1],
-		State:        state,
+		State:        types.Deployment_State(state),
 	}, ok, nil
 }
 

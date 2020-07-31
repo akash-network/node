@@ -87,9 +87,23 @@ message Deployment {
         (gogoproto.jsontag)    = "id",
         (gogoproto.moretags)   = "yaml:\"id\""
     ];
-    uint32 state = 2 [
-        (gogoproto.customtype) = "DeploymentState",
-        (gogoproto.nullable)   = false,
+
+    enum State {
+        option (gogoproto.goproto_enum_prefix) = false;
+
+        // Prefix should start with 0 in enum. So declaring dummy state
+        all = 0 [
+            (gogoproto.enumvalue_customname) = "DeploymentStateDefault"
+        ];
+        active = 1 [
+            (gogoproto.enumvalue_customname) = "DeploymentActive"
+        ];  
+        closed = 2 [
+            (gogoproto.enumvalue_customname) = "DeploymentClosed"
+        ];
+    }
+
+    State state = 2 [
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];
@@ -128,9 +142,8 @@ message DeploymentFilters {
         (gogoproto.jsontag)    = "dseq",
         (gogoproto.moretags)   = "yaml:\"dseq\""
     ];
-    uint32 state = 3 [
-        (gogoproto.customtype) = "DeploymentState",
-        (gogoproto.nullable)   = false,
+    int32 state = 3 [
+        (gogoproto.casttype)   = "Deployment_State",
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];

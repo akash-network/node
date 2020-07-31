@@ -15,7 +15,7 @@ type DeploymentFilters struct {
 	// State flag value given
 	StateFlagVal string
 	// Actual state value decoded from DeploymentStateMap
-	State types.DeploymentState
+	State types.Deployment_State
 }
 
 // Accept returns whether deployment filters valid or not
@@ -76,5 +76,5 @@ type GroupFilters struct {
 	// State flag value given
 	StateFlagVal string
 	// Actual state value decoded from GroupStateMap
-	State types.GroupState
+	State types.Group_State
 }

@@ -15,7 +15,7 @@ import (
 )
 
 type gStateTest struct {
-	state                types.GroupState
+	state                types.Group_State
 	expValidateOrderable error
 	expValidateClosable  error
 }
@@ -43,7 +43,7 @@ func TestGroupState(t *testing.T) {
 			expValidateOrderable: types.ErrGroupNotOpen,
 		},
 		{
-			state:                types.GroupState(99),
+			state:                types.Group_State(99),
 			expValidateOrderable: types.ErrGroupNotOpen,
 		},
 	}

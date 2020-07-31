@@ -70,9 +70,32 @@ message Group {
         (gogoproto.jsontag)    = "id",
         (gogoproto.moretags)   = "yaml:\"id\""
     ];
-    uint32 state = 2 [
-        (gogoproto.customtype) = "GroupState",
-        (gogoproto.nullable)   = false,
+
+    enum State {
+        option (gogoproto.goproto_enum_prefix) = false;
+
+        // Prefix should start with 0 in enum. So declaring dummy state
+        all = 0 [
+            (gogoproto.enumvalue_customname) = "GroupStateDefault"
+        ];
+        open = 1 [
+            (gogoproto.enumvalue_customname) = "GroupOpen"
+        ];
+        ordered = 2 [
+            (gogoproto.enumvalue_customname) = "GroupOrdered"
+        ]; 
+        matched = 3 [
+            (gogoproto.enumvalue_customname) = "GroupMatched"
+        ];
+        insufficient_funds = 4 [
+            (gogoproto.enumvalue_customname) = "GroupInsufficientFunds"
+        ];
+        closed = 5 [
+            (gogoproto.enumvalue_customname) = "GroupClosed"
+        ];
+    }
+
+    State state = 2 [
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];

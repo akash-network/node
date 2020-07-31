@@ -9,23 +9,23 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
-//go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
+// //go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
 
-// DeploymentState defines state of deployment
-type DeploymentState uint32
+// // DeploymentState defines state of deployment
+// type DeploymentState uint32
 
-const (
-	// DeploymentActive is used when state of deployment is active
-	DeploymentActive DeploymentState = iota + 1 // active
-	// DeploymentClosed is used when state of deployment is closed
-	DeploymentClosed // closed
-)
+// const (
+// 	// DeploymentActive is used when state of deployment is active
+// 	DeploymentActive DeploymentState = iota + 1 // active
+// 	// DeploymentClosed is used when state of deployment is closed
+// 	DeploymentClosed // closed
+// )
 
-// DeploymentStateMap is used to decode deployment state flag value
-var DeploymentStateMap = map[string]DeploymentState{
-	"active": DeploymentActive,
-	"closed": DeploymentClosed,
-}
+// // DeploymentStateMap is used to decode deployment state flag value
+// var DeploymentStateMap = map[string]DeploymentState{
+// 	"active": DeploymentActive,
+// 	"closed": DeploymentClosed,
+// }
 
 // Deployment stores deploymentID, state and version details
 // type Deployment struct {
@@ -39,21 +39,21 @@ func (obj Deployment) ID() DeploymentID {
 	return obj.DeploymentID
 }
 
-// GroupState defines state of group
-type GroupState uint32
+// // GroupState defines state of group
+// type GroupState uint32
 
-const (
-	// GroupOpen is used when state of group is open
-	GroupOpen GroupState = iota + 1 // open
-	// GroupOrdered is used when state of group is ordered
-	GroupOrdered // ordered
-	// GroupMatched is used when state of group is matched
-	GroupMatched // matched
-	// GroupInsufficientFunds is used when group has insufficient funds
-	GroupInsufficientFunds // insufficient-funds
-	// GroupClosed is used when state of group is closed
-	GroupClosed // closed
-)
+// const (
+// 	// GroupOpen is used when state of group is open
+// 	GroupOpen GroupState = iota + 1 // open
+// 	// GroupOrdered is used when state of group is ordered
+// 	GroupOrdered // ordered
+// 	// GroupMatched is used when state of group is matched
+// 	GroupMatched // matched
+// 	// GroupInsufficientFunds is used when group has insufficient funds
+// 	GroupInsufficientFunds // insufficient_funds
+// 	// GroupClosed is used when state of group is closed
+// 	GroupClosed // closed
+// )
 
 // GroupSpec stores group specifications
 // type GroupSpec struct {
