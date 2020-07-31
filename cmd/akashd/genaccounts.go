@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -25,6 +24,10 @@ const (
 	flagVestingStart = "vesting-start-time"
 	flagVestingEnd   = "vesting-end-time"
 	flagVestingAmt   = "vesting-amount"
+)
+
+var (
+	ErrInvalidVestingParameters = errors.New("invalid vesting parameters")
 )
 
 // AddGenesisAccountCmd returns add-genesis-account cobra Command.
@@ -103,7 +106,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 					genAccount = authvesting.NewDelayedVestingAccountRaw(baseVestingAccount)
 
 				default:
-					return errors.New("invalid vesting parameters; must supply start and end time or end time")
+					return errors.Wrap(ErrInvalidVestingParameters, "must supply start and end time or end time")
 				}
 			} else {
 				genAccount = baseAccount
@@ -122,7 +125,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 			authGenState := authtypes.GetGenesisStateFromAppState(cdc, appState)
 
 			if authGenState.Accounts.Contains(addr) {
-				return fmt.Errorf("cannot add account at existing address %s", addr)
+				return errors.Errorf("cannot add account at existing address %s", addr)
 			}
 
 			// Add the new account to the set of genesis accounts and sanitize the
