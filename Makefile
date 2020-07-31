@@ -246,6 +246,10 @@ test-sim-after-import:
 
 test-sims: test-sim-fullapp test-sim-nondeterminism test-sim-import-export test-sim-after-import
 
+###############################################################################
+###                           Protobuf                                    ###
+###############################################################################
+
 proto-gen:
 	@./script/protocgen.sh
 
@@ -297,3 +301,50 @@ proto-update-deps:
 
 	@mkdir -p $(COSMOS_SDK_PROTO_TYPES)/query
 	@curl -sSL $(COSMOS_SDK_PROTO_URL)/query/pagination.proto > $(COSMOS_SDK_PROTO_TYPES)/query/pagination.proto
+
+PREFIX ?= /usr/local
+BIN ?= $(PREFIX)/bin
+UNAME_S ?= $(shell uname -s)
+UNAME_M ?= $(shell uname -m)
+
+BUF_VERSION ?= 0.11.0
+
+PROTOC_VERSION ?= 3.11.2
+ifeq ($(UNAME_S),Linux)
+  PROTOC_ZIP ?= protoc-3.11.2-linux-x86_64.zip
+endif
+ifeq ($(UNAME_S),Darwin)
+  PROTOC_ZIP ?= protoc-3.11.2-osx-x86_64.zip
+endif
+
+proto-tools: proto-tools-stamp buf
+
+proto-tools-stamp:
+	@echo "Installing protoc compiler..."
+	@(cd /tmp; \
+	curl -OL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
+	unzip -o ${PROTOC_ZIP} -d $(PREFIX) bin/protoc; \
+	unzip -o ${PROTOC_ZIP} -d $(PREFIX) 'include/*'; \
+	rm -f ${PROTOC_ZIP})
+
+	@echo "Installing protoc-gen-gocosmos..."
+	@go install github.com/regen-network/cosmos-proto/protoc-gen-gocosmos
+
+	# Create dummy file to satisfy dependency and avoid
+	# rebuilding when this Makefile target is hit twice
+	# in a row
+	touch $@
+
+buf: buf-stamp
+
+buf-stamp:
+	@echo "Installing buf..."
+	@curl -sSL \
+    "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-${UNAME_S}-${UNAME_M}" \
+    -o "${BIN}/buf" && \
+	chmod +x "${BIN}/buf"
+
+	touch $@
+
+tools-clean:
+	rm -f proto-tools-stamp buf-stamp

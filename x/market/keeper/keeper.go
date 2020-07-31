@@ -56,9 +56,9 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 	}
 
 	key := orderKey(order.ID())
-
 	// XXX TODO: check not overwrite
 	store.Set(key, k.cdc.MustMarshalBinaryBare(order))
+	k.updateOpenOrderIndex(store, order)
 
 	ctx.Logger().Info("created order", "order", order.ID())
 	ctx.EventManager().EmitEvent(
@@ -295,6 +295,25 @@ func (k Keeper) WithOrders(ctx sdk.Context, fn func(types.Order) bool) {
 	}
 }
 
+// WithOpenOrders iterates all orders in market
+func (k Keeper) WithOpenOrders(ctx sdk.Context, fn func(types.Order) bool) {
+	store := ctx.KVStore(k.skey)
+	iter := sdk.KVStorePrefixIterator(store, orderOpenPrefix)
+	for ; iter.Valid(); iter.Next() {
+		dataKey, err := convertOrderOpenKey(iter.Key())
+		if err != nil {
+			continue
+		}
+
+		buf := store.Get(dataKey)
+		var val types.Order
+		k.cdc.MustUnmarshalBinaryBare(buf, &val)
+		if stop := fn(val); stop {
+			break
+		}
+	}
+}
+
 // WithBids iterates all bids in market
 func (k Keeper) WithBids(ctx sdk.Context, fn func(types.Bid) bool) {
 	store := ctx.KVStore(k.skey)
@@ -371,6 +390,7 @@ func (k Keeper) updateOrder(ctx sdk.Context, order types.Order) {
 	store := ctx.KVStore(k.skey)
 	key := orderKey(order.ID())
 	store.Set(key, k.cdc.MustMarshalBinaryBare(order))
+	k.updateOpenOrderIndex(store, order)
 }
 
 func (k Keeper) updateBid(ctx sdk.Context, bid types.Bid) {
@@ -395,5 +415,16 @@ func (k Keeper) updateActiveLeaseIndex(store sdk.KVStore, lease types.Lease) {
 	default:
 		store.Delete(key)
 
+	}
+}
+
+func (k Keeper) updateOpenOrderIndex(store sdk.KVStore, order types.Order) {
+	key := orderOpenKey(order.ID())
+
+	switch order.State {
+	case types.OrderOpen:
+		store.Set(key, []byte{})
+	default:
+		store.Delete(key)
 	}
 }

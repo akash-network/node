@@ -10,6 +10,7 @@ import (
 
 var (
 	orderPrefix       = []byte{0x01, 0x00}
+	orderOpenPrefix   = []byte{0x01, 0x01}
 	bidPrefix         = []byte{0x02, 0x00}
 	leasePrefix       = []byte{0x03, 0x00}
 	leaseActivePrefix = []byte{0x03, 0x01}
@@ -22,6 +23,24 @@ func orderKey(id types.OrderID) []byte {
 	binary.Write(buf, binary.BigEndian, id.GSeq)
 	binary.Write(buf, binary.BigEndian, id.OSeq)
 	return buf.Bytes()
+}
+
+func orderOpenKey(id types.OrderID) []byte {
+	buf := bytes.NewBuffer(orderOpenPrefix)
+	buf.Write(id.Owner.Bytes())
+	binary.Write(buf, binary.BigEndian, id.DSeq)
+	binary.Write(buf, binary.BigEndian, id.GSeq)
+	binary.Write(buf, binary.BigEndian, id.OSeq)
+	return buf.Bytes()
+}
+
+func convertOrderOpenKey(activeKey []byte) ([]byte, error) {
+	buf := bytes.NewBuffer(orderPrefix)
+	_, err := buf.Write(activeKey[len(orderOpenPrefix):])
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func bidKey(id types.BidID) []byte {

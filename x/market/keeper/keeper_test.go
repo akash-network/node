@@ -4,18 +4,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/rand"
+	dbm "github.com/tendermint/tm-db"
+
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/keeper"
 	"github.com/ovrclk/akash/x/market/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/rand"
-	dbm "github.com/tendermint/tm-db"
 )
 
 func Test_CreateOrder(t *testing.T) {
@@ -54,6 +56,17 @@ func Test_WithOrders(t *testing.T) {
 	})
 
 	assert.Equal(t, 1, count)
+
+	t.Run("open orders", func(t *testing.T) {
+		openCount := 0
+		keeper.WithOpenOrders(ctx, func(result types.Order) bool {
+			if assert.Equal(t, order.ID(), result.ID()) {
+				openCount++
+			}
+			return false
+		})
+		assert.Equal(t, openCount, 1)
+	})
 }
 
 func Test_WithOrdersForGroup(t *testing.T) {

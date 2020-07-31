@@ -15,6 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
@@ -22,14 +23,29 @@ import (
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 )
 
-var (
-	root = &cobra.Command{
+func main() {
+
+	common.InitSDKConfig()
+
+	encodingConfig := simapp.MakeEncodingConfig()
+
+	initClientCtx := client.Context{}.
+		WithJSONMarshaler(encodingConfig.Marshaler).
+		WithTxConfig(encodingConfig.TxConfig).
+		WithCodec(encodingConfig.Amino).
+		WithInput(os.Stdin).
+		WithAccountRetriever(authtypes.NewAccountRetriever(encodingConfig.Marshaler)).
+		WithBroadcastMode(flags.BroadcastBlock).
+		WithHomeDir(common.DefaultNodeHome())
+
+	root := &cobra.Command{
 		Use:  "akashd",
 		Long: "Akash Daemon CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
@@ -40,21 +56,7 @@ var (
 		},
 	}
 
-	encodingConfig = simapp.MakeEncodingConfig()
-	initClientCtx  = client.Context{}.
-			WithJSONMarshaler(encodingConfig.Marshaler).
-			WithTxConfig(encodingConfig.TxConfig).
-			WithCodec(encodingConfig.Amino).
-			WithInput(os.Stdin).
-			WithAccountRetriever(authtypes.NewAccountRetriever(encodingConfig.Marshaler)).
-			WithBroadcastMode(flags.BroadcastBlock).
-			WithHomeDir(common.DefaultNodeHome())
-)
-
-func main() {
 	authclient.Codec = encodingConfig.Marshaler
-
-	common.InitSDKConfig()
 
 	root.AddCommand(
 		genutilcli.InitCmd(app.ModuleBasics(), common.DefaultNodeHome()),
@@ -119,14 +121,14 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts server.A
 
 func exportAppStateAndTMValidators(
 	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailWhiteList []string,
-) (json.RawMessage, []tmtypes.GenesisValidator, error) {
+) (json.RawMessage, []tmtypes.GenesisValidator, *abci.ConsensusParams, error) {
 
 	app := app.NewApp(logger, db, ioutil.Discard, uint(1), map[int64]bool{})
 
 	if height != -1 {
 		err := app.LoadHeight(height)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		return app.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 	}

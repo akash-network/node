@@ -4,12 +4,13 @@ import (
 	"math"
 	"testing"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/rand"
 	dbm "github.com/tendermint/tm-db"
