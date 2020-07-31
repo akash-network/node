@@ -19,3 +19,16 @@ func TestActiveLeaseKeys(t *testing.T) {
 		assert.Equal(t, convertedActiveKey, key)
 	})
 }
+
+func TestOrdersOpenKeys(t *testing.T) {
+	oid := testutil.OrderID(t)
+	key := orderKey(oid)
+	openKey := orderOpenKey(oid)
+	assert.NotEqual(t, key, openKey)
+
+	t.Run("assert converted order open key matches normal order key", func(t *testing.T) {
+		convertedKey, err := convertOrderOpenKey(openKey)
+		assert.NoError(t, err)
+		assert.Equal(t, convertedKey, key)
+	})
+}

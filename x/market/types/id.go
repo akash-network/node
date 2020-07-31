@@ -101,7 +101,7 @@ func (id BidID) OrderID() OrderID {
 
 // String method for consistent output.
 func (id BidID) String() string {
-	return sdkutil.FmtBlockID(&id.Owner, &id.DSeq, &id.GSeq, &id.OSeq, nil)
+	return sdkutil.FmtBlockID(&id.Owner, &id.DSeq, &id.GSeq, &id.OSeq, &id.Provider)
 }
 
 // OrderIDString provides consistent conversion to string values for OrderID.
