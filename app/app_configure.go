@@ -27,17 +27,17 @@ func akashKVStoreKeys() []string {
 
 func (app *AkashApp) setAkashKeepers() {
 	app.keeper.deployment = deployment.NewKeeper(
-		app.cdc,
+		app.appCodec,
 		app.keys[deployment.StoreKey],
 	)
 
 	app.keeper.market = market.NewKeeper(
-		app.cdc,
+		app.appCodec,
 		app.keys[market.StoreKey],
 	)
 
 	app.keeper.provider = provider.NewKeeper(
-		app.cdc,
+		app.appCodec,
 		app.keys[provider.StoreKey],
 	)
 }
@@ -45,19 +45,21 @@ func (app *AkashApp) setAkashKeepers() {
 func (app *AkashApp) akashAppModules() []module.AppModule {
 	return []module.AppModule{
 		deployment.NewAppModule(
+			app.appCodec,
 			app.keeper.deployment,
 			app.keeper.market,
 			app.keeper.bank,
 		),
 
 		market.NewAppModule(
+			app.appCodec,
 			app.keeper.market,
 			app.keeper.deployment,
 			app.keeper.provider,
 			app.keeper.bank,
 		),
 
-		provider.NewAppModule(app.keeper.provider, app.keeper.bank, app.keeper.market),
+		provider.NewAppModule(app.appCodec, app.keeper.provider, app.keeper.bank, app.keeper.market),
 	}
 }
 
@@ -77,9 +79,9 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 
 func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 	return []module.AppModuleSimulation{
-		deployment.NewAppModuleSimulation(app.keeper.deployment, app.keeper.acct),
+		deployment.NewAppModuleSimulation(app.keeper.deployment, app.keeper.acct, app.keeper.bank),
 		market.NewAppModuleSimulation(app.keeper.market, app.keeper.acct, app.keeper.deployment,
 			app.keeper.provider, app.keeper.bank),
-		provider.NewAppModuleSimulation(app.keeper.provider, app.keeper.acct),
+		provider.NewAppModuleSimulation(app.keeper.provider, app.keeper.acct, app.keeper.bank),
 	}
 }

@@ -17,15 +17,18 @@ import (
 	"github.com/cosmos/cosmos-sdk/simapp/helpers"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	"github.com/cosmos/cosmos-sdk/x/gov"
-	"github.com/cosmos/cosmos-sdk/x/mint"
-	"github.com/cosmos/cosmos-sdk/x/params"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
-	"github.com/cosmos/cosmos-sdk/x/slashing"
-	"github.com/cosmos/cosmos-sdk/x/staking"
-	"github.com/cosmos/cosmos-sdk/x/supply"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/ovrclk/akash/cmd/common"
 )
 
 // Get flags every time the simulator is run
@@ -54,7 +57,7 @@ func interBlockCacheOpt() func(*baseapp.BaseApp) {
 	return baseapp.SetInterBlockCache(store.NewCommitKVStoreCacheManager())
 }
 
-func simulateFromSeedFunc(t *testing.T, app *AkashApp, config simulation.Config) (bool, simulation.Params, error) {
+func simulateFromSeedFunc(t *testing.T, app *AkashApp, config simtypes.Config) (bool, simulation.Params, error) {
 	return simulation.SimulateFromSeed(
 		t, os.Stdout, app.BaseApp, simapp.AppStateFn(app.Codec(), app.SimulationManager()),
 		simapp.SimulationOperations(app, app.Codec(), config),
@@ -75,7 +78,7 @@ func TestFullAppSimulation(t *testing.T) {
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 
-	app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, fauxMerkleModeOpt)
+	app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, common.DefaultNodeHome(), fauxMerkleModeOpt)
 	require.Equal(t, appName, app.Name())
 
 	fmt.Printf("config-------- %v", config)
@@ -104,7 +107,7 @@ func TestAppImportExport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 
-	app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, fauxMerkleModeOpt)
+	app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, common.DefaultNodeHome(), fauxMerkleModeOpt)
 	require.Equal(t, appName, app.Name())
 
 	// Run randomized simulation
@@ -121,7 +124,7 @@ func TestAppImportExport(t *testing.T) {
 
 	fmt.Printf("exporting genesis...\n")
 
-	appState, _, err := app.ExportAppStateAndValidators(false, []string{})
+	appState, _, consensusParams, err := app.ExportAppStateAndValidators(false, []string{})
 	require.NoError(t, err)
 
 	fmt.Printf("importing genesis...\n")
@@ -134,7 +137,7 @@ func TestAppImportExport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
-	newApp := NewApp(log.NewNopLogger(), newDB, nil, simapp.FlagPeriodValue, map[int64]bool{}, fauxMerkleModeOpt)
+	newApp := NewApp(log.NewNopLogger(), newDB, nil, simapp.FlagPeriodValue, map[int64]bool{}, common.DefaultNodeHome(), fauxMerkleModeOpt)
 	require.Equal(t, appName, newApp.Name())
 
 	var genesisState simapp.GenesisState
@@ -144,23 +147,25 @@ func TestAppImportExport(t *testing.T) {
 	ctxA := app.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
 	ctxB := newApp.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
 
-	newApp.mm.InitGenesis(ctxB, genesisState)
+	newApp.mm.InitGenesis(ctxB, app.Codec(), genesisState)
+	newApp.StoreConsensusParams(ctxB, consensusParams)
 
 	fmt.Printf("comparing stores...\n")
 
 	storeKeysPrefixes := []StoreKeysPrefixes{
-		{app.keys[baseapp.MainStoreKey], newApp.keys[baseapp.MainStoreKey], [][]byte{}},
-		{app.keys[auth.StoreKey], newApp.keys[auth.StoreKey], [][]byte{}},
-		{app.keys[staking.StoreKey], newApp.keys[staking.StoreKey],
+		{app.keys[authtypes.StoreKey], newApp.keys[authtypes.StoreKey], [][]byte{}},
+		{app.keys[stakingtypes.StoreKey], newApp.keys[stakingtypes.StoreKey],
 			[][]byte{
-				staking.UnbondingQueueKey, staking.RedelegationQueueKey, staking.ValidatorQueueKey,
+				stakingtypes.UnbondingQueueKey, stakingtypes.RedelegationQueueKey, stakingtypes.ValidatorQueueKey,
+				stakingtypes.HistoricalInfoKey,
 			}}, // ordering may change but it doesn't matter
-		{app.keys[slashing.StoreKey], newApp.keys[slashing.StoreKey], [][]byte{}},
-		{app.keys[mint.StoreKey], newApp.keys[mint.StoreKey], [][]byte{}},
-		{app.keys[distr.StoreKey], newApp.keys[distr.StoreKey], [][]byte{}},
-		{app.keys[supply.StoreKey], newApp.keys[supply.StoreKey], [][]byte{}},
-		{app.keys[params.StoreKey], newApp.keys[params.StoreKey], [][]byte{}},
-		{app.keys[gov.StoreKey], newApp.keys[gov.StoreKey], [][]byte{}},
+		{app.keys[slashingtypes.StoreKey], newApp.keys[slashingtypes.StoreKey], [][]byte{}},
+		{app.keys[minttypes.StoreKey], newApp.keys[minttypes.StoreKey], [][]byte{}},
+		{app.keys[distrtypes.StoreKey], newApp.keys[distrtypes.StoreKey], [][]byte{}},
+		{app.keys[banktypes.StoreKey], newApp.keys[banktypes.StoreKey], [][]byte{banktypes.BalancesPrefix}},
+		{app.keys[paramtypes.StoreKey], newApp.keys[paramtypes.StoreKey], [][]byte{}},
+		{app.keys[govtypes.StoreKey], newApp.keys[govtypes.StoreKey], [][]byte{}},
+		{app.keys[evidencetypes.StoreKey], newApp.keys[evidencetypes.StoreKey], [][]byte{}},
 	}
 
 	for _, skp := range storeKeysPrefixes {
@@ -172,7 +177,7 @@ func TestAppImportExport(t *testing.T) {
 
 		fmt.Printf("compared %d key/value pairs between %s and %s\n", len(failedKVAs), skp.A, skp.B)
 		require.Equal(t, len(failedKVAs), 0, simapp.GetSimulationLog(skp.A.Name(),
-			app.SimulationManager().StoreDecoders, app.Codec(), failedKVAs, failedKVBs))
+			app.SimulationManager().StoreDecoders, failedKVAs, failedKVBs))
 	}
 }
 
@@ -189,7 +194,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 
-	app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, fauxMerkleModeOpt)
+	app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, common.DefaultNodeHome(), fauxMerkleModeOpt)
 	require.Equal(t, appName, app.Name())
 
 	// Run randomized simulation
@@ -211,7 +216,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 
 	fmt.Printf("exporting genesis...\n")
 
-	appState, _, err := app.ExportAppStateAndValidators(true, []string{})
+	appState, _, _, err := app.ExportAppStateAndValidators(true, []string{})
 	require.NoError(t, err)
 
 	fmt.Printf("importing genesis...\n")
@@ -224,7 +229,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
-	newApp := NewApp(log.NewNopLogger(), newDB, nil, simapp.FlagPeriodValue, map[int64]bool{}, fauxMerkleModeOpt)
+	newApp := NewApp(log.NewNopLogger(), newDB, nil, simapp.FlagPeriodValue, map[int64]bool{}, common.DefaultNodeHome(), fauxMerkleModeOpt)
 	require.Equal(t, appName, newApp.Name())
 
 	newApp.InitChain(abci.RequestInitChain{
@@ -264,7 +269,7 @@ func TestAppStateDeterminism(t *testing.T) {
 
 			db := dbm.NewMemDB()
 
-			app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, interBlockCacheOpt())
+			app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, common.DefaultNodeHome(), interBlockCacheOpt())
 
 			fmt.Printf(
 				"running non-determinism simulation; seed %d: %d/%d, attempt: %d/%d\n",

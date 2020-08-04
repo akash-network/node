@@ -13,7 +13,6 @@ import (
 	"github.com/tendermint/tendermint/libs/rand"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/keeper"
@@ -271,7 +270,7 @@ func Test_OnGroupClosed(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
 	id := createLease(t, ctx, keeper)
 
-	keeper.OnGroupClosed(ctx, id.GroupID())
+	keeper.OnGroupClosed(ctx, id.BidID().GroupID())
 
 	lease, ok := keeper.GetLease(ctx, id)
 	require.True(t, ok)
@@ -305,7 +304,7 @@ func createBid(t testing.TB, ctx sdk.Context, keeper keeper.Keeper) (types.Bid, 
 	require.NoError(t, err)
 	assert.Equal(t, order.ID(), bid.ID().OrderID())
 	assert.Equal(t, price, bid.Price)
-	assert.Equal(t, provider, bid.Provider)
+	assert.Equal(t, provider, bid.ID().Provider)
 	return bid, order
 }
 
@@ -330,5 +329,5 @@ func setupKeeper(t testing.TB) (sdk.Context, keeper.Keeper) {
 	ms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
 	ms.LoadLatestVersion()
 	ctx := sdk.NewContext(ms, abci.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))
-	return ctx, keeper.NewKeeper(app.MakeCodec(), key)
+	return ctx, keeper.NewKeeper(types.ModuleCdc, key)
 }

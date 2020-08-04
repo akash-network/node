@@ -9,16 +9,17 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/slashing"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/staking/exported"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 // ExportAppStateAndValidators exports the state of the application for a genesis
 // file.
 func (app *AkashApp) ExportAppStateAndValidators(
 	forZeroHeight bool, jailWhiteList []string,
-) (appState json.RawMessage, validators []tmtypes.GenesisValidator,*abci.ConsensusParams, err error) {
+) (appState json.RawMessage, validators []tmtypes.GenesisValidator, cp *abci.ConsensusParams, err error) {
 
 	// as if they could withdraw from the start of the next block
 	ctx := app.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
@@ -27,14 +28,14 @@ func (app *AkashApp) ExportAppStateAndValidators(
 		app.prepForZeroHeightGenesis(ctx, jailWhiteList)
 	}
 
-	genState := app.mm.ExportGenesis(ctx)
+	genState := app.mm.ExportGenesis(ctx, app.cdc)
 	appState, err = codec.MarshalJSONIndent(app.cdc, genState)
 	if err != nil {
-		return nil, nil,nil, err
+		return nil, nil, nil, err
 	}
 
 	validators = staking.WriteValidators(ctx, app.keeper.staking)
-	return appState, validators,app.BaseApp.GetConsensusParams(ctx), nil
+	return appState, validators, app.BaseApp.GetConsensusParams(ctx), nil
 }
 
 // prepare for fresh start at zero height
@@ -87,9 +88,8 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 
 	// reinitialize all validators
 	app.keeper.staking.IterateValidators(ctx, func(_ int64, val exported.ValidatorI) (stop bool) {
-
 		// donate any unwithdrawn outstanding reward fraction tokens to the community pool
-		scraps := app.keeper.distr.GetValidatorOutstandingRewards(ctx, val.GetOperator())
+		scraps := app.keeper.distr.GetValidatorOutstandingRewardsCoins(ctx, val.GetOperator())
 		feePool := app.keeper.distr.GetFeePool(ctx)
 		feePool.CommunityPool = feePool.CommunityPool.Add(scraps...)
 		app.keeper.distr.SetFeePool(ctx, feePool)
@@ -110,7 +110,7 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 	/* Handle staking state. */
 
 	// iterate through redelegations, reset creation height
-	app.keeper.staking.IterateRedelegations(ctx, func(_ int64, red staking.Redelegation) (stop bool) {
+	app.keeper.staking.IterateRedelegations(ctx, func(_ int64, red stakingtypes.Redelegation) (stop bool) {
 		for i := range red.Entries {
 			red.Entries[i].CreationHeight = 0
 		}
@@ -119,7 +119,7 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 	})
 
 	// iterate through unbonding delegations, reset creation height
-	app.keeper.staking.IterateUnbondingDelegations(ctx, func(_ int64, ubd staking.UnbondingDelegation) (stop bool) {
+	app.keeper.staking.IterateUnbondingDelegations(ctx, func(_ int64, ubd stakingtypes.UnbondingDelegation) (stop bool) {
 		for i := range ubd.Entries {
 			ubd.Entries[i].CreationHeight = 0
 		}
@@ -129,8 +129,8 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 
 	// Iterate through validators by power descending, reset bond heights, and
 	// update bond intra-tx counters.
-	store := ctx.KVStore(app.keys[staking.StoreKey])
-	iter := sdk.KVStoreReversePrefixIterator(store, staking.ValidatorsKey)
+	store := ctx.KVStore(app.keys[stakingtypes.StoreKey])
+	iter := sdk.KVStoreReversePrefixIterator(store, stakingtypes.ValidatorsKey)
 	counter := int16(0)
 
 	for ; iter.Valid(); iter.Next() {
@@ -158,7 +158,7 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 	// reset start height on signing infos
 	app.keeper.slashing.IterateValidatorSigningInfos(
 		ctx,
-		func(addr sdk.ConsAddress, info slashing.ValidatorSigningInfo) (stop bool) {
+		func(addr sdk.ConsAddress, info slashingtypes.ValidatorSigningInfo) (stop bool) {
 			info.StartHeight = 0
 			app.keeper.slashing.SetValidatorSigningInfo(ctx, addr, info)
 			return false

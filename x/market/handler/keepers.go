@@ -2,7 +2,7 @@ package handler
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/bank"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/keeper"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
@@ -27,5 +27,5 @@ type Keepers struct {
 	Market     keeper.Keeper
 	Deployment DeploymentKeeper
 	Provider   ProviderKeeper
-	Bank       bank.Keeper
+	Bank       bankkeeper.Keeper
 }
