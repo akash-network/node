@@ -10,13 +10,24 @@ on:
       - provider/cluster/kube/*
 
 jobs:
-  crd:
+  crd-e2e:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
       - uses: engineerd/setup-kind@v0.4.0
-      - name: Setup K8S
-        run: ./script/setup-kind.sh
-      - name: Run Tests
+        with:
+            config: ./_run/kube/kind-config.yaml
+      - name: Setup Ingress K8S
+        run: make -s -C _run/kube kind-ingress-setup
+      - name: k8s-ingress
+        run: make -s -C _run/kube kind-k8s-ip
+      - name: Kube Environment
+        run: |
+          kubectl config view
+          kubectl cluster-info
+          kubectl get pods,ingress,svc -A
+      - name: Run E2E Tests
+        run: make test-e2e-integration
+      - name: Run K8s Tests
         run: make test-k8s-integration

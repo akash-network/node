@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,22 +13,25 @@ import (
 	"testing"
 
 	clientkeys "github.com/cosmos/cosmos-sdk/client/keys"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/ovrclk/akash/app"
-	"github.com/ovrclk/akash/cmd/common"
-	dquery "github.com/ovrclk/akash/x/deployment/query"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
-	tmtypes "github.com/tendermint/tendermint/types"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/tests"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	tmtypes "github.com/tendermint/tendermint/types"
+
+	"github.com/ovrclk/akash/app"
+	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/integration/cosmostests"
+	dquery "github.com/ovrclk/akash/x/deployment/query"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	"github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
 const (
@@ -42,7 +46,15 @@ const (
 	feeStartValue        = 1000000
 	deploymentFilePath   = "./../x/deployment/testdata/deployment.yaml"
 	deploymentV2FilePath = "./../x/deployment/testdata/deployment-v2.yaml"
+	deploymentOvrclkApp  = "./../_run/kube/deployment.yaml"
 	providerFilePath     = "./../x/provider/testdata/provider.yaml"
+	providerTemplate     = `host: %s
+attributes:
+  - key: region
+    value: us-west
+  - key: moniker
+    value: akash
+`
 )
 
 var (
@@ -65,6 +77,7 @@ func startCoins() sdk.Coins {
 
 // Fixtures is used to setup the testing environment
 type Fixtures struct {
+	Ctx          context.Context
 	BuildDir     string
 	RootDir      string
 	AkashdBinary string
@@ -83,6 +96,12 @@ func NewFixtures(t *testing.T) *Fixtures {
 	tmpDir, err := ioutil.TempDir("", "akash_integration_"+t.Name()+"_")
 	require.NoError(t, err)
 
+	// Prevent akashd errors on exit due to data saving behavior.
+	tmpStat, err := os.Lstat(tmpDir)
+	require.NoError(t, err)
+	err = os.MkdirAll(fmt.Sprintf("%s/.akashd/data/cs.wal", tmpDir), tmpStat.Mode())
+	require.NoError(t, err)
+
 	servAddr, port, err := server.FreeTCPAddr()
 	require.NoError(t, err)
 
@@ -97,6 +116,7 @@ func NewFixtures(t *testing.T) *Fixtures {
 
 	return &Fixtures{
 		T:            t,
+		Ctx:          context.Background(),
 		BuildDir:     buildDir,
 		RootDir:      tmpDir,
 		AkashdBinary: filepath.Join(buildDir, "akashd"),
@@ -165,10 +185,10 @@ func InitFixtures(t *testing.T) (f *Fixtures) {
 
 // Cleanup is meant to be run at the end of a test to clean up an remaining test state
 func (f *Fixtures) Cleanup(dirs ...string) {
-	clean := append(dirs, f.RootDir)
-	for _, d := range clean {
+	for _, d := range dirs {
 		require.NoError(f.T, os.RemoveAll(d))
 	}
+	os.RemoveAll(f.RootDir)
 }
 
 // Flags returns the flags necessary for making most CLI calls
@@ -236,11 +256,54 @@ func (f *Fixtures) CollectGenTxs(flags ...string) {
 func (f *Fixtures) AkashdStart(flags ...string) *tests.Process {
 	cmd := fmt.Sprintf("%s start --home=%s --rpc.laddr=%v --p2p.laddr=%v", f.AkashdBinary,
 		f.AkashdHome, f.RPCAddr, f.P2PAddr)
-	proc := tests.GoExecuteTWithStdout(f.T, addFlags(cmd, flags))
+	proc := tests.GoExecuteT(f.T, addFlags(cmd, flags))
 	tests.WaitForTMStart(f.Port)
 	tests.WaitForNextNBlocksTM(2, f.Port)
 
 	return proc
+}
+
+// ProviderStart launches the provider service
+/*
+Functional example from _run/kube
+AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS="false" \
+        ../../akashctl --home "./cache/client" --keyring-backend=test provider run \
+                --from "provider" \
+                --cluster-k8s \
+                --gateway-listen-address "localhost:8080"
+D[2020-08-03|16:56:26.423] reading kube config                          path=/home/ropes/.kube/config
+I[2020-08-03|16:56:26.472] found leases                                 module=provider-cluster cmp=service num-active=0
+*/
+func (f *Fixtures) ProviderStart(id, provHost string, flags ...string) (*cosmostests.Process, string) {
+	cmd := fmt.Sprintf("%s provider run --from=%s --cluster-k8s --gateway-listen-address=%s %s %s",
+		f.AkashBinary,
+		id,
+		provHost,
+		f.Flags(),
+		f.KeyFlags(),
+	)
+
+	envvars := []string{"AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS=false"}
+	proc := cosmostests.GoExecuteT(f.T, addFlags(cmd, flags), envvars)
+	tests.WaitForNextNBlocksTM(2, f.Port)
+	//tests.WaitForStart(fmt.Sprintf("%s/status", provURL.String()))
+	return proc, provHost
+}
+
+// SendManifest provides SDL to the Provider
+func (f *Fixtures) SendManifest(lease types.Lease, sdlPath string, flags ...string) {
+	leaseID := lease.ID()
+	cmd := fmt.Sprintf("%s provider send-manifest --owner %s --dseq %v --gseq %v --oseq %v --provider %s %s %s",
+		f.AkashBinary,
+		leaseID.Owner.String(), leaseID.DSeq, leaseID.GSeq, leaseID.OSeq,
+		leaseID.Provider.String(),
+		sdlPath,
+		f.Flags(),
+	)
+
+	_, stderr := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	assert.Empty(f.T, stderr, "sendmanifest stderr")
+	tests.WaitForNextNBlocksTM(2, f.Port)
 }
 
 // ValidateGenesis runs akashd validate-genesis
@@ -351,8 +414,8 @@ func (f *Fixtures) TxSend(from string, to sdk.AccAddress, amount sdk.Coin, flags
 // akash tx deployment
 
 // TxCreateDeployment is akashctl create deployment
-func (f *Fixtures) TxCreateDeployment(flags ...string) (bool, string, string) {
-	cmd := fmt.Sprintf("%s tx deployment create %s %v %s", f.AkashBinary, deploymentFilePath, f.Flags(), f.KeyFlags())
+func (f *Fixtures) TxCreateDeployment(dfp string, flags ...string) (bool, string, string) {
+	cmd := fmt.Sprintf("%s tx deployment create %s %v %s", f.AkashBinary, dfp, f.Flags(), f.KeyFlags())
 	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
 }
 
@@ -520,6 +583,12 @@ func (f *Fixtures) QueryLease(leaseID mtypes.LeaseID, flags ...string) mtypes.Le
 // TxCreateProvider is akash create provider
 func (f *Fixtures) TxCreateProvider(flags ...string) (bool, string, string) {
 	cmd := fmt.Sprintf("%s tx provider create %s %v %s", f.AkashBinary, providerFilePath, f.Flags(), f.KeyFlags())
+	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
+}
+
+// TxCreateProvider is akash create provider
+func (f *Fixtures) TxCreateProviderFromFile(path string, flags ...string) (bool, string, string) {
+	cmd := fmt.Sprintf("%s tx provider create %s %v %s", f.AkashBinary, path, f.Flags(), f.KeyFlags())
 	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags))
 }
 
