@@ -15,17 +15,17 @@ const (
 
 // Keeper of the market store
 type Keeper struct {
-	cdc  *codec.Codec
+	cdc  codec.BinaryMarshaler
 	skey sdk.StoreKey
 }
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc *codec.Codec, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey) Keeper {
 	return Keeper{cdc: cdc, skey: skey}
 }
 
 // Codec returns keeper codec
-func (k Keeper) Codec() *codec.Codec {
+func (k Keeper) Codec() codec.BinaryMarshaler {
 	return k.cdc
 }
 
@@ -57,7 +57,7 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 
 	key := orderKey(order.ID())
 	// XXX TODO: check not overwrite
-	store.Set(key, k.cdc.MustMarshalBinaryBare(order))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&order))
 	k.updateOpenOrderIndex(store, order)
 
 	ctx.Logger().Info("created order", "order", order.ID())
@@ -85,7 +85,7 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 	}
 
 	// XXX TODO: check not overwrite
-	store.Set(key, k.cdc.MustMarshalBinaryBare(bid))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&bid))
 
 	ctx.EventManager().EmitEvent(
 		types.NewEventBidCreated(bid.ID(), price).
@@ -108,7 +108,7 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 
 	// create (active) lease in store
 	key := leaseKey(lease.ID())
-	store.Set(key, k.cdc.MustMarshalBinaryBare(lease))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&lease))
 	k.updateActiveLeaseIndex(store, lease)
 
 	ctx.Logger().Info("created lease", "lease", lease.ID())
@@ -269,7 +269,7 @@ func (k Keeper) LeaseForOrder(ctx sdk.Context, oid types.OrderID) (types.Lease, 
 	)
 
 	k.WithBidsForOrder(ctx, oid, func(item types.Bid) bool {
-		if !item.OrderID().Equals(oid) {
+		if !item.ID().OrderID().Equals(oid) {
 			return false
 		}
 		if item.State != types.BidMatched {
@@ -389,20 +389,20 @@ func (k Keeper) WithBidsForOrder(ctx sdk.Context, id types.OrderID, fn func(type
 func (k Keeper) updateOrder(ctx sdk.Context, order types.Order) {
 	store := ctx.KVStore(k.skey)
 	key := orderKey(order.ID())
-	store.Set(key, k.cdc.MustMarshalBinaryBare(order))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&order))
 	k.updateOpenOrderIndex(store, order)
 }
 
 func (k Keeper) updateBid(ctx sdk.Context, bid types.Bid) {
 	store := ctx.KVStore(k.skey)
 	key := bidKey(bid.ID())
-	store.Set(key, k.cdc.MustMarshalBinaryBare(bid))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&bid))
 }
 
 func (k Keeper) updateLease(ctx sdk.Context, lease types.Lease) {
 	store := ctx.KVStore(k.skey)
 	key := leaseKey(lease.ID())
-	store.Set(key, k.cdc.MustMarshalBinaryBare(lease))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&lease))
 	k.updateActiveLeaseIndex(store, lease)
 }
 

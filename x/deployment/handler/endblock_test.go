@@ -28,7 +28,7 @@ func TestEndBlock(t *testing.T) {
 		for _, g := range groups {
 			grps = append(grps, g.GroupSpec)
 		}
-		m := types.MsgCreateDeployment{
+		m := &types.MsgCreateDeployment{
 			ID:     d.ID(),
 			Groups: grps,
 		}
@@ -36,7 +36,7 @@ func TestEndBlock(t *testing.T) {
 		assert.NoError(s.t, err)
 
 		if d.State == types.DeploymentClosed {
-			m := types.MsgCloseDeployment{
+			m := &types.MsgCloseDeployment{
 				ID: d.ID(),
 			}
 			_, err := s.handler(s.ctx, m)
@@ -55,7 +55,7 @@ func TestEndBlock(t *testing.T) {
 	for _, g := range gx {
 		orderCreated := false
 		suite.mkeeper.WithOrdersForGroup(suite.ctx, g.ID(), func(o mtypes.Order) bool {
-			suite.t.Logf("Order for group: %#v found", o.GroupID())
+			suite.t.Logf("Order for group: %#v found", o.ID().GroupID())
 			orderCreated = true
 			return true
 		})
@@ -80,7 +80,7 @@ func TestEndBlockGroups(t *testing.T) {
 		for _, g := range groups {
 			grps = append(grps, g.GroupSpec)
 		}
-		m := types.MsgCreateDeployment{
+		m := &types.MsgCreateDeployment{
 			ID:     d.ID(),
 			Groups: grps,
 		}

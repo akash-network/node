@@ -2,33 +2,42 @@ package types
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-var cdc = codec.New()
+var (
+	amino = codec.New()
+
+	// ModuleCdc references the global x/market module codec. Note, the codec should
+	// ONLY be used in certain instances of tests and for JSON encoding as Amino is
+	// still used for that purpose.
+	//
+	// The actual codec used for serialization should be provided to x/market and
+	// defined at the application level.
+	ModuleCdc = codec.NewHybridCodec(amino, cdctypes.NewInterfaceRegistry())
+)
 
 func init() {
-	RegisterCodec(cdc)
+	RegisterCodec(amino)
+	cryptocodec.RegisterCrypto(amino)
+	amino.Seal()
 }
 
-// RegisterCodec register concrete types on codec
+// RegisterCodec registers the necessary x/market interfaces and concrete types
+// on the provided Amino codec. These types are used for Amino JSON serialization.
 func RegisterCodec(cdc *codec.Codec) {
-	cdc.RegisterConcrete(MsgCreateBid{}, ModuleName+"/"+msgTypeCreateBid, nil)
-	cdc.RegisterConcrete(MsgCloseBid{}, ModuleName+"/"+msgTypeCloseBid, nil)
-	cdc.RegisterConcrete(MsgCloseOrder{}, ModuleName+"/"+msgTypeCloseOrder, nil)
+	cdc.RegisterConcrete(&MsgCreateBid{}, ModuleName+"/"+MsgTypeCreateBid, nil)
+	cdc.RegisterConcrete(&MsgCloseBid{}, ModuleName+"/"+MsgTypeCloseBid, nil)
+	cdc.RegisterConcrete(&MsgCloseOrder{}, ModuleName+"/"+MsgTypeCloseOrder, nil)
 }
 
-// MustMarshalJSON panics if an error occurs. Besides that it behaves exactly like MarshalJSON
-// i.e., encodes json to byte array
-func MustMarshalJSON(o interface{}) []byte {
-	return cdc.MustMarshalJSON(o)
-}
-
-// UnmarshalJSON decodes bytes into json
-func UnmarshalJSON(bz []byte, ptr interface{}) error {
-	return cdc.UnmarshalJSON(bz, ptr)
-}
-
-// MustUnmarshalJSON panics if an error occurs. Besides that it behaves exactly like UnmarshalJSON.
-func MustUnmarshalJSON(bz []byte, ptr interface{}) {
-	cdc.MustUnmarshalJSON(bz, ptr)
+// RegisterInterfaces registers the x/market interfaces types with the interface registry
+func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
+	registry.RegisterImplementations((*sdk.Msg)(nil),
+		&MsgCreateBid{},
+		&MsgCloseBid{},
+		&MsgCloseOrder{},
+	)
 }

@@ -11,13 +11,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 
 	simapp "github.com/cosmos/cosmos-sdk/simapp"
+	"github.com/ovrclk/akash/cmd/common"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 func TestSimAppExport(t *testing.T) {
 	db := dbm.NewMemDB()
 	app := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)),
-		db, nil, 0, map[int64]bool{})
+		db, nil, 0, map[int64]bool{}, common.DefaultNodeHome())
 
 	genesisState := simapp.NewDefaultGenesisState()
 	stateBytes, err := codec.MarshalJSONIndent(app.Codec(), genesisState)
@@ -33,16 +34,16 @@ func TestSimAppExport(t *testing.T) {
 	app.Commit()
 
 	// Making a new app object with the db, so that initchain hasn't been called
-	app2 := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{})
-	_, _, err = app2.ExportAppStateAndValidators(false, []string{})
+	app2 := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{}, common.DefaultNodeHome())
+	_, _, _, err = app2.ExportAppStateAndValidators(false, []string{})
 	require.NoError(t, err, "ExportAppStateAndValidators should not have an error")
 }
 
-func TestBlackListedAddrs(t *testing.T) {
+func TestBlockedAddrs(t *testing.T) {
 	db := dbm.NewMemDB()
-	app := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{})
+	app := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{}, common.DefaultNodeHome())
 
 	for acc := range macPerms() {
-		require.True(t, app.keeper.bank.BlacklistedAddr(app.keeper.supply.GetModuleAddress(acc)))
+		require.True(t, app.keeper.bank.BlockedAddr(app.keeper.acct.GetModuleAddress(acc)))
 	}
 }

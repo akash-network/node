@@ -1,6 +1,7 @@
 package query
 
 import (
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/ovrclk/akash/sdkutil"
@@ -10,27 +11,28 @@ import (
 )
 
 // NewQuerier creates and returns a new market querier instance
-func NewQuerier(keeper keeper.Keeper) sdk.Querier {
+func NewQuerier(keeper keeper.Keeper, legacyQuerierCdc codec.JSONMarshaler) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) ([]byte, error) {
 		switch path[0] {
 		case ordersPath:
-			return queryOrders(ctx, path[1:], req, keeper)
+			return queryOrders(ctx, path[1:], req, keeper, legacyQuerierCdc)
 		case orderPath:
-			return queryOrder(ctx, path[1:], req, keeper)
+			return queryOrder(ctx, path[1:], req, keeper, legacyQuerierCdc)
 		case bidsPath:
-			return queryBids(ctx, path[1:], req, keeper)
+			return queryBids(ctx, path[1:], req, keeper, legacyQuerierCdc)
 		case bidPath:
-			return queryBid(ctx, path[1:], req, keeper)
+			return queryBid(ctx, path[1:], req, keeper, legacyQuerierCdc)
 		case leasesPath:
-			return queryLeases(ctx, path[1:], req, keeper)
+			return queryLeases(ctx, path[1:], req, keeper, legacyQuerierCdc)
 		case leasePath:
-			return queryLease(ctx, path[1:], req, keeper)
+			return queryLease(ctx, path[1:], req, keeper, legacyQuerierCdc)
 		}
 		return []byte{}, sdkerrors.ErrUnknownRequest
 	}
 }
 
-func queryOrders(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryOrders(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper,
+	legacyQuerierCdc codec.JSONMarshaler) ([]byte, error) {
 	// isValidState denotes whether given state flag is valid or not
 	filters, isValidState, err := parseOrderFiltersPath(path)
 	if err != nil {
@@ -45,10 +47,11 @@ func queryOrders(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper kee
 
 		return false
 	})
-	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
+	return sdkutil.RenderQueryResponse(legacyQuerierCdc, values)
 }
 
-func queryOrder(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryOrder(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper,
+	legacyQuerierCdc codec.JSONMarshaler) ([]byte, error) {
 
 	id, err := parseOrderPath(path)
 	if err != nil {
@@ -62,10 +65,11 @@ func queryOrder(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keep
 
 	value := Order(order)
 
-	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
+	return sdkutil.RenderQueryResponse(legacyQuerierCdc, value)
 }
 
-func queryBids(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryBids(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper,
+	legacyQuerierCdc codec.JSONMarshaler) ([]byte, error) {
 	// isValidState denotes whether given state flag is valid or not
 	filters, isValidState, err := parseBidFiltersPath(path)
 	if err != nil {
@@ -78,10 +82,11 @@ func queryBids(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keepe
 		}
 		return false
 	})
-	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
+	return sdkutil.RenderQueryResponse(legacyQuerierCdc, values)
 }
 
-func queryBid(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryBid(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper,
+	legacyQuerierCdc codec.JSONMarshaler) ([]byte, error) {
 
 	id, err := parseBidPath(path)
 	if err != nil {
@@ -95,10 +100,11 @@ func queryBid(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper
 
 	value := Bid(bid)
 
-	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
+	return sdkutil.RenderQueryResponse(legacyQuerierCdc, value)
 }
 
-func queryLeases(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryLeases(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper,
+	legacyQuerierCdc codec.JSONMarshaler) ([]byte, error) {
 	// isValidState denotes whether given state flag is valid or not
 	filters, isValidState, err := parseLeaseFiltersPath(path)
 	if err != nil {
@@ -111,10 +117,10 @@ func queryLeases(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper kee
 		}
 		return false
 	})
-	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
+	return sdkutil.RenderQueryResponse(legacyQuerierCdc, values)
 }
 
-func queryLease(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryLease(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper, legacyQuerierCdc codec.JSONMarshaler) ([]byte, error) {
 
 	id, err := ParseLeasePath(path)
 	if err != nil {
@@ -128,5 +134,5 @@ func queryLease(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keep
 
 	value := Lease(lease)
 
-	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
+	return sdkutil.RenderQueryResponse(legacyQuerierCdc, value)
 }
