@@ -2,33 +2,41 @@ package types
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-var cdc = codec.New()
+var (
+	amino = codec.New()
+
+	// ModuleCdc references the global x/provider module codec. Note, the codec should
+	// ONLY be used in certain instances of tests and for JSON encoding as Amino is
+	// still used for that purpose.
+	//
+	// The actual codec used for serialization should be provided to x/provider and
+	// defined at the application level.
+	ModuleCdc = codec.NewHybridCodec(amino, cdctypes.NewInterfaceRegistry())
+)
 
 func init() {
-	RegisterCodec(cdc)
+	RegisterCodec(amino)
+	cryptocodec.RegisterCrypto(amino)
+	amino.Seal()
 }
 
 // RegisterCodec register concrete types on codec
 func RegisterCodec(cdc *codec.Codec) {
-	cdc.RegisterConcrete(MsgCreateProvider{}, ModuleName+"/"+msgTypeCreateProvider, nil)
-	cdc.RegisterConcrete(MsgUpdateProvider{}, ModuleName+"/"+msgTypeUpdateProvider, nil)
-	cdc.RegisterConcrete(MsgDeleteProvider{}, ModuleName+"/"+msgTypeDeleteProvider, nil)
+	cdc.RegisterConcrete(&MsgCreateProvider{}, ModuleName+"/"+MsgTypeCreateProvider, nil)
+	cdc.RegisterConcrete(&MsgUpdateProvider{}, ModuleName+"/"+MsgTypeUpdateProvider, nil)
+	cdc.RegisterConcrete(&MsgDeleteProvider{}, ModuleName+"/"+MsgTypeDeleteProvider, nil)
 }
 
-// MustMarshalJSON panics if an error occurs. Besides that it behaves exactly like MarshalJSON
-// i.e., encodes json to byte array
-func MustMarshalJSON(o interface{}) []byte {
-	return cdc.MustMarshalJSON(o)
-}
-
-// UnmarshalJSON decodes bytes into json
-func UnmarshalJSON(bz []byte, ptr interface{}) error {
-	return cdc.UnmarshalJSON(bz, ptr)
-}
-
-// MustUnmarshalJSON panics if an error occurs. Besides that it behaves exactly like UnmarshalJSON.
-func MustUnmarshalJSON(bz []byte, ptr interface{}) {
-	cdc.MustUnmarshalJSON(bz, ptr)
+// RegisterInterfaces registers the x/provider interfaces types with the interface registry
+func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
+	registry.RegisterImplementations((*sdk.Msg)(nil),
+		&MsgCreateProvider{},
+		&MsgUpdateProvider{},
+		&MsgDeleteProvider{},
+	)
 }
