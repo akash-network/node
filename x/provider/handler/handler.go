@@ -14,8 +14,6 @@ import (
 // NewHandler returns a handler for "provider" type messages.
 func NewHandler(keeper keeper.Keeper, mkeeper mkeeper.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
-		ctx = ctx.WithEventManager(sdk.NewEventManager())
-
 		switch msg := msg.(type) {
 		case *types.MsgCreateProvider:
 			return handleMsgCreate(ctx, keeper, msg)
