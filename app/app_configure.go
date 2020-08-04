@@ -32,7 +32,7 @@ func (app *AkashApp) setAkashKeepers() {
 	)
 
 	app.keeper.market = market.NewKeeper(
-		app.cdc,
+		app.appCodec,
 		app.keys[market.StoreKey],
 	)
 
@@ -52,6 +52,7 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 		),
 
 		market.NewAppModule(
+			app.appCodec,
 			app.keeper.market,
 			app.keeper.deployment,
 			app.keeper.provider,
