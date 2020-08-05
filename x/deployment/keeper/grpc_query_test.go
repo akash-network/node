@@ -196,7 +196,9 @@ func TestGRPCQueryDeployments(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, res)
 			require.Equal(t, tc.expLen, len(res.Deployments))
-			require.Equal(t, expDeployment, res.Deployments[0])
+			if tc.expLen != 0 {
+				require.Equal(t, expDeployment, res.Deployments[0])
+			}
 		})
 	}
 }
