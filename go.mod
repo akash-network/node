@@ -53,4 +53,6 @@ require (
 
 replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
 
-replace github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.33.7-rc1
+replace github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.33.7-rc3
+
+// replace github.com/tendermint/tendermint => /home/abozanich/gopath/src/github.com/ovrclk/tendermint
