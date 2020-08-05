@@ -147,7 +147,8 @@ func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc codec.JSONMarshaler) s
 // RegisterQueryService registers a GRPC query service to respond to the
 // module-specific GRPC queries.
 func (am AppModule) RegisterQueryService(_ grpc.Server) {
-	// TODO: Add grpc querier
+	querier := keeper.Querier{Keeper: am.keepers.Market}
+	types.RegisterQueryServer(server, querier)
 }
 
 // BeginBlock performs no-op

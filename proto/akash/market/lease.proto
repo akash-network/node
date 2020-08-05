@@ -54,8 +54,8 @@ message Lease {
         option (gogoproto.goproto_enum_prefix) = false;
 
         // Prefix should start with 0 in enum. So declaring dummy state
-        all = 0 [
-            (gogoproto.enumvalue_customname) = "LeaseStateDefault"
+        invalid = 0 [
+            (gogoproto.enumvalue_customname) = "LeaseStateInvalid"
         ];
         active = 1 [
             (gogoproto.enumvalue_customname) = "LeaseActive"
