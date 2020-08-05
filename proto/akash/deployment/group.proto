@@ -75,8 +75,8 @@ message Group {
         option (gogoproto.goproto_enum_prefix) = false;
 
         // Prefix should start with 0 in enum. So declaring dummy state
-        all = 0 [
-            (gogoproto.enumvalue_customname) = "GroupStateDefault"
+        invalid = 0 [
+            (gogoproto.enumvalue_customname) = "GroupStateInvalid"
         ];
         open = 1 [
             (gogoproto.enumvalue_customname) = "GroupOpen"
