@@ -6,7 +6,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
 	github.com/caarlos0/env v3.3.0+incompatible
-	github.com/cosmos/cosmos-sdk v0.39.1-rc1
+	github.com/cosmos/cosmos-sdk v0.39.1-rc3
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.4.8-0.20191012010759-4bf2d1fec783 // indirect
 	github.com/go-kit/kit v0.10.0
@@ -33,7 +33,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/subosito/gotenv v1.2.1-0.20190917103637-de67a6614a4d // indirect
 	github.com/tendermint/go-amino v0.15.1
-	github.com/tendermint/tendermint v0.33.6
+	github.com/tendermint/tendermint v0.33.7
 	github.com/tendermint/tm-db v0.5.1
 	github.com/vektra/mockery v1.1.2
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
