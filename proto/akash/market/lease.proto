@@ -41,6 +41,7 @@ message LeaseID {
 // Lease stores LeaseID, state of lease and price
 message Lease {
     option (gogoproto.equal) = false;
+    option (gogoproto.goproto_stringer) = false;
 
     LeaseID lease_id = 1 [
         (gogoproto.customname) = "LeaseID",
@@ -48,9 +49,26 @@ message Lease {
         (gogoproto.jsontag)    = "id",
         (gogoproto.moretags)   = "yaml:\"id\""
     ];
-    uint32 state = 2 [
-        (gogoproto.customtype) = "LeaseState",
-        (gogoproto.nullable)   = false,
+
+    enum State {
+        option (gogoproto.goproto_enum_prefix) = false;
+
+        // Prefix should start with 0 in enum. So declaring dummy state
+        invalid = 0 [
+            (gogoproto.enumvalue_customname) = "LeaseStateInvalid"
+        ];
+        active = 1 [
+            (gogoproto.enumvalue_customname) = "LeaseActive"
+        ];
+        insufficient_funds = 2 [
+            (gogoproto.enumvalue_customname) = "LeaseInsufficientFunds"
+        ];
+        closed = 3 [
+            (gogoproto.enumvalue_customname) = "LeaseClosed"
+        ];
+    }
+
+    State state = 2 [
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];
@@ -58,5 +76,41 @@ message Lease {
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "price",
         (gogoproto.moretags)   = "yaml:\"price\""
+    ];
+}
+
+// LeaseFilters defines flags for lease list filter
+message LeaseFilters {
+    option (gogoproto.equal) = false;
+
+    bytes owner = 1 [
+        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)    = "owner",
+        (gogoproto.moretags)   = "yaml:\"owner\""
+    ];
+    uint64 dseq = 2 [
+        (gogoproto.customname) = "DSeq",
+        (gogoproto.jsontag)    = "dseq",
+        (gogoproto.moretags)   = "yaml:\"dseq\""
+    ];
+    uint32 gseq = 3 [
+        (gogoproto.customname) = "GSeq",
+        (gogoproto.jsontag)    = "gseq",
+        (gogoproto.moretags)   = "yaml:\"gseq\""
+    ];
+    uint32 oseq = 4 [
+        (gogoproto.customname) = "OSeq",
+        (gogoproto.jsontag)    = "oseq",
+        (gogoproto.moretags)   = "yaml:\"oseq\""
+    ];
+    bytes provider = 5 [
+        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)    = "provider",
+        (gogoproto.moretags)   = "yaml:\"provider\""
+    ];
+    int32 state = 6 [
+        (gogoproto.casttype) = "Lease_State",
+        (gogoproto.jsontag)    = "state",
+        (gogoproto.moretags)   = "yaml:\"state\""
     ];
 }

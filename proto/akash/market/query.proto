@@ -1,0 +1,103 @@
+syntax = "proto3";
+package akash.market;
+
+import "gogoproto/gogo.proto";
+import "cosmos/query/pagination.proto";
+import "akash/market/order.proto";
+import "akash/market/bid.proto";
+import "akash/market/lease.proto";
+
+option go_package = "github.com/ovrclk/akash/x/market/types";
+
+// Query defines the gRPC querier service
+service Query {
+    // Orders queries orders with filters
+    rpc Orders (QueryOrdersRequest) returns (QueryOrdersResponse) {}
+
+    // Order queries order details
+    rpc Order (QueryOrderRequest) returns (QueryOrderResponse) {}
+
+    // Bids queries bids with filters
+    rpc Bids (QueryBidsRequest) returns (QueryBidsResponse) {}
+
+    // Bid queries bid details
+    rpc Bid (QueryBidRequest) returns (QueryBidResponse) {}
+
+    // Leases queries leases with filters
+    rpc Leases (QueryLeasesRequest) returns (QueryLeasesResponse) {}
+
+    // Lease queries lease details
+    rpc Lease (QueryLeaseRequest) returns (QueryLeaseResponse) {}
+}
+
+// QueryOrdersRequest is request type for the Query/Orders RPC method
+message QueryOrdersRequest{
+    OrderFilters Filters = 1 [(gogoproto.nullable) = false];
+
+    cosmos.query.PageRequest pagination = 2;
+}
+
+// QueryOrdersResponse is response type for the Query/Orders RPC method
+message QueryOrdersResponse{
+    repeated Order Orders = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="Orders"];
+
+    cosmos.query.PageResponse pagination = 2;
+}
+
+// QueryOrderRequest is request type for the Query/Order RPC method
+message QueryOrderRequest{
+    OrderID ID = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryOrderResponse is response type for the Query/Order RPC method
+message QueryOrderResponse{
+    Order Order = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryBidsRequest is request type for the Query/Bids RPC method
+message QueryBidsRequest{
+    BidFilters Filters = 1 [(gogoproto.nullable) = false];
+
+    cosmos.query.PageRequest pagination = 2;
+}
+
+// QueryBidsResponse is response type for the Query/Bids RPC method
+message QueryBidsResponse{
+    repeated Bid Bids = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="Bids"];
+
+    cosmos.query.PageResponse pagination = 2;
+}
+
+// QueryBidRequest is request type for the Query/Bid RPC method
+message QueryBidRequest{
+    BidID ID = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryBidResponse is response type for the Query/Bid RPC method
+message QueryBidResponse{
+    Bid Bid = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryLeasesRequest is request type for the Query/Leases RPC method
+message QueryLeasesRequest{
+    LeaseFilters Filters = 1 [(gogoproto.nullable) = false];
+
+    cosmos.query.PageRequest pagination = 2;
+}
+
+// QueryLeasesResponse is response type for the Query/Leases RPC method
+message QueryLeasesResponse{
+    repeated Lease Leases = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="Leases"];
+
+    cosmos.query.PageResponse pagination = 2;
+}
+
+// QueryLeaseRequest is request type for the Query/Lease RPC method
+message QueryLeaseRequest{
+    LeaseID ID = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryLeaseResponse is response type for the Query/Lease RPC method
+message QueryLeaseResponse{
+    Lease Lease = 1 [(gogoproto.nullable) = false];
+}

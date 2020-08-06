@@ -96,7 +96,7 @@ func parseOrderFiltersPath(parts []string) (OrderFilters, bool, error) {
 		return OrderFilters{}, false, ErrOwnerValue
 	}
 
-	state, ok := types.OrderStateMap[parts[1]]
+	state, ok := types.Order_State_value[parts[1]]
 
 	if !ok && (parts[1] != "") {
 		return OrderFilters{}, false, ErrStateValue
@@ -105,7 +105,7 @@ func parseOrderFiltersPath(parts []string) (OrderFilters, bool, error) {
 	return OrderFilters{
 		Owner:        owner,
 		StateFlagVal: parts[1],
-		State:        state,
+		State:        types.Order_State(state),
 	}, ok, nil
 }
 
@@ -145,7 +145,7 @@ func parseBidFiltersPath(parts []string) (BidFilters, bool, error) {
 		return BidFilters{}, false, ErrOwnerValue
 	}
 
-	state, ok := types.BidStateMap[parts[1]]
+	state, ok := types.Bid_State_value[parts[1]]
 
 	if !ok && (parts[1] != "") {
 		return BidFilters{}, false, ErrStateValue
@@ -154,7 +154,7 @@ func parseBidFiltersPath(parts []string) (BidFilters, bool, error) {
 	return BidFilters{
 		Owner:        owner,
 		StateFlagVal: parts[1],
-		State:        state,
+		State:        types.Bid_State(state),
 	}, ok, nil
 }
 
@@ -185,7 +185,7 @@ func parseLeaseFiltersPath(parts []string) (LeaseFilters, bool, error) {
 		return LeaseFilters{}, false, ErrOwnerValue
 	}
 
-	state, ok := types.LeaseStateMap[parts[1]]
+	state, ok := types.Lease_State_value[parts[1]]
 
 	if !ok && (parts[1] != "") {
 		return LeaseFilters{}, false, ErrStateValue
@@ -194,6 +194,6 @@ func parseLeaseFiltersPath(parts []string) (LeaseFilters, bool, error) {
 	return LeaseFilters{
 		Owner:        owner,
 		StateFlagVal: parts[1],
-		State:        state,
+		State:        types.Lease_State(state),
 	}, ok, nil
 }

@@ -1,30 +1,33 @@
 package types
 
 import (
+	"strings"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v2"
 )
 
-//go:generate stringer -linecomment -output=autogen_stringer.go -type=OrderState,BidState,LeaseState
+// //go:generate stringer -linecomment -output=autogen_stringer.go -type=OrderState,BidState,LeaseState
 
-// OrderState defines state of order
-type OrderState uint32
+// // OrderState defines state of order
+// type OrderState uint32
 
-const (
-	// OrderOpen is used when state of order is open
-	OrderOpen OrderState = iota + 1 // order
-	// OrderMatched is used when state of order is matched
-	OrderMatched // matched
-	// OrderClosed is used when state of order is closed
-	OrderClosed // closed
-)
+// const (
+// 	// OrderOpen is used when state of order is open
+// 	OrderOpen OrderState = iota + 1 // open
+// 	// OrderMatched is used when state of order is matched
+// 	OrderMatched // matched
+// 	// OrderClosed is used when state of order is closed
+// 	OrderClosed // closed
+// )
 
-// OrderStateMap is used to decode order state flag value
-var OrderStateMap = map[string]OrderState{
-	"open":    OrderOpen,
-	"matched": OrderMatched,
-	"closed":  OrderClosed,
-}
+// // OrderStateMap is used to decode order state flag value
+// var OrderStateMap = map[string]OrderState{
+// 	"open":    OrderOpen,
+// 	"matched": OrderMatched,
+// 	"closed":  OrderClosed,
+// }
 
 // Order stores orderID, state of order and other details
 // type Order struct {
@@ -39,6 +42,25 @@ var OrderStateMap = map[string]OrderState{
 // ID method returns OrderID details of specific order
 func (o Order) ID() OrderID {
 	return o.OrderID
+}
+
+// String implements the Stringer interface for a Order object.
+func (o Order) String() string {
+	out, _ := yaml.Marshal(o)
+	return string(out)
+}
+
+// Orders is a collection of Order
+type Orders []Order
+
+// String implements the Stringer interface for a Orders object.
+func (o Orders) String() string {
+	var out string
+	for _, order := range o {
+		out += order.String() + "\n"
+	}
+
+	return strings.TrimSpace(out)
 }
 
 // ValidateCanBid method validates whether order is open or not and
@@ -100,27 +122,57 @@ func (o Order) validateMatchableState() error {
 	}
 }
 
-// BidState defines state of bid
-type BidState uint32
+// Accept returns whether order filters valid or not
+func (filters OrderFilters) Accept(obj Order) bool {
+	// Checking owner filter
+	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.OrderID.Owner) {
+		return false
+	}
 
-const (
-	// BidOpen is used when state of bid is opened
-	BidOpen BidState = iota + 1 // open
-	// BidMatched is used when state of bid is matched
-	BidMatched // matched
-	// BidLost is used when state of bid is lost
-	BidLost // lost
-	// BidClosed is used when state of bid is closed
-	BidClosed // closed
-)
+	// Checking dseq filter
+	if filters.DSeq != 0 && filters.DSeq != obj.OrderID.DSeq {
+		return false
+	}
 
-// BidStateMap is used to decode bid state flag value
-var BidStateMap = map[string]BidState{
-	"open":    BidOpen,
-	"matched": BidMatched,
-	"lost":    BidLost,
-	"closed":  BidClosed,
+	// Checking gseq filter
+	if filters.GSeq != 0 && filters.GSeq != obj.OrderID.GSeq {
+		return false
+	}
+
+	// Checking oseq filter
+	if filters.OSeq != 0 && filters.OSeq != obj.OrderID.OSeq {
+		return false
+	}
+
+	// Checking state filter
+	if filters.State != 0 && filters.State != obj.State {
+		return false
+	}
+
+	return true
 }
+
+// // BidState defines state of bid
+// type BidState uint32
+
+// const (
+// 	// BidOpen is used when state of bid is opened
+// 	BidOpen BidState = iota + 1 // open
+// 	// BidMatched is used when state of bid is matched
+// 	BidMatched // matched
+// 	// BidLost is used when state of bid is lost
+// 	BidLost // lost
+// 	// BidClosed is used when state of bid is closed
+// 	BidClosed // closed
+// )
+
+// // BidStateMap is used to decode bid state flag value
+// var BidStateMap = map[string]BidState{
+// 	"open":    BidOpen,
+// 	"matched": BidMatched,
+// 	"lost":    BidLost,
+// 	"closed":  BidClosed,
+// }
 
 // Bid stores BidID, state of bid and price
 // type Bid struct {
@@ -134,24 +186,78 @@ func (obj Bid) ID() BidID {
 	return obj.BidID
 }
 
-// LeaseState defines state of Lease
-type LeaseState uint32
-
-const (
-	// LeaseActive is used when state of lease is active
-	LeaseActive LeaseState = iota + 1 // active
-	// LeaseInsufficientFunds is used when lease has insufficient funds
-	LeaseInsufficientFunds // insufficient-funds
-	// LeaseClosed is used when state of lease is closed
-	LeaseClosed // closed
-)
-
-// LeaseStateMap is used to decode lease state flag value
-var LeaseStateMap = map[string]LeaseState{
-	"active":             LeaseActive,
-	"insufficient-funds": LeaseInsufficientFunds,
-	"closed":             LeaseClosed,
+// String implements the Stringer interface for a Bid object.
+func (obj Bid) String() string {
+	out, _ := yaml.Marshal(obj)
+	return string(out)
 }
+
+// Bids is a collection of Bid
+type Bids []Bid
+
+// String implements the Stringer interface for a Bids object.
+func (b Bids) String() string {
+	var out string
+	for _, bid := range b {
+		out += bid.String() + "\n"
+	}
+
+	return strings.TrimSpace(out)
+}
+
+// Accept returns whether bid filters valid or not
+func (filters BidFilters) Accept(obj Bid) bool {
+	// Checking owner filter
+	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.BidID.Owner) {
+		return false
+	}
+
+	// Checking dseq filter
+	if filters.DSeq != 0 && filters.DSeq != obj.BidID.DSeq {
+		return false
+	}
+
+	// Checking gseq filter
+	if filters.GSeq != 0 && filters.GSeq != obj.BidID.GSeq {
+		return false
+	}
+
+	// Checking oseq filter
+	if filters.OSeq != 0 && filters.OSeq != obj.BidID.OSeq {
+		return false
+	}
+
+	// Checking provider filter
+	if !filters.Provider.Empty() && !filters.Provider.Equals(obj.BidID.Provider) {
+		return false
+	}
+
+	// Checking state filter
+	if filters.State != 0 && filters.State != obj.State {
+		return false
+	}
+
+	return true
+}
+
+// // LeaseState defines state of Lease
+// type LeaseState uint32
+
+// const (
+// 	// LeaseActive is used when state of lease is active
+// 	LeaseActive LeaseState = iota + 1 // active
+// 	// LeaseInsufficientFunds is used when lease has insufficient funds
+// 	LeaseInsufficientFunds // insufficient_funds
+// 	// LeaseClosed is used when state of lease is closed
+// 	LeaseClosed // closed
+// )
+
+// // LeaseStateMap is used to decode lease state flag value
+// var LeaseStateMap = map[string]LeaseState{
+// 	"active":             LeaseActive,
+// 	"insufficient_funds": LeaseInsufficientFunds,
+// 	"closed":             LeaseClosed,
+// }
 
 // Lease stores LeaseID, state of lease and price
 // type Lease struct {
@@ -163,4 +269,58 @@ var LeaseStateMap = map[string]LeaseState{
 // ID method returns LeaseID details of specific lease
 func (obj Lease) ID() LeaseID {
 	return obj.LeaseID
+}
+
+// String implements the Stringer interface for a Lease object.
+func (obj Lease) String() string {
+	out, _ := yaml.Marshal(obj)
+	return string(out)
+}
+
+// Leases is a collection of Lease
+type Leases []Lease
+
+// String implements the Stringer interface for a Leases object.
+func (l Leases) String() string {
+	var out string
+	for _, order := range l {
+		out += order.String() + "\n"
+	}
+
+	return strings.TrimSpace(out)
+}
+
+// Accept returns whether lease filters valid or not
+func (filters LeaseFilters) Accept(obj Lease) bool {
+	// Checking owner filter
+	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.LeaseID.Owner) {
+		return false
+	}
+
+	// Checking dseq filter
+	if filters.DSeq != 0 && filters.DSeq != obj.LeaseID.DSeq {
+		return false
+	}
+
+	// Checking gseq filter
+	if filters.GSeq != 0 && filters.GSeq != obj.LeaseID.GSeq {
+		return false
+	}
+
+	// Checking oseq filter
+	if filters.OSeq != 0 && filters.OSeq != obj.LeaseID.OSeq {
+		return false
+	}
+
+	// Checking provider filter
+	if !filters.Provider.Empty() && !filters.Provider.Equals(obj.LeaseID.Provider) {
+		return false
+	}
+
+	// Checking state filter
+	if filters.State != 0 && filters.State != obj.State {
+		return false
+	}
+
+	return true
 }

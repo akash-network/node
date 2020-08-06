@@ -144,7 +144,7 @@ func BidFiltersFromFlags(flags *pflag.FlagSet) (query.BidFilters, error) {
 // AddLeaseFilterFlags add flags to filter for lease list
 func AddLeaseFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "lease owner address to filter")
-	flags.String("state", "", "lease state to filter (active,insufficient-funds,closed)")
+	flags.String("state", "", "lease state to filter (active,insufficient_funds,closed)")
 }
 
 // LeaseFiltersFromFlags returns LeaseFilters with given flags and error if occurred
