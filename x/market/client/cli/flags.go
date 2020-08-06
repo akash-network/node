@@ -4,10 +4,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
-	"github.com/ovrclk/akash/x/market/query"
 	"github.com/ovrclk/akash/x/market/types"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+)
+
+var (
+	ErrProviderValue = errors.New("query: invalid provider value")
 )
 
 // AddOrderIDFlags add flags for order
@@ -107,55 +111,95 @@ func ProviderFromFlagsWithoutCtx(flags *pflag.FlagSet) (sdk.AccAddress, error) {
 func AddOrderFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "order owner address to filter")
 	flags.String("state", "", "order state to filter (open,matched,closed)")
+	flags.Uint64("dseq", 0, "deployment sequence to filter")
+	flags.Uint32("gseq", 0, "group sequence to filter")
+	flags.Uint32("oseq", 0, "order sequence to filter")
 }
 
 // OrderFiltersFromFlags returns OrderFilters with given flags and error if occurred
-func OrderFiltersFromFlags(flags *pflag.FlagSet) (query.OrderFilters, error) {
-	gfilters, err := dcli.GroupFiltersFromFlags(flags)
+func OrderFiltersFromFlags(flags *pflag.FlagSet) (types.OrderFilters, string, error) {
+	dfilters, state, err := dcli.DepFiltersFromFlags(flags)
 	if err != nil {
-		return query.OrderFilters{}, err
+		return types.OrderFilters{}, state, err
 	}
-	ofilters := query.OrderFilters{
-		Owner:        gfilters.Owner,
-		StateFlagVal: gfilters.StateFlagVal,
+	ofilters := types.OrderFilters{
+		Owner: dfilters.Owner,
+		DSeq:  dfilters.DSeq,
 	}
-	return ofilters, nil
+
+	if ofilters.GSeq, err = flags.GetUint32("gseq"); err != nil {
+		return ofilters, state, err
+	}
+
+	if ofilters.OSeq, err = flags.GetUint32("oseq"); err != nil {
+		return ofilters, state, err
+	}
+
+	return ofilters, state, nil
 }
 
 // AddBidFilterFlags add flags to filter for bid list
 func AddBidFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "bid owner address to filter")
 	flags.String("state", "", "bid state to filter (open,matched,lost,closed)")
+	flags.Uint64("dseq", 0, "deployment sequence to filter")
+	flags.Uint32("gseq", 0, "group sequence to filter")
+	flags.Uint32("oseq", 0, "order sequence to filter")
+	flags.String("provider", "", "bid provider address to filter")
 }
 
 // BidFiltersFromFlags returns BidFilters with given flags and error if occurred
-func BidFiltersFromFlags(flags *pflag.FlagSet) (query.BidFilters, error) {
-	ofilters, err := OrderFiltersFromFlags(flags)
+func BidFiltersFromFlags(flags *pflag.FlagSet) (types.BidFilters, string, error) {
+	ofilters, state, err := OrderFiltersFromFlags(flags)
 	if err != nil {
-		return query.BidFilters{}, err
+		return types.BidFilters{}, state, err
 	}
-	bfilters := query.BidFilters{
-		Owner:        ofilters.Owner,
-		StateFlagVal: ofilters.StateFlagVal,
+	bfilters := types.BidFilters{
+		Owner: ofilters.Owner,
+		DSeq:  ofilters.DSeq,
+		GSeq:  ofilters.OSeq,
+		OSeq:  ofilters.OSeq,
 	}
-	return bfilters, nil
+
+	provider, err := flags.GetString("provider")
+	if err != nil {
+		return bfilters, state, err
+	}
+
+	bfilters.Provider, err = sdk.AccAddressFromBech32(provider)
+	if err != nil {
+		return bfilters, state, err
+	}
+
+	if !bfilters.Provider.Empty() && sdk.VerifyAddressFormat(bfilters.Provider) != nil {
+		return bfilters, state, ErrProviderValue
+	}
+
+	return bfilters, state, nil
 }
 
 // AddLeaseFilterFlags add flags to filter for lease list
 func AddLeaseFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "lease owner address to filter")
 	flags.String("state", "", "lease state to filter (active,insufficient_funds,closed)")
+	flags.Uint64("dseq", 0, "deployment sequence to filter")
+	flags.Uint32("gseq", 0, "group sequence to filter")
+	flags.Uint32("oseq", 0, "order sequence to filter")
+	flags.String("provider", "", "bid provider address to filter")
 }
 
 // LeaseFiltersFromFlags returns LeaseFilters with given flags and error if occurred
-func LeaseFiltersFromFlags(flags *pflag.FlagSet) (query.LeaseFilters, error) {
-	ofilters, err := OrderFiltersFromFlags(flags)
+func LeaseFiltersFromFlags(flags *pflag.FlagSet) (types.LeaseFilters, string, error) {
+	bfilters, state, err := BidFiltersFromFlags(flags)
 	if err != nil {
-		return query.LeaseFilters{}, err
+		return types.LeaseFilters{}, state, err
 	}
-	lfilters := query.LeaseFilters{
-		Owner:        ofilters.Owner,
-		StateFlagVal: ofilters.StateFlagVal,
+	lfilters := types.LeaseFilters{
+		Owner:    bfilters.Owner,
+		DSeq:     bfilters.DSeq,
+		GSeq:     bfilters.GSeq,
+		OSeq:     bfilters.OSeq,
+		Provider: bfilters.Provider,
 	}
-	return lfilters, nil
+	return lfilters, state, nil
 }
