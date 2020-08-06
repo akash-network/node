@@ -52,7 +52,7 @@ func cmdDeployments() *cobra.Command {
 			stateVal, ok := types.Deployment_State_value[state]
 
 			if (!ok && (state != "")) || state == "invalid" {
-				return types.ErrInvalidState
+				return ErrStateValue
 			}
 
 			dfilters.State = types.Deployment_State(stateVal)
@@ -109,8 +109,11 @@ func cmdDeployment() *cobra.Command {
 			return clientCtx.PrintOutput(res.Deployment)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
 	AddDeploymentIDFlags(cmd.Flags())
 	MarkReqDeploymentIDFlags(cmd)
+
 	return cmd
 }
 
@@ -157,7 +160,10 @@ func cmdGetGroup() *cobra.Command {
 			return clientCtx.PrintOutput(res.Group)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
 	AddGroupIDFlags(cmd.Flags())
 	MarkReqGroupIDFlags(cmd)
+
 	return cmd
 }
