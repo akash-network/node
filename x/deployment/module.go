@@ -78,8 +78,7 @@ func (AppModuleBasic) RegisterRESTRoutes(clientCtx client.Context, rtr *mux.Rout
 
 // GetQueryCmd get the root query command of this module
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
-	// TODO: Change parameters when working on queries
-	return cli.GetQueryCmd(StoreKey, nil)
+	return cli.GetQueryCmd()
 }
 
 // GetTxCmd get the root tx command of this module
@@ -88,10 +87,10 @@ func (AppModuleBasic) GetTxCmd() *cobra.Command {
 	return cli.GetTxCmd(StoreKey, nil)
 }
 
-// // GetQueryClient returns a new query client for this module
-// func (AppModuleBasic) GetQueryClient(ctx context.CLIContext) query.Client {
-// 	return query.NewClient(ctx, StoreKey)
-// }
+// GetQueryClient returns a new query client for this module
+func (AppModuleBasic) GetQueryClient(clientCtx client.Context) query.Client {
+	return query.NewClient(clientCtx, StoreKey)
+}
 
 // AppModule implements an application module for the deployment module.
 type AppModule struct {
