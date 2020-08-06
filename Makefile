@@ -225,22 +225,22 @@ update-swagger-docs:
 ###############################################################################
 
 test-sim-fullapp:
-	@echo "Running app simulation test..."
+	echo "Running app simulation test..."
 	go test -mod=readonly -tags=$(BUILD_MAINNET) ${APP_DIR} -run=TestFullAppSimulation -Enabled=true \
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
 test-sim-nondeterminism:
-	@echo "Running non-determinism test. This may take several minutes..."
+	echo "Running non-determinism test. This may take several minutes..."
 	go test -mod=readonly -tags=$(BUILD_MAINNET) $(APP_DIR) -run TestAppStateDeterminism -Enabled=true \
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Period=0 -v -timeout 24h
 
 test-sim-import-export:
-	@echo "Running application import/export simulation..."
+	echo "Running application import/export simulation..."
 	go test -mod=readonly -tags=$(BUILD_MAINNET) $(APP_DIR) -run=TestAppImportExport -Enabled=true \
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
 test-sim-after-import:
-	@echo "Running application simulation-after-import..."
+	echo "Running application simulation-after-import..."
 	go test -mod=readonly -tags=$(BUILD_MAINNET) $(APP_DIR) -run=TestAppSimulationAfterImport -Enabled=true \
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
@@ -251,13 +251,13 @@ test-sims: test-sim-fullapp test-sim-nondeterminism test-sim-import-export test-
 ###############################################################################
 
 proto-gen:
-	@./script/protocgen.sh
+	./script/protocgen.sh
 
 proto-lint:
-	@buf check lint --error-format=json
+	buf check lint --error-format=json
 
 proto-check-breaking:
-	@buf check breaking --against-input '.git#branch=master'
+	buf check breaking --against-input '.git#branch=master'
 
 TM_URL           = https://raw.githubusercontent.com/tendermint/tendermint/v0.33.1
 GOGO_PROTO_URL   = https://raw.githubusercontent.com/regen-network/protobuf/cosmos
@@ -272,35 +272,35 @@ COSMOS_PROTO_TYPES  = third_party/proto/cosmos_proto
 COSMOS_SDK_PROTO_TYPES  = third_party/proto/cosmos
 
 proto-update-deps:
-	@mkdir -p $(GOGO_PROTO_TYPES)
-	@curl -sSL $(GOGO_PROTO_URL)/gogoproto/gogo.proto > $(GOGO_PROTO_TYPES)/gogo.proto
+	mkdir -p $(GOGO_PROTO_TYPES)
+	curl -sSL $(GOGO_PROTO_URL)/gogoproto/gogo.proto > $(GOGO_PROTO_TYPES)/gogo.proto
 
-	@mkdir -p $(COSMOS_PROTO_TYPES)
-	@curl -sSL $(COSMOS_PROTO_URL)/cosmos.proto > $(COSMOS_PROTO_TYPES)/cosmos.proto
+	mkdir -p $(COSMOS_PROTO_TYPES)
+	curl -sSL $(COSMOS_PROTO_URL)/cosmos.proto > $(COSMOS_PROTO_TYPES)/cosmos.proto
 
 	## Importing of tendermint protobuf definitions currently requires the
 ## use of `sed` in order to build properly with cosmos-sdk's proto file layout
 ## (which is the standard Buf.build FILE_LAYOUT)
 ## Issue link: https://github.com/tendermint/tendermint/issues/5021
-	@mkdir -p $(TM_ABCI_TYPES)
-	@curl -sSL $(TM_URL)/abci/types/types.proto > $(TM_ABCI_TYPES)/types.proto
-	@sed -i '7 s|third_party/proto/||g' $(TM_ABCI_TYPES)/types.proto
-	@sed -i '8 s|crypto/merkle/merkle.proto|tendermint/crypto/merkle/merkle.proto|g' $(TM_ABCI_TYPES)/types.proto
-	@sed -i '9 s|libs/kv/types.proto|tendermint/libs/kv/types.proto|g' $(TM_ABCI_TYPES)/types.proto
+	mkdir -p $(TM_ABCI_TYPES)
+	curl -sSL $(TM_URL)/abci/types/types.proto > $(TM_ABCI_TYPES)/types.proto
+	sed -i '7 s|third_party/proto/||g' $(TM_ABCI_TYPES)/types.proto
+	sed -i '8 s|crypto/merkle/merkle.proto|tendermint/crypto/merkle/merkle.proto|g' $(TM_ABCI_TYPES)/types.proto
+	sed -i '9 s|libs/kv/types.proto|tendermint/libs/kv/types.proto|g' $(TM_ABCI_TYPES)/types.proto
 
-	@mkdir -p $(TM_KV_TYPES)
-	@curl -sSL $(TM_URL)/libs/kv/types.proto > $(TM_KV_TYPES)/types.proto
-	@sed -i '5 s|third_party/proto/||g' $(TM_KV_TYPES)/types.proto
+	mkdir -p $(TM_KV_TYPES)
+	curl -sSL $(TM_URL)/libs/kv/types.proto > $(TM_KV_TYPES)/types.proto
+	sed -i '5 s|third_party/proto/||g' $(TM_KV_TYPES)/types.proto
 
-	@mkdir -p $(TM_MERKLE_TYPES)
-	@curl -sSL $(TM_URL)/crypto/merkle/merkle.proto > $(TM_MERKLE_TYPES)/merkle.proto
-	@sed -i '7 s|third_party/proto/||g' $(TM_MERKLE_TYPES)/merkle.proto
+	mkdir -p $(TM_MERKLE_TYPES)
+	curl -sSL $(TM_URL)/crypto/merkle/merkle.proto > $(TM_MERKLE_TYPES)/merkle.proto
+	sed -i '7 s|third_party/proto/||g' $(TM_MERKLE_TYPES)/merkle.proto
 
-	@mkdir -p $(COSMOS_SDK_PROTO_TYPES)
-	@curl -sSL $(COSMOS_SDK_PROTO_URL)/cosmos.proto > $(COSMOS_SDK_PROTO_TYPES)/cosmos.proto
+	mkdir -p $(COSMOS_SDK_PROTO_TYPES)
+	curl -sSL $(COSMOS_SDK_PROTO_URL)/cosmos.proto > $(COSMOS_SDK_PROTO_TYPES)/cosmos.proto
 
-	@mkdir -p $(COSMOS_SDK_PROTO_TYPES)/query
-	@curl -sSL $(COSMOS_SDK_PROTO_URL)/query/pagination.proto > $(COSMOS_SDK_PROTO_TYPES)/query/pagination.proto
+	mkdir -p $(COSMOS_SDK_PROTO_TYPES)/query
+	curl -sSL $(COSMOS_SDK_PROTO_URL)/query/pagination.proto > $(COSMOS_SDK_PROTO_TYPES)/query/pagination.proto
 
 PREFIX ?= /usr/local
 BIN ?= $(PREFIX)/bin
@@ -320,15 +320,15 @@ endif
 proto-tools: proto-tools-stamp buf
 
 proto-tools-stamp:
-	@echo "Installing protoc compiler..."
-	@(cd /tmp; \
+	echo "Installing protoc compiler..."
+	(cd /tmp; \
 	curl -OL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
 	unzip -o ${PROTOC_ZIP} -d $(PREFIX) bin/protoc; \
 	unzip -o ${PROTOC_ZIP} -d $(PREFIX) 'include/*'; \
 	rm -f ${PROTOC_ZIP})
 
-	@echo "Installing protoc-gen-gocosmos..."
-	@go install github.com/regen-network/cosmos-proto/protoc-gen-gocosmos
+	echo "Installing protoc-gen-gocosmos..."
+	go install github.com/regen-network/cosmos-proto/protoc-gen-gocosmos
 
 	# Create dummy file to satisfy dependency and avoid
 	# rebuilding when this Makefile target is hit twice
@@ -338,8 +338,8 @@ proto-tools-stamp:
 buf: buf-stamp
 
 buf-stamp:
-	@echo "Installing buf..."
-	@curl -sSL \
+	echo "Installing buf..."
+	curl -sSL \
     "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-${UNAME_S}-${UNAME_M}" \
     -o "${BIN}/buf" && \
 	chmod +x "${BIN}/buf"
