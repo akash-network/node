@@ -1,7 +1,7 @@
 package query
 
 import (
-	"github.com/cosmos/cosmos-sdk/client/context"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/ovrclk/akash/x/market/types"
 )
 
@@ -16,12 +16,12 @@ type Client interface {
 }
 
 // NewClient creates a client instance with provided context and key
-func NewClient(ctx context.CLIContext, key string) Client {
+func NewClient(ctx sdkclient.Context, key string) Client {
 	return &client{ctx: ctx, key: key}
 }
 
 type client struct {
-	ctx context.CLIContext
+	ctx sdkclient.Context
 	key string
 }
 

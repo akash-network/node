@@ -1,57 +1,97 @@
 package cli
 
 import (
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/ovrclk/akash/x/market/query"
+	"context"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 )
 
-func cmdGetOrders(key string, cdc *codec.Codec) *cobra.Command {
+func cmdGetOrders() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Query for all orders",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-
-			ofilters, err := OrderFiltersFromFlags(cmd.Flags())
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			obj, err := query.NewClient(ctx, key).Orders(ofilters)
+			queryClient := types.NewQueryClient(clientCtx)
+
+			ofilters, state, err := OrderFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
-			return ctx.PrintOutput(obj)
+
+			// checking state flag
+			stateVal, ok := types.Order_State_value[state]
+
+			if (!ok && (state != "")) || state == "invalid" {
+				return ErrStateValue
+			}
+
+			ofilters.State = types.Order_State(stateVal)
+
+			pageReq, err := client.ReadPageRequest(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			params := &types.QueryOrdersRequest{
+				Filters:    ofilters,
+				Pagination: pageReq,
+			}
+
+			res, err := queryClient.Orders(context.Background(), params)
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintOutput(res.Orders)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	flags.AddPaginationFlagsToCmd(cmd, "orders")
 	AddOrderFilterFlags(cmd.Flags())
 	return cmd
 }
 
-func cmdGetOrder(key string, cdc *codec.Codec) *cobra.Command {
+func cmdGetOrder() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Query order",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			queryClient := types.NewQueryClient(clientCtx)
 
 			id, err := OrderIDFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			obj, err := query.NewClient(ctx, key).Order(id)
+			res, err := queryClient.Order(context.Background(), &types.QueryOrderRequest{ID: id})
 			if err != nil {
 				return err
 			}
 
-			return ctx.PrintOutput(obj)
+			return clientCtx.PrintOutput(res.Order)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
 	AddOrderIDFlags(cmd.Flags())
 	MarkReqOrderIDFlags(cmd)
+
 	return cmd
 }

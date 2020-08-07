@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
 	"github.com/ovrclk/akash/x/market/types"
@@ -12,6 +12,7 @@ import (
 
 var (
 	ErrProviderValue = errors.New("query: invalid provider value")
+	ErrStateValue    = errors.New("query: invalid state value")
 )
 
 // AddOrderIDFlags add flags for order
@@ -68,7 +69,7 @@ func MarkReqBidIDFlags(cmd *cobra.Command) {
 }
 
 // BidIDFromFlags returns BidID with given flags and error if occurred
-func BidIDFromFlags(ctx context.CLIContext, flags *pflag.FlagSet) (types.BidID, error) {
+func BidIDFromFlags(ctx client.Context, flags *pflag.FlagSet) (types.BidID, error) {
 	prev, err := OrderIDFromFlags(flags)
 	if err != nil {
 		return types.BidID{}, err
