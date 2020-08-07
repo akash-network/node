@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/gorilla/mux"
@@ -12,7 +12,7 @@ import (
 )
 
 // RegisterRoutes registers all query routes
-func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
+func RegisterRoutes(ctx client.Context, r *mux.Router, ns string) {
 	// Get providers list
 	r.HandleFunc(fmt.Sprintf("/%s/list", ns), listProvidersHandler(ctx, ns)).Methods("GET")
 
@@ -20,7 +20,7 @@ func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
 	r.HandleFunc(fmt.Sprintf("/%s/info/{providerOwner}", ns), getProviderHandler(ctx, ns)).Methods("GET")
 }
 
-func listProvidersHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
+func listProvidersHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		res, err := query.NewRawClient(ctx, ns).Providers()
 		if err != nil {
@@ -31,7 +31,7 @@ func listProvidersHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	}
 }
 
-func getProviderHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
+func getProviderHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bech32Addr := mux.Vars(r)["providerOwner"]
 
