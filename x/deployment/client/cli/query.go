@@ -77,6 +77,7 @@ func cmdDeployments() *cobra.Command {
 	}
 
 	flags.AddQueryFlagsToCmd(cmd)
+	flags.AddPaginationFlagsToCmd(cmd, "deployments")
 	AddDeploymentFilterFlags(cmd.Flags())
 
 	return cmd
