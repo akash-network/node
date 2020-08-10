@@ -5,10 +5,9 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/codec"
 )
 
-func RootCmd(cdc *codec.Codec) *cobra.Command {
+func RootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "provider",
 		Short: "Akash provider commands",
@@ -17,14 +16,14 @@ func RootCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.PersistentFlags().String(flags.FlagNode, "http://localhost:26657", "The node address")
 	_ = viper.BindPFlag(flags.FlagNode, cmd.PersistentFlags().Lookup(flags.FlagNode))
 
-	cmd.AddCommand(sendManifestCmd(cdc))
-	cmd.AddCommand(statusCmd(cdc))
-	cmd.AddCommand(leaseStatusCmd(cdc))
-	cmd.AddCommand(serviceStatusCmd(cdc))
-	cmd.AddCommand(serviceLogsCmd(cdc))
-	cmd.AddCommand(flags.PostCommands(
-		runCmd(cdc),
-	)...)
+	cmd.AddCommand(sendManifestCmd())
+	cmd.AddCommand(statusCmd())
+	cmd.AddCommand(leaseStatusCmd())
+	cmd.AddCommand(serviceStatusCmd())
+	cmd.AddCommand(serviceLogsCmd())
+	cmd.AddCommand(
+		runCmd(),
+	)
 
 	return cmd
 }

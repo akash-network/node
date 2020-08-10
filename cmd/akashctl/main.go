@@ -1,17 +1,20 @@
 package main
 
 import (
+	"context"
+	"os"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/version"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/cli"
 
 	"github.com/ovrclk/akash/app"
@@ -25,7 +28,17 @@ func main() {
 
 	common.InitSDKConfig()
 
-	cdc := app.MakeCodec()
+	encodingConfig := app.MakeEncodingConfig()
+
+	initClientCtx := client.Context{}.
+		WithJSONMarshaler(encodingConfig.Marshaler).
+		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
+		WithTxConfig(encodingConfig.TxConfig).
+		WithCodec(encodingConfig.Amino).
+		WithInput(os.Stdin).
+		WithAccountRetriever(authtypes.NewAccountRetriever(encodingConfig.Marshaler)).
+		WithBroadcastMode(flags.BroadcastBlock).
+		WithHomeDir(common.DefaultCLIHome())
 
 	root := &cobra.Command{
 		Use:   "akashctl",
@@ -36,7 +49,7 @@ func main() {
 	// Add --chain-id to persistent flags and mark it required
 	root.PersistentFlags().String(flags.FlagChainID, "", "Chain ID of tendermint node")
 
-	root.PersistentPreRunE = func(_ *cobra.Command, _ []string) error {
+	root.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
 		// viper bindings below should be applied to root command rather then
 		// to an argument from this function. otherwise viper won't able to find them
 		if err := viper.BindPFlag(flags.FlagChainID, root.PersistentFlags().Lookup(flags.FlagChainID)); err != nil {
@@ -51,21 +64,27 @@ func main() {
 			return err
 		}
 
+		if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
+			return err
+		}
+
 		return nil
 	}
 
 	root.AddCommand(
 		rpc.StatusCommand(),
-		client.ConfigCmd(common.DefaultCLIHome()),
-		queryCmd(cdc),
-		txCmd(cdc),
+		queryCmd(),
+		txCmd(),
 		// lcd.ServeCommand(cdc, lcdRoutes),
-		keys.Commands(),
-		version.Cmd,
-		flags.NewCompletionCmd(root, true),
+		keys.Commands(common.DefaultCLIHome()),
+		version.NewVersionCommand(),
+		cli.NewCompletionCmd(root, true),
 	)
 
-	addOtherCommands(root, cdc)
+	addOtherCommands(root)
+
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, client.ClientContextKey, &client.Context{})
 
 	executor := cli.PrepareMainCmd(root, "AKASHCTL", common.DefaultCLIHome())
 	err := executor.Execute()
@@ -74,7 +93,7 @@ func main() {
 	}
 }
 
-func queryCmd(cdc *amino.Codec) *cobra.Command {
+func queryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "query",
 		Aliases: []string{"q"},
@@ -82,38 +101,41 @@ func queryCmd(cdc *amino.Codec) *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		authcmd.GetAccountCmd(cdc),
+		authcmd.GetAccountCmd(),
 		flags.LineBreak,
-		rpc.ValidatorCommand(cdc),
+		rpc.ValidatorCommand(),
 		rpc.BlockCommand(),
-		authcmd.QueryTxsByEventsCmd(cdc),
-		authcmd.QueryTxCmd(cdc),
+		authcmd.QueryTxsByEventsCmd(),
+		authcmd.QueryTxCmd(),
 		flags.LineBreak,
 	)
 
-	app.ModuleBasics().AddQueryCommands(cmd, cdc)
+	app.ModuleBasics().AddQueryCommands(cmd)
 	return cmd
 }
 
-func txCmd(cdc *amino.Codec) *cobra.Command {
+func txCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tx",
 		Short: "Transactions subcommands",
 	}
 
 	cmd.AddCommand(
-		bankcmd.SendTxCmd(cdc),
+		bankcmd.NewSendTxCmd(),
 		flags.LineBreak,
-		authcmd.GetSignCommand(cdc),
-		authcmd.GetMultiSignCommand(cdc),
+		authcmd.GetSignCommand(),
+		authcmd.GetSignBatchCommand(),
+		authcmd.GetMultiSignCommand(),
+		authcmd.GetValidateSignaturesCommand(),
 		flags.LineBreak,
-		authcmd.GetBroadcastCommand(cdc),
-		authcmd.GetEncodeCommand(cdc),
+		authcmd.GetBroadcastCommand(),
+		authcmd.GetEncodeCommand(),
+		authcmd.GetDecodeCommand(),
 		flags.LineBreak,
 	)
 
 	// add modules' tx commands
-	app.ModuleBasics().AddTxCommands(cmd, cdc)
+	app.ModuleBasics().AddTxCommands(cmd)
 
 	return cmd
 }

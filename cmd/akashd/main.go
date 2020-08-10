@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-	"os"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -16,7 +14,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	"github.com/ovrclk/akash/app"
@@ -36,23 +33,10 @@ func main() {
 
 	encodingConfig := app.MakeEncodingConfig()
 
-	initClientCtx := client.Context{}.
-		WithJSONMarshaler(encodingConfig.Marshaler).
-		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
-		WithTxConfig(encodingConfig.TxConfig).
-		WithCodec(encodingConfig.Amino).
-		WithInput(os.Stdin).
-		WithAccountRetriever(authtypes.NewAccountRetriever(encodingConfig.Marshaler)).
-		WithBroadcastMode(flags.BroadcastBlock).
-		WithHomeDir(common.DefaultNodeHome())
-
 	root := &cobra.Command{
 		Use:  "akashd",
 		Long: "Akash Daemon CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
-				return err
-			}
 			return server.InterceptConfigsPreRunHandler(cmd)
 		},
 	}
@@ -82,7 +66,6 @@ func main() {
 	server.AddCommands(root, newApp, exportAppStateAndTMValidators)
 
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, client.ClientContextKey, &client.Context{})
 	ctx = context.WithValue(ctx, server.ServerContextKey, server.NewDefaultContext())
 
 	executor := cli.PrepareBaseCmd(root, "AKASHD", common.DefaultNodeHome())

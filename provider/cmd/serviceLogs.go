@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	ccontext "github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -15,12 +14,12 @@ import (
 	pmodule "github.com/ovrclk/akash/x/provider"
 )
 
-func serviceLogsCmd(codec *codec.Codec) *cobra.Command {
+func serviceLogsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "service-logs",
 		Short: "get service status",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return doServiceLogs(codec, cmd)
+			return doServiceLogs(cmd)
 		},
 	}
 
@@ -36,8 +35,8 @@ func serviceLogsCmd(codec *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func doServiceLogs(codec *codec.Codec, cmd *cobra.Command) error {
-	cctx := ccontext.NewCLIContext().WithCodec(codec)
+func doServiceLogs(cmd *cobra.Command) error {
+	cctx := client.GetClientContextFromCmd(cmd)
 
 	addr, err := mcli.ProviderFromFlagsWithoutCtx(cmd.Flags())
 	if err != nil {

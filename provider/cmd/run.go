@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	ccontext "github.com/cosmos/cosmos-sdk/client/context"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 	"github.com/go-kit/kit/log/term"
@@ -40,16 +40,18 @@ var (
 	errInvalidConfig = errors.New("Invalid configuration")
 )
 
-func runCmd(cdc *codec.Codec) *cobra.Command {
+func runCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "run akash provider",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return common.RunForever(func(ctx context.Context) error {
-				return doRunCmd(ctx, cdc, cmd, args)
+				return doRunCmd(ctx, cmd, args)
 			})
 		},
 	}
+
+	flags.AddTxFlagsToCmd(cmd)
 
 	cmd.Flags().Bool(flagClusterK8s, false, "Use Kubernetes cluster")
 	viper.BindPFlag(flagClusterK8s, cmd.Flags().Lookup(flagClusterK8s))
@@ -64,8 +66,12 @@ func runCmd(cdc *codec.Codec) *cobra.Command {
 }
 
 // doRunCmd initializes all of the Provider functionality, hangs, and awaits shutdown signals.
-func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []string) error {
-	cctx := ccontext.NewCLIContext().WithCodec(cdc)
+func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
+	cctx := sdkclient.GetClientContextFromCmd(cmd)
+	cctx, err := sdkclient.ReadTxCommandFlags(cctx, cmd.Flags())
+	if err != nil {
+		return err
+	}
 
 	txbldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
 
