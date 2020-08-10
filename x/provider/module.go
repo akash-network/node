@@ -83,8 +83,7 @@ func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 
 // GetTxCmd returns the transaction commands for this module
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
-	// TODO: Change parameters when working on txs
-	return cli.GetTxCmd(StoreKey, nil)
+	return cli.GetTxCmd(StoreKey)
 }
 
 // GetQueryClient returns a new query client for this module

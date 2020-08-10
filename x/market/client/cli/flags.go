@@ -24,7 +24,7 @@ func AddOrderIDFlags(flags *pflag.FlagSet) {
 // MarkReqOrderIDFlags marks flags required for order
 func MarkReqOrderIDFlags(cmd *cobra.Command) {
 	dcli.MarkReqGroupIDFlags(cmd)
-	cmd.MarkFlagRequired("oseq")
+	_ = cmd.MarkFlagRequired("oseq")
 }
 
 // AddProviderFlag add provider flag to command flags set

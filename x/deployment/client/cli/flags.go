@@ -21,8 +21,8 @@ func AddDeploymentIDFlags(flags *pflag.FlagSet) {
 
 // MarkReqDeploymentIDFlags marks flags required for deployment
 func MarkReqDeploymentIDFlags(cmd *cobra.Command) {
-	cmd.MarkFlagRequired("owner")
-	cmd.MarkFlagRequired("dseq")
+	_ = cmd.MarkFlagRequired("owner")
+	_ = cmd.MarkFlagRequired("dseq")
 }
 
 // DeploymentIDFromFlags returns DeploymentID with given flags, owner and error if occurred
@@ -54,7 +54,7 @@ func AddGroupIDFlags(flags *pflag.FlagSet) {
 // MarkReqGroupIDFlags marks flags required for group
 func MarkReqGroupIDFlags(cmd *cobra.Command) {
 	MarkReqDeploymentIDFlags(cmd)
-	cmd.MarkFlagRequired("gseq")
+	_ = cmd.MarkFlagRequired("gseq")
 }
 
 // GroupIDFromFlags returns GroupID with given flags and error if occurred
