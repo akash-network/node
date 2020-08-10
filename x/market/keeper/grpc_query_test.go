@@ -122,7 +122,7 @@ func TestGRPCQueryOrders(t *testing.T) {
 	// creating orders with different states
 	order, _ := createOrder(t, suite.ctx, suite.keeper)
 	order2, _ := createOrder(t, suite.ctx, suite.keeper)
-	suite.keeper.OnOrderMatched(suite.ctx, order)
+	suite.keeper.OnOrderMatched(suite.ctx, order2)
 
 	var (
 		req      *types.QueryOrdersRequest
@@ -268,7 +268,7 @@ func TestGRPCQueryBids(t *testing.T) {
 	// creating bids with different states
 	bid, _ := createBid(t, suite.ctx, suite.keeper)
 	bid2, _ := createBid(t, suite.ctx, suite.keeper)
-	suite.keeper.OnBidLost(suite.ctx, bid)
+	suite.keeper.OnBidLost(suite.ctx, bid2)
 
 	var (
 		req    *types.QueryBidsRequest
@@ -340,7 +340,9 @@ func TestGRPCQueryLease(t *testing.T) {
 	suite := setupTest(t)
 
 	// creating lease
-	lease, _ := createLease(t, suite.ctx, suite.keeper)
+	leaseID := createLease(t, suite.ctx, suite.keeper)
+	lease, ok := suite.keeper.GetLease(suite.ctx, leaseID)
+	require.True(t, ok)
 
 	var (
 		req      *types.QueryLeaseRequest
@@ -413,9 +415,14 @@ func TestGRPCQueryLeases(t *testing.T) {
 	suite := setupTest(t)
 
 	// creating leases with different states
-	lease, _ := createLease(t, suite.ctx, suite.keeper)
-	lease2, _ := createLease(t, suite.ctx, suite.keeper)
-	suite.keeper.OnLeaseClosed(suite.ctx, lease)
+	leaseID := createLease(t, suite.ctx, suite.keeper)
+	lease, ok := suite.keeper.GetLease(suite.ctx, leaseID)
+	require.True(t, ok)
+
+	leaseID2 := createLease(t, suite.ctx, suite.keeper)
+	lease2, ok := suite.keeper.GetLease(suite.ctx, leaseID2)
+	require.True(t, ok)
+	suite.keeper.OnLeaseClosed(suite.ctx, lease2)
 
 	var (
 		req      *types.QueryLeasesRequest
