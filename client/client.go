@@ -3,7 +3,7 @@ package client
 import (
 	"github.com/pkg/errors"
 
-	ccontext "github.com/cosmos/cosmos-sdk/client/context"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -13,6 +13,7 @@ import (
 	mquery "github.com/ovrclk/akash/x/market/query"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	pquery "github.com/ovrclk/akash/x/provider/query"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 	"github.com/tendermint/tendermint/libs/log"
 )
 
@@ -26,9 +27,9 @@ var (
 
 // QueryClient interface includes query clients of deployment, market and provider modules
 type QueryClient interface {
-	dquery.Client
-	mquery.Client
-	pquery.Client
+	dtypes.QueryClient
+	mtypes.QueryClient
+	ptypes.QueryClient
 
 	// TODO: implement with search parameters
 	ActiveLeasesForProvider(id sdk.AccAddress) (mquery.Leases, error)
@@ -48,7 +49,7 @@ type Client interface {
 // NewClient creates new client instance
 func NewClient(
 	log log.Logger,
-	cctx ccontext.CLIContext,
+	cctx sdkclient.Context,
 	txbldr auth.TxBuilder,
 	info keyring.Info,
 	passphrase string,
@@ -65,7 +66,7 @@ func NewClient(
 }
 
 type client struct {
-	cctx       ccontext.CLIContext
+	cctx       sdkclient.Context
 	txbldr     auth.TxBuilder
 	info       keyring.Info
 	passphrase string
@@ -106,16 +107,16 @@ func (c *client) Query() QueryClient {
 }
 
 type qclient struct {
-	dclient dquery.Client
-	mclient mquery.Client
-	pclient pquery.Client
+	dclient dtypes.QueryClient
+	mclient mtypes.QueryClient
+	pclient ptypes.QueryClient
 }
 
 // NewQueryClient creates new query client instance
 func NewQueryClient(
-	dclient dquery.Client,
-	mclient mquery.Client,
-	pclient pquery.Client,
+	dclient dtypes.QueryClient,
+	mclient mtypes.QueryClient,
+	pclient ptypes.QueryClient,
 ) QueryClient {
 	return &qclient{
 		dclient: dclient,

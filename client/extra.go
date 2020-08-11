@@ -16,7 +16,7 @@ func (c *qclient) ActiveLeasesForProvider(id sdk.AccAddress) (mquery.Leases, err
 
 	var filtered mquery.Leases
 	for _, lease := range leases {
-		if lease.Provider.Equals(id) && lease.State == types.LeaseActive {
+		if lease.LeaseID.Provider.Equals(id) && lease.State == types.LeaseActive {
 			filtered = append(filtered, lease)
 		}
 	}
