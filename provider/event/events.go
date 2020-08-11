@@ -25,7 +25,7 @@ type ManifestReceived struct {
 // ManifestGroup returns group if present in manifest or nil
 func (ev ManifestReceived) ManifestGroup() *manifest.Group {
 	for _, mgroup := range *ev.Manifest {
-		if mgroup.Name == ev.Group.Name {
+		if mgroup.Name == ev.Group.GroupSpec.Name {
 			return &mgroup
 		}
 	}

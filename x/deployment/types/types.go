@@ -139,6 +139,16 @@ func (g Group) ValidateClosable() error {
 	}
 }
 
+// GetName method returns group name
+func (g Group) GetName() string {
+	return g.GroupSpec.Name
+}
+
+// GetResources method returns resources list in group
+func (g Group) GetResources() []types.Resource {
+	return g.GroupSpec.GetResources()
+}
+
 // // Resource stores unit, count and price of each resource
 // type Resource struct {
 // 	Unit  types.Unit `json:"unit"`

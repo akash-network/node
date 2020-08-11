@@ -177,7 +177,7 @@ func (m *deploymentMonitor) doCheck() (bool, error) {
 func (m *deploymentMonitor) runCloseLease() <-chan runner.Result {
 	return runner.Do(func() runner.Result {
 		// TODO: retry
-		err := m.session.Client().Tx().Broadcast(mtypes.MsgCloseBid{
+		err := m.session.Client().Tx().Broadcast(&mtypes.MsgCloseBid{
 			BidID: m.lease.BidID(),
 		})
 		if err != nil {
