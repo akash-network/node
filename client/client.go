@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
@@ -8,13 +10,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authutils "github.com/cosmos/cosmos-sdk/x/auth/client/utils"
-	dquery "github.com/ovrclk/akash/x/deployment/query"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	mquery "github.com/ovrclk/akash/x/market/query"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	pquery "github.com/ovrclk/akash/x/provider/query"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
 	"github.com/tendermint/tendermint/libs/log"
+	grpc "google.golang.org/grpc"
 )
 
 var (
@@ -32,7 +32,7 @@ type QueryClient interface {
 	ptypes.QueryClient
 
 	// TODO: implement with search parameters
-	ActiveLeasesForProvider(id sdk.AccAddress) (mquery.Leases, error)
+	ActiveLeasesForProvider(id sdk.AccAddress) (mtypes.Leases, error)
 }
 
 // TxClient interface
@@ -125,79 +125,79 @@ func NewQueryClient(
 	}
 }
 
-func (c *qclient) Deployments(filters dquery.DeploymentFilters) (dquery.Deployments, error) {
+func (c *qclient) Deployments(ctx context.Context, in *dtypes.QueryDeploymentsRequest, opts ...grpc.CallOption) (*dtypes.QueryDeploymentsResponse, error) {
 	if c.dclient == nil {
-		return dquery.Deployments{}, ErrClientNotFound
+		return &dtypes.QueryDeploymentsResponse{}, ErrClientNotFound
 	}
-	return c.dclient.Deployments(filters)
+	return c.dclient.Deployments(ctx, in, opts...)
 }
 
-func (c *qclient) Deployment(id dtypes.DeploymentID) (dquery.Deployment, error) {
+func (c *qclient) Deployment(ctx context.Context, in *dtypes.QueryDeploymentRequest, opts ...grpc.CallOption) (*dtypes.QueryDeploymentResponse, error) {
 	if c.dclient == nil {
-		return dquery.Deployment{}, ErrClientNotFound
+		return &dtypes.QueryDeploymentResponse{}, ErrClientNotFound
 	}
-	return c.dclient.Deployment(id)
+	return c.dclient.Deployment(ctx, in, opts...)
 }
 
-func (c *qclient) Group(id dtypes.GroupID) (dquery.Group, error) {
+func (c *qclient) Group(ctx context.Context, in *dtypes.QueryGroupRequest, opts ...grpc.CallOption) (*dtypes.QueryGroupResponse, error) {
 	if c.dclient == nil {
-		return dquery.Group{}, ErrClientNotFound
+		return &dtypes.QueryGroupResponse{}, ErrClientNotFound
 	}
-	return c.dclient.Group(id)
+	return c.dclient.Group(ctx, in, opts...)
 }
 
-func (c *qclient) Orders(filters mquery.OrderFilters) (mquery.Orders, error) {
+func (c *qclient) Orders(ctx context.Context, in *mtypes.QueryOrdersRequest, opts ...grpc.CallOption) (*mtypes.QueryOrdersResponse, error) {
 	if c.mclient == nil {
-		return mquery.Orders{}, ErrClientNotFound
+		return &mtypes.QueryOrdersResponse{}, ErrClientNotFound
 	}
-	return c.mclient.Orders(filters)
+	return c.mclient.Orders(ctx, in, opts...)
 }
 
-func (c *qclient) Order(id mtypes.OrderID) (mquery.Order, error) {
+func (c *qclient) Order(ctx context.Context, in *mtypes.QueryOrderRequest, opts ...grpc.CallOption) (*mtypes.QueryOrderResponse, error) {
 	if c.mclient == nil {
-		return mquery.Order{}, ErrClientNotFound
+		return &mtypes.QueryOrderResponse{}, ErrClientNotFound
 	}
-	return c.mclient.Order(id)
+	return c.mclient.Order(ctx, in, opts...)
 }
 
-func (c *qclient) Bids(filters mquery.BidFilters) (mquery.Bids, error) {
+func (c *qclient) Bids(ctx context.Context, in *mtypes.QueryBidsRequest, opts ...grpc.CallOption) (*mtypes.QueryBidsResponse, error) {
 	if c.mclient == nil {
-		return mquery.Bids{}, ErrClientNotFound
+		return &mtypes.QueryBidsResponse{}, ErrClientNotFound
 	}
-	return c.mclient.Bids(filters)
+	return c.mclient.Bids(ctx, in, opts...)
 }
 
-func (c *qclient) Bid(id mtypes.BidID) (mquery.Bid, error) {
+func (c *qclient) Bid(ctx context.Context, in *mtypes.QueryBidRequest, opts ...grpc.CallOption) (*mtypes.QueryBidResponse, error) {
 	if c.mclient == nil {
-		return mquery.Bid{}, ErrClientNotFound
+		return &mtypes.QueryBidResponse{}, ErrClientNotFound
 	}
-	return c.mclient.Bid(id)
+	return c.mclient.Bid(ctx, in, opts...)
 }
 
-func (c *qclient) Leases(filters mquery.LeaseFilters) (mquery.Leases, error) {
+func (c *qclient) Leases(ctx context.Context, in *mtypes.QueryLeasesRequest, opts ...grpc.CallOption) (*mtypes.QueryLeasesResponse, error) {
 	if c.mclient == nil {
-		return mquery.Leases{}, ErrClientNotFound
+		return &mtypes.QueryLeasesResponse{}, ErrClientNotFound
 	}
-	return c.mclient.Leases(filters)
+	return c.mclient.Leases(ctx, in, opts...)
 }
 
-func (c *qclient) Lease(id mtypes.LeaseID) (mquery.Lease, error) {
+func (c *qclient) Lease(ctx context.Context, in *mtypes.QueryLeaseRequest, opts ...grpc.CallOption) (*mtypes.QueryLeaseResponse, error) {
 	if c.mclient == nil {
-		return mquery.Lease{}, ErrClientNotFound
+		return &mtypes.QueryLeaseResponse{}, ErrClientNotFound
 	}
-	return c.mclient.Lease(id)
+	return c.mclient.Lease(ctx, in, opts...)
 }
 
-func (c *qclient) Providers() (pquery.Providers, error) {
+func (c *qclient) Providers(ctx context.Context, in *ptypes.QueryProvidersRequest, opts ...grpc.CallOption) (*ptypes.QueryProvidersResponse, error) {
 	if c.pclient == nil {
-		return pquery.Providers{}, ErrClientNotFound
+		return &ptypes.QueryProvidersResponse{}, ErrClientNotFound
 	}
-	return c.pclient.Providers()
+	return c.pclient.Providers(ctx, in, opts...)
 }
 
-func (c *qclient) Provider(id sdk.AccAddress) (*pquery.Provider, error) {
+func (c *qclient) Provider(ctx context.Context, in *ptypes.QueryProviderRequest, opts ...grpc.CallOption) (*ptypes.QueryProviderResponse, error) {
 	if c.pclient == nil {
-		return nil, ErrClientNotFound
+		return &ptypes.QueryProviderResponse{}, ErrClientNotFound
 	}
-	return c.pclient.Provider(id)
+	return c.pclient.Provider(ctx, in, opts...)
 }

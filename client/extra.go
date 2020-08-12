@@ -1,24 +1,30 @@
 package client
 
 import (
+	"context"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	mquery "github.com/ovrclk/akash/x/market/query"
-	"github.com/ovrclk/akash/x/market/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 // TODO: implement with search parameters
 
-func (c *qclient) ActiveLeasesForProvider(id sdk.AccAddress) (mquery.Leases, error) {
-	leases, err := c.Leases(mquery.LeaseFilters{})
+func (c *qclient) ActiveLeasesForProvider(id sdk.AccAddress) (mtypes.Leases, error) {
+	params := &mtypes.QueryLeasesRequest{
+		Filters: mtypes.LeaseFilters{
+			Provider: id,
+			State:    mtypes.LeaseActive,
+		},
+		Pagination: &sdkquery.PageRequest{
+			Limit: 10000,
+		},
+	}
+
+	res, err := c.Leases(context.Background(), params)
 	if err != nil {
 		return nil, err
 	}
 
-	var filtered mquery.Leases
-	for _, lease := range leases {
-		if lease.LeaseID.Provider.Equals(id) && lease.State == types.LeaseActive {
-			filtered = append(filtered, lease)
-		}
-	}
-	return filtered, nil
+	return res.Leases, nil
 }

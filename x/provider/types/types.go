@@ -59,3 +59,8 @@ func (obj Providers) String() string {
 
 	return buf.String()
 }
+
+// Address implements provider and returns owner of provider
+func (p *Provider) Address() sdk.AccAddress {
+	return p.Owner
+}

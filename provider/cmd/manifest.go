@@ -10,6 +10,7 @@ import (
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	pmodule "github.com/ovrclk/akash/x/provider"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 	"github.com/spf13/cobra"
 )
 
@@ -48,11 +49,12 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 	lid := mtypes.MakeLeaseID(bid)
 
 	pclient := pmodule.AppModuleBasic{}.GetQueryClient(cctx)
-	provider, err := pclient.Provider(lid.Provider)
+	res, err := pclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: lid.Provider})
 	if err != nil {
 		return err
 	}
 
+	provider := &res.Provider
 	gclient := gateway.NewClient()
 
 	return gclient.SubmitManifest(

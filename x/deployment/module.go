@@ -87,8 +87,8 @@ func (AppModuleBasic) GetTxCmd() *cobra.Command {
 }
 
 // GetQueryClient returns a new query client for this module
-func (AppModuleBasic) GetQueryClient(clientCtx client.Context) query.Client {
-	return query.NewClient(clientCtx, StoreKey)
+func (AppModuleBasic) GetQueryClient(clientCtx client.Context) types.QueryClient {
+	return types.NewQueryClient(clientCtx)
 }
 
 // AppModule implements an application module for the deployment module.

@@ -14,7 +14,6 @@ import (
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/util/runner"
 	"github.com/ovrclk/akash/validation"
-	dquery "github.com/ovrclk/akash/x/deployment/query"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
@@ -63,7 +62,7 @@ type manager struct {
 	manifestch chan manifestRequest
 	updatech   chan []byte
 
-	data      *dquery.Deployment
+	data      *dtypes.DeploymentResponse
 	requests  []manifestRequest
 	leases    []event.LeaseWon
 	manifests []*manifest.Manifest
@@ -174,7 +173,7 @@ loop:
 
 			m.versions = append(m.versions, version)
 			if m.data != nil {
-				m.data.Version = version
+				m.data.Deployment.Version = version
 			}
 
 		case result := <-runch:
@@ -185,9 +184,9 @@ loop:
 				break
 			}
 
-			m.data = result.Value().(*dquery.Deployment)
+			m.data = result.Value().(*dtypes.DeploymentResponse)
 
-			m.log.Info("data received", "version", m.data.Version)
+			m.log.Info("data received", "version", m.data.Deployment.Version)
 
 			m.validateRequests()
 			m.emitReceivedEvents()
@@ -228,12 +227,12 @@ func (m *manager) fetchData(ctx context.Context) <-chan runner.Result {
 	})
 }
 
-func (m *manager) doFetchData(_ context.Context) (*dquery.Deployment, error) {
-	deployment, err := m.session.Client().Query().Deployment(m.daddr)
+func (m *manager) doFetchData(_ context.Context) (*dtypes.DeploymentResponse, error) {
+	res, err := m.session.Client().Query().Deployment(context.Background(), &dtypes.QueryDeploymentRequest{ID: m.daddr})
 	if err != nil {
 		return nil, err
 	}
-	return &deployment, nil
+	return &res.Deployment, nil
 }
 
 func (m *manager) maybeScheduleStop() bool { // nolint:golint,unparam

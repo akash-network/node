@@ -12,6 +12,7 @@ import (
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	pmodule "github.com/ovrclk/akash/x/provider"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
 func serviceLogsCmd() *cobra.Command {
@@ -58,11 +59,12 @@ func doServiceLogs(cmd *cobra.Command) error {
 	}
 
 	pclient := pmodule.AppModuleBasic{}.GetQueryClient(cctx)
-	provider, err := pclient.Provider(addr)
+	res, err := pclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: addr})
 	if err != nil {
 		return err
 	}
 
+	provider := &res.Provider
 	gclient := gateway.NewClient()
 
 	bid, err := mcli.BidIDFromFlagsWithoutCtx(cmd.Flags())

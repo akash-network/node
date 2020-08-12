@@ -1,6 +1,8 @@
 package bidengine
 
 import (
+	"context"
+
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/event"
@@ -8,8 +10,7 @@ import (
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/util/runner"
 	"github.com/ovrclk/akash/validation"
-	dquery "github.com/ovrclk/akash/x/deployment/query"
-	mquery "github.com/ovrclk/akash/x/market/query"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
 )
@@ -17,7 +18,7 @@ import (
 // order manages bidding and general lifecycle handling of an order.
 type order struct {
 	order mtypes.OrderID
-	bid   *mquery.Bid
+	bid   *mtypes.Bid
 
 	session session.Session
 	cluster cluster.Cluster
@@ -28,7 +29,7 @@ type order struct {
 	lc  lifecycle.Lifecycle
 }
 
-func newOrder(e *service, oid mtypes.OrderID, bid *mquery.Bid) (*order, error) {
+func newOrder(e *service, oid mtypes.OrderID, bid *mtypes.Bid) (*order, error) {
 
 	// Create a subscription that will see all events that have not been read from e.sub.Events()
 	sub, err := e.sub.Clone()
@@ -75,7 +76,7 @@ func (o *order) run() {
 		clusterch <-chan runner.Result
 		bidch     <-chan runner.Result
 
-		group       *dquery.Group
+		group       *dtypes.Group
 		reservation cluster.Reservation
 
 		won bool
@@ -83,8 +84,8 @@ func (o *order) run() {
 
 	// Begin fetching group details immediately.
 	groupch = runner.Do(func() runner.Result {
-		return runner.NewResult(
-			o.session.Client().Query().Group(o.order.GroupID()))
+		res, err := o.session.Client().Query().Group(context.Background(), &dtypes.QueryGroupRequest{ID: o.order.GroupID()})
+		return runner.NewResult(res.Group, err)
 	})
 
 loop:
@@ -144,7 +145,7 @@ loop:
 				break loop
 			}
 
-			res := result.Value().(dquery.Group)
+			res := result.Value().(dtypes.Group)
 			group = &res
 
 			if !o.shouldBid(group) {
@@ -228,7 +229,7 @@ loop:
 	}
 }
 
-func (o *order) shouldBid(group *dquery.Group) bool {
+func (o *order) shouldBid(group *dtypes.Group) bool {
 
 	// does provider have required attributes?
 	if !group.GroupSpec.MatchAttributes(o.session.Provider().Attributes) {

@@ -9,6 +9,7 @@ import (
 	"github.com/ovrclk/akash/provider/gateway"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	pmodule "github.com/ovrclk/akash/x/provider"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
 func statusCmd() *cobra.Command {
@@ -36,11 +37,12 @@ func doStatus(cmd *cobra.Command) error {
 
 	pclient := pmodule.AppModuleBasic{}.GetQueryClient(cctx)
 
-	provider, err := pclient.Provider(addr)
+	res, err := pclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: addr})
 	if err != nil {
 		return err
 	}
 
+	provider := &res.Provider
 	gclient := gateway.NewClient()
 
 	result, err := gclient.Status(context.Background(), provider.HostURI)

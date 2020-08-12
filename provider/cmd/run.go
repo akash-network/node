@@ -24,6 +24,7 @@ import (
 	dmodule "github.com/ovrclk/akash/x/deployment"
 	mmodule "github.com/ovrclk/akash/x/market"
 	pmodule "github.com/ovrclk/akash/x/provider"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/log"
@@ -101,10 +102,15 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		),
 	)
 
-	pinfo, err := aclient.Query().Provider(info.GetAddress())
+	res, err := aclient.Query().Provider(
+		context.Background(),
+		&ptypes.QueryProviderRequest{Owner: info.GetAddress()},
+	)
 	if err != nil {
 		return err
 	}
+
+	pinfo := &res.Provider
 
 	// k8s client creation
 	cclient, err := createClusterClient(log, cmd, pinfo.HostURI)
