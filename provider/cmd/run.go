@@ -9,8 +9,7 @@ import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/go-kit/kit/log/term"
 	"github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/cmd/common"
@@ -74,10 +73,10 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	txbldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+	txFactory := tx.NewFactoryCLI(cctx, cmd.Flags())
 
 	keyname := cctx.GetFromName()
-	info, err := txbldr.Keybase().Get(keyname)
+	info, err := txFactory.Keybase().Key(keyname)
 	if err != nil {
 		return err
 	}
@@ -92,7 +91,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	aclient := client.NewClient(
 		log,
 		cctx,
-		txbldr,
+		txFactory,
 		info,
 		keys.DefaultKeyPass,
 		client.NewQueryClient(
