@@ -11,13 +11,17 @@ on:
 
 jobs:
   crd-e2e:
+    env:
+      KIND_NAME: kind
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
       - uses: engineerd/setup-kind@v0.4.0
         with:
-            config: ./_run/kube/kind-config.yaml
+          config: ./_run/kube/kind-config.yaml
+      - name: Docker Status
+        run: docker ps -a
       - name: Setup Ingress K8S
         run: make -s -C _run/kube kind-ingress-setup
       - name: k8s-ingress

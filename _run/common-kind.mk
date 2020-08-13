@@ -1,5 +1,8 @@
+# KIND_NAME NOTE: 'kind' string literal is default for the GH actions 
+# KinD, it's fine to use other names locally, however in GH container name 
+# is configured by engineerd/setup-kind. `kind-control-plane` is the docker
+# image's name in GH Actions.
 KIND_NAME      ?= $(shell basename $$PWD)
-# 'kind' matches the configuration of the GH actions KinD. 
 K8S_CONTEXT    ?= $(shell kubectl config current-context)
 KIND_HTTP_PORT  ?= $(shell docker inspect \
 										--type container "$(KIND_NAME)-control-plane" \
@@ -19,7 +22,7 @@ KIND_PORT_BINDINGS ?= $(shell docker inspect "$(KIND_NAME)-control-plane" \
 KIND_CONFIG       ?= kind-config.yaml
 
 PROVIDER_HOSTNAME ?= localhost
-PROVIDER_HOST     ?= $(PROVIDER_HOSTNAME):$(APP_HTTP_PORT)
+PROVIDER_HOST     ?= $(PROVIDER_HOSTNAME):$(KIND_HTTP_PORT)
 PROVIDER_ENDPOINT ?= http://$(PROVIDER_HOST)
 
 # TODO: referencing master/latest on a k8s repository is prone to breaking at some point.

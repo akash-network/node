@@ -19,11 +19,7 @@ import (
 )
 
 func TestE2EApp(t *testing.T) {
-	// Assert that there is an addressable docker container for KinD
-	host := os.Getenv("KIND_K8S_IP")
-	require.NotEmpty(t, host)
-	appPort := os.Getenv("KIND_APP_PORT")
-	require.NotEmpty(t, appPort)
+	host, appPort := appEnv(t)
 
 	t.Parallel()
 	f := InitFixtures(t)
@@ -142,8 +138,16 @@ func TestE2EApp(t *testing.T) {
 
 	// Close deployment to clean up container
 	//  Teardown/cleanup
-	f.TxCloseDeployment(fmt.Sprintf("--from=%s --dseq=%v", keyBar, createdDep.Deployment.DeploymentID.DSeq), "-y")
-	tests.WaitForNextNBlocksTM(3, f.Port)
+	// TODO: uncomment
+	//f.TxCloseDeployment(fmt.Sprintf("--from=%s --dseq=%v", keyBar, createdDep.Deployment.DeploymentID.DSeq), "-y")
+	//tests.WaitForNextNBlocksTM(3, f.Port)
+}
+
+func TestQueryApp(t *testing.T) {
+	host, appPort := appEnv(t)
+
+	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)
+	queryApp(t, appURL)
 }
 
 // Assert provider launches app in kind cluster
@@ -185,12 +189,11 @@ func queryApp(t *testing.T, appURL string) {
 	assert.Contains(t, string(bytes), "The Future of The Cloud is Decentralized")
 }
 
-func TestQueryApp(t *testing.T) {
-	host := os.Getenv("KIND_K8S_IP")
+// appEnv asserts that there is an addressable docker container for KinD
+func appEnv(t *testing.T) (string, string) {
+	host := os.Getenv("KIND_APP_IP")
 	require.NotEmpty(t, host)
 	appPort := os.Getenv("KIND_APP_PORT")
 	require.NotEmpty(t, appPort)
-
-	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)
-	queryApp(t, appURL)
+	return host, appPort
 }
