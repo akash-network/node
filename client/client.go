@@ -6,10 +6,9 @@ import (
 	"github.com/pkg/errors"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	authutils "github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
@@ -50,14 +49,14 @@ type Client interface {
 func NewClient(
 	log log.Logger,
 	cctx sdkclient.Context,
-	txbldr auth.TxBuilder,
+	txf tx.Factory,
 	info keyring.Info,
 	passphrase string,
 	qclient QueryClient,
 ) Client {
 	return &client{
 		cctx:       cctx,
-		txbldr:     txbldr,
+		txf:        txf,
 		info:       info,
 		passphrase: passphrase,
 		qclient:    qclient,
@@ -67,7 +66,7 @@ func NewClient(
 
 type client struct {
 	cctx       sdkclient.Context
-	txbldr     auth.TxBuilder
+	txf        tx.Factory
 	info       keyring.Info
 	passphrase string
 	qclient    QueryClient
@@ -79,12 +78,22 @@ func (c *client) Tx() TxClient {
 }
 
 func (c *client) Broadcast(msgs ...sdk.Msg) error {
-	txbldr, err := authutils.PrepareTxBuilder(c.txbldr, c.cctx)
+	txf, err := tx.PrepareFactory(c.cctx, c.txf)
 	if err != nil {
 		return err
 	}
 
-	bytes, err := txbldr.BuildAndSign(c.info.GetName(), c.passphrase, msgs)
+	txn, err := tx.BuildUnsignedTx(txf, msgs...)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Sign(txf, c.info.GetName(), txn)
+	if err != nil {
+		return err
+	}
+
+	bytes, err := c.cctx.TxConfig.TxEncoder()(txn.GetTx())
 	if err != nil {
 		return err
 	}

@@ -73,7 +73,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	txFactory := tx.NewFactoryCLI(cctx, cmd.Flags())
+	txFactory := tx.NewFactoryCLI(cctx, cmd.Flags()).WithTxConfig(cctx.TxConfig).WithAccountRetriever(cctx.AccountRetriever)
 
 	keyname := cctx.GetFromName()
 	info, err := txFactory.Keybase().Key(keyname)
