@@ -87,7 +87,7 @@ func main() {
 	ctx = context.WithValue(ctx, client.ClientContextKey, &client.Context{})
 
 	executor := cli.PrepareMainCmd(root, "AKASHCTL", common.DefaultCLIHome())
-	err := executor.Execute()
+	err := executor.ExecuteContext(ctx)
 	if err != nil {
 		panic(err)
 	}
