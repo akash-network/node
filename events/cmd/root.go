@@ -60,7 +60,7 @@ func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 			case <-subscriber.Done():
 				return nil
 			case ev := <-subscriber.Events():
-				cctx.PrintOutput(ev)
+				cctx.PrintOutputLegacy(ev)
 			}
 		}
 	})

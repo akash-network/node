@@ -16,7 +16,7 @@ var (
 	//
 	// The actual codec used for serialization should be provided to x/provider and
 	// defined at the application level.
-	ModuleCdc = codec.NewHybridCodec(amino, cdctypes.NewInterfaceRegistry())
+	ModuleCdc = codec.NewProtoCodec(cdctypes.NewInterfaceRegistry())
 )
 
 func init() {
@@ -26,7 +26,7 @@ func init() {
 }
 
 // RegisterCodec register concrete types on codec
-func RegisterCodec(cdc *codec.Codec) {
+func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgCreateProvider{}, ModuleName+"/"+MsgTypeCreateProvider, nil)
 	cdc.RegisterConcrete(&MsgUpdateProvider{}, ModuleName+"/"+MsgTypeUpdateProvider, nil)
 	cdc.RegisterConcrete(&MsgDeleteProvider{}, ModuleName+"/"+MsgTypeDeleteProvider, nil)

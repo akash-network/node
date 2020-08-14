@@ -1,14 +1,13 @@
 package app
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
-
-	"github.com/cosmos/cosmos-sdk/codec"
 
 	simapp "github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/ovrclk/akash/cmd/common"
@@ -21,7 +20,7 @@ func TestSimAppExport(t *testing.T) {
 		db, nil, 0, map[int64]bool{}, common.DefaultNodeHome())
 
 	genesisState := simapp.NewDefaultGenesisState()
-	stateBytes, err := codec.MarshalJSONIndent(app.Codec(), genesisState)
+	stateBytes, err := json.MarshalIndent(genesisState, "", "  ")
 	require.NoError(t, err)
 
 	// Initialize the chain

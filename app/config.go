@@ -30,6 +30,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	appparams "github.com/ovrclk/akash/app/params"
 )
 
 var (
@@ -75,7 +76,7 @@ func ModuleBasics() module.BasicManager {
 
 // MakeEncodingConfig creates an EncodingConfig for testing
 func MakeEncodingConfig() simparams.EncodingConfig {
-	encodingConfig := simparams.MakeEncodingConfig()
+	encodingConfig := appparams.MakeEncodingConfig()
 	std.RegisterCodec(encodingConfig.Amino)
 	std.RegisterInterfaces(encodingConfig.InterfaceRegistry)
 	mbasics.RegisterCodec(encodingConfig.Amino)

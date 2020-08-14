@@ -55,7 +55,7 @@ func cmdGetProviders() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res.Providers)
+			return clientCtx.PrintOutputLegacy(res.Providers)
 		},
 	}
 
@@ -89,7 +89,7 @@ func cmdGetProvider() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res.Provider)
+			return clientCtx.PrintOutput(&res.Provider)
 		},
 	}
 

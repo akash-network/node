@@ -51,7 +51,7 @@ func cmdGetLeases() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res.Leases)
+			return clientCtx.PrintOutputLegacy(res.Leases)
 		},
 	}
 
@@ -86,7 +86,7 @@ func cmdGetLease() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res.Lease)
+			return clientCtx.PrintOutput(&res.Lease)
 		},
 	}
 

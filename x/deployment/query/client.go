@@ -28,7 +28,7 @@ func (c *client) Deployments(dfilters DeploymentFilters) (Deployments, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }
 
 func (c *client) Deployment(id types.DeploymentID) (Deployment, error) {
@@ -37,7 +37,7 @@ func (c *client) Deployment(id types.DeploymentID) (Deployment, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }
 
 func (c *client) Group(id types.GroupID) (Group, error) {
@@ -46,5 +46,5 @@ func (c *client) Group(id types.GroupID) (Group, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }

@@ -62,7 +62,7 @@ func doServiceStatus(cmd *cobra.Command) error {
 		return err
 	}
 
-	if err = cctx.PrintOutput(result); err != nil {
+	if err = cctx.PrintOutputLegacy(result); err != nil {
 		return err
 	}
 

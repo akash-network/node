@@ -72,7 +72,7 @@ const (
 // AkashApp extends ABCI appplication
 type AkashApp struct {
 	*bam.BaseApp
-	cdc               *codec.Codec
+	cdc               *codec.LegacyAmino
 	appCodec          codec.Marshaler
 	interfaceRegistry codectypes.InterfaceRegistry
 
@@ -136,7 +136,7 @@ func NewApp(
 		tkeys:             tkeys,
 	}
 
-	app.keeper.params = initParamsKeeper(appCodec, app.keys[paramstypes.StoreKey], tkeys[paramstypes.TStoreKey])
+	app.keeper.params = initParamsKeeper(appCodec, cdc, app.keys[paramstypes.StoreKey], tkeys[paramstypes.TStoreKey])
 
 	// set the BaseApp's parameter store
 	bapp.SetParamStore(app.keeper.params.Subspace(bam.Paramspace).WithKeyTable(std.ConsensusParamsKeyTable()))
@@ -347,10 +347,10 @@ func NewApp(
 	return app
 }
 
-// MakeCodecs constructs the *std.Codec and *codec.Codec instances used by
+// MakeCodecs constructs the *std.Codec and *codec.LegacyAmino instances used by
 // simapp. It is useful for tests and clients who do not want to construct the
 // full simapp
-func MakeCodecs() (codec.Marshaler, *codec.Codec) {
+func MakeCodecs() (codec.Marshaler, *codec.LegacyAmino) {
 	config := MakeEncodingConfig()
 	return config.Marshaler, config.Amino
 }
@@ -378,8 +378,8 @@ func (app *AkashApp) EndBlocker(
 	return app.mm.EndBlock(ctx, req)
 }
 
-// Codec returns AkashApp's codec.
-func (app *AkashApp) Codec() *codec.Codec {
+// LegacyAmino returns AkashApp's codec.
+func (app *AkashApp) LegacyAmino() *codec.LegacyAmino {
 	return app.cdc
 }
 
@@ -433,8 +433,8 @@ func (app *AkashApp) LoadHeight(height int64) error {
 }
 
 // initParamsKeeper init params keeper and its subspaces
-func initParamsKeeper(appCodec codec.Marshaler, key, tkey sdk.StoreKey) paramskeeper.Keeper {
-	paramsKeeper := paramskeeper.NewKeeper(appCodec, key, tkey)
+func initParamsKeeper(appCodec codec.BinaryMarshaler, legacyAmino *codec.LegacyAmino, key, tkey sdk.StoreKey) paramskeeper.Keeper {
+	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
 
 	paramsKeeper.Subspace(authtypes.ModuleName)
 	paramsKeeper.Subspace(banktypes.ModuleName)

@@ -40,7 +40,7 @@ func main() {
 		WithJSONMarshaler(encodingConfig.Marshaler).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
 		WithTxConfig(encodingConfig.TxConfig).
-		WithCodec(encodingConfig.Amino).
+		WithLegacyAmino(encodingConfig.Amino).
 		WithInput(os.Stdin).
 		WithAccountRetriever(authtypes.AccountRetriever{}).
 		WithBroadcastMode(flags.BroadcastBlock).
@@ -80,7 +80,7 @@ func main() {
 		debug.Cmd(),
 	)
 
-	server.AddCommands(root, newApp, exportAppStateAndTMValidators)
+	server.AddCommands(root, common.DefaultNodeHome(), newApp, exportAppStateAndTMValidators)
 
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, client.ClientContextKey, &client.Context{})

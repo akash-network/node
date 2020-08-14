@@ -176,7 +176,7 @@ func Setup(isCheckTx bool) *AkashApp {
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := NewDefaultGenesisState()
-		stateBytes, err := codec.MarshalJSONIndent(app.Codec(), genesisState)
+		stateBytes, err := json.MarshalIndent(genesisState, "", "  ")
 		if err != nil {
 			panic(err)
 		}

@@ -72,7 +72,7 @@ func cmdDeployments() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res.Deployments)
+			return clientCtx.PrintOutputLegacy(res.Deployments)
 		},
 	}
 
@@ -107,7 +107,7 @@ func cmdDeployment() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res.Deployment)
+			return clientCtx.PrintOutput(&res.Deployment)
 		},
 	}
 
@@ -158,7 +158,7 @@ func cmdGetGroup() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res.Group)
+			return clientCtx.PrintOutput(&res.Group)
 		},
 	}
 

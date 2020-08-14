@@ -16,7 +16,7 @@ var (
 	//
 	// The actual codec used for serialization should be provided to x/market and
 	// defined at the application level.
-	ModuleCdc = codec.NewHybridCodec(amino, cdctypes.NewInterfaceRegistry())
+	ModuleCdc = codec.NewProtoCodec(cdctypes.NewInterfaceRegistry())
 )
 
 func init() {
@@ -27,7 +27,7 @@ func init() {
 
 // RegisterCodec registers the necessary x/market interfaces and concrete types
 // on the provided Amino codec. These types are used for Amino JSON serialization.
-func RegisterCodec(cdc *codec.Codec) {
+func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgCreateBid{}, ModuleName+"/"+MsgTypeCreateBid, nil)
 	cdc.RegisterConcrete(&MsgCloseBid{}, ModuleName+"/"+MsgTypeCloseBid, nil)
 	cdc.RegisterConcrete(&MsgCloseOrder{}, ModuleName+"/"+MsgTypeCloseOrder, nil)

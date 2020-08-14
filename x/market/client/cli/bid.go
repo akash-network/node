@@ -51,7 +51,7 @@ func cmdGetBids() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res.Bids)
+			return clientCtx.PrintOutputLegacy(res.Bids)
 		},
 	}
 
@@ -85,7 +85,7 @@ func cmdGetBid() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res.Bid)
+			return clientCtx.PrintOutput(&res.Bid)
 		},
 	}
 

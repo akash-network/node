@@ -27,7 +27,7 @@ func (c *client) Providers() (Providers, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }
 
 func (c *client) Provider(id sdk.AccAddress) (*Provider, error) {
@@ -36,5 +36,5 @@ func (c *client) Provider(id sdk.AccAddress) (*Provider, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return &obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }

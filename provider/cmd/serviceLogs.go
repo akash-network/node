@@ -100,7 +100,7 @@ func doServiceLogs(cmd *cobra.Command) error {
 
 	if outputFormat == "json" {
 		printFn = func(msg gateway.ServiceLogMessage) error {
-			if err = cctx.PrintOutput(msg); err != nil {
+			if err = cctx.PrintOutputLegacy(msg); err != nil {
 				return err
 			}
 			return nil

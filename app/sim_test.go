@@ -59,8 +59,8 @@ func interBlockCacheOpt() func(*baseapp.BaseApp) {
 
 func simulateFromSeedFunc(t *testing.T, app *AkashApp, config simtypes.Config) (bool, simulation.Params, error) {
 	return simulation.SimulateFromSeed(
-		t, os.Stdout, app.BaseApp, simapp.AppStateFn(app.Codec(), app.SimulationManager()),
-		simapp.SimulationOperations(app, app.Codec(), config),
+		t, os.Stdout, app.BaseApp, simapp.AppStateFn(app.AppCodec(), app.SimulationManager()),
+		simapp.SimulationOperations(app, app.AppCodec(), config),
 		app.ModuleAccountAddrs(), config,
 	)
 }
@@ -141,13 +141,13 @@ func TestAppImportExport(t *testing.T) {
 	require.Equal(t, appName, newApp.Name())
 
 	var genesisState simapp.GenesisState
-	err = app.Codec().UnmarshalJSON(appState, &genesisState)
+	err = json.Unmarshal(appState, &genesisState)
 	require.NoError(t, err)
 
 	ctxA := app.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
 	ctxB := newApp.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
 
-	newApp.mm.InitGenesis(ctxB, app.Codec(), genesisState)
+	newApp.mm.InitGenesis(ctxB, app.AppCodec(), genesisState)
 	newApp.StoreConsensusParams(ctxB, consensusParams)
 
 	fmt.Printf("comparing stores...\n")
