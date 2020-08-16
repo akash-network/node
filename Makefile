@@ -5,6 +5,10 @@ APP_DIR := ./app
 GO := GO111MODULE=on go
 GOBIN := $(shell go env GOPATH)/bin
 
+KIND_APP_IP ?= $(shell make -sC _run/kube kind-k8s-ip)
+KIND_APP_PORT ?= $(shell make -sC _run/kube app-http-port)
+KIND_VARS ?= KIND_APP_IP="$(KIND_APP_IP)" KIND_APP_PORT="$(KIND_APP_PORT)"
+
 # Setting mainnet flag based on env value
 # export MAINNET=true to set build tag mainnet
 ifeq ($(MAINNET),true)
@@ -150,6 +154,16 @@ devdeps-install:
 test-integration: $(BINS)
 	cp akashctl akashd ./_build
 	go test -mod=readonly -p 4 -tags "integration $(BUILD_MAINNET)" -v ./integration/...
+
+test-e2e-integration: $(BINS)
+	# ASSUMES:
+	# 1. cluster created - `kind create cluster --config=_run/kube/kind-config.yaml`
+	# 2. cluster setup - `make -s -C _run/kube kind-ingress-setup`
+	cp akashctl akashd ./_build
+	$(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestE2EApp
+
+test-query-app: $(BINS)
+	 $(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestQueryApp
 
 test-k8s-integration:
 	# ASSUMES:
