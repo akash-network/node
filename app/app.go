@@ -363,7 +363,7 @@ func (app *AkashApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abc
 	var genesisState simapp.GenesisState
 	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
 
-	return app.mm.InitGenesis(ctx, app.cdc, genesisState)
+	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
 }
 
 // BeginBlocker is a function in which application updates every begin block

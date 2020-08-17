@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -33,7 +33,7 @@ func setupTest(t *testing.T) *grpcTestSuite {
 	key := sdk.NewKVStoreKey(types.StoreKey)
 
 	suite.app = app.Setup(false)
-	suite.ctx = suite.app.BaseApp.NewContext(false, abci.Header{})
+	suite.ctx = suite.app.BaseApp.NewContext(false, tmproto.Header{})
 	suite.keeper = keeper.NewKeeper(types.ModuleCdc, key)
 	querier := keeper.Querier{Keeper: suite.keeper}
 

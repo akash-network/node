@@ -9,7 +9,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/ovrclk/akash/testutil"
@@ -46,7 +46,7 @@ func setupTestSuite(t *testing.T) *testSuite {
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
 
-	suite.ctx = sdk.NewContext(suite.ms, abci.Header{}, true, testutil.Logger(t))
+	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
 
 	suite.keeper = keeper.NewKeeper(types.ModuleCdc, pKey)
 	suite.mkeeper = mkeeper.NewKeeper(types.ModuleCdc, mKey)

@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/ovrclk/akash/testutil"
@@ -47,7 +47,7 @@ func setupTestSuite(t *testing.T) *testSuite {
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
 
-	suite.ctx = sdk.NewContext(suite.ms, abci.Header{}, true, testutil.Logger(t))
+	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
 
 	suite.mkeeper = mkeeper.NewKeeper(types.ModuleCdc, mKey)
 	suite.dkeeper = keeper.NewKeeper(types.ModuleCdc, dKey)

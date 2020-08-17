@@ -8,7 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/ovrclk/akash/testutil"
@@ -51,7 +51,7 @@ func SetupTestSuite(t testing.TB, codec codec.Marshaler) *TestSuite {
 
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
-	suite.ctx = sdk.NewContext(suite.ms, abci.Header{}, true, testutil.Logger(t))
+	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
 
 	suite.mkeeper = keeper.NewKeeper(codec, mKey)
 	suite.dkeeper = dkeeper.NewKeeper(codec, dKey)

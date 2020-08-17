@@ -8,7 +8,7 @@ require (
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
 	github.com/caarlos0/env v3.3.0+incompatible
 	github.com/confio/ics23-iavl v0.6.0 // indirect
-	github.com/cosmos/cosmos-sdk v0.34.4-0.20200813154612-4c762db64efe
+	github.com/cosmos/cosmos-sdk v0.34.4-0.20200815085233-f3c6ed61b433
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/enigmampc/btcutil v1.0.3-0.20200723161021-e2fb6adb2a25 // indirect
 	github.com/fsnotify/fsnotify v1.4.8-0.20191012010759-4bf2d1fec783 // indirect
@@ -43,8 +43,8 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/subosito/gotenv v1.2.1-0.20190917103637-de67a6614a4d // indirect
 	github.com/tendermint/go-amino v0.15.1
-	github.com/tendermint/tendermint v0.33.8
-	github.com/tendermint/tm-db v0.5.1
+	github.com/tendermint/tendermint v0.34.0-rc3
+	github.com/tendermint/tm-db v0.6.1
 	github.com/vektra/mockery v1.1.2
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/tools v0.0.0-20200323144430-8dcfad9e016e
@@ -64,4 +64,4 @@ replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.
 
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.2-alpha.regen.4
 
-replace github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.34.4-0.20200813154612-4c762db64efe
+replace github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.34.4-0.20200815085233-f3c6ed61b433

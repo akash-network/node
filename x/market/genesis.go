@@ -14,22 +14,22 @@ import (
 // }
 
 // ValidateGenesis does validation check of the Genesis
-func ValidateGenesis(data types.GenesisState) error {
+func ValidateGenesis(data *types.GenesisState) error {
 	return nil
 }
 
 // DefaultGenesisState returns default genesis state as raw bytes for the market
 // module.
-func DefaultGenesisState() types.GenesisState {
-	return types.GenesisState{}
+func DefaultGenesisState() *types.GenesisState {
+	return &types.GenesisState{}
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data types.GenesisState) []abci.ValidatorUpdate {
+func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState) []abci.ValidatorUpdate {
 	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns genesis state as raw bytes for the market module
-func ExportGenesis(ctx sdk.Context, k keeper.Keeper) types.GenesisState {
-	return types.GenesisState{}
+func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
+	return &types.GenesisState{}
 }

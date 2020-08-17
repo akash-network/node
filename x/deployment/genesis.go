@@ -27,7 +27,7 @@ import (
 // }
 
 // ValidateGenesis does validation check of the Genesis and return error incase of failure
-func ValidateGenesis(data types.GenesisState) error {
+func ValidateGenesis(data *types.GenesisState) error {
 	for _, record := range data.Deployments {
 		if err := record.Deployment.ID().Validate(); err != nil {
 			return errors.Wrap(err, types.ErrInvalidDeployment.Error())
@@ -38,12 +38,12 @@ func ValidateGenesis(data types.GenesisState) error {
 
 // DefaultGenesisState returns default genesis state as raw bytes for the deployment
 // module.
-func DefaultGenesisState() types.GenesisState {
-	return types.GenesisState{}
+func DefaultGenesisState() *types.GenesisState {
+	return &types.GenesisState{}
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data types.GenesisState) []abci.ValidatorUpdate {
+func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState) []abci.ValidatorUpdate {
 	for _, record := range data.Deployments {
 		keeper.Create(ctx, record.Deployment, record.Groups)
 	}
@@ -51,7 +51,7 @@ func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data types.GenesisState)
 }
 
 // ExportGenesis returns genesis state for the deployment module
-func ExportGenesis(ctx sdk.Context, k keeper.Keeper) types.GenesisState {
+func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 	var records []types.GenesisDeployment
 	k.WithDeployments(ctx, func(deployment types.Deployment) bool {
 		groups := k.GetGroups(ctx, deployment.ID())
@@ -61,5 +61,5 @@ func ExportGenesis(ctx sdk.Context, k keeper.Keeper) types.GenesisState {
 		})
 		return false
 	})
-	return types.GenesisState{Deployments: records}
+	return &types.GenesisState{Deployments: records}
 }
