@@ -87,9 +87,13 @@ func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, string,
 		return dfilters, "", err
 	}
 
-	dfilters.Owner, err = sdk.AccAddressFromBech32(owner)
-	if err != nil {
-		return dfilters, "", err
+	if owner != "" {
+		dfilters.Owner, err = sdk.AccAddressFromBech32(owner)
+		if err != nil {
+			return dfilters, "", err
+		}
+	} else {
+		dfilters.Owner = sdk.AccAddress{}
 	}
 
 	if !dfilters.Owner.Empty() && sdk.VerifyAddressFormat(dfilters.Owner) != nil {

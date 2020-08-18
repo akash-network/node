@@ -51,7 +51,7 @@ func cmdGetLeases() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutputLegacy(res.Leases)
+			return clientCtx.PrintOutput(res)
 		},
 	}
 

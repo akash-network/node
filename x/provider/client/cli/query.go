@@ -55,7 +55,7 @@ func cmdGetProviders() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutputLegacy(res.Providers)
+			return clientCtx.PrintOutput(res)
 		},
 	}
 

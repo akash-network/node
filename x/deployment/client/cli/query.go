@@ -72,7 +72,7 @@ func cmdDeployments() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutputLegacy(res.Deployments)
+			return clientCtx.PrintOutput(res)
 		},
 	}
 

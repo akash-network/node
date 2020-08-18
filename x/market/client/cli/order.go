@@ -51,7 +51,7 @@ func cmdGetOrders() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutputLegacy(res.Orders)
+			return clientCtx.PrintOutput(res)
 		},
 	}
 
