@@ -1,7 +1,6 @@
 package cli_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -86,7 +85,7 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	s.Require().Equal(sendTokens.Amount, balRes.Balances.AmountOf(s.cfg.BondDenom))
 
 	// create deployment
-	res, err := cli.TxCreateDeploymentExec(
+	_, err = cli.TxCreateDeploymentExec(
 		val.ClientCtx,
 		val.Address,
 		deploymentPath,
@@ -96,20 +95,29 @@ func (s *IntegrationTestSuite) TestDeployment() {
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
 	s.Require().NoError(err)
-	s.T().Logf("Tx.....%s", res.String())
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
+	// test query deployments
 	resp, err = cli.QueryDeploymentsExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	s.T().Logf("Out...%s", resp.String())
-
-	var out *types.QueryDeploymentsResponse
-	err = json.Unmarshal(resp.Bytes(), &out)
+	var out *types.QueryDeploymentsResponse = &types.QueryDeploymentsResponse{}
+	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
-	s.T().Logf("Dec...%v", out)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
+	deployments := out.Deployments
+	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner.String())
+
+	// test query deployment
+	createdDep := deployments[0]
+	resp, err = cli.QueryDeploymentExec(val.ClientCtx.WithOutputFormat("json"), createdDep.Deployment.DeploymentID)
+	s.Require().NoError(err)
+
+	var deployment types.DeploymentResponse
+	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &deployment)
+	s.Require().NoError(err)
+	s.Require().Equal(createdDep, deployment)
 }
 
 func TestIntegrationTestSuite(t *testing.T) {
