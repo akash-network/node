@@ -3,7 +3,8 @@ package akash.deployment;
 
 import "gogoproto/gogo.proto";
 import "akash/resource.proto";
-import "cosmos/cosmos.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "cosmos/base/abci/v1beta1/abci.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";
 
@@ -49,7 +50,7 @@ message GroupSpec {
         (gogoproto.jsontag)    = "name",
         (gogoproto.moretags)   = "yaml:\"name\""
     ];
-    repeated cosmos.Attribute requirements = 2 [
+    repeated cosmos.base.abci.v1beta1.Attribute requirements = 2 [
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "requirements",
         (gogoproto.moretags)   = "yaml:\"requirements\""
@@ -118,7 +119,7 @@ message Resource {
         (gogoproto.jsontag)    = "count",
         (gogoproto.moretags)   = "yaml:\"count\""
     ];
-    cosmos.Coin price = 3 [
+    cosmos.base.v1beta1.Coin price = 3 [
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "price",
         (gogoproto.moretags)   = "yaml:\"price\""

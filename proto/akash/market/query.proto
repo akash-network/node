@@ -2,7 +2,7 @@ syntax = "proto3";
 package akash.market;
 
 import "gogoproto/gogo.proto";
-import "cosmos/query/pagination.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
 import "akash/market/order.proto";
 import "akash/market/bid.proto";
 import "akash/market/lease.proto";
@@ -34,14 +34,14 @@ service Query {
 message QueryOrdersRequest{
     OrderFilters Filters = 1 [(gogoproto.nullable) = false];
 
-    cosmos.query.PageRequest pagination = 2;
+    cosmos.base.query.v1beta1.PageRequest pagination = 2;
 }
 
 // QueryOrdersResponse is response type for the Query/Orders RPC method
 message QueryOrdersResponse{
     repeated Order Orders = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="Orders"];
 
-    cosmos.query.PageResponse pagination = 2;
+    cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
 
 // QueryOrderRequest is request type for the Query/Order RPC method
@@ -58,14 +58,14 @@ message QueryOrderResponse{
 message QueryBidsRequest{
     BidFilters Filters = 1 [(gogoproto.nullable) = false];
 
-    cosmos.query.PageRequest pagination = 2;
+    cosmos.base.query.v1beta1.PageRequest pagination = 2;
 }
 
 // QueryBidsResponse is response type for the Query/Bids RPC method
 message QueryBidsResponse{
     repeated Bid Bids = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="Bids"];
 
-    cosmos.query.PageResponse pagination = 2;
+    cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
 
 // QueryBidRequest is request type for the Query/Bid RPC method
@@ -82,14 +82,14 @@ message QueryBidResponse{
 message QueryLeasesRequest{
     LeaseFilters Filters = 1 [(gogoproto.nullable) = false];
 
-    cosmos.query.PageRequest pagination = 2;
+    cosmos.base.query.v1beta1.PageRequest pagination = 2;
 }
 
 // QueryLeasesResponse is response type for the Query/Leases RPC method
 message QueryLeasesResponse{
     repeated Lease Leases = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="Leases"];
 
-    cosmos.query.PageResponse pagination = 2;
+    cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
 
 // QueryLeaseRequest is request type for the Query/Lease RPC method

@@ -2,7 +2,7 @@ syntax = "proto3";
 package akash.deployment;
 
 import "gogoproto/gogo.proto";
-import "cosmos/query/pagination.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
 import "akash/deployment/deployment.proto";
 import "akash/deployment/group.proto";
 
@@ -24,14 +24,14 @@ service Query {
 message QueryDeploymentsRequest{
     DeploymentFilters Filters = 1 [(gogoproto.nullable) = false];
 
-    cosmos.query.PageRequest pagination = 2;
+    cosmos.base.query.v1beta1.PageRequest pagination = 2;
 }
 
 // QueryDeploymentsResponse is response type for the Query/Deployments RPC method
 message QueryDeploymentsResponse{
     repeated DeploymentResponse Deployments = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="DeploymentResponses"];
 
-    cosmos.query.PageResponse pagination = 2;
+    cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
 
 // QueryDeploymentRequest is request type for the Query/Deployment RPC method

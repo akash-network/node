@@ -259,48 +259,57 @@ proto-lint:
 proto-check-breaking:
 	buf check breaking --against-input '.git#branch=master'
 
-TM_URL           = https://raw.githubusercontent.com/tendermint/tendermint/v0.33.1
+TM_URL           = https://raw.githubusercontent.com/tendermint/tendermint/v0.34.0-rc3/proto/tendermint
 GOGO_PROTO_URL   = https://raw.githubusercontent.com/regen-network/protobuf/cosmos
 COSMOS_PROTO_URL = https://raw.githubusercontent.com/regen-network/cosmos-proto/master
-COSMOS_SDK_PROTO_URL = https://raw.githubusercontent.com/cosmos/cosmos-sdk/master/proto/cosmos
+COSMOS_SDK_PROTO_URL = https://raw.githubusercontent.com/cosmos/cosmos-sdk/master/proto/cosmos/base
 
-TM_KV_TYPES         = third_party/proto/tendermint/libs/kv
-TM_MERKLE_TYPES     = third_party/proto/tendermint/crypto/merkle
-TM_ABCI_TYPES       = third_party/proto/tendermint/abci/types
+TM_CRYPTO_TYPES     = third_party/proto/tendermint/crypto
+TM_ABCI_TYPES       = third_party/proto/tendermint/abci
+TM_TYPES     	    = third_party/proto/tendermint/types
+TM_VERSION 			= third_party/proto/tendermint/version
+TM_LIBS				= third_party/proto/tendermint/libs/bits
+
 GOGO_PROTO_TYPES    = third_party/proto/gogoproto
 COSMOS_PROTO_TYPES  = third_party/proto/cosmos_proto
-COSMOS_SDK_PROTO_TYPES  = third_party/proto/cosmos
+
+SDK_ABCI_TYPES  	= third_party/proto/cosmos/base/abci/v1beta1
+SDK_QUERY_TYPES  	= third_party/proto/cosmos/base/query/v1beta1
+SDK_COIN_TYPES  	= third_party/proto/cosmos/base/v1beta1
 
 proto-update-deps:
-	mkdir -p $(GOGO_PROTO_TYPES)
-	curl -sSL $(GOGO_PROTO_URL)/gogoproto/gogo.proto > $(GOGO_PROTO_TYPES)/gogo.proto
+	@mkdir -p $(GOGO_PROTO_TYPES)
+	@curl -sSL $(GOGO_PROTO_URL)/gogoproto/gogo.proto > $(GOGO_PROTO_TYPES)/gogo.proto
 
-	mkdir -p $(COSMOS_PROTO_TYPES)
-	curl -sSL $(COSMOS_PROTO_URL)/cosmos.proto > $(COSMOS_PROTO_TYPES)/cosmos.proto
+	@mkdir -p $(COSMOS_PROTO_TYPES)
+	@curl -sSL $(COSMOS_PROTO_URL)/cosmos.proto > $(COSMOS_PROTO_TYPES)/cosmos.proto
 
-	## Importing of tendermint protobuf definitions currently requires the
-## use of `sed` in order to build properly with cosmos-sdk's proto file layout
-## (which is the standard Buf.build FILE_LAYOUT)
-## Issue link: https://github.com/tendermint/tendermint/issues/5021
-	mkdir -p $(TM_ABCI_TYPES)
-	curl -sSL $(TM_URL)/abci/types/types.proto > $(TM_ABCI_TYPES)/types.proto
-	sed -i '7 s|third_party/proto/||g' $(TM_ABCI_TYPES)/types.proto
-	sed -i '8 s|crypto/merkle/merkle.proto|tendermint/crypto/merkle/merkle.proto|g' $(TM_ABCI_TYPES)/types.proto
-	sed -i '9 s|libs/kv/types.proto|tendermint/libs/kv/types.proto|g' $(TM_ABCI_TYPES)/types.proto
+	@mkdir -p $(TM_ABCI_TYPES)
+	@curl -sSL $(TM_URL)/abci/types.proto > $(TM_ABCI_TYPES)/types.proto
 
-	mkdir -p $(TM_KV_TYPES)
-	curl -sSL $(TM_URL)/libs/kv/types.proto > $(TM_KV_TYPES)/types.proto
-	sed -i '5 s|third_party/proto/||g' $(TM_KV_TYPES)/types.proto
+	@mkdir -p $(TM_VERSION)
+	@curl -sSL $(TM_URL)/version/types.proto > $(TM_VERSION)/types.proto
 
-	mkdir -p $(TM_MERKLE_TYPES)
-	curl -sSL $(TM_URL)/crypto/merkle/merkle.proto > $(TM_MERKLE_TYPES)/merkle.proto
-	sed -i '7 s|third_party/proto/||g' $(TM_MERKLE_TYPES)/merkle.proto
+	@mkdir -p $(TM_TYPES)
+	@curl -sSL $(TM_URL)/types/types.proto > $(TM_TYPES)/types.proto
+	@curl -sSL $(TM_URL)/types/evidence.proto > $(TM_TYPES)/evidence.proto
+	@curl -sSL $(TM_URL)/types/params.proto > $(TM_TYPES)/params.proto
 
-	mkdir -p $(COSMOS_SDK_PROTO_TYPES)
-	curl -sSL $(COSMOS_SDK_PROTO_URL)/cosmos.proto > $(COSMOS_SDK_PROTO_TYPES)/cosmos.proto
+	@mkdir -p $(TM_CRYPTO_TYPES)
+	@curl -sSL $(TM_URL)/crypto/proof.proto > $(TM_CRYPTO_TYPES)/proof.proto
+	@curl -sSL $(TM_URL)/crypto/keys.proto > $(TM_CRYPTO_TYPES)/keys.proto
 
-	mkdir -p $(COSMOS_SDK_PROTO_TYPES)/query
-	curl -sSL $(COSMOS_SDK_PROTO_URL)/query/pagination.proto > $(COSMOS_SDK_PROTO_TYPES)/query/pagination.proto
+	@mkdir -p $(TM_LIBS)
+	@curl -sSL $(TM_URL)/libs/bits/types.proto > $(TM_LIBS)/types.proto
+
+	mkdir -p $(SDK_ABCI_TYPES)
+	curl -sSL $(COSMOS_SDK_PROTO_URL)/abci/v1beta1/abci.proto > $(SDK_ABCI_TYPES)/abci.proto
+
+	mkdir -p $(SDK_QUERY_TYPES)
+	curl -sSL $(COSMOS_SDK_PROTO_URL)/query/v1beta1/pagination.proto > $(SDK_QUERY_TYPES)/pagination.proto
+
+	mkdir -p $(SDK_COIN_TYPES)
+	curl -sSL $(COSMOS_SDK_PROTO_URL)/v1beta1/coin.proto > $(SDK_COIN_TYPES)/coin.proto
 
 PREFIX ?= /usr/local
 BIN ?= $(PREFIX)/bin

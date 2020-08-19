@@ -2,7 +2,7 @@ syntax = "proto3";
 package akash.provider;
 
 import "gogoproto/gogo.proto";
-import "cosmos/query/pagination.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
 import "akash/provider/provider.proto";
 
 option go_package = "github.com/ovrclk/akash/x/provider/types";
@@ -18,14 +18,14 @@ service Query {
 
 // QueryProvidersRequest is request type for the Query/Providers RPC method
 message QueryProvidersRequest{
-    cosmos.query.PageRequest pagination = 1;
+    cosmos.base.query.v1beta1.PageRequest pagination = 1;
 }
 
 // QueryProvidersResponse is response type for the Query/Providers RPC method
 message QueryProvidersResponse{
     repeated Provider providers = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="Providers"];
 
-    cosmos.query.PageResponse pagination = 2;
+    cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
 
 // QueryProviderRequest is request type for the Query/Provider RPC method

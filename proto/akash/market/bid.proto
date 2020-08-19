@@ -3,7 +3,7 @@ package akash.market;
 
 import "gogoproto/gogo.proto";
 import "akash/market/order.proto";
-import "cosmos/cosmos.proto";
+import "cosmos/base/v1beta1/coin.proto";
 
 option go_package = "github.com/ovrclk/akash/x/market/types";
 
@@ -22,7 +22,7 @@ message MsgCreateBid {
         (gogoproto.jsontag)  = "provider",
         (gogoproto.moretags) = "yaml:\"provider\""
     ];
-    cosmos.Coin price = 3 [
+    cosmos.base.v1beta1.Coin price = 3 [
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "price",
         (gogoproto.moretags)   = "yaml:\"price\""
@@ -111,7 +111,7 @@ message Bid {
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];
-    cosmos.Coin price = 3 [
+    cosmos.base.v1beta1.Coin price = 3 [
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "price",
         (gogoproto.moretags)   = "yaml:\"price\""
