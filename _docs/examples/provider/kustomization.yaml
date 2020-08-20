@@ -9,7 +9,7 @@ images:
     # akashctl version
     ##
 
-    newTag: lastest
+    newTag: latest
 
 configMapGenerator:
 
