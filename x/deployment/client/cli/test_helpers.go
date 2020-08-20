@@ -4,12 +4,9 @@ import (
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	"github.com/ovrclk/akash/x/deployment/types"
-	tmcli "github.com/tendermint/tendermint/libs/cli"
 )
 
 const key string = types.StoreKey
@@ -29,7 +26,6 @@ func TxCreateDeploymentExec(clientCtx client.Context, from fmt.Stringer, filePat
 // TxUpdateDeploymentExec is used for testing update deployment tx
 func TxUpdateDeploymentExec(clientCtx client.Context, from fmt.Stringer, filePath string, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
 		fmt.Sprintf("--from=%s", from.String()),
 		filePath,
 	}
@@ -42,7 +38,6 @@ func TxUpdateDeploymentExec(clientCtx client.Context, from fmt.Stringer, filePat
 // TxCloseDeploymentExec is used for testing close deployment tx
 func TxCloseDeploymentExec(clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
 		fmt.Sprintf("--from=%s", from.String()),
 	}
 
@@ -51,15 +46,23 @@ func TxCloseDeploymentExec(clientCtx client.Context, from fmt.Stringer, extraArg
 	return clitestutil.ExecTestCLICmd(clientCtx, cmdClose(key), args)
 }
 
-// QueryDeploymentsExec is used for testing deployments query
-func QueryDeploymentsExec(clientCtx client.Context, extraArgs ...string) (sdktest.BufferWriter, error) {
+// TxCloseGroupExec is used for testing close group tx
+func TxCloseGroupExec(clientCtx client.Context, groupID types.GroupID, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--%s=json", tmcli.OutputFlag),
+		fmt.Sprintf("--from=%s", from.String()),
+		fmt.Sprintf("--owner=%s", groupID.Owner.String()),
+		fmt.Sprintf("--dseq=%v", groupID.DSeq),
+		fmt.Sprintf("--gseq=%v", groupID.GSeq),
 	}
 
 	args = append(args, extraArgs...)
 
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdDeployments(), args)
+	return clitestutil.ExecTestCLICmd(clientCtx, cmdGroupClose(key), args)
+}
+
+// QueryDeploymentsExec is used for testing deployments query
+func QueryDeploymentsExec(clientCtx client.Context, extraArgs ...string) (sdktest.BufferWriter, error) {
+	return clitestutil.ExecTestCLICmd(clientCtx, cmdDeployments(), extraArgs)
 }
 
 // QueryDeploymentExec is used for testing deployment query
