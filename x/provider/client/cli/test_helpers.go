@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	"github.com/ovrclk/akash/x/provider/types"
@@ -16,7 +14,6 @@ const key string = types.StoreKey
 // TxCreateProviderExec is used for testing create provider tx
 func TxCreateProviderExec(clientCtx client.Context, from fmt.Stringer, filepath string, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
 		fmt.Sprintf("--from=%s", from.String()),
 		filepath,
 	}
@@ -29,7 +26,6 @@ func TxCreateProviderExec(clientCtx client.Context, from fmt.Stringer, filepath 
 // TxUpdateProviderExec is used for testing update provider tx
 func TxUpdateProviderExec(clientCtx client.Context, from fmt.Stringer, filepath string, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
 		fmt.Sprintf("--from=%s", from.String()),
 		filepath,
 	}
