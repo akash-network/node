@@ -167,9 +167,13 @@ func BidFiltersFromFlags(flags *pflag.FlagSet) (types.BidFilters, string, error)
 		return bfilters, state, err
 	}
 
-	bfilters.Provider, err = sdk.AccAddressFromBech32(provider)
-	if err != nil {
-		return bfilters, state, err
+	if provider != "" {
+		bfilters.Provider, err = sdk.AccAddressFromBech32(provider)
+		if err != nil {
+			return bfilters, state, err
+		}
+	} else {
+		bfilters.Provider = sdk.AccAddress{}
 	}
 
 	if !bfilters.Provider.Empty() && sdk.VerifyAddressFormat(bfilters.Provider) != nil {

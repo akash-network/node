@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	"github.com/ovrclk/akash/x/market/types"
@@ -17,7 +15,6 @@ const key string = types.StoreKey
 func TxCreateBidExec(clientCtx client.Context, orderID types.OrderID, price, from fmt.Stringer,
 	extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
 		fmt.Sprintf("--from=%s", from.String()),
 		fmt.Sprintf("--owner=%s", orderID.Owner.String()),
 		fmt.Sprintf("--dseq=%v", orderID.DSeq),
@@ -35,7 +32,6 @@ func TxCreateBidExec(clientCtx client.Context, orderID types.OrderID, price, fro
 func TxCloseBidExec(clientCtx client.Context, orderID types.OrderID, from fmt.Stringer,
 	extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
 		fmt.Sprintf("--from=%s", from.String()),
 		fmt.Sprintf("--owner=%s", orderID.Owner.String()),
 		fmt.Sprintf("--dseq=%v", orderID.DSeq),
@@ -52,7 +48,6 @@ func TxCloseBidExec(clientCtx client.Context, orderID types.OrderID, from fmt.St
 func TxCloseOrderExec(clientCtx client.Context, orderID types.OrderID, from fmt.Stringer,
 	extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
 		fmt.Sprintf("--from=%s", from.String()),
 		fmt.Sprintf("--owner=%s", orderID.Owner.String()),
 		fmt.Sprintf("--dseq=%v", orderID.DSeq),
@@ -86,7 +81,7 @@ func QueryOrderExec(clientCtx client.Context, orderID types.OrderID, extraArgs .
 
 // QueryBidsExec is used for testing bids query
 func QueryBidsExec(clientCtx client.Context, args ...string) (sdktest.BufferWriter, error) {
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdGetOrders(), args)
+	return clitestutil.ExecTestCLICmd(clientCtx, cmdGetBids(), args)
 }
 
 // QueryBidExec is used for testing bid query
@@ -106,7 +101,7 @@ func QueryBidExec(clientCtx client.Context, bidID types.BidID, extraArgs ...stri
 
 // QueryLeasesExec is used for testing leases query
 func QueryLeasesExec(clientCtx client.Context, args ...string) (sdktest.BufferWriter, error) {
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdGetOrders(), args)
+	return clitestutil.ExecTestCLICmd(clientCtx, cmdGetLeases(), args)
 }
 
 // QueryLeaseExec is used for testing lease query
