@@ -121,7 +121,7 @@ func NewApp(
 	bapp := bam.NewBaseApp(appName, logger, db, encodingConfig.TxConfig.TxDecoder(), options...)
 	bapp.SetCommitMultiStoreTracer(tio)
 	bapp.SetAppVersion(version.Version)
-	bapp.GRPCQueryRouter().SetAnyUnpacker(interfaceRegistry)
+	bapp.GRPCQueryRouter().SetInterfaceRegistry(interfaceRegistry)
 
 	keys := kvStoreKeys()
 	tkeys := transientStoreKeys()
@@ -422,9 +422,12 @@ func (app *AkashApp) SimulationManager() *module.SimulationManager {
 // RegisterAPIRoutes registers all application module routes with the provided
 // API server.
 func (app *AkashApp) RegisterAPIRoutes(apiSvr *api.Server) {
-	rpc.RegisterRoutes(apiSvr.ClientCtx, apiSvr.Router)
-	authrest.RegisterTxRoutes(apiSvr.ClientCtx, apiSvr.Router)
-	ModuleBasics().RegisterRESTRoutes(apiSvr.ClientCtx, apiSvr.Router)
+	clientCtx := apiSvr.ClientCtx
+	// amino is needed here for backwards compatibility of REST routes
+	clientCtx = clientCtx.WithJSONMarshaler(clientCtx.LegacyAmino)
+	rpc.RegisterRoutes(clientCtx, apiSvr.Router)
+	authrest.RegisterTxRoutes(clientCtx, apiSvr.Router)
+	ModuleBasics().RegisterRESTRoutes(clientCtx, apiSvr.Router)
 }
 
 // LoadHeight method of AkashApp loads baseapp application version with given height

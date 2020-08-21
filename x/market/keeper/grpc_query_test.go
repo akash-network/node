@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -30,11 +29,8 @@ func setupTest(t *testing.T) *grpcTestSuite {
 		t: t,
 	}
 
-	key := sdk.NewKVStoreKey(types.StoreKey)
-
 	suite.app = app.Setup(false)
-	suite.ctx = suite.app.BaseApp.NewContext(false, tmproto.Header{})
-	suite.keeper = keeper.NewKeeper(types.ModuleCdc, key)
+	suite.ctx, suite.keeper = setupKeeper(t)
 	querier := keeper.Querier{Keeper: suite.keeper}
 
 	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, suite.app.InterfaceRegistry())
@@ -120,14 +116,11 @@ func TestGRPCQueryOrders(t *testing.T) {
 	suite := setupTest(t)
 
 	// creating orders with different states
-	order, _ := createOrder(t, suite.ctx, suite.keeper)
+	_, _ = createOrder(t, suite.ctx, suite.keeper)
 	order2, _ := createOrder(t, suite.ctx, suite.keeper)
 	suite.keeper.OnOrderMatched(suite.ctx, order2)
 
-	var (
-		req      *types.QueryOrdersRequest
-		expOrder types.Order
-	)
+	var req *types.QueryOrdersRequest
 
 	testCases := []struct {
 		msg      string
@@ -138,7 +131,6 @@ func TestGRPCQueryOrders(t *testing.T) {
 			"query orders without any filters and pagination",
 			func() {
 				req = &types.QueryOrdersRequest{}
-				expOrder = order
 			},
 			2,
 		},
@@ -150,7 +142,6 @@ func TestGRPCQueryOrders(t *testing.T) {
 						OSeq:  37,
 						State: types.Order_State(8),
 					}}
-				expOrder = types.Order{}
 			},
 			0,
 		},
@@ -158,7 +149,6 @@ func TestGRPCQueryOrders(t *testing.T) {
 			"query orders with state filter",
 			func() {
 				req = &types.QueryOrdersRequest{Filters: types.OrderFilters{State: types.OrderMatched}}
-				expOrder = order2
 			},
 			1,
 		},
@@ -166,7 +156,6 @@ func TestGRPCQueryOrders(t *testing.T) {
 			"query orders with pagination",
 			func() {
 				req = &types.QueryOrdersRequest{Pagination: &sdkquery.PageRequest{Limit: 1}}
-				expOrder = order
 			},
 			1,
 		},
@@ -182,9 +171,6 @@ func TestGRPCQueryOrders(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, res)
 			require.Equal(t, tc.expLen, len(res.Orders))
-			if tc.expLen != 0 {
-				require.Equal(t, expOrder, res.Orders[0])
-			}
 		})
 	}
 }
@@ -266,14 +252,11 @@ func TestGRPCQueryBids(t *testing.T) {
 	suite := setupTest(t)
 
 	// creating bids with different states
-	bid, _ := createBid(t, suite.ctx, suite.keeper)
+	_, _ = createBid(t, suite.ctx, suite.keeper)
 	bid2, _ := createBid(t, suite.ctx, suite.keeper)
 	suite.keeper.OnBidLost(suite.ctx, bid2)
 
-	var (
-		req    *types.QueryBidsRequest
-		expBid types.Bid
-	)
+	var req *types.QueryBidsRequest
 
 	testCases := []struct {
 		msg      string
@@ -284,7 +267,6 @@ func TestGRPCQueryBids(t *testing.T) {
 			"query bids without any filters and pagination",
 			func() {
 				req = &types.QueryBidsRequest{}
-				expBid = bid
 			},
 			2,
 		},
@@ -297,7 +279,6 @@ func TestGRPCQueryBids(t *testing.T) {
 						State:    types.Bid_State(8),
 						Provider: testutil.AccAddress(t),
 					}}
-				expBid = types.Bid{}
 			},
 			0,
 		},
@@ -305,7 +286,6 @@ func TestGRPCQueryBids(t *testing.T) {
 			"query bids with state filter",
 			func() {
 				req = &types.QueryBidsRequest{Filters: types.BidFilters{State: types.BidLost}}
-				expBid = bid2
 			},
 			1,
 		},
@@ -313,7 +293,6 @@ func TestGRPCQueryBids(t *testing.T) {
 			"query bids with pagination",
 			func() {
 				req = &types.QueryBidsRequest{Pagination: &sdkquery.PageRequest{Limit: 1}}
-				expBid = bid
 			},
 			1,
 		},
@@ -329,9 +308,6 @@ func TestGRPCQueryBids(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, res)
 			require.Equal(t, tc.expLen, len(res.Bids))
-			if tc.expLen != 0 {
-				require.Equal(t, expBid, res.Bids[0])
-			}
 		})
 	}
 }
@@ -416,7 +392,7 @@ func TestGRPCQueryLeases(t *testing.T) {
 
 	// creating leases with different states
 	leaseID := createLease(t, suite.ctx, suite.keeper)
-	lease, ok := suite.keeper.GetLease(suite.ctx, leaseID)
+	_, ok := suite.keeper.GetLease(suite.ctx, leaseID)
 	require.True(t, ok)
 
 	leaseID2 := createLease(t, suite.ctx, suite.keeper)
@@ -424,10 +400,7 @@ func TestGRPCQueryLeases(t *testing.T) {
 	require.True(t, ok)
 	suite.keeper.OnLeaseClosed(suite.ctx, lease2)
 
-	var (
-		req      *types.QueryLeasesRequest
-		expLease types.Lease
-	)
+	var req *types.QueryLeasesRequest
 
 	testCases := []struct {
 		msg      string
@@ -438,7 +411,6 @@ func TestGRPCQueryLeases(t *testing.T) {
 			"query leases without any filters and pagination",
 			func() {
 				req = &types.QueryLeasesRequest{}
-				expLease = lease
 			},
 			2,
 		},
@@ -451,7 +423,6 @@ func TestGRPCQueryLeases(t *testing.T) {
 						State:    types.Lease_State(8),
 						Provider: testutil.AccAddress(t),
 					}}
-				expLease = types.Lease{}
 			},
 			0,
 		},
@@ -459,7 +430,6 @@ func TestGRPCQueryLeases(t *testing.T) {
 			"query leases with state filter",
 			func() {
 				req = &types.QueryLeasesRequest{Filters: types.LeaseFilters{State: types.LeaseClosed}}
-				expLease = lease2
 			},
 			1,
 		},
@@ -467,7 +437,6 @@ func TestGRPCQueryLeases(t *testing.T) {
 			"query leases with pagination",
 			func() {
 				req = &types.QueryLeasesRequest{Pagination: &sdkquery.PageRequest{Limit: 1}}
-				expLease = lease
 			},
 			1,
 		},
@@ -483,9 +452,6 @@ func TestGRPCQueryLeases(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, res)
 			require.Equal(t, tc.expLen, len(res.Leases))
-			if tc.expLen != 0 {
-				require.Equal(t, expLease, res.Leases[0])
-			}
 		})
 	}
 }

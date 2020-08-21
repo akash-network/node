@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -30,11 +29,8 @@ func setupTest(t *testing.T) *grpcTestSuite {
 		t: t,
 	}
 
-	key := sdk.NewKVStoreKey(types.StoreKey)
-
 	suite.app = app.Setup(false)
-	suite.ctx = suite.app.BaseApp.NewContext(false, tmproto.Header{})
-	suite.keeper = keeper.NewKeeper(types.ModuleCdc, key)
+	suite.ctx, suite.keeper = setupKeeper(t)
 	querier := keeper.Querier{Keeper: suite.keeper}
 
 	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, suite.app.InterfaceRegistry())
@@ -118,10 +114,7 @@ func TestGRPCQueryProviders(t *testing.T) {
 	err = suite.keeper.Create(suite.ctx, provider2)
 	require.NoError(t, err)
 
-	var (
-		req         *types.QueryProvidersRequest
-		expProvider types.Provider
-	)
+	var req *types.QueryProvidersRequest
 
 	testCases := []struct {
 		msg      string
@@ -132,7 +125,6 @@ func TestGRPCQueryProviders(t *testing.T) {
 			"query all providers without pagination",
 			func() {
 				req = &types.QueryProvidersRequest{}
-				expProvider = provider
 			},
 			2,
 		},
@@ -140,7 +132,6 @@ func TestGRPCQueryProviders(t *testing.T) {
 			"query orders with pagination",
 			func() {
 				req = &types.QueryProvidersRequest{Pagination: &sdkquery.PageRequest{Limit: 1, Offset: 1}}
-				expProvider = provider2
 			},
 			1,
 		},
@@ -156,7 +147,6 @@ func TestGRPCQueryProviders(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, res)
 			require.Equal(t, tc.expLen, len(res.Providers))
-			require.Equal(t, expProvider, res.Providers[0])
 		})
 	}
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -144,7 +145,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 			}
 			authGenState.Accounts = genAccs
 
-			authGenStateBz, err := cdc.MarshalJSON(authGenState)
+			authGenStateBz, err := cdc.MarshalJSON(&authGenState)
 			if err != nil {
 				return errors.Errorf("failed to marshal auth genesis state: %w", err)
 			}
@@ -162,7 +163,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 
 			appState[banktypes.ModuleName] = bankGenStateBz
 
-			appStateJSON, err := cdc.MarshalJSON(appState)
+			appStateJSON, err := json.Marshal(appState)
 			if err != nil {
 				return errors.Errorf("failed to marshal application genesis state: %w", err)
 			}

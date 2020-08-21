@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -30,11 +29,8 @@ func setupTest(t *testing.T) *grpcTestSuite {
 		t: t,
 	}
 
-	key := sdk.NewKVStoreKey(types.StoreKey)
-
 	suite.app = app.Setup(false)
-	suite.ctx = suite.app.BaseApp.NewContext(false, tmproto.Header{})
-	suite.keeper = keeper.NewKeeper(types.ModuleCdc, key)
+	suite.ctx, suite.keeper = setupKeeper(t)
 	querier := keeper.Querier{Keeper: suite.keeper}
 
 	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, suite.app.InterfaceRegistry())
@@ -128,14 +124,11 @@ func TestGRPCQueryDeployments(t *testing.T) {
 	require.NoError(t, err)
 
 	deployment2, groups2 := suite.createDeployment()
-	deployment.State = types.DeploymentClosed
+	deployment2.State = types.DeploymentClosed
 	err = suite.keeper.Create(suite.ctx, deployment2, groups2)
 	require.NoError(t, err)
 
-	var (
-		req           *types.QueryDeploymentsRequest
-		expDeployment types.DeploymentResponse
-	)
+	var req *types.QueryDeploymentsRequest
 
 	testCases := []struct {
 		msg      string
@@ -146,7 +139,6 @@ func TestGRPCQueryDeployments(t *testing.T) {
 			"query deployments without any filters and pagination",
 			func() {
 				req = &types.QueryDeploymentsRequest{}
-				expDeployment = types.DeploymentResponse{Deployment: deployment, Groups: groups}
 			},
 			2,
 		},
@@ -158,7 +150,6 @@ func TestGRPCQueryDeployments(t *testing.T) {
 						DSeq:  37,
 						State: types.Deployment_State(4),
 					}}
-				expDeployment = types.DeploymentResponse{}
 			},
 			0,
 		},
@@ -166,10 +157,6 @@ func TestGRPCQueryDeployments(t *testing.T) {
 			"query deployments with state filter",
 			func() {
 				req = &types.QueryDeploymentsRequest{Filters: types.DeploymentFilters{State: types.DeploymentClosed}}
-				expDeployment = types.DeploymentResponse{
-					Deployment: deployment2,
-					Groups:     groups2,
-				}
 			},
 			1,
 		},
@@ -177,10 +164,6 @@ func TestGRPCQueryDeployments(t *testing.T) {
 			"query deployments with pagination",
 			func() {
 				req = &types.QueryDeploymentsRequest{Pagination: &sdkquery.PageRequest{Limit: 1}}
-				expDeployment = types.DeploymentResponse{
-					Deployment: deployment,
-					Groups:     groups,
-				}
 			},
 			1,
 		},
@@ -196,9 +179,6 @@ func TestGRPCQueryDeployments(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, res)
 			require.Equal(t, tc.expLen, len(res.Deployments))
-			if tc.expLen != 0 {
-				require.Equal(t, expDeployment, res.Deployments[0])
-			}
 		})
 	}
 }
