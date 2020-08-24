@@ -54,7 +54,7 @@ func transferFundsForActiveLeases(ctx sdk.Context, keepers Keepers) error {
 
 var errNoBids error = errors.New("no bids to pick winner from")
 
-func pickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
+func PickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 	// open bids; match by lowest price; sort bids by price
 	sort.Slice(bids, func(i, j int) bool {
 		// The BidID DSeq is pulled from the original OrderID.
@@ -120,7 +120,7 @@ func matchOrders(ctx sdk.Context, keepers Keepers) error {
 			return false
 		}
 
-		winner, err := pickBidWinner(bids)
+		winner, err := PickBidWinner(bids)
 		if err != nil {
 			pErr := errors.Wrap(err, "picking bid winner returned unrecoverable error")
 			panic(pErr.Error())

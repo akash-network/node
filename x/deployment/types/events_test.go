@@ -14,6 +14,12 @@ import (
 )
 
 var (
+	_ = func() string {
+		config := sdk.GetConfig()
+		config.SetBech32PrefixForAccount("akash", "akashpub")
+		return ""
+	}()
+
 	keyAcc, _         = sdk.AccAddressFromBech32("akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr")
 	errWildcard       = errors.New("wildcard string error can't be matched")
 	tmpSum            = sha256.Sum256([]byte(keyAcc))

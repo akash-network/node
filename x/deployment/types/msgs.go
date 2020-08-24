@@ -39,7 +39,7 @@ func (msg MsgCreateDeployment) Type() string { return MsgTypeCreateDeployment }
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCreateDeployment) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 // GetSigners defines whose signature is required
@@ -98,7 +98,7 @@ func (msg MsgUpdateDeployment) ValidateBasic() error {
 
 // GetSignBytes encodes the message for signing
 func (msg MsgUpdateDeployment) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 // GetSigners defines whose signature is required
@@ -134,7 +134,7 @@ func (msg MsgCloseDeployment) ValidateBasic() error {
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCloseDeployment) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 // GetSigners defines whose signature is required
@@ -170,7 +170,7 @@ func (msg MsgCloseGroup) ValidateBasic() error {
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCloseGroup) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 // GetSigners defines whose signature is required

@@ -1,15 +1,18 @@
-package handler
+package handler_test
 
 import (
-	"errors"
 	"strconv"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/x/market/handler"
 	"github.com/ovrclk/akash/x/market/types"
+	"github.com/pkg/errors"
 )
+
+var errNoBids error = errors.New("no bids to pick winner from")
 
 type winnerTest struct {
 	desc      string
@@ -19,7 +22,7 @@ type winnerTest struct {
 }
 
 func (w *winnerTest) testFunc(t *testing.T) {
-	winner, err := pickBidWinner(w.bids)
+	winner, err := handler.PickBidWinner(w.bids)
 	if !errors.Is(err, w.expErr) {
 		t.Errorf("returned err: %v does not match %v", err, w.expErr)
 	}
@@ -119,7 +122,7 @@ func (td *testDist) testFunc(t *testing.T) {
 			bids = append(bids, b)
 		}
 
-		winner, err := pickBidWinner(bids)
+		winner, err := handler.PickBidWinner(bids)
 		if !errors.Is(err, td.expErr) {
 			t.Errorf("returned err: %v does not match %v", err, td.expErr)
 		}

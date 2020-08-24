@@ -38,7 +38,7 @@ func (msg MsgCreateBid) Type() string { return MsgTypeCreateBid }
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCreateBid) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 // GetSigners defines whose signature is required
@@ -83,7 +83,7 @@ func (msg MsgCloseBid) Type() string { return MsgTypeCloseBid }
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCloseBid) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 // GetSigners defines whose signature is required
@@ -116,7 +116,7 @@ func (msg MsgCloseOrder) Type() string { return MsgTypeCloseOrder }
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCloseOrder) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 // GetSigners defines whose signature is required
