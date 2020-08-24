@@ -85,7 +85,7 @@ func (o *order) run() {
 	// Begin fetching group details immediately.
 	groupch = runner.Do(func() runner.Result {
 		res, err := o.session.Client().Query().Group(context.Background(), &dtypes.QueryGroupRequest{ID: o.order.GroupID()})
-		return runner.NewResult(res.Group, err)
+		return runner.NewResult(res.GetGroup(), err)
 	})
 
 loop:

@@ -8,7 +8,7 @@ require (
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
 	github.com/caarlos0/env v3.3.0+incompatible
 	github.com/confio/ics23-iavl v0.6.0 // indirect
-	github.com/cosmos/cosmos-sdk v0.34.4-0.20200820220541-97df8b605ce2
+	github.com/cosmos/cosmos-sdk v0.34.4-0.20200823095822-c479a985302a
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/enigmampc/btcutil v1.0.3-0.20200723161021-e2fb6adb2a25 // indirect
 	github.com/fsnotify/fsnotify v1.4.8-0.20191012010759-4bf2d1fec783 // indirect
@@ -64,4 +64,4 @@ replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.
 
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.2-alpha.regen.4
 
-// replace github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.34.4-0.20200815085233-f3c6ed61b433
+replace github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.34.4-0.20200823095822-c479a985302a

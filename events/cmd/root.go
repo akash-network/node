@@ -26,7 +26,7 @@ func EventCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(flags.FlagNode, "", "The node address")
+	cmd.Flags().String(flags.FlagNode, "tcp://localhost:26657", "The node address")
 	_ = viper.BindPFlag(flags.FlagNode, cmd.Flags().Lookup(flags.FlagNode))
 
 	return cmd

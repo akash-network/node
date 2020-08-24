@@ -89,7 +89,7 @@ func main() {
 	executor := cli.PrepareMainCmd(root, "AKASHCTL", common.DefaultCLIHome())
 	err := executor.ExecuteContext(ctx)
 	if err != nil {
-		panic(err)
+		os.Exit(1)
 	}
 }
 

@@ -177,9 +177,7 @@ type existingOrder struct {
 
 func queryExistingOrders(_ context.Context, session session.Session) ([]existingOrder, error) {
 	params := &mtypes.QueryOrdersRequest{
-		Filters: mtypes.OrderFilters{
-			State: mtypes.OrderOpen,
-		},
+		Filters: mtypes.OrderFilters{},
 		Pagination: &sdkquery.PageRequest{
 			Limit: 10000,
 		},
@@ -194,9 +192,9 @@ func queryExistingOrders(_ context.Context, session session.Session) ([]existing
 	existingOrders := make([]existingOrder, 0)
 	for i := range orders {
 		pOrder := &orders[i]
-		// if pOrder.State != mtypes.OrderOpen {
-		// 	continue
-		// }
+		if pOrder.State != mtypes.OrderOpen {
+			continue
+		}
 
 		eo := existingOrder{order: pOrder}
 
@@ -207,7 +205,7 @@ func queryExistingOrders(_ context.Context, session session.Session) ([]existing
 			},
 		)
 
-		bid := res.Bid
+		bid := res.GetBid()
 
 		eo.bid = &bid
 
