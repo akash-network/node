@@ -6,6 +6,8 @@ commonLabels:
   app: akashd
   akash.network/component: akashd
 
+namespace: akash-services
+
 configMapGenerator:
 
   - name: akashd-boot

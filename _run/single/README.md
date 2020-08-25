@@ -52,6 +52,14 @@ this example.
 |`OSEQ`|1|order sequence|
 |`PRICE`|10akash|price to bid|
 
+To get DNS routing to work locally, there are two addresses which will probably need to set to configure requests to hit the kind docker container. To route requests back to the local interface, add the following two lines to your `/etc/hosts` for the Akashd and Akash-Provider examples to work correctly.
+
+* `127.0.0.1   akashd.localhost`
+* `127.0.0.1   akash-provider.localhost`
+
+Or if it does not conflict with other local rules, use a wildcard for localhost:
+* `127.0.0.1   *.localhost`
+
 ## Runbook
 
 The following steps will bring up a network and allow for interacting
@@ -70,7 +78,9 @@ make init kustomize-init
 
 ### Initialize Cluster
 
-Start and initialize kind.
+Start and initialize kind. There are two options for network manager; standard CNI, or Calico.
+Both are configured with Makefile targets as specified below. Using Calico enables testing of
+Network Polcies.
 
 **note**: this step waits for kubernetes metrics to be available, which can take some time.
 The counter on the left side of the messages is regularly in the 120 range.  If it goes beyond 250,
@@ -79,10 +89,16 @@ there may be a problem.
 **note**: If anything else is listening on port 80 (any other web server), this
 will fail.
 
+Pick one of the following commands:
 __t1__
 ```sh
+# Standard Networking
 make kind-cluster-create
+
+# Calico Network Manger
+make kind-cluster-calico-create
 ```
+
 
 ### Build Akash binaries and initialize network
 
@@ -114,6 +130,8 @@ You should see blocks being produced - the block height should be increasing.
 
 You can now view genesis accounts that were created:
 
+**If this command fails**, consider adding `127.0.0.1   akashd.localhost` to your `/etc/hosts` for DNS.
+
 __t1__
 ```sh
 make query-accounts
@@ -141,7 +159,7 @@ In a separate terminal, run the following command
 
 __t3__
 ```sh
-kubectl kustomize kustomize/akash-provider | kubectl apply -f-
+make kustomize-install-provider
 ```
 
 Query the provider service gateway for its status:
@@ -222,6 +240,13 @@ make provider-lease-ping
 
 If you chose to use port 80 when setting up kind, you can browse to your
 deployed workload at http://hello.localhost
+
+## Update Provider
+
+If the KinD configuration uses Docker's random port assignment then the on-chain Provider data will need to be updated for `send-manfiest` to be able to correctly route the manifest POST request.
+
+For example you might need to update the `provider.yaml`'s first line to include the port number. eg: `host: http://akash-provider.localhost:41109`
+
 
 ## Update Deployment
 

@@ -20,6 +20,7 @@ KIND_PORT_BINDINGS ?= $(shell docker inspect "$(KIND_NAME)-control-plane" \
 										--format '{{index .NetworkSettings.Ports "80/tcp" 0 "HostPort"}}')
 
 KIND_CONFIG       ?= kind-config.yaml
+KIND_CONFIG_CALICO ?= kind-config-calico.yaml
 
 PROVIDER_HOSTNAME ?= localhost
 PROVIDER_HOST     ?= $(PROVIDER_HOSTNAME):$(KIND_HTTP_PORT)
@@ -27,6 +28,7 @@ PROVIDER_ENDPOINT ?= http://$(PROVIDER_HOST)
 
 # TODO: referencing master/latest on a k8s repository is prone to breaking at some point.
 INGRESS_CONFIG_PATH ?= https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
+CALICO_MANIFEST ?= https://docs.projectcalico.org/v3.8/manifests/calico.yaml
 
 .PHONY: app-http-port
 app-http-port:
@@ -47,6 +49,17 @@ kind-cluster-create:
 		--name "$(KIND_NAME)"
 	kubectl apply -f "$(INGRESS_CONFIG_PATH)"
 	"$(AKASH_ROOT)/script/setup-kind.sh"
+
+.PHONY: kind-cluster-calico-create
+kind-cluster-calico-create:
+	kind create cluster \
+		--config "$(KIND_CONFIG_CALICO)" \
+		--name "$(KIND_NAME)"
+	kubectl apply -f "$(CALICO_MANIFEST)"
+	kubectl -n kube-system set env daemonset/calico-node FELIX_IGNORELOOSERPF=true
+	# Calico needs to be managing networking before finishing setup
+	kubectl apply -f "$(INGRESS_CONFIG_PATH)"
+	$(AKASH_ROOT)/script/setup-kind.sh calico-metrics
 
 .PHONY: kind-ingress-setup
 kind-ingress-setup:
