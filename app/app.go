@@ -2,6 +2,7 @@ package app
 
 import (
 	"io"
+	"os"
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
@@ -68,6 +69,8 @@ import (
 const (
 	appName = "akash"
 )
+
+var DefaultHome = os.ExpandEnv("$HOME/.akash")
 
 // AkashApp extends ABCI appplication
 type AkashApp struct {

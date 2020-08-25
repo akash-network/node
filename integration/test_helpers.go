@@ -14,7 +14,7 @@ import (
 	clientkeys "github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/ovrclk/akash/app"
-	"github.com/ovrclk/akash/cmd/common"
+	common "github.com/ovrclk/akash/cmd/akash"
 	dquery "github.com/ovrclk/akash/x/deployment/query"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"

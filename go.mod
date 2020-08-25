@@ -65,3 +65,7 @@ replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.2-alpha.regen.4
 
 replace github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.34.4-0.20200823095822-c479a985302a
+// replace github.com/tendermint/tendermint => /Users/johnzampolin/go/src/github.com/tendermint/tendermint
+// replace github.com/cosmos/cosmos-sdk => /Users/johnzampolin/go/src/github.com/cosmos/cosmos-sdk
+
+
