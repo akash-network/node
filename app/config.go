@@ -9,6 +9,8 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/cosmos/cosmos-sdk/x/capability"
+	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
@@ -18,6 +20,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/cosmos/cosmos-sdk/x/ibc"
+	ibctransfertypes "github.com/cosmos/cosmos-sdk/x/ibc-transfer/types"
+	ibchost "github.com/cosmos/cosmos-sdk/x/ibc/24-host"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/cosmos/cosmos-sdk/x/params"
@@ -44,6 +49,8 @@ var (
 			// tokens, token balance.
 			bank.AppModuleBasic{},
 
+			capability.AppModuleBasic{},
+
 			// inflation
 			mint.AppModuleBasic{},
 
@@ -59,6 +66,7 @@ var (
 			),
 
 			params.AppModuleBasic{},
+			ibc.AppModuleBasic{},
 			upgrade.AppModuleBasic{},
 			evidence.AppModuleBasic{},
 			crisis.AppModuleBasic{},
@@ -95,8 +103,11 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 			stakingtypes.StoreKey,
 			minttypes.StoreKey,
 			govtypes.StoreKey,
+			ibchost.StoreKey,
 			upgradetypes.StoreKey,
 			evidencetypes.StoreKey,
+			ibctransfertypes.StoreKey,
+			capabilitytypes.StoreKey,
 		},
 
 			akashKVStoreKeys()...,

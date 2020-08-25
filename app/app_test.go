@@ -14,7 +14,7 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-func TestSimAppExport(t *testing.T) {
+func TestAkashAppExport(t *testing.T) {
 	db := dbm.NewMemDB()
 	app := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)),
 		db, nil, 0, map[int64]bool{}, common.DefaultNodeHome())
@@ -43,6 +43,6 @@ func TestBlockedAddrs(t *testing.T) {
 	app := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{}, common.DefaultNodeHome())
 
 	for acc := range macPerms() {
-		require.True(t, app.keeper.bank.BlockedAddr(app.keeper.acct.GetModuleAddress(acc)))
+		require.Equal(t, !allowedReceivingModAcc[acc], app.keeper.bank.BlockedAddr(app.keeper.acct.GetModuleAddress(acc)))
 	}
 }

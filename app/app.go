@@ -19,6 +19,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/cosmos/cosmos-sdk/x/capability"
+	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
+	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
@@ -30,6 +33,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/cosmos/cosmos-sdk/x/ibc"
+	transfer "github.com/cosmos/cosmos-sdk/x/ibc-transfer"
+	ibctransferkeeper "github.com/cosmos/cosmos-sdk/x/ibc-transfer/keeper"
+	ibctransfertypes "github.com/cosmos/cosmos-sdk/x/ibc-transfer/types"
+	ibcclient "github.com/cosmos/cosmos-sdk/x/ibc/02-client"
+	ibcclienttypes "github.com/cosmos/cosmos-sdk/x/ibc/02-client/types"
+	porttypes "github.com/cosmos/cosmos-sdk/x/ibc/05-port/types"
+	ibchost "github.com/cosmos/cosmos-sdk/x/ibc/24-host"
+	ibckeeper "github.com/cosmos/cosmos-sdk/x/ibc/keeper"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
@@ -54,6 +66,7 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmos "github.com/tendermint/tendermint/libs/os"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/std"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -69,6 +82,11 @@ const (
 	appName = "akash"
 )
 
+// module accounts that are allowed to receive tokens
+var allowedReceivingModAcc = map[string]bool{
+	distrtypes.ModuleName: true,
+}
+
 // AkashApp extends ABCI appplication
 type AkashApp struct {
 	*bam.BaseApp
@@ -78,12 +96,14 @@ type AkashApp struct {
 
 	invCheckPeriod uint
 
-	keys  map[string]*sdk.KVStoreKey
-	tkeys map[string]*sdk.TransientStoreKey
+	keys    map[string]*sdk.KVStoreKey
+	tkeys   map[string]*sdk.TransientStoreKey
+	memKeys map[string]*sdk.MemoryStoreKey
 
 	keeper struct {
 		acct       authkeeper.AccountKeeper
 		bank       bankkeeper.Keeper
+		capability *capabilitykeeper.Keeper
 		params     paramskeeper.Keeper
 		staking    stakingkeeper.Keeper
 		distr      distrkeeper.Keeper
@@ -96,7 +116,13 @@ type AkashApp struct {
 		deployment deployment.Keeper
 		market     market.Keeper
 		provider   provider.Keeper
+		ibc        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
+		transfer   ibctransferkeeper.Keeper
 	}
+
+	// make scoped keepers public for test purposes
+	ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
+	ScopedTransferKeeper capabilitykeeper.ScopedKeeper
 
 	mm *module.Manager
 
@@ -125,6 +151,7 @@ func NewApp(
 
 	keys := kvStoreKeys()
 	tkeys := transientStoreKeys()
+	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
 
 	app := &AkashApp{
 		BaseApp:           bapp,
@@ -134,12 +161,22 @@ func NewApp(
 		invCheckPeriod:    invCheckPeriod,
 		keys:              keys,
 		tkeys:             tkeys,
+		memKeys:           memKeys,
 	}
 
 	app.keeper.params = initParamsKeeper(appCodec, cdc, app.keys[paramstypes.StoreKey], tkeys[paramstypes.TStoreKey])
 
 	// set the BaseApp's parameter store
 	bapp.SetParamStore(app.keeper.params.Subspace(bam.Paramspace).WithKeyTable(std.ConsensusParamsKeyTable()))
+
+	// add capability keeper and ScopeToModule for ibc module
+	app.keeper.capability = capabilitykeeper.NewKeeper(
+		appCodec,
+		keys[capabilitytypes.StoreKey],
+		memKeys[capabilitytypes.MemStoreKey],
+	)
+	scopedIBCKeeper := app.keeper.capability.ScopeToModule(ibchost.ModuleName)
+	scopedTransferKeeper := app.keeper.capability.ScopeToModule(ibctransfertypes.ModuleName)
 
 	app.keeper.acct = authkeeper.NewAccountKeeper(
 		appCodec,
@@ -154,7 +191,7 @@ func NewApp(
 		app.keys[banktypes.StoreKey],
 		app.keeper.acct,
 		app.GetSubspace(banktypes.ModuleName),
-		app.ModuleAccountAddrs(),
+		app.BlockedAddrs(),
 	)
 
 	// app.keeper.supply = supply.NewKeeper(
@@ -219,11 +256,30 @@ func NewApp(
 		authtypes.FeeCollectorName,
 	)
 
+	// Create IBC Keeper
+	app.keeper.ibc = ibckeeper.NewKeeper(
+		appCodec, keys[ibchost.StoreKey], app.keeper.staking, scopedIBCKeeper,
+	)
+
+	// Create Transfer Keepers
+	app.keeper.transfer = ibctransferkeeper.NewKeeper(
+		appCodec, keys[ibctransfertypes.StoreKey], app.GetSubspace(ibctransfertypes.ModuleName),
+		app.keeper.ibc.ChannelKeeper, &app.keeper.ibc.PortKeeper,
+		app.keeper.acct, app.keeper.bank, scopedTransferKeeper,
+	)
+	transferModule := transfer.NewAppModule(app.keeper.transfer)
+
+	// Create static IBC router, add transfer route, then set and seal it
+	ibcRouter := porttypes.NewRouter()
+	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferModule)
+	app.keeper.ibc.SetRouter(ibcRouter)
+
 	// create evidence keeper with evidence router
 	evidenceKeeper := evidencekeeper.NewKeeper(
 		appCodec, app.keys[evidencetypes.StoreKey], &app.keeper.staking, app.keeper.slashing,
 	)
-	evidenceRouter := evidencetypes.NewRouter()
+	evidenceRouter := evidencetypes.NewRouter().
+		AddRoute(ibcclienttypes.RouterKey, ibcclient.HandlerClientMisbehaviour(app.keeper.ibc.ClientKeeper))
 
 	evidenceKeeper.SetRouter(evidenceRouter)
 
@@ -253,6 +309,7 @@ func NewApp(
 			genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx, encodingConfig.TxConfig),
 			auth.NewAppModule(appCodec, app.keeper.acct),
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
+			capability.NewAppModule(appCodec, *app.keeper.capability),
 			crisis.NewAppModule(&app.keeper.crisis),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
 			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
@@ -261,6 +318,9 @@ func NewApp(
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
 			upgrade.NewAppModule(app.keeper.upgrade),
 			evidence.NewAppModule(app.keeper.evidence),
+			ibc.NewAppModule(app.keeper.ibc),
+			params.NewAppModule(app.keeper.params),
+			transferModule,
 		},
 
 			app.akashAppModules()...,
@@ -269,7 +329,7 @@ func NewApp(
 
 	app.mm.SetOrderBeginBlockers(
 		upgradetypes.ModuleName, minttypes.ModuleName, distrtypes.ModuleName, slashingtypes.ModuleName,
-		evidencetypes.ModuleName, stakingtypes.ModuleName,
+		evidencetypes.ModuleName, stakingtypes.ModuleName, ibchost.ModuleName,
 	)
 	app.mm.SetOrderEndBlockers(
 		append([]string{
@@ -282,6 +342,7 @@ func NewApp(
 	//       properly initialized with tokens from genesis accounts.
 	app.mm.SetOrderInitGenesis(
 		append([]string{
+			capabilitytypes.ModuleName,
 			authtypes.ModuleName,
 			distrtypes.ModuleName,
 			stakingtypes.ModuleName,
@@ -290,8 +351,10 @@ func NewApp(
 			govtypes.ModuleName,
 			minttypes.ModuleName,
 			crisistypes.ModuleName,
+			ibchost.ModuleName,
 			genutiltypes.ModuleName,
 			evidencetypes.ModuleName,
+			ibctransfertypes.ModuleName,
 		},
 
 			app.akashInitGenesisOrder()...,
@@ -306,6 +369,7 @@ func NewApp(
 		append([]module.AppModuleSimulation{
 			auth.NewAppModule(appCodec, app.keeper.acct),
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
+			capability.NewAppModule(appCodec, *app.keeper.capability),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
 			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
@@ -313,6 +377,8 @@ func NewApp(
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			params.NewAppModule(app.keeper.params),
 			evidence.NewAppModule(app.keeper.evidence),
+			ibc.NewAppModule(app.keeper.ibc),
+			transferModule,
 		},
 			app.akashSimModules()...,
 		)...,
@@ -323,6 +389,7 @@ func NewApp(
 	// initialize stores
 	app.MountKVStores(keys)
 	app.MountTransientStores(tkeys)
+	app.MountMemoryStores(memKeys)
 
 	// initialize BaseApp
 	app.SetInitChainer(app.InitChainer)
@@ -343,6 +410,17 @@ func NewApp(
 	if err != nil {
 		tmos.Exit("app initialization:" + err.Error())
 	}
+
+	// Initialize and seal the capability keeper so all persistent capabilities
+	// are loaded in-memory and prevent any further modules from creating scoped
+	// sub-keepers.
+	// This must be done during creation of baseapp rather than in InitChain so
+	// that in-memory capabilities get regenerated on app restart
+	ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
+	app.keeper.capability.InitializeAndSeal(ctx)
+
+	app.ScopedIBCKeeper = scopedIBCKeeper
+	app.ScopedTransferKeeper = scopedTransferKeeper
 
 	return app
 }
@@ -393,6 +471,17 @@ func (app *AkashApp) ModuleAccountAddrs() map[string]bool {
 	return macAddrs()
 }
 
+// BlockedAddrs returns all the app's module account addresses that are not
+// allowed to receive external tokens.
+func (app *AkashApp) BlockedAddrs() map[string]bool {
+	blockedAddrs := make(map[string]bool)
+	for acc := range macPerms() {
+		blockedAddrs[authtypes.NewModuleAddress(acc).String()] = !allowedReceivingModAcc[acc]
+	}
+
+	return blockedAddrs
+}
+
 // InterfaceRegistry returns AkashApp's InterfaceRegistry
 func (app *AkashApp) InterfaceRegistry() codectypes.InterfaceRegistry {
 	return app.interfaceRegistry
@@ -406,6 +495,11 @@ func (app *AkashApp) GetKey(storeKey string) *sdk.KVStoreKey {
 // GetTKey returns the TransientStoreKey for the provided store key.
 func (app *AkashApp) GetTKey(storeKey string) *sdk.TransientStoreKey {
 	return app.tkeys[storeKey]
+}
+
+// GetMemKey returns the MemStoreKey for the provided mem key.
+func (app *AkashApp) GetMemKey(storeKey string) *sdk.MemoryStoreKey {
+	return app.memKeys[storeKey]
 }
 
 // GetSubspace returns a param subspace for a given module name.
@@ -447,6 +541,7 @@ func initParamsKeeper(appCodec codec.BinaryMarshaler, legacyAmino *codec.LegacyA
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
 	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
 	paramsKeeper.Subspace(crisistypes.ModuleName)
+	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 
 	return paramsKeeper
 }
