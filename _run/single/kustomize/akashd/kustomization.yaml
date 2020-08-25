@@ -3,7 +3,7 @@ bases:
   - ../../../../_docs/kustomize/akashd
 
 images:
-  - name: ovrclk/akashd
+  - name: ovrclk/akash
 
     ##
     # akashctl version
@@ -17,7 +17,7 @@ configMapGenerator:
   ##
   # cosmos-sdk app config (app.toml) overrides
   ##
-  - name: akashd-app-config
+  - name: akash-app-config
     behavior: merge
     literals:
       # - pruning=syncable
@@ -25,18 +25,18 @@ configMapGenerator:
   ##
   # tendermint node config (config.toml) overrides
   ##
-  - name: akashd-config
+  - name: akash-config
     behavior: merge
     literals:
       # - moniker=node0
 
-  - name: akashd-data
+  - name: akash-data
     behavior: merge
     files:
       - cache/config/genesis.json
 
 secretGenerator:
-  - name: akashd-keys
+  - name: akash-keys
     behavior: replace
     files:
       - cache/config/node_key.json

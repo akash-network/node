@@ -1,8 +1,8 @@
 # See documentation at http://goreleaser.com
 builds:
-  - id: akashctl
-    binary: akashctl
-    main: ./cmd/akashctl
+  - id: akash
+    binary: akash
+    main: ./cmd/akash
     goarch: [amd64, arm64]
     goos: [linux, darwin]
     ignore:
@@ -10,27 +10,8 @@ builds:
         goarch: 386
     ldflags: >
       -s -w 
-      -X github.com/cosmos/cosmos-sdk/version.Name=akashctl 
-      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd 
-      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl 
-      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
-      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} 
-      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}} 
-  - id: akashd
-    binary: akashd
-    main: ./cmd/akashd
-    goarch: [amd64, arm64]
-    goos: [linux,darwin]
-    ignore:
-      - goos: darwin
-        goarch: 386
-      - goos: windows
-        goarch: arm
-    ldflags: >
-      -s -w 
-      -X github.com/cosmos/cosmos-sdk/version.Name=akashctl 
-      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd 
-      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl 
+      -X github.com/cosmos/cosmos-sdk/version.Name=akash 
+      -X github.com/cosmos/cosmos-sdk/version.AppName=akash
       -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
       -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} 
       -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}} 
@@ -38,8 +19,7 @@ builds:
 archives:
   - id: akash
     builds:
-    - akashctl
-    - akashd
+    - akash
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: zip
@@ -48,24 +28,14 @@ archives:
 
 dockers:
   - binaries: 
-    - akashctl
-    dockerfile: _build/Dockerfile.akashctl
+    - akash
+    dockerfile: _build/Dockerfile.akash
     goos: linux
     goarch: amd64
     image_templates:  
-    - "ovrclk/akashctl:latest"
-    - "ovrclk/akashctl:{{ .ShortCommit }}"
-    - "ovrclk/akashctl:{{ .Version }}"
-
-  - binaries: 
-    - akashd
-    dockerfile: _build/Dockerfile.akashd
-    goos: linux
-    goarch: amd64
-    image_templates:  
-    - "ovrclk/akashd:latest"
-    - "ovrclk/akashd:{{ .ShortCommit }}"
-    - "ovrclk/akashd:{{ .Version }}"
+    - "ovrclk/akash:latest"
+    - "ovrclk/akash:{{ .ShortCommit }}"
+    - "ovrclk/akash:{{ .Version }}"
 
 brews:
   - name: akash
@@ -75,8 +45,7 @@ brews:
     homepage: "https://akash.network"
     description: "Blockchain-powered decentralized compute platform"
     install: |
-      bin.install "akashctl"
-      bin.install "akashd"
+      bin.install "akash"
 
 nfpms:
   - 

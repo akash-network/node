@@ -83,9 +83,9 @@ fix, feat, build, chore, ci, docs, style, refactor, perf, test
 
 The body MAY include module/list of modules it affects.
 ```
-feat: read akashd config from some config system
+feat: read akash config from some config system
 
-cmd/akashd
+cmd/akash
 ```
 The specification can be found [here](https://www.conventionalcommits.org/en/v1.0.0/#specification).
 

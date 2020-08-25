@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: akashd
+  name: akash
 spec:
   selector:
-    app: akashd
+    app: akash
   ports:
-    - name: akashd-rpc
+    - name: akash-rpc
       port: 26657
-    - name: akashd-p2p
+    - name: akash-p2p
       port: 26656

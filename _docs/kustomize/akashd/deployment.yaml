@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: akashd
+  name: akash
 spec:
   selector:
     matchLabels:
-      app: akashd
+      app: akash
   template:
     metadata:
       labels:
-        app: akashd
+        app: akash
     spec:
       containers:
-        - name: akashd
-          image: ovrclk/akashd:latest
+        - name: akash
+          image: ovrclk/akash:latest
           imagePullPolicy: IfNotPresent
           command: [ "/bin/sh" , "/boot/run.sh" ]
           env:
@@ -22,510 +22,510 @@ spec:
             # boot config
             ##
 
-            - name: AKASHD_BOOT_DATA
+            - name: AKASH_BOOT_DATA
               value: /boot-data
 
-            - name: AKASHD_BOOT_KEYS
+            - name: AKASH_BOOT_KEYS
               value: /boot-keys
 
             ##
             # cosmos-sdk app config (app.toml)
             ##
 
-            - name: AKASHD_MINIMUM_GAS_PRICES
+            - name: AKASH_MINIMUM_GAS_PRICES
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-app-config
+                  name: akash-app-config
                   key: minimum-gas-prices
 
-            - name: AKASHD_HALT_HEIGHT
+            - name: AKASH_HALT_HEIGHT
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-app-config
+                  name: akash-app-config
                   key: halt-height
 
-            - name: AKASHD_HALT_TIME
+            - name: AKASH_HALT_TIME
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-app-config
+                  name: akash-app-config
                   key: halt-time
 
-            - name: AKASHD_INTER_BLOCK_CACHE
+            - name: AKASH_INTER_BLOCK_CACHE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-app-config
+                  name: akash-app-config
                   key: inter-block-cache
 
-            - name: AKASHD_PRUNING
+            - name: AKASH_PRUNING
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-app-config
+                  name: akash-app-config
                   key: pruning
 
             ##
             # tendermint node config (config.toml)
             ##
 
-            - name: AKASHD_HOME
+            - name: AKASH_HOME
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: home
 
-            - name: AKASHD_MONIKER
+            - name: AKASH_MONIKER
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: moniker
 
-            - name: AKASHD_FAST_SYNC
+            - name: AKASH_FAST_SYNC
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: fast_sync
 
-            - name: AKASHD_DB_BACKEND
+            - name: AKASH_DB_BACKEND
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: db_backend
 
-            - name: AKASHD_DB_DIR
+            - name: AKASH_DB_DIR
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: db_dir
 
-            - name: AKASHD_LOG_LEVEL
+            - name: AKASH_LOG_LEVEL
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: log_level
 
-            - name: AKASHD_LOG_FORMAT
+            - name: AKASH_LOG_FORMAT
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: log_format
 
-            - name: AKASHD_GENESIS_FILE
+            - name: AKASH_GENESIS_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: genesis_file
 
-            - name: AKASHD_PRIV_VALIDATOR_KEY_FILE
+            - name: AKASH_PRIV_VALIDATOR_KEY_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: priv_validator_key_file
 
-            - name: AKASHD_PRIV_VALIDATOR_STATE_FILE
+            - name: AKASH_PRIV_VALIDATOR_STATE_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: priv_validator_state_file
 
-            - name: AKASHD_PRIV_VALIDATOR_LADDR
+            - name: AKASH_PRIV_VALIDATOR_LADDR
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: priv_validator_laddr
 
-            - name: AKASHD_NODE_KEY_FILE
+            - name: AKASH_NODE_KEY_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: node_key_file
 
-            - name: AKASHD_ABCI
+            - name: AKASH_ABCI
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: abci
 
-            - name: AKASHD_PROF_LADDR
+            - name: AKASH_PROF_LADDR
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: prof_laddr
 
-            - name: AKASHD_FILTER_PEERS
+            - name: AKASH_FILTER_PEERS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: filter_peers
 
-            - name: AKASHD_RPC_LADDR
+            - name: AKASH_RPC_LADDR
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: rpc.laddr
 
-            - name: AKASHD_RPC_GRPC_LADDR
+            - name: AKASH_RPC_GRPC_LADDR
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: rpc.grpc_laddr
 
-            - name: AKASHD_RPC_GRPC_MAX_OPEN_CONNECTIONS
+            - name: AKASH_RPC_GRPC_MAX_OPEN_CONNECTIONS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: rpc.grpc_max_open_connections
 
-            - name: AKASHD_RPC_UNSAFE
+            - name: AKASH_RPC_UNSAFE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: rpc.unsafe
 
-            - name: AKASHD_RPC_MAX_OPEN_CONNECTIONS
+            - name: AKASH_RPC_MAX_OPEN_CONNECTIONS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: rpc.max_open_connections
 
-            - name: AKASHD_RPC_MAX_SUBSCRIPTION_CLIENTS
+            - name: AKASH_RPC_MAX_SUBSCRIPTION_CLIENTS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: rpc.max_subscription_clients
 
-            - name: AKASHD_RPC_MAX_SUBSCRIPTIONS_PER_CLIENT
+            - name: AKASH_RPC_MAX_SUBSCRIPTIONS_PER_CLIENT
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: rpc.max_subscriptions_per_client
 
-            - name: AKASHD_RPC_TIMEOUT_BROADCAST_TX_COMMIT
+            - name: AKASH_RPC_TIMEOUT_BROADCAST_TX_COMMIT
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: rpc.timeout_broadcast_tx_commit
 
-            - name: AKASHD_RPC_MAX_BODY_BYTES
+            - name: AKASH_RPC_MAX_BODY_BYTES
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: rpc.max_body_bytes
 
-            - name: AKASHD_RPC_MAX_HEADER_BYTES
+            - name: AKASH_RPC_MAX_HEADER_BYTES
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: rpc.max_header_bytes
 
-            - name: AKASHD_RPC_TLS_CERT_FILE
+            - name: AKASH_RPC_TLS_CERT_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: rpc.tls_cert_file
 
-            - name: AKASHD_RPC_TLS_KEY_FILE
+            - name: AKASH_RPC_TLS_KEY_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: rpc.tls_key_file
 
-            - name: AKASHD_P2P_LADDR
+            - name: AKASH_P2P_LADDR
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.laddr
 
-            - name: AKASHD_P2P_EXTERNAL_ADDRESS
+            - name: AKASH_P2P_EXTERNAL_ADDRESS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.external_address
 
-            - name: AKASHD_P2P_SEEDS
+            - name: AKASH_P2P_SEEDS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.seeds
 
-            - name: AKASHD_P2P_PERSISTENT_PEERS
+            - name: AKASH_P2P_PERSISTENT_PEERS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.persistent_peers
 
-            - name: AKASHD_P2P_UPNP
+            - name: AKASH_P2P_UPNP
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.upnp
 
-            - name: AKASHD_P2P_ADDR_BOOK_FILE
+            - name: AKASH_P2P_ADDR_BOOK_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.addr_book_file
 
-            - name: AKASHD_P2P_ADDR_BOOK_STRICT
+            - name: AKASH_P2P_ADDR_BOOK_STRICT
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.addr_book_strict
 
-            - name: AKASHD_P2P_MAX_NUM_INBOUND_PEERS
+            - name: AKASH_P2P_MAX_NUM_INBOUND_PEERS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.max_num_inbound_peers
 
-            - name: AKASHD_P2P_MAX_NUM_OUTBOUND_PEERS
+            - name: AKASH_P2P_MAX_NUM_OUTBOUND_PEERS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.max_num_outbound_peers
 
-            - name: AKASHD_P2P_UNCONDITIONAL_PEER_IDS
+            - name: AKASH_P2P_UNCONDITIONAL_PEER_IDS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.unconditional_peer_ids
 
-            - name: AKASHD_P2P_PERSISTENT_PEERS_MAX_DIAL_PERIOD
+            - name: AKASH_P2P_PERSISTENT_PEERS_MAX_DIAL_PERIOD
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.persistent_peers_max_dial_period
 
-            - name: AKASHD_P2P_FLUSH_THROTTLE_TIMEOUT
+            - name: AKASH_P2P_FLUSH_THROTTLE_TIMEOUT
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.flush_throttle_timeout
 
-            - name: AKASHD_P2P_MAX_PACKET_MSG_PAYLOAD_SIZE
+            - name: AKASH_P2P_MAX_PACKET_MSG_PAYLOAD_SIZE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.max_packet_msg_payload_size
 
-            - name: AKASHD_P2P_SEND_RATE
+            - name: AKASH_P2P_SEND_RATE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.send_rate
 
-            - name: AKASHD_P2P_RECV_RATE
+            - name: AKASH_P2P_RECV_RATE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.recv_rate
 
-            - name: AKASHD_P2P_PEX
+            - name: AKASH_P2P_PEX
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.pex
 
-            - name: AKASHD_P2P_SEED_MODE
+            - name: AKASH_P2P_SEED_MODE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.seed_mode
 
-            - name: AKASHD_P2P_PRIVATE_PEER_IDS
+            - name: AKASH_P2P_PRIVATE_PEER_IDS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.private_peer_ids
 
-            - name: AKASHD_P2P_ALLOW_DUPLICATE_IP
+            - name: AKASH_P2P_ALLOW_DUPLICATE_IP
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.allow_duplicate_ip
 
-            - name: AKASHD_P2P_HANDSHAKE_TIMEOUT
+            - name: AKASH_P2P_HANDSHAKE_TIMEOUT
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.handshake_timeout
 
-            - name: AKASHD_P2P_DIAL_TIMEOUT
+            - name: AKASH_P2P_DIAL_TIMEOUT
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: p2p.dial_timeout
 
-            - name: AKASHD_MEMPOOL_RECHECK
+            - name: AKASH_MEMPOOL_RECHECK
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: mempool.recheck
 
-            - name: AKASHD_MEMPOOL_BROADCAST
+            - name: AKASH_MEMPOOL_BROADCAST
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: mempool.broadcast
 
-            - name: AKASHD_MEMPOOL_WAL_DIR
+            - name: AKASH_MEMPOOL_WAL_DIR
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: mempool.wal_dir
 
-            - name: AKASHD_MEMPOOL_SIZE
+            - name: AKASH_MEMPOOL_SIZE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: mempool.size
 
-            - name: AKASHD_MEMPOOL_MAX_TXS_BYTES
+            - name: AKASH_MEMPOOL_MAX_TXS_BYTES
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: mempool.max_txs_bytes
 
-            - name: AKASHD_MEMPOOL_CACHE_SIZE
+            - name: AKASH_MEMPOOL_CACHE_SIZE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: mempool.cache_size
 
-            - name: AKASHD_MEMPOOL_MAX_TX_BYTES
+            - name: AKASH_MEMPOOL_MAX_TX_BYTES
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: mempool.max_tx_bytes
 
-            - name: AKASHD_FASTSYNC_VERSION
+            - name: AKASH_FASTSYNC_VERSION
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: fastsync.version
 
-            - name: AKASHD_CONSENSUS_WAL_FILE
+            - name: AKASH_CONSENSUS_WAL_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.wal_file
 
-            - name: AKASHD_CONSENSUS_TIMEOUT_PROPOSE
+            - name: AKASH_CONSENSUS_TIMEOUT_PROPOSE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.timeout_propose
 
-            - name: AKASHD_CONSENSUS_TIMEOUT_PROPOSE_DELTA
+            - name: AKASH_CONSENSUS_TIMEOUT_PROPOSE_DELTA
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.timeout_propose_delta
 
-            - name: AKASHD_CONSENSUS_TIMEOUT_PREVOTE
+            - name: AKASH_CONSENSUS_TIMEOUT_PREVOTE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.timeout_prevote
 
-            - name: AKASHD_CONSENSUS_TIMEOUT_PREVOTE_DELTA
+            - name: AKASH_CONSENSUS_TIMEOUT_PREVOTE_DELTA
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.timeout_prevote_delta
 
-            - name: AKASHD_CONSENSUS_TIMEOUT_PRECOMMIT
+            - name: AKASH_CONSENSUS_TIMEOUT_PRECOMMIT
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.timeout_precommit
 
-            - name: AKASHD_CONSENSUS_TIMEOUT_PRECOMMIT_DELTA
+            - name: AKASH_CONSENSUS_TIMEOUT_PRECOMMIT_DELTA
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.timeout_precommit_delta
 
-            - name: AKASHD_CONSENSUS_TIMEOUT_COMMIT
+            - name: AKASH_CONSENSUS_TIMEOUT_COMMIT
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.timeout_commit
 
-            - name: AKASHD_CONSENSUS_SKIP_TIMEOUT_COMMIT
+            - name: AKASH_CONSENSUS_SKIP_TIMEOUT_COMMIT
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.skip_timeout_commit
 
-            - name: AKASHD_CONSENSUS_CREATE_EMPTY_BLOCKS
+            - name: AKASH_CONSENSUS_CREATE_EMPTY_BLOCKS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.create_empty_blocks
 
-            - name: AKASHD_CONSENSUS_CREATE_EMPTY_BLOCKS_INTERVAL
+            - name: AKASH_CONSENSUS_CREATE_EMPTY_BLOCKS_INTERVAL
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.create_empty_blocks_interval
 
-            - name: AKASHD_CONSENSUS_PEER_GOSSIP_SLEEP_DURATION
+            - name: AKASH_CONSENSUS_PEER_GOSSIP_SLEEP_DURATION
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.peer_gossip_sleep_duration
 
-            - name: AKASHD_CONSENSUS_PEER_QUERY_MAJ23_SLEEP_DURATION
+            - name: AKASH_CONSENSUS_PEER_QUERY_MAJ23_SLEEP_DURATION
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: consensus.peer_query_maj23_sleep_duration
 
-            - name: AKASHD_TX_INDEX_INDEXER
+            - name: AKASH_TX_INDEX_INDEXER
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: tx_index.indexer
 
-            - name: AKASHD_TX_INDEX_INDEX_KEYS
+            - name: AKASH_TX_INDEX_INDEX_KEYS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: tx_index.index_keys
 
-            - name: AKASHD_TX_INDEX_INDEX_ALL_KEYS
+            - name: AKASH_TX_INDEX_INDEX_ALL_KEYS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: tx_index.index_all_keys
 
-            - name: AKASHD_INSTRUMENTATION_PROMETHEUS
+            - name: AKASH_INSTRUMENTATION_PROMETHEUS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: instrumentation.prometheus
 
-            - name: AKASHD_INSTRUMENTATION_PROMETHEUS_LISTEN_ADDR
+            - name: AKASH_INSTRUMENTATION_PROMETHEUS_LISTEN_ADDR
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: instrumentation.prometheus_listen_addr
 
-            - name: AKASHD_INSTRUMENTATION_MAX_OPEN_CONNECTIONS
+            - name: AKASH_INSTRUMENTATION_MAX_OPEN_CONNECTIONS
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: instrumentation.max_open_connections
 
-            - name: AKASHD_INSTRUMENTATION_NAMESPACE
+            - name: AKASH_INSTRUMENTATION_NAMESPACE
               valueFrom:
                 configMapKeyRef:
-                  name: akashd-config
+                  name: akash-config
                   key: instrumentation.namespace
 
           ports:
-            - name: akashd-rpc
+            - name: akash-rpc
               containerPort: 26657
-            - name: akashd-p2p
+            - name: akash-p2p
               containerPort: 26656
           volumeMounts:
             - name: boot
@@ -540,10 +540,10 @@ spec:
       volumes:
         - name: boot
           configMap:
-            name: akashd-boot
+            name: akash-boot
         - name: data
           configMap:
-            name: akashd-data
+            name: akash-data
         - name: keys
           secret:
-            secretName: akashd-keys
+            secretName: akash-keys

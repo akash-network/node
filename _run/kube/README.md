@@ -87,7 +87,7 @@ make init
 
 ## Run local network
 
-In a separate terminal, the following command will run the `akashd` node:
+In a separate terminal, the following command will run the `akash` node:
 
 ### __t2 Step: 3__
 ```sh
