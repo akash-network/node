@@ -9,17 +9,16 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
-	simapp "github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/ovrclk/akash/app"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-func TestSimAppExport(t *testing.T) {
+func TestAppExport(t *testing.T) {
 	db := dbm.NewMemDB()
 	app1 := app.NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)),
 		db, nil, 0, map[int64]bool{}, app.DefaultHome)
 
-	genesisState := simapp.NewDefaultGenesisState()
+	genesisState := app.NewDefaultGenesisState()
 	stateBytes, err := json.MarshalIndent(genesisState, "", "  ")
 	require.NoError(t, err)
 

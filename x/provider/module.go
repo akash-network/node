@@ -122,11 +122,6 @@ func (am AppModule) Route() sdk.Route {
 	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keeper, am.mkeeper))
 }
 
-// // NewHandler returns an sdk.Handler for the provider module.
-// func (am AppModule) NewHandler() sdk.Handler {
-// 	return handler.NewHandler(am.keeper, am.mkeeper)
-// }
-
 // QuerierRoute returns the provider module's querier route name.
 func (am AppModule) QuerierRoute() string {
 	return types.ModuleName

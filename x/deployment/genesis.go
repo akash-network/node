@@ -9,23 +9,6 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-// // GenesisDeployment defines the basic genesis state used by deployment module
-// type GenesisDeployment struct {
-// 	types.Deployment
-// 	Groups []types.Group
-// }
-
-// // GenesisState stores slice of genesis deployment instance
-// type GenesisState struct {
-// 	Deployments []GenesisDeployment `json:"deployments"`
-// }
-
-// func NewGenesisState(deployments []Deployment) GenesisState {
-// 	return GenesisState{
-// 		Deployments: deployments,
-// 	}
-// }
-
 // ValidateGenesis does validation check of the Genesis and return error incase of failure
 func ValidateGenesis(data *types.GenesisState) error {
 	for _, record := range data.Deployments {
