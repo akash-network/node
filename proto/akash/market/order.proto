@@ -88,6 +88,10 @@ message Order {
         (gogoproto.jsontag)    = "spec",
         (gogoproto.moretags)   = "yaml:\"spec\""
     ];
+    int64 close_at = 5 [
+        (gogoproto.jsontag)    = "close-at",
+        (gogoproto.moretags)   = "yaml:\"close-at\""
+    ];
 }
 
 // OrderFilters defines flags for order list filter

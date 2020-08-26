@@ -9,9 +9,73 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
+// DefaultOrderBiddingDuration is the default time limit for an Order being active.
+// After the duration, the Order is automatically closed.
+// ( 24(hr) * 3600(seconds per hour) ) / 7s-Block
+const DefaultOrderBiddingDuration int64 = int64(12342)
+
+// MaxBiddingDuration is roughly 30 days of block height
+const MaxBiddingDuration int64 = DefaultOrderBiddingDuration * int64(30)
+
+// //go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
+
+// // DeploymentState defines state of deployment
+// type DeploymentState uint32
+
+// const (
+// 	// DeploymentActive is used when state of deployment is active
+// 	DeploymentActive DeploymentState = iota + 1 // active
+// 	// DeploymentClosed is used when state of deployment is closed
+// 	DeploymentClosed // closed
+// )
+
+// // DeploymentStateMap is used to decode deployment state flag value
+// var DeploymentStateMap = map[string]DeploymentState{
+// 	"active": DeploymentActive,
+// 	"closed": DeploymentClosed,
+// }
+
+// Deployment stores deploymentID, state and version details
+// type Deployment struct {
+// 	DeploymentID `json:"id"`
+// 	State        DeploymentState `json:"state"`
+// 	Version      []byte          `json:"version"`
+// }
+
 // ID method returns DeploymentID details of specific deployment
 func (obj Deployment) ID() DeploymentID {
 	return obj.DeploymentID
+}
+
+// // GroupState defines state of group
+// type GroupState uint32
+
+// const (
+// 	// GroupOpen is used when state of group is open
+// 	GroupOpen GroupState = iota + 1 // open
+// 	// GroupOrdered is used when state of group is ordered
+// 	GroupOrdered // ordered
+// 	// GroupMatched is used when state of group is matched
+// 	GroupMatched // matched
+// 	// GroupInsufficientFunds is used when group has insufficient funds
+// 	GroupInsufficientFunds // insufficient_funds
+// 	// GroupClosed is used when state of group is closed
+// 	GroupClosed // closed
+// )
+
+// GroupSpec stores group specifications
+// type GroupSpec struct {
+// 	Name         string          `json:"name"`
+// 	Requirements []sdk.Attribute `json:"requirements"`
+// 	Resources    []Resource      `json:"resources"`
+// }
+
+// ValidateBasic asserts non-zero values
+func (g GroupSpec) ValidateBasic() error {
+	if g.Name == "" {
+		return ErrInvalidGroups
+	}
+	return nil
 }
 
 // GetResources method returns resources list in group

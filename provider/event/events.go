@@ -15,6 +15,7 @@ type LeaseWon struct {
 }
 
 // ManifestReceived stores leaseID, manifest received, deployment and group details
+// to be provisioned by the Provider.
 type ManifestReceived struct {
 	LeaseID    mtypes.LeaseID
 	Manifest   *manifest.Manifest

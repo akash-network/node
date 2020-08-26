@@ -24,9 +24,29 @@ configMapGenerator:
 
   - name: akash-provider-config
     literals:
-      - ingress-static-hosts=false
-      - ingress-domain=app.localhost
-      - ingress-expose-lb-hosts=false
+      ##
+      #  override-able defaults
+      ##
+      # - ingress-static-hosts=false
+      # - ingress-domain=
+      # - ingress-expose-lb-hosts=false
+      # - max-unit-cpu=500
+      # - max-unit-memory=1073741824
+      # - max-unit-storage=1073741824
+      # - max-unit-count=10
+      # - max-unit-price=10000
+      # - min-unit-cpu=10
+      # - min-unit-memory=1024
+      # - min-unit-storage=1024
+      # - min-unit-count=1
+      # - min-unit-price=1
+      # - max-group-count=10
+      # - max-group-units=10
+      # - max-group-cpu=1000
+      # - max-group-memory=1073741824
+      # - max-group-storage=5368709120
+      # - mem-price-min=50
+      # - mem-price-max=1048576
 
 secretGenerator:
   ##

@@ -28,8 +28,8 @@ configMapGenerator:
   - name: akash-provider-config
     behavior: merge
     literals:
+      - ingress-domain=app.localhost
       # - ingress-static-hosts=false
-      # - ingress-domain=app.localhost
 
 patchesJson6902:
 

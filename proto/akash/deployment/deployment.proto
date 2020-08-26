@@ -127,6 +127,10 @@ message DeploymentResponse {
         (gogoproto.jsontag)    = "groups",
         (gogoproto.moretags)   = "yaml:\"groups\""
     ];
+    bytes version = 3 [
+        (gogoproto.jsontag)    = "version",
+        (gogoproto.moretags)   = "yaml:\"version\""
+    ];
 }
 
 message DeploymentFilters {

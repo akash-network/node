@@ -33,6 +33,12 @@ deployment-create:
 		--dseq "$(DSEQ)" 			   \
 		--from "$(KEY_NAME)"
 
+.PHONY: deployment-update
+deployment-update:
+	$(AKASHCTL) tx deployment update "$(SDL_PATH)" -y \
+		--dseq "$(DSEQ)" 			   \
+		--from "$(KEY_NAME)"
+
 .PHONY: deployment-close
 deployment-close:
 	$(AKASHCTL) tx deployment close "$(KEY_OPTS)" "$(CHAIN_OPTS)" \

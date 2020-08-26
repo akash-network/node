@@ -1,9 +1,11 @@
 package types
 
 import (
+	fmt "fmt"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/validation"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -73,9 +75,16 @@ func (o Order) ValidateCanMatch(height int64) error {
 	if err := o.validateMatchableState(); err != nil {
 		return err
 	}
+	if err := validation.ValidateDeploymentGroup(o.Spec); err != nil {
+		return err
+	}
 
-	if o.StartAt > height {
-		return errors.Errorf("too early to match order (%v > %v)", o.StartAt, height)
+	if height < o.StartAt {
+		return errors.Wrap(ErrOrderTooEarly, fmt.Sprintf("(%v > %v)", o.StartAt, height))
+	}
+	if height >= o.CloseAt {
+		// Close Open Order if it have surpassed the CloseAt block height.
+		return ErrOrderDurationExceeded
 	}
 	return nil
 }

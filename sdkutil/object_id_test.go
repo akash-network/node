@@ -133,7 +133,7 @@ func TestBidID(t *testing.T) {
 	block := sdkutil.ReflectBlockID(bid)
 
 	str := block.String()
-	block, err := sdkutil.ParseBlockID(str)
+	sdkBlock, err := sdkutil.ParseBlockID(str)
 	assert.NoError(t, err)
 
 	assert.Equal(t, bid.Owner, *block.Owner)
@@ -141,6 +141,12 @@ func TestBidID(t *testing.T) {
 	assert.Equal(t, bid.GSeq, *block.GSeq)
 	assert.Equal(t, bid.OSeq, *block.OSeq)
 	assert.Equal(t, bid.Provider, *block.Provider)
+
+	assert.Equal(t, bid.Owner, *sdkBlock.Owner)
+	assert.Equal(t, bid.DSeq, *sdkBlock.DSeq)
+	assert.Equal(t, bid.GSeq, *sdkBlock.GSeq)
+	assert.Equal(t, bid.OSeq, *sdkBlock.OSeq)
+	assert.Equal(t, bid.Provider, *sdkBlock.Provider)
 }
 
 func TestGroupIDString(t *testing.T) {
@@ -156,78 +162,46 @@ func TestGroupIDString(t *testing.T) {
 func TestBlockReflectionID(t *testing.T) {
 	t.Run("deployment-id", func(t *testing.T) {
 		id := testutil.DeploymentID(t)
-		block := sdkutil.ReflectBlockID(id)
 
-		assert.Equal(t, id.Owner, *block.Owner)
-		assert.Equal(t, id.DSeq, *block.DSeq)
+		t.Run("reflect", func(t *testing.T) {
+			block := sdkutil.ReflectBlockID(id)
+			assert.Equal(t, id.Owner, *block.Owner)
+			assert.Equal(t, id.DSeq, *block.DSeq)
+			assert.Equal(t, id.String(), block.String())
+		})
 
-		pb, err := sdkutil.ParseBlockID(block.String())
-		assert.NoError(t, err)
-		assert.Equal(t, id.Owner, *pb.Owner)
-		assert.Equal(t, id.DSeq, *pb.DSeq)
+		t.Run("re-encode", func(t *testing.T) {
+			pb, err := sdkutil.ParseBlockID(id.String())
+			assert.NoError(t, err)
+			assert.Equal(t, id.Owner, *pb.Owner)
+			assert.Equal(t, id.DSeq, *pb.DSeq)
+			assert.Equal(t, id.String(), pb.String())
+		})
 	})
 
 	t.Run("group-id", func(t *testing.T) {
 		id := testutil.GroupID(t)
-		block := sdkutil.ReflectBlockID(id)
 
-		assert.Equal(t, id.Owner, *block.Owner)
-		assert.Equal(t, id.DSeq, *block.DSeq)
-		assert.Equal(t, id.GSeq, *block.GSeq)
+		t.Run("reflect", func(t *testing.T) {
+			block := sdkutil.ReflectBlockID(id)
+			assert.Equal(t, id.Owner, *block.Owner)
+			assert.Equal(t, id.DSeq, *block.DSeq)
+			assert.Equal(t, id.GSeq, *block.GSeq)
+			assert.Equal(t, id.String(), block.String())
+		})
 
-		pb, err := sdkutil.ParseBlockID(block.String())
-		assert.NoError(t, err)
-		assert.Equal(t, id.Owner, *pb.Owner)
-		assert.Equal(t, id.DSeq, *pb.DSeq)
-		assert.Equal(t, id.GSeq, *pb.GSeq)
+		t.Run("re-encode", func(t *testing.T) {
+			pb, err := sdkutil.ParseBlockID(id.String())
+			assert.NoError(t, err)
+			assert.Equal(t, id.Owner, *pb.Owner)
+			assert.Equal(t, id.DSeq, *pb.DSeq)
+			assert.Equal(t, id.GSeq, *pb.GSeq)
+			assert.Equal(t, id.String(), pb.String())
+		})
 	})
 
 	t.Run("order-id", func(t *testing.T) {
 		id := testutil.OrderID(t)
-		block := sdkutil.ReflectBlockID(id)
-
-		assert.Equal(t, id.Owner, *block.Owner)
-		assert.Equal(t, id.DSeq, *block.DSeq)
-		assert.Equal(t, id.GSeq, *block.GSeq)
-		assert.Equal(t, id.OSeq, *block.OSeq)
-
-		pb, err := sdkutil.ParseBlockID(block.String())
-		assert.NoError(t, err)
-		assert.Equal(t, id.Owner, *pb.Owner)
-		assert.Equal(t, id.DSeq, *pb.DSeq)
-		assert.Equal(t, id.GSeq, *pb.GSeq)
-		assert.Equal(t, id.OSeq, *pb.OSeq)
-	})
-
-	t.Run("lease-id", func(t *testing.T) {
-		id := testutil.LeaseID(t)
-		block := sdkutil.ReflectBlockID(id)
-
-		assert.Equal(t, id.Owner, *block.Owner)
-		assert.Equal(t, id.DSeq, *block.DSeq)
-		assert.Equal(t, id.GSeq, *block.GSeq)
-		assert.Equal(t, id.OSeq, *block.OSeq)
-		assert.Equal(t, id.Provider, *block.Provider)
-
-		pb, err := sdkutil.ParseBlockID(block.String())
-		assert.NoError(t, err)
-		assert.Equal(t, id.Owner, *pb.Owner)
-		assert.Equal(t, id.DSeq, *pb.DSeq)
-		assert.Equal(t, id.GSeq, *pb.GSeq)
-		assert.Equal(t, id.OSeq, *pb.OSeq)
-		assert.Equal(t, id.Provider, *pb.Provider)
-	})
-
-	t.Run("bid-id", func(t *testing.T) {
-		id := testutil.BidID(t)
-
-		pb, err := sdkutil.ParseBlockID(id.String())
-		assert.NoError(t, err)
-		assert.Equal(t, id.Owner, *pb.Owner)
-		assert.Equal(t, id.DSeq, *pb.DSeq)
-		assert.Equal(t, id.GSeq, *pb.GSeq)
-		assert.Equal(t, id.OSeq, *pb.OSeq)
-		assert.Equal(t, id.Provider, *pb.Provider)
 
 		t.Run("reflect", func(t *testing.T) {
 			block := sdkutil.ReflectBlockID(id)
@@ -235,7 +209,65 @@ func TestBlockReflectionID(t *testing.T) {
 			assert.Equal(t, id.DSeq, *block.DSeq)
 			assert.Equal(t, id.GSeq, *block.GSeq)
 			assert.Equal(t, id.OSeq, *block.OSeq)
+			assert.Equal(t, id.String(), block.String())
+		})
+
+		t.Run("re-encode", func(t *testing.T) {
+			pb, err := sdkutil.ParseBlockID(id.String())
+			assert.NoError(t, err)
+			assert.Equal(t, id.Owner, *pb.Owner)
+			assert.Equal(t, id.DSeq, *pb.DSeq)
+			assert.Equal(t, id.GSeq, *pb.GSeq)
+			assert.Equal(t, id.OSeq, *pb.OSeq)
+			assert.Equal(t, id.String(), pb.String())
+		})
+	})
+
+	t.Run("lease-id", func(t *testing.T) {
+		id := testutil.LeaseID(t)
+		t.Run("reflect", func(t *testing.T) {
+			block := sdkutil.ReflectBlockID(id)
+			assert.Equal(t, id.Owner, *block.Owner)
+			assert.Equal(t, id.DSeq, *block.DSeq)
+			assert.Equal(t, id.GSeq, *block.GSeq)
+			assert.Equal(t, id.OSeq, *block.OSeq)
 			assert.Equal(t, id.Provider, *block.Provider)
+			assert.Equal(t, id.String(), block.String())
+		})
+
+		t.Run("re-encode", func(t *testing.T) {
+			pb, err := sdkutil.ParseBlockID(id.String())
+			assert.NoError(t, err)
+			assert.Equal(t, id.Owner, *pb.Owner)
+			assert.Equal(t, id.DSeq, *pb.DSeq)
+			assert.Equal(t, id.GSeq, *pb.GSeq)
+			assert.Equal(t, id.OSeq, *pb.OSeq)
+			assert.Equal(t, id.Provider, *pb.Provider)
+			assert.Equal(t, id.String(), pb.String())
+		})
+	})
+
+	t.Run("bid-id", func(t *testing.T) {
+		id := testutil.BidID(t)
+		t.Run("reflect", func(t *testing.T) {
+			block := sdkutil.ReflectBlockID(id)
+			assert.Equal(t, id.Owner, *block.Owner)
+			assert.Equal(t, id.DSeq, *block.DSeq)
+			assert.Equal(t, id.GSeq, *block.GSeq)
+			assert.Equal(t, id.OSeq, *block.OSeq)
+			assert.Equal(t, id.Provider, *block.Provider)
+			assert.Equal(t, id.String(), block.String())
+		})
+
+		t.Run("re-encode", func(t *testing.T) {
+			pb, err := sdkutil.ParseBlockID(id.String())
+			assert.NoError(t, err)
+			assert.Equal(t, id.Owner, *pb.Owner)
+			assert.Equal(t, id.DSeq, *pb.DSeq)
+			assert.Equal(t, id.GSeq, *pb.GSeq)
+			assert.Equal(t, id.OSeq, *pb.OSeq)
+			assert.Equal(t, id.Provider, *pb.Provider)
+			assert.Equal(t, id.String(), pb.String())
 		})
 
 	})

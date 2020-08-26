@@ -42,8 +42,8 @@ PROVIDER_DOMAIN=akashian.io
 We'll be connecting to the testnet.
 
 ```sh
-AKASHCTL_NODE=tcp://sentry-1.v2.akashtest.net:26657
-AKASHCTL_CHAIN_ID=testnet-v2
+export AKASHCTL_NODE=tcp://rpc.akashtest.net:26657
+export AKASHCTL_CHAIN_ID=testnet-v4
 ```
 
 ## Deploy Provider Services
@@ -155,16 +155,16 @@ echo "password" > key-pass.txt
 (cat key-pass.txt; cat key-pass.txt) | ./bin/akashctl keys export provider 2> key.txt
 ```
 
-### View kubernetes configuration
-
-```sh
-kubectl kustomize .
-```
-
 ### Configure Akash Kubernetes CRDs
 
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/ovrclk/akash/master/pkg/apis/akash.network/v1/crd.yaml
+```
+
+### View kubernetes configuration
+
+```sh
+kubectl kustomize .
 ```
 
 ### Install kubernetes configuration

@@ -29,7 +29,6 @@ Configure `gcloud` project and default regions
 gcloud config set project "$GCLOUD_PROJECT"
 gcloud compute project-info add-metadata \
     --metadata google-compute-default-region=us-west1,google-compute-default-zone=us-west1-a
-gcloud init
 ```
 
 ### Create Instance

@@ -103,6 +103,10 @@ func PickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 func matchOrders(ctx sdk.Context, keepers Keepers) error {
 	keepers.Market.WithOpenOrders(ctx, func(order types.Order) bool {
 		if err := order.ValidateCanMatch(ctx.BlockHeight()); err != nil {
+			if errors.Is(err, types.ErrOrderDurationExceeded) {
+				keepers.Market.OnOrderClosed(ctx, order) // change order state to closed
+				return false
+			}
 			return false
 		}
 

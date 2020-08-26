@@ -15,7 +15,7 @@ type settings struct {
 
 	// gcp:    false
 	// others: true
-	DeploymentIngressStaticHosts bool `env:"AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS" envDefault:"true"`
+	DeploymentIngressStaticHosts bool `env:"AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS" envDefault:"false"`
 	// Ingress domain to map deployments to
 	DeploymentIngressDomain string `env:"AKASH_DEPLOYMENT_INGRESS_DOMAIN"`
 
