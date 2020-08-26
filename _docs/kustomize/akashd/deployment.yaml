@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: akash
+  name: akashd
 spec:
   selector:
     matchLabels:
-      app: akash
+      app: akashd
   template:
     metadata:
       labels:
-        app: akash
+        app: akashd
     spec:
       containers:
-        - name: akash
+        - name: akashd
           image: ovrclk/akash:latest
           imagePullPolicy: IfNotPresent
           command: [ "/bin/sh" , "/boot/run.sh" ]

@@ -3,8 +3,8 @@ resources:
   - service.yaml
   - ingress.yaml
 commonLabels:
-  app: akash
-  akash.network/component: akash
+  app: akashd
+  akash.network/component: akashd
 
 configMapGenerator:
 
