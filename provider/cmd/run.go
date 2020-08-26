@@ -51,6 +51,11 @@ func runCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().String(flags.FlagChainID, "", "The network chain ID")
+	if err := viper.BindPFlag(flags.FlagChainID, cmd.Flags().Lookup(flags.FlagChainID)); err != nil {
+		return nil
+	}
+
 	flags.AddTxFlagsToCmd(cmd)
 
 	cmd.Flags().Bool(flagClusterK8s, false, "Use Kubernetes cluster")
