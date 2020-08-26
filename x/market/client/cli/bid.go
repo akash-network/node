@@ -30,7 +30,7 @@ func cmdGetBids() *cobra.Command {
 			// checking state flag
 			stateVal, ok := types.Bid_State_value[state]
 
-			if (!ok && (state != "")) || state == "invalid" {
+			if (!ok && (state != "")) || state == InvalidState {
 				return ErrStateValue
 			}
 

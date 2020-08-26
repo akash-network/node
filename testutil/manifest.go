@@ -8,7 +8,7 @@ import (
 
 var (
 	// DefaultManifestGenerator is the default test manifest generator
-	DefaultManifestGenerator ManifestGenerator = RandManifestGenerator
+	DefaultManifestGenerator = RandManifestGenerator
 
 	// ManifestGenerators is a list of all available manifest generators
 	ManifestGenerators = []struct {

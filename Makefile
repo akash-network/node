@@ -107,7 +107,7 @@ SUBLINTERS = deadcode \
 
 # TODO: ^ gochecknoglobals
 
-LINT = $(GOBIN)/golangci-lint run ./... --disable-all --enable 
+LINT = $(GOBIN)/golangci-lint run ./... --disable-all --deadline=5m --enable 
 
 # Execute the same lint methods as configured in .github/workflows/tests.yaml
 # Clear feedback from each method as it fails.
