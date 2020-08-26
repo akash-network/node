@@ -28,6 +28,7 @@ const (
 
 var (
 	ErrInvalidVestingParameters = errors.New("invalid vesting parameters")
+	ErrVestingAmountGreater     = errors.New("vesting amount cannot be greater than total amount")
 )
 
 // AddGenesisAccountCmd returns add-genesis-account cobra Command.
@@ -95,7 +96,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 
 				if (balances.Coins.IsZero() && !baseVestingAccount.OriginalVesting.IsZero()) ||
 					baseVestingAccount.OriginalVesting.IsAnyGT(balances.Coins) {
-					return errors.New("vesting amount cannot be greater than total amount")
+					return ErrVestingAmountGreater
 				}
 
 				switch {
