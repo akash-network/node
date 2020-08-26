@@ -9,14 +9,6 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
-// OrderID stores owner and all other seq numbers
-// type OrderID struct {
-// 	Owner sdk.AccAddress `json:"owner"`
-// 	DSeq  uint64         `json:"dseq"`
-// 	GSeq  uint32         `json:"gseq"`
-// 	OSeq  uint32         `json:"oseq"`
-// }
-
 // MakeOrderID returns OrderID instance with provided groupID details and oseq
 func MakeOrderID(id dtypes.GroupID, oseq uint32) OrderID {
 	return OrderID{

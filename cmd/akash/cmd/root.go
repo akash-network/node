@@ -27,6 +27,7 @@ import (
 	"github.com/ovrclk/akash/app"
 	ecmd "github.com/ovrclk/akash/events/cmd"
 	pcmd "github.com/ovrclk/akash/provider/cmd"
+	"github.com/ovrclk/akash/sdkutil"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -35,17 +36,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
-)
-
-const (
-	Bech32PrefixAccAddr = "akash"
-	Bech32PrefixAccPub  = "akashpub"
-
-	Bech32PrefixValAddr = "akashvaloper"
-	Bech32PrefixValPub  = "akashvaloperpub"
-
-	Bech32PrefixConsAddr = "akashvalcons"
-	Bech32PrefixConsPub  = "akashvalconspub"
 )
 
 // NewRootCmd creates a new root command for akash. It is called once in the
@@ -98,7 +88,7 @@ func Execute(rootCmd *cobra.Command) error {
 }
 
 func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
-	InitSDKConfig()
+	sdkutil.InitSDKConfig()
 	authclient.Codec = encodingConfig.Marshaler
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
@@ -212,14 +202,4 @@ func txCmd() *cobra.Command {
 	app.ModuleBasics().AddTxCommands(cmd)
 
 	return cmd
-}
-
-// InitSDKConfig configures address prefixes for validator, accounts and consensus nodes
-func InitSDKConfig() {
-	config := sdk.GetConfig()
-	config.SetBech32PrefixForAccount(Bech32PrefixAccAddr, Bech32PrefixAccPub)
-	config.SetBech32PrefixForValidator(Bech32PrefixValAddr, Bech32PrefixValPub)
-	config.SetBech32PrefixForConsensusNode(Bech32PrefixConsAddr, Bech32PrefixConsPub)
-
-	config.Seal()
 }

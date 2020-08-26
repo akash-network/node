@@ -59,7 +59,7 @@ func Test_Create(t *testing.T) {
 	{
 		deployment := testutil.Deployment(t)
 		groups := testutil.DeploymentGroups(t, deployment.ID(), 0)
-		keeper.Create(ctx, deployment, groups)
+		assert.NoError(t, keeper.Create(ctx, deployment, groups))
 	}
 
 	t.Run("groups written - read all", func(t *testing.T) {

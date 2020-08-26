@@ -18,7 +18,9 @@ var (
 func deploymentKey(id types.DeploymentID) []byte {
 	buf := bytes.NewBuffer(deploymentPrefix)
 	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
+	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
+		return []byte{}
+	}
 	return buf.Bytes()
 }
 
@@ -26,8 +28,12 @@ func deploymentKey(id types.DeploymentID) []byte {
 func groupKey(id types.GroupID) []byte {
 	buf := bytes.NewBuffer(groupPrefix)
 	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
-	binary.Write(buf, binary.BigEndian, id.GSeq)
+	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
+		return []byte{}
+	}
 	return buf.Bytes()
 }
 
@@ -36,8 +42,12 @@ func groupKey(id types.GroupID) []byte {
 func groupOpenKey(id types.GroupID) []byte {
 	buf := bytes.NewBuffer(groupOpenPrefix)
 	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
-	binary.Write(buf, binary.BigEndian, id.GSeq)
+	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
+		return []byte{}
+	}
 	return buf.Bytes()
 }
 
@@ -56,16 +66,8 @@ func groupOpenKeyConvert(openKey []byte) ([]byte, error) {
 func groupsKey(id types.DeploymentID) []byte {
 	buf := bytes.NewBuffer(groupPrefix)
 	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
-	return buf.Bytes()
-}
-
-// groupsOpenKey provides store key for Groups in state open.
-// Key is culled from the store once the Group is no longer in state Open.
-// Uses the groupOpenPrefix byte.
-func groupsOpenKey(id types.DeploymentID) []byte {
-	buf := bytes.NewBuffer(groupOpenPrefix)
-	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
+	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
+		return []byte{}
+	}
 	return buf.Bytes()
 }

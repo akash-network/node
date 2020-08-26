@@ -38,7 +38,7 @@ func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus 
 	if err != nil {
 		return err
 	}
-	defer tmbus.UnsubscribeAll(ctx, blkname)
+	defer tmbus.UnsubscribeAll(ctx, txname)
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -80,7 +80,9 @@ loop:
 func processEvents(bus pubsub.Bus, events []abci.Event) {
 	for _, ev := range events {
 		if mev, ok := processEvent(ev); ok {
-			bus.Publish(mev)
+			if err := bus.Publish(mev); err != nil {
+				return
+			}
 			continue
 		}
 	}

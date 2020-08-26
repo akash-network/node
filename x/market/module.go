@@ -155,7 +155,9 @@ func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 // EndBlock returns the end blocker for the market module. It returns no validator
 // updates.
 func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
-	handler.OnEndBlock(ctx, am.keepers)
+	if err := handler.OnEndBlock(ctx, am.keepers); err != nil {
+		return nil
+	}
 	return []abci.ValidatorUpdate{}
 }
 

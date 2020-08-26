@@ -45,7 +45,9 @@ func DefaultGenesisState() *types.GenesisState {
 // InitGenesis initiate genesis state and return updated validator details
 func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState) []abci.ValidatorUpdate {
 	for _, record := range data.Deployments {
-		keeper.Create(ctx, record.Deployment, record.Groups)
+		if err := keeper.Create(ctx, record.Deployment, record.Groups); err != nil {
+			return nil
+		}
 	}
 	return []abci.ValidatorUpdate{}
 }

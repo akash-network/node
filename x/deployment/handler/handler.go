@@ -70,7 +70,7 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, _ MarketKeeper, msg 
 		return nil, types.ErrDeploymentNotFound
 	}
 
-	if bytes.Compare(msg.Version, deployment.Version) != 0 {
+	if !bytes.Equal(msg.Version, deployment.Version) {
 		deployment.Version = msg.Version
 	}
 

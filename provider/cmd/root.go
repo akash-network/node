@@ -14,7 +14,9 @@ func RootCmd() *cobra.Command {
 	}
 
 	cmd.PersistentFlags().String(flags.FlagNode, "http://localhost:26657", "The node address")
-	_ = viper.BindPFlag(flags.FlagNode, cmd.PersistentFlags().Lookup(flags.FlagNode))
+	if err := viper.BindPFlag(flags.FlagNode, cmd.PersistentFlags().Lookup(flags.FlagNode)); err != nil {
+		return nil
+	}
 
 	cmd.AddCommand(sendManifestCmd())
 	cmd.AddCommand(statusCmd())

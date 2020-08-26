@@ -19,18 +19,30 @@ var (
 func orderKey(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(orderPrefix)
 	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
-	binary.Write(buf, binary.BigEndian, id.GSeq)
-	binary.Write(buf, binary.BigEndian, id.OSeq)
+	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
+		return []byte{}
+	}
 	return buf.Bytes()
 }
 
 func orderOpenKey(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(orderOpenPrefix)
 	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
-	binary.Write(buf, binary.BigEndian, id.GSeq)
-	binary.Write(buf, binary.BigEndian, id.OSeq)
+	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
+		return []byte{}
+	}
 	return buf.Bytes()
 }
 
@@ -46,9 +58,15 @@ func convertOrderOpenKey(activeKey []byte) ([]byte, error) {
 func bidKey(id types.BidID) []byte {
 	buf := bytes.NewBuffer(bidPrefix)
 	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
-	binary.Write(buf, binary.BigEndian, id.GSeq)
-	binary.Write(buf, binary.BigEndian, id.OSeq)
+	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
+		return []byte{}
+	}
 	buf.Write(id.Provider.Bytes())
 	return buf.Bytes()
 }
@@ -56,9 +74,15 @@ func bidKey(id types.BidID) []byte {
 func leaseKey(id types.LeaseID) []byte {
 	buf := bytes.NewBuffer(leasePrefix)
 	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
-	binary.Write(buf, binary.BigEndian, id.GSeq)
-	binary.Write(buf, binary.BigEndian, id.OSeq)
+	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
+		return []byte{}
+	}
 	buf.Write(id.Provider.Bytes())
 	return buf.Bytes()
 }
@@ -66,9 +90,15 @@ func leaseKey(id types.LeaseID) []byte {
 func leaseKeyActive(id types.LeaseID) []byte {
 	buf := bytes.NewBuffer(leaseActivePrefix)
 	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
-	binary.Write(buf, binary.BigEndian, id.GSeq)
-	binary.Write(buf, binary.BigEndian, id.OSeq)
+	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
+		return []byte{}
+	}
 	buf.Write(id.Provider.Bytes())
 	return buf.Bytes()
 }
@@ -85,16 +115,26 @@ func convertLeaseActiveKey(activeKey []byte) ([]byte, error) {
 func ordersForGroupPrefix(id dtypes.GroupID) []byte {
 	buf := bytes.NewBuffer(orderPrefix)
 	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
-	binary.Write(buf, binary.BigEndian, id.GSeq)
+	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
+		return []byte{}
+	}
 	return buf.Bytes()
 }
 
 func bidsForOrderPrefix(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(bidPrefix)
 	buf.Write(id.Owner.Bytes())
-	binary.Write(buf, binary.BigEndian, id.DSeq)
-	binary.Write(buf, binary.BigEndian, id.GSeq)
-	binary.Write(buf, binary.BigEndian, id.OSeq)
+	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
+		return []byte{}
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
+		return []byte{}
+	}
 	return buf.Bytes()
 }

@@ -151,7 +151,9 @@ func encodeHex(src []byte) []byte {
 
 func decodeHex(src []byte) []byte {
 	dst := make([]byte, hex.DecodedLen(len(src)))
-	hex.Decode(dst, src)
+	if _, err := hex.Decode(dst, src); err != nil {
+		return []byte{}
+	}
 	return dst
 }
 
