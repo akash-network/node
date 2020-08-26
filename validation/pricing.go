@@ -60,7 +60,7 @@ func validateUnitPricing(config ValConfig, rg dtypes.Resource) error {
 	return nil
 }
 
-func validateOrderBidDuration(config ValConfig, rg dtypes.GroupSpec) error {
+func validateOrderBidDuration(_ ValConfig, rg dtypes.GroupSpec) error {
 	if !(rg.OrderBidDuration > 0) {
 		return errors.Errorf("error: order bid duration must be greater than zero")
 	}
