@@ -1,4 +1,4 @@
-package app
+package app_test
 
 import (
 	"encoding/json"
@@ -9,40 +9,40 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
-	simapp "github.com/cosmos/cosmos-sdk/simapp"
-	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/app"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 func TestAkashAppExport(t *testing.T) {
 	db := dbm.NewMemDB()
-	app := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)),
-		db, nil, 0, map[int64]bool{}, common.DefaultNodeHome())
+	app1 := app.NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)),
+		db, nil, 0, map[int64]bool{}, app.DefaultHome)
 
-	genesisState := simapp.NewDefaultGenesisState()
+	genesisState := app.NewDefaultGenesisState()
 	stateBytes, err := json.MarshalIndent(genesisState, "", "  ")
 	require.NoError(t, err)
 
 	// Initialize the chain
-	app.InitChain(
+	app1.InitChain(
 		abci.RequestInitChain{
 			Validators:    []abci.ValidatorUpdate{},
 			AppStateBytes: stateBytes,
 		},
 	)
-	app.Commit()
+	app1.Commit()
 
 	// Making a new app object with the db, so that initchain hasn't been called
-	app2 := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{}, common.DefaultNodeHome())
+	app2 := app.NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{}, app.DefaultHome)
 	_, _, _, err = app2.ExportAppStateAndValidators(false, []string{})
 	require.NoError(t, err, "ExportAppStateAndValidators should not have an error")
 }
 
-func TestBlockedAddrs(t *testing.T) {
-	db := dbm.NewMemDB()
-	app := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{}, common.DefaultNodeHome())
+// TODO: re-enable test, can't use unexported fields (keeper) in *_test.go files
+// func TestBlockedAddrs(t *testing.T) {
+// 	db := dbm.NewMemDB()
+// 	app1 := app.NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{}, app.DefaultHome)
 
-	for acc := range macPerms() {
-		require.Equal(t, !allowedReceivingModAcc[acc], app.keeper.bank.BlockedAddr(app.keeper.acct.GetModuleAddress(acc)))
-	}
-}
+// 	for acc := range app.MacPerms() {
+// 		require.True(t, app1.keeper.bank.BlockedAddr(app1.keeper.acct.GetModuleAddress(acc)))
+// 	}
+// }

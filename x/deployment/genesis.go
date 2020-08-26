@@ -9,23 +9,6 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-// // GenesisDeployment defines the basic genesis state used by deployment module
-// type GenesisDeployment struct {
-// 	types.Deployment
-// 	Groups []types.Group
-// }
-
-// // GenesisState stores slice of genesis deployment instance
-// type GenesisState struct {
-// 	Deployments []GenesisDeployment `json:"deployments"`
-// }
-
-// func NewGenesisState(deployments []Deployment) GenesisState {
-// 	return GenesisState{
-// 		Deployments: deployments,
-// 	}
-// }
-
 // ValidateGenesis does validation check of the Genesis and return error incase of failure
 func ValidateGenesis(data *types.GenesisState) error {
 	for _, record := range data.Deployments {
@@ -45,7 +28,9 @@ func DefaultGenesisState() *types.GenesisState {
 // InitGenesis initiate genesis state and return updated validator details
 func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState) []abci.ValidatorUpdate {
 	for _, record := range data.Deployments {
-		keeper.Create(ctx, record.Deployment, record.Groups)
+		if err := keeper.Create(ctx, record.Deployment, record.Groups); err != nil {
+			return nil
+		}
 	}
 	return []abci.ValidatorUpdate{}
 }

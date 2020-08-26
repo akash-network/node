@@ -16,14 +16,14 @@ import (
 var (
 	_ = func() string {
 		config := sdk.GetConfig()
-		config.SetBech32PrefixForAccount("akash", "akashpub")
+		config.SetBech32PrefixForAccount(sdkutil.Bech32PrefixAccAddr, sdkutil.Bech32PrefixAccPub)
 		return ""
 	}()
 
 	keyAcc, _         = sdk.AccAddressFromBech32("akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr")
 	errWildcard       = errors.New("wildcard string error can't be matched")
 	tmpSum            = sha256.Sum256([]byte(keyAcc))
-	deploymentVersion = tmpSum[:]
+	deploymentVersion = encodeHex(tmpSum[:])
 )
 
 type testEventParsing struct {
@@ -34,7 +34,6 @@ type testEventParsing struct {
 func (tep testEventParsing) testMessageType() func(t *testing.T) {
 	_, err := ParseEvent(tep.msg)
 	return func(t *testing.T) {
-		t.Logf("%+v", tep)
 		// if the error expected is errWildcard to catch untyped errors, don't fail the test, the error was expected.
 		if errors.Is(tep.expErr, errWildcard) {
 			require.Error(t, err)
@@ -334,8 +333,9 @@ func TestEventParsing(t *testing.T) {
 }
 
 func TestVersionEncoding(t *testing.T) {
-	versionHex := encodeHex(deploymentVersion)
+	versionHex := encodeHex(tmpSum[:])
 	assert.Len(t, versionHex, encodedVersionHexLen)
-	decodedVersion := decodeHex(versionHex)
-	assert.Equal(t, deploymentVersion, decodedVersion)
+	decodedVersion, err := decodeHex(versionHex)
+	assert.NoError(t, err)
+	assert.Equal(t, tmpSum[:], decodedVersion)
 }

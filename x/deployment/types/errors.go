@@ -20,6 +20,7 @@ const (
 	errGroupNotFound
 	errGroupClosed
 	errGroupNotOpen
+	errGroupSpec
 )
 
 var (
@@ -53,4 +54,6 @@ var (
 	ErrGroupClosed = sdkerrors.Register(ModuleName, errGroupClosed, "Group already closed")
 	// ErrGroupNotOpen indicates the Group state has progressed beyond initial Open.
 	ErrGroupNotOpen = sdkerrors.Register(ModuleName, errGroupNotOpen, "Group not open")
+	// ErrGroupSpecInvalid indicates a GroupSpec has invalid configuration
+	ErrGroupSpecInvalid = sdkerrors.Register(ModuleName, errGroupSpec, "GroupSpec invalid")
 )

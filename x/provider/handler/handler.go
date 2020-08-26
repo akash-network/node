@@ -41,7 +41,7 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg *types.MsgCreate
 		return nil, err
 	}
 
-	if err := keeper.Create(ctx, msg.ToProvider()); err != nil {
+	if err := keeper.Create(ctx, types.Provider(*msg)); err != nil {
 		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
 	}
 
@@ -87,7 +87,7 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper mkeeper.Keep
 		return nil, err
 	}
 
-	if err := keeper.Update(ctx, msg.ToProvider()); err != nil {
+	if err := keeper.Update(ctx, types.Provider(*msg)); err != nil {
 		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
 	}
 

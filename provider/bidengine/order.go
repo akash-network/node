@@ -114,11 +114,13 @@ loop:
 
 				o.log.Info("lease won", "lease", ev.ID)
 
-				o.bus.Publish(event.LeaseWon{
+				if err := o.bus.Publish(event.LeaseWon{
 					LeaseID: ev.ID,
 					Group:   group,
 					Price:   ev.Price,
-				})
+				}); err != nil {
+					o.log.Info("failed to publish to event queue")
+				}
 				won = true
 
 				break loop

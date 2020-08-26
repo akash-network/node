@@ -25,7 +25,7 @@ func TestBus(t *testing.T) {
 	sub2, err := bus.Subscribe()
 	require.NoError(t, err)
 
-	bus.Publish(ev)
+	assert.NoError(t, bus.Publish(ev))
 
 	select {
 	case newEv := <-sub1.Events():
@@ -49,7 +49,7 @@ func TestBus(t *testing.T) {
 		require.Fail(t, "time out")
 	}
 
-	bus.Publish(ev)
+	assert.NoError(t, bus.Publish(ev))
 
 	select {
 	case newEv := <-sub1.Events():

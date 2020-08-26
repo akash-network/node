@@ -139,8 +139,7 @@ func ParseEVDeploymentVersion(attrs []sdk.Attribute) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	version := decodeHex([]byte(v))
-	return version, nil
+	return decodeHex([]byte(v))
 }
 
 func encodeHex(src []byte) []byte {
@@ -149,10 +148,12 @@ func encodeHex(src []byte) []byte {
 	return dst
 }
 
-func decodeHex(src []byte) []byte {
+func decodeHex(src []byte) ([]byte, error) {
 	dst := make([]byte, hex.DecodedLen(len(src)))
-	hex.Decode(dst, src)
-	return dst
+	if _, err := hex.Decode(dst, src); err != nil {
+		return []byte{}, err
+	}
+	return dst, nil
 }
 
 // EventGroupClosed provides SDK event to signal group termination

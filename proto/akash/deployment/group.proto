@@ -60,6 +60,11 @@ message GroupSpec {
         (gogoproto.jsontag)    = "resources",
         (gogoproto.moretags)   = "yaml:\"resources\""
     ];
+    int64 orderBidDuration = 4 [
+        (gogoproto.customname) = "OrderBidDuration",
+        (gogoproto.jsontag)    = "order-bid-duration",
+        (gogoproto.moretags)   = "yaml:\"order-bid-duration\""
+    ];
 }
 
 message Group {

@@ -42,7 +42,7 @@ $ akash query account [key value] #returns your balance
 
 ### Environment
 <!--  Where are you running?
-akashd (server): testnet or local?
+akash (server): testnet or local?
 akash (client): OS and other env info as appropriate 
 -->
 

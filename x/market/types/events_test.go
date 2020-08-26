@@ -13,10 +13,11 @@ import (
 )
 
 var (
-	// converting string to address
-	accBytes, _ = sdk.GetFromBech32("akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr", "akash")
-	keyAcc      = sdk.AccAddress(accBytes)
-	//keyParams = sdk.NewKVStoreKey(params.StoreKey)
+	_ = func() string {
+		config := sdk.GetConfig()
+		config.SetBech32PrefixForAccount(sdkutil.Bech32PrefixAccAddr, sdkutil.Bech32PrefixAccPub)
+		return ""
+	}()
 
 	errWildcard = errors.New("wildcard string error can't be matched")
 	evOwnerKey  = "owner"
@@ -32,7 +33,6 @@ type testEventParsing struct {
 func (tep testEventParsing) testMessageType() func(t *testing.T) {
 	_, err := ParseEvent(tep.msg)
 	return func(t *testing.T) {
-		t.Logf("%+v", tep)
 		// if the error expected is errWildcard to catch untyped errors, don't fail the test, the error was expected.
 		if errors.Is(tep.expErr, errWildcard) {
 			require.Error(t, err)
@@ -88,7 +88,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evDSeqKey,
@@ -140,7 +140,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evDSeqKey,
@@ -167,7 +167,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evDSeqKey,
@@ -194,7 +194,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evDSeqKey,
@@ -210,7 +210,7 @@ var TEPS = []testEventParsing{
 				},
 				{
 					Key:   evProviderKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evPriceDenomKey,
@@ -232,7 +232,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evDSeqKey,
@@ -270,7 +270,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evDSeqKey,
@@ -286,7 +286,7 @@ var TEPS = []testEventParsing{
 				},
 				{
 					Key:   evProviderKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evPriceDenomKey,
@@ -309,7 +309,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evDSeqKey,
@@ -325,7 +325,7 @@ var TEPS = []testEventParsing{
 				},
 				{
 					Key:   evProviderKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evPriceDenomKey,
@@ -348,7 +348,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evDSeqKey,
@@ -364,7 +364,7 @@ var TEPS = []testEventParsing{
 				},
 				{
 					Key:   evProviderKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evPriceDenomKey,
@@ -386,7 +386,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evDSeqKey,
@@ -425,7 +425,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evDSeqKey,
@@ -441,7 +441,7 @@ var TEPS = []testEventParsing{
 				},
 				{
 					Key:   evProviderKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 				{
 					Key:   evPriceDenomKey,

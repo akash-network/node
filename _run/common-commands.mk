@@ -1,9 +1,14 @@
 KEY_NAME          ?= main
-KEY_ADDRESS       ?= $(shell $(AKASHCTL_NONODE) keys show "$(KEY_NAME)" -a)
+KEY_OPTS          := --keyring-backend=test
+CHAIN_NAME        := local
+CHAIN_OPTS        := --chain-id=$(CHAIN_NAME)
+
+KEY_ADDRESS       ?= $(shell $(AKASHCTL_NONODE) keys show $(KEY_OPTS) "$(KEY_NAME)" -a)
 
 PROVIDER_KEY_NAME    ?= provider
-PROVIDER_ADDRESS     ?= $(shell $(AKASHCTL_NONODE) keys show "$(PROVIDER_KEY_NAME)" -a)
+PROVIDER_ADDRESS     ?= $(shell $(AKASHCTL_NONODE) keys show $(KEY_OPTS) "$(PROVIDER_KEY_NAME)" -a)
 PROVIDER_CONFIG_PATH ?= provider.yaml
+
 
 SDL_PATH ?= deployment.yaml
 
@@ -14,30 +19,36 @@ PRICE ?= 10akash
 
 .PHONY: provider-create
 provider-create:
-	$(AKASHCTL) tx provider create "$(PROVIDER_CONFIG_PATH)" -y \
+	$(AKASHCTL) tx provider create "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(PROVIDER_CONFIG_PATH)" -y \
 		--from "$(PROVIDER_KEY_NAME)"
 
 .PHONY: provider-update
 provider-update:
-	$(AKASHCTL) tx provider update "$(PROVIDER_CONFIG_PATH)" -y \
+	$(AKASHCTL) tx provider update "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(PROVIDER_CONFIG_PATH)" -y \
 		--from "$(PROVIDER_KEY_NAME)"
 
 .PHONY: deployment-create
 deployment-create:
-	$(AKASHCTL) tx deployment create "$(SDL_PATH)" -y \
+	$(AKASHCTL) tx deployment create "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(SDL_PATH)" -y \
+		--dseq "$(DSEQ)" 			   \
+		--from "$(KEY_NAME)"
+
+.PHONY: deployment-update
+deployment-update:
+	$(AKASHCTL) tx deployment update "$(SDL_PATH)" -y \
 		--dseq "$(DSEQ)" 			   \
 		--from "$(KEY_NAME)"
 
 .PHONY: deployment-close
 deployment-close:
-	$(AKASHCTL) tx deployment close -y \
+	$(AKASHCTL) tx deployment close "$(KEY_OPTS)" "$(CHAIN_OPTS)" \
 		--owner "$(MAIN_ADDR)"   \
 		--dseq "$(DSEQ)" 			   \
 		--from "$(KEY_NAME)" -y
 
 .PHONY: order-close
 order-close:
-	$(AKASHCTL) tx market order-close -y \
+	$(AKASHCTL) tx market order-close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
 		--owner "$(KEY_ADDRESS)" \
 		--dseq  "$(DSEQ)"        \
 		--gseq  "$(GSEQ)"        \
@@ -46,7 +57,7 @@ order-close:
 
 .PHONY: bid-create
 bid-create:
-	$(AKASHCTL) tx market bid-create -y \
+	$(AKASHCTL) tx market bid-create "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
 		--owner "$(KEY_ADDRESS)"       \
 		--dseq  "$(DSEQ)"              \
 		--gseq  "$(GSEQ)"              \
@@ -56,7 +67,7 @@ bid-create:
 
 .PHONY: bid-close
 bid-close:
-	$(AKASHCTL) tx market bid-close -y \
+	$(AKASHCTL) tx market bid-close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
 		--owner "$(KEY_ADDRESS)"         \
 		--dseq  "$(DSEQ)"                \
 		--gseq  "$(GSEQ)"                \
@@ -68,7 +79,7 @@ query-accounts: $(patsubst %, query-account-%,$(KEY_NAMES))
 
 .PHONY: query-account-%
 query-account-%:
-	$(AKASHCTL) query account "$(shell $(AKASHCTL_NONODE) keys show -a "$(@:query-account-%=%)")"
+	$(AKASHCTL) query bank balances "$(shell $(AKASHCTL_NONODE) keys show --keyring-backend "test" -a "$(@:query-account-%=%)")"
 
 .PHONY: query-provider
 query-provider:

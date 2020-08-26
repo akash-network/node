@@ -127,11 +127,6 @@ func (am AppModule) Route() sdk.Route {
 	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keepers))
 }
 
-// // NewHandler returns an sdk.Handler for the market module.
-// func (am AppModule) NewHandler() sdk.Handler {
-// 	return handler.NewHandler(am.keepers)
-// }
-
 // QuerierRoute returns the market module's querier route name.
 func (am AppModule) QuerierRoute() string {
 	return types.ModuleName
@@ -155,7 +150,9 @@ func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 // EndBlock returns the end blocker for the market module. It returns no validator
 // updates.
 func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
-	handler.OnEndBlock(ctx, am.keepers)
+	if err := handler.OnEndBlock(ctx, am.keepers); err != nil {
+		panic(err)
+	}
 	return []abci.ValidatorUpdate{}
 }
 

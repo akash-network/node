@@ -9,6 +9,14 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
+// DefaultOrderBiddingDuration is the default time limit for an Order being active.
+// After the duration, the Order is automatically closed.
+// ( 24(hr) * 3600(seconds per hour) ) / 7s-Block
+const DefaultOrderBiddingDuration int64 = int64(12342)
+
+// MaxBiddingDuration is roughly 30 days of block height
+const MaxBiddingDuration int64 = DefaultOrderBiddingDuration * int64(30)
+
 // //go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
 
 // // DeploymentState defines state of deployment
@@ -62,6 +70,13 @@ func (obj Deployment) ID() DeploymentID {
 // 	Resources    []Resource      `json:"resources"`
 // }
 
+// ValidateBasic asserts non-zero values
+// TODO: This is causing an import cycle. I think there is some pattern here I'm missing tho..
+func (g GroupSpec) ValidateBasic() error {
+	// return validation.ValidateDeploymentGroup(g)
+	return nil
+}
+
 // GetResources method returns resources list in group
 func (g GroupSpec) GetResources() []types.Resource {
 	resources := make([]types.Resource, 0, len(g.Resources))
@@ -106,13 +121,6 @@ loop:
 	return true
 }
 
-// Group stores groupID, state and other specifications
-// type Group struct {
-// 	GroupID   `json:"id"`
-// 	State     GroupState `json:"state"`
-// 	GroupSpec `json:"spec"`
-// }
-
 // ID method returns GroupID details of specific group
 func (g Group) ID() GroupID {
 	return g.GroupID
@@ -148,23 +156,6 @@ func (g Group) GetName() string {
 func (g Group) GetResources() []types.Resource {
 	return g.GroupSpec.GetResources()
 }
-
-// // Resource stores unit, count and price of each resource
-// type Resource struct {
-// 	Unit  types.Unit `json:"unit"`
-// 	Count uint32     `json:"count"`
-// 	Price sdk.Coin   `json:"price"`
-// }
-
-// // GetUnit method returns unit of resource
-// func (r Resource) GetUnit() types.Unit {
-// 	return r.Unit
-// }
-
-// // GetCount method returns count of resource
-// func (r Resource) GetCount() uint32 {
-// 	return r.Count
-// }
 
 // FullPrice method returns full price of resource
 func (r Resource) FullPrice() sdk.Coin {

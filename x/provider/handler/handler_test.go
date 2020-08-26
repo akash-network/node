@@ -125,7 +125,7 @@ func TestProviderUpdateWithDuplicated(t *testing.T) {
 
 	updateMsg.Attributes = append(updateMsg.Attributes, updateMsg.Attributes[0])
 
-	err := suite.keeper.Create(suite.ctx, createMsg.ToProvider())
+	err := suite.keeper.Create(suite.ctx, types.Provider(*createMsg))
 	require.NoError(t, err)
 
 	res, err := suite.handler(suite.ctx, updateMsg)
@@ -150,7 +150,7 @@ func TestProviderUpdateExisting(t *testing.T) {
 		Attributes: createMsg.Attributes,
 	}
 
-	err := suite.keeper.Create(suite.ctx, createMsg.ToProvider())
+	err := suite.keeper.Create(suite.ctx, types.Provider(*createMsg))
 	require.NoError(t, err)
 
 	res, err := suite.handler(suite.ctx, updateMsg)
@@ -199,7 +199,7 @@ func TestProviderUpdateAttributes(t *testing.T) {
 		Attributes: createMsg.Attributes,
 	}
 
-	err := suite.keeper.Create(suite.ctx, createMsg.ToProvider())
+	err := suite.keeper.Create(suite.ctx, types.Provider(*createMsg))
 	require.NoError(t, err)
 
 	group := testutil.DeploymentGroup(t, testutil.DeploymentID(t), 0)
@@ -251,7 +251,7 @@ func TestProviderDeleteExisting(t *testing.T) {
 		Owner: addr,
 	}
 
-	err := suite.keeper.Create(suite.ctx, createMsg.ToProvider())
+	err := suite.keeper.Create(suite.ctx, types.Provider(*createMsg))
 	require.NoError(t, err)
 
 	res, err := suite.handler(suite.ctx, deleteMsg)

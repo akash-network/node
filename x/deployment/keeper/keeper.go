@@ -83,27 +83,6 @@ func (k Keeper) GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group 
 	return vals
 }
 
-// getOpenGroups returns all *open* groups of a deployment with given DeploymentID.
-func (k Keeper) getOpenGroups(ctx sdk.Context, id types.DeploymentID) []types.Group {
-	store := ctx.KVStore(k.skey)
-	key := groupsOpenKey(id)
-
-	var vals []types.Group
-	iter := sdk.KVStorePrefixIterator(store, key)
-	for ; iter.Valid(); iter.Next() {
-		gkey, _ := groupOpenKeyConvert(iter.Key())
-
-		buf := store.Get(gkey)
-		var val types.Group
-		k.cdc.MustUnmarshalBinaryBare(buf, &val)
-		if err := val.ValidateOrderable(); err == nil {
-			vals = append(vals, val)
-		}
-	}
-	iter.Close()
-	return vals
-}
-
 // Create creates a new deployment with given deployment and group specifications
 func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []types.Group) error {
 	store := ctx.KVStore(k.skey)
@@ -117,6 +96,7 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 	store.Set(key, k.cdc.MustMarshalBinaryBare(&deployment))
 
 	for _, group := range groups {
+		group := group
 		if !group.ID().DeploymentID().Equals(deployment.ID()) {
 			return types.ErrInvalidGroupID
 		}
@@ -175,6 +155,7 @@ func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group) error {
 func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, deploymentPrefix)
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Deployment
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
@@ -188,6 +169,7 @@ func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool)
 func (k Keeper) WithDeploymentsActive(ctx sdk.Context, fn func(types.Deployment) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, deploymentPrefix)
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Deployment
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
@@ -204,6 +186,7 @@ func (k Keeper) WithDeploymentsActive(ctx sdk.Context, fn func(types.Deployment)
 func (k Keeper) WithOpenGroups(ctx sdk.Context, fn func(types.Group) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, groupOpenPrefix)
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		gKey, err := groupOpenKeyConvert(iter.Key())
 		if err != nil {

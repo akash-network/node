@@ -1,8 +1,8 @@
 include ../common-base.mk
 
 DATA_ROOT    := ./cache
-NODE_HOME    := $(DATA_ROOT)/node
-CLIENT_HOME  := $(DATA_ROOT)/client
+NODE_HOME    := $(DATA_ROOT)
+CLIENT_HOME  := $(DATA_ROOT)
 
 CHAIN_NAME   := local
 CHAIN_OPTS   := --chain-id $(CHAIN_NAME)
@@ -12,10 +12,10 @@ CHAIN_MIN_DEPOSIT     := 10000000
 CHAIN_ACCOUNT_DEPOSIT := $(shell echo $$(($(CHAIN_MIN_DEPOSIT) * 10)))
 CHAIN_TOKEN_DENOM     := akash
 
-AKASHCTL_NONODE := $(AKASHCTL_BIN) --home "$(CLIENT_HOME)"
+AKASHCTL_NONODE := $(AKASH_BIN) --home "$(CLIENT_HOME)"
 AKASHCTL := $(AKASHCTL_NONODE)
-AKASHD   := $(AKASHD_BIN)   --home "$(NODE_HOME)"
-KEY_OPTS := --keyring-backend=test
+AKASHD   := $(AKASH_BIN)   --home "$(NODE_HOME)"
+KEY_OPTS := --keyring-backend=test "$(CHAIN_OPTS)"
 
 KEY_NAMES := main provider validator other
 
@@ -23,27 +23,18 @@ KEY_NAMES := main provider validator other
 init: bins client-init node-init
 
 .PHONY: client-init
-client-init: init-dirs client-init-config client-init-keys
+client-init: init-dirs client-init-keys
 
 .PHONY: init-dirs
 init-dirs: 
 	mkdir -p "$(CLIENT_HOME)" "$(NODE_HOME)"
-
-.PHONY: client-init-config
-client-init-config:
-	$(AKASHCTL_NONODE) config chain-id        "$(CHAIN_NAME)"
-	$(AKASHCTL_NONODE) config output          json
-	$(AKASHCTL_NONODE) config indent          true
-	$(AKASHCTL_NONODE) config trust-node      true
-	$(AKASHCTL_NONODE) config keyring-backend test
-	$(AKASHCTL_NONODE) config broadcast-mode  block
 
 .PHONY: client-init-keys
 client-init-keys: $(patsubst %,client-init-key-%,$(KEY_NAMES))
 
 .PHONY: client-init-key-%
 client-init-key-%:
-	$(AKASHCTL_NONODE) keys add "$(@:client-init-key-%=%)"
+	$(AKASHCTL_NONODE) keys add --keyring-backend "test" "$(@:client-init-key-%=%)"
 
 .PHONY: node-init
 node-init: node-init-genesis node-init-genesis-accounts node-init-gentx node-init-finalize
@@ -60,25 +51,24 @@ node-init-genesis: init-dirs
 
 .PHONY: node-init-genesis-accounts
 node-init-genesis-accounts: $(patsubst %,node-init-genesis-account-%,$(KEY_NAMES))
-	$(AKASHD) validate-genesis
+	# $(AKASHD) validate-genesis
 
 .PHONY: node-init-genesis-account-%
 node-init-genesis-account-%:
 	$(AKASHD) add-genesis-account \
-		"$(shell $(AKASHCTL_NONODE) keys show "$(@:node-init-genesis-account-%=%)" -a)" \
+		"$(shell $(AKASHCTL_NONODE) keys show --keyring-backend "test" "$(@:node-init-genesis-account-%=%)" -a)" \
 		"$(CHAIN_MIN_DEPOSIT)$(CHAIN_TOKEN_DENOM)"
 
 .PHONY: node-init-gentx
 node-init-gentx:
-	$(AKASHD) $(KEY_OPTS) gentx      \
-		--name validator               \
-		--home-client "$(CLIENT_HOME)" \
-		--amount "$(CHAIN_MIN_DEPOSIT)$(CHAIN_TOKEN_DENOM)"
+	$(AKASHD) $(KEY_OPTS) gentx validator \
+		--amount "$(CHAIN_MIN_DEPOSIT)$(CHAIN_TOKEN_DENOM)" \
+		$(CHAIN_OPTS)
 
 .PHONY: node-init-finalize
 node-init-finalize:
 	$(AKASHD) collect-gentxs
-	$(AKASHD) validate-genesis
+	# $(AKASHD) validate-genesis
 
 .PHONY: node-run
 node-run:

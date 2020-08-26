@@ -15,6 +15,7 @@ type LeaseWon struct {
 }
 
 // ManifestReceived stores leaseID, manifest received, deployment and group details
+// to be provisioned by the Provider.
 type ManifestReceived struct {
 	LeaseID    mtypes.LeaseID
 	Manifest   *manifest.Manifest
@@ -26,6 +27,7 @@ type ManifestReceived struct {
 func (ev ManifestReceived) ManifestGroup() *manifest.Group {
 	for _, mgroup := range *ev.Manifest {
 		if mgroup.Name == ev.Group.GroupSpec.Name {
+			mgroup := mgroup
 			return &mgroup
 		}
 	}

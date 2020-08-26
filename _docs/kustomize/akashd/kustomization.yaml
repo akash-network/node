@@ -8,14 +8,14 @@ commonLabels:
 
 configMapGenerator:
 
-  - name: akashd-boot
+  - name: akash-boot
     files:
       - run.sh
 
   ##
   # cosmos-sdk app config (app.toml)
   ##
-  - name: akashd-app-config
+  - name: akash-app-config
     literals:
       - minimum-gas-prices=
       - halt-height=0
@@ -26,7 +26,7 @@ configMapGenerator:
   ##
   # tendermint node config (config.toml)
   ##
-  - name: akashd-config
+  - name: akash-config
     literals:
       - home=/home
       - moniker=node0
@@ -36,20 +36,20 @@ configMapGenerator:
       - log_level=main:info,state:info,*:error
       - log_format=plain
 
-      # configmap: akashd-data
+      # configmap: akash-data
       # XXX: not being read
       - genesis_file=/boot-data/genesis.json
 
-      # secret: akashd-keys
+      # secret: akash-keys
       # XXX: not being read
       - priv_validator_key_file=/boot-keys/priv_validator_key.json
 
-      # secret: akashd-keys
+      # secret: akash-keys
       # XXX: not being read
       - priv_validator_state_file=data/priv_validator_state.json
       - priv_validator_laddr=
 
-      # secret: akashd-keys
+      # secret: akash-keys
       # XXX: not being read
       - node_key_file=/boot-keys/node_key.json
       - abci=socket
@@ -149,7 +149,7 @@ configMapGenerator:
       - instrumentation.max_open_connections=3
       - instrumentation.namespace=tendermint
 
-  - name: akashd-data
+  - name: akash-data
     ##
     #  required files
     ##
@@ -157,7 +157,7 @@ configMapGenerator:
       # - config/genesis.json
 
 secretGenerator:
-  - name: akashd-keys
+  - name: akash-keys
     ##
     #  required files
     ##

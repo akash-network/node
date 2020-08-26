@@ -52,7 +52,7 @@ execute() {
   rm -rf "${srcdir}"
   (cd "${tmpdir}" && untar "${TARBALL}")
   test ! -d "${BINDIR}" && install -d "${BINDIR}"
-  for binexe in "akashctl" "akashd" ; do
+  for binexe in "akash" ; do
     if [ "$OS" = "windows" ]; then
       binexe="${binexe}.exe"
     fi

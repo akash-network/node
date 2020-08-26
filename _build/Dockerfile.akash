@@ -1,0 +1,5 @@
+FROM busybox:glibc
+
+COPY ./akash .
+
+EXPOSE 26656 26657 26658

@@ -98,11 +98,10 @@ func TestConfigPath(t *testing.T) {
 					err != nil && test.expErr == nil {
 					t.Errorf("unexpected error occurred: %v", err)
 
-					p, err := url.Parse(test.path)
+					_, err := url.Parse(test.path)
 					if err != nil {
 						t.Errorf("url.Parse() of %q err: %v", test.path, err)
 					}
-					t.Logf("%#v", p)
 				}
 			}
 			return testFunc

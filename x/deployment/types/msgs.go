@@ -15,13 +15,6 @@ var (
 	_, _, _, _ sdk.Msg = &MsgCreateDeployment{}, &MsgUpdateDeployment{}, &MsgCloseDeployment{}, &MsgCloseGroup{}
 )
 
-// MsgCreateDeployment defines an SDK message for creating deployment
-// type MsgCreateDeployment struct {
-// 	ID      DeploymentID `json:"id"`
-// 	Groups  []GroupSpec  `json:"groups"`
-// 	Version []byte       `json:"version"`
-// }
-
 // NewMsgCreateDeployment creates a new MsgCreateDeployment instance
 func NewMsgCreateDeployment(id DeploymentID, groups []GroupSpec, version []byte) *MsgCreateDeployment {
 	return &MsgCreateDeployment{
@@ -58,15 +51,14 @@ func (msg MsgCreateDeployment) ValidateBasic() error {
 	if len(msg.Version) == 0 {
 		return ErrEmptyVersion
 	}
+	for _, gs := range msg.Groups {
+		err := gs.ValidateBasic()
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
-
-// MsgUpdateDeployment defines an SDK message for updating deployment
-// type MsgUpdateDeployment struct {
-// 	ID      DeploymentID
-// 	Groups  []GroupSpec
-// 	Version []byte
-// }
 
 // NewMsgUpdateDeployment creates a new MsgUpdateDeployment instance
 func NewMsgUpdateDeployment(id DeploymentID, groups []GroupSpec, version []byte) *MsgUpdateDeployment {
@@ -106,11 +98,6 @@ func (msg MsgUpdateDeployment) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.ID.Owner}
 }
 
-// MsgCloseDeployment defines an SDK message for closing deployment
-// type MsgCloseDeployment struct {
-// 	ID DeploymentID
-// }
-
 // NewMsgCloseDeployment creates a new MsgCloseDeployment instance
 func NewMsgCloseDeployment(id DeploymentID) *MsgCloseDeployment {
 	return &MsgCloseDeployment{
@@ -141,11 +128,6 @@ func (msg MsgCloseDeployment) GetSignBytes() []byte {
 func (msg MsgCloseDeployment) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.ID.Owner}
 }
-
-// MsgCloseGroup defines SDK message to close a single Group within a Deployment.
-// type MsgCloseGroup struct {
-// 	ID GroupID
-// }
 
 // NewMsgCloseGroup creates a new MsgCloseGroup instance
 func NewMsgCloseGroup(id GroupID) *MsgCloseGroup {

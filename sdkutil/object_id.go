@@ -66,7 +66,7 @@ func (b BlockID) String() string {
 // ReflectBlockID accepts an ID struct and unpacks the block identifying fields.
 // Useful for passing *ID types and getting consistent output based on the consistent
 // field names.
-func ReflectBlockID(id interface{}) *BlockID {
+func ReflectBlockID(id interface{}) BlockID {
 	b := BlockID{}
 
 	val := reflect.ValueOf(id)
@@ -114,7 +114,7 @@ func ReflectBlockID(id interface{}) *BlockID {
 			// Skip this field
 		}
 	}
-	return &b
+	return b
 }
 
 // FmtBlockID provides a human readable representation of the block chain ID fields.

@@ -66,7 +66,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONMarshaler, config client.TxE
 	var data types.GenesisState
 	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
-		return errors.Errorf("failed to unmarshal %s genesis state: %w", types.ModuleName, err)
+		return errors.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
 	}
 	return ValidateGenesis(&data)
 }
@@ -121,11 +121,6 @@ func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
 func (am AppModule) Route() sdk.Route {
 	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keeper, am.mkeeper))
 }
-
-// // NewHandler returns an sdk.Handler for the deployment module.
-// func (am AppModule) NewHandler() sdk.Handler {
-// 	return handler.NewHandler(am.keeper, am.mkeeper)
-// }
 
 // QuerierRoute returns the deployment module's querier route name.
 func (am AppModule) QuerierRoute() string {

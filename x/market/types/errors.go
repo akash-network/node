@@ -25,6 +25,9 @@ const (
 	errCodeInvalidPrice
 	errCodeOrderMatched
 	errCodeOrderClosed
+	errCodeOrderExists
+	errCodeOrderDurationExceeded
+	errCodeOrderTooEarly
 )
 
 var (
@@ -68,4 +71,10 @@ var (
 	ErrOrderMatched = sdkerrors.New(ModuleName, errCodeOrderMatched, "order matched")
 	// ErrOrderClosed order closed
 	ErrOrderClosed = sdkerrors.New(ModuleName, errCodeOrderClosed, "order closed")
+	// ErrOrderExists indicates a new order was proposed overwrite the existing store key
+	ErrOrderExists = sdkerrors.New(ModuleName, errCodeOrderExists, "order already exists in store")
+	// ErrOrderTooEarly to match bid
+	ErrOrderTooEarly = sdkerrors.New(ModuleName, errCodeOrderTooEarly, "order: chain height to low for bidding")
+	// ErrOrderDurationExceeded order should be closed
+	ErrOrderDurationExceeded = sdkerrors.New(ModuleName, errCodeOrderDurationExceeded, "order duration has exceeded the bidding duration")
 )

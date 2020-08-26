@@ -27,7 +27,9 @@ func EventCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String(flags.FlagNode, "tcp://localhost:26657", "The node address")
-	_ = viper.BindPFlag(flags.FlagNode, cmd.Flags().Lookup(flags.FlagNode))
+	if err := viper.BindPFlag(flags.FlagNode, cmd.Flags().Lookup(flags.FlagNode)); err != nil {
+		return nil
+	}
 
 	return cmd
 }
@@ -60,7 +62,9 @@ func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 			case <-subscriber.Done():
 				return nil
 			case ev := <-subscriber.Events():
-				cctx.PrintOutputLegacy(ev)
+				if err := cctx.PrintOutputLegacy(ev); err != nil {
+					return err
+				}
 			}
 		}
 	})
