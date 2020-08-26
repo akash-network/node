@@ -8,37 +8,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// //go:generate stringer -linecomment -output=autogen_stringer.go -type=OrderState,BidState,LeaseState
-
-// // OrderState defines state of order
-// type OrderState uint32
-
-// const (
-// 	// OrderOpen is used when state of order is open
-// 	OrderOpen OrderState = iota + 1 // open
-// 	// OrderMatched is used when state of order is matched
-// 	OrderMatched // matched
-// 	// OrderClosed is used when state of order is closed
-// 	OrderClosed // closed
-// )
-
-// // OrderStateMap is used to decode order state flag value
-// var OrderStateMap = map[string]OrderState{
-// 	"open":    OrderOpen,
-// 	"matched": OrderMatched,
-// 	"closed":  OrderClosed,
-// }
-
-// Order stores orderID, state of order and other details
-// type Order struct {
-// 	OrderID `json:"id"`
-// 	State   OrderState `json:"state"`
-
-// 	// block height to start matching
-// 	StartAt int64            `json:"start-at"`
-// 	Spec    dtypes.GroupSpec `json:"spec"`
-// }
-
 // ID method returns OrderID details of specific order
 func (o Order) ID() OrderID {
 	return o.OrderID
@@ -152,35 +121,6 @@ func (filters OrderFilters) Accept(obj Order) bool {
 	return true
 }
 
-// // BidState defines state of bid
-// type BidState uint32
-
-// const (
-// 	// BidOpen is used when state of bid is opened
-// 	BidOpen BidState = iota + 1 // open
-// 	// BidMatched is used when state of bid is matched
-// 	BidMatched // matched
-// 	// BidLost is used when state of bid is lost
-// 	BidLost // lost
-// 	// BidClosed is used when state of bid is closed
-// 	BidClosed // closed
-// )
-
-// // BidStateMap is used to decode bid state flag value
-// var BidStateMap = map[string]BidState{
-// 	"open":    BidOpen,
-// 	"matched": BidMatched,
-// 	"lost":    BidLost,
-// 	"closed":  BidClosed,
-// }
-
-// Bid stores BidID, state of bid and price
-// type Bid struct {
-// 	BidID `json:"id"`
-// 	State BidState `json:"state"`
-// 	Price sdk.Coin `json:"price"`
-// }
-
 // ID method returns BidID details of specific bid
 func (obj Bid) ID() BidID {
 	return obj.BidID
@@ -239,32 +179,6 @@ func (filters BidFilters) Accept(obj Bid) bool {
 
 	return true
 }
-
-// // LeaseState defines state of Lease
-// type LeaseState uint32
-
-// const (
-// 	// LeaseActive is used when state of lease is active
-// 	LeaseActive LeaseState = iota + 1 // active
-// 	// LeaseInsufficientFunds is used when lease has insufficient funds
-// 	LeaseInsufficientFunds // insufficient_funds
-// 	// LeaseClosed is used when state of lease is closed
-// 	LeaseClosed // closed
-// )
-
-// // LeaseStateMap is used to decode lease state flag value
-// var LeaseStateMap = map[string]LeaseState{
-// 	"active":             LeaseActive,
-// 	"insufficient_funds": LeaseInsufficientFunds,
-// 	"closed":             LeaseClosed,
-// }
-
-// Lease stores LeaseID, state of lease and price
-// type Lease struct {
-// 	LeaseID `json:"id"`
-// 	State   LeaseState `json:"state"`
-// 	Price   sdk.Coin   `json:"price"`
-// }
 
 // ID method returns LeaseID details of specific lease
 func (obj Lease) ID() LeaseID {

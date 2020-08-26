@@ -16,7 +16,7 @@ import (
 var (
 	_ = func() string {
 		config := sdk.GetConfig()
-		config.SetBech32PrefixForAccount("akash", "akashpub")
+		config.SetBech32PrefixForAccount(sdkutil.Bech32PrefixAccAddr, sdkutil.Bech32PrefixAccPub)
 		return ""
 	}()
 

@@ -102,7 +102,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		genutilcli.MigrateGenesisCmd(),
 		genutilcli.GenTxCmd(app.ModuleBasics(), encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultHome),
 		genutilcli.ValidateGenesisCmd(app.ModuleBasics(), encodingConfig.TxConfig),
-		AddGenesisAccountCmd(app.DefaultHome, app.DefaultHome),
+		AddGenesisAccountCmd(app.DefaultHome),
 		cli.NewCompletionCmd(rootCmd, true),
 		debug.Cmd(),
 	)
@@ -175,6 +175,7 @@ func queryCmd() *cobra.Command {
 	)
 
 	app.ModuleBasics().AddQueryCommands(cmd)
+	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	return cmd
 }
 
@@ -200,6 +201,7 @@ func txCmd() *cobra.Command {
 
 	// add modules' tx commands
 	app.ModuleBasics().AddTxCommands(cmd)
+	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
 	return cmd
 }

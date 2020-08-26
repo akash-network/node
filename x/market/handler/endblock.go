@@ -52,7 +52,7 @@ func transferFundsForActiveLeases(ctx sdk.Context, keepers Keepers) error {
 	return nil
 }
 
-var ErrNoBids error = errors.New("no bids to pick winner from")
+var ErrNoBids = errors.New("no bids to pick winner from")
 
 func PickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 	// open bids; match by lowest price; sort bids by price

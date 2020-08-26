@@ -7,12 +7,6 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-// // GenesisState defines the basic genesis state used by market module
-// type GenesisState struct {
-// 	Orders []types.Order `json:"orders"`
-// 	Leases []types.Lease `json:"leases"`
-// }
-
 // ValidateGenesis does validation check of the Genesis
 func ValidateGenesis(data *types.GenesisState) error {
 	return nil
