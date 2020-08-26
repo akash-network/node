@@ -125,7 +125,7 @@ func requestLogParams() mux.MiddlewareFunc {
 				}
 			}()
 
-			follow := false
+			var follow bool
 			var tailLines *int64
 
 			val := vars.Get("follow")
