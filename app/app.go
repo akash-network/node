@@ -365,7 +365,6 @@ func (app *AkashApp) Name() string { return app.BaseApp.Name() }
 func (app *AkashApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 	var genesisState simapp.GenesisState
 	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
-
 	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
 }
 

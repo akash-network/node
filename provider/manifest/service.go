@@ -89,8 +89,6 @@ type service struct {
 	managers  map[string]*manager
 	managerch chan *manager
 
-	// deploymentch chan runner.Result
-
 	lc lifecycle.Lifecycle
 }
 

@@ -1,7 +1,7 @@
 KEY_NAME          ?= main
-KEY_OPTS 		  := --keyring-backend=test
-CHAIN_NAME 		  := local
-CHAIN_OPTS   	  := --chain-id=$(CHAIN_NAME)
+KEY_OPTS          := --keyring-backend=test
+CHAIN_NAME        := local
+CHAIN_OPTS        := --chain-id=$(CHAIN_NAME)
 
 KEY_ADDRESS       ?= $(shell $(AKASHCTL_NONODE) keys show $(KEY_OPTS) "$(KEY_NAME)" -a)
 

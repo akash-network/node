@@ -54,9 +54,7 @@ func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus 
 		return publishEvents(ctx, blkch, bus)
 	})
 
-	err = g.Wait()
-
-	return err
+	return g.Wait()
 }
 
 func publishEvents(ctx context.Context, ch <-chan ctypes.ResultEvent, bus pubsub.Bus) error {
@@ -87,7 +85,8 @@ func processEvents(bus pubsub.Bus, events []abci.Event) {
 	for _, ev := range events {
 		if mev, ok := processEvent(ev); ok {
 			if err := bus.Publish(mev); err != nil {
-				panic(err)
+				bus.Close()
+				return
 			}
 			continue
 		}
