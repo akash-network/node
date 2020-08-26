@@ -67,7 +67,7 @@ import (
 )
 
 const (
-	appName = "akash"
+	AppName = "akash"
 )
 
 var DefaultHome = os.ExpandEnv("$HOME/.akash")
@@ -121,7 +121,7 @@ func NewApp(
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
-	bapp := bam.NewBaseApp(appName, logger, db, encodingConfig.TxConfig.TxDecoder(), options...)
+	bapp := bam.NewBaseApp(AppName, logger, db, encodingConfig.TxConfig.TxDecoder(), options...)
 	bapp.SetCommitMultiStoreTracer(tio)
 	bapp.SetAppVersion(version.Version)
 	bapp.GRPCQueryRouter().SetInterfaceRegistry(interfaceRegistry)
@@ -149,7 +149,7 @@ func NewApp(
 		app.keys[authtypes.StoreKey],
 		app.GetSubspace(authtypes.ModuleName),
 		authtypes.ProtoBaseAccount,
-		macPerms(),
+		MacPerms(),
 	)
 
 	app.keeper.bank = bankkeeper.NewBaseKeeper(
@@ -393,7 +393,7 @@ func (app *AkashApp) AppCodec() codec.Marshaler {
 
 // ModuleAccountAddrs returns all the app's module account addresses.
 func (app *AkashApp) ModuleAccountAddrs() map[string]bool {
-	return macAddrs()
+	return MacAddrs()
 }
 
 // InterfaceRegistry returns AkashApp's InterfaceRegistry

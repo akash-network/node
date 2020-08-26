@@ -66,7 +66,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONMarshaler, config client.TxE
 	var data types.GenesisState
 	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
-		return errors.Errorf("failed to unmarshal %s genesis state: %w", types.ModuleName, err)
+		return errors.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
 	}
 	return ValidateGenesis(&data)
 }

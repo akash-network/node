@@ -52,7 +52,7 @@ func transferFundsForActiveLeases(ctx sdk.Context, keepers Keepers) error {
 	return nil
 }
 
-var errNoBids error = errors.New("no bids to pick winner from")
+var ErrNoBids error = errors.New("no bids to pick winner from")
 
 func PickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 	// open bids; match by lowest price; sort bids by price
@@ -64,7 +64,7 @@ func PickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 	switch len(bids) {
 	case 0:
 		// This is a fatal case
-		return nil, errNoBids
+		return nil, ErrNoBids
 	case 1:
 		return &bids[0], nil
 	}
