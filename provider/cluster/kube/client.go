@@ -49,7 +49,7 @@ type client struct {
 	log      log.Logger
 }
 
-// NewClient returns new Client instance with provided logger, host and ns. Returns error incase of failure
+// NewClient returns new Kubernetes Client instance with provided logger, host and ns. Returns error incase of failure
 func NewClient(log log.Logger, host, ns string) (Client, error) {
 	var settings settings
 	if err := env.Parse(&settings); err != nil {

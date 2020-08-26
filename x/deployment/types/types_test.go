@@ -48,8 +48,7 @@ func TestGroupState(t *testing.T) {
 		},
 	}
 
-	for i, test := range tests {
-		t.Logf("------test-%d: %#v", i, test)
+	for _, test := range tests {
 		group := types.Group{
 			GroupID: testutil.GroupID(t),
 			State:   test.state,
@@ -104,4 +103,58 @@ func TestDeploymentVersionAttributeLifecycle(t *testing.T) {
 		require.Error(t, err)
 		assert.NotEqual(t, d.Version, versionString)
 	})
+}
+
+func TestGroupSpecValidation(t *testing.T) {
+	tests := []struct {
+		desc   string
+		gspec  types.GroupSpec
+		expErr error
+	}{
+		{
+			desc: "zero value bid duration error",
+			gspec: types.GroupSpec{
+				Name:             testutil.Name(t, "groupspec"),
+				Requirements:     testutil.Attributes(t),
+				Resources:        testutil.Resources(t),
+				OrderBidDuration: int64(0),
+			},
+			expErr: types.ErrInvalidGroups,
+		},
+		{
+			desc: "bid duration exceeds limit",
+			gspec: types.GroupSpec{
+				Name:             testutil.Name(t, "groupspec"),
+				Requirements:     testutil.Attributes(t),
+				Resources:        testutil.Resources(t),
+				OrderBidDuration: types.MaxBiddingDuration * int64(2),
+			},
+			expErr: types.ErrInvalidGroups,
+		},
+		{
+			desc: "groupspec requires name",
+			gspec: types.GroupSpec{
+				Name:             "",
+				Requirements:     testutil.Attributes(t),
+				Resources:        testutil.Resources(t),
+				OrderBidDuration: types.DefaultOrderBiddingDuration,
+			},
+			expErr: types.ErrInvalidGroups,
+		},
+		{
+			desc: "groupspec valid",
+			gspec: types.GroupSpec{
+				Name:             "hihi",
+				Requirements:     testutil.Attributes(t),
+				Resources:        testutil.Resources(t),
+				OrderBidDuration: types.DefaultOrderBiddingDuration,
+			},
+			expErr: nil,
+		},
+	}
+
+	for _, test := range tests {
+		err := test.gspec.ValidateBasic()
+		assert.Equal(t, test.expErr, err, test.desc)
+	}
 }

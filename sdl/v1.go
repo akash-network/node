@@ -3,9 +3,9 @@ package sdl
 import (
 	"sort"
 
+	"github.com/blang/semver"
 	"github.com/pkg/errors"
 
-	"github.com/blang/semver"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/manifest"
@@ -172,6 +172,8 @@ func (sdl *v1) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 				Count: svcdepl.Count,
 			})
 
+			// TODO: Make a parameter to configure the duration of orders being bid on
+			group.OrderBidDuration = dtypes.DefaultOrderBiddingDuration
 		}
 	}
 

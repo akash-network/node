@@ -97,6 +97,14 @@ func TestMatchOrders(t *testing.T) {
 		})
 		assert.Equal(t, len(openGroups), count)
 	})
+	t.Run("assert leases *not* created", func(t *testing.T) {
+		count := 0
+		suite.MarketKeeper().WithActiveLeases(suite.Context(), func(l types.Lease) bool {
+			count++
+			return false
+		})
+		assert.Equal(t, count, 0)
+	})
 
 	t.Run("match orders after setting block height", func(t *testing.T) {
 		suite.SetBlockHeight(int64(100))
@@ -117,6 +125,14 @@ func TestMatchOrders(t *testing.T) {
 			return false
 		})
 		assert.Equal(t, count, 0)
+	})
+	t.Run("assert any leases created???", func(t *testing.T) {
+		count := 0
+		suite.MarketKeeper().WithLeases(suite.Context(), func(l types.Lease) bool {
+			count++
+			return false
+		})
+		assert.Equal(t, len(openGroups), count)
 	})
 	t.Run("assert leases created", func(t *testing.T) {
 		count := 0

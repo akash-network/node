@@ -4,12 +4,11 @@ bases:
 
 images:
   - name: ovrclk/akashd
-
     ##
     # akashctl version
     ##
 
-    newTag: 0.7.4
+    newTag: latest
 
 configMapGenerator:
 

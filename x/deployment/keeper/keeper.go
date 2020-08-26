@@ -175,6 +175,7 @@ func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group) error {
 func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, deploymentPrefix)
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Deployment
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
@@ -188,6 +189,7 @@ func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool)
 func (k Keeper) WithDeploymentsActive(ctx sdk.Context, fn func(types.Deployment) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, deploymentPrefix)
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Deployment
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
@@ -204,6 +206,7 @@ func (k Keeper) WithDeploymentsActive(ctx sdk.Context, fn func(types.Deployment)
 func (k Keeper) WithOpenGroups(ctx sdk.Context, fn func(types.Group) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, groupOpenPrefix)
+	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		gKey, err := groupOpenKeyConvert(iter.Key())
 		if err != nil {

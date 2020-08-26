@@ -212,15 +212,13 @@ loop:
 			}
 
 		case dm := <-s.managerch:
-
 			s.log.Debug("manager done", "lease", dm.lease)
 
+			// unreserve resources
 			if _, err := s.inventory.unreserve(dm.lease.OrderID(), dm.mgroup); err != nil {
 				s.log.Error("unreserving inventory", "err", err,
 					"lease", dm.lease, "group-name", dm.mgroup.Name)
 			}
-
-			// todo: unreserve resources
 
 			delete(s.managers, mquery.LeasePath(dm.lease))
 		}

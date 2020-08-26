@@ -85,6 +85,7 @@ spec:
                 configMapKeyRef:
                   name: akash-provider-config
                   key: ingress-static-hosts
+                  optional: true
 
             # domain to host unique app hostnames on
             # (required if AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS is "true")
@@ -93,6 +94,7 @@ spec:
                 configMapKeyRef:
                   name: akash-provider-config
                   key: ingress-domain
+                  optional: true
 
             # return load balancer host in lease status command
             - name: AKASH_DEPLOYMENT_INGRESS_EXPOSE_LB_HOSTS
@@ -100,6 +102,126 @@ spec:
                 configMapKeyRef:
                   name: akash-provider-config
                   key: ingress-expose-lb-hosts
+                  optional: true
+
+            - name: AKASH_MAX_UNIT_CPU
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: max-unit-cpu
+                  optional: true
+
+            - name: AKASH_MAX_UNIT_MEMORY
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: max-unit-memory
+                  optional: true
+
+            - name: AKASH_MAX_UNIT_STORAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: max-unit-storage
+                  optional: true
+
+            - name: AKASH_MAX_UNIT_COUNT
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: max-unit-count
+                  optional: true
+
+            - name: AKASH_MAX_UNIT_PRICE
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: max-unit-price
+                  optional: true
+
+            - name: AKASH_MIN_UNIT_CPU
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: min-unit-cpu
+                  optional: true
+
+            - name: AKASH_MIN_UNIT_MEMORY
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: min-unit-memory
+                  optional: true
+
+            - name: AKASH_MIN_UNIT_STORAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: min-unit-storage
+                  optional: true
+
+            - name: AKASH_MIN_UNIT_COUNT
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: min-unit-count
+                  optional: true
+
+            - name: AKASH_MIN_UNIT_PRICE
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: min-unit-price
+                  optional: true
+
+            - name: AKASH_MAX_GROUP_COUNT
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: max-group-count
+                  optional: true
+
+            - name: AKASH_MAX_GROUP_UNITS
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: max-group-units
+                  optional: true
+
+            - name: AKASH_MAX_GROUP_CPU
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: max-group-cpu
+                  optional: true
+
+            - name: AKASH_MAX_GROUP_MEMORY
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: max-group-memory
+                  optional: true
+
+            - name: AKASH_MAX_GROUP_STORAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: max-group-storage
+                  optional: true
+
+            - name: AKASH_MEM_PRICE_MIN
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: mem-price-min
+                  optional: true
+
+            - name: AKASH_MEM_PRICE_MAX
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: mem-price-max
+                  optional: true
 
           ports:
             - name: http

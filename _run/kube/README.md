@@ -225,6 +225,20 @@ make provider-service-logs
 If you chose to use port 80 when setting up kind, you can browse to your
 deployed workload at http://hello.localhost
 
+## Update Deployment
+
+Updating active Deployments is a two step process. First edit the `deployment.yaml` with whatever changes are desired. Example; update the `image` field.
+ 1. Update the Akash Network to inform the Provider that a new Deployment declaration is expected.
+   * `make deployment-update`
+ 2. Send the updated manifest to the Provider to run.
+   * `make send-manifest`
+
+Between the first and second step, the prior deployment's containers will continue to run until the new manifest file is received, validated, and new container group operational. After health checks on updated group are passing; the prior containers will be terminated.
+
+#### Limitations
+
+Akash Groups are translated into Kubernetes Deployments, this means that only a few fields from the Akash SDL are mutable. For example `image`, `command`, `args`, `env` and exposed ports can be modified, but compute resources and placement criteria cannot.
+
 ## Terminate lease
 
 There are a number of ways that a lease can be terminated.

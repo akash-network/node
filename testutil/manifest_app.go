@@ -34,7 +34,7 @@ func (mg manifestGeneratorApp) Service(t testing.TB) manifest.Service {
 	t.Helper()
 	return manifest.Service{
 		Name:  "demo",
-		Image: "chentex/random-logger:latest",
+		Image: "ropes/akash-app:v1",
 		Unit: types.Unit{
 			CPU:     100,
 			Memory:  128 * unit.Mi,

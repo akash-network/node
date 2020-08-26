@@ -19,7 +19,8 @@ func ValidateDeploymentGroups(gspecs []dtypes.GroupSpec) error {
 	}
 
 	for _, group := range gspecs {
-		if err := validateGroupPricing(defaultConfig, group); err != nil {
+		err := ValidateDeploymentGroup(group)
+		if err != nil {
 			return err
 		}
 	}
@@ -28,6 +29,10 @@ func ValidateDeploymentGroups(gspecs []dtypes.GroupSpec) error {
 
 // ValidateDeploymentGroup does validation for provided deployment group
 func ValidateDeploymentGroup(gspec dtypes.GroupSpec) error {
+	if err := gspec.ValidateBasic(); err != nil {
+		return errors.Wrapf(err, "group validation error: %v", gspec.Name)
+	}
+
 	if err := validateResourceList(defaultConfig, gspec); err != nil {
 		return err
 	}

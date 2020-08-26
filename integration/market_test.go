@@ -31,7 +31,7 @@ func TestMarket(t *testing.T) {
 	require.Equal(t, startTokens, fooAcc.GetCoins().AmountOf(denom))
 
 	// Create deployment
-	f.TxCreateDeployment(fmt.Sprintf("--from=%s", keyFoo), "-y")
+	f.TxCreateDeployment(deploymentFilePath, fmt.Sprintf("--from=%s", keyFoo), "-y")
 	tests.WaitForNextNBlocksTM(1, f.Port)
 
 	// test query deployments

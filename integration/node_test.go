@@ -50,7 +50,6 @@ func TestAddGenesisAccount(t *testing.T) {
 
 	cdc := app.MakeCodec()
 	accounts := auth.GetGenesisStateFromAppState(cdc, genesisState)
-	// t.Logf("Accounts:%v\n", accounts)
 	require.Equal(t, accounts.Accounts[0].GetAddress(), f.KeyAddress(keyFoo))
 	require.Equal(t, accounts.Accounts[1].GetAddress(), f.KeyAddress(keyBar))
 	require.True(t, accounts.Accounts[0].GetCoins().IsEqual(startCoins()))

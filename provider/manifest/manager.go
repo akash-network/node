@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"bytes"
 	"context"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
+	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/util/runner"
 	"github.com/ovrclk/akash/validation"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
@@ -19,7 +21,11 @@ import (
 )
 
 var (
+	// ErrShutdownTimerExpired for a terminating deployment
 	ErrShutdownTimerExpired = errors.New("shutdown timer expired")
+	// ErrManifestVersion indicates that the given manifest's version does not
+	// match the blockchain Version value.
+	ErrManifestVersion = errors.New("manifest version validation failed")
 )
 
 func newManager(h *service, daddr dtypes.DeploymentID) (*manager, error) {
@@ -50,6 +56,7 @@ func newManager(h *service, daddr dtypes.DeploymentID) (*manager, error) {
 	return m, nil
 }
 
+// 'manager' facilitates operations around a configured Deployment.
 type manager struct {
 	config  config
 	daddr   dtypes.DeploymentID
@@ -170,7 +177,6 @@ loop:
 
 		case version := <-m.updatech:
 			m.log.Info("received version", "version", version)
-
 			m.versions = append(m.versions, version)
 			if m.data != nil {
 				m.data.Deployment.Version = version
@@ -300,7 +306,16 @@ func (m *manager) validateRequests() {
 }
 
 func (m *manager) validateRequest(req manifestRequest) error {
-	// TODO: hash(manifest) == m.data.Version
+	// ensure that an uploaded manifest matches the hash declared on
+	// the Akash Deployment.Version
+	version, err := sdl.ManifestVersion(req.value.Manifest)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(version, m.data.Version) {
+		return ErrManifestVersion
+	}
+
 	if err := validation.ValidateManifestWithDeployment(&req.value.Manifest, m.data.Groups); err != nil {
 		return err
 	}
