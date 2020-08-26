@@ -22,3 +22,4 @@ dist
 #IDE
 .idea/
 *.iml
+coverage.txt
