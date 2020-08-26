@@ -327,7 +327,7 @@ func setupKeeper(t testing.TB) (sdk.Context, keeper.Keeper) {
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
 	ms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
-	ms.LoadLatestVersion()
+	require.NoError(t, ms.LoadLatestVersion())
 	ctx := sdk.NewContext(ms, tmproto.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))
 	return ctx, keeper.NewKeeper(types.ModuleCdc, key)
 }

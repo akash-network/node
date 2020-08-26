@@ -5,8 +5,7 @@
 /vendor
 
 # binaries
-/akashd
-/akashctl
+/akash
 
 # dev artifacts
 /devdata

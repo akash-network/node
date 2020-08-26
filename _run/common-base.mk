@@ -1,6 +1,5 @@
 AKASH_ROOT   := ../..
-AKASHCTL_BIN := $(AKASH_ROOT)/akashctl
-AKASHD_BIN   := $(AKASH_ROOT)/akashd
+AKASH_BIN   := $(AKASH_ROOT)/akash
 
 .PHONY: all
 all:
@@ -10,13 +9,9 @@ all:
 bins:
 	(cd "$(AKASH_ROOT)" && make bins)
 
-.PHONY: akashctl
-akashctl:
-	(cd "$(AKASH_ROOT)" && make akashctl)
-
-.PHONY: akashd
-akashd:
-	(cd "$(AKASH_ROOT)" && make akashd)
+.PHONY: akash
+akash:
+	(cd "$(AKASH_ROOT)" && make akash)
 
 .PHONY: image-minikube
 image-minikube:

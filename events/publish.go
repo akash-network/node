@@ -18,7 +18,7 @@ import (
 
 // Publish events using tm buses to clients. Waits on context
 // shutdown signals to exit.
-func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus pubsub.Bus) error {
+func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus pubsub.Bus) (err error) {
 
 	const (
 		queuesz = 100
@@ -32,13 +32,17 @@ func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus 
 	if err != nil {
 		return err
 	}
-	defer tmbus.UnsubscribeAll(ctx, txname)
+	defer func() {
+		err = tmbus.UnsubscribeAll(ctx, txname)
+	}()
 
 	blkch, err := tmbus.Subscribe(ctx, blkname, blkQuery().String(), queuesz)
 	if err != nil {
 		return err
 	}
-	defer tmbus.UnsubscribeAll(ctx, blkname)
+	defer func() {
+		err = tmbus.UnsubscribeAll(ctx, blkname)
+	}()
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -80,7 +84,10 @@ loop:
 func processEvents(bus pubsub.Bus, events []abci.Event) {
 	for _, ev := range events {
 		if mev, ok := processEvent(ev); ok {
-			bus.Publish(mev)
+			if err := bus.Publish(mev); err != nil {
+				bus.Close()
+				return
+			}
 			continue
 		}
 	}

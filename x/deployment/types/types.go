@@ -71,10 +71,9 @@ func (obj Deployment) ID() DeploymentID {
 // }
 
 // ValidateBasic asserts non-zero values
+// TODO: This is causing an import cycle. I think there is some pattern here I'm missing tho..
 func (g GroupSpec) ValidateBasic() error {
-	if g.Name == "" {
-		return ErrInvalidGroups
-	}
+	// return validation.ValidateDeploymentGroup(g)
 	return nil
 }
 
@@ -122,13 +121,6 @@ loop:
 	return true
 }
 
-// Group stores groupID, state and other specifications
-// type Group struct {
-// 	GroupID   `json:"id"`
-// 	State     GroupState `json:"state"`
-// 	GroupSpec `json:"spec"`
-// }
-
 // ID method returns GroupID details of specific group
 func (g Group) ID() GroupID {
 	return g.GroupID
@@ -164,23 +156,6 @@ func (g Group) GetName() string {
 func (g Group) GetResources() []types.Resource {
 	return g.GroupSpec.GetResources()
 }
-
-// // Resource stores unit, count and price of each resource
-// type Resource struct {
-// 	Unit  types.Unit `json:"unit"`
-// 	Count uint32     `json:"count"`
-// 	Price sdk.Coin   `json:"price"`
-// }
-
-// // GetUnit method returns unit of resource
-// func (r Resource) GetUnit() types.Unit {
-// 	return r.Unit
-// }
-
-// // GetCount method returns count of resource
-// func (r Resource) GetCount() uint32 {
-// 	return r.Count
-// }
 
 // FullPrice method returns full price of resource
 func (r Resource) FullPrice() sdk.Coin {

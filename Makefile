@@ -1,5 +1,5 @@
-BINS       := akashctl akashd
-IMAGE_BINS := _build/akashctl _build/akashd
+BINS       := akash
+IMAGE_BINS := _build/akash
 APP_DIR := ./app
 
 GO := GO111MODULE=on go
@@ -21,8 +21,7 @@ IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 
 BUILD_FLAGS = -mod=readonly -tags "netgo ledger $(BUILD_MAINNET)" -ldflags \
  '-X github.com/cosmos/cosmos-sdk/version.Name=akash \
-  -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd \
-  -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl \
+  -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
   -X "github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger" \
   -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
   -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
@@ -37,29 +36,20 @@ build:
 generate:
 	$(GO) generate ./...
 
-akashctl:
-	$(GO) build $(BUILD_FLAGS) ./cmd/akashctl
-
-akashd:
-	$(GO) build $(BUILD_FLAGS) ./cmd/akashd
+akash:
+	$(GO) build $(BUILD_FLAGS) ./cmd/akash
 
 image-bins:
-	$(IMAGE_BUILD_ENV) $(GO) build $(BUILD_FLAGS) -o _build/akashctl  ./cmd/akashctl
-	$(IMAGE_BUILD_ENV) $(GO) build $(BUILD_FLAGS) -o _build/akashd ./cmd/akashd
+	$(IMAGE_BUILD_ENV) $(GO) build $(BUILD_FLAGS) -o _build/akash ./cmd/akash
 
 image: image-bins
-	docker build --rm            \
-		-t ovrclk/akash:latest     \
-		-f _build/Dockerfile.akashctl \
-		_build
 	docker build --rm             \
-		-t ovrclk/akashd:latest     \
-		-f _build/Dockerfile.akashd \
+		-t ovrclk/akash:latest     \
+		-f _build/Dockerfile.akash \
 		_build
 
 install:
-	$(GO) install $(BUILD_FLAGS) ./cmd/akashctl
-	$(GO) install $(BUILD_FLAGS) ./cmd/akashd
+	$(GO) install $(BUILD_FLAGS) ./cmd/akash
 
 release:
 	docker run --rm --privileged \
@@ -83,7 +73,7 @@ shellcheck:
 	-x /shellcheck/script/shellcheck.sh
 
 test:
-	$(GO) test -tags=$(BUILD_MAINNET) ./...
+	$(GO) test -tags=$(BUILD_MAINNET)  -timeout 300s ./...
 
 test-nocache:
 	$(GO) test -tags=$(BUILD_MAINNET) -count=1 ./...
@@ -121,7 +111,7 @@ SUBLINTERS = deadcode \
 
 # TODO: ^ gochecknoglobals
 
-LINT = $(GOBIN)/golangci-lint run ./... --disable-all --enable 
+LINT = $(GOBIN)/golangci-lint run ./... --disable-all --deadline=5m --enable 
 
 # Execute the same lint methods as configured in .github/workflows/tests.yaml
 # Clear feedback from each method as it fails.
@@ -152,7 +142,7 @@ devdeps-install:
 	$(GO) install golang.org/x/tools/cmd/stringer
 
 test-integration: $(BINS)
-	cp akashctl akashd ./_build
+	cp akash ./_build
 	go test -mod=readonly -p 4 -tags "integration $(BUILD_MAINNET)" -v ./integration/...
 
 test-e2e-integration: $(BINS)
@@ -209,7 +199,7 @@ clean:
 	rm -f $(BINS) $(IMAGE_BINS)
 
 .PHONY: all bins build \
-	akashctl akashd \
+	akash \
 	image image-bins \
 	test test-nocache test-full test-coverage \
 	deps-install devdeps-install \
@@ -224,15 +214,6 @@ clean:
 	clean \
 	kubetypes kubetypes-deps-install \
 	install
-
-update-swagger-docs:
-	statik -src=cmd/swagger-ui -dest=cmd -f -m
-	@if [ -n "$(git status --porcelain)" ]; then \
-        echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
-        exit 1;\
-    else \
-    	echo "\033[92mSwagger docs are in sync\033[0m";\
-    fi
 
 ###############################################################################
 ###                           Simulation                                    ###

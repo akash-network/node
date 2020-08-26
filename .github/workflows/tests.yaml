@@ -39,6 +39,6 @@ jobs:
       - run: make test-vet
       - run: make lintdeps-install
       - name: lint all
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --issues-exit-code=0
+        run: $(go env GOPATH)/bin/golangci-lint run ./... --issues-exit-code=0 --deadline=10m
       - name: lint make-sublinters
         run: make test-sublinters 

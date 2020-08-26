@@ -12,8 +12,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var errNoBids error = errors.New("no bids to pick winner from")
-
 type winnerTest struct {
 	desc      string
 	bids      []types.Bid
@@ -24,7 +22,7 @@ type winnerTest struct {
 func (w *winnerTest) testFunc(t *testing.T) {
 	winner, err := handler.PickBidWinner(w.bids)
 	if !errors.Is(err, w.expErr) {
-		t.Errorf("returned err: %v does not match %v", err, w.expErr)
+		t.Errorf("returned err: '%v' does not match '%v'", err, w.expErr)
 	}
 	if w.expWinner != nil && !winner.ID().Equals(w.expWinner.ID()) {
 		t.Errorf("unexpected winner: %#v\n%q : %v", winner, types.BidIDString(winner.BidID), winner.Price)
@@ -50,7 +48,7 @@ func TestBidWinner(t *testing.T) {
 			desc:      "no bids",
 			bids:      []types.Bid{},
 			expWinner: nil,
-			expErr:    errNoBids,
+			expErr:    handler.ErrNoBids,
 		},
 		{
 			desc:      "single bid",
@@ -108,6 +106,7 @@ type testDist struct {
 }
 
 func (td *testDist) testFunc(t *testing.T) {
+	t.Logf("testing function with description: %s", td.desc)
 	originOID := testutil.OrderID(t)
 
 	distributionSpread := make(map[int]int, td.bidNum)

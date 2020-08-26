@@ -10,7 +10,6 @@ import (
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
-	"github.com/ovrclk/akash/util/runner"
 	dquery "github.com/ovrclk/akash/x/deployment/query"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -89,8 +88,6 @@ type service struct {
 
 	managers  map[string]*manager
 	managerch chan *manager
-
-	deploymentch chan runner.Result
 
 	lc lifecycle.Lifecycle
 }

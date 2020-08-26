@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 
@@ -108,7 +109,7 @@ func (s *IntegrationTestSuite) Test1QueryOrders() {
 	resp, err = cli.QueryOrdersExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		fmt.Sprintf("--owner=%s", val.Address.String()),
-		fmt.Sprintf("--state=open"),
+		"--state=open",
 	)
 	s.Require().NoError(err)
 
@@ -119,14 +120,14 @@ func (s *IntegrationTestSuite) Test1QueryOrders() {
 	s.Require().Equal(createdOrder, result.Orders[0])
 
 	// test query orders with wrong owner value
-	resp, err = cli.QueryOrdersExec(
+	_, err = cli.QueryOrdersExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--owner=cosmos102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt",
 	)
 	s.Require().Error(err)
 
 	// test query orders with wrong state value
-	resp, err = cli.QueryOrdersExec(
+	_, err = cli.QueryOrdersExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--state=hello",
 	)
@@ -155,6 +156,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
+	s.Require().NoError(err)
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
@@ -252,14 +254,14 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	s.Require().Equal(createdBid, bidRes.Bids[0])
 
 	// test query bids with wrong owner value
-	resp, err = cli.QueryBidsExec(
+	_, err = cli.QueryBidsExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--owner=cosmos102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt",
 	)
 	s.Require().Error(err)
 
 	// test query bids with wrong state value
-	resp, err = cli.QueryBidsExec(
+	_, err = cli.QueryBidsExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--state=hello",
 	)
@@ -328,14 +330,14 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().Len(leaseRes.Leases, 1)
 
 	// test query leases with wrong owner value
-	resp, err = cli.QueryLeasesExec(
+	_, err = cli.QueryLeasesExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--provider=cosmos102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt",
 	)
 	s.Require().Error(err)
 
 	// test query leases with wrong state value
-	resp, err = cli.QueryLeasesExec(
+	_, err = cli.QueryLeasesExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--state=hello",
 	)
@@ -352,7 +354,7 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	// fetch open orders
 	resp, err := cli.QueryOrdersExec(
 		val.ClientCtx.WithOutputFormat("json"),
-		fmt.Sprintf("--state=open"),
+		"--state=open",
 	)
 	s.Require().NoError(err)
 
@@ -379,7 +381,7 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	s.Require().NoError(err)
 
 	// Let's wait for 3 blocks to create leases and modify state of bid
-	_, err = s.network.WaitForHeight(height + 4)
+	_, err = s.network.WaitForHeightWithTimeout(height+3, 30*time.Second)
 	s.Require().NoError(err)
 
 	// test query matched bids
@@ -407,8 +409,8 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	height, err = s.network.LatestHeight()
 	s.Require().NoError(err)
 
-	// Let's wait for 3 blocks to create leases and modify state of bid
-	_, err = s.network.WaitForHeight(height + 2)
+	// Let's wait for 2 blocks to create leases and modify state of bid
+	_, err = s.network.WaitForHeightWithTimeout(height+2, 30*time.Second)
 	s.Require().NoError(err)
 
 	// fetch closed orders

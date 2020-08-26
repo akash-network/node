@@ -274,14 +274,3 @@ func (st *testSuite) createDeployment() (types.Deployment, []types.Group) {
 
 	return deployment, groups
 }
-
-func (st *testSuite) createActiveDeployment() (types.Deployment, []types.Group) {
-	st.t.Helper()
-
-	deployment, groups := st.createDeployment()
-
-	err := st.dkeeper.Create(st.ctx, deployment, groups)
-	require.NoError(st.t, err)
-
-	return deployment, groups
-}
