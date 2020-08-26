@@ -58,9 +58,9 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 
 	key := orderKey(order.ID())
 	// XXX TODO: check not overwrite
-  if store.Has(key) {
-    return types.Order{}, types.ErrorOrderExists
-  }
+	if store.Has(key) {
+		return types.Order{}, types.ErrOrderExists
+	}
 	store.Set(key, k.cdc.MustMarshalBinaryBare(&order))
 	k.updateOpenOrderIndex(store, order)
 

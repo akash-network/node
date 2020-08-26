@@ -1,9 +1,11 @@
 package types
 
 import (
+	fmt "fmt"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/validation"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
