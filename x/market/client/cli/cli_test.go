@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 
@@ -380,7 +381,7 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	s.Require().NoError(err)
 
 	// Let's wait for 3 blocks to create leases and modify state of bid
-	_, err = s.network.WaitForHeight(height + 4)
+	_, err = s.network.WaitForHeightWithTimeout(height+3, 30*time.Second)
 	s.Require().NoError(err)
 
 	// test query matched bids
@@ -408,8 +409,8 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	height, err = s.network.LatestHeight()
 	s.Require().NoError(err)
 
-	// Let's wait for 3 blocks to create leases and modify state of bid
-	_, err = s.network.WaitForHeight(height + 2)
+	// Let's wait for 2 blocks to create leases and modify state of bid
+	_, err = s.network.WaitForHeightWithTimeout(height+2, 30*time.Second)
 	s.Require().NoError(err)
 
 	// fetch closed orders

@@ -7,11 +7,6 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-// // GenesisState defines the basic genesis state used by provider module
-// type GenesisState struct {
-// 	Providers []types.Provider `json:"providers"`
-// }
-
 // ValidateGenesis does validation check of the Genesis and returns error incase of failure
 func ValidateGenesis(data *types.GenesisState) error {
 	return nil

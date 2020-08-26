@@ -69,7 +69,7 @@ shellcheck:
 	-x /shellcheck/script/shellcheck.sh
 
 test:
-	$(GO) test -tags=$(BUILD_MAINNET) ./...
+	$(GO) test -tags=$(BUILD_MAINNET)  -timeout 300s ./...
 
 test-nocache:
 	$(GO) test -tags=$(BUILD_MAINNET) -count=1 ./...
@@ -107,7 +107,7 @@ SUBLINTERS = deadcode \
 
 # TODO: ^ gochecknoglobals
 
-LINT = $(GOBIN)/golangci-lint run ./... --disable-all --enable 
+LINT = $(GOBIN)/golangci-lint run ./... --disable-all --deadline=5m --enable 
 
 # Execute the same lint methods as configured in .github/workflows/tests.yaml
 # Clear feedback from each method as it fails.

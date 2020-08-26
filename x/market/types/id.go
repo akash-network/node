@@ -49,16 +49,6 @@ func (id OrderID) String() string {
 	return sdkutil.FmtBlockID(&id.Owner, &id.DSeq, &id.GSeq, &id.OSeq, nil)
 }
 
-// BidID stores owner, provider and all other seq numbers.
-// A successful bid becomes a Lease(ID).
-// type BidID struct {
-// 	Owner    sdk.AccAddress `json:"owner"`
-// 	DSeq     uint64         `json:"dseq"`
-// 	GSeq     uint32         `json:"gseq"`
-// 	OSeq     uint32         `json:"oseq"`
-// 	Provider sdk.AccAddress `json:"provider"`
-// }
-
 // MakeBidID returns BidID instance with provided order details and provider
 func MakeBidID(id OrderID, provider sdk.AccAddress) BidID {
 	return BidID{
@@ -127,18 +117,9 @@ func BidIDString(id BidID) string {
 	return fmt.Sprintf("%s-%d-%d-%d-%s", id.Owner.String(), id.DSeq, id.GSeq, id.OSeq, id.Provider.String())
 }
 
-// LeaseID stores bid details of lease
-// type LeaseID BidID
-
 // MakeLeaseID returns LeaseID instance with provided bid details
 func MakeLeaseID(id BidID) LeaseID {
-	return LeaseID{
-		Owner:    id.Owner,
-		DSeq:     id.DSeq,
-		GSeq:     id.GSeq,
-		OSeq:     id.OSeq,
-		Provider: id.Provider,
-	}
+	return LeaseID(id)
 }
 
 // Equals method compares specific lease with provided lease

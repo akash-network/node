@@ -13,6 +13,12 @@ import (
 )
 
 var (
+	_ = func() string {
+		config := sdk.GetConfig()
+		config.SetBech32PrefixForAccount(sdkutil.Bech32PrefixAccAddr, sdkutil.Bech32PrefixAccPub)
+		return ""
+	}()
+
 	errWildcard = errors.New("wildcard string error can't be matched")
 	evOwnerKey  = "owner"
 	evDSeqKey   = "dseq"

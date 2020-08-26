@@ -9,58 +9,10 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
-// //go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
-
-// // DeploymentState defines state of deployment
-// type DeploymentState uint32
-
-// const (
-// 	// DeploymentActive is used when state of deployment is active
-// 	DeploymentActive DeploymentState = iota + 1 // active
-// 	// DeploymentClosed is used when state of deployment is closed
-// 	DeploymentClosed // closed
-// )
-
-// // DeploymentStateMap is used to decode deployment state flag value
-// var DeploymentStateMap = map[string]DeploymentState{
-// 	"active": DeploymentActive,
-// 	"closed": DeploymentClosed,
-// }
-
-// Deployment stores deploymentID, state and version details
-// type Deployment struct {
-// 	DeploymentID `json:"id"`
-// 	State        DeploymentState `json:"state"`
-// 	Version      []byte          `json:"version"`
-// }
-
 // ID method returns DeploymentID details of specific deployment
 func (obj Deployment) ID() DeploymentID {
 	return obj.DeploymentID
 }
-
-// // GroupState defines state of group
-// type GroupState uint32
-
-// const (
-// 	// GroupOpen is used when state of group is open
-// 	GroupOpen GroupState = iota + 1 // open
-// 	// GroupOrdered is used when state of group is ordered
-// 	GroupOrdered // ordered
-// 	// GroupMatched is used when state of group is matched
-// 	GroupMatched // matched
-// 	// GroupInsufficientFunds is used when group has insufficient funds
-// 	GroupInsufficientFunds // insufficient_funds
-// 	// GroupClosed is used when state of group is closed
-// 	GroupClosed // closed
-// )
-
-// GroupSpec stores group specifications
-// type GroupSpec struct {
-// 	Name         string          `json:"name"`
-// 	Requirements []sdk.Attribute `json:"requirements"`
-// 	Resources    []Resource      `json:"resources"`
-// }
 
 // GetResources method returns resources list in group
 func (g GroupSpec) GetResources() []types.Resource {
@@ -106,13 +58,6 @@ loop:
 	return true
 }
 
-// Group stores groupID, state and other specifications
-// type Group struct {
-// 	GroupID   `json:"id"`
-// 	State     GroupState `json:"state"`
-// 	GroupSpec `json:"spec"`
-// }
-
 // ID method returns GroupID details of specific group
 func (g Group) ID() GroupID {
 	return g.GroupID
@@ -148,23 +93,6 @@ func (g Group) GetName() string {
 func (g Group) GetResources() []types.Resource {
 	return g.GroupSpec.GetResources()
 }
-
-// // Resource stores unit, count and price of each resource
-// type Resource struct {
-// 	Unit  types.Unit `json:"unit"`
-// 	Count uint32     `json:"count"`
-// 	Price sdk.Coin   `json:"price"`
-// }
-
-// // GetUnit method returns unit of resource
-// func (r Resource) GetUnit() types.Unit {
-// 	return r.Unit
-// }
-
-// // GetCount method returns count of resource
-// func (r Resource) GetCount() uint32 {
-// 	return r.Count
-// }
 
 // FullPrice method returns full price of resource
 func (r Resource) FullPrice() sdk.Coin {

@@ -107,6 +107,7 @@ type testDist struct {
 }
 
 func (td *testDist) testFunc(t *testing.T) {
+	t.Logf("testing function with description: %s", td.desc)
 	originOID := testutil.OrderID(t)
 
 	distributionSpread := make(map[int]int, td.bidNum)

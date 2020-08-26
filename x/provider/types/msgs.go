@@ -18,9 +18,6 @@ var (
 	_, _, _ sdk.Msg = &MsgCreateProvider{}, &MsgUpdateProvider{}, &MsgDeleteProvider{}
 )
 
-// MsgCreateProvider defines an SDK message for creating a provider
-// type MsgCreateProvider Provider
-
 // NewMsgCreateProvider creates a new MsgCreateProvider instance
 func NewMsgCreateProvider(owner sdk.AccAddress, hostURI string, attributes Attributes) *MsgCreateProvider {
 	return &MsgCreateProvider{
@@ -57,18 +54,6 @@ func (msg MsgCreateProvider) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 
-// ToProvider returns Provider from msg
-func (msg MsgCreateProvider) ToProvider() Provider {
-	return Provider{
-		Owner:      msg.Owner,
-		HostURI:    msg.HostURI,
-		Attributes: msg.Attributes,
-	}
-}
-
-// MsgUpdateProvider defines an SDK message for updating a provider
-// type MsgUpdateProvider Provider
-
 // NewMsgUpdateProvider creates a new MsgUpdateProvider instance
 func NewMsgUpdateProvider(owner sdk.AccAddress, hostURI string, attributes Attributes) *MsgUpdateProvider {
 	return &MsgUpdateProvider{
@@ -104,20 +89,6 @@ func (msg MsgUpdateProvider) GetSignBytes() []byte {
 func (msg MsgUpdateProvider) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
-
-// ToProvider returns Provider from msg
-func (msg MsgUpdateProvider) ToProvider() Provider {
-	return Provider{
-		Owner:      msg.Owner,
-		HostURI:    msg.HostURI,
-		Attributes: msg.Attributes,
-	}
-}
-
-// MsgDeleteProvider defines an SDK message for deleting a provider
-// type MsgDeleteProvider struct {
-// 	Owner sdk.AccAddress `json:"owner"`
-// }
 
 // NewMsgDeleteProvider creates a new MsgDeleteProvider instance
 func NewMsgDeleteProvider(owner sdk.AccAddress) *MsgDeleteProvider {
