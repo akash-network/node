@@ -19,7 +19,7 @@ func deploymentKey(id types.DeploymentID) []byte {
 	buf := bytes.NewBuffer(deploymentPrefix)
 	buf.Write(id.Owner.Bytes())
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	return buf.Bytes()
 }
@@ -29,10 +29,10 @@ func groupKey(id types.GroupID) []byte {
 	buf := bytes.NewBuffer(groupPrefix)
 	buf.Write(id.Owner.Bytes())
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	return buf.Bytes()
 }
@@ -43,10 +43,10 @@ func groupOpenKey(id types.GroupID) []byte {
 	buf := bytes.NewBuffer(groupOpenPrefix)
 	buf.Write(id.Owner.Bytes())
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	return buf.Bytes()
 }
@@ -67,7 +67,7 @@ func groupsKey(id types.DeploymentID) []byte {
 	buf := bytes.NewBuffer(groupPrefix)
 	buf.Write(id.Owner.Bytes())
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	return buf.Bytes()
 }

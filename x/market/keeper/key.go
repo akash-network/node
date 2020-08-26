@@ -20,13 +20,13 @@ func orderKey(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(orderPrefix)
 	buf.Write(id.Owner.Bytes())
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	return buf.Bytes()
 }
@@ -35,13 +35,13 @@ func orderOpenKey(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(orderOpenPrefix)
 	buf.Write(id.Owner.Bytes())
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	return buf.Bytes()
 }
@@ -59,13 +59,13 @@ func bidKey(id types.BidID) []byte {
 	buf := bytes.NewBuffer(bidPrefix)
 	buf.Write(id.Owner.Bytes())
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	buf.Write(id.Provider.Bytes())
 	return buf.Bytes()
@@ -75,13 +75,13 @@ func leaseKey(id types.LeaseID) []byte {
 	buf := bytes.NewBuffer(leasePrefix)
 	buf.Write(id.Owner.Bytes())
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	buf.Write(id.Provider.Bytes())
 	return buf.Bytes()
@@ -91,13 +91,13 @@ func leaseKeyActive(id types.LeaseID) []byte {
 	buf := bytes.NewBuffer(leaseActivePrefix)
 	buf.Write(id.Owner.Bytes())
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	buf.Write(id.Provider.Bytes())
 	return buf.Bytes()
@@ -116,10 +116,10 @@ func ordersForGroupPrefix(id dtypes.GroupID) []byte {
 	buf := bytes.NewBuffer(orderPrefix)
 	buf.Write(id.Owner.Bytes())
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	return buf.Bytes()
 }
@@ -128,13 +128,13 @@ func bidsForOrderPrefix(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(bidPrefix)
 	buf.Write(id.Owner.Bytes())
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
-		return []byte{}
+		panic(err)
 	}
 	return buf.Bytes()
 }

@@ -81,7 +81,7 @@ func processEvents(bus pubsub.Bus, events []abci.Event) {
 	for _, ev := range events {
 		if mev, ok := processEvent(ev); ok {
 			if err := bus.Publish(mev); err != nil {
-				return
+				panic(err)
 			}
 			continue
 		}

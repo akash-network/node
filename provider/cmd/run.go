@@ -136,10 +136,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	service, err := provider.NewService(ctx, session, bus, cclient)
 	if err != nil {
-		if err = group.Wait(); err != nil {
-			return err
-		}
-		return err
+		return group.Wait()
 	}
 
 	gateway := gateway.NewServer(ctx, log, service, gwaddr)

@@ -156,7 +156,7 @@ func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 // updates.
 func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 	if err := handler.OnEndBlock(ctx, am.keepers); err != nil {
-		return nil
+		panic(err)
 	}
 	return []abci.ValidatorUpdate{}
 }
