@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/ovrclk/akash/cmd/common"
 	abci "github.com/tendermint/tendermint/abci/types"
 	logger "github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
@@ -172,7 +171,7 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 // Setup initializes a new AkashApp. A Nop logger is set in AkashApp.
 func Setup(isCheckTx bool) *AkashApp {
 	db := dbm.NewMemDB()
-	app := NewApp(logger.NewNopLogger(), db, nil, 5, map[int64]bool{}, common.DefaultNodeHome())
+	app := NewApp(logger.NewNopLogger(), db, nil, 5, map[int64]bool{}, DefaultHome)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := NewDefaultGenesisState()

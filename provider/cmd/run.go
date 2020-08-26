@@ -51,16 +51,27 @@ func runCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().String(flags.FlagChainID, "", "The network chain ID")
+	if err := viper.BindPFlag(flags.FlagChainID, cmd.Flags().Lookup(flags.FlagChainID)); err != nil {
+		return nil
+	}
+
 	flags.AddTxFlagsToCmd(cmd)
 
 	cmd.Flags().Bool(flagClusterK8s, false, "Use Kubernetes cluster")
-	viper.BindPFlag(flagClusterK8s, cmd.Flags().Lookup(flagClusterK8s))
+	if err := viper.BindPFlag(flagClusterK8s, cmd.Flags().Lookup(flagClusterK8s)); err != nil {
+		return nil
+	}
 
 	cmd.Flags().String(flagK8sManifestNS, "lease", "Cluster manifest namespace")
-	viper.BindPFlag(flagK8sManifestNS, cmd.Flags().Lookup(flagK8sManifestNS))
+	if err := viper.BindPFlag(flagK8sManifestNS, cmd.Flags().Lookup(flagK8sManifestNS)); err != nil {
+		return nil
+	}
 
 	cmd.Flags().String(flagGatewayListenAddress, "0.0.0.0:8080", "Gateway listen address")
-	viper.BindPFlag(flagGatewayListenAddress, cmd.Flags().Lookup(flagGatewayListenAddress))
+	if err := viper.BindPFlag(flagGatewayListenAddress, cmd.Flags().Lookup(flagGatewayListenAddress)); err != nil {
+		return nil
+	}
 
 	return cmd
 }
@@ -130,8 +141,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	service, err := provider.NewService(ctx, session, bus, cclient)
 	if err != nil {
-		group.Wait()
-		return err
+		return group.Wait()
 	}
 
 	gateway := gateway.NewServer(ctx, log, service, gwaddr)

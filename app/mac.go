@@ -8,7 +8,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
-func macPerms() map[string][]string {
+func MacPerms() map[string][]string {
 	return map[string][]string{
 		authtypes.FeeCollectorName:     nil,
 		distrtypes.ModuleName:          nil,
@@ -19,8 +19,8 @@ func macPerms() map[string][]string {
 	}
 }
 
-func macAddrs() map[string]bool {
-	perms := macPerms()
+func MacAddrs() map[string]bool {
+	perms := MacPerms()
 	addrs := make(map[string]bool, len(perms))
 	for k := range perms {
 		addrs[authtypes.NewModuleAddress(k).String()] = true

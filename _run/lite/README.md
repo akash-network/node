@@ -63,7 +63,7 @@ make clean init
 
 The following command will
 
-* build `akashd` and `akashctl`
+* build `akash`
 * create configuration directories
 * create a genesis file with [accounts](#setup) and single validator.
 

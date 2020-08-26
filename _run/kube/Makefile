@@ -9,6 +9,7 @@ GATEWAY_ENDPOINT ?= http://$(GATEWAY_HOST)
 provider-run:
 	AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS="false" \
 		$(AKASHCTL) $(KEY_OPTS) provider run \
+			--chain-id "$(CHAIN_NAME)" \
 			--from "$(PROVIDER_KEY_NAME)" \
 			--cluster-k8s \
 			--gateway-listen-address "$(GATEWAY_HOST)"

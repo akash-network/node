@@ -140,7 +140,9 @@ loop:
 
 			// Publish to children.
 			for sub := range b.subscriptions {
-				sub.Publish(ev)
+				if err := sub.Publish(ev); err != nil {
+					panic(err)
+				}
 			}
 
 		case ch := <-b.subch:

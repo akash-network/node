@@ -39,5 +39,5 @@ func ValidateDeploymentGroup(gspec dtypes.GroupSpec) error {
 	if err := validateGroupPricing(defaultConfig, gspec); err != nil {
 		return err
 	}
-	return nil
+	return validateOrderBidDuration(defaultConfig, gspec)
 }

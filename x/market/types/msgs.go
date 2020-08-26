@@ -14,13 +14,6 @@ var (
 	_, _, _ sdk.Msg = &MsgCreateBid{}, &MsgCloseBid{}, &MsgCloseOrder{}
 )
 
-// MsgCreateBid defines an SDK message for creating Bid
-// type MsgCreateBid struct {
-// 	Order    OrderID        `json:"order"`
-// 	Provider sdk.AccAddress `json:"owner"`
-// 	Price    sdk.Coin       `json:"price"`
-// }
-
 // NewMsgCreateBid creates a new MsgCreateBid instance
 func NewMsgCreateBid(id OrderID, provider sdk.AccAddress, price sdk.Coin) *MsgCreateBid {
 	return &MsgCreateBid{
@@ -63,11 +56,6 @@ func (msg MsgCreateBid) ValidateBasic() error {
 	return nil
 }
 
-// MsgCloseBid defines an SDK message for closing bid
-// type MsgCloseBid struct {
-// 	BidID `json:"id"`
-// }
-
 // NewMsgCloseBid creates a new MsgCloseBid instance
 func NewMsgCloseBid(id BidID) *MsgCloseBid {
 	return &MsgCloseBid{
@@ -95,11 +83,6 @@ func (msg MsgCloseBid) GetSigners() []sdk.AccAddress {
 func (msg MsgCloseBid) ValidateBasic() error {
 	return msg.BidID.Validate()
 }
-
-// MsgCloseOrder defines an SDK message for closing order
-// type MsgCloseOrder struct {
-// 	OrderID `json:"id"`
-// }
 
 // NewMsgCloseOrder creates a new MsgCloseOrder instance
 func NewMsgCloseOrder(id OrderID) *MsgCloseOrder {

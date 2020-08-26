@@ -121,14 +121,14 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	s.Require().NotEqual(deployment.Deployment.Version, deploymentV2.Deployment.Version)
 
 	// test query deployments with wrong owner value
-	resp, err = cli.QueryDeploymentsExec(
+	_, err = cli.QueryDeploymentsExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--owner=cosmos102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt",
 	)
 	s.Require().Error(err)
 
 	// test query deployments with wrong state value
-	resp, err = cli.QueryDeploymentsExec(
+	_, err = cli.QueryDeploymentsExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--state=hello",
 	)
