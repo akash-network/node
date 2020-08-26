@@ -23,7 +23,7 @@ var (
 	keyAcc, _         = sdk.AccAddressFromBech32("akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr")
 	errWildcard       = errors.New("wildcard string error can't be matched")
 	tmpSum            = sha256.Sum256([]byte(keyAcc))
-	deploymentVersion = tmpSum[:]
+	deploymentVersion = encodeHex(tmpSum[:])
 )
 
 type testEventParsing struct {
@@ -334,8 +334,9 @@ func TestEventParsing(t *testing.T) {
 }
 
 func TestVersionEncoding(t *testing.T) {
-	versionHex := encodeHex(deploymentVersion)
+	versionHex := encodeHex(tmpSum[:])
 	assert.Len(t, versionHex, encodedVersionHexLen)
-	decodedVersion := decodeHex(versionHex)
-	assert.Equal(t, deploymentVersion, decodedVersion)
+	decodedVersion, err := decodeHex(versionHex)
+	assert.NoError(t, err)
+	assert.Equal(t, tmpSum[:], decodedVersion)
 }
