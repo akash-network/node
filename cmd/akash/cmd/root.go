@@ -141,7 +141,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 }
 
 func exportAppStateAndTMValidators(
-	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailWhiteList []string,
+	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailAllowedAddrs []string,
 ) (json.RawMessage, []tmtypes.GenesisValidator, *abci.ConsensusParams, error) {
 
 	app := app.NewApp(logger, db, ioutil.Discard, uint(1), map[int64]bool{}, "")
@@ -151,10 +151,10 @@ func exportAppStateAndTMValidators(
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		return app.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
+		return app.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs)
 	}
 
-	return app.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
+	return app.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs)
 }
 
 func queryCmd() *cobra.Command {

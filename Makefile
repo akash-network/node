@@ -273,29 +273,29 @@ SDK_QUERY_TYPES  	= third_party/proto/cosmos/base/query/v1beta1
 SDK_COIN_TYPES  	= third_party/proto/cosmos/base/v1beta1
 
 proto-update-deps:
-	@mkdir -p $(GOGO_PROTO_TYPES)
-	@curl -sSL $(GOGO_PROTO_URL)/gogoproto/gogo.proto > $(GOGO_PROTO_TYPES)/gogo.proto
+	mkdir -p $(GOGO_PROTO_TYPES)
+	curl -sSL $(GOGO_PROTO_URL)/gogoproto/gogo.proto > $(GOGO_PROTO_TYPES)/gogo.proto
 
-	@mkdir -p $(COSMOS_PROTO_TYPES)
-	@curl -sSL $(COSMOS_PROTO_URL)/cosmos.proto > $(COSMOS_PROTO_TYPES)/cosmos.proto
+	mkdir -p $(COSMOS_PROTO_TYPES)
+	curl -sSL $(COSMOS_PROTO_URL)/cosmos.proto > $(COSMOS_PROTO_TYPES)/cosmos.proto
 
-	@mkdir -p $(TM_ABCI_TYPES)
-	@curl -sSL $(TM_URL)/abci/types.proto > $(TM_ABCI_TYPES)/types.proto
+	mkdir -p $(TM_ABCI_TYPES)
+	curl -sSL $(TM_URL)/abci/types.proto > $(TM_ABCI_TYPES)/types.proto
 
-	@mkdir -p $(TM_VERSION)
-	@curl -sSL $(TM_URL)/version/types.proto > $(TM_VERSION)/types.proto
+	mkdir -p $(TM_VERSION)
+	curl -sSL $(TM_URL)/version/types.proto > $(TM_VERSION)/types.proto
 
-	@mkdir -p $(TM_TYPES)
-	@curl -sSL $(TM_URL)/types/types.proto > $(TM_TYPES)/types.proto
-	@curl -sSL $(TM_URL)/types/evidence.proto > $(TM_TYPES)/evidence.proto
-	@curl -sSL $(TM_URL)/types/params.proto > $(TM_TYPES)/params.proto
+	mkdir -p $(TM_TYPES)
+	curl -sSL $(TM_URL)/types/types.proto > $(TM_TYPES)/types.proto
+	curl -sSL $(TM_URL)/types/evidence.proto > $(TM_TYPES)/evidence.proto
+	curl -sSL $(TM_URL)/types/params.proto > $(TM_TYPES)/params.proto
 
-	@mkdir -p $(TM_CRYPTO_TYPES)
-	@curl -sSL $(TM_URL)/crypto/proof.proto > $(TM_CRYPTO_TYPES)/proof.proto
-	@curl -sSL $(TM_URL)/crypto/keys.proto > $(TM_CRYPTO_TYPES)/keys.proto
+	mkdir -p $(TM_CRYPTO_TYPES)
+	curl -sSL $(TM_URL)/crypto/proof.proto > $(TM_CRYPTO_TYPES)/proof.proto
+	curl -sSL $(TM_URL)/crypto/keys.proto > $(TM_CRYPTO_TYPES)/keys.proto
 
-	@mkdir -p $(TM_LIBS)
-	@curl -sSL $(TM_URL)/libs/bits/types.proto > $(TM_LIBS)/types.proto
+	mkdir -p $(TM_LIBS)
+	curl -sSL $(TM_URL)/libs/bits/types.proto > $(TM_LIBS)/types.proto
 
 	mkdir -p $(SDK_ABCI_TYPES)
 	curl -sSL $(COSMOS_SDK_PROTO_URL)/abci/v1beta1/abci.proto > $(SDK_ABCI_TYPES)/abci.proto
@@ -315,10 +315,10 @@ BUF_VERSION ?= 0.11.0
 
 PROTOC_VERSION ?= 3.11.2
 ifeq ($(UNAME_S),Linux)
-  PROTOC_ZIP ?= protoc-3.11.2-linux-x86_64.zip
+  PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-linux-x86_64.zip
 endif
 ifeq ($(UNAME_S),Darwin)
-  PROTOC_ZIP ?= protoc-3.11.2-osx-x86_64.zip
+  PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-osx-x86_64.zip
 endif
 
 proto-tools: proto-tools-stamp buf

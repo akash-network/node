@@ -16,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
@@ -125,6 +126,7 @@ func NewApp(
 	bapp.SetCommitMultiStoreTracer(tio)
 	bapp.SetAppVersion(version.Version)
 	bapp.GRPCQueryRouter().SetInterfaceRegistry(interfaceRegistry)
+	bapp.GRPCQueryRouter().RegisterSimulateService(bapp.Simulate, interfaceRegistry, std.DefaultPublicKeyCodec{})
 
 	keys := kvStoreKeys()
 	tkeys := transientStoreKeys()
@@ -142,7 +144,7 @@ func NewApp(
 	app.keeper.params = initParamsKeeper(appCodec, cdc, app.keys[paramstypes.StoreKey], tkeys[paramstypes.TStoreKey])
 
 	// set the BaseApp's parameter store
-	bapp.SetParamStore(app.keeper.params.Subspace(bam.Paramspace).WithKeyTable(std.ConsensusParamsKeyTable()))
+	bapp.SetParamStore(app.keeper.params.Subspace(bam.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
 
 	app.keeper.acct = authkeeper.NewAccountKeeper(
 		appCodec,
@@ -159,14 +161,6 @@ func NewApp(
 		app.GetSubspace(banktypes.ModuleName),
 		app.ModuleAccountAddrs(),
 	)
-
-	// app.keeper.supply = supply.NewKeeper(
-	// 	app.cdc,
-	// 	app.keys[supply.StoreKey],
-	// 	app.keeper.acct,
-	// 	app.keeper.bank,
-	// 	macPerms(),
-	// )
 
 	skeeper := stakingkeeper.NewKeeper(
 		appCodec,
@@ -254,7 +248,7 @@ func NewApp(
 	app.mm = module.NewManager(
 		append([]module.AppModule{
 			genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx, encodingConfig.TxConfig),
-			auth.NewAppModule(appCodec, app.keeper.acct),
+			auth.NewAppModule(appCodec, app.keeper.acct, authsims.RandomGenesisAccounts),
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			crisis.NewAppModule(&app.keeper.crisis),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
@@ -302,12 +296,12 @@ func NewApp(
 	)
 
 	app.mm.RegisterInvariants(&app.keeper.crisis)
-	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), codec.NewAminoCodec(encodingConfig.Amino))
+	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
 	app.mm.RegisterQueryServices(app.GRPCQueryRouter())
 
 	app.sm = module.NewSimulationManager(
 		append([]module.AppModuleSimulation{
-			auth.NewAppModule(appCodec, app.keeper.acct),
+			auth.NewAppModule(appCodec, app.keeper.acct, authsims.RandomGenesisAccounts),
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
 			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
@@ -380,7 +374,7 @@ func (app *AkashApp) EndBlocker(
 	return app.mm.EndBlock(ctx, req)
 }
 
-// LegacyAmino returns AkashApp's codec.
+// LegacyAmino returns AkashApp's amino codec.
 func (app *AkashApp) LegacyAmino() *codec.LegacyAmino {
 	return app.cdc
 }
@@ -425,11 +419,10 @@ func (app *AkashApp) SimulationManager() *module.SimulationManager {
 // API server.
 func (app *AkashApp) RegisterAPIRoutes(apiSvr *api.Server) {
 	clientCtx := apiSvr.ClientCtx
-	// amino is needed here for backwards compatibility of REST routes
-	clientCtx = clientCtx.WithJSONMarshaler(clientCtx.LegacyAmino)
 	rpc.RegisterRoutes(clientCtx, apiSvr.Router)
 	authrest.RegisterTxRoutes(clientCtx, apiSvr.Router)
 	ModuleBasics().RegisterRESTRoutes(clientCtx, apiSvr.Router)
+	ModuleBasics().RegisterGRPCRoutes(apiSvr.ClientCtx, apiSvr.GRPCRouter)
 }
 
 // LoadHeight method of AkashApp loads baseapp application version with given height

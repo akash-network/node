@@ -269,7 +269,7 @@ func fetchExistingLeases(_ context.Context, session session.Session) ([]event.Le
 		res, err := session.Client().Query().Group(
 			context.Background(),
 			&dtypes.QueryGroupRequest{
-				ID: lease.LeaseID.BidID().GroupID(),
+				ID: lease.LeaseID.GroupID(),
 			},
 		)
 		if err != nil {
