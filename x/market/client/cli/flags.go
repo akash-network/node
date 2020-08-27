@@ -10,8 +10,6 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const InvalidState = "invalid"
-
 var (
 	ErrProviderValue = errors.New("query: invalid provider value")
 	ErrStateValue    = errors.New("query: invalid state value")
