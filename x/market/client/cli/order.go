@@ -28,13 +28,10 @@ func cmdGetOrders() *cobra.Command {
 			}
 
 			// checking state flag
-			stateVal, ok := types.Order_State_value[state]
-
-			if (!ok && (state != "")) || state == InvalidState {
+			ofilters.State = types.Order_State(types.Order_State_value[state])
+			if state != "" && ofilters.State == types.OrderStateInvalid {
 				return ErrStateValue
 			}
-
-			ofilters.State = types.Order_State(stateVal)
 
 			pageReq, err := client.ReadPageRequest(cmd.Flags())
 			if err != nil {

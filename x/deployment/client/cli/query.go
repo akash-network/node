@@ -49,13 +49,10 @@ func cmdDeployments() *cobra.Command {
 			}
 
 			// checking state flag
-			stateVal, ok := types.Deployment_State_value[state]
-
-			if (!ok && (state != "")) || state == "invalid" {
+			dfilters.State = types.Deployment_State(types.Deployment_State_value[state])
+			if state != "" && dfilters.State == types.DeploymentStateInvalid {
 				return ErrStateValue
 			}
-
-			dfilters.State = types.Deployment_State(stateVal)
 
 			pageReq, err := client.ReadPageRequest(cmd.Flags())
 			if err != nil {
