@@ -1,0 +1,126 @@
+syntax = "proto3";
+package akash.market;
+
+import "gogoproto/gogo.proto";
+import "akash/deployment/group.proto";
+
+option go_package = "github.com/ovrclk/akash/x/market/types";
+
+// MsgCloseOrder defines an SDK message for closing order
+message MsgCloseOrder {
+    option (gogoproto.equal) = false;
+
+    OrderID order_id = 1 [
+        (gogoproto.customname) = "OrderID",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+}
+
+// OrderID stores owner and all other seq numbers
+message OrderID {
+    option (gogoproto.equal) = true;
+    option (gogoproto.goproto_stringer) = false;
+
+    bytes owner = 1 [
+        (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)  = "owner",
+        (gogoproto.moretags) = "yaml:\"owner\""
+    ];
+    uint64 dseq = 2 [
+        (gogoproto.customname) = "DSeq",
+        (gogoproto.jsontag)    = "dseq",
+        (gogoproto.moretags)   = "yaml:\"dseq\""
+    ];
+    uint32 gseq = 3 [
+        (gogoproto.customname) = "GSeq",
+        (gogoproto.jsontag)    = "gseq",
+        (gogoproto.moretags)   = "yaml:\"gseq\""
+    ];
+    uint32 oseq = 4 [
+        (gogoproto.customname) = "OSeq",
+        (gogoproto.jsontag)    = "oseq",
+        (gogoproto.moretags)   = "yaml:\"oseq\""
+    ];
+}
+
+// Order stores orderID, state of order and other details
+message Order {
+    option (gogoproto.equal) = false;
+    option (gogoproto.goproto_stringer) = false;
+
+    OrderID order_id = 1 [
+        (gogoproto.customname) = "OrderID",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+
+    enum State {
+        option (gogoproto.goproto_enum_prefix) = false;
+
+        // Prefix should start with 0 in enum. So declaring dummy state
+        invalid = 0 [
+            (gogoproto.enumvalue_customname) = "OrderStateInvalid"
+        ];
+        open = 1 [
+            (gogoproto.enumvalue_customname) = "OrderOpen"
+        ];
+        matched = 2 [
+            (gogoproto.enumvalue_customname) = "OrderMatched"
+        ]; 
+        closed = 3 [
+            (gogoproto.enumvalue_customname) = "OrderClosed"
+        ];
+    }
+
+    State state = 2 [
+        (gogoproto.jsontag)    = "state",
+        (gogoproto.moretags)   = "yaml:\"state\""
+    ];
+    int64 start_at = 3 [
+        (gogoproto.jsontag)    = "start-at",
+        (gogoproto.moretags)   = "yaml:\"start-at\""
+    ];
+    akash.deployment.GroupSpec spec = 4 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "spec",
+        (gogoproto.moretags)   = "yaml:\"spec\""
+    ];
+    int64 close_at = 5 [
+        (gogoproto.jsontag)    = "close-at",
+        (gogoproto.moretags)   = "yaml:\"close-at\""
+    ];
+}
+
+// OrderFilters defines flags for order list filter
+message OrderFilters {
+    option (gogoproto.equal) = false;
+
+    bytes owner = 1 [
+        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)    = "owner",
+        (gogoproto.moretags)   = "yaml:\"owner\""
+    ];
+    uint64 dseq = 2 [
+        (gogoproto.customname) = "DSeq",
+        (gogoproto.jsontag)    = "dseq",
+        (gogoproto.moretags)   = "yaml:\"dseq\""
+    ];
+    uint32 gseq = 3 [
+        (gogoproto.customname) = "GSeq",
+        (gogoproto.jsontag)    = "gseq",
+        (gogoproto.moretags)   = "yaml:\"gseq\""
+    ];
+    uint32 oseq = 4 [
+        (gogoproto.customname) = "OSeq",
+        (gogoproto.jsontag)    = "oseq",
+        (gogoproto.moretags)   = "yaml:\"oseq\""
+    ];
+    int32 state = 5 [
+        (gogoproto.casttype)   = "Order_State",
+        (gogoproto.jsontag)    = "state",
+        (gogoproto.moretags)   = "yaml:\"state\""
+    ];
+}

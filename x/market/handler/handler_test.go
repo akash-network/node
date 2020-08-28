@@ -8,14 +8,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/store"
+	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	abci "github.com/tendermint/tendermint/abci/types"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	"github.com/tendermint/tendermint/libs/rand"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
 	dkeeper "github.com/ovrclk/akash/x/deployment/keeper"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
@@ -33,7 +33,7 @@ type testSuite struct {
 	mkeeper keeper.Keeper
 	dkeeper dkeeper.Keeper
 	pkeeper pkeeper.Keeper
-	bkeeper bank.Keeper
+	bkeeper bankkeeper.Keeper
 
 	handler sdk.Handler
 }
@@ -56,11 +56,11 @@ func setupTestSuite(t *testing.T) *testSuite {
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
 
-	suite.ctx = sdk.NewContext(suite.ms, abci.Header{}, true, testutil.Logger(t))
+	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
 
-	suite.mkeeper = keeper.NewKeeper(app.MakeCodec(), mKey)
-	suite.dkeeper = dkeeper.NewKeeper(app.MakeCodec(), dKey)
-	suite.pkeeper = pkeeper.NewKeeper(app.MakeCodec(), pKey)
+	suite.mkeeper = keeper.NewKeeper(types.ModuleCdc, mKey)
+	suite.dkeeper = dkeeper.NewKeeper(types.ModuleCdc, dKey)
+	suite.pkeeper = pkeeper.NewKeeper(types.ModuleCdc, pKey)
 
 	suite.handler = handler.NewHandler(handler.Keepers{
 		Market:     suite.mkeeper,
@@ -75,7 +75,7 @@ func setupTestSuite(t *testing.T) *testSuite {
 func TestProviderBadMessageType(t *testing.T) {
 	suite := setupTestSuite(t)
 
-	res, err := suite.handler(suite.ctx, sdk.NewTestMsg())
+	res, err := suite.handler(suite.ctx, sdk.Msg(sdktestdata.NewTestMsg()))
 	require.Nil(t, res)
 	require.Error(t, err)
 	require.True(t, errors.Is(err, sdkerrors.ErrUnknownRequest))
@@ -88,7 +88,7 @@ func TestCreateBidValid(t *testing.T) {
 
 	provider := suite.createProvider(gspec.Requirements).Owner
 
-	msg := types.MsgCreateBid{
+	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: provider,
 		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(1)),
@@ -120,7 +120,7 @@ func TestCreateBidInvalidPrice(t *testing.T) {
 
 	provider := suite.createProvider(gspec.Requirements).Owner
 
-	msg := types.MsgCreateBid{
+	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: provider,
 		Price:    sdk.Coin{},
@@ -137,7 +137,7 @@ func TestCreateBidInvalidPrice(t *testing.T) {
 func TestCreateBidNonExistingOrder(t *testing.T) {
 	suite := setupTestSuite(t)
 
-	msg := types.MsgCreateBid{
+	msg := &types.MsgCreateBid{
 		Order:    types.OrderID{},
 		Provider: nil,
 		Price:    sdk.Coin{},
@@ -158,7 +158,7 @@ func TestCreateBidClosedOrder(t *testing.T) {
 
 	suite.mkeeper.OnOrderClosed(suite.ctx, order)
 
-	msg := types.MsgCreateBid{
+	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: suite.createProvider(gspec.Requirements).Owner,
 		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(math.MaxInt64)),
@@ -179,7 +179,7 @@ func TestCreateBidOverprice(t *testing.T) {
 	}
 	order, gspec := suite.createOrder(resources)
 
-	msg := types.MsgCreateBid{
+	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: suite.createProvider(gspec.Requirements).Owner,
 		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(math.MaxInt64)),
@@ -195,7 +195,7 @@ func TestCreateBidInvalidProvider(t *testing.T) {
 
 	order, _ := suite.createOrder(testutil.Resources(t))
 
-	msg := types.MsgCreateBid{
+	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: nil,
 		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(1)),
@@ -211,7 +211,7 @@ func TestCreateBidInvalidAttributes(t *testing.T) {
 
 	order, _ := suite.createOrder(testutil.Resources(t))
 
-	msg := types.MsgCreateBid{
+	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: suite.createProvider(testutil.Attributes(t)).Owner,
 		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(1)),
@@ -227,7 +227,7 @@ func TestCreateBidAlreadyExists(t *testing.T) {
 
 	order, gspec := suite.createOrder(testutil.Resources(t))
 
-	msg := types.MsgCreateBid{
+	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: suite.createProvider(gspec.Requirements).Owner,
 		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(1)),
@@ -246,7 +246,7 @@ func TestCloseOrderNonExisting(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	dgroup := testutil.DeploymentGroup(suite.t, testutil.DeploymentID(suite.t), 0)
-	msg := types.MsgCloseOrder{
+	msg := &types.MsgCloseOrder{
 		OrderID: types.MakeOrderID(dgroup.ID(), 1),
 	}
 
@@ -260,7 +260,7 @@ func TestCloseOrderWithoutLease(t *testing.T) {
 
 	order, _ := suite.createOrder(testutil.Resources(t))
 
-	msg := types.MsgCloseOrder{
+	msg := &types.MsgCloseOrder{
 		OrderID: order.ID(),
 	}
 
@@ -274,7 +274,7 @@ func TestCloseOrderValid(t *testing.T) {
 
 	_, _, order := suite.createLease()
 
-	msg := types.MsgCloseOrder{
+	msg := &types.MsgCloseOrder{
 		OrderID: order.ID(),
 	}
 
@@ -299,7 +299,7 @@ func TestCloseBidNonExisting(t *testing.T) {
 
 	provider := suite.createProvider(gspec.Requirements).Owner
 
-	msg := types.MsgCloseBid{
+	msg := &types.MsgCloseBid{
 		BidID: types.MakeBidID(order.ID(), provider),
 	}
 
@@ -315,7 +315,7 @@ func TestCloseBidUnknownLease(t *testing.T) {
 
 	suite.mkeeper.OnBidMatched(suite.ctx, bid)
 
-	msg := types.MsgCloseBid{
+	msg := &types.MsgCloseBid{
 		BidID: bid.ID(),
 	}
 
@@ -329,7 +329,7 @@ func TestCloseBidValid(t *testing.T) {
 
 	_, bid, _ := suite.createLease()
 
-	msg := types.MsgCloseBid{
+	msg := &types.MsgCloseBid{
 		BidID: bid.ID(),
 	}
 
@@ -352,7 +352,7 @@ func TestCloseBidWithStateOpen(t *testing.T) {
 
 	bid, _ := suite.createBid()
 
-	msg := types.MsgCloseBid{
+	msg := &types.MsgCloseBid{
 		BidID: bid.ID(),
 	}
 
@@ -378,7 +378,7 @@ func TestCloseBidNotActiveLease(t *testing.T) {
 	suite.mkeeper.OnLeaseClosed(suite.ctx, types.Lease{
 		LeaseID: lease,
 	})
-	msg := types.MsgCloseBid{
+	msg := &types.MsgCloseBid{
 		BidID: bid.ID(),
 	}
 
@@ -400,7 +400,7 @@ func TestCloseBidUnknownOrder(t *testing.T) {
 
 	suite.mkeeper.CreateLease(suite.ctx, bid)
 
-	msg := types.MsgCloseBid{
+	msg := &types.MsgCloseBid{
 		BidID: bid.ID(),
 	}
 
@@ -430,7 +430,7 @@ func (st *testSuite) createBid() (types.Bid, types.Order) {
 	require.NoError(st.t, err)
 	require.Equal(st.t, order.ID(), bid.ID().OrderID())
 	require.Equal(st.t, price, bid.Price)
-	require.Equal(st.t, provider, bid.Provider)
+	require.Equal(st.t, provider, bid.ID().Provider)
 	return bid, order
 }
 
@@ -438,7 +438,7 @@ func (st *testSuite) createOrder(resources []dtypes.Resource) (types.Order, dtyp
 	st.t.Helper()
 	group := testutil.DeploymentGroup(st.t, testutil.DeploymentID(st.t), 0)
 
-	group.Resources = resources
+	group.GroupSpec.Resources = resources
 	order, err := st.mkeeper.CreateOrder(st.ctx, group.ID(), group.GroupSpec)
 	require.NoError(st.t, err)
 	require.Equal(st.t, group.ID(), order.ID().GroupID())

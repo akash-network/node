@@ -32,8 +32,8 @@ type OrderFilters struct {
 	Owner sdk.AccAddress
 	// State flag value given
 	StateFlagVal string
-	// Actual state value decoded from OrderStateMap
-	State types.OrderState
+	// Actual state value decoded from Order_State_value
+	State types.Order_State
 }
 
 // BidFilters defines flags for bid list filter
@@ -41,8 +41,8 @@ type BidFilters struct {
 	Owner sdk.AccAddress
 	// State flag value given
 	StateFlagVal string
-	// Actual state value decoded from BidStateMap
-	State types.BidState
+	// Actual state value decoded from Bid_State_value
+	State types.Bid_State
 }
 
 // LeaseFilters defines flags for lease list filter
@@ -50,8 +50,8 @@ type LeaseFilters struct {
 	Owner sdk.AccAddress
 	// State flag value given
 	StateFlagVal string
-	// Actual state value decoded from LeaseStateMap
-	State types.LeaseState
+	// Actual state value decoded from Lease_State_value
+	State types.Lease_State
 }
 
 // Accept returns true if object matches filter requirements

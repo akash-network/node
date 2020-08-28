@@ -2,14 +2,12 @@ package cli
 
 import (
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 )
 
 // GetQueryCmd returns the transaction commands for the market module
-func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
+func GetQueryCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
@@ -19,16 +17,16 @@ func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	cmd.AddCommand(flags.GetCommands(
-		getOrderCmd(key, cdc),
-		getBidCmd(key, cdc),
-		getLeaseCmd(key, cdc),
-	)...)
+	cmd.AddCommand(
+		getOrderCmd(),
+		getBidCmd(),
+		getLeaseCmd(),
+	)
 
 	return cmd
 }
 
-func getOrderCmd(key string, cdc *codec.Codec) *cobra.Command {
+func getOrderCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "order",
 		Short:                      "Order query commands",
@@ -37,15 +35,15 @@ func getOrderCmd(key string, cdc *codec.Codec) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	cmd.AddCommand(flags.GetCommands(
-		cmdGetOrders(key, cdc),
-		cmdGetOrder(key, cdc),
-	)...)
+	cmd.AddCommand(
+		cmdGetOrders(),
+		cmdGetOrder(),
+	)
 
 	return cmd
 }
 
-func getBidCmd(key string, cdc *codec.Codec) *cobra.Command {
+func getBidCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "bid",
 		Short:                      "Bid query commands",
@@ -54,15 +52,15 @@ func getBidCmd(key string, cdc *codec.Codec) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	cmd.AddCommand(flags.GetCommands(
-		cmdGetBids(key, cdc),
-		cmdGetBid(key, cdc),
-	)...)
+	cmd.AddCommand(
+		cmdGetBids(),
+		cmdGetBid(),
+	)
 
 	return cmd
 }
 
-func getLeaseCmd(key string, cdc *codec.Codec) *cobra.Command {
+func getLeaseCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "lease",
 		Short:                      "Lease query commands",
@@ -71,10 +69,10 @@ func getLeaseCmd(key string, cdc *codec.Codec) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	cmd.AddCommand(flags.GetCommands(
-		cmdGetLeases(key, cdc),
-		cmdGetLease(key, cdc),
-	)...)
+	cmd.AddCommand(
+		cmdGetLeases(),
+		cmdGetLease(),
+	)
 
 	return cmd
 }

@@ -1,18 +1,17 @@
 package cli
 
 import (
+	"context"
+
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/x/provider/query"
 	"github.com/ovrclk/akash/x/provider/types"
 	"github.com/spf13/cobra"
 )
 
 // GetQueryCmd returns the transaction commands for the provider module
-func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
+func GetQueryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Provider query commands",
@@ -21,47 +20,80 @@ func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	cmd.AddCommand(flags.GetCommands(
-		cmdGetProviders(key, cdc),
-		cmdGetProvider(key, cdc),
-	)...)
+	cmd.AddCommand(
+		cmdGetProviders(),
+		cmdGetProvider(),
+	)
 
 	return cmd
 }
 
-func cmdGetProviders(key string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+func cmdGetProviders() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Query for all providers",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-
-			obj, err := query.NewClient(ctx, key).Providers()
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
-			return ctx.PrintOutput(obj)
+
+			queryClient := types.NewQueryClient(clientCtx)
+
+			pageReq, err := client.ReadPageRequest(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			params := &types.QueryProvidersRequest{
+				Pagination: pageReq,
+			}
+
+			res, err := queryClient.Providers(context.Background(), params)
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintOutput(res)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	flags.AddPaginationFlagsToCmd(cmd, "providers")
+
+	return cmd
 }
 
-func cmdGetProvider(key string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
+func cmdGetProvider() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "get [address]",
 		Short: "Query provider",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
-			id, err := sdk.AccAddressFromBech32(args[0])
+			queryClient := types.NewQueryClient(clientCtx)
+
+			owner, err := sdk.AccAddressFromBech32(args[0])
 			if err != nil {
 				return err
 			}
-			obj, err := query.NewClient(ctx, key).Provider(id)
+
+			res, err := queryClient.Provider(context.Background(), &types.QueryProviderRequest{Owner: owner})
 			if err != nil {
 				return err
 			}
-			return ctx.PrintOutput(obj)
+
+			return clientCtx.PrintOutput(&res.Provider)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+
+	return cmd
 }

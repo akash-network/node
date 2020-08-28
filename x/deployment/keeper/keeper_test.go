@@ -8,10 +8,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
@@ -60,7 +59,7 @@ func Test_Create(t *testing.T) {
 	{
 		deployment := testutil.Deployment(t)
 		groups := testutil.DeploymentGroups(t, deployment.ID(), 0)
-		keeper.Create(ctx, deployment, groups)
+		assert.NoError(t, keeper.Create(ctx, deployment, groups))
 	}
 
 	t.Run("groups written - read all", func(t *testing.T) {
@@ -328,7 +327,7 @@ func createActiveDeployment(t testing.TB, ctx sdk.Context, keeper keeper.Keeper)
 	return groups
 }
 
-func createDeploymentsWithState(t testing.TB, ctx sdk.Context, gState types.GroupState, keeper keeper.Keeper) []types.Group {
+func createDeploymentsWithState(t testing.TB, ctx sdk.Context, gState types.Group_State, keeper keeper.Keeper) []types.Group {
 	t.Helper()
 
 	deployment := testutil.Deployment(t)
@@ -354,6 +353,6 @@ func setupKeeper(t testing.TB) (sdk.Context, keeper.Keeper) {
 	ms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
 	err := ms.LoadLatestVersion()
 	require.NoError(t, err)
-	ctx := sdk.NewContext(ms, abci.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))
-	return ctx, keeper.NewKeeper(app.MakeCodec(), key)
+	ctx := sdk.NewContext(ms, tmproto.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))
+	return ctx, keeper.NewKeeper(types.ModuleCdc, key)
 }

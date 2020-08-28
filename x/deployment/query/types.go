@@ -15,7 +15,7 @@ type DeploymentFilters struct {
 	// State flag value given
 	StateFlagVal string
 	// Actual state value decoded from DeploymentStateMap
-	State types.DeploymentState
+	State types.Deployment_State
 }
 
 // Accept returns whether deployment filters valid or not
@@ -43,7 +43,8 @@ func (d Deployment) String() string {
 	State:   %v
 	Version: %s
 	Num Groups: %d
-	`, d.Owner, d.DSeq, d.State, d.Version, len(d.Groups))
+	`, d.Deployment.DeploymentID.Owner, d.Deployment.DeploymentID.DSeq,
+		d.Deployment.State, d.Deployment.Version, len(d.Groups))
 }
 
 // Deployments represents slice of deployment struct
@@ -75,5 +76,5 @@ type GroupFilters struct {
 	// State flag value given
 	StateFlagVal string
 	// Actual state value decoded from GroupStateMap
-	State types.GroupState
+	State types.Group_State
 }

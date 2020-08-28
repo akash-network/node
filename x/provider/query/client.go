@@ -1,7 +1,7 @@
 package query
 
 import (
-	"github.com/cosmos/cosmos-sdk/client/context"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -12,12 +12,12 @@ type Client interface {
 }
 
 // NewClient creates a client instance with provided context and key
-func NewClient(ctx context.CLIContext, key string) Client {
+func NewClient(ctx sdkclient.Context, key string) Client {
 	return &client{ctx: ctx, key: key}
 }
 
 type client struct {
-	ctx context.CLIContext
+	ctx sdkclient.Context
 	key string
 }
 
@@ -27,7 +27,7 @@ func (c *client) Providers() (Providers, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }
 
 func (c *client) Provider(id sdk.AccAddress) (*Provider, error) {
@@ -36,5 +36,5 @@ func (c *client) Provider(id sdk.AccAddress) (*Provider, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return &obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }

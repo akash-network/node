@@ -3,22 +3,22 @@ package cmd
 import (
 	"context"
 
-	ccontext "github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 
 	"github.com/ovrclk/akash/provider/gateway"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	pmodule "github.com/ovrclk/akash/x/provider"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
-func leaseStatusCmd(codec *codec.Codec) *cobra.Command {
+func leaseStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "lease-status",
 		Short: "get lease status",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return doLeaseStatus(codec, cmd)
+			return doLeaseStatus(cmd)
 		},
 	}
 
@@ -28,8 +28,8 @@ func leaseStatusCmd(codec *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func doLeaseStatus(codec *codec.Codec, cmd *cobra.Command) error {
-	cctx := ccontext.NewCLIContext().WithCodec(codec)
+func doLeaseStatus(cmd *cobra.Command) error {
+	cctx := client.GetClientContextFromCmd(cmd)
 
 	addr, err := mcli.ProviderFromFlagsWithoutCtx(cmd.Flags())
 	if err != nil {
@@ -37,11 +37,12 @@ func doLeaseStatus(codec *codec.Codec, cmd *cobra.Command) error {
 	}
 
 	pclient := pmodule.AppModuleBasic{}.GetQueryClient(cctx)
-	provider, err := pclient.Provider(addr)
+	res, err := pclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: addr})
 	if err != nil {
 		return err
 	}
 
+	provider := &res.Provider
 	gclient := gateway.NewClient()
 
 	bid, err := mcli.BidIDFromFlagsWithoutCtx(cmd.Flags())
@@ -56,7 +57,7 @@ func doLeaseStatus(codec *codec.Codec, cmd *cobra.Command) error {
 		return err
 	}
 
-	if err = cctx.PrintOutput(result); err != nil {
+	if err = cctx.PrintOutputLegacy(result); err != nil {
 		return err
 	}
 

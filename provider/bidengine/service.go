@@ -6,6 +6,7 @@ import (
 
 	lifecycle "github.com/boz/go-lifecycle"
 
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
@@ -170,16 +171,23 @@ loop:
 }
 
 type existingOrder struct {
-	order *mquery.Order
-	bid   *mquery.Bid
+	order *mtypes.Order
+	bid   *mtypes.Bid
 }
 
 func queryExistingOrders(_ context.Context, session session.Session) ([]existingOrder, error) {
-	orders, err := session.Client().Query().Orders(mquery.OrderFilters{})
+	params := &mtypes.QueryOrdersRequest{
+		Filters: mtypes.OrderFilters{},
+		Pagination: &sdkquery.PageRequest{
+			Limit: 10000,
+		},
+	}
+	res, err := session.Client().Query().Orders(context.Background(), params)
 	if err != nil {
 		session.Log().Error("error querying open orders:", "err", err)
 		return nil, err
 	}
+	orders := res.Orders
 
 	existingOrders := make([]existingOrder, 0)
 	for i := range orders {
@@ -190,9 +198,14 @@ func queryExistingOrders(_ context.Context, session session.Session) ([]existing
 
 		eo := existingOrder{order: pOrder}
 
-		bid, _ := session.Client().Query().Bid(
-			mtypes.MakeBidID(pOrder.OrderID, session.Provider().Address()),
+		res, _ := session.Client().Query().Bid(
+			context.Background(),
+			&mtypes.QueryBidRequest{
+				ID: mtypes.MakeBidID(pOrder.OrderID, session.Provider().Address()),
+			},
 		)
+
+		bid := res.GetBid()
 
 		eo.bid = &bid
 

@@ -9,14 +9,15 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
 	"github.com/stretchr/testify/require"
+	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-func ParseEvent(t testing.TB, events sdk.Events) sdkutil.Event {
+func ParseEvent(t testing.TB, events []abci.Event) sdkutil.Event {
 	t.Helper()
 
 	require.Equal(t, 1, len(events))
 
-	sev := sdk.StringifyEvent(events.ToABCIEvents()[0])
+	sev := sdk.StringifyEvent(events[0])
 	ev, err := sdkutil.ParseEvent(sev)
 
 	require.NoError(t, err)
@@ -24,7 +25,7 @@ func ParseEvent(t testing.TB, events sdk.Events) sdkutil.Event {
 	return ev
 }
 
-func ParseDeploymentEvent(t testing.TB, events sdk.Events) sdkutil.ModuleEvent {
+func ParseDeploymentEvent(t testing.TB, events []abci.Event) sdkutil.ModuleEvent {
 	t.Helper()
 
 	uev := ParseEvent(t, events)
@@ -35,7 +36,7 @@ func ParseDeploymentEvent(t testing.TB, events sdk.Events) sdkutil.ModuleEvent {
 	return iev
 }
 
-func ParseMarketEvent(t testing.TB, events sdk.Events) sdkutil.ModuleEvent {
+func ParseMarketEvent(t testing.TB, events []abci.Event) sdkutil.ModuleEvent {
 	t.Helper()
 
 	uev := ParseEvent(t, events)
@@ -46,7 +47,7 @@ func ParseMarketEvent(t testing.TB, events sdk.Events) sdkutil.ModuleEvent {
 	return iev
 }
 
-func ParseProviderEvent(t testing.TB, events sdk.Events) sdkutil.ModuleEvent {
+func ParseProviderEvent(t testing.TB, events []abci.Event) sdkutil.ModuleEvent {
 	t.Helper()
 
 	uev := ParseEvent(t, events)

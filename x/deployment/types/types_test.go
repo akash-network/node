@@ -11,11 +11,12 @@ import (
 
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/validation"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
 type gStateTest struct {
-	state                types.GroupState
+	state                types.Group_State
 	expValidateOrderable error
 	expValidateClosable  error
 }
@@ -43,7 +44,7 @@ func TestGroupState(t *testing.T) {
 			expValidateOrderable: types.ErrGroupNotOpen,
 		},
 		{
-			state:                types.GroupState(99),
+			state:                types.Group_State(99),
 			expValidateOrderable: types.ErrGroupNotOpen,
 		},
 	}
@@ -154,7 +155,11 @@ func TestGroupSpecValidation(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := test.gspec.ValidateBasic()
+		err := validation.ValidateDeploymentGroup(test.gspec)
+		if test.expErr != nil {
+			assert.Error(t, err)
+			continue
+		}
 		assert.Equal(t, test.expErr, err, test.desc)
 	}
 }

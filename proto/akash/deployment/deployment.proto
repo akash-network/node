@@ -1,0 +1,154 @@
+syntax = "proto3";
+package akash.deployment;
+
+import "gogoproto/gogo.proto";
+import "akash/deployment/group.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types";
+
+// MsgCreateDeployment defines an SDK message for creating deployment
+message MsgCreateDeployment {
+    option (gogoproto.equal) = false;
+
+    DeploymentID id = 1 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.customname) = "ID",
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+    repeated GroupSpec groups = 2 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "groups",
+        (gogoproto.moretags)   = "yaml:\"groups\""
+    ];
+    bytes version = 3 [
+        (gogoproto.jsontag)    = "version",
+        (gogoproto.moretags)   = "yaml:\"version\""
+    ];
+}
+
+// MsgUpdateDeployment defines an SDK message for updating deployment
+message MsgUpdateDeployment {
+    option (gogoproto.equal) = false;
+
+    DeploymentID id = 1 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.customname) = "ID",
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+    repeated GroupSpec groups = 2 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "groups",
+        (gogoproto.moretags)   = "yaml:\"groups\""
+    ];
+    bytes version = 3 [
+        (gogoproto.jsontag)    = "version",
+        (gogoproto.moretags)   = "yaml:\"version\""
+    ];
+}
+
+// MsgCloseDeployment defines an SDK message for closing deployment
+message MsgCloseDeployment {
+    option (gogoproto.equal) = true;
+
+    DeploymentID id = 1 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.customname) = "ID",
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+}
+
+// DeploymentID stores owner and sequence number
+message DeploymentID {
+    option (gogoproto.equal) = true;
+    option (gogoproto.goproto_stringer) = false;
+
+    bytes owner = 1 [
+        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)    = "owner",
+        (gogoproto.moretags)   = "yaml:\"owner\""
+    ];
+    uint64 dseq = 2 [
+        (gogoproto.customname) = "DSeq",
+        (gogoproto.jsontag)    = "dseq",
+        (gogoproto.moretags)   = "yaml:\"dseq\""
+    ];
+}
+
+// Deployment stores deploymentID, state and version details
+message Deployment {
+    option (gogoproto.equal) = false;
+
+    DeploymentID deployment_id = 1 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.customname) = "DeploymentID",
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+
+    enum State {
+        option (gogoproto.goproto_enum_prefix) = false;
+
+        // Prefix should start with 0 in enum. So declaring dummy state
+        invalid = 0 [
+            (gogoproto.enumvalue_customname) = "DeploymentStateInvalid"
+        ];
+        active = 1 [
+            (gogoproto.enumvalue_customname) = "DeploymentActive"
+        ];  
+        closed = 2 [
+            (gogoproto.enumvalue_customname) = "DeploymentClosed"
+        ];
+    }
+
+    State state = 2 [
+        (gogoproto.jsontag)    = "state",
+        (gogoproto.moretags)   = "yaml:\"state\""
+    ];
+    bytes version = 3 [
+        (gogoproto.jsontag)    = "version",
+        (gogoproto.moretags)   = "yaml:\"version\""
+    ];
+}
+
+message DeploymentResponse {
+    option (gogoproto.equal) = false;
+    option (gogoproto.goproto_stringer) = false;
+
+    Deployment deployment = 1 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "deployment",
+        (gogoproto.moretags)   = "yaml:\"deployment\""
+    ];
+    repeated Group groups = 2 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "groups",
+        (gogoproto.moretags)   = "yaml:\"groups\""
+    ];
+    bytes version = 3 [
+        (gogoproto.jsontag)    = "version",
+        (gogoproto.moretags)   = "yaml:\"version\""
+    ];
+}
+
+message DeploymentFilters {
+    option (gogoproto.equal) = false;
+
+    bytes owner = 1 [
+        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)    = "owner",
+        (gogoproto.moretags)   = "yaml:\"owner\""
+    ];
+    uint64 dseq = 2 [
+        (gogoproto.customname) = "DSeq",
+        (gogoproto.jsontag)    = "dseq",
+        (gogoproto.moretags)   = "yaml:\"dseq\""
+    ];
+    int32 state = 3 [
+        (gogoproto.casttype)   = "Deployment_State",
+        (gogoproto.jsontag)    = "state",
+        (gogoproto.moretags)   = "yaml:\"state\""
+    ];
+}

@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/gorilla/mux"
 	"github.com/ovrclk/akash/x/market/query"
 )
 
 // RegisterRoutes registers all query routes
-func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
+func RegisterRoutes(ctx client.Context, r *mux.Router, ns string) {
 	// Get all orders
 	r.HandleFunc(fmt.Sprintf("/%s/order/list", ns), listOrdersHandler(ctx, ns)).Methods("GET")
 
@@ -31,7 +31,7 @@ func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
 	r.HandleFunc(fmt.Sprintf("/%s/lease/info", ns), getLeaseHandler(ctx, ns)).Methods("GET")
 }
 
-func listOrdersHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
+func listOrdersHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ofilters, errMsg := OrderFiltersFromRequest(r)
 
@@ -49,7 +49,7 @@ func listOrdersHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	}
 }
 
-func listBidsHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
+func listBidsHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bfilters, errMsg := BidFiltersFromRequest(r)
 
@@ -67,7 +67,7 @@ func listBidsHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	}
 }
 
-func listLeasesHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
+func listLeasesHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lfilters, errMsg := LeaseFiltersFromRequest(r)
 
@@ -84,7 +84,7 @@ func listLeasesHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	}
 }
 
-func getOrderHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
+func getOrderHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		id, errMsg := OrderIDFromRequest(r)
@@ -103,7 +103,7 @@ func getOrderHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	}
 }
 
-func getBidHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
+func getBidHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		id, errMsg := BidIDFromRequest(r)
@@ -122,7 +122,7 @@ func getBidHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	}
 }
 
-func getLeaseHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
+func getLeaseHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		id, errMsg := LeaseIDFromRequest(r)

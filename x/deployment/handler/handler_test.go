@@ -5,15 +5,15 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/store"
+	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/x/deployment/handler"
 	"github.com/ovrclk/akash/x/deployment/keeper"
@@ -47,10 +47,10 @@ func setupTestSuite(t *testing.T) *testSuite {
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
 
-	suite.ctx = sdk.NewContext(suite.ms, abci.Header{}, true, testutil.Logger(t))
+	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
 
-	suite.mkeeper = mkeeper.NewKeeper(app.MakeCodec(), mKey)
-	suite.dkeeper = keeper.NewKeeper(app.MakeCodec(), dKey)
+	suite.mkeeper = mkeeper.NewKeeper(types.ModuleCdc, mKey)
+	suite.dkeeper = keeper.NewKeeper(types.ModuleCdc, dKey)
 
 	suite.handler = handler.NewHandler(suite.dkeeper, suite.mkeeper)
 
@@ -60,7 +60,7 @@ func setupTestSuite(t *testing.T) *testSuite {
 func TestProviderBadMessageType(t *testing.T) {
 	suite := setupTestSuite(t)
 
-	res, err := suite.handler(suite.ctx, sdk.NewTestMsg())
+	res, err := suite.handler(suite.ctx, sdk.Msg(sdktestdata.NewTestMsg()))
 	require.Nil(t, res)
 	require.Error(t, err)
 	require.True(t, errors.Is(err, sdkerrors.ErrUnknownRequest))
@@ -71,7 +71,7 @@ func TestCreateDeployment(t *testing.T) {
 
 	deployment, groups := suite.createDeployment()
 
-	msg := types.MsgCreateDeployment{
+	msg := &types.MsgCreateDeployment{
 		ID:     deployment.ID(),
 		Groups: make([]types.GroupSpec, 0, len(groups)),
 	}
@@ -106,7 +106,7 @@ func TestCreateDeploymentEmptyGroups(t *testing.T) {
 
 	deployment := testutil.Deployment(suite.t)
 
-	msg := types.MsgCreateDeployment{
+	msg := &types.MsgCreateDeployment{
 		ID: deployment.ID(),
 	}
 
@@ -120,7 +120,7 @@ func TestUpdateDeploymentNonExisting(t *testing.T) {
 
 	deployment := testutil.Deployment(suite.t)
 
-	msg := types.MsgUpdateDeployment{
+	msg := &types.MsgUpdateDeployment{
 		ID: deployment.ID(),
 	}
 
@@ -134,7 +134,7 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 
 	deployment, groups := suite.createDeployment()
 
-	msg := types.MsgCreateDeployment{
+	msg := &types.MsgCreateDeployment{
 		ID:      deployment.ID(),
 		Groups:  make([]types.GroupSpec, 0, len(groups)),
 		Version: testutil.DefaultDeploymentVersion[:],
@@ -156,7 +156,7 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 
 	depSum := sha256.Sum256(testutil.DefaultDeploymentVersion[:])
 
-	msgUpdate := types.MsgUpdateDeployment{
+	msgUpdate := &types.MsgUpdateDeployment{
 		ID:      deployment.ID(),
 		Version: depSum[:],
 	}
@@ -185,7 +185,7 @@ func TestCloseDeploymentNonExisting(t *testing.T) {
 
 	deployment := testutil.Deployment(suite.t)
 
-	msg := types.MsgCloseDeployment{
+	msg := &types.MsgCloseDeployment{
 		ID: deployment.ID(),
 	}
 
@@ -199,7 +199,7 @@ func TestCloseDeploymentExisting(t *testing.T) {
 
 	deployment, groups := suite.createDeployment()
 
-	msg := types.MsgCreateDeployment{
+	msg := &types.MsgCreateDeployment{
 		ID:     deployment.ID(),
 		Groups: make([]types.GroupSpec, 0, len(groups)),
 	}
@@ -221,7 +221,7 @@ func TestCloseDeploymentExisting(t *testing.T) {
 		require.Equal(t, msg.ID, dev.ID)
 	})
 
-	msgClose := types.MsgCloseDeployment{
+	msgClose := &types.MsgCloseDeployment{
 		ID: deployment.ID(),
 	}
 
@@ -257,7 +257,7 @@ func (st *testSuite) createDeployment() (types.Deployment, []types.Group) {
 
 	deployment := testutil.Deployment(st.t)
 	group := testutil.DeploymentGroup(st.t, deployment.ID(), 0)
-	group.Resources = []types.Resource{
+	group.GroupSpec.Resources = []types.Resource{
 		{
 			Unit:  testutil.Unit(st.t),
 			Count: 1,
@@ -271,17 +271,6 @@ func (st *testSuite) createDeployment() (types.Deployment, []types.Group) {
 	for i := range groups {
 		groups[i].State = types.GroupMatched
 	}
-
-	return deployment, groups
-}
-
-func (st *testSuite) createActiveDeployment() (types.Deployment, []types.Group) {
-	st.t.Helper()
-
-	deployment, groups := st.createDeployment()
-
-	err := st.dkeeper.Create(st.ctx, deployment, groups)
-	require.NoError(st.t, err)
 
 	return deployment, groups
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
-	"github.com/ovrclk/akash/util/runner"
 	dquery "github.com/ovrclk/akash/x/deployment/query"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -89,8 +88,6 @@ type service struct {
 
 	managers  map[string]*manager
 	managerch chan *manager
-
-	deploymentch chan runner.Result
 
 	lc lifecycle.Lifecycle
 }
@@ -269,11 +266,17 @@ func fetchExistingLeases(_ context.Context, session session.Session) ([]event.Le
 
 	items := make([]event.LeaseWon, 0, len(leases))
 	for _, lease := range leases {
-		dgroup, err := session.Client().Query().Group(lease.GroupID())
+		res, err := session.Client().Query().Group(
+			context.Background(),
+			&dtypes.QueryGroupRequest{
+				ID: lease.LeaseID.GroupID(),
+			},
+		)
 		if err != nil {
 			session.Log().Error("can't fetch deployment group", "err", err, "lease", lease)
 			continue
 		}
+		dgroup := res.Group
 
 		items = append(items, event.LeaseWon{
 			LeaseID: lease.LeaseID,

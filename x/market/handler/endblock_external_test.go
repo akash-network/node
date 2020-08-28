@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/testutil/state"
 	"github.com/ovrclk/akash/x/market/handler"
@@ -14,7 +13,7 @@ import (
 )
 
 func TestMatchOrders(t *testing.T) {
-	codec := app.MakeCodec()
+	codec := types.ModuleCdc
 	suite := state.SetupTestSuite(t, codec)
 	genOrders := make([]types.Order, 0)
 

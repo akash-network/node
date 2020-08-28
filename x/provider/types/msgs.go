@@ -9,19 +9,29 @@ import (
 )
 
 const (
-	msgTypeCreateProvider = "create-provider"
-	msgTypeUpdateProvider = "update-provider"
-	msgTypeDeleteProvider = "delete-provider"
+	MsgTypeCreateProvider = "create-provider"
+	MsgTypeUpdateProvider = "update-provider"
+	MsgTypeDeleteProvider = "delete-provider"
 )
 
-// MsgCreateProvider defines an SDK message for creating a provider
-type MsgCreateProvider Provider
+var (
+	_, _, _ sdk.Msg = &MsgCreateProvider{}, &MsgUpdateProvider{}, &MsgDeleteProvider{}
+)
+
+// NewMsgCreateProvider creates a new MsgCreateProvider instance
+func NewMsgCreateProvider(owner sdk.AccAddress, hostURI string, attributes Attributes) *MsgCreateProvider {
+	return &MsgCreateProvider{
+		Owner:      owner,
+		HostURI:    hostURI,
+		Attributes: attributes,
+	}
+}
 
 // Route implements the sdk.Msg interface
 func (msg MsgCreateProvider) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCreateProvider) Type() string { return msgTypeCreateProvider }
+func (msg MsgCreateProvider) Type() string { return MsgTypeCreateProvider }
 
 // ValidateBasic does basic validation of a HostURI
 func (msg MsgCreateProvider) ValidateBasic() error {
@@ -36,7 +46,7 @@ func (msg MsgCreateProvider) ValidateBasic() error {
 
 // GetSignBytes encodes the message for signing
 func (msg MsgCreateProvider) GetSignBytes() []byte {
-	return sdk.MustSortJSON(cdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 // GetSigners defines whose signature is required
@@ -44,14 +54,20 @@ func (msg MsgCreateProvider) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 
-// MsgUpdateProvider defines an SDK message for updating a provider
-type MsgUpdateProvider Provider
+// NewMsgUpdateProvider creates a new MsgUpdateProvider instance
+func NewMsgUpdateProvider(owner sdk.AccAddress, hostURI string, attributes Attributes) *MsgUpdateProvider {
+	return &MsgUpdateProvider{
+		Owner:      owner,
+		HostURI:    hostURI,
+		Attributes: attributes,
+	}
+}
 
 // Route implements the sdk.Msg interface
 func (msg MsgUpdateProvider) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgUpdateProvider) Type() string { return msgTypeUpdateProvider }
+func (msg MsgUpdateProvider) Type() string { return MsgTypeUpdateProvider }
 
 // ValidateBasic does basic validation of a ProviderURI
 func (msg MsgUpdateProvider) ValidateBasic() error {
@@ -66,7 +82,7 @@ func (msg MsgUpdateProvider) ValidateBasic() error {
 
 // GetSignBytes encodes the message for signing
 func (msg MsgUpdateProvider) GetSignBytes() []byte {
-	return sdk.MustSortJSON(cdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 // GetSigners defines whose signature is required
@@ -74,16 +90,18 @@ func (msg MsgUpdateProvider) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 
-// MsgDeleteProvider defines an SDK message for deleting a provider
-type MsgDeleteProvider struct {
-	Owner sdk.AccAddress `json:"owner"`
+// NewMsgDeleteProvider creates a new MsgDeleteProvider instance
+func NewMsgDeleteProvider(owner sdk.AccAddress) *MsgDeleteProvider {
+	return &MsgDeleteProvider{
+		Owner: owner,
+	}
 }
 
 // Route implements the sdk.Msg interface
 func (msg MsgDeleteProvider) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgDeleteProvider) Type() string { return msgTypeDeleteProvider }
+func (msg MsgDeleteProvider) Type() string { return MsgTypeDeleteProvider }
 
 // ValidateBasic does basic validation
 func (msg MsgDeleteProvider) ValidateBasic() error {
@@ -95,7 +113,7 @@ func (msg MsgDeleteProvider) ValidateBasic() error {
 
 // GetSignBytes encodes the message for signing
 func (msg MsgDeleteProvider) GetSignBytes() []byte {
-	return sdk.MustSortJSON(cdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 // GetSigners defines whose signature is required

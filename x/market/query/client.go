@@ -1,7 +1,7 @@
 package query
 
 import (
-	"github.com/cosmos/cosmos-sdk/client/context"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/ovrclk/akash/x/market/types"
 )
 
@@ -16,12 +16,12 @@ type Client interface {
 }
 
 // NewClient creates a client instance with provided context and key
-func NewClient(ctx context.CLIContext, key string) Client {
+func NewClient(ctx sdkclient.Context, key string) Client {
 	return &client{ctx: ctx, key: key}
 }
 
 type client struct {
-	ctx context.CLIContext
+	ctx sdkclient.Context
 	key string
 }
 
@@ -31,7 +31,7 @@ func (c *client) Orders(ofilters OrderFilters) (Orders, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }
 
 func (c *client) Order(id types.OrderID) (Order, error) {
@@ -40,7 +40,7 @@ func (c *client) Order(id types.OrderID) (Order, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }
 
 func (c *client) Bids(bfilters BidFilters) (Bids, error) {
@@ -49,7 +49,7 @@ func (c *client) Bids(bfilters BidFilters) (Bids, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }
 
 func (c *client) Bid(id types.BidID) (Bid, error) {
@@ -58,7 +58,7 @@ func (c *client) Bid(id types.BidID) (Bid, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }
 
 func (c *client) Leases(lfilters LeaseFilters) (Leases, error) {
@@ -67,7 +67,7 @@ func (c *client) Leases(lfilters LeaseFilters) (Leases, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }
 
 func (c *client) Lease(id types.LeaseID) (Lease, error) {
@@ -76,5 +76,5 @@ func (c *client) Lease(id types.LeaseID) (Lease, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }

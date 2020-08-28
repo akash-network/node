@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/gorilla/mux"
 	"github.com/ovrclk/akash/x/deployment/query"
 )
 
 // RegisterRoutes registers all query routes
-func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
+func RegisterRoutes(ctx client.Context, r *mux.Router, ns string) {
 	// Get all deployments
 	r.HandleFunc(fmt.Sprintf("/%s/list", ns), listDeploymentsHandler(ctx, ns)).Methods("GET")
 
@@ -22,7 +22,7 @@ func RegisterRoutes(ctx context.CLIContext, r *mux.Router, ns string) {
 	r.HandleFunc(fmt.Sprintf("/%s/group/info", ns), getGroupHandler(ctx, ns)).Methods("GET")
 }
 
-func listDeploymentsHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
+func listDeploymentsHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		dfilters, errMsg := DepFiltersFromRequest(r)
 
@@ -40,7 +40,7 @@ func listDeploymentsHandler(ctx context.CLIContext, ns string) http.HandlerFunc 
 	}
 }
 
-func getDeploymentHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
+func getDeploymentHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		id, errMsg := DeploymentIDFromRequest(r)
@@ -59,7 +59,7 @@ func getDeploymentHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
 	}
 }
 
-func getGroupHandler(ctx context.CLIContext, ns string) http.HandlerFunc {
+func getGroupHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		id, errMsg := GroupIDFromRequest(r)

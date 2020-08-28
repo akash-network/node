@@ -1,6 +1,7 @@
 package query
 
 import (
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/ovrclk/akash/sdkutil"
@@ -10,21 +11,22 @@ import (
 )
 
 // NewQuerier creates and returns a new deployment querier instance
-func NewQuerier(keeper keeper.Keeper) sdk.Querier {
+func NewQuerier(keeper keeper.Keeper, legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) ([]byte, error) {
 		switch path[0] {
 		case deploymentsPath:
-			return queryDeployments(ctx, path[1:], req, keeper)
+			return queryDeployments(ctx, path[1:], req, keeper, legacyQuerierCdc)
 		case deploymentPath:
-			return queryDeployment(ctx, path[1:], req, keeper)
+			return queryDeployment(ctx, path[1:], req, keeper, legacyQuerierCdc)
 		case groupPath:
-			return queryGroup(ctx, path[1:], req, keeper)
+			return queryGroup(ctx, path[1:], req, keeper, legacyQuerierCdc)
 		}
 		return []byte{}, sdkerrors.ErrUnknownRequest
 	}
 }
 
-func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper,
+	legacyQuerierCdc *codec.LegacyAmino) ([]byte, error) {
 	// isValidState denotes whether given state flag is valid or not
 	filters, isValidState, err := parseDepFiltersPath(path)
 	if err != nil {
@@ -44,10 +46,11 @@ func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, keepe
 		return false
 	})
 
-	return sdkutil.RenderQueryResponse(keeper.Codec(), values)
+	return sdkutil.RenderQueryResponse(legacyQuerierCdc, values)
 }
 
-func queryDeployment(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryDeployment(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper,
+	legacyQuerierCdc *codec.LegacyAmino) ([]byte, error) {
 
 	id, err := ParseDeploymentPath(path)
 	if err != nil {
@@ -64,10 +67,11 @@ func queryDeployment(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper
 		Groups:     keeper.GetGroups(ctx, deployment.ID()),
 	}
 
-	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
+	return sdkutil.RenderQueryResponse(legacyQuerierCdc, value)
 }
 
-func queryGroup(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper) ([]byte, error) {
+func queryGroup(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper,
+	legacyQuerierCdc *codec.LegacyAmino) ([]byte, error) {
 
 	id, err := ParseGroupPath(path)
 	if err != nil {
@@ -81,5 +85,5 @@ func queryGroup(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keep
 
 	value := Group(group)
 
-	return sdkutil.RenderQueryResponse(keeper.Codec(), value)
+	return sdkutil.RenderQueryResponse(legacyQuerierCdc, value)
 }

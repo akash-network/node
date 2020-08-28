@@ -2,16 +2,11 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/client/tx"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/x/deployment/types"
 
@@ -19,7 +14,7 @@ import (
 )
 
 // GetTxCmd returns the transaction commands for this module
-func GetTxCmd(key string, cdc *codec.Codec) *cobra.Command {
+func GetTxCmd(key string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Deployment transaction subcommands",
@@ -27,23 +22,26 @@ func GetTxCmd(key string, cdc *codec.Codec) *cobra.Command {
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
-	cmd.AddCommand(flags.PostCommands(
-		cmdCreate(key, cdc),
-		cmdUpdate(key, cdc),
-		cmdClose(key, cdc),
-		cmdGroupClose(key, cdc),
-	)...)
+	cmd.AddCommand(
+		cmdCreate(key),
+		cmdUpdate(key),
+		cmdClose(key),
+		cmdGroupClose(key),
+	)
 	return cmd
 }
 
-func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
+func cmdCreate(key string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [sdl-file]",
 		Short: fmt.Sprintf("Create %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			sdlManifest, err := sdl.ReadFile(args[0])
 			if err != nil {
@@ -55,14 +53,14 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			id, err := DeploymentIDFromFlags(cmd.Flags(), ctx.GetFromAddress().String())
+			id, err := DeploymentIDFromFlags(cmd.Flags(), clientCtx.GetFromAddress().String())
 			if err != nil {
 				return err
 			}
 
 			// Default DSeq to the current block height
 			if id.DSeq == 0 {
-				if id.DSeq, err = currentBlockHeight(ctx); err != nil {
+				if id.DSeq, err = currentBlockHeight(clientCtx); err != nil {
 					return err
 				}
 			}
@@ -72,7 +70,7 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.MsgCreateDeployment{
+			msg := &types.MsgCreateDeployment{
 				ID:      id,
 				Version: version,
 				Groups:  make([]types.GroupSpec, 0, len(groups)),
@@ -86,47 +84,58 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 	}
+
+	flags.AddTxFlagsToCmd(cmd)
 	AddDeploymentIDFlags(cmd.Flags())
 
 	return cmd
 }
 
-func cmdClose(key string, cdc *codec.Codec) *cobra.Command {
+func cmdClose(key string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "close",
 		Short: fmt.Sprintf("Close %s", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
-
-			id, err := DeploymentIDFromFlags(cmd.Flags(), ctx.GetFromAddress().String())
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			msg := types.MsgCloseDeployment{ID: id}
+			id, err := DeploymentIDFromFlags(cmd.Flags(), clientCtx.GetFromAddress().String())
+			if err != nil {
+				return err
+			}
 
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			msg := &types.MsgCloseDeployment{ID: id}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 	}
+
+	flags.AddTxFlagsToCmd(cmd)
 	AddDeploymentIDFlags(cmd.Flags())
+
 	return cmd
 }
 
-func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
+func cmdUpdate(key string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update [sdl-file]",
 		Short: fmt.Sprintf("update %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
-			id, err := DeploymentIDFromFlags(cmd.Flags(), ctx.GetFromAddress().String())
+			id, err := DeploymentIDFromFlags(cmd.Flags(), clientCtx.GetFromAddress().String())
 			if err != nil {
 				return err
 			}
@@ -145,7 +154,7 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.MsgUpdateDeployment{
+			msg := &types.MsgUpdateDeployment{
 				ID:      id,
 				Version: version,
 				Groups:  make([]types.GroupSpec, 0, len(groups)),
@@ -155,38 +164,47 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 				msg.Groups = append(msg.Groups, *group)
 			}
 
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 	}
+
+	flags.AddTxFlagsToCmd(cmd)
 	AddDeploymentIDFlags(cmd.Flags())
+
 	return cmd
 }
 
-func cmdGroupClose(_ string, cdc *codec.Codec) *cobra.Command {
+func cmdGroupClose(_ string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "group-close",
 		Short:   "close a Deployment's specific Group",
 		Example: "akashctl tx deployment group-close --owner=[Account Address] --dseq=[uint64] --gseq=[uint32]",
 		Args:    cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
 			id, err := GroupIDFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			msg := types.MsgCloseGroup{
+			msg := &types.MsgCloseGroup{
 				ID: id,
 			}
-			err = msg.ValidateBasic()
-			if err != nil {
+
+			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
 
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 	}
+
+	flags.AddTxFlagsToCmd(cmd)
 	AddGroupIDFlags(cmd.Flags())
 	MarkReqGroupIDFlags(cmd)
 

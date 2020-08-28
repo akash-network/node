@@ -2,10 +2,15 @@ package cli
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/x/deployment/query"
 	"github.com/ovrclk/akash/x/deployment/types"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+)
+
+var (
+	ErrOwnerValue = errors.New("query: invalid owner value")
+	ErrStateValue = errors.New("query: invalid state value")
 )
 
 // AddDeploymentIDFlags add flags for deployment
@@ -16,8 +21,8 @@ func AddDeploymentIDFlags(flags *pflag.FlagSet) {
 
 // MarkReqDeploymentIDFlags marks flags required for deployment
 func MarkReqDeploymentIDFlags(cmd *cobra.Command) {
-	cmd.MarkFlagRequired("owner")
-	cmd.MarkFlagRequired("dseq")
+	_ = cmd.MarkFlagRequired("owner")
+	_ = cmd.MarkFlagRequired("dseq")
 }
 
 // DeploymentIDFromFlags returns DeploymentID with given flags, owner and error if occurred
@@ -49,7 +54,7 @@ func AddGroupIDFlags(flags *pflag.FlagSet) {
 // MarkReqGroupIDFlags marks flags required for group
 func MarkReqGroupIDFlags(cmd *cobra.Command) {
 	MarkReqDeploymentIDFlags(cmd)
-	cmd.MarkFlagRequired("gseq")
+	_ = cmd.MarkFlagRequired("gseq")
 }
 
 // GroupIDFromFlags returns GroupID with given flags and error if occurred
@@ -71,41 +76,38 @@ func GroupIDFromFlags(flags *pflag.FlagSet) (types.GroupID, error) {
 func AddDeploymentFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "deployment owner address to filter")
 	flags.String("state", "", "deployment state to filter (active,closed)")
+	flags.Uint64("dseq", 0, "deployment sequence to filter")
 }
 
 // DepFiltersFromFlags returns DeploymentFilters with given flags and error if occurred
-func DepFiltersFromFlags(flags *pflag.FlagSet) (query.DeploymentFilters, error) {
-	var dfilters query.DeploymentFilters
+func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, string, error) {
+	var dfilters types.DeploymentFilters
 	owner, err := flags.GetString("owner")
 	if err != nil {
-		return dfilters, err
+		return dfilters, "", err
 	}
-	dfilters.Owner, err = sdk.AccAddressFromBech32(owner)
-	if err != nil {
-		return dfilters, err
-	}
-	dfilters.StateFlagVal, err = flags.GetString("state")
-	if err != nil {
-		return dfilters, err
-	}
-	return dfilters, nil
-}
 
-// AddGroupFilterFlags add flags to filter for group list
-func AddGroupFilterFlags(flags *pflag.FlagSet) {
-	flags.String("owner", "", "group owner address to filter")
-	flags.String("state", "", "group state to filter (open,ordered,matched,insufficient-funds,closed)")
-}
+	if owner != "" {
+		dfilters.Owner, err = sdk.AccAddressFromBech32(owner)
+		if err != nil {
+			return dfilters, "", err
+		}
+	} else {
+		dfilters.Owner = sdk.AccAddress{}
+	}
 
-// GroupFiltersFromFlags returns GroupFilters with given flags and error if occurred
-func GroupFiltersFromFlags(flags *pflag.FlagSet) (query.GroupFilters, error) {
-	dfilters, err := DepFiltersFromFlags(flags)
+	if !dfilters.Owner.Empty() && sdk.VerifyAddressFormat(dfilters.Owner) != nil {
+		return dfilters, "", ErrOwnerValue
+	}
+
+	state, err := flags.GetString("state")
 	if err != nil {
-		return query.GroupFilters{}, err
+		return dfilters, "", err
 	}
-	gfilters := query.GroupFilters{
-		Owner:        dfilters.Owner,
-		StateFlagVal: dfilters.StateFlagVal,
+
+	if dfilters.DSeq, err = flags.GetUint64("dseq"); err != nil {
+		return dfilters, state, err
 	}
-	return gfilters, nil
+
+	return dfilters, state, nil
 }

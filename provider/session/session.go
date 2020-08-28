@@ -4,19 +4,19 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/ovrclk/akash/client"
-	pquery "github.com/ovrclk/akash/x/provider/query"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
 // Session interface wraps Log, Client, Provider and ForModule methods
 type Session interface {
 	Log() log.Logger
 	Client() client.Client
-	Provider() *pquery.Provider
+	Provider() *ptypes.Provider
 	ForModule(string) Session
 }
 
 // New returns new session instance with provided details
-func New(log log.Logger, client client.Client, provider *pquery.Provider) Session {
+func New(log log.Logger, client client.Client, provider *ptypes.Provider) Session {
 	return session{
 		client:   client,
 		provider: provider,
@@ -26,7 +26,7 @@ func New(log log.Logger, client client.Client, provider *pquery.Provider) Sessio
 
 type session struct {
 	client   client.Client
-	provider *pquery.Provider
+	provider *ptypes.Provider
 	log      log.Logger
 }
 
@@ -38,7 +38,7 @@ func (s session) Client() client.Client {
 	return s.client
 }
 
-func (s session) Provider() *pquery.Provider {
+func (s session) Provider() *ptypes.Provider {
 	return s.provider
 }
 

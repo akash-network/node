@@ -10,11 +10,11 @@ import (
 // Keeper of the provider store
 type Keeper struct {
 	skey sdk.StoreKey
-	cdc  *codec.Codec
+	cdc  codec.BinaryMarshaler
 }
 
 // NewKeeper creates and returns an instance for Provider keeper
-func NewKeeper(cdc *codec.Codec, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey) Keeper {
 	return Keeper{
 		skey: skey,
 		cdc:  cdc,
@@ -22,7 +22,7 @@ func NewKeeper(cdc *codec.Codec, skey sdk.StoreKey) Keeper {
 }
 
 // Codec returns keeper codec
-func (k Keeper) Codec() *codec.Codec {
+func (k Keeper) Codec() codec.BinaryMarshaler {
 	return k.cdc
 }
 
@@ -50,7 +50,7 @@ func (k Keeper) Create(ctx sdk.Context, provider types.Provider) error {
 		return types.ErrProviderExists
 	}
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(provider))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&provider))
 
 	ctx.EventManager().EmitEvent(
 		types.EventProviderCreated{Owner: provider.Owner}.ToSDKEvent(),
@@ -81,7 +81,7 @@ func (k Keeper) Update(ctx sdk.Context, provider types.Provider) error {
 	if !store.Has(key) {
 		return types.ErrProviderNotFound
 	}
-	store.Set(key, k.cdc.MustMarshalBinaryBare(provider))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&provider))
 
 	ctx.EventManager().EmitEvent(
 		types.EventProviderUpdated{Owner: provider.Owner}.ToSDKEvent(),

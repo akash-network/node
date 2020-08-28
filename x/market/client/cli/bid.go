@@ -1,57 +1,97 @@
 package cli
 
 import (
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/ovrclk/akash/x/market/query"
+	"context"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 )
 
-func cmdGetBids(key string, cdc *codec.Codec) *cobra.Command {
+func cmdGetBids() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Query for all bids",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-
-			bfilters, err := BidFiltersFromFlags(cmd.Flags())
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			obj, err := query.NewClient(ctx, key).Bids(bfilters)
+			queryClient := types.NewQueryClient(clientCtx)
+
+			bfilters, state, err := BidFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
-			return ctx.PrintOutput(obj)
+
+			// checking state flag
+			stateVal, ok := types.Bid_State_value[state]
+
+			if (!ok && (state != "")) || state == InvalidState {
+				return ErrStateValue
+			}
+
+			bfilters.State = types.Bid_State(stateVal)
+
+			pageReq, err := client.ReadPageRequest(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			params := &types.QueryBidsRequest{
+				Filters:    bfilters,
+				Pagination: pageReq,
+			}
+
+			res, err := queryClient.Bids(context.Background(), params)
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintOutput(res)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	flags.AddPaginationFlagsToCmd(cmd, "bids")
 	AddBidFilterFlags(cmd.Flags())
 	return cmd
 }
 
-func cmdGetBid(key string, cdc *codec.Codec) *cobra.Command {
+func cmdGetBid() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Query order",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-
-			bid, err := BidIDFromFlagsWithoutCtx(cmd.Flags())
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			obj, err := query.NewClient(ctx, key).Bid(bid)
+			queryClient := types.NewQueryClient(clientCtx)
+
+			bidID, err := BidIDFromFlagsWithoutCtx(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			return ctx.PrintOutput(obj)
+			res, err := queryClient.Bid(context.Background(), &types.QueryBidRequest{ID: bidID})
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintOutput(&res.Bid)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
 	AddQueryBidIDFlags(cmd.Flags())
 	MarkReqBidIDFlags(cmd)
+
 	return cmd
 }

@@ -3,24 +3,24 @@ package cmd
 import (
 	"context"
 
-	ccontext "github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/ovrclk/akash/provider/gateway"
 	"github.com/ovrclk/akash/provider/manifest"
 	"github.com/ovrclk/akash/sdl"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	pmodule "github.com/ovrclk/akash/x/provider"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 	"github.com/spf13/cobra"
 )
 
-func sendManifestCmd(codec *codec.Codec) *cobra.Command {
+func sendManifestCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "send-manifest <sdl-path>",
 		Args:  cobra.ExactArgs(1),
 		Short: "Submit manifest to provider(s)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return doSendManifest(codec, cmd, args[0])
+			return doSendManifest(cmd, args[0])
 		},
 	}
 	mcli.AddBidIDFlags(cmd.Flags())
@@ -28,8 +28,8 @@ func sendManifestCmd(codec *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func doSendManifest(codec *codec.Codec, cmd *cobra.Command, sdlpath string) error {
-	cctx := ccontext.NewCLIContext().WithCodec(codec)
+func doSendManifest(cmd *cobra.Command, sdlpath string) error {
+	cctx := client.GetClientContextFromCmd(cmd)
 
 	sdl, err := sdl.ReadFile(sdlpath)
 	if err != nil {
@@ -49,11 +49,12 @@ func doSendManifest(codec *codec.Codec, cmd *cobra.Command, sdlpath string) erro
 	lid := mtypes.MakeLeaseID(bid)
 
 	pclient := pmodule.AppModuleBasic{}.GetQueryClient(cctx)
-	provider, err := pclient.Provider(lid.Provider)
+	res, err := pclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: lid.Provider})
 	if err != nil {
 		return err
 	}
 
+	provider := &res.Provider
 	gclient := gateway.NewClient()
 
 	return gclient.SubmitManifest(

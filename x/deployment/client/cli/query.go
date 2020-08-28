@@ -1,17 +1,16 @@
 package cli
 
 import (
+	"context"
+
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/ovrclk/akash/x/deployment/query"
 	"github.com/ovrclk/akash/x/deployment/types"
 	"github.com/spf13/cobra"
 )
 
 // GetQueryCmd returns the query commands for the deployment module
-func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
+func GetQueryCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
@@ -21,67 +20,105 @@ func GetQueryCmd(key string, cdc *codec.Codec) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	cmd.AddCommand(flags.GetCommands(
-		cmdDeployments(key, cdc),
-		cmdDeployment(key, cdc),
-		getGroupCmd(key, cdc),
-	)...)
+	cmd.AddCommand(
+		cmdDeployments(),
+		cmdDeployment(),
+		getGroupCmd(),
+	)
 
 	return cmd
 }
 
-func cmdDeployments(key string, cdc *codec.Codec) *cobra.Command {
+func cmdDeployments() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Query for all deployments",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-
-			dfilters, err := DepFiltersFromFlags(cmd.Flags())
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			obj, err := query.NewClient(ctx, key).Deployments(dfilters)
+			queryClient := types.NewQueryClient(clientCtx)
 
+			dfilters, state, err := DepFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
-			return ctx.PrintOutput(obj)
+
+			// checking state flag
+			stateVal, ok := types.Deployment_State_value[state]
+
+			if (!ok && (state != "")) || state == "invalid" {
+				return ErrStateValue
+			}
+
+			dfilters.State = types.Deployment_State(stateVal)
+
+			pageReq, err := client.ReadPageRequest(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			params := &types.QueryDeploymentsRequest{
+				Filters:    dfilters,
+				Pagination: pageReq,
+			}
+
+			res, err := queryClient.Deployments(context.Background(), params)
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintOutput(res)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	flags.AddPaginationFlagsToCmd(cmd, "deployments")
 	AddDeploymentFilterFlags(cmd.Flags())
+
 	return cmd
 }
 
-func cmdDeployment(key string, cdc *codec.Codec) *cobra.Command {
+func cmdDeployment() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Query deployment",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-
-			id, err := DeploymentIDFromFlags(cmd.Flags(), ctx.FromAddress.String())
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			obj, err := query.NewClient(ctx, key).Deployment(id)
+			queryClient := types.NewQueryClient(clientCtx)
+
+			id, err := DeploymentIDFromFlags(cmd.Flags(), "")
 			if err != nil {
 				return err
 			}
 
-			return ctx.PrintOutput(obj)
+			res, err := queryClient.Deployment(context.Background(), &types.QueryDeploymentRequest{ID: id})
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintOutput(&res.Deployment)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
 	AddDeploymentIDFlags(cmd.Flags())
 	MarkReqDeploymentIDFlags(cmd)
+
 	return cmd
 }
 
-func getGroupCmd(key string, cdc *codec.Codec) *cobra.Command {
+func getGroupCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "group",
 		Short:                      "Deployment group query commands",
@@ -90,35 +127,44 @@ func getGroupCmd(key string, cdc *codec.Codec) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	cmd.AddCommand(flags.GetCommands(
-		cmdGetGroup(key, cdc),
-	)...)
+	cmd.AddCommand(
+		cmdGetGroup(),
+	)
 
 	return cmd
 }
 
-func cmdGetGroup(key string, cdc *codec.Codec) *cobra.Command {
+func cmdGetGroup() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Query group of deployment",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			queryClient := types.NewQueryClient(clientCtx)
 
 			id, err := GroupIDFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			obj, err := query.NewClient(ctx, key).Group(id)
+			res, err := queryClient.Group(context.Background(), &types.QueryGroupRequest{ID: id})
 			if err != nil {
 				return err
 			}
 
-			return ctx.PrintOutput(obj)
+			return clientCtx.PrintOutput(&res.Group)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
 	AddGroupIDFlags(cmd.Flags())
 	MarkReqGroupIDFlags(cmd)
+
 	return cmd
 }

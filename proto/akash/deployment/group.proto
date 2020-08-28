@@ -1,0 +1,132 @@
+syntax = "proto3";
+package akash.deployment;
+
+import "gogoproto/gogo.proto";
+import "akash/resource.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "cosmos/base/abci/v1beta1/abci.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types";
+
+// MsgCloseGroup defines SDK message to close a single Group within a Deployment.
+message MsgCloseGroup {
+    option (gogoproto.equal) = false;
+
+    GroupID id = 1 [
+        (gogoproto.customname) = "ID",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+}
+
+// GroupID stores owner, deployment sequence number and group sequence number
+message GroupID {
+    option (gogoproto.equal) = true;
+    option (gogoproto.goproto_stringer) = false;
+
+    bytes owner = 1 [
+        (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+        (gogoproto.jsontag)  = "owner",
+        (gogoproto.moretags) = "yaml:\"owner\""
+    ];
+    uint64 dseq = 2 [
+        (gogoproto.customname) = "DSeq",
+        (gogoproto.jsontag)    = "dseq",
+        (gogoproto.moretags)   = "yaml:\"dseq\""
+    ];
+    uint32 gseq = 3 [
+        (gogoproto.customname) = "GSeq",
+        (gogoproto.jsontag)    = "gseq",
+        (gogoproto.moretags)   = "yaml:\"gseq\""
+    ];
+}
+
+message GroupSpec {
+    option (gogoproto.equal) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    string name = 1 [
+        (gogoproto.jsontag)    = "name",
+        (gogoproto.moretags)   = "yaml:\"name\""
+    ];
+    repeated cosmos.base.abci.v1beta1.Attribute requirements = 2 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "requirements",
+        (gogoproto.moretags)   = "yaml:\"requirements\""
+    ];
+    repeated Resource resources = 3 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "resources",
+        (gogoproto.moretags)   = "yaml:\"resources\""
+    ];
+    int64 orderBidDuration = 4 [
+        (gogoproto.customname) = "OrderBidDuration",
+        (gogoproto.jsontag)    = "order-bid-duration",
+        (gogoproto.moretags)   = "yaml:\"order-bid-duration\""
+    ];
+}
+
+message Group {
+    option (gogoproto.equal) = false;
+
+    GroupID group_id = 1 [
+        (gogoproto.customname) = "GroupID",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+
+    enum State {
+        option (gogoproto.goproto_enum_prefix) = false;
+
+        // Prefix should start with 0 in enum. So declaring dummy state
+        invalid = 0 [
+            (gogoproto.enumvalue_customname) = "GroupStateInvalid"
+        ];
+        open = 1 [
+            (gogoproto.enumvalue_customname) = "GroupOpen"
+        ];
+        ordered = 2 [
+            (gogoproto.enumvalue_customname) = "GroupOrdered"
+        ]; 
+        matched = 3 [
+            (gogoproto.enumvalue_customname) = "GroupMatched"
+        ];
+        insufficient_funds = 4 [
+            (gogoproto.enumvalue_customname) = "GroupInsufficientFunds"
+        ];
+        closed = 5 [
+            (gogoproto.enumvalue_customname) = "GroupClosed"
+        ];
+    }
+
+    State state = 2 [
+        (gogoproto.jsontag)    = "state",
+        (gogoproto.moretags)   = "yaml:\"state\""
+    ];
+    GroupSpec group_spec = 3 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "spec",
+        (gogoproto.moretags)   = "yaml:\"spec\""
+    ];
+}
+
+message Resource {
+    option (gogoproto.equal) = true;
+    
+    akash.Unit unit = 1 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "unit",
+        (gogoproto.moretags)   = "yaml:\"unit\""
+    ];
+    uint32 count = 2 [
+        (gogoproto.jsontag)    = "count",
+        (gogoproto.moretags)   = "yaml:\"count\""
+    ];
+    cosmos.base.v1beta1.Coin price = 3 [
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "price",
+        (gogoproto.moretags)   = "yaml:\"price\""
+    ];
+}

@@ -2,15 +2,10 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/ovrclk/akash/x/provider/config"
 	"github.com/ovrclk/akash/x/provider/types"
 	"github.com/pkg/errors"
@@ -18,7 +13,7 @@ import (
 )
 
 // GetTxCmd returns the transaction commands for provider module
-func GetTxCmd(key string, cdc *codec.Codec) *cobra.Command {
+func GetTxCmd(key string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Deployment transaction subcommands",
@@ -26,21 +21,24 @@ func GetTxCmd(key string, cdc *codec.Codec) *cobra.Command {
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
-	cmd.AddCommand(flags.PostCommands(
-		cmdCreate(key, cdc),
-		cmdUpdate(key, cdc),
-	)...)
+	cmd.AddCommand(
+		cmdCreate(key),
+		cmdUpdate(key),
+	)
 	return cmd
 }
 
-func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
+func cmdCreate(key string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [config-file]",
 		Short: fmt.Sprintf("Create a %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			// TODO: enable reading files with non-local URIs
 			cfg, err := config.ReadConfigPath(args[0])
@@ -49,8 +47,8 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.MsgCreateProvider{
-				Owner:      ctx.GetFromAddress(),
+			msg := &types.MsgCreateProvider{
+				Owner:      clientCtx.GetFromAddress(),
 				HostURI:    cfg.Host,
 				Attributes: cfg.GetAttributes(),
 			}
@@ -59,29 +57,34 @@ func cmdCreate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 	}
+
+	flags.AddTxFlagsToCmd(cmd)
 
 	return cmd
 }
 
-func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
+func cmdUpdate(key string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update [config-file]",
 		Short: fmt.Sprintf("Update %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-			bldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			cfg, err := config.ReadConfigPath(args[0])
 			if err != nil {
 				return err
 			}
 
-			msg := types.MsgUpdateProvider{
-				Owner:      ctx.GetFromAddress(),
+			msg := &types.MsgUpdateProvider{
+				Owner:      clientCtx.GetFromAddress(),
 				HostURI:    cfg.Host,
 				Attributes: cfg.GetAttributes(),
 			}
@@ -90,9 +93,11 @@ func cmdUpdate(key string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			return utils.GenerateOrBroadcastMsgs(ctx, bldr, []sdk.Msg{msg})
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 	}
+
+	flags.AddTxFlagsToCmd(cmd)
 
 	return cmd
 }

@@ -8,10 +8,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/x/provider/keeper"
 	"github.com/ovrclk/akash/x/provider/types"
@@ -151,6 +150,6 @@ func setupKeeper(t testing.TB) (sdk.Context, keeper.Keeper) {
 	ms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
 	err := ms.LoadLatestVersion()
 	require.NoError(t, err)
-	ctx := sdk.NewContext(ms, abci.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))
-	return ctx, keeper.NewKeeper(app.MakeCodec(), key)
+	ctx := sdk.NewContext(ms, tmproto.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))
+	return ctx, keeper.NewKeeper(types.ModuleCdc, key)
 }

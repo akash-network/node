@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	ccontext "github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -13,14 +12,15 @@ import (
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	pmodule "github.com/ovrclk/akash/x/provider"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
-func serviceLogsCmd(codec *codec.Codec) *cobra.Command {
+func serviceLogsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "service-logs",
 		Short: "get service status",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return doServiceLogs(codec, cmd)
+			return doServiceLogs(cmd)
 		},
 	}
 
@@ -36,8 +36,8 @@ func serviceLogsCmd(codec *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func doServiceLogs(codec *codec.Codec, cmd *cobra.Command) error {
-	cctx := ccontext.NewCLIContext().WithCodec(codec)
+func doServiceLogs(cmd *cobra.Command) error {
+	cctx := client.GetClientContextFromCmd(cmd)
 
 	addr, err := mcli.ProviderFromFlagsWithoutCtx(cmd.Flags())
 	if err != nil {
@@ -59,11 +59,12 @@ func doServiceLogs(codec *codec.Codec, cmd *cobra.Command) error {
 	}
 
 	pclient := pmodule.AppModuleBasic{}.GetQueryClient(cctx)
-	provider, err := pclient.Provider(addr)
+	res, err := pclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: addr})
 	if err != nil {
 		return err
 	}
 
+	provider := &res.Provider
 	gclient := gateway.NewClient()
 
 	bid, err := mcli.BidIDFromFlagsWithoutCtx(cmd.Flags())
@@ -99,7 +100,7 @@ func doServiceLogs(codec *codec.Codec, cmd *cobra.Command) error {
 
 	if outputFormat == "json" {
 		printFn = func(msg gateway.ServiceLogMessage) error {
-			if err = cctx.PrintOutput(msg); err != nil {
+			if err = cctx.PrintOutputLegacy(msg); err != nil {
 				return err
 			}
 			return nil

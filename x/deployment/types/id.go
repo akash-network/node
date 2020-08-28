@@ -6,12 +6,6 @@ import (
 	"github.com/ovrclk/akash/sdkutil"
 )
 
-// DeploymentID stores owner and sequence number
-type DeploymentID struct {
-	Owner sdk.AccAddress `json:"owner"`
-	DSeq  uint64         `json:"dseq"`
-}
-
 // Equals method compares specific deployment with provided deployment
 func (id DeploymentID) Equals(other DeploymentID) bool {
 	return id.Owner.Equals(other.Owner) && id.DSeq == other.DSeq
@@ -32,13 +26,6 @@ func (id DeploymentID) Validate() error {
 // String method for deployment IDs
 func (id DeploymentID) String() string {
 	return sdkutil.FmtBlockID(&id.Owner, &id.DSeq, nil, nil, nil)
-}
-
-// GroupID stores owner, deployment sequence number and group sequence number
-type GroupID struct {
-	Owner sdk.AccAddress `json:"owner"`
-	DSeq  uint64         `json:"dseq"`
-	GSeq  uint32         `json:"gseq"`
 }
 
 // MakeGroupID returns GroupID instance with provided deployment details

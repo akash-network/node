@@ -10,11 +10,11 @@ import (
 // Keeper of the deployment store
 type Keeper struct {
 	skey sdk.StoreKey
-	cdc  *codec.Codec
+	cdc  codec.BinaryMarshaler
 }
 
 // NewKeeper creates and returns an instance for deployment keeper
-func NewKeeper(cdc *codec.Codec, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey) Keeper {
 	return Keeper{
 		skey: skey,
 		cdc:  cdc,
@@ -22,7 +22,7 @@ func NewKeeper(cdc *codec.Codec, skey sdk.StoreKey) Keeper {
 }
 
 // Codec returns keeper codec
-func (k Keeper) Codec() *codec.Codec {
+func (k Keeper) Codec() codec.BinaryMarshaler {
 	return k.cdc
 }
 
@@ -83,27 +83,6 @@ func (k Keeper) GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group 
 	return vals
 }
 
-// getOpenGroups returns all *open* groups of a deployment with given DeploymentID.
-func (k Keeper) getOpenGroups(ctx sdk.Context, id types.DeploymentID) []types.Group {
-	store := ctx.KVStore(k.skey)
-	key := groupsOpenKey(id)
-
-	var vals []types.Group
-	iter := sdk.KVStorePrefixIterator(store, key)
-	for ; iter.Valid(); iter.Next() {
-		gkey, _ := groupOpenKeyConvert(iter.Key())
-
-		buf := store.Get(gkey)
-		var val types.Group
-		k.cdc.MustUnmarshalBinaryBare(buf, &val)
-		if err := val.ValidateOrderable(); err == nil {
-			vals = append(vals, val)
-		}
-	}
-	iter.Close()
-	return vals
-}
-
 // Create creates a new deployment with given deployment and group specifications
 func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []types.Group) error {
 	store := ctx.KVStore(k.skey)
@@ -114,14 +93,15 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 		return types.ErrDeploymentExists
 	}
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(deployment))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&deployment))
 
 	for _, group := range groups {
+		group := group
 		if !group.ID().DeploymentID().Equals(deployment.ID()) {
 			return types.ErrInvalidGroupID
 		}
 		gkey := groupKey(group.ID())
-		store.Set(gkey, k.cdc.MustMarshalBinaryBare(group))
+		store.Set(gkey, k.cdc.MustMarshalBinaryBare(&group))
 		k.updateOpenGroupsIndex(ctx, group)
 	}
 
@@ -147,7 +127,7 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(deployment))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&deployment))
 	return nil
 }
 
@@ -166,7 +146,7 @@ func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group) error {
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(group))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&group))
 	k.updateOpenGroupsIndex(ctx, group)
 	return nil
 }
@@ -261,7 +241,7 @@ func (k Keeper) OnDeploymentClosed(ctx sdk.Context, group types.Group) {
 	k.updateGroup(ctx, group)
 
 	ctx.EventManager().EmitEvent(
-		types.NewEventDeploymentClosed(group.DeploymentID()).
+		types.NewEventDeploymentClosed(group.ID().DeploymentID()).
 			ToSDKEvent(),
 	)
 }
@@ -270,7 +250,7 @@ func (k Keeper) updateGroup(ctx sdk.Context, group types.Group) {
 	store := ctx.KVStore(k.skey)
 	key := groupKey(group.ID())
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(group))
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&group))
 	k.updateOpenGroupsIndex(ctx, group)
 }
 

@@ -1,7 +1,7 @@
 package query
 
 import (
-	"github.com/cosmos/cosmos-sdk/client/context"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -13,12 +13,12 @@ type Client interface {
 }
 
 // NewClient creates a client instance with provided context and key
-func NewClient(ctx context.CLIContext, key string) Client {
+func NewClient(ctx sdkclient.Context, key string) Client {
 	return &client{ctx: ctx, key: key}
 }
 
 type client struct {
-	ctx context.CLIContext
+	ctx sdkclient.Context
 	key string
 }
 
@@ -28,7 +28,7 @@ func (c *client) Deployments(dfilters DeploymentFilters) (Deployments, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }
 
 func (c *client) Deployment(id types.DeploymentID) (Deployment, error) {
@@ -37,7 +37,7 @@ func (c *client) Deployment(id types.DeploymentID) (Deployment, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }
 
 func (c *client) Group(id types.GroupID) (Group, error) {
@@ -46,5 +46,5 @@ func (c *client) Group(id types.GroupID) (Group, error) {
 	if err != nil {
 		return obj, err
 	}
-	return obj, c.ctx.Codec.UnmarshalJSON(buf, &obj)
+	return obj, c.ctx.LegacyAmino.UnmarshalJSON(buf, &obj)
 }

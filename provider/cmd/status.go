@@ -3,21 +3,21 @@ package cmd
 import (
 	"context"
 
-	ccontext "github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 
 	"github.com/ovrclk/akash/provider/gateway"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	pmodule "github.com/ovrclk/akash/x/provider"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
-func statusCmd(codec *codec.Codec) *cobra.Command {
+func statusCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "get provider status",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return doStatus(codec, cmd)
+			return doStatus(cmd)
 		},
 	}
 
@@ -27,8 +27,8 @@ func statusCmd(codec *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func doStatus(codec *codec.Codec, cmd *cobra.Command) error {
-	cctx := ccontext.NewCLIContext().WithCodec(codec)
+func doStatus(cmd *cobra.Command) error {
+	cctx := client.GetClientContextFromCmd(cmd)
 
 	addr, err := mcli.ProviderFromFlagsWithoutCtx(cmd.Flags())
 	if err != nil {
@@ -37,11 +37,12 @@ func doStatus(codec *codec.Codec, cmd *cobra.Command) error {
 
 	pclient := pmodule.AppModuleBasic{}.GetQueryClient(cctx)
 
-	provider, err := pclient.Provider(addr)
+	res, err := pclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: addr})
 	if err != nil {
 		return err
 	}
 
+	provider := &res.Provider
 	gclient := gateway.NewClient()
 
 	result, err := gclient.Status(context.Background(), provider.HostURI)
@@ -49,7 +50,7 @@ func doStatus(codec *codec.Codec, cmd *cobra.Command) error {
 		return err
 	}
 
-	if err = cctx.PrintOutput(result); err != nil {
+	if err = cctx.PrintOutputLegacy(result); err != nil {
 		return err
 	}
 

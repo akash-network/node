@@ -11,7 +11,7 @@ var (
 )
 
 // RenderQueryResponse uses codec to render query response. Returns error incase of failure.
-func RenderQueryResponse(cdc *codec.Codec, obj interface{}) ([]byte, error) {
+func RenderQueryResponse(cdc *codec.LegacyAmino, obj interface{}) ([]byte, error) {
 	response, err := codec.MarshalJSONIndent(cdc, obj)
 	if err != nil {
 		return nil, sdkerrors.Wrap(ErrCouldNotRenderObject, err.Error())

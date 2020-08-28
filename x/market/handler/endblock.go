@@ -28,13 +28,13 @@ func transferFundsForActiveLeases(ctx sdk.Context, keepers Keepers) error {
 
 		amt := sdk.NewCoins(lease.Price)
 
-		if !keepers.Bank.HasCoins(ctx, lease.Owner, amt) {
-			keepers.Deployment.OnLeaseInsufficientFunds(ctx, lease.GroupID())
+		if !keepers.Bank.HasBalance(ctx, lease.ID().Owner, lease.Price) {
+			keepers.Deployment.OnLeaseInsufficientFunds(ctx, lease.ID().GroupID())
 			keepers.Market.OnInsufficientFunds(ctx, lease)
 			return false
 		}
 
-		err := keepers.Bank.SendCoins(ctx, lease.Owner, lease.Provider, amt)
+		err := keepers.Bank.SendCoins(ctx, lease.ID().Owner, lease.ID().Provider, amt)
 
 		if err != nil {
 			ctx.Logger().Error("error transferring funds", "err", err)
@@ -52,9 +52,9 @@ func transferFundsForActiveLeases(ctx sdk.Context, keepers Keepers) error {
 	return nil
 }
 
-var errNoBids error = errors.New("no bids to pick winner from")
+var ErrNoBids = errors.New("no bids to pick winner from")
 
-func pickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
+func PickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 	// open bids; match by lowest price; sort bids by price
 	sort.Slice(bids, func(i, j int) bool {
 		// The BidID DSeq is pulled from the original OrderID.
@@ -64,7 +64,7 @@ func pickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 	switch len(bids) {
 	case 0:
 		// This is a fatal case
-		return nil, errNoBids
+		return nil, ErrNoBids
 	case 1:
 		return &bids[0], nil
 	}
@@ -79,7 +79,7 @@ func pickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 	// FNV hash provider addresses all of the bids
 	h := fnv.New32a()
 	bidIndex := 0
-	_, err = h.Write(bids[bidIndex+1].Provider.Bytes())
+	_, err = h.Write(bids[bidIndex+1].ID().Provider.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func pickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 		if !bids[bidIndex].Price.IsEqual(bids[bidIndex+1].Price) {
 			break
 		}
-		_, err := h.Write(bids[bidIndex+1].Provider.Bytes())
+		_, err := h.Write(bids[bidIndex+1].ID().Provider.Bytes())
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +124,7 @@ func matchOrders(ctx sdk.Context, keepers Keepers) error {
 			return false
 		}
 
-		winner, err := pickBidWinner(bids)
+		winner, err := PickBidWinner(bids)
 		if err != nil {
 			pErr := errors.Wrap(err, "picking bid winner returned unrecoverable error")
 			panic(pErr.Error())
@@ -139,7 +139,7 @@ func matchOrders(ctx sdk.Context, keepers Keepers) error {
 		// set losing bids to state lost
 		// Set all but winning bid to State: Lost
 		for _, bid := range bids {
-			if winner.Equals(bid.BidID) {
+			if winner.ID().Equals(bid.BidID) {
 				continue // skip setting state to lost
 			}
 			keepers.Market.OnBidLost(ctx, bid)
@@ -149,7 +149,7 @@ func matchOrders(ctx sdk.Context, keepers Keepers) error {
 		keepers.Market.OnOrderMatched(ctx, order)
 
 		// notify group of match
-		keepers.Deployment.OnLeaseCreated(ctx, order.GroupID())
+		keepers.Deployment.OnLeaseCreated(ctx, order.ID().GroupID())
 
 		return false
 	})

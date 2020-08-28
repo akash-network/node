@@ -1,0 +1,55 @@
+syntax = "proto3";
+package akash.deployment;
+
+import "gogoproto/gogo.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "akash/deployment/deployment.proto";
+import "akash/deployment/group.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types";
+
+// Query defines the gRPC querier service
+service Query {
+    // Deployments queries deployments
+    rpc Deployments (QueryDeploymentsRequest) returns (QueryDeploymentsResponse) {}
+
+    // Deployment queries deployment details
+    rpc Deployment (QueryDeploymentRequest) returns (QueryDeploymentResponse) {}
+
+    // Group queries group details
+    rpc Group (QueryGroupRequest) returns (QueryGroupResponse) {}
+}
+
+// QueryDeploymentsRequest is request type for the Query/Deployments RPC method
+message QueryDeploymentsRequest{
+    DeploymentFilters Filters = 1 [(gogoproto.nullable) = false];
+
+    cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+// QueryDeploymentsResponse is response type for the Query/Deployments RPC method
+message QueryDeploymentsResponse{
+    repeated DeploymentResponse Deployments = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="DeploymentResponses"];
+
+    cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// QueryDeploymentRequest is request type for the Query/Deployment RPC method
+message QueryDeploymentRequest{
+    DeploymentID ID = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryDeploymentResponse is response type for the Query/Deployment RPC method
+message QueryDeploymentResponse{
+    DeploymentResponse Deployment = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryGroupRequest is request type for the Query/Group RPC method
+message QueryGroupRequest{
+    GroupID ID = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryGroupResponse is response type for the Query/Group RPC method
+message QueryGroupResponse{
+    Group Group = 1 [(gogoproto.nullable) = false];
+}

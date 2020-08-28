@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"math/rand"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/cosmos/cosmos-sdk/x/bank"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/gogo/protobuf/grpc"
 	"github.com/gorilla/mux"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/ovrclk/akash/x/deployment/client/cli"
 	"github.com/ovrclk/akash/x/deployment/client/rest"
 	"github.com/ovrclk/akash/x/deployment/handler"
@@ -18,10 +21,11 @@ import (
 	"github.com/ovrclk/akash/x/deployment/simulation"
 	"github.com/ovrclk/akash/x/deployment/types"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sim "github.com/cosmos/cosmos-sdk/x/simulation"
+	sim "github.com/cosmos/cosmos-sdk/types/simulation"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -33,7 +37,9 @@ var (
 )
 
 // AppModuleBasic defines the basic application module used by the deployment module.
-type AppModuleBasic struct{}
+type AppModuleBasic struct {
+	cdc codec.Marshaler
+}
 
 // Name returns deployment module's name
 func (AppModuleBasic) Name() string {
@@ -41,44 +47,53 @@ func (AppModuleBasic) Name() string {
 }
 
 // RegisterCodec registers the deployment module's types for the given codec.
-func (AppModuleBasic) RegisterCodec(cdc *codec.Codec) {
+func (AppModuleBasic) RegisterCodec(cdc *codec.LegacyAmino) {
 	types.RegisterCodec(cdc)
+}
+
+// RegisterInterfaces registers the module's interface types
+func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
+	types.RegisterInterfaces(registry)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the deployment
 // module.
-func (AppModuleBasic) DefaultGenesis() json.RawMessage {
-	return types.MustMarshalJSON(DefaultGenesisState())
+func (AppModuleBasic) DefaultGenesis(cdc codec.JSONMarshaler) json.RawMessage {
+	return cdc.MustMarshalJSON(DefaultGenesisState())
 }
 
 // ValidateGenesis does validation check of the Genesis and returns error incase of failure
-func (AppModuleBasic) ValidateGenesis(bz json.RawMessage) error {
-	var data GenesisState
-	err := types.UnmarshalJSON(bz, &data)
+func (AppModuleBasic) ValidateGenesis(cdc codec.JSONMarshaler, config client.TxEncodingConfig, bz json.RawMessage) error {
+	var data types.GenesisState
+	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
-		return err
+		return errors.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
 	}
-	return ValidateGenesis(data)
+	return ValidateGenesis(&data)
 }
 
 // RegisterRESTRoutes registers rest routes for this module
-func (AppModuleBasic) RegisterRESTRoutes(ctx context.CLIContext, rtr *mux.Router) {
-	rest.RegisterRoutes(ctx, rtr, StoreKey)
+func (AppModuleBasic) RegisterRESTRoutes(clientCtx client.Context, rtr *mux.Router) {
+	rest.RegisterRoutes(clientCtx, rtr, StoreKey)
+}
+
+// RegisterGRPCRoutes registers the gRPC Gateway routes for the deployment module.
+func (AppModuleBasic) RegisterGRPCRoutes(_ client.Context, _ *runtime.ServeMux) {
 }
 
 // GetQueryCmd get the root query command of this module
-func (AppModuleBasic) GetQueryCmd(cdc *codec.Codec) *cobra.Command {
-	return cli.GetQueryCmd(StoreKey, cdc)
+func (AppModuleBasic) GetQueryCmd() *cobra.Command {
+	return cli.GetQueryCmd()
 }
 
 // GetTxCmd get the root tx command of this module
-func (AppModuleBasic) GetTxCmd(cdc *codec.Codec) *cobra.Command {
-	return cli.GetTxCmd(StoreKey, cdc)
+func (AppModuleBasic) GetTxCmd() *cobra.Command {
+	return cli.GetTxCmd(StoreKey)
 }
 
 // GetQueryClient returns a new query client for this module
-func (AppModuleBasic) GetQueryClient(ctx context.CLIContext) query.Client {
-	return query.NewClient(ctx, StoreKey)
+func (AppModuleBasic) GetQueryClient(clientCtx client.Context) types.QueryClient {
+	return types.NewQueryClient(clientCtx)
 }
 
 // AppModule implements an application module for the deployment module.
@@ -86,13 +101,13 @@ type AppModule struct {
 	AppModuleBasic
 	keeper     keeper.Keeper
 	mkeeper    handler.MarketKeeper
-	coinKeeper bank.Keeper
+	coinKeeper bankkeeper.Keeper
 }
 
 // NewAppModule creates a new AppModule Object
-func NewAppModule(k keeper.Keeper, mkeeper handler.MarketKeeper, bankKeeper bank.Keeper) AppModule {
+func NewAppModule(cdc codec.Marshaler, k keeper.Keeper, mkeeper handler.MarketKeeper, bankKeeper bankkeeper.Keeper) AppModule {
 	return AppModule{
-		AppModuleBasic: AppModuleBasic{},
+		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keeper:         k,
 		mkeeper:        mkeeper,
 		coinKeeper:     bankKeeper,
@@ -108,13 +123,8 @@ func (AppModule) Name() string {
 func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
 
 // Route returns the message routing key for the deployment module
-func (am AppModule) Route() string {
-	return types.RouterKey
-}
-
-// NewHandler returns an sdk.Handler for the deployment module.
-func (am AppModule) NewHandler() sdk.Handler {
-	return handler.NewHandler(am.keeper, am.mkeeper)
+func (am AppModule) Route() sdk.Route {
+	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keeper, am.mkeeper))
 }
 
 // QuerierRoute returns the deployment module's querier route name.
@@ -122,9 +132,16 @@ func (am AppModule) QuerierRoute() string {
 	return types.ModuleName
 }
 
-// NewQuerierHandler returns the sdk.Querier for deployment module
-func (am AppModule) NewQuerierHandler() sdk.Querier {
-	return query.NewQuerier(am.keeper)
+// LegacyQuerierHandler returns the sdk.Querier for deployment module
+func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
+	return query.NewQuerier(am.keeper, legacyQuerierCdc)
+}
+
+// RegisterQueryService registers a GRPC query service to respond to the
+// module-specific GRPC queries.
+func (am AppModule) RegisterQueryService(server grpc.Server) {
+	querier := keeper.Querier{Keeper: am.keeper}
+	types.RegisterQueryServer(server, querier)
 }
 
 // BeginBlock performs no-op
@@ -141,17 +158,17 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 
 // InitGenesis performs genesis initialization for the deployment module. It returns
 // no validator updates.
-func (am AppModule) InitGenesis(ctx sdk.Context, data json.RawMessage) []abci.ValidatorUpdate {
-	var genesisState GenesisState
-	types.MustUnmarshalJSON(data, &genesisState)
-	return InitGenesis(ctx, am.keeper, genesisState)
+func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONMarshaler, data json.RawMessage) []abci.ValidatorUpdate {
+	var genesisState types.GenesisState
+	cdc.MustUnmarshalJSON(data, &genesisState)
+	return InitGenesis(ctx, am.keeper, &genesisState)
 }
 
 // ExportGenesis returns the exported genesis state as raw bytes for the deployment
 // module.
-func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
+func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONMarshaler) json.RawMessage {
 	gs := ExportGenesis(ctx, am.keeper)
-	return types.MustMarshalJSON(gs)
+	return cdc.MustMarshalJSON(gs)
 }
 
 //____________________________________________________________________________
@@ -160,13 +177,15 @@ func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
 type AppModuleSimulation struct {
 	keeper  keeper.Keeper
 	akeeper govtypes.AccountKeeper
+	bkeeper bankkeeper.Keeper
 }
 
-// NewAppModule creates a new AppModuleSimulation instance
-func NewAppModuleSimulation(k keeper.Keeper, akeeper govtypes.AccountKeeper) AppModuleSimulation {
+// NewAppModuleSimulation creates a new AppModuleSimulation instance
+func NewAppModuleSimulation(k keeper.Keeper, akeeper govtypes.AccountKeeper, bankKeeper bankkeeper.Keeper) AppModuleSimulation {
 	return AppModuleSimulation{
 		keeper:  k,
 		akeeper: akeeper,
+		bkeeper: bankKeeper,
 	}
 }
 
@@ -195,5 +214,5 @@ func (AppModuleSimulation) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
 // WeightedOperations returns the all the staking module operations with their respective weights.
 func (am AppModuleSimulation) WeightedOperations(simState module.SimulationState) []sim.WeightedOperation {
 	return simulation.WeightedOperations(simState.AppParams, simState.Cdc,
-		am.akeeper, am.keeper)
+		am.akeeper, am.bkeeper, am.keeper)
 }

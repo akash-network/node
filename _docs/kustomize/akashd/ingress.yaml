@@ -1,12 +1,12 @@
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
-  name: akashd
+  name: akash
 spec:
   rules:
-    - host: akashd.localhost
+    - host: akash.localhost
       http:
         paths:
           - backend: 
-              serviceName: akashd
-              servicePort: akashd-rpc
+              serviceName: akash
+              servicePort: akash-rpc

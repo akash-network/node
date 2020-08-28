@@ -1,0 +1,6 @@
+host: http://akash.network
+attributes:
+  - key: region
+    value: sfo
+  - key: moniker
+    value: akash

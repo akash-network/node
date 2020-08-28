@@ -3,7 +3,7 @@ package query
 import (
 	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -14,12 +14,12 @@ type RawClient interface {
 }
 
 // NewRawClient creates a client instance with provided context and key
-func NewRawClient(ctx context.CLIContext, key string) RawClient {
+func NewRawClient(ctx sdkclient.Context, key string) RawClient {
 	return &rawclient{ctx: ctx, key: key}
 }
 
 type rawclient struct {
-	ctx context.CLIContext
+	ctx sdkclient.Context
 	key string
 }
 

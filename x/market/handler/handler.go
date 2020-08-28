@@ -12,11 +12,11 @@ import (
 func NewHandler(keepers Keepers) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		switch msg := msg.(type) {
-		case types.MsgCreateBid:
+		case *types.MsgCreateBid:
 			return handleMsgCreateBid(ctx, keepers, msg)
-		case types.MsgCloseBid:
+		case *types.MsgCloseBid:
 			return handleMsgCloseBid(ctx, keepers, msg)
-		case types.MsgCloseOrder:
+		case *types.MsgCloseOrder:
 			return handleMsgCloseOrder(ctx, keepers, msg)
 		default:
 			return nil, sdkerrors.ErrUnknownRequest
@@ -24,7 +24,7 @@ func NewHandler(keepers Keepers) sdk.Handler {
 	}
 }
 
-func handleMsgCreateBid(ctx sdk.Context, keepers Keepers, msg types.MsgCreateBid) (*sdk.Result, error) {
+func handleMsgCreateBid(ctx sdk.Context, keepers Keepers, msg *types.MsgCreateBid) (*sdk.Result, error) {
 	order, found := keepers.Market.GetOrder(ctx, msg.Order)
 	if !found {
 		return nil, types.ErrInvalidOrder
@@ -56,17 +56,17 @@ func handleMsgCreateBid(ctx sdk.Context, keepers Keepers, msg types.MsgCreateBid
 	}
 
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }
 
-func handleMsgCloseBid(ctx sdk.Context, keepers Keepers, msg types.MsgCloseBid) (*sdk.Result, error) {
+func handleMsgCloseBid(ctx sdk.Context, keepers Keepers, msg *types.MsgCloseBid) (*sdk.Result, error) {
 	bid, found := keepers.Market.GetBid(ctx, msg.BidID)
 	if !found {
 		return nil, types.ErrUnknownBid
 	}
 
-	order, found := keepers.Market.GetOrder(ctx, msg.OrderID())
+	order, found := keepers.Market.GetOrder(ctx, msg.BidID.OrderID())
 	if !found {
 		return nil, types.ErrUnknownOrderForBid
 	}
@@ -74,7 +74,7 @@ func handleMsgCloseBid(ctx sdk.Context, keepers Keepers, msg types.MsgCloseBid) 
 	if bid.State == types.BidOpen {
 		keepers.Market.OnBidClosed(ctx, bid)
 		return &sdk.Result{
-			Events: ctx.EventManager().Events(),
+			Events: ctx.EventManager().ABCIEvents(),
 		}, nil
 	}
 
@@ -94,14 +94,14 @@ func handleMsgCloseBid(ctx sdk.Context, keepers Keepers, msg types.MsgCloseBid) 
 	keepers.Market.OnBidClosed(ctx, bid)
 	keepers.Market.OnLeaseClosed(ctx, lease)
 	keepers.Market.OnOrderClosed(ctx, order)
-	keepers.Deployment.OnLeaseClosed(ctx, order.GroupID())
+	keepers.Deployment.OnLeaseClosed(ctx, order.ID().GroupID())
 
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }
 
-func handleMsgCloseOrder(ctx sdk.Context, keepers Keepers, msg types.MsgCloseOrder) (*sdk.Result, error) {
+func handleMsgCloseOrder(ctx sdk.Context, keepers Keepers, msg *types.MsgCloseOrder) (*sdk.Result, error) {
 	order, found := keepers.Market.GetOrder(ctx, msg.OrderID)
 	if !found {
 		return nil, types.ErrUnknownOrder
@@ -114,8 +114,8 @@ func handleMsgCloseOrder(ctx sdk.Context, keepers Keepers, msg types.MsgCloseOrd
 
 	keepers.Market.OnOrderClosed(ctx, order)
 	keepers.Market.OnLeaseClosed(ctx, lease)
-	keepers.Deployment.OnLeaseClosed(ctx, order.GroupID())
+	keepers.Deployment.OnLeaseClosed(ctx, order.ID().GroupID())
 	return &sdk.Result{
-		Events: ctx.EventManager().Events(),
+		Events: ctx.EventManager().ABCIEvents(),
 	}, nil
 }

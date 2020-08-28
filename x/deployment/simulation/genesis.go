@@ -11,14 +11,9 @@ type GenesisDeployment struct {
 	Groups []types.Group
 }
 
-// GenesisState stores slice of genesis deployment instance
-type GenesisState struct {
-	Deployments []GenesisDeployment `json:"deployments"`
-}
-
 // RandomizedGenState generates a random GenesisState for supply
 func RandomizedGenState(simState *module.SimulationState) {
-	deploymentGenesis := GenesisState{}
+	deploymentGenesis := &types.GenesisState{}
 
 	simState.GenState[types.ModuleName] = simState.Cdc.MustMarshalJSON(deploymentGenesis)
 }

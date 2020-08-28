@@ -1,6 +1,9 @@
 package types
 
 import (
+	"bytes"
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/types"
@@ -14,71 +17,63 @@ const DefaultOrderBiddingDuration int64 = int64(12342)
 // MaxBiddingDuration is roughly 30 days of block height
 const MaxBiddingDuration int64 = DefaultOrderBiddingDuration * int64(30)
 
-//go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
+// //go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
 
-// DeploymentState defines state of deployment
-type DeploymentState uint8
+// // DeploymentState defines state of deployment
+// type DeploymentState uint32
 
-const (
-	// DeploymentActive is used when state of deployment is active
-	DeploymentActive DeploymentState = iota + 1 // active
-	// DeploymentClosed is used when state of deployment is closed
-	DeploymentClosed // closed
-)
+// const (
+// 	// DeploymentActive is used when state of deployment is active
+// 	DeploymentActive DeploymentState = iota + 1 // active
+// 	// DeploymentClosed is used when state of deployment is closed
+// 	DeploymentClosed // closed
+// )
 
-// DeploymentStateMap is used to decode deployment state flag value
-var DeploymentStateMap = map[string]DeploymentState{
-	"active": DeploymentActive,
-	"closed": DeploymentClosed,
-}
+// // DeploymentStateMap is used to decode deployment state flag value
+// var DeploymentStateMap = map[string]DeploymentState{
+// 	"active": DeploymentActive,
+// 	"closed": DeploymentClosed,
+// }
 
 // Deployment stores deploymentID, state and version details
-type Deployment struct {
-	DeploymentID `json:"id"`
-	State        DeploymentState `json:"state"`
-	Version      []byte          `json:"version"`
-}
+// type Deployment struct {
+// 	DeploymentID `json:"id"`
+// 	State        DeploymentState `json:"state"`
+// 	Version      []byte          `json:"version"`
+// }
 
 // ID method returns DeploymentID details of specific deployment
 func (obj Deployment) ID() DeploymentID {
 	return obj.DeploymentID
 }
 
-// GroupState defines state of group
-type GroupState uint8
+// // GroupState defines state of group
+// type GroupState uint32
 
-const (
-	// GroupOpen is used when state of group is open
-	GroupOpen GroupState = iota + 1 // open
-	// GroupOrdered is used when state of group is ordered
-	GroupOrdered // ordered
-	// GroupMatched is used when state of group is matched
-	GroupMatched // matched
-	// GroupInsufficientFunds is used when group has insufficient funds
-	GroupInsufficientFunds // insufficient-funds
-	// GroupClosed is used when state of group is closed
-	GroupClosed // closed
-)
+// const (
+// 	// GroupOpen is used when state of group is open
+// 	GroupOpen GroupState = iota + 1 // open
+// 	// GroupOrdered is used when state of group is ordered
+// 	GroupOrdered // ordered
+// 	// GroupMatched is used when state of group is matched
+// 	GroupMatched // matched
+// 	// GroupInsufficientFunds is used when group has insufficient funds
+// 	GroupInsufficientFunds // insufficient_funds
+// 	// GroupClosed is used when state of group is closed
+// 	GroupClosed // closed
+// )
 
 // GroupSpec stores group specifications
-type GroupSpec struct {
-	Name             string          `json:"name"`
-	Requirements     []sdk.Attribute `json:"requirements"`
-	Resources        []Resource      `json:"resources"`
-	OrderBidDuration int64           `json:"bid-duration"`
-}
+// type GroupSpec struct {
+// 	Name         string          `json:"name"`
+// 	Requirements []sdk.Attribute `json:"requirements"`
+// 	Resources    []Resource      `json:"resources"`
+// }
 
 // ValidateBasic asserts non-zero values
+// TODO: This is causing an import cycle. I think there is some pattern here I'm missing tho..
 func (g GroupSpec) ValidateBasic() error {
-	if g.OrderBidDuration < 1 {
-		return ErrInvalidGroups
-	}
-	if g.OrderBidDuration > MaxBiddingDuration {
-		return ErrInvalidGroups
-	}
-	if g.Name == "" {
-		return ErrInvalidGroups
-	}
+	// return validation.ValidateDeploymentGroup(g)
 	return nil
 }
 
@@ -126,13 +121,6 @@ loop:
 	return true
 }
 
-// Group stores groupID, state and other specifications
-type Group struct {
-	GroupID   `json:"id"`
-	State     GroupState `json:"state"`
-	GroupSpec `json:"spec"`
-}
-
 // ID method returns GroupID details of specific group
 func (g Group) ID() GroupID {
 	return g.GroupID
@@ -159,24 +147,68 @@ func (g Group) ValidateClosable() error {
 	}
 }
 
-// Resource stores unit, count and price of each resource
-type Resource struct {
-	Unit  types.Unit `json:"unit"`
-	Count uint32     `json:"count"`
-	Price sdk.Coin   `json:"price"`
+// GetName method returns group name
+func (g Group) GetName() string {
+	return g.GroupSpec.Name
 }
 
-// GetUnit method returns unit of resource
-func (r Resource) GetUnit() types.Unit {
-	return r.Unit
-}
-
-// GetCount method returns count of resource
-func (r Resource) GetCount() uint32 {
-	return r.Count
+// GetResources method returns resources list in group
+func (g Group) GetResources() []types.Resource {
+	return g.GroupSpec.GetResources()
 }
 
 // FullPrice method returns full price of resource
 func (r Resource) FullPrice() sdk.Coin {
 	return sdk.NewCoin(r.Price.Denom, r.Price.Amount.MulRaw(int64(r.Count)))
+}
+
+func (d DeploymentResponse) String() string {
+	return fmt.Sprintf(`Deployment
+	Owner:   %s
+	DSeq:    %d
+	State:   %v
+	Version: %s
+	Num Groups: %d
+	`, d.Deployment.DeploymentID.Owner, d.Deployment.DeploymentID.DSeq,
+		d.Deployment.State, d.Deployment.Version, len(d.Groups))
+}
+
+// DeploymentResponses is a collection of DeploymentResponse
+type DeploymentResponses []DeploymentResponse
+
+func (ds DeploymentResponses) String() string {
+	var buf bytes.Buffer
+
+	const sep = "\n\n"
+
+	for _, d := range ds {
+		buf.WriteString(d.String())
+		buf.WriteString(sep)
+	}
+
+	if len(ds) > 0 {
+		buf.Truncate(buf.Len() - len(sep))
+	}
+
+	return buf.String()
+}
+
+// Accept returns whether deployment filters valid or not
+func (filters DeploymentFilters) Accept(obj Deployment) bool {
+	// Checking owner filter
+	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.DeploymentID.Owner) {
+		return false
+	}
+
+	// Checking dseq filter
+	if filters.DSeq != 0 && filters.DSeq != obj.DeploymentID.DSeq {
+		return false
+	}
+
+	// Checking state filter
+	if filters.State != 0 && filters.State != obj.State {
+		return false
+	}
+
+	return true
 }

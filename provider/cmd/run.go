@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"os"
 
-	ccontext "github.com/cosmos/cosmos-sdk/client/context"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/go-kit/kit/log/term"
 	"github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/cmd/common"
@@ -24,6 +23,7 @@ import (
 	dmodule "github.com/ovrclk/akash/x/deployment"
 	mmodule "github.com/ovrclk/akash/x/market"
 	pmodule "github.com/ovrclk/akash/x/provider"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/log"
@@ -40,37 +40,54 @@ var (
 	errInvalidConfig = errors.New("Invalid configuration")
 )
 
-func runCmd(cdc *codec.Codec) *cobra.Command {
+func runCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "run akash provider",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return common.RunForever(func(ctx context.Context) error {
-				return doRunCmd(ctx, cdc, cmd, args)
+				return doRunCmd(ctx, cmd, args)
 			})
 		},
 	}
 
+	cmd.Flags().String(flags.FlagChainID, "", "The network chain ID")
+	if err := viper.BindPFlag(flags.FlagChainID, cmd.Flags().Lookup(flags.FlagChainID)); err != nil {
+		return nil
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+
 	cmd.Flags().Bool(flagClusterK8s, false, "Use Kubernetes cluster")
-	viper.BindPFlag(flagClusterK8s, cmd.Flags().Lookup(flagClusterK8s))
+	if err := viper.BindPFlag(flagClusterK8s, cmd.Flags().Lookup(flagClusterK8s)); err != nil {
+		return nil
+	}
 
 	cmd.Flags().String(flagK8sManifestNS, "lease", "Cluster manifest namespace")
-	viper.BindPFlag(flagK8sManifestNS, cmd.Flags().Lookup(flagK8sManifestNS))
+	if err := viper.BindPFlag(flagK8sManifestNS, cmd.Flags().Lookup(flagK8sManifestNS)); err != nil {
+		return nil
+	}
 
 	cmd.Flags().String(flagGatewayListenAddress, "0.0.0.0:8080", "Gateway listen address")
-	viper.BindPFlag(flagGatewayListenAddress, cmd.Flags().Lookup(flagGatewayListenAddress))
+	if err := viper.BindPFlag(flagGatewayListenAddress, cmd.Flags().Lookup(flagGatewayListenAddress)); err != nil {
+		return nil
+	}
 
 	return cmd
 }
 
 // doRunCmd initializes all of the Provider functionality, hangs, and awaits shutdown signals.
-func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []string) error {
-	cctx := ccontext.NewCLIContext().WithCodec(cdc)
+func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
+	cctx := sdkclient.GetClientContextFromCmd(cmd)
+	cctx, err := sdkclient.ReadTxCommandFlags(cctx, cmd.Flags())
+	if err != nil {
+		return err
+	}
 
-	txbldr := auth.NewTxBuilderFromCLI(os.Stdin).WithTxEncoder(utils.GetTxEncoder(cdc))
+	txFactory := tx.NewFactoryCLI(cctx, cmd.Flags()).WithTxConfig(cctx.TxConfig).WithAccountRetriever(cctx.AccountRetriever)
 
 	keyname := cctx.GetFromName()
-	info, err := txbldr.Keybase().Get(keyname)
+	info, err := txFactory.Keybase().Key(keyname)
 	if err != nil {
 		return err
 	}
@@ -85,7 +102,7 @@ func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []str
 	aclient := client.NewClient(
 		log,
 		cctx,
-		txbldr,
+		txFactory,
 		info,
 		keys.DefaultKeyPass,
 		client.NewQueryClient(
@@ -95,10 +112,15 @@ func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []str
 		),
 	)
 
-	pinfo, err := aclient.Query().Provider(info.GetAddress())
+	res, err := aclient.Query().Provider(
+		context.Background(),
+		&ptypes.QueryProviderRequest{Owner: info.GetAddress()},
+	)
 	if err != nil {
 		return err
 	}
+
+	pinfo := &res.Provider
 
 	// k8s client creation
 	cclient, err := createClusterClient(log, cmd, pinfo.HostURI)
@@ -119,8 +141,7 @@ func doRunCmd(ctx context.Context, cdc *codec.Codec, cmd *cobra.Command, _ []str
 
 	service, err := provider.NewService(ctx, session, bus, cclient)
 	if err != nil {
-		group.Wait()
-		return err
+		return group.Wait()
 	}
 
 	gateway := gateway.NewServer(ctx, log, service, gwaddr)

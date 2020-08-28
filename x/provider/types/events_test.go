@@ -12,8 +12,11 @@ import (
 )
 
 var (
-	keyAcc, _ = sdk.AccAddressFromBech32("akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr")
-	//keyParams = sdk.NewKVStoreKey(params.StoreKey)
+	_ = func() string {
+		config := sdk.GetConfig()
+		config.SetBech32PrefixForAccount(sdkutil.Bech32PrefixAccAddr, sdkutil.Bech32PrefixAccPub)
+		return ""
+	}()
 
 	errWildcard = errors.New("wildcard string error can't be matched")
 )
@@ -81,7 +84,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 			},
 		},
@@ -119,7 +122,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 			},
 		},
@@ -157,7 +160,7 @@ var TEPS = []testEventParsing{
 			Attributes: []sdk.Attribute{
 				{
 					Key:   evOwnerKey,
-					Value: keyAcc.String(),
+					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 			},
 		},

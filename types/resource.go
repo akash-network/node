@@ -12,13 +12,6 @@ type Resource struct {
 	Count uint32
 }
 
-// Unit stores cpu, memory and storage metrics
-type Unit struct {
-	CPU     uint32 `json:"cpu"`
-	Memory  uint64 `json:"memory"`
-	Storage uint64 `json:"storage"`
-}
-
 // Equals compare given unit with receiver unit
 func (u Unit) Equals(other Unit) bool {
 	return u.CPU == other.CPU &&

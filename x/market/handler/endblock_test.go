@@ -1,14 +1,15 @@
-package handler
+package handler_test
 
 import (
-	"errors"
 	"strconv"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/x/market/handler"
 	"github.com/ovrclk/akash/x/market/types"
+	"github.com/pkg/errors"
 )
 
 type winnerTest struct {
@@ -19,11 +20,11 @@ type winnerTest struct {
 }
 
 func (w *winnerTest) testFunc(t *testing.T) {
-	winner, err := pickBidWinner(w.bids)
+	winner, err := handler.PickBidWinner(w.bids)
 	if !errors.Is(err, w.expErr) {
-		t.Errorf("returned err: %v does not match %v", err, w.expErr)
+		t.Errorf("returned err: '%v' does not match '%v'", err, w.expErr)
 	}
-	if w.expWinner != nil && !winner.Equals(w.expWinner.ID()) {
+	if w.expWinner != nil && !winner.ID().Equals(w.expWinner.ID()) {
 		t.Errorf("unexpected winner: %#v\n%q : %v", winner, types.BidIDString(winner.BidID), winner.Price)
 	}
 }
@@ -47,7 +48,7 @@ func TestBidWinner(t *testing.T) {
 			desc:      "no bids",
 			bids:      []types.Bid{},
 			expWinner: nil,
-			expErr:    errNoBids,
+			expErr:    handler.ErrNoBids,
 		},
 		{
 			desc:      "single bid",
@@ -105,6 +106,7 @@ type testDist struct {
 }
 
 func (td *testDist) testFunc(t *testing.T) {
+	t.Logf("testing function with description: %s", td.desc)
 	originOID := testutil.OrderID(t)
 
 	distributionSpread := make(map[int]int, td.bidNum)
@@ -114,16 +116,16 @@ func (td *testDist) testFunc(t *testing.T) {
 		// generate N bids all with the same bidding amount
 		for j := 0; j < td.bidNum; j++ {
 			b := createBid(t, originOID, 5)
-			bIndex[b.Provider.String()] = j
+			bIndex[b.ID().Provider.String()] = j
 			bids = append(bids, b)
 		}
 
-		winner, err := pickBidWinner(bids)
+		winner, err := handler.PickBidWinner(bids)
 		if !errors.Is(err, td.expErr) {
 			t.Errorf("returned err: %v does not match %v", err, td.expErr)
 		}
 		// Check provider
-		slot := bIndex[winner.Provider.String()]
+		slot := bIndex[winner.ID().Provider.String()]
 		distributionSpread[slot]++
 	}
 

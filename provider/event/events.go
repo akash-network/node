@@ -3,14 +3,14 @@ package event
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/manifest"
-	dquery "github.com/ovrclk/akash/x/deployment/query"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 // LeaseWon is the data structure that includes leaseID, group and price
 type LeaseWon struct {
 	LeaseID mtypes.LeaseID
-	Group   *dquery.Group
+	Group   *dtypes.Group
 	Price   sdk.Coin
 }
 
@@ -19,14 +19,15 @@ type LeaseWon struct {
 type ManifestReceived struct {
 	LeaseID    mtypes.LeaseID
 	Manifest   *manifest.Manifest
-	Deployment *dquery.Deployment
-	Group      *dquery.Group
+	Deployment *dtypes.DeploymentResponse
+	Group      *dtypes.Group
 }
 
 // ManifestGroup returns group if present in manifest or nil
 func (ev ManifestReceived) ManifestGroup() *manifest.Group {
 	for _, mgroup := range *ev.Manifest {
-		if mgroup.Name == ev.Group.Name {
+		if mgroup.Name == ev.Group.GroupSpec.Name {
+			mgroup := mgroup
 			return &mgroup
 		}
 	}

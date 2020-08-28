@@ -6,9 +6,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/bank"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/ovrclk/akash/testutil"
@@ -29,12 +29,12 @@ type TestSuite struct {
 	mkeeper keeper.Keeper
 	dkeeper dkeeper.Keeper
 	pkeeper pkeeper.Keeper
-	bkeeper bank.Keeper
+	bkeeper bankkeeper.Keeper
 }
 
 // SetupTestSuite provides toolkit for accessing stores and keepers
 // for complex data interactions.
-func SetupTestSuite(t testing.TB, codec *codec.Codec) *TestSuite {
+func SetupTestSuite(t testing.TB, codec codec.Marshaler) *TestSuite {
 	suite := &TestSuite{
 		t: t,
 	}
@@ -51,7 +51,7 @@ func SetupTestSuite(t testing.TB, codec *codec.Codec) *TestSuite {
 
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
-	suite.ctx = sdk.NewContext(suite.ms, abci.Header{}, true, testutil.Logger(t))
+	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
 
 	suite.mkeeper = keeper.NewKeeper(codec, mKey)
 	suite.dkeeper = dkeeper.NewKeeper(codec, dKey)
@@ -91,6 +91,6 @@ func (ts *TestSuite) ProviderKeeper() pkeeper.Keeper {
 }
 
 // BankKeeper key store
-func (ts *TestSuite) BankKeeper() bank.Keeper {
+func (ts *TestSuite) BankKeeper() bankkeeper.Keeper {
 	return ts.bkeeper
 }

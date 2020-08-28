@@ -1,26 +1,36 @@
 package app
 
 import (
-	bam "github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/codec"
+	simparams "github.com/cosmos/cosmos-sdk/simapp/params"
+	"github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
+	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
+	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/mint"
+	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
+	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
-	"github.com/cosmos/cosmos-sdk/x/supply"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
+	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	appparams "github.com/ovrclk/akash/app/params"
 )
 
 var (
@@ -34,9 +44,6 @@ var (
 			// tokens, token balance.
 			bank.AppModuleBasic{},
 
-			// total supply of the chain
-			supply.AppModuleBasic{},
-
 			// inflation
 			mint.AppModuleBasic{},
 
@@ -47,7 +54,8 @@ var (
 			distr.AppModuleBasic{},
 
 			gov.NewAppModuleBasic(
-				paramsclient.ProposalHandler, distr.ProposalHandler, upgradeclient.ProposalHandler,
+				paramsclient.ProposalHandler, distrclient.ProposalHandler,
+				upgradeclient.ProposalHandler, upgradeclient.CancelProposalHandler,
 			),
 
 			params.AppModuleBasic{},
@@ -66,34 +74,29 @@ func ModuleBasics() module.BasicManager {
 	return mbasics
 }
 
-// MakeCodec returns registered codecs
-func MakeCodec() *codec.Codec {
-	var cdc = codec.New()
-
-	mbasics.RegisterCodec(cdc)
-
-	sdk.RegisterCodec(cdc)
-	vesting.RegisterCodec(cdc)
-	codec.RegisterCrypto(cdc)
-	codec.RegisterEvidences(cdc)
-
-	return cdc.Seal()
+// MakeEncodingConfig creates an EncodingConfig for testing
+func MakeEncodingConfig() simparams.EncodingConfig {
+	encodingConfig := appparams.MakeEncodingConfig()
+	std.RegisterCodec(encodingConfig.Amino)
+	std.RegisterInterfaces(encodingConfig.InterfaceRegistry)
+	mbasics.RegisterCodec(encodingConfig.Amino)
+	mbasics.RegisterInterfaces(encodingConfig.InterfaceRegistry)
+	return encodingConfig
 }
 
 func kvStoreKeys() map[string]*sdk.KVStoreKey {
 	return sdk.NewKVStoreKeys(
 		append([]string{
-			bam.MainStoreKey,
-			auth.StoreKey,
-			params.StoreKey,
-			slashing.StoreKey,
-			distr.StoreKey,
-			supply.StoreKey,
-			staking.StoreKey,
-			mint.StoreKey,
-			gov.StoreKey,
-			upgrade.StoreKey,
-			evidence.StoreKey,
+			authtypes.StoreKey,
+			banktypes.StoreKey,
+			paramstypes.StoreKey,
+			slashingtypes.StoreKey,
+			distrtypes.StoreKey,
+			stakingtypes.StoreKey,
+			minttypes.StoreKey,
+			govtypes.StoreKey,
+			upgradetypes.StoreKey,
+			evidencetypes.StoreKey,
 		},
 
 			akashKVStoreKeys()...,
@@ -102,5 +105,5 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 }
 
 func transientStoreKeys() map[string]*sdk.TransientStoreKey {
-	return sdk.NewTransientStoreKeys(params.TStoreKey)
+	return sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
 }

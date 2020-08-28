@@ -1,58 +1,98 @@
 package cli
 
 import (
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/ovrclk/akash/x/market/query"
+	"context"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 )
 
-func cmdGetLeases(key string, cdc *codec.Codec) *cobra.Command {
+func cmdGetLeases() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Query for all leases",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-
-			lfilters, err := LeaseFiltersFromFlags(cmd.Flags())
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			obj, err := query.NewClient(ctx, key).Leases(lfilters)
+			queryClient := types.NewQueryClient(clientCtx)
+
+			lfilters, state, err := LeaseFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
-			return ctx.PrintOutput(obj)
+
+			// checking state flag
+			stateVal, ok := types.Lease_State_value[state]
+
+			if (!ok && (state != "")) || state == InvalidState {
+				return ErrStateValue
+			}
+
+			lfilters.State = types.Lease_State(stateVal)
+
+			pageReq, err := client.ReadPageRequest(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			params := &types.QueryLeasesRequest{
+				Filters:    lfilters,
+				Pagination: pageReq,
+			}
+
+			res, err := queryClient.Leases(context.Background(), params)
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintOutput(res)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	flags.AddPaginationFlagsToCmd(cmd, "leases")
 	AddLeaseFilterFlags(cmd.Flags())
+
 	return cmd
 }
 
-func cmdGetLease(key string, cdc *codec.Codec) *cobra.Command {
+func cmdGetLease() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Query order",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-
-			bid, err := BidIDFromFlagsWithoutCtx(cmd.Flags())
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			obj, err := query.NewClient(ctx, key).Lease(types.MakeLeaseID(bid))
+			queryClient := types.NewQueryClient(clientCtx)
+
+			bidID, err := BidIDFromFlagsWithoutCtx(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			return ctx.PrintOutput(obj)
+			res, err := queryClient.Lease(context.Background(), &types.QueryLeaseRequest{ID: types.MakeLeaseID(bidID)})
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintOutput(&res.Lease)
 		},
 	}
+
+	flags.AddQueryFlagsToCmd(cmd)
 	AddQueryBidIDFlags(cmd.Flags())
 	MarkReqBidIDFlags(cmd)
+
 	return cmd
 }

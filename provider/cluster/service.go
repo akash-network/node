@@ -178,7 +178,7 @@ loop:
 
 				mgroup := ev.ManifestGroup()
 				if mgroup == nil {
-					s.log.Error("indeterminate manifest group", "lease", ev.LeaseID, "group-name", ev.Group.Name)
+					s.log.Error("indeterminate manifest group", "lease", ev.LeaseID, "group-name", ev.Group.GroupSpec.Name)
 					break
 				}
 
