@@ -126,9 +126,9 @@ __t1 status__
 make query-provider
 ```
 
-## Run provider services
+## Run Provider
 
-In a third terminal, run the Provider service with command:
+To run Provider as a simple binary connecting to the cluster, in a third terminal, run the command:
 
 ### __t3 Step: 5__
 ```sh

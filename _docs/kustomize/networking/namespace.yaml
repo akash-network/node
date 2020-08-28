@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: akash-services
+  labels:
+    name: akash-services
+    akash.network/name: akash-services
