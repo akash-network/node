@@ -4,9 +4,19 @@
 # Set up a kubernetes environment with kind.
 #
 # * Install Akash CRD
+# * Install `akash-services` Namespace
+# * Install Network Policies
 # * Optionally install metrics-server
 
 rootdir="$(dirname "$0")/.."
+
+install_ns() {
+  kubectl apply -f "$rootdir/_docs/kustomize/networking/"
+}
+
+install_network_policies() {
+  kubectl kustomize "$rootdir/_docs/kustomize/akash-services/" | kubectl apply -f-
+}
 
 install_crd() {
   kubectl apply -f "$rootdir/pkg/apis/akash.network/v1/crd.yaml"
@@ -34,10 +44,13 @@ usage() {
   cat <<EOF
   Install k8s dependencies for integration tests against "KinD"
 
-  Usage: $0 [crd|metrics]
+  Usage: $0 [crd|ns|metrics]
 
-  crd:     install the akash CRDs
-  metrics: install CRDs, metrics-server and wait for metrics to be available
+  crd:        install the akash CRDs
+  ns:         install akash namespace
+  metrics:    install CRDs, NS, metrics-server and wait for metrics to be available
+  calico-metrics: install CRDs, NS, Network Policies, metrics-server and wait for metrics to be available
+  networking: install essential k8s namespace and network policies for Akash services
 EOF
   exit 1
 }
@@ -46,9 +59,23 @@ case "${1:-metrics}" in
   crd)
     install_crd
     ;;
+  ns)
+    install_ns
+    ;;
   metrics)
     install_crd
+    install_ns
     install_metrics
+    ;;
+  calico-metrics)
+    install_crd
+    install_ns
+    install_metrics
+    install_network_policies
+    ;;
+  networking)
+    install_ns
+    install_network_policies
     ;;
   *) usage;;
 esac

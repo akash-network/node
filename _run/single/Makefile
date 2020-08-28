@@ -10,11 +10,10 @@ KUSTOMIZE_AKASHD_CACHE   ?= $(KUSTOMIZE_AKASHD_DIR)/cache
 CLIENT_EXPORT_PASSWORD   ?= 12345678
 
 PROVIDER_HOSTNAME = akash-provider.localhost
-AKASHCTL_NODE     = tcp://akashd.localhost:80
-
+AKASHCTL_NODE     = "tcp://akashd.localhost:$(KIND_PORT_BINDINGS)"
 GATEWAY_ENDPOINT ?= http://akash-provider.localhost
 
-AKASHCTL += --node "$(AKASHCTL_NODE)"
+AKASHCTL += --node $(AKASHCTL_NODE)
 
 .PHONY: kustomize-init
 kustomize-init: kustomize-init-akashd kustomize-init-provider
@@ -38,6 +37,10 @@ kustomize-init-provider:
 kustomize-install-akashd:
 	kubectl kustomize kustomize/akashd | kubectl apply -f-
 
+.PHONY: kustomize-install-provider
+kustomize-install-provider:
+	kubectl kustomize kustomize/akash-provider | kubectl apply -f-
+
 .PHONY: send-manifest
 send-manifest:
 	$(AKASHCTL) provider send-manifest "$(SDL_PATH)" \
@@ -49,7 +52,7 @@ send-manifest:
 
 .PHONY: provider-status
 provider-status:
-	$(AKASHCTL) provider status
+	$(AKASHCTL) provider status --provider "$(PROVIDER_ADDRESS)"
 
 .PHONY: provider-lease-status
 provider-lease-status:

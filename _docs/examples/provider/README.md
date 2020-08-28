@@ -158,6 +158,14 @@ echo "password" > key-pass.txt
 (cat key-pass.txt; cat key-pass.txt) | ./bin/akashctl keys export provider 2> key.txt
 ```
 
+### Configure Kubernetes Akash Namespace
+
+Create the `akash-services` namespace for running Provider.
+
+```sh
+kubectl apply -f https://raw.githubusercontent.com/ovrclk/akash/master/_docs/kustomize/namespace.yaml
+```
+
 ### Configure Akash Kubernetes CRDs
 
 ```sh

@@ -16,7 +16,7 @@ found in the [design documentation](_docs/design.md); and the target workload de
 
 # NOTE
 
-The `master` branch is currently unstable as we migrate to [cosmos-sdk](https://github.com/cosmos/cosmos-sdk) from the previous tendermint-core implementation.   The previous, stable branch can be found at [stable](https://github.com/ovrclk/akash/tree/stable).
+The `master` branch is currently unstable as we migrate to [cosmos-sdk](https://github.com/cosmos/cosmos-sdk) from the previous tendermint-core implementation, and to subsequent protobuf RPC implementation. The previous, stable branch can be found at [stable](https://github.com/ovrclk/akash/tree/stable).
 
 ## Akash Suite
 

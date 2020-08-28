@@ -2,6 +2,8 @@ bases:
   # - github.com/ovrclk/akash/_docs/kustomize/akash-provider?ref=boz/kustomize
   - ../../../../_docs/kustomize/akash-provider
 
+namespace: akash-services
+
 images:
   - name: ovrclk/akashctl
 

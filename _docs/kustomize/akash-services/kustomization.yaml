@@ -1,0 +1,4 @@
+resources:
+  - network-policies.yaml
+
+namespace: akash-services
