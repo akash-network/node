@@ -14,7 +14,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func sendManifestCmd() *cobra.Command {
+// SendManifestCmd looks up the Providers blockchain information,
+// and POSTs the SDL file to the Gateway address.
+func SendManifestCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "send-manifest <sdl-path>",
 		Args:  cobra.ExactArgs(1),

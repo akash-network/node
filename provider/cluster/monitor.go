@@ -183,7 +183,7 @@ func (m *deploymentMonitor) runCloseLease() <-chan runner.Result {
 		if err != nil {
 			m.log.Error("closing deployment", "err", err)
 		} else {
-			m.log.Info("lease closed")
+			m.log.Info("bidding on lease closed")
 		}
 		return runner.NewResult(nil, err)
 	})

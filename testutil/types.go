@@ -14,10 +14,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/ovrclk/akash/app"
-	"github.com/ovrclk/akash/types"
 	tmrand "github.com/tendermint/tendermint/libs/rand"
 	dbm "github.com/tendermint/tm-db"
+
+	"github.com/ovrclk/akash/app"
+	"github.com/ovrclk/akash/types"
 )
 
 func Unit(_ testing.TB) types.Unit {
@@ -54,7 +55,7 @@ func DefaultConfig() network.Config {
 		NumValidators:     4,
 		BondDenom:         sdk.DefaultBondDenom,
 		MinGasPrices:      fmt.Sprintf("0.000006%s", sdk.DefaultBondDenom),
-		AccountTokens:     sdk.TokensFromConsensusPower(1000),
+		AccountTokens:     sdk.TokensFromConsensusPower(10000),
 		StakingTokens:     sdk.TokensFromConsensusPower(500),
 		BondedTokens:      sdk.TokensFromConsensusPower(100),
 		PruningStrategy:   storetypes.PruningOptionNothing,
