@@ -14,10 +14,8 @@ import (
 
 	clientkeys "github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/simapp"
-	"github.com/cosmos/cosmos-sdk/tests"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/stretchr/testify/assert"
@@ -216,7 +214,7 @@ func (f *Fixtures) UnsafeResetAll(flags ...string) {
 // NOTE: AkashdInit sets the ChainID for the Fixtures instance
 func (f *Fixtures) AkashdInit(moniker string, flags ...string) {
 	cmd := fmt.Sprintf("%s init -o --home=%s %s", f.AkashdBinary, f.AkashdHome, moniker)
-	_, stderr := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	_, stderr := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string{})
 
 	var (
 		chainID string
@@ -256,9 +254,9 @@ func (f *Fixtures) CollectGenTxs(flags ...string) {
 func (f *Fixtures) AkashdStart(flags ...string) *tests.Process {
 	cmd := fmt.Sprintf("%s start --home=%s --rpc.laddr=%v --p2p.laddr=%v", f.AkashdBinary,
 		f.AkashdHome, f.RPCAddr, f.P2PAddr)
-	proc := tests.GoExecuteT(f.T, addFlags(cmd, flags))
-	tests.WaitForTMStart(f.Port)
-	tests.WaitForNextNBlocksTM(2, f.Port)
+	proc := cosmostests.GoExecuteT(f.T, addFlags(cmd, flags), []string{})
+	cosmostests.WaitForTMStart(f.Port)
+	cosmostests.WaitForNextNBlocksTM(2, f.Port)
 
 	return proc
 }
@@ -285,7 +283,7 @@ func (f *Fixtures) ProviderStart(id, provHost string, flags ...string) (*cosmost
 
 	envvars := []string{"AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS=false"}
 	proc := cosmostests.GoExecuteT(f.T, addFlags(cmd, flags), envvars)
-	tests.WaitForNextNBlocksTM(2, f.Port)
+	cosmostests.WaitForNextNBlocksTM(2, f.Port)
 	//tests.WaitForStart(fmt.Sprintf("%s/status", provURL.String()))
 	return proc, provHost
 }
@@ -301,9 +299,9 @@ func (f *Fixtures) SendManifest(lease types.Lease, sdlPath string, flags ...stri
 		f.Flags(),
 	)
 
-	_, stderr := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	_, stderr := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string{})
 	assert.Empty(f.T, stderr, "sendmanifest stderr")
-	tests.WaitForNextNBlocksTM(2, f.Port)
+	cosmostests.WaitForNextNBlocksTM(2, f.Port)
 }
 
 // ValidateGenesis runs akashd validate-genesis
@@ -342,10 +340,11 @@ func (f *Fixtures) KeysAddRecover(name, mnemonic string, flags ...string) (exitS
 	return executeWriteRetStdStreams(f.T, addFlags(cmd, flags), mnemonic)
 }
 
+/*
 // KeysShow is akash keys show
 func (f *Fixtures) KeysShow(name string, flags ...string) keys.KeyOutput {
 	cmd := fmt.Sprintf("%s keys show --home=%s %s -o json %s", f.AkashBinary, f.AkashHome, name, f.KeyFlags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string{})
 
 	var ko keys.KeyOutput
 
@@ -358,7 +357,7 @@ func (f *Fixtures) KeysShow(name string, flags ...string) keys.KeyOutput {
 // KeysList is akash keys list
 func (f *Fixtures) KeysList(flags ...string) []keys.KeyOutput {
 	cmd := fmt.Sprintf("%s keys list --home=%s -o json %s", f.AkashBinary, f.AkashHome, f.KeyFlags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string{})
 
 	var list []keys.KeyOutput
 
@@ -376,6 +375,7 @@ func (f *Fixtures) KeyAddress(name string) sdk.AccAddress {
 
 	return accAddr
 }
+*/
 
 //___________________________________________________________________________________
 // akash query account
@@ -383,7 +383,7 @@ func (f *Fixtures) KeyAddress(name string) sdk.AccAddress {
 // QueryAccount is akash query account
 func (f *Fixtures) QueryAccount(address sdk.AccAddress, flags ...string) auth.BaseAccount {
 	cmd := fmt.Sprintf("%s query account %s %v", f.AkashBinary, address, f.Flags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string)
 
 	var initRes map[string]json.RawMessage
 	err := json.Unmarshal([]byte(out), &initRes)
@@ -437,7 +437,7 @@ func (f *Fixtures) TxCloseDeployment(flags ...string) (bool, string, string) {
 // QueryDeployments is akash query deployments
 func (f *Fixtures) QueryDeployments(flags ...string) (dquery.Deployments, error) {
 	cmd := fmt.Sprintf("%s query deployment list %v", f.AkashBinary, f.Flags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string{})
 
 	var deployments dquery.Deployments
 
@@ -451,7 +451,7 @@ func (f *Fixtures) QueryDeployments(flags ...string) (dquery.Deployments, error)
 func (f *Fixtures) QueryDeployment(depID dtypes.DeploymentID, flags ...string) dquery.Deployment {
 	cmd := fmt.Sprintf("%s query deployment get --owner %s --dseq %v %v", f.AkashBinary,
 		depID.Owner.String(), depID.DSeq, f.Flags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string{})
 
 	var deployment dquery.Deployment
 
@@ -492,7 +492,7 @@ func (f *Fixtures) TxCloseOrder(oid mtypes.OrderID, flags ...string) (bool, stri
 // QueryOrders is akash query orders
 func (f *Fixtures) QueryOrders(flags ...string) ([]mtypes.Order, error) {
 	cmd := fmt.Sprintf("%s query market order list %v", f.AkashBinary, f.Flags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string)
 
 	var orders []mtypes.Order
 
@@ -506,7 +506,7 @@ func (f *Fixtures) QueryOrders(flags ...string) ([]mtypes.Order, error) {
 func (f *Fixtures) QueryOrder(orderID mtypes.OrderID, flags ...string) mtypes.Order {
 	cmd := fmt.Sprintf("%s query market order get --owner %s --dseq %v --gseq %v --oseq %v %v", f.AkashBinary,
 		orderID.Owner.String(), orderID.DSeq, orderID.GSeq, orderID.OSeq, f.Flags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string{})
 
 	var order mtypes.Order
 
@@ -520,7 +520,7 @@ func (f *Fixtures) QueryOrder(orderID mtypes.OrderID, flags ...string) mtypes.Or
 // QueryBids is akash query bids
 func (f *Fixtures) QueryBids(flags ...string) ([]mtypes.Bid, error) {
 	cmd := fmt.Sprintf("%s query market bid list %v", f.AkashBinary, f.Flags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string)
 
 	var bids []mtypes.Bid
 
@@ -536,7 +536,7 @@ func (f *Fixtures) QueryBid(bidID mtypes.BidID, flags ...string) mtypes.Bid {
 		bidID.Owner.String(), bidID.DSeq)
 	cmd += fmt.Sprintf(" --gseq %v --oseq %v --provider %s %v", bidID.GSeq, bidID.OSeq,
 		bidID.Provider.String(), f.Flags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string{})
 
 	var bid mtypes.Bid
 
@@ -550,7 +550,7 @@ func (f *Fixtures) QueryBid(bidID mtypes.BidID, flags ...string) mtypes.Bid {
 // QueryLeases is akash query leases
 func (f *Fixtures) QueryLeases(flags ...string) ([]mtypes.Lease, error) {
 	cmd := fmt.Sprintf("%s query market lease list %v", f.AkashBinary, f.Flags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string{})
 
 	var leases []mtypes.Lease
 
@@ -566,7 +566,7 @@ func (f *Fixtures) QueryLease(leaseID mtypes.LeaseID, flags ...string) mtypes.Le
 		leaseID.Owner.String(), leaseID.DSeq)
 	cmd += fmt.Sprintf(" --gseq %v --oseq %v --provider %s %v", leaseID.GSeq, leaseID.OSeq,
 		leaseID.Provider.String(), f.Flags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string{})
 
 	var lease mtypes.Lease
 
@@ -598,7 +598,7 @@ func (f *Fixtures) TxCreateProviderFromFile(path string, flags ...string) (bool,
 // QueryProviders is akash query providers
 func (f *Fixtures) QueryProviders(flags ...string) []ptypes.Provider {
 	cmd := fmt.Sprintf("%s query provider list %v", f.AkashBinary, f.Flags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string{})
 
 	var providers []ptypes.Provider
 
@@ -612,7 +612,7 @@ func (f *Fixtures) QueryProviders(flags ...string) []ptypes.Provider {
 // QueryProvider is akash query provider
 func (f *Fixtures) QueryProvider(owner string, flags ...string) ptypes.Provider {
 	cmd := fmt.Sprintf("%s query provider get %s %v", f.AkashBinary, owner, f.Flags())
-	out, _ := tests.ExecuteT(f.T, addFlags(cmd, flags), "")
+	out, _ := cosmostests.ExecuteT(f.T, addFlags(cmd, flags), "", []string{})
 
 	var provider ptypes.Provider
 
@@ -636,7 +636,7 @@ func executeWrite(t *testing.T, cmdStr string, writes ...string) (exitSuccess bo
 }
 
 func executeWriteRetStdStreams(t *testing.T, cmdStr string, writes ...string) (bool, string, string) {
-	proc := tests.GoExecuteT(t, cmdStr)
+	proc := cosmostests.GoExecuteT(t, cmdStr, []string{})
 
 	// Enables use of interactive commands
 	for _, write := range writes {

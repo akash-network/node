@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/tests"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/integration/cosmostests"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -68,7 +68,7 @@ func TestE2EApp(t *testing.T) {
 
 	// Create provider
 	f.TxCreateProviderFromFile(tfilePath, fmt.Sprintf("--from=%s", keyFoo), "-y")
-	tests.WaitForNextNBlocksTM(1, f.Port)
+	cosmostests.WaitForNextNBlocksTM(1, f.Port)
 
 	// test query providers
 	providers := f.QueryProviders()
@@ -93,7 +93,7 @@ func TestE2EApp(t *testing.T) {
 	// Apply SDL to provider
 	// Create deployment for `keyBar`
 	f.TxCreateDeployment(deploymentOvrclkApp, fmt.Sprintf("--from=%s", keyBar), "-y")
-	tests.WaitForNextNBlocksTM(1, f.Port)
+	cosmostests.WaitForNextNBlocksTM(1, f.Port)
 
 	// test query deployments
 	deployments, err := f.QueryDeployments()
@@ -106,7 +106,7 @@ func TestE2EApp(t *testing.T) {
 	deployment := f.QueryDeployment(createdDep.Deployment.DeploymentID)
 	require.Equal(t, createdDep, deployment)
 
-	tests.WaitForNextNBlocksTM(1, f.Port)
+	cosmostests.WaitForNextNBlocksTM(1, f.Port)
 	orders, err := f.QueryOrders()
 	require.NoError(t, err)
 	require.Len(t, orders, 1, "Order creation failed")
@@ -118,7 +118,7 @@ func TestE2EApp(t *testing.T) {
 	require.Len(t, leases, 0, "no Leases should be created yet")
 
 	// Wait for then EndBlock to handle bidding and creating lease
-	tests.WaitForNextNBlocksTM(5, f.Port)
+	cosmostests.WaitForNextNBlocksTM(5, f.Port)
 
 	// Assert provider made bid
 	leases, err = f.QueryLeases()
@@ -130,7 +130,7 @@ func TestE2EApp(t *testing.T) {
 	f.SendManifest(lease, deploymentOvrclkApp)
 
 	// Wait for App to deploy
-	tests.WaitForNextNBlocksTM(5, f.Port)
+	cosmostests.WaitForNextNBlocksTM(5, f.Port)
 
 	// Assert provider launches app in kind
 	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)

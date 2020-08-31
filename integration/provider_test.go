@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/tests"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/integration/cosmostests"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,7 +31,7 @@ func TestProvider(t *testing.T) {
 
 	// Create provider
 	f.TxCreateProvider(fmt.Sprintf("--from=%s", keyFoo), "-y")
-	tests.WaitForNextNBlocksTM(1, f.Port)
+	cosmostests.WaitForNextNBlocksTM(1, f.Port)
 
 	// test query providers
 	providers := f.QueryProviders()

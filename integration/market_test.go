@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/tests"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/integration/cosmostests"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,7 +32,7 @@ func TestMarket(t *testing.T) {
 
 	// Create deployment
 	f.TxCreateDeployment(deploymentFilePath, fmt.Sprintf("--from=%s", keyFoo), "-y")
-	tests.WaitForNextNBlocksTM(1, f.Port)
+	cosmostests.WaitForNextNBlocksTM(1, f.Port)
 
 	// test query deployments
 	deployments, err := f.QueryDeployments()
@@ -71,7 +71,7 @@ func TestMarket(t *testing.T) {
 
 	// Create provider
 	f.TxCreateProvider(fmt.Sprintf("--from=%s", keyBar), "-y")
-	tests.WaitForNextNBlocksTM(1, f.Port)
+	cosmostests.WaitForNextNBlocksTM(1, f.Port)
 
 	// test query providers
 	providers := f.QueryProviders()
@@ -80,7 +80,7 @@ func TestMarket(t *testing.T) {
 
 	// Create Bid
 	f.TxCreateBid(createdOrder.OrderID, sdk.NewInt64Coin(denom, 20), fmt.Sprintf("--from=%s", keyBar), "-y")
-	tests.WaitForNextNBlocksTM(3, f.Port)
+	cosmostests.WaitForNextNBlocksTM(3, f.Port)
 
 	// test query bids
 	bids, err := f.QueryBids()
@@ -123,7 +123,7 @@ func TestMarket(t *testing.T) {
 
 	// Close Bid
 	f.TxCloseBid(createdOrder.OrderID, fmt.Sprintf("--from=%s", keyBar), "-y")
-	tests.WaitForNextNBlocksTM(3, f.Port)
+	cosmostests.WaitForNextNBlocksTM(3, f.Port)
 
 	// test query bids with filter
 	closedBids, err := f.QueryBids("--state=closed")
@@ -143,7 +143,7 @@ func TestMarket(t *testing.T) {
 
 	// Creating bid again for new order
 	f.TxCreateBid(openedOrders[0].OrderID, sdk.NewInt64Coin(denom, 20), fmt.Sprintf("--from=%s", keyBar), "-y")
-	tests.WaitForNextNBlocksTM(3, f.Port)
+	cosmostests.WaitForNextNBlocksTM(3, f.Port)
 
 	// test query bids
 	matchedBids, err := f.QueryBids("--state=matched")
@@ -160,7 +160,7 @@ func TestMarket(t *testing.T) {
 
 	// Close Order
 	f.TxCloseOrder(openedOrders[0].OrderID, fmt.Sprintf("--from=%s", keyFoo), "-y")
-	tests.WaitForNextNBlocksTM(1, f.Port)
+	cosmostests.WaitForNextNBlocksTM(1, f.Port)
 
 	// test query orders with filter state closed
 	closedOrders, err := f.QueryOrders("--state=closed")

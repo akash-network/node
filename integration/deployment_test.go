@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/tests"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/integration/cosmostests"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/stretchr/testify/require"
 )
@@ -32,7 +32,7 @@ func TestDeployment(t *testing.T) {
 
 	// Create deployment
 	f.TxCreateDeployment(deploymentFilePath, fmt.Sprintf("--from=%s", keyFoo), "-y")
-	tests.WaitForNextNBlocksTM(1, f.Port)
+	cosmostests.WaitForNextNBlocksTM(1, f.Port)
 
 	// test query deployments
 	deployments, err := f.QueryDeployments()
@@ -75,7 +75,7 @@ func TestDeployment(t *testing.T) {
 
 	// Close deployment
 	f.TxCloseDeployment(fmt.Sprintf("--from=%s --dseq=%v", keyFoo, createdDep.Deployment.DeploymentID.DSeq), "-y")
-	tests.WaitForNextNBlocksTM(1, f.Port)
+	cosmostests.WaitForNextNBlocksTM(1, f.Port)
 
 	// test query deployments
 	deployments, err = f.QueryDeployments()
