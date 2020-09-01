@@ -1,3 +1,0 @@
-Akash provider {{ .Release.Name }} created
-
-curl -I http://{{ .Release.Name }}.{{ .Values.ingress.domain }}/status
