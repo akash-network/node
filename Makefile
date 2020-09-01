@@ -90,7 +90,6 @@ test-coverage:
 test-lint:
 	golangci-lint run
 
-
 lintdeps-install:
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
 		sh -s -- -b $(shell go env GOPATH)/bin $(GOLANGCI_LINT_VERSION)
@@ -135,7 +134,7 @@ deps-install:
 deps-tidy:
 	$(GO) mod tidy
 
-devdeps-install:
+devdeps-install: lintdeps-install kubetypes-deps-install
 	$(GO) install github.com/vektra/mockery/.../
 	$(GO) install k8s.io/code-generator/...
 	$(GO) install sigs.k8s.io/kind
