@@ -22,3 +22,5 @@ dist
 .idea/
 *.iml
 coverage.txt
+
+.cache
