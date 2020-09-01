@@ -111,24 +111,3 @@ func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, string,
 
 	return dfilters, state, nil
 }
-
-// // AddGroupFilterFlags add flags to filter for group list
-// func AddGroupFilterFlags(flags *pflag.FlagSet) {
-// 	flags.String("owner", "", "group owner address to filter")
-// 	flags.String("state", "", "group state to filter (open,ordered,matched,insufficient_funds,closed)")
-// 	flags.Uint64("dseq", 0, "deployment sequence to filter")
-// 	flags.Uint32("gseq", 0, "group sequence to filter")
-// }
-
-// // GroupFiltersFromFlags returns GroupFilters with given flags and error if occurred
-// func GroupFiltersFromFlags(flags *pflag.FlagSet) (query.GroupFilters, error) {
-// 	dfilters, err := DepFiltersFromFlags(flags)
-// 	if err != nil {
-// 		return query.GroupFilters{}, err
-// 	}
-// 	gfilters := query.GroupFilters{
-// 		Owner:        dfilters.Owner,
-// 		StateFlagVal: dfilters.StateFlagVal,
-// 	}
-// 	return gfilters, nil
-// }
