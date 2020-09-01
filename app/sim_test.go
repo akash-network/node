@@ -115,10 +115,10 @@ func TestAppImportExport(t *testing.T) {
 	require.Equal(t, AppName, app.Name())
 
 	// Run randomized simulation
-	_, simParams, simErr := simulateFromSeedFunc(t, newApp, config)
+	_, simParams, simErr := simulateFromSeedFunc(t, app, config)
 
 	// export state and simParams before the simulation error is checked
-	err = simapp.CheckExportSimulation(newApp, config, simParams)
+	err = simapp.CheckExportSimulation(app, config, simParams)
 	require.NoError(t, err)
 	require.NoError(t, simErr)
 
