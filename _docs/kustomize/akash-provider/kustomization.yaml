@@ -4,6 +4,8 @@ resources:
   - service.yaml
   - ingress.yaml
 
+namespace: akash-services
+
 commonLabels:
   app: akash-provider
   akash.network/component: akash-provider

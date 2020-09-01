@@ -13,6 +13,7 @@ Installed commands:
 * [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl)
 * [`jq`](https://stedolan.github.io/jq/)
 * [`curl`](https://curl.haxx.se/)
+* [`kustomize`](https://kubernetes-sigs.github.io/kustomize/installation/)
 
 ### Working Directory
 
@@ -36,6 +37,8 @@ In this tutorial, we will be using the domain `akashian.io`.
 ```sh
 PROVIDER_DOMAIN=akashian.io
 ```
+
+This `PROVIDER_DOMAIN` variable is used to configure the Kubernetes Ingress Controller domain, so for this example, a Deployment's requests will be routed via a random subdomain, eg: `kswtibraxfdhlflhrg6ahe.akashian.io`. A wildcard subdomain DNS entr is necessary to support this, eg `*.akashian.io`. This address can be customized in the [Configure provider services](#configure-provider-services) file's `ingress-domain` field, eg: `ingress-domain=ingress.akashian.io`.
 
 ### Akash Network
 
@@ -153,6 +156,14 @@ EOF
 ```sh
 echo "password" > key-pass.txt
 (cat key-pass.txt; cat key-pass.txt) | ./bin/akashctl keys export provider 2> key.txt
+```
+
+### Configure Kubernetes Akash Namespace
+
+Create the `akash-services` namespace for running Provider.
+
+```sh
+kubectl apply -f https://raw.githubusercontent.com/ovrclk/akash/master/_docs/kustomize/namespace.yaml
 ```
 
 ### Configure Akash Kubernetes CRDs

@@ -20,14 +20,14 @@ import (
 // ExportAppStateAndValidators exports the state of the application for a genesis
 // file.
 func (app *AkashApp) ExportAppStateAndValidators(
-	forZeroHeight bool, jailWhiteList []string,
+	forZeroHeight bool, jailAllowedAddrs []string,
 ) (appState json.RawMessage, validators []tmtypes.GenesisValidator, cp *abci.ConsensusParams, err error) {
 
 	// as if they could withdraw from the start of the next block
 	ctx := app.NewContext(true, tmproto.Header{Height: app.LastBlockHeight()})
 
 	if forZeroHeight {
-		app.prepForZeroHeightGenesis(ctx, jailWhiteList)
+		app.prepForZeroHeightGenesis(ctx, jailAllowedAddrs)
 	}
 
 	genState := app.mm.ExportGenesis(ctx, app.appCodec)
@@ -43,22 +43,22 @@ func (app *AkashApp) ExportAppStateAndValidators(
 // prepare for fresh start at zero height
 // NOTE zero height genesis is a temporary feature which will be deprecated
 //      in favour of export at a block height
-func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []string) {
-	applyWhiteList := false
+func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []string) {
+	applyAllowedAddrs := false
 
-	//Check if there is a whitelist
-	if len(jailWhiteList) > 0 {
-		applyWhiteList = true
+	//Check if there is a allowed address list
+	if len(jailAllowedAddrs) > 0 {
+		applyAllowedAddrs = true
 	}
 
-	whiteListMap := make(map[string]bool)
+	allowedAddrsMap := make(map[string]bool)
 
-	for _, addr := range jailWhiteList {
+	for _, addr := range jailAllowedAddrs {
 		_, err := sdk.ValAddressFromBech32(addr)
 		if err != nil {
 			log.Fatal(err)
 		}
-		whiteListMap[addr] = true
+		allowedAddrsMap[addr] = true
 	}
 
 	/* Just to be safe, assert the invariants on current state. */
@@ -143,7 +143,7 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 		}
 
 		validator.UnbondingHeight = 0
-		if applyWhiteList && !whiteListMap[addr.String()] {
+		if applyAllowedAddrs && !allowedAddrsMap[addr.String()] {
 			validator.Jailed = true
 		}
 

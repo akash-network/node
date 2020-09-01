@@ -11,7 +11,7 @@ import (
 )
 
 // NewQuerier creates and returns a new provider querier instance
-func NewQuerier(keeper keeper.Keeper, legacyQuerierCdc codec.JSONMarshaler) sdk.Querier {
+func NewQuerier(keeper keeper.Keeper, legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) ([]byte, error) {
 		switch path[0] {
 		case providersPath:
@@ -24,7 +24,7 @@ func NewQuerier(keeper keeper.Keeper, legacyQuerierCdc codec.JSONMarshaler) sdk.
 }
 
 func queryProviders(ctx sdk.Context, _ []string, _ abci.RequestQuery, keeper keeper.Keeper,
-	legacyQuerierCdc codec.JSONMarshaler) ([]byte, error) {
+	legacyQuerierCdc *codec.LegacyAmino) ([]byte, error) {
 	var values Providers
 	keeper.WithProviders(ctx, func(obj types.Provider) bool {
 		values = append(values, Provider(obj))
@@ -34,7 +34,7 @@ func queryProviders(ctx sdk.Context, _ []string, _ abci.RequestQuery, keeper kee
 }
 
 func queryProvider(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper,
-	legacyQuerierCdc codec.JSONMarshaler) ([]byte, error) {
+	legacyQuerierCdc *codec.LegacyAmino) ([]byte, error) {
 
 	if len(path) != 1 {
 		return nil, sdkerrors.ErrInvalidRequest

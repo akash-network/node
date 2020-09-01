@@ -11,7 +11,7 @@ import (
 )
 
 // NewQuerier creates and returns a new deployment querier instance
-func NewQuerier(keeper keeper.Keeper, legacyQuerierCdc codec.JSONMarshaler) sdk.Querier {
+func NewQuerier(keeper keeper.Keeper, legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) ([]byte, error) {
 		switch path[0] {
 		case deploymentsPath:
@@ -26,7 +26,7 @@ func NewQuerier(keeper keeper.Keeper, legacyQuerierCdc codec.JSONMarshaler) sdk.
 }
 
 func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper,
-	legacyQuerierCdc codec.JSONMarshaler) ([]byte, error) {
+	legacyQuerierCdc *codec.LegacyAmino) ([]byte, error) {
 	// isValidState denotes whether given state flag is valid or not
 	filters, isValidState, err := parseDepFiltersPath(path)
 	if err != nil {
@@ -50,7 +50,7 @@ func queryDeployments(ctx sdk.Context, path []string, _ abci.RequestQuery, keepe
 }
 
 func queryDeployment(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper,
-	legacyQuerierCdc codec.JSONMarshaler) ([]byte, error) {
+	legacyQuerierCdc *codec.LegacyAmino) ([]byte, error) {
 
 	id, err := ParseDeploymentPath(path)
 	if err != nil {
@@ -71,7 +71,7 @@ func queryDeployment(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper
 }
 
 func queryGroup(ctx sdk.Context, path []string, _ abci.RequestQuery, keeper keeper.Keeper,
-	legacyQuerierCdc codec.JSONMarshaler) ([]byte, error) {
+	legacyQuerierCdc *codec.LegacyAmino) ([]byte, error) {
 
 	id, err := ParseGroupPath(path)
 	if err != nil {

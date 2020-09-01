@@ -13,7 +13,7 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-func TestAkashAppExport(t *testing.T) {
+func TestAppExport(t *testing.T) {
 	db := dbm.NewMemDB()
 	app1 := app.NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)),
 		db, nil, 0, map[int64]bool{}, app.DefaultHome)

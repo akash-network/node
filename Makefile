@@ -195,7 +195,7 @@ gofmt:
 	find . -not -path './vendor*' -name '*.go' -type f | \
 		xargs gofmt -s -w
 
-clean:
+clean: tools-clean
 	rm -f $(BINS) $(IMAGE_BINS)
 
 .PHONY: all bins build \
@@ -244,15 +244,38 @@ test-sims: test-sim-fullapp test-sim-nondeterminism test-sim-import-export test-
 ###############################################################################
 ###                           Protobuf                                    ###
 ###############################################################################
+UNAME_OS       := $(shell uname -s)
+UNAME_ARCH     := $(shell uname -m)
+CACHE_BASE     ?= $(abspath .cache)
+CACHE          := $(CACHE_BASE)
+CACHE_BIN      := $(CACHE)/bin
+CACHE_INCLUDE  := $(CACHE)/include
+BUF_VERSION    ?= 0.20.5
+PROTOC_VERSION ?= 3.11.2
 
-proto-gen:
+ifeq ($(UNAME_OS),Linux)
+  PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-linux-x86_64.zip
+endif
+ifeq ($(UNAME_OS),Darwin)
+  PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-osx-x86_64.zip
+endif
+
+# This is needed to allow versions to be added to Golang modules with go get
+
+# BUF points to the marker file for the installed version.
+#
+# If BUF_VERSION is changed, the binary will be re-downloaded.
+BUF    := $(CACHE_BIN)/buf
+PROTOC := $(CACHE_BIN)/protoc
+
+proto-gen: $(PROTOC)
 	./script/protocgen.sh
 
-proto-lint:
-	buf check lint --error-format=json
+proto-lint: $(BUF)
+	$(BUF) check lint --error-format=json
 
-proto-check-breaking:
-	buf check breaking --against-input '.git#branch=master'
+proto-check-breaking: $(BUF)
+	$(BUF) check breaking --against-input '.git#branch=master'
 
 TM_URL           = https://raw.githubusercontent.com/tendermint/tendermint/v0.34.0-rc3/proto/tendermint
 GOGO_PROTO_URL   = https://raw.githubusercontent.com/regen-network/protobuf/cosmos
@@ -273,29 +296,29 @@ SDK_QUERY_TYPES  	= third_party/proto/cosmos/base/query/v1beta1
 SDK_COIN_TYPES  	= third_party/proto/cosmos/base/v1beta1
 
 proto-update-deps:
-	@mkdir -p $(GOGO_PROTO_TYPES)
-	@curl -sSL $(GOGO_PROTO_URL)/gogoproto/gogo.proto > $(GOGO_PROTO_TYPES)/gogo.proto
+	mkdir -p $(GOGO_PROTO_TYPES)
+	curl -sSL $(GOGO_PROTO_URL)/gogoproto/gogo.proto > $(GOGO_PROTO_TYPES)/gogo.proto
 
-	@mkdir -p $(COSMOS_PROTO_TYPES)
-	@curl -sSL $(COSMOS_PROTO_URL)/cosmos.proto > $(COSMOS_PROTO_TYPES)/cosmos.proto
+	mkdir -p $(COSMOS_PROTO_TYPES)
+	curl -sSL $(COSMOS_PROTO_URL)/cosmos.proto > $(COSMOS_PROTO_TYPES)/cosmos.proto
 
-	@mkdir -p $(TM_ABCI_TYPES)
-	@curl -sSL $(TM_URL)/abci/types.proto > $(TM_ABCI_TYPES)/types.proto
+	mkdir -p $(TM_ABCI_TYPES)
+	curl -sSL $(TM_URL)/abci/types.proto > $(TM_ABCI_TYPES)/types.proto
 
-	@mkdir -p $(TM_VERSION)
-	@curl -sSL $(TM_URL)/version/types.proto > $(TM_VERSION)/types.proto
+	mkdir -p $(TM_VERSION)
+	curl -sSL $(TM_URL)/version/types.proto > $(TM_VERSION)/types.proto
 
-	@mkdir -p $(TM_TYPES)
-	@curl -sSL $(TM_URL)/types/types.proto > $(TM_TYPES)/types.proto
-	@curl -sSL $(TM_URL)/types/evidence.proto > $(TM_TYPES)/evidence.proto
-	@curl -sSL $(TM_URL)/types/params.proto > $(TM_TYPES)/params.proto
+	mkdir -p $(TM_TYPES)
+	curl -sSL $(TM_URL)/types/types.proto > $(TM_TYPES)/types.proto
+	curl -sSL $(TM_URL)/types/evidence.proto > $(TM_TYPES)/evidence.proto
+	curl -sSL $(TM_URL)/types/params.proto > $(TM_TYPES)/params.proto
 
-	@mkdir -p $(TM_CRYPTO_TYPES)
-	@curl -sSL $(TM_URL)/crypto/proof.proto > $(TM_CRYPTO_TYPES)/proof.proto
-	@curl -sSL $(TM_URL)/crypto/keys.proto > $(TM_CRYPTO_TYPES)/keys.proto
+	mkdir -p $(TM_CRYPTO_TYPES)
+	curl -sSL $(TM_URL)/crypto/proof.proto > $(TM_CRYPTO_TYPES)/proof.proto
+	curl -sSL $(TM_URL)/crypto/keys.proto > $(TM_CRYPTO_TYPES)/keys.proto
 
-	@mkdir -p $(TM_LIBS)
-	@curl -sSL $(TM_URL)/libs/bits/types.proto > $(TM_LIBS)/types.proto
+	mkdir -p $(TM_LIBS)
+	curl -sSL $(TM_URL)/libs/bits/types.proto > $(TM_LIBS)/types.proto
 
 	mkdir -p $(SDK_ABCI_TYPES)
 	curl -sSL $(COSMOS_SDK_PROTO_URL)/abci/v1beta1/abci.proto > $(SDK_ABCI_TYPES)/abci.proto
@@ -306,49 +329,29 @@ proto-update-deps:
 	mkdir -p $(SDK_COIN_TYPES)
 	curl -sSL $(COSMOS_SDK_PROTO_URL)/v1beta1/coin.proto > $(SDK_COIN_TYPES)/coin.proto
 
-PREFIX ?= /usr/local
-BIN ?= $(PREFIX)/bin
-UNAME_S ?= $(shell uname -s)
-UNAME_M ?= $(shell uname -m)
+cache-setup:
+	@mkdir -p $(CACHE_BIN)
+	@mkdir -p $(CACHE_INCLUDE)
 
-BUF_VERSION ?= 0.11.0
+$(BUF):
+	@echo "Installing protoc buf cli..."
+	@rm -f $@
+	@curl -sSL \
+		"https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(UNAME_OS)-$(UNAME_ARCH)" \
+		-o "$(CACHE_BIN)/buf"
+	@chmod +x "$(CACHE_BIN)/buf"
 
-PROTOC_VERSION ?= 3.11.2
-ifeq ($(UNAME_S),Linux)
-  PROTOC_ZIP ?= protoc-3.11.2-linux-x86_64.zip
-endif
-ifeq ($(UNAME_S),Darwin)
-  PROTOC_ZIP ?= protoc-3.11.2-osx-x86_64.zip
-endif
-
-proto-tools: proto-tools-stamp buf
-
-proto-tools-stamp:
-	echo "Installing protoc compiler..."
-	(cd /tmp; \
-	curl -OL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
-	unzip -o ${PROTOC_ZIP} -d $(PREFIX) bin/protoc; \
-	unzip -o ${PROTOC_ZIP} -d $(PREFIX) 'include/*'; \
+$(PROTOC):
+	@echo "Installing protoc compiler..."
+	@rm -f $@
+	@(cd /tmp; \
+	curl -sOL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
+	unzip -oq ${PROTOC_ZIP} -d $(CACHE) bin/protoc; \
+	unzip -oq ${PROTOC_ZIP} -d $(CACHE) 'include/*'; \
 	rm -f ${PROTOC_ZIP})
 
-	echo "Installing protoc-gen-gocosmos..."
-	go install github.com/regen-network/cosmos-proto/protoc-gen-gocosmos
-
-	# Create dummy file to satisfy dependency and avoid
-	# rebuilding when this Makefile target is hit twice
-	# in a row
-	touch $@
-
-buf: buf-stamp
-
-buf-stamp:
-	echo "Installing buf..."
-	curl -sSL \
-    "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-${UNAME_S}-${UNAME_M}" \
-    -o "${BIN}/buf" && \
-	chmod +x "${BIN}/buf"
-
-	touch $@
+.PHONY: proto-tools
+proto-tools: cache-setup $(BUF) $(PROTOC)
 
 tools-clean:
-	rm -f proto-tools-stamp buf-stamp
+	rm -rf $(CACHE)

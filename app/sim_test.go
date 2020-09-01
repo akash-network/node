@@ -63,6 +63,7 @@ func interBlockCacheOpt() func(*baseapp.BaseApp) {
 func simulateFromSeedFunc(t *testing.T, newApp *AkashApp, config simtypes.Config) (bool, simulation.Params, error) {
 	return simulation.SimulateFromSeed(
 		t, os.Stdout, newApp.BaseApp, simapp.AppStateFn(newApp.AppCodec(), newApp.SimulationManager()),
+		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
 		simapp.SimulationOperations(newApp, newApp.AppCodec(), config),
 		newApp.ModuleAccountAddrs(), config,
 	)
@@ -110,8 +111,8 @@ func TestAppImportExport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 
-	newApp := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, fauxMerkleModeOpt)
-	require.Equal(t, AppName, newApp.Name())
+	app := NewApp(logger, db, nil, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, fauxMerkleModeOpt)
+	require.Equal(t, AppName, app.Name())
 
 	// Run randomized simulation
 	_, simParams, simErr := simulateFromSeedFunc(t, newApp, config)
@@ -127,7 +128,7 @@ func TestAppImportExport(t *testing.T) {
 
 	fmt.Printf("exporting genesis...\n")
 
-	appState, _, consensusParams, err := newApp.ExportAppStateAndValidators(false, []string{})
+	appState, _, consensusParams, err := app.ExportAppStateAndValidators(false, []string{})
 	require.NoError(t, err)
 
 	fmt.Printf("importing genesis...\n")
@@ -140,38 +141,38 @@ func TestAppImportExport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
-	newApp1 := NewApp(log.NewNopLogger(), newDB, nil, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, fauxMerkleModeOpt)
-	require.Equal(t, AppName, newApp1.Name())
+	newApp := NewApp(log.NewNopLogger(), newDB, nil, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, fauxMerkleModeOpt)
+	require.Equal(t, AppName, newApp.Name())
 
 	var genesisState simapp.GenesisState
 	err = json.Unmarshal(appState, &genesisState)
 	require.NoError(t, err)
 
-	ctxA := newApp1.NewContext(true, tmproto.Header{Height: newApp1.LastBlockHeight()})
-	ctxB := newApp1.NewContext(true, tmproto.Header{Height: newApp1.LastBlockHeight()})
+	ctxA := app.NewContext(true, tmproto.Header{Height: app.LastBlockHeight()})
+	ctxB := newApp.NewContext(true, tmproto.Header{Height: app.LastBlockHeight()})
 
-	newApp1.mm.InitGenesis(ctxB, newApp1.AppCodec(), genesisState)
-	newApp1.StoreConsensusParams(ctxB, consensusParams)
+	newApp.mm.InitGenesis(ctxB, app.AppCodec(), genesisState)
+	newApp.StoreConsensusParams(ctxB, consensusParams)
 
 	fmt.Printf("comparing stores...\n")
 
 	storeKeysPrefixes := []StoreKeysPrefixes{
-		{newApp1.keys[authtypes.StoreKey], newApp1.keys[authtypes.StoreKey], [][]byte{}},
-		{newApp1.keys[stakingtypes.StoreKey], newApp1.keys[stakingtypes.StoreKey],
+		{app.keys[authtypes.StoreKey], newApp.keys[authtypes.StoreKey], [][]byte{}},
+		{app.keys[stakingtypes.StoreKey], newApp.keys[stakingtypes.StoreKey],
 			[][]byte{
 				stakingtypes.UnbondingQueueKey, stakingtypes.RedelegationQueueKey, stakingtypes.ValidatorQueueKey,
 				stakingtypes.HistoricalInfoKey,
 			}}, // ordering may change but it doesn't matter
-		{newApp1.keys[slashingtypes.StoreKey], newApp.keys[slashingtypes.StoreKey], [][]byte{}},
-		{newApp1.keys[minttypes.StoreKey], newApp.keys[minttypes.StoreKey], [][]byte{}},
-		{newApp1.keys[distrtypes.StoreKey], newApp.keys[distrtypes.StoreKey], [][]byte{}},
-		{newApp1.keys[banktypes.StoreKey], newApp.keys[banktypes.StoreKey], [][]byte{banktypes.BalancesPrefix}},
-		{newApp1.keys[paramtypes.StoreKey], newApp.keys[paramtypes.StoreKey], [][]byte{}},
-		{newApp1.keys[govtypes.StoreKey], newApp.keys[govtypes.StoreKey], [][]byte{}},
-		{newApp1.keys[evidencetypes.StoreKey], newApp.keys[evidencetypes.StoreKey], [][]byte{}},
-		{newApp1.keys[capabilitytypes.StoreKey], newApp.keys[capabilitytypes.StoreKey], [][]byte{}},
-		{newApp1.keys[ibchost.StoreKey], newApp.keys[ibchost.StoreKey], [][]byte{}},
-		{newApp1.keys[ibctransfertypes.StoreKey], newApp.keys[ibctransfertypes.StoreKey], [][]byte{}},
+		{app.keys[slashingtypes.StoreKey], newApp.keys[slashingtypes.StoreKey], [][]byte{}},
+		{app.keys[minttypes.StoreKey], newApp.keys[minttypes.StoreKey], [][]byte{}},
+		{app.keys[distrtypes.StoreKey], newApp.keys[distrtypes.StoreKey], [][]byte{}},
+		{app.keys[banktypes.StoreKey], newApp.keys[banktypes.StoreKey], [][]byte{banktypes.BalancesPrefix}},
+		{app.keys[paramtypes.StoreKey], newApp.keys[paramtypes.StoreKey], [][]byte{}},
+		{app.keys[govtypes.StoreKey], newApp.keys[govtypes.StoreKey], [][]byte{}},
+		{app.keys[evidencetypes.StoreKey], newApp.keys[evidencetypes.StoreKey], [][]byte{}},
+		{app.keys[capabilitytypes.StoreKey], newApp.keys[capabilitytypes.StoreKey], [][]byte{}},
+		{app.keys[ibchost.StoreKey], newApp.keys[ibchost.StoreKey], [][]byte{}},
+		{app.keys[ibctransfertypes.StoreKey], newApp.keys[ibctransfertypes.StoreKey], [][]byte{}},
 	}
 
 	for _, skp := range storeKeysPrefixes {
@@ -183,7 +184,7 @@ func TestAppImportExport(t *testing.T) {
 
 		fmt.Printf("compared %d key/value pairs between %s and %s\n", len(failedKVAs), skp.A, skp.B)
 		require.Equal(t, len(failedKVAs), 0, simapp.GetSimulationLog(skp.A.Name(),
-			newApp1.SimulationManager().StoreDecoders, failedKVAs, failedKVBs))
+			app.SimulationManager().StoreDecoders, failedKVAs, failedKVBs))
 	}
 }
 
