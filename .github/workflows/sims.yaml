@@ -1,14 +1,21 @@
 name: simulation tests
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
+      - mainnet/main
   pull_request:
-    branches: [ master ]
+    branches:
+      - master
+      - mainnet/main
+
+env:
+  BUILD_MAINNET: ${{ github.ref == 'refs/heads/mainnet/main' || github.base_ref == 'refs/heads/mainnet/main' }}
 
 jobs:
   cleanup-runs:
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/master'
+    if: github.ref != 'refs/heads/master' && github.ref != 'refs/heads/mainnet/main'
     steps:
       - uses: rokroskar/workflow-run-cleanup-action@master
         env:

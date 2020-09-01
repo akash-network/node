@@ -14,9 +14,13 @@
 For a high-level overview of the Akash protocol and network economics, check out the [whitepapers](https://akash.network/research); a detailed protocol definition can be 
 found in the [design documentation](_docs/design.md); and the target workload definition spec is [here](_docs/sdl.md).
 
-# NOTE
 
-The `master` branch is currently unstable as we migrate to [cosmos-sdk](https://github.com/cosmos/cosmos-sdk) from the previous tendermint-core implementation, and to subsequent protobuf RPC implementation. The previous, stable branch can be found at [stable](https://github.com/ovrclk/akash/tree/stable).
+# Branching and Versioning
+
+The `master` branch contains new features and is under active development; the `mainnet/main` branch contains the current, stable release.
+
+* **stable** releases will have even minor numbers ( `v0.8.0` ) and be cut from the `mainnet/main` branch.
+* **unstable** releases will have odd minor numbers ( `v0.7.0` ) and be cut from the `master` branch.
 
 ## Akash Suite
 
@@ -74,45 +78,17 @@ To become a contributor, please see the guide on [contributing](CONTRIBUTING.md)
 ## Building from Source
 
  * [Dependencies](#dependencies)
-   * [MacOS](#macos)
-   * [Arch Linux](#arch-linux)
- * [Akash Suite](#akash-suite)
+ * [Building](#building)
 
 ### Dependencies
 
 Akash is developed and tested with [golang 1.13.1+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
 
-For development environments, requirements include:
-
- * [protocol buffers](https://developers.google.com/protocol-buffers/): Protobuf compiler.
-
  Most golang libraries will be installed via [`go modules`](https://github.com/golang/go/wiki/Modules),
  however the following packages will
- be installed globally with their binaries placed in `$GOPATH/bin` by `make devdeps-install`:
+ be installed globally with their binaries placed in `$GOPATH/bin` by `make devdeps-install`.
 
- * [gogoprotobuf](https://github.com/gogo/protobuf): Golang protobuf compiler plugin.
- * [mockery](https://github.com/vektra/mockery): Mock generator.
- * [grpc-gateway](https://github.com/grpc-ecosystem/grpc-gateway): HTTP<->gRPC proxy.
- * [golangci-lint](https://github.com/golangci/golangci-lint): golang static analysis tool.
-
- See below for dependency installation instructions for various platforms.
-
-#### MacOS:
-
-```sh
-# dev environment only:
-brew install protobuf
-```
-
-#### Arch Linux:
-
-```sh
-# dev environment only:
-sudo pacman -Sy protobuf
-```
-### Akash Suite
-
-Download and build `akash` and `akashd`:
+### Building
 
 ```sh
 go get -d github.com/ovrclk/akash
@@ -129,6 +105,6 @@ make devdeps-install
 We use thin integration testing environments to simplify
 the development and testing process.  We currently have two environments:
 
-* [Single node](_run/single): simple (no workloads) single node running locally.
-* [Single node with workloads](_run/kube): single node and provider running locally, running workloads within a virtual machine.
-* [Multi node](_run/multi): multiple nodes and providers running in a virtual machine.
+* [Single node](_run/lite): simple (no workloads) single node running locally.
+* [Single node with workloads](_run/single): single node and provider running locally, running workloads within a virtual machine.
+* [full k8s](_run/kube): same as above but with node and provider running inside Kubernetes.

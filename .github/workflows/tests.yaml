@@ -3,7 +3,12 @@ name: tests
 on:
   pull_request:
   push:
-    branches: [ master ]
+    branches:
+      - master
+      - mainnet/main
+
+env:
+  BUILD_MAINNET: ${{ github.ref == 'refs/heads/mainnet/main' || github.base_ref == 'refs/heads/mainnet/main' }}
 
 jobs:
 

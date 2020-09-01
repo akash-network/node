@@ -2,7 +2,12 @@ name: macos
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
+      - mainnet/main
+
+env:
+  BUILD_MAINNET: ${{ github.ref == 'refs/heads/mainnet/main'}}
 
 jobs:
   build-bins:
