@@ -6,10 +6,14 @@ import (
 	"fmt"
 	"os"
 
+	cosmosclient "github.com/cosmos/cosmos-sdk/client"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	sdktest "github.com/cosmos/cosmos-sdk/testutil"
+	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	"github.com/go-kit/kit/log/term"
 	"github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/cmd/common"
@@ -26,6 +30,7 @@ import (
 	ptypes "github.com/ovrclk/akash/x/provider/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	tmcli "github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
 	"golang.org/x/sync/errgroup"
 )
@@ -39,6 +44,29 @@ const (
 var (
 	errInvalidConfig = errors.New("Invalid configuration")
 )
+
+// RunLocalProvider wraps up the Provider cobra command for testing and supplies
+// new default values to the flags.
+// prev: akashctl provider run --from=foo --cluster-k8s --gateway-listen-address=localhost:39729 --home=/tmp/akash_integration_TestE2EApp_324892307/.akashctl --node=tcp://0.0.0.0:41863 --keyring-backend test
+func RunLocalProvider(clientCtx cosmosclient.Context, chainID, nodeRPC, akashHome, from, gatewayListenAddress string) (sdktest.BufferWriter, error) {
+	cmd := runCmd()
+	// Flags added because command not being wrapped by the Tendermint's PrepareMainCmd()
+	cmd.PersistentFlags().StringP(tmcli.HomeFlag, "", akashHome, "directory for config and data")
+	cmd.PersistentFlags().Bool(tmcli.TraceFlag, false, "print out full stack trace on errors")
+
+	args := []string{
+		"--cluster-k8s",
+		fmt.Sprintf("--%s=%s", flags.FlagChainID, chainID),
+		fmt.Sprintf("--%s=%s", flags.FlagNode, nodeRPC),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, akashHome),
+		fmt.Sprintf("--from=%s", from),
+		fmt.Sprintf("--%s=%s", flagGatewayListenAddress, gatewayListenAddress),
+		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
+	}
+	fmt.Printf("akash provider run args: %v\n", args)
+
+	return clitestutil.ExecTestCLICmd(clientCtx, cmd, args)
+}
 
 func runCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -78,8 +106,18 @@ func runCmd() *cobra.Command {
 
 // doRunCmd initializes all of the Provider functionality, hangs, and awaits shutdown signals.
 func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
+	fmt.Printf("SDK GET CLIENT CONTEXT\n")
 	cctx := sdkclient.GetClientContextFromCmd(cmd)
-	cctx, err := sdkclient.ReadTxCommandFlags(cctx, cmd.Flags())
+
+	fmt.Printf("clientCtx.From: %q genOnly: %v\n", cctx.From, cctx.GenerateOnly)
+	fmt.Printf("READ TX COMMAND FLAGS\n")
+	flagSet := cmd.Flags()
+	from, _ := flagSet.GetString(flags.FlagFrom)
+	fmt.Printf("FLAGSET FROM: %q\n", from)
+	addr, key, err := cosmosclient.GetFromFields(cctx.Keyring, from, false)
+	fmt.Printf("debugging: %v %q, %v\n", addr, key, err)
+
+	cctx, err = sdkclient.ReadTxCommandFlags(cctx, cmd.Flags())
 	if err != nil {
 		return err
 	}
@@ -98,7 +136,6 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	// TODO: actually get the passphrase?
 	// passphrase, err := keys.GetPassphrase(fromName)
-
 	aclient := client.NewClient(
 		log,
 		cctx,

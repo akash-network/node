@@ -23,9 +23,7 @@ func RootCmd() *cobra.Command {
 	cmd.AddCommand(leaseStatusCmd())
 	cmd.AddCommand(serviceStatusCmd())
 	cmd.AddCommand(serviceLogsCmd())
-	cmd.AddCommand(
-		runCmd(),
-	)
+	cmd.AddCommand(runCmd())
 
 	return cmd
 }
