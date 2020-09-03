@@ -207,7 +207,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	_, err = cli.TxCreateBidExec(
 		val.ClientCtx,
 		createdOrder.OrderID,
-		sdk.NewCoin("akash", sdk.NewInt(0)),
+		sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(0)),
 		keyBar.GetAddress(),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -368,7 +368,7 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	_, err = cli.TxCreateBidExec(
 		val.ClientCtx,
 		openedOrders[0].OrderID,
-		sdk.NewCoin("akash", sdk.NewInt(0)),
+		sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(0)),
 		keyBar.GetAddress(),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
