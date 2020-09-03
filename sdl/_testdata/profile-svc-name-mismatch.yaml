@@ -22,7 +22,7 @@ profiles:
         region: sjc
       pricing:
         web:
-          denom: akash
+          denom: uakt
           amount: 25
 
 deployment:

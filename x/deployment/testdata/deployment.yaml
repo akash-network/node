@@ -20,7 +20,7 @@ profiles:
     global:
       pricing:
         web:
-          denom: akash
+          denom: uakt
           amount: 30
 
 deployment:
