@@ -68,7 +68,7 @@ import (
 )
 
 const (
-	AppName = "uakt"
+	AppName = "akash"
 )
 
 var DefaultHome = os.ExpandEnv("$HOME/.akash")

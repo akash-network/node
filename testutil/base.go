@@ -13,13 +13,16 @@ import (
 
 func init() {
 	config := sdk.GetConfig()
-	config.SetBech32PrefixForAccount(CoinDenom, CoinDenom)
+	config.SetBech32PrefixForAccount(BechPrefix, BechPrefix)
 	config.Seal()
 }
 
 // CoinDenom provides ability to create coins in test functions and
 // pass them into testutil functionality.
-const CoinDenom = "uakt"
+const (
+	CoinDenom  = "uakt"
+	BechPrefix = "akash"
+)
 
 // Name generates a random name with the given prefix
 func Name(_ testing.TB, prefix string) string {
