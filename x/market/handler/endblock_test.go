@@ -184,7 +184,7 @@ func TestWinningDistribution(t *testing.T) {
 
 func createBid(t *testing.T, oid types.OrderID, bid int) types.Bid {
 	t.Helper()
-	akashDenom := "akash"
+	akashDenom := "uakt"
 	sdkInt := int64(bid)
 	b := types.Bid{
 		BidID: types.MakeBidID(oid, testutil.AccAddress(t)),

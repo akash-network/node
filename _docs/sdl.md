@@ -129,10 +129,10 @@ westcoast:
     region: us-west
   pricing:
     web:
-      denom: akash
+      denom: uakt
       amount: 8
     db:
-      denom: akash
+      denom: uakt
       amount: 100
 ```
 

@@ -19,7 +19,7 @@ func init() {
 
 // CoinDenom provides ability to create coins in test functions and
 // pass them into testutil functionality.
-const CoinDenom = "akash"
+const CoinDenom = "uakt"
 
 // Name generates a random name with the given prefix
 func Name(_ testing.TB, prefix string) string {

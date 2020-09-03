@@ -24,7 +24,7 @@ profiles:
         region: us-west
       pricing:
         web: 
-          denom: akash
+          denom: uakt
           amount: 1000
 
 deployment:

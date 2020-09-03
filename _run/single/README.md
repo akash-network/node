@@ -50,7 +50,7 @@ this example.
 |`DSEQ`|1|deployment sequence|
 |`GSEQ`|1|group sequence|
 |`OSEQ`|1|order sequence|
-|`PRICE`|10akash|price to bid|
+|`PRICE`|10uakt|price to bid|
 
 To get DNS routing to work locally, there are two addresses which will probably need to set to configure requests to hit the kind docker container. To route requests back to the local interface, add the following two lines to your `/etc/hosts` for the Akashd and Akash-Provider examples to work correctly.
 
