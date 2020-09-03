@@ -10,7 +10,7 @@ SDL_PATH ?= deployment.yaml
 DSEQ  ?= 1
 GSEQ  ?= 1
 OSEQ  ?= 1
-PRICE ?= 10akash
+PRICE ?= 10uakt
 
 .PHONY: provider-create
 provider-create:

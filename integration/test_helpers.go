@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	denom                = "akash"
+	denom                = "uakt"
 	denomStartValue      = 150
 	keyFoo               = "foo"
 	keyBar               = "bar"

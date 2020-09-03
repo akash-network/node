@@ -182,12 +182,11 @@ func TestWinningDistribution(t *testing.T) {
 
 func createBid(t *testing.T, oid types.OrderID, bid int) types.Bid {
 	t.Helper()
-	akashDenom := "akash"
 	sdkInt := int64(bid)
 	b := types.Bid{
 		BidID: types.MakeBidID(oid, testutil.AccAddress(t)),
 		State: types.BidOpen,
-		Price: sdk.NewCoin(akashDenom, sdk.NewInt(sdkInt)),
+		Price: sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(sdkInt)),
 	}
 	return b
 }

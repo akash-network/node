@@ -42,7 +42,7 @@ this example.
 |`DSEQ`|1|deployment sequence|
 |`GSEQ`|1|group sequence|
 |`OSEQ`|1|order sequence|
-|`PRICE`|10akash|price to bid|
+|`PRICE`|10uakt|price to bid|
 
 ## Runbook
 
@@ -355,7 +355,7 @@ KEY_NAME=other DSEQ=20 GSEQ=99 OSEQ=500 make order-close
 
 Fully-customized bid creation
 ```sh
-KEY_NAME=other PROVIDER_KEY_NAME=validator DSEQ=20 GSEQ=99 OSEQ=500 PRICE=100akash make bid-create
+KEY_NAME=other PROVIDER_KEY_NAME=validator DSEQ=20 GSEQ=99 OSEQ=500 PRICE=100uakt make bid-create
 ```
 
 Fully-customized bid close
