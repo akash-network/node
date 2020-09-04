@@ -1,9 +1,9 @@
 syntax = "proto3";
-package akash.provider;
+package akash.provider.v1beta1;
 
 import "gogoproto/gogo.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
-import "akash/provider/provider.proto";
+import "akash/provider/v1beta1/provider.proto";
 
 option go_package = "github.com/ovrclk/akash/x/provider/types";
 

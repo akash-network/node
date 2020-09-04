@@ -4,6 +4,7 @@ package tools
 
 //nolint
 import (
+	_ "github.com/rakyll/statik"
 	_ "github.com/vektra/mockery"
 	_ "golang.org/x/tools/cmd/stringer"
 	_ "k8s.io/code-generator"

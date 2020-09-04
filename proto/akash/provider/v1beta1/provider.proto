@@ -1,5 +1,5 @@
 syntax = "proto3";
-package akash.provider;
+package akash.provider.v1beta1;
 
 import "gogoproto/gogo.proto";
 import "cosmos/base/abci/v1beta1/abci.proto";

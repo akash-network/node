@@ -1,13 +1,25 @@
 syntax = "proto3";
-package akash.market;
+package akash.market.v1beta1;
 
 import "gogoproto/gogo.proto";
-import "cosmos/base/v1beta1/coin.proto";
+import "akash/deployment/v1beta1/group.proto";
 
 option go_package = "github.com/ovrclk/akash/x/market/types";
 
-// LeaseID stores bid details of lease
-message LeaseID {
+// MsgCloseOrder defines an SDK message for closing order
+message MsgCloseOrder {
+    option (gogoproto.equal) = false;
+
+    OrderID order_id = 1 [
+        (gogoproto.customname) = "OrderID",
+        (gogoproto.nullable)   = false,
+        (gogoproto.jsontag)    = "id",
+        (gogoproto.moretags)   = "yaml:\"id\""
+    ];
+}
+
+// OrderID stores owner and all other seq numbers
+message OrderID {
     option (gogoproto.equal) = true;
     option (gogoproto.goproto_stringer) = false;
 
@@ -31,20 +43,15 @@ message LeaseID {
         (gogoproto.jsontag)    = "oseq",
         (gogoproto.moretags)   = "yaml:\"oseq\""
     ];
-    bytes provider = 5 [
-        (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-        (gogoproto.jsontag)  = "provider",
-        (gogoproto.moretags) = "yaml:\"provider\""
-    ];
 }
 
-// Lease stores LeaseID, state of lease and price
-message Lease {
+// Order stores orderID, state of order and other details
+message Order {
     option (gogoproto.equal) = false;
     option (gogoproto.goproto_stringer) = false;
 
-    LeaseID lease_id = 1 [
-        (gogoproto.customname) = "LeaseID",
+    OrderID order_id = 1 [
+        (gogoproto.customname) = "OrderID",
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "id",
         (gogoproto.moretags)   = "yaml:\"id\""
@@ -55,16 +62,16 @@ message Lease {
 
         // Prefix should start with 0 in enum. So declaring dummy state
         invalid = 0 [
-            (gogoproto.enumvalue_customname) = "LeaseStateInvalid"
+            (gogoproto.enumvalue_customname) = "OrderStateInvalid"
         ];
-        active = 1 [
-            (gogoproto.enumvalue_customname) = "LeaseActive"
+        open = 1 [
+            (gogoproto.enumvalue_customname) = "OrderOpen"
         ];
-        insufficient_funds = 2 [
-            (gogoproto.enumvalue_customname) = "LeaseInsufficientFunds"
-        ];
+        matched = 2 [
+            (gogoproto.enumvalue_customname) = "OrderMatched"
+        ]; 
         closed = 3 [
-            (gogoproto.enumvalue_customname) = "LeaseClosed"
+            (gogoproto.enumvalue_customname) = "OrderClosed"
         ];
     }
 
@@ -72,15 +79,23 @@ message Lease {
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];
-    cosmos.base.v1beta1.Coin price = 3 [
+    int64 start_at = 3 [
+        (gogoproto.jsontag)    = "start-at",
+        (gogoproto.moretags)   = "yaml:\"start-at\""
+    ];
+    akash.deployment.v1beta1.GroupSpec spec = 4 [
         (gogoproto.nullable)   = false,
-        (gogoproto.jsontag)    = "price",
-        (gogoproto.moretags)   = "yaml:\"price\""
+        (gogoproto.jsontag)    = "spec",
+        (gogoproto.moretags)   = "yaml:\"spec\""
+    ];
+    int64 close_at = 5 [
+        (gogoproto.jsontag)    = "close-at",
+        (gogoproto.moretags)   = "yaml:\"close-at\""
     ];
 }
 
-// LeaseFilters defines flags for lease list filter
-message LeaseFilters {
+// OrderFilters defines flags for order list filter
+message OrderFilters {
     option (gogoproto.equal) = false;
 
     bytes owner = 1 [
@@ -103,13 +118,8 @@ message LeaseFilters {
         (gogoproto.jsontag)    = "oseq",
         (gogoproto.moretags)   = "yaml:\"oseq\""
     ];
-    bytes provider = 5 [
-        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-        (gogoproto.jsontag)    = "provider",
-        (gogoproto.moretags)   = "yaml:\"provider\""
-    ];
-    int32 state = 6 [
-        (gogoproto.casttype) = "Lease_State",
+    int32 state = 5 [
+        (gogoproto.casttype)   = "Order_State",
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];

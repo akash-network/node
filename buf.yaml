@@ -2,8 +2,6 @@ build:
   roots:
     - proto
     - third_party/proto
-  excludes:
-    - third_party/proto/google
 lint:
   use:
     - DEFAULT

@@ -251,13 +251,16 @@ CACHE          := $(CACHE_BASE)
 CACHE_BIN      := $(CACHE)/bin
 CACHE_INCLUDE  := $(CACHE)/include
 BUF_VERSION    ?= 0.20.5
-PROTOC_VERSION ?= 3.11.2
+PROTOC_VERSION ?= 3.13.0
+PROTOC_GRPC_GATEWAY_VERSION ?= 1.14.7
 
 ifeq ($(UNAME_OS),Linux)
   PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-linux-x86_64.zip
+  PROTOC_GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-v${PROTOC_GRPC_GATEWAY_VERSION}-linux-x86_64
 endif
 ifeq ($(UNAME_OS),Darwin)
   PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-osx-x86_64.zip
+  PROTOC_GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-v${PROTOC_GRPC_GATEWAY_VERSION}-darwin-x86_64
 endif
 
 # This is needed to allow versions to be added to Golang modules with go get
@@ -267,8 +270,9 @@ endif
 # If BUF_VERSION is changed, the binary will be re-downloaded.
 BUF    := $(CACHE_BIN)/buf
 PROTOC := $(CACHE_BIN)/protoc
+GRPC_GATEWAY := $(CACHE_BIN)/protoc-gen-grpc-gateway
 
-proto-gen: $(PROTOC)
+proto-gen: $(PROTOC) $(GRPC_GATEWAY)
 	./script/protocgen.sh
 
 proto-lint: $(BUF)
@@ -350,8 +354,33 @@ $(PROTOC):
 	unzip -oq ${PROTOC_ZIP} -d $(CACHE) 'include/*'; \
 	rm -f ${PROTOC_ZIP})
 
+$(GRPC_GATEWAY):
+	@echo "Installing protoc-gen-grpc-gateway..."
+	@rm -f $@
+	@curl -o "${CACHE_BIN}/protoc-gen-grpc-gateway" -L \
+	"https://github.com/grpc-ecosystem/grpc-gateway/releases/download/v${PROTOC_GRPC_GATEWAY_VERSION}/${PROTOC_GRPC_GATEWAY_BIN}"
+	chmod +x "${CACHE_BIN}/protoc-gen-grpc-gateway"
+
+protoc-swagger:
+ifeq (, $(shell which protoc-gen-swagger))
+	@echo "Installing protoc-gen-swagger..."
+	@go install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+	@npm install -g swagger-combine
+else
+	@echo "protoc-gen-swagger already installed; skipping..."
+endif
+
 .PHONY: proto-tools
-proto-tools: cache-setup $(BUF) $(PROTOC)
+proto-tools: cache-setup $(BUF) $(PROTOC) $(GRPC_GATEWAY) protoc-swagger
 
 tools-clean:
 	rm -rf $(CACHE)
+
+update-swagger-docs:
+	statik -src=client/grpc-gateway -dest=client/grpc-gateway -f -m
+	@if [ -n "$(git status --porcelain)" ]; then \
+        echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
+        exit 1;\
+    else \
+    	echo "\033[92mSwagger docs are in sync\033[0m";\
+    fi

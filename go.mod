@@ -22,6 +22,7 @@ require (
 	github.com/lithammer/shortuuid v1.0.1-0.20190319200910-1be5ab5d90f6
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/rakyll/statik v0.1.7
 	github.com/rs/cors v1.7.1-0.20191011001009-dcbccb712443 // indirect
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/cobra v1.0.0
