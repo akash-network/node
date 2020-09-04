@@ -2,9 +2,13 @@ name: shellcheck
 
 on:
   push:
-    branches: [master]
+    branches:
+      - master
+      - mainnet/main
   pull_request:
-    branches: [master]
+    branches:
+      - master
+      - mainnet/main
 
 jobs:
   shellcheck-lint:

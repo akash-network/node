@@ -39,7 +39,7 @@ this example.
 |`DSEQ`|1|deployment sequence|
 |`GSEQ`|1|group sequence|
 |`OSEQ`|1|order sequence|
-|`PRICE`|10akash|price to bid|
+|`PRICE`|10uakt|price to bid|
 
 # Runbook
 
