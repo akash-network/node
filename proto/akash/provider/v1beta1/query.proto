@@ -2,6 +2,7 @@ syntax = "proto3";
 package akash.provider.v1beta1;
 
 import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
 import "akash/provider/v1beta1/provider.proto";
 
@@ -10,10 +11,14 @@ option go_package = "github.com/ovrclk/akash/x/provider/types";
 // Query defines the gRPC querier service
 service Query {
     // Providers queries providers
-    rpc Providers (QueryProvidersRequest) returns (QueryProvidersResponse) {}
+    rpc Providers (QueryProvidersRequest) returns (QueryProvidersResponse) {
+        option (google.api.http).get = "/akash/deployment/v1beta1/providers";
+    }
 
     // Provider queries provider details
-    rpc Provider (QueryProviderRequest) returns (QueryProviderResponse) {}
+    rpc Provider (QueryProviderRequest) returns (QueryProviderResponse) {
+        option (google.api.http).get = "/akash/deployment/v1beta1/providers/{owner}";
+    }
 }
 
 // QueryProvidersRequest is request type for the Query/Providers RPC method

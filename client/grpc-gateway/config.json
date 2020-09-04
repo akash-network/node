@@ -1,0 +1,22 @@
+{
+    "swagger": "2.0",
+    "info": {
+      "title": "AKASH - GRPC Gateway",
+      "version": "1.0.0"
+    },
+    "apis": [
+      {
+        "url": "./akash/deployment/v1beta1/query.swagger.json"
+      },
+      {
+        "url": "./akash/market/v1beta1/query.swagger.json"
+      },
+      {
+        "url": "./akash/provider/v1beta1/query.swagger.json"
+      },
+      {
+        "url": "./client/grpc-gateway/swagger-sdk.json"
+      }
+    ]
+  }
+  

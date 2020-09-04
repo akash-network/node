@@ -8,7 +8,7 @@ for dir in $proto_dirs; do
   # generate swagger files (filter query files)
   query_file=$(find "${dir}" -maxdepth 1 -name 'query.proto')
   if [[ ! -z "$query_file" ]]; then
-    ./cache/bin/protoc  \
+    .cache/bin/protoc  \
     -I "proto" \
     -I "third_party/proto" \
     "$query_file" \

@@ -269,9 +269,8 @@ endif
 # If BUF_VERSION is changed, the binary will be re-downloaded.
 BUF    := $(CACHE_BIN)/buf
 PROTOC := $(CACHE_BIN)/protoc
-GRPC_GATEWAY := $(CACHE_BIN)/protoc-gen-grpc-gateway
 
-proto-gen: $(PROTOC) $(GRPC_GATEWAY)
+proto-gen: $(PROTOC)
 	./script/protocgen.sh
 
 proto-lint: $(BUF)
@@ -353,12 +352,12 @@ $(PROTOC):
 	unzip -oq ${PROTOC_ZIP} -d $(CACHE) 'include/*'; \
 	rm -f ${PROTOC_ZIP})
 
-$(GRPC_GATEWAY):
+grpc-gateway:
 	@echo "Installing protoc-gen-grpc-gateway..."
 	@rm -f $@
-	@curl -o "${CACHE_BIN}/protoc-gen-grpc-gateway" -L \
+	@curl -o "${GOBIN}/protoc-gen-grpc-gateway" -L \
 	"https://github.com/grpc-ecosystem/grpc-gateway/releases/download/v${PROTOC_GRPC_GATEWAY_VERSION}/${PROTOC_GRPC_GATEWAY_BIN}"
-	chmod +x "${CACHE_BIN}/protoc-gen-grpc-gateway"
+	chmod +x "${GOBIN}/protoc-gen-grpc-gateway"
 
 protoc-swagger:
 ifeq (, $(shell which protoc-gen-swagger))
@@ -370,10 +369,13 @@ else
 endif
 
 .PHONY: proto-tools
-proto-tools: cache-setup $(BUF) $(PROTOC) $(GRPC_GATEWAY) protoc-swagger
+proto-tools: cache-setup $(BUF) $(PROTOC) grpc-gateway protoc-swagger
 
 tools-clean:
 	rm -rf $(CACHE)
+
+proto-swagger-gen:
+	./script/protoc-swagger-gen.sh
 
 update-swagger-docs:
 	statik -src=client/grpc-gateway -dest=client/grpc-gateway -f -m
