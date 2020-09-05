@@ -693,7 +693,7 @@
         ]
       }
     },
-    "/akash/deployment/v1beta1/market/bids/info": {
+    "/akash/market/v1beta1/bids/info": {
       "get": {
         "summary": "Bid queries bid details",
         "operationId": "Bid",
@@ -842,7 +842,7 @@
         ]
       }
     },
-    "/akash/deployment/v1beta1/market/bids/list": {
+    "/akash/market/v1beta1/bids/list": {
       "get": {
         "summary": "Bids queries bids with filters",
         "operationId": "Bids",
@@ -1049,7 +1049,7 @@
         ]
       }
     },
-    "/akash/deployment/v1beta1/market/leases/info": {
+    "/akash/market/v1beta1/leases/info": {
       "get": {
         "summary": "Lease queries lease details",
         "operationId": "Lease",
@@ -1197,7 +1197,7 @@
         ]
       }
     },
-    "/akash/deployment/v1beta1/market/leases/list": {
+    "/akash/market/v1beta1/leases/list": {
       "get": {
         "summary": "Leases queries leases with filters",
         "operationId": "Leases",
@@ -1403,7 +1403,7 @@
         ]
       }
     },
-    "/akash/deployment/v1beta1/market/orders/info": {
+    "/akash/market/v1beta1/orders/info": {
       "get": {
         "summary": "Order queries order details",
         "operationId": "Order",
@@ -1605,7 +1605,7 @@
         ]
       }
     },
-    "/akash/deployment/v1beta1/market/orders/list": {
+    "/akash/market/v1beta1/orders/list": {
       "get": {
         "summary": "Orders queries orders with filters",
         "operationId": "Orders",
@@ -1865,7 +1865,7 @@
         ]
       }
     },
-    "/akash/deployment/v1beta1/providers": {
+    "/akash/provider/v1beta1/providers": {
       "get": {
         "summary": "Providers queries providers",
         "operationId": "Providers",
@@ -2002,7 +2002,7 @@
         ]
       }
     },
-    "/akash/deployment/v1beta1/providers/{owner}": {
+    "/akash/provider/v1beta1/providers/{owner}": {
       "get": {
         "summary": "Provider queries provider details",
         "operationId": "Provider",

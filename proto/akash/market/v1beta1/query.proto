@@ -14,32 +14,32 @@ option go_package = "github.com/ovrclk/akash/x/market/types";
 service Query {
     // Orders queries orders with filters
     rpc Orders (QueryOrdersRequest) returns (QueryOrdersResponse) {
-        option (google.api.http).get = "/akash/deployment/v1beta1/market/orders/list";
+        option (google.api.http).get = "/akash/market/v1beta1/orders/list";
     }
 
     // Order queries order details
     rpc Order (QueryOrderRequest) returns (QueryOrderResponse) {
-        option (google.api.http).get = "/akash/deployment/v1beta1/market/orders/info";
+        option (google.api.http).get = "/akash/market/v1beta1/orders/info";
     }
 
     // Bids queries bids with filters
     rpc Bids (QueryBidsRequest) returns (QueryBidsResponse) {
-        option (google.api.http).get = "/akash/deployment/v1beta1/market/bids/list";
+        option (google.api.http).get = "/akash/market/v1beta1/bids/list";
     }
 
     // Bid queries bid details
     rpc Bid (QueryBidRequest) returns (QueryBidResponse) {
-        option (google.api.http).get = "/akash/deployment/v1beta1/market/bids/info";
+        option (google.api.http).get = "/akash/market/v1beta1/bids/info";
     }
 
     // Leases queries leases with filters
     rpc Leases (QueryLeasesRequest) returns (QueryLeasesResponse) {
-        option (google.api.http).get = "/akash/deployment/v1beta1/market/leases/list";
+        option (google.api.http).get = "/akash/market/v1beta1/leases/list";
     }
 
     // Lease queries lease details
     rpc Lease (QueryLeaseRequest) returns (QueryLeaseResponse) {
-        option (google.api.http).get = "/akash/deployment/v1beta1/market/leases/info";
+        option (google.api.http).get = "/akash/market/v1beta1/leases/info";
     }
 }
 

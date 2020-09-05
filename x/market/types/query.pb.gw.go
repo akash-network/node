@@ -538,17 +538,17 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 }
 
 var (
-	pattern_Query_Orders_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"akash", "deployment", "v1beta1", "market", "orders", "list"}, "", runtime.AssumeColonVerbOpt(true)))
+	pattern_Query_Orders_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"akash", "market", "v1beta1", "orders", "list"}, "", runtime.AssumeColonVerbOpt(true)))
 
-	pattern_Query_Order_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"akash", "deployment", "v1beta1", "market", "orders", "info"}, "", runtime.AssumeColonVerbOpt(true)))
+	pattern_Query_Order_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"akash", "market", "v1beta1", "orders", "info"}, "", runtime.AssumeColonVerbOpt(true)))
 
-	pattern_Query_Bids_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"akash", "deployment", "v1beta1", "market", "bids", "list"}, "", runtime.AssumeColonVerbOpt(true)))
+	pattern_Query_Bids_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"akash", "market", "v1beta1", "bids", "list"}, "", runtime.AssumeColonVerbOpt(true)))
 
-	pattern_Query_Bid_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"akash", "deployment", "v1beta1", "market", "bids", "info"}, "", runtime.AssumeColonVerbOpt(true)))
+	pattern_Query_Bid_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"akash", "market", "v1beta1", "bids", "info"}, "", runtime.AssumeColonVerbOpt(true)))
 
-	pattern_Query_Leases_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"akash", "deployment", "v1beta1", "market", "leases", "list"}, "", runtime.AssumeColonVerbOpt(true)))
+	pattern_Query_Leases_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"akash", "market", "v1beta1", "leases", "list"}, "", runtime.AssumeColonVerbOpt(true)))
 
-	pattern_Query_Lease_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"akash", "deployment", "v1beta1", "market", "leases", "info"}, "", runtime.AssumeColonVerbOpt(true)))
+	pattern_Query_Lease_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"akash", "market", "v1beta1", "leases", "info"}, "", runtime.AssumeColonVerbOpt(true)))
 )
 
 var (

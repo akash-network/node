@@ -12,12 +12,12 @@ option go_package = "github.com/ovrclk/akash/x/provider/types";
 service Query {
     // Providers queries providers
     rpc Providers (QueryProvidersRequest) returns (QueryProvidersResponse) {
-        option (google.api.http).get = "/akash/deployment/v1beta1/providers";
+        option (google.api.http).get = "/akash/provider/v1beta1/providers";
     }
 
     // Provider queries provider details
     rpc Provider (QueryProviderRequest) returns (QueryProviderResponse) {
-        option (google.api.http).get = "/akash/deployment/v1beta1/providers/{owner}";
+        option (google.api.http).get = "/akash/provider/v1beta1/providers/{owner}";
     }
 }
 
