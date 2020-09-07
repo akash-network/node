@@ -118,8 +118,7 @@ message OrderFilters {
         (gogoproto.jsontag)    = "oseq",
         (gogoproto.moretags)   = "yaml:\"oseq\""
     ];
-    int32 state = 5 [
-        (gogoproto.casttype)   = "Order_State",
+    string state = 5 [
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];

@@ -194,7 +194,7 @@ func (ds DeploymentResponses) String() string {
 }
 
 // Accept returns whether deployment filters valid or not
-func (filters DeploymentFilters) Accept(obj Deployment) bool {
+func (filters DeploymentFilters) Accept(obj Deployment, stateVal Deployment_State) bool {
 	// Checking owner filter
 	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.DeploymentID.Owner) {
 		return false
@@ -206,7 +206,7 @@ func (filters DeploymentFilters) Accept(obj Deployment) bool {
 	}
 
 	// Checking state filter
-	if filters.State != 0 && filters.State != obj.State {
+	if stateVal != 0 && stateVal != obj.State {
 		return false
 	}
 

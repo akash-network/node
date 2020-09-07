@@ -22,15 +22,9 @@ func cmdGetLeases() *cobra.Command {
 
 			queryClient := types.NewQueryClient(clientCtx)
 
-			lfilters, state, err := LeaseFiltersFromFlags(cmd.Flags())
+			lfilters, err := LeaseFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
-			}
-
-			// checking state flag
-			lfilters.State = types.Lease_State(types.Lease_State_value[state])
-			if state != "" && lfilters.State == types.LeaseStateInvalid {
-				return ErrStateValue
 			}
 
 			pageReq, err := client.ReadPageRequest(cmd.Flags())

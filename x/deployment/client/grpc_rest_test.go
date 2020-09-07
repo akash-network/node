@@ -102,15 +102,15 @@ func (s *IntegrationTestSuite) TestGetDeployments() {
 		{
 			"get deployments with wrong state filter",
 			fmt.Sprintf("%s/akash/deployment/v1beta1/deployments/list?filters.state=%s", val.APIAddress,
-				"10"),
+				"invalid"),
 			true,
 			types.DeploymentResponse{},
 			0,
 		},
 		{
 			"get deployments with two filters",
-			fmt.Sprintf("%s/akash/deployment/v1beta1/deployments/list?filters.state=%d&filters.dseq=%d",
-				val.APIAddress, deployment.Deployment.State, deployment.Deployment.DeploymentID.DSeq),
+			fmt.Sprintf("%s/akash/deployment/v1beta1/deployments/list?filters.state=%s&filters.dseq=%d",
+				val.APIAddress, deployment.Deployment.State.String(), deployment.Deployment.DeploymentID.DSeq),
 			false,
 			deployment,
 			1,

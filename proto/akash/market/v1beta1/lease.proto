@@ -108,8 +108,7 @@ message LeaseFilters {
         (gogoproto.jsontag)    = "provider",
         (gogoproto.moretags)   = "yaml:\"provider\""
     ];
-    int32 state = 6 [
-        (gogoproto.casttype) = "Lease_State",
+    string state = 6 [
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];

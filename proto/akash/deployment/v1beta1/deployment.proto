@@ -146,8 +146,7 @@ message DeploymentFilters {
         (gogoproto.jsontag)    = "dseq",
         (gogoproto.moretags)   = "yaml:\"dseq\""
     ];
-    int32 state = 3 [
-        (gogoproto.casttype)   = "Deployment_State",
+    string state = 3 [
         (gogoproto.jsontag)    = "state",
         (gogoproto.moretags)   = "yaml:\"state\""
     ];

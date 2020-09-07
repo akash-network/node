@@ -80,34 +80,33 @@ func AddDeploymentFilterFlags(flags *pflag.FlagSet) {
 }
 
 // DepFiltersFromFlags returns DeploymentFilters with given flags and error if occurred
-func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, string, error) {
+func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, error) {
 	var dfilters types.DeploymentFilters
 	owner, err := flags.GetString("owner")
 	if err != nil {
-		return dfilters, "", err
+		return dfilters, err
 	}
 
 	if owner != "" {
 		dfilters.Owner, err = sdk.AccAddressFromBech32(owner)
 		if err != nil {
-			return dfilters, "", err
+			return dfilters, err
 		}
 	} else {
 		dfilters.Owner = sdk.AccAddress{}
 	}
 
 	if !dfilters.Owner.Empty() && sdk.VerifyAddressFormat(dfilters.Owner) != nil {
-		return dfilters, "", ErrOwnerValue
+		return dfilters, ErrOwnerValue
 	}
 
-	state, err := flags.GetString("state")
-	if err != nil {
-		return dfilters, "", err
+	if dfilters.State, err = flags.GetString("state"); err != nil {
+		return dfilters, err
 	}
 
 	if dfilters.DSeq, err = flags.GetUint64("dseq"); err != nil {
-		return dfilters, state, err
+		return dfilters, err
 	}
 
-	return dfilters, state, nil
+	return dfilters, nil
 }

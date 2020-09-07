@@ -468,8 +468,7 @@
             "name": "filters.state",
             "in": "query",
             "required": false,
-            "type": "integer",
-            "format": "int32"
+            "type": "string"
           },
           {
             "name": "pagination.key",
@@ -1008,8 +1007,7 @@
             "name": "filters.state",
             "in": "query",
             "required": false,
-            "type": "integer",
-            "format": "int32"
+            "type": "string"
           },
           {
             "name": "pagination.key",
@@ -1362,8 +1360,7 @@
             "name": "filters.state",
             "in": "query",
             "required": false,
-            "type": "integer",
-            "format": "int32"
+            "type": "string"
           },
           {
             "name": "pagination.key",
@@ -1824,8 +1821,7 @@
             "name": "filters.state",
             "in": "query",
             "required": false,
-            "type": "integer",
-            "format": "int32"
+            "type": "string"
           },
           {
             "name": "pagination.key",
@@ -10327,8 +10323,7 @@
           "format": "uint64"
         },
         "state": {
-          "type": "integer",
-          "format": "int32"
+          "type": "string"
         }
       }
     },
@@ -11392,8 +11387,7 @@
           "format": "byte"
         },
         "state": {
-          "type": "integer",
-          "format": "int32"
+          "type": "string"
         }
       },
       "title": "BidFilters defines flags for bid list filter"
@@ -11514,8 +11508,7 @@
           "format": "byte"
         },
         "state": {
-          "type": "integer",
-          "format": "int32"
+          "type": "string"
         }
       },
       "title": "LeaseFilters defines flags for lease list filter"
@@ -11693,8 +11686,7 @@
           "format": "int64"
         },
         "state": {
-          "type": "integer",
-          "format": "int32"
+          "type": "string"
         }
       },
       "title": "OrderFilters defines flags for order list filter"
