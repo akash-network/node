@@ -93,7 +93,7 @@ make deps-install
 make
 
 # dev environment only:
-make devdeps-install
+make setup-devenv
 ```
 
 ## Running
