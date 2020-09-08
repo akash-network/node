@@ -60,7 +60,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	resp, err := cli.QueryDeploymentsExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var out *types.QueryDeploymentsResponse = &types.QueryDeploymentsResponse{}
+	out := &types.QueryDeploymentsResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")

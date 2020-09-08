@@ -74,7 +74,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	resp, err := cli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var result *types.QueryOrdersResponse = &types.QueryOrdersResponse{}
+	result := &types.QueryOrdersResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), result)
 	s.Require().NoError(err)
 	s.Require().Len(result.Orders, 1)
@@ -132,7 +132,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	resp, err = cli.QueryBidsExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var bidRes *types.QueryBidsResponse = &types.QueryBidsResponse{}
+	bidRes := &types.QueryBidsResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), bidRes)
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
@@ -145,7 +145,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	resp, err = cli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var leaseRes *types.QueryLeasesResponse = &types.QueryLeasesResponse{}
+	leaseRes := &types.QueryLeasesResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), leaseRes)
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
