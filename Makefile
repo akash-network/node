@@ -203,7 +203,7 @@ clean: tools-clean
 	image image-bins \
 	test test-nocache test-full test-coverage \
 	test-integraion \
-	test-lint lintdeps-install \
+	test-lint \
 	test-k8s-integration \
 	test-vet \
 	vendor \
@@ -275,6 +275,12 @@ $(CACHE):
 	@mkdir -p $(CACHE_BIN)
 	@mkdir -p $(CACHE_INCLUDE)
 	@mkdir -p $(CACHE_VERSIONS)
+
+.PHONY:lintdeps-install
+lintdeps-install:
+	@echo "deprecated"
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+		sh -s -- -b $(GOBIN) $(GOLANGCI_LINT_VERSION)
 
 $(GOLANGCI_LINT_VERSION_FILE): $(CACHE)
 	@echo "installing golangci-lint..."
