@@ -110,7 +110,7 @@ test-coverage:
 		./...
 
 test-lint:
-	$(CACHE_BIN)/golangci-lint run
+	$(GOLANGCI_LINT) run
 
 SUBLINTERS = deadcode \
 			misspell \
@@ -262,7 +262,7 @@ proto-check-breaking: $(BUF)
 .PHONY: protovendor
 protovendor: modsensure $(MODVENDOR)
 	@echo "vendoring *.proto files..."
-	@$(MODVENDOR) -copy="**/*.proto" -include='\
+	$(MODVENDOR) -copy="**/*.proto" -include='\
 github.com/cosmos/cosmos-sdk/proto,\
 github.com/tendermint/tendermint/proto,\
 github.com/gogo/protobuf,\
@@ -271,20 +271,19 @@ github.com/regen-network/cosmos-proto/cosmos.proto'
 # Tools installation
 $(CACHE):
 	@echo "creating .cache dir structure..."
-	@mkdir -p $@
-	@mkdir -p $(CACHE_BIN)
-	@mkdir -p $(CACHE_INCLUDE)
-	@mkdir -p $(CACHE_VERSIONS)
+	mkdir -p $@
+	mkdir -p $(CACHE_BIN)
+	mkdir -p $(CACHE_INCLUDE)
+	mkdir -p $(CACHE_VERSIONS)
 
 $(GOLANGCI_LINT_VERSION_FILE): $(CACHE)
 	@echo "installing golangci-lint..."
-	@rm -f $(GOLANGCI_LINT)
+	rm -f $(GOLANGCI_LINT)
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
 		sh -s -- -b $(CACHE_BIN) $(GOLANGCI_LINT_VERSION)
-	@rm -rf $(dir $@)
-	@mkdir -p $(dir $@)
-	@touch $@
-
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
 $(GOLANGCI_LINT): $(GOLANGCI_LINT_VERSION_FILE)
 
 .PHONY:lintdeps-install
@@ -295,27 +294,27 @@ lintdeps-install: $(GOLANGCI_LINT)
 
 $(BUF_VERSION_FILE): $(CACHE)
 	@echo "installing protoc buf cli..."
-	@rm -f $(BUF)
-	@curl -sSL \
+	rm -f $(BUF)
+	curl -sSL \
 		"https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(UNAME_OS)-$(UNAME_ARCH)" \
 		-o "$(CACHE_BIN)/buf"
-	@chmod +x "$(CACHE_BIN)/buf"
-	@rm -rf $(dir $@)
-	@mkdir -p $(dir $@)
-	@touch $@
+	chmod +x "$(CACHE_BIN)/buf"
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
 $(BUF): $(BUF_VERSION_FILE)
 
 $(PROTOC_VERSION_FILE): $(CACHE)
 	@echo "installing protoc compiler..."
-	@rm -f $(PROTOC)
-	@(cd /tmp; \
+	rm -f $(PROTOC)
+	(cd /tmp; \
 	curl -sOL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
 	unzip -oq ${PROTOC_ZIP} -d $(CACHE) bin/protoc; \
 	unzip -oq ${PROTOC_ZIP} -d $(CACHE) 'include/*'; \
 	rm -f ${PROTOC_ZIP})
-	@rm -rf $(dir $@)
-	@mkdir -p $(dir $@)
-	@touch $@
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
 $(PROTOC): $(PROTOC_VERSION_FILE)
 
 $(MODVENDOR): $(CACHE)
