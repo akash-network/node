@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//func TestSendManifest(clientCtx cosmosclient.Context, ){}
+
 func sendManifestCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "send-manifest <sdl-path>",

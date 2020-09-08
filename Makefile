@@ -95,7 +95,7 @@ shellcheck:
 	-x /shellcheck/script/shellcheck.sh
 
 test:
-	$(GO) test -tags=$(BUILD_MAINNET)  -timeout 300s ./...
+	$(GO) test -tags=$(BUILD_MAINNET)  -timeout 300s -v ./x/provider/client/...
 
 test-nocache:
 	$(GO) test -tags=$(BUILD_MAINNET) -count=1 ./...
@@ -158,12 +158,11 @@ test-integration: $(BINS)
 	cp akash ./_build
 	go test -mod=readonly -p 4 -tags "integration $(BUILD_MAINNET)" -v ./integration/...
 
-test-e2e-integration: $(BINS)
+test-e2e-integration:
 	# ASSUMES:
 	# 1. cluster created - `kind create cluster --config=_run/kube/kind-config.yaml`
 	# 2. cluster setup - `make -s -C _run/kube kind-ingress-setup`
-	cp akashctl akashd ./_build
-	$(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestE2EApp
+	$(KIND_VARS) go test -mod=vendor -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integrationprotobuf/...
 
 test-query-app: $(BINS)
 	 $(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestQueryApp
