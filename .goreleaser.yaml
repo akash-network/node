@@ -8,6 +8,8 @@ builds:
     ignore:
       - goos: darwin
         goarch: 386
+    flags:
+      - -tags={{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
     ldflags: >
       -s -w 
       -X github.com/cosmos/cosmos-sdk/version.Name=akashctl 
