@@ -276,12 +276,6 @@ $(CACHE):
 	@mkdir -p $(CACHE_INCLUDE)
 	@mkdir -p $(CACHE_VERSIONS)
 
-.PHONY:lintdeps-install
-lintdeps-install:
-	@echo "deprecated"
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
-		sh -s -- -b $(GOBIN) $(GOLANGCI_LINT_VERSION)
-
 $(GOLANGCI_LINT_VERSION_FILE): $(CACHE)
 	@echo "installing golangci-lint..."
 	@rm -f $(CACHE_BIN)/golangci-lint
@@ -292,6 +286,12 @@ $(GOLANGCI_LINT_VERSION_FILE): $(CACHE)
 	@touch $@
 
 $(GOLANGCI_LINT): $(GOLANGCI_LINT_VERSION_FILE)
+
+.PHONY:lintdeps-install
+lintdeps-install: $(GOLANGCI_LINT)
+	@echo "lintdeps-install is deprecated and will be removed once Github Actions migrated to use .cache/bin/golangci-lint"
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+		sh -s -- -b $(GOBIN) $(GOLANGCI_LINT_VERSION)
 
 $(BUF_VERSION_FILE): $(CACHE)
 	@echo "installing protoc buf cli..."
