@@ -278,7 +278,7 @@ $(CACHE):
 
 $(GOLANGCI_LINT_VERSION_FILE): $(CACHE)
 	@echo "installing golangci-lint..."
-	@rm -f $(CACHE_BIN)/golangci-lint
+	@rm -f $(GOLANGCI_LINT)
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
 		sh -s -- -b $(CACHE_BIN) $(GOLANGCI_LINT_VERSION)
 	@rm -rf $(dir $@)
@@ -295,7 +295,7 @@ lintdeps-install: $(GOLANGCI_LINT)
 
 $(BUF_VERSION_FILE): $(CACHE)
 	@echo "installing protoc buf cli..."
-	@rm -f $(CACHE_BIN)/buf
+	@rm -f $(BUF)
 	@curl -sSL \
 		"https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(UNAME_OS)-$(UNAME_ARCH)" \
 		-o "$(CACHE_BIN)/buf"
@@ -307,7 +307,7 @@ $(BUF): $(BUF_VERSION_FILE)
 
 $(PROTOC_VERSION_FILE): $(CACHE)
 	@echo "installing protoc compiler..."
-	@rm -f $(CACHE_BIN)/protoc
+	@rm -f $(PROTOC)
 	@(cd /tmp; \
 	curl -sOL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
 	unzip -oq ${PROTOC_ZIP} -d $(CACHE) bin/protoc; \
@@ -336,7 +336,6 @@ devdeps-install: $(GOLANGCI_LINT) kubetypes-deps-install
 	$(GO) install k8s.io/code-generator/...
 	$(GO) install sigs.k8s.io/kind
 	$(GO) install golang.org/x/tools/cmd/stringer
-	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor
 
 cache-clean:
 	rm -rf $(CACHE)
