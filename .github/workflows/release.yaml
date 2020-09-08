@@ -5,12 +5,13 @@ on:
     branches:
       - master
       - mainnet/main
+      - boz/mainnet-release
     tags:
       - v*
 
 env:
   # bleh
-  BUILD_MAINNET: ${{ github.ref == 'refs/heads/mainnet/main' || (startsWith(github.ref,'refs/tags/v') && ( contains(github.ref,'.0.') || contains(github.ref,'.2.') || contains(github.ref,'.4.') || contains(github.ref,'.6.') || contains(github.ref,'.8.') )) }}
+  MAINNET: ${{ github.ref == 'refs/heads/mainnet/main' || (startsWith(github.ref,'refs/tags/v') && ( contains(github.ref,'.0.') || contains(github.ref,'.2.') || contains(github.ref,'.4.') || contains(github.ref,'.6.') || contains(github.ref,'.8.') )) }}
 
 jobs:
   goreleaser:
