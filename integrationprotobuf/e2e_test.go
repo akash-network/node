@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,6 +21,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 
+	"github.com/ovrclk/akash/provider/cmd"
 	"github.com/ovrclk/akash/testutil"
 	deploycli "github.com/ovrclk/akash/x/deployment/client/cli"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
@@ -194,9 +196,8 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	s.Require().NoError(err)
 	s.Require().Equal(createdProvider, provider)
 
-	/* TODO: re-enable Provider service
-	var keyName string
-	keyName = keyFoo.GetName()
+	// Run Provider service
+	keyName := keyFoo.GetName()
 	// Change the akash home directory for CLI to access the test keyring
 	cliHome := strings.Replace(val.ClientCtx.HomeDir, "simd", "simcli", 1)
 	// Launch the provider service in goroutine
@@ -214,7 +215,6 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 		// TODO: Kill mechanism on cleanup
 	}()
 	s.Require().NoError(s.network.WaitForNextBlock())
-	*/
 
 	// create a deployment
 	deploymentPath, err := filepath.Abs("../x/deployment/testdata/deployment-v2.yaml")

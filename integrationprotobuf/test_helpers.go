@@ -27,9 +27,8 @@ const (
 	keyFoo               = "foo"
 	keyBar               = "bar"
 	keyBaz               = "baz"
-	fooDenom             = "footoken"
 	fooStartValue        = 1000
-	feeDenom             = "stake"
+	feeDenom             = "uakt"
 	feeStartValue        = 1000000
 	deploymentFilePath   = "./../x/deployment/testdata/deployment.yaml"
 	deploymentV2FilePath = "./../x/deployment/testdata/deployment-v2.yaml"
@@ -52,14 +51,6 @@ var (
 // newAkashCoin
 func newAkashCoin(amt int64) sdk.Coin {
 	return sdk.NewInt64Coin(denom, amt)
-}
-
-func startCoins() sdk.Coins {
-	return sdk.NewCoins(
-		sdk.NewCoin(feeDenom, sdk.TokensFromConsensusPower(feeStartValue)),
-		sdk.NewCoin(fooDenom, sdk.TokensFromConsensusPower(fooStartValue)),
-		sdk.NewCoin(denom, sdk.TokensFromConsensusPower(denomStartValue)),
-	)
 }
 
 //___________________________________________________________________________________
