@@ -24,3 +24,4 @@ dist
 coverage.txt
 
 .cache
+0001-feat-update-Akash-to-Cosmos-SDK-0.40-Proto-Migration.patch

@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -21,7 +20,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 
-	"github.com/ovrclk/akash/provider/cmd"
 	"github.com/ovrclk/akash/testutil"
 	deploycli "github.com/ovrclk/akash/x/deployment/client/cli"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
@@ -196,9 +194,9 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	s.Require().NoError(err)
 	s.Require().Equal(createdProvider, provider)
 
+	/* TODO: re-enable Provider service
 	var keyName string
 	keyName = keyFoo.GetName()
-
 	// Change the akash home directory for CLI to access the test keyring
 	cliHome := strings.Replace(val.ClientCtx.HomeDir, "simd", "simcli", 1)
 	// Launch the provider service in goroutine
@@ -216,11 +214,13 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 		// TODO: Kill mechanism on cleanup
 	}()
 	s.Require().NoError(s.network.WaitForNextBlock())
+	*/
 
 	// create a deployment
 	deploymentPath, err := filepath.Abs("../x/deployment/testdata/deployment-v2.yaml")
 	s.Require().NoError(err)
 
+	// Create Deployments and assert query to assert
 	tenantAddr := keyBar.GetAddress().String()
 	s.T().Logf("%#v", tenantAddr)
 	buf, err := deploycli.TxCreateDeploymentExec(
@@ -229,7 +229,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 		deploymentPath,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
 	s.T().Log(buf.String())
@@ -240,7 +240,6 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	resp, err = deploycli.QueryDeploymentsExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	// Create Deployments and assert query to assert
 	var deployResp *dtypes.QueryDeploymentsResponse = &dtypes.QueryDeploymentsResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), deployResp)
 	s.T().Log(deployResp.String())
