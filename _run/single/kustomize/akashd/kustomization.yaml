@@ -57,4 +57,4 @@ patchesJson6902:
       group: networking.k8s.io
       version: v1beta1
       kind: Ingress
-      name: akashd
+      name: akash
