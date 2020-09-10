@@ -106,16 +106,11 @@ func runCmd() *cobra.Command {
 
 // doRunCmd initializes all of the Provider functionality, hangs, and awaits shutdown signals.
 func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
-	fmt.Printf("SDK GET CLIENT CONTEXT\n")
 	cctx := sdkclient.GetClientContextFromCmd(cmd)
 
-	fmt.Printf("clientCtx.From: %q genOnly: %v\n", cctx.From, cctx.GenerateOnly)
-	fmt.Printf("READ TX COMMAND FLAGS\n")
 	flagSet := cmd.Flags()
 	from, _ := flagSet.GetString(flags.FlagFrom)
-	fmt.Printf("FLAGSET FROM: %q\n", from)
-	addr, key, err := cosmosclient.GetFromFields(cctx.Keyring, from, false)
-	fmt.Printf("debugging: %v %q, %v\n", addr, key, err)
+	_, _, err := cosmosclient.GetFromFields(cctx.Keyring, from, false)
 
 	cctx, err = sdkclient.ReadTxCommandFlags(cctx, cmd.Flags())
 	if err != nil {

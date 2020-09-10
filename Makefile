@@ -160,7 +160,7 @@ test-integration: $(BINS)
 
 test-e2e-integration:
 	# ASSUMES:
-	# 1. cluster created - `kind create cluster --config=_run/kube/kind-config.yaml`
+	# 1. cluster created - `make -s -C _run/kube kind-cluster-create` or for CI:`kind create cluster --config=_run/kube/kind-config.yaml` + bootstrapping metrics-server
 	# 2. cluster setup - `make -s -C _run/kube kind-ingress-setup`
 	$(KIND_VARS) go test -mod=vendor -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integrationprotobuf/...
 

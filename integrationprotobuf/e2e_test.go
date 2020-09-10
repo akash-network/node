@@ -42,33 +42,10 @@ type IntegrationTestSuite struct {
 func (s *IntegrationTestSuite) SetupSuite() {
 	s.T().Log("setting up integration test suite")
 
-	/*
-		var err error
-		s.tmpDir, err = ioutil.TempDir("", "akash_integration_"+s.T().Name()+"_")
-		require.NoError(s.T(), err)
-
-		// Prevent akash errors on exit due to data saving behavior.
-		tmpStat, err := os.Lstat(s.tmpDir)
-		require.NoError(s.T(), err)
-		err = os.MkdirAll(fmt.Sprintf("%s/.akashd/data/cs.wal", s.tmpDir), tmpStat.Mode())
-		require.NoError(s.T(), err)
-
-				servAddr, port, err := server.FreeTCPAddr()
-				require.NoError(s.T(), err)
-
-				p2pAddr, _, err := server.FreeTCPAddr()
-				require.NoError(s.T(), err)
-			buildDir := os.Getenv("BUILDDIR")
-			if buildDir == "" {
-				buildDir, err = filepath.Abs("../_build/")
-				require.NoError(s.T(), err)
-			}
-	*/
-
 	cfg := testutil.DefaultConfig()
 	cfg.NumValidators = 1  // To enable using multiple keys assigned to validators
 	cfg.CleanupDir = false // TODO: remove until debugging is complete
-	//akashBondDenom := "akash"
+	//akashBondDenom := "uakt"
 	//cfg.BondDenom = akashBondDenom
 	//cfg.MinGasPrices = fmt.Sprintf("0.000006%s", akashBondDenom)
 
@@ -301,7 +278,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	s.Assert().Len(leases, 1)
 
 	// TODO: Send manifest
-	// akashctl provider send-manifest --owner akash1c09qqu9jp658jfuc0wa5wxhnsv99jwzvlv63u6 --dseq 7 --gseq 1 --oseq 1 --provider akash1p5a59r458sx6rt74ttku2zh0pdpsj5xtvvfzpw ./../_run/kube/deployment.yaml --home=/tmp/akash_integration_TestE2EApp_324892307/.akashctl --node=tcp://0.0.0.0:41863
+	// akash provider send-manifest --owner akash1c09qqu9jp658jfuc0wa5wxhnsv99jwzvlv63u6 --dseq 7 --gseq 1 --oseq 1 --provider akash1p5a59r458sx6rt74ttku2zh0pdpsj5xtvvfzpw ./../_run/kube/deployment.yaml --home=/tmp/akash_integration_TestE2EApp_324892307/.akashctl --node=tcp://0.0.0.0:41863
 
 	// TODO: Assert that service is running
 
