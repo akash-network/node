@@ -22,6 +22,7 @@ import (
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 
 	"github.com/ovrclk/akash/provider/cmd"
+	pcmd "github.com/ovrclk/akash/provider/cmd"
 	"github.com/ovrclk/akash/testutil"
 	deploycli "github.com/ovrclk/akash/x/deployment/client/cli"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
@@ -68,6 +69,12 @@ func (s *IntegrationTestSuite) TestNetwork_Liveness() {
 */
 
 func (s *IntegrationTestSuite) TearDownSuite() {
+	// Close deployment to clean up container
+	//  Teardown/cleanup
+	// TODO: uncomment
+	//f.TxCloseDeployment(fmt.Sprintf("--from=%s --dseq=%v", keyBar, createdDep.Deployment.DeploymentID.DSeq), "-y")
+	//tests.WaitForNextNBlocksTM(3, f.Port)
+
 	s.T().Log("tearing down integration test suite")
 	s.network.Cleanup()
 }
@@ -170,6 +177,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &provider)
 	s.Require().NoError(err)
 	s.Require().Equal(createdProvider, provider)
+	s.T().Logf("Provider: %#v", provider)
 
 	// Run Provider service
 	keyName := keyFoo.GetName()
@@ -202,7 +210,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 		val.ClientCtx,
 		keyBar.GetAddress(),
 		deploymentPath,
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
@@ -228,10 +236,12 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	resp, err = deploycli.QueryDeploymentExec(val.ClientCtx.WithOutputFormat("json"), createdDep.Deployment.DeploymentID)
 	s.Require().NoError(err)
 
-	var deployment dtypes.DeploymentResponse
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &deployment)
+	var deploymentResp dtypes.DeploymentResponse
+	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &deploymentResp)
 	s.Require().NoError(err)
-	s.Require().Equal(createdDep, deployment)
+	s.T().Logf("DEPLOYMENTRESP %#v", deploymentResp)
+	s.Require().Equal(createdDep, deploymentResp)
+	s.Require().NotEmpty(deploymentResp.Deployment.Version)
 
 	// test query deployments with filters
 	resp, err = deploycli.QueryDeploymentsExec(
@@ -261,6 +271,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	// Wait for then EndBlock to handle bidding and creating lease
 	h, err := s.network.LatestHeight()
 	s.Require().NoError(err)
+	s.T().Logf("height: %d, waiting for %d", h, h+int64(5))
 	_, err = s.network.WaitForHeight(h + int64(5))
 	s.Require().NoError(err)
 
@@ -272,20 +283,37 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), leaseRes)
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
-	leases := leaseRes.Leases
-	//s.Require().Equal(keyBar.GetAddress().String(), leases[0].LeaseID.Provider.String())
-	s.Assert().Len(leases, 1)
+	lease := leaseRes.Leases[0]
+	lid := lease.LeaseID
+	//s.Require().Equal(keyBar.GetAddress().String(), lid.Provider) TODO: Provider-betch32 != Address
+	bID := mtypes.BidID{
+		Provider: lid.Provider,
+		Owner:    lid.Owner,
+		DSeq:     lid.DSeq,
+		GSeq:     lid.GSeq,
+		OSeq:     lid.OSeq,
+	}
 
-	// TODO: Send manifest
+	// Send manifest, wait for deployment by Provider
 	// akash provider send-manifest --owner akash1c09qqu9jp658jfuc0wa5wxhnsv99jwzvlv63u6 --dseq 7 --gseq 1 --oseq 1 --provider akash1p5a59r458sx6rt74ttku2zh0pdpsj5xtvvfzpw ./../_run/kube/deployment.yaml --home=/tmp/akash_integration_TestE2EApp_324892307/.akashctl --node=tcp://0.0.0.0:41863
+	bufOut, err := pcmd.TestSendManifest(val.ClientCtx, bID, deploymentPath)
+	s.T().Log(bufOut.String())
+	s.Require().NoError(err)
 
-	// TODO: Assert that service is running
+	h, err = s.network.LatestHeight()
+	s.Require().NoError(err)
+	s.T().Logf("height: %d, waiting for %d", h, h+int64(20))
+	_, err = s.network.WaitForHeight(h + int64(20))
+	s.Require().NoError(err)
+
+	// Assert provider launches app and is running
+	host, appPort := appEnv(s.T())
+	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)
+	queryApp(s.T(), appURL)
 
 }
 
 func TestIntegrationTestSuite(t *testing.T) {
-	host, appPort := appEnv(t)
-	t.Logf("kind: %s:%s", host, appPort)
 	suite.Run(t, new(IntegrationTestSuite))
 }
 

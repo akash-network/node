@@ -312,7 +312,7 @@ func (m *manager) validateRequest(req manifestRequest) error {
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(version, m.data.Version) {
+	if !bytes.Equal(version, m.data.Deployment.Version) {
 		return ErrManifestVersion
 	}
 

@@ -63,7 +63,6 @@ func RunLocalProvider(clientCtx cosmosclient.Context, chainID, nodeRPC, akashHom
 		fmt.Sprintf("--%s=%s", flagGatewayListenAddress, gatewayListenAddress),
 		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
 	}
-	fmt.Printf("akash provider run args: %v\n", args)
 
 	return clitestutil.ExecTestCLICmd(clientCtx, cmd, args)
 }
