@@ -45,9 +45,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	cfg := testutil.DefaultConfig()
 	cfg.NumValidators = 1  // To enable using multiple keys assigned to validators
 	cfg.CleanupDir = false // TODO: remove until debugging is complete
-	//akashBondDenom := "uakt"
-	//cfg.BondDenom = akashBondDenom
-	//cfg.MinGasPrices = fmt.Sprintf("0.000006%s", akashBondDenom)
+	cfg.MinGasPrices = ""
 
 	s.cfg = cfg
 	s.network = network.New(s.T(), cfg)
@@ -187,8 +185,8 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 			keyName,
 			provURL.Host,
 		)
-		s.T().Log(buf.String())
 		s.Require().NoError(err)
+		s.T().Log(buf.String())
 		// TODO: Kill mechanism on cleanup
 	}()
 	s.Require().NoError(s.network.WaitForNextBlock())
@@ -209,15 +207,15 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
-	s.T().Log(buf.String())
 	s.Require().NoError(err)
+	s.T().Log(buf.String())
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query deployments
 	resp, err = deploycli.QueryDeploymentsExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var deployResp *dtypes.QueryDeploymentsResponse = &dtypes.QueryDeploymentsResponse{}
+	deployResp := &dtypes.QueryDeploymentsResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), deployResp)
 	s.T().Log(deployResp.String())
 	s.Require().NoError(err)
@@ -263,13 +261,14 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	// Wait for then EndBlock to handle bidding and creating lease
 	h, err := s.network.LatestHeight()
 	s.Require().NoError(err)
-	s.network.WaitForHeight(h + int64(3))
+	_, err = s.network.WaitForHeight(h + int64(5))
+	s.Require().NoError(err)
 
 	// Assert provider made bid and created lease; test query leases
 	resp, err = mcli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var leaseRes *mtypes.QueryLeasesResponse = &mtypes.QueryLeasesResponse{}
+	leaseRes := &mtypes.QueryLeasesResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), leaseRes)
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
