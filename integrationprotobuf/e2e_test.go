@@ -187,7 +187,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	// Launch the provider service in goroutine
 	cctx := val.ClientCtx
 	go func() {
-		buf, err := cmd.RunLocalProvider(cctx,
+		_, err := cmd.RunLocalProvider(cctx,
 			cctx.ChainID,
 			val.RPCAddress,
 			cliHome,
@@ -195,7 +195,6 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 			provURL.Host,
 		)
 		s.Require().NoError(err)
-		s.T().Log(buf.String())
 		// TODO: Kill mechanism on cleanup
 	}()
 	s.Require().NoError(s.network.WaitForNextBlock())
@@ -206,8 +205,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 
 	// Create Deployments and assert query to assert
 	tenantAddr := keyBar.GetAddress().String()
-	s.T().Logf("%#v", tenantAddr)
-	buf, err := deploycli.TxCreateDeploymentExec(
+	_, err = deploycli.TxCreateDeploymentExec(
 		val.ClientCtx,
 		keyBar.GetAddress(),
 		deploymentPath,
@@ -217,7 +215,6 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
 	s.Require().NoError(err)
-	s.T().Log(buf.String())
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query deployments
@@ -226,7 +223,6 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 
 	deployResp := &dtypes.QueryDeploymentsResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), deployResp)
-	s.T().Log(deployResp.String())
 	s.Require().NoError(err)
 	s.Require().Len(deployResp.Deployments, 1, "Deployment Create Failed")
 	deployments := deployResp.Deployments
@@ -262,7 +258,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	resp, err = mcli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var result *mtypes.QueryOrdersResponse = &mtypes.QueryOrdersResponse{}
+	result := &mtypes.QueryOrdersResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), result)
 	s.Require().NoError(err)
 	s.Require().Len(result.Orders, 1)
@@ -271,9 +267,10 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 
 	// Wait for then EndBlock to handle bidding and creating lease
 	h, err := s.network.LatestHeight()
+	blocksToWait := h + int64(3)
 	s.Require().NoError(err)
-	s.T().Logf("height: %d, waiting for %d", h, h+int64(5))
-	_, err = s.network.WaitForHeight(h + int64(5))
+	s.T().Logf("height: %d, waiting for %d", h, blocksToWait)
+	_, err = s.network.WaitForHeightWithTimeout(blocksToWait, time.Duration(blocksToWait+1)*5*time.Second)
 	s.Require().NoError(err)
 
 	// Assert provider made bid and created lease; test query leases
@@ -297,21 +294,20 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 
 	// Send manifest, wait for deployment by Provider
 	// akash provider send-manifest --owner akash1c09qqu9jp658jfuc0wa5wxhnsv99jwzvlv63u6 --dseq 7 --gseq 1 --oseq 1 --provider akash1p5a59r458sx6rt74ttku2zh0pdpsj5xtvvfzpw ./../_run/kube/deployment.yaml --home=/tmp/akash_integration_TestE2EApp_324892307/.akashctl --node=tcp://0.0.0.0:41863
-	bufOut, err := pcmd.TestSendManifest(val.ClientCtx, bID, deploymentPath)
-	s.T().Log(bufOut.String())
+	_, err = pcmd.TestSendManifest(val.ClientCtx, bID, deploymentPath)
 	s.Require().NoError(err)
 
 	h, err = s.network.LatestHeight()
+	blocksToWait = h + int64(3)
 	s.Require().NoError(err)
-	s.T().Logf("height: %d, waiting for %d", h, h+int64(20))
-	_, err = s.network.WaitForHeightWithTimeout(h+int64(20), time.Second*30)
+	s.T().Logf("height: %d, waiting for %d", h, blocksToWait)
+	_, err = s.network.WaitForHeightWithTimeout(blocksToWait, time.Duration(blocksToWait+1)*5*time.Second)
 	s.Require().NoError(err)
 
 	// Assert provider launches app and is running
 	host, appPort := appEnv(s.T())
 	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)
 	queryApp(s.T(), appURL)
-
 }
 
 func TestIntegrationTestSuite(t *testing.T) {
