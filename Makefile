@@ -270,8 +270,9 @@ endif
 # If BUF_VERSION is changed, the binary will be re-downloaded.
 BUF    := $(CACHE_BIN)/buf
 PROTOC := $(CACHE_BIN)/protoc
+GRPC_GATEWAY := $(CACHE_BIN)/protoc-gen-grpc-gateway
 
-proto-gen: $(PROTOC)
+proto-gen: $(PROTOC) $(GRPC_GATEWAY)
 	./script/protocgen.sh
 
 proto-lint: $(BUF)
@@ -284,6 +285,7 @@ TM_URL           = https://raw.githubusercontent.com/tendermint/tendermint/v0.34
 GOGO_PROTO_URL   = https://raw.githubusercontent.com/regen-network/protobuf/cosmos
 COSMOS_PROTO_URL = https://raw.githubusercontent.com/regen-network/cosmos-proto/master
 COSMOS_SDK_PROTO_URL = https://raw.githubusercontent.com/cosmos/cosmos-sdk/master/proto/cosmos/base
+GOOGLE_API_PROTO_URL = https://raw.githubusercontent.com/googleapis/googleapis/master/google/api
 
 TM_CRYPTO_TYPES     = third_party/proto/tendermint/crypto
 TM_ABCI_TYPES       = third_party/proto/tendermint/abci
@@ -293,6 +295,7 @@ TM_LIBS				= third_party/proto/tendermint/libs/bits
 
 GOGO_PROTO_TYPES    = third_party/proto/gogoproto
 COSMOS_PROTO_TYPES  = third_party/proto/cosmos_proto
+GOOGLE_PROTO_TYPES  = third_party/proto/google/api
 
 SDK_ABCI_TYPES  	= third_party/proto/cosmos/base/abci/v1beta1
 SDK_QUERY_TYPES  	= third_party/proto/cosmos/base/query/v1beta1
@@ -332,6 +335,11 @@ proto-update-deps:
 	mkdir -p $(SDK_COIN_TYPES)
 	curl -sSL $(COSMOS_SDK_PROTO_URL)/v1beta1/coin.proto > $(SDK_COIN_TYPES)/coin.proto
 
+	mkdir -p $(GOOGLE_PROTO_TYPES)
+	curl -sSL $(GOOGLE_API_PROTO_URL)/http.proto > $(GOOGLE_PROTO_TYPES)/http.proto
+	curl -sSL $(GOOGLE_API_PROTO_URL)/annotations.proto > $(GOOGLE_PROTO_TYPES)/annotations.proto
+	curl -sSL $(GOOGLE_API_PROTO_URL)/httpbody.proto > $(GOOGLE_PROTO_TYPES)/httpbody.proto
+
 cache-setup:
 	mkdir -p $(CACHE_BIN)
 	mkdir -p $(CACHE_INCLUDE)
@@ -353,7 +361,7 @@ $(PROTOC):
 	unzip -oq ${PROTOC_ZIP} -d $(CACHE) 'include/*'; \
 	rm -f ${PROTOC_ZIP})
 
-grpc-gateway:
+$(GRPC_GATEWAY):
 	@echo "Installing protoc-gen-grpc-gateway..."
 	rm -f $@
 	curl -o "${CACHE_BIN}/protoc-gen-grpc-gateway" -L \
@@ -369,12 +377,12 @@ else
 endif
 
 .PHONY: proto-tools
-proto-tools: cache-setup $(BUF) $(PROTOC) grpc-gateway protoc-swagger
+proto-tools: cache-setup $(BUF) $(PROTOC) $(GRPC_GATEWAY) protoc-swagger
 
 tools-clean:
 	rm -rf $(CACHE)
 
-proto-swagger-gen:
+proto-swagger-gen: protoc-swagger
 	./script/protoc-swagger-gen.sh
 
 update-swagger-docs:
