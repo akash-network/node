@@ -26,14 +26,18 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+// State is an enum which refers to state of lease
 type Lease_State int32
 
 const (
 	// Prefix should start with 0 in enum. So declaring dummy state
-	LeaseStateInvalid      Lease_State = 0
-	LeaseActive            Lease_State = 1
+	LeaseStateInvalid Lease_State = 0
+	// LeaseActive denotes state for lease active
+	LeaseActive Lease_State = 1
+	// LeaseInsufficientFunds denotes state for lease insufficient_funds
 	LeaseInsufficientFunds Lease_State = 2
-	LeaseClosed            Lease_State = 3
+	// LeaseClosed denotes state for lease closed
+	LeaseClosed Lease_State = 3
 )
 
 var Lease_State_name = map[int32]string{

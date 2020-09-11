@@ -42,6 +42,7 @@ message GroupID {
     ];
 }
 
+// GroupSpec stores group specifications
 message GroupSpec {
     option (gogoproto.equal) = false;
     option (gogoproto.goproto_getters) = false;
@@ -60,13 +61,14 @@ message GroupSpec {
         (gogoproto.jsontag)    = "resources",
         (gogoproto.moretags)   = "yaml:\"resources\""
     ];
-    int64 orderBidDuration = 4 [
+    int64 order_bid_duration = 4 [
         (gogoproto.customname) = "OrderBidDuration",
         (gogoproto.jsontag)    = "order-bid-duration",
         (gogoproto.moretags)   = "yaml:\"order-bid-duration\""
     ];
 }
 
+// Group stores group id, state and specifications of group
 message Group {
     option (gogoproto.equal) = false;
 
@@ -77,6 +79,7 @@ message Group {
         (gogoproto.moretags)   = "yaml:\"id\""
     ];
 
+    // State is an enum which refers to state of group
     enum State {
         option (gogoproto.goproto_enum_prefix) = false;
 
@@ -84,18 +87,23 @@ message Group {
         invalid = 0 [
             (gogoproto.enumvalue_customname) = "GroupStateInvalid"
         ];
+        // GroupOpen denotes state for group open
         open = 1 [
             (gogoproto.enumvalue_customname) = "GroupOpen"
         ];
+        // GroupOrdered denotes state for group ordered
         ordered = 2 [
             (gogoproto.enumvalue_customname) = "GroupOrdered"
         ]; 
+        // GroupMatched denotes state for group matched
         matched = 3 [
             (gogoproto.enumvalue_customname) = "GroupMatched"
         ];
+        // GroupInsufficientFunds denotes state for group insufficient_funds
         insufficient_funds = 4 [
             (gogoproto.enumvalue_customname) = "GroupInsufficientFunds"
         ];
+        // GroupClosed denotes state for group closed
         closed = 5 [
             (gogoproto.enumvalue_customname) = "GroupClosed"
         ];
@@ -112,6 +120,7 @@ message Group {
     ];
 }
 
+// Resource stores unit, total count and price of resource
 message Resource {
     option (gogoproto.equal) = true;
     

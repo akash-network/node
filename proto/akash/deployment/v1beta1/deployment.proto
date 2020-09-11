@@ -88,6 +88,7 @@ message Deployment {
         (gogoproto.moretags)   = "yaml:\"id\""
     ];
 
+    // State is an enum which refers to state of deployment
     enum State {
         option (gogoproto.goproto_enum_prefix) = false;
 
@@ -95,9 +96,11 @@ message Deployment {
         invalid = 0 [
             (gogoproto.enumvalue_customname) = "DeploymentStateInvalid"
         ];
+        // DeploymentActive denotes state for deployment active
         active = 1 [
             (gogoproto.enumvalue_customname) = "DeploymentActive"
-        ];  
+        ];
+        // DeploymentClosed denotes state for deployment closed 
         closed = 2 [
             (gogoproto.enumvalue_customname) = "DeploymentClosed"
         ];
@@ -113,6 +116,7 @@ message Deployment {
     ];
 }
 
+// DeploymentResponse represents details of deployment along with group details
 message DeploymentResponse {
     option (gogoproto.equal) = false;
     option (gogoproto.goproto_stringer) = false;
@@ -133,6 +137,7 @@ message DeploymentResponse {
     ];
 }
 
+// DeploymentFilters defines filters used to filter deployments
 message DeploymentFilters {
     option (gogoproto.equal) = false;
 

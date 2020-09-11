@@ -52,7 +52,8 @@ message QueryOrdersRequest{
 
 // QueryOrdersResponse is response type for the Query/Orders RPC method
 message QueryOrdersResponse{
-    repeated Order orders = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="Orders"];
+    repeated Order orders = 1 [(gogoproto.nullable) = false,
+    (gogoproto.castrepeated)="Orders"];
 
     cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
@@ -76,7 +77,8 @@ message QueryBidsRequest{
 
 // QueryBidsResponse is response type for the Query/Bids RPC method
 message QueryBidsResponse{
-    repeated Bid bids = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="Bids"];
+    repeated Bid bids = 1 [(gogoproto.nullable) = false,
+    (gogoproto.castrepeated)="Bids"];
 
     cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
@@ -100,7 +102,8 @@ message QueryLeasesRequest{
 
 // QueryLeasesResponse is response type for the Query/Leases RPC method
 message QueryLeasesResponse{
-    repeated Lease leases = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="Leases"];
+    repeated Lease leases = 1 [(gogoproto.nullable) = false,
+    (gogoproto.castrepeated)="Leases"];
 
     cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }

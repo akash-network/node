@@ -26,15 +26,20 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+// State is an enum which refers to state of bid
 type Bid_State int32
 
 const (
 	// Prefix should start with 0 in enum. So declaring dummy state
 	BidStateInvalid Bid_State = 0
-	BidOpen         Bid_State = 1
-	BidMatched      Bid_State = 2
-	BidLost         Bid_State = 3
-	BidClosed       Bid_State = 4
+	// BidOpen denotes state for bid open
+	BidOpen Bid_State = 1
+	// BidMatched denotes state for bid open
+	BidMatched Bid_State = 2
+	// BidLost denotes state for bid lost
+	BidLost Bid_State = 3
+	// BidClosed denotes state for bid closed
+	BidClosed Bid_State = 4
 )
 
 var Bid_State_name = map[int32]string{

@@ -26,14 +26,18 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+// State is an enum which refers to state of order
 type Order_State int32
 
 const (
 	// Prefix should start with 0 in enum. So declaring dummy state
 	OrderStateInvalid Order_State = 0
-	OrderOpen         Order_State = 1
-	OrderMatched      Order_State = 2
-	OrderClosed       Order_State = 3
+	// OrderOpen denotes state for order open
+	OrderOpen Order_State = 1
+	// OrderMatched denotes state for order matched
+	OrderMatched Order_State = 2
+	// OrderClosed denotes state for order lost
+	OrderClosed Order_State = 3
 )
 
 var Order_State_name = map[int32]string{

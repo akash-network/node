@@ -139,6 +139,7 @@ devdeps-install: lintdeps-install kubetypes-deps-install
 	$(GO) install k8s.io/code-generator/...
 	$(GO) install sigs.k8s.io/kind
 	$(GO) install golang.org/x/tools/cmd/stringer
+	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 
 test-integration: $(BINS)
 	cp akash ./_build
@@ -332,21 +333,21 @@ proto-update-deps:
 	curl -sSL $(COSMOS_SDK_PROTO_URL)/v1beta1/coin.proto > $(SDK_COIN_TYPES)/coin.proto
 
 cache-setup:
-	@mkdir -p $(CACHE_BIN)
-	@mkdir -p $(CACHE_INCLUDE)
+	mkdir -p $(CACHE_BIN)
+	mkdir -p $(CACHE_INCLUDE)
 
 $(BUF):
 	@echo "Installing protoc buf cli..."
-	@rm -f $@
-	@curl -sSL \
+	rm -f $@
+	curl -sSL \
 		"https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(UNAME_OS)-$(UNAME_ARCH)" \
 		-o "$(CACHE_BIN)/buf"
-	@chmod +x "$(CACHE_BIN)/buf"
+	chmod +x "$(CACHE_BIN)/buf"
 
 $(PROTOC):
 	@echo "Installing protoc compiler..."
-	@rm -f $@
-	@(cd /tmp; \
+	rm -f $@
+	(cd /tmp; \
 	curl -sOL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
 	unzip -oq ${PROTOC_ZIP} -d $(CACHE) bin/protoc; \
 	unzip -oq ${PROTOC_ZIP} -d $(CACHE) 'include/*'; \
@@ -354,18 +355,17 @@ $(PROTOC):
 
 grpc-gateway:
 	@echo "Installing protoc-gen-grpc-gateway..."
-	@rm -f $@
-	@curl -o "${GOBIN}/protoc-gen-grpc-gateway" -L \
+	rm -f $@
+	curl -o "${CACHE_BIN}/protoc-gen-grpc-gateway" -L \
 	"https://github.com/grpc-ecosystem/grpc-gateway/releases/download/v${PROTOC_GRPC_GATEWAY_VERSION}/${PROTOC_GRPC_GATEWAY_BIN}"
-	chmod +x "${GOBIN}/protoc-gen-grpc-gateway"
+	chmod +x "${CACHE_BIN}/protoc-gen-grpc-gateway"
 
 protoc-swagger:
-ifeq (, $(shell which protoc-gen-swagger))
-	@echo "Installing protoc-gen-swagger..."
-	@go install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
-	@npm install -g swagger-combine
+ifeq (, $(shell which swagger-combine))
+	@echo "Installing swagger-combine..."
+	npm install -g swagger-combine
 else
-	@echo "protoc-gen-swagger already installed; skipping..."
+	@echo "swagger-combine already installed; skipping..."
 endif
 
 .PHONY: proto-tools
@@ -378,8 +378,8 @@ proto-swagger-gen:
 	./script/protoc-swagger-gen.sh
 
 update-swagger-docs:
-	statik -src=client/grpc-gateway -dest=client/grpc-gateway -f -m
-	@if [ -n "$(git status --porcelain)" ]; then \
+	statik -src=client/docs -dest=client/docs -f -m
+	if [ -n "$(git status --porcelain)" ]; then \
         echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
         exit 1;\
     else \

@@ -25,13 +25,16 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+// State is an enum which refers to state of deployment
 type Deployment_State int32
 
 const (
 	// Prefix should start with 0 in enum. So declaring dummy state
 	DeploymentStateInvalid Deployment_State = 0
-	DeploymentActive       Deployment_State = 1
-	DeploymentClosed       Deployment_State = 2
+	// DeploymentActive denotes state for deployment active
+	DeploymentActive Deployment_State = 1
+	// DeploymentClosed denotes state for deployment closed
+	DeploymentClosed Deployment_State = 2
 )
 
 var Deployment_State_name = map[int32]string{
@@ -334,6 +337,7 @@ func (m *Deployment) GetVersion() []byte {
 	return nil
 }
 
+// DeploymentResponse represents details of deployment along with group details
 type DeploymentResponse struct {
 	Deployment Deployment `protobuf:"bytes,1,opt,name=deployment,proto3" json:"deployment" yaml:"deployment"`
 	Groups     []Group    `protobuf:"bytes,2,rep,name=groups,proto3" json:"groups" yaml:"groups"`
@@ -393,6 +397,7 @@ func (m *DeploymentResponse) GetVersion() []byte {
 	return nil
 }
 
+// DeploymentFilters defines filters used to filter deployments
 type DeploymentFilters struct {
 	Owner github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=owner,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"owner" yaml:"owner"`
 	DSeq  uint64                                        `protobuf:"varint,2,opt,name=dseq,proto3" json:"dseq" yaml:"dseq"`

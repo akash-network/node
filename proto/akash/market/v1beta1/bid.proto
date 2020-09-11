@@ -86,6 +86,7 @@ message Bid {
         (gogoproto.moretags)   = "yaml:\"id\""
     ];
 
+    // State is an enum which refers to state of bid
     enum State {
         option (gogoproto.goproto_enum_prefix) = false;
 
@@ -93,15 +94,19 @@ message Bid {
         invalid = 0 [
             (gogoproto.enumvalue_customname) = "BidStateInvalid"
         ];
+        // BidOpen denotes state for bid open
         open = 1 [
             (gogoproto.enumvalue_customname) = "BidOpen"
         ];
+        // BidMatched denotes state for bid open
         matched = 2 [
             (gogoproto.enumvalue_customname) = "BidMatched"
         ];
+        // BidLost denotes state for bid lost
         lost = 3 [
             (gogoproto.enumvalue_customname) = "BidLost"
         ];
+        // BidClosed denotes state for bid closed
         closed = 4 [
             (gogoproto.enumvalue_customname) = "BidClosed"
         ];

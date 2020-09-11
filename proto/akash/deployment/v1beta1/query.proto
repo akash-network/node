@@ -36,7 +36,8 @@ message QueryDeploymentsRequest{
 
 // QueryDeploymentsResponse is response type for the Query/Deployments RPC method
 message QueryDeploymentsResponse{
-    repeated DeploymentResponse deployments = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="DeploymentResponses"];
+    repeated DeploymentResponse deployments = 1 [(gogoproto.nullable) = false,
+    (gogoproto.castrepeated)="DeploymentResponses"];
 
     cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }

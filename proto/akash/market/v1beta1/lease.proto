@@ -50,6 +50,7 @@ message Lease {
         (gogoproto.moretags)   = "yaml:\"id\""
     ];
 
+    // State is an enum which refers to state of lease
     enum State {
         option (gogoproto.goproto_enum_prefix) = false;
 
@@ -57,12 +58,15 @@ message Lease {
         invalid = 0 [
             (gogoproto.enumvalue_customname) = "LeaseStateInvalid"
         ];
+        // LeaseActive denotes state for lease active
         active = 1 [
             (gogoproto.enumvalue_customname) = "LeaseActive"
         ];
+        // LeaseInsufficientFunds denotes state for lease insufficient_funds
         insufficient_funds = 2 [
             (gogoproto.enumvalue_customname) = "LeaseInsufficientFunds"
         ];
+        // LeaseClosed denotes state for lease closed
         closed = 3 [
             (gogoproto.enumvalue_customname) = "LeaseClosed"
         ];
