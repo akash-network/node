@@ -256,11 +256,13 @@ func (m *manager) maybeScheduleStop() bool { // nolint:golint,unparam
 		m.log.Info("starting stop timer", "duration", m.config.ManifestLingerDuration)
 		m.stoptimer = time.NewTimer(m.config.ManifestLingerDuration)
 	}
+	m.log.Debug("maybe schedule stopping")
 	return true
 }
 
 func (m *manager) emitReceivedEvents() {
 	if m.data == nil || len(m.leases) == 0 || len(m.manifests) == 0 {
+		m.log.Debug("emit received events skipped", "data", m.data, "leases", len(m.leases), "manifests", len(m.manifests))
 		return
 	}
 

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -303,7 +304,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	h, err = s.network.LatestHeight()
 	s.Require().NoError(err)
 	s.T().Logf("height: %d, waiting for %d", h, h+int64(20))
-	_, err = s.network.WaitForHeight(h + int64(20))
+	_, err = s.network.WaitForHeightWithTimeout(h+int64(20), time.Second*30)
 	s.Require().NoError(err)
 
 	// Assert provider launches app and is running
