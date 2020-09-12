@@ -161,7 +161,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	resp, err := cli.QueryProvidersExec(localCtx)
 	s.Require().NoError(err)
 
-	var out *types.QueryProvidersResponse = &types.QueryProvidersResponse{}
+	out := &types.QueryProvidersResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
 	s.T().Logf("%s", resp.Bytes())
 	s.Require().NoError(err)
@@ -267,7 +267,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 
 	// Wait for then EndBlock to handle bidding and creating lease
 	h, err := s.network.LatestHeight()
-	blocksToWait := h + int64(3)
+	blocksToWait := h + int64(5)
 	s.Require().NoError(err)
 	s.T().Logf("height: %d, waiting for %d", h, blocksToWait)
 	_, err = s.network.WaitForHeightWithTimeout(blocksToWait, time.Duration(blocksToWait+1)*5*time.Second)

@@ -8,6 +8,8 @@ services:
       - port: 80
         to:
           - global: true
+        accept:
+          - localhost
 
 profiles:
   compute:
@@ -20,8 +22,8 @@ profiles:
     global:
       pricing:
         web:
-          denom: uakt
-          amount: 500
+          denom: stake
+          amount: 10
 
 deployment:
   web:
