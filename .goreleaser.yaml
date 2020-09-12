@@ -9,7 +9,7 @@ builds:
       - goos: darwin
         goarch: 386
     flags:
-      - -tags={{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+      - -tags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
     ldflags: >
       -s -w 
       -X github.com/cosmos/cosmos-sdk/version.Name=akashctl 
@@ -28,6 +28,8 @@ builds:
         goarch: 386
       - goos: windows
         goarch: arm
+    flags:
+      - -tags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
     ldflags: >
       -s -w 
       -X github.com/cosmos/cosmos-sdk/version.Name=akashctl 
