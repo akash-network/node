@@ -8,6 +8,8 @@ services:
       - port: 80
         to:
           - global: true
+        accept:
+          - test.localhost
 
 profiles:
   compute:

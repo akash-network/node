@@ -3,13 +3,13 @@ version: "1.5"
 
 services:
   web:
-    image: bubuntux/riot-web:v2
+    image: quay.io/ovrclk/demo-app
     expose:
       - port: 80
         to:
           - global: true
         accept:
-          - localhost
+          - test.localhost
 
 profiles:
   compute:
