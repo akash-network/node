@@ -32,7 +32,6 @@ require (
 	github.com/stretchr/objx v0.2.1-0.20190415111823-35313a95ee26 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/subosito/gotenv v1.2.1-0.20190917103637-de67a6614a4d // indirect
-	github.com/tendermint/go-amino v0.15.1
 	github.com/tendermint/tendermint v0.34.0-rc3
 	github.com/tendermint/tm-db v0.6.1
 	github.com/vektra/mockery v1.1.2
