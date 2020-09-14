@@ -84,7 +84,7 @@ func SendManifest(lease types.Lease, sdlPath string, flags ...string) {
 func queryApp(t *testing.T, appURL string) {
 	req, err := http.NewRequest("GET", appURL, nil)
 	require.NoError(t, err)
-	req.Host = "test.localhost" // NOTE: cannot be inserted as a req.Header element, that is overwritten by this req.Host field.
+	req.Host = "hello.localhost" // NOTE: cannot be inserted as a req.Header element, that is overwritten by this req.Host field.
 	req.Header.Add("Cache-Control", "no-cache")
 	req.Header.Add("Connection", "keep-alive")
 	// Assert that the service is accessible. Unfortunately brittle single request.

@@ -85,6 +85,9 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	flagSet := cmd.Flags()
 	from, _ := flagSet.GetString(flags.FlagFrom)
 	_, _, err := cosmosclient.GetFromFields(cctx.Keyring, from, false)
+	if err != nil {
+		return err
+	}
 
 	cctx, err = sdkclient.ReadTxCommandFlags(cctx, cmd.Flags())
 	if err != nil {
