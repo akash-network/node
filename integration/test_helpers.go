@@ -1,6 +1,6 @@
 // +build integration
 
-package integrationprotobuf
+package integration
 
 import (
 	"fmt"
@@ -12,7 +12,6 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/ovrclk/akash/x/market/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,11 +37,6 @@ attributes:
   - key: moniker
     value: akash
 `
-)
-
-var (
-	fooAddr = authtypes.NewEmptyModuleAccount(keyFoo)
-	barAddr = authtypes.NewEmptyModuleAccount(keyBar)
 )
 
 // newAkashCoin

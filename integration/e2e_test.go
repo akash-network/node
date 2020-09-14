@@ -282,7 +282,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 
 	host, appPort := appEnv(s.T())
 	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)
-	queryApp(s.T(), appURL)
+	queryApp(s.T(), appURL, 50)
 
 	// teardown lease
 	_, err = deploycli.TxCloseDeploymentExec(
@@ -336,5 +336,5 @@ func TestQueryApp(t *testing.T) {
 	host, appPort := appEnv(t)
 
 	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)
-	queryApp(t, appURL)
+	queryApp(t, appURL, 1)
 }
