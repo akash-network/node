@@ -14,10 +14,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/ovrclk/akash/app"
-	"github.com/ovrclk/akash/types"
 	tmrand "github.com/tendermint/tendermint/libs/rand"
 	dbm "github.com/tendermint/tm-db"
+
+	"github.com/ovrclk/akash/app"
+	"github.com/ovrclk/akash/types"
 )
 
 func Unit(_ testing.TB) types.Unit {

@@ -5,7 +5,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
-	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
+
+	testutilcli "github.com/ovrclk/akash/testutil/cli"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -20,7 +21,7 @@ func TxCreateDeploymentExec(clientCtx client.Context, from fmt.Stringer, filePat
 
 	args = append(args, extraArgs...)
 
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdCreate(key), args)
+	return testutilcli.ExecTestCLICmd(clientCtx, cmdCreate(key), args...)
 }
 
 // TxUpdateDeploymentExec is used for testing update deployment tx
@@ -32,7 +33,7 @@ func TxUpdateDeploymentExec(clientCtx client.Context, from fmt.Stringer, filePat
 
 	args = append(args, extraArgs...)
 
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdUpdate(key), args)
+	return testutilcli.ExecTestCLICmd(clientCtx, cmdUpdate(key), args...)
 }
 
 // TxCloseDeploymentExec is used for testing close deployment tx
@@ -43,7 +44,7 @@ func TxCloseDeploymentExec(clientCtx client.Context, from fmt.Stringer, extraArg
 
 	args = append(args, extraArgs...)
 
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdClose(key), args)
+	return testutilcli.ExecTestCLICmd(clientCtx, cmdClose(key), args...)
 }
 
 // TxCloseGroupExec is used for testing close group tx
@@ -57,12 +58,12 @@ func TxCloseGroupExec(clientCtx client.Context, groupID types.GroupID, from fmt.
 
 	args = append(args, extraArgs...)
 
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdGroupClose(key), args)
+	return testutilcli.ExecTestCLICmd(clientCtx, cmdGroupClose(key), args...)
 }
 
 // QueryDeploymentsExec is used for testing deployments query
 func QueryDeploymentsExec(clientCtx client.Context, extraArgs ...string) (sdktest.BufferWriter, error) {
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdDeployments(), extraArgs)
+	return testutilcli.ExecTestCLICmd(clientCtx, cmdDeployments(), extraArgs...)
 }
 
 // QueryDeploymentExec is used for testing deployment query
@@ -74,7 +75,7 @@ func QueryDeploymentExec(clientCtx client.Context, id types.DeploymentID, extraA
 
 	args = append(args, extraArgs...)
 
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdDeployment(), args)
+	return testutilcli.ExecTestCLICmd(clientCtx, cmdDeployment(), args...)
 }
 
 // QueryGroupExec is used for testing group query
@@ -87,5 +88,5 @@ func QueryGroupExec(clientCtx client.Context, id types.GroupID, extraArgs ...str
 
 	args = append(args, extraArgs...)
 
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdGetGroup(), args)
+	return testutilcli.ExecTestCLICmd(clientCtx, cmdGetGroup(), args...)
 }

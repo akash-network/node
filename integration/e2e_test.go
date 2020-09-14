@@ -1,199 +1,340 @@
-// +build e2e,integration,!mainnet
+// +build integration,!mainnet
 
 package integration
 
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"net/url"
-	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/server"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/integration/cosmostests"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/testutil/network"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
+
+	pcmd "github.com/ovrclk/akash/provider/cmd"
+	ptestutil "github.com/ovrclk/akash/provider/testutil"
+	"github.com/ovrclk/akash/testutil"
+	deploycli "github.com/ovrclk/akash/x/deployment/client/cli"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	mcli "github.com/ovrclk/akash/x/market/client/cli"
+	mtypes "github.com/ovrclk/akash/x/market/types"
+	"github.com/ovrclk/akash/x/provider/client/cli"
+	"github.com/ovrclk/akash/x/provider/types"
 )
 
-func TestE2EApp(t *testing.T) {
-	host, appPort := appEnv(t)
+// IntegrationTestSuite wraps testing components
+type IntegrationTestSuite struct {
+	suite.Suite
 
-	t.Parallel()
-	f := InitFixtures(t)
-	defer f.Cleanup() // NOTE: defer statement ordering matters.
+	cfg     network.Config
+	network *network.Network
+}
 
-	// start akashd server
-	proc := f.AkashdStart()
-	defer func() { // shutdown akashd
-		err := proc.Stop(false)
-		require.NoError(t, err)
-		so, se, err := proc.ReadAll()
-		require.NoError(t, err)
-		assert.Empty(t, se, "akashd output", so)
-	}()
+func (s *IntegrationTestSuite) SetupSuite() {
+	s.T().Log("setting up integration test suite")
 
-	// Save key addresses for later use
-	fooAddr := f.KeyAddress(keyFoo)
-	barAddr := f.KeyAddress(keyBar)
+	cfg := testutil.DefaultConfig()
+	cfg.NumValidators = 1 // To enable using multiple keys assigned to validators
+	// cfg.MinGasPrices = ""
 
-	fooAcc := f.QueryAccount(fooAddr)
-	startTokens := sdk.TokensFromConsensusPower(denomStartValue)
-	require.Equal(t, startTokens, fooAcc.GetCoins().AmountOf(denom))
+	s.cfg = cfg
+	s.network = network.New(s.T(), cfg)
+
+	kb := s.network.Validators[0].ClientCtx.Keyring
+	_, _, err := kb.NewMnemonic("keyBar", keyring.English, sdk.FullFundraiserPath, hd.Secp256k1)
+	s.Require().NoError(err)
+	_, _, err = kb.NewMnemonic("keyFoo", keyring.English, sdk.FullFundraiserPath, hd.Secp256k1)
+	s.Require().NoError(err)
+
+	_, err = s.network.WaitForHeight(1)
+	s.Require().NoError(err)
+}
+
+func (s *IntegrationTestSuite) TearDownSuite() {
+	s.network.Cleanup()
+}
+
+func (s *IntegrationTestSuite) TestE2EApp() {
+	val := s.network.Validators[0]
+
+	// Send coins value
+	sendTokens := sdk.NewInt64Coin(s.cfg.BondDenom, 1000)
+
+	// Setup a Provider key
+	keyProvider, err := val.ClientCtx.Keyring.Key("keyFoo")
+	s.Require().NoError(err)
+
+	// give provider some coins
+	_, err = bankcli.MsgSendExec(
+		val.ClientCtx,
+		val.Address,
+		keyProvider.GetAddress(),
+		sdk.NewCoins(sendTokens),
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
+
+	// Set up second tenant key
+	keyTenant, err := val.ClientCtx.Keyring.Key("keyBar")
+	s.Require().NoError(err)
+
+	// give tenant some coins too
+	_, err = bankcli.MsgSendExec(
+		val.ClientCtx,
+		val.Address,
+		keyTenant.GetAddress(),
+		sdk.NewCoins(sendTokens),
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// address for provider to listen on
 	_, port, err := server.FreeTCPAddr()
-	require.NoError(t, err)
+	require.NoError(s.T(), err)
 	provHost := fmt.Sprintf("localhost:%s", port)
 	provURL := url.URL{
 		Host:   provHost,
 		Scheme: "http",
 	}
-
 	provFileStr := fmt.Sprintf(providerTemplate, provURL.String())
-	tmpFile, err := ioutil.TempFile(f.RootDir, "provider.yaml")
-	require.NoError(t, err)
+	tmpFile, err := ioutil.TempFile(s.network.BaseDir, "provider.yaml")
+	require.NoError(s.T(), err)
 
 	_, err = tmpFile.WriteString(provFileStr)
-	require.NoError(t, err)
+	require.NoError(s.T(), err)
+
 	defer func() {
-		err = tmpFile.Close()
-		require.NoError(t, err)
+		err := tmpFile.Close()
+		require.NoError(s.T(), err)
 	}()
+
 	fstat, err := tmpFile.Stat()
-	require.NoError(t, err)
-	tfilePath := fmt.Sprintf("%s/%s", f.RootDir, fstat.Name())
+	require.NoError(s.T(), err)
 
-	// Create provider
-	f.TxCreateProviderFromFile(tfilePath, fmt.Sprintf("--from=%s", keyFoo), "-y")
-	cosmostests.WaitForNextNBlocksTM(1, f.Port)
+	// create Provider blockchain declaration
+	_, err = cli.TxCreateProviderExec(
+		val.ClientCtx,
+		keyProvider.GetAddress(),
+		fmt.Sprintf("%s/%s", s.network.BaseDir, fstat.Name()),
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
 
+	s.Require().NoError(s.network.WaitForNextBlock())
+
+	localCtx := val.ClientCtx.WithOutputFormat("json")
 	// test query providers
-	providers := f.QueryProviders()
-	require.Len(t, providers, 1, "Creating provider failed")
-	require.Equal(t, fooAddr.String(), providers[0].Owner.String())
+	resp, err := cli.QueryProvidersExec(localCtx)
+	s.Require().NoError(err)
+
+	out := &types.QueryProvidersResponse{}
+	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
+	s.Require().NoError(err)
+	s.Require().Len(out.Providers, 1, "Provider Creation Failed")
+	providers := out.Providers
+	s.Require().Equal(keyProvider.GetAddress().String(), providers[0].Owner.String())
 
 	// test query provider
 	createdProvider := providers[0]
-	provider := f.QueryProvider(createdProvider.Owner.String())
-	require.Equal(t, createdProvider, provider)
+	resp, err = cli.QueryProviderExec(localCtx, createdProvider.Owner)
+	s.Require().NoError(err)
 
-	// Run provider service
-	provProc, provHost := f.ProviderStart(keyFoo, provHost)
-	defer func() { // shutdown provider
-		err := provProc.Stop(true)
-		require.NoError(t, err)
-		so, se, err := provProc.ReadAll()
-		require.NoError(t, err)
-		assert.Empty(t, se, "provider output", so)
+	var provider types.Provider
+	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &provider)
+	s.Require().NoError(err)
+	s.Require().Equal(createdProvider, provider)
+
+	// Run Provider service
+	keyName := keyProvider.GetName()
+
+	// Change the akash home directory for CLI to access the test keyring
+	cliHome := strings.Replace(val.ClientCtx.HomeDir, "simd", "simcli", 1)
+
+	cctx := val.ClientCtx
+	go func() {
+		_, err := ptestutil.RunLocalProvider(cctx,
+			cctx.ChainID,
+			val.RPCAddress,
+			cliHome,
+			keyName,
+			provURL.Host,
+			fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		)
+		s.Require().NoError(err)
 	}()
 
-	// Apply SDL to provider
-	// Create deployment for `keyBar`
-	f.TxCreateDeployment(deploymentOvrclkApp, fmt.Sprintf("--from=%s", keyBar), "-y")
-	cosmostests.WaitForNextNBlocksTM(1, f.Port)
+	s.Require().NoError(s.network.WaitForNextBlock())
+
+	// create a deployment
+	deploymentPath, err := filepath.Abs("../x/deployment/testdata/deployment-v2.yaml")
+	s.Require().NoError(err)
+
+	// Create Deployments and assert query to assert
+	tenantAddr := keyTenant.GetAddress().String()
+	_, err = deploycli.TxCreateDeploymentExec(
+		val.ClientCtx,
+		keyTenant.GetAddress(),
+		deploymentPath,
+		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query deployments
-	deployments, err := f.QueryDeployments()
-	require.NoError(t, err)
-	require.Len(t, deployments, 1, "Deployment Create Failed")
-	require.Equal(t, barAddr.String(), deployments[0].Deployment.DeploymentID.Owner.String())
+	resp, err = deploycli.QueryDeploymentsExec(val.ClientCtx.WithOutputFormat("json"))
+	s.Require().NoError(err)
+
+	deployResp := &dtypes.QueryDeploymentsResponse{}
+	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), deployResp)
+	s.Require().NoError(err)
+	s.Require().Len(deployResp.Deployments, 1, "Deployment Create Failed")
+	deployments := deployResp.Deployments
+	s.Require().Equal(tenantAddr, deployments[0].Deployment.DeploymentID.Owner.String())
 
 	// test query deployment
 	createdDep := deployments[0]
-	deployment := f.QueryDeployment(createdDep.Deployment.DeploymentID)
-	require.Equal(t, createdDep, deployment)
+	resp, err = deploycli.QueryDeploymentExec(val.ClientCtx.WithOutputFormat("json"), createdDep.Deployment.DeploymentID)
+	s.Require().NoError(err)
 
-	cosmostests.WaitForNextNBlocksTM(1, f.Port)
-	orders, err := f.QueryOrders()
-	require.NoError(t, err)
-	require.Len(t, orders, 1, "Order creation failed")
-	require.Equal(t, barAddr.String(), orders[0].OrderID.Owner.String())
+	deploymentResp := dtypes.DeploymentResponse{}
+	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &deploymentResp)
+	s.Require().NoError(err)
+	s.Require().Equal(createdDep, deploymentResp)
+	s.Require().NotEmpty(deploymentResp.Deployment.Version)
 
-	// Assert that there are no leases yet
-	leases, err := f.QueryLeases()
-	require.NoError(t, err)
-	require.Len(t, leases, 0, "no Leases should be created yet")
+	// test query deployments with filters
+	resp, err = deploycli.QueryDeploymentsExec(
+		val.ClientCtx.WithOutputFormat("json"),
+		fmt.Sprintf("--owner=%s", tenantAddr),
+		fmt.Sprintf("--dseq=%v", createdDep.Deployment.DeploymentID.DSeq),
+	)
+	s.Require().NoError(err, "Error when fetching deployments with owner filter")
+
+	deployResp = &dtypes.QueryDeploymentsResponse{}
+	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), deployResp)
+	s.Require().NoError(err)
+	s.Require().Len(deployResp.Deployments, 1)
+
+	// Assert orders created by provider
+	// test query orders
+	resp, err = mcli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
+	s.Require().NoError(err)
+
+	result := &mtypes.QueryOrdersResponse{}
+	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), result)
+	s.Require().NoError(err)
+	s.Require().Len(result.Orders, 1)
+	orders := result.Orders
+	s.Require().Equal(tenantAddr, orders[0].OrderID.Owner.String())
 
 	// Wait for then EndBlock to handle bidding and creating lease
-	cosmostests.WaitForNextNBlocksTM(5, f.Port)
+	s.Require().NoError(s.waitForBlocksCommitted(5))
 
-	// Assert provider made bid
-	leases, err = f.QueryLeases()
-	require.NoError(t, err)
-	require.Len(t, leases, 1, "Lease should be created after bidding completes")
-	lease := leases[0]
+	// Assert provider made bid and created lease; test query leases
+	resp, err = mcli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"))
+	s.Require().NoError(err)
 
-	// Provide manifest to provider service
-	f.SendManifest(lease, deploymentOvrclkApp)
+	leaseRes := &mtypes.QueryLeasesResponse{}
+	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), leaseRes)
+	s.Require().NoError(err)
+	s.Require().Len(leaseRes.Leases, 1)
+	lease := leaseRes.Leases[0]
+	lid := lease.LeaseID
+	s.Require().Equal(keyProvider.GetAddress().String(), lid.Provider.String())
 
-	// Wait for App to deploy
-	cosmostests.WaitForNextNBlocksTM(5, f.Port)
+	bID := mtypes.BidID{
+		Provider: lid.Provider,
+		Owner:    lid.Owner,
+		DSeq:     lid.DSeq,
+		GSeq:     lid.GSeq,
+		OSeq:     lid.OSeq,
+	}
 
-	// Assert provider launches app in kind
+	_, err = pcmd.TestSendManifest(val.ClientCtx.WithOutputFormat("json"), bID, deploymentPath)
+	s.Require().NoError(err)
+
+	s.Require().NoError(s.waitForBlocksCommitted(3))
+
+	host, appPort := appEnv(s.T())
 	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)
-	queryApp(t, appURL)
+	queryApp(s.T(), appURL)
 
-	// Close deployment to clean up container
-	//  Teardown/cleanup
-	// TODO: uncomment
-	//f.TxCloseDeployment(fmt.Sprintf("--from=%s --dseq=%v", keyBar, createdDep.Deployment.DeploymentID.DSeq), "-y")
-	//tests.WaitForNextNBlocksTM(3, f.Port)
+	// teardown lease
+	_, err = deploycli.TxCloseDeploymentExec(
+		val.ClientCtx,
+		keyTenant.GetAddress(),
+		fmt.Sprintf("--owner=%s", createdDep.Groups[0].GroupID.Owner.String()),
+		fmt.Sprintf("--dseq=%v", createdDep.Deployment.DeploymentID.DSeq),
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.waitForBlocksCommitted(3))
+
+	// test query deployments with state filter closed
+	resp, err = deploycli.QueryDeploymentsExec(
+		val.ClientCtx.WithOutputFormat("json"),
+		"--state=closed",
+	)
+	s.Require().NoError(err)
+
+	qResp := &dtypes.QueryDeploymentsResponse{}
+	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), qResp)
+	s.Require().NoError(err)
+	s.Require().Len(qResp.Deployments, 1, "Deployment Close Failed")
 }
 
+func TestIntegrationTestSuite(t *testing.T) {
+	suite.Run(t, new(IntegrationTestSuite))
+}
+
+func (s *IntegrationTestSuite) waitForBlocksCommitted(height int) error {
+	h, err := s.network.LatestHeight()
+	if err != nil {
+		return err
+	}
+
+	blocksToWait := h + int64(height)
+	s.T().Logf("height: %d, waiting for %d", h, blocksToWait)
+	_, err = s.network.WaitForHeightWithTimeout(blocksToWait, time.Duration(blocksToWait+1)*5*time.Second)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// killme? do we actually need this?
 func TestQueryApp(t *testing.T) {
 	host, appPort := appEnv(t)
 
 	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)
 	queryApp(t, appURL)
-}
-
-// Assert provider launches app in kind cluster
-func queryApp(t *testing.T, appURL string) {
-	req, err := http.NewRequest("GET", appURL, nil)
-	require.NoError(t, err)
-	req.Host = "hello.localhost" // NOTE: cannot be inserted as a req.Header element, that is overwritten by this req.Host field.
-	req.Header.Add("Cache-Control", "no-cache")
-	req.Header.Add("Connection", "keep-alive")
-	req.Header.Add("Accept", "text/html,application/xhtml+xml,*/*")
-	// Assert that the service is accessible. Unforetunately brittle single request.
-	tr := &http.Transport{
-		DisableKeepAlives: false,
-	}
-	client := &http.Client{
-		Transport: tr,
-	}
-
-	// retry mechanism
-	var resp *http.Response
-	for i := 0; i < 50; i++ {
-		time.Sleep(1 * time.Second) // reduce absurdly long wait period
-		resp, err = client.Do(req)
-		if err != nil {
-			t.Log(err)
-			continue
-		}
-		if resp != nil && resp.StatusCode == http.StatusOK {
-			err = nil
-			break
-		}
-	}
-	require.NoError(t, err)
-	assert.NotNil(t, resp)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	bytes, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
-	assert.Contains(t, string(bytes), "The Future of The Cloud is Decentralized")
-}
-
-// appEnv asserts that there is an addressable docker container for KinD
-func appEnv(t *testing.T) (string, string) {
-	host := os.Getenv("KIND_APP_IP")
-	require.NotEmpty(t, host)
-	appPort := os.Getenv("KIND_APP_PORT")
-	require.NotEmpty(t, appPort)
-	return host, appPort
 }
