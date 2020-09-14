@@ -99,8 +99,7 @@ func (b *deploymentBuilder) labels() map[string]string {
 
 func (b *deploymentBuilder) create() (*appsv1.Deployment, error) { // nolint:golint,unparam
 	replicas := int32(b.service.Count)
-	runAsNonRoot := true
-	automountServiceAccount := false
+	falseValue := false
 
 	kdeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -118,9 +117,9 @@ func (b *deploymentBuilder) create() (*appsv1.Deployment, error) { // nolint:gol
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: &runAsNonRoot,
+						RunAsNonRoot: &falseValue,
 					},
-					AutomountServiceAccountToken: &automountServiceAccount,
+					AutomountServiceAccountToken: &falseValue,
 					Containers:                   []corev1.Container{b.container()},
 				},
 			},
@@ -143,8 +142,7 @@ func (b *deploymentBuilder) update(obj *appsv1.Deployment) (*appsv1.Deployment, 
 func (b *deploymentBuilder) container() corev1.Container {
 	qcpu := resource.NewScaledQuantity(int64(b.service.Unit.CPU), resource.Milli)
 	qmem := resource.NewQuantity(int64(b.service.Unit.Memory), resource.DecimalSI)
-	privileged := false
-	allowPrivilegeEscalation := false
+	falseValue := false
 
 	kcontainer := corev1.Container{
 		Name:    b.service.Name,
@@ -163,8 +161,9 @@ func (b *deploymentBuilder) container() corev1.Container {
 			// },
 		},
 		SecurityContext: &corev1.SecurityContext{
-			Privileged:               &privileged,
-			AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+			RunAsNonRoot:             &falseValue,
+			Privileged:               &falseValue,
+			AllowPrivilegeEscalation: &falseValue,
 		},
 	}
 
