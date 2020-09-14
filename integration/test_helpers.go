@@ -1,6 +1,6 @@
 // +build integration
 
-package integration
+package integrationprotobuf
 
 import (
 	"fmt"
@@ -12,10 +12,10 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/ovrclk/akash/x/market/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/ovrclk/akash/x/market/types"
 )
 
 const (
@@ -40,11 +40,17 @@ attributes:
 `
 )
 
+var (
+	fooAddr = authtypes.NewEmptyModuleAccount(keyFoo)
+	barAddr = authtypes.NewEmptyModuleAccount(keyBar)
+)
+
 // newAkashCoin
 func newAkashCoin(amt int64) sdk.Coin {
 	return sdk.NewInt64Coin(denom, amt)
 }
 
+//___________________________________________________________________________________
 // utils
 func addFlags(cmd string, flags []string) string {
 	for _, f := range flags {
@@ -81,13 +87,13 @@ func SendManifest(lease types.Lease, sdlPath string, flags ...string) {
 }
 
 // Assert provider launches app in kind cluster
-func queryApp(t *testing.T, appURL string) {
+func queryApp(t *testing.T, appURL string, limit int) {
 	req, err := http.NewRequest("GET", appURL, nil)
 	require.NoError(t, err)
-	req.Host = "hello.localhost" // NOTE: cannot be inserted as a req.Header element, that is overwritten by this req.Host field.
+	req.Host = "test.localhost" // NOTE: cannot be inserted as a req.Header element, that is overwritten by this req.Host field.
 	req.Header.Add("Cache-Control", "no-cache")
 	req.Header.Add("Connection", "keep-alive")
-	// Assert that the service is accessible. Unfortunately brittle single request.
+	// Assert that the service is accessible. Unforetunately brittle single request.
 	tr := &http.Transport{
 		DisableKeepAlives: false,
 	}
@@ -97,7 +103,7 @@ func queryApp(t *testing.T, appURL string) {
 
 	// retry mechanism
 	var resp *http.Response
-	for i := 0; i < 50; i++ {
+	for i := 0; i < limit; i++ {
 		time.Sleep(1 * time.Second) // reduce absurdly long wait period
 		resp, err = client.Do(req)
 		if err != nil {
@@ -109,7 +115,6 @@ func queryApp(t *testing.T, appURL string) {
 			break
 		}
 	}
-
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)

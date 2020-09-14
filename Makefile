@@ -164,7 +164,7 @@ test-e2e-integration:
 	$(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/...
 
 test-query-app: $(BINS)
-	 $(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestQueryApp
+	 $(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integrationprotobuf/... -run TestQueryApp
 
 test-k8s-integration:
 	# ASSUMES:

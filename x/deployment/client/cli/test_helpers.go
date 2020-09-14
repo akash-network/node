@@ -36,6 +36,16 @@ func TxUpdateDeploymentExec(clientCtx client.Context, from fmt.Stringer, filePat
 	return testutilcli.ExecTestCLICmd(clientCtx, cmdUpdate(key), args...)
 }
 
+// TxDeleteDeploymentExec is used for testing update deployment tx
+func TxDeleteDeploymentExec(clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
+	args := []string{
+		fmt.Sprintf("--from=%s", from.String()),
+	}
+	args = append(args, extraArgs...)
+
+	return clitestutil.ExecTestCLICmd(clientCtx, cmdClose(key), args)
+}
+
 // TxCloseDeploymentExec is used for testing close deployment tx
 func TxCloseDeploymentExec(clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
