@@ -2,6 +2,10 @@ build:
   roots:
     - proto
     - third_party/proto
+    - vendor/github.com/regen-network/cosmos-proto
+    - vendor/github.com/tendermint/tendermint/proto
+    - vendor/github.com/cosmos/cosmos-sdk/proto
+    - vendor/github.com/gogo/protobuf
 lint:
   use:
     - DEFAULT
@@ -18,7 +22,6 @@ lint:
   ignore:
     - tendermint
     - gogoproto
-    - cosmos_proto
     - google
 breaking:
   use:
@@ -26,4 +29,4 @@ breaking:
   ignore:
     - tendermint
     - gogoproto
-    - cosmos_proto
+    - google

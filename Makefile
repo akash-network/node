@@ -258,10 +258,10 @@ endif
 proto-gen: $(PROTOC) $(GRPC_GATEWAY) protovendor
 	./script/protocgen.sh
 
-proto-lint: $(BUF)
+proto-lint: $(BUF) protovendor
 	$(BUF) check lint --error-format=json
 
-proto-check-breaking: $(BUF)
+proto-check-breaking: $(BUF) protovendor
 	$(BUF) check breaking --against-input '.git#branch=master'
 
 GOOGLE_API_PROTO_URL = https://raw.githubusercontent.com/googleapis/googleapis/master/google/api

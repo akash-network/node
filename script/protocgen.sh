@@ -2,7 +2,8 @@
 
 set -eo pipefail
 
-export PATH=$PATH:$(pwd)/.cache/bin
+PATH=$PATH:$(pwd)/.cache/bin
+export PATH=$PATH
 
 proto_dirs=$(find ./proto -path -prune -o -name '*.proto' -print0 | xargs -0 -n1 dirname | sort | uniq)
 #shellcheck disable=SC2046
