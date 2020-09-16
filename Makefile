@@ -275,7 +275,7 @@ github.com/cosmos/cosmos-sdk/proto,\
 github.com/tendermint/tendermint/proto,\
 github.com/gogo/protobuf,\
 github.com/regen-network/cosmos-proto/cosmos.proto
-	rm -rf
+	rm -rf $(GOOGLE_PROTO_TYPES)
 	mkdir -p $(GOOGLE_PROTO_TYPES)
 	curl -sSL $(GOOGLE_API_PROTO_URL)/http.proto > $(GOOGLE_PROTO_TYPES)/http.proto
 	curl -sSL $(GOOGLE_API_PROTO_URL)/annotations.proto > $(GOOGLE_PROTO_TYPES)/annotations.proto
