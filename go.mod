@@ -6,7 +6,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
 	github.com/caarlos0/env v3.3.0+incompatible
-	github.com/cosmos/cosmos-sdk v0.34.4-0.20200904205922-b52ffa08e139
+	github.com/cosmos/cosmos-sdk v0.34.4-0.20200916110855-320a852ee268
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-kit/kit v0.10.0
 	github.com/gogo/protobuf v1.3.1
@@ -33,14 +33,14 @@ require (
 	github.com/stretchr/objx v0.2.1-0.20190415111823-35313a95ee26 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/subosito/gotenv v1.2.1-0.20190917103637-de67a6614a4d // indirect
-	github.com/tendermint/tendermint v0.34.0-rc3
+	github.com/tendermint/tendermint v0.34.0-rc3.0.20200907055413-3359e0bf2f84
 	github.com/tendermint/tm-db v0.6.2
 	github.com/vektra/mockery v1.1.2
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/tools v0.0.0-20200323144430-8dcfad9e016e
 	google.golang.org/appengine v1.6.6-0.20191016204603-16bce7d3dc4e // indirect
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987
-	google.golang.org/grpc v1.31.1
+	google.golang.org/grpc v1.32.0
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.18.2
 	k8s.io/apimachinery v0.18.2
@@ -54,6 +54,6 @@ replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.
 
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.2-alpha.regen.4
 
-replace github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.34.4-0.20200904205922-b52ffa08e139
+replace github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.34.4-0.20200916110855-320a852ee268
 
 replace github.com/grpc-ecosystem/grpc-gateway => github.com/grpc-ecosystem/grpc-gateway v1.14.7

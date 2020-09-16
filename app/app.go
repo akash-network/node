@@ -280,9 +280,9 @@ func NewApp(
 	app.mm.SetOrderInitGenesis(
 		append([]string{
 			authtypes.ModuleName,
+			banktypes.ModuleName,
 			distrtypes.ModuleName,
 			stakingtypes.ModuleName,
-			banktypes.ModuleName,
 			slashingtypes.ModuleName,
 			govtypes.ModuleName,
 			minttypes.ModuleName,

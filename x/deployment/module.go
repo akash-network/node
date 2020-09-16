@@ -47,9 +47,9 @@ func (AppModuleBasic) Name() string {
 	return types.ModuleName
 }
 
-// RegisterCodec registers the deployment module's types for the given codec.
-func (AppModuleBasic) RegisterCodec(cdc *codec.LegacyAmino) {
-	types.RegisterCodec(cdc)
+// RegisterLegacyAminoCodec registers the deployment module's types for the given codec.
+func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
+	types.RegisterLegacyAminoCodec(cdc)
 }
 
 // RegisterInterfaces registers the module's interface types

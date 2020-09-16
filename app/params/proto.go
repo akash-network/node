@@ -10,7 +10,7 @@ import (
 
 // MakeEncodingConfig creates an EncodingConfig for an proto based test configuration.
 func MakeEncodingConfig() simparams.EncodingConfig {
-	amino := codec.New()
+	amino := codec.NewLegacyAmino()
 	interfaceRegistry := types.NewInterfaceRegistry()
 	marshaler := codec.NewProtoCodec(interfaceRegistry)
 	txCfg := tx.NewTxConfig(marshaler, std.DefaultPublicKeyCodec{}, tx.DefaultSignModes)
