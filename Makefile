@@ -262,11 +262,11 @@ proto-check-breaking: $(BUF)
 .PHONY: protovendor
 protovendor: modsensure $(MODVENDOR)
 	@echo "vendoring *.proto files..."
-	$(MODVENDOR) -copy="**/*.proto" -include='\
+	$(MODVENDOR) -copy="**/*.proto" -include=\
 github.com/cosmos/cosmos-sdk/proto,\
 github.com/tendermint/tendermint/proto,\
 github.com/gogo/protobuf,\
-github.com/regen-network/cosmos-proto/cosmos.proto'
+github.com/regen-network/cosmos-proto/cosmos.proto
 
 # Tools installation
 $(CACHE):
@@ -346,7 +346,7 @@ modsensure: deps-tidy deps-vendor
 codegen: generate proto-gen kubetypes
 
 .PHONY: setup-devenv
-setup-devenv: $(GOLANGCI_LINT) $(BUF) $(PROTOC) $(MODVENDOR) deps-vendor
+setup-devenv: $(GOLANGCI_LINT) $(BUF) $(PROTOC) $(MODVENDOR) deps-vendor protovendor
 
 .PHONY: setup-cienv
 setup-cienv: deps-vendor $(GOLANGCI_LINT)
