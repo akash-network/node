@@ -1,7 +1,7 @@
 build:
   roots:
     - proto
-    - third_party/proto
+    - .cache/include
     - vendor/github.com/regen-network/cosmos-proto
     - vendor/github.com/tendermint/tendermint/proto
     - vendor/github.com/cosmos/cosmos-sdk/proto
