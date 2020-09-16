@@ -3,11 +3,13 @@ version: "1.5"
 
 services:
   web:
-    image: bubuntux/riot-web:v2
+    image: quay.io/ovrclk/demo-app
     expose:
       - port: 80
         to:
           - global: true
+        accept:
+          - test.localhost
 
 profiles:
   compute:
@@ -20,8 +22,8 @@ profiles:
     global:
       pricing:
         web:
-          denom: uakt
-          amount: 30
+          denom: stake
+          amount: 10
 
 deployment:
   web:

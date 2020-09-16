@@ -158,14 +158,11 @@ test-integration: $(BINS)
 	cp akash ./_build
 	go test -mod=readonly -p 4 -tags "integration $(BUILD_MAINNET)" -v ./integration/...
 
-test-e2e-integration: $(BINS)
-	# ASSUMES:
-	# 1. cluster created - `kind create cluster --config=_run/kube/kind-config.yaml`
-	# 2. cluster setup - `make -s -C _run/kube kind-ingress-setup`
-	cp akashctl akashd ./_build
-	$(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestE2EApp
+test-e2e-integration:
+	# Assumes cluster created: `make -s -C _run/kube kind-cluster-create`
+	$(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestIntegrationTestSuite
 
-test-query-app: $(BINS)
+test-query-app:
 	 $(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestQueryApp
 
 test-k8s-integration:

@@ -18,14 +18,12 @@ func RootCmd() *cobra.Command {
 		return nil
 	}
 
-	cmd.AddCommand(sendManifestCmd())
+	cmd.AddCommand(SendManifestCmd())
 	cmd.AddCommand(statusCmd())
 	cmd.AddCommand(leaseStatusCmd())
 	cmd.AddCommand(serviceStatusCmd())
 	cmd.AddCommand(serviceLogsCmd())
-	cmd.AddCommand(
-		runCmd(),
-	)
+	cmd.AddCommand(RunCmd())
 
 	return cmd
 }
