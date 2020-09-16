@@ -10,7 +10,6 @@ for dir in $proto_dirs; do
   if [[ -n "$query_file" ]]; then
     .cache/bin/protoc  \
     -I "proto" \
-    -I "third_party/proto" \
     -I "vendor/github.com/regen-network/cosmos-proto" \
     -I "vendor/github.com/tendermint/tendermint/proto" \
     -I "vendor/github.com/cosmos/cosmos-sdk/proto" \
