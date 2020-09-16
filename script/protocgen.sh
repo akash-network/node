@@ -10,6 +10,10 @@ for dir in $proto_dirs; do
   .cache/bin/protoc \
   -I "proto" \
   -I "third_party/proto" \
+  -I "vendor/github.com/regen-network/cosmos-proto" \
+  -I "vendor/github.com/tendermint/tendermint/proto" \
+  -I "vendor/github.com/cosmos/cosmos-sdk/proto" \
+  -I "vendor/github.com/gogo/protobuf" \
   -I ".cache/include" \
   --gocosmos_out=plugins=interfacetype+grpc,\
 Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types:. \
@@ -19,6 +23,11 @@ Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types:. \
   .cache/bin/protoc \
   -I "proto" \
   -I "third_party/proto" \
+  -I "vendor/github.com/regen-network/cosmos-proto" \
+  -I "vendor/github.com/tendermint/tendermint/proto" \
+  -I "vendor/github.com/cosmos/cosmos-sdk/proto" \
+  -I "vendor/github.com/gogo/protobuf" \
+  -I ".cache/include" \
   --grpc-gateway_out=logtostderr=true:. \
   $(find "${dir}" -maxdepth 1 -name '*.proto')
 

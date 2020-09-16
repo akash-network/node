@@ -1,21 +1,46 @@
-BINS       := akash
-IMAGE_BINS := _build/akash
-APP_DIR := ./app
+BINS                  := akash
+IMAGE_BINS            := _build/akash
+APP_DIR               := ./app
 
-GO := GO111MODULE=on go
-GOBIN := $(shell go env GOPATH)/bin
+GO                    := GO111MODULE=on go
+GOBIN                 := $(shell go env GOPATH)/bin
 
-KIND_APP_IP ?= $(shell make -sC _run/kube kind-k8s-ip)
-KIND_APP_PORT ?= $(shell make -sC _run/kube app-http-port)
-KIND_VARS ?= KIND_APP_IP="$(KIND_APP_IP)" KIND_APP_PORT="$(KIND_APP_PORT)"
+KIND_APP_IP           ?= $(shell make -sC _run/kube kind-k8s-ip)
+KIND_APP_PORT         ?= $(shell make -sC _run/kube app-http-port)
+KIND_VARS             ?= KIND_APP_IP="$(KIND_APP_IP)" KIND_APP_PORT="$(KIND_APP_PORT)"
+
+UNAME_OS              := $(shell uname -s)
+UNAME_ARCH            := $(shell uname -m)
+CACHE_BASE            ?= $(abspath .cache)
+CACHE                 := $(CACHE_BASE)
+CACHE_BIN             := $(CACHE)/bin
+CACHE_INCLUDE         := $(CACHE)/include
+CACHE_VERSIONS        := $(CACHE)/versions
+
+BUF_VERSION           ?= 0.20.5
+PROTOC_VERSION        ?= 3.13.0
+GRPC_GATEWAY_VERSION  ?= 1.14.7
+GOLANGCI_LINT_VERSION ?= v1.27.0
+
+# <TOOL>_VERSION_FILE points to the marker file for the installed version.
+# If <TOOL>_VERSION_FILE is changed, the binary will be re-downloaded.
+BUF_VERSION_FILE           = $(CACHE_VERSIONS)/buf/$(BUF_VERSION)
+PROTOC_VERSION_FILE        = $(CACHE_VERSIONS)/protoc/$(PROTOC_VERSION)
+GRPC_GATEWAY_VERSION_FILE  = $(CACHE_VERSIONS)/protoc-gen-grpc-gateway/$(GRPC_GATEWAY_VERSION)
+GOLANGCI_LINT_VERSION_FILE = $(CACHE_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
+
+GOLANGCI_LINT          = $(CACHE_BIN)/golangci-lint
+LINT                   = $(GOLANGCI_LINT) run ./... --disable-all --deadline=5m --enable
+MODVENDOR              = $(CACHE_BIN)/modvendor
+BUF                   := $(CACHE_BIN)/buf
+PROTOC                := $(CACHE_BIN)/protoc
+GRPC_GATEWAY          := $(CACHE_BIN)/protoc-gen-grpc-gateway
 
 # Setting mainnet flag based on env value
 # export MAINNET=true to set build tag mainnet
 ifeq ($(MAINNET),true)
 	BUILD_MAINNET=mainnet
 endif
-
-GOLANGCI_LINT_VERSION = v1.27.0
 
 IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 
@@ -88,11 +113,7 @@ test-coverage:
 		./...
 
 test-lint:
-	golangci-lint run
-
-lintdeps-install:
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
-		sh -s -- -b $(shell go env GOPATH)/bin $(GOLANGCI_LINT_VERSION)
+	$(GOLANGCI_LINT) run
 
 SUBLINTERS = deadcode \
 			misspell \
@@ -106,11 +127,9 @@ SUBLINTERS = deadcode \
 			golint \
 			gosec \
 			scopelint \
-			prealloc	
+			prealloc
 
 # TODO: ^ gochecknoglobals
-
-LINT = $(GOBIN)/golangci-lint run ./... --disable-all --deadline=5m --enable 
 
 # Execute the same lint methods as configured in .github/workflows/tests.yaml
 # Clear feedback from each method as it fails.
@@ -128,18 +147,15 @@ test-sublinter-%:
 test-vet:
 	$(GO) vet ./...
 
+# Golang modules and vendoring
 deps-install:
 	$(GO) mod download
 
 deps-tidy:
 	$(GO) mod tidy
 
-devdeps-install: lintdeps-install kubetypes-deps-install
-	$(GO) install github.com/vektra/mockery/.../
-	$(GO) install k8s.io/code-generator/...
-	$(GO) install sigs.k8s.io/kind
-	$(GO) install golang.org/x/tools/cmd/stringer
-	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+deps-vendor:
+	go mod vendor
 
 test-integration: $(BINS)
 	cp akash ./_build
@@ -164,24 +180,11 @@ test-k8s-integration:
 
 gentypes: $(PROTOC_FILES)
 
-vendor:
-	go mod vendor
-
-kubetypes-deps-install:
-	if [ -d "$(shell go env GOPATH)/src/k8s.io/code-generator" ]; then    \
-		cd "$(shell go env GOPATH)/src/k8s.io/code-generator" && git pull;  \
-		exit 0;                                                             \
-	fi;                                                                   \
-	mkdir -p "$(shell go env GOPATH)/src/k8s.io" && \
-	git clone                                       \
-	  git@github.com:kubernetes/code-generator.git  \
-		"$(shell go env GOPATH)/src/k8s.io/code-generator"
-
 kubetypes:
 	chmod +x vendor/k8s.io/code-generator/generate-groups.sh
 	vendor/k8s.io/code-generator/generate-groups.sh all \
-  	github.com/ovrclk/akash/pkg/client github.com/ovrclk/akash/pkg/apis \
-  	akash.network:v1
+	github.com/ovrclk/akash/pkg/client github.com/ovrclk/akash/pkg/apis \
+	akash.network:v1
 
 mocks:
 	mockery -case=underscore -dir provider              -output provider/mocks              -name StatusClient
@@ -202,9 +205,8 @@ clean: tools-clean
 	akash \
 	image image-bins \
 	test test-nocache test-full test-coverage \
-	deps-install devdeps-install \
 	test-integraion \
-	test-lint lintdeps-install \
+	test-lint \
 	test-k8s-integration \
 	test-vet \
 	vendor \
@@ -244,35 +246,16 @@ test-sims: test-sim-fullapp test-sim-nondeterminism test-sim-import-export test-
 ###############################################################################
 ###                           Protobuf                                    ###
 ###############################################################################
-UNAME_OS       := $(shell uname -s)
-UNAME_ARCH     := $(shell uname -m)
-CACHE_BASE     ?= $(abspath .cache)
-CACHE          := $(CACHE_BASE)
-CACHE_BIN      := $(CACHE)/bin
-CACHE_INCLUDE  := $(CACHE)/include
-BUF_VERSION    ?= 0.20.5
-PROTOC_VERSION ?= 3.13.0
-PROTOC_GRPC_GATEWAY_VERSION ?= 1.14.7
-
 ifeq ($(UNAME_OS),Linux)
   PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-linux-x86_64.zip
-  PROTOC_GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-v${PROTOC_GRPC_GATEWAY_VERSION}-linux-x86_64
+  GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-v${GRPC_GATEWAY_VERSION}-linux-x86_64
 endif
 ifeq ($(UNAME_OS),Darwin)
   PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-osx-x86_64.zip
-  PROTOC_GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-v${PROTOC_GRPC_GATEWAY_VERSION}-darwin-x86_64
+  GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-v${GRPC_GATEWAY_VERSION}-darwin-x86_64
 endif
 
-# This is needed to allow versions to be added to Golang modules with go get
-
-# BUF points to the marker file for the installed version.
-#
-# If BUF_VERSION is changed, the binary will be re-downloaded.
-BUF    := $(CACHE_BIN)/buf
-PROTOC := $(CACHE_BIN)/protoc
-GRPC_GATEWAY := $(CACHE_BIN)/protoc-gen-grpc-gateway
-
-proto-gen: $(PROTOC) $(GRPC_GATEWAY)
+proto-gen: $(PROTOC) $(GRPC_GATEWAY) protovendor
 	./script/protocgen.sh
 
 proto-lint: $(BUF)
@@ -281,92 +264,87 @@ proto-lint: $(BUF)
 proto-check-breaking: $(BUF)
 	$(BUF) check breaking --against-input '.git#branch=master'
 
-TM_URL           = https://raw.githubusercontent.com/tendermint/tendermint/v0.34.0-rc3/proto/tendermint
-GOGO_PROTO_URL   = https://raw.githubusercontent.com/regen-network/protobuf/cosmos
-COSMOS_PROTO_URL = https://raw.githubusercontent.com/regen-network/cosmos-proto/master
-COSMOS_SDK_PROTO_URL = https://raw.githubusercontent.com/cosmos/cosmos-sdk/master/proto/cosmos/base
 GOOGLE_API_PROTO_URL = https://raw.githubusercontent.com/googleapis/googleapis/master/google/api
-
-TM_CRYPTO_TYPES     = third_party/proto/tendermint/crypto
-TM_ABCI_TYPES       = third_party/proto/tendermint/abci
-TM_TYPES     	    = third_party/proto/tendermint/types
-TM_VERSION 			= third_party/proto/tendermint/version
-TM_LIBS				= third_party/proto/tendermint/libs/bits
-
-GOGO_PROTO_TYPES    = third_party/proto/gogoproto
-COSMOS_PROTO_TYPES  = third_party/proto/cosmos_proto
 GOOGLE_PROTO_TYPES  = third_party/proto/google/api
 
-SDK_ABCI_TYPES  	= third_party/proto/cosmos/base/abci/v1beta1
-SDK_QUERY_TYPES  	= third_party/proto/cosmos/base/query/v1beta1
-SDK_COIN_TYPES  	= third_party/proto/cosmos/base/v1beta1
-
 proto-update-deps:
-	mkdir -p $(GOGO_PROTO_TYPES)
-	curl -sSL $(GOGO_PROTO_URL)/gogoproto/gogo.proto > $(GOGO_PROTO_TYPES)/gogo.proto
-
-	mkdir -p $(COSMOS_PROTO_TYPES)
-	curl -sSL $(COSMOS_PROTO_URL)/cosmos.proto > $(COSMOS_PROTO_TYPES)/cosmos.proto
-
-	mkdir -p $(TM_ABCI_TYPES)
-	curl -sSL $(TM_URL)/abci/types.proto > $(TM_ABCI_TYPES)/types.proto
-
-	mkdir -p $(TM_VERSION)
-	curl -sSL $(TM_URL)/version/types.proto > $(TM_VERSION)/types.proto
-
-	mkdir -p $(TM_TYPES)
-	curl -sSL $(TM_URL)/types/types.proto > $(TM_TYPES)/types.proto
-	curl -sSL $(TM_URL)/types/evidence.proto > $(TM_TYPES)/evidence.proto
-	curl -sSL $(TM_URL)/types/params.proto > $(TM_TYPES)/params.proto
-
-	mkdir -p $(TM_CRYPTO_TYPES)
-	curl -sSL $(TM_URL)/crypto/proof.proto > $(TM_CRYPTO_TYPES)/proof.proto
-	curl -sSL $(TM_URL)/crypto/keys.proto > $(TM_CRYPTO_TYPES)/keys.proto
-
-	mkdir -p $(TM_LIBS)
-	curl -sSL $(TM_URL)/libs/bits/types.proto > $(TM_LIBS)/types.proto
-
-	mkdir -p $(SDK_ABCI_TYPES)
-	curl -sSL $(COSMOS_SDK_PROTO_URL)/abci/v1beta1/abci.proto > $(SDK_ABCI_TYPES)/abci.proto
-
-	mkdir -p $(SDK_QUERY_TYPES)
-	curl -sSL $(COSMOS_SDK_PROTO_URL)/query/v1beta1/pagination.proto > $(SDK_QUERY_TYPES)/pagination.proto
-
-	mkdir -p $(SDK_COIN_TYPES)
-	curl -sSL $(COSMOS_SDK_PROTO_URL)/v1beta1/coin.proto > $(SDK_COIN_TYPES)/coin.proto
-
 	mkdir -p $(GOOGLE_PROTO_TYPES)
 	curl -sSL $(GOOGLE_API_PROTO_URL)/http.proto > $(GOOGLE_PROTO_TYPES)/http.proto
 	curl -sSL $(GOOGLE_API_PROTO_URL)/annotations.proto > $(GOOGLE_PROTO_TYPES)/annotations.proto
 	curl -sSL $(GOOGLE_API_PROTO_URL)/httpbody.proto > $(GOOGLE_PROTO_TYPES)/httpbody.proto
 
-cache-setup:
+.PHONY: protovendor
+protovendor: modsensure $(MODVENDOR)
+	@echo "vendoring *.proto files..."
+	$(MODVENDOR) -copy="**/*.proto" -include=\
+github.com/cosmos/cosmos-sdk/proto,\
+github.com/tendermint/tendermint/proto,\
+github.com/gogo/protobuf,\
+github.com/regen-network/cosmos-proto/cosmos.proto
+
+# Tools installation
+$(CACHE):
+	@echo "creating .cache dir structure..."
+	mkdir -p $@
 	mkdir -p $(CACHE_BIN)
 	mkdir -p $(CACHE_INCLUDE)
+	mkdir -p $(CACHE_VERSIONS)
 
-$(BUF):
-	@echo "Installing protoc buf cli..."
-	rm -f $@
+$(GOLANGCI_LINT_VERSION_FILE): $(CACHE)
+	@echo "installing golangci-lint..."
+	rm -f $(GOLANGCI_LINT)
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+		sh -s -- -b $(CACHE_BIN) $(GOLANGCI_LINT_VERSION)
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(GOLANGCI_LINT): $(GOLANGCI_LINT_VERSION_FILE)
+
+.PHONY:lintdeps-install
+lintdeps-install: $(GOLANGCI_LINT)
+	@echo "lintdeps-install is deprecated and will be removed once Github Actions migrated to use .cache/bin/golangci-lint"
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+		sh -s -- -b $(GOBIN) $(GOLANGCI_LINT_VERSION)
+
+$(BUF_VERSION_FILE): $(CACHE)
+	@echo "installing protoc buf cli..."
+	rm -f $(BUF)
 	curl -sSL \
 		"https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(UNAME_OS)-$(UNAME_ARCH)" \
 		-o "$(CACHE_BIN)/buf"
 	chmod +x "$(CACHE_BIN)/buf"
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(BUF): $(BUF_VERSION_FILE)
 
-$(PROTOC):
-	@echo "Installing protoc compiler..."
-	rm -f $@
+$(PROTOC_VERSION_FILE): $(CACHE)
+	@echo "installing protoc compiler..."
+	rm -f $(PROTOC)
 	(cd /tmp; \
 	curl -sOL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
 	unzip -oq ${PROTOC_ZIP} -d $(CACHE) bin/protoc; \
 	unzip -oq ${PROTOC_ZIP} -d $(CACHE) 'include/*'; \
 	rm -f ${PROTOC_ZIP})
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(PROTOC): $(PROTOC_VERSION_FILE)
 
-$(GRPC_GATEWAY):
+$(GRPC_GATEWAY_VERSION_FILE): $(CACHE)
 	@echo "Installing protoc-gen-grpc-gateway..."
-	rm -f $@
+	rm -f $(GRPC_GATEWAY)
 	curl -o "${CACHE_BIN}/protoc-gen-grpc-gateway" -L \
-	"https://github.com/grpc-ecosystem/grpc-gateway/releases/download/v${PROTOC_GRPC_GATEWAY_VERSION}/${PROTOC_GRPC_GATEWAY_BIN}"
-	chmod +x "${CACHE_BIN}/protoc-gen-grpc-gateway"
+	"https://github.com/grpc-ecosystem/grpc-gateway/releases/download/v${GRPC_GATEWAY_VERSION}/${GRPC_GATEWAY_BIN}"
+	chmod +x "$(CACHE_BIN)/protoc-gen-grpc-gateway"
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(GRPC_GATEWAY): $(GRPC_GATEWAY_VERSION_FILE)
+
+$(MODVENDOR): $(CACHE)
+	@echo "installing modvendor..."
+	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor
 
 protoc-swagger:
 ifeq (, $(shell which swagger-combine))
@@ -376,20 +354,45 @@ else
 	@echo "swagger-combine already installed; skipping..."
 endif
 
-.PHONY: proto-tools
-proto-tools: cache-setup $(BUF) $(PROTOC) $(GRPC_GATEWAY) protoc-swagger
+kubetypes-deps-install:
+	if [ -d "$(shell go env GOPATH)/src/k8s.io/code-generator" ]; then    \
+		cd "$(shell go env GOPATH)/src/k8s.io/code-generator" && git pull;  \
+		exit 0;                                                             \
+	fi;                                                                   \
+	mkdir -p "$(shell go env GOPATH)/src/k8s.io" && \
+	git clone  git@github.com:kubernetes/code-generator.git \
+		"$(shell go env GOPATH)/src/k8s.io/code-generator"
 
-tools-clean:
+devdeps-install: $(GOLANGCI_LINT) kubetypes-deps-install
+	$(GO) install github.com/vektra/mockery/.../
+	$(GO) install k8s.io/code-generator/...
+	$(GO) install sigs.k8s.io/kind
+	$(GO) install golang.org/x/tools/cmd/stringer
+	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+
+cache-clean:
 	rm -rf $(CACHE)
+
+.PHONY: modsensure
+modsensure: deps-tidy deps-vendor
+
+.PHONY: codegen
+codegen: generate proto-gen kubetypes
+
+.PHONY: setup-devenv
+setup-devenv: $(GOLANGCI_LINT) $(BUF) $(PROTOC) $(GRPC_GATEWAY) $(MODVENDOR) protoc-swagger deps-vendor protovendor
+
+.PHONY: setup-cienv
+setup-cienv: deps-vendor $(GOLANGCI_LINT)
 
 proto-swagger-gen: protoc-swagger
 	./script/protoc-swagger-gen.sh
 
-update-swagger-docs:
+update-swagger-docs: proto-swagger-gen
 	statik -src=client/docs -dest=client/docs -f -m
 	if [ -n "$(git status --porcelain)" ]; then \
         echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
         exit 1;\
     else \
     	echo "\033[92mSwagger docs are in sync\033[0m";\
-    fi
+	fi

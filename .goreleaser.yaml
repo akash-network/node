@@ -8,6 +8,8 @@ builds:
     ignore:
       - goos: darwin
         goarch: 386
+    flags:
+      - -tags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
     ldflags: >
       -s -w 
       -X github.com/cosmos/cosmos-sdk/version.Name=akash 
@@ -27,13 +29,13 @@ archives:
       - none*
 
 dockers:
-  - binaries: 
+  - binaries:
     - akash
     dockerfile: _build/Dockerfile.akash
     goos: linux
     goarch: amd64
-    image_templates:  
-    - "ovrclk/akash:latest"
+    image_templates:
+    - "ovrclk/akash:{{if eq .Env.MAINNET \"true\"}}stable{{else}}latest{{end}}"
     - "ovrclk/akash:{{ .ShortCommit }}"
     - "ovrclk/akash:{{ .Version }}"
 

@@ -16,7 +16,7 @@ require (
 	github.com/gorilla/context v1.1.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
-	github.com/grpc-ecosystem/grpc-gateway v1.14.7
+	github.com/grpc-ecosystem/grpc-gateway v1.14.8
 	github.com/hashicorp/hcl v1.0.1-0.20191016231534-914dc3f8dd7c // indirect
 	github.com/jmhodges/levigo v1.0.1-0.20191019112844-b572e7f4cdac // indirect
 	github.com/libp2p/go-buffer-pool v0.0.3-0.20190619091711-d94255cb3dfc // indirect
@@ -55,3 +55,5 @@ replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.2-alpha.regen.4
 
 replace github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.34.4-0.20200904205922-b52ffa08e139
+
+replace github.com/grpc-ecosystem/grpc-gateway => github.com/grpc-ecosystem/grpc-gateway v1.14.7
