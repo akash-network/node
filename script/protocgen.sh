@@ -10,7 +10,6 @@ proto_dirs=$(find ./proto -path -prune -o -name '*.proto' -print0 | xargs -0 -n1
 for dir in $proto_dirs; do
   .cache/bin/protoc \
   -I "proto" \
-  -I "third_party/proto" \
   -I "vendor/github.com/regen-network/cosmos-proto" \
   -I "vendor/github.com/tendermint/tendermint/proto" \
   -I "vendor/github.com/cosmos/cosmos-sdk/proto" \
@@ -23,7 +22,6 @@ Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types:. \
   # command to generate gRPC gateway (*.pb.gw.go in respective modules) files
   .cache/bin/protoc \
   -I "proto" \
-  -I "third_party/proto" \
   -I "vendor/github.com/regen-network/cosmos-proto" \
   -I "vendor/github.com/tendermint/tendermint/proto" \
   -I "vendor/github.com/cosmos/cosmos-sdk/proto" \
