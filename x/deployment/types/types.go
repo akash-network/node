@@ -12,10 +12,10 @@ import (
 // DefaultOrderBiddingDuration is the default time limit for an Order being active.
 // After the duration, the Order is automatically closed.
 // ( 24(hr) * 3600(seconds per hour) ) / 7s-Block
-const DefaultOrderBiddingDuration int64 = int64(12342)
+const DefaultOrderBiddingDuration = int64(12342)
 
 // MaxBiddingDuration is roughly 30 days of block height
-const MaxBiddingDuration int64 = DefaultOrderBiddingDuration * int64(30)
+const MaxBiddingDuration = DefaultOrderBiddingDuration * int64(30)
 
 // //go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
 
@@ -78,14 +78,15 @@ func (g GroupSpec) ValidateBasic() error {
 }
 
 // GetResources method returns resources list in group
-func (g GroupSpec) GetResources() []types.Resource {
-	resources := make([]types.Resource, 0, len(g.Resources))
+func (g GroupSpec) GetResources() []types.Resources {
+	resources := make([]types.Resources, 0, len(g.Resources))
 	for _, r := range g.Resources {
-		resources = append(resources, types.Resource{
-			Unit:  r.Unit,
-			Count: r.Count,
+		resources = append(resources, types.Resources{
+			Resources: r.Resources,
+			Count:     r.Count,
 		})
 	}
+
 	return resources
 }
 
@@ -108,17 +109,8 @@ func (g GroupSpec) Price() sdk.Coin {
 }
 
 // MatchAttributes method compares provided attributes with specific group attributes
-func (g GroupSpec) MatchAttributes(attrs []sdk.Attribute) bool {
-loop:
-	for _, req := range g.Requirements {
-		for _, attr := range attrs {
-			if req.Key == attr.Key && req.Value == attr.Value {
-				continue loop
-			}
-		}
-		return false
-	}
-	return true
+func (g GroupSpec) MatchAttributes(attrs []types.Attribute) bool {
+	return types.AttributesSubsetOf(g.Requirements, attrs)
 }
 
 // ID method returns GroupID details of specific group
@@ -152,8 +144,20 @@ func (g Group) GetName() string {
 	return g.GroupSpec.Name
 }
 
+// Resource stores resources group, count (amount of group) and price of each group
+// type Resource struct {
+// 	Resources types.ResourceUnits `json:"resources"`
+// 	Price     sdk.Coin            `json:"price"`
+// 	Count     uint32              `json:"count"`
+// }
+
+// GetUnits method returns unit of resource
+// func (r Resource) GetResources() types.ResourceUnits {
+// 	return r.Resources
+// }
+
 // GetResources method returns resources list in group
-func (g Group) GetResources() []types.Resource {
+func (g Group) GetResources() []types.Resources {
 	return g.GroupSpec.GetResources()
 }
 

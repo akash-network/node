@@ -37,10 +37,16 @@ func (mg manifestGeneratorOverflow) Service(t testing.TB) manifest.Service {
 		Image: "quay.io/ovrclk/demo-app",
 		Args:  []string{"run"},
 		Env:   []string{"AKASH_TEST_SERVICE=true"},
-		Unit: types.Unit{
-			CPU:     math.MaxUint32,
-			Memory:  math.MaxUint64,
-			Storage: math.MaxUint64,
+		Resources: types.ResourceUnits{
+			CPU: &types.CPU{
+				Units: types.NewResourceValue(math.MaxUint32),
+			},
+			Memory: &types.Memory{
+				Quantity: types.NewResourceValue(math.MaxUint64),
+			},
+			Storage: &types.Storage{
+				Quantity: types.NewResourceValue(math.MaxUint64),
+			},
 		},
 		Count: math.MaxUint32,
 		Expose: []manifest.ServiceExpose{

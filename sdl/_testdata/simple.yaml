@@ -1,6 +1,5 @@
 ---
-version: "1.5"
-
+version: "2.0"
 services:
   web:
     image: nginx
@@ -8,15 +7,16 @@ services:
       - port: 80
         to:
           - global: true
-
 profiles:
-
   compute:
     web:
-      cpu: "100m"
-      memory: "128Mi"
-      storage: "1Gi"
-
+      resources:
+        cpu:
+          units: "100m"
+        memory:
+          size: "128Mi"
+        storage:
+          size: "1Gi"
   placement:
     westcoast:
       attributes:
@@ -25,7 +25,6 @@ profiles:
         web:
           denom: uakt
           amount: 50
-
 deployment:
   web:
     westcoast:

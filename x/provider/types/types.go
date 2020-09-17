@@ -5,9 +5,11 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/ovrclk/akash/types"
 )
 
-type Attributes []sdk.Attribute
+type Attributes []types.Attribute
 
 func (attr Attributes) Validate() error {
 	store := make(map[string]bool)

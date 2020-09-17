@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/ovrclk/akash/types/unit"
 )
 
@@ -38,13 +40,8 @@ var unitSuffixes = []struct {
 // CPU shares.  One CPUQuantity = 1/1000 of a CPU
 type cpuQuantity uint32
 
-func (u *cpuQuantity) UnmarshalYAML(unmarshal func(interface{}) error) error {
-
-	var sval string
-	if err := unmarshal(&sval); err != nil {
-		return err
-	}
-
+func (u *cpuQuantity) UnmarshalYAML(node *yaml.Node) error {
+	sval := node.Value
 	if strings.HasSuffix(sval, "m") {
 		sval = strings.TrimSuffix(sval, "m")
 		val, err := strconv.ParseUint(sval, 10, 32)
@@ -74,12 +71,8 @@ func (u *cpuQuantity) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // Memory,Storage size in bytes.
 type byteQuantity uint64
 
-func (u *byteQuantity) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var sval string
-	if err := unmarshal(&sval); err != nil {
-		return err
-	}
-	val, err := parseWithSuffix(sval)
+func (u *byteQuantity) UnmarshalYAML(node *yaml.Node) error {
+	val, err := parseWithSuffix(node.Value)
 	if err != nil {
 		return err
 	}

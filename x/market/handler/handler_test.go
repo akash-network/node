@@ -17,6 +17,7 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/ovrclk/akash/testutil"
+	atypes "github.com/ovrclk/akash/types"
 	dkeeper "github.com/ovrclk/akash/x/deployment/keeper"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/handler"
@@ -448,7 +449,7 @@ func (st *testSuite) createOrder(resources []dtypes.Resource) (types.Order, dtyp
 	return order, group.GroupSpec
 }
 
-func (st *testSuite) createProvider(attr []sdk.Attribute) ptypes.Provider {
+func (st *testSuite) createProvider(attr []atypes.Attribute) ptypes.Provider {
 	st.t.Helper()
 
 	prov := ptypes.Provider{

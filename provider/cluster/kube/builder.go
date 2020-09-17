@@ -8,9 +8,6 @@ import (
 	"strings"
 
 	"github.com/lithammer/shortuuid"
-	"github.com/ovrclk/akash/manifest"
-	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
-	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +15,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/ovrclk/akash/manifest"
+	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 const (
@@ -140,8 +141,6 @@ func (b *deploymentBuilder) update(obj *appsv1.Deployment) (*appsv1.Deployment, 
 }
 
 func (b *deploymentBuilder) container() corev1.Container {
-	qcpu := resource.NewScaledQuantity(int64(b.service.Unit.CPU), resource.Milli)
-	qmem := resource.NewQuantity(int64(b.service.Unit.Memory), resource.DecimalSI)
 	falseValue := false
 
 	kcontainer := corev1.Container{
@@ -150,15 +149,9 @@ func (b *deploymentBuilder) container() corev1.Container {
 		Command: b.service.Command,
 		Args:    b.service.Args,
 		Resources: corev1.ResourceRequirements{
-			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    qcpu.DeepCopy(),
-				corev1.ResourceMemory: qmem.DeepCopy(),
-			},
+			Limits: make(corev1.ResourceList),
 			// TODO: this prevents over-subscription.  skip for now.
-			// Requests: corev1.ResourceList{
-			// 	corev1.ResourceCPU:    qcpu.DeepCopy(),
-			// 	corev1.ResourceMemory: qmem.DeepCopy(),
-			// },
+			// Requests: make(corev1.ResourceList),
 		},
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot:             &falseValue,
@@ -166,6 +159,16 @@ func (b *deploymentBuilder) container() corev1.Container {
 			AllowPrivilegeEscalation: &falseValue,
 		},
 	}
+
+	if cpu := b.service.Resources.CPU; cpu != nil {
+		kcontainer.Resources.Limits[corev1.ResourceCPU] = resource.NewScaledQuantity(int64(cpu.Units.Value()), resource.Milli).DeepCopy()
+	}
+
+	if mem := b.service.Resources.Memory; mem != nil {
+		kcontainer.Resources.Limits[corev1.ResourceMemory] = resource.NewQuantity(int64(mem.Quantity.Value()), resource.DecimalSI).DeepCopy()
+	}
+
+	// TODO: this prevents over-subscription.  skip for now.
 
 	for _, env := range b.service.Env {
 		parts := strings.Split(env, "=")
