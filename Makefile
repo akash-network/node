@@ -261,6 +261,9 @@ proto-lint: $(BUF) protovendor
 proto-check-breaking: $(BUF) protovendor
 	$(BUF) check breaking --against-input '.git#branch=master'
 
+proto-format: clang-format-install
+	find ./ ! -path "./vendor/*" ! -path "./.cache/*" -name *.proto -exec clang-format -i {} \;
+
 GOOGLE_API_PROTO_URL = https://raw.githubusercontent.com/googleapis/googleapis/master/google/api
 GOOGLE_PROTO_TYPES   = $(CACHE_INCLUDE)/google/api
 
@@ -348,6 +351,26 @@ ifeq (, $(shell which swagger-combine))
 	npm install -g swagger-combine
 else
 	@echo "swagger-combine already installed; skipping..."
+endif
+
+clang-format-install:
+ifeq (, $(shell which clang-format))
+	@echo "Installing clang-format..."
+ifeq ($(UNAME_OS),Darwin)
+	brew install clang-format
+endif
+ifeq ($(UNAME_OS),Linux)
+	if [ -e /etc/debian_version ]; then \
+    	sudo apt-get install clang-format -y; \
+    elif [ -e /etc/fedora-release ]; then \
+    	sudo dnf install clang; \
+    else \
+      echo -e "\tRun (as root): subscription-manager repos --enable rhel-7-server-devtools-rpms ; \
+	  yum install llvm-toolset-7" >&2; \
+    fi;
+endif
+else
+	@echo "clang-format already installed; skipping..."
 endif
 
 kubetypes-deps-install:

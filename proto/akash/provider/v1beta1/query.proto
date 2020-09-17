@@ -10,35 +10,35 @@ option go_package = "github.com/ovrclk/akash/x/provider/types";
 
 // Query defines the gRPC querier service
 service Query {
-    // Providers queries providers
-    rpc Providers (QueryProvidersRequest) returns (QueryProvidersResponse) {
-        option (google.api.http).get = "/akash/provider/v1beta1/providers";
-    }
+  // Providers queries providers
+  rpc Providers(QueryProvidersRequest) returns (QueryProvidersResponse) {
+    option (google.api.http).get = "/akash/provider/v1beta1/providers";
+  }
 
-    // Provider queries provider details
-    rpc Provider (QueryProviderRequest) returns (QueryProviderResponse) {
-        option (google.api.http).get = "/akash/provider/v1beta1/providers/{owner}";
-    }
+  // Provider queries provider details
+  rpc Provider(QueryProviderRequest) returns (QueryProviderResponse) {
+    option (google.api.http).get = "/akash/provider/v1beta1/providers/{owner}";
+  }
 }
 
 // QueryProvidersRequest is request type for the Query/Providers RPC method
-message QueryProvidersRequest{
-    cosmos.base.query.v1beta1.PageRequest pagination = 1;
+message QueryProvidersRequest {
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
 }
 
 // QueryProvidersResponse is response type for the Query/Providers RPC method
-message QueryProvidersResponse{
-    repeated Provider providers = 1 [(gogoproto.nullable) = false,(gogoproto.castrepeated)="Providers"];
+message QueryProvidersResponse {
+  repeated Provider providers = 1 [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "Providers"];
 
-    cosmos.base.query.v1beta1.PageResponse pagination = 2;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
 
 // QueryProviderRequest is request type for the Query/Provider RPC method
-message QueryProviderRequest{
-    bytes owner = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+message QueryProviderRequest {
+  bytes owner = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
 }
 
 // QueryProviderResponse is response type for the Query/Provider RPC method
-message QueryProviderResponse{
-    Provider provider = 1 [(gogoproto.nullable) = false];
+message QueryProviderResponse {
+  Provider provider = 1 [(gogoproto.nullable) = false];
 }
