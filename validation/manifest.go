@@ -67,7 +67,7 @@ mainloop:
 }
 
 func validateManifestDeploymentGroup(mgroup types.ResourceGroup, dgroup types.ResourceGroup) error {
-	mlist := make([]types.Resource, len(mgroup.GetResources()))
+	mlist := make([]types.Resources, len(mgroup.GetResources()))
 	copy(mlist, mgroup.GetResources())
 
 mainloop:
@@ -80,7 +80,7 @@ mainloop:
 				continue
 			}
 
-			if !drec.Unit.Equals(mrec.Unit) {
+			if !drec.Resources.Equals(mrec.Resources) {
 				continue
 			}
 

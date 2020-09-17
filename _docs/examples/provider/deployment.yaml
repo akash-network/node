@@ -1,5 +1,5 @@
 ---
-version: "1.5"
+version: "2.0"
 services:
   web:
     image: quay.io/ovrclk/demo-app
@@ -11,9 +11,13 @@ services:
 profiles:
   compute:
     web:
-      cpu: 0.1
-      memory: 16Mi
-      storage: 128Mi
+      resources:
+        cpu:
+          units: 0.1
+        memory:
+          size: 16Mi
+        storage:
+          size: 128Mi
   placement:
     westcoast:
       attributes:

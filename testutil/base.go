@@ -35,17 +35,17 @@ func Hostname(t testing.TB) string {
 }
 
 // Attribute generates a random sdk.Attribute
-func Attribute(t testing.TB) sdk.Attribute {
+func Attribute(t testing.TB) types.Attribute {
 	t.Helper()
-	return sdk.NewAttribute(Name(t, "attr-key"), Name(t, "attr-value"))
+	return types.NewStringAttribute(Name(t, "attr-key"), Name(t, "attr-value"))
 }
 
 // Attributes generates a set of sdk.Attribute
-func Attributes(t testing.TB) []sdk.Attribute {
+func Attributes(t testing.TB) []types.Attribute {
 	t.Helper()
 	count := rand.Intn(10) + 1
 
-	vals := make([]sdk.Attribute, 0, count)
+	vals := make([]types.Attribute, 0, count)
 	for i := 0; i < count; i++ {
 		vals = append(vals, Attribute(t))
 	}
@@ -63,10 +63,16 @@ func Resources(t testing.TB) []dtypes.Resource {
 	for i := 0; i < count; i++ {
 		coin := sdk.NewCoin(CoinDenom, sdk.NewInt(rand.Int63n(9999)))
 		res := dtypes.Resource{
-			Unit: types.Unit{
-				CPU:     100,
-				Memory:  100,
-				Storage: 10,
+			Resources: types.ResourceUnits{
+				CPU: &types.CPU{
+					Units: types.NewResourceValue(100),
+				},
+				Memory: &types.Memory{
+					Quantity: types.NewResourceValue(1024), // default min value is 1024
+				},
+				Storage: &types.Storage{
+					Quantity: types.NewResourceValue(1024), // default min value is 1024
+				},
 			},
 			Count: 1,
 			Price: coin,

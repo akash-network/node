@@ -33,12 +33,12 @@ func (mg manifestGeneratorRand) Group(t testing.TB) manifest.Group {
 func (mg manifestGeneratorRand) Service(t testing.TB) manifest.Service {
 	t.Helper()
 	return manifest.Service{
-		Name:  "demo",
-		Image: "quay.io/ovrclk/demo-app",
-		Args:  []string{"run"},
-		Env:   []string{"AKASH_TEST_SERVICE=true"},
-		Unit:  Unit(t),
-		Count: rand.Uint32(),
+		Name:      "demo",
+		Image:     "quay.io/ovrclk/demo-app",
+		Args:      []string{"run"},
+		Env:       []string{"AKASH_TEST_SERVICE=true"},
+		Resources: ResourceUnits(t),
+		Count:     rand.Uint32(),
 		Expose: []manifest.ServiceExpose{
 			mg.ServiceExpose(t),
 		},

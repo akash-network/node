@@ -21,11 +21,30 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
-func Unit(_ testing.TB) types.Unit {
-	return types.Unit{
-		CPU:     uint32(rand.Intn(999) + 1),
-		Memory:  uint64(rand.Intn(999) + 1),
-		Storage: uint64(rand.Intn(999) + 1),
+const (
+	defaultMinCPUUnit     = 10
+	defaultMaxCPUUnit     = 500
+	defaultMinMemorySize  = 1024
+	defaultMaxMemorySize  = 1073741824
+	defaultMinStorageSize = 1024
+	defaultMaxStorageSize = 1073741824
+)
+
+func RandRangeInt(min, max int) int {
+	return rand.Intn(max-min) + min
+}
+
+func ResourceUnits(_ testing.TB) types.ResourceUnits {
+	return types.ResourceUnits{
+		CPU: &types.CPU{
+			Units: types.NewResourceValue(uint64(RandRangeInt(defaultMinCPUUnit, defaultMaxCPUUnit))),
+		},
+		Memory: &types.Memory{
+			Quantity: types.NewResourceValue(uint64(RandRangeInt(defaultMinMemorySize, defaultMaxMemorySize))),
+		},
+		Storage: &types.Storage{
+			Quantity: types.NewResourceValue(uint64(RandRangeInt(defaultMinStorageSize, defaultMaxStorageSize))),
+		},
 	}
 }
 

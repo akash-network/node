@@ -259,9 +259,9 @@ func (st *testSuite) createDeployment() (types.Deployment, []types.Group) {
 	group := testutil.DeploymentGroup(st.t, deployment.ID(), 0)
 	group.GroupSpec.Resources = []types.Resource{
 		{
-			Unit:  testutil.Unit(st.t),
-			Count: 1,
-			Price: testutil.Coin(st.t),
+			Resources: testutil.ResourceUnits(st.t),
+			Count:     1,
+			Price:     testutil.Coin(st.t),
 		},
 	}
 	groups := []types.Group{
