@@ -6,11 +6,17 @@ import (
 	"fmt"
 	"os"
 
+	cosmosclient "github.com/cosmos/cosmos-sdk/client"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/go-kit/kit/log/term"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"github.com/tendermint/tendermint/libs/log"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/events"
@@ -24,23 +30,23 @@ import (
 	mmodule "github.com/ovrclk/akash/x/market"
 	pmodule "github.com/ovrclk/akash/x/provider"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"github.com/tendermint/tendermint/libs/log"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
-	flagClusterK8s           = "cluster-k8s"
-	flagK8sManifestNS        = "k8s-manifest-ns"
-	flagGatewayListenAddress = "gateway-listen-address"
+	// FlagClusterK8s informs the provider to scan and utilize localized kubernetes client configuration
+	FlagClusterK8s = "cluster-k8s"
+	// FlagK8sManifestNS
+	FlagK8sManifestNS = "k8s-manifest-ns"
+	// FlagGatewayListenAddress determines listening address for Manifests
+	FlagGatewayListenAddress = "gateway-listen-address"
 )
 
 var (
 	errInvalidConfig = errors.New("Invalid configuration")
 )
 
-func runCmd() *cobra.Command {
+// RunCmd launches the Akash Provider service
+func RunCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "run akash provider",
@@ -58,18 +64,18 @@ func runCmd() *cobra.Command {
 
 	flags.AddTxFlagsToCmd(cmd)
 
-	cmd.Flags().Bool(flagClusterK8s, false, "Use Kubernetes cluster")
-	if err := viper.BindPFlag(flagClusterK8s, cmd.Flags().Lookup(flagClusterK8s)); err != nil {
+	cmd.Flags().Bool(FlagClusterK8s, false, "Use Kubernetes cluster")
+	if err := viper.BindPFlag(FlagClusterK8s, cmd.Flags().Lookup(FlagClusterK8s)); err != nil {
 		return nil
 	}
 
-	cmd.Flags().String(flagK8sManifestNS, "lease", "Cluster manifest namespace")
-	if err := viper.BindPFlag(flagK8sManifestNS, cmd.Flags().Lookup(flagK8sManifestNS)); err != nil {
+	cmd.Flags().String(FlagK8sManifestNS, "lease", "Cluster manifest namespace")
+	if err := viper.BindPFlag(FlagK8sManifestNS, cmd.Flags().Lookup(FlagK8sManifestNS)); err != nil {
 		return nil
 	}
 
-	cmd.Flags().String(flagGatewayListenAddress, "0.0.0.0:8080", "Gateway listen address")
-	if err := viper.BindPFlag(flagGatewayListenAddress, cmd.Flags().Lookup(flagGatewayListenAddress)); err != nil {
+	cmd.Flags().String(FlagGatewayListenAddress, "0.0.0.0:8080", "Gateway listen address")
+	if err := viper.BindPFlag(FlagGatewayListenAddress, cmd.Flags().Lookup(FlagGatewayListenAddress)); err != nil {
 		return nil
 	}
 
@@ -79,7 +85,14 @@ func runCmd() *cobra.Command {
 // doRunCmd initializes all of the Provider functionality, hangs, and awaits shutdown signals.
 func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	cctx := sdkclient.GetClientContextFromCmd(cmd)
-	cctx, err := sdkclient.ReadTxCommandFlags(cctx, cmd.Flags())
+
+	from, _ := cmd.Flags().GetString(flags.FlagFrom)
+	_, _, err := cosmosclient.GetFromFields(cctx.Keyring, from, false)
+	if err != nil {
+		return err
+	}
+
+	cctx, err = sdkclient.ReadTxCommandFlags(cctx, cmd.Flags())
 	if err != nil {
 		return err
 	}
@@ -92,13 +105,12 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	gwaddr := viper.GetString(flagGatewayListenAddress)
+	gwaddr := viper.GetString(FlagGatewayListenAddress)
 
 	log := openLogger()
 
 	// TODO: actually get the passphrase?
 	// passphrase, err := keys.GetPassphrase(fromName)
-
 	aclient := client.NewClient(
 		log,
 		cctx,
@@ -173,13 +185,13 @@ func openLogger() log.Logger {
 }
 
 func createClusterClient(log log.Logger, _ *cobra.Command, host string) (cluster.Client, error) {
-	if !viper.GetBool(flagClusterK8s) {
+	if !viper.GetBool(FlagClusterK8s) {
 		// Condition that there is no Kubernetes API to work with.
 		return cluster.NullClient(), nil
 	}
-	ns := viper.GetString(flagK8sManifestNS)
+	ns := viper.GetString(FlagK8sManifestNS)
 	if ns == "" {
-		return nil, fmt.Errorf("%w: --%s required", errInvalidConfig, flagK8sManifestNS)
+		return nil, fmt.Errorf("%w: --%s required", errInvalidConfig, FlagK8sManifestNS)
 	}
 	return kube.NewClient(log, host, ns)
 }

@@ -35,3 +35,6 @@ jobs:
         run: make test-e2e-integration
       - name: Run K8s Tests
         run: make test-k8s-integration
+      - name: Post-Run Kube Environment
+        run: |
+          kubectl get ns,pods,ingress,svc -A

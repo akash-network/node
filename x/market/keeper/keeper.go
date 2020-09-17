@@ -181,6 +181,7 @@ func (k Keeper) OnInsufficientFunds(ctx sdk.Context, lease types.Lease) {
 		return
 	}
 	lease.State = types.LeaseInsufficientFunds
+	ctx.Logger().Debug("closing lease on insufficient funds", "lease", lease.ID())
 	k.updateLease(ctx, lease)
 	ctx.EventManager().EmitEvent(
 		types.NewEventLeaseClosed(lease.ID(), lease.Price).
@@ -197,7 +198,7 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease types.Lease) {
 	}
 	lease.State = types.LeaseClosed
 	k.updateLease(ctx, lease)
-	ctx.Logger().Info("closed lease", "lease", lease.ID())
+	ctx.Logger().Info("keeper closed lease", "lease", lease.ID())
 	ctx.EventManager().EmitEvent(
 		types.NewEventLeaseClosed(lease.ID(), lease.Price).
 			ToSDKEvent(),

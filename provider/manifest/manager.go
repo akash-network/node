@@ -261,6 +261,7 @@ func (m *manager) maybeScheduleStop() bool { // nolint:golint,unparam
 
 func (m *manager) emitReceivedEvents() {
 	if m.data == nil || len(m.leases) == 0 || len(m.manifests) == 0 {
+		m.log.Debug("emit received events skipped", "data", m.data, "leases", len(m.leases), "manifests", len(m.manifests))
 		return
 	}
 
@@ -312,7 +313,7 @@ func (m *manager) validateRequest(req manifestRequest) error {
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(version, m.data.Version) {
+	if !bytes.Equal(version, m.data.Deployment.Version) {
 		return ErrManifestVersion
 	}
 
