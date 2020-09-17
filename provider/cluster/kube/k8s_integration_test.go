@@ -33,6 +33,11 @@ func TestNewClient(t *testing.T) {
 
 	ac, err := newClientWithSettings(testutil.Logger(t), "localhost", ns, settings)
 	require.NoError(t, err)
+	oc, ok := kubeClient.(*client)
+	if !ok {
+		require.True(t, ok, "failed interface type conversion")
+	}
+	kc := oc.kc
 
 	cc, ok := ac.(*client)
 	require.True(t, ok)
@@ -64,6 +69,11 @@ func TestNewClient(t *testing.T) {
 	deployment := deployments[0]
 
 	assert.Equal(t, lid, deployment.LeaseID())
+
+	// query namespace and pod security policies
+	psp, err := kc.PolicyV1beta1().PodSecurityPolicies().Get(ctx, b.ns(), metav1.GetOptions{})
+	require.NoError(t, err)
+	require.NotNil(t, psp)
 
 	svcname := group.Services[0].Name
 
@@ -124,7 +134,7 @@ func TestNewClient(t *testing.T) {
 
 	// ensure inventory used
 	// XXX: not working with kind. might be a delay issue?
-	// curnodes, err := client.Inventory(ctx)
+	// curnodes, err := kubeClient.Inventory(ctx)
 	// require.NoError(t, err)
 	// require.Len(t, curnodes, 1)
 	// curnode := curnodes[0]

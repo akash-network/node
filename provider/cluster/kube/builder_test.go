@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/ovrclk/akash/manifest"
@@ -24,7 +25,7 @@ func TestLidNsSanity(t *testing.T) {
 
 	m, err := mb.create()
 	assert.NoError(t, err)
-	assert.Equal(t, m.Spec.LeaseID, leaseID)
+	assert.Equal(t, m.Spec.LeaseID.DSeq, strconv.FormatUint(leaseID.DSeq, 10))
 
 	assert.Equal(t, ns, m.Name)
 }
@@ -36,10 +37,10 @@ func TestNetworkPolicies(t *testing.T) {
 	np := newNetPolBuilder(settings{}, leaseID, g)
 	netPolicies, err := np.create()
 	assert.NoError(t, err)
-	assert.Len(t, netPolicies, 4)
+	assert.Len(t, netPolicies, 7)
 
 	pol0 := netPolicies[0]
-	assert.Equal(t, pol0.Name, "ingress-deny-all")
+	assert.Equal(t, pol0.Name, "default-deny-ingress")
 
 	// Change the DSeq ID
 	np.lid.DSeq = uint64(100)
