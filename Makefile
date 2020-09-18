@@ -246,10 +246,17 @@ test-sims: test-sim-fullapp test-sim-nondeterminism test-sim-import-export test-
 ifeq ($(UNAME_OS),Linux)
   PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-linux-x86_64.zip
   GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-v${GRPC_GATEWAY_VERSION}-linux-x86_64
+  # Checking debian release or not
+ifneq ("$(wildcard /etc/debian_version)","")
+  CLANG_FORMAT_BIN ?= clang-format-6.0
+else
+  CLANG_FORMAT_BIN ?= clang-format
+endif
 endif
 ifeq ($(UNAME_OS),Darwin)
   PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-osx-x86_64.zip
   GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-v${GRPC_GATEWAY_VERSION}-darwin-x86_64
+  CLANG_FORMAT_BIN ?= clang-format
 endif
 
 proto-gen: $(PROTOC) $(GRPC_GATEWAY) protovendor
@@ -262,7 +269,7 @@ proto-check-breaking: $(BUF) protovendor
 	$(BUF) check breaking --against-input '.git#branch=master'
 
 proto-format: clang-format-install
-	find ./ ! -path "./vendor/*" ! -path "./.cache/*" -name *.proto -exec clang-format -i {} \;
+	find ./ ! -path "./vendor/*" ! -path "./.cache/*" -name *.proto -exec ${CLANG_FORMAT_BIN} -i {} \;
 
 GOOGLE_API_PROTO_URL = https://raw.githubusercontent.com/googleapis/googleapis/master/google/api
 GOOGLE_PROTO_TYPES   = $(CACHE_INCLUDE)/google/api
@@ -354,14 +361,20 @@ else
 endif
 
 clang-format-install:
-ifeq (, $(shell which clang-format))
-	@echo "Installing clang-format..."
+ifeq (, $(shell which ${CLANG_FORMAT_BIN}))
+	@echo "Installing ${CLANG_FORMAT_BIN}..."
 ifeq ($(UNAME_OS),Darwin)
-	brew install clang-format
+	curl https://gist.githubusercontent.com/bvigueras/daf11aee6876fb9ba4c925c2c31bc04b/raw/\
+    526ff0eebbc0476f568c852a8cc5d4cc48281475/clang-format@6.rb -o \
+    $(brew --repo)/Library/Taps/homebrew/homebrew-core/Formula/clang-format@6.rb
+    brew install clang-format@6
 endif
 ifeq ($(UNAME_OS),Linux)
 	if [ -e /etc/debian_version ]; then \
-    	sudo apt-get install clang-format -y; \
+    	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - ; \
+		sudo apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main"; \
+		sudo apt update || true ; \
+		sudo apt-get install -y ${CLANG_FORMAT_BIN} ; \
     elif [ -e /etc/fedora-release ]; then \
     	sudo dnf install clang; \
     else \
@@ -370,7 +383,7 @@ ifeq ($(UNAME_OS),Linux)
     fi;
 endif
 else
-	@echo "clang-format already installed; skipping..."
+	@echo "${CLANG_FORMAT_BIN} already installed; skipping..."
 endif
 
 kubetypes-deps-install:

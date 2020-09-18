@@ -85,7 +85,7 @@ message Deployment {
     closed = 2 [(gogoproto.enumvalue_customname) = "DeploymentClosed"];
   }
 
-  State state = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
+  State state   = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
   bytes version = 3 [(gogoproto.jsontag) = "version", (gogoproto.moretags) = "yaml:\"version\""];
 }
 

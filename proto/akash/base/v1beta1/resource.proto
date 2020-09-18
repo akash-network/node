@@ -10,6 +10,6 @@ message Unit {
   option (gogoproto.equal) = true;
 
   uint32 cpu = 1 [(gogoproto.customname) = "CPU", (gogoproto.jsontag) = "cpu", (gogoproto.moretags) = "yaml:\"cpu\""];
-  uint64 memory = 2 [(gogoproto.jsontag) = "memory", (gogoproto.moretags) = "yaml:\"memory\""];
+  uint64 memory  = 2 [(gogoproto.jsontag) = "memory", (gogoproto.moretags) = "yaml:\"memory\""];
   uint64 storage = 3 [(gogoproto.jsontag) = "storage", (gogoproto.moretags) = "yaml:\"storage\""];
 }

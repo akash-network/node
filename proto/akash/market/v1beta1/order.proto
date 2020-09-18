@@ -62,7 +62,7 @@ message Order {
     closed = 3 [(gogoproto.enumvalue_customname) = "OrderClosed"];
   }
 
-  State state = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
+  State state    = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
   int64 start_at = 3 [(gogoproto.jsontag) = "start-at", (gogoproto.moretags) = "yaml:\"start-at\""];
   akash.deployment.v1beta1.GroupSpec spec = 4
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "spec", (gogoproto.moretags) = "yaml:\"spec\""];
