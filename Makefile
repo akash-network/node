@@ -11,7 +11,7 @@ KIND_VARS ?= KIND_APP_IP="$(KIND_APP_IP)" KIND_APP_PORT="$(KIND_APP_PORT)"
 
 # Setting mainnet flag based on env value
 # export MAINNET=true to set build tag mainnet
-ifeq ($(MAINNET),true)
+ifneq ($(MAINNET),false)
 	BUILD_MAINNET=mainnet
 endif
 
