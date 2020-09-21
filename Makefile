@@ -242,9 +242,16 @@ test-sims: test-sim-fullapp test-sim-nondeterminism test-sim-import-export test-
 ###############################################################################
 ifeq ($(UNAME_OS),Linux)
   PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-linux-x86_64.zip
+  # Checking debian release or not
+ifneq ("$(wildcard /etc/debian_version)","")
+  CLANG_FORMAT_BIN ?= clang-format-6.0
+else
+  CLANG_FORMAT_BIN ?= clang-format
+endif
 endif
 ifeq ($(UNAME_OS),Darwin)
   PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-osx-x86_64.zip
+  CLANG_FORMAT_BIN ?= clang-format
 endif
 
 proto-gen: $(PROTOC) protovendor
@@ -255,6 +262,9 @@ proto-lint: $(BUF)
 
 proto-check-breaking: $(BUF)
 	$(BUF) check breaking --against-input '.git#branch=master'
+
+proto-format: clang-format-install
+	find ./ ! -path "./vendor/*" ! -path "./.cache/*" -name *.proto -exec ${CLANG_FORMAT_BIN} -i {} \;
 
 .PHONY: protovendor
 protovendor: modsensure $(MODVENDOR)
@@ -317,6 +327,32 @@ $(PROTOC): $(PROTOC_VERSION_FILE)
 $(MODVENDOR): $(CACHE)
 	@echo "installing modvendor..."
 	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor
+
+clang-format-install:
+ifeq (, $(shell which ${CLANG_FORMAT_BIN}))
+	@echo "Installing ${CLANG_FORMAT_BIN}..."
+ifeq ($(UNAME_OS),Darwin)
+	curl https://gist.githubusercontent.com/bvigueras/daf11aee6876fb9ba4c925c2c31bc04b/raw/\
+    526ff0eebbc0476f568c852a8cc5d4cc48281475/clang-format@6.rb -o \
+    $(brew --repo)/Library/Taps/homebrew/homebrew-core/Formula/clang-format@6.rb
+    brew install clang-format@6
+endif
+ifeq ($(UNAME_OS),Linux)
+	if [ -e /etc/debian_version ]; then \
+    	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - ; \
+		sudo apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main"; \
+		sudo apt update || true ; \
+		sudo apt-get install -y ${CLANG_FORMAT_BIN} ; \
+    elif [ -e /etc/fedora-release ]; then \
+    	sudo dnf install clang; \
+    else \
+      echo -e "\tRun (as root): subscription-manager repos --enable rhel-7-server-devtools-rpms ; \
+	  yum install llvm-toolset-7" >&2; \
+    fi;
+endif
+else
+	@echo "${CLANG_FORMAT_BIN} already installed; skipping..."
+endif
 
 kubetypes-deps-install:
 	if [ -d "$(shell go env GOPATH)/src/k8s.io/code-generator" ]; then    \
