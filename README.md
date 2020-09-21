@@ -14,7 +14,6 @@
 For a high-level overview of the Akash protocol and network economics, check out the [whitepapers](https://akash.network/research); a detailed protocol definition can be 
 found in the [design documentation](_docs/design.md); and the target workload definition spec is [here](_docs/sdl.md).
 
-
 # Branching and Versioning
 
 The `master` branch contains new features and is under active development; the `mainnet/main` branch contains the current, stable release.
@@ -43,6 +42,16 @@ The easiest way to get started with Akash is by trying Testnet. Sign up [here](h
 - Read the documentation: [docs.akash.network](https://docs.akash.network)
 - Send a PR or raise an issue for the docs [ovrclk/docs](https://github.com/ovrclk/docs)
 - Read latest news and tutorials on the [Official Blog](https://blog.akash.network)
+
+# Supported platforms
+
+Platform | Arch | Status
+--- | --- | :---
+Darwin (aka MacOS) | amd64 | ✅ **Supported**
+Linux | amd64 | ✅ **Supported**
+Linux | arm64 (aka aarch64) | ✅ **Supported**
+Linux | armhf GOARM=5,6,7 | ⚠️ **Not supported**
+Windows | amd64 | ⚠️ **Experimental**
 
 # Installing
 
