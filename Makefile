@@ -1,13 +1,22 @@
 BINS       := akashctl akashd
 IMAGE_BINS := _build/akashctl _build/akashd
-APP_DIR := ./app
+APP_DIR    := ./app
 
-GO := GO111MODULE=on go
+GO    := GO111MODULE=on go
 GOBIN := $(shell go env GOPATH)/bin
 
-KIND_APP_IP ?= $(shell make -sC _run/kube kind-k8s-ip)
+KIND_APP_IP   ?= $(shell make -sC _run/kube kind-k8s-ip)
 KIND_APP_PORT ?= $(shell make -sC _run/kube app-http-port)
-KIND_VARS ?= KIND_APP_IP="$(KIND_APP_IP)" KIND_APP_PORT="$(KIND_APP_PORT)"
+KIND_VARS     ?= KIND_APP_IP="$(KIND_APP_IP)" KIND_APP_PORT="$(KIND_APP_PORT)"
+
+CACHE_BASE            ?= $(abspath .cache)
+CACHE                 := $(CACHE_BASE)
+CACHE_BIN             := $(CACHE)/bin
+CACHE_INCLUDE         := $(CACHE)/include
+CACHE_VERSIONS        := $(CACHE)/versions
+MODVENDOR              = $(CACHE_BIN)/modvendor
+
+GOLANG_CROSS_VERSION  ?= v1.15.2
 
 # Setting mainnet flag based on env value
 # export MAINNET=true to set build tag mainnet
@@ -258,3 +267,44 @@ test-sim-after-import:
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
 test-sims: test-sim-fullapp test-sim-nondeterminism test-sim-import-export test-sim-after-import
+
+.PHONY: modvendor
+modvendor: modsensure $(MODVENDOR)
+	@echo "vendoring non-go files files..."
+	$(MODVENDOR) -copy="**/*.h **/*.c" -include=github.com/zondax/hid
+
+# Tools installation
+$(CACHE):
+	@echo "creating .cache dir structure..."
+	mkdir -p $@
+	mkdir -p $(CACHE_BIN)
+	mkdir -p $(CACHE_INCLUDE)
+	mkdir -p $(CACHE_VERSIONS)
+
+$(MODVENDOR): $(CACHE)
+	@echo "installing modvendor..."
+	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor
+
+cache-clean:
+	rm -rf $(CACHE)
+
+.PHONY: modsensure
+modsensure: deps-tidy
+
+.PHONY: codegen
+codegen: generate kubetypes
+
+.PHONY: setup-devenv
+setup-devenv: $(GOLANGCI_LINT) $(BUF) $(PROTOC) $(MODVENDOR) modvendor
+
+.PHONY: setup-cienv
+setup-cienv: modvendor $(GOLANGCI_LINT)
+
+.PHONY: release-dry-run
+release-dry-run:
+	docker run --rm --privileged -e MAINNET=$(MAINNET) \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/github.com/ovrclk/akash \
+		-w /go/src/github.com/ovrclk/akash \
+		goreng/golang-cross:$(GOLANG_CROSS_VERSION) \
+		--rm-dist --skip-validate --skip-publish

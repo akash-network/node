@@ -11,7 +11,7 @@ on:
 env:
   # bleh
   MAINNET: ${{ github.ref == 'refs/heads/mainnet/main' || (startsWith(github.ref,'refs/tags/v') && ( contains(github.ref,'.0.') || contains(github.ref,'.2.') || contains(github.ref,'.4.') || contains(github.ref,'.6.') || contains(github.ref,'.8.') )) }}
-
+  GOLANG_CROSS_VERSION: v1.15.2
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
@@ -19,21 +19,19 @@ jobs:
       - uses: actions/checkout@v2
       - run: git fetch --prune --unshallow
       - uses: actions/setup-go@v2
-
+      - run: make modvendor
       - name: release dry-run
-        uses: goreleaser/goreleaser-action@v1
-        with:
-          args: --skip-validate --skip-publish
-          version: v0.133.0
-
-      - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'ovrclk/akash'
-        name: docker login
-        run: echo '${{secrets.DOCKERHUB_PASSWORD}}' | docker login --username '${{secrets.DOCKERHUB_USERNAME}}' --password-stdin
+        run: GOLANG_CROSS_VERSION=${GOLANG_CROSS_VERSION} make release-dry-run
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'ovrclk/akash'
         name: release publish
-        uses: goreleaser/goreleaser-action@v1
-        with:
-          version: v0.133.0
-          args: release --rm-dist
-        env:
-          GITHUB_TOKEN: ${{ secrets.GORELEASER_ACCESS_TOKEN }}
+        run: |-
+          docker run \
+          --priviledged \
+          -e MAINNET=${MAINNET} \
+          -e DOCKER_USERNAME=${{secrets.DOCKERHUB_USERNAME}} \
+          -e DOCKER_PASSWORD=${{secrets.DOCKERHUB_PASSWORD}} \
+          -e GITHUB_TOKEN=${{ secrets.GORELEASER_ACCESS_TOKEN }} \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -v `pwd`:/go/src/github.com/ovrclk/akash \
+          goreng/golang-cross:${GOLANG_CROSS_VERSION} \
+          --skip-validate --skip-publish
