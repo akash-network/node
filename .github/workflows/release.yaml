@@ -34,4 +34,4 @@ jobs:
           -v /var/run/docker.sock:/var/run/docker.sock \
           -v `pwd`:/go/src/github.com/ovrclk/akash \
           goreng/golang-cross:${GOLANG_CROSS_VERSION} \
-          --skip-validate --skip-publish
+          release --rm-dist
