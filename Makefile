@@ -260,7 +260,7 @@ test-sim-after-import:
 test-sims: test-sim-fullapp test-sim-nondeterminism test-sim-import-export test-sim-after-import
 
 .PHONY: modvendor
-modvendor: modsensure $(MODVENDOR)
+modvendor: $(MODVENDOR) vendor modsensure
 	@echo "vendoring non-go files files..."
 	$(MODVENDOR) -copy="**/*.h **/*.c" -include=github.com/zondax/hid
 
