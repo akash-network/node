@@ -321,8 +321,8 @@ release: modvendor
 		--rm \
 		--privileged \
 		-e MAINNET=$(MAINNET) \
-		-e DOCKER_USERNAME=$(DOCKER_USERNAME) \
-		-e DOCKER_PASSWORD=$(DOCKER_PASSWORD) \
+		-e DOCKER_USERNAME='$(DOCKER_USERNAME)' \
+		-e DOCKER_PASSWORD='$(DOCKER_PASSWORD)' \
 		-e GITHUB_TOKEN=$(GORELEASER_ACCESS_TOKEN) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
