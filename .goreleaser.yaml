@@ -210,16 +210,16 @@ dockers:
       - "ovrclk/akashd:{{ .ShortCommit }}"
       - "ovrclk/akashd:{{ .Version }}"
 
-brews:
-  - name: akash
-    tap:
-      owner: ovrclk
-      name: homebrew-tap
-    homepage: "https://akash.network"
-    description: "Blockchain-powered decentralized compute platform"
-    install: |
-      bin.install "akashctl"
-      bin.install "akashd"
+#brews:
+#  - name: akash
+#    tap:
+#      owner: ovrclk
+#      name: homebrew-tap
+#    homepage: "https://akash.network"
+#    description: "Blockchain-powered decentralized compute platform"
+#    install: |
+#      bin.install "akashctl"
+#      bin.install "akashd"
 
 nfpms:
   - vendor: Overclock Labs Inc.
