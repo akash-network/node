@@ -300,7 +300,7 @@ release-dry-run: modvendor
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
-		goreng/golang-cross:$(GOLANG_CROSS_VERSION) \
+		troian/golang-cross:${GOLANG_CROSS_VERSION} \
 		--rm-dist --skip-validate --skip-publish
 
 .PHONY: release
@@ -326,5 +326,5 @@ release: modvendor
 		-e GITHUB_TOKEN=$(GORELEASER_ACCESS_TOKEN) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
-		goreng/golang-cross:${GOLANG_CROSS_VERSION} \
+		troian/golang-cross:${GOLANG_CROSS_VERSION} \
 		release --rm-dist

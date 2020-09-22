@@ -179,11 +179,11 @@ archives:
       - akashd-windows-amd64
       - akashd-darwin-amd64
       - akashd-linux-amd64
-      - akashd-linux-armv7
+      - akashd-linux-arm64
       - akashctl-windows-amd64
       - akashctl-darwin-amd64
       - akashctl-linux-amd64
-      - akashctl-linux-armv7
+      - akashctl-linux-arm64
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: zip
