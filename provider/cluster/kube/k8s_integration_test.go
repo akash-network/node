@@ -5,14 +5,13 @@ package kube
 import (
 	"bufio"
 	"context"
-	"fmt"
-	"math/rand"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/ovrclk/akash/testutil"
 )
@@ -20,7 +19,10 @@ import (
 func TestNewClient(t *testing.T) {
 	ctx := context.Background()
 
-	ns := fmt.Sprintf("test-provider-cluster-kube-client-%v", rand.Uint32())
+	// create lease
+	lid := testutil.LeaseID(t)
+	group := testutil.AppManifestGenerator.Group(t)
+	ns := lidNS(lid)
 
 	settings := settings{
 		DeploymentServiceType:          corev1.ServiceTypeClusterIP,
@@ -29,11 +31,15 @@ func TestNewClient(t *testing.T) {
 		DeploymentIngressExposeLBHosts: false,
 	}
 
-	client, err := newClientWithSettings(testutil.Logger(t), "localhost", ns, settings)
+	ac, err := newClientWithSettings(testutil.Logger(t), "localhost", ns, settings)
 	require.NoError(t, err)
 
+	cc, ok := ac.(*client)
+	require.True(t, ok)
+	require.NotNil(t, cc)
+
 	// check inventory
-	nodes, err := client.Inventory(ctx)
+	nodes, err := ac.Inventory(ctx)
 	require.NoError(t, err)
 	require.Len(t, nodes, 1)
 
@@ -43,20 +49,16 @@ func TestNewClient(t *testing.T) {
 	require.NotZero(t, node.Available().Memory)
 
 	// ensure no deployments
-	deployments, err := client.Deployments(ctx)
+	deployments, err := ac.Deployments(ctx)
 	assert.NoError(t, err)
 	require.Empty(t, deployments)
 
-	// create lease
-	lid := testutil.LeaseID(t)
-	group := testutil.AppManifestGenerator.Group(t)
-
 	// deploy lease
-	err = client.Deploy(ctx, lid, &group)
+	err = ac.Deploy(ctx, lid, &group)
 	assert.NoError(t, err)
 
 	// query deployments, ensure lease present
-	deployments, err = client.Deployments(ctx)
+	deployments, err = ac.Deployments(ctx)
 	require.NoError(t, err)
 	require.Len(t, deployments, 1)
 	deployment := deployments[0]
@@ -65,16 +67,16 @@ func TestNewClient(t *testing.T) {
 
 	svcname := group.Services[0].Name
 
-	lstat, err := client.LeaseStatus(ctx, lid)
+	lstat, err := ac.LeaseStatus(ctx, lid)
 	assert.NoError(t, err)
 	assert.Len(t, lstat.Services, 1)
 	assert.Equal(t, svcname, lstat.Services[0].Name)
 
-	sstat, err := client.ServiceStatus(ctx, lid, svcname)
+	sstat, err := ac.ServiceStatus(ctx, lid, svcname)
 	require.NoError(t, err)
 
 	const (
-		maxtries = 10
+		maxtries = 30
 		delay    = time.Second
 	)
 
@@ -85,13 +87,13 @@ func TestNewClient(t *testing.T) {
 			break
 		}
 		time.Sleep(delay)
-		sstat, err = client.ServiceStatus(ctx, lid, svcname)
+		sstat, err = ac.ServiceStatus(ctx, lid, svcname)
 	}
 
 	assert.NoError(t, err)
 	assert.NotEqual(t, maxtries, tries)
 
-	logs, err := client.ServiceLogs(ctx, lid, svcname, true, nil)
+	logs, err := ac.ServiceLogs(ctx, lid, svcname, true, nil)
 	require.NoError(t, err)
 	require.Equal(t, int(sstat.AvailableReplicas), len(logs))
 
@@ -115,6 +117,11 @@ func TestNewClient(t *testing.T) {
 		assert.NoError(t, lg.Stream.Close(), lg.Name)
 	}
 
+	npi := cc.kc.NetworkingV1().NetworkPolicies(ns)
+	npList, err := npi.List(ctx, metav1.ListOptions{})
+	assert.NoError(t, err)
+	assert.Greater(t, len(npList.Items), 0)
+
 	// ensure inventory used
 	// XXX: not working with kind. might be a delay issue?
 	// curnodes, err := client.Inventory(ctx)
@@ -125,6 +132,6 @@ func TestNewClient(t *testing.T) {
 	// assert.Less(t, node.Available().Memory, curnode.Available().Memory)
 
 	// teardown lease
-	err = client.TeardownLease(ctx, lid)
+	err = ac.TeardownLease(ctx, lid)
 	assert.NoError(t, err)
 }

@@ -174,7 +174,6 @@ loop:
 			}
 
 			// Resources reservied.  Calculate price and bid.
-
 			reservation = result.Value().(cluster.Reservation)
 
 			price, err := calculatePrice(&group.GroupSpec)
