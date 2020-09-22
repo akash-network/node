@@ -305,18 +305,6 @@ release-dry-run: modvendor
 
 .PHONY: release
 release: modvendor
-	@if [ -z "$(DOCKER_USERNAME)" ]; then \
-		echo "\033[91mDOCKER_USERNAME is required for release\033[0m";\
-		exit 1;\
-	fi
-	@if [ -z "$(DOCKER_PASSWORD)" ]; then \
-		echo "\033[91mDOCKER_PASSWORD is required for release\033[0m";\
-		exit 1;\
-	fi
-	@if [ -z "$(GORELEASER_ACCESS_TOKEN)" ]; then \
-		echo "\033[91mGORELEASER_ACCESS_TOKEN is required for release\033[0m";\
-		exit 1;\
-	fi
 	docker run \
 		--rm \
 		--privileged \
