@@ -17,22 +17,24 @@ CACHE_VERSIONS        := $(CACHE)/versions
 MODVENDOR              = $(CACHE_BIN)/modvendor
 
 GOLANG_CROSS_VERSION  ?= v1.15.2
+GOLANGCI_LINT_VERSION = v1.27.0
+
+IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 
 # Setting mainnet flag based on env value
 # export MAINNET=true to set build tag mainnet
 ifneq ($(MAINNET),false)
 	BUILD_MAINNET=mainnet
+	BUILD_TAGS=netgo,ledger,mainnet
+else
+	BUILD_TAGS=netgo,ledger
 endif
 
-GOLANGCI_LINT_VERSION = v1.27.0
-
-IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
-
-BUILD_FLAGS = -mod=readonly -tags "netgo ledger $(BUILD_MAINNET)" -ldflags \
+BUILD_FLAGS = -mod=readonly -tags "$(BUILD_TAGS)" -ldflags \
  '-X github.com/cosmos/cosmos-sdk/version.Name=akash \
   -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd \
   -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl \
-  -X "github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger" \
+  -X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(BUILD_TAGS)" \
   -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
   -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
 
@@ -301,10 +303,39 @@ setup-devenv: $(GOLANGCI_LINT) $(BUF) $(PROTOC) $(MODVENDOR) modvendor
 setup-cienv: modvendor $(GOLANGCI_LINT)
 
 .PHONY: release-dry-run
-release-dry-run:
-	docker run --rm --privileged -e MAINNET=$(MAINNET) \
+release-dry-run: modvendor
+	docker run \
+		--rm \
+		--privileged \
+		-e MAINNET=$(MAINNET) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		goreng/golang-cross:$(GOLANG_CROSS_VERSION) \
 		--rm-dist --skip-validate --skip-publish
+
+.PHONY: release
+release: modvendor
+	@if [ -z "$(DOCKER_USERNAME)" ]; then \
+		echo "\033[91mDOCKER_USERNAME is required for release\033[0m";\
+		exit 1;\
+	fi
+	@if [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "\033[91mDOCKER_PASSWORD is required for release\033[0m";\
+		exit 1;\
+	fi
+	@if [ -z "$(GORELEASER_ACCESS_TOKEN)" ]; then \
+		echo "\033[91mGORELEASER_ACCESS_TOKEN is required for release\033[0m";\
+		exit 1;\
+	fi
+	docker run \
+		--rm \
+		--privileged \
+		-e MAINNET=$(MAINNET) \
+		-e DOCKER_USERNAME=$(DOCKER_USERNAME) \
+		-e DOCKER_PASSWORD=$(DOCKER_PASSWORD) \
+		-e GITHUB_TOKEN=$(GORELEASER_ACCESS_TOKEN) \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/github.com/ovrclk/akash \
+		goreng/golang-cross:${GOLANG_CROSS_VERSION} \
+		release --rm-dist

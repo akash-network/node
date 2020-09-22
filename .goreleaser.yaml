@@ -21,7 +21,7 @@ builds:
       -X github.com/cosmos/cosmos-sdk/version.Name=akashctl
       -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
       -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
-      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
       -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
       -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
   - id: akashd-darwin-amd64
@@ -42,7 +42,7 @@ builds:
       -X github.com/cosmos/cosmos-sdk/version.Name=akashd
       -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
       -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
-      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
       -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
       -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
 
@@ -62,7 +62,7 @@ builds:
       -X github.com/cosmos/cosmos-sdk/version.Name=akashctl
       -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
       -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
-      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
       -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
       -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
   - id: akashd-linux-amd64
@@ -81,7 +81,7 @@ builds:
       -X github.com/cosmos/cosmos-sdk/version.Name=akashd
       -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
       -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
-      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
       -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
       -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
 
@@ -103,7 +103,7 @@ builds:
       -X github.com/cosmos/cosmos-sdk/version.Name=akashctl
       -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
       -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
-      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
       -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
       -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
   - id: akashd-linux-arm64
@@ -124,7 +124,7 @@ builds:
       -X github.com/cosmos/cosmos-sdk/version.Name=akashd
       -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
       -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
-      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
       -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
       -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
 
@@ -147,7 +147,7 @@ builds:
       -X github.com/cosmos/cosmos-sdk/version.Name=akashctl
       -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
       -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
-      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
       -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
       -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
   - id: akashd-windows-amd64
@@ -169,7 +169,7 @@ builds:
       -X github.com/cosmos/cosmos-sdk/version.Name=akashd
       -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
       -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
-      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
       -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
       -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
 

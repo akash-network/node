@@ -24,14 +24,4 @@ jobs:
         run: GOLANG_CROSS_VERSION=${GOLANG_CROSS_VERSION} make release-dry-run
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'ovrclk/akash'
         name: release publish
-        run: |-
-          docker run \
-          --priviledged \
-          -e MAINNET=${MAINNET} \
-          -e DOCKER_USERNAME=${{secrets.DOCKERHUB_USERNAME}} \
-          -e DOCKER_PASSWORD=${{secrets.DOCKERHUB_PASSWORD}} \
-          -e GITHUB_TOKEN=${{ secrets.GORELEASER_ACCESS_TOKEN }} \
-          -v /var/run/docker.sock:/var/run/docker.sock \
-          -v `pwd`:/go/src/github.com/ovrclk/akash \
-          goreng/golang-cross:${GOLANG_CROSS_VERSION} \
-          release --rm-dist
+        run: make release
