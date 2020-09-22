@@ -242,13 +242,7 @@ test-sims: test-sim-fullapp test-sim-nondeterminism test-sim-import-export test-
 ###############################################################################
 ifeq ($(UNAME_OS),Linux)
   PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-linux-x86_64.zip
-  # Checking debian release or not
-ifneq ("$(wildcard /etc/debian_version)","")
-  CLANG_FORMAT_BIN ?= clang-format-6.0
-  LINUX_CODENAME ?= $(shell lsb_release -c -s)
-else
-  CLANG_FORMAT_BIN ?= clang-format
-endif
+  CLANG_FORMAT_BIN ?= $(shell [ -f /etc/debian_version ] && echo "clang-format-6.0" || echo "clang-format")
 endif
 ifeq ($(UNAME_OS),Darwin)
   PROTOC_ZIP ?= protoc-${PROTOC_VERSION}-osx-x86_64.zip
@@ -340,9 +334,6 @@ ifeq ($(UNAME_OS),Darwin)
 endif
 ifeq ($(UNAME_OS),Linux)
 	if [ -e /etc/debian_version ]; then \
-    	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - ; \
-		sudo apt-add-repository "deb http://apt.llvm.org/${LINUX_CODENAME}/ llvm-toolchain-${LINUX_CODENAME}-6.0 main"; \
-		sudo apt update || true ; \
 		sudo apt-get install -y ${CLANG_FORMAT_BIN} ; \
     elif [ -e /etc/fedora-release ]; then \
     	sudo dnf install clang; \
