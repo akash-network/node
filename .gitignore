@@ -18,6 +18,7 @@
 debug.test
 
 dist
+.cache
 
 #IDE
 .idea/
