@@ -245,6 +245,7 @@ ifeq ($(UNAME_OS),Linux)
   # Checking debian release or not
 ifneq ("$(wildcard /etc/debian_version)","")
   CLANG_FORMAT_BIN ?= clang-format-6.0
+  LINUX_CODENAME ?= $(shell lsb_release -c -s)
 else
   CLANG_FORMAT_BIN ?= clang-format
 endif
@@ -340,7 +341,7 @@ endif
 ifeq ($(UNAME_OS),Linux)
 	if [ -e /etc/debian_version ]; then \
     	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - ; \
-		sudo apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main"; \
+		sudo apt-add-repository "deb http://apt.llvm.org/${LINUX_CODENAME}/ llvm-toolchain-${LINUX_CODENAME}-6.0 main"; \
 		sudo apt update || true ; \
 		sudo apt-get install -y ${CLANG_FORMAT_BIN} ; \
     elif [ -e /etc/fedora-release ]; then \
