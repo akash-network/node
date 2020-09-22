@@ -1,29 +1,40 @@
 BINS       := akashctl akashd
 IMAGE_BINS := _build/akashctl _build/akashd
-APP_DIR := ./app
+APP_DIR    := ./app
 
-GO := GO111MODULE=on go
+GO    := GO111MODULE=on go
 GOBIN := $(shell go env GOPATH)/bin
 
-KIND_APP_IP ?= $(shell make -sC _run/kube kind-k8s-ip)
+KIND_APP_IP   ?= $(shell make -sC _run/kube kind-k8s-ip)
 KIND_APP_PORT ?= $(shell make -sC _run/kube app-http-port)
-KIND_VARS ?= KIND_APP_IP="$(KIND_APP_IP)" KIND_APP_PORT="$(KIND_APP_PORT)"
+KIND_VARS     ?= KIND_APP_IP="$(KIND_APP_IP)" KIND_APP_PORT="$(KIND_APP_PORT)"
+
+CACHE_BASE            ?= $(abspath .cache)
+CACHE                 := $(CACHE_BASE)
+CACHE_BIN             := $(CACHE)/bin
+CACHE_INCLUDE         := $(CACHE)/include
+CACHE_VERSIONS        := $(CACHE)/versions
+MODVENDOR              = $(CACHE_BIN)/modvendor
+
+GOLANG_CROSS_VERSION  ?= v1.15.2
+GOLANGCI_LINT_VERSION = v1.27.0
+
+IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
 
 # Setting mainnet flag based on env value
 # export MAINNET=true to set build tag mainnet
 ifneq ($(MAINNET),false)
 	BUILD_MAINNET=mainnet
+	BUILD_TAGS=netgo,ledger,mainnet
+else
+	BUILD_TAGS=netgo,ledger
 endif
 
-GOLANGCI_LINT_VERSION = v1.27.0
-
-IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
-
-BUILD_FLAGS = -mod=readonly -tags "netgo ledger $(BUILD_MAINNET)" -ldflags \
+BUILD_FLAGS = -mod=readonly -tags "$(BUILD_TAGS)" -ldflags \
  '-X github.com/cosmos/cosmos-sdk/version.Name=akash \
   -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd \
   -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl \
-  -X "github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger" \
+  -X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(BUILD_TAGS)" \
   -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
   -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
 
@@ -60,17 +71,6 @@ image: image-bins
 install:
 	$(GO) install $(BUILD_FLAGS) ./cmd/akashctl
 	$(GO) install $(BUILD_FLAGS) ./cmd/akashd
-
-release:
-	docker run --rm --privileged \
-	-v $(PWD):/go/src/github.com/ovrclk/akash \
-	-v /var/run/docker.sock:/var/run/docker.sock \
-	-w /go/src/github.com/ovrclk/akash \
-	-e GITHUB_TOKEN \
-	-e DOCKER_USERNAME \
-	-e DOCKER_PASSWORD \
-	-e DOCKER_REGISTRY \
-	goreleaser/goreleaser release --rm-dist
 
 image-minikube:
 	eval $$(minikube docker-env) && make image
@@ -116,11 +116,11 @@ SUBLINTERS = deadcode \
 			golint \
 			gosec \
 			scopelint \
-			prealloc	
+			prealloc
 
 # TODO: ^ gochecknoglobals
 
-LINT = $(GOBIN)/golangci-lint run ./... --disable-all --enable 
+LINT = $(GOBIN)/golangci-lint run ./... --disable-all --enable
 
 # Execute the same lint methods as configured in .github/workflows/tests.yaml
 # Clear feedback from each method as it fails.
@@ -258,3 +258,64 @@ test-sim-after-import:
 		-NumBlocks=50 -BlockSize=100 -Commit=true -Seed=99 -Period=5 -v -timeout 10m
 
 test-sims: test-sim-fullapp test-sim-nondeterminism test-sim-import-export test-sim-after-import
+
+.PHONY: modvendor
+modvendor: $(MODVENDOR) vendor modsensure
+	@echo "vendoring non-go files files..."
+	$(MODVENDOR) -copy="**/*.h **/*.c" -include=github.com/zondax/hid
+
+# Tools installation
+$(CACHE):
+	@echo "creating .cache dir structure..."
+	mkdir -p $@
+	mkdir -p $(CACHE_BIN)
+	mkdir -p $(CACHE_INCLUDE)
+	mkdir -p $(CACHE_VERSIONS)
+
+$(MODVENDOR): $(CACHE)
+	@echo "installing modvendor..."
+	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor
+
+cache-clean:
+	rm -rf $(CACHE)
+
+.PHONY: modsensure
+modsensure: deps-tidy
+
+.PHONY: codegen
+codegen: generate kubetypes
+
+.PHONY: setup-devenv
+setup-devenv: $(GOLANGCI_LINT) $(BUF) $(PROTOC) $(MODVENDOR) modvendor
+
+.PHONY: setup-cienv
+setup-cienv: modvendor $(GOLANGCI_LINT)
+
+.PHONY: release-dry-run
+release-dry-run: modvendor
+	docker run \
+		--rm \
+		--privileged \
+		-e MAINNET=$(MAINNET) \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/github.com/ovrclk/akash \
+		-w /go/src/github.com/ovrclk/akash \
+		troian/golang-cross:${GOLANG_CROSS_VERSION} \
+		--rm-dist --skip-validate --skip-publish
+
+.PHONY: release
+release: modvendor
+	@if [ ! -f ".release-env" ]; then \
+		echo "\033[91m.release-env is required for release\033[0m";\
+		exit 1;\
+	fi
+	@docker run \
+		--rm \
+		--privileged \
+		-e MAINNET=$(MAINNET) \
+		--env-file .release-env \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/github.com/ovrclk/akash \
+		-w /go/src/github.com/ovrclk/akash \
+		troian/golang-cross:${GOLANG_CROSS_VERSION} \
+		release --rm-dist

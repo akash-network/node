@@ -1,49 +1,189 @@
 # See documentation at http://goreleaser.com
+env:
+  - GO111MODULE=on
+
 builds:
-  - id: akashctl
+  - id: akashctl-darwin-amd64
     binary: akashctl
     main: ./cmd/akashctl
-    goarch: [amd64, arm64]
-    goos: [linux, darwin]
-    ignore:
-      - goos: darwin
-        goarch: 386
+    goarch:
+      - amd64
+    goos:
+      - darwin
+    env:
+      - CGO_ENABLED=1
+      - CC=o64-clang
+      - CXX=o64-clang++
     flags:
       - -tags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
     ldflags: >
-      -s -w 
-      -X github.com/cosmos/cosmos-sdk/version.Name=akashctl 
-      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd 
-      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl 
-      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
-      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} 
-      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}} 
-  - id: akashd
+      -s -w
+      -X github.com/cosmos/cosmos-sdk/version.Name=akashctl
+      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
+      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
+      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
+  - id: akashd-darwin-amd64
     binary: akashd
     main: ./cmd/akashd
-    goarch: [amd64, arm64]
-    goos: [linux,darwin]
-    ignore:
-      - goos: darwin
-        goarch: 386
-      - goos: windows
-        goarch: arm
+    goarch:
+      - amd64
+    goos:
+      - darwin
+    env:
+      - CGO_ENABLED=1
+      - CC=o64-clang
+      - CXX=o64-clang++
     flags:
       - -tags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
     ldflags: >
-      -s -w 
-      -X github.com/cosmos/cosmos-sdk/version.Name=akashctl 
-      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd 
-      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl 
-      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
-      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} 
-      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}} 
+      -s -w
+      -X github.com/cosmos/cosmos-sdk/version.Name=akashd
+      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
+      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
+      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
+
+  - id: akashctl-linux-amd64
+    binary: akashctl
+    main: ./cmd/akashctl
+    goarch:
+      - amd64
+    goos:
+      - linux
+    env:
+      - CGO_ENABLED=1
+    flags:
+      - -tags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+    ldflags: >
+      -s -w
+      -X github.com/cosmos/cosmos-sdk/version.Name=akashctl
+      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
+      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
+      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
+  - id: akashd-linux-amd64
+    binary: akashd
+    main: ./cmd/akashd
+    goarch:
+      - amd64
+    goos:
+      - linux
+    env:
+      - CGO_ENABLED=1
+    flags:
+      - -tags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+    ldflags: >
+      -s -w
+      -X github.com/cosmos/cosmos-sdk/version.Name=akashd
+      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
+      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
+      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
+
+  - id: akashctl-linux-arm64
+    binary: akashctl
+    main: ./cmd/akashctl
+    goarch:
+      - arm64
+    goos:
+      - linux
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    flags:
+      - -tags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+    ldflags: >
+      -s -w
+      -X github.com/cosmos/cosmos-sdk/version.Name=akashctl
+      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
+      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
+      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
+  - id: akashd-linux-arm64
+    binary: akashd
+    main: ./cmd/akashd
+    goarch:
+      - arm64
+    goos:
+      - linux
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    flags:
+      - -tags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+    ldflags: >
+      -s -w
+      -X github.com/cosmos/cosmos-sdk/version.Name=akashd
+      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
+      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
+      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
+
+  - id: akashctl-windows-amd64
+    binary: akashctl
+    main: ./cmd/akashctl
+    goarch:
+      - amd64
+    goos:
+      - windows
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+    flags:
+      - -tags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+    ldflags: >
+      -s -w
+      -buildmode=exe
+      -X github.com/cosmos/cosmos-sdk/version.Name=akashctl
+      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
+      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
+      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
+  - id: akashd-windows-amd64
+    binary: akashd
+    main: ./cmd/akashd
+    goarch:
+      - amd64
+    goos:
+      - windows
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+    flags:
+      - -tags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+    ldflags: >
+      -s -w
+      -buildmode=exe
+      -X github.com/cosmos/cosmos-sdk/version.Name=akashd
+      -X github.com/cosmos/cosmos-sdk/version.ServerName=akashd
+      -X github.com/cosmos/cosmos-sdk/version.ClientName=akashctl
+      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
+      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}}
+      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}}
 
 archives:
   - id: akash
     builds:
-    - akashctl
-    - akashd
+      - akashd-windows-amd64
+      - akashd-darwin-amd64
+      - akashd-linux-amd64
+      - akashd-linux-arm64
+      - akashctl-windows-amd64
+      - akashctl-darwin-amd64
+      - akashctl-linux-amd64
+      - akashctl-linux-arm64
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: zip
@@ -51,29 +191,28 @@ archives:
       - none*
 
 dockers:
-  - binaries: 
-    - akashctl
+  - binaries:
+      - akashctl
     dockerfile: _build/Dockerfile.akashctl
     goos: linux
     goarch: amd64
-    image_templates:  
-    - "ovrclk/akashctl:latest"
-    - "ovrclk/akashctl:{{ .ShortCommit }}"
-    - "ovrclk/akashctl:{{ .Version }}"
-
-  - binaries: 
-    - akashd
+    image_templates:
+      - "ovrclk/akashctl:{{if eq .Env.MAINNET \"true\"}}stable{{else}}latest{{end}}"
+      - "ovrclk/akashctl:{{ .ShortCommit }}"
+      - "ovrclk/akashctl:{{ .Version }}"
+  - binaries:
+      - akashd
     dockerfile: _build/Dockerfile.akashd
     goos: linux
     goarch: amd64
-    image_templates:  
-    - "ovrclk/akashd:latest"
-    - "ovrclk/akashd:{{ .ShortCommit }}"
-    - "ovrclk/akashd:{{ .Version }}"
+    image_templates:
+      - "ovrclk/akashd:{{if eq .Env.MAINNET \"true\"}}stable{{else}}latest{{end}}"
+      - "ovrclk/akashd:{{ .ShortCommit }}"
+      - "ovrclk/akashd:{{ .Version }}"
 
 brews:
   - name: akash
-    github:
+    tap:
       owner: ovrclk
       name: homebrew-tap
     homepage: "https://akash.network"
@@ -83,10 +222,9 @@ brews:
       bin.install "akashd"
 
 nfpms:
-  - 
-    vendor: Overclock Labs Inc.
+  - vendor: Overclock Labs Inc.
     homepage: http://ovrclk.com
-    maintainer: Greg Osuri <greg@akash.network>
+    maintainer: Akash Network <hello@akash.network>
     formats:
       - deb
       - rpm
