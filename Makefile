@@ -305,26 +305,17 @@ release-dry-run: modvendor
 
 .PHONY: release
 release: modvendor
-	@if [ -z "$(DOCKER_USERNAME)" ]; then \
-		echo "\033[91mDOCKER_USERNAME is required for release\033[0m";\
+	@if [ ! -f ".release-env" ]; then \
+		echo "\033[91m.release-env is required for release\033[0m";\
 		exit 1;\
 	fi
-	@if [ -z "$(DOCKER_PASSWORD)" ]; then \
-		echo "\033[91mDOCKER_PASSWORD is required for release\033[0m";\
-		exit 1;\
-	fi
-	@if [ -z "$(GORELEASER_ACCESS_TOKEN)" ]; then \
-		echo "\033[91mGORELEASER_ACCESS_TOKEN is required for release\033[0m";\
-		exit 1;\
-	fi
-	docker run \
+	@docker run \
 		--rm \
 		--privileged \
 		-e MAINNET=$(MAINNET) \
-		-e DOCKER_USERNAME='$(DOCKER_USERNAME)' \
-		-e DOCKER_PASSWORD='$(DOCKER_PASSWORD)' \
-		-e GITHUB_TOKEN=$(GORELEASER_ACCESS_TOKEN) \
+		--env-file .release-env \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
+		-w /go/src/github.com/ovrclk/akash \
 		troian/golang-cross:${GOLANG_CROSS_VERSION} \
 		release --rm-dist

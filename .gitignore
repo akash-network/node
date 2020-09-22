@@ -19,6 +19,7 @@ debug.test
 
 dist
 .cache
+.release-env
 
 #IDE
 .idea/
