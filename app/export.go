@@ -85,7 +85,16 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 	// withdraw all delegator rewards
 	dels := app.keeper.staking.GetAllDelegations(ctx)
 	for _, delegation := range dels {
-		_, _ = app.keeper.distr.WithdrawDelegationRewards(ctx, delegation.DelegatorAddress, delegation.ValidatorAddress)
+		valAddr, err := sdk.ValAddressFromBech32(delegation.ValidatorAddress)
+		if err != nil {
+			panic(err)
+		}
+
+		delAddr, err := sdk.AccAddressFromBech32(delegation.DelegatorAddress)
+		if err != nil {
+			panic(err)
+		}
+		_, _ = app.keeper.distr.WithdrawDelegationRewards(ctx, delAddr, valAddr)
 	}
 
 	// clear validator slash events
@@ -112,8 +121,17 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 
 	// reinitialize all delegations
 	for _, del := range dels {
-		app.keeper.distr.Hooks().BeforeDelegationCreated(ctx, del.DelegatorAddress, del.ValidatorAddress)
-		app.keeper.distr.Hooks().AfterDelegationModified(ctx, del.DelegatorAddress, del.ValidatorAddress)
+		valAddr, err := sdk.ValAddressFromBech32(del.ValidatorAddress)
+		if err != nil {
+			panic(err)
+		}
+
+		delAddr, err := sdk.AccAddressFromBech32(del.DelegatorAddress)
+		if err != nil {
+			panic(err)
+		}
+		app.keeper.distr.Hooks().BeforeDelegationCreated(ctx, delAddr, valAddr)
+		app.keeper.distr.Hooks().AfterDelegationModified(ctx, delAddr, valAddr)
 	}
 
 	// reset context height

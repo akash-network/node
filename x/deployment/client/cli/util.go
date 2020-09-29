@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"context"
+
 	"github.com/cosmos/cosmos-sdk/client"
 )
 
@@ -9,7 +11,7 @@ func currentBlockHeight(ctx client.Context) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	status, err := client.Status()
+	status, err := client.Status(context.Background())
 	if err != nil {
 		return 0, err
 	}

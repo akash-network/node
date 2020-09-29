@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/server/api"
+	"github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/simapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -57,7 +58,6 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmos "github.com/tendermint/tendermint/libs/os"
 
-	"github.com/cosmos/cosmos-sdk/std"
 	"github.com/cosmos/cosmos-sdk/version"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
@@ -126,7 +126,7 @@ func NewApp(
 	bapp.SetCommitMultiStoreTracer(tio)
 	bapp.SetAppVersion(version.Version)
 	bapp.GRPCQueryRouter().SetInterfaceRegistry(interfaceRegistry)
-	bapp.GRPCQueryRouter().RegisterSimulateService(bapp.Simulate, interfaceRegistry, std.DefaultPublicKeyCodec{})
+	bapp.GRPCQueryRouter().RegisterSimulateService(bapp.Simulate, interfaceRegistry)
 
 	keys := kvStoreKeys()
 	tkeys := transientStoreKeys()
@@ -417,7 +417,8 @@ func (app *AkashApp) SimulationManager() *module.SimulationManager {
 
 // RegisterAPIRoutes registers all application module routes with the provided
 // API server.
-func (app *AkashApp) RegisterAPIRoutes(apiSvr *api.Server) {
+func (app *AkashApp) RegisterAPIRoutes(apiSvr *api.Server, _ config.APIConfig) {
+	// TODO: register swagger API in seperate PR
 	clientCtx := apiSvr.ClientCtx
 	rpc.RegisterRoutes(clientCtx, apiSvr.Router)
 	authrest.RegisterTxRoutes(clientCtx, apiSvr.Router)
