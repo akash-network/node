@@ -15,6 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
       - run: make bins
       - run: make image-bins
       - run: make test

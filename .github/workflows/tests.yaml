@@ -17,6 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
       - run: make bins
       - run: make image-bins
 
@@ -25,6 +27,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
       - run: make test-full
 
   coverage:
@@ -32,6 +36,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
       - run: make test-coverage
       - uses: codecov/codecov-action@v1
 
@@ -40,6 +46,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
       - run: make build
       - run: make test-vet
       - run: make lintdeps-install
