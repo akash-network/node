@@ -418,7 +418,7 @@ func (app *AkashApp) SimulationManager() *module.SimulationManager {
 // RegisterAPIRoutes registers all application module routes with the provided
 // API server.
 func (app *AkashApp) RegisterAPIRoutes(apiSvr *api.Server, _ config.APIConfig) {
-	// TODO: register swagger API in seperate PR
+	// TODO: register swagger API in separate PR
 	clientCtx := apiSvr.ClientCtx
 	rpc.RegisterRoutes(clientCtx, apiSvr.Router)
 	authrest.RegisterTxRoutes(clientCtx, apiSvr.Router)
