@@ -1,0 +1,19 @@
+ignore:
+  - "**/*.pb.go"
+  - "**/mocks/.*"
+  - pkg
+codecov:
+  require_ci_to_pass: true
+parsers:
+  gcov:
+    branch_detection:
+      loop: true
+      macro: false
+      method: false
+      conditional: true
+coverage:
+  range:
+    - 70
+    - 100
+  round: down
+  precision: 2
