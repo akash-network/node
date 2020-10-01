@@ -1,0 +1,30 @@
+ignore:
+  - "**/*.pb.go"
+  - "**/mocks/.*"
+  - "pkg"
+comment:
+  layout: " diff, flags"
+  behavior: once
+  require_changes: true  # if true: only post the comment if coverage changes
+  require_base: yes      # [yes :: must have a base report to post]
+  require_head: yes      # [yes :: must have a head report to post]
+  branches:              # branch names that can post comment
+    - "master"
+codecov:
+  require_ci_to_pass: true
+parsers:
+  gcov:
+    branch_detection:
+      loop: yes
+      macro: no
+      method: no
+      conditional: yes
+coverage:
+  range: 40..100
+  round: down
+  precision: 2
+  status:
+    project:
+      default:
+        if_not_found: success
+        if_ci_failed: error

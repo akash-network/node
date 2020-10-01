@@ -1,0 +1,25 @@
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=1
+builds:
+  - id: akash-linux-amd64
+    binary: akash
+    main: ./cmd/akash
+    goarch:
+      - amd64
+    goos:
+      - linux
+    flags:
+      - -mod=readonly
+      - "{{ .Env.BUILD_FLAGS }}"
+    ldflags:
+      - "{{ .Env.LD_FLAGS }}"
+
+dockers:
+  - binaries:
+      - akash
+    dockerfile: _build/Dockerfile.akash
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "ovrclk/akash:latest"

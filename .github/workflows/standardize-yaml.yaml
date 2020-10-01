@@ -12,4 +12,4 @@ jobs:
       - uses: actions/checkout@v2
       - name: check-yml-count
         run: |
-          if [[ $(git ls-files '*.yml'| wc -l) -ne 0 ]]; then git ls-files '*.yml' && exit 1;fi
+          if [[ $(git ls-files '*.yml' ':!:codecov.yml' | wc -l) -ne 0 ]]; then git ls-files '*.yml' ':!:codecov.yml' && exit 1;fi

@@ -21,6 +21,7 @@ BUF_VERSION           ?= 0.20.5
 PROTOC_VERSION        ?= 3.13.0
 GRPC_GATEWAY_VERSION  ?= 1.14.7
 GOLANGCI_LINT_VERSION ?= v1.27.0
+GOLANG_CROSS_VERSION  ?= v1.15.2
 
 # <TOOL>_VERSION_FILE points to the marker file for the installed version.
 # If <TOOL>_VERSION_FILE is changed, the binary will be re-downloaded.
@@ -36,20 +37,33 @@ BUF                   := $(CACHE_BIN)/buf
 PROTOC                := $(CACHE_BIN)/protoc
 GRPC_GATEWAY          := $(CACHE_BIN)/protoc-gen-grpc-gateway
 
+TEST_IMAGE_BUILD_ENV   = CGO_ENABLED=1 GOOS=linux GOARCH=amd64
+
+# BUILD_TAGS are for builds withing this makefile
+# GORELEASER_BUILD_TAGS are for goreleaser only
 # Setting mainnet flag based on env value
 # export MAINNET=true to set build tag mainnet
 ifeq ($(MAINNET),true)
 	BUILD_MAINNET=mainnet
+	BUILD_TAGS=netgo,ledger,mainnet
+	GORELEASER_BUILD_TAGS=$(BUILD_TAGS)
+else
+	BUILD_TAGS=netgo,ledger
+	GORELEASER_BUILD_TAGS=$(BUILD_TAGS),testnet
 endif
 
-IMAGE_BUILD_ENV = GOOS=linux GOARCH=amd64
+GORELEASER_FLAGS    = -tags="$(GORELEASER_BUILD_TAGS)"
+GORELEASER_LD_FLAGS = '-s -w -X github.com/cosmos/cosmos-sdk/version.Name=akash \
+-X github.com/cosmos/cosmos-sdk/version.AppName=akash \
+-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(GORELEASER_BUILD_TAGS)" \
+-X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags --abbrev=0) \
+-X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
 
-BUILD_FLAGS = -mod=readonly -tags "netgo ledger $(BUILD_MAINNET)" -ldflags \
- '-X github.com/cosmos/cosmos-sdk/version.Name=akash \
-  -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
-  -X "github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger" \
-  -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
-  -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
+BUILD_FLAGS = -mod=readonly -tags "$(BUILD_TAGS)" -ldflags '-X github.com/cosmos/cosmos-sdk/version.Name=akash \
+-X github.com/cosmos/cosmos-sdk/version.AppName=akash \
+-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(BUILD_TAGS)" \
+-X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
+-X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
 
 all: build bins
 
@@ -64,31 +78,11 @@ generate:
 akash:
 	$(GO) build $(BUILD_FLAGS) ./cmd/akash
 
-image-bins:
-	$(IMAGE_BUILD_ENV) $(GO) build $(BUILD_FLAGS) -o _build/akash ./cmd/akash
-
-image: image-bins
-	docker build --rm             \
-		-t ovrclk/akash:latest     \
-		-f _build/Dockerfile.akash \
-		_build
-
 install:
 	$(GO) install $(BUILD_FLAGS) ./cmd/akash
 
-release:
-	docker run --rm --privileged \
-	-v $(PWD):/go/src/github.com/ovrclk/akash \
-	-v /var/run/docker.sock:/var/run/docker.sock \
-	-w /go/src/github.com/ovrclk/akash \
-	-e GITHUB_TOKEN \
-	-e DOCKER_USERNAME \
-	-e DOCKER_PASSWORD \
-	-e DOCKER_REGISTRY \
-	goreleaser/goreleaser release --rm-dist
-
 image-minikube:
-	eval $$(minikube docker-env) && make image
+	eval $$(minikube docker-env) && docker-image
 
 shellcheck:
 	docker run --rm \
@@ -98,7 +92,7 @@ shellcheck:
 	-x /shellcheck/script/shellcheck.sh
 
 test:
-	$(GO) test -tags=$(BUILD_MAINNET)  -timeout 300s ./...
+	$(GO) test -tags=$(BUILD_MAINNET) -timeout 300s ./...
 
 test-nocache:
 	$(GO) test -tags=$(BUILD_MAINNET) -count=1 ./...
@@ -195,7 +189,7 @@ gofmt:
 	find . -not -path './vendor*' -name '*.go' -type f | \
 		xargs gofmt -s -w
 
-clean: tools-clean
+clean: cache-clean
 	rm -f $(BINS) $(IMAGE_BINS)
 
 .PHONY: all bins build \
@@ -252,20 +246,21 @@ ifeq ($(UNAME_OS),Darwin)
   GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-v${GRPC_GATEWAY_VERSION}-darwin-x86_64
 endif
 
-proto-gen: $(PROTOC) $(GRPC_GATEWAY) protovendor
+proto-gen: $(PROTOC) $(GRPC_GATEWAY) modvendor
 	./script/protocgen.sh
 
-proto-lint: $(BUF) protovendor
+proto-lint: $(BUF) modvendor
 	$(BUF) check lint --error-format=json
 
-proto-check-breaking: $(BUF) protovendor
+proto-check-breaking: $(BUF) modvendor
 	$(BUF) check breaking --against-input '.git#branch=master'
 
 GOOGLE_API_PROTO_URL = https://raw.githubusercontent.com/googleapis/googleapis/master/google/api
 GOOGLE_PROTO_TYPES   = $(CACHE_INCLUDE)/google/api
 
-.PHONY: protovendor
-protovendor: $(CACHE) modsensure $(MODVENDOR)
+.PHONY: modvendor
+modvendor: modsensure $(MODVENDOR)
+	@echo "vendoring non-go files files..."
 	@echo "vendoring *.proto files..."
 	$(MODVENDOR) -copy="**/*.proto" -include=\
 github.com/cosmos/cosmos-sdk/proto,\
@@ -277,6 +272,8 @@ github.com/regen-network/cosmos-proto/cosmos.proto
 	curl -sSL $(GOOGLE_API_PROTO_URL)/http.proto > $(GOOGLE_PROTO_TYPES)/http.proto
 	curl -sSL $(GOOGLE_API_PROTO_URL)/annotations.proto > $(GOOGLE_PROTO_TYPES)/annotations.proto
 	curl -sSL $(GOOGLE_API_PROTO_URL)/httpbody.proto > $(GOOGLE_PROTO_TYPES)/httpbody.proto
+	$(MODVENDOR) -copy="**/*.h **/*.c" -include=\
+github.com/zondax/hid
 
 # Tools installation
 $(CACHE):
@@ -376,10 +373,10 @@ modsensure: deps-tidy deps-vendor
 codegen: generate proto-gen kubetypes
 
 .PHONY: setup-devenv
-setup-devenv: $(GOLANGCI_LINT) $(BUF) $(PROTOC) $(GRPC_GATEWAY) $(MODVENDOR) protoc-swagger deps-vendor protovendor
+setup-devenv: $(GOLANGCI_LINT) $(BUF) $(PROTOC) $(GRPC_GATEWAY) $(MODVENDOR) protoc-swagger deps-vendor modvendor
 
 .PHONY: setup-cienv
-setup-cienv: deps-vendor $(GOLANGCI_LINT)
+setup-cienv: deps-vendor modvendor $(GOLANGCI_LINT)
 
 proto-swagger-gen: protoc-swagger
 	./script/protoc-swagger-gen.sh
@@ -392,3 +389,50 @@ update-swagger-docs: proto-swagger-gen
     else \
     	echo "\033[92mSwagger docs are in sync\033[0m";\
 	fi
+
+.PHONY: docker-imag
+docker-image:
+	docker run \
+		--rm \
+		--privileged \
+		-e MAINNET=$(MAINNET) \
+		-e BUILD_FLAGS="$(GORELEASER_FLAGS)" \
+		-e LD_FLAGS="$(GORELEASER_LD_FLAGS)" \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/github.com/ovrclk/akash \
+		-w /go/src/github.com/ovrclk/akash \
+		troian/golang-cross:${GOLANG_CROSS_VERSION} \
+		-f .goreleaser-docker.yaml --rm-dist --skip-validate --skip-publish --snapshot
+
+.PHONY: release-dry-run
+release-dry-run: modvendor
+	docker run \
+		--rm \
+		--privileged \
+		-e MAINNET=$(MAINNET) \
+		-e BUILD_FLAGS="$(GORELEASER_FLAGS)" \
+		-e LD_FLAGS="$(GORELEASER_LD_FLAGS)" \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/github.com/ovrclk/akash \
+		-w /go/src/github.com/ovrclk/akash \
+		troian/golang-cross:${GOLANG_CROSS_VERSION} \
+		--rm-dist --skip-validate --skip-publish
+
+.PHONY: release
+release: modvendor
+	@if [ ! -f ".release-env" ]; then \
+		echo "\033[91m.release-env is required for release\033[0m";\
+		exit 1;\
+	fi
+	docker run \
+		--rm \
+		--privileged \
+		-e MAINNET=$(MAINNET) \
+		-e BUILD_FLAGS="$(GORELEASER_FLAGS)" \
+		-e LD_FLAGS="$(GORELEASER_LD_FLAGS)" \
+		--env-file .release-env \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/github.com/ovrclk/akash \
+		-w /go/src/github.com/ovrclk/akash \
+		troian/golang-cross:${GOLANG_CROSS_VERSION} \
+		release --rm-dist

@@ -20,7 +20,7 @@ jobs:
         with:
           go-version: 1.15
       - run: make bins
-      - run: make image-bins
+      - run: make docker-image
 
   tests:
     runs-on: ubuntu-latest
