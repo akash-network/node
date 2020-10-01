@@ -20,6 +20,11 @@ parsers:
       method: false
       conditional: true
 coverage:
-  range: 70..100
+  range: 30..100
   round: down
   precision: 2
+  status:
+    project:
+      default:
+        if_not_found: success
+        if_ci_failed: error
