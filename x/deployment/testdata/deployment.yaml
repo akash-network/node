@@ -1,5 +1,5 @@
 ---
-version: "1.5"
+version: "2.0"
 
 services:
   web:
@@ -14,9 +14,13 @@ services:
 profiles:
   compute:
     web:
-      cpu: "0.01"
-      memory: "128Mi"
-      storage: "512Mi"
+      resources:
+        cpu:
+          units: "0.01"
+        memory:
+          size: "128Mi"
+        storage:
+          size: "512Mi"
 
   placement:
     global:

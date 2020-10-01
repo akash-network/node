@@ -196,7 +196,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	resp, err = cli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var result *types.QueryOrdersResponse = &types.QueryOrdersResponse{}
+	result := &types.QueryOrdersResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), result)
 	s.Require().NoError(err)
 	s.Require().Len(result.Orders, 1)

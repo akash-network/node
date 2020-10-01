@@ -1,5 +1,5 @@
 ---
-version: "1.5"
+version: "2.0"
 
 services:
   webapp:
@@ -13,9 +13,13 @@ services:
 profiles:
   compute:
     web:
-      cpu: "100m"
-      memory: "512Mi"
-      storage: "512Mi"
+      resources:
+        cpu:
+          units: "100m"
+        memory:
+          size: "512Mi"
+        storage:
+          size: "512Mi"
   placement:
     san-jose:
       attributes:

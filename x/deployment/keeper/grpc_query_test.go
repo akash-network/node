@@ -266,9 +266,9 @@ func (suite *grpcTestSuite) createDeployment() (types.Deployment, []types.Group)
 	group := testutil.DeploymentGroup(suite.t, deployment.ID(), 0)
 	group.GroupSpec.Resources = []types.Resource{
 		{
-			Unit:  testutil.Unit(suite.t),
-			Count: 1,
-			Price: testutil.Coin(suite.t),
+			Resources: testutil.ResourceUnits(suite.t),
+			Count:     1,
+			Price:     testutil.Coin(suite.t),
 		},
 	}
 	groups := []types.Group{

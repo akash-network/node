@@ -42,7 +42,7 @@ func calculatePriceRange(gspec *dtypes.GroupSpec) (sdk.Coin, sdk.Coin) {
 
 	for _, group := range gspec.Resources {
 		mem = mem.Add(
-			sdk.NewIntFromUint64(group.Unit.Memory).
+			sdk.NewIntFromUint64(group.Resources.Memory.Quantity.Value()).
 				MulRaw(int64(group.Count)))
 	}
 

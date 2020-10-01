@@ -1,5 +1,5 @@
 ---
-version: "1.5"
+version: "2.0"
 
 include:
   - "foo.yaml"
@@ -59,17 +59,29 @@ profiles:
 
   compute:
     web:
-      cpu: "0.01"
-      memory: "128Mi"
-      storage: "512Mi"
+      resources:
+        cpu:
+          units: "0.01"
+        memory:
+          size: "128Mi"
+        storage:
+          size: "512Mi"
     db:
-      cpu: "0.01"
-      memory: "128Mi"
-      storage: "1Gi"
+      resources:
+        cpu:
+          unites: "0.01"
+        memory:
+          size: "128Mi"
+        storage:
+          size: "1Gi"
     db-pool:
-      cpu: "0.01"
-      memory: "128Mi"
-      storage: "512Mi"
+      resources:
+        cpu:
+          units: "0.01"
+        memory:
+          size: "128Mi"
+        storage:
+          size: "512Mi"
 
   placement:
     westcoast:
