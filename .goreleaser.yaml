@@ -1,27 +1,72 @@
-# See documentation at http://goreleaser.com
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=1
 builds:
-  - id: akash
+  - id: akash-darwin-amd64
     binary: akash
     main: ./cmd/akash
-    goarch: [amd64, arm64]
-    goos: [linux, darwin]
-    ignore:
-      - goos: darwin
-        goarch: 386
+    goarch:
+      - amd64
+    goos:
+      - darwin
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
     flags:
-      - -tags=netgo,ledger,{{if eq .Env.MAINNET "true"}}mainnet{{else}}testnet{{end}}
-    ldflags: >
-      -s -w 
-      -X github.com/cosmos/cosmos-sdk/version.Name=akash 
-      -X github.com/cosmos/cosmos-sdk/version.AppName=akash
-      -X github.com/cosmos/cosmos-sdk/version.BuildTags=netgo,ledger
-      -X github.com/cosmos/cosmos-sdk/version.Version={{.Version}} 
-      -X github.com/cosmos/cosmos-sdk/version.Commit={{.Commit}} 
-
+      - -mod=readonly
+      - "{{ .Env.BUILD_FLAGS }}"
+    ldflags:
+      - "{{ .Env.LD_FLAGS }}"
+  - id: akash-linux-amd64
+    binary: akash
+    main: ./cmd/akash
+    goarch:
+      - amd64
+    goos:
+      - linux
+    flags:
+      - -mod=readonly
+      - "{{ .Env.BUILD_FLAGS }}"
+    ldflags:
+      - "{{ .Env.LD_FLAGS }}"
+  - id: akash-linux-arm64
+    binary: akash
+    main: ./cmd/akash
+    goarch:
+      - arm64
+    goos:
+      - linux
+    env:
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    flags:
+      - -mod=readonly
+      - "{{ .Env.BUILD_FLAGS }}"
+    ldflags:
+      - "{{ .Env.LD_FLAGS }}"
+  - id: akash-windows-amd64
+    binary: akash
+    main: ./cmd/akash
+    goarch:
+      - amd64
+    goos:
+      - windows
+    env:
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+    flags:
+      - -mod=readonly
+      - "{{ .Env.BUILD_FLAGS }}"
+    ldflags:
+      - -buildmode=exe
+      - "{{ .Env.LD_FLAGS }}"
 archives:
   - id: akash
     builds:
-    - akash
+      - akash-darwin-amd64
+      - akash-linux-amd64
+      - akash-linux-arm64
+      - akash-windows-amd64
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: zip
@@ -30,18 +75,18 @@ archives:
 
 dockers:
   - binaries:
-    - akash
+      - akash
     dockerfile: _build/Dockerfile.akash
     goos: linux
     goarch: amd64
     image_templates:
-    - "ovrclk/akash:{{if eq .Env.MAINNET \"true\"}}stable{{else}}latest{{end}}"
-    - "ovrclk/akash:{{ .ShortCommit }}"
-    - "ovrclk/akash:{{ .Version }}"
+      - "ovrclk/akash:{{if eq .Env.MAINNET \"true\"}}stable{{else}}latest{{end}}"
+      - "ovrclk/akash:{{ .ShortCommit }}"
+      - "ovrclk/akash:{{ .Version }}"
 
 brews:
   - name: akash
-    github:
+    tap:
       owner: ovrclk
       name: homebrew-tap
     homepage: "https://akash.network"
@@ -50,10 +95,9 @@ brews:
       bin.install "akash"
 
 nfpms:
-  - 
-    vendor: Overclock Labs Inc.
+  - vendor: Overclock Labs Inc.
     homepage: http://ovrclk.com
-    maintainer: Greg Osuri <greg@akash.network>
+    maintainer: Akash Network <hello@akash.network>
     formats:
       - deb
       - rpm
