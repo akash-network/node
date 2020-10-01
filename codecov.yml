@@ -15,12 +15,12 @@ codecov:
 parsers:
   gcov:
     branch_detection:
-      loop: true
-      macro: false
-      method: false
-      conditional: true
+      loop: yes
+      macro: no
+      method: no
+      conditional: yes
 coverage:
-  range: 30..100
+  range: 40..100
   round: down
   precision: 2
   status:
