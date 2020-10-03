@@ -10,9 +10,10 @@ type Status struct {
 
 // InventoryStatus stores active, pending and available units
 type InventoryStatus struct {
-	Active    []atypes.Unit `json:"active"`
-	Pending   []atypes.Unit `json:"pending"`
-	Available []atypes.Unit `json:"available"`
+	Active    []atypes.ResourceUnits `json:"active"`
+	Pending   []atypes.ResourceUnits `json:"pending"`
+	Available []atypes.ResourceUnits `json:"available"`
+	Error     error                  `json:"error"`
 }
 
 // ServiceStatus stores the current status of service

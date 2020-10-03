@@ -23,25 +23,23 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-// Unit stores cpu, memory and storage metrics
-type Unit struct {
-	CPU     uint32 `protobuf:"varint,1,opt,name=cpu,proto3" json:"cpu" yaml:"cpu"`
-	Memory  uint64 `protobuf:"varint,2,opt,name=memory,proto3" json:"memory" yaml:"memory"`
-	Storage uint64 `protobuf:"varint,3,opt,name=storage,proto3" json:"storage" yaml:"storage"`
+type CPU struct {
+	Units      ResourceValue `protobuf:"bytes,1,opt,name=units,proto3" json:"units"`
+	Attributes []Attribute   `protobuf:"bytes,2,rep,name=attributes,proto3" json:"attributes,omitempty" yaml:"cpu,omitempty"`
 }
 
-func (m *Unit) Reset()         { *m = Unit{} }
-func (m *Unit) String() string { return proto.CompactTextString(m) }
-func (*Unit) ProtoMessage()    {}
-func (*Unit) Descriptor() ([]byte, []int) {
+func (m *CPU) Reset()         { *m = CPU{} }
+func (m *CPU) String() string { return proto.CompactTextString(m) }
+func (*CPU) ProtoMessage()    {}
+func (*CPU) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c018ae61a1e1b59b, []int{0}
 }
-func (m *Unit) XXX_Unmarshal(b []byte) error {
+func (m *CPU) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Unit) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *CPU) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_Unit.Marshal(b, m, deterministic)
+		return xxx_messageInfo_CPU.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -51,74 +49,248 @@ func (m *Unit) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *Unit) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Unit.Merge(m, src)
+func (m *CPU) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CPU.Merge(m, src)
 }
-func (m *Unit) XXX_Size() int {
+func (m *CPU) XXX_Size() int {
 	return m.Size()
 }
-func (m *Unit) XXX_DiscardUnknown() {
-	xxx_messageInfo_Unit.DiscardUnknown(m)
+func (m *CPU) XXX_DiscardUnknown() {
+	xxx_messageInfo_CPU.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Unit proto.InternalMessageInfo
+var xxx_messageInfo_CPU proto.InternalMessageInfo
 
-func (m *Unit) GetCPU() uint32 {
+func (m *CPU) GetUnits() ResourceValue {
+	if m != nil {
+		return m.Units
+	}
+	return ResourceValue{}
+}
+
+func (m *CPU) GetAttributes() []Attribute {
+	if m != nil {
+		return m.Attributes
+	}
+	return nil
+}
+
+type Memory struct {
+	Quantity   ResourceValue `protobuf:"bytes,1,opt,name=quantity,proto3" json:"size" yaml:"size"`
+	Attributes []Attribute   `protobuf:"bytes,2,rep,name=attributes,proto3" json:"attributes,omitempty" yaml:"cpu,omitempty"`
+}
+
+func (m *Memory) Reset()         { *m = Memory{} }
+func (m *Memory) String() string { return proto.CompactTextString(m) }
+func (*Memory) ProtoMessage()    {}
+func (*Memory) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c018ae61a1e1b59b, []int{1}
+}
+func (m *Memory) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Memory) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Memory.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Memory) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Memory.Merge(m, src)
+}
+func (m *Memory) XXX_Size() int {
+	return m.Size()
+}
+func (m *Memory) XXX_DiscardUnknown() {
+	xxx_messageInfo_Memory.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Memory proto.InternalMessageInfo
+
+func (m *Memory) GetQuantity() ResourceValue {
+	if m != nil {
+		return m.Quantity
+	}
+	return ResourceValue{}
+}
+
+func (m *Memory) GetAttributes() []Attribute {
+	if m != nil {
+		return m.Attributes
+	}
+	return nil
+}
+
+type Storage struct {
+	Quantity   ResourceValue `protobuf:"bytes,1,opt,name=quantity,proto3" json:"size" yaml:"size"`
+	Attributes []Attribute   `protobuf:"bytes,2,rep,name=attributes,proto3" json:"attributes,omitempty" yaml:"cpu,omitempty"`
+}
+
+func (m *Storage) Reset()         { *m = Storage{} }
+func (m *Storage) String() string { return proto.CompactTextString(m) }
+func (*Storage) ProtoMessage()    {}
+func (*Storage) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c018ae61a1e1b59b, []int{2}
+}
+func (m *Storage) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Storage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Storage.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Storage) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Storage.Merge(m, src)
+}
+func (m *Storage) XXX_Size() int {
+	return m.Size()
+}
+func (m *Storage) XXX_DiscardUnknown() {
+	xxx_messageInfo_Storage.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Storage proto.InternalMessageInfo
+
+func (m *Storage) GetQuantity() ResourceValue {
+	if m != nil {
+		return m.Quantity
+	}
+	return ResourceValue{}
+}
+
+func (m *Storage) GetAttributes() []Attribute {
+	if m != nil {
+		return m.Attributes
+	}
+	return nil
+}
+
+// ResourceUnits describes all available resources types for deployment/node etc
+// if field is nil resource is not present in the given data-structure
+type ResourceUnits struct {
+	CPU     *CPU     `protobuf:"bytes,1,opt,name=CPU,proto3" json:"cpu,omitempty" yaml:"cpu,omitempty"`
+	Memory  *Memory  `protobuf:"bytes,2,opt,name=memory,proto3" json:"memory,omitempty" yaml:"memory,omitempty"`
+	Storage *Storage `protobuf:"bytes,3,opt,name=storage,proto3" json:"storage,omitempty" yaml:"storage,omitempty"`
+}
+
+func (m *ResourceUnits) Reset()         { *m = ResourceUnits{} }
+func (m *ResourceUnits) String() string { return proto.CompactTextString(m) }
+func (*ResourceUnits) ProtoMessage()    {}
+func (*ResourceUnits) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c018ae61a1e1b59b, []int{3}
+}
+func (m *ResourceUnits) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ResourceUnits) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ResourceUnits.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ResourceUnits) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ResourceUnits.Merge(m, src)
+}
+func (m *ResourceUnits) XXX_Size() int {
+	return m.Size()
+}
+func (m *ResourceUnits) XXX_DiscardUnknown() {
+	xxx_messageInfo_ResourceUnits.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ResourceUnits proto.InternalMessageInfo
+
+func (m *ResourceUnits) GetCPU() *CPU {
 	if m != nil {
 		return m.CPU
 	}
-	return 0
+	return nil
 }
 
-func (m *Unit) GetMemory() uint64 {
+func (m *ResourceUnits) GetMemory() *Memory {
 	if m != nil {
 		return m.Memory
 	}
-	return 0
+	return nil
 }
 
-func (m *Unit) GetStorage() uint64 {
+func (m *ResourceUnits) GetStorage() *Storage {
 	if m != nil {
 		return m.Storage
 	}
-	return 0
+	return nil
 }
 
 func init() {
-	proto.RegisterType((*Unit)(nil), "akash.base.v1beta1.Unit")
+	proto.RegisterType((*CPU)(nil), "akash.base.v1beta1.CPU")
+	proto.RegisterType((*Memory)(nil), "akash.base.v1beta1.Memory")
+	proto.RegisterType((*Storage)(nil), "akash.base.v1beta1.Storage")
+	proto.RegisterType((*ResourceUnits)(nil), "akash.base.v1beta1.ResourceUnits")
 }
 
 func init() { proto.RegisterFile("akash/base/v1beta1/resource.proto", fileDescriptor_c018ae61a1e1b59b) }
 
 var fileDescriptor_c018ae61a1e1b59b = []byte{
-	// 270 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x52, 0x4c, 0xcc, 0x4e, 0x2c,
-	0xce, 0xd0, 0x4f, 0x4a, 0x2c, 0x4e, 0xd5, 0x2f, 0x33, 0x4c, 0x4a, 0x2d, 0x49, 0x34, 0xd4, 0x2f,
-	0x4a, 0x2d, 0xce, 0x2f, 0x2d, 0x4a, 0x4e, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x12, 0x02,
-	0x2b, 0xd1, 0x03, 0x29, 0xd1, 0x83, 0x2a, 0x91, 0x12, 0x49, 0xcf, 0x4f, 0xcf, 0x07, 0x4b, 0xeb,
-	0x83, 0x58, 0x10, 0x95, 0x4a, 0xab, 0x18, 0xb9, 0x58, 0x42, 0xf3, 0x32, 0x4b, 0x84, 0xf4, 0xb8,
-	0x98, 0x93, 0x0b, 0x4a, 0x25, 0x18, 0x15, 0x18, 0x35, 0x78, 0x9d, 0x64, 0x1e, 0xdd, 0x93, 0x67,
-	0x76, 0x0e, 0x08, 0x7d, 0x75, 0x4f, 0x1e, 0x24, 0xfa, 0xe9, 0x9e, 0x3c, 0x57, 0x65, 0x62, 0x6e,
-	0x8e, 0x95, 0x52, 0x72, 0x41, 0xa9, 0x52, 0x10, 0x48, 0x48, 0xc8, 0x98, 0x8b, 0x2d, 0x37, 0x35,
-	0x37, 0xbf, 0xa8, 0x52, 0x82, 0x49, 0x81, 0x51, 0x83, 0xc5, 0x49, 0xfa, 0xd5, 0x3d, 0x79, 0xa8,
-	0xc8, 0xa7, 0x7b, 0xf2, 0xbc, 0x10, 0xe5, 0x10, 0xbe, 0x52, 0x10, 0x54, 0x42, 0xc8, 0x9c, 0x8b,
-	0xbd, 0xb8, 0x24, 0xbf, 0x28, 0x31, 0x3d, 0x55, 0x82, 0x19, 0xac, 0x4b, 0xf6, 0xd5, 0x3d, 0x79,
-	0x98, 0xd0, 0xa7, 0x7b, 0xf2, 0x7c, 0x10, 0x6d, 0x50, 0x01, 0xa5, 0x20, 0x98, 0x94, 0x15, 0xcb,
-	0x8b, 0x05, 0xf2, 0x8c, 0x4e, 0xe6, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24, 0xc7, 0xf8, 0xe0,
-	0x91, 0x1c, 0xe3, 0x84, 0xc7, 0x72, 0x0c, 0x17, 0x1e, 0xcb, 0x31, 0xdc, 0x78, 0x2c, 0xc7, 0x10,
-	0x25, 0x9b, 0x9e, 0x59, 0x92, 0x51, 0x9a, 0xa4, 0x97, 0x9c, 0x9f, 0xab, 0x9f, 0x5f, 0x56, 0x94,
-	0x9c, 0x93, 0xad, 0x0f, 0x09, 0xa5, 0x92, 0xca, 0x82, 0xd4, 0xe2, 0x24, 0x36, 0xb0, 0x67, 0x8d,
-	0x01, 0x01, 0x00, 0x00, 0xff, 0xff, 0xb6, 0xdb, 0xfd, 0x7b, 0x3b, 0x01, 0x00, 0x00,
+	// 454 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x94, 0xc1, 0x8a, 0xd3, 0x40,
+	0x18, 0xc7, 0x33, 0x6d, 0xed, 0xca, 0x94, 0x05, 0x0d, 0x85, 0x0d, 0x59, 0x36, 0xd9, 0x9d, 0x83,
+	0xec, 0x41, 0x13, 0x76, 0x57, 0x11, 0x16, 0x3c, 0x98, 0x3d, 0x0b, 0x4b, 0xa4, 0x22, 0x7b, 0x9b,
+	0x84, 0x21, 0x1b, 0x36, 0xe9, 0xc4, 0xcc, 0xa4, 0x10, 0x9f, 0xc2, 0x47, 0xf0, 0x4d, 0xbc, 0x49,
+	0x8f, 0x3d, 0x7a, 0x8a, 0xa5, 0xbd, 0x48, 0x8f, 0x7d, 0x02, 0xc9, 0xcc, 0xb4, 0xb5, 0x35, 0x8a,
+	0x37, 0x61, 0x6f, 0x49, 0xe6, 0xff, 0xff, 0xff, 0xbe, 0x2f, 0xdf, 0xc7, 0xc0, 0x13, 0x7c, 0x87,
+	0xd9, 0xad, 0x1b, 0x60, 0x46, 0xdc, 0xd1, 0x59, 0x40, 0x38, 0x3e, 0x73, 0x73, 0xc2, 0x68, 0x91,
+	0x87, 0xc4, 0xc9, 0x72, 0xca, 0xa9, 0xae, 0x0b, 0x89, 0x53, 0x4b, 0x1c, 0x25, 0x31, 0xfb, 0x11,
+	0x8d, 0xa8, 0x38, 0x76, 0xeb, 0x27, 0xa9, 0x34, 0x51, 0x43, 0x18, 0xe6, 0x3c, 0x8f, 0x83, 0x82,
+	0xab, 0x34, 0xf3, 0xc9, 0x5f, 0x80, 0x23, 0x9c, 0x14, 0x4a, 0x87, 0xbe, 0x00, 0xd8, 0xbe, 0xba,
+	0x1e, 0xe8, 0xaf, 0xe0, 0x83, 0x62, 0x18, 0x73, 0x66, 0x80, 0x63, 0x70, 0xda, 0x3b, 0x3f, 0x71,
+	0x7e, 0xaf, 0xc6, 0xf1, 0x95, 0xff, 0x5d, 0xed, 0xf7, 0x3a, 0xe3, 0xca, 0xd6, 0x7c, 0xe9, 0xd2,
+	0x19, 0x84, 0xeb, 0x0a, 0x98, 0xd1, 0x3a, 0x6e, 0x9f, 0xf6, 0xce, 0x8f, 0x9a, 0x32, 0x5e, 0xaf,
+	0x54, 0xde, 0xf3, 0xda, 0xbf, 0xa8, 0xec, 0xfe, 0xc6, 0xf8, 0x94, 0xa6, 0x31, 0x27, 0x69, 0xc6,
+	0xcb, 0x65, 0x65, 0xf7, 0x4b, 0x9c, 0x26, 0x97, 0x28, 0xcc, 0x8a, 0xcd, 0x67, 0xe4, 0xff, 0x82,
+	0xb9, 0xec, 0xfc, 0xf8, 0x6c, 0x03, 0xf4, 0x1d, 0xc0, 0xee, 0x1b, 0x92, 0xd2, 0xbc, 0xd4, 0x6f,
+	0xe0, 0xc3, 0x0f, 0x05, 0x1e, 0xf2, 0x98, 0x97, 0xff, 0xde, 0xc7, 0xa1, 0xaa, 0xa3, 0xc3, 0xe2,
+	0x8f, 0x64, 0x59, 0xd9, 0x3d, 0xc9, 0xad, 0xdf, 0x90, 0xbf, 0xce, 0xfb, 0x9f, 0x1d, 0x4e, 0x01,
+	0xdc, 0x7b, 0xcb, 0x69, 0x8e, 0x23, 0x72, 0x5f, 0x5b, 0xfc, 0xda, 0x82, 0xfb, 0xab, 0x9a, 0x07,
+	0x62, 0xa3, 0xde, 0x8b, 0xbd, 0x54, 0x3d, 0x1e, 0x34, 0x55, 0x71, 0x75, 0x3d, 0xf0, 0x9e, 0x8d,
+	0x2b, 0x1b, 0x2c, 0x2a, 0x7b, 0x7f, 0x8b, 0xf0, 0x47, 0xb0, 0x58, 0xf5, 0x08, 0x76, 0x53, 0xb1,
+	0x2f, 0x46, 0x4b, 0x84, 0x9b, 0x4d, 0xe1, 0x72, 0xa3, 0xbc, 0x0b, 0x95, 0xff, 0x48, 0x3a, 0xb6,
+	0x10, 0x07, 0x12, 0xb1, 0x7b, 0x82, 0x7c, 0x15, 0xaf, 0x27, 0x70, 0x8f, 0xc9, 0xb1, 0x19, 0x6d,
+	0x41, 0x3a, 0x6c, 0x22, 0xa9, 0xc9, 0x7a, 0x2f, 0x14, 0xea, 0xb1, 0xf2, 0x6c, 0xb1, 0x0c, 0x35,
+	0xb1, 0xdd, 0x23, 0xe4, 0xaf, 0x10, 0xf2, 0x47, 0x7a, 0x2f, 0xc7, 0x33, 0x0b, 0x4c, 0x66, 0x16,
+	0x98, 0xce, 0x2c, 0xf0, 0x69, 0x6e, 0x69, 0x93, 0xb9, 0xa5, 0x7d, 0x9b, 0x5b, 0xda, 0xcd, 0x51,
+	0x14, 0xf3, 0xdb, 0x22, 0x70, 0x42, 0x9a, 0xba, 0x74, 0x94, 0x87, 0xc9, 0x9d, 0x2b, 0xef, 0x08,
+	0x5e, 0x66, 0x84, 0x05, 0x5d, 0x71, 0x1f, 0x5c, 0xfc, 0x0c, 0x00, 0x00, 0xff, 0xff, 0xcb, 0xbe,
+	0x65, 0x36, 0xaa, 0x04, 0x00, 0x00,
 }
 
-func (this *Unit) Equal(that interface{}) bool {
+func (this *CPU) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Unit)
+	that1, ok := that.(*CPU)
 	if !ok {
-		that2, ok := that.(Unit)
+		that2, ok := that.(CPU)
 		if ok {
 			that1 = &that2
 		} else {
@@ -130,18 +302,114 @@ func (this *Unit) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.CPU != that1.CPU {
+	if !this.Units.Equal(&that1.Units) {
 		return false
 	}
-	if this.Memory != that1.Memory {
+	if len(this.Attributes) != len(that1.Attributes) {
 		return false
 	}
-	if this.Storage != that1.Storage {
+	for i := range this.Attributes {
+		if !this.Attributes[i].Equal(&that1.Attributes[i]) {
+			return false
+		}
+	}
+	return true
+}
+func (this *Memory) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Memory)
+	if !ok {
+		that2, ok := that.(Memory)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.Quantity.Equal(&that1.Quantity) {
+		return false
+	}
+	if len(this.Attributes) != len(that1.Attributes) {
+		return false
+	}
+	for i := range this.Attributes {
+		if !this.Attributes[i].Equal(&that1.Attributes[i]) {
+			return false
+		}
+	}
+	return true
+}
+func (this *Storage) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Storage)
+	if !ok {
+		that2, ok := that.(Storage)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.Quantity.Equal(&that1.Quantity) {
+		return false
+	}
+	if len(this.Attributes) != len(that1.Attributes) {
+		return false
+	}
+	for i := range this.Attributes {
+		if !this.Attributes[i].Equal(&that1.Attributes[i]) {
+			return false
+		}
+	}
+	return true
+}
+func (this *ResourceUnits) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*ResourceUnits)
+	if !ok {
+		that2, ok := that.(ResourceUnits)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.CPU.Equal(that1.CPU) {
+		return false
+	}
+	if !this.Memory.Equal(that1.Memory) {
+		return false
+	}
+	if !this.Storage.Equal(that1.Storage) {
 		return false
 	}
 	return true
 }
-func (m *Unit) Marshal() (dAtA []byte, err error) {
+func (m *CPU) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -151,30 +419,192 @@ func (m *Unit) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Unit) MarshalTo(dAtA []byte) (int, error) {
+func (m *CPU) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *Unit) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *CPU) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Storage != 0 {
-		i = encodeVarintResource(dAtA, i, uint64(m.Storage))
-		i--
-		dAtA[i] = 0x18
+	if len(m.Attributes) > 0 {
+		for iNdEx := len(m.Attributes) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Attributes[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintResource(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
 	}
-	if m.Memory != 0 {
-		i = encodeVarintResource(dAtA, i, uint64(m.Memory))
-		i--
-		dAtA[i] = 0x10
+	{
+		size, err := m.Units.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintResource(dAtA, i, uint64(size))
 	}
-	if m.CPU != 0 {
-		i = encodeVarintResource(dAtA, i, uint64(m.CPU))
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *Memory) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Memory) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Memory) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Attributes) > 0 {
+		for iNdEx := len(m.Attributes) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Attributes[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintResource(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	{
+		size, err := m.Quantity.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintResource(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *Storage) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Storage) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Storage) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Attributes) > 0 {
+		for iNdEx := len(m.Attributes) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Attributes[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintResource(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	{
+		size, err := m.Quantity.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintResource(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *ResourceUnits) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ResourceUnits) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ResourceUnits) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Storage != nil {
+		{
+			size, err := m.Storage.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintResource(dAtA, i, uint64(size))
+		}
 		i--
-		dAtA[i] = 0x8
+		dAtA[i] = 0x1a
+	}
+	if m.Memory != nil {
+		{
+			size, err := m.Memory.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintResource(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.CPU != nil {
+		{
+			size, err := m.CPU.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintResource(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -190,20 +620,74 @@ func encodeVarintResource(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *Unit) Size() (n int) {
+func (m *CPU) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.CPU != 0 {
-		n += 1 + sovResource(uint64(m.CPU))
+	l = m.Units.Size()
+	n += 1 + l + sovResource(uint64(l))
+	if len(m.Attributes) > 0 {
+		for _, e := range m.Attributes {
+			l = e.Size()
+			n += 1 + l + sovResource(uint64(l))
+		}
 	}
-	if m.Memory != 0 {
-		n += 1 + sovResource(uint64(m.Memory))
+	return n
+}
+
+func (m *Memory) Size() (n int) {
+	if m == nil {
+		return 0
 	}
-	if m.Storage != 0 {
-		n += 1 + sovResource(uint64(m.Storage))
+	var l int
+	_ = l
+	l = m.Quantity.Size()
+	n += 1 + l + sovResource(uint64(l))
+	if len(m.Attributes) > 0 {
+		for _, e := range m.Attributes {
+			l = e.Size()
+			n += 1 + l + sovResource(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *Storage) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.Quantity.Size()
+	n += 1 + l + sovResource(uint64(l))
+	if len(m.Attributes) > 0 {
+		for _, e := range m.Attributes {
+			l = e.Size()
+			n += 1 + l + sovResource(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *ResourceUnits) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.CPU != nil {
+		l = m.CPU.Size()
+		n += 1 + l + sovResource(uint64(l))
+	}
+	if m.Memory != nil {
+		l = m.Memory.Size()
+		n += 1 + l + sovResource(uint64(l))
+	}
+	if m.Storage != nil {
+		l = m.Storage.Size()
+		n += 1 + l + sovResource(uint64(l))
 	}
 	return n
 }
@@ -214,7 +698,7 @@ func sovResource(x uint64) (n int) {
 func sozResource(x uint64) (n int) {
 	return sovResource(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *Unit) Unmarshal(dAtA []byte) error {
+func (m *CPU) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -237,17 +721,377 @@ func (m *Unit) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Unit: wiretype end group for non-group")
+			return fmt.Errorf("proto: CPU: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Unit: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: CPU: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 0 {
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Units", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowResource
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthResource
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthResource
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Units.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Attributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowResource
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthResource
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthResource
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Attributes = append(m.Attributes, Attribute{})
+			if err := m.Attributes[len(m.Attributes)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipResource(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthResource
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthResource
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Memory) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowResource
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Memory: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Memory: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Quantity", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowResource
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthResource
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthResource
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Quantity.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Attributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowResource
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthResource
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthResource
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Attributes = append(m.Attributes, Attribute{})
+			if err := m.Attributes[len(m.Attributes)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipResource(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthResource
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthResource
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Storage) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowResource
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Storage: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Storage: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Quantity", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowResource
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthResource
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthResource
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Quantity.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Attributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowResource
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthResource
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthResource
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Attributes = append(m.Attributes, Attribute{})
+			if err := m.Attributes[len(m.Attributes)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipResource(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthResource
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthResource
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ResourceUnits) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowResource
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ResourceUnits: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ResourceUnits: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CPU", wireType)
 			}
-			m.CPU = 0
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowResource
@@ -257,16 +1101,33 @@ func (m *Unit) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.CPU |= uint32(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			if msglen < 0 {
+				return ErrInvalidLengthResource
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthResource
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.CPU == nil {
+				m.CPU = &CPU{}
+			}
+			if err := m.CPU.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		case 2:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Memory", wireType)
 			}
-			m.Memory = 0
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowResource
@@ -276,16 +1137,33 @@ func (m *Unit) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Memory |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			if msglen < 0 {
+				return ErrInvalidLengthResource
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthResource
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Memory == nil {
+				m.Memory = &Memory{}
+			}
+			if err := m.Memory.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		case 3:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Storage", wireType)
 			}
-			m.Storage = 0
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowResource
@@ -295,11 +1173,28 @@ func (m *Unit) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Storage |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			if msglen < 0 {
+				return ErrInvalidLengthResource
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthResource
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Storage == nil {
+				m.Storage = &Storage{}
+			}
+			if err := m.Storage.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipResource(dAtA[iNdEx:])

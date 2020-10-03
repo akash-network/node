@@ -3,9 +3,10 @@ package sdl
 import (
 	"testing"
 
-	"github.com/ovrclk/akash/types/unit"
 	"github.com/stretchr/testify/assert"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
+
+	"github.com/ovrclk/akash/types/unit"
 )
 
 func TestCPUQuantity(t *testing.T) {
@@ -35,7 +36,7 @@ func TestCPUQuantity(t *testing.T) {
 		buf := []byte(test.text)
 		obj := &vtype{}
 
-		err := yaml.UnmarshalStrict(buf, obj)
+		err := yaml.Unmarshal(buf, obj)
 
 		if test.err {
 			assert.Error(t, err, "idx:%v text:`%v`", idx, test.text)
@@ -82,7 +83,7 @@ func TestByteQuantity(t *testing.T) {
 		buf := []byte(test.text)
 		obj := &vtype{}
 
-		err := yaml.UnmarshalStrict(buf, obj)
+		err := yaml.Unmarshal(buf, obj)
 
 		if test.err {
 			assert.Error(t, err, "idx:%v text:`%v`", idx, test.text)

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/validation"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -66,7 +67,7 @@ func (o Order) Price() sdk.Coin {
 }
 
 // MatchAttributes method compares provided attributes with specific order attributes
-func (o Order) MatchAttributes(attrs []sdk.Attribute) bool {
+func (o Order) MatchAttributes(attrs []types.Attribute) bool {
 	return o.Spec.MatchAttributes(attrs)
 }
 

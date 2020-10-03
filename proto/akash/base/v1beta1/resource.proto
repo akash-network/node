@@ -2,24 +2,68 @@ syntax = "proto3";
 package akash.base.v1beta1;
 
 import "gogoproto/gogo.proto";
+import "akash/base/v1beta1/attribute.proto";
+import "akash/base/v1beta1/resourcevalue.proto";
 
 option go_package = "github.com/ovrclk/akash/types";
 
-// Unit stores cpu, memory and storage metrics
-message Unit {
-    option (gogoproto.equal) = true;
+message CPU {
+  option (gogoproto.equal) = true;
+  ResourceValue units = 1 [
+    (gogoproto.nullable) = false
+  ];
+  repeated Attribute attributes = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "attributes,omitempty",
+    (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
+  ];
+}
 
-    uint32 cpu = 1 [
-        (gogoproto.customname) = "CPU",
-        (gogoproto.jsontag)    = "cpu",
-        (gogoproto.moretags)   = "yaml:\"cpu\""
-    ];
-    uint64 memory = 2 [
-        (gogoproto.jsontag)    = "memory",
-        (gogoproto.moretags)   = "yaml:\"memory\""
-    ];
-    uint64 storage = 3 [
-        (gogoproto.jsontag)    = "storage",
-        (gogoproto.moretags)   = "yaml:\"storage\""
-    ];
+message Memory {
+  option (gogoproto.equal) = true;
+  ResourceValue quantity = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "size",
+    (gogoproto.moretags) = "yaml:\"size\""
+  ];
+  repeated Attribute attributes = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "attributes,omitempty",
+    (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
+  ];
+}
+
+message Storage {
+  option (gogoproto.equal) = true;
+  ResourceValue quantity = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "size",
+    (gogoproto.moretags) = "yaml:\"size\""
+  ];
+  repeated Attribute attributes = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "attributes,omitempty",
+    (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
+  ];
+}
+
+// ResourceUnits describes all available resources types for deployment/node etc
+// if field is nil resource is not present in the given data-structure
+message ResourceUnits {
+  option (gogoproto.equal) = true;
+  CPU CPU = 1 [
+    (gogoproto.nullable) = true,
+    (gogoproto.jsontag) = "cpu,omitempty",
+    (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
+  ];
+  Memory memory = 2 [
+    (gogoproto.nullable) = true,
+    (gogoproto.jsontag) = "memory,omitempty",
+    (gogoproto.moretags) = "yaml:\"memory,omitempty\""
+  ];
+  Storage storage = 3 [
+    (gogoproto.nullable) = true,
+    (gogoproto.jsontag) = "storage,omitempty",
+    (gogoproto.moretags) = "yaml:\"storage,omitempty\""
+  ];
 }

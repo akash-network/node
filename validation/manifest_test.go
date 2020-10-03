@@ -3,22 +3,46 @@ package validation_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/validation"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
-	randCPU1    uint32 = 10
-	randCPU2    uint32 = 5
+	randCPU1    uint64 = 10
+	randCPU2    uint64 = 5
 	randMemory  uint64 = 20
 	randStorage uint64 = 5
 )
 
-func Test_ValidateManifest(t *testing.T) {
+var randUnits1 = types.ResourceUnits{
+	CPU: &types.CPU{
+		Units: types.NewResourceValue(randCPU1),
+	},
+	Memory: &types.Memory{
+		Quantity: types.NewResourceValue(randMemory),
+	},
+	Storage: &types.Storage{
+		Quantity: types.NewResourceValue(randStorage),
+	},
+}
 
+var randUnits2 = types.ResourceUnits{
+	CPU: &types.CPU{
+		Units: types.NewResourceValue(randCPU2),
+	},
+	Memory: &types.Memory{
+		Quantity: types.NewResourceValue(randMemory),
+	},
+	Storage: &types.Storage{
+		Quantity: types.NewResourceValue(randStorage),
+	},
+}
+
+func Test_ValidateManifest(t *testing.T) {
 	tests := []struct {
 		name    string
 		ok      bool
@@ -38,13 +62,9 @@ func Test_ValidateManifest(t *testing.T) {
 					Name: "foo",
 					Services: []manifest.Service{
 						{
-							Name: "svc1",
-							Unit: types.Unit{
-								CPU:     randCPU1,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 3,
+							Name:      "svc1",
+							Resources: randUnits1,
+							Count:     3,
 						},
 					},
 				},
@@ -54,12 +74,8 @@ func Test_ValidateManifest(t *testing.T) {
 					Name: "foo",
 					Resources: []dtypes.Resource{
 						{
-							Unit: types.Unit{
-								CPU:     randCPU1,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 3,
+							Resources: randUnits1,
+							Count:     3,
 						},
 					},
 				},
@@ -74,22 +90,14 @@ func Test_ValidateManifest(t *testing.T) {
 					Name: "foo",
 					Services: []manifest.Service{
 						{
-							Name: "svc1",
-							Unit: types.Unit{
-								CPU:     randCPU1,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 1,
+							Name:      "svc1",
+							Resources: randUnits1,
+							Count:     1,
 						},
 						{
-							Name: "svc1",
-							Unit: types.Unit{
-								CPU:     randCPU1,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 2,
+							Name:      "svc1",
+							Resources: randUnits1,
+							Count:     2,
 						},
 					},
 				},
@@ -99,12 +107,8 @@ func Test_ValidateManifest(t *testing.T) {
 					Name: "foo",
 					Resources: []dtypes.Resource{
 						{
-							Unit: types.Unit{
-								CPU:     randCPU1,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 3,
+							Resources: randUnits1,
+							Count:     3,
 						},
 					},
 				},
@@ -119,13 +123,9 @@ func Test_ValidateManifest(t *testing.T) {
 					Name: "foo",
 					Services: []manifest.Service{
 						{
-							Name: "svc1",
-							Unit: types.Unit{
-								CPU:     randCPU1,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 3,
+							Name:      "svc1",
+							Resources: randUnits1,
+							Count:     3,
 						},
 					},
 				},
@@ -135,20 +135,12 @@ func Test_ValidateManifest(t *testing.T) {
 					Name: "foo",
 					Resources: []dtypes.Resource{
 						{
-							Unit: types.Unit{
-								CPU:     randCPU1,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 2,
+							Resources: randUnits1,
+							Count:     2,
 						},
 						{
-							Unit: types.Unit{
-								CPU:     randCPU1,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 1,
+							Resources: randUnits1,
+							Count:     1,
 						},
 					},
 				},
@@ -163,13 +155,9 @@ func Test_ValidateManifest(t *testing.T) {
 					Name: "foo-bad",
 					Services: []manifest.Service{
 						{
-							Name: "svc1",
-							Unit: types.Unit{
-								CPU:     randCPU1,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 3,
+							Name:      "svc1",
+							Resources: randUnits1,
+							Count:     3,
 						},
 					},
 				},
@@ -179,12 +167,8 @@ func Test_ValidateManifest(t *testing.T) {
 					Name: "foo",
 					Resources: []dtypes.Resource{
 						{
-							Unit: types.Unit{
-								CPU:     randCPU1,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 3,
+							Resources: randUnits1,
+							Count:     3,
 						},
 					},
 				},
@@ -199,13 +183,9 @@ func Test_ValidateManifest(t *testing.T) {
 					Name: "foo",
 					Services: []manifest.Service{
 						{
-							Name: "svc1",
-							Unit: types.Unit{
-								CPU:     randCPU2,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 3,
+							Name:      "svc1",
+							Resources: randUnits2,
+							Count:     3,
 						},
 					},
 				},
@@ -215,12 +195,8 @@ func Test_ValidateManifest(t *testing.T) {
 					Name: "foo",
 					Resources: []dtypes.Resource{
 						{
-							Unit: types.Unit{
-								CPU:     randCPU1,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 3,
+							Resources: randUnits1,
+							Count:     3,
 						},
 					},
 				},
@@ -235,13 +211,9 @@ func Test_ValidateManifest(t *testing.T) {
 					Name: "foo",
 					Services: []manifest.Service{
 						{
-							Name: "svc1",
-							Unit: types.Unit{
-								CPU:     randCPU2,
-								Memory:  randMemory,
-								Storage: randStorage,
-							},
-							Count: 3,
+							Name:      "svc1",
+							Resources: randUnits2,
+							Count:     3,
 						},
 					},
 				},
@@ -259,5 +231,4 @@ func Test_ValidateManifest(t *testing.T) {
 			assert.Error(t, err, test.name)
 		}
 	}
-
 }

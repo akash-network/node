@@ -3,8 +3,8 @@ package akash.deployment.v1beta1;
 
 import "gogoproto/gogo.proto";
 import "akash/base/v1beta1/resource.proto";
+import "akash/base/v1beta1/attribute.proto";
 import "cosmos/base/v1beta1/coin.proto";
-import "cosmos/base/abci/v1beta1/abci.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";
 
@@ -51,7 +51,7 @@ message GroupSpec {
         (gogoproto.jsontag)    = "name",
         (gogoproto.moretags)   = "yaml:\"name\""
     ];
-    repeated cosmos.base.abci.v1beta1.Attribute requirements = 2 [
+    repeated akash.base.v1beta1.Attribute requirements = 2 [
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "requirements",
         (gogoproto.moretags)   = "yaml:\"requirements\""
@@ -123,8 +123,8 @@ message Group {
 // Resource stores unit, total count and price of resource
 message Resource {
     option (gogoproto.equal) = true;
-    
-    akash.base.v1beta1.Unit unit = 1 [
+
+    akash.base.v1beta1.ResourceUnits resources = 1 [
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "unit",
         (gogoproto.moretags)   = "yaml:\"unit\""

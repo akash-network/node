@@ -2,7 +2,7 @@ syntax = "proto3";
 package akash.provider.v1beta1;
 
 import "gogoproto/gogo.proto";
-import "cosmos/base/abci/v1beta1/abci.proto";
+import "akash/base/v1beta1/attribute.proto";
 
 option go_package = "github.com/ovrclk/akash/x/provider/types";
 
@@ -20,7 +20,7 @@ message MsgCreateProvider {
         (gogoproto.jsontag)    = "host-uri",
         (gogoproto.moretags)   = "yaml:\"host-uri\""
     ];
-    repeated cosmos.base.abci.v1beta1.Attribute attributes = 3 [
+    repeated akash.base.v1beta1.Attribute attributes = 3 [
         (gogoproto.castrepeated) = "Attributes",
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "attributes",
@@ -42,7 +42,7 @@ message MsgUpdateProvider {
         (gogoproto.jsontag)    = "host-uri",
         (gogoproto.moretags)   = "yaml:\"host-uri\""
     ];
-    repeated cosmos.base.abci.v1beta1.Attribute attributes = 3 [
+    repeated akash.base.v1beta1.Attribute attributes = 3 [
         (gogoproto.castrepeated) = "Attributes",
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "attributes",
@@ -76,7 +76,7 @@ message Provider {
         (gogoproto.jsontag)    = "host-uri",
         (gogoproto.moretags)   = "yaml:\"host-uri\""
     ];
-    repeated cosmos.base.abci.v1beta1.Attribute attributes = 3 [
+    repeated akash.base.v1beta1.Attribute attributes = 3 [
         (gogoproto.castrepeated) = "Attributes",
         (gogoproto.nullable)   = false,
         (gogoproto.jsontag)    = "attributes",
