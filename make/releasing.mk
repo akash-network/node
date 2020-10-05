@@ -26,7 +26,7 @@ docker-image:
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
-		troian/golang-cross:${GOLANG_CROSS_VERSION} \
+		troian/golang-cross:${GOLANG_CROSS_VERSION}-linux-amd64 \
 		-f .goreleaser-docker.yaml --rm-dist --skip-validate --skip-publish --snapshot
 
 .PHONY: release-dry-run
