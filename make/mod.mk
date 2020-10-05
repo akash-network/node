@@ -1,11 +1,12 @@
 # Golang modules and vendoring
+
 .PHONY: deps-install
 deps-install:
 	$(GO) mod download
 
 .PHONY: deps-tidy
 deps-tidy:
-	$(GO) mod tid
+	$(GO) mod tidy
 
 .PHONY: deps-vendor
 deps-vendor:

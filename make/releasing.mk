@@ -41,7 +41,7 @@ release-dry-run: modvendor
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		troian/golang-cross:${GOLANG_CROSS_VERSION} \
-		--rm-dist --skip-validate --skip-publish
+		-f .goreleaser.yaml --rm-dist --skip-validate --skip-publish
 
 .PHONY: release
 release: modvendor
@@ -60,4 +60,4 @@ release: modvendor
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		troian/golang-cross:${GOLANG_CROSS_VERSION} \
-		release --rm-dist
+		-f .goreleaser.yaml release --rm-dist
