@@ -1,4 +1,6 @@
-FROM busybox:glibc
+ARG GOLANG_VERSION
+
+FROM golang:${GOLANG_VERSION}-buster
 
 COPY ./akash .
 

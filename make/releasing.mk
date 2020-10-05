@@ -23,6 +23,7 @@ docker-image:
 		-e MAINNET=$(MAINNET) \
 		-e BUILD_FLAGS="$(GORELEASER_FLAGS)" \
 		-e LD_FLAGS="$(GORELEASER_LD_FLAGS)" \
+		-e GOLANG_VERSION="$(GOLANG_VERSION)" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
@@ -41,7 +42,7 @@ release-dry-run: modvendor
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		troian/golang-cross:${GOLANG_CROSS_VERSION} \
-		--rm-dist --skip-validate --skip-publish
+		-f .goreleaser.yaml --rm-dist --skip-validate --skip-publish
 
 .PHONY: release
 release: modvendor
@@ -60,4 +61,4 @@ release: modvendor
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		troian/golang-cross:${GOLANG_CROSS_VERSION} \
-		release --rm-dist
+		-f .goreleaser.yaml release --rm-dist
