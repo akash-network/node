@@ -1,5 +1,7 @@
-FROM busybox:glibc
+FROM golang:1.15.2-buster
 
 COPY ./akash .
 
 EXPOSE 26656 26657 26658
+
+
