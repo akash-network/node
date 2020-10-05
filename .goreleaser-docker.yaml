@@ -23,3 +23,6 @@ dockers:
     goarch: amd64
     image_templates:
       - "ovrclk/akash:latest"
+
+archives:
+  - format: binary
