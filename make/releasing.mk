@@ -23,6 +23,7 @@ docker-image:
 		-e MAINNET=$(MAINNET) \
 		-e BUILD_FLAGS="$(GORELEASER_FLAGS)" \
 		-e LD_FLAGS="$(GORELEASER_LD_FLAGS)" \
+		-e GOLANG_VERSION="$(GOLANG_VERSION)" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \

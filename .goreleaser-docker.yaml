@@ -23,6 +23,8 @@ dockers:
     goarch: amd64
     image_templates:
       - "ovrclk/akash:latest"
+    build_flag_templates:
+      - "--build-arg=GOLANG_VERSION={{.Env.GOLANG_VERSION}}"
 
 archives:
   - format: binary
