@@ -4,7 +4,7 @@ include ../common-commands.mk
 PROVIDER_HOSTNAME ?= http://localhost:8080
 
 provider-run:
-	$(AKASHCTL) provider run \
+	$(AKASHCTL) $(KEY_OPTS) provider run $(CHAIN_OPTS) \
 		--from "$(PROVIDER_KEY_NAME)"
 
 provider-status:
