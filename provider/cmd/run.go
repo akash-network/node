@@ -174,7 +174,12 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return gateway.Close()
 	})
 
-	return group.Wait()
+	err = group.Wait()
+	if err != nil && !errors.Is(err, context.Canceled) {
+		return err
+	}
+
+	return nil
 }
 
 func openLogger() log.Logger {
