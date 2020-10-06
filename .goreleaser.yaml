@@ -26,9 +26,11 @@ builds:
       - linux
     flags:
       - -mod=readonly
+      - -a
       - "{{ .Env.BUILD_FLAGS }}"
     ldflags:
       - "{{ .Env.LD_FLAGS }}"
+      - -extldflags "-lc -lrt -lpthread --static"
   - id: akash-linux-arm64
     binary: akash
     main: ./cmd/akash
@@ -41,9 +43,11 @@ builds:
       - CXX=aarch64-linux-gnu-g++
     flags:
       - -mod=readonly
+      - -a
       - "{{ .Env.BUILD_FLAGS }}"
     ldflags:
       - "{{ .Env.LD_FLAGS }}"
+      - -extldflags "-lc -lrt -lpthread --static"
   - id: akash-windows-amd64
     binary: akash
     main: ./cmd/akash

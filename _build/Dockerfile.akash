@@ -1,7 +1,5 @@
-ARG GOLANG_VERSION
+FROM debian:buster
 
-FROM golang:${GOLANG_VERSION}-buster
-
-COPY ./akash .
+COPY ./akash /bin/
 
 EXPOSE 26656 26657 26658
