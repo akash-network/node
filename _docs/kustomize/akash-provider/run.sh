@@ -15,10 +15,10 @@ set -e
 ##
 # Import key
 ##
-/akashctl keys import "$AKASHCTL_FROM" \
+/akash --home=$AKASH_HOME keys import "$AKASHCTL_FROM" \
   "$AKASHCTL_BOOT_KEYS/key.txt" < "$AKASHCTL_BOOT_KEYS/key-pass.txt"
 
 ##
 # Run daemon
 ##
-/akashctl provider run --cluster-k8s
+/akash --home=$AKASH_HOME provider run --cluster-k8s
