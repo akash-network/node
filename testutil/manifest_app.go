@@ -35,10 +35,16 @@ func (mg manifestGeneratorApp) Service(t testing.TB) manifest.Service {
 	return manifest.Service{
 		Name:  "demo",
 		Image: "ropes/akash-app:v1",
-		Unit: types.Unit{
-			CPU:     100,
-			Memory:  128 * unit.Mi,
-			Storage: 256 * unit.Mi,
+		Resources: types.ResourceUnits{
+			CPU: &types.CPU{
+				Units: types.NewResourceValue(100),
+			},
+			Memory: &types.Memory{
+				Quantity: types.NewResourceValue(128 * unit.Mi),
+			},
+			Storage: &types.Storage{
+				Quantity: types.NewResourceValue(256 * unit.Mi),
+			},
 		},
 		Count: 1,
 		Expose: []manifest.ServiceExpose{

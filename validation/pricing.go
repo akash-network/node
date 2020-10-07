@@ -11,7 +11,6 @@ import (
 )
 
 func validateGroupPricing(config ValConfig, gspec dtypes.GroupSpec) error {
-
 	var price sdk.Coin
 
 	mem := sdk.NewInt(0)
@@ -31,13 +30,15 @@ func validateGroupPricing(config ValConfig, gspec dtypes.GroupSpec) error {
 			price = price.Add(rprice)
 		}
 
-		mem = mem.Add(
-			sdk.NewIntFromUint64(resource.Unit.Memory).
-				Mul(sdk.NewIntFromUint64(uint64(resource.Count))))
+		memCount := sdk.NewInt(0)
+		if u := resource.Resources.Memory; u != nil {
+			memCount.Add(sdk.NewIntFromUint64(u.Quantity.Value()))
+		}
+
+		mem = mem.Add(memCount.Mul(sdk.NewIntFromUint64(uint64(resource.Count))))
 	}
 
-	minprice := mem.Mul(sdk.NewInt(config.MinGroupMemPrice)).
-		Quo(sdk.NewInt(unit.Gi))
+	minprice := mem.Mul(sdk.NewInt(config.MinGroupMemPrice)).Quo(sdk.NewInt(unit.Gi))
 
 	if price.Amount.LT(minprice) {
 		return errors.Errorf("group %v: price too low (%v >= %v fails)", gspec.GetName(), price, minprice)
@@ -57,6 +58,7 @@ func validateUnitPricing(config ValConfig, rg dtypes.Resource) error {
 	if rg.Price.Amount.GT(sdk.NewIntFromUint64(uint64(config.MaxUnitPrice))) {
 		return errors.Errorf("error: invalid unit price (%v < %v fails)", config.MinUnitPrice, rg.Price)
 	}
+
 	return nil
 }
 

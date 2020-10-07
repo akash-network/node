@@ -1,5 +1,5 @@
-FROM busybox:glibc
+FROM debian:buster
 
-COPY ./akash .
+COPY ./akash /bin/
 
 EXPOSE 26656 26657 26658

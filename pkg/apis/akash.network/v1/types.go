@@ -1,11 +1,14 @@
 package v1
 
 import (
+	"math"
 	"strconv"
 
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
@@ -36,6 +39,8 @@ type ManifestSpec struct {
 	Group   ManifestGroup `json:"group"`
 }
 
+// type ResourceUnits types.ResourceUnits
+
 // Deployment returns the cluster.Deployment that the saved manifest represents.
 func (m Manifest) Deployment() (cluster.Deployment, error) {
 	lid, err := m.Spec.LeaseID.toAkash()
@@ -65,6 +70,11 @@ func (d deployment) ManifestGroup() manifest.Group {
 
 // NewManifest creates new manifest with provided details. Returns error incase of failure.
 func NewManifest(name string, lid mtypes.LeaseID, mgroup *manifest.Group) (*Manifest, error) {
+	group, err := manifestGroupFromAkash(mgroup)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Manifest{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Manifest",
@@ -74,7 +84,7 @@ func NewManifest(name string, lid mtypes.LeaseID, mgroup *manifest.Group) (*Mani
 			Name: name,
 		},
 		Spec: ManifestSpec{
-			Group:   manifestGroupFromAkash(mgroup),
+			Group:   group,
 			LeaseID: leaseIDFromAkash(lid),
 		},
 	}, nil
@@ -153,17 +163,22 @@ func (m ManifestGroup) toAkash() (manifest.Group, error) {
 }
 
 // ManifestGroupFromAkash returns manifest group instance from akash group
-func manifestGroupFromAkash(m *manifest.Group) ManifestGroup {
+func manifestGroupFromAkash(m *manifest.Group) (ManifestGroup, error) {
 	ma := ManifestGroup{
 		Name:     m.Name,
 		Services: make([]ManifestService, 0, len(m.Services)),
 	}
 
 	for _, svc := range m.Services {
-		ma.Services = append(ma.Services, manifestServiceFromAkash(svc))
+		service, err := manifestServiceFromAkash(svc)
+		if err != nil {
+			return ManifestGroup{}, err
+		}
+
+		ma.Services = append(ma.Services, service)
 	}
 
-	return ma
+	return ma, nil
 }
 
 // ManifestService stores name, image, args, env, unit, count and expose list of service
@@ -175,7 +190,8 @@ type ManifestService struct {
 	Args  []string `json:"args,omitempty"`
 	Env   []string `json:"env,omitempty"`
 	// Resource requirements
-	Unit ResourceUnit `json:"unit"`
+	// in current version of CRD it is named as unit
+	Resources ResourceUnits `json:"unit"`
 	// Number of instances
 	Count uint32 `json:"count,omitempty"`
 	// Overlay Network Links
@@ -183,18 +199,19 @@ type ManifestService struct {
 }
 
 func (ms ManifestService) toAkash() (manifest.Service, error) {
-	unit, err := ms.Unit.toAkash()
+	res, err := ms.Resources.toAkash()
 	if err != nil {
 		return manifest.Service{}, err
 	}
+
 	ams := &manifest.Service{
-		Name:   ms.Name,
-		Image:  ms.Image,
-		Args:   ms.Args,
-		Env:    ms.Env,
-		Unit:   unit,
-		Count:  ms.Count,
-		Expose: make([]manifest.ServiceExpose, 0, len(ms.Expose)),
+		Name:      ms.Name,
+		Image:     ms.Image,
+		Args:      ms.Args,
+		Env:       ms.Env,
+		Resources: res,
+		Count:     ms.Count,
+		Expose:    make([]manifest.ServiceExpose, 0, len(ms.Expose)),
 	}
 
 	for _, expose := range ms.Expose {
@@ -204,22 +221,27 @@ func (ms ManifestService) toAkash() (manifest.Service, error) {
 	return *ams, nil
 }
 
-func manifestServiceFromAkash(ams manifest.Service) ManifestService {
+func manifestServiceFromAkash(ams manifest.Service) (ManifestService, error) {
+	resources, err := resourceUnitsFromAkash(ams.Resources)
+	if err != nil {
+		return ManifestService{}, err
+	}
+
 	ms := ManifestService{
-		Name:   ams.Name,
-		Image:  ams.Image,
-		Args:   ams.Args,
-		Env:    ams.Env,
-		Unit:   resourceUnitFromAkash(ams.Unit),
-		Count:  ams.Count,
-		Expose: make([]ManifestServiceExpose, 0, len(ams.Expose)),
+		Name:      ams.Name,
+		Image:     ams.Image,
+		Args:      ams.Args,
+		Env:       ams.Env,
+		Resources: resources,
+		Count:     ams.Count,
+		Expose:    make([]ManifestServiceExpose, 0, len(ams.Expose)),
 	}
 
 	for _, expose := range ams.Expose {
 		ms.Expose = append(ms.Expose, manifestServiceExposeFromAkash(expose))
 	}
 
-	return ms
+	return ms, nil
 }
 
 // ManifestServiceExpose stores exposed ports and accepted hosts details
@@ -255,36 +277,53 @@ func manifestServiceExposeFromAkash(amse manifest.ServiceExpose) ManifestService
 	}
 }
 
-// ResourceUnit stores cpu, memory and storage details
-type ResourceUnit struct {
+// ResourceUnits stores cpu, memory and storage details
+type ResourceUnits struct {
 	CPU     uint32 `json:"cpu,omitempty"`
 	Memory  string `json:"memory,omitempty"`
 	Storage string `json:"storage,omitempty"`
 }
 
-func (ru ResourceUnit) toAkash() (types.Unit, error) {
+func (ru ResourceUnits) toAkash() (types.ResourceUnits, error) {
 	memory, err := strconv.ParseUint(ru.Memory, 10, 64)
 	if err != nil {
-		return types.Unit{}, err
+		return types.ResourceUnits{}, err
 	}
 	storage, err := strconv.ParseUint(ru.Storage, 10, 64)
 	if err != nil {
-		return types.Unit{}, err
+		return types.ResourceUnits{}, err
 	}
 
-	return types.Unit{
-		CPU:     ru.CPU,
-		Memory:  memory,
-		Storage: storage,
+	return types.ResourceUnits{
+		CPU: &types.CPU{
+			Units: types.NewResourceValue(uint64(ru.CPU)),
+		},
+		Memory: &types.Memory{
+			Quantity: types.NewResourceValue(memory),
+		},
+		Storage: &types.Storage{
+			Quantity: types.NewResourceValue(storage),
+		},
 	}, nil
 }
 
-func resourceUnitFromAkash(aru types.Unit) ResourceUnit {
-	return ResourceUnit{
-		CPU:     aru.CPU,
-		Memory:  strconv.FormatUint(aru.Memory, 10),
-		Storage: strconv.FormatUint(aru.Storage, 10),
+func resourceUnitsFromAkash(aru types.ResourceUnits) (ResourceUnits, error) {
+	res := ResourceUnits{}
+	if aru.CPU != nil {
+		if aru.CPU.Units.Value() > math.MaxUint32 {
+			return ResourceUnits{}, errors.Errorf("k8s api: cpu units value overflows uint32")
+		}
+		res.CPU = uint32(aru.CPU.Units.Value())
 	}
+	if aru.Memory != nil {
+		res.Memory = strconv.FormatUint(aru.Memory.Quantity.Value(), 10)
+	}
+
+	if aru.Storage != nil {
+		res.Storage = strconv.FormatUint(aru.Storage.Quantity.Value(), 10)
+	}
+
+	return res, nil
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

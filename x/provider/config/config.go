@@ -3,19 +3,19 @@ package config
 import (
 	"io/ioutil"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"gopkg.in/yaml.v3"
 
-	"gopkg.in/yaml.v2"
+	"github.com/ovrclk/akash/types"
 )
 
 // Config is the struct that stores provider config
 type Config struct {
-	Host       string          `json:"host"`
-	Attributes []sdk.Attribute `json:"attributes"`
+	Host       string            `json:"host"`
+	Attributes []types.Attribute `json:"attributes"`
 }
 
 // GetAttributes returns config attributes into key value pairs
-func (c Config) GetAttributes() []sdk.Attribute {
+func (c Config) GetAttributes() []types.Attribute {
 	return c.Attributes
 }
 

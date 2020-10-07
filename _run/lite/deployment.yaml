@@ -1,5 +1,5 @@
 ---
-version: "1.5"
+version: "2.0"
 
 services:
   web:
@@ -13,9 +13,13 @@ profiles:
 
   compute:
     web:
-      cpu: "100m"
-      memory: "128Mi"
-      storage: "256Mi"
+      resources:
+        cpu:
+          units: "100m"
+        memory:
+          size: "128Mi"
+        storage:
+          size: "256Mi"
 
   placement:
     westcoast:

@@ -24,12 +24,12 @@ func (g Group) GetName() string {
 }
 
 // GetResources returns list of resources in a group
-func (g Group) GetResources() []types.Resource {
-	resources := make([]types.Resource, 0, len(g.Services))
+func (g Group) GetResources() []types.Resources {
+	resources := make([]types.Resources, 0, len(g.Services))
 	for _, s := range g.Services {
-		resources = append(resources, types.Resource{
-			Unit:  s.Unit,
-			Count: s.Count,
+		resources = append(resources, types.Resources{
+			Resources: s.Resources,
+			Count:     s.Count,
 		})
 	}
 	return resources
@@ -37,19 +37,19 @@ func (g Group) GetResources() []types.Resource {
 
 // Service stores name, image, args, env, unit, count and expose list of service
 type Service struct {
-	Name    string
-	Image   string
-	Command []string
-	Args    []string
-	Env     []string
-	Unit    types.Unit
-	Count   uint32
-	Expose  []ServiceExpose
+	Name      string
+	Image     string
+	Command   []string
+	Args      []string
+	Env       []string
+	Resources types.ResourceUnits
+	Count     uint32
+	Expose    []ServiceExpose
 }
 
-// GetUnit returns unit of service
-func (s Service) GetUnit() types.Unit {
-	return s.Unit
+// GetResourcesUnit returns resources unit of service
+func (s Service) GetResourceUnits() types.ResourceUnits {
+	return s.Resources
 }
 
 // GetCount returns count of service

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/boz/go-lifecycle"
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/ovrclk/akash/provider/event"
@@ -67,8 +67,7 @@ func newInventoryService(
 
 	reservations := make([]*reservation, 0, len(deployments))
 	for _, d := range deployments {
-		reservations = append(reservations,
-			newReservation(d.LeaseID().OrderID(), d.ManifestGroup()))
+		reservations = append(reservations, newReservation(d.LeaseID().OrderID(), d.ManifestGroup()))
 	}
 
 	go is.lc.WatchChannel(donech)
@@ -215,7 +214,6 @@ loop:
 
 		case req := <-is.reservech:
 			// create new registration if capacity available
-
 			reservation := newReservation(req.order, req.resources)
 
 			is.log.Debug("reservation requested", "order", req.order, "resources", req.resources)
@@ -266,7 +264,6 @@ loop:
 			req.ch <- inventoryResponse{err: errNotFound}
 
 		case ch := <-is.statusch:
-
 			ch <- is.getStatus(inventory, reservations)
 
 		case <-t.C:
@@ -320,21 +317,19 @@ func (is *inventoryService) runCheck(ctx context.Context) <-chan runner.Result {
 	})
 }
 
-func (is *inventoryService) getStatus(
-	inventory []Node, reservations []*reservation) InventoryStatus {
-
+func (is *inventoryService) getStatus(inventory []Node, reservations []*reservation) InventoryStatus {
 	status := InventoryStatus{}
+	for _, reserve := range reservations {
+		total := atypes.ResourceUnits{}
 
-	for _, reservation := range reservations {
-		total := atypes.Unit{}
-
-		for _, resource := range reservation.Resources().GetResources() {
-			total.CPU += resource.Unit.CPU
-			total.Memory += resource.Unit.Memory
-			total.Storage += resource.Unit.Storage
+		for _, resource := range reserve.Resources().GetResources() {
+			// 🤔
+			if total, status.Error = total.Add(resource.Resources); status.Error != nil {
+				return status
+			}
 		}
 
-		if reservation.allocated {
+		if reserve.allocated {
 			status.Active = append(status.Active, total)
 		} else {
 			status.Pending = append(status.Pending, total)
@@ -342,18 +337,13 @@ func (is *inventoryService) getStatus(
 	}
 
 	for _, node := range inventory {
-		status.Available = append(status.Available, atypes.Unit{
-			CPU:     node.Available().CPU,
-			Memory:  node.Available().Memory,
-			Storage: node.Available().Storage,
-		})
+		status.Available = append(status.Available, node.Available())
 	}
 
 	return status
 }
 
 func reservationAllocateable(inventory []Node, reservations []*reservation, newReservation *reservation) bool {
-
 	// 1. for each unallocated reservation, subtract its resources
 	//    from inventory.
 	// 2. subtract resources for new reservation from inventory.
@@ -377,33 +367,29 @@ func reservationAllocateable(inventory []Node, reservations []*reservation, newR
 }
 
 func reservationAdjustInventory(prevInventory []Node, reservation *reservation) ([]Node, bool) {
-
 	// for each node in the inventory
 	//   subtract resource capacity from node capacity if the former will fit in the latter
 	//   remove resource capacity that fit in node capacity from requested resource capacity
 	// return remaining inventory, true iff all resources were able to fit
 
-	resources := make([]atypes.Resource, len(reservation.resources.GetResources()))
+	resources := make([]atypes.Resources, len(reservation.resources.GetResources()))
 	copy(resources, reservation.resources.GetResources())
 
 	inventory := make([]Node, 0, len(prevInventory))
 
 	for _, node := range prevInventory {
 		available := node.Available()
-
 		curResources := resources[:0]
 
 		for _, resource := range resources {
-
 			for ; resource.Count > 0; resource.Count-- {
-				if available.CPU < resource.Unit.CPU ||
-					available.Memory < resource.Unit.Memory ||
-					available.Storage < resource.Unit.Storage {
+				var err error
+				var remaining atypes.ResourceUnits
+				if remaining, err = available.Sub(resource.Resources); err != nil {
 					break
 				}
-				available.CPU -= resource.Unit.CPU
-				available.Memory -= resource.Unit.Memory
-				available.Storage -= resource.Unit.Storage
+
+				available = remaining
 			}
 
 			if resource.Count > 0 {

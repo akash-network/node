@@ -37,17 +37,18 @@ type Client interface {
 // Node interface predefined with ID and Available methods
 type Node interface {
 	ID() string
-	Available() atypes.Unit
+	Available() atypes.ResourceUnits
+	Reserve(atypes.ResourceUnits) error
 }
 
 type node struct {
-	id        string
-	available atypes.Unit
+	id                 string
+	availableResources atypes.ResourceUnits
 }
 
 // NewNode returns new Node instance with provided details
-func NewNode(id string, available atypes.Unit) Node {
-	return &node{id: id, available: available}
+func NewNode(id string, available atypes.ResourceUnits) Node {
+	return &node{id: id, availableResources: available}
 }
 
 // ID returns id of node
@@ -55,9 +56,13 @@ func (n *node) ID() string {
 	return n.id
 }
 
+func (n *node) Reserve(atypes.ResourceUnits) error {
+	return nil
+}
+
 // Available returns available units of node
-func (n *node) Available() atypes.Unit {
-	return n.available
+func (n *node) Available() atypes.ResourceUnits {
+	return n.availableResources
 }
 
 // Deployment interface defined with LeaseID and ManifestGroup methods
@@ -152,10 +157,16 @@ func (c *nullClient) Deployments(ctx context.Context) ([]Deployment, error) {
 
 func (c *nullClient) Inventory(ctx context.Context) ([]Node, error) {
 	return []Node{
-		NewNode("solo", atypes.Unit{
-			CPU:     nullClientCPU,
-			Memory:  nullClientMemory,
-			Storage: nullClientStorage,
+		NewNode("solo", atypes.ResourceUnits{
+			CPU: &atypes.CPU{
+				Units: atypes.NewResourceValue(nullClientCPU),
+			},
+			Memory: &atypes.Memory{
+				Quantity: atypes.NewResourceValue(nullClientMemory),
+			},
+			Storage: &atypes.Storage{
+				Quantity: atypes.NewResourceValue(nullClientStorage),
+			},
 		}),
 	}, nil
 }

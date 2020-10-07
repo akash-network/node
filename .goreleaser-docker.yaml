@@ -9,12 +9,16 @@ builds:
       - amd64
     goos:
       - linux
+    env:
+      - CC=gcc
+      - CXX=g++
     flags:
       - -mod=readonly
+      - -a
       - "{{ .Env.BUILD_FLAGS }}"
     ldflags:
       - "{{ .Env.LD_FLAGS }}"
-
+      - -extldflags "-lc -lrt -lpthread --static"
 dockers:
   - binaries:
       - akash
@@ -23,3 +27,6 @@ dockers:
     goarch: amd64
     image_templates:
       - "ovrclk/akash:latest"
+
+archives:
+  - format: binary
