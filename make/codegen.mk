@@ -19,7 +19,7 @@ kubetypes: deps-vendor
 	akash.network:v1
 
 .PHONY: proto-gen
-proto-gen: $(PROTOC) $(GRPC_GATEWAY) modvendor
+proto-gen: $(PROTOC) $(GRPC_GATEWAY) modvendor proto-format
 	./script/protocgen.sh
 
 .PHONY: proto-swagger-gen
@@ -30,10 +30,10 @@ proto-swagger-gen: protoc-swagger
 update-swagger-docs: proto-swagger-gen
 	statik -src=client/docs -dest=client/docs -f -m
 	if [ -n "$(git status --porcelain)" ]; then \
-        echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
-        exit 1;\
-    else \
-    	echo "\033[92mSwagger docs are in sync\033[0m";\
+		echo "\033[91mSwagger docs are out of sync!!!\033[0m"; \
+		exit 1; \
+	else \
+		echo "\033[92mSwagger docs are in sync\033[0m"; \
 	fi
 
 .PHONY: codegen
