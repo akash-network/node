@@ -5,6 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -69,5 +70,10 @@ func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		}
 	})
 
-	return group.Wait()
+	err = group.Wait()
+	if err != nil && !errors.Is(err, context.Canceled) {
+		return err
+	}
+
+	return nil
 }
