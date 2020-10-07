@@ -50,6 +50,29 @@ $(MODVENDOR): $(CACHE)
 	@echo "installing modvendor..."
 	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor
 
+clang-format-install:
+ifeq (, $(shell which ${CLANG_FORMAT_BIN}))
+	@echo "Installing ${CLANG_FORMAT_BIN}..."
+ifeq ($(UNAME_OS),Darwin)
+	curl https://gist.githubusercontent.com/bvigueras/daf11aee6876fb9ba4c925c2c31bc04b/raw/ \
+	526ff0eebbc0476f568c852a8cc5d4cc48281475/clang-format@6.rb -o \
+	$(brew --repo)/Library/Taps/homebrew/homebrew-core/Formula/clang-format@6.rb
+	brew install clang-format@6
+endif
+ifeq ($(UNAME_OS),Linux)
+	if [ -e /etc/debian_version ]; then \
+		sudo apt-get install -y ${CLANG_FORMAT_BIN} ; \
+	elif [ -e /etc/fedora-release ]; then \
+		sudo dnf install clang; \
+	else \
+		echo -e "\tRun (as root): subscription-manager repos --enable rhel-7-server-devtools-rpms ; \
+		yum install llvm-toolset-7" >&2; \
+	fi;
+endif
+else
+	@echo "${CLANG_FORMAT_BIN} already installed; skipping..."
+endif
+
 kubetypes-deps-install:
 	if [ -d "$(shell go env GOPATH)/src/k8s.io/code-generator" ]; then    \
 		cd "$(shell go env GOPATH)/src/k8s.io/code-generator" && git pull;  \

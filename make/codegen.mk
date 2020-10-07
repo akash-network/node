@@ -19,7 +19,7 @@ kubetypes: deps-vendor
 	akash.network:v1
 
 .PHONY: proto-gen
-proto-gen: $(PROTOC) modvendor
+proto-gen: $(PROTOC) modvendor proto-format
 	./script/protocgen.sh
 
 .PHONY: codegen
