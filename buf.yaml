@@ -3,6 +3,8 @@ build:
     - ./proto
     - vendor/github.com/cosmos/cosmos-sdk/proto
     - vendor/github.com/cosmos/cosmos-sdk/third_party/proto
+  excludes:
+    - vendor/github.com/cosmos/cosmos-sdk/third_party/proto/google/protobuf
 lint:
   use:
     - DEFAULT
@@ -17,6 +19,8 @@ lint:
     - tendermint
     - gogoproto
     - cosmos_proto
+    - google
+    - confio
 breaking:
   use:
     - FILE
@@ -24,3 +28,5 @@ breaking:
     - tendermint
     - gogoproto
     - cosmos_proto
+    - google
+    - confio
