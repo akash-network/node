@@ -16,7 +16,6 @@ CACHE_BIN             := $(CACHE)/bin
 CACHE_INCLUDE         := $(CACHE)/include
 CACHE_VERSIONS        := $(CACHE)/versions
 
-BUF_VERSION           ?= 0.20.5
 PROTOC_VERSION        ?= 3.11.2
 GOLANGCI_LINT_VERSION ?= v1.27.0
 GOLANG_VERSION        ?= 1.15.2
@@ -24,15 +23,18 @@ GOLANG_CROSS_VERSION  := v$(GOLANG_VERSION)
 
 # <TOOL>_VERSION_FILE points to the marker file for the installed version.
 # If <TOOL>_VERSION_FILE is changed, the binary will be re-downloaded.
-BUF_VERSION_FILE           = $(CACHE_VERSIONS)/buf/$(BUF_VERSION)
 PROTOC_VERSION_FILE        = $(CACHE_VERSIONS)/protoc/$(PROTOC_VERSION)
 GOLANGCI_LINT_VERSION_FILE = $(CACHE_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
 
 GOLANGCI_LINT          = $(CACHE_BIN)/golangci-lint
 LINT                   = $(GOLANGCI_LINT) run ./... --disable-all --deadline=5m --enable
 MODVENDOR              = $(CACHE_BIN)/modvendor
-BUF                   := $(CACHE_BIN)/buf
-PROTOC                := $(CACHE_BIN)/protoc
+PROTOC                := $(CACHE_BIN)/
+
+HTTPS_GIT    := https://github.com/ovrclk/akash.git
+DOCKER_RUN   := docker run -v $(shell pwd):/workspace --workdir /workspace
+DOCKER_BUF   := $(DOCKER_RUN) bufbuild/buf
+DOCKER_CLANG := $(DOCKER_RUN) tendermintdev/docker-build-proto
 
 # BUILD_TAGS are for builds withing this makefile
 # GORELEASER_BUILD_TAGS are for goreleaser only
