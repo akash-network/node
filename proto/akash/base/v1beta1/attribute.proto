@@ -5,15 +5,12 @@ package akash.base.v1beta1;
 import "gogoproto/gogo.proto";
 
 option (gogoproto.goproto_stringer_all) = false;
-option (gogoproto.stringer_all) = false;
-option go_package = "github.com/ovrclk/akash/types";
+option (gogoproto.stringer_all)         = false;
+option go_package                       = "github.com/ovrclk/akash/types";
 
+// Attribute represents key value pair
 message Attribute {
   option (gogoproto.goproto_getters) = false;
-  string key = 1 [
-    (gogoproto.moretags) = "yaml:\"key\""
-  ];
-  string value = 2 [
-    (gogoproto.moretags) = "yaml:\"value\""
-  ];
+  string key                         = 1 [(gogoproto.moretags) = "yaml:\"key\""];
+  string value                       = 2 [(gogoproto.moretags) = "yaml:\"value\""];
 }

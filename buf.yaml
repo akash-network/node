@@ -1,11 +1,10 @@
 build:
   roots:
-    - proto
-    - .cache/include
-    - vendor/github.com/regen-network/cosmos-proto
-    - vendor/github.com/tendermint/tendermint/proto
+    - ./proto
     - vendor/github.com/cosmos/cosmos-sdk/proto
-    - vendor/github.com/gogo/protobuf
+    - vendor/github.com/cosmos/cosmos-sdk/third_party/proto
+  excludes:
+    - vendor/github.com/cosmos/cosmos-sdk/third_party/proto/google/protobuf
 lint:
   use:
     - DEFAULT
@@ -22,11 +21,15 @@ lint:
   ignore:
     - tendermint
     - gogoproto
+    - cosmos_proto
     - google
+    - confio
 breaking:
   use:
     - FILE
   ignore:
     - tendermint
     - gogoproto
+    - cosmos_proto
     - google
+    - confio

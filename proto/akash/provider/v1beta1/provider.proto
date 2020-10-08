@@ -8,78 +8,78 @@ option go_package = "github.com/ovrclk/akash/x/provider/types";
 
 // MsgCreateProvider defines an SDK message for creating a provider
 message MsgCreateProvider {
-    option (gogoproto.equal) = false;
+  option (gogoproto.equal) = false;
 
-    bytes owner = 1 [
-        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-        (gogoproto.jsontag)    = "owner",
-        (gogoproto.moretags)   = "yaml:\"owner\""
-    ];
-    string host_uri = 2 [
-        (gogoproto.customname) = "HostURI",
-        (gogoproto.jsontag)    = "host-uri",
-        (gogoproto.moretags)   = "yaml:\"host-uri\""
-    ];
-    repeated akash.base.v1beta1.Attribute attributes = 3 [
-        (gogoproto.castrepeated) = "Attributes",
-        (gogoproto.nullable)   = false,
-        (gogoproto.jsontag)    = "attributes",
-        (gogoproto.moretags)   = "yaml:\"attributes\""
-    ];
+  bytes owner = 1 [
+    (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+    (gogoproto.jsontag)  = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+  string host_uri = 2 [
+    (gogoproto.customname) = "HostURI",
+    (gogoproto.jsontag)    = "host-uri",
+    (gogoproto.moretags)   = "yaml:\"host-uri\""
+  ];
+  repeated akash.base.v1beta1.Attribute attributes = 3 [
+    (gogoproto.castrepeated) = "Attributes",
+    (gogoproto.nullable)     = false,
+    (gogoproto.jsontag)      = "attributes",
+    (gogoproto.moretags)     = "yaml:\"attributes\""
+  ];
 }
 
 // MsgUpdateProvider defines an SDK message for updating a provider
 message MsgUpdateProvider {
-    option (gogoproto.equal) = false;
+  option (gogoproto.equal) = false;
 
-    bytes owner = 1 [
-        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-        (gogoproto.jsontag)    = "owner",
-        (gogoproto.moretags)   = "yaml:\"owner\""
-    ];
-    string host_uri = 2 [
-        (gogoproto.customname) = "HostURI",
-        (gogoproto.jsontag)    = "host-uri",
-        (gogoproto.moretags)   = "yaml:\"host-uri\""
-    ];
-    repeated akash.base.v1beta1.Attribute attributes = 3 [
-        (gogoproto.castrepeated) = "Attributes",
-        (gogoproto.nullable)   = false,
-        (gogoproto.jsontag)    = "attributes",
-        (gogoproto.moretags)   = "yaml:\"attributes\""
-    ];
+  bytes owner = 1 [
+    (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+    (gogoproto.jsontag)  = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+  string host_uri = 2 [
+    (gogoproto.customname) = "HostURI",
+    (gogoproto.jsontag)    = "host-uri",
+    (gogoproto.moretags)   = "yaml:\"host-uri\""
+  ];
+  repeated akash.base.v1beta1.Attribute attributes = 3 [
+    (gogoproto.castrepeated) = "Attributes",
+    (gogoproto.nullable)     = false,
+    (gogoproto.jsontag)      = "attributes",
+    (gogoproto.moretags)     = "yaml:\"attributes\""
+  ];
 }
 
 // MsgDeleteProvider defines an SDK message for deleting a provider
 message MsgDeleteProvider {
-    option (gogoproto.equal) = false;
+  option (gogoproto.equal) = false;
 
-    bytes owner = 1 [
-        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-        (gogoproto.jsontag)    = "owner",
-        (gogoproto.moretags)   = "yaml:\"owner\""
-    ];
+  bytes owner = 1 [
+    (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+    (gogoproto.jsontag)  = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
 }
 
 // Provider stores owner and host details
 message Provider {
-    option (gogoproto.equal) = false;
-    option (gogoproto.goproto_stringer) = false;
+  option (gogoproto.equal)            = false;
+  option (gogoproto.goproto_stringer) = false;
 
-    bytes owner = 1 [
-        (gogoproto.casttype)   = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-        (gogoproto.jsontag)    = "owner",
-        (gogoproto.moretags)   = "yaml:\"owner\""
-    ];
-    string host_uri = 2 [
-        (gogoproto.customname) = "HostURI",
-        (gogoproto.jsontag)    = "host-uri",
-        (gogoproto.moretags)   = "yaml:\"host-uri\""
-    ];
-    repeated akash.base.v1beta1.Attribute attributes = 3 [
-        (gogoproto.castrepeated) = "Attributes",
-        (gogoproto.nullable)   = false,
-        (gogoproto.jsontag)    = "attributes",
-        (gogoproto.moretags)   = "yaml:\"attributes\""
-    ];
+  bytes owner = 1 [
+    (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
+    (gogoproto.jsontag)  = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+  string host_uri = 2 [
+    (gogoproto.customname) = "HostURI",
+    (gogoproto.jsontag)    = "host-uri",
+    (gogoproto.moretags)   = "yaml:\"host-uri\""
+  ];
+  repeated akash.base.v1beta1.Attribute attributes = 3 [
+    (gogoproto.castrepeated) = "Attributes",
+    (gogoproto.nullable)     = false,
+    (gogoproto.jsontag)      = "attributes",
+    (gogoproto.moretags)     = "yaml:\"attributes\""
+  ];
 }

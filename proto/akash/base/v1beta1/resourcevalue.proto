@@ -8,8 +8,5 @@ option go_package = "github.com/ovrclk/akash/types";
 // Unit stores cpu, memory and storage metrics
 message ResourceValue {
   option (gogoproto.equal) = true;
-  bytes val = 1 [
-    (gogoproto.nullable) = false,
-    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int"
-  ];
+  bytes val = 1 [(gogoproto.nullable) = false, (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int"];
 }

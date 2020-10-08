@@ -63,11 +63,11 @@ BUILD_FLAGS = -mod=readonly -tags "$(BUILD_TAGS)" -ldflags '-X github.com/cosmos
 -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
 -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
 
+include make/proto.mk
 include make/setup-cache.mk
 include make/releasing.mk
 include make/mod.mk
 include make/lint.mk
-include make/proto.mk
 include make/test-integration.mk
 include make/test-simulation.mk
 include make/tools.mk

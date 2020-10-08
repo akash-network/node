@@ -7,42 +7,37 @@ import "akash/base/v1beta1/resourcevalue.proto";
 
 option go_package = "github.com/ovrclk/akash/types";
 
+// CPU stores resource units and cpu config attributes
 message CPU {
-  option (gogoproto.equal) = true;
-  ResourceValue units = 1 [
-    (gogoproto.nullable) = false
-  ];
+  option (gogoproto.equal)      = true;
+  ResourceValue units           = 1 [(gogoproto.nullable) = false];
   repeated Attribute attributes = 2 [
     (gogoproto.nullable) = false,
-    (gogoproto.jsontag) = "attributes,omitempty",
+    (gogoproto.jsontag)  = "attributes,omitempty",
     (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
   ];
 }
 
+// Memory stores resource quantity and memory attributes
 message Memory {
   option (gogoproto.equal) = true;
-  ResourceValue quantity = 1 [
-    (gogoproto.nullable) = false,
-    (gogoproto.jsontag) = "size",
-    (gogoproto.moretags) = "yaml:\"size\""
-  ];
+  ResourceValue quantity   = 1
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "size", (gogoproto.moretags) = "yaml:\"size\""];
   repeated Attribute attributes = 2 [
     (gogoproto.nullable) = false,
-    (gogoproto.jsontag) = "attributes,omitempty",
+    (gogoproto.jsontag)  = "attributes,omitempty",
     (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
   ];
 }
 
+// Storage stores resource quantity and storage attributes
 message Storage {
   option (gogoproto.equal) = true;
-  ResourceValue quantity = 1 [
-    (gogoproto.nullable) = false,
-    (gogoproto.jsontag) = "size",
-    (gogoproto.moretags) = "yaml:\"size\""
-  ];
+  ResourceValue quantity   = 1
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "size", (gogoproto.moretags) = "yaml:\"size\""];
   repeated Attribute attributes = 2 [
     (gogoproto.nullable) = false,
-    (gogoproto.jsontag) = "attributes,omitempty",
+    (gogoproto.jsontag)  = "attributes,omitempty",
     (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
   ];
 }
@@ -51,19 +46,20 @@ message Storage {
 // if field is nil resource is not present in the given data-structure
 message ResourceUnits {
   option (gogoproto.equal) = true;
-  CPU CPU = 1 [
-    (gogoproto.nullable) = true,
-    (gogoproto.jsontag) = "cpu,omitempty",
-    (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
+  CPU cpu                  = 1 [
+    (gogoproto.nullable)   = true,
+    (gogoproto.customname) = "CPU",
+    (gogoproto.jsontag)    = "cpu,omitempty",
+    (gogoproto.moretags)   = "yaml:\"cpu,omitempty\""
   ];
   Memory memory = 2 [
     (gogoproto.nullable) = true,
-    (gogoproto.jsontag) = "memory,omitempty",
+    (gogoproto.jsontag)  = "memory,omitempty",
     (gogoproto.moretags) = "yaml:\"memory,omitempty\""
   ];
   Storage storage = 3 [
     (gogoproto.nullable) = true,
-    (gogoproto.jsontag) = "storage,omitempty",
+    (gogoproto.jsontag)  = "storage,omitempty",
     (gogoproto.moretags) = "yaml:\"storage,omitempty\""
   ];
 }

@@ -10,11 +10,8 @@ for dir in $proto_dirs; do
   if [[ -n "$query_file" ]]; then
     .cache/bin/protoc  \
     -I "proto" \
-    -I "vendor/github.com/regen-network/cosmos-proto" \
-    -I "vendor/github.com/tendermint/tendermint/proto" \
     -I "vendor/github.com/cosmos/cosmos-sdk/proto" \
-    -I "vendor/github.com/gogo/protobuf" \
-    -I ".cache/include" \
+    -I "vendor/github.com/cosmos/cosmos-sdk/third_party/proto" \
     "$query_file" \
     --swagger_out=logtostderr=true,stderrthreshold=1000,fqn_for_swagger_name=true,simple_operation_ids=true:.
   fi
