@@ -318,7 +318,7 @@ func exposeExternalPort(expose *manifest.ServiceExpose) int32 {
 
 // lidNS generates a unique sha256 sum for identifying a provider's object name.
 func lidNS(lid mtypes.LeaseID) string {
-	path := mtypes.BidIDString(lid.BidID())
+	path := lid.String()
 	// DNS-1123 label must consist of lower case alphanumeric characters or '-',
 	// and must start and end with an alphanumeric character
 	// (e.g. 'my-name',  or '123-abc', regex used for validation

@@ -71,8 +71,8 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper mkeeper.Keep
 			if !found {
 				err = errors.Wrapf(ErrInternal,
 					"order \"%s\" for lease \"%s\" has not been found",
-					mtypes.OrderIDString(order.ID()),
-					mtypes.BidIDString(mtypes.BidID(lease.ID())))
+					order.ID(),
+					lease.ID())
 				return true
 			}
 			if !order.MatchAttributes(msg.Attributes) {
