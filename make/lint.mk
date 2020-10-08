@@ -27,4 +27,4 @@ test-sublinter-ineffassign:
 
 .PHONY: test-sublinter-%
 test-sublinter-%:
-	$(LINT) "$(@:test-sublinter-%=%)"
+	$(LINT) $*
