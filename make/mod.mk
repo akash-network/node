@@ -20,8 +20,6 @@ modvendor: modsensure $(MODVENDOR)
 	@echo "vendoring non-go files files..."
 	$(MODVENDOR) -copy="**/*.proto" -include=\
 github.com/cosmos/cosmos-sdk/proto,\
-github.com/tendermint/tendermint/proto,\
-github.com/gogo/protobuf,\
-github.com/regen-network/cosmos-proto/cosmos.proto
+github.com/cosmos/cosmos-sdk/third_party/proto
 	$(MODVENDOR) -copy="**/*.h **/*.c" -include=\
 github.com/zondax/hid

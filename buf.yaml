@@ -1,9 +1,8 @@
 build:
   roots:
-    - proto
-    - third_party/proto
-  excludes:
-    - third_party/proto/google
+    - ./proto
+    - vendor/github.com/cosmos/cosmos-sdk/proto
+    - vendor/github.com/cosmos/cosmos-sdk/third_party/proto
 lint:
   use:
     - DEFAULT

@@ -9,15 +9,9 @@ option go_package = "github.com/ovrclk/akash/x/market/types";
 
 // GenesisState defines the basic genesis state used by market module
 message GenesisState {
-    repeated Order orders = 1 [
-        (gogoproto.nullable)   = false,
-        (gogoproto.jsontag)    = "orders",
-        (gogoproto.moretags)   = "yaml:\"orders\""
-    ];
+  repeated Order orders = 1
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "orders", (gogoproto.moretags) = "yaml:\"orders\""];
 
-    repeated Lease leases = 2 [
-        (gogoproto.nullable)   = false,
-        (gogoproto.jsontag)    = "leases",
-        (gogoproto.moretags)   = "yaml:\"leases\""
-    ];
+  repeated Lease leases = 2
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "leases", (gogoproto.moretags) = "yaml:\"leases\""];
 }

@@ -8,9 +8,6 @@ option go_package = "github.com/ovrclk/akash/x/provider/types";
 
 // GenesisState defines the basic genesis state used by provider module
 message GenesisState {
-    repeated Provider providers = 1 [
-        (gogoproto.nullable)   = false,
-        (gogoproto.jsontag)    = "providers",
-        (gogoproto.moretags)   = "yaml:\"providers\""
-    ];
+  repeated Provider providers = 1
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "providers", (gogoproto.moretags) = "yaml:\"providers\""];
 }
