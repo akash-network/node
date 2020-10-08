@@ -7,7 +7,8 @@ ifeq ($(UNAME_OS),Linux)
 endif
 ifeq ($(UNAME_OS),Darwin)
 	PROTOC_ZIP       ?= protoc-${PROTOC_VERSION}-osx-x86_64.zip
-	CLANG_FORMAT_BIN ?= clang-format
+	# clang-format on macos is keg-only
+	CLANG_FORMAT_BIN ?= /usr/local/opt/clang-format/bin/clang-format
 endif
 
 proto-lint: $(BUF)
