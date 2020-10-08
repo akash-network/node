@@ -69,7 +69,7 @@ profiles:
     db:
       resources:
         cpu:
-          unites: "0.01"
+          units: "0.01"
         memory:
           size: "128Mi"
         storage:
