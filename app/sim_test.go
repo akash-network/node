@@ -258,7 +258,7 @@ func TestAppStateDeterminism(t *testing.T) {
 	appHashList := make([]json.RawMessage, numTimesToRunPerSeed)
 
 	for i := 0; i < numSeeds; i++ {
-		config.Seed = rand.Int63()
+		config.Seed = rand.Int63() // nolint:gosec
 
 		for j := 0; j < numTimesToRunPerSeed; j++ {
 			var logger log.Logger

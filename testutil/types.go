@@ -31,7 +31,7 @@ const (
 )
 
 func RandRangeInt(min, max int) int {
-	return rand.Intn(max-min) + min
+	return rand.Intn(max-min) + min // nolint: gosec
 }
 
 func ResourceUnits(_ testing.TB) types.ResourceUnits {

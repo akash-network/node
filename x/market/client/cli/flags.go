@@ -201,13 +201,5 @@ func LeaseFiltersFromFlags(flags *pflag.FlagSet) (types.LeaseFilters, error) {
 	if err != nil {
 		return types.LeaseFilters{}, err
 	}
-	lfilters := types.LeaseFilters{
-		Owner:    bfilters.Owner,
-		DSeq:     bfilters.DSeq,
-		GSeq:     bfilters.GSeq,
-		OSeq:     bfilters.OSeq,
-		Provider: bfilters.Provider,
-		State:    bfilters.State,
-	}
-	return lfilters, nil
+	return types.LeaseFilters(bfilters), nil
 }

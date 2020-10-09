@@ -48,10 +48,11 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: ${{ secrets.GOLANG_VERSION }}
+      - run: make deps-tidy
+      - run: make deps-vendor
       - run: make build
       - run: make test-vet
-      - run: make lintdeps-install
       - name: lint all
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --issues-exit-code=0 --deadline=10m
+        run: make test-lint-all
       - name: lint make-sublinters
         run: make test-sublinters 
