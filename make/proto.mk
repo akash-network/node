@@ -13,11 +13,14 @@ ifeq ($(UNAME_OS),Darwin)
 	GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-v${GRPC_GATEWAY_VERSION}-darwin-x86_64
 endif
 
+.PHONY: proto-lint
 proto-lint: $(BUF) modvendor
 	$(BUF) check lint --error-format=json
 
+.PHONY: proto-check-breaking
 proto-check-breaking: $(BUF) modvendor
 	$(BUF) check breaking --against-input '.git#branch=master'
 
+.PHONY: proto-format
 proto-format: clang-format-install
 	find ./ ! -path "./vendor/*" ! -path "./.cache/*" -name *.proto -exec ${CLANG_FORMAT_BIN} -i {} \;
