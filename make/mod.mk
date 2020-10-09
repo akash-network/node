@@ -15,9 +15,12 @@ deps-vendor:
 .PHONY: modsensure
 modsensure: deps-tidy deps-vendor
 
+GOOGLE_API_PROTO_URL = https://raw.githubusercontent.com/googleapis/googleapis/master/google/api
+GOOGLE_PROTO_TYPES   = $(CACHE_INCLUDE)/google/api
+
 .PHONY: modvendor
 modvendor: modsensure $(MODVENDOR)
-	@echo "vendoring non-go files files..."
+	@echo "vendoring non-go files..."
 	$(MODVENDOR) -copy="**/*.proto" -include=\
 github.com/cosmos/cosmos-sdk/proto,\
 github.com/cosmos/cosmos-sdk/third_party/proto

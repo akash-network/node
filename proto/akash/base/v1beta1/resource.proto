@@ -1,15 +1,16 @@
 syntax = "proto3";
-package akash;
+package akash.base.v1beta1;
 
 import "gogoproto/gogo.proto";
-import "akash/attribute.proto";
-import "akash/resourcevalue.proto";
+import "akash/base/v1beta1/attribute.proto";
+import "akash/base/v1beta1/resourcevalue.proto";
 
 option go_package = "github.com/ovrclk/akash/types";
 
+// CPU stores resource units and cpu config attributes
 message CPU {
   option (gogoproto.equal)      = true;
-  ResourceValue      units      = 1 [(gogoproto.nullable) = false];
+  ResourceValue units           = 1 [(gogoproto.nullable) = false];
   repeated Attribute attributes = 2 [
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "attributes,omitempty",
@@ -17,6 +18,7 @@ message CPU {
   ];
 }
 
+// Memory stores resource quantity and memory attributes
 message Memory {
   option (gogoproto.equal) = true;
   ResourceValue quantity   = 1
@@ -28,6 +30,7 @@ message Memory {
   ];
 }
 
+// Storage stores resource quantity and storage attributes
 message Storage {
   option (gogoproto.equal) = true;
   ResourceValue quantity   = 1
@@ -43,10 +46,11 @@ message Storage {
 // if field is nil resource is not present in the given data-structure
 message ResourceUnits {
   option (gogoproto.equal) = true;
-  CPU CPU                  = 1 [
-    (gogoproto.nullable) = true,
-    (gogoproto.jsontag)  = "cpu,omitempty",
-    (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
+  CPU cpu                  = 1 [
+    (gogoproto.nullable)   = true,
+    (gogoproto.customname) = "CPU",
+    (gogoproto.jsontag)    = "cpu,omitempty",
+    (gogoproto.moretags)   = "yaml:\"cpu,omitempty\""
   ];
   Memory memory = 2 [
     (gogoproto.nullable) = true,

@@ -41,9 +41,9 @@ func QueryProvidersExec(clientCtx client.Context, args ...string) (sdktest.Buffe
 }
 
 // QueryProviderExec is used for testing provider query
-func QueryProviderExec(clientCtx client.Context, owner fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
+func QueryProviderExec(clientCtx client.Context, owner string, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		owner.String(),
+		owner,
 	}
 
 	args = append(args, extraArgs...)

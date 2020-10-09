@@ -25,6 +25,12 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
+	stateVal := types.Deployment_State(types.Deployment_State_value[req.Filters.State])
+
+	if req.Filters.State != "" && stateVal == types.DeploymentStateInvalid {
+		return nil, status.Error(codes.InvalidArgument, "invalid state value")
+	}
+
 	var deployments types.DeploymentResponses
 	ctx := sdk.UnwrapSDKContext(c)
 
@@ -40,7 +46,7 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 		}
 
 		// filter deployments with provided filters
-		if req.Filters.Accept(deployment) {
+		if req.Filters.Accept(deployment, stateVal) {
 			if accumulate {
 				value := types.DeploymentResponse{
 					Deployment: deployment,
@@ -70,8 +76,8 @@ func (k Querier) Deployment(c context.Context, req *types.QueryDeploymentRequest
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	if req.ID.Owner.Empty() {
-		return nil, status.Error(codes.InvalidArgument, "owner cannot be empty")
+	if _, err := sdk.AccAddressFromBech32(req.ID.Owner); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid owner address")
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)
@@ -95,8 +101,8 @@ func (k Querier) Group(c context.Context, req *types.QueryGroupRequest) (*types.
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	if req.ID.Owner.Empty() {
-		return nil, status.Error(codes.InvalidArgument, "owner cannot be empty")
+	if _, err := sdk.AccAddressFromBech32(req.ID.Owner); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid owner address")
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)

@@ -33,7 +33,12 @@ var (
 )
 
 func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg *types.MsgCreateProvider) (*sdk.Result, error) {
-	if _, ok := keeper.Get(ctx, msg.Owner); ok {
+	owner, err := sdk.AccAddressFromBech32(msg.Owner)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := keeper.Get(ctx, owner); ok {
 		return nil, errors.Wrapf(types.ErrProviderExists, "id: %s", msg.Owner)
 	}
 
@@ -51,7 +56,12 @@ func handleMsgCreate(ctx sdk.Context, keeper keeper.Keeper, msg *types.MsgCreate
 }
 
 func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper mkeeper.Keeper, msg *types.MsgUpdateProvider) (*sdk.Result, error) {
-	prov, found := keeper.Get(ctx, msg.Owner)
+	owner, err := sdk.AccAddressFromBech32(msg.Owner)
+	if err != nil {
+		return nil, err
+	}
+
+	prov, found := keeper.Get(ctx, owner)
 	if !found {
 		return nil, errors.Wrapf(types.ErrProviderNotFound, "id: %s", msg.Owner)
 	}
@@ -60,12 +70,10 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper mkeeper.Keep
 		return nil, err
 	}
 
-	var err error
-
 	// all filtering code below is madness!. should make an index to not melt the cpu
 	// TODO: use WithActiveLeases, filter by lease.Provider
 	mkeeper.WithLeases(ctx, func(lease mtypes.Lease) bool {
-		if prov.Owner.Equals(lease.ID().Provider) && (lease.State == mtypes.LeaseActive) {
+		if prov.Owner == lease.ID().Provider && (lease.State == mtypes.LeaseActive) {
 			var order mtypes.Order
 			order, found = mkeeper.GetOrder(ctx, lease.ID().OrderID())
 			if !found {
@@ -97,7 +105,12 @@ func handleMsgUpdate(ctx sdk.Context, keeper keeper.Keeper, mkeeper mkeeper.Keep
 }
 
 func handleMsgDelete(ctx sdk.Context, keeper keeper.Keeper, msg *types.MsgDeleteProvider) (*sdk.Result, error) {
-	if _, ok := keeper.Get(ctx, msg.Owner); !ok {
+	owner, err := sdk.AccAddressFromBech32(msg.Owner)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := keeper.Get(ctx, owner); !ok {
 		return nil, types.ErrProviderNotFound
 	}
 

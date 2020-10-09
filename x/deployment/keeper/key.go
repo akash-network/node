@@ -17,7 +17,7 @@ var (
 
 func deploymentKey(id types.DeploymentID) []byte {
 	buf := bytes.NewBuffer(deploymentPrefix)
-	buf.Write(id.Owner.Bytes())
+	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -27,7 +27,7 @@ func deploymentKey(id types.DeploymentID) []byte {
 // groupKey provides prefixed key for a Group's marshalled data.
 func groupKey(id types.GroupID) []byte {
 	buf := bytes.NewBuffer(groupPrefix)
-	buf.Write(id.Owner.Bytes())
+	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -41,7 +41,7 @@ func groupKey(id types.GroupID) []byte {
 // No data is stored under the key.
 func groupOpenKey(id types.GroupID) []byte {
 	buf := bytes.NewBuffer(groupOpenPrefix)
-	buf.Write(id.Owner.Bytes())
+	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -65,7 +65,7 @@ func groupOpenKeyConvert(openKey []byte) ([]byte, error) {
 // groupsKey provides default store Key for Group data.
 func groupsKey(id types.DeploymentID) []byte {
 	buf := bytes.NewBuffer(groupPrefix)
-	buf.Write(id.Owner.Bytes())
+	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}

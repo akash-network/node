@@ -84,7 +84,7 @@ func cmdGetProvider() *cobra.Command {
 				return err
 			}
 
-			res, err := queryClient.Provider(context.Background(), &types.QueryProviderRequest{Owner: owner})
+			res, err := queryClient.Provider(context.Background(), &types.QueryProviderRequest{Owner: owner.String()})
 			if err != nil {
 				return err
 			}

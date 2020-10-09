@@ -25,6 +25,12 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
+	stateVal := types.Order_State(types.Order_State_value[req.Filters.State])
+
+	if req.Filters.State != "" && stateVal == types.OrderStateInvalid {
+		return nil, status.Error(codes.InvalidArgument, "invalid state value")
+	}
+
 	var orders types.Orders
 	ctx := sdk.UnwrapSDKContext(c)
 
@@ -40,7 +46,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		}
 
 		// filter orders with provided filters
-		if req.Filters.Accept(order) {
+		if req.Filters.Accept(order, stateVal) {
 			if accumulate {
 				orders = append(orders, order)
 			}
@@ -66,8 +72,8 @@ func (k Querier) Order(c context.Context, req *types.QueryOrderRequest) (*types.
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	if req.ID.Owner.Empty() {
-		return nil, status.Error(codes.InvalidArgument, "owner cannot be empty")
+	if _, err := sdk.AccAddressFromBech32(req.ID.Owner); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid owner address")
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)
@@ -86,6 +92,12 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
+	stateVal := types.Bid_State(types.Bid_State_value[req.Filters.State])
+
+	if req.Filters.State != "" && stateVal == types.BidStateInvalid {
+		return nil, status.Error(codes.InvalidArgument, "invalid state value")
+	}
+
 	var bids types.Bids
 	ctx := sdk.UnwrapSDKContext(c)
 
@@ -101,7 +113,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		}
 
 		// filter bids with provided filters
-		if req.Filters.Accept(bid) {
+		if req.Filters.Accept(bid, stateVal) {
 			if accumulate {
 				bids = append(bids, bid)
 			}
@@ -127,12 +139,12 @@ func (k Querier) Bid(c context.Context, req *types.QueryBidRequest) (*types.Quer
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	if req.ID.Owner.Empty() {
-		return nil, status.Error(codes.InvalidArgument, "owner cannot be empty")
+	if _, err := sdk.AccAddressFromBech32(req.ID.Owner); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid owner address")
 	}
 
-	if req.ID.Provider.Empty() {
-		return nil, status.Error(codes.InvalidArgument, "provider cannot be empty")
+	if _, err := sdk.AccAddressFromBech32(req.ID.Provider); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid provider address")
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)
@@ -151,6 +163,12 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
+	stateVal := types.Lease_State(types.Lease_State_value[req.Filters.State])
+
+	if req.Filters.State != "" && stateVal == types.LeaseStateInvalid {
+		return nil, status.Error(codes.InvalidArgument, "invalid state value")
+	}
+
 	var leases types.Leases
 	ctx := sdk.UnwrapSDKContext(c)
 
@@ -166,7 +184,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		}
 
 		// filter leases with provided filters
-		if req.Filters.Accept(lease) {
+		if req.Filters.Accept(lease, stateVal) {
 			if accumulate {
 				leases = append(leases, lease)
 			}
@@ -192,12 +210,12 @@ func (k Querier) Lease(c context.Context, req *types.QueryLeaseRequest) (*types.
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	if req.ID.Owner.Empty() {
-		return nil, status.Error(codes.InvalidArgument, "owner cannot be empty")
+	if _, err := sdk.AccAddressFromBech32(req.ID.Owner); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid owner address")
 	}
 
-	if req.ID.Provider.Empty() {
-		return nil, status.Error(codes.InvalidArgument, "provider cannot be empty")
+	if _, err := sdk.AccAddressFromBech32(req.ID.Provider); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid provider address")
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)

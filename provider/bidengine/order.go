@@ -105,7 +105,7 @@ loop:
 				}
 
 				// check winning provider
-				if !ev.ID.Provider.Equals(o.session.Provider().Address()) {
+				if ev.ID.Provider != o.session.Provider().Address().String() {
 					o.log.Info("lease lost", "lease", ev.ID)
 					break loop
 				}
@@ -189,7 +189,7 @@ loop:
 			bidch = runner.Do(func() runner.Result {
 				return runner.NewResult(nil, o.session.Client().Tx().Broadcast(&mtypes.MsgCreateBid{
 					Order:    o.order,
-					Provider: o.session.Provider().Address(),
+					Provider: o.session.Provider().Address().String(),
 					Price:    price,
 				}))
 			})

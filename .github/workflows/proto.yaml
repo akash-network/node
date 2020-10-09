@@ -1,0 +1,22 @@
+name: Protobuf
+
+on:
+  pull_request:
+    paths:
+      - "**.proto"
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch --prune --unshallow
+      - name: lint
+        run: make proto-lint
+  breakage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch --prune --unshallow
+      - name: check-breakage
+        run: make proto-check-breaking

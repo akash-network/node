@@ -30,7 +30,7 @@ func AccAddress(t testing.TB) sdk.AccAddress {
 func DeploymentID(t testing.TB) dtypes.DeploymentID {
 	t.Helper()
 	return dtypes.DeploymentID{
-		Owner: AccAddress(t),
+		Owner: AccAddress(t).String(),
 		DSeq:  uint64(rand.Uint32()),
 	}
 }

@@ -17,7 +17,8 @@ CACHE_INCLUDE         := $(CACHE)/include
 CACHE_VERSIONS        := $(CACHE)/versions
 
 BUF_VERSION           ?= 0.20.5
-PROTOC_VERSION        ?= 3.11.2
+PROTOC_VERSION        ?= 3.13.0
+GRPC_GATEWAY_VERSION  ?= 1.14.7
 GOLANGCI_LINT_VERSION ?= v1.27.0
 GOLANG_VERSION        ?= 1.15.2
 GOLANG_CROSS_VERSION  := v$(GOLANG_VERSION)
@@ -26,6 +27,7 @@ GOLANG_CROSS_VERSION  := v$(GOLANG_VERSION)
 # If <TOOL>_VERSION_FILE is changed, the binary will be re-downloaded.
 BUF_VERSION_FILE           = $(CACHE_VERSIONS)/buf/$(BUF_VERSION)
 PROTOC_VERSION_FILE        = $(CACHE_VERSIONS)/protoc/$(PROTOC_VERSION)
+GRPC_GATEWAY_VERSION_FILE  = $(CACHE_VERSIONS)/protoc-gen-grpc-gateway/$(GRPC_GATEWAY_VERSION)
 GOLANGCI_LINT_VERSION_FILE = $(CACHE_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
 
 GOLANGCI_LINT          = $(CACHE_BIN)/golangci-lint
@@ -33,6 +35,7 @@ LINT                   = $(GOLANGCI_LINT) run ./... --disable-all --deadline=5m 
 MODVENDOR              = $(CACHE_BIN)/modvendor
 BUF                   := $(CACHE_BIN)/buf
 PROTOC                := $(CACHE_BIN)/protoc
+GRPC_GATEWAY          := $(CACHE_BIN)/protoc-gen-grpc-gateway
 
 # BUILD_TAGS are for builds withing this makefile
 # GORELEASER_BUILD_TAGS are for goreleaser only

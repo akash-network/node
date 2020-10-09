@@ -102,9 +102,9 @@ func (o Order) validateMatchableState() error {
 }
 
 // Accept returns whether order filters valid or not
-func (filters OrderFilters) Accept(obj Order) bool {
+func (filters OrderFilters) Accept(obj Order, stateVal Order_State) bool {
 	// Checking owner filter
-	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.OrderID.Owner) {
+	if filters.Owner != "" && filters.Owner != obj.OrderID.Owner {
 		return false
 	}
 
@@ -124,7 +124,7 @@ func (filters OrderFilters) Accept(obj Order) bool {
 	}
 
 	// Checking state filter
-	if filters.State != 0 && filters.State != obj.State {
+	if stateVal != 0 && stateVal != obj.State {
 		return false
 	}
 
@@ -156,9 +156,9 @@ func (b Bids) String() string {
 }
 
 // Accept returns whether bid filters valid or not
-func (filters BidFilters) Accept(obj Bid) bool {
+func (filters BidFilters) Accept(obj Bid, stateVal Bid_State) bool {
 	// Checking owner filter
-	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.BidID.Owner) {
+	if filters.Owner != "" && filters.Owner != obj.BidID.Owner {
 		return false
 	}
 
@@ -178,12 +178,12 @@ func (filters BidFilters) Accept(obj Bid) bool {
 	}
 
 	// Checking provider filter
-	if !filters.Provider.Empty() && !filters.Provider.Equals(obj.BidID.Provider) {
+	if filters.Provider != "" && filters.Provider != obj.BidID.Provider {
 		return false
 	}
 
 	// Checking state filter
-	if filters.State != 0 && filters.State != obj.State {
+	if stateVal != 0 && stateVal != obj.State {
 		return false
 	}
 
@@ -215,9 +215,9 @@ func (l Leases) String() string {
 }
 
 // Accept returns whether lease filters valid or not
-func (filters LeaseFilters) Accept(obj Lease) bool {
+func (filters LeaseFilters) Accept(obj Lease, stateVal Lease_State) bool {
 	// Checking owner filter
-	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.LeaseID.Owner) {
+	if filters.Owner != "" && filters.Owner != obj.LeaseID.Owner {
 		return false
 	}
 
@@ -237,12 +237,12 @@ func (filters LeaseFilters) Accept(obj Lease) bool {
 	}
 
 	// Checking provider filter
-	if !filters.Provider.Empty() && !filters.Provider.Equals(obj.LeaseID.Provider) {
+	if filters.Provider != "" && filters.Provider != obj.LeaseID.Provider {
 		return false
 	}
 
 	// Checking state filter
-	if filters.State != 0 && filters.State != obj.State {
+	if stateVal != 0 && stateVal != obj.State {
 		return false
 	}
 

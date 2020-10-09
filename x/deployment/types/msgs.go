@@ -37,7 +37,12 @@ func (msg MsgCreateDeployment) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgCreateDeployment) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.ID.Owner}
+	owner, err := sdk.AccAddressFromBech32(msg.ID.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{owner}
 }
 
 // ValidateBasic does basic validation like check owner and groups length
@@ -95,7 +100,12 @@ func (msg MsgUpdateDeployment) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgUpdateDeployment) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.ID.Owner}
+	owner, err := sdk.AccAddressFromBech32(msg.ID.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{owner}
 }
 
 // NewMsgCloseDeployment creates a new MsgCloseDeployment instance
@@ -126,7 +136,12 @@ func (msg MsgCloseDeployment) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgCloseDeployment) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.ID.Owner}
+	owner, err := sdk.AccAddressFromBech32(msg.ID.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{owner}
 }
 
 // NewMsgCloseGroup creates a new MsgCloseGroup instance
@@ -157,5 +172,10 @@ func (msg MsgCloseGroup) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgCloseGroup) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.ID.Owner}
+	owner, err := sdk.AccAddressFromBech32(msg.ID.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{owner}
 }

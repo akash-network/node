@@ -46,9 +46,28 @@ $(PROTOC_VERSION_FILE): $(CACHE)
 	touch $@
 $(PROTOC): $(PROTOC_VERSION_FILE)
 
+$(GRPC_GATEWAY_VERSION_FILE): $(CACHE)
+	@echo "Installing protoc-gen-grpc-gateway..."
+	rm -f $(GRPC_GATEWAY)
+	curl -o "${CACHE_BIN}/protoc-gen-grpc-gateway" -L \
+	"https://github.com/grpc-ecosystem/grpc-gateway/releases/download/v${GRPC_GATEWAY_VERSION}/${GRPC_GATEWAY_BIN}"
+	chmod +x "$(CACHE_BIN)/protoc-gen-grpc-gateway"
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(GRPC_GATEWAY): $(GRPC_GATEWAY_VERSION_FILE)
+
 $(MODVENDOR): $(CACHE)
 	@echo "installing modvendor..."
 	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor
+
+protoc-swagger:
+ifeq (, $(shell which swagger-combine))
+	@echo "Installing swagger-combine..."
+	npm install -g swagger-combine
+else
+	@echo "swagger-combine already installed; skipping..."
+endif
 
 clang-format-install:
 ifeq (, $(shell which ${CLANG_FORMAT_BIN}))
@@ -84,6 +103,7 @@ devdeps-install: $(GOLANGCI_LINT) kubetypes-deps-install
 	$(GO) install k8s.io/code-generator/...
 	$(GO) install sigs.k8s.io/kind
 	$(GO) install golang.org/x/tools/cmd/stringer
+	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 
 cache-clean:
 	rm -rf $(CACHE)

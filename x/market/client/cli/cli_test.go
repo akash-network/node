@@ -78,22 +78,22 @@ func (s *IntegrationTestSuite) Test1QueryOrders() {
 	resp, err := dcli.QueryDeploymentsExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var out *dtypes.QueryDeploymentsResponse = &dtypes.QueryDeploymentsResponse{}
+	out := &dtypes.QueryDeploymentsResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1)
-	s.Require().Equal(val.Address.String(), out.Deployments[0].Deployment.DeploymentID.Owner.String())
+	s.Require().Equal(val.Address.String(), out.Deployments[0].Deployment.DeploymentID.Owner)
 
 	// test query orders
 	resp, err = cli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var result *types.QueryOrdersResponse = &types.QueryOrdersResponse{}
+	result := &types.QueryOrdersResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), result)
 	s.Require().NoError(err)
 	s.Require().Len(result.Orders, 1)
 	orders := result.Orders
-	s.Require().Equal(val.Address.String(), orders[0].OrderID.Owner.String())
+	s.Require().Equal(val.Address.String(), orders[0].OrderID.Owner)
 
 	// test query order
 	createdOrder := orders[0]
@@ -186,11 +186,11 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	resp, err = pcli.QueryProvidersExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var out *ptypes.QueryProvidersResponse = &ptypes.QueryProvidersResponse{}
+	out := &ptypes.QueryProvidersResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Providers, 1, "Provider Creation Failed in TestCreateBid")
-	s.Require().Equal(keyBar.GetAddress().String(), out.Providers[0].Owner.String())
+	s.Require().Equal(keyBar.GetAddress().String(), out.Providers[0].Owner)
 
 	// fetch orders
 	resp, err = cli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
@@ -222,12 +222,12 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	resp, err = cli.QueryBidsExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var bidRes *types.QueryBidsResponse = &types.QueryBidsResponse{}
+	bidRes := &types.QueryBidsResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), bidRes)
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
 	bids := bidRes.Bids
-	s.Require().Equal(keyBar.GetAddress().String(), bids[0].BidID.Provider.String())
+	s.Require().Equal(keyBar.GetAddress().String(), bids[0].BidID.Provider)
 
 	// test query bid
 	createdBid := bids[0]
@@ -279,12 +279,12 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	resp, err := cli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var leaseRes *types.QueryLeasesResponse = &types.QueryLeasesResponse{}
+	leaseRes := &types.QueryLeasesResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), leaseRes)
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
 	leases := leaseRes.Leases
-	s.Require().Equal(keyBar.GetAddress().String(), leases[0].LeaseID.Provider.String())
+	s.Require().Equal(keyBar.GetAddress().String(), leases[0].LeaseID.Provider)
 
 	// test query lease
 	createdLease := leases[0]
@@ -314,11 +314,11 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	resp, err = cli.QueryBidsExec(val.ClientCtx.WithOutputFormat("json"), "--state=closed")
 	s.Require().NoError(err)
 
-	var bidRes *types.QueryBidsResponse = &types.QueryBidsResponse{}
+	bidRes := &types.QueryBidsResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), bidRes)
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
-	s.Require().Equal(keyBar.GetAddress().String(), bidRes.Bids[0].BidID.Provider.String())
+	s.Require().Equal(keyBar.GetAddress().String(), bidRes.Bids[0].BidID.Provider)
 
 	// test query leases with state value filter
 	resp, err = cli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"), "--state=closed")
@@ -358,7 +358,7 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	)
 	s.Require().NoError(err)
 
-	var result *types.QueryOrdersResponse = &types.QueryOrdersResponse{}
+	result := &types.QueryOrdersResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), result)
 	s.Require().NoError(err)
 	openedOrders := result.Orders
@@ -388,11 +388,11 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	resp, err = cli.QueryBidsExec(val.ClientCtx.WithOutputFormat("json"), "--state=matched")
 	s.Require().NoError(err)
 
-	var bidRes *types.QueryBidsResponse = &types.QueryBidsResponse{}
+	bidRes := &types.QueryBidsResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), bidRes)
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
-	s.Require().Equal(keyBar.GetAddress().String(), bidRes.Bids[0].BidID.Provider.String())
+	s.Require().Equal(keyBar.GetAddress().String(), bidRes.Bids[0].BidID.Provider)
 
 	// Close Order
 	_, err = cli.TxCloseOrderExec(

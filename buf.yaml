@@ -15,6 +15,9 @@ lint:
     - COMMENT_FIELD
     - SERVICE_SUFFIX
     - PACKAGE_VERSION_SUFFIX
+    - ENUM_VALUE_PREFIX
+    - ENUM_VALUE_UPPER_SNAKE_CASE
+    - ENUM_ZERO_VALUE_SUFFIX
   ignore:
     - tendermint
     - gogoproto

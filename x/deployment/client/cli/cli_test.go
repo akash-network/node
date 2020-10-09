@@ -67,12 +67,12 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	resp, err := cli.QueryDeploymentsExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var out *types.QueryDeploymentsResponse = &types.QueryDeploymentsResponse{}
+	out := &types.QueryDeploymentsResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
 	deployments := out.Deployments
-	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner.String())
+	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner)
 
 	// test query deployment
 	createdDep := deployments[0]
@@ -188,12 +188,12 @@ func (s *IntegrationTestSuite) TestGroup() {
 	)
 	s.Require().NoError(err)
 
-	var out *types.QueryDeploymentsResponse = &types.QueryDeploymentsResponse{}
+	out := &types.QueryDeploymentsResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
 	deployments := out.Deployments
-	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner.String())
+	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner)
 
 	createdDep := deployments[0]
 

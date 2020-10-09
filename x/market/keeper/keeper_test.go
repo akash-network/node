@@ -304,7 +304,7 @@ func createBid(t testing.TB, ctx sdk.Context, keeper keeper.Keeper) (types.Bid, 
 	require.NoError(t, err)
 	assert.Equal(t, order.ID(), bid.ID().OrderID())
 	assert.Equal(t, price, bid.Price)
-	assert.Equal(t, provider, bid.ID().Provider)
+	assert.Equal(t, provider.String(), bid.ID().Provider)
 	return bid, order
 }
 

@@ -76,7 +76,7 @@ func TestGRPCQueryDeployment(t *testing.T) {
 			"deployment not found",
 			func() {
 				req = &types.QueryDeploymentRequest{ID: types.DeploymentID{
-					Owner: testutil.AccAddress(t),
+					Owner: testutil.AccAddress(t).String(),
 					DSeq:  32,
 				}}
 			},
@@ -149,7 +149,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 				req = &types.QueryDeploymentsRequest{
 					Filters: types.DeploymentFilters{
 						DSeq:  37,
-						State: types.Deployment_State(4),
+						State: "closed",
 					}}
 			},
 			0,
@@ -157,7 +157,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments with state filter",
 			func() {
-				req = &types.QueryDeploymentsRequest{Filters: types.DeploymentFilters{State: types.DeploymentClosed}}
+				req = &types.QueryDeploymentsRequest{Filters: types.DeploymentFilters{State: types.DeploymentClosed.String()}}
 			},
 			1,
 		},
@@ -221,7 +221,7 @@ func TestGRPCQueryGroup(t *testing.T) {
 			"group not found",
 			func() {
 				req = &types.QueryGroupRequest{ID: types.GroupID{
-					Owner: testutil.AccAddress(t),
+					Owner: testutil.AccAddress(t).String(),
 					DSeq:  32,
 					GSeq:  45,
 				}}

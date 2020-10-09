@@ -17,11 +17,11 @@ func DeploymentIDFromRequest(r *http.Request) (types.DeploymentID, string) {
 	var id types.DeploymentID
 
 	if len(ownerAddr) != 0 {
-		owner, err := sdk.AccAddressFromBech32(ownerAddr)
+		_, err := sdk.AccAddressFromBech32(ownerAddr)
 		if err != nil {
 			return types.DeploymentID{}, err.Error()
 		}
-		id.Owner = owner
+		id.Owner = ownerAddr
 	} else {
 		return types.DeploymentID{}, "Missing owner query param"
 	}

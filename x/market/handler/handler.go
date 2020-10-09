@@ -42,8 +42,13 @@ func handleMsgCreateBid(ctx sdk.Context, keepers Keepers, msg *types.MsgCreateBi
 		return nil, types.ErrBidOverOrder
 	}
 
+	provider, err := sdk.AccAddressFromBech32(msg.Provider)
+	if err != nil {
+		return nil, types.ErrEmptyProvider
+	}
+
 	var prov ptypes.Provider
-	if prov, found = keepers.Provider.Get(ctx, msg.Provider); !found {
+	if prov, found = keepers.Provider.Get(ctx, provider); !found {
 		return nil, types.ErrEmptyProvider
 	}
 
@@ -51,7 +56,7 @@ func handleMsgCreateBid(ctx sdk.Context, keepers Keepers, msg *types.MsgCreateBi
 		return nil, types.ErrAttributeMismatch
 	}
 
-	if _, err := keepers.Market.CreateBid(ctx, msg.Order, msg.Provider, msg.Price); err != nil {
+	if _, err := keepers.Market.CreateBid(ctx, msg.Order, provider, msg.Price); err != nil {
 		return nil, err
 	}
 
