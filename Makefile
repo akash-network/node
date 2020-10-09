@@ -54,11 +54,24 @@ GORELEASER_LD_FLAGS = '-s -w -X github.com/cosmos/cosmos-sdk/version.Name=akash 
 -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags --abbrev=0) \
 -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
 
-BUILD_FLAGS = -mod=readonly -tags "$(BUILD_TAGS)" -ldflags '-X github.com/cosmos/cosmos-sdk/version.Name=akash \
+ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=akash \
 -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
 -X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(BUILD_TAGS)" \
 -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
--X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
+-X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')
+
+# check for nostrip option
+ifeq (,$(findstring nostrip,$(BUILD_OPTIONS)))
+  ldflags += -s -w
+endif
+ldflags += $(LDFLAGS)
+ldflags := $(strip $(ldflags))
+
+BUILD_FLAGS := -mod=readonly -tags "$(BUILD_TAGS)" -ldflags '$(ldflags)'
+# check for nostrip option
+ifeq (,$(findstring nostrip,$(BUILD_OPTIONS)))
+  BUILD_FLAGS += -trimpath
+endif
 
 .PHONY: all
 all: build bins
