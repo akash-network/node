@@ -62,6 +62,13 @@ BUILD_FLAGS = -mod=readonly -tags "$(BUILD_TAGS)" -ldflags '-X github.com/cosmos
 -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
 -X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
 
+.PHONY: all
+all: build bins
+
+.PHONY: clean
+clean: cache-clean
+	rm -f $(BINS)
+
 include make/proto.mk
 include make/setup-cache.mk
 include make/releasing.mk
@@ -72,9 +79,3 @@ include make/test-simulation.mk
 include make/tools.mk
 include make/environment.mk
 include make/codegen.mk
-
-.PHONY: all
-all: build bins
-
-clean: cache-clean
-	rm -f $(BINS)

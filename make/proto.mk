@@ -11,14 +11,14 @@ ifeq ($(UNAME_OS),Darwin)
 	CLANG_FORMAT_BIN ?= /usr/local/opt/clang-format/bin/clang-format
 endif
 
+.PHONY: proto-lint
 proto-lint: 
 	$(DOCKER_BUF) check lint --error-format=json
-.PHONY: proto-lint
 
+.PHONY: proto-check-breaking
 proto-check-breaking:
 	$(DOCKER_BUF) check breaking --against-input $(HTTPS_GIT)#branch=master
-.PHONY: proto-check-breaking
 
+.PHONY: proto-format
 proto-format:
 	$(DOCKER_CLANG) find ./ ! -path "./vendor/*" ! -path "./.cache/*" -name *.proto -exec clang-format -i {} \;
-.PHONY: proto-format

@@ -17,11 +17,14 @@ SUBLINTERS = deadcode \
 # Clear feedback from each method as it fails.
 test-sublinters: $(patsubst %, test-sublinter-%,$(SUBLINTERS))
 
+.PHONY: test-sublinter-misspell
 test-sublinter-misspell:
 	$(LINT) misspell --no-config
 
+.PHONY: test-sublinter-ineffassign
 test-sublinter-ineffassign:
 	$(LINT) ineffassign --no-config
 
+.PHONY: test-sublinter-%
 test-sublinter-%:
-	$(LINT) "$(@:test-sublinter-%=%)"
+	$(LINT) $*
