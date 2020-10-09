@@ -21,18 +21,6 @@ lintdeps-install: $(GOLANGCI_LINT)
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
 		sh -s -- -b $(GOBIN) $(GOLANGCI_LINT_VERSION)
 
-$(BUF_VERSION_FILE): $(CACHE)
-	@echo "installing protoc buf cli..."
-	rm -f $(BUF)
-	curl -sSL \
-		"https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(UNAME_OS)-$(UNAME_ARCH)" \
-		-o "$(CACHE_BIN)/buf"
-	chmod +x "$(CACHE_BIN)/buf"
-	rm -rf "$(dir $@)"
-	mkdir -p "$(dir $@)"
-	touch $@
-$(BUF): $(BUF_VERSION_FILE)
-
 $(PROTOC_VERSION_FILE): $(CACHE)
 	@echo "installing protoc compiler..."
 	rm -f $(PROTOC)
@@ -49,26 +37,6 @@ $(PROTOC): $(PROTOC_VERSION_FILE)
 $(MODVENDOR): $(CACHE)
 	@echo "installing modvendor..."
 	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor
-
-clang-format-install:
-ifeq (, $(shell which ${CLANG_FORMAT_BIN}))
-	@echo "Installing clang-format..."
-ifeq ($(UNAME_OS),Darwin)
-	brew install clang-format
-endif
-ifeq ($(UNAME_OS),Linux)
-	if [ -e /etc/debian_version ]; then \
-		sudo apt-get install -y ${CLANG_FORMAT_BIN} ; \
-	elif [ -e /etc/fedora-release ]; then \
-		sudo dnf install clang; \
-	else \
-		echo -e "\tRun (as root): subscription-manager repos --enable rhel-7-server-devtools-rpms ; \
-		yum install llvm-toolset-7" >&2; \
-	fi;
-endif
-else
-	@echo "${CLANG_FORMAT_BIN} already installed; skipping..."
-endif
 
 kubetypes-deps-install:
 	if [ -d "$(shell go env GOPATH)/src/k8s.io/code-generator" ]; then    \
