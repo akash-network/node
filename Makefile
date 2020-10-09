@@ -31,7 +31,6 @@ LINT                   = $(GOLANGCI_LINT) run ./... --disable-all --deadline=5m 
 MODVENDOR              = $(CACHE_BIN)/modvendor
 PROTOC                := $(CACHE_BIN)/
 
-HTTPS_GIT    := https://github.com/ovrclk/akash.git
 DOCKER_RUN   := docker run -v $(shell pwd):/workspace --workdir /workspace
 DOCKER_BUF   := $(DOCKER_RUN) bufbuild/buf
 DOCKER_CLANG := $(DOCKER_RUN) tendermintdev/docker-build-proto

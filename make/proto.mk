@@ -17,7 +17,7 @@ proto-lint:
 
 .PHONY: proto-check-breaking
 proto-check-breaking:
-	$(DOCKER_BUF) check breaking --against-input $(HTTPS_GIT)#branch=master
+	$(DOCKER_BUF) check breaking --against-input '.git#branch=master'
 
 .PHONY: proto-format
 proto-format:
