@@ -19,7 +19,7 @@ proto-lint: $(BUF) modvendor
 
 .PHONY: proto-check-breaking
 proto-check-breaking: $(BUF) modvendor
-	$(BUF) check breaking --against-input 'https://github.com/ovrclk/akash.git.git#branch=master'
+	$(BUF) check breaking --against-input 'https://github.com/ovrclk/akash.git#branch=master'
 
 .PHONY: proto-format
 proto-format: clang-format-install
