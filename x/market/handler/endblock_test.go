@@ -25,7 +25,7 @@ func (w *winnerTest) testFunc(t *testing.T) {
 		t.Errorf("returned err: '%v' does not match '%v'", err, w.expErr)
 	}
 	if w.expWinner != nil && !winner.ID().Equals(w.expWinner.ID()) {
-		t.Errorf("unexpected winner: %#v\n%q : %v", winner, types.BidIDString(winner.BidID), winner.Price)
+		t.Errorf("unexpected winner: %#v\n%s : %v", winner, winner.BidID, winner.Price)
 	}
 }
 

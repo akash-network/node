@@ -5,7 +5,6 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/ovrclk/akash/sdkutil"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -46,7 +45,7 @@ func (id OrderID) Validate() error {
 
 // String provides stringer interface to save reflected formatting.
 func (id OrderID) String() string {
-	return sdkutil.FmtBlockID(&id.Owner, &id.DSeq, &id.GSeq, &id.OSeq, nil)
+	return fmt.Sprintf("%s/%v", id.GroupID(), id.OSeq)
 }
 
 // MakeBidID returns BidID instance with provided order details and provider
@@ -83,12 +82,7 @@ func (id BidID) OrderID() OrderID {
 
 // String method for consistent output.
 func (id BidID) String() string {
-	return sdkutil.FmtBlockID(&id.Owner, &id.DSeq, &id.GSeq, &id.OSeq, &id.Provider)
-}
-
-// OrderIDString provides consistent conversion to string values for OrderID.
-func OrderIDString(id OrderID) string {
-	return fmt.Sprintf("%s-%d-%d-%d", id.Owner.String(), id.DSeq, id.GSeq, id.OSeq)
+	return fmt.Sprintf("%s/%v", id.OrderID(), id.Provider)
 }
 
 // GroupID method returns GroupID details with specific bid details
@@ -110,11 +104,6 @@ func (id BidID) Validate() error {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "BidID: Invalid Provider Address")
 	}
 	return nil
-}
-
-// BidIDString provides consistent conversion to string values for BidID/LeaseIDs.
-func BidIDString(id BidID) string {
-	return fmt.Sprintf("%s-%d-%d-%d-%s", id.Owner.String(), id.DSeq, id.GSeq, id.OSeq, id.Provider.String())
 }
 
 // MakeLeaseID returns LeaseID instance with provided bid details
@@ -157,5 +146,5 @@ func (id LeaseID) DeploymentID() dtypes.DeploymentID {
 
 // String method provides human readable representation of LeaseID.
 func (id LeaseID) String() string {
-	return sdkutil.FmtBlockID(&id.Owner, &id.DSeq, &id.GSeq, &id.OSeq, &id.Provider)
+	return id.BidID().String()
 }

@@ -73,6 +73,13 @@ ifeq (,$(findstring nostrip,$(BUILD_OPTIONS)))
   BUILD_FLAGS += -trimpath
 endif
 
+.PHONY: all
+all: build bins
+
+.PHONY: clean
+clean: cache-clean
+	rm -f $(BINS)
+
 include make/proto.mk
 include make/setup-cache.mk
 include make/releasing.mk
@@ -83,9 +90,3 @@ include make/test-simulation.mk
 include make/tools.mk
 include make/environment.mk
 include make/codegen.mk
-
-.PHONY: all
-all: build bins
-
-clean: cache-clean
-	rm -f $(BINS)
