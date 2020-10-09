@@ -19,5 +19,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: dump git config
+        run: cat .git/config
       - name: check-breakage
         run: make proto-check-breaking
