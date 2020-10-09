@@ -43,15 +43,9 @@ func cmdDeployments() *cobra.Command {
 
 			queryClient := types.NewQueryClient(clientCtx)
 
-			dfilters, state, err := DepFiltersFromFlags(cmd.Flags())
+			dfilters, err := DepFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
-			}
-
-			// checking state flag
-			dfilters.State = types.Deployment_State(types.Deployment_State_value[state])
-			if state != "" && dfilters.State == types.DeploymentStateInvalid {
-				return ErrStateValue
 			}
 
 			pageReq, err := client.ReadPageRequest(cmd.Flags())

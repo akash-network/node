@@ -1,8 +1,8 @@
 syntax = "proto3";
-package akash.deployment;
+package akash.deployment.v1beta1;
 
 import "gogoproto/gogo.proto";
-import "akash/deployment/group.proto";
+import "akash/deployment/v1beta1/group.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";
 
@@ -73,19 +73,23 @@ message Deployment {
     (gogoproto.moretags)   = "yaml:\"id\""
   ];
 
+  // State is an enum which refers to state of deployment
   enum State {
     option (gogoproto.goproto_enum_prefix) = false;
 
     // Prefix should start with 0 in enum. So declaring dummy state
     invalid = 0 [(gogoproto.enumvalue_customname) = "DeploymentStateInvalid"];
-    active  = 1 [(gogoproto.enumvalue_customname) = "DeploymentActive"];
-    closed  = 2 [(gogoproto.enumvalue_customname) = "DeploymentClosed"];
+    // DeploymentActive denotes state for deployment active
+    active = 1 [(gogoproto.enumvalue_customname) = "DeploymentActive"];
+    // DeploymentClosed denotes state for deployment closed
+    closed = 2 [(gogoproto.enumvalue_customname) = "DeploymentClosed"];
   }
 
   State state   = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
   bytes version = 3 [(gogoproto.jsontag) = "version", (gogoproto.moretags) = "yaml:\"version\""];
 }
 
+// DeploymentResponse represents details of deployment along with group details
 message DeploymentResponse {
   option (gogoproto.equal)            = false;
   option (gogoproto.goproto_stringer) = false;
@@ -97,6 +101,7 @@ message DeploymentResponse {
   bytes version = 3 [(gogoproto.jsontag) = "version", (gogoproto.moretags) = "yaml:\"version\""];
 }
 
+// DeploymentFilters defines filters used to filter deployments
 message DeploymentFilters {
   option (gogoproto.equal) = false;
 
@@ -107,9 +112,5 @@ message DeploymentFilters {
   ];
   uint64 dseq = 2
       [(gogoproto.customname) = "DSeq", (gogoproto.jsontag) = "dseq", (gogoproto.moretags) = "yaml:\"dseq\""];
-  int32 state = 3 [
-    (gogoproto.casttype) = "Deployment_State",
-    (gogoproto.jsontag)  = "state",
-    (gogoproto.moretags) = "yaml:\"state\""
-  ];
+  string state = 3 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
 }

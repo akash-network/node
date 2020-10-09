@@ -22,15 +22,9 @@ func cmdGetOrders() *cobra.Command {
 
 			queryClient := types.NewQueryClient(clientCtx)
 
-			ofilters, state, err := OrderFiltersFromFlags(cmd.Flags())
+			ofilters, err := OrderFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
-			}
-
-			// checking state flag
-			ofilters.State = types.Order_State(types.Order_State_value[state])
-			if state != "" && ofilters.State == types.OrderStateInvalid {
-				return ErrStateValue
 			}
 
 			pageReq, err := client.ReadPageRequest(cmd.Flags())

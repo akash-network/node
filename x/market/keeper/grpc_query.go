@@ -25,6 +25,12 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
+	stateVal := types.Order_State(types.Order_State_value[req.Filters.State])
+
+	if req.Filters.State != "" && stateVal == types.OrderStateInvalid {
+		return nil, status.Error(codes.InvalidArgument, "invalid state value")
+	}
+
 	var orders types.Orders
 	ctx := sdk.UnwrapSDKContext(c)
 
@@ -40,7 +46,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		}
 
 		// filter orders with provided filters
-		if req.Filters.Accept(order) {
+		if req.Filters.Accept(order, stateVal) {
 			if accumulate {
 				orders = append(orders, order)
 			}
@@ -86,6 +92,12 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
+	stateVal := types.Bid_State(types.Bid_State_value[req.Filters.State])
+
+	if req.Filters.State != "" && stateVal == types.BidStateInvalid {
+		return nil, status.Error(codes.InvalidArgument, "invalid state value")
+	}
+
 	var bids types.Bids
 	ctx := sdk.UnwrapSDKContext(c)
 
@@ -101,7 +113,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		}
 
 		// filter bids with provided filters
-		if req.Filters.Accept(bid) {
+		if req.Filters.Accept(bid, stateVal) {
 			if accumulate {
 				bids = append(bids, bid)
 			}
@@ -151,6 +163,12 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
+	stateVal := types.Lease_State(types.Lease_State_value[req.Filters.State])
+
+	if req.Filters.State != "" && stateVal == types.LeaseStateInvalid {
+		return nil, status.Error(codes.InvalidArgument, "invalid state value")
+	}
+
 	var leases types.Leases
 	ctx := sdk.UnwrapSDKContext(c)
 
@@ -166,7 +184,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		}
 
 		// filter leases with provided filters
-		if req.Filters.Accept(lease) {
+		if req.Filters.Accept(lease, stateVal) {
 			if accumulate {
 				leases = append(leases, lease)
 			}

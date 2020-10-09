@@ -1,0 +1,30 @@
+name: protobuf
+
+on:
+  pull_request:
+    paths:
+      - "**.proto"
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+      - name: go mod vendor
+        run: make modvendor
+      - name: lint
+        run: make proto-lint
+  breakage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: prepare master branch
+        run: git checkout master
+      - name: checkout back to GITHUB_SHA
+        run: git checkout $GITHUB_SHA
+      - name: go mod vendor
+        run: make modvendor
+      - name: check-breakage
+        run: make proto-check-breaking

@@ -17,7 +17,7 @@ modsensure: deps-tidy deps-vendor
 
 .PHONY: modvendor
 modvendor: modsensure $(MODVENDOR)
-	@echo "vendoring non-go files files..."
+	@echo "vendoring non-go files..."
 	$(MODVENDOR) -copy="**/*.proto" -include=\
 github.com/cosmos/cosmos-sdk/proto,\
 github.com/cosmos/cosmos-sdk/third_party/proto

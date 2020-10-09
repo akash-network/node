@@ -141,7 +141,7 @@ func TestGRPCQueryOrders(t *testing.T) {
 				req = &types.QueryOrdersRequest{
 					Filters: types.OrderFilters{
 						OSeq:  37,
-						State: types.Order_State(8),
+						State: types.OrderMatched.String(),
 					}}
 			},
 			0,
@@ -149,7 +149,7 @@ func TestGRPCQueryOrders(t *testing.T) {
 		{
 			"query orders with state filter",
 			func() {
-				req = &types.QueryOrdersRequest{Filters: types.OrderFilters{State: types.OrderMatched}}
+				req = &types.QueryOrdersRequest{Filters: types.OrderFilters{State: types.OrderMatched.String()}}
 			},
 			1,
 		},
@@ -279,7 +279,7 @@ func TestGRPCQueryBids(t *testing.T) {
 				req = &types.QueryBidsRequest{
 					Filters: types.BidFilters{
 						OSeq:     37,
-						State:    types.Bid_State(8),
+						State:    types.BidLost.String(),
 						Provider: testutil.AccAddress(t),
 					}}
 			},
@@ -288,7 +288,7 @@ func TestGRPCQueryBids(t *testing.T) {
 		{
 			"query bids with state filter",
 			func() {
-				req = &types.QueryBidsRequest{Filters: types.BidFilters{State: types.BidLost}}
+				req = &types.QueryBidsRequest{Filters: types.BidFilters{State: types.BidLost.String()}}
 			},
 			1,
 		},
@@ -425,7 +425,7 @@ func TestGRPCQueryLeases(t *testing.T) {
 				req = &types.QueryLeasesRequest{
 					Filters: types.LeaseFilters{
 						OSeq:     37,
-						State:    types.Lease_State(8),
+						State:    types.LeaseClosed.String(),
 						Provider: testutil.AccAddress(t),
 					}}
 			},
@@ -434,7 +434,7 @@ func TestGRPCQueryLeases(t *testing.T) {
 		{
 			"query leases with state filter",
 			func() {
-				req = &types.QueryLeasesRequest{Filters: types.LeaseFilters{State: types.LeaseClosed}}
+				req = &types.QueryLeasesRequest{Filters: types.LeaseFilters{State: types.LeaseClosed.String()}}
 			},
 			1,
 		},
