@@ -6,6 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 
+	cmdcommon "github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/provider/gateway"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -62,9 +63,5 @@ func doServiceStatus(cmd *cobra.Command) error {
 		return err
 	}
 
-	if err = cctx.PrintOutputLegacy(result); err != nil {
-		return err
-	}
-
-	return nil
+	return cmdcommon.PrintJSONStdout(result)
 }
