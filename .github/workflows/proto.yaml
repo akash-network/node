@@ -20,7 +20,8 @@ jobs:
         with:
           fetch-depth: 0
       - name: prepare master branch
-        run: git branch -u origin/master master
-      - run: cat .git/config
+        run: git checkout master
+      - name: checkout back to GITHUB_SHA
+        run: git checkout $GITHUB_SHA
       - name: check-breakage
         run: make proto-check-breaking
