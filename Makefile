@@ -47,7 +47,7 @@ else
 	GORELEASER_BUILD_TAGS=$(BUILD_TAGS),testnet
 endif
 
-GORELEASER_FLAGS    = -trimpath -tags="$(GORELEASER_BUILD_TAGS)"
+GORELEASER_FLAGS    = -tags="$(GORELEASER_BUILD_TAGS)"
 GORELEASER_LD_FLAGS = '-s -w -X github.com/cosmos/cosmos-sdk/version.Name=akash \
 -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
 -X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(GORELEASER_BUILD_TAGS)" \
