@@ -37,6 +37,8 @@ BUF                   := $(CACHE_BIN)/buf
 PROTOC                := $(CACHE_BIN)/protoc
 GRPC_GATEWAY          := $(CACHE_BIN)/protoc-gen-grpc-gateway
 
+HTTPS_GIT    := https://github.com/ovrclk/akash.git
+
 # BUILD_TAGS are for builds withing this makefile
 # GORELEASER_BUILD_TAGS are for goreleaser only
 # Setting mainnet flag based on env value
