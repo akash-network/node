@@ -18,11 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
-          ref: master
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
+          fetch-depth: 0
+      - name: prepare master branch
+        run: git branch -u origin/master master
       - run: cat .git/config
       - name: check-breakage
         run: make proto-check-breaking
