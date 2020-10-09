@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	cmdcommon "github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/provider/gateway"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -100,10 +101,7 @@ func doServiceLogs(cmd *cobra.Command) error {
 
 	if outputFormat == "json" {
 		printFn = func(msg gateway.ServiceLogMessage) error {
-			if err = cctx.PrintOutputLegacy(msg); err != nil {
-				return err
-			}
-			return nil
+			return cmdcommon.PrintJSONStdout(msg)
 		}
 	}
 
