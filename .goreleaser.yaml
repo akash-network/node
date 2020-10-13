@@ -12,10 +12,11 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-    flags:
+    flags: &build_flags
+      - -trimpath
       - -mod=readonly
       - "{{ .Env.BUILD_FLAGS }}"
-    ldflags:
+    ldflags: &ld_flags
       - "{{ .Env.LD_FLAGS }}"
   - id: akash-linux-amd64
     binary: akash
@@ -24,12 +25,8 @@ builds:
       - amd64
     goos:
       - linux
-    flags:
-      - -mod=readonly
-      - -a
-      - "{{ .Env.BUILD_FLAGS }}"
-    ldflags:
-      - "{{ .Env.LD_FLAGS }}"
+    <<: *build_flags
+    <<: *ld_flags
       - -extldflags "-lc -lrt -lpthread --static"
   - id: akash-linux-arm64
     binary: akash
@@ -41,12 +38,8 @@ builds:
     env:
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
-    flags:
-      - -mod=readonly
-      - -a
-      - "{{ .Env.BUILD_FLAGS }}"
-    ldflags:
-      - "{{ .Env.LD_FLAGS }}"
+    <<: *build_flags
+    <<: *ld_flags
       - -extldflags "-lc -lrt -lpthread --static"
   - id: akash-windows-amd64
     binary: akash
@@ -58,12 +51,9 @@ builds:
     env:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
-    flags:
-      - -mod=readonly
-      - "{{ .Env.BUILD_FLAGS }}"
-    ldflags:
+    <<: *build_flags
+    <<: *ld_flags
       - -buildmode=exe
-      - "{{ .Env.LD_FLAGS }}"
 archives:
   - id: akash
     builds:
