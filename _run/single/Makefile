@@ -63,6 +63,10 @@ provider-lease-status:
 		--oseq      "$(OSEQ)"        \
 		--provider  "$(PROVIDER_ADDRESS)"
 
+.PHONY: provider-lease-ping
+provider-lease-ping:
+	curl -sIH "Host: hello.localhost" localhost:$(KIND_HTTP_PORT)
+
 .PHONY:
 clean-all: clean
 	git clean -fdX
