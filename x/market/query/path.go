@@ -36,7 +36,7 @@ func OrderPath(id types.OrderID) string {
 	return fmt.Sprintf("%s/%s", orderPath, orderParts(id))
 }
 
-//getBidsPath returns bids path for queries
+// getBidsPath returns bids path for queries
 func getBidsPath(bfilters BidFilters) string {
 	return fmt.Sprintf("%s/%s/%v", bidsPath, bfilters.Owner, bfilters.StateFlagVal)
 }

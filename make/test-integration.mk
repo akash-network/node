@@ -48,8 +48,5 @@ test-coverage:
 		-coverpkg="./..." \
 		./...
 
-test-lint:
-	$(GOLANGCI_LINT) run
-
 test-vet:
 	$(GO) vet ./...

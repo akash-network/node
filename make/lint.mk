@@ -15,7 +15,12 @@ SUBLINTERS = deadcode \
 
 # Execute the same lint methods as configured in .github/workflows/tests.yaml
 # Clear feedback from each method as it fails.
+.PHONY: test-sublinters
 test-sublinters: $(patsubst %, test-sublinter-%,$(SUBLINTERS))
+
+.PHONY: test-lint
+test-lint-all:
+	$(GOLANGCI_LINT) ./... --issues-exit-code=0 --deadline=10m
 
 .PHONY: test-sublinter-misspell
 test-sublinter-misspell:

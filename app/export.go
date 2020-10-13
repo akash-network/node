@@ -56,7 +56,7 @@ func (app *AkashApp) ExportAppStateAndValidators(
 func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []string) {
 	applyAllowedAddrs := false
 
-	//Check if there is a allowed address list
+	// Check if there is a allowed address list
 	if len(jailAllowedAddrs) > 0 {
 		applyAllowedAddrs = true
 	}

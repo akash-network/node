@@ -5,22 +5,6 @@ $(CACHE):
 	mkdir -p $(CACHE_INCLUDE)
 	mkdir -p $(CACHE_VERSIONS)
 
-$(GOLANGCI_LINT_VERSION_FILE): $(CACHE)
-	@echo "installing golangci-lint..."
-	rm -f $(GOLANGCI_LINT)
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
-		sh -s -- -b $(CACHE_BIN) $(GOLANGCI_LINT_VERSION)
-	rm -rf "$(dir $@)"
-	mkdir -p "$(dir $@)"
-	touch $@
-$(GOLANGCI_LINT): $(GOLANGCI_LINT_VERSION_FILE)
-
-.PHONY:lintdeps-install
-lintdeps-install: $(GOLANGCI_LINT)
-	@echo "lintdeps-install is deprecated and will be removed once Github Actions migrated to use .cache/bin/golangci-lint"
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
-		sh -s -- -b $(GOBIN) $(GOLANGCI_LINT_VERSION)
-
 $(PROTOC_VERSION_FILE): $(CACHE)
 	@echo "installing protoc compiler..."
 	rm -f $(PROTOC)
@@ -66,7 +50,7 @@ kubetypes-deps-install:
 	git clone  git@github.com:kubernetes/code-generator.git \
 		"$(shell go env GOPATH)/src/k8s.io/code-generator"
 
-devdeps-install: $(GOLANGCI_LINT) kubetypes-deps-install
+devdeps-install: kubetypes-deps-install
 	$(GO) install github.com/vektra/mockery/.../
 	$(GO) install k8s.io/code-generator/...
 	$(GO) install sigs.k8s.io/kind

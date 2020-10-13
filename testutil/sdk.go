@@ -9,7 +9,7 @@ import (
 
 func Coin(t testing.TB) sdk.Coin {
 	t.Helper()
-	return sdk.NewCoin("testcoin", sdk.NewInt(int64(rand.Intn(999)+1)))
+	return sdk.NewCoin("testcoin", sdk.NewInt(int64(rand.Intn(999)+1))) // nolint: gosec
 }
 
 // AkashCoin provides simple interface to the Akash sdk.Coin type.
