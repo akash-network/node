@@ -118,25 +118,26 @@ func AddOrderFilterFlags(flags *pflag.FlagSet) {
 }
 
 // OrderFiltersFromFlags returns OrderFilters with given flags and error if occurred
-func OrderFiltersFromFlags(flags *pflag.FlagSet) (types.OrderFilters, string, error) {
-	dfilters, state, err := dcli.DepFiltersFromFlags(flags)
+func OrderFiltersFromFlags(flags *pflag.FlagSet) (types.OrderFilters, error) {
+	dfilters, err := dcli.DepFiltersFromFlags(flags)
 	if err != nil {
-		return types.OrderFilters{}, state, err
+		return types.OrderFilters{}, err
 	}
 	ofilters := types.OrderFilters{
 		Owner: dfilters.Owner,
 		DSeq:  dfilters.DSeq,
+		State: dfilters.State,
 	}
 
 	if ofilters.GSeq, err = flags.GetUint32("gseq"); err != nil {
-		return ofilters, state, err
+		return ofilters, err
 	}
 
 	if ofilters.OSeq, err = flags.GetUint32("oseq"); err != nil {
-		return ofilters, state, err
+		return ofilters, err
 	}
 
-	return ofilters, state, nil
+	return ofilters, nil
 }
 
 // AddBidFilterFlags add flags to filter for bid list
@@ -150,37 +151,38 @@ func AddBidFilterFlags(flags *pflag.FlagSet) {
 }
 
 // BidFiltersFromFlags returns BidFilters with given flags and error if occurred
-func BidFiltersFromFlags(flags *pflag.FlagSet) (types.BidFilters, string, error) {
-	ofilters, state, err := OrderFiltersFromFlags(flags)
+func BidFiltersFromFlags(flags *pflag.FlagSet) (types.BidFilters, error) {
+	ofilters, err := OrderFiltersFromFlags(flags)
 	if err != nil {
-		return types.BidFilters{}, state, err
+		return types.BidFilters{}, err
 	}
 	bfilters := types.BidFilters{
 		Owner: ofilters.Owner,
 		DSeq:  ofilters.DSeq,
 		GSeq:  ofilters.OSeq,
 		OSeq:  ofilters.OSeq,
+		State: ofilters.State,
 	}
 
 	provider, err := flags.GetString("provider")
 	if err != nil {
-		return bfilters, state, err
+		return bfilters, err
 	}
 
 	if provider != "" {
 		bfilters.Provider, err = sdk.AccAddressFromBech32(provider)
 		if err != nil {
-			return bfilters, state, err
+			return bfilters, err
 		}
 	} else {
 		bfilters.Provider = sdk.AccAddress{}
 	}
 
 	if !bfilters.Provider.Empty() && sdk.VerifyAddressFormat(bfilters.Provider) != nil {
-		return bfilters, state, ErrProviderValue
+		return bfilters, ErrProviderValue
 	}
 
-	return bfilters, state, nil
+	return bfilters, nil
 }
 
 // AddLeaseFilterFlags add flags to filter for lease list
@@ -194,10 +196,10 @@ func AddLeaseFilterFlags(flags *pflag.FlagSet) {
 }
 
 // LeaseFiltersFromFlags returns LeaseFilters with given flags and error if occurred
-func LeaseFiltersFromFlags(flags *pflag.FlagSet) (types.LeaseFilters, string, error) {
-	bfilters, state, err := BidFiltersFromFlags(flags)
+func LeaseFiltersFromFlags(flags *pflag.FlagSet) (types.LeaseFilters, error) {
+	bfilters, err := BidFiltersFromFlags(flags)
 	if err != nil {
-		return types.LeaseFilters{}, state, err
+		return types.LeaseFilters{}, err
 	}
 	lfilters := types.LeaseFilters{
 		Owner:    bfilters.Owner,
@@ -205,6 +207,7 @@ func LeaseFiltersFromFlags(flags *pflag.FlagSet) (types.LeaseFilters, string, er
 		GSeq:     bfilters.GSeq,
 		OSeq:     bfilters.OSeq,
 		Provider: bfilters.Provider,
+		State:    bfilters.State,
 	}
-	return lfilters, state, nil
+	return lfilters, nil
 }

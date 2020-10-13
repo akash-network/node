@@ -149,7 +149,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 				req = &types.QueryDeploymentsRequest{
 					Filters: types.DeploymentFilters{
 						DSeq:  37,
-						State: types.Deployment_State(4),
+						State: types.DeploymentClosed.String(),
 					}}
 			},
 			0,
@@ -157,7 +157,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments with state filter",
 			func() {
-				req = &types.QueryDeploymentsRequest{Filters: types.DeploymentFilters{State: types.DeploymentClosed}}
+				req = &types.QueryDeploymentsRequest{Filters: types.DeploymentFilters{State: types.DeploymentClosed.String()}}
 			},
 			1,
 		},

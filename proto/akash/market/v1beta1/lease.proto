@@ -1,46 +1,13 @@
 syntax = "proto3";
-package akash.market;
+package akash.market.v1beta1;
 
 import "gogoproto/gogo.proto";
-import "akash/market/order.proto";
 import "cosmos/base/v1beta1/coin.proto";
 
 option go_package = "github.com/ovrclk/akash/x/market/types";
 
-// MsgCreateBid defines an SDK message for creating Bid
-message MsgCreateBid {
-  option (gogoproto.equal) = false;
-
-  OrderID order = 1 [
-    (gogoproto.customname) = "Order",
-    (gogoproto.nullable)   = false,
-    (gogoproto.jsontag)    = "order",
-    (gogoproto.moretags)   = "yaml:\"order\""
-  ];
-  bytes provider = 2 [
-    (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-    (gogoproto.jsontag)  = "provider",
-    (gogoproto.moretags) = "yaml:\"provider\""
-  ];
-  cosmos.base.v1beta1.Coin price = 3
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "price", (gogoproto.moretags) = "yaml:\"price\""];
-}
-
-// MsgCloseBid defines an SDK message for closing bid
-message MsgCloseBid {
-  option (gogoproto.equal) = false;
-
-  BidID bid_id = 1 [
-    (gogoproto.customname) = "BidID",
-    (gogoproto.nullable)   = false,
-    (gogoproto.jsontag)    = "id",
-    (gogoproto.moretags)   = "yaml:\"id\""
-  ];
-}
-
-// BidID stores owner and all other seq numbers
-// A successful bid becomes a Lease(ID).
-message BidID {
+// LeaseID stores bid details of lease
+message LeaseID {
   option (gogoproto.equal)            = true;
   option (gogoproto.goproto_stringer) = false;
 
@@ -62,27 +29,30 @@ message BidID {
   ];
 }
 
-// Bid stores BidID, state of bid and price
-message Bid {
+// Lease stores LeaseID, state of lease and price
+message Lease {
   option (gogoproto.equal)            = false;
   option (gogoproto.goproto_stringer) = false;
 
-  BidID bid_id = 1 [
-    (gogoproto.customname) = "BidID",
+  LeaseID lease_id = 1 [
+    (gogoproto.customname) = "LeaseID",
     (gogoproto.nullable)   = false,
     (gogoproto.jsontag)    = "id",
     (gogoproto.moretags)   = "yaml:\"id\""
   ];
 
+  // State is an enum which refers to state of lease
   enum State {
     option (gogoproto.goproto_enum_prefix) = false;
 
     // Prefix should start with 0 in enum. So declaring dummy state
-    invalid = 0 [(gogoproto.enumvalue_customname) = "BidStateInvalid"];
-    open    = 1 [(gogoproto.enumvalue_customname) = "BidOpen"];
-    matched = 2 [(gogoproto.enumvalue_customname) = "BidMatched"];
-    lost    = 3 [(gogoproto.enumvalue_customname) = "BidLost"];
-    closed  = 4 [(gogoproto.enumvalue_customname) = "BidClosed"];
+    invalid = 0 [(gogoproto.enumvalue_customname) = "LeaseStateInvalid"];
+    // LeaseActive denotes state for lease active
+    active = 1 [(gogoproto.enumvalue_customname) = "LeaseActive"];
+    // LeaseInsufficientFunds denotes state for lease insufficient_funds
+    insufficient_funds = 2 [(gogoproto.enumvalue_customname) = "LeaseInsufficientFunds"];
+    // LeaseClosed denotes state for lease closed
+    closed = 3 [(gogoproto.enumvalue_customname) = "LeaseClosed"];
   }
 
   State                    state = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
@@ -90,8 +60,8 @@ message Bid {
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "price", (gogoproto.moretags) = "yaml:\"price\""];
 }
 
-// BidFilters defines flags for bid list filter
-message BidFilters {
+// LeaseFilters defines flags for lease list filter
+message LeaseFilters {
   option (gogoproto.equal) = false;
 
   bytes owner = 1 [
@@ -110,6 +80,5 @@ message BidFilters {
     (gogoproto.jsontag)  = "provider",
     (gogoproto.moretags) = "yaml:\"provider\""
   ];
-  int32 state = 6
-      [(gogoproto.casttype) = "Bid_State", (gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
+  string state = 6 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
 }

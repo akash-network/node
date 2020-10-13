@@ -26,6 +26,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2-beta
+        with:
+          go-version: ${{ secrets.GOLANG_VERSION }}
       - name: test-sim-nondeterminism
         run: make test-sim-nondeterminism
 
@@ -34,6 +36,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ secrets.GOLANG_VERSION }}
       - name: test-sim-import-export
         run: make test-sim-import-export
 
@@ -42,6 +46,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ secrets.GOLANG_VERSION }}
       - name: test-sim-after-import
         run: make test-sim-after-import
 
@@ -50,5 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ secrets.GOLANG_VERSION }}
       - name: test-sim-fullapp
         run: make test-sim-fullapp
