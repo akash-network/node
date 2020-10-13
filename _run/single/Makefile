@@ -56,7 +56,7 @@ provider-status:
 
 .PHONY: provider-lease-status
 provider-lease-status:
-	$(AKASHCTL) provider status lease-status \
+	$(AKASHCTL) provider lease-status \
 		--owner     "$(KEY_ADDRESS)" \
 		--dseq      "$(DSEQ)"        \
 		--gseq      "$(GSEQ)"        \
