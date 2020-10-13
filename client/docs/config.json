@@ -1,21 +1,25 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "AKASH - GRPC Gateway",
+    "title": "AKASH - gRPC Gateway docs",
+    "description": "A REST interface for state queries, legacy transactions",
     "version": "1.0.0"
   },
   "apis": [
     {
-      "url": "./akash/deployment/v1beta1/query.swagger.json"
+      "url": "./tmp-swagger-gen/akash/deployment/v1beta1/query.swagger.json"
     },
     {
-      "url": "./akash/market/v1beta1/query.swagger.json"
+      "url": "./tmp-swagger-gen/akash/market/v1beta1/query.swagger.json"
     },
     {
-      "url": "./akash/provider/v1beta1/query.swagger.json"
+      "url": "./tmp-swagger-gen/akash/provider/v1beta1/query.swagger.json"
     },
     {
-      "url": "./client/docs/swagger-sdk.json"
+      "url": "./vendor/github.com/cosmos/cosmos-sdk/client/docs/swagger-ui/swagger.yaml",
+      "dereference": {
+        "circular": "ignore"
+      }
     }
   ]
 }
