@@ -4,7 +4,7 @@ metadata:
   name: akash
 spec:
   selector:
-    app: akash
+    app: akashd
   ports:
     - name: akash-rpc
       port: 26657

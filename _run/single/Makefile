@@ -10,7 +10,7 @@ KUSTOMIZE_AKASHD_CACHE   ?= $(KUSTOMIZE_AKASHD_DIR)/cache
 CLIENT_EXPORT_PASSWORD   ?= 12345678
 
 PROVIDER_HOSTNAME = akash-provider.localhost
-AKASHCTL_NODE     = "tcp://akashd.localhost:$(KIND_PORT_BINDINGS)"
+AKASHCTL_NODE     = "tcp://akash.localhost:$(KIND_PORT_BINDINGS)"
 GATEWAY_ENDPOINT ?= http://akash-provider.localhost
 
 AKASHCTL += --node $(AKASHCTL_NODE)

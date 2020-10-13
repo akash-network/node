@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -e
+set -xe
 
 env | sort
 
@@ -14,4 +14,4 @@ cp "$AKASH_BOOT_DATA/genesis.json" "$AKASH_HOME/config/"
 cp "$AKASH_BOOT_KEYS/node_key.json" "$AKASH_HOME/config/"
 cp "$AKASH_BOOT_KEYS/priv_validator_key.json" "$AKASH_HOME/config/"
 
-/akash start --home=$AKASH_HOME
+/akash --home=$AKASH_HOME start 
