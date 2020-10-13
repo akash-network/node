@@ -13,4 +13,4 @@ spec:
               service:
                 name: akash
                 port:
-                  number: 26657
+                  name: akash-rpc
