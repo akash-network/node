@@ -21,8 +21,8 @@ for interacting with the network.
 
 Run a network with a single, local node and execute workloads in Minikube.
 
-Running through the entire suite requires four terminals.
-Each command is marked __t1__-__t4__ to indicate a suggested terminal number.
+Running through the entire suite requires three terminals.
+Each command is marked __t1__-__t3__ to indicate a suggested terminal number.
 
 * TODO: https://kind.sigs.k8s.io/docs/user/local-registry/
 
