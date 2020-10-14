@@ -4,15 +4,6 @@ bases:
 
 namespace: akash-services
 
-images:
-  - name: ovrclk/akashctl
-
-    ##
-    # akashctl version
-    ##
-
-    newTag: 0.7.4
-
 configMapGenerator:
 
   ##
@@ -44,9 +35,15 @@ patchesJson6902:
   - path: gateway-host.yaml
     target:
       group: networking.k8s.io
-      version: v1beta1
+      version: v1
       kind: Ingress
       name: akash-provider
+  - path: docker-image.yaml
+    target:
+      kind: Deployment
+      group: apps
+      name: akash-provider
+      version: v1
 
 secretGenerator:
 
@@ -59,3 +56,4 @@ secretGenerator:
     files:
       - cache/key.txt
       - cache/key-pass.txt
+
