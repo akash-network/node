@@ -3,12 +3,12 @@ version: "2.0"
 
 services:
   web:
-    image: ropes/akash-app:v1
+    image: quay.io/ovrclk/demo-app
     expose:
-      - port: 8080
+      - port: 80
         as: 80
         accept:
-          - test.localhost
+          - hello.localhost
         to:
           - global: true
 
