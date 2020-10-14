@@ -9,6 +9,8 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/cosmos/cosmos-sdk/x/capability"
+	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
@@ -18,6 +20,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	transfer "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
+	ibctransfertypes "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer/types"
+	ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
+	ibchost "github.com/cosmos/cosmos-sdk/x/ibc/core/24-host"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/cosmos/cosmos-sdk/x/params"
@@ -36,32 +42,32 @@ import (
 var (
 	mbasics = module.NewBasicManager(
 		append([]module.AppModuleBasic{
-			genutil.AppModuleBasic{},
-
 			// accounts, fees.
 			auth.AppModuleBasic{},
-
+			// genesis utilities
+			genutil.AppModuleBasic{},
 			// tokens, token balance.
 			bank.AppModuleBasic{},
-
+			capability.AppModuleBasic{},
+			// validator staking
+			staking.AppModuleBasic{},
 			// inflation
 			mint.AppModuleBasic{},
-
-			staking.AppModuleBasic{},
-
-			slashing.AppModuleBasic{},
-
+			// distribution of fess and inflation
 			distr.AppModuleBasic{},
-
+			// governance functionality (voting)
 			gov.NewAppModuleBasic(
 				paramsclient.ProposalHandler, distrclient.ProposalHandler,
 				upgradeclient.ProposalHandler, upgradeclient.CancelProposalHandler,
 			),
-
+			// chain parameters
 			params.AppModuleBasic{},
+			crisis.AppModuleBasic{},
+			slashing.AppModuleBasic{},
+			ibc.AppModuleBasic{},
 			upgrade.AppModuleBasic{},
 			evidence.AppModuleBasic{},
-			crisis.AppModuleBasic{},
+			transfer.AppModuleBasic{},
 		},
 			// akash
 			akashModuleBasics()...,
@@ -89,16 +95,18 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 		append([]string{
 			authtypes.StoreKey,
 			banktypes.StoreKey,
-			paramstypes.StoreKey,
-			slashingtypes.StoreKey,
-			distrtypes.StoreKey,
 			stakingtypes.StoreKey,
 			minttypes.StoreKey,
+			distrtypes.StoreKey,
+			slashingtypes.StoreKey,
 			govtypes.StoreKey,
+			paramstypes.StoreKey,
+			ibchost.StoreKey,
 			upgradetypes.StoreKey,
 			evidencetypes.StoreKey,
+			ibctransfertypes.StoreKey,
+			capabilitytypes.StoreKey,
 		},
-
 			akashKVStoreKeys()...,
 		)...,
 	)
@@ -106,4 +114,9 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 
 func transientStoreKeys() map[string]*sdk.TransientStoreKey {
 	return sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
+}
+
+func memStoreKeys() map[string]*sdk.MemoryStoreKey {
+	return sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
+
 }

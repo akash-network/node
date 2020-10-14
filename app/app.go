@@ -21,9 +21,12 @@ import (
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/cosmos/cosmos-sdk/x/capability"
+	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
@@ -35,6 +38,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	transfer "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
+	ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
+	porttypes "github.com/cosmos/cosmos-sdk/x/ibc/core/05-port/types"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
@@ -57,15 +63,21 @@ import (
 	"github.com/ovrclk/akash/x/provider"
 
 	"github.com/tendermint/tendermint/libs/log"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmos "github.com/tendermint/tendermint/libs/os"
 
 	"github.com/cosmos/cosmos-sdk/version"
+	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	ibctransferkeeper "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer/keeper"
+	ibctransfertypes "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer/types"
+	ibchost "github.com/cosmos/cosmos-sdk/x/ibc/core/24-host"
+	ibckeeper "github.com/cosmos/cosmos-sdk/x/ibc/core/keeper"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
@@ -89,21 +101,31 @@ type AkashApp struct {
 
 	invCheckPeriod uint
 
-	keys  map[string]*sdk.KVStoreKey
-	tkeys map[string]*sdk.TransientStoreKey
+	keys    map[string]*sdk.KVStoreKey
+	tkeys   map[string]*sdk.TransientStoreKey
+	memkeys map[string]*sdk.MemoryStoreKey
 
 	keeper struct {
-		acct       authkeeper.AccountKeeper
-		bank       bankkeeper.Keeper
-		params     paramskeeper.Keeper
-		staking    stakingkeeper.Keeper
-		distr      distrkeeper.Keeper
-		slashing   slashingkeeper.Keeper
-		mint       mintkeeper.Keeper
-		gov        govkeeper.Keeper
-		upgrade    upgradekeeper.Keeper
-		crisis     crisiskeeper.Keeper
-		evidence   evidencekeeper.Keeper
+		acct     authkeeper.AccountKeeper
+		bank     bankkeeper.Keeper
+		cap      *capabilitykeeper.Keeper
+		staking  stakingkeeper.Keeper
+		slashing slashingkeeper.Keeper
+		mint     mintkeeper.Keeper
+		distr    distrkeeper.Keeper
+		gov      govkeeper.Keeper
+		crisis   crisiskeeper.Keeper
+		upgrade  upgradekeeper.Keeper
+		params   paramskeeper.Keeper
+		ibc      *ibckeeper.Keeper
+		evidence evidencekeeper.Keeper
+		transfer ibctransferkeeper.Keeper
+
+		// make scoped keepers public for test purposes
+		scopedIBC      capabilitykeeper.ScopedKeeper
+		scopedTransfer capabilitykeeper.ScopedKeeper
+
+		// akash keepers
 		deployment deployment.Keeper
 		market     market.Keeper
 		provider   provider.Keeper
@@ -137,6 +159,7 @@ func NewApp(
 
 	keys := kvStoreKeys()
 	tkeys := transientStoreKeys()
+	memkeys := memStoreKeys()
 
 	app := &AkashApp{
 		BaseApp:           bapp,
@@ -146,12 +169,18 @@ func NewApp(
 		invCheckPeriod:    invCheckPeriod,
 		keys:              keys,
 		tkeys:             tkeys,
+		memkeys:           memkeys,
 	}
 
 	app.keeper.params = initParamsKeeper(appCodec, cdc, app.keys[paramstypes.StoreKey], tkeys[paramstypes.TStoreKey])
 
 	// set the BaseApp's parameter store
 	bapp.SetParamStore(app.keeper.params.Subspace(bam.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
+
+	// add capability keeper and ScopeToModule for ibc module
+	app.keeper.cap = capabilitykeeper.NewKeeper(appCodec, app.keys[capabilitytypes.StoreKey], app.memkeys[capabilitytypes.MemStoreKey])
+	scopedIBCKeeper := app.keeper.cap.ScopeToModule(ibchost.ModuleName)
+	scopedTransferKeeper := app.keeper.cap.ScopeToModule(ibctransfertypes.ModuleName)
 
 	app.keeper.acct = authkeeper.NewAccountKeeper(
 		appCodec,
@@ -177,6 +206,16 @@ func NewApp(
 		app.GetSubspace(stakingtypes.ModuleName),
 	)
 
+	app.keeper.mint = mintkeeper.NewKeeper(
+		appCodec,
+		app.keys[minttypes.StoreKey],
+		app.GetSubspace(minttypes.ModuleName),
+		&skeeper,
+		app.keeper.acct,
+		app.keeper.bank,
+		authtypes.FeeCollectorName,
+	)
+
 	app.keeper.distr = distrkeeper.NewKeeper(
 		appCodec,
 		app.keys[distrtypes.StoreKey],
@@ -195,27 +234,6 @@ func NewApp(
 		app.GetSubspace(slashingtypes.ModuleName),
 	)
 
-	// register the staking hooks
-	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
-	app.keeper.staking = *skeeper.SetHooks(
-		stakingtypes.NewMultiStakingHooks(
-			app.keeper.distr.Hooks(),
-			app.keeper.slashing.Hooks(),
-		),
-	)
-
-	app.keeper.mint = mintkeeper.NewKeeper(
-		appCodec,
-		app.keys[minttypes.StoreKey],
-		app.GetSubspace(minttypes.ModuleName),
-		&skeeper,
-		app.keeper.acct,
-		app.keeper.bank,
-		authtypes.FeeCollectorName,
-	)
-
-	app.keeper.upgrade = upgradekeeper.NewKeeper(skipUpgradeHeights, app.keys[upgradetypes.StoreKey], appCodec, homePath)
-
 	app.keeper.crisis = crisiskeeper.NewKeeper(
 		app.GetSubspace(crisistypes.ModuleName),
 		invCheckPeriod,
@@ -223,15 +241,7 @@ func NewApp(
 		authtypes.FeeCollectorName,
 	)
 
-	// create evidence keeper with evidence router
-	evidenceKeeper := evidencekeeper.NewKeeper(
-		appCodec, app.keys[evidencetypes.StoreKey], &app.keeper.staking, app.keeper.slashing,
-	)
-	evidenceRouter := evidencetypes.NewRouter()
-
-	evidenceKeeper.SetRouter(evidenceRouter)
-
-	app.keeper.evidence = *evidenceKeeper
+	app.keeper.upgrade = upgradekeeper.NewKeeper(skipUpgradeHeights, app.keys[upgradetypes.StoreKey], appCodec, homePath)
 
 	// register the proposal types
 	govRouter := govtypes.NewRouter()
@@ -250,13 +260,50 @@ func NewApp(
 		govRouter,
 	)
 
+	// register the staking hooks
+	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
+	app.keeper.staking = *skeeper.SetHooks(
+		stakingtypes.NewMultiStakingHooks(
+			app.keeper.distr.Hooks(),
+			app.keeper.slashing.Hooks(),
+		),
+	)
+
+	// register IBC Keeper
+	app.keeper.ibc = ibckeeper.NewKeeper(
+		appCodec, app.keys[ibchost.StoreKey], app.keeper.staking, app.keeper.scopedIBC,
+	)
+
+	// register Transfer Keepers
+	app.keeper.transfer = ibctransferkeeper.NewKeeper(
+		appCodec, app.keys[ibctransfertypes.StoreKey], app.GetSubspace(ibctransfertypes.ModuleName),
+		app.keeper.ibc.ChannelKeeper, &app.keeper.ibc.PortKeeper,
+		app.keeper.acct, app.keeper.bank, app.keeper.scopedTransfer,
+	)
+	transferModule := transfer.NewAppModule(app.keeper.transfer)
+
+	// Create static IBC router, add transfer route, then set and seal it
+	ibcRouter := porttypes.NewRouter()
+	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferModule)
+	app.keeper.ibc.SetRouter(ibcRouter)
+
+	// create evidence keeper with evidence router
+	evidenceKeeper := evidencekeeper.NewKeeper(
+		appCodec, app.keys[evidencetypes.StoreKey], &app.keeper.staking, app.keeper.slashing,
+	)
+
+	// if evidence needs to be handled for the app, set routes in router here and seal
+	app.keeper.evidence = *evidenceKeeper
+
 	app.setAkashKeepers()
 
 	app.mm = module.NewManager(
 		append([]module.AppModule{
 			genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx, encodingConfig.TxConfig),
-			auth.NewAppModule(appCodec, app.keeper.acct, authsims.RandomGenesisAccounts),
+			auth.NewAppModule(appCodec, app.keeper.acct, nil),
+			vesting.NewAppModule(app.keeper.acct, app.keeper.bank),
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
+			capability.NewAppModule(appCodec, *app.keeper.cap),
 			crisis.NewAppModule(&app.keeper.crisis),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
 			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
@@ -265,15 +312,15 @@ func NewApp(
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
 			upgrade.NewAppModule(app.keeper.upgrade),
 			evidence.NewAppModule(app.keeper.evidence),
-		},
-
-			app.akashAppModules()...,
-		)...,
+			ibc.NewAppModule(app.keeper.ibc),
+			params.NewAppModule(app.keeper.params),
+			transferModule,
+		}, app.akashAppModules()...)...,
 	)
 
 	app.mm.SetOrderBeginBlockers(
 		upgradetypes.ModuleName, minttypes.ModuleName, distrtypes.ModuleName, slashingtypes.ModuleName,
-		evidencetypes.ModuleName, stakingtypes.ModuleName,
+		evidencetypes.ModuleName, stakingtypes.ModuleName, ibchost.ModuleName,
 	)
 	app.mm.SetOrderEndBlockers(
 		append([]string{
@@ -286,6 +333,7 @@ func NewApp(
 	//       properly initialized with tokens from genesis accounts.
 	app.mm.SetOrderInitGenesis(
 		append([]string{
+			capabilitytypes.ModuleName,
 			authtypes.ModuleName,
 			banktypes.ModuleName,
 			distrtypes.ModuleName,
@@ -294,8 +342,10 @@ func NewApp(
 			govtypes.ModuleName,
 			minttypes.ModuleName,
 			crisistypes.ModuleName,
+			ibchost.ModuleName,
 			genutiltypes.ModuleName,
 			evidencetypes.ModuleName,
+			ibctransfertypes.ModuleName,
 		},
 
 			app.akashInitGenesisOrder()...,
@@ -310,6 +360,7 @@ func NewApp(
 		append([]module.AppModuleSimulation{
 			auth.NewAppModule(appCodec, app.keeper.acct, authsims.RandomGenesisAccounts),
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
+			capability.NewAppModule(appCodec, *app.keeper.cap),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
 			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
@@ -317,6 +368,8 @@ func NewApp(
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			params.NewAppModule(app.keeper.params),
 			evidence.NewAppModule(app.keeper.evidence),
+			ibc.NewAppModule(app.keeper.ibc),
+			transferModule,
 		},
 			app.akashSimModules()...,
 		)...,
@@ -327,6 +380,7 @@ func NewApp(
 	// initialize stores
 	app.MountKVStores(keys)
 	app.MountTransientStores(tkeys)
+	app.MountMemoryStores(memkeys)
 
 	// initialize BaseApp
 	app.SetInitChainer(app.InitChainer)
@@ -343,10 +397,17 @@ func NewApp(
 
 	app.SetEndBlocker(app.EndBlocker)
 
+	// TODO: add load latest check here
 	err := app.LoadLatestVersion()
 	if err != nil {
 		tmos.Exit("app initialization:" + err.Error())
 	}
+
+	ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
+	app.keeper.cap.InitializeAndSeal(ctx)
+
+	app.keeper.scopedIBC = scopedIBCKeeper
+	app.keeper.scopedTransfer = scopedTransferKeeper
 
 	return app
 }
