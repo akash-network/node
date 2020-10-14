@@ -21,11 +21,11 @@ env | sort
 ##
 # Import key
 ##
-/akash --home=$AKASH_HOME keys import --keyring-backend=$AKASH_KEYRING_BACKEND  "$AKASH_FROM" \
+/akash --home="$AKASH_HOME" keys import --keyring-backend="$AKASH_KEYRING_BACKEND"  "$AKASH_FROM" \
   "$AKASH_BOOT_KEYS/key.txt" < "$AKASH_BOOT_KEYS/key-pass.txt"
 
 ##
 # Run daemon
 ##
 #/akash --home=$AKASH_HOME provider run --cluster-k8s
-/akash --home=$AKASH_HOME --node tcp://$AKASH_SERVICE_HOST:$AKASH_SERVICE_PORT --keyring-backend=$AKASH_KEYRING_BACKEND provider run --chain-id=$AKASH_CHAIN_ID --from "$AKASH_FROM"  --cluster-k8s
+/akash --home="$AKASH_HOME" --node tcp://"$AKASH_SERVICE_HOST":"$AKASH_SERVICE_PORT" --keyring-backend="$AKASH_KEYRING_BACKEND" provider run --chain-id="$AKASH_CHAIN_ID" --from "$AKASH_FROM"  --cluster-k8s
