@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: akash-provider
-          image: ovrclk/akashctl:latest
+          image: ovrclk/akash:latest
           imagePullPolicy: IfNotPresent
           command: [ "/bin/sh", "/boot/run.sh" ]
           env:
@@ -26,7 +26,7 @@ spec:
             #
             # key.txt:      exported wallet key
             # key-pass.txt: password used to encrypt exported key
-            - name: AKASHCTL_BOOT_KEYS
+            - name: AKASH_BOOT_KEYS
               value: /boot-keys
 
             ##
@@ -34,42 +34,42 @@ spec:
             ##
 
             # --home
-            - name: AKASHCTL_HOME
+            - name: AKASH_HOME
               valueFrom:
                 configMapKeyRef:
                   name: akash-client-config
                   key: home
 
             # --from
-            - name: AKASHCTL_FROM
+            - name: AKASH_FROM
               valueFrom:
                 configMapKeyRef:
                   name: akash-client-config
                   key: from
 
             # --node
-            - name: AKASHCTL_NODE
+            - name: AKASH_NODE
               valueFrom:
                 configMapKeyRef:
                   name: akash-client-config
                   key: node
 
             # --chain-id
-            - name: AKASHCTL_CHAIN_ID
+            - name: AKASH_CHAIN_ID
               valueFrom:
                 configMapKeyRef:
                   name: akash-client-config
                   key: chain-id
 
             # --keyring-backend
-            - name: AKASHCTL_KEYRING_BACKEND
+            - name: AKASH_KEYRING_BACKEND
               valueFrom:
                 configMapKeyRef:
                   name: akash-client-config
                   key: keyring-backend
 
             # --trust-node
-            - name: AKASHCTL_TRUST_NODE
+            - name: AKASH_TRUST_NODE
               valueFrom:
                 configMapKeyRef:
                   name: akash-client-config

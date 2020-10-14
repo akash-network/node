@@ -1,4 +1,4 @@
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: akash-provider
@@ -7,6 +7,10 @@ spec:
     - host: akash-provider.localhost
       http:
         paths:
-          - backend: 
-              serviceName: akash-provider
-              servicePort: http
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: akash-provider
+                port:
+                  name: http
