@@ -20,6 +20,8 @@ lint:
     - ENUM_VALUE_UPPER_SNAKE_CASE
     - ENUM_ZERO_VALUE_SUFFIX
   ignore:
+    - ibc
+    - cosmos
     - tendermint
     - gogoproto
     - cosmos_proto
@@ -29,6 +31,8 @@ breaking:
   use:
     - FILE
   ignore:
+    - ibc
+    - cosmos
     - tendermint
     - gogoproto
     - cosmos_proto

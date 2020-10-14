@@ -17,6 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ secrets.GOLANG_VERSION }}
       - run: make bins
       - run: make docker-image
 
@@ -25,6 +27,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ secrets.GOLANG_VERSION }}
       - run: make test-full
 
   coverage:
@@ -32,6 +36,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ secrets.GOLANG_VERSION }}
       - run: make test-coverage
       - uses: codecov/codecov-action@v1
 
@@ -40,10 +46,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ secrets.GOLANG_VERSION }}
+      - run: make deps-tidy
+      - run: make deps-vendor
       - run: make build
       - run: make test-vet
-      - run: make lintdeps-install
       - name: lint all
-        run: $(go env GOPATH)/bin/golangci-lint run ./... --issues-exit-code=0 --deadline=10m
+        run: make test-lint-all
       - name: lint make-sublinters
         run: make test-sublinters 

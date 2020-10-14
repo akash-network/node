@@ -22,15 +22,9 @@ func cmdGetBids() *cobra.Command {
 
 			queryClient := types.NewQueryClient(clientCtx)
 
-			bfilters, state, err := BidFiltersFromFlags(cmd.Flags())
+			bfilters, err := BidFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
-			}
-
-			// checking state flag
-			bfilters.State = types.Bid_State(types.Bid_State_value[state])
-			if state != "" && bfilters.State == types.BidStateInvalid {
-				return ErrStateValue
 			}
 
 			pageReq, err := client.ReadPageRequest(cmd.Flags())

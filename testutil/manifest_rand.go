@@ -38,7 +38,7 @@ func (mg manifestGeneratorRand) Service(t testing.TB) manifest.Service {
 		Args:      []string{"run"},
 		Env:       []string{"AKASH_TEST_SERVICE=true"},
 		Resources: ResourceUnits(t),
-		Count:     rand.Uint32(),
+		Count:     rand.Uint32(), // nolint: gosec
 		Expose: []manifest.ServiceExpose{
 			mg.ServiceExpose(t),
 		},
@@ -47,8 +47,8 @@ func (mg manifestGeneratorRand) Service(t testing.TB) manifest.Service {
 
 func (mg manifestGeneratorRand) ServiceExpose(t testing.TB) manifest.ServiceExpose {
 	return manifest.ServiceExpose{
-		Port:         uint16(rand.Intn(math.MaxUint16)),
-		ExternalPort: uint16(rand.Intn(math.MaxUint16)),
+		Port:         uint16(rand.Intn(math.MaxUint16)), // nolint: gosec
+		ExternalPort: uint16(rand.Intn(math.MaxUint16)), // nolint: gosec
 		Proto:        "http",
 		Service:      "svc",
 		Global:       true,

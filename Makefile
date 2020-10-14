@@ -16,24 +16,26 @@ CACHE_BIN             := $(CACHE)/bin
 CACHE_INCLUDE         := $(CACHE)/include
 CACHE_VERSIONS        := $(CACHE)/versions
 
-PROTOC_VERSION        ?= 3.11.2
-GOLANGCI_LINT_VERSION ?= v1.27.0
+BUF_VERSION           ?= 0.25.0
+PROTOC_VERSION        ?= 3.13.0
+GRPC_GATEWAY_VERSION  ?= 1.14.7
+GOLANGCI_LINT_VERSION ?= v1.31.0
 GOLANG_VERSION        ?= 1.15.2
 GOLANG_CROSS_VERSION  := v$(GOLANG_VERSION)
 
 # <TOOL>_VERSION_FILE points to the marker file for the installed version.
 # If <TOOL>_VERSION_FILE is changed, the binary will be re-downloaded.
 PROTOC_VERSION_FILE        = $(CACHE_VERSIONS)/protoc/$(PROTOC_VERSION)
-GOLANGCI_LINT_VERSION_FILE = $(CACHE_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
+GRPC_GATEWAY_VERSION_FILE  = $(CACHE_VERSIONS)/protoc-gen-grpc-gateway/$(GRPC_GATEWAY_VERSION)
+MODVENDOR                  = $(CACHE_BIN)/modvendor
+PROTOC                    := $(CACHE_BIN)/protoc
+GRPC_GATEWAY              := $(CACHE_BIN)/protoc-gen-grpc-gateway
 
-GOLANGCI_LINT          = $(CACHE_BIN)/golangci-lint
-LINT                   = $(GOLANGCI_LINT) run ./... --disable-all --deadline=5m --enable
-MODVENDOR              = $(CACHE_BIN)/modvendor
-PROTOC                := $(CACHE_BIN)/
-
-DOCKER_RUN   := docker run -v $(shell pwd):/workspace --workdir /workspace
-DOCKER_BUF   := $(DOCKER_RUN) bufbuild/buf
-DOCKER_CLANG := $(DOCKER_RUN) tendermintdev/docker-build-proto
+DOCKER_RUN            := docker run --rm -v $(shell pwd):/workspace -w /workspace
+DOCKER_BUF            := $(DOCKER_RUN) bufbuild/buf:$(BUF_VERSION)
+DOCKER_CLANG          := $(DOCKER_RUN) tendermintdev/docker-build-proto
+GOLANGCI_LINT          = $(DOCKER_RUN) golangci/golangci-lint:$(GOLANGCI_LINT_VERSION)-alpine golangci-lint run
+LINT                   = $(GOLANGCI_LINT) ./... --disable-all --deadline=5m --enable
 
 # BUILD_TAGS are for builds withing this makefile
 # GORELEASER_BUILD_TAGS are for goreleaser only
@@ -63,7 +65,7 @@ ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=akash \
 
 # check for nostrip option
 ifeq (,$(findstring nostrip,$(BUILD_OPTIONS)))
-  ldflags += -s -w
+	ldflags += -s -w
 endif
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
@@ -71,7 +73,7 @@ ldflags := $(strip $(ldflags))
 BUILD_FLAGS := -mod=readonly -tags "$(BUILD_TAGS)" -ldflags '$(ldflags)'
 # check for nostrip option
 ifeq (,$(findstring nostrip,$(BUILD_OPTIONS)))
-  BUILD_FLAGS += -trimpath
+	BUILD_FLAGS += -trimpath
 endif
 
 .PHONY: all

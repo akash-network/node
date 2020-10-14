@@ -14,7 +14,7 @@ func (c *qclient) ActiveLeasesForProvider(id sdk.AccAddress) (mtypes.Leases, err
 	params := &mtypes.QueryLeasesRequest{
 		Filters: mtypes.LeaseFilters{
 			Provider: id,
-			State:    mtypes.LeaseActive,
+			State:    mtypes.LeaseActive.String(),
 		},
 		Pagination: &sdkquery.PageRequest{
 			Limit: 10000,

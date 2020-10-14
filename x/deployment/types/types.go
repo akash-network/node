@@ -17,58 +17,10 @@ const DefaultOrderBiddingDuration = int64(12342)
 // MaxBiddingDuration is roughly 30 days of block height
 const MaxBiddingDuration = DefaultOrderBiddingDuration * int64(30)
 
-// //go:generate stringer -linecomment -output=autogen_stringer.go -type=DeploymentState,GroupState
-
-// // DeploymentState defines state of deployment
-// type DeploymentState uint32
-
-// const (
-// 	// DeploymentActive is used when state of deployment is active
-// 	DeploymentActive DeploymentState = iota + 1 // active
-// 	// DeploymentClosed is used when state of deployment is closed
-// 	DeploymentClosed // closed
-// )
-
-// // DeploymentStateMap is used to decode deployment state flag value
-// var DeploymentStateMap = map[string]DeploymentState{
-// 	"active": DeploymentActive,
-// 	"closed": DeploymentClosed,
-// }
-
-// Deployment stores deploymentID, state and version details
-// type Deployment struct {
-// 	DeploymentID `json:"id"`
-// 	State        DeploymentState `json:"state"`
-// 	Version      []byte          `json:"version"`
-// }
-
 // ID method returns DeploymentID details of specific deployment
 func (obj Deployment) ID() DeploymentID {
 	return obj.DeploymentID
 }
-
-// // GroupState defines state of group
-// type GroupState uint32
-
-// const (
-// 	// GroupOpen is used when state of group is open
-// 	GroupOpen GroupState = iota + 1 // open
-// 	// GroupOrdered is used when state of group is ordered
-// 	GroupOrdered // ordered
-// 	// GroupMatched is used when state of group is matched
-// 	GroupMatched // matched
-// 	// GroupInsufficientFunds is used when group has insufficient funds
-// 	GroupInsufficientFunds // insufficient_funds
-// 	// GroupClosed is used when state of group is closed
-// 	GroupClosed // closed
-// )
-
-// GroupSpec stores group specifications
-// type GroupSpec struct {
-// 	Name         string          `json:"name"`
-// 	Requirements []sdk.Attribute `json:"requirements"`
-// 	Resources    []Resource      `json:"resources"`
-// }
 
 // ValidateBasic asserts non-zero values
 // TODO: This is causing an import cycle. I think there is some pattern here I'm missing tho..
@@ -198,7 +150,7 @@ func (ds DeploymentResponses) String() string {
 }
 
 // Accept returns whether deployment filters valid or not
-func (filters DeploymentFilters) Accept(obj Deployment) bool {
+func (filters DeploymentFilters) Accept(obj Deployment, stateVal Deployment_State) bool {
 	// Checking owner filter
 	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.DeploymentID.Owner) {
 		return false
@@ -210,7 +162,7 @@ func (filters DeploymentFilters) Accept(obj Deployment) bool {
 	}
 
 	// Checking state filter
-	if filters.State != 0 && filters.State != obj.State {
+	if stateVal != 0 && stateVal != obj.State {
 		return false
 	}
 

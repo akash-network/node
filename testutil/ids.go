@@ -31,7 +31,7 @@ func DeploymentID(t testing.TB) dtypes.DeploymentID {
 	t.Helper()
 	return dtypes.DeploymentID{
 		Owner: AccAddress(t),
-		DSeq:  uint64(rand.Uint32()),
+		DSeq:  uint64(rand.Uint32()), // nolint: gosec
 	}
 }
 
@@ -49,12 +49,12 @@ func DeploymentVersion(t testing.TB) []byte {
 
 func GroupID(t testing.TB) dtypes.GroupID {
 	t.Helper()
-	return dtypes.MakeGroupID(DeploymentID(t), rand.Uint32())
+	return dtypes.MakeGroupID(DeploymentID(t), rand.Uint32()) // nolint: gosec
 }
 
 func OrderID(t testing.TB) mtypes.OrderID {
 	t.Helper()
-	return mtypes.MakeOrderID(GroupID(t), rand.Uint32())
+	return mtypes.MakeOrderID(GroupID(t), rand.Uint32()) // nolint: gosec
 }
 
 func BidID(t testing.TB) mtypes.BidID {

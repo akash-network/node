@@ -1,9 +1,9 @@
 syntax = "proto3";
-package akash.market;
+package akash.market.v1beta1;
 
 import "gogoproto/gogo.proto";
-import "akash/market/order.proto";
-import "akash/market/lease.proto";
+import "akash/market/v1beta1/order.proto";
+import "akash/market/v1beta1/lease.proto";
 
 option go_package = "github.com/ovrclk/akash/x/market/types";
 

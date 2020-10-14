@@ -67,7 +67,7 @@ func (s *IntegrationTestSuite) TestProvider() {
 	resp, err := cli.QueryProvidersExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	var out *types.QueryProvidersResponse = &types.QueryProvidersResponse{}
+	out := &types.QueryProvidersResponse{}
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Providers, 1, "Provider Creation Failed")
