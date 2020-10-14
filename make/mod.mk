@@ -23,3 +23,5 @@ github.com/cosmos/cosmos-sdk/proto,\
 github.com/cosmos/cosmos-sdk/third_party/proto
 	$(MODVENDOR) -copy="**/*.h **/*.c" -include=\
 github.com/zondax/hid
+	$(MODVENDOR) -copy="**/swagger.yaml" -include=\
+github.com/cosmos/cosmos-sdk/client/docs

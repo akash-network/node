@@ -23,12 +23,12 @@ proto-gen: $(PROTOC) $(GRPC_GATEWAY) modvendor proto-format
 	./script/protocgen.sh
 
 .PHONY: proto-swagger-gen
-proto-swagger-gen: protoc-swagger
+proto-swagger-gen: protoc-swagger modvendor
 	./script/protoc-swagger-gen.sh
 
 .PHONY: update-swagger-docs
 update-swagger-docs: proto-swagger-gen
-	statik -src=client/docs -dest=client/docs -f -m
+	statik -src=client/docs/swagger-ui -dest=client/docs -f -m
 	if [ -n "$(git status --porcelain)" ]; then \
 		echo "\033[91mSwagger docs are out of sync!!!\033[0m"; \
 		exit 1; \
