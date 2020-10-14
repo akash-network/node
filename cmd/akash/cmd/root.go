@@ -217,6 +217,8 @@ func txCmd() *cobra.Command {
 	// add modules' tx commands
 	app.ModuleBasics().AddTxCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
+	cmd.PersistentFlags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend,
+		"Select keyring's backend (os|file|kwallet|pass|test)")
 
 	return cmd
 }
