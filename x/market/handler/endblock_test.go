@@ -116,7 +116,7 @@ func (td *testDist) testFunc(t *testing.T) {
 		// generate N bids all with the same bidding amount
 		for j := 0; j < td.bidNum; j++ {
 			b := createBid(t, originOID, 5)
-			bIndex[b.ID().Provider.String()] = j
+			bIndex[b.ID().Provider] = j
 			bids = append(bids, b)
 		}
 
@@ -125,7 +125,7 @@ func (td *testDist) testFunc(t *testing.T) {
 			t.Errorf("returned err: %v does not match %v", err, td.expErr)
 		}
 		// Check provider
-		slot := bIndex[winner.ID().Provider.String()]
+		slot := bIndex[winner.ID().Provider]
 		distributionSpread[slot]++
 	}
 

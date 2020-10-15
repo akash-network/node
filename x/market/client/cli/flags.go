@@ -11,8 +11,7 @@ import (
 )
 
 var (
-	ErrProviderValue = errors.New("query: invalid provider value")
-	ErrStateValue    = errors.New("query: invalid state value")
+	ErrStateValue = errors.New("query: invalid state value")
 )
 
 // AddOrderIDFlags add flags for order
@@ -170,17 +169,12 @@ func BidFiltersFromFlags(flags *pflag.FlagSet) (types.BidFilters, error) {
 	}
 
 	if provider != "" {
-		bfilters.Provider, err = sdk.AccAddressFromBech32(provider)
+		_, err = sdk.AccAddressFromBech32(provider)
 		if err != nil {
 			return bfilters, err
 		}
-	} else {
-		bfilters.Provider = sdk.AccAddress{}
 	}
-
-	if !bfilters.Provider.Empty() && sdk.VerifyAddressFormat(bfilters.Provider) != nil {
-		return bfilters, ErrProviderValue
-	}
+	bfilters.Provider = provider
 
 	return bfilters, nil
 }

@@ -126,7 +126,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	res, err := aclient.Query().Provider(
 		context.Background(),
-		&ptypes.QueryProviderRequest{Owner: info.GetAddress()},
+		&ptypes.QueryProviderRequest{Owner: info.GetAddress().String()},
 	)
 	if err != nil {
 		return err

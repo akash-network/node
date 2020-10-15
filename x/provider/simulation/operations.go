@@ -133,7 +133,13 @@ func SimulateMsgUpdate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper
 		i := r.Intn(len(providers))
 		provider := providers[i]
 
-		simAccount, found := simtypes.FindAccount(accounts, provider.Owner)
+		owner, convertErr := sdk.AccAddressFromBech32(provider.Owner)
+		if convertErr != nil {
+			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeUpdateProvider, "error while converting address"),
+				nil, convertErr
+		}
+
+		simAccount, found := simtypes.FindAccount(accounts, owner)
 		if !found {
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeUpdateProvider, "provider not found"),
 				nil, errors.Errorf("provider with %s not found", provider.Owner)
@@ -148,7 +154,7 @@ func SimulateMsgUpdate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper
 		}
 
 		msg := &types.MsgUpdateProvider{
-			Owner:   simAccount.Address,
+			Owner:   simAccount.Address.String(),
 			HostURI: provider.HostURI,
 		}
 

@@ -18,7 +18,7 @@ var (
 
 func orderKey(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(orderPrefix)
-	buf.Write(id.Owner.Bytes())
+	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -33,7 +33,7 @@ func orderKey(id types.OrderID) []byte {
 
 func orderOpenKey(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(orderOpenPrefix)
-	buf.Write(id.Owner.Bytes())
+	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -57,7 +57,7 @@ func convertOrderOpenKey(activeKey []byte) ([]byte, error) {
 
 func bidKey(id types.BidID) []byte {
 	buf := bytes.NewBuffer(bidPrefix)
-	buf.Write(id.Owner.Bytes())
+	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -67,13 +67,13 @@ func bidKey(id types.BidID) []byte {
 	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
 		panic(err)
 	}
-	buf.Write(id.Provider.Bytes())
+	buf.Write([]byte(id.Provider))
 	return buf.Bytes()
 }
 
 func leaseKey(id types.LeaseID) []byte {
 	buf := bytes.NewBuffer(leasePrefix)
-	buf.Write(id.Owner.Bytes())
+	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -83,13 +83,13 @@ func leaseKey(id types.LeaseID) []byte {
 	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
 		panic(err)
 	}
-	buf.Write(id.Provider.Bytes())
+	buf.Write([]byte(id.Provider))
 	return buf.Bytes()
 }
 
 func leaseKeyActive(id types.LeaseID) []byte {
 	buf := bytes.NewBuffer(leaseActivePrefix)
-	buf.Write(id.Owner.Bytes())
+	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -99,7 +99,7 @@ func leaseKeyActive(id types.LeaseID) []byte {
 	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
 		panic(err)
 	}
-	buf.Write(id.Provider.Bytes())
+	buf.Write([]byte(id.Provider))
 	return buf.Bytes()
 }
 
@@ -114,7 +114,7 @@ func convertLeaseActiveKey(activeKey []byte) ([]byte, error) {
 
 func ordersForGroupPrefix(id dtypes.GroupID) []byte {
 	buf := bytes.NewBuffer(orderPrefix)
-	buf.Write(id.Owner.Bytes())
+	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -126,7 +126,7 @@ func ordersForGroupPrefix(id dtypes.GroupID) []byte {
 
 func bidsForOrderPrefix(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(bidPrefix)
-	buf.Write(id.Owner.Bytes())
+	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}

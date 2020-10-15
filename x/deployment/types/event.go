@@ -111,7 +111,7 @@ func (ev EventDeploymentClosed) ToSDKEvent() sdk.Event {
 // DeploymentIDEVAttributes returns event attribues for given DeploymentID
 func DeploymentIDEVAttributes(id DeploymentID) []sdk.Attribute {
 	return []sdk.Attribute{
-		sdk.NewAttribute(evOwnerKey, id.Owner.String()),
+		sdk.NewAttribute(evOwnerKey, id.Owner),
 		sdk.NewAttribute(evDSeqKey, strconv.FormatUint(id.DSeq, 10)),
 	}
 }
@@ -128,7 +128,7 @@ func ParseEVDeploymentID(attrs []sdk.Attribute) (DeploymentID, error) {
 	}
 
 	return DeploymentID{
-		Owner: owner,
+		Owner: owner.String(),
 		DSeq:  dseq,
 	}, nil
 }

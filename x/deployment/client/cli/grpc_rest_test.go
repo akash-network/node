@@ -1,7 +1,6 @@
 package cli_test
 
 import (
-	"encoding/base64"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -65,7 +64,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
 	deployments := out.Deployments
-	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner.String())
+	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner)
 
 	s.deployment = deployments[0]
 }
@@ -73,9 +72,6 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 func (s *GRPCRestTestSuite) TestGetDeployments() {
 	val := s.network.Validators[0]
 	deployment := s.deployment
-
-	// TODO: need to pass bech32 string instead of base64 encoding string
-	ownerAddrBase64 := base64.URLEncoding.EncodeToString(deployment.Deployment.DeploymentID.Owner)
 
 	testCases := []struct {
 		name    string
@@ -94,7 +90,7 @@ func (s *GRPCRestTestSuite) TestGetDeployments() {
 		{
 			"get deployments with filters",
 			fmt.Sprintf("%s/akash/deployment/v1beta1/deployments/list?filters.owner=%s", val.APIAddress,
-				ownerAddrBase64),
+				deployment.Deployment.DeploymentID.Owner),
 			false,
 			deployment,
 			1,
@@ -142,9 +138,6 @@ func (s *GRPCRestTestSuite) TestGetDeployment() {
 	val := s.network.Validators[0]
 	deployment := s.deployment
 
-	// TODO: need to pass bech32 string instead of base64 encoding string
-	ownerAddrBase64 := base64.URLEncoding.EncodeToString(deployment.Deployment.DeploymentID.Owner)
-
 	testCases := []struct {
 		name    string
 		url     string
@@ -160,21 +153,21 @@ func (s *GRPCRestTestSuite) TestGetDeployment() {
 		{
 			"get deployment with invalid input",
 			fmt.Sprintf("%s/akash/deployment/v1beta1/deployments/info?id.owner=%s", val.APIAddress,
-				ownerAddrBase64),
+				deployment.Deployment.DeploymentID.Owner),
 			true,
 			types.DeploymentResponse{},
 		},
 		{
 			"deployment not found",
 			fmt.Sprintf("%s/akash/deployment/v1beta1/deployments/info?id.owner=%s&id.dseq=%d", val.APIAddress,
-				ownerAddrBase64, 249),
+				deployment.Deployment.DeploymentID.Owner, 249),
 			true,
 			types.DeploymentResponse{},
 		},
 		{
 			"valid get deployment request",
 			fmt.Sprintf("%s/akash/deployment/v1beta1/deployments/info?id.owner=%s&id.dseq=%d",
-				val.APIAddress, ownerAddrBase64, deployment.Deployment.DeploymentID.DSeq),
+				val.APIAddress, deployment.Deployment.DeploymentID.Owner, deployment.Deployment.DeploymentID.DSeq),
 			false,
 			deployment,
 		},
@@ -205,9 +198,6 @@ func (s *GRPCRestTestSuite) TestGetGroup() {
 	s.Require().NotEqual(0, len(deployment.Groups))
 	group := deployment.Groups[0]
 
-	// TODO: need to pass bech32 string instead of base64 encoding string
-	ownerAddrBase64 := base64.URLEncoding.EncodeToString(group.GroupID.Owner)
-
 	testCases := []struct {
 		name    string
 		url     string
@@ -223,21 +213,21 @@ func (s *GRPCRestTestSuite) TestGetGroup() {
 		{
 			"get group with invalid input",
 			fmt.Sprintf("%s/akash/deployment/v1beta1/groups/info?id.owner=%s", val.APIAddress,
-				ownerAddrBase64),
+				group.GroupID.Owner),
 			true,
 			types.Group{},
 		},
 		{
 			"group not found",
 			fmt.Sprintf("%s/akash/deployment/v1beta1/groups/info?id.owner=%s&id.dseq=%d", val.APIAddress,
-				ownerAddrBase64, 249),
+				group.GroupID.Owner, 249),
 			true,
 			types.Group{},
 		},
 		{
 			"valid get group request",
 			fmt.Sprintf("%s/akash/deployment/v1beta1/groups/info?id.owner=%s&id.dseq=%d&id.gseq=%d",
-				val.APIAddress, ownerAddrBase64, group.GroupID.DSeq, group.GroupID.GSeq),
+				val.APIAddress, group.GroupID.Owner, group.GroupID.DSeq, group.GroupID.GSeq),
 			false,
 			group,
 		},

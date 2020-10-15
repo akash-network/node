@@ -68,7 +68,7 @@ func TestGRPCQueryProvider(t *testing.T) {
 		{
 			"provider not found",
 			func() {
-				req = &types.QueryProviderRequest{Owner: testutil.AccAddress(t)}
+				req = &types.QueryProviderRequest{Owner: testutil.AccAddress(t).String()}
 			},
 			false,
 		},

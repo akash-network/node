@@ -22,8 +22,8 @@ type DeploymentFilters struct {
 func (filters DeploymentFilters) Accept(obj types.Deployment, isValidState bool) bool {
 	if (filters.Owner.Empty() && !isValidState) ||
 		(filters.Owner.Empty() && (obj.State == filters.State)) ||
-		(!isValidState && (obj.DeploymentID.Owner.Equals(filters.Owner))) ||
-		(obj.DeploymentID.Owner.Equals(filters.Owner) && obj.State == filters.State) {
+		(!isValidState && (obj.DeploymentID.Owner == filters.Owner.String())) ||
+		(obj.DeploymentID.Owner == filters.Owner.String() && obj.State == filters.State) {
 		return true
 	}
 

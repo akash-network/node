@@ -56,13 +56,14 @@ func (k Querier) Provider(c context.Context, req *types.QueryProviderRequest) (*
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	if req.Owner.Empty() {
+	owner, err := sdk.AccAddressFromBech32(req.Owner)
+	if err != nil {
 		return nil, types.ErrInvalidAddress
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)
 
-	provider, found := k.Get(ctx, req.Owner)
+	provider, found := k.Get(ctx, owner)
 	if !found {
 		return nil, types.ErrProviderNotFound
 	}

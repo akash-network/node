@@ -26,16 +26,28 @@ func transferFundsForActiveLeases(ctx sdk.Context, keepers Keepers) error {
 	count := 0
 	keepers.Market.WithActiveLeases(ctx, func(lease types.Lease) bool {
 
+		owner, err := sdk.AccAddressFromBech32(lease.ID().Owner)
+		if err != nil {
+			ctx.Logger().Error("error transferring funds", "err", err)
+			return false
+		}
+
+		provider, err := sdk.AccAddressFromBech32(lease.ID().Provider)
+		if err != nil {
+			ctx.Logger().Error("error transferring funds", "err", err)
+			return false
+		}
+
 		amt := sdk.NewCoins(lease.Price)
 
-		if !keepers.Bank.HasBalance(ctx, lease.ID().Owner, lease.Price) {
+		if !keepers.Bank.HasBalance(ctx, owner, lease.Price) {
 			ctx.Logger().Debug("keeper balance insufficient", "leaseID", lease.ID())
 			keepers.Deployment.OnLeaseInsufficientFunds(ctx, lease.ID().GroupID())
 			keepers.Market.OnInsufficientFunds(ctx, lease)
 			return false
 		}
 
-		err := keepers.Bank.SendCoins(ctx, lease.ID().Owner, lease.ID().Provider, amt)
+		err = keepers.Bank.SendCoins(ctx, owner, provider, amt)
 
 		if err != nil {
 			ctx.Logger().Error("error transferring funds", "err", err)
@@ -80,7 +92,7 @@ func PickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 	// FNV hash provider addresses all of the bids
 	h := fnv.New32a()
 	bidIndex := 0
-	_, err = h.Write(bids[bidIndex+1].ID().Provider.Bytes())
+	_, err = h.Write([]byte(bids[bidIndex+1].ID().Provider))
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +100,7 @@ func PickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 		if !bids[bidIndex].Price.IsEqual(bids[bidIndex+1].Price) {
 			break
 		}
-		_, err := h.Write(bids[bidIndex+1].ID().Provider.Bytes())
+		_, err := h.Write([]byte(bids[bidIndex+1].ID().Provider))
 		if err != nil {
 			return nil, err
 		}

@@ -10,7 +10,7 @@ func Provider(t testing.TB) ptypes.Provider {
 	t.Helper()
 
 	return ptypes.Provider{
-		Owner:      AccAddress(t),
+		Owner:      AccAddress(t).String(),
 		HostURI:    Hostname(t),
 		Attributes: Attributes(t),
 	}

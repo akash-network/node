@@ -74,7 +74,7 @@ func TestGRPCQueryOrder(t *testing.T) {
 			"order not found",
 			func() {
 				req = &types.QueryOrderRequest{ID: types.OrderID{
-					Owner: testutil.AccAddress(t),
+					Owner: testutil.AccAddress(t).String(),
 					DSeq:  32,
 					GSeq:  43,
 					OSeq:  25,
@@ -211,11 +211,11 @@ func TestGRPCQueryBid(t *testing.T) {
 			"bid not found",
 			func() {
 				req = &types.QueryBidRequest{ID: types.BidID{
-					Owner:    testutil.AccAddress(t),
+					Owner:    testutil.AccAddress(t).String(),
 					DSeq:     32,
 					GSeq:     43,
 					OSeq:     25,
-					Provider: testutil.AccAddress(t),
+					Provider: testutil.AccAddress(t).String(),
 				}}
 			},
 			false,
@@ -280,7 +280,7 @@ func TestGRPCQueryBids(t *testing.T) {
 					Filters: types.BidFilters{
 						OSeq:     37,
 						State:    types.BidLost.String(),
-						Provider: testutil.AccAddress(t),
+						Provider: testutil.AccAddress(t).String(),
 					}}
 			},
 			0,
@@ -352,11 +352,11 @@ func TestGRPCQueryLease(t *testing.T) {
 			"lease not found",
 			func() {
 				req = &types.QueryLeaseRequest{ID: types.LeaseID{
-					Owner:    testutil.AccAddress(t),
+					Owner:    testutil.AccAddress(t).String(),
 					DSeq:     32,
 					GSeq:     43,
 					OSeq:     25,
-					Provider: testutil.AccAddress(t),
+					Provider: testutil.AccAddress(t).String(),
 				}}
 			},
 			false,
@@ -426,7 +426,7 @@ func TestGRPCQueryLeases(t *testing.T) {
 					Filters: types.LeaseFilters{
 						OSeq:     37,
 						State:    types.LeaseClosed.String(),
-						Provider: testutil.AccAddress(t),
+						Provider: testutil.AccAddress(t).String(),
 					}}
 			},
 			0,

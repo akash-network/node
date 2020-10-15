@@ -72,7 +72,7 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
 	deployments := out.Deployments
-	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner.String())
+	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner)
 
 	// test query deployment
 	createdDep := deployments[0]
@@ -193,7 +193,7 @@ func (s *IntegrationTestSuite) TestGroup() {
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
 	deployments := out.Deployments
-	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner.String())
+	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner)
 
 	createdDep := deployments[0]
 

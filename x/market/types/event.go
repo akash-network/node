@@ -227,7 +227,7 @@ func parseEVOrderID(attrs []sdk.Attribute) (OrderID, error) {
 // bidIDEVAttributes returns event attribues for given bidID
 func bidIDEVAttributes(id BidID) []sdk.Attribute {
 	return append(orderIDEVAttributes(id.OrderID()),
-		sdk.NewAttribute(evProviderKey, id.Provider.String()))
+		sdk.NewAttribute(evProviderKey, id.Provider))
 }
 
 // parseEVBidID returns bidID for given event attributes
@@ -247,14 +247,14 @@ func parseEVBidID(attrs []sdk.Attribute) (BidID, error) {
 		DSeq:     oid.DSeq,
 		GSeq:     oid.GSeq,
 		OSeq:     oid.OSeq,
-		Provider: provider,
+		Provider: provider.String(),
 	}, nil
 }
 
 // leaseIDEVAttributes returns event attribues for given LeaseID
 func leaseIDEVAttributes(id LeaseID) []sdk.Attribute {
 	return append(orderIDEVAttributes(id.OrderID()),
-		sdk.NewAttribute(evProviderKey, id.Provider.String()))
+		sdk.NewAttribute(evProviderKey, id.Provider))
 }
 
 // parseEVLeaseID returns leaseID for given event attributes

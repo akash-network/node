@@ -8,25 +8,17 @@ option go_package = "github.com/ovrclk/akash/x/market/types";
 
 // LeaseID stores bid details of lease
 message LeaseID {
-  option (gogoproto.equal)            = true;
+  option (gogoproto.equal)            = false;
   option (gogoproto.goproto_stringer) = false;
 
-  bytes owner = 1 [
-    (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-    (gogoproto.jsontag)  = "owner",
-    (gogoproto.moretags) = "yaml:\"owner\""
-  ];
-  uint64 dseq = 2
+  string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+  uint64 dseq  = 2
       [(gogoproto.customname) = "DSeq", (gogoproto.jsontag) = "dseq", (gogoproto.moretags) = "yaml:\"dseq\""];
   uint32 gseq = 3
       [(gogoproto.customname) = "GSeq", (gogoproto.jsontag) = "gseq", (gogoproto.moretags) = "yaml:\"gseq\""];
   uint32 oseq = 4
       [(gogoproto.customname) = "OSeq", (gogoproto.jsontag) = "oseq", (gogoproto.moretags) = "yaml:\"oseq\""];
-  bytes provider = 5 [
-    (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-    (gogoproto.jsontag)  = "provider",
-    (gogoproto.moretags) = "yaml:\"provider\""
-  ];
+  string provider = 5 [(gogoproto.jsontag) = "provider", (gogoproto.moretags) = "yaml:\"provider\""];
 }
 
 // Lease stores LeaseID, state of lease and price
@@ -64,21 +56,13 @@ message Lease {
 message LeaseFilters {
   option (gogoproto.equal) = false;
 
-  bytes owner = 1 [
-    (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-    (gogoproto.jsontag)  = "owner",
-    (gogoproto.moretags) = "yaml:\"owner\""
-  ];
-  uint64 dseq = 2
+  string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+  uint64 dseq  = 2
       [(gogoproto.customname) = "DSeq", (gogoproto.jsontag) = "dseq", (gogoproto.moretags) = "yaml:\"dseq\""];
   uint32 gseq = 3
       [(gogoproto.customname) = "GSeq", (gogoproto.jsontag) = "gseq", (gogoproto.moretags) = "yaml:\"gseq\""];
   uint32 oseq = 4
       [(gogoproto.customname) = "OSeq", (gogoproto.jsontag) = "oseq", (gogoproto.moretags) = "yaml:\"oseq\""];
-  bytes provider = 5 [
-    (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-    (gogoproto.jsontag)  = "provider",
-    (gogoproto.moretags) = "yaml:\"provider\""
-  ];
-  string state = 6 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
+  string provider = 5 [(gogoproto.jsontag) = "provider", (gogoproto.moretags) = "yaml:\"provider\""];
+  string state    = 6 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
 }

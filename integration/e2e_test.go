@@ -78,7 +78,7 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	_, err = deploycli.TxCloseDeploymentExec(
 		val.ClientCtx,
 		keyTenant.GetAddress(),
-		fmt.Sprintf("--owner=%s", createdDep.Groups[0].GroupID.Owner.String()),
+		fmt.Sprintf("--owner=%s", createdDep.Groups[0].GroupID.Owner),
 		fmt.Sprintf("--dseq=%v", createdDep.Deployment.DeploymentID.DSeq),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -192,7 +192,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	s.Require().NoError(err)
 	s.Require().Len(out.Providers, 1, "Provider Creation Failed")
 	providers := out.Providers
-	s.Require().Equal(keyProvider.GetAddress().String(), providers[0].Owner.String())
+	s.Require().Equal(keyProvider.GetAddress().String(), providers[0].Owner)
 
 	// test query provider
 	createdProvider := providers[0]
@@ -252,7 +252,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	s.Require().NoError(err)
 	s.Require().Len(deployResp.Deployments, 1, "Deployment Create Failed")
 	deployments := deployResp.Deployments
-	s.Require().Equal(tenantAddr, deployments[0].Deployment.DeploymentID.Owner.String())
+	s.Require().Equal(tenantAddr, deployments[0].Deployment.DeploymentID.Owner)
 
 	// test query deployment
 	createdDep := deployments[0]
@@ -288,7 +288,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	s.Require().NoError(err)
 	s.Require().Len(result.Orders, 1)
 	orders := result.Orders
-	s.Require().Equal(tenantAddr, orders[0].OrderID.Owner.String())
+	s.Require().Equal(tenantAddr, orders[0].OrderID.Owner)
 
 	// Wait for then EndBlock to handle bidding and creating lease
 	s.Require().NoError(s.waitForBlocksCommitted(6))
@@ -303,7 +303,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	s.Require().Len(leaseRes.Leases, 1)
 	lease := leaseRes.Leases[0]
 	lid := lease.LeaseID
-	s.Require().Equal(keyProvider.GetAddress().String(), lid.Provider.String())
+	s.Require().Equal(keyProvider.GetAddress().String(), lid.Provider)
 
 	// Send Manifest to Provider ----------------------------------------------
 	bID := mtypes.BidID{

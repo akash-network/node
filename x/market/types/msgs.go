@@ -18,7 +18,7 @@ var (
 func NewMsgCreateBid(id OrderID, provider sdk.AccAddress, price sdk.Coin) *MsgCreateBid {
 	return &MsgCreateBid{
 		Order:    id,
-		Provider: provider,
+		Provider: provider.String(),
 		Price:    price,
 	}
 }
@@ -36,7 +36,12 @@ func (msg MsgCreateBid) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgCreateBid) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.Provider}
+	provider, err := sdk.AccAddressFromBech32(msg.Provider)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{provider}
 }
 
 // ValidateBasic does basic validation of provider and order
@@ -45,11 +50,17 @@ func (msg MsgCreateBid) ValidateBasic() error {
 		return err
 	}
 
-	if err := sdk.VerifyAddressFormat(msg.Provider); err != nil {
-		return ErrEmptyProvider
+	provider, err := sdk.AccAddressFromBech32(msg.Provider)
+	if err != nil {
+		return err
 	}
 
-	if msg.Provider.Equals(msg.Order.Owner) {
+	owner, err := sdk.AccAddressFromBech32(msg.Order.Owner)
+	if err != nil {
+		return err
+	}
+
+	if provider.Equals(owner) {
 		return ErrSameAccount
 	}
 
@@ -76,7 +87,12 @@ func (msg MsgCloseBid) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgCloseBid) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.BidID.Provider}
+	provider, err := sdk.AccAddressFromBech32(msg.BidID.Provider)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{provider}
 }
 
 // ValidateBasic method for MsgCloseBid
@@ -104,7 +120,12 @@ func (msg MsgCloseOrder) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgCloseOrder) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.OrderID.Owner}
+	owner, err := sdk.AccAddressFromBech32(msg.OrderID.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{owner}
 }
 
 // ValidateBasic method for MsgCloseOrder

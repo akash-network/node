@@ -1,7 +1,6 @@
 package manifest
 
 import (
-	"bytes"
 	"context"
 	"errors"
 
@@ -178,7 +177,7 @@ loop:
 
 			case mtypes.EventLeaseClosed:
 
-				if !bytes.Equal(ev.ID.Provider, s.session.Provider().Address()) {
+				if ev.ID.Provider != s.session.Provider().Address().String() {
 					continue
 				}
 

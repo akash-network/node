@@ -76,7 +76,7 @@ func TestGRPCQueryDeployment(t *testing.T) {
 			"deployment not found",
 			func() {
 				req = &types.QueryDeploymentRequest{ID: types.DeploymentID{
-					Owner: testutil.AccAddress(t),
+					Owner: testutil.AccAddress(t).String(),
 					DSeq:  32,
 				}}
 			},
@@ -221,7 +221,7 @@ func TestGRPCQueryGroup(t *testing.T) {
 			"group not found",
 			func() {
 				req = &types.QueryGroupRequest{ID: types.GroupID{
-					Owner: testutil.AccAddress(t),
+					Owner: testutil.AccAddress(t).String(),
 					DSeq:  32,
 					GSeq:  45,
 				}}

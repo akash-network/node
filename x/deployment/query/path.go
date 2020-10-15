@@ -55,7 +55,7 @@ func ParseDeploymentPath(parts []string) (types.DeploymentID, error) {
 	}
 
 	return types.DeploymentID{
-		Owner: owner,
+		Owner: owner.String(),
 		DSeq:  dseq,
 	}, nil
 }

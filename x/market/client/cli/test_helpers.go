@@ -16,7 +16,7 @@ func TxCreateBidExec(clientCtx client.Context, orderID types.OrderID, price, fro
 	extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
-		fmt.Sprintf("--owner=%s", orderID.Owner.String()),
+		fmt.Sprintf("--owner=%s", orderID.Owner),
 		fmt.Sprintf("--dseq=%v", orderID.DSeq),
 		fmt.Sprintf("--gseq=%v", orderID.GSeq),
 		fmt.Sprintf("--oseq=%v", orderID.OSeq),
@@ -33,7 +33,7 @@ func TxCloseBidExec(clientCtx client.Context, orderID types.OrderID, from fmt.St
 	extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
-		fmt.Sprintf("--owner=%s", orderID.Owner.String()),
+		fmt.Sprintf("--owner=%s", orderID.Owner),
 		fmt.Sprintf("--dseq=%v", orderID.DSeq),
 		fmt.Sprintf("--gseq=%v", orderID.GSeq),
 		fmt.Sprintf("--oseq=%v", orderID.OSeq),
@@ -49,7 +49,7 @@ func TxCloseOrderExec(clientCtx client.Context, orderID types.OrderID, from fmt.
 	extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
-		fmt.Sprintf("--owner=%s", orderID.Owner.String()),
+		fmt.Sprintf("--owner=%s", orderID.Owner),
 		fmt.Sprintf("--dseq=%v", orderID.DSeq),
 		fmt.Sprintf("--gseq=%v", orderID.GSeq),
 		fmt.Sprintf("--oseq=%v", orderID.OSeq),
@@ -68,7 +68,7 @@ func QueryOrdersExec(clientCtx client.Context, args ...string) (sdktest.BufferWr
 // QueryOrderExec is used for testing order query
 func QueryOrderExec(clientCtx client.Context, orderID types.OrderID, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--owner=%s", orderID.Owner.String()),
+		fmt.Sprintf("--owner=%s", orderID.Owner),
 		fmt.Sprintf("--dseq=%v", orderID.DSeq),
 		fmt.Sprintf("--gseq=%v", orderID.GSeq),
 		fmt.Sprintf("--oseq=%v", orderID.OSeq),
@@ -87,11 +87,11 @@ func QueryBidsExec(clientCtx client.Context, args ...string) (sdktest.BufferWrit
 // QueryBidExec is used for testing bid query
 func QueryBidExec(clientCtx client.Context, bidID types.BidID, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--owner=%s", bidID.Owner.String()),
+		fmt.Sprintf("--owner=%s", bidID.Owner),
 		fmt.Sprintf("--dseq=%v", bidID.DSeq),
 		fmt.Sprintf("--gseq=%v", bidID.GSeq),
 		fmt.Sprintf("--oseq=%v", bidID.OSeq),
-		fmt.Sprintf("--provider=%v", bidID.Provider.String()),
+		fmt.Sprintf("--provider=%v", bidID.Provider),
 	}
 
 	args = append(args, extraArgs...)
@@ -107,11 +107,11 @@ func QueryLeasesExec(clientCtx client.Context, args ...string) (sdktest.BufferWr
 // QueryLeaseExec is used for testing lease query
 func QueryLeaseExec(clientCtx client.Context, leaseID types.LeaseID, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--owner=%s", leaseID.Owner.String()),
+		fmt.Sprintf("--owner=%s", leaseID.Owner),
 		fmt.Sprintf("--dseq=%v", leaseID.DSeq),
 		fmt.Sprintf("--gseq=%v", leaseID.GSeq),
 		fmt.Sprintf("--oseq=%v", leaseID.OSeq),
-		fmt.Sprintf("--provider=%v", leaseID.Provider.String()),
+		fmt.Sprintf("--provider=%v", leaseID.Provider),
 	}
 
 	args = append(args, extraArgs...)

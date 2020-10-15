@@ -91,7 +91,7 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 		simAccount, _ := simtypes.RandomAcc(r, accounts)
 
 		dID := types.DeploymentID{
-			Owner: simAccount.Address,
+			Owner: simAccount.Address.String(),
 			DSeq:  uint64(ctx.BlockHeight()),
 		}
 
@@ -174,7 +174,12 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 		i := r.Intn(len(deployments))
 		deployment := deployments[i]
 
-		simAccount, found := simtypes.FindAccount(accounts, deployment.ID().Owner)
+		owner, convertErr := sdk.AccAddressFromBech32(deployment.ID().Owner)
+		if convertErr != nil {
+			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeUpdateDeployment, "error while converting address"), nil, convertErr
+		}
+
+		simAccount, found := simtypes.FindAccount(accounts, owner)
 		if !found {
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeUpdateDeployment, "unable to find deployment with given id"),
 				nil, errors.Errorf("deployment with %s not found", deployment.ID().Owner)
@@ -256,7 +261,12 @@ func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper,
 		i := r.Intn(len(deployments))
 		deployment := deployments[i]
 
-		simAccount, found := simtypes.FindAccount(accounts, deployment.ID().Owner)
+		owner, convertErr := sdk.AccAddressFromBech32(deployment.ID().Owner)
+		if convertErr != nil {
+			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseDeployment, "error while converting address"), nil, convertErr
+		}
+
+		simAccount, found := simtypes.FindAccount(accounts, owner)
 		if !found {
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseDeployment, "unable to find deployment"), nil,
 				errors.Errorf("deployment with %s not found", deployment.ID().Owner)
@@ -318,7 +328,12 @@ func SimulateMsgCloseGroup(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k ke
 		i := r.Intn(len(deployments))
 		deployment := deployments[i]
 
-		simAccount, found := simtypes.FindAccount(accounts, deployment.ID().Owner)
+		owner, convertErr := sdk.AccAddressFromBech32(deployment.ID().Owner)
+		if convertErr != nil {
+			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseGroup, "error while converting address"), nil, convertErr
+		}
+
+		simAccount, found := simtypes.FindAccount(accounts, owner)
 		if !found {
 			err := errors.Errorf("deployment with %s not found", deployment.ID().Owner)
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseGroup, err.Error()), nil, err

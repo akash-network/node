@@ -44,7 +44,12 @@ func (k Keeper) Get(ctx sdk.Context, id sdk.Address) (types.Provider, bool) {
 // Create creates a new provider or returns an error if the provider exists already
 func (k Keeper) Create(ctx sdk.Context, provider types.Provider) error {
 	store := ctx.KVStore(k.skey)
-	key := providerKey(provider.Owner)
+	owner, err := sdk.AccAddressFromBech32(provider.Owner)
+	if err != nil {
+		return err
+	}
+
+	key := providerKey(owner)
 
 	if store.Has(key) {
 		return types.ErrProviderExists
@@ -53,7 +58,7 @@ func (k Keeper) Create(ctx sdk.Context, provider types.Provider) error {
 	store.Set(key, k.cdc.MustMarshalBinaryBare(&provider))
 
 	ctx.EventManager().EmitEvent(
-		types.EventProviderCreated{Owner: provider.Owner}.ToSDKEvent(),
+		types.EventProviderCreated{Owner: owner}.ToSDKEvent(),
 	)
 
 	return nil
@@ -76,7 +81,12 @@ func (k Keeper) WithProviders(ctx sdk.Context, fn func(types.Provider) bool) {
 // Update updates a provider details
 func (k Keeper) Update(ctx sdk.Context, provider types.Provider) error {
 	store := ctx.KVStore(k.skey)
-	key := providerKey(provider.Owner)
+	owner, err := sdk.AccAddressFromBech32(provider.Owner)
+	if err != nil {
+		return err
+	}
+
+	key := providerKey(owner)
 
 	if !store.Has(key) {
 		return types.ErrProviderNotFound
@@ -84,7 +94,7 @@ func (k Keeper) Update(ctx sdk.Context, provider types.Provider) error {
 	store.Set(key, k.cdc.MustMarshalBinaryBare(&provider))
 
 	ctx.EventManager().EmitEvent(
-		types.EventProviderUpdated{Owner: provider.Owner}.ToSDKEvent(),
+		types.EventProviderUpdated{Owner: owner}.ToSDKEvent(),
 	)
 
 	return nil
