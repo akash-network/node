@@ -271,14 +271,14 @@ func NewApp(
 
 	// register IBC Keeper
 	app.keeper.ibc = ibckeeper.NewKeeper(
-		appCodec, app.keys[ibchost.StoreKey], app.keeper.staking, app.keeper.scopedIBC,
+		appCodec, app.keys[ibchost.StoreKey], app.keeper.staking, scopedIBCKeeper,
 	)
 
 	// register Transfer Keepers
 	app.keeper.transfer = ibctransferkeeper.NewKeeper(
 		appCodec, app.keys[ibctransfertypes.StoreKey], app.GetSubspace(ibctransfertypes.ModuleName),
 		app.keeper.ibc.ChannelKeeper, &app.keeper.ibc.PortKeeper,
-		app.keeper.acct, app.keeper.bank, app.keeper.scopedTransfer,
+		app.keeper.acct, app.keeper.bank, scopedTransferKeeper,
 	)
 	transferModule := transfer.NewAppModule(app.keeper.transfer)
 
@@ -527,6 +527,7 @@ func initParamsKeeper(appCodec codec.BinaryMarshaler, legacyAmino *codec.LegacyA
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
 	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
 	paramsKeeper.Subspace(crisistypes.ModuleName)
+	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 
 	return paramsKeeper
 }
