@@ -12,6 +12,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/api/extensions/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
+	"k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -23,7 +25,23 @@ import (
 
 const (
 	akashManagedLabelName         = "akash.network"
+	akashNetworkNamespace         = "akash.network/namespace"
 	akashManifestServiceLabelName = "akash.network/manifest-service"
+
+	netPolDefaultDenyIngress = "default-deny-ingress"
+	netPolDefaultDenyEgress  = "default-deny-egress"
+
+	netPolIngressInternalAllow = "ingress-allow-internal"
+	netPolIngressAllowIngCtrl  = "ingress-allow-controller"
+
+	netPolEgressInternalAllow     = "egress-allow-internal"
+	netPolEgressAllowExternalCidr = "egress-allow-cidr"
+	netPolEgressAllowKubeDNS      = "egress-allow-kube-dns"
+)
+
+var (
+	dnsPort     = intstr.FromInt(53)
+	dnsProtocol = corev1.Protocol("UDP")
 )
 
 type builder struct {
@@ -40,6 +58,7 @@ func (b *builder) ns() string {
 func (b *builder) labels() map[string]string {
 	return map[string]string{
 		akashManagedLabelName: "true",
+		akashNetworkNamespace: lidNS(b.lid),
 	}
 }
 
@@ -67,6 +86,82 @@ func (b *nsBuilder) create() (*corev1.Namespace, error) { // nolint:golint,unpar
 func (b *nsBuilder) update(obj *corev1.Namespace) (*corev1.Namespace, error) { // nolint:golint,unparam
 	obj.Name = b.ns()
 	obj.Labels = b.labels()
+	return obj, nil
+}
+
+// pspRestrictedBuilder produces restrictive PodSecurityPolicies for tenant Namespaces.
+// Restricted PSP source: https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/policy/restricted-psp.yaml
+type pspRestrictedBuilder struct {
+	builder
+}
+
+func newPspBuilder(settings settings, lid mtypes.LeaseID, group *manifest.Group) *pspRestrictedBuilder { // nolint:golint,unparam
+	return &pspRestrictedBuilder{builder: builder{settings: settings, lid: lid, group: group}}
+}
+
+func (p *pspRestrictedBuilder) name() string {
+	return p.ns()
+}
+
+func (p *pspRestrictedBuilder) create() (*v1beta1.PodSecurityPolicy, error) { // nolint:golint,unparam
+	falseVal := false
+	return &v1beta1.PodSecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      p.name(),
+			Namespace: p.name(),
+			Labels:    p.labels(),
+			Annotations: map[string]string{
+				"seccomp.security.alpha.kubernetes.io/allowedProfileNames": "docker/default,runtime/default",
+				"apparmor.security.beta.kubernetes.io/allowedProfileNames": "runtime/default",
+				"seccomp.security.alpha.kubernetes.io/defaultProfileName":  "runtime/default",
+				"apparmor.security.beta.kubernetes.io/defaultProfileName":  "runtime/default",
+			},
+		},
+		Spec: v1beta1.PodSecurityPolicySpec{
+			Privileged:               false,
+			AllowPrivilegeEscalation: &falseVal,
+			RequiredDropCapabilities: []corev1.Capability{
+				"ALL",
+			},
+			Volumes: []v1beta1.FSType{
+				v1beta1.EmptyDir,
+				v1beta1.PersistentVolumeClaim, // evaluate necessity later
+			},
+			HostNetwork: false,
+			HostIPC:     false,
+			HostPID:     false,
+			RunAsUser: v1beta1.RunAsUserStrategyOptions{
+				Rule: v1beta1.RunAsUserStrategyMustRunAsNonRoot,
+			},
+			SELinux: v1beta1.SELinuxStrategyOptions{
+				Rule: v1beta1.SELinuxStrategyRunAsAny,
+			},
+			SupplementalGroups: v1beta1.SupplementalGroupsStrategyOptions{
+				Rule: v1beta1.SupplementalGroupsStrategyMustRunAs,
+				Ranges: []v1beta1.IDRange{
+					{
+						Min: int64(1),
+						Max: int64(65535),
+					},
+				},
+			},
+			FSGroup: v1beta1.FSGroupStrategyOptions{
+				Rule: v1beta1.FSGroupStrategyMustRunAs,
+				Ranges: []v1beta1.IDRange{
+					{
+						Min: int64(1),
+						Max: int64(65535),
+					},
+				},
+			},
+			ReadOnlyRootFilesystem: false,
+		},
+	}, nil
+}
+
+func (p *pspRestrictedBuilder) update(obj *v1beta1.PodSecurityPolicy) (*v1beta1.PodSecurityPolicy, error) { // nolint:golint,unparam
+	obj.Name = p.ns()
+	obj.Labels = p.labels()
 	return obj, nil
 }
 
@@ -241,6 +336,231 @@ func (b *serviceBuilder) ports() []corev1.ServicePort {
 		})
 	}
 	return ports
+}
+
+type netPolBuilder struct {
+	builder
+}
+
+func newNetPolBuilder(settings settings, lid mtypes.LeaseID, group *manifest.Group) *netPolBuilder {
+	return &netPolBuilder{builder: builder{settings: settings, lid: lid, group: group}}
+}
+
+// Create a set of NetworkPolicies to restrict the ingress traffic to a Tenant's
+// Deployment namespace.
+func (b *netPolBuilder) create() ([]*netv1.NetworkPolicy, error) { // nolint:golint,unparam
+	return []*netv1.NetworkPolicy{
+		// INGRESS ---------------------------------------------------------------
+		{
+			// Deny all ingress to tenant namespace. Default rule which is opened up
+			// by subsequent rules.
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   netPolDefaultDenyIngress,
+				Labels: b.labels(),
+			},
+			Spec: netv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						akashNetworkNamespace: lidNS(b.lid),
+					},
+				},
+				PolicyTypes: []netv1.PolicyType{
+					netv1.PolicyTypeIngress,
+				},
+			},
+		},
+
+		{
+			// Allow ingress between services within namespace.
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   netPolIngressInternalAllow,
+				Labels: b.labels(),
+			},
+			Spec: netv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						akashNetworkNamespace: lidNS(b.lid),
+					},
+				},
+				Ingress: []netv1.NetworkPolicyIngressRule{
+					{ // Allow Network Connections from same Namespace
+						From: []netv1.NetworkPolicyPeer{
+							{
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										akashNetworkNamespace: lidNS(b.lid),
+									},
+								},
+							},
+						},
+					},
+				},
+				PolicyTypes: []netv1.PolicyType{
+					netv1.PolicyTypeIngress,
+				},
+			},
+		},
+
+		{
+			// Allow valid ingress to the tentant namespace from ingress controller, by default ingress-nginx
+			// TODO: a generic selector should be used since some Providers may choose
+			// a different Ingress Controller.
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   netPolIngressAllowIngCtrl,
+				Labels: b.labels(),
+			},
+			Spec: netv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						akashNetworkNamespace: lidNS(b.lid),
+					},
+				},
+				Ingress: []netv1.NetworkPolicyIngressRule{
+					{ // Allow Network Connections ingress-nginx Namespace
+						From: []netv1.NetworkPolicyPeer{
+							{
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"app.kubernetes.io/name": "ingress-nginx",
+									},
+								},
+							},
+						},
+					},
+				},
+				PolicyTypes: []netv1.PolicyType{
+					netv1.PolicyTypeIngress,
+				},
+			},
+		},
+
+		// EGRESS -----------------------------------------------------------------
+		{
+			// Deny all egress from tenant namespace. Default rule which is opened up
+			// by subsequent rules.
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   netPolDefaultDenyEgress,
+				Labels: b.labels(),
+			},
+			Spec: netv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						akashNetworkNamespace: lidNS(b.lid),
+					},
+				},
+				PolicyTypes: []netv1.PolicyType{
+					netv1.PolicyTypeEgress,
+				},
+			},
+		},
+
+		{
+			// Allow egress between services within the namespace.
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   netPolEgressInternalAllow,
+				Labels: b.labels(),
+			},
+			Spec: netv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						akashNetworkNamespace: lidNS(b.lid),
+					},
+				},
+				Ingress: []netv1.NetworkPolicyIngressRule{
+					{ // Allow Network Connections from same Namespace
+						From: []netv1.NetworkPolicyPeer{
+							{
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										akashNetworkNamespace: lidNS(b.lid),
+									},
+								},
+							},
+						},
+					},
+				},
+				PolicyTypes: []netv1.PolicyType{
+					netv1.PolicyTypeEgress,
+				},
+			},
+		},
+
+		{ // Allow egress to all IPs, EXCEPT local cluster.
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   netPolEgressAllowExternalCidr,
+				Labels: b.labels(),
+			},
+			Spec: netv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						akashNetworkNamespace: lidNS(b.lid),
+					},
+				},
+				Egress: []netv1.NetworkPolicyEgressRule{
+					{ // Allow Network Connections to Internet, block access to internal IPs
+						To: []netv1.NetworkPolicyPeer{
+							{
+								IPBlock: &netv1.IPBlock{
+									CIDR: "0.0.0.0/0",
+									Except: []string{
+										// TODO: Full validation and correction required.
+										// Initial testing indicates that this exception is being ignored;
+										// eg: Internal k8s API is accessible from containers, but
+										// open Internet is made accessible by rule.
+										"10.0.0.0/8",
+									},
+								},
+							},
+						},
+					},
+				},
+				PolicyTypes: []netv1.PolicyType{
+					netv1.PolicyTypeEgress,
+				},
+			},
+		},
+
+		{
+			// Allow egress to Kubernetes internal subnet for DNS
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   netPolEgressAllowKubeDNS,
+				Labels: b.labels(),
+			},
+			Spec: netv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						akashNetworkNamespace: lidNS(b.lid),
+					},
+				},
+				Egress: []netv1.NetworkPolicyEgressRule{
+					{ // Allow Network Connections from same Namespace
+						Ports: []netv1.NetworkPolicyPort{
+							{
+								Protocol: &dnsProtocol,
+								Port:     &dnsPort,
+							},
+						},
+						To: []netv1.NetworkPolicyPeer{
+							{
+								IPBlock: &netv1.IPBlock{
+									CIDR: "10.0.0.0/8",
+								},
+							},
+						},
+					},
+				},
+				PolicyTypes: []netv1.PolicyType{
+					netv1.PolicyTypeEgress,
+				},
+			},
+		},
+	}, nil
+}
+
+// Update a single NetworkPolicy with correct labels.
+func (b *netPolBuilder) update(obj *netv1.NetworkPolicy) (*netv1.NetworkPolicy, error) { // nolint:golint,unparam
+	obj.Labels = b.labels()
+	return obj, nil
 }
 
 // ingress

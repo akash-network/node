@@ -3,10 +3,6 @@
 ###                           Integration                                   ###
 ###############################################################################
 
-test-integration: $(BINS)
-	cp akash ./_build
-	go test -mod=readonly -p 4 -tags "integration $(BUILD_MAINNET)" -v ./integration/...
-
 test-e2e-integration:
 	# Assumes cluster created: `make -s -C _run/kube kind-cluster-create`
 	$(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestIntegrationTestSuite

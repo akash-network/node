@@ -4,8 +4,8 @@ APP_DIR               := ./app
 GO                    := GO111MODULE=on go
 GOBIN                 := $(shell go env GOPATH)/bin
 
-KIND_APP_IP           ?= $(shell make -sC _run/kube kind-k8s-ip)
-KIND_APP_PORT         ?= $(shell make -sC _run/kube app-http-port)
+export KIND_APP_IP    ?= $(shell make -sC _run/kube kind-k8s-ip)
+export KIND_APP_PORT  ?= $(shell make -sC _run/kube app-http-port)
 KIND_VARS             ?= KIND_APP_IP="$(KIND_APP_IP)" KIND_APP_PORT="$(KIND_APP_PORT)"
 
 UNAME_OS              := $(shell uname -s)

@@ -20,7 +20,7 @@ KIND_PORT_BINDINGS ?= $(shell docker inspect "$(KIND_NAME)-control-plane" \
 										--format '{{index .NetworkSettings.Ports "80/tcp" 0 "HostPort"}}')
 
 KIND_CONFIG       ?= kind-config.yaml
-KIND_CONFIG_CALICO ?= kind-config-calico.yaml
+KIND_CONFIG_CALICO ?= ../kind-config-calico.yaml
 
 PROVIDER_HOSTNAME ?= localhost
 PROVIDER_HOST     ?= $(PROVIDER_HOSTNAME):$(KIND_HTTP_PORT)
@@ -37,6 +37,15 @@ app-http-port:
 .PHONY: kind-k8s-ip
 kind-k8s-ip:
 	@echo $(KIND_K8S_IP)
+
+.PHONY: kind-configure-image
+kind-configure-image:
+	echo "- op: replace\n  path: /spec/template/spec/containers/0/image\n  value: ${DOCKER_IMAGE}" > ./kustomize/akashd/docker-image.yaml && \
+    cp ./kustomize/akashd/docker-image.yaml ./kustomize/akash-provider/docker-image.yaml
+
+.PHONY: kind-upload-image
+kind-upload-image:
+	kind --name "$(KIND_NAME)" load docker-image "${DOCKER_IMAGE}"
 
 .PHONY: kind-port-bindings
 kind-port-bindings:

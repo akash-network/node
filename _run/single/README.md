@@ -76,6 +76,15 @@ make clean-all kind-cluster-clean
 make init kustomize-init
 ```
 
+The next step is to configure the docker image to be used. If you want to use a specific
+image, set `DOCKER_IMAGE` to the image reference in the command below. Otherwise
+use `ovrclk/akash:latest` to use the default image.
+
+__t1__
+```sh
+DOCKER_IMAGE=ovrclk/akash:latest make kind-configure-image
+```
+
 ### Initialize Cluster
 
 Start and initialize kind. There are two options for network manager; standard CNI, or Calico.
@@ -99,6 +108,16 @@ make kind-cluster-create
 make kind-cluster-calico-create
 ```
 
+# (Optional) Upload a local docker image
+
+If you specified a custom image in the earlier step you need to upload that image into the Kubernetes
+cluster created by the `kind` command. This uploads an image from your local docker into the Kubernetes
+clsuter.
+
+__t1__
+```sh
+DOCKER_IMAGE=ovrclk/akash:mycustomtag make kind-upload-image
+```
 
 ### Build Akash binaries and initialize network
 

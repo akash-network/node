@@ -23,7 +23,7 @@ configMapGenerator:
       - halt-height=0
       - halt-time=0
       - inter-block-cache=true
-      - pruning=syncable
+      - pruning=nothing
 
   ##
   # tendermint node config (config.toml)

@@ -10,7 +10,7 @@ KUSTOMIZE_AKASHD_CACHE   ?= $(KUSTOMIZE_AKASHD_DIR)/cache
 CLIENT_EXPORT_PASSWORD   ?= 12345678
 
 PROVIDER_HOSTNAME = akash-provider.localhost
-AKASHCTL_NODE     = "tcp://akashd.localhost:$(KIND_PORT_BINDINGS)"
+AKASHCTL_NODE     = "tcp://akash.localhost:$(KIND_PORT_BINDINGS)"
 GATEWAY_ENDPOINT ?= http://akash-provider.localhost
 
 AKASHCTL += --node $(AKASHCTL_NODE)
@@ -56,12 +56,16 @@ provider-status:
 
 .PHONY: provider-lease-status
 provider-lease-status:
-	$(AKASHCTL) provider status lease-status \
+	$(AKASHCTL) provider lease-status \
 		--owner     "$(KEY_ADDRESS)" \
 		--dseq      "$(DSEQ)"        \
 		--gseq      "$(GSEQ)"        \
 		--oseq      "$(OSEQ)"        \
 		--provider  "$(PROVIDER_ADDRESS)"
+
+.PHONY: provider-lease-ping
+provider-lease-ping:
+	curl -sIH "Host: hello.localhost" localhost:$(KIND_HTTP_PORT)
 
 .PHONY:
 clean-all: clean
