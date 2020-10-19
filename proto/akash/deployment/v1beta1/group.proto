@@ -98,4 +98,5 @@ message Resource {
   uint32                   count = 2 [(gogoproto.jsontag) = "count", (gogoproto.moretags) = "yaml:\"count\""];
   cosmos.base.v1beta1.Coin price = 3
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "price", (gogoproto.moretags) = "yaml:\"price\""];
+  ;
 }

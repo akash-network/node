@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -71,11 +72,13 @@ func queryApp(t *testing.T, appURL string, limit int) {
 	var resp *http.Response
 	for i := 0; i < limit; i++ {
 		time.Sleep(1 * time.Second) // reduce absurdly long wait period
+		fmt.Fprintf(os.Stdout, "queryApp: polling app at %q attempt %d\n", req.URL.String(), i)
 		resp, err = client.Do(req)
 		if err != nil {
 			t.Log(err)
 			continue
 		}
+		fmt.Fprintf(os.Stdout, "queryApp: attempt %d response is %d\n", i, resp.StatusCode)
 		if resp != nil && resp.StatusCode == http.StatusOK {
 			err = nil
 			break
