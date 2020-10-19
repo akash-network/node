@@ -30,7 +30,7 @@ type Service interface {
 }
 
 // NewService creates new service instance and returns error incase of failure
-func NewService(ctx context.Context, session session.Session, cluster cluster.Cluster, bus pubsub.Bus) (Service, error) {
+func NewService(ctx context.Context, session session.Session, cluster cluster.Cluster, bus pubsub.Bus, bps BidPricingStrategy) (Service, error) {
 
 	session = session.ForModule("bidengine-service")
 
@@ -48,14 +48,15 @@ func NewService(ctx context.Context, session session.Session, cluster cluster.Cl
 	session.Log().Info("found orders", "count", len(existingOrders))
 
 	s := &service{
-		session:  session,
-		cluster:  cluster,
-		bus:      bus,
-		sub:      sub,
-		statusch: make(chan chan<- *Status),
-		orders:   make(map[string]*order),
-		drainch:  make(chan *order),
-		lc:       lifecycle.New(),
+		session:         session,
+		cluster:         cluster,
+		bus:             bus,
+		sub:             sub,
+		statusch:        make(chan chan<- *Status),
+		orders:          make(map[string]*order),
+		drainch:         make(chan *order),
+		lc:              lifecycle.New(),
+		pricingStrategy: bps,
 	}
 
 	go s.lc.WatchContext(ctx)
@@ -71,9 +72,10 @@ type service struct {
 	bus pubsub.Bus
 	sub pubsub.Subscriber
 
-	statusch chan chan<- *Status
-	orders   map[string]*order
-	drainch  chan *order
+	statusch        chan chan<- *Status
+	orders          map[string]*order
+	drainch         chan *order
+	pricingStrategy BidPricingStrategy
 
 	lc lifecycle.Lifecycle
 }
@@ -114,7 +116,8 @@ func (s *service) run(existingOrders []existingOrder) {
 
 	for _, eo := range existingOrders {
 		key := mquery.OrderPath(eo.order.OrderID)
-		order, err := newOrder(s, eo.order.OrderID, eo.bid)
+		s.session.Log().Debug("running order", "order", key)
+		order, err := newOrder(s, eo.order.OrderID, eo.bid, s.pricingStrategy)
 		if err != nil {
 			s.session.Log().Error("creating catchup order", "order", key, "err", err)
 			continue
@@ -143,7 +146,7 @@ loop:
 				}
 
 				// create an order object for managing the bid process and order lifecycle
-				order, err := newOrder(s, ev.ID, nil)
+				order, err := newOrder(s, ev.ID, nil, s.pricingStrategy)
 				if err != nil {
 					// todo: handle error
 					s.session.Log().Error("handling order", "order", key, "err", err)
@@ -158,14 +161,14 @@ loop:
 			}
 		case order := <-s.drainch:
 			// child done
-			key := mquery.OrderPath(order.order)
+			key := mquery.OrderPath(order.orderID)
 			delete(s.orders, key)
 		}
 	}
 
 	// drain: wait for all order monitors to complete.
 	for len(s.orders) > 0 {
-		key := mquery.OrderPath((<-s.drainch).order)
+		key := mquery.OrderPath((<-s.drainch).orderID)
 		delete(s.orders, key)
 	}
 }

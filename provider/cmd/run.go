@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ovrclk/akash/provider/bidengine"
 	"os"
+	"time"
 
 	cosmosclient "github.com/cosmos/cosmos-sdk/client"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
@@ -38,7 +40,14 @@ const (
 	// FlagK8sManifestNS
 	FlagK8sManifestNS = "k8s-manifest-ns"
 	// FlagGatewayListenAddress determines listening address for Manifests
-	FlagGatewayListenAddress = "gateway-listen-address"
+	FlagGatewayListenAddress       = "gateway-listen-address"
+	FlagBidPricingStrategy         = "bid-price-strategy"
+	FlagBidPriceCPUScale           = "bid-price-cpu-scale"
+	FlagBidPriceMemoryScale        = "bid-price-memory-scale"
+	FlagBidPriceStorageScale       = "bid-price-storage-scale"
+	FlagBidPriceScriptPath         = "bid-price-script-path"
+	FlagBidPriceScriptProcessLimit = "bid-price-script-process-limit"
+	FlagBidPriceScriptTimeout      = "bid-price-script-process-timeout"
 )
 
 var (
@@ -79,15 +88,118 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().String(FlagBidPricingStrategy, "scale", "Pricing strategy to use")
+	if err := viper.BindPFlag(FlagBidPricingStrategy, cmd.Flags().Lookup(FlagBidPricingStrategy)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint64(FlagBidPriceCPUScale, 0, "cpu pricing scale in uakt")
+	if err := viper.BindPFlag(FlagBidPriceCPUScale, cmd.Flags().Lookup(FlagBidPriceCPUScale)); err != nil {
+		return nil
+	}
+	cmd.Flags().Uint64(FlagBidPriceMemoryScale, 0, "memory pricing scale in uakt")
+	if err := viper.BindPFlag(FlagBidPriceMemoryScale, cmd.Flags().Lookup(FlagBidPriceMemoryScale)); err != nil {
+		return nil
+	}
+	cmd.Flags().Uint64(FlagBidPriceStorageScale, 0, "storage pricing scale in uakt")
+	if err := viper.BindPFlag(FlagBidPriceStorageScale, cmd.Flags().Lookup(FlagBidPriceStorageScale)); err != nil {
+		return nil
+	}
+	cmd.Flags().String(FlagBidPriceScriptPath, "", "path to script to run for computing bid price")
+	if err := viper.BindPFlag(FlagBidPriceScriptPath, cmd.Flags().Lookup(FlagBidPriceScriptPath)); err != nil {
+		return nil
+	}
+	cmd.Flags().Uint(FlagBidPriceScriptProcessLimit, 32, "limit to the number of scripts run concurrently for bid pricing")
+	if err := viper.BindPFlag(FlagBidPriceScriptProcessLimit, cmd.Flags().Lookup(FlagBidPriceScriptProcessLimit)); err != nil {
+		return nil
+	}
+	cmd.Flags().String(FlagBidPriceScriptTimeout, "10000ms", "execution timelimit for bid pricing as a duration")
+	if err := viper.BindPFlag(FlagBidPriceScriptTimeout, cmd.Flags().Lookup(FlagBidPriceScriptTimeout)); err != nil {
+		return nil
+	}
+
 	return cmd
+}
+
+const (
+	bidPricingStrategyScale       = "scale"
+	bidPricingStrategyRandomRange = "randomRange"
+	bidPricingStrategyShellScript = "shellScript"
+)
+
+var allowedBidPricingStrategies = [...]string{
+	bidPricingStrategyScale,
+	bidPricingStrategyRandomRange,
+	bidPricingStrategyShellScript,
+}
+
+var errNoSuchBidPricingStrategy = fmt.Errorf("No such bid pricing strategy. Allowed: %v", allowedBidPricingStrategies)
+
+func createBidPricingStrategy(cmd *cobra.Command, strategy string) (bidengine.BidPricingStrategy, error) {
+	if strategy == bidPricingStrategyScale {
+		cpuScale, err := cmd.Flags().GetUint64(FlagBidPriceCPUScale)
+		if err != nil {
+			return nil, err
+		}
+		memoryScale, err := cmd.Flags().GetUint64(FlagBidPriceMemoryScale)
+		if err != nil {
+			return nil, err
+		}
+		storageScale, err := cmd.Flags().GetUint64(FlagBidPriceStorageScale)
+		if err != nil {
+			return nil, err
+		}
+		return bidengine.MakeScalePricing(cpuScale, memoryScale, storageScale)
+	}
+
+	if strategy == bidPricingStrategyRandomRange {
+		return bidengine.MakeRandomRangePricing()
+	}
+
+	if strategy == bidPricingStrategyShellScript {
+		scriptPath, err := cmd.Flags().GetString(FlagBidPriceScriptPath)
+		if err != nil {
+			return nil, err
+		}
+
+		processLimit, err := cmd.Flags().GetUint(FlagBidPriceScriptProcessLimit)
+		if err != nil {
+			return nil, err
+		}
+
+		runtimeLimitAsString, err := cmd.Flags().GetString(FlagBidPriceScriptTimeout)
+		if err != nil {
+			return nil, err
+		}
+
+		runtimeLimit, err := time.ParseDuration(runtimeLimitAsString)
+		if err != nil {
+			return nil, err
+		}
+
+		return bidengine.MakeShellScriptPricing(scriptPath, processLimit, runtimeLimit)
+	}
+
+	return nil, errNoSuchBidPricingStrategy
 }
 
 // doRunCmd initializes all of the Provider functionality, hangs, and awaits shutdown signals.
 func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
+
+	strategy, err := cmd.Flags().GetString(FlagBidPricingStrategy)
+	if err != nil {
+		return err
+	}
+
+	pricing, err := createBidPricingStrategy(cmd, strategy)
+	if err != nil {
+		return err
+	}
+
 	cctx := sdkclient.GetClientContextFromCmd(cmd)
 
 	from, _ := cmd.Flags().GetString(flags.FlagFrom)
-	_, _, err := cosmosclient.GetFromFields(cctx.Keyring, from, false)
+	_, _, err = cosmosclient.GetFromFields(cctx.Keyring, from, false)
 	if err != nil {
 		return err
 	}
@@ -151,7 +263,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	group, ctx := errgroup.WithContext(ctx)
 
-	service, err := provider.NewService(ctx, session, bus, cclient)
+	service, err := provider.NewService(ctx, session, bus, cclient, pricing)
 	if err != nil {
 		return group.Wait()
 	}

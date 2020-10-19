@@ -41,7 +41,7 @@ type Service interface {
 
 // NewService creates and returns new Service instance
 // Simple wrapper around various services needed for running a provider.
-func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cclient cluster.Client) (Service, error) {
+func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cclient cluster.Client, bps bidengine.BidPricingStrategy) (Service, error) {
 
 	config := config{}
 	if err := env.Parse(&config); err != nil {
@@ -67,7 +67,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 		return nil, ErrClusterReadTimedout
 	}
 
-	bidengine, err := bidengine.NewService(ctx, session, cluster, bus)
+	bidengine, err := bidengine.NewService(ctx, session, cluster, bus, bps)
 	if err != nil {
 		errmsg := "creating bidengine service"
 		session.Log().Error(errmsg, "err", err)
