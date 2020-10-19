@@ -1,7 +1,21 @@
 package provider
 
-import "time"
+import (
+	"github.com/ovrclk/akash/provider/bidengine"
+	"time"
+)
 
-type config struct {
-	ClusterWaitReadyDuration time.Duration `env:"AKASH_CLUSTER_WAIT_READY_DURATION" envDefault:"5s"`
+type Config struct {
+	ClusterWaitReadyDuration        time.Duration
+	ClusterPublicHostname           string
+	ClusterExternalPortQuantity     uint
+	InventoryResourcePollPeriod     time.Duration
+	InventoryResourceDebugFrequency uint
+	BPS                             bidengine.BidPricingStrategy
+}
+
+func NewDefaultConfig() Config {
+	return Config{
+		ClusterWaitReadyDuration: time.Second * 5,
+	}
 }

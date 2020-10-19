@@ -4,12 +4,20 @@ generate:
 
 .PHONY: mocks
 mocks:
+	mockery -case=underscore -dir vendor/k8s.io/client-go/kubernetes -output testutil/kubernetes_mock -all -recursive -outpkg kubernetes_mocks -keeptree
 	mockery -case=underscore -dir provider              -output provider/mocks              -name StatusClient
 	mockery -case=underscore -dir provider              -output provider/mocks              -name Client
+	mockery -case=underscore -dir provider/cluster/types      -output provider/cluster/mocks      -name Deployment
 	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Client
 	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name ReadClient
+	mockery -case=underscore -dir provider/cluster      -output provider/cluster/mocks      -name Cluster
+	mockery -case=underscore -dir provider/cluster/types      -output provider/cluster/mocks      -name Reservation
 	mockery -case=underscore -dir provider/manifest     -output provider/manifest/mocks     -name Client
 	mockery -case=underscore -dir provider/manifest     -output provider/manifest/mocks     -name StatusClient
+	mockery -case=underscore -dir client                -output client/mocks/               -name QueryClient
+	mockery -case=underscore -dir client                -output client/mocks/               -name TxClient
+	mockery -case=underscore -dir client                -output client/mocks/               -name Client
+
 
 .PHONY: kubetypes
 kubetypes: deps-vendor

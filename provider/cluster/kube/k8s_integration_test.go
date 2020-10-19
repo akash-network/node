@@ -24,7 +24,7 @@ func TestNewClient(t *testing.T) {
 	group := testutil.AppManifestGenerator.Group(t)
 	ns := lidNS(lid)
 
-	settings := settings{
+	settings := Settings{
 		DeploymentServiceType:          corev1.ServiceTypeClusterIP,
 		DeploymentIngressStaticHosts:   false,
 		DeploymentIngressDomain:        "bar.com",
@@ -76,7 +76,7 @@ func TestNewClient(t *testing.T) {
 	lstat, err := ac.LeaseStatus(ctx, lid)
 	assert.NoError(t, err)
 	assert.Len(t, lstat.Services, 1)
-	assert.Equal(t, svcname, lstat.Services[0].Name)
+	assert.Equal(t, svcname, lstat.Services[svcname].Name)
 
 	sstat, err := ac.ServiceStatus(ctx, lid, svcname)
 	require.NoError(t, err)

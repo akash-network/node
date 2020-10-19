@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/provider"
-	"github.com/ovrclk/akash/provider/cluster"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/manifest"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
@@ -28,8 +28,8 @@ var ErrServerResponse = errors.New("server response")
 type Client interface {
 	Status(ctx context.Context, host string) (*provider.Status, error)
 	SubmitManifest(ctx context.Context, host string, req *manifest.SubmitRequest) error
-	LeaseStatus(ctx context.Context, host string, id mtypes.LeaseID) (*cluster.LeaseStatus, error)
-	ServiceStatus(ctx context.Context, host string, id mtypes.LeaseID, service string) (*cluster.ServiceStatus, error)
+	LeaseStatus(ctx context.Context, host string, id mtypes.LeaseID) (*ctypes.LeaseStatus, error)
+	ServiceStatus(ctx context.Context, host string, id mtypes.LeaseID, service string) (*ctypes.ServiceStatus, error)
 	ServiceLogs(ctx context.Context, host string, id mtypes.LeaseID, service string, follow bool, tailLines int64) (*ServiceLogs, error)
 }
 
@@ -104,13 +104,13 @@ func (c *client) SubmitManifest(ctx context.Context, host string, mreq *manifest
 	return nil
 }
 
-func (c *client) LeaseStatus(ctx context.Context, host string, id mtypes.LeaseID) (*cluster.LeaseStatus, error) {
+func (c *client) LeaseStatus(ctx context.Context, host string, id mtypes.LeaseID) (*ctypes.LeaseStatus, error) {
 	uri, err := makeURI(host, leaseStatusPath(id))
 	if err != nil {
 		return nil, err
 	}
 
-	var obj cluster.LeaseStatus
+	var obj ctypes.LeaseStatus
 	if err := c.getStatus(ctx, uri, &obj); err != nil {
 		return nil, err
 	}
@@ -118,13 +118,13 @@ func (c *client) LeaseStatus(ctx context.Context, host string, id mtypes.LeaseID
 	return &obj, nil
 }
 
-func (c *client) ServiceStatus(ctx context.Context, host string, id mtypes.LeaseID, service string) (*cluster.ServiceStatus, error) {
+func (c *client) ServiceStatus(ctx context.Context, host string, id mtypes.LeaseID, service string) (*ctypes.ServiceStatus, error) {
 	uri, err := makeURI(host, serviceStatusPath(id, service))
 	if err != nil {
 		return nil, err
 	}
 
-	var obj cluster.ServiceStatus
+	var obj ctypes.ServiceStatus
 	if err := c.getStatus(ctx, uri, &obj); err != nil {
 		return nil, err
 	}

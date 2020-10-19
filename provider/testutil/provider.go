@@ -37,6 +37,11 @@ func TestSendManifest(clientCtx client.Context, id mtypes.BidID, sdlPath string,
 	return testutilcli.ExecTestCLICmd(clientCtx, pcmd.SendManifestCmd(), args...)
 }
 
+const (
+	TestClusterPublicHostname   = "e2e.test"
+	TestClusterNodePortQuantity = 100
+)
+
 // RunLocalProvider wraps up the Provider cobra command for testing and supplies
 // new default values to the flags.
 // prev: akashctl provider run --from=foo --cluster-k8s --gateway-listen-address=localhost:39729 --home=/tmp/akash_integration_TestE2EApp_324892307/.akashctl --node=tcp://0.0.0.0:41863 --keyring-backend test
@@ -54,6 +59,9 @@ func RunLocalProvider(clientCtx cosmosclient.Context, chainID, nodeRPC, akashHom
 		fmt.Sprintf("--from=%s", from),
 		fmt.Sprintf("--%s=%s", pcmd.FlagGatewayListenAddress, gatewayListenAddress),
 		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
+		fmt.Sprintf("--%s=%s", pcmd.FlagClusterPublicHostname, TestClusterPublicHostname),
+		fmt.Sprintf("--%s=%d", pcmd.FlagClusterNodePortQuantity, TestClusterNodePortQuantity),
+		fmt.Sprintf("--%s=%s", pcmd.FlagBidPricingStrategy, "randomRange"),
 	}
 
 	args = append(args, extraArgs...)

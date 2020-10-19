@@ -35,17 +35,17 @@ require (
 	github.com/tendermint/tm-db v0.6.2
 	github.com/vektra/mockery v1.1.2
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	golang.org/x/tools v0.0.0-20200323144430-8dcfad9e016e
+	golang.org/x/tools v0.0.0-20200616133436-c1934b75d054
 	google.golang.org/appengine v1.6.6-0.20191016204603-16bce7d3dc4e // indirect
 	google.golang.org/genproto v0.0.0-20201014134559-03b6142f0dc9
 	google.golang.org/grpc v1.33.0
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
-	k8s.io/api v0.18.2
-	k8s.io/apimachinery v0.18.2
-	k8s.io/client-go v0.18.2
-	k8s.io/code-generator v0.18.2
-	k8s.io/metrics v0.18.2
+	k8s.io/api v0.19.3
+	k8s.io/apimachinery v0.19.3
+	k8s.io/client-go v0.19.3
+	k8s.io/code-generator v0.19.3
+	k8s.io/metrics v0.19.3
 	sigs.k8s.io/kind v0.8.1
 )
 

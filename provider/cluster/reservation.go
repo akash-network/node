@@ -5,12 +5,6 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
-// Reservation interface implements orders and resources
-type Reservation interface {
-	OrderID() mtypes.OrderID
-	Resources() atypes.ResourceGroup
-}
-
 func newReservation(order mtypes.OrderID, resources atypes.ResourceGroup) *reservation {
 	return &reservation{order: order, resources: resources}
 }

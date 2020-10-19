@@ -49,6 +49,12 @@ configMapGenerator:
       # - max-group-storage=5368709120
       # - mem-price-min=50
       # - mem-price-max=1048576
+      # - bid-price-strategy
+      # - bid-cpu-scale
+      # - bid-storage-scale
+      # - bid-script-path
+      # - bid-script-process-limit
+      # - bid-script-process-timeout
 
 secretGenerator:
   ##

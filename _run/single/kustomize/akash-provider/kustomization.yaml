@@ -22,6 +22,9 @@ configMapGenerator:
     behavior: merge
     literals:
       - ingress-domain=app.localhost
+      - cluster-public-hostname=app.localhost
+      - cluster-node-port-quantity=100
+      - bid-price-strategy=randomRange
       # - ingress-static-hosts=false
 
 patchesJson6902:

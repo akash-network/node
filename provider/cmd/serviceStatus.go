@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 
@@ -13,6 +12,8 @@ import (
 	pmodule "github.com/ovrclk/akash/x/provider"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
+
+const FlagService = "service"
 
 func serviceStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -25,6 +26,10 @@ func serviceStatusCmd() *cobra.Command {
 
 	mcli.AddBidIDFlags(cmd.Flags())
 	mcli.MarkReqBidIDFlags(cmd)
+	cmd.Flags().String(FlagService, "", "name of service to query")
+	if err := cmd.MarkFlagRequired(FlagService); err != nil {
+		return nil
+	}
 
 	return cmd
 }
@@ -38,7 +43,7 @@ func doServiceStatus(cmd *cobra.Command) error {
 	}
 
 	var svcName string
-	if svcName, err = cmd.Flags().GetString("service"); err != nil {
+	if svcName, err = cmd.Flags().GetString(FlagService); err != nil {
 		return err
 	}
 

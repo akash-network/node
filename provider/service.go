@@ -5,7 +5,6 @@ import (
 	"time"
 
 	lifecycle "github.com/boz/go-lifecycle"
-	"github.com/caarlos0/env"
 	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/provider/bidengine"
@@ -41,18 +40,18 @@ type Service interface {
 
 // NewService creates and returns new Service instance
 // Simple wrapper around various services needed for running a provider.
-func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cclient cluster.Client) (Service, error) {
 
-	config := config{}
-	if err := env.Parse(&config); err != nil {
-		return nil, err
-	}
-
+func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cclient cluster.Client, cfg Config) (Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	session = session.ForModule("provider-service")
 
-	cluster, err := cluster.NewService(ctx, session, bus, cclient)
+	clusterConfig := cluster.NewDefaultConfig()
+	clusterConfig.InventoryResourcePollPeriod = cfg.InventoryResourcePollPeriod
+	clusterConfig.InventoryResourceDebugFrequency = cfg.InventoryResourceDebugFrequency
+	clusterConfig.InventoryExternalPortQuantity = cfg.ClusterExternalPortQuantity
+
+	cluster, err := cluster.NewService(ctx, session, bus, cclient, clusterConfig)
 	if err != nil {
 		cancel()
 		return nil, err
@@ -60,14 +59,14 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 
 	select {
 	case <-cluster.Ready():
-	case <-time.After(config.ClusterWaitReadyDuration):
+	case <-time.After(cfg.ClusterWaitReadyDuration):
 		session.Log().Error(ErrClusterReadTimedout.Error())
 		cancel()
 		<-cluster.Done()
 		return nil, ErrClusterReadTimedout
 	}
 
-	bidengine, err := bidengine.NewService(ctx, session, cluster, bus)
+	bidengine, err := bidengine.NewService(ctx, session, cluster, bus, cfg.BPS)
 	if err != nil {
 		errmsg := "creating bidengine service"
 		session.Log().Error(errmsg, "err", err)
@@ -95,6 +94,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 		ctx:       ctx,
 		cancel:    cancel,
 		lc:        lifecycle.New(),
+		config:    cfg,
 	}
 
 	go service.lc.WatchContext(ctx)
@@ -104,6 +104,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 }
 
 type service struct {
+	config  Config
 	session session.Session
 	bus     pubsub.Bus
 	cclient cluster.Client
@@ -148,9 +149,10 @@ func (s *service) Status(ctx context.Context) (*Status, error) {
 		return nil, err
 	}
 	return &Status{
-		Cluster:   cluster,
-		Bidengine: bidengine,
-		Manifest:  manifest,
+		Cluster:               cluster,
+		Bidengine:             bidengine,
+		Manifest:              manifest,
+		ClusterPublicHostname: s.config.ClusterPublicHostname,
 	}, nil
 }
 

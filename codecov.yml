@@ -1,6 +1,7 @@
 ignore:
   - "**/*.pb.go"
   - "**/mocks/.*"
+  - "**/kubernetes_mock/.*"
   - "pkg"
 comment:
   layout: " diff, flags"

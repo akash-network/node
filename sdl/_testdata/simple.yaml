@@ -7,6 +7,10 @@ services:
       - port: 80
         to:
           - global: true
+      - port: 12345
+        to:
+          - global: true
+        proto: udp
 profiles:
   compute:
     web:
