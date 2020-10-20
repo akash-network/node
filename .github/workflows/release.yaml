@@ -19,7 +19,7 @@ jobs:
       - name: branch name
         id: branch_name
         run: |
-          echo ::set-output name=MAINNET::$([[ $(./script/semver.sh get minor $GITHUB_REF#refs/tags/) % 2 ]] && echo true || echo false)
+          echo ::set-output name=MAINNET::$([[ $(./script/semver.sh get minor ${GITHUB_REF#refs/tags/}) % 2 ]] && echo true || echo false)
       - uses: actions/setup-go@v2
       - name: release dry-run
         run: make release-dry-run
