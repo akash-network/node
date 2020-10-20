@@ -9,7 +9,6 @@ import (
 )
 
 var (
-	ErrOwnerValue = errors.New("query: invalid owner value")
 	ErrStateValue = errors.New("query: invalid state value")
 )
 
@@ -35,10 +34,12 @@ func DeploymentIDFromFlags(flags *pflag.FlagSet, defaultOwner string) (types.Dep
 	if owner == "" {
 		owner = defaultOwner
 	}
-	id.Owner, err = sdk.AccAddressFromBech32(owner)
+	_, err = sdk.AccAddressFromBech32(owner)
 	if err != nil {
 		return id, err
 	}
+	id.Owner = owner
+
 	if id.DSeq, err = flags.GetUint64("dseq"); err != nil {
 		return id, err
 	}
@@ -88,17 +89,13 @@ func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, error) 
 	}
 
 	if owner != "" {
-		dfilters.Owner, err = sdk.AccAddressFromBech32(owner)
+		_, err = sdk.AccAddressFromBech32(owner)
 		if err != nil {
 			return dfilters, err
 		}
-	} else {
-		dfilters.Owner = sdk.AccAddress{}
 	}
 
-	if !dfilters.Owner.Empty() && sdk.VerifyAddressFormat(dfilters.Owner) != nil {
-		return dfilters, ErrOwnerValue
-	}
+	dfilters.Owner = owner
 
 	if dfilters.State, err = flags.GetString("state"); err != nil {
 		return dfilters, err

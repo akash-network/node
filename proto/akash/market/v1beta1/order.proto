@@ -20,15 +20,11 @@ message MsgCloseOrder {
 
 // OrderID stores owner and all other seq numbers
 message OrderID {
-  option (gogoproto.equal)            = true;
+  option (gogoproto.equal)            = false;
   option (gogoproto.goproto_stringer) = false;
 
-  bytes owner = 1 [
-    (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-    (gogoproto.jsontag)  = "owner",
-    (gogoproto.moretags) = "yaml:\"owner\""
-  ];
-  uint64 dseq = 2
+  string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+  uint64 dseq  = 2
       [(gogoproto.customname) = "DSeq", (gogoproto.jsontag) = "dseq", (gogoproto.moretags) = "yaml:\"dseq\""];
   uint32 gseq = 3
       [(gogoproto.customname) = "GSeq", (gogoproto.jsontag) = "gseq", (gogoproto.moretags) = "yaml:\"gseq\""];
@@ -73,12 +69,8 @@ message Order {
 message OrderFilters {
   option (gogoproto.equal) = false;
 
-  bytes owner = 1 [
-    (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-    (gogoproto.jsontag)  = "owner",
-    (gogoproto.moretags) = "yaml:\"owner\""
-  ];
-  uint64 dseq = 2
+  string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+  uint64 dseq  = 2
       [(gogoproto.customname) = "DSeq", (gogoproto.jsontag) = "dseq", (gogoproto.moretags) = "yaml:\"dseq\""];
   uint32 gseq = 3
       [(gogoproto.customname) = "GSeq", (gogoproto.jsontag) = "gseq", (gogoproto.moretags) = "yaml:\"gseq\""];

@@ -5,7 +5,6 @@ package types
 
 import (
 	fmt "fmt"
-	github_com_cosmos_cosmos_sdk_types "github.com/cosmos/cosmos-sdk/types"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/ovrclk/akash/types"
@@ -27,9 +26,9 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 // MsgCreateProvider defines an SDK message for creating a provider
 type MsgCreateProvider struct {
-	Owner      github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=owner,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"owner" yaml:"owner"`
-	HostURI    string                                        `protobuf:"bytes,2,opt,name=host_uri,json=hostUri,proto3" json:"host-uri" yaml:"host-uri"`
-	Attributes Attributes                                    `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=Attributes" json:"attributes" yaml:"attributes"`
+	Owner      string     `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner" yaml:"owner"`
+	HostURI    string     `protobuf:"bytes,2,opt,name=host_uri,json=hostUri,proto3" json:"host-uri" yaml:"host-uri"`
+	Attributes Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=Attributes" json:"attributes" yaml:"attributes"`
 }
 
 func (m *MsgCreateProvider) Reset()         { *m = MsgCreateProvider{} }
@@ -65,11 +64,11 @@ func (m *MsgCreateProvider) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgCreateProvider proto.InternalMessageInfo
 
-func (m *MsgCreateProvider) GetOwner() github_com_cosmos_cosmos_sdk_types.AccAddress {
+func (m *MsgCreateProvider) GetOwner() string {
 	if m != nil {
 		return m.Owner
 	}
-	return nil
+	return ""
 }
 
 func (m *MsgCreateProvider) GetHostURI() string {
@@ -88,9 +87,9 @@ func (m *MsgCreateProvider) GetAttributes() Attributes {
 
 // MsgUpdateProvider defines an SDK message for updating a provider
 type MsgUpdateProvider struct {
-	Owner      github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=owner,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"owner" yaml:"owner"`
-	HostURI    string                                        `protobuf:"bytes,2,opt,name=host_uri,json=hostUri,proto3" json:"host-uri" yaml:"host-uri"`
-	Attributes Attributes                                    `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=Attributes" json:"attributes" yaml:"attributes"`
+	Owner      string     `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner" yaml:"owner"`
+	HostURI    string     `protobuf:"bytes,2,opt,name=host_uri,json=hostUri,proto3" json:"host-uri" yaml:"host-uri"`
+	Attributes Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=Attributes" json:"attributes" yaml:"attributes"`
 }
 
 func (m *MsgUpdateProvider) Reset()         { *m = MsgUpdateProvider{} }
@@ -126,11 +125,11 @@ func (m *MsgUpdateProvider) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgUpdateProvider proto.InternalMessageInfo
 
-func (m *MsgUpdateProvider) GetOwner() github_com_cosmos_cosmos_sdk_types.AccAddress {
+func (m *MsgUpdateProvider) GetOwner() string {
 	if m != nil {
 		return m.Owner
 	}
-	return nil
+	return ""
 }
 
 func (m *MsgUpdateProvider) GetHostURI() string {
@@ -149,7 +148,7 @@ func (m *MsgUpdateProvider) GetAttributes() Attributes {
 
 // MsgDeleteProvider defines an SDK message for deleting a provider
 type MsgDeleteProvider struct {
-	Owner github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=owner,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"owner" yaml:"owner"`
+	Owner string `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner" yaml:"owner"`
 }
 
 func (m *MsgDeleteProvider) Reset()         { *m = MsgDeleteProvider{} }
@@ -185,18 +184,18 @@ func (m *MsgDeleteProvider) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgDeleteProvider proto.InternalMessageInfo
 
-func (m *MsgDeleteProvider) GetOwner() github_com_cosmos_cosmos_sdk_types.AccAddress {
+func (m *MsgDeleteProvider) GetOwner() string {
 	if m != nil {
 		return m.Owner
 	}
-	return nil
+	return ""
 }
 
 // Provider stores owner and host details
 type Provider struct {
-	Owner      github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=owner,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"owner" yaml:"owner"`
-	HostURI    string                                        `protobuf:"bytes,2,opt,name=host_uri,json=hostUri,proto3" json:"host-uri" yaml:"host-uri"`
-	Attributes Attributes                                    `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=Attributes" json:"attributes" yaml:"attributes"`
+	Owner      string     `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner" yaml:"owner"`
+	HostURI    string     `protobuf:"bytes,2,opt,name=host_uri,json=hostUri,proto3" json:"host-uri" yaml:"host-uri"`
+	Attributes Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=Attributes" json:"attributes" yaml:"attributes"`
 }
 
 func (m *Provider) Reset()      { *m = Provider{} }
@@ -231,11 +230,11 @@ func (m *Provider) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Provider proto.InternalMessageInfo
 
-func (m *Provider) GetOwner() github_com_cosmos_cosmos_sdk_types.AccAddress {
+func (m *Provider) GetOwner() string {
 	if m != nil {
 		return m.Owner
 	}
-	return nil
+	return ""
 }
 
 func (m *Provider) GetHostURI() string {
@@ -264,33 +263,31 @@ func init() {
 }
 
 var fileDescriptor_12a8109840398be6 = []byte{
-	// 413 bytes of a gzipped FileDescriptorProto
+	// 371 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x52, 0x4d, 0xcc, 0x4e, 0x2c,
 	0xce, 0xd0, 0x2f, 0x28, 0xca, 0x2f, 0xcb, 0x4c, 0x49, 0x2d, 0xd2, 0x2f, 0x33, 0x4c, 0x4a, 0x2d,
 	0x49, 0x34, 0x84, 0x0b, 0xe8, 0x15, 0x14, 0xe5, 0x97, 0xe4, 0x0b, 0x89, 0x81, 0x95, 0xe9, 0xc1,
 	0x45, 0xa1, 0xca, 0xa4, 0x44, 0xd2, 0xf3, 0xd3, 0xf3, 0xc1, 0x4a, 0xf4, 0x41, 0x2c, 0x88, 0x6a,
 	0x29, 0x25, 0x88, 0xa1, 0x49, 0x89, 0xc5, 0xa9, 0x70, 0x03, 0x13, 0x4b, 0x4a, 0x8a, 0x32, 0x93,
-	0x4a, 0x4b, 0x52, 0x21, 0x6a, 0x94, 0x76, 0x30, 0x71, 0x09, 0xfa, 0x16, 0xa7, 0x3b, 0x17, 0xa5,
-	0x26, 0x96, 0xa4, 0x06, 0x40, 0xcd, 0x15, 0x4a, 0xe0, 0x62, 0xcd, 0x2f, 0xcf, 0x4b, 0x2d, 0x92,
-	0x60, 0x54, 0x60, 0xd4, 0xe0, 0x71, 0xf2, 0x7a, 0x75, 0x4f, 0x1e, 0x22, 0xf0, 0xe9, 0x9e, 0x3c,
-	0x4f, 0x65, 0x62, 0x6e, 0x8e, 0x95, 0x12, 0x98, 0xab, 0xf4, 0xeb, 0x9e, 0xbc, 0x6e, 0x7a, 0x66,
-	0x49, 0x46, 0x69, 0x92, 0x5e, 0x72, 0x7e, 0xae, 0x7e, 0x72, 0x7e, 0x71, 0x6e, 0x7e, 0x31, 0x94,
-	0xd2, 0x2d, 0x4e, 0xc9, 0xd6, 0x2f, 0xa9, 0x2c, 0x48, 0x2d, 0xd6, 0x73, 0x4c, 0x4e, 0x76, 0x4c,
-	0x49, 0x29, 0x4a, 0x2d, 0x2e, 0x0e, 0x82, 0x98, 0x23, 0xe4, 0xca, 0xc5, 0x91, 0x91, 0x5f, 0x5c,
-	0x12, 0x5f, 0x5a, 0x94, 0x29, 0xc1, 0xa4, 0xc0, 0xa8, 0xc1, 0xe9, 0xa4, 0xf5, 0xe8, 0x9e, 0x3c,
-	0xbb, 0x47, 0x7e, 0x71, 0x49, 0x68, 0x90, 0xe7, 0xab, 0x7b, 0xf2, 0x60, 0x69, 0xdd, 0xd2, 0xa2,
-	0xcc, 0x4f, 0xf7, 0xe4, 0xf9, 0x21, 0x56, 0xc2, 0x44, 0x94, 0x82, 0xd8, 0x41, 0xcc, 0xd0, 0xa2,
-	0x4c, 0xa1, 0x12, 0x2e, 0x2e, 0xb8, 0x8f, 0x8a, 0x25, 0x98, 0x15, 0x98, 0x35, 0xb8, 0x8d, 0x64,
-	0xf5, 0x20, 0xa1, 0x04, 0xf2, 0x37, 0x2c, 0x84, 0xf4, 0x1c, 0x61, 0xaa, 0x9c, 0x4c, 0x4f, 0xdc,
-	0x93, 0x67, 0x78, 0x75, 0x4f, 0x1e, 0x49, 0xe3, 0xa7, 0x7b, 0xf2, 0x82, 0x10, 0x2b, 0x10, 0x62,
-	0x4a, 0xab, 0xee, 0xcb, 0x73, 0xc1, 0x75, 0x15, 0x07, 0x21, 0x29, 0xb7, 0x62, 0x79, 0xb1, 0x40,
-	0x9e, 0x01, 0x16, 0x74, 0xa1, 0x05, 0x29, 0xa3, 0x41, 0x47, 0x62, 0xd0, 0x55, 0x83, 0x43, 0xce,
-	0x25, 0x35, 0x27, 0x95, 0x9e, 0x21, 0x07, 0xb5, 0x7c, 0x33, 0x13, 0x17, 0xc7, 0x68, 0x74, 0x11,
-	0x17, 0x5d, 0x1c, 0x33, 0x16, 0xc8, 0x33, 0x80, 0x42, 0xcd, 0xc9, 0xe9, 0xc4, 0x23, 0x39, 0xc6,
-	0x0b, 0x8f, 0xe4, 0x18, 0x1f, 0x3c, 0x92, 0x63, 0x9c, 0xf0, 0x58, 0x8e, 0xe1, 0xc2, 0x63, 0x39,
-	0x86, 0x1b, 0x8f, 0xe5, 0x18, 0xa2, 0x34, 0x90, 0x82, 0x25, 0xbf, 0xac, 0x28, 0x39, 0x27, 0x5b,
-	0x1f, 0x52, 0xf0, 0x54, 0x20, 0xca, 0x33, 0x70, 0xe0, 0x24, 0xb1, 0x81, 0xcb, 0x1c, 0x63, 0x40,
-	0x00, 0x00, 0x00, 0xff, 0xff, 0xd9, 0x41, 0x50, 0x07, 0xee, 0x04, 0x00, 0x00,
+	0x4a, 0x4b, 0x52, 0x21, 0x6a, 0x94, 0xda, 0x99, 0xb8, 0x04, 0x7d, 0x8b, 0xd3, 0x9d, 0x8b, 0x52,
+	0x13, 0x4b, 0x52, 0x03, 0xa0, 0xe6, 0x0a, 0xe9, 0x73, 0xb1, 0xe6, 0x97, 0xe7, 0xa5, 0x16, 0x49,
+	0x30, 0x2a, 0x30, 0x6a, 0x70, 0x3a, 0x49, 0xbe, 0xba, 0x27, 0x0f, 0x11, 0xf8, 0x74, 0x4f, 0x9e,
+	0xa7, 0x32, 0x31, 0x37, 0xc7, 0x4a, 0x09, 0xcc, 0x55, 0x0a, 0x82, 0x08, 0x0b, 0xb9, 0x72, 0x71,
+	0x64, 0xe4, 0x17, 0x97, 0xc4, 0x97, 0x16, 0x65, 0x4a, 0x30, 0x81, 0xf5, 0x68, 0x3d, 0xba, 0x27,
+	0xcf, 0xee, 0x91, 0x5f, 0x5c, 0x12, 0x1a, 0xe4, 0xf9, 0xea, 0x9e, 0x3c, 0x58, 0x5a, 0xb7, 0xb4,
+	0x28, 0xf3, 0xd3, 0x3d, 0x79, 0x7e, 0x88, 0x09, 0x30, 0x11, 0xa5, 0x20, 0x76, 0x10, 0x33, 0xb4,
+	0x28, 0x53, 0xa8, 0x84, 0x8b, 0x0b, 0xee, 0xc0, 0x62, 0x09, 0x66, 0x05, 0x66, 0x0d, 0x6e, 0x23,
+	0x59, 0x3d, 0x88, 0xa7, 0x41, 0xde, 0x80, 0x79, 0x58, 0xcf, 0x11, 0xa6, 0xca, 0xc9, 0xf4, 0xc4,
+	0x3d, 0x79, 0x86, 0x57, 0xf7, 0xe4, 0x91, 0x34, 0x7e, 0xba, 0x27, 0x2f, 0x08, 0xb1, 0x02, 0x21,
+	0xa6, 0xb4, 0xea, 0xbe, 0x3c, 0x17, 0x5c, 0x57, 0x71, 0x10, 0x92, 0x72, 0x2b, 0x96, 0x17, 0x0b,
+	0xe4, 0x19, 0x60, 0x21, 0x11, 0x5a, 0x90, 0x32, 0xd2, 0x43, 0xc2, 0x0b, 0x1c, 0x10, 0x2e, 0xa9,
+	0x39, 0xa9, 0x14, 0x04, 0x04, 0xd4, 0xac, 0x26, 0x26, 0x2e, 0x8e, 0x11, 0x1a, 0x98, 0x1c, 0x33,
+	0x16, 0xc8, 0x33, 0x80, 0x02, 0xc1, 0xc9, 0xe9, 0xc4, 0x23, 0x39, 0xc6, 0x0b, 0x8f, 0xe4, 0x18,
+	0x1f, 0x3c, 0x92, 0x63, 0x9c, 0xf0, 0x58, 0x8e, 0xe1, 0xc2, 0x63, 0x39, 0x86, 0x1b, 0x8f, 0xe5,
+	0x18, 0xa2, 0x34, 0xd2, 0x33, 0x4b, 0x32, 0x4a, 0x93, 0xf4, 0x92, 0xf3, 0x73, 0xf5, 0xf3, 0xcb,
+	0x8a, 0x92, 0x73, 0xb2, 0xf5, 0x21, 0x99, 0xb6, 0x02, 0x51, 0x16, 0x94, 0x54, 0x16, 0xa4, 0x16,
+	0x27, 0xb1, 0x81, 0xf3, 0xab, 0x31, 0x20, 0x00, 0x00, 0xff, 0xff, 0x46, 0x85, 0x37, 0xf3, 0x2a,
+	0x04, 0x00, 0x00,
 }
 
 func (m *MsgCreateProvider) Marshal() (dAtA []byte, err error) {
@@ -608,7 +605,7 @@ func (m *MsgCreateProvider) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Owner", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowProvider
@@ -618,25 +615,23 @@ func (m *MsgCreateProvider) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthProvider
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthProvider
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Owner = append(m.Owner[:0], dAtA[iNdEx:postIndex]...)
-			if m.Owner == nil {
-				m.Owner = []byte{}
-			}
+			m.Owner = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -761,7 +756,7 @@ func (m *MsgUpdateProvider) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Owner", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowProvider
@@ -771,25 +766,23 @@ func (m *MsgUpdateProvider) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthProvider
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthProvider
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Owner = append(m.Owner[:0], dAtA[iNdEx:postIndex]...)
-			if m.Owner == nil {
-				m.Owner = []byte{}
-			}
+			m.Owner = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -914,7 +907,7 @@ func (m *MsgDeleteProvider) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Owner", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowProvider
@@ -924,25 +917,23 @@ func (m *MsgDeleteProvider) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthProvider
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthProvider
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Owner = append(m.Owner[:0], dAtA[iNdEx:postIndex]...)
-			if m.Owner == nil {
-				m.Owner = []byte{}
-			}
+			m.Owner = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1001,7 +992,7 @@ func (m *Provider) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Owner", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowProvider
@@ -1011,25 +1002,23 @@ func (m *Provider) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthProvider
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthProvider
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Owner = append(m.Owner[:0], dAtA[iNdEx:postIndex]...)
-			if m.Owner == nil {
-				m.Owner = []byte{}
-			}
+			m.Owner = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {

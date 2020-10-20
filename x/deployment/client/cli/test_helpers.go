@@ -52,7 +52,7 @@ func TxCloseDeploymentExec(clientCtx client.Context, from fmt.Stringer, extraArg
 func TxCloseGroupExec(clientCtx client.Context, groupID types.GroupID, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
-		fmt.Sprintf("--owner=%s", groupID.Owner.String()),
+		fmt.Sprintf("--owner=%s", groupID.Owner),
 		fmt.Sprintf("--dseq=%v", groupID.DSeq),
 		fmt.Sprintf("--gseq=%v", groupID.GSeq),
 	}
@@ -70,7 +70,7 @@ func QueryDeploymentsExec(clientCtx client.Context, extraArgs ...string) (sdktes
 // QueryDeploymentExec is used for testing deployment query
 func QueryDeploymentExec(clientCtx client.Context, id types.DeploymentID, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--owner=%s", id.Owner.String()),
+		fmt.Sprintf("--owner=%s", id.Owner),
 		fmt.Sprintf("--dseq=%v", id.DSeq),
 	}
 
@@ -82,7 +82,7 @@ func QueryDeploymentExec(clientCtx client.Context, id types.DeploymentID, extraA
 // QueryGroupExec is used for testing group query
 func QueryGroupExec(clientCtx client.Context, id types.GroupID, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
-		fmt.Sprintf("--owner=%s", id.Owner.String()),
+		fmt.Sprintf("--owner=%s", id.Owner),
 		fmt.Sprintf("--dseq=%v", id.DSeq),
 		fmt.Sprintf("--gseq=%v", id.GSeq),
 	}

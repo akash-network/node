@@ -35,7 +35,7 @@ message QueryProvidersResponse {
 
 // QueryProviderRequest is request type for the Query/Provider RPC method
 message QueryProviderRequest {
-  bytes owner = 1 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
+  string owner = 1;
 }
 
 // QueryProviderResponse is response type for the Query/Provider RPC method

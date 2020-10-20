@@ -1,7 +1,6 @@
 package cli_test
 
 import (
-	"encoding/base64"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -65,7 +64,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.Require().Len(out.Providers, 1, "Provider Creation Failed")
 	providers := out.Providers
-	s.Require().Equal(val.Address.String(), providers[0].Owner.String())
+	s.Require().Equal(val.Address.String(), providers[0].Owner)
 
 	s.provider = providers[0]
 }
@@ -116,9 +115,6 @@ func (s *GRPCRestTestSuite) TestGetProvider() {
 	val := s.network.Validators[0]
 	provider := s.provider
 
-	// TODO: need to pass bech32 string instead of base64 encoding string
-	ownerAddrBase64 := base64.URLEncoding.EncodeToString(provider.Owner)
-
 	testCases := []struct {
 		name    string
 		url     string
@@ -139,7 +135,7 @@ func (s *GRPCRestTestSuite) TestGetProvider() {
 		},
 		{
 			"valid get provider request",
-			fmt.Sprintf("%s/akash/provider/v1beta1/providers/%s", val.APIAddress, ownerAddrBase64),
+			fmt.Sprintf("%s/akash/provider/v1beta1/providers/%s", val.APIAddress, provider.Owner),
 			false,
 			provider,
 		},

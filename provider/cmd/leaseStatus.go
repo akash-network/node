@@ -38,7 +38,7 @@ func doLeaseStatus(cmd *cobra.Command) error {
 	}
 
 	pclient := pmodule.AppModuleBasic{}.GetQueryClient(cctx)
-	res, err := pclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: addr})
+	res, err := pclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: addr.String()})
 	if err != nil {
 		return err
 	}

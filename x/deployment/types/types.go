@@ -152,7 +152,7 @@ func (ds DeploymentResponses) String() string {
 // Accept returns whether deployment filters valid or not
 func (filters DeploymentFilters) Accept(obj Deployment, stateVal Deployment_State) bool {
 	// Checking owner filter
-	if !filters.Owner.Empty() && !filters.Owner.Equals(obj.DeploymentID.Owner) {
+	if filters.Owner != "" && filters.Owner != obj.DeploymentID.Owner {
 		return false
 	}
 

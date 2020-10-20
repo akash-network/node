@@ -23,7 +23,10 @@ func TestProviderCreate(t *testing.T) {
 	err := keeper.Create(ctx, prov)
 	require.NoError(t, err)
 
-	foundProv, found := keeper.Get(ctx, prov.Owner)
+	owner, err := sdk.AccAddressFromBech32(prov.Owner)
+	require.NoError(t, err)
+
+	foundProv, found := keeper.Get(ctx, owner)
 	require.True(t, found)
 	require.Equal(t, prov, foundProv)
 }
@@ -43,7 +46,10 @@ func TestProviderGetNonExisting(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
 	prov := testutil.Provider(t)
 
-	foundProv, found := keeper.Get(ctx, prov.Owner)
+	owner, err := sdk.AccAddressFromBech32(prov.Owner)
+	require.NoError(t, err)
+
+	foundProv, found := keeper.Get(ctx, owner)
 	require.False(t, found)
 	require.Equal(t, types.Provider{}, foundProv)
 }
@@ -55,11 +61,14 @@ func TestProviderDeleteExisting(t *testing.T) {
 	err := keeper.Create(ctx, prov)
 	require.NoError(t, err)
 
+	owner, err := sdk.AccAddressFromBech32(prov.Owner)
+	require.NoError(t, err)
+
 	require.Panics(t, func() {
-		keeper.Delete(ctx, prov.Owner)
+		keeper.Delete(ctx, owner)
 	})
 
-	foundProv, found := keeper.Get(ctx, prov.Owner)
+	foundProv, found := keeper.Get(ctx, owner)
 	require.True(t, found)
 	require.Equal(t, prov, foundProv)
 }
@@ -83,7 +92,10 @@ func TestProviderUpdateExisting(t *testing.T) {
 	err = keeper.Update(ctx, prov)
 	require.NoError(t, err)
 
-	foundProv, found := keeper.Get(ctx, prov.Owner)
+	owner, err := sdk.AccAddressFromBech32(prov.Owner)
+	require.NoError(t, err)
+
+	foundProv, found := keeper.Get(ctx, owner)
 	require.True(t, found)
 	require.Equal(t, prov, foundProv)
 }

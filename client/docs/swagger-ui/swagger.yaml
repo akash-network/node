@@ -25,7 +25,6 @@ paths:
                         properties:
                           owner:
                             type: string
-                            format: byte
                           dseq:
                             type: string
                             format: uint64
@@ -57,7 +56,6 @@ paths:
                           properties:
                             owner:
                               type: string
-                              format: byte
                             dseq:
                               type: string
                               format: uint64
@@ -253,7 +251,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
         - name: id.dseq
           in: query
           required: false
@@ -284,7 +281,6 @@ paths:
                           properties:
                             owner:
                               type: string
-                              format: byte
                             dseq:
                               type: string
                               format: uint64
@@ -318,7 +314,6 @@ paths:
                             properties:
                               owner:
                                 type: string
-                                format: byte
                               dseq:
                                 type: string
                                 format: uint64
@@ -543,7 +538,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
         - name: filters.dseq
           in: query
           required: false
@@ -619,7 +613,6 @@ paths:
                     properties:
                       owner:
                         type: string
-                        format: byte
                       dseq:
                         type: string
                         format: uint64
@@ -807,7 +800,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
         - name: id.dseq
           in: query
           required: false
@@ -838,7 +830,6 @@ paths:
                     properties:
                       owner:
                         type: string
-                        format: byte
                       dseq:
                         type: string
                         format: uint64
@@ -850,7 +841,6 @@ paths:
                         format: int64
                       provider:
                         type: string
-                        format: byte
                     description: |-
                       BidID stores owner and all other seq numbers
                       A successful bid becomes a Lease(ID).
@@ -915,7 +905,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
         - name: id.dseq
           in: query
           required: false
@@ -935,7 +924,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
       tags:
         - Query
   /akash/market/v1beta1/bids/list:
@@ -958,7 +946,6 @@ paths:
                       properties:
                         owner:
                           type: string
-                          format: byte
                         dseq:
                           type: string
                           format: uint64
@@ -970,7 +957,6 @@ paths:
                           format: int64
                         provider:
                           type: string
-                          format: byte
                       description: |-
                         BidID stores owner and all other seq numbers
                         A successful bid becomes a Lease(ID).
@@ -1062,7 +1048,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
         - name: filters.dseq
           in: query
           required: false
@@ -1082,7 +1067,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
         - name: filters.state
           in: query
           required: false
@@ -1153,7 +1137,6 @@ paths:
                     properties:
                       owner:
                         type: string
-                        format: byte
                       dseq:
                         type: string
                         format: uint64
@@ -1165,7 +1148,6 @@ paths:
                         format: int64
                       provider:
                         type: string
-                        format: byte
                     title: LeaseID stores bid details of lease
                   state:
                     type: string
@@ -1226,7 +1208,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
         - name: id.dseq
           in: query
           required: false
@@ -1246,7 +1227,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
       tags:
         - Query
   /akash/market/v1beta1/leases/list:
@@ -1269,7 +1249,6 @@ paths:
                       properties:
                         owner:
                           type: string
-                          format: byte
                         dseq:
                           type: string
                           format: uint64
@@ -1281,7 +1260,6 @@ paths:
                           format: int64
                         provider:
                           type: string
-                          format: byte
                       title: LeaseID stores bid details of lease
                     state:
                       type: string
@@ -1371,7 +1349,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
         - name: filters.dseq
           in: query
           required: false
@@ -1391,7 +1368,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
         - name: filters.state
           in: query
           required: false
@@ -1462,7 +1438,6 @@ paths:
                     properties:
                       owner:
                         type: string
-                        format: byte
                       dseq:
                         type: string
                         format: uint64
@@ -1653,7 +1628,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
         - name: id.dseq
           in: query
           required: false
@@ -1691,7 +1665,6 @@ paths:
                       properties:
                         owner:
                           type: string
-                          format: byte
                         dseq:
                           type: string
                           format: uint64
@@ -1911,7 +1884,6 @@ paths:
           in: query
           required: false
           type: string
-          format: byte
         - name: filters.dseq
           in: query
           required: false
@@ -1996,7 +1968,6 @@ paths:
                   properties:
                     owner:
                       type: string
-                      format: byte
                     host_uri:
                       type: string
                     attributes:
@@ -2126,7 +2097,6 @@ paths:
                 properties:
                   owner:
                     type: string
-                    format: byte
                   host_uri:
                     type: string
                   attributes:
@@ -2170,7 +2140,6 @@ paths:
           in: path
           required: true
           type: string
-          format: byte
       tags:
         - Query
   /node_info:
@@ -22319,7 +22288,6 @@ definitions:
         properties:
           owner:
             type: string
-            format: byte
           dseq:
             type: string
             format: uint64
@@ -22358,7 +22326,6 @@ definitions:
     properties:
       owner:
         type: string
-        format: byte
       dseq:
         type: string
         format: uint64
@@ -22370,7 +22337,6 @@ definitions:
     properties:
       owner:
         type: string
-        format: byte
       dseq:
         type: string
         format: uint64
@@ -22386,7 +22352,6 @@ definitions:
             properties:
               owner:
                 type: string
-                format: byte
               dseq:
                 type: string
                 format: uint64
@@ -22418,7 +22383,6 @@ definitions:
               properties:
                 owner:
                   type: string
-                  format: byte
                 dseq:
                   type: string
                   format: uint64
@@ -22584,7 +22548,6 @@ definitions:
         properties:
           owner:
             type: string
-            format: byte
           dseq:
             type: string
             format: uint64
@@ -22752,7 +22715,6 @@ definitions:
     properties:
       owner:
         type: string
-        format: byte
       dseq:
         type: string
         format: uint64
@@ -22889,7 +22851,6 @@ definitions:
                 properties:
                   owner:
                     type: string
-                    format: byte
                   dseq:
                     type: string
                     format: uint64
@@ -22921,7 +22882,6 @@ definitions:
                   properties:
                     owner:
                       type: string
-                      format: byte
                     dseq:
                       type: string
                       format: uint64
@@ -23106,7 +23066,6 @@ definitions:
                   properties:
                     owner:
                       type: string
-                      format: byte
                     dseq:
                       type: string
                       format: uint64
@@ -23138,7 +23097,6 @@ definitions:
                     properties:
                       owner:
                         type: string
-                        format: byte
                       dseq:
                         type: string
                         format: uint64
@@ -23343,7 +23301,6 @@ definitions:
             properties:
               owner:
                 type: string
-                format: byte
               dseq:
                 type: string
                 format: uint64
@@ -24001,7 +23958,6 @@ definitions:
         properties:
           owner:
             type: string
-            format: byte
           dseq:
             type: string
             format: uint64
@@ -24013,7 +23969,6 @@ definitions:
             format: int64
           provider:
             type: string
-            format: byte
         description: |-
           BidID stores owner and all other seq numbers
           A successful bid becomes a Lease(ID).
@@ -24068,7 +24023,6 @@ definitions:
     properties:
       owner:
         type: string
-        format: byte
       dseq:
         type: string
         format: uint64
@@ -24080,7 +24034,6 @@ definitions:
         format: int64
       provider:
         type: string
-        format: byte
       state:
         type: string
     title: BidFilters defines flags for bid list filter
@@ -24089,7 +24042,6 @@ definitions:
     properties:
       owner:
         type: string
-        format: byte
       dseq:
         type: string
         format: uint64
@@ -24101,7 +24053,6 @@ definitions:
         format: int64
       provider:
         type: string
-        format: byte
     description: |-
       BidID stores owner and all other seq numbers
       A successful bid becomes a Lease(ID).
@@ -24113,7 +24064,6 @@ definitions:
         properties:
           owner:
             type: string
-            format: byte
           dseq:
             type: string
             format: uint64
@@ -24125,7 +24075,6 @@ definitions:
             format: int64
           provider:
             type: string
-            format: byte
         title: LeaseID stores bid details of lease
       state:
         type: string
@@ -24174,7 +24123,6 @@ definitions:
     properties:
       owner:
         type: string
-        format: byte
       dseq:
         type: string
         format: uint64
@@ -24186,7 +24134,6 @@ definitions:
         format: int64
       provider:
         type: string
-        format: byte
       state:
         type: string
     title: LeaseFilters defines flags for lease list filter
@@ -24195,7 +24142,6 @@ definitions:
     properties:
       owner:
         type: string
-        format: byte
       dseq:
         type: string
         format: uint64
@@ -24207,7 +24153,6 @@ definitions:
         format: int64
       provider:
         type: string
-        format: byte
     title: LeaseID stores bid details of lease
   akash.market.v1beta1.Order:
     type: object
@@ -24217,7 +24162,6 @@ definitions:
         properties:
           owner:
             type: string
-            format: byte
           dseq:
             type: string
             format: uint64
@@ -24384,7 +24328,6 @@ definitions:
     properties:
       owner:
         type: string
-        format: byte
       dseq:
         type: string
         format: uint64
@@ -24402,7 +24345,6 @@ definitions:
     properties:
       owner:
         type: string
-        format: byte
       dseq:
         type: string
         format: uint64
@@ -24424,7 +24366,6 @@ definitions:
             properties:
               owner:
                 type: string
-                format: byte
               dseq:
                 type: string
                 format: uint64
@@ -24436,7 +24377,6 @@ definitions:
                 format: int64
               provider:
                 type: string
-                format: byte
             description: |-
               BidID stores owner and all other seq numbers
               A successful bid becomes a Lease(ID).
@@ -24487,7 +24427,6 @@ definitions:
               properties:
                 owner:
                   type: string
-                  format: byte
                 dseq:
                   type: string
                   format: uint64
@@ -24499,7 +24438,6 @@ definitions:
                   format: int64
                 provider:
                   type: string
-                  format: byte
               description: |-
                 BidID stores owner and all other seq numbers
                 A successful bid becomes a Lease(ID).
@@ -24573,7 +24511,6 @@ definitions:
             properties:
               owner:
                 type: string
-                format: byte
               dseq:
                 type: string
                 format: uint64
@@ -24585,7 +24522,6 @@ definitions:
                 format: int64
               provider:
                 type: string
-                format: byte
             title: LeaseID stores bid details of lease
           state:
             type: string
@@ -24632,7 +24568,6 @@ definitions:
               properties:
                 owner:
                   type: string
-                  format: byte
                 dseq:
                   type: string
                   format: uint64
@@ -24644,7 +24579,6 @@ definitions:
                   format: int64
                 provider:
                   type: string
-                  format: byte
               title: LeaseID stores bid details of lease
             state:
               type: string
@@ -24714,7 +24648,6 @@ definitions:
             properties:
               owner:
                 type: string
-                format: byte
               dseq:
                 type: string
                 format: uint64
@@ -24880,7 +24813,6 @@ definitions:
               properties:
                 owner:
                   type: string
-                  format: byte
                 dseq:
                   type: string
                   format: uint64
@@ -25066,7 +24998,6 @@ definitions:
     properties:
       owner:
         type: string
-        format: byte
       host_uri:
         type: string
       attributes:
@@ -25088,7 +25019,6 @@ definitions:
         properties:
           owner:
             type: string
-            format: byte
           host_uri:
             type: string
           attributes:
@@ -25113,7 +25043,6 @@ definitions:
           properties:
             owner:
               type: string
-              format: byte
             host_uri:
               type: string
             attributes:

@@ -21,7 +21,7 @@ var (
 // NewMsgCreateProvider creates a new MsgCreateProvider instance
 func NewMsgCreateProvider(owner sdk.AccAddress, hostURI string, attributes Attributes) *MsgCreateProvider {
 	return &MsgCreateProvider{
-		Owner:      owner,
+		Owner:      owner.String(),
 		HostURI:    hostURI,
 		Attributes: attributes,
 	}
@@ -38,7 +38,7 @@ func (msg MsgCreateProvider) ValidateBasic() error {
 	if err := validateProviderURI(msg.HostURI); err != nil {
 		return err
 	}
-	if err := sdk.VerifyAddressFormat(msg.Owner); err != nil {
+	if _, err := sdk.AccAddressFromBech32(msg.Owner); err != nil {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgCreate: Invalid Provider Address")
 	}
 	return nil
@@ -51,13 +51,18 @@ func (msg MsgCreateProvider) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgCreateProvider) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.Owner}
+	owner, err := sdk.AccAddressFromBech32(msg.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{owner}
 }
 
 // NewMsgUpdateProvider creates a new MsgUpdateProvider instance
 func NewMsgUpdateProvider(owner sdk.AccAddress, hostURI string, attributes Attributes) *MsgUpdateProvider {
 	return &MsgUpdateProvider{
-		Owner:      owner,
+		Owner:      owner.String(),
 		HostURI:    hostURI,
 		Attributes: attributes,
 	}
@@ -74,7 +79,7 @@ func (msg MsgUpdateProvider) ValidateBasic() error {
 	if err := validateProviderURI(msg.HostURI); err != nil {
 		return err
 	}
-	if err := sdk.VerifyAddressFormat(msg.Owner); err != nil {
+	if _, err := sdk.AccAddressFromBech32(msg.Owner); err != nil {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgUpdate: Invalid Provider Address")
 	}
 	return nil
@@ -87,13 +92,18 @@ func (msg MsgUpdateProvider) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgUpdateProvider) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.Owner}
+	owner, err := sdk.AccAddressFromBech32(msg.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{owner}
 }
 
 // NewMsgDeleteProvider creates a new MsgDeleteProvider instance
 func NewMsgDeleteProvider(owner sdk.AccAddress) *MsgDeleteProvider {
 	return &MsgDeleteProvider{
-		Owner: owner,
+		Owner: owner.String(),
 	}
 }
 
@@ -105,7 +115,7 @@ func (msg MsgDeleteProvider) Type() string { return MsgTypeDeleteProvider }
 
 // ValidateBasic does basic validation
 func (msg MsgDeleteProvider) ValidateBasic() error {
-	if err := sdk.VerifyAddressFormat(msg.Owner); err != nil {
+	if _, err := sdk.AccAddressFromBech32(msg.Owner); err != nil {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgDelete: Invalid Provider Address")
 	}
 	return nil
@@ -118,7 +128,12 @@ func (msg MsgDeleteProvider) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgDeleteProvider) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.Owner}
+	owner, err := sdk.AccAddressFromBech32(msg.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{owner}
 }
 
 func validateProviderURI(val string) error {

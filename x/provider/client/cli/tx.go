@@ -48,7 +48,7 @@ func cmdCreate(key string) *cobra.Command {
 			}
 
 			msg := &types.MsgCreateProvider{
-				Owner:      clientCtx.GetFromAddress(),
+				Owner:      clientCtx.GetFromAddress().String(),
 				HostURI:    cfg.Host,
 				Attributes: cfg.GetAttributes(),
 			}
@@ -84,7 +84,7 @@ func cmdUpdate(key string) *cobra.Command {
 			}
 
 			msg := &types.MsgUpdateProvider{
-				Owner:      clientCtx.GetFromAddress(),
+				Owner:      clientCtx.GetFromAddress().String(),
 				HostURI:    cfg.Host,
 				Attributes: cfg.GetAttributes(),
 			}

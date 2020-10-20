@@ -72,7 +72,7 @@ func (s *IntegrationTestSuite) TestProvider() {
 	s.Require().NoError(err)
 	s.Require().Len(out.Providers, 1, "Provider Creation Failed")
 	providers := out.Providers
-	s.Require().Equal(val.Address.String(), providers[0].Owner.String())
+	s.Require().Equal(val.Address.String(), providers[0].Owner)
 
 	// test query provider
 	createdProvider := providers[0]

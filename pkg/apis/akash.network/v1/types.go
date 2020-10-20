@@ -117,22 +117,22 @@ func (id LeaseID) toAkash() (mtypes.LeaseID, error) {
 	}
 
 	return mtypes.LeaseID{
-		Owner:    owner,
+		Owner:    owner.String(),
 		DSeq:     dseq,
 		GSeq:     id.GSeq,
 		OSeq:     id.OSeq,
-		Provider: provider,
+		Provider: provider.String(),
 	}, nil
 }
 
 // LeaseIDFromAkash returns LeaseID instance from akash
 func leaseIDFromAkash(id mtypes.LeaseID) LeaseID {
 	return LeaseID{
-		Owner:    id.Owner.String(),
+		Owner:    id.Owner,
 		DSeq:     strconv.FormatUint(id.DSeq, 10),
 		GSeq:     id.GSeq,
 		OSeq:     id.OSeq,
-		Provider: id.Provider.String(),
+		Provider: id.Provider,
 	}
 }
 

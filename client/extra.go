@@ -13,7 +13,7 @@ import (
 func (c *qclient) ActiveLeasesForProvider(id sdk.AccAddress) (mtypes.Leases, error) {
 	params := &mtypes.QueryLeasesRequest{
 		Filters: mtypes.LeaseFilters{
-			Provider: id,
+			Provider: id.String(),
 			State:    mtypes.LeaseActive.String(),
 		},
 		Pagination: &sdkquery.PageRequest{

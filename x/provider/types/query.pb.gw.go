@@ -83,7 +83,7 @@ func request_Query_Provider_0(ctx context.Context, marshaler runtime.Marshaler, 
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "owner")
 	}
 
-	protoReq.Owner, err = runtime.Bytes(val)
+	protoReq.Owner, err = runtime.String(val)
 
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "owner", err)
@@ -110,7 +110,7 @@ func local_request_Query_Provider_0(ctx context.Context, marshaler runtime.Marsh
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "owner")
 	}
 
-	protoReq.Owner, err = runtime.Bytes(val)
+	protoReq.Owner, err = runtime.String(val)
 
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "owner", err)

@@ -57,7 +57,7 @@ func cmdCreateBid(key string) *cobra.Command {
 
 			msg := &types.MsgCreateBid{
 				Order:    id,
-				Provider: clientCtx.GetFromAddress(),
+				Provider: clientCtx.GetFromAddress().String(),
 				Price:    coins,
 			}
 

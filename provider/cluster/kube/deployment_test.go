@@ -28,11 +28,11 @@ func TestDeploy(t *testing.T) {
 	provider := ed25519.GenPrivKey().PubKey().Address()
 
 	leaseID := mtypes.LeaseID{
-		Owner:    sdk.AccAddress(owner),
+		Owner:    sdk.AccAddress(owner).String(),
 		DSeq:     randDSeq,
 		GSeq:     randGSeq,
 		OSeq:     randOSeq,
-		Provider: sdk.AccAddress(provider),
+		Provider: sdk.AccAddress(provider).String(),
 	}
 
 	sdl, err := sdl.ReadFile("../../../_run/kube/deployment.yaml")

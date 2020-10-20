@@ -72,8 +72,8 @@ func (k Querier) Order(c context.Context, req *types.QueryOrderRequest) (*types.
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	if req.ID.Owner.Empty() {
-		return nil, status.Error(codes.InvalidArgument, "owner cannot be empty")
+	if _, err := sdk.AccAddressFromBech32(req.ID.Owner); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid owner address")
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)
@@ -139,12 +139,12 @@ func (k Querier) Bid(c context.Context, req *types.QueryBidRequest) (*types.Quer
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	if req.ID.Owner.Empty() {
-		return nil, status.Error(codes.InvalidArgument, "owner cannot be empty")
+	if _, err := sdk.AccAddressFromBech32(req.ID.Owner); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid owner address")
 	}
 
-	if req.ID.Provider.Empty() {
-		return nil, status.Error(codes.InvalidArgument, "provider cannot be empty")
+	if _, err := sdk.AccAddressFromBech32(req.ID.Provider); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid provider address")
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)
@@ -210,12 +210,12 @@ func (k Querier) Lease(c context.Context, req *types.QueryLeaseRequest) (*types.
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	if req.ID.Owner.Empty() {
-		return nil, status.Error(codes.InvalidArgument, "owner cannot be empty")
+	if _, err := sdk.AccAddressFromBech32(req.ID.Owner); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid owner address")
 	}
 
-	if req.ID.Provider.Empty() {
-		return nil, status.Error(codes.InvalidArgument, "provider cannot be empty")
+	if _, err := sdk.AccAddressFromBech32(req.ID.Provider); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid provider address")
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)

@@ -42,5 +42,10 @@ func (obj Providers) String() string {
 
 // Address implements provider and returns owner of provider
 func (p *Provider) Address() sdk.AccAddress {
-	return p.Owner
+	owner, err := sdk.AccAddressFromBech32(p.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return owner
 }

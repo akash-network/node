@@ -22,15 +22,11 @@ message MsgCloseGroup {
 
 // GroupID stores owner, deployment sequence number and group sequence number
 message GroupID {
-  option (gogoproto.equal)            = true;
+  option (gogoproto.equal)            = false;
   option (gogoproto.goproto_stringer) = false;
 
-  bytes owner = 1 [
-    (gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress",
-    (gogoproto.jsontag)  = "owner",
-    (gogoproto.moretags) = "yaml:\"owner\""
-  ];
-  uint64 dseq = 2
+  string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+  uint64 dseq  = 2
       [(gogoproto.customname) = "DSeq", (gogoproto.jsontag) = "dseq", (gogoproto.moretags) = "yaml:\"dseq\""];
   uint32 gseq = 3
       [(gogoproto.customname) = "GSeq", (gogoproto.jsontag) = "gseq", (gogoproto.moretags) = "yaml:\"gseq\""];
@@ -92,7 +88,7 @@ message Group {
 
 // Resource stores unit, total count and price of resource
 message Resource {
-  option (gogoproto.equal) = true;
+  option (gogoproto.equal) = false;
 
   akash.base.v1beta1.ResourceUnits resources = 1
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "unit", (gogoproto.moretags) = "yaml:\"unit\""];

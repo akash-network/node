@@ -9,12 +9,12 @@ import (
 
 // Equals method compares specific deployment with provided deployment
 func (id DeploymentID) Equals(other DeploymentID) bool {
-	return id.Owner.Equals(other.Owner) && id.DSeq == other.DSeq
+	return id.Owner == other.Owner && id.DSeq == other.DSeq
 }
 
 // Validate method for DeploymentID and returns nil
 func (id DeploymentID) Validate() error {
-	err := sdk.VerifyAddressFormat(id.Owner)
+	_, err := sdk.AccAddressFromBech32(id.Owner)
 	switch {
 	case err != nil:
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "DeploymentID: Invalid Owner Address")

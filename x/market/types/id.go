@@ -55,14 +55,14 @@ func MakeBidID(id OrderID, provider sdk.AccAddress) BidID {
 		DSeq:     id.DSeq,
 		GSeq:     id.GSeq,
 		OSeq:     id.OSeq,
-		Provider: provider,
+		Provider: provider.String(),
 	}
 }
 
 // Equals method compares specific bid with provided bid
 func (id BidID) Equals(other BidID) bool {
 	return id.OrderID().Equals(other.OrderID()) &&
-		id.Provider.Equals(other.Provider)
+		id.Provider == other.Provider
 }
 
 // LeaseID method returns lease details of bid
@@ -100,7 +100,7 @@ func (id BidID) Validate() error {
 	if err := id.OrderID().Validate(); err != nil {
 		return sdkerrors.Wrap(err, "BidID: Invalid OrderID")
 	}
-	if err := sdk.VerifyAddressFormat(id.Provider); err != nil {
+	if _, err := sdk.AccAddressFromBech32(id.Provider); err != nil {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "BidID: Invalid Provider Address")
 	}
 	return nil
