@@ -1,5 +1,9 @@
 name: release
 
+defaults:
+  run:
+    shell: bash
+
 on:
   push:
     branches:
