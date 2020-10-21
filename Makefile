@@ -51,11 +51,11 @@ else
 endif
 
 GORELEASER_FLAGS    = -tags="$(GORELEASER_BUILD_TAGS)"
-GORELEASER_LD_FLAGS = '-s -w -X github.com/cosmos/cosmos-sdk/version.Name=akash \
+GORELEASER_LD_FLAGS = -s -w -X github.com/cosmos/cosmos-sdk/version.Name=akash \
 -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
--X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(GORELEASER_BUILD_TAGS)" \
+-X github.com/cosmos/cosmos-sdk/version.BuildTags="$(GORELEASER_BUILD_TAGS)" \
 -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags --abbrev=0) \
--X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')'
+-X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')
 
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=akash \
 -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
