@@ -18,5 +18,4 @@ jobs:
         with:
           go-version: ${{ secrets.GOLANG_VERSION }}
       - run: make bins
-      - run: make docker-image
       - run: make test
