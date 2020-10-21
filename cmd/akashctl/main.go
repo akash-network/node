@@ -21,6 +21,7 @@ import (
 
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/cmd/common"
+	akashsupply "github.com/ovrclk/akash/x/supply/client/cli"
 
 	// unnamed import of statik for swagger UI support
 	_ "github.com/ovrclk/akash/cmd/statik"
@@ -97,6 +98,11 @@ func queryCmd(cdc *amino.Codec) *cobra.Command {
 	)
 
 	app.ModuleBasics().AddQueryCommands(cmd, cdc)
+
+	// Add circulating query in supply SDK queries
+	supplyCmd, _, _ := cmd.Find([]string{"supply"})
+	supplyCmd.AddCommand(akashsupply.GetCirculatingSupply(cdc))
+
 	return cmd
 }
 

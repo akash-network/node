@@ -34,6 +34,7 @@ import (
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/supply"
+	akashsupply "github.com/ovrclk/akash/x/supply"
 )
 
 const (
@@ -218,6 +219,7 @@ func NewApp(
 			upgrade.NewAppModule(app.keeper.upgrade),
 			evidence.NewAppModule(app.keeper.evidence),
 			crisis.NewAppModule(&app.keeper.crisis),
+			akashsupply.NewAppModule(app.cdc, app.keeper.acct),
 		},
 
 			app.akashAppModules()...,

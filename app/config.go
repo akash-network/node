@@ -21,6 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/supply"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
+	akashsupply "github.com/ovrclk/akash/x/supply"
 )
 
 var (
@@ -54,6 +55,7 @@ var (
 			upgrade.AppModuleBasic{},
 			evidence.AppModuleBasic{},
 			crisis.AppModuleBasic{},
+			akashsupply.AppModuleBasic{},
 		},
 			// akash
 			akashModuleBasics()...,
