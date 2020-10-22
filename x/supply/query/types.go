@@ -15,6 +15,7 @@ type Supply struct {
 	Vesting     CoinDetails `json:"vesting"`
 	Available   CoinDetails `json:"available"`
 	Circulating sdk.Coins   `json:"circulating"`
+	Total	sdk.Coins `json:"total"`
 }
 
 // String method of Supply

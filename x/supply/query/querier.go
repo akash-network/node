@@ -5,6 +5,7 @@ import (
 	vestingexported "github.com/cosmos/cosmos-sdk/x/auth/vesting/exported"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/supply"
+
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/x/supply/types"
 
@@ -29,11 +30,8 @@ func NewQuerier(cdc *codec.Codec, accKeeper types.AccountKeeper, supKeeper types
 func queryCirculatingSupply(ctx sdk.Context, cdc *codec.Codec, accKeeper types.AccountKeeper,
 	supKeeper types.SupplyKeeper) (res []byte, err error) {
 	var supplyData Supply
-	var totalOriginal, totalVesting sdk.Coins
 
-	initialSupply := sdk.NewCoins(sdk.NewCoin("uakt", sdk.NewInt(100000000000000)))
-
-	totalSupply := supKeeper.GetSupply(ctx).GetTotal()
+	supplyData.Total = supKeeper.GetSupply(ctx).GetTotal()
 
 	accKeeper.IterateAccounts(ctx, func(account exported.Account) bool {
 		if ma, ok := account.(*supply.ModuleAccount); ok {
@@ -43,26 +41,23 @@ func queryCirculatingSupply(ctx sdk.Context, cdc *codec.Codec, accKeeper types.A
 			}
 		}
 
-		supplyData.Available.Unbonded = supplyData.Available.Unbonded.Add(account.GetCoins()...)
-
 		va, ok := account.(vestingexported.VestingAccount)
 		if !ok {
-			return false
+			// TODO filter by staking denom
+			supplyData.Available.Bonded = supplyData.Available.Bonded.Add(account.GetCoins().Sub(account.SpendableCoins(ctx.BlockTime()))...)
+			supplyData.Available.Unbonded = supplyData.Available.Unbonded.Add(account.SpendableCoins(ctx.BlockTime())...)
+		} else {
+			// TODO filter by staking denom
+			supplyData.Available.Bonded = supplyData.Available.Bonded.Add(va.GetDelegatedFree()...)
+			supplyData.Available.Unbonded = supplyData.Available.Unbonded.Add(va.SpendableCoins(ctx.BlockTime())...)
+			supplyData.Vesting.Bonded = supplyData.Vesting.Bonded.Add(va.GetDelegatedVesting()...)
+			supplyData.Vesting.Unbonded = supplyData.Vesting.Unbonded.Add(va.GetVestingCoins(ctx.BlockTime())...).Sub(va.GetDelegatedVesting())
 		}
 
-		originalVesting := va.GetOriginalVesting()
-		delegatedVesting := va.GetDelegatedVesting()
-		vestingCoins := va.GetVestingCoins(ctx.BlockTime())
-		supplyData.Vesting.Bonded = supplyData.Vesting.Bonded.Add(delegatedVesting...)
-		supplyData.Vesting.Unbonded = supplyData.Vesting.Unbonded.Add(originalVesting.Sub(delegatedVesting)...)
-		supplyData.Available.Bonded = supplyData.Available.Bonded.Add(va.GetDelegatedFree()...)
-
-		totalOriginal = totalOriginal.Add(originalVesting...)
-		totalVesting = totalVesting.Add(vestingCoins...)
 		return false
 	})
 
-	supplyData.Circulating = totalSupply.Add(totalOriginal.Sub(totalVesting)...).Sub(initialSupply)
+	supplyData.Circulating = supplyData.Available.Unbonded.Add(supplyData.Available.Bonded...)
 
 	return sdkutil.RenderQueryResponse(cdc, supplyData)
 }
