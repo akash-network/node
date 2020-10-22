@@ -2,12 +2,11 @@ package query
 
 import (
 	"github.com/cosmos/cosmos-sdk/client/context"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // Client interface
 type Client interface {
-	CirculatingSupply() (sdk.Coins, error)
+	CirculatingSupply() (Supply, error)
 }
 
 // NewClient creates a client instance with provided context and key
@@ -20,8 +19,8 @@ type client struct {
 	key string
 }
 
-func (c *client) CirculatingSupply() (sdk.Coins, error) {
-	var obj sdk.Coins
+func (c *client) CirculatingSupply() (Supply, error) {
+	var obj Supply
 	buf, err := NewRawClient(c.ctx, c.key).CirculatingSupply()
 	if err != nil {
 		return obj, err

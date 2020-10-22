@@ -219,7 +219,7 @@ func NewApp(
 			upgrade.NewAppModule(app.keeper.upgrade),
 			evidence.NewAppModule(app.keeper.evidence),
 			crisis.NewAppModule(&app.keeper.crisis),
-			akashsupply.NewAppModule(app.cdc, app.keeper.acct),
+			akashsupply.NewAppModule(app.cdc, app.keeper.acct, app.keeper.supply),
 		},
 
 			app.akashAppModules()...,
