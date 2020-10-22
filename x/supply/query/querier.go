@@ -29,7 +29,7 @@ func NewQuerier(cdc *codec.Codec, accKeeper types.AccountKeeper, supKeeper types
 func queryCirculatingSupply(ctx sdk.Context, cdc *codec.Codec, accKeeper types.AccountKeeper,
 	supKeeper types.SupplyKeeper) (res []byte, err error) {
 	var supplyData Supply
-	var totalOriginal, totalVested sdk.Coins
+	var totalOriginal, totalVesting sdk.Coins
 
 	initialSupply := sdk.NewCoins(sdk.NewCoin("uakt", sdk.NewInt(100000000000000)))
 
@@ -43,6 +43,8 @@ func queryCirculatingSupply(ctx sdk.Context, cdc *codec.Codec, accKeeper types.A
 			}
 		}
 
+		supplyData.Available.Unbonded = supplyData.Available.Unbonded.Add(account.GetCoins()...)
+
 		va, ok := account.(vestingexported.VestingAccount)
 		if !ok {
 			return false
@@ -50,17 +52,17 @@ func queryCirculatingSupply(ctx sdk.Context, cdc *codec.Codec, accKeeper types.A
 
 		originalVesting := va.GetOriginalVesting()
 		delegatedVesting := va.GetDelegatedVesting()
+		vestingCoins := va.GetVestingCoins(ctx.BlockTime())
 		supplyData.Vesting.Bonded = supplyData.Vesting.Bonded.Add(delegatedVesting...)
 		supplyData.Vesting.Unbonded = supplyData.Vesting.Unbonded.Add(originalVesting.Sub(delegatedVesting)...)
 		supplyData.Available.Bonded = supplyData.Available.Bonded.Add(va.GetDelegatedFree()...)
-		supplyData.Available.Unbonded = supplyData.Available.Unbonded.Add(account.GetCoins()...)
 
 		totalOriginal = totalOriginal.Add(originalVesting...)
-		totalVested = totalVested.Add(va.GetVestedCoins(ctx.BlockTime())...)
+		totalVesting = totalVesting.Add(vestingCoins...)
 		return false
 	})
 
-	supplyData.Circulating = totalSupply.Add(totalOriginal.Sub(totalVested)...).Sub(initialSupply)
+	supplyData.Circulating = totalSupply.Add(totalOriginal.Sub(totalVesting)...).Sub(initialSupply)
 
 	return sdkutil.RenderQueryResponse(cdc, supplyData)
 }
