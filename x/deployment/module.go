@@ -64,6 +64,11 @@ func (AppModuleBasic) DefaultGenesis(cdc codec.JSONMarshaler) json.RawMessage {
 	return cdc.MustMarshalJSON(DefaultGenesisState())
 }
 
+// RegisterServices registers the module's services
+func (b AppModuleBasic) RegisterServices(cfg module.Configurator) {
+	// TODO: implement
+}
+
 // ValidateGenesis does validation check of the Genesis and returns error incase of failure
 func (AppModuleBasic) ValidateGenesis(cdc codec.JSONMarshaler, config client.TxEncodingConfig, bz json.RawMessage) error {
 	var data types.GenesisState
