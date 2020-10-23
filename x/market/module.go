@@ -154,6 +154,11 @@ func (am AppModule) RegisterQueryService(server grpc.Server) {
 	types.RegisterQueryServer(server, querier)
 }
 
+// RegisterServices registers the module's services
+func (b AppModuleBasic) RegisterServices(cfg module.Configurator) {
+	// TODO: implement
+}
+
 // BeginBlock performs no-op
 func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 

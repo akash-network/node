@@ -58,6 +58,11 @@ func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) 
 	types.RegisterInterfaces(registry)
 }
 
+// RegisterServices registers the module's services
+func (b AppModuleBasic) RegisterServices(cfg module.Configurator) {
+	// TODO: implement
+}
+
 // DefaultGenesis returns default genesis state as raw bytes for the provider
 // module.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONMarshaler) json.RawMessage {
