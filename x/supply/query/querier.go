@@ -43,11 +43,9 @@ func queryCirculatingSupply(ctx sdk.Context, cdc *codec.Codec, accKeeper types.A
 
 		va, ok := account.(vestingexported.VestingAccount)
 		if !ok {
-			// TODO filter by staking denom
 			supplyData.Available.Bonded = supplyData.Available.Bonded.Add(account.GetCoins().Sub(account.SpendableCoins(ctx.BlockTime()))...)
 			supplyData.Available.Unbonded = supplyData.Available.Unbonded.Add(account.SpendableCoins(ctx.BlockTime())...)
 		} else {
-			// TODO filter by staking denom
 			supplyData.Available.Bonded = supplyData.Available.Bonded.Add(va.GetDelegatedFree()...)
 			supplyData.Available.Unbonded = supplyData.Available.Unbonded.Add(va.SpendableCoins(ctx.BlockTime())...)
 			supplyData.Vesting.Bonded = supplyData.Vesting.Bonded.Add(va.GetDelegatedVesting()...)

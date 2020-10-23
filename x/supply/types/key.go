@@ -1,5 +1,5 @@
 package types
 
 const (
-	ModuleName = "supplyqueries"
+	ModuleName = "akashsupply"
 )
