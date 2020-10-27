@@ -22,7 +22,7 @@ import (
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/cmd/common"
 
-	csupply "github.com/ovrclk/cosmos-circulating-supply/x/supply/client/cli"
+	csupply "github.com/ovrclk/cosmos-supply-summary/x/supply/client/cli"
 
 	// unnamed import of statik for swagger UI support
 	_ "github.com/ovrclk/akash/cmd/statik"

@@ -21,7 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/supply"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
-	csupply "github.com/ovrclk/cosmos-circulating-supply/x/supply"
+	csupply "github.com/ovrclk/cosmos-supply-summary/x/supply"
 )
 
 var (

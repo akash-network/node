@@ -34,7 +34,7 @@ import (
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/supply"
-	csupply "github.com/ovrclk/cosmos-circulating-supply/x/supply"
+	csupply "github.com/ovrclk/cosmos-supply-summary/x/supply"
 )
 
 const (
