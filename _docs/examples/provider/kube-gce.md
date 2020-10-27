@@ -3,7 +3,7 @@
 Follow these steps to create a Kubernetes cluster on
 [GCE](https://cloud.google.com/compute) using [`gcloud`](https://cloud.google.com/sdk/gcloud).
 
-The K3S portions of this are based off of [this](https://starkandwayne.com/blog/trying-tiny-k3s-on-google-cloud-with-k3sup/)
+TODO: update to Kubespray. The K3S portions of this are based off of [this](https://starkandwayne.com/blog/trying-tiny-k3s-on-google-cloud-with-k3sup/)
 tutorial.
 
 ## Requirements

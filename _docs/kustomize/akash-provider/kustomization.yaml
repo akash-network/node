@@ -19,7 +19,7 @@ configMapGenerator:
     literals:
       - home=/home
       - from=main
-      - node=tcp://akashd:26657
+      - node=http://akash-node:26657
       - chain-id=local
       - keyring-backend=test
       - trust-node=true
