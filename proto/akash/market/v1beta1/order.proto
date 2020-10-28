@@ -18,6 +18,8 @@ message MsgCloseOrder {
   ];
 }
 
+message MsgCloseOrderResponse {}
+
 // OrderID stores owner and all other seq numbers
 message OrderID {
   option (gogoproto.equal)            = false;

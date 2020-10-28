@@ -7,6 +7,17 @@ import "cosmos/base/v1beta1/coin.proto";
 
 option go_package = "github.com/ovrclk/akash/x/market/types";
 
+service Msg {
+  // CreateBid defines a method to create a bid given proper inputs.
+  rpc CreateBid(MsgCreateBid) returns (MsgCreateBidResponse);
+
+  // CloseBid defines a method to close a bid given proper inputs.
+  rpc CloseBid(MsgCloseBid) returns (MsgCloseBidResponse);
+
+  // CloseOrder defines a method to close an order given proper inputs.
+  rpc CloseOrder(MsgCloseOrder) returns (MsgCloseOrderResponse);
+}
+
 // MsgCreateBid defines an SDK message for creating Bid
 message MsgCreateBid {
   option (gogoproto.equal) = false;
@@ -22,6 +33,8 @@ message MsgCreateBid {
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "price", (gogoproto.moretags) = "yaml:\"price\""];
 }
 
+message MsgCreateBidResponse {}
+
 // MsgCloseBid defines an SDK message for closing bid
 message MsgCloseBid {
   option (gogoproto.equal) = false;
@@ -33,6 +46,8 @@ message MsgCloseBid {
     (gogoproto.moretags)   = "yaml:\"id\""
   ];
 }
+
+message MsgCloseBidResponse {}
 
 // BidID stores owner and all other seq numbers
 // A successful bid becomes a Lease(ID).

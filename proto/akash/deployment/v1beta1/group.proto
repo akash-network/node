@@ -20,6 +20,8 @@ message MsgCloseGroup {
   ];
 }
 
+message MsgCloseGroupResponse {}
+
 // GroupID stores owner, deployment sequence number and group sequence number
 message GroupID {
   option (gogoproto.equal)            = false;
