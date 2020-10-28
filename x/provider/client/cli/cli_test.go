@@ -1,3 +1,5 @@
+// +build !mainnet
+
 package cli_test
 
 import (

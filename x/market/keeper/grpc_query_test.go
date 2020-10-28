@@ -1,3 +1,5 @@
+// +build !mainnet
+
 package keeper_test
 
 import (

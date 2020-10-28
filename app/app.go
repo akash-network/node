@@ -67,6 +67,7 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	abci "github.com/tendermint/tendermint/abci/types"
+	tmjson "github.com/tendermint/tendermint/libs/json"
 	tmos "github.com/tendermint/tendermint/libs/os"
 
 	"github.com/cosmos/cosmos-sdk/version"
@@ -95,7 +96,7 @@ var DefaultHome = os.ExpandEnv("$HOME/.akash")
 // AkashApp extends ABCI appplication
 type AkashApp struct {
 	*bam.BaseApp
-	cdc               *codec.LegacyAmino
+	legacyAmino       *codec.LegacyAmino
 	appCodec          codec.Marshaler
 	interfaceRegistry codectypes.InterfaceRegistry
 
@@ -145,10 +146,10 @@ func NewApp(
 	homePath string, options ...func(*bam.BaseApp),
 ) *AkashApp {
 
-	// TODO: Remove cdc in favor of appCodec once all modules are migrated.
+	// TODO: Remove legacyAmino in favor of appCodec once all modules are migrated.
 	encodingConfig := MakeEncodingConfig()
 	appCodec := encodingConfig.Marshaler
-	cdc := encodingConfig.Amino
+	legacyAmino := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
 	bapp := bam.NewBaseApp(AppName, logger, db, encodingConfig.TxConfig.TxDecoder(), options...)
@@ -163,7 +164,7 @@ func NewApp(
 
 	app := &AkashApp{
 		BaseApp:           bapp,
-		cdc:               cdc,
+		legacyAmino:       legacyAmino,
 		appCodec:          appCodec,
 		interfaceRegistry: interfaceRegistry,
 		invCheckPeriod:    invCheckPeriod,
@@ -172,7 +173,7 @@ func NewApp(
 		memkeys:           memkeys,
 	}
 
-	app.keeper.params = initParamsKeeper(appCodec, cdc, app.keys[paramstypes.StoreKey], tkeys[paramstypes.TStoreKey])
+	app.keeper.params = initParamsKeeper(appCodec, legacyAmino, app.keys[paramstypes.StoreKey], tkeys[paramstypes.TStoreKey])
 
 	// set the BaseApp's parameter store
 	bapp.SetParamStore(app.keeper.params.Subspace(bam.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
@@ -354,7 +355,7 @@ func NewApp(
 
 	app.mm.RegisterInvariants(&app.keeper.crisis)
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
-	app.mm.RegisterQueryServices(app.GRPCQueryRouter())
+	app.mm.RegisterServices(module.NewConfigurator(app.MsgServiceRouter(), app.GRPCQueryRouter()))
 
 	app.sm = module.NewSimulationManager(
 		append([]module.AppModuleSimulation{
@@ -426,7 +427,9 @@ func (app *AkashApp) Name() string { return app.BaseApp.Name() }
 // InitChainer application update at chain initialization
 func (app *AkashApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 	var genesisState simapp.GenesisState
-	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
+	if err := tmjson.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
+		panic(err)
+	}
 	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
 }
 
@@ -444,7 +447,7 @@ func (app *AkashApp) EndBlocker(
 
 // LegacyAmino returns AkashApp's amino codec.
 func (app *AkashApp) LegacyAmino() *codec.LegacyAmino {
-	return app.cdc
+	return app.legacyAmino
 }
 
 // AppCodec returns AkashApp's app codec.

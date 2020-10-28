@@ -13,7 +13,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
-	"github.com/cosmos/cosmos-sdk/x/staking/exported"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
@@ -77,7 +76,7 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 	/* Handle fee distribution state. */
 
 	// withdraw all validator commission
-	app.keeper.staking.IterateValidators(ctx, func(_ int64, val exported.ValidatorI) (stop bool) {
+	app.keeper.staking.IterateValidators(ctx, func(_ int64, val stakingtypes.ValidatorI) (stop bool) {
 		_, _ = app.keeper.distr.WithdrawValidatorCommission(ctx, val.GetOperator())
 		return false
 	})
@@ -108,7 +107,7 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 	ctx = ctx.WithBlockHeight(0)
 
 	// reinitialize all validators
-	app.keeper.staking.IterateValidators(ctx, func(_ int64, val exported.ValidatorI) (stop bool) {
+	app.keeper.staking.IterateValidators(ctx, func(_ int64, val stakingtypes.ValidatorI) (stop bool) {
 		// donate any unwithdrawn outstanding reward fraction tokens to the community pool
 		scraps := app.keeper.distr.GetValidatorOutstandingRewardsCoins(ctx, val.GetOperator())
 		feePool := app.keeper.distr.GetFeePool(ctx)

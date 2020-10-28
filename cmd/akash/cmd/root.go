@@ -28,7 +28,6 @@ import (
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	"github.com/ovrclk/akash/app"
 	ecmd "github.com/ovrclk/akash/events/cmd"
-	pcmd "github.com/ovrclk/akash/provider/cmd"
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
@@ -92,7 +91,6 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 	authclient.Codec = encodingConfig.Marshaler
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
-		pcmd.RootCmd(),
 		ecmd.EventCmd(),
 		queryCmd(),
 		txCmd(),
@@ -106,6 +104,8 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		cli.NewCompletionCmd(rootCmd, true),
 		debug.Cmd(),
 	)
+
+	addOtherCommands(rootCmd)
 
 	server.AddCommands(rootCmd, app.DefaultHome, newApp, createAppAndExport)
 }
