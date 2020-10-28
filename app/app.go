@@ -155,7 +155,7 @@ func NewApp(
 	bapp := bam.NewBaseApp(AppName, logger, db, encodingConfig.TxConfig.TxDecoder(), options...)
 	bapp.SetCommitMultiStoreTracer(tio)
 	bapp.SetAppVersion(version.Version)
-	bapp.GRPCQueryRouter().SetInterfaceRegistry(interfaceRegistry)
+	bapp.SetInterfaceRegistry(interfaceRegistry)
 	bapp.GRPCQueryRouter().RegisterSimulateService(bapp.Simulate, interfaceRegistry)
 
 	keys := kvStoreKeys()
