@@ -91,7 +91,7 @@ const (
 	AppName = "akash"
 )
 
-var DefaultHome = os.ExpandEnv("$HOME/.akash")
+var DefaultHome = os.ExpandEnv("$HOME/.akashd")
 
 // AkashApp extends ABCI appplication
 type AkashApp struct {
@@ -245,7 +245,7 @@ func NewApp(
 	app.keeper.upgrade = upgradekeeper.NewKeeper(skipUpgradeHeights, app.keys[upgradetypes.StoreKey], appCodec, homePath)
 
 	// no-op handler for "stargate"
-	app.keeper.upgrade.SetUpgradeHandler("stargate", func(ctx sdk.Context, plan upgrade.Plan) {
+	app.keeper.upgrade.SetUpgradeHandler("stargate", func(ctx sdk.Context, plan upgradetypes.Plan) {
 
 	})
 
