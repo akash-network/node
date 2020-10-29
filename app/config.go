@@ -6,6 +6,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -68,6 +69,7 @@ var (
 			upgrade.AppModuleBasic{},
 			evidence.AppModuleBasic{},
 			transfer.AppModuleBasic{},
+			vesting.AppModuleBasic{},
 		},
 			// akash
 			akashModuleBasics()...,
