@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/ovrclk/akash/cmd/akash/cmd"
+	"github.com/ovrclk/akash/cmd/akashd/cmd"
 )
 
 // In main we call the rootCmd

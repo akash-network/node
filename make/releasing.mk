@@ -6,10 +6,10 @@ build:
 	$(GO) build ./...
 
 akash:
-	$(GO) build $(BUILD_FLAGS) ./cmd/akash
+	$(GO) build $(BUILD_FLAGS) ./cmd/akashd
 
 install:
-	$(GO) install $(BUILD_FLAGS) ./cmd/akash
+	$(GO) install $(BUILD_FLAGS) ./cmd/akashd
 
 .PHONY: image-minikube
 image-minikube:

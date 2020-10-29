@@ -52,7 +52,7 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 		WithHomeDir(app.DefaultHome)
 
 	rootCmd := &cobra.Command{
-		Use:   "akash",
+		Use:   "akashd",
 		Short: "Akash Blockchain Application",
 		Long:  "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
