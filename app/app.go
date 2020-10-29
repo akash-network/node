@@ -244,6 +244,11 @@ func NewApp(
 
 	app.keeper.upgrade = upgradekeeper.NewKeeper(skipUpgradeHeights, app.keys[upgradetypes.StoreKey], appCodec, homePath)
 
+	// no-op handler for "stargate"
+	app.keeper.upgrade.SetUpgradeHandler("stargate", func(ctx sdk.Context, plan upgrade.Plan) {
+
+	})
+
 	// register the proposal types
 	govRouter := govtypes.NewRouter()
 	govRouter.AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).

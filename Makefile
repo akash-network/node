@@ -41,7 +41,7 @@ LINT                   = $(GOLANGCI_LINT) ./... --disable-all --deadline=5m --en
 # GORELEASER_BUILD_TAGS are for goreleaser only
 # Setting mainnet flag based on env value
 # export MAINNET=true to set build tag mainnet
-ifeq ($(MAINNET),true)
+ifneq ($(MAINNET),false)
 	BUILD_MAINNET=mainnet
 	BUILD_TAGS=netgo,ledger,mainnet
 	GORELEASER_BUILD_TAGS=$(BUILD_TAGS)
