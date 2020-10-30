@@ -4,11 +4,11 @@ package gateway
 import (
 	"context"
 	"errors"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/ovrclk/akash/provider"
-	"github.com/ovrclk/akash/provider/cluster"
 	pcmock "github.com/ovrclk/akash/provider/cluster/mocks"
 	"github.com/ovrclk/akash/provider/manifest"
 	pmmock "github.com/ovrclk/akash/provider/manifest/mocks"
@@ -77,7 +77,7 @@ func Test_router_Manifest(t *testing.T) {
 func Test_router_LeaseStatus(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
-		expected := &cluster.LeaseStatus{}
+		expected := &ctypes.LeaseStatus{}
 		id := testutil.LeaseID(t)
 		pclient, _, pcclient := createMocks()
 
@@ -108,7 +108,7 @@ func Test_router_LeaseStatus(t *testing.T) {
 
 func Test_router_ServiceStatus(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		expected := &cluster.ServiceStatus{}
+		expected := &ctypes.ServiceStatus{}
 		id := testutil.LeaseID(t)
 		service := "svc"
 

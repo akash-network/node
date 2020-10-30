@@ -7,6 +7,17 @@ import (
 // Manifest store list of groups
 type Manifest []Group
 
+type ServiceProtocol string
+
+const (
+	TCP = ServiceProtocol("TCP")
+	UDP = ServiceProtocol("UDP")
+)
+
+func (sp ServiceProtocol) ToString() string {
+	return string(sp)
+}
+
 // GetGroups returns a manifest with groups list
 func (m Manifest) GetGroups() []Group {
 	return m
@@ -59,9 +70,9 @@ func (s Service) GetCount() uint32 {
 
 // ServiceExpose stores exposed ports and hosts details
 type ServiceExpose struct {
-	Port         uint16
-	ExternalPort uint16
-	Proto        string
+	Port         uint16 // Port on the container
+	ExternalPort uint16 // Port on the service definition
+	Proto        ServiceProtocol
 	Service      string
 	Global       bool
 	Hosts        []string

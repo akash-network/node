@@ -1,0 +1,11 @@
+syntax = "proto3";
+package akash.base.v1beta1;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/ovrclk/akash/types";
+
+// Endpoint describes a publicly accessible IP service
+message Endpoint {
+  option (gogoproto.equal) = true;
+}

@@ -216,14 +216,42 @@ spec:
                   key: mem-price-min
                   optional: true
 
-            - name: AKASH_MEM_PRICE_MAX
-              valueFrom:
-                configMapKeyRef:
-                  name: akash-provider-config
-                  key: mem-price-max
-                  optional: true
+            - name: AKASH_CLUSTER_PUBLIC_HOSTNAME
+                valueFrom:
+                  configMapKeyRef:
+                    name: akash-provider-config
+                    key: cluster-public-hostname
+                    optional: true
 
-          ports:
+            - name: AKASH_CLUSTER_NODE_PORT_QUANTITY
+                valueFrom:
+                  configMapKeyRef:
+                    name: akash-provider-config
+                    key: cluter-node-port-quantity
+                    optional: true
+
+            - name: AKASH_CLUSTER_WAIT_READY_DURATION
+                valueFrom:
+                  configMapKeyRef:
+                    name: akash-provider-config
+                    key: cluster_wait-ready-duration
+                    optional: true
+
+            - name: AKASH_INVENTORY_RESOURCE_POLL_PERIOD
+                valueFrom:
+                  configMapKeyRef:
+                    name: akash-provider-config
+                    key: inventory-resource-poll-period
+                    optional: true
+
+            - name: AKASH_INVENTORY_RESOURCE_DEBUG_FREQUENCY
+                valueFrom:
+                  configMapKeyRef:
+                    name: akash-provider-config
+                    key: inventory-resource-debug-freq
+                    optional: true
+
+      ports:
             - name: http
               containerPort: 8080
           volumeMounts:

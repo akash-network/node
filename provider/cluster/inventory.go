@@ -8,6 +8,7 @@ import (
 	"github.com/boz/go-lifecycle"
 	"github.com/tendermint/tendermint/libs/log"
 
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/pubsub"
 	atypes "github.com/ovrclk/akash/types"
@@ -23,11 +24,11 @@ var (
 )
 
 type inventoryService struct {
-	config config
+	config Config
 	client Client
 	sub    pubsub.Subscriber
 
-	statusch    chan chan<- InventoryStatus
+	statusch    chan chan<- ctypes.InventoryStatus
 	lookupch    chan inventoryRequest
 	reservech   chan inventoryRequest
 	unreservech chan inventoryRequest
@@ -36,15 +37,17 @@ type inventoryService struct {
 
 	log log.Logger
 	lc  lifecycle.Lifecycle
+
+	availableExternalPorts uint
 }
 
 func newInventoryService(
-	config config,
+	config Config,
 	log log.Logger,
 	donech <-chan struct{},
 	sub pubsub.Subscriber,
 	client Client,
-	deployments []Deployment,
+	deployments []ctypes.Deployment,
 ) (*inventoryService, error) {
 
 	sub, err := sub.Clone()
@@ -53,16 +56,17 @@ func newInventoryService(
 	}
 
 	is := &inventoryService{
-		config:      config,
-		client:      client,
-		sub:         sub,
-		statusch:    make(chan chan<- InventoryStatus),
-		lookupch:    make(chan inventoryRequest),
-		reservech:   make(chan inventoryRequest),
-		unreservech: make(chan inventoryRequest),
-		readych:     make(chan struct{}),
-		log:         log.With("cmp", "inventory-service"),
-		lc:          lifecycle.New(),
+		config:                 config,
+		client:                 client,
+		sub:                    sub,
+		statusch:               make(chan chan<- ctypes.InventoryStatus),
+		lookupch:               make(chan inventoryRequest),
+		reservech:              make(chan inventoryRequest),
+		unreservech:            make(chan inventoryRequest),
+		readych:                make(chan struct{}),
+		log:                    log.With("cmp", "inventory-service"),
+		lc:                     lifecycle.New(),
+		availableExternalPorts: config.InventoryExternalPortQuantity,
 	}
 
 	reservations := make([]*reservation, 0, len(deployments))
@@ -135,22 +139,22 @@ func (is *inventoryService) unreserve(order mtypes.OrderID, resources atypes.Res
 	}
 }
 
-func (is *inventoryService) status(ctx context.Context) (InventoryStatus, error) {
-	ch := make(chan InventoryStatus, 1)
+func (is *inventoryService) status(ctx context.Context) (ctypes.InventoryStatus, error) {
+	ch := make(chan ctypes.InventoryStatus, 1)
 
 	select {
 	case <-is.lc.Done():
-		return InventoryStatus{}, ErrNotRunning
+		return ctypes.InventoryStatus{}, ErrNotRunning
 	case <-ctx.Done():
-		return InventoryStatus{}, ctx.Err()
+		return ctypes.InventoryStatus{}, ctx.Err()
 	case is.statusch <- ch:
 	}
 
 	select {
 	case <-is.lc.Done():
-		return InventoryStatus{}, ErrNotRunning
+		return ctypes.InventoryStatus{}, ErrNotRunning
 	case <-ctx.Done():
-		return InventoryStatus{}, ctx.Err()
+		return ctypes.InventoryStatus{}, ctx.Err()
 	case result := <-ch:
 		return result, nil
 	}
@@ -172,12 +176,16 @@ func (is *inventoryService) run(reservations []*reservation) {
 	defer is.sub.Close()
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// Create a timer to trigger periodic inventory checks
+	// Stop the timer immediately
 	t := time.NewTimer(time.Hour)
 	t.Stop()
 	defer t.Stop()
 
-	var inventory []Node
+	var inventory []ctypes.Node
 	ready := false
+
+	// Run an inventory check immediately.
 	runch := is.runCheck(ctx)
 
 	var fetchCount uint
@@ -201,7 +209,17 @@ loop:
 						continue
 					}
 
+					allocatedPrev := res.allocated
 					res.allocated = ev.Status == event.ClusterDeploymentDeployed
+					allocatedChanged := res.allocated != allocatedPrev
+					if allocatedChanged {
+						externalPortCount := reservationCountEndpoints(res)
+						if ev.Status == event.ClusterDeploymentDeployed {
+							is.availableExternalPorts -= externalPortCount
+						} else {
+							is.availableExternalPorts += externalPortCount
+						}
+					}
 
 					is.log.Debug("reservation status update",
 						"order", res.OrderID(),
@@ -218,7 +236,7 @@ loop:
 
 			is.log.Debug("reservation requested", "order", req.order, "resources", req.resources)
 
-			if reservationAllocateable(inventory, reservations, reservation) {
+			if reservationAllocateable(inventory, is.availableExternalPorts, reservations, reservation) {
 				reservations = append(reservations, reservation)
 				req.ch <- inventoryResponse{value: reservation}
 				break
@@ -270,12 +288,15 @@ loop:
 			// run cluster inventory check
 
 			t.Stop()
+			// Run an inventory check
 			runch = is.runCheck(ctx)
 
 		case res := <-runch:
 			// inventory check returned
 
 			runch = nil
+
+			// Reset the inventory check timer, so this runs periodically
 			t.Reset(is.config.InventoryResourcePollPeriod)
 
 			if err := res.Error(); err != nil {
@@ -289,7 +310,7 @@ loop:
 				close(is.readych)
 			}
 
-			inventory = res.Value().([]Node)
+			inventory = res.Value().([]ctypes.Node)
 			if fetchCount%is.config.InventoryResourceDebugFrequency == 0 {
 				is.log.Debug("inventory fetched", "nodes", len(inventory))
 				for _, node := range inventory {
@@ -317,8 +338,8 @@ func (is *inventoryService) runCheck(ctx context.Context) <-chan runner.Result {
 	})
 }
 
-func (is *inventoryService) getStatus(inventory []Node, reservations []*reservation) InventoryStatus {
-	status := InventoryStatus{}
+func (is *inventoryService) getStatus(inventory []ctypes.Node, reservations []*reservation) ctypes.InventoryStatus {
+	status := ctypes.InventoryStatus{}
 	for _, reserve := range reservations {
 		total := atypes.ResourceUnits{}
 
@@ -343,7 +364,7 @@ func (is *inventoryService) getStatus(inventory []Node, reservations []*reservat
 	return status
 }
 
-func reservationAllocateable(inventory []Node, reservations []*reservation, newReservation *reservation) bool {
+func reservationAllocateable(inventory []ctypes.Node, externalPortsAvailable uint, reservations []*reservation, newReservation *reservation) bool {
 	// 1. for each unallocated reservation, subtract its resources
 	//    from inventory.
 	// 2. subtract resources for new reservation from inventory.
@@ -355,27 +376,46 @@ func reservationAllocateable(inventory []Node, reservations []*reservation, newR
 		if res.allocated {
 			continue
 		}
-		inventory, ok = reservationAdjustInventory(inventory, res)
+		inventory, externalPortsAvailable, ok = reservationAdjustInventory(inventory, externalPortsAvailable, res)
 		if !ok {
 			return false
 		}
 	}
 
-	_, ok = reservationAdjustInventory(inventory, newReservation)
+	_, _, ok = reservationAdjustInventory(inventory, externalPortsAvailable, newReservation)
 
 	return ok
 }
 
-func reservationAdjustInventory(prevInventory []Node, reservation *reservation) ([]Node, bool) {
+func reservationCountEndpoints(reservation *reservation) uint {
+	var externalPortCount uint
+
+	resources := reservation.Resources().GetResources()
+	// Count the number of endpoints per resource. The number of instances does not affect
+	// the number of ports
+	for _, resource := range resources {
+		externalPortCount += uint(len(resource.Resources.Endpoints))
+	}
+
+	return externalPortCount
+}
+
+func reservationAdjustInventory(prevInventory []ctypes.Node, externalPortsAvailable uint, reservation *reservation) ([]ctypes.Node, uint, bool) {
 	// for each node in the inventory
 	//   subtract resource capacity from node capacity if the former will fit in the latter
 	//   remove resource capacity that fit in node capacity from requested resource capacity
-	// return remaining inventory, true iff all resources were able to fit
+	// return remaining inventory, true if all resources are able to fit
 
 	resources := make([]atypes.Resources, len(reservation.resources.GetResources()))
 	copy(resources, reservation.resources.GetResources())
 
-	inventory := make([]Node, 0, len(prevInventory))
+	inventory := make([]ctypes.Node, 0, len(prevInventory))
+
+	externalPortCount := reservationCountEndpoints(reservation)
+	if externalPortsAvailable < externalPortCount {
+		return nil, 0, false
+	}
+	externalPortsAvailable -= externalPortCount
 
 	for _, node := range prevInventory {
 		available := node.Available()
@@ -401,5 +441,5 @@ func reservationAdjustInventory(prevInventory []Node, reservation *reservation) 
 		inventory = append(inventory, NewNode(node.ID(), available))
 	}
 
-	return inventory, len(resources) == 0
+	return inventory, externalPortsAvailable, len(resources) == 0
 }

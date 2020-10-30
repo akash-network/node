@@ -117,7 +117,8 @@ func Test_v1_Parse_simple(t *testing.T) {
 				},
 				Count: 2,
 				Expose: []manifest.ServiceExpose{
-					{Port: 80, Global: true},
+					{Port: 80, Global: true, Proto: manifest.TCP},
+					{Port: 12345, Global: true, Proto: manifest.UDP},
 				},
 			},
 		},

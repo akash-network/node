@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	cosmosclient "github.com/cosmos/cosmos-sdk/client"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
@@ -38,7 +39,15 @@ const (
 	// FlagK8sManifestNS
 	FlagK8sManifestNS = "k8s-manifest-ns"
 	// FlagGatewayListenAddress determines listening address for Manifests
-	FlagGatewayListenAddress = "gateway-listen-address"
+	FlagGatewayListenAddress            = "gateway-listen-address"
+	FlagClusterPublicHostname           = "cluster-public-hostname"
+	FlagClusterNodePortQuantity         = "cluster-node-port-quantity"
+	FlagClusterWaitReadyDuration        = "cluster-wait-ready-duration"
+	FlagInventoryResourcePollPeriod     = "inventory-resource-poll-period"
+	FlagInventoryResourceDebugFrequency = "inventory-resource-debug-frequency"
+	FlagDeploymentIngressStaticHosts    = "deployment-ingress-static-hosts"
+	FlagDeploymentIngressDomain         = "deployment-ingress-domain"
+	FlagDeploymentIngressExposeLBHosts  = "deployment-ingress-expose-lb-hosts"
 )
 
 var (
@@ -79,15 +88,103 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().String(FlagClusterPublicHostname, "", "The public IP of the Kubernetes cluster")
+	if err := viper.BindPFlag(FlagClusterPublicHostname, cmd.Flags().Lookup(FlagClusterPublicHostname)); err != nil {
+		return nil
+	}
+	if err := cmd.MarkFlagRequired(FlagClusterPublicHostname); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint(FlagClusterNodePortQuantity, 0, "The number of node ports available on the Kubernetes cluster")
+	if err := viper.BindPFlag(FlagClusterNodePortQuantity, cmd.Flags().Lookup(FlagClusterNodePortQuantity)); err != nil {
+		return nil
+	}
+	if err := cmd.MarkFlagRequired(FlagClusterNodePortQuantity); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagClusterWaitReadyDuration, time.Second*5, "The time to wait for the cluster to be available")
+	if err := viper.BindPFlag(FlagClusterWaitReadyDuration, cmd.Flags().Lookup(FlagClusterWaitReadyDuration)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagInventoryResourcePollPeriod, time.Second*5, "The period to poll the cluster inventory")
+	if err := viper.BindPFlag(FlagInventoryResourcePollPeriod, cmd.Flags().Lookup(FlagInventoryResourcePollPeriod)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint(FlagInventoryResourceDebugFrequency, 10, "The rate at which to log all inventory resources")
+	if err := viper.BindPFlag(FlagInventoryResourceDebugFrequency, cmd.Flags().Lookup(FlagInventoryResourceDebugFrequency)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Bool(FlagDeploymentIngressStaticHosts, false, "")
+	if err := viper.BindPFlag(FlagDeploymentIngressStaticHosts, cmd.Flags().Lookup(FlagDeploymentIngressStaticHosts)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().String(FlagDeploymentIngressDomain, "", "")
+	if err := viper.BindPFlag(FlagDeploymentIngressDomain, cmd.Flags().Lookup(FlagDeploymentIngressDomain)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Bool(FlagDeploymentIngressExposeLBHosts, false, "")
+	if err := viper.BindPFlag(FlagDeploymentIngressExposeLBHosts, cmd.Flags().Lookup(FlagDeploymentIngressExposeLBHosts)); err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
 // doRunCmd initializes all of the Provider functionality, hangs, and awaits shutdown signals.
 func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
+	clusterPublicHostname, err := cmd.Flags().GetString(FlagClusterPublicHostname)
+	if err != nil {
+		return err
+	}
+
+	// TODO - validate that clusterPublicHostname is a valid hostname
+
+	nodePortQuantity, err := cmd.Flags().GetUint(FlagClusterNodePortQuantity)
+	if err != nil {
+		return err
+	}
+
+	clusterWaitReadyDuration, err := cmd.Flags().GetDuration(FlagClusterWaitReadyDuration)
+	if err != nil {
+		return err
+	}
+
+	inventoryResourcePollPeriod, err := cmd.Flags().GetDuration(FlagInventoryResourcePollPeriod)
+	if err != nil {
+		return err
+	}
+
+	inventoryResourceDebugFreq, err := cmd.Flags().GetUint(FlagInventoryResourceDebugFrequency)
+	if err != nil {
+		return err
+	}
+
+	deploymentIngressStaticHosts, err := cmd.Flags().GetBool(FlagDeploymentIngressStaticHosts)
+	if err != nil {
+		return err
+	}
+
+	deploymentIngressDomain, err := cmd.Flags().GetString(FlagDeploymentIngressDomain)
+	if err != nil {
+		return err
+	}
+
+	deploymentIngressExposeLBHosts, err := cmd.Flags().GetBool(FlagDeploymentIngressExposeLBHosts)
+	if err != nil {
+		return err
+	}
+
 	cctx := sdkclient.GetClientContextFromCmd(cmd)
 
 	from, _ := cmd.Flags().GetString(flags.FlagFrom)
-	_, _, err := cosmosclient.GetFromFields(cctx.Keyring, from, false)
+	_, _, err = cosmosclient.GetFromFields(cctx.Keyring, from, false)
 	if err != nil {
 		return err
 	}
@@ -135,7 +232,12 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	pinfo := &res.Provider
 
 	// k8s client creation
-	cclient, err := createClusterClient(log, cmd, pinfo.HostURI)
+	kubeSettings := kube.NewDefaultSettings()
+	kubeSettings.DeploymentIngressDomain = deploymentIngressDomain
+	kubeSettings.DeploymentIngressExposeLBHosts = deploymentIngressExposeLBHosts
+	kubeSettings.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
+
+	cclient, err := createClusterClient(log, cmd, pinfo.HostURI, kubeSettings)
 	if err != nil {
 		return err
 	}
@@ -151,7 +253,13 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	group, ctx := errgroup.WithContext(ctx)
 
-	service, err := provider.NewService(ctx, session, bus, cclient)
+	config := provider.NewDefaultConfig()
+	config.ClusterWaitReadyDuration = clusterWaitReadyDuration
+	config.ClusterPublicHostname = clusterPublicHostname
+	config.ClusterExternalPortQuantity = nodePortQuantity
+	config.InventoryResourceDebugFrequency = inventoryResourceDebugFreq
+	config.InventoryResourcePollPeriod = inventoryResourcePollPeriod
+	service, err := provider.NewService(ctx, session, bus, cclient, config)
 	if err != nil {
 		return group.Wait()
 	}
@@ -189,7 +297,7 @@ func openLogger() log.Logger {
 	})
 }
 
-func createClusterClient(log log.Logger, _ *cobra.Command, host string) (cluster.Client, error) {
+func createClusterClient(log log.Logger, _ *cobra.Command, host string, settings kube.Settings) (cluster.Client, error) {
 	if !viper.GetBool(FlagClusterK8s) {
 		// Condition that there is no Kubernetes API to work with.
 		return cluster.NullClient(), nil
@@ -198,5 +306,5 @@ func createClusterClient(log log.Logger, _ *cobra.Command, host string) (cluster
 	if ns == "" {
 		return nil, fmt.Errorf("%w: --%s required", errInvalidConfig, FlagK8sManifestNS)
 	}
-	return kube.NewClient(log, host, ns)
+	return kube.NewClient(log, host, ns, settings)
 }

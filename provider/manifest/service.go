@@ -191,7 +191,7 @@ loop:
 
 		case req := <-s.mreqch:
 
-			// TODO: validate manifest according to rules in github.com/ovrclk/validation
+			// TODO: validate manifest according to rules in github.com/ovrclk/akash/validation
 			// if err := validation.ValidateManifest(req.value.Manifest); err != nil {
 			// 	h.session.Log().Error("manifest validation failed",
 			// 		"err", err, "deployment", req.value.Deployment)

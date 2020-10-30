@@ -3,15 +3,14 @@ package kube
 import (
 	"crypto/sha256"
 	"encoding/base32"
+	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/lithammer/shortuuid"
 	"github.com/tendermint/tendermint/libs/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	extv1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -46,7 +45,7 @@ var (
 
 type builder struct {
 	log      log.Logger
-	settings settings
+	settings Settings
 	lid      mtypes.LeaseID
 	group    *manifest.Group
 }
@@ -66,7 +65,7 @@ type nsBuilder struct {
 	builder
 }
 
-func newNSBuilder(settings settings, lid mtypes.LeaseID, group *manifest.Group) *nsBuilder {
+func newNSBuilder(settings Settings, lid mtypes.LeaseID, group *manifest.Group) *nsBuilder {
 	return &nsBuilder{builder: builder{settings: settings, lid: lid, group: group}}
 }
 
@@ -95,7 +94,7 @@ type pspRestrictedBuilder struct {
 	builder
 }
 
-func newPspBuilder(settings settings, lid mtypes.LeaseID, group *manifest.Group) *pspRestrictedBuilder { // nolint:golint,unparam
+func newPspBuilder(settings Settings, lid mtypes.LeaseID, group *manifest.Group) *pspRestrictedBuilder { // nolint:golint,unparam
 	return &pspRestrictedBuilder{builder: builder{settings: settings, lid: lid, group: group}}
 }
 
@@ -171,7 +170,7 @@ type deploymentBuilder struct {
 	service *manifest.Service
 }
 
-func newDeploymentBuilder(log log.Logger, settings settings, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service) *deploymentBuilder {
+func newDeploymentBuilder(log log.Logger, settings Settings, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service) *deploymentBuilder {
 	return &deploymentBuilder{
 		builder: builder{
 			settings: settings,
@@ -248,6 +247,7 @@ func (b *deploymentBuilder) container() corev1.Container {
 			// TODO: this prevents over-subscription.  skip for now.
 			// Requests: make(corev1.ResourceList),
 		},
+		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot:             &falseValue,
 			Privileged:               &falseValue,
@@ -287,9 +287,10 @@ func (b *deploymentBuilder) container() corev1.Container {
 // service
 type serviceBuilder struct {
 	deploymentBuilder
+	requireNodePort bool
 }
 
-func newServiceBuilder(log log.Logger, settings settings, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service) *serviceBuilder {
+func newServiceBuilder(log log.Logger, settings Settings, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service, requireNodePort bool) *serviceBuilder {
 	return &serviceBuilder{
 		deploymentBuilder: deploymentBuilder{
 			builder: builder{
@@ -300,21 +301,45 @@ func newServiceBuilder(log log.Logger, settings settings, lid mtypes.LeaseID, gr
 			},
 			service: service,
 		},
+		requireNodePort: requireNodePort,
 	}
 }
 
+const suffixForNodePortServiceName = "-np"
+
+func makeGlobalServiceNameFromBasename(basename string) string {
+	return fmt.Sprintf("%s%s", basename, suffixForNodePortServiceName)
+}
+
+func (b *serviceBuilder) name() string {
+	basename := b.deploymentBuilder.name()
+	if b.requireNodePort {
+		return makeGlobalServiceNameFromBasename(basename)
+	}
+	return basename
+}
+
+func (b *serviceBuilder) deploymentServiceType() corev1.ServiceType {
+	if b.requireNodePort {
+		return corev1.ServiceTypeNodePort
+	}
+	return corev1.ServiceTypeClusterIP
+}
+
 func (b *serviceBuilder) create() (*corev1.Service, error) { // nolint:golint,unparam
+	ports, err := b.ports()
+	if err != nil {
+		return nil, err
+	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   b.name(),
 			Labels: b.labels(),
 		},
 		Spec: corev1.ServiceSpec{
-			// use NodePort to support GCP. GCP provides a new IP address for every ingress
-			// and requires the service type to be either NodePort or LoadBalancer
-			Type:     b.settings.DeploymentServiceType,
+			Type:     b.deploymentServiceType(),
 			Selector: b.labels(),
-			Ports:    b.ports(),
+			Ports:    ports,
 		},
 	}, nil
 }
@@ -322,27 +347,56 @@ func (b *serviceBuilder) create() (*corev1.Service, error) { // nolint:golint,un
 func (b *serviceBuilder) update(obj *corev1.Service) (*corev1.Service, error) { // nolint:golint,unparam
 	obj.Labels = b.labels()
 	obj.Spec.Selector = b.labels()
-	obj.Spec.Ports = b.ports()
+	ports, err := b.ports()
+	if err != nil {
+		return nil, err
+	}
+	obj.Spec.Ports = ports
 	return obj, nil
 }
 
-func (b *serviceBuilder) ports() []corev1.ServicePort {
+func (b *serviceBuilder) any() bool {
+	for _, expose := range b.service.Expose {
+		if expose.Global == b.requireNodePort {
+			return true
+		}
+	}
+	return false
+}
+
+var errUnsupportedProtocol = errors.New("Unsupported protocol for service")
+
+func (b *serviceBuilder) ports() ([]corev1.ServicePort, error) {
 	ports := make([]corev1.ServicePort, 0, len(b.service.Expose))
 	for i, expose := range b.service.Expose {
-		ports = append(ports, corev1.ServicePort{
-			Name:       strconv.Itoa(int(expose.Port)),
-			Port:       exposeExternalPort(&b.service.Expose[i]),
-			TargetPort: intstr.FromInt(int(expose.Port)),
-		})
+		if expose.Global == b.requireNodePort {
+
+			var exposeProtocol corev1.Protocol
+			switch expose.Proto {
+			case manifest.TCP:
+				exposeProtocol = corev1.ProtocolTCP
+			case manifest.UDP:
+				exposeProtocol = corev1.ProtocolUDP
+			default:
+				return nil, errUnsupportedProtocol
+			}
+			externalPort := exposeExternalPort(&b.service.Expose[i])
+			ports = append(ports, corev1.ServicePort{
+				Name:       fmt.Sprintf("%d-%d", i, int(externalPort)),
+				Port:       externalPort,
+				TargetPort: intstr.FromInt(int(expose.Port)),
+				Protocol:   exposeProtocol,
+			})
+		}
 	}
-	return ports
+	return ports, nil
 }
 
 type netPolBuilder struct {
 	builder
 }
 
-func newNetPolBuilder(settings settings, lid mtypes.LeaseID, group *manifest.Group) *netPolBuilder {
+func newNetPolBuilder(settings Settings, lid mtypes.LeaseID, group *manifest.Group) *netPolBuilder {
 	return &netPolBuilder{builder: builder{settings: settings, lid: lid, group: group}}
 }
 
@@ -569,9 +623,10 @@ type ingressBuilder struct {
 	expose *manifest.ServiceExpose
 }
 
-func newIngressBuilder(log log.Logger, settings settings, host string, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service, expose *manifest.ServiceExpose) *ingressBuilder {
+func newIngressBuilder(log log.Logger, settings Settings, host string, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service, expose *manifest.ServiceExpose) *ingressBuilder {
 	if settings.DeploymentIngressStaticHosts {
 		uid := strings.ToLower(shortuuid.New())
+		// FIXME - hostnames should not start with a number
 		h := fmt.Sprintf("%s.%s", uid, settings.DeploymentIngressDomain)
 		log.Debug("IngressBuilder: map ", h, " host ", host)
 		expose.Hosts = append(expose.Hosts, h)
@@ -590,39 +645,49 @@ func newIngressBuilder(log log.Logger, settings settings, host string, lid mtype
 	}
 }
 
-func (b *ingressBuilder) create() (*extv1.Ingress, error) { // nolint:golint,unparam
-	return &extv1.Ingress{
+func (b *ingressBuilder) create() (*netv1.Ingress, error) { // nolint:golint,unparam
+	return &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   b.name(),
 			Labels: b.labels(),
 		},
-		Spec: extv1.IngressSpec{
+		Spec: netv1.IngressSpec{
 			Rules: b.rules(),
 		},
 	}, nil
 }
 
-func (b *ingressBuilder) update(obj *extv1.Ingress) (*extv1.Ingress, error) { // nolint:golint,unparam
+func (b *ingressBuilder) update(obj *netv1.Ingress) (*netv1.Ingress, error) { // nolint:golint,unparam
 	obj.Labels = b.labels()
 	obj.Spec.Rules = b.rules()
 	return obj, nil
 }
 
-func (b *ingressBuilder) rules() []extv1.IngressRule {
-	rules := make([]extv1.IngressRule, 0, len(b.expose.Hosts))
-	httpRule := &extv1.HTTPIngressRuleValue{
-		Paths: []extv1.HTTPIngressPath{{
-			Backend: extv1.IngressBackend{
-				ServiceName: b.name(),
-				ServicePort: intstr.FromInt(int(exposeExternalPort(b.expose))),
+func (b *ingressBuilder) rules() []netv1.IngressRule {
+	// for some reason we need top pass a pointer to this
+	pathTypeForAll := netv1.PathTypePrefix
+
+	rules := make([]netv1.IngressRule, 0, len(b.expose.Hosts))
+	httpRule := &netv1.HTTPIngressRuleValue{
+		Paths: []netv1.HTTPIngressPath{{
+			Path:     "/",
+			PathType: &pathTypeForAll,
+			Backend: netv1.IngressBackend{
+				Service: &netv1.IngressServiceBackend{
+					Name: makeGlobalServiceNameFromBasename(b.name()),
+					Port: netv1.ServiceBackendPort{
+
+						Number: exposeExternalPort(b.expose),
+					},
+				},
 			}},
 		},
 	}
 
 	for _, host := range b.expose.Hosts {
-		rules = append(rules, extv1.IngressRule{
+		rules = append(rules, netv1.IngressRule{
 			Host:             host,
-			IngressRuleValue: extv1.IngressRuleValue{HTTP: httpRule},
+			IngressRuleValue: netv1.IngressRuleValue{HTTP: httpRule},
 		})
 	}
 	b.log.Debug("provider/cluster/kube/builder: created rules", "rules", rules)
@@ -654,7 +719,7 @@ type manifestBuilder struct {
 	mns string // Q: is this supposed to be the k8s Namespace? It's the Object name now.
 }
 
-func newManifestBuilder(log log.Logger, settings settings, ns string, lid mtypes.LeaseID, group *manifest.Group) *manifestBuilder {
+func newManifestBuilder(log log.Logger, settings Settings, ns string, lid mtypes.LeaseID, group *manifest.Group) *manifestBuilder {
 	return &manifestBuilder{
 		builder: builder{
 			log:      log.With("module", "kube-builder"),
