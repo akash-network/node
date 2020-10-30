@@ -21,6 +21,7 @@ import (
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -71,6 +72,7 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmos "github.com/tendermint/tendermint/libs/os"
 
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/version"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
@@ -92,7 +94,10 @@ const (
 	AppName = "akash"
 )
 
-var DefaultHome = os.ExpandEnv("$HOME/.akash")
+var (
+	DefaultHome                         = os.ExpandEnv("$HOME/.akash")
+	_           servertypes.Application = (*AkashApp)(nil)
+)
 
 // AkashApp extends ABCI appplication
 type AkashApp struct {
@@ -157,7 +162,6 @@ func NewApp(
 	bapp.SetCommitMultiStoreTracer(tio)
 	bapp.SetAppVersion(version.Version)
 	bapp.SetInterfaceRegistry(interfaceRegistry)
-	bapp.GRPCQueryRouter().RegisterSimulateService(bapp.Simulate, interfaceRegistry)
 
 	keys := kvStoreKeys()
 	tkeys := transientStoreKeys()
@@ -502,15 +506,24 @@ func (app *AkashApp) SimulationManager() *module.SimulationManager {
 func (app *AkashApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APIConfig) {
 	clientCtx := apiSvr.ClientCtx
 	rpc.RegisterRoutes(clientCtx, apiSvr.Router)
+	// Register legacy tx routes
 	authrest.RegisterTxRoutes(clientCtx, apiSvr.Router)
+	// Register new tx routes from grpc-gateway
+	authtx.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCRouter)
 
+	// Register legacy and grpc-gateway routes for all modules.
 	ModuleBasics().RegisterRESTRoutes(clientCtx, apiSvr.Router)
-	ModuleBasics().RegisterGRPCGatewayRoutes(apiSvr.ClientCtx, apiSvr.GRPCRouter)
+	ModuleBasics().RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCRouter)
 
 	// register swagger API from root so that other applications can override easily
 	if apiConfig.Swagger {
 		RegisterSwaggerAPI(clientCtx, apiSvr.Router)
 	}
+}
+
+// RegisterTxService implements the Application.RegisterTxService method.
+func (app *AkashApp) RegisterTxService(clientCtx client.Context) {
+	authtx.RegisterTxService(app.BaseApp.GRPCQueryRouter(), clientCtx, app.BaseApp.Simulate, app.interfaceRegistry)
 }
 
 // RegisterSwaggerAPI registers swagger route with API Server
