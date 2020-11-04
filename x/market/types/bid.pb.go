@@ -130,6 +130,7 @@ func (m *MsgCreateBid) GetPrice() types.Coin {
 	return types.Coin{}
 }
 
+// MsgCreateBidResponse defines the Msg/CreateBid response type.
 type MsgCreateBidResponse struct {
 }
 
@@ -211,6 +212,7 @@ func (m *MsgCloseBid) GetBidID() BidID {
 	return BidID{}
 }
 
+// MsgCloseBidResponse defines the Msg/CloseBid response type.
 type MsgCloseBidResponse struct {
 }
 

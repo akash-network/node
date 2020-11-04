@@ -90,6 +90,7 @@ func (m *MsgCreateProvider) GetAttributes() Attributes {
 	return nil
 }
 
+// MsgCreateProviderResponse defines the Msg/CreateProvider response type.
 type MsgCreateProviderResponse struct {
 }
 
@@ -187,6 +188,7 @@ func (m *MsgUpdateProvider) GetAttributes() Attributes {
 	return nil
 }
 
+// MsgUpdateProviderResponse defines the Msg/UpdateProvider response type.
 type MsgUpdateProviderResponse struct {
 }
 
@@ -268,6 +270,7 @@ func (m *MsgDeleteProvider) GetOwner() string {
 	return ""
 }
 
+// MsgDeleteProviderResponse defines the Msg/DeleteProvider response type.
 type MsgDeleteProviderResponse struct {
 }
 

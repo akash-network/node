@@ -114,6 +114,7 @@ func (m *MsgCloseGroup) GetID() GroupID {
 	return GroupID{}
 }
 
+// MsgCloseGroupResponse defines the Msg/CloseGroup response type.
 type MsgCloseGroupResponse struct {
 }
 

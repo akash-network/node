@@ -105,6 +105,7 @@ func (m *MsgCloseOrder) GetOrderID() OrderID {
 	return OrderID{}
 }
 
+// MsgCloseOrderResponse defines the Msg/CloseOrder response type.
 type MsgCloseOrderResponse struct {
 }
 

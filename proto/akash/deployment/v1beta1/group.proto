@@ -20,6 +20,7 @@ message MsgCloseGroup {
   ];
 }
 
+// MsgCloseGroupResponse defines the Msg/CloseGroup response type.
 message MsgCloseGroupResponse {}
 
 // GroupID stores owner, deployment sequence number and group sequence number

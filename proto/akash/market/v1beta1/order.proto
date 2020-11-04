@@ -18,6 +18,7 @@ message MsgCloseOrder {
   ];
 }
 
+// MsgCloseOrderResponse defines the Msg/CloseOrder response type.
 message MsgCloseOrderResponse {}
 
 // OrderID stores owner and all other seq numbers
