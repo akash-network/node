@@ -9,6 +9,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
+	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/ovrclk/akash/app"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
@@ -16,7 +17,7 @@ import (
 func TestAppExport(t *testing.T) {
 	db := dbm.NewMemDB()
 	app1 := app.NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)),
-		db, nil, 0, map[int64]bool{}, app.DefaultHome)
+		db, nil, 0, map[int64]bool{}, app.DefaultHome, simapp.EmptyAppOptions{})
 
 	genesisState := app.NewDefaultGenesisState()
 	stateBytes, err := json.MarshalIndent(genesisState, "", "  ")
@@ -32,7 +33,7 @@ func TestAppExport(t *testing.T) {
 	app1.Commit()
 
 	// Making a new app object with the db, so that initchain hasn't been called
-	app2 := app.NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{}, app.DefaultHome)
+	app2 := app.NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{}, app.DefaultHome, simapp.EmptyAppOptions{})
 	_, err = app2.ExportAppStateAndValidators(false, []string{})
 	require.NoError(t, err, "ExportAppStateAndValidators should not have an error")
 }
