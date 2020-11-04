@@ -28,7 +28,6 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	abci "github.com/tendermint/tendermint/abci/types"
-	tmos "github.com/tendermint/tendermint/libs/os"
 
 	"github.com/cosmos/cosmos-sdk/version"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
@@ -291,11 +290,6 @@ func NewApp(
 
 	app.SetEndBlocker(app.EndBlocker)
 
-	err := app.LoadLatestVersion(app.keys[bam.MainStoreKey])
-	if err != nil {
-		tmos.Exit("app initialization:" + err.Error())
-	}
-
 	return app
 }
 
@@ -333,6 +327,10 @@ func (app *AkashApp) ModuleAccountAddrs() map[string]bool {
 // SimulationManager implements the SimulationApp interface
 func (app *AkashApp) SimulationManager() *module.SimulationManager {
 	return app.sm
+}
+
+func (app *AkashApp) LoadLatestVersion() error {
+	return app.BaseApp.LoadLatestVersion(app.keys[bam.MainStoreKey])
 }
 
 // LoadHeight method of AkashApp loads baseapp application version with given height

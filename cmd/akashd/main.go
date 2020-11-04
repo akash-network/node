@@ -89,7 +89,7 @@ func newApp(logger log.Logger, db dbm.DB, tio io.Writer) abci.Application {
 		skipUpgradeHeights[int64(h)] = true
 	}
 
-	return app.NewApp(
+	app := app.NewApp(
 		logger, db, tio, invCheckPeriod, skipUpgradeHeights,
 		baseapp.SetPruning(storetypes.NewPruningOptionsFromString(viper.GetString("pruning"))),
 		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
@@ -97,6 +97,10 @@ func newApp(logger log.Logger, db dbm.DB, tio io.Writer) abci.Application {
 		baseapp.SetHaltTime(viper.GetUint64(server.FlagHaltTime)),
 		baseapp.SetInterBlockCache(cache),
 	)
+	if err := app.LoadLatestVersion(); err != nil {
+		panic(err)
+	}
+	return app
 }
 
 func exportAppStateAndTMValidators(
