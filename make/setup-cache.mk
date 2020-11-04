@@ -18,6 +18,15 @@ $(PROTOC_VERSION_FILE): $(CACHE)
 	touch $@
 $(PROTOC): $(PROTOC_VERSION_FILE)
 
+$(PROTOC_GEN_COSMOS_VERSION_FILE): $(CACHE)
+	@echo "installing protoc-gen-cosmos..."
+	rm -f $(PROTOC_GEN_COSMOS)
+	GOBIN=$(CACHE_BIN) $(GO) install github.com/regen-network/cosmos-proto/protoc-gen-gocosmos
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(PROTOC_GEN_COSMOS): $(PROTOC_GEN_COSMOS_VERSION_FILE)
+
 $(GRPC_GATEWAY_VERSION_FILE): $(CACHE)
 	@echo "Installing protoc-gen-grpc-gateway..."
 	rm -f $(GRPC_GATEWAY)

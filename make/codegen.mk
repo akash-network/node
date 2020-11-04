@@ -19,7 +19,7 @@ kubetypes: deps-vendor
 	akash.network:v1
 
 .PHONY: proto-gen
-proto-gen: $(PROTOC) $(GRPC_GATEWAY) modvendor proto-format
+proto-gen: $(PROTOC) $(GRPC_GATEWAY) $(PROTOC_GEN_COSMOS) modvendor proto-format
 	./script/protocgen.sh
 
 .PHONY: proto-swagger-gen

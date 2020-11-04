@@ -23,7 +23,6 @@ Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types:. \
   -I "vendor/github.com/cosmos/cosmos-sdk/third_party/proto" \
   --grpc-gateway_out=logtostderr=true:. \
   $(find "${dir}" -maxdepth 1 -name '*.proto')
-
 done
 
 # move proto files to the right places
