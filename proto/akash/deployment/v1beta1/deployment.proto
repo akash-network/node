@@ -36,6 +36,7 @@ message MsgCreateDeployment {
   bytes version = 3 [(gogoproto.jsontag) = "version", (gogoproto.moretags) = "yaml:\"version\""];
 }
 
+// MsgCreateDeploymentResponse defines the Msg/CreateDeployment response type.
 message MsgCreateDeploymentResponse {}
 
 // MsgUpdateDeployment defines an SDK message for updating deployment
@@ -53,6 +54,7 @@ message MsgUpdateDeployment {
   bytes version = 3 [(gogoproto.jsontag) = "version", (gogoproto.moretags) = "yaml:\"version\""];
 }
 
+// MsgUpdateDeploymentResponse defines the Msg/UpdateDeployment response type.
 message MsgUpdateDeploymentResponse {}
 
 // MsgCloseDeployment defines an SDK message for closing deployment
@@ -67,6 +69,7 @@ message MsgCloseDeployment {
   ];
 }
 
+// MsgCloseDeploymentResponse defines the Msg/CloseDeployment response type.
 message MsgCloseDeploymentResponse {}
 
 // DeploymentID stores owner and sequence number

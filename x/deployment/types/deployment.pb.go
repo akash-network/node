@@ -121,6 +121,7 @@ func (m *MsgCreateDeployment) GetVersion() []byte {
 	return nil
 }
 
+// MsgCreateDeploymentResponse defines the Msg/CreateDeployment response type.
 type MsgCreateDeploymentResponse struct {
 }
 
@@ -218,6 +219,7 @@ func (m *MsgUpdateDeployment) GetVersion() []byte {
 	return nil
 }
 
+// MsgUpdateDeploymentResponse defines the Msg/UpdateDeployment response type.
 type MsgUpdateDeploymentResponse struct {
 }
 
@@ -299,6 +301,7 @@ func (m *MsgCloseDeployment) GetID() DeploymentID {
 	return DeploymentID{}
 }
 
+// MsgCloseDeploymentResponse defines the Msg/CloseDeployment response type.
 type MsgCloseDeploymentResponse struct {
 }
 

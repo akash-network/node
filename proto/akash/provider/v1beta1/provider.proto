@@ -6,6 +6,7 @@ import "akash/base/v1beta1/attribute.proto";
 
 option go_package = "github.com/ovrclk/akash/x/provider/types";
 
+// Msg defines the provider Msg service
 service Msg {
   // CreateProvider defines a method that creates a provider given the proper inputs
   rpc CreateProvider(MsgCreateProvider) returns (MsgCreateProviderResponse);
@@ -35,6 +36,7 @@ message MsgCreateProvider {
   ];
 }
 
+// MsgCreateProviderResponse defines the Msg/CreateProvider response type.
 message MsgCreateProviderResponse {}
 
 // MsgUpdateProvider defines an SDK message for updating a provider
@@ -55,6 +57,7 @@ message MsgUpdateProvider {
   ];
 }
 
+// MsgUpdateProviderResponse defines the Msg/UpdateProvider response type.
 message MsgUpdateProviderResponse {}
 
 // MsgDeleteProvider defines an SDK message for deleting a provider
@@ -64,6 +67,7 @@ message MsgDeleteProvider {
   string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
 }
 
+// MsgDeleteProviderResponse defines the Msg/DeleteProvider response type.
 message MsgDeleteProviderResponse {}
 
 // Provider stores owner and host details
