@@ -16,20 +16,23 @@ CACHE_BIN             := $(CACHE)/bin
 CACHE_INCLUDE         := $(CACHE)/include
 CACHE_VERSIONS        := $(CACHE)/versions
 
-BUF_VERSION           ?= 0.25.0
-PROTOC_VERSION        ?= 3.13.0
-GRPC_GATEWAY_VERSION  ?= 1.14.7
-GOLANGCI_LINT_VERSION ?= v1.31.0
-GOLANG_VERSION        ?= 1.15.2
-GOLANG_CROSS_VERSION  := v$(GOLANG_VERSION)
+BUF_VERSION                ?= 0.25.0
+PROTOC_VERSION             ?= 3.13.0
+PROTOC_GEN_COSMOS_VERSION  ?= master
+GRPC_GATEWAY_VERSION       ?= 1.14.7
+GOLANGCI_LINT_VERSION      ?= v1.31.0
+GOLANG_VERSION             ?= 1.15.2
+GOLANG_CROSS_VERSION       := v$(GOLANG_VERSION)
 
 # <TOOL>_VERSION_FILE points to the marker file for the installed version.
 # If <TOOL>_VERSION_FILE is changed, the binary will be re-downloaded.
-PROTOC_VERSION_FILE        = $(CACHE_VERSIONS)/protoc/$(PROTOC_VERSION)
-GRPC_GATEWAY_VERSION_FILE  = $(CACHE_VERSIONS)/protoc-gen-grpc-gateway/$(GRPC_GATEWAY_VERSION)
-MODVENDOR                  = $(CACHE_BIN)/modvendor
-PROTOC                    := $(CACHE_BIN)/protoc
-GRPC_GATEWAY              := $(CACHE_BIN)/protoc-gen-grpc-gateway
+PROTOC_VERSION_FILE             = $(CACHE_VERSIONS)/protoc/$(PROTOC_VERSION)
+GRPC_GATEWAY_VERSION_FILE       = $(CACHE_VERSIONS)/protoc-gen-grpc-gateway/$(GRPC_GATEWAY_VERSION)
+PROTOC_GEN_COSMOS_VERSION_FILE  = $(CACHE_VERSIONS)/protoc-gen-cosmos/$(PROTOC_GEN_COSMOS_VERSION)
+MODVENDOR                       = $(CACHE_BIN)/modvendor
+PROTOC                         := $(CACHE_BIN)/protoc
+PROTOC_GEN_COSMOS              := $(CACHE_BIN)/protoc-gen-cosmos
+GRPC_GATEWAY                   := $(CACHE_BIN)/protoc-gen-grpc-gateway
 
 DOCKER_RUN            := docker run --rm -v $(shell pwd):/workspace -w /workspace
 DOCKER_BUF            := $(DOCKER_RUN) bufbuild/buf:$(BUF_VERSION)
