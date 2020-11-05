@@ -6,11 +6,11 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
 	github.com/caarlos0/env v3.3.0+incompatible
-	github.com/cosmos/cosmos-sdk v0.40.0-rc1
+	github.com/cosmos/cosmos-sdk v0.40.0-rc2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-kit/kit v0.10.0
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.4.2
+	github.com/golang/protobuf v1.4.3
 	github.com/gorilla/context v1.1.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
@@ -25,7 +25,7 @@ require (
 	github.com/regen-network/cosmos-proto v0.3.0
 	github.com/rs/cors v1.7.1-0.20191011001009-dcbccb712443 // indirect
 	github.com/spf13/cast v1.3.1
-	github.com/spf13/cobra v1.1.0
+	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/objx v0.2.1-0.20190415111823-35313a95ee26 // indirect

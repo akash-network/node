@@ -10,6 +10,7 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	"github.com/cosmos/cosmos-sdk/simapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
@@ -40,7 +41,11 @@ func (app *AkashApp) ExportAppStateAndValidators(
 		return servertypes.ExportedApp{}, err
 	}
 
-	validators := staking.WriteValidators(ctx, app.keeper.staking)
+	validators, err := staking.WriteValidators(ctx, app.keeper.staking)
+	if err != nil {
+		return servertypes.ExportedApp{}, err
+	}
+
 	return servertypes.ExportedApp{
 		AppState:        appState,
 		Validators:      validators,
@@ -180,7 +185,7 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 
 	iter.Close()
 
-	_ = app.keeper.staking.ApplyAndReturnValidatorSetUpdates(ctx)
+	_, _ = app.keeper.staking.ApplyAndReturnValidatorSetUpdates(ctx)
 
 	/* Handle slashing state. */
 
@@ -198,7 +203,7 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 // Setup initializes a new AkashApp. A Nop logger is set in AkashApp.
 func Setup(isCheckTx bool) *AkashApp {
 	db := dbm.NewMemDB()
-	app := NewApp(logger.NewNopLogger(), db, nil, 5, map[int64]bool{}, DefaultHome)
+	app := NewApp(logger.NewNopLogger(), db, nil, true, 5, map[int64]bool{}, DefaultHome, simapp.EmptyAppOptions{})
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := NewDefaultGenesisState()

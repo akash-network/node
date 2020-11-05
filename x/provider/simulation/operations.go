@@ -87,7 +87,7 @@ func SimulateMsgCreate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper
 
 		msg := types.NewMsgCreateProvider(simAccount.Address, cfg.Host, cfg.GetAttributes())
 
-		txGen := simappparams.MakeEncodingConfig().TxConfig
+		txGen := simappparams.MakeTestEncodingConfig().TxConfig
 		tx, err := helpers.GenTx(
 			txGen,
 			[]sdk.Msg{msg},
@@ -158,7 +158,7 @@ func SimulateMsgUpdate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper
 			HostURI: provider.HostURI,
 		}
 
-		txGen := simappparams.MakeEncodingConfig().TxConfig
+		txGen := simappparams.MakeTestEncodingConfig().TxConfig
 		tx, err := helpers.GenTx(
 			txGen,
 			[]sdk.Msg{msg},

@@ -20,6 +20,7 @@ import (
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -49,6 +50,7 @@ import (
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
+	"github.com/spf13/cast"
 
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
@@ -70,6 +72,7 @@ import (
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	tmos "github.com/tendermint/tendermint/libs/os"
 
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/version"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
@@ -91,7 +94,10 @@ const (
 	AppName = "akash"
 )
 
-var DefaultHome = os.ExpandEnv("$HOME/.akashd")
+var (
+	DefaultHome                         = os.ExpandEnv("$HOME/.akashd")
+	_           servertypes.Application = (*AkashApp)(nil)
+)
 
 // AkashApp extends ABCI appplication
 type AkashApp struct {
@@ -142,8 +148,8 @@ type AkashApp struct {
 
 // NewApp creates and returns a new Akash App.
 func NewApp(
-	logger log.Logger, db dbm.DB, tio io.Writer, invCheckPeriod uint, skipUpgradeHeights map[int64]bool,
-	homePath string, options ...func(*bam.BaseApp),
+	logger log.Logger, db dbm.DB, tio io.Writer, loadLatest bool, invCheckPeriod uint, skipUpgradeHeights map[int64]bool,
+	homePath string, appOpts servertypes.AppOptions, options ...func(*bam.BaseApp),
 ) *AkashApp {
 
 	// TODO: Remove legacyAmino in favor of appCodec once all modules are migrated.
@@ -156,7 +162,6 @@ func NewApp(
 	bapp.SetCommitMultiStoreTracer(tio)
 	bapp.SetAppVersion(version.Version)
 	bapp.SetInterfaceRegistry(interfaceRegistry)
-	bapp.GRPCQueryRouter().RegisterSimulateService(bapp.Simulate, interfaceRegistry)
 
 	keys := kvStoreKeys()
 	tkeys := transientStoreKeys()
@@ -303,6 +308,10 @@ func NewApp(
 
 	app.setAkashKeepers()
 
+	// NOTE: we may consider parsing `appOpts` inside module constructors. For the moment
+	// we prefer to be more strict in what arguments the modules expect.
+	var skipGenesisInvariants = cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants))
+
 	app.mm = module.NewManager(
 		append([]module.AppModule{
 			genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx, encodingConfig.TxConfig),
@@ -310,7 +319,7 @@ func NewApp(
 			vesting.NewAppModule(app.keeper.acct, app.keeper.bank),
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			capability.NewAppModule(appCodec, *app.keeper.cap),
-			crisis.NewAppModule(&app.keeper.crisis),
+			crisis.NewAppModule(&app.keeper.crisis, skipGenesisInvariants),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
 			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
@@ -403,14 +412,21 @@ func NewApp(
 
 	app.SetEndBlocker(app.EndBlocker)
 
-	// TODO: add load latest check here
-	err := app.LoadLatestVersion()
-	if err != nil {
-		tmos.Exit("app initialization:" + err.Error())
-	}
+	if loadLatest {
+		if err := app.LoadLatestVersion(); err != nil {
+			tmos.Exit("app initialization:" + err.Error())
+		}
 
-	ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
-	app.keeper.cap.InitializeAndSeal(ctx)
+		// Initialize and seal the capability keeper so all persistent capabilities
+		// are loaded in-memory and prevent any further modules from creating scoped
+		// sub-keepers.
+		// This must be done during creation of baseapp rather than in InitChain so
+		// that in-memory capabilities get regenerated on app restart.
+		// Note that since this reads from the store, we can only perform it when
+		// `loadLatest` is set to true.
+		ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
+		app.keeper.cap.InitializeAndSeal(ctx)
+	}
 
 	app.keeper.scopedIBC = scopedIBCKeeper
 	app.keeper.scopedTransfer = scopedTransferKeeper
@@ -496,15 +512,23 @@ func (app *AkashApp) SimulationManager() *module.SimulationManager {
 func (app *AkashApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APIConfig) {
 	clientCtx := apiSvr.ClientCtx
 	rpc.RegisterRoutes(clientCtx, apiSvr.Router)
+	// Register legacy tx routes
 	authrest.RegisterTxRoutes(clientCtx, apiSvr.Router)
+	// Register new tx routes from grpc-gateway.
+	authtx.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCRouter)
 
 	ModuleBasics().RegisterRESTRoutes(clientCtx, apiSvr.Router)
-	ModuleBasics().RegisterGRPCRoutes(apiSvr.ClientCtx, apiSvr.GRPCRouter)
+	ModuleBasics().RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCRouter)
 
 	// register swagger API from root so that other applications can override easily
 	if apiConfig.Swagger {
 		RegisterSwaggerAPI(clientCtx, apiSvr.Router)
 	}
+}
+
+// RegisterTxService implements the Application.RegisterTxService method.
+func (app *AkashApp) RegisterTxService(clientCtx client.Context) {
+	authtx.RegisterTxService(app.BaseApp.GRPCQueryRouter(), clientCtx, app.BaseApp.Simulate, app.interfaceRegistry)
 }
 
 // RegisterSwaggerAPI registers swagger route with API Server
