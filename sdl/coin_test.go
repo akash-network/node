@@ -14,9 +14,9 @@ func TestPricing(t *testing.T) {
 		value sdk.Coin
 		err   bool
 	}{
-		{"amount: 1\ndenom: akt", sdk.NewCoin("akt", sdk.NewInt(1)), false},
-		{"amount: -1\ndenom: akt", sdk.NewCoin("akt", sdk.NewInt(1)), true},
-		{"amount: 0.7\ndenom: akt", sdk.NewCoin("akt", sdk.NewInt(1)), true},
+		{"amount: 1\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(1)), false},
+		{"amount: -1\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(1)), true},
+		{"amount: 0.7\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(1)), true},
 	}
 
 	for idx, test := range tests {

@@ -41,7 +41,7 @@ profiles:
       pricing:
         web:
           amount: 1
-          denom: akt
+          denom: uakt
 deployment:
   web:
     westcoast:
