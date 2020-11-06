@@ -50,7 +50,7 @@ func ResourceUnits(_ testing.TB) types.ResourceUnits {
 
 func NewApp(val network.Validator) servertypes.Application {
 	return app.NewApp(
-		val.Ctx.Logger, dbm.NewMemDB(), nil, 0, make(map[int64]bool), val.Ctx.Config.RootDir,
+		val.Ctx.Logger, dbm.NewMemDB(), nil, true, 0, make(map[int64]bool), val.Ctx.Config.RootDir,
 		baseapp.SetPruning(storetypes.NewPruningOptionsFromString(val.AppConfig.Pruning)),
 		baseapp.SetMinGasPrices(val.AppConfig.MinGasPrices),
 	)
