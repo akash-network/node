@@ -1,0 +1,117 @@
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=1
+builds:
+  - id: akash-darwin-amd64
+    binary: akash
+    main: ./cmd/akash
+    goarch:
+      - amd64
+    goos:
+      - darwin
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
+    flags:
+      - -trimpath
+      - -mod=readonly
+      - "{{ .Env.BUILD_FLAGS }}"
+    ldflags:
+      - "{{ .Env.LD_FLAGS }}"
+  - id: akash-linux-amd64
+    binary: akash
+    main: ./cmd/akash
+    goarch:
+      - amd64
+    goos:
+      - linux
+    flags:
+      - "{{ .Env.BUILD_FLAGS }}"
+      - -trimpath
+      - -mod=readonly
+    ldflags:
+      - "{{ .Env.LD_FLAGS }}"
+      - -extldflags "-lc -lrt -lpthread --static"
+  - id: akash-linux-arm64
+    binary: akash
+    main: ./cmd/akash
+    goarch:
+      - arm64
+    goos:
+      - linux
+    env:
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    flags:
+      - "{{ .Env.BUILD_FLAGS }}"
+      - -trimpath
+      - -mod=readonly
+    ldflags:
+      - "{{ .Env.LD_FLAGS }}"
+      - -extldflags "-lc -lrt -lpthread --static"
+  - id: akash-windows-amd64
+    binary: akash
+    main: ./cmd/akash
+    goarch:
+      - amd64
+    goos:
+      - windows
+    env:
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+    flags:
+      - "{{ .Env.BUILD_FLAGS }}"
+      - -trimpath
+      - -mod=readonly
+      - -buildmode=exe
+    ldflags:
+      - "{{ .Env.LD_FLAGS }}"
+archives:
+  - id: akash
+    builds:
+      - akash-darwin-amd64
+      - akash-linux-amd64
+      - akash-linux-arm64
+      - akash-windows-amd64
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format: zip
+    files:
+      - none*
+
+dockers:
+  - binaries:
+      - akash
+    dockerfile: _build/Dockerfile.akash
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "ovrclk/akash:{{if eq .Env.MAINNET \"true\"}}stable{{else}}latest{{end}}"
+      - "ovrclk/akash:{{ .ShortCommit }}"
+      - "ovrclk/akash:{{ .Version }}"
+
+brews:
+  - name: akash
+    tap:
+      owner: ovrclk
+      name: homebrew-edge-tap
+    homepage: "https://akash.network"
+    description: "Blockchain-powered decentralized compute platform"
+    install: |
+      bin.install "akash"
+
+nfpms:
+  - vendor: Overclock Labs Inc.
+    homepage: http://ovrclk.com
+    maintainer: Akash Network <hello@akash.network>
+    formats:
+      - deb
+      - rpm
+    license: Apache 2.0
+
+release:
+  github:
+    owner: ovrclk
+    name: akash
+  prerelease: auto
+  draft: false

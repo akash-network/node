@@ -48,9 +48,11 @@ ifeq ($(MAINNET),true)
 	BUILD_MAINNET=mainnet
 	BUILD_TAGS=netgo,ledger,mainnet
 	GORELEASER_BUILD_TAGS=$(BUILD_TAGS)
+	GORELEASER_CONFIG=.goreleaser.yaml
 else
 	BUILD_TAGS=netgo,ledger
 	GORELEASER_BUILD_TAGS=$(BUILD_TAGS),testnet
+	GORELEASER_CONFIG=.goreleaser.edge.yaml
 endif
 
 GORELEASER_FLAGS    = -tags="$(GORELEASER_BUILD_TAGS)"
