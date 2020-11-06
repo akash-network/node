@@ -94,7 +94,7 @@ brews:
   - name: akash
     tap:
       owner: ovrclk
-      name: homebrew-tap
+      name: "{{if eq .Env.MAINNET \"true\"}}homebrew-tap{{else}}homebrew-edgenet-tap{{end}}"
     homepage: "https://akash.network"
     description: "Blockchain-powered decentralized compute platform"
     install: |
