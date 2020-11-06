@@ -31,6 +31,11 @@ type IntegrationTestSuite struct {
 	network *network.Network
 }
 
+const (
+	blockWaitHeight   = 8
+	blockWaitDuration = 45 * time.Second
+)
+
 func (s *IntegrationTestSuite) SetupSuite() {
 	s.T().Log("setting up integration test suite")
 
@@ -380,8 +385,8 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	height, err := s.network.LatestHeight()
 	s.Require().NoError(err)
 
-	// Let's wait for 3 blocks to create leases and modify state of bid
-	_, err = s.network.WaitForHeightWithTimeout(height+3, 30*time.Second)
+	// Wait for lease creation to modify state of bid
+	_, err = s.network.WaitForHeightWithTimeout(height+blockWaitHeight, blockWaitDuration)
 	s.Require().NoError(err)
 
 	// test query matched bids
@@ -409,8 +414,8 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	height, err = s.network.LatestHeight()
 	s.Require().NoError(err)
 
-	// Let's wait for 2 blocks to create leases and modify state of bid
-	_, err = s.network.WaitForHeightWithTimeout(height+2, 30*time.Second)
+	// Wait for lease creation to modify state of bid
+	_, err = s.network.WaitForHeightWithTimeout(height+blockWaitHeight, blockWaitDuration)
 	s.Require().NoError(err)
 
 	// fetch closed orders
