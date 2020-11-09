@@ -42,7 +42,7 @@ release-dry-run: modvendor
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		troian/golang-cross:${GOLANG_CROSS_VERSION} \
-		-f .goreleaser.yaml --rm-dist --skip-validate --skip-publish
+		-f "$(GORELEASER_CONFIG)" --rm-dist --skip-validate --skip-publish
 
 .PHONY: release
 release: modvendor
