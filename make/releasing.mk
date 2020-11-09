@@ -61,4 +61,4 @@ release: modvendor
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		troian/golang-cross:${GOLANG_CROSS_VERSION} \
-		-f .goreleaser.yaml release --rm-dist
+		-f "$(GORELEASER_CONFIG)" release --rm-dist
