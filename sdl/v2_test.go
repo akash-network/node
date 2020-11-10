@@ -71,10 +71,10 @@ func Test_v1_Parse_simple(t *testing.T) {
 	group := groups[0]
 	assert.Len(t, group.GetResources(), 1)
 
-	// assert.Equal(t, types.Attribute{
-	// 	Name:  "region",
-	// 	Value: "us-west",
-	// }, group.GetRequirements()[0])
+	assert.Equal(t, atypes.Attribute{
+		Key:   "region",
+		Value: "us-west",
+	}, group.Requirements.Attributes[0])
 
 	assert.Len(t, group.GetResources(), 1)
 

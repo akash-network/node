@@ -90,15 +90,42 @@ paths:
                             name:
                               type: string
                             requirements:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  key:
-                                    type: string
-                                  value:
-                                    type: string
-                                title: Attribute represents key value pair
+                              type: object
+                              properties:
+                                signed_by:
+                                  title: >-
+                                    SignedBy list of keys that tenants expect to
+                                    have signatures from
+                                  type: object
+                                  properties:
+                                    all_of:
+                                      type: array
+                                      items:
+                                        type: string
+                                      title: >-
+                                        all_of all keys in this list must have
+                                        signed attributes
+                                    any_of:
+                                      type: array
+                                      items:
+                                        type: string
+                                      title: >-
+                                        any_of at least of of the keys from the
+                                        list must have signed attributes
+                                attributes:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      key:
+                                        type: string
+                                      value:
+                                        type: string
+                                    title: Attribute represents key value pair
+                                  title: >-
+                                    Attribute list of attributes tenant expects
+                                    from the provider
+                              title: PlacementRequirements
                             resources:
                               type: array
                               items:
@@ -355,15 +382,42 @@ paths:
                               name:
                                 type: string
                               requirements:
-                                type: array
-                                items:
-                                  type: object
-                                  properties:
-                                    key:
-                                      type: string
-                                    value:
-                                      type: string
-                                  title: Attribute represents key value pair
+                                type: object
+                                properties:
+                                  signed_by:
+                                    title: >-
+                                      SignedBy list of keys that tenants expect
+                                      to have signatures from
+                                    type: object
+                                    properties:
+                                      all_of:
+                                        type: array
+                                        items:
+                                          type: string
+                                        title: >-
+                                          all_of all keys in this list must have
+                                          signed attributes
+                                      any_of:
+                                        type: array
+                                        items:
+                                          type: string
+                                        title: >-
+                                          any_of at least of of the keys from the
+                                          list must have signed attributes
+                                  attributes:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        key:
+                                          type: string
+                                        value:
+                                          type: string
+                                      title: Attribute represents key value pair
+                                    title: >-
+                                      Attribute list of attributes tenant
+                                      expects from the provider
+                                title: PlacementRequirements
                               resources:
                                 type: array
                                 items:
@@ -662,15 +716,42 @@ paths:
                       name:
                         type: string
                       requirements:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            key:
-                              type: string
-                            value:
-                              type: string
-                          title: Attribute represents key value pair
+                        type: object
+                        properties:
+                          signed_by:
+                            title: >-
+                              SignedBy list of keys that tenants expect to have
+                              signatures from
+                            type: object
+                            properties:
+                              all_of:
+                                type: array
+                                items:
+                                  type: string
+                                title: >-
+                                  all_of all keys in this list must have signed
+                                  attributes
+                              any_of:
+                                type: array
+                                items:
+                                  type: string
+                                title: >-
+                                  any_of at least of of the keys from the list
+                                  must have signed attributes
+                          attributes:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                key:
+                                  type: string
+                                value:
+                                  type: string
+                              title: Attribute represents key value pair
+                            title: >-
+                              Attribute list of attributes tenant expects from
+                              the provider
+                        title: PlacementRequirements
                       resources:
                         type: array
                         items:
@@ -1496,15 +1577,42 @@ paths:
                       name:
                         type: string
                       requirements:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            key:
-                              type: string
-                            value:
-                              type: string
-                          title: Attribute represents key value pair
+                        type: object
+                        properties:
+                          signed_by:
+                            title: >-
+                              SignedBy list of keys that tenants expect to have
+                              signatures from
+                            type: object
+                            properties:
+                              all_of:
+                                type: array
+                                items:
+                                  type: string
+                                title: >-
+                                  all_of all keys in this list must have signed
+                                  attributes
+                              any_of:
+                                type: array
+                                items:
+                                  type: string
+                                title: >-
+                                  any_of at least of of the keys from the list
+                                  must have signed attributes
+                          attributes:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                key:
+                                  type: string
+                                value:
+                                  type: string
+                              title: Attribute represents key value pair
+                            title: >-
+                              Attribute list of attributes tenant expects from
+                              the provider
+                        title: PlacementRequirements
                       resources:
                         type: array
                         items:
@@ -1730,15 +1838,42 @@ paths:
                         name:
                           type: string
                         requirements:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              key:
-                                type: string
-                              value:
-                                type: string
-                            title: Attribute represents key value pair
+                          type: object
+                          properties:
+                            signed_by:
+                              title: >-
+                                SignedBy list of keys that tenants expect to
+                                have signatures from
+                              type: object
+                              properties:
+                                all_of:
+                                  type: array
+                                  items:
+                                    type: string
+                                  title: >-
+                                    all_of all keys in this list must have
+                                    signed attributes
+                                any_of:
+                                  type: array
+                                  items:
+                                    type: string
+                                  title: >-
+                                    any_of at least of of the keys from the list
+                                    must have signed attributes
+                            attributes:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  key:
+                                    type: string
+                                  value:
+                                    type: string
+                                title: Attribute represents key value pair
+                              title: >-
+                                Attribute list of attributes tenant expects from
+                                the provider
+                          title: PlacementRequirements
                         resources:
                           type: array
                           items:
@@ -26109,6 +26244,37 @@ definitions:
               type: string
           title: Attribute represents key value pair
     title: Memory stores resource quantity and memory attributes
+  akash.base.v1beta1.PlacementRequirements:
+    type: object
+    properties:
+      signed_by:
+        title: SignedBy list of keys that tenants expect to have signatures from
+        type: object
+        properties:
+          all_of:
+            type: array
+            items:
+              type: string
+            title: all_of all keys in this list must have signed attributes
+          any_of:
+            type: array
+            items:
+              type: string
+            title: >-
+              any_of at least of of the keys from the list must have signed
+              attributes
+      attributes:
+        type: array
+        items:
+          type: object
+          properties:
+            key:
+              type: string
+            value:
+              type: string
+          title: Attribute represents key value pair
+        title: Attribute list of attributes tenant expects from the provider
+    title: PlacementRequirements
   akash.base.v1beta1.ResourceUnits:
     type: object
     properties:
@@ -26192,6 +26358,31 @@ definitions:
         type: string
         format: byte
     title: 'Unit stores cpu, memory and storage metrics'
+  akash.base.v1beta1.SignedBy:
+    type: object
+    properties:
+      all_of:
+        type: array
+        items:
+          type: string
+        title: all_of all keys in this list must have signed attributes
+      any_of:
+        type: array
+        items:
+          type: string
+        title: >-
+          any_of at least of of the keys from the list must have signed
+          attributes
+    title: >-
+      SignedBy represents validation accounts that tenant expects signatures for
+      provider attributes
+
+      AllOf has precedence i.e. if there is at least one entry AnyOf is ignored
+      regardless to how many
+
+      entries there
+
+      this behaviour to be discussed
   akash.base.v1beta1.Storage:
     type: object
     properties:
@@ -26350,15 +26541,42 @@ definitions:
                 name:
                   type: string
                 requirements:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      key:
-                        type: string
-                      value:
-                        type: string
-                    title: Attribute represents key value pair
+                  type: object
+                  properties:
+                    signed_by:
+                      title: >-
+                        SignedBy list of keys that tenants expect to have
+                        signatures from
+                      type: object
+                      properties:
+                        all_of:
+                          type: array
+                          items:
+                            type: string
+                          title: >-
+                            all_of all keys in this list must have signed
+                            attributes
+                        any_of:
+                          type: array
+                          items:
+                            type: string
+                          title: >-
+                            any_of at least of of the keys from the list must
+                            have signed attributes
+                    attributes:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                          value:
+                            type: string
+                        title: Attribute represents key value pair
+                      title: >-
+                        Attribute list of attributes tenant expects from the
+                        provider
+                  title: PlacementRequirements
                 resources:
                   type: array
                   items:
@@ -26522,15 +26740,38 @@ definitions:
           name:
             type: string
           requirements:
-            type: array
-            items:
-              type: object
-              properties:
-                key:
-                  type: string
-                value:
-                  type: string
-              title: Attribute represents key value pair
+            type: object
+            properties:
+              signed_by:
+                title: >-
+                  SignedBy list of keys that tenants expect to have signatures
+                  from
+                type: object
+                properties:
+                  all_of:
+                    type: array
+                    items:
+                      type: string
+                    title: all_of all keys in this list must have signed attributes
+                  any_of:
+                    type: array
+                    items:
+                      type: string
+                    title: >-
+                      any_of at least of of the keys from the list must have
+                      signed attributes
+              attributes:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    key:
+                      type: string
+                    value:
+                      type: string
+                  title: Attribute represents key value pair
+                title: Attribute list of attributes tenant expects from the provider
+            title: PlacementRequirements
           resources:
             type: array
             items:
@@ -26673,15 +26914,36 @@ definitions:
       name:
         type: string
       requirements:
-        type: array
-        items:
-          type: object
-          properties:
-            key:
-              type: string
-            value:
-              type: string
-          title: Attribute represents key value pair
+        type: object
+        properties:
+          signed_by:
+            title: SignedBy list of keys that tenants expect to have signatures from
+            type: object
+            properties:
+              all_of:
+                type: array
+                items:
+                  type: string
+                title: all_of all keys in this list must have signed attributes
+              any_of:
+                type: array
+                items:
+                  type: string
+                title: >-
+                  any_of at least of of the keys from the list must have signed
+                  attributes
+          attributes:
+            type: array
+            items:
+              type: object
+              properties:
+                key:
+                  type: string
+                value:
+                  type: string
+              title: Attribute represents key value pair
+            title: Attribute list of attributes tenant expects from the provider
+        title: PlacementRequirements
       resources:
         type: array
         items:
@@ -26866,15 +27128,42 @@ definitions:
                     name:
                       type: string
                     requirements:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          key:
-                            type: string
-                          value:
-                            type: string
-                        title: Attribute represents key value pair
+                      type: object
+                      properties:
+                        signed_by:
+                          title: >-
+                            SignedBy list of keys that tenants expect to have
+                            signatures from
+                          type: object
+                          properties:
+                            all_of:
+                              type: array
+                              items:
+                                type: string
+                              title: >-
+                                all_of all keys in this list must have signed
+                                attributes
+                            any_of:
+                              type: array
+                              items:
+                                type: string
+                              title: >-
+                                any_of at least of of the keys from the list
+                                must have signed attributes
+                        attributes:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              key:
+                                type: string
+                              value:
+                                type: string
+                            title: Attribute represents key value pair
+                          title: >-
+                            Attribute list of attributes tenant expects from the
+                            provider
+                      title: PlacementRequirements
                     resources:
                       type: array
                       items:
@@ -27088,15 +27377,42 @@ definitions:
                       name:
                         type: string
                       requirements:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            key:
-                              type: string
-                            value:
-                              type: string
-                          title: Attribute represents key value pair
+                        type: object
+                        properties:
+                          signed_by:
+                            title: >-
+                              SignedBy list of keys that tenants expect to have
+                              signatures from
+                            type: object
+                            properties:
+                              all_of:
+                                type: array
+                                items:
+                                  type: string
+                                title: >-
+                                  all_of all keys in this list must have signed
+                                  attributes
+                              any_of:
+                                type: array
+                                items:
+                                  type: string
+                                title: >-
+                                  any_of at least of of the keys from the list
+                                  must have signed attributes
+                          attributes:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                key:
+                                  type: string
+                                value:
+                                  type: string
+                              title: Attribute represents key value pair
+                            title: >-
+                              Attribute list of attributes tenant expects from
+                              the provider
+                        title: PlacementRequirements
                       resources:
                         type: array
                         items:
@@ -27299,15 +27615,42 @@ definitions:
               name:
                 type: string
               requirements:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: string
-                  title: Attribute represents key value pair
+                type: object
+                properties:
+                  signed_by:
+                    title: >-
+                      SignedBy list of keys that tenants expect to have
+                      signatures from
+                    type: object
+                    properties:
+                      all_of:
+                        type: array
+                        items:
+                          type: string
+                        title: >-
+                          all_of all keys in this list must have signed
+                          attributes
+                      any_of:
+                        type: array
+                        items:
+                          type: string
+                        title: >-
+                          any_of at least of of the keys from the list must have
+                          signed attributes
+                  attributes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        value:
+                          type: string
+                      title: Attribute represents key value pair
+                    title: >-
+                      Attribute list of attributes tenant expects from the
+                      provider
+                title: PlacementRequirements
               resources:
                 type: array
                 items:
@@ -28172,15 +28515,38 @@ definitions:
           name:
             type: string
           requirements:
-            type: array
-            items:
-              type: object
-              properties:
-                key:
-                  type: string
-                value:
-                  type: string
-              title: Attribute represents key value pair
+            type: object
+            properties:
+              signed_by:
+                title: >-
+                  SignedBy list of keys that tenants expect to have signatures
+                  from
+                type: object
+                properties:
+                  all_of:
+                    type: array
+                    items:
+                      type: string
+                    title: all_of all keys in this list must have signed attributes
+                  any_of:
+                    type: array
+                    items:
+                      type: string
+                    title: >-
+                      any_of at least of of the keys from the list must have
+                      signed attributes
+              attributes:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    key:
+                      type: string
+                    value:
+                      type: string
+                  title: Attribute represents key value pair
+                title: Attribute list of attributes tenant expects from the provider
+            title: PlacementRequirements
           resources:
             type: array
             items:
@@ -28663,15 +29029,42 @@ definitions:
               name:
                 type: string
               requirements:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: string
-                  title: Attribute represents key value pair
+                type: object
+                properties:
+                  signed_by:
+                    title: >-
+                      SignedBy list of keys that tenants expect to have
+                      signatures from
+                    type: object
+                    properties:
+                      all_of:
+                        type: array
+                        items:
+                          type: string
+                        title: >-
+                          all_of all keys in this list must have signed
+                          attributes
+                      any_of:
+                        type: array
+                        items:
+                          type: string
+                        title: >-
+                          any_of at least of of the keys from the list must have
+                          signed attributes
+                  attributes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        value:
+                          type: string
+                      title: Attribute represents key value pair
+                    title: >-
+                      Attribute list of attributes tenant expects from the
+                      provider
+                title: PlacementRequirements
               resources:
                 type: array
                 items:
@@ -28835,15 +29228,42 @@ definitions:
                 name:
                   type: string
                 requirements:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      key:
-                        type: string
-                      value:
-                        type: string
-                    title: Attribute represents key value pair
+                  type: object
+                  properties:
+                    signed_by:
+                      title: >-
+                        SignedBy list of keys that tenants expect to have
+                        signatures from
+                      type: object
+                      properties:
+                        all_of:
+                          type: array
+                          items:
+                            type: string
+                          title: >-
+                            all_of all keys in this list must have signed
+                            attributes
+                        any_of:
+                          type: array
+                          items:
+                            type: string
+                          title: >-
+                            any_of at least of of the keys from the list must
+                            have signed attributes
+                    attributes:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                          value:
+                            type: string
+                        title: Attribute represents key value pair
+                      title: >-
+                        Attribute list of attributes tenant expects from the
+                        provider
+                  title: PlacementRequirements
                 resources:
                   type: array
                   items:

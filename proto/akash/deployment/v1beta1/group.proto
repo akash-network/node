@@ -40,8 +40,8 @@ message GroupSpec {
   option (gogoproto.equal)           = false;
   option (gogoproto.goproto_getters) = false;
 
-  string   name = 1 [(gogoproto.jsontag) = "name", (gogoproto.moretags) = "yaml:\"name\""];
-  repeated akash.base.v1beta1.Attribute requirements = 2 [
+  string name = 1 [(gogoproto.jsontag) = "name", (gogoproto.moretags) = "yaml:\"name\""];
+  akash.base.v1beta1.PlacementRequirements requirements = 2 [
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "requirements",
     (gogoproto.moretags) = "yaml:\"requirements\""

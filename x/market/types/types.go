@@ -1,13 +1,16 @@
 package types
 
 import (
-	fmt "fmt"
+	"fmt"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/ovrclk/akash/types"
+	atypes "github.com/ovrclk/akash/x/audit/types"
+
 	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // ID method returns OrderID details of specific order
@@ -68,6 +71,11 @@ func (o Order) Price() sdk.Coin {
 // MatchAttributes method compares provided attributes with specific order attributes
 func (o Order) MatchAttributes(attrs []types.Attribute) bool {
 	return o.Spec.MatchAttributes(attrs)
+}
+
+// MatchRequirements method compares provided attributes with specific order attributes
+func (o Order) MatchRequirements(prov []atypes.Provider) bool {
+	return o.Spec.MatchRequirements(prov)
 }
 
 // ValidateCanMatch method validates whether to match order for provided height

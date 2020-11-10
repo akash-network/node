@@ -28,6 +28,7 @@ import (
 	"github.com/ovrclk/akash/provider/gateway"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
+	amodule "github.com/ovrclk/akash/x/audit"
 	dmodule "github.com/ovrclk/akash/x/deployment"
 	mmodule "github.com/ovrclk/akash/x/market"
 	pmodule "github.com/ovrclk/akash/x/provider"
@@ -273,6 +274,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 			dmodule.AppModuleBasic{}.GetQueryClient(cctx),
 			mmodule.AppModuleBasic{}.GetQueryClient(cctx),
 			pmodule.AppModuleBasic{}.GetQueryClient(cctx),
+			amodule.AppModuleBasic{}.GetQueryClient(cctx),
 		),
 	)
 

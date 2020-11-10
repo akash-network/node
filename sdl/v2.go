@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/ovrclk/akash/manifest"
+	"github.com/ovrclk/akash/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -59,6 +60,7 @@ type v2ProfileCompute struct {
 
 type v2ProfilePlacement struct {
 	Attributes v2PlacementAttributes `yaml:"attributes"`
+	SignedBy   types.SignedBy        `yaml:"signedBy"`
 	Pricing    v2PlacementPricing    `yaml:"pricing"`
 }
 
@@ -98,13 +100,12 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 					Name: placementName,
 				}
 
-				for _, v := range infra.Attributes {
-					group.Requirements = append(group.Requirements, v)
-				}
+				group.Requirements.Attributes = infra.Attributes
+				group.Requirements.SignedBy = infra.SignedBy
 
 				// keep ordering stable
-				sort.Slice(group.Requirements, func(i, j int) bool {
-					return group.Requirements[i].Key < group.Requirements[j].Key
+				sort.Slice(group.Requirements.Attributes, func(i, j int) bool {
+					return group.Requirements.Attributes[i].Key < group.Requirements.Attributes[j].Key
 				})
 
 				groups[placementName] = group

@@ -260,6 +260,8 @@ loop:
 func (o *order) shouldBid(group *dtypes.Group) bool {
 
 	// does provider have required attributes?
+	// fixme - MatchAttributes does not check for signed attributes
+	// it is done during processing of MsgCreateBid
 	if !group.GroupSpec.MatchAttributes(o.session.Provider().Attributes) {
 		o.log.Debug("unable to fulfill: incompatible attributes")
 		return false

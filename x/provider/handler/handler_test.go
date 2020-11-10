@@ -13,6 +13,7 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/ovrclk/akash/testutil"
+	akashtypes "github.com/ovrclk/akash/types"
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/ovrclk/akash/x/provider/handler"
@@ -105,7 +106,7 @@ func TestProviderCreateWithDuplicated(t *testing.T) {
 
 	res, err := suite.handler(suite.ctx, msg)
 	require.Nil(t, res)
-	require.EqualError(t, err, types.ErrDuplicateAttributes.Error())
+	require.EqualError(t, err, akashtypes.ErrAttributesDuplicateKeys.Error())
 }
 
 func TestProviderUpdateWithDuplicated(t *testing.T) {
@@ -130,7 +131,7 @@ func TestProviderUpdateWithDuplicated(t *testing.T) {
 
 	res, err := suite.handler(suite.ctx, updateMsg)
 	require.Nil(t, res)
-	require.EqualError(t, err, types.ErrDuplicateAttributes.Error())
+	require.EqualError(t, err, akashtypes.ErrAttributesDuplicateKeys.Error())
 }
 
 func TestProviderUpdateExisting(t *testing.T) {
@@ -205,7 +206,9 @@ func TestProviderUpdateAttributes(t *testing.T) {
 	group := testutil.DeploymentGroup(t, testutil.DeploymentID(t), 0)
 
 	group.GroupSpec.Resources = testutil.Resources(t)
-	group.GroupSpec.Requirements = createMsg.Attributes
+	group.GroupSpec.Requirements = akashtypes.PlacementRequirements{
+		Attributes: createMsg.Attributes,
+	}
 
 	order, err := suite.mkeeper.CreateOrder(suite.ctx, group.ID(), group.GroupSpec)
 	require.NoError(t, err)

@@ -45,7 +45,7 @@ func Test_ScalePricingAcceptsOneForASingleScale(t *testing.T) {
 func defaultGroupSpec() *dtypes.GroupSpec {
 	gspec := &dtypes.GroupSpec{
 		Name:             "",
-		Requirements:     nil,
+		Requirements:     atypes.PlacementRequirements{},
 		Resources:        make([]dtypes.Resource, 1),
 		OrderBidDuration: 0,
 	}

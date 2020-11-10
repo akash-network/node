@@ -7,7 +7,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/types"
+	atypes "github.com/ovrclk/akash/x/audit/types"
 )
+
+type attributesMatching map[string]types.Attributes
 
 // DefaultOrderBiddingDuration is the default time limit for an Order being active.
 // After the duration, the Order is automatically closed.
@@ -59,9 +62,53 @@ func (g GroupSpec) Price() sdk.Coin {
 	return price
 }
 
+// MatchRequirements method compares provided attributes with specific group attributes.
+// Argument provider is a bit cumbersome. First element is attributes from x/provider store
+// in case tenant does not need signed attributes at all
+// rest of elements (if any) are attributes signed by various auditors
+func (g GroupSpec) MatchRequirements(provider []atypes.Provider) bool {
+	if (len(g.Requirements.SignedBy.AnyOf) != 0) || (len(g.Requirements.SignedBy.AllOf) != 0) {
+		// we cannot match if there is no signed attributes
+		if len(provider) < 2 {
+			return false
+		}
+
+		existingRequirements := make(attributesMatching)
+
+		for _, existing := range provider[1:] {
+			existingRequirements[existing.Validator] = existing.Attributes
+		}
+
+		if len(g.Requirements.SignedBy.AllOf) != 0 {
+			for _, validator := range g.Requirements.SignedBy.AllOf {
+				if existingAttr, exists := existingRequirements[validator]; exists {
+					if !types.AttributesSubsetOf(g.Requirements.Attributes, existingAttr) {
+						return false
+					}
+				} else {
+					return false
+				}
+			}
+			return true
+		}
+
+		for _, validator := range g.Requirements.SignedBy.AnyOf {
+			if existingAttr, exists := existingRequirements[validator]; exists {
+				if types.AttributesSubsetOf(g.Requirements.Attributes, existingAttr) {
+					return true
+				}
+			}
+		}
+
+		return false
+	}
+
+	return types.AttributesSubsetOf(g.Requirements.Attributes, provider[0].Attributes)
+}
+
 // MatchAttributes method compares provided attributes with specific group attributes
-func (g GroupSpec) MatchAttributes(attrs []types.Attribute) bool {
-	return types.AttributesSubsetOf(g.Requirements, attrs)
+func (g GroupSpec) MatchAttributes(attr types.Attributes) bool {
+	return types.AttributesSubsetOf(g.Requirements.Attributes, attr)
 }
 
 // ID method returns GroupID details of specific group

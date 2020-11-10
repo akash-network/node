@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	atypes "github.com/ovrclk/akash/x/audit/types"
 	"github.com/ovrclk/akash/x/market/types"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
@@ -51,7 +52,14 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 		return nil, types.ErrEmptyProvider
 	}
 
-	if !order.MatchAttributes(prov.Attributes) {
+	provAttr, _ := ms.keepers.Audit.GetProviderAttributes(ctx, provider)
+
+	provAttr = append([]atypes.Provider{{
+		Owner:      msg.Provider,
+		Attributes: prov.Attributes,
+	}}, provAttr...)
+
+	if !order.MatchRequirements(provAttr) {
 		return nil, types.ErrAttributeMismatch
 	}
 

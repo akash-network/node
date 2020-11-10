@@ -11,6 +11,8 @@ import (
 
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/testutil"
+	atypes "github.com/ovrclk/akash/x/audit/types"
+
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -115,7 +117,7 @@ func TestGroupSpecValidation(t *testing.T) {
 			desc: "zero value bid duration error",
 			gspec: types.GroupSpec{
 				Name:             testutil.Name(t, "groupspec"),
-				Requirements:     testutil.Attributes(t),
+				Requirements:     testutil.PlacementRequirements(t),
 				Resources:        testutil.Resources(t),
 				OrderBidDuration: int64(0),
 			},
@@ -125,7 +127,7 @@ func TestGroupSpecValidation(t *testing.T) {
 			desc: "bid duration exceeds limit",
 			gspec: types.GroupSpec{
 				Name:             testutil.Name(t, "groupspec"),
-				Requirements:     testutil.Attributes(t),
+				Requirements:     testutil.PlacementRequirements(t),
 				Resources:        testutil.Resources(t),
 				OrderBidDuration: types.MaxBiddingDuration * int64(2),
 			},
@@ -135,7 +137,7 @@ func TestGroupSpecValidation(t *testing.T) {
 			desc: "groupspec requires name",
 			gspec: types.GroupSpec{
 				Name:             "",
-				Requirements:     testutil.Attributes(t),
+				Requirements:     testutil.PlacementRequirements(t),
 				Resources:        testutil.Resources(t),
 				OrderBidDuration: types.DefaultOrderBiddingDuration,
 			},
@@ -145,7 +147,7 @@ func TestGroupSpecValidation(t *testing.T) {
 			desc: "groupspec valid",
 			gspec: types.GroupSpec{
 				Name:             "hihi",
-				Requirements:     testutil.Attributes(t),
+				Requirements:     testutil.PlacementRequirements(t),
 				Resources:        testutil.Resources(t),
 				OrderBidDuration: types.DefaultOrderBiddingDuration,
 			},
@@ -161,4 +163,145 @@ func TestGroupSpecValidation(t *testing.T) {
 		}
 		assert.Equal(t, test.expErr, err, test.desc)
 	}
+}
+
+func TestGroupPlacementRequirementsNoSigners(t *testing.T) {
+	group := types.GroupSpec{
+		Name:             "spec",
+		Requirements:     testutil.PlacementRequirements(t),
+		Resources:        testutil.Resources(t),
+		OrderBidDuration: types.DefaultOrderBiddingDuration,
+	}
+
+	providerAttr := []atypes.Provider{
+		{
+			Owner:      "test",
+			Attributes: group.Requirements.Attributes,
+		},
+	}
+
+	require.True(t, group.MatchRequirements(providerAttr))
+}
+
+func TestGroupPlacementRequirementsSignerAllOf(t *testing.T) {
+	group := types.GroupSpec{
+		Name:             "spec",
+		Requirements:     testutil.PlacementRequirements(t),
+		Resources:        testutil.Resources(t),
+		OrderBidDuration: types.DefaultOrderBiddingDuration,
+	}
+
+	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "validator1")
+	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "validator2")
+
+	providerAttr := []atypes.Provider{
+		{
+			Owner:      "test",
+			Attributes: group.Requirements.Attributes,
+		},
+	}
+
+	require.False(t, group.MatchRequirements(providerAttr))
+
+	providerAttr = append(providerAttr, atypes.Provider{
+		Owner:      "test",
+		Validator:  "validator2",
+		Attributes: group.Requirements.Attributes,
+	})
+
+	require.False(t, group.MatchRequirements(providerAttr))
+
+	providerAttr = append(providerAttr, atypes.Provider{
+		Owner:      "test",
+		Validator:  "validator1",
+		Attributes: group.Requirements.Attributes,
+	})
+
+	require.True(t, group.MatchRequirements(providerAttr))
+}
+
+func TestGroupPlacementRequirementsSignerAnyOf(t *testing.T) {
+	group := types.GroupSpec{
+		Name:             "spec",
+		Requirements:     testutil.PlacementRequirements(t),
+		Resources:        testutil.Resources(t),
+		OrderBidDuration: types.DefaultOrderBiddingDuration,
+	}
+
+	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "validator1")
+
+	providerAttr := []atypes.Provider{
+		{
+			Owner:      "test",
+			Attributes: group.Requirements.Attributes,
+		},
+	}
+
+	require.False(t, group.MatchRequirements(providerAttr))
+
+	providerAttr = append(providerAttr, atypes.Provider{
+		Owner:      "test",
+		Validator:  "validator2",
+		Attributes: group.Requirements.Attributes,
+	})
+
+	require.False(t, group.MatchRequirements(providerAttr))
+
+	providerAttr = append(providerAttr, atypes.Provider{
+		Owner:      "test",
+		Validator:  "validator1",
+		Attributes: group.Requirements.Attributes,
+	})
+
+	require.True(t, group.MatchRequirements(providerAttr))
+}
+
+func TestGroupPlacementRequirementsSignerAllOfPrecedence(t *testing.T) {
+	group := types.GroupSpec{
+		Name:             "spec",
+		Requirements:     testutil.PlacementRequirements(t),
+		Resources:        testutil.Resources(t),
+		OrderBidDuration: types.DefaultOrderBiddingDuration,
+	}
+
+	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "validator1")
+	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "validator2")
+
+	group.Requirements.SignedBy.AnyOf = append(group.Requirements.SignedBy.AnyOf, "validator3")
+	group.Requirements.SignedBy.AnyOf = append(group.Requirements.SignedBy.AnyOf, "validator4")
+
+	providerAttr := []atypes.Provider{
+		{
+			Owner:      "test",
+			Attributes: group.Requirements.Attributes,
+		},
+		{
+			Owner:      "test",
+			Validator:  "validator3",
+			Attributes: group.Requirements.Attributes,
+		},
+		{
+			Owner:      "test",
+			Validator:  "validator4",
+			Attributes: group.Requirements.Attributes,
+		},
+	}
+
+	require.False(t, group.MatchRequirements(providerAttr))
+
+	providerAttr = append(providerAttr, atypes.Provider{
+		Owner:      "test",
+		Validator:  "validator2",
+		Attributes: group.Requirements.Attributes,
+	})
+
+	require.False(t, group.MatchRequirements(providerAttr))
+
+	providerAttr = append(providerAttr, atypes.Provider{
+		Owner:      "test",
+		Validator:  "validator1",
+		Attributes: group.Requirements.Attributes,
+	})
+
+	require.True(t, group.MatchRequirements(providerAttr))
 }

@@ -4,6 +4,8 @@ package app
 
 import (
 	"github.com/cosmos/cosmos-sdk/types/module"
+
+	"github.com/ovrclk/akash/x/audit"
 	"github.com/ovrclk/akash/x/deployment"
 	"github.com/ovrclk/akash/x/market"
 	"github.com/ovrclk/akash/x/provider"
@@ -14,6 +16,7 @@ func akashModuleBasics() []module.AppModuleBasic {
 		deployment.AppModuleBasic{},
 		market.AppModuleBasic{},
 		provider.AppModuleBasic{},
+		audit.AppModuleBasic{},
 	}
 }
 
@@ -22,6 +25,7 @@ func akashKVStoreKeys() []string {
 		deployment.StoreKey,
 		market.StoreKey,
 		provider.StoreKey,
+		audit.StoreKey,
 	}
 }
 
@@ -40,6 +44,11 @@ func (app *AkashApp) setAkashKeepers() {
 		app.appCodec,
 		app.keys[provider.StoreKey],
 	)
+
+	app.keeper.audit = audit.NewKeeper(
+		app.appCodec,
+		app.keys[audit.StoreKey],
+	)
 }
 
 func (app *AkashApp) akashAppModules() []module.AppModule {
@@ -54,12 +63,23 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 		market.NewAppModule(
 			app.appCodec,
 			app.keeper.market,
+			app.keeper.audit,
 			app.keeper.deployment,
 			app.keeper.provider,
 			app.keeper.bank,
 		),
 
-		provider.NewAppModule(app.appCodec, app.keeper.provider, app.keeper.bank, app.keeper.market),
+		provider.NewAppModule(
+			app.appCodec,
+			app.keeper.provider,
+			app.keeper.bank,
+			app.keeper.market,
+		),
+
+		audit.NewAppModule(
+			app.appCodec,
+			app.keeper.audit,
+		),
 	}
 }
 
@@ -79,9 +99,24 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 
 func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 	return []module.AppModuleSimulation{
-		deployment.NewAppModuleSimulation(app.keeper.deployment, app.keeper.acct, app.keeper.bank),
-		market.NewAppModuleSimulation(app.keeper.market, app.keeper.acct, app.keeper.deployment,
-			app.keeper.provider, app.keeper.bank),
-		provider.NewAppModuleSimulation(app.keeper.provider, app.keeper.acct, app.keeper.bank),
+		deployment.NewAppModuleSimulation(
+			app.keeper.deployment,
+			app.keeper.acct,
+			app.keeper.bank,
+		),
+
+		market.NewAppModuleSimulation(
+			app.keeper.market,
+			app.keeper.acct,
+			app.keeper.deployment,
+			app.keeper.provider,
+			app.keeper.bank,
+		),
+
+		provider.NewAppModuleSimulation(
+			app.keeper.provider,
+			app.keeper.acct,
+			app.keeper.bank,
+		),
 	}
 }

@@ -13,6 +13,9 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/spf13/cobra"
+
+	akeeper "github.com/ovrclk/akash/x/audit/keeper"
 	"github.com/ovrclk/akash/x/market/client/cli"
 	"github.com/ovrclk/akash/x/market/client/rest"
 	"github.com/ovrclk/akash/x/market/handler"
@@ -20,7 +23,6 @@ import (
 	"github.com/ovrclk/akash/x/market/query"
 	"github.com/ovrclk/akash/x/market/simulation"
 	"github.com/ovrclk/akash/x/market/types"
-	"github.com/spf13/cobra"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
@@ -108,6 +110,7 @@ type AppModule struct {
 func NewAppModule(
 	cdc codec.Marshaler,
 	keeper keeper.Keeper,
+	akeeper akeeper.Keeper,
 	dkeeper handler.DeploymentKeeper,
 	pkeeper handler.ProviderKeeper,
 	bkeeper bankkeeper.Keeper,
@@ -115,6 +118,7 @@ func NewAppModule(
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keepers: handler.Keepers{
+			Audit:      akeeper,
 			Market:     keeper,
 			Deployment: dkeeper,
 			Provider:   pkeeper,
