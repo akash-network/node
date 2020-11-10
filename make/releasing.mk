@@ -38,6 +38,8 @@ release-dry-run: modvendor
 		-e MAINNET=$(MAINNET) \
 		-e BUILD_FLAGS="$(GORELEASER_FLAGS)" \
 		-e LD_FLAGS="$(GORELEASER_LD_FLAGS)" \
+		-e HOMEBREW_NAME="$(GORELEASER_HOMEBREW_NAME)" \
+		-e HOMEBREW_CUSTOM="$(GORELEASER_HOMEBREW_CUSTOM)" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
@@ -56,6 +58,8 @@ release: modvendor
 		-e MAINNET=$(MAINNET) \
 		-e BUILD_FLAGS="$(GORELEASER_FLAGS)" \
 		-e LD_FLAGS="$(GORELEASER_LD_FLAGS)" \
+		-e HOMEBREW_NAME="$(GORELEASER_HOMEBREW_NAME)" \
+		-e HOMEBREW_CUSTOM="$(GORELEASER_HOMEBREW_CUSTOM)" \
 		--env-file .release-env \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
