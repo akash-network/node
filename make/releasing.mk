@@ -38,11 +38,13 @@ release-dry-run: modvendor
 		-e MAINNET=$(MAINNET) \
 		-e BUILD_FLAGS="$(GORELEASER_FLAGS)" \
 		-e LD_FLAGS="$(GORELEASER_LD_FLAGS)" \
+		-e HOMEBREW_NAME="$(GORELEASER_HOMEBREW_NAME)" \
+		-e HOMEBREW_CUSTOM="$(GORELEASER_HOMEBREW_CUSTOM)" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		troian/golang-cross:${GOLANG_CROSS_VERSION} \
-		-f .goreleaser.yaml --rm-dist --skip-validate --skip-publish
+		-f "$(GORELEASER_CONFIG)" --rm-dist --skip-validate --skip-publish
 
 .PHONY: release
 release: modvendor
@@ -56,9 +58,11 @@ release: modvendor
 		-e MAINNET=$(MAINNET) \
 		-e BUILD_FLAGS="$(GORELEASER_FLAGS)" \
 		-e LD_FLAGS="$(GORELEASER_LD_FLAGS)" \
+		-e HOMEBREW_NAME="$(GORELEASER_HOMEBREW_NAME)" \
+		-e HOMEBREW_CUSTOM="$(GORELEASER_HOMEBREW_CUSTOM)" \
 		--env-file .release-env \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		troian/golang-cross:${GOLANG_CROSS_VERSION} \
-		-f .goreleaser.yaml release --rm-dist
+		-f "$(GORELEASER_CONFIG)" release --rm-dist
