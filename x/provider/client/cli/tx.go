@@ -16,7 +16,7 @@ import (
 func GetTxCmd(key string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
-		Short:                      "Deployment transaction subcommands",
+		Short:                      "Provider transaction subcommands",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
