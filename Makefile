@@ -55,7 +55,7 @@ else
 	BUILD_TAGS=netgo,ledger
 	GORELEASER_BUILD_TAGS=$(BUILD_TAGS),testnet
 	GORELEASER_HOMEBREW_NAME="akash-edge"
-	GORELEASER_HOMEBREW_CUSTOM=keg_only, \"This is testnet release. Run brew install ovrclk/tap/akash to install mainnet version\"
+	GORELEASER_HOMEBREW_CUSTOM=keg_only :unneeded, \"This is testnet release. Run brew install ovrclk/tap/akash to install mainnet version\"
 endif
 
 GORELEASER_FLAGS    = -tags="$(GORELEASER_BUILD_TAGS)"
