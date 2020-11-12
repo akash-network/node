@@ -214,7 +214,7 @@ var TEPS = []testEventParsing{
 				},
 				{
 					Key:   evPriceDenomKey,
-					Value: "akt",
+					Value: "uakt",
 				},
 				{
 					Key:   evPriceAmountKey,
@@ -252,7 +252,7 @@ var TEPS = []testEventParsing{
 				},
 				{
 					Key:   evPriceDenomKey,
-					Value: "akt",
+					Value: "uakt",
 				},
 				{
 					Key:   evPriceAmountKey,
@@ -290,7 +290,7 @@ var TEPS = []testEventParsing{
 				},
 				{
 					Key:   evPriceDenomKey,
-					Value: "akt",
+					Value: "uakt",
 				},
 				{
 					Key:   evPriceAmountKey,
@@ -329,7 +329,7 @@ var TEPS = []testEventParsing{
 				},
 				{
 					Key:   evPriceDenomKey,
-					Value: "akt",
+					Value: "uakt",
 				},
 				{
 					Key:   evPriceAmountKey,
@@ -368,7 +368,7 @@ var TEPS = []testEventParsing{
 				},
 				{
 					Key:   evPriceDenomKey,
-					Value: "akt",
+					Value: "uakt",
 				},
 				{
 					Key:   evPriceAmountKey,
@@ -406,7 +406,7 @@ var TEPS = []testEventParsing{
 				},
 				{
 					Key:   evPriceDenomKey,
-					Value: "akt",
+					Value: "uakt",
 				},
 				{
 					Key:   evPriceAmountKey,
@@ -445,7 +445,7 @@ var TEPS = []testEventParsing{
 				},
 				{
 					Key:   evPriceDenomKey,
-					Value: "akt",
+					Value: "uakt",
 				},
 				{
 					Key:   evPriceAmountKey,
