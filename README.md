@@ -23,7 +23,7 @@ The `master` branch contains new features and is under active development; the `
 
 ## Akash Suite
 
-Akash Suite is the reference implementation of the [Akash Protocol](https://akash.network/l/whitepaper). Akash is an actively-developed prototype currently focused on the distributed marketplace functionality.
+Akash Suite is the reference implementation of the [Akash Protocol](https://akash.network/whitepaper). Akash is an actively-developed prototype currently focused on the distributed marketplace functionality.
 
 The Suite is composed of one binary, `akash`, which contains a ([tendermint](https://github.com/tendermint/tendermint)-powered) blockchain node that
 implements the decentralized exchange as well as client functionality to access the exchange and network data in general.
