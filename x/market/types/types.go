@@ -6,7 +6,6 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/validation"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -76,7 +75,7 @@ func (o Order) ValidateCanMatch(height int64) error {
 	if err := o.validateMatchableState(); err != nil {
 		return err
 	}
-	if err := validation.ValidateDeploymentGroup(o.Spec); err != nil {
+	if err := o.Spec.ValidateBasic(); err != nil {
 		return err
 	}
 

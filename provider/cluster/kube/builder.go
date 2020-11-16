@@ -266,7 +266,7 @@ func (b *deploymentBuilder) container() corev1.Container {
 	// TODO: this prevents over-subscription.  skip for now.
 
 	for _, env := range b.service.Env {
-		parts := strings.Split(env, "=")
+		parts := strings.SplitN(env, "=", 2)
 		switch len(parts) {
 		case 2:
 			kcontainer.Env = append(kcontainer.Env, corev1.EnvVar{Name: parts[0], Value: parts[1]})

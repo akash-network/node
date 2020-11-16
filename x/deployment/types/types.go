@@ -25,8 +25,7 @@ func (obj Deployment) ID() DeploymentID {
 // ValidateBasic asserts non-zero values
 // TODO: This is causing an import cycle. I think there is some pattern here I'm missing tho..
 func (g GroupSpec) ValidateBasic() error {
-	// return validation.ValidateDeploymentGroup(g)
-	return nil
+	return validateDeploymentGroup(g)
 }
 
 // GetResources method returns resources list in group
