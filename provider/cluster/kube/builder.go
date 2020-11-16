@@ -421,7 +421,7 @@ func (b *netPolBuilder) create() ([]*netv1.NetworkPolicy, error) { // nolint:gol
 							{
 								NamespaceSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										"app.kubernetes.io/name": "ingress-nginx",
+										"name": "ingress-nginx",
 									},
 								},
 							},
