@@ -56,7 +56,7 @@ kubetypes-deps-install:
 		exit 0;                                                             \
 	fi;                                                                   \
 	mkdir -p "$(shell go env GOPATH)/src/k8s.io" && \
-	git clone  git@github.com:kubernetes/code-generator.git \
+	git clone https://github.com/kubernetes/code-generator.git \
 		"$(shell go env GOPATH)/src/k8s.io/code-generator"
 
 devdeps-install: kubetypes-deps-install
