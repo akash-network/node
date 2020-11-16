@@ -280,10 +280,11 @@ func NewApp(
 		),
 	)
 
-	// register IBC Keeper
+	// Create IBC Keeper
 	app.keeper.ibc = ibckeeper.NewKeeper(
-		appCodec, app.keys[ibchost.StoreKey], app.keeper.staking, scopedIBCKeeper,
+		appCodec, keys[ibchost.StoreKey], app.GetSubspace(ibchost.ModuleName), app.keeper.staking, scopedIBCKeeper,
 	)
+
 
 	// register Transfer Keepers
 	app.keeper.transfer = ibctransferkeeper.NewKeeper(
