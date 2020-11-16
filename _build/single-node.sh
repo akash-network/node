@@ -15,11 +15,11 @@ fi
 
 # Build genesis file incl account for passed address
 coins="10000000000stake,100000000000samoleans"
-akash init --chain-id $CHAINID $CHAINID
+akash init --chain-id "$CHAINID" "$CHAINID"
 akash keys add validator --keyring-backend="test"
-akash add-genesis-account $(akash keys show validator -a --keyring-backend="test") $coins
-akash add-genesis-account $GENACCT $coins
-akash gentx validator --keyring-backend="test" --chain-id $CHAINID
+akash add-genesis-account "$(akash keys show validator -a --keyring-backend="test")" $coins
+akash add-genesis-account "$GENACCT" $coins
+akash gentx validator --keyring-backend="test" --chain-id "$CHAINID"
 akash collect-gentxs
 
 # Set proper defaults and change ports
