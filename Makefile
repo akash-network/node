@@ -40,6 +40,7 @@ DOCKER_CLANG          := $(DOCKER_RUN) tendermintdev/docker-build-proto
 GOLANGCI_LINT          = $(DOCKER_RUN) golangci/golangci-lint:$(GOLANGCI_LINT_VERSION)-alpine golangci-lint run
 LINT                   = $(GOLANGCI_LINT) ./... --disable-all --deadline=5m --enable
 
+GORELEASER_CONFIG=.goreleaser.yaml
 # BUILD_TAGS are for builds withing this makefile
 # GORELEASER_BUILD_TAGS are for goreleaser only
 # Setting mainnet flag based on env value
@@ -48,9 +49,13 @@ ifeq ($(MAINNET),true)
 	BUILD_MAINNET=mainnet
 	BUILD_TAGS=netgo,ledger,mainnet
 	GORELEASER_BUILD_TAGS=$(BUILD_TAGS)
+	GORELEASER_HOMEBREW_NAME=akash
+	GORELEASER_HOMEBREW_CUSTOM=
 else
 	BUILD_TAGS=netgo,ledger
 	GORELEASER_BUILD_TAGS=$(BUILD_TAGS),testnet
+	GORELEASER_HOMEBREW_NAME="akash-edge"
+	GORELEASER_HOMEBREW_CUSTOM=keg_only :unneeded, \"This is testnet release. Run brew install ovrclk/tap/akash to install mainnet version\"
 endif
 
 GORELEASER_FLAGS    = -tags="$(GORELEASER_BUILD_TAGS)"

@@ -91,12 +91,14 @@ dockers:
       - "ovrclk/akash:{{ .Version }}"
 
 brews:
-  - name: akash
+  - name: "{{ .Env.HOMEBREW_NAME }}"
     tap:
       owner: ovrclk
       name: homebrew-tap
     homepage: "https://akash.network"
     description: "Blockchain-powered decentralized compute platform"
+    custom_block: |
+      {{ .Env.HOMEBREW_CUSTOM }}
     install: |
       bin.install "akash"
 
