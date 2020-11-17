@@ -1,9 +1,8 @@
 package sdl
 
 import (
-	"sort"
-
 	"github.com/pkg/errors"
+	"sort"
 
 	"github.com/ovrclk/akash/manifest"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
@@ -178,11 +177,17 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 
 			for _, expose := range svc.Expose {
 				for _, to := range expose.To {
+
+					proto, err := manifest.ParseServiceProtocol(expose.Proto)
+					if err != nil {
+						return manifest.Manifest{}, err
+					}
+
 					msvc.Expose = append(msvc.Expose, manifest.ServiceExpose{
 						Service:      to.Service,
 						Port:         expose.Port,
 						ExternalPort: expose.As,
-						Proto:        expose.Proto,
+						Proto:        proto,
 						Global:       to.Global,
 						Hosts:        expose.Accept.Items,
 					})

@@ -40,6 +40,7 @@ func serviceLogsCmd() *cobra.Command {
 func doServiceLogs(cmd *cobra.Command) error {
 	cctx := client.GetClientContextFromCmd(cmd)
 
+	// TODO - changeme not to use cmd.Flags, use viper
 	addr, err := mcli.ProviderFromFlagsWithoutCtx(cmd.Flags())
 	if err != nil {
 		return err

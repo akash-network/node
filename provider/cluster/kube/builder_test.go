@@ -1,6 +1,9 @@
 package kube
 
 import (
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"strconv"
 	"testing"
 
@@ -21,7 +24,7 @@ func TestLidNsSanity(t *testing.T) {
 	assert.Less(t, len(ns), int(64))
 
 	g := &manifest.Group{}
-	mb := newManifestBuilder(log, settings{}, ns, leaseID, g)
+	mb := newManifestBuilder(log, NewDefaultSettings(), ns, leaseID, g)
 
 	m, err := mb.create()
 	assert.NoError(t, err)
@@ -34,7 +37,7 @@ func TestNetworkPolicies(t *testing.T) {
 	leaseID := testutil.LeaseID(t)
 
 	g := &manifest.Group{}
-	np := newNetPolBuilder(settings{}, leaseID, g)
+	np := newNetPolBuilder(NewDefaultSettings(), leaseID, g)
 	netPolicies, err := np.create()
 	assert.NoError(t, err)
 	assert.Len(t, netPolicies, 7)
@@ -50,4 +53,143 @@ func TestNetworkPolicies(t *testing.T) {
 	assert.NoError(t, err)
 	updatedNS := updatedNetPol.Labels[k]
 	assert.Equal(t, ns, updatedNS)
+}
+
+func TestGlobalServiceBuilder(t *testing.T) {
+	myLog := testutil.Logger(t)
+	group := &manifest.Group{}
+	service := &manifest.Service{
+		Name: "myservice",
+	}
+	mySettings := NewDefaultSettings()
+	lid := testutil.LeaseID(t)
+	serviceBuilder := newServiceBuilder(myLog, mySettings, lid, group, service, true)
+	require.NotNil(t, serviceBuilder)
+	// Should have name ending with suffix
+	require.Equal(t, "myservice-np", serviceBuilder.name())
+	// Should not have any work to do
+	require.False(t, serviceBuilder.any())
+}
+
+func TestLocalServiceBuilder(t *testing.T) {
+	myLog := testutil.Logger(t)
+	group := &manifest.Group{}
+	service := &manifest.Service{
+		Name: "myservice",
+	}
+	mySettings := NewDefaultSettings()
+	lid := testutil.LeaseID(t)
+	serviceBuilder := newServiceBuilder(myLog, mySettings, lid, group, service, false)
+	require.NotNil(t, serviceBuilder)
+	// Should have name verbatim
+	require.Equal(t, "myservice", serviceBuilder.name())
+	// Should not have any work to do
+	require.False(t, serviceBuilder.any())
+}
+
+func TestGlobalServiceBuilderWithoutGlobalServices(t *testing.T) {
+	myLog := testutil.Logger(t)
+	group := &manifest.Group{}
+	exposesServices := make([]manifest.ServiceExpose, 1)
+	exposesServices[0].Global = false
+	service := &manifest.Service{
+		Name:   "myservice",
+		Expose: exposesServices,
+	}
+	mySettings := NewDefaultSettings()
+	lid := testutil.LeaseID(t)
+	serviceBuilder := newServiceBuilder(myLog, mySettings, lid, group, service, true)
+
+	// Should not have any work to do
+	require.False(t, serviceBuilder.any())
+}
+
+func TestGlobalServiceBuilderWithGlobalServices(t *testing.T) {
+	myLog := testutil.Logger(t)
+	group := &manifest.Group{}
+	exposesServices := make([]manifest.ServiceExpose, 2)
+	exposesServices[0] = manifest.ServiceExpose{
+		Global:       true,
+		Proto:        "TCP",
+		Port:         1000,
+		ExternalPort: 1001,
+	}
+	exposesServices[1] = manifest.ServiceExpose{
+		Global:       false,
+		Proto:        "TCP",
+		Port:         2000,
+		ExternalPort: 2001,
+	}
+	service := &manifest.Service{
+		Name:   "myservice",
+		Expose: exposesServices,
+	}
+	mySettings := NewDefaultSettings()
+	lid := testutil.LeaseID(t)
+	serviceBuilder := newServiceBuilder(myLog, mySettings, lid, group, service, true)
+
+	// Should have work to do
+	require.True(t, serviceBuilder.any())
+
+	result, err := serviceBuilder.create()
+	require.NoError(t, err)
+	require.Equal(t, result.Spec.Type, corev1.ServiceTypeNodePort)
+	ports := result.Spec.Ports
+	require.Len(t, ports, 1)
+	require.Equal(t, ports[0].Port, int32(1001))
+	require.Equal(t, ports[0].TargetPort, intstr.FromInt(1000))
+	require.Equal(t, ports[0].Name, "0-1001")
+}
+
+func TestLocalServiceBuilderWithoutLocalServices(t *testing.T) {
+	myLog := testutil.Logger(t)
+	group := &manifest.Group{}
+	exposesServices := make([]manifest.ServiceExpose, 1)
+	exposesServices[0].Global = true
+	service := &manifest.Service{
+		Name:   "myservice",
+		Expose: exposesServices,
+	}
+	mySettings := NewDefaultSettings()
+	lid := testutil.LeaseID(t)
+	serviceBuilder := newServiceBuilder(myLog, mySettings, lid, group, service, false)
+
+	// Should have work to do
+	require.False(t, serviceBuilder.any())
+}
+
+func TestLocalServiceBuilderWithLocalServices(t *testing.T) {
+	myLog := testutil.Logger(t)
+	group := &manifest.Group{}
+	exposesServices := make([]manifest.ServiceExpose, 2)
+	exposesServices[0] = manifest.ServiceExpose{
+		Global:       true,
+		Proto:        "TCP",
+		Port:         1000,
+		ExternalPort: 1001,
+	}
+	exposesServices[1] = manifest.ServiceExpose{
+		Global:       false,
+		Proto:        "TCP",
+		Port:         2000,
+		ExternalPort: 2001,
+	}
+	service := &manifest.Service{
+		Name:   "myservice",
+		Expose: exposesServices,
+	}
+	mySettings := NewDefaultSettings()
+	lid := testutil.LeaseID(t)
+	serviceBuilder := newServiceBuilder(myLog, mySettings, lid, group, service, false)
+
+	// Should have work to do
+	require.True(t, serviceBuilder.any())
+
+	result, err := serviceBuilder.create()
+	require.NoError(t, err)
+	require.Equal(t, result.Spec.Type, corev1.ServiceTypeClusterIP)
+	ports := result.Spec.Ports
+	require.Equal(t, ports[0].Port, int32(2001))
+	require.Equal(t, ports[0].TargetPort, intstr.FromInt(2000))
+	require.Equal(t, ports[0].Name, "1-2001")
 }

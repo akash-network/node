@@ -140,7 +140,7 @@ loop:
 
 			// Publish to children.
 			for sub := range b.subscriptions {
-				if err := sub.Publish(ev); err != nil {
+				if err := sub.Publish(ev); err != nil && !errors.Is(err, ErrNotRunning) {
 					panic(err)
 				}
 			}

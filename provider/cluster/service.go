@@ -4,9 +4,9 @@ import (
 	"context"
 
 	lifecycle "github.com/boz/go-lifecycle"
-	"github.com/caarlos0/env"
 	"github.com/pkg/errors"
 
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
@@ -21,13 +21,13 @@ var ErrNotRunning = errors.New("not running")
 
 // Cluster is the interface that wraps Reserve and Unreserve methods
 type Cluster interface {
-	Reserve(mtypes.OrderID, atypes.ResourceGroup) (Reservation, error)
+	Reserve(mtypes.OrderID, atypes.ResourceGroup) (ctypes.Reservation, error)
 	Unreserve(mtypes.OrderID, atypes.ResourceGroup) error
 }
 
 // StatusClient is the interface which includes status of service
 type StatusClient interface {
-	Status(context.Context) (*Status, error)
+	Status(context.Context) (*ctypes.Status, error)
 }
 
 // Service manage compute cluster for the provider.  Will eventually integrate with kubernetes, etc...
@@ -40,14 +40,8 @@ type Service interface {
 }
 
 // NewService returns new Service instance
-func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, client Client) (Service, error) {
+func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, client Client, cfg Config) (Service, error) {
 	log := session.Log().With("module", "provider-cluster", "cmp", "service")
-
-	config := config{}
-	if err := env.Parse(&config); err != nil {
-		log.Error("parsing config", "err", err)
-		return nil, errors.Wrap(err, "parsing config")
-	}
 
 	lc := lifecycle.New()
 
@@ -62,7 +56,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 		return nil, err
 	}
 
-	inventory, err := newInventoryService(config, log, lc.ShuttingDown(), sub, client, deployments)
+	inventory, err := newInventoryService(cfg, log, lc.ShuttingDown(), sub, client, deployments)
 	if err != nil {
 		sub.Close()
 		return nil, err
@@ -74,7 +68,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 		bus:       bus,
 		sub:       sub,
 		inventory: inventory,
-		statusch:  make(chan chan<- *Status),
+		statusch:  make(chan chan<- *ctypes.Status),
 		managers:  make(map[string]*deploymentManager),
 		managerch: make(chan *deploymentManager),
 		log:       log,
@@ -95,7 +89,7 @@ type service struct {
 
 	inventory *inventoryService
 
-	statusch  chan chan<- *Status
+	statusch  chan chan<- *ctypes.Status
 	managers  map[string]*deploymentManager
 	managerch chan *deploymentManager
 
@@ -116,7 +110,7 @@ func (s *service) Ready() <-chan struct{} {
 	return s.inventory.ready()
 }
 
-func (s *service) Reserve(order mtypes.OrderID, resources atypes.ResourceGroup) (Reservation, error) {
+func (s *service) Reserve(order mtypes.OrderID, resources atypes.ResourceGroup) (ctypes.Reservation, error) {
 	return s.inventory.reserve(order, resources)
 }
 
@@ -125,14 +119,14 @@ func (s *service) Unreserve(order mtypes.OrderID, resources atypes.ResourceGroup
 	return err
 }
 
-func (s *service) Status(ctx context.Context) (*Status, error) {
+func (s *service) Status(ctx context.Context) (*ctypes.Status, error) {
 
 	istatus, err := s.inventory.status(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	ch := make(chan *Status, 1)
+	ch := make(chan *ctypes.Status, 1)
 
 	select {
 	case <-s.lc.Done():
@@ -154,7 +148,7 @@ func (s *service) Status(ctx context.Context) (*Status, error) {
 
 }
 
-func (s *service) run(deployments []Deployment) {
+func (s *service) run(deployments []ctypes.Deployment) {
 	defer s.lc.ShutdownCompleted()
 	defer s.sub.Close()
 
@@ -207,7 +201,7 @@ loop:
 
 		case ch := <-s.statusch:
 
-			ch <- &Status{
+			ch <- &ctypes.Status{
 				Leases: uint32(len(s.managers)),
 			}
 
@@ -249,7 +243,7 @@ func (s *service) teardownLease(lid mtypes.LeaseID) {
 	}
 }
 
-func findDeployments(ctx context.Context, log log.Logger, client Client, session session.Session) ([]Deployment, error) {
+func findDeployments(ctx context.Context, log log.Logger, client Client, session session.Session) ([]ctypes.Deployment, error) {
 	deployments, err := client.Deployments(ctx)
 	if err != nil {
 		log.Error("fetching deployments", "err", err)
@@ -269,7 +263,7 @@ func findDeployments(ctx context.Context, log log.Logger, client Client, session
 
 	log.Info("found leases", "num-active", len(leases))
 
-	active := make([]Deployment, 0, len(deployments))
+	active := make([]ctypes.Deployment, 0, len(deployments))
 
 	for _, deployment := range deployments {
 		if _, ok := leases[mquery.LeasePath(deployment.LeaseID())]; !ok {

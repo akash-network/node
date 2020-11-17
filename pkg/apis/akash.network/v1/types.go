@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"fmt"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"math"
 	"strconv"
 
@@ -10,7 +12,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/manifest"
-	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
@@ -42,7 +43,7 @@ type ManifestSpec struct {
 // type ResourceUnits types.ResourceUnits
 
 // Deployment returns the cluster.Deployment that the saved manifest represents.
-func (m Manifest) Deployment() (cluster.Deployment, error) {
+func (m Manifest) Deployment() (ctypes.Deployment, error) {
 	lid, err := m.Spec.LeaseID.toAkash()
 	if err != nil {
 		return nil, err
@@ -215,7 +216,11 @@ func (ms ManifestService) toAkash() (manifest.Service, error) {
 	}
 
 	for _, expose := range ms.Expose {
-		ams.Expose = append(ams.Expose, expose.toAkash())
+		value, err := expose.toAkash()
+		if err != nil {
+			return manifest.Service{}, err
+		}
+		ams.Expose = append(ams.Expose, value)
 	}
 
 	return *ams, nil
@@ -255,22 +260,27 @@ type ManifestServiceExpose struct {
 	Hosts []string `json:"hosts,omitempty"`
 }
 
-func (mse ManifestServiceExpose) toAkash() manifest.ServiceExpose {
+func (mse ManifestServiceExpose) toAkash() (manifest.ServiceExpose, error) {
+	proto, err := manifest.ParseServiceProtocol(mse.Proto)
+	if err != nil {
+		fmt.Printf("foobar: %q\n", mse.Proto)
+		return manifest.ServiceExpose{}, err
+	}
 	return manifest.ServiceExpose{
 		Port:         mse.Port,
 		ExternalPort: mse.ExternalPort,
-		Proto:        mse.Proto,
+		Proto:        proto,
 		Service:      mse.Service,
 		Global:       mse.Global,
 		Hosts:        mse.Hosts,
-	}
+	}, nil
 }
 
 func manifestServiceExposeFromAkash(amse manifest.ServiceExpose) ManifestServiceExpose {
 	return ManifestServiceExpose{
 		Port:         amse.Port,
 		ExternalPort: amse.ExternalPort,
-		Proto:        amse.Proto,
+		Proto:        amse.Proto.ToString(),
 		Service:      amse.Service,
 		Global:       amse.Global,
 		Hosts:        amse.Hosts,

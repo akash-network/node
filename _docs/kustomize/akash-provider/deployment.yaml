@@ -216,13 +216,89 @@ spec:
                   key: mem-price-min
                   optional: true
 
-            - name: AKASH_MEM_PRICE_MAX
+            - name: AKASH_CLUSTER_PUBLIC_HOSTNAME
               valueFrom:
                 configMapKeyRef:
                   name: akash-provider-config
-                  key: mem-price-max
+                  key: cluster-public-hostname
                   optional: true
 
+            - name: AKASH_CLUSTER_NODE_PORT_QUANTITY
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: cluster-node-port-quantity
+                  optional: true
+
+            - name: AKASH_CLUSTER_WAIT_READY_DURATION
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: cluster_wait-ready-duration
+                  optional: true
+
+            - name: AKASH_INVENTORY_RESOURCE_POLL_PERIOD
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: inventory-resource-poll-period
+                  optional: true
+
+            - name: AKASH_INVENTORY_RESOURCE_DEBUG_FREQUENCY
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: inventory-resource-debug-freq
+                  optional: true
+
+            - name: AKASH_BID_PRICE_STRATEGY
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: bid-price-strategy
+                  optional: true
+
+            - name: AKASH_BID_CPU_SCALE
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: bid-cpu-scale
+                  optional: true
+
+            - name: AKASH_BID_MEMORY_SCALE
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: bid-memory-scale
+                  optional: true
+
+            - name: AKASH_BID_STORAGE_SCALE
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: bid-storage-scale
+                  optional: true
+
+            - name: AKASH_BID_SCRIPT_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: bid-script-path
+                  optional: true
+
+            - name: AKASH_BID_SCRIPT_PROCESS_LIMIT
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: bid-script-process-limit
+                  optional: true
+
+            - name: AKASH_BID_SCRIPT_PROCESS_TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: bid-script-process-timeout
+                  optional: true
           ports:
             - name: http
               containerPort: 8080

@@ -148,26 +148,45 @@ func (m *deploymentMonitor) doCheck() (bool, error) {
 	badsvc := 0
 
 	for _, spec := range m.mgroup.Services {
-		found := false
-		for _, svc := range status.Services {
-			if svc.Name != spec.Name {
-				continue
-			}
-			found = true
-
-			if uint32(svc.Available) < spec.Count {
+		service, foundService := status.Services[spec.Name]
+		if foundService {
+			if uint32(service.Available) < spec.Count {
 				badsvc++
 				m.log.Debug("service available replicas below target",
 					"service", spec.Name,
-					"available", svc.Available,
+					"available", service.Available,
 					"target", spec.Count,
 				)
 			}
 		}
 
-		if !found {
+		expectedPortCount := 0
+		foundPortCount := 0
+		for _, exposed := range spec.Expose {
+			if exposed.Global {
+				expectedPortCount++
+				// Get the list of all forwarded ports for this deployment
+				forwardedPorts := status.ForwardedPorts[spec.Name]
+				for _, forwarded := range forwardedPorts {
+					// Search for a match on port & protocol
+					if exposed.Port == forwarded.Port && exposed.Proto == forwarded.Proto {
+						foundPortCount++
+						if uint32(forwarded.Available) < spec.Count {
+							badsvc++
+							m.log.Debug("service available replicas below target",
+								"service", spec.Name,
+								"available", forwarded.Available,
+								"target", spec.Count,
+							)
+						}
+					}
+				}
+			}
+		}
+
+		if !foundService || foundPortCount != expectedPortCount {
 			badsvc++
-			m.log.Debug("service status found", "service", spec.Name)
+			m.log.Debug("service status not found", "service", spec.Name)
 		}
 	}
 

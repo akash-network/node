@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ovrclk/akash/provider/bidengine"
 	"os"
+	"time"
 
 	cosmosclient "github.com/cosmos/cosmos-sdk/client"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
@@ -38,7 +40,23 @@ const (
 	// FlagK8sManifestNS
 	FlagK8sManifestNS = "k8s-manifest-ns"
 	// FlagGatewayListenAddress determines listening address for Manifests
-	FlagGatewayListenAddress = "gateway-listen-address"
+	FlagGatewayListenAddress            = "gateway-listen-address"
+	FlagBidPricingStrategy              = "bid-price-strategy"
+	FlagBidPriceCPUScale                = "bid-price-cpu-scale"
+	FlagBidPriceMemoryScale             = "bid-price-memory-scale"
+	FlagBidPriceStorageScale            = "bid-price-storage-scale"
+	FlagBidPriceEndpointScale           = "bid-price-endpoint-scale"
+	FlagBidPriceScriptPath              = "bid-price-script-path"
+	FlagBidPriceScriptProcessLimit      = "bid-price-script-process-limit"
+	FlagBidPriceScriptTimeout           = "bid-price-script-process-timeout"
+	FlagClusterPublicHostname           = "cluster-public-hostname"
+	FlagClusterNodePortQuantity         = "cluster-node-port-quantity"
+	FlagClusterWaitReadyDuration        = "cluster-wait-ready-duration"
+	FlagInventoryResourcePollPeriod     = "inventory-resource-poll-period"
+	FlagInventoryResourceDebugFrequency = "inventory-resource-debug-frequency"
+	FlagDeploymentIngressStaticHosts    = "deployment-ingress-static-hosts"
+	FlagDeploymentIngressDomain         = "deployment-ingress-domain"
+	FlagDeploymentIngressExposeLBHosts  = "deployment-ingress-expose-lb-hosts"
 )
 
 var (
@@ -79,15 +97,149 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().String(FlagBidPricingStrategy, "scale", "Pricing strategy to use")
+	if err := viper.BindPFlag(FlagBidPricingStrategy, cmd.Flags().Lookup(FlagBidPricingStrategy)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint64(FlagBidPriceCPUScale, 0, "cpu pricing scale in uakt")
+	if err := viper.BindPFlag(FlagBidPriceCPUScale, cmd.Flags().Lookup(FlagBidPriceCPUScale)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint64(FlagBidPriceMemoryScale, 0, "memory pricing scale in uakt")
+	if err := viper.BindPFlag(FlagBidPriceMemoryScale, cmd.Flags().Lookup(FlagBidPriceMemoryScale)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint64(FlagBidPriceStorageScale, 0, "storage pricing scale in uakt")
+	if err := viper.BindPFlag(FlagBidPriceStorageScale, cmd.Flags().Lookup(FlagBidPriceStorageScale)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint64(FlagBidPriceEndpointScale, 0, "endpoint pricing scale in uakt")
+	if err := viper.BindPFlag(FlagBidPriceEndpointScale, cmd.Flags().Lookup(FlagBidPriceEndpointScale)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().String(FlagBidPriceScriptPath, "", "path to script to run for computing bid price")
+	if err := viper.BindPFlag(FlagBidPriceScriptPath, cmd.Flags().Lookup(FlagBidPriceScriptPath)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint(FlagBidPriceScriptProcessLimit, 32, "limit to the number of scripts run concurrently for bid pricing")
+	if err := viper.BindPFlag(FlagBidPriceScriptProcessLimit, cmd.Flags().Lookup(FlagBidPriceScriptProcessLimit)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagBidPriceScriptTimeout, time.Second*10, "execution timelimit for bid pricing as a duration")
+	if err := viper.BindPFlag(FlagBidPriceScriptTimeout, cmd.Flags().Lookup(FlagBidPriceScriptTimeout)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().String(FlagClusterPublicHostname, "", "The public IP of the Kubernetes cluster")
+	if err := viper.BindPFlag(FlagClusterPublicHostname, cmd.Flags().Lookup(FlagClusterPublicHostname)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint(FlagClusterNodePortQuantity, 1, "The number of node ports available on the Kubernetes cluster")
+	if err := viper.BindPFlag(FlagClusterNodePortQuantity, cmd.Flags().Lookup(FlagClusterNodePortQuantity)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagClusterWaitReadyDuration, time.Second*5, "The time to wait for the cluster to be available")
+	if err := viper.BindPFlag(FlagClusterWaitReadyDuration, cmd.Flags().Lookup(FlagClusterWaitReadyDuration)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagInventoryResourcePollPeriod, time.Second*5, "The period to poll the cluster inventory")
+	if err := viper.BindPFlag(FlagInventoryResourcePollPeriod, cmd.Flags().Lookup(FlagInventoryResourcePollPeriod)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint(FlagInventoryResourceDebugFrequency, 10, "The rate at which to log all inventory resources")
+	if err := viper.BindPFlag(FlagInventoryResourceDebugFrequency, cmd.Flags().Lookup(FlagInventoryResourceDebugFrequency)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Bool(FlagDeploymentIngressStaticHosts, false, "")
+	if err := viper.BindPFlag(FlagDeploymentIngressStaticHosts, cmd.Flags().Lookup(FlagDeploymentIngressStaticHosts)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().String(FlagDeploymentIngressDomain, "", "")
+	if err := viper.BindPFlag(FlagDeploymentIngressDomain, cmd.Flags().Lookup(FlagDeploymentIngressDomain)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Bool(FlagDeploymentIngressExposeLBHosts, false, "")
+	if err := viper.BindPFlag(FlagDeploymentIngressExposeLBHosts, cmd.Flags().Lookup(FlagDeploymentIngressExposeLBHosts)); err != nil {
+		return nil
+	}
+
 	return cmd
+}
+
+const (
+	bidPricingStrategyScale       = "scale"
+	bidPricingStrategyRandomRange = "randomRange"
+	bidPricingStrategyShellScript = "shellScript"
+)
+
+var allowedBidPricingStrategies = [...]string{
+	bidPricingStrategyScale,
+	bidPricingStrategyRandomRange,
+	bidPricingStrategyShellScript,
+}
+
+var errNoSuchBidPricingStrategy = fmt.Errorf("No such bid pricing strategy. Allowed: %v", allowedBidPricingStrategies)
+
+func createBidPricingStrategy(strategy string) (bidengine.BidPricingStrategy, error) {
+	if strategy == bidPricingStrategyScale {
+		cpuScale := viper.GetUint64(FlagBidPriceCPUScale)
+		memoryScale := viper.GetUint64(FlagBidPriceMemoryScale)
+		storageScale := viper.GetUint64(FlagBidPriceStorageScale)
+		endpointScale := viper.GetUint64(FlagBidPriceEndpointScale)
+
+		return bidengine.MakeScalePricing(cpuScale, memoryScale, storageScale, endpointScale)
+	}
+
+	if strategy == bidPricingStrategyRandomRange {
+		return bidengine.MakeRandomRangePricing()
+	}
+
+	if strategy == bidPricingStrategyShellScript {
+		scriptPath := viper.GetString(FlagBidPriceScriptPath)
+		processLimit := viper.GetUint(FlagBidPriceScriptProcessLimit)
+		runtimeLimit := viper.GetDuration(FlagBidPriceScriptTimeout)
+		return bidengine.MakeShellScriptPricing(scriptPath, processLimit, runtimeLimit)
+	}
+
+	return nil, errNoSuchBidPricingStrategy
 }
 
 // doRunCmd initializes all of the Provider functionality, hangs, and awaits shutdown signals.
 func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
+	clusterPublicHostname := viper.GetString(FlagClusterPublicHostname)
+	// TODO - validate that clusterPublicHostname is a valid hostname
+	nodePortQuantity := viper.GetUint(FlagClusterNodePortQuantity)
+	clusterWaitReadyDuration := viper.GetDuration(FlagClusterWaitReadyDuration)
+	inventoryResourcePollPeriod := viper.GetDuration(FlagInventoryResourcePollPeriod)
+	inventoryResourceDebugFreq := viper.GetUint(FlagInventoryResourceDebugFrequency)
+	deploymentIngressStaticHosts := viper.GetBool(FlagDeploymentIngressStaticHosts)
+	deploymentIngressDomain := viper.GetString(FlagDeploymentIngressDomain)
+	strategy := viper.GetString(FlagBidPricingStrategy)
+	deploymentIngressExposeLBHosts := viper.GetBool(FlagDeploymentIngressExposeLBHosts)
+	from := viper.GetString(flags.FlagFrom)
+	pricing, err := createBidPricingStrategy(strategy)
+
+	if err != nil {
+		return err
+	}
+
 	cctx := sdkclient.GetClientContextFromCmd(cmd)
 
-	from, _ := cmd.Flags().GetString(flags.FlagFrom)
-	_, _, err := cosmosclient.GetFromFields(cctx.Keyring, from, false)
+	_, _, err = cosmosclient.GetFromFields(cctx.Keyring, from, false)
 	if err != nil {
 		return err
 	}
@@ -135,7 +287,12 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	pinfo := &res.Provider
 
 	// k8s client creation
-	cclient, err := createClusterClient(log, cmd, pinfo.HostURI)
+	kubeSettings := kube.NewDefaultSettings()
+	kubeSettings.DeploymentIngressDomain = deploymentIngressDomain
+	kubeSettings.DeploymentIngressExposeLBHosts = deploymentIngressExposeLBHosts
+	kubeSettings.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
+
+	cclient, err := createClusterClient(log, cmd, pinfo.HostURI, kubeSettings)
 	if err != nil {
 		return err
 	}
@@ -151,7 +308,15 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	group, ctx := errgroup.WithContext(ctx)
 
-	service, err := provider.NewService(ctx, session, bus, cclient)
+	config := provider.NewDefaultConfig()
+	config.ClusterWaitReadyDuration = clusterWaitReadyDuration
+	config.ClusterPublicHostname = clusterPublicHostname
+	config.ClusterExternalPortQuantity = nodePortQuantity
+	config.InventoryResourceDebugFrequency = inventoryResourceDebugFreq
+	config.InventoryResourcePollPeriod = inventoryResourcePollPeriod
+	config.BPS = pricing
+	service, err := provider.NewService(ctx, session, bus, cclient, config)
+
 	if err != nil {
 		return group.Wait()
 	}
@@ -189,7 +354,7 @@ func openLogger() log.Logger {
 	})
 }
 
-func createClusterClient(log log.Logger, _ *cobra.Command, host string) (cluster.Client, error) {
+func createClusterClient(log log.Logger, _ *cobra.Command, host string, settings kube.Settings) (cluster.Client, error) {
 	if !viper.GetBool(FlagClusterK8s) {
 		// Condition that there is no Kubernetes API to work with.
 		return cluster.NullClient(), nil
@@ -198,5 +363,5 @@ func createClusterClient(log log.Logger, _ *cobra.Command, host string) (cluster
 	if ns == "" {
 		return nil, fmt.Errorf("%w: --%s required", errInvalidConfig, FlagK8sManifestNS)
 	}
-	return kube.NewClient(log, host, ns)
+	return kube.NewClient(log, host, ns, settings)
 }

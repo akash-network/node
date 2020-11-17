@@ -12,7 +12,10 @@ provider-run:
 			--chain-id "$(CHAIN_NAME)" \
 			--from "$(PROVIDER_KEY_NAME)" \
 			--cluster-k8s \
-			--gateway-listen-address "$(GATEWAY_HOST)"
+			--gateway-listen-address "$(GATEWAY_HOST)" \
+			--cluster-node-port-quantity 100 \
+			--cluster-public-hostname "localhost" \
+			--bid-price-strategy "randomRange"
 
 .PHONY: provider-status
 provider-status:

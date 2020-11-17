@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/ovrclk/akash/manifest"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
 	mquery "github.com/ovrclk/akash/x/market/query"
@@ -20,9 +21,9 @@ var _ Client = (*nullClient)(nil)
 var ErrNoDeployments = errors.New("no deployments")
 
 type ReadClient interface {
-	LeaseStatus(context.Context, mtypes.LeaseID) (*LeaseStatus, error)
-	ServiceStatus(context.Context, mtypes.LeaseID, string) (*ServiceStatus, error)
-	ServiceLogs(context.Context, mtypes.LeaseID, string, bool, *int64) ([]*ServiceLog, error)
+	LeaseStatus(context.Context, mtypes.LeaseID) (*ctypes.LeaseStatus, error)
+	ServiceStatus(context.Context, mtypes.LeaseID, string) (*ctypes.ServiceStatus, error)
+	ServiceLogs(context.Context, mtypes.LeaseID, string, bool, *int64) ([]*ctypes.ServiceLog, error)
 }
 
 // Client interface lease and deployment methods
@@ -30,15 +31,8 @@ type Client interface {
 	ReadClient
 	Deploy(context.Context, mtypes.LeaseID, *manifest.Group) error
 	TeardownLease(context.Context, mtypes.LeaseID) error
-	Deployments(context.Context) ([]Deployment, error)
-	Inventory(context.Context) ([]Node, error)
-}
-
-// Node interface predefined with ID and Available methods
-type Node interface {
-	ID() string
-	Available() atypes.ResourceUnits
-	Reserve(atypes.ResourceUnits) error
+	Deployments(context.Context) ([]ctypes.Deployment, error)
+	Inventory(context.Context) ([]ctypes.Node, error)
 }
 
 type node struct {
@@ -47,7 +41,7 @@ type node struct {
 }
 
 // NewNode returns new Node instance with provided details
-func NewNode(id string, available atypes.ResourceUnits) Node {
+func NewNode(id string, available atypes.ResourceUnits) ctypes.Node {
 	return &node{id: id, availableResources: available}
 }
 
@@ -65,19 +59,6 @@ func (n *node) Available() atypes.ResourceUnits {
 	return n.availableResources
 }
 
-// Deployment interface defined with LeaseID and ManifestGroup methods
-type Deployment interface {
-	LeaseID() mtypes.LeaseID
-	ManifestGroup() manifest.Group
-}
-
-// ServiceLog stores name, stream and scanner
-type ServiceLog struct {
-	Name    string
-	Stream  io.ReadCloser
-	Scanner *bufio.Scanner
-}
-
 const (
 	// 5 CPUs, 5Gi memory for null client.
 	nullClientCPU     = 5000
@@ -91,8 +72,8 @@ type nullClient struct {
 }
 
 // NewServiceLog creates and returns a service log with provided details
-func NewServiceLog(name string, stream io.ReadCloser) *ServiceLog {
-	return &ServiceLog{
+func NewServiceLog(name string, stream io.ReadCloser) *ctypes.ServiceLog {
+	return &ctypes.ServiceLog{
 		Name:    name,
 		Stream:  stream,
 		Scanner: bufio.NewScanner(stream),
@@ -114,7 +95,7 @@ func (c *nullClient) Deploy(ctx context.Context, lid mtypes.LeaseID, mgroup *man
 	return nil
 }
 
-func (c *nullClient) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*LeaseStatus, error) {
+func (c *nullClient) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.LeaseStatus, error) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -123,23 +104,24 @@ func (c *nullClient) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*Leas
 		return nil, nil
 	}
 
-	resp := &LeaseStatus{}
+	resp := &ctypes.LeaseStatus{}
+	resp.Services = make(map[string]*ctypes.ServiceStatus)
 	for _, svc := range mgroup.Services {
-		resp.Services = append(resp.Services, &ServiceStatus{
+		resp.Services[svc.Name] = &ctypes.ServiceStatus{
 			Name:      svc.Name,
 			Available: int32(svc.Count),
 			Total:     int32(svc.Count),
-		})
+		}
 	}
 
 	return resp, nil
 }
 
-func (c *nullClient) ServiceStatus(ctx context.Context, _ mtypes.LeaseID, _ string) (*ServiceStatus, error) {
+func (c *nullClient) ServiceStatus(ctx context.Context, _ mtypes.LeaseID, _ string) (*ctypes.ServiceStatus, error) {
 	return nil, nil
 }
 
-func (c *nullClient) ServiceLogs(_ context.Context, _ mtypes.LeaseID, _ string, _ bool, _ *int64) ([]*ServiceLog, error) {
+func (c *nullClient) ServiceLogs(_ context.Context, _ mtypes.LeaseID, _ string, _ bool, _ *int64) ([]*ctypes.ServiceLog, error) {
 	return nil, nil
 }
 
@@ -151,12 +133,12 @@ func (c *nullClient) TeardownLease(ctx context.Context, lid mtypes.LeaseID) erro
 	return nil
 }
 
-func (c *nullClient) Deployments(ctx context.Context) ([]Deployment, error) {
+func (c *nullClient) Deployments(ctx context.Context) ([]ctypes.Deployment, error) {
 	return nil, nil
 }
 
-func (c *nullClient) Inventory(ctx context.Context) ([]Node, error) {
-	return []Node{
+func (c *nullClient) Inventory(ctx context.Context) ([]ctypes.Node, error) {
+	return []ctypes.Node{
 		NewNode("solo", atypes.ResourceUnits{
 			CPU: &atypes.CPU{
 				Units: atypes.NewResourceValue(nullClientCPU),

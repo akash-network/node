@@ -1,4 +1,4 @@
-
+COVER_PACKAGES = $(shell go list ./... | grep -v mock)
 ###############################################################################
 ###                           Integration                                   ###
 ###############################################################################
@@ -41,8 +41,7 @@ test-full:
 test-coverage:
 	$(GO) test -tags=$(BUILD_MAINNET) -coverprofile=coverage.txt \
 		-covermode=count \
-		-coverpkg="./..." \
-		./...
+		-coverpkg=$(COVER_PACKAGES)
 
 test-vet:
 	$(GO) vet ./...
