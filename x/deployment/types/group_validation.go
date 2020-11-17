@@ -11,3 +11,18 @@ func validateDeploymentGroup(gspec GroupSpec) error {
 	return validateOrderBidDuration(defaultConfig, gspec)
 }
 
+// ValidateDeploymentGroups does validation for all deployment groups
+func ValidateDeploymentGroups(gspecs []GroupSpec) error {
+	if len(gspecs) == 0 {
+		return ErrInvalidGroups
+	}
+
+	for _, group := range gspecs {
+		if err := group.ValidateBasic(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+

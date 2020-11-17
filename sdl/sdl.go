@@ -90,7 +90,7 @@ func Read(buf []byte) (SDL, error) {
 		vgroups = append(vgroups, *dgroup)
 	}
 
-	if err := validation.ValidateDeploymentGroups(vgroups); err != nil {
+	if err := dtypes.ValidateDeploymentGroups(vgroups); err != nil {
 		return nil, err
 	}
 

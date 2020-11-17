@@ -11,7 +11,6 @@ import (
 
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/testutil"
-	"github.com/ovrclk/akash/validation"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -155,7 +154,7 @@ func TestGroupSpecValidation(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := validation.ValidateDeploymentGroup(test.gspec)
+		err := test.gspec.ValidateBasic()
 		if test.expErr != nil {
 			assert.Error(t, err)
 			continue
