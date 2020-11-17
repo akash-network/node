@@ -141,7 +141,7 @@ type AkashApp struct {
 
 // NewApp creates and returns a new Akash App.
 func NewApp(
-	logger log.Logger, db dbm.DB, tio io.Writer, invCheckPeriod uint, skipUpgradeHeights map[int64]bool,
+	logger log.Logger, db dbm.DB, tio io.Writer, loadLatest bool, invCheckPeriod uint, skipUpgradeHeights map[int64]bool,
 	homePath string, options ...func(*bam.BaseApp),
 ) *AkashApp {
 
@@ -397,14 +397,21 @@ func NewApp(
 
 	app.SetEndBlocker(app.EndBlocker)
 
-	// TODO: add load latest check here
-	err := app.LoadLatestVersion()
-	if err != nil {
-		tmos.Exit("app initialization:" + err.Error())
-	}
+	if loadLatest {
+		if err := app.LoadLatestVersion(); err != nil {
+			tmos.Exit("app initialization:" + err.Error())
+		}
 
-	ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
-	app.keeper.cap.InitializeAndSeal(ctx)
+		// Initialize and seal the capability keeper so all persistent capabilities
+		// are loaded in-memory and prevent any further modules from creating scoped
+		// sub-keepers.
+		// This must be done during creation of baseapp rather than in InitChain so
+		// that in-memory capabilities get regenerated on app restart.
+		// Note that since this reads from the store, we can only perform it when
+		// `loadLatest` is set to true.
+		ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
+		app.keeper.cap.InitializeAndSeal(ctx)
+	}
 
 	app.keeper.scopedIBC = scopedIBCKeeper
 	app.keeper.scopedTransfer = scopedTransferKeeper

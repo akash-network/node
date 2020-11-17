@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -138,7 +137,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 	}
 
 	return app.NewApp(
-		logger, db, traceStore, cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)), skipUpgradeHeights,
+		logger, db, traceStore, true, cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)), skipUpgradeHeights,
 		cast.ToString(appOpts.Get(flags.FlagHome)),
 		baseapp.SetPruning(pruningOpts),
 		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(server.FlagMinGasPrices))),
@@ -158,17 +157,18 @@ func createAppAndExport(
 	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailAllowedAddrs []string,
 ) (servertypes.ExportedApp, error) {
 
-	app := app.NewApp(logger, db, ioutil.Discard, uint(1), map[int64]bool{}, "")
-
+	var akashApp *app.AkashApp
 	if height != -1 {
-		err := app.LoadHeight(height)
-		if err != nil {
+		akashApp = app.NewApp(logger, db, tio, false, uint(1), map[int64]bool{}, "")
+
+		if err := akashApp.LoadHeight(height); err != nil {
 			return servertypes.ExportedApp{}, err
 		}
-		return app.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs)
+	} else {
+		akashApp = app.NewApp(logger, db, tio, true, uint(1), map[int64]bool{}, "")
 	}
 
-	return app.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs)
+	return akashApp.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs)
 }
 
 func queryCmd() *cobra.Command {

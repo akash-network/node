@@ -199,7 +199,7 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 // Setup initializes a new AkashApp. A Nop logger is set in AkashApp.
 func Setup(isCheckTx bool) *AkashApp {
 	db := dbm.NewMemDB()
-	app := NewApp(logger.NewNopLogger(), db, nil, 5, map[int64]bool{}, DefaultHome)
+	app := NewApp(logger.NewNopLogger(), db, nil, true, 5, map[int64]bool{}, DefaultHome)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := NewDefaultGenesisState()
