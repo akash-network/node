@@ -39,6 +39,7 @@ DOCKER_BUF            := $(DOCKER_RUN) bufbuild/buf:$(BUF_VERSION)
 DOCKER_CLANG          := $(DOCKER_RUN) tendermintdev/docker-build-proto
 GOLANGCI_LINT          = $(DOCKER_RUN) golangci/golangci-lint:$(GOLANGCI_LINT_VERSION)-alpine golangci-lint run
 LINT                   = $(GOLANGCI_LINT) ./... --disable-all --deadline=5m --enable
+TEST_DOCKER_REPO      := jackzampolin/akashtest
 
 GORELEASER_CONFIG=.goreleaser.yaml
 # BUILD_TAGS are for builds withing this makefile
@@ -101,3 +102,13 @@ include make/test-simulation.mk
 include make/tools.mk
 include make/environment.mk
 include make/codegen.mk
+
+test-docker:
+	@docker build -f _build/Dockerfile.test -t ${TEST_DOCKER_REPO}:$(shell git rev-parse --short HEAD) .
+	@docker tag ${TEST_DOCKER_REPO}:$(shell git rev-parse --short HEAD) ${TEST_DOCKER_REPO}:$(shell git rev-parse --abbrev-ref HEAD | sed 's#/#_#g')
+	@docker tag ${TEST_DOCKER_REPO}:$(shell git rev-parse --short HEAD) ${TEST_DOCKER_REPO}:latest
+
+test-docker-push: test-docker
+	@docker push ${TEST_DOCKER_REPO}:$(shell git rev-parse --short HEAD)
+	@docker push ${TEST_DOCKER_REPO}:$(shell git rev-parse --abbrev-ref HEAD | sed 's#/#_#g')
+	@docker push ${TEST_DOCKER_REPO}:latest
