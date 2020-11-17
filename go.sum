@@ -446,6 +446,12 @@ github.com/openzipkin-contrib/zipkin-go-opentracing v0.4.5/go.mod h1:/wsWhb9smxS
 github.com/openzipkin/zipkin-go v0.1.6/go.mod h1:QgAqvLzwWbR/WpD4A3cGpPtJrZXNIiJc5AZX7/PBEpw=
 github.com/openzipkin/zipkin-go v0.2.1/go.mod h1:NaW6tEwdmWMaCDZzg8sh+IBNOxHMPnhQw8ySjnjRyN4=
 github.com/openzipkin/zipkin-go v0.2.2/go.mod h1:NaW6tEwdmWMaCDZzg8sh+IBNOxHMPnhQw8ySjnjRyN4=
+github.com/ovrclk/cosmos-supply-summary v0.0.5 h1:+9Y7iV6SlZgqB8e58jaifIHOsWj2K4LSOVpJEddge3k=
+github.com/ovrclk/cosmos-supply-summary v0.0.5/go.mod h1:4qNmFLPyf0sAEWOocNXo6dEkcZnQlJjxFt+THre7bSY=
+github.com/ovrclk/cosmos-supply-summary v0.0.6 h1:QAvLRrHOMhLLVbj4RCB8423YWqJu1KY79aemGWPjSHk=
+github.com/ovrclk/cosmos-supply-summary v0.0.6/go.mod h1:4qNmFLPyf0sAEWOocNXo6dEkcZnQlJjxFt+THre7bSY=
+github.com/ovrclk/cosmos-supply-summary v0.0.7 h1:L2jmZChVVnTbZMg2/0UUD+ln/TrxwXzdBSlGjuOgCRo=
+github.com/ovrclk/cosmos-supply-summary v0.0.7/go.mod h1:4qNmFLPyf0sAEWOocNXo6dEkcZnQlJjxFt+THre7bSY=
 github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIwwtUjcrb0b5/5kLM=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
