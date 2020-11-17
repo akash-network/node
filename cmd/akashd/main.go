@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"io"
-	"io/ioutil"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client/debug"
@@ -90,7 +89,7 @@ func newApp(logger log.Logger, db dbm.DB, tio io.Writer) abci.Application {
 	}
 
 	return app.NewApp(
-		logger, db, tio, invCheckPeriod, skipUpgradeHeights,
+		logger, db, tio, true, invCheckPeriod, skipUpgradeHeights,
 		baseapp.SetPruning(storetypes.NewPruningOptionsFromString(viper.GetString("pruning"))),
 		baseapp.SetMinGasPrices(viper.GetString(server.FlagMinGasPrices)),
 		baseapp.SetHaltHeight(viper.GetUint64(server.FlagHaltHeight)),
@@ -103,15 +102,16 @@ func exportAppStateAndTMValidators(
 	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailWhiteList []string,
 ) (json.RawMessage, []tmtypes.GenesisValidator, error) {
 
-	app := app.NewApp(logger, db, ioutil.Discard, uint(1), map[int64]bool{})
-
+	var akashApp *app.AkashApp
 	if height != -1 {
-		err := app.LoadHeight(height)
-		if err != nil {
+		akashApp = app.NewApp(logger, db, tio, false, uint(1), map[int64]bool{})
+
+		if err := akashApp.LoadHeight(height); err != nil {
 			return nil, nil, err
 		}
-		return app.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
+	} else {
+		akashApp = app.NewApp(logger, db, tio, true, uint(1), map[int64]bool{})
 	}
 
-	return app.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
+	return akashApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
 }
