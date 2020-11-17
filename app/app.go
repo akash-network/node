@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/simapp"
+	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -20,6 +21,7 @@ import (
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -49,6 +51,8 @@ import (
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
+	"github.com/spf13/cast"
+	tmjson "github.com/tendermint/tendermint/libs/json"
 
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
@@ -69,6 +73,7 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmos "github.com/tendermint/tendermint/libs/os"
 
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/version"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
@@ -90,7 +95,10 @@ const (
 	AppName = "akash"
 )
 
-var DefaultHome = os.ExpandEnv("$HOME/.akash")
+var (
+	DefaultHome                         = os.ExpandEnv("$HOME/.akash")
+	_           servertypes.Application = (*AkashApp)(nil)
+)
 
 // AkashApp extends ABCI appplication
 type AkashApp struct {
@@ -142,7 +150,7 @@ type AkashApp struct {
 // NewApp creates and returns a new Akash App.
 func NewApp(
 	logger log.Logger, db dbm.DB, tio io.Writer, loadLatest bool, invCheckPeriod uint, skipUpgradeHeights map[int64]bool,
-	homePath string, options ...func(*bam.BaseApp),
+	homePath string, appOpts servertypes.AppOptions, options ...func(*bam.BaseApp),
 ) *AkashApp {
 
 	// TODO: Remove cdc in favor of appCodec once all modules are migrated.
@@ -154,8 +162,7 @@ func NewApp(
 	bapp := bam.NewBaseApp(AppName, logger, db, encodingConfig.TxConfig.TxDecoder(), options...)
 	bapp.SetCommitMultiStoreTracer(tio)
 	bapp.SetAppVersion(version.Version)
-	bapp.GRPCQueryRouter().SetInterfaceRegistry(interfaceRegistry)
-	bapp.GRPCQueryRouter().RegisterSimulateService(bapp.Simulate, interfaceRegistry)
+	bapp.SetInterfaceRegistry(interfaceRegistry)
 
 	keys := kvStoreKeys()
 	tkeys := transientStoreKeys()
@@ -297,6 +304,10 @@ func NewApp(
 
 	app.setAkashKeepers()
 
+	// NOTE: we may consider parsing `appOpts` inside module constructors. For the moment
+	// we prefer to be more strict in what arguments the modules expect.
+	var skipGenesisInvariants = cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants))
+
 	app.mm = module.NewManager(
 		append([]module.AppModule{
 			genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx, encodingConfig.TxConfig),
@@ -304,7 +315,7 @@ func NewApp(
 			vesting.NewAppModule(app.keeper.acct, app.keeper.bank),
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			capability.NewAppModule(appCodec, *app.keeper.cap),
-			crisis.NewAppModule(&app.keeper.crisis),
+			crisis.NewAppModule(&app.keeper.crisis, skipGenesisInvariants),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
 			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
@@ -354,7 +365,10 @@ func NewApp(
 
 	app.mm.RegisterInvariants(&app.keeper.crisis)
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
-	app.mm.RegisterQueryServices(app.GRPCQueryRouter())
+	app.mm.RegisterServices(module.NewConfigurator(app.MsgServiceRouter(), app.GRPCQueryRouter()))
+
+	// add test gRPC service for testing gRPC queries in isolation
+	testdata.RegisterQueryServer(app.GRPCQueryRouter(), testdata.QueryImpl{})
 
 	app.sm = module.NewSimulationManager(
 		append([]module.AppModuleSimulation{
@@ -433,7 +447,9 @@ func (app *AkashApp) Name() string { return app.BaseApp.Name() }
 // InitChainer application update at chain initialization
 func (app *AkashApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 	var genesisState simapp.GenesisState
-	app.cdc.MustUnmarshalJSON(req.AppStateBytes, &genesisState)
+	if err := tmjson.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
+		panic(err)
+	}
 	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
 }
 
@@ -495,15 +511,24 @@ func (app *AkashApp) SimulationManager() *module.SimulationManager {
 func (app *AkashApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APIConfig) {
 	clientCtx := apiSvr.ClientCtx
 	rpc.RegisterRoutes(clientCtx, apiSvr.Router)
+	// Register legacy tx routes
 	authrest.RegisterTxRoutes(clientCtx, apiSvr.Router)
+	// Register new tx routes from grpc-gateway
+	authtx.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCRouter)
 
+	// Register legacy and grpc-gateway routes for all modules.
 	ModuleBasics().RegisterRESTRoutes(clientCtx, apiSvr.Router)
-	ModuleBasics().RegisterGRPCRoutes(apiSvr.ClientCtx, apiSvr.GRPCRouter)
+	ModuleBasics().RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCRouter)
 
 	// register swagger API from root so that other applications can override easily
 	if apiConfig.Swagger {
 		RegisterSwaggerAPI(clientCtx, apiSvr.Router)
 	}
+}
+
+// RegisterTxService implements the Application.RegisterTxService method.
+func (app *AkashApp) RegisterTxService(clientCtx client.Context) {
+	authtx.RegisterTxService(app.BaseApp.GRPCQueryRouter(), clientCtx, app.BaseApp.Simulate, app.interfaceRegistry)
 }
 
 // RegisterSwaggerAPI registers swagger route with API Server
