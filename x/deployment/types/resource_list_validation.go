@@ -12,21 +12,21 @@ var (
 	ErrGroupEmptyName  = errors.New("validation: group has empty name")
 )
 
-func validateResourceList(config ValConfig, rlist types.ResourceGroup) error {
+func ValidateResourceList(rlist types.ResourceGroup) error {
 	if rlist.GetName() == "" {
 		return ErrGroupEmptyName
 	}
 
 	units := rlist.GetResources()
 
-	if count := len(units); count > config.MaxGroupUnits {
-		return errors.Errorf("group %v: too many units (%v > %v)", rlist.GetName(), count, config.MaxGroupUnits)
+	if count := len(units); count > validationConfig.MaxGroupUnits {
+		return errors.Errorf("group %v: too many units (%v > %v)", rlist.GetName(), count, validationConfig.MaxGroupUnits)
 	}
 
 	limits := newLimits()
 
 	for _, resource := range units {
-		gLimits, err := validateResourceGroup(config, resource)
+		gLimits, err := validateResourceGroup(resource)
 		if err != nil {
 			return fmt.Errorf("group %v: %w", rlist.GetName(), err)
 		}
@@ -45,33 +45,33 @@ func validateResourceList(config ValConfig, rlist types.ResourceGroup) error {
 		// }
 	}
 
-	if limits.cpu.GT(sdk.NewInt(config.MaxGroupCPU)) || limits.cpu.LTE(sdk.ZeroInt()) {
+	if limits.cpu.GT(sdk.NewInt(validationConfig.MaxGroupCPU)) || limits.cpu.LTE(sdk.ZeroInt()) {
 		return errors.Errorf("group %v: invalid total cpu (%v > %v > %v fails)",
-			rlist.GetName(), config.MaxGroupCPU, limits.cpu, 0)
+			rlist.GetName(), validationConfig.MaxGroupCPU, limits.cpu, 0)
 	}
 
-	if limits.memory.GT(sdk.NewInt(config.MaxGroupMemory)) || limits.memory.LTE(sdk.ZeroInt()) {
+	if limits.memory.GT(sdk.NewInt(validationConfig.MaxGroupMemory)) || limits.memory.LTE(sdk.ZeroInt()) {
 		return errors.Errorf("group %v: invalid total memory (%v > %v > %v fails)",
-			rlist.GetName(), config.MaxGroupMemory, limits.memory, 0)
+			rlist.GetName(), validationConfig.MaxGroupMemory, limits.memory, 0)
 	}
 
-	if limits.storage.GT(sdk.NewInt(config.MaxGroupStorage)) || limits.storage.LTE(sdk.ZeroInt()) {
+	if limits.storage.GT(sdk.NewInt(validationConfig.MaxGroupStorage)) || limits.storage.LTE(sdk.ZeroInt()) {
 		return errors.Errorf("group %v: invalid total storage (%v > %v > %v fails)",
-			rlist.GetName(), config.MaxGroupStorage, limits.storage, 0)
+			rlist.GetName(), validationConfig.MaxGroupStorage, limits.storage, 0)
 	}
 
 	return nil
 }
 
-func validateResourceGroup(config ValConfig, rg types.Resources) (resourceLimits, error) {
-	limits, err := validateResourceUnit(config, rg.Resources)
+func validateResourceGroup(rg types.Resources) (resourceLimits, error) {
+	limits, err := validateResourceUnit(rg.Resources)
 	if err != nil {
 		return resourceLimits{}, err
 	}
 
-	if rg.Count > uint32(config.MaxUnitCount) || rg.Count < uint32(config.MinUnitCount) {
+	if rg.Count > uint32(validationConfig.MaxUnitCount) || rg.Count < uint32(validationConfig.MinUnitCount) {
 		return resourceLimits{}, errors.Errorf("error: invalid unit count (%v > %v > %v fails)",
-			config.MaxUnitCount, rg.Count, config.MinUnitCount)
+			validationConfig.MaxUnitCount, rg.Count, validationConfig.MinUnitCount)
 	}
 
 	// TODO: validate pricing
@@ -82,22 +82,22 @@ func validateResourceGroup(config ValConfig, rg types.Resources) (resourceLimits
 	return limits, nil
 }
 
-func validateResourceUnit(config ValConfig, units types.ResourceUnits) (resourceLimits, error) {
+func validateResourceUnit( units types.ResourceUnits) (resourceLimits, error) {
 	limits := newLimits()
 
-	val, err := validateCPU(config, units.CPU)
+	val, err := validateCPU(units.CPU)
 	if err != nil {
 		return resourceLimits{}, err
 	}
 	limits.cpu = limits.cpu.Add(val)
 
-	val, err = validateMemory(config, units.Memory)
+	val, err = validateMemory( units.Memory)
 	if err != nil {
 		return resourceLimits{}, err
 	}
 	limits.memory = limits.memory.Add(val)
 
-	val, err = validateStorage(config, units.Storage)
+	val, err = validateStorage(units.Storage)
 	if err != nil {
 		return resourceLimits{}, err
 	}
@@ -106,37 +106,37 @@ func validateResourceUnit(config ValConfig, units types.ResourceUnits) (resource
 	return limits, nil
 }
 
-func validateCPU(config ValConfig, u *types.CPU) (sdk.Int, error) {
+func validateCPU( u *types.CPU) (sdk.Int, error) {
 	if u == nil {
 		return sdk.Int{}, errors.Errorf("error: invalid unit cpu, cannot be nil")
 	}
-	if (u.Units.Value() > uint64(config.MaxUnitCPU)) || (u.Units.Value() < uint64(config.MinUnitCPU)) {
+	if (u.Units.Value() > uint64(validationConfig.MaxUnitCPU)) || (u.Units.Value() < uint64(validationConfig.MinUnitCPU)) {
 		return sdk.Int{}, errors.Errorf("error: invalid unit cpu (%v > %v > %v fails)",
-			config.MaxUnitCPU, u.Units.Value(), config.MinUnitCPU)
+			validationConfig.MaxUnitCPU, u.Units.Value(), validationConfig.MinUnitCPU)
 	}
 
 	return u.Units.Val, nil
 }
 
-func validateMemory(config ValConfig, u *types.Memory) (sdk.Int, error) {
+func validateMemory(u *types.Memory) (sdk.Int, error) {
 	if u == nil {
 		return sdk.Int{}, errors.Errorf("error: invalid unit memory, cannot be nil")
 	}
-	if (u.Quantity.Value() > uint64(config.MaxUnitMemory)) || (u.Quantity.Value() < uint64(config.MinUnitMemory)) {
+	if (u.Quantity.Value() > uint64(validationConfig.MaxUnitMemory)) || (u.Quantity.Value() < uint64(validationConfig.MinUnitMemory)) {
 		return sdk.Int{}, errors.Errorf("error: invalid unit memory (%v > %v > %v fails)",
-			config.MaxUnitMemory, u.Quantity.Value(), config.MinUnitMemory)
+			validationConfig.MaxUnitMemory, u.Quantity.Value(), validationConfig.MinUnitMemory)
 	}
 
 	return u.Quantity.Val, nil
 }
 
-func validateStorage(config ValConfig, u *types.Storage) (sdk.Int, error) {
+func validateStorage( u *types.Storage) (sdk.Int, error) {
 	if u == nil {
 		return sdk.Int{}, errors.Errorf("error: invalid unit storage, cannot be nil")
 	}
-	if (u.Quantity.Value() > uint64(config.MaxUnitStorage)) || (u.Quantity.Value() < uint64(config.MinUnitStorage)) {
+	if (u.Quantity.Value() > uint64(validationConfig.MaxUnitStorage)) || (u.Quantity.Value() < uint64(validationConfig.MinUnitStorage)) {
 		return sdk.Int{}, errors.Errorf("error: invalid unit storage (%v > %v > %v fails)",
-			config.MaxUnitStorage, u.Quantity.Value(), config.MinUnitStorage)
+			validationConfig.MaxUnitStorage, u.Quantity.Value(), validationConfig.MinUnitStorage)
 	}
 
 	return u.Quantity.Val, nil

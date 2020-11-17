@@ -12,7 +12,6 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/types/unit"
-	"github.com/ovrclk/akash/validation"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -161,8 +160,6 @@ func calculatePriceRange(gspec *dtypes.GroupSpec) (sdk.Coin, sdk.Coin) {
 
 	mem := sdk.NewInt(0)
 
-	cfg := validation.Config()
-
 	for _, group := range gspec.Resources {
 		mem = mem.Add(
 			sdk.NewIntFromUint64(group.Resources.Memory.Quantity.Value()).
@@ -171,12 +168,16 @@ func calculatePriceRange(gspec *dtypes.GroupSpec) (sdk.Coin, sdk.Coin) {
 
 	rmax := gspec.Price()
 
+	// TODO - replace me with values from the vaildation configuartion
+	minGroupMemPrice := int64(0)
+	maxGroupMemPrice := int64(0)
+
 	cmin := mem.MulRaw(
-		cfg.MinGroupMemPrice).
+		minGroupMemPrice).
 		Quo(sdk.NewInt(unit.Gi))
 
 	cmax := mem.MulRaw(
-		cfg.MaxGroupMemPrice).
+		maxGroupMemPrice).
 		Quo(sdk.NewInt(unit.Gi))
 
 	if cmax.GT(rmax.Amount) {

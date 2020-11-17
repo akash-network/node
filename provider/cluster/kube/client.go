@@ -3,6 +3,7 @@ package kube
 import (
 	"context"
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	"github.com/ovrclk/akash/provider/cluster/util"
 	"os"
 	"path"
 
@@ -22,7 +23,6 @@ import (
 	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/validation"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
@@ -112,10 +112,6 @@ func openKubeConfig(log log.Logger) (*rest.Config, error) {
 	return rest.InClusterConfig()
 }
 
-func shouldExpose(expose *manifest.ServiceExpose) bool {
-	return expose.Proto == manifest.TCP && expose.Global && 80 == exposeExternalPort(expose)
-}
-
 func (c *client) Deployments(ctx context.Context) ([]ctypes.Deployment, error) {
 	manifests, err := c.ac.AkashV1().Manifests(c.ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -190,7 +186,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 
 		for expIdx := range service.Expose {
 			expose := &service.Expose[expIdx]
-			if !shouldExpose(expose) {
+			if !util.ShouldExpose(expose) {
 				continue
 			}
 			if err := applyIngress(ctx, c.kc, newIngressBuilder(c.log, c.settings, c.host, lid, group, service, expose)); err != nil {
@@ -431,22 +427,6 @@ func (c *client) Inventory(ctx context.Context) ([]ctypes.Node, error) {
 		}
 
 		nodes = append(nodes, cluster.NewNode(knode.Name, resources))
-	}
-
-	if os.Getenv("AKASH_PROVIDER_FAKE_CAPACITY") == "true" {
-		cfg := validation.Config()
-		return []ctypes.Node{
-			cluster.NewNode("minikube", types.ResourceUnits{
-				CPU: &types.CPU{
-					Units: types.NewResourceValue(uint64(cfg.MaxUnitCPU * 100)),
-				},
-				Memory: &types.Memory{
-					Quantity: types.NewResourceValue(uint64(cfg.MaxUnitMemory * 100)),
-				},
-				Storage: &types.Storage{
-					Quantity: types.NewResourceValue(uint64(cfg.MaxUnitStorage * 100)),
-				},
-			})}, nil
 	}
 
 	return nodes, nil

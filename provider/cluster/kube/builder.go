@@ -5,6 +5,7 @@ import (
 	"encoding/base32"
 	"errors"
 	"fmt"
+	"github.com/ovrclk/akash/provider/cluster/util"
 	"strings"
 
 	"github.com/lithammer/shortuuid"
@@ -380,7 +381,7 @@ func (b *serviceBuilder) ports() ([]corev1.ServicePort, error) {
 			default:
 				return nil, errUnsupportedProtocol
 			}
-			externalPort := exposeExternalPort(&b.service.Expose[i])
+			externalPort := util.ExposeExternalPort(&b.service.Expose[i])
 			ports = append(ports, corev1.ServicePort{
 				Name:       fmt.Sprintf("%d-%d", i, int(externalPort)),
 				Port:       externalPort,
@@ -677,7 +678,7 @@ func (b *ingressBuilder) rules() []netv1.IngressRule {
 					Name: makeGlobalServiceNameFromBasename(b.name()),
 					Port: netv1.ServiceBackendPort{
 
-						Number: exposeExternalPort(b.expose),
+						Number: util.ExposeExternalPort(b.expose),
 					},
 				},
 			}},
@@ -692,13 +693,6 @@ func (b *ingressBuilder) rules() []netv1.IngressRule {
 	}
 	b.log.Debug("provider/cluster/kube/builder: created rules", "rules", rules)
 	return rules
-}
-
-func exposeExternalPort(expose *manifest.ServiceExpose) int32 {
-	if expose.ExternalPort == 0 {
-		return int32(expose.Port)
-	}
-	return int32(expose.ExternalPort)
 }
 
 // lidNS generates a unique sha256 sum for identifying a provider's object name.

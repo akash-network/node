@@ -1,43 +1,52 @@
 package types
 
-import (
-	"github.com/caarlos0/env"
-)
 
-// ValConfig represents validation config
-type ValConfig struct {
-	MaxUnitCPU     uint `env:"AKASH_MAX_UNIT_CPU"     envDefault:"500"`
-	MaxUnitMemory  uint `env:"AKASH_MAX_UNIT_MEMORY"  envDefault:"1073741824"` // 1Gi
-	MaxUnitStorage uint `env:"AKASH_MAX_UNIT_STORAGE" envDefault:"1073741824"` // 1Gi
-	MaxUnitCount   uint `env:"AKASH_MAX_UNIT_COUNT"   envDefault:"10"`
-	MaxUnitPrice   uint `env:"AKASH_MAX_UNIT_PRICE"   envDefault:"10000"`
+// This is the validation configuration that acts as a hard limit
+// on what the network accepts for deployments. This is never changed
+// and is the same across all members of the network
 
-	MinUnitCPU     uint `env:"AKASH_MIN_UNIT_CPU"      envDefault:"10"`
-	MinUnitMemory  uint `env:"AKASH_MIN_UNIT_MEMORY"   envDefault:"1024"` // 1Mi
-	MinUnitStorage uint `env:"AKASH_MIN_UNIT_STORAGE"  envDefault:"1024"` // 1Mi
-	MinUnitCount   uint `env:"AKASH_MIN_UNIT_COUNT"    envDefault:"1"`
-	MinUnitPrice   uint `env:"AKASH_MIN_UNIT_PRICE"    envDefault:"1"`
+var validationConfig = struct {
+	MaxUnitCPU uint
+	MaxUnitMemory  uint
+	MaxUnitStorage uint
+	MaxUnitCount   uint
+	MaxUnitPrice   uint
 
-	MaxGroupCount int `env:"AKASH_MAX_GROUP_COUNT" envDefault:"10"`
-	MaxGroupUnits int `env:"AKASH_MAX_GROUP_UNITS" envDefault:"10"`
+	MinUnitCPU     uint
+	MinUnitMemory  uint
+	MinUnitStorage uint
+	MinUnitCount   uint
+	MinUnitPrice   uint
 
-	MaxGroupCPU     int64 `env:"AKASH_MAX_GROUP_CPU"       envDefault:"1000"`
-	MaxGroupMemory  int64 `env:"AKASH_MAX_GROUP_MEMORY"    envDefault:"1073741824"` // 1Gi
-	MaxGroupStorage int64 `env:"AKASH_MAX_GROUP_STORAGE"   envDefault:"5368709120"` // 5Gi
+	MaxGroupCount int
+	MaxGroupUnits int
 
-	MinGroupMemPrice int64 `env:"AKASH_MEM_PRICE_MIN" envDefault:"50"`
-	MaxGroupMemPrice int64 `env:"AKASH_MEM_PRICE_MAX" envDefault:"1048576"`
-}
+	MaxGroupCPU     int64
+	MaxGroupMemory  int64
+	MaxGroupStorage int64
 
-var defaultConfig = ValConfig{}
+	MinGroupMemPrice int64
+	MaxGroupMemPrice int64
+}{
+	MaxUnitCPU: 500,
+	MaxUnitMemory:  1073741824,
+	MaxUnitStorage: 1073741824,
+	MaxUnitCount:  10,
+	MaxUnitPrice:   10000,
 
-func init() {
-	if err := env.Parse(&defaultConfig); err != nil {
-		panic(err)
-	}
-}
+	MinUnitCPU:     10,
+	MinUnitMemory:  1024,
+	MinUnitStorage: 1024,
+	MinUnitCount:  1,
+	MinUnitPrice:   1,
 
-// Config returns default configuration
-func Config() ValConfig {
-	return defaultConfig
+	MaxGroupCount: 10,
+	MaxGroupUnits: 10,
+
+	MaxGroupCPU:     1000,
+	MaxGroupMemory:  1073741824,
+	MaxGroupStorage: 5368709120,
+
+	MinGroupMemPrice: 50,
+	MaxGroupMemPrice: 1048576,
 }

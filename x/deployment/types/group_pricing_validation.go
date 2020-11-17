@@ -9,13 +9,13 @@ import (
 	"github.com/ovrclk/akash/types/unit"
 )
 
-func validateGroupPricing(config ValConfig, gspec GroupSpec) error {
+func validateGroupPricing( gspec GroupSpec) error {
 	var price sdk.Coin
 
 	mem := sdk.NewInt(0)
 
 	for idx, resource := range gspec.Resources {
-		if err := validateUnitPricing(config, resource); err != nil {
+		if err := validateUnitPricing(resource); err != nil {
 			return fmt.Errorf("group %v: %w", gspec.GetName(), err)
 		}
 
@@ -37,7 +37,7 @@ func validateGroupPricing(config ValConfig, gspec GroupSpec) error {
 		mem = mem.Add(memCount.Mul(sdk.NewIntFromUint64(uint64(resource.Count))))
 	}
 
-	minprice := mem.Mul(sdk.NewInt(config.MinGroupMemPrice)).Quo(sdk.NewInt(unit.Gi))
+	minprice := mem.Mul(sdk.NewInt(validationConfig.MinGroupMemPrice)).Quo(sdk.NewInt(unit.Gi))
 
 	if price.Amount.LT(minprice) {
 		return errors.Errorf("group %v: price too low (%v >= %v fails)", gspec.GetName(), price, minprice)
@@ -45,23 +45,23 @@ func validateGroupPricing(config ValConfig, gspec GroupSpec) error {
 	return nil
 }
 
-func validateUnitPricing(config ValConfig, rg Resource) error {
+func validateUnitPricing(rg Resource) error {
 	if !rg.Price.IsValid() {
 		return errors.Errorf("error: invalid price object")
 	}
 
-	if rg.Price.Amount.GT(sdk.NewIntFromUint64(uint64(config.MaxUnitPrice))) {
-		return errors.Errorf("error: invalid unit price (%v > %v fails)", config.MaxUnitPrice, rg.Price)
+	if rg.Price.Amount.GT(sdk.NewIntFromUint64(uint64(validationConfig.MaxUnitPrice))) {
+		return errors.Errorf("error: invalid unit price (%v > %v fails)", validationConfig.MaxUnitPrice, rg.Price)
 	}
 
-	if rg.Price.Amount.GT(sdk.NewIntFromUint64(uint64(config.MaxUnitPrice))) {
-		return errors.Errorf("error: invalid unit price (%v < %v fails)", config.MinUnitPrice, rg.Price)
+	if rg.Price.Amount.GT(sdk.NewIntFromUint64(uint64(validationConfig.MaxUnitPrice))) {
+		return errors.Errorf("error: invalid unit price (%v < %v fails)", validationConfig.MinUnitPrice, rg.Price)
 	}
 
 	return nil
 }
 
-func validateOrderBidDuration(_ ValConfig, rg GroupSpec) error {
+func validateOrderBidDuration(rg GroupSpec) error {
 	if !(rg.OrderBidDuration > 0) {
 		return errors.Errorf("error: order bid duration must be greater than zero")
 	}

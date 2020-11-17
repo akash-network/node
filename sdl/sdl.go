@@ -99,13 +99,9 @@ func Read(buf []byte) (SDL, error) {
 		return nil, err
 	}
 
-	// TODO: Determine if worth repairing ValidateManifest; functionality is commented out
 	if err := validation.ValidateManifest(m); err != nil {
 		return nil, err
 	}
-	// if err := validation.ValidateManifestWithGroupSpecs(m, dgroups); err != nil {
-	// 	return nil, err
-	// }
 
 	return obj, nil
 }
