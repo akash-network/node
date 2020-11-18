@@ -95,18 +95,6 @@ func (g Group) GetName() string {
 	return g.GroupSpec.Name
 }
 
-// Resource stores resources group, count (amount of group) and price of each group
-// type Resource struct {
-// 	Resources types.ResourceUnits `json:"resources"`
-// 	Price     sdk.Coin            `json:"price"`
-// 	Count     uint32              `json:"count"`
-// }
-
-// GetUnits method returns unit of resource
-// func (r Resource) GetResources() types.ResourceUnits {
-// 	return r.Resources
-// }
-
 // GetResources method returns resources list in group
 func (g Group) GetResources() []types.Resources {
 	return g.GroupSpec.GetResources()

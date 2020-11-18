@@ -19,7 +19,7 @@ func ValidateDeploymentGroups(gspecs []GroupSpec) error {
 		return ErrInvalidGroups
 	}
 
-	names := make(map[string]int)
+	names := make(map[string]int, len(gspecs)) // Used as set
 	for _, group := range gspecs {
 		if err := group.ValidateBasic(); err != nil {
 			return err
@@ -28,6 +28,7 @@ func ValidateDeploymentGroups(gspecs []GroupSpec) error {
 		if _, exists := names[group.GetName()]; exists {
 			return errors.Errorf("duplicate deployment group name %q", group.GetName())
 		}
+		names[group.GetName()] = 0 // Value stored does not matter
 	}
 
 	return nil

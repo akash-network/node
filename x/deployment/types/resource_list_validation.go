@@ -34,19 +34,10 @@ func ValidateResourceList(rlist types.ResourceGroup) error {
 		gLimits.mul(resource.Count)
 
 		limits.add(gLimits)
-
-		// TODO: validate pricing
-		// if idx == 0 {
-		// 	price = resource.Price
-		// } else {
-		// 	if resource.Price.Denom != price.Denom {
-		// 		return fmt.Errorf("mixed denominations: (%v != %v)", price.Denom, resource.Price.Denom)
-		// 	}
-		// }
 	}
 
 	if limits.cpu.GT(sdk.NewInt(validationConfig.MaxGroupCPU)) || limits.cpu.LTE(sdk.ZeroInt()) {
-		return errors.Errorf("group %v: invalid total cpu (%v > %v > %v fails)",
+		return errors.Errorf("group %v: invalid total CPU (%v > %v > %v fails)",
 			rlist.GetName(), validationConfig.MaxGroupCPU, limits.cpu, 0)
 	}
 
@@ -74,10 +65,6 @@ func validateResourceGroup(rg types.Resources) (resourceLimits, error) {
 			validationConfig.MaxUnitCount, rg.Count, validationConfig.MinUnitCount)
 	}
 
-	// TODO: validate pricing
-	// if !rg.Price.IsPositive() {
-	// 	return fmt.Errorf("error: invalid unit price (not positive fails)")
-	// }
 
 	return limits, nil
 }
@@ -108,10 +95,10 @@ func validateResourceUnit( units types.ResourceUnits) (resourceLimits, error) {
 
 func validateCPU( u *types.CPU) (sdk.Int, error) {
 	if u == nil {
-		return sdk.Int{}, errors.Errorf("error: invalid unit cpu, cannot be nil")
+		return sdk.Int{}, errors.Errorf("error: invalid unit CPU, cannot be nil")
 	}
 	if (u.Units.Value() > uint64(validationConfig.MaxUnitCPU)) || (u.Units.Value() < uint64(validationConfig.MinUnitCPU)) {
-		return sdk.Int{}, errors.Errorf("error: invalid unit cpu (%v > %v > %v fails)",
+		return sdk.Int{}, errors.Errorf("error: invalid unit CPU (%v > %v > %v fails)",
 			validationConfig.MaxUnitCPU, u.Units.Value(), validationConfig.MinUnitCPU)
 	}
 

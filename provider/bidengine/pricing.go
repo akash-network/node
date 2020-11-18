@@ -168,7 +168,7 @@ func calculatePriceRange(gspec *dtypes.GroupSpec) (sdk.Coin, sdk.Coin) {
 
 	rmax := gspec.Price()
 
-	// TODO - replace me with values from the vaildation configuartion
+	// TODO - replace me with values from the vaildation configuration
 	minGroupMemPrice := int64(0)
 	maxGroupMemPrice := int64(0)
 

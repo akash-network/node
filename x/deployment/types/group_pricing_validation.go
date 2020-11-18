@@ -2,19 +2,19 @@ package types
 
 import (
 	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/types/unit"
 )
 
-func validateGroupPricing( gspec GroupSpec) error {
+func validateGroupPricing(gspec GroupSpec) error {
 	var price sdk.Coin
 
 	mem := sdk.NewInt(0)
 
 	for idx, resource := range gspec.Resources {
+
 		if err := validateUnitPricing(resource); err != nil {
 			return fmt.Errorf("group %v: %w", gspec.GetName(), err)
 		}
@@ -42,11 +42,13 @@ func validateGroupPricing( gspec GroupSpec) error {
 	if price.Amount.LT(minprice) {
 		return errors.Errorf("group %v: price too low (%v >= %v fails)", gspec.GetName(), price, minprice)
 	}
+
+	// TODO - validate uakt for everything
 	return nil
 }
 
 func validateUnitPricing(rg Resource) error {
-	if !rg.Price.IsValid() {
+	if !rg.GetPrice().IsValid() {
 		return errors.Errorf("error: invalid price object")
 	}
 
@@ -57,7 +59,6 @@ func validateUnitPricing(rg Resource) error {
 	if rg.Price.Amount.GT(sdk.NewIntFromUint64(uint64(validationConfig.MaxUnitPrice))) {
 		return errors.Errorf("error: invalid unit price (%v < %v fails)", validationConfig.MinUnitPrice, rg.Price)
 	}
-
 	return nil
 }
 

@@ -18,16 +18,18 @@ func ValidateManifest(m manifest.Manifest) error {
 }
 
 type validateManifestGroupsHelper struct {
-	hostnames map[string]int // used as a set
+	hostnames          map[string]int // used as a set
 	globalServiceCount uint
 }
+
+var ErrInvalidManifest = errors.New("invalid manifest")
 
 func validateManifestGroups(groups []manifest.Group) error {
 	helper := validateManifestGroupsHelper{
 		hostnames: make(map[string]int),
 	}
 	names := make(map[string]int) // used as a set
-	 for _, group := range groups {
+	for _, group := range groups {
 		if err := validateManifestGroup(group, &helper); err != nil {
 			return err
 		}
@@ -36,20 +38,20 @@ func validateManifestGroups(groups []manifest.Group) error {
 		}
 
 		names[group.GetName()] = 0 // Value stored is not used
-	 }
-	 if helper.globalServiceCount == 0 {
-	 	return ErrManifestUnreachable
-	 }
+	}
+	if helper.globalServiceCount == 0 {
+		return ErrManifestUnreachable
+	}
 	return nil
 }
 
 func validateManifestGroup(group manifest.Group, helper *validateManifestGroupsHelper) error {
 	if err := dtypes.ValidateResourceList(group); err != nil {
-		return fmt.Errorf("manifest groups: %v", err)
+		return err
 	}
 
 	if 0 == len(group.Services) {
-		return errors.Errorf("invalid manifest: group %q contains no services", group.GetName())
+		return fmt.Errorf("%w: group %q contains no services", ErrInvalidManifest, group.GetName())
 	}
 
 	for _, s := range group.Services {
@@ -94,7 +96,7 @@ func validateServiceExpose(serviceName string, serviceExpose manifest.ServiceExp
 		return ErrServiceExposePortZero
 	}
 
-	switch(serviceExpose.Proto){
+	switch serviceExpose.Proto {
 	case manifest.TCP, manifest.UDP:
 		break
 	default:
@@ -117,17 +119,15 @@ func validateServiceExpose(serviceName string, serviceExpose manifest.ServiceExp
 		}
 	}
 
-
 	return nil
 }
 
 var hostnameRegex = regexp.MustCompile("^[[:alnum:],-,\\.]+$")
 
-func isValidHostname(hostname string) bool{
+func isValidHostname(hostname string) bool {
 	return hostnameRegex.MatchString(hostname)
 }
 
-// TODO - I think we can eliminate this ?!
 // ValidateManifestWithGroupSpecs does validation for manifest with group specifications
 func ValidateManifestWithGroupSpecs(m *manifest.Manifest, gspecs []*dtypes.GroupSpec) error {
 	rlists := make([]types.ResourceGroup, 0, len(gspecs))
@@ -182,7 +182,7 @@ func validateManifestDeploymentGroup(mgroup manifest.Group, dgroup types.Resourc
 	endpointsCountForDeploymentGroup := 0
 
 	// Iterate over all deployment groups
-	deploymentGroupLoop:
+deploymentGroupLoop:
 	for _, drec := range dgroup.GetResources() {
 		endpointsCountForDeploymentGroup += len(drec.Resources.Endpoints)
 		// Find a matching manifest group
@@ -233,7 +233,7 @@ func validateManifestDeploymentGroup(mgroup manifest.Group, dgroup types.Resourc
 
 	endpointsCountForManifestGroup := 0
 	for _, service := range mgroup.Services {
-		for _, serviceExpose := range service.Expose{
+		for _, serviceExpose := range service.Expose {
 			if serviceExpose.Global && !util.ShouldExpose(&serviceExpose) {
 				endpointsCountForManifestGroup++
 			}
