@@ -43,7 +43,7 @@ $(MODVENDOR): $(CACHE)
 	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor
 
 protoc-swagger:
-ifeq (, $(shell which swagger-combine))
+ifeq (, $(shell which swagger-combine 2>/dev/null))
 	@echo "Installing swagger-combine..."
 	npm install -g swagger-combine
 else
