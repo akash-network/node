@@ -17,10 +17,18 @@ func ValidateManifest(m manifest.Manifest) error {
 	return validateManifestGroups(m.GetGroups())
 }
 
+type validateManifestGroupsHelper struct {
+	hostnames map[string]int // used as a set
+	globalServiceCount uint
+}
+
 func validateManifestGroups(groups []manifest.Group) error {
+	helper := validateManifestGroupsHelper{
+		hostnames: make(map[string]int),
+	}
 	names := make(map[string]int) // used as a set
 	 for _, group := range groups {
-		if err := validateManifestGroup(group); err != nil {
+		if err := validateManifestGroup(group, &helper); err != nil {
 			return err
 		}
 		if _, exists := names[group.GetName()]; exists {
@@ -29,40 +37,42 @@ func validateManifestGroups(groups []manifest.Group) error {
 
 		names[group.GetName()] = 0 // Value stored is not used
 	 }
-
+	 if helper.globalServiceCount == 0 {
+	 	return ErrManifestUnreachable
+	 }
 	return nil
 }
 
-func validateManifestGroup(group manifest.Group) error {
+func validateManifestGroup(group manifest.Group, helper *validateManifestGroupsHelper) error {
 	if err := dtypes.ValidateResourceList(group); err != nil {
 		return fmt.Errorf("manifest groups: %v", err)
 	}
 
 	if 0 == len(group.Services) {
-		return ErrGroupContainsNoServices
+		return errors.Errorf("invalid manifest: group %q contains no services", group.GetName())
 	}
 
 	for _, s := range group.Services {
-		if err := validateManifestService(s); err != nil {
+		if err := validateManifestService(s, helper); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func validateManifestService(service manifest.Service) error {
+func validateManifestService(service manifest.Service, helper *validateManifestGroupsHelper) error {
 	if len(service.Name) == 0 {
 		return ErrServiceNameEmpty
 	}
 
 	if len(service.Image) == 0 {
-		return ErrServiceImageEmpty
+		return errors.Errorf("invalid manifest: service %q has an empty image name", service.Name)
 	}
 
 	for _, envVar := range service.Env {
 		idx := strings.Index(envVar, "=")
 		if idx == 0 {
-			return ErrServiceEnvVarEmptyName
+			return errors.Errorf("invalid manifest: service %q defines an env. var. with an empty name", service.Name)
 		}
 	}
 
@@ -71,7 +81,7 @@ func validateManifestService(service manifest.Service) error {
 	}
 
 	for _, serviceExpose := range service.Expose {
-		if err := validateServiceExpose(serviceExpose); err != nil {
+		if err := validateServiceExpose(service.Name, serviceExpose, helper); err != nil {
 			return err
 		}
 	}
@@ -79,21 +89,37 @@ func validateManifestService(service manifest.Service) error {
 	return nil
 }
 
-func validateServiceExpose(serviceExpose manifest.ServiceExpose) error {
+func validateServiceExpose(serviceName string, serviceExpose manifest.ServiceExpose, helper *validateManifestGroupsHelper) error {
 	if serviceExpose.Port == 0 {
 		return ErrServiceExposePortZero
+	}
+
+	switch(serviceExpose.Proto){
+	case manifest.TCP, manifest.UDP:
+		break
+	default:
+		return errors.Errorf("invalid manifest: service %q protocol invalid", serviceName)
 	}
 
 	for _, host := range serviceExpose.Hosts {
 		if !isValidHostname(host) {
 			return ErrServiceExposeInvalidHostname
 		}
+
+		_, exists := helper.hostnames[host]
+		if exists {
+			return errors.Errorf("hostname %q is duplicated, this is not allowed", host)
+		}
+		helper.hostnames[host] = 0 // Value stored does not matter
+
+		if serviceExpose.Global {
+			helper.globalServiceCount++
+		}
 	}
 
-	// TODO - validate that the hostnames are unique across the entire manifest
+
 	return nil
 }
-
 
 var hostnameRegex = regexp.MustCompile("^[[:alnum:],-,\\.]+$")
 
@@ -138,8 +164,7 @@ func validateManifestDeploymentGroups(mgroups []manifest.Group, dgroups []types.
 		dgroup, dgroupExists := dgroupByName[mgroup.GetName()]
 
 		if !dgroupExists {
-			//return errors.Errorf("invalid manifest: unknown deployment group ('%v')", mgroup.GetName())
-			return ErrManifestGroupDoesNotExistInDeployment
+			return errors.Errorf("invalid manifest: unknown deployment group ('%v')", mgroup.GetName())
 		}
 
 		if err := validateManifestDeploymentGroup(mgroup, dgroup); err != nil {

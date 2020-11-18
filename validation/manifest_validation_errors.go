@@ -12,4 +12,4 @@ var ErrServiceEnvVarEmptyName = errors.New("An environmental variable has an emp
 var ErrServiceCountIsZero = errors.New("The service count is zero")
 var ErrServiceExposePortZero = errors.New("The service port is zero")
 var ErrServiceExposeInvalidHostname = errors.New("The service hostname is not valid")
-var ErrManifestGroupDoesNotExistInDeployment = errors.New("")
+var ErrManifestUnreachable = errors.New("invalid manifest: zero global services")

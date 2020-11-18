@@ -7,7 +7,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
-	"github.com/ovrclk/akash/validation"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
@@ -38,7 +37,7 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		Version:      msg.Version,
 	}
 
-	if err := validation.ValidateDeploymentGroups(msg.Groups); err != nil {
+	if err := types.ValidateDeploymentGroups(msg.Groups); err != nil {
 		return nil, errors.Wrap(types.ErrInvalidGroups, err.Error())
 	}
 
