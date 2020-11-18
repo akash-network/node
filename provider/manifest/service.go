@@ -191,12 +191,12 @@ loop:
 			}
 
 		case req := <-s.mreqch:
-			 if err := validation.ValidateManifest(req.value.Manifest); err != nil {
-			 	s.session.Log().Error("manifest validation failed",
-			 		"err", err, "deployment", req.value.Deployment)
-			 	req.ch <- err
-			 	break
-			 }
+			if err := validation.ValidateManifest(req.value.Manifest); err != nil {
+				s.session.Log().Error("manifest validation failed",
+					"err", err, "deployment", req.value.Deployment)
+				req.ch <- err
+				break
+			}
 
 			manager, err := s.ensureManger(req.value.Deployment)
 			if err != nil {

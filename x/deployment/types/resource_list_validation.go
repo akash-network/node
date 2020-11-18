@@ -1,10 +1,10 @@
 package types
 
 import (
-	"github.com/pkg/errors"
 	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/types"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -65,11 +65,10 @@ func validateResourceGroup(rg types.Resources) (resourceLimits, error) {
 			validationConfig.MaxUnitCount, rg.Count, validationConfig.MinUnitCount)
 	}
 
-
 	return limits, nil
 }
 
-func validateResourceUnit( units types.ResourceUnits) (resourceLimits, error) {
+func validateResourceUnit(units types.ResourceUnits) (resourceLimits, error) {
 	limits := newLimits()
 
 	val, err := validateCPU(units.CPU)
@@ -78,7 +77,7 @@ func validateResourceUnit( units types.ResourceUnits) (resourceLimits, error) {
 	}
 	limits.cpu = limits.cpu.Add(val)
 
-	val, err = validateMemory( units.Memory)
+	val, err = validateMemory(units.Memory)
 	if err != nil {
 		return resourceLimits{}, err
 	}
@@ -93,7 +92,7 @@ func validateResourceUnit( units types.ResourceUnits) (resourceLimits, error) {
 	return limits, nil
 }
 
-func validateCPU( u *types.CPU) (sdk.Int, error) {
+func validateCPU(u *types.CPU) (sdk.Int, error) {
 	if u == nil {
 		return sdk.Int{}, errors.Errorf("error: invalid unit CPU, cannot be nil")
 	}
@@ -117,7 +116,7 @@ func validateMemory(u *types.Memory) (sdk.Int, error) {
 	return u.Quantity.Val, nil
 }
 
-func validateStorage( u *types.Storage) (sdk.Int, error) {
+func validateStorage(u *types.Storage) (sdk.Int, error) {
 	if u == nil {
 		return sdk.Int{}, errors.Errorf("error: invalid unit storage, cannot be nil")
 	}

@@ -1,12 +1,11 @@
 package types
 
-
 // This is the validation configuration that acts as a hard limit
 // on what the network accepts for deployments. This is never changed
 // and is the same across all members of the network
 
 var validationConfig = struct {
-	MaxUnitCPU uint
+	MaxUnitCPU     uint
 	MaxUnitMemory  uint
 	MaxUnitStorage uint
 	MaxUnitCount   uint
@@ -28,16 +27,16 @@ var validationConfig = struct {
 	MinGroupMemPrice int64
 	MaxGroupMemPrice int64
 }{
-	MaxUnitCPU: 500,
+	MaxUnitCPU:     500,
 	MaxUnitMemory:  1073741824,
 	MaxUnitStorage: 1073741824,
-	MaxUnitCount:  10,
+	MaxUnitCount:   10,
 	MaxUnitPrice:   10000,
 
 	MinUnitCPU:     10,
 	MinUnitMemory:  1024,
 	MinUnitStorage: 1024,
-	MinUnitCount:  1,
+	MinUnitCount:   1,
 	MinUnitPrice:   1,
 
 	MaxGroupCount: 10,

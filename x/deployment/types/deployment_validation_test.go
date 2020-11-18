@@ -57,7 +57,7 @@ func TestEmptyGroupSpecIsInvalid(t *testing.T) {
 	require.Equal(t, types.ErrInvalidGroups, err)
 }
 
-func validSimpleGroupSpec(t *testing.T) types.GroupSpec {
+func validSimpleGroupSpec() types.GroupSpec {
 	resources := make([]types.Resource, 1)
 	resources[0] = types.Resource{
 		Resources: akashtypes.ResourceUnits{
@@ -95,21 +95,21 @@ func validSimpleGroupSpec(t *testing.T) types.GroupSpec {
 	}
 }
 
-func validSimpleGroupSpecs(t *testing.T) []types.GroupSpec {
+func validSimpleGroupSpecs() []types.GroupSpec {
 	result := make([]types.GroupSpec, 1)
-	result[0] = validSimpleGroupSpec(t)
+	result[0] = validSimpleGroupSpec()
 
 	return result
 }
 
 func TestSimpleGroupSpecIsValid(t *testing.T) {
-	groups := validSimpleGroupSpecs(t)
+	groups := validSimpleGroupSpecs()
 	err := types.ValidateDeploymentGroups(groups)
 	require.NoError(t, err)
 }
 
 func TestDuplicateSimpleGroupSpecIsInvalid(t *testing.T) {
-	groups := validSimpleGroupSpecs(t)
+	groups := validSimpleGroupSpecs()
 	groupsDuplicate := make([]types.GroupSpec, 2)
 	groupsDuplicate[0] = groups[0]
 	groupsDuplicate[1] = groups[0]
@@ -119,7 +119,7 @@ func TestDuplicateSimpleGroupSpecIsInvalid(t *testing.T) {
 }
 
 func TestGroupWithZeroCount(t *testing.T) {
-	group := validSimpleGroupSpec(t)
+	group := validSimpleGroupSpec()
 	group.Resources[0].Count = 0
 	err := group.ValidateBasic()
 	require.Error(t, err)
@@ -127,7 +127,7 @@ func TestGroupWithZeroCount(t *testing.T) {
 }
 
 func TestGroupWithZeroCPU(t *testing.T) {
-	group := validSimpleGroupSpec(t)
+	group := validSimpleGroupSpec()
 	group.Resources[0].Resources.CPU.Units.Val = sdk.NewInt(0)
 	err := group.ValidateBasic()
 	require.Error(t, err)
@@ -135,7 +135,7 @@ func TestGroupWithZeroCPU(t *testing.T) {
 }
 
 func TestGroupWithZeroMemory(t *testing.T) {
-	group := validSimpleGroupSpec(t)
+	group := validSimpleGroupSpec()
 	group.Resources[0].Resources.Memory.Quantity.Val = sdk.NewInt(0)
 	err := group.ValidateBasic()
 	require.Error(t, err)
@@ -143,7 +143,7 @@ func TestGroupWithZeroMemory(t *testing.T) {
 }
 
 func TestGroupWithZeroStorage(t *testing.T) {
-	group := validSimpleGroupSpec(t)
+	group := validSimpleGroupSpec()
 	group.Resources[0].Resources.Storage.Quantity.Val = sdk.NewInt(0)
 	err := group.ValidateBasic()
 	require.Error(t, err)
@@ -151,7 +151,7 @@ func TestGroupWithZeroStorage(t *testing.T) {
 }
 
 func TestGroupWithNilCPU(t *testing.T) {
-	group := validSimpleGroupSpec(t)
+	group := validSimpleGroupSpec()
 	group.Resources[0].Resources.CPU = nil
 	err := group.ValidateBasic()
 	require.Error(t, err)
@@ -159,7 +159,7 @@ func TestGroupWithNilCPU(t *testing.T) {
 }
 
 func TestGroupWithNilMemory(t *testing.T) {
-	group := validSimpleGroupSpec(t)
+	group := validSimpleGroupSpec()
 	group.Resources[0].Resources.Memory = nil
 	err := group.ValidateBasic()
 	require.Error(t, err)
@@ -167,33 +167,41 @@ func TestGroupWithNilMemory(t *testing.T) {
 }
 
 func TestGroupWithNilStorage(t *testing.T) {
-	group := validSimpleGroupSpec(t)
+	group := validSimpleGroupSpec()
 	group.Resources[0].Resources.Storage = nil
 	err := group.ValidateBasic()
 	require.Error(t, err)
 	require.Regexp(t, "^.*invalid unit storage.*$", err)
 }
 
-func TestGroupWithZeroOrderBid(t *testing.T){
-	group := validSimpleGroupSpec(t)
+func TestGroupWithZeroOrderBid(t *testing.T) {
+	group := validSimpleGroupSpec()
 	group.OrderBidDuration = 0
 	err := group.ValidateBasic()
 	require.Error(t, err)
 	require.Regexp(t, "^.*order bid duration must be greater than zero.*$", err)
 }
 
-func TestGroupWithInvalidPrice(t *testing.T){
-	group := validSimpleGroupSpec(t)
+func TestGroupWithInvalidPrice(t *testing.T) {
+	group := validSimpleGroupSpec()
 	group.Resources[0].Price = sdk.Coin{}
 	err := group.ValidateBasic()
 	require.Error(t, err)
 	require.Regexp(t, "^.*invalid price object.*$", err)
 }
 
-func TestGroupWithNegativePrice(t *testing.T){
-	group := validSimpleGroupSpec(t)
+func TestGroupWithNegativePrice(t *testing.T) {
+	group := validSimpleGroupSpec()
 	group.Resources[0].Price.Amount = sdk.NewInt(-1)
 	err := group.ValidateBasic()
 	require.Error(t, err)
 	require.Regexp(t, "^.*invalid price object.*$", err)
+}
+
+func TestGroupWithInvalidDenom(t *testing.T) {
+	group := validSimpleGroupSpec()
+	group.Resources[0].Price.Denom = "goldenTicket"
+	err := group.ValidateBasic()
+	require.Error(t, err)
+	require.Regexp(t, "^.*denomination must be.*$", err)
 }

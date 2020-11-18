@@ -14,6 +14,9 @@ import (
 
 // ValidateManifest does validation for manifest
 func ValidateManifest(m manifest.Manifest) error {
+	if m == nil {
+		return fmt.Errorf("%w: manifest is nil", ErrInvalidManifest)
+	}
 	return validateManifestGroups(m.GetGroups())
 }
 
@@ -21,8 +24,6 @@ type validateManifestGroupsHelper struct {
 	hostnames          map[string]int // used as a set
 	globalServiceCount uint
 }
-
-var ErrInvalidManifest = errors.New("invalid manifest")
 
 func validateManifestGroups(groups []manifest.Group) error {
 	helper := validateManifestGroupsHelper{
@@ -34,26 +35,25 @@ func validateManifestGroups(groups []manifest.Group) error {
 			return err
 		}
 		if _, exists := names[group.GetName()]; exists {
-			return errors.Errorf("duplicate manifest group %q", group.GetName())
+			return fmt.Errorf("%w: duplicate group %q", ErrInvalidManifest, group.GetName())
 		}
 
 		names[group.GetName()] = 0 // Value stored is not used
 	}
 	if helper.globalServiceCount == 0 {
-		return ErrManifestUnreachable
+		return fmt.Errorf("%w: zero global services", ErrInvalidManifest)
 	}
 	return nil
 }
 
 func validateManifestGroup(group manifest.Group, helper *validateManifestGroupsHelper) error {
-	if err := dtypes.ValidateResourceList(group); err != nil {
-		return err
-	}
-
 	if 0 == len(group.Services) {
 		return fmt.Errorf("%w: group %q contains no services", ErrInvalidManifest, group.GetName())
 	}
-
+	
+	if err := dtypes.ValidateResourceList(group); err != nil {
+		return err
+	}
 	for _, s := range group.Services {
 		if err := validateManifestService(s, helper); err != nil {
 			return err
@@ -64,22 +64,19 @@ func validateManifestGroup(group manifest.Group, helper *validateManifestGroupsH
 
 func validateManifestService(service manifest.Service, helper *validateManifestGroupsHelper) error {
 	if len(service.Name) == 0 {
+		return fmt.Errorf("%w: service name is empty", ErrInvalidManifest)
 		return ErrServiceNameEmpty
 	}
 
 	if len(service.Image) == 0 {
-		return errors.Errorf("invalid manifest: service %q has an empty image name", service.Name)
+		return fmt.Errorf("%w: service %q has empty image name", ErrInvalidManifest, service.Name)
 	}
 
 	for _, envVar := range service.Env {
 		idx := strings.Index(envVar, "=")
 		if idx == 0 {
-			return errors.Errorf("invalid manifest: service %q defines an env. var. with an empty name", service.Name)
+			return fmt.Errorf("%w: service %q defines an env. var. with an empty name", ErrInvalidManifest, service.Name)
 		}
-	}
-
-	if service.Count == 0 {
-		return ErrServiceCountIsZero
 	}
 
 	for _, serviceExpose := range service.Expose {
@@ -100,12 +97,16 @@ func validateServiceExpose(serviceName string, serviceExpose manifest.ServiceExp
 	case manifest.TCP, manifest.UDP:
 		break
 	default:
-		return errors.Errorf("invalid manifest: service %q protocol invalid", serviceName)
+		return fmt.Errorf("%w: service %q protocol %q unknown", ErrInvalidManifest, serviceName, serviceExpose.Proto)
+	}
+
+	if serviceExpose.Global {
+		helper.globalServiceCount++
 	}
 
 	for _, host := range serviceExpose.Hosts {
 		if !isValidHostname(host) {
-			return ErrServiceExposeInvalidHostname
+			return fmt.Errorf("%w: service %q has invalid hostname %q", ErrInvalidManifest, serviceName, host)
 		}
 
 		_, exists := helper.hostnames[host]
@@ -113,22 +114,17 @@ func validateServiceExpose(serviceName string, serviceExpose manifest.ServiceExp
 			return errors.Errorf("hostname %q is duplicated, this is not allowed", host)
 		}
 		helper.hostnames[host] = 0 // Value stored does not matter
-
-		if serviceExpose.Global {
-			helper.globalServiceCount++
-		}
 	}
 
 	return nil
 }
 
-var hostnameRegex = regexp.MustCompile("^[[:alnum:],-,\\.]+$")
+var hostnameRegex = regexp.MustCompile(`^[[:alnum:],-,\.]+$`)
 
 func isValidHostname(hostname string) bool {
 	return hostnameRegex.MatchString(hostname)
 }
 
-// ValidateManifestWithGroupSpecs does validation for manifest with group specifications
 func ValidateManifestWithGroupSpecs(m *manifest.Manifest, gspecs []*dtypes.GroupSpec) error {
 	rlists := make([]types.ResourceGroup, 0, len(gspecs))
 	for _, gspec := range gspecs {
@@ -137,7 +133,6 @@ func ValidateManifestWithGroupSpecs(m *manifest.Manifest, gspecs []*dtypes.Group
 	return validateManifestDeploymentGroups(m.GetGroups(), rlists)
 }
 
-// ValidateManifestWithDeployment does basic validation and returns nil
 func ValidateManifestWithDeployment(m *manifest.Manifest, dgroups []dtypes.Group) error {
 	rgroups := make([]types.ResourceGroup, 0, len(dgroups))
 	for _, dgroup := range dgroups {
@@ -149,7 +144,6 @@ func ValidateManifestWithDeployment(m *manifest.Manifest, dgroups []dtypes.Group
 }
 
 func validateManifestDeploymentGroups(mgroups []manifest.Group, dgroups []types.ResourceGroup) error {
-	// TODO - audit this to make sure it covers everything
 	if len(mgroups) != len(dgroups) {
 		return errors.Errorf("invalid manifest: group count mismatch (%v != %v)", len(mgroups), len(dgroups))
 	}
@@ -194,8 +188,9 @@ deploymentGroupLoop:
 				continue
 			}
 
-			// Check that the resources in the deployment group are equal to the manifest group
-			if !drec.Resources.Equals(mrec.Resources) {
+			if !drec.Resources.CPU.Equal(mrec.Resources.CPU) ||
+				!drec.Resources.Memory.Equal(mrec.Resources.Memory) ||
+				!drec.Resources.Storage.Equal(mrec.Resources.Storage) {
 				continue
 			}
 
@@ -221,13 +216,13 @@ deploymentGroupLoop:
 		}
 		// If this point is reached then the deployment group cannot be fully matched
 		// against the given manifest groups
-		return errors.Errorf("invalid manifest: unused deployment resources ('%v')", dgroup.GetName())
+		return fmt.Errorf("%w: underutilized deployment group %q", ErrManifestCrossValidation, dgroup.GetName())
 	}
 
 	// Search for any manifest groups which are not fully satisfied
 	for _, mrec := range mlist {
 		if mrec.Count > 0 {
-			return errors.Errorf("invalid manifest: excess manifest resources ('%v')", mgroup.GetName())
+			return fmt.Errorf("%w: manifest resources %q is not fully matched with deployment groups", ErrManifestCrossValidation, mgroup.GetName())
 		}
 	}
 

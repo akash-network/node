@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/validation/constants"
 	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/types/unit"
@@ -17,6 +18,10 @@ func validateGroupPricing(gspec GroupSpec) error {
 
 		if err := validateUnitPricing(resource); err != nil {
 			return fmt.Errorf("group %v: %w", gspec.GetName(), err)
+		}
+
+		if resource.FullPrice().Denom != constants.AkashDenom {
+			return fmt.Errorf("%w: denomination must be %q", ErrInvalidDeployment, constants.AkashDenom)
 		}
 
 		if idx == 0 {
