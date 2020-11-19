@@ -48,7 +48,6 @@ func validateGroupPricing(gspec GroupSpec) error {
 		return errors.Errorf("group %v: price too low (%v >= %v fails)", gspec.GetName(), price, minprice)
 	}
 
-	// TODO - validate uakt for everything
 	return nil
 }
 
@@ -61,7 +60,7 @@ func validateUnitPricing(rg Resource) error {
 		return errors.Errorf("error: invalid unit price (%v > %v fails)", validationConfig.MaxUnitPrice, rg.Price)
 	}
 
-	if rg.Price.Amount.GT(sdk.NewIntFromUint64(uint64(validationConfig.MaxUnitPrice))) {
+	if rg.Price.Amount.LT(sdk.NewIntFromUint64(uint64(validationConfig.MinUnitPrice))) {
 		return errors.Errorf("error: invalid unit price (%v < %v fails)", validationConfig.MinUnitPrice, rg.Price)
 	}
 	return nil

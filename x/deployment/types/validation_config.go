@@ -27,7 +27,7 @@ var validationConfig = struct {
 	MinGroupMemPrice int64
 	MaxGroupMemPrice int64
 }{
-	MaxUnitCPU:     500,
+	MaxUnitCPU:     64000,
 	MaxUnitMemory:  1073741824,
 	MaxUnitStorage: 1073741824,
 	MaxUnitCount:   10,

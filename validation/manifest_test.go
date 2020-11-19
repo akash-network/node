@@ -1,6 +1,7 @@
 package validation_test
 
 import (
+	"bytes"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -238,7 +239,7 @@ func Test_ValidateManifest(t *testing.T) {
 func TestNilManifestIsInvalid(t *testing.T) {
 	err := validation.ValidateManifest(nil)
 	require.Error(t, err)
-	require.Regexp(t, "^.*manifest is nil.*$", err)
+	require.Regexp(t, "^.*manifest is empty.*$", err)
 }
 
 const nameOfTestService = "testService"
@@ -328,6 +329,24 @@ func TestManifestWithBadHostIsInvalid(t *testing.T) {
 	hosts[1] = "-bob"     // invalid
 	m[0].Services[0].Expose[0].Hosts = hosts
 	err := validation.ValidateManifest(m)
+	require.Error(t, err)
+	require.Regexp(t, "^.*invalid hostname.*$", err)
+}
+
+func TestManifestWithLongHostIsInvalid(t *testing.T) {
+	m := simpleManifest()
+	hosts := make([]string, 1)
+	buf := &bytes.Buffer{}
+	for i := 0 ; i != 255; i++ {
+		_, err := buf.WriteRune('a')
+		require.NoError(t, err)
+	}
+	_, err := buf.WriteString(".com")
+	require.NoError(t, err)
+
+	hosts[0] = buf.String()
+	m[0].Services[0].Expose[0].Hosts = hosts
+	err = validation.ValidateManifest(m)
 	require.Error(t, err)
 	require.Regexp(t, "^.*invalid hostname.*$", err)
 }

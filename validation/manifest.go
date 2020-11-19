@@ -14,8 +14,8 @@ import (
 
 // ValidateManifest does validation for manifest
 func ValidateManifest(m manifest.Manifest) error {
-	if m == nil {
-		return fmt.Errorf("%w: manifest is nil", ErrInvalidManifest)
+	if len(m) == 0 {
+		return fmt.Errorf("%w: manifest is empty", ErrInvalidManifest)
 	}
 	return validateManifestGroups(m.GetGroups())
 }
@@ -118,10 +118,10 @@ func validateServiceExpose(serviceName string, serviceExpose manifest.ServiceExp
 	return nil
 }
 
-var hostnameRegex = regexp.MustCompile(`^[[:alnum:],-,\.]+$`)
-
+var hostnameRegex = regexp.MustCompile(`^[[:alnum:],-,\.]+\.[[:alpha:]]{2,}$`)
+const hostnameMaxLen = 255
 func isValidHostname(hostname string) bool {
-	return hostnameRegex.MatchString(hostname)
+	return len(hostname) <= hostnameMaxLen && hostnameRegex.MatchString(hostname)
 }
 
 func ValidateManifestWithGroupSpecs(m *manifest.Manifest, gspecs []*dtypes.GroupSpec) error {
