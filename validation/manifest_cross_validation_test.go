@@ -11,14 +11,14 @@ import (
 	"testing"
 )
 
-func TestManifestWithEmptyDeployment(t *testing.T){
+func TestManifestWithEmptyDeployment(t *testing.T) {
 	m := simpleManifest()
 	deployment := make([]dtypes.Group, 0)
 	err := validation.ValidateManifestWithDeployment(&m, deployment)
 	require.Error(t, err)
 }
 
-func simpleDeployment(t *testing.T) []dtypes.Group{
+func simpleDeployment(t *testing.T) []dtypes.Group {
 	deployment := make([]dtypes.Group, 1)
 	gid := testutil.GroupID(t)
 	resources := make([]dtypes.Resource, 1)
@@ -28,8 +28,8 @@ func simpleDeployment(t *testing.T) []dtypes.Group{
 		Price:     sdk.Coin{},
 	}
 	deployment[0] = dtypes.Group{
-		GroupID:   gid,
-		State:     0,
+		GroupID: gid,
+		State:   0,
 		GroupSpec: dtypes.GroupSpec{
 			Name:             nameOfTestGroup,
 			Requirements:     nil,
@@ -37,18 +37,18 @@ func simpleDeployment(t *testing.T) []dtypes.Group{
 			OrderBidDuration: 0,
 		},
 	}
-	
+
 	return deployment
 }
 
-func TestManifestWithDeployment(t *testing.T){
+func TestManifestWithDeployment(t *testing.T) {
 	m := simpleManifest()
 	deployment := simpleDeployment(t)
 	err := validation.ValidateManifestWithDeployment(&m, deployment)
 	require.NoError(t, err)
 }
 
-func TestManifestWithDeploymentMultipleCount(t *testing.T){
+func TestManifestWithDeploymentMultipleCount(t *testing.T) {
 	addl := uint32(testutil.RandRangeInt(1, 20))
 	m := simpleManifest()
 	m[0].Services[0].Count += addl
@@ -58,7 +58,7 @@ func TestManifestWithDeploymentMultipleCount(t *testing.T){
 	require.NoError(t, err)
 }
 
-func TestManifestWithDeploymentMultiple(t *testing.T){
+func TestManifestWithDeploymentMultiple(t *testing.T) {
 	cpu := int64(testutil.RandRangeInt(1024, 2000))
 	storage := int64(testutil.RandRangeInt(2000, 3000))
 	memory := int64(testutil.RandRangeInt(3001, 4000))
@@ -93,7 +93,7 @@ func TestManifestWithDeploymentMultiple(t *testing.T){
 	require.NoError(t, err)
 }
 
-func TestManifestWithDeploymentCPUMismatch(t *testing.T){
+func TestManifestWithDeploymentCPUMismatch(t *testing.T) {
 	m := simpleManifest()
 	deployment := simpleDeployment(t)
 	deployment[0].GroupSpec.Resources[0].Resources.CPU.Units.Val = sdk.NewInt(999)
@@ -102,7 +102,7 @@ func TestManifestWithDeploymentCPUMismatch(t *testing.T){
 	require.Regexp(t, "^.*underutilized deployment group.+$", err)
 }
 
-func TestManifestWithDeploymentMemoryMismatch(t *testing.T){
+func TestManifestWithDeploymentMemoryMismatch(t *testing.T) {
 	m := simpleManifest()
 	deployment := simpleDeployment(t)
 	deployment[0].GroupSpec.Resources[0].Resources.Memory.Quantity.Val = sdk.NewInt(99999)
@@ -111,7 +111,7 @@ func TestManifestWithDeploymentMemoryMismatch(t *testing.T){
 	require.Regexp(t, "^.*underutilized deployment group.+$", err)
 }
 
-func TestManifestWithDeploymentStorageMismatch(t *testing.T){
+func TestManifestWithDeploymentStorageMismatch(t *testing.T) {
 	m := simpleManifest()
 	deployment := simpleDeployment(t)
 	deployment[0].GroupSpec.Resources[0].Resources.Storage.Quantity.Val = sdk.NewInt(99999)
@@ -120,7 +120,7 @@ func TestManifestWithDeploymentStorageMismatch(t *testing.T){
 	require.Regexp(t, "^.*underutilized deployment group.+$", err)
 }
 
-func TestManifestWithDeploymentCountMismatch(t *testing.T){
+func TestManifestWithDeploymentCountMismatch(t *testing.T) {
 	m := simpleManifest()
 	deployment := simpleDeployment(t)
 	deployment[0].GroupSpec.Resources[0].Count++
@@ -129,7 +129,7 @@ func TestManifestWithDeploymentCountMismatch(t *testing.T){
 	require.Regexp(t, "^.*underutilized deployment group.+$", err)
 }
 
-func TestManifestWithManifestGroupMismatch(t *testing.T){
+func TestManifestWithManifestGroupMismatch(t *testing.T) {
 	m := simpleManifest()
 	deployment := simpleDeployment(t)
 	m[0].Services[0].Count++
@@ -138,7 +138,7 @@ func TestManifestWithManifestGroupMismatch(t *testing.T){
 	require.Regexp(t, "^.*manifest resources .+ not fully matched.+$", err)
 }
 
-func TestManifestWithEndpointMismatchA(t *testing.T){
+func TestManifestWithEndpointMismatchA(t *testing.T) {
 	m := simpleManifest()
 
 	// Make this require an endpoint
@@ -156,7 +156,7 @@ func TestManifestWithEndpointMismatchA(t *testing.T){
 	require.Regexp(t, "^.*mismatch on number of endpoints.+$", err)
 }
 
-func TestManifestWithEndpointMismatchB(t *testing.T){
+func TestManifestWithEndpointMismatchB(t *testing.T) {
 	m := simpleManifest()
 	deployment := simpleDeployment(t)
 	// Add an endpoint where the manifest doesn't need 1
@@ -165,7 +165,3 @@ func TestManifestWithEndpointMismatchB(t *testing.T){
 	require.Error(t, err)
 	require.Regexp(t, "^.*mismatch on number of endpoints.+$", err)
 }
-
-
-
-

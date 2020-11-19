@@ -50,7 +50,7 @@ func validateManifestGroup(group manifest.Group, helper *validateManifestGroupsH
 	if 0 == len(group.Services) {
 		return fmt.Errorf("%w: group %q contains no services", ErrInvalidManifest, group.GetName())
 	}
-	
+
 	if err := dtypes.ValidateResourceList(group); err != nil {
 		return err
 	}
@@ -65,7 +65,6 @@ func validateManifestGroup(group manifest.Group, helper *validateManifestGroupsH
 func validateManifestService(service manifest.Service, helper *validateManifestGroupsHelper) error {
 	if len(service.Name) == 0 {
 		return fmt.Errorf("%w: service name is empty", ErrInvalidManifest)
-		return ErrServiceNameEmpty
 	}
 
 	if len(service.Image) == 0 {
@@ -229,7 +228,7 @@ deploymentGroupLoop:
 	endpointsCountForManifestGroup := 0
 	for _, service := range mgroup.Services {
 		for _, serviceExpose := range service.Expose {
-			if serviceExpose.Global && !util.ShouldExpose(&serviceExpose) {
+			if serviceExpose.Global && !util.ShouldExpose(serviceExpose) {
 				endpointsCountForManifestGroup++
 			}
 		}

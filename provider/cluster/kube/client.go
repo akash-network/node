@@ -185,11 +185,11 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 		}
 
 		for expIdx := range service.Expose {
-			expose := &service.Expose[expIdx]
+			expose := service.Expose[expIdx]
 			if !util.ShouldExpose(expose) {
 				continue
 			}
-			if err := applyIngress(ctx, c.kc, newIngressBuilder(c.log, c.settings, c.host, lid, group, service, expose)); err != nil {
+			if err := applyIngress(ctx, c.kc, newIngressBuilder(c.log, c.settings, c.host, lid, group, service, &service.Expose[expIdx])); err != nil {
 				c.log.Error("applying ingress", "err", err, "lease", lid, "service", service.Name, "expose", expose)
 				return err
 			}

@@ -381,7 +381,7 @@ func (b *serviceBuilder) ports() ([]corev1.ServicePort, error) {
 			default:
 				return nil, errUnsupportedProtocol
 			}
-			externalPort := util.ExposeExternalPort(&b.service.Expose[i])
+			externalPort := util.ExposeExternalPort(b.service.Expose[i])
 			ports = append(ports, corev1.ServicePort{
 				Name:       fmt.Sprintf("%d-%d", i, int(externalPort)),
 				Port:       externalPort,
@@ -678,7 +678,7 @@ func (b *ingressBuilder) rules() []netv1.IngressRule {
 					Name: makeGlobalServiceNameFromBasename(b.name()),
 					Port: netv1.ServiceBackendPort{
 
-						Number: util.ExposeExternalPort(b.expose),
+						Number: util.ExposeExternalPort(*b.expose),
 					},
 				},
 			}},

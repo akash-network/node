@@ -235,7 +235,7 @@ func Test_ValidateManifest(t *testing.T) {
 	}
 }
 
-func TestNilManifestIsInvalid(t *testing.T){
+func TestNilManifestIsInvalid(t *testing.T) {
 	err := validation.ValidateManifest(nil)
 	require.Error(t, err)
 	require.Regexp(t, "^.*manifest is nil.*$", err)
@@ -295,13 +295,13 @@ func simpleManifest() manifest.Manifest {
 	return m
 }
 
-func TestSimpleManifestIsValid(t *testing.T){
+func TestSimpleManifestIsValid(t *testing.T) {
 	m := simpleManifest()
 	err := validation.ValidateManifest(m)
 	require.NoError(t, err)
 }
 
-func TestManifestWithNoGlobalServicesIsInvalid(t *testing.T){
+func TestManifestWithNoGlobalServicesIsInvalid(t *testing.T) {
 	m := simpleManifest()
 	m[0].Services[0].Expose[0].Global = false
 	err := validation.ValidateManifest(m)
@@ -309,29 +309,30 @@ func TestManifestWithNoGlobalServicesIsInvalid(t *testing.T){
 	require.Regexp(t, "^.*zero global services.*$", err)
 }
 
-func TestManifestWithDuplicateHostIsInvalid(t *testing.T){
+func TestManifestWithDuplicateHostIsInvalid(t *testing.T) {
 	m := simpleManifest()
 	hosts := make([]string, 2)
-	hosts[0] = "a.test"
-	hosts[1] = "a.test"
- 	m[0].Services[0].Expose[0].Hosts = hosts
+	const hostname = "a.test"
+	hosts[0] = hostname
+	hosts[1] = hostname
+	m[0].Services[0].Expose[0].Hosts = hosts
 	err := validation.ValidateManifest(m)
 	require.Error(t, err)
 	require.Regexp(t, "^.*hostname.+is duplicated.*$", err)
 }
 
-func TestManifestWithBadHostIsInvalid(t *testing.T){
+func TestManifestWithBadHostIsInvalid(t *testing.T) {
 	m := simpleManifest()
 	hosts := make([]string, 2)
-	hosts[0] = "a.test" // valid
-	hosts[1] = "-bob" // invalid
+	hosts[0] = "bob.test" // valid
+	hosts[1] = "-bob"     // invalid
 	m[0].Services[0].Expose[0].Hosts = hosts
 	err := validation.ValidateManifest(m)
 	require.Error(t, err)
 	require.Regexp(t, "^.*invalid hostname.*$", err)
 }
 
-func TestManifestWithDuplicateGroupIsInvalid(t *testing.T){
+func TestManifestWithDuplicateGroupIsInvalid(t *testing.T) {
 	mDuplicate := make(manifest.Manifest, 2)
 	mDuplicate[0] = simpleManifest()[0]
 	mDuplicate[1] = simpleManifest()[0]
@@ -341,7 +342,7 @@ func TestManifestWithDuplicateGroupIsInvalid(t *testing.T){
 	require.Regexp(t, "^.*duplicate group.*$", err)
 }
 
-func TestManifestWithNoServicesInvalid(t *testing.T){
+func TestManifestWithNoServicesInvalid(t *testing.T) {
 	m := simpleManifest()
 	m[0].Services = nil
 	err := validation.ValidateManifest(m)
@@ -349,7 +350,7 @@ func TestManifestWithNoServicesInvalid(t *testing.T){
 	require.Regexp(t, "^.*contains no services.*$", err)
 }
 
-func TestManifestWithEmptyServiceNameInvalid(t *testing.T){
+func TestManifestWithEmptyServiceNameInvalid(t *testing.T) {
 	m := simpleManifest()
 	m[0].Services[0].Name = ""
 	err := validation.ValidateManifest(m)
@@ -357,7 +358,7 @@ func TestManifestWithEmptyServiceNameInvalid(t *testing.T){
 	require.Regexp(t, "^.*service name is empty.*$", err)
 }
 
-func TestManifestWithEmptyImageNameInvalid(t *testing.T){
+func TestManifestWithEmptyImageNameInvalid(t *testing.T) {
 	m := simpleManifest()
 	m[0].Services[0].Image = ""
 	err := validation.ValidateManifest(m)
@@ -365,7 +366,7 @@ func TestManifestWithEmptyImageNameInvalid(t *testing.T){
 	require.Regexp(t, "^.*service.+has empty image name.*$", err)
 }
 
-func TestManifestWithEmptyEnvValueIsValid(t *testing.T){
+func TestManifestWithEmptyEnvValueIsValid(t *testing.T) {
 	m := simpleManifest()
 	envVars := make([]string, 2)
 	envVars[0] = "FOO=" // sets FOO to empty string
@@ -374,26 +375,20 @@ func TestManifestWithEmptyEnvValueIsValid(t *testing.T){
 	require.NoError(t, err)
 }
 
-func TestManifestWithEmptyEnvNameIsInvalid(t *testing.T){
+func TestManifestWithEmptyEnvNameIsInvalid(t *testing.T) {
 	m := simpleManifest()
 	envVars := make([]string, 2)
 	envVars[0] = "=FOO" // invalid
 	m[0].Services[0].Env = envVars
 	err := validation.ValidateManifest(m)
 	require.Error(t, err)
-	require.Regexp(t,`^.*var\. with an empty name.*$`, err)
+	require.Regexp(t, `^.*var\. with an empty name.*$`, err)
 }
 
-func TestManifestServiceUnknownProtocolIsInvalid(t *testing.T){
+func TestManifestServiceUnknownProtocolIsInvalid(t *testing.T) {
 	m := simpleManifest()
 	m[0].Services[0].Expose[0].Proto = "ICMP"
 	err := validation.ValidateManifest(m)
 	require.Error(t, err)
-	require.Regexp(t,`^.*protocol .+ unknown.*$`, err)
+	require.Regexp(t, `^.*protocol .+ unknown.*$`, err)
 }
-
-
-
-
-
-

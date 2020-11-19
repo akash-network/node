@@ -317,13 +317,10 @@ func (m *manager) validateRequest(req manifestRequest) error {
 		return ErrManifestVersion
 	}
 
-	// TODO - test this code path
 	if err := validation.ValidateManifest(req.value.Manifest); err != nil {
 		return err
 	}
 
-	// TODO - figure out why we pass a pointer here
-	// TODO - test this code path
 	if err := validation.ValidateManifestWithDeployment(&req.value.Manifest, m.data.Groups); err != nil {
 		return err
 	}
