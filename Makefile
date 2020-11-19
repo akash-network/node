@@ -15,6 +15,11 @@ CACHE                 := $(CACHE_BASE)
 CACHE_BIN             := $(CACHE)/bin
 CACHE_INCLUDE         := $(CACHE)/include
 CACHE_VERSIONS        := $(CACHE)/versions
+CACHE_NODE_MODULES    := $(CACHE)/node_modules
+CACHE_NODE_BIN        := $(CACHE_NODE_MODULES)/.bin
+
+# setup .cache bins first in paths to have precedence over already installed same tools for system wide use
+PATH                  := "$(PATH):$(CACHE_BIN):$(CACHE_NODE_BIN)"
 
 BUF_VERSION                ?= 0.25.0
 PROTOC_VERSION             ?= 3.13.0
@@ -30,6 +35,8 @@ PROTOC_VERSION_FILE             = $(CACHE_VERSIONS)/protoc/$(PROTOC_VERSION)
 GRPC_GATEWAY_VERSION_FILE       = $(CACHE_VERSIONS)/protoc-gen-grpc-gateway/$(GRPC_GATEWAY_VERSION)
 PROTOC_GEN_COSMOS_VERSION_FILE  = $(CACHE_VERSIONS)/protoc-gen-cosmos/$(PROTOC_GEN_COSMOS_VERSION)
 MODVENDOR                       = $(CACHE_BIN)/modvendor
+SWAGGER_COMBINE                 = $(CACHE_NODE_BIN)/swagger-combine
+PROTOC_SWAGGER_GEN             := $(CACHE_BIN)/protoc-swagger-gen
 PROTOC                         := $(CACHE_BIN)/protoc
 PROTOC_GEN_COSMOS              := $(CACHE_BIN)/protoc-gen-cosmos
 GRPC_GATEWAY                   := $(CACHE_BIN)/protoc-gen-grpc-gateway
@@ -41,7 +48,8 @@ GOLANGCI_LINT          = $(DOCKER_RUN) golangci/golangci-lint:$(GOLANGCI_LINT_VE
 LINT                   = $(GOLANGCI_LINT) ./... --disable-all --deadline=5m --enable
 TEST_DOCKER_REPO      := jackzampolin/akashtest
 
-GORELEASER_CONFIG=.goreleaser.yaml
+GORELEASER_CONFIG      = .goreleaser.yaml
+
 # BUILD_TAGS are for builds withing this makefile
 # GORELEASER_BUILD_TAGS are for goreleaser only
 # Setting mainnet flag based on env value
