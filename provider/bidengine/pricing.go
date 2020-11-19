@@ -168,9 +168,8 @@ func calculatePriceRange(gspec *dtypes.GroupSpec) (sdk.Coin, sdk.Coin) {
 
 	rmax := gspec.Price()
 
-	// TODO - replace me with values from the vaildation configuration
-	minGroupMemPrice := int64(0)
-	maxGroupMemPrice := int64(0)
+	const minGroupMemPrice = int64(50)
+	const maxGroupMemPrice = int64(1048576)
 
 	cmin := mem.MulRaw(
 		minGroupMemPrice).
