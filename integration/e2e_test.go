@@ -44,8 +44,6 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	cfg := testutil.DefaultConfig()
 	cfg.NumValidators = 1
 	cfg.MinGasPrices = ""
-	cfg.BondDenom = "stake"
-
 	s.cfg = cfg
 	s.network = network.New(s.T(), cfg)
 
