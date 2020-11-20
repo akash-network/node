@@ -337,7 +337,7 @@ func TestManifestWithLongHostIsInvalid(t *testing.T) {
 	m := simpleManifest()
 	hosts := make([]string, 1)
 	buf := &bytes.Buffer{}
-	for i := 0 ; i != 255; i++ {
+	for i := 0; i != 255; i++ {
 		_, err := buf.WriteRune('a')
 		require.NoError(t, err)
 	}

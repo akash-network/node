@@ -87,7 +87,6 @@ func DefaultConfig() network.Config {
 			continue
 		}
 
-
 		var val map[string]interface{}
 		err = json.Unmarshal(buf.Bytes(), &val)
 		if err != nil {
@@ -107,18 +106,18 @@ func DefaultConfig() network.Config {
 		AccountRetriever:  authtypes.AccountRetriever{},
 		AppConstructor:    NewApp,
 
-		GenesisState:      genesisState,
-		TimeoutCommit:     2 * time.Second,
-		ChainID:           "chain-" + tmrand.NewRand().Str(6),
-		NumValidators:     4,
-		BondDenom:         CoinDenom,
-		MinGasPrices:      fmt.Sprintf("0.000006%s", CoinDenom),
-		AccountTokens:     sdk.TokensFromConsensusPower(10000),
-		StakingTokens:     sdk.TokensFromConsensusPower(500),
-		BondedTokens:      sdk.TokensFromConsensusPower(100),
-		PruningStrategy:   storetypes.PruningOptionNothing,
-		CleanupDir:        true,
-		SigningAlgo:       string(hd.Secp256k1Type),
-		KeyringOptions:    []keyring.Option{},
+		GenesisState:    genesisState,
+		TimeoutCommit:   2 * time.Second,
+		ChainID:         "chain-" + tmrand.NewRand().Str(6),
+		NumValidators:   4,
+		BondDenom:       CoinDenom,
+		MinGasPrices:    fmt.Sprintf("0.000006%s", CoinDenom),
+		AccountTokens:   sdk.TokensFromConsensusPower(10000),
+		StakingTokens:   sdk.TokensFromConsensusPower(500),
+		BondedTokens:    sdk.TokensFromConsensusPower(100),
+		PruningStrategy: storetypes.PruningOptionNothing,
+		CleanupDir:      true,
+		SigningAlgo:     string(hd.Secp256k1Type),
+		KeyringOptions:  []keyring.Option{},
 	}
 }

@@ -119,7 +119,9 @@ func validateServiceExpose(serviceName string, serviceExpose manifest.ServiceExp
 }
 
 var hostnameRegex = regexp.MustCompile(`^[[:alnum:],-,\.]+\.[[:alpha:]]{2,}$`)
+
 const hostnameMaxLen = 255
+
 func isValidHostname(hostname string) bool {
 	return len(hostname) <= hostnameMaxLen && hostnameRegex.MatchString(hostname)
 }
