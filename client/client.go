@@ -9,11 +9,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/tendermint/tendermint/libs/log"
+	"google.golang.org/grpc"
+
+	atypes "github.com/ovrclk/akash/x/audit/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
-	"github.com/tendermint/tendermint/libs/log"
-	grpc "google.golang.org/grpc"
 )
 
 var (
@@ -29,6 +31,7 @@ type QueryClient interface {
 	dtypes.QueryClient
 	mtypes.QueryClient
 	ptypes.QueryClient
+	atypes.QueryClient
 
 	// TODO: implement with search parameters
 	ActiveLeasesForProvider(id sdk.AccAddress) (mtypes.Leases, error)
@@ -45,7 +48,7 @@ type Client interface {
 	Tx() TxClient
 }
 
-// NewClient creates new client instance to interface with terndermint.
+// NewClient creates new client instance to interface with tendermint.
 func NewClient(
 	log log.Logger,
 	cctx sdkclient.Context,
@@ -119,6 +122,7 @@ type qclient struct {
 	dclient dtypes.QueryClient
 	mclient mtypes.QueryClient
 	pclient ptypes.QueryClient
+	aclient atypes.QueryClient
 }
 
 // NewQueryClient creates new query client instance
@@ -126,11 +130,13 @@ func NewQueryClient(
 	dclient dtypes.QueryClient,
 	mclient mtypes.QueryClient,
 	pclient ptypes.QueryClient,
+	aclient atypes.QueryClient,
 ) QueryClient {
 	return &qclient{
 		dclient: dclient,
 		mclient: mclient,
 		pclient: pclient,
+		aclient: aclient,
 	}
 }
 
@@ -209,4 +215,36 @@ func (c *qclient) Provider(ctx context.Context, in *ptypes.QueryProviderRequest,
 		return &ptypes.QueryProviderResponse{}, ErrClientNotFound
 	}
 	return c.pclient.Provider(ctx, in, opts...)
+}
+
+// ProviderValidatorAttributes queries all providers
+func (c *qclient) AllProvidersAttributes(ctx context.Context, in *atypes.QueryAllProvidersAttributesRequest, opts ...grpc.CallOption) (*atypes.QueryProvidersResponse, error) {
+	if c.aclient == nil {
+		return &atypes.QueryProvidersResponse{}, ErrClientNotFound
+	}
+	return c.aclient.AllProvidersAttributes(ctx, in, opts...)
+}
+
+// ProviderValidatorAttributes queries all provider signed attributes
+func (c *qclient) ProviderAttributes(ctx context.Context, in *atypes.QueryProviderAttributesRequest, opts ...grpc.CallOption) (*atypes.QueryProvidersResponse, error) {
+	if c.aclient == nil {
+		return &atypes.QueryProvidersResponse{}, ErrClientNotFound
+	}
+	return c.aclient.ProviderAttributes(ctx, in, opts...)
+}
+
+// ProviderValidatorAttributes queries provider signed attributes by specific validator
+func (c *qclient) ProviderValidatorAttributes(ctx context.Context, in *atypes.QueryProviderValidatorRequest, opts ...grpc.CallOption) (*atypes.QueryProvidersResponse, error) {
+	if c.aclient == nil {
+		return &atypes.QueryProvidersResponse{}, ErrClientNotFound
+	}
+	return c.aclient.ProviderValidatorAttributes(ctx, in, opts...)
+}
+
+// ValidatorAttributes queries all providers signed by this validator
+func (c *qclient) ValidatorAttributes(ctx context.Context, in *atypes.QueryValidatorAttributesRequest, opts ...grpc.CallOption) (*atypes.QueryProvidersResponse, error) {
+	if c.aclient == nil {
+		return &atypes.QueryProvidersResponse{}, ErrClientNotFound
+	}
+	return c.aclient.ValidatorAttributes(ctx, in, opts...)
 }

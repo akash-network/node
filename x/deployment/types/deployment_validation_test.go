@@ -1,13 +1,16 @@
 package types_test
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	akashtypes "github.com/ovrclk/akash/types"
 	"testing"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	akashtypes "github.com/ovrclk/akash/types"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/x/deployment/types"
-	"github.com/stretchr/testify/require"
 )
 
 func TestZeroValueGroupSpec(t *testing.T) {
@@ -89,7 +92,7 @@ func validSimpleGroupSpec() types.GroupSpec {
 	}
 	return types.GroupSpec{
 		Name:             "testGroup",
-		Requirements:     nil,
+		Requirements:     akashtypes.PlacementRequirements{},
 		Resources:        resources,
 		OrderBidDuration: 3,
 	}

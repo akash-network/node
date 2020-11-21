@@ -6,6 +6,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/pkg/errors"
+
+	"github.com/ovrclk/akash/types"
 )
 
 const (
@@ -19,7 +21,7 @@ var (
 )
 
 // NewMsgCreateProvider creates a new MsgCreateProvider instance
-func NewMsgCreateProvider(owner sdk.AccAddress, hostURI string, attributes Attributes) *MsgCreateProvider {
+func NewMsgCreateProvider(owner sdk.AccAddress, hostURI string, attributes types.Attributes) *MsgCreateProvider {
 	return &MsgCreateProvider{
 		Owner:      owner.String(),
 		HostURI:    hostURI,
@@ -60,7 +62,7 @@ func (msg MsgCreateProvider) GetSigners() []sdk.AccAddress {
 }
 
 // NewMsgUpdateProvider creates a new MsgUpdateProvider instance
-func NewMsgUpdateProvider(owner sdk.AccAddress, hostURI string, attributes Attributes) *MsgUpdateProvider {
+func NewMsgUpdateProvider(owner sdk.AccAddress, hostURI string, attributes types.Attributes) *MsgUpdateProvider {
 	return &MsgUpdateProvider{
 		Owner:      owner.String(),
 		HostURI:    hostURI,

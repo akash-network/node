@@ -27,17 +27,17 @@ kubetypes: deps-vendor
 	akash.network:v1
 
 .PHONY: proto-gen
-proto-gen: $(PROTOC) $(GRPC_GATEWAY) $(PROTOC_GEN_COSMOS) modvendor proto-format
+proto-gen: $(PROTOC) $(GRPC_GATEWAY) $(PROTOC_GEN_COSMOS) modvendor
 	./script/protocgen.sh
 
 .PHONY: proto-swagger-gen
-proto-swagger-gen: $(PROTOC_SWAGGER_GEN) $(SWAGGER_COMBINE) modvendor
+proto-swagger-gen: $(PROTOC) $(PROTOC_SWAGGER_GEN) $(SWAGGER_COMBINE) modvendor
 	./script/protoc-swagger-gen.sh
 
 .PHONY: update-swagger-docs
-update-swagger-docs: proto-swagger-gen
-	statik -src=client/docs/swagger-ui -dest=client/docs -f -m
-	if [ -n "$(git status --porcelain)" ]; then \
+update-swagger-docs: $(STATIK) proto-swagger-gen
+	$(STATIK) -src=client/docs/swagger-ui -dest=client/docs -f -m
+	@if [ -n "$(git status --porcelain)" ]; then \
 		echo "\033[91mSwagger docs are out of sync!!!\033[0m"; \
 		exit 1; \
 	else \

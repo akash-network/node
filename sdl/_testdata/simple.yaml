@@ -25,6 +25,13 @@ profiles:
     westcoast:
       attributes:
         region: us-west
+      signedBy:
+        anyOf:
+          - 1
+          - 2
+        allOf:
+          - 3
+          - 4
       pricing:
         web:
           denom: uakt

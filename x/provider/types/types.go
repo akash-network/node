@@ -5,25 +5,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"github.com/ovrclk/akash/types"
 )
-
-type Attributes []types.Attribute
-
-func (attr Attributes) Validate() error {
-	store := make(map[string]bool)
-
-	for i := range attr {
-		if _, ok := store[attr[i].Key]; ok {
-			return ErrDuplicateAttributes
-		}
-
-		store[attr[i].Key] = true
-	}
-
-	return nil
-}
 
 // String implements the Stringer interface for a Provider object.
 func (p Provider) String() string {

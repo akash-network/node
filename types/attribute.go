@@ -2,8 +2,29 @@ package types
 
 import (
 	"reflect"
+	"regexp"
 
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"gopkg.in/yaml.v3"
+)
+
+const (
+	moduleName                = "akash"
+	attributeNameRegexpString = `^[a-zA-Z][\w-]{1,30}[a-zA-Z0-9]$`
+)
+
+const (
+	errAttributesDuplicateKeys uint32 = iota + 1
+	errInvalidAttributeKey
+)
+
+var (
+	ErrAttributesDuplicateKeys = sdkerrors.Register(moduleName, errAttributesDuplicateKeys, "attributes cannot have duplicate keys")
+	ErrInvalidAttributeKey     = sdkerrors.Register(moduleName, errInvalidAttributeKey, "attribute key does not match regexp "+attributeNameRegexpString)
+)
+
+var (
+	attributeNameRegexp = regexp.MustCompile(attributeNameRegexpString)
 )
 
 /*
@@ -38,6 +59,24 @@ func (m Attribute) SubsetOf(rhs Attribute) bool {
 	}
 
 	return false
+}
+
+func (attr Attributes) Validate() error {
+	store := make(map[string]bool)
+
+	for i := range attr {
+		if !attributeNameRegexp.MatchString(attr[i].Key) {
+			return ErrInvalidAttributeKey
+		}
+
+		if _, ok := store[attr[i].Key]; ok {
+			return ErrAttributesDuplicateKeys
+		}
+
+		store[attr[i].Key] = true
+	}
+
+	return nil
 }
 
 /*
@@ -92,72 +131,6 @@ loop:
 	return true
 }
 
-func (a Attributes) SubsetOf(that Attributes) bool {
-	return AttributesSubsetOf(a, that)
+func (attr Attributes) SubsetOf(that Attributes) bool {
+	return AttributesSubsetOf(attr, that)
 }
-
-// type AttributeValue struct {
-// 	Val interface{} `json:"value" yaml:"value"`
-// }
-//
-// func NewAttributeValue(val interface{}) AttributeValue {
-// 	return AttributeValue{Val: val}
-// }
-//
-// func (a *AttributeValue) Reset() {
-// 	a.Val = nil
-// }
-//
-// func (a *AttributeValue) String() string {
-// 	res, _ := yaml.Marshal(&a.Val)
-// 	return string(res)
-// }
-//
-// func (a *AttributeValue) ProtoMessage() {}
-//
-// // Marshal implements the gogo proto custom type interface.
-// func (a AttributeValue) Marshal() ([]byte, error) {
-// 	return nil, nil
-// }
-//
-// // MarshalTo implements the gogo proto custom type interface.
-// func (a *AttributeValue) MarshalTo(data []byte) (n int, err error) {
-// 	return
-// }
-//
-// // Unmarshal implements the gogo proto custom type interface.
-// func (a *AttributeValue) Unmarshal(data []byte) error {
-// 	return nil
-// }
-//
-// // Size implements the gogo proto custom type interface.
-// func (a *AttributeValue) Size() int {
-// 	bz, _ := a.Marshal()
-// 	return len(bz)
-// }
-
-// func (m Attribute) SubsetOf(rhs Attribute) bool {
-// 	if m.Key == rhs.Key {
-// 		switch v := m.Value.Val.(type) {
-// 		case string:
-// 			v2 := rhs.Value.Val.(string)
-// 			if v == v2 {
-// 				return true
-// 			}
-// 		case []string:
-// 			v2 := rhs.Value.Val.([]string)
-// 			// fixme: turn into a func?
-// 			for _, mVal := range v {
-// 				for _, rhsVal := range v2 {
-// 					if mVal == rhsVal {
-// 						return true
-// 					}
-// 				}
-// 			}
-// 		default:
-// 			return false
-// 		}
-// 	}
-//
-// 	return false
-// }

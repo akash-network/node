@@ -3,6 +3,8 @@ package handler
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+
+	atypes "github.com/ovrclk/akash/x/audit/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/keeper"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
@@ -12,6 +14,10 @@ import (
 type ProviderKeeper interface {
 	Get(ctx sdk.Context, id sdk.Address) (ptypes.Provider, bool)
 	WithProviders(ctx sdk.Context, fn func(ptypes.Provider) bool)
+}
+
+type AuditKeeper interface {
+	GetProviderAttributes(ctx sdk.Context, id sdk.Address) (atypes.Providers, bool)
 }
 
 // DeploymentKeeper Interface includes deployment methods
@@ -27,5 +33,6 @@ type Keepers struct {
 	Market     keeper.Keeper
 	Deployment DeploymentKeeper
 	Provider   ProviderKeeper
+	Audit      AuditKeeper
 	Bank       bankkeeper.Keeper
 }

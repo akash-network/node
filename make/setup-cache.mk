@@ -39,6 +39,15 @@ $(GRPC_GATEWAY_VERSION_FILE): $(CACHE)
 	touch $@
 $(GRPC_GATEWAY): $(GRPC_GATEWAY_VERSION_FILE)
 
+$(STATIK_VERSION_FILE): $(CACHE)
+	@echo "Installing statik..."
+	rm -f $(STATIK)
+	GOBIN=$(CACHE_BIN) $(GO) get github.com/rakyll/statik@$(STATIK_VERSION)
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(STATIK): $(STATIK_VERSION_FILE)
+
 $(MODVENDOR): $(CACHE)
 	@echo "installing modvendor..."
 	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor

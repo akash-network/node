@@ -1,14 +1,16 @@
 package validation_test
 
 import (
+	"testing"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/require"
+
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/testutil"
-	atypes "github.com/ovrclk/akash/types"
+	akashtypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/validation"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestManifestWithEmptyDeployment(t *testing.T) {
@@ -32,7 +34,7 @@ func simpleDeployment(t *testing.T) []dtypes.Group {
 		State:   0,
 		GroupSpec: dtypes.GroupSpec{
 			Name:             nameOfTestGroup,
-			Requirements:     nil,
+			Requirements:     akashtypes.PlacementRequirements{},
 			Resources:        resources,
 			OrderBidDuration: 0,
 		},
@@ -160,7 +162,7 @@ func TestManifestWithEndpointMismatchB(t *testing.T) {
 	m := simpleManifest()
 	deployment := simpleDeployment(t)
 	// Add an endpoint where the manifest doesn't need 1
-	deployment[0].GroupSpec.Resources[0].Resources.Endpoints = make([]atypes.Endpoint, 1)
+	deployment[0].GroupSpec.Resources[0].Resources.Endpoints = make([]akashtypes.Endpoint, 1)
 	err := validation.ValidateManifestWithDeployment(&m, deployment)
 	require.Error(t, err)
 	require.Regexp(t, "^.*mismatch on number of endpoints.+$", err)

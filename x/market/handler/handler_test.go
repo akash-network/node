@@ -17,7 +17,9 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/ovrclk/akash/testutil"
-	atypes "github.com/ovrclk/akash/types"
+	akashtypes "github.com/ovrclk/akash/types"
+	akeeper "github.com/ovrclk/akash/x/audit/keeper"
+	atypes "github.com/ovrclk/akash/x/audit/types"
 	dkeeper "github.com/ovrclk/akash/x/deployment/keeper"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/handler"
@@ -32,6 +34,7 @@ type testSuite struct {
 	ms      sdk.CommitMultiStore
 	ctx     sdk.Context
 	mkeeper keeper.Keeper
+	akeeper akeeper.Keeper
 	dkeeper dkeeper.Keeper
 	pkeeper pkeeper.Keeper
 	bkeeper bankkeeper.Keeper
@@ -47,12 +50,14 @@ func setupTestSuite(t *testing.T) *testSuite {
 	mKey := sdk.NewKVStoreKey(types.StoreKey)
 	dKey := sdk.NewKVStoreKey(dtypes.StoreKey)
 	pKey := sdk.NewKVStoreKey(ptypes.StoreKey)
+	aKey := sdk.NewKVStoreKey(atypes.StoreKey)
 
 	db := dbm.NewMemDB()
 	suite.ms = store.NewCommitMultiStore(db)
 	suite.ms.MountStoreWithDB(mKey, sdk.StoreTypeIAVL, db)
 	suite.ms.MountStoreWithDB(dKey, sdk.StoreTypeIAVL, db)
 	suite.ms.MountStoreWithDB(pKey, sdk.StoreTypeIAVL, db)
+	suite.ms.MountStoreWithDB(aKey, sdk.StoreTypeIAVL, db)
 
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
@@ -60,10 +65,12 @@ func setupTestSuite(t *testing.T) *testSuite {
 	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
 
 	suite.mkeeper = keeper.NewKeeper(types.ModuleCdc, mKey)
+	suite.akeeper = akeeper.NewKeeper(types.ModuleCdc, aKey)
 	suite.dkeeper = dkeeper.NewKeeper(types.ModuleCdc, dKey)
 	suite.pkeeper = pkeeper.NewKeeper(types.ModuleCdc, pKey)
 
 	suite.handler = handler.NewHandler(handler.Keepers{
+		Audit:      suite.akeeper,
 		Market:     suite.mkeeper,
 		Deployment: suite.dkeeper,
 		Provider:   suite.pkeeper,
@@ -87,7 +94,7 @@ func TestCreateBidValid(t *testing.T) {
 
 	order, gspec := suite.createOrder(testutil.Resources(t))
 
-	provider := suite.createProvider(gspec.Requirements).Owner
+	provider := suite.createProvider(gspec.Requirements.Attributes).Owner
 
 	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
@@ -122,7 +129,7 @@ func TestCreateBidInvalidPrice(t *testing.T) {
 
 	order, gspec := suite.createOrder(nil)
 
-	provider := suite.createProvider(gspec.Requirements).Owner
+	provider := suite.createProvider(gspec.Requirements.Attributes).Owner
 
 	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
@@ -169,7 +176,7 @@ func TestCreateBidClosedOrder(t *testing.T) {
 
 	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
-		Provider: suite.createProvider(gspec.Requirements).Owner,
+		Provider: suite.createProvider(gspec.Requirements.Attributes).Owner,
 		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(math.MaxInt64)),
 	}
 
@@ -190,7 +197,7 @@ func TestCreateBidOverprice(t *testing.T) {
 
 	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
-		Provider: suite.createProvider(gspec.Requirements).Owner,
+		Provider: suite.createProvider(gspec.Requirements.Attributes).Owner,
 		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(math.MaxInt64)),
 	}
 
@@ -238,7 +245,7 @@ func TestCreateBidAlreadyExists(t *testing.T) {
 
 	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
-		Provider: suite.createProvider(gspec.Requirements).Owner,
+		Provider: suite.createProvider(gspec.Requirements.Attributes).Owner,
 		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(1)),
 	}
 
@@ -306,7 +313,7 @@ func TestCloseBidNonExisting(t *testing.T) {
 
 	order, gspec := suite.createOrder(testutil.Resources(t))
 
-	provider := suite.createProvider(gspec.Requirements).Owner
+	provider := suite.createProvider(gspec.Requirements.Attributes).Owner
 
 	providerAddr, err := sdk.AccAddressFromBech32(provider)
 	require.NoError(t, err)
@@ -460,7 +467,7 @@ func (st *testSuite) createOrder(resources []dtypes.Resource) (types.Order, dtyp
 	return order, group.GroupSpec
 }
 
-func (st *testSuite) createProvider(attr []atypes.Attribute) ptypes.Provider {
+func (st *testSuite) createProvider(attr []akashtypes.Attribute) ptypes.Provider {
 	st.t.Helper()
 
 	prov := ptypes.Provider{
