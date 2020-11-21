@@ -4,6 +4,7 @@ $(CACHE):
 	mkdir -p $(CACHE_BIN)
 	mkdir -p $(CACHE_INCLUDE)
 	mkdir -p $(CACHE_VERSIONS)
+	mkdir -p $(CACHE_NODE_MODULES)
 
 $(PROTOC_VERSION_FILE): $(CACHE)
 	@echo "installing protoc compiler..."
@@ -42,12 +43,18 @@ $(MODVENDOR): $(CACHE)
 	@echo "installing modvendor..."
 	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor
 
-protoc-swagger:
+$(SWAGGER_COMBINE): $(CACHE)
 ifeq (, $(shell which swagger-combine 2>/dev/null))
 	@echo "Installing swagger-combine..."
-	npm install -g swagger-combine
+	npm install swagger-combine --prefix $(CACHE_NODE_MODULES)
 else
 	@echo "swagger-combine already installed; skipping..."
+endif
+
+$(PROTOC_SWAGGER_GEN): $(CACHE)
+ifeq (, $(shell which protoc-gen-swagger 2>/dev/null))
+	@echo "installing protoc-gen-swagger..."
+	GOBIN=$(CACHE_BIN) $(GO) get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 endif
 
 kubetypes-deps-install:
@@ -64,7 +71,6 @@ devdeps-install: kubetypes-deps-install
 	$(GO) install k8s.io/code-generator/...
 	$(GO) install sigs.k8s.io/kind
 	$(GO) install golang.org/x/tools/cmd/stringer
-	$(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 
 cache-clean:
 	rm -rf $(CACHE)

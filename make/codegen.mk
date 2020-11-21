@@ -31,7 +31,7 @@ proto-gen: $(PROTOC) $(GRPC_GATEWAY) $(PROTOC_GEN_COSMOS) modvendor proto-format
 	./script/protocgen.sh
 
 .PHONY: proto-swagger-gen
-proto-swagger-gen: protoc-swagger modvendor
+proto-swagger-gen: $(PROTOC_SWAGGER_GEN) $(SWAGGER_COMBINE) modvendor
 	./script/protoc-swagger-gen.sh
 
 .PHONY: update-swagger-docs
