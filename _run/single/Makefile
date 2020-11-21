@@ -2,10 +2,11 @@ include ../common.mk
 include ../common-commands.mk
 include ../common-kind.mk
 
+KUSTOMIZE_ROOT           ?= ../../_docs/kustomize
 KUSTOMIZE_DIR            ?= ./kustomize
 KUSTOMIZE_PROVIDER_DIR   ?= $(KUSTOMIZE_DIR)/akash-provider
 KUSTOMIZE_PROVIDER_CACHE ?= $(KUSTOMIZE_PROVIDER_DIR)/cache
-KUSTOMIZE_AKASHD_DIR     ?= $(KUSTOMIZE_DIR)/akashd
+KUSTOMIZE_AKASHD_DIR     ?= $(KUSTOMIZE_DIR)/akash-node
 KUSTOMIZE_AKASHD_CACHE   ?= $(KUSTOMIZE_AKASHD_DIR)/cache
 CLIENT_EXPORT_PASSWORD   ?= 12345678
 
@@ -15,11 +16,16 @@ GATEWAY_ENDPOINT ?= http://akash-provider.localhost
 
 AKASHCTL += --node $(AKASHCTL_NODE)
 
-.PHONY: kustomize-init
-kustomize-init: kustomize-init-akashd kustomize-init-provider
+.PHONY: kind-namespace-setup
+kind-namespace-setup:
+	kubectl apply -f "$(KUSTOMIZE_ROOT)/networking"
 
-.PHONY: kustomize-init-akashd
-kustomize-init-akashd:
+.PHONY: kustomize-init
+kustomize-init: kustomize-init-akash-node kustomize-init-provider kind-namespace-setup
+
+
+.PHONY: kustomize-init-akash-node
+kustomize-init-akash-node:
 	mkdir -p "$(KUSTOMIZE_AKASHD_CACHE)"
 	cp -r "$(NODE_HOME)/"* "$(KUSTOMIZE_AKASHD_CACHE)/"
 
@@ -33,9 +39,9 @@ kustomize-init-provider:
 		cat "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt"   \
 	) | $(AKASHCTL_NONODE) $(KEY_OPTS) keys export provider 2> "$(KUSTOMIZE_PROVIDER_CACHE)/key.txt"
 
-.PHONY: kustomize-install-akashd
-kustomize-install-akashd:
-	kubectl kustomize kustomize/akashd | kubectl apply -f-
+.PHONY: kustomize-install-node
+kustomize-install-node:
+	kubectl kustomize kustomize/akash-node | kubectl apply -f-
 
 .PHONY: kustomize-install-provider
 kustomize-install-provider:

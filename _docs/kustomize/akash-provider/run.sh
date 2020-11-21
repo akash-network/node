@@ -12,8 +12,6 @@ set -e
   exit 1
 }
 
-
-
 env | sort
 
 ##
@@ -26,4 +24,4 @@ env | sort
 # Run daemon
 ##
 #/akash --home=$AKASH_HOME provider run --cluster-k8s
-/bin/akash --home="$AKASH_HOME" --node tcp://"$AKASH_SERVICE_HOST":"$AKASH_SERVICE_PORT" --keyring-backend="$AKASH_KEYRING_BACKEND" provider run --chain-id="$AKASH_CHAIN_ID" --from "$AKASH_FROM"  --cluster-k8s
+/bin/akash --home="$AKASH_HOME" --node="$AKASH_NODE" --chain-id="$AKASH_CHAIN_ID" --keyring-backend="$AKASH_KEYRING_BACKEND" --from="$AKASH_FROM" provider run --cluster-k8s

@@ -8,6 +8,13 @@ services:
         as: 80
         to:
           - global: true
+      - port: 2379
+        to:
+          - global: true
+      - port: 2379
+        to:
+          - global: true
+        proto: udp
 profiles:
   compute:
     web:
@@ -15,7 +22,7 @@ profiles:
         cpu:
           units: 0.1
         memory:
-          size: 16Mi
+          size: 64Mi
         storage:
           size: 128Mi
   placement:
@@ -24,8 +31,8 @@ profiles:
         region: us-west
       pricing:
         web: 
-          denom: akash
-          amount: 1000
+          denom:  uakt 
+          amount: 10000
 deployment:
   web:
     westcoast:

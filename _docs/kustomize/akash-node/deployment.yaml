@@ -1,18 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: akashd
+  name: akash-node
 spec:
   selector:
     matchLabels:
-      app: akashd
+      akash.network/component: akash-node
+      app: akash-node
   template:
     metadata:
       labels:
-        app: akashd
+        akash.network/component: akash-node
+        app: akash-node
     spec:
       containers:
-        - name: akashd
+        - name: akash-node
           image: ovrclk/akash:latest
           imagePullPolicy: IfNotPresent
           command: [ "/bin/sh" , "/boot/run.sh" ]

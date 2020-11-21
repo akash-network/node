@@ -41,8 +41,8 @@ kind-k8s-ip:
 
 .PHONY: kind-configure-image
 kind-configure-image:
-	echo "- op: replace\n  path: /spec/template/spec/containers/0/image\n  value: ${DOCKER_IMAGE}" > ./kustomize/akashd/docker-image.yaml && \
-    cp ./kustomize/akashd/docker-image.yaml ./kustomize/akash-provider/docker-image.yaml
+	echo "- op: replace\n  path: /spec/template/spec/containers/0/image\n  value: ${DOCKER_IMAGE}" > ./kustomize/akash-node/docker-image.yaml && \
+    cp ./kustomize/akash-node/docker-image.yaml ./kustomize/akash-provider/docker-image.yaml
 
 .PHONY: kind-upload-image
 kind-upload-image:
@@ -78,10 +78,11 @@ kind-ingress-setup:
 	kubectl apply -f "$(INGRESS_CONFIG_PATH)"
 	"$(AKASH_ROOT)/script/setup-kind.sh"
 
+
 .PHONY: kind-cluster-delete
 kind-cluster-delete:
 	kind delete cluster --name "$(KIND_NAME)"
 
 .PHONY: kind-cluster-clean
 kind-cluster-clean:
-	kubectl delete ns -l akash.network
+	kubectl delete ns -l akash.network 

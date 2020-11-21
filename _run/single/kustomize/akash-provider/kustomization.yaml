@@ -12,8 +12,8 @@ configMapGenerator:
   - name: akash-client-config
     behavior: merge
     literals:
-      # - node=tcp://akashd:26657
-      # - chain-id=local
+      - node=http://akash-node:26657
+      - chain-id=local
 
   ##
   # Akash provider service option overrides
