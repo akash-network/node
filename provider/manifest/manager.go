@@ -317,6 +317,10 @@ func (m *manager) validateRequest(req manifestRequest) error {
 		return ErrManifestVersion
 	}
 
+	if err := validation.ValidateManifest(req.value.Manifest); err != nil {
+		return err
+	}
+
 	if err := validation.ValidateManifestWithDeployment(&req.value.Manifest, m.data.Groups); err != nil {
 		return err
 	}

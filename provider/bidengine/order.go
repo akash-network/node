@@ -11,7 +11,6 @@ import (
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/util/runner"
-	"github.com/ovrclk/akash/validation"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -266,7 +265,7 @@ func (o *order) shouldBid(group *dtypes.Group) bool {
 		return false
 	}
 
-	if err := validation.ValidateDeploymentGroup(group.GroupSpec); err != nil {
+	if err := group.GroupSpec.ValidateBasic(); err != nil {
 		o.log.Error("unable to fulfill: group validation error",
 			"err", err)
 		return false

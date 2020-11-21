@@ -14,7 +14,7 @@ require (
 	github.com/gorilla/context v1.1.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
-	github.com/grpc-ecosystem/grpc-gateway v1.15.2
+	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/hashicorp/hcl v1.0.1-0.20191016231534-914dc3f8dd7c // indirect
 	github.com/jmhodges/levigo v1.0.1-0.20191019112844-b572e7f4cdac // indirect
 	github.com/libp2p/go-buffer-pool v0.0.3-0.20190619091711-d94255cb3dfc // indirect
@@ -32,13 +32,13 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/subosito/gotenv v1.2.1-0.20190917103637-de67a6614a4d // indirect
 	github.com/tendermint/tendermint v0.34.0-rc6
-	github.com/tendermint/tm-db v0.6.2
+	github.com/tendermint/tm-db v0.6.3
 	github.com/vektra/mockery v1.1.2
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/tools v0.0.0-20200616133436-c1934b75d054
 	google.golang.org/appengine v1.6.6-0.20191016204603-16bce7d3dc4e // indirect
-	google.golang.org/genproto v0.0.0-20201014134559-03b6142f0dc9
-	google.golang.org/grpc v1.33.0
+	google.golang.org/genproto v0.0.0-20201111145450-ac7456db90a6
+	google.golang.org/grpc v1.33.2
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 	k8s.io/api v0.19.3
@@ -54,3 +54,5 @@ replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.2-alpha.regen.4
 
 replace github.com/grpc-ecosystem/grpc-gateway => github.com/grpc-ecosystem/grpc-gateway v1.14.7
+
+replace github.com/cosmos/cosmos-sdk v0.40.0-rc3 => github.com/ovrclk/cosmos-sdk v0.40.0-rc3.0.20201120200843-110317ecc98d

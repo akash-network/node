@@ -1,8 +1,11 @@
 package testutil
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,6 +65,38 @@ func NewApp(val network.Validator) servertypes.Application {
 // testing requirements.
 func DefaultConfig() network.Config {
 	encCfg := app.MakeEncodingConfig()
+	origGenesisState := app.ModuleBasics().DefaultGenesis(encCfg.Marshaler)
+
+	genesisState := make(map[string]json.RawMessage)
+	for k, v := range origGenesisState {
+		data, err := v.MarshalJSON()
+		if err != nil {
+			panic(err)
+		}
+
+		buf := &bytes.Buffer{}
+		_, err = buf.Write(data)
+		if err != nil {
+			panic(err)
+		}
+
+		stringData := buf.String()
+		stringDataAfter := strings.ReplaceAll(stringData, `"stake"`, `"uakt"`)
+		if stringData == stringDataAfter {
+			genesisState[k] = v
+			continue
+		}
+
+		var val map[string]interface{}
+		err = json.Unmarshal(buf.Bytes(), &val)
+		if err != nil {
+			panic(err)
+		}
+
+		replacementV := json.RawMessage(stringDataAfter)
+		genesisState[k] = replacementV
+
+	}
 
 	return network.Config{
 		Codec:             encCfg.Marshaler,
@@ -70,18 +105,19 @@ func DefaultConfig() network.Config {
 		InterfaceRegistry: encCfg.InterfaceRegistry,
 		AccountRetriever:  authtypes.AccountRetriever{},
 		AppConstructor:    NewApp,
-		GenesisState:      app.ModuleBasics().DefaultGenesis(encCfg.Marshaler),
-		TimeoutCommit:     2 * time.Second,
-		ChainID:           "chain-" + tmrand.NewRand().Str(6),
-		NumValidators:     4,
-		BondDenom:         sdk.DefaultBondDenom,
-		MinGasPrices:      fmt.Sprintf("0.000006%s", sdk.DefaultBondDenom),
-		AccountTokens:     sdk.TokensFromConsensusPower(10000),
-		StakingTokens:     sdk.TokensFromConsensusPower(500),
-		BondedTokens:      sdk.TokensFromConsensusPower(100),
-		PruningStrategy:   storetypes.PruningOptionNothing,
-		CleanupDir:        true,
-		SigningAlgo:       string(hd.Secp256k1Type),
-		KeyringOptions:    []keyring.Option{},
+
+		GenesisState:    genesisState,
+		TimeoutCommit:   2 * time.Second,
+		ChainID:         "chain-" + tmrand.NewRand().Str(6),
+		NumValidators:   4,
+		BondDenom:       CoinDenom,
+		MinGasPrices:    fmt.Sprintf("0.000006%s", CoinDenom),
+		AccountTokens:   sdk.TokensFromConsensusPower(10000),
+		StakingTokens:   sdk.TokensFromConsensusPower(500),
+		BondedTokens:    sdk.TokensFromConsensusPower(100),
+		PruningStrategy: storetypes.PruningOptionNothing,
+		CleanupDir:      true,
+		SigningAlgo:     string(hd.Secp256k1Type),
+		KeyringOptions:  []keyring.Option{},
 	}
 }

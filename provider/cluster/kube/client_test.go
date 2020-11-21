@@ -2,7 +2,6 @@ package kube
 
 import (
 	"context"
-	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/testutil"
 	kubernetes_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock"
 	appsv1_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock/typed/apps/v1"
@@ -26,36 +25,6 @@ func clientForTest(t *testing.T, kc kubernetes.Interface) Client {
 	}
 
 	return result
-}
-
-func TestShouldExpose(t *testing.T) {
-	// Should not create ingress for something on port 81
-	require.False(t, shouldExpose(&manifest.ServiceExpose{
-		Global: true,
-		Proto:  manifest.TCP,
-		Port:   81,
-	}))
-
-	// Should create ingress for something on port 80
-	require.True(t, shouldExpose(&manifest.ServiceExpose{
-		Global: true,
-		Proto:  manifest.TCP,
-		Port:   80,
-	}))
-
-	// Should not create ingress for something on port 80 that is not Global
-	require.False(t, shouldExpose(&manifest.ServiceExpose{
-		Global: false,
-		Proto:  manifest.TCP,
-		Port:   80,
-	}))
-
-	// Should not create ingress for something on port 80 that is UDP
-	require.False(t, shouldExpose(&manifest.ServiceExpose{
-		Global: true,
-		Proto:  manifest.UDP,
-		Port:   80,
-	}))
 }
 
 func TestLeaseStatusWithNoDeployments(t *testing.T) {

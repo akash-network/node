@@ -211,6 +211,7 @@ loop:
 
 					allocatedPrev := res.allocated
 					res.allocated = ev.Status == event.ClusterDeploymentDeployed
+
 					if res.allocated != allocatedPrev {
 						externalPortCount := reservationCountEndpoints(res)
 						if ev.Status == event.ClusterDeploymentDeployed {
