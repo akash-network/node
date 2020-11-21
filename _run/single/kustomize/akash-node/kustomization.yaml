@@ -1,11 +1,10 @@
 bases:
   # - github.com/ovrclk/akash/_docs/kustomize/akashd?ref=boz/kustomize
-  - ../../../../_docs/kustomize/akashd
+  - ../../../../_docs/kustomize/akash-node
 
 namespace: akash-services
 
 configMapGenerator:
-
 
   ##
   # cosmos-sdk app config (app.toml) overrides
@@ -48,11 +47,11 @@ patchesJson6902:
       group: networking.k8s.io
       version: v1
       kind: Ingress
-      name: akash
+      name: akash-node
   - path: docker-image.yaml
     target:
       kind: Deployment
       group: apps
-      name: akashd
+      name: akash-node
       version: v1
 

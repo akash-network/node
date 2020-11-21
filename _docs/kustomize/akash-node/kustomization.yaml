@@ -3,8 +3,8 @@ resources:
   - service.yaml
   - ingress.yaml
 commonLabels:
-  app: akashd
-  akash.network/component: akashd
+  app: akash-node
+  akash.network/component: akash-node
 
 namespace: akash-services
 

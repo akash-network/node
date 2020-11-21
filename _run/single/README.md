@@ -24,8 +24,6 @@ Run a network with a single, local node and execute workloads in Minikube.
 Running through the entire suite requires three terminals.
 Each command is marked __t1__-__t3__ to indicate a suggested terminal number.
 
-* TODO: https://kind.sigs.k8s.io/docs/user/local-registry/
-
 * https://kubectl.docs.kubernetes.io/pages/reference/kustomize.html
 
 ## Setup
@@ -65,6 +63,13 @@ this example.
 |`OSEQ`|1|order sequence|
 |`PRICE`|10uakt|price to bid|
 
+To get DNS routing to work locally, there are two addresses which will probably need to set to configure requests to hit the kind docker container. To route requests back to the local interface, add the following two lines to your `/etc/hosts` for the Akash-Node and Akash-Provider examples to work correctly.
+
+* `127.0.0.1   akash.localhost`
+* `127.0.0.1   akash-provider.localhost`
+
+Or if it does not conflict with other local rules, use a wildcard for localhost:
+* `127.0.0.1   *.localhost`
 
 ## Runbook
 
@@ -141,7 +146,7 @@ make kustomize-init
 ### Run local network
 
 ```sh
-make kustomize-install-akashd
+make kustomize-install-akash-node
 ```
 
 You can check the status of the network with:
@@ -155,7 +160,7 @@ You should see blocks being produced - the block height should be increasing.
 
 You can now view genesis accounts that were created:
 
-**If this command fails**, consider adding `127.0.0.1   akashd.localhost` to your `/etc/hosts` for DNS.
+**If this command fails**, consider adding `127.0.0.1   akash.localhost` to your `/etc/hosts` for DNS.
 
 __t1__
 ```sh

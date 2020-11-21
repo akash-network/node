@@ -3,4 +3,4 @@ attributes:
   - key: region
     value:  us-west
   - key: tier
-    value:  "5"
+    value: 5

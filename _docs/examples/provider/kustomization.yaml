@@ -1,15 +1,15 @@
 bases:
   - github.com/ovrclk/akash/_docs/kustomize/akash-provider?ref=master
-  # - ../../kustomize/akash-provider
+  # local location: - ../../kustomize/akash-provider
+
+namespace: akash-services
 
 images:
-  - name: ovrclk/akashctl
-
+  - name: ovrclk/akash
     ##
-    # akashctl version
+    # akash version
     ##
-
-    newTag: latest
+    newTag: 0.9.0-rc3
 
 configMapGenerator:
 
@@ -31,6 +31,9 @@ configMapGenerator:
   ##
   - name: akash-provider-config
     behavior: merge
+    literals:
+      - cluster-node-port-quantity=100
+      - bid-price-strategy=randomRange
     ##
     # place overrides in provider-config.txt
     #
@@ -50,7 +53,7 @@ patchesJson6902:
   - path: gateway-host.yaml
     target:
       group: networking.k8s.io
-      version: v1beta1
+      version: v1
       kind: Ingress
       name: akash-provider
 
