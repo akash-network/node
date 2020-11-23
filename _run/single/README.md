@@ -146,7 +146,7 @@ make kustomize-init
 ### Run local network
 
 ```sh
-make kustomize-install-akash-node
+make kustomize-install-node
 ```
 
 You can check the status of the network with:
