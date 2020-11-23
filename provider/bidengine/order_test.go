@@ -285,6 +285,8 @@ func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
 
 	bid := &mtypes.Bid{}
 	order, scaffold := makeOrderForTest(t, bid, nil)
+	reservationFulfilledNotify := make(chan int, 1)
+	order.reservationFulfilledNotify = reservationFulfilledNotify
 
 	// Wait for a reserve call
 	<-scaffold.reserveCallNotify
@@ -292,9 +294,10 @@ func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
 	// Should have called reserve once
 	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
 
-	// Should not have called unreserve
-	scaffold.cluster.AssertNotCalled(t, "Unreserve", mock.Anything, mock.Anything)
+	// Wait for the reservation to be processed
+	<-reservationFulfilledNotify
 
+	// Close the order
 	ev := mtypes.EventOrderClosed{
 		Context: sdkutil.BaseModuleEvent{},
 		ID:      scaffold.orderID,
@@ -302,6 +305,9 @@ func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
 
 	err := scaffold.testBus.Publish(ev)
 	require.NoError(t, err)
+
+	// Should not have called unreserve yet
+	scaffold.cluster.AssertNotCalled(t, "Unreserve", mock.Anything, mock.Anything)
 
 	// Wait for it to stop
 	<-order.lc.Done()
