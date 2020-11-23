@@ -128,7 +128,7 @@ Example:
 westcoast:
   attributes:
     region: us-west
-  signedBy: # optional, allOf has higher priority, anyOf is ignored if there is at least one key in allOf
+  signedBy: # optional. if both provided resulting operation will be allOf AND anyOf
     allOf: # array of keys tenant expects attributes to be validated by. if all but one validated, provider cannot bid
       - signer1
       - signer2
