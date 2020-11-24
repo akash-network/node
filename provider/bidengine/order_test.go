@@ -3,11 +3,13 @@ package bidengine
 import (
 	"context"
 	"errors"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/sdkutil"
 
-	"github.com/stretchr/testify/mock"
 	"testing"
+
+	"github.com/stretchr/testify/mock"
 
 	"github.com/stretchr/testify/require"
 
@@ -19,6 +21,7 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
 
+	broadcastmocks "github.com/ovrclk/akash/client/broadcaster/mocks"
 	clientmocks "github.com/ovrclk/akash/client/mocks"
 	clustermocks "github.com/ovrclk/akash/provider/cluster/mocks"
 )
@@ -32,7 +35,7 @@ type orderTestScaffold struct {
 
 	queryClient *clientmocks.QueryClient
 	client      *clientmocks.Client
-	txClient    *clientmocks.TxClient
+	txClient    *broadcastmocks.Client
 	cluster     *clustermocks.Cluster
 
 	broadcasts        chan sdk.Msg
@@ -74,10 +77,10 @@ func makeMocks(s *orderTestScaffold) {
 
 	queryClientMock.On("Orders", mock.Anything, mock.Anything).Return(&mtypes.QueryOrdersResponse{}, nil)
 
-	txClientMock := &clientmocks.TxClient{}
+	txClientMock := &broadcastmocks.Client{}
 	s.broadcasts = make(chan sdk.Msg, 1)
-	txClientMock.On("Broadcast", mock.Anything).Run(func(args mock.Arguments) {
-		s.broadcasts <- args.Get(0).(sdk.Msg)
+	txClientMock.On("Broadcast", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		s.broadcasts <- args.Get(1).(sdk.Msg)
 	}).Return(nil)
 
 	clientMock := &clientmocks.Client{}

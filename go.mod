@@ -39,13 +39,13 @@ require (
 	google.golang.org/appengine v1.6.6-0.20191016204603-16bce7d3dc4e // indirect
 	google.golang.org/genproto v0.0.0-20201111145450-ac7456db90a6
 	google.golang.org/grpc v1.33.2
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	k8s.io/api v0.19.3
 	k8s.io/apimachinery v0.19.3
 	k8s.io/client-go v0.19.3
 	k8s.io/code-generator v0.19.3
 	k8s.io/metrics v0.19.3
-	sigs.k8s.io/kind v0.8.1
+	sigs.k8s.io/kind v0.9.0
 )
 
 replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4

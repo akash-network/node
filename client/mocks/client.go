@@ -4,6 +4,8 @@ package mocks
 
 import (
 	client "github.com/ovrclk/akash/client"
+	broadcaster "github.com/ovrclk/akash/client/broadcaster"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -29,15 +31,15 @@ func (_m *Client) Query() client.QueryClient {
 }
 
 // Tx provides a mock function with given fields:
-func (_m *Client) Tx() client.TxClient {
+func (_m *Client) Tx() broadcaster.Client {
 	ret := _m.Called()
 
-	var r0 client.TxClient
-	if rf, ok := ret.Get(0).(func() client.TxClient); ok {
+	var r0 broadcaster.Client
+	if rf, ok := ret.Get(0).(func() broadcaster.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(client.TxClient)
+			r0 = ret.Get(0).(broadcaster.Client)
 		}
 	}
 

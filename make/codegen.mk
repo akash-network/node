@@ -14,8 +14,8 @@ mocks:
 	mockery -case=underscore -dir provider/cluster/types      -output provider/cluster/mocks      -name Reservation
 	mockery -case=underscore -dir provider/manifest     -output provider/manifest/mocks     -name Client
 	mockery -case=underscore -dir provider/manifest     -output provider/manifest/mocks     -name StatusClient
+	mockery -case=underscore -dir client/broadcaster    -output client/broadcaster/mocks    -name Client
 	mockery -case=underscore -dir client                -output client/mocks/               -name QueryClient
-	mockery -case=underscore -dir client                -output client/mocks/               -name TxClient
 	mockery -case=underscore -dir client                -output client/mocks/               -name Client
 
 

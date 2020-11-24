@@ -12,6 +12,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	"google.golang.org/grpc"
 
+	"github.com/ovrclk/akash/client/broadcaster"
 	atypes "github.com/ovrclk/akash/x/audit/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -21,9 +22,6 @@ import (
 var (
 	// ErrClientNotFound is a new error with message "Client not found"
 	ErrClientNotFound = errors.New("Client not found")
-
-	// ErrBroadcastTx is used when a broadcast fails due to tendermint errors
-	ErrBroadcastTx = errors.New("broadcast tx error")
 )
 
 // QueryClient interface includes query clients of deployment, market and provider modules
@@ -37,15 +35,10 @@ type QueryClient interface {
 	ActiveLeasesForProvider(id sdk.AccAddress) (mtypes.Leases, error)
 }
 
-// TxClient interface
-type TxClient interface {
-	Broadcast(...sdk.Msg) error
-}
-
 // Client interface pre-defined with query and tx interfaces
 type Client interface {
 	Query() QueryClient
-	Tx() TxClient
+	Tx() broadcaster.Client
 }
 
 // NewClient creates new client instance to interface with tendermint.
@@ -54,64 +47,47 @@ func NewClient(
 	cctx sdkclient.Context,
 	txf tx.Factory,
 	info keyring.Info,
-	passphrase string,
 	qclient QueryClient,
 ) Client {
+	return NewClientWithBroadcaster(
+		log,
+		cctx,
+		txf,
+		info,
+		qclient,
+		broadcaster.NewClient(cctx, txf, info),
+	)
+}
+
+func NewClientWithBroadcaster(
+	log log.Logger,
+	cctx sdkclient.Context,
+	txf tx.Factory,
+	info keyring.Info,
+	qclient QueryClient,
+	bclient broadcaster.Client,
+) Client {
 	return &client{
-		cctx:       cctx,
-		txf:        txf,
-		info:       info,
-		passphrase: passphrase,
-		qclient:    qclient,
-		log:        log.With("cmp", "client/client"),
+		cctx:    cctx,
+		txf:     txf,
+		info:    info,
+		qclient: qclient,
+		bclient: bclient,
+		log:     log.With("cmp", "client/client"),
 	}
 }
 
 type client struct {
-	cctx       sdkclient.Context
-	txf        tx.Factory
-	info       keyring.Info
-	passphrase string
-	qclient    QueryClient
-	log        log.Logger
+	cctx    sdkclient.Context
+	txf     tx.Factory
+	info    keyring.Info
+	qclient QueryClient
+	bclient broadcaster.Client
+	log     log.Logger
 }
 
-func (c *client) Tx() TxClient {
-	return c
-}
-
-func (c *client) Broadcast(msgs ...sdk.Msg) error {
-	txf, err := tx.PrepareFactory(c.cctx, c.txf)
-	if err != nil {
-		return err
-	}
-
-	txn, err := tx.BuildUnsignedTx(txf, msgs...)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Sign(txf, c.info.GetName(), txn)
-	if err != nil {
-		return err
-	}
-
-	bytes, err := c.cctx.TxConfig.TxEncoder()(txn.GetTx())
-	if err != nil {
-		return err
-	}
-
-	response, err := c.cctx.BroadcastTxSync(bytes)
-	if err != nil {
-		return err
-	}
-
-	if response.Code != 0 {
-		c.log.Error("error broadcasting transaction", "response", response)
-		return ErrBroadcastTx
-	}
-
-	return nil
+func (c *client) Tx() broadcaster.Client {
+	return c.bclient
 }
 
 func (c *client) Query() QueryClient {

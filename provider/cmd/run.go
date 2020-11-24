@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ovrclk/akash/provider/bidengine"
 	"os"
 	"time"
+
+	"github.com/ovrclk/akash/client/broadcaster"
+	"github.com/ovrclk/akash/provider/bidengine"
 
 	cosmosclient "github.com/cosmos/cosmos-sdk/client"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/go-kit/kit/log/term"
 	"github.com/spf13/cobra"
@@ -262,20 +263,25 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	log := openLogger()
 
+	broadcaster, err := broadcaster.NewSerialClient(log, cctx, txFactory, info)
+	if err != nil {
+		return err
+	}
+
 	// TODO: actually get the passphrase?
 	// passphrase, err := keys.GetPassphrase(fromName)
-	aclient := client.NewClient(
+	aclient := client.NewClientWithBroadcaster(
 		log,
 		cctx,
 		txFactory,
 		info,
-		keys.DefaultKeyPass,
 		client.NewQueryClient(
 			dmodule.AppModuleBasic{}.GetQueryClient(cctx),
 			mmodule.AppModuleBasic{}.GetQueryClient(cctx),
 			pmodule.AppModuleBasic{}.GetQueryClient(cctx),
 			amodule.AppModuleBasic{}.GetQueryClient(cctx),
 		),
+		broadcaster,
 	)
 
 	res, err := aclient.Query().Provider(
@@ -342,6 +348,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	})
 
 	err = group.Wait()
+	broadcaster.Close()
 	if err != nil && !errors.Is(err, context.Canceled) {
 		return err
 	}

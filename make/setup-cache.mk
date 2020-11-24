@@ -76,9 +76,9 @@ kubetypes-deps-install:
 		"$(shell go env GOPATH)/src/k8s.io/code-generator"
 
 devdeps-install: kubetypes-deps-install
-	$(GO) install github.com/vektra/mockery/.../
+	$(GO) get     github.com/vektra/mockery/.../
 	$(GO) install k8s.io/code-generator/...
-	$(GO) install sigs.k8s.io/kind
+	$(GO) get     sigs.k8s.io/kind
 	$(GO) install golang.org/x/tools/cmd/stringer
 
 cache-clean:

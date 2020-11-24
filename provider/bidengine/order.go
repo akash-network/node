@@ -2,6 +2,7 @@ package bidengine
 
 import (
 	"context"
+
 	lifecycle "github.com/boz/go-lifecycle"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/provider/cluster"
@@ -207,7 +208,7 @@ loop:
 
 			// Begin submitting fulfillment
 			bidch = runner.Do(func() runner.Result {
-				return runner.NewResult(nil, o.session.Client().Tx().Broadcast(&mtypes.MsgCreateBid{
+				return runner.NewResult(nil, o.session.Client().Tx().Broadcast(ctx, &mtypes.MsgCreateBid{
 					Order:    o.orderID,
 					Provider: o.session.Provider().Address().String(),
 					Price:    price,
@@ -243,7 +244,7 @@ loop:
 
 		if o.bid != nil {
 			o.log.Debug("closing bid")
-			err := o.session.Client().Tx().Broadcast(&mtypes.MsgCloseBid{
+			err := o.session.Client().Tx().Broadcast(ctx, &mtypes.MsgCloseBid{
 				BidID: o.bid.BidID,
 			})
 			if err != nil {
