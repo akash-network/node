@@ -2,11 +2,10 @@ package bidengine
 
 import (
 	"context"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
-
 	lifecycle "github.com/boz/go-lifecycle"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/provider/cluster"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
@@ -22,10 +21,11 @@ type order struct {
 	bid             *mtypes.Bid
 	pricingStrategy BidPricingStrategy
 
-	session session.Session
-	cluster cluster.Cluster
-	bus     pubsub.Bus
-	sub     pubsub.Subscriber
+	session                    session.Session
+	cluster                    cluster.Cluster
+	bus                        pubsub.Bus
+	sub                        pubsub.Subscriber
+	reservationFulfilledNotify chan<- int
 
 	log log.Logger
 	lc  lifecycle.Lifecycle
@@ -43,15 +43,16 @@ func newOrder(svc *service, oid mtypes.OrderID, bid *mtypes.Bid, pricingStrategy
 	log := session.Log().With("order", oid)
 
 	order := &order{
-		orderID:         oid,
-		bid:             bid,
-		session:         session,
-		cluster:         svc.cluster,
-		bus:             svc.bus,
-		sub:             sub,
-		log:             log,
-		lc:              lifecycle.New(),
-		pricingStrategy: pricingStrategy,
+		orderID:                    oid,
+		bid:                        bid,
+		session:                    session,
+		cluster:                    svc.cluster,
+		bus:                        svc.bus,
+		sub:                        sub,
+		log:                        log,
+		lc:                         lifecycle.New(),
+		pricingStrategy:            pricingStrategy,
+		reservationFulfilledNotify: nil, // Normally nil in production
 	}
 
 	// Shut down when parent begins shutting down
@@ -160,7 +161,8 @@ loop:
 			o.log.Info("requesting reservation")
 			// Begin reserving resources from cluster.
 			clusterch = runner.Do(func() runner.Result {
-				return runner.NewResult(o.cluster.Reserve(o.orderID, group))
+				v := runner.NewResult(o.cluster.Reserve(o.orderID, group))
+				return v
 			})
 
 		case result := <-clusterch:
@@ -172,6 +174,14 @@ loop:
 			}
 
 			o.log.Info("Reservation fulfilled")
+
+			// If the channel is assigned and there is capacity, write into the channel
+			if o.reservationFulfilledNotify != nil {
+				select {
+				case o.reservationFulfilledNotify <- 0:
+				default:
+				}
+			}
 
 			// Resources reserved.
 			reservation = result.Value().(ctypes.Reservation)
