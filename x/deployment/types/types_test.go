@@ -256,7 +256,7 @@ func TestGroupPlacementRequirementsSignerAnyOf(t *testing.T) {
 	require.True(t, group.MatchRequirements(providerAttr))
 }
 
-func TestGroupPlacementRequirementsSignerAllOfPrecedence(t *testing.T) {
+func TestGroupPlacementRequirementsSignerAllOfAnyOf(t *testing.T) {
 	group := types.GroupSpec{
 		Name:             "spec",
 		Requirements:     testutil.PlacementRequirements(t),
