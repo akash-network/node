@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"context"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
@@ -54,6 +55,7 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 	if err := ms.deployment.Create(ctx, deployment, groups); err != nil {
 		return nil, errors.Wrap(types.ErrInternal, err.Error())
 	}
+	telemetry.IncrCounter(1.0, "akash.deployment_created")
 
 	return &types.MsgCreateDeploymentResponse{}, nil
 }
