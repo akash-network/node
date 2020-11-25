@@ -258,42 +258,42 @@ spec:
                   key: bid-price-strategy
                   optional: true
 
-            - name: AKASH_BID_CPU_SCALE
+            - name: AKASH_BID_PRICE_CPU_SCALE
               valueFrom:
                 configMapKeyRef:
                   name: akash-provider-config
                   key: bid-cpu-scale
                   optional: true
 
-            - name: AKASH_BID_MEMORY_SCALE
+            - name: AKASH_BID_PRICE_MEMORY_SCALE
               valueFrom:
                 configMapKeyRef:
                   name: akash-provider-config
                   key: bid-memory-scale
                   optional: true
 
-            - name: AKASH_BID_STORAGE_SCALE
+            - name: AKASH_BID_PRICE_STORAGE_SCALE
               valueFrom:
                 configMapKeyRef:
                   name: akash-provider-config
                   key: bid-storage-scale
                   optional: true
 
-            - name: AKASH_BID_SCRIPT_PATH
+            - name: AKASH_BID_PRICE_SCRIPT_PATH
               valueFrom:
                 configMapKeyRef:
                   name: akash-provider-config
                   key: bid-script-path
                   optional: true
 
-            - name: AKASH_BID_SCRIPT_PROCESS_LIMIT
+            - name: AKASH_BID_PRICE_SCRIPT_PROCESS_LIMIT
               valueFrom:
                 configMapKeyRef:
                   name: akash-provider-config
                   key: bid-script-process-limit
                   optional: true
 
-            - name: AKASH_BID_SCRIPT_PROCESS_TIMEOUT
+            - name: AKASH_BID_PRICE_SCRIPT_PROCESS_TIMEOUT
               valueFrom:
                 configMapKeyRef:
                   name: akash-provider-config
