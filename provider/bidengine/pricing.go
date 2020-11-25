@@ -53,13 +53,25 @@ func MakeScalePricing(
 var ErrBidQuantityInvalid = errors.New("A bid quantity is invalid")
 var ErrBidZero = errors.New("A bid of zero was produced")
 
+func ceilBigRatToBigInt(v *big.Rat) *big.Int {
+	numerator := v.Num()
+	denom := v.Denom()
+
+	result := big.NewInt(0).Div(numerator, denom)
+	if !v.IsInt() {
+		result.Add(result, big.NewInt(1))
+	}
+
+	return result
+}
+
 func (fp scalePricing) calculatePrice(ctx context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	// Use unlimited precision math here.
 	// Otherwise a correctly crafted order could create a cost of '1' given
 	// a possible configuration
 	cpuTotal := big.NewInt(0)
-	memoryTotal := big.NewInt(0)
-	storageTotal := big.NewInt(0)
+	memoryTotal := big.NewRat(0, 1)
+	storageTotal := big.NewRat(0, 1)
 	endpointTotal := big.NewInt(0)
 
 	// iterate over everything & sum it up
@@ -67,20 +79,22 @@ func (fp scalePricing) calculatePrice(ctx context.Context, gspec *dtypes.GroupSp
 
 		groupCount := big.NewInt(0)
 		groupCount.SetUint64(uint64(group.Count)) // Expand uint32 to uint64
+		groupCountRat := big.NewRat(0, 1)
+		groupCountRat.SetUint64(uint64(group.Count))
 
 		cpuQuantity := big.NewInt(0)
 		cpuQuantity.SetUint64(group.Resources.CPU.Units.Val.Uint64())
 		cpuQuantity.Mul(cpuQuantity, groupCount)
 		cpuTotal.Add(cpuTotal, cpuQuantity)
 
-		memoryQuantity := big.NewInt(0)
+		memoryQuantity := big.NewRat(0, 1)
 		memoryQuantity.SetUint64(group.Resources.Memory.Quantity.Value())
-		memoryQuantity.Mul(memoryQuantity, groupCount)
+		memoryQuantity.Mul(memoryQuantity, groupCountRat)
 		memoryTotal.Add(memoryTotal, memoryQuantity)
 
-		storageQuantity := big.NewInt(0)
+		storageQuantity := big.NewRat(0, 1)
 		storageQuantity.SetUint64(group.Resources.Storage.Quantity.Val.Uint64())
-		storageQuantity.Mul(storageQuantity, groupCount)
+		storageQuantity.Mul(storageQuantity, groupCountRat)
 		storageTotal.Add(storageTotal, storageQuantity)
 
 		endpointQuantity := big.NewInt(0)
@@ -92,27 +106,35 @@ func (fp scalePricing) calculatePrice(ctx context.Context, gspec *dtypes.GroupSp
 	scale.SetUint64(fp.cpuScale)
 	cpuTotal.Mul(cpuTotal, scale)
 
-	scale.SetUint64(fp.memoryScale)
-	memoryTotal.Mul(memoryTotal, scale)
+	mebibytes := big.NewRat(unit.Mi, 1)
+	memoryTotal.Quo(memoryTotal, mebibytes)
 
-	scale.SetUint64(fp.storageScale)
-	storageTotal.Mul(storageTotal, scale)
+	scaleRat := big.NewRat(0, 1)
+	scaleRat.SetUint64(fp.memoryScale)
+	memoryTotal.Mul(memoryTotal, scaleRat)
+
+	storageTotal.Quo(storageTotal, mebibytes)
+	scaleRat.SetUint64(fp.storageScale)
+	storageTotal.Mul(storageTotal, scaleRat)
 
 	scale.SetUint64(fp.endpointScale)
 	endpointTotal.Mul(endpointTotal, scale)
 
+	memoryTotalInt := ceilBigRatToBigInt(memoryTotal)
+	storageTotalInt := ceilBigRatToBigInt(storageTotal)
+
 	// Each quantity must be non negative
 	// and fit into an Int64
 	if cpuTotal.Sign() < 0 || !cpuTotal.IsInt64() ||
-		memoryTotal.Sign() < 0 || !memoryTotal.IsInt64() ||
-		storageTotal.Sign() < 0 || !storageTotal.IsInt64() ||
+		memoryTotal.Sign() < 0 || !memoryTotalInt.IsInt64() ||
+		storageTotal.Sign() < 0 || !storageTotalInt.IsInt64() ||
 		endpointTotal.Sign() < 0 || !endpointTotal.IsInt64() {
 		return sdk.Coin{}, ErrBidQuantityInvalid
 	}
 
 	cpuCost := sdk.NewCoin(denom, sdk.NewIntFromBigInt(cpuTotal))
-	memoryCost := sdk.NewCoin(denom, sdk.NewIntFromBigInt(memoryTotal))
-	storageCost := sdk.NewCoin(denom, sdk.NewIntFromBigInt(storageTotal))
+	memoryCost := sdk.NewCoin(denom, sdk.NewIntFromBigInt(memoryTotalInt))
+	storageCost := sdk.NewCoin(denom, sdk.NewIntFromBigInt(storageTotalInt))
 
 	// Check for less than or equal to zero
 	cost := cpuCost.Add(memoryCost).Add(storageCost)

@@ -7,10 +7,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/testutil"
 	atypes "github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/unit"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/stretchr/testify/require"
 	io "io"
 	"math"
+	"math/big"
 	"os"
 	"os/exec"
 	"path"
@@ -105,7 +107,7 @@ func Test_ScalePricingOnCpu(t *testing.T) {
 
 func Test_ScalePricingOnMemory(t *testing.T) {
 	memoryScale := uint64(23)
-	pricing, err := MakeScalePricing(0, memoryScale, 0, 0)
+	pricing, err := MakeScalePricing(0, memoryScale*unit.Mi, 0, 0)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
@@ -119,9 +121,64 @@ func Test_ScalePricingOnMemory(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func Test_ScalePricingOnMemoryRoundsUpA(t *testing.T) {
+	memoryScale := uint64(123)
+	pricing, err := MakeScalePricing(0, memoryScale, 0, 0)
+	require.NoError(t, err)
+	require.NotNil(t, pricing)
+
+	gspec := defaultGroupSpec()
+	// Make a resource exactly 1 byte greater than a megabyte
+	memoryQuantity := uint64(unit.Mi + 1)
+	gspec.Resources[0].Resources.Memory.Quantity = atypes.NewResourceValue(memoryQuantity)
+	price, err := pricing.calculatePrice(context.Background(), gspec)
+
+	// The pricing function cannot round down, so the price must exactly 1 uakt larger
+	// than the scale provided
+	expectedPrice := testutil.AkashCoin(t, int64(124))
+	require.Equal(t, expectedPrice, price)
+	require.NoError(t, err)
+}
+
+func Test_ScalePricingOnMemoryRoundsUpB(t *testing.T) {
+	memoryScale := uint64(123)
+	pricing, err := MakeScalePricing(0, memoryScale, 0, 0)
+	require.NoError(t, err)
+	require.NotNil(t, pricing)
+
+	gspec := defaultGroupSpec()
+	// Make a resource exactly 1 less byte less than two megabytes
+	memoryQuantity := uint64(2*unit.Mi - 1)
+	gspec.Resources[0].Resources.Memory.Quantity = atypes.NewResourceValue(memoryQuantity)
+	price, err := pricing.calculatePrice(context.Background(), gspec)
+
+	// The pricing function cannot round down, so the price must exactly twice the scale
+	expectedPrice := testutil.AkashCoin(t, int64(246))
+	require.Equal(t, expectedPrice, price)
+	require.NoError(t, err)
+}
+
+func Test_ScalePricingOnMemoryRoundsUpFromZero(t *testing.T) {
+	memoryScale := uint64(1) // 1 uakt per megabyte
+	pricing, err := MakeScalePricing(0, memoryScale, 0, 0)
+	require.NoError(t, err)
+	require.NotNil(t, pricing)
+
+	gspec := defaultGroupSpec()
+	// Make a resource exactly 1 byte
+	memoryQuantity := uint64(1)
+	gspec.Resources[0].Resources.Memory.Quantity = atypes.NewResourceValue(memoryQuantity)
+	price, err := pricing.calculatePrice(context.Background(), gspec)
+
+	// The pricing function cannot round down, so the price must exactly 1 uakt
+	expectedPrice := testutil.AkashCoin(t, int64(1))
+	require.Equal(t, expectedPrice, price)
+	require.NoError(t, err)
+}
+
 func Test_ScalePricingOnStorage(t *testing.T) {
 	storageScale := uint64(24)
-	pricing, err := MakeScalePricing(0, 0, storageScale, 0)
+	pricing, err := MakeScalePricing(0, 0, storageScale*unit.Mi, 0)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
@@ -137,7 +194,7 @@ func Test_ScalePricingOnStorage(t *testing.T) {
 
 func Test_ScalePricingByCountOfResources(t *testing.T) {
 	storageScale := uint64(3)
-	pricing, err := MakeScalePricing(0, 0, storageScale, 0)
+	pricing, err := MakeScalePricing(0, 0, storageScale*unit.Mi, 0)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
@@ -438,4 +495,18 @@ func Test_ScriptPricingWritesJsonToStdin(t *testing.T) {
 		require.Equal(t, r.Count, data[i].Count)
 		require.Equal(t, len(r.Resources.Endpoints), data[i].EndpointQuantity)
 	}
+}
+
+func TestRationalToIntConversion(t *testing.T) {
+	x := ceilBigRatToBigInt(big.NewRat(0, 1))
+	require.Equal(t, big.NewInt(0), x)
+
+	y := ceilBigRatToBigInt(big.NewRat(1, 1))
+	require.Equal(t, big.NewInt(1), y)
+
+	z := ceilBigRatToBigInt(big.NewRat(1, 2))
+	require.Equal(t, big.NewInt(1), z)
+
+	a := ceilBigRatToBigInt(big.NewRat(3, 2))
+	require.Equal(t, big.NewInt(2), a)
 }
