@@ -33,6 +33,9 @@ type order struct {
 }
 
 func newOrder(svc *service, oid mtypes.OrderID, bid *mtypes.Bid, pricingStrategy BidPricingStrategy) (*order, error) {
+	return newOrderInternal(svc, oid, bid, pricingStrategy, nil)
+}
+func newOrderInternal(svc *service, oid mtypes.OrderID, bid *mtypes.Bid, pricingStrategy BidPricingStrategy, reservationFulfilledNotify chan<- int) (*order, error) {
 	// Create a subscription that will see all events that have not been read from e.sub.Events()
 	sub, err := svc.sub.Clone()
 	if err != nil {
@@ -53,7 +56,7 @@ func newOrder(svc *service, oid mtypes.OrderID, bid *mtypes.Bid, pricingStrategy
 		log:                        log,
 		lc:                         lifecycle.New(),
 		pricingStrategy:            pricingStrategy,
-		reservationFulfilledNotify: nil, // Normally nil in production
+		reservationFulfilledNotify: reservationFulfilledNotify, // Normally nil in production
 	}
 
 	// Shut down when parent begins shutting down
