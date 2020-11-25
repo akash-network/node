@@ -118,8 +118,9 @@ Example:
 
 #### profiles.placement
 
-`profiles.placement` is map of named datacenter profiles.  Each profile specifies required datacenter attributes and pricing
+`profiles.placement` is map of named datacenter profiles. Each profile specifies required datacenter attributes and pricing
 configuration for each [compute profile](#profilescompute) that will be used within the datacenter.
+It also specifies optional list of signatures of which tenants expects audit of datacenter attributes.
 
 Example:
 
@@ -127,6 +128,13 @@ Example:
 westcoast:
   attributes:
     region: us-west
+  signedBy: # optional. if both provided resulting operation will be allOf AND anyOf
+    allOf: # array of keys tenant expects attributes to be validated by. if all but one validated, provider cannot bid
+      - signer1
+      - signer2
+    anyOf: # array of keys tenant expects attributes to be validated by. provider can bid if one of keys has put signature 
+      - signer3
+      - signer4
   pricing:
     web:
       denom: uakt
