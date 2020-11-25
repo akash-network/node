@@ -105,7 +105,7 @@ func makeMocks(s *orderTestScaffold) {
 
 }
 
-func makeOrderForTest(t *testing.T, bid *mtypes.Bid, pricing BidPricingStrategy) (*order, orderTestScaffold) {
+func makeOrderForTest(t *testing.T, bid *mtypes.Bid, pricing BidPricingStrategy) (*order, orderTestScaffold, <-chan int) {
 	if pricing == nil {
 		var err error
 		pricing, err = MakeRandomRangePricing()
@@ -145,18 +145,20 @@ func makeOrderForTest(t *testing.T, bid *mtypes.Bid, pricing BidPricingStrategy)
 		bid.BidID = mtypes.MakeBidID(scaffold.orderID, scaffold.testAddr)
 		bid.Price = testutil.AkashCoin(t, 1)
 	}
-	order, err := newOrder(serviceCast, scaffold.orderID, bid, pricing)
+
+	reservationFulfilledNotify := make(chan int, 1)
+	order, err := newOrderInternal(serviceCast, scaffold.orderID, bid, pricing, reservationFulfilledNotify)
 
 	require.NoError(t, err)
 	require.NotNil(t, order)
 
-	return order, scaffold
+	return order, scaffold, reservationFulfilledNotify
 }
 
 func Test_BidOrderAndUnreserve(t *testing.T) {
-	order, scaffold := makeOrderForTest(t, nil, nil)
+	order, scaffold, _ := makeOrderForTest(t, nil, nil)
 
-	broadcast := <-scaffold.broadcasts
+	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 	// Should have called reserve once
 	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
 
@@ -181,9 +183,9 @@ func Test_BidOrderAndUnreserve(t *testing.T) {
 }
 
 func Test_BidOrderAndThenClosedUnreserve(t *testing.T) {
-	order, scaffold := makeOrderForTest(t, nil, nil)
+	order, scaffold, _ := makeOrderForTest(t, nil, nil)
 
-	<-scaffold.broadcasts
+	testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 	// Should have called reserve once at this point
 	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
 
@@ -203,10 +205,10 @@ func Test_BidOrderAndThenClosedUnreserve(t *testing.T) {
 }
 
 func Test_BidOrderAndThenLeaseCreated(t *testing.T) {
-	order, scaffold := makeOrderForTest(t, nil, nil)
+	order, scaffold, _ := makeOrderForTest(t, nil, nil)
 
 	// Wait for first broadcast
-	broadcast := <-scaffold.broadcasts
+	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 
 	createBidMsg, ok := broadcast.(*mtypes.MsgCreateBid)
 	require.True(t, ok)
@@ -244,10 +246,10 @@ func Test_BidOrderAndThenLeaseCreated(t *testing.T) {
 
 func Test_BidOrderAndThenLeaseCreatedForDifferentDeployment(t *testing.T) {
 
-	order, scaffold := makeOrderForTest(t, nil, nil)
+	order, scaffold, _ := makeOrderForTest(t, nil, nil)
 
 	// Wait for first broadcast
-	broadcast := <-scaffold.broadcasts
+	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 
 	// Should have called reserve once
 	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
@@ -272,7 +274,7 @@ func Test_BidOrderAndThenLeaseCreatedForDifferentDeployment(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for the event to be published
-	<-subscriber.Events()
+	testutil.ChannelWaitForValue(t, subscriber.Events())
 
 	// Should not have called unreserve yet
 	scaffold.cluster.AssertNotCalled(t, "Unreserve", mock.Anything, mock.Anything)
@@ -287,18 +289,16 @@ func Test_BidOrderAndThenLeaseCreatedForDifferentDeployment(t *testing.T) {
 func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
 
 	bid := &mtypes.Bid{}
-	order, scaffold := makeOrderForTest(t, bid, nil)
-	reservationFulfilledNotify := make(chan int, 1)
-	order.reservationFulfilledNotify = reservationFulfilledNotify
+	order, scaffold, reservationFulfilledNotify := makeOrderForTest(t, bid, nil)
 
 	// Wait for a reserve call
-	<-scaffold.reserveCallNotify
+	testutil.ChannelWaitForValue(t, scaffold.reserveCallNotify)
 
 	// Should have called reserve once
 	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
 
 	// Wait for the reservation to be processed
-	<-reservationFulfilledNotify
+	testutil.ChannelWaitForValue(t, reservationFulfilledNotify)
 
 	// Close the order
 	ev := mtypes.EventOrderClosed{
@@ -335,10 +335,10 @@ func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
 
 func Test_ShouldRecognizeLeaseCreatedIfBiddingIsSkipped(t *testing.T) {
 	bid := &mtypes.Bid{}
-	order, scaffold := makeOrderForTest(t, bid, nil)
+	order, scaffold, _ := makeOrderForTest(t, bid, nil)
 
 	// Wait for a reserve call
-	<-scaffold.reserveCallNotify
+	testutil.ChannelWaitForValue(t, scaffold.reserveCallNotify)
 
 	// Should have called reserve once
 	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
@@ -383,9 +383,9 @@ func Test_BidOrderUsesBidPricingStrategy(t *testing.T) {
 	expectedBid := int64(1337)
 	// Create a test strategy that gives a fixed price
 	pricing := testBidPricingStrategy(expectedBid)
-	order, scaffold := makeOrderForTest(t, nil, pricing)
+	order, scaffold, _ := makeOrderForTest(t, nil, pricing)
 
-	broadcast := <-scaffold.broadcasts
+	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 
 	createBidMsg, ok := broadcast.(*mtypes.MsgCreateBid)
 	require.True(t, ok)
@@ -418,7 +418,7 @@ var errBidPricingAlwaysFails = errors.New("bid pricing fail in test")
 func Test_BidOrderFailsAndAborts(t *testing.T) {
 	// Create a test strategy that gives a fixed price
 	pricing := alwaysFailsBidPricingStrategy{failure: errBidPricingAlwaysFails}
-	order, scaffold := makeOrderForTest(t, nil, pricing)
+	order, scaffold, _ := makeOrderForTest(t, nil, pricing)
 
 	<-order.lc.Done() // Stops whenever the bid pricing is called and returns an errro
 
