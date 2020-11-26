@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"github.com/cosmos/cosmos-sdk/telemetry"
+	validationConstants "github.com/ovrclk/akash/validation/constants"
 	"hash/fnv"
 	"sort"
 
@@ -23,7 +25,7 @@ func OnEndBlock(ctx sdk.Context, keepers Keepers) error {
 
 func transferFundsForActiveLeases(ctx sdk.Context, keepers Keepers) error {
 	// for all active leases, transfer funds
-	count := 0
+	activeLeaseCount := 0
 	keepers.Market.WithActiveLeases(ctx, func(lease types.Lease) bool {
 
 		owner, err := sdk.AccAddressFromBech32(lease.ID().Owner)
@@ -56,11 +58,14 @@ func transferFundsForActiveLeases(ctx sdk.Context, keepers Keepers) error {
 			return false
 		}
 
-		count++
+		telemetry.IncrCounter(float32(amt.AmountOf(validationConstants.AkashDenom).Int64()), "akash.coins_xfer")
+
+		activeLeaseCount++
 		return false
 	})
 
-	ctx.Logger().Info("processed active leases", "count", count)
+	ctx.Logger().Info("processed active leases", "count", activeLeaseCount)
+	telemetry.SetGauge(float32(activeLeaseCount), "akash.active_leases")
 
 	return nil
 }
@@ -74,6 +79,7 @@ func PickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 		// So it can't be used to determine who bid first like a timestamp.
 		return bids[i].Price.IsLT(bids[j].Price)
 	})
+
 	switch len(bids) {
 	case 0:
 		// This is a fatal case
@@ -114,6 +120,7 @@ func PickBidWinner(bids []types.Bid) (winner *types.Bid, err error) {
 // matchOrders that are open, picks a winning Bid, creates a Lease, and closes
 // originating Order.
 func matchOrders(ctx sdk.Context, keepers Keepers) error {
+	openOrdersCount := 0
 	keepers.Market.WithOpenOrders(ctx, func(order types.Order) bool {
 		if err := order.ValidateCanMatch(ctx.BlockHeight()); err != nil {
 			if errors.Is(err, types.ErrOrderDurationExceeded) {
@@ -122,6 +129,7 @@ func matchOrders(ctx sdk.Context, keepers Keepers) error {
 			}
 			return false
 		}
+		openOrdersCount++
 
 		var bids []types.Bid
 		keepers.Market.WithBidsForOrder(ctx, order.ID(), func(bid types.Bid) bool {
@@ -163,8 +171,10 @@ func matchOrders(ctx sdk.Context, keepers Keepers) error {
 
 		// notify group of match
 		keepers.Deployment.OnLeaseCreated(ctx, order.ID().GroupID())
+		telemetry.IncrCounter(1.0, "akash.lease_created")
 
 		return false
 	})
+	telemetry.SetGauge(float32(openOrdersCount), "akash.open_orders")
 	return nil
 }

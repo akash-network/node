@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
@@ -18,6 +19,7 @@ func OnEndBlock(ctx sdk.Context, keeper keeper.Keeper, mkeeper MarketKeeper) {
 
 		// set state to ordered
 		keeper.OnOrderCreated(ctx, group)
+		telemetry.IncrCounter(1.0, "akash.order_created")
 		return false
 	})
 }
