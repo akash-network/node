@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/ovrclk/akash/manifest"
+	providerUtil "github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
@@ -117,6 +118,28 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 				Count:     svcdepl.Count,
 			}
 
+			endpointCount := 0
+			for _, expose := range sdl.Services[svcdepl.Profile].Expose {
+				for _, to := range expose.To {
+					proto, err := manifest.ParseServiceProtocol(expose.Proto)
+					if err != nil {
+						return nil, err
+					}
+					v := manifest.ServiceExpose{
+						Port:         expose.Port,
+						ExternalPort: expose.As,
+						Proto:        proto,
+						Service:      to.Service,
+						Global:       to.Global,
+						Hosts:        expose.Accept.Items,
+					}
+					if !providerUtil.ShouldExpose(v) {
+						endpointCount++
+					}
+				}
+			}
+
+			resources.Resources.Endpoints = make([]types.Endpoint, endpointCount)
 			group.Resources = append(group.Resources, resources)
 
 			// TODO: Make a parameter to configure the duration of orders being bid on

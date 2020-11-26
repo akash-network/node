@@ -1,6 +1,7 @@
 package sdl
 
 import (
+	"github.com/ovrclk/akash/validation"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -60,6 +61,37 @@ func TestV2Parse_Deployments(t *testing.T) {
 	require.NotEqual(t, sha1, sha3)
 }
 
+func Test_V2_Cross_Validates(t *testing.T) {
+	sdl2, err := ReadFile("../x/deployment/testdata/deployment-v2.yaml")
+	require.NoError(t, err)
+	dgroups, err := sdl2.DeploymentGroups()
+	require.NoError(t, err)
+	manifest, err := sdl2.Manifest()
+	require.NoError(t, err)
+
+	// This is a single document producing both the manifest & deployment groups
+	// These should always agree with each other. If this test fails at least one of the
+	// following is ture
+	// 1. Cross validation logic is wrong
+	// 2. The DeploymentGroups() & Manifest() code do not agree with one another
+	err = validation.ValidateManifestWithGroupSpecs(&manifest, dgroups)
+	require.NoError(t, err)
+
+	// Repeat the same test with another file
+	sdl2, err = ReadFile("./_testdata/simple.yaml")
+	require.NoError(t, err)
+	dgroups, err = sdl2.DeploymentGroups()
+	require.NoError(t, err)
+	manifest, err = sdl2.Manifest()
+	require.NoError(t, err)
+
+	// This is a single document producing both the manifest & deployment groups
+	// These should always agree with each other
+	err = validation.ValidateManifestWithGroupSpecs(&manifest, dgroups)
+	require.NoError(t, err)
+
+}
+
 func Test_v1_Parse_simple(t *testing.T) {
 	sdl, err := ReadFile("./_testdata/simple.yaml")
 	require.NoError(t, err)
@@ -90,6 +122,7 @@ func Test_v1_Parse_simple(t *testing.T) {
 			Storage: &atypes.Storage{
 				Quantity: atypes.NewResourceValue(randStorage),
 			},
+			Endpoints: make([]atypes.Endpoint, 1),
 		},
 	}, group.GetResources()[0])
 
