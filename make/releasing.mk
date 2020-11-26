@@ -1,3 +1,5 @@
+GORELEASER_SKIP_VALIDATE ?= false
+
 .PHONY: bins
 bins: $(BINS)
 
@@ -44,7 +46,7 @@ release-dry-run: modvendor
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		troian/golang-cross:${GOLANG_CROSS_VERSION} \
-		-f "$(GORELEASER_CONFIG)" --rm-dist --skip-validate --skip-publish
+		-f "$(GORELEASER_CONFIG)" --skip-validate=$(GORELEASER_SKIP_VALIDATE) --rm-dist --skip-publish
 
 .PHONY: release
 release: modvendor
