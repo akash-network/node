@@ -104,17 +104,17 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
-	cmd.Flags().Uint64(FlagBidPriceCPUScale, 0, "cpu pricing scale in uakt")
+	cmd.Flags().Uint64(FlagBidPriceCPUScale, 0, "cpu pricing scale in uakt per millicpu")
 	if err := viper.BindPFlag(FlagBidPriceCPUScale, cmd.Flags().Lookup(FlagBidPriceCPUScale)); err != nil {
 		return nil
 	}
 
-	cmd.Flags().Uint64(FlagBidPriceMemoryScale, 0, "memory pricing scale in uakt")
+	cmd.Flags().Uint64(FlagBidPriceMemoryScale, 0, "memory pricing scale in uakt per megabyte")
 	if err := viper.BindPFlag(FlagBidPriceMemoryScale, cmd.Flags().Lookup(FlagBidPriceMemoryScale)); err != nil {
 		return nil
 	}
 
-	cmd.Flags().Uint64(FlagBidPriceStorageScale, 0, "storage pricing scale in uakt")
+	cmd.Flags().Uint64(FlagBidPriceStorageScale, 0, "storage pricing scale in uakt per megabyte")
 	if err := viper.BindPFlag(FlagBidPriceStorageScale, cmd.Flags().Lookup(FlagBidPriceStorageScale)); err != nil {
 		return nil
 	}
