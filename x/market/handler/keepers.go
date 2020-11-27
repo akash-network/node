@@ -25,7 +25,8 @@ type DeploymentKeeper interface {
 	GetGroup(ctx sdk.Context, id dtypes.GroupID) (dtypes.Group, bool)
 	OnLeaseCreated(ctx sdk.Context, id dtypes.GroupID)
 	OnLeaseInsufficientFunds(ctx sdk.Context, id dtypes.GroupID)
-	OnLeaseClosed(ctx sdk.Context, id dtypes.GroupID)
+	OnOrderClosed(ctx sdk.Context, id dtypes.GroupID)
+	OnBidClosed(ctx sdk.Context, id dtypes.GroupID)
 }
 
 // Keepers include all modules keepers

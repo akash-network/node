@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/suite"
 
@@ -30,11 +29,6 @@ type IntegrationTestSuite struct {
 	cfg     network.Config
 	network *network.Network
 }
-
-const (
-	blockWaitHeight   = 8
-	blockWaitDuration = 45 * time.Second
-)
 
 func (s *IntegrationTestSuite) SetupSuite() {
 	s.T().Log("setting up integration test suite")
@@ -353,9 +347,6 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 func (s *IntegrationTestSuite) Test4CloseOrder() {
 	val := s.network.Validators[0]
 
-	keyBar, err := val.ClientCtx.Keyring.Key("keyBar")
-	s.Require().NoError(err)
-
 	// fetch open orders
 	resp, err := cli.QueryOrdersExec(
 		val.ClientCtx.WithOutputFormat("json"),
@@ -367,67 +358,7 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), result)
 	s.Require().NoError(err)
 	openedOrders := result.Orders
-	s.Require().Len(openedOrders, 1)
-
-	// Creating bid again for opened order
-	_, err = cli.TxCreateBidExec(
-		val.ClientCtx,
-		openedOrders[0].OrderID,
-		sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(0)),
-		keyBar.GetAddress(),
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-	)
-	s.Require().NoError(err)
-
-	height, err := s.network.LatestHeight()
-	s.Require().NoError(err)
-
-	// Wait for lease creation to modify state of bid
-	_, err = s.network.WaitForHeightWithTimeout(height+blockWaitHeight, blockWaitDuration)
-	s.Require().NoError(err)
-
-	// test query matched bids
-	resp, err = cli.QueryBidsExec(val.ClientCtx.WithOutputFormat("json"), "--state=matched")
-	s.Require().NoError(err)
-
-	bidRes := &types.QueryBidsResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), bidRes)
-	s.Require().NoError(err)
-	s.Require().Len(bidRes.Bids, 1)
-	s.Require().Equal(keyBar.GetAddress().String(), bidRes.Bids[0].BidID.Provider)
-
-	// Close Order
-	_, err = cli.TxCloseOrderExec(
-		val.ClientCtx,
-		openedOrders[0].OrderID,
-		keyBar.GetAddress(),
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-	)
-	s.Require().NoError(err)
-
-	height, err = s.network.LatestHeight()
-	s.Require().NoError(err)
-
-	// Wait for lease creation to modify state of bid
-	_, err = s.network.WaitForHeightWithTimeout(height+blockWaitHeight, blockWaitDuration)
-	s.Require().NoError(err)
-
-	// fetch closed orders
-	resp, err = cli.QueryOrdersExec(
-		val.ClientCtx.WithOutputFormat("json"),
-	)
-	s.Require().NoError(err)
-
-	result = &types.QueryOrdersResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), result)
-	s.Require().NoError(err)
-	s.Require().Len(result.Orders, 2)
+	s.Require().Len(openedOrders, 0)
 }
 
 func TestIntegrationTestSuite(t *testing.T) {

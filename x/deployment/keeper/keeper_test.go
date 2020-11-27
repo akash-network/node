@@ -180,12 +180,32 @@ func Test_OnInsufficientFunds(t *testing.T) {
 	})
 }
 
-func Test_OnLeaseClosed(t *testing.T) {
+func Test_OnBidClosed(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
 
 	groups := createActiveDeployment(t, ctx, keeper)
 
-	keeper.OnLeaseClosed(ctx, groups[0].ID())
+	keeper.OnBidClosed(ctx, groups[0].ID())
+
+	t.Run("target group changed", func(t *testing.T) {
+		group, ok := keeper.GetGroup(ctx, groups[0].ID())
+		assert.True(t, ok)
+		assert.Equal(t, types.GroupClosed, group.State)
+	})
+
+	t.Run("non-target group state unchanged", func(t *testing.T) {
+		group, ok := keeper.GetGroup(ctx, groups[1].ID())
+		assert.True(t, ok)
+		assert.Equal(t, types.GroupMatched, group.State)
+	})
+}
+
+func Test_OnOrderClosed(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+
+	groups := createActiveDeployment(t, ctx, keeper)
+
+	keeper.OnOrderClosed(ctx, groups[0].ID())
 
 	t.Run("target group changed", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[0].ID())

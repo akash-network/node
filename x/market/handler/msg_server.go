@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -106,7 +107,7 @@ func (ms msgServer) CloseBid(goCtx context.Context, msg *types.MsgCloseBid) (*ty
 	ms.keepers.Market.OnBidClosed(ctx, bid)
 	ms.keepers.Market.OnLeaseClosed(ctx, lease)
 	ms.keepers.Market.OnOrderClosed(ctx, order)
-	ms.keepers.Deployment.OnLeaseClosed(ctx, order.ID().GroupID())
+	ms.keepers.Deployment.OnBidClosed(ctx, order.ID().GroupID())
 	telemetry.IncrCounter(1.0, "akash.order_closed")
 
 	return &types.MsgCloseBidResponse{}, nil
@@ -127,7 +128,7 @@ func (ms msgServer) CloseOrder(goCtx context.Context, msg *types.MsgCloseOrder) 
 
 	ms.keepers.Market.OnOrderClosed(ctx, order)
 	ms.keepers.Market.OnLeaseClosed(ctx, lease)
-	ms.keepers.Deployment.OnLeaseClosed(ctx, order.ID().GroupID())
+	ms.keepers.Deployment.OnOrderClosed(ctx, order.ID().GroupID())
 
 	return &types.MsgCloseOrderResponse{}, nil
 }
