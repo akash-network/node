@@ -228,7 +228,7 @@ func TestGroupPlacementRequirementsSignerAnyOf(t *testing.T) {
 		OrderBidDuration: types.DefaultOrderBiddingDuration,
 	}
 
-	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "validator1")
+	group.Requirements.SignedBy.AnyOf = append(group.Requirements.SignedBy.AnyOf, "validator1")
 
 	providerAttr := []atypes.Provider{
 		{

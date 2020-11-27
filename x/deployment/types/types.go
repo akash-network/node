@@ -89,12 +89,15 @@ func (g GroupSpec) MatchRequirements(provider []atypes.Provider) bool {
 			}
 		}
 
-		for _, validator := range g.Requirements.SignedBy.AnyOf {
-			if existingAttr, exists := existingRequirements[validator]; exists {
-				if types.AttributesSubsetOf(g.Requirements.Attributes, existingAttr) {
+		if len(g.Requirements.SignedBy.AnyOf) != 0 {
+			for _, validator := range g.Requirements.SignedBy.AnyOf {
+				if existingAttr, exists := existingRequirements[validator]; exists &&
+					types.AttributesSubsetOf(g.Requirements.Attributes, existingAttr) {
 					return true
 				}
 			}
+
+			return false
 		}
 
 		return true
