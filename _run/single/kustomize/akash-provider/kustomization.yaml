@@ -25,7 +25,29 @@ configMapGenerator:
       - cluster-public-hostname=app.localhost
       - cluster-node-port-quantity=100
       - bid-price-strategy=randomRange
+      - "bid-price-script-contents=#!/usr/bin/env python3\nimport math\nimport sys\nimport\
+          \ json\nimport random\n\ncpu_rate = 1\nmemory_rate = 2\nstorage_base_rate = 3 #\
+          \ For smaller deployments\nstorage_high_rate = 100 # For larger deployments\n# The\
+          \ point at which a deployment becomes large in terms of storage\ntier_threshold\
+          \ = 9.5 * (1024**3) # gigabytes\n\n# Read JSON from standard input\norder_data =\
+          \ json.load(sys.stdin)\n\n# Store the total counts in these variables\ntotal_cpu\
+          \ = 0\ntotal_memory = 0\ntotal_storage = 0\n\ntotal_endpoints = 0\n\nfor group in\
+          \ order_data: # Iterate over the array\n  # Add up what is being ordered\n  total_cpu\
+          \ += group['cpu'] * group['count']\n  total_memory += group['memory'] * group['count']\n\
+          \  total_storage += group['storage'] * group['count']\n  total_endpoints += group['endpoint-quantity']\
+          \ * group['count']\n\n# Use the base rate by default\nstorage_rate = storage_base_rate\n\
+          \n# If the deployment is large, then switch to the high rate\nif total_storage >=\
+          \ tier_threshold:\n  storage_rate = storage_high_rate\n\n# Use units of megabytes\n\
+          total_memory /= 1024**2\ntotal_storage /= 1024**2\n\n# Compute the final price that\
+          \ is used for the bid\nprice = cpu_rate * total_cpu\nprice += memory_rate * total_memory\n\
+          price += storage_rate * total_storage\n\nif total_endpoints > 2:\n  price += random.randint(50000,\
+          \ 300000)\n\nprice += random.randint(-2, 2)\n\nprice = max(price, 0)\n\n# Round\
+          \ upwards, then convert to an integer. Write to standard out as JSON\njson.dump(int(math.ceil(price)),\
+          \ sys.stdout)\n\n\n"
+
       # - ingress-static-hosts=false
+
+
 
 patchesJson6902:
 

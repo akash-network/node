@@ -299,6 +299,13 @@ spec:
                   name: akash-provider-config
                   key: bid-script-process-timeout
                   optional: true
+
+            - name: AKASH_BID_PRICE_SCRIPT_CONTENTS
+              valueFrom:
+                 configMapKeyRef:
+                   name: akash-provider-config
+                   key: bid-price-script-contents
+                   optional: true
           ports:
             - name: http
               containerPort: 8080

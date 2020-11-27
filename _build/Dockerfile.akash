@@ -1,5 +1,7 @@
 FROM debian:buster
 
+RUN apt-get update && apt-get --no-install-recommends -y install python3 && apt-get clean
+
 COPY ./akash /bin/
 
 EXPOSE 26656 26657 26658

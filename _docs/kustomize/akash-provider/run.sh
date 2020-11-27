@@ -1,6 +1,15 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
+
+if [ -n "${AKASH_BID_PRICE_SCRIPT_CONTENTS}" ]; then
+  echo 'setting up bid price script'
+  echo "${AKASH_BID_PRICE_SCRIPT_CONTENTS}" > /bin/pricing.sh
+  chmod 555 /bin/pricing.sh
+  AKASH_BID_PRICE_SCRIPT_PATH=/bin/pricing.sh
+  export AKASH_BID_PRICE_SCRIPT_PATH
+  export AKASH_BID_PRICE_STRATEGY=shellScript
+fi
 
 ##
 # Configuration sanity check
