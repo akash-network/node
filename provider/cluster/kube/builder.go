@@ -131,19 +131,16 @@ func (p *pspRestrictedBuilder) create() (*v1beta1.PodSecurityPolicy, error) { //
 			HostIPC:     false,
 			HostPID:     false,
 			RunAsUser: v1beta1.RunAsUserStrategyOptions{
-				Rule: v1beta1.RunAsUserStrategyMustRunAsNonRoot,
+				// fixme(#946): previous value RunAsUserStrategyMustRunAsNonRoot was interfering with
+				// (b *deploymentBuilder) create() RunAsNonRoot: false
+				// allow any user at this moment till revise all security debris of kube api
+				Rule: v1beta1.RunAsUserStrategyRunAsAny,
 			},
 			SELinux: v1beta1.SELinuxStrategyOptions{
 				Rule: v1beta1.SELinuxStrategyRunAsAny,
 			},
 			SupplementalGroups: v1beta1.SupplementalGroupsStrategyOptions{
-				Rule: v1beta1.SupplementalGroupsStrategyMustRunAs,
-				Ranges: []v1beta1.IDRange{
-					{
-						Min: int64(1),
-						Max: int64(65535),
-					},
-				},
+				Rule: v1beta1.SupplementalGroupsStrategyRunAsAny,
 			},
 			FSGroup: v1beta1.FSGroupStrategyOptions{
 				Rule: v1beta1.FSGroupStrategyMustRunAs,
