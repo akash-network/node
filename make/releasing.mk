@@ -7,9 +7,11 @@ bins: $(BINS)
 build:
 	$(GO) build ./...
 
+.PHONY: akash
 akash:
 	$(GO) build $(BUILD_FLAGS) ./cmd/akash
 
+.PHONY: install
 install:
 	$(GO) install $(BUILD_FLAGS) ./cmd/akash
 
