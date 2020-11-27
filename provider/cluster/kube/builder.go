@@ -261,6 +261,11 @@ func (b *deploymentBuilder) container() corev1.Container {
 		kcontainer.Resources.Limits[corev1.ResourceMemory] = resource.NewQuantity(int64(mem.Quantity.Value()), resource.DecimalSI).DeepCopy()
 	}
 
+	if storage := b.service.Resources.Storage; storage != nil {
+		storageQuantity := storage.Quantity.Val.Int64()
+		kcontainer.Resources.Limits[corev1.ResourceEphemeralStorage] = resource.NewQuantity(int64(storageQuantity), resource.DecimalSI).DeepCopy()
+	}
+
 	// TODO: this prevents over-subscription.  skip for now.
 
 	for _, env := range b.service.Env {
