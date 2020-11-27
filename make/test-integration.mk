@@ -23,7 +23,7 @@ test-k8s-integration:
 ###############################################################################
 
 shellcheck:
-	docker run --rm \
+	docker run -e SHELLCHECK_OPTS="-e SC1071" --rm \
 	--volume ${PWD}:/shellcheck \
 	--entrypoint sh \
 	koalaman/shellcheck-alpine:stable \

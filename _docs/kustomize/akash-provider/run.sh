@@ -5,7 +5,7 @@ set -e
 pricing_script_path="/boot/pricing.sh"
 pricing_script_size=$(stat -c%s ${pricing_script_path?})
 
-if [ $pricing_script_size > 0 ]; then
+if [ "$pricing_script_size" -gt 0 ]; then
   echo 'setting up bid price script'
   export AKASH_BID_PRICE_SCRIPT_PATH=$pricing_script_path
   export 'AKASH_BID_PRICE_STRATEGY'='shellScript'
