@@ -29,7 +29,7 @@ var validationConfig = struct {
 }{
 	MaxUnitCPU:     1000,
 	MaxUnitMemory:  1073741824,
-	MaxUnitStorage: 1073741824,
+	MaxUnitStorage: 10 * 1073741824,
 	MaxUnitCount:   10,
 	MaxUnitPrice:   10000,
 
