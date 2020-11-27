@@ -121,20 +121,22 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 			endpointCount := 0
 			for _, expose := range sdl.Services[svcdepl.Profile].Expose {
 				for _, to := range expose.To {
-					proto, err := manifest.ParseServiceProtocol(expose.Proto)
-					if err != nil {
-						return nil, err
-					}
-					v := manifest.ServiceExpose{
-						Port:         expose.Port,
-						ExternalPort: expose.As,
-						Proto:        proto,
-						Service:      to.Service,
-						Global:       to.Global,
-						Hosts:        expose.Accept.Items,
-					}
-					if !providerUtil.ShouldExpose(v) {
-						endpointCount++
+					if to.Global {
+						proto, err := manifest.ParseServiceProtocol(expose.Proto)
+						if err != nil {
+							return nil, err
+						}
+						v := manifest.ServiceExpose{
+							Port:         expose.Port,
+							ExternalPort: expose.As,
+							Proto:        proto,
+							Service:      to.Service,
+							Global:       to.Global,
+							Hosts:        expose.Accept.Items,
+						}
+						if !providerUtil.ShouldExpose(v) {
+							endpointCount++
+						}
 					}
 				}
 			}
