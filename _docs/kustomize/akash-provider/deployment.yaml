@@ -300,12 +300,6 @@ spec:
                   key: bid-script-process-timeout
                   optional: true
 
-            - name: AKASH_BID_PRICE_SCRIPT_CONTENTS
-              valueFrom:
-                 configMapKeyRef:
-                   name: akash-provider-config
-                   key: bid-price-script-contents
-                   optional: true
           ports:
             - name: http
               containerPort: 8080
@@ -316,10 +310,19 @@ spec:
             - name: keys
               mountPath: /boot-keys
               readOnly: true
+
       volumes:
         - name: boot
           configMap:
             name: akash-provider-boot
+            items:
+              - key: pricing.sh
+                path: pricing.sh
+                mode: 0555
+              - key: run.sh
+                path: run.sh
+                mode: 0555
+
         - name: keys
           secret:
             secretName: akash-provider-keys

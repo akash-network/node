@@ -14,6 +14,7 @@ configMapGenerator:
   - name: akash-provider-boot
     files:
       - run.sh
+      - pricing.sh
 
   - name: akash-client-config
     literals:

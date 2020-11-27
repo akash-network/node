@@ -2,13 +2,13 @@
 
 set -e
 
-if [ -n "${AKASH_BID_PRICE_SCRIPT_CONTENTS}" ]; then
+pricing_script_path="/boot/pricing.sh"
+pricing_script_size=$(stat -c%s ${pricing_script_path?})
+
+if [ $pricing_script_size > 0 ]; then
   echo 'setting up bid price script'
-  echo "${AKASH_BID_PRICE_SCRIPT_CONTENTS}" > /bin/pricing.sh
-  chmod 555 /bin/pricing.sh
-  AKASH_BID_PRICE_SCRIPT_PATH=/bin/pricing.sh
-  export AKASH_BID_PRICE_SCRIPT_PATH
-  export AKASH_BID_PRICE_STRATEGY=shellScript
+  export AKASH_BID_PRICE_SCRIPT_PATH=$pricing_script_path
+  export 'AKASH_BID_PRICE_STRATEGY'='shellScript'
 fi
 
 ##
