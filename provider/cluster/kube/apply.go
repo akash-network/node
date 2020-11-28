@@ -2,7 +2,6 @@ package kube
 
 import (
 	"context"
-
 	akashv1 "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"

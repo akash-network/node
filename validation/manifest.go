@@ -103,6 +103,10 @@ func validateServiceExpose(serviceName string, serviceExpose manifest.ServiceExp
 		helper.globalServiceCount++
 	}
 
+	if util.ShouldBeIngress(serviceExpose) && 0 == len(serviceExpose.Hosts) {
+		return fmt.Errorf("%w: service %q has no hosts declared", ErrInvalidManifest, serviceName)
+	}
+
 	for _, host := range serviceExpose.Hosts {
 		if !isValidHostname(host) {
 			return fmt.Errorf("%w: service %q has invalid hostname %q", ErrInvalidManifest, serviceName, host)
@@ -230,7 +234,7 @@ deploymentGroupLoop:
 	endpointsCountForManifestGroup := 0
 	for _, service := range mgroup.Services {
 		for _, serviceExpose := range service.Expose {
-			if serviceExpose.Global && !util.ShouldExpose(serviceExpose) {
+			if serviceExpose.Global && !util.ShouldBeIngress(serviceExpose) {
 				endpointsCountForManifestGroup++
 			}
 		}
