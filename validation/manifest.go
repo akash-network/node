@@ -2,10 +2,11 @@ package validation
 
 import (
 	"fmt"
-	"github.com/ovrclk/akash/provider/cluster/util"
-	"github.com/pkg/errors"
 	"regexp"
 	"strings"
+
+	"github.com/ovrclk/akash/provider/cluster/util"
+	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
@@ -230,7 +231,7 @@ deploymentGroupLoop:
 	endpointsCountForManifestGroup := 0
 	for _, service := range mgroup.Services {
 		for _, serviceExpose := range service.Expose {
-			if serviceExpose.Global && !util.ShouldExpose(serviceExpose) {
+			if serviceExpose.Global && !util.ShouldBeIngress(serviceExpose) {
 				endpointsCountForManifestGroup++
 			}
 		}

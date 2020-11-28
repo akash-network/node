@@ -90,6 +90,19 @@ func Test_V2_Cross_Validates(t *testing.T) {
 	err = validation.ValidateManifestWithGroupSpecs(&manifest, dgroups)
 	require.NoError(t, err)
 
+	// Repeat the same test with another file
+	sdl2, err = ReadFile("./_testdata/private_service.yaml")
+	require.NoError(t, err)
+	dgroups, err = sdl2.DeploymentGroups()
+	require.NoError(t, err)
+	manifest, err = sdl2.Manifest()
+	require.NoError(t, err)
+
+	// This is a single document producing both the manifest & deployment groups
+	// These should always agree with each other
+	err = validation.ValidateManifestWithGroupSpecs(&manifest, dgroups)
+	require.NoError(t, err)
+
 }
 
 func Test_v1_Parse_simple(t *testing.T) {
@@ -131,6 +144,8 @@ func Test_v1_Parse_simple(t *testing.T) {
 
 	assert.Len(t, mani.GetGroups(), 1)
 
+	expectedHosts := make([]string, 1)
+	expectedHosts[0] = "ahostname.com"
 	assert.Equal(t, manifest.Group{
 		Name: "westcoast",
 		Services: []manifest.Service{
@@ -150,7 +165,7 @@ func Test_v1_Parse_simple(t *testing.T) {
 				},
 				Count: 2,
 				Expose: []manifest.ServiceExpose{
-					{Port: 80, Global: true, Proto: manifest.TCP},
+					{Port: 80, Global: true, Proto: manifest.TCP, Hosts: expectedHosts},
 					{Port: 12345, Global: true, Proto: manifest.UDP},
 				},
 			},

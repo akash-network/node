@@ -1,0 +1,64 @@
+---
+version: "2.0"
+services:
+  bind:
+    image: bind9
+    expose:
+      - port: 53
+        proto: udp
+        to:
+          - global: true
+
+  pg:
+    image: postgresql
+    expose: 
+      - port: 5463
+        to:
+          - service: bind
+
+profiles:
+  compute:
+    bind:
+      resources:
+        cpu:
+          units: "50m"
+        memory:
+          size: "64Mi"
+        storage:
+          size: "16Mi"
+    pg:
+      resources:
+        cpu:
+          units: "500m"
+        memory:
+          size: "512Mi"
+        storage:
+          size: "1000Mi"
+
+  placement:
+    westcoast:
+      attributes:
+        region: us-west
+      signedBy:
+        anyOf:
+          - 1
+          - 2
+        allOf:
+          - 3
+          - 4
+      pricing:
+        pg:
+          denom: uakt
+          amount: 1000
+        bind:
+          denom: uakt
+          amount: 333
+deployment:
+  pg:
+    westcoast:
+      profile: pg
+      count: 1
+  bind:
+    westcoast:
+      profile: bind
+      count: 8

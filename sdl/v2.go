@@ -121,20 +121,22 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 			endpointCount := 0
 			for _, expose := range sdl.Services[svcdepl.Profile].Expose {
 				for _, to := range expose.To {
-					proto, err := manifest.ParseServiceProtocol(expose.Proto)
-					if err != nil {
-						return nil, err
-					}
-					v := manifest.ServiceExpose{
-						Port:         expose.Port,
-						ExternalPort: expose.As,
-						Proto:        proto,
-						Service:      to.Service,
-						Global:       to.Global,
-						Hosts:        expose.Accept.Items,
-					}
-					if !providerUtil.ShouldExpose(v) {
-						endpointCount++
+					if to.Global {
+						proto, err := manifest.ParseServiceProtocol(expose.Proto)
+						if err != nil {
+							return nil, err
+						}
+						v := manifest.ServiceExpose{
+							Port:         expose.Port,
+							ExternalPort: expose.As,
+							Proto:        proto,
+							Service:      to.Service,
+							Global:       to.Global,
+							Hosts:        expose.Accept.Items,
+						}
+						if !providerUtil.ShouldBeIngress(v) {
+							endpointCount++
+						}
 					}
 				}
 			}
@@ -200,19 +202,29 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 			}
 
 			for _, expose := range svc.Expose {
-				for _, to := range expose.To {
+				proto, err := manifest.ParseServiceProtocol(expose.Proto)
+				if err != nil {
+					return manifest.Manifest{}, err
+				}
 
-					proto, err := manifest.ParseServiceProtocol(expose.Proto)
-					if err != nil {
-						return manifest.Manifest{}, err
+				if len(expose.To) != 0 {
+					for _, to := range expose.To {
+						msvc.Expose = append(msvc.Expose, manifest.ServiceExpose{
+							Service:      to.Service,
+							Port:         expose.Port,
+							ExternalPort: expose.As,
+							Proto:        proto,
+							Global:       to.Global,
+							Hosts:        expose.Accept.Items,
+						})
 					}
-
+				} else { // Nothing explicitly set, fill in without any information from "expose.To"
 					msvc.Expose = append(msvc.Expose, manifest.ServiceExpose{
-						Service:      to.Service,
+						Service:      "",
 						Port:         expose.Port,
 						ExternalPort: expose.As,
 						Proto:        proto,
-						Global:       to.Global,
+						Global:       false,
 						Hosts:        expose.Accept.Items,
 					})
 				}

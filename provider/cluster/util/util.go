@@ -2,7 +2,7 @@ package util
 
 import "github.com/ovrclk/akash/manifest"
 
-func ShouldExpose(expose manifest.ServiceExpose) bool {
+func ShouldBeIngress(expose manifest.ServiceExpose) bool {
 	return expose.Proto == manifest.TCP && expose.Global && 80 == ExposeExternalPort(expose)
 }
 
