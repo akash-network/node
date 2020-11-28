@@ -2,10 +2,11 @@ package validation
 
 import (
 	"fmt"
-	"github.com/ovrclk/akash/provider/cluster/util"
-	"github.com/pkg/errors"
 	"regexp"
 	"strings"
+
+	"github.com/ovrclk/akash/provider/cluster/util"
+	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
@@ -101,10 +102,6 @@ func validateServiceExpose(serviceName string, serviceExpose manifest.ServiceExp
 
 	if serviceExpose.Global {
 		helper.globalServiceCount++
-	}
-
-	if util.ShouldBeIngress(serviceExpose) && 0 == len(serviceExpose.Hosts) {
-		return fmt.Errorf("%w: service %q has no hosts declared", ErrInvalidManifest, serviceName)
 	}
 
 	for _, host := range serviceExpose.Hosts {
