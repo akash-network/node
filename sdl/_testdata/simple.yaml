@@ -5,6 +5,8 @@ services:
     image: nginx
     expose:
       - port: 80
+        accept:
+          - ahostname.com
         to:
           - global: true
       - port: 12345

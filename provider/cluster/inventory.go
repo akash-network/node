@@ -263,6 +263,7 @@ loop:
 			req.ch <- inventoryResponse{err: errNotFound}
 
 		case req := <-is.unreservech:
+			is.log.Debug("unreserving capacity", "order", req.order)
 			// remove reservation
 
 			for idx, res := range reservations {
@@ -276,6 +277,7 @@ loop:
 				reservations = append(reservations[:idx], reservations[idx+1:]...)
 
 				req.ch <- inventoryResponse{value: res}
+				is.log.Info("unreserve capacity complete", "order", req.order)
 				continue loop
 			}
 

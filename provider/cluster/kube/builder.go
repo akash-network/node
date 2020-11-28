@@ -329,7 +329,7 @@ func (b *serviceBuilder) create() (*corev1.Service, error) { // nolint:golint,un
 	if err != nil {
 		return nil, err
 	}
-	return &corev1.Service{
+	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   b.name(),
 			Labels: b.labels(),
@@ -339,7 +339,10 @@ func (b *serviceBuilder) create() (*corev1.Service, error) { // nolint:golint,un
 			Selector: b.labels(),
 			Ports:    ports,
 		},
-	}, nil
+	}
+	b.log.Debug("provider/cluster/kube/builder: created service", "service", service)
+
+	return service, nil
 }
 
 func (b *serviceBuilder) update(obj *corev1.Service) (*corev1.Service, error) { // nolint:golint,unparam
@@ -355,6 +358,15 @@ func (b *serviceBuilder) update(obj *corev1.Service) (*corev1.Service, error) { 
 
 func (b *serviceBuilder) any() bool {
 	for _, expose := range b.service.Expose {
+		exposeIsIngress := util.ShouldBeIngress(expose)
+		if b.requireNodePort && exposeIsIngress {
+			continue
+		}
+
+		if !b.requireNodePort && exposeIsIngress {
+			return true
+		}
+
 		if expose.Global == b.requireNodePort {
 			return true
 		}
@@ -363,11 +375,16 @@ func (b *serviceBuilder) any() bool {
 }
 
 var errUnsupportedProtocol = errors.New("Unsupported protocol for service")
+var errInvalidServiceBuilder = errors.New("service builder invalid")
 
 func (b *serviceBuilder) ports() ([]corev1.ServicePort, error) {
 	ports := make([]corev1.ServicePort, 0, len(b.service.Expose))
 	for i, expose := range b.service.Expose {
-		if expose.Global == b.requireNodePort {
+		shouldBeIngress := util.ShouldBeIngress(expose)
+		if expose.Global == b.requireNodePort || (!b.requireNodePort && shouldBeIngress) {
+			if b.requireNodePort && shouldBeIngress {
+				continue
+			}
 
 			var exposeProtocol corev1.Protocol
 			switch expose.Proto {
@@ -386,6 +403,11 @@ func (b *serviceBuilder) ports() ([]corev1.ServicePort, error) {
 				Protocol:   exposeProtocol,
 			})
 		}
+	}
+
+	if len(ports) == 0 {
+		b.log.Debug("provider/cluster/kube/builder: created 0 ports", "requireNodePort", b.requireNodePort, "serviceExpose", b.service.Expose)
+		return nil, errInvalidServiceBuilder
 	}
 	return ports, nil
 }
@@ -672,9 +694,8 @@ func (b *ingressBuilder) rules() []netv1.IngressRule {
 			PathType: &pathTypeForAll,
 			Backend: netv1.IngressBackend{
 				Service: &netv1.IngressServiceBackend{
-					Name: makeGlobalServiceNameFromBasename(b.name()),
+					Name: b.name(),
 					Port: netv1.ServiceBackendPort{
-
 						Number: util.ExposeExternalPort(*b.expose),
 					},
 				},

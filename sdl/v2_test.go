@@ -144,6 +144,8 @@ func Test_v1_Parse_simple(t *testing.T) {
 
 	assert.Len(t, mani.GetGroups(), 1)
 
+	expectedHosts := make([]string, 1)
+	expectedHosts[0] = "ahostname.com"
 	assert.Equal(t, manifest.Group{
 		Name: "westcoast",
 		Services: []manifest.Service{
@@ -163,7 +165,7 @@ func Test_v1_Parse_simple(t *testing.T) {
 				},
 				Count: 2,
 				Expose: []manifest.ServiceExpose{
-					{Port: 80, Global: true, Proto: manifest.TCP},
+					{Port: 80, Global: true, Proto: manifest.TCP, Hosts: expectedHosts},
 					{Port: 12345, Global: true, Proto: manifest.UDP},
 				},
 			},
