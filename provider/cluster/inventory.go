@@ -122,20 +122,19 @@ func (is *inventoryService) reserve(order mtypes.OrderID, resources atypes.Resou
 	}
 }
 
-func (is *inventoryService) unreserve(order mtypes.OrderID, resources atypes.ResourceGroup) (ctypes.Reservation, error) { // nolint:golint,unparam
+func (is *inventoryService) unreserve(order mtypes.OrderID) error { // nolint:golint,unparam
 	ch := make(chan inventoryResponse, 1)
 	req := inventoryRequest{
-		order:     order,
-		resources: resources,
-		ch:        ch,
+		order: order,
+		ch:    ch,
 	}
 
 	select {
 	case is.unreservech <- req:
 		response := <-ch
-		return response.value, response.err
+		return response.err
 	case <-is.lc.ShuttingDown():
-		return nil, ErrNotRunning
+		return ErrNotRunning
 	}
 }
 
@@ -265,13 +264,14 @@ loop:
 		case req := <-is.unreservech:
 			// remove reservation
 
+			is.log.Info("attempting to removing reservation", "order", req.order)
+
 			for idx, res := range reservations {
 				if !res.OrderID().Equals(req.order) {
 					continue
 				}
-				if res.Resources().GetName() != req.resources.GetName() {
-					continue
-				}
+
+				is.log.Info("removing reservation", "order", res.OrderID())
 
 				reservations = append(reservations[:idx], reservations[idx+1:]...)
 

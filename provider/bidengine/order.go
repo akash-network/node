@@ -240,7 +240,7 @@ loop:
 	if !won {
 		if reservation != nil {
 			o.log.Debug("unreserving reservation")
-			if err := o.cluster.Unreserve(reservation.OrderID(), reservation.Resources()); err != nil {
+			if err := o.cluster.Unreserve(reservation.OrderID()); err != nil {
 				o.log.Error("error unreserving reservation", "err", err)
 			}
 		}
