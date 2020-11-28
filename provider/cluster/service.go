@@ -22,7 +22,7 @@ var ErrNotRunning = errors.New("not running")
 // Cluster is the interface that wraps Reserve and Unreserve methods
 type Cluster interface {
 	Reserve(mtypes.OrderID, atypes.ResourceGroup) (ctypes.Reservation, error)
-	Unreserve(mtypes.OrderID, atypes.ResourceGroup) error
+	Unreserve(mtypes.OrderID) error
 }
 
 // StatusClient is the interface which includes status of service
@@ -114,9 +114,8 @@ func (s *service) Reserve(order mtypes.OrderID, resources atypes.ResourceGroup) 
 	return s.inventory.reserve(order, resources)
 }
 
-func (s *service) Unreserve(order mtypes.OrderID, resources atypes.ResourceGroup) error {
-	_, err := s.inventory.unreserve(order, resources)
-	return err
+func (s *service) Unreserve(order mtypes.OrderID) error {
+	return s.inventory.unreserve(order)
 }
 
 func (s *service) Status(ctx context.Context) (*ctypes.Status, error) {
@@ -206,12 +205,12 @@ loop:
 			}
 
 		case dm := <-s.managerch:
-			s.log.Debug("manager done", "lease", dm.lease)
+			s.log.Info("manager done", "lease", dm.lease)
 
 			// unreserve resources
-			if _, err := s.inventory.unreserve(dm.lease.OrderID(), dm.mgroup); err != nil {
+			if err := s.inventory.unreserve(dm.lease.OrderID()); err != nil {
 				s.log.Error("unreserving inventory", "err", err,
-					"lease", dm.lease, "group-name", dm.mgroup.Name)
+					"lease", dm.lease)
 			}
 
 			delete(s.managers, mquery.LeasePath(dm.lease))
@@ -233,13 +232,17 @@ loop:
 
 func (s *service) teardownLease(lid mtypes.LeaseID) {
 	key := mquery.LeasePath(lid)
-	manager := s.managers[key]
-	if manager == nil {
+	if manager := s.managers[key]; manager != nil {
+		if err := manager.teardown(); err != nil {
+			s.log.Error("tearing down lease deployment", "err", err, "lease", lid)
+		}
 		return
 	}
 
-	if err := manager.teardown(); err != nil {
-		s.log.Error("tearing down lease deployment", "err", err, "lease", lid)
+	// unreserve resources if no manager present yet.
+	if lid.Provider == s.session.Provider().Owner {
+		s.log.Info("unreserving unmanaged order", "lease", lid)
+		s.inventory.unreserve(lid.OrderID())
 	}
 }
 

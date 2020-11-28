@@ -2,10 +2,11 @@ package kube
 
 import (
 	"context"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
-	"github.com/ovrclk/akash/provider/cluster/util"
 	"os"
 	"path"
+
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	"github.com/ovrclk/akash/provider/cluster/util"
 
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -136,10 +137,11 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 		return err
 	}
 
-	if err := applyRestrictivePodSecPoliciesToNS(ctx, c.kc, newPspBuilder(c.settings, lid, group)); err != nil {
-		c.log.Error("applying pod security policies", "err", err, "lease", lid)
-		return err
-	}
+	// TODO: re-enable.  see #946
+	// if err := applyRestrictivePodSecPoliciesToNS(ctx, c.kc, newPspBuilder(c.settings, lid, group)); err != nil {
+	// 	c.log.Error("applying pod security policies", "err", err, "lease", lid)
+	// 	return err
+	// }
 
 	if err := applyNetPolicies(ctx, c.kc, newNetPolBuilder(c.settings, lid, group)); err != nil {
 		c.log.Error("applying namespace network policies", "err", err, "lease", lid)
@@ -186,7 +188,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 
 		for expIdx := range service.Expose {
 			expose := service.Expose[expIdx]
-			if !util.ShouldExpose(expose) {
+			if !util.ShouldBeIngress(expose) {
 				continue
 			}
 			if err := applyIngress(ctx, c.kc, newIngressBuilder(c.log, c.settings, c.host, lid, group, service, &service.Expose[expIdx])); err != nil {

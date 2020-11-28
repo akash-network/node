@@ -39,13 +39,13 @@ func (_m *Cluster) Reserve(_a0 types.OrderID, _a1 akashtypes.ResourceGroup) (clu
 	return r0, r1
 }
 
-// Unreserve provides a mock function with given fields: _a0, _a1
-func (_m *Cluster) Unreserve(_a0 types.OrderID, _a1 akashtypes.ResourceGroup) error {
-	ret := _m.Called(_a0, _a1)
+// Unreserve provides a mock function with given fields: _a0
+func (_m *Cluster) Unreserve(_a0 types.OrderID) error {
+	ret := _m.Called(_a0)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(types.OrderID, akashtypes.ResourceGroup) error); ok {
-		r0 = rf(_a0, _a1)
+	if rf, ok := ret.Get(0).(func(types.OrderID) error); ok {
+		r0 = rf(_a0)
 	} else {
 		r0 = ret.Error(0)
 	}
