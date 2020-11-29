@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -26,17 +28,35 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	"github.com/ovrclk/akash/app"
-	ecmd "github.com/ovrclk/akash/events/cmd"
-	pcmd "github.com/ovrclk/akash/provider/cmd"
-	"github.com/ovrclk/akash/sdkutil"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/cli"
 	tmcli "github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
+
+	"github.com/ovrclk/akash/app"
+	ecmd "github.com/ovrclk/akash/events/cmd"
+	pcmd "github.com/ovrclk/akash/provider/cmd"
+	"github.com/ovrclk/akash/sdkutil"
 )
+
+func bindFlags(cmd *cobra.Command, v *viper.Viper) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		// Environment variables can't have dashes in them, so bind them to their equivalent
+		// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
+		_ = v.BindEnv(f.Name, fmt.Sprintf("%s_%s", "AKASH", strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))))
+		_ = v.BindPFlag(f.Name, f)
+
+		// Apply the viper config value to the flag when the flag is not set and viper has a value
+		if !f.Changed && v.IsSet(f.Name) {
+			val := v.Get(f.Name)
+			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+		}
+	})
+}
 
 // NewRootCmd creates a new root command for akash. It is called once in the
 // main function.
@@ -57,11 +77,15 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 		Short: "Akash Blockchain Application",
 		Long:  "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
+			if err := server.InterceptConfigsPreRunHandler(cmd); err != nil {
 				return err
 			}
 
-			return server.InterceptConfigsPreRunHandler(cmd)
+			ctx := server.GetServerContextFromCmd(cmd)
+
+			bindFlags(cmd, ctx.Viper)
+
+			return client.SetCmdClientContextHandler(initClientCtx, cmd)
 		},
 	}
 
