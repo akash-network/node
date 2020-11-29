@@ -59,22 +59,23 @@ func applyNetPolicies(ctx context.Context, kc kubernetes.Interface, b *netPolBui
 	return err
 }
 
-func applyRestrictivePodSecPoliciesToNS(ctx context.Context, kc kubernetes.Interface, p *pspRestrictedBuilder) error {
-	obj, err := kc.PolicyV1beta1().PodSecurityPolicies().Get(ctx, p.name(), metav1.GetOptions{})
-	switch {
-	case err == nil:
-		obj, err = p.update(obj)
-		if err == nil {
-			_, err = kc.PolicyV1beta1().PodSecurityPolicies().Update(ctx, obj, metav1.UpdateOptions{})
-		}
-	case errors.IsNotFound(err):
-		obj, err = p.create()
-		if err == nil {
-			_, err = kc.PolicyV1beta1().PodSecurityPolicies().Create(ctx, obj, metav1.CreateOptions{})
-		}
-	}
-	return err
-}
+// TODO: re-enable.  see #946
+// func applyRestrictivePodSecPoliciesToNS(ctx context.Context, kc kubernetes.Interface, p *pspRestrictedBuilder) error {
+// 	obj, err := kc.PolicyV1beta1().PodSecurityPolicies().Get(ctx, p.name(), metav1.GetOptions{})
+// 	switch {
+// 	case err == nil:
+// 		obj, err = p.update(obj)
+// 		if err == nil {
+// 			_, err = kc.PolicyV1beta1().PodSecurityPolicies().Update(ctx, obj, metav1.UpdateOptions{})
+// 		}
+// 	case errors.IsNotFound(err):
+// 		obj, err = p.create()
+// 		if err == nil {
+// 			_, err = kc.PolicyV1beta1().PodSecurityPolicies().Create(ctx, obj, metav1.CreateOptions{})
+// 		}
+// 	}
+// 	return err
+// }
 
 func applyDeployment(ctx context.Context, kc kubernetes.Interface, b *deploymentBuilder) error {
 	obj, err := kc.AppsV1().Deployments(b.ns()).Get(ctx, b.name(), metav1.GetOptions{})
