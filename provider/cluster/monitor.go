@@ -160,7 +160,7 @@ func (m *deploymentMonitor) doCheck() (bool, error) {
 			}
 		}
 
-		if !foundService  {
+		if !foundService {
 			badsvc++
 			m.log.Debug("service status not found", "service", spec.Name)
 		}

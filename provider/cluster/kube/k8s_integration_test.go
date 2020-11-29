@@ -37,7 +37,9 @@ func TestNewClient(t *testing.T) {
 	cc, ok := ac.(*client)
 	require.True(t, ok)
 	require.NotNil(t, cc)
-	kc := cc.kc
+
+	// TODO: re-enable.  see #946
+	// kc := cc.kc
 
 	// check inventory
 	nodes, err := ac.Inventory(ctx)
@@ -67,9 +69,10 @@ func TestNewClient(t *testing.T) {
 	assert.Equal(t, lid, deployment.LeaseID())
 
 	// query namespace and pod security policies
-	psp, err := kc.PolicyV1beta1().PodSecurityPolicies().Get(ctx, ns, metav1.GetOptions{})
-	require.NoError(t, err)
-	require.NotNil(t, psp)
+	// TODO: re-enable.  see #946
+	// psp, err := kc.PolicyV1beta1().PodSecurityPolicies().Get(ctx, ns, metav1.GetOptions{})
+	// require.NoError(t, err)
+	// require.NotNil(t, psp)
 
 	svcname := group.Services[0].Name
 
