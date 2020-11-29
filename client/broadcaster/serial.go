@@ -3,6 +3,9 @@ package broadcaster
 import (
 	"context"
 	"errors"
+	"fmt"
+	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/boz/go-lifecycle"
@@ -14,11 +17,17 @@ import (
 )
 
 const (
-	syncDuration = 10 * time.Second
+	syncDuration    = 10 * time.Second
+	errCodeMismatch = 32
+	// invalid group - 7
 )
 
 var (
 	ErrNotRunning = errors.New("not running")
+
+	// errors are of the form:
+	// "account sequence mismatch, expected 25, got 27: incorrect account sequence"
+	recoverRegexp = regexp.MustCompile("^account sequence mismatch, expected (\\d+), got (\\d+):")
 )
 
 type SerialClient interface {
@@ -114,18 +123,11 @@ loop:
 			break loop
 		case req := <-c.broadcastch:
 			// broadcast the message
-			err := doBroadcast(c.cctx, txf, c.info.GetName(), req.msgs...)
+			var err error
+			txf, err = c.doBroadcast(txf, false, req.msgs...)
 
 			// send response
-			// TODO: respond to "sequence mismatch" errors here.  not sure how to detect them.
 			req.responsech <- err
-
-			if err != nil {
-				c.log.Error("request error", "sequence", txf.Sequence(), "err", err)
-			}
-
-			// update our sequence number
-			txf = txf.WithSequence(txf.Sequence() + 1)
 
 		case seqno := <-synch:
 
@@ -167,4 +169,75 @@ func (c *serialBroadcaster) syncLoop(ch chan<- uint64) {
 
 		}
 	}
+}
+
+func (c *serialBroadcaster) doBroadcast(txf tx.Factory, retried bool, msgs ...sdk.Msg) (tx.Factory, error) {
+	response, err := doBroadcast(c.cctx, txf, c.info.GetName(), msgs...)
+
+	c.log.Info("broadcast response", "response", response, "err", err)
+
+	if err != nil {
+		return txf, err
+	}
+
+	// if no error, increment sequence.
+	if response.Code == 0 {
+		return txf.WithSequence(txf.Sequence() + 1), nil
+	}
+
+	// if not mismatch error, don't increment sequence and return
+	if response.Code != errCodeMismatch {
+		return txf, fmt.Errorf("%w: response code %d - (%#v)", ErrBroadcastTx, response.Code, response)
+	}
+
+	// if we're retrying a parsed sequence (see below), don't try to fix it again.
+	if retried {
+		return txf, fmt.Errorf("%w: retried response code %d - (%#v)", ErrBroadcastTx, response.Code, response)
+	}
+
+	// attempt to parse correct next sequence
+	nextseq, ok := parseNextSequence(txf.Sequence(), response.RawLog)
+
+	if !ok {
+		return txf, fmt.Errorf("%w: response code %d - (%#v)", ErrBroadcastTx, response.Code, response)
+	}
+
+	txf = txf.WithSequence(nextseq)
+
+	// try again
+	return c.doBroadcast(txf, true, msgs...)
+
+}
+
+func parseNextSequence(current uint64, message string) (uint64, bool) {
+
+	// errors are of the form:
+	// "account sequence mismatch, expected 25, got 27: incorrect account sequence"
+
+	matches := recoverRegexp.FindStringSubmatch(message)
+
+	if len(matches) != 3 {
+		return 0, false
+	}
+
+	if len(matches[1]) == 0 || len(matches[2]) == 0 {
+		return 0, false
+	}
+
+	expected, err := strconv.ParseUint(matches[1], 10, 64)
+	if err != nil || expected == 0 {
+		return 0, false
+	}
+
+	received, err := strconv.ParseUint(matches[2], 10, 64)
+	if err != nil || received == 0 {
+		return 0, false
+	}
+
+	if received != current {
+		// XXX not sure wtf todo.
+		return expected, true
+	}
+
+	return expected, true
 }

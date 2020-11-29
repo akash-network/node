@@ -1,12 +1,15 @@
 package kube
 
+// nolint:deadcode,golint
+
 import (
 	"crypto/sha256"
 	"encoding/base32"
 	"errors"
 	"fmt"
-	"github.com/ovrclk/akash/provider/cluster/util"
 	"strings"
+
+	"github.com/ovrclk/akash/provider/cluster/util"
 
 	"github.com/lithammer/shortuuid"
 	"github.com/tendermint/tendermint/libs/log"
