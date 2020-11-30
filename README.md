@@ -12,14 +12,14 @@
 [Akash](https://akash.network) is a secure, transparent, and decentralized cloud computing marketplace that connects those who need computing resources (tenants) with those that have computing capacity to lease (providers).
 
 For a high-level overview of the Akash protocol and network economics, check out the [whitepapers](https://akash.network/research); a detailed protocol definition can be 
-found in the [design documentation](_docs/design.md); and the target workload definition spec is [here](_docs/sdl.md).
+found in the [design documentation](https://docs.akash.network); and the target workload definition spec is [here](https://docs.akash.network/sdl).
 
 # Branching and Versioning
 
 The `master` branch contains new features and is under active development; the `mainnet/main` branch contains the current, stable release.
 
 * **stable** releases will have even minor numbers ( `v0.8.0` ) and be cut from the `mainnet/main` branch.
-* **unstable** releases will have odd minor numbers ( `v0.7.0` ) and be cut from the `master` branch.
+* **unstable** releases will have odd minor numbers ( `v0.9.0` ) and be cut from the `master` branch.
 
 ## Akash Suite
 
@@ -34,7 +34,7 @@ The easiest way to get started with Akash is by trying Testnet. Sign up [here](h
 
 ## Join the Community
 
-- [Join Developer Chat](https://akash.network/chat)
+- [Join Developer Chat](https://discord.gg/6Rtn8aJkU4)
 - [Become a validator](https://akash.network/token)
 
 ## Official blog and documentation
