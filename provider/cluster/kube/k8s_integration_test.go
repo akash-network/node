@@ -129,7 +129,7 @@ func TestNewClient(t *testing.T) {
 	npi := cc.kc.NetworkingV1().NetworkPolicies(ns)
 	npList, err := npi.List(ctx, metav1.ListOptions{})
 	assert.NoError(t, err)
-	assert.Greater(t, len(npList.Items), 0)
+	assert.Equal(t, len(npList.Items), 0)
 
 	// ensure inventory used
 	// XXX: not working with kind. might be a delay issue?
