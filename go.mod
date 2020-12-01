@@ -18,12 +18,12 @@ require (
 	github.com/hashicorp/hcl v1.0.1-0.20191016231534-914dc3f8dd7c // indirect
 	github.com/jmhodges/levigo v1.0.1-0.20191019112844-b572e7f4cdac // indirect
 	github.com/libp2p/go-buffer-pool v0.0.3-0.20190619091711-d94255cb3dfc // indirect
-	github.com/lithammer/shortuuid v1.0.1-0.20190319200910-1be5ab5d90f6
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rakyll/statik v0.1.7
 	github.com/regen-network/cosmos-proto v0.3.0
 	github.com/rs/cors v1.7.1-0.20191011001009-dcbccb712443 // indirect
+	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5

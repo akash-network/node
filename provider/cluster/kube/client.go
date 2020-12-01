@@ -45,20 +45,19 @@ type client struct {
 	ac       akashclient.Interface
 	metc     metricsclient.Interface
 	ns       string
-	host     string
 	settings Settings
 	log      log.Logger
 }
 
 // NewClient returns new Kubernetes Client instance with provided logger, host and ns. Returns error incase of failure
-func NewClient(log log.Logger, host, ns string, settings Settings) (Client, error) {
+func NewClient(log log.Logger, ns string, settings Settings) (Client, error) {
 	if err := validateSettings(settings); err != nil {
 		return nil, err
 	}
-	return newClientWithSettings(log, host, ns, settings)
+	return newClientWithSettings(log, ns, settings)
 }
 
-func newClientWithSettings(log log.Logger, host, ns string, settings Settings) (Client, error) {
+func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client, error) {
 	ctx := context.Background()
 
 	config, err := openKubeConfig(log)
@@ -95,7 +94,6 @@ func newClientWithSettings(log log.Logger, host, ns string, settings Settings) (
 		ac:       mc,
 		metc:     metc,
 		ns:       ns,
-		host:     host,
 		log:      log.With("module", "provider-cluster-kube"),
 	}, nil
 
@@ -191,7 +189,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 			if !util.ShouldBeIngress(expose) {
 				continue
 			}
-			if err := applyIngress(ctx, c.kc, newIngressBuilder(c.log, c.settings, c.host, lid, group, service, &service.Expose[expIdx])); err != nil {
+			if err := applyIngress(ctx, c.kc, newIngressBuilder(c.log, c.settings, lid, group, service, &service.Expose[expIdx])); err != nil {
 				c.log.Error("applying ingress", "err", err, "lease", lid, "service", service.Name, "expose", expose)
 				return err
 			}

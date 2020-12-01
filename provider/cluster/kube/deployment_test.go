@@ -42,7 +42,7 @@ func TestDeploy(t *testing.T) {
 	require.NoError(t, err)
 
 	log := log.NewTMLogger(os.Stdout)
-	client, err := NewClient(log, "host", "lease", NewDefaultSettings())
+	client, err := NewClient(log, "lease", NewDefaultSettings())
 	assert.NoError(t, err)
 
 	err = client.Deploy(ctx, leaseID, &mani.GetGroups()[0])

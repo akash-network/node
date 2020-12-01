@@ -31,7 +31,7 @@ func TestNewClient(t *testing.T) {
 		DeploymentIngressExposeLBHosts: false,
 	}
 
-	ac, err := newClientWithSettings(testutil.Logger(t), "localhost", ns, settings)
+	ac, err := newClientWithSettings(testutil.Logger(t), ns, settings)
 	require.NoError(t, err)
 
 	cc, ok := ac.(*client)

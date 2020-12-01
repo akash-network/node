@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/ovrclk/akash/provider/cluster/util"
+	uuid "github.com/satori/go.uuid"
 
-	"github.com/lithammer/shortuuid"
 	"github.com/tendermint/tendermint/libs/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -657,17 +657,12 @@ func (b *netPolBuilder) update(obj *netv1.NetworkPolicy) (*netv1.NetworkPolicy, 
 type ingressBuilder struct {
 	deploymentBuilder
 	expose *manifest.ServiceExpose
+	hosts  []string
 }
 
-func newIngressBuilder(log log.Logger, settings Settings, host string, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service, expose *manifest.ServiceExpose) *ingressBuilder {
-	if settings.DeploymentIngressStaticHosts {
-		uid := strings.ToLower(shortuuid.New())
-		// FIXME - hostnames should not start with a number
-		h := fmt.Sprintf("%s.%s", uid, settings.DeploymentIngressDomain)
-		log.Debug("IngressBuilder: map ", h, " host ", host)
-		expose.Hosts = append(expose.Hosts, h)
-	}
-	return &ingressBuilder{
+func newIngressBuilder(log log.Logger, settings Settings, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service, expose *manifest.ServiceExpose) *ingressBuilder {
+
+	builder := &ingressBuilder{
 		deploymentBuilder: deploymentBuilder{
 			builder: builder{
 				log:      log.With("module", "kube-builder"),
@@ -678,7 +673,23 @@ func newIngressBuilder(log log.Logger, settings Settings, host string, lid mtype
 			service: service,
 		},
 		expose: expose,
+		hosts:  make([]string, len(expose.Hosts), len(expose.Hosts)+1),
 	}
+
+	copy(builder.hosts, expose.Hosts)
+
+	if settings.DeploymentIngressStaticHosts {
+		uid := ingressHost(lid, service)
+		host := fmt.Sprintf("%s.%s", uid, settings.DeploymentIngressDomain)
+		builder.hosts = append(builder.hosts, host)
+	}
+
+	return builder
+}
+
+func ingressHost(lid mtypes.LeaseID, svc *manifest.Service) string {
+	uid := uuid.NewV5(uuid.NamespaceDNS, lid.String()+svc.Name).Bytes()
+	return strings.ToLower(base32.HexEncoding.WithPadding(base32.NoPadding).EncodeToString(uid))
 }
 
 func (b *ingressBuilder) create() (*netv1.Ingress, error) { // nolint:golint,unparam
@@ -719,7 +730,7 @@ func (b *ingressBuilder) rules() []netv1.IngressRule {
 		},
 	}
 
-	for _, host := range b.expose.Hosts {
+	for _, host := range b.hosts {
 		rules = append(rules, netv1.IngressRule{
 			Host:             host,
 			IngressRuleValue: netv1.IngressRuleValue{HTTP: httpRule},
