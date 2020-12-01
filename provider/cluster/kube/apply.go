@@ -49,7 +49,6 @@ func applyNetPolicies(ctx context.Context, kc kubernetes.Interface, b *netPolBui
 		}
 	}
 
-	// NOTE: When there are no policies, this will simply skip
 	for _, pol := range policies {
 		if err != nil {
 			break // short circuit running due to error returned
