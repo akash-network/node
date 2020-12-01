@@ -64,11 +64,19 @@ func (AppModuleBasic) DefaultGenesis(cdc codec.JSONMarshaler) json.RawMessage {
 
 // ValidateGenesis validation check of the Genesis
 func (AppModuleBasic) ValidateGenesis(cdc codec.JSONMarshaler, _ client.TxEncodingConfig, bz json.RawMessage) error {
+	// AuditedAttributes may not be present in genesis file.
+	// todo: in fact we don't have any requirements of genesis entry for audited attributes for now
+	if bz == nil {
+		return nil
+	}
+
 	var data types.GenesisState
+
 	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
 		return errors.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
 	}
+
 	return ValidateGenesis(&data)
 }
 
