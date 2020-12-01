@@ -242,7 +242,10 @@ func (s *service) teardownLease(lid mtypes.LeaseID) {
 	// unreserve resources if no manager present yet.
 	if lid.Provider == s.session.Provider().Owner {
 		s.log.Info("unreserving unmanaged order", "lease", lid)
-		s.inventory.unreserve(lid.OrderID())
+		err := s.inventory.unreserve(lid.OrderID())
+		if err != nil {
+			s.log.Error("unreserve failed", "lease", lid, "err", err)
+		}
 	}
 }
 

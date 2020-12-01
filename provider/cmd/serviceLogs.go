@@ -18,8 +18,9 @@ import (
 
 func serviceLogsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "service-logs",
-		Short: "get service status",
+		Use:          "service-logs",
+		Short:        "get service status",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return doServiceLogs(cmd)
 		},
@@ -92,7 +93,7 @@ func doServiceLogs(cmd *cobra.Command) error {
 
 	result, err := gclient.ServiceLogs(context.Background(), provider.HostURI, lid, svcName, follow, tailLines)
 	if err != nil {
-		return err
+		return showErrorToUser(err)
 	}
 
 	printFn := func(msg gateway.ServiceLogMessage) error {

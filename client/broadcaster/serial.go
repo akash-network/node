@@ -27,7 +27,7 @@ var (
 
 	// errors are of the form:
 	// "account sequence mismatch, expected 25, got 27: incorrect account sequence"
-	recoverRegexp = regexp.MustCompile("^account sequence mismatch, expected (\\d+), got (\\d+):")
+	recoverRegexp = regexp.MustCompile(`^account sequence mismatch, expected (\\d+), got (\\d+):`)
 )
 
 type SerialClient interface {

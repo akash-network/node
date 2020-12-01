@@ -55,7 +55,7 @@ func doLeaseStatus(cmd *cobra.Command) error {
 
 	result, err := gclient.LeaseStatus(context.Background(), provider.HostURI, lid)
 	if err != nil {
-		return err
+		return showErrorToUser(err)
 	}
 	return cmdcommon.PrintJSONStdout(result)
 }

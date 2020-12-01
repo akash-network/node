@@ -17,8 +17,9 @@ const FlagService = "service"
 
 func serviceStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "service-status",
-		Short: "get service status",
+		Use:          "service-status",
+		Short:        "get service status",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return doServiceStatus(cmd)
 		},
@@ -65,7 +66,7 @@ func doServiceStatus(cmd *cobra.Command) error {
 
 	result, err := gclient.ServiceStatus(context.Background(), provider.HostURI, lid, svcName)
 	if err != nil {
-		return err
+		return showErrorToUser(err)
 	}
 
 	return cmdcommon.PrintJSONStdout(result)

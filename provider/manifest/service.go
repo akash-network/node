@@ -106,9 +106,19 @@ func (s *service) Submit(ctx context.Context, mreq *SubmitRequest) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	case s.mreqch <- req:
-		return <-ch
 	case <-s.lc.ShuttingDown():
 		return ErrNotRunning
+	case <-s.lc.Done():
+		return ErrNotRunning
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-s.lc.Done():
+		return ErrNotRunning
+	case result := <-ch:
+		return result
 	}
 }
 
@@ -198,7 +208,7 @@ loop:
 				break
 			}
 
-			manager, err := s.ensureManger(req.value.Deployment)
+			manager, err := s.ensureManager(req.value.Deployment)
 			if err != nil {
 				s.session.Log().Error("error fetching manager for manifest",
 					"err", err, "deployment", req.value.Deployment)
@@ -234,7 +244,7 @@ func (s *service) managePreExistingLease(leases []event.LeaseWon) {
 }
 
 func (s *service) handleLease(ev event.LeaseWon) {
-	manager, err := s.ensureManger(ev.LeaseID.DeploymentID())
+	manager, err := s.ensureManager(ev.LeaseID.DeploymentID())
 	if err != nil {
 		s.session.Log().Error("error creating manager",
 			"err", err, "lease", ev.LeaseID)
@@ -244,7 +254,7 @@ func (s *service) handleLease(ev event.LeaseWon) {
 	manager.handleLease(ev)
 }
 
-func (s *service) ensureManger(did dtypes.DeploymentID) (manager *manager, err error) {
+func (s *service) ensureManager(did dtypes.DeploymentID) (manager *manager, err error) {
 	manager = s.managers[dquery.DeploymentPath(did)]
 	if manager == nil {
 		manager, err = newManager(s, did)

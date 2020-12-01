@@ -14,8 +14,9 @@ import (
 
 func statusCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "status",
-		Short: "get provider status",
+		Use:          "status",
+		Short:        "get provider status",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return doStatus(cmd)
 		},
@@ -47,7 +48,7 @@ func doStatus(cmd *cobra.Command) error {
 
 	result, err := gclient.Status(context.Background(), provider.HostURI)
 	if err != nil {
-		return err
+		return showErrorToUser(err)
 	}
 
 	return cmdcommon.PrintJSONStdout(result)

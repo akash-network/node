@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -57,6 +56,19 @@ type client struct {
 	hclient httpClient
 }
 
+type ClientResponseError struct {
+	Status  int
+	Message string
+}
+
+func (err ClientResponseError) Error() string {
+	return fmt.Sprintf("remote server returned %d", err.Status)
+}
+
+func (err ClientResponseError) ClientError() string {
+	return fmt.Sprintf("Remote Server returned %d\n%s", err.Status, err.Message)
+}
+
 func (c *client) Status(ctx context.Context, host string) (*provider.Status, error) {
 	uri, err := makeURI(host, statusPath())
 	if err != nil {
@@ -92,13 +104,20 @@ func (c *client) SubmitManifest(ctx context.Context, host string, mreq *manifest
 	if err != nil {
 		return err
 	}
-	_, _ = io.Copy(ioutil.Discard, resp.Body)
+	responseBuf := &bytes.Buffer{}
+	_, err = io.Copy(responseBuf, resp.Body)
+	if err != nil {
+		return err
+	}
 	if err := resp.Body.Close(); err != nil {
 		return err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%w: %v", ErrServerResponse, resp.Status)
+		return ClientResponseError{
+			Status:  resp.StatusCode,
+			Message: responseBuf.String(),
+		}
 	}
 
 	return nil
@@ -144,16 +163,24 @@ func (c *client) getStatus(ctx context.Context, uri string, obj interface{}) err
 		return err
 	}
 
+	buf := &bytes.Buffer{}
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		return err
+	}
+
 	defer func() {
 		_ = resp.Body.Close()
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		_, _ = io.Copy(ioutil.Discard, resp.Body)
-		return fmt.Errorf("%w: %v", ErrServerResponse, resp.Status)
+		return ClientResponseError{
+			Status:  resp.StatusCode,
+			Message: buf.String(),
+		}
 	}
 
-	dec := json.NewDecoder(resp.Body)
+	dec := json.NewDecoder(buf)
 	return dec.Decode(obj)
 }
 
@@ -194,7 +221,19 @@ func (c *client) ServiceLogs(ctx context.Context,
 
 	endpoint.RawQuery = query.Encode()
 
-	conn, _, err := websocket.DefaultDialer.DialContext(ctx, endpoint.String(), nil)
+	conn, response, err := websocket.DefaultDialer.DialContext(ctx, endpoint.String(), nil)
+	if err == websocket.ErrBadHandshake {
+		buf := &bytes.Buffer{}
+		_, err = io.Copy(buf, response.Body)
+		if err != nil {
+			return nil, err
+		}
+		return nil, ClientResponseError{
+			Status:  response.StatusCode,
+			Message: buf.String(),
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}

@@ -382,3 +382,13 @@ func createClusterClient(log log.Logger, _ *cobra.Command, host string, settings
 	}
 	return kube.NewClient(log, host, ns, settings)
 }
+
+func showErrorToUser(err error) error {
+	// If the error has a complete message associated with it then show it
+	clientResponseError, ok := err.(gateway.ClientResponseError)
+	if ok && 0 != len(clientResponseError.Message) {
+		fmt.Fprintf(os.Stderr, "provider error messsage:\n%v\n", clientResponseError.Message)
+	}
+
+	return err
+}
