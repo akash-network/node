@@ -16,6 +16,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+
 	// TODO: re-enable.  see #946
 	// "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -433,6 +434,11 @@ func newNetPolBuilder(settings Settings, lid mtypes.LeaseID, group *manifest.Gro
 // Create a set of NetworkPolicies to restrict the ingress traffic to a Tenant's
 // Deployment namespace.
 func (b *netPolBuilder) create() ([]*netv1.NetworkPolicy, error) { // nolint:golint,unparam
+
+	if !b.settings.NetworkPoliciesEnabled {
+		return []*netv1.NetworkPolicy{}, nil
+	}
+
 	return []*netv1.NetworkPolicy{
 		// INGRESS ---------------------------------------------------------------
 		{

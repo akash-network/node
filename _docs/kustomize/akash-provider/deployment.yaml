@@ -104,6 +104,14 @@ spec:
                   key: ingress-expose-lb-hosts
                   optional: true
 
+            # return load balancer host in lease status command
+            - name: AKASH_DEPLOYMENT_NETWORK_POLICIES_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: network-policies-enabled
+                  optional: true
+
             - name: AKASH_MAX_UNIT_CPU
               valueFrom:
                 configMapKeyRef:

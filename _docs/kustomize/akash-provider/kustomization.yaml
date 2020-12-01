@@ -32,6 +32,7 @@ configMapGenerator:
       # - ingress-static-hosts=false
       # - ingress-domain=
       # - ingress-expose-lb-hosts=false
+      # - network-policies-enabled=false
       # - max-unit-cpu=500
       # - max-unit-memory=1073741824
       # - max-unit-storage=1073741824

@@ -23,6 +23,9 @@ type Settings struct {
 	// gcp:    true
 	// others: optional
 	DeploymentIngressExposeLBHosts bool
+
+	// NetworkPoliciesEnabled determines if NetworkPolicies should be installed.
+	NetworkPoliciesEnabled bool
 }
 
 var errSettingsValidation = errors.New("settings validation")
@@ -39,5 +42,6 @@ func NewDefaultSettings() Settings {
 		DeploymentServiceType:          corev1.ServiceTypeClusterIP,
 		DeploymentIngressStaticHosts:   false,
 		DeploymentIngressExposeLBHosts: false,
+		NetworkPoliciesEnabled:         false,
 	}
 }

@@ -42,23 +42,24 @@ const (
 	// FlagK8sManifestNS
 	FlagK8sManifestNS = "k8s-manifest-ns"
 	// FlagGatewayListenAddress determines listening address for Manifests
-	FlagGatewayListenAddress            = "gateway-listen-address"
-	FlagBidPricingStrategy              = "bid-price-strategy"
-	FlagBidPriceCPUScale                = "bid-price-cpu-scale"
-	FlagBidPriceMemoryScale             = "bid-price-memory-scale"
-	FlagBidPriceStorageScale            = "bid-price-storage-scale"
-	FlagBidPriceEndpointScale           = "bid-price-endpoint-scale"
-	FlagBidPriceScriptPath              = "bid-price-script-path"
-	FlagBidPriceScriptProcessLimit      = "bid-price-script-process-limit"
-	FlagBidPriceScriptTimeout           = "bid-price-script-process-timeout"
-	FlagClusterPublicHostname           = "cluster-public-hostname"
-	FlagClusterNodePortQuantity         = "cluster-node-port-quantity"
-	FlagClusterWaitReadyDuration        = "cluster-wait-ready-duration"
-	FlagInventoryResourcePollPeriod     = "inventory-resource-poll-period"
-	FlagInventoryResourceDebugFrequency = "inventory-resource-debug-frequency"
-	FlagDeploymentIngressStaticHosts    = "deployment-ingress-static-hosts"
-	FlagDeploymentIngressDomain         = "deployment-ingress-domain"
-	FlagDeploymentIngressExposeLBHosts  = "deployment-ingress-expose-lb-hosts"
+	FlagGatewayListenAddress             = "gateway-listen-address"
+	FlagBidPricingStrategy               = "bid-price-strategy"
+	FlagBidPriceCPUScale                 = "bid-price-cpu-scale"
+	FlagBidPriceMemoryScale              = "bid-price-memory-scale"
+	FlagBidPriceStorageScale             = "bid-price-storage-scale"
+	FlagBidPriceEndpointScale            = "bid-price-endpoint-scale"
+	FlagBidPriceScriptPath               = "bid-price-script-path"
+	FlagBidPriceScriptProcessLimit       = "bid-price-script-process-limit"
+	FlagBidPriceScriptTimeout            = "bid-price-script-process-timeout"
+	FlagClusterPublicHostname            = "cluster-public-hostname"
+	FlagClusterNodePortQuantity          = "cluster-node-port-quantity"
+	FlagClusterWaitReadyDuration         = "cluster-wait-ready-duration"
+	FlagInventoryResourcePollPeriod      = "inventory-resource-poll-period"
+	FlagInventoryResourceDebugFrequency  = "inventory-resource-debug-frequency"
+	FlagDeploymentIngressStaticHosts     = "deployment-ingress-static-hosts"
+	FlagDeploymentIngressDomain          = "deployment-ingress-domain"
+	FlagDeploymentIngressExposeLBHosts   = "deployment-ingress-expose-lb-hosts"
+	FlagDeploymentNetworkPoliciesEnabled = "deployment-network-policies-enabled"
 )
 
 var (
@@ -179,6 +180,11 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().Bool(FlagDeploymentNetworkPoliciesEnabled, false, "Enable network policies")
+	if err := viper.BindPFlag(FlagDeploymentNetworkPoliciesEnabled, cmd.Flags().Lookup(FlagDeploymentNetworkPoliciesEnabled)); err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
@@ -230,6 +236,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	inventoryResourceDebugFreq := viper.GetUint(FlagInventoryResourceDebugFrequency)
 	deploymentIngressStaticHosts := viper.GetBool(FlagDeploymentIngressStaticHosts)
 	deploymentIngressDomain := viper.GetString(FlagDeploymentIngressDomain)
+	deploymentNetworkPoliciesEnabled := viper.GetBool(FlagDeploymentNetworkPoliciesEnabled)
 	strategy := viper.GetString(FlagBidPricingStrategy)
 	deploymentIngressExposeLBHosts := viper.GetBool(FlagDeploymentIngressExposeLBHosts)
 	from := viper.GetString(flags.FlagFrom)
@@ -299,6 +306,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	kubeSettings.DeploymentIngressDomain = deploymentIngressDomain
 	kubeSettings.DeploymentIngressExposeLBHosts = deploymentIngressExposeLBHosts
 	kubeSettings.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
+	kubeSettings.NetworkPoliciesEnabled = deploymentNetworkPoliciesEnabled
 
 	cclient, err := createClusterClient(log, cmd, pinfo.HostURI, kubeSettings)
 	if err != nil {

@@ -1,11 +1,12 @@
 package kube
 
 import (
+	"strconv"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"strconv"
-	"testing"
 
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/testutil"
@@ -37,8 +38,18 @@ func TestNetworkPolicies(t *testing.T) {
 	leaseID := testutil.LeaseID(t)
 
 	g := &manifest.Group{}
+	settings := NewDefaultSettings()
 	np := newNetPolBuilder(NewDefaultSettings(), leaseID, g)
+
+	// disabled
 	netPolicies, err := np.create()
+	assert.NoError(t, err)
+	assert.Len(t, netPolicies, 0)
+
+	// enabled
+	settings.NetworkPoliciesEnabled = true
+	np = newNetPolBuilder(settings, leaseID, g)
+	netPolicies, err = np.create()
 	assert.NoError(t, err)
 	assert.Len(t, netPolicies, 7)
 
