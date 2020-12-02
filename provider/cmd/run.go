@@ -308,6 +308,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	kubeSettings.DeploymentIngressExposeLBHosts = deploymentIngressExposeLBHosts
 	kubeSettings.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
 	kubeSettings.NetworkPoliciesEnabled = deploymentNetworkPoliciesEnabled
+	kubeSettings.ClusterPublicHostname = clusterPublicHostname
 
 	cclient, err := createClusterClient(log, cmd, pinfo.HostURI, kubeSettings)
 	if err != nil {

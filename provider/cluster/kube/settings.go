@@ -24,6 +24,9 @@ type Settings struct {
 	// others: optional
 	DeploymentIngressExposeLBHosts bool
 
+	// Global hostname for arbitrary ports
+	ClusterPublicHostname string
+
 	// NetworkPoliciesEnabled determines if NetworkPolicies should be installed.
 	NetworkPoliciesEnabled bool
 }

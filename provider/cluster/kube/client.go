@@ -302,6 +302,7 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 					if nodePort > 0 {
 						// Record the actual port inside the container that is exposed
 						v := ctypes.ForwardedPortStatus{
+							Host:         c.exposedHostForPort(),
 							Port:         uint16(port.TargetPort.IntVal),
 							ExternalPort: uint16(nodePort),
 							Available:    deployment.Available,
@@ -339,6 +340,10 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 	}
 
 	return response, nil
+}
+
+func (c *client) exposedHostForPort() string {
+	return c.settings.ClusterPublicHostname
 }
 
 func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name string) (*ctypes.ServiceStatus, error) {

@@ -2,10 +2,11 @@ package cluster
 
 import (
 	"bufio"
+	"io"
+
 	"github.com/ovrclk/akash/manifest"
 	atypes "github.com/ovrclk/akash/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	"io"
 )
 
 // Status stores current leases and inventory statuses
@@ -37,6 +38,7 @@ type ServiceStatus struct {
 }
 
 type ForwardedPortStatus struct {
+	Host         string                   `json:"host,omitempty"`
 	Port         uint16                   `json:"port"`
 	ExternalPort uint16                   `json:"externalPort"`
 	Proto        manifest.ServiceProtocol `json:"proto"`
