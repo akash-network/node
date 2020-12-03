@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -57,6 +56,19 @@ type client struct {
 	hclient httpClient
 }
 
+type ClientResponseError struct {
+	Status  int
+	Message string
+}
+
+func (err ClientResponseError) Error() string {
+	return fmt.Sprintf("remote server returned %d", err.Status)
+}
+
+func (err ClientResponseError) ClientError() string {
+	return fmt.Sprintf("Remote Server returned %d\n%s", err.Status, err.Message)
+}
+
 func (c *client) Status(ctx context.Context, host string) (*provider.Status, error) {
 	uri, err := makeURI(host, statusPath())
 	if err != nil {
@@ -69,6 +81,17 @@ func (c *client) Status(ctx context.Context, host string) (*provider.Status, err
 	}
 
 	return &obj, nil
+}
+
+func createClientResponseErrorIfNotOK(resp *http.Response, responseBuf *bytes.Buffer) error {
+	if resp.StatusCode == http.StatusOK {
+		return nil
+	}
+
+	return ClientResponseError{
+		Status:  resp.StatusCode,
+		Message: responseBuf.String(),
+	}
 }
 
 func (c *client) SubmitManifest(ctx context.Context, host string, mreq *manifest.SubmitRequest) error {
@@ -92,16 +115,17 @@ func (c *client) SubmitManifest(ctx context.Context, host string, mreq *manifest
 	if err != nil {
 		return err
 	}
-	_, _ = io.Copy(ioutil.Discard, resp.Body)
-	if err := resp.Body.Close(); err != nil {
+	responseBuf := &bytes.Buffer{}
+	_, err = io.Copy(responseBuf, resp.Body)
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if err != nil {
 		return err
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%w: %v", ErrServerResponse, resp.Status)
-	}
-
-	return nil
+	return createClientResponseErrorIfNotOK(resp, responseBuf)
 }
 
 func (c *client) LeaseStatus(ctx context.Context, host string, id mtypes.LeaseID) (*ctypes.LeaseStatus, error) {
@@ -144,16 +168,22 @@ func (c *client) getStatus(ctx context.Context, uri string, obj interface{}) err
 		return err
 	}
 
+	buf := &bytes.Buffer{}
+	_, err = io.Copy(buf, resp.Body)
 	defer func() {
 		_ = resp.Body.Close()
 	}()
 
-	if resp.StatusCode != http.StatusOK {
-		_, _ = io.Copy(ioutil.Discard, resp.Body)
-		return fmt.Errorf("%w: %v", ErrServerResponse, resp.Status)
+	if err != nil {
+		return err
 	}
 
-	dec := json.NewDecoder(resp.Body)
+	err = createClientResponseErrorIfNotOK(resp, buf)
+	if err != nil {
+		return err
+	}
+
+	dec := json.NewDecoder(buf)
 	return dec.Decode(obj)
 }
 
@@ -194,7 +224,19 @@ func (c *client) ServiceLogs(ctx context.Context,
 
 	endpoint.RawQuery = query.Encode()
 
-	conn, _, err := websocket.DefaultDialer.DialContext(ctx, endpoint.String(), nil)
+	conn, response, err := websocket.DefaultDialer.DialContext(ctx, endpoint.String(), nil)
+	if errors.Is(err, websocket.ErrBadHandshake) {
+		buf := &bytes.Buffer{}
+		_, err = io.Copy(buf, response.Body)
+		if err != nil {
+			return nil, err
+		}
+		return nil, ClientResponseError{
+			Status:  response.StatusCode,
+			Message: buf.String(),
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}

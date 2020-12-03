@@ -9,8 +9,9 @@ import (
 
 func RootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "provider",
-		Short: "Akash provider commands",
+		Use:          "provider",
+		Short:        "Akash provider commands",
+		SilenceUsage: true,
 	}
 
 	cmd.PersistentFlags().String(flags.FlagNode, "http://localhost:26657", "The node address")
