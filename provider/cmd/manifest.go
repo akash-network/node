@@ -59,12 +59,12 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 	provider := &res.Provider
 	gclient := gateway.NewClient()
 
-	return gclient.SubmitManifest(
+	return showErrorToUser(gclient.SubmitManifest(
 		context.Background(),
 		provider.HostURI,
 		&manifest.SubmitRequest{
 			Deployment: lid.DeploymentID(),
 			Manifest:   mani,
 		},
-	)
+	))
 }

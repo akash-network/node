@@ -90,7 +90,7 @@ func validateManifestService(service manifest.Service, helper *validateManifestG
 
 func validateServiceExpose(serviceName string, serviceExpose manifest.ServiceExpose, helper *validateManifestGroupsHelper) error {
 	if serviceExpose.Port == 0 {
-		return ErrServiceExposePortZero
+		return fmt.Errorf("%w: service %q port is zero", ErrInvalidManifest, serviceName)
 	}
 
 	switch serviceExpose.Proto {

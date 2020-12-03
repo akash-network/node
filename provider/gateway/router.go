@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"sync"
 	"time"
@@ -15,7 +16,9 @@ import (
 
 	"github.com/ovrclk/akash/provider"
 	"github.com/ovrclk/akash/provider/cluster"
+	kubeClient "github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/manifest"
+	manifestValidation "github.com/ovrclk/akash/validation"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -116,12 +119,15 @@ func createManifestHandler(_ log.Logger, mclient manifest.Client) http.HandlerFu
 		}
 
 		if !requestDeploymentID(req).Equals(mreq.Deployment) {
-			http.Error(w, "Invalid ID", http.StatusBadRequest)
+			http.Error(w, "deployment ID in request body does not match this resource", http.StatusBadRequest)
 			return
 		}
 
 		if err := mclient.Submit(req.Context(), &mreq); err != nil {
-			// TODO: surface unauthorized, etc...
+			if errors.Is(err, manifestValidation.ErrInvalidManifest) {
+				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+				return
+			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -132,11 +138,22 @@ func leaseStatusHandler(log log.Logger, cclient cluster.ReadClient) http.Handler
 	return func(w http.ResponseWriter, req *http.Request) {
 		status, err := cclient.LeaseStatus(req.Context(), requestLeaseID(req))
 		if err != nil {
+			if errors.Is(err, kubeClient.ErrNoDeploymentForLease) {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
 			if kerrors.IsNotFound(err) {
 				http.Error(w, err.Error(), http.StatusNotFound)
-			} else {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
+
+			if errors.Is(err, kubeClient.ErrNoGlobalServicesForLease) {
+				http.Error(w, err.Error(), http.StatusServiceUnavailable)
+				return
+			}
+
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		writeJSON(log, w, status)
@@ -147,11 +164,16 @@ func leaseServiceStatusHandler(log log.Logger, cclient cluster.ReadClient) http.
 	return func(w http.ResponseWriter, req *http.Request) {
 		status, err := cclient.ServiceStatus(req.Context(), requestLeaseID(req), requestService(req))
 		if err != nil {
+			if errors.Is(err, kubeClient.ErrNoDeploymentForLease) {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
 			if kerrors.IsNotFound(err) {
 				http.Error(w, err.Error(), http.StatusNotFound)
-			} else {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
+
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		writeJSON(log, w, status)
@@ -167,9 +189,8 @@ func leaseServiceLogsHandler(log log.Logger, cclient cluster.ReadClient) http.Ha
 
 		ws, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			if _, ok := err.(websocket.HandshakeError); !ok {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
+			// At this point the connection either has a response sent already
+			// or it has been closed
 			return
 		}
 
