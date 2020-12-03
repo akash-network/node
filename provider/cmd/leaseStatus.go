@@ -57,5 +57,5 @@ func doLeaseStatus(cmd *cobra.Command) error {
 	if err != nil {
 		return showErrorToUser(err)
 	}
-	return cmdcommon.PrintJSONStdout(result)
+	return cmdcommon.PrintJSON(cctx, result)
 }

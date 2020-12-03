@@ -103,7 +103,7 @@ func doServiceLogs(cmd *cobra.Command) error {
 
 	if outputFormat == "json" {
 		printFn = func(msg gateway.ServiceLogMessage) error {
-			return cmdcommon.PrintJSONStdout(msg)
+			return cmdcommon.PrintJSON(cctx, msg)
 		}
 	}
 
