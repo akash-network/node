@@ -83,6 +83,17 @@ func (c *client) Status(ctx context.Context, host string) (*provider.Status, err
 	return &obj, nil
 }
 
+func createClientResponseErrorIfNotOK(resp *http.Response, responseBuf *bytes.Buffer) error {
+	if resp.StatusCode == http.StatusOK {
+		return nil
+	}
+
+	return ClientResponseError{
+		Status:  resp.StatusCode,
+		Message: responseBuf.String(),
+	}
+}
+
 func (c *client) SubmitManifest(ctx context.Context, host string, mreq *manifest.SubmitRequest) error {
 	uri, err := makeURI(host, submitManifestPath(mreq.Deployment))
 	if err != nil {
@@ -106,21 +117,15 @@ func (c *client) SubmitManifest(ctx context.Context, host string, mreq *manifest
 	}
 	responseBuf := &bytes.Buffer{}
 	_, err = io.Copy(responseBuf, resp.Body)
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
 	if err != nil {
 		return err
 	}
-	if err := resp.Body.Close(); err != nil {
-		return err
-	}
 
-	if resp.StatusCode != http.StatusOK {
-		return ClientResponseError{
-			Status:  resp.StatusCode,
-			Message: responseBuf.String(),
-		}
-	}
-
-	return nil
+	return createClientResponseErrorIfNotOK(resp, responseBuf)
 }
 
 func (c *client) LeaseStatus(ctx context.Context, host string, id mtypes.LeaseID) (*ctypes.LeaseStatus, error) {
@@ -165,19 +170,17 @@ func (c *client) getStatus(ctx context.Context, uri string, obj interface{}) err
 
 	buf := &bytes.Buffer{}
 	_, err = io.Copy(buf, resp.Body)
-	if err != nil {
-		return err
-	}
-
 	defer func() {
 		_ = resp.Body.Close()
 	}()
 
-	if resp.StatusCode != http.StatusOK {
-		return ClientResponseError{
-			Status:  resp.StatusCode,
-			Message: buf.String(),
-		}
+	if err != nil {
+		return err
+	}
+
+	err = createClientResponseErrorIfNotOK(resp, buf)
+	if err != nil {
+		return err
 	}
 
 	dec := json.NewDecoder(buf)
@@ -222,7 +225,7 @@ func (c *client) ServiceLogs(ctx context.Context,
 	endpoint.RawQuery = query.Encode()
 
 	conn, response, err := websocket.DefaultDialer.DialContext(ctx, endpoint.String(), nil)
-	if err == websocket.ErrBadHandshake {
+	if errors.Is(err, websocket.ErrBadHandshake) {
 		buf := &bytes.Buffer{}
 		_, err = io.Copy(buf, response.Body)
 		if err != nil {

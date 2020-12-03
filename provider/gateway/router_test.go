@@ -359,9 +359,10 @@ func TestRouteLeaseStatusErr(t *testing.T) {
 	require.Regexp(t, "^generic test error(?s:.)*$", scaffold.w.Body.String())
 }
 
+const serviceName = "database"
+
 func TestRouteServiceStatusOK(t *testing.T) {
 	scaffold := newRouterForTest(t)
-	serviceName := "database"
 
 	owner := testutil.AccAddress(t)
 	provider := testutil.AccAddress(t)
@@ -400,7 +401,6 @@ func TestRouteServiceStatusOK(t *testing.T) {
 
 func TestRouteServiceStatusNoDeployment(t *testing.T) {
 	scaffold := newRouterForTest(t)
-	serviceName := "database"
 
 	owner := testutil.AccAddress(t)
 	provider := testutil.AccAddress(t)
@@ -425,7 +425,6 @@ func TestRouteServiceStatusNoDeployment(t *testing.T) {
 
 func TestRouteServiceStatusKubernetesNotFound(t *testing.T) {
 	scaffold := newRouterForTest(t)
-	serviceName := "database"
 
 	owner := testutil.AccAddress(t)
 	provider := testutil.AccAddress(t)
@@ -462,7 +461,6 @@ func TestRouteServiceStatusKubernetesNotFound(t *testing.T) {
 
 func TestRouteServiceStatusError(t *testing.T) {
 	scaffold := newRouterForTest(t)
-	serviceName := "database"
 
 	owner := testutil.AccAddress(t)
 	provider := testutil.AccAddress(t)
