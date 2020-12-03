@@ -51,7 +51,7 @@ node-init-genesis: init-dirs
 
 .PHONY: node-init-genesis-accounts
 node-init-genesis-accounts: $(patsubst %,node-init-genesis-account-%,$(KEY_NAMES))
-	# $(AKASHD) validate-genesis
+	$(AKASHD) validate-genesis
 
 .PHONY: node-init-genesis-account-%
 node-init-genesis-account-%:
@@ -68,7 +68,7 @@ node-init-gentx:
 .PHONY: node-init-finalize
 node-init-finalize:
 	$(AKASHD) collect-gentxs
-	# $(AKASHD) validate-genesis
+	$(AKASHD) validate-genesis
 
 .PHONY: node-run
 node-run:
