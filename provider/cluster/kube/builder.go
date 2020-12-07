@@ -274,6 +274,7 @@ func (b *deploymentBuilder) container() corev1.Container {
 
 	// TODO: this prevents over-subscription.  skip for now.
 
+	envVarsAdded := make(map[string]int)
 	for _, env := range b.service.Env {
 		parts := strings.SplitN(env, "=", 2)
 		switch len(parts) {
@@ -282,7 +283,9 @@ func (b *deploymentBuilder) container() corev1.Container {
 		case 1:
 			kcontainer.Env = append(kcontainer.Env, corev1.EnvVar{Name: parts[0]})
 		}
+		envVarsAdded[parts[0]] = 0
 	}
+	kcontainer.Env = b.addEnvVarsForDeployment(envVarsAdded, kcontainer.Env)
 
 	for _, expose := range b.service.Expose {
 		kcontainer.Ports = append(kcontainer.Ports, corev1.ContainerPort{
@@ -291,6 +294,36 @@ func (b *deploymentBuilder) container() corev1.Container {
 	}
 
 	return kcontainer
+}
+
+const (
+	envVarAkashGroupSequence = "AKASH_GROUP_SEQUENCE"
+	envVarAkashDeploymentSequence = "AKASH_DEPLOYMENT_SEQUENCE"
+	envVarAkashOrderSequence = "AKASH_ORDER_SEQUENCE"
+	envVarAkashOwner = "AKASH_OWDER"
+	envVarAkashProvider = "AKASH_PROVIDER"
+	envVarAkashClusterPublicHostname = "AKASH_CLUSTER_PUBLIC_HOSTNAME"
+)
+
+func addIfNotPresent(envVarsAlreadyAdded map[string]int, env []corev1.EnvVar, key string, value interface{}) []corev1.EnvVar {
+	_, exists := envVarsAlreadyAdded[key]
+	if exists {
+		return env
+	}
+
+	env = append(env, corev1.EnvVar{Name: key, Value: fmt.Sprintf("%v", value)})
+	return env
+}
+
+func (b *deploymentBuilder) addEnvVarsForDeployment(envVarsAlreadyAdded map[string]int, env []corev1.EnvVar) []corev1.EnvVar {
+	// Add each env. var. if it is not already set by the SDL
+	env = addIfNotPresent(envVarsAlreadyAdded, env, envVarAkashGroupSequence, b.lid.GetGSeq())
+	env = addIfNotPresent(envVarsAlreadyAdded, env, envVarAkashDeploymentSequence, b.lid.GetDSeq())
+	env = addIfNotPresent(envVarsAlreadyAdded, env, envVarAkashOrderSequence, b.lid.GetOSeq())
+	env = addIfNotPresent(envVarsAlreadyAdded, env, envVarAkashOwner, b.lid.Owner)
+	env = addIfNotPresent(envVarsAlreadyAdded, env, envVarAkashProvider, b.lid.Provider)
+	env = addIfNotPresent(envVarsAlreadyAdded, env, envVarAkashClusterPublicHostname, b.settings.ClusterPublicHostname)
+	return env
 }
 
 // service
