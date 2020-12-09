@@ -52,6 +52,24 @@ $(MODVENDOR): $(CACHE)
 	@echo "installing modvendor..."
 	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor
 
+# fixme use go install when 1.16 is out
+# this hack is to not flood go.{mod, sum} with tools used in this makefile
+# but take versions from variables instead
+# see https://github.com/golang/go/issues/40276
+# https://tip.golang.org/doc/go1.16
+$(GIT_CHGLOG_VERSION_FILE): $(CACHE)
+	@echo "installing git-chglog..."
+	( \
+		eval TMP := $(shell mktemp -d); \
+		trap 'rm -rf "$(TMP)"' EXIT; \
+		cd $(TMP); \
+		GOBIN=$(CACHE_BIN) GO111MODULE=on go get -u github.com/git-chglog/git-chglog/cmd/git-chglog@$(GIT_CHGLOG_VERSION) \
+	)
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(GIT_CHGLOG): $(GIT_CHGLOG_VERSION_FILE)
+
 $(SWAGGER_COMBINE): $(CACHE)
 ifeq (, $(shell which swagger-combine 2>/dev/null))
 	@echo "Installing swagger-combine..."
