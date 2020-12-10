@@ -3,7 +3,9 @@
 package integration
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/url"
 	"path/filepath"
@@ -22,7 +24,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 
+	providerCmd "github.com/ovrclk/akash/provider/cmd"
 	ptestutil "github.com/ovrclk/akash/provider/testutil"
+	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
 	deploycli "github.com/ovrclk/akash/x/deployment/client/cli"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
@@ -320,6 +324,60 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	host, appPort := appEnv(s.T())
 	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)
 	queryApp(s.T(), appURL, 50)
+
+	cmdResult, err := providerCmd.ProviderStatusExec(
+		val.ClientCtx,
+		fmt.Sprintf("--%s=%v", "provider", lid.Provider))
+	assert.NoError(s.T(), err)
+	data := make(map[string]interface{})
+	err = json.Unmarshal(cmdResult.Bytes(), &data)
+	assert.NoError(s.T(), err)
+	leaseCount, ok := data["cluster"].(map[string]interface{})["leases"]
+	assert.True(s.T(), ok)
+	assert.Equal(s.T(), float64(1), leaseCount)
+
+	// Read SDL into memory so each service can be checked
+	deploymentSdl, err := sdl.ReadFile(deploymentPath)
+	require.NoError(s.T(), err)
+	mani, err := deploymentSdl.Manifest()
+	require.NoError(s.T(), err)
+
+	cmdResult, err = providerCmd.ProviderLeaseStatusExec(
+		val.ClientCtx,
+		fmt.Sprintf("--%s=%v", "dseq", lid.DSeq),
+		fmt.Sprintf("--%s=%v", "gseq", lid.GSeq),
+		fmt.Sprintf("--%s=%v", "oseq", lid.OSeq),
+		fmt.Sprintf("--%s=%v", "owner", lid.Owner),
+		fmt.Sprintf("--%s=%v", "provider", lid.Provider))
+	assert.NoError(s.T(), err)
+	err = json.Unmarshal(cmdResult.Bytes(), &data)
+	assert.NoError(s.T(), err)
+	for _, group := range mani.GetGroups() {
+		for _, service := range group.Services {
+			serviceTotalCount, ok := data["services"].(map[string]interface{})[service.Name].(map[string]interface{})["total"]
+			assert.True(s.T(), ok)
+			assert.Greater(s.T(), serviceTotalCount, float64(0))
+		}
+	}
+
+	for _, group := range mani.GetGroups() {
+		for _, service := range group.Services {
+			cmdResult, err = providerCmd.ProviderServiceStatusExec(
+				val.ClientCtx,
+				fmt.Sprintf("--%s=%v", "dseq", lid.DSeq),
+				fmt.Sprintf("--%s=%v", "gseq", lid.GSeq),
+				fmt.Sprintf("--%s=%v", "oseq", lid.OSeq),
+				fmt.Sprintf("--%s=%v", "owner", lid.Owner),
+				fmt.Sprintf("--%s=%v", "provider", lid.Provider),
+				fmt.Sprintf("--%s=%v", "service", service.Name))
+			assert.NoError(s.T(), err)
+			err = json.Unmarshal(cmdResult.Bytes(), &data)
+			assert.NoError(s.T(), err)
+			serviceTotalCount, ok := data["services"].(map[string]interface{})[service.Name].(map[string]interface{})["total"]
+			assert.True(s.T(), ok)
+			assert.Greater(s.T(), serviceTotalCount, float64(0))
+		}
+	}
 }
 
 func TestIntegrationTestSuite(t *testing.T) {

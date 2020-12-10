@@ -64,7 +64,7 @@ func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 			case <-subscriber.Done():
 				return nil
 			case ev := <-subscriber.Events():
-				if err := cmdcommon.PrintJSONStdout(ev); err != nil {
+				if err := cmdcommon.PrintJSON(cctx, ev); err != nil {
 					return err
 				}
 			}

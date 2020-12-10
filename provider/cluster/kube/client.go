@@ -238,9 +238,14 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 	forwardedPorts := make(map[string][]ctypes.ForwardedPortStatus, len(deployments))
 	for _, deployment := range deployments {
 		status := &ctypes.ServiceStatus{
-			Name:      deployment.Name,
-			Available: deployment.Status.AvailableReplicas,
-			Total:     deployment.Status.Replicas,
+			Name:               deployment.Name,
+			Available:          deployment.Status.AvailableReplicas,
+			Total:              deployment.Status.Replicas,
+			ObservedGeneration: deployment.Status.ObservedGeneration,
+			Replicas:           deployment.Status.Replicas,
+			UpdatedReplicas:    deployment.Status.UpdatedReplicas,
+			ReadyReplicas:      deployment.Status.ReadyReplicas,
+			AvailableReplicas:  deployment.Status.AvailableReplicas,
 		}
 		serviceStatus[deployment.Name] = status
 
@@ -354,13 +359,45 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 	if deployment == nil {
 		return nil, ErrNoDeploymentForLease
 	}
-	return &ctypes.ServiceStatus{
+
+	ingress, err := c.kc.NetworkingV1().Ingresses(lidNS(lid)).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		c.log.Error(err.Error())
+		return nil, errors.Wrap(err, ErrInternalError.Error())
+	}
+
+	result := &ctypes.ServiceStatus{
+		Name:               deployment.Name,
+		Available:          deployment.Status.AvailableReplicas,
+		Total:              deployment.Status.Replicas,
 		ObservedGeneration: deployment.Status.ObservedGeneration,
 		Replicas:           deployment.Status.Replicas,
 		UpdatedReplicas:    deployment.Status.UpdatedReplicas,
 		ReadyReplicas:      deployment.Status.ReadyReplicas,
 		AvailableReplicas:  deployment.Status.AvailableReplicas,
-	}, nil
+	}
+
+	if ingress != nil {
+		hosts := []string{}
+		for _, rule := range ingress.Spec.Rules {
+			hosts = append(hosts, rule.Host)
+		}
+
+		if c.settings.DeploymentIngressExposeLBHosts {
+			for _, lbing := range ingress.Status.LoadBalancer.Ingress {
+				if val := lbing.IP; val != "" {
+					hosts = append(hosts, val)
+				}
+				if val := lbing.Hostname; val != "" {
+					hosts = append(hosts, val)
+				}
+			}
+		}
+
+		result.URIs = hosts
+	}
+
+	return result, nil
 }
 
 func (c *client) Inventory(ctx context.Context) ([]ctypes.Node, error) {
