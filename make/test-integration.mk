@@ -5,7 +5,10 @@ COVER_PACKAGES = $(shell go list ./... | grep -v mock)
 
 test-e2e-integration:
 	# Assumes cluster created: `make -s -C _run/kube kind-cluster-create`
-	$(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestIntegrationTestSuite
+	$(KIND_VARS) go test -count=1 -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestIntegrationTestSuite
+
+test-e2e-integration-k8s:
+	KUBE_INGRESS_IP=127.0.0.1 KUBE_INGRESS_PORT=10080 go test -count=1 -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestIntegrationTestSuite
 
 test-query-app:
 	 $(KIND_VARS) go test -mod=readonly -p 4 -tags "e2e integration $(BUILD_MAINNET)" -v ./integration/... -run TestQueryApp
