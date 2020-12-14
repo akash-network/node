@@ -56,6 +56,8 @@ func newManager(h *service, daddr dtypes.DeploymentID) (*manager, error) {
 	return m, nil
 }
 
+var ErrNoLeaseForDeployment = errors.New("no lease for deployment")
+
 // 'manager' facilitates operations around a configured Deployment.
 type manager struct {
 	config  config
@@ -69,11 +71,12 @@ type manager struct {
 	manifestch chan manifestRequest
 	updatech   chan []byte
 
-	data      *dtypes.DeploymentResponse
-	requests  []manifestRequest
-	leases    []event.LeaseWon
-	manifests []*manifest.Manifest
-	versions  [][]byte
+	data            *dtypes.DeploymentResponse
+	requests        []manifestRequest
+	pendingRequests []chan<- error
+	leases          []event.LeaseWon
+	manifests       []*manifest.Manifest
+	versions        [][]byte
 
 	stoptimer *time.Timer
 
@@ -167,8 +170,6 @@ loop:
 		case req := <-m.manifestch:
 			m.log.Info("manifest received")
 
-			// TODO: fail fast if invalid request to prevent DoS
-
 			m.requests = append(m.requests, req)
 			m.validateRequests()
 			m.emitReceivedEvents()
@@ -187,6 +188,8 @@ loop:
 
 			if err := result.Error(); err != nil {
 				m.log.Error("error fetching data", "err", err)
+				// Fetching data failed, all requests are now in an error state
+				m.fillAllRequests(err)
 				break
 			}
 
@@ -203,9 +206,7 @@ loop:
 
 	cancel()
 
-	for _, req := range m.requests {
-		req.ch <- ErrNotRunning
-	}
+	m.fillAllRequests(ErrNotRunning)
 
 	if m.stoptimer != nil {
 		if m.stoptimer.Stop() {
@@ -259,8 +260,25 @@ func (m *manager) maybeScheduleStop() bool { // nolint:golint,unparam
 	return true
 }
 
+func (m *manager) fillAllRequests(response error) {
+	for _, reqch := range m.pendingRequests {
+		reqch <- response
+	}
+	m.pendingRequests = nil
+
+	for _, req := range m.requests {
+		req.ch <- response
+	}
+	m.requests = nil
+}
+
 func (m *manager) emitReceivedEvents() {
-	if m.data == nil || len(m.leases) == 0 || len(m.manifests) == 0 {
+	if len(m.leases) == 0 {
+		m.log.Debug("emit received events skips due to no leases", "data", m.data, "leases", len(m.leases), "manifests", len(m.manifests))
+		m.fillAllRequests(ErrNoLeaseForDeployment)
+		return
+	}
+	if m.data == nil || len(m.manifests) == 0 {
 		m.log.Debug("emit received events skipped", "data", m.data, "leases", len(m.leases), "manifests", len(m.manifests))
 		return
 	}
@@ -270,6 +288,7 @@ func (m *manager) emitReceivedEvents() {
 	m.log.Debug("publishing manifest received", "num-leases", len(m.leases))
 
 	for _, lease := range m.leases {
+		m.log.Debug("publishing manifest received for lease", "lease-id", lease.LeaseID)
 		if err := m.bus.Publish(event.ManifestReceived{
 			LeaseID:    lease.LeaseID,
 			Group:      lease.Group,
@@ -279,6 +298,12 @@ func (m *manager) emitReceivedEvents() {
 			m.log.Error("publishing event", "err", err, "lease", lease.LeaseID)
 		}
 	}
+
+	// A manifest has been published, satisfy all pending requests
+	for _, reqch := range m.pendingRequests {
+		reqch <- nil
+	}
+	m.pendingRequests = nil
 }
 
 func (m *manager) validateRequests() {
@@ -294,7 +319,9 @@ func (m *manager) validateRequests() {
 			continue
 		}
 		manifests = append(manifests, &req.value.Manifest)
-		req.ch <- nil
+
+		// The manifest has been  grabbed from the request but not published yet, store this response
+		m.pendingRequests = append(m.pendingRequests, req.ch)
 	}
 	m.requests = nil
 

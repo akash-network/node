@@ -128,6 +128,10 @@ func createManifestHandler(_ log.Logger, mclient manifest.Client) http.HandlerFu
 				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 				return
 			}
+			if errors.Is(err, manifest.ErrNoLeaseForDeployment) {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
