@@ -6,7 +6,7 @@ GOBIN                 := $(shell go env GOPATH)/bin
 
 KIND_APP_IP           ?= $(shell make -sC _run/kube kind-k8s-ip)
 KIND_APP_PORT         ?= $(shell make -sC _run/kube app-http-port)
-KIND_VARS             ?= KIND_APP_IP="$(KIND_APP_IP)" KIND_APP_PORT="$(KIND_APP_PORT)"
+KIND_VARS             ?= KUBE_INGRESS_IP="$(KIND_APP_IP)" KUBE_INGRESS_PORT="$(KIND_APP_PORT)"
 
 UNAME_OS              := $(shell uname -s)
 UNAME_ARCH            := $(shell uname -m)
