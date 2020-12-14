@@ -76,7 +76,7 @@ func (g GroupSpec) MatchRequirements(provider []atypes.Provider) bool {
 		existingRequirements := make(attributesMatching)
 
 		for _, existing := range provider[1:] {
-			existingRequirements[existing.Validator] = existing.Attributes
+			existingRequirements[existing.Auditor] = existing.Attributes
 		}
 
 		if len(g.Requirements.SignedBy.AllOf) != 0 {

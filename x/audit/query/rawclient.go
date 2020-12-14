@@ -14,7 +14,7 @@ type RawClient interface {
 	AllProviders() ([]byte, error)
 	Provider(sdk.AccAddress) ([]byte, error)
 	ProviderID(types.ProviderID) ([]byte, error)
-	Validator(sdk.AccAddress) ([]byte, error)
+	Auditor(sdk.AccAddress) ([]byte, error)
 }
 
 // NewRawClient creates a client instance with provided context and key
@@ -44,15 +44,15 @@ func (c *rawclient) Provider(id sdk.AccAddress) ([]byte, error) {
 }
 
 func (c *rawclient) ProviderID(id types.ProviderID) ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/attributes/validator/%s/%s", c.key, id.Validator, id.Owner), nil)
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/attributes/auditor/%s/%s", c.key, id.Auditor, id.Owner), nil)
 	if err != nil {
 		return []byte{}, err
 	}
 	return buf, err
 }
 
-func (c *rawclient) Validator(id sdk.AccAddress) ([]byte, error) {
-	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/attributes/validator/%s/list", c.key, id), nil)
+func (c *rawclient) Auditor(id sdk.AccAddress) ([]byte, error) {
+	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/attributes/auditor/%s/list", c.key, id), nil)
 	if err != nil {
 		return []byte{}, err
 	}

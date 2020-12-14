@@ -10,12 +10,12 @@ func AuditedProvider(t testing.TB) (atypes.ProviderID, atypes.Provider) {
 	t.Helper()
 
 	id := atypes.ProviderID{
-		Validator: AccAddress(t),
-		Owner:     AccAddress(t),
+		Auditor: AccAddress(t),
+		Owner:   AccAddress(t),
 	}
 
 	return id, atypes.Provider{
-		Validator:  id.Validator.String(),
+		Auditor:    id.Auditor.String(),
 		Owner:      id.Owner.String(),
 		Attributes: Attributes(t),
 	}

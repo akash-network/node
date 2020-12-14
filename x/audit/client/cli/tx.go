@@ -76,7 +76,7 @@ func cmdCreateProviderAttributes() *cobra.Command {
 			}
 
 			msg := &types.MsgSignProviderAttributes{
-				Validator:  clientCtx.GetFromAddress().String(),
+				Auditor:    clientCtx.GetFromAddress().String(),
 				Owner:      providerAddress.String(),
 				Attributes: attr,
 			}
@@ -116,9 +116,9 @@ func cmdDeleteProviderAttributes() *cobra.Command {
 			}
 
 			msg := &types.MsgDeleteProviderAttributes{
-				Validator: clientCtx.GetFromAddress().String(),
-				Owner:     providerAddress.String(),
-				Keys:      keys,
+				Auditor: clientCtx.GetFromAddress().String(),
+				Owner:   providerAddress.String(),
+				Keys:    keys,
 			}
 
 			if err = msg.ValidateBasic(); err != nil {

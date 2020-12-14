@@ -25,7 +25,7 @@ var _ types.MsgServer = msgServer{}
 func (ms msgServer) SignProviderAttributes(goCtx context.Context, msg *types.MsgSignProviderAttributes) (*types.MsgSignProviderAttributesResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	validator, err := sdk.AccAddressFromBech32(msg.Validator)
+	auditor, err := sdk.AccAddressFromBech32(msg.Auditor)
 	if err != nil {
 		return nil, err
 	}
@@ -36,8 +36,8 @@ func (ms msgServer) SignProviderAttributes(goCtx context.Context, msg *types.Msg
 	}
 
 	provID := types.ProviderID{
-		Owner:     owner,
-		Validator: validator,
+		Owner:   owner,
+		Auditor: auditor,
 	}
 
 	if err = ms.keeper.CreateOrUpdateProviderAttributes(ctx, provID, msg.Attributes); err != nil {
@@ -51,7 +51,7 @@ func (ms msgServer) SignProviderAttributes(goCtx context.Context, msg *types.Msg
 func (ms msgServer) DeleteProviderAttributes(goCtx context.Context, msg *types.MsgDeleteProviderAttributes) (*types.MsgDeleteProviderAttributesResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	validator, err := sdk.AccAddressFromBech32(msg.Validator)
+	auditor, err := sdk.AccAddressFromBech32(msg.Auditor)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +62,8 @@ func (ms msgServer) DeleteProviderAttributes(goCtx context.Context, msg *types.M
 	}
 
 	provID := types.ProviderID{
-		Owner:     owner,
-		Validator: validator,
+		Owner:   owner,
+		Auditor: auditor,
 	}
 
 	if err = ms.keeper.DeleteProviderAttributes(ctx, provID, msg.Keys); err != nil {

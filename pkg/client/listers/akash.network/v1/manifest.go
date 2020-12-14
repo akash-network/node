@@ -26,8 +26,10 @@ import (
 )
 
 // ManifestLister helps list Manifests.
+// All objects returned here must be treated as read-only.
 type ManifestLister interface {
 	// List lists all Manifests in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Manifest, err error)
 	// Manifests returns an object that can list and get Manifests.
 	Manifests(namespace string) ManifestNamespaceLister
@@ -58,10 +60,13 @@ func (s *manifestLister) Manifests(namespace string) ManifestNamespaceLister {
 }
 
 // ManifestNamespaceLister helps list and get Manifests.
+// All objects returned here must be treated as read-only.
 type ManifestNamespaceLister interface {
 	// List lists all Manifests in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Manifest, err error)
 	// Get retrieves the Manifest from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Manifest, error)
 	ManifestNamespaceListerExpansion
 }

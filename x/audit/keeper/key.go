@@ -18,7 +18,7 @@ func providerKey(id types.ProviderID) []byte {
 		panic(err)
 	}
 
-	if _, err := buf.Write(id.Validator.Bytes()); err != nil {
+	if _, err := buf.Write(id.Auditor.Bytes()); err != nil {
 		panic(err)
 	}
 
