@@ -2,20 +2,22 @@ include ../common.mk
 include ../common-commands.mk
 include ../common-kind.mk
 
+GATEWAY_HOSTNAME ?= localhost
 GATEWAY_HOST     ?= localhost:8080
 GATEWAY_ENDPOINT ?= http://$(GATEWAY_HOST)
 
 .PHONY: provider-run
 provider-run:
-	AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS="false" \
-		$(AKASHCTL) $(KEY_OPTS) provider run \
-			--chain-id "$(CHAIN_NAME)" \
-			--from "$(PROVIDER_KEY_NAME)" \
-			--cluster-k8s \
-			--gateway-listen-address "$(GATEWAY_HOST)" \
-			--cluster-node-port-quantity 100 \
-			--cluster-public-hostname "localhost" \
-			--bid-price-strategy "randomRange"
+	$(AKASHCTL) $(KEY_OPTS) provider run \
+		--chain-id "$(CHAIN_NAME)" \
+		--from "$(PROVIDER_KEY_NAME)" \
+		--cluster-k8s \
+		--gateway-listen-address "$(GATEWAY_HOST)" \
+		--deployment-ingress-static-hosts true \
+		--deployment-ingress-domain "$(GATEWAY_HOSTNAME)" \
+		--cluster-node-port-quantity 100 \
+		--cluster-public-hostname "$(GATEWAY_HOSTNAME)" \
+		--bid-price-strategy "randomRange"
 
 .PHONY: provider-status
 provider-status:

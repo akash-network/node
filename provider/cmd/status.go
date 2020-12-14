@@ -51,5 +51,5 @@ func doStatus(cmd *cobra.Command) error {
 		return showErrorToUser(err)
 	}
 
-	return cmdcommon.PrintJSONStdout(result)
+	return cmdcommon.PrintJSON(cctx, result)
 }

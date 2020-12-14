@@ -90,8 +90,16 @@ To become a contributor, please see the guide on [contributing](CONTRIBUTING.md)
 Akash is developed and tested with [golang 1.13.1+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
 
  Most golang libraries will be installed via [`go modules`](https://github.com/golang/go/wiki/Modules),
- however the following packages will
- be installed globally with their binaries placed in `$GOPATH/bin` by `make devdeps-install`.
+ however the following packages:
+ 
+ ```
+github.com/vektra/mockery/.../
+k8s.io/code-generator/...
+sigs.k8s.io/kind
+golang.org/x/tools/cmd/stringer
+ ```
+ 
+ will be installed globally with their binaries placed in `$GOPATH/bin` by `make devdeps-install`.
 
 ### Building
 

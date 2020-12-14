@@ -3,10 +3,10 @@ package common
 import (
 	"bytes"
 	"encoding/json"
-	"os"
+	"github.com/cosmos/cosmos-sdk/client"
 )
 
-func PrintJSONStdout(v interface{}) error {
+func PrintJSON(ctx client.Context, v interface{}) error {
 	marshaled, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -24,6 +24,5 @@ func PrintJSONStdout(v interface{}) error {
 		return err
 	}
 
-	_, err = os.Stdout.Write(buf.Bytes())
-	return err
+	return ctx.PrintString(buf.String())
 }
