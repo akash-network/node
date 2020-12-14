@@ -29,8 +29,6 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: ${{ secrets.GOLANG_VERSION }}
-          kubernetes_service_host: localhost
-          kubernetes_service_port: 9999
       - run: make test-full
 
   coverage:
