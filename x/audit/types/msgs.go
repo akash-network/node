@@ -32,8 +32,8 @@ func (m MsgSignProviderAttributes) ValidateBasic() error {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgCreate: Invalid Owner Address")
 	}
 
-	if _, err := sdk.AccAddressFromBech32(m.Validator); err != nil {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgCreate: Invalid Validator Address")
+	if _, err := sdk.AccAddressFromBech32(m.Auditor); err != nil {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgCreate: Invalid Auditor Address")
 	}
 
 	return nil
@@ -46,12 +46,12 @@ func (m MsgSignProviderAttributes) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (m MsgSignProviderAttributes) GetSigners() []sdk.AccAddress {
-	validator, err := sdk.AccAddressFromBech32(m.Validator)
+	auditor, err := sdk.AccAddressFromBech32(m.Auditor)
 	if err != nil {
 		panic(err)
 	}
 
-	return []sdk.AccAddress{validator}
+	return []sdk.AccAddress{auditor}
 }
 
 // ====MsgRevokeProviderAttributes====
@@ -71,8 +71,8 @@ func (m MsgDeleteProviderAttributes) ValidateBasic() error {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgCreate: Invalid Owner Address")
 	}
 
-	if _, err := sdk.AccAddressFromBech32(m.Validator); err != nil {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgCreate: Invalid Validator Address")
+	if _, err := sdk.AccAddressFromBech32(m.Auditor); err != nil {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgCreate: Invalid Auditor Address")
 	}
 
 	return nil
@@ -85,10 +85,10 @@ func (m MsgDeleteProviderAttributes) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (m MsgDeleteProviderAttributes) GetSigners() []sdk.AccAddress {
-	validator, err := sdk.AccAddressFromBech32(m.Validator)
+	auditor, err := sdk.AccAddressFromBech32(m.Auditor)
 	if err != nil {
 		panic(err)
 	}
 
-	return []sdk.AccAddress{validator}
+	return []sdk.AccAddress{auditor}
 }

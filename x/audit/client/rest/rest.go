@@ -20,7 +20,7 @@ func RegisterRoutes(ctx client.Context, r *mux.Router, ns string) {
 	// Get all signed
 	r.HandleFunc(fmt.Sprintf("/%s/list", prefix), listAllSignedHandler(ctx, ns)).Methods("GET")
 	r.HandleFunc(fmt.Sprintf("/%s/owner/{providerOwner}/list", prefix), listProviderAttributes(ctx, ns)).Methods("GET")
-	r.HandleFunc(fmt.Sprintf("/%s/validator/{validator}/{providerOwner}", prefix), listValidatorProviderAttributes(ctx, ns)).Methods("GET")
+	r.HandleFunc(fmt.Sprintf("/%s/auditor/{auditor}/{providerOwner}", prefix), listAuditorProviderAttributes(ctx, ns)).Methods("GET")
 }
 
 func listAllSignedHandler(ctx client.Context, ns string) http.HandlerFunc {
@@ -51,9 +51,9 @@ func listProviderAttributes(ctx client.Context, ns string) http.HandlerFunc {
 	}
 }
 
-func listValidatorProviderAttributes(ctx client.Context, ns string) http.HandlerFunc {
+func listAuditorProviderAttributes(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		validator, err := sdk.AccAddressFromBech32(mux.Vars(r)["validator"])
+		auditor, err := sdk.AccAddressFromBech32(mux.Vars(r)["auditor"])
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
 			return
@@ -62,7 +62,7 @@ func listValidatorProviderAttributes(ctx client.Context, ns string) http.Handler
 		var res []byte
 
 		if addr := mux.Vars(r)["providerOwner"]; addr == "list" {
-			res, err = query.NewRawClient(ctx, ns).Validator(validator)
+			res, err = query.NewRawClient(ctx, ns).Auditor(auditor)
 		} else {
 			var owner sdk.AccAddress
 			if owner, err = sdk.AccAddressFromBech32(addr); err != nil {
@@ -71,8 +71,8 @@ func listValidatorProviderAttributes(ctx client.Context, ns string) http.Handler
 			}
 
 			res, err = query.NewRawClient(ctx, ns).ProviderID(types.ProviderID{
-				Owner:     validator,
-				Validator: owner,
+				Owner:   owner,
+				Auditor: auditor,
 			})
 		}
 

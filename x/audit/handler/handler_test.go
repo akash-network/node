@@ -62,11 +62,11 @@ func TestProviderSignNew(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	owner := testutil.AccAddress(t)
-	validator := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
 
 	msg := &types.MsgSignProviderAttributes{
 		Owner:      owner.String(),
-		Validator:  validator.String(),
+		Auditor:    auditor.String(),
 		Attributes: testutil.Attributes(t),
 	}
 
@@ -83,12 +83,12 @@ func TestProviderSignAndUpdate(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	owner := testutil.AccAddress(t)
-	validator := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
 	originAttr := testutil.Attributes(t)
 
 	msg := &types.MsgSignProviderAttributes{
 		Owner:      owner.String(),
-		Validator:  validator.String(),
+		Auditor:    auditor.String(),
 		Attributes: originAttr,
 	}
 
@@ -113,8 +113,8 @@ func TestProviderSignAndUpdate(t *testing.T) {
 func TestProviderDeleteNonExisting(t *testing.T) {
 	suite := setupTestSuite(t)
 	msg := &types.MsgDeleteProviderAttributes{
-		Validator: testutil.AccAddress(t).String(),
-		Owner:     testutil.AccAddress(t).String(),
+		Auditor: testutil.AccAddress(t).String(),
+		Owner:   testutil.AccAddress(t).String(),
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
@@ -128,7 +128,7 @@ func TestProviderDeleteFull(t *testing.T) {
 
 	msg := &types.MsgSignProviderAttributes{
 		Owner:      testutil.AccAddress(t).String(),
-		Validator:  testutil.AccAddress(t).String(),
+		Auditor:    testutil.AccAddress(t).String(),
 		Attributes: testutil.Attributes(t),
 	}
 
@@ -137,15 +137,15 @@ func TestProviderDeleteFull(t *testing.T) {
 	require.NotNil(t, res)
 
 	res, err = suite.handler(suite.ctx, &types.MsgDeleteProviderAttributes{
-		Validator: msg.Validator,
-		Owner:     msg.Owner,
+		Auditor: msg.Auditor,
+		Owner:   msg.Owner,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
 	res, err = suite.handler(suite.ctx, &types.MsgDeleteProviderAttributes{
-		Validator: msg.Validator,
-		Owner:     msg.Owner,
+		Auditor: msg.Auditor,
+		Owner:   msg.Owner,
 	})
 
 	require.Error(t, err)
@@ -160,7 +160,7 @@ func TestProviderDeleteAttribute(t *testing.T) {
 
 	msg := &types.MsgSignProviderAttributes{
 		Owner:      owner.String(),
-		Validator:  testutil.AccAddress(t).String(),
+		Auditor:    testutil.AccAddress(t).String(),
 		Attributes: testutil.Attributes(t),
 	}
 
@@ -176,9 +176,9 @@ func TestProviderDeleteAttribute(t *testing.T) {
 	require.NotNil(t, res)
 
 	res, err = suite.handler(suite.ctx, &types.MsgDeleteProviderAttributes{
-		Validator: msg.Validator,
-		Owner:     msg.Owner,
-		Keys:      []string{msg.Attributes[0].Key}, // remove first attribute
+		Auditor: msg.Auditor,
+		Owner:   msg.Owner,
+		Keys:    []string{msg.Attributes[0].Key}, // remove first attribute
 	})
 	require.NoError(t, err)
 	require.NotNil(t, res)
@@ -199,7 +199,7 @@ func msgSignProviderAttributesToResponse(msg *types.MsgSignProviderAttributes) t
 	return types.Providers{
 		{
 			Owner:      msg.Owner,
-			Validator:  msg.Validator,
+			Auditor:    msg.Auditor,
 			Attributes: msg.Attributes,
 		},
 	}

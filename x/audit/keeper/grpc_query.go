@@ -78,9 +78,9 @@ func (q Querier) ProviderAttributes(
 	}, nil
 }
 
-func (q Querier) ProviderValidatorAttributes(
+func (q Querier) ProviderAuditorAttributes(
 	c context.Context,
-	req *types.QueryProviderValidatorRequest,
+	req *types.QueryProviderAuditorRequest,
 ) (*types.QueryProvidersResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
@@ -91,16 +91,16 @@ func (q Querier) ProviderValidatorAttributes(
 		return nil, types.ErrInvalidAddress
 	}
 
-	validator, err := sdk.AccAddressFromBech32(req.Validator)
+	auditor, err := sdk.AccAddressFromBech32(req.Auditor)
 	if err != nil {
 		return nil, types.ErrInvalidAddress
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)
 
-	provider, found := q.GetProviderByValidator(ctx, types.ProviderID{
-		Owner:     owner,
-		Validator: validator,
+	provider, found := q.GetProviderByAuditor(ctx, types.ProviderID{
+		Owner:   owner,
+		Auditor: auditor,
 	})
 	if !found {
 		return nil, types.ErrProviderNotFound
@@ -112,9 +112,9 @@ func (q Querier) ProviderValidatorAttributes(
 	}, nil
 }
 
-func (q Querier) ValidatorAttributes(
+func (q Querier) AuditorAttributes(
 	c context.Context,
-	req *types.QueryValidatorAttributesRequest,
+	req *types.QueryAuditorAttributesRequest,
 ) (*types.QueryProvidersResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")

@@ -85,8 +85,8 @@ func (m *QueryProvidersResponse) GetPagination() *query.PageResponse {
 
 // QueryProviderRequest is request type for the Query/Provider RPC method
 type QueryProviderRequest struct {
-	Validator string `protobuf:"bytes,1,opt,name=validator,proto3" json:"validator,omitempty"`
-	Owner     string `protobuf:"bytes,2,opt,name=owner,proto3" json:"owner,omitempty"`
+	Auditor string `protobuf:"bytes,1,opt,name=auditor,proto3" json:"auditor,omitempty"`
+	Owner   string `protobuf:"bytes,2,opt,name=owner,proto3" json:"owner,omitempty"`
 }
 
 func (m *QueryProviderRequest) Reset()         { *m = QueryProviderRequest{} }
@@ -122,9 +122,9 @@ func (m *QueryProviderRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QueryProviderRequest proto.InternalMessageInfo
 
-func (m *QueryProviderRequest) GetValidator() string {
+func (m *QueryProviderRequest) GetAuditor() string {
 	if m != nil {
-		return m.Validator
+		return m.Auditor
 	}
 	return ""
 }
@@ -234,24 +234,24 @@ func (m *QueryProviderAttributesRequest) GetPagination() *query.PageRequest {
 	return nil
 }
 
-// QueryProviderValidatorRequest is request type for the Query/Providers RPC method
-type QueryProviderValidatorRequest struct {
-	Validator string `protobuf:"bytes,1,opt,name=validator,proto3" json:"validator,omitempty"`
-	Owner     string `protobuf:"bytes,2,opt,name=owner,proto3" json:"owner,omitempty"`
+// QueryProviderAuditorRequest is request type for the Query/Providers RPC method
+type QueryProviderAuditorRequest struct {
+	Auditor string `protobuf:"bytes,1,opt,name=auditor,proto3" json:"auditor,omitempty"`
+	Owner   string `protobuf:"bytes,2,opt,name=owner,proto3" json:"owner,omitempty"`
 }
 
-func (m *QueryProviderValidatorRequest) Reset()         { *m = QueryProviderValidatorRequest{} }
-func (m *QueryProviderValidatorRequest) String() string { return proto.CompactTextString(m) }
-func (*QueryProviderValidatorRequest) ProtoMessage()    {}
-func (*QueryProviderValidatorRequest) Descriptor() ([]byte, []int) {
+func (m *QueryProviderAuditorRequest) Reset()         { *m = QueryProviderAuditorRequest{} }
+func (m *QueryProviderAuditorRequest) String() string { return proto.CompactTextString(m) }
+func (*QueryProviderAuditorRequest) ProtoMessage()    {}
+func (*QueryProviderAuditorRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_57c276f283e450c2, []int{4}
 }
-func (m *QueryProviderValidatorRequest) XXX_Unmarshal(b []byte) error {
+func (m *QueryProviderAuditorRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *QueryProviderValidatorRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QueryProviderAuditorRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_QueryProviderValidatorRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_QueryProviderAuditorRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -261,50 +261,50 @@ func (m *QueryProviderValidatorRequest) XXX_Marshal(b []byte, deterministic bool
 		return b[:n], nil
 	}
 }
-func (m *QueryProviderValidatorRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryProviderValidatorRequest.Merge(m, src)
+func (m *QueryProviderAuditorRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryProviderAuditorRequest.Merge(m, src)
 }
-func (m *QueryProviderValidatorRequest) XXX_Size() int {
+func (m *QueryProviderAuditorRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *QueryProviderValidatorRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryProviderValidatorRequest.DiscardUnknown(m)
+func (m *QueryProviderAuditorRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryProviderAuditorRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_QueryProviderValidatorRequest proto.InternalMessageInfo
+var xxx_messageInfo_QueryProviderAuditorRequest proto.InternalMessageInfo
 
-func (m *QueryProviderValidatorRequest) GetValidator() string {
+func (m *QueryProviderAuditorRequest) GetAuditor() string {
 	if m != nil {
-		return m.Validator
+		return m.Auditor
 	}
 	return ""
 }
 
-func (m *QueryProviderValidatorRequest) GetOwner() string {
+func (m *QueryProviderAuditorRequest) GetOwner() string {
 	if m != nil {
 		return m.Owner
 	}
 	return ""
 }
 
-// QueryValidatorAttributesRequest is request type for the Query/Providers RPC method
-type QueryValidatorAttributesRequest struct {
-	Validator  string             `protobuf:"bytes,1,opt,name=validator,proto3" json:"validator,omitempty"`
+// QueryAuditorAttributesRequest is request type for the Query/Providers RPC method
+type QueryAuditorAttributesRequest struct {
+	Auditor    string             `protobuf:"bytes,1,opt,name=auditor,proto3" json:"auditor,omitempty"`
 	Pagination *query.PageRequest `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
 }
 
-func (m *QueryValidatorAttributesRequest) Reset()         { *m = QueryValidatorAttributesRequest{} }
-func (m *QueryValidatorAttributesRequest) String() string { return proto.CompactTextString(m) }
-func (*QueryValidatorAttributesRequest) ProtoMessage()    {}
-func (*QueryValidatorAttributesRequest) Descriptor() ([]byte, []int) {
+func (m *QueryAuditorAttributesRequest) Reset()         { *m = QueryAuditorAttributesRequest{} }
+func (m *QueryAuditorAttributesRequest) String() string { return proto.CompactTextString(m) }
+func (*QueryAuditorAttributesRequest) ProtoMessage()    {}
+func (*QueryAuditorAttributesRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_57c276f283e450c2, []int{5}
 }
-func (m *QueryValidatorAttributesRequest) XXX_Unmarshal(b []byte) error {
+func (m *QueryAuditorAttributesRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *QueryValidatorAttributesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QueryAuditorAttributesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_QueryValidatorAttributesRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_QueryAuditorAttributesRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -314,26 +314,26 @@ func (m *QueryValidatorAttributesRequest) XXX_Marshal(b []byte, deterministic bo
 		return b[:n], nil
 	}
 }
-func (m *QueryValidatorAttributesRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryValidatorAttributesRequest.Merge(m, src)
+func (m *QueryAuditorAttributesRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryAuditorAttributesRequest.Merge(m, src)
 }
-func (m *QueryValidatorAttributesRequest) XXX_Size() int {
+func (m *QueryAuditorAttributesRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *QueryValidatorAttributesRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryValidatorAttributesRequest.DiscardUnknown(m)
+func (m *QueryAuditorAttributesRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryAuditorAttributesRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_QueryValidatorAttributesRequest proto.InternalMessageInfo
+var xxx_messageInfo_QueryAuditorAttributesRequest proto.InternalMessageInfo
 
-func (m *QueryValidatorAttributesRequest) GetValidator() string {
+func (m *QueryAuditorAttributesRequest) GetAuditor() string {
 	if m != nil {
-		return m.Validator
+		return m.Auditor
 	}
 	return ""
 }
 
-func (m *QueryValidatorAttributesRequest) GetPagination() *query.PageRequest {
+func (m *QueryAuditorAttributesRequest) GetPagination() *query.PageRequest {
 	if m != nil {
 		return m.Pagination
 	}
@@ -345,49 +345,49 @@ func init() {
 	proto.RegisterType((*QueryProviderRequest)(nil), "akash.audit.v1beta1.QueryProviderRequest")
 	proto.RegisterType((*QueryAllProvidersAttributesRequest)(nil), "akash.audit.v1beta1.QueryAllProvidersAttributesRequest")
 	proto.RegisterType((*QueryProviderAttributesRequest)(nil), "akash.audit.v1beta1.QueryProviderAttributesRequest")
-	proto.RegisterType((*QueryProviderValidatorRequest)(nil), "akash.audit.v1beta1.QueryProviderValidatorRequest")
-	proto.RegisterType((*QueryValidatorAttributesRequest)(nil), "akash.audit.v1beta1.QueryValidatorAttributesRequest")
+	proto.RegisterType((*QueryProviderAuditorRequest)(nil), "akash.audit.v1beta1.QueryProviderAuditorRequest")
+	proto.RegisterType((*QueryAuditorAttributesRequest)(nil), "akash.audit.v1beta1.QueryAuditorAttributesRequest")
 }
 
 func init() { proto.RegisterFile("akash/audit/v1beta1/query.proto", fileDescriptor_57c276f283e450c2) }
 
 var fileDescriptor_57c276f283e450c2 = []byte{
-	// 559 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x95, 0x31, 0x6f, 0xd3, 0x40,
-	0x14, 0xc7, 0x73, 0x41, 0x41, 0xf2, 0x75, 0xe2, 0x1a, 0x55, 0x51, 0x68, 0x9d, 0xc8, 0x12, 0x10,
-	0x15, 0xe4, 0x53, 0xdd, 0x4a, 0x08, 0x18, 0x50, 0x3a, 0x80, 0xc4, 0x80, 0xc0, 0x48, 0x0c, 0x6c,
-	0xe7, 0xe4, 0xe4, 0x5a, 0x75, 0x7d, 0xae, 0xef, 0x1c, 0xa8, 0x50, 0x19, 0x58, 0x58, 0x91, 0xf8,
-	0x16, 0x6c, 0x20, 0xbe, 0x00, 0x5b, 0xc7, 0x4a, 0x2c, 0x4c, 0x80, 0x12, 0x46, 0x3e, 0x04, 0xf2,
-	0xd9, 0xbe, 0xc4, 0xb5, 0x43, 0x0a, 0x61, 0xb3, 0xef, 0xde, 0xfb, 0xff, 0x7f, 0xef, 0xdd, 0x3b,
-	0x1b, 0x76, 0xc8, 0x3e, 0xe1, 0x7b, 0x98, 0xc4, 0x43, 0x4f, 0xe0, 0xd1, 0x96, 0x43, 0x05, 0xd9,
-	0xc2, 0x87, 0x31, 0x8d, 0x8e, 0xcc, 0x30, 0x62, 0x82, 0xa1, 0x55, 0x19, 0x60, 0xca, 0x00, 0x33,
-	0x0b, 0x68, 0x37, 0x5d, 0xe6, 0x32, 0xb9, 0x8f, 0x93, 0xa7, 0x34, 0xb4, 0xbd, 0xee, 0x32, 0xe6,
-	0xfa, 0x14, 0x93, 0xd0, 0xc3, 0x24, 0x08, 0x98, 0x20, 0xc2, 0x63, 0x01, 0xcf, 0x76, 0x37, 0x07,
-	0x8c, 0x1f, 0x30, 0x8e, 0x1d, 0xc2, 0x69, 0xea, 0xa0, 0xfc, 0x42, 0xe2, 0x7a, 0x81, 0x0c, 0xce,
-	0x62, 0x2b, 0xa9, 0x52, 0x04, 0x19, 0x60, 0x7c, 0x00, 0x70, 0xed, 0x71, 0xa2, 0xf1, 0x28, 0x62,
-	0x23, 0x6f, 0x48, 0x23, 0x6e, 0x53, 0x1e, 0xb2, 0x80, 0x53, 0xf4, 0x10, 0x6a, 0x61, 0xbe, 0xd8,
-	0x02, 0xdd, 0x0b, 0xbd, 0x15, 0x6b, 0xc3, 0xac, 0x28, 0xc2, 0xcc, 0x53, 0x77, 0x2f, 0x9d, 0x7c,
-	0xeb, 0xd4, 0xde, 0x7f, 0xef, 0x68, 0x53, 0xb1, 0xa9, 0x04, 0xba, 0x0f, 0xe1, 0x94, 0xaf, 0x55,
-	0xef, 0x82, 0xde, 0x8a, 0x75, 0xcd, 0x4c, 0x8b, 0x31, 0x93, 0x62, 0xcc, 0xb4, 0x5d, 0x4a, 0x96,
-	0xb8, 0x34, 0x87, 0xb1, 0x67, 0x52, 0x8d, 0x07, 0xb0, 0x59, 0x40, 0xb6, 0xe9, 0x61, 0x4c, 0xb9,
-	0x40, 0xeb, 0x50, 0x1b, 0x11, 0xdf, 0x1b, 0x12, 0xc1, 0xa2, 0x16, 0xe8, 0x82, 0x9e, 0x66, 0x4f,
-	0x17, 0x50, 0x13, 0x36, 0xd8, 0xf3, 0x80, 0x46, 0xd2, 0x59, 0xb3, 0xd3, 0x17, 0xc3, 0x87, 0x86,
-	0xd4, 0xea, 0xfb, 0xbe, 0x82, 0xee, 0x0b, 0x11, 0x79, 0x4e, 0x2c, 0x28, 0xcf, 0x95, 0xef, 0x15,
-	0xd0, 0x81, 0x44, 0xbf, 0xba, 0x10, 0x5d, 0xe6, 0x16, 0xc8, 0x5f, 0x41, 0xbd, 0x40, 0x5e, 0x76,
-	0x52, 0x94, 0x60, 0x86, 0xf2, 0x8c, 0x7f, 0xfd, 0x9f, 0xfd, 0x9f, 0xc0, 0x8d, 0x82, 0xff, 0xd3,
-	0xbc, 0x3b, 0xcb, 0xb4, 0xf0, 0x0d, 0x80, 0x1d, 0xa9, 0xaa, 0xd4, 0xca, 0x65, 0xfd, 0x59, 0xf7,
-	0x3f, 0x95, 0x67, 0xfd, 0x6a, 0xc0, 0x86, 0x24, 0x41, 0x1f, 0x01, 0x5c, 0xab, 0x3e, 0x52, 0x74,
-	0xb3, 0x72, 0x86, 0x17, 0x0f, 0x41, 0xfb, 0xfa, 0xfc, 0xc4, 0xd2, 0xe5, 0x31, 0xac, 0xd7, 0x5f,
-	0x7e, 0xbe, 0xab, 0xdf, 0x40, 0x9b, 0x78, 0xee, 0x0d, 0xc4, 0x44, 0x59, 0x60, 0xdf, 0xe3, 0x22,
-	0x81, 0x46, 0xe5, 0xc9, 0x40, 0xdb, 0x8b, 0x7d, 0x97, 0x84, 0xbd, 0x2d, 0x61, 0x77, 0x90, 0x75,
-	0x3e, 0xd8, 0x97, 0xf2, 0xdc, 0x8f, 0x53, 0xe8, 0xcf, 0x00, 0x5e, 0x2e, 0x8d, 0xd3, 0x0c, 0xbd,
-	0xb5, 0x18, 0xe4, 0xec, 0x14, 0xfe, 0x1d, 0x7c, 0x5f, 0xc2, 0xdf, 0x41, 0xb7, 0xce, 0x09, 0xaf,
-	0xc6, 0xee, 0x38, 0x2f, 0x04, 0x7d, 0x02, 0x70, 0xb5, 0x8a, 0x7d, 0x67, 0x3e, 0xc7, 0xfc, 0x59,
-	0x5f, 0xae, 0xf5, 0xf9, 0xe7, 0x52, 0x15, 0xa0, 0x70, 0x0b, 0xe4, 0x49, 0xeb, 0x77, 0xef, 0x9e,
-	0x8c, 0x75, 0x70, 0x3a, 0xd6, 0xc1, 0x8f, 0xb1, 0x0e, 0xde, 0x4e, 0xf4, 0xda, 0xe9, 0x44, 0xaf,
-	0x7d, 0x9d, 0xe8, 0xb5, 0x67, 0x57, 0x5c, 0x4f, 0xec, 0xc5, 0x8e, 0x39, 0x60, 0x07, 0x98, 0x8d,
-	0xa2, 0x81, 0xbf, 0x9f, 0xc9, 0xbf, 0xc8, 0x1a, 0x22, 0x8e, 0x42, 0xca, 0x9d, 0x8b, 0xf2, 0x1f,
-	0xb0, 0xfd, 0x3b, 0x00, 0x00, 0xff, 0xff, 0x4a, 0x1d, 0x29, 0x57, 0xbc, 0x06, 0x00, 0x00,
+	// 558 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x94, 0xc1, 0x6e, 0xd3, 0x30,
+	0x18, 0xc7, 0xeb, 0xa2, 0x82, 0xea, 0x9d, 0x66, 0xaa, 0xa9, 0x14, 0x96, 0x56, 0x91, 0x80, 0x6a,
+	0x20, 0x7b, 0xcb, 0x10, 0x13, 0x5c, 0xa6, 0xed, 0x30, 0x4e, 0x20, 0xc8, 0x91, 0x9b, 0xd3, 0x59,
+	0x59, 0xb4, 0x2c, 0xce, 0x62, 0xa7, 0x30, 0xa1, 0x21, 0xc1, 0x13, 0x20, 0xf1, 0x16, 0x88, 0x0b,
+	0x5c, 0x79, 0x81, 0x1d, 0x27, 0x71, 0xe1, 0x34, 0x50, 0xcb, 0x83, 0xa0, 0xd8, 0x49, 0xda, 0x2c,
+	0x2d, 0xed, 0x06, 0xb7, 0xa6, 0xf9, 0x7f, 0xff, 0xff, 0xef, 0xfb, 0xfc, 0xc5, 0xb0, 0x4d, 0xf7,
+	0xa9, 0xd8, 0x23, 0x34, 0xde, 0xf5, 0x24, 0xe9, 0xaf, 0x39, 0x4c, 0xd2, 0x35, 0x72, 0x18, 0xb3,
+	0xe8, 0x08, 0x87, 0x11, 0x97, 0x1c, 0x5d, 0x57, 0x02, 0xac, 0x04, 0x38, 0x15, 0xb4, 0x1a, 0x2e,
+	0x77, 0xb9, 0x7a, 0x4f, 0x92, 0x5f, 0x5a, 0xda, 0xba, 0xe5, 0x72, 0xee, 0xfa, 0x8c, 0xd0, 0xd0,
+	0x23, 0x34, 0x08, 0xb8, 0xa4, 0xd2, 0xe3, 0x81, 0x48, 0xdf, 0xae, 0xf4, 0xb8, 0x38, 0xe0, 0x82,
+	0x38, 0x54, 0x30, 0x9d, 0x90, 0xe7, 0x85, 0xd4, 0xf5, 0x02, 0x25, 0x4e, 0xb5, 0x13, 0xa9, 0x34,
+	0x82, 0x12, 0x98, 0x5f, 0x00, 0x5c, 0x7a, 0x91, 0x78, 0x3c, 0x8f, 0x78, 0xdf, 0xdb, 0x65, 0x91,
+	0xb0, 0x99, 0x08, 0x79, 0x20, 0x18, 0x7a, 0x06, 0xeb, 0x61, 0xf6, 0x67, 0x13, 0x74, 0xae, 0x74,
+	0x17, 0xac, 0x65, 0x3c, 0xa1, 0x09, 0x9c, 0x95, 0x6e, 0x2f, 0x9e, 0x9c, 0xb5, 0x2b, 0x9f, 0x7e,
+	0xb6, 0xeb, 0x23, 0xb3, 0x91, 0x05, 0x7a, 0x02, 0xe1, 0x88, 0xaf, 0x59, 0xed, 0x80, 0xee, 0x82,
+	0x75, 0x17, 0xeb, 0x66, 0x70, 0xd2, 0x0c, 0xd6, 0xe3, 0xca, 0x6d, 0xa9, 0xcb, 0x32, 0x18, 0x7b,
+	0xac, 0xd4, 0xdc, 0x81, 0x8d, 0x02, 0xb2, 0xcd, 0x0e, 0x63, 0x26, 0x24, 0x6a, 0xc2, 0x6b, 0x0a,
+	0x8c, 0x47, 0x4d, 0xd0, 0x01, 0xdd, 0xba, 0x9d, 0x3d, 0xa2, 0x06, 0xac, 0xf1, 0x57, 0x01, 0x8b,
+	0x54, 0x6a, 0xdd, 0xd6, 0x0f, 0xa6, 0x0f, 0x4d, 0xe5, 0xb3, 0xe5, 0xfb, 0x39, 0xf0, 0x96, 0x94,
+	0x91, 0xe7, 0xc4, 0x92, 0x89, 0xcc, 0x75, 0xa7, 0x80, 0x0d, 0x14, 0xf6, 0x9d, 0x99, 0xd8, 0xaa,
+	0xb6, 0x40, 0xfd, 0x16, 0x1a, 0x05, 0xea, 0x72, 0x52, 0x4e, 0x09, 0xc6, 0x28, 0xcf, 0xe5, 0x57,
+	0x2f, 0x9d, 0xff, 0x14, 0xde, 0x2c, 0xe6, 0xeb, 0xd9, 0x5c, 0x76, 0x78, 0xef, 0x00, 0x5c, 0xd6,
+	0xd3, 0xd3, 0xb2, 0x72, 0x3b, 0xd3, 0x1d, 0xff, 0x53, 0x4b, 0xd6, 0x59, 0x0d, 0xd6, 0x14, 0x03,
+	0xfa, 0x0a, 0xe0, 0xd2, 0xe4, 0x63, 0x44, 0x1b, 0x13, 0x77, 0x76, 0xf6, 0xc1, 0xb7, 0xee, 0x4d,
+	0x2f, 0x2c, 0x7d, 0x2c, 0xa6, 0xf5, 0xfe, 0xfb, 0xef, 0x8f, 0xd5, 0xfb, 0x68, 0x85, 0x4c, 0xfd,
+	0xe2, 0x08, 0xcd, 0x23, 0x88, 0xef, 0x09, 0x99, 0x40, 0xa3, 0xf2, 0x36, 0xa0, 0xf5, 0xd9, 0xb9,
+	0xff, 0x08, 0xfb, 0x58, 0xc1, 0x3e, 0x40, 0xd6, 0x7c, 0xb0, 0x6f, 0xd4, 0x89, 0x1f, 0x6b, 0xe8,
+	0x6f, 0x00, 0xde, 0x38, 0xb7, 0x42, 0x63, 0xec, 0xab, 0x73, 0xb0, 0x17, 0xf6, 0xee, 0x62, 0xe0,
+	0x9b, 0x0a, 0xfc, 0x11, 0xda, 0x98, 0x13, 0x3c, 0x5d, 0xb8, 0xe3, 0xac, 0x05, 0xf4, 0x19, 0xc0,
+	0xc5, 0x32, 0xb5, 0xf5, 0x97, 0x15, 0x99, 0xb2, 0xdd, 0x17, 0xe3, 0x7e, 0xa8, 0xb8, 0x57, 0x11,
+	0x4e, 0xb9, 0xb3, 0x4b, 0xb1, 0x88, 0xce, 0xa3, 0x31, 0xe2, 0x64, 0xd8, 0xdb, 0x9b, 0x27, 0x03,
+	0x03, 0x9c, 0x0e, 0x0c, 0xf0, 0x6b, 0x60, 0x80, 0x0f, 0x43, 0xa3, 0x72, 0x3a, 0x34, 0x2a, 0x3f,
+	0x86, 0x46, 0xe5, 0xe5, 0x6d, 0xd7, 0x93, 0x7b, 0xb1, 0x83, 0x7b, 0xfc, 0x80, 0xf0, 0x7e, 0xd4,
+	0xf3, 0xf7, 0x53, 0xeb, 0xd7, 0xe9, 0x18, 0xe4, 0x51, 0xc8, 0x84, 0x73, 0x55, 0xdd, 0xf2, 0xeb,
+	0x7f, 0x02, 0x00, 0x00, 0xff, 0xff, 0x56, 0x97, 0x43, 0x73, 0x9e, 0x06, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -404,20 +404,20 @@ const _ = grpc.SupportPackageIsVersion4
 type QueryClient interface {
 	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
 	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-	// ProviderValidatorAttributes queries all providers
+	// AllProvidersAttributes queries all providers
 	AllProvidersAttributes(ctx context.Context, in *QueryAllProvidersAttributesRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error)
 	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
 	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-	// ProviderValidatorAttributes queries all provider signed attributes
+	// ProviderAttributes queries all provider signed attributes
 	ProviderAttributes(ctx context.Context, in *QueryProviderAttributesRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error)
 	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
 	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-	// ProviderValidatorAttributes queries provider signed attributes by specific validator
-	ProviderValidatorAttributes(ctx context.Context, in *QueryProviderValidatorRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error)
+	// ProviderAuditorAttributes queries provider signed attributes by specific auditor
+	ProviderAuditorAttributes(ctx context.Context, in *QueryProviderAuditorRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error)
 	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
 	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-	// ValidatorAttributes queries all providers signed by this validator
-	ValidatorAttributes(ctx context.Context, in *QueryValidatorAttributesRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error)
+	// AuditorAttributes queries all providers signed by this auditor
+	AuditorAttributes(ctx context.Context, in *QueryAuditorAttributesRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error)
 }
 
 type queryClient struct {
@@ -446,18 +446,18 @@ func (c *queryClient) ProviderAttributes(ctx context.Context, in *QueryProviderA
 	return out, nil
 }
 
-func (c *queryClient) ProviderValidatorAttributes(ctx context.Context, in *QueryProviderValidatorRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error) {
+func (c *queryClient) ProviderAuditorAttributes(ctx context.Context, in *QueryProviderAuditorRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error) {
 	out := new(QueryProvidersResponse)
-	err := c.cc.Invoke(ctx, "/akash.audit.v1beta1.Query/ProviderValidatorAttributes", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/akash.audit.v1beta1.Query/ProviderAuditorAttributes", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) ValidatorAttributes(ctx context.Context, in *QueryValidatorAttributesRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error) {
+func (c *queryClient) AuditorAttributes(ctx context.Context, in *QueryAuditorAttributesRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error) {
 	out := new(QueryProvidersResponse)
-	err := c.cc.Invoke(ctx, "/akash.audit.v1beta1.Query/ValidatorAttributes", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/akash.audit.v1beta1.Query/AuditorAttributes", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -468,20 +468,20 @@ func (c *queryClient) ValidatorAttributes(ctx context.Context, in *QueryValidato
 type QueryServer interface {
 	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
 	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-	// ProviderValidatorAttributes queries all providers
+	// AllProvidersAttributes queries all providers
 	AllProvidersAttributes(context.Context, *QueryAllProvidersAttributesRequest) (*QueryProvidersResponse, error)
 	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
 	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-	// ProviderValidatorAttributes queries all provider signed attributes
+	// ProviderAttributes queries all provider signed attributes
 	ProviderAttributes(context.Context, *QueryProviderAttributesRequest) (*QueryProvidersResponse, error)
 	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
 	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-	// ProviderValidatorAttributes queries provider signed attributes by specific validator
-	ProviderValidatorAttributes(context.Context, *QueryProviderValidatorRequest) (*QueryProvidersResponse, error)
+	// ProviderAuditorAttributes queries provider signed attributes by specific auditor
+	ProviderAuditorAttributes(context.Context, *QueryProviderAuditorRequest) (*QueryProvidersResponse, error)
 	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
 	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-	// ValidatorAttributes queries all providers signed by this validator
-	ValidatorAttributes(context.Context, *QueryValidatorAttributesRequest) (*QueryProvidersResponse, error)
+	// AuditorAttributes queries all providers signed by this auditor
+	AuditorAttributes(context.Context, *QueryAuditorAttributesRequest) (*QueryProvidersResponse, error)
 }
 
 // UnimplementedQueryServer can be embedded to have forward compatible implementations.
@@ -494,11 +494,11 @@ func (*UnimplementedQueryServer) AllProvidersAttributes(ctx context.Context, req
 func (*UnimplementedQueryServer) ProviderAttributes(ctx context.Context, req *QueryProviderAttributesRequest) (*QueryProvidersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ProviderAttributes not implemented")
 }
-func (*UnimplementedQueryServer) ProviderValidatorAttributes(ctx context.Context, req *QueryProviderValidatorRequest) (*QueryProvidersResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ProviderValidatorAttributes not implemented")
+func (*UnimplementedQueryServer) ProviderAuditorAttributes(ctx context.Context, req *QueryProviderAuditorRequest) (*QueryProvidersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProviderAuditorAttributes not implemented")
 }
-func (*UnimplementedQueryServer) ValidatorAttributes(ctx context.Context, req *QueryValidatorAttributesRequest) (*QueryProvidersResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ValidatorAttributes not implemented")
+func (*UnimplementedQueryServer) AuditorAttributes(ctx context.Context, req *QueryAuditorAttributesRequest) (*QueryProvidersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuditorAttributes not implemented")
 }
 
 func RegisterQueryServer(s grpc1.Server, srv QueryServer) {
@@ -541,38 +541,38 @@ func _Query_ProviderAttributes_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_ProviderValidatorAttributes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryProviderValidatorRequest)
+func _Query_ProviderAuditorAttributes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryProviderAuditorRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).ProviderValidatorAttributes(ctx, in)
+		return srv.(QueryServer).ProviderAuditorAttributes(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/akash.audit.v1beta1.Query/ProviderValidatorAttributes",
+		FullMethod: "/akash.audit.v1beta1.Query/ProviderAuditorAttributes",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).ProviderValidatorAttributes(ctx, req.(*QueryProviderValidatorRequest))
+		return srv.(QueryServer).ProviderAuditorAttributes(ctx, req.(*QueryProviderAuditorRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_ValidatorAttributes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryValidatorAttributesRequest)
+func _Query_AuditorAttributes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryAuditorAttributesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).ValidatorAttributes(ctx, in)
+		return srv.(QueryServer).AuditorAttributes(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/akash.audit.v1beta1.Query/ValidatorAttributes",
+		FullMethod: "/akash.audit.v1beta1.Query/AuditorAttributes",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).ValidatorAttributes(ctx, req.(*QueryValidatorAttributesRequest))
+		return srv.(QueryServer).AuditorAttributes(ctx, req.(*QueryAuditorAttributesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -590,12 +590,12 @@ var _Query_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Query_ProviderAttributes_Handler,
 		},
 		{
-			MethodName: "ProviderValidatorAttributes",
-			Handler:    _Query_ProviderValidatorAttributes_Handler,
+			MethodName: "ProviderAuditorAttributes",
+			Handler:    _Query_ProviderAuditorAttributes_Handler,
 		},
 		{
-			MethodName: "ValidatorAttributes",
-			Handler:    _Query_ValidatorAttributes_Handler,
+			MethodName: "AuditorAttributes",
+			Handler:    _Query_AuditorAttributes_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -678,10 +678,10 @@ func (m *QueryProviderRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.Validator) > 0 {
-		i -= len(m.Validator)
-		copy(dAtA[i:], m.Validator)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Validator)))
+	if len(m.Auditor) > 0 {
+		i -= len(m.Auditor)
+		copy(dAtA[i:], m.Auditor)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.Auditor)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -765,7 +765,7 @@ func (m *QueryProviderAttributesRequest) MarshalToSizedBuffer(dAtA []byte) (int,
 	return len(dAtA) - i, nil
 }
 
-func (m *QueryProviderValidatorRequest) Marshal() (dAtA []byte, err error) {
+func (m *QueryProviderAuditorRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -775,12 +775,12 @@ func (m *QueryProviderValidatorRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *QueryProviderValidatorRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *QueryProviderAuditorRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *QueryProviderValidatorRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *QueryProviderAuditorRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -792,17 +792,17 @@ func (m *QueryProviderValidatorRequest) MarshalToSizedBuffer(dAtA []byte) (int, 
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.Validator) > 0 {
-		i -= len(m.Validator)
-		copy(dAtA[i:], m.Validator)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Validator)))
+	if len(m.Auditor) > 0 {
+		i -= len(m.Auditor)
+		copy(dAtA[i:], m.Auditor)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.Auditor)))
 		i--
 		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
 
-func (m *QueryValidatorAttributesRequest) Marshal() (dAtA []byte, err error) {
+func (m *QueryAuditorAttributesRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -812,12 +812,12 @@ func (m *QueryValidatorAttributesRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *QueryValidatorAttributesRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *QueryAuditorAttributesRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *QueryValidatorAttributesRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *QueryAuditorAttributesRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -834,10 +834,10 @@ func (m *QueryValidatorAttributesRequest) MarshalToSizedBuffer(dAtA []byte) (int
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.Validator) > 0 {
-		i -= len(m.Validator)
-		copy(dAtA[i:], m.Validator)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Validator)))
+	if len(m.Auditor) > 0 {
+		i -= len(m.Auditor)
+		copy(dAtA[i:], m.Auditor)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.Auditor)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -880,7 +880,7 @@ func (m *QueryProviderRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Validator)
+	l = len(m.Auditor)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
@@ -921,13 +921,13 @@ func (m *QueryProviderAttributesRequest) Size() (n int) {
 	return n
 }
 
-func (m *QueryProviderValidatorRequest) Size() (n int) {
+func (m *QueryProviderAuditorRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.Validator)
+	l = len(m.Auditor)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
@@ -938,13 +938,13 @@ func (m *QueryProviderValidatorRequest) Size() (n int) {
 	return n
 }
 
-func (m *QueryValidatorAttributesRequest) Size() (n int) {
+func (m *QueryAuditorAttributesRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.Validator)
+	l = len(m.Auditor)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
@@ -1115,7 +1115,7 @@ func (m *QueryProviderRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Validator", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Auditor", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1143,7 +1143,7 @@ func (m *QueryProviderRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Validator = string(dAtA[iNdEx:postIndex])
+			m.Auditor = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -1411,7 +1411,7 @@ func (m *QueryProviderAttributesRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *QueryProviderValidatorRequest) Unmarshal(dAtA []byte) error {
+func (m *QueryProviderAuditorRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1434,15 +1434,15 @@ func (m *QueryProviderValidatorRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: QueryProviderValidatorRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: QueryProviderAuditorRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryProviderValidatorRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: QueryProviderAuditorRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Validator", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Auditor", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1470,7 +1470,7 @@ func (m *QueryProviderValidatorRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Validator = string(dAtA[iNdEx:postIndex])
+			m.Auditor = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -1528,7 +1528,7 @@ func (m *QueryProviderValidatorRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *QueryValidatorAttributesRequest) Unmarshal(dAtA []byte) error {
+func (m *QueryAuditorAttributesRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1551,15 +1551,15 @@ func (m *QueryValidatorAttributesRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: QueryValidatorAttributesRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: QueryAuditorAttributesRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryValidatorAttributesRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: QueryAuditorAttributesRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Validator", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Auditor", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1587,7 +1587,7 @@ func (m *QueryValidatorAttributesRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Validator = string(dAtA[iNdEx:postIndex])
+			m.Auditor = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {

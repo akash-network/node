@@ -210,17 +210,17 @@ func (c *qclient) ProviderAttributes(ctx context.Context, in *atypes.QueryProvid
 }
 
 // ProviderValidatorAttributes queries provider signed attributes by specific validator
-func (c *qclient) ProviderValidatorAttributes(ctx context.Context, in *atypes.QueryProviderValidatorRequest, opts ...grpc.CallOption) (*atypes.QueryProvidersResponse, error) {
+func (c *qclient) ProviderAuditorAttributes(ctx context.Context, in *atypes.QueryProviderAuditorRequest, opts ...grpc.CallOption) (*atypes.QueryProvidersResponse, error) {
 	if c.aclient == nil {
 		return &atypes.QueryProvidersResponse{}, ErrClientNotFound
 	}
-	return c.aclient.ProviderValidatorAttributes(ctx, in, opts...)
+	return c.aclient.ProviderAuditorAttributes(ctx, in, opts...)
 }
 
 // ValidatorAttributes queries all providers signed by this validator
-func (c *qclient) ValidatorAttributes(ctx context.Context, in *atypes.QueryValidatorAttributesRequest, opts ...grpc.CallOption) (*atypes.QueryProvidersResponse, error) {
+func (c *qclient) AuditorAttributes(ctx context.Context, in *atypes.QueryAuditorAttributesRequest, opts ...grpc.CallOption) (*atypes.QueryProvidersResponse, error) {
 	if c.aclient == nil {
 		return &atypes.QueryProvidersResponse{}, ErrClientNotFound
 	}
-	return c.aclient.ValidatorAttributes(ctx, in, opts...)
+	return c.aclient.AuditorAttributes(ctx, in, opts...)
 }

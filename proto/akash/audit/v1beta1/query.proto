@@ -13,30 +13,30 @@ option go_package = "github.com/ovrclk/akash/x/audit/types";
 service Query {
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-  // ProviderValidatorAttributes queries all providers
+  // AllProvidersAttributes queries all providers
   rpc AllProvidersAttributes(QueryAllProvidersAttributesRequest) returns (QueryProvidersResponse) {
     option (google.api.http).get = "/akash/audit/v1beta1/audit/attributes/list";
   }
 
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-  // ProviderValidatorAttributes queries all provider signed attributes
+  // ProviderAttributes queries all provider signed attributes
   rpc ProviderAttributes(QueryProviderAttributesRequest) returns (QueryProvidersResponse) {
     option (google.api.http).get = "/akash/audit/v1beta1/audit/attributes/{owner}/list";
   }
 
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-  // ProviderValidatorAttributes queries provider signed attributes by specific validator
-  rpc ProviderValidatorAttributes(QueryProviderValidatorRequest) returns (QueryProvidersResponse) {
-    option (google.api.http).get = "/akash/audit/v1beta1/audit/attributes/{validator}/{owner}";
+  // ProviderAuditorAttributes queries provider signed attributes by specific auditor
+  rpc ProviderAuditorAttributes(QueryProviderAuditorRequest) returns (QueryProvidersResponse) {
+    option (google.api.http).get = "/akash/audit/v1beta1/audit/attributes/{auditor}/{owner}";
   }
 
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-  // ValidatorAttributes queries all providers signed by this validator
-  rpc ValidatorAttributes(QueryValidatorAttributesRequest) returns (QueryProvidersResponse) {
-    option (google.api.http).get = "/akash/provider/v1beta1/validator/{validator}/list";
+  // AuditorAttributes queries all providers signed by this auditor
+  rpc AuditorAttributes(QueryAuditorAttributesRequest) returns (QueryProvidersResponse) {
+    option (google.api.http).get = "/akash/provider/v1beta1/auditor/{auditor}/list";
   }
 }
 
@@ -49,8 +49,8 @@ message QueryProvidersResponse {
 
 // QueryProviderRequest is request type for the Query/Provider RPC method
 message QueryProviderRequest {
-  string validator = 1;
-  string owner     = 2;
+  string auditor = 1;
+  string owner   = 2;
 }
 
 // QueryAllProvidersAttributesRequest is request type for the Query/All Providers RPC method
@@ -64,14 +64,14 @@ message QueryProviderAttributesRequest {
   cosmos.base.query.v1beta1.PageRequest pagination = 2;
 }
 
-// QueryProviderValidatorRequest is request type for the Query/Providers RPC method
-message QueryProviderValidatorRequest {
-  string validator = 1;
-  string owner     = 2;
+// QueryProviderAuditorRequest is request type for the Query/Providers RPC method
+message QueryProviderAuditorRequest {
+  string auditor = 1;
+  string owner   = 2;
 }
 
-// QueryValidatorAttributesRequest is request type for the Query/Providers RPC method
-message QueryValidatorAttributesRequest {
-  string                                validator  = 1;
+// QueryAuditorAttributesRequest is request type for the Query/Providers RPC method
+message QueryAuditorAttributesRequest {
+  string                                auditor    = 1;
   cosmos.base.query.v1beta1.PageRequest pagination = 2;
 }
