@@ -28,8 +28,8 @@ func (k Keeper) Codec() codec.BinaryMarshaler {
 	return k.cdc
 }
 
-// GetProviderByValidator returns a provider with given validator and owner id
-func (k Keeper) GetProviderByValidator(ctx sdk.Context, id types.ProviderID) (types.Provider, bool) {
+// GetProviderByAuditor returns a provider with given auditor and owner id
+func (k Keeper) GetProviderByAuditor(ctx sdk.Context, id types.ProviderID) (types.Provider, bool) {
 	store := ctx.KVStore(k.skey)
 
 	buf := store.Get(providerKey(id))
@@ -43,7 +43,7 @@ func (k Keeper) GetProviderByValidator(ctx sdk.Context, id types.ProviderID) (ty
 	return val, true
 }
 
-// GetProviderAttributes returns a provider with given validator and owner id's
+// GetProviderAttributes returns a provider with given auditor and owner id's
 func (k Keeper) GetProviderAttributes(ctx sdk.Context, id sdk.Address) (types.Providers, bool) {
 	store := ctx.KVStore(k.skey)
 
@@ -76,7 +76,7 @@ func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.Provi
 
 	prov := types.Provider{
 		Owner:      id.Owner.String(),
-		Validator:  id.Validator.String(),
+		Auditor:    id.Auditor.String(),
 		Attributes: attr,
 	}
 
@@ -128,8 +128,8 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 		store.Delete(key)
 	} else {
 		prov := types.Provider{
-			Owner:     id.Owner.String(),
-			Validator: id.Validator.String(),
+			Owner:   id.Owner.String(),
+			Auditor: id.Auditor.String(),
 		}
 
 		tmp := types.Provider{}
@@ -143,9 +143,9 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 
 		for _, entry := range keys {
 			if _, exists := kv[entry]; !exists {
-				return errors.Errorf("trying to delete non-existing attribute \"%s\" for validator/provider \"%s/%s\"",
+				return errors.Errorf("trying to delete non-existing attribute \"%s\" for auditor/provider \"%s/%s\"",
 					entry,
-					prov.Validator,
+					prov.Auditor,
 					prov.Owner)
 			}
 

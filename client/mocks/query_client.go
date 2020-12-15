@@ -78,6 +78,36 @@ func (_m *QueryClient) AllProvidersAttributes(ctx context.Context, in *audittype
 	return r0, r1
 }
 
+// AuditorAttributes provides a mock function with given fields: ctx, in, opts
+func (_m *QueryClient) AuditorAttributes(ctx context.Context, in *audittypes.QueryAuditorAttributesRequest, opts ...grpc.CallOption) (*audittypes.QueryProvidersResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, in)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *audittypes.QueryProvidersResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *audittypes.QueryAuditorAttributesRequest, ...grpc.CallOption) *audittypes.QueryProvidersResponse); ok {
+		r0 = rf(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*audittypes.QueryProvidersResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *audittypes.QueryAuditorAttributesRequest, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Bid provides a mock function with given fields: ctx, in, opts
 func (_m *QueryClient) Bid(ctx context.Context, in *markettypes.QueryBidRequest, opts ...grpc.CallOption) (*markettypes.QueryBidResponse, error) {
 	_va := make([]interface{}, len(opts))
@@ -408,8 +438,8 @@ func (_m *QueryClient) ProviderAttributes(ctx context.Context, in *audittypes.Qu
 	return r0, r1
 }
 
-// ProviderValidatorAttributes provides a mock function with given fields: ctx, in, opts
-func (_m *QueryClient) ProviderValidatorAttributes(ctx context.Context, in *audittypes.QueryProviderValidatorRequest, opts ...grpc.CallOption) (*audittypes.QueryProvidersResponse, error) {
+// ProviderAuditorAttributes provides a mock function with given fields: ctx, in, opts
+func (_m *QueryClient) ProviderAuditorAttributes(ctx context.Context, in *audittypes.QueryProviderAuditorRequest, opts ...grpc.CallOption) (*audittypes.QueryProvidersResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -420,7 +450,7 @@ func (_m *QueryClient) ProviderValidatorAttributes(ctx context.Context, in *audi
 	ret := _m.Called(_ca...)
 
 	var r0 *audittypes.QueryProvidersResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *audittypes.QueryProviderValidatorRequest, ...grpc.CallOption) *audittypes.QueryProvidersResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *audittypes.QueryProviderAuditorRequest, ...grpc.CallOption) *audittypes.QueryProvidersResponse); ok {
 		r0 = rf(ctx, in, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -429,7 +459,7 @@ func (_m *QueryClient) ProviderValidatorAttributes(ctx context.Context, in *audi
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *audittypes.QueryProviderValidatorRequest, ...grpc.CallOption) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *audittypes.QueryProviderAuditorRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -460,36 +490,6 @@ func (_m *QueryClient) Providers(ctx context.Context, in *providertypes.QueryPro
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *providertypes.QueryProvidersRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// ValidatorAttributes provides a mock function with given fields: ctx, in, opts
-func (_m *QueryClient) ValidatorAttributes(ctx context.Context, in *audittypes.QueryValidatorAttributesRequest, opts ...grpc.CallOption) (*audittypes.QueryProvidersResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
-
-	var r0 *audittypes.QueryProvidersResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *audittypes.QueryValidatorAttributesRequest, ...grpc.CallOption) *audittypes.QueryProvidersResponse); ok {
-		r0 = rf(ctx, in, opts...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*audittypes.QueryProvidersResponse)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *audittypes.QueryValidatorAttributesRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)

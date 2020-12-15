@@ -49,7 +49,7 @@ func TestGRPCQueryProvider(t *testing.T) {
 	err := suite.keeper.CreateOrUpdateProviderAttributes(suite.ctx, id, provider.Attributes)
 	require.NoError(t, err)
 
-	var req *types.QueryProviderValidatorRequest
+	var req *types.QueryProviderAuditorRequest
 	var expProvider types.Provider
 
 	testCases := []struct {
@@ -60,16 +60,16 @@ func TestGRPCQueryProvider(t *testing.T) {
 		{
 			"empty request",
 			func() {
-				req = &types.QueryProviderValidatorRequest{}
+				req = &types.QueryProviderAuditorRequest{}
 			},
 			false,
 		},
 		{
 			"provider not found",
 			func() {
-				req = &types.QueryProviderValidatorRequest{
-					Owner:     testutil.AccAddress(t).String(),
-					Validator: testutil.AccAddress(t).String(),
+				req = &types.QueryProviderAuditorRequest{
+					Owner:   testutil.AccAddress(t).String(),
+					Auditor: testutil.AccAddress(t).String(),
 				}
 			},
 			false,
@@ -77,9 +77,9 @@ func TestGRPCQueryProvider(t *testing.T) {
 		{
 			"success",
 			func() {
-				req = &types.QueryProviderValidatorRequest{
-					Validator: provider.Validator,
-					Owner:     provider.Owner,
+				req = &types.QueryProviderAuditorRequest{
+					Auditor: provider.Auditor,
+					Owner:   provider.Owner,
 				}
 				expProvider = provider
 			},
@@ -93,7 +93,7 @@ func TestGRPCQueryProvider(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
 
-			res, err := suite.queryClient.ProviderValidatorAttributes(ctx, req)
+			res, err := suite.queryClient.ProviderAuditorAttributes(ctx, req)
 
 			if tc.expPass {
 				require.NoError(t, err)

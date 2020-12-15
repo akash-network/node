@@ -170,7 +170,7 @@ func (am AppModule) RegisterQueryService(server grpc.Server) {
 // BeginBlock performs no-op
 func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 
-// EndBlock returns the end blocker for the audit module. It returns no validator
+// EndBlock returns the end blocker for the audit module. It returns no auditor
 // updates.
 func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 	return []abci.ValidatorUpdate{}

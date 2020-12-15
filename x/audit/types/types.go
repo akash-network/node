@@ -7,8 +7,8 @@ import (
 )
 
 type ProviderID struct {
-	Owner     sdk.Address
-	Validator sdk.Address
+	Owner   sdk.Address
+	Auditor sdk.Address
 }
 
 // Providers is the collection of Provider

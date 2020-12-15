@@ -191,8 +191,8 @@ func TestGroupPlacementRequirementsSignerAllOf(t *testing.T) {
 		OrderBidDuration: types.DefaultOrderBiddingDuration,
 	}
 
-	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "validator1")
-	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "validator2")
+	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "auditor1")
+	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "auditor2")
 
 	providerAttr := []atypes.Provider{
 		{
@@ -205,7 +205,7 @@ func TestGroupPlacementRequirementsSignerAllOf(t *testing.T) {
 
 	providerAttr = append(providerAttr, atypes.Provider{
 		Owner:      "test",
-		Validator:  "validator2",
+		Auditor:    "auditor2",
 		Attributes: group.Requirements.Attributes,
 	})
 
@@ -213,7 +213,7 @@ func TestGroupPlacementRequirementsSignerAllOf(t *testing.T) {
 
 	providerAttr = append(providerAttr, atypes.Provider{
 		Owner:      "test",
-		Validator:  "validator1",
+		Auditor:    "auditor1",
 		Attributes: group.Requirements.Attributes,
 	})
 
@@ -228,7 +228,7 @@ func TestGroupPlacementRequirementsSignerAnyOf(t *testing.T) {
 		OrderBidDuration: types.DefaultOrderBiddingDuration,
 	}
 
-	group.Requirements.SignedBy.AnyOf = append(group.Requirements.SignedBy.AnyOf, "validator1")
+	group.Requirements.SignedBy.AnyOf = append(group.Requirements.SignedBy.AnyOf, "auditor1")
 
 	providerAttr := []atypes.Provider{
 		{
@@ -241,7 +241,7 @@ func TestGroupPlacementRequirementsSignerAnyOf(t *testing.T) {
 
 	providerAttr = append(providerAttr, atypes.Provider{
 		Owner:      "test",
-		Validator:  "validator2",
+		Auditor:    "auditor2",
 		Attributes: group.Requirements.Attributes,
 	})
 
@@ -249,7 +249,7 @@ func TestGroupPlacementRequirementsSignerAnyOf(t *testing.T) {
 
 	providerAttr = append(providerAttr, atypes.Provider{
 		Owner:      "test",
-		Validator:  "validator1",
+		Auditor:    "auditor1",
 		Attributes: group.Requirements.Attributes,
 	})
 
@@ -264,11 +264,11 @@ func TestGroupPlacementRequirementsSignerAllOfAnyOf(t *testing.T) {
 		OrderBidDuration: types.DefaultOrderBiddingDuration,
 	}
 
-	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "validator1")
-	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "validator2")
+	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "auditor1")
+	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "auditor2")
 
-	group.Requirements.SignedBy.AnyOf = append(group.Requirements.SignedBy.AnyOf, "validator3")
-	group.Requirements.SignedBy.AnyOf = append(group.Requirements.SignedBy.AnyOf, "validator4")
+	group.Requirements.SignedBy.AnyOf = append(group.Requirements.SignedBy.AnyOf, "auditor3")
+	group.Requirements.SignedBy.AnyOf = append(group.Requirements.SignedBy.AnyOf, "auditor4")
 
 	providerAttr := []atypes.Provider{
 		{
@@ -277,12 +277,12 @@ func TestGroupPlacementRequirementsSignerAllOfAnyOf(t *testing.T) {
 		},
 		{
 			Owner:      "test",
-			Validator:  "validator3",
+			Auditor:    "auditor3",
 			Attributes: group.Requirements.Attributes,
 		},
 		{
 			Owner:      "test",
-			Validator:  "validator4",
+			Auditor:    "auditor4",
 			Attributes: group.Requirements.Attributes,
 		},
 	}
@@ -291,7 +291,7 @@ func TestGroupPlacementRequirementsSignerAllOfAnyOf(t *testing.T) {
 
 	providerAttr = append(providerAttr, atypes.Provider{
 		Owner:      "test",
-		Validator:  "validator2",
+		Auditor:    "auditor2",
 		Attributes: group.Requirements.Attributes,
 	})
 
@@ -299,7 +299,7 @@ func TestGroupPlacementRequirementsSignerAllOfAnyOf(t *testing.T) {
 
 	providerAttr = append(providerAttr, atypes.Provider{
 		Owner:      "test",
-		Validator:  "validator1",
+		Auditor:    "auditor1",
 		Attributes: group.Requirements.Attributes,
 	})
 

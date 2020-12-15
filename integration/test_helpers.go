@@ -92,9 +92,9 @@ func queryApp(t *testing.T, appURL string, limit int) {
 
 // appEnv asserts that there is an addressable docker container for KinD
 func appEnv(t *testing.T) (string, string) {
-	host := os.Getenv("KIND_APP_IP")
+	host := os.Getenv("KUBE_INGRESS_IP")
 	require.NotEmpty(t, host)
-	appPort := os.Getenv("KIND_APP_PORT")
+	appPort := os.Getenv("KUBE_INGRESS_PORT")
 	require.NotEmpty(t, appPort)
 	return host, appPort
 }

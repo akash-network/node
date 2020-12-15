@@ -15,11 +15,11 @@ service Msg {
   rpc DeleteProviderAttributes(MsgDeleteProviderAttributes) returns (MsgDeleteProviderAttributesResponse);
 }
 
-// Provider stores owner validator and attributes details
+// Provider stores owner auditor and attributes details
 message Provider {
   string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
 
-  string validator = 2 [(gogoproto.jsontag) = "validator", (gogoproto.moretags) = "yaml:\"validator\""];
+  string auditor = 2 [(gogoproto.jsontag) = "auditor", (gogoproto.moretags) = "yaml:\"auditor\""];
 
   repeated akash.base.v1beta1.Attribute attributes = 4 [
     (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Attributes",
@@ -36,7 +36,7 @@ message AuditedAttributes {
 
   string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
 
-  string validator = 2 [(gogoproto.jsontag) = "validator", (gogoproto.moretags) = "yaml:\"validator\""];
+  string auditor = 2 [(gogoproto.jsontag) = "auditor", (gogoproto.moretags) = "yaml:\"auditor\""];
 
   repeated akash.base.v1beta1.Attribute attributes = 3 [
     (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Attributes",
@@ -60,7 +60,7 @@ message AttributesFilters {
   option (gogoproto.equal)            = false;
   option (gogoproto.goproto_stringer) = true;
 
-  repeated string validators = 1 [(gogoproto.jsontag) = "validators", (gogoproto.moretags) = "yaml:\"validators\""];
+  repeated string auditors = 1 [(gogoproto.jsontag) = "auditors", (gogoproto.moretags) = "yaml:\"auditors\""];
 
   repeated string owners = 2 [(gogoproto.jsontag) = "owners", (gogoproto.moretags) = "yaml:\"owners\""];
 }
@@ -71,7 +71,7 @@ message MsgSignProviderAttributes {
 
   string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
 
-  string validator = 2 [(gogoproto.jsontag) = "validator", (gogoproto.moretags) = "yaml:\"auditor\""];
+  string auditor = 2 [(gogoproto.jsontag) = "auditor", (gogoproto.moretags) = "yaml:\"auditor\""];
 
   repeated akash.base.v1beta1.Attribute attributes = 3 [
     (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Attributes",
@@ -90,13 +90,9 @@ message MsgDeleteProviderAttributes {
 
   string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
 
-  string validator = 2 [(gogoproto.jsontag) = "validator", (gogoproto.moretags) = "yaml:\"auditor\""];
+  string auditor = 2 [(gogoproto.jsontag) = "auditor", (gogoproto.moretags) = "yaml:\"auditor\""];
 
-  repeated string keys = 3 [
-    (gogoproto.nullable)     = false,
-    (gogoproto.jsontag)      = "keys",
-    (gogoproto.moretags)     = "yaml:\"keys\""
-  ];
+  repeated string keys = 3 [(gogoproto.jsontag) = "keys", (gogoproto.moretags) = "yaml:\"keys\""];
 }
 
 // MsgDeleteProviderAttributesResponse defines the Msg/ProviderAttributes response type.

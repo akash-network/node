@@ -66,7 +66,7 @@ func cmdGetProviders() *cobra.Command {
 
 func cmdGetProvider() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "get [owner address] [validator address]",
+		Use:   "get [owner address] [auditor address]",
 		Short: "Query provider",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -90,15 +90,15 @@ func cmdGetProvider() *cobra.Command {
 					},
 				)
 			} else {
-				var validator sdk.AccAddress
-				if validator, err = sdk.AccAddressFromBech32(args[1]); err != nil {
+				var auditor sdk.AccAddress
+				if auditor, err = sdk.AccAddressFromBech32(args[1]); err != nil {
 					return err
 				}
 
-				res, err = queryClient.ProviderValidatorAttributes(context.Background(),
-					&types.QueryProviderValidatorRequest{
-						Validator: validator.String(),
-						Owner:     owner.String(),
+				res, err = queryClient.ProviderAuditorAttributes(context.Background(),
+					&types.QueryProviderAuditorRequest{
+						Auditor: auditor.String(),
+						Owner:   owner.String(),
 					},
 				)
 			}
