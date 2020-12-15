@@ -87,7 +87,7 @@ To become a contributor, please see the guide on [contributing](CONTRIBUTING.md)
 
 ### Dependencies
 
-Akash is developed and tested with [golang 1.13.1+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
+Akash is developed and tested with [golang 1.15.6+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
 
  Most golang libraries will be installed via [`go modules`](https://github.com/golang/go/wiki/Modules),
  however the following packages:
