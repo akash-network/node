@@ -33,10 +33,9 @@ func simpleDeployment(t *testing.T) []dtypes.Group {
 		GroupID: gid,
 		State:   0,
 		GroupSpec: dtypes.GroupSpec{
-			Name:             nameOfTestGroup,
-			Requirements:     akashtypes.PlacementRequirements{},
-			Resources:        resources,
-			OrderBidDuration: 0,
+			Name:         nameOfTestGroup,
+			Requirements: akashtypes.PlacementRequirements{},
+			Resources:    resources,
 		},
 	}
 

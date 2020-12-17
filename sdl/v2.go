@@ -1,8 +1,9 @@
 package sdl
 
 import (
-	"github.com/pkg/errors"
 	"sort"
+
+	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/manifest"
 	providerUtil "github.com/ovrclk/akash/provider/cluster/util"
@@ -148,9 +149,6 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 
 			resources.Resources.Endpoints = endpoints
 			group.Resources = append(group.Resources, resources)
-
-			// TODO: Make a parameter to configure the duration of orders being bid on
-			group.OrderBidDuration = dtypes.DefaultOrderBiddingDuration
 		}
 	}
 

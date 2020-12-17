@@ -1,8 +1,11 @@
 package provider
 
 import (
-	"github.com/ovrclk/akash/provider/bidengine"
 	"time"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/provider/bidengine"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 type Config struct {
@@ -11,7 +14,8 @@ type Config struct {
 	ClusterExternalPortQuantity     uint
 	InventoryResourcePollPeriod     time.Duration
 	InventoryResourceDebugFrequency uint
-	BPS                             bidengine.BidPricingStrategy
+	BidPricingStrategy              bidengine.BidPricingStrategy
+	BidDeposit                      sdk.Coin
 	CPUCommitLevel                  float64
 	MemoryCommitLevel               float64
 	StorageCommitLevel              float64
@@ -22,5 +26,6 @@ type Config struct {
 func NewDefaultConfig() Config {
 	return Config{
 		ClusterWaitReadyDuration: time.Second * 5,
+		BidDeposit:               mtypes.DefaultBidMinDeposit,
 	}
 }

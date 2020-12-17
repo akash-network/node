@@ -52,6 +52,7 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 					Deployment: deployment,
 					Groups:     k.GetGroups(ctx, deployment.ID()),
 				}
+
 				deployments = append(deployments, value)
 			}
 

@@ -28,6 +28,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	"golang.org/x/sync/errgroup"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/events"
@@ -56,6 +57,7 @@ const (
 	FlagBidPriceScriptPath               = "bid-price-script-path"
 	FlagBidPriceScriptProcessLimit       = "bid-price-script-process-limit"
 	FlagBidPriceScriptTimeout            = "bid-price-script-process-timeout"
+	FlagBidDeposit                       = "bid-deposit"
 	FlagClusterPublicHostname            = "cluster-public-hostname"
 	FlagClusterNodePortQuantity          = "cluster-node-port-quantity"
 	FlagClusterWaitReadyDuration         = "cluster-wait-ready-duration"
@@ -95,6 +97,8 @@ func RunCmd() *cobra.Command {
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
+
+	cfg := provider.NewDefaultConfig()
 
 	cmd.Flags().Bool(FlagClusterK8s, false, "Use Kubernetes cluster")
 	if err := viper.BindPFlag(FlagClusterK8s, cmd.Flags().Lookup(FlagClusterK8s)); err != nil {
@@ -148,6 +152,11 @@ func RunCmd() *cobra.Command {
 
 	cmd.Flags().Duration(FlagBidPriceScriptTimeout, time.Second*10, "execution timelimit for bid pricing as a duration")
 	if err := viper.BindPFlag(FlagBidPriceScriptTimeout, cmd.Flags().Lookup(FlagBidPriceScriptTimeout)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().String(FlagBidDeposit, cfg.BidDeposit.String(), "Bid deposit amount")
+	if err := viper.BindPFlag(FlagBidDeposit, cmd.Flags().Lookup(FlagBidDeposit)); err != nil {
 		return nil
 	}
 
@@ -410,11 +419,17 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	config.BlockedHostnames = blockedHostnames
 	config.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
 
-	config.BPS = pricing
+	config.BidPricingStrategy = pricing
 	service, err := provider.NewService(ctx, session, bus, cclient, config)
 	if err != nil {
 		return err
 	}
+
+	bidDeposit, err := sdk.ParseCoinNormalized(viper.GetString(FlagBidDeposit))
+	if err != nil {
+		return err
+	}
+	config.BidDeposit = bidDeposit
 
 	gateway, err := gwrest.NewServer(
 		ctx,

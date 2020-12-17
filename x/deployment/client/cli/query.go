@@ -96,7 +96,7 @@ func cmdDeployment() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintProto(&res.Deployment)
+			return clientCtx.PrintProto(res)
 		},
 	}
 

@@ -3,9 +3,6 @@
 package integration
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -13,6 +10,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -94,9 +95,8 @@ func queryApp(t *testing.T, appURL string, limit int) {
 	queryAppWithHostname(t, appURL, limit, "test.localhost")
 }
 
-
 func queryAppWithHostname(t *testing.T, appURL string, limit int, hostname string) {
-// Assert provider launches app in kind cluster
+	// Assert provider launches app in kind cluster
 
 	req, err := http.NewRequest("GET", appURL, nil)
 	require.NoError(t, err)

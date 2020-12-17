@@ -64,6 +64,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--deposit=%s", dcli.DefaultDeposit),
 	)
 	s.Require().NoError(err)
 
@@ -84,7 +85,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.order = orders[0]
 
 	// Send coins from validator to keyBar
-	sendTokens := sdk.NewInt64Coin(s.cfg.BondDenom, 100)
+	sendTokens := cli.DefaultDeposit.Add(cli.DefaultDeposit)
 	_, err = bankcli.MsgSendExec(
 		val.ClientCtx,
 		val.Address,
@@ -122,6 +123,8 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--deposit=%s", cli.DefaultDeposit),
+		"--price=1uakt",
 	)
 	s.Require().NoError(err)
 
@@ -136,9 +139,23 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
 	bids := bidRes.Bids
-	s.Require().Equal(keyBar.GetAddress().String(), bids[0].BidID.Provider)
+	s.Require().Equal(keyBar.GetAddress().String(), bids[0].Bid.BidID.Provider)
 
-	s.bid = bids[0]
+	s.bid = bids[0].Bid
+
+	// create lease
+	_, err = cli.TxCreateLeaseExec(
+		val.ClientCtx,
+		s.bid.BidID,
+		val.Address,
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+
+	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query leases
 	resp, err = cli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"))
@@ -149,13 +166,13 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
 	leases := leaseRes.Leases
-	s.Require().Equal(keyBar.GetAddress().String(), leases[0].LeaseID.Provider)
+	s.Require().Equal(keyBar.GetAddress().String(), leases[0].Lease.LeaseID.Provider)
 
-	s.order.State = types.OrderMatched
-	s.bid.State = types.BidMatched
+	s.order.State = types.OrderActive
+	s.bid.State = types.BidActive
 
 	// test query lease
-	s.lease = leases[0]
+	s.lease = leases[0].Lease
 }
 
 func (s *GRPCRestTestSuite) TestGetOrders() {
@@ -340,7 +357,7 @@ func (s *GRPCRestTestSuite) TestGetBids() {
 			} else {
 				s.Require().NoError(err)
 				s.Require().Len(bids.Bids, tc.expLen)
-				s.Require().Equal(tc.expResp, bids.Bids[0])
+				s.Require().Equal(tc.expResp, bids.Bids[0].Bid)
 			}
 		})
 	}
@@ -463,7 +480,7 @@ func (s *GRPCRestTestSuite) TestGetLeases() {
 			} else {
 				s.Require().NoError(err)
 				s.Require().Len(leases.Leases, tc.expLen)
-				s.Require().Equal(tc.expResp, leases.Leases[0])
+				s.Require().Equal(tc.expResp, leases.Leases[0].Lease)
 			}
 		})
 	}

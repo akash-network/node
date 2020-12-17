@@ -7,9 +7,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 
+	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/x/deployment/types"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 )
 
@@ -25,8 +27,9 @@ func GetTxCmd(key string) *cobra.Command {
 	cmd.AddCommand(
 		cmdCreate(key),
 		cmdUpdate(key),
+		cmdDeposit(key),
 		cmdClose(key),
-		cmdGroupClose(key),
+		cmdGroup(key),
 	)
 	return cmd
 }
@@ -69,10 +72,16 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
+			deposit, err := common.DepositFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
 			msg := &types.MsgCreateDeployment{
 				ID:      id,
 				Version: version,
 				Groups:  make([]types.GroupSpec, 0, len(groups)),
+				Deposit: deposit,
 			}
 
 			for _, group := range groups {
@@ -81,6 +90,44 @@ func cmdCreate(key string) *cobra.Command {
 
 			if err := msg.ValidateBasic(); err != nil {
 				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	AddDeploymentIDFlags(cmd.Flags())
+	common.AddDepositFlags(cmd.Flags(), DefaultDeposit)
+	common.MarkReqDepositFlags(cmd)
+
+	return cmd
+}
+
+func cmdDeposit(key string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "deposit <amount>",
+		Short: fmt.Sprintf("Deposit %s", key),
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			id, err := DeploymentIDFromFlags(cmd.Flags(), clientCtx.GetFromAddress().String())
+			if err != nil {
+				return err
+			}
+
+			deposit, err := sdk.ParseCoinNormalized(args[0])
+			if err != nil {
+				return err
+			}
+
+			msg := &types.MsgDepositDeployment{
+				ID:     id,
+				Amount: deposit,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -117,7 +164,6 @@ func cmdClose(key string) *cobra.Command {
 
 	flags.AddTxFlagsToCmd(cmd)
 	AddDeploymentIDFlags(cmd.Flags())
-
 	return cmd
 }
 
@@ -171,9 +217,24 @@ func cmdUpdate(key string) *cobra.Command {
 	return cmd
 }
 
+func cmdGroup(key string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "group",
+		Short: "Modify a Deployment's specific Group",
+	}
+
+	cmd.AddCommand(
+		cmdGroupClose(key),
+		cmdGroupPause(key),
+		cmdGroupStart(key),
+	)
+
+	return cmd
+}
+
 func cmdGroupClose(_ string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "group-close",
+		Use:     "close",
 		Short:   "close a Deployment's specific Group",
 		Example: "akashctl tx deployment group-close --owner=[Account Address] --dseq=[uint64] --gseq=[uint32]",
 		Args:    cobra.ExactArgs(0),
@@ -189,6 +250,78 @@ func cmdGroupClose(_ string) *cobra.Command {
 			}
 
 			msg := &types.MsgCloseGroup{
+				ID: id,
+			}
+
+			if err := msg.ValidateBasic(); err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	AddGroupIDFlags(cmd.Flags())
+	MarkReqGroupIDFlags(cmd)
+
+	return cmd
+}
+
+func cmdGroupPause(_ string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "pause",
+		Short:   "pause a Deployment's specific Group",
+		Example: "akashctl tx deployment group pause --owner=[Account Address] --dseq=[uint64] --gseq=[uint32]",
+		Args:    cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			id, err := GroupIDFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			msg := &types.MsgPauseGroup{
+				ID: id,
+			}
+
+			if err := msg.ValidateBasic(); err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	AddGroupIDFlags(cmd.Flags())
+	MarkReqGroupIDFlags(cmd)
+
+	return cmd
+}
+
+func cmdGroupStart(_ string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "start",
+		Short:   "start a Deployment's specific Group",
+		Example: "akashctl tx deployment group pause --owner=[Account Address] --dseq=[uint64] --gseq=[uint32]",
+		Args:    cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			id, err := GroupIDFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			msg := &types.MsgStartGroup{
 				ID: id,
 			}
 

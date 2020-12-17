@@ -10,7 +10,7 @@ import (
 
 // TODO: implement with search parameters
 
-func (c *qclient) ActiveLeasesForProvider(id sdk.AccAddress) (mtypes.Leases, error) {
+func (c *qclient) ActiveLeasesForProvider(id sdk.AccAddress) ([]mtypes.QueryLeaseResponse, error) {
 	params := &mtypes.QueryLeasesRequest{
 		Filters: mtypes.LeaseFilters{
 			Provider: id.String(),

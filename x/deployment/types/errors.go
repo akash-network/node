@@ -22,6 +22,9 @@ const (
 	errGroupClosed
 	errGroupNotOpen
 	errGroupSpec
+	errInvalidDeposit
+	errInvalidIDPath
+	errInvalidParam
 )
 
 var (
@@ -59,4 +62,11 @@ var (
 	ErrGroupNotOpen = sdkerrors.Register(ModuleName, errGroupNotOpen, "Group not open")
 	// ErrGroupSpecInvalid indicates a GroupSpec has invalid configuration
 	ErrGroupSpecInvalid = sdkerrors.Register(ModuleName, errGroupSpec, "GroupSpec invalid")
+
+	// ErrInvalidDeposit indicates an invalid deposit
+	ErrInvalidDeposit = sdkerrors.Register(ModuleName, errInvalidDeposit, "Deposit invalid")
+	// ErrInvalidIDPath indicates an invalid ID path
+	ErrInvalidIDPath = sdkerrors.Register(ModuleName, errInvalidIDPath, "ID path invalid")
+	// ErrInvalidParam indicates an invalid chain parameter
+	ErrInvalidParam = sdkerrors.Register(ModuleName, errInvalidParam, "parameter invalid")
 )

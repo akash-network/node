@@ -32,10 +32,9 @@ func DeploymentGroup(t testing.TB, did dtypes.DeploymentID, gseq uint32) dtypes.
 		GroupID: dtypes.MakeGroupID(did, gseq),
 		State:   dtypes.GroupOpen,
 		GroupSpec: dtypes.GroupSpec{
-			Name:             Name(t, "dgroup"),
-			Requirements:     PlacementRequirements(t),
-			Resources:        Resources(t),
-			OrderBidDuration: dtypes.DefaultOrderBiddingDuration,
+			Name:         Name(t, "dgroup"),
+			Requirements: PlacementRequirements(t),
+			Resources:    Resources(t),
 		},
 	}
 }
@@ -44,10 +43,9 @@ func DeploymentGroup(t testing.TB, did dtypes.DeploymentID, gseq uint32) dtypes.
 func GroupSpec(t testing.TB) dtypes.GroupSpec {
 	t.Helper()
 	return dtypes.GroupSpec{
-		Name:             Name(t, "dgroup"),
-		Requirements:     PlacementRequirements(t),
-		Resources:        Resources(t),
-		OrderBidDuration: dtypes.DefaultOrderBiddingDuration,
+		Name:         Name(t, "dgroup"),
+		Requirements: PlacementRequirements(t),
+		Resources:    Resources(t),
 	}
 }
 

@@ -6,21 +6,6 @@ import "akash/deployment/v1beta1/group.proto";
 
 option go_package = "github.com/ovrclk/akash/x/market/types";
 
-// MsgCloseOrder defines an SDK message for closing order
-message MsgCloseOrder {
-  option (gogoproto.equal) = false;
-
-  OrderID order_id = 1 [
-    (gogoproto.customname) = "OrderID",
-    (gogoproto.nullable)   = false,
-    (gogoproto.jsontag)    = "id",
-    (gogoproto.moretags)   = "yaml:\"id\""
-  ];
-}
-
-// MsgCloseOrderResponse defines the Msg/CloseOrder response type.
-message MsgCloseOrderResponse {}
-
 // OrderID stores owner and all other seq numbers
 message OrderID {
   option (gogoproto.equal)            = false;
@@ -56,16 +41,14 @@ message Order {
     // OrderOpen denotes state for order open
     open = 1 [(gogoproto.enumvalue_customname) = "OrderOpen"];
     // OrderMatched denotes state for order matched
-    matched = 2 [(gogoproto.enumvalue_customname) = "OrderMatched"];
+    active = 2 [(gogoproto.enumvalue_customname) = "OrderActive"];
     // OrderClosed denotes state for order lost
     closed = 3 [(gogoproto.enumvalue_customname) = "OrderClosed"];
   }
 
   State state    = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
-  int64 start_at = 3 [(gogoproto.jsontag) = "start_at", (gogoproto.moretags) = "yaml:\"start_at\""];
-  akash.deployment.v1beta1.GroupSpec spec = 4
+  akash.deployment.v1beta1.GroupSpec spec = 3
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "spec", (gogoproto.moretags) = "yaml:\"spec\""];
-  int64 close_at = 5 [(gogoproto.jsontag) = "close_at", (gogoproto.moretags) = "yaml:\"close_at\""];
 }
 
 // OrderFilters defines flags for order list filter

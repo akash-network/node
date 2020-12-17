@@ -7,6 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 )
@@ -21,16 +22,30 @@ func GetTxCmd(key string) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 	cmd.AddCommand(
-		cmdCreateBid(key),
-		cmdCloseBid(key),
-		cmdCloseOrder(key),
+		cmdBid(key),
+		cmdLease(key),
 	)
 	return cmd
 }
 
-func cmdCreateBid(key string) *cobra.Command {
+func cmdBid(key string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "bid-create",
+		Use:                        "bid",
+		Short:                      "Bid subcommands",
+		DisableFlagParsing:         true,
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
+	}
+	cmd.AddCommand(
+		cmdBidCreate(key),
+		cmdBidClose(key),
+	)
+	return cmd
+}
+
+func cmdBidCreate(key string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "create",
 		Short: fmt.Sprintf("Create a %s bid", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -54,10 +69,16 @@ func cmdCreateBid(key string) *cobra.Command {
 				return err
 			}
 
+			deposit, err := common.DepositFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
 			msg := &types.MsgCreateBid{
 				Order:    id,
 				Provider: clientCtx.GetFromAddress().String(),
 				Price:    coins,
+				Deposit:  deposit,
 			}
 
 			if err := msg.ValidateBasic(); err != nil {
@@ -71,13 +92,15 @@ func cmdCreateBid(key string) *cobra.Command {
 	flags.AddTxFlagsToCmd(cmd)
 	AddOrderIDFlags(cmd.Flags())
 	cmd.Flags().String("price", "", "Bid Price")
+	common.AddDepositFlags(cmd.Flags(), DefaultDeposit)
+	common.MarkReqDepositFlags(cmd)
 
 	return cmd
 }
 
-func cmdCloseBid(key string) *cobra.Command {
+func cmdBidClose(key string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "bid-close",
+		Use:   "close",
 		Short: fmt.Sprintf("Close a %s bid", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -109,10 +132,26 @@ func cmdCloseBid(key string) *cobra.Command {
 	return cmd
 }
 
-func cmdCloseOrder(key string) *cobra.Command {
+func cmdLease(key string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "order-close",
-		Short: fmt.Sprintf("Close a %s order", key),
+		Use:                        "lease",
+		Short:                      "Lease subcommands",
+		DisableFlagParsing:         true,
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
+	}
+	cmd.AddCommand(
+		cmdLeaseCreate(key),
+		cmdLeaseWithdraw(key),
+		cmdLeaseClose(key),
+	)
+	return cmd
+}
+
+func cmdLeaseCreate(key string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: fmt.Sprintf("Create a %s lease", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
@@ -120,13 +159,13 @@ func cmdCloseOrder(key string) *cobra.Command {
 				return err
 			}
 
-			id, err := OrderIDFromFlags(cmd.Flags())
+			id, err := BidIDFromFlagsWithoutCtx(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			msg := &types.MsgCloseOrder{
-				OrderID: id,
+			msg := &types.MsgCreateLease{
+				BidID: id,
 			}
 
 			if err := msg.ValidateBasic(); err != nil {
@@ -138,7 +177,78 @@ func cmdCloseOrder(key string) *cobra.Command {
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
-	AddOrderIDFlags(cmd.Flags())
+	AddLeaseIDFlags(cmd.Flags())
+	MarkReqLeaseIDFlags(cmd)
+
+	return cmd
+}
+
+func cmdLeaseWithdraw(key string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "withdraw",
+		Short: fmt.Sprintf("Close a %s order", key),
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			id, err := LeaseIDFromFlagsWithoutCtx(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			msg := &types.MsgWithdrawLease{
+				LeaseID: id,
+			}
+
+			if err := msg.ValidateBasic(); err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	AddLeaseIDFlags(cmd.Flags())
+	MarkReqLeaseIDFlags(cmd)
+
+	return cmd
+}
+
+func cmdLeaseClose(key string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "close",
+		Short: fmt.Sprintf("Close a %s order", key),
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			id, err := LeaseIDFromFlagsWithoutCtx(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			msg := &types.MsgCloseLease{
+				LeaseID: id,
+			}
+
+			if err := msg.ValidateBasic(); err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	AddLeaseIDFlags(cmd.Flags())
+	MarkReqLeaseIDFlags(cmd)
 
 	return cmd
 }

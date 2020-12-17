@@ -121,21 +121,31 @@ func (g Group) ID() GroupID {
 	return g.GroupID
 }
 
-// ValidateOrderable method checks whether group status is Open or not
-func (g Group) ValidateOrderable() error {
-	switch g.State {
-	case GroupOpen:
-		return nil
-	default:
-		return ErrGroupNotOpen
-	}
-}
-
 // ValidateClosable provides error response if group is already closed,
 // and thus should not be closed again, else nil.
 func (g Group) ValidateClosable() error {
 	switch g.State {
 	case GroupClosed:
+		return ErrGroupClosed
+	default:
+		return nil
+	}
+}
+
+// ValidatePausable provides error response if group is not pausable
+func (g Group) ValidatePausable() error {
+	switch g.State {
+	case GroupClosed, GroupPaused:
+		return ErrGroupClosed
+	default:
+		return nil
+	}
+}
+
+// ValidatePausable provides error response if group is not pausable
+func (g Group) ValidateStartable() error {
+	switch g.State {
+	case GroupPaused:
 		return ErrGroupClosed
 	default:
 		return nil

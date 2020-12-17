@@ -51,7 +51,7 @@ type IntegrationTestSuite struct {
 	validator   *network.Validator
 	keyProvider keyring.Info
 	keyTenant   keyring.Info
-	prevLeases  mtypes.Leases
+	prevLeases  []mtypes.QueryLeaseResponse
 
 	appHost string
 	appPort string
@@ -81,7 +81,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.validator = s.network.Validators[0]
 
 	// Send coins value
-	sendTokens := sdk.NewInt64Coin(s.cfg.BondDenom, 9999999)
+	sendTokens := sdk.NewCoin(s.cfg.BondDenom, mtypes.DefaultBidMinDeposit.Amount.MulRaw(4))
 
 	// Setup a Provider key
 	s.keyProvider, err = s.validator.ClientCtx.Keyring.Key("keyFoo")
@@ -291,16 +291,16 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	s.network.Cleanup()
 }
 
-func newestLease(leases mtypes.Leases) mtypes.Lease {
+func newestLease(leases []mtypes.QueryLeaseResponse) mtypes.Lease {
 	result := mtypes.Lease{}
 	assigned := false
 
 	for _, lease := range leases {
 		if !assigned {
-			result = lease
+			result = lease.Lease
 			assigned = true
-		} else if result.GetLeaseID().DSeq < lease.GetLeaseID().DSeq {
-			result = lease
+		} else if result.GetLeaseID().DSeq < lease.Lease.GetLeaseID().DSeq {
+			result = lease.Lease
 		}
 	}
 
@@ -316,6 +316,11 @@ func (s *IntegrationTestSuite) TestE2EContainerToContainer() {
 	deploymentPath, err := filepath.Abs("../x/deployment/testdata/deployment-v2-c2c.yaml")
 	s.Require().NoError(err)
 
+	deploymentID := dtypes.DeploymentID{
+		Owner: s.keyTenant.GetAddress().String(),
+		DSeq:  uint64(100),
+	}
+
 	// Create Deployments
 	_, err = deploycli.TxCreateDeploymentExec(
 		s.validator.ClientCtx,
@@ -325,24 +330,34 @@ func (s *IntegrationTestSuite) TestE2EContainerToContainer() {
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit),
+		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(7))
 
-	// Assert provider made bid and created lease; test query leases ---------
-	resp, err := mcli.QueryLeasesExec(s.validator.ClientCtx.WithOutputFormat("json"))
+	bidID := mtypes.MakeBidID(
+		mtypes.MakeOrderID(dtypes.MakeGroupID(deploymentID, 1), 1),
+		s.keyProvider.GetAddress(),
+	)
+
+	// check bid
+	_, err = mcli.QueryBidExec(s.validator.ClientCtx, bidID)
 	s.Require().NoError(err)
 
-	leaseRes := &mtypes.QueryLeasesResponse{}
-	err = s.validator.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), leaseRes)
+	// create lease
+	_, err = mcli.TxCreateLeaseExec(
+		s.validator.ClientCtx,
+		bidID,
+		s.keyTenant.GetAddress(),
+		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
 	s.Require().NoError(err)
 
-	s.Require().Len(leaseRes.Leases, len(s.prevLeases)+1)
-	s.prevLeases = leaseRes.Leases
-
-	lease := newestLease(leaseRes.Leases)
-	lid := lease.LeaseID
-	s.Require().Equal(s.keyProvider.GetAddress().String(), lid.Provider)
+	lid := bidID.LeaseID()
 
 	// Send Manifest to Provider ----------------------------------------------
 	_, err = ptestutil.TestSendManifest(

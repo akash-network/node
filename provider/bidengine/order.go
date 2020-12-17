@@ -20,9 +20,9 @@ import (
 
 // order manages bidding and general lifecycle handling of an order.
 type order struct {
-	orderID         mtypes.OrderID
-	bidPlaced       bool
-	pricingStrategy BidPricingStrategy
+	orderID   mtypes.OrderID
+	bidPlaced bool
+	cfg       Config
 
 	session                    session.Session
 	cluster                    cluster.Cluster
@@ -34,10 +34,10 @@ type order struct {
 	lc  lifecycle.Lifecycle
 }
 
-func newOrder(svc *service, oid mtypes.OrderID, pricingStrategy BidPricingStrategy, checkForExistingBid bool) (*order, error) {
-	return newOrderInternal(svc, oid, pricingStrategy, checkForExistingBid, nil)
+func newOrder(svc *service, oid mtypes.OrderID, cfg Config, checkForExistingBid bool) (*order, error) {
+	return newOrderInternal(svc, oid, cfg, checkForExistingBid, nil)
 }
-func newOrderInternal(svc *service, oid mtypes.OrderID, pricingStrategy BidPricingStrategy, checkForExistingBid bool, reservationFulfilledNotify chan<- int) (*order, error) {
+func newOrderInternal(svc *service, oid mtypes.OrderID, cfg Config, checkForExistingBid bool, reservationFulfilledNotify chan<- int) (*order, error) {
 	// Create a subscription that will see all events that have not been read from e.sub.Events()
 	sub, err := svc.sub.Clone()
 	if err != nil {
@@ -49,6 +49,7 @@ func newOrderInternal(svc *service, oid mtypes.OrderID, pricingStrategy BidPrici
 	log := session.Log().With("order", oid)
 
 	order := &order{
+		cfg:                        cfg,
 		orderID:                    oid,
 		bidPlaced:                  false,
 		session:                    session,
@@ -57,7 +58,6 @@ func newOrderInternal(svc *service, oid mtypes.OrderID, pricingStrategy BidPrici
 		sub:                        sub,
 		log:                        log,
 		lc:                         lifecycle.New(),
-		pricingStrategy:            pricingStrategy,
 		reservationFulfilledNotify: reservationFulfilledNotify, // Normally nil in production
 	}
 
@@ -237,7 +237,7 @@ loop:
 
 			pricech = runner.Do(func() runner.Result {
 				// Calculate price & bid
-				return runner.NewResult(o.pricingStrategy.calculatePrice(ctx, &group.GroupSpec))
+				return runner.NewResult(o.cfg.PricingStrategy.calculatePrice(ctx, &group.GroupSpec))
 
 			})
 		case result := <-pricech:
@@ -250,7 +250,7 @@ loop:
 			o.log.Debug("submitting fulfillment", "price", price)
 
 			// Begin submitting fulfillment
-			msg = mtypes.NewMsgCreateBid(o.orderID, o.session.Provider().Address(), price)
+			msg = mtypes.NewMsgCreateBid(o.orderID, o.session.Provider().Address(), price, o.cfg.Deposit)
 			bidch = runner.Do(func() runner.Result {
 				return runner.NewResult(nil, o.session.Client().Tx().Broadcast(ctx, msg))
 			})
