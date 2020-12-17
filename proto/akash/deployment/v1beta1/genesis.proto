@@ -4,6 +4,7 @@ package akash.deployment.v1beta1;
 import "gogoproto/gogo.proto";
 import "akash/deployment/v1beta1/deployment.proto";
 import "akash/deployment/v1beta1/group.proto";
+import "akash/deployment/v1beta1/params.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";
 
@@ -22,5 +23,11 @@ message GenesisState {
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "deployments",
     (gogoproto.moretags) = "yaml:\"deployments\""
+  ];
+
+  Params params = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "params",
+    (gogoproto.moretags) = "yaml:\"params\""
   ];
 }

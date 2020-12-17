@@ -74,7 +74,7 @@ func cmdGetBid() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintProto(&res.Bid)
+			return clientCtx.PrintProto(res)
 		},
 	}
 

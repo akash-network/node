@@ -3,15 +3,12 @@ package keeper_test
 import (
 	"reflect"
 	"testing"
-	"time"
 
-	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 
 	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/testutil/state"
 	"github.com/ovrclk/akash/x/provider/keeper"
 	"github.com/ovrclk/akash/x/provider/types"
 )
@@ -154,14 +151,10 @@ func TestKeeperCoder(t *testing.T) {
 	require.NotNil(t, codec)
 }
 
-func setupKeeper(t testing.TB) (sdk.Context, keeper.Keeper) {
+func setupKeeper(t testing.TB) (sdk.Context, keeper.IKeeper) {
 	t.Helper()
-	key := sdk.NewKVStoreKey(types.StoreKey)
-	db := dbm.NewMemDB()
-	ms := store.NewCommitMultiStore(db)
-	ms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
-	err := ms.LoadLatestVersion()
-	require.NoError(t, err)
-	ctx := sdk.NewContext(ms, tmproto.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))
-	return ctx, keeper.NewKeeper(types.ModuleCdc, key)
+
+	suite := state.SetupTestSuite(t)
+
+	return suite.Context(), suite.ProviderKeeper()
 }

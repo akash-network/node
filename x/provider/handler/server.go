@@ -19,13 +19,13 @@ var (
 )
 
 type msgServer struct {
-	provider keeper.Keeper
-	market   mkeeper.Keeper
+	provider keeper.IKeeper
+	market   mkeeper.IKeeper
 }
 
 // NewMsgServerImpl returns an implementation of the market MsgServer interface
 // for the provided Keeper.
-func NewMsgServerImpl(k keeper.Keeper, mk mkeeper.Keeper) types.MsgServer {
+func NewMsgServerImpl(k keeper.IKeeper, mk mkeeper.IKeeper) types.MsgServer {
 	return &msgServer{provider: k, market: mk}
 }
 

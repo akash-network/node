@@ -9,7 +9,6 @@ PROVIDER_KEY_NAME    ?= provider
 PROVIDER_ADDRESS     ?= $(shell $(AKASHCTL_NONODE) keys show $(KEY_OPTS) "$(PROVIDER_KEY_NAME)" -a)
 PROVIDER_CONFIG_PATH ?= provider.yaml
 
-
 SDL_PATH ?= deployment.yaml
 
 DSEQ          ?= 1
@@ -59,18 +58,33 @@ deployment-close:
 		--dseq "$(DSEQ)"       \
 		--from "$(KEY_NAME)" -y
 
-.PHONY: order-close
-order-close:
-	$(AKASHCTL) tx market order-close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
-		--owner "$(KEY_ADDRESS)" \
-		--dseq  "$(DSEQ)"        \
-		--gseq  "$(GSEQ)"        \
-		--oseq  "$(OSEQ)"        \
+.PHONY: group-close
+group-close:
+	$(AKASHCTL) tx deployment group close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+		--owner "$(KEY_ADDRESS)"       \
+		--dseq  "$(DSEQ)"              \
+		--gseq  "$(GSEQ)"              \
+		--from  "$(KEY_NAME)"
+
+.PHONY: group-pause
+group-pause:
+	$(AKASHCTL) tx deployment group pause "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+		--owner "$(KEY_ADDRESS)"       \
+		--dseq  "$(DSEQ)"              \
+		--gseq  "$(GSEQ)"              \
+		--from  "$(KEY_NAME)"
+
+.PHONY: group-start
+group-start:
+	$(AKASHCTL) tx deployment group start "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+		--owner "$(KEY_ADDRESS)"       \
+		--dseq  "$(DSEQ)"              \
+		--gseq  "$(GSEQ)"              \
 		--from  "$(KEY_NAME)"
 
 .PHONY: bid-create
 bid-create:
-	$(AKASHCTL) tx market bid-create "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+	$(AKASHCTL) tx market bid create "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
 		--owner "$(KEY_ADDRESS)"       \
 		--dseq  "$(DSEQ)"              \
 		--gseq  "$(GSEQ)"              \
@@ -80,12 +94,42 @@ bid-create:
 
 .PHONY: bid-close
 bid-close:
-	$(AKASHCTL) tx market bid-close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+	$(AKASHCTL) tx market bid close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+		--owner "$(KEY_ADDRESS)"       \
+		--dseq  "$(DSEQ)"              \
+		--gseq  "$(GSEQ)"              \
+		--oseq  "$(OSEQ)"              \
+		--from  "$(PROVIDER_KEY_NAME)"
+
+.PHONY: lease-create
+lease-create:
+	$(AKASHCTL) tx market lease create "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
 		--owner "$(KEY_ADDRESS)"         \
 		--dseq  "$(DSEQ)"                \
 		--gseq  "$(GSEQ)"                \
 		--oseq  "$(OSEQ)"                \
+		--provider "$(PROVIDER_ADDRESS)" \
+		--from  "$(KEY_NAME)"
+
+.PHONY: lease-withdraw
+lease-withdraw:
+	$(AKASHCTL) tx market lease withdraw "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+		--owner "$(KEY_ADDRESS)"         \
+		--dseq  "$(DSEQ)"                \
+		--gseq  "$(GSEQ)"                \
+		--oseq  "$(OSEQ)"                \
+		--provider "$(PROVIDER_ADDRESS)" \
 		--from  "$(PROVIDER_KEY_NAME)"
+
+.PHONY: lease-close
+lease-close:
+	$(AKASHCTL) tx market lease close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+		--owner "$(KEY_ADDRESS)"         \
+		--dseq  "$(DSEQ)"                \
+		--gseq  "$(GSEQ)"                \
+		--oseq  "$(OSEQ)"                \
+		--provider "$(PROVIDER_ADDRESS)" \
+		--from  "$(KEY_NAME)"
 
 .PHONY: query-accounts
 query-accounts: $(patsubst %, query-account-%,$(KEY_NAMES))

@@ -71,7 +71,6 @@ func makeMocks(s *orderTestScaffold) {
 	}
 
 	groupResult.Group.GroupSpec.Resources[0] = resource
-	groupResult.Group.GroupSpec.OrderBidDuration = 37
 
 	queryClientMock := &clientmocks.QueryClient{}
 	queryClientMock.On("Group", mock.Anything, mock.Anything).Return(groupResult, nil)
@@ -135,8 +134,12 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricing
 	mySession := session.New(myLog, scaffold.client, myProvider)
 
 	scaffold.testBus = pubsub.NewBus()
+	cfg := Config{
+		PricingStrategy: pricing,
+		Deposit:         mtypes.DefaultBidMinDeposit,
+	}
 
-	myService, err := NewService(context.Background(), mySession, scaffold.cluster, scaffold.testBus, pricing)
+	myService, err := NewService(context.Background(), mySession, scaffold.cluster, scaffold.testBus, cfg)
 	require.NoError(t, err)
 	require.NotNil(t, myService)
 
@@ -159,7 +162,7 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricing
 	}
 
 	reservationFulfilledNotify := make(chan int, 1)
-	order, err := newOrderInternal(serviceCast, scaffold.orderID, pricing, checkForExistingBid, reservationFulfilledNotify)
+	order, err := newOrderInternal(serviceCast, scaffold.orderID, cfg, checkForExistingBid, reservationFulfilledNotify)
 
 	require.NoError(t, err)
 	require.NotNil(t, order)

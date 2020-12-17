@@ -9,7 +9,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 
-	dquery "github.com/ovrclk/akash/x/deployment/query"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mquery "github.com/ovrclk/akash/x/market/query"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -127,7 +126,7 @@ func parseDeploymentID(req *http.Request) (dtypes.DeploymentID, error) {
 	var parts []string
 	parts = append(parts, requestOwner(req).String())
 	parts = append(parts, mux.Vars(req)["dseq"])
-	return dquery.ParseDeploymentPath(parts)
+	return dtypes.ParseDeploymentPath(parts)
 }
 
 func parseLeaseID(req *http.Request) (mtypes.LeaseID, error) {

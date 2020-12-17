@@ -18,7 +18,7 @@ SUBLINTERS = deadcode \
 .PHONY: test-sublinters
 test-sublinters: $(patsubst %, test-sublinter-%,$(SUBLINTERS))
 
-.PHONY: test-lint
+.PHONY: test-lint-all
 test-lint-all:
 	$(GOLANGCI_LINT) ./... --issues-exit-code=0 --deadline=10m
 

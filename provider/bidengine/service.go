@@ -30,7 +30,7 @@ type Service interface {
 }
 
 // NewService creates new service instance and returns error incase of failure
-func NewService(ctx context.Context, session session.Session, cluster cluster.Cluster, bus pubsub.Bus, bps BidPricingStrategy) (Service, error) {
+func NewService(ctx context.Context, session session.Session, cluster cluster.Cluster, bus pubsub.Bus, cfg Config) (Service, error) {
 	session = session.ForModule("bidengine-service")
 
 	sub, err := bus.Subscribe()
@@ -47,15 +47,15 @@ func NewService(ctx context.Context, session session.Session, cluster cluster.Cl
 	session.Log().Info("found orders", "count", len(existingOrders))
 
 	s := &service{
-		session:         session,
-		cluster:         cluster,
-		bus:             bus,
-		sub:             sub,
-		statusch:        make(chan chan<- *Status),
-		orders:          make(map[string]*order),
-		drainch:         make(chan *order),
-		lc:              lifecycle.New(),
-		pricingStrategy: bps,
+		session:  session,
+		cluster:  cluster,
+		bus:      bus,
+		sub:      sub,
+		statusch: make(chan chan<- *Status),
+		orders:   make(map[string]*order),
+		drainch:  make(chan *order),
+		lc:       lifecycle.New(),
+		cfg:      cfg,
 	}
 
 	go s.lc.WatchContext(ctx)
@@ -67,14 +67,14 @@ func NewService(ctx context.Context, session session.Session, cluster cluster.Cl
 type service struct {
 	session session.Session
 	cluster cluster.Cluster
+	cfg     Config
 
 	bus pubsub.Bus
 	sub pubsub.Subscriber
 
-	statusch        chan chan<- *Status
-	orders          map[string]*order
-	drainch         chan *order
-	pricingStrategy BidPricingStrategy
+	statusch chan chan<- *Status
+	orders   map[string]*order
+	drainch  chan *order
 
 	lc lifecycle.Lifecycle
 }
@@ -116,7 +116,7 @@ func (s *service) run(existingOrders []mtypes.OrderID) {
 	for _, orderID := range existingOrders {
 		key := mquery.OrderPath(orderID)
 		s.session.Log().Debug("creating catchup order", "order", key)
-		order, err := newOrder(s, orderID, s.pricingStrategy, true)
+		order, err := newOrder(s, orderID, s.cfg, true)
 		if err != nil {
 			s.session.Log().Error("creating catchup order", "order", key, "err", err)
 			continue
@@ -145,7 +145,7 @@ loop:
 				}
 
 				// create an order object for managing the bid process and order lifecycle
-				order, err := newOrder(s, ev.ID, s.pricingStrategy, false)
+				order, err := newOrder(s, ev.ID, s.cfg, false)
 				if err != nil {
 
 					s.session.Log().Error("handling order", "order", key, "err", err)

@@ -19,7 +19,7 @@ type LeaseWon struct {
 type ManifestReceived struct {
 	LeaseID    mtypes.LeaseID
 	Manifest   *manifest.Manifest
-	Deployment *dtypes.DeploymentResponse
+	Deployment *dtypes.QueryDeploymentResponse
 	Group      *dtypes.Group
 }
 

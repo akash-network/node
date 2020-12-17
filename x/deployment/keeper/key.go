@@ -9,10 +9,7 @@ import (
 
 var (
 	deploymentPrefix = []byte{0x01}
-
-	groupPrefix = []byte{0x02}
-	// groupOpenPrefix is used only to track the set of Groups in Open state which need to have orders assigned.
-	groupOpenPrefix = []byte{0x03}
+	groupPrefix      = []byte{0x02}
 )
 
 func deploymentKey(id types.DeploymentID) []byte {
@@ -35,31 +32,6 @@ func groupKey(id types.GroupID) []byte {
 		panic(err)
 	}
 	return buf.Bytes()
-}
-
-// groupOpenKey provides prefixed key for groups which are in open state.
-// No data is stored under the key.
-func groupOpenKey(id types.GroupID) []byte {
-	buf := bytes.NewBuffer(groupOpenPrefix)
-	buf.Write([]byte(id.Owner))
-	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		panic(err)
-	}
-	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
-}
-
-// groupOpenKeyConvert converts an open key to the original
-// group key prefix for accessing the Group's data.
-func groupOpenKeyConvert(openKey []byte) ([]byte, error) {
-	buf := bytes.NewBuffer(groupPrefix)
-	_, err := buf.Write(openKey[len(groupPrefix):])
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
 
 // groupsKey provides default store Key for Group data.

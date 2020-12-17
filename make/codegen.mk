@@ -17,6 +17,7 @@ mocks:
 	mockery -case=underscore -dir client/broadcaster          -output client/broadcaster/mocks    -name Client
 	mockery -case=underscore -dir client                      -output client/mocks/               -name QueryClient
 	mockery -case=underscore -dir client                      -output client/mocks/               -name Client
+	mockery -case=underscore -dir x/escrow/keeper             -output x/escrow/keeper/mocks       -name BankKeeper
 
 
 .PHONY: kubetypes

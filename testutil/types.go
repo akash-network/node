@@ -112,7 +112,7 @@ func DefaultConfig() network.Config {
 		NumValidators:   4,
 		BondDenom:       CoinDenom,
 		MinGasPrices:    fmt.Sprintf("0.000006%s", CoinDenom),
-		AccountTokens:   sdk.TokensFromConsensusPower(10000),
+		AccountTokens:   sdk.TokensFromConsensusPower(1000000000000),
 		StakingTokens:   sdk.TokensFromConsensusPower(500),
 		BondedTokens:    sdk.TokensFromConsensusPower(100),
 		PruningStrategy: storetypes.PruningOptionNothing,

@@ -27,15 +27,15 @@ type QueryClient struct {
 }
 
 // ActiveLeasesForProvider provides a mock function with given fields: id
-func (_m *QueryClient) ActiveLeasesForProvider(id types.AccAddress) (markettypes.Leases, error) {
+func (_m *QueryClient) ActiveLeasesForProvider(id types.AccAddress) ([]markettypes.QueryLeaseResponse, error) {
 	ret := _m.Called(id)
 
-	var r0 markettypes.Leases
-	if rf, ok := ret.Get(0).(func(types.AccAddress) markettypes.Leases); ok {
+	var r0 []markettypes.QueryLeaseResponse
+	if rf, ok := ret.Get(0).(func(types.AccAddress) []markettypes.QueryLeaseResponse); ok {
 		r0 = rf(id)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(markettypes.Leases)
+			r0 = ret.Get(0).([]markettypes.QueryLeaseResponse)
 		}
 	}
 

@@ -6,6 +6,8 @@ services:
     image: nginx
     expose:
       - port: 80
+        accept:
+          - hello.localhost
         to:
           - global: true
 

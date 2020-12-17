@@ -12,5 +12,5 @@ const (
 
 	DefaultWeightMsgCreateBid  int = 100
 	DefaultWeightMsgCloseBid   int = 100
-	DefaultWeightMsgCloseOrder int = 10
+	DefaultWeightMsgCloseLease int = 10
 )

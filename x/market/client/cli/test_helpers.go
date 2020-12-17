@@ -9,6 +9,8 @@ import (
 	"github.com/ovrclk/akash/x/market/types"
 )
 
+// XXX: WHY TF DON'T THESE RETURN OBJECTS
+
 const key string = types.StoreKey
 
 // TxCreateBidExec is used for testing create bid tx
@@ -25,7 +27,7 @@ func TxCreateBidExec(clientCtx client.Context, orderID types.OrderID, price, fro
 
 	args = append(args, extraArgs...)
 
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdCreateBid(key), args)
+	return clitestutil.ExecTestCLICmd(clientCtx, cmdBidCreate(key), args)
 }
 
 // TxCloseBidExec is used for testing close bid tx
@@ -41,11 +43,28 @@ func TxCloseBidExec(clientCtx client.Context, orderID types.OrderID, from fmt.St
 
 	args = append(args, extraArgs...)
 
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdCloseBid(key), args)
+	return clitestutil.ExecTestCLICmd(clientCtx, cmdBidClose(key), args)
 }
 
-// TxCloseOrderExec is used for testing close order tx
-func TxCloseOrderExec(clientCtx client.Context, orderID types.OrderID, from fmt.Stringer,
+// TxCreateLeaseExec is used for creating a lease
+func TxCreateLeaseExec(clientCtx client.Context, bid types.BidID, from fmt.Stringer,
+	extraArgs ...string) (sdktest.BufferWriter, error) {
+	args := []string{
+		fmt.Sprintf("--from=%s", from.String()),
+		fmt.Sprintf("--owner=%s", bid.Owner),
+		fmt.Sprintf("--dseq=%v", bid.DSeq),
+		fmt.Sprintf("--gseq=%v", bid.GSeq),
+		fmt.Sprintf("--oseq=%v", bid.OSeq),
+		fmt.Sprintf("--provider=%s", bid.Provider),
+	}
+
+	args = append(args, extraArgs...)
+
+	return clitestutil.ExecTestCLICmd(clientCtx, cmdLeaseCreate(key), args)
+}
+
+// TxCloseLeaseExec is used for testing close order tx
+func TxCloseLeaseExec(clientCtx client.Context, orderID types.OrderID, from fmt.Stringer,
 	extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
@@ -57,7 +76,7 @@ func TxCloseOrderExec(clientCtx client.Context, orderID types.OrderID, from fmt.
 
 	args = append(args, extraArgs...)
 
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdCloseOrder(key), args)
+	return clitestutil.ExecTestCLICmd(clientCtx, cmdLeaseClose(key), args)
 }
 
 // QueryOrdersExec is used for testing orders query

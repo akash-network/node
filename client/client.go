@@ -39,7 +39,7 @@ type QueryClient interface {
 	ctypes.QueryClient
 
 	// TODO: implement with search parameters
-	ActiveLeasesForProvider(id sdk.AccAddress) (mtypes.Leases, error)
+	ActiveLeasesForProvider(id sdk.AccAddress) ([]mtypes.QueryLeaseResponse, error)
 }
 
 // Client interface pre-defined with query and tx interfaces
