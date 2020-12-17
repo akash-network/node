@@ -3,9 +3,10 @@ package cluster
 import (
 	"context"
 	"errors"
+	"time"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"time"
 
 	"github.com/boz/go-lifecycle"
 	"github.com/tendermint/tendermint/libs/log"
@@ -202,10 +203,9 @@ func (is *inventoryService) committedResources(rgroup atypes.ResourceGroup) atyp
 	}
 
 	result := dtypes.GroupSpec{
-		Name:             rgroup.GetName(),
-		Requirements:     atypes.PlacementRequirements{},
-		Resources:        replacedResources,
-		OrderBidDuration: 0,
+		Name:         rgroup.GetName(),
+		Requirements: atypes.PlacementRequirements{},
+		Resources:    replacedResources,
 	}
 	return result
 }

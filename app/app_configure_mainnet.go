@@ -4,6 +4,7 @@ package app
 
 import (
 	"github.com/cosmos/cosmos-sdk/types/module"
+	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {
@@ -31,4 +32,8 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 
 func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 	return []module.AppModuleSimulation{}
+}
+
+func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
+	return k
 }

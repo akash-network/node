@@ -3,6 +3,7 @@ package akash.market.v1beta1;
 
 import "gogoproto/gogo.proto";
 import "cosmos/base/v1beta1/coin.proto";
+import "akash/market/v1beta1/bid.proto";
 
 option go_package = "github.com/ovrclk/akash/x/market/types";
 
@@ -66,3 +67,32 @@ message LeaseFilters {
   string provider = 5 [(gogoproto.jsontag) = "provider", (gogoproto.moretags) = "yaml:\"provider\""];
   string state    = 6 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
 }
+
+message MsgCreateLease {
+  option (gogoproto.equal) = false;
+
+  BidID bid_id = 1 [
+    (gogoproto.customname) = "BidID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+message MsgCreateLeaseResponse {}
+
+
+// MsgCloseLease defines an SDK message for closing order
+message MsgCloseLease {
+  option (gogoproto.equal) = false;
+
+  LeaseID lease_id = 1 [
+    (gogoproto.customname) = "LeaseID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+// MsgCloseLeaseResponse defines the Msg/CloseLease response type.
+message MsgCloseLeaseResponse {}

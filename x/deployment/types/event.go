@@ -13,6 +13,8 @@ const (
 	evActionDeploymentUpdated = "deployment-updated"
 	evActionDeploymentClosed  = "deployment-closed"
 	evActionGroupClosed       = "group-closed"
+	evActionGroupPaused       = "group-paused"
+	evActionGroupStarted      = "group-started"
 	evOwnerKey                = "owner"
 	evDSeqKey                 = "dseq"
 	evGSeqKey                 = "gseq"
@@ -178,6 +180,58 @@ func (ev EventGroupClosed) ToSDKEvent() sdk.Event {
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
 			sdk.NewAttribute(sdk.AttributeKeyAction, evActionGroupClosed),
+		}, GroupIDEVAttributes(ev.ID)...)...,
+	)
+}
+
+// EventGroupPaused provides SDK event to signal group termination
+type EventGroupPaused struct {
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	ID      GroupID                 `json:"id"`
+}
+
+func NewEventGroupPaused(id GroupID) EventGroupPaused {
+	return EventGroupPaused{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionGroupPaused,
+		},
+		ID: id,
+	}
+}
+
+// ToSDKEvent produces the SDK notification for Event
+func (ev EventGroupPaused) ToSDKEvent() sdk.Event {
+	return sdk.NewEvent(sdkutil.EventTypeMessage,
+		append([]sdk.Attribute{
+			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
+			sdk.NewAttribute(sdk.AttributeKeyAction, evActionGroupPaused),
+		}, GroupIDEVAttributes(ev.ID)...)...,
+	)
+}
+
+// EventGroupStarted provides SDK event to signal group termination
+type EventGroupStarted struct {
+	Context sdkutil.BaseModuleEvent `json:"context"`
+	ID      GroupID                 `json:"id"`
+}
+
+func NewEventGroupStarted(id GroupID) EventGroupStarted {
+	return EventGroupStarted{
+		Context: sdkutil.BaseModuleEvent{
+			Module: ModuleName,
+			Action: evActionGroupStarted,
+		},
+		ID: id,
+	}
+}
+
+// ToSDKEvent produces the SDK notification for Event
+func (ev EventGroupStarted) ToSDKEvent() sdk.Event {
+	return sdk.NewEvent(sdkutil.EventTypeMessage,
+		append([]sdk.Attribute{
+			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
+			sdk.NewAttribute(sdk.AttributeKeyAction, evActionGroupStarted),
 		}, GroupIDEVAttributes(ev.ID)...)...,
 	)
 }

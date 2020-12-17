@@ -7,18 +7,6 @@ import "cosmos/base/v1beta1/coin.proto";
 
 option go_package = "github.com/ovrclk/akash/x/market/types";
 
-// Msg defines the market Msg service
-service Msg {
-  // CreateBid defines a method to create a bid given proper inputs.
-  rpc CreateBid(MsgCreateBid) returns (MsgCreateBidResponse);
-
-  // CloseBid defines a method to close a bid given proper inputs.
-  rpc CloseBid(MsgCloseBid) returns (MsgCloseBidResponse);
-
-  // CloseOrder defines a method to close an order given proper inputs.
-  rpc CloseOrder(MsgCloseOrder) returns (MsgCloseOrderResponse);
-}
-
 // MsgCreateBid defines an SDK message for creating Bid
 message MsgCreateBid {
   option (gogoproto.equal) = false;
@@ -32,6 +20,9 @@ message MsgCreateBid {
   string                   provider = 2 [(gogoproto.jsontag) = "provider", (gogoproto.moretags) = "yaml:\"provider\""];
   cosmos.base.v1beta1.Coin price    = 3
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "price", (gogoproto.moretags) = "yaml:\"price\""];
+
+  cosmos.base.v1beta1.Coin deposit = 4
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "deposit", (gogoproto.moretags) = "yaml:\"deposit\""];
 }
 
 // MsgCreateBidResponse defines the Msg/CreateBid response type.
@@ -51,6 +42,21 @@ message MsgCloseBid {
 
 // MsgCloseBidResponse defines the Msg/CloseBid response type.
 message MsgCloseBidResponse {}
+
+// MsgWithdrawBid defines an SDK message for closing bid
+message MsgWithdrawBid {
+  option (gogoproto.equal) = false;
+
+  BidID bid_id = 1 [
+    (gogoproto.customname) = "BidID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+// MsgWithdrawBidResponse defines the Msg/WithdrawBid response type.
+message MsgWithdrawBidResponse {}
 
 // BidID stores owner and all other seq numbers
 // A successful bid becomes a Lease(ID).
@@ -89,7 +95,7 @@ message Bid {
     // BidOpen denotes state for bid open
     open = 1 [(gogoproto.enumvalue_customname) = "BidOpen"];
     // BidMatched denotes state for bid open
-    matched = 2 [(gogoproto.enumvalue_customname) = "BidMatched"];
+    active = 2 [(gogoproto.enumvalue_customname) = "BidActive"];
     // BidLost denotes state for bid lost
     lost = 3 [(gogoproto.enumvalue_customname) = "BidLost"];
     // BidClosed denotes state for bid closed

@@ -70,7 +70,7 @@ order-close:
 
 .PHONY: bid-create
 bid-create:
-	$(AKASHCTL) tx market bid-create "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+	$(AKASHCTL) tx market bid create "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
 		--owner "$(KEY_ADDRESS)"       \
 		--dseq  "$(DSEQ)"              \
 		--gseq  "$(GSEQ)"              \
@@ -78,9 +78,9 @@ bid-create:
 		--from  "$(PROVIDER_KEY_NAME)" \
 		--price "$(PRICE)"
 
-.PHONY: bid-close
-bid-close:
-	$(AKASHCTL) tx market bid-close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+.PHONY: lease-close
+lease-close:
+	$(AKASHCTL) tx market lease close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
 		--owner "$(KEY_ADDRESS)"         \
 		--dseq  "$(DSEQ)"                \
 		--gseq  "$(GSEQ)"                \

@@ -3,7 +3,9 @@ package keeper
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	etypes "github.com/ovrclk/akash/x/escrow/types"
 	"github.com/ovrclk/akash/x/market/types"
 	"github.com/pkg/errors"
 )
@@ -15,13 +17,25 @@ const (
 
 // Keeper of the market store
 type Keeper struct {
-	cdc  codec.BinaryMarshaler
-	skey sdk.StoreKey
+	cdc     codec.BinaryMarshaler
+	skey    sdk.StoreKey
+	pspace  paramtypes.Subspace
+	ekeeper EscrowKeeper
 }
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey) Keeper {
-	return Keeper{cdc: cdc, skey: skey}
+func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) Keeper {
+
+	if !pspace.HasKeyTable() {
+		pspace = pspace.WithKeyTable(types.ParamKeyTable())
+	}
+
+	return Keeper{
+		skey:    skey,
+		cdc:     cdc,
+		pspace:  pspace,
+		ekeeper: ekeeper,
+	}
 }
 
 // Codec returns keeper codec
@@ -52,15 +66,14 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 		OrderID: types.MakeOrderID(gid, oseq),
 		Spec:    spec,
 		State:   types.OrderOpen,
-		StartAt: ctx.BlockHeight() + orderTTL,                         // TODO: check overflow
-		CloseAt: ctx.BlockHeight() + orderTTL + spec.OrderBidDuration, // TODO: check overflow, set via parameter
 	}
 
 	key := orderKey(order.ID())
-	// XXX TODO: check not overwrite
+
 	if store.Has(key) {
 		return types.Order{}, types.ErrOrderExists
 	}
+
 	store.Set(key, k.cdc.MustMarshalBinaryBare(&order))
 	k.updateOpenOrderIndex(store, order)
 
@@ -88,7 +101,6 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 		return types.Bid{}, types.ErrBidExists
 	}
 
-	// XXX TODO: check not overwrite
 	store.Set(key, k.cdc.MustMarshalBinaryBare(&bid))
 
 	ctx.EventManager().EmitEvent(
@@ -124,21 +136,18 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 
 // OnOrderMatched updates order state to matched
 func (k Keeper) OnOrderMatched(ctx sdk.Context, order types.Order) {
-	// TODO: assert state transition
-	order.State = types.OrderMatched
+	order.State = types.OrderActive
 	k.updateOrder(ctx, order)
 }
 
-// OnBidMatched updates bid state to matched
+// OnBidActive updates bid state to matched
 func (k Keeper) OnBidMatched(ctx sdk.Context, bid types.Bid) {
-	// TODO: assert state transition
-	bid.State = types.BidMatched
+	bid.State = types.BidActive
 	k.updateBid(ctx, bid)
 }
 
 // OnBidLost updates bid state to bid lost
 func (k Keeper) OnBidLost(ctx sdk.Context, bid types.Bid) {
-	// TODO: assert state transition
 	bid.State = types.BidLost
 	k.updateBid(ctx, bid)
 }
@@ -152,6 +161,9 @@ func (k Keeper) OnBidClosed(ctx sdk.Context, bid types.Bid) {
 	}
 	bid.State = types.BidClosed
 	k.updateBid(ctx, bid)
+
+	k.ekeeper.AccountClose(ctx, types.EscrowAccountForBid(bid.ID()))
+
 	ctx.EventManager().EmitEvent(
 		types.NewEventBidClosed(bid.ID(), bid.Price).
 			ToSDKEvent(),
@@ -160,7 +172,6 @@ func (k Keeper) OnBidClosed(ctx sdk.Context, bid types.Bid) {
 
 // OnOrderClosed updates order state to closed
 func (k Keeper) OnOrderClosed(ctx sdk.Context, order types.Order) {
-	// TODO: assert state transition
 	if order.State == types.OrderClosed {
 		return
 	}
@@ -175,7 +186,6 @@ func (k Keeper) OnOrderClosed(ctx sdk.Context, order types.Order) {
 
 // OnInsufficientFunds updates lease state to insufficient funds
 func (k Keeper) OnInsufficientFunds(ctx sdk.Context, lease types.Lease) {
-	// TODO: assert state transition
 	switch lease.State {
 	case types.LeaseClosed, types.LeaseInsufficientFunds:
 		return
@@ -190,15 +200,19 @@ func (k Keeper) OnInsufficientFunds(ctx sdk.Context, lease types.Lease) {
 }
 
 // OnLeaseClosed updates lease state to closed
-func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease types.Lease) {
-	// TODO: assert state transition
+func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease types.Lease, state types.Lease_State) {
 	switch lease.State {
 	case types.LeaseClosed, types.LeaseInsufficientFunds:
 		return
 	}
-	lease.State = types.LeaseClosed
+	lease.State = state
 	k.updateLease(ctx, lease)
 	ctx.Logger().Info("keeper closed lease", "lease", lease.ID())
+
+	k.ekeeper.PaymentClose(ctx,
+		dtypes.EscrowAccountForDeployment(lease.ID().DeploymentID()),
+		types.EscrowPaymentForBid(lease.ID().BidID()))
+
 	ctx.EventManager().EmitEvent(
 		types.NewEventLeaseClosed(lease.ID(), lease.Price).
 			ToSDKEvent(),
@@ -212,8 +226,7 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) {
 		k.WithBidsForOrder(ctx, order.ID(), func(bid types.Bid) bool {
 			k.OnBidClosed(ctx, bid)
 			if lease, ok := k.GetLease(ctx, types.LeaseID(bid.ID())); ok {
-				// TODO: emit events
-				k.OnLeaseClosed(ctx, lease)
+				k.OnLeaseClosed(ctx, lease, types.LeaseClosed)
 			}
 			return false
 		})
@@ -277,7 +290,7 @@ func (k Keeper) LeaseForOrder(ctx sdk.Context, oid types.OrderID) (types.Lease, 
 		if !item.ID().OrderID().Equals(oid) {
 			return false
 		}
-		if item.State != types.BidMatched {
+		if item.State != types.BidActive {
 			return false
 		}
 		value, found = k.GetLease(ctx, types.LeaseID(item.ID()))
@@ -388,6 +401,7 @@ func (k Keeper) WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, fn func(t
 func (k Keeper) WithBidsForOrder(ctx sdk.Context, id types.OrderID, fn func(types.Bid) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, bidsForOrderPrefix(id))
+
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Bid
@@ -396,6 +410,69 @@ func (k Keeper) WithBidsForOrder(ctx sdk.Context, id types.OrderID, fn func(type
 			break
 		}
 	}
+}
+
+func (k Keeper) BidCountForOrder(ctx sdk.Context, id types.OrderID) uint32 {
+	store := ctx.KVStore(k.skey)
+	iter := sdk.KVStorePrefixIterator(store, bidsForOrderPrefix(id))
+	defer iter.Close()
+	count := uint32(0)
+	for ; iter.Valid(); iter.Next() {
+		count++
+	}
+	return count
+}
+
+// GetParams returns the total set of deployment parameters.
+func (k Keeper) GetParams(ctx sdk.Context) (params types.Params) {
+	k.pspace.GetParamSet(ctx, &params)
+	return params
+}
+
+// SetParams sets the deployment parameters to the paramspace.
+func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
+	k.pspace.SetParamSet(ctx, &params)
+}
+
+func (k Keeper) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
+}
+
+func (k Keeper) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment) {
+	id, ok := types.BidIDFromEscrowAccount(obj.AccountID, obj.PaymentID)
+	if !ok {
+		return
+	}
+
+	bid, ok := k.GetBid(ctx, id)
+	if !ok {
+		return
+	}
+
+	order, ok := k.GetOrder(ctx, id.OrderID())
+	if !ok {
+		return
+	}
+
+	lease, ok := k.GetLease(ctx, id.LeaseID())
+	if !ok {
+		return
+	}
+
+	if bid.State != types.BidActive {
+		return
+	}
+
+	k.OnOrderClosed(ctx, order)
+
+	if obj.State == etypes.PaymentOverdrawn {
+		k.OnLeaseClosed(ctx, lease, types.LeaseInsufficientFunds)
+	} else {
+		k.OnLeaseClosed(ctx, lease, types.LeaseClosed)
+	}
+
+	// TODO: ensure that the only time a payment is closed via this mechanism
+	// is when ...
+	// ms.keepers.Deployment.OnOrderClosed(ctx, order.ID().GroupID())
 }
 
 func (k Keeper) updateOrder(ctx sdk.Context, order types.Order) {

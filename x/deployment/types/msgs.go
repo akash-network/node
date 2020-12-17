@@ -5,10 +5,13 @@ import (
 )
 
 const (
-	MsgTypeCreateDeployment = "create-deployment"
-	MsgTypeUpdateDeployment = "update-deployment"
-	MsgTypeCloseDeployment  = "close-deployment"
-	MsgTypeCloseGroup       = "close-group"
+	MsgTypeCreateDeployment  = "create-deployment"
+	MsgTypeDepositDeployment = "deposit-deployment"
+	MsgTypeUpdateDeployment  = "update-deployment"
+	MsgTypeCloseDeployment   = "close-deployment"
+	MsgTypeCloseGroup        = "close-group"
+	MsgTypePauseGroup        = "pause-group"
+	MsgTypeStartGroup        = "start-group"
 )
 
 var (
@@ -68,6 +71,48 @@ func (msg MsgCreateDeployment) ValidateBasic() error {
 			return err
 		}
 	}
+	return nil
+}
+
+// NewMsgDepositDeployment creates a new MsgDepositDeployment instance
+func NewMsgDepositDeployment(id DeploymentID, amount sdk.Coin) *MsgDepositDeployment {
+	return &MsgDepositDeployment{
+		ID:     id,
+		Amount: amount,
+	}
+}
+
+// Route implements the sdk.Msg interface
+func (msg MsgDepositDeployment) Route() string { return RouterKey }
+
+// Type implements the sdk.Msg interface
+func (msg MsgDepositDeployment) Type() string { return MsgTypeDepositDeployment }
+
+// GetSignBytes encodes the message for signing
+func (msg MsgDepositDeployment) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+// GetSigners defines whose signature is required
+func (msg MsgDepositDeployment) GetSigners() []sdk.AccAddress {
+	owner, err := sdk.AccAddressFromBech32(msg.ID.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{owner}
+}
+
+// ValidateBasic does basic validation like check owner and groups length
+func (msg MsgDepositDeployment) ValidateBasic() error {
+	if err := msg.ID.Validate(); err != nil {
+		return err
+	}
+
+	if msg.Amount.IsZero() {
+		return ErrInvalidDeposit
+	}
+
 	return nil
 }
 
@@ -182,6 +227,78 @@ func (msg MsgCloseGroup) GetSignBytes() []byte {
 
 // GetSigners defines whose signature is required
 func (msg MsgCloseGroup) GetSigners() []sdk.AccAddress {
+	owner, err := sdk.AccAddressFromBech32(msg.ID.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{owner}
+}
+
+// NewMsgPauseGroup creates a new MsgPauseGroup instance
+func NewMsgPauseGroup(id GroupID) *MsgPauseGroup {
+	return &MsgPauseGroup{
+		ID: id,
+	}
+}
+
+// Route implements the sdk.Msg interface for routing
+func (msg MsgPauseGroup) Route() string { return RouterKey }
+
+// Type implements the sdk.Msg interface exposing message type
+func (msg MsgPauseGroup) Type() string { return MsgTypePauseGroup }
+
+// ValidateBasic calls underlying GroupID.Validate() check and returns result
+func (msg MsgPauseGroup) ValidateBasic() error {
+	if err := msg.ID.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetSignBytes encodes the message for signing
+func (msg MsgPauseGroup) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+// GetSigners defines whose signature is required
+func (msg MsgPauseGroup) GetSigners() []sdk.AccAddress {
+	owner, err := sdk.AccAddressFromBech32(msg.ID.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{owner}
+}
+
+// NewMsgStartGroup creates a new MsgStartGroup instance
+func NewMsgStartGroup(id GroupID) *MsgStartGroup {
+	return &MsgStartGroup{
+		ID: id,
+	}
+}
+
+// Route implements the sdk.Msg interface for routing
+func (msg MsgStartGroup) Route() string { return RouterKey }
+
+// Type implements the sdk.Msg interface exposing message type
+func (msg MsgStartGroup) Type() string { return MsgTypeStartGroup }
+
+// ValidateBasic calls underlying GroupID.Validate() check and returns result
+func (msg MsgStartGroup) ValidateBasic() error {
+	if err := msg.ID.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetSignBytes encodes the message for signing
+func (msg MsgStartGroup) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+// GetSigners defines whose signature is required
+func (msg MsgStartGroup) GetSigners() []sdk.AccAddress {
 	owner, err := sdk.AccAddressFromBech32(msg.ID.Owner)
 	if err != nil {
 		panic(err)

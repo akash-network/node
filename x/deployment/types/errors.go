@@ -22,6 +22,7 @@ const (
 	errGroupClosed
 	errGroupNotOpen
 	errGroupSpec
+	errInvalidDeposit
 )
 
 var (
@@ -59,4 +60,7 @@ var (
 	ErrGroupNotOpen = sdkerrors.Register(ModuleName, errGroupNotOpen, "Group not open")
 	// ErrGroupSpecInvalid indicates a GroupSpec has invalid configuration
 	ErrGroupSpecInvalid = sdkerrors.Register(ModuleName, errGroupSpec, "GroupSpec invalid")
+
+	// ErrInvalidDeposit indicates an invalid deposit
+	ErrInvalidDeposit = sdkerrors.Register(ModuleName, errInvalidDeposit, "Deposit invalid")
 )

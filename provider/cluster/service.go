@@ -271,7 +271,7 @@ func findDeployments(ctx context.Context, log log.Logger, client Client, session
 
 	leases := make(map[string]bool)
 	for _, lease := range leaseList {
-		leases[mquery.LeasePath(lease.LeaseID)] = true
+		leases[mquery.LeasePath(lease.Lease.LeaseID)] = true
 	}
 
 	log.Info("found leases", "num-active", len(leases))

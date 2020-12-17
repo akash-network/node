@@ -71,7 +71,6 @@ func makeMocks(s *orderTestScaffold) {
 	}
 
 	groupResult.Group.GroupSpec.Resources[0] = resource
-	groupResult.Group.GroupSpec.OrderBidDuration = 37
 
 	queryClientMock := &clientmocks.QueryClient{}
 	queryClientMock.On("Group", mock.Anything, mock.Anything).Return(groupResult, nil)

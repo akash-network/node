@@ -247,7 +247,7 @@ There are a number of ways that a lease can be terminated.
 
 __t1 teardown__
 ```sh
-make bid-close
+make lease-close
 ```
 
 #### Tenant closes the order

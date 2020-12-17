@@ -4,6 +4,7 @@ package akash.market.v1beta1;
 import "gogoproto/gogo.proto";
 import "akash/market/v1beta1/order.proto";
 import "akash/market/v1beta1/lease.proto";
+import "akash/market/v1beta1/params.proto";
 
 option go_package = "github.com/ovrclk/akash/x/market/types";
 
@@ -14,4 +15,10 @@ message GenesisState {
 
   repeated Lease leases = 2
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "leases", (gogoproto.moretags) = "yaml:\"leases\""];
+
+  Params params = 3 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "params",
+    (gogoproto.moretags) = "yaml:\"params\""
+  ];
 }

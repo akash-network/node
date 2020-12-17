@@ -3,6 +3,9 @@ package manifest
 import (
 	"context"
 	"errors"
+	"testing"
+	"time"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	clientMocks "github.com/ovrclk/akash/client/mocks"
 	"github.com/ovrclk/akash/provider/cluster"
@@ -19,8 +22,6 @@ import (
 	ptypes "github.com/ovrclk/akash/x/provider/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 type scaffold struct {
@@ -97,7 +98,7 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 		Attributes: nil,
 	}
 
-	queryMock.On("ActiveLeasesForProvider", p.Address()).Return(markettypes.Leases{}, nil)
+	queryMock.On("ActiveLeasesForProvider", p.Address()).Return([]markettypes.QueryLeaseResponse{}, nil)
 
 	serviceInterface, err := NewService(ctx, session.New(log, clientMock, p), bus, hostnames, cfg)
 	require.NoError(t, err)

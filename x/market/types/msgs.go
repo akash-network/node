@@ -5,13 +5,15 @@ import (
 )
 
 const (
-	MsgTypeCreateBid  = "create-bid"
-	MsgTypeCloseBid   = "close-bid"
-	MsgTypeCloseOrder = "close-order"
+	MsgTypeCreateBid   = "create-bid"
+	MsgTypeWithdrawBid = "withdraw-bid"
+	MsgTypeCreateLease = "create-lease"
+	MsgTypeCloseLease  = "close-lease"
+	MsgTypeCloseBid    = "close-bid"
 )
 
 var (
-	_, _, _ sdk.Msg = &MsgCreateBid{}, &MsgCloseBid{}, &MsgCloseOrder{}
+	_, _, _ sdk.Msg = &MsgCreateBid{}, &MsgCloseBid{}, &MsgCloseLease{}
 )
 
 // NewMsgCreateBid creates a new MsgCreateBid instance
@@ -20,6 +22,7 @@ func NewMsgCreateBid(id OrderID, provider sdk.AccAddress, price sdk.Coin) *MsgCr
 		Order:    id,
 		Provider: provider.String(),
 		Price:    price,
+		Deposit:  DefaultBidMinDeposit,
 	}
 }
 
@@ -64,7 +67,80 @@ func (msg MsgCreateBid) ValidateBasic() error {
 		return ErrSameAccount
 	}
 
+	if msg.Price.IsZero() {
+		return ErrBidZeroPrice
+	}
+
 	return nil
+}
+
+// NewMsgWithdrawBid creates a new MsgWithdrawBid instance
+func NewMsgWithdrawBid(id BidID) *MsgWithdrawBid {
+	return &MsgWithdrawBid{
+		BidID: id,
+	}
+}
+
+// Route implements the sdk.Msg interface
+func (msg MsgWithdrawBid) Route() string { return RouterKey }
+
+// Type implements the sdk.Msg interface
+func (msg MsgWithdrawBid) Type() string { return MsgTypeWithdrawBid }
+
+// GetSignBytes encodes the message for signing
+func (msg MsgWithdrawBid) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+// GetSigners defines whose signature is required
+func (msg MsgWithdrawBid) GetSigners() []sdk.AccAddress {
+	provider, err := sdk.AccAddressFromBech32(msg.GetBidID().Provider)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{provider}
+}
+
+// ValidateBasic does basic validation of provider and order
+func (msg MsgWithdrawBid) ValidateBasic() error {
+	if err := msg.BidID.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// NewMsgCreateLease creates a new MsgCreateLease instance
+func NewMsgCreateLease(id BidID) *MsgCreateLease {
+	return &MsgCreateLease{
+		BidID: id,
+	}
+}
+
+// Route implements the sdk.Msg interface
+func (msg MsgCreateLease) Route() string { return RouterKey }
+
+// Type implements the sdk.Msg interface
+func (msg MsgCreateLease) Type() string { return MsgTypeCreateLease }
+
+// GetSignBytes encodes the message for signing
+func (msg MsgCreateLease) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+// GetSigners defines whose signature is required
+func (msg MsgCreateLease) GetSigners() []sdk.AccAddress {
+	provider, err := sdk.AccAddressFromBech32(msg.BidID.Owner)
+	if err != nil {
+		panic(err)
+	}
+
+	return []sdk.AccAddress{provider}
+}
+
+// ValidateBasic method for MsgCreateLease
+func (msg MsgCreateLease) ValidateBasic() error {
+	return msg.BidID.Validate()
 }
 
 // NewMsgCloseBid creates a new MsgCloseBid instance
@@ -100,27 +176,27 @@ func (msg MsgCloseBid) ValidateBasic() error {
 	return msg.BidID.Validate()
 }
 
-// NewMsgCloseOrder creates a new MsgCloseOrder instance
-func NewMsgCloseOrder(id OrderID) *MsgCloseOrder {
-	return &MsgCloseOrder{
-		OrderID: id,
+// NewMsgCloseLease creates a new MsgCloseLease instance
+func NewMsgCloseLease(id LeaseID) *MsgCloseLease {
+	return &MsgCloseLease{
+		LeaseID: id,
 	}
 }
 
 // Route implements the sdk.Msg interface
-func (msg MsgCloseOrder) Route() string { return RouterKey }
+func (msg MsgCloseLease) Route() string { return RouterKey }
 
 // Type implements the sdk.Msg interface
-func (msg MsgCloseOrder) Type() string { return MsgTypeCloseOrder }
+func (msg MsgCloseLease) Type() string { return MsgTypeCloseLease }
 
 // GetSignBytes encodes the message for signing
-func (msg MsgCloseOrder) GetSignBytes() []byte {
+func (msg MsgCloseLease) GetSignBytes() []byte {
 	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 // GetSigners defines whose signature is required
-func (msg MsgCloseOrder) GetSigners() []sdk.AccAddress {
-	owner, err := sdk.AccAddressFromBech32(msg.OrderID.Owner)
+func (msg MsgCloseLease) GetSigners() []sdk.AccAddress {
+	owner, err := sdk.AccAddressFromBech32(msg.LeaseID.Owner)
 	if err != nil {
 		panic(err)
 	}
@@ -128,7 +204,7 @@ func (msg MsgCloseOrder) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{owner}
 }
 
-// ValidateBasic method for MsgCloseOrder
-func (msg MsgCloseOrder) ValidateBasic() error {
-	return msg.OrderID.Validate()
+// ValidateBasic method for MsgCloseLease
+func (msg MsgCloseLease) ValidateBasic() error {
+	return msg.LeaseID.Validate()
 }

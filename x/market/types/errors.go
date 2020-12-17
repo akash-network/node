@@ -15,19 +15,21 @@ const (
 	errCodeUnknownLeaseForOrder
 	errCodeUnknownOrderForBid
 	errCodeLeaseNotActive
-	errCodeBidNotMatched
+	errCodeBidNotActive
 	errCodeUnknownOrder
 	errCodeNoLeaseForOrder
 	errCodeOrderNotFound
 	errCodeBidNotFound
+	errCodeBidZeroPrice
 	errCodeLeaseNotFound
 	errCodeBidExists
 	errCodeInvalidPrice
-	errCodeOrderMatched
+	errCodeOrderActive
 	errCodeOrderClosed
 	errCodeOrderExists
 	errCodeOrderDurationExceeded
 	errCodeOrderTooEarly
+	errInvalidDeposit
 )
 
 var (
@@ -51,8 +53,8 @@ var (
 	ErrUnknownOrderForBid = sdkerrors.Register(ModuleName, errCodeUnknownOrderForBid, "unknown order for bid")
 	// ErrLeaseNotActive is the error when lease is not active
 	ErrLeaseNotActive = sdkerrors.Register(ModuleName, errCodeLeaseNotActive, "lease not active")
-	// ErrBidNotMatched is the error when bid is not matched
-	ErrBidNotMatched = sdkerrors.Register(ModuleName, errCodeBidNotMatched, "bid not matched")
+	// ErrBidNotActive is the error when bid is not matched
+	ErrBidNotActive = sdkerrors.Register(ModuleName, errCodeBidNotActive, "bid not active")
 	// ErrUnknownOrder is the error when order is unknown
 	ErrUnknownOrder = sdkerrors.Register(ModuleName, errCodeUnknownOrder, "unknown order")
 	// ErrNoLeaseForOrder is the error when there is no lease for order
@@ -61,6 +63,8 @@ var (
 	ErrOrderNotFound = sdkerrors.Register(ModuleName, errCodeOrderNotFound, "invalid order: order not found")
 	// ErrBidNotFound bid not found
 	ErrBidNotFound = sdkerrors.Register(ModuleName, errCodeBidNotFound, "invalid bid: bid not found")
+	// ErrBidZeroPrice zero price
+	ErrBidZeroPrice = sdkerrors.Register(ModuleName, errCodeBidZeroPrice, "invalid bid: zero price")
 	// ErrLeaseNotFound lease not found
 	ErrLeaseNotFound = sdkerrors.Register(ModuleName, errCodeLeaseNotFound, "invalid lease: lease not found")
 	// ErrBidExists bid exists
@@ -68,7 +72,7 @@ var (
 	// ErrBidInvalidPrice bid invalid price
 	ErrBidInvalidPrice = sdkerrors.Register(ModuleName, errCodeInvalidPrice, "bid price is invalid")
 	// ErrOrderMatched order matched
-	ErrOrderMatched = sdkerrors.New(ModuleName, errCodeOrderMatched, "order matched")
+	ErrOrderActive = sdkerrors.New(ModuleName, errCodeOrderActive, "order active")
 	// ErrOrderClosed order closed
 	ErrOrderClosed = sdkerrors.New(ModuleName, errCodeOrderClosed, "order closed")
 	// ErrOrderExists indicates a new order was proposed overwrite the existing store key
@@ -77,4 +81,7 @@ var (
 	ErrOrderTooEarly = sdkerrors.New(ModuleName, errCodeOrderTooEarly, "order: chain height to low for bidding")
 	// ErrOrderDurationExceeded order should be closed
 	ErrOrderDurationExceeded = sdkerrors.New(ModuleName, errCodeOrderDurationExceeded, "order duration has exceeded the bidding duration")
+
+	// ErrInvalidDeposit indicates an invalid deposit
+	ErrInvalidDeposit = sdkerrors.Register(ModuleName, errInvalidDeposit, "Deposit invalid")
 )

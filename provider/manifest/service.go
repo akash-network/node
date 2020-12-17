@@ -278,7 +278,7 @@ func fetchExistingLeases(ctx context.Context, session session.Session) ([]event.
 		res, err := session.Client().Query().Group(
 			ctx,
 			&dtypes.QueryGroupRequest{
-				ID: lease.LeaseID.GroupID(),
+				ID: lease.Lease.LeaseID.GroupID(),
 			},
 		)
 		if err != nil {
@@ -288,8 +288,8 @@ func fetchExistingLeases(ctx context.Context, session session.Session) ([]event.
 		dgroup := res.Group
 
 		items = append(items, event.LeaseWon{
-			LeaseID: lease.LeaseID,
-			Price:   lease.Price,
+			LeaseID: lease.Lease.LeaseID,
+			Price:   lease.Lease.Price,
 			Group:   &dgroup,
 		})
 	}

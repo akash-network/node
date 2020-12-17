@@ -103,6 +103,9 @@ func (id BidID) Validate() error {
 	if _, err := sdk.AccAddressFromBech32(id.Provider); err != nil {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "BidID: Invalid Provider Address")
 	}
+	if id.Owner == id.Provider {
+		sdkerrors.Wrap(sdkerrors.ErrConflict, "BidID: self-bid")
+	}
 	return nil
 }
 

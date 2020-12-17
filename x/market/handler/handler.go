@@ -9,7 +9,7 @@ import (
 
 // NewHandler returns a handler for "market" type messages
 func NewHandler(keepers Keepers) sdk.Handler {
-	ms := NewMsgServerImpl(keepers)
+	ms := NewServer(keepers)
 
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		switch msg := msg.(type) {
@@ -21,8 +21,16 @@ func NewHandler(keepers Keepers) sdk.Handler {
 			res, err := ms.CloseBid(sdk.WrapSDKContext(ctx), msg)
 			return sdk.WrapServiceResult(ctx, res, err)
 
-		case *types.MsgCloseOrder:
-			res, err := ms.CloseOrder(sdk.WrapSDKContext(ctx), msg)
+		case *types.MsgWithdrawBid:
+			res, err := ms.WithdrawBid(sdk.WrapSDKContext(ctx), msg)
+			return sdk.WrapServiceResult(ctx, res, err)
+
+		case *types.MsgCreateLease:
+			res, err := ms.CreateLease(sdk.WrapSDKContext(ctx), msg)
+			return sdk.WrapServiceResult(ctx, res, err)
+
+		case *types.MsgCloseLease:
+			res, err := ms.CloseLease(sdk.WrapSDKContext(ctx), msg)
 			return sdk.WrapServiceResult(ctx, res, err)
 
 		default:

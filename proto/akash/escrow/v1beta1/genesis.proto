@@ -1,0 +1,22 @@
+syntax = "proto3";
+package akash.escrow.v1beta1;
+
+import "gogoproto/gogo.proto";
+import "akash/escrow/v1beta1/types.proto";
+
+option go_package = "github.com/ovrclk/akash/x/escrow/types";
+
+// GenesisState defines the basic genesis state used by escrow module
+message GenesisState {
+  repeated Account accounts = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "accounts",
+    (gogoproto.moretags) = "yaml:\"accounts\""
+  ];
+
+  repeated Payment payments = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "payments",
+    (gogoproto.moretags) = "yaml:\"payments\""
+  ];
+}

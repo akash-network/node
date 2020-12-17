@@ -6,6 +6,7 @@ import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
 import "akash/deployment/v1beta1/deployment.proto";
 import "akash/deployment/v1beta1/group.proto";
+import "akash/escrow/v1beta1/types.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";
 
@@ -25,6 +26,13 @@ service Query {
   rpc Group(QueryGroupRequest) returns (QueryGroupResponse) {
     option (google.api.http).get = "/akash/deployment/v1beta1/groups/info";
   }
+}
+
+message DeploymentInfo {
+  Deployment deployment = 1 [(gogoproto.nullable) = false];
+  akash.escrow.v1beta1.Account escrow_account = 2 [
+    (gogoproto.nullable) = false
+  ];
 }
 
 // QueryDeploymentsRequest is request type for the Query/Deployments RPC method
@@ -50,6 +58,9 @@ message QueryDeploymentRequest {
 // QueryDeploymentResponse is response type for the Query/Deployment RPC method
 message QueryDeploymentResponse {
   DeploymentResponse deployment = 1 [(gogoproto.nullable) = false];
+  akash.escrow.v1beta1.Account escrow_account = 2 [
+    (gogoproto.nullable) = false
+  ];
 }
 
 // QueryGroupRequest is request type for the Query/Group RPC method

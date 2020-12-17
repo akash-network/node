@@ -9,15 +9,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/testutil/state"
 	"github.com/ovrclk/akash/x/market/keeper"
 	"github.com/ovrclk/akash/x/market/types"
 )
 
 type grpcTestSuite struct {
+	*state.TestSuite
 	t      *testing.T
-	app    *app.AkashApp
 	ctx    sdk.Context
 	keeper keeper.Keeper
 
@@ -25,15 +25,19 @@ type grpcTestSuite struct {
 }
 
 func setupTest(t *testing.T) *grpcTestSuite {
+
+	ssuite := state.SetupTestSuite(t)
+
 	suite := &grpcTestSuite{
-		t: t,
+		TestSuite: ssuite,
+		t:         t,
+		ctx:       ssuite.Context(),
+		keeper:    ssuite.MarketKeeper(),
 	}
 
-	suite.app = app.Setup(false)
-	suite.ctx, suite.keeper = setupKeeper(t)
 	querier := keeper.Querier{Keeper: suite.keeper}
 
-	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, suite.app.InterfaceRegistry())
+	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, suite.App().InterfaceRegistry())
 	types.RegisterQueryServer(queryHelper, querier)
 	suite.queryClient = types.NewQueryClient(queryHelper)
 
@@ -141,7 +145,7 @@ func TestGRPCQueryOrders(t *testing.T) {
 				req = &types.QueryOrdersRequest{
 					Filters: types.OrderFilters{
 						OSeq:  37,
-						State: types.OrderMatched.String(),
+						State: types.OrderActive.String(),
 					}}
 			},
 			0,
@@ -149,7 +153,7 @@ func TestGRPCQueryOrders(t *testing.T) {
 		{
 			"query orders with state filter",
 			func() {
-				req = &types.QueryOrdersRequest{Filters: types.OrderFilters{State: types.OrderMatched.String()}}
+				req = &types.QueryOrdersRequest{Filters: types.OrderFilters{State: types.OrderActive.String()}}
 			},
 			1,
 		},
@@ -181,7 +185,7 @@ func TestGRPCQueryBid(t *testing.T) {
 	suite := setupTest(t)
 
 	// creating bid
-	bid, _ := createBid(t, suite.ctx, suite.keeper)
+	bid, _ := createBid(t, suite.TestSuite)
 
 	var (
 		req    *types.QueryBidRequest
@@ -255,8 +259,8 @@ func TestGRPCQueryBids(t *testing.T) {
 	suite := setupTest(t)
 
 	// creating bids with different states
-	_, _ = createBid(t, suite.ctx, suite.keeper)
-	bid2, _ := createBid(t, suite.ctx, suite.keeper)
+	_, _ = createBid(t, suite.TestSuite)
+	bid2, _ := createBid(t, suite.TestSuite)
 	suite.keeper.OnBidLost(suite.ctx, bid2)
 
 	var req *types.QueryBidsRequest
@@ -320,7 +324,7 @@ func TestGRPCQueryLease(t *testing.T) {
 	suite := setupTest(t)
 
 	// creating lease
-	leaseID := createLease(t, suite.ctx, suite.keeper)
+	leaseID := createLease(t, suite.TestSuite)
 	lease, ok := suite.keeper.GetLease(suite.ctx, leaseID)
 	require.True(t, ok)
 
@@ -396,14 +400,14 @@ func TestGRPCQueryLeases(t *testing.T) {
 	suite := setupTest(t)
 
 	// creating leases with different states
-	leaseID := createLease(t, suite.ctx, suite.keeper)
+	leaseID := createLease(t, suite.TestSuite)
 	_, ok := suite.keeper.GetLease(suite.ctx, leaseID)
 	require.True(t, ok)
 
-	leaseID2 := createLease(t, suite.ctx, suite.keeper)
+	leaseID2 := createLease(t, suite.TestSuite)
 	lease2, ok := suite.keeper.GetLease(suite.ctx, leaseID2)
 	require.True(t, ok)
-	suite.keeper.OnLeaseClosed(suite.ctx, lease2)
+	suite.keeper.OnLeaseClosed(suite.ctx, lease2, types.LeaseClosed)
 
 	var req *types.QueryLeasesRequest
 

@@ -2,6 +2,8 @@ package types
 
 import (
 	fmt "fmt"
+	"strconv"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -27,6 +29,34 @@ func (id DeploymentID) Validate() error {
 // String method for deployment IDs
 func (id DeploymentID) String() string {
 	return fmt.Sprintf("%s/%d", id.Owner, id.DSeq)
+}
+
+func ParseDeploymentID(val string) (DeploymentID, error) {
+	parts := strings.Split(val, "/")
+	return ParseDeploymentPath(parts)
+}
+
+// ParseDeploymentPath returns DeploymentID details with provided queries, and return
+// error if occurred due to wrong query
+func ParseDeploymentPath(parts []string) (DeploymentID, error) {
+	if len(parts) != 2 {
+		return DeploymentID{}, fmt.Errorf("FIXMEERROR")
+	}
+
+	owner, err := sdk.AccAddressFromBech32(parts[0])
+	if err != nil {
+		return DeploymentID{}, err
+	}
+
+	dseq, err := strconv.ParseUint(parts[1], 10, 64)
+	if err != nil {
+		return DeploymentID{}, err
+	}
+
+	return DeploymentID{
+		Owner: owner.String(),
+		DSeq:  dseq,
+	}, nil
 }
 
 // MakeGroupID returns GroupID instance with provided deployment details

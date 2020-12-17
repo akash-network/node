@@ -1,0 +1,175 @@
+syntax = "proto3";
+package akash.escrow.v1beta1;
+
+import "gogoproto/gogo.proto";
+import "cosmos/base/v1beta1/coin.proto";
+
+option go_package = "github.com/ovrclk/akash/x/escrow/types";
+
+// Msg defines the provider Msg service
+service Msg {
+  rpc AccountWithdraw(MsgAccountWithdraw) returns (MsgAccountStatus);
+  rpc PaymentWithdraw(MsgPaymentWithdraw) returns (MsgPaymentStatus);
+}
+
+message AccountID {
+  string scope = 1 [
+    (gogoproto.jsontag)  = "scope",
+    (gogoproto.moretags) = "yaml:\"scope\""
+  ];
+  string xid = 2 [
+    (gogoproto.jsontag)    = "xid",
+    (gogoproto.moretags)   = "yaml:\"xid\"",
+    (gogoproto.customname) = "XID"
+  ];
+}
+
+message Account {
+
+  enum State {
+    option (gogoproto.goproto_enum_prefix) = false;
+
+    invalid   = 0 [(gogoproto.enumvalue_customname) = "AccountStateInvalid"];
+    open      = 1 [(gogoproto.enumvalue_customname) = "AccountOpen"];
+    closed    = 2 [(gogoproto.enumvalue_customname) = "AccountClosed"];
+    overdrawn = 3 [(gogoproto.enumvalue_customname) = "AccountOverdrawn"];
+  }
+
+  AccountID id = 1 [
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\"",
+    (gogoproto.customname) = "ID"
+  ];
+
+  string owner = 2 [
+    (gogoproto.jsontag)  = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+
+  State state = 3 [
+    (gogoproto.jsontag)  = "state",
+    (gogoproto.moretags) = "yaml:\"state\""
+  ];
+
+  cosmos.base.v1beta1.Coin balance   = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "balance",
+    (gogoproto.moretags) = "yaml:\"balance\""
+  ];
+
+  cosmos.base.v1beta1.Coin transferred = 5 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "transferred",
+    (gogoproto.moretags) = "yaml:\"transferred\""
+  ];
+
+  int64 settled_at = 6 [
+    (gogoproto.jsontag)    = "settledAt",
+    (gogoproto.moretags)   = "yaml:\"settledAt\"",
+    (gogoproto.customname) = "SettledAt"
+  ];
+}
+
+message Payment {
+  option (gogoproto.goproto_stringer) = true;
+
+  enum State {
+    option (gogoproto.goproto_enum_prefix) = false;
+
+    invalid   = 0 [(gogoproto.enumvalue_customname) = "PaymentStateInvalid"];
+    open      = 1 [(gogoproto.enumvalue_customname) = "PaymentOpen"];
+    closed    = 2 [(gogoproto.enumvalue_customname) = "PaymentClosed"];
+    overdrawn = 3 [(gogoproto.enumvalue_customname) = "PaymentOverdrawn"];
+  }
+
+  AccountID account_id = 1 [
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "accountID",
+    (gogoproto.moretags)   = "yaml:\"accountID\"",
+    (gogoproto.customname) = "AccountID"
+  ];
+
+  string payment_id = 2 [
+    (gogoproto.jsontag)    = "paymentID",
+    (gogoproto.moretags)   = "yaml:\"paymentID\"",
+    (gogoproto.customname) = "PaymentID"
+  ];
+
+  string owner = 3 [
+    (gogoproto.jsontag)  = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+
+  State state = 4 [
+    (gogoproto.jsontag)  = "state",
+    (gogoproto.moretags) = "yaml:\"state\""
+  ];
+
+  cosmos.base.v1beta1.Coin rate      = 5 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "rate",
+    (gogoproto.moretags) = "yaml:\"rate\""
+  ];
+
+  cosmos.base.v1beta1.Coin balance   = 6 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "balance",
+    (gogoproto.moretags) = "yaml:\"balance\""
+  ];
+
+  cosmos.base.v1beta1.Coin withdrawn = 7 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "withdrawn",
+    (gogoproto.moretags) = "yaml:\"withdrawn\""
+  ];
+}
+
+message MsgAccountWithdraw {
+  AccountID id = 1 [
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\"",
+    (gogoproto.customname) = "ID"
+  ];
+  string owner = 2 [
+    (gogoproto.jsontag)  = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+}
+
+message MsgAccountStatus {
+  Account account = 1 [
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "account",
+    (gogoproto.moretags)   = "yaml:\"account\""
+  ];
+}
+
+message MsgPaymentWithdraw {
+  AccountID account_id = 1 [
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "accountID",
+    (gogoproto.moretags)   = "yaml:\"accountID\"",
+    (gogoproto.customname) = "AccountID"
+  ];
+
+  string payment_id = 2 [
+    (gogoproto.jsontag)    = "paymentID",
+    (gogoproto.moretags)   = "yaml:\"paymentID\"",
+    (gogoproto.customname) = "PaymentID"
+  ];
+
+  string owner = 3 [
+    (gogoproto.jsontag)  = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+}
+
+message MsgPaymentStatus {
+  Payment payment = 1 [
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "payment",
+    (gogoproto.moretags)   = "yaml:\"payment\""
+  ];
+}

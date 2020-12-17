@@ -30,8 +30,11 @@ func init() {
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgCreateDeployment{}, ModuleName+"/"+MsgTypeCreateDeployment, nil)
 	cdc.RegisterConcrete(&MsgUpdateDeployment{}, ModuleName+"/"+MsgTypeUpdateDeployment, nil)
+	cdc.RegisterConcrete(&MsgDepositDeployment{}, ModuleName+"/"+MsgTypeDepositDeployment, nil)
 	cdc.RegisterConcrete(&MsgCloseDeployment{}, ModuleName+"/"+MsgTypeCloseDeployment, nil)
 	cdc.RegisterConcrete(&MsgCloseGroup{}, ModuleName+"/"+MsgTypeCloseGroup, nil)
+	cdc.RegisterConcrete(&MsgPauseGroup{}, ModuleName+"/"+MsgTypePauseGroup, nil)
+	cdc.RegisterConcrete(&MsgStartGroup{}, ModuleName+"/"+MsgTypeStartGroup, nil)
 }
 
 // RegisterInterfaces registers the x/deployment interfaces types with the interface registry
@@ -39,8 +42,11 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	registry.RegisterImplementations((*sdk.Msg)(nil),
 		&MsgCreateDeployment{},
 		&MsgUpdateDeployment{},
+		&MsgDepositDeployment{},
 		&MsgCloseDeployment{},
 		&MsgCloseGroup{},
+		&MsgPauseGroup{},
+		&MsgStartGroup{},
 	)
 
 	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)

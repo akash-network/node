@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package akash.escrow.v1beta1;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "akash/escrow/v1beta1/types.proto";
+
+option go_package = "github.com/ovrclk/akash/x/escrow/types";
+
+// Query defines the gRPC querier service
+service Query {
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  // Accounts queries all accounts
+  rpc Accounts(QueryAccountsRequest) returns (QueryAccountsResponse) {
+    option (google.api.http).get = "/akash/escrow/v1beta1/types/accounts/list";
+  }
+
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  // Payments queries all payments
+  rpc Payments(QueryPaymentsRequest) returns (QueryPaymentsResponse) {
+    option (google.api.http).get = "/akash/escrow/v1beta1/types/payments/list";
+  }
+}
+
+// QueryAccountRequest is request type for the Query/Account RPC method
+message QueryAccountsRequest {
+  string scope = 1;
+  string xid   = 2;
+  string owner = 3;
+  string state = 4;
+  cosmos.base.query.v1beta1.PageRequest pagination = 5;
+}
+
+// QueryProvidersResponse is response type for the Query/Providers RPC method
+message QueryAccountsResponse {
+  repeated Account accounts = 1 [(gogoproto.nullable) = false];
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// QueryPaymentRequest is request type for the Query/Payment RPC method
+message QueryPaymentsRequest {
+  string scope = 1;
+  string xid   = 2;
+  string id    = 3;
+  string owner = 4;
+  string state = 5;
+  cosmos.base.query.v1beta1.PageRequest pagination = 6;
+}
+
+// QueryProvidersResponse is response type for the Query/Providers RPC method
+message QueryPaymentsResponse {
+  repeated Payment payments = 1 [(gogoproto.nullable) = false];
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}

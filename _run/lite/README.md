@@ -198,7 +198,7 @@ There are a number of ways that a lease can be terminated.
 
 __t1__
 ```sh
-make bid-close
+make lease-close
 ```
 
 #### Tenant closes the order
@@ -360,7 +360,7 @@ KEY_NAME=other PROVIDER_KEY_NAME=validator DSEQ=20 GSEQ=99 OSEQ=500 PRICE=100uak
 
 Fully-customized bid close
 ```sh
-KEY_NAME=other PROVIDER_KEY_NAME=validator DSEQ=20 GSEQ=99 OSEQ=500 make bid-close
+KEY_NAME=other PROVIDER_KEY_NAME=validator DSEQ=20 GSEQ=99 OSEQ=500 make lease-close
 ```
 
 #### Providers

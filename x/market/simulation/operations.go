@@ -22,7 +22,7 @@ import (
 const (
 	OpWeightMsgCreateBid  = "op_weight_msg_create_bid"
 	OpWeightMsgCloseBid   = "op_weight_msg_close_bid"
-	OpWeightMsgCloseOrder = "op_weight_msg_close_order"
+	OpWeightMsgCloseLease = "op_weight_msg_close_lease"
 )
 
 // WeightedOperations returns all the operations from the module with their respective weights
@@ -32,7 +32,7 @@ func WeightedOperations(
 	var (
 		weightMsgCreateBid  int
 		weightMsgCloseBid   int
-		weightMsgCloseOrder int
+		weightMsgCloseLease int
 	)
 
 	appParams.GetOrGenerate(
@@ -48,8 +48,8 @@ func WeightedOperations(
 	)
 
 	appParams.GetOrGenerate(
-		cdc, OpWeightMsgCloseOrder, &weightMsgCloseOrder, nil, func(r *rand.Rand) {
-			weightMsgCloseOrder = appparams.DefaultWeightMsgCloseOrder
+		cdc, OpWeightMsgCloseLease, &weightMsgCloseLease, nil, func(r *rand.Rand) {
+			weightMsgCloseLease = appparams.DefaultWeightMsgCloseLease
 		},
 	)
 
@@ -63,8 +63,8 @@ func WeightedOperations(
 			SimulateMsgCloseBid(ak, ks),
 		),
 		simulation.NewWeightedOperation(
-			weightMsgCloseOrder,
-			SimulateMsgCloseOrder(ak, ks),
+			weightMsgCloseLease,
+			SimulateMsgCloseLease(ak, ks),
 		),
 	}
 }
@@ -153,7 +153,7 @@ func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes
 		var bids []types.Bid
 
 		ks.Market.WithBids(ctx, func(bid types.Bid) bool {
-			if bid.State == types.BidMatched {
+			if bid.State == types.BidActive {
 				lease, ok := ks.Market.GetLease(ctx, types.LeaseID(bid.BidID))
 				if ok && lease.State == types.LeaseActive {
 					bids = append(bids, bid)
@@ -216,60 +216,60 @@ func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes
 	}
 }
 
-// SimulateMsgCloseOrder generates a MsgCloseOrder with random values
-func SimulateMsgCloseOrder(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes.Operation {
+// SimulateMsgCloseLease generates a MsgCloseLease with random values
+func SimulateMsgCloseLease(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
 		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
-		orders := getOrdersWithState(ctx, ks, types.OrderMatched)
-		if len(orders) == 0 {
-			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseOrder, "no orders with state matched found"), nil, nil
-		}
+		// orders := getOrdersWithState(ctx, ks, types.OrderActive)
+		// if len(orders) == 0 {
+		// 	return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseLease, "no orders with state matched found"), nil, nil
+		// }
 
-		// Get random order
-		i := r.Intn(len(orders))
-		order := orders[i]
+		// // Get random order
+		// i := r.Intn(len(orders))
+		// order := orders[i]
 
-		ownerAddr, convertErr := sdk.AccAddressFromBech32(order.ID().Owner)
-		if convertErr != nil {
-			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseOrder, "error while converting address"), nil, convertErr
-		}
+		// ownerAddr, convertErr := sdk.AccAddressFromBech32(order.ID().Owner)
+		// if convertErr != nil {
+		// 	return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseLease, "error while converting address"), nil, convertErr
+		// }
 
-		simAccount, found := simtypes.FindAccount(accounts, ownerAddr)
-		if !found {
-			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseOrder, "unable to find order"),
-				nil, errors.Errorf("order with %s not found", order.ID().Owner)
-		}
+		// simAccount, found := simtypes.FindAccount(accounts, ownerAddr)
+		// if !found {
+		// 	return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseLease, "unable to find order"),
+		// 		nil, errors.Errorf("order with %s not found", order.ID().Owner)
+		// }
 
-		account := ak.GetAccount(ctx, simAccount.Address)
-		spendable := ks.Bank.SpendableCoins(ctx, account.GetAddress())
+		// account := ak.GetAccount(ctx, simAccount.Address)
+		// spendable := ks.Bank.SpendableCoins(ctx, account.GetAddress())
 
-		fees, err := simtypes.RandomFees(r, ctx, spendable)
-		if err != nil {
-			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseBid, "unable to generate fees"), nil, err
-		}
+		// fees, err := simtypes.RandomFees(r, ctx, spendable)
+		// if err != nil {
+		// 	return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseBid, "unable to generate fees"), nil, err
+		// }
 
-		msg := types.NewMsgCloseOrder(order.OrderID)
+		// msg := types.NewMsgCloseLease(order.OrderID)
 
-		txGen := simappparams.MakeTestEncodingConfig().TxConfig
-		tx, err := helpers.GenTx(
-			txGen,
-			[]sdk.Msg{msg},
-			fees,
-			helpers.DefaultGenTxGas,
-			chainID,
-			[]uint64{account.GetAccountNumber()},
-			[]uint64{account.GetSequence()},
-			simAccount.PrivKey,
-		)
-		if err != nil {
-			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to generate mock tx"), nil, err
-		}
+		// txGen := simappparams.MakeTestEncodingConfig().TxConfig
+		// tx, err := helpers.GenTx(
+		// 	txGen,
+		// 	[]sdk.Msg{msg},
+		// 	fees,
+		// 	helpers.DefaultGenTxGas,
+		// 	chainID,
+		// 	[]uint64{account.GetAccountNumber()},
+		// 	[]uint64{account.GetSequence()},
+		// 	simAccount.PrivKey,
+		// )
+		// if err != nil {
+		// 	return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to generate mock tx"), nil, err
+		// }
 
-		_, _, err = app.Deliver(txGen.TxEncoder(), tx)
-		if err != nil {
-			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to deliver tx"), nil, err
-		}
+		// _, _, err = app.Deliver(txGen.TxEncoder(), tx)
+		// if err != nil {
+		// 	return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to deliver tx"), nil, err
+		// }
 
-		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(nil, true, ""), nil, nil
 	}
 }

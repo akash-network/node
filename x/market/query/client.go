@@ -16,9 +16,9 @@ type Client interface {
 }
 
 // NewClient creates a client instance with provided context and key
-func NewClient(ctx sdkclient.Context, key string) Client {
-	return &client{ctx: ctx, key: key}
-}
+// func NewClient(ctx sdkclient.Context, key string) Client {
+// 	return &client{ctx: ctx, key: key}
+// }
 
 type client struct {
 	ctx sdkclient.Context

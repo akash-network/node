@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/validation/constants"
 	"github.com/pkg/errors"
@@ -67,11 +68,5 @@ func validateUnitPricing(rg Resource) error {
 }
 
 func validateOrderBidDuration(rg GroupSpec) error {
-	if !(rg.OrderBidDuration > 0) {
-		return errors.Errorf("error: order bid duration must be greater than zero")
-	}
-	if rg.OrderBidDuration > MaxBiddingDuration {
-		return errors.Errorf("error: order bid duration must not be greater than %v", MaxBiddingDuration)
-	}
 	return nil
 }

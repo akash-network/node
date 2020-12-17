@@ -66,6 +66,7 @@ import (
 	"github.com/ovrclk/akash/x/audit"
 	"github.com/ovrclk/akash/x/cert"
 	"github.com/ovrclk/akash/x/deployment"
+	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
 	"github.com/ovrclk/akash/x/market"
 	"github.com/ovrclk/akash/x/provider"
 
@@ -143,6 +144,7 @@ type AkashApp struct {
 		scopedTransfer capabilitykeeper.ScopedKeeper
 
 		// akash keepers
+		escrow     escrowkeeper.Keeper
 		deployment deployment.Keeper
 		market     market.Keeper
 		provider   provider.Keeper
@@ -593,5 +595,5 @@ func initParamsKeeper(appCodec codec.BinaryMarshaler, legacyAmino *codec.LegacyA
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibchost.ModuleName)
 
-	return paramsKeeper
+	return akashSubspaces(paramsKeeper)
 }

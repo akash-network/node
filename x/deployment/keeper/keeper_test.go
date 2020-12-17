@@ -2,18 +2,16 @@ package keeper_test
 
 import (
 	"testing"
-	"time"
 
-	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 
 	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/testutil/state"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
+	etypes "github.com/ovrclk/akash/x/escrow/types"
 )
 
 func Test_Create(t *testing.T) {
@@ -143,7 +141,7 @@ func Test_OnOrderCreated(t *testing.T) {
 
 	group, ok := keeper.GetGroup(ctx, groups[0].ID())
 	assert.True(t, ok)
-	assert.Equal(t, types.GroupOrdered, group.State)
+	assert.Equal(t, types.GroupOpen, group.State)
 }
 
 func Test_OnLeaseCreated(t *testing.T) {
@@ -157,27 +155,42 @@ func Test_OnLeaseCreated(t *testing.T) {
 	keeper.OnLeaseCreated(ctx, groups[0].ID())
 	group, ok := keeper.GetGroup(ctx, groups[0].ID())
 	assert.True(t, ok)
-	assert.Equal(t, types.GroupMatched, group.State)
+	assert.Equal(t, types.GroupOpen, group.State)
 }
 
-func Test_OnInsufficientFunds(t *testing.T) {
+func Test_OnEscrowAccountClosed_overdrawn(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
 
 	groups := createActiveDeployment(t, ctx, keeper)
 
-	keeper.OnLeaseInsufficientFunds(ctx, groups[0].ID())
+	did := groups[0].ID().DeploymentID()
 
-	t.Run("target group changed", func(t *testing.T) {
+	eid := types.EscrowAccountForDeployment(did)
+
+	eobj := etypes.Account{
+		ID:    eid,
+		State: etypes.AccountOverdrawn,
+	}
+
+	keeper.OnEscrowAccountClosed(ctx, eobj)
+
+	{
 		group, ok := keeper.GetGroup(ctx, groups[0].ID())
 		assert.True(t, ok)
 		assert.Equal(t, types.GroupInsufficientFunds, group.State)
-	})
+	}
 
-	t.Run("non-target group state unchanged", func(t *testing.T) {
+	{
 		group, ok := keeper.GetGroup(ctx, groups[1].ID())
 		assert.True(t, ok)
-		assert.Equal(t, types.GroupMatched, group.State)
-	})
+		assert.Equal(t, types.GroupInsufficientFunds, group.State)
+	}
+
+	{
+		deployment, ok := keeper.GetDeployment(ctx, did)
+		assert.True(t, ok)
+		assert.Equal(t, types.DeploymentClosed, deployment.State)
+	}
 }
 
 func Test_OnBidClosed(t *testing.T) {
@@ -190,13 +203,13 @@ func Test_OnBidClosed(t *testing.T) {
 	t.Run("target group changed", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[0].ID())
 		assert.True(t, ok)
-		assert.Equal(t, types.GroupClosed, group.State)
+		assert.Equal(t, types.GroupPaused, group.State)
 	})
 
 	t.Run("non-target group state unchanged", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[1].ID())
 		assert.True(t, ok)
-		assert.Equal(t, types.GroupMatched, group.State)
+		assert.Equal(t, types.GroupOpen, group.State)
 	})
 }
 
@@ -216,7 +229,7 @@ func Test_OnOrderClosed(t *testing.T) {
 	t.Run("non-target group state unchanged", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[1].ID())
 		assert.True(t, ok)
-		assert.Equal(t, types.GroupMatched, group.State)
+		assert.Equal(t, types.GroupOpen, group.State)
 	})
 }
 
@@ -236,7 +249,7 @@ func Test_OnDeploymentClosed(t *testing.T) {
 	t.Run("non-target group state unchanged", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[1].ID())
 		assert.True(t, ok)
-		assert.Equal(t, types.GroupMatched, group.State)
+		assert.Equal(t, types.GroupOpen, group.State)
 	})
 }
 
@@ -245,7 +258,7 @@ func Test_CloseGroup(t *testing.T) {
 	groups := createActiveDeployment(t, ctx, keeper)
 
 	t.Run("assert group 0 state closed", func(t *testing.T) {
-		assert.NoError(t, keeper.OnCloseGroup(ctx, groups[0]))
+		assert.NoError(t, keeper.OnCloseGroup(ctx, groups[0], types.GroupClosed))
 		group, ok := keeper.GetGroup(ctx, groups[0].ID())
 		assert.True(t, ok)
 		assert.Equal(t, types.GroupClosed, group.State)
@@ -253,67 +266,9 @@ func Test_CloseGroup(t *testing.T) {
 		keeper.OnDeploymentClosed(ctx, group) // coverage: catch an additional code path
 		assert.Equal(t, types.GroupClosed, group.State)
 	})
-	t.Run("group 1 matched-state not-orderable", func(t *testing.T) {
+	t.Run("group 1 matched-state orderable", func(t *testing.T) {
 		group := groups[1]
-		assert.Equal(t, group.ValidateOrderable(), types.ErrGroupNotOpen, group.State.String())
-	})
-}
-
-func Test_CloseOpenGroups(t *testing.T) {
-	ctx, keeper := setupKeeper(t)
-	groups := createDeploymentsWithState(t, ctx, types.GroupOpen, keeper)
-
-	t.Run("assert open groups", func(t *testing.T) {
-		og := keeper.GetGroups(ctx, groups[0].ID().DeploymentID())
-		assert.Len(t, og, 2)
-		for _, g := range og {
-			assert.Equal(t, g.State, types.GroupOpen)
-		}
-	})
-
-	t.Run("assert group 0 state closed", func(t *testing.T) {
-		assert.NoError(t, keeper.OnCloseGroup(ctx, groups[0]))
-		group, ok := keeper.GetGroup(ctx, groups[0].ID())
-		assert.True(t, ok)
-		assert.Equal(t, types.GroupClosed, group.State)
-	})
-	t.Run("group 1 matched-state still orderable", func(t *testing.T) {
-		group := groups[1]
-		assert.Equal(t, group.ValidateOrderable(), nil, group.State.String())
-	})
-}
-
-func Test_CloseOpenGroupsCheckIndexes(t *testing.T) {
-	ctx, keeper := setupKeeper(t)
-	groups := createDeploymentsWithState(t, ctx, types.GroupOpen, keeper)
-
-	t.Run("assert iterating over one group", func(t *testing.T) {
-		i := 0
-		keeper.WithOpenGroups(ctx, func(g types.Group) bool {
-			i++
-			return true // aborts the iteration after one group is read and increments i
-		})
-		assert.Equal(t, i, 1)
-	})
-
-	t.Run("assert groups open", func(t *testing.T) {
-		openCnt := 0
-		keeper.WithOpenGroups(ctx, func(g types.Group) bool {
-			openCnt++
-			return false
-		})
-		assert.Equal(t, 2, openCnt)
-	})
-
-	t.Run("assert group 0 state closed", func(t *testing.T) {
-		assert.NoError(t, keeper.OnCloseGroup(ctx, groups[0]))
-		group, ok := keeper.GetGroup(ctx, groups[0].ID())
-		assert.True(t, ok)
-		assert.Equal(t, types.GroupClosed, group.State)
-	})
-	t.Run("group 1 matched-state still orderable", func(t *testing.T) {
-		group := groups[1]
-		assert.Equal(t, group.ValidateOrderable(), nil, group.State.String())
+		assert.Equal(t, types.GroupOpen, group.State)
 	})
 }
 
@@ -324,7 +279,7 @@ func Test_Empty_CloseGroup(t *testing.T) {
 	}
 
 	t.Run("assert non-existent group returns error", func(t *testing.T) {
-		err := keeper.OnCloseGroup(ctx, group)
+		err := keeper.OnCloseGroup(ctx, group, types.GroupClosed)
 		assert.Error(t, err, "'group not found' error should be returned")
 	})
 }
@@ -338,7 +293,7 @@ func createActiveDeployment(t testing.TB, ctx sdk.Context, keeper keeper.Keeper)
 		testutil.DeploymentGroup(t, deployment.ID(), 1),
 	}
 	for i := range groups {
-		groups[i].State = types.GroupMatched
+		groups[i].State = types.GroupOpen
 	}
 
 	err := keeper.Create(ctx, deployment, groups)
@@ -367,12 +322,8 @@ func createDeploymentsWithState(t testing.TB, ctx sdk.Context, gState types.Grou
 
 func setupKeeper(t testing.TB) (sdk.Context, keeper.Keeper) {
 	t.Helper()
-	key := sdk.NewKVStoreKey(types.StoreKey)
-	db := dbm.NewMemDB()
-	ms := store.NewCommitMultiStore(db)
-	ms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
-	err := ms.LoadLatestVersion()
-	require.NoError(t, err)
-	ctx := sdk.NewContext(ms, tmproto.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))
-	return ctx, keeper.NewKeeper(types.ModuleCdc, key)
+
+	suite := state.SetupTestSuite(t)
+
+	return suite.Context(), suite.DeploymentKeeper()
 }

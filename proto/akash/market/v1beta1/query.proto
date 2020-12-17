@@ -7,6 +7,7 @@ import "cosmos/base/query/v1beta1/pagination.proto";
 import "akash/market/v1beta1/order.proto";
 import "akash/market/v1beta1/bid.proto";
 import "akash/market/v1beta1/lease.proto";
+import "akash/escrow/v1beta1/types.proto";
 
 option go_package = "github.com/ovrclk/akash/x/market/types";
 
@@ -76,7 +77,7 @@ message QueryBidsRequest {
 
 // QueryBidsResponse is response type for the Query/Bids RPC method
 message QueryBidsResponse {
-  repeated Bid bids = 1 [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "Bids"];
+  repeated QueryBidResponse bids = 1 [(gogoproto.nullable) = false];
 
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
@@ -89,6 +90,9 @@ message QueryBidRequest {
 // QueryBidResponse is response type for the Query/Bid RPC method
 message QueryBidResponse {
   Bid bid = 1 [(gogoproto.nullable) = false];
+  akash.escrow.v1beta1.Account escrow_account = 2 [
+    (gogoproto.nullable) = false
+  ];
 }
 
 // QueryLeasesRequest is request type for the Query/Leases RPC method
@@ -100,7 +104,7 @@ message QueryLeasesRequest {
 
 // QueryLeasesResponse is response type for the Query/Leases RPC method
 message QueryLeasesResponse {
-  repeated Lease leases = 1 [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "Leases"];
+  repeated QueryLeaseResponse leases = 1 [(gogoproto.nullable) = false];
 
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
@@ -113,4 +117,7 @@ message QueryLeaseRequest {
 // QueryLeaseResponse is response type for the Query/Lease RPC method
 message QueryLeaseResponse {
   Lease lease = 1 [(gogoproto.nullable) = false];
+  akash.escrow.v1beta1.Payment escrow_payment = 2 [
+    (gogoproto.nullable) = false
+  ];
 }

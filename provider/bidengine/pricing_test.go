@@ -4,12 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/testutil"
-	atypes "github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/types/unit"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/stretchr/testify/require"
 	io "io"
 	"math"
 	"math/big"
@@ -18,6 +12,13 @@ import (
 	"path"
 	"testing"
 	"time"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/testutil"
+	atypes "github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types/unit"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_ScalePricingRejectsAllZero(t *testing.T) {
@@ -46,10 +47,9 @@ func Test_ScalePricingAcceptsOneForASingleScale(t *testing.T) {
 
 func defaultGroupSpec() *dtypes.GroupSpec {
 	gspec := &dtypes.GroupSpec{
-		Name:             "",
-		Requirements:     atypes.PlacementRequirements{},
-		Resources:        make([]dtypes.Resource, 1),
-		OrderBidDuration: 0,
+		Name:         "",
+		Requirements: atypes.PlacementRequirements{},
+		Resources:    make([]dtypes.Resource, 1),
 	}
 
 	cpu := atypes.CPU{}
