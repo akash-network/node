@@ -7,6 +7,7 @@ import (
 	"encoding/base32"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/ovrclk/akash/provider/cluster/util"
@@ -32,6 +33,12 @@ const (
 	akashManagedLabelName         = "akash.network"
 	akashNetworkNamespace         = "akash.network/namespace"
 	akashManifestServiceLabelName = "akash.network/manifest-service"
+
+	akashLeaseOwnerLabelName    = "akash.network/lease.id.owner"
+	akashLeaseDSeqLabelName     = "akash.network/lease.id.dseq"
+	akashLeaseGSeqLabelName     = "akash.network/lease.id.gseq"
+	akashLeaseOSeqLabelName     = "akash.network/lease.id.oseq"
+	akashLeaseProviderLabelName = "akash.network/lease.id.provider"
 
 	netPolDefaultDenyIngress = "default-deny-ingress"
 	netPolDefaultDenyEgress  = "default-deny-egress"
@@ -77,6 +84,10 @@ func newNSBuilder(settings Settings, lid mtypes.LeaseID, group *manifest.Group) 
 
 func (b *nsBuilder) name() string {
 	return b.ns()
+}
+
+func (b *nsBuilder) labels() map[string]string {
+	return appendLeaseLabels(b.lid, b.builder.labels())
 }
 
 func (b *nsBuilder) create() (*corev1.Namespace, error) { // nolint:golint,unparam
@@ -803,6 +814,10 @@ func newManifestBuilder(log log.Logger, settings Settings, ns string, lid mtypes
 	}
 }
 
+func (b *manifestBuilder) labels() map[string]string {
+	return appendLeaseLabels(b.lid, b.builder.labels())
+}
+
 func (b *manifestBuilder) ns() string {
 	return b.mns
 }
@@ -828,4 +843,13 @@ func (b *manifestBuilder) update(obj *akashv1.Manifest) (*akashv1.Manifest, erro
 
 func (b *manifestBuilder) name() string {
 	return lidNS(b.lid)
+}
+
+func appendLeaseLabels(lid mtypes.LeaseID, labels map[string]string) map[string]string {
+	labels[akashLeaseOwnerLabelName] = lid.Owner
+	labels[akashLeaseDSeqLabelName] = strconv.FormatUint(lid.DSeq, 10)
+	labels[akashLeaseGSeqLabelName] = strconv.FormatUint(uint64(lid.GSeq), 10)
+	labels[akashLeaseOSeqLabelName] = strconv.FormatUint(uint64(lid.OSeq), 10)
+	labels[akashLeaseProviderLabelName] = lid.Provider
+	return labels
 }
