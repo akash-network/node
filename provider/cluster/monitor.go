@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	monitorMaxRetries        = 20
-	monitorRetryPeriodMin    = time.Second * 2
-	monitorRetryPeriodJitter = time.Second * 5
+	monitorMaxRetries        = 40
+	monitorRetryPeriodMin    = time.Second * 4
+	monitorRetryPeriodJitter = time.Second * 15
 
 	monitorHealthcheckPeriodMin    = time.Second * 10
 	monitorHealthcheckPeriodJitter = time.Second * 5

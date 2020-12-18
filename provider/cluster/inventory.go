@@ -3,12 +3,15 @@ package cluster
 import (
 	"context"
 	"errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"time"
 
 	"github.com/boz/go-lifecycle"
 	"github.com/tendermint/tendermint/libs/log"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	clusterUtil "github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/pubsub"
 	atypes "github.com/ovrclk/akash/types"
@@ -170,6 +173,43 @@ type inventoryResponse struct {
 	err   error
 }
 
+func (is *inventoryService) committedResources(rgroup atypes.ResourceGroup) atypes.ResourceGroup {
+	replacedResources := make([]dtypes.Resource, 0)
+
+	for _, resource := range rgroup.GetResources() {
+		runits := atypes.ResourceUnits{
+			CPU: &atypes.CPU{
+				Units:      clusterUtil.ComputeCommittedResources(is.config.CPUCommitLevel, resource.Resources.GetCPU().GetUnits()),
+				Attributes: resource.Resources.GetCPU().GetAttributes(),
+			},
+			Memory: &atypes.Memory{
+				Quantity:   clusterUtil.ComputeCommittedResources(is.config.MemoryCommitLevel, resource.Resources.GetMemory().GetQuantity()),
+				Attributes: resource.Resources.GetMemory().GetAttributes(),
+			},
+			Storage: &atypes.Storage{
+				Quantity:   clusterUtil.ComputeCommittedResources(is.config.StorageCommitLevel, resource.Resources.GetStorage().GetQuantity()),
+				Attributes: resource.Resources.GetStorage().GetAttributes(),
+			},
+			Endpoints: resource.Resources.GetEndpoints(),
+		}
+		v := dtypes.Resource{
+			Resources: runits,
+			Count:     resource.Count,
+			Price:     sdk.Coin{},
+		}
+
+		replacedResources = append(replacedResources, v)
+	}
+
+	result := dtypes.GroupSpec{
+		Name:             rgroup.GetName(),
+		Requirements:     atypes.PlacementRequirements{},
+		Resources:        replacedResources,
+		OrderBidDuration: 0,
+	}
+	return result
+}
+
 func (is *inventoryService) run(reservations []*reservation) {
 	defer is.lc.ShutdownCompleted()
 	defer is.sub.Close()
@@ -230,8 +270,10 @@ loop:
 			}
 
 		case req := <-is.reservech:
+			// convert the resources to the commmitted amount
+			resourcesToCommit := is.committedResources(req.resources)
 			// create new registration if capacity available
-			reservation := newReservation(req.order, req.resources)
+			reservation := newReservation(req.order, resourcesToCommit)
 
 			is.log.Debug("reservation requested", "order", req.order, "resources", req.resources)
 
@@ -283,8 +325,8 @@ loop:
 
 			req.ch <- inventoryResponse{err: errNotFound}
 
-		case ch := <-is.statusch:
-			ch <- is.getStatus(inventory, reservations)
+		case responseCh := <-is.statusch:
+			responseCh <- is.getStatus(inventory, reservations)
 
 		case <-t.C:
 			// run cluster inventory check

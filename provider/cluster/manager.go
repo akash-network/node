@@ -3,14 +3,13 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"sync"
-
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
+	"sync"
 )
 
 type deploymentState string
@@ -126,10 +125,16 @@ loop:
 			}
 			switch dm.state {
 			case dsDeployActive:
+				if result != nil {
+					break loop
+				}
 				dm.log.Debug("deploy complete")
 				dm.state = dsDeployComplete
 				dm.startMonitor()
 			case dsDeployPending:
+				if result != nil {
+					break loop
+				}
 				// start update
 				runch = dm.startDeploy()
 			case dsDeployComplete:

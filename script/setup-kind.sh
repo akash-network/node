@@ -31,13 +31,7 @@ install_metrics() {
     --selector=k8s-app=metrics-server \
     --timeout=90s
 
-  count=1
-  while ! kubectl top nodes; do
-    echo "[$((count++))] waiting for metrics..."
-    sleep 1
-  done
-
-  echo "metrics available"
+  echo "metrics initialized"
 }
 
 usage() {
