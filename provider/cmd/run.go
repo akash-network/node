@@ -61,6 +61,8 @@ const (
 	FlagDeploymentIngressDomain          = "deployment-ingress-domain"
 	FlagDeploymentIngressExposeLBHosts   = "deployment-ingress-expose-lb-hosts"
 	FlagDeploymentNetworkPoliciesEnabled = "deployment-network-policies-enabled"
+	FlagContainerUserID                  = "container-user-id"
+	FlagContainerGroupID                 = "container-group-id"
 )
 
 var (
@@ -186,6 +188,16 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().Uint32(FlagContainerUserID, 1000, "User ID to run as inside containers")
+	if err := viper.BindPFlag(FlagContainerUserID, cmd.Flags().Lookup(FlagContainerUserID)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint32(FlagContainerGroupID, 1000, "Group ID to run as inside containers")
+	if err := viper.BindPFlag(FlagContainerGroupID, cmd.Flags().Lookup(FlagContainerGroupID)); err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
@@ -227,6 +239,8 @@ func createBidPricingStrategy(strategy string) (bidengine.BidPricingStrategy, er
 	return nil, errNoSuchBidPricingStrategy
 }
 
+var errRootNotAllowed = errors.New("Cannot use root user ID [1] for group or user in containers")
+
 // doRunCmd initializes all of the Provider functionality, hangs, and awaits shutdown signals.
 func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	clusterPublicHostname := viper.GetString(FlagClusterPublicHostname)
@@ -241,6 +255,13 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	strategy := viper.GetString(FlagBidPricingStrategy)
 	deploymentIngressExposeLBHosts := viper.GetBool(FlagDeploymentIngressExposeLBHosts)
 	from := viper.GetString(flags.FlagFrom)
+	runAsUser := viper.GetUint32(FlagContainerUserID)
+	runAsGroup := viper.GetUint32(FlagContainerGroupID)
+
+	if runAsUser == 1 || runAsGroup == 1 {
+		return errRootNotAllowed
+	}
+
 	pricing, err := createBidPricingStrategy(strategy)
 
 	if err != nil {
@@ -309,6 +330,8 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	kubeSettings.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
 	kubeSettings.NetworkPoliciesEnabled = deploymentNetworkPoliciesEnabled
 	kubeSettings.ClusterPublicHostname = clusterPublicHostname
+	kubeSettings.RunAsGroup = runAsGroup
+	kubeSettings.RunAsUser = runAsUser
 
 	cclient, err := createClusterClient(log, cmd, kubeSettings)
 	if err != nil {

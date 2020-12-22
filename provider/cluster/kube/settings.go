@@ -29,6 +29,9 @@ type Settings struct {
 
 	// NetworkPoliciesEnabled determines if NetworkPolicies should be installed.
 	NetworkPoliciesEnabled bool
+
+	RunAsUser  uint32
+	RunAsGroup uint32
 }
 
 var errSettingsValidation = errors.New("settings validation")

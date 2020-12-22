@@ -5,7 +5,8 @@ services:
   web:
     image: quay.io/ovrclk/demo-app
     expose:
-      - port: 80
+      - port: 8080
+        as: 80
         to:
           - global: true
         accept:

@@ -27,6 +27,7 @@ import (
 	"github.com/ovrclk/akash/manifest"
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+	"k8s.io/api/policy/v1beta1"
 )
 
 const (
@@ -105,79 +106,88 @@ func (b *nsBuilder) update(obj *corev1.Namespace) (*corev1.Namespace, error) { /
 	return obj, nil
 }
 
-// TODO: re-enable.  see #946
 // pspRestrictedBuilder produces restrictive PodSecurityPolicies for tenant Namespaces.
 // Restricted PSP source: https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/policy/restricted-psp.yaml
-// type pspRestrictedBuilder struct {
-// 	builder
-// }
-//
-// func newPspBuilder(settings Settings, lid mtypes.LeaseID, group *manifest.Group) *pspRestrictedBuilder { // nolint:golint,unparam
-// 	return &pspRestrictedBuilder{builder: builder{settings: settings, lid: lid, group: group}}
-// }
-//
-// func (p *pspRestrictedBuilder) name() string {
-// 	return p.ns()
-// }
-//
-// func (p *pspRestrictedBuilder) create() (*v1beta1.PodSecurityPolicy, error) { // nolint:golint,unparam
-// 	falseVal := false
-// 	return &v1beta1.PodSecurityPolicy{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:      p.name(),
-// 			Namespace: p.name(),
-// 			Labels:    p.labels(),
-// 			Annotations: map[string]string{
-// 				"seccomp.security.alpha.kubernetes.io/allowedProfileNames": "docker/default,runtime/default",
-// 				"apparmor.security.beta.kubernetes.io/allowedProfileNames": "runtime/default",
-// 				"seccomp.security.alpha.kubernetes.io/defaultProfileName":  "runtime/default",
-// 				"apparmor.security.beta.kubernetes.io/defaultProfileName":  "runtime/default",
-// 			},
-// 		},
-// 		Spec: v1beta1.PodSecurityPolicySpec{
-// 			Privileged:               false,
-// 			AllowPrivilegeEscalation: &falseVal,
-// 			RequiredDropCapabilities: []corev1.Capability{
-// 				"ALL",
-// 			},
-// 			Volumes: []v1beta1.FSType{
-// 				v1beta1.EmptyDir,
-// 				v1beta1.PersistentVolumeClaim, // evaluate necessity later
-// 			},
-// 			HostNetwork: false,
-// 			HostIPC:     false,
-// 			HostPID:     false,
-// 			RunAsUser: v1beta1.RunAsUserStrategyOptions{
-// 				// fixme(#946): previous value RunAsUserStrategyMustRunAsNonRoot was interfering with
-// 				// (b *deploymentBuilder) create() RunAsNonRoot: false
-// 				// allow any user at this moment till revise all security debris of kube api
-// 				Rule: v1beta1.RunAsUserStrategyRunAsAny,
-// 			},
-// 			SELinux: v1beta1.SELinuxStrategyOptions{
-// 				Rule: v1beta1.SELinuxStrategyRunAsAny,
-// 			},
-// 			SupplementalGroups: v1beta1.SupplementalGroupsStrategyOptions{
-// 				Rule: v1beta1.SupplementalGroupsStrategyRunAsAny,
-// 			},
-// 			FSGroup: v1beta1.FSGroupStrategyOptions{
-// 				Rule: v1beta1.FSGroupStrategyMustRunAs,
-// 				Ranges: []v1beta1.IDRange{
-// 					{
-// 						Min: int64(1),
-// 						Max: int64(65535),
-// 					},
-// 				},
-// 			},
-// 			ReadOnlyRootFilesystem: false,
-// 		},
-// 	}, nil
-// }
-//
-// func (p *pspRestrictedBuilder) update(obj *v1beta1.PodSecurityPolicy) (*v1beta1.PodSecurityPolicy, error) { // nolint:golint,unparam
-// 	obj.Name = p.ns()
-// 	obj.Labels = p.labels()
-// 	return obj, nil
-// }
+type pspRestrictedBuilder struct {
+	builder
+}
+
+func newPspBuilder(settings Settings, lid mtypes.LeaseID, group *manifest.Group) *pspRestrictedBuilder { // nolint:golint,unparam
+	return &pspRestrictedBuilder{builder: builder{settings: settings, lid: lid, group: group}}
+}
+
+func (p *pspRestrictedBuilder) name() string {
+	return p.ns()
+}
+
+func (p *pspRestrictedBuilder) create() (*v1beta1.PodSecurityPolicy, error) { // nolint:golint,unparam
+	falseVal := false
+	runAsGroup := v1beta1.RunAsGroupStrategyOptions{
+		Rule: v1beta1.RunAsGroupStrategyMustRunAs,
+		Ranges: []v1beta1.IDRange{
+			{
+				Min: int64(2),
+				Max: int64(65535),
+			},
+		},
+	}
+	return &v1beta1.PodSecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      p.name(),
+			Namespace: p.name(),
+			Labels:    p.labels(),
+			Annotations: map[string]string{
+				"seccomp.security.alpha.kubernetes.io/allowedProfileNames": "docker/default,runtime/default",
+				"apparmor.security.beta.kubernetes.io/allowedProfileNames": "runtime/default",
+				"seccomp.security.alpha.kubernetes.io/defaultProfileName":  "runtime/default",
+				"apparmor.security.beta.kubernetes.io/defaultProfileName":  "runtime/default",
+			},
+		},
+		Spec: v1beta1.PodSecurityPolicySpec{
+			Privileged:               false,
+			AllowPrivilegeEscalation: &falseVal,
+			RequiredDropCapabilities: []corev1.Capability{
+				"ALL",
+			},
+			Volumes: []v1beta1.FSType{
+				v1beta1.EmptyDir,
+				v1beta1.ConfigMap,
+				v1beta1.DownwardAPI,
+				v1beta1.Secret,
+				v1beta1.Projected,
+			},
+			HostNetwork: false,
+			HostIPC:     false,
+			HostPID:     false,
+			RunAsUser: v1beta1.RunAsUserStrategyOptions{
+				Rule: v1beta1.RunAsUserStrategyMustRunAsNonRoot,
+			},
+			RunAsGroup: &runAsGroup,
+			SELinux: v1beta1.SELinuxStrategyOptions{
+				Rule: v1beta1.SELinuxStrategyRunAsAny,
+			},
+			SupplementalGroups: v1beta1.SupplementalGroupsStrategyOptions{
+				Rule: v1beta1.SupplementalGroupsStrategyRunAsAny,
+			},
+			FSGroup: v1beta1.FSGroupStrategyOptions{
+				Rule: v1beta1.FSGroupStrategyMustRunAs,
+				Ranges: []v1beta1.IDRange{
+					{
+						Min: int64(1),
+						Max: int64(65535),
+					},
+				},
+			},
+			ReadOnlyRootFilesystem: false,
+		},
+	}, nil
+}
+
+func (p *pspRestrictedBuilder) update(obj *v1beta1.PodSecurityPolicy) (*v1beta1.PodSecurityPolicy, error) { // nolint:golint,unparam
+	obj.Name = p.ns()
+	obj.Labels = p.labels()
+	return obj, nil
+}
 
 // deployment
 type deploymentBuilder struct {
@@ -210,6 +220,12 @@ func (b *deploymentBuilder) labels() map[string]string {
 func (b *deploymentBuilder) create() (*appsv1.Deployment, error) { // nolint:golint,unparam
 	replicas := int32(b.service.Count)
 	falseValue := false
+	trueValue := true
+
+	// For whatever reason the kubernetes API uses a signed 64 bit integer for this
+	// so case them here
+	runAsUser := int64(b.settings.RunAsUser)
+	runAsGroup := int64(b.settings.RunAsGroup)
 
 	kdeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -227,7 +243,16 @@ func (b *deploymentBuilder) create() (*appsv1.Deployment, error) { // nolint:gol
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: &falseValue,
+						SELinuxOptions:      nil,
+						WindowsOptions:      nil,
+						RunAsUser:           &runAsUser,
+						RunAsGroup:          &runAsGroup,
+						RunAsNonRoot:        &trueValue,
+						SupplementalGroups:  nil,
+						FSGroup:             nil,
+						Sysctls:             nil,
+						FSGroupChangePolicy: nil,
+						SeccompProfile:      nil,
 					},
 					AutomountServiceAccountToken: &falseValue,
 					Containers:                   []corev1.Container{b.container()},
