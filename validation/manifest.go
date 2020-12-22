@@ -63,9 +63,16 @@ func validateManifestGroup(group manifest.Group, helper *validateManifestGroupsH
 	return nil
 }
 
+var serviceNameValidationRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
+
 func validateManifestService(service manifest.Service, helper *validateManifestGroupsHelper) error {
 	if len(service.Name) == 0 {
 		return fmt.Errorf("%w: service name is empty", ErrInvalidManifest)
+	}
+
+	serviceNameValid := serviceNameValidationRegex.MatchString(service.Name)
+	if !serviceNameValid {
+		return fmt.Errorf("%w: service %q name is invalid", ErrInvalidManifest, service.Name)
 	}
 
 	if len(service.Image) == 0 {
