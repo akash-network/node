@@ -242,7 +242,7 @@ func TestNilManifestIsInvalid(t *testing.T) {
 	require.Regexp(t, "^.*manifest is empty.*$", err)
 }
 
-const nameOfTestService = "testService"
+const nameOfTestService = "test-service"
 const nameOfTestGroup = "testGroup"
 
 func simpleResourceUnits() akashtypes.ResourceUnits {
@@ -308,6 +308,30 @@ func TestManifestWithNoGlobalServicesIsInvalid(t *testing.T) {
 	err := validation.ValidateManifest(m)
 	require.Error(t, err)
 	require.Regexp(t, "^.*zero global services.*$", err)
+}
+
+func TestManifestWithBadServiceNameIsInvalid(t *testing.T) {
+	m := simpleManifest()
+	m[0].Services[0].Name = "a_bad_service_name" // should not contain underscores
+	err := validation.ValidateManifest(m)
+	require.Error(t, err)
+	require.Regexp(t, "^.*name is invalid.*$", err)
+
+	m[0].Services[0].Name = "a-name-" // should not end with dash
+	err = validation.ValidateManifest(m)
+	require.Error(t, err)
+	require.Regexp(t, "^.*name is invalid.*$", err)
+}
+
+func TestManifestWithServiceNameIsValid(t *testing.T) {
+	m := simpleManifest()
+	m[0].Services[0].Name = "12345" // allows all numbers
+	err := validation.ValidateManifest(m)
+	require.NoError(t, err)
+
+	m[0].Services[0].Name = "9aaa-bar" // allows starting with a number
+	err = validation.ValidateManifest(m)
+	require.NoError(t, err)
 }
 
 func TestManifestWithDuplicateHostIsInvalid(t *testing.T) {
