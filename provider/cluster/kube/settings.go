@@ -28,7 +28,8 @@ type Settings struct {
 	ClusterPublicHostname string
 
 	// NetworkPoliciesEnabled determines if NetworkPolicies should be installed.
-	NetworkPoliciesEnabled bool
+	NetworkPoliciesEnabled     bool
+	PodSecurityPoliciesEnabled bool
 
 	CPUCommitLevel     float64
 	MemoryCommitLevel  float64

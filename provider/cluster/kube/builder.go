@@ -28,6 +28,7 @@ import (
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	clusterUtil "github.com/ovrclk/akash/provider/cluster/util"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+	"k8s.io/api/policy/v1beta1"
 )
 
 const (
@@ -98,79 +99,91 @@ func (b *nsBuilder) update(obj *corev1.Namespace) (*corev1.Namespace, error) { /
 	return obj, nil
 }
 
-// TODO: re-enable.  see #946
 // pspRestrictedBuilder produces restrictive PodSecurityPolicies for tenant Namespaces.
 // Restricted PSP source: https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/policy/restricted-psp.yaml
-// type pspRestrictedBuilder struct {
-// 	builder
-// }
-//
-// func newPspBuilder(settings Settings, lid mtypes.LeaseID, group *manifest.Group) *pspRestrictedBuilder { // nolint:golint,unparam
-// 	return &pspRestrictedBuilder{builder: builder{settings: settings, lid: lid, group: group}}
-// }
-//
-// func (p *pspRestrictedBuilder) name() string {
-// 	return p.ns()
-// }
-//
-// func (p *pspRestrictedBuilder) create() (*v1beta1.PodSecurityPolicy, error) { // nolint:golint,unparam
-// 	falseVal := false
-// 	return &v1beta1.PodSecurityPolicy{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:      p.name(),
-// 			Namespace: p.name(),
-// 			Labels:    p.labels(),
-// 			Annotations: map[string]string{
-// 				"seccomp.security.alpha.kubernetes.io/allowedProfileNames": "docker/default,runtime/default",
-// 				"apparmor.security.beta.kubernetes.io/allowedProfileNames": "runtime/default",
-// 				"seccomp.security.alpha.kubernetes.io/defaultProfileName":  "runtime/default",
-// 				"apparmor.security.beta.kubernetes.io/defaultProfileName":  "runtime/default",
-// 			},
-// 		},
-// 		Spec: v1beta1.PodSecurityPolicySpec{
-// 			Privileged:               false,
-// 			AllowPrivilegeEscalation: &falseVal,
-// 			RequiredDropCapabilities: []corev1.Capability{
-// 				"ALL",
-// 			},
-// 			Volumes: []v1beta1.FSType{
-// 				v1beta1.EmptyDir,
-// 				v1beta1.PersistentVolumeClaim, // evaluate necessity later
-// 			},
-// 			HostNetwork: false,
-// 			HostIPC:     false,
-// 			HostPID:     false,
-// 			RunAsUser: v1beta1.RunAsUserStrategyOptions{
-// 				// fixme(#946): previous value RunAsUserStrategyMustRunAsNonRoot was interfering with
-// 				// (b *deploymentBuilder) create() RunAsNonRoot: false
-// 				// allow any user at this moment till revise all security debris of kube api
-// 				Rule: v1beta1.RunAsUserStrategyRunAsAny,
-// 			},
-// 			SELinux: v1beta1.SELinuxStrategyOptions{
-// 				Rule: v1beta1.SELinuxStrategyRunAsAny,
-// 			},
-// 			SupplementalGroups: v1beta1.SupplementalGroupsStrategyOptions{
-// 				Rule: v1beta1.SupplementalGroupsStrategyRunAsAny,
-// 			},
-// 			FSGroup: v1beta1.FSGroupStrategyOptions{
-// 				Rule: v1beta1.FSGroupStrategyMustRunAs,
-// 				Ranges: []v1beta1.IDRange{
-// 					{
-// 						Min: int64(1),
-// 						Max: int64(65535),
-// 					},
-// 				},
-// 			},
-// 			ReadOnlyRootFilesystem: false,
-// 		},
-// 	}, nil
-// }
-//
-// func (p *pspRestrictedBuilder) update(obj *v1beta1.PodSecurityPolicy) (*v1beta1.PodSecurityPolicy, error) { // nolint:golint,unparam
-// 	obj.Name = p.ns()
-// 	obj.Labels = p.labels()
-// 	return obj, nil
-// }
+type pspRestrictedBuilder struct {
+	builder
+}
+
+func newPspBuilder(settings Settings, lid mtypes.LeaseID, group *manifest.Group) *pspRestrictedBuilder { // nolint:golint,unparam
+	return &pspRestrictedBuilder{builder: builder{settings: settings, lid: lid, group: group}}
+}
+
+func (p *pspRestrictedBuilder) name() string {
+	return p.ns()
+}
+
+func (p *pspRestrictedBuilder) create() (*v1beta1.PodSecurityPolicy, error) { // nolint:golint,unparam
+	if !p.settings.PodSecurityPoliciesEnabled {
+		return nil, nil
+	}
+	falseVal := false
+	runAsGroup := v1beta1.RunAsGroupStrategyOptions{
+		Rule: v1beta1.RunAsGroupStrategyMustRunAs,
+		Ranges: []v1beta1.IDRange{
+			{
+				Min: int64(1),
+				Max: int64(65535),
+			},
+		},
+	}
+	return &v1beta1.PodSecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      p.name(),
+			Namespace: p.name(),
+			Labels:    p.labels(),
+			Annotations: map[string]string{
+				"seccomp.security.alpha.kubernetes.io/allowedProfileNames": "docker/default,runtime/default",
+				"apparmor.security.beta.kubernetes.io/allowedProfileNames": "runtime/default",
+				"seccomp.security.alpha.kubernetes.io/defaultProfileName":  "runtime/default",
+				"apparmor.security.beta.kubernetes.io/defaultProfileName":  "runtime/default",
+			},
+		},
+		Spec: v1beta1.PodSecurityPolicySpec{
+			Privileged:               false,
+			AllowPrivilegeEscalation: &falseVal,
+			RequiredDropCapabilities: []corev1.Capability{
+				"ALL",
+			},
+			Volumes: []v1beta1.FSType{
+				v1beta1.EmptyDir,
+				v1beta1.ConfigMap,
+				v1beta1.DownwardAPI,
+				v1beta1.Secret,
+				v1beta1.Projected,
+			},
+			HostNetwork: false,
+			HostIPC:     false,
+			HostPID:     false,
+			RunAsUser: v1beta1.RunAsUserStrategyOptions{
+				Rule: v1beta1.RunAsUserStrategyRunAsAny,
+			},
+			RunAsGroup: &runAsGroup,
+			SELinux: v1beta1.SELinuxStrategyOptions{
+				Rule: v1beta1.SELinuxStrategyRunAsAny,
+			},
+			SupplementalGroups: v1beta1.SupplementalGroupsStrategyOptions{
+				Rule: v1beta1.SupplementalGroupsStrategyRunAsAny,
+			},
+			FSGroup: v1beta1.FSGroupStrategyOptions{
+				Rule: v1beta1.FSGroupStrategyMustRunAs,
+				Ranges: []v1beta1.IDRange{
+					{
+						Min: int64(1),
+						Max: int64(65535),
+					},
+				},
+			},
+			ReadOnlyRootFilesystem: false,
+		},
+	}, nil
+}
+
+func (p *pspRestrictedBuilder) update(obj *v1beta1.PodSecurityPolicy) (*v1beta1.PodSecurityPolicy, error) { // nolint:golint,unparam
+	obj.Name = p.ns()
+	obj.Labels = p.labels()
+	return obj, nil
+}
 
 // deployment
 type deploymentBuilder struct {
@@ -635,233 +648,6 @@ func (b *netPolBuilder) create() ([]*netv1.NetworkPolicy, error) { // nolint:gol
 	}
 
 	return result, nil
-	/**
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   netPolInternalAllow,
-					Labels: b.labels(),
-					Namespace: lidNS(b.lid),
-				},
-				Spec: netv1.NetworkPolicySpec{
-					PodSelector: metav1.LabelSelector{},
-					PolicyTypes: []netv1.PolicyType{
-						netv1.PolicyTypeIngress,
-						netv1.PolicyTypeEgress,
-					},
-					Ingress: []netv1.NetworkPolicyIngressRule{
-						{ // Allow Network Connections from same Namespace
-							From: []netv1.NetworkPolicyPeer{
-								{
-									NamespaceSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											akashNetworkNamespace: lidNS(b.lid),
-										},
-									},
-								},
-							},
-						},
-					},
-					Egress: []netv1.NetworkPolicyEgressRule{
-						{ // Allow Network Connections to same Namespace
-							To: []netv1.NetworkPolicyPeer{
-								{
-									NamespaceSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											akashNetworkNamespace: lidNS(b.lid),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			{
-				// Allowing incoming connections from anything labeled as ingress-nginx
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   netPolIngressAllowIngCtrl,
-					Labels: b.labels(),
-					Namespace: lidNS(b.lid),
-				},
-				Spec: netv1.NetworkPolicySpec{
-					PodSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							akashNetworkNamespace: lidNS(b.lid),
-						},
-					},
-					Ingress: []netv1.NetworkPolicyIngressRule{
-						{ // Allow Network Connections ingress-nginx Namespace
-							From: []netv1.NetworkPolicyPeer{
-								{
-									NamespaceSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											"app.kubernetes.io/name": "ingress-nginx",
-										},
-									},
-								},
-							},
-						},
-					},
-					PolicyTypes: []netv1.PolicyType{
-						netv1.PolicyTypeIngress,
-					},
-				},
-			},
-
-			/**
-
-
-			{
-				// Allow valid ingress to the tentant namespace from NodePorts
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   netPolIngressAllowExternal,
-					Labels: b.labels(),
-				},
-				Spec: netv1.NetworkPolicySpec{
-					PodSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							akashNetworkNamespace: lidNS(b.lid),
-						},
-					},
-					Ingress: []netv1.NetworkPolicyIngressRule{
-						{
-							From: []netv1.NetworkPolicyPeer{
-								{
-									IPBlock: &netv1.IPBlock{
-										CIDR: "0.0.0.0/0",
-										Except: []string{
-											"10.0.0.0/8",
-										},
-									},
-								},
-							},
-						},
-					},
-					PolicyTypes: []netv1.PolicyType{
-						netv1.PolicyTypeIngress,
-					},
-				},
-			},
-	**/
-	/**
-	// EGRESS -----------------------------------------------------------------
-	{
-		// Deny all egress from tenant namespace. Default rule which is opened up
-		// by subsequent rules.
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   netPolDefaultDenyEgress,
-			Labels: b.labels(),
-		},
-		Spec: netv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-			},
-			PolicyTypes: []netv1.PolicyType{
-
-			},
-		},
-	},
-
-	{
-		// Allow egress between services within the namespace.
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   netPolEgressInternalAllow,
-			Labels: b.labels(),
-		},
-		Spec: netv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					akashNetworkNamespace: lidNS(b.lid),
-				},
-			},
-			Egress: []netv1.NetworkPolicyEgressRule{
-				{
-					To: []netv1.NetworkPolicyPeer{
-						{
-							NamespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									akashNetworkNamespace: lidNS(b.lid),
-								},
-							},
-						},
-					},
-				},
-			},
-			PolicyTypes: []netv1.PolicyType{
-				netv1.PolicyTypeEgress,
-			},
-		},
-	},
-
-	{ // Allow egress to all IPs, EXCEPT local cluster.
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   netPolEgressAllowExternalCidr,
-			Labels: b.labels(),
-		},
-		Spec: netv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					akashNetworkNamespace: lidNS(b.lid),
-				},
-			},
-			Egress: []netv1.NetworkPolicyEgressRule{
-				{ // Allow Network Connections to Internet, block access to internal IPs
-					To: []netv1.NetworkPolicyPeer{
-						{
-							IPBlock: &netv1.IPBlock{
-								CIDR: "0.0.0.0/0",
-								Except: []string{
-									// TODO: Full validation and correction required.
-									// Initial testing indicates that this exception is being ignored;
-									// eg: Internal k8s API is accessible from containers, but
-									// open Internet is made accessible by rule.
-									"10.0.0.0/8",
-								},
-							},
-						},
-					},
-				},
-			},
-			PolicyTypes: []netv1.PolicyType{
-				netv1.PolicyTypeEgress,
-			},
-		},
-	},
-
-	{
-		// Allow egress to Kubernetes internal subnet for DNS
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   netPolEgressAllowKubeDNS,
-			Labels: b.labels(),
-		},
-		Spec: netv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					akashNetworkNamespace: lidNS(b.lid),
-				},
-			},
-			Egress: []netv1.NetworkPolicyEgressRule{
-				{ // Allow Network Connections from same Namespace
-					Ports: []netv1.NetworkPolicyPort{
-						{
-							Protocol: &dnsProtocol,
-							Port:     &dnsPort,
-						},
-					},
-					To: []netv1.NetworkPolicyPeer{
-						{
-							IPBlock: &netv1.IPBlock{
-								CIDR: "10.0.0.0/8",
-							},
-						},
-					},
-				},
-			},
-			PolicyTypes: []netv1.PolicyType{
-				netv1.PolicyTypeEgress,
-			},
-		},
-	}, **/
-
 }
 
 // Update a single NetworkPolicy with correct labels.

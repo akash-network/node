@@ -43,27 +43,28 @@ const (
 	// FlagK8sManifestNS
 	FlagK8sManifestNS = "k8s-manifest-ns"
 	// FlagGatewayListenAddress determines listening address for Manifests
-	FlagGatewayListenAddress             = "gateway-listen-address"
-	FlagBidPricingStrategy               = "bid-price-strategy"
-	FlagBidPriceCPUScale                 = "bid-price-cpu-scale"
-	FlagBidPriceMemoryScale              = "bid-price-memory-scale"
-	FlagBidPriceStorageScale             = "bid-price-storage-scale"
-	FlagBidPriceEndpointScale            = "bid-price-endpoint-scale"
-	FlagBidPriceScriptPath               = "bid-price-script-path"
-	FlagBidPriceScriptProcessLimit       = "bid-price-script-process-limit"
-	FlagBidPriceScriptTimeout            = "bid-price-script-process-timeout"
-	FlagClusterPublicHostname            = "cluster-public-hostname"
-	FlagClusterNodePortQuantity          = "cluster-node-port-quantity"
-	FlagClusterWaitReadyDuration         = "cluster-wait-ready-duration"
-	FlagInventoryResourcePollPeriod      = "inventory-resource-poll-period"
-	FlagInventoryResourceDebugFrequency  = "inventory-resource-debug-frequency"
-	FlagDeploymentIngressStaticHosts     = "deployment-ingress-static-hosts"
-	FlagDeploymentIngressDomain          = "deployment-ingress-domain"
-	FlagDeploymentIngressExposeLBHosts   = "deployment-ingress-expose-lb-hosts"
-	FlagDeploymentNetworkPoliciesEnabled = "deployment-network-policies-enabled"
-	FlagOvercommitPercentMemory          = "overcommit-pct-mem"
-	FlagOvercommitPercentCPU             = "overcommit-pct-cpu"
-	FlagOvercommitPercentStorage         = "overcommit-pct-storage"
+	FlagGatewayListenAddress                 = "gateway-listen-address"
+	FlagBidPricingStrategy                   = "bid-price-strategy"
+	FlagBidPriceCPUScale                     = "bid-price-cpu-scale"
+	FlagBidPriceMemoryScale                  = "bid-price-memory-scale"
+	FlagBidPriceStorageScale                 = "bid-price-storage-scale"
+	FlagBidPriceEndpointScale                = "bid-price-endpoint-scale"
+	FlagBidPriceScriptPath                   = "bid-price-script-path"
+	FlagBidPriceScriptProcessLimit           = "bid-price-script-process-limit"
+	FlagBidPriceScriptTimeout                = "bid-price-script-process-timeout"
+	FlagClusterPublicHostname                = "cluster-public-hostname"
+	FlagClusterNodePortQuantity              = "cluster-node-port-quantity"
+	FlagClusterWaitReadyDuration             = "cluster-wait-ready-duration"
+	FlagInventoryResourcePollPeriod          = "inventory-resource-poll-period"
+	FlagInventoryResourceDebugFrequency      = "inventory-resource-debug-frequency"
+	FlagDeploymentIngressStaticHosts         = "deployment-ingress-static-hosts"
+	FlagDeploymentIngressDomain              = "deployment-ingress-domain"
+	FlagDeploymentIngressExposeLBHosts       = "deployment-ingress-expose-lb-hosts"
+	FlagDeploymentNetworkPoliciesEnabled     = "deployment-network-policies-enabled"
+	FlagDeploymentPodSecurityPoliciesEnabled = "deployment-pod-security-policies-enabled"
+	FlagOvercommitPercentMemory              = "overcommit-pct-mem"
+	FlagOvercommitPercentCPU                 = "overcommit-pct-cpu"
+	FlagOvercommitPercentStorage             = "overcommit-pct-storage"
 )
 
 var (
@@ -189,6 +190,11 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().Bool(FlagDeploymentPodSecurityPoliciesEnabled, true, "Enable pod security policies")
+	if err := viper.BindPFlag(FlagDeploymentPodSecurityPoliciesEnabled, cmd.Flags().Lookup(FlagDeploymentPodSecurityPoliciesEnabled)); err != nil {
+		return nil
+	}
+
 	cmd.Flags().Uint64(FlagOvercommitPercentMemory, 0, "Percentage of memory overcommit")
 	if err := viper.BindPFlag(FlagOvercommitPercentMemory, cmd.Flags().Lookup(FlagOvercommitPercentMemory)); err != nil {
 		return nil
@@ -256,12 +262,14 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	deploymentIngressStaticHosts := viper.GetBool(FlagDeploymentIngressStaticHosts)
 	deploymentIngressDomain := viper.GetString(FlagDeploymentIngressDomain)
 	deploymentNetworkPoliciesEnabled := viper.GetBool(FlagDeploymentNetworkPoliciesEnabled)
+	deploymentPodSecurityPoliciesEnabled := viper.GetBool(FlagDeploymentPodSecurityPoliciesEnabled)
 	strategy := viper.GetString(FlagBidPricingStrategy)
 	deploymentIngressExposeLBHosts := viper.GetBool(FlagDeploymentIngressExposeLBHosts)
 	from := viper.GetString(flags.FlagFrom)
 	overcommitPercentStorage := 1.0 + float64(viper.GetUint64(FlagOvercommitPercentStorage)/100.0)
 	overcommitPercentCPU := 1.0 + float64(viper.GetUint64(FlagOvercommitPercentCPU)/100.0)
 	overcommitPercentMemory := 1.0 + float64(viper.GetUint64(FlagOvercommitPercentMemory)/100.0)
+
 	pricing, err := createBidPricingStrategy(strategy)
 
 	if err != nil {
@@ -269,7 +277,6 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	}
 
 	cctx := sdkclient.GetClientContextFromCmd(cmd)
-
 	_, _, err = cosmosclient.GetFromFields(cctx.Keyring, from, false)
 	if err != nil {
 		return err
@@ -329,6 +336,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	kubeSettings.DeploymentIngressExposeLBHosts = deploymentIngressExposeLBHosts
 	kubeSettings.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
 	kubeSettings.NetworkPoliciesEnabled = deploymentNetworkPoliciesEnabled
+	kubeSettings.PodSecurityPoliciesEnabled = deploymentPodSecurityPoliciesEnabled
 	kubeSettings.ClusterPublicHostname = clusterPublicHostname
 	kubeSettings.CPUCommitLevel = overcommitPercentCPU
 	kubeSettings.MemoryCommitLevel = overcommitPercentMemory

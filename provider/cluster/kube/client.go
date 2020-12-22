@@ -138,11 +138,10 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 		return err
 	}
 
-	// TODO: re-enable.  see #946
-	// if err := applyRestrictivePodSecPoliciesToNS(ctx, c.kc, newPspBuilder(c.settings, lid, group)); err != nil {
-	// 	c.log.Error("applying pod security policies", "err", err, "lease", lid)
-	// 	return err
-	// }
+	if err := applyRestrictivePodSecPoliciesToNS(ctx, c.kc, newPspBuilder(c.settings, lid, group)); err != nil {
+		c.log.Error("applying pod security policies", "err", err, "lease", lid)
+		return err
+	}
 
 	if err := applyNetPolicies(ctx, c.kc, newNetPolBuilder(c.settings, lid, group)); err != nil {
 		c.log.Error("applying namespace network policies", "err", err, "lease", lid)
