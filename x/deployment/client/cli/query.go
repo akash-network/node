@@ -35,8 +35,7 @@ func cmdDeployments() *cobra.Command {
 		Short: "Query for all deployments",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -63,7 +62,7 @@ func cmdDeployments() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res)
+			return clientCtx.PrintProto(res)
 		},
 	}
 
@@ -80,8 +79,7 @@ func cmdDeployment() *cobra.Command {
 		Short: "Query deployment",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -98,7 +96,7 @@ func cmdDeployment() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(&res.Deployment)
+			return clientCtx.PrintProto(&res.Deployment)
 		},
 	}
 
@@ -131,8 +129,7 @@ func cmdGetGroup() *cobra.Command {
 		Short: "Query group of deployment",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -149,7 +146,7 @@ func cmdGetGroup() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(&res.Group)
+			return clientCtx.PrintProto(&res.Group)
 		},
 	}
 

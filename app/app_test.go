@@ -1,4 +1,4 @@
-package app_test
+package app
 
 import (
 	"encoding/json"
@@ -10,16 +10,20 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/cosmos/cosmos-sdk/simapp"
-	"github.com/ovrclk/akash/app"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 func TestAppExport(t *testing.T) {
 	db := dbm.NewMemDB()
-	app1 := app.NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)),
-		db, nil, true, 0, map[int64]bool{}, app.DefaultHome, simapp.EmptyAppOptions{})
+	app1 := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)),
+		db, nil, true, 0, map[int64]bool{}, DefaultHome, simapp.EmptyAppOptions{})
 
-	genesisState := app.NewDefaultGenesisState()
+	for acc := range MacPerms() {
+		require.Equal(t, !allowedReceivingModAcc[acc], app1.keeper.bank.BlockedAddr(app1.keeper.acct.GetModuleAddress(acc)),
+			"ensure that blocked addresses are properly set in bank keeper")
+	}
+
+	genesisState := NewDefaultGenesisState()
 	stateBytes, err := json.MarshalIndent(genesisState, "", "  ")
 	require.NoError(t, err)
 
@@ -33,17 +37,7 @@ func TestAppExport(t *testing.T) {
 	app1.Commit()
 
 	// Making a new app object with the db, so that initchain hasn't been called
-	app2 := app.NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, true, 0, map[int64]bool{}, app.DefaultHome, simapp.EmptyAppOptions{})
+	app2 := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, true, 0, map[int64]bool{}, DefaultHome, simapp.EmptyAppOptions{})
 	_, err = app2.ExportAppStateAndValidators(false, []string{})
 	require.NoError(t, err, "ExportAppStateAndValidators should not have an error")
 }
-
-// TODO: re-enable test, can't use unexported fields (keeper) in *_test.go files
-// func TestBlockedAddrs(t *testing.T) {
-// 	db := dbm.NewMemDB()
-// 	app1 := app.NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, 0, map[int64]bool{}, app.DefaultHome)
-
-// 	for acc := range app.MacPerms() {
-// 		require.True(t, app1.keeper.bank.BlockedAddr(app1.keeper.acct.GetModuleAddress(acc)))
-// 	}
-// }

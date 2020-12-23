@@ -16,7 +16,7 @@ func TestPricing(t *testing.T) {
 	}{
 		{"amount: 1\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(1)), false},
 		{"amount: -1\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(1)), true},
-		{"amount: 0.7\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(1)), true},
+		{"amount: 0.7\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(0)), false},
 	}
 
 	for idx, test := range tests {
