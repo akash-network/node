@@ -33,7 +33,7 @@ func cmdGetProviders() *cobra.Command {
 		Use:   "list",
 		Short: "Query for all providers",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.ReadQueryCommandFlags(client.GetClientContextFromCmd(cmd), cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -54,7 +54,7 @@ func cmdGetProviders() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res)
+			return clientCtx.PrintProto(res)
 		},
 	}
 
@@ -70,7 +70,7 @@ func cmdGetProvider() *cobra.Command {
 		Short: "Query provider",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.ReadQueryCommandFlags(client.GetClientContextFromCmd(cmd), cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -107,7 +107,7 @@ func cmdGetProvider() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res)
+			return clientCtx.PrintProto(res)
 		},
 	}
 

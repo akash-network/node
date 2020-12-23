@@ -11,7 +11,6 @@ import (
 	"github.com/ovrclk/akash/client/broadcaster"
 	"github.com/ovrclk/akash/provider/bidengine"
 
-	cosmosclient "github.com/cosmos/cosmos-sdk/client"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -277,12 +276,12 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	cctx := sdkclient.GetClientContextFromCmd(cmd)
 
-	_, _, err = cosmosclient.GetFromFields(cctx.Keyring, from, false)
+	_, _, _, err = sdkclient.GetFromFields(cctx.Keyring, from, false)
 	if err != nil {
 		return err
 	}
 
-	cctx, err = sdkclient.ReadTxCommandFlags(cctx, cmd.Flags())
+	cctx, err = sdkclient.GetClientTxContext(cmd)
 	if err != nil {
 		return err
 	}

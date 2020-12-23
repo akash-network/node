@@ -57,7 +57,7 @@ func doBroadcast(cctx sdkclient.Context, txf tx.Factory, keyName string, msgs ..
 		return nil, err
 	}
 
-	err = tx.Sign(txf, keyName, txn)
+	err = tx.Sign(txf, keyName, txn, true)
 	if err != nil {
 		return nil, err
 	}

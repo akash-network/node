@@ -14,8 +14,7 @@ func cmdGetBids() *cobra.Command {
 		Use:   "list",
 		Short: "Query for all bids",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -42,7 +41,7 @@ func cmdGetBids() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res)
+			return clientCtx.PrintProto(res)
 		},
 	}
 
@@ -58,8 +57,7 @@ func cmdGetBid() *cobra.Command {
 		Short: "Query order",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -76,7 +74,7 @@ func cmdGetBid() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(&res.Bid)
+			return clientCtx.PrintProto(&res.Bid)
 		},
 	}
 

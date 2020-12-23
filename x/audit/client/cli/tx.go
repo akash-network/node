@@ -70,7 +70,7 @@ func cmdCreateProviderAttributes() *cobra.Command {
 				return errors.Errorf("no attributes provided")
 			}
 
-			clientCtx, err := client.ReadTxCommandFlags(client.GetClientContextFromCmd(cmd), cmd.Flags())
+			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -110,7 +110,7 @@ func cmdDeleteProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			clientCtx, err := client.ReadTxCommandFlags(client.GetClientContextFromCmd(cmd), cmd.Flags())
+			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
