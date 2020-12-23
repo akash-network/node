@@ -1,0 +1,157 @@
+# Network Policies declared to control tenant traffic. This file is representative what the Providers apply to each tenant namespace via the k8s API.
+#
+# Unfortunately there's no clear way to generate this from the code itself to keep perfect parity. These rules were exported with `kubectl get...` and used to debug network issues on the edgenet provider nodes.
+#
+# To utilize, find-replace will need to update the Namespace identifier with the target namespace, then rules can be edited to test functionality.
+apiVersion: v1
+items:
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    labels:
+      akash.network: "true"
+      akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    name: default-deny-egress
+    namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+  spec:
+    podSelector:
+      matchLabels:
+        akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    policyTypes:
+    - Egress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    labels:
+      akash.network: "true"
+      akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    name: default-deny-ingress
+    namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+  spec:
+    podSelector:
+      matchLabels:
+        akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    labels:
+      akash.network: "true"
+      akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    name: egress-allow-cidr
+    namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+  spec:
+    egress:
+    - to:
+      - ipBlock:
+          cidr: 0.0.0.0/0
+          except:
+          - 10.0.0.0/8
+    podSelector:
+      matchLabels:
+        akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    policyTypes:
+    - Egress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    labels:
+      akash.network: "true"
+      akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    name: egress-allow-internal
+    namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+  spec:
+    egress:
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    podSelector:
+      matchLabels:
+        akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    policyTypes:
+    - Egress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    labels:
+      akash.network: "true"
+      akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    name: egress-allow-kube-dns
+    namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+  spec:
+    egress:
+    - ports:
+      - port: 53
+        protocol: UDP
+      to:
+      - ipBlock:
+          cidr: 10.0.0.0/8
+    podSelector:
+      matchLabels:
+        akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    policyTypes:
+    - Egress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    labels:
+      akash.network: "true"
+      akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    name: ingress-allow-node-ports
+    namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+  spec:
+    ingress:
+    - from:
+      - ipBlock:
+          cidr: 0.0.0.0/0
+          except:
+          - 10.0.0.0/8
+    podSelector:
+      matchLabels:
+        akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    labels:
+      akash.network: "true"
+      akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    name: ingress-allow-controller
+    namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: ingress-nginx
+    podSelector:
+      matchLabels:
+        akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    labels:
+      akash.network: "true"
+      akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    name: ingress-allow-internal
+    namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    podSelector:
+      matchLabels:
+        akash.network/namespace: jcdbq0ri93p2ej5p9k6bd59rl04o5nu9u7a1ottnvi81k
+    policyTypes:
+    - Ingress
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""
