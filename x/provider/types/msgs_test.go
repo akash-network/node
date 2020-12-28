@@ -63,7 +63,7 @@ func TestConfigPath(t *testing.T) {
 			expErr: ErrInvalidProviderURI,
 		},
 		{
-			path:   "http://localhost",
+			path:   "https://localhost",
 			expErr: nil,
 		},
 		{
@@ -71,7 +71,7 @@ func TestConfigPath(t *testing.T) {
 			expErr: ErrInvalidProviderURI,
 		},
 		{
-			path:   "http://localhost:80",
+			path:   "https://localhost:80",
 			expErr: nil,
 		},
 		{
@@ -178,7 +178,7 @@ var msgCreateTests = []providerTestParams{
 	{
 		msg: Provider{
 			Owner:   sdk.AccAddress("hihi").String(),
-			HostURI: "http://localhost:3001",
+			HostURI: "https://localhost:3001",
 			Attributes: []types.Attribute{
 				{
 					Key:   "hihi",
@@ -191,7 +191,7 @@ var msgCreateTests = []providerTestParams{
 	{
 		msg: Provider{
 			Owner:   sdk.AccAddress("").String(),
-			HostURI: "http://localhost:3001",
+			HostURI: "https://localhost:3001",
 			Attributes: []types.Attribute{
 				{
 					Key:   "hihi",

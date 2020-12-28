@@ -37,7 +37,7 @@ func getGroupPath(id types.GroupID) string {
 	return fmt.Sprintf("%s/%s/%v/%v", groupPath, id.Owner, id.DSeq, id.GSeq)
 }
 
-// parseDeploymentPath returns DeploymentID details with provided queries, and return
+// ParseDeploymentPath returns DeploymentID details with provided queries, and return
 // error if occurred due to wrong query
 func ParseDeploymentPath(parts []string) (types.DeploymentID, error) {
 	if len(parts) < 2 {

@@ -10,7 +10,7 @@ type Status struct {
 	Deployments uint32 `json:"deployments"`
 }
 
-type SubmitRequest struct {
+type submitRequest struct {
 	Deployment dtypes.DeploymentID `json:"deployment"`
 	Manifest   manifest.Manifest   `json:"manifest"`
 }

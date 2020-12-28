@@ -147,8 +147,8 @@ func validateProviderURI(val string) error {
 		return errors.Wrapf(ErrNotAbsProviderURI, "validating %q for absolute URI", val)
 	}
 
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return errors.Wrapf(ErrInvalidProviderURI, "scheme in %q should be http or https", val)
+	if u.Scheme != "https" {
+		return errors.Wrapf(ErrInvalidProviderURI, "scheme in %q should be https", val)
 	}
 
 	if u.Host == "" {

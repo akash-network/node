@@ -3,11 +3,8 @@ package kube
 import (
 	"context"
 	"errors"
-	"github.com/ovrclk/akash/testutil"
-	kubernetes_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock"
-	appsv1_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock/typed/apps/v1"
-	corev1_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock/typed/core/v1"
-	netv1_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock/typed/networking/v1"
+	"testing"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -16,7 +13,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"testing"
+
+	"github.com/ovrclk/akash/testutil"
+	kubernetes_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock"
+	appsv1_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock/typed/apps/v1"
+	corev1_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock/typed/core/v1"
+	netv1_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock/typed/networking/v1"
 )
 
 func clientForTest(t *testing.T, kc kubernetes.Interface) Client {
@@ -34,7 +36,13 @@ func TestLeaseStatusWithNoDeployments(t *testing.T) {
 
 	kmock := &kubernetes_mocks.Interface{}
 	appsV1Mock := &appsv1_mocks.AppsV1Interface{}
+	coreV1Mock := &corev1_mocks.CoreV1Interface{}
 	kmock.On("AppsV1").Return(appsV1Mock)
+	kmock.On("CoreV1").Return(coreV1Mock)
+
+	namespaceMock := &corev1_mocks.NamespaceInterface{}
+	coreV1Mock.On("Namespaces").Return(namespaceMock)
+	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
 	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
@@ -53,7 +61,13 @@ func TestLeaseStatusWithNoIngressNoService(t *testing.T) {
 
 	kmock := &kubernetes_mocks.Interface{}
 	appsV1Mock := &appsv1_mocks.AppsV1Interface{}
+	coreV1Mock := &corev1_mocks.CoreV1Interface{}
 	kmock.On("AppsV1").Return(appsV1Mock)
+	kmock.On("CoreV1").Return(coreV1Mock)
+
+	namespaceMock := &corev1_mocks.NamespaceInterface{}
+	coreV1Mock.On("Namespaces").Return(namespaceMock)
+	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
 	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
@@ -77,11 +91,8 @@ func TestLeaseStatusWithNoIngressNoService(t *testing.T) {
 	ingressesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(ingressList, nil)
 	netv1Mock.On("Ingresses", lidNS(lid)).Return(ingressesMock)
 
-	corev1Mock := &corev1_mocks.CoreV1Interface{}
-	kmock.On("CoreV1").Return(corev1Mock)
-
 	servicesMock := &corev1_mocks.ServiceInterface{}
-	corev1Mock.On("Services", lidNS(lid)).Return(servicesMock)
+	coreV1Mock.On("Services", lidNS(lid)).Return(servicesMock)
 
 	servicesList := &v1.ServiceList{} // This is concrete so no mock is used
 	servicesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(servicesList, nil)
@@ -98,7 +109,13 @@ func TestLeaseStatusWithIngressOnly(t *testing.T) {
 
 	kmock := &kubernetes_mocks.Interface{}
 	appsV1Mock := &appsv1_mocks.AppsV1Interface{}
+	coreV1Mock := &corev1_mocks.CoreV1Interface{}
 	kmock.On("AppsV1").Return(appsV1Mock)
+	kmock.On("CoreV1").Return(coreV1Mock)
+
+	namespaceMock := &corev1_mocks.NamespaceInterface{}
+	coreV1Mock.On("Namespaces").Return(namespaceMock)
+	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
 	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
@@ -140,11 +157,8 @@ func TestLeaseStatusWithIngressOnly(t *testing.T) {
 	ingressesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(ingressList, nil)
 	netv1Mock.On("Ingresses", lidNS(lid)).Return(ingressesMock)
 
-	corev1Mock := &corev1_mocks.CoreV1Interface{}
-	kmock.On("CoreV1").Return(corev1Mock)
-
 	servicesMock := &corev1_mocks.ServiceInterface{}
-	corev1Mock.On("Services", lidNS(lid)).Return(servicesMock)
+	coreV1Mock.On("Services", lidNS(lid)).Return(servicesMock)
 
 	servicesList := &v1.ServiceList{} // This is concrete so no mock is used
 	servicesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(servicesList, nil)
@@ -178,7 +192,13 @@ func TestLeaseStatusWithForwardedPortOnly(t *testing.T) {
 
 	kmock := &kubernetes_mocks.Interface{}
 	appsV1Mock := &appsv1_mocks.AppsV1Interface{}
+	coreV1Mock := &corev1_mocks.CoreV1Interface{}
 	kmock.On("AppsV1").Return(appsV1Mock)
+	kmock.On("CoreV1").Return(coreV1Mock)
+
+	namespaceMock := &corev1_mocks.NamespaceInterface{}
+	coreV1Mock.On("Namespaces").Return(namespaceMock)
+	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
 	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
@@ -207,11 +227,8 @@ func TestLeaseStatusWithForwardedPortOnly(t *testing.T) {
 	ingressesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(ingressList, nil)
 	netv1Mock.On("Ingresses", lidNS(lid)).Return(ingressesMock)
 
-	corev1Mock := &corev1_mocks.CoreV1Interface{}
-	kmock.On("CoreV1").Return(corev1Mock)
-
 	servicesMock := &corev1_mocks.ServiceInterface{}
-	corev1Mock.On("Services", lidNS(lid)).Return(servicesMock)
+	coreV1Mock.On("Services", lidNS(lid)).Return(servicesMock)
 
 	servicesList := &v1.ServiceList{} // This is concrete so no mock is used
 	servicesList.Items = make([]v1.Service, 1)

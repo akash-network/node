@@ -46,6 +46,20 @@ func DeploymentIDFromFlags(flags *pflag.FlagSet, defaultOwner string) (types.Dep
 	return id, nil
 }
 
+// DeploymentIDFromFlagsForOwner returns DeploymentID with given flags, owner and error if occurred
+func DeploymentIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (types.DeploymentID, error) {
+	id := types.DeploymentID{
+		Owner: owner.String(),
+	}
+
+	var err error
+	if id.DSeq, err = flags.GetUint64("dseq"); err != nil {
+		return id, err
+	}
+
+	return id, nil
+}
+
 // AddGroupIDFlags add flags for Group
 func AddGroupIDFlags(flags *pflag.FlagSet) {
 	AddDeploymentIDFlags(flags)
@@ -62,6 +76,21 @@ func MarkReqGroupIDFlags(cmd *cobra.Command) {
 func GroupIDFromFlags(flags *pflag.FlagSet) (types.GroupID, error) {
 	var id types.GroupID
 	prev, err := DeploymentIDFromFlags(flags, "")
+	if err != nil {
+		return id, err
+	}
+
+	gseq, err := flags.GetUint32("gseq")
+	if err != nil {
+		return id, err
+	}
+	return types.MakeGroupID(prev, gseq), nil
+}
+
+// GroupIDFromFlagsForOwner returns GroupID with given flags and error if occurred
+func GroupIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (types.GroupID, error) {
+	var id types.GroupID
+	prev, err := DeploymentIDFromFlagsForOwner(flags, owner)
 	if err != nil {
 		return id, err
 	}

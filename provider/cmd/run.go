@@ -2,14 +2,20 @@ package cmd
 
 import (
 	"context"
-	"errors"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/ovrclk/akash/client/broadcaster"
 	"github.com/ovrclk/akash/provider/bidengine"
+	ctypes "github.com/ovrclk/akash/x/cert/types"
+	cutils "github.com/ovrclk/akash/x/cert/utils"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -26,10 +32,11 @@ import (
 	"github.com/ovrclk/akash/provider"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/kube"
-	"github.com/ovrclk/akash/provider/gateway"
+	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	amodule "github.com/ovrclk/akash/x/audit"
+	cmodule "github.com/ovrclk/akash/x/cert"
 	dmodule "github.com/ovrclk/akash/x/deployment"
 	mmodule "github.com/ovrclk/akash/x/market"
 	pmodule "github.com/ovrclk/akash/x/provider"
@@ -73,8 +80,9 @@ var (
 // RunCmd launches the Akash Provider service
 func RunCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "run",
-		Short: "run akash provider",
+		Use:          "run",
+		Short:        "run akash provider",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return common.RunForever(func(ctx context.Context) error {
 				return doRunCmd(ctx, cmd, args)
@@ -99,7 +107,7 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
-	cmd.Flags().String(FlagGatewayListenAddress, "0.0.0.0:8080", "Gateway listen address")
+	cmd.Flags().String(FlagGatewayListenAddress, "0.0.0.0:8443", "Gateway listen address")
 	if err := viper.BindPFlag(FlagGatewayListenAddress, cmd.Flags().Lookup(FlagGatewayListenAddress)); err != nil {
 		return nil
 	}
@@ -296,6 +304,38 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	gwaddr := viper.GetString(FlagGatewayListenAddress)
 
+	cpem, err := cutils.LoadPEMForAccount(cctx.HomeDir, cctx.FromAddress, txFactory.Keybase())
+	if err != nil {
+		return err
+	}
+
+	blk, _ := pem.Decode(cpem.Cert)
+	x509cert, err := x509.ParseCertificate(blk.Bytes)
+	if err != nil {
+		return err
+	}
+
+	cquery := cmodule.AppModuleBasic{}.GetQueryClient(cctx)
+	cresp, err := cquery.Certificates(cmd.Context(), &ctypes.QueryCertificatesRequest{
+		Filter: ctypes.CertificateFilter{
+			Owner:  cctx.FromAddress.String(),
+			Serial: x509cert.SerialNumber.String(),
+			State:  "valid",
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(cresp.Certificates) == 0 {
+		return errors.Errorf("no valid found on chain certificate for account %s", cctx.FromAddress)
+	}
+
+	cert, err := tls.X509KeyPair(cpem.Cert, cpem.Priv)
+	if err != nil {
+		return err
+	}
+
 	log := openLogger()
 
 	broadcaster, err := broadcaster.NewSerialClient(log, cctx, txFactory, info)
@@ -315,6 +355,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 			mmodule.AppModuleBasic{}.GetQueryClient(cctx),
 			pmodule.AppModuleBasic{}.GetQueryClient(cctx),
 			amodule.AppModuleBasic{}.GetQueryClient(cctx),
+			cmodule.AppModuleBasic{}.GetQueryClient(cctx),
 		),
 		broadcaster,
 	)
@@ -371,12 +412,22 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	config.BPS = pricing
 	service, err := provider.NewService(ctx, session, bus, cclient, config)
-
 	if err != nil {
-		return group.Wait()
+		return err
 	}
 
-	gateway := gateway.NewServer(ctx, log, service, gwaddr)
+	gateway, err := gwrest.NewServer(
+		ctx,
+		log,
+		service,
+		cquery,
+		gwaddr,
+		cctx.FromAddress,
+		[]tls.Certificate{cert},
+	)
+	if err != nil {
+		return err
+	}
 
 	group.Go(func() error {
 		return events.Publish(ctx, cctx.Client, "provider-cli", bus)
@@ -387,7 +438,10 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return nil
 	})
 
-	group.Go(gateway.ListenAndServe)
+	group.Go(func() error {
+		// certificates are supplied via tls.Config
+		return gateway.ListenAndServeTLS("", "")
+	})
 
 	group.Go(func() error {
 		<-ctx.Done()
@@ -424,9 +478,10 @@ func createClusterClient(log log.Logger, _ *cobra.Command, settings kube.Setting
 
 func showErrorToUser(err error) error {
 	// If the error has a complete message associated with it then show it
-	clientResponseError, ok := err.(gateway.ClientResponseError)
+	clientResponseError, ok := err.(gwrest.ClientResponseError)
 	if ok && 0 != len(clientResponseError.Message) {
-		fmt.Fprintf(os.Stderr, "provider error messsage:\n%v\n", clientResponseError.Message)
+		_, _ = fmt.Fprintf(os.Stderr, "provider error messsage:\n%v\n", clientResponseError.Message)
+		err = nil
 	}
 
 	return err

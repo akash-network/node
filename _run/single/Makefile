@@ -47,28 +47,6 @@ kustomize-install-node:
 kustomize-install-provider:
 	kubectl kustomize kustomize/akash-provider | kubectl apply -f-
 
-.PHONY: send-manifest
-send-manifest:
-	$(AKASHCTL) provider send-manifest "$(SDL_PATH)" \
-		--owner     "$(KEY_ADDRESS)" \
-		--dseq      "$(DSEQ)"        \
-		--gseq      "$(GSEQ)"        \
-		--oseq      "$(OSEQ)"        \
-		--provider  "$(PROVIDER_ADDRESS)"
-
-.PHONY: provider-status
-provider-status:
-	$(AKASHCTL) provider status --provider "$(PROVIDER_ADDRESS)"
-
-.PHONY: provider-lease-status
-provider-lease-status:
-	$(AKASHCTL) provider lease-status \
-		--owner     "$(KEY_ADDRESS)" \
-		--dseq      "$(DSEQ)"        \
-		--gseq      "$(GSEQ)"        \
-		--oseq      "$(OSEQ)"        \
-		--provider  "$(PROVIDER_ADDRESS)"
-
 .PHONY: provider-lease-ping
 provider-lease-ping:
 	curl -sIH "Host: hello.localhost" localhost:$(KIND_HTTP_PORT)

@@ -3,7 +3,6 @@ package cluster
 import (
 	"bufio"
 	"context"
-	"errors"
 	"io"
 	"sync"
 
@@ -16,9 +15,6 @@ import (
 )
 
 var _ Client = (*nullClient)(nil)
-
-// ErrNoDeployments indicates no deployments exist
-var ErrNoDeployments = errors.New("no deployments")
 
 type ReadClient interface {
 	LeaseStatus(context.Context, mtypes.LeaseID) (*ctypes.LeaseStatus, error)

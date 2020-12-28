@@ -3,8 +3,8 @@ include ../common-commands.mk
 include ../common-kind.mk
 
 GATEWAY_HOSTNAME ?= localhost
-GATEWAY_HOST     ?= localhost:8080
-GATEWAY_ENDPOINT ?= http://$(GATEWAY_HOST)
+GATEWAY_HOST     ?= $(GATEWAY_HOSTNAME):8443
+GATEWAY_ENDPOINT ?= https://$(GATEWAY_HOST)
 
 .PHONY: provider-run
 provider-run:
@@ -22,15 +22,6 @@ provider-run:
 .PHONY: provider-status
 provider-status:
 	$(AKASHCTL) provider status --provider "$(PROVIDER_ADDRESS)"
-
-.PHONY: send-manifest
-send-manifest:
-	$(AKASHCTL) provider send-manifest "$(SDL_PATH)" \
-		--owner     "$(KEY_ADDRESS)" \
-		--dseq      "$(DSEQ)"        \
-		--gseq      "$(GSEQ)"        \
-		--oseq      "$(OSEQ)"        \
-		--provider  "$(PROVIDER_ADDRESS)"
 
 .PHONY: provider-lease-status
 provider-lease-status:

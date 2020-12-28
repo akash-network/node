@@ -1,14 +1,13 @@
-package gateway
+package rest
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/tendermint/tendermint/libs/log"
 
 	dquery "github.com/ovrclk/akash/x/deployment/query"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
@@ -24,14 +23,12 @@ const (
 	logFollowContextKey
 	tailLinesContextKey
 	serviceContextKey
+	ownerContextKey
+	providerContextKey
 )
 
 func requestLeaseID(req *http.Request) mtypes.LeaseID {
 	return context.Get(req, leaseContextKey).(mtypes.LeaseID)
-}
-
-func requestDeploymentID(req *http.Request) dtypes.DeploymentID {
-	return context.Get(req, deploymentContextKey).(dtypes.DeploymentID)
 }
 
 func requestLogFollow(req *http.Request) bool {
@@ -46,7 +43,41 @@ func requestService(req *http.Request) string {
 	return context.Get(req, serviceContextKey).(string)
 }
 
-func requireDeploymentID(_ log.Logger) mux.MiddlewareFunc {
+func requestProvider(req *http.Request) sdk.Address {
+	return context.Get(req, providerContextKey).(sdk.Address)
+}
+
+func requestOwner(req *http.Request) sdk.Address {
+	return context.Get(req, ownerContextKey).(sdk.Address)
+}
+
+func requestDeploymentID(req *http.Request) dtypes.DeploymentID {
+	return context.Get(req, deploymentContextKey).(dtypes.DeploymentID)
+}
+
+func requireOwner() mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+				http.Error(w, "", http.StatusUnauthorized)
+				return
+			}
+
+			// at this point client certificate has been validated
+			// so only thing left to do is get account id stored in the CommonName
+			owner, err := sdk.AccAddressFromBech32(r.TLS.PeerCertificates[0].Subject.CommonName)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			context.Set(r, ownerContextKey, owner)
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func requireDeploymentID() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			id, err := parseDeploymentID(req)
@@ -60,7 +91,7 @@ func requireDeploymentID(_ log.Logger) mux.MiddlewareFunc {
 	}
 }
 
-func requireLeaseID(_ log.Logger) mux.MiddlewareFunc {
+func requireLeaseID() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			id, err := parseLeaseID(req)
@@ -68,6 +99,7 @@ func requireLeaseID(_ log.Logger) mux.MiddlewareFunc {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
+
 			context.Set(req, leaseContextKey, id)
 			next.ServeHTTP(w, req)
 		})
@@ -85,7 +117,6 @@ func requireService() mux.MiddlewareFunc {
 				return
 			}
 
-			fmt.Printf("param service %s\n", svc)
 			context.Set(req, serviceContextKey, svc)
 			next.ServeHTTP(w, req)
 		})
@@ -93,22 +124,24 @@ func requireService() mux.MiddlewareFunc {
 }
 
 func parseDeploymentID(req *http.Request) (dtypes.DeploymentID, error) {
-	vars := mux.Vars(req)
-	return dquery.ParseDeploymentPath([]string{
-		vars["owner"],
-		vars["dseq"],
-	})
+	var parts []string
+	parts = append(parts, requestOwner(req).String())
+	parts = append(parts, mux.Vars(req)["dseq"])
+	return dquery.ParseDeploymentPath(parts)
 }
 
 func parseLeaseID(req *http.Request) (mtypes.LeaseID, error) {
 	vars := mux.Vars(req)
-	return mquery.ParseLeasePath([]string{
-		vars["owner"],
+
+	parts := []string{
+		requestOwner(req).String(),
 		vars["dseq"],
 		vars["gseq"],
 		vars["oseq"],
-		vars["provider"],
-	})
+		requestProvider(req).String(),
+	}
+
+	return mquery.ParseLeasePath(parts)
 }
 
 func requestLogParams() mux.MiddlewareFunc {

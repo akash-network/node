@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/boz/go-lifecycle"
 	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/provider/bidengine"

@@ -21,7 +21,7 @@ CACHE_NODE_BIN        := $(CACHE_NODE_MODULES)/.bin
 # setup .cache bins first in paths to have precedence over already installed same tools for system wide use
 PATH                  := "$(PATH):$(CACHE_BIN):$(CACHE_NODE_BIN)"
 
-BUF_VERSION                ?= 0.31.1
+BUF_VERSION                ?= 0.35.1
 PROTOC_VERSION             ?= 3.13.0
 PROTOC_GEN_COSMOS_VERSION  ?= master
 GRPC_GATEWAY_VERSION       ?= 1.14.7
