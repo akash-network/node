@@ -50,6 +50,9 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 	clusterConfig.InventoryResourcePollPeriod = cfg.InventoryResourcePollPeriod
 	clusterConfig.InventoryResourceDebugFrequency = cfg.InventoryResourceDebugFrequency
 	clusterConfig.InventoryExternalPortQuantity = cfg.ClusterExternalPortQuantity
+	clusterConfig.CPUCommitLevel = cfg.CPUCommitLevel
+	clusterConfig.MemoryCommitLevel = cfg.MemoryCommitLevel
+	clusterConfig.StorageCommitLevel = cfg.StorageCommitLevel
 
 	cluster, err := cluster.NewService(ctx, session, bus, cclient, clusterConfig)
 	if err != nil {

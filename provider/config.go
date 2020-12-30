@@ -12,6 +12,9 @@ type Config struct {
 	InventoryResourcePollPeriod     time.Duration
 	InventoryResourceDebugFrequency uint
 	BPS                             bidengine.BidPricingStrategy
+	CPUCommitLevel                  float64
+	MemoryCommitLevel               float64
+	StorageCommitLevel              float64
 }
 
 func NewDefaultConfig() Config {

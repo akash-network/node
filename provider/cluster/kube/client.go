@@ -2,6 +2,7 @@ package kube
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"path"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -25,6 +27,7 @@ import (
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+	"k8s.io/client-go/tools/pager"
 )
 
 var (
@@ -401,99 +404,162 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 }
 
 func (c *client) Inventory(ctx context.Context) ([]ctypes.Node, error) {
+
 	// Load all the nodes
 	knodes, err := c.activeNodes(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Load all the node metrics
-	nodeMetrics, err := c.metc.MetricsV1beta1().NodeMetricses().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	nodes := make([]ctypes.Node, 0, len(nodeMetrics.Items))
+	nodes := make([]ctypes.Node, 0, len(knodes))
 	// Iterate over the node metrics
-	for _, mnode := range nodeMetrics.Items {
-		// Lookup the node
-		knode, ok := knodes[mnode.Name]
-		if !ok {
-			continue
-		}
+	for nodeName, knode := range knodes {
 
 		// Get the amount of available CPU, then subtract that in use
-		cpu := knode.Status.Allocatable.Cpu().MilliValue()
-		cpu -= mnode.Usage.Cpu().MilliValue()
-		if cpu < 0 {
-			cpu = 0
+		var tmp resource.Quantity
+
+		tmp = knode.cpu.available()
+		cpuAvailable := (&tmp).MilliValue()
+		if cpuAvailable < 0 {
+			cpuAvailable = 0
 		}
 
-		// Get the amount of memory, then subtract that in use
-		memory := knode.Status.Allocatable.Memory().Value()
-		memory -= mnode.Usage.Memory().Value()
-		if memory < 0 {
-			memory = 0
+		tmp = knode.memory.available()
+		memoryAvailable := (&tmp).Value()
+		if memoryAvailable < 0 {
+			memoryAvailable = 0
 		}
 
-		// Get the amount of storage, then subtract that in use
-		storage := knode.Status.Allocatable.StorageEphemeral().Value()
-		storage -= mnode.Usage.StorageEphemeral().Value()
-		if storage < 0 {
-			storage = 0
+		tmp = knode.storage.available()
+		storageAvailable := (&tmp).Value()
+		if storageAvailable < 0 {
+			storageAvailable = 0
 		}
 
 		resources := types.ResourceUnits{
 			CPU: &types.CPU{
-				Units: types.NewResourceValue(uint64(cpu)),
+				Units: types.NewResourceValue(uint64(cpuAvailable)),
 				Attributes: []types.Attribute{
 					{
 						Key:   "arch",
-						Value: knode.Status.NodeInfo.Architecture,
-						// Value: types.NewAttributeValue(
-						// 	[]string{
-						// 		knode.Status.NodeInfo.Architecture,
-						// 	}),
+						Value: knode.arch,
 					},
 					// todo (#788) other node attributes ?
 				},
 			},
 			Memory: &types.Memory{
-				Quantity: types.NewResourceValue(uint64(memory)),
+				Quantity: types.NewResourceValue(uint64(memoryAvailable)),
 				// todo (#788) memory attributes ?
 			},
 			Storage: &types.Storage{
-				Quantity: types.NewResourceValue(uint64(storage)),
+				Quantity: types.NewResourceValue(uint64(storageAvailable)),
 				// todo (#788) storage attributes like class and iops?
 			},
 		}
 
-		nodes = append(nodes, cluster.NewNode(knode.Name, resources))
+		nodes = append(nodes, cluster.NewNode(nodeName, resources))
 	}
 
 	return nodes, nil
 }
 
-func (c *client) activeNodes(ctx context.Context) (map[string]*corev1.Node, error) {
+type resourcePair struct {
+	allocatable resource.Quantity
+	allocated   resource.Quantity
+}
+
+func (rp resourcePair) available() resource.Quantity {
+	result := rp.allocatable.DeepCopy()
+	// Modifies the value in place
+	(&result).Sub(rp.allocated)
+	return result
+}
+
+type nodeResources struct {
+	cpu     resourcePair
+	memory  resourcePair
+	storage resourcePair
+	arch    string
+}
+
+func (c *client) activeNodes(ctx context.Context) (map[string]nodeResources, error) {
 	knodes, err := c.kc.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	retnodes := make(map[string]*corev1.Node)
+	podListOptions := metav1.ListOptions{
+		FieldSelector: "status.phase!=Failed,status.phase!=Succeeded",
+	}
+	podsClient := c.kc.CoreV1().Pods(metav1.NamespaceAll)
+	podsPager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
+		return podsClient.List(ctx, opts)
+	})
+	zero := resource.NewMilliQuantity(0, "m")
 
-	for i := range knodes.Items {
-		knode := &knodes.Items[i]
+	retnodes := make(map[string]nodeResources)
+	for _, knode := range knodes.Items {
+
 		if !c.nodeIsActive(knode) {
 			continue
 		}
-		retnodes[knode.Name] = knode
+
+		// Create an entry with the allocatable amount for the node
+		cpu := knode.Status.Allocatable.Cpu().DeepCopy()
+		memory := knode.Status.Allocatable.Memory().DeepCopy()
+		storage := knode.Status.Allocatable.StorageEphemeral().DeepCopy()
+
+		entry := nodeResources{
+			arch: knode.Status.NodeInfo.Architecture,
+			cpu: resourcePair{
+				allocatable: cpu,
+			},
+			memory: resourcePair{
+				allocatable: memory,
+			},
+			storage: resourcePair{
+				allocatable: storage,
+			},
+		}
+
+		// Initialize the allocated amount to for each node
+		zero.DeepCopyInto(&entry.cpu.allocated)
+		zero.DeepCopyInto(&entry.memory.allocated)
+		zero.DeepCopyInto(&entry.storage.allocated)
+
+		retnodes[knode.Name] = entry
+	}
+
+	// Go over each pod and sum the resources for it into the value for the pod it lives on
+	err = podsPager.EachListItem(ctx, podListOptions, func(obj runtime.Object) error {
+		pod := obj.(*corev1.Pod)
+		nodeName := pod.Spec.NodeName
+
+		entry := retnodes[nodeName]
+		cpuAllocated := &entry.cpu.allocated
+		memoryAllocated := &entry.memory.allocated
+		storageAllocated := &entry.storage.allocated
+		for _, container := range pod.Spec.Containers {
+			// Per the documentation Limits > Requests for each pod. But stuff in the kube-system
+			// namespace doesn't follow this. The requests is always summed here since it is what
+			// the cluster considers a dedicated resource
+
+			cpuAllocated.Add(*container.Resources.Requests.Cpu())
+			memoryAllocated.Add(*container.Resources.Requests.Memory())
+			storageAllocated.Add(*container.Resources.Requests.StorageEphemeral())
+		}
+
+		retnodes[nodeName] = entry // Map is by value, so store the copy back into the map
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return retnodes, nil
 }
 
-func (c *client) nodeIsActive(node *corev1.Node) bool {
+func (c *client) nodeIsActive(node corev1.Node) bool {
 	ready := false
 	issues := 0
 

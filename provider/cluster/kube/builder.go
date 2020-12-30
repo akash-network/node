@@ -26,6 +26,7 @@ import (
 
 	"github.com/ovrclk/akash/manifest"
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	clusterUtil "github.com/ovrclk/akash/provider/cluster/util"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
@@ -258,9 +259,8 @@ func (b *deploymentBuilder) container() corev1.Container {
 		Command: b.service.Command,
 		Args:    b.service.Args,
 		Resources: corev1.ResourceRequirements{
-			Limits: make(corev1.ResourceList),
-			// TODO: this prevents over-subscription.  skip for now.
-			// Requests: make(corev1.ResourceList),
+			Limits:   make(corev1.ResourceList),
+			Requests: make(corev1.ResourceList),
 		},
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: &corev1.SecurityContext{
@@ -271,16 +271,21 @@ func (b *deploymentBuilder) container() corev1.Container {
 	}
 
 	if cpu := b.service.Resources.CPU; cpu != nil {
+		requestedCPU := clusterUtil.ComputeCommittedResources(b.settings.CPUCommitLevel, cpu.Units)
+		kcontainer.Resources.Requests[corev1.ResourceCPU] = resource.NewScaledQuantity(int64(requestedCPU.Value()), resource.Milli).DeepCopy()
 		kcontainer.Resources.Limits[corev1.ResourceCPU] = resource.NewScaledQuantity(int64(cpu.Units.Value()), resource.Milli).DeepCopy()
 	}
 
 	if mem := b.service.Resources.Memory; mem != nil {
+		requestedMem := clusterUtil.ComputeCommittedResources(b.settings.MemoryCommitLevel, mem.Quantity)
+		kcontainer.Resources.Requests[corev1.ResourceMemory] = resource.NewQuantity(int64(requestedMem.Value()), resource.DecimalSI).DeepCopy()
 		kcontainer.Resources.Limits[corev1.ResourceMemory] = resource.NewQuantity(int64(mem.Quantity.Value()), resource.DecimalSI).DeepCopy()
 	}
 
 	if storage := b.service.Resources.Storage; storage != nil {
-		storageQuantity := storage.Quantity.Val.Int64()
-		kcontainer.Resources.Limits[corev1.ResourceEphemeralStorage] = resource.NewQuantity(int64(storageQuantity), resource.DecimalSI).DeepCopy()
+		requestedStorage := clusterUtil.ComputeCommittedResources(b.settings.StorageCommitLevel, storage.Quantity)
+		kcontainer.Resources.Requests[corev1.ResourceEphemeralStorage] = resource.NewQuantity(int64(requestedStorage.Value()), resource.DecimalSI).DeepCopy()
+		kcontainer.Resources.Limits[corev1.ResourceEphemeralStorage] = resource.NewQuantity(int64(storage.Quantity.Value()), resource.DecimalSI).DeepCopy()
 	}
 
 	// TODO: this prevents over-subscription.  skip for now.

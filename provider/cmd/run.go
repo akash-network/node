@@ -61,6 +61,9 @@ const (
 	FlagDeploymentIngressDomain          = "deployment-ingress-domain"
 	FlagDeploymentIngressExposeLBHosts   = "deployment-ingress-expose-lb-hosts"
 	FlagDeploymentNetworkPoliciesEnabled = "deployment-network-policies-enabled"
+	FlagOvercommitPercentMemory          = "overcommit-pct-mem"
+	FlagOvercommitPercentCPU             = "overcommit-pct-cpu"
+	FlagOvercommitPercentStorage         = "overcommit-pct-storage"
 )
 
 var (
@@ -186,6 +189,21 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().Uint64(FlagOvercommitPercentMemory, 0, "Percentage of memory overcommit")
+	if err := viper.BindPFlag(FlagOvercommitPercentMemory, cmd.Flags().Lookup(FlagOvercommitPercentMemory)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint64(FlagOvercommitPercentCPU, 0, "Percentage of CPU overcommit")
+	if err := viper.BindPFlag(FlagOvercommitPercentCPU, cmd.Flags().Lookup(FlagOvercommitPercentCPU)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint64(FlagOvercommitPercentStorage, 0, "Percentage of storage overcommit")
+	if err := viper.BindPFlag(FlagOvercommitPercentStorage, cmd.Flags().Lookup(FlagOvercommitPercentStorage)); err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
@@ -241,6 +259,9 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	strategy := viper.GetString(FlagBidPricingStrategy)
 	deploymentIngressExposeLBHosts := viper.GetBool(FlagDeploymentIngressExposeLBHosts)
 	from := viper.GetString(flags.FlagFrom)
+	overcommitPercentStorage := 1.0 + float64(viper.GetUint64(FlagOvercommitPercentStorage)/100.0)
+	overcommitPercentCPU := 1.0 + float64(viper.GetUint64(FlagOvercommitPercentCPU)/100.0)
+	overcommitPercentMemory := 1.0 + float64(viper.GetUint64(FlagOvercommitPercentMemory)/100.0)
 	pricing, err := createBidPricingStrategy(strategy)
 
 	if err != nil {
@@ -309,6 +330,9 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	kubeSettings.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
 	kubeSettings.NetworkPoliciesEnabled = deploymentNetworkPoliciesEnabled
 	kubeSettings.ClusterPublicHostname = clusterPublicHostname
+	kubeSettings.CPUCommitLevel = overcommitPercentCPU
+	kubeSettings.MemoryCommitLevel = overcommitPercentMemory
+	kubeSettings.StorageCommitLevel = overcommitPercentStorage
 
 	cclient, err := createClusterClient(log, cmd, kubeSettings)
 	if err != nil {
@@ -326,12 +350,17 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	group, ctx := errgroup.WithContext(ctx)
 
+	// Provider service creation
 	config := provider.NewDefaultConfig()
 	config.ClusterWaitReadyDuration = clusterWaitReadyDuration
 	config.ClusterPublicHostname = clusterPublicHostname
 	config.ClusterExternalPortQuantity = nodePortQuantity
 	config.InventoryResourceDebugFrequency = inventoryResourceDebugFreq
 	config.InventoryResourcePollPeriod = inventoryResourcePollPeriod
+	config.CPUCommitLevel = overcommitPercentCPU
+	config.MemoryCommitLevel = overcommitPercentMemory
+	config.StorageCommitLevel = overcommitPercentStorage
+
 	config.BPS = pricing
 	service, err := provider.NewService(ctx, session, bus, cclient, config)
 

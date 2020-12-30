@@ -29,6 +29,10 @@ type Settings struct {
 
 	// NetworkPoliciesEnabled determines if NetworkPolicies should be installed.
 	NetworkPoliciesEnabled bool
+
+	CPUCommitLevel     float64
+	MemoryCommitLevel  float64
+	StorageCommitLevel float64
 }
 
 var errSettingsValidation = errors.New("settings validation")
