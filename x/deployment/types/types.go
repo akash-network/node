@@ -12,13 +12,18 @@ import (
 
 type attributesMatching map[string]types.Attributes
 
-// DefaultOrderBiddingDuration is the default time limit for an Order being active.
-// After the duration, the Order is automatically closed.
-// ( 24(hr) * 3600(seconds per hour) ) / 7s-Block
-const DefaultOrderBiddingDuration = int64(12342)
+const (
+	// ManifestVersionLength is the length of manifest version
+	ManifestVersionLength = 32
 
-// MaxBiddingDuration is roughly 30 days of block height
-const MaxBiddingDuration = DefaultOrderBiddingDuration * int64(30)
+	// DefaultOrderBiddingDuration is the default time limit for an Order being active.
+	// After the duration, the Order is automatically closed.
+	// ( 24(hr) * 3600(seconds per hour) ) / 7s-Block
+	DefaultOrderBiddingDuration = int64(12342)
+
+	// MaxBiddingDuration is roughly 30 days of block height
+	MaxBiddingDuration = DefaultOrderBiddingDuration * int64(30)
+)
 
 // ID method returns DeploymentID details of specific deployment
 func (obj Deployment) ID() DeploymentID {
