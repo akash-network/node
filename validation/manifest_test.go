@@ -411,7 +411,7 @@ func TestManifestWithEmptyImageNameInvalid(t *testing.T) {
 
 func TestManifestWithEmptyEnvValueIsValid(t *testing.T) {
 	m := simpleManifest()
-	envVars := make([]string, 2)
+	envVars := make([]string, 1)
 	envVars[0] = "FOO=" // sets FOO to empty string
 	m[0].Services[0].Env = envVars
 	err := validation.ValidateManifest(m)
@@ -420,12 +420,22 @@ func TestManifestWithEmptyEnvValueIsValid(t *testing.T) {
 
 func TestManifestWithEmptyEnvNameIsInvalid(t *testing.T) {
 	m := simpleManifest()
-	envVars := make([]string, 2)
+	envVars := make([]string, 1)
 	envVars[0] = "=FOO" // invalid
 	m[0].Services[0].Env = envVars
 	err := validation.ValidateManifest(m)
 	require.Error(t, err)
 	require.Regexp(t, `^.*var\. with an empty name.*$`, err)
+}
+
+func TestManifestWithBadEnvNameIsInvalid(t *testing.T) {
+	m := simpleManifest()
+	envVars := make([]string, 1)
+	envVars[0] = "9VAR=FOO" // invalid because it starts with a digit
+	m[0].Services[0].Env = envVars
+	err := validation.ValidateManifest(m)
+	require.Error(t, err)
+	require.Regexp(t, `^.*var\. with an invalid name.*$`, err)
 }
 
 func TestManifestServiceUnknownProtocolIsInvalid(t *testing.T) {
