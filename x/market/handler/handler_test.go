@@ -16,6 +16,7 @@ import (
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
+	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
 	akashtypes "github.com/ovrclk/akash/types"
 	akeeper "github.com/ovrclk/akash/x/audit/keeper"
@@ -63,10 +64,11 @@ func setupTestSuite(t *testing.T) *testSuite {
 	require.NoError(t, err)
 
 	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
+	newapp := app.Setup(false)
 
 	suite.mkeeper = keeper.NewKeeper(types.ModuleCdc, mKey)
 	suite.akeeper = akeeper.NewKeeper(types.ModuleCdc, aKey)
-	suite.dkeeper = dkeeper.NewKeeper(types.ModuleCdc, dKey)
+	suite.dkeeper = dkeeper.NewKeeper(types.ModuleCdc, dKey, newapp.GetSubspace(dtypes.ModuleName))
 	suite.pkeeper = pkeeper.NewKeeper(types.ModuleCdc, pKey)
 
 	suite.handler = handler.NewHandler(handler.Keepers{

@@ -11,6 +11,7 @@ import (
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
+	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
@@ -374,5 +375,6 @@ func setupKeeper(t testing.TB) (sdk.Context, keeper.Keeper) {
 	err := ms.LoadLatestVersion()
 	require.NoError(t, err)
 	ctx := sdk.NewContext(ms, tmproto.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))
-	return ctx, keeper.NewKeeper(types.ModuleCdc, key)
+	newapp := app.Setup(false)
+	return ctx, keeper.NewKeeper(types.ModuleCdc, key, newapp.GetSubspace(types.ModuleName))
 }

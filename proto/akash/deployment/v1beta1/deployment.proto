@@ -130,3 +130,98 @@ message DeploymentFilters {
       [(gogoproto.customname) = "DSeq", (gogoproto.jsontag) = "dseq", (gogoproto.moretags) = "yaml:\"dseq\""];
   string state = 3 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
 }
+
+// Params defines the parameters for the deployment module.
+message Params {
+  option (gogoproto.equal) = true;
+
+  uint64 max_unit_cpu = 1 [
+    (gogoproto.customname) = "MaxUnitCPU",
+    (gogoproto.jsontag)    = "max_unit_cpu",
+    (gogoproto.moretags)   = "yaml:\"max_unit_cpu\""
+  ];
+  uint64 max_unit_memory = 2 [
+    (gogoproto.customname) = "MaxUnitMemory",
+    (gogoproto.jsontag)    = "max_unit_memory",
+    (gogoproto.moretags)   = "yaml:\"max_unit_memory\""
+  ];
+  uint64 max_unit_storage = 3 [
+    (gogoproto.customname) = "MaxUnitStorage",
+    (gogoproto.jsontag)    = "max_unit_storage",
+    (gogoproto.moretags)   = "yaml:\"max_unit_storage\""
+  ];
+  uint64 max_unit_count = 4 [
+    (gogoproto.customname) = "MaxUnitCount",
+    (gogoproto.jsontag)    = "max_unit_count",
+    (gogoproto.moretags)   = "yaml:\"max_unit_count\""
+  ];
+  uint64 max_unit_price = 5 [
+    (gogoproto.customname) = "MaxUnitPrice",
+    (gogoproto.jsontag)    = "max_unit_price",
+    (gogoproto.moretags)   = "yaml:\"max_unit_price\""
+  ];
+
+  uint64 min_unit_cpu = 6 [
+    (gogoproto.customname) = "MinUnitCPU",
+    (gogoproto.jsontag)    = "min_unit_cpu",
+    (gogoproto.moretags)   = "yaml:\"min_unit_cpu\""
+  ];
+  uint64 min_unit_memory = 7 [
+    (gogoproto.customname) = "MinUnitMemory",
+    (gogoproto.jsontag)    = "min_unit_memory",
+    (gogoproto.moretags)   = "yaml:\"min_unit_memory\""
+  ];
+  uint64 min_unit_storage = 8 [
+    (gogoproto.customname) = "MinUnitStorage",
+    (gogoproto.jsontag)    = "min_unit_storage",
+    (gogoproto.moretags)   = "yaml:\"min_unit_storage\""
+  ];
+  uint64 min_unit_count = 9 [
+    (gogoproto.customname) = "MinUnitCount",
+    (gogoproto.jsontag)    = "min_unit_count",
+    (gogoproto.moretags)   = "yaml:\"min_unit_count\""
+  ];
+  uint64 min_unit_price = 10 [
+    (gogoproto.customname) = "MinUnitPrice",
+    (gogoproto.jsontag)    = "min_unit_price",
+    (gogoproto.moretags)   = "yaml:\"min_unit_price\""
+  ];
+
+  int64 max_group_count = 11 [
+    (gogoproto.customname) = "MaxGroupCount",
+    (gogoproto.jsontag)    = "max_group_count",
+    (gogoproto.moretags)   = "yaml:\"max_group_count\""
+  ];
+  int64 max_group_units = 12 [
+    (gogoproto.customname) = "MaxGroupUnits",
+    (gogoproto.jsontag)    = "max_group_units",
+    (gogoproto.moretags)   = "yaml:\"max_group_units\""
+  ];
+
+  int64 max_group_cpu = 13 [
+    (gogoproto.customname) = "MaxGroupCPU",
+    (gogoproto.jsontag)    = "max_group_cpu",
+    (gogoproto.moretags)   = "yaml:\"max_group_cpu\""
+  ];
+  int64 max_group_memory = 14 [
+    (gogoproto.customname) = "MaxGroupMemory",
+    (gogoproto.jsontag)    = "max_group_memory",
+    (gogoproto.moretags)   = "yaml:\"max_group_memory\""
+  ];
+  int64 max_group_storage = 15 [
+    (gogoproto.customname) = "MaxGroupStorage",
+    (gogoproto.jsontag)    = "max_group_storage",
+    (gogoproto.moretags)   = "yaml:\"max_group_storage\""
+  ];
+
+  int64 min_group_memprice = 16 [
+    (gogoproto.customname) = "MinGroupMemPrice",
+    (gogoproto.jsontag)    = "min_group_memprice",
+    (gogoproto.moretags)   = "yaml:\"min_group_memprice\""
+  ];
+  int64 max_group_memprice = 17 [
+    (gogoproto.customname) = "MaxGroupMemPrice",
+    (gogoproto.jsontag)    = "max_group_memprice",
+    (gogoproto.moretags)   = "yaml:\"max_group_memprice\""
+  ];
+}

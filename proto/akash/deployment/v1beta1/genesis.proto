@@ -23,4 +23,7 @@ message GenesisState {
     (gogoproto.jsontag)  = "deployments",
     (gogoproto.moretags) = "yaml:\"deployments\""
   ];
+
+  // params defines all the paramaters related  to resource limits
+  Params params = 2 [(gogoproto.nullable) = false];
 }

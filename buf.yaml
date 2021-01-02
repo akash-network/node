@@ -21,6 +21,7 @@ lint:
     - ENUM_VALUE_UPPER_SNAKE_CASE
     - ENUM_ZERO_VALUE_SUFFIX
     - RPC_REQUEST_STANDARD_NAME
+    - RPC_RESPONSE_STANDARD_NAME
   ignore:
     - ibc
     - cosmos

@@ -4,26 +4,45 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
 // Keeper of the deployment store
 type Keeper struct {
-	skey sdk.StoreKey
-	cdc  codec.BinaryMarshaler
+	skey       sdk.StoreKey
+	cdc        codec.BinaryMarshaler
+	paramspace paramtypes.Subspace
 }
 
 // NewKeeper creates and returns an instance for deployment keeper
-func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey, ps paramtypes.Subspace) Keeper {
+	// set KeyTable if it has not already been set
+	if !ps.HasKeyTable() {
+		ps = ps.WithKeyTable(types.ParamKeyTable())
+	}
+
 	return Keeper{
-		skey: skey,
-		cdc:  cdc,
+		skey:       skey,
+		cdc:        cdc,
+		paramspace: ps,
 	}
 }
 
 // Codec returns keeper codec
 func (k Keeper) Codec() codec.BinaryMarshaler {
 	return k.cdc
+}
+
+// GetParams returns the total set of deployment parameters.
+func (k Keeper) GetParams(ctx sdk.Context) (params types.Params) {
+	k.paramspace.GetParamSet(ctx, &params)
+	return params
+}
+
+// SetParams sets the deployment parameters to the paramspace.
+func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
+	k.paramspace.SetParamSet(ctx, &params)
 }
 
 // GetDeployment returns deployment details with provided DeploymentID
