@@ -3,16 +3,16 @@
 package integration
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
 	"time"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -52,6 +52,45 @@ func addFlags(cmd string, flags []string) string {
 	return strings.TrimSpace(cmd)
 }
 
+func queryAppWithRetries(t *testing.T, appURL string, appHost string, limit int) *http.Response {
+	req, err := http.NewRequest("GET", appURL, nil)
+	require.NoError(t, err)
+	req.Host = appHost
+	req.Header.Add("Cache-Control", "no-cache")
+	req.Header.Add("Connection", "keep-alive")
+	tr := &http.Transport{
+		DisableKeepAlives: false,
+		DialContext: (&net.Dialer{
+			Timeout:   1 * time.Second,
+			KeepAlive: 1 * time.Second,
+			DualStack: false,
+		}).DialContext,
+	}
+	client := &http.Client{
+		Transport: tr,
+	}
+
+	var resp *http.Response
+	const delay = 1 * time.Second
+	for i := 0; i != limit; i++ {
+		resp, err = client.Do(req)
+		if resp != nil {
+			t.Log("GET: ", appURL, resp.StatusCode)
+		}
+		if err != nil {
+			time.Sleep(delay)
+			continue
+		}
+		if resp != nil && resp.StatusCode == http.StatusOK {
+			break
+		}
+		time.Sleep(delay)
+	}
+	assert.NoError(t, err)
+
+	return resp
+}
+
 // Assert provider launches app in kind cluster
 func queryApp(t *testing.T, appURL string, limit int) {
 	req, err := http.NewRequest("GET", appURL, nil)
@@ -81,12 +120,12 @@ func queryApp(t *testing.T, appURL string, limit int) {
 			break
 		}
 	}
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	bytes, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Contains(t, string(bytes), "The Future of The Cloud is Decentralized")
 }
 

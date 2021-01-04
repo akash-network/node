@@ -18,14 +18,22 @@ func TestLidNsSanity(t *testing.T) {
 	leaseID := testutil.LeaseID(t)
 
 	ns := lidNS(leaseID)
-
 	assert.NotEmpty(t, ns)
 
 	// namespaces must be no more than 63 characters.
 	assert.Less(t, len(ns), int(64))
-
+	settings := NewDefaultSettings()
 	g := &manifest.Group{}
-	mb := newManifestBuilder(log, NewDefaultSettings(), ns, leaseID, g)
+
+	b := builder{
+		log:      log,
+		settings: settings,
+		lid:      leaseID,
+		group:    g,
+	}
+
+	mb := newManifestBuilder(log, settings, ns, leaseID, g)
+	assert.Equal(t, b.ns(), mb.ns())
 
 	m, err := mb.create()
 	assert.NoError(t, err)
@@ -51,10 +59,10 @@ func TestNetworkPolicies(t *testing.T) {
 	np = newNetPolBuilder(settings, leaseID, g)
 	netPolicies, err = np.create()
 	assert.NoError(t, err)
-	assert.Len(t, netPolicies, 7)
+	assert.Len(t, netPolicies, 1)
 
 	pol0 := netPolicies[0]
-	assert.Equal(t, pol0.Name, "default-deny-ingress")
+	assert.Equal(t, pol0.Name, "akash-deployment-restrictions")
 
 	// Change the DSeq ID
 	np.lid.DSeq = uint64(100)

@@ -1,0 +1,39 @@
+---
+version: "2.0"
+
+services:
+  web:
+    image: hydrogen18/hello_world:20201209
+    expose:
+      - port: 10000
+        as: 10000
+        to:
+          - global: true
+      - port: 10000
+        as: 10000
+        proto: UDP
+        to: 
+          - global: true
+
+profiles:
+  compute:
+    web:
+      resources:
+        cpu:
+          units: 0.1
+        memory:
+          size: 16Mi
+        storage:
+          size: 128Mi
+  placement:
+    global:
+      pricing:
+        web: 
+          denom: uakt
+          amount: 9000
+
+deployment:
+  web:
+    global:
+      profile: web
+      count: 1

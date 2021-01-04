@@ -184,7 +184,7 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
-	cmd.Flags().Bool(FlagDeploymentNetworkPoliciesEnabled, false, "Enable network policies")
+	cmd.Flags().Bool(FlagDeploymentNetworkPoliciesEnabled, true, "Enable network policies")
 	if err := viper.BindPFlag(FlagDeploymentNetworkPoliciesEnabled, cmd.Flags().Lookup(FlagDeploymentNetworkPoliciesEnabled)); err != nil {
 		return nil
 	}

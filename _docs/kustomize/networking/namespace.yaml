@@ -4,5 +4,5 @@ metadata:
   name: akash-services
   labels:
     name: akash-services
-    akash.network: true
+    akash.network: "true"
     akash.network/name: akash-services

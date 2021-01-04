@@ -7,7 +7,6 @@ import (
 
 	akashv1 "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -33,27 +32,26 @@ func applyNS(ctx context.Context, kc kubernetes.Interface, b *nsBuilder) error {
 // Apply list of Network Policies
 func applyNetPolicies(ctx context.Context, kc kubernetes.Interface, b *netPolBuilder) error {
 	var err error
-	var obj *netv1.NetworkPolicy
 
 	policies, err := b.create()
-	fn := func(np *netv1.NetworkPolicy) {
-		obj, err = kc.NetworkingV1().NetworkPolicies(b.ns()).Get(ctx, np.Name, metav1.GetOptions{})
-		switch {
-		case err == nil:
-			obj, err = b.update(obj)
-			if err == nil {
-				_, err = kc.NetworkingV1().NetworkPolicies(b.ns()).Update(ctx, np, metav1.UpdateOptions{})
-			}
-		case errors.IsNotFound(err):
-			_, err = kc.NetworkingV1().NetworkPolicies(b.ns()).Create(ctx, np, metav1.CreateOptions{})
-		}
+	if err != nil {
+		return err
 	}
 
 	for _, pol := range policies {
-		if err != nil {
-			break // short circuit running due to error returned
+		obj, err := kc.NetworkingV1().NetworkPolicies(b.ns()).Get(ctx, pol.Name, metav1.GetOptions{})
+		switch {
+		case err == nil:
+			_, err = b.update(obj)
+			if err == nil {
+				_, err = kc.NetworkingV1().NetworkPolicies(b.ns()).Update(ctx, pol, metav1.UpdateOptions{})
+			}
+		case errors.IsNotFound(err):
+			_, err = kc.NetworkingV1().NetworkPolicies(b.ns()).Create(ctx, pol, metav1.CreateOptions{})
 		}
-		fn(pol)
+		if err != nil {
+			break
+		}
 	}
 
 	return err
