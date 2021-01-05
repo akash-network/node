@@ -39,3 +39,14 @@ func ComputeCommittedResources(factor float64, rv atypes.ResourceValue) atypes.R
 
 	return result
 }
+
+func AllHostnamesOfManifestGroup(mgroup manifest.Group) []string {
+	allHostnames := make([]string, 0)
+	for _, service := range mgroup.Services {
+		for _, expose := range service.Expose {
+			allHostnames = append(allHostnames, expose.Hosts...)
+		}
+	}
+
+	return allHostnames
+}

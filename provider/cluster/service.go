@@ -37,6 +37,7 @@ type Service interface {
 	Close() error
 	Ready() <-chan struct{}
 	Done() <-chan struct{}
+	HostnameService() HostnameServiceClient
 }
 
 // NewService returns new Service instance
@@ -62,9 +63,12 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 		return nil, err
 	}
 
+	hostnames := newHostnameService(ctx, cfg)
+
 	s := &service{
 		session:   session,
 		client:    client,
+		hostnames: hostnames,
 		bus:       bus,
 		sub:       sub,
 		inventory: inventory,
@@ -88,6 +92,7 @@ type service struct {
 	sub     pubsub.Subscriber
 
 	inventory *inventoryService
+	hostnames *hostnameService
 
 	statusch  chan chan<- *ctypes.Status
 	managers  map[string]*deploymentManager
@@ -116,6 +121,10 @@ func (s *service) Reserve(order mtypes.OrderID, resources atypes.ResourceGroup) 
 
 func (s *service) Unreserve(order mtypes.OrderID) error {
 	return s.inventory.unreserve(order)
+}
+
+func (s *service) HostnameService() HostnameServiceClient {
+	return s.hostnames
 }
 
 func (s *service) Status(ctx context.Context) (*ctypes.Status, error) {

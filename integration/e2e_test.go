@@ -199,6 +199,8 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 func (s *IntegrationTestSuite) TearDownSuite() {
 
+	s.T().Log("Cleaning up after E2E tests")
+
 	keyTenant, err := s.validator.ClientCtx.Keyring.Key("keyBar")
 	s.Require().NoError(err)
 	resp, err := deploycli.QueryDeploymentsExec(s.validator.ClientCtx.WithOutputFormat("json"))
@@ -211,6 +213,7 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 
 	deployments := deployResp.Deployments
 
+	s.T().Logf("Cleaning up %d deployments", len(deployments))
 	for _, createdDep := range deployments {
 		// teardown lease
 		_, err = deploycli.TxCloseDeploymentExec(
@@ -409,6 +412,72 @@ portLoop:
 
 		s.Require().Regexp("^.*hello world(?s:.)*$", string(recvData))
 	}
+}
+
+func (s *IntegrationTestSuite) TestE2EDeploymentUpdate() {
+	// create a deployment
+	deploymentPath, err := filepath.Abs("../x/deployment/testdata/deployment-v2-updateA.yaml")
+	s.Require().NoError(err)
+
+	// Create Deployments
+	_, err = deploycli.TxCreateDeploymentExec(
+		s.validator.ClientCtx,
+		s.keyTenant.GetAddress(),
+		deploymentPath,
+		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.waitForBlocksCommitted(7))
+
+	// Assert provider made bid and created lease; test query leases ---------
+	resp, err := mcli.QueryLeasesExec(s.validator.ClientCtx.WithOutputFormat("json"))
+	s.Require().NoError(err)
+
+	leaseRes := &mtypes.QueryLeasesResponse{}
+	err = s.validator.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), leaseRes)
+	s.Require().NoError(err)
+
+	s.Require().Len(leaseRes.Leases, len(s.prevLeases)+1)
+	s.prevLeases = leaseRes.Leases
+
+	lease := newestLease(leaseRes.Leases)
+	lid := lease.LeaseID
+	did := lease.GetLeaseID().DeploymentID()
+	s.Require().Equal(s.keyProvider.GetAddress().String(), lid.Provider)
+
+	// Send Manifest to Provider
+	_, err = ptestutil.TestSendManifest(s.validator.ClientCtx.WithOutputFormat("json"), lid.BidID(), deploymentPath)
+	s.Require().NoError(err)
+	s.Require().NoError(s.waitForBlocksCommitted(2))
+
+	appURL := fmt.Sprintf("http://%s:%s/", s.appHost, s.appPort)
+	queryAppWithHostname(s.T(), appURL, 50, "testupdatea.localhost")
+
+	deploymentPath, err = filepath.Abs("../x/deployment/testdata/deployment-v2-updateB.yaml")
+	s.Require().NoError(err)
+
+	_, err = deploycli.TxUpdateDeploymentExec(s.validator.ClientCtx,
+		s.keyTenant.GetAddress(),
+		deploymentPath,
+		fmt.Sprintf("--owner=%s", lease.GetLeaseID().Owner),
+		fmt.Sprintf("--dseq=%v", did.GetDSeq()),
+		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		)
+	s.Require().NoError(err)
+	s.Require().NoError(s.waitForBlocksCommitted(2))
+
+	// Send Updated Manifest to Provider
+	_, err = ptestutil.TestSendManifest(s.validator.ClientCtx.WithOutputFormat("json"), lid.BidID(), deploymentPath)
+	s.Require().NoError(err)
+	s.Require().NoError(s.waitForBlocksCommitted(2))
+	queryAppWithHostname(s.T(), appURL, 50, "testupdateb.localhost")
+
 }
 
 func (s *IntegrationTestSuite) TestE2EApp() {

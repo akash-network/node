@@ -5,6 +5,7 @@ import (
 	"fmt"
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/manifest"
+	"github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -39,25 +40,27 @@ type deploymentManager struct {
 	updatech   chan *manifest.Group
 	teardownch chan struct{}
 
-	log log.Logger
-	lc  lifecycle.Lifecycle
+	log             log.Logger
+	lc              lifecycle.Lifecycle
+	hostnameService HostnameServiceClient
 }
 
 func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Group) *deploymentManager {
 	log := s.log.With("cmp", "deployment-manager", "lease", lease, "manifest-group", mgroup.Name)
 
 	dm := &deploymentManager{
-		bus:        s.bus,
-		client:     s.client,
-		session:    s.session,
-		state:      dsDeployActive,
-		lease:      lease,
-		mgroup:     mgroup,
-		wg:         sync.WaitGroup{},
-		updatech:   make(chan *manifest.Group),
-		teardownch: make(chan struct{}),
-		log:        log,
-		lc:         lifecycle.New(),
+		bus:             s.bus,
+		client:          s.client,
+		session:         s.session,
+		state:           dsDeployActive,
+		lease:           lease,
+		mgroup:          mgroup,
+		wg:              sync.WaitGroup{},
+		updatech:        make(chan *manifest.Group),
+		teardownch:      make(chan struct{}),
+		log:             log,
+		lc:              lifecycle.New(),
+		hostnameService: s.HostnameService(),
 	}
 
 	go dm.lc.WatchChannel(s.lc.ShuttingDown())
@@ -91,11 +94,23 @@ func (dm *deploymentManager) teardown() error {
 
 func (dm *deploymentManager) run() {
 	defer dm.lc.ShutdownCompleted()
-	runch := dm.startDeploy()
+
+	allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
+	reserveHostnamesCh := dm.hostnameService.ReserveHostnames(allHostnames, dm.lease.DeploymentID())
+
+	var runch <-chan error
 
 loop:
 	for {
 		select {
+		case err := <-reserveHostnamesCh:
+			reserveHostnamesCh = nil
+			if err != nil {
+				dm.log.Error("deploy hostname error", "state", dm.state, "err", err)
+				break loop
+			}
+			defer dm.hostnameService.ReleaseHostnames(allHostnames)
+			runch = dm.startDeploy()
 
 		case err := <-dm.lc.ShutdownRequest():
 			dm.lc.ShutdownInitiated(err)

@@ -3,79 +3,283 @@ package manifest
 import (
 	"context"
 	"errors"
-	"github.com/boz/go-lifecycle"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	clientMocks "github.com/ovrclk/akash/client/mocks"
+	"github.com/ovrclk/akash/provider/cluster"
+	"github.com/ovrclk/akash/provider/cluster/util"
+	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
+	"github.com/ovrclk/akash/sdkutil"
+	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/x/deployment/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	markettypes "github.com/ovrclk/akash/x/market/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
-func serviceForManifestTest(t *testing.T) *service {
-	svc := &service{}
-	log := testutil.Logger(t)
-	bus := pubsub.NewBus()
-	svc.bus = bus
-	var err error
-	svc.sub, err = bus.Subscribe()
-	require.NoError(t, err)
+type scaffold struct {
+	svc       *service
+	cancel    context.CancelFunc
+	bus       pubsub.Bus
+	queryMock *clientMocks.QueryClient
+	hostnames cluster.HostnameServiceClient
+}
+
+func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did dtypes.DeploymentID) *scaffold {
 
 	clientMock := &clientMocks.Client{}
 	queryMock := &clientMocks.QueryClient{}
 
 	clientMock.On("Query").Return(queryMock)
 
-	version := []byte("test")
+	var version []byte
+	var err error
+	if mani != nil {
+		m, err := mani.Manifest()
+		require.NoError(t, err)
+		version, err = sdl.ManifestVersion(m)
+		require.NoError(t, err)
+		require.NotNil(t, version)
+	} else {
+		version = []byte("test")
+	}
+
+	var groups []dtypes.Group
+	if mani != nil {
+		dgroups, err := mani.DeploymentGroups()
+		require.NoError(t, err)
+		require.NotNil(t, dgroups)
+		for _, g := range dgroups {
+			groups = append(groups, dtypes.Group{
+				GroupID: dtypes.GroupID{
+					Owner: "",
+					DSeq:  0,
+					GSeq:  0,
+				},
+				State:     0,
+				GroupSpec: *g,
+			})
+		}
+	}
+
 	res := &types.QueryDeploymentResponse{
 		Deployment: types.DeploymentResponse{
-			Deployment: types.Deployment{},
-			Groups:     nil,
-			Version:    version,
+			Deployment: types.Deployment{
+				DeploymentID: did,
+				State:        0,
+				Version:      version,
+			},
+			Groups:  groups,
+			Version: version,
 		},
 	}
 	queryMock.On("Deployment", mock.Anything, mock.Anything).Return(res, nil)
 
-	svc.session = session.New(log, clientMock, nil)
-	svc.lc = lifecycle.New()
-	svc.managerch = make(chan *manager, 1) // Size of 1 here, because the manager writes to this when closed
-	return svc
+	ctx, cancel := context.WithCancel(context.Background())
+
+	hostnames := &cluster.SimpleHostnames{
+		Hostnames: make(map[string]dtypes.DeploymentID),
+	}
+
+	log := testutil.Logger(t)
+	bus := pubsub.NewBus()
+
+	accAddr := testutil.AccAddress(t)
+	p := &ptypes.Provider{
+		Owner:      accAddr.String(),
+		HostURI:    "",
+		Attributes: nil,
+	}
+
+	queryMock.On("ActiveLeasesForProvider", p.Address()).Return(markettypes.Leases{}, nil)
+
+	serviceInterface, err := NewService(ctx, session.New(log, clientMock, p), bus, hostnames, cfg)
+	require.NoError(t, err)
+
+	svc := serviceInterface.(*service)
+
+	return &scaffold{
+		svc:       svc,
+		cancel:    cancel,
+		bus:       bus,
+		queryMock: queryMock,
+		hostnames: hostnames,
+	}
 }
 
 func TestManagerReturnsNoLease(t *testing.T) {
-	deploymentAddr := testutil.DeploymentID(t)
-	svc := serviceForManifestTest(t)
-	m, err := newManager(svc, deploymentAddr)
+	s := serviceForManifestTest(t, ServiceConfig{}, nil, dtypes.DeploymentID{})
+
+	sdl2, err := sdl.ReadFile("../../x/deployment/testdata/deployment-v2.yaml")
 	require.NoError(t, err)
-	require.NotNil(t, m)
 
-	ch := make(chan error, 1)
-	req := manifestRequest{
-		value: nil,
-		ch:    ch,
-		ctx:   context.Background(),
+	sdlManifest, err := sdl2.Manifest()
+	require.NoError(t, err)
+
+	did := testutil.DeploymentID(t)
+	req := &SubmitRequest{
+		Deployment: did,
+		Manifest:   sdlManifest,
 	}
+	err = s.svc.Submit(context.Background(), req)
+	require.Error(t, err)
+	require.True(t, errors.Is(ErrNoLeaseForDeployment, err))
 
-	m.handleManifest(req)
+	s.cancel()
 
 	select {
-	case err := <-ch:
-		require.Error(t, err)
-		require.True(t, errors.Is(ErrNoLeaseForDeployment, err))
-	case <-time.After(5 * time.Second):
-		t.Fatal("timed out waiting for response")
-	}
-	close(ch)
-
-	svc.lc.ShutdownInitiated(nil)
-
-	select {
-	case <-m.lc.Done():
+	case <-s.svc.lc.Done():
 
 	case <-time.After(10 * time.Second):
-		t.Fatal("timed out waiting for manager shutdown")
+		t.Fatal("timed out waiting for service shutdown")
+	}
+}
+
+func TestManagerRequiresHostname(t *testing.T) {
+	sdl2, err := sdl.ReadFile("../../x/deployment/testdata/deployment-v2-nohost.yaml")
+	require.NoError(t, err)
+
+	sdlManifest, err := sdl2.Manifest()
+	require.Len(t, sdlManifest[0].Services[0].Expose[0].Hosts, 0)
+	require.NoError(t, err)
+
+	lid := testutil.LeaseID(t)
+	did := lid.DeploymentID()
+	dgroups, err := sdl2.DeploymentGroups()
+	require.NoError(t, err)
+
+	// Tell the service that a lease has been won
+	dgroup := &dtypes.Group{
+		GroupID:   lid.GroupID(),
+		State:     0,
+		GroupSpec: *dgroups[0],
+	}
+
+	ev := event.LeaseWon{
+		LeaseID: lid,
+		Group:   dgroup,
+		Price: sdk.Coin{
+			Denom:  "uakt",
+			Amount: sdk.NewInt(111),
+		},
+	}
+	version, err := sdl.ManifestVersion(sdlManifest)
+	require.NotNil(t, version)
+	require.NoError(t, err)
+	s := serviceForManifestTest(t, ServiceConfig{HTTPServicesRequireAtLeastOneHost: true}, sdl2, did)
+	err = s.bus.Publish(ev)
+	require.NoError(t, err)
+
+	time.Sleep(time.Second) // Wait for publish to do its thing
+
+	sreq := &SubmitRequest{
+		Deployment: did,
+		Manifest:   sdlManifest,
+	}
+
+	err = s.svc.Submit(context.Background(), sreq)
+	require.Error(t, err)
+	require.Regexp(t, `^.+service ".+" exposed on .+:.+ must have a hostname$`, err.Error())
+
+	s.cancel()
+	select {
+	case <-s.svc.lc.Done():
+
+	case <-time.After(10 * time.Second):
+		t.Fatal("timed out waiting for service shutdown")
+	}
+}
+
+func TestManagerAllowsUpdate(t *testing.T) {
+	sdl2, err := sdl.ReadFile("../../x/deployment/testdata/deployment-v2.yaml")
+	require.NoError(t, err)
+	sdl2NewContainer, err := sdl.ReadFile("../../x/deployment/testdata/deployment-v2-newcontainer.yaml")
+	require.NoError(t, err)
+
+	sdlManifest, err := sdl2.Manifest()
+	require.NoError(t, err)
+
+	lid := testutil.LeaseID(t)
+	did := lid.DeploymentID()
+	dgroups, err := sdl2.DeploymentGroups()
+	require.NoError(t, err)
+
+	// Tell the service that a lease has been won
+	dgroup := &dtypes.Group{
+		GroupID:   lid.GroupID(),
+		State:     0,
+		GroupSpec: *dgroups[0],
+	}
+
+	ev := event.LeaseWon{
+		LeaseID: lid,
+		Group:   dgroup,
+		Price: sdk.Coin{
+			Denom:  "uakt",
+			Amount: sdk.NewInt(111),
+		},
+	}
+	version, err := sdl.ManifestVersion(sdlManifest)
+	require.NotNil(t, version)
+	require.NoError(t, err)
+	s := serviceForManifestTest(t, ServiceConfig{HTTPServicesRequireAtLeastOneHost: true}, sdl2, did)
+
+	err = s.bus.Publish(ev)
+	require.NoError(t, err)
+	time.Sleep(time.Second) // Wait for publish to do its thing
+
+	sreq := &SubmitRequest{
+		Deployment: did,
+		Manifest:   sdlManifest,
+	}
+
+	err = s.svc.Submit(context.Background(), sreq)
+	require.NoError(t, err)
+
+	// Pretend that the hostname has been reserved by a running deployment
+	select {
+	case err := <-s.hostnames.ReserveHostnames(util.AllHostnamesOfManifestGroup(sdlManifest.GetGroups()[0]), did):
+		require.NoError(t, err)
+	case <-time.After(10 * time.Second):
+		t.Fatal("timed out waiting for reserve hostnames")
+	}
+
+	sdlManifest, err = sdl2NewContainer.Manifest()
+	require.NoError(t, err)
+
+	version, err = sdl.ManifestVersion(sdlManifest)
+	require.NoError(t, err)
+
+	update := dtypes.EventDeploymentUpdated{
+		Context: sdkutil.BaseModuleEvent{},
+		ID:      did,
+		Version: version,
+	}
+
+	err = s.bus.Publish(update)
+	require.NoError(t, err)
+	time.Sleep(time.Second) // Wait for publish to do its thing
+
+	// Submit the new manifest
+	sreq = &SubmitRequest{
+		Deployment: did,
+		Manifest:   sdlManifest,
+	}
+
+	err = s.svc.Submit(context.Background(), sreq)
+	require.NoError(t, err)
+
+	s.cancel()
+	select {
+	case <-s.svc.lc.Done():
+
+	case <-time.After(10 * time.Second):
+		t.Fatal("timed out waiting for service shutdown")
 	}
 }

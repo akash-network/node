@@ -3,10 +3,8 @@ package manifest
 import (
 	"context"
 	"errors"
-	"github.com/ovrclk/akash/validation"
-
 	lifecycle "github.com/boz/go-lifecycle"
-	"github.com/caarlos0/env"
+	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
@@ -37,15 +35,9 @@ type Service interface {
 
 // NewHandler creates and returns new Service instance
 // Manage incoming leases and manifests and pair the two together to construct and emit a ManifestReceived event.
-func NewService(ctx context.Context, session session.Session, bus pubsub.Bus) (Service, error) {
+func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, hostnameService cluster.HostnameServiceClient, cfg ServiceConfig) (Service, error) {
 
 	session = session.ForModule("provider-manifest")
-
-	config := config{}
-	if err := env.Parse(&config); err != nil {
-		session.Log().Error("parsing config", "err", err)
-		return nil, err
-	}
 
 	sub, err := bus.Subscribe()
 	if err != nil {
@@ -61,14 +53,16 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus) (S
 	session.Log().Info("found existing leases", "count", len(leases))
 
 	s := &service{
-		session:   session,
-		bus:       bus,
-		sub:       sub,
-		statusch:  make(chan chan<- *Status),
-		mreqch:    make(chan manifestRequest),
-		managers:  make(map[string]*manager),
-		managerch: make(chan *manager),
-		lc:        lifecycle.New(),
+		session:         session,
+		bus:             bus,
+		sub:             sub,
+		statusch:        make(chan chan<- *Status),
+		mreqch:          make(chan manifestRequest),
+		managers:        make(map[string]*manager),
+		managerch:       make(chan *manager),
+		lc:              lifecycle.New(),
+		hostnameService: hostnameService,
+		config:          cfg,
 	}
 
 	go s.lc.WatchContext(ctx)
@@ -78,7 +72,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus) (S
 }
 
 type service struct {
-	config  config
+	config  ServiceConfig
 	session session.Session
 	bus     pubsub.Bus
 	sub     pubsub.Subscriber
@@ -90,6 +84,8 @@ type service struct {
 	managerch chan *manager
 
 	lc lifecycle.Lifecycle
+
+	hostnameService cluster.HostnameServiceClient
 }
 
 type manifestRequest struct {
@@ -187,7 +183,6 @@ loop:
 				}
 
 			case mtypes.EventLeaseClosed:
-
 				if ev.ID.Provider != s.session.Provider().Address().String() {
 					continue
 				}
@@ -201,13 +196,6 @@ loop:
 			}
 
 		case req := <-s.mreqch:
-			if err := validation.ValidateManifest(req.value.Manifest); err != nil {
-				s.session.Log().Error("manifest validation failed",
-					"err", err, "deployment", req.value.Deployment)
-				req.ch <- err
-				break
-			}
-
 			manager, err := s.ensureManager(req.value.Deployment)
 			if err != nil {
 				s.session.Log().Error("error fetching manager for manifest",
@@ -215,6 +203,7 @@ loop:
 				req.ch <- err
 				break
 			}
+			// The manager is responsible for putting a result in req.ch
 			manager.handleManifest(req)
 
 		case ch := <-s.statusch:

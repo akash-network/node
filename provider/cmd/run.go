@@ -64,6 +64,7 @@ const (
 	FlagOvercommitPercentMemory          = "overcommit-pct-mem"
 	FlagOvercommitPercentCPU             = "overcommit-pct-cpu"
 	FlagOvercommitPercentStorage         = "overcommit-pct-storage"
+	FlagDeploymentBlockedHostnames       = "deployment-blocked-hostnames"
 )
 
 var (
@@ -204,6 +205,11 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().StringSlice(FlagDeploymentBlockedHostnames, nil, "hostnames blocked for deployments")
+	if err := viper.BindPFlag(FlagDeploymentBlockedHostnames, cmd.Flags().Lookup(FlagDeploymentBlockedHostnames)); err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
@@ -263,6 +269,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	overcommitPercentCPU := 1.0 + float64(viper.GetUint64(FlagOvercommitPercentCPU)/100.0)
 	overcommitPercentMemory := 1.0 + float64(viper.GetUint64(FlagOvercommitPercentMemory)/100.0)
 	pricing, err := createBidPricingStrategy(strategy)
+	blockedHostnames := viper.GetStringSlice(FlagDeploymentBlockedHostnames)
 
 	if err != nil {
 		return err
@@ -360,6 +367,8 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	config.CPUCommitLevel = overcommitPercentCPU
 	config.MemoryCommitLevel = overcommitPercentMemory
 	config.StorageCommitLevel = overcommitPercentStorage
+	config.BlockedHostnames = blockedHostnames
+	config.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
 
 	config.BPS = pricing
 	service, err := provider.NewService(ctx, session, bus, cclient, config)

@@ -90,12 +90,17 @@ func queryAppWithRetries(t *testing.T, appURL string, appHost string, limit int)
 
 	return resp
 }
-
-// Assert provider launches app in kind cluster
 func queryApp(t *testing.T, appURL string, limit int) {
+	queryAppWithHostname(t, appURL, limit, "test.localhost")
+}
+
+
+func queryAppWithHostname(t *testing.T, appURL string, limit int, hostname string) {
+// Assert provider launches app in kind cluster
+
 	req, err := http.NewRequest("GET", appURL, nil)
 	require.NoError(t, err)
-	req.Host = "test.localhost" // NOTE: cannot be inserted as a req.Header element, that is overwritten by this req.Host field.
+	req.Host = hostname // NOTE: cannot be inserted as a req.Header element, that is overwritten by this req.Host field.
 	req.Header.Add("Cache-Control", "no-cache")
 	req.Header.Add("Connection", "keep-alive")
 	// Assert that the service is accessible. Unforetunately brittle single request.
