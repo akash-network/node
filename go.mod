@@ -3,6 +3,7 @@ module github.com/ovrclk/akash
 go 1.15
 
 require (
+	github.com/avast/retry-go v2.6.0+incompatible
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
 	github.com/cosmos/cosmos-sdk v0.40.0

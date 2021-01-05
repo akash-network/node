@@ -59,7 +59,7 @@ func cmdCreate(key string) *cobra.Command {
 
 			// Default DSeq to the current block height
 			if id.DSeq == 0 {
-				if id.DSeq, err = currentBlockHeight(clientCtx); err != nil {
+				if id.DSeq, err = CurrentBlockHeight(clientCtx); err != nil {
 					return err
 				}
 			}
