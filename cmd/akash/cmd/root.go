@@ -38,6 +38,7 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/ovrclk/akash/app"
+	dcmd "github.com/ovrclk/akash/deploy/cmd"
 	ecmd "github.com/ovrclk/akash/events/cmd"
 	pcmd "github.com/ovrclk/akash/provider/cmd"
 	"github.com/ovrclk/akash/sdkutil"
@@ -118,6 +119,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 	authclient.Codec = encodingConfig.Marshaler
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
+		dcmd.RootCmd(),
 		pcmd.RootCmd(),
 		ecmd.EventCmd(),
 		queryCmd(),
