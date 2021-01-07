@@ -14,6 +14,7 @@ const (
 	errInvalidGroups
 	errInvalidDeploymentID
 	errEmptyVersion
+	errInvalidVersion
 	errInternal
 	errInvalidDeployment
 	errInvalidGroupID
@@ -42,6 +43,8 @@ var (
 	ErrInvalidDeploymentID = sdkerrors.Register(ModuleName, errInvalidDeploymentID, "Invalid: deployment id")
 	// ErrEmptyVersion is the error when version is empty
 	ErrEmptyVersion = sdkerrors.Register(ModuleName, errEmptyVersion, "Invalid: empty version")
+	// ErrInvalidVersion is the error when version is invalid
+	ErrInvalidVersion = sdkerrors.Register(ModuleName, errInvalidVersion, "Invalid: deployment version")
 	// ErrInternal is the error for internal error
 	ErrInternal = sdkerrors.Register(ModuleName, errInternal, "internal error")
 	// ErrInvalidDeployment = is the error when deployment does not pass validation

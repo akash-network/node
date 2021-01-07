@@ -53,9 +53,15 @@ func (msg MsgCreateDeployment) ValidateBasic() error {
 	if len(msg.Groups) == 0 {
 		return ErrInvalidGroups
 	}
+
 	if len(msg.Version) == 0 {
 		return ErrEmptyVersion
 	}
+
+	if len(msg.Version) != ManifestVersionLength {
+		return ErrInvalidVersion
+	}
+
 	for _, gs := range msg.Groups {
 		err := gs.ValidateBasic()
 		if err != nil {
@@ -88,6 +94,10 @@ func (msg MsgUpdateDeployment) ValidateBasic() error {
 
 	if len(msg.Version) == 0 {
 		return ErrEmptyVersion
+	}
+
+	if len(msg.Version) != ManifestVersionLength {
+		return ErrInvalidVersion
 	}
 
 	return nil
