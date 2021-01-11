@@ -1,0 +1,37 @@
+---
+version: "2.0"
+
+services:
+  web:
+    image: quay.io/ovrclk/demo-app
+    expose:
+      - port: 80
+        to:
+          - global: true
+        accept:
+          - testupdatea.localhost
+          - testupdateb.localhost
+
+profiles:
+  compute:
+    web:
+      resources:
+        cpu:
+          units: "0.01"
+        memory:
+          size: "128Mi"
+        storage:
+          size: "512Mi"
+
+  placement:
+    global:
+      pricing:
+        web:
+          denom: uakt
+          amount: 10
+
+deployment:
+  web:
+    global:
+      profile: web
+      count: 1

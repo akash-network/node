@@ -53,6 +53,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 	clusterConfig.CPUCommitLevel = cfg.CPUCommitLevel
 	clusterConfig.MemoryCommitLevel = cfg.MemoryCommitLevel
 	clusterConfig.StorageCommitLevel = cfg.StorageCommitLevel
+	clusterConfig.BlockedHostnames = cfg.BlockedHostnames
 
 	cluster, err := cluster.NewService(ctx, session, bus, cclient, clusterConfig)
 	if err != nil {
@@ -78,7 +79,11 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 		return nil, errors.Wrap(err, errmsg)
 	}
 
-	manifest, err := manifest.NewService(ctx, session, bus)
+	manifestConfig := manifest.ServiceConfig{
+		HTTPServicesRequireAtLeastOneHost: cfg.DeploymentIngressStaticHosts,
+	}
+
+	manifest, err := manifest.NewService(ctx, session, bus, cluster.HostnameService(), manifestConfig)
 	if err != nil {
 		session.Log().Error("creating manifest handler", "err", err)
 		cancel()

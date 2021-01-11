@@ -3,6 +3,10 @@ package manifest
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
+	"fmt"
+	"github.com/ovrclk/akash/provider/cluster"
+	"github.com/ovrclk/akash/provider/cluster/util"
 	"time"
 
 	"github.com/pkg/errors"
@@ -37,17 +41,18 @@ func newManager(h *service, daddr dtypes.DeploymentID) (*manager, error) {
 	}
 
 	m := &manager{
-		config:     h.config,
-		daddr:      daddr,
-		session:    session,
-		bus:        h.bus,
-		sub:        sub,
-		leasech:    make(chan event.LeaseWon),
-		rmleasech:  make(chan mtypes.LeaseID),
-		manifestch: make(chan manifestRequest),
-		updatech:   make(chan []byte),
-		log:        session.Log().With("deployment", daddr),
-		lc:         lifecycle.New(),
+		daddr:           daddr,
+		session:         session,
+		bus:             h.bus,
+		sub:             sub,
+		leasech:         make(chan event.LeaseWon),
+		rmleasech:       make(chan mtypes.LeaseID),
+		manifestch:      make(chan manifestRequest),
+		updatech:        make(chan []byte),
+		log:             session.Log().With("deployment", daddr),
+		lc:              lifecycle.New(),
+		config:          h.config,
+		hostnameService: h.hostnameService,
 	}
 
 	go m.lc.WatchChannel(h.lc.ShuttingDown())
@@ -60,7 +65,7 @@ var ErrNoLeaseForDeployment = errors.New("no lease for deployment")
 
 // 'manager' facilitates operations around a configured Deployment.
 type manager struct {
-	config  config
+	config  ServiceConfig
 	daddr   dtypes.DeploymentID
 	session session.Session
 	bus     pubsub.Bus
@@ -82,6 +87,8 @@ type manager struct {
 
 	log log.Logger
 	lc  lifecycle.Lifecycle
+
+	hostnameService cluster.HostnameServiceClient
 }
 
 func (m *manager) stop() {
@@ -117,7 +124,7 @@ func (m *manager) handleUpdate(version []byte) {
 	select {
 	case m.updatech <- version:
 	case <-m.lc.ShuttingDown():
-		m.log.Error("not running: version update", "version", version)
+		m.log.Error("not running: version update", "version", hex.EncodeToString(version))
 	}
 }
 
@@ -177,7 +184,7 @@ loop:
 			runch = m.maybeFetchData(ctx, runch)
 
 		case version := <-m.updatech:
-			m.log.Info("received version", "version", version)
+			m.log.Info("received version", "version", hex.EncodeToString(version))
 			m.versions = append(m.versions, version)
 			if m.data != nil {
 				m.data.Deployment.Version = version
@@ -195,7 +202,7 @@ loop:
 
 			m.data = result.Value().(*dtypes.DeploymentResponse)
 
-			m.log.Info("data received", "version", m.data.Deployment.Version)
+			m.log.Info("data received", "version", hex.EncodeToString(m.data.Deployment.Version))
 
 			m.validateRequests()
 			m.emitReceivedEvents()
@@ -254,8 +261,9 @@ func (m *manager) maybeScheduleStop() bool { // nolint:golint,unparam
 		return false
 	}
 	if m.stoptimer != nil {
-		m.log.Info("starting stop timer", "duration", m.config.ManifestLingerDuration)
-		m.stoptimer = time.NewTimer(m.config.ManifestLingerDuration)
+		const manifestLingerDuration = time.Minute * time.Duration(5)
+		m.log.Info("starting stop timer", "duration", manifestLingerDuration)
+		m.stoptimer = time.NewTimer(manifestLingerDuration)
 	}
 	return true
 }
@@ -333,6 +341,43 @@ func (m *manager) validateRequests() {
 	}
 }
 
+var errManifestRejected = errors.New("manifest rejected")
+
+func (m *manager) checkHostnamesForManifest(requestManifest manifest.Manifest, groupNames []string) error {
+	allHostnames := make([]string, 0)
+
+	for _, mgroup := range requestManifest.GetGroups() {
+		for _, groupName := range groupNames {
+			// Only check leases with a matching deployment ID & group name
+			if groupName != mgroup.GetName() {
+				continue
+			}
+
+			allHostnames = append(allHostnames, util.AllHostnamesOfManifestGroup(mgroup)...)
+			if !m.config.HTTPServicesRequireAtLeastOneHost {
+				continue
+			}
+			// For each service that exposes via an Ingress, then require a hsotname
+			for _, service := range mgroup.Services {
+				for _, expose := range service.Expose {
+					if util.ShouldBeIngress(expose) && len(expose.Hosts) == 0 {
+						return fmt.Errorf("%w: service %q exposed on %d:%s must have a hostname", errManifestRejected, service.Name, util.ExposeExternalPort(expose), expose.Proto)
+					}
+				}
+			}
+		}
+	}
+
+	// Check if the hostnames are available. Do not block forever
+	select {
+	case err := <-m.hostnameService.CanReserveHostnames(allHostnames, m.data.Deployment.DeploymentID):
+		return err
+	case <-m.lc.ShutdownRequest():
+		return ErrNotRunning
+	}
+
+}
+
 func (m *manager) validateRequest(req manifestRequest) error {
 	// ensure that an uploaded manifest matches the hash declared on
 	// the Akash Deployment.Version
@@ -340,7 +385,16 @@ func (m *manager) validateRequest(req manifestRequest) error {
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(version, m.data.Deployment.Version) {
+
+	var versionExpected []byte
+
+	if len(m.versions) != 0 {
+		versionExpected = m.versions[len(m.versions)-1]
+	} else {
+		versionExpected = m.data.Deployment.Version
+	}
+	if !bytes.Equal(version, versionExpected) {
+		m.log.Info("deployment version mismatch", "expected", m.data.Deployment.Version, "got", version)
 		return ErrManifestVersion
 	}
 
@@ -351,5 +405,15 @@ func (m *manager) validateRequest(req manifestRequest) error {
 	if err := validation.ValidateManifestWithDeployment(&req.value.Manifest, m.data.Groups); err != nil {
 		return err
 	}
+
+	groupNames := make([]string, 0)
+	for _, lease := range m.leases {
+		groupNames = append(groupNames, lease.Group.GroupSpec.Name)
+	}
+	// Check that hostnames are not in use
+	if err := m.checkHostnamesForManifest(req.value.Manifest, groupNames); err != nil {
+		return err
+	}
+
 	return nil
 }
