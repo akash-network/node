@@ -24,7 +24,7 @@ func (sdl *v2Coin) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 
-	coin, err := sdk.ParseCoin(parsedCoin.Amount + parsedCoin.Denom)
+	coin, err := sdk.ParseCoinNormalized(parsedCoin.Amount + parsedCoin.Denom)
 	if err != nil {
 		return err
 	}

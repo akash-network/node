@@ -34,8 +34,7 @@ func cmdCreateBid(key string) *cobra.Command {
 		Short: fmt.Sprintf("Create a %s bid", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -45,7 +44,7 @@ func cmdCreateBid(key string) *cobra.Command {
 				return err
 			}
 
-			coins, err := sdk.ParseCoin(price)
+			coins, err := sdk.ParseCoinNormalized(price)
 			if err != nil {
 				return err
 			}
@@ -82,8 +81,7 @@ func cmdCloseBid(key string) *cobra.Command {
 		Short: fmt.Sprintf("Close a %s bid", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -117,8 +115,7 @@ func cmdCloseOrder(key string) *cobra.Command {
 		Short: fmt.Sprintf("Close a %s order", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
