@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"io/ioutil"
 	"sync"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -15,7 +14,6 @@ import (
 
 // DeploymentData contains the various IDs involved in a deployment
 type DeploymentData struct {
-	SDLFile      []byte
 	SDL          sdl.SDL
 	Manifest     manifest.Manifest
 	Groups       []*dtypes.GroupSpec
@@ -91,26 +89,9 @@ func (dd *DeploymentData) AddLease(lease mtypes.LeaseID) {
 	dd.LeaseID = append(dd.LeaseID, lease)
 }
 
-// RemoveLease adds an order for tracking
-func (dd *DeploymentData) RemoveLease(order mtypes.LeaseID) {
-	dd.Lock()
-	defer dd.Unlock()
-	var out []mtypes.LeaseID
-	for _, o := range dd.LeaseID {
-		if !order.Equals(o) {
-			out = append(out, o)
-		}
-	}
-	dd.LeaseID = out
-}
-
 // NewDeploymentData returns a DeploymentData struct initialized from a file and flags
-func NewDeploymentData(file string, flags *pflag.FlagSet, clientCtx client.Context) (*DeploymentData, error) {
-	f, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	sdlSpec, err := sdl.Read(f)
+func NewDeploymentData(filename string, flags *pflag.FlagSet, clientCtx client.Context) (*DeploymentData, error) {
+	sdlSpec, err := sdl.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +117,6 @@ func NewDeploymentData(file string, flags *pflag.FlagSet, clientCtx client.Conte
 		}
 	}
 	return &DeploymentData{
-		SDLFile:      f,
 		SDL:          sdlSpec,
 		Manifest:     mani,
 		Groups:       groups,
