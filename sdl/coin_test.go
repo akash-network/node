@@ -9,6 +9,7 @@ import (
 )
 
 func TestPricing(t *testing.T) {
+	t.Skip("https://github.com/ovrclk/akash/issues/1027")
 	tests := []struct {
 		text  string
 		value sdk.Coin
@@ -16,7 +17,7 @@ func TestPricing(t *testing.T) {
 	}{
 		{"amount: 1\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(1)), false},
 		{"amount: -1\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(1)), true},
-		{"amount: 0.7\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(0)), false},
+		{"amount: 0.7\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(0)), true},
 	}
 
 	for idx, test := range tests {
