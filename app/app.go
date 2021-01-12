@@ -94,6 +94,11 @@ const (
 var (
 	DefaultHome                         = os.ExpandEnv("$HOME/.akashd")
 	_           servertypes.Application = (*AkashApp)(nil)
+
+	// module accounts that are allowed to receive tokens
+	allowedReceivingModAcc = map[string]bool{
+		distrtypes.ModuleName: true,
+	}
 )
 
 // AkashApp extends ABCI appplication
@@ -198,7 +203,7 @@ func NewApp(
 		app.keys[banktypes.StoreKey],
 		app.keeper.acct,
 		app.GetSubspace(banktypes.ModuleName),
-		app.ModuleAccountAddrs(),
+		app.BlockedAddrs(),
 	)
 
 	skeeper := stakingkeeper.NewKeeper(
@@ -477,6 +482,18 @@ func (app *AkashApp) AppCodec() codec.Marshaler {
 // ModuleAccountAddrs returns all the app's module account addresses.
 func (app *AkashApp) ModuleAccountAddrs() map[string]bool {
 	return MacAddrs()
+}
+
+// BlockedAddrs returns all the app's module account addresses that are not
+// allowed to receive external tokens.
+func (app *AkashApp) BlockedAddrs() map[string]bool {
+	perms := MacPerms()
+	blockedAddrs := make(map[string]bool)
+	for acc := range perms {
+		blockedAddrs[authtypes.NewModuleAddress(acc).String()] = !allowedReceivingModAcc[acc]
+	}
+
+	return blockedAddrs
 }
 
 // InterfaceRegistry returns AkashApp's InterfaceRegistry
