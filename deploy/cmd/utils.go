@@ -16,11 +16,11 @@ func SendMsgs(clientCtx client.Context, flags *pflag.FlagSet, datagrams []sdk.Ms
 		}
 	}
 
-	return BuildAndBroadCastTx(clientCtx, flags, datagrams)
+	return BuildAndBroadcastTx(clientCtx, flags, datagrams)
 }
 
-// BuildAndBroadCastTx takes messages and builds, signs and marshals a sdk.Tx to prepare it for broadcast
-func BuildAndBroadCastTx(clientCtx client.Context, flags *pflag.FlagSet, msgs []sdk.Msg) (*sdk.TxResponse, error) {
+// BuildAndBroadcastTx takes messages and builds, signs and marshals a sdk.Tx to prepare it for broadcast
+func BuildAndBroadcastTx(clientCtx client.Context, flags *pflag.FlagSet, msgs []sdk.Msg) (*sdk.TxResponse, error) {
 	txf := tx.NewFactoryCLI(clientCtx, flags).
 		WithTxConfig(clientCtx.TxConfig).
 		WithAccountRetriever(clientCtx.AccountRetriever)

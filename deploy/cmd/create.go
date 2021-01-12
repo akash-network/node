@@ -2,7 +2,10 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	mtypes "github.com/ovrclk/akash/x/market/types"
+	"os"
 	"strings"
 	"time"
 
@@ -40,6 +43,7 @@ func createCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Short: "Create a deployment to be managed by the deploy application",
 		RunE: func(cmd *cobra.Command, args []string) error {
+
 			clientCtx := client.GetClientContextFromCmd(cmd)
 			clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
 			if err != nil {
@@ -57,29 +61,79 @@ func createCmd() *cobra.Command {
 
 			// Listen to on chain events and send the manifest when required
 			group.Go(func() error {
-				if err = ChainEmitter(ctx, clientCtx, DeploymentDataUpdateHandler(dd), SendManifestHander(clientCtx, dd)); err != nil {
-					log.Error("error watching events", err)
+				if err = ChainEmitter(ctx, clientCtx, DeploymentDataUpdateHandler(dd), SendManifestHander(clientCtx, dd)); err != nil && !errors.Is(err, context.Canceled) {
+					log.Error("error watching events", "err", err)
 				}
 				return err
 			})
 
 			// Send the deployment creation transaction
 			group.Go(func() error {
-				if err = TxCreateDeployment(clientCtx, cmd.Flags(), dd); err != nil {
-					log.Error("error creating deployment", err)
+				if err = TxCreateDeployment(clientCtx, cmd.Flags(), dd); err != nil && !errors.Is(err, context.Canceled) {
+					log.Error("error creating deployment", "err", err)
 				}
 				return err
 			})
 
+			wfl := newWaitForLeases(dd)
 			// Wait for the leases to be created and then start polling the provider for service availability
 			group.Go(func() error {
-				if err = WaitForLeasesAndPollService(clientCtx, dd, cancel); err != nil {
-					log.Error("error listening for service", err)
+				if err = wfl.run(clientCtx, cancel); err != nil && !errors.Is(err, context.Canceled) {
+					log.Error("error waiting for services to be ready", "err", err)
 				}
 				return err
 			})
 
-			return group.Wait()
+			// This returns "context cancelled" when everything goes OK
+			err = group.Wait()
+			if err != nil && errors.Is(err, context.Canceled) && wfl.allLeasesOk() {
+				err = nil // Not an actual error to stop on
+			}
+
+			if err != nil {
+				return err
+			}
+
+			gclient := gateway.NewClient()
+
+			deadline := time.After(viper.GetDuration(FlagTimeout))
+			ctx, cancel = context.WithCancel(context.Background())
+			go func() {
+				<-deadline
+				cancel()
+			}()
+
+			return wfl.eachService(func(leaseID mtypes.LeaseID, providerHost string, serviceName string) error {
+				var status *ctypes.ServiceStatus
+				var err error
+			loop:
+				for {
+					status, err = gclient.ServiceStatus(ctx, providerHost, leaseID, serviceName)
+					if err != nil {
+						_, isClientErr := err.(gateway.ClientResponseError)
+						if isClientErr {
+							time.Sleep(time.Second * 3) // Delay before next attempt
+							continue
+						}
+
+						return err
+					}
+					// Got status, so terminate the loop
+					break loop
+				}
+
+				statusEncoded, err := json.MarshalIndent(status, "", " ")
+				if err != nil {
+					return nil
+				}
+
+				_, err = os.Stdout.Write(statusEncoded)
+				if err != nil {
+					return err
+				}
+				_, err = fmt.Print("\n")
+				return err
+			})
 		},
 	}
 
@@ -104,14 +158,96 @@ func createCmd() *cobra.Command {
 	return cmd
 }
 
-// WaitForLeasesAndPollService waits for leases
-func WaitForLeasesAndPollService(clientCtx client.Context, dd *DeploymentData, cancel context.CancelFunc) error {
-	log := logger
+func getProviderHostURIFromLease(clientCtx client.Context, provider string) (string, error) {
 	pclient := pmodule.AppModuleBasic{}.GetQueryClient(clientCtx)
+
+	// Retrieve the provider host URI
+	var p *ptypes.Provider
+	if err := retry.Do(func() error {
+		res, err := pclient.Provider(
+			context.Background(),
+			&ptypes.QueryProviderRequest{Owner: provider},
+		)
+		if err != nil {
+			// TODO: Log retry?
+			return err
+		}
+
+		p = &res.Provider
+		return nil
+	}); err != nil {
+		return "", fmt.Errorf("error querying provider: %w", err)
+	}
+
+	return p.HostURI, nil
+}
+
+func newWaitForLeases(dd *DeploymentData) *waitForLeases {
+	return &waitForLeases{
+		dd:                 dd,
+		servicesOkForLease: make(map[mtypes.LeaseID]map[string]bool),
+		providers:          make(map[string]string),
+	}
+}
+
+type waitForLeases struct {
+	dd                 *DeploymentData
+	servicesOkForLease map[mtypes.LeaseID]map[string]bool
+	providers          map[string]string
+}
+
+func (wfl *waitForLeases) leaseIsOk(leaseID mtypes.LeaseID) bool {
+	data := wfl.servicesOkForLease[leaseID]
+	if len(data) == 0 {
+		return false // No data stored, lease is not OK
+	}
+
+	for _, isOk := range data {
+		if !isOk {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (wfl *waitForLeases) allLeasesOk() bool {
+	if len(wfl.servicesOkForLease) == 0 {
+		return false
+	}
+	for _, leaseID := range wfl.dd.Leases() {
+		if !wfl.leaseIsOk(leaseID) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (wfl *waitForLeases) eachService(fn func(leaseID mtypes.LeaseID, providerHost string, serviceName string) error) error {
+	for leaseID, services := range wfl.servicesOkForLease {
+		providerHost := wfl.providers[leaseID.Provider]
+
+		for serviceName := range services {
+			err := fn(leaseID, providerHost, serviceName)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// WaitForLeasesAndPollService waits for leases
+func (wfl *waitForLeases) run(clientCtx client.Context, cancel context.CancelFunc) error {
+	log := logger
+
 	timeoutDuration := viper.GetDuration(FlagTimeout)
 	tickDuration := viper.GetDuration(FlagTick)
 	timeout := time.After(timeoutDuration)
 	tick := time.Tick(tickDuration)
+
 	for {
 		select {
 		case <-timeout:
@@ -119,34 +255,27 @@ func WaitForLeasesAndPollService(clientCtx client.Context, dd *DeploymentData, c
 			cancel()
 			return errTimeout
 		case <-tick:
-			if dd.ExpectedLeases() {
-				for _, l := range dd.Leases() {
-
-					var (
-						p   *ptypes.Provider
-						err error
-					)
-					if err := retry.Do(func() error {
-						res, err := pclient.Provider(
-							context.Background(),
-							&ptypes.QueryProviderRequest{Owner: l.Provider},
-						)
+			if wfl.dd.ExpectedLeases() {
+				for _, leaseID := range wfl.dd.Leases() {
+					if wfl.leaseIsOk(leaseID) {
+						continue
+					}
+					var err error
+					// Lookup provider host URI
+					providerHostURI, ok := wfl.providers[leaseID.Provider]
+					if !ok { // Fetch it if needed
+						providerHostURI, err = getProviderHostURIFromLease(clientCtx, leaseID.Provider)
 						if err != nil {
-							// TODO: Log retry?
-							return err
+							cancel()
+							return fmt.Errorf("error getting provider URI: %w", err)
 						}
-
-						p = &res.Provider
-						return nil
-					}); err != nil {
-						cancel()
-						return fmt.Errorf("error querying provider: %w", err)
+						wfl.providers[leaseID.Provider] = providerHostURI // Fill in the data in the map for next time
 					}
 
 					// TODO: Move to using service status here?
 					var ls *ctypes.LeaseStatus
 					if err := retry.Do(func() error {
-						ls, err = gateway.NewClient().LeaseStatus(context.Background(), p.HostURI, l)
+						ls, err = gateway.NewClient().LeaseStatus(context.Background(), providerHostURI, leaseID)
 						if err != nil {
 							return err
 						}
@@ -156,16 +285,30 @@ func WaitForLeasesAndPollService(clientCtx client.Context, dd *DeploymentData, c
 						return fmt.Errorf("error querying lease status: %w", err)
 					}
 
-					for _, s := range ls.Services {
+					servicesStatus, exists := wfl.servicesOkForLease[leaseID]
+					if !exists {
+						servicesStatus = make(map[string]bool)
+						wfl.servicesOkForLease[leaseID] = servicesStatus
+					}
+					for serviceName, s := range ls.Services {
+						isOk := s.Available == s.Total
 						// TODO: Much better logging/ux could be put in here: waiting, timeouts etc...
-						if s.Available == s.Total {
+						storedStatus := servicesStatus[serviceName]
+
+						if isOk != storedStatus {
 							log.Info(strings.Join(s.URIs, ","), "name", s.Name, "available", s.Available)
-							cancel()
-							return nil
+							servicesStatus[serviceName] = isOk
 						}
 					}
+
 				}
 			}
+		}
+
+		// After each run, check if all leases are OK
+		if wfl.allLeasesOk() {
+			cancel() // We're done
+			return nil
 		}
 	}
 }

@@ -30,7 +30,7 @@ func SendManifestHander(clientCtx client.Context, dd *DeploymentData) func(pubsu
 		switch event := ev.(type) {
 		// Handle Lease creation events
 		case mtypes.EventLeaseCreated:
-			if addr.String() == event.ID.Owner {
+			if addr.String() == event.ID.Owner && event.ID.DSeq == dd.DeploymentID.DSeq {
 				pclient := pmodule.AppModuleBasic{}.GetQueryClient(clientCtx)
 				res, err := pclient.Provider(
 					context.Background(),
@@ -59,6 +59,8 @@ func SendManifestHander(clientCtx client.Context, dd *DeploymentData) func(pubsu
 	}
 }
 
+var errUnexpectedEvent = errors.New("unexpected event")
+
 // DeploymentDataUpdateHandler updates a DeploymentData and prints relevant events
 func DeploymentDataUpdateHandler(dd *DeploymentData) func(pubsub.Event) error {
 	return func(ev pubsub.Event) (err error) {
@@ -82,8 +84,10 @@ func DeploymentDataUpdateHandler(dd *DeploymentData) func(pubsub.Event) error {
 		// Handle deployment close events
 		case dtypes.EventDeploymentClosed:
 			if event.ID.Equals(dd.DeploymentID) {
-				// TODO: Maybe we should exit here as the tracked deployment is now closed?
-				log.Info("deployment closed")
+				log.Error("deployment closed unexpectedly")
+
+				// TODO - exit here
+				return fmt.Errorf("%w: deployment closed", errUnexpectedEvent)
 			}
 			return
 
@@ -136,14 +140,14 @@ func DeploymentDataUpdateHandler(dd *DeploymentData) func(pubsub.Event) error {
 		// Handle Lease close events
 		case mtypes.EventLeaseClosed:
 			if addr == event.ID.Owner && event.ID.DSeq == dd.DeploymentID.DSeq {
-				dd.RemoveLease(event.ID)
-				log.Info("lease for order closed", "oseq", event.ID.OSeq, "price", event.Price)
+				log.Error("lease for order closed", "oseq", event.ID.OSeq, "price", event.Price)
+				return fmt.Errorf("%w: lease closed oseq: %v", errUnexpectedEvent, event.ID.OSeq)
 			}
 			return
 
-			// In any other case we should exit with error
+		// In any other case we should exit with error
 		default:
-			return fmt.Errorf(errUnreachableCode.Error())
+			return fmt.Errorf("%w: %T", errUnexpectedEvent, ev)
 		}
 	}
 }

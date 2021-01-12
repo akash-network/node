@@ -23,6 +23,12 @@ func ChainEmitter(ctx context.Context, clientCtx client.Context, ehs ...EventHan
 	bus := pubsub.NewBus()
 	defer bus.Close()
 
+	// Subscribe to the bus events
+	subscriber, err := bus.Subscribe()
+	if err != nil {
+		return err
+	}
+
 	// Initialize a new error group
 	group, ctx := errgroup.WithContext(ctx)
 
@@ -30,12 +36,6 @@ func ChainEmitter(ctx context.Context, clientCtx client.Context, ehs ...EventHan
 	group.Go(func() error {
 		return events.Publish(ctx, clientCtx.Client, "akash-deploy", bus)
 	})
-
-	// Subscribe to the bus events
-	subscriber, err := bus.Subscribe()
-	if err != nil {
-		return err
-	}
 
 	// Handle all the events coming out of the bus
 	group.Go(func() error {
