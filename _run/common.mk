@@ -62,7 +62,7 @@ node-init-genesis-account-%:
 .PHONY: node-init-gentx
 node-init-gentx:
 	$(AKASHD) $(KEY_OPTS) gentx validator \
-		--amount "$(CHAIN_MIN_DEPOSIT)$(CHAIN_TOKEN_DENOM)" \
+		"$(CHAIN_MIN_DEPOSIT)$(CHAIN_TOKEN_DENOM)" \
 		$(CHAIN_OPTS)
 
 .PHONY: node-init-finalize
