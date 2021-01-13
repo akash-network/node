@@ -271,8 +271,9 @@ func (wfl *waitForLeases) run(clientCtx client.Context, cancel context.CancelFun
 					}
 
 					var ls *ctypes.LeaseStatus
+					leaseIDCopy := leaseID
 					if err := retry.Do(func() error {
-						ls, err = gateway.NewClient().LeaseStatus(context.Background(), providerHostURI, leaseID)
+						ls, err = gateway.NewClient().LeaseStatus(context.Background(), providerHostURI, leaseIDCopy)
 						if err != nil {
 							return err
 						}

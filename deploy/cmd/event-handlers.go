@@ -15,10 +15,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	errUnreachableCode = errors.New("should be unreachable code, exit with this error")
-)
-
 // EventHandler is a type of function that handles events coming out of the event bus
 type EventHandler func(pubsub.Event) error
 
@@ -27,32 +23,30 @@ func SendManifestHander(clientCtx client.Context, dd *DeploymentData) func(pubsu
 	return func(ev pubsub.Event) (err error) {
 		addr := clientCtx.GetFromAddress()
 		log := logger.With("action", "send-manifest")
-		switch event := ev.(type) {
-		// Handle Lease creation events
-		case mtypes.EventLeaseCreated:
-			if addr.String() == event.ID.Owner && event.ID.DSeq == dd.DeploymentID.DSeq {
-				pclient := pmodule.AppModuleBasic{}.GetQueryClient(clientCtx)
-				res, err := pclient.Provider(
-					context.Background(),
-					&ptypes.QueryProviderRequest{Owner: event.ID.Provider},
-				)
-				if err != nil {
-					return err
-				}
 
-				provider := res.Provider
+		evLeaseCreated, ok := ev.(mtypes.EventLeaseCreated)
+		if ok && addr.String() == evLeaseCreated.ID.Owner && evLeaseCreated.ID.DSeq == dd.DeploymentID.DSeq {
+			pclient := pmodule.AppModuleBasic{}.GetQueryClient(clientCtx)
+			res, err := pclient.Provider(
+				context.Background(),
+				&ptypes.QueryProviderRequest{Owner: evLeaseCreated.ID.Provider},
+			)
+			if err != nil {
+				return err
+			}
 
-				log.Info("sending manifest to provider", "provider", event.ID.Provider, "uri", provider.HostURI, "dseq", event.ID.DSeq)
-				if err = gateway.NewClient().SubmitManifest(
-					context.Background(),
-					provider.HostURI,
-					&manifest.SubmitRequest{
-						Deployment: event.ID.DeploymentID(),
-						Manifest:   dd.Manifest,
-					},
-				); err != nil {
-					return err
-				}
+			provider := res.Provider
+
+			log.Info("sending manifest to provider", "provider", evLeaseCreated.ID.Provider, "uri", provider.HostURI, "dseq", evLeaseCreated.ID.DSeq)
+			if err = gateway.NewClient().SubmitManifest(
+				context.Background(),
+				provider.HostURI,
+				&manifest.SubmitRequest{
+					Deployment: evLeaseCreated.ID.DeploymentID(),
+					Manifest:   dd.Manifest,
+				},
+			); err != nil {
+				return err
 			}
 		}
 		return
