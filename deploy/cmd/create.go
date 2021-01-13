@@ -269,12 +269,7 @@ func (wfl *waitForLeases) run(clientCtx client.Context, cancel context.CancelFun
 						}
 						wfl.providers[leaseID.Provider] = providerHostURI // Fill in the data in the map for next time
 					}
-<<<<<<< HEAD
-					
-=======
 
-					// TODO: Move to using service status here?
->>>>>>> 3f52a65d5b15c093404c39483f8e3e52f5536054
 					var ls *ctypes.LeaseStatus
 					if err := retry.Do(func() error {
 						ls, err = gateway.NewClient().LeaseStatus(context.Background(), providerHostURI, leaseID)
