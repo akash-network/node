@@ -290,7 +290,6 @@ func (wfl *waitForLeases) run(clientCtx client.Context, cancel context.CancelFun
 					}
 					for serviceName, s := range ls.Services {
 						isOk := s.Available == s.Total
-						// TODO: Much better logging/ux could be put in here: waiting, timeouts etc...
 						storedStatus := servicesStatus[serviceName]
 
 						if isOk != storedStatus {
@@ -304,7 +303,7 @@ func (wfl *waitForLeases) run(clientCtx client.Context, cancel context.CancelFun
 		}
 
 		// After each run, check if all leases are OK
-		if wfl.allLeasesOk() {
+		if wfl.dd.ExpectedLeases() && wfl.allLeasesOk() {
 			cancel() // We're done
 			return nil
 		}
