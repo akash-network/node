@@ -52,7 +52,7 @@ func BuildAndBroadcastTx(clientCtx client.Context, flags *pflag.FlagSet, msgs []
 	}
 
 	// Attach the signature to the transaction
-	err = tx.Sign(txf, info.GetName(), txb)
+	err = tx.Sign(txf, info.GetName(), txb, true)
 	if err != nil {
 		return nil, err
 	}

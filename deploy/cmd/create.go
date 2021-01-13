@@ -44,8 +44,8 @@ func createCmd() *cobra.Command {
 		Short: "Create a deployment to be managed by the deploy application",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadTxCommandFlags(clientCtx, cmd.Flags())
+
+			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
