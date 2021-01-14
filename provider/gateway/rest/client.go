@@ -7,17 +7,20 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	cutils "github.com/ovrclk/akash/x/cert/utils"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 
+	cosmosclient "github.com/cosmos/cosmos-sdk/client"
 	akashclient "github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider"
@@ -86,6 +89,54 @@ func NewClient(qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Ce
 	}
 
 	return cl, nil
+}
+
+type ClientDirectory struct {
+	cosmosContext cosmosclient.Context
+	clients       map[string]Client
+	clientCert    tls.Certificate
+
+	lock sync.Mutex
+}
+
+func (cd *ClientDirectory) GetClientFromBech32(providerAddrBech32 string) (Client, error) {
+	id, err := sdk.AccAddressFromBech32(providerAddrBech32)
+	if err != nil {
+		return nil, err
+	}
+	return cd.GetClient(id)
+}
+
+func (cd *ClientDirectory) GetClient(providerAddr sdk.Address) (Client, error) {
+	cd.lock.Lock()
+	defer cd.lock.Unlock()
+
+	client, clientExists := cd.clients[providerAddr.String()]
+	if clientExists {
+		return client, nil
+	}
+
+	client, err := NewClient(akashclient.NewQueryClientFromCtx(cd.cosmosContext), providerAddr, []tls.Certificate{cd.clientCert})
+	if err != nil {
+		return nil, err
+	}
+
+	cd.clients[providerAddr.String()] = client // Store the client
+
+	return client, nil
+}
+
+func NewClientDirectory(cctx cosmosclient.Context) (*ClientDirectory, error) {
+	cert, err := cutils.LoadCertificateForAccount(cctx.HomeDir, cctx.FromAddress, cctx.Keyring)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ClientDirectory{
+		cosmosContext: cctx,
+		clientCert:    cert,
+		clients:       make(map[string]Client),
+	}, nil
 }
 
 type httpClient interface {
