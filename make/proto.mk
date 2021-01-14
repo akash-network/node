@@ -12,7 +12,7 @@ endif
 
 .PHONY: proto-lint
 proto-lint:
-	$(DOCKER_BUF) check lint --error-format=json
+	$(DOCKER_BUF) lint --error-format=json
 
 .PHONY: proto-check-breaking
 proto-check-breaking:

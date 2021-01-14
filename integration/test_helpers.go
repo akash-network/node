@@ -42,7 +42,7 @@ func newAkashCoin(amt int64) sdk.Coin {
 	return sdk.NewInt64Coin(denom, amt)
 }
 
-//___________________________________________________________________________________
+// ___________________________________________________________________________________
 // utils
 func addFlags(cmd string, flags []string) string {
 	for _, f := range flags {
@@ -103,7 +103,7 @@ func queryAppWithHostname(t *testing.T, appURL string, limit int, hostname strin
 	req.Host = hostname // NOTE: cannot be inserted as a req.Header element, that is overwritten by this req.Host field.
 	req.Header.Add("Cache-Control", "no-cache")
 	req.Header.Add("Connection", "keep-alive")
-	// Assert that the service is accessible. Unforetunately brittle single request.
+	// Assert that the service is accessible. Unfortunately brittle single request.
 	tr := &http.Transport{
 		DisableKeepAlives: false,
 	}

@@ -19,6 +19,9 @@ KEY_OPTS := --keyring-backend=test "$(CHAIN_OPTS)"
 
 KEY_NAMES := main provider validator other
 
+CLIENT_CERTS := main validator other
+SERVER_CERTS := provider
+
 .PHONY: init
 init: bins client-init node-init
 
@@ -37,7 +40,7 @@ client-init-key-%:
 	$(AKASHCTL_NONODE) keys add --keyring-backend "test" "$(@:client-init-key-%=%)"
 
 .PHONY: node-init
-node-init: node-init-genesis node-init-genesis-accounts node-init-gentx node-init-finalize
+node-init: node-init-genesis node-init-genesis-accounts node-init-genesis-certs node-init-gentx node-init-finalize
 
 .PHONY: node-init-genesis
 node-init-genesis: init-dirs
@@ -48,6 +51,17 @@ node-init-genesis: init-dirs
 		jq -rM '(..|objects|select(has("bond_denom"))).bond_denom |= "$(CHAIN_TOKEN_DENOM)"' | \
 		jq -rM '(..|objects|select(has("mint_denom"))).mint_denom |= "$(CHAIN_TOKEN_DENOM)"' > \
 		"$(GENESIS_PATH)"
+
+.PHONY: node-init-genesis-certs
+node-init-genesis-certs: $(patsubst %,node-init-genesis-client-cert-%,$(CLIENT_CERTS)) $(patsubst %,node-init-genesis-server-cert-%,$(SERVER_CERTS))
+
+.PHONY: node-init-genesis-client-cert-%
+node-init-genesis-client-cert-%:
+	$(AKASHD) $(KEY_OPTS) tx cert create client --to-genesis=true --from=$(@:node-init-genesis-client-cert-%=%)
+
+.PHONY: node-init-genesis-server-cert-%
+node-init-genesis-server-cert-%:
+	$(AKASHD) $(KEY_OPTS) tx cert create server localhost --to-genesis=true --from=$(@:node-init-genesis-server-cert-%=%)
 
 .PHONY: node-init-genesis-accounts
 node-init-genesis-accounts: $(patsubst %,node-init-genesis-account-%,$(KEY_NAMES))

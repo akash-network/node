@@ -123,11 +123,7 @@ func TestManagerReturnsNoLease(t *testing.T) {
 	require.NoError(t, err)
 
 	did := testutil.DeploymentID(t)
-	req := &SubmitRequest{
-		Deployment: did,
-		Manifest:   sdlManifest,
-	}
-	err = s.svc.Submit(context.Background(), req)
+	err = s.svc.Submit(context.Background(), did, sdlManifest)
 	require.Error(t, err)
 	require.True(t, errors.Is(ErrNoLeaseForDeployment, err))
 
@@ -178,12 +174,7 @@ func TestManagerRequiresHostname(t *testing.T) {
 
 	time.Sleep(time.Second) // Wait for publish to do its thing
 
-	sreq := &SubmitRequest{
-		Deployment: did,
-		Manifest:   sdlManifest,
-	}
-
-	err = s.svc.Submit(context.Background(), sreq)
+	err = s.svc.Submit(context.Background(), did, sdlManifest)
 	require.Error(t, err)
 	require.Regexp(t, `^.+service ".+" exposed on .+:.+ must have a hostname$`, err.Error())
 
@@ -234,12 +225,7 @@ func TestManagerAllowsUpdate(t *testing.T) {
 	require.NoError(t, err)
 	time.Sleep(time.Second) // Wait for publish to do its thing
 
-	sreq := &SubmitRequest{
-		Deployment: did,
-		Manifest:   sdlManifest,
-	}
-
-	err = s.svc.Submit(context.Background(), sreq)
+	err = s.svc.Submit(context.Background(), did, sdlManifest)
 	require.NoError(t, err)
 
 	// Pretend that the hostname has been reserved by a running deployment
@@ -267,12 +253,7 @@ func TestManagerAllowsUpdate(t *testing.T) {
 	time.Sleep(time.Second) // Wait for publish to do its thing
 
 	// Submit the new manifest
-	sreq = &SubmitRequest{
-		Deployment: did,
-		Manifest:   sdlManifest,
-	}
-
-	err = s.svc.Submit(context.Background(), sreq)
+	err = s.svc.Submit(context.Background(), did, sdlManifest)
 	require.NoError(t, err)
 
 	s.cancel()

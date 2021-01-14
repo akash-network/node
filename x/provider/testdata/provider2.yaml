@@ -1,4 +1,4 @@
-host: http://akash.network
+host: https://akash.network
 attributes:
   - key: region
     value: sfo

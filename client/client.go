@@ -13,9 +13,15 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/ovrclk/akash/client/broadcaster"
+	amodule "github.com/ovrclk/akash/x/audit"
 	atypes "github.com/ovrclk/akash/x/audit/types"
+	cmodule "github.com/ovrclk/akash/x/cert"
+	ctypes "github.com/ovrclk/akash/x/cert/types"
+	dmodule "github.com/ovrclk/akash/x/deployment"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	mmodule "github.com/ovrclk/akash/x/market"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+	pmodule "github.com/ovrclk/akash/x/provider"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
@@ -30,6 +36,7 @@ type QueryClient interface {
 	mtypes.QueryClient
 	ptypes.QueryClient
 	atypes.QueryClient
+	ctypes.QueryClient
 
 	// TODO: implement with search parameters
 	ActiveLeasesForProvider(id sdk.AccAddress) (mtypes.Leases, error)
@@ -99,6 +106,7 @@ type qclient struct {
 	mclient mtypes.QueryClient
 	pclient ptypes.QueryClient
 	aclient atypes.QueryClient
+	cclient ctypes.QueryClient
 }
 
 // NewQueryClient creates new query client instance
@@ -107,13 +115,25 @@ func NewQueryClient(
 	mclient mtypes.QueryClient,
 	pclient ptypes.QueryClient,
 	aclient atypes.QueryClient,
+	cclient ctypes.QueryClient,
 ) QueryClient {
 	return &qclient{
 		dclient: dclient,
 		mclient: mclient,
 		pclient: pclient,
 		aclient: aclient,
+		cclient: cclient,
 	}
+}
+
+func NewQueryClientFromCtx(cctx sdkclient.Context) QueryClient {
+	return NewQueryClient(
+		dmodule.AppModuleBasic{}.GetQueryClient(cctx),
+		mmodule.AppModuleBasic{}.GetQueryClient(cctx),
+		pmodule.AppModuleBasic{}.GetQueryClient(cctx),
+		amodule.AppModuleBasic{}.GetQueryClient(cctx),
+		cmodule.AppModuleBasic{}.GetQueryClient(cctx),
+	)
 }
 
 func (c *qclient) Deployments(ctx context.Context, in *dtypes.QueryDeploymentsRequest, opts ...grpc.CallOption) (*dtypes.QueryDeploymentsResponse, error) {
@@ -223,4 +243,11 @@ func (c *qclient) AuditorAttributes(ctx context.Context, in *atypes.QueryAuditor
 		return &atypes.QueryProvidersResponse{}, ErrClientNotFound
 	}
 	return c.aclient.AuditorAttributes(ctx, in, opts...)
+}
+
+func (c *qclient) Certificates(ctx context.Context, in *ctypes.QueryCertificatesRequest, opts ...grpc.CallOption) (*ctypes.QueryCertificatesResponse, error) {
+	if c.cclient == nil {
+		return &ctypes.QueryCertificatesResponse{}, ErrClientNotFound
+	}
+	return c.cclient.Certificates(ctx, in, opts...)
 }

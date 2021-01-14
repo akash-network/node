@@ -6,6 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 
 	"github.com/ovrclk/akash/x/audit"
+	"github.com/ovrclk/akash/x/cert"
 	"github.com/ovrclk/akash/x/deployment"
 	"github.com/ovrclk/akash/x/market"
 	"github.com/ovrclk/akash/x/provider"
@@ -17,6 +18,7 @@ func akashModuleBasics() []module.AppModuleBasic {
 		market.AppModuleBasic{},
 		provider.AppModuleBasic{},
 		audit.AppModuleBasic{},
+		cert.AppModuleBasic{},
 	}
 }
 
@@ -26,6 +28,7 @@ func akashKVStoreKeys() []string {
 		market.StoreKey,
 		provider.StoreKey,
 		audit.StoreKey,
+		cert.StoreKey,
 	}
 }
 
@@ -48,6 +51,11 @@ func (app *AkashApp) setAkashKeepers() {
 	app.keeper.audit = audit.NewKeeper(
 		app.appCodec,
 		app.keys[audit.StoreKey],
+	)
+
+	app.keeper.cert = cert.NewKeeper(
+		app.appCodec,
+		app.keys[cert.StoreKey],
 	)
 }
 
@@ -80,6 +88,11 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 			app.appCodec,
 			app.keeper.audit,
 		),
+
+		cert.NewAppModule(
+			app.appCodec,
+			app.keeper.cert,
+		),
 	}
 }
 
@@ -91,6 +104,7 @@ func (app *AkashApp) akashEndBlockModules() []string {
 
 func (app *AkashApp) akashInitGenesisOrder() []string {
 	return []string{
+		cert.ModuleName,
 		deployment.ModuleName,
 		provider.ModuleName,
 		market.ModuleName,
@@ -117,6 +131,10 @@ func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 			app.keeper.provider,
 			app.keeper.acct,
 			app.keeper.bank,
+		),
+
+		cert.NewAppModuleSimulation(
+			app.keeper.cert,
 		),
 	}
 }
