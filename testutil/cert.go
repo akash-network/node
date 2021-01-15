@@ -35,6 +35,8 @@ type TestCertificate struct {
 
 type certificateOption struct {
 	domains []string
+	nbf     time.Time
+	naf     time.Time
 	qclient *mocks.QueryClient
 }
 
@@ -43,6 +45,18 @@ type CertificateOption func(*certificateOption)
 func CertificateOptionDomains(domains []string) CertificateOption {
 	return func(opt *certificateOption) {
 		opt.domains = domains
+	}
+}
+
+func CertificateOptionNotBefore(tm time.Time) CertificateOption {
+	return func(opt *certificateOption) {
+		opt.nbf = tm
+	}
+}
+
+func CertificateOptionNotAfter(tm time.Time) CertificateOption {
+	return func(opt *certificateOption) {
+		opt.naf = tm
 	}
 }
 
@@ -66,8 +80,13 @@ func Certificate(t testing.TB, addr sdk.Address, opts ...CertificateOption) Test
 		t.Fatal(err)
 	}
 
-	notBefore := time.Now()
-	notAfter := notBefore.Add(time.Hour * 24 * 365)
+	if opt.nbf.IsZero() {
+		opt.nbf = time.Now()
+	}
+
+	if opt.naf.IsZero() {
+		opt.naf = opt.nbf.Add(time.Hour * 24 * 365)
+	}
 
 	extKeyUsage := []x509.ExtKeyUsage{
 		x509.ExtKeyUsageClientAuth,
@@ -91,8 +110,8 @@ func Certificate(t testing.TB, addr sdk.Address, opts ...CertificateOption) Test
 		Issuer: pkix.Name{
 			CommonName: addr.String(),
 		},
-		NotBefore:             notBefore,
-		NotAfter:              notAfter,
+		NotBefore:             opt.nbf,
+		NotAfter:              opt.naf,
 		KeyUsage:              x509.KeyUsageDataEncipherment | x509.KeyUsageKeyEncipherment,
 		ExtKeyUsage:           extKeyUsage,
 		BasicConstraintsValid: true,
