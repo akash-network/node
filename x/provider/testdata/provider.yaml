@@ -1,4 +1,4 @@
-host: http://akash.ovrclk.com
+host: https://akash.ovrclk.com
 attributes:
   - key: region
     value: sfo

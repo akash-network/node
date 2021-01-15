@@ -2,9 +2,11 @@ package kube
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"path"
+
+	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/cluster/util"
@@ -22,15 +24,17 @@ import (
 
 	"github.com/tendermint/tendermint/libs/log"
 
+	"k8s.io/client-go/tools/pager"
+
 	"github.com/ovrclk/akash/manifest"
 	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	"k8s.io/client-go/tools/pager"
 )
 
 var (
+	ErrLeaseNotFound            = errors.New("kube: lease not found")
 	ErrNoDeploymentForLease     = errors.New("kube: no deployments for lease")
 	ErrNoGlobalServicesForLease = errors.New("kube: no global services for lease")
 	ErrInternalError            = errors.New("kube: internal error")
@@ -208,6 +212,10 @@ func (c *client) TeardownLease(ctx context.Context, lid mtypes.LeaseID) error {
 
 func (c *client) ServiceLogs(ctx context.Context, lid mtypes.LeaseID,
 	_ string, follow bool, tailLines *int64) ([]*ctypes.ServiceLog, error) {
+	if err := c.leaseExists(ctx, lid); err != nil {
+		return nil, err
+	}
+
 	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
@@ -233,7 +241,6 @@ func (c *client) ServiceLogs(ctx context.Context, lid mtypes.LeaseID,
 func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.LeaseStatus, error) {
 	deployments, err := c.deploymentsForLease(ctx, lid)
 	if err != nil {
-		c.log.Error(err.Error())
 		return nil, err
 	}
 
@@ -353,6 +360,10 @@ func (c *client) exposedHostForPort() string {
 }
 
 func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name string) (*ctypes.ServiceStatus, error) {
+	if err := c.leaseExists(ctx, lid); err != nil {
+		return nil, err
+	}
+
 	deployment, err := c.kc.AppsV1().Deployments(lidNS(lid)).Get(ctx, name, metav1.GetOptions{})
 
 	if err != nil {
@@ -404,7 +415,6 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 }
 
 func (c *client) Inventory(ctx context.Context) ([]ctypes.Node, error) {
-
 	// Load all the nodes
 	knodes, err := c.activeNodes(ctx)
 	if err != nil {
@@ -595,7 +605,25 @@ func (c *client) nodeIsActive(node corev1.Node) bool {
 	return ready && issues == 0
 }
 
+func (c *client) leaseExists(ctx context.Context, lid mtypes.LeaseID) error {
+	_, err := c.kc.CoreV1().Namespaces().Get(ctx, lidNS(lid), metav1.GetOptions{})
+	if err != nil {
+		if kubeErrors.IsNotFound(err) {
+			return ErrLeaseNotFound
+		}
+
+		c.log.Error(err.Error())
+		return errors.Wrap(err, ErrInternalError.Error())
+	}
+
+	return nil
+}
+
 func (c *client) deploymentsForLease(ctx context.Context, lid mtypes.LeaseID) ([]appsv1.Deployment, error) {
+	if err := c.leaseExists(ctx, lid); err != nil {
+		return nil, err
+	}
+
 	deployments, err := c.kc.AppsV1().Deployments(lidNS(lid)).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		c.log.Error(err.Error())
@@ -605,5 +633,6 @@ func (c *client) deploymentsForLease(ctx context.Context, lid mtypes.LeaseID) ([
 	if deployments == nil || 0 == len(deployments.Items) {
 		return nil, ErrNoDeploymentForLease
 	}
+
 	return deployments.Items, nil
 }

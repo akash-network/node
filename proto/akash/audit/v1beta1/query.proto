@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+
 package akash.audit.v1beta1;
 
 import "gogoproto/gogo.proto";
@@ -11,30 +13,30 @@ option go_package = "github.com/ovrclk/akash/x/audit/types";
 
 // Query defines the gRPC querier service
 service Query {
+  // AllProvidersAttributes queries all providers
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-  // AllProvidersAttributes queries all providers
   rpc AllProvidersAttributes(QueryAllProvidersAttributesRequest) returns (QueryProvidersResponse) {
     option (google.api.http).get = "/akash/audit/v1beta1/audit/attributes/list";
   }
 
+  // ProviderAttributes queries all provider signed attributes
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-  // ProviderAttributes queries all provider signed attributes
   rpc ProviderAttributes(QueryProviderAttributesRequest) returns (QueryProvidersResponse) {
     option (google.api.http).get = "/akash/audit/v1beta1/audit/attributes/{owner}/list";
   }
 
+  // ProviderAuditorAttributes queries provider signed attributes by specific auditor
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-  // ProviderAuditorAttributes queries provider signed attributes by specific auditor
   rpc ProviderAuditorAttributes(QueryProviderAuditorRequest) returns (QueryProvidersResponse) {
     option (google.api.http).get = "/akash/audit/v1beta1/audit/attributes/{auditor}/{owner}";
   }
 
+  // AuditorAttributes queries all providers signed by this auditor
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-  // AuditorAttributes queries all providers signed by this auditor
   rpc AuditorAttributes(QueryAuditorAttributesRequest) returns (QueryProvidersResponse) {
     option (google.api.http).get = "/akash/provider/v1beta1/auditor/{auditor}/list";
   }

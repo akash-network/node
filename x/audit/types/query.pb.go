@@ -402,21 +402,21 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type QueryClient interface {
-	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
-	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
 	// AllProvidersAttributes queries all providers
+	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
 	AllProvidersAttributes(ctx context.Context, in *QueryAllProvidersAttributesRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error)
-	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
-	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
 	// ProviderAttributes queries all provider signed attributes
+	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
 	ProviderAttributes(ctx context.Context, in *QueryProviderAttributesRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error)
-	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
-	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
 	// ProviderAuditorAttributes queries provider signed attributes by specific auditor
-	ProviderAuditorAttributes(ctx context.Context, in *QueryProviderAuditorRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error)
 	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
 	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+	ProviderAuditorAttributes(ctx context.Context, in *QueryProviderAuditorRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error)
 	// AuditorAttributes queries all providers signed by this auditor
+	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
 	AuditorAttributes(ctx context.Context, in *QueryAuditorAttributesRequest, opts ...grpc.CallOption) (*QueryProvidersResponse, error)
 }
 
@@ -466,21 +466,21 @@ func (c *queryClient) AuditorAttributes(ctx context.Context, in *QueryAuditorAtt
 
 // QueryServer is the server API for Query service.
 type QueryServer interface {
-	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
-	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
 	// AllProvidersAttributes queries all providers
+	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
 	AllProvidersAttributes(context.Context, *QueryAllProvidersAttributesRequest) (*QueryProvidersResponse, error)
-	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
-	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
 	// ProviderAttributes queries all provider signed attributes
+	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
 	ProviderAttributes(context.Context, *QueryProviderAttributesRequest) (*QueryProvidersResponse, error)
-	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
-	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
 	// ProviderAuditorAttributes queries provider signed attributes by specific auditor
-	ProviderAuditorAttributes(context.Context, *QueryProviderAuditorRequest) (*QueryProvidersResponse, error)
 	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
 	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+	ProviderAuditorAttributes(context.Context, *QueryProviderAuditorRequest) (*QueryProvidersResponse, error)
 	// AuditorAttributes queries all providers signed by this auditor
+	// buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+	// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
 	AuditorAttributes(context.Context, *QueryAuditorAttributesRequest) (*QueryProvidersResponse, error)
 }
 

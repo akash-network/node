@@ -2,51 +2,47 @@ package cmd
 
 import (
 	"context"
-	"github.com/cosmos/cosmos-sdk/client"
+
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 
+	akashclient "github.com/ovrclk/akash/client"
 	cmdcommon "github.com/ovrclk/akash/cmd/common"
-	"github.com/ovrclk/akash/provider/gateway"
-	mcli "github.com/ovrclk/akash/x/market/client/cli"
-	pmodule "github.com/ovrclk/akash/x/provider"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
+	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
 )
 
 func statusCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:          "status",
+		Use:          "status [address]",
 		Short:        "get provider status",
+		Args:         cobra.ExactArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return doStatus(cmd)
+			addr, err := sdk.AccAddressFromBech32(args[0])
+			if err != nil {
+				return err
+			}
+
+			return doStatus(cmd, addr)
 		},
 	}
-
-	mcli.AddProviderFlag(cmd.Flags())
-	mcli.MarkReqProviderFlag(cmd)
 
 	return cmd
 }
 
-func doStatus(cmd *cobra.Command) error {
-	cctx := client.GetClientContextFromCmd(cmd)
-
-	addr, err := mcli.ProviderFromFlagsWithoutCtx(cmd.Flags())
+func doStatus(cmd *cobra.Command, addr sdk.Address) error {
+	cctx, err := sdkclient.GetClientTxContext(cmd)
 	if err != nil {
 		return err
 	}
 
-	pclient := pmodule.AppModuleBasic{}.GetQueryClient(cctx)
-
-	res, err := pclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: addr.String()})
+	gclient, err := gwrest.NewClient(akashclient.NewQueryClientFromCtx(cctx), addr, nil)
 	if err != nil {
 		return err
 	}
 
-	provider := &res.Provider
-	gclient := gateway.NewClient()
-
-	result, err := gclient.Status(context.Background(), provider.HostURI)
+	result, err := gclient.Status(context.Background())
 	if err != nil {
 		return showErrorToUser(err)
 	}

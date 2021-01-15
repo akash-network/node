@@ -49,6 +49,19 @@ func OrderIDFromFlags(flags *pflag.FlagSet) (types.OrderID, error) {
 	return types.MakeOrderID(prev, val), nil
 }
 
+// OrderIDFromFlagsForOwner returns OrderID with given flags and error if occurred
+func OrderIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (types.OrderID, error) {
+	prev, err := dcli.GroupIDFromFlagsForOwner(flags, owner)
+	if err != nil {
+		return types.OrderID{}, err
+	}
+	val, err := flags.GetUint32("oseq")
+	if err != nil {
+		return types.OrderID{}, err
+	}
+	return types.MakeOrderID(prev, val), nil
+}
+
 // AddBidIDFlags add flags for bid
 func AddBidIDFlags(flags *pflag.FlagSet) {
 	AddOrderIDFlags(flags)
@@ -94,17 +107,22 @@ func BidIDFromFlagsWithoutCtx(flags *pflag.FlagSet) (types.BidID, error) {
 	return types.MakeBidID(prev, addr), nil
 }
 
-// ProviderFromFlagsWithoutCtx returns Provider address with given flags and error if occurred
-func ProviderFromFlagsWithoutCtx(flags *pflag.FlagSet) (sdk.AccAddress, error) {
+// BidIDFromFlagsForOwner returns BidID with given flags and error if occurred
+// Here provider value is taken from flags
+func BidIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (types.BidID, error) {
+	prev, err := OrderIDFromFlagsForOwner(flags, owner)
+	if err != nil {
+		return types.BidID{}, err
+	}
 	provider, err := flags.GetString("provider")
 	if err != nil {
-		return sdk.AccAddress{}, err
+		return types.BidID{}, err
 	}
 	addr, err := sdk.AccAddressFromBech32(provider)
 	if err != nil {
-		return sdk.AccAddress{}, err
+		return types.BidID{}, err
 	}
-	return addr, nil
+	return types.MakeBidID(prev, addr), nil
 }
 
 // AddOrderFilterFlags add flags to filter for order list

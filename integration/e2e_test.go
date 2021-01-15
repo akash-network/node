@@ -5,21 +5,23 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/server"
-	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
-	"github.com/ovrclk/akash/x/provider/client/cli"
-	"github.com/ovrclk/akash/x/provider/types"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
-	"os"
-
 	"net"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/server"
+	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
+	"github.com/stretchr/testify/assert"
+
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	ccli "github.com/ovrclk/akash/x/cert/client/cli"
+	"github.com/ovrclk/akash/x/provider/client/cli"
+	"github.com/ovrclk/akash/x/provider/types"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -29,6 +31,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	providerCmd "github.com/ovrclk/akash/provider/cmd"
 	ptestutil "github.com/ovrclk/akash/provider/testutil"
 	"github.com/ovrclk/akash/sdl"
@@ -122,7 +125,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	provHost := fmt.Sprintf("localhost:%s", port)
 	provURL := url.URL{
 		Host:   provHost,
-		Scheme: "http",
+		Scheme: "https",
 	}
 	provFileStr := fmt.Sprintf(providerTemplate, provURL.String())
 	tmpFile, err := ioutil.TempFile(s.network.BaseDir, "provider.yaml")
@@ -150,8 +153,49 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
 	s.Require().NoError(err)
-
 	s.Require().NoError(s.network.WaitForNextBlock())
+
+	// Create provider's certificate
+	_, err = ccli.TxCreateServerExec(
+		s.validator.ClientCtx,
+		s.keyTenant.GetAddress(),
+		"localhost",
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
+
+	// Create tenant's certificate
+	_, err = ccli.TxCreateServerExec(
+		s.validator.ClientCtx,
+		s.keyProvider.GetAddress(),
+		"localhost",
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
+
+	pemSrc := fmt.Sprintf("%s/%s.pem", s.validator.ClientCtx.HomeDir, s.keyProvider.GetAddress().String())
+	pemDst := fmt.Sprintf("%s/%s.pem", strings.Replace(s.validator.ClientCtx.HomeDir, "simd", "simcli", 1), s.keyProvider.GetAddress().String())
+	input, err := ioutil.ReadFile(pemSrc)
+	s.Require().NoError(err)
+
+	err = ioutil.WriteFile(pemDst, input, 0400)
+	s.Require().NoError(err)
+
+	pemSrc = fmt.Sprintf("%s/%s.pem", s.validator.ClientCtx.HomeDir, s.keyTenant.GetAddress().String())
+	pemDst = fmt.Sprintf("%s/%s.pem", strings.Replace(s.validator.ClientCtx.HomeDir, "simd", "simcli", 1), s.keyTenant.GetAddress().String())
+	input, err = ioutil.ReadFile(pemSrc)
+	s.Require().NoError(err)
+
+	err = ioutil.WriteFile(pemDst, input, 0400)
+	s.Require().NoError(err)
 
 	localCtx := s.validator.ClientCtx.WithOutputFormat("json")
 	// test query providers
@@ -182,6 +226,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	cliHome := strings.Replace(s.validator.ClientCtx.HomeDir, "simd", "simcli", 1)
 
 	cctx := s.validator.ClientCtx
+
 	go func() {
 		_, err := ptestutil.RunLocalProvider(cctx,
 			cctx.ChainID,
@@ -300,7 +345,13 @@ func (s *IntegrationTestSuite) TestE2EContainerToContainer() {
 	s.Require().Equal(s.keyProvider.GetAddress().String(), lid.Provider)
 
 	// Send Manifest to Provider ----------------------------------------------
-	_, err = ptestutil.TestSendManifest(s.validator.ClientCtx.WithOutputFormat("json"), lid.BidID(), deploymentPath)
+	_, err = ptestutil.TestSendManifest(
+		s.validator.ClientCtx.WithOutputFormat("json"),
+		lid.BidID(),
+		deploymentPath,
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
 
@@ -356,7 +407,14 @@ func (s *IntegrationTestSuite) TestE2EAppNodePort() {
 	s.Require().Equal(s.keyProvider.GetAddress().String(), lid.Provider)
 
 	// Send Manifest to Provider ----------------------------------------------
-	_, err = ptestutil.TestSendManifest(s.validator.ClientCtx.WithOutputFormat("json"), lid.BidID(), deploymentPath)
+	_, err = ptestutil.TestSendManifest(
+		s.validator.ClientCtx.WithOutputFormat("json"),
+		lid.BidID(),
+		deploymentPath,
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
+
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
 
@@ -366,8 +424,10 @@ func (s *IntegrationTestSuite) TestE2EAppNodePort() {
 		fmt.Sprintf("--%s=%v", "dseq", lid.DSeq),
 		fmt.Sprintf("--%s=%v", "gseq", lid.GSeq),
 		fmt.Sprintf("--%s=%v", "oseq", lid.OSeq),
-		fmt.Sprintf("--%s=%v", "owner", lid.Owner),
-		fmt.Sprintf("--%s=%v", "provider", lid.Provider))
+		fmt.Sprintf("--%s=%v", "provider", lid.Provider),
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
 	assert.NoError(s.T(), err)
 	data := ctypes.LeaseStatus{}
 	err = json.Unmarshal(cmdResult.Bytes(), &data)
@@ -449,7 +509,14 @@ func (s *IntegrationTestSuite) TestE2EDeploymentUpdate() {
 	s.Require().Equal(s.keyProvider.GetAddress().String(), lid.Provider)
 
 	// Send Manifest to Provider
-	_, err = ptestutil.TestSendManifest(s.validator.ClientCtx.WithOutputFormat("json"), lid.BidID(), deploymentPath)
+	_, err = ptestutil.TestSendManifest(
+		s.validator.ClientCtx.WithOutputFormat("json"),
+		lid.BidID(),
+		deploymentPath,
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
+
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
 
@@ -468,12 +535,18 @@ func (s *IntegrationTestSuite) TestE2EDeploymentUpdate() {
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		)
+	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
 
 	// Send Updated Manifest to Provider
-	_, err = ptestutil.TestSendManifest(s.validator.ClientCtx.WithOutputFormat("json"), lid.BidID(), deploymentPath)
+	_, err = ptestutil.TestSendManifest(
+		s.validator.ClientCtx.WithOutputFormat("json"),
+		lid.BidID(),
+		deploymentPath,
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
 	queryAppWithHostname(s.T(), appURL, 50, "testupdateb.localhost")
@@ -563,16 +636,20 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	s.Require().Equal(s.keyProvider.GetAddress().String(), lid.Provider)
 
 	// Send Manifest to Provider ----------------------------------------------
-	_, err = ptestutil.TestSendManifest(s.validator.ClientCtx.WithOutputFormat("json"), lid.BidID(), deploymentPath)
+	_, err = ptestutil.TestSendManifest(
+		s.validator.ClientCtx.WithOutputFormat("json"),
+		lid.BidID(),
+		deploymentPath,
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(20))
 
 	appURL := fmt.Sprintf("http://%s:%s/", s.appHost, s.appPort)
 	queryApp(s.T(), appURL, 50)
 
-	cmdResult, err := providerCmd.ProviderStatusExec(
-		s.validator.ClientCtx,
-		fmt.Sprintf("--%s=%v", "provider", lid.Provider))
+	cmdResult, err := providerCmd.ProviderStatusExec(s.validator.ClientCtx, lid.Provider)
 	assert.NoError(s.T(), err)
 	data := make(map[string]interface{})
 	err = json.Unmarshal(cmdResult.Bytes(), &data)
@@ -592,8 +669,10 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 		fmt.Sprintf("--%s=%v", "dseq", lid.DSeq),
 		fmt.Sprintf("--%s=%v", "gseq", lid.GSeq),
 		fmt.Sprintf("--%s=%v", "oseq", lid.OSeq),
-		fmt.Sprintf("--%s=%v", "owner", lid.Owner),
-		fmt.Sprintf("--%s=%v", "provider", lid.Provider))
+		fmt.Sprintf("--%s=%v", "provider", lid.Provider),
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
 	assert.NoError(s.T(), err)
 	err = json.Unmarshal(cmdResult.Bytes(), &data)
 	assert.NoError(s.T(), err)
@@ -612,9 +691,11 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 				fmt.Sprintf("--%s=%v", "dseq", lid.DSeq),
 				fmt.Sprintf("--%s=%v", "gseq", lid.GSeq),
 				fmt.Sprintf("--%s=%v", "oseq", lid.OSeq),
-				fmt.Sprintf("--%s=%v", "owner", lid.Owner),
 				fmt.Sprintf("--%s=%v", "provider", lid.Provider),
-				fmt.Sprintf("--%s=%v", "service", service.Name))
+				fmt.Sprintf("--%s=%v", "service", service.Name),
+				fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+				fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+			)
 			assert.NoError(s.T(), err)
 			err = json.Unmarshal(cmdResult.Bytes(), &data)
 			assert.NoError(s.T(), err)
@@ -649,6 +730,6 @@ func (s *IntegrationTestSuite) waitForBlocksCommitted(height int) error {
 func TestQueryApp(t *testing.T) {
 	host, appPort := appEnv(t)
 
-	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)
+	appURL := fmt.Sprintf("https://%s:%s/", host, appPort)
 	queryApp(t, appURL, 1)
 }

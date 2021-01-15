@@ -1,61 +1,63 @@
 package cmd
 
 import (
-	"context"
+	"crypto/tls"
 
-	"github.com/cosmos/cosmos-sdk/client"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 
+	akashclient "github.com/ovrclk/akash/client"
 	cmdcommon "github.com/ovrclk/akash/cmd/common"
-	"github.com/ovrclk/akash/provider/gateway"
+	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
+	cutils "github.com/ovrclk/akash/x/cert/utils"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
-	mtypes "github.com/ovrclk/akash/x/market/types"
-	pmodule "github.com/ovrclk/akash/x/provider"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
 func leaseStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "lease-status",
-		Short: "get lease status",
+		Use:          "lease-status",
+		Short:        "get lease status",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return doLeaseStatus(cmd)
 		},
 	}
 
-	mcli.AddBidIDFlags(cmd.Flags())
-	mcli.MarkReqBidIDFlags(cmd)
+	addLeaseFlags(cmd)
 
 	return cmd
 }
 
 func doLeaseStatus(cmd *cobra.Command) error {
-	cctx := client.GetClientContextFromCmd(cmd)
-
-	addr, err := mcli.ProviderFromFlagsWithoutCtx(cmd.Flags())
+	cctx, err := sdkclient.GetClientTxContext(cmd)
 	if err != nil {
 		return err
 	}
 
-	pclient := pmodule.AppModuleBasic{}.GetQueryClient(cctx)
-	res, err := pclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: addr.String()})
+	prov, err := providerFromFlags(cmd.Flags())
 	if err != nil {
 		return err
 	}
 
-	provider := &res.Provider
-	gclient := gateway.NewClient()
-
-	bid, err := mcli.BidIDFromFlagsWithoutCtx(cmd.Flags())
+	bid, err := mcli.BidIDFromFlagsForOwner(cmd.Flags(), cctx.FromAddress)
 	if err != nil {
 		return err
 	}
 
-	lid := mtypes.MakeLeaseID(bid)
+	cert, err := cutils.LoadCertificateForAccount(cctx.HomeDir, cctx.FromAddress, cctx.Keyring)
+	if err != nil {
+		return err
+	}
 
-	result, err := gclient.LeaseStatus(context.Background(), provider.HostURI, lid)
+	gclient, err := gwrest.NewClient(akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})
+	if err != nil {
+		return err
+	}
+
+	result, err := gclient.LeaseStatus(cmd.Context(), bid.LeaseID())
 	if err != nil {
 		return showErrorToUser(err)
 	}
+
 	return cmdcommon.PrintJSON(cctx, result)
 }

@@ -2,36 +2,40 @@ package cmd
 
 import (
 	"context"
+	"crypto/tls"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/ovrclk/akash/provider/gateway"
-	"github.com/ovrclk/akash/provider/manifest"
-	"github.com/ovrclk/akash/sdl"
-	mcli "github.com/ovrclk/akash/x/market/client/cli"
-	mtypes "github.com/ovrclk/akash/x/market/types"
-	pmodule "github.com/ovrclk/akash/x/provider"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
+
+	akashclient "github.com/ovrclk/akash/client"
+	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
+	"github.com/ovrclk/akash/sdl"
+	cutils "github.com/ovrclk/akash/x/cert/utils"
 )
 
 // SendManifestCmd looks up the Providers blockchain information,
 // and POSTs the SDL file to the Gateway address.
 func SendManifestCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "send-manifest <sdl-path>",
-		Args:  cobra.ExactArgs(1),
-		Short: "Submit manifest to provider(s)",
+		Use:          "send-manifest <sdl-path>",
+		Args:         cobra.ExactArgs(1),
+		Short:        "Submit manifest to provider(s)",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return doSendManifest(cmd, args[0])
 		},
 	}
-	mcli.AddBidIDFlags(cmd.Flags())
-	mcli.MarkReqBidIDFlags(cmd)
+
+	addCmdFlags(cmd)
+
 	return cmd
 }
 
 func doSendManifest(cmd *cobra.Command, sdlpath string) error {
-	cctx := client.GetClientContextFromCmd(cmd)
+	cctx, err := sdkclient.GetClientTxContext(cmd)
+	if err != nil {
+		return err
+	}
 
 	sdl, err := sdl.ReadFile(sdlpath)
 	if err != nil {
@@ -43,28 +47,25 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 		return err
 	}
 
-	bid, err := mcli.BidIDFromFlagsWithoutCtx(cmd.Flags())
+	prov, err := providerFromFlags(cmd.Flags())
 	if err != nil {
 		return err
 	}
 
-	lid := mtypes.MakeLeaseID(bid)
-
-	pclient := pmodule.AppModuleBasic{}.GetQueryClient(cctx)
-	res, err := pclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: lid.Provider})
+	dseq, err := dseqFromFlags(cmd.Flags())
 	if err != nil {
 		return err
 	}
 
-	provider := &res.Provider
-	gclient := gateway.NewClient()
+	cert, err := cutils.LoadCertificateForAccount(cctx.HomeDir, cctx.FromAddress, cctx.Keyring)
+	if err != nil {
+		return err
+	}
 
-	return showErrorToUser(gclient.SubmitManifest(
-		context.Background(),
-		provider.HostURI,
-		&manifest.SubmitRequest{
-			Deployment: lid.DeploymentID(),
-			Manifest:   mani,
-		},
-	))
+	gclient, err := gwrest.NewClient(akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})
+	if err != nil {
+		return err
+	}
+
+	return showErrorToUser(gclient.SubmitManifest(context.Background(), dseq, mani))
 }

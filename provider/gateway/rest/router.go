@@ -1,4 +1,4 @@
-package gateway
+package rest
 
 import (
 	"bufio"
@@ -9,19 +9,25 @@ import (
 	"sync"
 	"time"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	gcontext "github.com/gorilla/context"
 	"github.com/gorilla/websocket"
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/gorilla/mux"
 
+	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
+
+	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider"
 	"github.com/ovrclk/akash/provider/cluster"
 	kubeClient "github.com/ovrclk/akash/provider/cluster/kube"
-	"github.com/ovrclk/akash/provider/manifest"
+	pmanifest "github.com/ovrclk/akash/provider/manifest"
 	manifestValidation "github.com/ovrclk/akash/validation"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
+
+type CtxAuthKey string
 
 const (
 	contentTypeJSON = "application/json; charset=UTF-8"
@@ -51,23 +57,40 @@ type wsLogsConfig struct {
 	client    cluster.ReadClient
 }
 
-func newRouter(log log.Logger, pclient provider.Client) *mux.Router {
+func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.Router {
 	router := mux.NewRouter()
 
+	// store provider address in context as lease endpoints below need it
+	router.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gcontext.Set(r, providerContextKey, addr)
+
+			next.ServeHTTP(w, r)
+		})
+	})
+
 	// GET /status
+	// provider status endpoint does not require authentication
 	router.HandleFunc("/status",
 		createStatusHandler(log, pclient)).
 		Methods("GET")
 
-	// PUT /deployment/<deployment-id>/manifest
+	// PUT /deployment/manifest
 	drouter := router.PathPrefix(deploymentPathPrefix).Subrouter()
-	drouter.Use(requireDeploymentID(log))
+	drouter.Use(
+		requireOwner(),
+		requireDeploymentID(),
+	)
+
 	drouter.HandleFunc("/manifest",
 		createManifestHandler(log, pclient.Manifest())).
 		Methods("PUT")
 
 	lrouter := router.PathPrefix(leasePathPrefix).Subrouter()
-	lrouter.Use(requireLeaseID(log))
+	lrouter.Use(
+		requireOwner(),
+		requireLeaseID(),
+	)
 
 	// GET /lease/<lease-id>/status
 	lrouter.HandleFunc("/status",
@@ -75,7 +98,9 @@ func newRouter(log log.Logger, pclient provider.Client) *mux.Router {
 		Methods("GET")
 
 	srouter := lrouter.PathPrefix("/service/{serviceName}").Subrouter()
-	srouter.Use(requireService())
+	srouter.Use(
+		requireService(),
+	)
 
 	// GET /lease/<lease-id>/service/<service-name>/status
 	srouter.HandleFunc("/status",
@@ -83,7 +108,9 @@ func newRouter(log log.Logger, pclient provider.Client) *mux.Router {
 		Methods("GET")
 
 	logRouter := srouter.PathPrefix("/logs").Subrouter()
-	logRouter.Use(requestLogParams())
+	logRouter.Use(
+		requestLogParams(),
+	)
 
 	// GET /lease/<lease-id>/service/<service-name>/logs
 	logRouter.HandleFunc("",
@@ -104,31 +131,25 @@ func createStatusHandler(log log.Logger, sclient provider.StatusClient) http.Han
 	}
 }
 
-func createManifestHandler(_ log.Logger, mclient manifest.Client) http.HandlerFunc {
+func createManifestHandler(_ log.Logger, mclient pmanifest.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		var mreq manifest.SubmitRequest
-
+		var mani manifest.Manifest
 		decoder := json.NewDecoder(req.Body)
 		defer func() {
 			_ = req.Body.Close()
 		}()
 
-		if err := decoder.Decode(&mreq); err != nil {
+		if err := decoder.Decode(&mani); err != nil {
 			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 
-		if !requestDeploymentID(req).Equals(mreq.Deployment) {
-			http.Error(w, "deployment ID in request body does not match this resource", http.StatusBadRequest)
-			return
-		}
-
-		if err := mclient.Submit(req.Context(), &mreq); err != nil {
+		if err := mclient.Submit(req.Context(), requestDeploymentID(req), mani); err != nil {
 			if errors.Is(err, manifestValidation.ErrInvalidManifest) {
 				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 				return
 			}
-			if errors.Is(err, manifest.ErrNoLeaseForDeployment) {
+			if errors.Is(err, pmanifest.ErrNoLeaseForDeployment) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
@@ -146,17 +167,18 @@ func leaseStatusHandler(log log.Logger, cclient cluster.ReadClient) http.Handler
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
-
-			if kerrors.IsNotFound(err) {
+			if errors.Is(err, kubeClient.ErrLeaseNotFound) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
-
+			if kubeErrors.IsNotFound(err) {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
 			if errors.Is(err, kubeClient.ErrNoGlobalServicesForLease) {
 				http.Error(w, err.Error(), http.StatusServiceUnavailable)
 				return
 			}
-
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -172,11 +194,14 @@ func leaseServiceStatusHandler(log log.Logger, cclient cluster.ReadClient) http.
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
-			if kerrors.IsNotFound(err) {
+			if errors.Is(err, kubeClient.ErrLeaseNotFound) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
-
+			if kubeErrors.IsNotFound(err) {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

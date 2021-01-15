@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
+
 	testutilcli "github.com/ovrclk/akash/testutil/cli"
 )
 
