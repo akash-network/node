@@ -3,6 +3,7 @@ package rest
 
 import (
 	"context"
+	"crypto/tls"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -28,7 +29,7 @@ func Test_router_Status(t *testing.T) {
 		addr := testutil.AccAddress(t)
 		pclient, _, _, qclient := createMocks()
 		pclient.On("Status", mock.Anything).Return(expected, nil)
-		withServer(t, addr, pclient, qclient, func(host string) {
+		withServer(t, addr, pclient, qclient, nil, func(host string) {
 			client, err := NewClient(qclient, addr, nil)
 			assert.NoError(t, err)
 			result, err := client.Status(context.Background())
@@ -42,7 +43,7 @@ func Test_router_Status(t *testing.T) {
 		addr := testutil.AccAddress(t)
 		pclient, _, _, qclient := createMocks()
 		pclient.On("Status", mock.Anything).Return(nil, errors.New("oops"))
-		withServer(t, addr, pclient, qclient, func(host string) {
+		withServer(t, addr, pclient, qclient, nil, func(host string) {
 			client, err := NewClient(qclient, addr, nil)
 			assert.NoError(t, err)
 			_, err = client.Status(context.Background())
@@ -61,7 +62,7 @@ func Test_router_Manifest(t *testing.T) {
 		pclient, pmclient, _, qclient := createMocks()
 
 		pmclient.On("Submit", mock.Anything, did, akashmanifest.Manifest(nil)).Return(nil)
-		withServer(t, paddr, pclient, qclient, func(host string) {
+		withServer(t, paddr, pclient, qclient, nil, func(host string) {
 			cert := testutil.Certificate(t, caddr, testutil.CertificateOptionMocks(qclient))
 			client, err := NewClient(qclient, paddr, cert.Cert)
 			assert.NoError(t, err)
@@ -80,7 +81,7 @@ func Test_router_Manifest(t *testing.T) {
 		pclient, pmclient, _, qclient := createMocks()
 
 		pmclient.On("Submit", mock.Anything, did, akashmanifest.Manifest(nil)).Return(errors.New("ded"))
-		withServer(t, paddr, pclient, qclient, func(host string) {
+		withServer(t, paddr, pclient, qclient, nil, func(host string) {
 			cert := testutil.Certificate(t, caddr, testutil.CertificateOptionMocks(qclient))
 			client, err := NewClient(qclient, paddr, cert.Cert)
 			assert.NoError(t, err)
@@ -100,7 +101,7 @@ func Test_router_LeaseStatus(t *testing.T) {
 		id := testutil.LeaseIDForAccount(t, caddr, paddr)
 		pclient, _, pcclient, qclient := createMocks()
 		pcclient.On("LeaseStatus", mock.Anything, id).Return(expected, nil)
-		withServer(t, paddr, pclient, qclient, func(host string) {
+		withServer(t, paddr, pclient, qclient, nil, func(host string) {
 			cert := testutil.Certificate(t, caddr, testutil.CertificateOptionMocks(qclient))
 			client, err := NewClient(qclient, paddr, cert.Cert)
 			assert.NoError(t, err)
@@ -119,7 +120,7 @@ func Test_router_LeaseStatus(t *testing.T) {
 		pclient, _, pcclient, qclient := createMocks()
 
 		pcclient.On("LeaseStatus", mock.Anything, id).Return(nil, errors.New("ded"))
-		withServer(t, paddr, pclient, qclient, func(host string) {
+		withServer(t, paddr, pclient, qclient, nil, func(host string) {
 			cert := testutil.Certificate(t, caddr, testutil.CertificateOptionMocks(qclient))
 			client, err := NewClient(qclient, paddr, cert.Cert)
 			assert.NoError(t, err)
@@ -144,7 +145,7 @@ func Test_router_ServiceStatus(t *testing.T) {
 		pclient, _, pcclient, qclient := createMocks()
 
 		pcclient.On("ServiceStatus", mock.Anything, id, service).Return(expected, nil)
-		withServer(t, paddr, pclient, qclient, func(host string) {
+		withServer(t, paddr, pclient, qclient, nil, func(host string) {
 			cert := testutil.Certificate(t, caddr, testutil.CertificateOptionMocks(qclient))
 			client, err := NewClient(qclient, paddr, cert.Cert)
 			assert.NoError(t, err)
@@ -166,7 +167,7 @@ func Test_router_ServiceStatus(t *testing.T) {
 		pclient, _, pcclient, qclient := createMocks()
 
 		pcclient.On("ServiceStatus", mock.Anything, id, service).Return(nil, errors.New("ded"))
-		withServer(t, paddr, pclient, qclient, func(host string) {
+		withServer(t, paddr, pclient, qclient, nil, func(host string) {
 			cert := testutil.Certificate(t, caddr, testutil.CertificateOptionMocks(qclient))
 			client, err := NewClient(qclient, paddr, cert.Cert)
 			assert.NoError(t, err)
@@ -192,12 +193,22 @@ func createMocks() (*pmock.Client, *pmmock.Client, *pcmock.Client, *qmock.QueryC
 	return pclient, pmclient, pcclient, qclient
 }
 
-func withServer(t testing.TB, addr sdk.Address, pclient provider.Client, qclient *qmock.QueryClient, fn func(string)) {
+func withServer(t testing.TB, addr sdk.Address, pclient provider.Client, qclient *qmock.QueryClient, certs []tls.Certificate, fn func(string)) {
 	t.Helper()
 	router := newRouter(testutil.Logger(t), addr, pclient)
-	cert := testutil.Certificate(t, addr, testutil.CertificateOptionDomains([]string{"localhost", "127.0.0.1"}), testutil.CertificateOptionMocks(qclient))
 
-	server := testutil.NewServer(t, qclient, router, cert.Cert)
+	if len(certs) == 0 {
+		crt := testutil.Certificate(
+			t,
+			addr,
+			testutil.CertificateOptionDomains([]string{"localhost", "127.0.0.1"}),
+			testutil.CertificateOptionMocks(qclient),
+		)
+
+		certs = append(certs, crt.Cert...)
+	}
+
+	server := testutil.NewServer(t, qclient, router, certs)
 	defer server.Close()
 
 	host := "https://" + server.Listener.Addr().String()

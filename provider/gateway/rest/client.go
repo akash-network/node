@@ -135,7 +135,7 @@ func (c *client) verifyPeerCertificate(certificates [][]byte, _ [][]*x509.Certif
 	}
 
 	if !c.addr.Equals(prov) {
-		return errors.Errorf("tls: hijacked certificate")
+		return errors.Errorf("hijacked certificate")
 	}
 
 	// 2. serial number must be in

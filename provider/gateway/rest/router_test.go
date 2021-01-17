@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
@@ -34,6 +35,18 @@ const (
 )
 
 var errGeneric = errors.New("generic test error")
+
+type fakeKubernetesStatusError struct {
+	status metav1.Status
+}
+
+func (fkse fakeKubernetesStatusError) Status() metav1.Status {
+	return fkse.status
+}
+
+func (fkse fakeKubernetesStatusError) Error() string {
+	return "fake error"
+}
 
 type routerTest struct {
 	caddr    sdk.Address
@@ -63,14 +76,18 @@ func runRouterTest(t *testing.T, authClient bool, fn func(*routerTest)) {
 	}
 
 	mf.ccert = testutil.Certificate(t, mf.caddr, testutil.CertificateOptionMocks(qclient))
-	mf.pcert = testutil.Certificate(t, mf.paddr, testutil.CertificateOptionMocks(qclient))
+	mf.pcert = testutil.Certificate(
+		t,
+		mf.paddr,
+		testutil.CertificateOptionDomains([]string{"localhost", "127.0.0.1"}),
+		testutil.CertificateOptionMocks(qclient))
 
 	var certs []tls.Certificate
 	if authClient {
 		certs = mf.ccert.Cert
 	}
 
-	withServer(t, mf.paddr, pclient, qclient, func(host string) {
+	withServer(t, mf.paddr, pclient, qclient, mf.pcert.Cert, func(host string) {
 		var err error
 		mf.host, err = url.Parse(host)
 		require.NoError(t, err)
@@ -82,6 +99,187 @@ func runRouterTest(t *testing.T, authClient bool, fn func(*routerTest)) {
 		mf.gclient = gclient.(*client)
 
 		fn(mf)
+	})
+}
+
+func testCertHelper(t *testing.T, test *routerTest) {
+	test.pmclient.On(
+		"Submit",
+		mock.Anything,
+		mock.AnythingOfType("types.DeploymentID"),
+		mock.AnythingOfType("manifest.Manifest"),
+	).Return(nil)
+
+	dseq := uint64(testutil.RandRangeInt(1, 1000))
+
+	uri, err := makeURI(test.host, submitManifestPath(dseq))
+	require.NoError(t, err)
+
+	sdl, err := sdl.ReadFile(testSDL)
+	require.NoError(t, err)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	buf, err := json.Marshal(mani)
+	require.NoError(t, err)
+
+	req, err := http.NewRequest("PUT", uri, bytes.NewBuffer(buf))
+	require.NoError(t, err)
+
+	req.Header.Set("Content-Type", contentTypeJSON)
+
+	_, err = test.gclient.hclient.Do(req)
+	require.Error(t, err)
+}
+
+func TestRouteNotActiveClientCert(t *testing.T) {
+	pclient, pmclient, pcclient, qclient := createMocks()
+
+	mf := &routerTest{
+		caddr:    testutil.AccAddress(t),
+		paddr:    testutil.AccAddress(t),
+		pmclient: pmclient,
+		pcclient: pcclient,
+		pclient:  pclient,
+		qclient:  qclient,
+	}
+
+	mf.ccert = testutil.Certificate(
+		t,
+		mf.caddr,
+		testutil.CertificateOptionMocks(qclient),
+		testutil.CertificateOptionNotBefore(time.Now().Add(time.Hour*24)),
+	)
+	mf.pcert = testutil.Certificate(t, mf.paddr, testutil.CertificateOptionMocks(qclient))
+
+	withServer(t, mf.paddr, pclient, qclient, mf.pcert.Cert, func(host string) {
+		var err error
+		mf.host, err = url.Parse(host)
+		require.NoError(t, err)
+
+		gclient, err := NewClient(qclient, mf.paddr, mf.ccert.Cert)
+		require.NoError(t, err)
+		require.NotNil(t, gclient)
+
+		mf.gclient = gclient.(*client)
+
+		testCertHelper(t, mf)
+	})
+}
+
+func TestRouteExpiredClientCert(t *testing.T) {
+	pclient, pmclient, pcclient, qclient := createMocks()
+
+	mf := &routerTest{
+		caddr:    testutil.AccAddress(t),
+		paddr:    testutil.AccAddress(t),
+		pmclient: pmclient,
+		pcclient: pcclient,
+		pclient:  pclient,
+		qclient:  qclient,
+	}
+
+	mf.ccert = testutil.Certificate(
+		t,
+		mf.caddr,
+		testutil.CertificateOptionMocks(qclient),
+		testutil.CertificateOptionNotBefore(time.Now().Add(time.Hour*(-48))),
+		testutil.CertificateOptionNotAfter(time.Now().Add(time.Hour*(-24))),
+	)
+	mf.pcert = testutil.Certificate(t, mf.paddr, testutil.CertificateOptionMocks(qclient))
+
+	withServer(t, mf.paddr, pclient, qclient, mf.pcert.Cert, func(host string) {
+		var err error
+		mf.host, err = url.Parse(host)
+		require.NoError(t, err)
+
+		gclient, err := NewClient(qclient, mf.paddr, mf.ccert.Cert)
+		require.NoError(t, err)
+		require.NotNil(t, gclient)
+
+		mf.gclient = gclient.(*client)
+
+		testCertHelper(t, mf)
+	})
+}
+
+func TestRouteNotActiveServerCert(t *testing.T) {
+	pclient, pmclient, pcclient, qclient := createMocks()
+
+	mf := &routerTest{
+		caddr:    testutil.AccAddress(t),
+		paddr:    testutil.AccAddress(t),
+		pmclient: pmclient,
+		pcclient: pcclient,
+		pclient:  pclient,
+		qclient:  qclient,
+	}
+
+	mf.ccert = testutil.Certificate(
+		t,
+		mf.caddr,
+		testutil.CertificateOptionMocks(qclient),
+	)
+	mf.pcert = testutil.Certificate(
+		t,
+		mf.paddr,
+		testutil.CertificateOptionMocks(qclient),
+		testutil.CertificateOptionNotBefore(time.Now().Add(time.Hour*24)),
+	)
+
+	withServer(t, mf.paddr, pclient, qclient, mf.pcert.Cert, func(host string) {
+		var err error
+		mf.host, err = url.Parse(host)
+		require.NoError(t, err)
+
+		gclient, err := NewClient(qclient, mf.paddr, mf.ccert.Cert)
+		require.NoError(t, err)
+		require.NotNil(t, gclient)
+
+		mf.gclient = gclient.(*client)
+
+		testCertHelper(t, mf)
+	})
+}
+
+func TestRouteExpiredServerCert(t *testing.T) {
+	pclient, pmclient, pcclient, qclient := createMocks()
+
+	mf := &routerTest{
+		caddr:    testutil.AccAddress(t),
+		paddr:    testutil.AccAddress(t),
+		pmclient: pmclient,
+		pcclient: pcclient,
+		pclient:  pclient,
+		qclient:  qclient,
+	}
+
+	mf.ccert = testutil.Certificate(
+		t,
+		mf.caddr,
+		testutil.CertificateOptionMocks(qclient),
+	)
+	mf.pcert = testutil.Certificate(
+		t,
+		mf.paddr,
+		testutil.CertificateOptionMocks(qclient),
+		testutil.CertificateOptionNotBefore(time.Now().Add(time.Hour*(-48))),
+		testutil.CertificateOptionNotAfter(time.Now().Add(time.Hour*(-24))),
+	)
+
+	withServer(t, mf.paddr, pclient, qclient, mf.pcert.Cert, func(host string) {
+		var err error
+		mf.host, err = url.Parse(host)
+		require.NoError(t, err)
+
+		gclient, err := NewClient(qclient, mf.paddr, mf.ccert.Cert)
+		require.NoError(t, err)
+		require.NotNil(t, gclient)
+
+		mf.gclient = gclient.(*client)
+
+		testCertHelper(t, mf)
 	})
 }
 
@@ -328,18 +526,6 @@ func TestRouteLeaseStatusNoGlobalServices(t *testing.T) {
 		require.NoError(t, err)
 		require.Regexp(t, "^kube: no global services(?s:.)*$", string(data))
 	})
-}
-
-type fakeKubernetesStatusError struct {
-	status metav1.Status
-}
-
-func (fkse fakeKubernetesStatusError) Status() metav1.Status {
-	return fkse.status
-}
-
-func (fkse fakeKubernetesStatusError) Error() string {
-	return "fake error"
 }
 
 func TestRouteLeaseNotInKubernetes(t *testing.T) {
