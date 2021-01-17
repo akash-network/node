@@ -131,6 +131,9 @@ func testCertHelper(t *testing.T, test *routerTest) {
 
 	_, err = test.gclient.hclient.Do(req)
 	require.Error(t, err)
+	// return error message looks like
+	// Put "https://127.0.0.1:58536/deployment/652/manifest": tls: unable to verify certificate: x509: cannot validate certificate for 127.0.0.1 because it doesn't contain any IP SANs
+	require.Regexp(t, "^(Put|Get) (\".*\": )tls: unable to verify certificate: .*$", err.Error())
 }
 
 func TestRouteNotActiveClientCert(t *testing.T) {

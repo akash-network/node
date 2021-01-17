@@ -120,27 +120,27 @@ func (c *client) verifyPeerCertificate(certificates [][]byte, _ [][]*x509.Certif
 
 	cert, err := x509.ParseCertificate(certificates[0])
 	if err != nil {
-		return errors.Wrap(err, "failed to parse certificate")
+		return errors.Wrap(err, "tls: failed to parse certificate")
 	}
 
 	// validation
-	// 1. CommonName in issuer and Subject must be the same
-	if cert.Subject.CommonName != cert.Issuer.CommonName {
-		return errors.Wrap(err, "invalid certificate")
-	}
-
 	var prov sdk.Address
 	if prov, err = sdk.AccAddressFromBech32(cert.Subject.CommonName); err != nil {
-		return errors.Wrap(err, "invalid certificate")
+		return errors.Wrap(err, "tls: invalid certificate's subject common name")
+	}
+
+	// 1. CommonName in issuer and Subject must be the same
+	if cert.Subject.CommonName != cert.Issuer.CommonName {
+		return errors.Wrap(err, "tls: invalid certificate's issuer common name")
 	}
 
 	if !c.addr.Equals(prov) {
-		return errors.Errorf("hijacked certificate")
+		return errors.Errorf("tls: hijacked certificate")
 	}
 
 	// 2. serial number must be in
 	if cert.SerialNumber == nil {
-		return errors.Wrap(err, "invalid certificate")
+		return errors.Wrap(err, "tls: invalid certificate serial number")
 	}
 
 	// 3. look up certificate on chain. it must not be revoked
@@ -156,14 +156,14 @@ func (c *client) verifyPeerCertificate(certificates [][]byte, _ [][]*x509.Certif
 		},
 	)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "tls: unable to fetch certificate from chain")
+	}
+	if (len(resp.Certificates) != 1) || (resp.Certificates[0].State != ctypes.CertificateValid) {
+		return errors.New("tls: attempt to use non-existing or revoked certificate")
 	}
 
 	certPool := x509.NewCertPool()
-
-	if !certPool.AppendCertsFromPEM(resp.Certificates[0].Cert) {
-		return errors.Wrap(err, "invalid certificate")
-	}
+	certPool.AddCert(cert)
 
 	opts := x509.VerifyOptions{
 		DNSName:                   c.host.Hostname(),
@@ -174,7 +174,7 @@ func (c *client) verifyPeerCertificate(certificates [][]byte, _ [][]*x509.Certif
 	}
 
 	if _, err = cert.Verify(opts); err != nil {
-		return errors.Wrap(err, "invalid certificate")
+		return errors.Wrap(err, "tls: unable to verify certificate")
 	}
 
 	return nil
