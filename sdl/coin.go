@@ -1,8 +1,11 @@
 package sdl
 
 import (
+	"errors"
+	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"gopkg.in/yaml.v3"
+	"math/big"
 )
 
 // v2Coin is an alias sdk.Coin to allow our custom UnmarshalYAML
@@ -14,6 +17,8 @@ type v2Coin struct {
 	Value sdk.Coin `yaml:"-"`
 }
 
+var errInvalidCoinAmount = errors.New("invalid coin amount")
+
 func (sdl *v2Coin) UnmarshalYAML(node *yaml.Node) error {
 	parsedCoin := struct {
 		Amount string `yaml:"amount"`
@@ -22,6 +27,14 @@ func (sdl *v2Coin) UnmarshalYAML(node *yaml.Node) error {
 
 	if err := node.Decode(&parsedCoin); err != nil {
 		return err
+	}
+
+	asFloat, _, err := big.ParseFloat(parsedCoin.Amount, 0, 54, big.AwayFromZero)
+	if err != nil {
+		return err
+	}
+	if !asFloat.IsInt() {
+		return fmt.Errorf("%w: %q is not an integer", errInvalidCoinAmount, parsedCoin.Amount)
 	}
 
 	coin, err := sdk.ParseCoinNormalized(parsedCoin.Amount + parsedCoin.Denom)

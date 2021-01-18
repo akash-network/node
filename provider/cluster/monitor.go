@@ -77,6 +77,7 @@ loop:
 		select {
 
 		case err := <-m.lc.ShutdownRequest():
+			m.log.Debug("shutting down")
 			m.lc.ShutdownInitiated(err)
 			break loop
 
@@ -120,12 +121,18 @@ loop:
 	}
 
 	if runch != nil {
+		m.log.Debug("read runch")
 		<-runch
 	}
 
 	if closech != nil {
+		m.log.Debug("read closech")
 		<-closech
 	}
+
+	// TODO
+	// Check that we got here
+	m.log.Debug("shutdown complete")
 }
 
 func (m *deploymentMonitor) runCheck() <-chan runner.Result {
