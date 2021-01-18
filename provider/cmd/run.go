@@ -12,11 +12,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/go-kit/kit/log/term"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"github.com/tendermint/tendermint/libs/log"
-	"golang.org/x/sync/errgroup"
-
 	"github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/events"
@@ -30,6 +25,10 @@ import (
 	mmodule "github.com/ovrclk/akash/x/market"
 	pmodule "github.com/ovrclk/akash/x/provider"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"github.com/tendermint/tendermint/libs/log"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -84,15 +83,13 @@ func RunCmd() *cobra.Command {
 
 // doRunCmd initializes all of the Provider functionality, hangs, and awaits shutdown signals.
 func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
-	cctx := sdkclient.GetClientContextFromCmd(cmd)
-
-	from, _ := cmd.Flags().GetString(flags.FlagFrom)
-	_, _, err := cosmosclient.GetFromFields(cctx.Keyring, from, false)
+	cctx, err := sdkclient.GetClientTxContext(cmd)
 	if err != nil {
 		return err
 	}
 
-	cctx, err = sdkclient.ReadTxCommandFlags(cctx, cmd.Flags())
+	from, _ := cmd.Flags().GetString(flags.FlagFrom)
+	_, _, _, err = cosmosclient.GetFromFields(cctx.Keyring, from, false)
 	if err != nil {
 		return err
 	}

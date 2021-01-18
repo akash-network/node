@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 
-	"github.com/pkg/errors"
-
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -12,6 +10,7 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
+	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/libs/log"
 	grpc "google.golang.org/grpc"
 )
@@ -88,7 +87,7 @@ func (c *client) Broadcast(msgs ...sdk.Msg) error {
 		return err
 	}
 
-	err = tx.Sign(txf, c.info.GetName(), txn)
+	err = tx.Sign(txf, c.info.GetName(), txn, true)
 	if err != nil {
 		return err
 	}

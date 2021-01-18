@@ -14,8 +14,7 @@ func cmdGetLeases() *cobra.Command {
 		Use:   "list",
 		Short: "Query for all leases",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -42,7 +41,7 @@ func cmdGetLeases() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(res)
+			return clientCtx.PrintProto(res)
 		},
 	}
 
@@ -59,8 +58,7 @@ func cmdGetLease() *cobra.Command {
 		Short: "Query order",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -77,7 +75,7 @@ func cmdGetLease() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintOutput(&res.Lease)
+			return clientCtx.PrintProto(&res.Lease)
 		},
 	}
 
