@@ -205,7 +205,15 @@ func (hs *hostnameService) ReserveHostnames(hostnames []string, did dtypes.Deplo
 }
 
 func (hs *hostnameService) ReleaseHostnames(hostnames []string) {
-	hs.releases <- hostnames
+	lowercaseHostnames := make([]string, len(hostnames))
+	for i, hostname := range hostnames {
+		lowercaseHostnames[i] = strings.ToLower(hostname)
+	}
+	select {
+	case hs.releases <- lowercaseHostnames:
+	case <-hs.lc.ShuttingDown():
+		// service is shutting down, so release doesn't matter
+	}
 }
 
 func (hs *hostnameService) CanReserveHostnames(hostnames []string, did dtypes.DeploymentID) <-chan error {

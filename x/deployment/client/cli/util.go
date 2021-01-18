@@ -6,7 +6,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 )
 
-func currentBlockHeight(ctx client.Context) (uint64, error) {
+// CurrentBlockHeight returns current block height of node
+func CurrentBlockHeight(ctx client.Context) (uint64, error) {
 	client, err := ctx.GetNode()
 	if err != nil {
 		return 0, err

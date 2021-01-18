@@ -80,7 +80,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 	}
 
 	manifestConfig := manifest.ServiceConfig{
-		HTTPServicesRequireAtLeastOneHost: cfg.DeploymentIngressStaticHosts,
+		HTTPServicesRequireAtLeastOneHost: !cfg.DeploymentIngressStaticHosts,
 	}
 
 	manifest, err := manifest.NewService(ctx, session, bus, cluster.HostnameService(), manifestConfig)

@@ -257,7 +257,7 @@ func doCreateCmd(cmd *cobra.Command, domains []string) error {
 				return err
 			}
 
-			_ = cctx.PrintString(fmt.Sprintf("generating new...\n"))
+			_ = cctx.PrintString("generating new...\n")
 			return handleCreate(cctx, cmd, pemFile, domains)
 		}
 	}
