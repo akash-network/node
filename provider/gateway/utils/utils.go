@@ -23,28 +23,28 @@ func NewServerTLSConfig(ctx context.Context, certs []tls.Certificate, cquery cty
 		VerifyPeerCertificate: func(certificates [][]byte, _ [][]*x509.Certificate) error {
 			if len(certificates) > 0 {
 				if len(certificates) != 1 {
-					return errors.Errorf("invalid certificate chain")
+					return errors.Errorf("tls: invalid certificate chain")
 				}
 
 				cert, err := x509.ParseCertificate(certificates[0])
 				if err != nil {
-					return errors.Wrap(err, "failed to parse certificate")
+					return errors.Wrap(err, "tls: failed to parse certificate")
 				}
 
 				// validation
-				// 1. CommonName in issuer and Subject must match and be as Bech32 format
-				if cert.Subject.CommonName != cert.Issuer.CommonName {
-					return errors.Wrap(err, "invalid certificate")
-				}
-
 				var owner sdk.Address
 				if owner, err = sdk.AccAddressFromBech32(cert.Subject.CommonName); err != nil {
-					return errors.Wrap(err, "invalid certificate")
+					return errors.Wrap(err, "tls: invalid certificate's subject common name")
+				}
+
+				// 1. CommonName in issuer and Subject must match and be as Bech32 format
+				if cert.Subject.CommonName != cert.Issuer.CommonName {
+					return errors.Wrap(err, "tls: invalid certificate's issuer common name")
 				}
 
 				// 2. serial number must be in
 				if cert.SerialNumber == nil {
-					return errors.Wrap(err, "invalid certificate")
+					return errors.Wrap(err, "tls: invalid certificate serial number")
 				}
 
 				// 3. look up certificate on chain
@@ -60,14 +60,14 @@ func NewServerTLSConfig(ctx context.Context, certs []tls.Certificate, cquery cty
 					},
 				)
 				if err != nil {
-					return err
+					return errors.Wrap(err, "tls: unable to fetch certificate from chain")
+				}
+				if (len(resp.Certificates) != 1) || (resp.Certificates[0].State != ctypes.CertificateValid) {
+					return errors.New("tls: attempt to use non-existing or revoked certificate")
 				}
 
 				clientCertPool := x509.NewCertPool()
-
-				if !clientCertPool.AppendCertsFromPEM(resp.Certificates[0].Cert) {
-					return errors.Wrap(err, "invalid certificate")
-				}
+				clientCertPool.AddCert(cert)
 
 				opts := x509.VerifyOptions{
 					Roots:                     clientCertPool,
@@ -77,7 +77,7 @@ func NewServerTLSConfig(ctx context.Context, certs []tls.Certificate, cquery cty
 				}
 
 				if _, err = cert.Verify(opts); err != nil {
-					return errors.Wrap(err, "invalid certificate")
+					return errors.Wrap(err, "tls: unable to verify certificate")
 				}
 			}
 			return nil
