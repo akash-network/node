@@ -287,7 +287,6 @@ func Test_BidOrderAndThenLeaseCreatedForDifferentDeployment(t *testing.T) {
 }
 
 func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
-
 	bid := &mtypes.Bid{}
 	order, scaffold, reservationFulfilledNotify := makeOrderForTest(t, bid, nil)
 
@@ -309,9 +308,6 @@ func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
 	err := scaffold.testBus.Publish(ev)
 	require.NoError(t, err)
 
-	// Should not have called unreserve yet
-	scaffold.cluster.AssertNotCalled(t, "Unreserve", mock.Anything, mock.Anything)
-
 	// Wait for it to stop
 	<-order.lc.Done()
 
@@ -330,7 +326,6 @@ func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
 	require.NotNil(t, closeBid)
 
 	require.Equal(t, closeBid.BidID, bid.BidID)
-
 }
 
 func Test_ShouldRecognizeLeaseCreatedIfBiddingIsSkipped(t *testing.T) {
