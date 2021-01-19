@@ -29,6 +29,7 @@ GOLANGCI_LINT_VERSION      ?= v1.31.0
 GOLANG_VERSION             ?= 1.15.2
 GOLANG_CROSS_VERSION       := v$(GOLANG_VERSION)
 STATIK_VERSION             ?= v0.1.7
+GIT_CHGLOG_VERSION         ?= v0.10.0
 
 # <TOOL>_VERSION_FILE points to the marker file for the installed version.
 # If <TOOL>_VERSION_FILE is changed, the binary will be re-downloaded.
@@ -36,6 +37,7 @@ PROTOC_VERSION_FILE             = $(CACHE_VERSIONS)/protoc/$(PROTOC_VERSION)
 GRPC_GATEWAY_VERSION_FILE       = $(CACHE_VERSIONS)/protoc-gen-grpc-gateway/$(GRPC_GATEWAY_VERSION)
 PROTOC_GEN_COSMOS_VERSION_FILE  = $(CACHE_VERSIONS)/protoc-gen-cosmos/$(PROTOC_GEN_COSMOS_VERSION)
 STATIK_VERSION_FILE             = $(CACHE_VERSIONS)/statik/$(STATIK_VERSION)
+GIT_CHGLOG_VERSION_FILE         = $(CACHE_VERSIONS)/git-chglog/$(GIT_CHGLOG_VERSION)
 MODVENDOR                       = $(CACHE_BIN)/modvendor
 SWAGGER_COMBINE                 = $(CACHE_NODE_BIN)/swagger-combine
 PROTOC_SWAGGER_GEN             := $(CACHE_BIN)/protoc-swagger-gen
@@ -43,6 +45,7 @@ PROTOC                         := $(CACHE_BIN)/protoc
 STATIK                         := $(CACHE_BIN)/statik
 PROTOC_GEN_COSMOS              := $(CACHE_BIN)/protoc-gen-cosmos
 GRPC_GATEWAY                   := $(CACHE_BIN)/protoc-gen-grpc-gateway
+GIT_CHGLOG                     := $(CACHE_BIN)/git-chglog
 
 DOCKER_RUN            := docker run --rm -v $(shell pwd):/workspace -w /workspace
 DOCKER_BUF            := $(DOCKER_RUN) bufbuild/buf:$(BUF_VERSION)
