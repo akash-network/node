@@ -148,6 +148,10 @@ query-leases:
 query-certificates:
 	$(AKASHCTL) query cert list
 
+.PHONY: query-account-certificates
+query-certificates:
+	$(AKASHCTL) query cert list --owner=$(KEY_ADDRESS)
+
 .PHONY: create-server-certificate
 create-server-certificate:
 	$(AKASHCTL) $(KEY_OPTS) $(CHAIN_OPTS) tx cert create server $(CERT_HOSTNAME) --from=$(KEY_NAME) --rie -y
