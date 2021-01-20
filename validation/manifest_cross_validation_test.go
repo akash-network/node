@@ -161,9 +161,9 @@ func TestManifestWithEndpointMismatchA(t *testing.T) {
 func TestManifestWithEndpointMismatchB(t *testing.T) {
 	m := simpleManifest()
 	deployment := simpleDeployment(t)
-	// Add an endpoint where the manifest doesn't need 1
-	deployment[0].GroupSpec.Resources[0].Resources.Endpoints = make([]akashtypes.Endpoint, 1)
+	// Add an endpoint where the manifest doesn't call for it
+	deployment[0].GroupSpec.Resources[0].Resources.Endpoints = append(deployment[0].GroupSpec.Resources[0].Resources.Endpoints, akashtypes.Endpoint{})
 	err := validation.ValidateManifestWithDeployment(&m, deployment)
 	require.Error(t, err)
-	require.Regexp(t, "^.*mismatch on number of endpoints.+$", err)
+	require.Regexp(t, "^.*mismatch on number of HTTP only endpoints.+$", err)
 }
