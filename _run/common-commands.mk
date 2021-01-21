@@ -12,10 +12,11 @@ PROVIDER_CONFIG_PATH ?= provider.yaml
 
 SDL_PATH ?= deployment.yaml
 
-DSEQ  ?= 1
-GSEQ  ?= 1
-OSEQ  ?= 1
-PRICE ?= 10uakt
+DSEQ          ?= 1
+GSEQ          ?= 1
+OSEQ          ?= 1
+PRICE         ?= 10uakt
+CERT_HOSTNAME ?= localhost
 
 .PHONY: provider-create
 provider-create:
@@ -147,6 +148,10 @@ query-leases:
 .PHONY: query-certificates
 query-certificates:
 	$(AKASHCTL) query cert list
+
+.PHONY: query-account-certificates
+query-account-certificates:
+	$(AKASHCTL) query cert list --owner="$(KEY_ADDRESS)" --state="valid"
 
 .PHONY: create-server-certificate
 create-server-certificate:

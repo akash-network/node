@@ -89,7 +89,7 @@ func cmdRevoke() *cobra.Command {
 
 			if serial != "" {
 				if _, valid := new(big.Int).SetString(serial, 10); !valid {
-					return errors.Errorf("invalid serial number")
+					return errInvalidSerialFlag
 				}
 			} else {
 				cpem, err := cutils.LoadPEMForAccount(cctx.HomeDir, cctx.FromAddress, cctx.Keyring)
