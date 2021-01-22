@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -30,8 +31,9 @@ func GetQueryCmd() *cobra.Command {
 
 func cmdGetCertificates() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "Query for all certificates",
+		Use:          "list",
+		Short:        "Query for all certificates",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cctx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
@@ -46,12 +48,16 @@ func cmdGetCertificates() *cobra.Command {
 			}
 
 			params := &types.QueryCertificatesRequest{
-				Filter: types.CertificateFilter{
-					Owner:  "",
-					Serial: cmd.Flag("serial").Value.String(),
-					State:  "",
-				},
 				Pagination: pageReq,
+			}
+
+			if value := cmd.Flag("serial").Value.String(); value != "" {
+				val, valid := new(big.Int).SetString(value, 10)
+				if !valid {
+					return errInvalidSerialFlag
+				}
+
+				params.Filter.Serial = val.String()
 			}
 
 			if value := cmd.Flag("owner").Value.String(); value != "" {
@@ -65,7 +71,7 @@ func cmdGetCertificates() *cobra.Command {
 
 			if value := cmd.Flag("state").Value.String(); value != "" {
 				if value != "valid" && value != "revoked" {
-					return errors.Errorf("invalid value in --state flag. expected valid|revoked")
+					return errors.Errorf("invalid value of --state flag. expected valid|revoked")
 				}
 
 				params.Filter.State = value
