@@ -11,6 +11,10 @@ build:
 akash:
 	$(GO) build $(BUILD_FLAGS) ./cmd/akash
 
+.PHONY: akash_docgen
+akash_docgen:
+	$(GO) build -o akash_docgen $(BUILD_FLAGS) ./docgen
+
 .PHONY: install
 install:
 	$(GO) install $(BUILD_FLAGS) ./cmd/akash
