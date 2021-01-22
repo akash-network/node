@@ -67,15 +67,12 @@ func (q Querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 				certificates = append(certificates, cert)
 			}
 		} else {
-			offset := uint(1)
-			limit := ^uint(0)
-
-			if req.Pagination != nil {
-				offset = uint(req.Pagination.Offset)
-				limit = uint(req.Pagination.Limit)
+			page, limit, err := sdkquery.ParsePagination(req.Pagination)
+			if err != nil {
+				return nil, err
 			}
 
-			it := sdkstore.KVStorePrefixIteratorPaginated(store, certificatePrefix(owner), offset, limit)
+			it := sdkstore.KVStorePrefixIteratorPaginated(store, certificatePrefix(owner), uint(page), uint(limit))
 			for ; it.Valid(); it.Next() {
 				var cert types.Certificate
 				if e := q.cdc.UnmarshalBinaryBare(it.Value(), &cert); e != nil {
