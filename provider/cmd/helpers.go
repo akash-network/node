@@ -42,9 +42,6 @@ func addServiceFlags(cmd *cobra.Command) {
 	addLeaseFlags(cmd)
 
 	cmd.Flags().String(FlagService, "", "name of service to query")
-	if err := cmd.MarkFlagRequired(FlagService); err != nil {
-		panic(err.Error())
-	}
 }
 
 func dseqFromFlags(flags *pflag.FlagSet) (uint64, error) {

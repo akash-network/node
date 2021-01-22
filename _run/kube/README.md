@@ -53,7 +53,7 @@ If at any time you'd like to start over with a fresh chain, simply run:
 
 __t1 run__
 ```sh
-make clean kind-cluster-clean 
+make clean kind-cluster-clean
 make init
 ```
 

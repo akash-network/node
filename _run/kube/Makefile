@@ -37,18 +37,6 @@ provider-service-status:
 		--from      "$(KEY_NAME)" \
 		--provider  "$(PROVIDER_ADDRESS)"
 
-.PHONY: provider-service-logs
-provider-service-logs:
-	$(AKASHCTL) "$(KEY_OPTS)" provider service-logs     \
-		--from     "$(KEY_NAME)"      \
-		--dseq      "$(DSEQ)"             \
-		--gseq      "$(GSEQ)"             \
-		--oseq      "$(OSEQ)"             \
-		--provider  "$(PROVIDER_ADDRESS)" \
-		--follow    false                 \
-		--service   "web"                 \
-		--tail      "100"
-
 .PHONY: provider-lease-ping
 provider-lease-ping:
 	curl -sIH "Host: hello.localhost" localhost:$(KIND_HTTP_PORT)

@@ -3,7 +3,7 @@ version: "2.0"
 
 services:
   web:
-    image: quay.io/ovrclk/demo-app
+    image: chentex/random-logger
     expose:
       - port: 80
         as: 80
@@ -12,7 +12,7 @@ services:
         to:
           - global: true
   bew:
-    image: quay.io/ovrclk/demo-app
+    image: chentex/random-logger
     expose:
       - port: 80
         as: 80
