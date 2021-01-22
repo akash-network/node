@@ -196,12 +196,20 @@ func validateManifestDeploymentGroup(mgroup manifest.Group, dgroup types.Resourc
 	mlist := make([]types.Resources, len(mgroup.GetResources()))
 	copy(mlist, mgroup.GetResources())
 
-	endpointsCountForDeploymentGroup := 0
+	httpOnlyEndpointsCountForDeploymentGroup := 0
+	otherEndpointsCountForDeploymentGroup := 0
 
 	// Iterate over all deployment groups
 deploymentGroupLoop:
 	for _, drec := range dgroup.GetResources() {
-		endpointsCountForDeploymentGroup += len(drec.Resources.Endpoints)
+		for _, endpoint := range drec.Resources.Endpoints {
+			switch endpoint.Kind {
+			case types.Endpoint_SHARED_HTTP:
+				httpOnlyEndpointsCountForDeploymentGroup++
+			case types.Endpoint_RANDOM_PORT:
+				otherEndpointsCountForDeploymentGroup++
+			}
+		}
 		// Find a matching manifest group
 		for idx := range mlist {
 			mrec := mlist[idx]
@@ -249,17 +257,28 @@ deploymentGroupLoop:
 		}
 	}
 
-	endpointsCountForManifestGroup := 0
+	httpOnlyEndpointCount := 0
+	otherEndpointCount := 0
+
 	for _, service := range mgroup.Services {
 		for _, serviceExpose := range service.Expose {
-			if serviceExpose.Global && !util.ShouldBeIngress(serviceExpose) {
-				endpointsCountForManifestGroup++
+			if serviceExpose.Global {
+				if util.ShouldBeIngress(serviceExpose) {
+					httpOnlyEndpointCount++
+				} else {
+					otherEndpointCount++
+				}
+
 			}
 		}
 	}
 
-	if endpointsCountForManifestGroup != endpointsCountForDeploymentGroup {
-		return errors.Errorf("invalid manifest: mismatch on number of endpoints %d != %d", endpointsCountForManifestGroup, endpointsCountForDeploymentGroup)
+	if otherEndpointCount != otherEndpointsCountForDeploymentGroup {
+		return errors.Errorf("invalid manifest: mismatch on number of endpoints %d != %d", otherEndpointCount, otherEndpointsCountForDeploymentGroup)
+	}
+
+	if httpOnlyEndpointCount != httpOnlyEndpointsCountForDeploymentGroup {
+		return errors.Errorf("invalid manifest: mismatch on number of HTTP only endpoints %d != %d", httpOnlyEndpointCount, httpOnlyEndpointsCountForDeploymentGroup)
 	}
 
 	return nil

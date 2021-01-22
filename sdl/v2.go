@@ -118,7 +118,7 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 				Count:     svcdepl.Count,
 			}
 
-			endpointCount := 0
+			endpoints := make([]types.Endpoint, 0)
 			for _, expose := range sdl.Services[svcdepl.Profile].Expose {
 				for _, to := range expose.To {
 					if to.Global {
@@ -126,6 +126,7 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 						if err != nil {
 							return nil, err
 						}
+						// This value is created just so it can be passed to the utility function
 						v := manifest.ServiceExpose{
 							Port:         expose.Port,
 							ExternalPort: expose.As,
@@ -134,14 +135,18 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 							Global:       to.Global,
 							Hosts:        expose.Accept.Items,
 						}
-						if !providerUtil.ShouldBeIngress(v) {
-							endpointCount++
+
+						kind := types.Endpoint_RANDOM_PORT
+						if providerUtil.ShouldBeIngress(v) {
+							kind = types.Endpoint_SHARED_HTTP
 						}
+
+						endpoints = append(endpoints, types.Endpoint{Kind: kind})
 					}
 				}
 			}
 
-			resources.Resources.Endpoints = make([]types.Endpoint, endpointCount)
+			resources.Resources.Endpoints = endpoints
 			group.Resources = append(group.Resources, resources)
 
 			// TODO: Make a parameter to configure the duration of orders being bid on
