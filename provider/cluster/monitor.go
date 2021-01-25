@@ -64,6 +64,7 @@ func (m *deploymentMonitor) done() <-chan struct{} {
 
 func (m *deploymentMonitor) run() {
 	defer m.lc.ShutdownCompleted()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	var (
 		runch   <-chan runner.Result
@@ -83,7 +84,7 @@ loop:
 
 		case <-tickch:
 			tickch = nil
-			runch = m.runCheck()
+			runch = m.runCheck(ctx)
 
 		case result := <-runch:
 			runch = nil
@@ -113,12 +114,13 @@ loop:
 			}
 
 			m.log.Error("deployment failed.  closing lease.")
-			closech = m.runCloseLease()
+			closech = m.runCloseLease(ctx)
 
 		case <-closech:
 			closech = nil
 		}
 	}
+	cancel()
 
 	if runch != nil {
 		m.log.Debug("read runch")
@@ -135,16 +137,15 @@ loop:
 	m.log.Debug("shutdown complete")
 }
 
-func (m *deploymentMonitor) runCheck() <-chan runner.Result {
+func (m *deploymentMonitor) runCheck(ctx context.Context) <-chan runner.Result {
 	m.attempts++
 	m.log.Debug("running check", "attempt", m.attempts)
 	return runner.Do(func() runner.Result {
-		return runner.NewResult(m.doCheck())
+		return runner.NewResult(m.doCheck(ctx))
 	})
 }
 
-func (m *deploymentMonitor) doCheck() (bool, error) {
-	ctx := context.Background() // TODO: manage context within the deploymentMonitor{}
+func (m *deploymentMonitor) doCheck(ctx context.Context) (bool, error) {
 	status, err := m.client.LeaseStatus(ctx, m.lease)
 
 	if err != nil {
@@ -176,10 +177,10 @@ func (m *deploymentMonitor) doCheck() (bool, error) {
 	return badsvc == 0, nil
 }
 
-func (m *deploymentMonitor) runCloseLease() <-chan runner.Result {
+func (m *deploymentMonitor) runCloseLease(ctx context.Context) <-chan runner.Result {
 	return runner.Do(func() runner.Result {
 		// TODO: retry, timeout
-		err := m.session.Client().Tx().Broadcast(context.Background(), &mtypes.MsgCloseBid{
+		err := m.session.Client().Tx().Broadcast(ctx, &mtypes.MsgCloseBid{
 			BidID: m.lease.BidID(),
 		})
 		if err != nil {

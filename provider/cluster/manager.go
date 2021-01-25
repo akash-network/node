@@ -215,12 +215,14 @@ func (dm *deploymentManager) startTeardown() <-chan error {
 }
 
 func (dm *deploymentManager) doDeploy() error {
-	ctx := context.Background() // TODO: refactor management
+	// Don't use a context tied to the lifecycle, as we don't want to cancel Kubernetes operations
+	ctx := context.Background()
 	return dm.client.Deploy(ctx, dm.lease, dm.mgroup)
 }
 
 func (dm *deploymentManager) doTeardown() error {
-	ctx := context.Background() // TODO: refactor management
+	// Don't use a context tied to the lifecycle, as we don't want to cancel Kubernetes operations
+	ctx := context.Background()
 	return dm.client.TeardownLease(ctx, dm.lease)
 }
 
