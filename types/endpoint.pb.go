@@ -23,10 +23,13 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+// This describes how the endpoint is implemented when the lease is deployed
 type Endpoint_Kind int32
 
 const (
+	// Describes an endpoint that becomes a Kubernetes Ingress
 	Endpoint_SHARED_HTTP Endpoint_Kind = 0
+	// Describes an endpoint that becomes a Kubernetes NodePort
 	Endpoint_RANDOM_PORT Endpoint_Kind = 1
 )
 

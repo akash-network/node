@@ -258,7 +258,7 @@ type dataForScriptElement struct {
 	CPU              uint64 `json:"cpu"`
 	Storage          uint64 `json:"storage"`
 	Count            uint32 `json:"count"`
-	EndpointQuantity int    `json:"endpoint-quantity"`
+	EndpointQuantity int    `json:"endpoint_quantity"`
 }
 
 func (ssp shellScriptPricing) calculatePrice(ctx context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {

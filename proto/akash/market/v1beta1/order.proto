@@ -62,10 +62,10 @@ message Order {
   }
 
   State state    = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
-  int64 start_at = 3 [(gogoproto.jsontag) = "start-at", (gogoproto.moretags) = "yaml:\"start-at\""];
+  int64 start_at = 3 [(gogoproto.jsontag) = "start_at", (gogoproto.moretags) = "yaml:\"start_at\""];
   akash.deployment.v1beta1.GroupSpec spec = 4
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "spec", (gogoproto.moretags) = "yaml:\"spec\""];
-  int64 close_at = 5 [(gogoproto.jsontag) = "close-at", (gogoproto.moretags) = "yaml:\"close-at\""];
+  int64 close_at = 5 [(gogoproto.jsontag) = "close_at", (gogoproto.moretags) = "yaml:\"close_at\""];
 }
 
 // OrderFilters defines flags for order list filter
