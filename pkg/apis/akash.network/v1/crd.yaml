@@ -22,7 +22,7 @@ spec:
             spec:
               type: object
               properties:
-                lease-id:
+                lease_id:
                   type: object
                   properties:
                     owner:
@@ -81,7 +81,7 @@ spec:
                                 port:
                                   type: integer
                                   format: uint16
-                                external-port:
+                                external_port:
                                   type: integer
                                   format: uint16
                                 proto:
