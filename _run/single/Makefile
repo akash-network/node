@@ -34,6 +34,7 @@ kustomize-init-provider:
 	mkdir -p "$(KUSTOMIZE_PROVIDER_CACHE)"
 	cp -r "$(CLIENT_HOME)/config" "$(KUSTOMIZE_PROVIDER_CACHE)/"
 	echo "$(CLIENT_EXPORT_PASSWORD)" > "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt"
+	cat "$(CLIENT_HOME)/$(PROVIDER_ADDRESS).pem" > "$(KUSTOMIZE_PROVIDER_CACHE)/provider-cert.pem"
 	( \
 		cat "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt" ; \
 		cat "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt"   \

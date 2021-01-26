@@ -59,4 +59,4 @@ secretGenerator:
     files:
       - cache/key.txt
       - cache/key-pass.txt
-
+      - cache/provider-cert.pem

@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -35,11 +37,7 @@ import (
 	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
-	amodule "github.com/ovrclk/akash/x/audit"
 	cmodule "github.com/ovrclk/akash/x/cert"
-	dmodule "github.com/ovrclk/akash/x/deployment"
-	mmodule "github.com/ovrclk/akash/x/market"
-	pmodule "github.com/ovrclk/akash/x/provider"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
@@ -71,6 +69,7 @@ const (
 	FlagOvercommitPercentCPU             = "overcommit-pct-cpu"
 	FlagOvercommitPercentStorage         = "overcommit-pct-storage"
 	FlagDeploymentBlockedHostnames       = "deployment-blocked-hostnames"
+	FlagAuthPem                          = "auth-pem"
 )
 
 var (
@@ -217,6 +216,8 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().String(FlagAuthPem, "", "")
+
 	return cmd
 }
 
@@ -304,7 +305,12 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	gwaddr := viper.GetString(FlagGatewayListenAddress)
 
-	cpem, err := cutils.LoadPEMForAccount(cctx.HomeDir, cctx.FromAddress, txFactory.Keybase())
+	var certFromFlag io.Reader
+	if val := cmd.Flag(FlagAuthPem).Value.String(); val != "" {
+		certFromFlag = bytes.NewBufferString(val)
+	}
+
+	cpem, err := cutils.LoadPEMForAccount(cctx, txFactory.Keybase(), cutils.PEMFromReader(certFromFlag))
 	if err != nil {
 		return err
 	}
@@ -350,13 +356,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		cctx,
 		txFactory,
 		info,
-		client.NewQueryClient(
-			dmodule.AppModuleBasic{}.GetQueryClient(cctx),
-			mmodule.AppModuleBasic{}.GetQueryClient(cctx),
-			pmodule.AppModuleBasic{}.GetQueryClient(cctx),
-			amodule.AppModuleBasic{}.GetQueryClient(cctx),
-			cmodule.AppModuleBasic{}.GetQueryClient(cctx),
-		),
+		client.NewQueryClientFromCtx(cctx),
 		broadcaster,
 	)
 

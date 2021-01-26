@@ -35,7 +35,7 @@ configMapGenerator:
       - fast_sync=true
       - db_backend=goleveldb
       - db_dir=data
-      - log_level=main:info,state:info,*:error
+      - log_level=info
       - log_format=plain
 
       # configmap: akash-data
