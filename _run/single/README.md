@@ -100,7 +100,7 @@ DOCKER_IMAGE=ovrclk/akash:latest make kind-configure-image
 
 Start and initialize kind. There are two options for network manager; standard CNI, or Calico.
 Both are configured with Makefile targets as specified below. Using Calico enables testing of
-Network Polcies.
+Network Policies.
 
 **note**: this step waits for kubernetes metrics to be available, which can take some time.
 The counter on the left side of the messages is regularly in the 120 range.  If it goes beyond 250,

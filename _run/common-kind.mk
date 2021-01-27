@@ -20,16 +20,15 @@ KIND_K8S_IP ?= $(shell docker inspect \
 KIND_PORT_BINDINGS ?= $(shell docker inspect "$(KIND_NAME)-control-plane" \
     --format '{{index .NetworkSettings.Ports "80/tcp" 0 "HostPort"}}')
 
-KIND_CONFIG       ?= kind-config.yaml
+KIND_CONFIG        ?= kind-config.yaml
 KIND_CONFIG_CALICO ?= ../kind-config-calico.yaml
 
 PROVIDER_HOSTNAME ?= localhost
 PROVIDER_HOST     ?= $(PROVIDER_HOSTNAME):$(KIND_HTTP_PORT)
 PROVIDER_ENDPOINT ?= http://$(PROVIDER_HOST)
 
-# TODO: referencing master/latest on a k8s repository is prone to breaking at some point.
-INGRESS_CONFIG_PATH ?= https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
-CALICO_MANIFEST ?= https://docs.projectcalico.org/v3.8/manifests/calico.yaml
+INGRESS_CONFIG_PATH ?= ../ingress-nginx.yaml
+CALICO_MANIFEST     ?= https://docs.projectcalico.org/v3.8/manifests/calico.yaml
 
 .PHONY: app-http-port
 app-http-port:

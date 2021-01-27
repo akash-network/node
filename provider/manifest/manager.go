@@ -241,8 +241,8 @@ func (m *manager) fetchData(ctx context.Context) <-chan runner.Result {
 	})
 }
 
-func (m *manager) doFetchData(_ context.Context) (*dtypes.DeploymentResponse, error) {
-	res, err := m.session.Client().Query().Deployment(context.Background(), &dtypes.QueryDeploymentRequest{ID: m.daddr})
+func (m *manager) doFetchData(ctx context.Context) (*dtypes.DeploymentResponse, error) {
+	res, err := m.session.Client().Query().Deployment(ctx, &dtypes.QueryDeploymentRequest{ID: m.daddr})
 	if err != nil {
 		return nil, err
 	}

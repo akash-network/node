@@ -7,10 +7,11 @@ import (
 	"encoding/pem"
 	"io"
 	"io/ioutil"
+	"os"
 	"reflect"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
 	ctypes "github.com/ovrclk/akash/x/cert/types"
@@ -22,18 +23,44 @@ type PEMBlocks struct {
 	Pub  []byte
 }
 
+type loaderOption struct {
+	rd io.Reader
+}
+
+type LoaderOption func(*loaderOption)
+
+func PEMFromReader(rd io.Reader) LoaderOption {
+	return func(opt *loaderOption) {
+		opt.rd = rd
+	}
+}
+
 // LoadPEMForAccount load certificate/private key from file named as
 // account name supplied in FlagFrom
 // file must contain two PEM blocks, certificate followed by a private key
-func LoadPEMForAccount(homedir string, key sdk.Address, keyring keyring.Keyring) (PEMBlocks, error) {
-	sig, _, err := keyring.SignByAddress(key, key.Bytes())
+func LoadPEMForAccount(cctx client.Context, keyring keyring.Keyring, opts ...LoaderOption) (PEMBlocks, error) {
+	sig, _, err := keyring.SignByAddress(cctx.FromAddress, cctx.FromAddress.Bytes())
 	if err != nil {
 		return PEMBlocks{}, err
 	}
 
+	opt := &loaderOption{}
+
+	for _, o := range opts {
+		o(opt)
+	}
+
 	var pdata []byte
 
-	pdata, err = ioutil.ReadFile(homedir + "/" + key.String() + ".pem")
+	if opt.rd == nil {
+		pdata, err = ioutil.ReadFile(cctx.HomeDir + "/" + cctx.FromAddress.String() + ".pem")
+		if os.IsNotExist(err) {
+			pdata, err = ioutil.ReadFile(cctx.HomeDir + "/" + cctx.FromName + ".pem")
+		}
+	} else {
+		pdata, err = ioutil.ReadAll(opt.rd)
+	}
+
 	if err != nil && !errors.Is(err, io.EOF) {
 		return PEMBlocks{}, err
 	}
@@ -84,8 +111,8 @@ func LoadPEMForAccount(homedir string, key sdk.Address, keyring keyring.Keyring)
 }
 
 // LoadCertificateForAccount wraps LoadPEMForAccount and tls.X509KeyPair
-func LoadCertificateForAccount(homedir string, key sdk.Address, keyring keyring.Keyring) (tls.Certificate, error) {
-	pblk, err := LoadPEMForAccount(homedir, key, keyring)
+func LoadCertificateForAccount(cctx client.Context, keyring keyring.Keyring, opts ...LoaderOption) (tls.Certificate, error) {
+	pblk, err := LoadPEMForAccount(cctx, keyring, opts...)
 	if err != nil {
 		return tls.Certificate{}, err
 	}
