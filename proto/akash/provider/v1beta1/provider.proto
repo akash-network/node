@@ -25,8 +25,8 @@ message MsgCreateProvider {
   string owner    = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
   string host_uri = 2 [
     (gogoproto.customname) = "HostURI",
-    (gogoproto.jsontag)    = "host-uri",
-    (gogoproto.moretags)   = "yaml:\"host-uri\""
+    (gogoproto.jsontag)    = "host_uri",
+    (gogoproto.moretags)   = "yaml:\"host_uri\""
   ];
   repeated akash.base.v1beta1.Attribute attributes = 3 [
     (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Attributes",
@@ -46,8 +46,8 @@ message MsgUpdateProvider {
   string owner    = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
   string host_uri = 2 [
     (gogoproto.customname) = "HostURI",
-    (gogoproto.jsontag)    = "host-uri",
-    (gogoproto.moretags)   = "yaml:\"host-uri\""
+    (gogoproto.jsontag)    = "host_uri",
+    (gogoproto.moretags)   = "yaml:\"host_uri\""
   ];
   repeated akash.base.v1beta1.Attribute attributes = 3 [
     (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Attributes",
@@ -78,8 +78,8 @@ message Provider {
   string owner    = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
   string host_uri = 2 [
     (gogoproto.customname) = "HostURI",
-    (gogoproto.jsontag)    = "host-uri",
-    (gogoproto.moretags)   = "yaml:\"host-uri\""
+    (gogoproto.jsontag)    = "host_uri",
+    (gogoproto.moretags)   = "yaml:\"host_uri\""
   ];
   repeated akash.base.v1beta1.Attribute attributes = 3 [
     (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Attributes",

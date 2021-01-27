@@ -328,7 +328,7 @@ func TestRouteStatusOK(t *testing.T) {
 		decoder := json.NewDecoder(resp.Body)
 		err = decoder.Decode(&data)
 		require.NoError(t, err)
-		cph, ok := data["cluster-public-hostname"].(string)
+		cph, ok := data["cluster_public_hostname"].(string)
 		require.True(t, ok)
 		require.Equal(t, cph, "foobar")
 	})

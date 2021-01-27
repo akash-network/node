@@ -36,7 +36,7 @@ type ManifestStatus struct {
 
 // ManifestSpec stores LeaseID, Group and metadata details
 type ManifestSpec struct {
-	LeaseID LeaseID       `json:"lease-id"`
+	LeaseID LeaseID       `json:"lease_id"`
 	Group   ManifestGroup `json:"group"`
 }
 
@@ -252,7 +252,7 @@ func manifestServiceFromAkash(ams manifest.Service) (ManifestService, error) {
 // ManifestServiceExpose stores exposed ports and accepted hosts details
 type ManifestServiceExpose struct {
 	Port         uint16 `json:"port,omitempty"`
-	ExternalPort uint16 `json:"external-port,omitempty"`
+	ExternalPort uint16 `json:"external_port,omitempty"`
 	Proto        string `json:"proto,omitempty"`
 	Service      string `json:"service,omitempty"`
 	Global       bool   `json:"global,omitempty"`

@@ -30,11 +30,11 @@ type ServiceStatus struct {
 	Total     int32    `json:"total"`
 	URIs      []string `json:"uris"`
 
-	ObservedGeneration int64 `json:"observed-generation"`
+	ObservedGeneration int64 `json:"observed_generation"`
 	Replicas           int32 `json:"replicas"`
-	UpdatedReplicas    int32 `json:"updated-replicas"`
-	ReadyReplicas      int32 `json:"ready-replicas"`
-	AvailableReplicas  int32 `json:"available-replicas"`
+	UpdatedReplicas    int32 `json:"updated_replicas"`
+	ReadyReplicas      int32 `json:"ready_replicas"`
+	AvailableReplicas  int32 `json:"available_replicas"`
 }
 
 type ForwardedPortStatus struct {
@@ -49,7 +49,7 @@ type ForwardedPortStatus struct {
 // LeaseStatus includes list of services with their status
 type LeaseStatus struct {
 	Services       map[string]*ServiceStatus        `json:"services"`
-	ForwardedPorts map[string][]ForwardedPortStatus `json:"forwarded-ports"` // Container services that are externally accessible
+	ForwardedPorts map[string][]ForwardedPortStatus `json:"forwarded_ports"` // Container services that are externally accessible
 }
 
 // Node interface predefined with ID and Available methods

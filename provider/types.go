@@ -11,5 +11,5 @@ type Status struct {
 	Cluster               *ctypes.Status    `json:"cluster"`
 	Bidengine             *bidengine.Status `json:"bidengine"`
 	Manifest              *manifest.Status  `json:"manifest"`
-	ClusterPublicHostname string            `json:"cluster-public-hostname,omitempty"`
+	ClusterPublicHostname string            `json:"cluster_public_hostname,omitempty"`
 }

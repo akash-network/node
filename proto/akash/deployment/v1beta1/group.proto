@@ -50,8 +50,8 @@ message GroupSpec {
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "resources", (gogoproto.moretags) = "yaml:\"resources\""];
   int64 order_bid_duration = 4 [
     (gogoproto.customname) = "OrderBidDuration",
-    (gogoproto.jsontag)    = "order-bid-duration",
-    (gogoproto.moretags)   = "yaml:\"order-bid-duration\""
+    (gogoproto.jsontag)    = "order_bid_duration",
+    (gogoproto.moretags)   = "yaml:\"order_bid_duration\""
   ];
 }
 

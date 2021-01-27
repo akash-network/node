@@ -19,8 +19,8 @@ test-k8s-integration:
 	# ASSUMES:
 	# 1. cluster created - `kind create cluster`
 	# 2. cluster setup   - ./script/setup-kind.sh
-	go test -v -tags k8s_integration ./pkg/apis/akash.network/v1
-	go test -v -tags k8s_integration ./provider/cluster/kube
+	go test -count=1 -v -tags k8s_integration ./pkg/apis/akash.network/v1
+	go test -count=1 -v -tags k8s_integration ./provider/cluster/kube
 
 
 ###############################################################################

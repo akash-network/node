@@ -296,7 +296,7 @@ func (m *manager) emitReceivedEvents() {
 	m.log.Debug("publishing manifest received", "num-leases", len(m.leases))
 
 	for _, lease := range m.leases {
-		m.log.Debug("publishing manifest received for lease", "lease-id", lease.LeaseID)
+		m.log.Debug("publishing manifest received for lease", "lease_id", lease.LeaseID)
 		if err := m.bus.Publish(event.ManifestReceived{
 			LeaseID:    lease.LeaseID,
 			Group:      lease.Group,
