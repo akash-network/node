@@ -1,4 +1,4 @@
-BINS                  := akash
+BINS                  := akash akash_docgen
 APP_DIR               := ./app
 
 GO                    := GO111MODULE=on go

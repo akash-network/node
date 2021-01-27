@@ -6,6 +6,7 @@
 
 # binaries
 /akash
+/akash_docgen
 
 # dev artifacts
 /devdata
