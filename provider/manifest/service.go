@@ -267,7 +267,7 @@ func (s *service) ensureManager(did dtypes.DeploymentID) (manager *manager, err 
 	return manager, nil
 }
 
-func fetchExistingLeases(_ context.Context, session session.Session) ([]event.LeaseWon, error) {
+func fetchExistingLeases(ctx context.Context, session session.Session) ([]event.LeaseWon, error) {
 	leases, err := session.Client().Query().ActiveLeasesForProvider(session.Provider().Address())
 	if err != nil {
 		return nil, err
@@ -276,7 +276,7 @@ func fetchExistingLeases(_ context.Context, session session.Session) ([]event.Le
 	items := make([]event.LeaseWon, 0, len(leases))
 	for _, lease := range leases {
 		res, err := session.Client().Query().Group(
-			context.Background(),
+			ctx,
 			&dtypes.QueryGroupRequest{
 				ID: lease.LeaseID.GroupID(),
 			},

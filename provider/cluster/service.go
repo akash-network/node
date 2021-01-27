@@ -202,9 +202,7 @@ loop:
 				s.managers[key] = manager
 
 			case mtypes.EventLeaseClosed:
-
 				s.teardownLease(ev.ID)
-
 			}
 
 		case ch := <-s.statusch:
@@ -226,7 +224,7 @@ loop:
 		}
 	}
 
-	s.log.Debug("draining deployment managers...")
+	s.log.Debug("draining deployment managers...", "qty", len(s.managers))
 
 	for _, manager := range s.managers {
 		if manager != nil {
