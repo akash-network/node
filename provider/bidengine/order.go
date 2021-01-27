@@ -2,6 +2,8 @@ package bidengine
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 
 	lifecycle "github.com/boz/go-lifecycle"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -19,7 +21,7 @@ import (
 // order manages bidding and general lifecycle handling of an order.
 type order struct {
 	orderID         mtypes.OrderID
-	bid             *mtypes.Bid
+	bidPlaced       bool
 	pricingStrategy BidPricingStrategy
 
 	session                    session.Session
@@ -32,10 +34,10 @@ type order struct {
 	lc  lifecycle.Lifecycle
 }
 
-func newOrder(svc *service, oid mtypes.OrderID, bid *mtypes.Bid, pricingStrategy BidPricingStrategy) (*order, error) {
-	return newOrderInternal(svc, oid, bid, pricingStrategy, nil)
+func newOrder(svc *service, oid mtypes.OrderID, pricingStrategy BidPricingStrategy, checkForExistingBid bool) (*order, error) {
+	return newOrderInternal(svc, oid, pricingStrategy, checkForExistingBid, nil)
 }
-func newOrderInternal(svc *service, oid mtypes.OrderID, bid *mtypes.Bid, pricingStrategy BidPricingStrategy, reservationFulfilledNotify chan<- int) (*order, error) {
+func newOrderInternal(svc *service, oid mtypes.OrderID, pricingStrategy BidPricingStrategy, checkForExistingBid bool, reservationFulfilledNotify chan<- int) (*order, error) {
 	// Create a subscription that will see all events that have not been read from e.sub.Events()
 	sub, err := svc.sub.Clone()
 	if err != nil {
@@ -48,7 +50,7 @@ func newOrderInternal(svc *service, oid mtypes.OrderID, bid *mtypes.Bid, pricing
 
 	order := &order{
 		orderID:                    oid,
-		bid:                        bid,
+		bidPlaced:                  false,
 		session:                    session,
 		cluster:                    svc.cluster,
 		bus:                        svc.bus,
@@ -63,7 +65,7 @@ func newOrderInternal(svc *service, oid mtypes.OrderID, bid *mtypes.Bid, pricing
 	go order.lc.WatchChannel(svc.lc.ShuttingDown())
 
 	// Run main loop in separate thread.
-	go order.run()
+	go order.run(checkForExistingBid)
 
 	// Notify parent of completion (allows drain).
 	go func() {
@@ -74,34 +76,72 @@ func newOrderInternal(svc *service, oid mtypes.OrderID, bid *mtypes.Bid, pricing
 	return order, nil
 }
 
-func (o *order) run() {
+var matchBidNotFound = regexp.MustCompile("^.+bid not found.+$")
+
+func (o *order) run(checkForExistingBid bool) {
 	defer o.lc.ShutdownCompleted()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var (
 		// channels for async operations.
-		groupch   <-chan runner.Result
-		clusterch <-chan runner.Result
-		bidch     <-chan runner.Result
-		pricech   <-chan runner.Result
+		groupch       <-chan runner.Result
+		storedGroupCh <-chan runner.Result
+		clusterch     <-chan runner.Result
+		bidch         <-chan runner.Result
+		pricech       <-chan runner.Result
+		queryBidCh    <-chan runner.Result
 
 		group       *dtypes.Group
 		reservation ctypes.Reservation
 
 		won bool
+		msg *mtypes.MsgCreateBid
 	)
 
 	// Begin fetching group details immediately.
 	groupch = runner.Do(func() runner.Result {
-		res, err := o.session.Client().Query().Group(context.Background(), &dtypes.QueryGroupRequest{ID: o.orderID.GroupID()})
+		res, err := o.session.Client().Query().Group(ctx, &dtypes.QueryGroupRequest{ID: o.orderID.GroupID()})
 		return runner.NewResult(res.GetGroup(), err)
 	})
 
+	// Load existing bid if needed
+	if checkForExistingBid {
+		queryBidCh = runner.Do(func() runner.Result {
+			return runner.NewResult(o.session.Client().Query().Bid(
+				ctx,
+				&mtypes.QueryBidRequest{
+					ID: mtypes.MakeBidID(o.orderID, o.session.Provider().Address()),
+				},
+			))
+		})
+		// Hide the group details result for later
+		storedGroupCh = groupch
+		groupch = nil
+	}
 loop:
 	for {
 		select {
 		case <-o.lc.ShutdownRequest():
 			break loop
+
+		case queryBid := <-queryBidCh:
+			err := queryBid.Error()
+			bidFound := true
+			if err != nil {
+				if matchBidNotFound.MatchString(err.Error()) {
+					bidFound = false
+				} else {
+					o.session.Log().Error("could not get existing bid", "err", err, "errtype", fmt.Sprintf("%T", err))
+					break loop
+				}
+			}
+
+			if bidFound {
+				o.bidPlaced = true
+				o.session.Log().Info("Found existing bid ")
+			}
+			groupch = storedGroupCh // Allow getting the group details result now
+			storedGroupCh = nil
 
 		case ev := <-o.sub.Events():
 			switch ev := ev.(type) {
@@ -189,7 +229,7 @@ loop:
 
 			// Resources reserved.
 			reservation = result.Value().(ctypes.Reservation)
-			if o.bid != nil {
+			if o.bidPlaced {
 				o.log.Info("Fulfillment already exists")
 				// fulfillment already created (state recovered via queryExistingOrders)
 				break
@@ -210,12 +250,9 @@ loop:
 			o.log.Debug("submitting fulfillment", "price", price)
 
 			// Begin submitting fulfillment
+			msg = mtypes.NewMsgCreateBid(o.orderID, o.session.Provider().Address(), price)
 			bidch = runner.Do(func() runner.Result {
-				return runner.NewResult(nil, o.session.Client().Tx().Broadcast(ctx, &mtypes.MsgCreateBid{
-					Order:    o.orderID,
-					Provider: o.session.Provider().Address().String(),
-					Price:    price,
-				}))
+				return runner.NewResult(nil, o.session.Client().Tx().Broadcast(ctx, msg))
 			})
 
 		case result := <-bidch:
@@ -228,6 +265,7 @@ loop:
 			}
 
 			// Fulfillment placed.
+			o.bidPlaced = true
 		}
 	}
 
@@ -245,10 +283,10 @@ loop:
 			}
 		}
 
-		if o.bid != nil {
+		if o.bidPlaced {
 			o.log.Debug("closing bid")
 			err := o.session.Client().Tx().Broadcast(ctx, &mtypes.MsgCloseBid{
-				BidID: o.bid.BidID,
+				BidID: mtypes.MakeBidID(o.orderID, o.session.Provider().Address()),
 			})
 			if err != nil {
 				o.log.Error("closing bid", "err", err)

@@ -109,14 +109,14 @@ func (s *service) Status(ctx context.Context) (*Status, error) {
 	}
 }
 
-func (s *service) run(existingOrders []existingOrder) {
+func (s *service) run(existingOrders []mtypes.OrderID) {
 	defer s.lc.ShutdownCompleted()
 	defer s.sub.Close()
 
-	for _, eo := range existingOrders {
-		key := mquery.OrderPath(eo.order.OrderID)
-		s.session.Log().Debug("running order", "order", key)
-		order, err := newOrder(s, eo.order.OrderID, eo.bid, s.pricingStrategy)
+	for _, orderID := range existingOrders {
+		key := mquery.OrderPath(orderID)
+		s.session.Log().Debug("creating catchup order", "order", key)
+		order, err := newOrder(s, orderID, s.pricingStrategy, true)
 		if err != nil {
 			s.session.Log().Error("creating catchup order", "order", key, "err", err)
 			continue
@@ -145,9 +145,9 @@ loop:
 				}
 
 				// create an order object for managing the bid process and order lifecycle
-				order, err := newOrder(s, ev.ID, nil, s.pricingStrategy)
+				order, err := newOrder(s, ev.ID, s.pricingStrategy, false)
 				if err != nil {
-					// todo: handle error
+
 					s.session.Log().Error("handling order", "order", key, "err", err)
 					break
 				}
@@ -165,6 +165,7 @@ loop:
 		}
 	}
 
+	s.session.Log().Info("draining order monitors", "qty", len(s.orders))
 	// drain: wait for all order monitors to complete.
 	for len(s.orders) > 0 {
 		key := mquery.OrderPath((<-s.drainch).orderID)
@@ -172,46 +173,28 @@ loop:
 	}
 }
 
-type existingOrder struct {
-	order *mtypes.Order
-	bid   *mtypes.Bid
-}
-
-func queryExistingOrders(_ context.Context, session session.Session) ([]existingOrder, error) {
+func queryExistingOrders(ctx context.Context, session session.Session) ([]mtypes.OrderID, error) {
 	params := &mtypes.QueryOrdersRequest{
 		Filters: mtypes.OrderFilters{},
 		Pagination: &sdkquery.PageRequest{
 			Limit: 10000,
 		},
 	}
-	res, err := session.Client().Query().Orders(context.Background(), params)
+	res, err := session.Client().Query().Orders(ctx, params)
 	if err != nil {
 		session.Log().Error("error querying open orders:", "err", err)
 		return nil, err
 	}
 	orders := res.Orders
 
-	existingOrders := make([]existingOrder, 0)
+	existingOrders := make([]mtypes.OrderID, 0)
 	for i := range orders {
 		pOrder := &orders[i]
+		// Only check existing orders that are open
 		if pOrder.State != mtypes.OrderOpen {
 			continue
 		}
-
-		eo := existingOrder{order: pOrder}
-
-		res, _ := session.Client().Query().Bid(
-			context.Background(),
-			&mtypes.QueryBidRequest{
-				ID: mtypes.MakeBidID(pOrder.OrderID, session.Provider().Address()),
-			},
-		)
-
-		bid := res.GetBid()
-
-		eo.bid = &bid
-
-		existingOrders = append(existingOrders, eo)
+		existingOrders = append(existingOrders, pOrder.OrderID)
 	}
 
 	return existingOrders, nil
