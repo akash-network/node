@@ -127,7 +127,7 @@ func (cd *ClientDirectory) GetClient(providerAddr sdk.Address) (Client, error) {
 }
 
 func NewClientDirectory(cctx cosmosclient.Context) (*ClientDirectory, error) {
-	cert, err := cutils.LoadCertificateForAccount(cctx.HomeDir, cctx.FromAddress, cctx.Keyring)
+	cert, err := cutils.LoadCertificateForAccount(cctx, cctx.Keyring)
 	if err != nil {
 		return nil, err
 	}

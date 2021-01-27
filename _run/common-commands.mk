@@ -28,6 +28,10 @@ provider-update:
 	$(AKASHCTL) tx provider update "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(PROVIDER_CONFIG_PATH)" -y \
 		--from "$(PROVIDER_KEY_NAME)"
 
+.PHONY: provider-status
+provider-status:
+	$(AKASHCTL) provider status $(PROVIDER_ADDRESS)
+
 .PHONY: send-manifest
 send-manifest:
 	$(AKASHCTL) "$(KEY_OPTS)" provider send-manifest "$(SDL_PATH)" \

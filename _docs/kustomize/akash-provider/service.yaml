@@ -6,5 +6,5 @@ spec:
   selector:
     app: akash-provider
   ports:
-    - name: http
-      port: 8080
+    - name: gateway
+      port: 8443

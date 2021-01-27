@@ -79,6 +79,12 @@ spec:
             # akash-provider config
             ##
 
+            - name: AKASH_AUTH_PEM
+              valueFrom:
+                secretKeyRef:
+                  name: akash-provider-keys
+                  key: provider-cert.pem
+
             # include unique hostnames for apps
             - name: AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS
               valueFrom:
@@ -308,8 +314,8 @@ spec:
                   key: bid-script-process-timeout
                   optional: true
           ports:
-            - name: http
-              containerPort: 8080
+            - name: gateway
+              containerPort: 8443
           volumeMounts:
             - name: boot
               mountPath: /boot

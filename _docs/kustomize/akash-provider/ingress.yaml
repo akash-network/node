@@ -2,6 +2,9 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: akash-provider
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+    nginx.ingress.kubernetes.io/secure-backends: "true"
 spec:
   rules:
     - host: akash-provider.localhost
@@ -13,4 +16,4 @@ spec:
               service:
                 name: akash-provider
                 port:
-                  name: http
+                  name: gateway

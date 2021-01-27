@@ -92,7 +92,7 @@ func cmdRevoke() *cobra.Command {
 					return errInvalidSerialFlag
 				}
 			} else {
-				cpem, err := cutils.LoadPEMForAccount(cctx.HomeDir, cctx.FromAddress, cctx.Keyring)
+				cpem, err := cutils.LoadPEMForAccount(cctx, cctx.Keyring)
 				if err != nil {
 					return err
 				}
@@ -191,7 +191,7 @@ func doCreateCmd(cmd *cobra.Command, domains []string) error {
 		return handleCreate(cctx, cmd, pemFile, domains)
 	}
 
-	cpem, err := cutils.LoadPEMForAccount(cctx.HomeDir, cctx.FromAddress, cctx.Keyring)
+	cpem, err := cutils.LoadPEMForAccount(cctx, cctx.Keyring)
 	if err != nil {
 		return err
 	}
