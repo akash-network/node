@@ -9,10 +9,6 @@ provider-run:
 		--cluster-public-hostname "localhost" \
 		--bid-price-strategy "randomRange"
 
-.PHONY: provider-status
-provider-status:
-	$(AKASHCTL) provider status $(PROVIDER_ADDRESS)
-
 .PHONY: provider-lease-status
 provider-lease-status:
 	$(AKASHCTL) "$(KEY_OPTS)" provider lease-status \
