@@ -28,15 +28,7 @@ Each command is marked __t1__-__t3__ to indicate a suggested terminal number.
 
 ## Setup
 
-**Developer Deps**: You will need `kind` installed, install developer dependencies by running `make devdeps-install` from the `root` directory
-
-**DNS**: To get DNS routing to work locally, there are two addresses which will probably need to set to configure requests to hit the kind docker container. To route requests back to the local interface, add the following two lines to your `/etc/hosts` for the Akashd and Akash-Provider examples to work correctly.
-
-* `127.0.0.1   akash.localhost`
-* `127.0.0.1   akash-provider.localhost`
-
-Or if it does not conflict with other local rules, use a wildcard for localhost:
-* `127.0.0.1   *.localhost`
+**Developer Deps**: You will need `kind` & `kubectl` installed, install developer dependencies by running `make devdeps-install` from the `root` directory
 
 
 ### Overview
@@ -76,7 +68,7 @@ Or if it does not conflict with other local rules, use a wildcard for localhost:
 The following steps will bring up a network and allow for interacting
 with it.
 
-Running through the entire runbook requires four terminals.
+Running through the entire runbook requires three terminals.
 Each command is marked __t1__-__t3__ to indicate a suggested terminal number.
 
 If at any time you'd like to start over with a fresh chain, simply run:
@@ -103,8 +95,7 @@ Both are configured with Makefile targets as specified below. Using Calico enabl
 Network Policies.
 
 **note**: this step waits for kubernetes metrics to be available, which can take some time.
-The counter on the left side of the messages is regularly in the 120 range.  If it goes beyond 250,
-there may be a problem.
+The counter on the left side of the messages is regularly in the 120 range.  If it goes beyond 250, there may be a problem.
 
 **note**: If anything else is listening on port 80 (any other web server), this
 will fail.
