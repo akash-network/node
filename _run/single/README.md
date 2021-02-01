@@ -28,15 +28,7 @@ Each command is marked __t1__-__t3__ to indicate a suggested terminal number.
 
 ## Setup
 
-**Developer Deps**: You will need `kind` installed, install developer dependencies by running `make devdeps-install` from the `root` directory
-
-**DNS**: To get DNS routing to work locally, there are two addresses which will probably need to set to configure requests to hit the kind docker container. To route requests back to the local interface, add the following two lines to your `/etc/hosts` for the Akashd and Akash-Provider examples to work correctly.
-
-* `127.0.0.1   akash.localhost`
-* `127.0.0.1   akash-provider.localhost`
-
-Or if it does not conflict with other local rules, use a wildcard for localhost:
-* `127.0.0.1   *.localhost`
+**Developer Deps**: You will need `kind` & `kubectl` installed, install developer dependencies by running `make devdeps-install` from the `root` directory
 
 
 ### Overview
@@ -76,8 +68,8 @@ Or if it does not conflict with other local rules, use a wildcard for localhost:
 The following steps will bring up a network and allow for interacting
 with it.
 
-Running through the entire runbook requires four terminals.
-Each command is marked __t1__-__t3__ to indicate a suggested terminal number.
+Running through the entire runbook requires two terminals.
+Each command is marked __t1__-__t2__ to indicate a suggested terminal number.
 
 If at any time you'd like to start over with a fresh chain, simply run:
 
@@ -102,12 +94,7 @@ Start and initialize kind. There are two options for network manager; standard C
 Both are configured with Makefile targets as specified below. Using Calico enables testing of
 Network Policies.
 
-**note**: this step waits for kubernetes metrics to be available, which can take some time.
-The counter on the left side of the messages is regularly in the 120 range.  If it goes beyond 250,
-there may be a problem.
-
-**note**: If anything else is listening on port 80 (any other web server), this
-will fail.
+**note**: If anything else is listening on port 80 (any other web server), this will fail.
 
 Pick one of the following commands:
 __t1__
@@ -119,11 +106,10 @@ make kind-cluster-create
 make kind-cluster-calico-create
 ```
 
-# (Optional) Upload a local docker image
+### (Optional) Upload a local docker image
 
 If you specified a custom image in the earlier step you need to upload that image into the Kubernetes
-cluster created by the `kind` command. This uploads an image from your local docker into the Kubernetes
-clsuter.
+cluster created by the `kind` command. This uploads an image from your local docker into the Kubernetes cluster.
 
 __t1__
 ```sh
@@ -187,7 +173,7 @@ make query-provider
 
 In a separate terminal, run the following command
 
-__t3__
+__t2__
 ```sh
 make kustomize-install-provider
 ```
@@ -281,6 +267,9 @@ For example you might need to update the `provider.yaml`'s first line to include
 ## Update Deployment
 
 Updating active Deployments is a two step process. First edit the `deployment.yaml` with whatever changes are desired. Example; update the `image` field.
+
+***note:*** Resource fields cannot be changed when updating a deplyment.
+
  1. Update the Akash Network to inform the Provider that a new Deployment declaration is expected.
    * `make deployment-update`
  2. Send the updated manifest to the Provider to run.
