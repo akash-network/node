@@ -9,7 +9,6 @@ const (
 	errInvalidAddress
 	errCertificateExists
 	errCertificateAlreadyRevoked
-	errCertificateForAccountAlreadyExists
 	errInvalidSerialNumber
 	errInvalidCertificateValue
 	errInvalidPubkeyValue
@@ -28,9 +27,6 @@ var (
 
 	// ErrCertificateAlreadyRevoked certificate already revoked
 	ErrCertificateAlreadyRevoked = sdkerrors.Register(ModuleName, errCertificateAlreadyRevoked, "certificate already revoked")
-
-	// ErrCertificateForAccountAlreadyExists active certificate for such account already exists
-	ErrCertificateForAccountAlreadyExists = sdkerrors.Register(ModuleName, errCertificateForAccountAlreadyExists, "active certificate for such account already exists")
 
 	// ErrInvalidSerialNumber invalid serial number
 	ErrInvalidSerialNumber = sdkerrors.Register(ModuleName, errInvalidSerialNumber, "invalid serial number")
