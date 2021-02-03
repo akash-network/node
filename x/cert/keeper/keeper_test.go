@@ -54,7 +54,7 @@ func TestCertKeeperCreateOwnerMismatch(t *testing.T) {
 	require.False(t, exists)
 }
 
-func TestCertKeeperDuplicate(t *testing.T) {
+func TestCertKeeperMultipleActive(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
 	owner := testutil.AccAddress(t)
 	cert := testutil.Certificate(t, owner)
@@ -76,7 +76,7 @@ func TestCertKeeperDuplicate(t *testing.T) {
 
 	cert1 := testutil.Certificate(t, owner)
 	err = keeper.CreateCertificate(ctx, owner, cert1.PEM.Cert, cert1.PEM.Pub)
-	require.Error(t, err, types.ErrCertificateForAccountAlreadyExists.Error())
+	require.NoError(t, err)
 
 	resp, exists = keeper.GetCertificateByID(ctx, types.CertID{
 		Owner:  owner,
@@ -86,6 +86,15 @@ func TestCertKeeperDuplicate(t *testing.T) {
 	require.Equal(t, types.CertificateValid, resp.State)
 	require.Equal(t, cert.PEM.Cert, resp.Cert)
 	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+
+	resp, exists = keeper.GetCertificateByID(ctx, types.CertID{
+		Owner:  owner,
+		Serial: cert1.Serial,
+	})
+	require.True(t, exists)
+	require.Equal(t, types.CertificateValid, resp.State)
+	require.Equal(t, cert1.PEM.Cert, resp.Cert)
+	require.Equal(t, cert1.PEM.Pub, resp.Pubkey)
 }
 
 func TestCertKeeperRevoke(t *testing.T) {
