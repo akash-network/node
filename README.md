@@ -35,7 +35,7 @@ The easiest way to get started with Akash is by trying Testnet. Sign up [here](h
 ## Join the Community
 
 - [Join Developer Chat](https://akash.network/chat)
-- [Become a validator](https://akash.network/token)
+- [Become a validator](https://akash.network/validators/)
 
 ## Official blog and documentation
 
