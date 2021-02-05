@@ -21,26 +21,26 @@ provider-run:
 
 .PHONY: provider-lease-status
 provider-lease-status:
-	$(AKASHCTL) provider lease-status \
-		--owner     "$(KEY_ADDRESS)" \
+	$(AKASHCTL) "$(KEY_OPTS)" provider lease-status \
 		--dseq      "$(DSEQ)"        \
 		--gseq      "$(GSEQ)"        \
 		--oseq      "$(OSEQ)"        \
+		--from      "$(KEY_NAME)" \
 		--provider  "$(PROVIDER_ADDRESS)"
 
 .PHONY: provider-service-status
 provider-service-status:
-	$(AKASHCTL) provider service-status   \
-		--owner     "$(KEY_ADDRESS)"      \
-		--dseq      "$(DSEQ)"             \
-		--gseq      "$(GSEQ)"             \
-		--oseq      "$(OSEQ)"             \
+	$(AKASHCTL) "$(KEY_OPTS)" provider lease-status \
+		--dseq      "$(DSEQ)"        \
+		--gseq      "$(GSEQ)"        \
+		--oseq      "$(OSEQ)"        \
+		--from      "$(KEY_NAME)" \
 		--provider  "$(PROVIDER_ADDRESS)"
 
 .PHONY: provider-service-logs
 provider-service-logs:
-	$(AKASHCTL) provider service-logs     \
-		--owner     "$(KEY_ADDRESS)"      \
+	$(AKASHCTL) "$(KEY_OPTS)" provider service-logs     \
+		--from     "$(KEY_NAME)"      \
 		--dseq      "$(DSEQ)"             \
 		--gseq      "$(GSEQ)"             \
 		--oseq      "$(OSEQ)"             \

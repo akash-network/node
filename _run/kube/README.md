@@ -178,7 +178,7 @@ And when the order is ready to be matched, a lease will be created:
 make query-leases
 ```
 
-You should now see "pending" inventory inventory in the provider status:
+You should now see "pending" inventory in the provider status:
 
 ```sh
 make provider-status
