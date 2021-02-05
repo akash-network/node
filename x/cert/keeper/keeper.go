@@ -45,16 +45,6 @@ func (k Keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte
 		_ = iter.Close()
 	}()
 
-	// allow only one active certificate per account.
-	// do we actually need it?
-	for ; iter.Valid(); iter.Next() {
-		var val types.Certificate
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
-		if val.State == types.CertificateValid {
-			return types.ErrCertificateForAccountAlreadyExists
-		}
-	}
-
 	val := types.Certificate{
 		State:  types.CertificateValid,
 		Cert:   crt,

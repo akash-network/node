@@ -49,7 +49,7 @@ this example.
 The following steps will bring up a network and allow for interacting
 with it.
 
-Running through the entire runbook requires four terminals.
+Running through the entire runbook requires three terminals.
 Each command is marked __t1__-__t3__ to indicate a suggested terminal number.
 
 If at any time you'd like to start over with a fresh chain, simply run:
@@ -74,7 +74,7 @@ make init
 
 ### Run local network
 
-In a separate terminal, the following command will run the `akashd` node:
+In a separate terminal, the following command will run the `akash` node:
 
 __t2__
 ```sh

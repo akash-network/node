@@ -151,8 +151,8 @@ func TestCertHandlerDuplicate(t *testing.T) {
 	}
 
 	res, err = suite.handler(suite.ctx, msg)
-	require.Nil(t, res)
-	require.Error(t, err, types.ErrCertificateForAccountAlreadyExists.Error())
+	require.NotNil(t, res)
+	require.NoError(t, err)
 
 	resp, exists = suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -162,6 +162,15 @@ func TestCertHandlerDuplicate(t *testing.T) {
 	require.Equal(t, types.CertificateValid, resp.State)
 	require.Equal(t, cert.PEM.Cert, resp.Cert)
 	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+
+	resp, exists = suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
+		Owner:  owner,
+		Serial: cert1.Serial,
+	})
+	require.True(t, exists)
+	require.Equal(t, types.CertificateValid, resp.State)
+	require.Equal(t, cert1.PEM.Cert, resp.Cert)
+	require.Equal(t, cert1.PEM.Pub, resp.Pubkey)
 }
 
 func TestCertHandlerRevoke(t *testing.T) {
