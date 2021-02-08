@@ -26,7 +26,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -206,7 +205,7 @@ func doCreateCmd(cmd *cobra.Command, domains []string) error {
 	// then certificate is being revoked (if valid) and file is removed without any prompts
 	yes := revokeIfExists
 	if !yes {
-		yes, err = getConfirmation(cmd, fmt.Sprintf("certificate already exist for address %s. check it on-chain status?", fromAddress))
+		yes, err = getConfirmation(cmd, fmt.Sprintf("certificate file for address %q already exist. check it on-chain status?", fromAddress))
 		if err != nil {
 			return err
 		}

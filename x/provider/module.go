@@ -26,7 +26,6 @@ import (
 	"github.com/ovrclk/akash/x/provider/client/rest"
 	"github.com/ovrclk/akash/x/provider/handler"
 	"github.com/ovrclk/akash/x/provider/keeper"
-	"github.com/ovrclk/akash/x/provider/query"
 	"github.com/ovrclk/akash/x/provider/simulation"
 	"github.com/ovrclk/akash/x/provider/types"
 )
@@ -134,12 +133,12 @@ func (am AppModule) Route() sdk.Route {
 
 // QuerierRoute returns the provider module's querier route name.
 func (am AppModule) QuerierRoute() string {
-	return types.ModuleName
+	return ""
 }
 
 // LegacyQuerierHandler returns the sdk.Querier for provider module
-func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
-	return query.NewQuerier(am.keeper, legacyQuerierCdc)
+func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
+	return nil
 }
 
 // RegisterServices registers the module's servicess
