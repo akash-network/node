@@ -18,8 +18,6 @@ const (
 
 var (
 	ErrInvalidPath = errors.New("query: invalid path")
-	ErrOwnerValue  = errors.New("query: invalid owner value")
-	ErrStateValue  = errors.New("query: invalid state value")
 )
 
 // getDeploymentsPath returns deployments path for queries
@@ -58,35 +56,6 @@ func ParseDeploymentPath(parts []string) (types.DeploymentID, error) {
 		Owner: owner.String(),
 		DSeq:  dseq,
 	}, nil
-}
-
-// parseDepFiltersPath returns DeploymentFilters details with provided queries, and return
-// error if occurred due to wrong query
-func parseDepFiltersPath(parts []string) (DeploymentFilters, bool, error) {
-	if len(parts) < 2 {
-		return DeploymentFilters{}, false, ErrInvalidPath
-	}
-
-	owner, err := sdk.AccAddressFromBech32(parts[0])
-	if err != nil {
-		return DeploymentFilters{}, false, err
-	}
-
-	if !owner.Empty() && sdk.VerifyAddressFormat(owner) != nil {
-		return DeploymentFilters{}, false, ErrOwnerValue
-	}
-
-	state, ok := types.Deployment_State_value[parts[1]]
-
-	if !ok && (parts[1] != "") {
-		return DeploymentFilters{}, false, ErrStateValue
-	}
-
-	return DeploymentFilters{
-		Owner:        owner,
-		StateFlagVal: parts[1],
-		State:        types.Deployment_State(state),
-	}, ok, nil
 }
 
 // ParseGroupPath returns GroupID details with provided queries, and return

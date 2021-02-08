@@ -55,13 +55,10 @@ func (q Querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 				return nil, status.Error(codes.InvalidArgument, "invalid serial number")
 			}
 
-			cert, found := q.GetCertificateByID(ctx, types.CertID{
+			cert, _ := q.GetCertificateByID(ctx, types.CertID{
 				Owner:  owner,
 				Serial: *serial,
 			})
-			if !found {
-				return nil, status.Error(codes.NotFound, types.ErrCertificateNotFound.Error())
-			}
 
 			if filterCertByState(state, cert.State) {
 				certificates = append(certificates, cert)

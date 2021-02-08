@@ -20,7 +20,6 @@ import (
 	"github.com/ovrclk/akash/x/market/client/rest"
 	"github.com/ovrclk/akash/x/market/handler"
 	"github.com/ovrclk/akash/x/market/keeper"
-	"github.com/ovrclk/akash/x/market/query"
 	"github.com/ovrclk/akash/x/market/simulation"
 	"github.com/ovrclk/akash/x/market/types"
 
@@ -142,12 +141,12 @@ func (am AppModule) Route() sdk.Route {
 
 // QuerierRoute returns the market module's querier route name.
 func (am AppModule) QuerierRoute() string {
-	return types.ModuleName
+	return ""
 }
 
 // LegacyQuerierHandler returns the sdk.Querier for market module
-func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
-	return query.NewQuerier(am.keepers.Market, legacyQuerierCdc)
+func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
+	return nil
 }
 
 // RegisterServices registers the module's services

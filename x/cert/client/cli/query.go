@@ -51,15 +51,6 @@ func cmdGetCertificates() *cobra.Command {
 				Pagination: pageReq,
 			}
 
-			if value := cmd.Flag("serial").Value.String(); value != "" {
-				val, valid := new(big.Int).SetString(value, 10)
-				if !valid {
-					return errInvalidSerialFlag
-				}
-
-				params.Filter.Serial = val.String()
-			}
-
 			if value := cmd.Flag("owner").Value.String(); value != "" {
 				var owner sdk.Address
 				if owner, err = sdk.AccAddressFromBech32(value); err != nil {
@@ -67,6 +58,18 @@ func cmdGetCertificates() *cobra.Command {
 				}
 
 				params.Filter.Owner = owner.String()
+			}
+
+			if value := cmd.Flag("serial").Value.String(); value != "" {
+				if params.Filter.Owner == "" {
+					return errors.Errorf("--serial flag requires --owner to be set")
+				}
+				val, valid := new(big.Int).SetString(value, 10)
+				if !valid {
+					return errInvalidSerialFlag
+				}
+
+				params.Filter.Serial = val.String()
 			}
 
 			if value := cmd.Flag("state").Value.String(); value != "" {
