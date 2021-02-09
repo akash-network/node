@@ -55,12 +55,12 @@ func (q Querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 				return nil, status.Error(codes.InvalidArgument, "invalid serial number")
 			}
 
-			cert, _ := q.GetCertificateByID(ctx, types.CertID{
+			cert, exists := q.GetCertificateByID(ctx, types.CertID{
 				Owner:  owner,
 				Serial: *serial,
 			})
 
-			if filterCertByState(state, cert.State) {
+			if exists && filterCertByState(state, cert.State) {
 				certificates = append(certificates, cert)
 			}
 		} else {
