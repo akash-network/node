@@ -59,12 +59,11 @@ $(MODVENDOR): $(CACHE)
 # https://tip.golang.org/doc/go1.16
 $(GIT_CHGLOG_VERSION_FILE): $(CACHE)
 	@echo "installing git-chglog..."
-	( \
-		eval TMP := $(shell mktemp -d); \
-		trap 'rm -rf "$(TMP)"' EXIT; \
-		cd $(TMP); \
+	bash -c 'TMP=$(shell mktemp -d); \
+		trap "rm -rf $${TMP}" EXIT; \
+		cd $${TMP}; \
 		GOBIN=$(CACHE_BIN) GO111MODULE=on go get -u github.com/git-chglog/git-chglog/cmd/git-chglog@$(GIT_CHGLOG_VERSION) \
-	)
+	'
 	rm -rf "$(dir $@)"
 	mkdir -p "$(dir $@)"
 	touch $@
