@@ -60,7 +60,7 @@ release-dry-run: modvendor gen-changelog
 		-f "$(GORELEASER_CONFIG)" --skip-validate=$(GORELEASER_SKIP_VALIDATE) --rm-dist --skip-publish --release-notes=/go/src/github.com/ovrclk/akash/.cache/changelog.md
 
 .PHONY: release
-release: modvendor gen-changelog
+release: gen-changelog
 	@if [ ! -f ".release-env" ]; then \
 		echo "\033[91m.release-env is required for release\033[0m";\
 		exit 1;\
