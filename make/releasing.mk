@@ -78,4 +78,4 @@ release: modvendor gen-changelog
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		troian/golang-cross:${GOLANG_CROSS_VERSION} \
-		-f "$(GORELEASER_CONFIG)" release --rm-dist --release-notes=/go/src/github.com/ovrclk/akash/.cache/changelog.md
+		-f "$(GORELEASER_CONFIG)" release --debug --rm-dist --release-notes=/go/src/github.com/ovrclk/akash/.cache/changelog.md
