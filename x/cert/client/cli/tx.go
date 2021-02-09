@@ -240,6 +240,23 @@ func doCreateCmd(cmd *cobra.Command, domains []string) error {
 					}
 
 					removeFile = yes
+				} else {
+					cpem, err := cutils.LoadPEMForAccount(cctx, cctx.Keyring)
+					if err != nil {
+						return err
+					}
+
+					msg := &types.MsgCreateCertificate{
+						Owner:  fromAddress.String(),
+						Cert:   cpem.Cert,
+						Pubkey: cpem.Pub,
+					}
+
+					if err = msg.ValidateBasic(); err != nil {
+						return err
+					}
+
+					return tx.GenerateOrBroadcastTxCLI(cctx, cmd.Flags(), msg)
 				}
 			}
 		} else {
