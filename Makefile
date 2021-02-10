@@ -52,9 +52,13 @@ DOCKER_BUF            := $(DOCKER_RUN) bufbuild/buf:$(BUF_VERSION)
 DOCKER_CLANG          := $(DOCKER_RUN) tendermintdev/docker-build-proto
 GOLANGCI_LINT          = $(DOCKER_RUN) --network none golangci/golangci-lint:$(GOLANGCI_LINT_VERSION)-alpine golangci-lint run
 LINT                   = $(GOLANGCI_LINT) ./... --disable-all --deadline=5m --enable
-TEST_DOCKER_REPO      := jackzampolin/akashtest
+TEST_DOCKER_REPO      := ovrclk/akashtest
 
 GORELEASER_CONFIG      = .goreleaser.yaml
+
+GIT_HEAD_COMMIT_LONG  := $(shell git log -1 --format='%H')
+GIT_HEAD_COMMIT_SHORT := $(shell git rev-parse --short HEAD)
+GIT_HEAD_ABBREV       := $(shell git rev-parse --abbrev-ref HEAD)
 
 # BUILD_TAGS are for builds withing this makefile
 # GORELEASER_BUILD_TAGS are for goreleaser only
@@ -78,13 +82,13 @@ GORELEASER_LD_FLAGS = -s -w -X github.com/cosmos/cosmos-sdk/version.Name=akash \
 -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
 -X github.com/cosmos/cosmos-sdk/version.BuildTags="$(GORELEASER_BUILD_TAGS)" \
 -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags --abbrev=0) \
--X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')
+-X github.com/cosmos/cosmos-sdk/version.Commit=$(GIT_HEAD_COMMIT_LONG)
 
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=akash \
 -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
 -X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(BUILD_TAGS)" \
 -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
--X github.com/cosmos/cosmos-sdk/version.Commit=$(shell git log -1 --format='%H')
+-X github.com/cosmos/cosmos-sdk/version.Commit=$(GIT_HEAD_COMMIT_LONG)
 
 # check for nostrip option
 ifeq (,$(findstring nostrip,$(BUILD_OPTIONS)))
@@ -116,13 +120,3 @@ include make/test-simulation.mk
 include make/tools.mk
 include make/environment.mk
 include make/codegen.mk
-
-test-docker:
-	@docker build -f _build/Dockerfile.test -t ${TEST_DOCKER_REPO}:$(shell git rev-parse --short HEAD) .
-	@docker tag ${TEST_DOCKER_REPO}:$(shell git rev-parse --short HEAD) ${TEST_DOCKER_REPO}:$(shell git rev-parse --abbrev-ref HEAD | sed 's#/#_#g')
-	@docker tag ${TEST_DOCKER_REPO}:$(shell git rev-parse --short HEAD) ${TEST_DOCKER_REPO}:latest
-
-test-docker-push: test-docker
-	@docker push ${TEST_DOCKER_REPO}:$(shell git rev-parse --short HEAD)
-	@docker push ${TEST_DOCKER_REPO}:$(shell git rev-parse --abbrev-ref HEAD | sed 's#/#_#g')
-	@docker push ${TEST_DOCKER_REPO}:latest
