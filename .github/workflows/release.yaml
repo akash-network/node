@@ -1,5 +1,9 @@
 name: release
 
+defaults:
+  run:
+    shell: bash
+
 on:
   push:
     branches:
@@ -9,18 +13,31 @@ on:
       - v*
 
 env:
-  # bleh
-  MAINNET: ${{ github.ref == 'refs/heads/mainnet/main' || (startsWith(github.ref,'refs/tags/v') && ( contains(github.ref,'.0.') || contains(github.ref,'.2.') || contains(github.ref,'.4.') || contains(github.ref,'.6.') || contains(github.ref,'.8.') )) }}
-  GOLANG_CROSS_VERSION: v1.15.2
+  GOLANG_VERSION: "v${{ secrets.GOLANG_VERSION }}"
+
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - run: git fetch --prune --unshallow
+      - name: branch name
+        id: branch_name
+        run: |
+          echo ::set-output name=MAINNET::$(./script/mainnet-from-tag.sh ${GITHUB_REF#refs/tags/})
+          echo ::set-output name=GORELEASER_TAG::${GITHUB_REF#refs/tags/}
+      - run: echo "Building for MAINNET=${{ steps.branch_name.outputs.MAINNET }}"
       - uses: actions/setup-go@v2
-      - name: release dry-run
+        with:
+          go-version: "^${{ secrets.GOLANG_VERSION }}"
+      - if: (github.ref == 'refs/heads/master') || (github.ref == 'refs/heads/mainnet/main')
+        name: release dry-run GORELEASER_SKIP_VALIDATE=true
+        run: make release-dry-run GORELEASER_SKIP_VALIDATE=true
+      - if: startsWith(github.ref,'refs/tags/v')
+        name: release dry-run
         run: make release-dry-run
+        env:
+          GORELEASER_TAG: ${{ steps.branch_name.outputs.GORELEASER_TAG }}
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'ovrclk/akash'
         name: setup release environment
         run: |-
@@ -29,4 +46,9 @@ jobs:
           echo 'GITHUB_TOKEN=${{secrets.GORELEASER_ACCESS_TOKEN}}' >> .release-env
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'ovrclk/akash'
         name: release publish
-        run: make release
+        run: |-
+          sudo rm -rf dist
+          make release
+        env:
+          MAINNET: ${{ steps.branch_name.outputs.MAINNET }}
+          GORELEASER_TAG: ${{ steps.branch_name.outputs.GORELEASER_TAG }}
