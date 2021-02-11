@@ -2,6 +2,7 @@ package kube
 
 import (
 	"context"
+	"k8s.io/client-go/util/flowcontrol"
 	"os"
 	"path"
 
@@ -71,7 +72,7 @@ func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client
 	if err != nil {
 		return nil, errors.Wrap(err, "kube: error building config flags")
 	}
-
+	config.RateLimiter = flowcontrol.NewFakeAlwaysRateLimiter()
 	kc, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, errors.Wrap(err, "kube: error creating kubernetes client")
