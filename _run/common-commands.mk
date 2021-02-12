@@ -77,6 +77,35 @@ bid-create:
 		--from  "$(PROVIDER_KEY_NAME)" \
 		--price "$(PRICE)"
 
+.PHONY: bid-close
+bid-close:
+	$(AKASHCTL) tx market bid close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+		--owner "$(KEY_ADDRESS)"       \
+		--dseq  "$(DSEQ)"              \
+		--gseq  "$(GSEQ)"              \
+		--oseq  "$(OSEQ)"              \
+		--from  "$(PROVIDER_KEY_NAME)"
+
+.PHONY: lease-create
+lease-create:
+	$(AKASHCTL) tx market lease create "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+		--owner "$(KEY_ADDRESS)"         \
+		--dseq  "$(DSEQ)"                \
+		--gseq  "$(GSEQ)"                \
+		--oseq  "$(OSEQ)"                \
+		--provider "$(PROVIDER_ADDRESS)" \
+		--from  "$(KEY_NAME)"
+
+.PHONY: lease-withdraw
+lease-withdraw:
+	$(AKASHCTL) tx market lease withdraw "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+		--owner "$(KEY_ADDRESS)"         \
+		--dseq  "$(DSEQ)"                \
+		--gseq  "$(GSEQ)"                \
+		--oseq  "$(OSEQ)"                \
+		--provider "$(PROVIDER_ADDRESS)" \
+		--from  "$(PROVIDER_KEY_NAME)"
+
 .PHONY: lease-close
 lease-close:
 	$(AKASHCTL) tx market lease close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \

@@ -32,6 +32,7 @@ const (
 	errCodeOrderTooEarly
 	errInvalidDeposit
 	errInvalidParam
+	errUnknownProvider
 )
 
 var (
@@ -89,4 +90,6 @@ var (
 	ErrInvalidDeposit = sdkerrors.Register(ModuleName, errInvalidDeposit, "Deposit invalid")
 	// ErrInvalidParam indicates an invalid chain parameter
 	ErrInvalidParam = sdkerrors.Register(ModuleName, errInvalidParam, "parameter invalid")
+	// ErrUnknownProvider indicates an invalid chain parameter
+	ErrUnknownProvider = sdkerrors.Register(ModuleName, errUnknownProvider, "unknown provider")
 )

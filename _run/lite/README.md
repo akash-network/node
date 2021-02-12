@@ -15,6 +15,7 @@ The [instructions](#runbook) below will illustrate how to:
 * [Run provider services](#run-provider-services) _(optional)_
 * [Create a deployment](#create-a-deployment)
 * [Bid on an order](#create-a-bid)
+* [Create a lease](#create-a-lease)
 * [Terminate a lease](#terminate-lease)
 
 See [commands](#commands) for a full list of utilities meant
@@ -190,6 +191,45 @@ __t1__
 make provider-status
 ```
 
+### Create a lease
+
+Create a lease for the bid from the provider:
+
+__t1__
+```sh
+make lease-create
+```
+
+You should be able to see the lease with
+
+__t1__
+```sh
+make query-leases
+```
+
+### Withdraw from the lease
+
+Withdraw some funds from the lease
+
+__t1__
+```sh
+make lease-withdraw
+```
+
+You should be able to see the escrow payment change in
+
+__t1__
+```sh
+make query-leases
+```
+
+and
+
+__t1__
+```sh
+make query-accounts
+```
+
 ### Terminate lease
 
 There are a number of ways that a lease can be terminated.
@@ -198,14 +238,14 @@ There are a number of ways that a lease can be terminated.
 
 __t1__
 ```sh
-make lease-close
+make bid-close
 ```
 
 #### Tenant closes the order
 
 __t1__
 ```sh
-make order-close
+make lease-close
 ```
 
 #### Tenant closes the deployment

@@ -68,7 +68,7 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 
 	var prov ptypes.Provider
 	if prov, found = ms.keepers.Provider.Get(ctx, provider); !found {
-		return nil, types.ErrEmptyProvider
+		return nil, types.ErrUnknownProvider
 	}
 
 	provAttr, _ := ms.keepers.Audit.GetProviderAttributes(ctx, provider)
