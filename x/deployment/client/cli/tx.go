@@ -2,12 +2,15 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/sdl"
+	cutils "github.com/ovrclk/akash/x/cert/utils"
 	"github.com/ovrclk/akash/x/deployment/types"
 
 	"github.com/spf13/cobra"
@@ -39,6 +42,16 @@ func cmdCreate(key string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
+				return err
+			}
+
+			// first lets validate certificate exists for given account
+			if _, err = cutils.LoadCertificateForAccount(clientCtx, clientCtx.Keyring); err != nil {
+				if os.IsNotExist(err) {
+					err = errors.Errorf("no certificate file found for account %q.\n"+
+						"consider creating it as certificate required to submit manifest", clientCtx.FromAddress.String())
+				}
+
 				return err
 			}
 
