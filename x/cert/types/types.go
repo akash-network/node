@@ -38,6 +38,8 @@ func ToCertID(id CertificateID) (CertID, error) {
 // Certificates is the collection of Certificate
 type Certificates []Certificate
 
+type CertificatesResponse []CertificateResponse
+
 // String implements the Stringer interface for a Certificates object.
 func (obj Certificates) String() string {
 	var buf bytes.Buffer

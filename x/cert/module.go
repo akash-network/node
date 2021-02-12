@@ -21,9 +21,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/x/cert/client/cli"
-	"github.com/ovrclk/akash/x/cert/client/rest"
 	"github.com/ovrclk/akash/x/cert/handler"
 	"github.com/ovrclk/akash/x/cert/keeper"
+	"github.com/ovrclk/akash/x/cert/simulation"
 	"github.com/ovrclk/akash/x/cert/types"
 )
 
@@ -76,8 +76,8 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONMarshaler, _ client.TxEncodi
 }
 
 // RegisterRESTRoutes registers rest routes for this module
-func (AppModuleBasic) RegisterRESTRoutes(clientCtx client.Context, rtr *mux.Router) {
-	rest.RegisterRoutes(clientCtx, rtr, StoreKey)
+func (AppModuleBasic) RegisterRESTRoutes(_ client.Context, _ *mux.Router) {
+
 }
 
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the provider module.
@@ -123,7 +123,7 @@ func (AppModule) Name() string {
 }
 
 // RegisterInvariants registers module invariants
-func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
+func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
 // Route returns the message routing key for the audit module.
 func (am AppModule) Route() sdk.Route {
@@ -140,11 +140,10 @@ func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
 	return nil
 }
 
-// RegisterServices registers the module's servicess
+// RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), handler.NewMsgServerImpl(am.keeper))
-	querier := keeper.Querier{Keeper: am.keeper}
-	types.RegisterQueryServer(cfg.QueryServer(), querier)
+	types.RegisterQueryServer(cfg.QueryServer(), am.keeper.Querier())
 }
 
 // BeginBlock performs no-op
@@ -152,7 +151,7 @@ func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 
 // EndBlock returns the end blocker for the audit module. It returns no auditor
 // updates.
-func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
+func (am AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 	return []abci.ValidatorUpdate{}
 }
 
@@ -188,7 +187,7 @@ func NewAppModuleSimulation(k keeper.Keeper) AppModuleSimulation {
 // AppModuleSimulation functions
 // GenerateGenesisState creates a randomized GenState of the staking module.
 func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
-	// simulation.RandomizedGenState(simState)
+	simulation.RandomizedGenState(simState)
 }
 
 // ProposalContents doesn't return any content functions for governance proposals.
@@ -197,16 +196,16 @@ func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []sim.Weig
 }
 
 // RandomizedParams creates randomized staking param changes for the simulator.
-func (AppModuleSimulation) RandomizedParams(r *rand.Rand) []sim.ParamChange {
+func (AppModuleSimulation) RandomizedParams(_ *rand.Rand) []sim.ParamChange {
 	return nil
 }
 
 // RegisterStoreDecoder registers a decoder for staking module's types
-func (AppModuleSimulation) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
+func (AppModuleSimulation) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
 
 }
 
 // WeightedOperations returns the all the staking module operations with their respective weights.
-func (am AppModuleSimulation) WeightedOperations(simState module.SimulationState) []sim.WeightedOperation {
+func (am AppModuleSimulation) WeightedOperations(_ module.SimulationState) []sim.WeightedOperation {
 	return nil
 }

@@ -19,3 +19,14 @@ func TxCreateServerExec(clientCtx client.Context, from fmt.Stringer, host string
 
 	return clitestutil.ExecTestCLICmd(clientCtx, cmdCreateServer(), args)
 }
+
+// TxCreateClientExec is used for testing create client certificate tx
+func TxCreateClientExec(clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
+	args := []string{
+		fmt.Sprintf("--from=%s", from.String()),
+	}
+
+	args = append(args, extraArgs...)
+
+	return clitestutil.ExecTestCLICmd(clientCtx, cmdCreateClient(), args)
+}

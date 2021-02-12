@@ -14,18 +14,18 @@ import (
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
-type Querier struct {
-	Keeper
+type querier struct {
+	keeper
 }
 
-var _ types.QueryServer = Querier{}
+var _ types.QueryServer = &querier{}
 
-func (q Querier) Certificates(c context.Context, req *types.QueryCertificatesRequest) (*types.QueryCertificatesResponse, error) {
+func (q querier) Certificates(c context.Context, req *types.QueryCertificatesRequest) (*types.QueryCertificatesResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	var certificates types.Certificates
+	var certificates types.CertificatesResponse
 	var pageRes *sdkquery.PageResponse
 	var err error
 
@@ -55,13 +55,13 @@ func (q Querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 				return nil, status.Error(codes.InvalidArgument, "invalid serial number")
 			}
 
-			cert, exists := q.GetCertificateByID(ctx, types.CertID{
+			item, exists := q.GetCertificateByID(ctx, types.CertID{
 				Owner:  owner,
 				Serial: *serial,
 			})
 
-			if exists && filterCertByState(state, cert.State) {
-				certificates = append(certificates, cert)
+			if exists && filterCertByState(state, item.Certificate.State) {
+				certificates = append(certificates, item)
 			}
 		} else {
 			page, limit, err := sdkquery.ParsePagination(req.Pagination)
@@ -71,25 +71,24 @@ func (q Querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 
 			it := sdkstore.KVStorePrefixIteratorPaginated(store, certificatePrefix(owner), uint(page), uint(limit))
 			for ; it.Valid(); it.Next() {
-				var cert types.Certificate
-				if e := q.cdc.UnmarshalBinaryBare(it.Value(), &cert); e != nil {
+				item, err := q.unmarshalIterator(it.Key(), it.Value())
+				if err != nil {
 					return nil, err
 				}
-
-				if filterCertByState(state, cert.State) {
-					certificates = append(certificates, cert)
+				if filterCertByState(state, item.Certificate.State) {
+					certificates = append(certificates, item)
 				}
 			}
 		}
 	} else {
 		pageRes, err = sdkquery.Paginate(store, req.Pagination, func(key []byte, value []byte) error {
-			var cert types.Certificate
-			if e := q.cdc.UnmarshalBinaryBare(value, &cert); e != nil {
+			item, err := q.unmarshalIterator(key, value)
+			if err != nil {
 				return err
 			}
 
-			if filterCertByState(state, cert.State) {
-				certificates = append(certificates, cert)
+			if filterCertByState(state, item.Certificate.State) {
+				certificates = append(certificates, item)
 			}
 			return nil
 		})

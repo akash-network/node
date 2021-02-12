@@ -16,6 +16,19 @@ service Query {
   }
 }
 
+message CertificateResponse {
+  Certificate certificate = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "certificate",
+    (gogoproto.moretags) = "yaml:\"certificate\""
+  ];
+
+  string serial = 2 [
+    (gogoproto.jsontag) = "serial",
+    (gogoproto.moretags) = "yaml:\"serial\""
+  ];
+}
+
 // QueryDeploymentsRequest is request type for the Query/Deployments RPC method
 message QueryCertificatesRequest {
   CertificateFilter filter = 1 [
@@ -27,9 +40,9 @@ message QueryCertificatesRequest {
 
 // QueryCertificatesResponse is response type for the Query/Certificates RPC method
 message QueryCertificatesResponse {
-  repeated Certificate certificates = 1 [
+  repeated CertificateResponse certificates = 1 [
     (gogoproto.nullable) = false,
-    (gogoproto.castrepeated) = "Certificates"
+    (gogoproto.castrepeated) = "CertificatesResponse"
   ];
 
   cosmos.base.query.v1beta1.PageResponse pagination = 2;

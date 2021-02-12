@@ -14,7 +14,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
+
 	"github.com/ovrclk/akash/testutil"
+	ccli "github.com/ovrclk/akash/x/cert/client/cli"
 	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
 	"github.com/ovrclk/akash/x/market/client/cli"
 	"github.com/ovrclk/akash/x/market/types"
@@ -48,6 +50,18 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	val := s.network.Validators[0]
+
+	// Create client certificate
+	_, err = ccli.TxCreateClientExec(
+		val.ClientCtx,
+		val.Address,
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
 
 	deploymentPath, err := filepath.Abs("./../../../deployment/testdata/deployment.yaml")
 	s.Require().NoError(err)

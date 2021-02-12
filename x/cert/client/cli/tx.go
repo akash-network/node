@@ -48,6 +48,7 @@ func GetTxCmd() *cobra.Command {
 		Use:                        types.ModuleName,
 		Short:                      "Certificates transaction subcommands",
 		SuggestionsMinimumDistance: 2,
+		DisableFlagParsing:         true,
 		RunE:                       sdkclient.ValidateCmd,
 	}
 
@@ -61,8 +62,11 @@ func GetTxCmd() *cobra.Command {
 
 func cmdCreate() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "create/update api certificates",
+		Use:                        "create",
+		Short:                      "create/update api certificates",
+		SuggestionsMinimumDistance: 2,
+		DisableFlagParsing:         true,
+		RunE:                       sdkclient.ValidateCmd,
 	}
 
 	cmd.AddCommand(
@@ -260,7 +264,7 @@ func doCreateCmd(cmd *cobra.Command, domains []string) error {
 				}
 			}
 		} else {
-			if res.Certificates[0].State == types.CertificateValid {
+			if res.Certificates[0].Certificate.IsState(types.CertificateValid) {
 				err = doRevoke(cctx, cmd.Flags(), x509cert.SerialNumber.String())
 				if err == nil {
 					removeFile = true

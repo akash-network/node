@@ -13,6 +13,7 @@ const (
 	errInvalidCertificateValue
 	errInvalidPubkeyValue
 	errInvalidState
+	errInvalidKeySize
 )
 
 var (
@@ -39,4 +40,7 @@ var (
 
 	// ErrInvalidState invalid certificate state
 	ErrInvalidState = sdkerrors.Register(ModuleName, errInvalidState, "invalid state")
+
+	// ErrInvalidState invalid certificate state
+	ErrInvalidKeySize = sdkerrors.Register(ModuleName, errInvalidKeySize, "invalid key size")
 )
