@@ -38,22 +38,24 @@ type IKeeper interface {
 
 // Keeper of the deployment store
 type Keeper struct {
-	skey   sdk.StoreKey
-	cdc    codec.BinaryMarshaler
-	pspace paramtypes.Subspace
+	skey    sdk.StoreKey
+	cdc     codec.BinaryMarshaler
+	pspace  paramtypes.Subspace
+	ekeeper EscrowKeeper
 }
 
 // NewKeeper creates and returns an instance for deployment keeper
-func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey, pspace paramtypes.Subspace) IKeeper {
+func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) IKeeper {
 
 	if !pspace.HasKeyTable() {
 		pspace = pspace.WithKeyTable(types.ParamKeyTable())
 	}
 
 	return Keeper{
-		skey:   skey,
-		cdc:    cdc,
-		pspace: pspace,
+		skey:    skey,
+		cdc:     cdc,
+		pspace:  pspace,
+		ekeeper: ekeeper,
 	}
 }
 

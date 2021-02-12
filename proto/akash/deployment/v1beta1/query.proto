@@ -37,7 +37,7 @@ message QueryDeploymentsRequest {
 
 // QueryDeploymentsResponse is response type for the Query/Deployments RPC method
 message QueryDeploymentsResponse {
-  repeated DeploymentResponse deployments = 1
+  repeated QueryDeploymentResponse deployments = 1
       [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "DeploymentResponses"];
 
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
@@ -50,8 +50,12 @@ message QueryDeploymentRequest {
 
 // QueryDeploymentResponse is response type for the Query/Deployment RPC method
 message QueryDeploymentResponse {
-  DeploymentResponse deployment = 1 [(gogoproto.nullable) = false];
-  akash.escrow.v1beta1.Account escrow_account = 2 [
+  option (gogoproto.equal)            = false;
+  Deployment deployment = 1
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "deployment", (gogoproto.moretags) = "yaml:\"deployment\""];
+  repeated Group groups = 2
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "groups", (gogoproto.moretags) = "yaml:\"groups\""];
+  akash.escrow.v1beta1.Account escrow_account = 3 [
     (gogoproto.nullable) = false
   ];
 }

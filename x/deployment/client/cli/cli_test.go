@@ -85,7 +85,7 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	fmt.Println(string(resp.Bytes()))
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &deployment)
 	s.Require().NoError(err)
-	s.Require().Equal(createdDep, deployment.Deployment)
+	s.Require().Equal(createdDep, deployment)
 
 	// test query deployments with filters
 	resp, err = cli.QueryDeploymentsExec(
@@ -121,7 +121,7 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	var deploymentV2 types.QueryDeploymentResponse
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &deploymentV2)
 	s.Require().NoError(err)
-	s.Require().NotEqual(deployment.Deployment.Version, deploymentV2.Deployment.Deployment.Version)
+	s.Require().NotEqual(deployment.Deployment.Version, deploymentV2.Deployment.Version)
 
 	// test query deployments with wrong owner value
 	_, err = cli.QueryDeploymentsExec(

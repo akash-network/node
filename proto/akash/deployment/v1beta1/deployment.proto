@@ -140,18 +140,6 @@ message Deployment {
   bytes version = 3 [(gogoproto.jsontag) = "version", (gogoproto.moretags) = "yaml:\"version\""];
 }
 
-// DeploymentResponse represents details of deployment along with group details
-message DeploymentResponse {
-  option (gogoproto.equal)            = false;
-  option (gogoproto.goproto_stringer) = false;
-
-  Deployment deployment = 1
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "deployment", (gogoproto.moretags) = "yaml:\"deployment\""];
-  repeated Group groups = 2
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "groups", (gogoproto.moretags) = "yaml:\"groups\""];
-  bytes version = 3 [(gogoproto.jsontag) = "version", (gogoproto.moretags) = "yaml:\"version\""];
-}
-
 // DeploymentFilters defines filters used to filter deployments
 message DeploymentFilters {
   option (gogoproto.equal) = false;

@@ -14,13 +14,16 @@ import (
 	"github.com/ovrclk/akash/testutil/state"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
+	ekeeper "github.com/ovrclk/akash/x/escrow/keeper"
+	etypes "github.com/ovrclk/akash/x/escrow/types"
 )
 
 type grpcTestSuite struct {
-	t      *testing.T
-	app    *app.AkashApp
-	ctx    sdk.Context
-	keeper keeper.IKeeper
+	t       *testing.T
+	app     *app.AkashApp
+	ctx     sdk.Context
+	keeper  keeper.IKeeper
+	ekeeper ekeeper.Keeper
 
 	queryClient types.QueryClient
 }
@@ -28,10 +31,11 @@ type grpcTestSuite struct {
 func setupTest(t *testing.T) *grpcTestSuite {
 	ssuite := state.SetupTestSuite(t)
 	suite := &grpcTestSuite{
-		t:      t,
-		app:    ssuite.App(),
-		ctx:    ssuite.Context(),
-		keeper: ssuite.DeploymentKeeper(),
+		t:       t,
+		app:     ssuite.App(),
+		ctx:     ssuite.Context(),
+		keeper:  ssuite.DeploymentKeeper(),
+		ekeeper: ssuite.EscrowKeeper(),
 	}
 
 	querier := suite.keeper.NewQuerier()
@@ -51,9 +55,11 @@ func TestGRPCQueryDeployment(t *testing.T) {
 	err := suite.keeper.Create(suite.ctx, deployment, groups)
 	require.NoError(t, err)
 
+	eid := suite.createEscrowAccount(deployment.ID())
+
 	var (
 		req           *types.QueryDeploymentRequest
-		expDeployment types.DeploymentResponse
+		expDeployment types.QueryDeploymentResponse
 	)
 
 	testCases := []struct {
@@ -89,7 +95,7 @@ func TestGRPCQueryDeployment(t *testing.T) {
 			"success",
 			func() {
 				req = &types.QueryDeploymentRequest{ID: deployment.DeploymentID}
-				expDeployment = types.DeploymentResponse{
+				expDeployment = types.QueryDeploymentResponse{
 					Deployment: deployment,
 					Groups:     groups,
 				}
@@ -109,7 +115,9 @@ func TestGRPCQueryDeployment(t *testing.T) {
 			if tc.expPass {
 				require.NoError(t, err)
 				require.NotNil(t, res)
-				require.Equal(t, expDeployment, res.Deployment)
+				require.Equal(t, expDeployment.Deployment, res.Deployment)
+				require.Equal(t, expDeployment.Groups, res.Groups)
+				require.Equal(t, eid, res.EscrowAccount.ID)
 			} else {
 				require.Error(t, err)
 				require.Nil(t, res)
@@ -126,11 +134,13 @@ func TestGRPCQueryDeployments(t *testing.T) {
 	deployment, groups := suite.createDeployment()
 	err := suite.keeper.Create(suite.ctx, deployment, groups)
 	require.NoError(t, err)
+	suite.createEscrowAccount(deployment.ID())
 
 	deployment2, groups2 := suite.createDeployment()
 	deployment2.State = types.DeploymentClosed
 	err = suite.keeper.Create(suite.ctx, deployment2, groups2)
 	require.NoError(t, err)
+	suite.createEscrowAccount(deployment2.ID())
 
 	var req *types.QueryDeploymentsRequest
 
@@ -283,4 +293,19 @@ func (suite *grpcTestSuite) createDeployment() (types.Deployment, []types.Group)
 	}
 
 	return deployment, groups
+}
+
+func (suite *grpcTestSuite) createEscrowAccount(id types.DeploymentID) etypes.AccountID {
+	owner, err := sdk.AccAddressFromBech32(id.Owner)
+	require.NoError(suite.t, err)
+
+	eid := types.EscrowAccountForDeployment(id)
+
+	err = suite.ekeeper.AccountCreate(suite.ctx,
+		eid,
+		owner,
+		types.DefaultDeploymentMinDeposit,
+	)
+	require.NoError(suite.t, err)
+	return eid
 }

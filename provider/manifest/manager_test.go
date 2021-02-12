@@ -70,15 +70,12 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 	}
 
 	res := &types.QueryDeploymentResponse{
-		Deployment: types.DeploymentResponse{
-			Deployment: types.Deployment{
-				DeploymentID: did,
-				State:        0,
-				Version:      version,
-			},
-			Groups:  groups,
-			Version: version,
+		Deployment: types.Deployment{
+			DeploymentID: did,
+			State:        0,
+			Version:      version,
 		},
+		Groups: groups,
 	}
 	queryMock.On("Deployment", mock.Anything, mock.Anything).Return(res, nil)
 

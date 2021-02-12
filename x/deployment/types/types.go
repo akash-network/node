@@ -2,7 +2,6 @@ package types
 
 import (
 	"bytes"
-	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -167,19 +166,8 @@ func (r Resource) FullPrice() sdk.Coin {
 	return sdk.NewCoin(r.Price.Denom, r.Price.Amount.MulRaw(int64(r.Count)))
 }
 
-func (d DeploymentResponse) String() string {
-	return fmt.Sprintf(`Deployment
-	Owner:   %s
-	DSeq:    %d
-	State:   %v
-	Version: %s
-	Num Groups: %d
-	`, d.Deployment.DeploymentID.Owner, d.Deployment.DeploymentID.DSeq,
-		d.Deployment.State, d.Deployment.Version, len(d.Groups))
-}
-
 // DeploymentResponses is a collection of DeploymentResponse
-type DeploymentResponses []DeploymentResponse
+type DeploymentResponses []QueryDeploymentResponse
 
 func (ds DeploymentResponses) String() string {
 	var buf bytes.Buffer

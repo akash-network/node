@@ -48,9 +48,19 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 		// filter deployments with provided filters
 		if req.Filters.Accept(deployment, stateVal) {
 			if accumulate {
-				value := types.DeploymentResponse{
-					Deployment: deployment,
-					Groups:     k.GetGroups(ctx, deployment.ID()),
+
+				account, err := k.ekeeper.GetAccount(
+					ctx,
+					types.EscrowAccountForDeployment(deployment.ID()),
+				)
+				if err != nil {
+					return true, err
+				}
+
+				value := types.QueryDeploymentResponse{
+					Deployment:    deployment,
+					Groups:        k.GetGroups(ctx, deployment.ID()),
+					EscrowAccount: account,
 				}
 
 				deployments = append(deployments, value)
@@ -88,12 +98,21 @@ func (k Querier) Deployment(c context.Context, req *types.QueryDeploymentRequest
 		return nil, types.ErrDeploymentNotFound
 	}
 
-	value := types.DeploymentResponse{
-		Deployment: deployment,
-		Groups:     k.GetGroups(ctx, req.ID),
+	account, err := k.ekeeper.GetAccount(
+		ctx,
+		types.EscrowAccountForDeployment(req.ID),
+	)
+	if err != nil {
+		return &types.QueryDeploymentResponse{}, err
 	}
 
-	return &types.QueryDeploymentResponse{Deployment: value}, nil
+	value := &types.QueryDeploymentResponse{
+		Deployment:    deployment,
+		Groups:        k.GetGroups(ctx, req.ID),
+		EscrowAccount: account,
+	}
+
+	return value, nil
 }
 
 // Group returns group details based on GroupID
