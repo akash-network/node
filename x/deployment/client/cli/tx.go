@@ -99,7 +99,6 @@ func cmdCreate(key string) *cobra.Command {
 	flags.AddTxFlagsToCmd(cmd)
 	AddDeploymentIDFlags(cmd.Flags())
 	common.AddDepositFlags(cmd.Flags(), DefaultDeposit)
-	common.MarkReqDepositFlags(cmd)
 
 	return cmd
 }

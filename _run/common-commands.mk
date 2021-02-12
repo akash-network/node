@@ -9,7 +9,6 @@ PROVIDER_KEY_NAME    ?= provider
 PROVIDER_ADDRESS     ?= $(shell $(AKASHCTL_NONODE) keys show $(KEY_OPTS) "$(PROVIDER_KEY_NAME)" -a)
 PROVIDER_CONFIG_PATH ?= provider.yaml
 
-
 SDL_PATH ?= deployment.yaml
 
 DSEQ          ?= 1

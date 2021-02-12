@@ -93,7 +93,6 @@ func cmdBidCreate(key string) *cobra.Command {
 	AddOrderIDFlags(cmd.Flags())
 	cmd.Flags().String("price", "", "Bid Price")
 	common.AddDepositFlags(cmd.Flags(), DefaultDeposit)
-	common.MarkReqDepositFlags(cmd)
 
 	return cmd
 }

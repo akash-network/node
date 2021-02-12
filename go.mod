@@ -46,8 +46,10 @@ require (
 	k8s.io/apimachinery v0.19.3
 	k8s.io/client-go v0.19.3
 	k8s.io/code-generator v0.19.3
+	k8s.io/klog v1.0.0 // indirect
 	k8s.io/metrics v0.19.3
-	sigs.k8s.io/kind v0.9.0
+	sigs.k8s.io/kind v0.10.0
+	sigs.k8s.io/structured-merge-diff/v3 v3.0.0 // indirect
 )
 
 replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
