@@ -14,8 +14,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
+	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
@@ -81,14 +84,14 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.validator = s.network.Validators[0]
 
 	// Send coins value
-	sendTokens := sdk.NewCoin(s.cfg.BondDenom, mtypes.DefaultBidMinDeposit.Amount.MulRaw(4))
+	sendTokens := sdk.NewCoin(s.cfg.BondDenom, mtypes.DefaultBidMinDeposit.Amount.MulRaw(2))
 
 	// Setup a Provider key
 	s.keyProvider, err = s.validator.ClientCtx.Keyring.Key("keyFoo")
 	s.Require().NoError(err)
 
 	// give provider some coins
-	_, err = bankcli.MsgSendExec(
+	res, err := bankcli.MsgSendExec(
 		s.validator.ClientCtx,
 		s.validator.Address,
 		s.keyProvider.GetAddress(),
@@ -101,12 +104,15 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 
+	err = validateTxSuccessful(s.validator.ClientCtx, res.Bytes())
+	s.Require().NoError(err)
+
 	// Set up second tenant key
 	s.keyTenant, err = s.validator.ClientCtx.Keyring.Key("keyBar")
 	s.Require().NoError(err)
 
 	// give tenant some coins too
-	_, err = bankcli.MsgSendExec(
+	res, err = bankcli.MsgSendExec(
 		s.validator.ClientCtx,
 		s.validator.Address,
 		s.keyTenant.GetAddress(),
@@ -118,6 +124,9 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
+
+	err = validateTxSuccessful(s.validator.ClientCtx, res.Bytes())
+	s.Require().NoError(err)
 
 	// address for provider to listen on
 	_, port, err := server.FreeTCPAddr()
@@ -289,6 +298,30 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	s.Require().True(len(qResp.Deployments) == len(deployResp.Deployments), "Deployment Close Failed")
 
 	s.network.Cleanup()
+}
+
+// this function is a gentle response to inappropriate approach of cli test utils
+// send transaction may fail and calling cli routine won't know about it
+func validateTxSuccessful(cctx client.Context, data []byte) error {
+	type txResp struct {
+		TxHash string `json:"txhash"`
+	}
+
+	resp := txResp{}
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return err
+	}
+
+	res, err := authclient.QueryTx(cctx, resp.TxHash)
+	if err != nil {
+		return err
+	}
+
+	if res.Code != 0 {
+		return errors.Errorf("transaction failed: %s:%d", res.Codespace, res.Code)
+	}
+
+	return nil
 }
 
 func newestLease(leases []mtypes.QueryLeaseResponse) mtypes.Lease {
@@ -603,7 +636,7 @@ func (s *IntegrationTestSuite) TestE2EApp() {
 	resp, err = deploycli.QueryDeploymentExec(s.validator.ClientCtx.WithOutputFormat("json"), createdDep.Deployment.DeploymentID)
 	s.Require().NoError(err)
 
-	deploymentResp := dtypes.DeploymentResponse{}
+	deploymentResp := dtypes.QueryDeploymentResponse{}
 	err = s.validator.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &deploymentResp)
 	s.Require().NoError(err)
 	s.Require().Equal(createdDep, deploymentResp)
