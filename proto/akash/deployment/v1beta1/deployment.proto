@@ -138,6 +138,7 @@ message Deployment {
 
   State state   = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
   bytes version = 3 [(gogoproto.jsontag) = "version", (gogoproto.moretags) = "yaml:\"version\""];
+  int64 created_at = 4;
 }
 
 // DeploymentFilters defines filters used to filter deployments

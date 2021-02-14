@@ -91,9 +91,10 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 	}
 
 	order := types.Order{
-		OrderID: types.MakeOrderID(gid, oseq),
-		Spec:    spec,
-		State:   types.OrderOpen,
+		OrderID:   types.MakeOrderID(gid, oseq),
+		Spec:      spec,
+		State:     types.OrderOpen,
+		CreatedAt: ctx.BlockHeight(),
 	}
 
 	key := orderKey(order.ID())
@@ -117,9 +118,10 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 	store := ctx.KVStore(k.skey)
 
 	bid := types.Bid{
-		BidID: types.MakeBidID(oid, provider),
-		State: types.BidOpen,
-		Price: price,
+		BidID:     types.MakeBidID(oid, provider),
+		State:     types.BidOpen,
+		Price:     price,
+		CreatedAt: ctx.BlockHeight(),
 	}
 
 	key := bidKey(bid.ID())
@@ -144,9 +146,10 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 	store := ctx.KVStore(k.skey)
 
 	lease := types.Lease{
-		LeaseID: types.LeaseID(bid.ID()),
-		State:   types.LeaseActive,
-		Price:   bid.Price,
+		LeaseID:   types.LeaseID(bid.ID()),
+		State:     types.LeaseActive,
+		Price:     bid.Price,
+		CreatedAt: ctx.BlockHeight(),
 	}
 
 	// create (active) lease in store

@@ -49,6 +49,8 @@ message Order {
   State state    = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
   akash.deployment.v1beta1.GroupSpec spec = 3
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "spec", (gogoproto.moretags) = "yaml:\"spec\""];
+
+  int64 created_at = 4;
 }
 
 // OrderFilters defines flags for order list filter
