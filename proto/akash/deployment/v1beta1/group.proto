@@ -112,6 +112,8 @@ message Group {
   State     state      = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
   GroupSpec group_spec = 3
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "spec", (gogoproto.moretags) = "yaml:\"spec\""];
+
+  int64 created_at = 4;
 }
 
 // Resource stores unit, total count and price of resource

@@ -45,6 +45,7 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		DeploymentID: msg.ID,
 		State:        types.DeploymentActive,
 		Version:      msg.Version,
+		CreatedAt:    ctx.BlockHeight(),
 	}
 
 	if err := types.ValidateDeploymentGroups(msg.Groups); err != nil {
@@ -58,6 +59,7 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 			GroupID:   types.MakeGroupID(deployment.ID(), uint32(idx+1)),
 			State:     types.GroupOpen,
 			GroupSpec: spec,
+			CreatedAt: ctx.BlockHeight(),
 		})
 	}
 
