@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -19,19 +18,7 @@ import (
 )
 
 const (
-	denom                = "uakt"
-	denomStartValue      = 150
-	keyFoo               = "foo"
-	keyBar               = "bar"
-	keyBaz               = "baz"
-	fooStartValue        = 1000
-	feeDenom             = "uakt"
-	feeStartValue        = 1000000
-	deploymentFilePath   = "./../x/deployment/testdata/deployment.yaml"
-	deploymentV2FilePath = "./../x/deployment/testdata/deployment-v2.yaml"
-	deploymentOvrclkApp  = "./../_run/kube/deployment.yaml"
-	providerFilePath     = "./../x/provider/testdata/provider.yaml"
-	providerTemplate     = `host: %s
+	providerTemplate = `host: %s
 attributes:
   - key: region
     value: us-west
@@ -48,21 +35,6 @@ func integrationTestOnly(t testing.TB) {
 	if !found || val != "true" {
 		t.Skip("SKIPPING INTEGRATION TEST")
 	}
-}
-
-// newAkashCoin
-func newAkashCoin(amt int64) sdk.Coin {
-	return sdk.NewInt64Coin(denom, amt)
-}
-
-// ___________________________________________________________________________________
-// utils
-func addFlags(cmd string, flags []string) string {
-	for _, f := range flags {
-		cmd += " " + f
-	}
-
-	return strings.TrimSpace(cmd)
 }
 
 func queryAppWithRetries(t *testing.T, appURL string, appHost string, limit int) *http.Response {
