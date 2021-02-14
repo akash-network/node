@@ -25,29 +25,34 @@ import (
 	"github.com/ovrclk/akash/types"
 )
 
-const (
-	defaultMinCPUUnit     = 10
-	defaultMaxCPUUnit     = 500
-	defaultMinMemorySize  = 1024
-	defaultMaxMemorySize  = 1073741824
-	defaultMinStorageSize = 1024
-	defaultMaxStorageSize = 1073741824
-)
-
 func RandRangeInt(min, max int) int {
 	return rand.Intn(max-min) + min // nolint: gosec
+}
+
+func RandRangeUint(min, max uint) uint {
+	val := rand.Uint64() // nolint: gosec
+	val %= uint64(max - min)
+	val += uint64(min)
+	return uint(val)
+}
+
+func RandRangeUint64(min, max uint64) uint64 {
+	val := rand.Uint64() // nolint: gosec
+	val %= max - min
+	val += min
+	return val
 }
 
 func ResourceUnits(_ testing.TB) types.ResourceUnits {
 	return types.ResourceUnits{
 		CPU: &types.CPU{
-			Units: types.NewResourceValue(uint64(RandRangeInt(defaultMinCPUUnit, defaultMaxCPUUnit))),
+			Units: types.NewResourceValue(uint64(RandCPUUnits())),
 		},
 		Memory: &types.Memory{
-			Quantity: types.NewResourceValue(uint64(RandRangeInt(defaultMinMemorySize, defaultMaxMemorySize))),
+			Quantity: types.NewResourceValue(RandMemoryQuantity()),
 		},
 		Storage: &types.Storage{
-			Quantity: types.NewResourceValue(uint64(RandRangeInt(defaultMinStorageSize, defaultMaxStorageSize))),
+			Quantity: types.NewResourceValue(RandStorageQuantity()),
 		},
 	}
 }

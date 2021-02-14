@@ -13,6 +13,13 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
+var (
+	serviceNameValidationRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
+	envVarValidatorRegex       = regexp.MustCompile(`^[-._a-zA-Z][-._a-zA-Z0-9]*$`)
+	hostnameRegex              = regexp.MustCompile(`^[[:alnum:],-,\.]+\.[[:alpha:]]{2,}$`)
+	hostnameMaxLen             = 255
+)
+
 // ValidateManifest does validation for manifest
 func ValidateManifest(m manifest.Manifest) error {
 	if len(m) == 0 {
@@ -62,9 +69,6 @@ func validateManifestGroup(group manifest.Group, helper *validateManifestGroupsH
 	}
 	return nil
 }
-
-var serviceNameValidationRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
-var envVarValidatorRegex = regexp.MustCompile(`^[-._a-zA-Z][-._a-zA-Z0-9]*$`)
 
 func validateManifestService(service manifest.Service, helper *validateManifestGroupsHelper) error {
 	if len(service.Name) == 0 {
@@ -139,10 +143,6 @@ func validateServiceExpose(serviceName string, serviceExpose manifest.ServiceExp
 
 	return nil
 }
-
-var hostnameRegex = regexp.MustCompile(`^[[:alnum:],-,\.]+\.[[:alpha:]]{2,}$`)
-
-const hostnameMaxLen = 255
 
 func isValidHostname(hostname string) bool {
 	return len(hostname) <= hostnameMaxLen && hostnameRegex.MatchString(hostname)

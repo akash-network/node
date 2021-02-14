@@ -6,8 +6,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/validation/constants"
 	"github.com/pkg/errors"
-
-	"github.com/ovrclk/akash/types/unit"
 )
 
 func validateGroupPricing(gspec GroupSpec) error {
@@ -43,12 +41,6 @@ func validateGroupPricing(gspec GroupSpec) error {
 		mem = mem.Add(memCount.Mul(sdk.NewIntFromUint64(uint64(resource.Count))))
 	}
 
-	minprice := mem.Mul(sdk.NewInt(validationConfig.MinGroupMemPrice)).Quo(sdk.NewInt(unit.Gi))
-
-	if price.Amount.LT(minprice) {
-		return errors.Errorf("group %v: price too low (%v >= %v fails)", gspec.GetName(), price, minprice)
-	}
-
 	return nil
 }
 
@@ -57,11 +49,11 @@ func validateUnitPricing(rg Resource) error {
 		return errors.Errorf("error: invalid price object")
 	}
 
-	if rg.Price.Amount.GT(sdk.NewIntFromUint64(uint64(validationConfig.MaxUnitPrice))) {
+	if rg.Price.Amount.GT(sdk.NewIntFromUint64(validationConfig.MaxUnitPrice)) {
 		return errors.Errorf("error: invalid unit price (%v > %v fails)", validationConfig.MaxUnitPrice, rg.Price)
 	}
 
-	if rg.Price.Amount.LT(sdk.NewIntFromUint64(uint64(validationConfig.MinUnitPrice))) {
+	if rg.Price.Amount.LT(sdk.NewIntFromUint64(validationConfig.MinUnitPrice)) {
 		return errors.Errorf("error: invalid unit price (%v < %v fails)", validationConfig.MinUnitPrice, rg.Price)
 	}
 	return nil

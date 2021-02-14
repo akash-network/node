@@ -44,6 +44,12 @@ deployment-create:
 		--dseq "$(DSEQ)" 			   \
 		--from "$(KEY_NAME)"
 
+.PHONY: deployment-deposit
+deployment-deposit:
+	$(AKASHCTL) tx deployment deposit "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(PRICE)" -y \
+		--dseq "$(DSEQ)" 			   \
+		--from "$(KEY_NAME)"
+
 .PHONY: deployment-update
 deployment-update:
 	$(AKASHCTL) tx deployment update "$(KEY_OPTS)" "$(SDL_PATH)" -y \
@@ -209,3 +215,7 @@ create-server-certificate:
 .PHONY: revoke-certificate
 revoke-certificate:
 	$(AKASHCTL) $(KEY_OPTS) $(CHAIN_OPTS) tx cert revoke --from=$(KEY_NAME) -y
+
+.PHONY: events-run
+events-run:
+	$(AKASHCTL) events

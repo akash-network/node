@@ -63,13 +63,13 @@ func validSimpleGroupSpec() types.GroupSpec {
 			},
 			Memory: &akashtypes.Memory{
 				Quantity: akashtypes.ResourceValue{
-					Val: sdk.NewInt(1024),
+					Val: sdk.NewIntFromUint64(types.GetValidationConfig().MinUnitMemory),
 				},
 				Attributes: nil,
 			},
 			Storage: &akashtypes.Storage{
 				Quantity: akashtypes.ResourceValue{
-					Val: sdk.NewInt(1025),
+					Val: sdk.NewIntFromUint64(types.GetValidationConfig().MinUnitStorage),
 				},
 				Attributes: nil,
 			},

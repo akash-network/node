@@ -50,13 +50,13 @@ func makeMocks(s *orderTestScaffold) {
 	groupResult.Group.GroupSpec.Resources = make([]dtypes.Resource, 1)
 
 	cpu := atypes.CPU{}
-	cpu.Units = atypes.NewResourceValue(11)
+	cpu.Units = atypes.NewResourceValue(uint64(dtypes.GetValidationConfig().MinUnitCPU))
 
 	memory := atypes.Memory{}
-	memory.Quantity = atypes.NewResourceValue(10000)
+	memory.Quantity = atypes.NewResourceValue(dtypes.GetValidationConfig().MinUnitMemory)
 
 	storage := atypes.Storage{}
-	storage.Quantity = atypes.NewResourceValue(4096)
+	storage.Quantity = atypes.NewResourceValue(dtypes.GetValidationConfig().MinUnitStorage)
 
 	clusterResources := atypes.ResourceUnits{
 		CPU:     &cpu,
@@ -66,7 +66,7 @@ func makeMocks(s *orderTestScaffold) {
 	price := sdk.NewInt64Coin(testutil.CoinDenom, 23)
 	resource := dtypes.Resource{
 		Resources: clusterResources,
-		Count:     10,
+		Count:     2,
 		Price:     price,
 	}
 
