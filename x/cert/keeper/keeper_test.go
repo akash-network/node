@@ -29,9 +29,7 @@ func TestCertKeeperCreate(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 }
 
 func TestCertKeeperCreateOwnerMismatch(t *testing.T) {
@@ -67,9 +65,7 @@ func TestCertKeeperMultipleActive(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	err = keeper.CreateCertificate(ctx, owner, cert.PEM.Cert, cert.PEM.Pub)
 	require.Error(t, err, types.ErrCertificateExists.Error())
@@ -83,18 +79,14 @@ func TestCertKeeperMultipleActive(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	resp, exists = keeper.GetCertificateByID(ctx, types.CertID{
 		Owner:  owner,
 		Serial: cert1.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert1.PEM.Cert, resp.Cert)
-	require.Equal(t, cert1.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert1, resp, types.CertificateValid)
 }
 
 func TestCertKeeperRevoke(t *testing.T) {
@@ -110,9 +102,7 @@ func TestCertKeeperRevoke(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	err = keeper.RevokeCertificate(ctx, types.CertID{
 		Owner:  owner,
@@ -125,9 +115,7 @@ func TestCertKeeperRevoke(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateRevoked, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateRevoked)
 
 	err = keeper.RevokeCertificate(ctx, types.CertID{
 		Owner:  owner,
@@ -149,10 +137,7 @@ func TestCertKeeperRevokeCreateRevoked(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
-
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 	err = keeper.RevokeCertificate(ctx, types.CertID{
 		Owner:  owner,
 		Serial: cert.Serial,
@@ -164,9 +149,7 @@ func TestCertKeeperRevokeCreateRevoked(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateRevoked, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateRevoked)
 
 	err = keeper.CreateCertificate(ctx, owner, cert.PEM.Cert, cert.PEM.Pub)
 	require.Error(t, err, types.ErrCertificateExists.Error())
@@ -185,10 +168,7 @@ func TestCertKeeperRevokeCreate(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
-
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 	err = keeper.RevokeCertificate(ctx, types.CertID{
 		Owner:  owner,
 		Serial: cert.Serial,
@@ -200,9 +180,7 @@ func TestCertKeeperRevokeCreate(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateRevoked, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateRevoked)
 
 	cert1 := testutil.Certificate(t, owner)
 	err = keeper.CreateCertificate(ctx, owner, cert1.PEM.Cert, cert1.PEM.Pub)

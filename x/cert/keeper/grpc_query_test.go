@@ -30,7 +30,7 @@ func setupTest(t *testing.T) *grpcTestSuite {
 
 	suite.app = app.Setup(false)
 	suite.ctx, suite.keeper = setupKeeper(t)
-	querier := keeper.Querier{Keeper: suite.keeper}
+	querier := suite.keeper.Querier()
 
 	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, suite.app.InterfaceRegistry())
 	types.RegisterQueryServer(queryHelper, querier)
@@ -157,8 +157,14 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 				require.NotNil(t, res)
 				if expCertificates != nil {
 					sortCerts(expCertificates)
-					sortCerts(res.Certificates)
-					require.Equal(t, expCertificates, res.Certificates)
+
+					respCerts := make(types.Certificates, len(res.Certificates))
+					for i, cert := range res.Certificates {
+						respCerts[i] = cert.Certificate
+					}
+
+					sortCerts(respCerts)
+					require.Equal(t, expCertificates, respCerts)
 				}
 			} else {
 				require.NotNil(t, res)

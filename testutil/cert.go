@@ -16,6 +16,7 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/require"
 
 	"github.com/ovrclk/akash/client/mocks"
 	"github.com/ovrclk/akash/x/cert/types"
@@ -188,14 +189,25 @@ func Certificate(t testing.TB, addr sdk.Address, opts ...CertificateOption) Test
 				},
 			}).
 			Return(&types.QueryCertificatesResponse{
-				Certificates: []types.Certificate{
-					{
-						State:  types.CertificateValid,
-						Cert:   res.PEM.Cert,
-						Pubkey: res.PEM.Pub,
+				Certificates: types.CertificatesResponse{
+					types.CertificateResponse{
+						Certificate: types.Certificate{
+							State:  types.CertificateValid,
+							Cert:   res.PEM.Cert,
+							Pubkey: res.PEM.Pub,
+						},
+						Serial: res.Serial.String(),
 					},
 				},
 			}, nil)
 	}
 	return res
+}
+
+func CertificateRequireEqualResponse(t *testing.T, cert TestCertificate, resp types.CertificateResponse, state types.Certificate_State) {
+	t.Helper()
+
+	require.Equal(t, state, resp.Certificate.State)
+	require.Equal(t, cert.PEM.Cert, resp.Certificate.Cert)
+	require.Equal(t, cert.PEM.Pub, resp.Certificate.Pubkey)
 }
