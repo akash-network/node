@@ -34,7 +34,7 @@ type AuditKeeper interface {
 type DeploymentKeeper interface {
 	GetGroup(ctx sdk.Context, id dtypes.GroupID) (dtypes.Group, bool)
 	OnBidClosed(ctx sdk.Context, id dtypes.GroupID) error
-	OnLeaseClosed(ctx sdk.Context, id dtypes.GroupID) error
+	OnLeaseClosed(ctx sdk.Context, id dtypes.GroupID) (dtypes.Group, error)
 }
 
 // Keepers include all modules keepers

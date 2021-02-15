@@ -263,9 +263,6 @@ func (ms msgServer) CloseLease(goCtx context.Context, msg *types.MsgCloseLease) 
 	if lease.State != types.LeaseActive {
 		return &types.MsgCloseLeaseResponse{}, types.ErrOrderClosed
 	}
-	if err := ms.keepers.Deployment.OnLeaseClosed(ctx, msg.LeaseID.GroupID()); err != nil {
-		return &types.MsgCloseLeaseResponse{}, err
-	}
 
 	ms.keepers.Market.OnLeaseClosed(ctx, lease, types.LeaseClosed)
 	ms.keepers.Market.OnBidClosed(ctx, bid)
@@ -278,5 +275,17 @@ func (ms msgServer) CloseLease(goCtx context.Context, msg *types.MsgCloseLease) 
 		return &types.MsgCloseLeaseResponse{}, err
 	}
 
+	group, err := ms.keepers.Deployment.OnLeaseClosed(ctx, msg.LeaseID.GroupID())
+	if err != nil {
+		return &types.MsgCloseLeaseResponse{}, err
+	}
+
+	if group.State != dtypes.GroupOpen {
+		return &types.MsgCloseLeaseResponse{}, nil
+	}
+	if _, err := ms.keepers.Market.CreateOrder(ctx, group.ID(), group.GroupSpec); err != nil {
+		return &types.MsgCloseLeaseResponse{}, err
+	}
 	return &types.MsgCloseLeaseResponse{}, nil
+
 }

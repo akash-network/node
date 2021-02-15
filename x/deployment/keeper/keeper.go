@@ -23,7 +23,7 @@ type IKeeper interface {
 	WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool)
 	WithDeploymentsActive(ctx sdk.Context, fn func(types.Deployment) bool)
 	OnBidClosed(ctx sdk.Context, id types.GroupID) error
-	OnLeaseClosed(ctx sdk.Context, id types.GroupID) error
+	OnLeaseClosed(ctx sdk.Context, id types.GroupID) (types.Group, error)
 	OnDeploymentClosed(ctx sdk.Context, group types.Group)
 	GetParams(ctx sdk.Context) (params types.Params)
 	SetParams(ctx sdk.Context, params types.Params)
@@ -270,12 +270,12 @@ func (k Keeper) OnBidClosed(ctx sdk.Context, id types.GroupID) error {
 }
 
 // OnLeaseClosed sets the group to state closed.
-func (k Keeper) OnLeaseClosed(ctx sdk.Context, id types.GroupID) error {
+func (k Keeper) OnLeaseClosed(ctx sdk.Context, id types.GroupID) (types.Group, error) {
 	group, ok := k.GetGroup(ctx, id)
 	if !ok {
-		return types.ErrGroupNotFound
+		return types.Group{}, types.ErrGroupNotFound
 	}
-	return k.OnCloseGroup(ctx, group, types.GroupClosed)
+	return group, nil
 }
 
 // OnDeploymentClosed updates group state to group closed
