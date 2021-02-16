@@ -3,17 +3,23 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"net/url"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // String implements the Stringer interface for a Provider object.
 func (p Provider) String() string {
-	return fmt.Sprintf(`Deployment
+	res := fmt.Sprintf(`Deployment
 	Owner:   %s
 	HostURI: %s
 	Attributes: %v
 	`, p.Owner, p.HostURI, p.Attributes)
+
+	if !p.Info.IsEmpty() {
+		res += fmt.Sprintf("Info: %v\n", p.Info)
+	}
+	return res
 }
 
 // Providers is the collection of Provider
@@ -45,4 +51,17 @@ func (p *Provider) Address() sdk.AccAddress {
 	}
 
 	return owner
+}
+
+func (m ProviderInfo) IsEmpty() bool {
+	return m.EMail == "" && m.Website == ""
+}
+
+func (m ProviderInfo) Validate() error {
+	if m.Website != "" {
+		if _, err := url.Parse(m.Website); err != nil {
+			return ErrInvalidInfoWebsite
+		}
+	}
+	return nil
 }

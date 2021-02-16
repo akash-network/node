@@ -18,6 +18,19 @@ service Msg {
   rpc DeleteProvider(MsgDeleteProvider) returns (MsgDeleteProviderResponse);
 }
 
+// ProviderInfo
+message ProviderInfo {
+  string email = 1 [
+    (gogoproto.customname) = "EMail",
+    (gogoproto.jsontag)    = "email",
+    (gogoproto.moretags)   = "yaml:\"email\""
+  ];
+  string website = 2 [
+    (gogoproto.jsontag)    = "website",
+    (gogoproto.moretags)   = "yaml:\"website\""
+  ];
+}
+
 // MsgCreateProvider defines an SDK message for creating a provider
 message MsgCreateProvider {
   option (gogoproto.equal) = false;
@@ -33,6 +46,12 @@ message MsgCreateProvider {
     (gogoproto.nullable)     = false,
     (gogoproto.jsontag)      = "attributes",
     (gogoproto.moretags)     = "yaml:\"attributes\""
+  ];
+
+  ProviderInfo info = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "info",
+    (gogoproto.moretags) = "yaml:\"info\""
   ];
 }
 
@@ -54,6 +73,11 @@ message MsgUpdateProvider {
     (gogoproto.nullable)     = false,
     (gogoproto.jsontag)      = "attributes",
     (gogoproto.moretags)     = "yaml:\"attributes\""
+  ];
+  ProviderInfo info = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "info",
+    (gogoproto.moretags) = "yaml:\"info\""
   ];
 }
 
@@ -86,5 +110,11 @@ message Provider {
     (gogoproto.nullable)     = false,
     (gogoproto.jsontag)      = "attributes",
     (gogoproto.moretags)     = "yaml:\"attributes\""
+  ];
+
+  ProviderInfo info = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "info",
+    (gogoproto.moretags) = "yaml:\"info\""
   ];
 }

@@ -19,6 +19,10 @@ import (
 	"github.com/ovrclk/akash/x/provider/types"
 )
 
+const (
+	emailValid = "test@example.com"
+)
+
 type testSuite struct {
 	t       testing.TB
 	ctx     sdk.Context
@@ -54,7 +58,39 @@ func TestProviderCreate(t *testing.T) {
 
 	msg := &types.MsgCreateProvider{
 		Owner:   testutil.AccAddress(t).String(),
-		HostURI: testutil.Hostname(t),
+		HostURI: testutil.ProviderHostname(t),
+	}
+
+	res, err := suite.handler(suite.ctx, msg)
+	require.NotNil(t, res)
+	require.NoError(t, err)
+
+	t.Run("ensure event created", func(t *testing.T) {
+
+		iev := testutil.ParseProviderEvent(t, res.Events)
+		require.IsType(t, types.EventProviderCreated{}, iev)
+
+		dev := iev.(types.EventProviderCreated)
+
+		require.Equal(t, msg.Owner, dev.Owner.String())
+	})
+
+	res, err = suite.handler(suite.ctx, msg)
+	require.Nil(t, res)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, types.ErrProviderExists))
+}
+
+func TestProviderCreateWithInfo(t *testing.T) {
+	suite := setupTestSuite(t)
+
+	msg := &types.MsgCreateProvider{
+		Owner:   testutil.AccAddress(t).String(),
+		HostURI: testutil.ProviderHostname(t),
+		Info: types.ProviderInfo{
+			EMail:   emailValid,
+			Website: testutil.Hostname(t),
+		},
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
@@ -82,7 +118,7 @@ func TestProviderCreateWithDuplicated(t *testing.T) {
 
 	msg := &types.MsgCreateProvider{
 		Owner:      testutil.AccAddress(t).String(),
-		HostURI:    testutil.Hostname(t),
+		HostURI:    testutil.ProviderHostname(t),
 		Attributes: testutil.Attributes(t),
 	}
 
@@ -98,13 +134,13 @@ func TestProviderUpdateWithDuplicated(t *testing.T) {
 
 	createMsg := &types.MsgCreateProvider{
 		Owner:      testutil.AccAddress(t).String(),
-		HostURI:    testutil.Hostname(t),
+		HostURI:    testutil.ProviderHostname(t),
 		Attributes: testutil.Attributes(t),
 	}
 
 	updateMsg := &types.MsgUpdateProvider{
 		Owner:      createMsg.Owner,
-		HostURI:    testutil.Hostname(t),
+		HostURI:    testutil.ProviderHostname(t),
 		Attributes: createMsg.Attributes,
 	}
 
@@ -125,13 +161,13 @@ func TestProviderUpdateExisting(t *testing.T) {
 
 	createMsg := &types.MsgCreateProvider{
 		Owner:      addr.String(),
-		HostURI:    testutil.Hostname(t),
+		HostURI:    testutil.ProviderHostname(t),
 		Attributes: testutil.Attributes(t),
 	}
 
 	updateMsg := &types.MsgUpdateProvider{
 		Owner:      addr.String(),
-		HostURI:    testutil.Hostname(t),
+		HostURI:    testutil.ProviderHostname(t),
 		Attributes: createMsg.Attributes,
 	}
 
@@ -141,7 +177,6 @@ func TestProviderUpdateExisting(t *testing.T) {
 	res, err := suite.handler(suite.ctx, updateMsg)
 
 	t.Run("ensure event created", func(t *testing.T) {
-
 		iev := testutil.ParseProviderEvent(t, res.Events[1:])
 		require.IsType(t, types.EventProviderUpdated{}, iev)
 
@@ -158,7 +193,7 @@ func TestProviderUpdateNotExisting(t *testing.T) {
 	suite := setupTestSuite(t)
 	msg := &types.MsgUpdateProvider{
 		Owner:   testutil.AccAddress(t).String(),
-		HostURI: testutil.Hostname(t),
+		HostURI: testutil.ProviderHostname(t),
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
@@ -174,13 +209,13 @@ func TestProviderUpdateAttributes(t *testing.T) {
 
 	createMsg := &types.MsgCreateProvider{
 		Owner:      addr.String(),
-		HostURI:    testutil.Hostname(t),
+		HostURI:    testutil.ProviderHostname(t),
 		Attributes: testutil.Attributes(t),
 	}
 
 	updateMsg := &types.MsgUpdateProvider{
 		Owner:      addr.String(),
-		HostURI:    testutil.Hostname(t),
+		HostURI:    testutil.ProviderHostname(t),
 		Attributes: createMsg.Attributes,
 	}
 
@@ -231,7 +266,7 @@ func TestProviderDeleteExisting(t *testing.T) {
 
 	createMsg := &types.MsgCreateProvider{
 		Owner:   addr.String(),
-		HostURI: testutil.Hostname(t),
+		HostURI: testutil.ProviderHostname(t),
 	}
 
 	deleteMsg := &types.MsgDeleteProvider{
