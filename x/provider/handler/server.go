@@ -34,17 +34,14 @@ var _ types.MsgServer = msgServer{}
 func (ms msgServer) CreateProvider(goCtx context.Context, msg *types.MsgCreateProvider) (*types.MsgCreateProviderResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	owner, err := sdk.AccAddressFromBech32(msg.Owner)
-	if err != nil {
+	if err := msg.ValidateBasic(); err != nil {
 		return nil, err
 	}
+
+	owner, _ := sdk.AccAddressFromBech32(msg.Owner)
 
 	if _, ok := ms.provider.Get(ctx, owner); ok {
 		return nil, errors.Wrapf(types.ErrProviderExists, "id: %s", msg.Owner)
-	}
-
-	if err := msg.Attributes.Validate(); err != nil {
-		return nil, err
 	}
 
 	if err := ms.provider.Create(ctx, types.Provider(*msg)); err != nil {
@@ -57,18 +54,15 @@ func (ms msgServer) CreateProvider(goCtx context.Context, msg *types.MsgCreatePr
 func (ms msgServer) UpdateProvider(goCtx context.Context, msg *types.MsgUpdateProvider) (*types.MsgUpdateProviderResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	owner, err := sdk.AccAddressFromBech32(msg.Owner)
+	err := msg.ValidateBasic()
 	if err != nil {
 		return nil, err
 	}
 
+	owner, _ := sdk.AccAddressFromBech32(msg.Owner)
 	prov, found := ms.provider.Get(ctx, owner)
 	if !found {
 		return nil, errors.Wrapf(types.ErrProviderNotFound, "id: %s", msg.Owner)
-	}
-
-	if err := msg.Attributes.Validate(); err != nil {
-		return nil, err
 	}
 
 	// all filtering code below is madness!. should make an index to not melt the cpu
