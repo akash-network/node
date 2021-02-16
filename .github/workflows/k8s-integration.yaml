@@ -8,6 +8,7 @@ on:
     paths:
       - pkg/**
       - provider/cluster/kube/*
+      - integration/*
 
 jobs:
   crd-e2e:
