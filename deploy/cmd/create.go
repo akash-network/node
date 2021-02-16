@@ -4,8 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/ovrclk/akash/cmd/common"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+	"math/rand"
 	"os"
+	"sort"
 	"sync"
 	"time"
 
@@ -36,9 +40,11 @@ func retryIfGatewayClientResponseError(err error) bool {
 }
 
 var errDeployTimeout = errors.New("Timed out while trying to deploy")
+var DefaultDeposit = dtypes.DefaultDeploymentMinDeposit
 
 // createCmd represents the create command
 func createCmd() *cobra.Command {
+
 	cmd := &cobra.Command{
 		Use:   "create [sdl-file]",
 		Args:  cobra.ExactArgs(1),
@@ -84,8 +90,9 @@ func createCmd() *cobra.Command {
 
 			// Listen to on chain events and send the manifest when required
 			leasesReady := make(chan struct{}, 1)
+			bids := make(chan mtypes.EventBidCreated, 1)
 			group.Go(func() error {
-				if err = ChainEmitter(ctx, clientCtx, DeploymentDataUpdateHandler(dd, leasesReady), SendManifestHander(clientCtx, dd, gClientDir, retryConfiguration)); err != nil && !errors.Is(err, context.Canceled) {
+				if err = ChainEmitter(ctx, clientCtx, DeploymentDataUpdateHandler(dd, bids, leasesReady), SendManifestHander(clientCtx, dd, gClientDir, retryConfiguration)); err != nil && !errors.Is(err, context.Canceled) {
 					log.Error("error watching events", "err", err)
 					cancel()
 				}
@@ -96,6 +103,15 @@ func createCmd() *cobra.Command {
 			group.Go(func() error {
 				if err = TxCreateDeployment(clientCtx, cmd.Flags(), dd); err != nil && !errors.Is(err, context.Canceled) {
 					log.Error("error creating deployment", "err", err)
+					cancel()
+				}
+				return err
+			})
+
+			wfb := newWaitForBids(dd, bids)
+			group.Go(func() error {
+				if err = wfb.run(ctx, cancel, clientCtx, cmd.Flags()); err != nil && !errors.Is(err, context.Canceled) {
+					log.Error("error waiting for bids to be made", "err", err)
 					cancel()
 				}
 				return err
@@ -178,8 +194,108 @@ func createCmd() *cobra.Command {
 
 	flags.AddTxFlagsToCmd(cmd)
 	dcli.AddDeploymentIDFlags(cmd.Flags())
+	common.AddDepositFlags(cmd.Flags(), DefaultDeposit)
 
 	return cmd
+}
+
+func newWaitForBids(dd *DeploymentData, bids <-chan mtypes.EventBidCreated) *waitForBids {
+	return &waitForBids{
+		bids:       bids,
+		groupCount: len(dd.Groups),
+	}
+}
+
+type waitForBids struct {
+	groupCount int
+	bids       <-chan mtypes.EventBidCreated
+}
+
+type bidList []mtypes.EventBidCreated
+
+func (bl bidList) Len() int {
+	return len(bl)
+}
+
+func (bl bidList) Less(i, j int) bool {
+	lhs := bl[i]
+	rhs := bl[j]
+
+	if !lhs.Price.Amount.Equal(rhs.Price.Amount) {
+		return lhs.Price.Amount.LT(rhs.Price.Amount)
+	}
+
+	return lhs.ID.Provider < rhs.ID.Provider
+}
+
+func (bl bidList) Swap(i, j int) {
+	bl[i], bl[j] = bl[j], bl[i]
+}
+
+func (wfb *waitForBids) run(ctx context.Context, cancel context.CancelFunc, clientCtx client.Context, flags *pflag.FlagSet) error {
+	var bidDeadline <-chan time.Time
+	allBids := make(map[uint32]bidList)
+loop:
+	for {
+		select {
+		case bid := <-wfb.bids:
+			logger.Debug("Processing bid")
+			bidsForGroup := allBids[bid.ID.GSeq]
+
+			allBids[bid.ID.GSeq] = append(bidsForGroup, bid)
+
+			// If there is a bid for at least every group, then start the deadline
+			if nil == bidDeadline && len(allBids) == wfb.groupCount {
+				logger.Debug("All groups have at least one bid")
+				// TODO - this value was made up
+				ticker := time.NewTicker(time.Second * 15)
+				bidDeadline = ticker.C
+				defer ticker.Stop()
+			}
+
+		case <-ctx.Done():
+			cancel()
+			return context.Canceled
+		case <-bidDeadline:
+			logger.Info("Done waiting on bids", "qty", len(allBids))
+			break loop
+		}
+	}
+
+	for gseq, bidsForGroup := range allBids {
+		// Create the lease, using the lowest price
+		sort.Sort(bidsForGroup)
+		winningBid := bidsForGroup[0]
+
+		// check for more than 1 bid having the same price
+		if len(allBids) > 1 && winningBid.Price.Equal(bidsForGroup[1].Price) {
+			identical := make(bidList, 0)
+			for _, bid := range bidsForGroup {
+				if bid.Price.Equal(winningBid.Price) {
+					identical = append(identical, bid)
+				}
+			}
+			logger.Info("Multiple bids with identical price", "gseq", gseq, "price", winningBid.Price.String(), "qty", len(identical))
+			rng := rand.New(rand.NewSource(int64(winningBid.ID.DSeq))) //nolint
+			choice := rng.Intn(len(identical))
+
+			winningBid = identical[choice]
+		}
+
+		logger.Info("Winning bid", "gseq", gseq, "price", winningBid.Price.String(), "provider", winningBid.ID.Provider)
+
+		ev := &mtypes.MsgCreateLease{
+			BidID: winningBid.ID,
+		}
+
+		_, err := SendMsgs(clientCtx, flags, []sdk.Msg{ev})
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
 }
 
 func newWaitForLeases(dd *DeploymentData, gClientDir *gateway.ClientDirectory, retryConfiguration []retry.Option, leasesReady <-chan struct{}) *waitForLeases {

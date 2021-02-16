@@ -166,7 +166,8 @@ func Test_OnBidClosed(t *testing.T) {
 
 	groups := createActiveDeployment(t, ctx, keeper)
 
-	keeper.OnBidClosed(ctx, groups[0].ID())
+	err := keeper.OnBidClosed(ctx, groups[0].ID())
+	require.NoError(t, err)
 
 	t.Run("target group changed", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[0].ID())
