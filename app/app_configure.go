@@ -1,5 +1,3 @@
-// +build !mainnet
-
 package app
 
 import (
