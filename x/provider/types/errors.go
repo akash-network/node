@@ -12,6 +12,7 @@ const (
 	errInvalidAddress
 	errAttributes
 	errIncompatibleAttributes
+	errInvalidInfoWebsite
 )
 
 var (
@@ -35,4 +36,7 @@ var (
 
 	// ErrIncompatibleAttributes error code for attributes update
 	ErrIncompatibleAttributes = sdkerrors.Register(ModuleName, errIncompatibleAttributes, "attributes cannot be changed")
+
+	// ErrInvalidInfoWebsite register error code for invalid info website
+	ErrInvalidInfoWebsite = sdkerrors.Register(ModuleName, errInvalidInfoWebsite, "invalid provider: invalid info website")
 )

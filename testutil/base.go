@@ -34,6 +34,10 @@ func Hostname(t testing.TB) string {
 	return Name(t, "hostname") + ".test.com"
 }
 
+func ProviderHostname(t testing.TB) string {
+	return "https://" + Hostname(t)
+}
+
 // Attribute generates a random sdk.Attribute
 func Attribute(t testing.TB) types.Attribute {
 	t.Helper()
