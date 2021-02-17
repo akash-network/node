@@ -134,8 +134,10 @@ func (g Group) ValidateClosable() error {
 // ValidatePausable provides error response if group is not pausable
 func (g Group) ValidatePausable() error {
 	switch g.State {
-	case GroupClosed, GroupPaused:
+	case GroupClosed:
 		return ErrGroupClosed
+	case GroupPaused:
+		return ErrGroupPaused
 	default:
 		return nil
 	}
@@ -144,8 +146,10 @@ func (g Group) ValidatePausable() error {
 // ValidatePausable provides error response if group is not pausable
 func (g Group) ValidateStartable() error {
 	switch g.State {
-	case GroupPaused:
+	case GroupClosed:
 		return ErrGroupClosed
+	case GroupOpen:
+		return ErrGroupOpen
 	default:
 		return nil
 	}

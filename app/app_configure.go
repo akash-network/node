@@ -10,6 +10,7 @@ import (
 	"github.com/ovrclk/akash/x/escrow"
 	ekeeper "github.com/ovrclk/akash/x/escrow/keeper"
 	"github.com/ovrclk/akash/x/market"
+	mhooks "github.com/ovrclk/akash/x/market/hooks"
 	"github.com/ovrclk/akash/x/provider"
 )
 
@@ -56,9 +57,6 @@ func (app *AkashApp) setAkashKeepers() {
 		app.keeper.escrow,
 	)
 
-	app.keeper.escrow.
-		AddOnAccountClosedHook(app.keeper.deployment.OnEscrowAccountClosed)
-
 	app.keeper.market = market.NewKeeper(
 		app.appCodec,
 		app.keys[market.StoreKey],
@@ -66,8 +64,10 @@ func (app *AkashApp) setAkashKeepers() {
 		app.keeper.escrow,
 	)
 
-	app.keeper.escrow.
-		AddOnPaymentClosedHook(app.keeper.market.OnEscrowPaymentClosed)
+	hook := mhooks.New(app.keeper.deployment, app.keeper.market)
+
+	app.keeper.escrow.AddOnAccountClosedHook(hook.OnEscrowAccountClosed)
+	app.keeper.escrow.AddOnPaymentClosedHook(hook.OnEscrowPaymentClosed)
 
 	app.keeper.provider = provider.NewKeeper(
 		app.appCodec,

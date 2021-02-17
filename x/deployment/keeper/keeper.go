@@ -7,7 +7,6 @@ import (
 
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/ovrclk/akash/x/deployment/types"
-	etypes "github.com/ovrclk/akash/x/escrow/types"
 )
 
 type IKeeper interface {
@@ -17,17 +16,15 @@ type IKeeper interface {
 	GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group
 	Create(ctx sdk.Context, deployment types.Deployment, groups []types.Group) error
 	UpdateDeployment(ctx sdk.Context, deployment types.Deployment) error
+	CloseDeployment(ctx sdk.Context, deployment types.Deployment)
 	OnCloseGroup(ctx sdk.Context, group types.Group, state types.Group_State) error
 	OnPauseGroup(ctx sdk.Context, group types.Group) error
 	OnStartGroup(ctx sdk.Context, group types.Group) error
 	WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool)
-	WithDeploymentsActive(ctx sdk.Context, fn func(types.Deployment) bool)
 	OnBidClosed(ctx sdk.Context, id types.GroupID) error
 	OnLeaseClosed(ctx sdk.Context, id types.GroupID) (types.Group, error)
-	OnDeploymentClosed(ctx sdk.Context, group types.Group)
 	GetParams(ctx sdk.Context) (params types.Params)
 	SetParams(ctx sdk.Context, params types.Params)
-	OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account)
 	updateDeployment(ctx sdk.Context, obj types.Deployment)
 
 	NewQuerier() Querier
@@ -172,6 +169,28 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 	return nil
 }
 
+// UpdateDeployment updates deployment details
+func (k Keeper) CloseDeployment(ctx sdk.Context, deployment types.Deployment) {
+	if deployment.State == types.DeploymentClosed {
+		return
+	}
+
+	store := ctx.KVStore(k.skey)
+	key := deploymentKey(deployment.ID())
+
+	if !store.Has(key) {
+		return
+	}
+
+	deployment.State = types.DeploymentClosed
+	ctx.EventManager().EmitEvent(
+		types.NewEventDeploymentClosed(deployment.ID()).
+			ToSDKEvent(),
+	)
+
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&deployment))
+}
+
 // OnCloseGroup provides shutdown API for a Group
 func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group, state types.Group_State) error {
 	store := ctx.KVStore(k.skey)
@@ -243,23 +262,6 @@ func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool)
 	}
 }
 
-// WithDeploymentsActive filters to only those with State: Active
-func (k Keeper) WithDeploymentsActive(ctx sdk.Context, fn func(types.Deployment) bool) {
-	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, deploymentPrefix)
-	defer iter.Close()
-	for ; iter.Valid(); iter.Next() {
-		var val types.Deployment
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
-		if val.State != types.DeploymentActive {
-			continue
-		}
-		if stop := fn(val); stop {
-			break
-		}
-	}
-}
-
 // OnBidClosed sets the group to state paused.
 func (k Keeper) OnBidClosed(ctx sdk.Context, id types.GroupID) error {
 	group, ok := k.GetGroup(ctx, id)
@@ -269,27 +271,13 @@ func (k Keeper) OnBidClosed(ctx sdk.Context, id types.GroupID) error {
 	return k.OnPauseGroup(ctx, group)
 }
 
-// OnLeaseClosed sets the group to state closed.
+// OnLeaseClosed keeps the group at state open
 func (k Keeper) OnLeaseClosed(ctx sdk.Context, id types.GroupID) (types.Group, error) {
 	group, ok := k.GetGroup(ctx, id)
 	if !ok {
 		return types.Group{}, types.ErrGroupNotFound
 	}
 	return group, nil
-}
-
-// OnDeploymentClosed updates group state to group closed
-func (k Keeper) OnDeploymentClosed(ctx sdk.Context, group types.Group) {
-	if group.State == types.GroupClosed {
-		return
-	}
-	group.State = types.GroupClosed
-	k.updateGroup(ctx, group)
-
-	ctx.EventManager().EmitEvent(
-		types.NewEventDeploymentClosed(group.ID().DeploymentID()).
-			ToSDKEvent(),
-	)
 }
 
 // GetParams returns the total set of deployment parameters.
@@ -301,35 +289,6 @@ func (k Keeper) GetParams(ctx sdk.Context) (params types.Params) {
 // SetParams sets the deployment parameters to the paramspace.
 func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
 	k.pspace.SetParamSet(ctx, &params)
-}
-
-func (k Keeper) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
-	id, found := types.DeploymentIDFromEscrowAccount(obj.ID)
-	if !found {
-		return
-	}
-
-	deployment, found := k.GetDeployment(ctx, id)
-	if !found {
-		return
-	}
-
-	if deployment.State != types.DeploymentActive {
-		return
-	}
-
-	gstate := types.GroupClosed
-	if obj.State == etypes.AccountOverdrawn {
-		gstate = types.GroupInsufficientFunds
-	}
-
-	deployment.State = types.DeploymentClosed
-	k.updateDeployment(ctx, deployment)
-	for _, group := range k.GetGroups(ctx, deployment.ID()) {
-		if group.ValidateClosable() == nil {
-			_ = k.OnCloseGroup(ctx, group, gstate)
-		}
-	}
 }
 
 func (k Keeper) updateDeployment(ctx sdk.Context, obj types.Deployment) {

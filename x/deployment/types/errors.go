@@ -20,6 +20,8 @@ const (
 	errInvalidGroupID
 	errGroupNotFound
 	errGroupClosed
+	errGroupOpen
+	errGroupPaused
 	errGroupNotOpen
 	errGroupSpec
 	errInvalidDeposit
@@ -58,6 +60,10 @@ var (
 	ErrGroupNotFound = sdkerrors.Register(ModuleName, errGroupNotFound, "Group not found")
 	// ErrGroupClosed is the error when deployment is closed
 	ErrGroupClosed = sdkerrors.Register(ModuleName, errGroupClosed, "Group already closed")
+	// ErrGroupOpen is the error when deployment is closed
+	ErrGroupOpen = sdkerrors.Register(ModuleName, errGroupOpen, "Group open")
+	// ErrGroupPaused is the error when deployment is closed
+	ErrGroupPaused = sdkerrors.Register(ModuleName, errGroupPaused, "Group paused")
 	// ErrGroupNotOpen indicates the Group state has progressed beyond initial Open.
 	ErrGroupNotOpen = sdkerrors.Register(ModuleName, errGroupNotOpen, "Group not open")
 	// ErrGroupSpecInvalid indicates a GroupSpec has invalid configuration

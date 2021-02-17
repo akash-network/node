@@ -109,7 +109,7 @@ type AppModule struct {
 // NewAppModule creates a new AppModule object
 func NewAppModule(
 	cdc codec.Marshaler,
-	keeper keeper.Keeper,
+	keeper keeper.IKeeper,
 	ekeeper ekeeper.Keeper,
 	akeeper akeeper.Keeper,
 	dkeeper handler.DeploymentKeeper,
@@ -191,7 +191,7 @@ type AppModuleSimulation struct {
 
 // NewAppModule creates a new AppModuleSimulation instance
 func NewAppModuleSimulation(
-	keeper keeper.Keeper,
+	keeper keeper.IKeeper,
 	akeeper govtypes.AccountKeeper,
 	dkeeper handler.DeploymentKeeper,
 	pkeeper handler.ProviderKeeper,

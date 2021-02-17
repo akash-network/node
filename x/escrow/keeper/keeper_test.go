@@ -63,6 +63,12 @@ func Test_PaymentCreate(t *testing.T) {
 		Return(nil)
 	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, amt))
 
+	{
+		acct, err := keeper.GetAccount(ctx, aid)
+		require.NoError(t, err)
+		require.Equal(t, ctx.BlockHeight(), acct.SettledAt)
+	}
+
 	// create payment
 	assert.NoError(t, keeper.PaymentCreate(ctx, aid, pid, powner, rate))
 
@@ -174,6 +180,35 @@ func Test_Payment_Overdraw(t *testing.T) {
 		assert.Equal(t, testutil.AkashCoin(t, 0), payment.Balance)
 	}
 
+}
+
+func Test_PaymentCreate_later(t *testing.T) {
+	ctx, keeper, bkeeper := setupKeeper(t)
+	aid := genAccountID(t)
+	aowner := testutil.AccAddress(t)
+
+	amt := testutil.AkashCoin(t, 1000)
+	pid := testutil.Name(t, "payment")
+	powner := testutil.AccAddress(t)
+	rate := testutil.AkashCoin(t, 10)
+
+	// create account
+	bkeeper.
+		On("SendCoinsFromAccountToModule", ctx, aowner, types.ModuleName, sdk.NewCoins(amt)).
+		Return(nil)
+	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, amt))
+
+	blkdelta := int64(10)
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + blkdelta)
+
+	// create payment
+	assert.NoError(t, keeper.PaymentCreate(ctx, aid, pid, powner, rate))
+
+	{
+		acct, err := keeper.GetAccount(ctx, aid)
+		require.NoError(t, err)
+		require.Equal(t, ctx.BlockHeight(), acct.SettledAt)
+	}
 }
 
 func genAccountID(t testing.TB) types.AccountID {

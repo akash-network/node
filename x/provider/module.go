@@ -105,11 +105,11 @@ type AppModule struct {
 	AppModuleBasic
 	keeper  keeper.IKeeper
 	bkeeper bankkeeper.Keeper
-	mkeeper mkeeper.Keeper
+	mkeeper mkeeper.IKeeper
 }
 
 // NewAppModule creates a new AppModule object
-func NewAppModule(cdc codec.Marshaler, k keeper.IKeeper, bkeeper bankkeeper.Keeper, mkeeper mkeeper.Keeper) AppModule {
+func NewAppModule(cdc codec.Marshaler, k keeper.IKeeper, bkeeper bankkeeper.Keeper, mkeeper mkeeper.IKeeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keeper:         k,

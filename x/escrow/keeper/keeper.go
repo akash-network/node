@@ -358,6 +358,7 @@ func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Acc
 	payments := k.accountOpenPayments(ctx, id)
 
 	if len(payments) == 0 {
+		k.saveAccount(ctx, &account)
 		return account, nil, false, nil
 	}
 

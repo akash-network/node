@@ -66,7 +66,6 @@ import (
 	"github.com/ovrclk/akash/x/audit"
 	"github.com/ovrclk/akash/x/cert"
 	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
-	"github.com/ovrclk/akash/x/market"
 
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
@@ -91,6 +90,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 
 	dkeeper "github.com/ovrclk/akash/x/deployment/keeper"
+	mkeeper "github.com/ovrclk/akash/x/market/keeper"
 	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
 
 	// unnamed import of statik for swagger UI support
@@ -147,7 +147,7 @@ type AkashApp struct {
 		// akash keepers
 		escrow     escrowkeeper.Keeper
 		deployment dkeeper.IKeeper
-		market     market.Keeper
+		market     mkeeper.IKeeper
 		provider   pkeeper.IKeeper
 		audit      audit.Keeper
 		cert       cert.Keeper

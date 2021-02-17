@@ -15,6 +15,7 @@ import (
 	ekeeper "github.com/ovrclk/akash/x/escrow/keeper"
 	emocks "github.com/ovrclk/akash/x/escrow/keeper/mocks"
 	etypes "github.com/ovrclk/akash/x/escrow/types"
+	mhooks "github.com/ovrclk/akash/x/market/hooks"
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
@@ -76,8 +77,10 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		keepers.Provider = pkeeper.NewKeeper(ptypes.ModuleCdc, app.GetKey(ptypes.StoreKey))
 	}
 
-	keepers.Escrow.AddOnAccountClosedHook(keepers.Deployment.OnEscrowAccountClosed)
-	keepers.Escrow.AddOnPaymentClosedHook(keepers.Market.OnEscrowPaymentClosed)
+	hook := mhooks.New(keepers.Deployment, keepers.Market)
+
+	keepers.Escrow.AddOnAccountClosedHook(hook.OnEscrowAccountClosed)
+	keepers.Escrow.AddOnPaymentClosedHook(hook.OnEscrowPaymentClosed)
 
 	return &TestSuite{
 		t:       t,
