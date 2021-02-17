@@ -1,19 +1,20 @@
 package simulation
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
-// GenesisDeployment defines the basic genesis state used by deployment module
-type GenesisDeployment struct {
-	types.Deployment
-	Groups []types.Group
-}
+var minDeposit = sdk.NewInt64Coin("stake", 1)
 
 // RandomizedGenState generates a random GenesisState for supply
 func RandomizedGenState(simState *module.SimulationState) {
-	deploymentGenesis := &types.GenesisState{}
+	deploymentGenesis := &types.GenesisState{
+		Params: types.Params{
+			DeploymentMinDeposit: minDeposit,
+		},
+	}
 
 	simState.GenState[types.ModuleName] = simState.Cdc.MustMarshalJSON(deploymentGenesis)
 }

@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/types"
 	"github.com/pkg/errors"
@@ -36,17 +37,17 @@ func ValidateResourceList(rlist types.ResourceGroup) error {
 		limits.add(gLimits)
 	}
 
-	if limits.cpu.GT(sdk.NewInt(validationConfig.MaxGroupCPU)) || limits.cpu.LTE(sdk.ZeroInt()) {
+	if limits.cpu.GT(sdk.NewIntFromUint64(validationConfig.MaxGroupCPU)) || limits.cpu.LTE(sdk.ZeroInt()) {
 		return errors.Errorf("group %v: invalid total CPU (%v > %v > %v fails)",
 			rlist.GetName(), validationConfig.MaxGroupCPU, limits.cpu, 0)
 	}
 
-	if limits.memory.GT(sdk.NewInt(validationConfig.MaxGroupMemory)) || limits.memory.LTE(sdk.ZeroInt()) {
+	if limits.memory.GT(sdk.NewIntFromUint64(validationConfig.MaxGroupMemory)) || limits.memory.LTE(sdk.ZeroInt()) {
 		return errors.Errorf("group %v: invalid total memory (%v > %v > %v fails)",
 			rlist.GetName(), validationConfig.MaxGroupMemory, limits.memory, 0)
 	}
 
-	if limits.storage.GT(sdk.NewInt(validationConfig.MaxGroupStorage)) || limits.storage.LTE(sdk.ZeroInt()) {
+	if limits.storage.GT(sdk.NewIntFromUint64(validationConfig.MaxGroupStorage)) || limits.storage.LTE(sdk.ZeroInt()) {
 		return errors.Errorf("group %v: invalid total storage (%v > %v > %v fails)",
 			rlist.GetName(), validationConfig.MaxGroupStorage, limits.storage, 0)
 	}

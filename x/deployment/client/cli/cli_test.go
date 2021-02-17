@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/testutil"
+	ccli "github.com/ovrclk/akash/x/cert/client/cli"
 	"github.com/ovrclk/akash/x/deployment/client/cli"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
@@ -27,12 +28,27 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 	cfg := testutil.DefaultConfig()
 	cfg.NumValidators = 1
+	// cfg.EnableLogging = true
 
 	s.cfg = cfg
 	s.network = network.New(s.T(), cfg)
 
 	_, err := s.network.WaitForHeight(1)
 	s.Require().NoError(err)
+
+	val := s.network.Validators[0]
+
+	// Create client certificate
+	_, err = ccli.TxCreateClientExec(
+		val.ClientCtx,
+		val.Address,
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
 }
 
 func (s *IntegrationTestSuite) TearDownSuite() {
@@ -58,6 +74,7 @@ func (s *IntegrationTestSuite) TestDeployment() {
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--deposit=%s", cli.DefaultDeposit),
 	)
 	s.Require().NoError(err)
 
@@ -79,7 +96,8 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	resp, err = cli.QueryDeploymentExec(val.ClientCtx.WithOutputFormat("json"), createdDep.Deployment.DeploymentID)
 	s.Require().NoError(err)
 
-	var deployment types.DeploymentResponse
+	var deployment types.QueryDeploymentResponse
+	fmt.Println(string(resp.Bytes()))
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &deployment)
 	s.Require().NoError(err)
 	s.Require().Equal(createdDep, deployment)
@@ -115,7 +133,7 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	resp, err = cli.QueryDeploymentExec(val.ClientCtx.WithOutputFormat("json"), createdDep.Deployment.DeploymentID)
 	s.Require().NoError(err)
 
-	var deploymentV2 types.DeploymentResponse
+	var deploymentV2 types.QueryDeploymentResponse
 	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &deploymentV2)
 	s.Require().NoError(err)
 	s.Require().NotEqual(deployment.Deployment.Version, deploymentV2.Deployment.Version)
@@ -176,9 +194,9 @@ func (s *IntegrationTestSuite) TestGroup() {
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--deposit=%s", cli.DefaultDeposit),
 	)
 	s.Require().NoError(err)
-
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query deployments

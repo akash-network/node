@@ -1,19 +1,21 @@
-// +build !mainnet
-
 package app
 
 import (
 	"github.com/cosmos/cosmos-sdk/types/module"
+	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 
 	"github.com/ovrclk/akash/x/audit"
 	"github.com/ovrclk/akash/x/cert"
 	"github.com/ovrclk/akash/x/deployment"
+	"github.com/ovrclk/akash/x/escrow"
+	ekeeper "github.com/ovrclk/akash/x/escrow/keeper"
 	"github.com/ovrclk/akash/x/market"
 	"github.com/ovrclk/akash/x/provider"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {
 	return []module.AppModuleBasic{
+		escrow.AppModuleBasic{},
 		deployment.AppModuleBasic{},
 		market.AppModuleBasic{},
 		provider.AppModuleBasic{},
@@ -24,6 +26,7 @@ func akashModuleBasics() []module.AppModuleBasic {
 
 func akashKVStoreKeys() []string {
 	return []string{
+		escrow.StoreKey,
 		deployment.StoreKey,
 		market.StoreKey,
 		provider.StoreKey,
@@ -32,16 +35,39 @@ func akashKVStoreKeys() []string {
 	}
 }
 
+func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
+	k.Subspace(deployment.ModuleName)
+	k.Subspace(market.ModuleName)
+	return k
+}
+
 func (app *AkashApp) setAkashKeepers() {
+
+	app.keeper.escrow = ekeeper.NewKeeper(
+		app.appCodec,
+		app.keys[escrow.StoreKey],
+		app.keeper.bank,
+	)
+
 	app.keeper.deployment = deployment.NewKeeper(
 		app.appCodec,
 		app.keys[deployment.StoreKey],
+		app.GetSubspace(deployment.ModuleName),
+		app.keeper.escrow,
 	)
+
+	app.keeper.escrow.
+		AddOnAccountClosedHook(app.keeper.deployment.OnEscrowAccountClosed)
 
 	app.keeper.market = market.NewKeeper(
 		app.appCodec,
 		app.keys[market.StoreKey],
+		app.GetSubspace(market.ModuleName),
+		app.keeper.escrow,
 	)
+
+	app.keeper.escrow.
+		AddOnPaymentClosedHook(app.keeper.market.OnEscrowPaymentClosed)
 
 	app.keeper.provider = provider.NewKeeper(
 		app.appCodec,
@@ -61,16 +87,24 @@ func (app *AkashApp) setAkashKeepers() {
 
 func (app *AkashApp) akashAppModules() []module.AppModule {
 	return []module.AppModule{
+
+		escrow.NewAppModule(
+			app.appCodec,
+			app.keeper.escrow,
+		),
+
 		deployment.NewAppModule(
 			app.appCodec,
 			app.keeper.deployment,
 			app.keeper.market,
+			app.keeper.escrow,
 			app.keeper.bank,
 		),
 
 		market.NewAppModule(
 			app.appCodec,
 			app.keeper.market,
+			app.keeper.escrow,
 			app.keeper.audit,
 			app.keeper.deployment,
 			app.keeper.provider,
@@ -105,6 +139,7 @@ func (app *AkashApp) akashEndBlockModules() []string {
 func (app *AkashApp) akashInitGenesisOrder() []string {
 	return []string{
 		cert.ModuleName,
+		escrow.ModuleName,
 		deployment.ModuleName,
 		provider.ModuleName,
 		market.ModuleName,

@@ -16,11 +16,11 @@ import (
 	"github.com/spf13/cobra"
 
 	akeeper "github.com/ovrclk/akash/x/audit/keeper"
+	ekeeper "github.com/ovrclk/akash/x/escrow/keeper"
 	"github.com/ovrclk/akash/x/market/client/cli"
 	"github.com/ovrclk/akash/x/market/client/rest"
 	"github.com/ovrclk/akash/x/market/handler"
 	"github.com/ovrclk/akash/x/market/keeper"
-	"github.com/ovrclk/akash/x/market/query"
 	"github.com/ovrclk/akash/x/market/simulation"
 	"github.com/ovrclk/akash/x/market/types"
 
@@ -110,6 +110,7 @@ type AppModule struct {
 func NewAppModule(
 	cdc codec.Marshaler,
 	keeper keeper.Keeper,
+	ekeeper ekeeper.Keeper,
 	akeeper akeeper.Keeper,
 	dkeeper handler.DeploymentKeeper,
 	pkeeper handler.ProviderKeeper,
@@ -118,6 +119,7 @@ func NewAppModule(
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keepers: handler.Keepers{
+			Escrow:     ekeeper,
 			Audit:      akeeper,
 			Market:     keeper,
 			Deployment: dkeeper,
@@ -142,18 +144,18 @@ func (am AppModule) Route() sdk.Route {
 
 // QuerierRoute returns the market module's querier route name.
 func (am AppModule) QuerierRoute() string {
-	return types.ModuleName
+	return ""
 }
 
 // LegacyQuerierHandler returns the sdk.Querier for market module
-func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
-	return query.NewQuerier(am.keepers.Market, legacyQuerierCdc)
+func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
+	return nil
 }
 
 // RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgServer(cfg.MsgServer(), handler.NewMsgServerImpl(am.keepers))
-	querier := keeper.Querier{Keeper: am.keepers.Market}
+	types.RegisterMsgServer(cfg.MsgServer(), handler.NewServer(am.keepers))
+	querier := am.keepers.Market.NewQuerier()
 	types.RegisterQueryServer(cfg.QueryServer(), querier)
 }
 
@@ -163,9 +165,6 @@ func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 // EndBlock returns the end blocker for the market module. It returns no validator
 // updates.
 func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
-	if err := handler.OnEndBlock(ctx, am.keepers); err != nil {
-		panic(err)
-	}
 	return []abci.ValidatorUpdate{}
 }
 

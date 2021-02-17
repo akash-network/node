@@ -79,9 +79,7 @@ func TestCertHandlerCreate(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 }
 
 func TestCertHandlerCreateOwnerMismatch(t *testing.T) {
@@ -135,9 +133,7 @@ func TestCertHandlerDuplicate(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	res, err = suite.handler(suite.ctx, msg)
 	require.Nil(t, res)
@@ -159,18 +155,14 @@ func TestCertHandlerDuplicate(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	resp, exists = suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
 		Serial: cert1.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert1.PEM.Cert, resp.Cert)
-	require.Equal(t, cert1.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert1, resp, types.CertificateValid)
 }
 
 func TestCertHandlerRevoke(t *testing.T) {
@@ -195,9 +187,7 @@ func TestCertHandlerRevoke(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	msgRevoke := &types.MsgRevokeCertificate{
 		ID: types.CertificateID{
@@ -215,9 +205,7 @@ func TestCertHandlerRevoke(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateRevoked, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateRevoked)
 
 	res, err = suite.handler(suite.ctx, msgRevoke)
 	require.Nil(t, res)
@@ -246,9 +234,7 @@ func TestCertHandlerRevokeCreateRevoked(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	msgRevoke := &types.MsgRevokeCertificate{
 		ID: types.CertificateID{
@@ -266,9 +252,7 @@ func TestCertHandlerRevokeCreateRevoked(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateRevoked, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateRevoked)
 
 	res, err = suite.handler(suite.ctx, msgCreate)
 	require.Nil(t, res)
@@ -295,9 +279,7 @@ func TestCertHandlerRevokeCreate(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateValid, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	msgRevoke := &types.MsgRevokeCertificate{
 		ID: types.CertificateID{
@@ -315,9 +297,7 @@ func TestCertHandlerRevokeCreate(t *testing.T) {
 		Serial: cert.Serial,
 	})
 	require.True(t, exists)
-	require.Equal(t, types.CertificateRevoked, resp.State)
-	require.Equal(t, cert.PEM.Cert, resp.Cert)
-	require.Equal(t, cert.PEM.Pub, resp.Pubkey)
+	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateRevoked)
 
 	cert1 := testutil.Certificate(t, owner)
 

@@ -106,7 +106,10 @@ func LoadPEMForAccount(cctx client.Context, keyring keyring.Keyring, opts ...Loa
 	return PEMBlocks{
 		Cert: pdata,
 		Priv: pem.EncodeToMemory(&pem.Block{Type: ctypes.PemBlkTypeECPrivateKey, Bytes: pkey}),
-		Pub:  pubKey,
+		Pub: pem.EncodeToMemory(&pem.Block{
+			Type:  ctypes.PemBlkTypeECPublicKey,
+			Bytes: pubKey,
+		}),
 	}, nil
 }
 

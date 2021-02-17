@@ -1,34 +1,24 @@
-// +build integration
-
 package integration
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"bytes"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
+	"github.com/gogo/protobuf/jsonpb"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
-	denom                = "uakt"
-	denomStartValue      = 150
-	keyFoo               = "foo"
-	keyBar               = "bar"
-	keyBaz               = "baz"
-	fooStartValue        = 1000
-	feeDenom             = "uakt"
-	feeStartValue        = 1000000
-	deploymentFilePath   = "./../x/deployment/testdata/deployment.yaml"
-	deploymentV2FilePath = "./../x/deployment/testdata/deployment-v2.yaml"
-	deploymentOvrclkApp  = "./../_run/kube/deployment.yaml"
-	providerFilePath     = "./../x/provider/testdata/provider.yaml"
-	providerTemplate     = `host: %s
+	providerTemplate = `host: %s
 attributes:
   - key: region
     value: us-west
@@ -37,22 +27,18 @@ attributes:
 `
 )
 
-// newAkashCoin
-func newAkashCoin(amt int64) sdk.Coin {
-	return sdk.NewInt64Coin(denom, amt)
-}
-
-// ___________________________________________________________________________________
-// utils
-func addFlags(cmd string, flags []string) string {
-	for _, f := range flags {
-		cmd += " " + f
+// skip integration-only tests.
+// using build tags breaks tooling for compilation, etc...
+func integrationTestOnly(t testing.TB) {
+	t.Helper()
+	val, found := os.LookupEnv("TEST_INTEGRATION")
+	if !found || val != "true" {
+		t.Skip("SKIPPING INTEGRATION TEST")
 	}
-
-	return strings.TrimSpace(cmd)
 }
 
 func queryAppWithRetries(t *testing.T, appURL string, appHost string, limit int) *http.Response {
+	t.Helper()
 	req, err := http.NewRequest("GET", appURL, nil)
 	require.NoError(t, err)
 	req.Host = appHost
@@ -91,12 +77,13 @@ func queryAppWithRetries(t *testing.T, appURL string, appHost string, limit int)
 	return resp
 }
 func queryApp(t *testing.T, appURL string, limit int) {
+	t.Helper()
 	queryAppWithHostname(t, appURL, limit, "test.localhost")
 }
 
-
 func queryAppWithHostname(t *testing.T, appURL string, limit int, hostname string) {
-// Assert provider launches app in kind cluster
+	t.Helper()
+	// Assert provider launches app in kind cluster
 
 	req, err := http.NewRequest("GET", appURL, nil)
 	require.NoError(t, err)
@@ -136,9 +123,26 @@ func queryAppWithHostname(t *testing.T, appURL string, limit int, hostname strin
 
 // appEnv asserts that there is an addressable docker container for KinD
 func appEnv(t *testing.T) (string, string) {
+	t.Helper()
 	host := os.Getenv("KUBE_INGRESS_IP")
 	require.NotEmpty(t, host)
 	appPort := os.Getenv("KUBE_INGRESS_PORT")
 	require.NotEmpty(t, appPort)
 	return host, appPort
+}
+
+// this function is a gentle response to inappropriate approach of cli test utils
+// send transaction may fail and calling cli routine won't know about it
+func validateTxSuccessful(t testing.TB, cctx client.Context, data []byte) {
+	t.Helper()
+
+	var resp sdk.TxResponse
+
+	err := jsonpb.Unmarshal(bytes.NewBuffer(data), &resp)
+	require.NoError(t, err)
+
+	res, err := authclient.QueryTx(cctx, resp.TxHash)
+	require.NoError(t, err)
+
+	require.Zero(t, res.Code, res)
 }

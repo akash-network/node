@@ -11,6 +11,7 @@ import (
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/testutil/state"
 	"github.com/ovrclk/akash/x/provider/keeper"
 	"github.com/ovrclk/akash/x/provider/types"
 )
@@ -19,20 +20,21 @@ type grpcTestSuite struct {
 	t      *testing.T
 	app    *app.AkashApp
 	ctx    sdk.Context
-	keeper keeper.Keeper
+	keeper keeper.IKeeper
 
 	queryClient types.QueryClient
 }
 
 func setupTest(t *testing.T) *grpcTestSuite {
+	ssuite := state.SetupTestSuite(t)
 	suite := &grpcTestSuite{
-		t: t,
+		t:      t,
+		app:    ssuite.App(),
+		ctx:    ssuite.Context(),
+		keeper: ssuite.ProviderKeeper(),
 	}
 
-	suite.app = app.Setup(false)
-	suite.ctx, suite.keeper = setupKeeper(t)
-	querier := keeper.Querier{Keeper: suite.keeper}
-
+	querier := suite.keeper.NewQuerier()
 	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, suite.app.InterfaceRegistry())
 	types.RegisterQueryServer(queryHelper, querier)
 	suite.queryClient = types.NewQueryClient(queryHelper)

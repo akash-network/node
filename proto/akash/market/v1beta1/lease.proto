@@ -3,6 +3,7 @@ package akash.market.v1beta1;
 
 import "gogoproto/gogo.proto";
 import "cosmos/base/v1beta1/coin.proto";
+import "akash/market/v1beta1/bid.proto";
 
 option go_package = "github.com/ovrclk/akash/x/market/types";
 
@@ -50,6 +51,7 @@ message Lease {
   State                    state = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
   cosmos.base.v1beta1.Coin price = 3
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "price", (gogoproto.moretags) = "yaml:\"price\""];
+  int64 created_at = 4;
 }
 
 // LeaseFilters defines flags for lease list filter
@@ -66,3 +68,49 @@ message LeaseFilters {
   string provider = 5 [(gogoproto.jsontag) = "provider", (gogoproto.moretags) = "yaml:\"provider\""];
   string state    = 6 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
 }
+
+// MsgCreateLease is sent to create a lease
+message MsgCreateLease {
+  option (gogoproto.equal) = false;
+
+  BidID bid_id = 1 [
+    (gogoproto.customname) = "BidID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+// MsgCreateLeaseResponse is the response from creating a lease
+message MsgCreateLeaseResponse {}
+
+// MsgWithdrawLease defines an SDK message for closing bid
+message MsgWithdrawLease {
+  option (gogoproto.equal) = false;
+
+  LeaseID bid_id = 1 [
+    (gogoproto.customname) = "LeaseID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+// MsgWithdrawLeaseResponse defines the Msg/WithdrawLease response type.
+message MsgWithdrawLeaseResponse {}
+
+
+// MsgCloseLease defines an SDK message for closing order
+message MsgCloseLease {
+  option (gogoproto.equal) = false;
+
+  LeaseID lease_id = 1 [
+    (gogoproto.customname) = "LeaseID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+// MsgCloseLeaseResponse defines the Msg/CloseLease response type.
+message MsgCloseLeaseResponse {}

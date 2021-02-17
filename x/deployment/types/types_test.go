@@ -17,9 +17,8 @@ import (
 )
 
 type gStateTest struct {
-	state                types.Group_State
-	expValidateOrderable error
-	expValidateClosable  error
+	state               types.Group_State
+	expValidateClosable error
 }
 
 func TestGroupState(t *testing.T) {
@@ -28,25 +27,17 @@ func TestGroupState(t *testing.T) {
 			state: types.GroupOpen,
 		},
 		{
-			state:                types.GroupOrdered,
-			expValidateOrderable: types.ErrGroupNotOpen,
+			state: types.GroupOpen,
 		},
 		{
-			state:                types.GroupMatched,
-			expValidateOrderable: types.ErrGroupNotOpen,
+			state: types.GroupInsufficientFunds,
 		},
 		{
-			state:                types.GroupInsufficientFunds,
-			expValidateOrderable: types.ErrGroupNotOpen,
+			state:               types.GroupClosed,
+			expValidateClosable: types.ErrGroupClosed,
 		},
 		{
-			state:                types.GroupClosed,
-			expValidateClosable:  types.ErrGroupClosed,
-			expValidateOrderable: types.ErrGroupNotOpen,
-		},
-		{
-			state:                types.Group_State(99),
-			expValidateOrderable: types.ErrGroupNotOpen,
+			state: types.Group_State(99),
 		},
 	}
 
@@ -55,8 +46,6 @@ func TestGroupState(t *testing.T) {
 			GroupID: testutil.GroupID(t),
 			State:   test.state,
 		}
-
-		assert.Equal(t, group.ValidateOrderable(), test.expValidateOrderable, group.State)
 
 		assert.Equal(t, group.ValidateClosable(), test.expValidateClosable, group.State)
 	}
@@ -114,42 +103,20 @@ func TestGroupSpecValidation(t *testing.T) {
 		expErr error
 	}{
 		{
-			desc: "zero value bid duration error",
-			gspec: types.GroupSpec{
-				Name:             testutil.Name(t, "groupspec"),
-				Requirements:     testutil.PlacementRequirements(t),
-				Resources:        testutil.Resources(t),
-				OrderBidDuration: int64(0),
-			},
-			expErr: types.ErrInvalidGroups,
-		},
-		{
-			desc: "bid duration exceeds limit",
-			gspec: types.GroupSpec{
-				Name:             testutil.Name(t, "groupspec"),
-				Requirements:     testutil.PlacementRequirements(t),
-				Resources:        testutil.Resources(t),
-				OrderBidDuration: types.MaxBiddingDuration * int64(2),
-			},
-			expErr: types.ErrInvalidGroups,
-		},
-		{
 			desc: "groupspec requires name",
 			gspec: types.GroupSpec{
-				Name:             "",
-				Requirements:     testutil.PlacementRequirements(t),
-				Resources:        testutil.Resources(t),
-				OrderBidDuration: types.DefaultOrderBiddingDuration,
+				Name:         "",
+				Requirements: testutil.PlacementRequirements(t),
+				Resources:    testutil.Resources(t),
 			},
 			expErr: types.ErrInvalidGroups,
 		},
 		{
 			desc: "groupspec valid",
 			gspec: types.GroupSpec{
-				Name:             "hihi",
-				Requirements:     testutil.PlacementRequirements(t),
-				Resources:        testutil.Resources(t),
-				OrderBidDuration: types.DefaultOrderBiddingDuration,
+				Name:         "hihi",
+				Requirements: testutil.PlacementRequirements(t),
+				Resources:    testutil.Resources(t),
 			},
 			expErr: nil,
 		},
@@ -158,7 +125,7 @@ func TestGroupSpecValidation(t *testing.T) {
 	for _, test := range tests {
 		err := test.gspec.ValidateBasic()
 		if test.expErr != nil {
-			assert.Error(t, err)
+			assert.Error(t, err, test.desc)
 			continue
 		}
 		assert.Equal(t, test.expErr, err, test.desc)
@@ -167,10 +134,9 @@ func TestGroupSpecValidation(t *testing.T) {
 
 func TestGroupPlacementRequirementsNoSigners(t *testing.T) {
 	group := types.GroupSpec{
-		Name:             "spec",
-		Requirements:     testutil.PlacementRequirements(t),
-		Resources:        testutil.Resources(t),
-		OrderBidDuration: types.DefaultOrderBiddingDuration,
+		Name:         "spec",
+		Requirements: testutil.PlacementRequirements(t),
+		Resources:    testutil.Resources(t),
 	}
 
 	providerAttr := []atypes.Provider{
@@ -185,10 +151,9 @@ func TestGroupPlacementRequirementsNoSigners(t *testing.T) {
 
 func TestGroupPlacementRequirementsSignerAllOf(t *testing.T) {
 	group := types.GroupSpec{
-		Name:             "spec",
-		Requirements:     testutil.PlacementRequirements(t),
-		Resources:        testutil.Resources(t),
-		OrderBidDuration: types.DefaultOrderBiddingDuration,
+		Name:         "spec",
+		Requirements: testutil.PlacementRequirements(t),
+		Resources:    testutil.Resources(t),
 	}
 
 	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "auditor1")
@@ -222,10 +187,9 @@ func TestGroupPlacementRequirementsSignerAllOf(t *testing.T) {
 
 func TestGroupPlacementRequirementsSignerAnyOf(t *testing.T) {
 	group := types.GroupSpec{
-		Name:             "spec",
-		Requirements:     testutil.PlacementRequirements(t),
-		Resources:        testutil.Resources(t),
-		OrderBidDuration: types.DefaultOrderBiddingDuration,
+		Name:         "spec",
+		Requirements: testutil.PlacementRequirements(t),
+		Resources:    testutil.Resources(t),
 	}
 
 	group.Requirements.SignedBy.AnyOf = append(group.Requirements.SignedBy.AnyOf, "auditor1")
@@ -258,10 +222,9 @@ func TestGroupPlacementRequirementsSignerAnyOf(t *testing.T) {
 
 func TestGroupPlacementRequirementsSignerAllOfAnyOf(t *testing.T) {
 	group := types.GroupSpec{
-		Name:             "spec",
-		Requirements:     testutil.PlacementRequirements(t),
-		Resources:        testutil.Resources(t),
-		OrderBidDuration: types.DefaultOrderBiddingDuration,
+		Name:         "spec",
+		Requirements: testutil.PlacementRequirements(t),
+		Resources:    testutil.Resources(t),
 	}
 
 	group.Requirements.SignedBy.AllOf = append(group.Requirements.SignedBy.AllOf, "auditor1")

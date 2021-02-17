@@ -25,7 +25,6 @@ import (
 	"github.com/ovrclk/akash/x/audit/client/rest"
 	"github.com/ovrclk/akash/x/audit/handler"
 	"github.com/ovrclk/akash/x/audit/keeper"
-	"github.com/ovrclk/akash/x/audit/query"
 	"github.com/ovrclk/akash/x/audit/types"
 	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
 )
@@ -145,15 +144,15 @@ func (am AppModule) Route() sdk.Route {
 
 // QuerierRoute returns the audit module's querier route name.
 func (am AppModule) QuerierRoute() string {
-	return types.ModuleName
+	return ""
 }
 
 // LegacyQuerierHandler returns the sdk.Querier for audit module
-func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
-	return query.NewQuerier(am.keeper, legacyQuerierCdc)
+func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
+	return nil
 }
 
-// RegisterServices registers the module's servicess
+// RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), handler.NewMsgServerImpl(am.keeper))
 	querier := keeper.Querier{Keeper: am.keeper}

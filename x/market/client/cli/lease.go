@@ -75,7 +75,7 @@ func cmdGetLease() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintProto(&res.Lease)
+			return clientCtx.PrintProto(res)
 		},
 	}
 

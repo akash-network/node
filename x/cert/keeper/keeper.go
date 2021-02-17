@@ -8,22 +8,41 @@ import (
 )
 
 // Keeper of the provider store
-type Keeper struct {
+type Keeper interface {
+	Querier() types.QueryServer
+	Codec() codec.BinaryMarshaler
+	CreateCertificate(sdk.Context, sdk.Address, []byte, []byte) error
+	RevokeCertificate(sdk.Context, types.CertID) error
+	GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool)
+	WithCertificates(ctx sdk.Context, fn func(certificate types.CertificateResponse) bool)
+	WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.CertificateResponse) bool)
+	WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.CertificateResponse) bool)
+	WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.CertificateResponse) bool)
+}
+
+type keeper struct {
 	skey sdk.StoreKey
 	cdc  codec.BinaryMarshaler
 }
 
+var _ Keeper = (*keeper)(nil)
+
 // NewKeeper creates and returns an instance for Market keeper
 func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey) Keeper {
-	return Keeper{cdc: cdc, skey: skey}
+	return &keeper{cdc: cdc, skey: skey}
+}
+
+// Querier return gRPC query handler
+func (k keeper) Querier() types.QueryServer {
+	return &querier{keeper: k}
 }
 
 // Codec returns keeper codec
-func (k Keeper) Codec() codec.BinaryMarshaler {
+func (k keeper) Codec() codec.BinaryMarshaler {
 	return k.cdc
 }
 
-func (k Keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte, pubkey []byte) error {
+func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte, pubkey []byte) error {
 	store := ctx.KVStore(k.skey)
 
 	cert, err := types.ParseAndValidateCertificate(owner, crt, pubkey)
@@ -56,7 +75,7 @@ func (k Keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte
 	return nil
 }
 
-func (k Keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
+func (k keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
 	store := ctx.KVStore(k.skey)
 	key := certificateKey(id)
 
@@ -80,22 +99,25 @@ func (k Keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
 }
 
 // GetCertificateByID returns a provider with given auditor and owner id
-func (k Keeper) GetCertificateByID(ctx sdk.Context, id types.CertID) (types.Certificate, bool) {
+func (k keeper) GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool) {
 	store := ctx.KVStore(k.skey)
 
 	buf := store.Get(certificateKey(id))
 	if buf == nil {
-		return types.Certificate{}, false
+		return types.CertificateResponse{}, false
 	}
 
 	var val types.Certificate
 	k.cdc.MustUnmarshalBinaryBare(buf, &val)
 
-	return val, true
+	return types.CertificateResponse{
+		Certificate: val,
+		Serial:      id.Serial.String(),
+	}, true
 }
 
 // WithCertificates iterates all certificates
-func (k Keeper) WithCertificates(ctx sdk.Context, fn func(certificate types.Certificate) bool) {
+func (k keeper) WithCertificates(ctx sdk.Context, fn func(certificate types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := store.Iterator(nil, nil)
 
@@ -104,16 +126,15 @@ func (k Keeper) WithCertificates(ctx sdk.Context, fn func(certificate types.Cert
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		var val types.Certificate
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
-		if stop := fn(val); stop {
+		item := k.mustUnmarshal(iter.Key(), iter.Value())
+		if stop := fn(item); stop {
 			break
 		}
 	}
 }
 
-// WithCertificates iterates all certificates
-func (k Keeper) WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.Certificate) bool) {
+// WithCertificatesState iterates all certificates in certain state
+func (k keeper) WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := store.Iterator(nil, nil)
 
@@ -122,10 +143,9 @@ func (k Keeper) WithCertificatesState(ctx sdk.Context, state types.Certificate_S
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		var val types.Certificate
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
-		if val.State == state {
-			if stop := fn(val); stop {
+		item := k.mustUnmarshal(iter.Key(), iter.Value())
+		if item.Certificate.State == state {
+			if stop := fn(item); stop {
 				break
 			}
 		}
@@ -133,7 +153,7 @@ func (k Keeper) WithCertificatesState(ctx sdk.Context, state types.Certificate_S
 }
 
 // WithOwner iterates all certificates by owner
-func (k Keeper) WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.Certificate) bool) {
+func (k keeper) WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, certificatePrefix(id))
 	defer func() {
@@ -141,16 +161,15 @@ func (k Keeper) WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.Certifi
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		var val types.Certificate
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
-		if stop := fn(val); stop {
+		item := k.mustUnmarshal(iter.Key(), iter.Value())
+		if stop := fn(item); stop {
 			break
 		}
 	}
 }
 
-// WithOwner iterates all certificates by owner
-func (k Keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.Certificate) bool) {
+// WithOwnerState iterates all certificates by owner in certain state
+func (k keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, certificatePrefix(id))
 	defer func() {
@@ -158,12 +177,34 @@ func (k Keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Cert
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		var val types.Certificate
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
-		if val.State == state {
-			if stop := fn(val); stop {
+		item := k.mustUnmarshal(iter.Key(), iter.Value())
+		if item.Certificate.State == state {
+			if stop := fn(item); stop {
 				break
 			}
 		}
 	}
+}
+
+func (k keeper) mustUnmarshal(key, val []byte) types.CertificateResponse {
+	serial := certificateSerialFromKey(key)
+	item := types.CertificateResponse{
+		Serial: serial.String(),
+	}
+	k.cdc.MustUnmarshalBinaryBare(val, &item.Certificate)
+
+	return item
+}
+
+func (k keeper) unmarshalIterator(key, val []byte) (types.CertificateResponse, error) {
+	serial := certificateSerialFromKey(key)
+	item := types.CertificateResponse{
+		Serial: serial.String(),
+	}
+
+	if err := k.cdc.UnmarshalBinaryBare(val, &item.Certificate); err != nil {
+		return types.CertificateResponse{}, err
+	}
+
+	return item, nil
 }

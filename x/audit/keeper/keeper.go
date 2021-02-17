@@ -12,6 +12,16 @@ import (
 	"github.com/ovrclk/akash/x/audit/types"
 )
 
+// TODO: use interfaces for keepers, queriers
+type IKeeper interface {
+	GetProviderByAuditor(ctx sdk.Context, id types.ProviderID) (types.Provider, bool)
+	GetProviderAttributes(ctx sdk.Context, id sdk.Address) (types.Providers, bool)
+	CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.ProviderID, attr akashtypes.Attributes) error
+	DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, keys []string) error
+	WithProviders(ctx sdk.Context, fn func(types.Provider) bool)
+	WithProvider(ctx sdk.Context, id sdk.Address, fn func(types.Provider) bool)
+}
+
 // Keeper of the provider store
 type Keeper struct {
 	skey sdk.StoreKey

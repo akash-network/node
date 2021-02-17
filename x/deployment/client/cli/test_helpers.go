@@ -12,6 +12,8 @@ import (
 
 const key string = types.StoreKey
 
+// XXX: WHY TF DON'T THESE RETURN OBJECTS
+
 // TxCreateDeploymentExec is used for testing create deployment tx
 func TxCreateDeploymentExec(clientCtx client.Context, from fmt.Stringer, filePath string, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{

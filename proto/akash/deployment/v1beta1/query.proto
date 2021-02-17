@@ -6,6 +6,7 @@ import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
 import "akash/deployment/v1beta1/deployment.proto";
 import "akash/deployment/v1beta1/group.proto";
+import "akash/escrow/v1beta1/types.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";
 
@@ -36,7 +37,7 @@ message QueryDeploymentsRequest {
 
 // QueryDeploymentsResponse is response type for the Query/Deployments RPC method
 message QueryDeploymentsResponse {
-  repeated DeploymentResponse deployments = 1
+  repeated QueryDeploymentResponse deployments = 1
       [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "DeploymentResponses"];
 
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
@@ -49,7 +50,14 @@ message QueryDeploymentRequest {
 
 // QueryDeploymentResponse is response type for the Query/Deployment RPC method
 message QueryDeploymentResponse {
-  DeploymentResponse deployment = 1 [(gogoproto.nullable) = false];
+  option (gogoproto.equal)            = false;
+  Deployment deployment = 1
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "deployment", (gogoproto.moretags) = "yaml:\"deployment\""];
+  repeated Group groups = 2
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "groups", (gogoproto.moretags) = "yaml:\"groups\""];
+  akash.escrow.v1beta1.Account escrow_account = 3 [
+    (gogoproto.nullable) = false
+  ];
 }
 
 // QueryGroupRequest is request type for the Query/Group RPC method

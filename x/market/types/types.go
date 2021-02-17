@@ -1,7 +1,6 @@
 package types
 
 import (
-	"fmt"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -9,7 +8,6 @@ import (
 	"github.com/ovrclk/akash/types"
 	atypes "github.com/ovrclk/akash/x/audit/types"
 
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -43,8 +41,8 @@ func (o Order) ValidateCanBid() error {
 	switch o.State {
 	case OrderOpen:
 		return nil
-	case OrderMatched:
-		return ErrOrderMatched
+	case OrderActive:
+		return ErrOrderActive
 	default:
 		return ErrOrderClosed
 	}
@@ -56,8 +54,8 @@ func (o Order) ValidateInactive() error {
 	switch o.State {
 	case OrderClosed:
 		return nil
-	case OrderMatched:
-		return ErrOrderMatched
+	case OrderActive:
+		return ErrOrderActive
 	default:
 		return ErrOrderClosed
 	}
@@ -76,36 +74,6 @@ func (o Order) MatchAttributes(attrs []types.Attribute) bool {
 // MatchRequirements method compares provided attributes with specific order attributes
 func (o Order) MatchRequirements(prov []atypes.Provider) bool {
 	return o.Spec.MatchRequirements(prov)
-}
-
-// ValidateCanMatch method validates whether to match order for provided height
-func (o Order) ValidateCanMatch(height int64) error {
-	if err := o.validateMatchableState(); err != nil {
-		return err
-	}
-	if err := o.Spec.ValidateBasic(); err != nil {
-		return err
-	}
-
-	if height < o.StartAt {
-		return errors.Wrap(ErrOrderTooEarly, fmt.Sprintf("(%v > %v)", o.StartAt, height))
-	}
-	if height >= o.CloseAt {
-		// Close Open Order if it have surpassed the CloseAt block height.
-		return ErrOrderDurationExceeded
-	}
-	return nil
-}
-
-func (o Order) validateMatchableState() error {
-	switch o.State {
-	case OrderOpen:
-		return nil
-	case OrderMatched:
-		return ErrOrderMatched
-	default:
-		return ErrOrderClosed
-	}
 }
 
 // Accept returns whether order filters valid or not

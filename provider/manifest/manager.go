@@ -5,9 +5,10 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
+
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/util"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/libs/log"
@@ -76,7 +77,7 @@ type manager struct {
 	manifestch chan manifestRequest
 	updatech   chan []byte
 
-	data            *dtypes.DeploymentResponse
+	data            *dtypes.QueryDeploymentResponse
 	requests        []manifestRequest
 	pendingRequests []chan<- error
 	leases          []event.LeaseWon
@@ -200,7 +201,7 @@ loop:
 				break
 			}
 
-			m.data = result.Value().(*dtypes.DeploymentResponse)
+			m.data = result.Value().(*dtypes.QueryDeploymentResponse)
 
 			m.log.Info("data received", "version", hex.EncodeToString(m.data.Deployment.Version))
 
@@ -241,12 +242,12 @@ func (m *manager) fetchData(ctx context.Context) <-chan runner.Result {
 	})
 }
 
-func (m *manager) doFetchData(ctx context.Context) (*dtypes.DeploymentResponse, error) {
+func (m *manager) doFetchData(ctx context.Context) (*dtypes.QueryDeploymentResponse, error) {
 	res, err := m.session.Client().Query().Deployment(ctx, &dtypes.QueryDeploymentRequest{ID: m.daddr})
 	if err != nil {
 		return nil, err
 	}
-	return &res.Deployment, nil
+	return res, nil
 }
 
 func (m *manager) maybeScheduleStop() bool { // nolint:golint,unparam

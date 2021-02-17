@@ -12,6 +12,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/ovrclk/akash/testutil"
+	ccli "github.com/ovrclk/akash/x/cert/client/cli"
 	"github.com/ovrclk/akash/x/deployment/client/cli"
 	"github.com/ovrclk/akash/x/deployment/types"
 )
@@ -21,7 +22,7 @@ type GRPCRestTestSuite struct {
 
 	cfg        network.Config
 	network    *network.Network
-	deployment types.DeploymentResponse
+	deployment types.QueryDeploymentResponse
 }
 
 func (s *GRPCRestTestSuite) SetupSuite() {
@@ -41,6 +42,18 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	deploymentPath, err := filepath.Abs("../../testdata/deployment.yaml")
 	s.Require().NoError(err)
 
+	// Create client certificate
+	_, err = ccli.TxCreateClientExec(
+		val.ClientCtx,
+		val.Address,
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
+
 	// create deployment
 	_, err = cli.TxCreateDeploymentExec(
 		val.ClientCtx,
@@ -50,6 +63,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--deposit=%s", cli.DefaultDeposit),
 	)
 	s.Require().NoError(err)
 
@@ -77,7 +91,7 @@ func (s *GRPCRestTestSuite) TestGetDeployments() {
 		name    string
 		url     string
 		expErr  bool
-		expResp types.DeploymentResponse
+		expResp types.QueryDeploymentResponse
 		expLen  int
 	}{
 		{
@@ -100,7 +114,7 @@ func (s *GRPCRestTestSuite) TestGetDeployments() {
 			fmt.Sprintf("%s/akash/deployment/v1beta1/deployments/list?filters.state=%s", val.APIAddress,
 				types.DeploymentStateInvalid.String()),
 			true,
-			types.DeploymentResponse{},
+			types.QueryDeploymentResponse{},
 			0,
 		},
 		{
@@ -142,27 +156,27 @@ func (s *GRPCRestTestSuite) TestGetDeployment() {
 		name    string
 		url     string
 		expErr  bool
-		expResp types.DeploymentResponse
+		expResp types.QueryDeploymentResponse
 	}{
 		{
 			"get deployment with empty input",
 			fmt.Sprintf("%s/akash/deployment/v1beta1/deployments/info", val.APIAddress),
 			true,
-			types.DeploymentResponse{},
+			types.QueryDeploymentResponse{},
 		},
 		{
 			"get deployment with invalid input",
 			fmt.Sprintf("%s/akash/deployment/v1beta1/deployments/info?id.owner=%s", val.APIAddress,
 				deployment.Deployment.DeploymentID.Owner),
 			true,
-			types.DeploymentResponse{},
+			types.QueryDeploymentResponse{},
 		},
 		{
 			"deployment not found",
 			fmt.Sprintf("%s/akash/deployment/v1beta1/deployments/info?id.owner=%s&id.dseq=%d", val.APIAddress,
 				deployment.Deployment.DeploymentID.Owner, 249),
 			true,
-			types.DeploymentResponse{},
+			types.QueryDeploymentResponse{},
 		},
 		{
 			"valid get deployment request",
@@ -186,7 +200,7 @@ func (s *GRPCRestTestSuite) TestGetDeployment() {
 				s.Require().Error(err)
 			} else {
 				s.Require().NoError(err)
-				s.Require().Equal(tc.expResp, out.Deployment)
+				s.Require().Equal(tc.expResp, out)
 			}
 		})
 	}

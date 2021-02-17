@@ -31,7 +31,9 @@ func init() {
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgCreateBid{}, ModuleName+"/"+MsgTypeCreateBid, nil)
 	cdc.RegisterConcrete(&MsgCloseBid{}, ModuleName+"/"+MsgTypeCloseBid, nil)
-	cdc.RegisterConcrete(&MsgCloseOrder{}, ModuleName+"/"+MsgTypeCloseOrder, nil)
+	cdc.RegisterConcrete(&MsgCreateLease{}, ModuleName+"/"+MsgTypeCreateLease, nil)
+	cdc.RegisterConcrete(&MsgWithdrawLease{}, ModuleName+"/"+MsgTypeWithdrawLease, nil)
+	cdc.RegisterConcrete(&MsgCloseLease{}, ModuleName+"/"+MsgTypeCloseLease, nil)
 }
 
 // RegisterInterfaces registers the x/market interfaces types with the interface registry
@@ -39,7 +41,9 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	registry.RegisterImplementations((*sdk.Msg)(nil),
 		&MsgCreateBid{},
 		&MsgCloseBid{},
-		&MsgCloseOrder{},
+		&MsgCreateLease{},
+		&MsgWithdrawLease{},
+		&MsgCloseLease{},
 	)
 
 	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)

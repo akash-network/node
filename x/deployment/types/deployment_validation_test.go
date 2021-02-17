@@ -23,12 +23,6 @@ func TestZeroValueGroupSpec(t *testing.T) {
 		err := gspec.ValidateBasic()
 		require.NoError(t, err)
 	})
-
-	gspec.OrderBidDuration = int64(0)
-	t.Run("assert error for zero value bid duration", func(t *testing.T) {
-		err := gspec.ValidateBasic()
-		require.Error(t, err)
-	})
 }
 
 func TestZeroValueGroupSpecs(t *testing.T) {
@@ -45,10 +39,7 @@ func TestZeroValueGroupSpecs(t *testing.T) {
 	})
 
 	gspecZeroed := make([]types.GroupSpec, len(gspecs))
-	for _, g := range gspecs {
-		g.OrderBidDuration = int64(0)
-		gspecZeroed = append(gspecZeroed, g)
-	}
+	gspecZeroed = append(gspecZeroed, gspecs...)
 	t.Run("assert error for zero value bid duration", func(t *testing.T) {
 		err := types.ValidateDeploymentGroups(gspecZeroed)
 		require.Error(t, err)
@@ -72,13 +63,13 @@ func validSimpleGroupSpec() types.GroupSpec {
 			},
 			Memory: &akashtypes.Memory{
 				Quantity: akashtypes.ResourceValue{
-					Val: sdk.NewInt(1024),
+					Val: sdk.NewIntFromUint64(types.GetValidationConfig().MinUnitMemory),
 				},
 				Attributes: nil,
 			},
 			Storage: &akashtypes.Storage{
 				Quantity: akashtypes.ResourceValue{
-					Val: sdk.NewInt(1025),
+					Val: sdk.NewIntFromUint64(types.GetValidationConfig().MinUnitStorage),
 				},
 				Attributes: nil,
 			},
@@ -91,10 +82,9 @@ func validSimpleGroupSpec() types.GroupSpec {
 		},
 	}
 	return types.GroupSpec{
-		Name:             "testGroup",
-		Requirements:     akashtypes.PlacementRequirements{},
-		Resources:        resources,
-		OrderBidDuration: 3,
+		Name:         "testGroup",
+		Requirements: akashtypes.PlacementRequirements{},
+		Resources:    resources,
 	}
 }
 
@@ -175,14 +165,6 @@ func TestGroupWithNilStorage(t *testing.T) {
 	err := group.ValidateBasic()
 	require.Error(t, err)
 	require.Regexp(t, "^.*invalid unit storage.*$", err)
-}
-
-func TestGroupWithZeroOrderBid(t *testing.T) {
-	group := validSimpleGroupSpec()
-	group.OrderBidDuration = 0
-	err := group.ValidateBasic()
-	require.Error(t, err)
-	require.Regexp(t, "^.*order bid duration must be greater than zero.*$", err)
 }
 
 func TestGroupWithInvalidPrice(t *testing.T) {

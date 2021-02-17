@@ -50,13 +50,13 @@ func makeMocks(s *orderTestScaffold) {
 	groupResult.Group.GroupSpec.Resources = make([]dtypes.Resource, 1)
 
 	cpu := atypes.CPU{}
-	cpu.Units = atypes.NewResourceValue(11)
+	cpu.Units = atypes.NewResourceValue(uint64(dtypes.GetValidationConfig().MinUnitCPU))
 
 	memory := atypes.Memory{}
-	memory.Quantity = atypes.NewResourceValue(10000)
+	memory.Quantity = atypes.NewResourceValue(dtypes.GetValidationConfig().MinUnitMemory)
 
 	storage := atypes.Storage{}
-	storage.Quantity = atypes.NewResourceValue(4096)
+	storage.Quantity = atypes.NewResourceValue(dtypes.GetValidationConfig().MinUnitStorage)
 
 	clusterResources := atypes.ResourceUnits{
 		CPU:     &cpu,
@@ -66,12 +66,11 @@ func makeMocks(s *orderTestScaffold) {
 	price := sdk.NewInt64Coin(testutil.CoinDenom, 23)
 	resource := dtypes.Resource{
 		Resources: clusterResources,
-		Count:     10,
+		Count:     2,
 		Price:     price,
 	}
 
 	groupResult.Group.GroupSpec.Resources[0] = resource
-	groupResult.Group.GroupSpec.OrderBidDuration = 37
 
 	queryClientMock := &clientmocks.QueryClient{}
 	queryClientMock.On("Group", mock.Anything, mock.Anything).Return(groupResult, nil)
@@ -135,8 +134,12 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricing
 	mySession := session.New(myLog, scaffold.client, myProvider)
 
 	scaffold.testBus = pubsub.NewBus()
+	cfg := Config{
+		PricingStrategy: pricing,
+		Deposit:         mtypes.DefaultBidMinDeposit,
+	}
 
-	myService, err := NewService(context.Background(), mySession, scaffold.cluster, scaffold.testBus, pricing)
+	myService, err := NewService(context.Background(), mySession, scaffold.cluster, scaffold.testBus, cfg)
 	require.NoError(t, err)
 	require.NotNil(t, myService)
 
@@ -159,7 +162,7 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricing
 	}
 
 	reservationFulfilledNotify := make(chan int, 1)
-	order, err := newOrderInternal(serviceCast, scaffold.orderID, pricing, checkForExistingBid, reservationFulfilledNotify)
+	order, err := newOrderInternal(serviceCast, scaffold.orderID, cfg, checkForExistingBid, reservationFulfilledNotify)
 
 	require.NoError(t, err)
 	require.NotNil(t, order)

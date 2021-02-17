@@ -65,9 +65,8 @@ import (
 
 	"github.com/ovrclk/akash/x/audit"
 	"github.com/ovrclk/akash/x/cert"
-	"github.com/ovrclk/akash/x/deployment"
+	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
 	"github.com/ovrclk/akash/x/market"
-	"github.com/ovrclk/akash/x/provider"
 
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
@@ -90,6 +89,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
+
+	dkeeper "github.com/ovrclk/akash/x/deployment/keeper"
+	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
 
 	// unnamed import of statik for swagger UI support
 	_ "github.com/ovrclk/akash/client/docs/statik"
@@ -143,9 +145,10 @@ type AkashApp struct {
 		scopedTransfer capabilitykeeper.ScopedKeeper
 
 		// akash keepers
-		deployment deployment.Keeper
+		escrow     escrowkeeper.Keeper
+		deployment dkeeper.IKeeper
 		market     market.Keeper
-		provider   provider.Keeper
+		provider   pkeeper.IKeeper
 		audit      audit.Keeper
 		cert       cert.Keeper
 	}
@@ -593,5 +596,5 @@ func initParamsKeeper(appCodec codec.BinaryMarshaler, legacyAmino *codec.LegacyA
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibchost.ModuleName)
 
-	return paramsKeeper
+	return akashSubspaces(paramsKeeper)
 }

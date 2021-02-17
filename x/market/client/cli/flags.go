@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	ErrStateValue = errors.New("query: invalid state value")
+	ErrStateValue  = errors.New("query: invalid state value")
+	DefaultDeposit = types.DefaultBidMinDeposit
 )
 
 // AddOrderIDFlags add flags for order
@@ -123,6 +124,36 @@ func BidIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (types.BidI
 		return types.BidID{}, err
 	}
 	return types.MakeBidID(prev, addr), nil
+}
+
+func AddLeaseIDFlags(flags *pflag.FlagSet) {
+	AddBidIDFlags(flags)
+}
+
+// MarkReqLeaseIDFlags marks flags required for bid
+// Used in get bid query command
+func MarkReqLeaseIDFlags(cmd *cobra.Command) {
+	MarkReqBidIDFlags(cmd)
+}
+
+// LeaseIDFromFlags returns LeaseID with given flags and error if occurred
+func LeaseIDFromFlags(ctx client.Context, flags *pflag.FlagSet) (types.LeaseID, error) {
+	bid, err := BidIDFromFlags(ctx, flags)
+	return bid.LeaseID(), err
+}
+
+// LeaseIDFromFlagsWithoutCtx returns LeaseID with given flags and error if occurred
+// Here provider value is taken from flags
+func LeaseIDFromFlagsWithoutCtx(flags *pflag.FlagSet) (types.LeaseID, error) {
+	bid, err := BidIDFromFlagsWithoutCtx(flags)
+	return bid.LeaseID(), err
+}
+
+// LeaseIDFromFlagsForOwner returns LeaseID with given flags and error if occurred
+// Here provider value is taken from flags
+func LeaseIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (types.LeaseID, error) {
+	bid, err := BidIDFromFlagsForOwner(flags, owner)
+	return bid.LeaseID(), err
 }
 
 // AddOrderFilterFlags add flags to filter for order list

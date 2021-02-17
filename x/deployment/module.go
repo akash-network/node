@@ -14,11 +14,11 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+
 	"github.com/ovrclk/akash/x/deployment/client/cli"
 	"github.com/ovrclk/akash/x/deployment/client/rest"
 	"github.com/ovrclk/akash/x/deployment/handler"
 	"github.com/ovrclk/akash/x/deployment/keeper"
-	"github.com/ovrclk/akash/x/deployment/query"
 	"github.com/ovrclk/akash/x/deployment/simulation"
 	"github.com/ovrclk/akash/x/deployment/types"
 
@@ -104,17 +104,19 @@ func (AppModuleBasic) GetQueryClient(clientCtx client.Context) types.QueryClient
 // AppModule implements an application module for the deployment module.
 type AppModule struct {
 	AppModuleBasic
-	keeper     keeper.Keeper
+	keeper     keeper.IKeeper
 	mkeeper    handler.MarketKeeper
+	ekeeper    handler.EscrowKeeper
 	coinKeeper bankkeeper.Keeper
 }
 
 // NewAppModule creates a new AppModule Object
-func NewAppModule(cdc codec.Marshaler, k keeper.Keeper, mkeeper handler.MarketKeeper, bankKeeper bankkeeper.Keeper) AppModule {
+func NewAppModule(cdc codec.Marshaler, k keeper.IKeeper, mkeeper handler.MarketKeeper, ekeeper handler.EscrowKeeper, bankKeeper bankkeeper.Keeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keeper:         k,
 		mkeeper:        mkeeper,
+		ekeeper:        ekeeper,
 		coinKeeper:     bankKeeper,
 	}
 }
@@ -129,23 +131,23 @@ func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
 
 // Route returns the message routing key for the deployment module
 func (am AppModule) Route() sdk.Route {
-	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keeper, am.mkeeper))
+	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keeper, am.mkeeper, am.ekeeper))
 }
 
 // QuerierRoute returns the deployment module's querier route name.
 func (am AppModule) QuerierRoute() string {
-	return types.ModuleName
+	return ""
 }
 
 // LegacyQuerierHandler returns the sdk.Querier for deployment module
-func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
-	return query.NewQuerier(am.keeper, legacyQuerierCdc)
+func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
+	return nil
 }
 
 // RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgServer(cfg.MsgServer(), handler.NewMsgServerImpl(am.keeper, am.mkeeper))
-	querier := keeper.Querier{Keeper: am.keeper}
+	types.RegisterMsgServer(cfg.MsgServer(), handler.NewServer(am.keeper, am.mkeeper, am.ekeeper))
+	querier := am.keeper.NewQuerier()
 	types.RegisterQueryServer(cfg.QueryServer(), querier)
 }
 
@@ -155,9 +157,6 @@ func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 // EndBlock returns the end blocker for the deployment module. It returns no validator
 // updates.
 func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
-
-	handler.OnEndBlock(ctx, am.keeper, am.mkeeper)
-
 	return []abci.ValidatorUpdate{}
 }
 
@@ -178,13 +177,13 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONMarshaler) json
 
 // AppModuleSimulation implements an application simulation module for the deployment module.
 type AppModuleSimulation struct {
-	keeper  keeper.Keeper
+	keeper  keeper.IKeeper
 	akeeper govtypes.AccountKeeper
 	bkeeper bankkeeper.Keeper
 }
 
 // NewAppModuleSimulation creates a new AppModuleSimulation instance
-func NewAppModuleSimulation(k keeper.Keeper, akeeper govtypes.AccountKeeper, bankKeeper bankkeeper.Keeper) AppModuleSimulation {
+func NewAppModuleSimulation(k keeper.IKeeper, akeeper govtypes.AccountKeeper, bankKeeper bankkeeper.Keeper) AppModuleSimulation {
 	return AppModuleSimulation{
 		keeper:  k,
 		akeeper: akeeper,

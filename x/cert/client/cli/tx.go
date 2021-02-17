@@ -26,7 +26,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -49,6 +48,7 @@ func GetTxCmd() *cobra.Command {
 		Use:                        types.ModuleName,
 		Short:                      "Certificates transaction subcommands",
 		SuggestionsMinimumDistance: 2,
+		DisableFlagParsing:         true,
 		RunE:                       sdkclient.ValidateCmd,
 	}
 
@@ -62,8 +62,11 @@ func GetTxCmd() *cobra.Command {
 
 func cmdCreate() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "create/update api certificates",
+		Use:                        "create",
+		Short:                      "create/update api certificates",
+		SuggestionsMinimumDistance: 2,
+		DisableFlagParsing:         true,
+		RunE:                       sdkclient.ValidateCmd,
 	}
 
 	cmd.AddCommand(
@@ -206,7 +209,7 @@ func doCreateCmd(cmd *cobra.Command, domains []string) error {
 	// then certificate is being revoked (if valid) and file is removed without any prompts
 	yes := revokeIfExists
 	if !yes {
-		yes, err = getConfirmation(cmd, fmt.Sprintf("certificate already exist for address %s. check it on-chain status?", fromAddress))
+		yes, err = getConfirmation(cmd, fmt.Sprintf("certificate file for address %q already exist. check it on-chain status?", fromAddress))
 		if err != nil {
 			return err
 		}
@@ -241,10 +244,27 @@ func doCreateCmd(cmd *cobra.Command, domains []string) error {
 					}
 
 					removeFile = yes
+				} else {
+					cpem, err := cutils.LoadPEMForAccount(cctx, cctx.Keyring)
+					if err != nil {
+						return err
+					}
+
+					msg := &types.MsgCreateCertificate{
+						Owner:  fromAddress.String(),
+						Cert:   cpem.Cert,
+						Pubkey: cpem.Pub,
+					}
+
+					if err = msg.ValidateBasic(); err != nil {
+						return err
+					}
+
+					return tx.GenerateOrBroadcastTxCLI(cctx, cmd.Flags(), msg)
 				}
 			}
 		} else {
-			if res.Certificates[0].State == types.CertificateValid {
+			if res.Certificates[0].Certificate.IsState(types.CertificateValid) {
 				err = doRevoke(cctx, cmd.Flags(), x509cert.SerialNumber.String())
 				if err == nil {
 					removeFile = true

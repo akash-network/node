@@ -29,7 +29,7 @@ const (
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
 	appParams simtypes.AppParams, cdc codec.JSONMarshaler, ak govtypes.AccountKeeper,
-	bk bankkeeper.Keeper, k keeper.Keeper) simulation.WeightedOperations {
+	bk bankkeeper.Keeper, k keeper.IKeeper) simulation.WeightedOperations {
 	var (
 		weightMsgCreate int
 		weightMsgUpdate int
@@ -61,7 +61,7 @@ func WeightedOperations(
 
 // SimulateMsgCreate generates a MsgCreateProvider with random values
 // nolint:funlen
-func SimulateMsgCreate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper.Keeper) simtypes.Operation {
+func SimulateMsgCreate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper.IKeeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
 		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		simAccount, _ := simtypes.RandomAcc(r, accounts)
@@ -114,7 +114,7 @@ func SimulateMsgCreate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper
 
 // SimulateMsgUpdate generates a MsgUpdateProvider with random values
 // nolint:funlen
-func SimulateMsgUpdate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper.Keeper) simtypes.Operation {
+func SimulateMsgUpdate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper.IKeeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
 		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var providers []types.Provider

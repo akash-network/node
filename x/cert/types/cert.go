@@ -65,3 +65,7 @@ func (m Certificate) Validate(owner sdk.Address) error {
 
 	return nil
 }
+
+func (m Certificate) IsState(state Certificate_State) bool {
+	return m.State == state
+}

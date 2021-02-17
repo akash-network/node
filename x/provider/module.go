@@ -26,7 +26,6 @@ import (
 	"github.com/ovrclk/akash/x/provider/client/rest"
 	"github.com/ovrclk/akash/x/provider/handler"
 	"github.com/ovrclk/akash/x/provider/keeper"
-	"github.com/ovrclk/akash/x/provider/query"
 	"github.com/ovrclk/akash/x/provider/simulation"
 	"github.com/ovrclk/akash/x/provider/types"
 )
@@ -104,13 +103,13 @@ func (AppModuleBasic) GetQueryClient(clientCtx client.Context) types.QueryClient
 // AppModule implements an application module for the provider module.
 type AppModule struct {
 	AppModuleBasic
-	keeper  keeper.Keeper
+	keeper  keeper.IKeeper
 	bkeeper bankkeeper.Keeper
 	mkeeper mkeeper.Keeper
 }
 
 // NewAppModule creates a new AppModule object
-func NewAppModule(cdc codec.Marshaler, k keeper.Keeper, bkeeper bankkeeper.Keeper, mkeeper mkeeper.Keeper) AppModule {
+func NewAppModule(cdc codec.Marshaler, k keeper.IKeeper, bkeeper bankkeeper.Keeper, mkeeper mkeeper.Keeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keeper:         k,
@@ -134,18 +133,18 @@ func (am AppModule) Route() sdk.Route {
 
 // QuerierRoute returns the provider module's querier route name.
 func (am AppModule) QuerierRoute() string {
-	return types.ModuleName
+	return ""
 }
 
 // LegacyQuerierHandler returns the sdk.Querier for provider module
-func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
-	return query.NewQuerier(am.keeper, legacyQuerierCdc)
+func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
+	return nil
 }
 
 // RegisterServices registers the module's servicess
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), handler.NewMsgServerImpl(am.keeper, am.mkeeper))
-	querier := keeper.Querier{Keeper: am.keeper}
+	querier := am.keeper.NewQuerier()
 	types.RegisterQueryServer(cfg.QueryServer(), querier)
 }
 
@@ -177,13 +176,13 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONMarshaler) json
 
 // AppModuleSimulation implements an application simulation module for the provider module.
 type AppModuleSimulation struct {
-	keeper  keeper.Keeper
+	keeper  keeper.IKeeper
 	akeeper govtypes.AccountKeeper
 	bkeeper bankkeeper.Keeper
 }
 
 // NewAppModuleSimulation creates a new AppModuleSimulation instance
-func NewAppModuleSimulation(k keeper.Keeper, akeeper govtypes.AccountKeeper, bkeeper bankkeeper.Keeper) AppModuleSimulation {
+func NewAppModuleSimulation(k keeper.IKeeper, akeeper govtypes.AccountKeeper, bkeeper bankkeeper.Keeper) AppModuleSimulation {
 	return AppModuleSimulation{
 		keeper:  k,
 		akeeper: akeeper,

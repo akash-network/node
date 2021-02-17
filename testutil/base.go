@@ -34,6 +34,10 @@ func Hostname(t testing.TB) string {
 	return Name(t, "hostname") + ".test.com"
 }
 
+func ProviderHostname(t testing.TB) string {
+	return "https://" + Hostname(t)
+}
+
 // Attribute generates a random sdk.Attribute
 func Attribute(t testing.TB) types.Attribute {
 	t.Helper()
@@ -59,6 +63,24 @@ func PlacementRequirements(t testing.TB) types.PlacementRequirements {
 	}
 }
 
+func RandCPUUnits() uint {
+	return RandRangeUint(
+		dtypes.GetValidationConfig().MinUnitCPU,
+		dtypes.GetValidationConfig().MaxUnitCPU)
+}
+
+func RandMemoryQuantity() uint64 {
+	return RandRangeUint64(
+		dtypes.GetValidationConfig().MinUnitMemory,
+		dtypes.GetValidationConfig().MaxUnitMemory)
+}
+
+func RandStorageQuantity() uint64 {
+	return RandRangeUint64(
+		dtypes.GetValidationConfig().MinUnitStorage,
+		dtypes.GetValidationConfig().MaxUnitStorage)
+}
+
 // Resources produces an attribute list for populating a Group's
 // 'Resources' fields.
 func Resources(t testing.TB) []dtypes.Resource {
@@ -71,13 +93,13 @@ func Resources(t testing.TB) []dtypes.Resource {
 		res := dtypes.Resource{
 			Resources: types.ResourceUnits{
 				CPU: &types.CPU{
-					Units: types.NewResourceValue(100),
+					Units: types.NewResourceValue(uint64(dtypes.GetValidationConfig().MinUnitCPU)),
 				},
 				Memory: &types.Memory{
-					Quantity: types.NewResourceValue(1024), // default min value is 1024
+					Quantity: types.NewResourceValue(dtypes.GetValidationConfig().MinUnitMemory),
 				},
 				Storage: &types.Storage{
-					Quantity: types.NewResourceValue(1024), // default min value is 1024
+					Quantity: types.NewResourceValue(dtypes.GetValidationConfig().MinUnitStorage),
 				},
 			},
 			Count: 1,

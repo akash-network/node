@@ -76,10 +76,11 @@ func SendManifestHander(clientCtx client.Context, dd *DeploymentData, gClientDir
 var errUnexpectedEvent = errors.New("unexpected event")
 
 // DeploymentDataUpdateHandler updates a DeploymentData and prints relevant events
-func DeploymentDataUpdateHandler(dd *DeploymentData, leasesReady chan<- struct{}) func(pubsub.Event) error {
+func DeploymentDataUpdateHandler(dd *DeploymentData, bids chan<- mtypes.EventBidCreated, leasesReady chan<- struct{}) func(pubsub.Event) error {
 	return func(ev pubsub.Event) (err error) {
 		addr := dd.DeploymentID.Owner
 		log := logger.With("addr", addr, "dseq", dd.DeploymentID.DSeq)
+
 		switch event := ev.(type) {
 		// Handle deployment creation events
 		case dtypes.EventDeploymentCreated:
@@ -133,6 +134,7 @@ func DeploymentDataUpdateHandler(dd *DeploymentData, leasesReady chan<- struct{}
 		case mtypes.EventBidCreated:
 			if addr == event.ID.Owner && event.ID.DSeq == dd.DeploymentID.DSeq {
 				log.Info("bid for order created", "oseq", event.ID.OSeq, "price", event.Price)
+				bids <- event
 			}
 			return
 

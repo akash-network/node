@@ -2,7 +2,6 @@ package types
 
 import (
 	"bytes"
-	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -121,21 +120,31 @@ func (g Group) ID() GroupID {
 	return g.GroupID
 }
 
-// ValidateOrderable method checks whether group status is Open or not
-func (g Group) ValidateOrderable() error {
-	switch g.State {
-	case GroupOpen:
-		return nil
-	default:
-		return ErrGroupNotOpen
-	}
-}
-
 // ValidateClosable provides error response if group is already closed,
 // and thus should not be closed again, else nil.
 func (g Group) ValidateClosable() error {
 	switch g.State {
 	case GroupClosed:
+		return ErrGroupClosed
+	default:
+		return nil
+	}
+}
+
+// ValidatePausable provides error response if group is not pausable
+func (g Group) ValidatePausable() error {
+	switch g.State {
+	case GroupClosed, GroupPaused:
+		return ErrGroupClosed
+	default:
+		return nil
+	}
+}
+
+// ValidatePausable provides error response if group is not pausable
+func (g Group) ValidateStartable() error {
+	switch g.State {
+	case GroupPaused:
 		return ErrGroupClosed
 	default:
 		return nil
@@ -157,19 +166,8 @@ func (r Resource) FullPrice() sdk.Coin {
 	return sdk.NewCoin(r.Price.Denom, r.Price.Amount.MulRaw(int64(r.Count)))
 }
 
-func (d DeploymentResponse) String() string {
-	return fmt.Sprintf(`Deployment
-	Owner:   %s
-	DSeq:    %d
-	State:   %v
-	Version: %s
-	Num Groups: %d
-	`, d.Deployment.DeploymentID.Owner, d.Deployment.DeploymentID.DSeq,
-		d.Deployment.State, d.Deployment.Version, len(d.Groups))
-}
-
 // DeploymentResponses is a collection of DeploymentResponse
-type DeploymentResponses []DeploymentResponse
+type DeploymentResponses []QueryDeploymentResponse
 
 func (ds DeploymentResponses) String() string {
 	var buf bytes.Buffer

@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	ErrStateValue = errors.New("query: invalid state value")
+	ErrStateValue  = errors.New("query: invalid state value")
+	DefaultDeposit = types.DefaultDeploymentMinDeposit
 )
 
 // AddDeploymentIDFlags add flags for deployment

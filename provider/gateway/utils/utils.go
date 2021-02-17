@@ -62,7 +62,7 @@ func NewServerTLSConfig(ctx context.Context, certs []tls.Certificate, cquery cty
 				if err != nil {
 					return errors.Wrap(err, "tls: unable to fetch certificate from chain")
 				}
-				if (len(resp.Certificates) != 1) || (resp.Certificates[0].State != ctypes.CertificateValid) {
+				if (len(resp.Certificates) != 1) || !resp.Certificates[0].Certificate.IsState(ctypes.CertificateValid) {
 					return errors.New("tls: attempt to use non-existing or revoked certificate")
 				}
 

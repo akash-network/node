@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/types"
 )
 
@@ -98,7 +99,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		return nil, status.Error(codes.InvalidArgument, "invalid state value")
 	}
 
-	var bids types.Bids
+	var bids []types.QueryBidResponse
 	ctx := sdk.UnwrapSDKContext(c)
 
 	store := ctx.KVStore(k.skey)
@@ -115,7 +116,15 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		// filter bids with provided filters
 		if req.Filters.Accept(bid, stateVal) {
 			if accumulate {
-				bids = append(bids, bid)
+				acct, err := k.ekeeper.GetAccount(ctx, types.EscrowAccountForBid(bid.BidID))
+				if err != nil {
+					return true, err
+				}
+
+				bids = append(bids, types.QueryBidResponse{
+					Bid:           bid,
+					EscrowAccount: acct,
+				})
 			}
 
 			return true, nil
@@ -154,7 +163,15 @@ func (k Querier) Bid(c context.Context, req *types.QueryBidRequest) (*types.Quer
 		return nil, types.ErrBidNotFound
 	}
 
-	return &types.QueryBidResponse{Bid: bid}, nil
+	acct, err := k.ekeeper.GetAccount(ctx, types.EscrowAccountForBid(bid.ID()))
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryBidResponse{
+		Bid:           bid,
+		EscrowAccount: acct,
+	}, nil
 }
 
 // Leases returns leases based on filters
@@ -169,7 +186,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		return nil, status.Error(codes.InvalidArgument, "invalid state value")
 	}
 
-	var leases types.Leases
+	var leases []types.QueryLeaseResponse
 	ctx := sdk.UnwrapSDKContext(c)
 
 	store := ctx.KVStore(k.skey)
@@ -186,7 +203,17 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		// filter leases with provided filters
 		if req.Filters.Accept(lease, stateVal) {
 			if accumulate {
-				leases = append(leases, lease)
+				payment, err := k.ekeeper.GetPayment(ctx,
+					dtypes.EscrowAccountForDeployment(lease.ID().DeploymentID()),
+					types.EscrowPaymentForLease(lease.ID()))
+				if err != nil {
+					return true, err
+				}
+
+				leases = append(leases, types.QueryLeaseResponse{
+					Lease:         lease,
+					EscrowPayment: payment,
+				})
 			}
 
 			return true, nil
@@ -225,5 +252,15 @@ func (k Querier) Lease(c context.Context, req *types.QueryLeaseRequest) (*types.
 		return nil, types.ErrLeaseNotFound
 	}
 
-	return &types.QueryLeaseResponse{Lease: lease}, nil
+	payment, err := k.ekeeper.GetPayment(ctx,
+		dtypes.EscrowAccountForDeployment(lease.ID().DeploymentID()),
+		types.EscrowPaymentForLease(lease.ID()))
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryLeaseResponse{
+		Lease:         lease,
+		EscrowPayment: payment,
+	}, nil
 }

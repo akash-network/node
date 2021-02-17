@@ -2,23 +2,25 @@ package validation_test
 
 import (
 	"bytes"
+	"testing"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ovrclk/akash/manifest"
+	"github.com/ovrclk/akash/testutil"
 	akashtypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/validation"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
-const (
-	randCPU1    uint64 = 10
-	randCPU2    uint64 = 5
-	randMemory  uint64 = 20
-	randStorage uint64 = 5
+var (
+	randCPU1    = uint64(testutil.RandCPUUnits())
+	randCPU2    = randCPU1 + 1
+	randMemory  = testutil.RandMemoryQuantity()
+	randStorage = testutil.RandStorageQuantity()
 )
 
 var randUnits1 = akashtypes.ResourceUnits{
@@ -249,19 +251,19 @@ func simpleResourceUnits() akashtypes.ResourceUnits {
 	return akashtypes.ResourceUnits{
 		CPU: &akashtypes.CPU{
 			Units: akashtypes.ResourceValue{
-				Val: sdk.NewInt(10),
+				Val: sdk.NewIntFromUint64(randCPU1),
 			},
 			Attributes: nil,
 		},
 		Memory: &akashtypes.Memory{
 			Quantity: akashtypes.ResourceValue{
-				Val: sdk.NewInt(1024),
+				Val: sdk.NewIntFromUint64(randMemory),
 			},
 			Attributes: nil,
 		},
 		Storage: &akashtypes.Storage{
 			Quantity: akashtypes.ResourceValue{
-				Val: sdk.NewInt(1025),
+				Val: sdk.NewIntFromUint64(randStorage),
 			},
 			Attributes: nil,
 		},

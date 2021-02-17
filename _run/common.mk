@@ -8,7 +8,7 @@ CHAIN_NAME   := local
 CHAIN_OPTS   := --chain-id $(CHAIN_NAME)
 GENESIS_PATH := $(NODE_HOME)/config/genesis.json
 
-CHAIN_MIN_DEPOSIT     := 10000000
+CHAIN_MIN_DEPOSIT     := 10000000000000
 CHAIN_ACCOUNT_DEPOSIT := $(shell echo $$(($(CHAIN_MIN_DEPOSIT) * 10)))
 CHAIN_TOKEN_DENOM     := uakt
 

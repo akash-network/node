@@ -7,6 +7,16 @@ import (
 	"github.com/ovrclk/akash/x/provider/types"
 )
 
+type IKeeper interface {
+	Codec() codec.BinaryMarshaler
+	Get(ctx sdk.Context, id sdk.Address) (types.Provider, bool)
+	Create(ctx sdk.Context, provider types.Provider) error
+	WithProviders(ctx sdk.Context, fn func(types.Provider) bool)
+	Update(ctx sdk.Context, provider types.Provider) error
+	Delete(ctx sdk.Context, id sdk.Address)
+	NewQuerier() Querier
+}
+
 // Keeper of the provider store
 type Keeper struct {
 	skey sdk.StoreKey
@@ -14,11 +24,15 @@ type Keeper struct {
 }
 
 // NewKeeper creates and returns an instance for Provider keeper
-func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey) IKeeper {
 	return Keeper{
 		skey: skey,
 		cdc:  cdc,
 	}
+}
+
+func (k Keeper) NewQuerier() Querier {
+	return Querier{k}
 }
 
 // Codec returns keeper codec

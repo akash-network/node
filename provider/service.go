@@ -70,7 +70,10 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 		return nil, ErrClusterReadTimedout
 	}
 
-	bidengine, err := bidengine.NewService(ctx, session, cluster, bus, cfg.BPS)
+	bidengine, err := bidengine.NewService(ctx, session, cluster, bus, bidengine.Config{
+		PricingStrategy: cfg.BidPricingStrategy,
+		Deposit:         cfg.BidDeposit,
+	})
 	if err != nil {
 		errmsg := "creating bidengine service"
 		session.Log().Error(errmsg, "err", err)

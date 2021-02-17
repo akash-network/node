@@ -172,7 +172,18 @@ The Provider Services Daemon should see this order and bid on it.
 make query-bids
 ```
 
-And when the order is ready to be matched, a lease will be created:
+When a bid has been created, you may create a lease:
+
+
+### __t1 run Step: 7__
+
+To create a lease, run
+
+```sh
+make lease-create
+```
+
+You can see the lease with:
 
 ```sh
 make query-leases
@@ -189,7 +200,7 @@ make provider-status
 Now that you have a lease with a provider, you need to send your
 workload configuration to that provider by sending it the manifest:
 
-### __t1 Step: 7__
+### __t1 Step: 8__
 ```sh
 make send-manifest
 ```
@@ -250,11 +261,25 @@ __t1 teardown__
 make bid-close
 ```
 
-#### Tenant closes the order
+#### Tenant closes the lease
 
 __t1 teardown__
 ```sh
-make order-close
+make lease-close
+```
+
+#### Tenant pauses the group
+
+__t1 teardown__
+```sh
+make group-pause
+```
+
+#### Tenant closes the group
+
+__t1 teardown__
+```sh
+make group-pause
 ```
 
 #### Tenant closes the deployment

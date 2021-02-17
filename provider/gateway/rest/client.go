@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	cutils "github.com/ovrclk/akash/x/cert/utils"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,11 +15,14 @@ import (
 	"sync"
 	"time"
 
+	cutils "github.com/ovrclk/akash/x/cert/utils"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 
 	cosmosclient "github.com/cosmos/cosmos-sdk/client"
+
 	akashclient "github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider"
@@ -209,7 +211,7 @@ func (c *client) verifyPeerCertificate(certificates [][]byte, _ [][]*x509.Certif
 	if err != nil {
 		return errors.Wrap(err, "tls: unable to fetch certificate from chain")
 	}
-	if (len(resp.Certificates) != 1) || (resp.Certificates[0].State != ctypes.CertificateValid) {
+	if (len(resp.Certificates) != 1) || !resp.Certificates[0].Certificate.IsState(ctypes.CertificateValid) {
 		return errors.New("tls: attempt to use non-existing or revoked certificate")
 	}
 

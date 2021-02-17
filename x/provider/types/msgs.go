@@ -43,6 +43,12 @@ func (msg MsgCreateProvider) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Owner); err != nil {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgCreate: Invalid Provider Address")
 	}
+	if err := msg.Attributes.Validate(); err != nil {
+		return err
+	}
+	if err := msg.Info.Validate(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -83,6 +89,12 @@ func (msg MsgUpdateProvider) ValidateBasic() error {
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.Owner); err != nil {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgUpdate: Invalid Provider Address")
+	}
+	if err := msg.Attributes.Validate(); err != nil {
+		return err
+	}
+	if err := msg.Info.Validate(); err != nil {
+		return err
 	}
 	return nil
 }
