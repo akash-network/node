@@ -3,23 +3,22 @@ generate:
 	$(GO) generate ./...
 
 .PHONY: mocks
-mocks:
-	mockery -case=underscore -dir vendor/k8s.io/client-go/kubernetes -output testutil/kubernetes_mock -all -recursive -outpkg kubernetes_mocks -keeptree
-	mockery -case=underscore -dir provider                    -output provider/mocks              -name StatusClient
-	mockery -case=underscore -dir provider                    -output provider/mocks              -name Client
-	mockery -case=underscore -dir provider/cluster/types      -output provider/cluster/mocks      -name Deployment
-	mockery -case=underscore -dir provider/cluster            -output provider/cluster/mocks      -name Client
-	mockery -case=underscore -dir provider/cluster            -output provider/cluster/mocks      -name ReadClient
-	mockery -case=underscore -dir provider/cluster            -output provider/cluster/mocks      -name Cluster
-	mockery -case=underscore -dir provider/cluster/types      -output provider/cluster/mocks      -name Reservation
-	mockery -case=underscore -dir provider/manifest           -output provider/manifest/mocks     -name Client
-	mockery -case=underscore -dir provider/manifest           -output provider/manifest/mocks     -name StatusClient
-	mockery -case=underscore -dir client/broadcaster          -output client/broadcaster/mocks    -name Client
-	mockery -case=underscore -dir client                      -output client/mocks/               -name QueryClient
-	mockery -case=underscore -dir client                      -output client/mocks/               -name Client
-	mockery -case=underscore -dir x/escrow/keeper             -output x/escrow/keeper/mocks       -name BankKeeper
-	mockery -case=underscore -dir vendor/github.com/cosmos/cosmos-sdk/x/bank/types -output testutil/cosmos_mock -name QueryClient -outpkg cosmos_mocks -keeptree
-
+mocks: $(MOCKERY) modvendor
+	$(MOCKERY) --case=underscore --dir vendor/k8s.io/client-go/kubernetes --output testutil/kubernetes_mock --all --recursive --outpkg kubernetes_mocks --keeptree
+	$(MOCKERY) --case=underscore --dir vendor/github.com/cosmos/cosmos-sdk/x/bank/types --output testutil/cosmos_mock --name QueryClient --outpkg cosmos_mocks --keeptree
+	$(MOCKERY) --case=underscore --dir provider                    --output provider/mocks              --name StatusClient
+	$(MOCKERY) --case=underscore --dir provider                    --output provider/mocks              --name Client
+	$(MOCKERY) --case=underscore --dir provider/cluster/types      --output provider/cluster/mocks      --name Deployment
+	$(MOCKERY) --case=underscore --dir provider/cluster            --output provider/cluster/mocks      --name Client
+	$(MOCKERY) --case=underscore --dir provider/cluster            --output provider/cluster/mocks      --name ReadClient
+	$(MOCKERY) --case=underscore --dir provider/cluster            --output provider/cluster/mocks      --name Cluster
+	$(MOCKERY) --case=underscore --dir provider/cluster/types      --output provider/cluster/mocks      --name Reservation
+	$(MOCKERY) --case=underscore --dir provider/manifest           --output provider/manifest/mocks     --name Client
+	$(MOCKERY) --case=underscore --dir provider/manifest           --output provider/manifest/mocks     --name StatusClient
+	$(MOCKERY) --case=underscore --dir client/broadcaster          --output client/broadcaster/mocks    --name Client
+	$(MOCKERY) --case=underscore --dir client                      --output client/mocks/               --name QueryClient
+	$(MOCKERY) --case=underscore --dir client                      --output client/mocks/               --name Client
+	$(MOCKERY) --case=underscore --dir x/escrow/keeper             --output x/escrow/keeper/mocks       --name BankKeeper
 
 .PHONY: kubetypes
 kubetypes: deps-vendor
