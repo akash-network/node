@@ -17,6 +17,8 @@ OSEQ          ?= 1
 PRICE         ?= 10uakt
 CERT_HOSTNAME ?= localhost
 
+export AKASH_GAS_ADJUSTMENT ?= 2
+
 .PHONY: provider-create
 provider-create:
 	$(AKASHCTL) tx provider create "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(PROVIDER_CONFIG_PATH)" -y \
@@ -41,6 +43,12 @@ send-manifest:
 .PHONY: deployment-create
 deployment-create:
 	$(AKASHCTL) tx deployment create "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(SDL_PATH)" -y \
+		--dseq "$(DSEQ)" 			   \
+		--from "$(KEY_NAME)"
+
+.PHONY: deploy-create
+deploy-create:
+	$(AKASHCTL) deploy create "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(SDL_PATH)" -y \
 		--dseq "$(DSEQ)" 			   \
 		--from "$(KEY_NAME)"
 
