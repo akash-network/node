@@ -18,6 +18,7 @@ mocks:
 	mockery -case=underscore -dir client                      -output client/mocks/               -name QueryClient
 	mockery -case=underscore -dir client                      -output client/mocks/               -name Client
 	mockery -case=underscore -dir x/escrow/keeper             -output x/escrow/keeper/mocks       -name BankKeeper
+	mockery -case=underscore -dir vendor/github.com/cosmos/cosmos-sdk/x/bank/types -output testutil/cosmos_mock -name QueryClient -outpkg cosmos_mocks -keeptree
 
 
 .PHONY: kubetypes
