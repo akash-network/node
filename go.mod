@@ -56,4 +56,4 @@ replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.2-alp
 
 replace github.com/grpc-ecosystem/grpc-gateway => github.com/grpc-ecosystem/grpc-gateway v1.14.7
 
-replace github.com/tendermint/tendermint => /home/ericu/ovrclk/tendermint
+replace github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.7-hydrogen18
