@@ -170,9 +170,10 @@ func DeploymentDataUpdateHandler(dd *DeploymentData, bids chan<- mtypes.EventBid
 			}
 			return
 
-		// In any other case we should exit with error
+		// Ignore any other event
 		default:
-			return fmt.Errorf("%w: %T", errUnexpectedEvent, ev)
+			log.Debug("Ignoring event")
+			return
 		}
 	}
 }
