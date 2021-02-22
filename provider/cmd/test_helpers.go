@@ -20,5 +20,5 @@ func ProviderStatusExec(clientCtx client.Context, extraArgs ...string) (sdktest.
 }
 
 func ProviderServiceLogs(clientCtx client.Context, extraArgs ...string) (sdktest.BufferWriter, error) {
-	return testutilcli.ExecTestCLICmd(clientCtx, serviceLogsCmd(), extraArgs...)
+	return testutilcli.ExecTestCLICmd(clientCtx, leaseLogsCmd(), extraArgs...)
 }

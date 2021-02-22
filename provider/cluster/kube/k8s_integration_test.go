@@ -102,7 +102,7 @@ func TestNewClient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, maxtries, tries)
 
-	logs, err := ac.ServiceLogs(ctx, lid, svcname, true, nil)
+	logs, err := ac.LeaseLogs(ctx, lid, svcname, true, nil)
 	require.NoError(t, err)
 	require.Equal(t, int(sstat.AvailableReplicas), len(logs))
 
