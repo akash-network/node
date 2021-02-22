@@ -2,12 +2,15 @@ package kube
 
 import (
 	"context"
-	"k8s.io/client-go/util/flowcontrol"
+	"fmt"
 	"os"
 	"path"
 
+	"k8s.io/client-go/util/flowcontrol"
+
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/cluster/util"
@@ -15,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -211,13 +215,94 @@ func (c *client) TeardownLease(ctx context.Context, lid mtypes.LeaseID) error {
 	return c.kc.CoreV1().Namespaces().Delete(ctx, lidNS(lid), metav1.DeleteOptions{})
 }
 
-func (c *client) ServiceLogs(ctx context.Context, lid mtypes.LeaseID,
-	_ string, follow bool, tailLines *int64) ([]*ctypes.ServiceLog, error) {
+func newEventsFeedList(ctx context.Context, events []eventsv1.Event) ctypes.EventsWatcher {
+	wtch := ctypes.NewEventsFeed(ctx)
+
+	go func() {
+		defer wtch.Shutdown()
+
+	done:
+		for _, evt := range events {
+			evt := evt
+			if !wtch.SendEvent(&evt) {
+				break done
+			}
+		}
+	}()
+
+	return wtch
+}
+
+func newEventsFeedWatch(ctx context.Context, events watch.Interface) ctypes.EventsWatcher {
+	wtch := ctypes.NewEventsFeed(ctx)
+
+	go func() {
+		func() {
+			events.Stop()
+			wtch.Shutdown()
+		}()
+
+	done:
+		for {
+			select {
+			case obj := <-events.ResultChan():
+				evt := obj.Object.(*eventsv1.Event)
+				if !wtch.SendEvent(evt) {
+					break done
+				}
+			case <-wtch.Done():
+				break done
+			}
+		}
+	}()
+
+	return wtch
+}
+
+func (c *client) LeaseEvents(ctx context.Context, lid mtypes.LeaseID, services string, follow bool) (ctypes.EventsWatcher, error) {
 	if err := c.leaseExists(ctx, lid); err != nil {
 		return nil, err
 	}
 
-	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(ctx, metav1.ListOptions{})
+	listOpts := metav1.ListOptions{}
+	if len(services) != 0 {
+		listOpts.LabelSelector = fmt.Sprintf(akashManifestServiceLabelName+" in (%s)", services)
+	}
+
+	var wtch ctypes.EventsWatcher
+	if follow {
+		watcher, err := c.kc.EventsV1().Events(lidNS(lid)).Watch(ctx, listOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		wtch = newEventsFeedWatch(ctx, watcher)
+	} else {
+		list, err := c.kc.EventsV1().Events(lidNS(lid)).List(ctx, listOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		wtch = newEventsFeedList(ctx, list.Items)
+	}
+
+	return wtch, nil
+}
+
+func (c *client) LeaseLogs(ctx context.Context, lid mtypes.LeaseID,
+	services string, follow bool, tailLines *int64) ([]*ctypes.ServiceLog, error) {
+	if err := c.leaseExists(ctx, lid); err != nil {
+		return nil, err
+	}
+
+	listOpts := metav1.ListOptions{}
+	if len(services) != 0 {
+		listOpts.LabelSelector = fmt.Sprintf(akashManifestServiceLabelName+" in (%s)", services)
+	}
+
+	c.log.Error("filtering pods", "labelSelector", listOpts.LabelSelector)
+
+	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(ctx, listOpts)
 	if err != nil {
 		c.log.Error(err.Error())
 		return nil, errors.Wrap(err, ErrInternalError.Error())
@@ -259,7 +344,6 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 			AvailableReplicas:  deployment.Status.AvailableReplicas,
 		}
 		serviceStatus[deployment.Name] = status
-
 	}
 
 	ingress, err := c.kc.NetworkingV1().Ingresses(lidNS(lid)).List(ctx, metav1.ListOptions{})
@@ -280,7 +364,8 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 		if !found {
 			continue
 		}
-		hosts := []string{}
+
+		hosts := make([]string, 0, len(ing.Spec.Rules)+(len(ing.Status.LoadBalancer.Ingress)*2))
 
 		for _, rule := range ing.Spec.Rules {
 			hosts = append(hosts, rule.Host)
@@ -393,7 +478,7 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 	}
 
 	if ingress != nil {
-		hosts := []string{}
+		hosts := make([]string, 0, len(ingress.Spec.Rules))
 		for _, rule := range ingress.Spec.Rules {
 			hosts = append(hosts, rule.Host)
 		}

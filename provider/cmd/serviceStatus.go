@@ -30,6 +30,9 @@ func serviceStatusCmd() *cobra.Command {
 	}
 
 	addServiceFlags(cmd)
+	if err := cmd.MarkFlagRequired(FlagService); err != nil {
+		panic(err.Error())
+	}
 
 	return cmd
 }
