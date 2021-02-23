@@ -43,6 +43,7 @@ var (
 	ErrNoDeploymentForLease     = errors.New("kube: no deployments for lease")
 	ErrNoGlobalServicesForLease = errors.New("kube: no global services for lease")
 	ErrInternalError            = errors.New("kube: internal error")
+	ErrNoServiceForLease        = errors.New("no service for that lease")
 )
 
 // Client interface includes cluster client
@@ -304,7 +305,7 @@ func (c *client) LeaseLogs(ctx context.Context, lid mtypes.LeaseID,
 
 	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(ctx, listOpts)
 	if err != nil {
-		c.log.Error(err.Error())
+		c.log.Error("listing pods", "err", err)
 		return nil, errors.Wrap(err, ErrInternalError.Error())
 	}
 	streams := make([]*ctypes.ServiceLog, len(pods.Items))
@@ -315,7 +316,7 @@ func (c *client) LeaseLogs(ctx context.Context, lid mtypes.LeaseID,
 			Timestamps: false,
 		}).Stream(ctx)
 		if err != nil {
-			c.log.Error(err.Error())
+			c.log.Error("get pod logs", "err", err)
 			return nil, errors.Wrap(err, ErrInternalError.Error())
 		}
 		streams[i] = cluster.NewServiceLog(pod.Name, stream)
@@ -348,13 +349,13 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 
 	ingress, err := c.kc.NetworkingV1().Ingresses(lidNS(lid)).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		c.log.Error(err.Error())
+		c.log.Error("list ingresses", "err", err)
 		return nil, errors.Wrap(err, ErrInternalError.Error())
 	}
 
 	services, err := c.kc.CoreV1().Services(lidNS(lid)).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		c.log.Error(err.Error())
+		c.log.Error("list services", "err", err)
 		return nil, errors.Wrap(err, ErrInternalError.Error())
 	}
 
@@ -450,21 +451,45 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 		return nil, err
 	}
 
+	c.log.Debug("get deployment", "lease-ns", lidNS(lid), "name", name)
 	deployment, err := c.kc.AppsV1().Deployments(lidNS(lid)).Get(ctx, name, metav1.GetOptions{})
 
 	if err != nil {
-		c.log.Error(err.Error())
+		c.log.Error("deployment get", "err", err)
 		return nil, errors.Wrap(err, ErrInternalError.Error())
 	}
 	if deployment == nil {
+		c.log.Error("no deployment found", "name", name)
 		return nil, ErrNoDeploymentForLease
 	}
 
-	ingress, err := c.kc.NetworkingV1().Ingresses(lidNS(lid)).Get(ctx, name, metav1.GetOptions{})
+	hasIngress := false
+	// Get manifest definition from CRD
+	c.log.Debug("Pulling manifest from CRD", "lease-ns", lidNS(lid))
+	obj, err := c.ac.AkashV1().Manifests(c.ns).Get(ctx, lidNS(lid), metav1.GetOptions{})
 	if err != nil {
-		c.log.Error(err.Error())
-		return nil, errors.Wrap(err, ErrInternalError.Error())
+		c.log.Error("CRD manifest not found", "lease-ns", lidNS(lid), "name", name)
+		return nil, err
 	}
+
+	found := false
+exposeCheckLoop:
+	for _, service := range obj.Spec.Group.Services {
+		if service.Name == name {
+			found = true
+			for _, expose := range service.Expose {
+				if expose.Global && 0 != len(expose.Hosts) {
+					hasIngress = true
+					break exposeCheckLoop
+				}
+			}
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("%w: service %q", ErrNoServiceForLease, name)
+	}
+
+	c.log.Debug("service result", "lease-ns", lidNS(lid), "hasIngress", hasIngress)
 
 	result := &ctypes.ServiceStatus{
 		Name:               deployment.Name,
@@ -477,7 +502,13 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 		AvailableReplicas:  deployment.Status.AvailableReplicas,
 	}
 
-	if ingress != nil {
+	if hasIngress {
+		ingress, err := c.kc.NetworkingV1().Ingresses(lidNS(lid)).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			c.log.Error("ingresses get", "err", err)
+			return nil, errors.Wrap(err, ErrInternalError.Error())
+		}
+
 		hosts := make([]string, 0, len(ingress.Spec.Rules))
 		for _, rule := range ingress.Spec.Rules {
 			hosts = append(hosts, rule.Host)
@@ -698,7 +729,7 @@ func (c *client) leaseExists(ctx context.Context, lid mtypes.LeaseID) error {
 			return ErrLeaseNotFound
 		}
 
-		c.log.Error(err.Error())
+		c.log.Error("namespaces get", "err", err)
 		return errors.Wrap(err, ErrInternalError.Error())
 	}
 
@@ -712,11 +743,12 @@ func (c *client) deploymentsForLease(ctx context.Context, lid mtypes.LeaseID) ([
 
 	deployments, err := c.kc.AppsV1().Deployments(lidNS(lid)).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		c.log.Error(err.Error())
+		c.log.Error("deployments list", "err", err)
 		return nil, errors.Wrap(err, ErrInternalError.Error())
 	}
 
 	if deployments == nil || 0 == len(deployments.Items) {
+		c.log.Info("No deployments found for", "lease namespace", lidNS(lid))
 		return nil, ErrNoDeploymentForLease
 	}
 

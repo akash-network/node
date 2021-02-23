@@ -30,7 +30,9 @@ var (
 	ErrShutdownTimerExpired = errors.New("shutdown timer expired")
 	// ErrManifestVersion indicates that the given manifest's version does not
 	// match the blockchain Version value.
-	ErrManifestVersion = errors.New("manifest version validation failed")
+	ErrManifestVersion         = errors.New("manifest version validation failed")
+	ErrNoManifestForDeployment = errors.New("manifest not yet received for that deployment")
+	ErrNoLeaseForDeployment    = errors.New("no lease for deployment")
 )
 
 func newManager(h *service, daddr dtypes.DeploymentID) (*manager, error) {
@@ -61,8 +63,6 @@ func newManager(h *service, daddr dtypes.DeploymentID) (*manager, error) {
 
 	return m, nil
 }
-
-var ErrNoLeaseForDeployment = errors.New("no lease for deployment")
 
 // 'manager' facilitates operations around a configured Deployment.
 type manager struct {
