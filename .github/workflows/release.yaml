@@ -41,8 +41,8 @@ jobs:
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'ovrclk/akash'
         name: setup release environment
         run: |-
-          echo 'DOCKER_USERNAME=${{secrets.DOCKERHUB_USERNAME}}' > .release-env
-          echo 'DOCKER_PASSWORD=${{secrets.DOCKERHUB_PASSWORD}}' >> .release-env
+          echo '${{secrets.GHCR_USER}}:${{secrets.GHCR_TOKEN}}:ghcr.io' > .docker-creds
+          echo 'DOCKER_CREDS_FILE=.docker-creds'                    > .release-env
           echo 'GITHUB_TOKEN=${{secrets.GORELEASER_ACCESS_TOKEN}}' >> .release-env
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'ovrclk/akash'
         name: release publish
