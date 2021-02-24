@@ -31,6 +31,46 @@ func clientForTest(t *testing.T, kc kubernetes.Interface) Client {
 	return result
 }
 
+func TestNewClientWithBogusIngressDomain(t *testing.T) {
+	settings := Settings{
+		DeploymentIngressStaticHosts: true,
+		DeploymentIngressDomain:      "*.foo.bar.com",
+	}
+	client, err := NewClient(testutil.Logger(t), "aNamespace0", settings)
+	require.Error(t, err)
+	require.ErrorIs(t, err, errSettingsValidation)
+	require.Nil(t, client)
+
+	settings = Settings{
+		DeploymentIngressStaticHosts: true,
+		DeploymentIngressDomain:      "foo.bar.com-",
+	}
+	client, err = NewClient(testutil.Logger(t), "aNamespace1", settings)
+	require.Error(t, err)
+	require.ErrorIs(t, err, errSettingsValidation)
+	require.Nil(t, client)
+
+	settings = Settings{
+		DeploymentIngressStaticHosts: true,
+		DeploymentIngressDomain:      "foo.ba!!!r.com",
+	}
+	client, err = NewClient(testutil.Logger(t), "aNamespace2", settings)
+	require.Error(t, err)
+	require.ErrorIs(t, err, errSettingsValidation)
+	require.Nil(t, client)
+}
+
+func TestNewClientWithEmptyIngressDomain(t *testing.T) {
+	settings := Settings{
+		DeploymentIngressStaticHosts: true,
+		DeploymentIngressDomain:      "",
+	}
+	client, err := NewClient(testutil.Logger(t), "aNamespace3", settings)
+	require.Error(t, err)
+	require.ErrorIs(t, err, errSettingsValidation)
+	require.Nil(t, client)
+}
+
 func TestLeaseStatusWithNoDeployments(t *testing.T) {
 	lid := testutil.LeaseID(t)
 
