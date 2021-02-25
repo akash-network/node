@@ -113,6 +113,9 @@ func (s *service) run(existingOrders []mtypes.OrderID) {
 	defer s.lc.ShutdownCompleted()
 	defer s.sub.Close()
 
+	// TODO - periodically query to see if we have in the wallet more than 2x the tokens needed for
+	// placing a deposit on a bid. If it is less than that amount, then trigger a withdrawal from all leases
+
 	for _, orderID := range existingOrders {
 		key := mquery.OrderPath(orderID)
 		s.session.Log().Debug("creating catchup order", "order", key)

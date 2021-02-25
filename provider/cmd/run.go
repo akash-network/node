@@ -420,7 +420,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	config.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
 
 	config.BidPricingStrategy = pricing
-	service, err := provider.NewService(ctx, session, bus, cclient, config)
+	service, err := provider.NewService(ctx, cctx, info.GetAddress(), session, bus, cclient, config)
 	if err != nil {
 		return err
 	}

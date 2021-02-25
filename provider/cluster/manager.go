@@ -6,6 +6,7 @@ import (
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/cluster/util"
+
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -34,8 +35,9 @@ type deploymentManager struct {
 	lease  mtypes.LeaseID
 	mgroup *manifest.Group
 
-	monitor *deploymentMonitor
-	wg      sync.WaitGroup
+	monitor    *deploymentMonitor
+	withdrawal *deploymentWithdrawal
+	wg         sync.WaitGroup
 
 	updatech   chan *manifest.Group
 	teardownch chan struct{}
@@ -146,6 +148,7 @@ loop:
 				dm.log.Debug("deploy complete")
 				dm.state = dsDeployComplete
 				dm.startMonitor()
+				dm.startWithdrawal()
 			case dsDeployPending:
 				if result != nil {
 					break loop
@@ -185,6 +188,18 @@ loop:
 	}
 
 	dm.wg.Wait()
+	if nil != dm.withdrawal {
+		<-dm.withdrawal.lc.Done()
+	}
+}
+
+func (dm *deploymentManager) startWithdrawal() {
+	dm.wg.Add(1)
+	dm.withdrawal = newDeploymentWithdrawal(dm)
+	go func(m *deploymentMonitor) {
+		defer dm.wg.Done()
+		<-m.done()
+	}(dm.monitor)
 }
 
 func (dm *deploymentManager) startMonitor() {

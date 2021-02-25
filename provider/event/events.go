@@ -50,3 +50,6 @@ type ClusterDeployment struct {
 	Group   *manifest.Group
 	Status  ClusterDeploymentStatus
 }
+
+// Empty type used as a marker to indicate _any_ lease should be withdrawn now
+type LeaseWithdrawNow struct{}
