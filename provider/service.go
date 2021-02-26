@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"time"
 
 	"github.com/boz/go-lifecycle"
@@ -41,7 +44,7 @@ type Service interface {
 // NewService creates and returns new Service instance
 // Simple wrapper around various services needed for running a provider.
 
-func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cclient cluster.Client, cfg Config) (Service, error) {
+func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress, session session.Session, bus pubsub.Bus, cclient cluster.Client, cfg Config) (Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	session = session.ForModule("provider-service")
@@ -95,6 +98,8 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 		return nil, err
 	}
 
+	bankQueryClient := bankTypes.NewQueryClient(cctx)
+
 	service := &service{
 		session:   session,
 		bus:       bus,
@@ -104,6 +109,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cc
 		manifest:  manifest,
 		ctx:       ctx,
 		cancel:    cancel,
+		bc:        newBalanceChecker(ctx, bankQueryClient, accAddr, session, bus),
 		lc:        lifecycle.New(),
 		config:    cfg,
 	}
@@ -123,6 +129,7 @@ type service struct {
 	cluster   cluster.Service
 	bidengine bidengine.Service
 	manifest  manifest.Service
+	bc        *balanceChecker
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -186,4 +193,5 @@ func (s *service) run() {
 	<-s.cluster.Done()
 	<-s.bidengine.Done()
 	<-s.manifest.Done()
+	<-s.bc.lc.Done()
 }

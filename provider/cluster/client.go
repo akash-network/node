@@ -4,7 +4,12 @@ import (
 	"bufio"
 	"context"
 	"io"
+	"math/rand"
 	"sync"
+	"time"
+
+	eventsv1 "k8s.io/api/events/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/ovrclk/akash/manifest"
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
@@ -18,8 +23,9 @@ var _ Client = (*nullClient)(nil)
 
 type ReadClient interface {
 	LeaseStatus(context.Context, mtypes.LeaseID) (*ctypes.LeaseStatus, error)
+	LeaseEvents(context.Context, mtypes.LeaseID, string, bool) (ctypes.EventsWatcher, error)
+	LeaseLogs(context.Context, mtypes.LeaseID, string, bool, *int64) ([]*ctypes.ServiceLog, error)
 	ServiceStatus(context.Context, mtypes.LeaseID, string) (*ctypes.ServiceStatus, error)
-	ServiceLogs(context.Context, mtypes.LeaseID, string, bool, *int64) ([]*ctypes.ServiceLog, error)
 }
 
 // Client interface lease and deployment methods
@@ -62,8 +68,14 @@ const (
 	nullClientStorage = 512 * unit.Gi
 )
 
+type nullLease struct {
+	ctx    context.Context
+	cancel func()
+	group  *manifest.Group
+}
+
 type nullClient struct {
-	leases map[string]*manifest.Group
+	leases map[string]*nullLease
 	mtx    sync.Mutex
 }
 
@@ -79,7 +91,7 @@ func NewServiceLog(name string, stream io.ReadCloser) *ctypes.ServiceLog {
 // NullClient returns nullClient instance
 func NullClient() Client {
 	return &nullClient{
-		leases: make(map[string]*manifest.Group),
+		leases: make(map[string]*nullLease),
 		mtx:    sync.Mutex{},
 	}
 }
@@ -87,22 +99,29 @@ func NullClient() Client {
 func (c *nullClient) Deploy(ctx context.Context, lid mtypes.LeaseID, mgroup *manifest.Group) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	c.leases[mquery.LeasePath(lid)] = mgroup
+
+	ctx, cancel := context.WithCancel(ctx)
+	c.leases[mquery.LeasePath(lid)] = &nullLease{
+		ctx:    ctx,
+		cancel: cancel,
+		group:  mgroup,
+	}
+
 	return nil
 }
 
-func (c *nullClient) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.LeaseStatus, error) {
+func (c *nullClient) LeaseStatus(_ context.Context, lid mtypes.LeaseID) (*ctypes.LeaseStatus, error) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
-	mgroup, ok := c.leases[mquery.LeasePath(lid)]
+	lease, ok := c.leases[mquery.LeasePath(lid)]
 	if !ok {
 		return nil, nil
 	}
 
 	resp := &ctypes.LeaseStatus{}
 	resp.Services = make(map[string]*ctypes.ServiceStatus)
-	for _, svc := range mgroup.Services {
+	for _, svc := range lease.group.Services {
 		resp.Services[svc.Name] = &ctypes.ServiceStatus{
 			Name:      svc.Name,
 			Available: int32(svc.Count),
@@ -113,27 +132,92 @@ func (c *nullClient) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctyp
 	return resp, nil
 }
 
-func (c *nullClient) ServiceStatus(ctx context.Context, _ mtypes.LeaseID, _ string) (*ctypes.ServiceStatus, error) {
-	return nil, nil
-}
-
-func (c *nullClient) ServiceLogs(_ context.Context, _ mtypes.LeaseID, _ string, _ bool, _ *int64) ([]*ctypes.ServiceLog, error) {
-	return nil, nil
-}
-
-func (c *nullClient) TeardownLease(ctx context.Context, lid mtypes.LeaseID) error {
+func (c *nullClient) LeaseEvents(ctx context.Context, lid mtypes.LeaseID, _ string, follow bool) (ctypes.EventsWatcher, error) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
-	delete(c.leases, mquery.LeasePath(lid))
-	return nil
+	lease, ok := c.leases[mquery.LeasePath(lid)]
+	if !ok {
+		return nil, nil
+	}
+
+	if lease.ctx.Err() != nil {
+		return nil, nil
+	}
+
+	feed := ctypes.NewEventsFeed(ctx)
+	go func() {
+		defer feed.Shutdown()
+
+		tm := time.NewTicker(7 * time.Second)
+		tm.Stop()
+
+		genEvent := func() *eventsv1.Event {
+			return &eventsv1.Event{
+				EventTime:           v1.NewMicroTime(time.Now()),
+				ReportingController: lease.group.Name,
+			}
+		}
+
+		nfollowCh := make(chan *eventsv1.Event, 1)
+		count := 0
+		if !follow {
+			count = rand.Intn(9) // nolint: gosec
+			nfollowCh <- genEvent()
+		} else {
+			tm.Reset(time.Second)
+		}
+
+		for {
+			select {
+			case <-lease.ctx.Done():
+				return
+			case evt := <-nfollowCh:
+				if !feed.SendEvent(evt) || count == 0 {
+					return
+				}
+				count--
+				nfollowCh <- genEvent()
+				break
+			case <-tm.C:
+				tm.Stop()
+				if !feed.SendEvent(genEvent()) {
+					return
+				}
+				tm.Reset(time.Duration(rand.Intn(9)+1) * time.Second) // nolint: gosec
+				break
+			}
+		}
+	}()
+
+	return feed, nil
 }
 
-func (c *nullClient) Deployments(ctx context.Context) ([]ctypes.Deployment, error) {
+func (c *nullClient) ServiceStatus(_ context.Context, _ mtypes.LeaseID, _ string) (*ctypes.ServiceStatus, error) {
 	return nil, nil
 }
 
-func (c *nullClient) Inventory(ctx context.Context) ([]ctypes.Node, error) {
+func (c *nullClient) LeaseLogs(_ context.Context, _ mtypes.LeaseID, _ string, _ bool, _ *int64) ([]*ctypes.ServiceLog, error) {
+	return nil, nil
+}
+
+func (c *nullClient) TeardownLease(_ context.Context, lid mtypes.LeaseID) error {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+
+	if lease, ok := c.leases[mquery.LeasePath(lid)]; ok {
+		delete(c.leases, mquery.LeasePath(lid))
+		lease.cancel()
+	}
+
+	return nil
+}
+
+func (c *nullClient) Deployments(context.Context) ([]ctypes.Deployment, error) {
+	return nil, nil
+}
+
+func (c *nullClient) Inventory(context.Context) ([]ctypes.Node, error) {
 	return []ctypes.Node{
 		NewNode("solo", atypes.ResourceUnits{
 			CPU: &atypes.CPU{

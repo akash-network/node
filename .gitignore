@@ -26,5 +26,6 @@ coverage.txt
 
 .cache
 .release-env
+.docker-creds
 
 /tmp-swagger-gen

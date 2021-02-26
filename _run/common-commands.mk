@@ -11,11 +11,14 @@ PROVIDER_CONFIG_PATH ?= provider.yaml
 
 SDL_PATH ?= deployment.yaml
 
-DSEQ          ?= 1
-GSEQ          ?= 1
-OSEQ          ?= 1
-PRICE         ?= 10uakt
-CERT_HOSTNAME ?= localhost
+DSEQ           ?= 1
+GSEQ           ?= 1
+OSEQ           ?= 1
+PRICE          ?= 10uakt
+CERT_HOSTNAME  ?= localhost
+LEASE_SERVICES ?= web
+
+export AKASH_GAS_ADJUSTMENT ?= 2
 
 .PHONY: provider-create
 provider-create:
@@ -44,6 +47,12 @@ deployment-create:
 		--dseq "$(DSEQ)" 			   \
 		--from "$(KEY_NAME)"
 
+.PHONY: deploy-create
+deploy-create:
+	$(AKASHCTL) deploy create "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(SDL_PATH)" -y \
+		--dseq "$(DSEQ)" 			   \
+		--from "$(KEY_NAME)"
+
 .PHONY: deployment-deposit
 deployment-deposit:
 	$(AKASHCTL) tx deployment deposit "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(PRICE)" -y \
@@ -52,7 +61,7 @@ deployment-deposit:
 
 .PHONY: deployment-update
 deployment-update:
-	$(AKASHCTL) tx deployment update "$(KEY_OPTS)" "$(SDL_PATH)" -y \
+	$(AKASHCTL) tx deployment update "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(SDL_PATH)" -y \
 		--dseq "$(DSEQ)" \
 		--from "$(KEY_NAME)"			\
 		--chain-id "$(CHAIN_NAME)"
@@ -219,3 +228,20 @@ revoke-certificate:
 .PHONY: events-run
 events-run:
 	$(AKASHCTL) events
+
+.PHONY: provider-lease-logs
+provider-lease-logs:
+	$(AKASHCTL) "$(KEY_OPTS)" provider lease-logs \
+		-f \
+		--service="$(LEASE_SERVICES)" \
+		--dseq "$(DSEQ)"     \
+		--from "$(KEY_NAME)" \
+		--provider "$(PROVIDER_ADDRESS)"
+
+.PHONY: provider-lease-events
+provider-lease-events:
+	$(AKASHCTL) "$(KEY_OPTS)" provider lease-events \
+		-f \
+		--dseq "$(DSEQ)"     \
+		--from "$(KEY_NAME)" \
+		--provider "$(PROVIDER_ADDRESS)"

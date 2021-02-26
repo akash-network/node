@@ -3,6 +3,7 @@ package rest
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/context"
@@ -24,6 +25,7 @@ const (
 	serviceContextKey
 	ownerContextKey
 	providerContextKey
+	servicesContextKey
 )
 
 func requestLeaseID(req *http.Request) mtypes.LeaseID {
@@ -40,6 +42,10 @@ func requestLogTailLines(req *http.Request) *int64 {
 
 func requestService(req *http.Request) string {
 	return context.Get(req, serviceContextKey).(string)
+}
+
+func requestServices(req *http.Request) string {
+	return context.Get(req, servicesContextKey).(string)
 }
 
 func requestProvider(req *http.Request) sdk.Address {
@@ -143,7 +149,7 @@ func parseLeaseID(req *http.Request) (mtypes.LeaseID, error) {
 	return mquery.ParseLeasePath(parts)
 }
 
-func requestLogParams() mux.MiddlewareFunc {
+func requestStreamParams() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			vars := req.URL.Query()
@@ -157,35 +163,36 @@ func requestLogParams() mux.MiddlewareFunc {
 				}
 			}()
 
-			var follow bool
 			var tailLines *int64
 
-			val := vars.Get("follow")
-			if val == "" {
-				err = errors.Errorf("query must contain \"follow\" key")
+			services := vars.Get("service")
+			if strings.HasSuffix(services, ",") {
+				err = errors.Errorf("parameter \"service\" must not contain trailing comma")
 				return
 			}
 
-			follow, err = strconv.ParseBool(val)
-			if err != nil {
-				return
-			}
+			follow := false
 
-			val = vars.Get("tail")
-			if val == "" {
-				err = errors.Errorf("query must contain \"tail\" key")
-				return
+			if val := vars.Get("follow"); val != "" {
+				follow, err = strconv.ParseBool(val)
+				if err != nil {
+					return
+				}
 			}
 
 			vl := new(int64)
-			*vl, err = strconv.ParseInt(val, 10, 32)
-			if err != nil {
-				return
-			}
+			if val := vars.Get("tail"); val != "" {
+				*vl, err = strconv.ParseInt(val, 10, 32)
+				if err != nil {
+					return
+				}
 
-			if *vl < -1 {
-				err = errors.Errorf("parameter \"tail\" contains invalid value")
-				return
+				if *vl < -1 {
+					err = errors.Errorf("parameter \"tail\" contains invalid value")
+					return
+				}
+			} else {
+				*vl = -1
 			}
 
 			if *vl > -1 {
@@ -194,6 +201,7 @@ func requestLogParams() mux.MiddlewareFunc {
 
 			context.Set(req, logFollowContextKey, follow)
 			context.Set(req, tailLinesContextKey, tailLines)
+			context.Set(req, servicesContextKey, services)
 
 			next.ServeHTTP(w, req)
 		})

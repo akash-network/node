@@ -79,6 +79,52 @@ func (_m *Client) Inventory(_a0 context.Context) ([]clustertypes.Node, error) {
 	return r0, r1
 }
 
+// LeaseEvents provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *Client) LeaseEvents(_a0 context.Context, _a1 types.LeaseID, _a2 string, _a3 bool) (clustertypes.EventsWatcher, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3)
+
+	var r0 clustertypes.EventsWatcher
+	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, string, bool) clustertypes.EventsWatcher); ok {
+		r0 = rf(_a0, _a1, _a2, _a3)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(clustertypes.EventsWatcher)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, types.LeaseID, string, bool) error); ok {
+		r1 = rf(_a0, _a1, _a2, _a3)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// LeaseLogs provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4
+func (_m *Client) LeaseLogs(_a0 context.Context, _a1 types.LeaseID, _a2 string, _a3 bool, _a4 *int64) ([]*clustertypes.ServiceLog, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4)
+
+	var r0 []*clustertypes.ServiceLog
+	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, string, bool, *int64) []*clustertypes.ServiceLog); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*clustertypes.ServiceLog)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, types.LeaseID, string, bool, *int64) error); ok {
+		r1 = rf(_a0, _a1, _a2, _a3, _a4)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // LeaseStatus provides a mock function with given fields: _a0, _a1
 func (_m *Client) LeaseStatus(_a0 context.Context, _a1 types.LeaseID) (*clustertypes.LeaseStatus, error) {
 	ret := _m.Called(_a0, _a1)
@@ -95,29 +141,6 @@ func (_m *Client) LeaseStatus(_a0 context.Context, _a1 types.LeaseID) (*clustert
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, types.LeaseID) error); ok {
 		r1 = rf(_a0, _a1)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// ServiceLogs provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4
-func (_m *Client) ServiceLogs(_a0 context.Context, _a1 types.LeaseID, _a2 string, _a3 bool, _a4 *int64) ([]*clustertypes.ServiceLog, error) {
-	ret := _m.Called(_a0, _a1, _a2, _a3, _a4)
-
-	var r0 []*clustertypes.ServiceLog
-	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, string, bool, *int64) []*clustertypes.ServiceLog); ok {
-		r0 = rf(_a0, _a1, _a2, _a3, _a4)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*clustertypes.ServiceLog)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, types.LeaseID, string, bool, *int64) error); ok {
-		r1 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		r1 = ret.Error(1)
 	}

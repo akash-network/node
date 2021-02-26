@@ -28,12 +28,3 @@ provider-service-status:
 		--from      "$(KEY_NAME)" \
 		--provider  "$(PROVIDER_ADDRESS)"
 
-.PHONY: provider-service-logs
-provider-service-logs:
-	$(AKASHCTL) "$(KEY_OPTS)" provider service-logs \
-		--dseq      "$(DSEQ)"        \
-		--gseq      "$(GSEQ)"        \
-		--oseq      "$(OSEQ)"        \
-		--service   "web"            \
-		--from      "$(KEY_NAME)" \
-		--provider  "$(PROVIDER_ADDRESS)"
