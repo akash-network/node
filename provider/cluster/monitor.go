@@ -76,7 +76,6 @@ func (m *deploymentMonitor) run() {
 loop:
 	for {
 		select {
-
 		case err := <-m.lc.ShutdownRequest():
 			m.log.Debug("shutting down")
 			m.lc.ShutdownInitiated(err)
