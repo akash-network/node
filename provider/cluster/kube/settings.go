@@ -1,6 +1,8 @@
 package kube
 
 import (
+	"fmt"
+	validation_util "github.com/ovrclk/akash/util/validation"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -38,9 +40,16 @@ type Settings struct {
 var errSettingsValidation = errors.New("settings validation")
 
 func validateSettings(settings Settings) error {
-	if settings.DeploymentIngressStaticHosts && settings.DeploymentIngressDomain == "" {
-		return errors.Wrap(errSettingsValidation, "empty ingress domain")
+	if settings.DeploymentIngressStaticHosts {
+		if settings.DeploymentIngressDomain == "" {
+			return errors.Wrap(errSettingsValidation, "empty ingress domain")
+		}
+
+		if !validation_util.IsDomainName(settings.DeploymentIngressDomain) {
+			return fmt.Errorf("%w: invalid domain name %q", errSettingsValidation, settings.DeploymentIngressDomain)
+		}
 	}
+
 	return nil
 }
 
