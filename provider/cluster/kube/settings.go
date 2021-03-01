@@ -35,6 +35,9 @@ type Settings struct {
 	CPUCommitLevel     float64
 	MemoryCommitLevel  float64
 	StorageCommitLevel float64
+
+	// path to kube config file, may be left blank
+	ConfigPath string
 }
 
 var errSettingsValidation = errors.New("settings validation")

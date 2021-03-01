@@ -72,6 +72,7 @@ const (
 	FlagOvercommitPercentStorage         = "overcommit-pct-storage"
 	FlagDeploymentBlockedHostnames       = "deployment-blocked-hostnames"
 	FlagAuthPem                          = "auth-pem"
+	FlagKubeConfig                       = "kubeconfig"
 )
 
 var (
@@ -227,6 +228,11 @@ func RunCmd() *cobra.Command {
 
 	cmd.Flags().String(FlagAuthPem, "", "")
 
+	cmd.Flags().String(FlagKubeConfig, "", "kubernetes configuration file path")
+	if err := viper.BindPFlag(FlagKubeConfig, cmd.Flags().Lookup(FlagKubeConfig)); err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
@@ -287,6 +293,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	overcommitPercentMemory := 1.0 + float64(viper.GetUint64(FlagOvercommitPercentMemory)/100.0)
 	pricing, err := createBidPricingStrategy(strategy)
 	blockedHostnames := viper.GetStringSlice(FlagDeploymentBlockedHostnames)
+	kubeConfig := viper.GetString(FlagKubeConfig)
 
 	if err != nil {
 		return err
@@ -389,6 +396,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	kubeSettings.CPUCommitLevel = overcommitPercentCPU
 	kubeSettings.MemoryCommitLevel = overcommitPercentMemory
 	kubeSettings.StorageCommitLevel = overcommitPercentStorage
+	kubeSettings.ConfigPath = kubeConfig
 
 	cclient, err := createClusterClient(log, cmd, kubeSettings)
 	if err != nil {

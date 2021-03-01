@@ -73,7 +73,7 @@ func NewClient(log log.Logger, ns string, settings Settings) (Client, error) {
 func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client, error) {
 	ctx := context.Background()
 
-	config, err := openKubeConfig(log)
+	config, err := openKubeConfig(settings.ConfigPath, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "kube: error building config flags")
 	}
@@ -112,15 +112,18 @@ func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client
 
 }
 
-func openKubeConfig(log log.Logger) (*rest.Config, error) {
-	cfgpath := path.Join(homedir.HomeDir(), ".kube", "config")
-
-	if _, err := os.Stat(cfgpath); err == nil {
-		log.Debug("reading kube config", "path", cfgpath)
-		return clientcmd.BuildConfigFromFlags("", cfgpath)
+func openKubeConfig(cfgPath string, log log.Logger) (*rest.Config, error) {
+	// If no value is specified, use a default
+	if len(cfgPath) == 0 {
+		cfgPath = path.Join(homedir.HomeDir(), ".kube", "config")
 	}
 
-	log.Info("using in-cluster config")
+	if _, err := os.Stat(cfgPath); err == nil {
+		log.Info("using kube config file", "path", cfgPath)
+		return clientcmd.BuildConfigFromFlags("", cfgPath)
+	}
+
+	log.Info("using in cluster kube config")
 	return rest.InClusterConfig()
 }
 
