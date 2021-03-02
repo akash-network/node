@@ -16,9 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: c-py/action-dotenv-to-setenv@v3
+        with:
+          env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ secrets.GOLANG_VERSION }}"
+          go-version: "^${{ env.GOLANG_VERSION }}"
       - run: make bins
       - run: make docker-image
 
@@ -26,18 +29,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: c-py/action-dotenv-to-setenv@v3
+        with:
+          env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ secrets.GOLANG_VERSION }}"
+          go-version: "^${{ env.GOLANG_VERSION }}"
       - run: make test-full
 
   coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: c-py/action-dotenv-to-setenv@v3
+        with:
+          env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ secrets.GOLANG_VERSION }}"
+          go-version: "^${{ env.GOLANG_VERSION }}"
       - run: make test-coverage
       - uses: codecov/codecov-action@v1
 
@@ -45,9 +54,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: c-py/action-dotenv-to-setenv@v3
+        with:
+          env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ secrets.GOLANG_VERSION }}"
+          go-version: "^${{ env.GOLANG_VERSION }}"
       - run: make deps-tidy
       - run: make deps-vendor
       - run: make build

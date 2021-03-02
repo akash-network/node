@@ -25,9 +25,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: c-py/action-dotenv-to-setenv@v3
+        with:
+          env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ secrets.GOLANG_VERSION }}"
+          go-version: "^${{ env.GOLANG_VERSION }}"
       - name: test-sim-nondeterminism
         run: make test-sim-nondeterminism
 
@@ -35,9 +38,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: c-py/action-dotenv-to-setenv@v3
+        with:
+          env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ secrets.GOLANG_VERSION }}"
+          go-version: "^${{ env.GOLANG_VERSION }}"
       - name: test-sim-import-export
         run: make test-sim-import-export
 
@@ -45,9 +51,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: c-py/action-dotenv-to-setenv@v3
+        with:
+          env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ secrets.GOLANG_VERSION }}"
+          go-version: "^${{ env.GOLANG_VERSION }}"
       - name: test-sim-after-import
         run: make test-sim-after-import
 
@@ -55,8 +64,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: c-py/action-dotenv-to-setenv@v3
+        with:
+          env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ secrets.GOLANG_VERSION }}"
+          go-version: "^${{ env.GOLANG_VERSION }}"
       - name: test-sim-fullapp
         run: make test-sim-fullapp

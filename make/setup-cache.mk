@@ -22,7 +22,7 @@ $(PROTOC): $(PROTOC_VERSION_FILE)
 $(PROTOC_GEN_COSMOS_VERSION_FILE): $(CACHE)
 	@echo "installing protoc-gen-cosmos..."
 	rm -f $(PROTOC_GEN_COSMOS)
-	GOBIN=$(CACHE_BIN) $(GO) install github.com/regen-network/cosmos-proto/protoc-gen-gocosmos
+	GOBIN=$(CACHE_BIN) go get github.com/regen-network/cosmos-proto/protoc-gen-gocosmos@$(PROTOC_GEN_COSMOS_VERSION)
 	rm -rf "$(dir $@)"
 	mkdir -p "$(dir $@)"
 	touch $@
@@ -42,32 +42,38 @@ $(GRPC_GATEWAY): $(GRPC_GATEWAY_VERSION_FILE)
 $(STATIK_VERSION_FILE): $(CACHE)
 	@echo "Installing statik..."
 	rm -f $(STATIK)
-	GOBIN=$(CACHE_BIN) $(GO) get github.com/rakyll/statik@$(STATIK_VERSION)
+	GOBIN=$(CACHE_BIN) $(GO) install github.com/rakyll/statik@$(STATIK_VERSION)
 	rm -rf "$(dir $@)"
 	mkdir -p "$(dir $@)"
 	touch $@
 $(STATIK): $(STATIK_VERSION_FILE)
 
-$(MODVENDOR): $(CACHE)
+$(MODVENDOR_VERSION_FILE): $(CACHE)
 	@echo "installing modvendor..."
-	GOBIN=$(CACHE_BIN) GO111MODULE=off go get github.com/goware/modvendor
+	rm -f $(MODVENDOR)
+	GOBIN=$(CACHE_BIN) $(GO) install github.com/goware/modvendor@$(MODVENDOR_VERSION)
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(MODVENDOR): $(MODVENDOR_VERSION_FILE)
 
-# fixme use go install when 1.16 is out
-# this hack is to not flood go.{mod, sum} with tools used in this makefile
-# but take versions from variables instead
-# see https://github.com/golang/go/issues/40276
-# https://tip.golang.org/doc/go1.16
 $(GIT_CHGLOG_VERSION_FILE): $(CACHE)
 	@echo "installing git-chglog..."
-	bash -c 'TMP=$(shell mktemp -d); \
-		trap "rm -rf $${TMP}" EXIT; \
-		cd $${TMP}; \
-		GOBIN=$(CACHE_BIN) GO111MODULE=on go get -u github.com/git-chglog/git-chglog/cmd/git-chglog@$(GIT_CHGLOG_VERSION) \
-	'
+	rm -f $(GIT_CHGLOG)
+	GOBIN=$(CACHE_BIN) go install github.com/git-chglog/git-chglog/cmd/git-chglog@$(GIT_CHGLOG_VERSION)
 	rm -rf "$(dir $@)"
 	mkdir -p "$(dir $@)"
 	touch $@
 $(GIT_CHGLOG): $(GIT_CHGLOG_VERSION_FILE)
+
+$(MOCKERY_VERSION_FILE): $(CACHE)
+	@echo "installing mockery..."
+	rm -f $(PROTOC_GEN_COSMOS)
+	GOBIN=$(CACHE_BIN) go install -ldflags '-s -w -X github.com/vektra/mockery/v2/pkg/config.SemVer=$(MOCKERY_VERSION)' github.com/vektra/mockery/v2@v$(MOCKERY_VERSION)
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(MOCKERY): $(MOCKERY_VERSION_FILE)
 
 $(SWAGGER_COMBINE): $(CACHE)
 ifeq (, $(shell which swagger-combine 2>/dev/null))
@@ -80,7 +86,7 @@ endif
 $(PROTOC_SWAGGER_GEN): $(CACHE)
 ifeq (, $(shell which protoc-gen-swagger 2>/dev/null))
 	@echo "installing protoc-gen-swagger..."
-	GOBIN=$(CACHE_BIN) $(GO) get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+	GOBIN=$(CACHE_BIN) $(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@$(PROTOC_SWAGGER_GEN_VERSION)
 endif
 
 kubetypes-deps-install:
@@ -93,10 +99,8 @@ kubetypes-deps-install:
 		"$(shell go env GOPATH)/src/k8s.io/code-generator"
 
 devdeps-install: kubetypes-deps-install
-	$(GO) get     github.com/vektra/mockery/.../
 	$(GO) install k8s.io/code-generator/...
 	$(GO) get     sigs.k8s.io/kind
-	$(GO) install golang.org/x/tools/cmd/stringer
 
 cache-clean:
 	rm -rf $(CACHE)

@@ -80,16 +80,18 @@ archives:
       - none*
 
 dockers:
-  - binaries:
-      - akash
+  - ids:
+      - akash-linux-amd64
     dockerfile: _build/Dockerfile.akash
     goos: linux
     goarch: amd64
     image_templates:
-      - "ghcr.io/ovrclk/akash:{{if eq .Env.MAINNET \"true\"}}stable{{else}}latest{{end}}"
-      - "ghcr.io/ovrclk/akash:{{ .ShortCommit }}"
-      - "ghcr.io/ovrclk/akash:{{ .Version }}"
-
+      - 'ovrclk/akash:{{if eq .Env.MAINNET "true"}}stable{{else}}latest{{end}}'
+      - 'ovrclk/akash:{{ .ShortCommit }}'
+      - 'ovrclk/akash:{{ .Version }}'
+      - 'ghcr.io/ovrclk/akash:{{if eq .Env.MAINNET "true"}}stable{{else}}latest{{end}}'
+      - 'ghcr.io/ovrclk/akash:{{ .ShortCommit }}'
+      - 'ghcr.io/ovrclk/akash:{{ .Version }}'
 brews:
   - name: "{{ .Env.HOMEBREW_NAME }}"
     tap:
@@ -103,9 +105,9 @@ brews:
       bin.install "akash"
 
 nfpms:
-  - vendor: Overclock Labs Inc.
-    homepage: http://ovrclk.com
-    maintainer: Akash Network <hello@akash.network>
+  - vendor: "Overclock Labs Inc."
+    homepage: "http://ovrclk.com"
+    maintainer: "Akash Network <hello@akash.network>"
     formats:
       - deb
       - rpm

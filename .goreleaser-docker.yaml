@@ -21,13 +21,14 @@ builds:
       - "{{ .Env.LD_FLAGS }}"
       - -extldflags "-lc -lrt -lpthread --static"
 dockers:
-  - binaries:
-      - akash
+  - ids:
+      - akash-linux-amd64
     dockerfile: _build/Dockerfile.akash
     goos: linux
     goarch: amd64
     image_templates:
-      - "ovrclk/akash:latest"
+      - 'ovrclk/akash:latest'
+      - 'ghcr.io/ovrclk/akash:latest'
 
 archives:
   - format: binary

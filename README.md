@@ -47,7 +47,8 @@ The easiest way to get started with Akash is by trying Testnet. Sign up [here](h
 
 Platform | Arch | Status
 --- | --- | :---
-Darwin (aka MacOS) | amd64 | ✅ **Supported**
+Darwin | amd64 | ✅ **Supported**
+Darwin | arm64 | ⚠️ **Not Supported**
 Linux | amd64 | ✅ **Supported**
 Linux | arm64 (aka aarch64) | ✅ **Supported**
 Linux | armhf GOARM=5,6,7 | ⚠️ **Not supported**
@@ -87,7 +88,7 @@ To become a contributor, please see the guide on [contributing](CONTRIBUTING.md)
 
 ### Dependencies
 
-Akash is developed and tested with [golang 1.15.6+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
+Akash is developed and tested with [golang 1.16.0+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
 
  Most golang libraries will be installed via [`go modules`](https://github.com/golang/go/wiki/Modules),
  however the following packages:
@@ -96,7 +97,6 @@ Akash is developed and tested with [golang 1.15.6+](https://golang.org/).  Build
 github.com/vektra/mockery/.../
 k8s.io/code-generator/...
 sigs.k8s.io/kind
-golang.org/x/tools/cmd/stringer
  ```
  
  will be installed globally with their binaries placed in `$GOPATH/bin` by `make devdeps-install`.
