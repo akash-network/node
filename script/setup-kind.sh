@@ -8,6 +8,8 @@
 # * Install Network Policies
 # * Optionally install metrics-server
 
+set -xe
+
 rootdir="$(dirname "$0")/.."
 
 install_ns() {
@@ -26,10 +28,10 @@ install_metrics() {
   # https://github.com/kubernetes-sigs/kind/issues/398#issuecomment-621143252
   kubectl apply -f "$(dirname "$0")/kind-metrics-server.yaml"
 
-  kubectl wait pod --namespace kube-system \
-    --for=condition=ready \
-    --selector=k8s-app=metrics-server \
-    --timeout=90s
+#  kubectl wait pod --namespace kube-system \
+#    --for=condition=ready \
+#    --selector=k8s-app=metrics-server \
+#    --timeout=90s
 
   echo "metrics initialized"
 }

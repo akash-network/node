@@ -73,6 +73,7 @@ const (
 	FlagDeploymentBlockedHostnames       = "deployment-blocked-hostnames"
 	FlagAuthPem                          = "auth-pem"
 	FlagKubeConfig                       = "kubeconfig"
+	FlagDeploymentRuntimeClass           = "deployment-runtime-class"
 )
 
 var (
@@ -233,6 +234,10 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().String(FlagDeploymentRuntimeClass, "gvisor", "kubernetes runtime class for deployments, use none for no specification")
+	if err := viper.BindPFlag(FlagDeploymentRuntimeClass, cmd.Flags().Lookup(FlagDeploymentRuntimeClass)); err != nil {
+		return nil
+	}
 	return cmd
 }
 
@@ -294,6 +299,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	pricing, err := createBidPricingStrategy(strategy)
 	blockedHostnames := viper.GetStringSlice(FlagDeploymentBlockedHostnames)
 	kubeConfig := viper.GetString(FlagKubeConfig)
+	deploymentRuntimeClass := viper.GetString(FlagDeploymentRuntimeClass)
 
 	if err != nil {
 		return err
@@ -397,6 +403,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	kubeSettings.MemoryCommitLevel = overcommitPercentMemory
 	kubeSettings.StorageCommitLevel = overcommitPercentStorage
 	kubeSettings.ConfigPath = kubeConfig
+	kubeSettings.DeploymentRuntimeClass = deploymentRuntimeClass
 
 	cclient, err := createClusterClient(log, cmd, kubeSettings)
 	if err != nil {

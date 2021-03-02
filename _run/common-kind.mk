@@ -3,7 +3,7 @@
 # is configured by engineerd/setup-kind. `kind-control-plane` is the docker
 # image's name in GH Actions.
 KIND_NAME      ?= $(shell basename $$PWD)
-KIND_IMG       ?= kindest/node:v1.19.3
+KIND_IMG       ?= kindest/node:v1.20.0
 K8S_CONTEXT    ?= $(shell kubectl config current-context)
 KIND_HTTP_PORT ?= $(shell docker inspect \
     --type container "$(KIND_NAME)-control-plane" \
