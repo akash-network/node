@@ -14,9 +14,11 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: c-py/action-dotenv-to-setenv@v3
-        with:
-          env-file: .makerc
+      - shell: bash
+        run: |
+          while IFS='' read -r LINE || [ -n "${LINE}" ]; do
+            echo "$LINE" >> $GITHUB_ENV;
+          done < .makerc
       - uses: actions/setup-go@v2
         with:
           go-version: "^${{ env.GOLANG_VERSION }}"
