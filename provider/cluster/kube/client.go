@@ -241,7 +241,7 @@ func newEventsFeedWatch(ctx context.Context, events watch.Interface) ctypes.Even
 	wtch := ctypes.NewEventsFeed(ctx)
 
 	go func() {
-		func() {
+		defer func() {
 			events.Stop()
 			wtch.Shutdown()
 		}()
