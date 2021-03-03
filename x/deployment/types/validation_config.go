@@ -39,9 +39,9 @@ type ValidationConfig struct {
 }
 
 var validationConfig = ValidationConfig{
-	MaxUnitCPU:     10 * 1000,     // 10 CPUs
-	MaxUnitMemory:  16 * unit.Gi,  // 16 Gi
-	MaxUnitStorage: 100 * unit.Gi, // 100 Gi
+	MaxUnitCPU:     10 * 1000,    // 10 CPUs
+	MaxUnitMemory:  16 * unit.Gi, // 16 Gi
+	MaxUnitStorage: unit.Ti,      // 1 Ti
 	MaxUnitCount:   50,
 	MaxUnitPrice:   10000000, // 10akt
 
@@ -56,7 +56,7 @@ var validationConfig = ValidationConfig{
 
 	MaxGroupCPU:     20 * 1000,
 	MaxGroupMemory:  32 * unit.Gi,
-	MaxGroupStorage: 256 * unit.Gi,
+	MaxGroupStorage: unit.Ti,
 }
 
 func GetValidationConfig() ValidationConfig {
