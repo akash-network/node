@@ -502,8 +502,6 @@ func (c *client) LeaseLogs(ctx context.Context,
 
 	endpoint.RawQuery = query.Encode()
 
-	fmt.Println(endpoint.String())
-
 	conn, response, err := c.wsclient.DialContext(ctx, endpoint.String(), nil)
 	if err != nil {
 		if errors.Is(err, websocket.ErrBadHandshake) {
