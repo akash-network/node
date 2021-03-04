@@ -432,17 +432,23 @@ func wsEventWriter(ctx context.Context, ws *websocket.Conn, cfg wsStreamConfig) 
 		return
 	}
 
+	sendClose := func() {
+		_ = ws.WriteMessage(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	}
 done:
 	for {
 		select {
 		case <-ctx.Done():
+			sendClose()
+			break done
+		case <-evts.Done():
+			sendClose()
 			break done
 		case evt := <-evts.ResultChan():
 			if evt == nil {
-				// go through normal websocket close in case there is no more data to feed
-				_ = ws.WriteMessage(
-					websocket.CloseMessage,
-					websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+				sendClose()
 				break done
 			}
 
@@ -452,6 +458,7 @@ done:
 				ReportingInstance:   evt.ReportingInstance,
 				Time:                evt.EventTime.Time,
 				Reason:              evt.Reason,
+				Note:                evt.Note,
 				Object: cltypes.LeaseEventObject{
 					Kind:      evt.Regarding.Kind,
 					Namespace: evt.Regarding.Namespace,

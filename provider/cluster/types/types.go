@@ -88,6 +88,7 @@ type LeaseEvent struct {
 	ReportingInstance   string           `json:"reportingInstance,omitempty" yaml:"reportingInstance"`
 	Time                time.Time        `json:"time" yaml:"time"`
 	Reason              string           `json:"reason" yaml:"reason"`
+	Note                string           `json:"note" yaml:"note"`
 	Object              LeaseEventObject `json:"object" yaml:"object"`
 }
 
