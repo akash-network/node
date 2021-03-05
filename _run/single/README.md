@@ -81,11 +81,11 @@ make init kustomize-init
 
 The next step is to configure the docker image to be used. If you want to use a specific
 image, set `DOCKER_IMAGE` to the image reference in the command below. Otherwise
-use `ovrclk/akash:latest` to use the default image.
+use `ghcr.io/ovrclk/akash:stable` to use the default image.
 
 __t1__
 ```sh
-DOCKER_IMAGE=ovrclk/akash:latest make kind-configure-image
+DOCKER_IMAGE=ghcr.io/ovrclk/akash:stable make kind-configure-image
 ```
 
 ### Initialize Cluster
@@ -217,18 +217,27 @@ __t1__
 make query-bids
 ```
 
-And when the order is ready to be matched, a lease will be created:
-
-__t1__
-```sh
-make query-leases
-```
-
 You should now see "pending" inventory inventory in the provider status:
 
 __t1__
 ```sh
 make provider-status
+```
+
+### Create a lease
+
+Create a lease for the bid from the provider:
+
+__t1__
+```sh
+make lease-create
+```
+
+You should be able to see the lease with
+
+__t1__
+```sh
+make query-leases
 ```
 
 ### Distribute Manifest
@@ -256,6 +265,29 @@ make provider-lease-ping
 
 If you chose to use port 80 when setting up kind, you can browse to your
 deployed workload at http://hello.localhost
+
+### Withdraw from the lease
+
+Withdraw some funds from the lease
+
+__t1__
+```sh
+make lease-withdraw
+```
+
+You should be able to see the escrow payment change in
+
+__t1__
+```sh
+make query-deployment
+```
+
+and
+
+__t1__
+```sh
+make query-accounts
+```
 
 ## Update Provider
 

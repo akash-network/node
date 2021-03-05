@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: akash-provider
-          image: ovrclk/akash:latest
+          image: ghcr.io/ovrclk/akash:stable
           imagePullPolicy: IfNotPresent
           command: [ "/bin/sh", "/boot/run.sh" ]
           env:
