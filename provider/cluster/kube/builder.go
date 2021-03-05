@@ -175,7 +175,8 @@ func (b *nsBuilder) update(obj *corev1.Namespace) (*corev1.Namespace, error) { /
 // deployment
 type deploymentBuilder struct {
 	builder
-	service *manifest.Service
+	service          *manifest.Service
+	runtimeClassName string
 }
 
 func newDeploymentBuilder(log log.Logger, settings Settings, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service) *deploymentBuilder {
@@ -186,7 +187,8 @@ func newDeploymentBuilder(log log.Logger, settings Settings, lid mtypes.LeaseID,
 			lid:      lid,
 			group:    group,
 		},
-		service: service,
+		service:          service,
+		runtimeClassName: settings.DeploymentRuntimeClass,
 	}
 }
 
@@ -200,9 +202,16 @@ func (b *deploymentBuilder) labels() map[string]string {
 	return obj
 }
 
+const runtimeClassNoneValue = "none"
+
 func (b *deploymentBuilder) create() (*appsv1.Deployment, error) { // nolint:golint,unparam
 	replicas := int32(b.service.Count)
 	falseValue := false
+
+	var effectiveRuntimeClassName *string
+	if len(b.runtimeClassName) != 0 && b.runtimeClassName != runtimeClassNoneValue {
+		effectiveRuntimeClassName = &b.runtimeClassName
+	}
 
 	kdeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -219,6 +228,7 @@ func (b *deploymentBuilder) create() (*appsv1.Deployment, error) { // nolint:gol
 					Labels: b.labels(),
 				},
 				Spec: corev1.PodSpec{
+					RuntimeClassName: effectiveRuntimeClassName,
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: &falseValue,
 					},
@@ -480,6 +490,9 @@ func (b *netPolBuilder) create() ([]*netv1.NetworkPolicy, error) { // nolint:gol
 		return []*netv1.NetworkPolicy{}, nil
 	}
 
+	const ingressLabelName = "app.kubernetes.io/name"
+	const ingressLabelValue = "ingress-nginx"
+
 	result := []*netv1.NetworkPolicy{
 		{
 
@@ -511,12 +524,12 @@ func (b *netPolBuilder) create() ([]*netv1.NetworkPolicy, error) { // nolint:gol
 							{
 								NamespaceSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										"name": "ingress-nginx",
+										ingressLabelName: ingressLabelValue,
 									},
 								},
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										"app.kubernetes.io/name": "ingress-nginx",
+										ingressLabelName: ingressLabelValue,
 									},
 								},
 							},

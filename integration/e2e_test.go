@@ -255,6 +255,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 			keyName,
 			provURL.Host,
 			fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+			fmt.Sprintf("--deployment-runtime-class=none"),
 		)
 		s.Require().NoError(err)
 	}()
