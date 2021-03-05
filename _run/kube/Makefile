@@ -17,7 +17,8 @@ provider-run:
 		--deployment-ingress-domain "$(GATEWAY_HOSTNAME)" \
 		--cluster-node-port-quantity 100 \
 		--cluster-public-hostname "$(GATEWAY_HOSTNAME)" \
-		--bid-price-strategy "randomRange"
+		--bid-price-strategy "randomRange" \
+		--deployment-runtime-class "none"
 
 .PHONY: provider-lease-status
 provider-lease-status:
