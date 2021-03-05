@@ -159,6 +159,7 @@ loop:
 				panic(fmt.Sprintf("INVALID STATE: runch read on %v", dm.state))
 			case dsTeardownActive:
 				dm.state = dsTeardownComplete
+				dm.log.Debug("teardown complete")
 				break loop
 			case dsTeardownPending:
 				// start teardown
@@ -185,12 +186,17 @@ loop:
 
 	if runch != nil {
 		<-runch
+		dm.log.Debug("read from runch during shutdown")
 	}
 
+	dm.log.Debug("waiting on dm.wg")
 	dm.wg.Wait()
+
 	if nil != dm.withdrawal {
-		<-dm.withdrawal.lc.Done()
+		dm.log.Debug("waiting on withdrawal")
+		dm.withdrawal.lc.Shutdown(nil)
 	}
+	dm.log.Info("shutdown complete")
 }
 
 func (dm *deploymentManager) startWithdrawal() {
