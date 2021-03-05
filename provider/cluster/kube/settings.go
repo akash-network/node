@@ -37,7 +37,8 @@ type Settings struct {
 	StorageCommitLevel float64
 
 	// path to kube config file, may be left blank
-	ConfigPath string
+	ConfigPath             string
+	DeploymentRuntimeClass string
 }
 
 var errSettingsValidation = errors.New("settings validation")

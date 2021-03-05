@@ -481,7 +481,20 @@ exposeCheckLoop:
 		if service.Name == name {
 			found = true
 			for _, expose := range service.Expose {
-				if expose.Global && 0 != len(expose.Hosts) {
+
+				proto, err := manifest.ParseServiceProtocol(expose.Proto)
+				if err != nil {
+					return nil, err
+				}
+				mse := manifest.ServiceExpose{
+					Port:         expose.Port,
+					ExternalPort: expose.ExternalPort,
+					Proto:        proto,
+					Service:      expose.Service,
+					Global:       expose.Global,
+					Hosts:        expose.Hosts,
+				}
+				if util.ShouldBeIngress(mse) {
 					hasIngress = true
 					break exposeCheckLoop
 				}
