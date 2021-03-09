@@ -247,6 +247,13 @@ loop:
 				break loop
 			}
 			price := result.Value().(sdk.Coin)
+			maxPrice := group.GroupSpec.Price()
+
+			if maxPrice.IsLT(price) {
+				o.log.Info("Price too high, not bidding", "price", price.String(), "max-price", maxPrice.String())
+				break loop
+			}
+
 			o.log.Debug("submitting fulfillment", "price", price)
 
 			// Begin submitting fulfillment
