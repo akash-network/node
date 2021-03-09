@@ -138,6 +138,9 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		debug.Cmd(),
 	)
 
+	rootCmd.SetOut(rootCmd.OutOrStdout())
+	rootCmd.SetErr(rootCmd.ErrOrStderr())
+
 	server.AddCommands(rootCmd, app.DefaultHome, newApp, createAppAndExport, addModuleInitFlags)
 }
 
