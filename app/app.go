@@ -93,6 +93,9 @@ import (
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
 	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
 
+	csupplycli "github.com/ovrclk/cosmos-supply-summary/x/supply/client/cli"
+	csupplyrest "github.com/ovrclk/cosmos-supply-summary/x/supply/client/rest"
+
 	// unnamed import of statik for swagger UI support
 	_ "github.com/ovrclk/akash/client/docs/statik"
 )
@@ -544,6 +547,10 @@ func (app *AkashApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APIC
 	authtx.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 	// Register new tendermint queries routes from grpc-gateway.
 	tmservice.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
+
+	// Register supply summary routes
+	csupplycli.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
+	csupplyrest.RegisterRoutes(clientCtx, apiSvr.Router)
 
 	// Register legacy and grpc-gateway routes for all modules.
 	ModuleBasics().RegisterRESTRoutes(clientCtx, apiSvr.Router)

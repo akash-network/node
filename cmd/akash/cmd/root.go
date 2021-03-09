@@ -43,6 +43,7 @@ import (
 	ecmd "github.com/ovrclk/akash/events/cmd"
 	pcmd "github.com/ovrclk/akash/provider/cmd"
 	"github.com/ovrclk/akash/sdkutil"
+	csupply "github.com/ovrclk/cosmos-supply-summary/x/supply/client/cli"
 )
 
 func bindFlags(cmd *cobra.Command, v *viper.Viper) {
@@ -124,6 +125,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		dcmd.RootCmd(),
 		pcmd.RootCmd(),
 		ecmd.EventCmd(),
+		csupply.GetQueryCmd(),
 		queryCmd(),
 		txCmd(),
 		keys.Commands(app.DefaultHome),

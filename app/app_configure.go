@@ -12,6 +12,7 @@ import (
 	"github.com/ovrclk/akash/x/market"
 	mhooks "github.com/ovrclk/akash/x/market/hooks"
 	"github.com/ovrclk/akash/x/provider"
+	csupply "github.com/ovrclk/cosmos-supply-summary/x/supply"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {
@@ -126,6 +127,14 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 		cert.NewAppModule(
 			app.appCodec,
 			app.keeper.cert,
+		),
+
+		csupply.NewAppModule(
+			app.appCodec,
+			app.keeper.acct,
+			app.keeper.bank,
+			app.keeper.staking,
+			app.keeper.distr,
 		),
 	}
 }
