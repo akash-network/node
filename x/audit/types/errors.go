@@ -7,6 +7,7 @@ import (
 const (
 	errProviderNotFound uint32 = iota + 1
 	errInvalidAddress
+	errAttributeNotFound
 )
 
 var (
@@ -15,4 +16,7 @@ var (
 
 	// ErrInvalidAddress invalid trusted auditor address
 	ErrInvalidAddress = sdkerrors.Register(ModuleName, errInvalidAddress, "invalid address")
+
+	// ErrAttributeNotFound invalid trusted auditor address
+	ErrAttributeNotFound = sdkerrors.Register(ModuleName, errAttributeNotFound, "attribute not found")
 )
