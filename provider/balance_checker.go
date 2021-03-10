@@ -51,7 +51,8 @@ func (bc *balanceChecker) doCheck(ctx context.Context) (bool, error) {
 	}
 
 	balance := result.Balance.Amount
-	bc.log.Debug("provider acct balance", "balance", balance)
+	// TODO - find a way to use the logger without a race
+	// bc.log.Debug("provider acct balance", "balance", balance)
 	// Get the amount required as a bid deposit
 	// TODO - pull me from the blockchain in the future
 	defaultMinBidDeposit := mparams.DefaultBidMinDeposit
