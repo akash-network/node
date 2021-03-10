@@ -318,7 +318,7 @@ const (
 	envVarAkashGroupSequence         = "AKASH_GROUP_SEQUENCE"
 	envVarAkashDeploymentSequence    = "AKASH_DEPLOYMENT_SEQUENCE"
 	envVarAkashOrderSequence         = "AKASH_ORDER_SEQUENCE"
-	envVarAkashOwner                 = "AKASH_OWDER"
+	envVarAkashOwner                 = "AKASH_OWNER"
 	envVarAkashProvider              = "AKASH_PROVIDER"
 	envVarAkashClusterPublicHostname = "AKASH_CLUSTER_PUBLIC_HOSTNAME"
 )
