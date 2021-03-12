@@ -49,7 +49,7 @@ func balanceCheckerForTest(t *testing.T, balance int64) (*scaffold, *balanceChec
 
 	myProvider := &ptypes.Provider{
 		Owner:      s.testAddr.String(),
-		HostURI:    "",
+		HostURI:    "http://test.localhost:7443",
 		Attributes: nil,
 	}
 	mySession := session.New(myLog, nil, myProvider)
@@ -73,6 +73,7 @@ func balanceCheckerForTest(t *testing.T, balance int64) (*scaffold, *balanceChec
 
 func TestBalanceCheckerChecksBalance(t *testing.T) {
 	testScaffold, bc := balanceCheckerForTest(t, 9999999999999)
+	defer testScaffold.testBus.Close()
 	subscriber, err := testScaffold.testBus.Subscribe()
 	require.NoError(t, err)
 
@@ -93,8 +94,7 @@ func TestBalanceCheckerChecksBalance(t *testing.T) {
 	testScaffold.cancel()
 	<-bc.lc.Done()
 
-	firstCall := testScaffold.queryClient.Calls[0]
-	require.Equal(t, "Balance", firstCall.Method)
+	testScaffold.queryClient.AssertExpectations(t)
 
 	// Make sure no event is sent
 	select {
@@ -107,6 +107,7 @@ func TestBalanceCheckerChecksBalance(t *testing.T) {
 
 func TestBalanceCheckerStartsWithdrawal(t *testing.T) {
 	testScaffold, bc := balanceCheckerForTest(t, 1)
+	defer testScaffold.testBus.Close()
 	subscriber, err := testScaffold.testBus.Subscribe()
 	require.NoError(t, err)
 
@@ -123,19 +124,23 @@ func TestBalanceCheckerStartsWithdrawal(t *testing.T) {
 
 	testScaffold.start()
 
-	time.Sleep(bc.checkPeriod * 3)
-	testScaffold.cancel()
-	<-bc.lc.Done()
-
-	firstCall := testScaffold.queryClient.Calls[0]
-	require.Equal(t, "Balance", firstCall.Method)
-
 	// Make sure the event is sent
 	select {
 	case ev := <-firstEvent:
 		_, ok := ev.(event.LeaseWithdrawNow)
 		require.True(t, ok)
-	default:
+	case <-time.After(15 * time.Second):
 		t.Fatal("should have an event to read")
 	}
+
+	time.Sleep(bc.checkPeriod * 3)
+	testScaffold.cancel()
+
+	select {
+	case <-bc.lc.Done():
+	case <-time.After(15 * time.Second):
+		t.Fatal("timed out waiting for completion")
+	}
+
+	testScaffold.queryClient.AssertExpectations(t)
 }

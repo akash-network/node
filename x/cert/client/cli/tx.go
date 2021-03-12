@@ -48,7 +48,6 @@ func GetTxCmd() *cobra.Command {
 		Use:                        types.ModuleName,
 		Short:                      "Certificates transaction subcommands",
 		SuggestionsMinimumDistance: 2,
-		DisableFlagParsing:         true,
 		RunE:                       sdkclient.ValidateCmd,
 	}
 
@@ -65,7 +64,6 @@ func cmdCreate() *cobra.Command {
 		Use:                        "create",
 		Short:                      "create/update api certificates",
 		SuggestionsMinimumDistance: 2,
-		DisableFlagParsing:         true,
 		RunE:                       sdkclient.ValidateCmd,
 	}
 

@@ -15,7 +15,6 @@ func GetQueryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Deployment query commands",
-		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
@@ -111,7 +110,6 @@ func getGroupCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "group",
 		Short:                      "Deployment group query commands",
-		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}

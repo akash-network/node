@@ -12,7 +12,6 @@ func GetQueryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Market query commands",
-		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
@@ -30,7 +29,6 @@ func getOrderCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "order",
 		Short:                      "Order query commands",
-		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
@@ -47,7 +45,6 @@ func getBidCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "bid",
 		Short:                      "Bid query commands",
-		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
@@ -64,7 +61,6 @@ func getLeaseCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "lease",
 		Short:                      "Lease query commands",
-		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
