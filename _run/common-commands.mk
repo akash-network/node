@@ -20,6 +20,32 @@ LEASE_SERVICES ?= web
 
 export AKASH_GAS_ADJUSTMENT ?= 2
 
+.PHONY: multisig-send
+multisig-send:
+	$(AKASHCTL) tx send "$(KEY_OPTS)" "$(CHAIN_OPTS)" \
+		"$(shell $(AKASHCTL) keys show $(KEY_OPTS) "$(MULTISIG_KEY)" -a)" \
+		"$(shell $(AKASHCTL) keys show $(KEY_OPTS) "$(KEY_NAME)"     -a)" \
+		1000000uakt \
+		--generate-only \
+		> "$(DATA_ROOT)/multisig-tx.json"
+	$(AKASHCTL) tx sign "$(KEY_OPTS)" "$(CHAIN_OPTS)" \
+		"$(DATA_ROOT)/multisig-tx.json" \
+		--multisig "$(shell $(AKASHCTL) keys show $(KEY_OPTS) "$(MULTISIG_KEY)" -a)" \
+		--from "main" \
+		> "$(DATA_ROOT)/multisig-sig-main.json"
+	$(AKASHCTL) tx sign "$(KEY_OPTS)" "$(CHAIN_OPTS)" \
+		"$(DATA_ROOT)/multisig-tx.json" \
+		--multisig "$(shell $(AKASHCTL) keys show $(KEY_OPTS) "$(MULTISIG_KEY)" -a)" \
+		--from "other" \
+		> "$(DATA_ROOT)/multisig-sig-other.json"
+	$(AKASHCTL) tx multisign "$(KEY_OPTS)" "$(CHAIN_OPTS)" \
+		"$(DATA_ROOT)/multisig-tx.json" \
+		"$(MULTISIG_KEY)" \
+		"$(DATA_ROOT)/multisig-sig-main.json" \
+		"$(DATA_ROOT)/multisig-sig-other.json" \
+		> "$(DATA_ROOT)/multisig-final.json"
+	$(AKASHCTL) "$(CHAIN_OPTS)" tx broadcast "$(DATA_ROOT)/multisig-final.json"
+
 .PHONY: provider-create
 provider-create:
 	$(AKASHCTL) tx provider create "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(PROVIDER_CONFIG_PATH)" -y \
@@ -147,11 +173,12 @@ lease-close:
 		--from  "$(KEY_NAME)"
 
 .PHONY: query-accounts
-query-accounts: $(patsubst %, query-account-%,$(KEY_NAMES))
+query-accounts: $(patsubst %, query-account-%,$(GENESIS_ACCOUNTS))
 
 .PHONY: query-account-%
 query-account-%:
 	$(AKASHCTL) query bank balances "$(shell $(AKASHCTL_NONODE) keys show --keyring-backend "test" -a "$(@:query-account-%=%)")"
+	$(AKASHCTL) query account       "$(shell $(AKASHCTL_NONODE) keys show --keyring-backend "test" -a "$(@:query-account-%=%)")"
 
 .PHONY: query-provider
 query-provider:
