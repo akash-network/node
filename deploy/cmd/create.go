@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ovrclk/akash/cmd/common"
+	cutils "github.com/ovrclk/akash/x/cert/utils"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"math/rand"
@@ -72,6 +73,15 @@ func createCmd() *cobra.Command {
 
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
+				return err
+			}
+
+			if _, err = cutils.LoadAndQueryPEMForAccount(cmd.Context(), clientCtx, clientCtx.Keyring); err != nil {
+				if os.IsNotExist(err) {
+					err = errors.Errorf("no certificate file found for account %q.\n"+
+						"consider creating it as certificate required to create a deployment", clientCtx.FromAddress.String())
+				}
+
 				return err
 			}
 
