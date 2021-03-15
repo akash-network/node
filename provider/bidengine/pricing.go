@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"math"
 	"math/big"
 	"os/exec"
 	"time"
@@ -13,6 +14,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/types/unit"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	"github.com/shopspring/decimal"
 )
 
 type BidPricingStrategy interface {
@@ -24,19 +26,19 @@ const denom = "uakt"
 var errAllScalesZero = errors.New("At least one bid price must be a non-zero number")
 
 type scalePricing struct {
-	cpuScale      uint64
-	memoryScale   uint64
-	storageScale  uint64
-	endpointScale uint64
+	cpuScale      decimal.Decimal
+	memoryScale   decimal.Decimal
+	storageScale  decimal.Decimal
+	endpointScale decimal.Decimal
 }
 
 func MakeScalePricing(
-	cpuScale uint64,
-	memoryScale uint64,
-	storageScale uint64,
-	endpointScale uint64) (BidPricingStrategy, error) {
+	cpuScale decimal.Decimal,
+	memoryScale decimal.Decimal,
+	storageScale decimal.Decimal,
+	endpointScale decimal.Decimal) (BidPricingStrategy, error) {
 
-	if cpuScale == 0 && memoryScale == 0 && storageScale == 0 && endpointScale == 0 {
+	if cpuScale.IsZero() && memoryScale.IsZero() && storageScale.IsZero() && endpointScale.IsZero() {
 		return nil, errAllScalesZero
 	}
 
@@ -69,80 +71,69 @@ func (fp scalePricing) calculatePrice(ctx context.Context, gspec *dtypes.GroupSp
 	// Use unlimited precision math here.
 	// Otherwise a correctly crafted order could create a cost of '1' given
 	// a possible configuration
-	cpuTotal := big.NewInt(0)
-	memoryTotal := big.NewRat(0, 1)
-	storageTotal := big.NewRat(0, 1)
-	endpointTotal := big.NewInt(0)
+	cpuTotal := decimal.NewFromInt(0)
+	memoryTotal := decimal.NewFromInt(0)
+	storageTotal := decimal.NewFromInt(0)
+	endpointTotal := decimal.NewFromInt(0)
 
 	// iterate over everything & sum it up
 	for _, group := range gspec.Resources {
+		groupCount := decimal.NewFromInt(int64(group.Count)) // Expand uint32 to int64
 
-		groupCount := big.NewInt(0)
-		groupCount.SetUint64(uint64(group.Count)) // Expand uint32 to uint64
-		groupCountRat := big.NewRat(0, 1)
-		groupCountRat.SetUint64(uint64(group.Count))
+		cpuQuantity := decimal.NewFromBigInt(group.Resources.CPU.Units.Val.BigInt(), 0)
+		cpuQuantity = cpuQuantity.Mul(groupCount)
+		cpuTotal = cpuTotal.Add(cpuQuantity)
 
-		cpuQuantity := big.NewInt(0)
-		cpuQuantity.SetUint64(group.Resources.CPU.Units.Val.Uint64())
-		cpuQuantity.Mul(cpuQuantity, groupCount)
-		cpuTotal.Add(cpuTotal, cpuQuantity)
+		memoryQuantity := decimal.NewFromBigInt(group.Resources.Memory.Quantity.Val.BigInt(), 0)
+		memoryQuantity = memoryQuantity.Mul(groupCount)
+		memoryTotal = memoryTotal.Add(memoryQuantity)
 
-		memoryQuantity := big.NewRat(0, 1)
-		memoryQuantity.SetUint64(group.Resources.Memory.Quantity.Value())
-		memoryQuantity.Mul(memoryQuantity, groupCountRat)
-		memoryTotal.Add(memoryTotal, memoryQuantity)
+		storageQuantity := decimal.NewFromBigInt(group.Resources.Storage.Quantity.Val.BigInt(), 0)
+		storageQuantity = storageQuantity.Mul(groupCount)
+		storageTotal = storageTotal.Add(storageQuantity)
 
-		storageQuantity := big.NewRat(0, 1)
-		storageQuantity.SetUint64(group.Resources.Storage.Quantity.Val.Uint64())
-		storageQuantity.Mul(storageQuantity, groupCountRat)
-		storageTotal.Add(storageTotal, storageQuantity)
-
-		endpointQuantity := big.NewInt(0)
-		endpointQuantity.SetUint64(uint64(len(group.Resources.Endpoints)))
-		endpointTotal.Add(endpointTotal, endpointQuantity)
+		endpointQuantity := decimal.NewFromInt(int64(len(group.Resources.Endpoints)))
+		endpointTotal = endpointTotal.Add(endpointQuantity)
 	}
 
-	scale := big.NewInt(0)
-	scale.SetUint64(fp.cpuScale)
-	cpuTotal.Mul(cpuTotal, scale)
+	cpuTotal = cpuTotal.Mul(fp.cpuScale)
 
-	mebibytes := big.NewRat(unit.Mi, 1)
-	memoryTotal.Quo(memoryTotal, mebibytes)
+	mebibytes := decimal.NewFromInt(unit.Mi)
 
-	scaleRat := big.NewRat(0, 1)
-	scaleRat.SetUint64(fp.memoryScale)
-	memoryTotal.Mul(memoryTotal, scaleRat)
+	memoryTotal = memoryTotal.Div(mebibytes)
+	memoryTotal = memoryTotal.Mul(fp.memoryScale)
 
-	storageTotal.Quo(storageTotal, mebibytes)
-	scaleRat.SetUint64(fp.storageScale)
-	storageTotal.Mul(storageTotal, scaleRat)
+	storageTotal = storageTotal.Div(mebibytes)
+	storageTotal = storageTotal.Mul(fp.storageScale)
 
-	scale.SetUint64(fp.endpointScale)
-	endpointTotal.Mul(endpointTotal, scale)
+	endpointTotal = endpointTotal.Mul(fp.endpointScale)
 
-	memoryTotalInt := ceilBigRatToBigInt(memoryTotal)
-	storageTotalInt := ceilBigRatToBigInt(storageTotal)
-
+	maxAllowedValue := decimal.NewFromInt(math.MaxInt64)
 	// Each quantity must be non negative
 	// and fit into an Int64
-	if cpuTotal.Sign() < 0 || !cpuTotal.IsInt64() ||
-		memoryTotal.Sign() < 0 || !memoryTotalInt.IsInt64() ||
-		storageTotal.Sign() < 0 || !storageTotalInt.IsInt64() ||
-		endpointTotal.Sign() < 0 || !endpointTotal.IsInt64() {
+	if cpuTotal.IsNegative() || !cpuTotal.LessThanOrEqual(maxAllowedValue) ||
+		memoryTotal.IsNegative() || !memoryTotal.LessThanOrEqual(maxAllowedValue) ||
+		storageTotal.IsNegative() || !storageTotal.LessThanOrEqual(maxAllowedValue) ||
+		endpointTotal.IsNegative() || !endpointTotal.LessThanOrEqual(maxAllowedValue) {
 		return sdk.Coin{}, ErrBidQuantityInvalid
 	}
 
-	cpuCost := sdk.NewCoin(denom, sdk.NewIntFromBigInt(cpuTotal))
-	memoryCost := sdk.NewCoin(denom, sdk.NewIntFromBigInt(memoryTotalInt))
-	storageCost := sdk.NewCoin(denom, sdk.NewIntFromBigInt(storageTotalInt))
+	totalCost := cpuTotal
+	totalCost = totalCost.Add(memoryTotal)
+	totalCost = totalCost.Add(storageTotal)
+	totalCost = totalCost.Add(endpointTotal)
+	totalCost = totalCost.Ceil() // Round upwards to get an integer
 
-	// Check for less than or equal to zero
-	cost := cpuCost.Add(memoryCost).Add(storageCost)
+	if totalCost.IsNegative() || !totalCost.LessThanOrEqual(maxAllowedValue) {
+		return sdk.Coin{}, ErrBidQuantityInvalid
+	}
 
-	if cost.Amount.IsZero() {
+	if totalCost.IsZero() {
 		// Return an error indicating we can't bid with a cost of zero
 		return sdk.Coin{}, ErrBidZero
 	}
+
+	cost := sdk.NewCoin(denom, sdk.NewIntFromBigInt(totalCost.BigInt()))
 
 	return cost, nil
 }

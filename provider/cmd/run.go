@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/shopspring/decimal"
 	"io"
 	"net/http"
 	"os"
@@ -122,22 +123,22 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
-	cmd.Flags().Uint64(FlagBidPriceCPUScale, 0, "cpu pricing scale in uakt per millicpu")
+	cmd.Flags().String(FlagBidPriceCPUScale, "0", "cpu pricing scale in uakt per millicpu")
 	if err := viper.BindPFlag(FlagBidPriceCPUScale, cmd.Flags().Lookup(FlagBidPriceCPUScale)); err != nil {
 		return nil
 	}
 
-	cmd.Flags().Uint64(FlagBidPriceMemoryScale, 0, "memory pricing scale in uakt per megabyte")
+	cmd.Flags().String(FlagBidPriceMemoryScale, "0", "memory pricing scale in uakt per megabyte")
 	if err := viper.BindPFlag(FlagBidPriceMemoryScale, cmd.Flags().Lookup(FlagBidPriceMemoryScale)); err != nil {
 		return nil
 	}
 
-	cmd.Flags().Uint64(FlagBidPriceStorageScale, 0, "storage pricing scale in uakt per megabyte")
+	cmd.Flags().String(FlagBidPriceStorageScale, "0", "storage pricing scale in uakt per megabyte")
 	if err := viper.BindPFlag(FlagBidPriceStorageScale, cmd.Flags().Lookup(FlagBidPriceStorageScale)); err != nil {
 		return nil
 	}
 
-	cmd.Flags().Uint64(FlagBidPriceEndpointScale, 0, "endpoint pricing scale in uakt")
+	cmd.Flags().String(FlagBidPriceEndpointScale, "0", "endpoint pricing scale in uakt")
 	if err := viper.BindPFlag(FlagBidPriceEndpointScale, cmd.Flags().Lookup(FlagBidPriceEndpointScale)); err != nil {
 		return nil
 	}
@@ -254,13 +255,40 @@ var allowedBidPricingStrategies = [...]string{
 }
 
 var errNoSuchBidPricingStrategy = fmt.Errorf("No such bid pricing strategy. Allowed: %v", allowedBidPricingStrategies)
+var errInvalidValueForBidPrice = errors.New("not a valid bid price")
+var errBidPriceNegative = errors.New("Bid price cannot be a negative number")
+
+func strToBidPriceScale(val string) (decimal.Decimal, error) {
+	v, err := decimal.NewFromString(val)
+	if err != nil {
+		return decimal.Decimal{}, fmt.Errorf("%w: %s", errInvalidValueForBidPrice, val)
+	}
+
+	if v.IsNegative() {
+		return decimal.Decimal{}, errBidPriceNegative
+	}
+
+	return v, nil
+}
 
 func createBidPricingStrategy(strategy string) (bidengine.BidPricingStrategy, error) {
 	if strategy == bidPricingStrategyScale {
-		cpuScale := viper.GetUint64(FlagBidPriceCPUScale)
-		memoryScale := viper.GetUint64(FlagBidPriceMemoryScale)
-		storageScale := viper.GetUint64(FlagBidPriceStorageScale)
-		endpointScale := viper.GetUint64(FlagBidPriceEndpointScale)
+		cpuScale, err := strToBidPriceScale(viper.GetString(FlagBidPriceCPUScale))
+		if err != nil {
+			return nil, err
+		}
+		memoryScale, err := strToBidPriceScale(viper.GetString(FlagBidPriceMemoryScale))
+		if err != nil {
+			return nil, err
+		}
+		storageScale, err := strToBidPriceScale(viper.GetString(FlagBidPriceStorageScale))
+		if err != nil {
+			return nil, err
+		}
+		endpointScale, err := strToBidPriceScale(viper.GetString(FlagBidPriceEndpointScale))
+		if err != nil {
+			return nil, err
+		}
 
 		return bidengine.MakeScalePricing(cpuScale, memoryScale, storageScale, endpointScale)
 	}
