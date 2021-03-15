@@ -18,6 +18,22 @@ builds:
       - "{{ .Env.BUILD_FLAGS }}"
     ldflags:
       - "{{ .Env.LD_FLAGS }}"
+  - id: akash-darwin-arm64
+    binary: akash
+    main: ./cmd/akash
+    goarch:
+      - arm64
+    goos:
+      - darwin
+    env:
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    flags:
+      - -trimpath
+      - -mod=readonly
+      - "{{ .Env.BUILD_FLAGS }}"
+    ldflags:
+      - "{{ .Env.LD_FLAGS }}"
   - id: akash-linux-amd64
     binary: akash
     main: ./cmd/akash
