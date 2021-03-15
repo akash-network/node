@@ -55,6 +55,6 @@ replace google.golang.org/grpc => google.golang.org/grpc v1.33.2
 
 replace github.com/grpc-ecosystem/grpc-gateway => github.com/grpc-ecosystem/grpc-gateway v1.14.7
 
-replace github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.41.4-akash-2
+replace github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.41.4-akash-3
 
 replace github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.8-akash-1

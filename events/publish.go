@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	atypes "github.com/ovrclk/akash/x/audit/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/pubsub"
@@ -108,6 +109,10 @@ func processEvent(bev abci.Event) (interface{}, bool) {
 	}
 
 	if mev, err := ptypes.ParseEvent(ev); err == nil {
+		return mev, true
+	}
+
+	if mev, err := atypes.ParseEvent(ev); err == nil {
 		return mev, true
 	}
 
