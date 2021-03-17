@@ -286,7 +286,7 @@ func createBid(t testing.TB, suite *state.TestSuite) (types.Bid, types.Order) {
 	ctx := suite.Context()
 	order, _ := createOrder(t, suite.Context(), suite.MarketKeeper())
 	provider := testutil.AccAddress(t)
-	price := testutil.AkashCoinRandom(t)
+	price := testutil.AkashDecCoinRandom(t)
 	bid, err := suite.MarketKeeper().CreateBid(ctx, order.ID(), provider, price)
 	require.NoError(t, err)
 	assert.Equal(t, order.ID(), bid.ID().OrderID())

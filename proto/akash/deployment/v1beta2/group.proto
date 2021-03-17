@@ -1,0 +1,128 @@
+syntax = "proto3";
+package akash.deployment.v1beta2;
+
+import "gogoproto/gogo.proto";
+import "akash/base/v1beta2/resource.proto";
+import "akash/base/v1beta2/attribute.proto";
+import "cosmos/base/v1beta1/coin.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types";
+
+// MsgCloseGroup defines SDK message to close a single Group within a Deployment.
+message MsgCloseGroup {
+  option (gogoproto.equal) = false;
+
+  GroupID id = 1 [
+    (gogoproto.customname) = "ID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+// MsgCloseGroupResponse defines the Msg/CloseGroup response type.
+message MsgCloseGroupResponse {}
+
+// MsgPauseGroup defines SDK message to close a single Group within a Deployment.
+message MsgPauseGroup {
+  option (gogoproto.equal) = false;
+
+  GroupID id = 1 [
+    (gogoproto.customname) = "ID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+// MsgPauseGroupResponse defines the Msg/PauseGroup response type.
+message MsgPauseGroupResponse {}
+
+// MsgStartGroup defines SDK message to close a single Group within a Deployment.
+message MsgStartGroup {
+  option (gogoproto.equal) = false;
+
+  GroupID id = 1 [
+    (gogoproto.customname) = "ID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+// MsgStartGroupResponse defines the Msg/StartGroup response type.
+message MsgStartGroupResponse {}
+
+// GroupID stores owner, deployment sequence number and group sequence number
+message GroupID {
+  option (gogoproto.equal)            = false;
+  option (gogoproto.goproto_stringer) = false;
+
+  string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+  uint64 dseq  = 2
+      [(gogoproto.customname) = "DSeq", (gogoproto.jsontag) = "dseq", (gogoproto.moretags) = "yaml:\"dseq\""];
+  uint32 gseq = 3
+      [(gogoproto.customname) = "GSeq", (gogoproto.jsontag) = "gseq", (gogoproto.moretags) = "yaml:\"gseq\""];
+}
+
+// GroupSpec stores group specifications
+message GroupSpec {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  string name = 1 [(gogoproto.jsontag) = "name", (gogoproto.moretags) = "yaml:\"name\""];
+
+  akash.base.v1beta2.PlacementRequirements requirements = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "requirements",
+    (gogoproto.moretags) = "yaml:\"requirements\""
+  ];
+
+  repeated Resource resources = 3
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "resources", (gogoproto.moretags) = "yaml:\"resources\""];
+}
+
+// Group stores group id, state and specifications of group
+message Group {
+  option (gogoproto.equal) = false;
+
+  GroupID group_id = 1 [
+    (gogoproto.customname) = "GroupID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+
+  // State is an enum which refers to state of group
+  enum State {
+    option (gogoproto.goproto_enum_prefix) = false;
+
+    // Prefix should start with 0 in enum. So declaring dummy state
+    invalid = 0 [(gogoproto.enumvalue_customname) = "GroupStateInvalid"];
+    // GroupOpen denotes state for group open
+    open = 1 [(gogoproto.enumvalue_customname) = "GroupOpen"];
+    // GroupOrdered denotes state for group ordered
+    paused = 2 [(gogoproto.enumvalue_customname) = "GroupPaused"];
+    // GroupInsufficientFunds denotes state for group insufficient_funds
+    insufficient_funds = 3 [(gogoproto.enumvalue_customname) = "GroupInsufficientFunds"];
+    // GroupClosed denotes state for group closed
+    closed = 4 [(gogoproto.enumvalue_customname) = "GroupClosed"];
+  }
+
+  State     state      = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
+  GroupSpec group_spec = 3
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "spec", (gogoproto.moretags) = "yaml:\"spec\""];
+
+  int64 created_at = 4;
+}
+
+// Resource stores unit, total count and price of resource
+message Resource {
+  option (gogoproto.equal) = false;
+
+  akash.base.v1beta2.ResourceUnits resources = 1
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "unit", (gogoproto.moretags) = "yaml:\"unit\""];
+  uint32                   count = 2 [(gogoproto.jsontag) = "count", (gogoproto.moretags) = "yaml:\"count\""];
+  cosmos.base.v1beta1.DecCoin price = 3
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "price", (gogoproto.moretags) = "yaml:\"price\""];
+}

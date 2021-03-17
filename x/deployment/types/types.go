@@ -2,7 +2,6 @@ package types
 
 import (
 	"bytes"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/types"
@@ -54,8 +53,9 @@ func (g GroupSpec) GetName() string {
 }
 
 // Price method returns price of group
-func (g GroupSpec) Price() sdk.Coin {
-	var price sdk.Coin
+func (g GroupSpec) Price() sdk.DecCoin {
+	var price sdk.DecCoin
+
 	for idx, resource := range g.Resources {
 		if idx == 0 {
 			price = resource.FullPrice()
@@ -85,9 +85,10 @@ func (g GroupSpec) MatchRequirements(provider []atypes.Provider) bool {
 
 		if len(g.Requirements.SignedBy.AllOf) != 0 {
 			for _, validator := range g.Requirements.SignedBy.AllOf {
+				x := types.Attributes(g.Requirements.Attributes)
 				// if at least one signature does not exist or no match on attributes - requirements cannot match
 				if existingAttr, exists := existingRequirements[validator]; !exists ||
-					!types.AttributesSubsetOf(g.Requirements.Attributes, existingAttr) {
+					!types.AttributesSubsetOf(x, existingAttr) {
 					return false
 				}
 			}
@@ -95,8 +96,9 @@ func (g GroupSpec) MatchRequirements(provider []atypes.Provider) bool {
 
 		if len(g.Requirements.SignedBy.AnyOf) != 0 {
 			for _, validator := range g.Requirements.SignedBy.AnyOf {
+				x := types.Attributes(g.Requirements.Attributes)
 				if existingAttr, exists := existingRequirements[validator]; exists &&
-					types.AttributesSubsetOf(g.Requirements.Attributes, existingAttr) {
+					types.AttributesSubsetOf(x, existingAttr) {
 					return true
 				}
 			}
@@ -107,12 +109,14 @@ func (g GroupSpec) MatchRequirements(provider []atypes.Provider) bool {
 		return true
 	}
 
-	return types.AttributesSubsetOf(g.Requirements.Attributes, provider[0].Attributes)
+	x := types.Attributes(g.Requirements.Attributes)
+	return types.AttributesSubsetOf(x, provider[0].Attributes)
 }
 
 // MatchAttributes method compares provided attributes with specific group attributes
 func (g GroupSpec) MatchAttributes(attr types.Attributes) bool {
-	return types.AttributesSubsetOf(g.Requirements.Attributes, attr)
+	x := types.Attributes(g.Requirements.Attributes)
+	return types.AttributesSubsetOf(x, attr)
 }
 
 // ID method returns GroupID details of specific group
@@ -166,8 +170,8 @@ func (g Group) GetResources() []types.Resources {
 }
 
 // FullPrice method returns full price of resource
-func (r Resource) FullPrice() sdk.Coin {
-	return sdk.NewCoin(r.Price.Denom, r.Price.Amount.MulRaw(int64(r.Count)))
+func (r Resource) FullPrice() sdk.DecCoin {
+	return sdk.NewDecCoinFromDec(r.Price.Denom, r.Price.Amount.Mul(sdk.NewDec(int64(r.Count))))
 }
 
 // DeploymentResponses is a collection of DeploymentResponse

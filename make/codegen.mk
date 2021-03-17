@@ -22,10 +22,7 @@ mocks: $(MOCKERY) modvendor
 
 .PHONY: kubetypes
 kubetypes: deps-vendor
-	chmod +x vendor/k8s.io/code-generator/generate-groups.sh
-	vendor/k8s.io/code-generator/generate-groups.sh all \
-	github.com/ovrclk/akash/pkg/client github.com/ovrclk/akash/pkg/apis \
-	akash.network:v1
+	./script/kubetypes.sh
 
 .PHONY: proto-gen
 proto-gen: $(PROTOC) $(GRPC_GATEWAY) $(PROTOC_GEN_COSMOS) modvendor

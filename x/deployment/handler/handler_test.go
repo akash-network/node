@@ -255,7 +255,7 @@ func (st *testSuite) createDeployment() (types.Deployment, []types.Group) {
 		{
 			Resources: testutil.ResourceUnits(st.t),
 			Count:     1,
-			Price:     testutil.AkashCoinRandom(st.t),
+			Price:     testutil.AkashDecCoinRandom(st.t),
 		},
 	}
 	groups := []types.Group{

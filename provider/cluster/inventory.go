@@ -196,7 +196,7 @@ func (is *inventoryService) committedResources(rgroup atypes.ResourceGroup) atyp
 		v := dtypes.Resource{
 			Resources: runits,
 			Count:     resource.Count,
-			Price:     sdk.Coin{},
+			Price:     sdk.DecCoin{},
 		}
 
 		replacedResources = append(replacedResources, v)

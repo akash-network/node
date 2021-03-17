@@ -5,7 +5,7 @@ import "gogoproto/gogo.proto";
 import "akash/deployment/v1beta1/group.proto";
 import "cosmos/base/v1beta1/coin.proto";
 
-option go_package = "github.com/ovrclk/akash/x/deployment/types";
+option go_package = "github.com/ovrclk/akash/x/deployment/typesv1beta1";
 
 // Msg defines the deployment Msg service.
 service Msg {

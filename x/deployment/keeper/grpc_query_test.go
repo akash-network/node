@@ -281,7 +281,7 @@ func (suite *grpcTestSuite) createDeployment() (types.Deployment, []types.Group)
 		{
 			Resources: testutil.ResourceUnits(suite.t),
 			Count:     1,
-			Price:     testutil.Coin(suite.t),
+			Price:     testutil.DecCoin(suite.t),
 		},
 	}
 	groups := []types.Group{

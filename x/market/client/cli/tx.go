@@ -57,7 +57,7 @@ func cmdBidCreate(key string) *cobra.Command {
 				return err
 			}
 
-			coins, err := sdk.ParseCoinNormalized(price)
+			coin, err := sdk.ParseDecCoin(price)
 			if err != nil {
 				return err
 			}
@@ -75,7 +75,7 @@ func cmdBidCreate(key string) *cobra.Command {
 			msg := &types.MsgCreateBid{
 				Order:    id,
 				Provider: clientCtx.GetFromAddress().String(),
-				Price:    coins,
+				Price:    coin,
 				Deposit:  deposit,
 			}
 

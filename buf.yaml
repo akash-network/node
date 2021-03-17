@@ -32,6 +32,7 @@ lint:
   ignore_only:
     RPC_RESPONSE_STANDARD_NAME:
       - akash/audit/v1beta1/query.proto
+      - akash/audit/v1beta2/query.proto
 breaking:
   use:
     - FILE

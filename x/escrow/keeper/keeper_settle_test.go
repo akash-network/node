@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const denom = "xxx"
+const denom = "uakt"
 
 func TestSettleFullblocks(t *testing.T) {
 	for _, tt := range []struct {
@@ -22,7 +22,7 @@ func TestSettleFullblocks(t *testing.T) {
 				balanceStart: 100,
 				rates:        []int64{1, 2},
 				balanceEnd:   85,
-				transferred:  []int64{5, 10},
+				transferred:  []sdk.Dec{sdk.NewDec(5), sdk.NewDec(10)},
 				remaining:    0,
 				overdrawn:    false,
 			},
@@ -34,7 +34,7 @@ func TestSettleFullblocks(t *testing.T) {
 				balanceStart: 100,
 				rates:        []int64{10, 10},
 				balanceEnd:   0,
-				transferred:  []int64{50, 50},
+				transferred:  []sdk.Dec{sdk.NewDec(50), sdk.NewDec(50)},
 				remaining:    0,
 				overdrawn:    false,
 			},
@@ -46,7 +46,7 @@ func TestSettleFullblocks(t *testing.T) {
 				balanceStart: 100,
 				rates:        []int64{10, 10},
 				balanceEnd:   0,
-				transferred:  []int64{50, 50},
+				transferred:  []sdk.Dec{sdk.NewDec(50), sdk.NewDec(50)},
 				remaining:    0,
 				overdrawn:    true,
 			},
@@ -58,7 +58,7 @@ func TestSettleFullblocks(t *testing.T) {
 				balanceStart: 90,
 				rates:        []int64{10, 10},
 				balanceEnd:   10,
-				transferred:  []int64{40, 40},
+				transferred:  []sdk.Dec{sdk.NewDec(40), sdk.NewDec(40)},
 				remaining:    10,
 				overdrawn:    true,
 			},
@@ -69,13 +69,13 @@ func TestSettleFullblocks(t *testing.T) {
 		account, payments, overdrawn, remaining := accountSettleFullblocks(
 			account, payments, blocks, blockRate)
 
-		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.Balance, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64DecCoin(denom, tt.cfg.balanceEnd), account.Balance, tt.name)
 
 		for idx := range payments {
-			assert.Equal(t, sdk.NewInt64Coin(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
+			assert.Equal(t, sdk.NewDecCoinFromDec(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
 		}
 
-		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.remaining), remaining, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64DecCoin(denom, tt.cfg.remaining), remaining, tt.name)
 		assert.Equal(t, tt.cfg.overdrawn, overdrawn, tt.name)
 	}
 }
@@ -91,7 +91,7 @@ func TestSettleDistributeWeighted(t *testing.T) {
 				balanceStart: 10,
 				rates:        []int64{20, 30},
 				balanceEnd:   0,
-				transferred:  []int64{4, 6},
+				transferred:  []sdk.Dec{sdk.NewDec(4), sdk.NewDec(6)},
 				remaining:    0,
 				overdrawn:    false,
 			},
@@ -102,19 +102,19 @@ func TestSettleDistributeWeighted(t *testing.T) {
 				balanceStart: 10,
 				rates:        []int64{30, 30},
 				balanceEnd:   0,
-				transferred:  []int64{5, 5},
+				transferred:  []sdk.Dec{sdk.NewDec(5), sdk.NewDec(5)},
 				remaining:    0,
 				overdrawn:    false,
 			},
 		},
 		{
-			name: "some left - unbalanced",
+			name: "all goes - unbalanced",
 			cfg: distTestConfig{
 				balanceStart: 10,
 				rates:        []int64{45, 55},
-				balanceEnd:   1,
-				transferred:  []int64{4, 5},
-				remaining:    1,
+				balanceEnd:   0,
+				transferred:  []sdk.Dec{sdk.MustNewDecFromStr("4.5"), sdk.MustNewDecFromStr("5.5")},
+				remaining:    0,
 				overdrawn:    false,
 			},
 		},
@@ -124,52 +124,13 @@ func TestSettleDistributeWeighted(t *testing.T) {
 		account, payments, remaining := accountSettleDistributeWeighted(
 			account, payments, blockRate, account.Balance)
 
-		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.Balance, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64DecCoin(denom, tt.cfg.balanceEnd), account.Balance, tt.name)
 
 		for idx := range payments {
-			assert.Equal(t, sdk.NewInt64Coin(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
+			assert.Equal(t, sdk.NewDecCoinFromDec(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
 		}
 
-		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.remaining), remaining, tt.name)
-	}
-}
-
-func TestSettleDistributeEvenly(t *testing.T) {
-	for _, tt := range []struct {
-		name string
-		cfg  distTestConfig
-	}{
-		{
-			name: "even",
-			cfg: distTestConfig{
-				balanceStart: 2,
-				rates:        []int64{20, 30},
-				balanceEnd:   0,
-				transferred:  []int64{1, 1},
-			},
-		},
-		{
-			name: "not even",
-			cfg: distTestConfig{
-				balanceStart: 3,
-				rates:        []int64{20, 30},
-				balanceEnd:   0,
-				transferred:  []int64{2, 1},
-			},
-		},
-	} {
-		account, payments, _, _ := setupDistTest(tt.cfg)
-
-		account, payments, remaining := accountSettleDistributeEvenly(
-			account, payments, account.Balance)
-
-		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.Balance, tt.name)
-
-		for idx := range payments {
-			assert.Equal(t, sdk.NewInt64Coin(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
-		}
-
-		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.remaining), remaining, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64DecCoin(denom, tt.cfg.remaining), remaining, tt.name)
 	}
 }
 
@@ -178,33 +139,33 @@ type distTestConfig struct {
 	balanceStart int64
 	rates        []int64
 	balanceEnd   int64
-	transferred  []int64
+	transferred  []sdk.Dec
 	remaining    int64
 	overdrawn    bool
 }
 
-func setupDistTest(cfg distTestConfig) (types.Account, []types.Payment, sdk.Int, sdk.Coin) {
+func setupDistTest(cfg distTestConfig) (types.Account, []types.FractionalPayment, sdk.Int, sdk.DecCoin) {
 	account := types.Account{
-		Balance:     sdk.NewInt64Coin(denom, cfg.balanceStart),
-		Transferred: sdk.NewInt64Coin(denom, 0),
+		Balance:     sdk.NewInt64DecCoin(denom, cfg.balanceStart),
+		Transferred: sdk.NewInt64DecCoin(denom, 0),
 	}
 
-	payments := make([]types.Payment, 0, len(cfg.rates))
+	payments := make([]types.FractionalPayment, 0, len(cfg.rates))
 
 	blockRate := int64(0)
 
 	for _, rate := range cfg.rates {
 		blockRate += rate
-		payments = append(payments, types.Payment{
-			Rate:    sdk.NewInt64Coin(denom, rate),
-			Balance: sdk.NewInt64Coin(denom, 0),
+		payments = append(payments, types.FractionalPayment{
+			Rate:    sdk.NewInt64DecCoin(denom, rate),
+			Balance: sdk.NewInt64DecCoin(denom, 0),
 		})
 	}
 
-	return account, payments, sdk.NewInt(cfg.blocks), sdk.NewInt64Coin(denom, blockRate)
+	return account, payments, sdk.NewInt(cfg.blocks), sdk.NewInt64DecCoin(denom, blockRate)
 }
 
-func assertCoinsEqual(t testing.TB, c1 sdk.Coin, c2 sdk.Coin, msg string) {
+func assertCoinsEqual(t testing.TB, c1 sdk.DecCoin, c2 sdk.DecCoin, msg string) {
 	t.Helper()
 	if c1.IsZero() {
 		if !c2.IsZero() {
@@ -212,5 +173,5 @@ func assertCoinsEqual(t testing.TB, c1 sdk.Coin, c2 sdk.Coin, msg string) {
 		}
 		return
 	}
-	assert.Equal(t, c1, c2, msg)
+	assert.Equal(t, c1.Amount, c2.Amount, msg)
 }

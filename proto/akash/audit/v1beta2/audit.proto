@@ -1,0 +1,99 @@
+syntax = "proto3";
+package akash.audit.v1beta2;
+
+import "gogoproto/gogo.proto";
+import "akash/base/v1beta2/attribute.proto";
+
+option go_package = "github.com/ovrclk/akash/x/audit/types";
+
+// Msg defines the provider Msg service
+service Msg {
+  // SignProviderAttributes defines a method that signs provider attributes
+  rpc SignProviderAttributes(MsgSignProviderAttributes) returns (MsgSignProviderAttributesResponse);
+
+  // DeleteProviderAttributes defines a method that deletes provider attributes
+  rpc DeleteProviderAttributes(MsgDeleteProviderAttributes) returns (MsgDeleteProviderAttributesResponse);
+}
+
+// Provider stores owner auditor and attributes details
+message Provider {
+  string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+
+  string auditor = 2 [(gogoproto.jsontag) = "auditor", (gogoproto.moretags) = "yaml:\"auditor\""];
+
+  repeated akash.base.v1beta2.Attribute attributes = 4 [
+    (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Attributes",
+    (gogoproto.nullable)     = false,
+    (gogoproto.jsontag)      = "attributes",
+    (gogoproto.moretags)     = "yaml:\"attributes\""
+  ];
+}
+
+// Attributes
+message AuditedAttributes {
+  option (gogoproto.equal)            = false;
+  option (gogoproto.goproto_stringer) = true;
+
+  string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+
+  string auditor = 2 [(gogoproto.jsontag) = "auditor", (gogoproto.moretags) = "yaml:\"auditor\""];
+
+  repeated akash.base.v1beta2.Attribute attributes = 3 [
+    (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Attributes",
+    (gogoproto.nullable)     = false,
+    (gogoproto.jsontag)      = "attributes",
+    (gogoproto.moretags)     = "yaml:\"attributes\""
+  ];
+}
+
+// AttributesResponse represents details of deployment along with group details
+message AttributesResponse {
+  option (gogoproto.equal)            = false;
+  option (gogoproto.goproto_stringer) = true;
+
+  repeated AuditedAttributes attributes = 1
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "attributes", (gogoproto.moretags) = "yaml:\"attributes\""];
+}
+
+// AttributesFilters defines filters used to filter deployments
+message AttributesFilters {
+  option (gogoproto.equal)            = false;
+  option (gogoproto.goproto_stringer) = true;
+
+  repeated string auditors = 1 [(gogoproto.jsontag) = "auditors", (gogoproto.moretags) = "yaml:\"auditors\""];
+
+  repeated string owners = 2 [(gogoproto.jsontag) = "owners", (gogoproto.moretags) = "yaml:\"owners\""];
+}
+
+// MsgSignProviderAttributes defines an SDK message for signing a provider attributes
+message MsgSignProviderAttributes {
+  option (gogoproto.equal) = false;
+
+  string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+
+  string auditor = 2 [(gogoproto.jsontag) = "auditor", (gogoproto.moretags) = "yaml:\"auditor\""];
+
+  repeated akash.base.v1beta2.Attribute attributes = 3 [
+    (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Attributes",
+    (gogoproto.nullable)     = false,
+    (gogoproto.jsontag)      = "attributes",
+    (gogoproto.moretags)     = "yaml:\"attributes\""
+  ];
+}
+
+// MsgSignProviderAttributesResponse defines the Msg/CreateProvider response type.
+message MsgSignProviderAttributesResponse {}
+
+// MsgDeleteProviderAttributes defined the Msg/DeleteProviderAttributes
+message MsgDeleteProviderAttributes {
+  option (gogoproto.equal) = false;
+
+  string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+
+  string auditor = 2 [(gogoproto.jsontag) = "auditor", (gogoproto.moretags) = "yaml:\"auditor\""];
+
+  repeated string keys = 3 [(gogoproto.jsontag) = "keys", (gogoproto.moretags) = "yaml:\"keys\""];
+}
+
+// MsgDeleteProviderAttributesResponse defines the Msg/ProviderAttributes response type.
+message MsgDeleteProviderAttributesResponse {}

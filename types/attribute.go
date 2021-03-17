@@ -61,22 +61,26 @@ func (m Attribute) SubsetOf(rhs Attribute) bool {
 	return false
 }
 
-func (attr Attributes) Validate() error {
-	store := make(map[string]bool)
+func (m Attribute) AttributeKey() string {
+	return m.Key
+}
 
-	for i := range attr {
-		if !attributeNameRegexp.MatchString(attr[i].Key) {
-			return ErrInvalidAttributeKey
-		}
+func (m Attribute) AttributeValue() string {
+	return m.Key
+}
 
-		if _, ok := store[attr[i].Key]; ok {
-			return ErrAttributesDuplicateKeys
-		}
-
-		store[attr[i].Key] = true
+func (attr Attributes) Attributes() []AttributeAccessor {
+	result := make([]AttributeAccessor, len(attr))
+	for i, v := range attr {
+		result[i] = v
 	}
 
-	return nil
+	return result
+}
+
+func (attr Attributes) Validate() error {
+	x := AttributesGetter(attr)
+	return ValidateAttributes(x)
 }
 
 /*
@@ -117,6 +121,7 @@ attributes:
   region:
     - us-east-2
 */
+/**
 func AttributesSubsetOf(a, b Attributes) bool {
 loop:
 	for _, req := range a {
@@ -133,4 +138,59 @@ loop:
 
 func (attr Attributes) SubsetOf(that Attributes) bool {
 	return AttributesSubsetOf(attr, that)
+}**/
+
+func AttributesSubsetOf(a, b AttributesGetter) bool {
+loop:
+	for _, req := range a.Attributes() {
+		for _, attr := range b.Attributes() {
+			if IsSubsetOf(req, attr) {
+				continue loop
+			}
+		}
+		return false
+	}
+
+	return true
+}
+
+/**
+func (attr Attributes) SubsetOf(that Attributes) bool {
+	return AttributesSubsetOf(attr, that)
+}**/
+
+type AttributeAccessor interface {
+	AttributeKey() string
+	AttributeValue() string
+}
+
+func IsSubsetOf(lhs AttributeAccessor, rhs AttributeAccessor) bool {
+	if lhs.AttributeKey() == rhs.AttributeKey() && lhs.AttributeValue() == rhs.AttributeValue() {
+		return true
+	}
+
+	return false
+}
+
+type AttributesGetter interface {
+	Attributes() []AttributeAccessor
+}
+
+func ValidateAttributes(m AttributesGetter) error {
+	store := make(map[string]bool)
+
+	for _, v := range m.Attributes() {
+		key := v.AttributeKey()
+		if !attributeNameRegexp.MatchString(key) {
+			return ErrInvalidAttributeKey
+		}
+
+		if _, ok := store[key]; ok {
+			return ErrAttributesDuplicateKeys
+		}
+
+		store[key] = true
+	}
+
+	return nil
 }

@@ -27,7 +27,7 @@ func simpleDeployment(t *testing.T) []dtypes.Group {
 	resources[0] = dtypes.Resource{
 		Resources: simpleResourceUnits(),
 		Count:     1,
-		Price:     sdk.Coin{},
+		Price:     sdk.NewInt64DecCoin(testutil.CoinDenom, 1),
 	}
 	deployment[0] = dtypes.Group{
 		GroupID: gid,

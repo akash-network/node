@@ -81,6 +81,19 @@ func (k Keeper) GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Dep
 	return val, true
 }
 
+func (k Keeper) IterateDeploymentsRaw(ctx sdk.Context, cb func(deployment []byte) bool) {
+	store := ctx.KVStore(k.skey)
+	iter := sdk.KVStorePrefixIterator(store, deploymentPrefix)
+
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		if cb(iter.Value()) {
+			break
+		}
+	}
+}
+
 // GetGroup returns group details with given GroupID from deployment store
 func (k Keeper) GetGroup(ctx sdk.Context, id types.GroupID) (types.Group, bool) {
 	store := ctx.KVStore(k.skey)
@@ -117,6 +130,28 @@ func (k Keeper) GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group 
 
 	iter.Close()
 	return vals
+}
+
+func (k Keeper) SetGroup(ctx sdk.Context, id types.GroupID, g types.Group) {
+	store := ctx.KVStore(k.skey)
+	key := groupKey(id)
+
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&g))
+}
+
+func (k Keeper) IterateGroupsRaw(ctx sdk.Context, fn func(id types.GroupID, groupRaw []byte) bool) {
+	store := ctx.KVStore(k.skey)
+	key := groupPrefix
+
+	iter := sdk.KVStorePrefixIterator(store, key)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		id := groupKeyToID(iter.Key())
+
+		if fn(id, iter.Value()) {
+			break
+		}
+	}
 }
 
 // Create creates a new deployment with given deployment and group specifications

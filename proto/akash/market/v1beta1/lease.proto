@@ -5,7 +5,7 @@ import "gogoproto/gogo.proto";
 import "cosmos/base/v1beta1/coin.proto";
 import "akash/market/v1beta1/bid.proto";
 
-option go_package = "github.com/ovrclk/akash/x/market/types";
+option go_package = "github.com/ovrclk/akash/x/market/typesv1beta1";
 
 // LeaseID stores bid details of lease
 message LeaseID {

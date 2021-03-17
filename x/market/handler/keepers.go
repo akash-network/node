@@ -15,7 +15,7 @@ type EscrowKeeper interface {
 	AccountCreate(ctx sdk.Context, id etypes.AccountID, owner sdk.AccAddress, deposit sdk.Coin) error
 	AccountDeposit(ctx sdk.Context, id etypes.AccountID, amount sdk.Coin) error
 	AccountClose(ctx sdk.Context, id etypes.AccountID) error
-	PaymentCreate(ctx sdk.Context, id etypes.AccountID, pid string, owner sdk.AccAddress, rate sdk.Coin) error
+	PaymentCreate(ctx sdk.Context, id etypes.AccountID, pid string, owner sdk.AccAddress, rate sdk.DecCoin) error
 	PaymentWithdraw(ctx sdk.Context, id etypes.AccountID, pid string) error
 	PaymentClose(ctx sdk.Context, id etypes.AccountID, pid string) error
 }

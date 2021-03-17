@@ -6,7 +6,7 @@ import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
 import "akash/cert/v1beta1/cert.proto";
 
-option go_package = "github.com/ovrclk/akash/x/cert/types";
+option go_package = "github.com/ovrclk/akash/x/cert/typesv1beta1";
 
 // Query defines the gRPC querier service
 service Query {
@@ -16,6 +16,7 @@ service Query {
   }
 }
 
+// CertificateResponse contains a single X509 certificate and its serial number
 message CertificateResponse {
   Certificate certificate = 1 [
     (gogoproto.nullable) = false,

@@ -69,6 +69,7 @@ node-init-genesis: init-dirs
 	$(AKASHD) init node0 
 	cp "$(GENESIS_PATH)" "$(GENESIS_PATH).orig"
 	cat "$(GENESIS_PATH).orig" | \
+        jq -M '.app_state.gov.voting_params.voting_period = "15s"' | \
 		jq -rM '(..|objects|select(has("denom"))).denom           |= "$(CHAIN_TOKEN_DENOM)"' | \
 		jq -rM '(..|objects|select(has("bond_denom"))).bond_denom |= "$(CHAIN_TOKEN_DENOM)"' | \
 		jq -rM '(..|objects|select(has("mint_denom"))).mint_denom |= "$(CHAIN_TOKEN_DENOM)"' > \

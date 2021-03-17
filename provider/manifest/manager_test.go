@@ -158,10 +158,7 @@ func TestManagerRequiresHostname(t *testing.T) {
 	ev := event.LeaseWon{
 		LeaseID: lid,
 		Group:   dgroup,
-		Price: sdk.Coin{
-			Denom:  "uakt",
-			Amount: sdk.NewInt(111),
-		},
+		Price:   sdk.NewDecCoin("uakt", sdk.NewInt(111)),
 	}
 	version, err := sdl.ManifestVersion(sdlManifest)
 	require.NotNil(t, version)
@@ -209,10 +206,7 @@ func TestManagerAllowsUpdate(t *testing.T) {
 	ev := event.LeaseWon{
 		LeaseID: lid,
 		Group:   dgroup,
-		Price: sdk.Coin{
-			Denom:  "uakt",
-			Amount: sdk.NewInt(111),
-		},
+		Price:   sdk.NewDecCoinFromDec(testutil.CoinDenom, sdk.NewDec(111)),
 	}
 	version, err := sdl.ManifestVersion(sdlManifest)
 	require.NotNil(t, version)

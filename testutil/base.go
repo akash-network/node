@@ -89,7 +89,7 @@ func Resources(t testing.TB) []dtypes.Resource {
 
 	vals := make([]dtypes.Resource, 0, count)
 	for i := 0; i < count; i++ {
-		coin := sdk.NewCoin(CoinDenom, sdk.NewInt(rand.Int63n(9999)+1))
+		coin := sdk.NewDecCoin(CoinDenom, sdk.NewInt(rand.Int63n(9999)+1))
 		res := dtypes.Resource{
 			Resources: types.ResourceUnits{
 				CPU: &types.CPU{

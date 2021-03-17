@@ -6,7 +6,7 @@ import "akash/deployment/v1beta1/deployment.proto";
 import "akash/deployment/v1beta1/group.proto";
 import "akash/deployment/v1beta1/params.proto";
 
-option go_package = "github.com/ovrclk/akash/x/deployment/types";
+option go_package = "github.com/ovrclk/akash/x/deployment/typesv1beta1";
 
 // GenesisDeployment defines the basic genesis state used by deployment module
 message GenesisDeployment {

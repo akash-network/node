@@ -195,6 +195,21 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 	return nil
 }
 
+func (k Keeper) IterateProvidersRaw(ctx sdk.Context, fn func(raw []byte) bool) {
+	store := ctx.KVStore(k.skey)
+	iter := store.Iterator(nil, nil)
+
+	defer func() {
+		_ = iter.Close()
+	}()
+
+	for ; iter.Valid(); iter.Next() {
+		if stop := fn(iter.Value()); stop {
+			break
+		}
+	}
+}
+
 // WithProviders iterates all signed provider's attributes
 func (k Keeper) WithProviders(ctx sdk.Context, fn func(types.Provider) bool) {
 	store := ctx.KVStore(k.skey)

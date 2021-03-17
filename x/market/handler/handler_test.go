@@ -66,7 +66,7 @@ func TestCreateBidValid(t *testing.T) {
 	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: provider,
-		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(1)),
+		Price:    sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(1)),
 		Deposit:  types.DefaultBidMinDeposit,
 	}
 
@@ -103,7 +103,7 @@ func TestCreateBidInvalidPrice(t *testing.T) {
 	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: provider,
-		Price:    sdk.Coin{},
+		Price:    sdk.DecCoin{},
 	}
 	res, err := suite.handler(suite.Context(), msg)
 	require.Nil(t, res)
@@ -122,7 +122,7 @@ func TestCreateBidNonExistingOrder(t *testing.T) {
 	msg := &types.MsgCreateBid{
 		Order:    types.OrderID{},
 		Provider: "",
-		Price:    sdk.Coin{},
+		Price:    testutil.AkashDecCoinRandom(t),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -145,7 +145,7 @@ func TestCreateBidClosedOrder(t *testing.T) {
 	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: suite.createProvider(gspec.Requirements.Attributes).Owner,
-		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(math.MaxInt64)),
+		Price:    sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(math.MaxInt64)),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -158,7 +158,7 @@ func TestCreateBidOverprice(t *testing.T) {
 
 	resources := []dtypes.Resource{
 		{
-			Price: sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(1)),
+			Price: sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(1)),
 		},
 	}
 	order, gspec := suite.createOrder(resources)
@@ -166,7 +166,7 @@ func TestCreateBidOverprice(t *testing.T) {
 	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: suite.createProvider(gspec.Requirements.Attributes).Owner,
-		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(math.MaxInt64)),
+		Price:    sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(math.MaxInt64)),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -182,7 +182,7 @@ func TestCreateBidInvalidProvider(t *testing.T) {
 	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: "",
-		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(1)),
+		Price:    sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(1)),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -198,7 +198,7 @@ func TestCreateBidInvalidAttributes(t *testing.T) {
 	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: suite.createProvider(testutil.Attributes(t)).Owner,
-		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(1)),
+		Price:    sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(1)),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -214,7 +214,7 @@ func TestCreateBidAlreadyExists(t *testing.T) {
 	msg := &types.MsgCreateBid{
 		Order:    order.ID(),
 		Provider: suite.createProvider(gspec.Requirements.Attributes).Owner,
-		Price:    sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(1)),
+		Price:    sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(1)),
 		Deposit:  types.DefaultBidMinDeposit,
 	}
 
@@ -387,7 +387,7 @@ func TestCloseBidUnknownOrder(t *testing.T) {
 	group := testutil.DeploymentGroup(t, testutil.DeploymentID(t), 0)
 	orderID := types.MakeOrderID(group.ID(), 1)
 	provider := testutil.AccAddress(t)
-	price := sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(int64(rand.Uint16())))
+	price := sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(int64(rand.Uint16())))
 
 	bid, err := suite.MarketKeeper().CreateBid(suite.Context(), orderID, provider, price)
 	require.NoError(t, err)
@@ -419,7 +419,7 @@ func (st *testSuite) createBid() (types.Bid, types.Order) {
 	st.t.Helper()
 	order, _ := st.createOrder(testutil.Resources(st.t))
 	provider := testutil.AccAddress(st.t)
-	price := sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(int64(rand.Uint16())))
+	price := sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(int64(rand.Uint16())))
 	bid, err := st.MarketKeeper().CreateBid(st.Context(), order.ID(), provider, price)
 	require.NoError(st.t, err)
 	require.Equal(st.t, order.ID(), bid.ID().OrderID())

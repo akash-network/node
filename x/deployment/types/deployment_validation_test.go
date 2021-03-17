@@ -76,10 +76,7 @@ func validSimpleGroupSpec() types.GroupSpec {
 			Endpoints: nil,
 		},
 		Count: 1,
-		Price: sdk.Coin{
-			Denom:  testutil.CoinDenom,
-			Amount: sdk.NewInt(1),
-		},
+		Price: sdk.NewInt64DecCoin(testutil.CoinDenom, 1),
 	}
 	return types.GroupSpec{
 		Name:         "testGroup",
@@ -169,7 +166,7 @@ func TestGroupWithNilStorage(t *testing.T) {
 
 func TestGroupWithInvalidPrice(t *testing.T) {
 	group := validSimpleGroupSpec()
-	group.Resources[0].Price = sdk.Coin{}
+	group.Resources[0].Price = sdk.DecCoin{}
 	err := group.ValidateBasic()
 	require.Error(t, err)
 	require.Regexp(t, "^.*invalid price object.*$", err)
@@ -177,7 +174,7 @@ func TestGroupWithInvalidPrice(t *testing.T) {
 
 func TestGroupWithNegativePrice(t *testing.T) {
 	group := validSimpleGroupSpec()
-	group.Resources[0].Price.Amount = sdk.NewInt(-1)
+	group.Resources[0].Price.Amount = sdk.NewDec(-1)
 	err := group.ValidateBasic()
 	require.Error(t, err)
 	require.Regexp(t, "^.*invalid price object.*$", err)

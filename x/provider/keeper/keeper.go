@@ -78,6 +78,17 @@ func (k Keeper) Create(ctx sdk.Context, provider types.Provider) error {
 	return nil
 }
 
+func (k Keeper) IterateProvidersRaw(ctx sdk.Context, fn func([]byte) bool) {
+	store := ctx.KVStore(k.skey)
+	iter := store.Iterator(nil, nil)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		if stop := fn(iter.Value()); stop {
+			break
+		}
+	}
+}
+
 // WithProviders iterates all providers
 func (k Keeper) WithProviders(ctx sdk.Context, fn func(types.Provider) bool) {
 	store := ctx.KVStore(k.skey)

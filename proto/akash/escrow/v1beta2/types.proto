@@ -1,0 +1,133 @@
+syntax = "proto3";
+package akash.escrow.v1beta2;
+
+import "gogoproto/gogo.proto";
+import "cosmos/base/v1beta1/coin.proto";
+
+option go_package = "github.com/ovrclk/akash/x/escrow/types";
+
+// AccountID is the account identifier
+message AccountID {
+  string scope = 1 [
+    (gogoproto.jsontag)  = "scope",
+    (gogoproto.moretags) = "yaml:\"scope\""
+  ];
+  string xid = 2 [
+    (gogoproto.jsontag)    = "xid",
+    (gogoproto.moretags)   = "yaml:\"xid\"",
+    (gogoproto.customname) = "XID"
+  ];
+}
+
+// Account stores state for an escrow account
+message Account {
+
+  // State stores state for an escrow account
+  enum State {
+    option (gogoproto.goproto_enum_prefix) = false;
+
+    // AccountStateInvalid is an invalid state
+    invalid   = 0 [(gogoproto.enumvalue_customname) = "AccountStateInvalid"];
+    // AccountOpen is the state when an account is open
+    open      = 1 [(gogoproto.enumvalue_customname) = "AccountOpen"];
+    // AccountClosed is the state when an account is closed
+    closed    = 2 [(gogoproto.enumvalue_customname) = "AccountClosed"];
+    // AccountOverdrawn is the state when an account is overdrawn
+    overdrawn = 3 [(gogoproto.enumvalue_customname) = "AccountOverdrawn"];
+  }
+
+  AccountID id = 1 [
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\"",
+    (gogoproto.customname) = "ID"
+  ];
+
+  string owner = 2 [
+    (gogoproto.jsontag)  = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+
+  State state = 3 [
+    (gogoproto.jsontag)  = "state",
+    (gogoproto.moretags) = "yaml:\"state\""
+  ];
+
+  cosmos.base.v1beta1.DecCoin balance   = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "balance",
+    (gogoproto.moretags) = "yaml:\"balance\""
+  ];
+
+  cosmos.base.v1beta1.DecCoin transferred = 5 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "transferred",
+    (gogoproto.moretags) = "yaml:\"transferred\""
+  ];
+
+  int64 settled_at = 6 [
+    (gogoproto.jsontag)    = "settledAt",
+    (gogoproto.moretags)   = "yaml:\"settledAt\"",
+    (gogoproto.customname) = "SettledAt"
+  ];
+}
+
+// Payment stores state for a payment
+message FractionalPayment {
+  option (gogoproto.goproto_stringer) = true;
+
+  // Payment State
+  enum State {
+    option (gogoproto.goproto_enum_prefix) = false;
+
+    // PaymentStateInvalid is the state when the payment is invalid
+    invalid   = 0 [(gogoproto.enumvalue_customname) = "PaymentStateInvalid"];
+    // PaymentStateOpen is the state when the payment is open
+    open      = 1 [(gogoproto.enumvalue_customname) = "PaymentOpen"];
+    // PaymentStateClosed is the state when the payment is closed
+    closed    = 2 [(gogoproto.enumvalue_customname) = "PaymentClosed"];
+    // PaymentStateOverdrawn is the state when the payment is overdrawn
+    overdrawn = 3 [(gogoproto.enumvalue_customname) = "PaymentOverdrawn"];
+  }
+
+  AccountID account_id = 1 [
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "accountID",
+    (gogoproto.moretags)   = "yaml:\"accountID\"",
+    (gogoproto.customname) = "AccountID"
+  ];
+
+  string payment_id = 2 [
+    (gogoproto.jsontag)    = "paymentID",
+    (gogoproto.moretags)   = "yaml:\"paymentID\"",
+    (gogoproto.customname) = "PaymentID"
+  ];
+
+  string owner = 3 [
+    (gogoproto.jsontag)  = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+
+  State state = 4 [
+    (gogoproto.jsontag)  = "state",
+    (gogoproto.moretags) = "yaml:\"state\""
+  ];
+
+  cosmos.base.v1beta1.DecCoin rate   = 5 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "rate",
+    (gogoproto.moretags) = "yaml:\"rate\""
+  ];
+
+  cosmos.base.v1beta1.DecCoin balance   = 6 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "balance",
+    (gogoproto.moretags) = "yaml:\"balance\""
+  ];
+
+  cosmos.base.v1beta1.Coin withdrawn = 7 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "withdrawn",
+    (gogoproto.moretags) = "yaml:\"withdrawn\""
+  ];
+}

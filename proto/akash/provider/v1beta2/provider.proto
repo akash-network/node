@@ -1,0 +1,120 @@
+syntax = "proto3";
+package akash.provider.v1beta2;
+
+import "gogoproto/gogo.proto";
+import "akash/base/v1beta2/attribute.proto";
+
+option go_package = "github.com/ovrclk/akash/x/provider/types";
+
+// Msg defines the provider Msg service
+service Msg {
+  // CreateProvider defines a method that creates a provider given the proper inputs
+  rpc CreateProvider(MsgCreateProvider) returns (MsgCreateProviderResponse);
+
+  // UpdateProvider defines a method that updates a provider given the proper inputs
+  rpc UpdateProvider(MsgUpdateProvider) returns (MsgUpdateProviderResponse);
+
+  // DeleteProvider defines a method that deletes a provider given the proper inputs
+  rpc DeleteProvider(MsgDeleteProvider) returns (MsgDeleteProviderResponse);
+}
+
+// ProviderInfo
+message ProviderInfo {
+  string email = 1 [
+    (gogoproto.customname) = "EMail",
+    (gogoproto.jsontag)    = "email",
+    (gogoproto.moretags)   = "yaml:\"email\""
+  ];
+  string website = 2 [
+    (gogoproto.jsontag)    = "website",
+    (gogoproto.moretags)   = "yaml:\"website\""
+  ];
+}
+
+// MsgCreateProvider defines an SDK message for creating a provider
+message MsgCreateProvider {
+  option (gogoproto.equal) = false;
+
+  string owner    = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+  string host_uri = 2 [
+    (gogoproto.customname) = "HostURI",
+    (gogoproto.jsontag)    = "host_uri",
+    (gogoproto.moretags)   = "yaml:\"host_uri\""
+  ];
+  repeated akash.base.v1beta2.Attribute attributes = 3 [
+    (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Attributes",
+    (gogoproto.nullable)     = false,
+    (gogoproto.jsontag)      = "attributes",
+    (gogoproto.moretags)     = "yaml:\"attributes\""
+  ];
+
+  ProviderInfo info = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "info",
+    (gogoproto.moretags) = "yaml:\"info\""
+  ];
+}
+
+// MsgCreateProviderResponse defines the Msg/CreateProvider response type.
+message MsgCreateProviderResponse {}
+
+// MsgUpdateProvider defines an SDK message for updating a provider
+message MsgUpdateProvider {
+  option (gogoproto.equal) = false;
+
+  string owner    = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+  string host_uri = 2 [
+    (gogoproto.customname) = "HostURI",
+    (gogoproto.jsontag)    = "host_uri",
+    (gogoproto.moretags)   = "yaml:\"host_uri\""
+  ];
+  repeated akash.base.v1beta2.Attribute attributes = 3 [
+    (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Attributes",
+    (gogoproto.nullable)     = false,
+    (gogoproto.jsontag)      = "attributes",
+    (gogoproto.moretags)     = "yaml:\"attributes\""
+  ];
+  ProviderInfo info = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "info",
+    (gogoproto.moretags) = "yaml:\"info\""
+  ];
+}
+
+// MsgUpdateProviderResponse defines the Msg/UpdateProvider response type.
+message MsgUpdateProviderResponse {}
+
+// MsgDeleteProvider defines an SDK message for deleting a provider
+message MsgDeleteProvider {
+  option (gogoproto.equal) = false;
+
+  string owner = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+}
+
+// MsgDeleteProviderResponse defines the Msg/DeleteProvider response type.
+message MsgDeleteProviderResponse {}
+
+// Provider stores owner and host details
+message Provider {
+  option (gogoproto.equal)            = false;
+  option (gogoproto.goproto_stringer) = false;
+
+  string owner    = 1 [(gogoproto.jsontag) = "owner", (gogoproto.moretags) = "yaml:\"owner\""];
+  string host_uri = 2 [
+    (gogoproto.customname) = "HostURI",
+    (gogoproto.jsontag)    = "host_uri",
+    (gogoproto.moretags)   = "yaml:\"host_uri\""
+  ];
+  repeated akash.base.v1beta2.Attribute attributes = 3 [
+    (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Attributes",
+    (gogoproto.nullable)     = false,
+    (gogoproto.jsontag)      = "attributes",
+    (gogoproto.moretags)     = "yaml:\"attributes\""
+  ];
+
+  ProviderInfo info = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "info",
+    (gogoproto.moretags) = "yaml:\"info\""
+  ];
+}

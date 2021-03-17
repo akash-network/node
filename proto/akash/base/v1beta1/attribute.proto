@@ -6,7 +6,7 @@ import "gogoproto/gogo.proto";
 
 option (gogoproto.goproto_stringer_all) = false;
 option (gogoproto.stringer_all)         = false;
-option go_package                       = "github.com/ovrclk/akash/types";
+option go_package                       = "github.com/ovrclk/akash/typesv1beta1";
 
 // Attribute represents key value pair
 message Attribute {

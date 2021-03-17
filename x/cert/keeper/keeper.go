@@ -3,6 +3,7 @@ package keeper
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"math/big"
 
 	"github.com/ovrclk/akash/x/cert/types"
 )
@@ -18,6 +19,10 @@ type Keeper interface {
 	WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.CertificateResponse) bool)
 	WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.CertificateResponse) bool)
 	WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.CertificateResponse) bool)
+
+	// Used for upgrade
+	IterateCertificatesRaw(ctx sdk.Context, fn func(owner sdk.Address, serial big.Int, certificateRaw []byte) bool)
+	SetCertificate(ctx sdk.Context, owner sdk.Address, serial big.Int, crt types.Certificate)
 }
 
 type keeper struct {
@@ -40,6 +45,17 @@ func (k keeper) Querier() types.QueryServer {
 // Codec returns keeper codec
 func (k keeper) Codec() codec.BinaryMarshaler {
 	return k.cdc
+}
+
+func (k keeper) SetCertificate(ctx sdk.Context, owner sdk.Address, serial big.Int, crt types.Certificate) {
+	store := ctx.KVStore(k.skey)
+
+	key := certificateKey(types.CertID{
+		Owner:  owner,
+		Serial: serial,
+	})
+
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&crt))
 }
 
 func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte, pubkey []byte) error {
@@ -114,6 +130,23 @@ func (k keeper) GetCertificateByID(ctx sdk.Context, id types.CertID) (types.Cert
 		Certificate: val,
 		Serial:      id.Serial.String(),
 	}, true
+}
+
+func (k keeper) IterateCertificatesRaw(ctx sdk.Context, fn func(owner sdk.Address, serial big.Int, certificateRaw []byte) bool) {
+	store := ctx.KVStore(k.skey)
+	iter := store.Iterator(nil, nil)
+
+	defer func() {
+		_ = iter.Close()
+	}()
+
+	for ; iter.Valid(); iter.Next() {
+		owner := certificateOwnerFromKey(iter.Key())
+		serial := certificateSerialFromKey(iter.Key())
+		if stop := fn(owner, serial, iter.Value()); stop {
+			break
+		}
+	}
 }
 
 // WithCertificates iterates all certificates

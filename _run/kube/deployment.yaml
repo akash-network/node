@@ -11,6 +11,15 @@ services:
           - hello.localhost
         to:
           - global: true
+  bew:
+    image: quay.io/ovrclk/demo-app
+    expose:
+      - port: 80
+        as: 80
+        accept:
+          - hello1.localhost
+        to:
+          - global: true
 
 profiles:
   compute:
@@ -33,6 +42,10 @@ profiles:
 
 deployment:
   web:
+    westcoast:
+      profile: web
+      count: 1
+  bew:
     westcoast:
       profile: web
       count: 1

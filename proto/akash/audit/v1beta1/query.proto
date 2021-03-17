@@ -9,7 +9,7 @@ import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
 import "akash/audit/v1beta1/audit.proto";
 
-option go_package = "github.com/ovrclk/akash/x/audit/types";
+option go_package = "github.com/ovrclk/akash/x/audit/typesv1beta1";
 
 // Query defines the gRPC querier service
 service Query {

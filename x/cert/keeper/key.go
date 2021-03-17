@@ -19,6 +19,7 @@ var (
 
 func certificateKey(id types.CertID) []byte {
 	buf := bytes.NewBuffer(prefixCertificateID)
+
 	if _, err := buf.Write(id.Owner.Bytes()); err != nil {
 		panic(err)
 	}
@@ -45,4 +46,12 @@ func certificateSerialFromKey(key []byte) big.Int {
 	}
 
 	return *new(big.Int).SetBytes(key[keyAddrPrefixLen:])
+}
+
+func certificateOwnerFromKey(key []byte) sdk.Address {
+	if len(key) < sdk.AddrLen {
+		panic("invalid key size")
+	}
+
+	return sdk.AccAddress(key[0:sdk.AddrLen])
 }

@@ -28,7 +28,7 @@ func (obj *Account) ValidateBasic() error {
 	return nil
 }
 
-func (obj *Payment) ValidateBasic() error {
+func (obj *FractionalPayment) ValidateBasic() error {
 	if err := obj.AccountID.ValidateBasic(); err != nil {
 		return errors.Wrapf(ErrInvalidPayment, "invalid account id: %s", err)
 	}

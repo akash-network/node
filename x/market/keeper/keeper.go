@@ -14,7 +14,7 @@ type IKeeper interface {
 	NewQuerier() Querier
 	Codec() codec.BinaryMarshaler
 	CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.GroupSpec) (types.Order, error)
-	CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.Coin) (types.Bid, error)
+	CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.DecCoin) (types.Bid, error)
 	CreateLease(ctx sdk.Context, bid types.Bid)
 	OnOrderMatched(ctx sdk.Context, order types.Order)
 	OnBidMatched(ctx sdk.Context, bid types.Bid)
@@ -69,9 +69,21 @@ func (k Keeper) Codec() codec.BinaryMarshaler {
 	return k.cdc
 }
 
+func (k Keeper) SetOrder(ctx sdk.Context, order types.Order, checkExists bool) error {
+	store := ctx.KVStore(k.skey)
+
+	key := orderKey(order.ID())
+
+	if checkExists && store.Has(key) {
+		return types.ErrOrderExists
+	}
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&order))
+
+	return nil
+}
+
 // CreateOrder creates a new order with given group id and specifications. It returns created order
 func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.GroupSpec) (types.Order, error) {
-	store := ctx.KVStore(k.skey)
 
 	oseq := uint32(1)
 	var err error
@@ -95,13 +107,10 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 		CreatedAt: ctx.BlockHeight(),
 	}
 
-	key := orderKey(order.ID())
-
-	if store.Has(key) {
-		return types.Order{}, types.ErrOrderExists
+	err = k.SetOrder(ctx, order, true)
+	if err != nil {
+		return types.Order{}, err
 	}
-
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&order))
 
 	ctx.Logger().Info("created order", "order", order.ID())
 	ctx.EventManager().EmitEvent(
@@ -111,10 +120,20 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 	return order, nil
 }
 
-// CreateBid creates a bid for a order with given orderID, price for bid and provider
-func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.Coin) (types.Bid, error) {
+func (k Keeper) SetBid(ctx sdk.Context, bid types.Bid, checkExists bool) error {
 	store := ctx.KVStore(k.skey)
+	key := bidKey(bid.ID())
 
+	if checkExists && store.Has(key) {
+		return types.ErrBidExists
+	}
+
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&bid))
+	return nil
+}
+
+// CreateBid creates a bid for a order with given orderID, price for bid and provider
+func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.DecCoin) (types.Bid, error) {
 	bid := types.Bid{
 		BidID:     types.MakeBidID(oid, provider),
 		State:     types.BidOpen,
@@ -122,13 +141,10 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 		CreatedAt: ctx.BlockHeight(),
 	}
 
-	key := bidKey(bid.ID())
-
-	if store.Has(key) {
-		return types.Bid{}, types.ErrBidExists
+	err := k.SetBid(ctx, bid, true)
+	if err != nil {
+		return types.Bid{}, err
 	}
-
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&bid))
 
 	ctx.EventManager().EmitEvent(
 		types.NewEventBidCreated(bid.ID(), price).
@@ -138,10 +154,18 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 	return bid, nil
 }
 
+func (k Keeper) SetLease(ctx sdk.Context, lease types.Lease) {
+	store := ctx.KVStore(k.skey)
+
+	// create (active) lease in store
+	key := leaseKey(lease.ID())
+	store.Set(key, k.cdc.MustMarshalBinaryBare(&lease))
+
+}
+
 // CreateLease creates lease for bid with given bidID.
 // Should only be called by the EndBlock handler or unit tests.
 func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
-	store := ctx.KVStore(k.skey)
 
 	lease := types.Lease{
 		LeaseID:   types.LeaseID(bid.ID()),
@@ -149,10 +173,7 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 		Price:     bid.Price,
 		CreatedAt: ctx.BlockHeight(),
 	}
-
-	// create (active) lease in store
-	key := leaseKey(lease.ID())
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&lease))
+	k.SetLease(ctx, lease)
 
 	ctx.Logger().Info("created lease", "lease", lease.ID())
 	ctx.EventManager().EmitEvent(
@@ -327,6 +348,17 @@ func (k Keeper) WithOrders(ctx sdk.Context, fn func(types.Order) bool) {
 	}
 }
 
+func (k Keeper) IterateOrdersRaw(ctx sdk.Context, fn func([]byte) bool) {
+	store := ctx.KVStore(k.skey)
+	iter := sdk.KVStorePrefixIterator(store, orderPrefix)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		if stop := fn(iter.Value()); stop {
+			break
+		}
+	}
+}
+
 // WithBids iterates all bids in market
 func (k Keeper) WithBids(ctx sdk.Context, fn func(types.Bid) bool) {
 	store := ctx.KVStore(k.skey)
@@ -341,6 +373,17 @@ func (k Keeper) WithBids(ctx sdk.Context, fn func(types.Bid) bool) {
 	}
 }
 
+func (k Keeper) IterateBidsRaw(ctx sdk.Context, fn func([]byte) bool) {
+	store := ctx.KVStore(k.skey)
+	iter := sdk.KVStorePrefixIterator(store, bidPrefix)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		if stop := fn(iter.Value()); stop {
+			break
+		}
+	}
+}
+
 // WithLeases iterates all leases in market
 func (k Keeper) WithLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 	store := ctx.KVStore(k.skey)
@@ -350,6 +393,17 @@ func (k Keeper) WithLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 		var val types.Lease
 		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
 		if stop := fn(val); stop {
+			break
+		}
+	}
+}
+
+func (k Keeper) IterateLeasesRaw(ctx sdk.Context, fn func([]byte) bool) {
+	store := ctx.KVStore(k.skey)
+	iter := sdk.KVStorePrefixIterator(store, leasePrefix)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		if stop := fn(iter.Value()); stop {
 			break
 		}
 	}

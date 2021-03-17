@@ -1,0 +1,16 @@
+syntax = "proto3";
+package akash.deployment.v1beta2;
+import "gogoproto/gogo.proto";
+import "cosmos/base/v1beta1/coin.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types";
+
+// Params defines the parameters for the x/deployment package
+message Params {
+  cosmos.base.v1beta1.Coin deployment_min_deposit = 1 [
+    (gogoproto.customname) = "DeploymentMinDeposit",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "deployment_min_deposit",
+    (gogoproto.moretags)   = "yaml:\"deployment_min_deposit\""
+  ];
+}

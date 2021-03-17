@@ -91,6 +91,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 
 	dkeeper "github.com/ovrclk/akash/x/deployment/keeper"
+	ekeeper "github.com/ovrclk/akash/x/escrow/keeper"
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
 	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
 
@@ -169,6 +170,7 @@ func NewApp(
 	// TODO: Remove cdc in favor of appCodec once all modules are migrated.
 	encodingConfig := MakeEncodingConfig()
 	appCodec := encodingConfig.Marshaler
+	appCodec.(*codec.ProtoCodec).InterfaceRegistry()
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
@@ -268,6 +270,17 @@ func NewApp(
 
 		// Set staking HistoricalEntries to 10000, required positive value for ibc
 		app.GetSubspace(stakingtypes.ModuleName).Set(ctx, stakingtypes.KeyHistoricalEntries, uint32(10000))
+	})
+
+	app.keeper.upgrade.SetUpgradeHandler("fractional-uakt", func(ctx sdk.Context, plan upgradetypes.Plan) {
+		migrations.MigrateFractionalUakt(ctx,
+			app.keeper.audit,
+			app.keeper.cert,
+			app.keeper.deployment.(dkeeper.Keeper),
+			app.keeper.escrow.(ekeeper.Keeper),
+			app.keeper.market.(mkeeper.Keeper),
+			app.keeper.provider.(pkeeper.Keeper))
+
 	})
 
 	// register the staking hooks

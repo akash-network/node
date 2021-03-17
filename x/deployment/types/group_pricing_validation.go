@@ -9,7 +9,7 @@ import (
 )
 
 func validateGroupPricing(gspec GroupSpec) error {
-	var price sdk.Coin
+	var price sdk.DecCoin
 
 	mem := sdk.NewInt(0)
 
@@ -30,7 +30,7 @@ func validateGroupPricing(gspec GroupSpec) error {
 			if rprice.Denom != price.Denom {
 				return errors.Errorf("multi-denonimation group: (%v == %v fails)", rprice.Denom, price.Denom)
 			}
-			price = price.Add(rprice)
+			price = price.Add(price)
 		}
 
 		memCount := sdk.NewInt(0)
@@ -49,13 +49,10 @@ func validateUnitPricing(rg Resource) error {
 		return errors.Errorf("error: invalid price object")
 	}
 
-	if rg.Price.Amount.GT(sdk.NewIntFromUint64(validationConfig.MaxUnitPrice)) {
+	if rg.Price.Amount.GT(sdk.NewDecFromInt(sdk.NewIntFromUint64(validationConfig.MaxUnitPrice))) {
 		return errors.Errorf("error: invalid unit price (%v > %v fails)", validationConfig.MaxUnitPrice, rg.Price)
 	}
 
-	if rg.Price.Amount.LT(sdk.NewIntFromUint64(validationConfig.MinUnitPrice)) {
-		return errors.Errorf("error: invalid unit price (%v < %v fails)", validationConfig.MinUnitPrice, rg.Price)
-	}
 	return nil
 }
 

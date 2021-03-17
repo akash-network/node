@@ -6,7 +6,7 @@ import "akash/base/v1beta1/attribute.proto";
 import "akash/base/v1beta1/resourcevalue.proto";
 import "akash/base/v1beta1/endpoint.proto";
 
-option go_package = "github.com/ovrclk/akash/types";
+option go_package = "github.com/ovrclk/akash/typesv1beta1";
 
 // CPU stores resource units and cpu config attributes
 message CPU {

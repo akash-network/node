@@ -4,7 +4,7 @@ package akash.escrow.v1beta1;
 import "gogoproto/gogo.proto";
 import "akash/escrow/v1beta1/types.proto";
 
-option go_package = "github.com/ovrclk/akash/x/escrow/types";
+option go_package = "github.com/ovrclk/akash/x/escrow/typesv1beta1";
 
 // GenesisState defines the basic genesis state used by escrow module
 message GenesisState {

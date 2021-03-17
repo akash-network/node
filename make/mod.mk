@@ -25,3 +25,5 @@ github.com/cosmos/cosmos-sdk/third_party/proto
 github.com/zondax/hid
 	$(MODVENDOR) -copy="**/swagger.yaml" -include=\
 github.com/cosmos/cosmos-sdk/client/docs
+	$(MODVENDOR) -copy="**/boilerplate.go.txt" -include=\
+k8s.io/code-generator/hack

@@ -23,10 +23,10 @@ func Test_processEvent(t *testing.T) {
 		// x/market events
 		mtypes.NewEventOrderCreated(testutil.OrderID(t)),
 		mtypes.NewEventOrderClosed(testutil.OrderID(t)),
-		mtypes.NewEventBidCreated(testutil.BidID(t), testutil.Coin(t)),
-		mtypes.NewEventBidClosed(testutil.BidID(t), testutil.Coin(t)),
-		mtypes.NewEventLeaseCreated(testutil.LeaseID(t), testutil.Coin(t)),
-		mtypes.NewEventLeaseClosed(testutil.LeaseID(t), testutil.Coin(t)),
+		mtypes.NewEventBidCreated(testutil.BidID(t), testutil.DecCoin(t)),
+		mtypes.NewEventBidClosed(testutil.BidID(t), testutil.DecCoin(t)),
+		mtypes.NewEventLeaseCreated(testutil.LeaseID(t), testutil.DecCoin(t)),
+		mtypes.NewEventLeaseClosed(testutil.LeaseID(t), testutil.DecCoin(t)),
 
 		// x/provider events
 		ptypes.NewEventProviderCreated(testutil.AccAddress(t)),

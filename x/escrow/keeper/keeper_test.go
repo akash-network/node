@@ -70,7 +70,7 @@ func Test_PaymentCreate(t *testing.T) {
 	}
 
 	// create payment
-	assert.NoError(t, keeper.PaymentCreate(ctx, aid, pid, powner, rate))
+	assert.NoError(t, keeper.PaymentCreate(ctx, aid, pid, powner, sdk.NewDecCoinFromCoin(rate)))
 
 	// withdraw some funds
 	blkdelta := int64(10)
@@ -86,15 +86,15 @@ func Test_PaymentCreate(t *testing.T) {
 		require.Equal(t, ctx.BlockHeight(), acct.SettledAt)
 
 		require.Equal(t, types.AccountOpen, acct.State)
-		require.Equal(t, testutil.AkashCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), acct.Balance)
-		require.Equal(t, testutil.AkashCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.Transferred)
+		require.Equal(t, testutil.AkashDecCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), acct.Balance)
+		require.Equal(t, testutil.AkashDecCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.Transferred)
 
 		payment, err := keeper.GetPayment(ctx, aid, pid)
 		require.NoError(t, err)
 
 		require.Equal(t, types.PaymentOpen, payment.State)
 		require.Equal(t, testutil.AkashCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), payment.Withdrawn)
-		require.Equal(t, testutil.AkashCoin(t, 0), payment.Balance)
+		require.Equal(t, testutil.AkashDecCoin(t, 0), payment.Balance)
 	}
 
 	// close payment
@@ -111,15 +111,15 @@ func Test_PaymentCreate(t *testing.T) {
 		require.Equal(t, ctx.BlockHeight(), acct.SettledAt)
 
 		require.Equal(t, types.AccountOpen, acct.State)
-		require.Equal(t, testutil.AkashCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), acct.Balance)
-		require.Equal(t, testutil.AkashCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.Transferred)
+		require.Equal(t, testutil.AkashDecCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), acct.Balance)
+		require.Equal(t, testutil.AkashDecCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.Transferred)
 
 		payment, err := keeper.GetPayment(ctx, aid, pid)
 		require.NoError(t, err)
 
 		require.Equal(t, types.PaymentClosed, payment.State)
 		require.Equal(t, testutil.AkashCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), payment.Withdrawn)
-		require.Equal(t, testutil.AkashCoin(t, 0), payment.Balance)
+		require.Equal(t, testutil.AkashDecCoin(t, 0), payment.Balance)
 	}
 
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 30)
@@ -128,7 +128,7 @@ func Test_PaymentCreate(t *testing.T) {
 	assert.Error(t, keeper.PaymentWithdraw(ctx, aid, pid))
 
 	// can't re-created a closed payment
-	assert.Error(t, keeper.PaymentCreate(ctx, aid, pid, powner, rate))
+	assert.Error(t, keeper.PaymentCreate(ctx, aid, pid, powner, sdk.NewDecCoinFromCoin(rate)))
 
 	// closing the account transfers all remaining funds
 	bkeeper.
@@ -153,7 +153,7 @@ func Test_Payment_Overdraw(t *testing.T) {
 	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, amt))
 
 	// create payment
-	assert.NoError(t, keeper.PaymentCreate(ctx, aid, pid, powner, rate))
+	assert.NoError(t, keeper.PaymentCreate(ctx, aid, pid, powner, sdk.NewDecCoinFromCoin(rate)))
 
 	// withdraw some funds
 	blkdelta := int64(1000/10 + 1)
@@ -169,15 +169,15 @@ func Test_Payment_Overdraw(t *testing.T) {
 		assert.Equal(t, ctx.BlockHeight(), acct.SettledAt)
 
 		assert.Equal(t, types.AccountOverdrawn, acct.State)
-		assert.Equal(t, testutil.AkashCoin(t, 0), acct.Balance)
-		assert.Equal(t, amt, acct.Transferred)
+		assert.Equal(t, testutil.AkashDecCoin(t, 0), acct.Balance)
+		assert.Equal(t, sdk.NewDecCoinFromCoin(amt), acct.Transferred)
 
 		payment, err := keeper.GetPayment(ctx, aid, pid)
 		assert.NoError(t, err)
 
 		assert.Equal(t, types.PaymentOverdrawn, payment.State)
 		assert.Equal(t, amt, payment.Withdrawn)
-		assert.Equal(t, testutil.AkashCoin(t, 0), payment.Balance)
+		assert.Equal(t, testutil.AkashDecCoin(t, 0), payment.Balance)
 	}
 
 }
@@ -202,7 +202,7 @@ func Test_PaymentCreate_later(t *testing.T) {
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + blkdelta)
 
 	// create payment
-	assert.NoError(t, keeper.PaymentCreate(ctx, aid, pid, powner, rate))
+	assert.NoError(t, keeper.PaymentCreate(ctx, aid, pid, powner, sdk.NewDecCoinFromCoin(rate)))
 
 	{
 		acct, err := keeper.GetAccount(ctx, aid)

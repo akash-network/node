@@ -1,0 +1,13 @@
+syntax = "proto3";
+package akash.provider.v1beta2;
+
+import "gogoproto/gogo.proto";
+import "akash/provider/v1beta2/provider.proto";
+
+option go_package = "github.com/ovrclk/akash/x/provider/types";
+
+// GenesisState defines the basic genesis state used by provider module
+message GenesisState {
+  repeated Provider providers = 1
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "providers", (gogoproto.moretags) = "yaml:\"providers\""];
+}

@@ -4,7 +4,7 @@ package akash.provider.v1beta1;
 import "gogoproto/gogo.proto";
 import "akash/provider/v1beta1/provider.proto";
 
-option go_package = "github.com/ovrclk/akash/x/provider/types";
+option go_package = "github.com/ovrclk/akash/x/provider/typesv1beta1";
 
 // GenesisState defines the basic genesis state used by provider module
 message GenesisState {

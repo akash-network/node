@@ -3,7 +3,7 @@ package akash.cert.v1beta1;
 
 import "gogoproto/gogo.proto";
 
-option go_package = "github.com/ovrclk/akash/x/cert/types";
+option go_package = "github.com/ovrclk/akash/x/cert/typesv1beta1";
 
 // Msg defines the provider Msg service
 service Msg {

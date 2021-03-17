@@ -9,7 +9,7 @@ import "akash/market/v1beta1/bid.proto";
 import "akash/market/v1beta1/lease.proto";
 import "akash/escrow/v1beta1/types.proto";
 
-option go_package = "github.com/ovrclk/akash/x/market/types";
+option go_package = "github.com/ovrclk/akash/x/market/typesv1beta1";
 
 // Query defines the gRPC querier service
 service Query {

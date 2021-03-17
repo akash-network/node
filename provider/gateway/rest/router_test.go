@@ -358,7 +358,7 @@ func TestRouteStatusFails(t *testing.T) {
 func TestRouteValidateOK(t *testing.T) {
 	runRouterTest(t, false, func(test *routerTest) {
 		validate := provider.ValidateGroupSpecResult{
-			MinBidPrice: testutil.AkashCoin(t, 200),
+			MinBidPrice: testutil.AkashDecCoin(t, 200),
 		}
 
 		test.pclient.On("Validate", mock.Anything, mock.Anything).Return(validate, nil)
