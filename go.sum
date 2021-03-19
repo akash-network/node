@@ -492,8 +492,8 @@ github.com/otiai10/curr v1.0.0/go.mod h1:LskTG5wDwr8Rs+nNQ+1LlxRjAtTZZjtJW4rMXl6
 github.com/otiai10/mint v1.3.0/go.mod h1:F5AjcsTsWUqX+Na9fpHb52P8pcRX2CI6A3ctIT91xUo=
 github.com/otiai10/mint v1.3.2 h1:VYWnrP5fXmz1MXvjuUvcBrXSjGE6xjON+axB/UrpO3E=
 github.com/otiai10/mint v1.3.2/go.mod h1:/yxELlJQ0ufhjUwhshSj+wFjZ78CnZ48/1wtmBH1OTc=
-github.com/ovrclk/cosmos-sdk v0.41.4-akash-2 h1:JXuZ5WwhOsyGtE1CsnY0x4+Qnwtz8iXk9zZ0q06lahw=
-github.com/ovrclk/cosmos-sdk v0.41.4-akash-2/go.mod h1:iLH8pH47p0ilfI1cJVPT628FyVdvcoDMxXg1lrl/1MA=
+github.com/ovrclk/cosmos-sdk v0.41.4-akash-3 h1:+p5fJlESuCnJXCd6men+R8fwg5iUAGZ7G9r7AumLH6Y=
+github.com/ovrclk/cosmos-sdk v0.41.4-akash-3/go.mod h1:iLH8pH47p0ilfI1cJVPT628FyVdvcoDMxXg1lrl/1MA=
 github.com/ovrclk/cosmos-supply-summary v0.1.0 h1:y314GYwEH0fsSO1XnDZ7J6i7hoiFk3fvp1Km61z5WoQ=
 github.com/ovrclk/cosmos-supply-summary v0.1.0/go.mod h1:bsmJS1cKcfctrbXjkGYVD/N2I35Oop39rLLDrnRdSqg=
 github.com/ovrclk/tendermint v0.34.8-akash-1 h1:LJDru2ZJrdp0x+/3raHJyb9JGx4VkF+6C+gIoeIhmkA=
@@ -586,6 +586,8 @@ github.com/sasha-s/go-deadlock v0.2.1-0.20190427202633-1595213edefa/go.mod h1:F7
 github.com/satori/go.uuid v1.2.0 h1:0uYX9dsZ2yD7q2RtLRtPSdGDWzjeM3TbMJP9utgA0ww=
 github.com/satori/go.uuid v1.2.0/go.mod h1:dA0hQrYB0VpLJoorglMZABFdXlWrHn1NEOzdhQKdks0=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
+github.com/shopspring/decimal v1.2.0 h1:abSATXmQEYyShuxI4/vyW3tV1MrKAJzCZ/0zLUXYbsQ=
+github.com/shopspring/decimal v1.2.0/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/shurcooL/sanitized_anchor_name v1.0.0 h1:PdmoCO6wvbs+7yrJyMORt4/BmY5IYyJwS/kOiWx8mHo=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=

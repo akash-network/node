@@ -126,7 +126,6 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		dcmd.RootCmd(),
 		pcmd.RootCmd(),
 		ecmd.EventCmd(),
-		csupply.GetQueryCmd(),
 		queryCmd(),
 		txCmd(),
 		keys.Commands(app.DefaultHome),
@@ -228,6 +227,7 @@ func queryCmd() *cobra.Command {
 		authcmd.QueryTxsByEventsCmd(),
 		authcmd.QueryTxCmd(),
 		flags.LineBreak,
+		csupply.GetQueryCmd(),
 	)
 
 	app.ModuleBasics().AddQueryCommands(cmd)

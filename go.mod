@@ -25,6 +25,7 @@ require (
 	github.com/rs/cors v1.7.1-0.20191011001009-dcbccb712443 // indirect
 	github.com/rs/zerolog v1.20.0
 	github.com/satori/go.uuid v1.2.0
+	github.com/shopspring/decimal v1.2.0
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
@@ -56,6 +57,6 @@ replace google.golang.org/grpc => google.golang.org/grpc v1.33.2
 
 replace github.com/grpc-ecosystem/grpc-gateway => github.com/grpc-ecosystem/grpc-gateway v1.14.7
 
-replace github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.41.4-akash-2
+replace github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.41.4-akash-3
 
 replace github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.8-akash-1

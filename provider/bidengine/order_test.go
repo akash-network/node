@@ -18,6 +18,7 @@ import (
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/testutil"
 	atypes "github.com/ovrclk/akash/types"
+	audittypes "github.com/ovrclk/akash/x/audit/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
@@ -106,6 +107,12 @@ func makeMocks(s *orderTestScaffold) {
 
 }
 
+type nullProviderAttrSignatureService struct{}
+
+func (nullProviderAttrSignatureService) GetAuditorAttributeSignatures(auditor string) ([]audittypes.Provider, error) {
+	return nil, nil // Return no attributes & no error
+}
+
 func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricingStrategy) (*order, orderTestScaffold, <-chan int) {
 	if pricing == nil {
 		var err error
@@ -163,7 +170,7 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricing
 	}
 
 	reservationFulfilledNotify := make(chan int, 1)
-	order, err := newOrderInternal(serviceCast, scaffold.orderID, cfg, checkForExistingBid, reservationFulfilledNotify)
+	order, err := newOrderInternal(serviceCast, scaffold.orderID, cfg, nullProviderAttrSignatureService{}, checkForExistingBid, reservationFulfilledNotify)
 
 	require.NoError(t, err)
 	require.NotNil(t, order)

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -9,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -126,4 +128,44 @@ func LoadCertificateForAccount(cctx client.Context, keyring keyring.Keyring, opt
 	}
 
 	return cert, nil
+}
+
+func LoadAndQueryPEMForAccount(ctx context.Context, cctx client.Context, keyring keyring.Keyring, opts ...LoaderOption) (PEMBlocks, error) {
+	pblk, err := LoadPEMForAccount(cctx, keyring, opts...)
+	if err != nil {
+		return PEMBlocks{}, err
+	}
+
+	blk, _ := pem.Decode(pblk.Cert)
+	cert, err := x509.ParseCertificate(blk.Bytes)
+	if err != nil {
+		return PEMBlocks{}, err
+	}
+
+	params := &ctypes.QueryCertificatesRequest{
+		Filter: ctypes.CertificateFilter{
+			Owner:  cert.Subject.CommonName,
+			Serial: cert.SerialNumber.String(),
+			State:  "valid",
+		},
+	}
+
+	certs, err := ctypes.NewQueryClient(cctx).Certificates(ctx, params)
+	if err != nil {
+		return PEMBlocks{}, err
+	}
+
+	if len(certs.Certificates) == 0 {
+		return PEMBlocks{}, errors.Errorf("certificate has not been committed to blockchain")
+	}
+
+	if cert.NotBefore.After(time.Now().UTC()) {
+		return PEMBlocks{}, errors.Errorf("certificate is not yet active, start ts %s", cert.NotBefore)
+	}
+
+	if time.Now().UTC().After(cert.NotAfter) {
+		return PEMBlocks{}, errors.Errorf("certificate has been expired")
+	}
+
+	return pblk, nil
 }

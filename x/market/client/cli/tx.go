@@ -17,7 +17,6 @@ func GetTxCmd(key string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Transaction subcommands",
-		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
@@ -32,7 +31,6 @@ func cmdBid(key string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "bid",
 		Short:                      "Bid subcommands",
-		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
@@ -135,7 +133,6 @@ func cmdLease(key string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "lease",
 		Short:                      "Lease subcommands",
-		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
