@@ -18,7 +18,7 @@ import (
 )
 
 type BidPricingStrategy interface {
-	calculatePrice(ctx context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error)
+	CalculatePrice(ctx context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error)
 }
 
 const denom = "uakt"
@@ -67,7 +67,7 @@ func ceilBigRatToBigInt(v *big.Rat) *big.Int {
 	return result
 }
 
-func (fp scalePricing) calculatePrice(ctx context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (fp scalePricing) CalculatePrice(_ context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	// Use unlimited precision math here.
 	// Otherwise a correctly crafted order could create a cost of '1' given
 	// a possible configuration
@@ -144,8 +144,7 @@ func MakeRandomRangePricing() (BidPricingStrategy, error) {
 	return randomRangePricing(0), nil
 }
 
-func (randomRangePricing) calculatePrice(ctx context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
-
+func (randomRangePricing) CalculatePrice(ctx context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	min, max := calculatePriceRange(gspec)
 
 	if min.IsEqual(max) {
@@ -252,7 +251,7 @@ type dataForScriptElement struct {
 	EndpointQuantity int    `json:"endpoint_quantity"`
 }
 
-func (ssp shellScriptPricing) calculatePrice(ctx context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	buf := &bytes.Buffer{}
 
 	dataForScript := make([]dataForScriptElement, len(gspec.Resources))

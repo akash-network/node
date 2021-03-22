@@ -355,6 +355,82 @@ func TestRouteStatusFails(t *testing.T) {
 	})
 }
 
+func TestRouteValidateOK(t *testing.T) {
+	runRouterTest(t, false, func(test *routerTest) {
+		validate := provider.ValidateGroupSpecResult{
+			MinBidPrice: testutil.AkashCoin(t, 200),
+		}
+
+		test.pclient.On("Validate", mock.Anything, mock.Anything).Return(validate, nil)
+
+		uri, err := makeURI(test.host, validatePath())
+		require.NoError(t, err)
+
+		gspec := testutil.GroupSpec(t)
+		bgspec, err := json.Marshal(&gspec)
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("GET", uri, bytes.NewReader(bgspec))
+		require.NoError(t, err)
+
+		req.Header.Set("Content-Type", contentTypeJSON)
+
+		resp, err := test.gclient.hclient.Do(req)
+		require.NoError(t, err)
+		require.Equal(t, resp.StatusCode, http.StatusOK)
+		data := make(map[string]interface{})
+		decoder := json.NewDecoder(resp.Body)
+		err = decoder.Decode(&data)
+		require.NoError(t, err)
+	})
+}
+
+func TestRouteValidateFails(t *testing.T) {
+	runRouterTest(t, false, func(test *routerTest) {
+		test.pclient.On("Validate", mock.Anything, mock.Anything).Return(provider.ValidateGroupSpecResult{}, errGeneric)
+
+		uri, err := makeURI(test.host, validatePath())
+		require.NoError(t, err)
+
+		gspec := testutil.GroupSpec(t)
+		bgspec, err := json.Marshal(&gspec)
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("GET", uri, bytes.NewReader(bgspec))
+		require.NoError(t, err)
+
+		req.Header.Set("Content-Type", contentTypeJSON)
+		resp, err := test.gclient.hclient.Do(req)
+		require.NoError(t, err)
+		require.Equal(t, resp.StatusCode, http.StatusInternalServerError)
+
+		data, err := ioutil.ReadAll(resp.Body)
+		require.NoError(t, err)
+		require.Regexp(t, "^generic test error(?s:.)*$", string(data))
+	})
+}
+
+func TestRouteValidateFailsEmptyBody(t *testing.T) {
+	runRouterTest(t, false, func(test *routerTest) {
+		test.pclient.On("Validate", mock.Anything, mock.Anything).Return(provider.ValidateGroupSpecResult{}, errGeneric)
+
+		uri, err := makeURI(test.host, validatePath())
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("GET", uri, nil)
+		require.NoError(t, err)
+
+		req.Header.Set("Content-Type", contentTypeJSON)
+		resp, err := test.gclient.hclient.Do(req)
+		require.NoError(t, err)
+		require.Equal(t, resp.StatusCode, http.StatusBadRequest)
+
+		data, err := ioutil.ReadAll(resp.Body)
+		require.NoError(t, err)
+		require.Regexp(t, "empty payload", string(data))
+	})
+}
+
 func TestRoutePutManifestOK(t *testing.T) {
 	runRouterTest(t, true, func(test *routerTest) {
 		test.pmclient.On(

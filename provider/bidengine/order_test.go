@@ -443,7 +443,7 @@ func Test_ShouldRecognizeLeaseCreatedIfBiddingIsSkipped(t *testing.T) {
 
 type testBidPricingStrategy int64
 
-func (tbps testBidPricingStrategy) calculatePrice(_ context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (tbps testBidPricingStrategy) CalculatePrice(_ context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	return sdk.NewInt64Coin(testutil.CoinDenom, int64(tbps)), nil
 }
 
@@ -477,7 +477,7 @@ type alwaysFailsBidPricingStrategy struct {
 	failure error
 }
 
-func (afbps alwaysFailsBidPricingStrategy) calculatePrice(_ context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (afbps alwaysFailsBidPricingStrategy) CalculatePrice(_ context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	return sdk.Coin{}, afbps.failure
 }
 

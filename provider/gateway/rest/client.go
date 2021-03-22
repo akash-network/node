@@ -16,6 +16,7 @@ import (
 	"time"
 
 	cutils "github.com/ovrclk/akash/x/cert/utils"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/websocket"
@@ -40,6 +41,7 @@ const (
 // Client defines the methods available for connecting to the gateway server.
 type Client interface {
 	Status(ctx context.Context) (*provider.Status, error)
+	Validate(ctx context.Context, gspec dtypes.GroupSpec) (provider.ValidateGroupSpecResult, error)
 	SubmitManifest(ctx context.Context, dseq uint64, mani manifest.Manifest) error
 	LeaseStatus(ctx context.Context, id mtypes.LeaseID) (*cltypes.LeaseStatus, error)
 	LeaseEvents(ctx context.Context, id mtypes.LeaseID, services string, follow bool) (*LeaseKubeEvents, error)
@@ -261,6 +263,55 @@ func (c *client) Status(ctx context.Context) (*provider.Status, error) {
 	}
 
 	return &obj, nil
+}
+
+func (c *client) Validate(ctx context.Context, gspec dtypes.GroupSpec) (provider.ValidateGroupSpecResult, error) {
+	uri, err := makeURI(c.host, validatePath())
+	if err != nil {
+		return provider.ValidateGroupSpecResult{}, err
+	}
+
+	if err = gspec.ValidateBasic(); err != nil {
+		return provider.ValidateGroupSpecResult{}, err
+	}
+
+	bgspec, err := json.Marshal(gspec)
+	if err != nil {
+		return provider.ValidateGroupSpecResult{}, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", uri, bytes.NewReader(bgspec))
+	if err != nil {
+		return provider.ValidateGroupSpecResult{}, err
+	}
+	req.Header.Set("Content-Type", contentTypeJSON)
+
+	resp, err := c.hclient.Do(req)
+	if err != nil {
+		return provider.ValidateGroupSpecResult{}, err
+	}
+
+	buf := &bytes.Buffer{}
+	_, err = io.Copy(buf, resp.Body)
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if err != nil {
+		return provider.ValidateGroupSpecResult{}, err
+	}
+
+	err = createClientResponseErrorIfNotOK(resp, buf)
+	if err != nil {
+		return provider.ValidateGroupSpecResult{}, err
+	}
+
+	var obj provider.ValidateGroupSpecResult
+	if err = json.NewDecoder(buf).Decode(&obj); err != nil {
+		return provider.ValidateGroupSpecResult{}, err
+	}
+
+	return obj, nil
 }
 
 func (c *client) SubmitManifest(ctx context.Context, dseq uint64, mani manifest.Manifest) error {
