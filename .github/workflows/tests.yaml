@@ -21,7 +21,7 @@ jobs:
           env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOLANG_VERSION }}"
       - run: make bins
       - run: make docker-image
 
@@ -34,7 +34,7 @@ jobs:
           env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOLANG_VERSION }}"
       - run: make test-full
 
   coverage:
@@ -46,7 +46,7 @@ jobs:
           env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOLANG_VERSION }}"
       - run: make test-coverage
       - uses: codecov/codecov-action@v1
 
@@ -59,7 +59,7 @@ jobs:
           env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOLANG_VERSION }}"
       - run: make deps-tidy
       - run: make deps-vendor
       - run: make build
