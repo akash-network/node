@@ -352,7 +352,7 @@ func (c *client) LeaseEvents(ctx context.Context, id mtypes.LeaseID, _ string, f
 
 	processOnCloseErr := func(err error) {
 		if err != nil {
-			if _, ok := err.(*websocket.CloseError); ok {
+			if _, ok := err.(*websocket.CloseError); ok { // nolint: gosimple
 				onclose <- parseCloseMessage(err.Error())
 			} else {
 				onclose <- err.Error()

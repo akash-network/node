@@ -460,7 +460,8 @@ func createAuthPem(cmd *cobra.Command, pemFile string, domains []string) (*types
 	}
 
 	var blk *pem.Block
-	blk, err = x509.EncryptPEMBlock(rand.Reader, types.PemBlkTypeECPrivateKey, keyDer, sig, x509.PEMCipherAES256)
+	// fixme #1182
+	blk, err = x509.EncryptPEMBlock(rand.Reader, types.PemBlkTypeECPrivateKey, keyDer, sig, x509.PEMCipherAES256) // nolint: staticcheck
 	if err != nil {
 		_ = cctx.PrintString(fmt.Sprintf("failed to encrypt key file: %v\n", err))
 		return nil, err

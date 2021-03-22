@@ -85,7 +85,8 @@ func LoadPEMForAccount(cctx client.Context, keyring keyring.Keyring, opts ...Loa
 	pdata = pdata[:len(pdata)-len(kdata)-1]
 
 	var pkey []byte
-	if pkey, err = x509.DecryptPEMBlock(bkey, sig); err != nil {
+	// fixme #1182
+	if pkey, err = x509.DecryptPEMBlock(bkey, sig); err != nil { // nolint: staticcheck
 		return PEMBlocks{}, err
 	}
 

@@ -162,9 +162,7 @@ func readAttributes(cmd *cobra.Command, cctx client.Context, provider string, ar
 			return nil, err
 		}
 
-		for _, attribute := range resp.Provider.Attributes {
-			attr = append(attr, attribute)
-		}
+		attr = append(attr, resp.Provider.Attributes...)
 	}
 
 	sort.SliceStable(attr, func(i, j int) bool {
