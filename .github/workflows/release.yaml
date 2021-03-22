@@ -23,7 +23,7 @@ jobs:
           env-file: .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOLANG_VERSION }}"
       - name: branch name
         id: branch_name
         run: |
