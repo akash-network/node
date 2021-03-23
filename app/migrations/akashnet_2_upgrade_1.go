@@ -45,7 +45,7 @@ func getDelegations(ctx sdk.Context, skeeper stakingkeeper.Keeper, address sdk.A
 	gctx := sdk.WrapSDKContext(ctx)
 	squery := stakingkeeper.Querier{skeeper}
 
-	response, err := squery.DelegatorDelegations(gctx, &stakingtypes.QueryDelegatorDelegationsRequest{
+	dresponse, err := squery.DelegatorDelegations(gctx, &stakingtypes.QueryDelegatorDelegationsRequest{
 		DelegatorAddr: address.String(),
 	})
 	if err != nil {
@@ -54,8 +54,23 @@ func getDelegations(ctx sdk.Context, skeeper stakingkeeper.Keeper, address sdk.A
 
 	delegations := sdk.NewCoins()
 
-	for _, delegation := range response.DelegationResponses {
+	for _, delegation := range dresponse.DelegationResponses {
 		delegations = delegations.Add(delegation.GetBalance())
+	}
+
+	udresponse, err := squery.DelegatorUnbondingDelegations(gctx, &stakingtypes.QueryDelegatorUnbondingDelegationsRequest{
+		DelegatorAddr: address.String(),
+	})
+	if err != nil {
+		panic(fmt.Errorf("error getting delegations [%s]: %w", address, err))
+	}
+
+	denom := skeeper.BondDenom(ctx)
+
+	for _, delegation := range udresponse.UnbondingResponses {
+		for _, entry := range delegation.Entries {
+			delegations = delegations.Add(sdk.NewCoin(denom, entry.Balance))
+		}
 	}
 
 	return delegations
