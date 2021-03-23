@@ -182,7 +182,7 @@ func cmdLeaseCreate(key string) *cobra.Command {
 func cmdLeaseWithdraw(key string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "withdraw",
-		Short: fmt.Sprintf("Close a %s order", key),
+		Short: fmt.Sprintf("Settle and withdraw available funds from %s order escrow account", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
