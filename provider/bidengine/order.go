@@ -255,7 +255,7 @@ loop:
 
 			pricech = runner.Do(func() runner.Result {
 				// Calculate price & bid
-				return runner.NewResult(o.cfg.PricingStrategy.calculatePrice(ctx, &group.GroupSpec))
+				return runner.NewResult(o.cfg.PricingStrategy.CalculatePrice(ctx, &group.GroupSpec))
 
 			})
 		case result := <-pricech:

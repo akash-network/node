@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -25,6 +26,7 @@ import (
 	cltypes "github.com/ovrclk/akash/provider/cluster/types"
 	pmanifest "github.com/ovrclk/akash/provider/manifest"
 	manifestValidation "github.com/ovrclk/akash/validation"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
@@ -75,6 +77,12 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.R
 	// provider status endpoint does not require authentication
 	router.HandleFunc("/status",
 		createStatusHandler(log, pclient)).
+		Methods("GET")
+
+	// GET /validate
+	// validate endpoint checks if provider will bid on given groupspec
+	router.HandleFunc("/validate",
+		validateHandler(log, pclient)).
 		Methods("GET")
 
 	// PUT /deployment/manifest
@@ -139,6 +147,35 @@ func createStatusHandler(log log.Logger, sclient provider.StatusClient) http.Han
 			return
 		}
 		writeJSON(log, w, status)
+	}
+}
+
+func validateHandler(log log.Logger, cl provider.ValidateClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		data, err := io.ReadAll(req.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if len(data) == 0 {
+			http.Error(w, "empty payload", http.StatusBadRequest)
+			return
+		}
+
+		var gspec dtypes.GroupSpec
+
+		if err := json.Unmarshal(data, &gspec); err != nil {
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+			return
+		}
+
+		validate, err := cl.Validate(req.Context(), gspec)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(log, w, validate)
 	}
 }
 
