@@ -63,6 +63,7 @@ import (
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	"github.com/ovrclk/akash/app/migrations"
 	"github.com/ovrclk/akash/x/audit"
 	"github.com/ovrclk/akash/x/cert"
 	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
@@ -265,7 +266,7 @@ func NewApp(
 	app.keeper.upgrade = upgradekeeper.NewKeeper(skipUpgradeHeights, app.keys[upgradetypes.StoreKey], appCodec, homePath)
 
 	app.keeper.upgrade.SetUpgradeHandler("akashnet-2-upgrade-1", func(ctx sdk.Context, plan upgradetypes.Plan) {
-		// TODO - Call vesting account migration here
+		migrations.MigrateAkashnet2Upgrade1(ctx, app.keeper.auth, app.keeper.bank, app.keeper.staking)
 	})
 
 	// register the staking hooks
