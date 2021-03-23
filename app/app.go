@@ -264,6 +264,10 @@ func NewApp(
 
 	app.keeper.upgrade = upgradekeeper.NewKeeper(skipUpgradeHeights, app.keys[upgradetypes.StoreKey], appCodec, homePath)
 
+	app.keeper.upgrade.SetUpgradeHandler("akashnet-2-upgrade-1", func(ctx sdk.Context, plan upgradetypes.Plan) {
+		// TODO - Call vesting account migration here
+	})
+
 	// register the staking hooks
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
 	app.keeper.staking = *skeeper.SetHooks(
