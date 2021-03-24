@@ -107,9 +107,7 @@ var (
 	_           servertypes.Application = (*AkashApp)(nil)
 
 	// module accounts that are allowed to receive tokens
-	allowedReceivingModAcc = map[string]bool{
-		distrtypes.ModuleName: true,
-	}
+	allowedReceivingModAcc = map[string]bool{}
 )
 
 // AkashApp extends ABCI appplication

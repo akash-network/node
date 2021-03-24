@@ -15,6 +15,10 @@ func statusPath() string {
 	return "status"
 }
 
+func validatePath() string {
+	return "validate"
+}
+
 func leasePath(id mtypes.LeaseID) string {
 	return fmt.Sprintf("lease/%d/%d/%d", id.DSeq, id.GSeq, id.OSeq)
 }

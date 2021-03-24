@@ -2,10 +2,11 @@ package provider
 
 import (
 	"context"
+	"time"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"time"
 
 	"github.com/boz/go-lifecycle"
 	"github.com/pkg/errors"
@@ -15,11 +16,17 @@ import (
 	"github.com/ovrclk/akash/provider/manifest"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
 var (
 	ErrClusterReadTimedout = errors.New("timeout waiting for cluster ready")
 )
+
+// ValidateClient is the interface to check if provider will bid on given groupspec
+type ValidateClient interface {
+	Validate(context.Context, dtypes.GroupSpec) (ValidateGroupSpecResult, error)
+}
 
 // StatusClient is the interface which includes status of service
 type StatusClient interface {
@@ -28,6 +35,7 @@ type StatusClient interface {
 
 type Client interface {
 	StatusClient
+	ValidateClient
 	Manifest() manifest.Client
 	Cluster() cluster.Client
 }
@@ -171,6 +179,17 @@ func (s *service) Status(ctx context.Context) (*Status, error) {
 		Bidengine:             bidengine,
 		Manifest:              manifest,
 		ClusterPublicHostname: s.config.ClusterPublicHostname,
+	}, nil
+}
+
+func (s *service) Validate(ctx context.Context, gspec dtypes.GroupSpec) (ValidateGroupSpecResult, error) {
+	price, err := s.config.BidPricingStrategy.CalculatePrice(ctx, &gspec)
+	if err != nil {
+		return ValidateGroupSpecResult{}, err
+	}
+
+	return ValidateGroupSpecResult{
+		MinBidPrice: price,
 	}, nil
 }
 

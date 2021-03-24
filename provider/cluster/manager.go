@@ -6,7 +6,9 @@ import (
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/cluster/util"
+	"time"
 
+	retry "github.com/avast/retry-go"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -244,7 +246,20 @@ func (dm *deploymentManager) doDeploy() error {
 func (dm *deploymentManager) doTeardown() error {
 	// Don't use a context tied to the lifecycle, as we don't want to cancel Kubernetes operations
 	ctx := context.Background()
-	return dm.client.TeardownLease(ctx, dm.lease)
+
+	return retry.Do(func() error {
+		err := dm.client.TeardownLease(ctx, dm.lease)
+		if err != nil {
+			dm.log.Error("lease teardown failed", "err", err)
+		}
+		return err
+	},
+		retry.Attempts(50),
+		retry.Delay(100*time.Millisecond),
+		retry.MaxDelay(3000*time.Millisecond),
+		retry.DelayType(retry.BackOffDelay),
+		retry.LastErrorOnly(true))
+
 }
 
 func (dm *deploymentManager) do(fn func() error) <-chan error {

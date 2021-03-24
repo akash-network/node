@@ -3,6 +3,7 @@ package bidengine
 import (
 	"context"
 	"fmt"
+	atypes "github.com/ovrclk/akash/x/audit/types"
 	"regexp"
 
 	lifecycle "github.com/boz/go-lifecycle"
@@ -30,14 +31,15 @@ type order struct {
 	sub                        pubsub.Subscriber
 	reservationFulfilledNotify chan<- int
 
-	log log.Logger
-	lc  lifecycle.Lifecycle
+	log  log.Logger
+	lc   lifecycle.Lifecycle
+	pass ProviderAttrSignatureService
 }
 
-func newOrder(svc *service, oid mtypes.OrderID, cfg Config, checkForExistingBid bool) (*order, error) {
-	return newOrderInternal(svc, oid, cfg, checkForExistingBid, nil)
+func newOrder(svc *service, oid mtypes.OrderID, cfg Config, pass ProviderAttrSignatureService, checkForExistingBid bool) (*order, error) {
+	return newOrderInternal(svc, oid, cfg, pass, checkForExistingBid, nil)
 }
-func newOrderInternal(svc *service, oid mtypes.OrderID, cfg Config, checkForExistingBid bool, reservationFulfilledNotify chan<- int) (*order, error) {
+func newOrderInternal(svc *service, oid mtypes.OrderID, cfg Config, pass ProviderAttrSignatureService, checkForExistingBid bool, reservationFulfilledNotify chan<- int) (*order, error) {
 	// Create a subscription that will see all events that have not been read from e.sub.Events()
 	sub, err := svc.sub.Clone()
 	if err != nil {
@@ -59,6 +61,7 @@ func newOrderInternal(svc *service, oid mtypes.OrderID, cfg Config, checkForExis
 		log:                        log,
 		lc:                         lifecycle.New(),
 		reservationFulfilledNotify: reservationFulfilledNotify, // Normally nil in production
+		pass:                       pass,
 	}
 
 	// Shut down when parent begins shutting down
@@ -90,6 +93,7 @@ func (o *order) run(checkForExistingBid bool) {
 		bidch         <-chan runner.Result
 		pricech       <-chan runner.Result
 		queryBidCh    <-chan runner.Result
+		shouldBidCh   <-chan runner.Result
 
 		group       *dtypes.Group
 		reservation ctypes.Reservation
@@ -198,7 +202,21 @@ loop:
 			res := result.Value().(dtypes.Group)
 			group = &res
 
-			if !o.shouldBid(group) {
+			shouldBidCh = runner.Do(func() runner.Result {
+				return runner.NewResult(o.shouldBid(group))
+			})
+
+		case result := <-shouldBidCh:
+			shouldBidCh = nil
+
+			if result.Error() != nil {
+				o.log.Error("failure during checking should bid", "err", result.Error())
+				break loop
+			}
+
+			shouldBid := result.Value().(bool)
+			if !shouldBid {
+				o.log.Debug("declined to bid")
 				break loop
 			}
 
@@ -237,7 +255,7 @@ loop:
 
 			pricech = runner.Do(func() runner.Result {
 				// Calculate price & bid
-				return runner.NewResult(o.cfg.PricingStrategy.calculatePrice(ctx, &group.GroupSpec))
+				return runner.NewResult(o.cfg.PricingStrategy.CalculatePrice(ctx, &group.GroupSpec))
 
 			})
 		case result := <-pricech:
@@ -247,6 +265,13 @@ loop:
 				break loop
 			}
 			price := result.Value().(sdk.Coin)
+			maxPrice := group.GroupSpec.Price()
+
+			if maxPrice.IsLT(price) {
+				o.log.Info("Price too high, not bidding", "price", price.String(), "max-price", maxPrice.String())
+				break loop
+			}
+
 			o.log.Debug("submitting fulfillment", "price", price)
 
 			// Begin submitting fulfillment
@@ -309,20 +334,53 @@ loop:
 	}
 }
 
-func (o *order) shouldBid(group *dtypes.Group) bool {
+func (o *order) shouldBid(group *dtypes.Group) (bool, error) {
 
 	// does provider have required attributes?
-	// fixme - MatchAttributes does not check for signed attributes
-	// it is done during processing of MsgCreateBid
 	if !group.GroupSpec.MatchAttributes(o.session.Provider().Attributes) {
 		o.log.Debug("unable to fulfill: incompatible attributes")
-		return false
+		return false, nil
+	}
+
+	signatureRequirements := group.GroupSpec.Requirements.SignedBy
+	if signatureRequirements.Size() != 0 {
+		// Check that the signature requirements are met for each attribute
+		var provAttr []atypes.Provider
+		ownAttrs := atypes.Provider{
+			Owner:      o.session.Provider().Owner,
+			Auditor:    "",
+			Attributes: o.session.Provider().Attributes,
+		}
+		provAttr = append(provAttr, ownAttrs)
+		auditors := make([]string, 0)
+		auditors = append(auditors, group.GroupSpec.Requirements.SignedBy.AllOf...)
+		auditors = append(auditors, group.GroupSpec.Requirements.SignedBy.AnyOf...)
+
+		gotten := make(map[string]struct{})
+		for _, auditor := range auditors {
+			_, done := gotten[auditor]
+			if done {
+				continue
+			}
+			result, err := o.pass.GetAuditorAttributeSignatures(auditor)
+			if err != nil {
+				return false, err
+			}
+			provAttr = append(provAttr, result...)
+			gotten[auditor] = struct{}{}
+		}
+
+		ok := group.GroupSpec.MatchRequirements(provAttr)
+		if !ok {
+			o.log.Debug("attribute signature requirements not met")
+			return false, nil
+		}
 	}
 
 	if err := group.GroupSpec.ValidateBasic(); err != nil {
 		o.log.Error("unable to fulfill: group validation error",
 			"err", err)
-		return false
+		return false, nil
 	}
-	return true
+	return true, nil
 }

@@ -3,6 +3,8 @@ package bidengine
 import (
 	"context"
 	"errors"
+	atypes "github.com/ovrclk/akash/x/audit/types"
+	"time"
 
 	lifecycle "github.com/boz/go-lifecycle"
 
@@ -46,6 +48,11 @@ func NewService(ctx context.Context, session session.Session, cluster cluster.Cl
 	}
 	session.Log().Info("found orders", "count", len(existingOrders))
 
+	providerAttrService, err := newProviderAttrSignatureService(session, bus)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &service{
 		session:  session,
 		cluster:  cluster,
@@ -56,12 +63,30 @@ func NewService(ctx context.Context, session session.Session, cluster cluster.Cl
 		drainch:  make(chan *order),
 		lc:       lifecycle.New(),
 		cfg:      cfg,
+		pass:     providerAttrService,
 	}
 
 	go s.lc.WatchContext(ctx)
 	go s.run(existingOrders)
 
 	return s, nil
+}
+
+type providerAttrRequest struct {
+	auditor   string
+	successCh chan<- []atypes.Provider
+	errCh     chan<- error
+}
+
+type providerAttrEntry struct {
+	providerAttr []atypes.Provider
+	at           time.Time
+}
+
+type providerAttrResult struct {
+	auditor      string
+	providerAttr []atypes.Provider
+	err          error
 }
 
 type service struct {
@@ -76,7 +101,8 @@ type service struct {
 	orders   map[string]*order
 	drainch  chan *order
 
-	lc lifecycle.Lifecycle
+	lc   lifecycle.Lifecycle
+	pass *providerAttrSignatureService
 }
 
 func (s *service) Close() error {
@@ -113,13 +139,10 @@ func (s *service) run(existingOrders []mtypes.OrderID) {
 	defer s.lc.ShutdownCompleted()
 	defer s.sub.Close()
 
-	// TODO - periodically query to see if we have in the wallet more than 2x the tokens needed for
-	// placing a deposit on a bid. If it is less than that amount, then trigger a withdrawal from all leases
-
 	for _, orderID := range existingOrders {
 		key := mquery.OrderPath(orderID)
 		s.session.Log().Debug("creating catchup order", "order", key)
-		order, err := newOrder(s, orderID, s.cfg, true)
+		order, err := newOrder(s, orderID, s.cfg, s.pass, true)
 		if err != nil {
 			s.session.Log().Error("creating catchup order", "order", key, "err", err)
 			continue
@@ -148,7 +171,7 @@ loop:
 				}
 
 				// create an order object for managing the bid process and order lifecycle
-				order, err := newOrder(s, ev.ID, s.cfg, false)
+				order, err := newOrder(s, ev.ID, s.cfg, s.pass, false)
 				if err != nil {
 
 					s.session.Log().Error("handling order", "order", key, "err", err)
@@ -168,12 +191,17 @@ loop:
 		}
 	}
 
+	s.pass.lc.ShutdownAsync(nil)
+
 	s.session.Log().Info("draining order monitors", "qty", len(s.orders))
 	// drain: wait for all order monitors to complete.
 	for len(s.orders) > 0 {
 		key := mquery.OrderPath((<-s.drainch).orderID)
 		delete(s.orders, key)
 	}
+
+	s.session.Log().Info("Waiting on provider attributes service")
+	<-s.pass.lc.Done()
 }
 
 func queryExistingOrders(ctx context.Context, session session.Session) ([]mtypes.OrderID, error) {

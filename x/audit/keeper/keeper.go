@@ -5,8 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/pkg/errors"
-
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	akashtypes "github.com/ovrclk/akash/types"
 	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/x/audit/types"
@@ -122,6 +121,11 @@ func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.Provi
 	})
 
 	store.Set(key, k.cdc.MustMarshalBinaryBare(&prov))
+
+	ctx.EventManager().EmitEvent(
+		types.NewEventTrustedAuditorCreated(id.Owner, id.Auditor).ToSDKEvent(),
+	)
+
 	return nil
 }
 
@@ -153,7 +157,7 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 
 		for _, entry := range keys {
 			if _, exists := kv[entry]; !exists {
-				return errors.Errorf("trying to delete non-existing attribute \"%s\" for auditor/provider \"%s/%s\"",
+				return sdkerrors.Wrapf(types.ErrAttributeNotFound, "trying to delete non-existing attribute \"%s\" for auditor/provider \"%s/%s\"",
 					entry,
 					prov.Auditor,
 					prov.Owner)
@@ -183,6 +187,10 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 			store.Set(key, k.cdc.MustMarshalBinaryBare(&prov))
 		}
 	}
+
+	ctx.EventManager().EmitEvent(
+		types.NewEventTrustedAuditorDeleted(id.Owner, id.Auditor).ToSDKEvent(),
+	)
 
 	return nil
 }

@@ -1,5 +1,11 @@
 include ../common-base.mk
 
+# https://stackoverflow.com/a/7531247
+# https://www.gnu.org/software/make/manual/make.html#Flavors
+null  := 
+space := $(null) #
+comma := ,
+
 DATA_ROOT    := ./cache
 NODE_HOME    := $(DATA_ROOT)
 CLIENT_HOME  := $(DATA_ROOT)
@@ -19,8 +25,14 @@ KEY_OPTS := --keyring-backend=test "$(CHAIN_OPTS)"
 
 KEY_NAMES := main provider validator other
 
+MULTISIG_KEY     := msig
+MULTISIG_SIGNERS := main other
+
+GENESIS_ACCOUNTS := $(KEY_NAMES) $(MULTISIG_KEY)
+
 CLIENT_CERTS := main validator other
 SERVER_CERTS := provider
+
 
 .PHONY: init
 init: bins client-init node-init
@@ -33,11 +45,18 @@ init-dirs:
 	mkdir -p "$(CLIENT_HOME)" "$(NODE_HOME)"
 
 .PHONY: client-init-keys
-client-init-keys: $(patsubst %,client-init-key-%,$(KEY_NAMES))
+client-init-keys: $(patsubst %,client-init-key-%,$(KEY_NAMES)) client-init-multisig-key
 
 .PHONY: client-init-key-%
 client-init-key-%:
 	$(AKASHCTL_NONODE) keys add --keyring-backend "test" "$(@:client-init-key-%=%)"
+
+.PHONY: client-init-multisig-key
+client-init-multisig-key:
+	$(AKASHCTL_NONODE) keys add $(KEY_OPTS) \
+		"$(MULTISIG_KEY)" \
+		--multisig "$(subst $(space),$(comma),$(strip $(MULTISIG_SIGNERS)))" \
+		--multisig-threshold 2
 
 .PHONY: node-init
 node-init: node-init-genesis node-init-genesis-accounts node-init-genesis-certs node-init-gentx node-init-finalize
@@ -64,7 +83,7 @@ node-init-genesis-server-cert-%:
 	$(AKASHD) $(KEY_OPTS) tx cert create server localhost akash-provider.localhost --to-genesis=true --from=$(@:node-init-genesis-server-cert-%=%)
 
 .PHONY: node-init-genesis-accounts
-node-init-genesis-accounts: $(patsubst %,node-init-genesis-account-%,$(KEY_NAMES))
+node-init-genesis-accounts: $(patsubst %,node-init-genesis-account-%,$(GENESIS_ACCOUNTS))
 	$(AKASHD) validate-genesis
 
 .PHONY: node-init-genesis-account-%

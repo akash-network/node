@@ -3,6 +3,7 @@ package bidengine
 import (
 	"context"
 	"errors"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/sdkutil"
@@ -17,6 +18,7 @@ import (
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/testutil"
 	atypes "github.com/ovrclk/akash/types"
+	audittypes "github.com/ovrclk/akash/x/audit/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
@@ -105,6 +107,12 @@ func makeMocks(s *orderTestScaffold) {
 
 }
 
+type nullProviderAttrSignatureService struct{}
+
+func (nullProviderAttrSignatureService) GetAuditorAttributeSignatures(auditor string) ([]audittypes.Provider, error) {
+	return nil, nil // Return no attributes & no error
+}
+
 func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricingStrategy) (*order, orderTestScaffold, <-chan int) {
 	if pricing == nil {
 		var err error
@@ -155,14 +163,14 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricing
 			Bid: mtypes.Bid{
 				BidID: bidID,
 				State: mtypes.BidOpen,
-				Price: sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(int64(testutil.RandRangeInt(1, 100)))),
+				Price: sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(int64(testutil.RandRangeInt(100, 1000)))),
 			},
 		}
 		scaffold.queryClient.On("Bid", mock.Anything, queryBidRequest).Return(response, nil)
 	}
 
 	reservationFulfilledNotify := make(chan int, 1)
-	order, err := newOrderInternal(serviceCast, scaffold.orderID, cfg, checkForExistingBid, reservationFulfilledNotify)
+	order, err := newOrderInternal(serviceCast, scaffold.orderID, cfg, nullProviderAttrSignatureService{}, checkForExistingBid, reservationFulfilledNotify)
 
 	require.NoError(t, err)
 	require.NotNil(t, order)
@@ -195,6 +203,30 @@ func Test_BidOrderAndUnreserve(t *testing.T) {
 
 	// Should have called unreserve once, nothing happened after the bid
 	scaffold.cluster.AssertCalled(t, "Unreserve", scaffold.orderID, mock.Anything)
+}
+
+func Test_BidOrderPriceTooHigh(t *testing.T) {
+	pricing := testBidPricingStrategy(9999999999)
+	order, scaffold, _ := makeOrderForTest(t, false, pricing)
+
+	select {
+	case <-order.lc.Done(): // Should stop on its own
+
+	case <-time.After(10 * time.Second):
+		t.Fatal("timed out waiting in test")
+	}
+	// Should have called reserve once
+	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
+
+	select {
+	case <-scaffold.broadcasts:
+		t.Fatal("should not have broadcast anything")
+	default:
+	}
+
+	// Should have called unreserve once, nothing happened after the bid
+	scaffold.cluster.AssertCalled(t, "Unreserve", scaffold.orderID, mock.Anything)
+
 }
 
 func Test_BidOrderAndThenClosedUnreserve(t *testing.T) {
@@ -411,12 +443,12 @@ func Test_ShouldRecognizeLeaseCreatedIfBiddingIsSkipped(t *testing.T) {
 
 type testBidPricingStrategy int64
 
-func (tbps testBidPricingStrategy) calculatePrice(_ context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (tbps testBidPricingStrategy) CalculatePrice(_ context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	return sdk.NewInt64Coin(testutil.CoinDenom, int64(tbps)), nil
 }
 
 func Test_BidOrderUsesBidPricingStrategy(t *testing.T) {
-	expectedBid := int64(1337)
+	expectedBid := int64(37)
 	// Create a test strategy that gives a fixed price
 	pricing := testBidPricingStrategy(expectedBid)
 	order, scaffold, _ := makeOrderForTest(t, false, pricing)
@@ -445,7 +477,7 @@ type alwaysFailsBidPricingStrategy struct {
 	failure error
 }
 
-func (afbps alwaysFailsBidPricingStrategy) calculatePrice(_ context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (afbps alwaysFailsBidPricingStrategy) CalculatePrice(_ context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	return sdk.Coin{}, afbps.failure
 }
 

@@ -5,12 +5,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"github.com/ovrclk/akash/app"
 )
 
 func addCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().String("provider", "", "provider")
 	cmd.Flags().Uint64("dseq", 0, "deployment sequence")
-	cmd.Flags().String(flags.FlagHome, "", "the application home directory")
+	cmd.Flags().String(flags.FlagHome, app.DefaultHome, "the application home directory")
 	cmd.Flags().String(flags.FlagFrom, "", "name or address of private key with which to sign")
 	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "select keyring's backend (os|file|kwallet|pass|test)")
 
@@ -19,10 +21,6 @@ func addCmdFlags(cmd *cobra.Command) {
 	}
 
 	if err := cmd.MarkFlagRequired(FlagDSeq); err != nil {
-		panic(err.Error())
-	}
-
-	if err := cmd.MarkFlagRequired(flags.FlagHome); err != nil {
 		panic(err.Error())
 	}
 

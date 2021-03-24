@@ -20,6 +20,7 @@ import (
 	pmmock "github.com/ovrclk/akash/provider/manifest/mocks"
 	pmock "github.com/ovrclk/akash/provider/mocks"
 	"github.com/ovrclk/akash/testutil"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	providertypes "github.com/ovrclk/akash/x/provider/types"
 )
 
@@ -47,6 +48,40 @@ func Test_router_Status(t *testing.T) {
 			client, err := NewClient(qclient, addr, nil)
 			assert.NoError(t, err)
 			_, err = client.Status(context.Background())
+			assert.Error(t, err)
+		})
+		pclient.AssertExpectations(t)
+	})
+}
+
+func Test_router_Validate(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		expected := provider.ValidateGroupSpecResult{
+			MinBidPrice: testutil.AkashCoin(t, 200),
+		}
+		addr := testutil.AccAddress(t)
+		pclient, _, _, qclient := createMocks()
+		pclient.On("Validate", mock.Anything, mock.Anything).Return(expected, nil)
+		withServer(t, addr, pclient, qclient, nil, func(host string) {
+			client, err := NewClient(qclient, addr, nil)
+			assert.NoError(t, err)
+			result, err := client.Validate(context.Background(), testutil.GroupSpec(t))
+			assert.NoError(t, err)
+			assert.Equal(t, expected, result)
+		})
+		pclient.AssertExpectations(t)
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		addr := testutil.AccAddress(t)
+		pclient, _, _, qclient := createMocks()
+		pclient.On("Validate", mock.Anything, mock.Anything).Return(provider.ValidateGroupSpecResult{}, errors.New("oops"))
+		withServer(t, addr, pclient, qclient, nil, func(host string) {
+			client, err := NewClient(qclient, addr, nil)
+			assert.NoError(t, err)
+			_, err = client.Validate(context.Background(), dtypes.GroupSpec{})
+			assert.Error(t, err)
+			_, err = client.Validate(context.Background(), testutil.GroupSpec(t))
 			assert.Error(t, err)
 		})
 		pclient.AssertExpectations(t)

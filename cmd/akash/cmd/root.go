@@ -75,9 +75,10 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 		WithHomeDir(app.DefaultHome)
 
 	rootCmd := &cobra.Command{
-		Use:   "akash",
-		Short: "Akash Blockchain Application",
-		Long:  "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
+		Use:          "akash",
+		Short:        "Akash Blockchain Application",
+		Long:         "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
+		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if err := server.InterceptConfigsPreRunHandler(cmd); err != nil {
 				return err
@@ -136,6 +137,9 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		tmcli.NewCompletionCmd(rootCmd, true),
 		debug.Cmd(),
 	)
+
+	rootCmd.SetOut(rootCmd.OutOrStdout())
+	rootCmd.SetErr(rootCmd.ErrOrStderr())
 
 	server.AddCommands(rootCmd, app.DefaultHome, newApp, createAppAndExport, addModuleInitFlags)
 }

@@ -48,7 +48,6 @@ func GetTxCmd() *cobra.Command {
 		Use:                        types.ModuleName,
 		Short:                      "Certificates transaction subcommands",
 		SuggestionsMinimumDistance: 2,
-		DisableFlagParsing:         true,
 		RunE:                       sdkclient.ValidateCmd,
 	}
 
@@ -65,7 +64,6 @@ func cmdCreate() *cobra.Command {
 		Use:                        "create",
 		Short:                      "create/update api certificates",
 		SuggestionsMinimumDistance: 2,
-		DisableFlagParsing:         true,
 		RunE:                       sdkclient.ValidateCmd,
 	}
 
@@ -462,7 +460,8 @@ func createAuthPem(cmd *cobra.Command, pemFile string, domains []string) (*types
 	}
 
 	var blk *pem.Block
-	blk, err = x509.EncryptPEMBlock(rand.Reader, types.PemBlkTypeECPrivateKey, keyDer, sig, x509.PEMCipherAES256)
+	// fixme #1182
+	blk, err = x509.EncryptPEMBlock(rand.Reader, types.PemBlkTypeECPrivateKey, keyDer, sig, x509.PEMCipherAES256) // nolint: staticcheck
 	if err != nil {
 		_ = cctx.PrintString(fmt.Sprintf("failed to encrypt key file: %v\n", err))
 		return nil, err

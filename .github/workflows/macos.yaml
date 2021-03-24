@@ -21,6 +21,6 @@ jobs:
           done < .makerc
       - uses: actions/setup-go@v2
         with:
-          go-version: "^${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOLANG_VERSION }}"
       - run: make bins
       - run: make test
