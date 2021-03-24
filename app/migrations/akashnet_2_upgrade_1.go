@@ -43,7 +43,7 @@ func MigrateAkashnet2Upgrade1(
 
 func getDelegations(ctx sdk.Context, skeeper stakingkeeper.Keeper, address sdk.AccAddress) sdk.Coins {
 	gctx := sdk.WrapSDKContext(ctx)
-	squery := stakingkeeper.Querier{skeeper}
+	squery := stakingkeeper.Querier{Keeper: skeeper}
 
 	dresponse, err := squery.DelegatorDelegations(gctx, &stakingtypes.QueryDelegatorDelegationsRequest{
 		DelegatorAddr: address.String(),
