@@ -492,8 +492,8 @@ github.com/otiai10/curr v1.0.0/go.mod h1:LskTG5wDwr8Rs+nNQ+1LlxRjAtTZZjtJW4rMXl6
 github.com/otiai10/mint v1.3.0/go.mod h1:F5AjcsTsWUqX+Na9fpHb52P8pcRX2CI6A3ctIT91xUo=
 github.com/otiai10/mint v1.3.2 h1:VYWnrP5fXmz1MXvjuUvcBrXSjGE6xjON+axB/UrpO3E=
 github.com/otiai10/mint v1.3.2/go.mod h1:/yxELlJQ0ufhjUwhshSj+wFjZ78CnZ48/1wtmBH1OTc=
-github.com/ovrclk/cosmos-sdk v0.41.4-akash-3 h1:+p5fJlESuCnJXCd6men+R8fwg5iUAGZ7G9r7AumLH6Y=
-github.com/ovrclk/cosmos-sdk v0.41.4-akash-3/go.mod h1:iLH8pH47p0ilfI1cJVPT628FyVdvcoDMxXg1lrl/1MA=
+github.com/ovrclk/cosmos-sdk v0.41.4-akash-4 h1:0Iw/WWpWXnUSyLgW+K3dvNgH6PKxQCoJKIuGwWqWZ0I=
+github.com/ovrclk/cosmos-sdk v0.41.4-akash-4/go.mod h1:iLH8pH47p0ilfI1cJVPT628FyVdvcoDMxXg1lrl/1MA=
 github.com/ovrclk/tendermint v0.34.8-akash-1 h1:LJDru2ZJrdp0x+/3raHJyb9JGx4VkF+6C+gIoeIhmkA=
 github.com/ovrclk/tendermint v0.34.8-akash-1/go.mod h1:JVuu3V1ZexOaZG8VJMRl8lnfrGw6hEB2TVnoUwKRbss=
 github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIwwtUjcrb0b5/5kLM=

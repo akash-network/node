@@ -11,6 +11,8 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func MigrateAkashnet2Upgrade1(
@@ -48,29 +50,33 @@ func getDelegations(ctx sdk.Context, skeeper stakingkeeper.Keeper, address sdk.A
 	dresponse, err := squery.DelegatorDelegations(gctx, &stakingtypes.QueryDelegatorDelegationsRequest{
 		DelegatorAddr: address.String(),
 	})
-	if err != nil {
-		panic(fmt.Errorf("error getting delegations [%s]: %w", address, err))
-	}
 
 	delegations := sdk.NewCoins()
 
-	for _, delegation := range dresponse.DelegationResponses {
-		delegations = delegations.Add(delegation.GetBalance())
+	switch status.Code(err) {
+	case codes.OK:
+		for _, delegation := range dresponse.DelegationResponses {
+			delegations = delegations.Add(delegation.GetBalance())
+		}
+	case codes.NotFound:
+	default:
+		panic(fmt.Errorf("error getting delegations [%s]: %w", address, err))
 	}
 
 	udresponse, err := squery.DelegatorUnbondingDelegations(gctx, &stakingtypes.QueryDelegatorUnbondingDelegationsRequest{
 		DelegatorAddr: address.String(),
 	})
-	if err != nil {
-		panic(fmt.Errorf("error getting delegations [%s]: %w", address, err))
-	}
-
-	denom := skeeper.BondDenom(ctx)
-
-	for _, delegation := range udresponse.UnbondingResponses {
-		for _, entry := range delegation.Entries {
-			delegations = delegations.Add(sdk.NewCoin(denom, entry.Balance))
+	switch status.Code(err) {
+	case codes.OK:
+		denom := skeeper.BondDenom(ctx)
+		for _, delegation := range udresponse.UnbondingResponses {
+			for _, entry := range delegation.Entries {
+				delegations = delegations.Add(sdk.NewCoin(denom, entry.Balance))
+			}
 		}
+	case codes.NotFound:
+	default:
+		panic(fmt.Errorf("error getting unbonding delegations [%s]: %w", address, err))
 	}
 
 	return delegations
