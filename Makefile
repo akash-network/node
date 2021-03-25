@@ -75,12 +75,12 @@ GIT_HEAD_ABBREV       := $(shell git rev-parse --abbrev-ref HEAD)
 # export MAINNET=true to set build tag mainnet
 ifeq ($(MAINNET),true)
 	BUILD_MAINNET=mainnet
-	BUILD_TAGS=netgo,ledger,mainnet
+	BUILD_TAGS=osusergo,netgo,ledger,mainnet,static_build
 	GORELEASER_BUILD_TAGS=$(BUILD_TAGS)
 	GORELEASER_HOMEBREW_NAME=akash
 	GORELEASER_HOMEBREW_CUSTOM=
 else
-	BUILD_TAGS=netgo,ledger
+	BUILD_TAGS=osusergo,netgo,ledger,static_build
 	GORELEASER_BUILD_TAGS=$(BUILD_TAGS),testnet
 	GORELEASER_HOMEBREW_NAME="akash-edge"
 	GORELEASER_HOMEBREW_CUSTOM=keg_only :unneeded, \"This is testnet release. Run brew install ovrclk/tap/akash to install mainnet version\"
