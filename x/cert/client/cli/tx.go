@@ -21,7 +21,6 @@ import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	cinpuit "github.com/cosmos/cosmos-sdk/client/input"
-	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
@@ -30,6 +29,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/x/cert/types"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
 )
@@ -158,7 +158,7 @@ func handleCreate(cctx sdkclient.Context, cmd *cobra.Command, pemFile string, do
 	}
 
 	if !toGenesis {
-		return tx.GenerateOrBroadcastTxCLI(cctx, cmd.Flags(), msg)
+		return sdkutil.BroadcastTX(cctx, cmd.Flags(), msg)
 	}
 
 	return addCertToGenesis(cmd, types.GenesisCertificate{
@@ -258,7 +258,7 @@ func doCreateCmd(cmd *cobra.Command, domains []string) error {
 						return err
 					}
 
-					return tx.GenerateOrBroadcastTxCLI(cctx, cmd.Flags(), msg)
+					return sdkutil.BroadcastTX(cctx, cmd.Flags(), msg)
 				}
 			}
 		} else {
@@ -517,7 +517,7 @@ func doRevoke(cctx sdkclient.Context, flags *pflag.FlagSet, serial string) error
 		},
 	}
 
-	return tx.GenerateOrBroadcastTxCLI(cctx, flags, msg)
+	return sdkutil.BroadcastTX(cctx, flags, msg)
 }
 
 func getConfirmation(cmd *cobra.Command, prompt string) (bool, error) {

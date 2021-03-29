@@ -5,11 +5,11 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	"github.com/ovrclk/akash/sdkutil"
 	akashtypes "github.com/ovrclk/akash/types"
 	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/x/audit/types"
@@ -85,7 +85,7 @@ func cmdCreateProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -125,7 +125,7 @@ func cmdDeleteProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
