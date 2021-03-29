@@ -6,10 +6,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/sdl"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
 	"github.com/ovrclk/akash/x/deployment/types"
@@ -104,7 +104,7 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -141,7 +141,7 @@ func cmdDeposit(key string) *cobra.Command {
 				Amount: deposit,
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -169,7 +169,7 @@ func cmdClose(key string) *cobra.Command {
 
 			msg := &types.MsgCloseDeployment{ID: id}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -218,7 +218,7 @@ func cmdUpdate(key string) *cobra.Command {
 				msg.Groups = append(msg.Groups, *group)
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -268,7 +268,7 @@ func cmdGroupClose(_ string) *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -304,7 +304,7 @@ func cmdGroupPause(_ string) *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -340,7 +340,7 @@ func cmdGroupStart(_ string) *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 

@@ -5,9 +5,9 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/cmd/common"
+	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 )
@@ -83,7 +83,7 @@ func cmdBidCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -119,7 +119,7 @@ func cmdBidClose(key string) *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -168,7 +168,7 @@ func cmdLeaseCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -203,7 +203,7 @@ func cmdLeaseWithdraw(key string) *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -238,7 +238,7 @@ func cmdLeaseClose(key string) *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
