@@ -265,6 +265,9 @@ func NewApp(
 
 	app.keeper.upgrade.SetUpgradeHandler("akashnet-2-upgrade-1", func(ctx sdk.Context, plan upgradetypes.Plan) {
 		migrations.MigrateAkashnet2Upgrade1(ctx, app.keeper.acct, app.keeper.bank, app.keeper.staking)
+
+		// Set staking HistoricalEntries to 10000, required positive value for ibc
+		app.GetSubspace(stakingtypes.ModuleName).Set(ctx, stakingtypes.KeyHistoricalEntries, uint32(10000))
 	})
 
 	// register the staking hooks
