@@ -5,7 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/x/provider/config"
 	"github.com/ovrclk/akash/x/provider/types"
 	"github.com/pkg/errors"
@@ -55,7 +55,7 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -90,7 +90,7 @@ func cmdUpdate(key string) *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
