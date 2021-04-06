@@ -59,3 +59,5 @@ replace github.com/grpc-ecosystem/grpc-gateway => github.com/grpc-ecosystem/grpc
 replace github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.41.4-akash-4
 
 replace github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.8-akash-1
+
+replace github.com/cosmos/ledger-cosmos-go => github.com/ovrclk/ledger-cosmos-go v0.13.0
