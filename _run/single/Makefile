@@ -14,7 +14,7 @@ PROVIDER_HOSTNAME = akash-provider.localhost
 AKASHCTL_NODE     = "tcp://akash.localhost:$(KIND_PORT_BINDINGS)"
 GATEWAY_ENDPOINT ?= http://akash-provider.localhost
 
-AKASHCTL += --node $(AKASHCTL_NODE)
+export AKASH_NODE = $(AKASHCTL_NODE)
 
 .PHONY: kind-namespace-setup
 kind-namespace-setup:
@@ -38,7 +38,7 @@ kustomize-init-provider:
 	( \
 		cat "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt" ; \
 		cat "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt"   \
-	) | $(AKASHCTL_NONODE) $(KEY_OPTS) keys export provider 2> "$(KUSTOMIZE_PROVIDER_CACHE)/key.txt"
+	) | $(AKASHCTL_NONODE) keys export provider 2> "$(KUSTOMIZE_PROVIDER_CACHE)/key.txt"
 
 .PHONY: kustomize-install-node
 kustomize-install-node:
@@ -54,7 +54,7 @@ provider-lease-ping:
 
 PHONY: provider-lease-status
 provider-lease-status:
-	$(AKASHCTL) "$(KEY_OPTS)" provider lease-status \
+	$(AKASHCTL) provider lease-status \
 		--dseq      "$(DSEQ)"        \
 		--gseq      "$(GSEQ)"        \
 		--oseq      "$(OSEQ)"        \

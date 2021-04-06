@@ -4,14 +4,14 @@ include ../common-commands.mk
 PROVIDER_HOSTNAME ?= https://localhost:8443
 
 provider-run:
-	$(AKASHCTL) $(KEY_OPTS) provider run $(CHAIN_OPTS) \
+	$(AKASHCTL) provider run \
 		--from "$(PROVIDER_KEY_NAME)" \
 		--cluster-public-hostname "localhost" \
 		--bid-price-strategy "randomRange"
 
 .PHONY: provider-lease-status
 provider-lease-status:
-	$(AKASHCTL) "$(KEY_OPTS)" provider lease-status \
+	$(AKASHCTL) provider lease-status \
 		--dseq      "$(DSEQ)"        \
 		--gseq      "$(GSEQ)"        \
 		--oseq      "$(OSEQ)"        \
@@ -20,7 +20,7 @@ provider-lease-status:
 
 .PHONY: provider-service-status
 provider-service-status:
-	$(AKASHCTL) "$(KEY_OPTS)" provider service-status \
+	$(AKASHCTL) provider service-status \
 		--dseq      "$(DSEQ)"        \
 		--gseq      "$(GSEQ)"        \
 		--oseq      "$(OSEQ)"        \
