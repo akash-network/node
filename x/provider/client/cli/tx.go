@@ -5,11 +5,12 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/x/provider/config"
 	"github.com/ovrclk/akash/x/provider/types"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 )
 
 // GetTxCmd returns the transaction commands for provider module
@@ -48,6 +49,7 @@ func cmdCreate(key string) *cobra.Command {
 			msg := &types.MsgCreateProvider{
 				Owner:      clientCtx.GetFromAddress().String(),
 				HostURI:    cfg.Host,
+				Info:       cfg.Info,
 				Attributes: cfg.GetAttributes(),
 			}
 
@@ -83,6 +85,7 @@ func cmdUpdate(key string) *cobra.Command {
 			msg := &types.MsgUpdateProvider{
 				Owner:      clientCtx.GetFromAddress().String(),
 				HostURI:    cfg.Host,
+				Info:       cfg.Info,
 				Attributes: cfg.GetAttributes(),
 			}
 

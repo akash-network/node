@@ -6,12 +6,14 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/ovrclk/akash/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
 // Config is the struct that stores provider config
 type Config struct {
-	Host       string            `json:"host"`
-	Attributes []types.Attribute `json:"attributes"`
+	Host       string              `json:"host" yaml:"host"`
+	Info       ptypes.ProviderInfo `json:"info" yaml:"info"`
+	Attributes []types.Attribute   `json:"attributes" yaml:"attributes"`
 }
 
 // GetAttributes returns config attributes into key value pairs
