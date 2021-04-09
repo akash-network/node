@@ -279,6 +279,8 @@ github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/
 github.com/google/gofuzz v1.1.0 h1:Hsa8mG0dQ46ij8Sl2AYJDUv1oA9/d6Vk+3LG99Oe02g=
 github.com/google/gofuzz v1.1.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/google/martian v2.1.0+incompatible/go.mod h1:9I4somxYTbIHy5NJKHRl3wXiIaQGbYVAs8BPL6v8lEs=
+github.com/google/orderedcode v0.0.1 h1:UzfcAexk9Vhv8+9pNOgRu41f16lHq725vPwnSeiG/Us=
+github.com/google/orderedcode v0.0.1/go.mod h1:iVyU4/qPKHY5h/wSd6rZZCDcLJNxiWO6dvsYES2Sb20=
 github.com/google/pprof v0.0.0-20181206194817-3ea8567a2e57/go.mod h1:zfwlbNMJ+OItoe0UupaVj+oy1omPYYDuagoSzA8v9mc=
 github.com/google/pprof v0.0.0-20190515194954-54271f7e092f/go.mod h1:zfwlbNMJ+OItoe0UupaVj+oy1omPYYDuagoSzA8v9mc=
 github.com/google/pprof v0.0.0-20191218002539-d4f498aebedc/go.mod h1:ZgVRPoUq/hfqzAqh7sHMqb3I9Rq5C59dIz2SbBwJ4eM=
@@ -492,8 +494,8 @@ github.com/ovrclk/cosmos-sdk v0.41.4-akash-4 h1:0Iw/WWpWXnUSyLgW+K3dvNgH6PKxQCoJ
 github.com/ovrclk/cosmos-sdk v0.41.4-akash-4/go.mod h1:iLH8pH47p0ilfI1cJVPT628FyVdvcoDMxXg1lrl/1MA=
 github.com/ovrclk/ledger-cosmos-go v0.13.0 h1:+J3+WArZQBsDUd9RjPCmuZdKCyhRl0ciwGAS+YUDt1s=
 github.com/ovrclk/ledger-cosmos-go v0.13.0/go.mod h1:vI7wv6xNnNtCX6kKFrrfNUE3DINmxtIbMFs4okyXoOU=
-github.com/ovrclk/tendermint v0.34.8-akash-1 h1:LJDru2ZJrdp0x+/3raHJyb9JGx4VkF+6C+gIoeIhmkA=
-github.com/ovrclk/tendermint v0.34.8-akash-1/go.mod h1:JVuu3V1ZexOaZG8VJMRl8lnfrGw6hEB2TVnoUwKRbss=
+github.com/ovrclk/tendermint v0.34.9-akash-1 h1:uQl6MuQjvptQedjLItCds5foqmWpCPaiNd1iKiTM418=
+github.com/ovrclk/tendermint v0.34.9-akash-1/go.mod h1:kl4Z1JwGx1I+u1SXIzMDy7Z3T8LiMeCAOnzNn6AIMT4=
 github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIwwtUjcrb0b5/5kLM=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pascaldekloe/goe v0.1.0 h1:cBOtyMzM9HTpWjXfbbunk26uA6nG3a8n06Wieeh0MwY=
