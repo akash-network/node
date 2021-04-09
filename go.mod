@@ -32,7 +32,7 @@ require (
 	github.com/stretchr/objx v0.2.1-0.20190415111823-35313a95ee26 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/subosito/gotenv v1.2.1-0.20190917103637-de67a6614a4d // indirect
-	github.com/tendermint/tendermint v0.34.8
+	github.com/tendermint/tendermint v0.34.9
 	github.com/tendermint/tm-db v0.6.4
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 // indirect
@@ -58,6 +58,6 @@ replace github.com/grpc-ecosystem/grpc-gateway => github.com/grpc-ecosystem/grpc
 
 replace github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.41.4-akash-4
 
-replace github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.8-akash-1
+replace github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.9-akash-1
 
 replace github.com/cosmos/ledger-cosmos-go => github.com/ovrclk/ledger-cosmos-go v0.13.0
