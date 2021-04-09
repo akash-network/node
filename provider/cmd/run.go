@@ -241,7 +241,7 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
-	cmd.Flags().Duration(FlagBidTimeout, 20*time.Minute, "time after which bids are cancelled if no lease is created")
+	cmd.Flags().Duration(FlagBidTimeout, 5*time.Minute, "time after which bids are cancelled if no lease is created")
 	if err := viper.BindPFlag(FlagBidTimeout, cmd.Flags().Lookup(FlagBidTimeout)); err != nil {
 		return nil
 	}
