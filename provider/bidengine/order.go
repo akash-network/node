@@ -5,6 +5,7 @@ import (
 	"fmt"
 	atypes "github.com/ovrclk/akash/x/audit/types"
 	"regexp"
+	"time"
 
 	lifecycle "github.com/boz/go-lifecycle"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -94,6 +95,7 @@ func (o *order) run(checkForExistingBid bool) {
 		pricech       <-chan runner.Result
 		queryBidCh    <-chan runner.Result
 		shouldBidCh   <-chan runner.Result
+		bidTimeout    <-chan time.Time
 
 		group       *dtypes.Group
 		reservation ctypes.Reservation
@@ -291,6 +293,14 @@ loop:
 
 			// Fulfillment placed.
 			o.bidPlaced = true
+
+			if o.cfg.BidTimeout > time.Duration(0) {
+				bidTimeout = time.After(o.cfg.BidTimeout)
+			}
+
+		case <-bidTimeout:
+			o.log.Info("bid timeout, closing bid")
+			break loop
 		}
 	}
 

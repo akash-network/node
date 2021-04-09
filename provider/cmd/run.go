@@ -75,6 +75,7 @@ const (
 	FlagAuthPem                          = "auth-pem"
 	FlagKubeConfig                       = "kubeconfig"
 	FlagDeploymentRuntimeClass           = "deployment-runtime-class"
+	FlagBidTimeout                       = "bid-timeout"
 )
 
 var (
@@ -239,6 +240,11 @@ func RunCmd() *cobra.Command {
 	if err := viper.BindPFlag(FlagDeploymentRuntimeClass, cmd.Flags().Lookup(FlagDeploymentRuntimeClass)); err != nil {
 		return nil
 	}
+
+	cmd.Flags().Duration(FlagBidTimeout, 20*time.Minute, "time after which bids are cancelled if no lease is created")
+	if err := viper.BindPFlag(FlagBidTimeout, cmd.Flags().Lookup(FlagBidTimeout)); err != nil {
+		return nil
+	}
 	return cmd
 }
 
@@ -328,6 +334,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	blockedHostnames := viper.GetStringSlice(FlagDeploymentBlockedHostnames)
 	kubeConfig := viper.GetString(FlagKubeConfig)
 	deploymentRuntimeClass := viper.GetString(FlagDeploymentRuntimeClass)
+	bidTimeout := viper.GetDuration(FlagBidTimeout)
 
 	if err != nil {
 		return err
@@ -461,6 +468,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	config.StorageCommitLevel = overcommitPercentStorage
 	config.BlockedHostnames = blockedHostnames
 	config.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
+	config.BidTimeout = bidTimeout
 
 	config.BidPricingStrategy = pricing
 	service, err := provider.NewService(ctx, cctx, info.GetAddress(), session, bus, cclient, config)
