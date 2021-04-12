@@ -1,6 +1,6 @@
 module github.com/ovrclk/akash
 
-go 1.15
+go 1.16
 
 require (
 	github.com/avast/retry-go v2.7.0+incompatible
