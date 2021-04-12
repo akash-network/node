@@ -1,12 +1,9 @@
-KEY_NAME          ?= main
-KEY_OPTS          := --keyring-backend=test
-CHAIN_NAME        := local
-CHAIN_OPTS        := --chain-id=$(CHAIN_NAME)
+KEY_NAME   ?= main
 
-KEY_ADDRESS       ?= $(shell $(AKASHCTL_NONODE) keys show $(KEY_OPTS) "$(KEY_NAME)" -a)
 
+KEY_ADDRESS          ?= $(shell $(AKASHCTL_NONODE) $(KEY_OPTS) keys show "$(KEY_NAME)" -a)
 PROVIDER_KEY_NAME    ?= provider
-PROVIDER_ADDRESS     ?= $(shell $(AKASHCTL_NONODE) keys show $(KEY_OPTS) "$(PROVIDER_KEY_NAME)" -a)
+PROVIDER_ADDRESS     ?= $(shell $(AKASHCTL_NONODE) $(KEY_OPTS) keys show "$(PROVIDER_KEY_NAME)" -a)
 PROVIDER_CONFIG_PATH ?= provider.yaml
 
 SDL_PATH ?= deployment.yaml
@@ -18,27 +15,25 @@ PRICE          ?= 10uakt
 CERT_HOSTNAME  ?= localhost
 LEASE_SERVICES ?= web
 
-export AKASH_GAS_ADJUSTMENT ?= 2
-
 .PHONY: multisig-send
 multisig-send:
-	$(AKASHCTL) tx send "$(KEY_OPTS)" "$(CHAIN_OPTS)" \
-		"$(shell $(AKASHCTL) keys show $(KEY_OPTS) "$(MULTISIG_KEY)" -a)" \
-		"$(shell $(AKASHCTL) keys show $(KEY_OPTS) "$(KEY_NAME)"     -a)" \
+	$(AKASHCTL) tx send \
+		"$(shell $(AKASHCTL) $(KEY_OPTS) keys show "$(MULTISIG_KEY)" -a)" \
+		"$(shell $(AKASHCTL) $(KEY_OPTS) keys show "$(KEY_NAME)"     -a)" \
 		1000000uakt \
 		--generate-only \
 		> "$(DATA_ROOT)/multisig-tx.json"
-	$(AKASHCTL) tx sign "$(KEY_OPTS)" "$(CHAIN_OPTS)" \
+	$(AKASHCTL) tx sign \
 		"$(DATA_ROOT)/multisig-tx.json" \
-		--multisig "$(shell $(AKASHCTL) keys show $(KEY_OPTS) "$(MULTISIG_KEY)" -a)" \
+		--multisig "$(shell $(AKASHCTL) $(KEY_OPTS) keys show "$(MULTISIG_KEY)" -a)" \
 		--from "main" \
 		> "$(DATA_ROOT)/multisig-sig-main.json"
-	$(AKASHCTL) tx sign "$(KEY_OPTS)" "$(CHAIN_OPTS)" \
+	$(AKASHCTL) tx sign \
 		"$(DATA_ROOT)/multisig-tx.json" \
-		--multisig "$(shell $(AKASHCTL) keys show $(KEY_OPTS) "$(MULTISIG_KEY)" -a)" \
+		--multisig "$(shell $(AKASHCTL) $(KEY_OPTS) keys show "$(MULTISIG_KEY)" -a)" \
 		--from "other" \
 		> "$(DATA_ROOT)/multisig-sig-other.json"
-	$(AKASHCTL) tx multisign "$(KEY_OPTS)" "$(CHAIN_OPTS)" \
+	$(AKASHCTL) tx multisign \
 		"$(DATA_ROOT)/multisig-tx.json" \
 		"$(MULTISIG_KEY)" \
 		"$(DATA_ROOT)/multisig-sig-main.json" \
@@ -48,12 +43,12 @@ multisig-send:
 
 .PHONY: provider-create
 provider-create:
-	$(AKASHCTL) tx provider create "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(PROVIDER_CONFIG_PATH)" -y \
+	$(AKASHCTL) tx provider create "$(PROVIDER_CONFIG_PATH)" \
 		--from "$(PROVIDER_KEY_NAME)"
 
 .PHONY: provider-update
 provider-update:
-	$(AKASHCTL) tx provider update "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(PROVIDER_CONFIG_PATH)" -y \
+	$(AKASHCTL) tx provider update "$(PROVIDER_CONFIG_PATH)" \
 		--from "$(PROVIDER_KEY_NAME)"
 
 .PHONY: provider-status
@@ -62,46 +57,45 @@ provider-status:
 
 .PHONY: send-manifest
 send-manifest:
-	$(AKASHCTL) "$(KEY_OPTS)" provider send-manifest "$(SDL_PATH)" \
+	$(AKASHCTL) provider send-manifest "$(SDL_PATH)" \
 		--dseq "$(DSEQ)"     \
 		--from "$(KEY_NAME)" \
 		--provider "$(PROVIDER_ADDRESS)"
 
 .PHONY: deployment-create
 deployment-create:
-	$(AKASHCTL) tx deployment create "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(SDL_PATH)" -y \
+	$(AKASHCTL) tx deployment create "$(SDL_PATH)" \
 		--dseq "$(DSEQ)" 			   \
 		--from "$(KEY_NAME)"
 
 .PHONY: deploy-create
 deploy-create:
-	$(AKASHCTL) deploy create "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(SDL_PATH)" -y \
+	$(AKASHCTL) deploy create "$(SDL_PATH)" \
 		--dseq "$(DSEQ)" 			   \
 		--from "$(KEY_NAME)"
 
 .PHONY: deployment-deposit
 deployment-deposit:
-	$(AKASHCTL) tx deployment deposit "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(PRICE)" -y \
+	$(AKASHCTL) tx deployment deposit "$(PRICE)" \
 		--dseq "$(DSEQ)" 			   \
 		--from "$(KEY_NAME)"
 
 .PHONY: deployment-update
 deployment-update:
-	$(AKASHCTL) tx deployment update "$(KEY_OPTS)" "$(CHAIN_OPTS)" "$(SDL_PATH)" -y \
+	$(AKASHCTL) tx deployment update "$(SDL_PATH)" \
 		--dseq "$(DSEQ)" \
-		--from "$(KEY_NAME)"			\
-		--chain-id "$(CHAIN_NAME)"
+		--from "$(KEY_NAME)"
 
 .PHONY: deployment-close
 deployment-close:
-	$(AKASHCTL) tx deployment close "$(KEY_OPTS)" "$(CHAIN_OPTS)" \
+	$(AKASHCTL) tx deployment close \
 		--owner "$(MAIN_ADDR)" \
 		--dseq "$(DSEQ)"       \
-		--from "$(KEY_NAME)" -y
+		--from "$(KEY_NAME)"
 
 .PHONY: group-close
 group-close:
-	$(AKASHCTL) tx deployment group close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+	$(AKASHCTL) tx deployment group close \
 		--owner "$(KEY_ADDRESS)"       \
 		--dseq  "$(DSEQ)"              \
 		--gseq  "$(GSEQ)"              \
@@ -109,7 +103,7 @@ group-close:
 
 .PHONY: group-pause
 group-pause:
-	$(AKASHCTL) tx deployment group pause "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+	$(AKASHCTL) tx deployment group pause \
 		--owner "$(KEY_ADDRESS)"       \
 		--dseq  "$(DSEQ)"              \
 		--gseq  "$(GSEQ)"              \
@@ -117,7 +111,7 @@ group-pause:
 
 .PHONY: group-start
 group-start:
-	$(AKASHCTL) tx deployment group start "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+	$(AKASHCTL) tx deployment group start \
 		--owner "$(KEY_ADDRESS)"       \
 		--dseq  "$(DSEQ)"              \
 		--gseq  "$(GSEQ)"              \
@@ -125,7 +119,7 @@ group-start:
 
 .PHONY: bid-create
 bid-create:
-	$(AKASHCTL) tx market bid create "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+	$(AKASHCTL) tx market bid create \
 		--owner "$(KEY_ADDRESS)"       \
 		--dseq  "$(DSEQ)"              \
 		--gseq  "$(GSEQ)"              \
@@ -135,7 +129,7 @@ bid-create:
 
 .PHONY: bid-close
 bid-close:
-	$(AKASHCTL) tx market bid close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+	$(AKASHCTL) tx market bid close \
 		--owner "$(KEY_ADDRESS)"       \
 		--dseq  "$(DSEQ)"              \
 		--gseq  "$(GSEQ)"              \
@@ -144,7 +138,7 @@ bid-close:
 
 .PHONY: lease-create
 lease-create:
-	$(AKASHCTL) tx market lease create "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+	$(AKASHCTL) tx market lease create \
 		--owner "$(KEY_ADDRESS)"         \
 		--dseq  "$(DSEQ)"                \
 		--gseq  "$(GSEQ)"                \
@@ -154,7 +148,7 @@ lease-create:
 
 .PHONY: lease-withdraw
 lease-withdraw:
-	$(AKASHCTL) tx market lease withdraw "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+	$(AKASHCTL) tx market lease withdraw \
 		--owner "$(KEY_ADDRESS)"         \
 		--dseq  "$(DSEQ)"                \
 		--gseq  "$(GSEQ)"                \
@@ -164,7 +158,7 @@ lease-withdraw:
 
 .PHONY: lease-close
 lease-close:
-	$(AKASHCTL) tx market lease close "$(KEY_OPTS)" "$(CHAIN_OPTS)" -y \
+	$(AKASHCTL) tx market lease close \
 		--owner "$(KEY_ADDRESS)"         \
 		--dseq  "$(DSEQ)"                \
 		--gseq  "$(GSEQ)"                \
@@ -177,8 +171,8 @@ query-accounts: $(patsubst %, query-account-%,$(GENESIS_ACCOUNTS))
 
 .PHONY: query-account-%
 query-account-%:
-	$(AKASHCTL) query bank balances "$(shell $(AKASHCTL_NONODE) keys show --keyring-backend "test" -a "$(@:query-account-%=%)")"
-	$(AKASHCTL) query account       "$(shell $(AKASHCTL_NONODE) keys show --keyring-backend "test" -a "$(@:query-account-%=%)")"
+	$(AKASHCTL) query bank balances "$(shell $(AKASHCTL_NONODE) $(KEY_OPTS) keys show -a "$(@:query-account-%=%)")"
+	$(AKASHCTL) query account       "$(shell $(AKASHCTL_NONODE) $(KEY_OPTS) keys show -a "$(@:query-account-%=%)")"
 
 .PHONY: query-provider
 query-provider:
@@ -246,11 +240,11 @@ query-account-certificates:
 
 .PHONY: create-server-certificate
 create-server-certificate:
-	$(AKASHCTL) $(KEY_OPTS) $(CHAIN_OPTS) tx cert create server $(CERT_HOSTNAME) --from=$(KEY_NAME) --rie -y
+	$(AKASHCTL) tx cert create server $(CERT_HOSTNAME) --from=$(KEY_NAME) --rie
 
 .PHONY: revoke-certificate
 revoke-certificate:
-	$(AKASHCTL) $(KEY_OPTS) $(CHAIN_OPTS) tx cert revoke --from=$(KEY_NAME) -y
+	$(AKASHCTL) tx cert revoke --from=$(KEY_NAME)
 
 .PHONY: events-run
 events-run:
@@ -258,7 +252,7 @@ events-run:
 
 .PHONY: provider-lease-logs
 provider-lease-logs:
-	$(AKASHCTL) "$(KEY_OPTS)" provider lease-logs \
+	$(AKASHCTL) provider lease-logs \
 		-f \
 		--service="$(LEASE_SERVICES)" \
 		--dseq "$(DSEQ)"     \
@@ -267,7 +261,7 @@ provider-lease-logs:
 
 .PHONY: provider-lease-events
 provider-lease-events:
-	$(AKASHCTL) "$(KEY_OPTS)" provider lease-events \
+	$(AKASHCTL) provider lease-events \
 		-f \
 		--dseq "$(DSEQ)"     \
 		--from "$(KEY_NAME)" \
