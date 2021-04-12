@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"context"
-
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/pkg/errors"
 
@@ -75,8 +74,9 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 		statusch:  make(chan chan<- *ctypes.Status),
 		managers:  make(map[string]*deploymentManager),
 		managerch: make(chan *deploymentManager),
-		log:       log,
-		lc:        lc,
+
+		log: log,
+		lc:  lc,
 	}
 
 	go s.lc.WatchContext(ctx)
@@ -94,8 +94,9 @@ type service struct {
 	inventory *inventoryService
 	hostnames *hostnameService
 
-	statusch  chan chan<- *ctypes.Status
-	managers  map[string]*deploymentManager
+	statusch chan chan<- *ctypes.Status
+	managers map[string]*deploymentManager
+
 	managerch chan *deploymentManager
 
 	log log.Logger
@@ -190,7 +191,6 @@ loop:
 				}
 
 				key := mquery.LeasePath(ev.LeaseID)
-
 				if manager := s.managers[key]; manager != nil {
 					if err := manager.update(mgroup); err != nil {
 						s.log.Error("updating deployment", "err", err, "lease", ev.LeaseID, "group-name", mgroup.Name)
@@ -203,6 +203,7 @@ loop:
 
 			case mtypes.EventLeaseClosed:
 				s.teardownLease(ev.ID)
+
 			}
 
 		case ch := <-s.statusch:
@@ -221,6 +222,7 @@ loop:
 			}
 
 			delete(s.managers, mquery.LeasePath(dm.lease))
+
 		}
 	}
 
