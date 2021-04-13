@@ -60,4 +60,8 @@ replace github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.41.4-aka
 
 replace github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.9-akash-1
 
-replace github.com/cosmos/ledger-cosmos-go => github.com/ovrclk/ledger-cosmos-go v0.13.0
+replace (
+	github.com/cosmos/ledger-cosmos-go => github.com/ovrclk/ledger-cosmos-go v0.13.2
+	github.com/zondax/hid => github.com/troian/hid v0.9.9
+	github.com/zondax/ledger-go => github.com/ovrclk/ledger-go v0.13.4
+)
