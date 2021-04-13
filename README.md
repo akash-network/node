@@ -116,7 +116,7 @@ make setup-devenv
 ## Running
 
 We use thin integration testing environments to simplify
-the development and testing process.  We currently have two environments:
+the development and testing process.  We currently have three environments:
 
 * [Single node](_run/lite): simple (no workloads) single node running locally.
 * [Single node with workloads](_run/single): single node and provider running locally, running workloads within a virtual machine.
