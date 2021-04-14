@@ -76,6 +76,7 @@ const (
 	FlagKubeConfig                       = "kubeconfig"
 	FlagDeploymentRuntimeClass           = "deployment-runtime-class"
 	FlagBidTimeout                       = "bid-timeout"
+	FlagManifestTimeout                  = "manifest-timeout"
 )
 
 var (
@@ -245,6 +246,12 @@ func RunCmd() *cobra.Command {
 	if err := viper.BindPFlag(FlagBidTimeout, cmd.Flags().Lookup(FlagBidTimeout)); err != nil {
 		return nil
 	}
+
+	cmd.Flags().Duration(FlagManifestTimeout, 5*time.Minute, "time after which bids are cancelled if no manifest is received")
+	if err := viper.BindPFlag(FlagManifestTimeout, cmd.Flags().Lookup(FlagManifestTimeout)); err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
@@ -335,6 +342,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	kubeConfig := viper.GetString(FlagKubeConfig)
 	deploymentRuntimeClass := viper.GetString(FlagDeploymentRuntimeClass)
 	bidTimeout := viper.GetDuration(FlagBidTimeout)
+	manifestTimeout := viper.GetDuration(FlagManifestTimeout)
 
 	if err != nil {
 		return err
@@ -469,6 +477,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	config.BlockedHostnames = blockedHostnames
 	config.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
 	config.BidTimeout = bidTimeout
+	config.ManifestTimeout = manifestTimeout
 
 	config.BidPricingStrategy = pricing
 	service, err := provider.NewService(ctx, cctx, info.GetAddress(), session, bus, cclient, config)

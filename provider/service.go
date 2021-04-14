@@ -96,6 +96,7 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 
 	manifestConfig := manifest.ServiceConfig{
 		HTTPServicesRequireAtLeastOneHost: !cfg.DeploymentIngressStaticHosts,
+		ManifestTimeout:                   cfg.ManifestTimeout,
 	}
 
 	manifest, err := manifest.NewService(ctx, session, bus, cluster.HostnameService(), manifestConfig)

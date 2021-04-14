@@ -22,6 +22,7 @@ type Config struct {
 	BlockedHostnames                []string
 	DeploymentIngressStaticHosts    bool
 	BidTimeout                      time.Duration
+	ManifestTimeout                 time.Duration
 }
 
 func NewDefaultConfig() Config {
