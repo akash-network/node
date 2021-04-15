@@ -1,8 +1,9 @@
 package sdl
 
 import (
-	"github.com/ovrclk/akash/validation"
 	"testing"
+
+	"github.com/ovrclk/akash/validation"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -191,4 +192,32 @@ func Test_v1_Parse_ProfileNameNotServiceName(t *testing.T) {
 	mani, err := sdl.Manifest()
 	require.NoError(t, err)
 	assert.Len(t, mani.GetGroups(), 1)
+}
+
+func Test_v2_Parse_DeploymentNameServiceNameMismatch(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/deployment-svc-mismatch.yaml")
+	require.Error(t, err)
+	require.Nil(t, sdl)
+	require.Contains(t, err.Error(), "no service profile named")
+
+	sdl, err = ReadFile("./_testdata/simple2.yaml")
+	require.NoError(t, err)
+	require.NotNil(t, sdl)
+
+	dgroups, err := sdl.DeploymentGroups()
+	require.NoError(t, err)
+	assert.Len(t, dgroups, 1)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+	assert.Len(t, mani.GetGroups(), 1)
+
+	require.Equal(t, dgroups[0].Name, mani.GetGroups()[0].Name)
+	// SDL lists 2 services, but particular deployment specifies only one
+	require.Len(t, mani.GetGroups()[0].Services, 1)
+
+	// make sure deployment maps to the right service
+	require.Len(t, mani.GetGroups()[0].Services[0].Expose, 2)
+	require.Len(t, mani.GetGroups()[0].Services[0].Expose[0].Hosts, 1)
+	require.Equal(t, mani.GetGroups()[0].Services[0].Expose[0].Hosts[0], "ahostname.com")
 }

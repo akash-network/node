@@ -1,0 +1,64 @@
+---
+version: "2.0"
+services:
+  web:
+    image: nginx
+    expose:
+      - port: 80
+        accept:
+          - ahostname.com
+        to:
+          - global: true
+      - port: 12345
+        to:
+          - global: true
+        proto: udp
+  bew:
+    image: nginx
+    expose:
+      - port: 8080
+        accept:
+          - bhostname.com
+        to:
+          - global: true
+      - port: 12346
+        to:
+          - global: true
+        proto: udp
+      - port: 12347
+        to:
+          - global: true
+        proto: udp
+profiles:
+  compute:
+    bew:
+      resources:
+        cpu:
+          units: "100m"
+        memory:
+          size: "128Mi"
+        storage:
+          size: "1Gi"
+  placement:
+    westcoast:
+      attributes:
+        region: us-west
+      signedBy:
+        anyOf:
+          - 1
+          - 2
+        allOf:
+          - 3
+          - 4
+      pricing:
+        web:
+          denom: uakt
+          amount: 50
+        bew:
+          denom: uakt
+          amount: 50
+deployment:
+  web:
+    westcoast:
+      profile: bew
+      count: 2

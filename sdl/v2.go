@@ -120,7 +120,7 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 			}
 
 			endpoints := make([]types.Endpoint, 0)
-			for _, expose := range sdl.Services[svcdepl.Profile].Expose {
+			for _, expose := range sdl.Services[svcName].Expose {
 				for _, to := range expose.To {
 					if to.Global {
 						proto, err := manifest.ParseServiceProtocol(expose.Proto)
