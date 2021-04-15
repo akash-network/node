@@ -81,20 +81,24 @@ Akash is written in Golang and is Apache 2.0 licensed - contributions are welcom
 
 To become a contributor, please see the guide on [contributing](CONTRIBUTING.md)
 
+## Development environment
+Akash is developed and tested with [golang 1.16.0+](https://golang.org/). 
+Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
+It is also required to have C/C++ compiler installed (gcc/clang) as there are C dependencies in use (libusb/libhid)
+Akash build process and examples are heavily tied to Makefile.
 
-### Building
+Akash also uses [direnv](https://direnv.net) to setup and seamlessly update environment. List of variables exported in root dir are listed in [.env](./.env)
+It sets local dir `.cache` to hold all temporary files and tools (except **kind** which installed ) required for development purposes.
+It is possible to set custom path to `.cache` with `AKASH_DEVCACHE` environment variable.
+All tools are referred as `makefile targets` and set as dependencies thus installed (to `.cache/bin`) only upon necessity.
+For example `protoc` installed only when `proto-gen` target called.
 
-
-Akash is developed and tested with [golang 1.16.0+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
-
-```sh
-git clone https://github.com/ovrclk/akash
-cd akash
-make
-
-# dev environment only:
-make setup-devenv
+## Building from Source
+Command below will compile akash executable and put it into `.cache/bin`
+```shell
+make akash # akash is set as default target thus `make` is equal to `make akash`
 ```
+once binary compiled it exempts system-wide installed akash within akash repo
 
 ## Running
 

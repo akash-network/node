@@ -1,5 +1,13 @@
 GORELEASER_SKIP_VALIDATE ?= false
 
+GON_CONFIGFILE ?= gon.json
+
+ifeq ($(OS),Windows_NT)
+    DETECTED_OS := Windows
+else
+    DETECTED_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+endif
+
 .PHONY: bins
 bins: $(BINS)
 
@@ -7,13 +15,15 @@ bins: $(BINS)
 build:
 	$(GO) build ./...
 
+$(AKASH): modvendor
+	$(GO) build -o $@ $(BUILD_FLAGS) ./cmd/akash
+
 .PHONY: akash
-akash:
-	$(GO) build $(BUILD_FLAGS) ./cmd/akash
+akash: $(AKASH)
 
 .PHONY: akash_docgen
-akash_docgen:
-	$(GO) build -o akash_docgen $(BUILD_FLAGS) ./docgen
+akash_docgen: $(AKASH_DEVCACHE)
+	$(GO) build -o $(AKASH_DEVCACHE_BIN)/akash_docgen $(BUILD_FLAGS) ./docgen
 
 .PHONY: install
 install:
