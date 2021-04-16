@@ -24,6 +24,12 @@ jobs:
         run: git checkout master
       - name: checkout back to GITHUB_SHA
         run: git checkout $GITHUB_SHA
+      - uses: c-py/action-dotenv-to-setenv@v3
+        with:
+          env-file: .makerc
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "${{ env.GOLANG_VERSION }}"
       - name: go mod vendor
         run: make modvendor
       - name: check-breakage
