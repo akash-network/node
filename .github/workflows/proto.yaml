@@ -10,6 +10,12 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v2
+      - uses: c-py/action-dotenv-to-setenv@v3
+        with:
+          env-file: .makerc
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "${{ env.GOLANG_VERSION }}"
       - name: go mod vendor
         run: make modvendor
       - name: lint
