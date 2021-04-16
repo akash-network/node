@@ -58,7 +58,7 @@ func doServiceStatus(cmd *cobra.Command) error {
 		return err
 	}
 
-	cert, err := cutils.LoadCertificateForAccount(cctx, cctx.Keyring)
+	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, cctx.Keyring)
 	if err != nil {
 		return err
 	}
