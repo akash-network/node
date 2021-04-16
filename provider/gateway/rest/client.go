@@ -146,8 +146,8 @@ func (cd *ClientDirectory) GetClient(providerAddr sdk.Address) (Client, error) {
 	return client, nil
 }
 
-func NewClientDirectory(cctx cosmosclient.Context) (*ClientDirectory, error) {
-	cert, err := cutils.LoadCertificateForAccount(cctx, cctx.Keyring)
+func NewClientDirectory(ctx context.Context, cctx cosmosclient.Context) (*ClientDirectory, error) {
+	cert, err := cutils.LoadAndQueryCertificateForAccount(ctx, cctx, cctx.Keyring)
 	if err != nil {
 		return nil, err
 	}
