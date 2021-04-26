@@ -29,7 +29,7 @@ func leaseLogsCmd() *cobra.Command {
 
 	cmd.Flags().BoolP("follow", "f", false, "Specify if the logs should be streamed. Defaults to false")
 	cmd.Flags().Int64P("tail", "t", -1, "The number of lines from the end of the logs to show. Defaults to -1")
-	cmd.Flags().String("format", "text", "Output format text|json. Defaults to text")
+	cmd.Flags().String("format", outputText, "Output format text|json. Defaults to text")
 
 	return cmd
 }
@@ -60,7 +60,7 @@ func doServiceLogs(cmd *cobra.Command) error {
 		return err
 	}
 
-	if outputFormat != "text" && outputFormat != "json" {
+	if outputFormat != outputText && outputFormat != outputJSON {
 		return errors.Errorf("invalid output format %s. expected text|json", outputFormat)
 	}
 
