@@ -48,7 +48,7 @@ The easiest way to get started with Akash is by trying Testnet. Sign up [here](h
 Platform | Arch | Status
 --- | --- | :---
 Darwin | amd64 | ✅ **Supported**
-Darwin | arm64 | ⚠️ **Not Supported**
+Darwin | arm64 | ✅ **Supported**
 Linux | amd64 | ✅ **Supported**
 Linux | arm64 (aka aarch64) | ✅ **Supported**
 Linux | armhf GOARM=5,6,7 | ⚠️ **Not supported**
