@@ -2,19 +2,20 @@ package cli
 
 import (
 	"context"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/spf13/cobra"
 	"github.com/ovrclk/akash/x/escrow/types"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	marketTypes "github.com/ovrclk/akash/x/market/types"
 	deploymentTypes "github.com/ovrclk/akash/x/deployment/types"
+	marketTypes "github.com/ovrclk/akash/x/market/types"
 )
 
 func GetQueryCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:                       types.ModuleName,
+		Use:                        types.ModuleName,
 		Short:                      "Escrow query commands",
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
@@ -45,7 +46,7 @@ func cmdBlocksRemaining() *cobra.Command {
 
 			// Fetch leases matching owner & dseq
 			leaseRequest := marketTypes.QueryLeasesRequest{
-				Filters:    marketTypes.LeaseFilters{
+				Filters: marketTypes.LeaseFilters{
 					Owner:    owner,
 					DSeq:     dseq,
 					GSeq:     0,
@@ -81,6 +82,10 @@ func cmdBlocksRemaining() *cobra.Command {
 				balance := res.EscrowAccount.Balance
 				settledAt := res.EscrowAccount.SettledAt
 				blockchainHeight := clientCtx.Height
+				_ = createdAt
+				_ = balance
+				_ = settledAt
+				_ = blockchainHeight
 
 				err = clientCtx.PrintString("example")
 				if err != nil {
