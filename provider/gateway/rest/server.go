@@ -33,7 +33,7 @@ func NewServer(
 
 	var err error
 
-	srv.TLSConfig, err = gwutils.NewServerTLSConfig(context.Background(), certs, cquery)
+	srv.TLSConfig, err = gwutils.NewServerTLSConfig(context.WithValue(context.Background(), "log", log.With("name", "tls")), certs, cquery)
 	if err != nil {
 		return nil, err
 	}

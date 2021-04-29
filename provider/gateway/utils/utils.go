@@ -8,6 +8,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
+	"github.com/tendermint/tendermint/libs/log"
 
 	ctypes "github.com/ovrclk/akash/x/cert/types"
 )
@@ -27,24 +28,34 @@ func NewServerTLSConfig(ctx context.Context, certs []tls.Certificate, cquery cty
 				}
 
 				cert, err := x509.ParseCertificate(certificates[0])
+				defer func() {
+					if err != nil {
+						ctx.Value("log").(log.Logger).Error("VerifyPeerCertificate failed", "err", err.Error())
+					}
+				}()
+
 				if err != nil {
-					return errors.Wrap(err, "tls: failed to parse certificate")
+					err = errors.Wrap(err, "tls: failed to parse certificate")
+					return err
 				}
 
 				// validation
 				var owner sdk.Address
 				if owner, err = sdk.AccAddressFromBech32(cert.Subject.CommonName); err != nil {
-					return errors.Wrap(err, "tls: invalid certificate's subject common name")
+					err = errors.Wrap(err, "tls: invalid certificate's subject common name")
+					return err
 				}
 
 				// 1. CommonName in issuer and Subject must match and be as Bech32 format
 				if cert.Subject.CommonName != cert.Issuer.CommonName {
-					return errors.Wrap(err, "tls: invalid certificate's issuer common name")
+					err = errors.Wrap(err, "tls: invalid certificate's issuer common name")
+					return err
 				}
 
 				// 2. serial number must be in
 				if cert.SerialNumber == nil {
-					return errors.Wrap(err, "tls: invalid certificate serial number")
+					err = errors.Wrap(err, "tls: invalid certificate serial number")
+					return err
 				}
 
 				// 3. look up certificate on chain
@@ -60,10 +71,12 @@ func NewServerTLSConfig(ctx context.Context, certs []tls.Certificate, cquery cty
 					},
 				)
 				if err != nil {
-					return errors.Wrap(err, "tls: unable to fetch certificate from chain")
+					err = errors.Wrap(err, "tls: unable to fetch certificate from chain")
+					return err
 				}
 				if (len(resp.Certificates) != 1) || !resp.Certificates[0].Certificate.IsState(ctypes.CertificateValid) {
-					return errors.New("tls: attempt to use non-existing or revoked certificate")
+					err = errors.New("tls: attempt to use non-existing or revoked certificate")
+					return err
 				}
 
 				clientCertPool := x509.NewCertPool()
@@ -77,7 +90,8 @@ func NewServerTLSConfig(ctx context.Context, certs []tls.Certificate, cquery cty
 				}
 
 				if _, err = cert.Verify(opts); err != nil {
-					return errors.Wrap(err, "tls: unable to verify certificate")
+					err = errors.Wrap(err, "tls: unable to verify certificate")
+					return err
 				}
 			}
 			return nil
