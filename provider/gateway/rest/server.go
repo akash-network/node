@@ -11,6 +11,7 @@ import (
 
 	"github.com/ovrclk/akash/provider"
 	gwutils "github.com/ovrclk/akash/provider/gateway/utils"
+	"github.com/ovrclk/akash/util/ctxlog"
 	ctypes "github.com/ovrclk/akash/x/cert/types"
 )
 
@@ -33,7 +34,7 @@ func NewServer(
 
 	var err error
 
-	srv.TLSConfig, err = gwutils.NewServerTLSConfig(context.Background(), certs, cquery)
+	srv.TLSConfig, err = gwutils.NewServerTLSConfig(ctxlog.WithLogger(context.Background(), log.With("name", "tls")), certs, cquery)
 	if err != nil {
 		return nil, err
 	}
