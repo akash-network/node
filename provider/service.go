@@ -185,7 +185,8 @@ func (s *service) Status(ctx context.Context) (*Status, error) {
 }
 
 func (s *service) Validate(ctx context.Context, gspec dtypes.GroupSpec) (ValidateGroupSpecResult, error) {
-	price, err := s.config.BidPricingStrategy.CalculatePrice(ctx, &gspec)
+	// FUTURE - pass owner here
+	price, err := s.config.BidPricingStrategy.CalculatePrice(ctx, "", &gspec)
 	if err != nil {
 		return ValidateGroupSpecResult{}, err
 	}
