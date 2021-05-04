@@ -7,6 +7,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ovrclk/akash/app"
@@ -141,6 +142,86 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 				}
 			},
 			true,
+		},
+		{
+			"success pagination with limit",
+			func() {
+				req = &types.QueryCertificatesRequest{
+					Pagination: &sdkquery.PageRequest{
+						Limit: 10,
+					},
+				}
+				expCertificates = types.Certificates{
+					types.Certificate{
+						State:  types.CertificateValid,
+						Cert:   cert.PEM.Cert,
+						Pubkey: cert.PEM.Pub,
+					},
+					types.Certificate{
+						State:  types.CertificateRevoked,
+						Cert:   cert2.PEM.Cert,
+						Pubkey: cert2.PEM.Pub,
+					},
+				}
+			},
+			true,
+		},
+		{
+			"success pagination with limit with state",
+			func() {
+				req = &types.QueryCertificatesRequest{
+					Filter: types.CertificateFilter{
+						State: types.Certificate_State_name[int32(types.CertificateValid)],
+					},
+					Pagination: &sdkquery.PageRequest{
+						Limit: 10,
+					},
+				}
+				expCertificates = types.Certificates{
+					types.Certificate{
+						State:  types.CertificateValid,
+						Cert:   cert.PEM.Cert,
+						Pubkey: cert.PEM.Pub,
+					},
+				}
+			},
+			true,
+		},
+		{
+			"success pagination with limit with owner",
+			func() {
+				req = &types.QueryCertificatesRequest{
+					Filter: types.CertificateFilter{
+						Owner: owner2.String(),
+					},
+					Pagination: &sdkquery.PageRequest{
+						Limit: 10,
+					},
+				}
+				expCertificates = types.Certificates{
+					types.Certificate{
+						State:  types.CertificateRevoked,
+						Cert:   cert2.PEM.Cert,
+						Pubkey: cert2.PEM.Pub,
+					},
+				}
+			},
+			true,
+		},
+		{
+			"failing pagination with limit with non-existing owner",
+			func() {
+				req = &types.QueryCertificatesRequest{
+					Filter: types.CertificateFilter{
+						Owner: testutil.AccAddress(t).String(),
+					},
+					Pagination: &sdkquery.PageRequest{
+						Limit: 10,
+					},
+				}
+				expCertificates = nil
+			},
+			false,
 		},
 	}
 
