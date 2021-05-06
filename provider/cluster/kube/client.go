@@ -3,6 +3,9 @@ package kube
 import (
 	"context"
 	"fmt"
+	metricsutils "github.com/ovrclk/akash/util/metrics"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"os"
 	"path"
 
@@ -44,6 +47,12 @@ var (
 	ErrNoGlobalServicesForLease = errors.New("kube: no global services for lease")
 	ErrInternalError            = errors.New("kube: internal error")
 	ErrNoServiceForLease        = errors.New("no service for that lease")
+)
+
+var (
+	kubeCallsCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "provider_kube_calls",
+	}, []string{"action", "result"})
 )
 
 // Client interface includes cluster client
@@ -216,7 +225,15 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 }
 
 func (c *client) TeardownLease(ctx context.Context, lid mtypes.LeaseID) error {
-	return c.kc.CoreV1().Namespaces().Delete(ctx, lidNS(lid), metav1.DeleteOptions{})
+	result := c.kc.CoreV1().Namespaces().Delete(ctx, lidNS(lid), metav1.DeleteOptions{})
+
+	label := metricsutils.SuccessLabel
+	if result != nil {
+		label = metricsutils.FailLabel
+	}
+	kubeCallsCounter.WithLabelValues("namespaces-delete", label).Inc()
+
+	return result
 }
 
 func newEventsFeedList(ctx context.Context, events []eventsv1.Event) ctypes.EventsWatcher {
@@ -276,6 +293,11 @@ func (c *client) LeaseEvents(ctx context.Context, lid mtypes.LeaseID, services s
 	var wtch ctypes.EventsWatcher
 	if follow {
 		watcher, err := c.kc.EventsV1().Events(lidNS(lid)).Watch(ctx, listOpts)
+		label := metricsutils.SuccessLabel
+		if err != nil {
+			label = metricsutils.FailLabel
+		}
+		kubeCallsCounter.WithLabelValues("events-follow", label).Inc()
 		if err != nil {
 			return nil, err
 		}
@@ -283,6 +305,11 @@ func (c *client) LeaseEvents(ctx context.Context, lid mtypes.LeaseID, services s
 		wtch = newEventsFeedWatch(ctx, watcher)
 	} else {
 		list, err := c.kc.EventsV1().Events(lidNS(lid)).List(ctx, listOpts)
+		label := metricsutils.SuccessLabel
+		if err != nil {
+			label = metricsutils.FailLabel
+		}
+		kubeCallsCounter.WithLabelValues("events-list", label).Inc()
 		if err != nil {
 			return nil, err
 		}
@@ -307,6 +334,11 @@ func (c *client) LeaseLogs(ctx context.Context, lid mtypes.LeaseID,
 	c.log.Error("filtering pods", "labelSelector", listOpts.LabelSelector)
 
 	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(ctx, listOpts)
+	label := metricsutils.SuccessLabel
+	if err != nil {
+		label = metricsutils.FailLabel
+	}
+	kubeCallsCounter.WithLabelValues("pods-list", label).Inc()
 	if err != nil {
 		c.log.Error("listing pods", "err", err)
 		return nil, errors.Wrap(err, ErrInternalError.Error())
@@ -318,6 +350,11 @@ func (c *client) LeaseLogs(ctx context.Context, lid mtypes.LeaseID,
 			TailLines:  tailLines,
 			Timestamps: false,
 		}).Stream(ctx)
+		label := metricsutils.SuccessLabel
+		if err != nil {
+			label = metricsutils.FailLabel
+		}
+		kubeCallsCounter.WithLabelValues("pods-getlogs", label).Inc()
 		if err != nil {
 			c.log.Error("get pod logs", "err", err)
 			return nil, errors.Wrap(err, ErrInternalError.Error())
@@ -351,12 +388,22 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 	}
 
 	ingress, err := c.kc.NetworkingV1().Ingresses(lidNS(lid)).List(ctx, metav1.ListOptions{})
+	label := metricsutils.SuccessLabel
+	if err != nil {
+		label = metricsutils.FailLabel
+	}
+	kubeCallsCounter.WithLabelValues("ingresses-list", label).Inc()
 	if err != nil {
 		c.log.Error("list ingresses", "err", err)
 		return nil, errors.Wrap(err, ErrInternalError.Error())
 	}
 
 	services, err := c.kc.CoreV1().Services(lidNS(lid)).List(ctx, metav1.ListOptions{})
+	label = metricsutils.SuccessLabel
+	if err != nil {
+		label = metricsutils.FailLabel
+	}
+	kubeCallsCounter.WithLabelValues("services-list", label).Inc()
 	if err != nil {
 		c.log.Error("list services", "err", err)
 		return nil, errors.Wrap(err, ErrInternalError.Error())
@@ -456,6 +503,11 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 
 	c.log.Debug("get deployment", "lease-ns", lidNS(lid), "name", name)
 	deployment, err := c.kc.AppsV1().Deployments(lidNS(lid)).Get(ctx, name, metav1.GetOptions{})
+	label := metricsutils.SuccessLabel
+	if err != nil {
+		label = metricsutils.FailLabel
+	}
+	kubeCallsCounter.WithLabelValues("deployments-get", label).Inc()
 
 	if err != nil {
 		c.log.Error("deployment get", "err", err)
@@ -520,6 +572,11 @@ exposeCheckLoop:
 
 	if hasIngress {
 		ingress, err := c.kc.NetworkingV1().Ingresses(lidNS(lid)).Get(ctx, name, metav1.GetOptions{})
+		label := metricsutils.SuccessLabel
+		if err != nil {
+			label = metricsutils.FailLabel
+		}
+		kubeCallsCounter.WithLabelValues("networking-ingresses", label).Inc()
 		if err != nil {
 			c.log.Error("ingresses get", "err", err)
 			return nil, errors.Wrap(err, ErrInternalError.Error())
@@ -561,6 +618,15 @@ func (c *client) Inventory(ctx context.Context) ([]ctypes.Node, error) {
 		// Get the amount of available CPU, then subtract that in use
 		var tmp resource.Quantity
 
+		tmp = knode.cpu.allocatable
+		cpuTotal := (&tmp).MilliValue()
+
+		tmp = knode.memory.allocatable
+		memoryTotal := (&tmp).Value()
+
+		tmp = knode.storage.allocatable
+		storageTotal := (&tmp).Value()
+
 		tmp = knode.cpu.available()
 		cpuAvailable := (&tmp).MilliValue()
 		if cpuAvailable < 0 {
@@ -600,7 +666,28 @@ func (c *client) Inventory(ctx context.Context) ([]ctypes.Node, error) {
 			},
 		}
 
-		nodes = append(nodes, cluster.NewNode(nodeName, resources))
+		allocateable := types.ResourceUnits{
+			CPU: &types.CPU{
+				Units: types.NewResourceValue(uint64(cpuTotal)),
+				Attributes: []types.Attribute{
+					{
+						Key:   "arch",
+						Value: knode.arch,
+					},
+					// todo (#788) other node attributes ?
+				},
+			},
+			Memory: &types.Memory{
+				Quantity: types.NewResourceValue(uint64(memoryTotal)),
+				// todo (#788) memory attributes ?
+			},
+			Storage: &types.Storage{
+				Quantity: types.NewResourceValue(uint64(storageTotal)),
+				// todo (#788) storage attributes like class and iops?
+			},
+		}
+
+		nodes = append(nodes, cluster.NewNode(nodeName, allocateable, resources))
 	}
 
 	return nodes, nil
@@ -627,6 +714,11 @@ type nodeResources struct {
 
 func (c *client) activeNodes(ctx context.Context) (map[string]nodeResources, error) {
 	knodes, err := c.kc.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	label := metricsutils.SuccessLabel
+	if err != nil {
+		label = metricsutils.FailLabel
+	}
+	kubeCallsCounter.WithLabelValues("nodes-list", label).Inc()
 	if err != nil {
 		return nil, err
 	}
@@ -740,6 +832,11 @@ func (c *client) nodeIsActive(node corev1.Node) bool {
 
 func (c *client) leaseExists(ctx context.Context, lid mtypes.LeaseID) error {
 	_, err := c.kc.CoreV1().Namespaces().Get(ctx, lidNS(lid), metav1.GetOptions{})
+	label := metricsutils.SuccessLabel
+	if err != nil && !kubeErrors.IsNotFound(err) {
+		label = metricsutils.FailLabel
+	}
+	kubeCallsCounter.WithLabelValues("namespace-get", label).Inc()
 	if err != nil {
 		if kubeErrors.IsNotFound(err) {
 			return ErrLeaseNotFound
@@ -758,6 +855,12 @@ func (c *client) deploymentsForLease(ctx context.Context, lid mtypes.LeaseID) ([
 	}
 
 	deployments, err := c.kc.AppsV1().Deployments(lidNS(lid)).List(ctx, metav1.ListOptions{})
+	label := metricsutils.SuccessLabel
+	if err != nil {
+		label = metricsutils.FailLabel
+	}
+	kubeCallsCounter.WithLabelValues("deployments-list", label).Inc()
+
 	if err != nil {
 		c.log.Error("deployments list", "err", err)
 		return nil, errors.Wrap(err, ErrInternalError.Error())
