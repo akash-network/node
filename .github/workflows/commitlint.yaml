@@ -1,0 +1,11 @@
+name: conventional commits
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: aevea/commitsar@v0.16.0
+        env:
+          GIT_DEPTH: 0

@@ -1,0 +1,8 @@
+version: 1
+verbose: true
+commits:
+  disabled: false
+  strict: true
+  limit: 0
+  all: false
+  upstreamBranch: origin/master
