@@ -180,8 +180,7 @@ loop:
 
 			case event.LeaseWon:
 				s.session.Log().Info("lease won", "lease", ev.LeaseID)
-
-				s.handleLease(ev)
+				s.handleLease(ev, true)
 
 			case dtypes.EventDeploymentUpdated:
 				s.session.Log().Info("update received", "deployment", ev.ID, "version", ev.Version)
@@ -269,13 +268,13 @@ func (s *service) maybeRemoveWatchdog(deploymentID dtypes.DeploymentID) {
 
 func (s *service) managePreExistingLease(leases []event.LeaseWon) {
 	for _, lease := range leases {
-		s.handleLease(lease)
+		s.handleLease(lease, false)
 	}
 }
 
-func (s *service) handleLease(ev event.LeaseWon) {
+func (s *service) handleLease(ev event.LeaseWon, isNew bool) {
 	// Only run this if configured to do so
-	if s.config.ManifestTimeout > time.Duration(0) {
+	if isNew && s.config.ManifestTimeout > time.Duration(0) {
 		// Create watchdog if it does not exist AND a manifest has not been received yet
 		if watchdog := s.watchdogs[ev.LeaseID.DeploymentID()]; watchdog == nil {
 			watchdog = newWatchdog(s.session, s.lc.ShuttingDown(), s.watchdogch, ev.LeaseID, s.config.ManifestTimeout)
