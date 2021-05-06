@@ -305,7 +305,6 @@ loop:
 	}
 
 	o.log.Info("shutting down")
-	cancel()
 	o.lc.ShutdownInitiated(nil)
 	o.sub.Close()
 
@@ -328,6 +327,7 @@ loop:
 			}
 		}
 	}
+	cancel()
 
 	// Wait for all runners to complete.
 	if groupch != nil {
