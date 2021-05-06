@@ -63,7 +63,6 @@ import (
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/ovrclk/akash/app/migrations"
 	"github.com/ovrclk/akash/x/audit"
 	"github.com/ovrclk/akash/x/cert"
 	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
@@ -263,11 +262,8 @@ func NewApp(
 
 	app.keeper.upgrade = upgradekeeper.NewKeeper(skipUpgradeHeights, app.keys[upgradetypes.StoreKey], appCodec, homePath)
 
-	app.keeper.upgrade.SetUpgradeHandler("akashnet-2-upgrade-1", func(ctx sdk.Context, plan upgradetypes.Plan) {
-		migrations.MigrateAkashnet2Upgrade1(ctx, app.keeper.acct, app.keeper.bank, app.keeper.staking)
+	app.keeper.upgrade.SetUpgradeHandler("v0.42-upgrade", func(ctx sdk.Context, plan upgradetypes.Plan) {
 
-		// Set staking HistoricalEntries to 10000, required positive value for ibc
-		app.GetSubspace(stakingtypes.ModuleName).Set(ctx, stakingtypes.KeyHistoricalEntries, uint32(10000))
 	})
 
 	// register the staking hooks
