@@ -56,8 +56,8 @@ func TestInventory_reservationAllocateable(t *testing.T) {
 	}
 
 	inventory := []ctypes.Node{
-		NewNode("a", newResourceUnits()),
-		NewNode("b", newResourceUnits()),
+		NewNode("a", newResourceUnits(), newResourceUnits()),
+		NewNode("b", newResourceUnits(), newResourceUnits()),
 	}
 
 	reservations := []*reservation{
