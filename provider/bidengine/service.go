@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	atypes "github.com/ovrclk/akash/x/audit/types"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"time"
 
 	lifecycle "github.com/boz/go-lifecycle"
@@ -16,6 +18,13 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
+var (
+	ordersCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "provider_order_handler",
+		Help: "The total number of orders created",
+	}, []string{"action"})
+)
+
 // ErrNotRunning declares new error with message "not running"
 var ErrNotRunning = errors.New("not running")
 
@@ -23,6 +32,14 @@ var ErrNotRunning = errors.New("not running")
 type StatusClient interface {
 	Status(context.Context) (*Status, error)
 }
+
+var (
+	orderManagerGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name:        "provider_order_manager",
+		Help:        "",
+		ConstLabels: nil,
+	})
+)
 
 // Service handles bidding on orders.
 type Service interface {
@@ -135,10 +152,14 @@ func (s *service) Status(ctx context.Context) (*Status, error) {
 	}
 }
 
+func (s *service) updateOrderManagerGauge() {
+	orderManagerGauge.Set(float64(len(s.orders)))
+}
+
 func (s *service) run(existingOrders []mtypes.OrderID) {
 	defer s.lc.ShutdownCompleted()
 	defer s.sub.Close()
-
+	s.updateOrderManagerGauge()
 	for _, orderID := range existingOrders {
 		key := mquery.OrderPath(orderID)
 		s.session.Log().Debug("creating catchup order", "order", key)
@@ -148,8 +169,8 @@ func (s *service) run(existingOrders []mtypes.OrderID) {
 			continue
 		}
 		s.orders[key] = order
+		s.updateOrderManagerGauge()
 	}
-
 loop:
 	for {
 		select {
@@ -173,11 +194,11 @@ loop:
 				// create an order object for managing the bid process and order lifecycle
 				order, err := newOrder(s, ev.ID, s.cfg, s.pass, false)
 				if err != nil {
-
 					s.session.Log().Error("handling order", "order", key, "err", err)
 					break
 				}
 
+				ordersCounter.WithLabelValues("start").Inc()
 				s.orders[key] = order
 			}
 		case ch := <-s.statusch:
@@ -188,7 +209,9 @@ loop:
 			// child done
 			key := mquery.OrderPath(order.orderID)
 			delete(s.orders, key)
+			ordersCounter.WithLabelValues("stop").Inc()
 		}
+		s.updateOrderManagerGauge()
 	}
 
 	s.pass.lc.ShutdownAsync(nil)
@@ -198,6 +221,7 @@ loop:
 	for len(s.orders) > 0 {
 		key := mquery.OrderPath((<-s.drainch).orderID)
 		delete(s.orders, key)
+		s.updateOrderManagerGauge()
 	}
 
 	s.session.Log().Info("Waiting on provider attributes service")
