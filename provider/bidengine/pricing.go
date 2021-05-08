@@ -6,8 +6,10 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
+	"os"
 	"os/exec"
 	"time"
 
@@ -18,7 +20,7 @@ import (
 )
 
 type BidPricingStrategy interface {
-	CalculatePrice(ctx context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error)
+	CalculatePrice(ctx context.Context, owner string, gspec *dtypes.GroupSpec) (sdk.Coin, error)
 }
 
 const denom = "uakt"
@@ -67,7 +69,7 @@ func ceilBigRatToBigInt(v *big.Rat) *big.Int {
 	return result
 }
 
-func (fp scalePricing) CalculatePrice(_ context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	// Use unlimited precision math here.
 	// Otherwise a correctly crafted order could create a cost of '1' given
 	// a possible configuration
@@ -144,7 +146,7 @@ func MakeRandomRangePricing() (BidPricingStrategy, error) {
 	return randomRangePricing(0), nil
 }
 
-func (randomRangePricing) CalculatePrice(ctx context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (randomRangePricing) CalculatePrice(ctx context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	min, max := calculatePriceRange(gspec)
 
 	if min.IsEqual(max) {
@@ -251,7 +253,7 @@ type dataForScriptElement struct {
 	EndpointQuantity int    `json:"endpoint_quantity"`
 }
 
-func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	buf := &bytes.Buffer{}
 
 	dataForScript := make([]dataForScriptElement, len(gspec.Resources))
@@ -292,6 +294,10 @@ func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, gspec *dtypes.
 	cmd.Stdin = buf
 	outputBuf := &bytes.Buffer{}
 	cmd.Stdout = outputBuf
+
+	subprocEnv := os.Environ()
+	subprocEnv = append(subprocEnv, fmt.Sprintf("AKASH_OWNER=%s", owner))
+	cmd.Env = subprocEnv
 
 	err = cmd.Run()
 	if ctxErr := processCtx.Err(); ctxErr != nil {

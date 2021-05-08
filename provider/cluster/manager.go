@@ -6,6 +6,8 @@ import (
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/cluster/util"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"time"
 
 	retry "github.com/avast/retry-go"
@@ -25,6 +27,16 @@ const (
 	dsTeardownActive   deploymentState = "teardown-active"
 	dsTeardownPending  deploymentState = "teardown-pending"
 	dsTeardownComplete deploymentState = "teardown-complete"
+)
+
+var (
+	deploymentCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "provider_deployment",
+	}, []string{"action", "result"})
+
+	monitorCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "provider_deployment_monitor",
+	}, []string{"action"})
 )
 
 type deploymentManager struct {
@@ -110,9 +122,11 @@ loop:
 		case err := <-reserveHostnamesCh:
 			reserveHostnamesCh = nil
 			if err != nil {
+				deploymentCounter.WithLabelValues("reserve-hostnames", "err").Inc()
 				dm.log.Error("deploy hostname error", "state", dm.state, "err", err)
 				break loop
 			}
+			deploymentCounter.WithLabelValues("reserve-hostnames", "success").Inc()
 			defer dm.hostnameService.ReleaseHostnames(allHostnames)
 			runch = dm.startDeploy()
 
@@ -213,6 +227,7 @@ func (dm *deploymentManager) startWithdrawal() {
 func (dm *deploymentManager) startMonitor() {
 	dm.wg.Add(1)
 	dm.monitor = newDeploymentMonitor(dm)
+	monitorCounter.WithLabelValues("start").Inc()
 	go func(m *deploymentMonitor) {
 		defer dm.wg.Done()
 		<-m.done()
@@ -221,6 +236,7 @@ func (dm *deploymentManager) startMonitor() {
 
 func (dm *deploymentManager) stopMonitor() {
 	if dm.monitor != nil {
+		monitorCounter.WithLabelValues("stop").Inc()
 		dm.monitor.shutdown()
 	}
 }
@@ -240,14 +256,20 @@ func (dm *deploymentManager) startTeardown() <-chan error {
 func (dm *deploymentManager) doDeploy() error {
 	// Don't use a context tied to the lifecycle, as we don't want to cancel Kubernetes operations
 	ctx := context.Background()
-	return dm.client.Deploy(ctx, dm.lease, dm.mgroup)
+	result := dm.client.Deploy(ctx, dm.lease, dm.mgroup)
+	label := "success"
+	if result != nil {
+		label = "fail"
+	}
+	deploymentCounter.WithLabelValues("deploy", label).Inc()
+	return result
 }
 
 func (dm *deploymentManager) doTeardown() error {
 	// Don't use a context tied to the lifecycle, as we don't want to cancel Kubernetes operations
 	ctx := context.Background()
 
-	return retry.Do(func() error {
+	result := retry.Do(func() error {
 		err := dm.client.TeardownLease(ctx, dm.lease)
 		if err != nil {
 			dm.log.Error("lease teardown failed", "err", err)
@@ -260,6 +282,12 @@ func (dm *deploymentManager) doTeardown() error {
 		retry.DelayType(retry.BackOffDelay),
 		retry.LastErrorOnly(true))
 
+	label := "success"
+	if result != nil {
+		label = "fail"
+	}
+	deploymentCounter.WithLabelValues("teardown", label).Inc()
+	return result
 }
 
 func (dm *deploymentManager) do(fn func() error) <-chan error {

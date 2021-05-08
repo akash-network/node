@@ -60,6 +60,7 @@ type LeaseStatus struct {
 type Node interface {
 	ID() string
 	Available() atypes.ResourceUnits
+	Allocateable() atypes.ResourceUnits
 	Reserve(atypes.ResourceUnits) error
 }
 

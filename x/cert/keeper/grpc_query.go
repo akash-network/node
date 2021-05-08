@@ -4,7 +4,7 @@ import (
 	"context"
 	"math/big"
 
-	sdkstore "github.com/cosmos/cosmos-sdk/store/types"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"google.golang.org/grpc/codes"
@@ -64,33 +64,40 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 				certificates = append(certificates, item)
 			}
 		} else {
-			page, limit, err := sdkquery.ParsePagination(req.Pagination)
-			if err != nil {
-				return nil, err
-			}
-
-			it := sdkstore.KVStorePrefixIteratorPaginated(store, certificatePrefix(owner), uint(page), uint(limit))
-			for ; it.Valid(); it.Next() {
-				item, err := q.unmarshalIterator(it.Key(), it.Value())
+			ownerStore := prefix.NewStore(store, certificatePrefix(owner))
+			pageRes, err = sdkquery.FilteredPaginate(ownerStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+				// prefixed store returns key without prefix
+				key = append(certificatePrefix(owner), key...)
+				item, err := q.unmarshalIterator(key, value)
 				if err != nil {
-					return nil, err
+					return true, err
 				}
+
 				if filterCertByState(state, item.Certificate.State) {
-					certificates = append(certificates, item)
+					if accumulate {
+						certificates = append(certificates, item)
+					}
+					return true, nil
 				}
-			}
+
+				return false, nil
+			})
 		}
 	} else {
-		pageRes, err = sdkquery.Paginate(store, req.Pagination, func(key []byte, value []byte) error {
+		pageRes, err = sdkquery.FilteredPaginate(store, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 			item, err := q.unmarshalIterator(key, value)
 			if err != nil {
-				return err
+				return true, err
 			}
 
 			if filterCertByState(state, item.Certificate.State) {
-				certificates = append(certificates, item)
+				if accumulate {
+					certificates = append(certificates, item)
+				}
+				return true, nil
 			}
-			return nil
+
+			return false, nil
 		})
 	}
 

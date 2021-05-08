@@ -2,6 +2,8 @@ package cluster
 
 import (
 	"context"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"math/rand"
 	"time"
 
@@ -22,6 +24,12 @@ const (
 
 	monitorHealthcheckPeriodMin    = time.Second * 10
 	monitorHealthcheckPeriodJitter = time.Second * 5
+)
+
+var (
+	deploymentHealthCheckCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "provider_deployment_monitor_health",
+	}, []string{"state"})
 )
 
 type deploymentMonitor struct {
@@ -89,6 +97,7 @@ loop:
 			runch = nil
 
 			if err := result.Error(); err != nil {
+				deploymentHealthCheckCounter.WithLabelValues("err").Inc()
 				m.log.Error("monitor check", "err", err)
 			}
 
@@ -101,7 +110,10 @@ loop:
 				m.attempts = 0
 				tickch = m.scheduleHealthcheck()
 				m.publishStatus(event.ClusterDeploymentDeployed)
+				deploymentHealthCheckCounter.WithLabelValues("up").Inc()
 				break
+			} else {
+				deploymentHealthCheckCounter.WithLabelValues("down").Inc()
 			}
 
 			m.publishStatus(event.ClusterDeploymentPending)
@@ -113,6 +125,7 @@ loop:
 			}
 
 			m.log.Error("deployment failed.  closing lease.")
+			deploymentHealthCheckCounter.WithLabelValues("failed").Inc()
 			closech = m.runCloseLease(ctx)
 
 		case <-closech:
