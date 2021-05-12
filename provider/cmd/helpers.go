@@ -22,6 +22,9 @@ const (
 	FlagDSeq     = "dseq"
 	FlagGSeq     = "gseq"
 	FlagOSeq     = "oseq"
+	flagOutput   = "output"
+	flagFollow   = "follow"
+	flagTail     = "tail"
 )
 
 const (
@@ -49,8 +52,8 @@ func addCmdFlags(cmd *cobra.Command) {
 func addManifestFlags(cmd *cobra.Command) {
 	addCmdFlags(cmd)
 
-	cmd.Flags().Uint32("gseq", 1, "group sequence")
-	cmd.Flags().Uint32("oseq", 1, "order sequence")
+	cmd.Flags().Uint32(FlagGSeq, 1, "group sequence")
+	cmd.Flags().Uint32(FlagOSeq, 1, "order sequence")
 }
 
 func addLeaseFlags(cmd *cobra.Command) {
@@ -84,7 +87,7 @@ func providerFromFlags(flags *pflag.FlagSet) (sdk.Address, error) {
 	return addr, nil
 }
 
-func providersForDeployment(ctx context.Context, cctx client.Context, flags *pflag.FlagSet, did dtypes.DeploymentID) ([]sdk.Address, error) {
+func leasesForDeployment(ctx context.Context, cctx client.Context, flags *pflag.FlagSet, did dtypes.DeploymentID) ([]mtypes.LeaseID, error) {
 	filter := mtypes.LeaseFilters{
 		Owner: did.Owner,
 		DSeq:  did.DSeq,
@@ -120,16 +123,11 @@ func providersForDeployment(ctx context.Context, cctx client.Context, flags *pfl
 		return nil, errors.Errorf("no active leases found for dseq=%v", did.DSeq)
 	}
 
-	addrs := make([]sdk.Address, 0, len(resp.Leases))
+	leases := make([]mtypes.LeaseID, 0, len(resp.Leases))
 
 	for _, lease := range resp.Leases {
-		addr, err := sdk.AccAddressFromBech32(lease.Lease.LeaseID.Provider)
-		if err != nil {
-			return nil, err
-		}
-
-		addrs = append(addrs, addr)
+		leases = append(leases, lease.Lease.LeaseID)
 	}
 
-	return addrs, nil
+	return leases, nil
 }
