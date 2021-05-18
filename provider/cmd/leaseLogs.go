@@ -3,8 +3,12 @@ package cmd
 import (
 	"crypto/tls"
 	"fmt"
+	"sync"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -12,7 +16,6 @@ import (
 	cmdcommon "github.com/ovrclk/akash/cmd/common"
 	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
-	mcli "github.com/ovrclk/akash/x/market/client/cli"
 )
 
 func leaseLogsCmd() *cobra.Command {
@@ -21,21 +24,39 @@ func leaseLogsCmd() *cobra.Command {
 		Short:        "get lease logs",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return doServiceLogs(cmd)
+			return doLeaseLogs(cmd)
 		},
 	}
 
 	addServiceFlags(cmd)
 
-	cmd.Flags().BoolP("follow", "f", false, "Specify if the logs should be streamed. Defaults to false")
-	cmd.Flags().Int64P("tail", "t", -1, "The number of lines from the end of the logs to show. Defaults to -1")
-	cmd.Flags().String("format", outputText, "Output format text|json. Defaults to text")
+	cmd.Flags().BoolP(flagFollow, "f", false, "Specify if the logs should be streamed. Defaults to false")
+	cmd.Flags().Int64P(flagTail, "t", -1, "The number of lines from the end of the logs to show. Defaults to -1")
+	cmd.Flags().StringP(flagOutput, "o", outputText, "Output format text|json. Defaults to text")
 
 	return cmd
 }
 
-func doServiceLogs(cmd *cobra.Command) error {
+func doLeaseLogs(cmd *cobra.Command) error {
 	cctx, err := sdkclient.GetClientTxContext(cmd)
+	if err != nil {
+		return err
+	}
+
+	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, cctx.Keyring)
+	if err != nil {
+		return err
+	}
+
+	dseq, err := dseqFromFlags(cmd.Flags())
+	if err != nil {
+		return err
+	}
+
+	leases, err := leasesForDeployment(cmd.Context(), cctx, cmd.Flags(), dtypes.DeploymentID{
+		Owner: cctx.GetFromAddress().String(),
+		DSeq:  dseq,
+	})
 	if err != nil {
 		return err
 	}
@@ -45,17 +66,7 @@ func doServiceLogs(cmd *cobra.Command) error {
 		return err
 	}
 
-	prov, err := providerFromFlags(cmd.Flags())
-	if err != nil {
-		return err
-	}
-
-	bid, err := mcli.BidIDFromFlagsForOwner(cmd.Flags(), cctx.FromAddress)
-	if err != nil {
-		return err
-	}
-
-	outputFormat, err := cmd.Flags().GetString("format")
+	outputFormat, err := cmd.Flags().GetString(flagOutput)
 	if err != nil {
 		return err
 	}
@@ -64,12 +75,12 @@ func doServiceLogs(cmd *cobra.Command) error {
 		return errors.Errorf("invalid output format %s. expected text|json", outputFormat)
 	}
 
-	follow, err := cmd.Flags().GetBool("follow")
+	follow, err := cmd.Flags().GetBool(flagFollow)
 	if err != nil {
 		return err
 	}
 
-	tailLines, err := cmd.Flags().GetInt64("tail")
+	tailLines, err := cmd.Flags().GetInt64(flagTail)
 	if err != nil {
 		return err
 	}
@@ -78,47 +89,75 @@ func doServiceLogs(cmd *cobra.Command) error {
 		return errors.Errorf("tail flag supplied with invalid value. must be >= -1")
 	}
 
-	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, cctx.Keyring)
-	if err != nil {
-		return err
+	type result struct {
+		lid      mtypes.LeaseID
+		provider sdk.Address
+		error    error
+		stream   *gwrest.ServiceLogs
 	}
 
-	gclient, err := gwrest.NewClient(akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})
-	if err != nil {
-		return err
+	streams := make([]result, 0, len(leases))
+
+	ctx := cmd.Context()
+
+	for _, lid := range leases {
+		stream := result{lid: lid}
+		prov, _ := sdk.AccAddressFromBech32(lid.Provider)
+		gclient, err := gwrest.NewClient(akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})
+		if err == nil {
+			stream.stream, stream.error = gclient.LeaseLogs(ctx, lid, svcs, follow, tailLines)
+		} else {
+			stream.error = err
+		}
+
+		streams = append(streams, stream)
 	}
 
-	result, err := gclient.LeaseLogs(cmd.Context(), bid.LeaseID(), svcs, follow, tailLines)
-	if err != nil {
-		return showErrorToUser(err)
+	var wgStreams sync.WaitGroup
+
+	type logEntry struct {
+		gwrest.ServiceLogMessage `json:",inline"`
+		Lid                      mtypes.LeaseID `json:"lease_id"`
 	}
 
-	printFn := func(msg gwrest.ServiceLogMessage) error {
-		fmt.Printf("[%s] %s\n", msg.Name, msg.Message)
-		return nil
+	outch := make(chan logEntry)
+
+	printFn := func(evt logEntry) {
+		fmt.Printf("[%s][%s] %s\n", evt.Lid, evt.Name, evt.Message)
 	}
 
 	if outputFormat == "json" {
-		printFn = func(msg gwrest.ServiceLogMessage) error {
-			return cmdcommon.PrintJSON(cctx, msg)
+		printFn = func(evt logEntry) {
+			_ = cmdcommon.PrintJSON(cctx, evt)
 		}
 	}
 
-	for res := range result.Stream {
-		err = printFn(res)
-		if err != nil {
-			return err
+	go func() {
+		for evt := range outch {
+			printFn(evt)
 		}
+	}()
+
+	for _, stream := range streams {
+		if stream.error != nil {
+			continue
+		}
+
+		wgStreams.Add(1)
+		go func(stream result) {
+			defer wgStreams.Done()
+
+			for res := range stream.stream.Stream {
+				outch <- logEntry{
+					ServiceLogMessage: res,
+					Lid:               stream.lid,
+				}
+			}
+		}(stream)
 	}
 
-	select {
-	case msg, ok := <-result.OnClose:
-		if ok && msg != "" {
-			_ = cctx.PrintString(msg)
-			_ = cctx.PrintString("\n")
-		}
-	default:
-	}
+	wgStreams.Wait()
+	close(outch)
 
 	return nil
 }

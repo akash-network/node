@@ -39,7 +39,7 @@ func SendManifestCmd() *cobra.Command {
 
 	addManifestFlags(cmd)
 
-	cmd.Flags().StringP("output", "o", outputText, "output format text|json|yaml. default text")
+	cmd.Flags().StringP(flagOutput, "o", outputText, "output format text|json|yaml. default text")
 
 	return cmd
 }
@@ -71,7 +71,7 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 	}
 
 	// owner address in FlagFrom has already been validated thus save to just pull its value as string
-	providers, err := providersForDeployment(cmd.Context(), cctx, cmd.Flags(), dtypes.DeploymentID{
+	leases, err := leasesForDeployment(cmd.Context(), cctx, cmd.Flags(), dtypes.DeploymentID{
 		Owner: cctx.GetFromAddress().String(),
 		DSeq:  dseq,
 	})
@@ -85,19 +85,20 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 		Error    error       `json:"error,omitempty" yaml:"error,omitempty"`
 	}
 
-	results := make([]result, len(providers))
+	results := make([]result, len(leases))
 
 	submitFailed := false
 
-	for i, provider := range providers {
-		gclient, err := gwrest.NewClient(akashclient.NewQueryClientFromCtx(cctx), provider, []tls.Certificate{cert})
+	for i, lid := range leases {
+		prov, _ := sdk.AccAddressFromBech32(lid.Provider)
+		gclient, err := gwrest.NewClient(akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})
 		if err != nil {
 			return err
 		}
 
 		err = gclient.SubmitManifest(context.Background(), dseq, mani)
 		res := result{
-			Provider: provider,
+			Provider: prov,
 			Status:   "PASS",
 			Error:    err,
 		}
@@ -112,7 +113,7 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 
 	buf := &bytes.Buffer{}
 
-	switch cmd.Flag("output").Value.String() {
+	switch cmd.Flag(flagOutput).Value.String() {
 	case outputText:
 		for _, res := range results {
 			_, _ = fmt.Fprintf(buf, "provider: %s\n\tstatus: %s\n", res.Provider, res.Status)
