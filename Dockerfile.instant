@@ -1,0 +1,28 @@
+# Build repository for faddat/archilinux is: https://github.com/faddat/archlinux-docker.  It does arm64/amd64 quite well. 
+FROM faddat/archlinux
+
+RUN pacman --noconfirm -Syyu go base-devel curl wget
+
+WORKDIR /data
+
+RUN SNAP_NAME=$(curl -s http://135.181.60.250/akash/ | egrep -o ">akashnet-2.*tar" | tr -d ">") && wget -O - http://135.181.60.250/akash/${SNAP_NAME} | tar xf -
+
+ENV GOPATH=/go
+ENV PATH=$PATH:/go/bin
+ENV AKASH_NET="https://raw.githubusercontent.com/ovrclk/net/master/mainnet"
+ENV AKASH_VERSION="$(curl -s "$AKASH_NET/version.txt")"
+ENV AKASH_CHAIN_ID="$(curl -s "$AKASH_NET/chain-id.txt")"
+
+WORKDIR /go/src/github.com/ovrclk/akash
+
+COPY . .
+
+RUN pacman -Syyu --noconfirm git
+
+RUN make install
+
+WORKDIR /genesis
+
+RUN wget https://github.com/ovrclk/net/raw/master/mainnet/genesis.json
+
+CMD akash init instakash$RANDOM && mv /genesis/genesis.json /root/.akash/config/genesis.json && mv -f /data /root/.akash/data && akash start --p2p.seeds 27eb432ccd5e895c5c659659120d68b393dd8c60@35.247.65.183:26656,8e2f56098f182ffe2f6fb09280bafe13c63eb42f@46.101.176.149:26656,fff99a2e8f3c9473e4e5ee9a99611a2e599529fd@46.166.138.218:26656
