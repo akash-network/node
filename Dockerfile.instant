@@ -25,4 +25,6 @@ WORKDIR /genesis
 
 RUN wget -O genesis.json https://github.com/ovrclk/net/raw/master/mainnet/genesis.json
 
-CMD akash init instakash$RANDOM --chain-id akashnet-2 -o && mv /genesis/genesis.json /root/.akash/config/genesis.json && mv -f /data /root/.akash/data && akash start --p2p.seeds 27eb432ccd5e895c5c659659120d68b393dd8c60@35.247.65.183:26656,8e2f56098f182ffe2f6fb09280bafe13c63eb42f@46.101.176.149:26656,fff99a2e8f3c9473e4e5ee9a99611a2e599529fd@46.166.138.218:26656
+WORKDIR /
+
+CMD akash init instakash$RANDOM --chain-id akashnet-2 -o && mv /genesis/genesis.json /root/.akash/config/genesis.json && rm -rf ~/.akash/data; mkdir -p ~/.akash/data; cd ~/.akash/data; mv -f /data/* . && akash start --p2p.seeds 27eb432ccd5e895c5c659659120d68b393dd8c60@35.247.65.183:26656,8e2f56098f182ffe2f6fb09280bafe13c63eb42f@46.101.176.149:26656,fff99a2e8f3c9473e4e5ee9a99611a2e599529fd@46.166.138.218:26656
