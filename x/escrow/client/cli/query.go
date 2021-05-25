@@ -5,12 +5,12 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/ovrclk/akash/x/deployment/client/cli"
+	deploymentTypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/escrow/types"
+	marketTypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	deploymentTypes "github.com/ovrclk/akash/x/deployment/types"
-	marketTypes "github.com/ovrclk/akash/x/market/types"
 )
 
 func GetQueryCmd() *cobra.Command {
@@ -98,6 +98,7 @@ func cmdBlocksRemaining() *cobra.Command {
 	}
 
 	flags.AddQueryFlagsToCmd(cmd)
-
+	cli.AddDeploymentIDFlags(cmd.Flags())
+	cli.MarkReqDeploymentIDFlags(cmd)
 	return cmd
 }
