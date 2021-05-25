@@ -20,6 +20,7 @@ require (
 	github.com/libp2p/go-buffer-pool v0.0.3-0.20190619091711-d94255cb3dfc // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/prometheus/client_golang v1.8.0
 	github.com/rakyll/statik v0.1.7
 	github.com/rs/cors v1.7.1-0.20191011001009-dcbccb712443 // indirect
 	github.com/rs/zerolog v1.20.0

@@ -38,13 +38,14 @@ type Client interface {
 }
 
 type node struct {
-	id                 string
-	availableResources atypes.ResourceUnits
+	id                    string
+	availableResources    atypes.ResourceUnits
+	allocateableResources atypes.ResourceUnits
 }
 
 // NewNode returns new Node instance with provided details
-func NewNode(id string, available atypes.ResourceUnits) ctypes.Node {
-	return &node{id: id, availableResources: available}
+func NewNode(id string, allocateable atypes.ResourceUnits, available atypes.ResourceUnits) ctypes.Node {
+	return &node{id: id, allocateableResources: allocateable, availableResources: available}
 }
 
 // ID returns id of node
@@ -59,6 +60,10 @@ func (n *node) Reserve(atypes.ResourceUnits) error {
 // Available returns available units of node
 func (n *node) Available() atypes.ResourceUnits {
 	return n.availableResources
+}
+
+func (n *node) Allocateable() atypes.ResourceUnits {
+	return n.allocateableResources
 }
 
 const (
@@ -229,6 +234,17 @@ func (c *nullClient) Inventory(context.Context) ([]ctypes.Node, error) {
 			Storage: &atypes.Storage{
 				Quantity: atypes.NewResourceValue(nullClientStorage),
 			},
-		}),
+		},
+			atypes.ResourceUnits{
+				CPU: &atypes.CPU{
+					Units: atypes.NewResourceValue(nullClientCPU),
+				},
+				Memory: &atypes.Memory{
+					Quantity: atypes.NewResourceValue(nullClientMemory),
+				},
+				Storage: &atypes.Storage{
+					Quantity: atypes.NewResourceValue(nullClientStorage),
+				},
+			}),
 	}, nil
 }

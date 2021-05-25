@@ -3,6 +3,8 @@ package manifest
 import (
 	"context"
 	"errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"time"
 
 	"github.com/ovrclk/akash/provider/cluster"
@@ -21,6 +23,20 @@ import (
 
 // ErrNotRunning is the error when service is not running
 var ErrNotRunning = errors.New("not running")
+
+var (
+	manifestManagerGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name:        "provider_manifest_manager",
+		Help:        "",
+		ConstLabels: nil,
+	})
+
+	manifestWatchdogGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name:        "provider_order_watchdog",
+		Help:        "",
+		ConstLabels: nil,
+	})
+)
 
 // StatusClient is the interface which includes status of service
 type StatusClient interface {
@@ -104,6 +120,11 @@ type manifestRequest struct {
 	ctx   context.Context
 }
 
+func (s *service) updateGauges() {
+	manifestManagerGauge.Set(float64(len(s.managers)))
+	manifestWatchdogGauge.Set(float64(len(s.managers)))
+}
+
 // Send incoming manifest request.
 func (s *service) Submit(ctx context.Context, did dtypes.DeploymentID, mani manifest.Manifest) error {
 	ch := make(chan error, 1)
@@ -165,8 +186,8 @@ func (s *service) run(leases []event.LeaseWon) {
 	defer s.lc.ShutdownCompleted()
 	defer s.sub.Close()
 
+	s.updateGauges()
 	s.managePreExistingLease(leases)
-
 loop:
 	for {
 		select {
@@ -180,8 +201,7 @@ loop:
 
 			case event.LeaseWon:
 				s.session.Log().Info("lease won", "lease", ev.LeaseID)
-
-				s.handleLease(ev)
+				s.handleLease(ev, true)
 
 			case dtypes.EventDeploymentUpdated:
 				s.session.Log().Info("update received", "deployment", ev.ID, "version", ev.Version)
@@ -244,11 +264,13 @@ loop:
 			s.session.Log().Info("watchdog done", "lease", leaseID)
 			delete(s.watchdogs, leaseID)
 		}
+		s.updateGauges()
 	}
 
 	for len(s.managers) > 0 {
 		manager := <-s.managerch
 		delete(s.managers, dquery.DeploymentPath(manager.daddr))
+		s.updateGauges()
 	}
 
 	s.session.Log().Debug("draining watchdogs", "qty", len(s.watchdogs))
@@ -269,13 +291,14 @@ func (s *service) maybeRemoveWatchdog(deploymentID dtypes.DeploymentID) {
 
 func (s *service) managePreExistingLease(leases []event.LeaseWon) {
 	for _, lease := range leases {
-		s.handleLease(lease)
+		s.handleLease(lease, false)
+		s.updateGauges()
 	}
 }
 
-func (s *service) handleLease(ev event.LeaseWon) {
+func (s *service) handleLease(ev event.LeaseWon, isNew bool) {
 	// Only run this if configured to do so
-	if s.config.ManifestTimeout > time.Duration(0) {
+	if isNew && s.config.ManifestTimeout > time.Duration(0) {
 		// Create watchdog if it does not exist AND a manifest has not been received yet
 		if watchdog := s.watchdogs[ev.LeaseID.DeploymentID()]; watchdog == nil {
 			watchdog = newWatchdog(s.session, s.lc.ShuttingDown(), s.watchdogch, ev.LeaseID, s.config.ManifestTimeout)
