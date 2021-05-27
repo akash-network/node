@@ -11,12 +11,11 @@ import (
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
 var (
 	serviceNameValidationRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
-	envVarValidatorRegex       = regexp.MustCompile(`^[-._a-zA-Z][-._a-zA-Z0-9]*$`)
-	hostnameRegex              = regexp.MustCompile(`^[[:alnum:],-,\.]+\.[[:alpha:]]{2,}$`)
 	hostnameMaxLen             = 255
 )
 
@@ -97,8 +96,7 @@ func validateManifestService(service manifest.Service, helper *validateManifestG
 			envVarName = envVar
 		}
 
-		matches := envVarValidatorRegex.MatchString(envVarName)
-		if !matches {
+		if 0 != len(k8svalidation.IsEnvVarName(envVarName)) {
 			return fmt.Errorf("%w: service %q defines an env. var. with an invalid name %q", ErrInvalidManifest, service.Name, envVarName)
 		}
 
@@ -145,7 +143,7 @@ func validateServiceExpose(serviceName string, serviceExpose manifest.ServiceExp
 }
 
 func isValidHostname(hostname string) bool {
-	return len(hostname) <= hostnameMaxLen && hostnameRegex.MatchString(hostname)
+	return len(hostname) <= hostnameMaxLen && 0 == len(k8svalidation.IsDNS1123Subdomain(hostname))
 }
 
 func ValidateManifestWithGroupSpecs(m *manifest.Manifest, gspecs []*dtypes.GroupSpec) error {

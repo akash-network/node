@@ -48,7 +48,7 @@ The easiest way to get started with Akash is by trying Testnet. Sign up [here](h
 Platform | Arch | Status
 --- | --- | :---
 Darwin | amd64 | ✅ **Supported**
-Darwin | arm64 | ⚠️ **Not Supported**
+Darwin | arm64 | ✅ **Supported**
 Linux | amd64 | ✅ **Supported**
 Linux | arm64 (aka aarch64) | ✅ **Supported**
 Linux | armhf GOARM=5,6,7 | ⚠️ **Not supported**
@@ -81,32 +81,15 @@ Akash is written in Golang and is Apache 2.0 licensed - contributions are welcom
 
 To become a contributor, please see the guide on [contributing](CONTRIBUTING.md)
 
-## Building from Source
-
- * [Dependencies](#dependencies)
- * [Building](#building)
-
-### Dependencies
-
-Akash is developed and tested with [golang 1.16.0+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
-
- Most golang libraries will be installed via [`go modules`](https://github.com/golang/go/wiki/Modules),
- however the following packages:
- 
- ```
-github.com/vektra/mockery/.../
-k8s.io/code-generator/...
-sigs.k8s.io/kind
- ```
- 
- will be installed globally with their binaries placed in `$GOPATH/bin` by `make devdeps-install`.
 
 ### Building
 
+
+Akash is developed and tested with [golang 1.16.0+](https://golang.org/).  Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
+
 ```sh
-go get -d github.com/ovrclk/akash
-cd $GOPATH/src/github.com/ovrclk/akash
-make deps-install
+git clone https://github.com/ovrclk/akash
+cd akash
 make
 
 # dev environment only:
@@ -116,7 +99,7 @@ make setup-devenv
 ## Running
 
 We use thin integration testing environments to simplify
-the development and testing process.  We currently have two environments:
+the development and testing process.  We currently have three environments:
 
 * [Single node](_run/lite): simple (no workloads) single node running locally.
 * [Single node with workloads](_run/single): single node and provider running locally, running workloads within a virtual machine.

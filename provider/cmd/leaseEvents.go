@@ -2,15 +2,19 @@ package cmd
 
 import (
 	"crypto/tls"
+	"sync"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	cmdcommon "github.com/ovrclk/akash/cmd/common"
+	cltypes "github.com/ovrclk/akash/provider/cluster/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 
 	akashclient "github.com/ovrclk/akash/client"
-	cmdcommon "github.com/ovrclk/akash/cmd/common"
 	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
-	mcli "github.com/ovrclk/akash/x/market/client/cli"
 )
 
 func leaseEventsCmd() *cobra.Command {
@@ -36,12 +40,20 @@ func doLeaseEvents(cmd *cobra.Command) error {
 		return err
 	}
 
-	prov, err := providerFromFlags(cmd.Flags())
+	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, cctx.Keyring)
 	if err != nil {
 		return err
 	}
 
-	bid, err := mcli.BidIDFromFlagsForOwner(cmd.Flags(), cctx.FromAddress)
+	dseq, err := dseqFromFlags(cmd.Flags())
+	if err != nil {
+		return err
+	}
+
+	leases, err := leasesForDeployment(cmd.Context(), cctx, cmd.Flags(), dtypes.DeploymentID{
+		Owner: cctx.GetFromAddress().String(),
+		DSeq:  dseq,
+	})
 	if err != nil {
 		return err
 	}
@@ -51,39 +63,69 @@ func doLeaseEvents(cmd *cobra.Command) error {
 		return err
 	}
 
-	follow, err := cmd.Flags().GetBool("follow")
+	follow, err := cmd.Flags().GetBool(flagFollow)
 	if err != nil {
 		return err
 	}
 
-	cert, err := cutils.LoadCertificateForAccount(cctx, cctx.Keyring)
-	if err != nil {
-		return err
+	ctx := cmd.Context()
+
+	type result struct {
+		lid      mtypes.LeaseID
+		provider sdk.Address
+		error    error
+		stream   *gwrest.LeaseKubeEvents
 	}
 
-	gclient, err := gwrest.NewClient(akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})
-	if err != nil {
-		return err
-	}
+	streams := make([]result, 0, len(leases))
 
-	result, err := gclient.LeaseEvents(cmd.Context(), bid.LeaseID(), svcs, follow)
-	if err != nil {
-		return showErrorToUser(err)
-	}
-
-	for res := range result.Stream {
-		if err = cmdcommon.PrintJSON(cctx, res); err != nil {
-			break
+	for _, lid := range leases {
+		stream := result{lid: lid}
+		prov, _ := sdk.AccAddressFromBech32(lid.Provider)
+		gclient, err := gwrest.NewClient(akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})
+		if err == nil {
+			stream.stream, stream.error = gclient.LeaseEvents(ctx, lid, svcs, follow)
+		} else {
+			stream.error = err
 		}
+
+		streams = append(streams, stream)
 	}
 
-	select {
-	case msg, ok := <-result.OnClose:
-		if ok && msg != "" {
-			_ = cctx.PrintString(msg + "\n")
-		}
-	default:
+	var wgStreams sync.WaitGroup
+	type logEntry struct {
+		cltypes.LeaseEvent `json:",inline"`
+		Lid                mtypes.LeaseID `json:"lease_id"`
 	}
+
+	outch := make(chan logEntry)
+
+	go func() {
+		for evt := range outch {
+			_ = cmdcommon.PrintJSON(cctx, evt)
+		}
+	}()
+
+	for _, stream := range streams {
+		if stream.error != nil {
+			continue
+		}
+
+		wgStreams.Add(1)
+		go func(stream result) {
+			defer wgStreams.Done()
+
+			for res := range stream.stream.Stream {
+				outch <- logEntry{
+					LeaseEvent: res,
+					Lid:        stream.lid,
+				}
+			}
+		}(stream)
+	}
+
+	wgStreams.Wait()
+	close(outch)
 
 	return nil
 }

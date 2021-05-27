@@ -2,9 +2,10 @@ package cluster
 
 import (
 	"context"
-
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/event"
@@ -18,6 +19,14 @@ import (
 
 // ErrNotRunning is the error when service is not running
 var ErrNotRunning = errors.New("not running")
+
+var (
+	deploymentManagerGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name:        "provider_deploymetn_manager",
+		Help:        "",
+		ConstLabels: nil,
+	})
+)
 
 // Cluster is the interface that wraps Reserve and Unreserve methods
 type Cluster interface {
@@ -75,8 +84,9 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 		statusch:  make(chan chan<- *ctypes.Status),
 		managers:  make(map[string]*deploymentManager),
 		managerch: make(chan *deploymentManager),
-		log:       log,
-		lc:        lc,
+
+		log: log,
+		lc:  lc,
 	}
 
 	go s.lc.WatchContext(ctx)
@@ -94,8 +104,9 @@ type service struct {
 	inventory *inventoryService
 	hostnames *hostnameService
 
-	statusch  chan chan<- *ctypes.Status
-	managers  map[string]*deploymentManager
+	statusch chan chan<- *ctypes.Status
+	managers map[string]*deploymentManager
+
 	managerch chan *deploymentManager
 
 	log log.Logger
@@ -156,14 +167,20 @@ func (s *service) Status(ctx context.Context) (*ctypes.Status, error) {
 
 }
 
+func (s *service) updateDeploymentManagerGauge() {
+	deploymentManagerGauge.Set(float64(len(s.managers)))
+}
+
 func (s *service) run(deployments []ctypes.Deployment) {
 	defer s.lc.ShutdownCompleted()
 	defer s.sub.Close()
 
+	s.updateDeploymentManagerGauge()
 	for _, deployment := range deployments {
 		key := mquery.LeasePath(deployment.LeaseID())
 		mgroup := deployment.ManifestGroup()
 		s.managers[key] = newDeploymentManager(s, deployment.LeaseID(), &mgroup)
+		s.updateDeploymentManagerGauge()
 	}
 
 loop:
@@ -190,7 +207,6 @@ loop:
 				}
 
 				key := mquery.LeasePath(ev.LeaseID)
-
 				if manager := s.managers[key]; manager != nil {
 					if err := manager.update(mgroup); err != nil {
 						s.log.Error("updating deployment", "err", err, "lease", ev.LeaseID, "group-name", mgroup.Name)
@@ -203,6 +219,7 @@ loop:
 
 			case mtypes.EventLeaseClosed:
 				s.teardownLease(ev.ID)
+
 			}
 
 		case ch := <-s.statusch:
@@ -222,6 +239,7 @@ loop:
 
 			delete(s.managers, mquery.LeasePath(dm.lease))
 		}
+		s.updateDeploymentManagerGauge()
 	}
 
 	s.log.Debug("draining deployment managers...", "qty", len(s.managers))

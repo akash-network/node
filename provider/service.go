@@ -84,6 +84,7 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 	bidengine, err := bidengine.NewService(ctx, session, cluster, bus, bidengine.Config{
 		PricingStrategy: cfg.BidPricingStrategy,
 		Deposit:         cfg.BidDeposit,
+		BidTimeout:      cfg.BidTimeout,
 	})
 	if err != nil {
 		errmsg := "creating bidengine service"
@@ -95,6 +96,7 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 
 	manifestConfig := manifest.ServiceConfig{
 		HTTPServicesRequireAtLeastOneHost: !cfg.DeploymentIngressStaticHosts,
+		ManifestTimeout:                   cfg.ManifestTimeout,
 	}
 
 	manifest, err := manifest.NewService(ctx, session, bus, cluster.HostnameService(), manifestConfig)
@@ -183,7 +185,8 @@ func (s *service) Status(ctx context.Context) (*Status, error) {
 }
 
 func (s *service) Validate(ctx context.Context, gspec dtypes.GroupSpec) (ValidateGroupSpecResult, error) {
-	price, err := s.config.BidPricingStrategy.CalculatePrice(ctx, &gspec)
+	// FUTURE - pass owner here
+	price, err := s.config.BidPricingStrategy.CalculatePrice(ctx, "", &gspec)
 	if err != nil {
 		return ValidateGroupSpecResult{}, err
 	}

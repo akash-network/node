@@ -21,6 +21,8 @@ type Config struct {
 	StorageCommitLevel              float64
 	BlockedHostnames                []string
 	DeploymentIngressStaticHosts    bool
+	BidTimeout                      time.Duration
+	ManifestTimeout                 time.Duration
 }
 
 func NewDefaultConfig() Config {

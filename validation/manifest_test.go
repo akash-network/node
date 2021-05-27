@@ -352,6 +352,15 @@ func TestManifestWithDuplicateHostIsInvalid(t *testing.T) {
 	require.Regexp(t, "^.*hostname.+is duplicated.*$", err)
 }
 
+func TestManifestWithDashInHostname(t *testing.T) {
+	m := simpleManifest()
+	hosts := make([]string, 1)
+	hosts[0] = "a-test.com"
+	m[0].Services[0].Expose[0].Hosts = hosts
+	err := validation.ValidateManifest(m)
+	require.NoError(t, err)
+}
+
 func TestManifestWithBadHostIsInvalid(t *testing.T) {
 	m := simpleManifest()
 	hosts := make([]string, 2)

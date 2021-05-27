@@ -113,7 +113,7 @@ func (nullProviderAttrSignatureService) GetAuditorAttributeSignatures(auditor st
 	return nil, nil // Return no attributes & no error
 }
 
-func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricingStrategy) (*order, orderTestScaffold, <-chan int) {
+func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricingStrategy, callerConfig *Config) (*order, orderTestScaffold, <-chan int) {
 	if pricing == nil {
 		var err error
 		pricing, err = MakeRandomRangePricing()
@@ -142,10 +142,13 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricing
 	mySession := session.New(myLog, scaffold.client, myProvider)
 
 	scaffold.testBus = pubsub.NewBus()
-	cfg := Config{
-		PricingStrategy: pricing,
-		Deposit:         mtypes.DefaultBidMinDeposit,
+	var cfg Config
+	if callerConfig != nil {
+		cfg = *callerConfig // Copy values from caller
 	}
+	// Overwrite some with stuff built in this function
+	cfg.PricingStrategy = pricing
+	cfg.Deposit = mtypes.DefaultBidMinDeposit
 
 	myService, err := NewService(context.Background(), mySession, scaffold.cluster, scaffold.testBus, cfg)
 	require.NoError(t, err)
@@ -179,7 +182,7 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricing
 }
 
 func Test_BidOrderAndUnreserve(t *testing.T) {
-	order, scaffold, _ := makeOrderForTest(t, false, nil)
+	order, scaffold, _ := makeOrderForTest(t, false, nil, nil)
 
 	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 	// Should have called reserve once
@@ -205,9 +208,49 @@ func Test_BidOrderAndUnreserve(t *testing.T) {
 	scaffold.cluster.AssertCalled(t, "Unreserve", scaffold.orderID, mock.Anything)
 }
 
+func Test_BidOrderAndUnreserveOnTimeout(t *testing.T) {
+	order, scaffold, _ := makeOrderForTest(t, false, nil, &Config{
+		BidTimeout: 5 * time.Second,
+	})
+
+	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
+	// Should have called reserve once
+	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
+
+	createBidMsg, ok := broadcast.(*mtypes.MsgCreateBid)
+	require.True(t, ok)
+
+	require.Equal(t, createBidMsg.Order, scaffold.orderID)
+
+	priceDenom := createBidMsg.Price.Denom
+	require.Equal(t, testutil.CoinDenom, priceDenom)
+	priceAmount := createBidMsg.Price.Amount.Int64()
+
+	require.GreaterOrEqual(t, priceAmount, int64(1))
+	require.Less(t, priceAmount, int64(100))
+
+	// After the broadcast call the timeout should take effect
+	// and then close the bid, unreserving capacity in the process
+	broadcast = testutil.ChannelWaitForValue(t, scaffold.broadcasts)
+	_, ok = broadcast.(*mtypes.MsgCloseBid)
+	require.True(t, ok)
+
+	// After the broadcast call shut down happens automatically
+	order.lc.Shutdown(nil)
+	select {
+	case <-time.After(10 * time.Second):
+		t.Fatalf("timed out waiting on shutdown")
+	case <-order.lc.Done():
+		break
+	}
+
+	// Should have called unreserve once
+	scaffold.cluster.AssertCalled(t, "Unreserve", scaffold.orderID, mock.Anything)
+}
+
 func Test_BidOrderPriceTooHigh(t *testing.T) {
 	pricing := testBidPricingStrategy(9999999999)
-	order, scaffold, _ := makeOrderForTest(t, false, pricing)
+	order, scaffold, _ := makeOrderForTest(t, false, pricing, nil)
 
 	select {
 	case <-order.lc.Done(): // Should stop on its own
@@ -230,7 +273,7 @@ func Test_BidOrderPriceTooHigh(t *testing.T) {
 }
 
 func Test_BidOrderAndThenClosedUnreserve(t *testing.T) {
-	order, scaffold, _ := makeOrderForTest(t, false, nil)
+	order, scaffold, _ := makeOrderForTest(t, false, nil, nil)
 
 	testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 	// Should have called reserve once at this point
@@ -252,7 +295,7 @@ func Test_BidOrderAndThenClosedUnreserve(t *testing.T) {
 }
 
 func Test_BidOrderAndThenLeaseCreated(t *testing.T) {
-	order, scaffold, _ := makeOrderForTest(t, false, nil)
+	order, scaffold, _ := makeOrderForTest(t, false, nil, nil)
 
 	// Wait for first broadcast
 	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
@@ -293,7 +336,7 @@ func Test_BidOrderAndThenLeaseCreated(t *testing.T) {
 
 func Test_BidOrderAndThenLeaseCreatedForDifferentDeployment(t *testing.T) {
 
-	order, scaffold, _ := makeOrderForTest(t, false, nil)
+	order, scaffold, _ := makeOrderForTest(t, false, nil, nil)
 
 	// Wait for first broadcast
 	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
@@ -347,7 +390,7 @@ func Test_BidOrderAndThenLeaseCreatedForDifferentDeployment(t *testing.T) {
 
 func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
 
-	order, scaffold, reservationFulfilledNotify := makeOrderForTest(t, true, nil)
+	order, scaffold, reservationFulfilledNotify := makeOrderForTest(t, true, nil, nil)
 
 	// Wait for a reserve call
 	testutil.ChannelWaitForValue(t, scaffold.reserveCallNotify)
@@ -403,7 +446,7 @@ func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
 }
 
 func Test_ShouldRecognizeLeaseCreatedIfBiddingIsSkipped(t *testing.T) {
-	order, scaffold, _ := makeOrderForTest(t, true, nil)
+	order, scaffold, _ := makeOrderForTest(t, true, nil, nil)
 
 	// Wait for a reserve call
 	testutil.ChannelWaitForValue(t, scaffold.reserveCallNotify)
@@ -443,7 +486,7 @@ func Test_ShouldRecognizeLeaseCreatedIfBiddingIsSkipped(t *testing.T) {
 
 type testBidPricingStrategy int64
 
-func (tbps testBidPricingStrategy) CalculatePrice(_ context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (tbps testBidPricingStrategy) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	return sdk.NewInt64Coin(testutil.CoinDenom, int64(tbps)), nil
 }
 
@@ -451,7 +494,7 @@ func Test_BidOrderUsesBidPricingStrategy(t *testing.T) {
 	expectedBid := int64(37)
 	// Create a test strategy that gives a fixed price
 	pricing := testBidPricingStrategy(expectedBid)
-	order, scaffold, _ := makeOrderForTest(t, false, pricing)
+	order, scaffold, _ := makeOrderForTest(t, false, pricing, nil)
 
 	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 
@@ -477,7 +520,7 @@ type alwaysFailsBidPricingStrategy struct {
 	failure error
 }
 
-func (afbps alwaysFailsBidPricingStrategy) CalculatePrice(_ context.Context, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (afbps alwaysFailsBidPricingStrategy) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	return sdk.Coin{}, afbps.failure
 }
 
@@ -486,7 +529,7 @@ var errBidPricingAlwaysFails = errors.New("bid pricing fail in test")
 func Test_BidOrderFailsAndAborts(t *testing.T) {
 	// Create a test strategy that gives a fixed price
 	pricing := alwaysFailsBidPricingStrategy{failure: errBidPricingAlwaysFails}
-	order, scaffold, _ := makeOrderForTest(t, false, pricing)
+	order, scaffold, _ := makeOrderForTest(t, false, pricing, nil)
 
 	<-order.lc.Done() // Stops whenever the bid pricing is called and returns an errro
 

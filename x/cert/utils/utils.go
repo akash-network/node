@@ -116,21 +116,6 @@ func LoadPEMForAccount(cctx client.Context, keyring keyring.Keyring, opts ...Loa
 	}, nil
 }
 
-// LoadCertificateForAccount wraps LoadPEMForAccount and tls.X509KeyPair
-func LoadCertificateForAccount(cctx client.Context, keyring keyring.Keyring, opts ...LoaderOption) (tls.Certificate, error) {
-	pblk, err := LoadPEMForAccount(cctx, keyring, opts...)
-	if err != nil {
-		return tls.Certificate{}, err
-	}
-
-	cert, err := tls.X509KeyPair(pblk.Cert, pblk.Priv)
-	if err != nil {
-		return tls.Certificate{}, err
-	}
-
-	return cert, nil
-}
-
 func LoadAndQueryPEMForAccount(ctx context.Context, cctx client.Context, keyring keyring.Keyring, opts ...LoaderOption) (PEMBlocks, error) {
 	pblk, err := LoadPEMForAccount(cctx, keyring, opts...)
 	if err != nil {
@@ -169,4 +154,19 @@ func LoadAndQueryPEMForAccount(ctx context.Context, cctx client.Context, keyring
 	}
 
 	return pblk, nil
+}
+
+// LoadAndQueryCertificateForAccount wraps LoadAndQueryPEMForAccount and tls.X509KeyPair
+func LoadAndQueryCertificateForAccount(ctx context.Context, cctx client.Context, keyring keyring.Keyring, opts ...LoaderOption) (tls.Certificate, error) {
+	pblk, err := LoadAndQueryPEMForAccount(ctx, cctx, keyring, opts...)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	cert, err := tls.X509KeyPair(pblk.Cert, pblk.Priv)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	return cert, nil
 }

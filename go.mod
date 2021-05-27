@@ -1,6 +1,6 @@
 module github.com/ovrclk/akash
 
-go 1.15
+go 1.16
 
 require (
 	github.com/avast/retry-go v2.7.0+incompatible
@@ -20,6 +20,7 @@ require (
 	github.com/libp2p/go-buffer-pool v0.0.3-0.20190619091711-d94255cb3dfc // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/prometheus/client_golang v1.8.0
 	github.com/rakyll/statik v0.1.7
 	github.com/rs/cors v1.7.1-0.20191011001009-dcbccb712443 // indirect
 	github.com/rs/zerolog v1.20.0
@@ -32,7 +33,7 @@ require (
 	github.com/stretchr/objx v0.2.1-0.20190415111823-35313a95ee26 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/subosito/gotenv v1.2.1-0.20190917103637-de67a6614a4d // indirect
-	github.com/tendermint/tendermint v0.34.8
+	github.com/tendermint/tendermint v0.34.9
 	github.com/tendermint/tm-db v0.6.4
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 // indirect
@@ -58,6 +59,10 @@ replace github.com/grpc-ecosystem/grpc-gateway => github.com/grpc-ecosystem/grpc
 
 replace github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.41.4-akash-4
 
-replace github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.8-akash-1
+replace github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.9-akash-1
 
-replace github.com/cosmos/ledger-cosmos-go => github.com/ovrclk/ledger-cosmos-go v0.13.0
+replace (
+	github.com/cosmos/ledger-cosmos-go => github.com/ovrclk/ledger-cosmos-go v0.13.2
+	github.com/zondax/hid => github.com/troian/hid v0.9.9
+	github.com/zondax/ledger-go => github.com/ovrclk/ledger-go v0.13.4
+)

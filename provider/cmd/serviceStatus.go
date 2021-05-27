@@ -13,12 +13,6 @@ import (
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 )
 
-const (
-	FlagService  = "service"
-	FlagProvider = "provider"
-	FlagDSeq     = "dseq"
-)
-
 func serviceStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "service-status",
@@ -58,7 +52,7 @@ func doServiceStatus(cmd *cobra.Command) error {
 		return err
 	}
 
-	cert, err := cutils.LoadCertificateForAccount(cctx, cctx.Keyring)
+	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, cctx.Keyring)
 	if err != nil {
 		return err
 	}

@@ -75,6 +75,9 @@ const (
 	FlagAuthPem                          = "auth-pem"
 	FlagKubeConfig                       = "kubeconfig"
 	FlagDeploymentRuntimeClass           = "deployment-runtime-class"
+	FlagBidTimeout                       = "bid-timeout"
+	FlagManifestTimeout                  = "manifest-timeout"
+	FlagMetricsListener                  = "metrics-listener"
 )
 
 var (
@@ -239,6 +242,22 @@ func RunCmd() *cobra.Command {
 	if err := viper.BindPFlag(FlagDeploymentRuntimeClass, cmd.Flags().Lookup(FlagDeploymentRuntimeClass)); err != nil {
 		return nil
 	}
+
+	cmd.Flags().Duration(FlagBidTimeout, 5*time.Minute, "time after which bids are cancelled if no lease is created")
+	if err := viper.BindPFlag(FlagBidTimeout, cmd.Flags().Lookup(FlagBidTimeout)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagManifestTimeout, 5*time.Minute, "time after which bids are cancelled if no manifest is received")
+	if err := viper.BindPFlag(FlagManifestTimeout, cmd.Flags().Lookup(FlagManifestTimeout)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().String(FlagMetricsListener, "", "ip and port to start the metrics listener on")
+	if err := viper.BindPFlag(FlagMetricsListener, cmd.Flags().Lookup(FlagMetricsListener)); err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
@@ -328,6 +347,14 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	blockedHostnames := viper.GetStringSlice(FlagDeploymentBlockedHostnames)
 	kubeConfig := viper.GetString(FlagKubeConfig)
 	deploymentRuntimeClass := viper.GetString(FlagDeploymentRuntimeClass)
+	bidTimeout := viper.GetDuration(FlagBidTimeout)
+	manifestTimeout := viper.GetDuration(FlagManifestTimeout)
+	metricsListener := viper.GetString(FlagMetricsListener)
+
+	var metricsRouter http.Handler
+	if len(metricsListener) != 0 {
+		metricsRouter = makeMetricsRouter()
+	}
 
 	if err != nil {
 		return err
@@ -461,6 +488,8 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	config.StorageCommitLevel = overcommitPercentStorage
 	config.BlockedHostnames = blockedHostnames
 	config.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
+	config.BidTimeout = bidTimeout
+	config.ManifestTimeout = manifestTimeout
 
 	config.BidPricingStrategy = pricing
 	service, err := provider.NewService(ctx, cctx, info.GetAddress(), session, bus, cclient, config)
@@ -505,6 +534,21 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		<-ctx.Done()
 		return gateway.Close()
 	})
+
+	if metricsRouter != nil {
+		group.Go(func() error {
+			srv := http.Server{Addr: metricsListener, Handler: metricsRouter}
+			go func() {
+				<-ctx.Done()
+				srv.Close()
+			}()
+			err := srv.ListenAndServe()
+			if errors.Is(err, http.ErrServerClosed) {
+				return nil
+			}
+			return err
+		})
+	}
 
 	err = group.Wait()
 	broadcaster.Close()

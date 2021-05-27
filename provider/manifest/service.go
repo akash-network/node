@@ -3,6 +3,9 @@ package manifest
 import (
 	"context"
 	"errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"time"
 
 	"github.com/ovrclk/akash/provider/cluster"
 
@@ -20,6 +23,20 @@ import (
 
 // ErrNotRunning is the error when service is not running
 var ErrNotRunning = errors.New("not running")
+
+var (
+	manifestManagerGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name:        "provider_manifest_manager",
+		Help:        "",
+		ConstLabels: nil,
+	})
+
+	manifestWatchdogGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name:        "provider_order_watchdog",
+		Help:        "",
+		ConstLabels: nil,
+	})
+)
 
 // StatusClient is the interface which includes status of service
 type StatusClient interface {
@@ -67,6 +84,9 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, ho
 		lc:              lifecycle.New(),
 		hostnameService: hostnameService,
 		config:          cfg,
+
+		watchdogch: make(chan dtypes.DeploymentID),
+		watchdogs:  make(map[dtypes.DeploymentID]*watchdog),
 	}
 
 	go s.lc.WatchContext(ctx)
@@ -80,6 +100,7 @@ type service struct {
 	session session.Session
 	bus     pubsub.Bus
 	sub     pubsub.Subscriber
+	lc      lifecycle.Lifecycle
 
 	statusch chan chan<- *Status
 	mreqch   chan manifestRequest
@@ -87,15 +108,21 @@ type service struct {
 	managers  map[string]*manager
 	managerch chan *manager
 
-	lc lifecycle.Lifecycle
-
 	hostnameService cluster.HostnameServiceClient
+
+	watchdogs  map[dtypes.DeploymentID]*watchdog
+	watchdogch chan dtypes.DeploymentID
 }
 
 type manifestRequest struct {
 	value *submitRequest
 	ch    chan<- error
 	ctx   context.Context
+}
+
+func (s *service) updateGauges() {
+	manifestManagerGauge.Set(float64(len(s.managers)))
+	manifestWatchdogGauge.Set(float64(len(s.managers)))
 }
 
 // Send incoming manifest request.
@@ -159,8 +186,8 @@ func (s *service) run(leases []event.LeaseWon) {
 	defer s.lc.ShutdownCompleted()
 	defer s.sub.Close()
 
+	s.updateGauges()
 	s.managePreExistingLease(leases)
-
 loop:
 	for {
 		select {
@@ -174,8 +201,7 @@ loop:
 
 			case event.LeaseWon:
 				s.session.Log().Info("lease won", "lease", ev.LeaseID)
-
-				s.handleLease(ev)
+				s.handleLease(ev, true)
 
 			case dtypes.EventDeploymentUpdated:
 				s.session.Log().Info("update received", "deployment", ev.ID, "version", ev.Version)
@@ -204,10 +230,12 @@ loop:
 					s.session.Log().Info("lease closed", "lease", ev.ID)
 					manager.removeLease(ev.ID)
 				}
-
 			}
 
 		case req := <-s.mreqch:
+			// Cancel the watchdog (if it exists), since a manifest has been received
+			s.maybeRemoveWatchdog(req.value.Deployment)
+
 			manager, err := s.ensureManager(req.value.Deployment)
 			if err != nil {
 				s.session.Log().Error("error fetching manager for manifest",
@@ -228,23 +256,56 @@ loop:
 			s.session.Log().Info("manager done", "deployment", manager.daddr)
 
 			delete(s.managers, dquery.DeploymentPath(manager.daddr))
+
+			// Cancel the watchdog (if it exists) since the manager has stopped as well
+			s.maybeRemoveWatchdog(manager.daddr)
+
+		case leaseID := <-s.watchdogch:
+			s.session.Log().Info("watchdog done", "lease", leaseID)
+			delete(s.watchdogs, leaseID)
 		}
+		s.updateGauges()
 	}
 
 	for len(s.managers) > 0 {
 		manager := <-s.managerch
 		delete(s.managers, dquery.DeploymentPath(manager.daddr))
+		s.updateGauges()
 	}
 
+	s.session.Log().Debug("draining watchdogs", "qty", len(s.watchdogs))
+	for _, watchdog := range s.watchdogs {
+		if watchdog != nil {
+			leaseID := <-s.watchdogch
+			s.session.Log().Info("watchdog done", "lease", leaseID)
+		}
+	}
+
+}
+
+func (s *service) maybeRemoveWatchdog(deploymentID dtypes.DeploymentID) {
+	if watchdog := s.watchdogs[deploymentID]; watchdog != nil {
+		watchdog.stop()
+	}
 }
 
 func (s *service) managePreExistingLease(leases []event.LeaseWon) {
 	for _, lease := range leases {
-		s.handleLease(lease)
+		s.handleLease(lease, false)
+		s.updateGauges()
 	}
 }
 
-func (s *service) handleLease(ev event.LeaseWon) {
+func (s *service) handleLease(ev event.LeaseWon, isNew bool) {
+	// Only run this if configured to do so
+	if isNew && s.config.ManifestTimeout > time.Duration(0) {
+		// Create watchdog if it does not exist AND a manifest has not been received yet
+		if watchdog := s.watchdogs[ev.LeaseID.DeploymentID()]; watchdog == nil {
+			watchdog = newWatchdog(s.session, s.lc.ShuttingDown(), s.watchdogch, ev.LeaseID, s.config.ManifestTimeout)
+			s.watchdogs[ev.LeaseID.DeploymentID()] = watchdog
+		}
+	}
+
 	manager, err := s.ensureManager(ev.LeaseID.DeploymentID())
 	if err != nil {
 		s.session.Log().Error("error creating manager",
