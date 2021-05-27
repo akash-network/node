@@ -2,6 +2,9 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -10,7 +13,6 @@ import (
 	"github.com/ovrclk/akash/x/escrow/types"
 	marketTypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func GetQueryCmd() *cobra.Command {
@@ -39,8 +41,9 @@ func cmdBlocksRemaining() *cobra.Command {
 				return err
 			}
 
-			owner := viper.GetString("owner")
-			dseq := viper.GetUint64("dseq")
+			owner, err := cmd.Flags().GetString("owner")
+			dseq, err := cmd.Flags().GetUint64("dseq")
+
 			marketClient := marketTypes.NewQueryClient(clientCtx)
 			ctx := context.Background()
 
@@ -69,7 +72,8 @@ func cmdBlocksRemaining() *cobra.Command {
 
 			// Fetch the balance of the escrow account
 			deploymentClient := deploymentTypes.NewQueryClient(clientCtx)
-
+			// fmt.Printf("length of leases, %d \n", len(leases))
+			outputSlice := make([]interface{}, 0)
 			for _, lease := range leases {
 				//  Fetch the time of last settlement
 				res, err := deploymentClient.Deployment(ctx, &deploymentTypes.QueryDeploymentRequest{
@@ -78,21 +82,46 @@ func cmdBlocksRemaining() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				createdAt := lease.CreatedAt
-				balance := res.EscrowAccount.Balance
+				amount := lease.Price.Amount
+				balance := res.EscrowAccount.Balance.Amount
 				settledAt := res.EscrowAccount.SettledAt
-				blockchainHeight := clientCtx.Height
-				_ = createdAt
-				_ = balance
-				_ = settledAt
-				_ = blockchainHeight
+				blockchainHeight, err := cli.CurrentBlockHeight(clientCtx)
 
-				err = clientCtx.PrintString("example")
+				balanceRemain := balance.Int64() - ((int64(blockchainHeight) - settledAt) * (amount.Int64()))
+				blocksRemain := balanceRemain / amount.Int64()
+				blocksPerDay := 86400 / 6.5
+				daysRemain := blocksRemain / int64(blocksPerDay)
+
+				output := struct {
+					BalanceRemain int64 `json:"balance_remaining" yaml:"balance_remaining"`
+					BlocksRemain  int64 `json:"blocks_remaining" yaml:"blocks_remaining"`
+					DaysRemain    int64 `json:"days_remaining" yaml:"days_remaining"`
+				}{
+					BalanceRemain: balanceRemain,
+					BlocksRemain:  blocksRemain,
+					DaysRemain:    daysRemain,
+				}
+				outputSlice = append(outputSlice, output)
+
+			}
+			outputType, err := cmd.Flags().GetString("output")
+			if outputType == "json" {
+				data, err := json.MarshalIndent(outputSlice, " ", "\t")
 				if err != nil {
 					return err
 				}
+				clientCtx.PrintBytes(data)
+			} else {
+				data, err := yaml.Marshal(outputSlice)
+				if err != nil {
+					return err
+				}
+				clientCtx.PrintBytes(data)
 			}
 
+			if err != nil {
+				return err
+			}
 			return nil
 		},
 	}
