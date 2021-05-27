@@ -6,13 +6,16 @@ import (
 	metricsutils "github.com/ovrclk/akash/util/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"io"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"os"
 	"path"
+	"strings"
 
 	"k8s.io/client-go/util/flowcontrol"
 
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
@@ -33,12 +36,18 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"k8s.io/client-go/tools/pager"
+	executil "k8s.io/client-go/util/exec"
 
 	"github.com/ovrclk/akash/manifest"
 	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+
+	kubev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 var (
@@ -69,6 +78,7 @@ type client struct {
 	ns       string
 	settings Settings
 	log      log.Logger
+	kubeContentConfig *restclient.Config
 }
 
 // NewClient returns new Kubernetes Client instance with provided logger, host and ns. Returns error incase of failure
@@ -87,6 +97,7 @@ func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client
 		return nil, errors.Wrap(err, "kube: error building config flags")
 	}
 	config.RateLimiter = flowcontrol.NewFakeAlwaysRateLimiter()
+
 	kc, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, errors.Wrap(err, "kube: error creating kubernetes client")
@@ -117,6 +128,7 @@ func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client
 		metc:     metc,
 		ns:       ns,
 		log:      log.With("module", "provider-cluster-kube"),
+		kubeContentConfig: config,
 	}, nil
 
 }
@@ -872,4 +884,161 @@ func (c *client) deploymentsForLease(ctx context.Context, lid mtypes.LeaseID) ([
 	}
 
 	return deployments.Items, nil
+}
+
+type execResult struct {
+	exitCode int
+}
+
+func (er execResult) ExitCode() int{
+	return er.exitCode
+}
+
+func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName string, cmd []string, stdin io.Reader,
+stdout io.Writer,
+stderr io.Writer, tty bool,
+	tsq remotecommand.TerminalSizeQueue) (cluster.ExecResult, error) {
+
+
+	// TODO - check if deployment actually exists in the first place before querying kubernetes
+
+	namespace := lidNS(leaseID)
+
+	deployments, err := c.kc.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{
+		TypeMeta:             metav1.TypeMeta{},
+		LabelSelector:        "",
+		FieldSelector:        "",
+		Watch:                false,
+		AllowWatchBookmarks:  false,
+		ResourceVersion:      "",
+		ResourceVersionMatch: "",
+		TimeoutSeconds:       nil,
+		Limit:                0,
+		Continue:             "",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed getting deployments for namespace %q", err, namespace)
+	}
+
+	// If no deployments are found yet then the deployment hasn't been spun up kubernetes yet
+	if 0 == len(deployments.Items) {
+		return nil, cluster.ErrDeploymentNotYetRunning
+	}
+
+	serviceExists := false
+	for _, deployment := range deployments.Items {
+		if serviceName == deployment.GetName() {
+			serviceExists = true
+		}
+
+	}
+	if !serviceExists {
+		return nil, cluster.ErrExecNoServiceWithName
+	}
+
+	pods, err := c.kc.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		TypeMeta:             metav1.TypeMeta{},
+		LabelSelector:        fmt.Sprintf("akash.network/manifest-service=%s", serviceName),
+		FieldSelector:        "",
+		Watch:                false,
+		AllowWatchBookmarks:  false,
+		ResourceVersion:      "",
+		ResourceVersionMatch: "",
+		TimeoutSeconds:       nil,
+		Limit:                0,
+		Continue:             "",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed getting pods in namespace %q", err, namespace)
+	}
+
+	// If no pods are found yet then the deployment hasn't been spun up kubernetes yet
+	if 0 == len(pods.Items) {
+		return nil, cluster.ErrDeploymentNotYetRunning
+	}
+
+	var podName string
+	for _, pod := range pods.Items {
+		podName = pod.Name
+	}
+
+	// Pod name not found, so it is not running
+	if len(podName) == 0 {
+		return nil, cluster.ErrExecServiceNotRunning
+	}
+
+	const subResource = "exec"
+
+	containerName := serviceName
+
+	groupVersion := schema.GroupVersion{Group: "api", Version: "v1"}
+	myScheme := runtime.NewScheme()
+	err = kubev1.AddToScheme(myScheme)
+	if err != nil {
+		return nil, err
+	}
+	myParameterCodec := runtime.NewParameterCodec(myScheme)
+	myScheme.AddKnownTypes(groupVersion, &corev1.PodExecOptions{})
+
+	kubeConfig := *c.kubeContentConfig // Make a local copy of the configuration
+	kubeConfig.GroupVersion = &groupVersion
+
+	codecFactory := serializer.NewCodecFactory(myScheme)
+	negotiatedSerializer := runtime.NegotiatedSerializer(codecFactory)
+	kubeConfig.NegotiatedSerializer = negotiatedSerializer
+
+	kubeRestClient, err := restclient.RESTClientFor(&kubeConfig)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed getting REST client", err)
+	}
+
+	c.log.Info("Opening container shell", "namespace", namespace, "pod", podName, "container", containerName)
+	if tty {
+		stderr = nil
+	}
+	// TODO - probably need to figure out what happens here with multiple containers and try and select the
+	// same container each time if possible
+	req := kubeRestClient.Post().Resource("pods").Name(podName).Namespace(namespace).SubResource(subResource)
+	req.VersionedParams(&corev1.PodExecOptions{
+		Container: containerName,
+		Command: cmd,
+		Stdin: stdin != nil,
+		Stdout: stdout != nil,
+		Stderr: stderr != nil,
+		TTY: tty,
+	}, myParameterCodec)
+
+	exec, err := remotecommand.NewSPDYExecutor(&kubeConfig, "POST", req.URL())
+	if err != nil {
+		return nil, fmt.Errorf("%w: execution via SPDY failed", err)
+	}
+
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:             stdin, // any reader
+		Stdout:            stdout, // any writer
+		Stderr:            stderr, // any writer
+		Tty:               tty,
+		TerminalSizeQueue: tsq,
+	})
+	if err == nil {
+		// No error means the process returned a 0 exit code
+		return execResult{exitCode: 0}, nil
+	}
+
+	// Check to see if the process ran & returned an exit code
+	// If this is true, don't return an error. Something ran in the
+	// container which is what this code was trying to do
+	if err, ok := err.(executil.CodeExitError); ok {
+		return execResult{exitCode: err.Code}, nil
+	}
+
+	// Some errors are basically untyped
+	if strings.Contains(err.Error(), "error executing command in container") {
+		if strings.Contains(err.Error(), "no such file or directory") {
+			return nil, cluster.ErrCommandDoesNotExist
+		}
+		return nil, cluster.ErrCommandExecutionFailed
+	}
+
+	return nil, err
 }

@@ -3,7 +3,9 @@ package cluster
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
+	"k8s.io/client-go/tools/remotecommand"
 	"math/rand"
 	"sync"
 	"time"
@@ -35,6 +37,30 @@ type Client interface {
 	TeardownLease(context.Context, mtypes.LeaseID) error
 	Deployments(context.Context) ([]ctypes.Deployment, error)
 	Inventory(context.Context) ([]ctypes.Node, error)
+    Exec(ctx context.Context,
+    	lID mtypes.LeaseID,
+    	service string,
+    	cmd []string,
+    	stdin io.Reader,
+    	stdout io.Writer,
+    	stderr io.Writer,
+    	tty bool,
+    	tsq remotecommand.TerminalSizeQueue) (ExecResult, error)
+}
+
+type ExecResult interface {
+	ExitCode() int
+}
+
+var ErrExecNoServiceWithName = errors.New("no such service exists with that name")
+var ErrExecServiceNotRunning = errors.New("service with that name is not running")
+var ErrCommandExecutionFailed = errors.New("command execution failed")
+var ErrCommandDoesNotExist = errors.New("command could not be executed because it does not exist")
+var ErrDeploymentNotYetRunning = errors.New("deployment is not yet active")
+
+func ErrorIsOkToSendToClient(err error) bool {
+	return errors.Is(err, ErrExecNoServiceWithName) || errors.Is(err, ErrExecServiceNotRunning) ||
+		errors.Is(err, ErrCommandExecutionFailed) || errors.Is(err, ErrCommandDoesNotExist) || errors.Is(err, ErrDeploymentNotYetRunning)
 }
 
 type node struct {
@@ -247,4 +273,8 @@ func (c *nullClient) Inventory(context.Context) ([]ctypes.Node, error) {
 				},
 			}),
 	}, nil
+}
+
+func (c *nullClient) Exec(context.Context, mtypes.LeaseID, string, []string, io.Reader, io.Writer, io.Writer, bool, remotecommand.TerminalSizeQueue) (ExecResult, error) {
+	return nil, errors.New("not implemented")
 }

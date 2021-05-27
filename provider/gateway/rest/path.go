@@ -31,6 +31,10 @@ func leaseStatusPath(id mtypes.LeaseID) string {
 	return fmt.Sprintf("%s/status", leasePath(id))
 }
 
+func leaseShellPath(lID mtypes.LeaseID) string {
+	return fmt.Sprintf("%s/shell", leasePath(lID))
+}
+
 func leaseEventsPath(id mtypes.LeaseID) string {
 	return fmt.Sprintf("%s/kubeevents", leasePath(id))
 }

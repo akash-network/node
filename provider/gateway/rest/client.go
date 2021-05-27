@@ -5,9 +5,12 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/ovrclk/akash/util/wsutil"
 	"io"
+	"k8s.io/client-go/tools/remotecommand"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -47,6 +50,12 @@ type Client interface {
 	LeaseEvents(ctx context.Context, id mtypes.LeaseID, services string, follow bool) (*LeaseKubeEvents, error)
 	LeaseLogs(ctx context.Context, id mtypes.LeaseID, services string, follow bool, tailLines int64) (*ServiceLogs, error)
 	ServiceStatus(ctx context.Context, id mtypes.LeaseID, service string) (*cltypes.ServiceStatus, error)
+	LeaseShell(ctx context.Context, id mtypes.LeaseID, service string, cmd []string,
+		stdin io.ReadCloser,
+		stdout io.Writer,
+		stderr io.Writer,
+		tty bool,
+		tsq <- chan remotecommand.TerminalSize) error
 }
 
 type LeaseKubeEvent struct {
@@ -360,6 +369,195 @@ func (c *client) LeaseStatus(ctx context.Context, id mtypes.LeaseID) (*cltypes.L
 	}
 
 	return &obj, nil
+}
+
+func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service string, cmd []string,
+	stdin io.ReadCloser,
+	stdout io.Writer,
+	stderr io.Writer,
+	tty bool,
+	terminalResize <- chan remotecommand.TerminalSize) error {
+
+	endpoint, err := url.Parse(c.host.String() + "/" + leaseShellPath(lID))
+	if err != nil {
+		return err
+	}
+
+	switch endpoint.Scheme {
+	case schemeWSS, schemeHTTPS:
+		endpoint.Scheme = schemeWSS
+	default:
+		return errors.Errorf("invalid uri scheme %q", endpoint.Scheme)
+	}
+
+	query := url.Values{}
+	query.Set("service", service)
+	ttyValue := "0"
+	if tty {
+		ttyValue = "1"
+	}
+	query.Set("tty", ttyValue)
+
+	stdinValue := "0"
+	if stdin != nil {
+		stdinValue = "1"
+	}
+	query.Set("stdin", stdinValue)
+
+	for i, v := range cmd {
+		query.Set(fmt.Sprintf("cmd%d", i), v)
+	}
+
+	endpoint.RawQuery = query.Encode()
+
+	fmt.Printf("dialing %q\n", endpoint.String())
+
+	conn, response, err := c.wsclient.DialContext(ctx, endpoint.String(), nil)
+	if err != nil {
+		if errors.Is(err, websocket.ErrBadHandshake) {
+			buf := &bytes.Buffer{}
+			_, _ = io.Copy(buf, response.Body)
+
+			return ClientResponseError{
+				Status:  response.StatusCode,
+				Message: buf.String(),
+			}
+		}
+		return err
+	}
+
+	l := &sync.Mutex{}
+	subctx, subcancel := context.WithCancel(ctx)
+	wg := &sync.WaitGroup{}
+	if stdin != nil {
+		wg.Add(1)
+		go func (){
+			defer wg.Done()
+			data := make([]byte, 256)
+
+			writer := wsutil.NewWsWriterWrapper(conn, LeaseShellCodeStdin, l)
+			for {
+				n, err := stdin.Read(data)
+				if err != nil {
+					// TODO - record error
+					return
+				}
+
+				_, err = writer.Write(data[0:n])
+				if err != nil {
+					// TODO - record error
+					return
+				}
+			}
+		}()
+	}
+
+	if tty && terminalResize != nil {
+		wg.Add(1)
+		go func () {
+			defer wg.Done()
+			var w io.Writer
+			w = wsutil.NewWsWriterWrapper(conn, LeaseShellCodeTerminalResize, l)
+			buf := bytes.Buffer{}
+			for {
+				var size remotecommand.TerminalSize
+				var ok bool
+				select {
+				case <- subctx.Done():
+					return
+				case size, ok = <- terminalResize:
+					if !ok { // Channel has closed
+						return
+					}
+
+				}
+
+				// Clear the buffer, then pack in both values
+				(&buf).Reset()
+				err = binary.Write(&buf, binary.BigEndian, size.Width)
+				if err != nil {
+					// TODO - record error
+					return
+				}
+				err = binary.Write(&buf, binary.BigEndian, size.Height)
+				if err != nil {
+					// TODO - record error
+					return
+				}
+
+				_, err = w.Write((&buf).Bytes())
+				if err != nil {
+					// TODO - record error
+					return
+				}
+			}
+		}()
+	}
+
+	var remoteError *bytes.Buffer
+	var connectionError error
+	loop:
+	for {
+		messageType, data, err := conn.ReadMessage()
+		if err != nil {
+			return err
+		}
+		if messageType != websocket.BinaryMessage {
+			continue // Just ignore anything else
+		}
+
+		if len(data) == 0 {
+			connectionError = errors.New("provider sent a message that is too short to parse")
+		}
+
+		msgId := data[0] // First byte is always message ID
+		msg := data[1:] // remainder is the message
+		switch msgId {
+		case LeaseShellCodeStdout:
+			stdout.Write(msg) // TODO - check error
+		case LeaseShellCodeStderr:
+			stderr.Write(msg) // TODO - check error
+		case LeaseShellCodeResult:
+			remoteError = bytes.NewBuffer(msg)
+			break loop
+		case LeaseShellCodeFailure:
+			connectionError = errors.New("the provider encountered an unknown error")
+			break loop
+		default:
+			connectionError = fmt.Errorf("provider sent unknown message ID %d", messageType)
+			break loop
+		}
+
+	}
+
+	subcancel()
+
+	if stdin != nil {
+		stdin.Close() // TODO - check if this actually works
+	}
+
+	if remoteError != nil {
+		dec := json.NewDecoder(remoteError)
+		var v leaseShellResponse
+		err := dec.Decode(&v)
+		if err != nil {
+			return fmt.Errorf("%w: failed parsing response data from provider", err)
+		}
+
+		if 0 != len(v.Message) {
+			return errors.New(v.Message)
+		}
+
+		if 0 != v.ExitCode {
+			return fmt.Errorf("remote process exited with code %d", v.ExitCode)
+		}
+
+	}
+
+	// TODO - re enable me after fixing the goroutine reading from stdin
+	//wg.Wait()
+
+	return connectionError
 }
 
 func (c *client) LeaseEvents(ctx context.Context, id mtypes.LeaseID, _ string, follow bool) (*LeaseKubeEvents, error) {
