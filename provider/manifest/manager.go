@@ -35,19 +35,13 @@ var (
 	ErrNoLeaseForDeployment    = errors.New("no lease for deployment")
 )
 
-func newManager(h *service, daddr dtypes.DeploymentID) (*manager, error) {
+func newManager(h *service, daddr dtypes.DeploymentID) *manager {
 	session := h.session.ForModule("manifest-manager")
-
-	sub, err := h.sub.Clone()
-	if err != nil {
-		return nil, err
-	}
 
 	m := &manager{
 		daddr:           daddr,
 		session:         session,
 		bus:             h.bus,
-		sub:             sub,
 		leasech:         make(chan event.LeaseWon),
 		rmleasech:       make(chan mtypes.LeaseID),
 		manifestch:      make(chan manifestRequest),
@@ -61,7 +55,7 @@ func newManager(h *service, daddr dtypes.DeploymentID) (*manager, error) {
 	go m.lc.WatchChannel(h.lc.ShuttingDown())
 	go m.run(h.managerch)
 
-	return m, nil
+	return m
 }
 
 // 'manager' facilitates operations around a configured Deployment.
@@ -70,7 +64,6 @@ type manager struct {
 	daddr   dtypes.DeploymentID
 	session session.Session
 	bus     pubsub.Bus
-	sub     pubsub.Subscriber
 
 	leasech    chan event.LeaseWon
 	rmleasech  chan mtypes.LeaseID
