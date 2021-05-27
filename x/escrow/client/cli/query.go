@@ -42,7 +42,14 @@ func cmdBlocksRemaining() *cobra.Command {
 			}
 
 			owner, err := cmd.Flags().GetString("owner")
+			if err != nil {
+				return err
+			}
+
 			dseq, err := cmd.Flags().GetUint64("dseq")
+			if err != nil {
+				return err
+			}
 
 			marketClient := marketTypes.NewQueryClient(clientCtx)
 			ctx := context.Background()
@@ -86,7 +93,9 @@ func cmdBlocksRemaining() *cobra.Command {
 				balance := res.EscrowAccount.Balance.Amount
 				settledAt := res.EscrowAccount.SettledAt
 				blockchainHeight, err := cli.CurrentBlockHeight(clientCtx)
-
+				if err != nil {
+					return err
+				}
 				balanceRemain := balance.Int64() - ((int64(blockchainHeight) - settledAt) * (amount.Int64()))
 				blocksRemain := balanceRemain / amount.Int64()
 				blocksPerDay := 86400 / 6.5
