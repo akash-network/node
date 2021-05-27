@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"context"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/ovrclk/akash/x/market/types"
@@ -36,7 +34,7 @@ func cmdGetOrders() *cobra.Command {
 				Pagination: pageReq,
 			}
 
-			res, err := queryClient.Orders(context.Background(), params)
+			res, err := queryClient.Orders(cmd.Context(), params)
 			if err != nil {
 				return err
 			}
@@ -69,7 +67,7 @@ func cmdGetOrder() *cobra.Command {
 				return err
 			}
 
-			res, err := queryClient.Order(context.Background(), &types.QueryOrderRequest{ID: id})
+			res, err := queryClient.Order(cmd.Context(), &types.QueryOrderRequest{ID: id})
 			if err != nil {
 				return err
 			}

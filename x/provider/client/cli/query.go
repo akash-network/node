@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"context"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -48,7 +46,7 @@ func cmdGetProviders() *cobra.Command {
 				Pagination: pageReq,
 			}
 
-			res, err := queryClient.Providers(context.Background(), params)
+			res, err := queryClient.Providers(cmd.Context(), params)
 			if err != nil {
 				return err
 			}
@@ -81,7 +79,7 @@ func cmdGetProvider() *cobra.Command {
 				return err
 			}
 
-			res, err := queryClient.Provider(context.Background(), &types.QueryProviderRequest{Owner: owner.String()})
+			res, err := queryClient.Provider(cmd.Context(), &types.QueryProviderRequest{Owner: owner.String()})
 			if err != nil {
 				return err
 			}

@@ -43,7 +43,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.network = network.New(s.T(), cfg)
 
 	kb := s.network.Validators[0].ClientCtx.Keyring
-	_, _, err := kb.NewMnemonic("keyBar", keyring.English, sdk.FullFundraiserPath, hd.Secp256k1)
+	_, _, err := kb.NewMnemonic("keyBar", keyring.English, sdk.FullFundraiserPath, keyring.DefaultBIP39Passphrase, hd.Secp256k1)
 	s.Require().NoError(err)
 
 	_, err = s.network.WaitForHeight(1)
@@ -96,7 +96,7 @@ func (s *IntegrationTestSuite) Test1QueryOrders() {
 	s.Require().NoError(err)
 
 	out := &dtypes.QueryDeploymentsResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1)
 	s.Require().Equal(val.Address.String(), out.Deployments[0].Deployment.DeploymentID.Owner)
@@ -106,7 +106,7 @@ func (s *IntegrationTestSuite) Test1QueryOrders() {
 	s.Require().NoError(err)
 
 	result := &types.QueryOrdersResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), result)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), result)
 	s.Require().NoError(err)
 	s.Require().Len(result.Orders, 1)
 	orders := result.Orders
@@ -118,7 +118,7 @@ func (s *IntegrationTestSuite) Test1QueryOrders() {
 	s.Require().NoError(err)
 
 	var order types.Order
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &order)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), &order)
 	s.Require().NoError(err)
 	s.Require().Equal(createdOrder, order)
 
@@ -131,7 +131,7 @@ func (s *IntegrationTestSuite) Test1QueryOrders() {
 	s.Require().NoError(err)
 
 	result = &types.QueryOrdersResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), result)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), result)
 	s.Require().NoError(err)
 	s.Require().Len(result.Orders, 1)
 	s.Require().Equal(createdOrder, result.Orders[0])
@@ -181,7 +181,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	s.Require().NoError(err)
 
 	var balRes banktypes.QueryAllBalancesResponse
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &balRes)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), &balRes)
 	s.Require().NoError(err)
 	s.Require().Equal(sendTokens.Amount, balRes.Balances.AmountOf(s.cfg.BondDenom))
 
@@ -204,7 +204,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	s.Require().NoError(err)
 
 	out := &ptypes.QueryProvidersResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Providers, 1, "Provider Creation Failed in TestCreateBid")
 	s.Require().Equal(keyBar.GetAddress().String(), out.Providers[0].Owner)
@@ -214,7 +214,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	s.Require().NoError(err)
 
 	result := &types.QueryOrdersResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), result)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), result)
 	s.Require().NoError(err)
 	s.Require().Len(result.Orders, 1)
 
@@ -242,7 +242,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	s.Require().NoError(err)
 
 	bidRes := &types.QueryBidsResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), bidRes)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), bidRes)
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
 	bids := bidRes.Bids
@@ -255,7 +255,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 
 	var bid types.QueryBidResponse
 	fmt.Println(string(resp.Bytes()))
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &bid)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), &bid)
 	s.Require().NoError(err)
 	s.Require().Equal(createdBid, bid.Bid)
 
@@ -268,7 +268,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	s.Require().NoError(err)
 
 	bidRes = &types.QueryBidsResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), bidRes)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), bidRes)
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
 	s.Require().Equal(createdBid, bidRes.Bids[0].Bid)
@@ -314,7 +314,7 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().NoError(err)
 
 	leaseRes := &types.QueryLeasesResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), leaseRes)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), leaseRes)
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
 	leases := leaseRes.Leases
@@ -326,7 +326,7 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().NoError(err)
 
 	var lease types.QueryLeaseResponse
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &lease)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), &lease)
 	s.Require().NoError(err)
 	s.Require().Equal(createdLease, lease.Lease)
 
@@ -349,7 +349,7 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().NoError(err)
 
 	bidRes := &types.QueryBidsResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), bidRes)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), bidRes)
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
 	s.Require().Equal(keyBar.GetAddress().String(), bidRes.Bids[0].Bid.BidID.Provider)
@@ -359,7 +359,7 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().NoError(err)
 
 	leaseRes = &types.QueryLeasesResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), leaseRes)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), leaseRes)
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
 
@@ -390,7 +390,7 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	s.Require().NoError(err)
 
 	result := &types.QueryOrdersResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), result)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), result)
 	s.Require().NoError(err)
 	openedOrders := result.Orders
 	s.Require().Len(openedOrders, 0)

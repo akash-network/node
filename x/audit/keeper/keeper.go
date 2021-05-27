@@ -24,16 +24,16 @@ type IKeeper interface {
 // Keeper of the provider store
 type Keeper struct {
 	skey sdk.StoreKey
-	cdc  codec.BinaryMarshaler
+	cdc  codec.BinaryCodec
 }
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey) Keeper {
 	return Keeper{cdc: cdc, skey: skey}
 }
 
 // Codec returns keeper codec
-func (k Keeper) Codec() codec.BinaryMarshaler {
+func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
 }
 
@@ -47,7 +47,7 @@ func (k Keeper) GetProviderByAuditor(ctx sdk.Context, id types.ProviderID) (type
 	}
 
 	var val types.Provider
-	k.cdc.MustUnmarshalBinaryBare(buf, &val)
+	k.cdc.MustUnmarshal(buf, &val)
 
 	return val, true
 }
@@ -65,7 +65,7 @@ func (k Keeper) GetProviderAttributes(ctx sdk.Context, id sdk.Address) (types.Pr
 
 	for ; iter.Valid(); iter.Next() {
 		var val types.Provider
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		attr = append(attr, val)
 	}
 
@@ -92,7 +92,7 @@ func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.Provi
 	buf := store.Get(key)
 	if buf != nil {
 		tmp := types.Provider{}
-		k.cdc.MustUnmarshalBinaryBare(buf, &tmp)
+		k.cdc.MustUnmarshal(buf, &tmp)
 
 		kv := make(map[string]string)
 
@@ -120,7 +120,7 @@ func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.Provi
 		return prov.Attributes[i].Key < prov.Attributes[j].Key
 	})
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&prov))
+	store.Set(key, k.cdc.MustMarshal(&prov))
 
 	ctx.EventManager().EmitEvent(
 		types.NewEventTrustedAuditorCreated(id.Owner, id.Auditor).ToSDKEvent(),
@@ -147,7 +147,7 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 		}
 
 		tmp := types.Provider{}
-		k.cdc.MustUnmarshalBinaryBare(buf, &tmp)
+		k.cdc.MustUnmarshal(buf, &tmp)
 
 		kv := make(map[string]string)
 
@@ -184,7 +184,7 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 
 			prov.Attributes = attr
 
-			store.Set(key, k.cdc.MustMarshalBinaryBare(&prov))
+			store.Set(key, k.cdc.MustMarshal(&prov))
 		}
 	}
 
@@ -206,7 +206,7 @@ func (k Keeper) WithProviders(ctx sdk.Context, fn func(types.Provider) bool) {
 
 	for ; iter.Valid(); iter.Next() {
 		var val types.Provider
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
 		}
@@ -223,7 +223,7 @@ func (k Keeper) WithProvider(ctx sdk.Context, id sdk.Address, fn func(types.Prov
 
 	for ; iter.Valid(); iter.Next() {
 		var val types.Provider
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
 		}

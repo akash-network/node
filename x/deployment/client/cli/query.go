@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"context"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/ovrclk/akash/x/deployment/types"
@@ -56,7 +54,7 @@ func cmdDeployments() *cobra.Command {
 				Pagination: pageReq,
 			}
 
-			res, err := queryClient.Deployments(context.Background(), params)
+			res, err := queryClient.Deployments(cmd.Context(), params)
 			if err != nil {
 				return err
 			}
@@ -90,7 +88,7 @@ func cmdDeployment() *cobra.Command {
 				return err
 			}
 
-			res, err := queryClient.Deployment(context.Background(), &types.QueryDeploymentRequest{ID: id})
+			res, err := queryClient.Deployment(cmd.Context(), &types.QueryDeploymentRequest{ID: id})
 			if err != nil {
 				return err
 			}
@@ -139,7 +137,7 @@ func cmdGetGroup() *cobra.Command {
 				return err
 			}
 
-			res, err := queryClient.Group(context.Background(), &types.QueryGroupRequest{ID: id})
+			res, err := queryClient.Group(cmd.Context(), &types.QueryGroupRequest{ID: id})
 			if err != nil {
 				return err
 			}

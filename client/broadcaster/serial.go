@@ -47,7 +47,7 @@ type serialBroadcaster struct {
 func NewSerialClient(log log.Logger, cctx sdkclient.Context, txf tx.Factory, info keyring.Info) (SerialClient, error) {
 
 	// populate account number, current sequence number
-	poptxf, err := tx.PrepareFactory(cctx, txf)
+	poptxf, err := PrepareFactory(cctx, txf)
 	if err != nil {
 		return nil, err
 	}

@@ -41,7 +41,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 	pageRes, err := sdkquery.FilteredPaginate(orderStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		var order types.Order
 
-		err := k.cdc.UnmarshalBinaryBare(value, &order)
+		err := k.cdc.Unmarshal(value, &order)
 		if err != nil {
 			return false, err
 		}
@@ -108,7 +108,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 	pageRes, err := sdkquery.FilteredPaginate(bidStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		var bid types.Bid
 
-		err := k.cdc.UnmarshalBinaryBare(value, &bid)
+		err := k.cdc.Unmarshal(value, &bid)
 		if err != nil {
 			return false, err
 		}
@@ -195,7 +195,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 	pageRes, err := sdkquery.FilteredPaginate(leaseStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		var lease types.Lease
 
-		err := k.cdc.UnmarshalBinaryBare(value, &lease)
+		err := k.cdc.Unmarshal(value, &lease)
 		if err != nil {
 			return false, err
 		}

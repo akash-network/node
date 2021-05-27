@@ -173,3 +173,14 @@ func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 		),
 	}
 }
+
+func akashVersionMaps(vm module.VersionMap) module.VersionMap {
+	vm["audit"] = audit.AppModule{}.ConsensusVersion()
+	vm["cert"] = cert.AppModule{}.ConsensusVersion()
+	vm["deployment"] = deployment.AppModule{}.ConsensusVersion()
+	vm["escrow"] = escrow.AppModule{}.ConsensusVersion()
+	vm["market"] = market.AppModule{}.ConsensusVersion()
+	vm["provider"] = provider.AppModule{}.ConsensusVersion()
+
+	return vm
+}

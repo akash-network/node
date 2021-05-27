@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"context"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/ovrclk/akash/x/market/types"
@@ -36,7 +34,7 @@ func cmdGetLeases() *cobra.Command {
 				Pagination: pageReq,
 			}
 
-			res, err := queryClient.Leases(context.Background(), params)
+			res, err := queryClient.Leases(cmd.Context(), params)
 			if err != nil {
 				return err
 			}
@@ -70,7 +68,7 @@ func cmdGetLease() *cobra.Command {
 				return err
 			}
 
-			res, err := queryClient.Lease(context.Background(), &types.QueryLeaseRequest{ID: types.MakeLeaseID(bidID)})
+			res, err := queryClient.Lease(cmd.Context(), &types.QueryLeaseRequest{ID: types.MakeLeaseID(bidID)})
 			if err != nil {
 				return err
 			}

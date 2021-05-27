@@ -27,7 +27,7 @@ const (
 
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simtypes.AppParams, cdc codec.JSONMarshaler, ak govtypes.AccountKeeper,
+	appParams simtypes.AppParams, cdc codec.JSONCodec, ak govtypes.AccountKeeper,
 	ks keepers.Keepers) simulation.WeightedOperations {
 	var (
 		weightMsgCreateBid  int
@@ -142,9 +142,9 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtype
 		_, _, err = app.Deliver(txGen.TxEncoder(), tx)
 		switch {
 		case err == nil:
-			return simtypes.NewOperationMsg(msg, true, ""), nil, nil
+			return simtypes.NewOperationMsg(msg, true, "", nil), nil, nil
 		case errors.Is(err, types.ErrBidExists):
-			return simtypes.NewOperationMsg(msg, false, ""), nil, nil
+			return simtypes.NewOperationMsg(msg, false, "", nil), nil, nil
 		default:
 			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to deliver mock tx"), nil, err
 		}
@@ -218,7 +218,7 @@ func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes
 			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to deliver tx"), nil, err
 		}
 
-		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(msg, true, "", nil), nil, nil
 	}
 }
 

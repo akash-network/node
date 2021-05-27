@@ -4,6 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ovrclk/akash/client/broadcaster"
 	"github.com/spf13/pflag"
 )
 
@@ -31,13 +32,13 @@ func BuildAndBroadcastTx(clientCtx client.Context, flags *pflag.FlagSet, msgs []
 		return nil, err
 	}
 
-	txf, err = tx.PrepareFactory(clientCtx, txf)
+	txf, err = broadcaster.PrepareFactory(clientCtx, txf)
 	if err != nil {
 		return nil, err
 	}
 
 	// If users pass gas adjustment, then calculate gas
-	_, adjusted, err := tx.CalculateGas(clientCtx.QueryWithData, txf, msgs...)
+	_, adjusted, err := broadcaster.CalculateGas(clientCtx.QueryWithData, txf, msgs...)
 	if err != nil {
 		return nil, err
 	}

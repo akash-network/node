@@ -11,7 +11,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -141,7 +141,7 @@ func validateTxSuccessful(t testing.TB, cctx client.Context, data []byte) {
 	err := jsonpb.Unmarshal(bytes.NewBuffer(data), &resp)
 	require.NoError(t, err)
 
-	res, err := authclient.QueryTx(cctx, resp.TxHash)
+	res, err := authtx.QueryTx(cctx, resp.TxHash)
 	require.NoError(t, err)
 
 	require.Zero(t, res.Code, res)

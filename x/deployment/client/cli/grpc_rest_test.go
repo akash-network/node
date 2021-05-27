@@ -74,7 +74,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	out := &types.QueryDeploymentsResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
 	deployments := out.Deployments
@@ -134,7 +134,7 @@ func (s *GRPCRestTestSuite) TestGetDeployments() {
 			s.Require().NoError(err)
 
 			var deployments types.QueryDeploymentsResponse
-			err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp, &deployments)
+			err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp, &deployments)
 
 			if tc.expErr {
 				s.Require().NotNil(err)
@@ -194,7 +194,7 @@ func (s *GRPCRestTestSuite) TestGetDeployment() {
 			s.Require().NoError(err)
 
 			var out types.QueryDeploymentResponse
-			err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp, &out)
+			err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {
 				s.Require().Error(err)
@@ -254,7 +254,7 @@ func (s *GRPCRestTestSuite) TestGetGroup() {
 			s.Require().NoError(err)
 
 			var out types.QueryGroupResponse
-			err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp, &out)
+			err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {
 				s.Require().Error(err)

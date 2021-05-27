@@ -85,7 +85,7 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	s.Require().NoError(err)
 
 	out := &types.QueryDeploymentsResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
 	deployments := out.Deployments
@@ -98,7 +98,7 @@ func (s *IntegrationTestSuite) TestDeployment() {
 
 	var deployment types.QueryDeploymentResponse
 	fmt.Println(string(resp.Bytes()))
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &deployment)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), &deployment)
 	s.Require().NoError(err)
 	s.Require().Equal(createdDep, deployment)
 
@@ -111,7 +111,7 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	s.Require().NoError(err, "Error when fetching deployments with owner filter")
 
 	out = &types.QueryDeploymentsResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1)
 
@@ -134,7 +134,7 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	s.Require().NoError(err)
 
 	var deploymentV2 types.QueryDeploymentResponse
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &deploymentV2)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), &deploymentV2)
 	s.Require().NoError(err)
 	s.Require().NotEqual(deployment.Deployment.Version, deploymentV2.Deployment.Version)
 
@@ -174,7 +174,7 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	s.Require().NoError(err)
 
 	out = &types.QueryDeploymentsResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Close Failed")
 }
@@ -207,7 +207,7 @@ func (s *IntegrationTestSuite) TestGroup() {
 	s.Require().NoError(err)
 
 	out := &types.QueryDeploymentsResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
 	deployments := out.Deployments
@@ -235,7 +235,7 @@ func (s *IntegrationTestSuite) TestGroup() {
 	s.Require().NoError(err)
 
 	var group types.Group
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &group)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), &group)
 	s.Require().NoError(err)
 	s.Require().Equal(types.GroupClosed, group.State)
 }

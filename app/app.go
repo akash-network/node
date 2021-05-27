@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/simapp"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -59,7 +61,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
-	tmjson "github.com/tendermint/tendermint/libs/json"
 
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
@@ -274,9 +275,49 @@ func NewApp(
 		homePath, app.BaseApp)
 
 	app.keeper.upgrade.SetUpgradeHandler("v0.43.0-beta1-upgrade", func(ctx sdk.Context, plan upgradetypes.Plan,
-		fromVM module.VersionMap) (module.VersionMap, error) {
+		_ module.VersionMap) (module.VersionMap, error) {
+		// 1st-time running in-store migrations, using 1 as fromVersion to
+		// avoid running InitGenesis.
+		fromVM := map[string]uint64{
+			"auth":         1,
+			"bank":         1,
+			"capability":   1,
+			"crisis":       1,
+			"distribution": 1,
+			"evidence":     1,
+			"gov":          1,
+			"mint":         1,
+			"params":       1,
+			"slashing":     1,
+			"staking":      1,
+			"upgrade":      1,
+			"vesting":      1,
+			"ibc":          1,
+			"genutil":      1,
+			"transfer":     1,
+			"audit":        1,
+			"cert":         1,
+			"deployment":   1,
+			"escrow":       1,
+			"market":       1,
+			"provider":     1,
+		}
 		return app.mm.RunMigrations(ctx, app.configurator, fromVM)
 	})
+
+	upgradeInfo, err := app.keeper.upgrade.ReadUpgradeInfoFromDisk()
+	if err != nil {
+		panic(err)
+	}
+
+	if upgradeInfo.Name == "v0.43.0-beta1-upgrade" && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
+		storeUpgrades := storetypes.StoreUpgrades{
+			Added: []string{"authz", "feegrant"},
+		}
+
+		// configure store loader that checks if version == upgradeHeight and applies store upgrades
+		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+	}
 
 	// register the staking hooks
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
@@ -352,7 +393,7 @@ func NewApp(
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			crisis.NewAppModule(&app.keeper.crisis, skipGenesisInvariants),
-			feegrantmodule.NewAppModule(appCodec, app.keeper.acct, app.keeper,bank, 
+			feegrantmodule.NewAppModule(appCodec, app.keeper.acct, app.keeper.bank,
 				app.keeper.feegrant, app.interfaceRegistry),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
 			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
@@ -406,7 +447,7 @@ func NewApp(
 
 	app.mm.RegisterInvariants(&app.keeper.crisis)
 	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
-	app.configurator = module.NewConfigurator(app.appCodec,app.MsgServiceRouter(), app.GRPCQueryRouter())
+	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
 	app.mm.RegisterServices(app.configurator)
 
 	// add test gRPC service for testing gRPC queries in isolation
@@ -417,7 +458,7 @@ func NewApp(
 			auth.NewAppModule(appCodec, app.keeper.acct, authsims.RandomGenesisAccounts),
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			capability.NewAppModule(appCodec, *app.keeper.cap),
-			feegrantmodule.NewAppModule(appCodec, app.keeper.acct, app.keeper,bank, 
+			feegrantmodule.NewAppModule(appCodec, app.keeper.acct, app.keeper.bank,
 				app.keeper.feegrant, app.interfaceRegistry),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
 			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),

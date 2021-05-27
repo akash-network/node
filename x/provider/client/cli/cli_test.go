@@ -68,7 +68,7 @@ func (s *IntegrationTestSuite) TestProvider() {
 	s.Require().NoError(err)
 
 	out := &types.QueryProvidersResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Providers, 1, "Provider Creation Failed")
 	providers := out.Providers
@@ -80,7 +80,7 @@ func (s *IntegrationTestSuite) TestProvider() {
 	s.Require().NoError(err)
 
 	var provider types.Provider
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &provider)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), &provider)
 	s.Require().NoError(err)
 	s.Require().Equal(createdProvider, provider)
 
@@ -102,7 +102,7 @@ func (s *IntegrationTestSuite) TestProvider() {
 	s.Require().NoError(err)
 
 	var providerV2 types.Provider
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), &providerV2)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), &providerV2)
 	s.Require().NoError(err)
 	s.Require().NotEqual(provider.HostURI, providerV2.HostURI)
 }

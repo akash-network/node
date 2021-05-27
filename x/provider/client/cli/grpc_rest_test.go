@@ -60,7 +60,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	out := &types.QueryProvidersResponse{}
-	err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), out)
+	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Providers, 1, "Provider Creation Failed")
 	providers := out.Providers
@@ -100,7 +100,7 @@ func (s *GRPCRestTestSuite) TestGetProviders() {
 			s.Require().NoError(err)
 
 			var providers types.QueryProvidersResponse
-			err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp, &providers)
+			err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp, &providers)
 
 			s.Require().NoError(err)
 			s.Require().Len(providers.Providers, tc.expLen)
@@ -148,7 +148,7 @@ func (s *GRPCRestTestSuite) TestGetProvider() {
 			s.Require().NoError(err)
 
 			var out types.QueryProviderResponse
-			err = val.ClientCtx.JSONMarshaler.UnmarshalJSON(resp, &out)
+			err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {
 				s.Require().Error(err)

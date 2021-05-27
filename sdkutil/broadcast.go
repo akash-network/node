@@ -13,7 +13,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/input"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	"github.com/ovrclk/akash/client/broadcaster"
 	"github.com/spf13/pflag"
 	ttypes "github.com/tendermint/tendermint/types"
 )
@@ -44,7 +45,7 @@ func BroadcastTX(ctx client.Context, flags *pflag.FlagSet, msgs ...sdk.Msg) erro
 		return tx.GenerateTx(ctx, txf, msgs...)
 	}
 
-	txf, err := tx.PrepareFactory(ctx, txf)
+	txf, err := broadcaster.PrepareFactory(ctx, txf)
 	if err != nil {
 		return err
 	}
@@ -124,7 +125,7 @@ func doBroadcast(ctx client.Context, timeout time.Duration, txb ttypes.Tx) (*sdk
 		}
 
 		// check transaction
-		res, err := authclient.QueryTx(ctx, cres.TxHash)
+		res, err := authtx.QueryTx(ctx, cres.TxHash)
 		if err == nil {
 			return res, nil
 		}
@@ -165,7 +166,7 @@ func adjustGas(ctx client.Context, txf tx.Factory, msgs ...sdk.Msg) (tx.Factory,
 	if !ctx.Simulate && !txf.SimulateAndExecute() {
 		return txf, nil
 	}
-	_, adjusted, err := tx.CalculateGas(ctx.QueryWithData, txf, msgs...)
+	_, adjusted, err := broadcaster.CalculateGas(ctx.QueryWithData, txf, msgs...)
 	if err != nil {
 		return txf, err
 	}

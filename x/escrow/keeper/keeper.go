@@ -30,7 +30,7 @@ type Keeper interface {
 	SavePayment(sdk.Context, types.Payment)
 }
 
-func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey, bkeeper BankKeeper) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, bkeeper BankKeeper) Keeper {
 	return &keeper{
 		cdc:     cdc,
 		skey:    skey,
@@ -39,7 +39,7 @@ func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey, bkeeper BankKeeper)
 }
 
 type keeper struct {
-	cdc     codec.BinaryMarshaler
+	cdc     codec.BinaryCodec
 	skey    sdk.StoreKey
 	bkeeper BankKeeper
 
@@ -74,7 +74,7 @@ func (k *keeper) AccountCreate(ctx sdk.Context, id types.AccountID, owner sdk.Ac
 		return err
 	}
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(obj))
+	store.Set(key, k.cdc.MustMarshal(obj))
 
 	return nil
 }
@@ -103,7 +103,7 @@ func (k *keeper) AccountDeposit(ctx sdk.Context, id types.AccountID, amount sdk.
 
 	obj.Balance = obj.Balance.Add(amount)
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&obj))
+	store.Set(key, k.cdc.MustMarshal(&obj))
 
 	return nil
 }
@@ -190,7 +190,7 @@ func (k *keeper) PaymentCreate(ctx sdk.Context, id types.AccountID, pid string, 
 		Withdrawn: sdk.NewCoin(rate.Denom, sdk.ZeroInt()),
 	}
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(obj))
+	store.Set(key, k.cdc.MustMarshal(obj))
 
 	return nil
 }
@@ -280,7 +280,7 @@ func (k *keeper) GetAccount(ctx sdk.Context, id types.AccountID) (types.Account,
 
 	var obj types.Account
 
-	k.cdc.MustUnmarshalBinaryBare(buf, &obj)
+	k.cdc.MustUnmarshal(buf, &obj)
 
 	return obj, nil
 }
@@ -297,7 +297,7 @@ func (k *keeper) GetPayment(ctx sdk.Context, id types.AccountID, pid string) (ty
 
 	var obj types.Payment
 
-	k.cdc.MustUnmarshalBinaryBare(buf, &obj)
+	k.cdc.MustUnmarshal(buf, &obj)
 
 	return obj, nil
 }
@@ -316,7 +316,7 @@ func (k *keeper) WithAccounts(ctx sdk.Context, fn func(types.Account) bool) {
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Account
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
 		}
@@ -329,7 +329,7 @@ func (k *keeper) WithPayments(ctx sdk.Context, fn func(types.Payment) bool) {
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Payment
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
 		}
@@ -428,13 +428,13 @@ func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Acc
 func (k *keeper) saveAccount(ctx sdk.Context, obj *types.Account) {
 	store := ctx.KVStore(k.skey)
 	key := accountKey(obj.ID)
-	store.Set(key, k.cdc.MustMarshalBinaryBare(obj))
+	store.Set(key, k.cdc.MustMarshal(obj))
 }
 
 func (k *keeper) savePayment(ctx sdk.Context, obj *types.Payment) {
 	store := ctx.KVStore(k.skey)
 	key := paymentKey(obj.AccountID, obj.PaymentID)
-	store.Set(key, k.cdc.MustMarshalBinaryBare(obj))
+	store.Set(key, k.cdc.MustMarshal(obj))
 }
 
 func (k *keeper) accountPayments(ctx sdk.Context, id types.AccountID) []types.Payment {
@@ -446,7 +446,7 @@ func (k *keeper) accountPayments(ctx sdk.Context, id types.AccountID) []types.Pa
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Payment
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		payments = append(payments, val)
 	}
 

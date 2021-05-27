@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"math/big"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -79,7 +78,7 @@ func cmdGetCertificates() *cobra.Command {
 				params.Filter.State = value
 			}
 
-			res, err := queryClient.Certificates(context.Background(), params)
+			res, err := queryClient.Certificates(cmd.Context(), params)
 			if err != nil {
 				return err
 			}

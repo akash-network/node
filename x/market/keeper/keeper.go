@@ -12,7 +12,7 @@ import (
 // TODO: use interface for all keepers, queriers
 type IKeeper interface {
 	NewQuerier() Querier
-	Codec() codec.BinaryMarshaler
+	Codec() codec.BinaryCodec
 	CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.GroupSpec) (types.Order, error)
 	CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.Coin) (types.Bid, error)
 	CreateLease(ctx sdk.Context, bid types.Bid)
@@ -39,14 +39,14 @@ type IKeeper interface {
 
 // Keeper of the market store
 type Keeper struct {
-	cdc     codec.BinaryMarshaler
+	cdc     codec.BinaryCodec
 	skey    sdk.StoreKey
 	pspace  paramtypes.Subspace
 	ekeeper EscrowKeeper
 }
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) IKeeper {
+func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) IKeeper {
 
 	if !pspace.HasKeyTable() {
 		pspace = pspace.WithKeyTable(types.ParamKeyTable())
@@ -65,7 +65,7 @@ func (k Keeper) NewQuerier() Querier {
 }
 
 // Codec returns keeper codec
-func (k Keeper) Codec() codec.BinaryMarshaler {
+func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
 }
 
@@ -101,7 +101,7 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 		return types.Order{}, types.ErrOrderExists
 	}
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&order))
+	store.Set(key, k.cdc.MustMarshal(&order))
 
 	ctx.Logger().Info("created order", "order", order.ID())
 	ctx.EventManager().EmitEvent(
@@ -128,7 +128,7 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 		return types.Bid{}, types.ErrBidExists
 	}
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&bid))
+	store.Set(key, k.cdc.MustMarshal(&bid))
 
 	ctx.EventManager().EmitEvent(
 		types.NewEventBidCreated(bid.ID(), price).
@@ -152,7 +152,7 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 
 	// create (active) lease in store
 	key := leaseKey(lease.ID())
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&lease))
+	store.Set(key, k.cdc.MustMarshal(&lease))
 
 	ctx.Logger().Info("created lease", "lease", lease.ID())
 	ctx.EventManager().EmitEvent(
@@ -258,7 +258,7 @@ func (k Keeper) GetOrder(ctx sdk.Context, id types.OrderID) (types.Order, bool) 
 	buf := store.Get(key)
 
 	var val types.Order
-	k.cdc.MustUnmarshalBinaryBare(buf, &val)
+	k.cdc.MustUnmarshal(buf, &val)
 	return val, true
 }
 
@@ -273,7 +273,7 @@ func (k Keeper) GetBid(ctx sdk.Context, id types.BidID) (types.Bid, bool) {
 	buf := store.Get(key)
 
 	var val types.Bid
-	k.cdc.MustUnmarshalBinaryBare(buf, &val)
+	k.cdc.MustUnmarshal(buf, &val)
 	return val, true
 }
 
@@ -288,7 +288,7 @@ func (k Keeper) GetLease(ctx sdk.Context, id types.LeaseID) (types.Lease, bool) 
 	buf := store.Get(key)
 
 	var val types.Lease
-	k.cdc.MustUnmarshalBinaryBare(buf, &val)
+	k.cdc.MustUnmarshal(buf, &val)
 	return val, true
 }
 
@@ -320,7 +320,7 @@ func (k Keeper) WithOrders(ctx sdk.Context, fn func(types.Order) bool) {
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Order
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
 		}
@@ -334,7 +334,7 @@ func (k Keeper) WithBids(ctx sdk.Context, fn func(types.Bid) bool) {
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Bid
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
 		}
@@ -348,7 +348,7 @@ func (k Keeper) WithLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Lease
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
 		}
@@ -362,7 +362,7 @@ func (k Keeper) WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, fn func(t
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Order
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
 		}
@@ -377,7 +377,7 @@ func (k Keeper) WithBidsForOrder(ctx sdk.Context, id types.OrderID, fn func(type
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Bid
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
 		}
@@ -409,17 +409,17 @@ func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
 func (k Keeper) updateOrder(ctx sdk.Context, order types.Order) {
 	store := ctx.KVStore(k.skey)
 	key := orderKey(order.ID())
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&order))
+	store.Set(key, k.cdc.MustMarshal(&order))
 }
 
 func (k Keeper) updateBid(ctx sdk.Context, bid types.Bid) {
 	store := ctx.KVStore(k.skey)
 	key := bidKey(bid.ID())
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&bid))
+	store.Set(key, k.cdc.MustMarshal(&bid))
 }
 
 func (k Keeper) updateLease(ctx sdk.Context, lease types.Lease) {
 	store := ctx.KVStore(k.skey)
 	key := leaseKey(lease.ID())
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&lease))
+	store.Set(key, k.cdc.MustMarshal(&lease))
 }

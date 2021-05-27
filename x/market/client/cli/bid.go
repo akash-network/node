@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"context"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/ovrclk/akash/x/market/types"
@@ -36,7 +34,7 @@ func cmdGetBids() *cobra.Command {
 				Pagination: pageReq,
 			}
 
-			res, err := queryClient.Bids(context.Background(), params)
+			res, err := queryClient.Bids(cmd.Context(), params)
 			if err != nil {
 				return err
 			}
@@ -69,7 +67,7 @@ func cmdGetBid() *cobra.Command {
 				return err
 			}
 
-			res, err := queryClient.Bid(context.Background(), &types.QueryBidRequest{ID: bidID})
+			res, err := queryClient.Bid(cmd.Context(), &types.QueryBidRequest{ID: bidID})
 			if err != nil {
 				return err
 			}
