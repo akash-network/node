@@ -17,6 +17,8 @@ import (
 var (
 	// ErrBroadcastTx is used when a broadcast fails due to tendermint errors
 	ErrBroadcastTx = errors.New("broadcast tx error")
+	// ErrSimulateTx is used when unsigned tx is not proto tx provider format
+	ErrSimulateTx = errors.New("cannot simulate amino tx")
 )
 
 type Client interface {
@@ -162,7 +164,7 @@ func BuildSimTx(txf tx.Factory, msgs ...sdk.Msg) ([]byte, error) {
 
 	protoProvider, ok := txb.(protoTxProvider)
 	if !ok {
-		return nil, fmt.Errorf("cannot simulate amino tx")
+		return nil, fmt.Errorf("%w: not protoTxProvider format", ErrSimulateTx)
 	}
 	simReq := txtypes.SimulateRequest{Tx: protoProvider.GetProtoTx()}
 
