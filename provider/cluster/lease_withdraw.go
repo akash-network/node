@@ -67,6 +67,7 @@ func (dw *deploymentWithdrawal) run() {
 	if err != nil {
 		dw.log.Error("Could not subscribe to events", "err", err)
 	}
+	defer events.Close()
 
 	const withdrawalPeriod = 24 * time.Hour
 	ticker := time.NewTicker(withdrawalPeriod)

@@ -116,6 +116,7 @@ func (dm *deploymentManager) run() {
 
 	var runch <-chan error
 
+	var shutdownErr error
 loop:
 	for {
 		select {
@@ -130,8 +131,7 @@ loop:
 			defer dm.hostnameService.ReleaseHostnames(allHostnames)
 			runch = dm.startDeploy()
 
-		case err := <-dm.lc.ShutdownRequest():
-			dm.lc.ShutdownInitiated(err)
+		case shutdownErr = <-dm.lc.ShutdownRequest():
 			break loop
 
 		case mgroup := <-dm.updatech:
@@ -199,6 +199,7 @@ loop:
 			}
 		}
 	}
+	dm.lc.ShutdownInitiated(shutdownErr)
 
 	if runch != nil {
 		<-runch
