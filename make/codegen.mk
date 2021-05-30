@@ -21,9 +21,8 @@ mocks: $(MOCKERY) modvendor
 	$(MOCKERY) --case=underscore --dir x/escrow/keeper             --output x/escrow/keeper/mocks       --name BankKeeper
 
 .PHONY: kubetypes
-kubetypes: deps-vendor
-	chmod +x vendor/k8s.io/code-generator/generate-groups.sh
-	vendor/k8s.io/code-generator/generate-groups.sh all \
+kubetypes: $(K8S_GENERATE_GROUPS)
+	GOBIN=$(AKASH_DEVCACHE_BIN) $(K8S_GENERATE_GROUPS) all \
 	github.com/ovrclk/akash/pkg/client github.com/ovrclk/akash/pkg/apis \
 	akash.network:v1
 

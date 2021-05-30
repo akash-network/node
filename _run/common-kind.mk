@@ -44,16 +44,16 @@ kind-configure-image:
     cp ./kustomize/akash-node/docker-image.yaml ./kustomize/akash-provider/docker-image.yaml
 
 .PHONY: kind-upload-image
-kind-upload-image:
-	kind --name "$(KIND_NAME)" load docker-image "${DOCKER_IMAGE}"
+kind-upload-image: $(KIND)
+	$(KIND) --name "$(KIND_NAME)" load docker-image "${DOCKER_IMAGE}"
 
 .PHONY: kind-port-bindings
-kind-port-bindings:
+kind-port-bindings: $(KIND)
 	@echo $(KIND_PORT_BINDINGS)
 
 .PHONY: kind-cluster-create
-kind-cluster-create:
-	kind create cluster \
+kind-cluster-create: $(KIND)
+	$(KIND) create cluster \
 		--config "$(KIND_CONFIG)" \
 		--name "$(KIND_NAME)" \
 		--image "$(KIND_IMG)"
@@ -61,8 +61,8 @@ kind-cluster-create:
 	"$(AKASH_ROOT)/script/setup-kind.sh"
 
 .PHONY: kind-cluster-calico-create
-kind-cluster-calico-create:
-	kind create cluster \
+kind-cluster-calico-create: $(KIND)
+	$(KIND) create cluster \
 		--config "$(KIND_CONFIG_CALICO)" \
 		--name "$(KIND_NAME)" \
 		--image "$(KIND_IMG)"
@@ -79,8 +79,8 @@ kind-ingress-setup:
 
 
 .PHONY: kind-cluster-delete
-kind-cluster-delete:
-	kind delete cluster --name "$(KIND_NAME)"
+kind-cluster-delete: $(KIND)
+	$(KIND) delete cluster --name "$(KIND_NAME)"
 
 .PHONY: kind-cluster-clean
 kind-cluster-clean:
