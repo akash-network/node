@@ -3,16 +3,17 @@ package cli
 import (
 	"context"
 	"encoding/json"
-
-	"gopkg.in/yaml.v3"
+	"errors"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/x/deployment/client/cli"
 	deploymentTypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/escrow/types"
 	marketTypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 func GetQueryCmd() *cobra.Command {
@@ -79,59 +80,67 @@ func cmdBlocksRemaining() *cobra.Command {
 
 			// Fetch the balance of the escrow account
 			deploymentClient := deploymentTypes.NewQueryClient(clientCtx)
-			// fmt.Printf("length of leases, %d \n", len(leases))
-			outputSlice := make([]interface{}, 0)
+			totalLeaseAmount := cosmosTypes.NewInt(0)
+			blockchainHeight, err := cli.CurrentBlockHeight(clientCtx)
+			if err != nil {
+				return err
+			}
+			if 0 == len(leases) {
+				return errors.New("leases for deployment do not exist")
+			}
 			for _, lease := range leases {
 				//  Fetch the time of last settlement
-				res, err := deploymentClient.Deployment(ctx, &deploymentTypes.QueryDeploymentRequest{
-					ID: lease.LeaseID.DeploymentID(),
-				})
-				if err != nil {
-					return err
-				}
-				amount := lease.Price.Amount
-				balance := res.EscrowAccount.Balance.Amount
-				settledAt := res.EscrowAccount.SettledAt
-				blockchainHeight, err := cli.CurrentBlockHeight(clientCtx)
-				if err != nil {
-					return err
-				}
-				balanceRemain := balance.Int64() - ((int64(blockchainHeight) - settledAt) * (amount.Int64()))
-				blocksRemain := balanceRemain / amount.Int64()
-				blocksPerDay := 86400 / 6.5
-				daysRemain := blocksRemain / int64(blocksPerDay)
 
-				output := struct {
-					BalanceRemain int64 `json:"balance_remaining" yaml:"balance_remaining"`
-					BlocksRemain  int64 `json:"blocks_remaining" yaml:"blocks_remaining"`
-					DaysRemain    int64 `json:"days_remaining" yaml:"days_remaining"`
-				}{
-					BalanceRemain: balanceRemain,
-					BlocksRemain:  blocksRemain,
-					DaysRemain:    daysRemain,
-				}
-				outputSlice = append(outputSlice, output)
+				amount := lease.Price.Amount
+				totalLeaseAmount = totalLeaseAmount.Add(amount)
 
 			}
+			res, err := deploymentClient.Deployment(ctx, &deploymentTypes.QueryDeploymentRequest{
+				ID: deploymentTypes.DeploymentID{Owner: owner, DSeq: dseq},
+			})
+			if err != nil {
+				return err
+			}
+			balance := res.EscrowAccount.Balance.Amount
+			settledAt := res.EscrowAccount.SettledAt
+			if err != nil {
+				return err
+			}
+			balanceRemain := balance.Int64() - ((int64(blockchainHeight) - settledAt) * (totalLeaseAmount.Int64()))
+			blocksRemain := balanceRemain / totalLeaseAmount.Int64()
+			const secondsPerDay = 24 * 60 * 60
+			const secondsPerBlock = 6.5
+			// Calculate blocks per day by using 6.5 seconds as average block-time
+			blocksPerDay := (secondsPerDay / secondsPerBlock)
+			estimatedDaysRemain := blocksRemain / int64(blocksPerDay)
+			output := struct {
+				BalanceRemain       int64 `json:"balance_remaining" yaml:"balance_remaining"`
+				BlocksRemain        int64 `json:"blocks_remaining" yaml:"blocks_remaining"`
+				EstimatedDaysRemain int64 `json:"estimated_days_remaining" yaml:"estimated_days_remaining"`
+			}{
+				BalanceRemain:       balanceRemain,
+				BlocksRemain:        blocksRemain,
+				EstimatedDaysRemain: estimatedDaysRemain,
+			}
+
 			outputType, err := cmd.Flags().GetString("output")
+			if err != nil {
+				return err
+			}
+
+			var data []byte
 			if outputType == "json" {
-				data, err := json.MarshalIndent(outputSlice, " ", "\t")
-				if err != nil {
-					return err
-				}
-				clientCtx.PrintBytes(data)
+				data, err = json.MarshalIndent(output, " ", "\t")
 			} else {
-				data, err := yaml.Marshal(outputSlice)
-				if err != nil {
-					return err
-				}
-				clientCtx.PrintBytes(data)
+				data, err = yaml.Marshal(output)
 			}
 
 			if err != nil {
 				return err
 			}
-			return nil
+
+			return clientCtx.PrintBytes(data)
+
 		},
 	}
 
