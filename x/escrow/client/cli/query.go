@@ -31,6 +31,8 @@ func GetQueryCmd() *cobra.Command {
 	return cmd
 }
 
+var errNoLeaseMatches = errors.New("leases for deployment do not exist")
+
 func cmdBlocksRemaining() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "blocks-remaining",
@@ -86,7 +88,7 @@ func cmdBlocksRemaining() *cobra.Command {
 				return err
 			}
 			if 0 == len(leases) {
-				return errors.New("leases for deployment do not exist")
+				return errNoLeaseMatches
 			}
 			for _, lease := range leases {
 				//  Fetch the time of last settlement
