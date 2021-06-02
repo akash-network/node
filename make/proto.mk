@@ -3,11 +3,11 @@
 ###############################################################################
 ifeq ($(UNAME_OS),Linux)
 	PROTOC_ZIP       ?= protoc-${PROTOC_VERSION}-linux-x86_64.zip
-	GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-v${GRPC_GATEWAY_VERSION}-linux-x86_64
+	GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-${GRPC_GATEWAY_VERSION}-linux-x86_64
 endif
 ifeq ($(UNAME_OS),Darwin)
 	PROTOC_ZIP       ?= protoc-${PROTOC_VERSION}-osx-x86_64.zip
-	GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-v${GRPC_GATEWAY_VERSION}-darwin-x86_64
+	GRPC_GATEWAY_BIN ?= protoc-gen-grpc-gateway-${GRPC_GATEWAY_VERSION}-darwin-x86_64
 endif
 
 .PHONY: proto-lint
@@ -16,15 +16,15 @@ proto-lint:
 
 .PHONY: proto-check-breaking
 proto-check-breaking:
-	rm -rf $(CACHE)/akash
-	mkdir -p $(CACHE)/akash
-	(cp -r .git $(CACHE)/akash; \
-	cd $(CACHE)/akash; \
+	rm -rf $(AKASH_DEVCACHE)/akash
+	mkdir -p $(AKASH_DEVCACHE)/akash
+	(cp -r .git $(AKASH_DEVCACHE)/akash; \
+	cd $(AKASH_DEVCACHE)/akash; \
 	git checkout master; \
 	git reset --hard; \
 	$(MAKE) modvendor)
 	$(DOCKER_BUF) check breaking --against-input '.cache/akash/'
-	rm -rf $(CACHE)/akash
+	rm -rf $(AKASH_DEVCACHE)/akash
 
 .PHONY: proto-format
 proto-format:
