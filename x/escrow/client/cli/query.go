@@ -53,16 +53,6 @@ func cmdBlocksRemaining() *cobra.Command {
 				return err
 			}
 
-			// owner, err := cmd.Flags().GetString("owner")
-			// if err != nil {
-			// 	return err
-			// }
-
-			// dseq, err := cmd.Flags().GetUint64("dseq")
-			// if err != nil {
-			// 	return err
-			// }
-
 			marketClient := marketTypes.NewQueryClient(clientCtx)
 			ctx := context.Background()
 
@@ -70,11 +60,6 @@ func cmdBlocksRemaining() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			// res, err := marketClient.Deployment(ctx, &marketTypes.QueryLeasesRequest{  })
-			// if err != nil {
-			// 	return err
-			// }
 
 			// Fetch leases matching owner & dseq
 			leaseRequest := marketTypes.QueryLeasesRequest{
