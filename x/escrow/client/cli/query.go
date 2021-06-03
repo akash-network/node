@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -31,6 +33,13 @@ func GetQueryCmd() *cobra.Command {
 	return cmd
 }
 
+// Calculate blocks per day by using 6.5 seconds as average block-time
+const (
+	secondsPerDay   = 24 * 60 * 60
+	secondsPerBlock = 6.5
+	blocksPerDay    = secondsPerDay / secondsPerBlock
+)
+
 var errNoLeaseMatches = errors.New("leases for deployment do not exist")
 
 func cmdBlocksRemaining() *cobra.Command {
@@ -44,24 +53,34 @@ func cmdBlocksRemaining() *cobra.Command {
 				return err
 			}
 
-			owner, err := cmd.Flags().GetString("owner")
-			if err != nil {
-				return err
-			}
+			// owner, err := cmd.Flags().GetString("owner")
+			// if err != nil {
+			// 	return err
+			// }
 
-			dseq, err := cmd.Flags().GetUint64("dseq")
-			if err != nil {
-				return err
-			}
+			// dseq, err := cmd.Flags().GetUint64("dseq")
+			// if err != nil {
+			// 	return err
+			// }
 
 			marketClient := marketTypes.NewQueryClient(clientCtx)
 			ctx := context.Background()
 
+			id, err := cli.DeploymentIDFromFlags(cmd.Flags(), "")
+			if err != nil {
+				return err
+			}
+
+			// res, err := marketClient.Deployment(ctx, &marketTypes.QueryLeasesRequest{  })
+			// if err != nil {
+			// 	return err
+			// }
+
 			// Fetch leases matching owner & dseq
 			leaseRequest := marketTypes.QueryLeasesRequest{
 				Filters: marketTypes.LeaseFilters{
-					Owner:    owner,
-					DSeq:     dseq,
+					Owner:    id.Owner,
+					DSeq:     id.DSeq,
 					GSeq:     0,
 					OSeq:     0,
 					Provider: "",
@@ -91,38 +110,29 @@ func cmdBlocksRemaining() *cobra.Command {
 				return errNoLeaseMatches
 			}
 			for _, lease := range leases {
-				//  Fetch the time of last settlement
 
 				amount := lease.Price.Amount
 				totalLeaseAmount = totalLeaseAmount.Add(amount)
 
 			}
 			res, err := deploymentClient.Deployment(ctx, &deploymentTypes.QueryDeploymentRequest{
-				ID: deploymentTypes.DeploymentID{Owner: owner, DSeq: dseq},
+				ID: deploymentTypes.DeploymentID{Owner: id.Owner, DSeq: id.DSeq},
 			})
 			if err != nil {
 				return err
 			}
 			balance := res.EscrowAccount.Balance.Amount
 			settledAt := res.EscrowAccount.SettledAt
-			if err != nil {
-				return err
-			}
-			balanceRemain := balance.Int64() - ((int64(blockchainHeight) - settledAt) * (totalLeaseAmount.Int64()))
-			blocksRemain := balanceRemain / totalLeaseAmount.Int64()
-			const secondsPerDay = 24 * 60 * 60
-			const secondsPerBlock = 6.5
-			// Calculate blocks per day by using 6.5 seconds as average block-time
-			blocksPerDay := (secondsPerDay / secondsPerBlock)
-			estimatedDaysRemain := blocksRemain / int64(blocksPerDay)
+			balanceRemain := float64(balance.Int64() - ((int64(blockchainHeight) - settledAt) * (totalLeaseAmount.Int64())))
+			blocksRemain := (balanceRemain / float64(totalLeaseAmount.Int64()))
 			output := struct {
-				BalanceRemain       int64 `json:"balance_remaining" yaml:"balance_remaining"`
-				BlocksRemain        int64 `json:"blocks_remaining" yaml:"blocks_remaining"`
-				EstimatedDaysRemain int64 `json:"estimated_days_remaining" yaml:"estimated_days_remaining"`
+				BalanceRemain       float64 `json:"balance_remaining" yaml:"balance_remaining"`
+				BlocksRemain        float64 `json:"blocks_remaining" yaml:"blocks_remaining"`
+				EstimatedTimeRemain string  `json:"estimated_time_remaining" yaml:"estimated_time_remaining"`
 			}{
 				BalanceRemain:       balanceRemain,
 				BlocksRemain:        blocksRemain,
-				EstimatedDaysRemain: estimatedDaysRemain,
+				EstimatedTimeRemain: (time.Duration(math.Floor(secondsPerBlock*blocksRemain)) * time.Second).String(),
 			}
 
 			outputType, err := cmd.Flags().GetString("output")
