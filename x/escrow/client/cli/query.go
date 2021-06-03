@@ -33,11 +33,8 @@ func GetQueryCmd() *cobra.Command {
 	return cmd
 }
 
-// Calculate blocks per day by using 6.5 seconds as average block-time
-const (
-	secondsPerDay   = 24 * 60 * 60
-	secondsPerBlock = 6.5
-)
+// Define 6.5 seconds as average block-time
+const secondsPerBlock = 6.5
 
 var errNoLeaseMatches = errors.New("leases for deployment do not exist")
 
