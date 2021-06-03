@@ -37,7 +37,6 @@ func GetQueryCmd() *cobra.Command {
 const (
 	secondsPerDay   = 24 * 60 * 60
 	secondsPerBlock = 6.5
-	blocksPerDay    = secondsPerDay / secondsPerBlock
 )
 
 var errNoLeaseMatches = errors.New("leases for deployment do not exist")
