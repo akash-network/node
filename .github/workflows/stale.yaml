@@ -12,7 +12,7 @@ jobs:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         stale-pr-label: stale
         exempt-pr-labels:
-          - keepalive
+          - pr/keepalive
         days-before-stale: 10
         days-before-close: 5
         stale-pr-message: |
