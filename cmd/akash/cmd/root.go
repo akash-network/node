@@ -24,6 +24,7 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	vestingcli "github.com/cosmos/cosmos-sdk/x/auth/vesting/client/cli"
+	"github.com/cosmos/cosmos-sdk/x/authz"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
@@ -43,6 +44,7 @@ import (
 	ecmd "github.com/ovrclk/akash/events/cmd"
 	pcmd "github.com/ovrclk/akash/provider/cmd"
 	"github.com/ovrclk/akash/sdkutil"
+	ecli "github.com/ovrclk/akash/x/escrow/client/cli"
 )
 
 func bindFlags(cmd *cobra.Command, v *viper.Viper) {
@@ -264,6 +266,10 @@ func txCmd() *cobra.Command {
 	// add modules' tx commands
 	app.ModuleBasics().AddTxCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
+
+	// Add deploy grant command in authz SDK txs
+	authzCmd, _, _ := cmd.Find([]string{authz.ModuleName})
+	authzCmd.AddCommand(ecli.GrantAuthorizationCmd())
 
 	return cmd
 }

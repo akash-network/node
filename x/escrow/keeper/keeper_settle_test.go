@@ -69,7 +69,7 @@ func TestSettleFullblocks(t *testing.T) {
 		account, payments, overdrawn, remaining := accountSettleFullblocks(
 			account, payments, blocks, blockRate)
 
-		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.Balance, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.TotalBalance, tt.name)
 
 		for idx := range payments {
 			assert.Equal(t, sdk.NewInt64Coin(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
@@ -122,9 +122,9 @@ func TestSettleDistributeWeighted(t *testing.T) {
 		account, payments, _, blockRate := setupDistTest(tt.cfg)
 
 		account, payments, remaining := accountSettleDistributeWeighted(
-			account, payments, blockRate, account.Balance)
+			account, payments, blockRate, account.TotalBalance)
 
-		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.Balance, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.TotalBalance, tt.name)
 
 		for idx := range payments {
 			assert.Equal(t, sdk.NewInt64Coin(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
@@ -161,9 +161,9 @@ func TestSettleDistributeEvenly(t *testing.T) {
 		account, payments, _, _ := setupDistTest(tt.cfg)
 
 		account, payments, remaining := accountSettleDistributeEvenly(
-			account, payments, account.Balance)
+			account, payments, account.TotalBalance)
 
-		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.Balance, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.TotalBalance, tt.name)
 
 		for idx := range payments {
 			assert.Equal(t, sdk.NewInt64Coin(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
@@ -185,8 +185,8 @@ type distTestConfig struct {
 
 func setupDistTest(cfg distTestConfig) (types.Account, []types.Payment, sdk.Int, sdk.Coin) {
 	account := types.Account{
-		Balance:     sdk.NewInt64Coin(denom, cfg.balanceStart),
-		Transferred: sdk.NewInt64Coin(denom, 0),
+		TotalBalance: sdk.NewInt64Coin(denom, cfg.balanceStart),
+		Transferred:  sdk.NewInt64Coin(denom, 0),
 	}
 
 	payments := make([]types.Payment, 0, len(cfg.rates))

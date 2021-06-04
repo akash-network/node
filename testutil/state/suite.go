@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	"github.com/ovrclk/akash/app"
 	akeeper "github.com/ovrclk/akash/x/audit/keeper"
 	atypes "github.com/ovrclk/akash/x/audit/types"
@@ -39,6 +40,7 @@ type Keepers struct {
 	Deployment dkeeper.IKeeper
 	Provider   pkeeper.IKeeper
 	Bank       *emocks.BankKeeper
+	Authz      ekeeper.AuthzKeeper
 }
 
 // SetupTestSuite provides toolkit for accessing stores and keepers
@@ -64,8 +66,11 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	if keepers.Audit == nil {
 		keepers.Audit = akeeper.NewKeeper(atypes.ModuleCdc, app.GetKey(atypes.StoreKey))
 	}
+	if keepers.Authz == nil {
+		keepers.Authz = authzkeeper.NewKeeper(app.GetKey(authzkeeper.StoreKey), app.AppCodec(), app.MsgServiceRouter())
+	}
 	if keepers.Escrow == nil {
-		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.StoreKey), keepers.Bank)
+		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.StoreKey), keepers.Bank, keepers.Authz)
 	}
 	if keepers.Market == nil {
 		keepers.Market = mkeeper.NewKeeper(mtypes.ModuleCdc, app.GetKey(mtypes.StoreKey), app.GetSubspace(mtypes.ModuleName), keepers.Escrow)

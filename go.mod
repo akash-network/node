@@ -24,6 +24,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.10.0
 	github.com/rakyll/statik v0.1.7
+	github.com/regen-network/cosmos-proto v0.3.1
 	github.com/rs/cors v1.7.1-0.20191011001009-dcbccb712443 // indirect
 	github.com/rs/zerolog v1.21.0
 	github.com/satori/go.uuid v1.2.0

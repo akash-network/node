@@ -86,7 +86,7 @@ func Test_PaymentCreate(t *testing.T) {
 		require.Equal(t, ctx.BlockHeight(), acct.SettledAt)
 
 		require.Equal(t, types.AccountOpen, acct.State)
-		require.Equal(t, testutil.AkashCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), acct.Balance)
+		require.Equal(t, testutil.AkashCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), acct.TotalBalance)
 		require.Equal(t, testutil.AkashCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.Transferred)
 
 		payment, err := keeper.GetPayment(ctx, aid, pid)
@@ -111,7 +111,7 @@ func Test_PaymentCreate(t *testing.T) {
 		require.Equal(t, ctx.BlockHeight(), acct.SettledAt)
 
 		require.Equal(t, types.AccountOpen, acct.State)
-		require.Equal(t, testutil.AkashCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), acct.Balance)
+		require.Equal(t, testutil.AkashCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), acct.TotalBalance)
 		require.Equal(t, testutil.AkashCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.Transferred)
 
 		payment, err := keeper.GetPayment(ctx, aid, pid)
@@ -169,7 +169,7 @@ func Test_Payment_Overdraw(t *testing.T) {
 		assert.Equal(t, ctx.BlockHeight(), acct.SettledAt)
 
 		assert.Equal(t, types.AccountOverdrawn, acct.State)
-		assert.Equal(t, testutil.AkashCoin(t, 0), acct.Balance)
+		assert.Equal(t, testutil.AkashCoin(t, 0), acct.TotalBalance)
 		assert.Equal(t, amt, acct.Transferred)
 
 		payment, err := keeper.GetPayment(ctx, aid, pid)

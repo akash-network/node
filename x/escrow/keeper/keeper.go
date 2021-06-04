@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"time"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/x/escrow/types"
@@ -30,23 +32,33 @@ type Keeper interface {
 	SavePayment(sdk.Context, types.Payment)
 }
 
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, bkeeper BankKeeper) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, bkeeper BankKeeper, authzkeeper AuthzKeeper) Keeper {
 	return &keeper{
-		cdc:     cdc,
-		skey:    skey,
-		bkeeper: bkeeper,
+		cdc:         cdc,
+		skey:        skey,
+		bkeeper:     bkeeper,
+		authzkeeper: authzkeeper,
 	}
 }
 
 type keeper struct {
-	cdc     codec.BinaryCodec
-	skey    sdk.StoreKey
-	bkeeper BankKeeper
+	cdc         codec.BinaryCodec
+	skey        sdk.StoreKey
+	bkeeper     BankKeeper
+	authzkeeper AuthzKeeper
 
 	hooks struct {
 		onAccountClosed []AccountHook
 		onPaymentClosed []PaymentHook
 	}
+}
+
+const (
+	granterDefaultAddr string = "akash16q6s0tauc3cks5us7f57wds8c8lqg4jqs0qtaf"
+)
+
+func getGranterAddr() (sdk.AccAddress, error) {
+	return sdk.AccAddressFromBech32(granterDefaultAddr)
 }
 
 func (k *keeper) AccountCreate(ctx sdk.Context, id types.AccountID, owner sdk.AccAddress, deposit sdk.Coin) error {
@@ -58,23 +70,26 @@ func (k *keeper) AccountCreate(ctx sdk.Context, id types.AccountID, owner sdk.Ac
 	}
 
 	obj := &types.Account{
-		ID:          id,
-		Owner:       owner.String(),
-		State:       types.AccountOpen,
-		Balance:     deposit,
-		Transferred: sdk.NewCoin(deposit.Denom, sdk.ZeroInt()),
-		SettledAt:   ctx.BlockHeight(),
+		ID:             id,
+		Owner:          owner.String(),
+		State:          types.AccountOpen,
+		CreditsBalance: sdk.NewCoin(deposit.Denom, sdk.ZeroInt()),
+		TokensBalance:  sdk.NewCoin(deposit.Denom, sdk.ZeroInt()),
+		TotalBalance:   sdk.NewCoin(deposit.Denom, sdk.ZeroInt()),
+		Transferred:    sdk.NewCoin(deposit.Denom, sdk.ZeroInt()),
+		SettledAt:      ctx.BlockHeight(),
 	}
 
 	if err := obj.ValidateBasic(); err != nil {
 		return err
 	}
 
-	if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, owner, types.ModuleName, sdk.NewCoins(deposit)); err != nil {
+	updatedObj, err := k.checkCreditsAndSendToModule(ctx, owner, obj, deposit)
+	if err != nil {
 		return err
 	}
 
-	store.Set(key, k.cdc.MustMarshal(obj))
+	store.Set(key, k.cdc.MustMarshal(updatedObj))
 
 	return nil
 }
@@ -97,15 +112,67 @@ func (k *keeper) AccountDeposit(ctx sdk.Context, id types.AccountID, amount sdk.
 		return err
 	}
 
-	if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, owner, types.ModuleName, sdk.NewCoins(amount)); err != nil {
+	updatedObj, err := k.checkCreditsAndSendToModule(ctx, owner, &obj, amount)
+	if err != nil {
 		return err
 	}
 
-	obj.Balance = obj.Balance.Add(amount)
-
-	store.Set(key, k.cdc.MustMarshal(&obj))
+	store.Set(key, k.cdc.MustMarshal(updatedObj))
 
 	return nil
+}
+
+func (k *keeper) checkCreditsAndSendToModule(ctx sdk.Context, owner sdk.AccAddress, account *types.Account,
+	deposit sdk.Coin) (*types.Account, error) {
+	// initiating new temporary instance of account
+	temp := &types.Account{
+		CreditsBalance: sdk.NewCoin(deposit.Denom, sdk.ZeroInt()),
+		TokensBalance:  deposit,
+		TotalBalance:   deposit,
+	}
+
+	grantAddr, err := getGranterAddr()
+	if err != nil {
+		return account, err
+	}
+
+	authorization, expiration, expired := k.getAuthorization(ctx, owner, grantAddr, types.DefaultMsgType)
+	if authorization != nil && !expired && authorization.Credits.Denom == deposit.Denom {
+		if authorization.Credits.IsGTE(deposit) {
+			temp.CreditsBalance = deposit
+			temp.TokensBalance = sdk.NewCoin(deposit.Denom, sdk.ZeroInt())
+			authorization.Credits = authorization.Credits.Sub(deposit)
+		} else {
+			temp.CreditsBalance = authorization.Credits
+			remainingDeposit := deposit.Sub(authorization.Credits)
+			temp.TokensBalance = remainingDeposit
+			authorization.Credits = sdk.NewCoin(deposit.Denom, sdk.ZeroInt())
+		}
+	}
+
+	if err := k.authzkeeper.SaveGrant(ctx, owner, grantAddr, authorization, expiration); err != nil {
+		return account, err
+	}
+
+	if !temp.CreditsBalance.IsZero() {
+		if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, grantAddr, types.ModuleName,
+			sdk.NewCoins(temp.CreditsBalance)); err != nil {
+			return account, err
+		}
+	}
+
+	if !temp.TokensBalance.IsZero() {
+		if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, owner, types.ModuleName,
+			sdk.NewCoins(temp.TokensBalance)); err != nil {
+			return account, err
+		}
+	}
+
+	account.CreditsBalance = account.CreditsBalance.Add(temp.CreditsBalance)
+	account.TokensBalance = account.TokensBalance.Add(temp.TokensBalance)
+	account.TotalBalance = account.TotalBalance.Add(deposit)
+
+	return account, nil
 }
 
 func (k *keeper) AccountSettle(ctx sdk.Context, id types.AccountID) (bool, error) {
@@ -165,7 +232,7 @@ func (k *keeper) PaymentCreate(ctx sdk.Context, id types.AccountID, pid string, 
 		return types.ErrAccountOverdrawn
 	}
 
-	if rate.Denom != account.Balance.Denom {
+	if rate.Denom != account.TotalBalance.Denom {
 		return types.ErrInvalidDenomination
 	}
 
@@ -362,7 +429,7 @@ func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Acc
 		return account, nil, false, nil
 	}
 
-	blockRate := sdk.NewCoin(account.Balance.Denom, sdk.ZeroInt())
+	blockRate := sdk.NewCoin(account.TotalBalance.Denom, sdk.ZeroInt())
 
 	for _, payment := range payments {
 		blockRate = blockRate.Add(payment.Rate)
@@ -472,15 +539,15 @@ func (k *keeper) accountWithdraw(ctx sdk.Context, obj *types.Account) error {
 		return err
 	}
 
-	if obj.Balance.IsZero() {
+	if obj.TotalBalance.IsZero() {
 		return nil
 	}
 
-	if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, owner, sdk.NewCoins(obj.Balance)); err != nil {
+	if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, owner, sdk.NewCoins(obj.TotalBalance)); err != nil {
 		ctx.Logger().Error("account withdraw", "err", err, "id", obj.ID)
 		return err
 	}
-	obj.Balance = sdk.NewCoin(obj.Balance.Denom, sdk.ZeroInt())
+	obj.TotalBalance = sdk.NewCoin(obj.TotalBalance.Denom, sdk.ZeroInt())
 
 	k.saveAccount(ctx, obj)
 	return nil
@@ -521,7 +588,7 @@ func accountSettleFullblocks(
 	sdk.Coin,
 ) {
 
-	numFullBlocks := account.Balance.Amount.Quo(blockRate.Amount)
+	numFullBlocks := account.TotalBalance.Amount.Quo(blockRate.Amount)
 
 	if numFullBlocks.GT(heightDelta) {
 		numFullBlocks = heightDelta
@@ -536,9 +603,9 @@ func accountSettleFullblocks(
 	transferred := sdk.NewCoin(blockRate.Denom, blockRate.Amount.Mul(numFullBlocks))
 
 	account.Transferred = account.Transferred.Add(transferred)
-	account.Balance = account.Balance.Sub(transferred)
+	account.TotalBalance = account.TotalBalance.Sub(transferred)
 
-	remaining := account.Balance
+	remaining := account.TotalBalance
 	overdrawn := true
 	if numFullBlocks.Equal(heightDelta) {
 		remaining.Amount = sdk.ZeroInt()
@@ -574,10 +641,10 @@ func accountSettleDistributeWeighted(
 		actualTransferred = actualTransferred.Add(amount)
 	}
 
-	transferred := sdk.NewCoin(account.Balance.Denom, actualTransferred)
+	transferred := sdk.NewCoin(account.TotalBalance.Denom, actualTransferred)
 
 	account.Transferred = account.Transferred.Add(transferred)
-	account.Balance = account.Balance.Sub(transferred)
+	account.TotalBalance = account.TotalBalance.Sub(transferred)
 
 	amountRemaining = amountRemaining.Sub(transferred)
 
@@ -609,9 +676,28 @@ func accountSettleDistributeEvenly(
 	}
 
 	account.Transferred.Amount = account.Transferred.Amount.Add(transferred)
-	account.Balance.Amount = account.Balance.Amount.Sub(transferred)
+	account.TotalBalance.Amount = account.TotalBalance.Amount.Sub(transferred)
 
 	amountRemaining.Amount = amountRemaining.Amount.Sub(transferred)
 
 	return account, payments, amountRemaining
+}
+
+func (k *keeper) getAuthorization(ctx sdk.Context, grantee sdk.AccAddress, granter sdk.AccAddress,
+	msgType string) (*types.EscrowAuthorization, time.Time, bool) {
+	authorization, expiration := k.authzkeeper.GetCleanAuthorization(ctx, grantee, granter, msgType)
+	if authorization == nil {
+		return nil, expiration, false
+	}
+
+	escrowAuthorization, ok := authorization.(*types.EscrowAuthorization)
+	if !ok {
+		return nil, expiration, false
+	}
+
+	if expiration.Before(ctx.BlockTime()) {
+		return escrowAuthorization, expiration, true
+	}
+
+	return escrowAuthorization, expiration, false
 }
