@@ -620,10 +620,10 @@ func deductTransferredAmount(account types.Account, transferred sdk.Int) types.A
 	if transferred.GT(account.CreditsBalance.Amount) {
 		// subtracting transferred amount from token and credit balances
 		extra := transferred.Sub(account.CreditsBalance.Amount)
-		account.TokensBalance.Amount = account.TokensBalance.Amount.Sub(extra)
+		account.TokensBalance = account.TokensBalance.SubAmount(extra)
 		account.CreditsBalance = sdk.NewCoin(account.CreditsBalance.Denom, sdk.ZeroInt())
 	} else {
-		account.CreditsBalance.Amount = account.CreditsBalance.Amount.Sub(transferred)
+		account.CreditsBalance = account.CreditsBalance.SubAmount(transferred)
 	}
 
 	return account

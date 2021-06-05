@@ -185,8 +185,10 @@ type distTestConfig struct {
 
 func setupDistTest(cfg distTestConfig) (types.Account, []types.Payment, sdk.Int, sdk.Coin) {
 	account := types.Account{
-		TotalBalance: sdk.NewInt64Coin(denom, cfg.balanceStart),
-		Transferred:  sdk.NewInt64Coin(denom, 0),
+		CreditsBalance: sdk.NewInt64Coin(denom, 0),
+		TokensBalance:  sdk.NewInt64Coin(denom, cfg.balanceStart),
+		TotalBalance:   sdk.NewInt64Coin(denom, cfg.balanceStart),
+		Transferred:    sdk.NewInt64Coin(denom, 0),
 	}
 
 	payments := make([]types.Payment, 0, len(cfg.rates))
