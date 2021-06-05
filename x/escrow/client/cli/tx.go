@@ -13,11 +13,16 @@ import (
 	"github.com/ovrclk/akash/x/escrow/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 const (
 	FlagExpiration = "expiration"
+)
+
+var (
+	ErrNegativeCredits = errors.New("credits should be greater than zero")
 )
 
 func GetTxCmd() *cobra.Command {
@@ -53,7 +58,7 @@ func GrantAuthorizationCmd() *cobra.Command {
 			}
 
 			if !credits.IsPositive() {
-				return fmt.Errorf("spend-limit should be greater than zero")
+				return ErrNegativeCredits
 			}
 
 			authorization := types.NewEscrowAuthorization(credits)

@@ -16,6 +16,7 @@ service Query {
   }
 }
 
+// CertificateResponse stores certificate details and serial
 message CertificateResponse {
   Certificate certificate = 1 [
     (gogoproto.nullable) = false,
