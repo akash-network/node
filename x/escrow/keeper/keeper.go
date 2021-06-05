@@ -54,8 +54,8 @@ type keeper struct {
 }
 
 const (
-	// update this with default granter address
-	granterDefaultAddr string = ""
+	// TODO: update this with actual default granter address
+	granterDefaultAddr string = "akash16q6s0tauc3cks5us7f57wds8c8lqg4jqs0qtaf"
 )
 
 func getGranterAddr() (sdk.AccAddress, error) {
