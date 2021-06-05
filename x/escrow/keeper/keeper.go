@@ -148,10 +148,10 @@ func (k *keeper) checkCreditsAndSendToModule(ctx sdk.Context, owner sdk.AccAddre
 			temp.TokensBalance = remainingDeposit
 			authorization.Credits = sdk.NewCoin(deposit.Denom, sdk.ZeroInt())
 		}
-	}
 
-	if err := k.authzkeeper.SaveGrant(ctx, owner, grantAddr, authorization, expiration); err != nil {
-		return account, err
+		if err := k.authzkeeper.SaveGrant(ctx, owner, grantAddr, authorization, expiration); err != nil {
+			return account, err
+		}
 	}
 
 	if !temp.CreditsBalance.IsZero() {
@@ -533,6 +533,42 @@ func (k *keeper) accountOpenPayments(ctx sdk.Context, id types.AccountID) []type
 	return payments
 }
 
+func (k *keeper) checkCreditsAndSendFromModule(ctx sdk.Context, owner sdk.AccAddress, account *types.Account) error {
+	if !account.CreditsBalance.IsZero() {
+		grantAddr, err := getGranterAddr()
+		if err != nil {
+			return err
+		}
+
+		authorization, expiration, expired := k.getAuthorization(ctx, owner, grantAddr, types.DefaultMsgType)
+		if authorization != nil {
+			if expired {
+				if err := k.authzkeeper.DeleteGrant(ctx, owner, grantAddr, types.DefaultMsgType); err != nil {
+					return err
+				}
+			} else {
+				authorization.Credits = authorization.Credits.Add(account.CreditsBalance)
+				if err := k.authzkeeper.SaveGrant(ctx, owner, grantAddr, authorization, expiration); err != nil {
+					return err
+				}
+				if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, grantAddr,
+					sdk.NewCoins(account.CreditsBalance)); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	if !account.TokensBalance.IsZero() {
+		if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, owner,
+			sdk.NewCoins(account.TokensBalance)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (k *keeper) accountWithdraw(ctx sdk.Context, obj *types.Account) error {
 	owner, err := sdk.AccAddressFromBech32(obj.Owner)
 	if err != nil {
@@ -543,11 +579,14 @@ func (k *keeper) accountWithdraw(ctx sdk.Context, obj *types.Account) error {
 		return nil
 	}
 
-	if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, owner, sdk.NewCoins(obj.TotalBalance)); err != nil {
+	if err := k.checkCreditsAndSendFromModule(ctx, owner, obj); err != nil {
 		ctx.Logger().Error("account withdraw", "err", err, "id", obj.ID)
 		return err
 	}
+
 	obj.TotalBalance = sdk.NewCoin(obj.TotalBalance.Denom, sdk.ZeroInt())
+	obj.CreditsBalance = sdk.NewCoin(obj.CreditsBalance.Denom, sdk.ZeroInt())
+	obj.TokensBalance = sdk.NewCoin(obj.TokensBalance.Denom, sdk.ZeroInt())
 
 	k.saveAccount(ctx, obj)
 	return nil
@@ -574,6 +613,19 @@ func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *types.Payment) error {
 
 	k.savePayment(ctx, obj)
 	return nil
+}
+
+func deductTransferredAmount(account types.Account, transferred sdk.Int) types.Account {
+	if transferred.GT(account.CreditsBalance.Amount) {
+		// subtracting transferred amount from token and credit balances
+		extra := transferred.Sub(account.CreditsBalance.Amount)
+		account.TokensBalance.Amount = account.TokensBalance.Amount.Sub(extra)
+		account.CreditsBalance = sdk.NewCoin(account.CreditsBalance.Denom, sdk.ZeroInt())
+	} else {
+		account.CreditsBalance.Amount = account.CreditsBalance.Amount.Sub(transferred)
+	}
+
+	return account
 }
 
 func accountSettleFullblocks(
@@ -604,6 +656,7 @@ func accountSettleFullblocks(
 
 	account.Transferred = account.Transferred.Add(transferred)
 	account.TotalBalance = account.TotalBalance.Sub(transferred)
+	account = deductTransferredAmount(account, transferred.Amount)
 
 	remaining := account.TotalBalance
 	overdrawn := true
@@ -645,6 +698,7 @@ func accountSettleDistributeWeighted(
 
 	account.Transferred = account.Transferred.Add(transferred)
 	account.TotalBalance = account.TotalBalance.Sub(transferred)
+	account = deductTransferredAmount(account, transferred.Amount)
 
 	amountRemaining = amountRemaining.Sub(transferred)
 
@@ -677,6 +731,7 @@ func accountSettleDistributeEvenly(
 
 	account.Transferred.Amount = account.Transferred.Amount.Add(transferred)
 	account.TotalBalance.Amount = account.TotalBalance.Amount.Sub(transferred)
+	account = deductTransferredAmount(account, transferred)
 
 	amountRemaining.Amount = amountRemaining.Amount.Sub(transferred)
 

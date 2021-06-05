@@ -16,4 +16,5 @@ type AuthzKeeper interface {
 	GetCleanAuthorization(ctx sdk.Context, grantee sdk.AccAddress,
 		granter sdk.AccAddress, msgType string) (authz.Authorization, time.Time)
 	SaveGrant(ctx sdk.Context, grantee, granter sdk.AccAddress, authorization authz.Authorization, expiration time.Time) error
+	DeleteGrant(ctx sdk.Context, grantee sdk.AccAddress, granter sdk.AccAddress, msgType string) error
 }
