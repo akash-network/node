@@ -55,7 +55,8 @@ type keeper struct {
 
 const (
 	// TODO: update this with actual default granter address
-	granterDefaultAddr string = "akash16q6s0tauc3cks5us7f57wds8c8lqg4jqs0qtaf"
+	granterDefaultAddr   string = "akash16q6s0tauc3cks5us7f57wds8c8lqg4jqs0qtaf"
+	defaultCreditDeposit int64  = 5000000
 )
 
 func getGranterAddr() (sdk.AccAddress, error) {
@@ -443,6 +444,50 @@ func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Acc
 	if !overdrawn {
 
 		// save objects
+		k.saveAccount(ctx, &account)
+		for idx := range payments {
+			k.savePayment(ctx, &payments[idx])
+		}
+
+		// return early
+		return account, payments, false, nil
+	}
+
+	//
+	// checking credits if present any
+	//
+	owner, err := sdk.AccAddressFromBech32(account.Owner)
+	if err != nil {
+		return account, nil, false, err
+	}
+
+	grantAddr, err := getGranterAddr()
+	if err != nil {
+		return account, nil, false, err
+	}
+
+	authorization, expiration, expired := k.getAuthorization(ctx, owner, grantAddr, types.DefaultMsgType)
+	if authorization != nil && !expired && !authorization.Credits.IsZero() &&
+		authorization.Credits.Denom == account.TotalBalance.Denom {
+		sdkDefaultAmount := sdk.NewInt(defaultCreditDeposit)
+		if authorization.Credits.Amount.LTE(sdkDefaultAmount) {
+			account.CreditsBalance = account.CreditsBalance.Add(authorization.Credits)
+			account.TotalBalance = account.TotalBalance.Add(authorization.Credits)
+			authorization.Credits = sdk.NewCoin(account.TotalBalance.Denom, sdk.ZeroInt())
+		} else {
+			account.CreditsBalance = account.CreditsBalance.AddAmount(sdkDefaultAmount)
+			account.TotalBalance = account.TotalBalance.AddAmount(sdkDefaultAmount)
+			authorization.Credits = authorization.Credits.SubAmount(sdkDefaultAmount)
+		}
+		if err := k.authzkeeper.SaveGrant(ctx, owner, grantAddr, authorization, expiration); err != nil {
+			return account, nil, false, err
+		}
+
+		if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, grantAddr, types.ModuleName,
+			sdk.NewCoins(account.CreditsBalance)); err != nil {
+			return account, nil, false, err
+		}
+
 		k.saveAccount(ctx, &account)
 		for idx := range payments {
 			k.savePayment(ctx, &payments[idx])
