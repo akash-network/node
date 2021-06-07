@@ -24,7 +24,7 @@ import (
 
 var (
 	// errNotFound is the new error with message "not found"
-	errNotFound = errors.New("not found")
+	errReservationNotFound = errors.New("reservation not found")
 	// ErrInsufficientCapacity is the new error when capacity is insufficient
 	ErrInsufficientCapacity = errors.New("insufficient capacity")
 )
@@ -390,7 +390,7 @@ loop:
 			}
 
 			inventoryRequestsCounter.WithLabelValues("lookup", "not-found").Inc()
-			req.ch <- inventoryResponse{err: errNotFound}
+			req.ch <- inventoryResponse{err: errReservationNotFound}
 
 		case req := <-is.unreservech:
 			is.log.Debug("unreserving capacity", "order", req.order)
@@ -414,7 +414,7 @@ loop:
 			}
 
 			inventoryRequestsCounter.WithLabelValues("unreserve", "not-found").Inc()
-			req.ch <- inventoryResponse{err: errNotFound}
+			req.ch <- inventoryResponse{err: errReservationNotFound}
 
 		case responseCh := <-is.statusch:
 			responseCh <- is.getStatus(inventory, reservations)
