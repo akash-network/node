@@ -75,7 +75,7 @@ func MarkReqGroupIDFlags(cmd *cobra.Command) {
 // GroupIDFromFlags returns GroupID with given flags and error if occurred
 func GroupIDFromFlags(flags *pflag.FlagSet) (types.GroupID, error) {
 	var id types.GroupID
-	prev, err := DeploymentIDFromFlags(flags, "1")
+	prev, err := DeploymentIDFromFlags(flags, "")
 	if err != nil {
 		return id, err
 	}
