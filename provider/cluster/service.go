@@ -268,7 +268,7 @@ func (s *service) teardownLease(lid mtypes.LeaseID) {
 	if lid.Provider == s.session.Provider().Owner {
 		s.log.Info("unreserving unmanaged order", "lease", lid)
 		err := s.inventory.unreserve(lid.OrderID())
-		if err != nil {
+		if err != nil && !errors.Is(errReservationNotFound, err) {
 			s.log.Error("unreserve failed", "lease", lid, "err", err)
 		}
 	}
