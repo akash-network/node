@@ -75,7 +75,18 @@ func (m ResourceUnits) Sub(rhs ResourceUnits) (ResourceUnits, error) {
 		return ResourceUnits{}, errCannotSub
 	}
 
-	res := m
+	// Make a deep copy
+	res := ResourceUnits{
+		CPU:       &CPU{},
+		Memory:    &Memory{},
+		Storage:   &Storage{},
+		Endpoints: nil,
+	}
+	*res.CPU = *m.CPU
+	*res.Memory = *m.Memory
+	*res.Storage = *m.Storage
+	res.Endpoints = make([]Endpoint, len(m.Endpoints))
+	copy(res.Endpoints, m.Endpoints)
 
 	if res.CPU != nil {
 		if err := res.CPU.sub(rhs.CPU); err != nil {

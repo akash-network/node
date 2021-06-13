@@ -346,6 +346,18 @@ func (is *inventoryService) run(reservations []*reservation) {
 
 	var fetchCount uint
 
+	var reserveChLocal <-chan inventoryRequest
+	allowProcessingReservations := func() {
+		reserveChLocal = is.reservech
+	}
+
+	stopProcessingReservations := func() {
+		reserveChLocal = nil
+		if runch == nil {
+			runch = is.runCheck(ctx)
+		}
+	}
+
 loop:
 	for {
 		select {
@@ -367,6 +379,7 @@ loop:
 
 					allocatedPrev := res.allocated
 					res.allocated = ev.Status == event.ClusterDeploymentDeployed
+					stopProcessingReservations()
 
 					if res.allocated != allocatedPrev {
 						externalPortCount := reservationCountEndpoints(res)
@@ -386,7 +399,7 @@ loop:
 				}
 			}
 
-		case req := <-is.reservech:
+		case req := <-reserveChLocal:
 			// convert the resources to the commmitted amount
 			resourcesToCommit := is.committedResources(req.resources)
 			// create new registration if capacity available
@@ -491,6 +504,7 @@ loop:
 				}
 			}
 			fetchCount++
+			allowProcessingReservations()
 		}
 		updateReservationMetrics(reservations)
 	}
@@ -585,7 +599,6 @@ func reservationAdjustInventory(prevInventory []ctypes.Node, externalPortsAvaila
 		return nil, 0, false
 	}
 	externalPortsAvailable -= externalPortCount
-
 	for _, node := range prevInventory {
 		available := node.Available()
 		curResources := resources[:0]
@@ -597,7 +610,6 @@ func reservationAdjustInventory(prevInventory []ctypes.Node, externalPortsAvaila
 				if remaining, err = available.Sub(resource.Resources); err != nil {
 					break
 				}
-
 				available = remaining
 			}
 
