@@ -20,8 +20,12 @@ func TestSettleFullblocks(t *testing.T) {
 			cfg: distTestConfig{
 				blocks:       5,
 				balanceStart: 100,
+				creditStart:  50,
+				tokenStart:   50,
 				rates:        []int64{1, 2},
 				balanceEnd:   85,
+				creditEnd:    35,
+				tokenEnd:     50,
 				transferred:  []int64{5, 10},
 				remaining:    0,
 				overdrawn:    false,
@@ -32,8 +36,12 @@ func TestSettleFullblocks(t *testing.T) {
 			cfg: distTestConfig{
 				blocks:       5,
 				balanceStart: 100,
+				creditStart:  50,
+				tokenStart:   50,
 				rates:        []int64{10, 10},
 				balanceEnd:   0,
+				creditEnd:    0,
+				tokenEnd:     0,
 				transferred:  []int64{50, 50},
 				remaining:    0,
 				overdrawn:    false,
@@ -44,8 +52,12 @@ func TestSettleFullblocks(t *testing.T) {
 			cfg: distTestConfig{
 				blocks:       6,
 				balanceStart: 100,
+				creditStart:  70,
+				tokenStart:   30,
 				rates:        []int64{10, 10},
 				balanceEnd:   0,
+				creditEnd:    0,
+				tokenEnd:     0,
 				transferred:  []int64{50, 50},
 				remaining:    0,
 				overdrawn:    true,
@@ -56,8 +68,12 @@ func TestSettleFullblocks(t *testing.T) {
 			cfg: distTestConfig{
 				blocks:       6,
 				balanceStart: 90,
+				creditStart:  40,
+				tokenStart:   50,
 				rates:        []int64{10, 10},
 				balanceEnd:   10,
+				creditEnd:    0,
+				tokenEnd:     10,
 				transferred:  []int64{40, 40},
 				remaining:    10,
 				overdrawn:    true,
@@ -70,6 +86,8 @@ func TestSettleFullblocks(t *testing.T) {
 			account, payments, blocks, blockRate)
 
 		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.TotalBalance, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.creditEnd), account.CreditsBalance, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.tokenEnd), account.TokensBalance, tt.name)
 
 		for idx := range payments {
 			assert.Equal(t, sdk.NewInt64Coin(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
@@ -89,8 +107,12 @@ func TestSettleDistributeWeighted(t *testing.T) {
 			name: "all goes - unbalanced",
 			cfg: distTestConfig{
 				balanceStart: 10,
+				creditStart:  7,
+				tokenStart:   3,
 				rates:        []int64{20, 30},
 				balanceEnd:   0,
+				creditEnd:    0,
+				tokenEnd:     0,
 				transferred:  []int64{4, 6},
 				remaining:    0,
 				overdrawn:    false,
@@ -100,8 +122,12 @@ func TestSettleDistributeWeighted(t *testing.T) {
 			name: "all goes - balanced",
 			cfg: distTestConfig{
 				balanceStart: 10,
+				creditStart:  5,
+				tokenStart:   5,
 				rates:        []int64{30, 30},
 				balanceEnd:   0,
+				creditEnd:    0,
+				tokenEnd:     0,
 				transferred:  []int64{5, 5},
 				remaining:    0,
 				overdrawn:    false,
@@ -111,8 +137,12 @@ func TestSettleDistributeWeighted(t *testing.T) {
 			name: "some left - unbalanced",
 			cfg: distTestConfig{
 				balanceStart: 10,
+				creditStart:  8,
+				tokenStart:   2,
 				rates:        []int64{45, 55},
 				balanceEnd:   1,
+				creditEnd:    0,
+				tokenEnd:     1,
 				transferred:  []int64{4, 5},
 				remaining:    1,
 				overdrawn:    false,
@@ -125,6 +155,8 @@ func TestSettleDistributeWeighted(t *testing.T) {
 			account, payments, blockRate, account.TotalBalance)
 
 		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.TotalBalance, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.creditEnd), account.CreditsBalance, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.tokenEnd), account.TokensBalance, tt.name)
 
 		for idx := range payments {
 			assert.Equal(t, sdk.NewInt64Coin(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
@@ -143,8 +175,12 @@ func TestSettleDistributeEvenly(t *testing.T) {
 			name: "even",
 			cfg: distTestConfig{
 				balanceStart: 2,
+				creditStart:  1,
+				tokenStart:   1,
 				rates:        []int64{20, 30},
 				balanceEnd:   0,
+				creditEnd:    0,
+				tokenEnd:     0,
 				transferred:  []int64{1, 1},
 			},
 		},
@@ -152,8 +188,12 @@ func TestSettleDistributeEvenly(t *testing.T) {
 			name: "not even",
 			cfg: distTestConfig{
 				balanceStart: 3,
+				creditStart:  2,
+				tokenStart:   1,
 				rates:        []int64{20, 30},
 				balanceEnd:   0,
+				creditEnd:    0,
+				tokenEnd:     0,
 				transferred:  []int64{2, 1},
 			},
 		},
@@ -164,6 +204,8 @@ func TestSettleDistributeEvenly(t *testing.T) {
 			account, payments, account.TotalBalance)
 
 		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.TotalBalance, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.creditEnd), account.CreditsBalance, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.tokenEnd), account.TokensBalance, tt.name)
 
 		for idx := range payments {
 			assert.Equal(t, sdk.NewInt64Coin(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
@@ -176,8 +218,12 @@ func TestSettleDistributeEvenly(t *testing.T) {
 type distTestConfig struct {
 	blocks       int64
 	balanceStart int64
+	creditStart  int64
+	tokenStart   int64
 	rates        []int64
 	balanceEnd   int64
+	creditEnd    int64
+	tokenEnd     int64
 	transferred  []int64
 	remaining    int64
 	overdrawn    bool
@@ -185,8 +231,8 @@ type distTestConfig struct {
 
 func setupDistTest(cfg distTestConfig) (types.Account, []types.Payment, sdk.Int, sdk.Coin) {
 	account := types.Account{
-		CreditsBalance: sdk.NewInt64Coin(denom, 0),
-		TokensBalance:  sdk.NewInt64Coin(denom, cfg.balanceStart),
+		CreditsBalance: sdk.NewInt64Coin(denom, cfg.creditStart),
+		TokensBalance:  sdk.NewInt64Coin(denom, cfg.tokenStart),
 		TotalBalance:   sdk.NewInt64Coin(denom, cfg.balanceStart),
 		Transferred:    sdk.NewInt64Coin(denom, 0),
 	}
