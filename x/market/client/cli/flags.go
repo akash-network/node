@@ -18,13 +18,12 @@ var (
 // AddOrderIDFlags add flags for order
 func AddOrderIDFlags(flags *pflag.FlagSet) {
 	dcli.AddGroupIDFlags(flags)
-	flags.Uint32("oseq", 0, "Order Sequence")
+	flags.Uint32("oseq", 1, "Order Sequence")
 }
 
 // MarkReqOrderIDFlags marks flags required for order
 func MarkReqOrderIDFlags(cmd *cobra.Command) {
 	dcli.MarkReqGroupIDFlags(cmd)
-	_ = cmd.MarkFlagRequired("oseq")
 }
 
 // AddProviderFlag add provider flag to command flags set
@@ -161,8 +160,8 @@ func AddOrderFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "order owner address to filter")
 	flags.String("state", "", "order state to filter (open,matched,closed)")
 	flags.Uint64("dseq", 0, "deployment sequence to filter")
-	flags.Uint32("gseq", 0, "group sequence to filter")
-	flags.Uint32("oseq", 0, "order sequence to filter")
+	flags.Uint32("gseq", 1, "group sequence to filter")
+	flags.Uint32("oseq", 1, "order sequence to filter")
 }
 
 // OrderFiltersFromFlags returns OrderFilters with given flags and error if occurred
@@ -193,8 +192,8 @@ func AddBidFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "bid owner address to filter")
 	flags.String("state", "", "bid state to filter (open,matched,lost,closed)")
 	flags.Uint64("dseq", 0, "deployment sequence to filter")
-	flags.Uint32("gseq", 0, "group sequence to filter")
-	flags.Uint32("oseq", 0, "order sequence to filter")
+	flags.Uint32("gseq", 1, "group sequence to filter")
+	flags.Uint32("oseq", 1, "order sequence to filter")
 	flags.String("provider", "", "bid provider address to filter")
 }
 
@@ -233,8 +232,8 @@ func AddLeaseFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "lease owner address to filter")
 	flags.String("state", "", "lease state to filter (active,insufficient_funds,closed)")
 	flags.Uint64("dseq", 0, "deployment sequence to filter")
-	flags.Uint32("gseq", 0, "group sequence to filter")
-	flags.Uint32("oseq", 0, "order sequence to filter")
+	flags.Uint32("gseq", 1, "group sequence to filter")
+	flags.Uint32("oseq", 1, "order sequence to filter")
 	flags.String("provider", "", "bid provider address to filter")
 }
 

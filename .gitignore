@@ -4,10 +4,6 @@
 #vendor
 /vendor
 
-# binaries
-/akash
-/akash_docgen
-
 # dev artifacts
 /devdata
 
@@ -24,8 +20,8 @@ dist
 *.iml
 coverage.txt
 
-.cache
-.release-env
-.docker-creds
+/.cache
+/.release-env
+/.docker-creds
 
 /tmp-swagger-gen

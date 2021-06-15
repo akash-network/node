@@ -10,7 +10,10 @@ on:
       - provider/cluster/kube/*
       - integration/*
       - .github/workflows/k8s-integration.yaml
-
+      - _run/**
+      - make/*
+      - .env
+      - Makefile
 jobs:
   crd-e2e:
     env:

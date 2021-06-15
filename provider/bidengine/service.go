@@ -52,17 +52,17 @@ type Service interface {
 func NewService(ctx context.Context, session session.Session, cluster cluster.Cluster, bus pubsub.Bus, cfg Config) (Service, error) {
 	session = session.ForModule("bidengine-service")
 
+	existingOrders, err := queryExistingOrders(ctx, session)
+	if err != nil {
+		session.Log().Error("finding existing orders", "err", err)
+		return nil, err
+	}
+
 	sub, err := bus.Subscribe()
 	if err != nil {
 		return nil, err
 	}
 
-	existingOrders, err := queryExistingOrders(ctx, session)
-	if err != nil {
-		session.Log().Error("finding existing orders", "err", err)
-		sub.Close()
-		return nil, err
-	}
 	session.Log().Info("found orders", "count", len(existingOrders))
 
 	providerAttrService, err := newProviderAttrSignatureService(session, bus)

@@ -60,17 +60,17 @@ type Service interface {
 func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, hostnameService cluster.HostnameServiceClient, cfg ServiceConfig) (Service, error) {
 	session = session.ForModule("provider-manifest")
 
+	leases, err := fetchExistingLeases(ctx, session)
+	if err != nil {
+		session.Log().Error("fetching existing leases", "err", err)
+		return nil, err
+	}
+
 	sub, err := bus.Subscribe()
 	if err != nil {
 		return nil, err
 	}
 
-	leases, err := fetchExistingLeases(ctx, session)
-	if err != nil {
-		session.Log().Error("fetching existing leases", "err", err)
-		sub.Close()
-		return nil, err
-	}
 	session.Log().Info("found existing leases", "count", len(leases))
 
 	s := &service{
@@ -236,13 +236,7 @@ loop:
 			// Cancel the watchdog (if it exists), since a manifest has been received
 			s.maybeRemoveWatchdog(req.value.Deployment)
 
-			manager, err := s.ensureManager(req.value.Deployment)
-			if err != nil {
-				s.session.Log().Error("error fetching manager for manifest",
-					"err", err, "deployment", req.value.Deployment)
-				req.ch <- err
-				break
-			}
+			manager := s.ensureManager(req.value.Deployment)
 			// The manager is responsible for putting a result in req.ch
 			manager.handleManifest(req)
 
@@ -306,26 +300,18 @@ func (s *service) handleLease(ev event.LeaseWon, isNew bool) {
 		}
 	}
 
-	manager, err := s.ensureManager(ev.LeaseID.DeploymentID())
-	if err != nil {
-		s.session.Log().Error("error creating manager",
-			"err", err, "lease", ev.LeaseID)
-		return
-	}
+	manager := s.ensureManager(ev.LeaseID.DeploymentID())
 
 	manager.handleLease(ev)
 }
 
-func (s *service) ensureManager(did dtypes.DeploymentID) (manager *manager, err error) {
+func (s *service) ensureManager(did dtypes.DeploymentID) (manager *manager) {
 	manager = s.managers[dquery.DeploymentPath(did)]
 	if manager == nil {
-		manager, err = newManager(s, did)
-		if err != nil {
-			return nil, err
-		}
+		manager = newManager(s, did)
 		s.managers[dquery.DeploymentPath(did)] = manager
 	}
-	return manager, nil
+	return manager
 }
 
 func fetchExistingLeases(ctx context.Context, session session.Session) ([]event.LeaseWon, error) {
