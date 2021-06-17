@@ -26,6 +26,9 @@ GIT_HEAD_COMMIT_LONG  := $(shell git log -1 --format='%H')
 GIT_HEAD_COMMIT_SHORT := $(shell git rev-parse --short HEAD)
 GIT_HEAD_ABBREV       := $(shell git rev-parse --abbrev-ref HEAD)
 
+GORELEASER_TAG       ?= $(shell git describe --tags --abbrev=0)
+GORELEASER_IS_PREREL ?= $(shell $(ROOT_DIR)/script/is_prerelease.sh "$(GORELEASER_TAG)")
+
 # BUILD_TAGS are for builds withing this makefile
 # GORELEASER_BUILD_TAGS are for goreleaser only
 # Setting mainnet flag based on env value
@@ -34,16 +37,18 @@ ifeq ($(MAINNET),true)
 	BUILD_MAINNET=mainnet
 	BUILD_TAGS=osusergo,netgo,ledger,mainnet,static_build
 	GORELEASER_BUILD_TAGS=$(BUILD_TAGS)
-	GORELEASER_HOMEBREW_NAME=akash
-	GORELEASER_HOMEBREW_CUSTOM=
 else
 	BUILD_TAGS=osusergo,netgo,ledger,static_build
 	GORELEASER_BUILD_TAGS=$(BUILD_TAGS),testnet
+endif
+
+ifeq ($(GORELEASER_IS_PREREL),false)
+	GORELEASER_HOMEBREW_NAME=akash
+	GORELEASER_HOMEBREW_CUSTOM=
+else
 	GORELEASER_HOMEBREW_NAME="akash-edge"
 	GORELEASER_HOMEBREW_CUSTOM=keg_only :unneeded, \"This is testnet release. Run brew install ovrclk/tap/akash to install mainnet version\"
 endif
-
-GORELEASER_TAG     ?= $(shell git describe --tags --abbrev=0)
 
 GORELEASER_FLAGS    = -tags="$(GORELEASER_BUILD_TAGS)"
 GORELEASER_LD_FLAGS = -s -w -X github.com/cosmos/cosmos-sdk/version.Name=akash \
