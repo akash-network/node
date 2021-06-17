@@ -33,7 +33,7 @@ func GrantAuthorizationCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "deploy-grant <grantee> <credits> --from <granter>",
 		Short: "Grant deploy authorization to an address",
-		Example: fmt.Sprintf(`$ %s tx %s deploy-grant [grantee address] 1000uakt --from=[grantee address]`,
+		Example: fmt.Sprintf(`$ %s tx %s deploy-grant [grantee address] 1000uakt --from=[granter address]`,
 			version.AppName, authz.ModuleName),
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
