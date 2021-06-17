@@ -133,12 +133,12 @@ func (k *keeper) checkCreditsAndSendToModule(ctx sdk.Context, owner sdk.AccAddre
 		TotalBalance:   deposit,
 	}
 
-	grantAddr, err := getGranterAddr()
+	granter, err := getGranterAddr()
 	if err != nil {
 		return account, err
 	}
 
-	authorization, expiration, expired := k.getAuthorization(ctx, owner, grantAddr, types.DefaultMsgType)
+	authorization, expiration, expired := k.getAuthorization(ctx, owner, granter, types.DefaultMsgType)
 	if authorization != nil && !expired && authorization.Credits.Denom == deposit.Denom {
 		if authorization.Credits.IsGTE(deposit) {
 			temp.CreditsBalance = deposit
@@ -151,13 +151,13 @@ func (k *keeper) checkCreditsAndSendToModule(ctx sdk.Context, owner sdk.AccAddre
 			authorization.Credits = sdk.NewCoin(deposit.Denom, sdk.ZeroInt())
 		}
 
-		if err := k.authzkeeper.SaveGrant(ctx, owner, grantAddr, authorization, expiration); err != nil {
+		if err := k.authzkeeper.SaveGrant(ctx, owner, granter, authorization, expiration); err != nil {
 			return account, err
 		}
 	}
 
 	if !temp.CreditsBalance.IsZero() {
-		if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, grantAddr, types.ModuleName,
+		if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, granter, types.ModuleName,
 			sdk.NewCoins(temp.CreditsBalance)); err != nil {
 			return account, err
 		}
@@ -461,12 +461,12 @@ func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Acc
 		return account, nil, false, err
 	}
 
-	grantAddr, err := getGranterAddr()
+	granter, err := getGranterAddr()
 	if err != nil {
 		return account, nil, false, err
 	}
 
-	authorization, expiration, expired := k.getAuthorization(ctx, owner, grantAddr, types.DefaultMsgType)
+	authorization, expiration, expired := k.getAuthorization(ctx, owner, granter, types.DefaultMsgType)
 	if authorization != nil && !expired && !authorization.Credits.IsZero() &&
 		authorization.Credits.Denom == account.TotalBalance.Denom {
 		sdkDefaultAmount := sdk.NewInt(defaultCreditDeposit)
@@ -479,11 +479,11 @@ func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Acc
 			account.TotalBalance = account.TotalBalance.AddAmount(sdkDefaultAmount)
 			authorization.Credits = authorization.Credits.SubAmount(sdkDefaultAmount)
 		}
-		if err := k.authzkeeper.SaveGrant(ctx, owner, grantAddr, authorization, expiration); err != nil {
+		if err := k.authzkeeper.SaveGrant(ctx, owner, granter, authorization, expiration); err != nil {
 			return account, nil, false, err
 		}
 
-		if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, grantAddr, types.ModuleName,
+		if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, granter, types.ModuleName,
 			sdk.NewCoins(account.CreditsBalance)); err != nil {
 			return account, nil, false, err
 		}
@@ -581,23 +581,23 @@ func (k *keeper) accountOpenPayments(ctx sdk.Context, id types.AccountID) []type
 
 func (k *keeper) checkCreditsAndSendFromModule(ctx sdk.Context, owner sdk.AccAddress, account *types.Account) error {
 	if !account.CreditsBalance.IsZero() {
-		grantAddr, err := getGranterAddr()
+		granter, err := getGranterAddr()
 		if err != nil {
 			return err
 		}
 
-		authorization, expiration, expired := k.getAuthorization(ctx, owner, grantAddr, types.DefaultMsgType)
+		authorization, expiration, expired := k.getAuthorization(ctx, owner, granter, types.DefaultMsgType)
 		if authorization != nil {
 			if expired {
-				if err := k.authzkeeper.DeleteGrant(ctx, owner, grantAddr, types.DefaultMsgType); err != nil {
+				if err := k.authzkeeper.DeleteGrant(ctx, owner, granter, types.DefaultMsgType); err != nil {
 					return err
 				}
 			} else {
 				authorization.Credits = authorization.Credits.Add(account.CreditsBalance)
-				if err := k.authzkeeper.SaveGrant(ctx, owner, grantAddr, authorization, expiration); err != nil {
+				if err := k.authzkeeper.SaveGrant(ctx, owner, granter, authorization, expiration); err != nil {
 					return err
 				}
-				if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, grantAddr,
+				if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, granter,
 					sdk.NewCoins(account.CreditsBalance)); err != nil {
 					return err
 				}
