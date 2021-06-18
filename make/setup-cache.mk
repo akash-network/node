@@ -90,10 +90,8 @@ $(K8S_GENERATE_GROUPS): $(K8S_CODE_GEN_VERSION_FILE)
 
 .PHONY: $(KIND)
 $(KIND):
-ifeq (, $(shell which $(KIND) 2>/dev/null))
 	@echo "installing kind ..."
 	$(GO) install sigs.k8s.io/kind
-endif
 
 $(NPM):
 ifeq (, $(shell which $(NPM) 2>/dev/null))
