@@ -414,6 +414,28 @@ func (b *serviceBuilder) update(obj *corev1.Service) (*corev1.Service, error) { 
 	if err != nil {
 		return nil, err
 	}
+
+	// retain provisioned NodePort values
+	if b.requireNodePort {
+
+		// for each newly-calculated port
+		for i, port := range ports {
+
+			// if there is a current (in-kube) port defined
+			// with the same specified values
+			for _, curport := range obj.Spec.Ports {
+				if curport.Name == port.Name &&
+					curport.Port == port.Port &&
+					curport.TargetPort.IntValue() == port.TargetPort.IntValue() &&
+					curport.Protocol == port.Protocol {
+
+					// re-use current port
+					ports[i] = curport
+				}
+			}
+		}
+	}
+
 	obj.Spec.Ports = ports
 	return obj, nil
 }
