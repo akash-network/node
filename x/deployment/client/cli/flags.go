@@ -64,13 +64,12 @@ func DeploymentIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (typ
 // AddGroupIDFlags add flags for Group
 func AddGroupIDFlags(flags *pflag.FlagSet) {
 	AddDeploymentIDFlags(flags)
-	flags.Uint32("gseq", 0, "Group Sequence")
+	flags.Uint32("gseq", 1, "Group Sequence")
 }
 
 // MarkReqGroupIDFlags marks flags required for group
 func MarkReqGroupIDFlags(cmd *cobra.Command) {
 	MarkReqDeploymentIDFlags(cmd)
-	_ = cmd.MarkFlagRequired("gseq")
 }
 
 // GroupIDFromFlags returns GroupID with given flags and error if occurred

@@ -1,5 +1,6 @@
-AKASH_ROOT   := ../..
-AKASH_BIN   := $(AKASH_ROOT)/akash
+include $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../make/init.mk)
+
+AKASH_HOME ?= $(AKASH_RUN)/$(notdir $(CURDIR))
 
 .PHONY: all
 all:
@@ -11,7 +12,7 @@ bins:
 
 .PHONY: akash
 akash:
-	(cd "$(AKASH_ROOT)" && make akash)
+	(cd "$(AKASH_ROOT)" && make)
 
 .PHONY: image-minikube
 image-minikube:

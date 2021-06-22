@@ -6,8 +6,9 @@ import (
 )
 
 var (
-	errOverflow  = errors.Errorf("resource value overflow")
-	errCannotSub = errors.Errorf("cannot sub resources when lhs does not have same units as rhs")
+	errOverflow       = errors.Errorf("resource value overflow")
+	errCannotSub      = errors.Errorf("cannot subtract resources when lhs does not have same units as rhs")
+	errNegativeResult = errors.Errorf("result of subtraction is negative")
 )
 
 /*
@@ -72,7 +73,7 @@ func (m ResourceValue) sub(rhs ResourceValue) (ResourceValue, error) {
 	res = res.Sub(rhs.Val)
 
 	if res.Sign() == -1 {
-		return ResourceValue{}, errCannotSub
+		return ResourceValue{}, errNegativeResult
 	}
 
 	return ResourceValue{res}, nil

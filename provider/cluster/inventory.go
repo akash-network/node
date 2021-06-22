@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"sync/atomic"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -24,7 +25,7 @@ import (
 
 var (
 	// errNotFound is the new error with message "not found"
-	errNotFound = errors.New("not found")
+	errReservationNotFound = errors.New("reservation not found")
 	// ErrInsufficientCapacity is the new error when capacity is insufficient
 	ErrInsufficientCapacity = errors.New("insufficient capacity")
 )
@@ -39,7 +40,7 @@ var (
 	inventoryReservations = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "provider_inventory_reservations_total",
 		Help: "",
-	}, []string{"quantity"})
+	}, []string{"classification", "quantity"})
 
 	clusterInventoryAllocateable = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "provider_inventory_allocateable_total",
@@ -57,10 +58,11 @@ type inventoryService struct {
 	client Client
 	sub    pubsub.Subscriber
 
-	statusch    chan chan<- ctypes.InventoryStatus
-	lookupch    chan inventoryRequest
-	reservech   chan inventoryRequest
-	unreservech chan inventoryRequest
+	statusch         chan chan<- ctypes.InventoryStatus
+	lookupch         chan inventoryRequest
+	reservech        chan inventoryRequest
+	unreservech      chan inventoryRequest
+	reservationCount int64
 
 	readych chan struct{}
 
@@ -145,6 +147,10 @@ func (is *inventoryService) reserve(order mtypes.OrderID, resources atypes.Resou
 	select {
 	case is.reservech <- req:
 		response := <-ch
+		if response.err == nil {
+			cnt := atomic.AddInt64(&is.reservationCount, 1)
+			is.log.Debug("reservation count", "cnt", cnt)
+		}
 		return response.value, response.err
 	case <-is.lc.ShuttingDown():
 		return nil, ErrNotRunning
@@ -161,6 +167,10 @@ func (is *inventoryService) unreserve(order mtypes.OrderID) error { // nolint:go
 	select {
 	case is.unreservech <- req:
 		response := <-ch
+		if response.err == nil {
+			cnt := atomic.AddInt64(&is.reservationCount, -1)
+			is.log.Debug("reservation count", "cnt", cnt)
+		}
 		return response.err
 	case <-is.lc.ShuttingDown():
 		return ErrNotRunning
@@ -270,30 +280,51 @@ func (is *inventoryService) updateInventoryMetrics(inventory []ctypes.Node) {
 }
 
 func updateReservationMetrics(reservations []*reservation) {
-	inventoryReservations.WithLabelValues("quantity").Set(float64(len(reservations)))
+	inventoryReservations.WithLabelValues("none", "quantity").Set(float64(len(reservations)))
 
-	cpuTotal := 0.0
-	memoryTotal := 0.0
-	storageTotal := 0.0
-	endpointsTotal := 0.0
+	activeCPUTotal := 0.0
+	activeMemoryTotal := 0.0
+	activeStorageTotal := 0.0
+	activeEndpointsTotal := 0.0
+
+	pendingCPUTotal := 0.0
+	pendingMemoryTotal := 0.0
+	pendingStorageTotal := 0.0
+	pendingEndpointsTotal := 0.0
+
 	allocated := 0.0
 	for _, reservation := range reservations {
+		cpuTotal := &pendingCPUTotal
+		memoryTotal := &pendingMemoryTotal
+		storageTotal := &pendingStorageTotal
+		endpointsTotal := &pendingEndpointsTotal
+
 		if reservation.allocated {
 			allocated++
+			cpuTotal = &activeCPUTotal
+			memoryTotal = &activeMemoryTotal
+			storageTotal = &activeStorageTotal
+			endpointsTotal = &activeEndpointsTotal
 		}
 		for _, resource := range reservation.Resources().GetResources() {
-			cpuTotal += float64(resource.Resources.GetCPU().GetUnits().Value() * uint64(resource.Count))
-			memoryTotal += float64(resource.Resources.GetMemory().Quantity.Value() * uint64(resource.Count))
-			storageTotal += float64(resource.Resources.GetStorage().Quantity.Value() * uint64(resource.Count))
-			endpointsTotal += float64(len(resource.Resources.GetEndpoints()))
+			*cpuTotal += float64(resource.Resources.GetCPU().GetUnits().Value() * uint64(resource.Count))
+			*memoryTotal += float64(resource.Resources.GetMemory().Quantity.Value() * uint64(resource.Count))
+			*storageTotal += float64(resource.Resources.GetStorage().Quantity.Value() * uint64(resource.Count))
+			*endpointsTotal += float64(len(resource.Resources.GetEndpoints()))
 		}
 	}
 
-	inventoryReservations.WithLabelValues("allocated").Set(allocated)
-	inventoryReservations.WithLabelValues("cpu").Set(cpuTotal)
-	inventoryReservations.WithLabelValues("memory").Set(memoryTotal)
-	inventoryReservations.WithLabelValues("storage").Set(storageTotal)
-	inventoryReservations.WithLabelValues("endpoints").Set(endpointsTotal)
+	inventoryReservations.WithLabelValues("none", "allocated").Set(allocated)
+
+	inventoryReservations.WithLabelValues("active", "cpu").Set(activeCPUTotal)
+	inventoryReservations.WithLabelValues("active", "memory").Set(activeMemoryTotal)
+	inventoryReservations.WithLabelValues("active", "storage").Set(activeStorageTotal)
+	inventoryReservations.WithLabelValues("active", "endpoints").Set(activeEndpointsTotal)
+
+	inventoryReservations.WithLabelValues("pending", "cpu").Set(pendingCPUTotal)
+	inventoryReservations.WithLabelValues("pending", "memory").Set(pendingMemoryTotal)
+	inventoryReservations.WithLabelValues("pending", "storage").Set(pendingStorageTotal)
+	inventoryReservations.WithLabelValues("pending", "endpoints").Set(pendingEndpointsTotal)
 }
 
 func (is *inventoryService) run(reservations []*reservation) {
@@ -314,6 +345,18 @@ func (is *inventoryService) run(reservations []*reservation) {
 	runch := is.runCheck(ctx)
 
 	var fetchCount uint
+
+	var reserveChLocal <-chan inventoryRequest
+	allowProcessingReservations := func() {
+		reserveChLocal = is.reservech
+	}
+
+	stopProcessingReservations := func() {
+		reserveChLocal = nil
+		if runch == nil {
+			runch = is.runCheck(ctx)
+		}
+	}
 
 loop:
 	for {
@@ -336,6 +379,7 @@ loop:
 
 					allocatedPrev := res.allocated
 					res.allocated = ev.Status == event.ClusterDeploymentDeployed
+					stopProcessingReservations()
 
 					if res.allocated != allocatedPrev {
 						externalPortCount := reservationCountEndpoints(res)
@@ -355,7 +399,7 @@ loop:
 				}
 			}
 
-		case req := <-is.reservech:
+		case req := <-reserveChLocal:
 			// convert the resources to the commmitted amount
 			resourcesToCommit := is.committedResources(req.resources)
 			// create new registration if capacity available
@@ -390,7 +434,7 @@ loop:
 			}
 
 			inventoryRequestsCounter.WithLabelValues("lookup", "not-found").Inc()
-			req.ch <- inventoryResponse{err: errNotFound}
+			req.ch <- inventoryResponse{err: errReservationNotFound}
 
 		case req := <-is.unreservech:
 			is.log.Debug("unreserving capacity", "order", req.order)
@@ -414,7 +458,7 @@ loop:
 			}
 
 			inventoryRequestsCounter.WithLabelValues("unreserve", "not-found").Inc()
-			req.ch <- inventoryResponse{err: errNotFound}
+			req.ch <- inventoryResponse{err: errReservationNotFound}
 
 		case responseCh := <-is.statusch:
 			responseCh <- is.getStatus(inventory, reservations)
@@ -460,6 +504,7 @@ loop:
 				}
 			}
 			fetchCount++
+			allowProcessingReservations()
 		}
 		updateReservationMetrics(reservations)
 	}
@@ -554,7 +599,6 @@ func reservationAdjustInventory(prevInventory []ctypes.Node, externalPortsAvaila
 		return nil, 0, false
 	}
 	externalPortsAvailable -= externalPortCount
-
 	for _, node := range prevInventory {
 		available := node.Available()
 		curResources := resources[:0]
@@ -566,7 +610,6 @@ func reservationAdjustInventory(prevInventory []ctypes.Node, externalPortsAvaila
 				if remaining, err = available.Sub(resource.Resources); err != nil {
 					break
 				}
-
 				available = remaining
 			}
 

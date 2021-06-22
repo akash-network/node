@@ -36,17 +36,16 @@ require (
 	github.com/tendermint/tendermint v0.34.9
 	github.com/tendermint/tm-db v0.6.4
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 // indirect
 	google.golang.org/appengine v1.6.6-0.20191016204603-16bce7d3dc4e // indirect
 	google.golang.org/genproto v0.0.0-20210114201628-6edceaf6022f
 	google.golang.org/grpc v1.35.0
-	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/api v0.19.3
-	k8s.io/apimachinery v0.19.3
+	k8s.io/apimachinery v0.20.2
 	k8s.io/client-go v0.19.3
 	k8s.io/code-generator v0.19.3
 	k8s.io/metrics v0.19.3
-	sigs.k8s.io/kind v0.10.0
+	sigs.k8s.io/kind v0.11.1
 )
 
 replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
@@ -54,8 +53,6 @@ replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
 replace google.golang.org/grpc => google.golang.org/grpc v1.33.2
-
-replace github.com/grpc-ecosystem/grpc-gateway => github.com/grpc-ecosystem/grpc-gateway v1.14.7
 
 replace github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.41.4-akash-4
 
