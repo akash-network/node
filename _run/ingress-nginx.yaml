@@ -401,7 +401,7 @@ spec:
               memory: 90Mi
       nodeSelector:
         kubernetes.io/os: linux
-        akashRole: ingress
+        akash.network/role: ingress
       tolerations:
         - effect: NoSchedule
           key: node-role.kubernetes.io/master

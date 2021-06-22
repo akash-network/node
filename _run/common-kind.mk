@@ -57,7 +57,7 @@ kind-cluster-create:
 		--config "$(KIND_CONFIG)" \
 		--name "$(KIND_NAME)" \
 		--image "$(KIND_IMG)"
-	kubectl label nodes kube-control-plane akashRole=ingress
+	kubectl label nodes kube-control-plane akash.network/role=ingress
 	kubectl apply -f "$(INGRESS_CONFIG_PATH)"
 	"$(AKASH_ROOT)/script/setup-kind.sh"
 
