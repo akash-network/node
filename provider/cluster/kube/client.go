@@ -915,10 +915,6 @@ func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName s
 stdout io.Writer,
 stderr io.Writer, tty bool,
 	tsq remotecommand.TerminalSizeQueue) (cluster.ExecResult, error) {
-
-
-	// TODO - check if deployment actually exists in the first place before querying kubernetes
-
 	namespace := lidNS(leaseID)
 
 	deployments, err := c.kc.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{

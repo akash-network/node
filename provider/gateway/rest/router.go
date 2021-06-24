@@ -67,6 +67,7 @@ type wsStreamConfig struct {
 }
 
 func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.Router {
+
 	router := mux.NewRouter()
 
 	// store provider address in context as lease endpoints below need it
@@ -143,7 +144,7 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.R
 
 	// POST /lease/<lease-id>/shell
 	lrouter.HandleFunc("/shell",
-		leaseShellHandler(log, pclient.Cluster()))
+		leaseShellHandler(log, pclient.Manifest(), pclient.Cluster()))
 
 	return router
 }
@@ -164,8 +165,23 @@ type leaseShellResponse struct {
 	Message string `json:"message,omitempty"`
 }
 
-func leaseShellHandler(log log.Logger, cclient cluster.Client) http.HandlerFunc {
+func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster.Client) http.HandlerFunc {
 	return func (rw http.ResponseWriter, req *http.Request){
+		leaseID := requestLeaseID(req)
+
+		//  check if deployment actually exists in the first place before querying kubernetes
+		active, err := mclient.IsActive(context.Background(), leaseID.DeploymentID())
+		if err != nil {
+			log.Error("failed checking deployment activity", "err", err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if !active {
+			log.Info("no active deployment", "lease", leaseID)
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
 
 		vars := req.URL.Query()
 		var cmd []string
@@ -213,7 +229,7 @@ func leaseShellHandler(log log.Logger, cclient cluster.Client) http.HandlerFunc 
 			return
 		}
 		var podIndex uint
-		_, err := fmt.Sscanf(podIndexStr,"%d", &podIndex)
+		_, err = fmt.Sscanf(podIndexStr,"%d", &podIndex)
 		if err != nil {
 			log.Error("parameter podIndex invalid", "err", err)
 			rw.WriteHeader(http.StatusInternalServerError)
@@ -296,7 +312,7 @@ func leaseShellHandler(log log.Logger, cclient cluster.Client) http.HandlerFunc 
 		if connectStdin {
 			stdinForExec = stdinPipeIn
 		}
-		result, err := cclient.Exec(req.Context(), requestLeaseID(req), service, podIndex, cmd, stdinForExec, stdout, stderr, isTty, tsq)
+		result, err := cclient.Exec(req.Context(), leaseID, service, podIndex, cmd, stdinForExec, stdout, stderr, isTty, tsq)
 
 		responseData := leaseShellResponse{}
 
