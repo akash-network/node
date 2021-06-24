@@ -6,7 +6,6 @@ import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	dockerterm "github.com/moby/term"
 	akashclient "github.com/ovrclk/akash/client"
-	cmdcommon "github.com/ovrclk/akash/cmd/common"
 	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
@@ -26,7 +25,7 @@ const (
 
 func leaseShellCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Args: cobra.MinimumNArgs(1),
+		Args: cobra.MinimumNArgs(2),
 		Use:          "lease-shell",
 		Short:        "do lease shell",
 		SilenceUsage: true,
@@ -134,6 +133,7 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 		}()
 	}
 
+	// TODO - trap sigint/sigterm here and kill the remote process
 	leaseShellFn := func() error {
 		return gclient.LeaseShell(cmd.Context(), bid.LeaseID(), service, remoteCmd, stdin, stdout, stderr, setupTty, terminalResizes)
 	}
@@ -145,7 +145,6 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return showErrorToUser(err)
 	}
-
-	return cmdcommon.PrintJSON(cctx, "done")
+	return nil
 }
 

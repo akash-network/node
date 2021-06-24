@@ -409,9 +409,6 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 	}
 
 	endpoint.RawQuery = query.Encode()
-
-	fmt.Printf("dialing %q\n", endpoint.String())
-
 	conn, response, err := c.wsclient.DialContext(ctx, endpoint.String(), nil)
 	if err != nil {
 		if errors.Is(err, websocket.ErrBadHandshake) {
@@ -429,6 +426,14 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 	l := &sync.Mutex{}
 	subctx, subcancel := context.WithCancel(ctx)
 	wg := &sync.WaitGroup{}
+	suberr := make(chan error, 1)
+	saveError := func(msg string, err error){
+		err = fmt.Errorf("%w: failed while" + msg)
+		select {
+		case suberr <- err:
+		default:
+		}
+	}
 	if stdin != nil {
 		wg.Add(1)
 		go func (){
@@ -439,13 +444,13 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 			for {
 				n, err := stdin.Read(data)
 				if err != nil {
-					// TODO - record error
+					saveError("reading from stdin", err)
 					return
 				}
 
 				_, err = writer.Write(data[0:n])
 				if err != nil {
-					// TODO - record error
+					saveError("writing stdin data to remote", err)
 					return
 				}
 			}
@@ -476,18 +481,18 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 				(&buf).Reset()
 				err = binary.Write(&buf, binary.BigEndian, size.Width)
 				if err != nil {
-					// TODO - record error
+					saveError("encoding terminal size width", err)
 					return
 				}
 				err = binary.Write(&buf, binary.BigEndian, size.Height)
 				if err != nil {
-					// TODO - record error
+					saveError("encoding terminal size height", err)
 					return
 				}
 
 				_, err = w.Write((&buf).Bytes())
 				if err != nil {
-					// TODO - record error
+					saveError("sending terminal size to remote", err)
 					return
 				}
 			}
@@ -514,20 +519,21 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 		msg := data[1:] // remainder is the message
 		switch msgId {
 		case LeaseShellCodeStdout:
-			stdout.Write(msg) // TODO - check error
+			_, connectionError = stdout.Write(msg)
 		case LeaseShellCodeStderr:
-			stderr.Write(msg) // TODO - check error
+			_, connectionError = stderr.Write(msg)
 		case LeaseShellCodeResult:
 			remoteError = bytes.NewBuffer(msg)
 			break loop
 		case LeaseShellCodeFailure:
 			connectionError = errors.New("the provider encountered an unknown error")
-			break loop
 		default:
 			connectionError = fmt.Errorf("provider sent unknown message ID %d", messageType)
-			break loop
 		}
 
+		if connectionError != nil {
+			break loop
+		}
 	}
 
 	subcancel()
@@ -552,6 +558,13 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 			return fmt.Errorf("remote process exited with code %d", v.ExitCode)
 		}
 
+	}
+
+	// Check to see if a goroutine failed
+	select {
+	case err = <- suberr:
+		return err
+	default:
 	}
 
 	// TODO - re enable me after fixing the goroutine reading from stdin

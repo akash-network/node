@@ -1034,9 +1034,11 @@ stderr io.Writer, tty bool,
 
 	// Some errors are basically untyped
 	if strings.Contains(err.Error(), "error executing command in container") {
-		if strings.Contains(err.Error(), "no such file or directory") {
+		if strings.Contains(err.Error(), "no such file or directory") || strings.Contains(err.Error(), "executable file not found in $PATH"){
 			return nil, cluster.ErrCommandDoesNotExist
 		}
+		// Log the error here so this can be tracked down somehow in the provider logs at least
+		c.log.Error("command execution failed", "err", err)
 		return nil, cluster.ErrCommandExecutionFailed
 	}
 
