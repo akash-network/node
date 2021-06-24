@@ -206,6 +206,20 @@ func leaseShellHandler(log log.Logger, cclient cluster.Client) http.HandlerFunc 
 		}
 		connectStdin := stdin == "1"
 
+		podIndexStr := vars.Get("podIndex")
+		if len(podIndexStr) == 0 {
+			log.Error("missing parameter podIndex")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		var podIndex uint
+		_, err := fmt.Sscanf(podIndexStr,"%d", &podIndex)
+		if err != nil {
+			log.Error("parameter podIndex invalid", "err", err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		upgrader := websocket.Upgrader{
 			ReadBufferSize:  0,
 			WriteBufferSize: 0,
@@ -282,7 +296,7 @@ func leaseShellHandler(log log.Logger, cclient cluster.Client) http.HandlerFunc 
 		if connectStdin {
 			stdinForExec = stdinPipeIn
 		}
-		result, err := cclient.Exec(req.Context(), requestLeaseID(req), service, cmd, stdinForExec, stdout, stderr, isTty, tsq)
+		result, err := cclient.Exec(req.Context(), requestLeaseID(req), service, podIndex, cmd, stdinForExec, stdout, stderr, isTty, tsq)
 
 		responseData := leaseShellResponse{}
 

@@ -21,6 +21,7 @@ import (
 const (
 	FlagStdin = "stdin"
 	FlagTty = "tty"
+	FlagReplicaIndex = "replica-index"
 )
 
 func leaseShellCmd() *cobra.Command {
@@ -45,7 +46,10 @@ func leaseShellCmd() *cobra.Command {
 		return nil
 	}
 
-
+	cmd.Flags().Uint(FlagReplicaIndex, 0, "replica index to connect to")
+	if err := viper.BindPFlag(FlagReplicaIndex, cmd.Flags().Lookup(FlagReplicaIndex)); err != nil {
+		return nil
+	}
 
 	return cmd
 }
@@ -58,6 +62,7 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 	stderr = os.Stderr
 	connectStdin := viper.GetBool(FlagStdin)
 	setupTty := viper.GetBool(FlagTty)
+	podIndex := viper.GetUint(FlagReplicaIndex)
 	if connectStdin || setupTty {
 		stdin = os.Stdin
 	}
@@ -135,7 +140,7 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 
 	// TODO - trap sigint/sigterm here and kill the remote process
 	leaseShellFn := func() error {
-		return gclient.LeaseShell(cmd.Context(), bid.LeaseID(), service, remoteCmd, stdin, stdout, stderr, setupTty, terminalResizes)
+		return gclient.LeaseShell(cmd.Context(), bid.LeaseID(), service, podIndex, remoteCmd, stdin, stdout, stderr, setupTty, terminalResizes)
 	}
 	if setupTty {
 		err = tty.Safe(leaseShellFn)

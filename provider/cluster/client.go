@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"k8s.io/client-go/tools/remotecommand"
 	"math/rand"
@@ -40,6 +41,7 @@ type Client interface {
     Exec(ctx context.Context,
     	lID mtypes.LeaseID,
     	service string,
+    	podIndex uint,
     	cmd []string,
     	stdin io.Reader,
     	stdout io.Writer,
@@ -52,15 +54,17 @@ type ExecResult interface {
 	ExitCode() int
 }
 
-var ErrExecNoServiceWithName = errors.New("no such service exists with that name")
-var ErrExecServiceNotRunning = errors.New("service with that name is not running")
-var ErrCommandExecutionFailed = errors.New("command execution failed")
-var ErrCommandDoesNotExist = errors.New("command could not be executed because it does not exist")
-var ErrDeploymentNotYetRunning = errors.New("deployment is not yet active")
+var ErrExec = errors.New("remote command execute error")
+var ErrExecNoServiceWithName = fmt.Errorf("%w: no such service exists with that name", ErrExec)
+var ErrExecServiceNotRunning = fmt.Errorf("%w: service with that name is not running", ErrExec)
+var ErrExecCommandExecutionFailed = fmt.Errorf("%w: command execution failed", ErrExec)
+var ErrExecCommandDoesNotExist = fmt.Errorf("%w: command could not be executed because it does not exist", ErrExec)
+var ErrExecDeploymentNotYetRunning = fmt.Errorf("%w: deployment is not yet active", ErrExec)
+var ErrExecMultiplePods = fmt.Errorf("%w: cannot execute without specifying a pod explicitly", ErrExec)
+var ErrExecPodIndexOutOfRange = fmt.Errorf("%w: pod index out of range", ErrExec)
 
 func ErrorIsOkToSendToClient(err error) bool {
-	return errors.Is(err, ErrExecNoServiceWithName) || errors.Is(err, ErrExecServiceNotRunning) ||
-		errors.Is(err, ErrCommandExecutionFailed) || errors.Is(err, ErrCommandDoesNotExist) || errors.Is(err, ErrDeploymentNotYetRunning)
+	return errors.Is(err, ErrExec)
 }
 
 type node struct {
@@ -275,6 +279,6 @@ func (c *nullClient) Inventory(context.Context) ([]ctypes.Node, error) {
 	}, nil
 }
 
-func (c *nullClient) Exec(context.Context, mtypes.LeaseID, string, []string, io.Reader, io.Writer, io.Writer, bool, remotecommand.TerminalSizeQueue) (ExecResult, error) {
+func (c *nullClient) Exec(context.Context, mtypes.LeaseID, string, uint, []string, io.Reader, io.Writer, io.Writer, bool, remotecommand.TerminalSizeQueue) (ExecResult, error) {
 	return nil, errors.New("not implemented")
 }

@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"os"
 	"path"
+	"sort"
 	"strings"
 
 	"k8s.io/client-go/util/flowcontrol"
@@ -894,7 +895,23 @@ func (er execResult) ExitCode() int{
 	return er.exitCode
 }
 
-func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName string, cmd []string, stdin io.Reader,
+type sortablePods []kubev1.Pod
+
+func (sp sortablePods) Len() int {
+	return len(sp)
+}
+
+func (sp sortablePods) Less(i, j int) bool {
+	return strings.Compare(sp[i].Name, sp[j].Name) == -1
+}
+
+func (sp sortablePods) Swap(i, j int) {
+	tmp := sp[i]
+	sp[i] = sp[j]
+	sp[j] = tmp
+}
+
+func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName string, podIndex uint, cmd []string, stdin io.Reader,
 stdout io.Writer,
 stderr io.Writer, tty bool,
 	tsq remotecommand.TerminalSizeQueue) (cluster.ExecResult, error) {
@@ -922,7 +939,7 @@ stderr io.Writer, tty bool,
 
 	// If no deployments are found yet then the deployment hasn't been spun up kubernetes yet
 	if 0 == len(deployments.Items) {
-		return nil, cluster.ErrDeploymentNotYetRunning
+		return nil, cluster.ErrExecDeploymentNotYetRunning
 	}
 
 	serviceExists := false
@@ -954,20 +971,19 @@ stderr io.Writer, tty bool,
 
 	// If no pods are found yet then the deployment hasn't been spun up kubernetes yet
 	if 0 == len(pods.Items) {
-		return nil, cluster.ErrDeploymentNotYetRunning
-	}
-
-	var podName string
-	for _, pod := range pods.Items {
-		podName = pod.Name
-	}
-
-	// Pod name not found, so it is not running
-	if len(podName) == 0 {
 		return nil, cluster.ErrExecServiceNotRunning
 	}
 
-	const subResource = "exec"
+	var podName string
+	if podIndex >= uint(len(pods.Items)) {
+		return nil, fmt.Errorf("%w: valid range is [0, %d]", cluster.ErrExecPodIndexOutOfRange, len(pods.Items) - 1)
+	}
+
+	// sort the pods, since we have no idea what order kubernetes returns them in
+	podsEff := sortablePods(pods.Items)
+	sort.Sort(podsEff)
+	podName = podsEff[podIndex].Name
+
 
 	containerName := serviceName
 
@@ -996,8 +1012,8 @@ stderr io.Writer, tty bool,
 	if tty {
 		stderr = nil
 	}
-	// TODO - probably need to figure out what happens here with multiple containers and try and select the
-	// same container each time if possible
+
+	const subResource = "exec" // This value copied from kubectl
 	req := kubeRestClient.Post().Resource("pods").Name(podName).Namespace(namespace).SubResource(subResource)
 	req.VersionedParams(&corev1.PodExecOptions{
 		Container: containerName,
@@ -1035,11 +1051,12 @@ stderr io.Writer, tty bool,
 	// Some errors are basically untyped
 	if strings.Contains(err.Error(), "error executing command in container") {
 		if strings.Contains(err.Error(), "no such file or directory") || strings.Contains(err.Error(), "executable file not found in $PATH"){
-			return nil, cluster.ErrCommandDoesNotExist
+			return nil, cluster.ErrExecCommandDoesNotExist
 		}
+		// Don't send the full text of unknown errors back to the user
 		// Log the error here so this can be tracked down somehow in the provider logs at least
 		c.log.Error("command execution failed", "err", err)
-		return nil, cluster.ErrCommandExecutionFailed
+		return nil, cluster.ErrExecCommandExecutionFailed
 	}
 
 	return nil, err

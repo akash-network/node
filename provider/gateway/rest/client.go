@@ -50,7 +50,7 @@ type Client interface {
 	LeaseEvents(ctx context.Context, id mtypes.LeaseID, services string, follow bool) (*LeaseKubeEvents, error)
 	LeaseLogs(ctx context.Context, id mtypes.LeaseID, services string, follow bool, tailLines int64) (*ServiceLogs, error)
 	ServiceStatus(ctx context.Context, id mtypes.LeaseID, service string) (*cltypes.ServiceStatus, error)
-	LeaseShell(ctx context.Context, id mtypes.LeaseID, service string, cmd []string,
+	LeaseShell(ctx context.Context, id mtypes.LeaseID, service string, podIndex uint, cmd []string,
 		stdin io.ReadCloser,
 		stdout io.Writer,
 		stderr io.Writer,
@@ -371,7 +371,7 @@ func (c *client) LeaseStatus(ctx context.Context, id mtypes.LeaseID) (*cltypes.L
 	return &obj, nil
 }
 
-func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service string, cmd []string,
+func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service string, podIndex uint, cmd []string,
 	stdin io.ReadCloser,
 	stdout io.Writer,
 	stderr io.Writer,
@@ -392,6 +392,7 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 
 	query := url.Values{}
 	query.Set("service", service)
+	query.Set("podIndex", fmt.Sprintf("%d", podIndex))
 	ttyValue := "0"
 	if tty {
 		ttyValue = "1"
