@@ -22,7 +22,18 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
-var _ Client = (*nullClient)(nil)
+var (
+	_ Client = (*nullClient)(nil)
+	// Errors types returned by the Exec function on the client interface
+	ErrExec = errors.New("remote command execute error")
+	ErrExecNoServiceWithName = fmt.Errorf("%w: no such service exists with that name", ErrExec)
+	ErrExecServiceNotRunning = fmt.Errorf("%w: service with that name is not running", ErrExec)
+	ErrExecCommandExecutionFailed = fmt.Errorf("%w: command execution failed", ErrExec)
+	ErrExecCommandDoesNotExist = fmt.Errorf("%w: command could not be executed because it does not exist", ErrExec)
+	ErrExecDeploymentNotYetRunning = fmt.Errorf("%w: deployment is not yet active", ErrExec)
+	ErrExecMultiplePods = fmt.Errorf("%w: cannot execute without specifying a pod explicitly", ErrExec)
+	ErrExecPodIndexOutOfRange = fmt.Errorf("%w: pod index out of range", ErrExec)
+)
 
 type ReadClient interface {
 	LeaseStatus(context.Context, mtypes.LeaseID) (*ctypes.LeaseStatus, error)
@@ -54,14 +65,6 @@ type ExecResult interface {
 	ExitCode() int
 }
 
-var ErrExec = errors.New("remote command execute error")
-var ErrExecNoServiceWithName = fmt.Errorf("%w: no such service exists with that name", ErrExec)
-var ErrExecServiceNotRunning = fmt.Errorf("%w: service with that name is not running", ErrExec)
-var ErrExecCommandExecutionFailed = fmt.Errorf("%w: command execution failed", ErrExec)
-var ErrExecCommandDoesNotExist = fmt.Errorf("%w: command could not be executed because it does not exist", ErrExec)
-var ErrExecDeploymentNotYetRunning = fmt.Errorf("%w: deployment is not yet active", ErrExec)
-var ErrExecMultiplePods = fmt.Errorf("%w: cannot execute without specifying a pod explicitly", ErrExec)
-var ErrExecPodIndexOutOfRange = fmt.Errorf("%w: pod index out of range", ErrExec)
 
 func ErrorIsOkToSendToClient(err error) bool {
 	return errors.Is(err, ErrExec)
