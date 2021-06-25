@@ -138,3 +138,7 @@ func (e *eventsFeed) SendEvent(evt *eventsv1.Event) bool {
 func (e *eventsFeed) ResultChan() <-chan *eventsv1.Event {
 	return e.feed
 }
+
+type ExecResult interface {
+	ExitCode() int
+}

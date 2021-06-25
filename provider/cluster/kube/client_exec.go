@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/ovrclk/akash/provider/cluster"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"io"
 	corev1 "k8s.io/api/core/v1"
@@ -19,18 +20,18 @@ import (
 	"strings"
 )
 
-
 // the type implementing the interface returned by the Exec command
 type execResult struct {
 	exitCode int
 }
 
-func (er execResult) ExitCode() int{
+func (er execResult) ExitCode() int {
 	return er.exitCode
 }
 
 // a type to allow a slice of kubernetes pods to be sorted
 type sortablePods []kubev1.Pod
+
 func (sp sortablePods) Len() int {
 	return len(sp)
 }
@@ -48,7 +49,7 @@ func (sp sortablePods) Swap(i, j int) {
 func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName string, podIndex uint, cmd []string, stdin io.Reader,
 	stdout io.Writer,
 	stderr io.Writer, tty bool,
-	tsq remotecommand.TerminalSizeQueue) (cluster.ExecResult, error) {
+	tsq remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error) {
 	namespace := lidNS(leaseID)
 
 	// Check that the deployment exists
@@ -109,7 +110,7 @@ func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName s
 
 	// check that the requested pod is within the range
 	if podIndex >= uint(len(pods.Items)) {
-		return nil, fmt.Errorf("%w: valid range is [0, %d]", cluster.ErrExecPodIndexOutOfRange, len(pods.Items) - 1)
+		return nil, fmt.Errorf("%w: valid range is [0, %d]", cluster.ErrExecPodIndexOutOfRange, len(pods.Items)-1)
 	}
 
 	// sort the pods, since we have no idea what order kubernetes returns them in
@@ -120,7 +121,7 @@ func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName s
 	switch selectedPod.Status.Phase {
 	case corev1.PodSucceeded:
 		return nil, fmt.Errorf("%w: the service has completed", cluster.ErrExecServiceNotRunning)
-	case  corev1.PodFailed:
+	case corev1.PodFailed:
 		return nil, fmt.Errorf("%w: the service has failed", cluster.ErrExecServiceNotRunning)
 	default:
 	}
@@ -160,11 +161,11 @@ func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName s
 	req := kubeRestClient.Post().Resource("pods").Name(podName).Namespace(namespace).SubResource(subResource)
 	req.VersionedParams(&corev1.PodExecOptions{
 		Container: containerName,
-		Command: cmd,
-		Stdin: stdin != nil,
-		Stdout: stdout != nil,
-		Stderr: stderr != nil,
-		TTY: tty,
+		Command:   cmd,
+		Stdin:     stdin != nil,
+		Stdout:    stdout != nil,
+		Stderr:    stderr != nil,
+		TTY:       tty,
 	}, myParameterCodec)
 
 	// Make the request with SPDY
@@ -176,7 +177,7 @@ func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName s
 	// Run, passing in the streams and everything else. This runs until the remote end closes
 	// or the streams close
 	err = exec.Stream(remotecommand.StreamOptions{
-		Stdin:             stdin, // any reader
+		Stdin:             stdin,  // any reader
 		Stdout:            stdout, // any writer
 		Stderr:            stderr, // any writer
 		Tty:               tty,
@@ -196,7 +197,7 @@ func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName s
 
 	// Some errors are untyped, use string matching to give better answers
 	if strings.Contains(err.Error(), "error executing command in container") {
-		if strings.Contains(err.Error(), "no such file or directory") || strings.Contains(err.Error(), "executable file not found in $PATH"){
+		if strings.Contains(err.Error(), "no such file or directory") || strings.Contains(err.Error(), "executable file not found in $PATH") {
 			return nil, cluster.ErrExecCommandDoesNotExist
 		}
 		// Don't send the full text of unknown errors back to the user

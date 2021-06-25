@@ -25,14 +25,14 @@ import (
 var (
 	_ Client = (*nullClient)(nil)
 	// Errors types returned by the Exec function on the client interface
-	ErrExec = errors.New("remote command execute error")
-	ErrExecNoServiceWithName = fmt.Errorf("%w: no such service exists with that name", ErrExec)
-	ErrExecServiceNotRunning = fmt.Errorf("%w: service with that name is not running", ErrExec)
-	ErrExecCommandExecutionFailed = fmt.Errorf("%w: command execution failed", ErrExec)
-	ErrExecCommandDoesNotExist = fmt.Errorf("%w: command could not be executed because it does not exist", ErrExec)
+	ErrExec                        = errors.New("remote command execute error")
+	ErrExecNoServiceWithName       = fmt.Errorf("%w: no such service exists with that name", ErrExec)
+	ErrExecServiceNotRunning       = fmt.Errorf("%w: service with that name is not running", ErrExec)
+	ErrExecCommandExecutionFailed  = fmt.Errorf("%w: command execution failed", ErrExec)
+	ErrExecCommandDoesNotExist     = fmt.Errorf("%w: command could not be executed because it does not exist", ErrExec)
 	ErrExecDeploymentNotYetRunning = fmt.Errorf("%w: deployment is not yet active", ErrExec)
-	ErrExecMultiplePods = fmt.Errorf("%w: cannot execute without specifying a pod explicitly", ErrExec)
-	ErrExecPodIndexOutOfRange = fmt.Errorf("%w: pod index out of range", ErrExec)
+	ErrExecMultiplePods            = fmt.Errorf("%w: cannot execute without specifying a pod explicitly", ErrExec)
+	ErrExecPodIndexOutOfRange      = fmt.Errorf("%w: pod index out of range", ErrExec)
 )
 
 type ReadClient interface {
@@ -49,21 +49,18 @@ type Client interface {
 	TeardownLease(context.Context, mtypes.LeaseID) error
 	Deployments(context.Context) ([]ctypes.Deployment, error)
 	Inventory(context.Context) ([]ctypes.Node, error)
-    Exec(ctx context.Context,
-    	lID mtypes.LeaseID,
-    	service string,
-    	podIndex uint,
-    	cmd []string,
-    	stdin io.Reader,
-    	stdout io.Writer,
-    	stderr io.Writer,
-    	tty bool,
-    	tsq remotecommand.TerminalSizeQueue) (ExecResult, error)
+	Exec(ctx context.Context,
+		lID mtypes.LeaseID,
+		service string,
+		podIndex uint,
+		cmd []string,
+		stdin io.Reader,
+		stdout io.Writer,
+		stderr io.Writer,
+		tty bool,
+		tsq remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error)
 }
 
-type ExecResult interface {
-	ExitCode() int
-}
 
 
 func ErrorIsOkToSendToClient(err error) bool {
@@ -282,6 +279,6 @@ func (c *nullClient) Inventory(context.Context) ([]ctypes.Node, error) {
 	}, nil
 }
 
-func (c *nullClient) Exec(context.Context, mtypes.LeaseID, string, uint, []string, io.Reader, io.Writer, io.Writer, bool, remotecommand.TerminalSizeQueue) (ExecResult, error) {
+func (c *nullClient) Exec(context.Context, mtypes.LeaseID, string, uint, []string, io.Reader, io.Writer, io.Writer, bool, remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error) {
 	return nil, errors.New("not implemented")
 }

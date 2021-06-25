@@ -53,7 +53,7 @@ type Client interface {
 		stdout io.Writer,
 		stderr io.Writer,
 		tty bool,
-		tsq <- chan remotecommand.TerminalSize) error
+		tsq <-chan remotecommand.TerminalSize) error
 }
 
 type LeaseKubeEvent struct {
@@ -368,8 +368,6 @@ func (c *client) LeaseStatus(ctx context.Context, id mtypes.LeaseID) (*cltypes.L
 
 	return &obj, nil
 }
-
-
 
 func (c *client) LeaseEvents(ctx context.Context, id mtypes.LeaseID, _ string, follow bool) (*LeaseKubeEvents, error) {
 	endpoint, err := url.Parse(c.host.String() + "/" + leaseEventsPath(id))

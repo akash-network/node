@@ -80,7 +80,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, ho
 		sub:             sub,
 		statusch:        make(chan chan<- *Status),
 		mreqch:          make(chan manifestRequest),
-		activeCheckCh:  make(chan isActiveCheck),
+		activeCheckCh:   make(chan isActiveCheck),
 		managers:        make(map[string]*manager),
 		managerch:       make(chan *manager),
 		lc:              lifecycle.New(),
@@ -104,8 +104,8 @@ type service struct {
 	sub     pubsub.Subscriber
 	lc      lifecycle.Lifecycle
 
-	statusch chan chan<- *Status
-	mreqch   chan manifestRequest
+	statusch      chan chan<- *Status
+	mreqch        chan manifestRequest
 	activeCheckCh chan isActiveCheck
 
 	managers  map[string]*manager
@@ -129,19 +129,20 @@ func (s *service) updateGauges() {
 }
 
 type isActiveCheck struct {
-	ch chan <- bool
+	ch         chan<- bool
 	Deployment dtypes.DeploymentID
 }
+
 func (s *service) IsActive(ctx context.Context, dID dtypes.DeploymentID) (bool, error) {
 
 	ch := make(chan bool, 1)
 	req := isActiveCheck{
 		Deployment: dID,
-		ch: ch,
+		ch:         ch,
 	}
 
 	select {
-	case <- ctx.Done():
+	case <-ctx.Done():
 		return false, ctx.Err()
 	case s.activeCheckCh <- req:
 	case <-s.lc.ShuttingDown():
@@ -266,7 +267,7 @@ loop:
 				}
 			}
 
-		case check := <- s.activeCheckCh:
+		case check := <-s.activeCheckCh:
 			_, ok := s.managers[dquery.DeploymentPath(check.Deployment)]
 			check.ch <- ok
 

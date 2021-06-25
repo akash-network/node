@@ -23,14 +23,14 @@ import (
 )
 
 const (
-	FlagStdin = "stdin"
-	FlagTty = "tty"
+	FlagStdin        = "stdin"
+	FlagTty          = "tty"
 	FlagReplicaIndex = "replica-index"
 )
 
 func leaseShellCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Args: cobra.MinimumNArgs(2),
+		Args:         cobra.MinimumNArgs(2),
 		Use:          "lease-shell",
 		Short:        "do lease shell",
 		SilenceUsage: true,
@@ -76,11 +76,11 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 	if setupTty {
 		tty = term.TTY{
 			Parent: nil,
-			Out: os.Stdout,
-			In: stdin,
+			Out:    os.Stdout,
+			In:     stdin,
 		}
 
-		if ! tty.IsTerminalIn() {
+		if !tty.IsTerminalIn() {
 			return errors.New("Input is not a terminal, cannot setup TTY")
 		}
 
@@ -129,7 +129,7 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 
 	if tsq != nil {
 		terminalResizes = make(chan remotecommand.TerminalSize, 1)
-		go func () {
+		go func() {
 			for {
 				// this blocks waiting for a resize event, the docs suggest
 				// that this isn't the case but there is not a code path that ever does that
@@ -155,10 +155,10 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 	go func() {
 		defer wg.Done()
 		select {
-			case sig := <- signals:
-				cancel()
-				wasHalted <- sig
-			case <- ctx.Done():
+		case sig := <-signals:
+			cancel()
+			wasHalted <- sig
+		case <-ctx.Done():
 		}
 	}()
 	leaseShellFn := func() error {
@@ -173,7 +173,7 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 
 	// Check if a signal halted things
 	select {
-	case haltSignal := <- wasHalted:
+	case haltSignal := <-wasHalted:
 		cctx.PrintString(fmt.Sprintf("\nhalted by signal: %v\n", haltSignal))
 		err = nil // Don't show this error, as it is always something complaining about use of a closed connection
 	default:
@@ -186,4 +186,3 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 	}
 	return nil
 }
-

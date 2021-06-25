@@ -38,7 +38,6 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"k8s.io/client-go/tools/pager"
 
-
 	"k8s.io/apimachinery/pkg/runtime"
 	restclient "k8s.io/client-go/rest"
 )
@@ -65,12 +64,12 @@ type Client interface {
 var _ Client = (*client)(nil)
 
 type client struct {
-	kc       kubernetes.Interface
-	ac       akashclient.Interface
-	metc     metricsclient.Interface
-	ns       string
-	settings Settings
-	log      log.Logger
+	kc                kubernetes.Interface
+	ac                akashclient.Interface
+	metc              metricsclient.Interface
+	ns                string
+	settings          Settings
+	log               log.Logger
 	kubeContentConfig *restclient.Config
 }
 
@@ -115,12 +114,12 @@ func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client
 	}
 
 	return &client{
-		settings: settings,
-		kc:       kc,
-		ac:       mc,
-		metc:     metc,
-		ns:       ns,
-		log:      log.With("module", "provider-cluster-kube"),
+		settings:          settings,
+		kc:                kc,
+		ac:                mc,
+		metc:              metc,
+		ns:                ns,
+		log:               log.With("module", "provider-cluster-kube"),
 		kubeContentConfig: config,
 	}, nil
 
@@ -878,4 +877,3 @@ func (c *client) deploymentsForLease(ctx context.Context, lid mtypes.LeaseID) ([
 
 	return deployments.Items, nil
 }
-

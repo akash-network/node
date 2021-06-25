@@ -149,10 +149,10 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.R
 	return router
 }
 
-type channelToTerminalSizeQueue <- chan remotecommand.TerminalSize
+type channelToTerminalSizeQueue <-chan remotecommand.TerminalSize
 
 func (sq channelToTerminalSizeQueue) Next() *remotecommand.TerminalSize {
-	v, ok := <- sq
+	v, ok := <-sq
 	if !ok {
 		return nil
 	}
@@ -161,12 +161,12 @@ func (sq channelToTerminalSizeQueue) Next() *remotecommand.TerminalSize {
 }
 
 type leaseShellResponse struct {
-	ExitCode int `json:"exit_code"`
-	Message string `json:"message,omitempty"`
+	ExitCode int    `json:"exit_code"`
+	Message  string `json:"message,omitempty"`
 }
 
 func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster.Client) http.HandlerFunc {
-	return func (rw http.ResponseWriter, req *http.Request){
+	return func(rw http.ResponseWriter, req *http.Request) {
 		leaseID := requestLeaseID(req)
 
 		//  check if deployment actually exists in the first place before querying kubernetes
@@ -183,7 +183,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 			return
 		}
 
-		localLog := log.With("lease", leaseID.String(),"action", "shell")
+		localLog := log.With("lease", leaseID.String(), "action", "shell")
 
 		vars := req.URL.Query()
 		var cmd []string
@@ -196,7 +196,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 			cmd = append(cmd, v)
 		}
 
-		if len(cmd) == 0{
+		if len(cmd) == 0 {
 			localLog.Error("missing cmd parameter")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
@@ -231,7 +231,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 			return
 		}
 		var podIndex uint
-		_, err = fmt.Sscanf(podIndexStr,"%d", &podIndex)
+		_, err = fmt.Sscanf(podIndexStr, "%d", &podIndex)
 		if err != nil {
 			localLog.Error("parameter podIndex invalid", "err", err)
 			rw.WriteHeader(http.StatusInternalServerError)
@@ -266,7 +266,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 			stdinPipeIn, stdinPipeOut = io.Pipe()
 
 			wg.Add(1)
-			go func () {
+			go func() {
 				defer wg.Done()
 				for {
 					msgType, data, err := ws.ReadMessage()
@@ -274,7 +274,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 						return
 					}
 
-					if msgType == websocket.BinaryMessage && len(data) > 1  {
+					if msgType == websocket.BinaryMessage && len(data) > 1 {
 						msgId := data[0]
 						msg := data[1:]
 						if msgId == LeaseShellCodeStdin {

@@ -21,7 +21,7 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 	stdout io.Writer,
 	stderr io.Writer,
 	tty bool,
-	terminalResize <- chan remotecommand.TerminalSize) error {
+	terminalResize <-chan remotecommand.TerminalSize) error {
 
 	endpoint, err := url.Parse(c.host.String() + "/" + leaseShellPath(lID))
 	if err != nil {
@@ -72,7 +72,7 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 
 	wg := &sync.WaitGroup{}
 	suberr := make(chan error, 1)
-	saveError := func(msg string, err error){
+	saveError := func(msg string, err error) {
 		err = fmt.Errorf("%w: failed while" + msg)
 		// The channel is buffered but do not block here
 		select {
@@ -84,7 +84,7 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		<- subctx.Done()
+		<-subctx.Done()
 		err := conn.Close()
 		if err != nil {
 			saveError("closing websocket", err)
@@ -96,7 +96,7 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 	if stdin != nil {
 		// This goroutine is orphaned. There is no universal way to cancel a read from stdin
 		// at this time
-		go func (){
+		go func() {
 			data := make([]byte, 4096)
 
 			writer := wsutil.NewWsWriterWrapper(conn, LeaseShellCodeStdin, l)
@@ -108,7 +108,7 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 				}
 
 				select {
-				case <- subctx.Done():
+				case <-subctx.Done():
 					return
 				default:
 				}
@@ -124,7 +124,7 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 
 	if tty && terminalResize != nil {
 		wg.Add(1)
-		go func () {
+		go func() {
 			defer wg.Done()
 			var w io.Writer
 			w = wsutil.NewWsWriterWrapper(conn, LeaseShellCodeTerminalResize, l)
@@ -133,9 +133,9 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 				var size remotecommand.TerminalSize
 				var ok bool
 				select {
-				case <- subctx.Done():
+				case <-subctx.Done():
 					return
-				case size, ok = <- terminalResize:
+				case size, ok = <-terminalResize:
 					if !ok { // Channel has closed
 						return
 					}
@@ -181,7 +181,7 @@ loop:
 		}
 
 		msgId := data[0] // First byte is always message ID
-		msg := data[1:] // remainder is the message
+		msg := data[1:]  // remainder is the message
 		switch msgId {
 		case LeaseShellCodeStdout:
 			_, connectionError = stdout.Write(msg)
@@ -230,7 +230,7 @@ loop:
 
 	// Check to see if a goroutine failed
 	select {
-	case err = <- suberr:
+	case err = <-suberr:
 		return err
 	default:
 	}
