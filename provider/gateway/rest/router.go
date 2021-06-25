@@ -183,6 +183,8 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 			return
 		}
 
+		localLog := log.With("lease", leaseID.String(),"action", "shell")
+
 		vars := req.URL.Query()
 		var cmd []string
 
@@ -195,13 +197,13 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 		}
 
 		if len(cmd) == 0{
-			log.Error("missing cmd parameter")
+			localLog.Error("missing cmd parameter")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		tty := vars.Get("tty")
 		if 0 == len(tty) {
-			log.Error("missing parameter tty")
+			localLog.Error("missing parameter tty")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -209,14 +211,14 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 
 		service := vars.Get("service")
 		if 0 == len(service) {
-			log.Error("missing parameter service")
+			localLog.Error("missing parameter service")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		stdin := vars.Get("stdin")
 		if 0 == len(stdin) {
-			log.Error("missing parameter stdin")
+			localLog.Error("missing parameter stdin")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -224,14 +226,14 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 
 		podIndexStr := vars.Get("podIndex")
 		if len(podIndexStr) == 0 {
-			log.Error("missing parameter podIndex")
+			localLog.Error("missing parameter podIndex")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		var podIndex uint
 		_, err = fmt.Sscanf(podIndexStr,"%d", &podIndex)
 		if err != nil {
-			log.Error("parameter podIndex invalid", "err", err)
+			localLog.Error("parameter podIndex invalid", "err", err)
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -245,7 +247,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 		if err != nil {
 			// At this point the connection either has a response sent already
 			// or it has been closed
-			log.Error("failed handshake", "err", err)
+			localLog.Error("failed handshake", "err", err)
 			return
 		}
 
@@ -293,7 +295,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 								return
 							}
 
-							log.Debug("terminal resize received", "width", size.Width, "height", size.Height)
+							localLog.Debug("terminal resize received", "width", size.Width, "height", size.Height)
 							if terminalSizeUpdate != nil {
 								terminalSizeUpdate <- size
 							}
@@ -325,7 +327,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 		if result != nil {
 			responseData.ExitCode = result.ExitCode()
 
-			log.Debug("lease shell completed", "exitcode", result.ExitCode())
+			localLog.Info("lease shell completed", "exitcode", result.ExitCode())
 		} else {
 			if cluster.ErrorIsOkToSendToClient(err) {
 				responseData.Message = err.Error()
@@ -335,7 +337,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 				// that should not be let out
 				encodeData = false
 
-				log.Error("lease exec failed", "err", err)
+				localLog.Error("lease exec failed", "err", err)
 			}
 		}
 
@@ -350,7 +352,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 		_ = ws.Close()
 
 		if err != nil {
-			log.Error("failed writing response to client after exec", "err", err)
+			localLog.Error("failed writing response to client after exec", "err", err)
 		}
 
 		wg.Wait()

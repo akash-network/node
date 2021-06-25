@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	dockerterm "github.com/moby/term"
 	akashclient "github.com/ovrclk/akash/client"
@@ -15,7 +17,9 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/kubectl/pkg/util/term"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 )
 
 const (
@@ -121,32 +125,62 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 
 	var terminalResizes chan remotecommand.TerminalSize
 	wg := &sync.WaitGroup{}
+	ctx, cancel := context.WithCancel(cmd.Context())
+
 	if tsq != nil {
 		terminalResizes = make(chan remotecommand.TerminalSize, 1)
-		wg.Add(1)
 		go func () {
-			defer wg.Done()
 			for {
-				size := tsq.Next() // this blocks waiting for a resize event
-				if size == nil {   // this means reisze events have ended
-					close(terminalResizes)
+				// this blocks waiting for a resize event, the docs suggest
+				// that this isn't the case but there is not a code path that ever does that
+				// so this goroutine is just left running until the process exits
+				size := tsq.Next()
+				if size == nil {
 					return
 				}
-
 				terminalResizes <- *size
+
 			}
 		}()
 	}
 
-	// TODO - trap sigint/sigterm here and kill the remote process
-	leaseShellFn := func() error {
-		return gclient.LeaseShell(cmd.Context(), bid.LeaseID(), service, podIndex, remoteCmd, stdin, stdout, stderr, setupTty, terminalResizes)
+	signals := make(chan os.Signal, 1)
+	signalsToCatch := []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGHUP}
+	if !setupTty { // if the terminal is not interactive, handle SIGINT
+		signalsToCatch = append(signalsToCatch, syscall.SIGINT)
 	}
-	if setupTty {
+	signal.Notify(signals, signalsToCatch...)
+	wasHalted := make(chan os.Signal, 1)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		select {
+			case sig := <- signals:
+				cancel()
+				wasHalted <- sig
+			case <- ctx.Done():
+		}
+	}()
+	leaseShellFn := func() error {
+		return gclient.LeaseShell(ctx, bid.LeaseID(), service, podIndex, remoteCmd, stdin, stdout, stderr, setupTty, terminalResizes)
+	}
+
+	if setupTty { // Interactive terminals run with a wrapper that restores the prior state
 		err = tty.Safe(leaseShellFn)
 	} else {
 		err = leaseShellFn()
 	}
+
+	// Check if a signal halted things
+	select {
+	case haltSignal := <- wasHalted:
+		cctx.PrintString(fmt.Sprintf("\nhalted by signal: %v\n", haltSignal))
+		err = nil // Don't show this error, as it is always something complaining about use of a closed connection
+	default:
+		cancel()
+	}
+	wg.Wait()
+
 	if err != nil {
 		return showErrorToUser(err)
 	}

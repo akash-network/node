@@ -970,7 +970,6 @@ stderr io.Writer, tty bool,
 		return nil, cluster.ErrExecServiceNotRunning
 	}
 
-	var podName string
 	if podIndex >= uint(len(pods.Items)) {
 		return nil, fmt.Errorf("%w: valid range is [0, %d]", cluster.ErrExecPodIndexOutOfRange, len(pods.Items) - 1)
 	}
@@ -978,10 +977,17 @@ stderr io.Writer, tty bool,
 	// sort the pods, since we have no idea what order kubernetes returns them in
 	podsEff := sortablePods(pods.Items)
 	sort.Sort(podsEff)
-	podName = podsEff[podIndex].Name
-
-
-	containerName := serviceName
+	selectedPod := podsEff[podIndex]
+	// Validate the pod is in a state where it can be connected to
+	switch selectedPod.Status.Phase {
+		case corev1.PodSucceeded:
+			return nil, fmt.Errorf("%w: the service has completed", cluster.ErrExecServiceNotRunning)
+		case  corev1.PodFailed:
+			return nil, fmt.Errorf("%w: the service has failed", cluster.ErrExecServiceNotRunning)
+		default:
+	}
+	podName := selectedPod.Name
+	containerName := serviceName // Container name is always the same as the service name
 
 	groupVersion := schema.GroupVersion{Group: "api", Version: "v1"}
 	myScheme := runtime.NewScheme()
@@ -1006,6 +1012,7 @@ stderr io.Writer, tty bool,
 
 	c.log.Info("Opening container shell", "namespace", namespace, "pod", podName, "container", containerName)
 	if tty {
+		// disable stderr if running as a TTY, results come back over stdout
 		stderr = nil
 	}
 

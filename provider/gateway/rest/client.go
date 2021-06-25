@@ -410,7 +410,8 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 	}
 
 	endpoint.RawQuery = query.Encode()
-	conn, response, err := c.wsclient.DialContext(ctx, endpoint.String(), nil)
+	subctx, subcancel := context.WithCancel(ctx)
+	conn, response, err := c.wsclient.DialContext(subctx, endpoint.String(), nil)
 	if err != nil {
 		if errors.Is(err, websocket.ErrBadHandshake) {
 			buf := &bytes.Buffer{}
@@ -424,22 +425,34 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 		return err
 	}
 
-	l := &sync.Mutex{}
-	subctx, subcancel := context.WithCancel(ctx)
 	wg := &sync.WaitGroup{}
 	suberr := make(chan error, 1)
 	saveError := func(msg string, err error){
 		err = fmt.Errorf("%w: failed while" + msg)
+		// The channel is buffered but do not block here
 		select {
 		case suberr <- err:
 		default:
 		}
 	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<- subctx.Done()
+		err := conn.Close()
+		if err != nil {
+			saveError("closing websocket", err)
+		}
+	}()
+
+	l := &sync.Mutex{}
+
 	if stdin != nil {
-		wg.Add(1)
+		// This goroutine is orphaned. There is no universal way to cancel a read from stdin
+		// at this time
 		go func (){
-			defer wg.Done()
-			data := make([]byte, 256)
+			data := make([]byte, 4096)
 
 			writer := wsutil.NewWsWriterWrapper(conn, LeaseShellCodeStdin, l)
 			for {
@@ -447,6 +460,12 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 				if err != nil {
 					saveError("reading from stdin", err)
 					return
+				}
+
+				select {
+					case <- subctx.Done():
+						return
+					default:
 				}
 
 				_, err = writer.Write(data[0:n])
@@ -540,7 +559,10 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 	subcancel()
 
 	if stdin != nil {
-		stdin.Close() // TODO - check if this actually works
+		err := stdin.Close()
+		if err != nil {
+			saveError("closing stdin", err)
+		}
 	}
 
 	if remoteError != nil {
@@ -568,8 +590,7 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 	default:
 	}
 
-	// TODO - re enable me after fixing the goroutine reading from stdin
-	//wg.Wait()
+	wg.Wait()
 
 	return connectionError
 }
