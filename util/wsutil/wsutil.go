@@ -6,15 +6,19 @@ import (
 	"sync"
 )
 
+type wrappedConnection interface {
+	WriteMessage(int, []byte) error
+}
+
 type WsWriterWrapper struct {
-	connection *websocket.Conn
+	connection wrappedConnection
 
 	id  byte
 	buf bytes.Buffer
 	l   sync.Locker
 }
 
-func NewWsWriterWrapper(conn *websocket.Conn, id byte, l sync.Locker) WsWriterWrapper {
+func NewWsWriterWrapper(conn wrappedConnection, id byte, l sync.Locker) WsWriterWrapper {
 	return WsWriterWrapper{
 		connection: conn,
 		l:          l,

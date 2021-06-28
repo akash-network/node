@@ -16,6 +16,8 @@ import (
 	"sync"
 )
 
+var ErrLeaseShellProviderError = errors.New("the provider encountered an unknown error")
+
 func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service string, podIndex uint, cmd []string,
 	stdin io.ReadCloser,
 	stdout io.Writer,
@@ -191,7 +193,7 @@ loop:
 			remoteError = bytes.NewBuffer(msg)
 			break loop
 		case LeaseShellCodeFailure:
-			connectionError = errors.New("the provider encountered an unknown error")
+			connectionError = ErrLeaseShellProviderError
 		default:
 			connectionError = fmt.Errorf("provider sent unknown message ID %d", messageType)
 		}

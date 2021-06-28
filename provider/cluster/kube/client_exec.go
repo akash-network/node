@@ -8,7 +8,6 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"io"
 	corev1 "k8s.io/api/core/v1"
-	kubev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,7 +29,7 @@ func (er execResult) ExitCode() int {
 }
 
 // a type to allow a slice of kubernetes pods to be sorted
-type sortablePods []kubev1.Pod
+type sortablePods []corev1.Pod
 
 func (sp sortablePods) Len() int {
 	return len(sp)
@@ -131,7 +130,7 @@ func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName s
 	// Define the necessary runtime scheme & codec to send the request
 	groupVersion := schema.GroupVersion{Group: "api", Version: "v1"}
 	myScheme := runtime.NewScheme()
-	err = kubev1.AddToScheme(myScheme)
+	err = corev1.AddToScheme(myScheme)
 	if err != nil {
 		return nil, err
 	}

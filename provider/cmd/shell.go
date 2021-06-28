@@ -28,7 +28,7 @@ const (
 	FlagReplicaIndex = "replica-index"
 )
 
-func leaseShellCmd() *cobra.Command {
+func LeaseShellCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Args:         cobra.MinimumNArgs(2),
 		Use:          "lease-shell",
