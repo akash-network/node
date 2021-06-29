@@ -275,15 +275,14 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 					}
 
 					if msgType == websocket.BinaryMessage && len(data) > 1 {
-						msgId := data[0]
+						msgID := data[0]
 						msg := data[1:]
-						if msgId == LeaseShellCodeStdin {
+						if msgID == LeaseShellCodeStdin {
 							_, err := stdinPipeOut.Write(msg)
 							if err != nil {
 								return
 							}
-						}
-						if msgId == LeaseShellCodeTerminalResize {
+						} else if msgID == LeaseShellCodeTerminalResize {
 							var size remotecommand.TerminalSize
 							r := bytes.NewReader(msg)
 							err = binary.Read(r, binary.BigEndian, &size.Width)
@@ -368,7 +367,6 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 			close(terminalSizeUpdate)
 		}
 
-		return
 	}
 }
 

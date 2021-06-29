@@ -40,9 +40,7 @@ func (sp sortablePods) Less(i, j int) bool {
 }
 
 func (sp sortablePods) Swap(i, j int) {
-	tmp := sp[i]
-	sp[i] = sp[j]
-	sp[j] = tmp
+	sp[i], sp[j] = sp[j], sp[i]
 }
 
 func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName string, podIndex uint, cmd []string, stdin io.Reader,

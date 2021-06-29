@@ -33,6 +33,8 @@ var (
 	ErrExecDeploymentNotYetRunning = fmt.Errorf("%w: deployment is not yet active", ErrExec)
 	ErrExecMultiplePods            = fmt.Errorf("%w: cannot execute without specifying a pod explicitly", ErrExec)
 	ErrExecPodIndexOutOfRange      = fmt.Errorf("%w: pod index out of range", ErrExec)
+
+	errNotImplemented = errors.New("not implemented")
 )
 
 type ReadClient interface {
@@ -60,8 +62,6 @@ type Client interface {
 		tty bool,
 		tsq remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error)
 }
-
-
 
 func ErrorIsOkToSendToClient(err error) bool {
 	return errors.Is(err, ErrExec)
@@ -280,5 +280,5 @@ func (c *nullClient) Inventory(context.Context) ([]ctypes.Node, error) {
 }
 
 func (c *nullClient) Exec(context.Context, mtypes.LeaseID, string, uint, []string, io.Reader, io.Writer, io.Writer, bool, remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error) {
-	return nil, errors.New("not implemented")
+	return nil, errNotImplemented
 }

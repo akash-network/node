@@ -59,7 +59,6 @@ func TestLeaseShell(clientCtx client.Context, extraArgs []string, lID mtypes.Lea
 	return testutilcli.ExecTestCLICmd(clientCtx, pcmd.LeaseShellCmd(), args...)
 }
 
-
 // RunLocalProvider wraps up the Provider cobra command for testing and supplies
 // new default values to the flags.
 // prev: akashctl provider run --from=foo --cluster-k8s --gateway-listen-address=localhost:39729 --home=/tmp/akash_integration_TestE2EApp_324892307/.akashctl --node=tcp://0.0.0.0:41863 --keyring-backend test

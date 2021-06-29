@@ -16,7 +16,10 @@ import (
 	"sync"
 )
 
-var ErrLeaseShellProviderError = errors.New("the provider encountered an unknown error")
+var (
+	errLeaseShell              = errors.New("lease shell failed")
+	ErrLeaseShellProviderError = fmt.Errorf("%w: the provider encountered an unknown error", errLeaseShell)
+)
 
 func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service string, podIndex uint, cmd []string,
 	stdin io.ReadCloser,
@@ -34,7 +37,7 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 	case schemeWSS, schemeHTTPS:
 		endpoint.Scheme = schemeWSS
 	default:
-		return fmt.Errorf("invalid uri scheme %q", endpoint.Scheme)
+		return fmt.Errorf("%w: invalid uri scheme %q", errLeaseShell, endpoint.Scheme)
 	}
 
 	query := url.Values{}
@@ -64,18 +67,20 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 			buf := &bytes.Buffer{}
 			_, _ = io.Copy(buf, response.Body)
 
+			subcancel()
 			return ClientResponseError{
 				Status:  response.StatusCode,
 				Message: buf.String(),
 			}
 		}
+		subcancel()
 		return err
 	}
 
 	wg := &sync.WaitGroup{}
 	suberr := make(chan error, 1)
 	saveError := func(msg string, err error) {
-		err = fmt.Errorf("%w: failed while" + msg)
+		err = fmt.Errorf("%w: failed while %s", err, msg)
 		// The channel is buffered but do not block here
 		select {
 		case suberr <- err:
@@ -128,8 +133,7 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			var w io.Writer
-			w = wsutil.NewWsWriterWrapper(conn, LeaseShellCodeTerminalResize, l)
+			w := wsutil.NewWsWriterWrapper(conn, LeaseShellCodeTerminalResize, l)
 			buf := bytes.Buffer{}
 			for {
 				var size remotecommand.TerminalSize
@@ -172,19 +176,20 @@ loop:
 	for {
 		messageType, data, err := conn.ReadMessage()
 		if err != nil {
-			return err
+			saveError("receiving from websocket", err)
+			break
 		}
 		if messageType != websocket.BinaryMessage {
 			continue // Just ignore anything else
 		}
 
 		if len(data) == 0 {
-			connectionError = errors.New("provider sent a message that is too short to parse")
+			connectionError = fmt.Errorf("%w: provider sent a message that is too short to parse", errLeaseShell)
 		}
 
-		msgId := data[0] // First byte is always message ID
+		msgID := data[0] // First byte is always message ID
 		msg := data[1:]  // remainder is the message
-		switch msgId {
+		switch msgID {
 		case LeaseShellCodeStdout:
 			_, connectionError = stdout.Write(msg)
 		case LeaseShellCodeStderr:
@@ -195,7 +200,7 @@ loop:
 		case LeaseShellCodeFailure:
 			connectionError = ErrLeaseShellProviderError
 		default:
-			connectionError = fmt.Errorf("provider sent unknown message ID %d", messageType)
+			connectionError = fmt.Errorf("%w: provider sent unknown message ID %d", errLeaseShell, messageType)
 		}
 
 		if connectionError != nil {
@@ -221,11 +226,11 @@ loop:
 		}
 
 		if 0 != len(v.Message) {
-			return errors.New(v.Message)
+			return fmt.Errorf("%w: %s", errLeaseShell, v.Message)
 		}
 
 		if 0 != v.ExitCode {
-			return fmt.Errorf("remote process exited with code %d", v.ExitCode)
+			return fmt.Errorf("%w: remote process exited with code %d", errLeaseShell, v.ExitCode)
 		}
 
 	}

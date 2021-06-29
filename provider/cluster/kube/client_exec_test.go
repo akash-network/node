@@ -8,11 +8,11 @@ import (
 	"testing"
 )
 
-func TestSortablePodsSorting(t *testing.T){
+func TestSortablePodsSorting(t *testing.T) {
 	v := sortablePods{
-		corev1.Pod{ObjectMeta: v1.ObjectMeta{Name :"z"}},
-		corev1.Pod{ObjectMeta: v1.ObjectMeta{Name :"a"}},
-		corev1.Pod{ObjectMeta: v1.ObjectMeta{Name :"b"}},
+		corev1.Pod{ObjectMeta: v1.ObjectMeta{Name: "z"}},
+		corev1.Pod{ObjectMeta: v1.ObjectMeta{Name: "a"}},
+		corev1.Pod{ObjectMeta: v1.ObjectMeta{Name: "b"}},
 	}
 
 	sort.Sort(v)
@@ -22,11 +22,11 @@ func TestSortablePodsSorting(t *testing.T){
 	require.Equal(t, "z", v[2].Name)
 }
 
-func TestSortablePodsAlreadySorted(t *testing.T){
+func TestSortablePodsAlreadySorted(t *testing.T) {
 	v := sortablePods{
-		corev1.Pod{ObjectMeta: v1.ObjectMeta{Name :"a"}},
-		corev1.Pod{ObjectMeta: v1.ObjectMeta{Name :"b"}},
-		corev1.Pod{ObjectMeta: v1.ObjectMeta{Name :"c"}},
+		corev1.Pod{ObjectMeta: v1.ObjectMeta{Name: "a"}},
+		corev1.Pod{ObjectMeta: v1.ObjectMeta{Name: "b"}},
+		corev1.Pod{ObjectMeta: v1.ObjectMeta{Name: "c"}},
 	}
 
 	sort.Sort(v)
@@ -36,9 +36,8 @@ func TestSortablePodsAlreadySorted(t *testing.T){
 	require.Equal(t, "c", v[2].Name)
 }
 
-func TestExecResultImpl(t *testing.T){
+func TestExecResultImpl(t *testing.T) {
 	v := execResult{exitCode: 133}
 
 	require.Equal(t, 133, v.ExitCode())
 }
-

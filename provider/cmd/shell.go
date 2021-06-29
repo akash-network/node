@@ -28,15 +28,17 @@ const (
 	FlagReplicaIndex = "replica-index"
 )
 
+var (
+	errTerminalNotATty = errors.New("Input is not a terminal, cannot setup TTY")
+)
+
 func LeaseShellCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Args:         cobra.MinimumNArgs(2),
 		Use:          "lease-shell",
 		Short:        "do lease shell",
 		SilenceUsage: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return doLeaseShell(cmd, args)
-		},
+		RunE:         doLeaseShell,
 	}
 
 	addLeaseFlags(cmd)
@@ -81,7 +83,7 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 		}
 
 		if !tty.IsTerminalIn() {
-			return errors.New("Input is not a terminal, cannot setup TTY")
+			return errTerminalNotATty
 		}
 
 		dockerStdin, dockerStdout, _ := dockerterm.StdStreams()
@@ -174,7 +176,7 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 	// Check if a signal halted things
 	select {
 	case haltSignal := <-wasHalted:
-		cctx.PrintString(fmt.Sprintf("\nhalted by signal: %v\n", haltSignal))
+		_ = cctx.PrintString(fmt.Sprintf("\nhalted by signal: %v\n", haltSignal))
 		err = nil // Don't show this error, as it is always something complaining about use of a closed connection
 	default:
 		cancel()

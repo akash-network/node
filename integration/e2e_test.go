@@ -919,7 +919,7 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 		out, err = ptestutil.TestLeaseShell(s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
 			lID, 0, false, false, "web", "/bin/echo", "foo")
 		if err != nil {
-			if errors.Is(err, rest.ErrLeaseShellProviderError){
+			if errors.Is(err, rest.ErrLeaseShellProviderError) {
 				s.T().Logf("encountered %v waiting before next attempt", err)
 				time.Sleep(pollingPeriod)
 				continue
@@ -968,7 +968,6 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 		lID, 99, false, false, "notaservice", "/bin/echo", "/foo")
 	require.Error(s.T(), err)
 	require.Regexp(s.T(), ".*no such service exists with that name.*", err.Error())
-
 
 }
 

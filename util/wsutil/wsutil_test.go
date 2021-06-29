@@ -6,11 +6,11 @@ import (
 	"io"
 	"sync"
 	"testing"
-	)
+)
 
 type dummyConnection struct {
 	messageType int
-	data []byte
+	data        []byte
 
 	returns error
 }
@@ -21,30 +21,30 @@ func (dc *dummyConnection) WriteMessage(mt int, data []byte) error {
 	return dc.returns
 }
 
-func TestWebsocketWriterWrapperWritesPrefix(t *testing.T){
-	const testId = 0xab
+func TestWebsocketWriterWrapperWritesPrefix(t *testing.T) {
+	const testID = 0xab
 	l := &sync.Mutex{}
 	conn := &dummyConnection{}
 
-	wrapper := NewWsWriterWrapper(conn, testId, l)
+	wrapper := NewWsWriterWrapper(conn, testID, l)
 
-	n, err := wrapper.Write([]byte{0x1,0x2,0x3})
+	n, err := wrapper.Write([]byte{0x1, 0x2, 0x3})
 	require.NoError(t, err)
 	require.Equal(t, n, 3)
 
 	require.Equal(t, conn.messageType, websocket.BinaryMessage)
-	require.Equal(t, conn.data, []byte{testId, 0x1, 0x2, 0x3})
+	require.Equal(t, conn.data, []byte{testID, 0x1, 0x2, 0x3})
 }
 
-func TestWebsocketWriterWrapperReturnsError(t *testing.T){
-	const testId = 0xab
+func TestWebsocketWriterWrapperReturnsError(t *testing.T) {
+	const testID = 0xab
 	l := &sync.Mutex{}
 	conn := &dummyConnection{}
 	conn.returns = io.EOF // Any error works
 
-	wrapper := NewWsWriterWrapper(conn, testId, l)
+	wrapper := NewWsWriterWrapper(conn, testID, l)
 
-	_, err := wrapper.Write([]byte{0x1,0x2,0x3})
+	_, err := wrapper.Write([]byte{0x1, 0x2, 0x3})
 	require.Error(t, err)
 	require.Equal(t, io.EOF, err)
 }
