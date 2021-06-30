@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-func leaseShellWebsocketHandler(log log.Logger, wg *sync.WaitGroup, shellWs *websocket.Conn, stdinPipeOut io.Writer, terminalSizeUpdate chan <- remotecommand.TerminalSize) {
+func leaseShellWebsocketHandler(log log.Logger, wg *sync.WaitGroup, shellWs *websocket.Conn, stdinPipeOut io.Writer, terminalSizeUpdate chan<- remotecommand.TerminalSize) {
 	defer wg.Done()
 	for {
 		msgType, data, err := shellWs.ReadMessage()
@@ -24,7 +24,7 @@ func leaseShellWebsocketHandler(log log.Logger, wg *sync.WaitGroup, shellWs *web
 
 		msgID := data[0]
 		msg := data[1:]
-		switch (msgID) {
+		switch msgID {
 		case LeaseShellCodeStdin:
 			_, err := stdinPipeOut.Write(msg)
 			if err != nil {

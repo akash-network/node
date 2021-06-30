@@ -230,7 +230,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 			return
 		}
 
-		podIndex64, err := strconv.ParseUint(podIndexStr,0,31)
+		podIndex64, err := strconv.ParseUint(podIndexStr, 0, 31)
 		if err != nil {
 			localLog.Error("parameter podIndex invalid", "err", err)
 			rw.WriteHeader(http.StatusBadRequest)
