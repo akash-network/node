@@ -2,15 +2,14 @@ package rest
 
 import (
 	"bufio"
-	"bytes"
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"github.com/ovrclk/akash/util/wsutil"
 	"io"
 	"k8s.io/client-go/tools/remotecommand"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -198,13 +197,13 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 
 		if len(cmd) == 0 {
 			localLog.Error("missing cmd parameter")
-			rw.WriteHeader(http.StatusInternalServerError)
+			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		tty := vars.Get("tty")
 		if 0 == len(tty) {
 			localLog.Error("missing parameter tty")
-			rw.WriteHeader(http.StatusInternalServerError)
+			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		isTty := tty == "1"
@@ -212,14 +211,14 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 		service := vars.Get("service")
 		if 0 == len(service) {
 			localLog.Error("missing parameter service")
-			rw.WriteHeader(http.StatusInternalServerError)
+			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		stdin := vars.Get("stdin")
 		if 0 == len(stdin) {
 			localLog.Error("missing parameter stdin")
-			rw.WriteHeader(http.StatusInternalServerError)
+			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		connectStdin := stdin == "1"
@@ -227,23 +226,24 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 		podIndexStr := vars.Get("podIndex")
 		if len(podIndexStr) == 0 {
 			localLog.Error("missing parameter podIndex")
-			rw.WriteHeader(http.StatusInternalServerError)
+			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		var podIndex uint
-		_, err = fmt.Sscanf(podIndexStr, "%d", &podIndex)
+
+		podIndex64, err := strconv.ParseUint(podIndexStr,0,31)
 		if err != nil {
 			localLog.Error("parameter podIndex invalid", "err", err)
-			rw.WriteHeader(http.StatusInternalServerError)
+			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		podIndex := uint(podIndex64)
 
 		upgrader := websocket.Upgrader{
 			ReadBufferSize:  0,
 			WriteBufferSize: 0,
 		}
 
-		ws, err := upgrader.Upgrade(rw, req, nil)
+		shellWs, err := upgrader.Upgrade(rw, req, nil)
 		if err != nil {
 			// At this point the connection either has a response sent already
 			// or it has been closed
@@ -266,62 +266,23 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 			stdinPipeIn, stdinPipeOut = io.Pipe()
 
 			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for {
-					msgType, data, err := ws.ReadMessage()
-					if err != nil {
-						return
-					}
+			go leaseShellWebsocketHandler(localLog, wg, shellWs, stdinPipeOut, terminalSizeUpdate)
 
-					if msgType == websocket.BinaryMessage && len(data) > 1 {
-						msgID := data[0]
-						msg := data[1:]
-						if msgID == LeaseShellCodeStdin {
-							_, err := stdinPipeOut.Write(msg)
-							if err != nil {
-								return
-							}
-						} else if msgID == LeaseShellCodeTerminalResize {
-							var size remotecommand.TerminalSize
-							r := bytes.NewReader(msg)
-							err = binary.Read(r, binary.BigEndian, &size.Width)
-							if err != nil {
-								return
-							}
-							err = binary.Read(r, binary.BigEndian, &size.Height)
-							if err != nil {
-								return
-							}
-
-							localLog.Debug("terminal resize received", "width", size.Width, "height", size.Height)
-							if terminalSizeUpdate != nil {
-								terminalSizeUpdate <- size
-							}
-						}
-					}
-				}
-
-			}()
 		}
 
 		l := &sync.Mutex{}
-		stdout := wsutil.NewWsWriterWrapper(ws, LeaseShellCodeStdout, l)
-		stderr := wsutil.NewWsWriterWrapper(ws, LeaseShellCodeStderr, l)
+		stdout := wsutil.NewWsWriterWrapper(shellWs, LeaseShellCodeStdout, l)
+		stderr := wsutil.NewWsWriterWrapper(shellWs, LeaseShellCodeStderr, l)
 
 		var stdinForExec io.Reader
 		if connectStdin {
 			stdinForExec = stdinPipeIn
 		}
 		result, err := cclient.Exec(req.Context(), leaseID, service, podIndex, cmd, stdinForExec, stdout, stderr, isTty, tsq)
-
 		responseData := leaseShellResponse{}
-
 		var resultWriter io.Writer
-
 		encodeData := true
-
-		resultWriter = wsutil.NewWsWriterWrapper(ws, LeaseShellCodeResult, l)
+		resultWriter = wsutil.NewWsWriterWrapper(shellWs, LeaseShellCodeResult, l)
 
 		if result != nil {
 			responseData.ExitCode = result.ExitCode()
@@ -331,7 +292,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 			if cluster.ErrorIsOkToSendToClient(err) {
 				responseData.Message = err.Error()
 			} else {
-				resultWriter = wsutil.NewWsWriterWrapper(ws, LeaseShellCodeFailure, l)
+				resultWriter = wsutil.NewWsWriterWrapper(shellWs, LeaseShellCodeFailure, l)
 				// Don't return errors like this to the client, they could contain information
 				// that should not be let out
 				encodeData = false
@@ -348,7 +309,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 			_, err = resultWriter.Write([]byte{})
 		}
 
-		_ = ws.Close()
+		_ = shellWs.Close()
 
 		if err != nil {
 			localLog.Error("failed writing response to client after exec", "err", err)

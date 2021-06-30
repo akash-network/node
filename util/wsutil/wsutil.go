@@ -3,14 +3,16 @@ package wsutil
 import (
 	"bytes"
 	"github.com/gorilla/websocket"
+	"io"
 	"sync"
 )
 
+// This type exposes the single method that this wrapper uses
 type wrappedConnection interface {
 	WriteMessage(int, []byte) error
 }
 
-type WsWriterWrapper struct {
+type wsWriterWrapper struct {
 	connection wrappedConnection
 
 	id  byte
@@ -18,15 +20,15 @@ type WsWriterWrapper struct {
 	l   sync.Locker
 }
 
-func NewWsWriterWrapper(conn wrappedConnection, id byte, l sync.Locker) WsWriterWrapper {
-	return WsWriterWrapper{
+func NewWsWriterWrapper(conn wrappedConnection, id byte, l sync.Locker) io.Writer {
+	return &wsWriterWrapper{
 		connection: conn,
 		l:          l,
 		id:         id,
 	}
 }
 
-func (wsw WsWriterWrapper) Write(data []byte) (int, error) {
+func (wsw *wsWriterWrapper) Write(data []byte) (int, error) {
 	myBuf := &wsw.buf
 	myBuf.Reset()
 	_ = myBuf.WriteByte(wsw.id)
