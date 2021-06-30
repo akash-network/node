@@ -261,11 +261,17 @@ func (dm *deploymentManager) doDeploy() error {
 	// Reservation was successful, check to see if any hostnames are being migrated
 	if len(changedHostnames) != 0 {
 		dm.log.Info("deploy taking over hostnames", "count", len(changedHostnames))
+		ownerAddr, err := dm.lease.DeploymentID().GetOwnerAddress()
+		if err != nil {
+			return err
+		}
 
 		// Strip each and every hostname from its existing deployment within kubernetes
 		for _, changedHostname := range changedHostnames {
-			_ = changedHostname
-			//dm.client.ClearHostname(dm.lease.Owner, changedHostname.PreviousDeploymentSequence, changedHostname.Hostname)
+			err = dm.client.ClearHostname(ctx, ownerAddr, changedHostname.PreviousDeploymentSequence, changedHostname.Hostname)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
