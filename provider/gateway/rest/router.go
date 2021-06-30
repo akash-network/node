@@ -274,11 +274,32 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 		stdout := wsutil.NewWsWriterWrapper(shellWs, LeaseShellCodeStdout, l)
 		stderr := wsutil.NewWsWriterWrapper(shellWs, LeaseShellCodeStderr, l)
 
+		subctx, subcancel := context.WithCancel(req.Context())
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			pingTicker := time.NewTicker(pingPeriod)
+			defer pingTicker.Stop()
+
+			for {
+				select {
+				case <-pingTicker.C:
+					if err = shellWs.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second)); err != nil {
+						return
+					}
+				case <-subctx.Done():
+					return
+				}
+			}
+		}()
+
 		var stdinForExec io.Reader
 		if connectStdin {
 			stdinForExec = stdinPipeIn
 		}
-		result, err := cclient.Exec(req.Context(), leaseID, service, podIndex, cmd, stdinForExec, stdout, stderr, isTty, tsq)
+		result, err := cclient.Exec(subctx, leaseID, service, podIndex, cmd, stdinForExec, stdout, stderr, isTty, tsq)
+		subcancel()
+
 		responseData := leaseShellResponse{}
 		var resultWriter io.Writer
 		encodeData := true

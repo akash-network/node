@@ -73,7 +73,6 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, ho
 	}
 
 	session.Log().Info("found existing leases", "count", len(leases))
-
 	s := &service{
 		session:         session,
 		bus:             bus,

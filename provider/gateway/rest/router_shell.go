@@ -8,15 +8,21 @@ import (
 	"io"
 	"k8s.io/client-go/tools/remotecommand"
 	"sync"
+	"time"
 )
 
 func leaseShellWebsocketHandler(log log.Logger, wg *sync.WaitGroup, shellWs *websocket.Conn, stdinPipeOut io.Writer, terminalSizeUpdate chan<- remotecommand.TerminalSize) {
 	defer wg.Done()
 	for {
+		shellWs.SetPongHandler(func(string) error {
+			return shellWs.SetReadDeadline(time.Now().Add(pingWait))
+		})
+
 		msgType, data, err := shellWs.ReadMessage()
 		if err != nil {
 			return
 		}
+
 		// Just ignore anything not a binary message or that is empty
 		if msgType != websocket.BinaryMessage || len(data) == 0 {
 			continue
