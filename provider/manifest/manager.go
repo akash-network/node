@@ -338,6 +338,12 @@ func (m *manager) validateRequests() {
 var errManifestRejected = errors.New("manifest rejected")
 
 func (m *manager) checkHostnamesForManifest(requestManifest manifest.Manifest, groupNames []string) error {
+	// Check if the hostnames are available. Do not block forever
+	ownerAddr, err := m.data.GetDeployment().DeploymentID.GetOwnerAddress()
+	if err != nil {
+		return err
+	}
+
 	allHostnames := make([]string, 0)
 
 	for _, mgroup := range requestManifest.GetGroups() {
@@ -362,9 +368,8 @@ func (m *manager) checkHostnamesForManifest(requestManifest manifest.Manifest, g
 		}
 	}
 
-	// Check if the hostnames are available. Do not block forever
 	select {
-	case err := <-m.hostnameService.CanReserveHostnames(allHostnames, m.data.Deployment.DeploymentID):
+	case err := <-m.hostnameService.CanReserveHostnames(allHostnames, ownerAddr):
 		return err
 	case <-m.lc.ShutdownRequest():
 		return ErrNotRunning
