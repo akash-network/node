@@ -276,22 +276,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 
 		subctx, subcancel := context.WithCancel(req.Context())
 		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			pingTicker := time.NewTicker(pingPeriod)
-			defer pingTicker.Stop()
-
-			for {
-				select {
-				case <-pingTicker.C:
-					if err = shellWs.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second)); err != nil {
-						return
-					}
-				case <-subctx.Done():
-					return
-				}
-			}
-		}()
+		go leaseShellPingHandler(subctx, wg, shellWs)
 
 		var stdinForExec io.Reader
 		if connectStdin {

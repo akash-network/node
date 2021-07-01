@@ -2,6 +2,7 @@ package rest
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"github.com/gorilla/websocket"
 	"github.com/tendermint/tendermint/libs/log"
@@ -10,6 +11,24 @@ import (
 	"sync"
 	"time"
 )
+
+func leaseShellPingHandler(ctx context.Context, wg *sync.WaitGroup, ws *websocket.Conn) {
+	defer wg.Done()
+	pingTicker := time.NewTicker(pingPeriod)
+	defer pingTicker.Stop()
+
+	for {
+		select {
+		case <-pingTicker.C:
+			const pingWriteWaitTime = 5 * time.Second
+			if err := ws.WriteControl(websocket.PingMessage, nil, time.Now().Add(pingWriteWaitTime)); err != nil {
+				return
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
 
 func leaseShellWebsocketHandler(log log.Logger, wg *sync.WaitGroup, shellWs *websocket.Conn, stdinPipeOut io.Writer, terminalSizeUpdate chan<- remotecommand.TerminalSize) {
 	defer wg.Done()

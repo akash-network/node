@@ -101,76 +101,19 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 	l := &sync.Mutex{}
 
 	if stdin != nil {
+		stdinWriter := wsutil.NewWsWriterWrapper(conn, LeaseShellCodeStdin, l)
 		// This goroutine is orphaned. There is no universal way to cancel a read from stdin
 		// at this time
-		go func() {
-			data := make([]byte, 4096)
-
-			writer := wsutil.NewWsWriterWrapper(conn, LeaseShellCodeStdin, l)
-			for {
-				n, err := stdin.Read(data)
-				if err != nil {
-					saveError("reading from stdin", err)
-					return
-				}
-
-				select {
-				case <-subctx.Done():
-					return
-				default:
-				}
-
-				_, err = writer.Write(data[0:n])
-				if err != nil {
-					saveError("writing stdin data to remote", err)
-					return
-				}
-			}
-		}()
+		go handleStdin(ctx, stdin, stdinWriter, saveError)
 	}
 
 	if tty && terminalResize != nil {
 		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			w := wsutil.NewWsWriterWrapper(conn, LeaseShellCodeTerminalResize, l)
-			buf := bytes.Buffer{}
-			for {
-				var size remotecommand.TerminalSize
-				var ok bool
-				select {
-				case <-subctx.Done():
-					return
-				case size, ok = <-terminalResize:
-					if !ok { // Channel has closed
-						return
-					}
-
-				}
-
-				// Clear the buffer, then pack in both values
-				(&buf).Reset()
-				err = binary.Write(&buf, binary.BigEndian, size.Width)
-				if err != nil {
-					saveError("encoding terminal size width", err)
-					return
-				}
-				err = binary.Write(&buf, binary.BigEndian, size.Height)
-				if err != nil {
-					saveError("encoding terminal size height", err)
-					return
-				}
-
-				_, err = w.Write((&buf).Bytes())
-				if err != nil {
-					saveError("sending terminal size to remote", err)
-					return
-				}
-			}
-		}()
+		terminalOutput := wsutil.NewWsWriterWrapper(conn, LeaseShellCodeTerminalResize, l)
+		go handleTerminalResize(ctx, wg, terminalResize, terminalOutput, saveError)
 	}
 
-	var remoteError *bytes.Buffer
+	var remoteErrorData *bytes.Buffer
 	var connectionError error
 loop:
 	for {
@@ -195,7 +138,7 @@ loop:
 		case LeaseShellCodeStderr:
 			_, connectionError = stderr.Write(msg)
 		case LeaseShellCodeResult:
-			remoteError = bytes.NewBuffer(msg)
+			remoteErrorData = bytes.NewBuffer(msg)
 			break loop
 		case LeaseShellCodeFailure:
 			connectionError = ErrLeaseShellProviderError
@@ -217,22 +160,11 @@ loop:
 		}
 	}
 
-	if remoteError != nil {
-		dec := json.NewDecoder(remoteError)
-		var v leaseShellResponse
-		err := dec.Decode(&v)
-		if err != nil {
-			return fmt.Errorf("%w: failed parsing response data from provider", err)
+	// Check to see if the remote end returned an error
+	if remoteErrorData != nil {
+		if err = processRemoteError(remoteErrorData); err != nil {
+			return err
 		}
-
-		if 0 != len(v.Message) {
-			return fmt.Errorf("%w: %s", errLeaseShell, v.Message)
-		}
-
-		if 0 != v.ExitCode {
-			return fmt.Errorf("%w: remote process exited with code %d", errLeaseShell, v.ExitCode)
-		}
-
 	}
 
 	// Check to see if a goroutine failed
@@ -245,4 +177,85 @@ loop:
 	wg.Wait()
 
 	return connectionError
+}
+
+func processRemoteError(input io.Reader) error {
+	dec := json.NewDecoder(input)
+	var v leaseShellResponse
+	err := dec.Decode(&v)
+	if err != nil {
+		return fmt.Errorf("%w: failed parsing response data from provider", err)
+	}
+
+	if 0 != len(v.Message) {
+		return fmt.Errorf("%w: %s", errLeaseShell, v.Message)
+	}
+
+	if 0 != v.ExitCode {
+		return fmt.Errorf("%w: remote process exited with code %d", errLeaseShell, v.ExitCode)
+	}
+
+	return nil
+}
+
+func handleStdin(ctx context.Context, input io.Reader, output io.Writer, saveError func(string, error)) {
+	data := make([]byte, 4096)
+
+	for {
+		n, err := input.Read(data)
+		if err != nil {
+			saveError("reading from stdin", err)
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		_, err = output.Write(data[0:n])
+		if err != nil {
+			saveError("writing stdin data to remote", err)
+			return
+		}
+	}
+}
+
+func handleTerminalResize(ctx context.Context, wg *sync.WaitGroup, input <-chan remotecommand.TerminalSize, output io.Writer, saveError func(string, error)) {
+	defer wg.Done()
+
+	buf := &bytes.Buffer{}
+	for {
+		var size remotecommand.TerminalSize
+		var ok bool
+		select {
+		case <-ctx.Done():
+			return
+		case size, ok = <-input:
+			if !ok { // Channel has closed
+				return
+			}
+
+		}
+
+		// Clear the buffer, then pack in both values
+		buf.Reset()
+		err := binary.Write(buf, binary.BigEndian, size.Width)
+		if err != nil {
+			saveError("encoding terminal size width", err)
+			return
+		}
+		err = binary.Write(buf, binary.BigEndian, size.Height)
+		if err != nil {
+			saveError("encoding terminal size height", err)
+			return
+		}
+
+		_, err = output.Write((buf).Bytes())
+		if err != nil {
+			saveError("sending terminal size to remote", err)
+			return
+		}
+	}
 }
