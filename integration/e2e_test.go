@@ -266,14 +266,16 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.Require().NoError(s.network.WaitForNextBlock())
 }
 
-func (s *IntegrationTestSuite) TearDownSuite() {
-	s.T().Log("Cleaning up after E2E tests")
+func (s *IntegrationTestSuite) TearDownTest() {
+	s.T().Log("Cleaning up after E2E test")
+	s.closeDeployments()
+}
 
+func (s *IntegrationTestSuite) closeDeployments() int {
 	keyTenant, err := s.validator.ClientCtx.Keyring.Key("keyBar")
 	s.Require().NoError(err)
 	resp, err := deploycli.QueryDeploymentsExec(s.validator.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
-
 	deployResp := &dtypes.QueryDeploymentsResponse{}
 	err = s.validator.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), deployResp)
 	s.Require().NoError(err)
@@ -283,6 +285,9 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 
 	s.T().Logf("Cleaning up %d deployments", len(deployments))
 	for _, createdDep := range deployments {
+		if createdDep.Deployment.State != dtypes.DeploymentActive {
+			continue
+		}
 		// teardown lease
 		res, err := deploycli.TxCloseDeploymentExec(
 			s.validator.ClientCtx,
@@ -299,8 +304,14 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 		validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 	}
 
+	return len(deployments)
+}
+
+func (s *IntegrationTestSuite) TearDownSuite() {
+	s.T().Log("Cleaning up after E2E suite")
+	n := s.closeDeployments()
 	// test query deployments with state filter closed
-	resp, err = deploycli.QueryDeploymentsExec(
+	resp, err := deploycli.QueryDeploymentsExec(
 		s.validator.ClientCtx.WithOutputFormat("json"),
 		"--state=closed",
 	)
@@ -309,7 +320,7 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	qResp := &dtypes.QueryDeploymentsResponse{}
 	err = s.validator.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), qResp)
 	s.Require().NoError(err)
-	s.Require().True(len(qResp.Deployments) == len(deployResp.Deployments), "Deployment Close Failed")
+	s.Require().True(len(qResp.Deployments) == n, "Deployment Close Failed")
 
 	s.network.Cleanup()
 }
