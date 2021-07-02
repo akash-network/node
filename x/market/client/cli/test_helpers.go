@@ -6,6 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
+
 	"github.com/ovrclk/akash/x/market/types"
 )
 
@@ -35,7 +36,7 @@ func TxCloseBidExec(clientCtx client.Context, orderID types.OrderID, from fmt.St
 	extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
-		fmt.Sprintf("--owner=%s", orderID.Owner),
+		fmt.Sprintf("--owner=%v", orderID.Owner),
 		fmt.Sprintf("--dseq=%v", orderID.DSeq),
 		fmt.Sprintf("--gseq=%v", orderID.GSeq),
 		fmt.Sprintf("--oseq=%v", orderID.OSeq),
@@ -51,7 +52,6 @@ func TxCreateLeaseExec(clientCtx client.Context, bid types.BidID, from fmt.Strin
 	extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
-		fmt.Sprintf("--owner=%s", bid.Owner),
 		fmt.Sprintf("--dseq=%v", bid.DSeq),
 		fmt.Sprintf("--gseq=%v", bid.GSeq),
 		fmt.Sprintf("--oseq=%v", bid.OSeq),
