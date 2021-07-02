@@ -121,7 +121,7 @@ func (dm *deploymentManager) run() {
 	deployHostnamesCh, runch := dm.startDeploy(true)
 
 	// TODO - update me so that a list does not have to be passed in
-	defer dm.hostnameService.ReleaseHostnames(nil, dm.lease.DeploymentID())
+	defer dm.hostnameService.ReleaseHostnames(dm.lease.DeploymentID())
 
 	var okNotify <-chan struct{}
 

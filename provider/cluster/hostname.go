@@ -13,7 +13,7 @@ import (
 
 type HostnameServiceClient interface {
 	ReserveHostnames(hostnames []string, dID dtypes.DeploymentID) ReservationResult
-	ReleaseHostnames(hostnames []string, dID dtypes.DeploymentID)
+	ReleaseHostnames(dID dtypes.DeploymentID)
 	CanReserveHostnames(hostnames []string, ownerAddr cosmostypes.Address) <-chan error
 }
 
@@ -132,19 +132,23 @@ func canReserveHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []s
 	chErr <- nil
 }
 
-func (sh *SimpleHostnames) ReleaseHostnames(hostnames []string, dID dtypes.DeploymentID) {
+func (sh *SimpleHostnames) ReleaseHostnames(dID dtypes.DeploymentID) {
 	sh.lock.Lock()
 	defer sh.lock.Unlock()
 
-	releaseHostnamesImpl(sh.Hostnames, hostnames, dID)
+	releaseHostnamesImpl(sh.Hostnames, dID)
 }
 
-func releaseHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []string, dID dtypes.DeploymentID) {
-	for _, hostname := range hostnames {
-		existingDeployment, ok := store[hostname]
-		if ok && existingDeployment.Equals(dID) {
-			delete(store, hostname)
+func releaseHostnamesImpl(store map[string]dtypes.DeploymentID, dID dtypes.DeploymentID) {
+	var toDelete []string
+	for hostname, existingDeployment := range store {
+		if existingDeployment.Equals(dID) {
+			toDelete = append(toDelete, hostname)
 		}
+	}
+
+	for _, hostname := range toDelete {
+		delete(store, hostname)
 	}
 }
 
@@ -161,17 +165,12 @@ type canReserveRequest struct {
 	ownerAddr cosmostypes.Address
 }
 
-type releaseRequest struct {
-	hostnames    []string
-	deploymentID dtypes.DeploymentID
-}
-
 type hostnameService struct {
 	inUse map[string]dtypes.DeploymentID
 
 	requests   chan reserveRequest
 	canRequest chan canReserveRequest
-	releases   chan releaseRequest
+	releases   chan dtypes.DeploymentID
 	lc         lifecycle.Lifecycle
 
 	blockedHostnames []string
@@ -200,7 +199,7 @@ func newHostnameService(ctx context.Context, cfg Config) *hostnameService {
 		blockedDomains:   blockedDomains,
 		requests:         make(chan reserveRequest),
 		canRequest:       make(chan canReserveRequest),
-		releases:         make(chan releaseRequest),
+		releases:         make(chan dtypes.DeploymentID),
 		lc:               lifecycle.New(),
 	}
 
@@ -226,8 +225,8 @@ loop:
 		case crr := <-hs.canRequest:
 
 			canReserveHostnamesImpl(hs.inUse, crr.hostnames, crr.ownerAddr, crr.result)
-		case rr := <-hs.releases:
-			releaseHostnamesImpl(hs.inUse, rr.hostnames, rr.deploymentID)
+		case dID := <-hs.releases:
+			releaseHostnamesImpl(hs.inUse, dID)
 		}
 	}
 
@@ -293,13 +292,9 @@ func (hs *hostnameService) ReserveHostnames(hostnames []string, dID dtypes.Deplo
 	}
 }
 
-func (hs *hostnameService) ReleaseHostnames(hostnames []string, dID dtypes.DeploymentID) {
-	lowercaseHostnames := make([]string, len(hostnames))
-	for i, hostname := range hostnames {
-		lowercaseHostnames[i] = strings.ToLower(hostname)
-	}
+func (hs *hostnameService) ReleaseHostnames(dID dtypes.DeploymentID) {
 	select {
-	case hs.releases <- releaseRequest{hostnames: lowercaseHostnames, deploymentID: dID}:
+	case hs.releases <- dID:
 	case <-hs.lc.ShuttingDown():
 		// service is shutting down, so release doesn't matter
 	}
