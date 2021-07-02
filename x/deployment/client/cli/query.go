@@ -5,8 +5,9 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/ovrclk/akash/x/deployment/types"
 	"github.com/spf13/cobra"
+
+	"github.com/ovrclk/akash/x/deployment/types"
 )
 
 // GetQueryCmd returns the query commands for the deployment module
@@ -85,7 +86,7 @@ func cmdDeployment() *cobra.Command {
 
 			queryClient := types.NewQueryClient(clientCtx)
 
-			id, err := DeploymentIDFromFlags(cmd.Flags(), "")
+			id, err := DeploymentIDFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}

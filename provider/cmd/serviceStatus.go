@@ -10,6 +10,7 @@ import (
 	cmdcommon "github.com/ovrclk/akash/cmd/common"
 	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
+	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 )
 
@@ -47,7 +48,7 @@ func doServiceStatus(cmd *cobra.Command) error {
 		return err
 	}
 
-	bid, err := mcli.BidIDFromFlagsForOwner(cmd.Flags(), cctx.FromAddress)
+	bid, err := mcli.BidIDFromFlags(cmd.Flags(), dcli.WithOwner(cctx.FromAddress))
 	if err != nil {
 		return err
 	}
