@@ -10,12 +10,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
+
 	"github.com/ovrclk/akash/x/deployment/client/cli"
 	deploymentTypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/escrow/types"
 	marketTypes "github.com/ovrclk/akash/x/market/types"
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 func GetQueryCmd() *cobra.Command {
@@ -52,7 +53,7 @@ func cmdBlocksRemaining() *cobra.Command {
 			marketClient := marketTypes.NewQueryClient(clientCtx)
 			ctx := context.Background()
 
-			id, err := cli.DeploymentIDFromFlags(cmd.Flags(), "")
+			id, err := cli.DeploymentIDFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}

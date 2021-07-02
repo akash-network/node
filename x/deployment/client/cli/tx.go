@@ -67,7 +67,7 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			id, err := DeploymentIDFromFlags(cmd.Flags(), clientCtx.GetFromAddress().String())
+			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(clientCtx.FromAddress))
 			if err != nil {
 				return err
 			}
@@ -126,7 +126,7 @@ func cmdDeposit(key string) *cobra.Command {
 				return err
 			}
 
-			id, err := DeploymentIDFromFlags(cmd.Flags(), clientCtx.GetFromAddress().String())
+			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(clientCtx.FromAddress))
 			if err != nil {
 				return err
 			}
@@ -162,7 +162,7 @@ func cmdClose(key string) *cobra.Command {
 				return err
 			}
 
-			id, err := DeploymentIDFromFlags(cmd.Flags(), clientCtx.GetFromAddress().String())
+			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(clientCtx.FromAddress))
 			if err != nil {
 				return err
 			}
@@ -189,7 +189,7 @@ func cmdUpdate(key string) *cobra.Command {
 				return err
 			}
 
-			id, err := DeploymentIDFromFlags(cmd.Flags(), clientCtx.GetFromAddress().String())
+			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(clientCtx.FromAddress))
 			if err != nil {
 				return err
 			}
