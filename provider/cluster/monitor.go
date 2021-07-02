@@ -43,6 +43,8 @@ type deploymentMonitor struct {
 	attempts int
 	log      log.Logger
 	lc       lifecycle.Lifecycle
+
+	okNotif chan<- struct{}
 }
 
 func newDeploymentMonitor(dm *deploymentManager) *deploymentMonitor {
@@ -54,6 +56,7 @@ func newDeploymentMonitor(dm *deploymentManager) *deploymentMonitor {
 		mgroup:  dm.mgroup,
 		log:     dm.log.With("cmp", "deployment-monitor"),
 		lc:      lifecycle.New(),
+		okNotif: dm.deploymentOkNotif,
 	}
 
 	go m.lc.WatchChannel(dm.lc.ShuttingDown())
@@ -111,6 +114,12 @@ loop:
 				tickch = m.scheduleHealthcheck()
 				m.publishStatus(event.ClusterDeploymentDeployed)
 				deploymentHealthCheckCounter.WithLabelValues("up").Inc()
+
+				select {
+				case m.okNotif <- struct{}{}:
+				default:
+					// Channel is buffered, so the value is already in there
+				}
 				break
 			} else {
 				deploymentHealthCheckCounter.WithLabelValues("down").Inc()

@@ -22,8 +22,8 @@ import (
 )
 
 var (
-	_ Client = (*nullClient)(nil)
-	ErrClearHostnameNoMatches = errors.New("clearing hostname, no matches")
+	_                         Client = (*nullClient)(nil)
+	ErrClearHostnameNoMatches        = errors.New("clearing hostname, no matches")
 )
 
 type ReadClient interface {
@@ -36,7 +36,7 @@ type ReadClient interface {
 // Client interface lease and deployment methods
 type Client interface {
 	ReadClient
-	Deploy(context.Context, mtypes.LeaseID, *manifest.Group) error
+	Deploy(ctx context.Context, lID mtypes.LeaseID, mgroup *manifest.Group, holdHostnames []string) error
 	TeardownLease(context.Context, mtypes.LeaseID) error
 	Deployments(context.Context) ([]ctypes.Deployment, error)
 	Inventory(context.Context) ([]ctypes.Node, error)
@@ -107,7 +107,7 @@ func NullClient() Client {
 	}
 }
 
-func (c *nullClient) Deploy(ctx context.Context, lid mtypes.LeaseID, mgroup *manifest.Group) error {
+func (c *nullClient) Deploy(ctx context.Context, lid mtypes.LeaseID, mgroup *manifest.Group, holdHostnames []string) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 

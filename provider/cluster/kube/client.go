@@ -144,7 +144,7 @@ func (c *client) ClearHostname(ctx context.Context, ownerAddress cosmostypes.Add
 	_, _ = fmt.Fprintf(labelSelector, "%s=%s", akashLeaseOwnerLabelName, ownerAddress.String())
 	_, _ = fmt.Fprintf(labelSelector, ",%s=%d", akashLeaseDSeqLabelName, dseq)
 
-	namespaces, err := c.kc.CoreV1().Namespaces().List(ctx,metav1.ListOptions{
+	namespaces, err := c.kc.CoreV1().Namespaces().List(ctx, metav1.ListOptions{
 		TypeMeta:             metav1.TypeMeta{},
 		LabelSelector:        labelSelector.String(),
 		FieldSelector:        "",
@@ -161,7 +161,7 @@ func (c *client) ClearHostname(ctx context.Context, ownerAddress cosmostypes.Add
 		return err
 	}
 
-	if 0 == len(namespaces.Items){
+	if 0 == len(namespaces.Items) {
 		return cluster.ErrClearHostnameNoMatches
 	}
 
@@ -175,7 +175,7 @@ func (c *client) ClearHostname(ctx context.Context, ownerAddress cosmostypes.Add
 
 	var ingressToModify netv1.Ingress
 	found := false
-	search:
+search:
 	for _, ingress := range ingresses.Items {
 		for _, rule := range ingress.Spec.Rules {
 			if hostname == rule.Host {
@@ -191,7 +191,7 @@ func (c *client) ClearHostname(ctx context.Context, ownerAddress cosmostypes.Add
 	}
 
 	rules := ingressToModify.Spec.Rules
-	if len(rules) == 1 { // TODO - I do not think this ever executes???
+	if len(rules) == 1 { // TODO - I do not think this ever executes when settings.DeploymentIngressStaticHosts is true
 		// Delete the Ingress
 		err := c.kc.NetworkingV1().Ingresses(leaseNamespace).Delete(ctx, ingressToModify.Name, metav1.DeleteOptions{})
 		if err != nil {
@@ -200,7 +200,7 @@ func (c *client) ClearHostname(ctx context.Context, ownerAddress cosmostypes.Add
 		return nil
 	}
 
-	newRules := make([]netv1.IngressRule, 0, len(rules) - 1)
+	newRules := make([]netv1.IngressRule, 0, len(rules)-1)
 	for _, rule := range rules {
 		if rule.Host != hostname {
 			newRules = append(newRules, rule)
@@ -209,8 +209,8 @@ func (c *client) ClearHostname(ctx context.Context, ownerAddress cosmostypes.Add
 
 	newIngress := netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   ingressToModify.ObjectMeta.Name,
-			Labels: ingressToModify.ObjectMeta.Labels,
+			Name:      ingressToModify.ObjectMeta.Name,
+			Labels:    ingressToModify.ObjectMeta.Labels,
 			Namespace: leaseNamespace,
 		},
 		Spec: netv1.IngressSpec{
@@ -244,17 +244,11 @@ func (c *client) Deployments(ctx context.Context) ([]ctypes.Deployment, error) {
 	return deployments, nil
 }
 
-func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest.Group) error {
+func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest.Group, holdHostnames []string) error {
 	if err := applyNS(ctx, c.kc, newNSBuilder(c.settings, lid, group)); err != nil {
 		c.log.Error("applying namespace", "err", err, "lease", lid)
 		return err
 	}
-
-	// TODO: re-enable.  see #946
-	// if err := applyRestrictivePodSecPoliciesToNS(ctx, c.kc, newPspBuilder(c.settings, lid, group)); err != nil {
-	// 	c.log.Error("applying pod security policies", "err", err, "lease", lid)
-	// 	return err
-	// }
 
 	if err := applyNetPolicies(ctx, c.kc, newNetPolBuilder(c.settings, lid, group)); err != nil {
 		c.log.Error("applying namespace network policies", "err", err, "lease", lid)
@@ -304,7 +298,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 			if !util.ShouldBeIngress(expose) {
 				continue
 			}
-			if err := applyIngress(ctx, c.kc, newIngressBuilder(c.log, c.settings, lid, group, service, &service.Expose[expIdx])); err != nil {
+			if err := applyIngress(ctx, c.kc, newIngressBuilder(c.log, c.settings, lid, group, service, &service.Expose[expIdx], holdHostnames)); err != nil {
 				c.log.Error("applying ingress", "err", err, "lease", lid, "service", service.Name, "expose", expose)
 				return err
 			}

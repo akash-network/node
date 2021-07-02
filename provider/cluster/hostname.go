@@ -23,29 +23,27 @@ type SimpleHostnames struct {
 } /* Used in test code */
 
 type ReplacedHostname struct {
-	Hostname string
+	Hostname                   string
 	PreviousDeploymentSequence uint64
 }
 
 type ReservationResult struct {
-	ChErr <- chan error
-	ChReplacedHostnames <- chan []ReplacedHostname
+	ChErr               <-chan error
+	ChReplacedHostnames <-chan []ReplacedHostname
 }
 
-func (rr ReservationResult) Wait(wait <- chan struct{}) ([]ReplacedHostname, error){
+func (rr ReservationResult) Wait(wait <-chan struct{}) ([]ReplacedHostname, error) {
 	select {
 	case err := <-rr.ChErr:
 		if err != nil {
 			return nil, err
 		}
-	case <- wait:
+	case <-wait:
 		return nil, errors.New("bob")
 	}
 
-	return <- rr.ChReplacedHostnames, nil
+	return <-rr.ChReplacedHostnames, nil
 }
-
-
 
 func (sh *SimpleHostnames) ReserveHostnames(hostnames []string, dID dtypes.DeploymentID) ReservationResult {
 	sh.lock.Lock()
@@ -54,14 +52,14 @@ func (sh *SimpleHostnames) ReserveHostnames(hostnames []string, dID dtypes.Deplo
 	resultCh := make(chan []ReplacedHostname, 1)
 
 	result := ReservationResult{
-		ChErr: errCh,
+		ChErr:               errCh,
 		ChReplacedHostnames: resultCh,
 	}
 	reserveHostnamesImpl(sh.Hostnames, hostnames, dID, errCh, resultCh)
 	return result
 }
 
-func reserveHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []string, dID dtypes.DeploymentID, ch chan <- error, resultCh chan <- []ReplacedHostname) {
+func reserveHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []string, dID dtypes.DeploymentID, ch chan<- error, resultCh chan<- []ReplacedHostname) {
 	reservingHostnameAddr, err := dID.GetOwnerAddress()
 	if err != nil {
 		ch <- err
@@ -105,7 +103,6 @@ func reserveHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []stri
 	return
 }
 
-
 func (sh *SimpleHostnames) CanReserveHostnames(hostnames []string, ownerAddr cosmostypes.Address) <-chan error {
 	sh.lock.Lock()
 	defer sh.lock.Unlock()
@@ -114,7 +111,7 @@ func (sh *SimpleHostnames) CanReserveHostnames(hostnames []string, ownerAddr cos
 	return ch
 }
 
-func canReserveHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []string, ownerAddr cosmostypes.Address, chErr chan <- error) {
+func canReserveHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []string, ownerAddr cosmostypes.Address, chErr chan<- error) {
 	for _, hostname := range hostnames {
 		usedByDid, inUse := store[hostname]
 
@@ -125,7 +122,7 @@ func canReserveHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []s
 				return
 
 			}
-			if  !existingOwnerAddr.Equals(ownerAddr) {
+			if !existingOwnerAddr.Equals(ownerAddr) {
 				chErr <- fmt.Errorf("%w: host %q in use", errHostnameNotAllowed, hostname)
 				return
 			}
@@ -142,20 +139,20 @@ func (sh *SimpleHostnames) ReleaseHostnames(hostnames []string, dID dtypes.Deplo
 	releaseHostnamesImpl(sh.Hostnames, hostnames, dID)
 }
 
-func releaseHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []string, dID dtypes.DeploymentID){
+func releaseHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []string, dID dtypes.DeploymentID) {
 	for _, hostname := range hostnames {
 		existingDeployment, ok := store[hostname]
-		if ok && existingDeployment.Equals(dID){
+		if ok && existingDeployment.Equals(dID) {
 			delete(store, hostname)
 		}
 	}
 }
 
 type reserveRequest struct {
-	chErr chan <- error
-	chReplacedHostnames chan <- []ReplacedHostname
-	hostnames []string
-	deploymentID dtypes.DeploymentID
+	chErr               chan<- error
+	chReplacedHostnames chan<- []ReplacedHostname
+	hostnames           []string
+	deploymentID        dtypes.DeploymentID
 }
 
 type canReserveRequest struct {
@@ -165,17 +162,17 @@ type canReserveRequest struct {
 }
 
 type releaseRequest struct {
-	hostnames []string
+	hostnames    []string
 	deploymentID dtypes.DeploymentID
 }
 
 type hostnameService struct {
 	inUse map[string]dtypes.DeploymentID
 
-	requests chan reserveRequest
+	requests   chan reserveRequest
 	canRequest chan canReserveRequest
-	releases chan releaseRequest
-	lc       lifecycle.Lifecycle
+	releases   chan releaseRequest
+	lc         lifecycle.Lifecycle
 
 	blockedHostnames []string
 	blockedDomains   []string
@@ -202,7 +199,7 @@ func newHostnameService(ctx context.Context, cfg Config) *hostnameService {
 		blockedHostnames: blockedHostnames,
 		blockedDomains:   blockedDomains,
 		requests:         make(chan reserveRequest),
-		canRequest: make(chan canReserveRequest),
+		canRequest:       make(chan canReserveRequest),
 		releases:         make(chan releaseRequest),
 		lc:               lifecycle.New(),
 	}
@@ -226,7 +223,7 @@ loop:
 			break loop
 		case rr := <-hs.requests:
 			hs.doRequest(rr)
-		case crr := <- hs.canRequest:
+		case crr := <-hs.canRequest:
 
 			canReserveHostnamesImpl(hs.inUse, crr.hostnames, crr.ownerAddr, crr.result)
 		case rr := <-hs.releases:
@@ -267,14 +264,13 @@ func (hs *hostnameService) doRequest(rr reserveRequest) {
 	reserveHostnamesImpl(hs.inUse, rr.hostnames, rr.deploymentID, rr.chErr, rr.chReplacedHostnames)
 }
 
-
 func (hs *hostnameService) ReserveHostnames(hostnames []string, dID dtypes.DeploymentID) ReservationResult {
 	lowercaseHostnames := make([]string, len(hostnames))
 	for i, hostname := range hostnames {
 		lowercaseHostnames[i] = strings.ToLower(hostname)
 	}
 
-	chErr := make(chan error, 1) // Buffer of one so service does not block
+	chErr := make(chan error, 1)                            // Buffer of one so service does not block
 	chReplacedHostnames := make(chan []ReplacedHostname, 1) // Buffer of one so service does not block
 
 	request := reserveRequest{

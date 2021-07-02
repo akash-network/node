@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/manifest"
@@ -27,6 +28,7 @@ const (
 	dsTeardownActive   deploymentState = "teardown-active"
 	dsTeardownPending  deploymentState = "teardown-pending"
 	dsTeardownComplete deploymentState = "teardown-complete"
+	dsTakeoverHostname deploymentState = "takeover-hostname"
 )
 
 var (
@@ -59,24 +61,27 @@ type deploymentManager struct {
 	log             log.Logger
 	lc              lifecycle.Lifecycle
 	hostnameService HostnameServiceClient
+
+	deploymentOkNotif chan struct{}
 }
 
 func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Group) *deploymentManager {
 	log := s.log.With("cmp", "deployment-manager", "lease", lease, "manifest-group", mgroup.Name)
 
 	dm := &deploymentManager{
-		bus:             s.bus,
-		client:          s.client,
-		session:         s.session,
-		state:           dsDeployActive,
-		lease:           lease,
-		mgroup:          mgroup,
-		wg:              sync.WaitGroup{},
-		updatech:        make(chan *manifest.Group),
-		teardownch:      make(chan struct{}),
-		log:             log,
-		lc:              lifecycle.New(),
-		hostnameService: s.HostnameService(),
+		bus:               s.bus,
+		client:            s.client,
+		session:           s.session,
+		state:             dsDeployActive,
+		lease:             lease,
+		mgroup:            mgroup,
+		wg:                sync.WaitGroup{},
+		updatech:          make(chan *manifest.Group),
+		teardownch:        make(chan struct{}),
+		log:               log,
+		lc:                lifecycle.New(),
+		hostnameService:   s.HostnameService(),
+		deploymentOkNotif: make(chan struct{}, 1),
 	}
 
 	go dm.lc.WatchChannel(s.lc.ShuttingDown())
@@ -111,10 +116,16 @@ func (dm *deploymentManager) teardown() error {
 func (dm *deploymentManager) run() {
 	defer dm.lc.ShutdownCompleted()
 	var shutdownErr error
-	var runch <-chan error
-	runch = dm.startDeploy()
+	var hostnamesToTakeover []ReplacedHostname
 
-	loop:
+	deployHostnamesCh, runch := dm.startDeploy(true)
+
+	// TODO - update me so that a list does not have to be passed in
+	defer dm.hostnameService.ReleaseHostnames(nil, dm.lease.DeploymentID())
+
+	var okNotify <-chan struct{}
+
+loop:
 	for {
 		select {
 
@@ -130,13 +141,33 @@ func (dm *deploymentManager) run() {
 				dm.state = dsDeployPending
 			case dsDeployPending:
 				dm.mgroup = mgroup
-			case dsDeployComplete:
+			case dsDeployComplete, dsTakeoverHostname:
 				dm.mgroup = mgroup
 				// start update
-				runch = dm.startDeploy()
+				deployHostnamesCh, runch = dm.startDeploy(true)
 			case dsTeardownActive, dsTeardownPending, dsTeardownComplete:
 				// do nothing
 			}
+		case hostnamesToTakeover = <-deployHostnamesCh:
+			dm.log.Info("ready to claim hostnames")
+			deployHostnamesCh = nil
+
+			// Clear the channel if a value is present
+			select {
+			case <-dm.deploymentOkNotif:
+			default:
+			}
+
+			okNotify = dm.deploymentOkNotif
+
+		case <-okNotify:
+			okNotify = nil
+			// The deploy should be running at this point. If not bail
+			if dm.state != dsDeployComplete {
+				continue
+			}
+			dm.log.Info("taking over hostnames after deployment is up", "cnt", len(hostnamesToTakeover))
+			runch = dm.startTakeoverHostnames(hostnamesToTakeover)
 
 		case result := <-runch:
 			runch = nil
@@ -157,7 +188,9 @@ func (dm *deploymentManager) run() {
 					break loop
 				}
 				// start update
-				runch = dm.startDeploy()
+				deployHostnamesCh, runch = dm.startDeploy(true)
+			case dsTakeoverHostname:
+				dm.log.Info("deployment finalized")
 			case dsDeployComplete:
 				panic(fmt.Sprintf("INVALID STATE: runch read on %v", dm.state))
 			case dsTeardownActive:
@@ -179,7 +212,7 @@ func (dm *deploymentManager) run() {
 				dm.state = dsTeardownPending
 			case dsDeployPending:
 				dm.state = dsTeardownPending
-			case dsDeployComplete:
+			case dsDeployComplete, dsTakeoverHostname:
 				// start teardown
 				runch = dm.startTeardown()
 			case dsTeardownActive, dsTeardownPending, dsTeardownComplete:
@@ -202,6 +235,45 @@ func (dm *deploymentManager) run() {
 		dm.withdrawal.lc.Shutdown(nil)
 	}
 	dm.log.Info("shutdown complete")
+}
+
+func (dm *deploymentManager) startTakeoverHostnames(changedHostnames []ReplacedHostname) <-chan error {
+	dm.state = dsTakeoverHostname
+	return dm.do(func() error {
+		err := dm.takeoverHostnames(changedHostnames)
+		if err != nil {
+			return nil
+		}
+
+		_, err = dm.doDeploy(false)
+		return err
+	})
+}
+
+func (dm *deploymentManager) takeoverHostnames(changedHostnames []ReplacedHostname) error {
+	dm.log.Info("deploy taking over hostnames", "count", len(changedHostnames))
+	ownerAddr, err := dm.lease.DeploymentID().GetOwnerAddress()
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background() // TODO - choose a context that makes sense here
+	// Strip each and every hostname from its existing deployment within kubernetes
+	for _, changedHostname := range changedHostnames {
+		err = dm.client.ClearHostname(ctx, ownerAddr, changedHostname.PreviousDeploymentSequence, changedHostname.Hostname)
+		if err != nil {
+			if !errors.Is(err, ErrClearHostnameNoMatches) {
+				return err
+			}
+
+			// The hostname to be cleared was not found, this is usually due to a race condition
+			dm.log.Info("hostname did not exist", "hostname", changedHostname)
+		} else {
+			dm.log.Info("hostname cleared", "hostname", changedHostname)
+		}
+	}
+
+	return nil
 }
 
 func (dm *deploymentManager) startWithdrawal() {
@@ -230,11 +302,27 @@ func (dm *deploymentManager) stopMonitor() {
 	}
 }
 
-func (dm *deploymentManager) startDeploy() <-chan error {
+func (dm *deploymentManager) startDeploy(reserveHostnames bool) (<-chan []ReplacedHostname, <-chan error) {
 	dm.stopMonitor()
 	dm.state = dsDeployActive
 
-	return dm.do(dm.doDeploy)
+	chErr := make(chan error, 1)
+	chHostnames := make(chan []ReplacedHostname, 1)
+	go func() {
+		hostnames, err := dm.doDeploy(reserveHostnames)
+		if err != nil {
+			chErr <- err
+			return
+		}
+
+		chErr <- nil
+
+		if len(hostnames) != 0 {
+			chHostnames <- hostnames
+		}
+	}()
+
+	return chHostnames, chErr
 }
 
 func (dm *deploymentManager) startTeardown() <-chan error {
@@ -243,46 +331,37 @@ func (dm *deploymentManager) startTeardown() <-chan error {
 	return dm.do(dm.doTeardown)
 }
 
-func (dm *deploymentManager) doDeploy() error {
-	allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
-	reservationResult := dm.hostnameService.ReserveHostnames(allHostnames, dm.lease.DeploymentID())
-
-	changedHostnames, err := reservationResult.Wait(dm.lc.ShuttingDown())
-	if err != nil {
-		deploymentCounter.WithLabelValues("reserve-hostnames", "err").Inc()
-		dm.log.Error("deploy hostname error", "state", dm.state, "err", err)
-		return err
+func (dm *deploymentManager) doDeploy(reserveHostnames bool) ([]ReplacedHostname, error) {
+	var changedHostnames []ReplacedHostname
+	var err error
+	if reserveHostnames {
+		allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
+		// Either reserve the hostnames, or confirm that they already are held
+		reservationResult := dm.hostnameService.ReserveHostnames(allHostnames, dm.lease.DeploymentID())
+		changedHostnames, err = reservationResult.Wait(dm.lc.ShuttingDown())
+		if err != nil {
+			deploymentCounter.WithLabelValues("reserve-hostnames", "err").Inc()
+			dm.log.Error("deploy hostname reservation error", "state", dm.state, "err", err)
+			return nil, err
+		}
+		deploymentCounter.WithLabelValues("reserve-hostnames", "success").Inc()
 	}
-	deploymentCounter.WithLabelValues("reserve-hostnames", "success").Inc()
 
 	// Don't use a context tied to the lifecycle, as we don't want to cancel Kubernetes operations
 	ctx := context.Background()
 
-	// Reservation was successful, check to see if any hostnames are being migrated
-	if len(changedHostnames) != 0 {
-		dm.log.Info("deploy taking over hostnames", "count", len(changedHostnames))
-		ownerAddr, err := dm.lease.DeploymentID().GetOwnerAddress()
-		if err != nil {
-			return err
-		}
-
-		// Strip each and every hostname from its existing deployment within kubernetes
-		for _, changedHostname := range changedHostnames {
-			err = dm.client.ClearHostname(ctx, ownerAddr, changedHostname.PreviousDeploymentSequence, changedHostname.Hostname)
-			if err != nil {
-				return err
-			}
-		}
+	holdHostnames := make([]string, len(changedHostnames))
+	for i, v := range changedHostnames {
+		holdHostnames[i] = v.Hostname
 	}
-
-
-	err = dm.client.Deploy(ctx, dm.lease, dm.mgroup)
+	err = dm.client.Deploy(ctx, dm.lease, dm.mgroup, holdHostnames)
 	label := "success"
 	if err != nil {
 		label = "fail"
 	}
 	deploymentCounter.WithLabelValues("deploy", label).Inc()
-	return err
+	return changedHostnames, err
+
 }
 
 func (dm *deploymentManager) doTeardown() error {

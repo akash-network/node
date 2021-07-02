@@ -908,12 +908,12 @@ func (b *netPolBuilder) update(obj *netv1.NetworkPolicy) (*netv1.NetworkPolicy, 
 // ingress
 type ingressBuilder struct {
 	deploymentBuilder
-	expose *manifest.ServiceExpose
-	hosts  []string
+	expose        *manifest.ServiceExpose
+	hosts         []string
+	holdHostnames map[string]struct{}
 }
 
-func newIngressBuilder(log log.Logger, settings Settings, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service, expose *manifest.ServiceExpose) *ingressBuilder {
-
+func newIngressBuilder(log log.Logger, settings Settings, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service, expose *manifest.ServiceExpose, holdHostnames []string) *ingressBuilder {
 	builder := &ingressBuilder{
 		deploymentBuilder: deploymentBuilder{
 			builder: builder{
@@ -924,8 +924,14 @@ func newIngressBuilder(log log.Logger, settings Settings, lid mtypes.LeaseID, gr
 			},
 			service: service,
 		},
-		expose: expose,
-		hosts:  make([]string, len(expose.Hosts), len(expose.Hosts)+1),
+		expose:        expose,
+		hosts:         make([]string, len(expose.Hosts), len(expose.Hosts)+1),
+		holdHostnames: make(map[string]struct{}),
+	}
+
+	for _, hostname := range holdHostnames {
+		hostname = strings.ToLower(hostname)
+		builder.holdHostnames[hostname] = struct{}{}
 	}
 
 	copy(builder.hosts, expose.Hosts)
@@ -962,6 +968,12 @@ func (b *ingressBuilder) update(obj *netv1.Ingress) (*netv1.Ingress, error) { //
 	return obj, nil
 }
 
+func (b *ingressBuilder) holdHostname(hostname string) bool {
+	hostname = strings.ToLower(hostname)
+	_, hold := b.holdHostnames[hostname]
+	return hold
+}
+
 func (b *ingressBuilder) rules() []netv1.IngressRule {
 	// for some reason we need top pass a pointer to this
 	pathTypeForAll := netv1.PathTypePrefix
@@ -983,6 +995,9 @@ func (b *ingressBuilder) rules() []netv1.IngressRule {
 	}
 
 	for _, host := range b.hosts {
+		if b.holdHostname(host) {
+			continue
+		}
 		rules = append(rules, netv1.IngressRule{
 			Host:             host,
 			IngressRuleValue: netv1.IngressRuleValue{HTTP: httpRule},

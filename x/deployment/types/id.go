@@ -31,7 +31,7 @@ func (id DeploymentID) String() string {
 	return fmt.Sprintf("%s/%d", id.Owner, id.DSeq)
 }
 
-func (id DeploymentID) GetOwnerAddress() (sdk.Address, error){
+func (id DeploymentID) GetOwnerAddress() (sdk.Address, error) {
 	return sdk.AccAddressFromBech32(id.Owner)
 }
 
