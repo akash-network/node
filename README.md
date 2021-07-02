@@ -30,7 +30,7 @@ implements the decentralized exchange as well as client functionality to access 
 
 ## Get Started with Akash
 
-The easiest way to get started with Akash is by trying Testnet. Sign up [here](https://akash.network/signup) to get started. 
+The easiest way to get started with Akash is by following the [Quick Start Guide](https://docs.akash.network/guides/deploy) to get started. 
 
 ## Join the Community
 
