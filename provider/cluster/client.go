@@ -3,7 +3,10 @@ package cluster
 import (
 	"bufio"
 	"context"
+	"errors"
+	"fmt"
 	"io"
+	"k8s.io/client-go/tools/remotecommand"
 	"math/rand"
 	"sync"
 	"time"
@@ -19,7 +22,20 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
-var _ Client = (*nullClient)(nil)
+var (
+	_ Client = (*nullClient)(nil)
+	// Errors types returned by the Exec function on the client interface
+	ErrExec                        = errors.New("remote command execute error")
+	ErrExecNoServiceWithName       = fmt.Errorf("%w: no such service exists with that name", ErrExec)
+	ErrExecServiceNotRunning       = fmt.Errorf("%w: service with that name is not running", ErrExec)
+	ErrExecCommandExecutionFailed  = fmt.Errorf("%w: command execution failed", ErrExec)
+	ErrExecCommandDoesNotExist     = fmt.Errorf("%w: command could not be executed because it does not exist", ErrExec)
+	ErrExecDeploymentNotYetRunning = fmt.Errorf("%w: deployment is not yet active", ErrExec)
+	ErrExecMultiplePods            = fmt.Errorf("%w: cannot execute without specifying a pod explicitly", ErrExec)
+	ErrExecPodIndexOutOfRange      = fmt.Errorf("%w: pod index out of range", ErrExec)
+
+	errNotImplemented = errors.New("not implemented")
+)
 
 type ReadClient interface {
 	LeaseStatus(context.Context, mtypes.LeaseID) (*ctypes.LeaseStatus, error)
@@ -35,6 +51,20 @@ type Client interface {
 	TeardownLease(context.Context, mtypes.LeaseID) error
 	Deployments(context.Context) ([]ctypes.Deployment, error)
 	Inventory(context.Context) ([]ctypes.Node, error)
+	Exec(ctx context.Context,
+		lID mtypes.LeaseID,
+		service string,
+		podIndex uint,
+		cmd []string,
+		stdin io.Reader,
+		stdout io.Writer,
+		stderr io.Writer,
+		tty bool,
+		tsq remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error)
+}
+
+func ErrorIsOkToSendToClient(err error) bool {
+	return errors.Is(err, ErrExec)
 }
 
 type node struct {
@@ -247,4 +277,8 @@ func (c *nullClient) Inventory(context.Context) ([]ctypes.Node, error) {
 				},
 			}),
 	}, nil
+}
+
+func (c *nullClient) Exec(context.Context, mtypes.LeaseID, string, uint, []string, io.Reader, io.Writer, io.Writer, bool, remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error) {
+	return nil, errNotImplemented
 }
