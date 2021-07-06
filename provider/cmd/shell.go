@@ -107,7 +107,7 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	bid, err := mcli.BidIDFromFlagsForOwner(cmd.Flags(), cctx.FromAddress)
+	bid, err := mcli.BidIDFromFlags(cmd.Flags())
 	if err != nil {
 		return err
 	}
