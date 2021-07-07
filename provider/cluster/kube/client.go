@@ -3,16 +3,13 @@ package kube
 import (
 	"context"
 	"fmt"
-	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	netv1 "k8s.io/api/networking/v1"
+	"k8s.io/client-go/util/flowcontrol"
 	"os"
 	"path"
-	"strings"
-
-	"k8s.io/client-go/util/flowcontrol"
 
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -137,93 +134,6 @@ func openKubeConfig(cfgPath string, log log.Logger) (*rest.Config, error) {
 
 	log.Info("using in cluster kube config")
 	return rest.InClusterConfig()
-}
-
-func (c *client) ClearHostname(ctx context.Context, ownerAddress cosmostypes.Address, dseq uint64, hostname string) error {
-	labelSelector := &strings.Builder{}
-	_, _ = fmt.Fprintf(labelSelector, "%s=%s", akashLeaseOwnerLabelName, ownerAddress.String())
-	_, _ = fmt.Fprintf(labelSelector, ",%s=%d", akashLeaseDSeqLabelName, dseq)
-
-	namespaces, err := c.kc.CoreV1().Namespaces().List(ctx, metav1.ListOptions{
-		TypeMeta:             metav1.TypeMeta{},
-		LabelSelector:        labelSelector.String(),
-		FieldSelector:        "",
-		Watch:                false,
-		AllowWatchBookmarks:  false,
-		ResourceVersion:      "",
-		ResourceVersionMatch: "",
-		TimeoutSeconds:       nil,
-		Limit:                0,
-		Continue:             "",
-	})
-
-	if err != nil {
-		return err
-	}
-
-	if 0 == len(namespaces.Items) {
-		return cluster.ErrClearHostnameNoMatches
-	}
-
-	// Note that namespace here is always the empty string
-	leaseNamespace := namespaces.Items[0].Name
-
-	fmt.Printf("found namespace: %+v\n", namespaces.Items[0])
-	c.log.Debug("searching for ingress", "namespace", leaseNamespace, "hostname", hostname)
-
-	ingresses, err := c.kc.NetworkingV1().Ingresses(leaseNamespace).List(ctx, metav1.ListOptions{})
-
-	var ingressToModify netv1.Ingress
-	found := false
-search:
-	for _, ingress := range ingresses.Items {
-		for _, rule := range ingress.Spec.Rules {
-			if hostname == rule.Host {
-				ingressToModify = ingress
-				found = true
-				break search
-			}
-		}
-	}
-
-	if !found {
-		return cluster.ErrClearHostnameNoMatches
-	}
-
-	rules := ingressToModify.Spec.Rules
-	if len(rules) == 1 { // TODO - I do not think this ever executes when settings.DeploymentIngressStaticHosts is true
-		// Delete the Ingress
-		err := c.kc.NetworkingV1().Ingresses(leaseNamespace).Delete(ctx, ingressToModify.Name, metav1.DeleteOptions{})
-		if err != nil {
-			return fmt.Errorf("%w: while deleting ingress %q for host %q", err, ingressToModify.Name, hostname)
-		}
-		return nil
-	}
-
-	newRules := make([]netv1.IngressRule, 0, len(rules)-1)
-	for _, rule := range rules {
-		if rule.Host != hostname {
-			newRules = append(newRules, rule)
-		}
-	}
-
-	newIngress := netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ingressToModify.ObjectMeta.Name,
-			Labels:    ingressToModify.ObjectMeta.Labels,
-			Namespace: leaseNamespace,
-		},
-		Spec: netv1.IngressSpec{
-			Rules: newRules,
-		},
-	}
-
-	fmt.Printf("updated ingress: %+v\n", newIngress)
-	_, err = c.kc.NetworkingV1().Ingresses(leaseNamespace).Update(ctx, &newIngress, metav1.UpdateOptions{})
-	if err != nil {
-		return fmt.Errorf("%w: while updating ingress %q to remove host %q", err, newIngress.Name, hostname)
-	}
-	return nil
 }
 
 func (c *client) Deployments(ctx context.Context) ([]ctypes.Deployment, error) {
@@ -956,4 +866,29 @@ func (c *client) deploymentsForLease(ctx context.Context, lid mtypes.LeaseID) ([
 	}
 
 	return deployments.Items, nil
+}
+
+func (c *client) LeaseHostnames(ctx context.Context, lID mtypes.LeaseID) ([]string, error) {
+	ns := lidNS(lID)
+
+	pager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error){
+		return c.kc.NetworkingV1().Ingresses(ns).List(ctx, opts)
+	})
+
+	listOptions := metav1.ListOptions{
+		LabelSelector:        fmt.Sprintf("%s=true", akashManagedLabelName),
+	}
+	hostnames := make([]string, 0)
+	err := pager.EachListItem(ctx, listOptions, func(obj runtime.Object) error {
+		ingress := obj.(*netv1.Ingress)
+		for _, rule := range ingress.Spec.Rules {
+			hostnames = append(hostnames, rule.Host)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return hostnames, nil
 }

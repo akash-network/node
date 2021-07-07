@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	"io"
 	"math/rand"
 	"sync"
@@ -31,6 +30,7 @@ type ReadClient interface {
 	LeaseEvents(context.Context, mtypes.LeaseID, string, bool) (ctypes.EventsWatcher, error)
 	LeaseLogs(context.Context, mtypes.LeaseID, string, bool, *int64) ([]*ctypes.ServiceLog, error)
 	ServiceStatus(context.Context, mtypes.LeaseID, string) (*ctypes.ServiceStatus, error)
+	LeaseHostnames(context.Context, mtypes.LeaseID) ([]string, error)
 }
 
 // Client interface lease and deployment methods
@@ -40,7 +40,6 @@ type Client interface {
 	TeardownLease(context.Context, mtypes.LeaseID) error
 	Deployments(context.Context) ([]ctypes.Deployment, error)
 	Inventory(context.Context) ([]ctypes.Node, error)
-	ClearHostname(ctx context.Context, ownerAddress cosmostypes.Address, dseq uint64, hostname string) error
 }
 
 type node struct {
@@ -255,6 +254,6 @@ func (c *nullClient) Inventory(context.Context) ([]ctypes.Node, error) {
 	}, nil
 }
 
-func (c *nullClient) ClearHostname(ctx context.Context, ownerAddress cosmostypes.Address, dseq uint64, hostname string) error {
-	return nil
+func (c *nullClient) LeaseHostnames(context.Context, mtypes.LeaseID) ([]string, error) {
+	return nil, nil
 }

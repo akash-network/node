@@ -2,6 +2,7 @@ package rest
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -85,6 +86,10 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.R
 		validateHandler(log, pclient)).
 		Methods("GET")
 
+	hostnameRouter := router.PathPrefix(hostnamePrefix).Subrouter()
+	hostnameRouter.Use(requireOwner())
+	hostnameRouter.HandleFunc("/migrate", migrateHandler(log, pclient.Hostname(), pclient.ClusterService()))
+
 	// PUT /deployment/manifest
 	drouter := router.PathPrefix(deploymentPathPrefix).Subrouter()
 	drouter.Use(
@@ -137,6 +142,76 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.R
 		Methods("GET")
 
 	return router
+}
+
+type migrateRequestBody struct {
+	HostnamesToMigrate []string `json:"hostnames_to_migrate"`
+	DestinationDSeq uint64
+}
+
+func migrateHandler(log log.Logger, hostnameService cluster.HostnameServiceClient, clusterService cluster.Service) http.HandlerFunc{
+	return func (rw http.ResponseWriter, req *http.Request) {
+		body := migrateRequestBody{}
+		buf := &bytes.Buffer{}
+		_, err := io.Copy(buf, req.Body)
+		if err != nil {
+			panic(err)
+		}
+
+		dec := json.NewDecoder(buf)
+
+		err = dec.Decode(&body)
+		defer func() {
+			_ = req.Body.Close()
+		}()
+
+		if err != nil {
+
+			log.Error("could not read request body as json", "err", err, "buf", buf.String())
+			rw.WriteHeader(http.StatusUnprocessableEntity)
+			return
+		}
+
+		if len(body.HostnamesToMigrate) == 0 {
+			log.Error("no hostnames indicated for migration")
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		owner := requestOwner(req)
+
+		// TODO - make sure deployment actually exists
+		// Make sure this hostname can be taken
+		dID := dtypes.DeploymentID{
+			Owner: owner.String(),
+			DSeq:  body.DestinationDSeq,
+		}
+		errCh := hostnameService.PrepareHostnamesForTransfer(body.HostnamesToMigrate, dID)
+
+		err = <- errCh // TODO timeout on context
+		if err != nil {
+			if errors.Is(err, cluster.ErrHostnameNotAllowed) {
+				log.Info("hostname not allowed", "err", err)
+				http.Error(rw, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			log.Error("failed preparing hostnames for transfer", "err", err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// Start the goroutine to migrate the hostname
+		err = clusterService.TransferHostnames(req.Context(), body.HostnamesToMigrate, dID)
+		if err != nil {
+			log.Error("failed starting transfer of hostnames", "err", err)
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		rw.WriteHeader(http.StatusOK)
+	}
+
 }
 
 func createStatusHandler(log log.Logger, sclient provider.StatusClient) http.HandlerFunc {

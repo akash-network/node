@@ -47,6 +47,7 @@ type Client interface {
 	LeaseEvents(ctx context.Context, id mtypes.LeaseID, services string, follow bool) (*LeaseKubeEvents, error)
 	LeaseLogs(ctx context.Context, id mtypes.LeaseID, services string, follow bool, tailLines int64) (*ServiceLogs, error)
 	ServiceStatus(ctx context.Context, id mtypes.LeaseID, service string) (*cltypes.ServiceStatus, error)
+	MigrateHostnames(ctx context.Context, hostnames []string, dseq uint64) error
 }
 
 type LeaseKubeEvent struct {
@@ -330,6 +331,43 @@ func (c *client) SubmitManifest(ctx context.Context, dseq uint64, mani manifest.
 		return err
 	}
 
+	req.Header.Set("Content-Type", contentTypeJSON)
+	resp, err := c.hclient.Do(req)
+	if err != nil {
+		return err
+	}
+	responseBuf := &bytes.Buffer{}
+	_, err = io.Copy(responseBuf, resp.Body)
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if err != nil {
+		return err
+	}
+
+	return createClientResponseErrorIfNotOK(resp, responseBuf)
+}
+
+func (c *client) MigrateHostnames(ctx context.Context, hostnames []string, dseq uint64) error {
+	uri, err := makeURI(c.host, "/hostname/migrate")
+	if err != nil {
+		return err
+	}
+
+	body := migrateRequestBody{
+		HostnamesToMigrate: hostnames,
+		DestinationDSeq:    dseq,
+	}
+
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, "POST", uri, bytes.NewBuffer(buf))
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", contentTypeJSON)
 	resp, err := c.hclient.Do(req)
 	if err != nil {

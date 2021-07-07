@@ -3,6 +3,7 @@ package cluster
 import (
 	"context"
 	lifecycle "github.com/boz/go-lifecycle"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -47,6 +48,7 @@ type Service interface {
 	Ready() <-chan struct{}
 	Done() <-chan struct{}
 	HostnameService() HostnameServiceClient
+	TransferHostnames(ctx context.Context, hostnames []string, dID dtypes.DeploymentID) error
 }
 
 // NewService returns new Service instance
@@ -82,7 +84,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 		sub:       sub,
 		inventory: inventory,
 		statusch:  make(chan chan<- *ctypes.Status),
-		managers:  make(map[string]*deploymentManager),
+		managers:  make(map[mtypes.LeaseID]*deploymentManager),
 		managerch: make(chan *deploymentManager),
 
 		log: log,
@@ -104,8 +106,9 @@ type service struct {
 	inventory *inventoryService
 	hostnames *hostnameService
 
+	transferHostnamesRequestCh chan transferHostnamesRequest
 	statusch chan chan<- *ctypes.Status
-	managers map[string]*deploymentManager
+	managers map[mtypes.LeaseID]*deploymentManager
 
 	managerch chan *deploymentManager
 
@@ -138,8 +141,24 @@ func (s *service) HostnameService() HostnameServiceClient {
 	return s.hostnames
 }
 
-func (s *service) Status(ctx context.Context) (*ctypes.Status, error) {
+func (s *service) TransferHostnames(ctx context.Context, hostnames []string, dID dtypes.DeploymentID) error {
+	req := transferHostnamesRequest{
+		hostnames:   hostnames,
+		destination: dID,
+	}
 
+	select {
+	case s.transferHostnamesRequestCh <- req:
+	case <- ctx.Done():
+		return ctx.Err()
+	case <-s.lc.ShuttingDown():
+		return ErrNotRunning
+	}
+
+	return nil
+}
+
+func (s *service) Status(ctx context.Context) (*ctypes.Status, error) {
 	istatus, err := s.inventory.status(ctx)
 	if err != nil {
 		return nil, err
@@ -177,7 +196,7 @@ func (s *service) run(deployments []ctypes.Deployment) {
 
 	s.updateDeploymentManagerGauge()
 	for _, deployment := range deployments {
-		key := mquery.LeasePath(deployment.LeaseID())
+		key := deployment.LeaseID()
 		mgroup := deployment.ManifestGroup()
 		s.managers[key] = newDeploymentManager(s, deployment.LeaseID(), &mgroup)
 		s.updateDeploymentManagerGauge()
@@ -206,7 +225,7 @@ loop:
 					break
 				}
 
-				key := mquery.LeasePath(ev.LeaseID)
+				key := ev.LeaseID
 				if manager := s.managers[key]; manager != nil {
 					if err := manager.update(mgroup); err != nil {
 						s.log.Error("updating deployment", "err", err, "lease", ev.LeaseID, "group-name", mgroup.Name)
@@ -237,7 +256,9 @@ loop:
 					"lease", dm.lease)
 			}
 
-			delete(s.managers, mquery.LeasePath(dm.lease))
+			delete(s.managers, dm.lease)
+		case req := <- s.transferHostnamesRequestCh:
+			s.transferHostnames(req)
 		}
 		s.updateDeploymentManagerGauge()
 	}
@@ -256,8 +277,7 @@ loop:
 }
 
 func (s *service) teardownLease(lid mtypes.LeaseID) {
-	key := mquery.LeasePath(lid)
-	if manager := s.managers[key]; manager != nil {
+	if manager := s.managers[lid]; manager != nil {
 		if err := manager.teardown(); err != nil {
 			s.log.Error("tearing down lease deployment", "err", err, "lease", lid)
 		}

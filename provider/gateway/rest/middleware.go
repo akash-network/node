@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -64,6 +65,7 @@ func requireOwner() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+				fmt.Printf("no peer certificates\n")
 				http.Error(w, "", http.StatusUnauthorized)
 				return
 			}
@@ -72,6 +74,7 @@ func requireOwner() mux.MiddlewareFunc {
 			// so only thing left to do is get account id stored in the CommonName
 			owner, err := sdk.AccAddressFromBech32(r.TLS.PeerCertificates[0].Subject.CommonName)
 			if err != nil {
+				fmt.Printf("failed extracting owner key from cert\n")
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}

@@ -9,6 +9,7 @@ import (
 const (
 	deploymentPathPrefix = "/deployment/{dseq}"
 	leasePathPrefix      = "/lease/{dseq}/{gseq}/{oseq}"
+	hostnamePrefix = "/hostname"
 )
 
 func statusPath() string {
