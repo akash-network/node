@@ -65,19 +65,19 @@ send-manifest:
 .PHONY: deployment-create
 deployment-create:
 	$(AKASH) tx deployment create "$(SDL_PATH)" \
-		--dseq "$(DSEQ)" 			   \
+		--dseq "$(DSEQ)" \
 		--from "$(KEY_NAME)"
 
 .PHONY: deploy-create
 deploy-create:
 	$(AKASH) deploy create "$(SDL_PATH)" \
-		--dseq "$(DSEQ)" 			   \
+		--dseq "$(DSEQ)" \
 		--from "$(KEY_NAME)"
 
 .PHONY: deployment-deposit
 deployment-deposit:
 	$(AKASH) tx deployment deposit "$(PRICE)" \
-		--dseq "$(DSEQ)" 			   \
+		--dseq "$(DSEQ)" \
 		--from "$(KEY_NAME)"
 
 .PHONY: deployment-update

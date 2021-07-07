@@ -1,6 +1,8 @@
 include $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../make/init.mk)
 
-AKASH_HOME ?= $(AKASH_RUN)/$(notdir $(CURDIR))
+AKASH_RUN_NAME := $(notdir $(CURDIR))
+
+AKASH_HOME ?= $(AKASH_RUN)/$(AKASH_RUN_NAME)
 
 .PHONY: all
 all:

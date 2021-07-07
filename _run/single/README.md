@@ -28,8 +28,7 @@ Each command is marked __t1__-__t3__ to indicate a suggested terminal number.
 
 ## Setup
 
-**Developer Deps**: You will need `kind` & `kubectl` installed, install developer dependencies by running `make devdeps-install` from the `root` directory
-
+**Developer Deps**: You will need `kubectl` installed
 
 ### Overview
 
@@ -75,17 +74,7 @@ If at any time you'd like to start over with a fresh chain, simply run:
 
 __t1__
 ```sh
-make clean-all kind-cluster-clean
-make init kustomize-init
-```
-
-The next step is to configure the docker image to be used. If you want to use a specific
-image, set `DOCKER_IMAGE` to the image reference in the command below. Otherwise
-use `ghcr.io/ovrclk/akash:stable` to use the default image.
-
-__t1__
-```sh
-DOCKER_IMAGE=ghcr.io/ovrclk/akash:stable make kind-configure-image
+make clean kind-cluster-clean
 ```
 
 ### Initialize Cluster
@@ -104,6 +93,12 @@ make kind-cluster-create
 
 # Calico Network Manger
 make kind-cluster-calico-create
+```
+
+Check all pods in kube-system and ingress-nginx namespaces are in Running state.
+If some pods are in Pending stay give it a little wait and check again
+```shell
+kubectl --context kind-single -n ingress-nginx -n kube-system get pods
 ```
 
 ### (Optional) Upload a local docker image
