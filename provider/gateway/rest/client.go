@@ -97,11 +97,19 @@ func NewClient(qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Ce
 		MinVersion:            tls.VersionTLS13,
 	}
 
-	cl.hclient = &http.Client{
+	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
+		// Never  follow redirects
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+		Jar:           nil,
+		Timeout:       0,
 	}
+
+	cl.hclient = httpClient 
 
 	cl.wsclient = &websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
@@ -350,7 +358,7 @@ func (c *client) SubmitManifest(ctx context.Context, dseq uint64, mani manifest.
 }
 
 func (c *client) MigrateHostnames(ctx context.Context, hostnames []string, dseq uint64) error {
-	uri, err := makeURI(c.host, "/hostname/migrate")
+	uri, err := makeURI(c.host, "hostname/migrate")
 	if err != nil {
 		return err
 	}
@@ -364,11 +372,13 @@ func (c *client) MigrateHostnames(ctx context.Context, hostnames []string, dseq 
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, "POST", uri, bytes.NewBuffer(buf))
+	fmt.Printf("sending as body: %s\n", string(buf))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, bytes.NewReader(buf))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", contentTypeJSON)
+
 	resp, err := c.hclient.Do(req)
 	if err != nil {
 		return err

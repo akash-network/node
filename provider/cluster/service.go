@@ -38,6 +38,7 @@ type Cluster interface {
 // StatusClient is the interface which includes status of service
 type StatusClient interface {
 	Status(context.Context) (*ctypes.Status, error)
+	CheckDeploymentExists(ctx context.Context, dID dtypes.DeploymentID) (bool, error)
 }
 
 // Service manage compute cluster for the provider.  Will eventually integrate with kubernetes, etc...
@@ -49,6 +50,7 @@ type Service interface {
 	Done() <-chan struct{}
 	HostnameService() HostnameServiceClient
 	TransferHostnames(ctx context.Context, hostnames []string, dID dtypes.DeploymentID) error
+
 }
 
 // NewService returns new Service instance
@@ -86,6 +88,8 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 		statusch:  make(chan chan<- *ctypes.Status),
 		managers:  make(map[mtypes.LeaseID]*deploymentManager),
 		managerch: make(chan *deploymentManager),
+		transferHostnamesRequestCh: make(chan transferHostnamesRequest),
+		checkDeploymentExistsRequestCh: make(chan checkDeploymentExistsRequest),
 
 		log: log,
 		lc:  lc,
@@ -107,6 +111,7 @@ type service struct {
 	hostnames *hostnameService
 
 	transferHostnamesRequestCh chan transferHostnamesRequest
+	checkDeploymentExistsRequestCh chan checkDeploymentExistsRequest
 	statusch chan chan<- *ctypes.Status
 	managers map[mtypes.LeaseID]*deploymentManager
 
@@ -114,6 +119,31 @@ type service struct {
 
 	log log.Logger
 	lc  lifecycle.Lifecycle
+}
+
+type checkDeploymentExistsRequest struct {
+	deploymentID dtypes.DeploymentID
+	responseCh chan <- bool
+}
+
+func (s *service) CheckDeploymentExists(ctx context.Context, dID dtypes.DeploymentID) (bool, error){
+	response := make(chan bool, 1)
+	req := checkDeploymentExistsRequest{
+		responseCh: response,
+		deploymentID: dID,
+	}
+	select {
+	case s.checkDeploymentExistsRequestCh <- req:
+	case <- ctx.Done():
+		return false, ctx.Err()
+	}
+
+	select {
+		case v := <- response:
+			return v, nil
+		case <-ctx.Done():
+			return false, ctx.Err()
+	}
 }
 
 func (s *service) Close() error {
@@ -242,7 +272,6 @@ loop:
 			}
 
 		case ch := <-s.statusch:
-
 			ch <- &ctypes.Status{
 				Leases: uint32(len(s.managers)),
 			}
@@ -259,12 +288,19 @@ loop:
 			delete(s.managers, dm.lease)
 		case req := <- s.transferHostnamesRequestCh:
 			s.transferHostnames(req)
+		case req := <- s.checkDeploymentExistsRequestCh:
+			exists := false
+			for leaseID := range s.managers {
+				if leaseID.DeploymentID().Equals(req.deploymentID) {
+					exists = true
+					break
+				}
+			}
+			req.responseCh <- exists
 		}
 		s.updateDeploymentManagerGauge()
 	}
-
 	s.log.Debug("draining deployment managers...", "qty", len(s.managers))
-
 	for _, manager := range s.managers {
 		if manager != nil {
 			manager := <-s.managerch

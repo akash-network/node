@@ -73,6 +73,7 @@ func prepareHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []stri
 	for _, hostname := range toChange {
 		store[hostname] = dID
 	}
+	close(errCh)
 }
 
 func (sh *SimpleHostnames) ReserveHostnames(hostnames []string, dID dtypes.DeploymentID) ReservationResult {
@@ -242,6 +243,7 @@ func newHostnameService(ctx context.Context, cfg Config) *hostnameService {
 		canRequest:       make(chan canReserveRequest),
 		releases:         make(chan dtypes.DeploymentID),
 		lc:               lifecycle.New(),
+		prepareRequest: make(chan prepareTransferRequest),
 	}
 
 	go hs.lc.WatchContext(ctx)

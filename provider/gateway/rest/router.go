@@ -2,7 +2,6 @@ package rest
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -88,7 +87,8 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.R
 
 	hostnameRouter := router.PathPrefix(hostnamePrefix).Subrouter()
 	hostnameRouter.Use(requireOwner())
-	hostnameRouter.HandleFunc("/migrate", migrateHandler(log, pclient.Hostname(), pclient.ClusterService()))
+	hostnameRouter.HandleFunc("/migrate", migrateHandler(log, pclient.Hostname(), pclient.ClusterService())).
+		Methods(http.MethodPost)
 
 	// PUT /deployment/manifest
 	drouter := router.PathPrefix(deploymentPathPrefix).Subrouter()
@@ -99,7 +99,7 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.R
 
 	drouter.HandleFunc("/manifest",
 		createManifestHandler(log, pclient.Manifest())).
-		Methods("PUT")
+		Methods(http.MethodPut)
 
 	lrouter := router.PathPrefix(leasePathPrefix).Subrouter()
 	lrouter.Use(
@@ -110,7 +110,7 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.R
 	// GET /lease/<lease-id>/status
 	lrouter.HandleFunc("/status",
 		leaseStatusHandler(log, pclient.Cluster())).
-		Methods("GET")
+		Methods(http.MethodGet)
 
 	// GET /lease/<lease-id>/kubeevents
 	eventsRouter := lrouter.PathPrefix("/kubeevents").Subrouter()
@@ -146,28 +146,20 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.R
 
 type migrateRequestBody struct {
 	HostnamesToMigrate []string `json:"hostnames_to_migrate"`
-	DestinationDSeq uint64
+	DestinationDSeq uint64 `json:"destination_dseq"`
 }
 
 func migrateHandler(log log.Logger, hostnameService cluster.HostnameServiceClient, clusterService cluster.Service) http.HandlerFunc{
 	return func (rw http.ResponseWriter, req *http.Request) {
 		body := migrateRequestBody{}
-		buf := &bytes.Buffer{}
-		_, err := io.Copy(buf, req.Body)
-		if err != nil {
-			panic(err)
-		}
-
-		dec := json.NewDecoder(buf)
-
-		err = dec.Decode(&body)
+		dec := json.NewDecoder(req.Body)
+		err := dec.Decode(&body)
 		defer func() {
 			_ = req.Body.Close()
 		}()
 
 		if err != nil {
-
-			log.Error("could not read request body as json", "err", err, "buf", buf.String())
+			log.Error("could not read request body as json", "err", err)
 			rw.WriteHeader(http.StatusUnprocessableEntity)
 			return
 		}
@@ -180,12 +172,27 @@ func migrateHandler(log log.Logger, hostnameService cluster.HostnameServiceClien
 
 		owner := requestOwner(req)
 
-		// TODO - make sure deployment actually exists
 		// Make sure this hostname can be taken
 		dID := dtypes.DeploymentID{
 			Owner: owner.String(),
 			DSeq:  body.DestinationDSeq,
 		}
+
+		//  make sure destination deployment actually exists
+		exists, err := clusterService.CheckDeploymentExists(req.Context(), dID)
+		if err != nil {
+			log.Error("failed checking if destination deployment exists", "err", err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if !exists {
+			log.Info("destination deployment does not exist", "dseq", body.DestinationDSeq)
+			http.Error(rw, "destination deployment does not exist", http.StatusBadRequest)
+			return
+		}
+
+		log.Debug("preparing migration of hostnames", "cnt", len(body.HostnamesToMigrate))
 		errCh := hostnameService.PrepareHostnamesForTransfer(body.HostnamesToMigrate, dID)
 
 		err = <- errCh // TODO timeout on context
@@ -201,6 +208,7 @@ func migrateHandler(log log.Logger, hostnameService cluster.HostnameServiceClien
 			return
 		}
 
+		log.Debug("transferring hostnames", "cnt", len(body.HostnamesToMigrate))
 		// Start the goroutine to migrate the hostname
 		err = clusterService.TransferHostnames(req.Context(), body.HostnamesToMigrate, dID)
 		if err != nil {
