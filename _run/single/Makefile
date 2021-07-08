@@ -2,19 +2,17 @@ include ../common.mk
 include ../common-commands.mk
 include ../common-kind.mk
 
-KUSTOMIZE_ROOT           ?= ../../_docs/kustomize
-KUSTOMIZE_DIR            ?= ./kustomize
+KUSTOMIZE_ROOT           ?= $(AKASH_ROOT)/_docs/kustomize
+KUSTOMIZE_DIR            ?= $(AKASH_ROOT)/_run/single/kustomize
 KUSTOMIZE_PROVIDER_DIR   ?= $(KUSTOMIZE_DIR)/akash-provider
 KUSTOMIZE_PROVIDER_CACHE ?= $(KUSTOMIZE_PROVIDER_DIR)/cache
 KUSTOMIZE_AKASHD_DIR     ?= $(KUSTOMIZE_DIR)/akash-node
 KUSTOMIZE_AKASHD_CACHE   ?= $(KUSTOMIZE_AKASHD_DIR)/cache
 CLIENT_EXPORT_PASSWORD   ?= 12345678
 
-PROVIDER_HOSTNAME = akash-provider.localhost
-AKASH_NODE        = "tcp://akash.localhost:$(KIND_PORT_BINDINGS)"
-GATEWAY_ENDPOINT ?= http://akash-provider.localhost
-
-export AKASH_NODE = $(AKASHCTL_NODE)
+PROVIDER_HOSTNAME  = akash-provider.localhost
+export AKASH_NODE  = tcp://akash.localhost:$(KIND_PORT_BINDINGS)
+GATEWAY_ENDPOINT  ?= https://akash-provider.localhost
 
 .PHONY: kind-namespace-setup
 kind-namespace-setup:
@@ -23,22 +21,21 @@ kind-namespace-setup:
 .PHONY: kustomize-init
 kustomize-init: kustomize-init-akash-node kustomize-init-provider kind-namespace-setup
 
-
 .PHONY: kustomize-init-akash-node
 kustomize-init-akash-node:
 	mkdir -p "$(KUSTOMIZE_AKASHD_CACHE)"
-	cp -r "$(NODE_HOME)/"* "$(KUSTOMIZE_AKASHD_CACHE)/"
+	cp -r "$(AKASH_HOME)/"* "$(KUSTOMIZE_AKASHD_CACHE)/"
 
 .PHONY: kustomize-init-provider
 kustomize-init-provider:
 	mkdir -p "$(KUSTOMIZE_PROVIDER_CACHE)"
-	cp -r "$(CLIENT_HOME)/config" "$(KUSTOMIZE_PROVIDER_CACHE)/"
+	cp -r "$(AKASH_HOME)/config" "$(KUSTOMIZE_PROVIDER_CACHE)/"
 	echo "$(CLIENT_EXPORT_PASSWORD)" > "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt"
-	cat "$(CLIENT_HOME)/$(PROVIDER_ADDRESS).pem" > "$(KUSTOMIZE_PROVIDER_CACHE)/provider-cert.pem"
+	cat "$(AKASH_HOME)/$(PROVIDER_ADDRESS).pem" > "$(KUSTOMIZE_PROVIDER_CACHE)/provider-cert.pem"
 	( \
 		cat "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt" ; \
 		cat "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt"   \
-	) | $(AKASHCTL_NONODE) keys export provider 2> "$(KUSTOMIZE_PROVIDER_CACHE)/key.txt"
+	) | $(AKASH) keys export provider 1> "$(KUSTOMIZE_PROVIDER_CACHE)/key.txt"
 
 .PHONY: kustomize-install-node
 kustomize-install-node:
@@ -61,6 +58,9 @@ provider-lease-status:
 		--from      "$(KEY_NAME)" \
 		--provider  "$(PROVIDER_ADDRESS)"
 
-.PHONY:
-clean-all: clean
-	git clean -fdX
+PHONY: clean-$(AKASH_RUN_NAME)
+clean-$(AKASH_RUN_NAME):
+	rm -rf $(CURDIR)/kustomize/akash-node/cache
+	rm -f  $(CURDIR)/kustomize/akash-node/docker-image.yaml
+	rm -rf $(CURDIR)/kustomize/akash-provider/cache
+	rm -f  $(CURDIR)/kustomize/akash-provider/docker-image.yaml
