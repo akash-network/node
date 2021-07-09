@@ -233,6 +233,9 @@ func (xferMgr *transferHostnamesManager) completeTransferWhenReady(ctx context.C
 		skipping := make([]mtypes.LeaseID, 0, len(xferMgr.toPurge))
 		releasedHostnames := make(map[mtypes.LeaseID]struct{})
 		const pollingPeriod = 10*time.Second
+		// TODO - this polling behavior seems to cause a period where the ingress returns 404
+		// because it briefly doesn't have a configured ingress for the hostname. This can probably be solved
+		// by more agressive polling
 		polling := time.NewTicker(pollingPeriod)
 		for {
 			select {

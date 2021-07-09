@@ -149,6 +149,9 @@ func (dm *deploymentManager) run() {
 
 	runch := dm.startDeploy()
 
+	// TODO - somehow at this point if this deployment holds a hostname
+	// which is also requested for use by any other deployment with the same owner
+	// then the hostname should get moved back to the other deployment at this time
 	defer dm.hostnameService.ReleaseHostnames(dm.lease.DeploymentID())
 
 loop:
