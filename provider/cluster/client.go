@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	"io"
 	"math/rand"
 	"sync"
@@ -31,6 +32,8 @@ type ReadClient interface {
 	LeaseLogs(context.Context, mtypes.LeaseID, string, bool, *int64) ([]*ctypes.ServiceLog, error)
 	ServiceStatus(context.Context, mtypes.LeaseID, string) (*ctypes.ServiceStatus, error)
 	LeaseHostnames(context.Context, mtypes.LeaseID) ([]string, error)
+	AllHostnames(context.Context) ([]ActiveHostname, error)
+	GetManifestGroup(context.Context, mtypes.LeaseID) (bool, akashv1.ManifestGroup, error)
 }
 
 // Client interface lease and deployment methods
@@ -40,6 +43,11 @@ type Client interface {
 	TeardownLease(context.Context, mtypes.LeaseID) error
 	Deployments(context.Context) ([]ctypes.Deployment, error)
 	Inventory(context.Context) ([]ctypes.Node, error)
+}
+
+type ActiveHostname struct {
+	ID mtypes.LeaseID
+	Hostnames []string
 }
 
 type node struct {
@@ -255,5 +263,13 @@ func (c *nullClient) Inventory(context.Context) ([]ctypes.Node, error) {
 }
 
 func (c *nullClient) LeaseHostnames(context.Context, mtypes.LeaseID) ([]string, error) {
+	return nil, nil
+}
+
+func (c *nullClient) GetManifestGroup(context.Context, mtypes.LeaseID) (bool, akashv1.ManifestGroup, error) {
+	return false, akashv1.ManifestGroup{}, nil
+}
+
+func (c *nullClient) AllHostnames(context.Context) ([]ActiveHostname, error) {
 	return nil, nil
 }

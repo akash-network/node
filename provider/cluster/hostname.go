@@ -221,12 +221,10 @@ type hostnameService struct {
 
 const HostnameSeparator = '.'
 
-func newHostnameService(ctx context.Context, cfg Config) *hostnameService {
-
+func newHostnameService(ctx context.Context, cfg Config, initialData map[string]dtypes.DeploymentID) *hostnameService {
 	blockedHostnames := make([]string, 0)
 	blockedDomains := make([]string, 0)
 	for _, name := range cfg.BlockedHostnames {
-
 		if len(name) != 0 && name[0] == HostnameSeparator {
 			blockedDomains = append(blockedDomains, name)
 			blockedHostnames = append(blockedHostnames, name[1:])
@@ -236,7 +234,7 @@ func newHostnameService(ctx context.Context, cfg Config) *hostnameService {
 	}
 
 	hs := &hostnameService{
-		inUse:            make(map[string]dtypes.DeploymentID),
+		inUse:            make(map[string]dtypes.DeploymentID, len(initialData)),
 		blockedHostnames: blockedHostnames,
 		blockedDomains:   blockedDomains,
 		requests:         make(chan reserveRequest),
@@ -244,6 +242,9 @@ func newHostnameService(ctx context.Context, cfg Config) *hostnameService {
 		releases:         make(chan dtypes.DeploymentID),
 		lc:               lifecycle.New(),
 		prepareRequest: make(chan prepareTransferRequest),
+	}
+	for k, v := range initialData {
+		hs.inUse[k] = v
 	}
 
 	go hs.lc.WatchContext(ctx)

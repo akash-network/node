@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"sync"
@@ -179,23 +180,51 @@ func migrateHandler(log log.Logger, hostnameService cluster.HostnameServiceClien
 		}
 
 		//  make sure destination deployment actually exists
-		exists, err := clusterService.CheckDeploymentExists(req.Context(), dID)
+		activeLeases, err := clusterService.FindActiveLeases(req.Context(), dID)
 		if err != nil {
 			log.Error("failed checking if destination deployment exists", "err", err)
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		if !exists {
+		if len(activeLeases) == 0 {
 			log.Info("destination deployment does not exist", "dseq", body.DestinationDSeq)
 			http.Error(rw, "destination deployment does not exist", http.StatusBadRequest)
 			return
 		}
 
+		// check that the destination leases can actually use the requested hostnames
+		hostnamesInManifestGroups := make(map[string]struct{})
+		for _, activeLease := range activeLeases {
+			for _, service := range activeLease.Group.Services {
+				for _, expose := range service.Expose {
+					for _, host := range expose.Hosts {
+						hostnamesInManifestGroups[host] = struct{}{}
+					}
+				}
+			}
+		}
+
+		for _, hostname := range body.HostnamesToMigrate {
+			_, inUse := hostnamesInManifestGroups[hostname]
+			if !inUse {
+				msg := fmt.Sprintf("the hostname %q is not used by this deployment", hostname)
+				http.Error(rw, msg, http.StatusBadRequest)
+				return
+			}
+
+		}
+
 		log.Debug("preparing migration of hostnames", "cnt", len(body.HostnamesToMigrate))
 		errCh := hostnameService.PrepareHostnamesForTransfer(body.HostnamesToMigrate, dID)
 
-		err = <- errCh // TODO timeout on context
+		select {
+		case err = <-errCh:
+
+		case <-req.Context().Done():
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		if err != nil {
 			if errors.Is(err, cluster.ErrHostnameNotAllowed) {
 				log.Info("hostname not allowed", "err", err)
@@ -218,6 +247,7 @@ func migrateHandler(log log.Logger, hostnameService cluster.HostnameServiceClien
 		}
 
 		rw.WriteHeader(http.StatusOK)
+		// Send message saying it has been started
 	}
 
 }

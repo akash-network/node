@@ -3,6 +3,7 @@ package cluster
 import (
 	"context"
 	lifecycle "github.com/boz/go-lifecycle"
+	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -38,7 +39,7 @@ type Cluster interface {
 // StatusClient is the interface which includes status of service
 type StatusClient interface {
 	Status(context.Context) (*ctypes.Status, error)
-	CheckDeploymentExists(ctx context.Context, dID dtypes.DeploymentID) (bool, error)
+	FindActiveLeases(ctx context.Context, dID dtypes.DeploymentID) ([]ActiveLease, error)
 }
 
 // Service manage compute cluster for the provider.  Will eventually integrate with kubernetes, etc...
@@ -50,7 +51,6 @@ type Service interface {
 	Done() <-chan struct{}
 	HostnameService() HostnameServiceClient
 	TransferHostnames(ctx context.Context, hostnames []string, dID dtypes.DeploymentID) error
-
 }
 
 // NewService returns new Service instance
@@ -76,7 +76,21 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 		return nil, err
 	}
 
-	hostnames := newHostnameService(ctx, cfg)
+	allHostnames, err := client.AllHostnames(ctx)
+	if err != nil {
+		sub.Close()
+		return nil, err
+	}
+	activeHostnames := make(map[string]dtypes.DeploymentID, len(allHostnames))
+	for _, v := range allHostnames {
+		deploymentID := v.ID.DeploymentID()
+		for _, hostname := range v.Hostnames {
+			// TODO - filter out generated hostnames here
+			activeHostnames[hostname] = deploymentID
+			log.Debug("found existing hostname", "hostname", hostname, "deployment", deploymentID)
+		}
+	}
+	hostnames := newHostnameService(ctx, cfg, activeHostnames)
 
 	s := &service{
 		session:   session,
@@ -90,6 +104,8 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 		managerch: make(chan *deploymentManager),
 		transferHostnamesRequestCh: make(chan transferHostnamesRequest),
 		checkDeploymentExistsRequestCh: make(chan checkDeploymentExistsRequest),
+		xferHostnameManagerCh: make(chan *transferHostnamesManager),
+		xferHostnameManagers: make(map[string]*transferHostnamesManager),
 
 		log: log,
 		lc:  lc,
@@ -114,8 +130,10 @@ type service struct {
 	checkDeploymentExistsRequestCh chan checkDeploymentExistsRequest
 	statusch chan chan<- *ctypes.Status
 	managers map[mtypes.LeaseID]*deploymentManager
+	xferHostnameManagers map[string]*transferHostnamesManager
 
 	managerch chan *deploymentManager
+	xferHostnameManagerCh chan *transferHostnamesManager
 
 	log log.Logger
 	lc  lifecycle.Lifecycle
@@ -123,11 +141,18 @@ type service struct {
 
 type checkDeploymentExistsRequest struct {
 	deploymentID dtypes.DeploymentID
-	responseCh chan <- bool
+	responseCh chan <- []mtypes.LeaseID
 }
 
-func (s *service) CheckDeploymentExists(ctx context.Context, dID dtypes.DeploymentID) (bool, error){
-	response := make(chan bool, 1)
+type ActiveLease struct {
+	ID mtypes.LeaseID
+	Group akashv1.ManifestGroup
+}
+
+var errNoManifestGroup = errors.New("no manifest group could be found")
+
+func (s *service) FindActiveLeases(ctx context.Context, dID dtypes.DeploymentID) ([]ActiveLease, error){
+	response := make(chan []mtypes.LeaseID, 1)
 	req := checkDeploymentExistsRequest{
 		responseCh: response,
 		deploymentID: dID,
@@ -135,15 +160,35 @@ func (s *service) CheckDeploymentExists(ctx context.Context, dID dtypes.Deployme
 	select {
 	case s.checkDeploymentExistsRequestCh <- req:
 	case <- ctx.Done():
-		return false, ctx.Err()
+		return nil, ctx.Err()
 	}
 
+	var leases []mtypes.LeaseID
 	select {
-		case v := <- response:
-			return v, nil
+		case leases = <- response:
+
 		case <-ctx.Done():
-			return false, ctx.Err()
+			return nil, ctx.Err()
 	}
+
+	result := make([]ActiveLease, 0, len(leases))
+	for _, leaseID := range leases {
+		found, mgroup, err := s.client.GetManifestGroup(ctx, leaseID)
+		if err != nil {
+			return nil, err
+		}
+
+		if !found {
+			return nil, errNoManifestGroup
+		}
+
+		result = append(result, ActiveLease{
+			ID:   leaseID,
+			Group: mgroup,
+		})
+	}
+
+	return result, nil
 }
 
 func (s *service) Close() error {
@@ -172,9 +217,11 @@ func (s *service) HostnameService() HostnameServiceClient {
 }
 
 func (s *service) TransferHostnames(ctx context.Context, hostnames []string, dID dtypes.DeploymentID) error {
+	errCh := make(chan error, 1)
 	req := transferHostnamesRequest{
 		hostnames:   hostnames,
 		destination: dID,
+		errCh: errCh,
 	}
 
 	select {
@@ -185,7 +232,14 @@ func (s *service) TransferHostnames(ctx context.Context, hostnames []string, dID
 		return ErrNotRunning
 	}
 
-	return nil
+	select {
+	case err := <- errCh:
+		return err
+	case <- ctx.Done():
+		return ctx.Err()
+	case <-s.lc.ShuttingDown():
+		return ErrNotRunning
+	}
 }
 
 func (s *service) Status(ctx context.Context) (*ctypes.Status, error) {
@@ -287,16 +341,12 @@ loop:
 
 			delete(s.managers, dm.lease)
 		case req := <- s.transferHostnamesRequestCh:
-			s.transferHostnames(req)
+			err := s.transferHostnames(req)
+			req.errCh <- err
+		case mgr := <- s.xferHostnameManagerCh:
+			delete(s.xferHostnameManagers, mgr.ownerAddr.String())
 		case req := <- s.checkDeploymentExistsRequestCh:
-			exists := false
-			for leaseID := range s.managers {
-				if leaseID.DeploymentID().Equals(req.deploymentID) {
-					exists = true
-					break
-				}
-			}
-			req.responseCh <- exists
+			s.doCheckDeploymentExists(req)
 		}
 		s.updateDeploymentManagerGauge()
 	}
@@ -310,6 +360,19 @@ loop:
 
 	<-s.inventory.done()
 
+}
+
+func (s *service) doCheckDeploymentExists(req checkDeploymentExistsRequest) {
+	result := make([]mtypes.LeaseID, 0)
+
+	for leaseID := range s.managers {
+		if leaseID.DeploymentID().Equals(req.deploymentID) {
+			result = append(result, leaseID)
+			break
+		}
+	}
+
+	req.responseCh <- result
 }
 
 func (s *service) teardownLease(lid mtypes.LeaseID) {

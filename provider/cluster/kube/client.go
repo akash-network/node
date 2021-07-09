@@ -3,6 +3,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -10,6 +11,7 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	"os"
 	"path"
+	"strconv"
 
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -134,6 +136,22 @@ func openKubeConfig(cfgPath string, log log.Logger) (*rest.Config, error) {
 
 	log.Info("using in cluster kube config")
 	return rest.InClusterConfig()
+}
+
+func (c *client) GetManifestGroup(ctx context.Context, lID mtypes.LeaseID) (bool, akashv1.ManifestGroup, error){
+	leaseNamespace := lidNS(lID)
+
+	obj, err := c.ac.AkashV1().Manifests(c.ns).Get(ctx, leaseNamespace, metav1.GetOptions{})
+	if err != nil {
+		if kubeErrors.IsNotFound(err) {
+			c.log.Info("CRD manifest not found", "lease-ns", leaseNamespace)
+			return false, akashv1.ManifestGroup{}, nil
+		}
+
+		return false, akashv1.ManifestGroup{}, err
+	}
+
+	return true, obj.Spec.Group, nil
 }
 
 func (c *client) Deployments(ctx context.Context) ([]ctypes.Deployment, error) {
@@ -891,4 +909,100 @@ func (c *client) LeaseHostnames(ctx context.Context, lID mtypes.LeaseID) ([]stri
 		return nil, err
 	}
 	return hostnames, nil
+}
+
+func (c *client) AllHostnames(ctx context.Context) ([]cluster.ActiveHostname, error) {
+	ingressPager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error){
+		return c.kc.NetworkingV1().Ingresses(metav1.NamespaceAll).List(ctx, opts)
+	})
+
+	listOptions := metav1.ListOptions{
+		LabelSelector:        fmt.Sprintf("%s=true", akashManagedLabelName),
+	}
+
+	namespaces := make(map[string][]string, 0)
+	err := ingressPager.EachListItem(ctx, listOptions, func(obj runtime.Object) error {
+		ingress := obj.(*netv1.Ingress)
+		namespace := ingress.Labels[akashNetworkNamespace]
+		hostnames, _ := namespaces[namespace]
+		for _, rule := range ingress.Spec.Rules {
+			hostnames = append(hostnames, rule.Host)
+		}
+		namespaces[namespace] = hostnames
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]cluster.ActiveHostname, 0)
+	nsPager := pager.New(func (ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
+		return c.kc.CoreV1().Namespaces().List(ctx, opts)
+	})
+	err = nsPager.EachListItem(ctx, listOptions, func(obj runtime.Object) error {
+		ns := obj.(*corev1.Namespace)
+		hostnames, exists := namespaces[ns.Name]
+		if !exists {
+			return nil
+		}
+
+		owner, ok := ns.Labels[akashLeaseOwnerLabelName]
+		if !ok || len(owner) == 0 {
+			c.log.Error("namespace missing owner label", "ns", ns.Name)
+			return nil
+		}
+		provider, ok := ns.Labels[akashLeaseProviderLabelName]
+		if !ok || len(provider) == 0 {
+			c.log.Error("namespace missing provider label", "ns", ns.Name)
+			return nil
+		}
+		dseqStr, ok := ns.Labels[akashLeaseDSeqLabelName]
+		if !ok {
+			c.log.Error("namespace missing dseq label", "ns", ns.Name)
+			return nil
+		}
+		gseqStr, ok := ns.Labels[akashLeaseGSeqLabelName]
+		if !ok {
+			c.log.Error("namespace missing gseq label", "ns", ns.Name)
+			return nil
+		}
+		oseqStr, ok := ns.Labels[akashLeaseOSeqLabelName]
+		if !ok {
+			c.log.Error("namespace missing oseq label", "ns", ns.Name)
+			return nil
+		}
+		dseq, err := strconv.ParseUint(dseqStr, 10, 64)
+		if err != nil {
+			c.log.Error("namespace dseq label invalid", "ns", ns.Name, "dseq", dseq)
+			return nil
+		}
+		gseq, err := strconv.ParseUint(gseqStr, 10, 32)
+		if err != nil {
+			c.log.Error("namespace gseq label invalid", "ns", ns.Name, "gseq", gseq)
+			return nil
+		}
+		oseq, err := strconv.ParseUint(oseqStr, 10, 32)
+		if err != nil {
+			c.log.Error("namespace oseq label invalid", "ns", ns.Name, "oseq", oseq)
+			return nil
+		}
+
+		leaseID := mtypes.LeaseID{
+			Owner:    owner,
+			DSeq:     dseq,
+			GSeq:     uint32(gseq),
+			OSeq:     uint32(oseq),
+			Provider: provider,
+		}
+
+		result = append(result, cluster.ActiveHostname{
+			ID: leaseID,
+			Hostnames: hostnames,
+		})
+		return nil
+	})
+
+
+	return result, nil
 }
