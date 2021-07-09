@@ -274,7 +274,7 @@ func cmdGroupClose(_ string) *cobra.Command {
 
 	flags.AddTxFlagsToCmd(cmd)
 	AddGroupIDFlags(cmd.Flags())
-	MarkReqGroupIDFlags(cmd)
+	MarkReqGroupIDFlags(cmd, DeploymentIDOptionNoOwner(true))
 
 	return cmd
 }
@@ -310,7 +310,7 @@ func cmdGroupPause(_ string) *cobra.Command {
 
 	flags.AddTxFlagsToCmd(cmd)
 	AddGroupIDFlags(cmd.Flags())
-	MarkReqGroupIDFlags(cmd)
+	MarkReqGroupIDFlags(cmd, DeploymentIDOptionNoOwner(true))
 
 	return cmd
 }
@@ -346,7 +346,7 @@ func cmdGroupStart(_ string) *cobra.Command {
 
 	flags.AddTxFlagsToCmd(cmd)
 	AddGroupIDFlags(cmd.Flags())
-	MarkReqGroupIDFlags(cmd)
+	MarkReqGroupIDFlags(cmd, DeploymentIDOptionNoOwner(true))
 
 	return cmd
 }
