@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	lifecycle "github.com/boz/go-lifecycle"
-	cosmostypes "github.com/cosmos/cosmos-sdk/types"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/pkg/errors"
 	"strings"
@@ -14,7 +14,7 @@ import (
 type HostnameServiceClient interface {
 	ReserveHostnames(hostnames []string, dID dtypes.DeploymentID) ReservationResult
 	ReleaseHostnames(dID dtypes.DeploymentID)
-	CanReserveHostnames(hostnames []string, ownerAddr cosmostypes.Address) <-chan error
+	CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) <-chan error
 	PrepareHostnamesForTransfer(hostnames []string, dID dtypes.DeploymentID) <- chan error
 }
 
@@ -137,7 +137,7 @@ func reserveHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []stri
 	return
 }
 
-func (sh *SimpleHostnames) CanReserveHostnames(hostnames []string, ownerAddr cosmostypes.Address) <-chan error {
+func (sh *SimpleHostnames) CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) <-chan error {
 	sh.lock.Lock()
 	defer sh.lock.Unlock()
 	ch := make(chan error, 1)
@@ -145,7 +145,7 @@ func (sh *SimpleHostnames) CanReserveHostnames(hostnames []string, ownerAddr cos
 	return ch
 }
 
-func canReserveHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []string, ownerAddr cosmostypes.Address, chErr chan<- error) {
+func canReserveHostnamesImpl(store map[string]dtypes.DeploymentID, hostnames []string, ownerAddr sdktypes.Address, chErr chan<- error) {
 	for _, hostname := range hostnames {
 		usedByDid, inUse := store[hostname]
 
@@ -196,7 +196,7 @@ type reserveRequest struct {
 type canReserveRequest struct {
 	hostnames []string
 	result    chan<- error
-	ownerAddr cosmostypes.Address
+	ownerAddr sdktypes.Address
 }
 
 type prepareTransferRequest struct {
@@ -363,7 +363,7 @@ func (hs *hostnameService) ReleaseHostnames(dID dtypes.DeploymentID) {
 	}
 }
 
-func (hs *hostnameService) CanReserveHostnames(hostnames []string, ownerAddr cosmostypes.Address) <-chan error {
+func (hs *hostnameService) CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) <-chan error {
 	returnValue := make(chan error, 1) // Buffer of one so service does not block
 	lowercaseHostnames := make([]string, len(hostnames))
 	for i, hostname := range hostnames {
