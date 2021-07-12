@@ -10,6 +10,7 @@ import (
 	akashclient "github.com/ovrclk/akash/client"
 	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
+	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -107,10 +108,11 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	bid, err := mcli.BidIDFromFlags(cmd.Flags())
+	bidID, err := mcli.BidIDFromFlags(cmd.Flags(), dcli.WithOwner(cctx.FromAddress))
 	if err != nil {
 		return err
 	}
+	lID := bidID.LeaseID()
 
 	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, cctx.Keyring)
 	if err != nil {
@@ -164,7 +166,7 @@ func doLeaseShell(cmd *cobra.Command, args []string) error {
 		}
 	}()
 	leaseShellFn := func() error {
-		return gclient.LeaseShell(ctx, bid.LeaseID(), service, podIndex, remoteCmd, stdin, stdout, stderr, setupTty, terminalResizes)
+		return gclient.LeaseShell(ctx, lID, service, podIndex, remoteCmd, stdin, stdout, stderr, setupTty, terminalResizes)
 	}
 
 	if setupTty { // Interactive terminals run with a wrapper that restores the prior state
