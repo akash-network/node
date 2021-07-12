@@ -139,6 +139,7 @@ bid-close:
 .PHONY: lease-create
 lease-create:
 	$(AKASH) tx market lease create \
+		--owner "$(KEY_ADDRESS)"         \
 		--dseq  "$(DSEQ)"                \
 		--gseq  "$(GSEQ)"                \
 		--oseq  "$(OSEQ)"                \
@@ -148,6 +149,7 @@ lease-create:
 .PHONY: lease-withdraw
 lease-withdraw:
 	$(AKASH) tx market lease withdraw \
+		--owner "$(KEY_ADDRESS)"         \
 		--dseq  "$(DSEQ)"                \
 		--gseq  "$(GSEQ)"                \
 		--oseq  "$(OSEQ)"                \
@@ -157,6 +159,7 @@ lease-withdraw:
 .PHONY: lease-close
 lease-close:
 	$(AKASH) tx market lease close \
+		--owner "$(KEY_ADDRESS)"         \
 		--dseq  "$(DSEQ)"                \
 		--gseq  "$(GSEQ)"                \
 		--oseq  "$(OSEQ)"                \
