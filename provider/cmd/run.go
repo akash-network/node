@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	mparams "github.com/ovrclk/akash/x/market/types"
 	"github.com/shopspring/decimal"
 	"io"
 	"net/http"
@@ -78,6 +79,9 @@ const (
 	FlagBidTimeout                       = "bid-timeout"
 	FlagManifestTimeout                  = "manifest-timeout"
 	FlagMetricsListener                  = "metrics-listener"
+	FlagWithdrawalPeriod                 = "withdrawal-period"
+	FlagMinimumBalance                   = "minimum-balance"
+	FlagBalanceCheckPeriod               = "balance-check-period"
 )
 
 var (
@@ -255,6 +259,21 @@ func RunCmd() *cobra.Command {
 
 	cmd.Flags().String(FlagMetricsListener, "", "ip and port to start the metrics listener on")
 	if err := viper.BindPFlag(FlagMetricsListener, cmd.Flags().Lookup(FlagMetricsListener)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagWithdrawalPeriod, time.Hour*24, "period at which withdrawals are made from the escrow accounts")
+	if err := viper.BindPFlag(FlagWithdrawalPeriod, cmd.Flags().Lookup(FlagWithdrawalPeriod)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagBalanceCheckPeriod, 10*time.Minute, "period at which the account balance is checked")
+	if err := viper.BindPFlag(FlagBalanceCheckPeriod, cmd.Flags().Lookup(FlagBalanceCheckPeriod)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint64(FlagMinimumBalance, mparams.DefaultBidMinDeposit.Amount.Mul(sdk.NewIntFromUint64(2)).Uint64(), "minimum account balance at which withdrawal is started")
+	if err := viper.BindPFlag(FlagMinimumBalance, cmd.Flags().Lookup(FlagMinimumBalance)); err != nil {
 		return nil
 	}
 
@@ -490,6 +509,12 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	config.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
 	config.BidTimeout = bidTimeout
 	config.ManifestTimeout = manifestTimeout
+
+	config.BalanceCheckerCfg = provider.BalanceCheckerConfig{
+		PollingPeriod:           viper.GetDuration(FlagBalanceCheckPeriod),
+		MinimumBalanceThreshold: viper.GetUint64(FlagMinimumBalance),
+		WithdrawalPeriod:        viper.GetDuration(FlagWithdrawalPeriod),
+	}
 
 	config.BidPricingStrategy = pricing
 	service, err := provider.NewService(ctx, cctx, info.GetAddress(), session, bus, cclient, config)
