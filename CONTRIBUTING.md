@@ -309,7 +309,7 @@ If you would like invites, sign-up to Slack and pick "Yes" to Community Events a
 
 ## Branding guidelines
 
-For press, branding, logos and marks see the [Akash Network website](https://akash.network/media).
+For press, branding, logos and marks see the [Akash Network website](https://akash.network/brand).
 
 ## Community
 
