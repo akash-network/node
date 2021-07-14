@@ -61,7 +61,6 @@ func (mg manifestGeneratorOverflow) ServiceExpose(t testing.TB) manifest.Service
 		Port:         math.MaxUint16,
 		ExternalPort: math.MaxUint16,
 		Proto:        "TCP",
-		Service:      "svc",
 		Global:       true,
 		Hosts: []string{
 			Hostname(t),

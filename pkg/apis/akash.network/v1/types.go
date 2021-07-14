@@ -270,7 +270,6 @@ func (mse ManifestServiceExpose) toAkash() (manifest.ServiceExpose, error) {
 		Port:         mse.Port,
 		ExternalPort: mse.ExternalPort,
 		Proto:        proto,
-		Service:      mse.Service,
 		Global:       mse.Global,
 		Hosts:        mse.Hosts,
 	}, nil
@@ -281,7 +280,6 @@ func manifestServiceExposeFromAkash(amse manifest.ServiceExpose) ManifestService
 		Port:         amse.Port,
 		ExternalPort: amse.ExternalPort,
 		Proto:        amse.Proto.ToString(),
-		Service:      amse.Service,
 		Global:       amse.Global,
 		Hosts:        amse.Hosts,
 	}

@@ -50,7 +50,6 @@ func (mg manifestGeneratorRand) ServiceExpose(t testing.TB) manifest.ServiceExpo
 		Port:         uint16(rand.Intn(math.MaxUint16)), // nolint: gosec
 		ExternalPort: uint16(rand.Intn(math.MaxUint16)), // nolint: gosec
 		Proto:        "TCP",
-		Service:      "svc",
 		Global:       true,
 		Hosts: []string{
 			Hostname(t),

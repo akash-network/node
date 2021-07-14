@@ -147,7 +147,6 @@ func TestManifestWithEndpointMismatchA(t *testing.T) {
 		Port:         2000,
 		ExternalPort: 0,
 		Proto:        manifest.TCP,
-		Service:      "",
 		Global:       true,
 		Hosts:        nil,
 	}

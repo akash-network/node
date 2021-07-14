@@ -221,3 +221,26 @@ func Test_v2_Parse_DeploymentNameServiceNameMismatch(t *testing.T) {
 	require.Len(t, mani.GetGroups()[0].Services[0].Expose[0].Hosts, 1)
 	require.Equal(t, mani.GetGroups()[0].Services[0].Expose[0].Hosts[0], "ahostname.com")
 }
+
+func Test_V2_Parse_MultipleServiceTo(t *testing.T) {
+	obj, err := ReadFile("./_testdata/multiple_service_to.yaml")
+	require.NoError(t, err)
+	require.NotNil(t, obj)
+
+	m, err := obj.Manifest()
+	require.NoError(t, err)
+	require.NotNil(t, m)
+
+	g := m.GetGroups()[0]
+
+	s := g.Services[0]
+	require.Equal(t, "hello-world", s.Name)
+	require.Len(t, s.Expose, 2)
+}
+
+func Test_V2_Parse_MultipleServiceToMultipleDeploy(t *testing.T) {
+	obj, err := ReadFile("./_testdata/multiple_service_to_multiple_deploy.yaml")
+	require.Error(t, err)
+	require.Equal(t, err.Error(), `hello-world.dcloud1: cannot expose to "test-1", no service by that name in this deployment group`)
+	require.Nil(t, obj)
+}

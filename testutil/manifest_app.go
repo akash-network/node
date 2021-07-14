@@ -55,10 +55,9 @@ func (mg manifestGeneratorApp) Service(t testing.TB) manifest.Service {
 
 func (mg manifestGeneratorApp) ServiceExpose(t testing.TB) manifest.ServiceExpose {
 	return manifest.ServiceExpose{
-		Port:    80,
-		Service: "demo",
-		Global:  true,
-		Proto:   "TCP",
+		Port:   80,
+		Global: true,
+		Proto:  "TCP",
 		Hosts: []string{
 			Hostname(t),
 		},

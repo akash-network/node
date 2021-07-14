@@ -478,7 +478,6 @@ func TestServiceStatusWithIngress(t *testing.T) {
 				Port:         9000,
 				ExternalPort: 9000,
 				Proto:        "TCP",
-				Service:      "echo",
 				Global:       false,
 				Hosts:        nil,
 			},
@@ -497,9 +496,9 @@ func TestServiceStatusWithIngress(t *testing.T) {
 				Port:         9000,
 				ExternalPort: 80,
 				Proto:        "TCP",
-				Service:      "echo",
-				Global:       true,
-				Hosts:        []string{"atest.localhost"},
+
+				Global: true,
+				Hosts:  []string{"atest.localhost"},
 			},
 		},
 	}
@@ -585,9 +584,9 @@ func TestServiceStatusWithIngressError(t *testing.T) {
 				Port:         9000,
 				ExternalPort: 9000,
 				Proto:        "TCP",
-				Service:      "echo",
-				Global:       false,
-				Hosts:        nil,
+
+				Global: false,
+				Hosts:  nil,
 			},
 		},
 	}
@@ -604,9 +603,9 @@ func TestServiceStatusWithIngressError(t *testing.T) {
 				Port:         9000,
 				ExternalPort: 80,
 				Proto:        "TCP",
-				Service:      "echo",
-				Global:       true,
-				Hosts:        []string{"atest.localhost"},
+
+				Global: true,
+				Hosts:  []string{"atest.localhost"},
 			},
 		},
 	}
@@ -671,9 +670,9 @@ func TestServiceStatusWithoutIngress(t *testing.T) {
 				Port:         9000,
 				ExternalPort: 9000,
 				Proto:        "TCP",
-				Service:      "echo",
-				Global:       false,
-				Hosts:        nil,
+
+				Global: false,
+				Hosts:  nil,
 			},
 		},
 	}
@@ -690,9 +689,9 @@ func TestServiceStatusWithoutIngress(t *testing.T) {
 				Port:         9000,
 				ExternalPort: 80,
 				Proto:        "TCP",
-				Service:      "echo",
-				Global:       false,
-				Hosts:        []string{"atest.localhost"},
+
+				Global: false,
+				Hosts:  []string{"atest.localhost"},
 			},
 		},
 	}

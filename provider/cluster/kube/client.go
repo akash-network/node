@@ -546,9 +546,9 @@ exposeCheckLoop:
 					Port:         expose.Port,
 					ExternalPort: expose.ExternalPort,
 					Proto:        proto,
-					Service:      expose.Service,
-					Global:       expose.Global,
-					Hosts:        expose.Hosts,
+					//Service:      expose.Service,
+					Global: expose.Global,
+					Hosts:  expose.Hosts,
 				}
 				if util.ShouldBeIngress(mse) {
 					hasIngress = true
