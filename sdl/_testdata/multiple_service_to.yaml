@@ -1,0 +1,75 @@
+---
+version: "2.0"
+
+services:
+  test-1:
+    image: tombeynon/hello-world-curl-test
+    depends_on:
+      - service: hello-world
+  test-2:
+    image: tombeynon/hello-world-curl-test
+    depends_on:
+      - service: hello-world
+  hello-world:
+    image: tombeynon/akash-hello-world:release-v0.1.1
+    expose:
+      - port: 80
+        to:
+          - service: test-1
+          - service: test-2
+      - port: 9999 # required global service
+        to:
+          - global: true
+
+profiles:
+  compute:
+    test-1:
+      resources:
+        cpu:
+          units: 0.1
+        memory:
+          size: 0.1Gi
+        storage:
+          size: 0.1Gi
+    test-2:
+      resources:
+        cpu:
+          units: 0.1
+        memory:
+          size: 0.1Gi
+        storage:
+          size: 0.1Gi
+    hello-world:
+      resources:
+        cpu:
+          units: 0.1
+        memory:
+          size: 0.1Gi
+        storage:
+          size: 0.1Gi
+  placement:
+    dcloud:
+      pricing:
+        test-1:
+          denom: uakt
+          amount: 10
+        test-2:
+          denom: uakt
+          amount: 10
+        hello-world:
+          denom: uakt
+          amount: 10
+
+deployment:
+  test-1:
+    dcloud:
+      profile: test-1
+      count: 1
+  test-2:
+    dcloud:
+      profile: test-2
+      count: 1
+  hello-world:
+    dcloud:
+      profile: hello-world
+      count: 1
