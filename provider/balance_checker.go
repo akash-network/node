@@ -116,10 +116,10 @@ loop:
 
 		case balanceCheck := <-balanceCheckResult:
 			balanceCheckResult = nil
+			tick.Reset(bc.cfg.PollingPeriod) // Re-enable the timer
 			err := balanceCheck.Error()
 			if err != nil {
 				bc.log.Error("failed to check balance", "err", err)
-				tick.Reset(bc.cfg.PollingPeriod) // Re-enable the timer
 				break
 			}
 
@@ -130,13 +130,15 @@ loop:
 				withdrawAllNow = true
 			}
 		case withdrawAll := <-withdrawAllResult:
+
 			withdrawAllResult = nil
+			withdrawalTicker.Reset(bc.cfg.PollingPeriod) // Re-enable the timer
 			if err := withdrawAll.Error(); err != nil {
 				bc.log.Error("failed to started withdrawals", "err", err)
 			}
-			tick.Reset(bc.cfg.PollingPeriod) // Re-enable the timer
 		case <-withdrawalTicker.C:
 			withdrawAllNow = true
+			withdrawalTicker.Stop()
 		}
 
 		if withdrawAllNow {
