@@ -119,7 +119,7 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 		manifest:  manifest,
 		ctx:       ctx,
 		cancel:    cancel,
-		bc:        newBalanceChecker(ctx, bankQueryClient, accAddr, session, bus),
+		bc:        newBalanceChecker(ctx, bankQueryClient, accAddr, session, bus, cfg.BalanceCheckerCfg),
 		lc:        lifecycle.New(),
 		config:    cfg,
 	}
