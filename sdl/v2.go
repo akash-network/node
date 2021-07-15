@@ -121,28 +121,31 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 
 			endpoints := make([]types.Endpoint, 0)
 			for _, expose := range sdl.Services[svcName].Expose {
+
+				proto, err := manifest.ParseServiceProtocol(expose.Proto)
+				if err != nil {
+					return nil, err
+				}
+				// This value is created just so it can be passed to the utility function
+				v := manifest.ServiceExpose{
+					Port:         expose.Port,
+					ExternalPort: expose.As,
+					Proto:        proto,
+					Global:       false,
+					Hosts:        expose.Accept.Items,
+				}
+
 				for _, to := range expose.To {
-					if to.Global {
-						proto, err := manifest.ParseServiceProtocol(expose.Proto)
-						if err != nil {
-							return nil, err
-						}
-						// This value is created just so it can be passed to the utility function
-						v := manifest.ServiceExpose{
-							Port:         expose.Port,
-							ExternalPort: expose.As,
-							Proto:        proto,
-							Global:       to.Global,
-							Hosts:        expose.Accept.Items,
-						}
-
-						kind := types.Endpoint_RANDOM_PORT
-						if providerUtil.ShouldBeIngress(v) {
-							kind = types.Endpoint_SHARED_HTTP
-						}
-
-						endpoints = append(endpoints, types.Endpoint{Kind: kind})
+					v.Global = v.Global || to.Global
+				}
+				
+				if v.Global {
+					kind := types.Endpoint_RANDOM_PORT
+					if providerUtil.ShouldBeIngress(v) {
+						kind = types.Endpoint_SHARED_HTTP
 					}
+
+					endpoints = append(endpoints, types.Endpoint{Kind: kind})
 				}
 			}
 
@@ -225,10 +228,8 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 					Hosts:        expose.Accept.Items,
 				}
 
-				if len(expose.To) != 0 {
-					for _, to := range expose.To {
-						serviceExpose.Global = serviceExpose.Global || to.Global
-					}
+				for _, to := range expose.To {
+					serviceExpose.Global = serviceExpose.Global || to.Global
 				}
 
 				msvc.Expose = append(msvc.Expose, serviceExpose)
