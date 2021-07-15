@@ -212,3 +212,56 @@ func TestLocalServiceBuilderWithLocalServices(t *testing.T) {
 	require.Equal(t, ports[0].TargetPort, intstr.FromInt(2000))
 	require.Equal(t, ports[0].Name, "1-2001")
 }
+
+func TestIngressBuilder(t *testing.T) {
+	myLog := testutil.Logger(t)
+	group := &manifest.Group{}
+
+	serviceExpose := &manifest.ServiceExpose{
+		Global:       true,
+		Proto:        "TCP",
+		Port:         1000,
+		ExternalPort: 80,
+		HTTPOptions: manifest.ServiceExposeHTTPOptions{
+			MaxBodySize: 1,
+			ReadTimeout: 2,
+			SendTimeout: 3,
+			NextTries:   4,
+			NextTimeout: 5,
+			NextCases:   []string{"timeout", "404"},
+		},
+		Hosts: []string{"foo.io"},
+	}
+
+	service := &manifest.Service{
+		Name:   "myservice",
+		Expose: []manifest.ServiceExpose{*serviceExpose},
+	}
+	mySettings := NewDefaultSettings()
+	lid := testutil.LeaseID(t)
+	ingressBuilder := newIngressBuilder(myLog, mySettings, lid, group, service, serviceExpose)
+
+	kubeObj, err := ingressBuilder.create()
+	require.NoError(t, err)
+	require.NotNil(t, kubeObj)
+	annotations := kubeObj.Annotations
+
+	for _, key := range []string{
+		"nginx.ingress.kubernetes.io/proxy-send-timeout",
+		"nginx.ingress.kubernetes.io/proxy-read-timeout",
+		"nginx.ingress.kubernetes.io/proxy-next-upstream-tries",
+		"nginx.ingress.kubernetes.io/proxy-body-size",
+		"nginx.ingress.kubernetes.io/proxy-next-upstream-timeout",
+		"nginx.ingress.kubernetes.io/next-upstream",
+	} {
+		v, exists := annotations[key]
+		require.True(t, exists, "key %q should exist in annotations", key)
+		require.True(t, len(v) != 0, "value stored at key %q should not be empty", key)
+	}
+
+	require.Equal(t, annotations["nginx.ingress.kubernetes.io/next-upstream"], "timeout http_404")
+
+	rule := kubeObj.Spec.Rules[0]
+	require.Equal(t, "foo.io", rule.Host)
+
+}

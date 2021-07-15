@@ -944,11 +944,56 @@ func ingressHost(lid mtypes.LeaseID, svc *manifest.Service) string {
 	return strings.ToLower(base32.HexEncoding.WithPadding(base32.NoPadding).EncodeToString(uid))
 }
 
+func (b *ingressBuilder) annotations() map[string]string {
+	// For kubernetes/ingress-nginx
+	// https://github.com/kubernetes/ingress-nginx
+	const root = "nginx.ingress.kubernetes.io"
+
+	httpOptions := b.expose.HTTPOptions
+
+	result := map[string]string{
+
+		fmt.Sprintf("%s/proxy-send-timeout", root):        fmt.Sprintf("%dms", httpOptions.SendTimeout),
+		fmt.Sprintf("%s/proxy-read-timeout", root):        fmt.Sprintf("%dms", httpOptions.ReadTimeout),
+		fmt.Sprintf("%s/proxy-next-upstream-tries", root): strconv.Itoa(int(httpOptions.NextTries)),
+		fmt.Sprintf("%s/proxy-body-size", root):           strconv.Itoa(int(httpOptions.MaxBodySize)),
+	}
+
+	nextTimeoutKey := fmt.Sprintf("%s/proxy-next-upstream-timeout", root)
+	if httpOptions.NextTimeout > 0 {
+		result[nextTimeoutKey] = fmt.Sprintf("%dms", httpOptions.NextTimeout)
+	} else {
+		result[nextTimeoutKey] = "0" // Magic value for disable
+	}
+
+	builder := strings.Builder{}
+
+	for i, v := range httpOptions.NextCases {
+		first := string(v[0])
+		isHTTPCode := strings.ContainsAny(first, "12345")
+
+		if isHTTPCode {
+			builder.WriteString("http_")
+		}
+		builder.WriteString(v)
+
+		if i != len(httpOptions.NextCases)-1 {
+			// The actual separator is the space character for kubernetes/ingress-nginx
+			builder.WriteRune(' ')
+		}
+	}
+
+	result[fmt.Sprintf("%s/next-upstream", root)] = builder.String()
+
+	return result
+}
+
 func (b *ingressBuilder) create() (*netv1.Ingress, error) { // nolint:golint,unparam
 	return &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   b.name(),
-			Labels: b.labels(),
+			Name:        b.name(),
+			Labels:      b.labels(),
+			Annotations: b.annotations(),
 		},
 		Spec: netv1.IngressSpec{
 			Rules: b.rules(),

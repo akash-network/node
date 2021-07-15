@@ -154,6 +154,8 @@ func Test_v1_Parse_simple(t *testing.T) {
 
 	expectedHosts := make([]string, 1)
 	expectedHosts[0] = "ahostname.com"
+	defaultHTTPOptions, err := (v2HTTPOptions{}).asManifest()
+	require.NoError(t, err)
 	assert.Equal(t, manifest.Group{
 		Name: "westcoast",
 		Services: []manifest.Service{
@@ -173,8 +175,10 @@ func Test_v1_Parse_simple(t *testing.T) {
 				},
 				Count: 2,
 				Expose: []manifest.ServiceExpose{
-					{Port: 80, Global: true, Proto: manifest.TCP, Hosts: expectedHosts},
-					{Port: 12345, Global: true, Proto: manifest.UDP},
+					{Port: 80, Global: true, Proto: manifest.TCP, Hosts: expectedHosts,
+						HTTPOptions: defaultHTTPOptions},
+					{Port: 12345, Global: true, Proto: manifest.UDP,
+						HTTPOptions: defaultHTTPOptions},
 				},
 			},
 		},
@@ -243,4 +247,108 @@ func Test_V2_Parse_MultipleServiceToMultipleDeploy(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, err.Error(), `hello-world.dcloud1: cannot expose to "test-1", no service by that name in this deployment group`)
 	require.Nil(t, obj)
+}
+
+func TestV2HTTPOptionsAny(t *testing.T) {
+	require.False(t, (v2HTTPOptions{}).any())
+
+	require.True(t, (v2HTTPOptions{
+		NextCases: []string{nextCase400},
+	}).any())
+
+	require.True(t, (v2HTTPOptions{
+		NextTimeout: 1,
+	}).any())
+
+	require.True(t, (v2HTTPOptions{
+		MaxBodySize: 1,
+	}).any())
+
+	require.True(t, (v2HTTPOptions{
+		ReadTimeout: 1,
+	}).any())
+
+	require.True(t, (v2HTTPOptions{
+		SendTimeout: 1,
+	}).any())
+}
+
+func TestV2HTTPOptionsAsManifest(t *testing.T) {
+	options := v2HTTPOptions{
+		MaxBodySize: 1,
+		ReadTimeout: 2,
+		SendTimeout: 3,
+		NextTries:   4,
+		NextTimeout: 5,
+		NextCases:   defaultNextCases,
+	}
+
+	m, err := options.asManifest()
+	require.NoError(t, err)
+
+	require.Equal(t, manifest.ServiceExposeHTTPOptions{
+		MaxBodySize: 1,
+		ReadTimeout: 2,
+		SendTimeout: 3,
+		NextTries:   4,
+		NextTimeout: 5,
+		NextCases:   defaultNextCases,
+	}, m)
+
+	options = v2HTTPOptions{
+		MaxBodySize: upperLimitBodySize + 1,
+	}
+	_, err = options.asManifest()
+	require.ErrorIs(t, err, errHTTPOptionNotAllowed)
+
+	options = v2HTTPOptions{
+		ReadTimeout: upperLimitReadTimeout + 1,
+	}
+	_, err = options.asManifest()
+	require.ErrorIs(t, err, errHTTPOptionNotAllowed)
+
+	options = v2HTTPOptions{
+		SendTimeout: upperLimitSendTimeout + 1,
+	}
+	_, err = options.asManifest()
+	require.ErrorIs(t, err, errHTTPOptionNotAllowed)
+
+	options = v2HTTPOptions{
+		NextCases: []string{"kittens"},
+	}
+	_, err = options.asManifest()
+	require.ErrorIs(t, err, errUnknownNextCase)
+
+	options = v2HTTPOptions{
+		NextCases: []string{nextCaseOff},
+	}
+	_, err = options.asManifest()
+	require.NoError(t, err)
+
+	options = v2HTTPOptions{
+		NextCases: []string{nextCaseOff, "kittens"},
+	}
+	_, err = options.asManifest()
+	require.ErrorIs(t, err, errCannotSpecifyOffAndOtherCases)
+}
+
+func TestV2HTTPOptionsParse(t *testing.T) {
+	data, err := ReadFile("_testdata/simple_httpoptions.yaml")
+	require.NoError(t, err)
+	require.NotNil(t, data)
+
+	m, err := data.Manifest()
+	require.NoError(t, err)
+	g := m.GetGroups()[0]
+
+	svc := g.Services[0]
+	expose := svc.Expose[0]
+	require.Equal(t, manifest.ServiceExposeHTTPOptions{
+		MaxBodySize: 1,
+		ReadTimeout: 2,
+		SendTimeout: 3,
+		NextTries:   4,
+		NextTimeout: 5,
+		NextCases:   []string{"off"},
+	}, expose.HTTPOptions)
 }
