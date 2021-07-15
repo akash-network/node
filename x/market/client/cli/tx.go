@@ -175,7 +175,7 @@ func cmdLeaseCreate(key string) *cobra.Command {
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
-	AddLeaseIDFlags(cmd.Flags(), dcli.DeploymentIDOptionNoOwner(true))
+	AddLeaseIDFlags(cmd.Flags())
 	MarkReqLeaseIDFlags(cmd, dcli.DeploymentIDOptionNoOwner(true))
 
 	return cmd
@@ -210,7 +210,7 @@ func cmdLeaseWithdraw(key string) *cobra.Command {
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
-	AddLeaseIDFlags(cmd.Flags(), dcli.DeploymentIDOptionNoOwner(true))
+	AddLeaseIDFlags(cmd.Flags())
 	MarkReqLeaseIDFlags(cmd, dcli.DeploymentIDOptionNoOwner(true))
 
 	return cmd
@@ -245,7 +245,7 @@ func cmdLeaseClose(key string) *cobra.Command {
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
-	AddLeaseIDFlags(cmd.Flags(), dcli.DeploymentIDOptionNoOwner(true))
+	AddLeaseIDFlags(cmd.Flags())
 	MarkReqLeaseIDFlags(cmd, dcli.DeploymentIDOptionNoOwner(true))
 
 	return cmd
