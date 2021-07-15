@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/provider/bidengine"
+	mparams "github.com/ovrclk/akash/x/market/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
@@ -23,11 +24,18 @@ type Config struct {
 	DeploymentIngressStaticHosts    bool
 	BidTimeout                      time.Duration
 	ManifestTimeout                 time.Duration
+
+	BalanceCheckerCfg BalanceCheckerConfig
 }
 
 func NewDefaultConfig() Config {
 	return Config{
 		ClusterWaitReadyDuration: time.Second * 5,
 		BidDeposit:               mtypes.DefaultBidMinDeposit,
+		BalanceCheckerCfg: BalanceCheckerConfig{
+			PollingPeriod:           5 * time.Minute,
+			MinimumBalanceThreshold: mparams.DefaultBidMinDeposit.Amount.Mul(sdk.NewIntFromUint64(2)).Uint64(),
+			WithdrawalPeriod:        24 * time.Hour,
+		},
 	}
 }

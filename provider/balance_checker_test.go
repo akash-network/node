@@ -61,8 +61,12 @@ func balanceCheckerForTest(t *testing.T, balance int64) (*scaffold, *balanceChec
 		lc:              lifecycle.New(),
 		bus:             s.testBus,
 		ownAddr:         s.testAddr,
-		checkPeriod:     time.Millisecond * 100,
 		bankQueryClient: queryClient,
+		cfg: BalanceCheckerConfig{
+			PollingPeriod:           time.Millisecond * 100, // TODO
+			MinimumBalanceThreshold: 100,
+			WithdrawalPeriod:        time.Hour * 24,
+		},
 	}
 
 	s.queryClient = queryClient
@@ -90,7 +94,7 @@ func TestBalanceCheckerChecksBalance(t *testing.T) {
 
 	testScaffold.start()
 
-	time.Sleep(bc.checkPeriod * 3)
+	time.Sleep(bc.cfg.PollingPeriod * 3)
 	testScaffold.cancel()
 	<-bc.lc.Done()
 
@@ -133,7 +137,7 @@ func TestBalanceCheckerStartsWithdrawal(t *testing.T) {
 		t.Fatal("should have an event to read")
 	}
 
-	time.Sleep(bc.checkPeriod * 3)
+	time.Sleep(bc.cfg.PollingPeriod)
 	testScaffold.cancel()
 
 	select {
