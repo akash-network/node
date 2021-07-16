@@ -85,12 +85,13 @@ func DeploymentIDFromFlags(flags *pflag.FlagSet, opts ...MarketOption) (types.De
 		o(opt)
 	}
 
-	if opt.Owner.Empty() {
-		owner, err := flags.GetString("owner")
-		if err != nil {
-			return id, err
-		}
+	owner, err := flags.GetString("owner")
+	if err != nil {
+		return id, err
+	}
 
+	// if --owner flag was explicitly provided, use that.
+	if owner != "" {
 		opt.Owner, err = sdk.AccAddressFromBech32(owner)
 		if err != nil {
 			return id, err
@@ -98,8 +99,6 @@ func DeploymentIDFromFlags(flags *pflag.FlagSet, opts ...MarketOption) (types.De
 	}
 
 	id.Owner = opt.Owner.String()
-
-	var err error
 
 	if id.DSeq, err = flags.GetUint64("dseq"); err != nil {
 		return id, err
