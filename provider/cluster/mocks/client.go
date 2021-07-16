@@ -7,9 +7,13 @@ import (
 
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 
+	io "io"
+
 	manifest "github.com/ovrclk/akash/manifest"
 
 	mock "github.com/stretchr/testify/mock"
+
+	remotecommand "k8s.io/client-go/tools/remotecommand"
 
 	types "github.com/ovrclk/akash/x/market/types"
 )
@@ -49,6 +53,29 @@ func (_m *Client) Deployments(_a0 context.Context) ([]clustertypes.Deployment, e
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
 		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Exec provides a mock function with given fields: ctx, lID, service, podIndex, cmd, stdin, stdout, stderr, tty, tsq
+func (_m *Client) Exec(ctx context.Context, lID types.LeaseID, service string, podIndex uint, cmd []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, tty bool, tsq remotecommand.TerminalSizeQueue) (clustertypes.ExecResult, error) {
+	ret := _m.Called(ctx, lID, service, podIndex, cmd, stdin, stdout, stderr, tty, tsq)
+
+	var r0 clustertypes.ExecResult
+	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, string, uint, []string, io.Reader, io.Writer, io.Writer, bool, remotecommand.TerminalSizeQueue) clustertypes.ExecResult); ok {
+		r0 = rf(ctx, lID, service, podIndex, cmd, stdin, stdout, stderr, tty, tsq)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(clustertypes.ExecResult)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, types.LeaseID, string, uint, []string, io.Reader, io.Writer, io.Writer, bool, remotecommand.TerminalSizeQueue) error); ok {
+		r1 = rf(ctx, lID, service, podIndex, cmd, stdin, stdout, stderr, tty, tsq)
 	} else {
 		r1 = ret.Error(1)
 	}

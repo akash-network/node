@@ -15,6 +15,11 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
+const (
+	TestClusterPublicHostname   = "e2e.test"
+	TestClusterNodePortQuantity = 100
+)
+
 /*
 TestSendManifest for integration testing
 this is similar to cli command exampled below
@@ -34,10 +39,25 @@ func TestSendManifest(clientCtx client.Context, id mtypes.BidID, sdlPath string,
 	return testutilcli.ExecTestCLICmd(clientCtx, pcmd.SendManifestCmd(), args...)
 }
 
-const (
-	TestClusterPublicHostname   = "e2e.test"
-	TestClusterNodePortQuantity = 100
-)
+func TestLeaseShell(clientCtx client.Context, extraArgs []string, lID mtypes.LeaseID, replicaIndex int, tty bool, stdin bool, serviceName string, cmd ...string) (sdktest.BufferWriter, error) {
+	args := []string{
+		fmt.Sprintf("--provider=%s", lID.Provider),
+		fmt.Sprintf("--replica-index=%d", replicaIndex),
+		fmt.Sprintf("--dseq=%v", lID.DSeq),
+		fmt.Sprintf("--gseq=%v", lID.GSeq),
+	}
+	if tty {
+		args = append(args, "--tty")
+	}
+	if stdin {
+		args = append(args, "--stdin")
+	}
+	args = append(args, extraArgs...)
+	args = append(args, serviceName)
+	args = append(args, cmd...)
+	fmt.Printf("%v\n", args)
+	return testutilcli.ExecTestCLICmd(clientCtx, pcmd.LeaseShellCmd(), args...)
+}
 
 // RunLocalProvider wraps up the Provider cobra command for testing and supplies
 // new default values to the flags.

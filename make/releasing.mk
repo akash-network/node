@@ -13,7 +13,7 @@ bins: $(BINS)
 
 .PHONY: build
 build:
-	$(GO) build ./...
+	$(GO) build -a  ./...
 
 $(AKASH): modvendor
 	$(GO) build -o $@ $(BUILD_FLAGS) ./cmd/akash

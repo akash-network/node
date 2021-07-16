@@ -12,7 +12,6 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
@@ -32,13 +31,15 @@ import (
 
 	"github.com/tendermint/tendermint/libs/log"
 
-	"k8s.io/client-go/tools/pager"
-
 	"github.com/ovrclk/akash/manifest"
 	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+	"k8s.io/client-go/tools/pager"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	restclient "k8s.io/client-go/rest"
 )
 
 var (
@@ -63,12 +64,13 @@ type Client interface {
 var _ Client = (*client)(nil)
 
 type client struct {
-	kc       kubernetes.Interface
-	ac       akashclient.Interface
-	metc     metricsclient.Interface
-	ns       string
-	settings Settings
-	log      log.Logger
+	kc                kubernetes.Interface
+	ac                akashclient.Interface
+	metc              metricsclient.Interface
+	ns                string
+	settings          Settings
+	log               log.Logger
+	kubeContentConfig *restclient.Config
 }
 
 // NewClient returns new Kubernetes Client instance with provided logger, host and ns. Returns error incase of failure
@@ -87,6 +89,7 @@ func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client
 		return nil, errors.Wrap(err, "kube: error building config flags")
 	}
 	config.RateLimiter = flowcontrol.NewFakeAlwaysRateLimiter()
+
 	kc, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, errors.Wrap(err, "kube: error creating kubernetes client")
@@ -111,12 +114,13 @@ func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client
 	}
 
 	return &client{
-		settings: settings,
-		kc:       kc,
-		ac:       mc,
-		metc:     metc,
-		ns:       ns,
-		log:      log.With("module", "provider-cluster-kube"),
+		settings:          settings,
+		kc:                kc,
+		ac:                mc,
+		metc:              metc,
+		ns:                ns,
+		log:               log.With("module", "provider-cluster-kube"),
+		kubeContentConfig: config,
 	}, nil
 
 }

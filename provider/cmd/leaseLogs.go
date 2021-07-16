@@ -90,10 +90,9 @@ func doLeaseLogs(cmd *cobra.Command) error {
 	}
 
 	type result struct {
-		lid      mtypes.LeaseID
-		provider sdk.Address
-		error    error
-		stream   *gwrest.ServiceLogs
+		lid    mtypes.LeaseID
+		error  error
+		stream *gwrest.ServiceLogs
 	}
 
 	streams := make([]result, 0, len(leases))

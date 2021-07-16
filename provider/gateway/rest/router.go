@@ -4,8 +4,12 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/ovrclk/akash/util/wsutil"
 	"io"
+	"k8s.io/client-go/tools/remotecommand"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -62,6 +66,7 @@ type wsStreamConfig struct {
 }
 
 func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.Router {
+
 	router := mux.NewRouter()
 
 	// store provider address in context as lease endpoints below need it
@@ -136,7 +141,200 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.R
 		leaseServiceStatusHandler(log, pclient.Cluster())).
 		Methods("GET")
 
+	// POST /lease/<lease-id>/shell
+	lrouter.HandleFunc("/shell",
+		leaseShellHandler(log, pclient.Manifest(), pclient.Cluster()))
+
 	return router
+}
+
+type channelToTerminalSizeQueue <-chan remotecommand.TerminalSize
+
+func (sq channelToTerminalSizeQueue) Next() *remotecommand.TerminalSize {
+	v, ok := <-sq
+	if !ok {
+		return nil
+	}
+
+	return &v // Interface is dumb and use a pointer
+}
+
+type leaseShellResponse struct {
+	ExitCode int    `json:"exit_code"`
+	Message  string `json:"message,omitempty"`
+}
+
+func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster.Client) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		leaseID := requestLeaseID(req)
+
+		//  check if deployment actually exists in the first place before querying kubernetes
+		active, err := mclient.IsActive(context.Background(), leaseID.DeploymentID())
+		if err != nil {
+			log.Error("failed checking deployment activity", "err", err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if !active {
+			log.Info("no active deployment", "lease", leaseID)
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		localLog := log.With("lease", leaseID.String(), "action", "shell")
+
+		vars := req.URL.Query()
+		var cmd []string
+
+		for i := 0; true; i++ {
+			v := vars.Get(fmt.Sprintf("cmd%d", i))
+			if 0 == len(v) {
+				break
+			}
+			cmd = append(cmd, v)
+		}
+
+		if len(cmd) == 0 {
+			localLog.Error("missing cmd parameter")
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		tty := vars.Get("tty")
+		if 0 == len(tty) {
+			localLog.Error("missing parameter tty")
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		isTty := tty == "1"
+
+		service := vars.Get("service")
+		if 0 == len(service) {
+			localLog.Error("missing parameter service")
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		stdin := vars.Get("stdin")
+		if 0 == len(stdin) {
+			localLog.Error("missing parameter stdin")
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		connectStdin := stdin == "1"
+
+		podIndexStr := vars.Get("podIndex")
+		if len(podIndexStr) == 0 {
+			localLog.Error("missing parameter podIndex")
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		podIndex64, err := strconv.ParseUint(podIndexStr, 0, 31)
+		if err != nil {
+			localLog.Error("parameter podIndex invalid", "err", err)
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		podIndex := uint(podIndex64)
+
+		upgrader := websocket.Upgrader{
+			ReadBufferSize:  0,
+			WriteBufferSize: 0,
+		}
+
+		shellWs, err := upgrader.Upgrade(rw, req, nil)
+		if err != nil {
+			// At this point the connection either has a response sent already
+			// or it has been closed
+			localLog.Error("failed handshake", "err", err)
+			return
+		}
+
+		var stdinPipeOut *io.PipeWriter
+		var stdinPipeIn *io.PipeReader
+		wg := &sync.WaitGroup{}
+
+		var tsq remotecommand.TerminalSizeQueue
+		var terminalSizeUpdate chan remotecommand.TerminalSize
+		if isTty {
+			terminalSizeUpdate = make(chan remotecommand.TerminalSize, 1)
+			tsq = channelToTerminalSizeQueue(terminalSizeUpdate)
+		}
+
+		if connectStdin {
+			stdinPipeIn, stdinPipeOut = io.Pipe()
+
+			wg.Add(1)
+			go leaseShellWebsocketHandler(localLog, wg, shellWs, stdinPipeOut, terminalSizeUpdate)
+
+		}
+
+		l := &sync.Mutex{}
+		stdout := wsutil.NewWsWriterWrapper(shellWs, LeaseShellCodeStdout, l)
+		stderr := wsutil.NewWsWriterWrapper(shellWs, LeaseShellCodeStderr, l)
+
+		subctx, subcancel := context.WithCancel(req.Context())
+		wg.Add(1)
+		go leaseShellPingHandler(subctx, wg, shellWs)
+
+		var stdinForExec io.Reader
+		if connectStdin {
+			stdinForExec = stdinPipeIn
+		}
+		result, err := cclient.Exec(subctx, leaseID, service, podIndex, cmd, stdinForExec, stdout, stderr, isTty, tsq)
+		subcancel()
+
+		responseData := leaseShellResponse{}
+		var resultWriter io.Writer
+		encodeData := true
+		resultWriter = wsutil.NewWsWriterWrapper(shellWs, LeaseShellCodeResult, l)
+
+		if result != nil {
+			responseData.ExitCode = result.ExitCode()
+
+			localLog.Info("lease shell completed", "exitcode", result.ExitCode())
+		} else {
+			if cluster.ErrorIsOkToSendToClient(err) {
+				responseData.Message = err.Error()
+			} else {
+				resultWriter = wsutil.NewWsWriterWrapper(shellWs, LeaseShellCodeFailure, l)
+				// Don't return errors like this to the client, they could contain information
+				// that should not be let out
+				encodeData = false
+
+				localLog.Error("lease exec failed", "err", err)
+			}
+		}
+
+		if encodeData {
+			encoder := json.NewEncoder(resultWriter)
+			err = encoder.Encode(responseData)
+		} else {
+			// Just send an empty message so the remote knows things are over
+			_, err = resultWriter.Write([]byte{})
+		}
+
+		_ = shellWs.Close()
+
+		if err != nil {
+			localLog.Error("failed writing response to client after exec", "err", err)
+		}
+
+		wg.Wait()
+
+		if stdinPipeOut != nil {
+			_ = stdinPipeOut.Close()
+		}
+		if stdinPipeIn != nil {
+			_ = stdinPipeIn.Close()
+		}
+
+		if terminalSizeUpdate != nil {
+			close(terminalSizeUpdate)
+		}
+
+	}
 }
 
 func createStatusHandler(log log.Logger, sclient provider.StatusClient) http.HandlerFunc {
