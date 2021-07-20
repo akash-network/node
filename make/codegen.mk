@@ -24,7 +24,8 @@ mocks: $(MOCKERY) modvendor
 kubetypes: $(K8S_GENERATE_GROUPS)
 	GOBIN=$(AKASH_DEVCACHE_BIN) $(K8S_GENERATE_GROUPS) all \
 	github.com/ovrclk/akash/pkg/client github.com/ovrclk/akash/pkg/apis \
-	akash.network:v1
+	akash.network:v1  -h $(AKASH_ROOT)/.empty.txt
+	cd $(AKASH_ROOT)/github.com/ovrclk/akash && cp -Rv pkg/ ../../../
 
 .PHONY: proto-gen
 proto-gen: $(PROTOC) $(GRPC_GATEWAY) $(PROTOC_GEN_COSMOS) modvendor

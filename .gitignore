@@ -25,3 +25,5 @@ coverage.txt
 /.docker-creds
 
 /tmp-swagger-gen
+
+/github.com
