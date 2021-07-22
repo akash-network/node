@@ -83,7 +83,7 @@ var (
 	ErrBidExists = sdkerrors.Register(ModuleName, errCodeBidExists, "invalid bid: bid exists from provider")
 	// ErrBidInvalidPrice bid invalid price
 	ErrBidInvalidPrice = sdkerrors.Register(ModuleName, errCodeInvalidPrice, "bid price is invalid")
-	// ErrOrderMatched order matched
+	// ErrOrderActive order active
 	ErrOrderActive = sdkerrors.New(ModuleName, errCodeOrderActive, "order active")
 	// ErrOrderClosed order closed
 	ErrOrderClosed = sdkerrors.New(ModuleName, errCodeOrderClosed, "order closed")
