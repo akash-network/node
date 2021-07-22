@@ -6,7 +6,7 @@ Guidelines for contributing.
 
 ### How can I get involved?
 
-The [Matrix](https://akash.network/chat) community is the best place to keep up to date with the project and to get help contributing. Here we exchange ideas, ask questions and chat about Akash.
+The [Discourse forum](https://forum.akash.network/) is the best place to keep up to date with the project and to get help contributing. Here we exchange ideas, ask questions and chat about Akash.
 
 There are a number of areas where contributions can be accepted:
 
@@ -20,7 +20,7 @@ There are a number of areas where contributions can be accepted:
 * Manage, triage and research Issues and Pull Requests
 * Engage with the growing community by providing technical support on Slack/GitHub
 * Create docs, guides and write blogs
-* Speak at meet-ups, conferences or by helping folks with Akash on [Matrix](https://akash.network/chat)
+* Speak at meet-ups, conferences or by helping folks with Akash [on the Discourse forum](https://forum.akash.network/)
 
 This is just a short list of ideas, if you have other ideas for contributing please make a suggestion.
 
@@ -317,13 +317,15 @@ This project is written in Golang but many of the community contributions so far
 
 ### Chat
 
-There is an Matrix community which you are welcome to join to discuss Akash Network, Kubernetes, Serverless, FaaS, Blockchain.
+There is a forum which you are welcome to join to discuss Akash Network, Kubernetes, Serverless, FaaS, Blockchain.
 
-[Join Developer Chat here](https://akash.network/chat)
+[Join discourse here](https://forum.akash.network/)
+
+[Join Discord here](https://discord.com/invite/DxftX67)
+
 
 ### Roadmap
 
-* See the [2019 Project Update](https://github.com/orgs/ovrclk/projects/2)
 * Browse open issues in [overclock/akash](https://github.com/ovrclk/akash/issues)
 
 ## License
