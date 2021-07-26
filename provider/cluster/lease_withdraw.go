@@ -12,7 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/tendermint/tendermint/libs/log"
-	"time"
 )
 
 type deploymentWithdrawal struct {
@@ -69,9 +68,6 @@ func (dw *deploymentWithdrawal) run() {
 	}
 	defer events.Close()
 
-	const withdrawalPeriod = 24 * time.Hour
-	ticker := time.NewTicker(withdrawalPeriod)
-
 	var result <-chan runner.Result
 loop:
 	for {
@@ -82,10 +78,6 @@ loop:
 			dw.log.Debug("shutting down")
 			dw.lc.ShutdownInitiated(err)
 			break loop
-
-		case <-ticker.C:
-			withdraw = true
-
 		case ev := <-events.Events():
 			// This event contains no information, so if it is
 			// of the correct type attempt a withdrawal
@@ -95,11 +87,9 @@ loop:
 			if err := r.Error(); err != nil {
 				dw.log.Error("failed to do withdrawal", "err", err)
 			}
-			ticker.Reset(withdrawalPeriod)
 		}
 
 		if withdraw {
-			ticker.Stop()
 			// do the withdrawal
 			result = runner.Do(func() runner.Result {
 				return runner.NewResult(nil, dw.doWithdrawal(ctx))

@@ -3,8 +3,9 @@ package cli
 import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
+
+	"github.com/ovrclk/akash/x/market/types"
 )
 
 func cmdGetBids() *cobra.Command {
@@ -62,7 +63,7 @@ func cmdGetBid() *cobra.Command {
 
 			queryClient := types.NewQueryClient(clientCtx)
 
-			bidID, err := BidIDFromFlagsWithoutCtx(cmd.Flags())
+			bidID, err := BidIDFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}

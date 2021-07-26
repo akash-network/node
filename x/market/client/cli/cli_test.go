@@ -341,7 +341,6 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
 	s.Require().NoError(err)
-
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query closed bids

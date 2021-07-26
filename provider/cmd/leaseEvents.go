@@ -71,10 +71,9 @@ func doLeaseEvents(cmd *cobra.Command) error {
 	ctx := cmd.Context()
 
 	type result struct {
-		lid      mtypes.LeaseID
-		provider sdk.Address
-		error    error
-		stream   *gwrest.LeaseKubeEvents
+		lid    mtypes.LeaseID
+		error  error
+		stream *gwrest.LeaseKubeEvents
 	}
 
 	streams := make([]result, 0, len(leases))

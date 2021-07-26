@@ -116,5 +116,5 @@ rest-server-run:
 	$(AKASH) rest-server
 
 .PHONY: clean
-clean:
+clean: clean-$(AKASH_RUN_NAME)
 	rm -rf "$(AKASH_HOME)"

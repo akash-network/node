@@ -1,13 +1,13 @@
 package cli
 
 import (
-	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
-	"github.com/ovrclk/akash/x/market/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
+	"github.com/ovrclk/akash/x/market/types"
 )
 
 var (
@@ -16,15 +16,14 @@ var (
 )
 
 // AddOrderIDFlags add flags for order
-func AddOrderIDFlags(flags *pflag.FlagSet) {
-	dcli.AddGroupIDFlags(flags)
-	flags.Uint32("oseq", 0, "Order Sequence")
+func AddOrderIDFlags(flags *pflag.FlagSet, opts ...dcli.DeploymentIDOption) {
+	dcli.AddGroupIDFlags(flags, opts...)
+	flags.Uint32("oseq", 1, "Order Sequence")
 }
 
 // MarkReqOrderIDFlags marks flags required for order
-func MarkReqOrderIDFlags(cmd *cobra.Command) {
-	dcli.MarkReqGroupIDFlags(cmd)
-	_ = cmd.MarkFlagRequired("oseq")
+func MarkReqOrderIDFlags(cmd *cobra.Command, opts ...dcli.DeploymentIDOption) {
+	dcli.MarkReqGroupIDFlags(cmd, opts...)
 }
 
 // AddProviderFlag add provider flag to command flags set
@@ -38,21 +37,8 @@ func MarkReqProviderFlag(cmd *cobra.Command) {
 }
 
 // OrderIDFromFlags returns OrderID with given flags and error if occurred
-func OrderIDFromFlags(flags *pflag.FlagSet) (types.OrderID, error) {
-	prev, err := dcli.GroupIDFromFlags(flags)
-	if err != nil {
-		return types.OrderID{}, err
-	}
-	val, err := flags.GetUint32("oseq")
-	if err != nil {
-		return types.OrderID{}, err
-	}
-	return types.MakeOrderID(prev, val), nil
-}
-
-// OrderIDFromFlagsForOwner returns OrderID with given flags and error if occurred
-func OrderIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (types.OrderID, error) {
-	prev, err := dcli.GroupIDFromFlagsForOwner(flags, owner)
+func OrderIDFromFlags(flags *pflag.FlagSet, opts ...dcli.MarketOption) (types.OrderID, error) {
+	prev, err := dcli.GroupIDFromFlags(flags, opts...)
 	if err != nil {
 		return types.OrderID{}, err
 	}
@@ -64,8 +50,8 @@ func OrderIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (types.Or
 }
 
 // AddBidIDFlags add flags for bid
-func AddBidIDFlags(flags *pflag.FlagSet) {
-	AddOrderIDFlags(flags)
+func AddBidIDFlags(flags *pflag.FlagSet, opts ...dcli.DeploymentIDOption) {
+	AddOrderIDFlags(flags, opts...)
 	AddProviderFlag(flags)
 }
 
@@ -76,84 +62,58 @@ func AddQueryBidIDFlags(flags *pflag.FlagSet) {
 
 // MarkReqBidIDFlags marks flags required for bid
 // Used in get bid query command
-func MarkReqBidIDFlags(cmd *cobra.Command) {
-	MarkReqOrderIDFlags(cmd)
+func MarkReqBidIDFlags(cmd *cobra.Command, opts ...dcli.DeploymentIDOption) {
+	MarkReqOrderIDFlags(cmd, opts...)
 	MarkReqProviderFlag(cmd)
 }
 
 // BidIDFromFlags returns BidID with given flags and error if occurred
-func BidIDFromFlags(ctx client.Context, flags *pflag.FlagSet) (types.BidID, error) {
-	prev, err := OrderIDFromFlags(flags)
-	if err != nil {
-		return types.BidID{}, err
-	}
-	return types.MakeBidID(prev, ctx.GetFromAddress()), nil
-}
-
-// BidIDFromFlagsWithoutCtx returns BidID with given flags and error if occurred
 // Here provider value is taken from flags
-func BidIDFromFlagsWithoutCtx(flags *pflag.FlagSet) (types.BidID, error) {
-	prev, err := OrderIDFromFlags(flags)
+func BidIDFromFlags(flags *pflag.FlagSet, opts ...dcli.MarketOption) (types.BidID, error) {
+	prev, err := OrderIDFromFlags(flags, opts...)
 	if err != nil {
 		return types.BidID{}, err
 	}
-	provider, err := flags.GetString("provider")
-	if err != nil {
-		return types.BidID{}, err
+
+	opt := &dcli.MarketOptions{}
+
+	for _, o := range opts {
+		o(opt)
 	}
-	addr, err := sdk.AccAddressFromBech32(provider)
-	if err != nil {
-		return types.BidID{}, err
+
+	if opt.Provider.Empty() {
+		provider, err := flags.GetString("provider")
+		if err != nil {
+			return types.BidID{}, err
+		}
+
+		if opt.Provider, err = sdk.AccAddressFromBech32(provider); err != nil {
+			return types.BidID{}, err
+		}
 	}
-	return types.MakeBidID(prev, addr), nil
+
+	return types.MakeBidID(prev, opt.Provider), nil
 }
 
-// BidIDFromFlagsForOwner returns BidID with given flags and error if occurred
-// Here provider value is taken from flags
-func BidIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (types.BidID, error) {
-	prev, err := OrderIDFromFlagsForOwner(flags, owner)
-	if err != nil {
-		return types.BidID{}, err
-	}
-	provider, err := flags.GetString("provider")
-	if err != nil {
-		return types.BidID{}, err
-	}
-	addr, err := sdk.AccAddressFromBech32(provider)
-	if err != nil {
-		return types.BidID{}, err
-	}
-	return types.MakeBidID(prev, addr), nil
-}
-
-func AddLeaseIDFlags(flags *pflag.FlagSet) {
-	AddBidIDFlags(flags)
+func AddLeaseIDFlags(flags *pflag.FlagSet, opts ...dcli.DeploymentIDOption) {
+	AddBidIDFlags(flags, opts...)
 }
 
 // MarkReqLeaseIDFlags marks flags required for bid
 // Used in get bid query command
-func MarkReqLeaseIDFlags(cmd *cobra.Command) {
-	MarkReqBidIDFlags(cmd)
+func MarkReqLeaseIDFlags(cmd *cobra.Command, opts ...dcli.DeploymentIDOption) {
+	MarkReqBidIDFlags(cmd, opts...)
 }
 
 // LeaseIDFromFlags returns LeaseID with given flags and error if occurred
-func LeaseIDFromFlags(ctx client.Context, flags *pflag.FlagSet) (types.LeaseID, error) {
-	bid, err := BidIDFromFlags(ctx, flags)
-	return bid.LeaseID(), err
-}
-
-// LeaseIDFromFlagsWithoutCtx returns LeaseID with given flags and error if occurred
 // Here provider value is taken from flags
-func LeaseIDFromFlagsWithoutCtx(flags *pflag.FlagSet) (types.LeaseID, error) {
-	bid, err := BidIDFromFlagsWithoutCtx(flags)
-	return bid.LeaseID(), err
-}
+func LeaseIDFromFlags(flags *pflag.FlagSet, opts ...dcli.MarketOption) (types.LeaseID, error) {
+	bid, err := BidIDFromFlags(flags, opts...)
+	if err != nil {
+		return types.LeaseID{}, err
+	}
 
-// LeaseIDFromFlagsForOwner returns LeaseID with given flags and error if occurred
-// Here provider value is taken from flags
-func LeaseIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (types.LeaseID, error) {
-	bid, err := BidIDFromFlagsForOwner(flags, owner)
-	return bid.LeaseID(), err
+	return bid.LeaseID(), nil
 }
 
 // AddOrderFilterFlags add flags to filter for order list
@@ -161,8 +121,8 @@ func AddOrderFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "order owner address to filter")
 	flags.String("state", "", "order state to filter (open,matched,closed)")
 	flags.Uint64("dseq", 0, "deployment sequence to filter")
-	flags.Uint32("gseq", 0, "group sequence to filter")
-	flags.Uint32("oseq", 0, "order sequence to filter")
+	flags.Uint32("gseq", 1, "group sequence to filter")
+	flags.Uint32("oseq", 1, "order sequence to filter")
 }
 
 // OrderFiltersFromFlags returns OrderFilters with given flags and error if occurred
@@ -193,8 +153,8 @@ func AddBidFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "bid owner address to filter")
 	flags.String("state", "", "bid state to filter (open,matched,lost,closed)")
 	flags.Uint64("dseq", 0, "deployment sequence to filter")
-	flags.Uint32("gseq", 0, "group sequence to filter")
-	flags.Uint32("oseq", 0, "order sequence to filter")
+	flags.Uint32("gseq", 1, "group sequence to filter")
+	flags.Uint32("oseq", 1, "order sequence to filter")
 	flags.String("provider", "", "bid provider address to filter")
 }
 
@@ -233,8 +193,8 @@ func AddLeaseFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "lease owner address to filter")
 	flags.String("state", "", "lease state to filter (active,insufficient_funds,closed)")
 	flags.Uint64("dseq", 0, "deployment sequence to filter")
-	flags.Uint32("gseq", 0, "group sequence to filter")
-	flags.Uint32("oseq", 0, "order sequence to filter")
+	flags.Uint32("gseq", 1, "group sequence to filter")
+	flags.Uint32("oseq", 1, "order sequence to filter")
 	flags.String("provider", "", "bid provider address to filter")
 }
 

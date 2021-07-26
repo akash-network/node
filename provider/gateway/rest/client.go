@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"k8s.io/client-go/tools/remotecommand"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -47,6 +48,12 @@ type Client interface {
 	LeaseEvents(ctx context.Context, id mtypes.LeaseID, services string, follow bool) (*LeaseKubeEvents, error)
 	LeaseLogs(ctx context.Context, id mtypes.LeaseID, services string, follow bool, tailLines int64) (*ServiceLogs, error)
 	ServiceStatus(ctx context.Context, id mtypes.LeaseID, service string) (*cltypes.ServiceStatus, error)
+	LeaseShell(ctx context.Context, id mtypes.LeaseID, service string, podIndex uint, cmd []string,
+		stdin io.ReadCloser,
+		stdout io.Writer,
+		stderr io.Writer,
+		tty bool,
+		tsq <-chan remotecommand.TerminalSize) error
 }
 
 type LeaseKubeEvent struct {

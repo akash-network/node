@@ -2,8 +2,11 @@
 # KinD, it's fine to use other names locally, however in GH container name 
 # is configured by engineerd/setup-kind. `kind-control-plane` is the docker
 # image's name in GH Actions.
-KIND_NAME      ?= $(shell basename $$PWD)
-KIND_IMG       ?= kindest/node:v1.20.0
+KIND_NAME       ?= $(shell basename $$PWD)
+
+KINDEST_VERSION ?= v1.21.1
+KIND_IMG        ?= kindest/node:$(KINDEST_VERSION)
+
 K8S_CONTEXT    ?= $(shell kubectl config current-context)
 KIND_HTTP_PORT ?= $(shell docker inspect \
     --type container "$(KIND_NAME)-control-plane" \
@@ -23,6 +26,8 @@ KIND_PORT_BINDINGS ?= $(shell docker inspect "$(KIND_NAME)-control-plane" \
 KIND_CONFIG        ?= kind-config.yaml
 KIND_CONFIG_CALICO ?= ../kind-config-calico.yaml
 
+DOCKER_IMAGE       ?= ghcr.io/ovrclk/akash:latest
+
 PROVIDER_HOSTNAME ?= localhost
 PROVIDER_HOST     ?= $(PROVIDER_HOSTNAME):$(KIND_HTTP_PORT)
 PROVIDER_ENDPOINT ?= http://$(PROVIDER_HOST)
@@ -40,7 +45,7 @@ kind-k8s-ip:
 
 .PHONY: kind-configure-image
 kind-configure-image:
-	echo "- op: replace\n  path: /spec/template/spec/containers/0/image\n  value: ${DOCKER_IMAGE}" > ./kustomize/akash-node/docker-image.yaml && \
+	echo "- op: replace\n  path: /spec/template/spec/containers/0/image\n  value: $(DOCKER_IMAGE)" > ./kustomize/akash-node/docker-image.yaml && \
     cp ./kustomize/akash-node/docker-image.yaml ./kustomize/akash-provider/docker-image.yaml
 
 .PHONY: kind-upload-image
@@ -57,6 +62,7 @@ kind-cluster-create: $(KIND)
 		--config "$(KIND_CONFIG)" \
 		--name "$(KIND_NAME)" \
 		--image "$(KIND_IMG)"
+	kubectl label nodes $(KIND_NAME)-control-plane akash.network/role=ingress
 	kubectl apply -f "$(INGRESS_CONFIG_PATH)"
 	"$(AKASH_ROOT)/script/setup-kind.sh"
 
@@ -74,6 +80,7 @@ kind-cluster-calico-create: $(KIND)
 
 .PHONY: kind-ingress-setup
 kind-ingress-setup:
+	kubectl label nodes $(KIND_NAME)-control-plane akash.network/role=ingress
 	kubectl apply -f "$(INGRESS_CONFIG_PATH)"
 	"$(AKASH_ROOT)/script/setup-kind.sh"
 
