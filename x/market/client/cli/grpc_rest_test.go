@@ -89,7 +89,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	result := &types.QueryOrdersResponse{}
-	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), result)
+	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), result)
 	s.Require().NoError(err)
 	s.Require().Len(result.Orders, 1)
 	orders := result.Orders
@@ -149,7 +149,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	bidRes := &types.QueryBidsResponse{}
-	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), bidRes)
+	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), bidRes)
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
 	bids := bidRes.Bids
@@ -176,7 +176,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	leaseRes := &types.QueryLeasesResponse{}
-	err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), leaseRes)
+	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), leaseRes)
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
 	leases := leaseRes.Leases
@@ -240,7 +240,7 @@ func (s *GRPCRestTestSuite) TestGetOrders() {
 			s.Require().NoError(err)
 
 			var orders types.QueryOrdersResponse
-			err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp, &orders)
+			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &orders)
 
 			if tc.expErr {
 				s.Require().NotNil(err)
@@ -300,7 +300,7 @@ func (s *GRPCRestTestSuite) TestGetOrder() {
 			s.Require().NoError(err)
 
 			var out types.QueryOrderResponse
-			err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp, &out)
+			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {
 				s.Require().Error(err)
@@ -363,7 +363,7 @@ func (s *GRPCRestTestSuite) TestGetBids() {
 			s.Require().NoError(err)
 
 			var bids types.QueryBidsResponse
-			err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp, &bids)
+			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &bids)
 
 			if tc.expErr {
 				s.Require().NotNil(err)
@@ -423,7 +423,7 @@ func (s *GRPCRestTestSuite) TestGetBid() {
 			s.Require().NoError(err)
 
 			var out types.QueryBidResponse
-			err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp, &out)
+			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {
 				s.Require().Error(err)
@@ -486,7 +486,7 @@ func (s *GRPCRestTestSuite) TestGetLeases() {
 			s.Require().NoError(err)
 
 			var leases types.QueryLeasesResponse
-			err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp, &leases)
+			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &leases)
 
 			if tc.expErr {
 				s.Require().NotNil(err)
@@ -547,7 +547,7 @@ func (s *GRPCRestTestSuite) TestGetLease() {
 			s.Require().NoError(err)
 
 			var out types.QueryLeaseResponse
-			err = val.ClientCtx.JSONCodec.UnmarshalJSON(resp, &out)
+			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {
 				s.Require().Error(err)

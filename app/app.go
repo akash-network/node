@@ -162,7 +162,7 @@ type AkashApp struct {
 	// simulation manager
 	sm *module.SimulationManager
 
-	// the configurator
+	// module configurator
 	configurator module.Configurator
 }
 
@@ -274,7 +274,7 @@ func NewApp(
 	app.keeper.upgrade = upgradekeeper.NewKeeper(skipUpgradeHeights, app.keys[upgradetypes.StoreKey], appCodec,
 		homePath, app.BaseApp)
 
-	app.keeper.upgrade.SetUpgradeHandler("v0.43.0-beta1-upgrade", func(ctx sdk.Context, plan upgradetypes.Plan,
+	app.keeper.upgrade.SetUpgradeHandler("v0.43.0-upgrade", func(ctx sdk.Context, plan upgradetypes.Plan,
 		_ module.VersionMap) (module.VersionMap, error) {
 		// 1st-time running in-store migrations, using 1 as fromVersion to
 		// avoid running InitGenesis.
@@ -310,7 +310,7 @@ func NewApp(
 		panic(err)
 	}
 
-	if upgradeInfo.Name == "v0.43.0-beta1-upgrade" && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
+	if upgradeInfo.Name == "v0.43.0-upgrade" && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
 		storeUpgrades := storetypes.StoreUpgrades{
 			Added: []string{"authz", "feegrant"},
 		}

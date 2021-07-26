@@ -303,7 +303,7 @@ func addCertToGenesis(cmd *cobra.Command, cert types.GenesisCertificate) error {
 		return err
 	}
 
-	cdc := cctx.JSONCodec.(codec.Codec)
+	cdc := cctx.Codec.(codec.Codec)
 
 	serverCtx := server.GetServerContextFromCmd(cmd)
 	config := serverCtx.Config

@@ -16,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/server"
+	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/snapshots"
@@ -23,7 +24,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	vestingcli "github.com/cosmos/cosmos-sdk/x/auth/vesting/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
@@ -65,7 +65,7 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 	encodingConfig := app.MakeEncodingConfig()
 	initClientCtx := client.Context{}.
-		WithJSONCodec(encodingConfig.Marshaler).
+		WithCodec(encodingConfig.Marshaler).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
 		WithTxConfig(encodingConfig.TxConfig).
 		WithLegacyAmino(encodingConfig.Amino).
@@ -87,7 +87,9 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 				return err
 			}
 
-			if err := server.InterceptConfigsPreRunHandler(cmd); err != nil {
+			customAppTemplate, customAppConfig := initAppConfig()
+
+			if err := server.InterceptConfigsPreRunHandler(cmd, customAppTemplate, customAppConfig); err != nil {
 				return err
 			}
 
@@ -102,6 +104,35 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 	initRootCmd(rootCmd, encodingConfig)
 
 	return rootCmd, encodingConfig
+}
+
+// initAppConfig helps to override default appConfig template and configs.
+// return "", nil if no custom configuration is required for the application.
+func initAppConfig() (string, interface{}) {
+	type CustomAppConfig struct {
+		serverconfig.Config
+	}
+
+	srvCfg := serverconfig.DefaultConfig()
+	// The SDK's default minimum gas price is set to "" (empty value) inside
+	// app.toml. If left empty by validators, the node will halt on startup.
+	// However, the chain developer can set a default app.toml value for their
+	// validators here.
+	//
+	// In summary:
+	// - if you leave srvCfg.MinGasPrices = "", all validators MUST tweak their
+	//   own app.toml config,
+	// - if you set srvCfg.MinGasPrices non-empty, validators CAN tweak their
+	//   own app.toml to override, or use this default value.
+	//
+	// we set the min gas prices to 0.
+	srvCfg.MinGasPrices = "0uakt"
+
+	customAppConfig := CustomAppConfig{
+		Config: *srvCfg,
+	}
+
+	return serverconfig.DefaultConfigTemplate, customAppConfig
 }
 
 // Execute executes the root command.
@@ -253,12 +284,9 @@ func txCmd() *cobra.Command {
 		authcmd.GetSignBatchCommand(),
 		authcmd.GetMultiSignCommand(),
 		authcmd.GetValidateSignaturesCommand(),
-		flags.LineBreak,
 		authcmd.GetBroadcastCommand(),
 		authcmd.GetEncodeCommand(),
 		authcmd.GetDecodeCommand(),
-		flags.LineBreak,
-		vestingcli.GetTxCmd(),
 	)
 
 	// add modules' tx commands

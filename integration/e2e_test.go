@@ -223,7 +223,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	out := &types.QueryProvidersResponse{}
-	err = s.validator.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), out)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Providers, 1, "Provider Creation Failed")
 	providers := out.Providers
@@ -235,7 +235,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	var provider types.Provider
-	err = s.validator.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), &provider)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), &provider)
 	s.Require().NoError(err)
 	s.Require().Equal(createdProvider, provider)
 
@@ -272,7 +272,7 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	s.Require().NoError(err)
 
 	deployResp := &dtypes.QueryDeploymentsResponse{}
-	err = s.validator.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), deployResp)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), deployResp)
 	s.Require().NoError(err)
 	s.Require().False(0 == len(deployResp.Deployments), "no deployments created")
 
@@ -304,7 +304,7 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	s.Require().NoError(err)
 
 	qResp := &dtypes.QueryDeploymentsResponse{}
-	err = s.validator.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), qResp)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), qResp)
 	s.Require().NoError(err)
 	s.Require().True(len(qResp.Deployments) == len(deployResp.Deployments), "Deployment Close Failed")
 
@@ -463,7 +463,7 @@ func (s *E2EAppNodePort) TestE2EAppNodePort() {
 	s.Require().NoError(err)
 
 	leaseRes := &mtypes.QueryLeasesResponse{}
-	err = s.validator.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), leaseRes)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), leaseRes)
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
 
@@ -591,7 +591,7 @@ func (s *E2EDeploymentUpdate) TestE2EDeploymentUpdate() {
 	s.Require().NoError(err)
 
 	leaseRes := &mtypes.QueryLeasesResponse{}
-	err = s.validator.ClientCtx.JSONCodec.UnmarshalJSON(resp.Bytes(), leaseRes)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), leaseRes)
 	s.Require().NoError(err)
 
 	s.Require().Len(leaseRes.Leases, 1)
@@ -679,7 +679,7 @@ func (s *E2EApp) TestE2EApp() {
 	s.Require().NoError(err)
 
 	deployResp := &dtypes.QueryDeploymentsResponse{}
-	err = s.validator.ClientCtx.JSONCodec.UnmarshalJSON(res.Bytes(), deployResp)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(res.Bytes(), deployResp)
 	s.Require().NoError(err)
 	s.Require().Len(deployResp.Deployments, 1, "Deployment Create Failed")
 	deployments := deployResp.Deployments
@@ -691,7 +691,7 @@ func (s *E2EApp) TestE2EApp() {
 	s.Require().NoError(err)
 
 	deploymentResp := dtypes.QueryDeploymentResponse{}
-	err = s.validator.ClientCtx.JSONCodec.UnmarshalJSON(res.Bytes(), &deploymentResp)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(res.Bytes(), &deploymentResp)
 	s.Require().NoError(err)
 	s.Require().Equal(createdDep, deploymentResp)
 	s.Require().NotEmpty(deploymentResp.Deployment.Version)
@@ -705,7 +705,7 @@ func (s *E2EApp) TestE2EApp() {
 	s.Require().NoError(err, "Error when fetching deployments with owner filter")
 
 	deployResp = &dtypes.QueryDeploymentsResponse{}
-	err = s.validator.ClientCtx.JSONCodec.UnmarshalJSON(res.Bytes(), deployResp)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(res.Bytes(), deployResp)
 	s.Require().NoError(err)
 	s.Require().Len(deployResp.Deployments, 1)
 
@@ -715,7 +715,7 @@ func (s *E2EApp) TestE2EApp() {
 	s.Require().NoError(err)
 
 	result := &mtypes.QueryOrdersResponse{}
-	err = s.validator.ClientCtx.JSONCodec.UnmarshalJSON(res.Bytes(), result)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(res.Bytes(), result)
 	s.Require().NoError(err)
 	s.Require().Len(result.Orders, 1)
 	orders := result.Orders
@@ -729,7 +729,7 @@ func (s *E2EApp) TestE2EApp() {
 	res, err = mcli.QueryBidsExec(cctxJSON)
 	s.Require().NoError(err)
 	bidsRes := &mtypes.QueryBidsResponse{}
-	err = s.validator.ClientCtx.JSONCodec.UnmarshalJSON(res.Bytes(), bidsRes)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(res.Bytes(), bidsRes)
 	s.Require().NoError(err)
 	s.Require().Len(bidsRes.Bids, 1)
 
@@ -750,7 +750,7 @@ func (s *E2EApp) TestE2EApp() {
 	s.Require().NoError(err)
 
 	leaseRes := &mtypes.QueryLeasesResponse{}
-	err = s.validator.ClientCtx.JSONCodec.UnmarshalJSON(res.Bytes(), leaseRes)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(res.Bytes(), leaseRes)
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
 
