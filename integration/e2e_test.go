@@ -82,7 +82,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	// Create a network for test
 	cfg := testutil.DefaultConfig()
 	cfg.NumValidators = 1
-	cfg.MinGasPrices = ""
+	cfg.MinGasPrices = fmt.Sprintf("0%s", cfg.BondDenom)
 	s.cfg = cfg
 	s.network = network.New(s.T(), cfg)
 
