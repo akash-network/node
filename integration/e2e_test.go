@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	sdktest "github.com/cosmos/cosmos-sdk/testutil"
-	"github.com/ovrclk/akash/provider/gateway/rest"
 	"io/ioutil"
 	"net"
 	"net/url"
@@ -16,6 +14,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	sdktest "github.com/cosmos/cosmos-sdk/testutil"
+	"github.com/ovrclk/akash/provider/gateway/rest"
 
 	"github.com/cosmos/cosmos-sdk/server"
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
@@ -895,7 +896,7 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 	s.Require().NoError(err)
 
 	leaseRes := &mtypes.QueryLeasesResponse{}
-	err = s.validator.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), leaseRes)
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), leaseRes)
 	s.Require().NoError(err)
 
 	lease := newestLease(leaseRes.Leases)
