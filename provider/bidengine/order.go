@@ -3,9 +3,6 @@ package bidengine
 import (
 	"context"
 	"fmt"
-	atypes "github.com/ovrclk/akash/x/audit/types"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"regexp"
 	"time"
 
@@ -18,8 +15,11 @@ import (
 	"github.com/ovrclk/akash/pubsub"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
 	"github.com/ovrclk/akash/util/runner"
+	atypes "github.com/ovrclk/akash/x/audit/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/tendermint/tendermint/libs/log"
 )
 
@@ -360,6 +360,13 @@ loop:
 
 	// cancel reservation
 	if !won {
+		if clusterch != nil {
+			result := <-clusterch
+			clusterch = nil
+			if result.Error() == nil {
+				reservation = result.Value().(ctypes.Reservation)
+			}
+		}
 		if reservation != nil {
 			o.log.Debug("unreserving reservation")
 			if err := o.cluster.Unreserve(reservation.OrderID()); err != nil {

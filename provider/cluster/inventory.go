@@ -3,24 +3,22 @@ package cluster
 import (
 	"context"
 	"errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"sync/atomic"
 	"time"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
-
 	"github.com/boz/go-lifecycle"
-	"github.com/tendermint/tendermint/libs/log"
-
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	clusterUtil "github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/pubsub"
 	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/util/runner"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 var (
@@ -450,6 +448,10 @@ loop:
 				is.log.Info("removing reservation", "order", res.OrderID())
 
 				reservations = append(reservations[:idx], reservations[idx+1:]...)
+				// reclaim availableExternalPorts if unreserving allocated resources
+				if res.allocated {
+					is.availableExternalPorts += reservationCountEndpoints(res)
+				}
 
 				req.ch <- inventoryResponse{value: res}
 				is.log.Info("unreserve capacity complete", "order", req.order)
