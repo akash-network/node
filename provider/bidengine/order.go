@@ -411,7 +411,13 @@ func (o *order) shouldBid(group *dtypes.Group) (bool, error) {
 
 	// does provider have required attributes?
 	if !group.GroupSpec.MatchAttributes(o.session.Provider().Attributes) {
-		o.log.Debug("unable to fulfill: incompatible attributes")
+		o.log.Debug("unable to fulfill: incompatible provider attributes")
+		return false, nil
+	}
+
+	// does order have required attributes?
+	if !o.cfg.Attributes.SubsetOf(group.GroupSpec.Requirements.Attributes) {
+		o.log.Debug("unable to fulfill: incompatible order attributes")
 		return false, nil
 	}
 

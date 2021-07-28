@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/provider/bidengine"
+	"github.com/ovrclk/akash/types"
 	mparams "github.com/ovrclk/akash/x/market/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
@@ -26,6 +27,7 @@ type Config struct {
 	ManifestTimeout                 time.Duration
 
 	BalanceCheckerCfg BalanceCheckerConfig
+	Attributes        types.Attributes
 }
 
 func NewDefaultConfig() Config {
