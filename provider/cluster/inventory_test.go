@@ -1,6 +1,10 @@
 package cluster
 
 import (
+	"context"
+	"testing"
+	"time"
+
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/cluster/mocks"
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
@@ -10,8 +14,6 @@ import (
 	atypes "github.com/ovrclk/akash/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -224,12 +226,30 @@ func TestInventory_ClusterDeploymentDeployed(t *testing.T) {
 	// Wait for second call to inventory
 	<-inventoryCalled
 
+	// wait for cluster deployment to be active
+	// needed to avoid data race in reading availableExternalPorts
+	for {
+		status, err := inv.status(context.Background())
+		require.NoError(t, err)
+
+		if len(status.Active) != 0 {
+			break
+		}
+
+		time.Sleep(time.Second / 2)
+	}
+
+	// availableExternalEndpoints should be consumed because of the deployed reservation
+	require.Equal(t, uint(1000-serviceCount), inv.availableExternalPorts)
+
+	// Unreserving the allocated reservation should reclaim the availableExternalEndpoints
+	err = inv.unreserve(lid.OrderID())
+	require.NoError(t, err)
+	require.Equal(t, uint(1000), inv.availableExternalPorts)
+
 	// Shut everything down
 	close(donech)
 	<-inv.lc.Done()
-
-	// No ports used yet
-	require.Equal(t, uint(1000-serviceCount), inv.availableExternalPorts)
 }
 
 func TestInventory_OverReservations(t *testing.T) {

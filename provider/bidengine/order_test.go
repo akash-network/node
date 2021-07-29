@@ -101,6 +101,7 @@ func makeMocks(s *orderTestScaffold) {
 	s.reserveCallNotify = make(chan int, 1)
 	s.cluster.On("Reserve", s.orderID, &(groupResult.Group)).Run(func(args mock.Arguments) {
 		s.reserveCallNotify <- 0
+		time.Sleep(time.Second) // add a delay before returning response, to test race conditions
 	}).Return(mockReservation, nil)
 
 	s.cluster.On("Unreserve", s.orderID, mock.Anything).Return(nil)
@@ -285,6 +286,45 @@ func Test_BidOrderAndThenClosedUnreserve(t *testing.T) {
 	}
 	err := scaffold.testBus.Publish(ev)
 	require.NoError(t, err)
+
+	// Wait for this to complete. An order close event has happened so it stops
+	// on its own
+	<-order.lc.Done()
+
+	// Should have called unreserve once
+	scaffold.cluster.AssertCalled(t, "Unreserve", scaffold.orderID, mock.Anything)
+}
+
+func Test_OrderCloseBeforeReserveReturn(t *testing.T) {
+	order, scaffold, reservationFulfilledNotify := makeOrderForTest(t, false, nil, nil)
+
+	testutil.ChannelWaitForValue(t, scaffold.reserveCallNotify)
+	// Should have called reserve once at this point
+	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
+
+	// reservationFulfilledNotify channel shouldn't have got any value yet because the Reserve call
+	// returns after a delay of one second
+	select {
+	case <-reservationFulfilledNotify:
+		t.Fatal("reservation shouldn't have been fulfilled")
+	default:
+	}
+
+	// close the order before Reserve call returns
+	ev := mtypes.EventOrderClosed{
+		Context: sdkutil.BaseModuleEvent{},
+		ID:      scaffold.orderID,
+	}
+	err := scaffold.testBus.Publish(ev)
+	require.NoError(t, err)
+
+	// reservationFulfilledNotify channel can't get any value now because the order close event
+	// should take priority
+	select {
+	case <-reservationFulfilledNotify:
+		t.Fatal("reservation shouldn't have been fulfilled")
+	default:
+	}
 
 	// Wait for this to complete. An order close event has happened so it stops
 	// on its own
