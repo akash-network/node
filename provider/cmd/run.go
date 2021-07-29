@@ -519,13 +519,15 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	config.BidTimeout = bidTimeout
 	config.ManifestTimeout = manifestTimeout
 
-	pConf, err := config2.ReadConfigPath(providerConfig)
-	if err != nil {
-		return err
-	}
-	config.Attributes = pConf.Attributes
-	if err = config.Attributes.Validate(); err != nil {
-		return err
+	if len(providerConfig) != 0 {
+		pConf, err := config2.ReadConfigPath(providerConfig)
+		if err != nil {
+			return err
+		}
+		config.Attributes = pConf.Attributes
+		if err = config.Attributes.Validate(); err != nil {
+			return err
+		}
 	}
 
 	config.BalanceCheckerCfg = provider.BalanceCheckerConfig{
