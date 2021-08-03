@@ -85,6 +85,7 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 		PricingStrategy: cfg.BidPricingStrategy,
 		Deposit:         cfg.BidDeposit,
 		BidTimeout:      cfg.BidTimeout,
+		Attributes:      cfg.Attributes,
 	})
 	if err != nil {
 		errmsg := "creating bidengine service"

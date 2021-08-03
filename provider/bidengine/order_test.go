@@ -589,5 +589,33 @@ func Test_BidOrderFailsAndAborts(t *testing.T) {
 	scaffold.cluster.AssertCalled(t, "Unreserve", scaffold.orderID, mock.Anything)
 }
 
+func Test_ShouldntBidIfOrderAttrsDontMatch(t *testing.T) {
+	// Create a config that only bids on orders with given attributes
+	cfg := &Config{Attributes: atypes.Attributes{
+		{
+			Key:   "owner",
+			Value: "me",
+		},
+	}}
+	order, scaffold, _ := makeOrderForTest(t, false, nil, cfg)
+
+	<-order.lc.Done() // Stops whenever it figures it shouldn't bid
+
+	// Should not have called reserve ever
+	scaffold.cluster.AssertNotCalled(t, "Reserve", scaffold.orderID, mock.Anything)
+
+	var broadcast sdk.Msg
+
+	select {
+	case broadcast = <-scaffold.broadcasts:
+	default:
+	}
+	// Should never have broadcast since bid was declined
+	require.Nil(t, broadcast)
+
+	// Should not have called unreserve ever, as nothing was ever reserved
+	scaffold.cluster.AssertNotCalled(t, "Unreserve", scaffold.orderID, mock.Anything)
+}
+
 // TODO - add test failing the call to Broadcast on TxClient and
 // and then confirm that the reservation is cancelled

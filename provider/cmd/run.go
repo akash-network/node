@@ -7,12 +7,14 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	mparams "github.com/ovrclk/akash/x/market/types"
-	"github.com/shopspring/decimal"
 	"io"
 	"net/http"
 	"os"
 	"time"
+
+	mparams "github.com/ovrclk/akash/x/market/types"
+	config2 "github.com/ovrclk/akash/x/provider/config"
+	"github.com/shopspring/decimal"
 
 	"github.com/pkg/errors"
 
@@ -82,6 +84,7 @@ const (
 	FlagWithdrawalPeriod                 = "withdrawal-period"
 	FlagMinimumBalance                   = "minimum-balance"
 	FlagBalanceCheckPeriod               = "balance-check-period"
+	FlagProviderConfig                   = "provider-config"
 )
 
 var (
@@ -277,6 +280,11 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().String(FlagProviderConfig, "", "provider configuration file path")
+	if err := viper.BindPFlag(FlagProviderConfig, cmd.Flags().Lookup(FlagProviderConfig)); err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
@@ -369,6 +377,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	bidTimeout := viper.GetDuration(FlagBidTimeout)
 	manifestTimeout := viper.GetDuration(FlagManifestTimeout)
 	metricsListener := viper.GetString(FlagMetricsListener)
+	providerConfig := viper.GetString(FlagProviderConfig)
 
 	var metricsRouter http.Handler
 	if len(metricsListener) != 0 {
@@ -509,6 +518,17 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	config.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
 	config.BidTimeout = bidTimeout
 	config.ManifestTimeout = manifestTimeout
+
+	if len(providerConfig) != 0 {
+		pConf, err := config2.ReadConfigPath(providerConfig)
+		if err != nil {
+			return err
+		}
+		config.Attributes = pConf.Attributes
+		if err = config.Attributes.Validate(); err != nil {
+			return err
+		}
+	}
 
 	config.BalanceCheckerCfg = provider.BalanceCheckerConfig{
 		PollingPeriod:           viper.GetDuration(FlagBalanceCheckPeriod),
