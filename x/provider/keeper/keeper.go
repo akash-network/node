@@ -8,7 +8,7 @@ import (
 )
 
 type IKeeper interface {
-	Codec() codec.BinaryMarshaler
+	Codec() codec.BinaryCodec
 	Get(ctx sdk.Context, id sdk.Address) (types.Provider, bool)
 	Create(ctx sdk.Context, provider types.Provider) error
 	WithProviders(ctx sdk.Context, fn func(types.Provider) bool)
@@ -20,11 +20,11 @@ type IKeeper interface {
 // Keeper of the provider store
 type Keeper struct {
 	skey sdk.StoreKey
-	cdc  codec.BinaryMarshaler
+	cdc  codec.BinaryCodec
 }
 
 // NewKeeper creates and returns an instance for Provider keeper
-func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey) IKeeper {
+func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey) IKeeper {
 	return Keeper{
 		skey: skey,
 		cdc:  cdc,
@@ -36,7 +36,7 @@ func (k Keeper) NewQuerier() Querier {
 }
 
 // Codec returns keeper codec
-func (k Keeper) Codec() codec.BinaryMarshaler {
+func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
 }
 
@@ -51,7 +51,7 @@ func (k Keeper) Get(ctx sdk.Context, id sdk.Address) (types.Provider, bool) {
 
 	buf := store.Get(key)
 	var val types.Provider
-	k.cdc.MustUnmarshalBinaryBare(buf, &val)
+	k.cdc.MustUnmarshal(buf, &val)
 	return val, true
 }
 
@@ -69,7 +69,7 @@ func (k Keeper) Create(ctx sdk.Context, provider types.Provider) error {
 		return types.ErrProviderExists
 	}
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&provider))
+	store.Set(key, k.cdc.MustMarshal(&provider))
 
 	ctx.EventManager().EmitEvent(
 		types.EventProviderCreated{Owner: owner}.ToSDKEvent(),
@@ -85,7 +85,7 @@ func (k Keeper) WithProviders(ctx sdk.Context, fn func(types.Provider) bool) {
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Provider
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
 		}
@@ -105,7 +105,7 @@ func (k Keeper) Update(ctx sdk.Context, provider types.Provider) error {
 	if !store.Has(key) {
 		return types.ErrProviderNotFound
 	}
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&provider))
+	store.Set(key, k.cdc.MustMarshal(&provider))
 
 	ctx.EventManager().EmitEvent(
 		types.EventProviderUpdated{Owner: owner}.ToSDKEvent(),

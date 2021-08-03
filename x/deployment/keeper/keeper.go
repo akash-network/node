@@ -10,7 +10,7 @@ import (
 )
 
 type IKeeper interface {
-	Codec() codec.BinaryMarshaler
+	Codec() codec.BinaryCodec
 	GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Deployment, bool)
 	GetGroup(ctx sdk.Context, id types.GroupID) (types.Group, bool)
 	GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group
@@ -33,13 +33,13 @@ type IKeeper interface {
 // Keeper of the deployment store
 type Keeper struct {
 	skey    sdk.StoreKey
-	cdc     codec.BinaryMarshaler
+	cdc     codec.BinaryCodec
 	pspace  paramtypes.Subspace
 	ekeeper EscrowKeeper
 }
 
 // NewKeeper creates and returns an instance for deployment keeper
-func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) IKeeper {
+func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) IKeeper {
 
 	if !pspace.HasKeyTable() {
 		pspace = pspace.WithKeyTable(types.ParamKeyTable())
@@ -58,7 +58,7 @@ func (k Keeper) NewQuerier() Querier {
 }
 
 // Codec returns keeper codec
-func (k Keeper) Codec() codec.BinaryMarshaler {
+func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
 }
 
@@ -76,7 +76,7 @@ func (k Keeper) GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Dep
 
 	var val types.Deployment
 
-	k.cdc.MustUnmarshalBinaryBare(buf, &val)
+	k.cdc.MustUnmarshal(buf, &val)
 
 	return val, true
 }
@@ -95,7 +95,7 @@ func (k Keeper) GetGroup(ctx sdk.Context, id types.GroupID) (types.Group, bool) 
 
 	var val types.Group
 
-	k.cdc.MustUnmarshalBinaryBare(buf, &val)
+	k.cdc.MustUnmarshal(buf, &val)
 
 	return val, true
 }
@@ -111,7 +111,7 @@ func (k Keeper) GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group 
 
 	for ; iter.Valid(); iter.Next() {
 		var val types.Group
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		vals = append(vals, val)
 	}
 
@@ -129,7 +129,7 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 		return types.ErrDeploymentExists
 	}
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&deployment))
+	store.Set(key, k.cdc.MustMarshal(&deployment))
 
 	for idx := range groups {
 		group := groups[idx]
@@ -138,7 +138,7 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 			return types.ErrInvalidGroupID
 		}
 		gkey := groupKey(group.ID())
-		store.Set(gkey, k.cdc.MustMarshalBinaryBare(&group))
+		store.Set(gkey, k.cdc.MustMarshal(&group))
 	}
 
 	ctx.EventManager().EmitEvent(
@@ -165,7 +165,7 @@ func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) e
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&deployment))
+	store.Set(key, k.cdc.MustMarshal(&deployment))
 	return nil
 }
 
@@ -188,7 +188,7 @@ func (k Keeper) CloseDeployment(ctx sdk.Context, deployment types.Deployment) {
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&deployment))
+	store.Set(key, k.cdc.MustMarshal(&deployment))
 }
 
 // OnCloseGroup provides shutdown API for a Group
@@ -206,7 +206,7 @@ func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group, state types.Gro
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&group))
+	store.Set(key, k.cdc.MustMarshal(&group))
 	return nil
 }
 
@@ -225,7 +225,7 @@ func (k Keeper) OnPauseGroup(ctx sdk.Context, group types.Group) error {
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&group))
+	store.Set(key, k.cdc.MustMarshal(&group))
 	return nil
 }
 
@@ -244,7 +244,7 @@ func (k Keeper) OnStartGroup(ctx sdk.Context, group types.Group) error {
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&group))
+	store.Set(key, k.cdc.MustMarshal(&group))
 	return nil
 }
 
@@ -255,7 +255,7 @@ func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Deployment
-		k.cdc.MustUnmarshalBinaryBare(iter.Value(), &val)
+		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
 		}
@@ -294,7 +294,7 @@ func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
 func (k Keeper) updateDeployment(ctx sdk.Context, obj types.Deployment) {
 	store := ctx.KVStore(k.skey)
 	key := deploymentKey(obj.ID())
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&obj))
+	store.Set(key, k.cdc.MustMarshal(&obj))
 }
 
 // nolint: unused
@@ -302,5 +302,5 @@ func (k Keeper) updateGroup(ctx sdk.Context, group types.Group) {
 	store := ctx.KVStore(k.skey)
 	key := groupKey(group.ID())
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&group))
+	store.Set(key, k.cdc.MustMarshal(&group))
 }

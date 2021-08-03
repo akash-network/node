@@ -10,7 +10,7 @@ import (
 // Keeper of the provider store
 type Keeper interface {
 	Querier() types.QueryServer
-	Codec() codec.BinaryMarshaler
+	Codec() codec.BinaryCodec
 	CreateCertificate(sdk.Context, sdk.Address, []byte, []byte) error
 	RevokeCertificate(sdk.Context, types.CertID) error
 	GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool)
@@ -22,13 +22,13 @@ type Keeper interface {
 
 type keeper struct {
 	skey sdk.StoreKey
-	cdc  codec.BinaryMarshaler
+	cdc  codec.BinaryCodec
 }
 
 var _ Keeper = (*keeper)(nil)
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc codec.BinaryMarshaler, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey) Keeper {
 	return &keeper{cdc: cdc, skey: skey}
 }
 
@@ -38,7 +38,7 @@ func (k keeper) Querier() types.QueryServer {
 }
 
 // Codec returns keeper codec
-func (k keeper) Codec() codec.BinaryMarshaler {
+func (k keeper) Codec() codec.BinaryCodec {
 	return k.cdc
 }
 
@@ -70,7 +70,7 @@ func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte
 		Pubkey: pubkey,
 	}
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&val))
+	store.Set(key, k.cdc.MustMarshal(&val))
 
 	return nil
 }
@@ -85,7 +85,7 @@ func (k keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
 	}
 
 	var cert types.Certificate
-	k.cdc.MustUnmarshalBinaryBare(buf, &cert)
+	k.cdc.MustUnmarshal(buf, &cert)
 
 	if cert.State == types.CertificateRevoked {
 		return types.ErrCertificateAlreadyRevoked
@@ -93,7 +93,7 @@ func (k keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
 
 	cert.State = types.CertificateRevoked
 
-	store.Set(key, k.cdc.MustMarshalBinaryBare(&cert))
+	store.Set(key, k.cdc.MustMarshal(&cert))
 
 	return nil
 }
@@ -108,7 +108,7 @@ func (k keeper) GetCertificateByID(ctx sdk.Context, id types.CertID) (types.Cert
 	}
 
 	var val types.Certificate
-	k.cdc.MustUnmarshalBinaryBare(buf, &val)
+	k.cdc.MustUnmarshal(buf, &val)
 
 	return types.CertificateResponse{
 		Certificate: val,
@@ -191,7 +191,7 @@ func (k keeper) mustUnmarshal(key, val []byte) types.CertificateResponse {
 	item := types.CertificateResponse{
 		Serial: serial.String(),
 	}
-	k.cdc.MustUnmarshalBinaryBare(val, &item.Certificate)
+	k.cdc.MustUnmarshal(val, &item.Certificate)
 
 	return item
 }
@@ -202,7 +202,7 @@ func (k keeper) unmarshalIterator(key, val []byte) (types.CertificateResponse, e
 		Serial: serial.String(),
 	}
 
-	if err := k.cdc.UnmarshalBinaryBare(val, &item.Certificate); err != nil {
+	if err := k.cdc.Unmarshal(val, &item.Certificate); err != nil {
 		return types.CertificateResponse{}, err
 	}
 

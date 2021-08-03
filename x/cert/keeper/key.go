@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	keyAddrPrefixLen = 1 + sdk.AddrLen
+	keyAddrPrefixLen = 1 + 20
 )
 
 var (

@@ -53,7 +53,7 @@ func DefaultGenesisState() *types.GenesisState {
 
 // GetGenesisStateFromAppState returns x/cert GenesisState given raw application
 // genesis state.
-func GetGenesisStateFromAppState(cdc codec.JSONMarshaler, appState map[string]json.RawMessage) *types.GenesisState {
+func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *types.GenesisState {
 	var genesisState types.GenesisState
 
 	if appState[ModuleName] != nil {
