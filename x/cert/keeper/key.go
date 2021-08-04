@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	keyAddrPrefixLen = 1 + 20
+	keyAddrPrefixLen = 1 + 20 // TODO: discuss and find a proper fix for this
 )
 
 var (

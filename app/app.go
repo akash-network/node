@@ -14,7 +14,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/simapp"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -489,21 +488,6 @@ func (app *AkashApp) registerUpgradeHandlers() {
 
 		return app.mm.RunMigrations(ctx, app.configurator, fromVM)
 	})
-
-	upgradeInfo, err := app.keeper.upgrade.ReadUpgradeInfoFromDisk()
-	if err != nil {
-		panic(err)
-	}
-
-	// TODO: check if this piece is needed?
-	if upgradeInfo.Name == "v0.43" && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
-		storeUpgrades := storetypes.StoreUpgrades{
-			Added: []string{"authz", "feegrant"},
-		}
-
-		// configure store loader that checks if version == upgradeHeight and applies store upgrades
-		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
-	}
 }
 
 // MakeCodecs constructs the *std.Codec and *codec.LegacyAmino instances used by
