@@ -13,7 +13,7 @@ import (
 
 func deploymentKey(id types.DeploymentID) []byte {
 	buf := bytes.NewBuffer(types.DeploymentPrefix)
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
+	buf.Write(address.MustLengthPrefix(sdkutil.GetAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -23,7 +23,7 @@ func deploymentKey(id types.DeploymentID) []byte {
 // groupKey provides prefixed key for a Group's marshalled data.
 func groupKey(id types.GroupID) []byte {
 	buf := bytes.NewBuffer(types.GroupPrefix)
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
+	buf.Write(address.MustLengthPrefix(sdkutil.GetAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -36,7 +36,7 @@ func groupKey(id types.GroupID) []byte {
 // groupsKey provides default store Key for Group data.
 func groupsKey(id types.DeploymentID) []byte {
 	buf := bytes.NewBuffer(types.GroupPrefix)
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
+	buf.Write(address.MustLengthPrefix(sdkutil.GetAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}

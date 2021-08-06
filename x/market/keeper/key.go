@@ -12,7 +12,7 @@ import (
 
 func orderKey(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(types.OrderPrefix)
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
+	buf.Write(address.MustLengthPrefix(sdkutil.GetAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -27,7 +27,7 @@ func orderKey(id types.OrderID) []byte {
 
 func bidKey(id types.BidID) []byte {
 	buf := bytes.NewBuffer(types.BidPrefix)
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
+	buf.Write(address.MustLengthPrefix(sdkutil.GetAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -37,13 +37,13 @@ func bidKey(id types.BidID) []byte {
 	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
 		panic(err)
 	}
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Provider)))
+	buf.Write(address.MustLengthPrefix(sdkutil.GetAccAddressFromBech32(id.Provider)))
 	return buf.Bytes()
 }
 
 func leaseKey(id types.LeaseID) []byte {
 	buf := bytes.NewBuffer(types.LeasePrefix)
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
+	buf.Write(address.MustLengthPrefix(sdkutil.GetAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -53,13 +53,13 @@ func leaseKey(id types.LeaseID) []byte {
 	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
 		panic(err)
 	}
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Provider)))
+	buf.Write(address.MustLengthPrefix(sdkutil.GetAccAddressFromBech32(id.Provider)))
 	return buf.Bytes()
 }
 
 func ordersForGroupPrefix(id dtypes.GroupID) []byte {
 	buf := bytes.NewBuffer(types.OrderPrefix)
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
+	buf.Write(address.MustLengthPrefix(sdkutil.GetAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -71,7 +71,7 @@ func ordersForGroupPrefix(id dtypes.GroupID) []byte {
 
 func bidsForOrderPrefix(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(types.BidPrefix)
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
+	buf.Write(address.MustLengthPrefix(sdkutil.GetAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
