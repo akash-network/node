@@ -10,3 +10,7 @@ const (
 	// RouterKey is the message route for provider
 	RouterKey = ModuleName
 )
+
+var (
+	PrefixProviderID = []byte{0x01}
+)

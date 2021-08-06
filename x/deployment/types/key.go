@@ -10,3 +10,8 @@ const (
 	// RouterKey is the message route for deployment
 	RouterKey = ModuleName
 )
+
+var (
+	DeploymentPrefix = []byte{0x01}
+	GroupPrefix      = []byte{0x02}
+)

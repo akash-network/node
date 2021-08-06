@@ -5,21 +5,20 @@ import (
 	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/address"
 
 	"github.com/ovrclk/akash/x/cert/types"
 )
 
 const (
-	keyAddrPrefixLen = 1 + 20 // TODO: discuss and find a proper fix for this
+	keyAddrPrefixLen = 1 /*len(PrefixCertificateID)*/ + 1 /*owner_address_len (1 byte)*/
 )
 
-var (
-	prefixCertificateID = []byte{0x01}
-)
-
+// certificateKey creates a store key of the format:
+// prefix_bytes | owner_address_len (1 byte) | owner_address_bytes | serial_bytes
 func certificateKey(id types.CertID) []byte {
-	buf := bytes.NewBuffer(prefixCertificateID)
-	if _, err := buf.Write(id.Owner.Bytes()); err != nil {
+	buf := bytes.NewBuffer(types.PrefixCertificateID)
+	if _, err := buf.Write(address.MustLengthPrefix(id.Owner.Bytes())); err != nil {
 		panic(err)
 	}
 
@@ -31,8 +30,8 @@ func certificateKey(id types.CertID) []byte {
 }
 
 func certificatePrefix(id sdk.Address) []byte {
-	buf := bytes.NewBuffer(prefixCertificateID)
-	if _, err := buf.Write(id.Bytes()); err != nil {
+	buf := bytes.NewBuffer(types.PrefixCertificateID)
+	if _, err := buf.Write(address.MustLengthPrefix(id.Bytes())); err != nil {
 		panic(err)
 	}
 
@@ -40,9 +39,14 @@ func certificatePrefix(id sdk.Address) []byte {
 }
 
 func certificateSerialFromKey(key []byte) big.Int {
-	if len(key) < keyAddrPrefixLen+1 {
+	if len(key) < keyAddrPrefixLen {
 		panic("invalid key size")
 	}
 
-	return *new(big.Int).SetBytes(key[keyAddrPrefixLen:])
+	addrLen := int(key[keyAddrPrefixLen-1])
+	if len(key) < keyAddrPrefixLen+addrLen+1 {
+		panic("invalid key size")
+	}
+
+	return *new(big.Int).SetBytes(key[keyAddrPrefixLen+addrLen:])
 }

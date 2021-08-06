@@ -3,22 +3,20 @@ package keeper
 import (
 	"bytes"
 
+	"github.com/cosmos/cosmos-sdk/types/address"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/x/audit/types"
 )
 
-var (
-	prefixProviderID = []byte{0x01}
-)
-
 func providerKey(id types.ProviderID) []byte {
-	buf := bytes.NewBuffer(prefixProviderID)
-	if _, err := buf.Write(id.Owner.Bytes()); err != nil {
+	buf := bytes.NewBuffer(types.PrefixProviderID)
+	if _, err := buf.Write(address.MustLengthPrefix(id.Owner.Bytes())); err != nil {
 		panic(err)
 	}
 
-	if _, err := buf.Write(id.Auditor.Bytes()); err != nil {
+	if _, err := buf.Write(address.MustLengthPrefix(id.Auditor.Bytes())); err != nil {
 		panic(err)
 	}
 
@@ -26,8 +24,8 @@ func providerKey(id types.ProviderID) []byte {
 }
 
 func providerPrefix(id sdk.Address) []byte {
-	buf := bytes.NewBuffer(prefixProviderID)
-	if _, err := buf.Write(id.Bytes()); err != nil {
+	buf := bytes.NewBuffer(types.PrefixProviderID)
+	if _, err := buf.Write(address.MustLengthPrefix(id.Bytes())); err != nil {
 		panic(err)
 	}
 

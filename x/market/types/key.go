@@ -10,3 +10,9 @@ const (
 	// RouterKey is the message route for market
 	RouterKey = ModuleName
 )
+
+var (
+	OrderPrefix = []byte{0x01, 0x00}
+	BidPrefix   = []byte{0x02, 0x00}
+	LeasePrefix = []byte{0x03, 0x00}
+)

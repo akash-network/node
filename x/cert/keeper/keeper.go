@@ -59,11 +59,6 @@ func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte
 		return types.ErrCertificateExists
 	}
 
-	iter := sdk.KVStorePrefixIterator(store, certificatePrefix(owner))
-	defer func() {
-		_ = iter.Close()
-	}()
-
 	val := types.Certificate{
 		State:  types.CertificateValid,
 		Cert:   crt,

@@ -4,17 +4,16 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/ovrclk/akash/sdkutil"
+
+	"github.com/cosmos/cosmos-sdk/types/address"
+
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
-var (
-	deploymentPrefix = []byte{0x01}
-	groupPrefix      = []byte{0x02}
-)
-
 func deploymentKey(id types.DeploymentID) []byte {
-	buf := bytes.NewBuffer(deploymentPrefix)
-	buf.Write([]byte(id.Owner))
+	buf := bytes.NewBuffer(types.DeploymentPrefix)
+	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -23,8 +22,8 @@ func deploymentKey(id types.DeploymentID) []byte {
 
 // groupKey provides prefixed key for a Group's marshalled data.
 func groupKey(id types.GroupID) []byte {
-	buf := bytes.NewBuffer(groupPrefix)
-	buf.Write([]byte(id.Owner))
+	buf := bytes.NewBuffer(types.GroupPrefix)
+	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
@@ -36,8 +35,8 @@ func groupKey(id types.GroupID) []byte {
 
 // groupsKey provides default store Key for Group data.
 func groupsKey(id types.DeploymentID) []byte {
-	buf := bytes.NewBuffer(groupPrefix)
-	buf.Write([]byte(id.Owner))
+	buf := bytes.NewBuffer(types.GroupPrefix)
+	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
 	}
