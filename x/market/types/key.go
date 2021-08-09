@@ -11,8 +11,14 @@ const (
 	RouterKey = ModuleName
 )
 
-var (
-	OrderPrefix = []byte{0x01, 0x00}
-	BidPrefix   = []byte{0x02, 0x00}
-	LeasePrefix = []byte{0x03, 0x00}
-)
+func OrderPrefix() []byte {
+	return []byte{0x01, 0x00}
+}
+
+func BidPrefix() []byte {
+	return []byte{0x02, 0x00}
+}
+
+func LeasePrefix() []byte {
+	return []byte{0x03, 0x00}
+}

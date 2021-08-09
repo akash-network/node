@@ -251,7 +251,7 @@ func (k Keeper) OnStartGroup(ctx sdk.Context, group types.Group) error {
 // WithDeployments iterates all deployments in deployment store
 func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, types.DeploymentPrefix)
+	iter := sdk.KVStorePrefixIterator(store, types.DeploymentPrefix())
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Deployment

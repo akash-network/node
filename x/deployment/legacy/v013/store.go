@@ -12,8 +12,8 @@ import (
 // - Change addresses to be length-prefixed
 func MigrateStore(ctx sdk.Context, storeKey sdk.StoreKey) error {
 	store := ctx.KVStore(storeKey)
-	v013.MigratePrefixBech32AddrBytes(store, types.DeploymentPrefix)
-	v013.MigratePrefixBech32AddrBytes(store, types.GroupPrefix)
+	v013.MigratePrefixBech32AddrBytes(store, types.DeploymentPrefix())
+	v013.MigratePrefixBech32AddrBytes(store, types.GroupPrefix())
 
 	return nil
 }

@@ -11,13 +11,13 @@ import (
 )
 
 const (
-	keyAddrPrefixLen = 1 /*len(PrefixCertificateID)*/ + 1 /*owner_address_len (1 byte)*/
+	keyAddrPrefixLen = 2 // 1 byte for PrefixCertificateID followed by 1 byte for owner_address_len
 )
 
 // certificateKey creates a store key of the format:
 // prefix_bytes | owner_address_len (1 byte) | owner_address_bytes | serial_bytes
 func certificateKey(id types.CertID) []byte {
-	buf := bytes.NewBuffer(types.PrefixCertificateID)
+	buf := bytes.NewBuffer(types.PrefixCertificateID())
 	if _, err := buf.Write(address.MustLengthPrefix(id.Owner.Bytes())); err != nil {
 		panic(err)
 	}
@@ -30,7 +30,7 @@ func certificateKey(id types.CertID) []byte {
 }
 
 func certificatePrefix(id sdk.Address) []byte {
-	buf := bytes.NewBuffer(types.PrefixCertificateID)
+	buf := bytes.NewBuffer(types.PrefixCertificateID())
 	if _, err := buf.Write(address.MustLengthPrefix(id.Bytes())); err != nil {
 		panic(err)
 	}

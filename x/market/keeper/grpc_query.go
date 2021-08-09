@@ -36,7 +36,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 	ctx := sdk.UnwrapSDKContext(c)
 
 	store := ctx.KVStore(k.skey)
-	orderStore := prefix.NewStore(store, types.OrderPrefix)
+	orderStore := prefix.NewStore(store, types.OrderPrefix())
 
 	pageRes, err := sdkquery.FilteredPaginate(orderStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		var order types.Order
@@ -103,7 +103,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 	ctx := sdk.UnwrapSDKContext(c)
 
 	store := ctx.KVStore(k.skey)
-	bidStore := prefix.NewStore(store, types.BidPrefix)
+	bidStore := prefix.NewStore(store, types.BidPrefix())
 
 	pageRes, err := sdkquery.FilteredPaginate(bidStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		var bid types.Bid
@@ -190,7 +190,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 	ctx := sdk.UnwrapSDKContext(c)
 
 	store := ctx.KVStore(k.skey)
-	leaseStore := prefix.NewStore(store, types.LeasePrefix)
+	leaseStore := prefix.NewStore(store, types.LeasePrefix())
 
 	pageRes, err := sdkquery.FilteredPaginate(leaseStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		var lease types.Lease

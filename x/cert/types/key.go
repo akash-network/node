@@ -11,6 +11,6 @@ const (
 	RouterKey = ModuleName
 )
 
-var (
-	PrefixCertificateID = []byte{0x01}
-)
+func PrefixCertificateID() []byte {
+	return []byte{0x01}
+}

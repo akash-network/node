@@ -11,6 +11,6 @@ const (
 	RouterKey = ModuleName
 )
 
-var (
-	PrefixProviderID = []byte{0x01}
-)
+func PrefixProviderID() []byte {
+	return []byte{0x01}
+}

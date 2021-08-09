@@ -12,7 +12,7 @@ import (
 // - Change addresses to be length-prefixed
 func MigrateStore(ctx sdk.Context, storeKey sdk.StoreKey) error {
 	store := ctx.KVStore(storeKey)
-	v043.MigratePrefixAddressBytes(store, types.PrefixCertificateID)
+	v043.MigratePrefixAddressBytes(store, types.PrefixCertificateID())
 
 	return nil
 }

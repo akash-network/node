@@ -11,7 +11,10 @@ const (
 	RouterKey = ModuleName
 )
 
-var (
-	DeploymentPrefix = []byte{0x01}
-	GroupPrefix      = []byte{0x02}
-)
+func DeploymentPrefix() []byte {
+	return []byte{0x01}
+}
+
+func GroupPrefix() []byte {
+	return []byte{0x02}
+}

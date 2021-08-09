@@ -120,8 +120,8 @@ func TestCreateBidNonExistingOrder(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	msg := &types.MsgCreateBid{
-		Order:    types.OrderID{},
-		Provider: "",
+		Order:    types.OrderID{Owner: testutil.AccAddress(t).String()},
+		Provider: testutil.AccAddress(t).String(),
 		Price:    sdk.Coin{},
 	}
 

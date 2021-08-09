@@ -316,7 +316,7 @@ func (k Keeper) LeaseForOrder(ctx sdk.Context, oid types.OrderID) (types.Lease, 
 // WithOrders iterates all orders in market
 func (k Keeper) WithOrders(ctx sdk.Context, fn func(types.Order) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, types.OrderPrefix)
+	iter := sdk.KVStorePrefixIterator(store, types.OrderPrefix())
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Order
@@ -330,7 +330,7 @@ func (k Keeper) WithOrders(ctx sdk.Context, fn func(types.Order) bool) {
 // WithBids iterates all bids in market
 func (k Keeper) WithBids(ctx sdk.Context, fn func(types.Bid) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, types.BidPrefix)
+	iter := sdk.KVStorePrefixIterator(store, types.BidPrefix())
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Bid
@@ -344,7 +344,7 @@ func (k Keeper) WithBids(ctx sdk.Context, fn func(types.Bid) bool) {
 // WithLeases iterates all leases in market
 func (k Keeper) WithLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, types.LeasePrefix)
+	iter := sdk.KVStorePrefixIterator(store, types.LeasePrefix())
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Lease

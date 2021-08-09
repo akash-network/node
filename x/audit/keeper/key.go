@@ -11,7 +11,7 @@ import (
 )
 
 func providerKey(id types.ProviderID) []byte {
-	buf := bytes.NewBuffer(types.PrefixProviderID)
+	buf := bytes.NewBuffer(types.PrefixProviderID())
 	if _, err := buf.Write(address.MustLengthPrefix(id.Owner.Bytes())); err != nil {
 		panic(err)
 	}
@@ -24,7 +24,7 @@ func providerKey(id types.ProviderID) []byte {
 }
 
 func providerPrefix(id sdk.Address) []byte {
-	buf := bytes.NewBuffer(types.PrefixProviderID)
+	buf := bytes.NewBuffer(types.PrefixProviderID())
 	if _, err := buf.Write(address.MustLengthPrefix(id.Bytes())); err != nil {
 		panic(err)
 	}
