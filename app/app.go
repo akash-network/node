@@ -68,7 +68,6 @@ import (
 	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
 
 	"github.com/tendermint/tendermint/libs/log"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -204,6 +203,9 @@ func NewApp(
 	app.keeper.cap = capabilitykeeper.NewKeeper(appCodec, app.keys[capabilitytypes.StoreKey], app.memkeys[capabilitytypes.MemStoreKey])
 	scopedIBCKeeper := app.keeper.cap.ScopeToModule(ibchost.ModuleName)
 	scopedTransferKeeper := app.keeper.cap.ScopeToModule(ibctransfertypes.ModuleName)
+	// seal the capability keeper so all persistent capabilities are loaded in-memory and prevent
+	// any further modules from creating scoped sub-keepers.
+	app.keeper.cap.Seal()
 
 	app.keeper.acct = authkeeper.NewAccountKeeper(
 		appCodec,
@@ -348,9 +350,15 @@ func NewApp(
 		}, app.akashAppModules()...)...,
 	)
 
+	// During begin block slashing happens after distr.BeginBlocker so that
+	// there is nothing left over in the validator fee pool, so as to keep the
+	// CanWithdrawInvariant invariant.
+	// NOTE: staking module is required if HistoricalEntries param > 0
+	// NOTE: capability module's beginblocker must come before any modules using capabilities (e.g. IBC)
 	app.mm.SetOrderBeginBlockers(
-		upgradetypes.ModuleName, minttypes.ModuleName, distrtypes.ModuleName, slashingtypes.ModuleName,
-		evidencetypes.ModuleName, stakingtypes.ModuleName, ibchost.ModuleName,
+		upgradetypes.ModuleName, capabilitytypes.ModuleName, minttypes.ModuleName,
+		distrtypes.ModuleName, slashingtypes.ModuleName, evidencetypes.ModuleName,
+		stakingtypes.ModuleName, ibchost.ModuleName,
 	)
 	app.mm.SetOrderEndBlockers(
 		append([]string{
@@ -436,16 +444,6 @@ func NewApp(
 		if err := app.LoadLatestVersion(); err != nil {
 			tmos.Exit("app initialization:" + err.Error())
 		}
-
-		// Initialize and seal the capability keeper so all persistent capabilities
-		// are loaded in-memory and prevent any further modules from creating scoped
-		// sub-keepers.
-		// This must be done during creation of baseapp rather than in InitChain so
-		// that in-memory capabilities get regenerated on app restart.
-		// Note that since this reads from the store, we can only perform it when
-		// `loadLatest` is set to true.
-		ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
-		app.keeper.cap.InitializeAndSeal(ctx)
 	}
 
 	app.keeper.scopedIBC = scopedIBCKeeper

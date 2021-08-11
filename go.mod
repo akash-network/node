@@ -6,7 +6,7 @@ require (
 	github.com/avast/retry-go v2.7.0+incompatible
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
-	github.com/cosmos/cosmos-sdk v0.43.0-rc2
+	github.com/cosmos/cosmos-sdk v0.43.0
 	github.com/cosmos/ibc-go v1.0.0-rc3
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-kit/kit v0.10.0
