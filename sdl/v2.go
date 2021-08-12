@@ -1,6 +1,7 @@
 package sdl
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -35,13 +36,18 @@ type v2Dependency struct {
 	Service string `yaml:"service"`
 }
 
+type v2ServiceParams struct {
+	Storage map[string]v2ServiceStorageParams `yaml:"storage,omitempty"`
+}
+
 type v2Service struct {
 	Image        string
-	Command      []string       `yaml:",omitempty"`
-	Args         []string       `yaml:",omitempty"`
-	Env          []string       `yaml:",omitempty"`
-	Expose       []v2Expose     `yaml:",omitempty"`
-	Dependencies []v2Dependency `yaml:",omitempty"`
+	Command      []string        `yaml:",omitempty"`
+	Args         []string        `yaml:",omitempty"`
+	Env          []string        `yaml:",omitempty"`
+	Expose       []v2Expose      `yaml:",omitempty"`
+	Dependencies []v2Dependency  `yaml:",omitempty"`
+	Params       v2ServiceParams `yaml:",omitempty"`
 }
 
 type v2ServiceDeployment struct {
@@ -80,20 +86,10 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 		for _, placementName := range v2DeploymentPlacementNames(depl) {
 			svcdepl := depl[placementName]
 
-			compute, ok := sdl.Profiles.Compute[svcdepl.Profile]
-			if !ok {
-				return nil, errors.Errorf("%v.%v: no compute profile named %v", svcName, placementName, svcdepl.Profile)
-			}
-
-			infra, ok := sdl.Profiles.Placement[placementName]
-			if !ok {
-				return nil, errors.Errorf("%v.%v: no placement profile named %v", svcName, placementName, placementName)
-			}
-
-			price, ok := infra.Pricing[svcdepl.Profile]
-			if !ok {
-				return nil, errors.Errorf("%v.%v: no pricing for profile %v", svcName, placementName, svcdepl.Profile)
-			}
+			// at this moment compute, infra and price have been check for existence
+			compute := sdl.Profiles.Compute[svcdepl.Profile]
+			infra := sdl.Profiles.Placement[placementName]
+			price := infra.Pricing[svcdepl.Profile]
 
 			group := groups[placementName]
 
@@ -114,7 +110,7 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 			}
 
 			resources := dtypes.Resource{
-				Resources: compute.Resources.toResourceUnits(),
+				Resources: compute.Resources.toDGroupResourceUnits(),
 				Price:     price.Value,
 				Count:     svcdepl.Count,
 			}
@@ -185,14 +181,13 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 				groups[group.Name] = group
 			}
 
-			compute, ok := sdl.Profiles.Compute[svcdepl.Profile]
-			if !ok {
-				return nil, errors.Errorf("%v.%v: no compute profile named %v", svcName, placementName, svcdepl.Profile)
-			}
+			// at this moment compute and svc have been check for existence
+			compute := sdl.Profiles.Compute[svcdepl.Profile]
+			svc := sdl.Services[svcName]
 
-			svc, ok := sdl.Services[svcName]
-			if !ok {
-				return nil, errors.Errorf("%v.%v: no service profile named %v", svcName, placementName, svcName)
+			mresources, err := toManifestResources(compute.Resources, svc)
+			if err != nil {
+				return nil, err
 			}
 
 			msvc := &manifest.Service{
@@ -200,7 +195,7 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 				Image:     svc.Image,
 				Args:      svc.Args,
 				Env:       svc.Env,
-				Resources: compute.Resources.toResourceUnits(),
+				Resources: mresources,
 				Count:     svcdepl.Count,
 			}
 
@@ -257,7 +252,6 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 			})
 
 			group.Services = append(group.Services, *msvc)
-
 		}
 	}
 
@@ -274,6 +268,91 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 	}
 
 	return result, nil
+}
+
+func (sdl *v2) validate() error {
+	for _, svcName := range v2DeploymentSvcNames(sdl.Deployments) {
+		depl := sdl.Deployments[svcName]
+
+		for _, placementName := range v2DeploymentPlacementNames(depl) {
+			svcdepl := depl[placementName]
+
+			compute, ok := sdl.Profiles.Compute[svcdepl.Profile]
+			if !ok {
+				return errors.Errorf("sdl: %v.%v: no compute profile named %v", svcName, placementName, svcdepl.Profile)
+			}
+
+			infra, ok := sdl.Profiles.Placement[placementName]
+			if !ok {
+				return errors.Errorf("sdl: %v.%v: no placement profile named %v", svcName, placementName, placementName)
+			}
+
+			if _, ok := infra.Pricing[svcdepl.Profile]; !ok {
+				return errors.Errorf("sdl: %v.%v: no pricing for profile %v", svcName, placementName, svcdepl.Profile)
+			}
+
+			svc, ok := sdl.Services[svcName]
+			if !ok {
+				return errors.Errorf("sdl: %v.%v: no service profile named %v", svcName, placementName, svcName)
+			}
+
+			// validate storage's attributes and parameters
+			volumes := make(map[string]v2ResourceStorage)
+			for _, volume := range compute.Resources.Storage {
+				// making deepcopy here as we gonna merge compute attributes and service parameters below for validation
+				attr := make(v2StorageAttributes, 0, len(volume.Attributes))
+
+				copy(attr, volume.Attributes)
+
+				volumes[volume.Name] = v2ResourceStorage{
+					Name:       volume.Name,
+					Quantity:   volume.Quantity,
+					Attributes: attr,
+				}
+			}
+
+			mounts := make(map[string]string)
+			for name, params := range svc.Params.Storage {
+				cvolume, exists := volumes[name]
+				if !exists {
+					return errors.Errorf("sdl: service \"%s\" no-existing compute volume named \"%s\"", svcName, name)
+				}
+
+				attr := make(map[string]string)
+
+				for _, nd := range types.Attributes(params) {
+					attr[nd.Key] = nd.Value
+				}
+
+				mount := attr[storageAttributeMount]
+				if vlname, exists := mounts[mount]; exists {
+					if mount == "" {
+						return errStorageMultipleEphemeral
+					}
+
+					return errors.Wrap(errStorageDupMountPoint, fmt.Sprintf("\"%s\" already in use by volume \"%s\"", mount, vlname))
+				}
+
+				mounts[mount] = name
+
+				cvolume.Attributes = append(cvolume.Attributes, params...)
+			}
+
+			for name, volume := range volumes {
+				attr := make(map[string]string)
+
+				for _, nd := range types.Attributes(volume.Attributes) {
+					attr[nd.Key] = nd.Value
+				}
+
+				if _, persistence := attr[storageAttributePersistent]; persistence && len(attr[storageAttributeMount]) == 0 {
+					return errors.Errorf("sdl: compute.storage.%s has persistent=true which requires service.%s.params.storage.%s to have mount", name, svcName, name)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // stable ordering

@@ -1,24 +1,29 @@
 package types
 
 import (
-	"github.com/ovrclk/akash/types/unit"
 	"testing"
+
+	"github.com/ovrclk/akash/types/unit"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestResourceUnitsSubIsIdempotent(t *testing.T) {
 	ru := ResourceUnits{
-		CPU:     &CPU{Units: NewResourceValue(1000)},
-		Memory:  &Memory{Quantity: NewResourceValue(10 * unit.Gi)},
-		Storage: &Storage{Quantity: NewResourceValue(10 * unit.Gi)},
+		CPU:    &CPU{Units: NewResourceValue(1000)},
+		Memory: &Memory{Quantity: NewResourceValue(10 * unit.Gi)},
+		Storage: Volumes{
+			Storage{Quantity: NewResourceValue(10 * unit.Gi)},
+		},
 	}
 	cpuAsString := ru.CPU.String()
 	newRu, err := ru.Sub(
 		ResourceUnits{
-			CPU:     &CPU{Units: NewResourceValue(1)},
-			Memory:  &Memory{Quantity: NewResourceValue(0 * unit.Gi)},
-			Storage: &Storage{Quantity: NewResourceValue(0 * unit.Gi)},
+			CPU:    &CPU{Units: NewResourceValue(1)},
+			Memory: &Memory{Quantity: NewResourceValue(0 * unit.Gi)},
+			Storage: Volumes{
+				Storage{Quantity: NewResourceValue(0 * unit.Gi)},
+			},
 		},
 	)
 	require.NoError(t, err)

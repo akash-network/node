@@ -3,12 +3,12 @@ package bidengine
 import (
 	"context"
 	"errors"
+	"testing"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/sdkutil"
 
-	"testing"
+	"github.com/ovrclk/akash/sdkutil"
 
 	"github.com/stretchr/testify/mock"
 
@@ -57,13 +57,16 @@ func makeMocks(s *orderTestScaffold) {
 	memory := atypes.Memory{}
 	memory.Quantity = atypes.NewResourceValue(dtypes.GetValidationConfig().MinUnitMemory)
 
-	storage := atypes.Storage{}
-	storage.Quantity = atypes.NewResourceValue(dtypes.GetValidationConfig().MinUnitStorage)
+	storage := atypes.Volumes{
+		atypes.Storage{
+			Quantity: atypes.NewResourceValue(dtypes.GetValidationConfig().MinUnitStorage),
+		},
+	}
 
 	clusterResources := atypes.ResourceUnits{
 		CPU:     &cpu,
 		Memory:  &memory,
-		Storage: &storage,
+		Storage: storage,
 	}
 	price := sdk.NewInt64Coin(testutil.CoinDenom, 23)
 	resource := dtypes.Resource{
@@ -111,6 +114,10 @@ func makeMocks(s *orderTestScaffold) {
 type nullProviderAttrSignatureService struct{}
 
 func (nullProviderAttrSignatureService) GetAuditorAttributeSignatures(auditor string) ([]audittypes.Provider, error) {
+	return nil, nil // Return no attributes & no error
+}
+
+func (nullProviderAttrSignatureService) GetAttributes() (atypes.Attributes, error) {
 	return nil, nil // Return no attributes & no error
 }
 

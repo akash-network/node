@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"k8s.io/client-go/tools/remotecommand"
 	"math/rand"
 	"sync"
 	"time"
+
+	"k8s.io/client-go/tools/remotecommand"
 
 	eventsv1 "k8s.io/api/events/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +24,6 @@ import (
 )
 
 var (
-	_ Client = (*nullClient)(nil)
 	// Errors types returned by the Exec function on the client interface
 	ErrExec                        = errors.New("remote command execute error")
 	ErrExecNoServiceWithName       = fmt.Errorf("%w: no such service exists with that name", ErrExec)
@@ -37,7 +37,10 @@ var (
 	errNotImplemented = errors.New("not implemented")
 )
 
+var _ Client = (*nullClient)(nil)
+
 type ReadClient interface {
+	ActiveStorageClasses(context.Context) ([]string, error)
 	LeaseStatus(context.Context, mtypes.LeaseID) (*ctypes.LeaseStatus, error)
 	LeaseEvents(context.Context, mtypes.LeaseID, string, bool) (ctypes.EventsWatcher, error)
 	LeaseLogs(context.Context, mtypes.LeaseID, string, bool, *int64) ([]*ctypes.ServiceLog, error)
@@ -50,7 +53,7 @@ type Client interface {
 	Deploy(context.Context, mtypes.LeaseID, *manifest.Group) error
 	TeardownLease(context.Context, mtypes.LeaseID) error
 	Deployments(context.Context) ([]ctypes.Deployment, error)
-	Inventory(context.Context) ([]ctypes.Node, error)
+	Inventory(context.Context) (ctypes.Inventory, error)
 	Exec(ctx context.Context,
 		lID mtypes.LeaseID,
 		service string,
@@ -69,12 +72,34 @@ func ErrorIsOkToSendToClient(err error) bool {
 
 type node struct {
 	id                    string
-	availableResources    atypes.ResourceUnits
-	allocateableResources atypes.ResourceUnits
+	availableResources    ctypes.ResourceUnits
+	allocateableResources ctypes.ResourceUnits
 }
 
-// NewNode returns new Node instance with provided details
-func NewNode(id string, allocateable atypes.ResourceUnits, available atypes.ResourceUnits) ctypes.Node {
+var _ ctypes.Node = (*node)(nil)
+
+type inventory struct {
+	nodes []*node
+}
+
+func NewInventory() ctypes.Inventory {
+	return &inventory{}
+}
+
+func (inv *inventory) AddNode(id string, allocateable ctypes.ResourceUnits, available ctypes.ResourceUnits) {
+	inv.nodes = append(inv.nodes, newNode(id, allocateable, available))
+}
+
+func (inv *inventory) Nodes() []ctypes.Node {
+	return inv.nodes
+}
+
+func (inv *inventory) AddStorageClass(class string) {
+
+}
+
+// newNode returns new Node instance with provided details
+func newNode(id string, allocateable ctypes.ResourceUnits, available ctypes.ResourceUnits) *node {
 	return &node{id: id, allocateableResources: allocateable, availableResources: available}
 }
 
@@ -88,11 +113,11 @@ func (n *node) Reserve(atypes.ResourceUnits) error {
 }
 
 // Available returns available units of node
-func (n *node) Available() atypes.ResourceUnits {
+func (n *node) Available() ctypes.ResourceUnits {
 	return n.availableResources
 }
 
-func (n *node) Allocateable() atypes.ResourceUnits {
+func (n *node) Allocateable() ctypes.ResourceUnits {
 	return n.allocateableResources
 }
 
@@ -252,33 +277,42 @@ func (c *nullClient) Deployments(context.Context) ([]ctypes.Deployment, error) {
 	return nil, nil
 }
 
-func (c *nullClient) Inventory(context.Context) ([]ctypes.Node, error) {
-	return []ctypes.Node{
-		NewNode("solo", atypes.ResourceUnits{
-			CPU: &atypes.CPU{
-				Units: atypes.NewResourceValue(nullClientCPU),
-			},
-			Memory: &atypes.Memory{
-				Quantity: atypes.NewResourceValue(nullClientMemory),
-			},
-			Storage: &atypes.Storage{
-				Quantity: atypes.NewResourceValue(nullClientStorage),
-			},
-		},
-			atypes.ResourceUnits{
-				CPU: &atypes.CPU{
-					Units: atypes.NewResourceValue(nullClientCPU),
-				},
-				Memory: &atypes.Memory{
-					Quantity: atypes.NewResourceValue(nullClientMemory),
-				},
-				Storage: &atypes.Storage{
-					Quantity: atypes.NewResourceValue(nullClientStorage),
-				},
-			}),
-	}, nil
+func (c *nullClient) Inventory(context.Context) (ctypes.Inventory, error) {
+	inventory := NewInventory()
+	// return []ctypes.Node{
+	// 	NewNode("solo", ctypes.ResourceUnits{
+	// 		CPU: &atypes.CPU{
+	// 			Units: atypes.NewResourceValue(nullClientCPU),
+	// 		},
+	// 		Memory: &atypes.Memory{
+	// 			Quantity: atypes.NewResourceValue(nullClientMemory),
+	// 		},
+	// 		// Storage: atypes.Volumes{
+	// 		// 	atypes.Storage{
+	// 		// 		Quantity: atypes.NewResourceValue(nullClientStorage),
+	// 		// 	},
+	// 		// },
+	// 	},
+	// 		ctypes.ResourceUnits{
+	// 			CPU: &atypes.CPU{
+	// 				Units: atypes.NewResourceValue(nullClientCPU),
+	// 			},
+	// 			Memory: &atypes.Memory{
+	// 				Quantity: atypes.NewResourceValue(nullClientMemory),
+	// 			},
+	// 			// Storage: &atypes.Storage{
+	// 			// 	Quantity: atypes.NewResourceValue(nullClientStorage),
+	// 			// },
+	// 		}),
+	// }, nil
+
+	return inventory, nil
 }
 
 func (c *nullClient) Exec(context.Context, mtypes.LeaseID, string, uint, []string, io.Reader, io.Writer, io.Writer, bool, remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error) {
 	return nil, errNotImplemented
+}
+
+func (c *nullClient) ActiveStorageClasses(context.Context) ([]string, error) {
+	return []string{}, errNotImplemented
 }

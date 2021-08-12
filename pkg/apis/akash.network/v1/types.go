@@ -40,7 +40,30 @@ type ManifestSpec struct {
 	Group   ManifestGroup `json:"group"`
 }
 
-// type ResourceUnits types.ResourceUnits
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type StorageClassState struct {
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	// +optional
+	metav1.ObjectMeta `json:"metadata"`
+
+	Spec   StorageClassStateSpec
+	Status StorageClassStateStatus
+}
+
+type StorageClassStateStatus struct {
+	State   string `json:"state,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+type StorageClassStateSpec struct {
+	Capacity  uint64 `json:"capacity"`
+	Available uint64 `json:"available"`
+}
 
 // Deployment returns the cluster.Deployment that the saved manifest represents.
 func (m Manifest) Deployment() (ctypes.Deployment, error) {
@@ -87,6 +110,23 @@ func NewManifest(name string, lid mtypes.LeaseID, mgroup *manifest.Group) (*Mani
 		Spec: ManifestSpec{
 			Group:   group,
 			LeaseID: leaseIDFromAkash(lid),
+		},
+	}, nil
+}
+
+// NewStorageClassState creates new storage class state with provided details. Returns error in case of failure.
+func NewStorageClassState(name string, capacity uint64, available uint64) (*StorageClassState, error) {
+	return &StorageClassState{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "StorageClassState",
+			APIVersion: "akash.network/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: StorageClassStateSpec{
+			Capacity:  capacity,
+			Available: available,
 		},
 	}, nil
 }
@@ -343,4 +383,13 @@ type ManifestList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:",inline"`
 	Items           []Manifest `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// StorageClassStateList stores metadata and items list of storage class states
+type StorageClassStateList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:",inline"`
+	Items           []StorageClassState `json:"items"`
 }

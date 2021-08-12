@@ -4,8 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/shopspring/decimal"
-	io "io"
+	"io"
 	"math"
 	"math/big"
 	"os"
@@ -14,12 +13,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/require"
+
 	"github.com/ovrclk/akash/testutil"
 	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_ScalePricingRejectsAllZero(t *testing.T) {
@@ -59,13 +61,14 @@ func defaultGroupSpec() *dtypes.GroupSpec {
 	memory := atypes.Memory{}
 	memory.Quantity = atypes.NewResourceValue(10000)
 
-	storage := atypes.Storage{}
-	storage.Quantity = atypes.NewResourceValue(4096)
-
 	clusterResources := atypes.ResourceUnits{
-		CPU:     &cpu,
-		Memory:  &memory,
-		Storage: &storage,
+		CPU:    &cpu,
+		Memory: &memory,
+		Storage: atypes.Volumes{
+			atypes.Storage{
+				Quantity: atypes.NewResourceValue(4096),
+			},
+		},
 	}
 	price := sdk.NewInt64Coin("uakt", 23)
 	resource := dtypes.Resource{
@@ -228,7 +231,7 @@ func Test_ScalePricingOnStorage(t *testing.T) {
 
 	gspec := defaultGroupSpec()
 	storageQuantity := uint64(98765)
-	gspec.Resources[0].Resources.Storage.Quantity = atypes.NewResourceValue(storageQuantity)
+	gspec.Resources[0].Resources.Storage[0].Quantity = atypes.NewResourceValue(storageQuantity)
 	price, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
 
 	// one is added due to fractional rounding in the implementation
@@ -246,7 +249,7 @@ func Test_ScalePricingByCountOfResources(t *testing.T) {
 
 	gspec := defaultGroupSpec()
 	storageQuantity := uint64(111)
-	gspec.Resources[0].Resources.Storage.Quantity = atypes.NewResourceValue(storageQuantity)
+	gspec.Resources[0].Resources.Storage[0].Quantity = atypes.NewResourceValue(storageQuantity)
 	firstPrice, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
 
 	// one is added due to fractional rounding in the implementation
@@ -528,7 +531,9 @@ func Test_ScriptPricingWritesJsonToStdin(t *testing.T) {
 	// Open the file and make sure it has the JSON
 	fin, err := os.Open(jsonPath)
 	require.NoError(t, err)
-	defer fin.Close()
+	defer func() {
+		_ = fin.Close()
+	}()
 	decoder := json.NewDecoder(fin)
 	data := make([]dataForScriptElement, 0)
 	err = decoder.Decode(&data)
@@ -539,7 +544,7 @@ func Test_ScriptPricingWritesJsonToStdin(t *testing.T) {
 	for i, r := range gspec.Resources {
 		require.Equal(t, r.Resources.CPU.Units.Val.Uint64(), data[i].CPU)
 		require.Equal(t, r.Resources.Memory.Quantity.Val.Uint64(), data[i].Memory)
-		require.Equal(t, r.Resources.Storage.Quantity.Val.Uint64(), data[i].Storage)
+		require.Equal(t, r.Resources.Storage[0].Quantity.Val.Uint64(), data[i].Storage)
 		require.Equal(t, r.Count, data[i].Count)
 		require.Equal(t, len(r.Resources.Endpoints), data[i].EndpointQuantity)
 	}

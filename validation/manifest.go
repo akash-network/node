@@ -5,13 +5,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/pkg/errors"
+
+	"github.com/ovrclk/akash/provider/cluster/util"
+
+	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
 var (
@@ -223,7 +225,7 @@ deploymentGroupLoop:
 				continue
 			}
 
-			// If the manifest group contains more resources than the deploynent group, then
+			// If the manifest group contains more resources than the deployment group, then
 			// fulfill the deployment group entirely
 			if mrec.Count >= drec.Count {
 				mrec.Count -= drec.Count

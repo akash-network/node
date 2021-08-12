@@ -33,7 +33,7 @@ profiles:
         storage:
           size: 128Mi
           attributes:
-            storage-class: ssd
+            class: standard
   placement:
     westcoast:
       attributes:

@@ -5,12 +5,12 @@ import (
 )
 
 type v2ComputeResources struct {
-	CPU     *v2ResourceCPU     `yaml:"cpu"`
-	Memory  *v2ResourceMemory  `yaml:"memory"`
-	Storage *v2ResourceStorage `yaml:"storage"`
+	CPU     *v2ResourceCPU         `yaml:"cpu"`
+	Memory  *v2ResourceMemory      `yaml:"memory"`
+	Storage v2ResourceStorageArray `yaml:"storage"`
 }
 
-func (sdl *v2ComputeResources) toResourceUnits() types.ResourceUnits {
+func (sdl *v2ComputeResources) toDGroupResourceUnits() types.ResourceUnits {
 	if sdl == nil {
 		return types.ResourceUnits{}
 	}
@@ -19,21 +19,56 @@ func (sdl *v2ComputeResources) toResourceUnits() types.ResourceUnits {
 	if sdl.CPU != nil {
 		units.CPU = &types.CPU{
 			Units:      types.NewResourceValue(uint64(sdl.CPU.Units)),
-			Attributes: sdl.CPU.Attributes,
+			Attributes: types.Attributes(sdl.CPU.Attributes),
 		}
 	}
 	if sdl.Memory != nil {
 		units.Memory = &types.Memory{
 			Quantity:   types.NewResourceValue(uint64(sdl.Memory.Quantity)),
-			Attributes: sdl.Memory.Attributes,
-		}
-	}
-	if sdl.Storage != nil {
-		units.Storage = &types.Storage{
-			Quantity:   types.NewResourceValue(uint64(sdl.Storage.Quantity)),
-			Attributes: sdl.Storage.Attributes,
+			Attributes: types.Attributes(sdl.Memory.Attributes),
 		}
 	}
 
+	for _, storage := range sdl.Storage {
+		storageEntry := types.Storage{
+			Name:       storage.Name,
+			Quantity:   types.NewResourceValue(uint64(storage.Quantity)),
+			Attributes: types.Attributes(storage.Attributes),
+		}
+
+		units.Storage = append(units.Storage, storageEntry)
+	}
+
 	return units
+}
+
+func toManifestResources(res *v2ComputeResources, svc v2Service) (types.ResourceUnits, error) {
+	var units types.ResourceUnits
+
+	if res.CPU != nil {
+		units.CPU = &types.CPU{
+			Units: types.NewResourceValue(uint64(res.CPU.Units)),
+		}
+	}
+	if res.Memory != nil {
+		units.Memory = &types.Memory{
+			Quantity: types.NewResourceValue(uint64(res.Memory.Quantity)),
+		}
+	}
+
+	for _, storage := range res.Storage {
+		storageEntry := types.Storage{
+			Name:     storage.Name,
+			Quantity: types.NewResourceValue(uint64(storage.Quantity)),
+		}
+
+		if params, exists := svc.Params.Storage[storage.Name]; exists {
+			storageEntry.Attributes = make(types.Attributes, 0, len(params))
+			copy(storageEntry.Attributes, params)
+		}
+
+		units.Storage = append(units.Storage, storageEntry)
+	}
+
+	return units, nil
 }

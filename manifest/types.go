@@ -58,7 +58,7 @@ type Service struct {
 	Expose    []ServiceExpose
 }
 
-// GetResourcesUnit returns resources unit of service
+// GetResourceUnits returns resources unit of service
 func (s Service) GetResourceUnits() types.ResourceUnits {
 	return s.Resources
 }

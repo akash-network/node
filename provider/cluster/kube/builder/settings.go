@@ -1,13 +1,15 @@
-package kube
+package builder
 
 import (
 	"fmt"
-	validation_util "github.com/ovrclk/akash/util/validation"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+
+	validation_util "github.com/ovrclk/akash/util/validation"
 )
 
-// settings configures k8s object generation such that it is customized to the
+// Settings configures k8s object generation such that it is customized to the
 // cluster environment that is being used.
 // For instance, GCP requires a different service type than minikube.
 type Settings struct {
@@ -41,16 +43,16 @@ type Settings struct {
 	DeploymentRuntimeClass string
 }
 
-var errSettingsValidation = errors.New("settings validation")
+var ErrSettingsValidation = errors.New("settings validation")
 
-func validateSettings(settings Settings) error {
+func ValidateSettings(settings Settings) error {
 	if settings.DeploymentIngressStaticHosts {
 		if settings.DeploymentIngressDomain == "" {
-			return errors.Wrap(errSettingsValidation, "empty ingress domain")
+			return errors.Wrap(ErrSettingsValidation, "empty ingress domain")
 		}
 
 		if !validation_util.IsDomainName(settings.DeploymentIngressDomain) {
-			return fmt.Errorf("%w: invalid domain name %q", errSettingsValidation, settings.DeploymentIngressDomain)
+			return fmt.Errorf("%w: invalid domain name %q", ErrSettingsValidation, settings.DeploymentIngressDomain)
 		}
 	}
 

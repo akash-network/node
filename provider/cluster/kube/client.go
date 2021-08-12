@@ -3,11 +3,17 @@ package kube
 import (
 	"context"
 	"fmt"
-	metricsutils "github.com/ovrclk/akash/util/metrics"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"os"
 	"path"
+	"strings"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	"github.com/ovrclk/akash/provider/cluster/kube/builder"
+	"github.com/ovrclk/akash/types"
+
+	metricsutils "github.com/ovrclk/akash/util/metrics"
 
 	"k8s.io/client-go/util/flowcontrol"
 
@@ -31,12 +37,12 @@ import (
 
 	"github.com/tendermint/tendermint/libs/log"
 
+	"k8s.io/client-go/tools/pager"
+
 	"github.com/ovrclk/akash/manifest"
 	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
-	"github.com/ovrclk/akash/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	"k8s.io/client-go/tools/pager"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	restclient "k8s.io/client-go/rest"
@@ -68,20 +74,20 @@ type client struct {
 	ac                akashclient.Interface
 	metc              metricsclient.Interface
 	ns                string
-	settings          Settings
+	settings          builder.Settings
 	log               log.Logger
 	kubeContentConfig *restclient.Config
 }
 
 // NewClient returns new Kubernetes Client instance with provided logger, host and ns. Returns error incase of failure
-func NewClient(log log.Logger, ns string, settings Settings) (Client, error) {
-	if err := validateSettings(settings); err != nil {
+func NewClient(log log.Logger, ns string, settings builder.Settings) (Client, error) {
+	if err := builder.ValidateSettings(settings); err != nil {
 		return nil, err
 	}
 	return newClientWithSettings(log, ns, settings)
 }
 
-func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client, error) {
+func newClientWithSettings(log log.Logger, ns string, settings builder.Settings) (Client, error) {
 	ctx := context.Background()
 
 	config, err := openKubeConfig(settings.ConfigPath, log)
@@ -140,6 +146,10 @@ func openKubeConfig(cfgPath string, log log.Logger) (*rest.Config, error) {
 	return rest.InClusterConfig()
 }
 
+func (c *client) ActiveStorageClasses(ctx context.Context) ([]string, error) {
+	return c.storageClasses(ctx)
+}
+
 func (c *client) Deployments(ctx context.Context) ([]ctypes.Deployment, error) {
 	manifests, err := c.ac.AkashV1().Manifests(c.ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -159,23 +169,25 @@ func (c *client) Deployments(ctx context.Context) ([]ctypes.Deployment, error) {
 }
 
 func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest.Group) error {
-	if err := applyNS(ctx, c.kc, newNSBuilder(c.settings, lid, group)); err != nil {
+	if err := applyNS(ctx, c.kc, builder.NewNS(c.settings, lid, group)); err != nil {
 		c.log.Error("applying namespace", "err", err, "lease", lid)
 		return err
 	}
 
 	// TODO: re-enable.  see #946
-	// if err := applyRestrictivePodSecPoliciesToNS(ctx, c.kc, newPspBuilder(c.settings, lid, group)); err != nil {
+	// pspRestrictedBuilder produces restrictive PodSecurityPolicies for tenant Namespaces.
+	// Restricted PSP source: https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/policy/restricted-psp.yaml
+	// if err := applyRestrictivePodSecPoliciesToNS(ctx, c.kc, builder.NewPsp(c.settings, lid, group)); err != nil {
 	// 	c.log.Error("applying pod security policies", "err", err, "lease", lid)
 	// 	return err
 	// }
 
-	if err := applyNetPolicies(ctx, c.kc, newNetPolBuilder(c.settings, lid, group)); err != nil {
+	if err := applyNetPolicies(ctx, c.kc, builder.NewNetPol(c.settings, lid, group)); err != nil {
 		c.log.Error("applying namespace network policies", "err", err, "lease", lid)
 		return err
 	}
 
-	if err := applyManifest(ctx, c.ac, newManifestBuilder(c.log, c.settings, c.ns, lid, group)); err != nil {
+	if err := applyManifest(ctx, c.ac, builder.NewManifest(c.log, c.settings, lid, group)); err != nil {
 		c.log.Error("applying manifest", "err", err, "lease", lid)
 		return err
 	}
@@ -187,9 +199,25 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 
 	for svcIdx := range group.Services {
 		service := &group.Services[svcIdx]
-		if err := applyDeployment(ctx, c.kc, newDeploymentBuilder(c.log, c.settings, lid, group, service)); err != nil {
-			c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)
-			return err
+
+		persistent := false
+		for i := range service.Resources.Storage {
+			attrVal := service.Resources.Storage[i].Attributes.Find(builder.StorageAttributePersistent)
+			if persistent, _ = attrVal.AsBool(); persistent {
+				break
+			}
+		}
+
+		if persistent {
+			if err := applyStatefulSet(ctx, c.kc, builder.NewStatefulSet(c.log, c.settings, lid, group, service)); err != nil {
+				c.log.Error("applying statefulSet", "err", err, "lease", lid, "service", service.Name)
+				return err
+			}
+		} else {
+			if err := applyDeployment(ctx, c.kc, builder.NewDeployment(c.log, c.settings, lid, group, service)); err != nil {
+				c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)
+				return err
+			}
 		}
 
 		if len(service.Expose) == 0 {
@@ -197,16 +225,16 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 			continue
 		}
 
-		serviceBuilderLocal := newServiceBuilder(c.log, c.settings, lid, group, service, false)
-		if serviceBuilderLocal.any() {
+		serviceBuilderLocal := builder.NewService(c.log, c.settings, lid, group, service, false)
+		if serviceBuilderLocal.Any() {
 			if err := applyService(ctx, c.kc, serviceBuilderLocal); err != nil {
 				c.log.Error("applying local service", "err", err, "lease", lid, "service", service.Name)
 				return err
 			}
 		}
 
-		serviceBuilderGlobal := newServiceBuilder(c.log, c.settings, lid, group, service, true)
-		if serviceBuilderGlobal.any() {
+		serviceBuilderGlobal := builder.NewService(c.log, c.settings, lid, group, service, true)
+		if serviceBuilderGlobal.Any() {
 			if err := applyService(ctx, c.kc, serviceBuilderGlobal); err != nil {
 				c.log.Error("applying global service", "err", err, "lease", lid, "service", service.Name)
 				return err
@@ -218,7 +246,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 			if !util.ShouldBeIngress(expose) {
 				continue
 			}
-			if err := applyIngress(ctx, c.kc, newIngressBuilder(c.log, c.settings, lid, group, service, &service.Expose[expIdx])); err != nil {
+			if err := applyIngress(ctx, c.kc, builder.NewIngress(c.log, c.settings, lid, group, service, &service.Expose[expIdx])); err != nil {
 				c.log.Error("applying ingress", "err", err, "lease", lid, "service", service.Name, "expose", expose)
 				return err
 			}
@@ -229,13 +257,15 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 }
 
 func (c *client) TeardownLease(ctx context.Context, lid mtypes.LeaseID) error {
-	result := c.kc.CoreV1().Namespaces().Delete(ctx, lidNS(lid), metav1.DeleteOptions{})
+	result := c.kc.CoreV1().Namespaces().Delete(ctx, builder.LidNS(lid), metav1.DeleteOptions{})
 
 	label := metricsutils.SuccessLabel
 	if result != nil {
 		label = metricsutils.FailLabel
 	}
 	kubeCallsCounter.WithLabelValues("namespaces-delete", label).Inc()
+
+	result = c.ac.AkashV1().Manifests("lease").Delete(ctx, builder.LidNS(lid), metav1.DeleteOptions{})
 
 	return result
 }
@@ -291,12 +321,12 @@ func (c *client) LeaseEvents(ctx context.Context, lid mtypes.LeaseID, services s
 
 	listOpts := metav1.ListOptions{}
 	if len(services) != 0 {
-		listOpts.LabelSelector = fmt.Sprintf(akashManifestServiceLabelName+" in (%s)", services)
+		listOpts.LabelSelector = fmt.Sprintf(builder.AkashManifestServiceLabelName+" in (%s)", services)
 	}
 
 	var wtch ctypes.EventsWatcher
 	if follow {
-		watcher, err := c.kc.EventsV1().Events(lidNS(lid)).Watch(ctx, listOpts)
+		watcher, err := c.kc.EventsV1().Events(builder.LidNS(lid)).Watch(ctx, listOpts)
 		label := metricsutils.SuccessLabel
 		if err != nil {
 			label = metricsutils.FailLabel
@@ -308,7 +338,7 @@ func (c *client) LeaseEvents(ctx context.Context, lid mtypes.LeaseID, services s
 
 		wtch = newEventsFeedWatch(ctx, watcher)
 	} else {
-		list, err := c.kc.EventsV1().Events(lidNS(lid)).List(ctx, listOpts)
+		list, err := c.kc.EventsV1().Events(builder.LidNS(lid)).List(ctx, listOpts)
 		label := metricsutils.SuccessLabel
 		if err != nil {
 			label = metricsutils.FailLabel
@@ -332,12 +362,12 @@ func (c *client) LeaseLogs(ctx context.Context, lid mtypes.LeaseID,
 
 	listOpts := metav1.ListOptions{}
 	if len(services) != 0 {
-		listOpts.LabelSelector = fmt.Sprintf(akashManifestServiceLabelName+" in (%s)", services)
+		listOpts.LabelSelector = fmt.Sprintf(builder.AkashManifestServiceLabelName+" in (%s)", services)
 	}
 
 	c.log.Error("filtering pods", "labelSelector", listOpts.LabelSelector)
 
-	pods, err := c.kc.CoreV1().Pods(lidNS(lid)).List(ctx, listOpts)
+	pods, err := c.kc.CoreV1().Pods(builder.LidNS(lid)).List(ctx, listOpts)
 	label := metricsutils.SuccessLabel
 	if err != nil {
 		label = metricsutils.FailLabel
@@ -349,7 +379,7 @@ func (c *client) LeaseLogs(ctx context.Context, lid mtypes.LeaseID,
 	}
 	streams := make([]*ctypes.ServiceLog, len(pods.Items))
 	for i, pod := range pods.Items {
-		stream, err := c.kc.CoreV1().Pods(lidNS(lid)).GetLogs(pod.Name, &corev1.PodLogOptions{
+		stream, err := c.kc.CoreV1().Pods(builder.LidNS(lid)).GetLogs(pod.Name, &corev1.PodLogOptions{
 			Follow:     follow,
 			TailLines:  tailLines,
 			Timestamps: false,
@@ -391,7 +421,7 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 		serviceStatus[deployment.Name] = status
 	}
 
-	ingress, err := c.kc.NetworkingV1().Ingresses(lidNS(lid)).List(ctx, metav1.ListOptions{})
+	ingress, err := c.kc.NetworkingV1().Ingresses(builder.LidNS(lid)).List(ctx, metav1.ListOptions{})
 	label := metricsutils.SuccessLabel
 	if err != nil {
 		label = metricsutils.FailLabel
@@ -402,7 +432,7 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 		return nil, errors.Wrap(err, ErrInternalError.Error())
 	}
 
-	services, err := c.kc.CoreV1().Services(lidNS(lid)).List(ctx, metav1.ListOptions{})
+	services, err := c.kc.CoreV1().Services(builder.LidNS(lid)).List(ctx, metav1.ListOptions{})
 	label = metricsutils.SuccessLabel
 	if err != nil {
 		label = metricsutils.FailLabel
@@ -445,7 +475,7 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 	for _, service := range services.Items {
 		if service.Spec.Type == corev1.ServiceTypeNodePort {
 			serviceName := service.Name // Always suffixed during creation, so chop it off
-			deploymentName := serviceName[0 : len(serviceName)-len(suffixForNodePortServiceName)]
+			deploymentName := serviceName[0 : len(serviceName)-len(builder.SuffixForNodePortServiceName)]
 			deployment, ok := serviceStatus[deploymentName]
 			if ok && 0 != len(service.Spec.Ports) {
 				portsForDeployment := make([]ctypes.ForwardedPortStatus, 0, len(service.Spec.Ports))
@@ -505,8 +535,8 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 		return nil, err
 	}
 
-	c.log.Debug("get deployment", "lease-ns", lidNS(lid), "name", name)
-	deployment, err := c.kc.AppsV1().Deployments(lidNS(lid)).Get(ctx, name, metav1.GetOptions{})
+	c.log.Debug("get deployment", "lease-ns", builder.LidNS(lid), "name", name)
+	deployment, err := c.kc.AppsV1().Deployments(builder.LidNS(lid)).Get(ctx, name, metav1.GetOptions{})
 	label := metricsutils.SuccessLabel
 	if err != nil {
 		label = metricsutils.FailLabel
@@ -524,10 +554,10 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 
 	hasIngress := false
 	// Get manifest definition from CRD
-	c.log.Debug("Pulling manifest from CRD", "lease-ns", lidNS(lid))
-	obj, err := c.ac.AkashV1().Manifests(c.ns).Get(ctx, lidNS(lid), metav1.GetOptions{})
+	c.log.Debug("Pulling manifest from CRD", "lease-ns", builder.LidNS(lid))
+	obj, err := c.ac.AkashV1().Manifests(c.ns).Get(ctx, builder.LidNS(lid), metav1.GetOptions{})
 	if err != nil {
-		c.log.Error("CRD manifest not found", "lease-ns", lidNS(lid), "name", name)
+		c.log.Error("CRD manifest not found", "lease-ns", builder.LidNS(lid), "name", name)
 		return nil, err
 	}
 
@@ -561,7 +591,7 @@ exposeCheckLoop:
 		return nil, fmt.Errorf("%w: service %q", ErrNoServiceForLease, name)
 	}
 
-	c.log.Debug("service result", "lease-ns", lidNS(lid), "hasIngress", hasIngress)
+	c.log.Debug("service result", "lease-ns", builder.LidNS(lid), "hasIngress", hasIngress)
 
 	result := &ctypes.ServiceStatus{
 		Name:               deployment.Name,
@@ -575,7 +605,7 @@ exposeCheckLoop:
 	}
 
 	if hasIngress {
-		ingress, err := c.kc.NetworkingV1().Ingresses(lidNS(lid)).Get(ctx, name, metav1.GetOptions{})
+		ingress, err := c.kc.NetworkingV1().Ingresses(builder.LidNS(lid)).Get(ctx, name, metav1.GetOptions{})
 		label := metricsutils.SuccessLabel
 		if err != nil {
 			label = metricsutils.FailLabel
@@ -608,17 +638,22 @@ exposeCheckLoop:
 	return result, nil
 }
 
-func (c *client) Inventory(ctx context.Context) ([]ctypes.Node, error) {
+func (c *client) Inventory(ctx context.Context) (ctypes.Inventory, error) {
+	sclasses, err := c.storageClasses(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	// Load all the nodes
 	knodes, err := c.activeNodes(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	nodes := make([]ctypes.Node, 0, len(knodes))
+	inventory := cluster.NewInventory()
+
 	// Iterate over the node metrics
 	for nodeName, knode := range knodes {
-
 		// Get the amount of available CPU, then subtract that in use
 		var tmp resource.Quantity
 
@@ -628,8 +663,8 @@ func (c *client) Inventory(ctx context.Context) ([]ctypes.Node, error) {
 		tmp = knode.memory.allocatable
 		memoryTotal := (&tmp).Value()
 
-		tmp = knode.storage.allocatable
-		storageTotal := (&tmp).Value()
+		tmp = knode.ephemeralStorage.allocatable
+		ephemeralStorageTotal := (&tmp).Value()
 
 		tmp = knode.cpu.available()
 		cpuAvailable := (&tmp).MilliValue()
@@ -643,13 +678,13 @@ func (c *client) Inventory(ctx context.Context) ([]ctypes.Node, error) {
 			memoryAvailable = 0
 		}
 
-		tmp = knode.storage.available()
-		storageAvailable := (&tmp).Value()
-		if storageAvailable < 0 {
-			storageAvailable = 0
+		tmp = knode.ephemeralStorage.available()
+		ephemeralStorageAvailable := (&tmp).Value()
+		if ephemeralStorageAvailable < 0 {
+			ephemeralStorageAvailable = 0
 		}
 
-		resources := types.ResourceUnits{
+		resources := ctypes.ResourceUnits{
 			CPU: &types.CPU{
 				Units: types.NewResourceValue(uint64(cpuAvailable)),
 				Attributes: []types.Attribute{
@@ -664,13 +699,14 @@ func (c *client) Inventory(ctx context.Context) ([]ctypes.Node, error) {
 				Quantity: types.NewResourceValue(uint64(memoryAvailable)),
 				// todo (#788) memory attributes ?
 			},
-			Storage: &types.Storage{
-				Quantity: types.NewResourceValue(uint64(storageAvailable)),
-				// todo (#788) storage attributes like class and iops?
-			},
+			Storage: make(map[string]types.Storage),
 		}
 
-		allocateable := types.ResourceUnits{
+		resources.Storage["ephemeral"] = types.Storage{
+			Quantity: types.NewResourceValue(uint64(ephemeralStorageAvailable)),
+		}
+
+		allocateable := ctypes.ResourceUnits{
 			CPU: &types.CPU{
 				Units: types.NewResourceValue(uint64(cpuTotal)),
 				Attributes: []types.Attribute{
@@ -685,16 +721,17 @@ func (c *client) Inventory(ctx context.Context) ([]ctypes.Node, error) {
 				Quantity: types.NewResourceValue(uint64(memoryTotal)),
 				// todo (#788) memory attributes ?
 			},
-			Storage: &types.Storage{
-				Quantity: types.NewResourceValue(uint64(storageTotal)),
-				// todo (#788) storage attributes like class and iops?
-			},
+			Storage: make(map[string]types.Storage),
 		}
 
-		nodes = append(nodes, cluster.NewNode(nodeName, allocateable, resources))
+		allocateable.Storage["ephemeral"] = types.Storage{
+			Quantity: types.NewResourceValue(uint64(ephemeralStorageTotal)),
+		}
+
+		inventory.AddNode(nodeName, allocateable, resources)
 	}
 
-	return nodes, nil
+	return inventory, nil
 }
 
 type resourcePair struct {
@@ -710,13 +747,97 @@ func (rp resourcePair) available() resource.Quantity {
 }
 
 type nodeResources struct {
-	cpu     resourcePair
-	memory  resourcePair
-	storage resourcePair
-	arch    string
+	cpu                       resourcePair
+	memory                    resourcePair
+	ephemeralStorage          resourcePair
+	persistentVolumes         resourcePair
+	arch                      string
+	volumesAttached           resourcePair
+	persistentVolumesAttached resourcePair
+	volumesMounted            resourcePair
+	persistentVolumesMounted  resourcePair
+	storageclasses            map[string]bool
+}
+
+type NodeStorage struct {
+}
+
+type ActiveClusterStorage struct {
+}
+
+func (c *client) countKubeCall(err error, name string) {
+	label := metricsutils.SuccessLabel
+	if err != nil {
+		label = metricsutils.FailLabel
+	}
+	kubeCallsCounter.WithLabelValues(name, label).Inc()
+}
+
+func (c *client) storageClasses(ctx context.Context) (map[string]resourcePair, error) {
+	classes := make(map[string]bool)
+
+	sc, err := c.kc.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=true", builder.AkashManagedLabelName),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, ksclass := range sc.Items {
+		if !isSupportedStorageClass(ksclass.Name) {
+			continue
+		}
+
+		classes[ksclass.Name] = true
+	}
+
+	storageStates, err := c.ac.AkashV1().StorageClassStates().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	storageResources := make(map[string]resourcePair)
+	for _, state := range storageStates.Items {
+		storageResources[state.Name] = resourcePair{
+			allocatable: *resource.NewQuantity(int64(state.Spec.Capacity), resource.DecimalSI),
+			allocated:   *resource.NewQuantity(int64(state.Spec.Capacity-state.Spec.Available), resource.DecimalSI),
+		}
+	}
+
+	for class := range classes {
+		if _, exists := storageResources[class]; !exists {
+			c.log.Error(fmt.Sprintf("could not find CRD:StorageClassState:%[1]s for class %[1]s", class))
+			delete(classes, class)
+		}
+	}
+
+	for class := range storageResources {
+		if _, exists := classes[class]; !exists {
+			c.log.Error(fmt.Sprintf("CRD:StorageClassState:%[1]s represents non existing storage class %[1]s", class))
+			delete(storageResources, class)
+		}
+	}
+
+	return storageResources, nil
+}
+
+func isSupportedStorageClass(name string) bool {
+	switch name {
+	case "standard":
+		fallthrough
+	case "beta1":
+		fallthrough
+	case "beta2":
+		fallthrough
+	case "beta3":
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *client) activeNodes(ctx context.Context) (map[string]nodeResources, error) {
+	// todo filter nodes by akash.network label
 	knodes, err := c.kc.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	label := metricsutils.SuccessLabel
 	if err != nil {
@@ -738,7 +859,6 @@ func (c *client) activeNodes(ctx context.Context) (map[string]nodeResources, err
 
 	retnodes := make(map[string]nodeResources)
 	for _, knode := range knodes.Items {
-
 		if !c.nodeIsActive(knode) {
 			continue
 		}
@@ -747,7 +867,6 @@ func (c *client) activeNodes(ctx context.Context) (map[string]nodeResources, err
 		cpu := knode.Status.Allocatable.Cpu().DeepCopy()
 		memory := knode.Status.Allocatable.Memory().DeepCopy()
 		storage := knode.Status.Allocatable.StorageEphemeral().DeepCopy()
-
 		entry := nodeResources{
 			arch: knode.Status.NodeInfo.Architecture,
 			cpu: resourcePair{
@@ -756,15 +875,27 @@ func (c *client) activeNodes(ctx context.Context) (map[string]nodeResources, err
 			memory: resourcePair{
 				allocatable: memory,
 			},
-			storage: resourcePair{
+			ephemeralStorage: resourcePair{
 				allocatable: storage,
 			},
+			volumesAttached: resourcePair{
+				allocated: *resource.NewQuantity(int64(len(knode.Status.VolumesAttached)), resource.DecimalSI),
+			},
+			storageclasses: make(map[string]bool),
+		}
+
+		if value, defined := knode.Labels[builder.AkashNetworkStorageClasses]; defined {
+			for _, class := range strings.Split(value, ",") {
+				if isSupportedStorageClass(class) {
+					entry.storageclasses[class] = true
+				}
+			}
 		}
 
 		// Initialize the allocated amount to for each node
 		zero.DeepCopyInto(&entry.cpu.allocated)
 		zero.DeepCopyInto(&entry.memory.allocated)
-		zero.DeepCopyInto(&entry.storage.allocated)
+		zero.DeepCopyInto(&entry.ephemeralStorage.allocated)
 
 		retnodes[knode.Name] = entry
 	}
@@ -775,27 +906,37 @@ func (c *client) activeNodes(ctx context.Context) (map[string]nodeResources, err
 		nodeName := pod.Spec.NodeName
 
 		entry := retnodes[nodeName]
-		cpuAllocated := &entry.cpu.allocated
-		memoryAllocated := &entry.memory.allocated
-		storageAllocated := &entry.storage.allocated
-		for _, container := range pod.Spec.Containers {
-			// Per the documentation Limits > Requests for each pod. But stuff in the kube-system
-			// namespace doesn't follow this. The requests is always summed here since it is what
-			// the cluster considers a dedicated resource
 
-			cpuAllocated.Add(*container.Resources.Requests.Cpu())
-			memoryAllocated.Add(*container.Resources.Requests.Memory())
-			storageAllocated.Add(*container.Resources.Requests.StorageEphemeral())
+		for _, container := range pod.Spec.Containers {
+			entry.addAllocatedResources(container.Resources.Requests)
 		}
+
+		// Add overhead for running a pod to the sum of requests
+		// https://kubernetes.io/docs/concepts/scheduling-eviction/pod-overhead/
+		entry.addAllocatedResources(pod.Spec.Overhead)
 
 		retnodes[nodeName] = entry // Map is by value, so store the copy back into the map
 		return nil
 	})
+
 	if err != nil {
 		return nil, err
 	}
 
 	return retnodes, nil
+}
+
+func (nr *nodeResources) addAllocatedResources(rl corev1.ResourceList) {
+	for name, quantity := range rl {
+		switch name {
+		case corev1.ResourceCPU:
+			nr.cpu.allocated.Add(quantity)
+		case corev1.ResourceMemory:
+			nr.memory.allocated.Add(quantity)
+		case corev1.ResourceEphemeralStorage:
+			nr.ephemeralStorage.allocated.Add(quantity)
+		}
+	}
 }
 
 func (c *client) nodeIsActive(node corev1.Node) bool {
@@ -804,13 +945,10 @@ func (c *client) nodeIsActive(node corev1.Node) bool {
 
 	for _, cond := range node.Status.Conditions {
 		switch cond.Type {
-
 		case corev1.NodeReady:
-
 			if cond.Status == corev1.ConditionTrue {
 				ready = true
 			}
-
 		case corev1.NodeMemoryPressure:
 			fallthrough
 		case corev1.NodeDiskPressure:
@@ -818,9 +956,7 @@ func (c *client) nodeIsActive(node corev1.Node) bool {
 		case corev1.NodePIDPressure:
 			fallthrough
 		case corev1.NodeNetworkUnavailable:
-
 			if cond.Status != corev1.ConditionFalse {
-
 				c.log.Error("node in poor condition",
 					"node", node.Name,
 					"condition", cond.Type,
@@ -835,7 +971,7 @@ func (c *client) nodeIsActive(node corev1.Node) bool {
 }
 
 func (c *client) leaseExists(ctx context.Context, lid mtypes.LeaseID) error {
-	_, err := c.kc.CoreV1().Namespaces().Get(ctx, lidNS(lid), metav1.GetOptions{})
+	_, err := c.kc.CoreV1().Namespaces().Get(ctx, builder.LidNS(lid), metav1.GetOptions{})
 	label := metricsutils.SuccessLabel
 	if err != nil && !kubeErrors.IsNotFound(err) {
 		label = metricsutils.FailLabel
@@ -858,7 +994,7 @@ func (c *client) deploymentsForLease(ctx context.Context, lid mtypes.LeaseID) ([
 		return nil, err
 	}
 
-	deployments, err := c.kc.AppsV1().Deployments(lidNS(lid)).List(ctx, metav1.ListOptions{})
+	deployments, err := c.kc.AppsV1().Deployments(builder.LidNS(lid)).List(ctx, metav1.ListOptions{})
 	label := metricsutils.SuccessLabel
 	if err != nil {
 		label = metricsutils.FailLabel
@@ -871,7 +1007,7 @@ func (c *client) deploymentsForLease(ctx context.Context, lid mtypes.LeaseID) ([
 	}
 
 	if deployments == nil || 0 == len(deployments.Items) {
-		c.log.Info("No deployments found for", "lease namespace", lidNS(lid))
+		c.log.Info("No deployments found for", "lease namespace", builder.LidNS(lid))
 		return nil, ErrNoDeploymentForLease
 	}
 

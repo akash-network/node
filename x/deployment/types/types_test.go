@@ -268,3 +268,7 @@ func TestGroupPlacementRequirementsSignerAllOfAnyOf(t *testing.T) {
 
 	require.True(t, group.MatchRequirements(providerAttr))
 }
+
+func TestGroupSpec_MatchResourcesAttributes(t *testing.T) {
+	t.Error("unimplemented")
+}

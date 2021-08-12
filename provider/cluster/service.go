@@ -2,10 +2,13 @@ package cluster
 
 import (
 	"context"
-	lifecycle "github.com/boz/go-lifecycle"
+
+	"github.com/boz/go-lifecycle"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	"github.com/tendermint/tendermint/libs/log"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/event"
@@ -14,7 +17,6 @@ import (
 	atypes "github.com/ovrclk/akash/types"
 	mquery "github.com/ovrclk/akash/x/market/query"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
 // ErrNotRunning is the error when service is not running
@@ -22,6 +24,7 @@ var ErrNotRunning = errors.New("not running")
 
 var (
 	deploymentManagerGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		// fixme provider_deployment_manager
 		Name:        "provider_deploymetn_manager",
 		Help:        "",
 		ConstLabels: nil,

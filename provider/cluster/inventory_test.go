@@ -5,6 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/cluster/mocks"
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
@@ -12,8 +15,6 @@ import (
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/testutil"
 	atypes "github.com/ovrclk/akash/types"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 
@@ -22,19 +23,27 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 )
 
-func newResourceUnits() types.ResourceUnits {
-	return types.ResourceUnits{
-		CPU:     &types.CPU{Units: types.NewResourceValue(1000)},
-		Memory:  &types.Memory{Quantity: types.NewResourceValue(10 * unit.Gi)},
-		Storage: &types.Storage{Quantity: types.NewResourceValue(100 * unit.Gi)},
+func newResourceUnits() ctypes.ResourceUnits {
+	return ctypes.ResourceUnits{
+		CPU:    &types.CPU{Units: types.NewResourceValue(1000)},
+		Memory: &types.Memory{Quantity: types.NewResourceValue(10 * unit.Gi)},
+		Storage: map[string]atypes.Storage{
+			"ephemeral": {
+				Quantity: types.NewResourceValue(100 * unit.Gi),
+			},
+		},
 	}
 }
 
-func zeroResourceUnits() types.ResourceUnits {
-	return types.ResourceUnits{
-		CPU:     &types.CPU{Units: types.NewResourceValue(0)},
-		Memory:  &types.Memory{Quantity: types.NewResourceValue(0 * unit.Gi)},
-		Storage: &types.Storage{Quantity: types.NewResourceValue(0 * unit.Gi)},
+func zeroResourceUnits() ctypes.ResourceUnits {
+	return ctypes.ResourceUnits{
+		CPU:    &types.CPU{Units: types.NewResourceValue(0)},
+		Memory: &types.Memory{Quantity: types.NewResourceValue(0 * unit.Gi)},
+		Storage: map[string]atypes.Storage{
+			"ephemeral": {
+				Quantity: types.NewResourceValue(0 * unit.Gi),
+			},
+		},
 	}
 }
 
@@ -49,8 +58,10 @@ func TestInventory_reservationAllocateable(t *testing.T) {
 				Memory: &types.Memory{
 					Quantity: types.NewResourceValue(memory),
 				},
-				Storage: &types.Storage{
-					Quantity: types.NewResourceValue(storage),
+				Storage: []types.Storage{
+					{
+						Quantity: types.NewResourceValue(storage),
+					},
 				},
 				Endpoints: endpoints,
 			},
@@ -167,8 +178,10 @@ func TestInventory_ClusterDeploymentDeployed(t *testing.T) {
 			Memory: &atypes.Memory{
 				Quantity: types.NewResourceValue(1 * unit.Gi),
 			},
-			Storage: &atypes.Storage{
-				Quantity: types.NewResourceValue(1 * unit.Gi),
+			Storage: []types.Storage{
+				{
+					Quantity: types.NewResourceValue(1 * unit.Gi),
+				},
 			},
 			Endpoints: serviceEndpoints,
 		},
@@ -279,8 +292,10 @@ func TestInventory_OverReservations(t *testing.T) {
 			Memory: &atypes.Memory{
 				Quantity: types.NewResourceValue(1 * unit.Mi),
 			},
-			Storage: &atypes.Storage{
-				Quantity: types.NewResourceValue(1 * unit.Mi),
+			Storage: []types.Storage{
+				{
+					Quantity: types.NewResourceValue(1 * unit.Mi),
+				},
 			},
 			Endpoints: []atypes.Endpoint{},
 		})

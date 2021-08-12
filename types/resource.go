@@ -10,7 +10,7 @@ type Unit interface {
 	String() string
 	equals(Unit) bool
 	add(Unit) error
-	sub(Unit) error
+	Sub(Unit) error
 	le(Unit) bool
 }
 
@@ -31,11 +31,24 @@ type ResourceGroup interface {
 	GetResources() []Resources
 }
 
+type Volumes []Storage
+
 var _ Unit = (*CPU)(nil)
 var _ Unit = (*Memory)(nil)
 var _ Unit = (*Storage)(nil)
 
-// AddUnit it rather searches for existing entry of the same type and sums values
+func (m ResourceUnits) Dup() ResourceUnits {
+	res := ResourceUnits{
+		CPU:       m.CPU.Dup(),
+		Memory:    m.Memory.Dup(),
+		Storage:   m.Storage.Dup(),
+		Endpoints: m.Endpoints.Dup(),
+	}
+
+	return res
+}
+
+// Add it rather searches for existing entry of the same type and sums values
 // if type not found it appends
 func (m ResourceUnits) Add(rhs ResourceUnits) (ResourceUnits, error) {
 	res := m
@@ -56,13 +69,13 @@ func (m ResourceUnits) Add(rhs ResourceUnits) (ResourceUnits, error) {
 		res.Memory = rhs.Memory
 	}
 
-	if res.Storage != nil {
-		if err := res.Storage.add(rhs.Storage); err != nil {
-			return ResourceUnits{}, err
-		}
-	} else {
-		res.Storage = rhs.Storage
-	}
+	// if res.Storage != nil {
+	// 	if err := res.Storage.add(rhs.Storage); err != nil {
+	// 		return ResourceUnits{}, err
+	// 	}
+	// } else {
+	// 	res.Storage = rhs.Storage
+	// }
 
 	return res, nil
 }
@@ -72,44 +85,51 @@ func (m ResourceUnits) Sub(rhs ResourceUnits) (ResourceUnits, error) {
 	if (m.CPU == nil && rhs.CPU != nil) ||
 		(m.Memory == nil && rhs.Memory != nil) ||
 		(m.Storage == nil && rhs.Storage != nil) {
-		return ResourceUnits{}, errCannotSub
+		return ResourceUnits{}, ErrCannotSub
 	}
 
 	// Make a deep copy
 	res := ResourceUnits{
-		CPU:       &CPU{},
-		Memory:    &Memory{},
-		Storage:   &Storage{},
+		CPU:    &CPU{},
+		Memory: &Memory{},
+		// Storage:   &Storage{},
 		Endpoints: nil,
 	}
 	*res.CPU = *m.CPU
 	*res.Memory = *m.Memory
-	*res.Storage = *m.Storage
+	// *res.Storage = *m.Storage
 	res.Endpoints = make([]Endpoint, len(m.Endpoints))
 	copy(res.Endpoints, m.Endpoints)
 
 	if res.CPU != nil {
-		if err := res.CPU.sub(rhs.CPU); err != nil {
+		if err := res.CPU.Sub(rhs.CPU); err != nil {
 			return ResourceUnits{}, err
 		}
 	}
 	if res.Memory != nil {
-		if err := res.Memory.sub(rhs.Memory); err != nil {
+		if err := res.Memory.Sub(rhs.Memory); err != nil {
 			return ResourceUnits{}, err
 		}
 	}
 
-	if res.Storage != nil {
-		if err := res.Storage.sub(rhs.Storage); err != nil {
-			return ResourceUnits{}, err
-		}
-	}
+	// if res.Storage != nil {
+	// 	if err := res.Storage.sub(rhs.Storage); err != nil {
+	// 		return ResourceUnits{}, err
+	// 	}
+	// }
 
 	return res, nil
 }
 
 func (m ResourceUnits) Equals(rhs ResourceUnits) bool {
 	return reflect.DeepEqual(m, rhs)
+}
+
+func (m CPU) Dup() *CPU {
+	return &CPU{
+		Units:      m.Units.Dup(),
+		Attributes: m.Attributes.Dup(),
+	}
 }
 
 func (m *CPU) equals(other Unit) bool {
@@ -150,7 +170,7 @@ func (m *CPU) add(other Unit) error {
 	return nil
 }
 
-func (m *CPU) sub(other Unit) error {
+func (m *CPU) Sub(other Unit) error {
 	rhs, valid := other.(*CPU)
 	if !valid {
 		return nil
@@ -164,6 +184,13 @@ func (m *CPU) sub(other Unit) error {
 	m.Units = res
 
 	return nil
+}
+
+func (m Memory) Dup() *Memory {
+	return &Memory{
+		Quantity:   m.Quantity.Dup(),
+		Attributes: m.Attributes.Dup(),
+	}
 }
 
 func (m *Memory) equals(other Unit) bool {
@@ -204,7 +231,7 @@ func (m *Memory) add(other Unit) error {
 	return nil
 }
 
-func (m *Memory) sub(other Unit) error {
+func (m *Memory) Sub(other Unit) error {
 	rhs, valid := other.(*Memory)
 	if !valid {
 		return nil
@@ -218,6 +245,13 @@ func (m *Memory) sub(other Unit) error {
 	m.Quantity = res
 
 	return nil
+}
+
+func (m Storage) Dup() *Storage {
+	return &Storage{
+		Quantity:   m.Quantity.Dup(),
+		Attributes: m.Attributes.Dup(),
+	}
 }
 
 func (m *Storage) equals(other Unit) bool {
@@ -258,7 +292,7 @@ func (m *Storage) add(other Unit) error {
 	return nil
 }
 
-func (m *Storage) sub(other Unit) error {
+func (m *Storage) Sub(other Unit) error {
 	rhs, valid := other.(*Storage)
 	if !valid {
 		return nil
@@ -272,4 +306,18 @@ func (m *Storage) sub(other Unit) error {
 	m.Quantity = res
 
 	return nil
+}
+
+func (m Volumes) Equal(rhs Volumes) bool {
+	return reflect.DeepEqual(m, rhs)
+}
+
+func (m Volumes) Dup() Volumes {
+	res := make(Volumes, len(m))
+
+	for _, storage := range m {
+		res = append(res, *storage.Dup())
+	}
+
+	return res
 }

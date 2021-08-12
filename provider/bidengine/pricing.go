@@ -14,9 +14,10 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/shopspring/decimal"
+
 	"github.com/ovrclk/akash/types/unit"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/shopspring/decimal"
 )
 
 type BidPricingStrategy interface {
@@ -90,9 +91,9 @@ func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes
 		memoryQuantity = memoryQuantity.Mul(groupCount)
 		memoryTotal = memoryTotal.Add(memoryQuantity)
 
-		storageQuantity := decimal.NewFromBigInt(group.Resources.Storage.Quantity.Val.BigInt(), 0)
-		storageQuantity = storageQuantity.Mul(groupCount)
-		storageTotal = storageTotal.Add(storageQuantity)
+		// storageQuantity := decimal.NewFromBigInt(group.Resources.Storage.Quantity.Val.BigInt(), 0)
+		// storageQuantity = storageQuantity.Mul(groupCount)
+		// storageTotal = storageTotal.Add(storageQuantity)
 
 		endpointQuantity := decimal.NewFromInt(int64(len(group.Resources.Endpoints)))
 		endpointTotal = endpointTotal.Add(endpointQuantity)
@@ -146,7 +147,7 @@ func MakeRandomRangePricing() (BidPricingStrategy, error) {
 	return randomRangePricing(0), nil
 }
 
-func (randomRangePricing) CalculatePrice(ctx context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (randomRangePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	min, max := calculatePriceRange(gspec)
 
 	if min.IsEqual(max) {
@@ -237,7 +238,7 @@ func MakeShellScriptPricing(path string, processLimit uint, runtimeLimit time.Du
 
 	// Use the channel as a semaphore to limit the number of processes created for computing bid processes
 	// Most platforms put a limit on the number of processes a user can open. Even if the limit is high
-	// it isn't a good idea to open thuosands of processes.
+	// it isn't a good idea to open thousands of processes.
 	for i := uint(0); i != processLimit; i++ {
 		result.processLimit <- 0
 	}
@@ -263,13 +264,13 @@ func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, 
 		groupCount := group.Count
 		cpuQuantity := group.Resources.CPU.Units.Val.Uint64()
 		memoryQuantity := group.Resources.Memory.Quantity.Value()
-		storageQuantity := group.Resources.Storage.Quantity.Val.Uint64()
+		// storageQuantity := group.Resources.Storage.Quantity.Val.Uint64()
 		endpointQuantity := len(group.Resources.Endpoints)
 
 		dataForScript[i] = dataForScriptElement{
-			CPU:              cpuQuantity,
-			Memory:           memoryQuantity,
-			Storage:          storageQuantity,
+			CPU:    cpuQuantity,
+			Memory: memoryQuantity,
+			// Storage:          storageQuantity,
 			Count:            groupCount,
 			EndpointQuantity: endpointQuantity,
 		}

@@ -21,10 +21,10 @@ type Status struct {
 
 // InventoryStatus stores active, pending and available units
 type InventoryStatus struct {
-	Active    []atypes.ResourceUnits `json:"active"`
-	Pending   []atypes.ResourceUnits `json:"pending"`
-	Available []atypes.ResourceUnits `json:"available"`
-	Error     error                  `json:"error"`
+	Active    []ResourceUnits `json:"active"`
+	Pending   []ResourceUnits `json:"pending"`
+	Available []ResourceUnits `json:"available"`
+	Error     error           `json:"error"`
 }
 
 // ServiceStatus stores the current status of service
@@ -56,12 +56,29 @@ type LeaseStatus struct {
 	ForwardedPorts map[string][]ForwardedPortStatus `json:"forwarded_ports"` // Container services that are externally accessible
 }
 
+type ResourceUnits struct {
+	CPU       *atypes.CPU
+	Memory    *atypes.Memory
+	Storage   map[string]atypes.Storage
+	Endpoints []atypes.Endpoint
+}
+
 // Node interface predefined with ID and Available methods
 type Node interface {
 	ID() string
-	Available() atypes.ResourceUnits
-	Allocateable() atypes.ResourceUnits
+	Available() ResourceUnits
+	Allocateable() ResourceUnits
 	Reserve(atypes.ResourceUnits) error
+}
+
+type InventoryRead interface {
+	Nodes() []Node
+}
+
+type Inventory interface {
+	InventoryRead
+	AddStorageClass(class string)
+	AddNode(string, ResourceUnits, ResourceUnits)
 }
 
 // Deployment interface defined with LeaseID and ManifestGroup methods
@@ -93,7 +110,6 @@ type LeaseEvent struct {
 	Object              LeaseEventObject `json:"object" yaml:"object"`
 }
 
-// EventsWatcher
 type EventsWatcher interface {
 	Shutdown()
 	Done() <-chan struct{}
@@ -141,4 +157,75 @@ func (e *eventsFeed) ResultChan() <-chan *eventsv1.Event {
 
 type ExecResult interface {
 	ExitCode() int
+}
+
+func (m *ResourceUnits) Sub(rhs atypes.ResourceUnits) (ResourceUnits, error) {
+	if (m.CPU == nil && rhs.CPU != nil) ||
+		(m.Memory == nil && rhs.Memory != nil) ||
+		(m.Storage == nil && rhs.Storage != nil) {
+		return ResourceUnits{}, atypes.ErrCannotSub
+	}
+
+	// Make a deep copy
+	res := ResourceUnits{
+		CPU:       &atypes.CPU{},
+		Memory:    &atypes.Memory{},
+		Storage:   make(map[string]atypes.Storage),
+		Endpoints: make([]atypes.Endpoint, len(m.Endpoints)),
+	}
+
+	*res.CPU = *m.CPU
+	*res.Memory = *m.Memory
+	copy(res.Endpoints, m.Endpoints)
+
+	if res.CPU != nil {
+		if err := res.CPU.Sub(rhs.CPU); err != nil {
+			return ResourceUnits{}, err
+		}
+	}
+	if res.Memory != nil {
+		if err := res.Memory.Sub(rhs.Memory); err != nil {
+			return ResourceUnits{}, err
+		}
+	}
+
+	// for _, storage := range rhs.Storage {
+	//
+	// }
+
+	// if res.Storage != nil {
+	// 	if err := res.Storage.sub(rhs.Storage); err != nil {
+	// 		return ResourceUnits{}, err
+	// 	}
+	// }
+
+	return res, nil
+}
+
+func (m *ResourceUnits) GetCPU() *atypes.CPU {
+	if m != nil {
+		return m.CPU
+	}
+	return nil
+}
+
+func (m *ResourceUnits) GetMemory() *atypes.Memory {
+	if m != nil {
+		return m.Memory
+	}
+	return nil
+}
+
+func (m *ResourceUnits) GetStorage() atypes.Volumes {
+	// if m != nil {
+	// 	return m.Storage
+	// }
+	return nil
+}
+
+func (m *ResourceUnits) GetEndpoints() atypes.Endpoints {
+	if m != nil {
+		return m.Endpoints
+	}
+	return nil
 }

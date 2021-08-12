@@ -9,10 +9,11 @@ import (
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 
 	akashclient "github.com/ovrclk/akash/client"
 	gwrest "github.com/ovrclk/akash/provider/gateway/rest"

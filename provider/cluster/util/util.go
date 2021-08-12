@@ -1,10 +1,12 @@
 package util
 
 import (
+	"math"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/ovrclk/akash/manifest"
 	atypes "github.com/ovrclk/akash/types"
-	"math"
 )
 
 func ShouldBeIngress(expose manifest.ServiceExpose) bool {
@@ -26,15 +28,15 @@ func ComputeCommittedResources(factor float64, rv atypes.ResourceValue) atypes.R
 
 	v := rv.Val.Uint64()
 	fraction := 1.0 / factor
-	commitedValue := math.Round(float64(v) * fraction)
+	committedValue := math.Round(float64(v) * fraction)
 
 	// Don't return a value of zero, since this is used as a resource request
-	if commitedValue <= 0 {
-		commitedValue = 1
+	if committedValue <= 0 {
+		committedValue = 1
 	}
 
 	result := atypes.ResourceValue{
-		Val: sdk.NewInt(int64(commitedValue)),
+		Val: sdk.NewInt(int64(committedValue)),
 	}
 
 	return result
