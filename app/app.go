@@ -453,8 +453,8 @@ func NewApp(
 }
 
 func (app *AkashApp) registerUpgradeHandlers() {
-	app.keeper.upgrade.SetUpgradeHandler("v0.43", func(ctx sdk.Context, plan upgradetypes.Plan,
-		_ module.VersionMap) (module.VersionMap, error) {
+	app.keeper.upgrade.SetUpgradeHandler("akash_v0.13.0-cosmos_v0.43.0", func(ctx sdk.Context,
+		plan upgradetypes.Plan, _ module.VersionMap) (module.VersionMap, error) {
 		// 1st-time running in-store migrations, using 1 as fromVersion to
 		// avoid running InitGenesis.
 		fromVM := map[string]uint64{
