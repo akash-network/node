@@ -11,6 +11,7 @@ import (
 
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/testutil"
+	akashtypes "github.com/ovrclk/akash/types"
 	atypes "github.com/ovrclk/akash/x/audit/types"
 
 	"github.com/ovrclk/akash/x/deployment/types"
@@ -267,4 +268,52 @@ func TestGroupPlacementRequirementsSignerAllOfAnyOf(t *testing.T) {
 	})
 
 	require.True(t, group.MatchRequirements(providerAttr))
+}
+
+func TestGroupSpec_MatchResourcesAttributes(t *testing.T) {
+	group := types.GroupSpec{
+		Name:         "spec",
+		Requirements: testutil.PlacementRequirements(t),
+		Resources:    testutil.Resources(t),
+	}
+
+	group.Resources[0].Resources.Storage[0].Attributes = akashtypes.Attributes{
+		{
+			Key:   "persistent",
+			Value: "true",
+		},
+		{
+			Key:   "class",
+			Value: "default",
+		},
+	}
+
+	provAttributes := akashtypes.Attributes{
+		{
+			Key:   "capabilities/storage/1/class",
+			Value: "default",
+		},
+		{
+			Key:   "capabilities/storage/1/persistent",
+			Value: "true",
+		},
+	}
+
+	prov2Attributes := akashtypes.Attributes{
+		{
+			Key:   "capabilities/storage/1/class",
+			Value: "default",
+		},
+	}
+
+	prov3Attributes := akashtypes.Attributes{
+		{
+			Key:   "capabilities/storage/1/class",
+			Value: "beta2",
+		},
+	}
+
+	require.True(t, group.MatchResourcesRequirements(provAttributes))
+	require.False(t, group.MatchResourcesRequirements(prov2Attributes))
+	require.False(t, group.MatchResourcesRequirements(prov3Attributes))
 }

@@ -8,9 +8,11 @@ import (
 	mock "github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	storagev1 "k8s.io/api/storage/v1"
+
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/storage/v1"
+	v1 "k8s.io/client-go/applyconfigurations/storage/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +22,44 @@ type StorageClassInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, storageClass, opts
-func (_m *StorageClassInterface) Create(ctx context.Context, storageClass *v1.StorageClass, opts metav1.CreateOptions) (*v1.StorageClass, error) {
+// Apply provides a mock function with given fields: ctx, storageClass, opts
+func (_m *StorageClassInterface) Apply(ctx context.Context, storageClass *v1.StorageClassApplyConfiguration, opts metav1.ApplyOptions) (*storagev1.StorageClass, error) {
 	ret := _m.Called(ctx, storageClass, opts)
 
-	var r0 *v1.StorageClass
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.StorageClass, metav1.CreateOptions) *v1.StorageClass); ok {
+	var r0 *storagev1.StorageClass
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.StorageClassApplyConfiguration, metav1.ApplyOptions) *storagev1.StorageClass); ok {
 		r0 = rf(ctx, storageClass, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.StorageClass)
+			r0 = ret.Get(0).(*storagev1.StorageClass)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.StorageClass, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.StorageClassApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, storageClass, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, storageClass, opts
+func (_m *StorageClassInterface) Create(ctx context.Context, storageClass *storagev1.StorageClass, opts metav1.CreateOptions) (*storagev1.StorageClass, error) {
+	ret := _m.Called(ctx, storageClass, opts)
+
+	var r0 *storagev1.StorageClass
+	if rf, ok := ret.Get(0).(func(context.Context, *storagev1.StorageClass, metav1.CreateOptions) *storagev1.StorageClass); ok {
+		r0 = rf(ctx, storageClass, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*storagev1.StorageClass)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *storagev1.StorageClass, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, storageClass, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +97,15 @@ func (_m *StorageClassInterface) DeleteCollection(ctx context.Context, opts meta
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *StorageClassInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.StorageClass, error) {
+func (_m *StorageClassInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*storagev1.StorageClass, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.StorageClass
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.StorageClass); ok {
+	var r0 *storagev1.StorageClass
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *storagev1.StorageClass); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.StorageClass)
+			r0 = ret.Get(0).(*storagev1.StorageClass)
 		}
 	}
 
@@ -95,15 +120,15 @@ func (_m *StorageClassInterface) Get(ctx context.Context, name string, opts meta
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *StorageClassInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.StorageClassList, error) {
+func (_m *StorageClassInterface) List(ctx context.Context, opts metav1.ListOptions) (*storagev1.StorageClassList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.StorageClassList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.StorageClassList); ok {
+	var r0 *storagev1.StorageClassList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *storagev1.StorageClassList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.StorageClassList)
+			r0 = ret.Get(0).(*storagev1.StorageClassList)
 		}
 	}
 
@@ -118,7 +143,7 @@ func (_m *StorageClassInterface) List(ctx context.Context, opts metav1.ListOptio
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *StorageClassInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.StorageClass, error) {
+func (_m *StorageClassInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*storagev1.StorageClass, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +153,12 @@ func (_m *StorageClassInterface) Patch(ctx context.Context, name string, pt type
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.StorageClass
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.StorageClass); ok {
+	var r0 *storagev1.StorageClass
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *storagev1.StorageClass); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.StorageClass)
+			r0 = ret.Get(0).(*storagev1.StorageClass)
 		}
 	}
 
@@ -148,20 +173,20 @@ func (_m *StorageClassInterface) Patch(ctx context.Context, name string, pt type
 }
 
 // Update provides a mock function with given fields: ctx, storageClass, opts
-func (_m *StorageClassInterface) Update(ctx context.Context, storageClass *v1.StorageClass, opts metav1.UpdateOptions) (*v1.StorageClass, error) {
+func (_m *StorageClassInterface) Update(ctx context.Context, storageClass *storagev1.StorageClass, opts metav1.UpdateOptions) (*storagev1.StorageClass, error) {
 	ret := _m.Called(ctx, storageClass, opts)
 
-	var r0 *v1.StorageClass
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.StorageClass, metav1.UpdateOptions) *v1.StorageClass); ok {
+	var r0 *storagev1.StorageClass
+	if rf, ok := ret.Get(0).(func(context.Context, *storagev1.StorageClass, metav1.UpdateOptions) *storagev1.StorageClass); ok {
 		r0 = rf(ctx, storageClass, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.StorageClass)
+			r0 = ret.Get(0).(*storagev1.StorageClass)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.StorageClass, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *storagev1.StorageClass, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, storageClass, opts)
 	} else {
 		r1 = ret.Error(1)

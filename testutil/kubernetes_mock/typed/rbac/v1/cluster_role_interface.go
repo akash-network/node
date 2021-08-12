@@ -8,9 +8,11 @@ import (
 	mock "github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	rbacv1 "k8s.io/api/rbac/v1"
+
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/rbac/v1"
+	v1 "k8s.io/client-go/applyconfigurations/rbac/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +22,44 @@ type ClusterRoleInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, clusterRole, opts
-func (_m *ClusterRoleInterface) Create(ctx context.Context, clusterRole *v1.ClusterRole, opts metav1.CreateOptions) (*v1.ClusterRole, error) {
+// Apply provides a mock function with given fields: ctx, clusterRole, opts
+func (_m *ClusterRoleInterface) Apply(ctx context.Context, clusterRole *v1.ClusterRoleApplyConfiguration, opts metav1.ApplyOptions) (*rbacv1.ClusterRole, error) {
 	ret := _m.Called(ctx, clusterRole, opts)
 
-	var r0 *v1.ClusterRole
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.ClusterRole, metav1.CreateOptions) *v1.ClusterRole); ok {
+	var r0 *rbacv1.ClusterRole
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.ClusterRoleApplyConfiguration, metav1.ApplyOptions) *rbacv1.ClusterRole); ok {
 		r0 = rf(ctx, clusterRole, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ClusterRole)
+			r0 = ret.Get(0).(*rbacv1.ClusterRole)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.ClusterRole, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.ClusterRoleApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, clusterRole, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, clusterRole, opts
+func (_m *ClusterRoleInterface) Create(ctx context.Context, clusterRole *rbacv1.ClusterRole, opts metav1.CreateOptions) (*rbacv1.ClusterRole, error) {
+	ret := _m.Called(ctx, clusterRole, opts)
+
+	var r0 *rbacv1.ClusterRole
+	if rf, ok := ret.Get(0).(func(context.Context, *rbacv1.ClusterRole, metav1.CreateOptions) *rbacv1.ClusterRole); ok {
+		r0 = rf(ctx, clusterRole, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rbacv1.ClusterRole)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rbacv1.ClusterRole, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, clusterRole, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +97,15 @@ func (_m *ClusterRoleInterface) DeleteCollection(ctx context.Context, opts metav
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *ClusterRoleInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ClusterRole, error) {
+func (_m *ClusterRoleInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*rbacv1.ClusterRole, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.ClusterRole
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.ClusterRole); ok {
+	var r0 *rbacv1.ClusterRole
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *rbacv1.ClusterRole); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ClusterRole)
+			r0 = ret.Get(0).(*rbacv1.ClusterRole)
 		}
 	}
 
@@ -95,15 +120,15 @@ func (_m *ClusterRoleInterface) Get(ctx context.Context, name string, opts metav
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *ClusterRoleInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.ClusterRoleList, error) {
+func (_m *ClusterRoleInterface) List(ctx context.Context, opts metav1.ListOptions) (*rbacv1.ClusterRoleList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.ClusterRoleList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.ClusterRoleList); ok {
+	var r0 *rbacv1.ClusterRoleList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *rbacv1.ClusterRoleList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ClusterRoleList)
+			r0 = ret.Get(0).(*rbacv1.ClusterRoleList)
 		}
 	}
 
@@ -118,7 +143,7 @@ func (_m *ClusterRoleInterface) List(ctx context.Context, opts metav1.ListOption
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *ClusterRoleInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ClusterRole, error) {
+func (_m *ClusterRoleInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*rbacv1.ClusterRole, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +153,12 @@ func (_m *ClusterRoleInterface) Patch(ctx context.Context, name string, pt types
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.ClusterRole
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.ClusterRole); ok {
+	var r0 *rbacv1.ClusterRole
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *rbacv1.ClusterRole); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ClusterRole)
+			r0 = ret.Get(0).(*rbacv1.ClusterRole)
 		}
 	}
 
@@ -148,20 +173,20 @@ func (_m *ClusterRoleInterface) Patch(ctx context.Context, name string, pt types
 }
 
 // Update provides a mock function with given fields: ctx, clusterRole, opts
-func (_m *ClusterRoleInterface) Update(ctx context.Context, clusterRole *v1.ClusterRole, opts metav1.UpdateOptions) (*v1.ClusterRole, error) {
+func (_m *ClusterRoleInterface) Update(ctx context.Context, clusterRole *rbacv1.ClusterRole, opts metav1.UpdateOptions) (*rbacv1.ClusterRole, error) {
 	ret := _m.Called(ctx, clusterRole, opts)
 
-	var r0 *v1.ClusterRole
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.ClusterRole, metav1.UpdateOptions) *v1.ClusterRole); ok {
+	var r0 *rbacv1.ClusterRole
+	if rf, ok := ret.Get(0).(func(context.Context, *rbacv1.ClusterRole, metav1.UpdateOptions) *rbacv1.ClusterRole); ok {
 		r0 = rf(ctx, clusterRole, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ClusterRole)
+			r0 = ret.Get(0).(*rbacv1.ClusterRole)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.ClusterRole, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *rbacv1.ClusterRole, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, clusterRole, opts)
 	} else {
 		r1 = ret.Error(1)

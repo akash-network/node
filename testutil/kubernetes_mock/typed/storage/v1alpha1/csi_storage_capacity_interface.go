@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	storagev1alpha1 "k8s.io/api/storage/v1alpha1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1alpha1 "k8s.io/api/storage/v1alpha1"
+	v1alpha1 "k8s.io/client-go/applyconfigurations/storage/v1alpha1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,44 @@ type CSIStorageCapacityInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, cSIStorageCapacity, opts
-func (_m *CSIStorageCapacityInterface) Create(ctx context.Context, cSIStorageCapacity *v1alpha1.CSIStorageCapacity, opts v1.CreateOptions) (*v1alpha1.CSIStorageCapacity, error) {
+// Apply provides a mock function with given fields: ctx, cSIStorageCapacity, opts
+func (_m *CSIStorageCapacityInterface) Apply(ctx context.Context, cSIStorageCapacity *v1alpha1.CSIStorageCapacityApplyConfiguration, opts v1.ApplyOptions) (*storagev1alpha1.CSIStorageCapacity, error) {
 	ret := _m.Called(ctx, cSIStorageCapacity, opts)
 
-	var r0 *v1alpha1.CSIStorageCapacity
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.CSIStorageCapacity, v1.CreateOptions) *v1alpha1.CSIStorageCapacity); ok {
+	var r0 *storagev1alpha1.CSIStorageCapacity
+	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.CSIStorageCapacityApplyConfiguration, v1.ApplyOptions) *storagev1alpha1.CSIStorageCapacity); ok {
 		r0 = rf(ctx, cSIStorageCapacity, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.CSIStorageCapacity)
+			r0 = ret.Get(0).(*storagev1alpha1.CSIStorageCapacity)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.CSIStorageCapacity, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.CSIStorageCapacityApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, cSIStorageCapacity, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, cSIStorageCapacity, opts
+func (_m *CSIStorageCapacityInterface) Create(ctx context.Context, cSIStorageCapacity *storagev1alpha1.CSIStorageCapacity, opts v1.CreateOptions) (*storagev1alpha1.CSIStorageCapacity, error) {
+	ret := _m.Called(ctx, cSIStorageCapacity, opts)
+
+	var r0 *storagev1alpha1.CSIStorageCapacity
+	if rf, ok := ret.Get(0).(func(context.Context, *storagev1alpha1.CSIStorageCapacity, v1.CreateOptions) *storagev1alpha1.CSIStorageCapacity); ok {
+		r0 = rf(ctx, cSIStorageCapacity, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*storagev1alpha1.CSIStorageCapacity)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *storagev1alpha1.CSIStorageCapacity, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, cSIStorageCapacity, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +97,15 @@ func (_m *CSIStorageCapacityInterface) DeleteCollection(ctx context.Context, opt
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *CSIStorageCapacityInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.CSIStorageCapacity, error) {
+func (_m *CSIStorageCapacityInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*storagev1alpha1.CSIStorageCapacity, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1alpha1.CSIStorageCapacity
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1alpha1.CSIStorageCapacity); ok {
+	var r0 *storagev1alpha1.CSIStorageCapacity
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *storagev1alpha1.CSIStorageCapacity); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.CSIStorageCapacity)
+			r0 = ret.Get(0).(*storagev1alpha1.CSIStorageCapacity)
 		}
 	}
 
@@ -96,15 +120,15 @@ func (_m *CSIStorageCapacityInterface) Get(ctx context.Context, name string, opt
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *CSIStorageCapacityInterface) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.CSIStorageCapacityList, error) {
+func (_m *CSIStorageCapacityInterface) List(ctx context.Context, opts v1.ListOptions) (*storagev1alpha1.CSIStorageCapacityList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1alpha1.CSIStorageCapacityList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1alpha1.CSIStorageCapacityList); ok {
+	var r0 *storagev1alpha1.CSIStorageCapacityList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *storagev1alpha1.CSIStorageCapacityList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.CSIStorageCapacityList)
+			r0 = ret.Get(0).(*storagev1alpha1.CSIStorageCapacityList)
 		}
 	}
 
@@ -119,7 +143,7 @@ func (_m *CSIStorageCapacityInterface) List(ctx context.Context, opts v1.ListOpt
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *CSIStorageCapacityInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1alpha1.CSIStorageCapacity, error) {
+func (_m *CSIStorageCapacityInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*storagev1alpha1.CSIStorageCapacity, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +153,12 @@ func (_m *CSIStorageCapacityInterface) Patch(ctx context.Context, name string, p
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1alpha1.CSIStorageCapacity
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1alpha1.CSIStorageCapacity); ok {
+	var r0 *storagev1alpha1.CSIStorageCapacity
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *storagev1alpha1.CSIStorageCapacity); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.CSIStorageCapacity)
+			r0 = ret.Get(0).(*storagev1alpha1.CSIStorageCapacity)
 		}
 	}
 
@@ -149,20 +173,20 @@ func (_m *CSIStorageCapacityInterface) Patch(ctx context.Context, name string, p
 }
 
 // Update provides a mock function with given fields: ctx, cSIStorageCapacity, opts
-func (_m *CSIStorageCapacityInterface) Update(ctx context.Context, cSIStorageCapacity *v1alpha1.CSIStorageCapacity, opts v1.UpdateOptions) (*v1alpha1.CSIStorageCapacity, error) {
+func (_m *CSIStorageCapacityInterface) Update(ctx context.Context, cSIStorageCapacity *storagev1alpha1.CSIStorageCapacity, opts v1.UpdateOptions) (*storagev1alpha1.CSIStorageCapacity, error) {
 	ret := _m.Called(ctx, cSIStorageCapacity, opts)
 
-	var r0 *v1alpha1.CSIStorageCapacity
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.CSIStorageCapacity, v1.UpdateOptions) *v1alpha1.CSIStorageCapacity); ok {
+	var r0 *storagev1alpha1.CSIStorageCapacity
+	if rf, ok := ret.Get(0).(func(context.Context, *storagev1alpha1.CSIStorageCapacity, v1.UpdateOptions) *storagev1alpha1.CSIStorageCapacity); ok {
 		r0 = rf(ctx, cSIStorageCapacity, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.CSIStorageCapacity)
+			r0 = ret.Get(0).(*storagev1alpha1.CSIStorageCapacity)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.CSIStorageCapacity, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *storagev1alpha1.CSIStorageCapacity, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, cSIStorageCapacity, opts)
 	} else {
 		r1 = ret.Error(1)

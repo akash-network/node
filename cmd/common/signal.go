@@ -25,10 +25,10 @@ func watchSignals(ctx context.Context, cancel context.CancelFunc) <-chan struct{
 
 // RunForever runs a function in the background, forever. Returns error in case of failure.
 func RunForever(fn func(ctx context.Context) error) error {
-	return runForeverWithContext(context.Background(), fn)
+	return RunForeverWithContext(context.Background(), fn)
 }
 
-func runForeverWithContext(ctx context.Context, fn func(ctx context.Context) error) error {
+func RunForeverWithContext(ctx context.Context, fn func(ctx context.Context) error) error {
 	ctx, cancel := context.WithCancel(ctx)
 
 	donech := watchSignals(ctx, cancel)

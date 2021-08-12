@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/types"
 	"github.com/pkg/errors"
+
+	"github.com/ovrclk/akash/types"
 )
 
 var (
@@ -47,9 +48,11 @@ func ValidateResourceList(rlist types.ResourceGroup) error {
 			rlist.GetName(), validationConfig.MaxGroupMemory, limits.memory, 0)
 	}
 
-	if limits.storage.GT(sdk.NewIntFromUint64(validationConfig.MaxGroupStorage)) || limits.storage.LTE(sdk.ZeroInt()) {
-		return errors.Errorf("group %v: invalid total storage (%v > %v > %v fails)",
-			rlist.GetName(), validationConfig.MaxGroupStorage, limits.storage, 0)
+	for i := range limits.storage {
+		if limits.storage[i].GT(sdk.NewIntFromUint64(validationConfig.MaxGroupStorage)) || limits.storage[i].LTE(sdk.ZeroInt()) {
+			return errors.Errorf("group %v: invalid total storage (%v > %v > %v fails)",
+				rlist.GetName(), validationConfig.MaxGroupStorage, limits.storage, 0)
+		}
 	}
 
 	return nil
@@ -84,11 +87,15 @@ func validateResourceUnit(units types.ResourceUnits) (resourceLimits, error) {
 	}
 	limits.memory = limits.memory.Add(val)
 
-	val, err = validateStorage(units.Storage)
+	var storage []sdk.Int
+	storage, err = validateStorage(units.Storage)
 	if err != nil {
 		return resourceLimits{}, err
 	}
-	limits.storage = limits.storage.Add(val)
+
+	// fixme this is not actually sum for storage usecase.
+	// do we really need sum here?
+	limits.storage = storage
 
 	return limits, nil
 }
@@ -109,7 +116,7 @@ func validateMemory(u *types.Memory) (sdk.Int, error) {
 	if u == nil {
 		return sdk.Int{}, errors.Errorf("error: invalid unit memory, cannot be nil")
 	}
-	if (u.Quantity.Value() > uint64(validationConfig.MaxUnitMemory)) || (u.Quantity.Value() < uint64(validationConfig.MinUnitMemory)) {
+	if (u.Quantity.Value() > validationConfig.MaxUnitMemory) || (u.Quantity.Value() < validationConfig.MinUnitMemory) {
 		return sdk.Int{}, errors.Errorf("error: invalid unit memory (%v > %v > %v fails)",
 			validationConfig.MaxUnitMemory, u.Quantity.Value(), validationConfig.MinUnitMemory)
 	}
@@ -117,40 +124,49 @@ func validateMemory(u *types.Memory) (sdk.Int, error) {
 	return u.Quantity.Val, nil
 }
 
-func validateStorage(u *types.Storage) (sdk.Int, error) {
+func validateStorage(u types.Volumes) ([]sdk.Int, error) {
 	if u == nil {
-		return sdk.Int{}, errors.Errorf("error: invalid unit storage, cannot be nil")
-	}
-	if (u.Quantity.Value() > uint64(validationConfig.MaxUnitStorage)) || (u.Quantity.Value() < uint64(validationConfig.MinUnitStorage)) {
-		return sdk.Int{}, errors.Errorf("error: invalid unit storage (%v > %v > %v fails)",
-			validationConfig.MaxUnitStorage, u.Quantity.Value(), validationConfig.MinUnitStorage)
+		return nil, errors.Errorf("error: invalid unit storage, cannot be nil")
 	}
 
-	return u.Quantity.Val, nil
+	storage := make([]sdk.Int, 0, len(u))
+
+	for i := range u {
+		if (u[i].Quantity.Value() > validationConfig.MaxUnitStorage) || (u[i].Quantity.Value() < validationConfig.MinUnitStorage) {
+			return nil, errors.Errorf("error: invalid unit storage (%v > %v > %v fails)",
+				validationConfig.MaxUnitStorage, u[i].Quantity.Value(), validationConfig.MinUnitStorage)
+		}
+
+		storage = append(storage, u[i].Quantity.Val)
+	}
+
+	return storage, nil
 }
 
 type resourceLimits struct {
 	cpu     sdk.Int
 	memory  sdk.Int
-	storage sdk.Int
+	storage []sdk.Int
 }
 
 func newLimits() resourceLimits {
 	return resourceLimits{
-		cpu:     sdk.ZeroInt(),
-		memory:  sdk.ZeroInt(),
-		storage: sdk.ZeroInt(),
+		cpu:    sdk.ZeroInt(),
+		memory: sdk.ZeroInt(),
 	}
 }
 
 func (u *resourceLimits) add(rhs resourceLimits) {
 	u.cpu = u.cpu.Add(rhs.cpu)
 	u.memory = u.memory.Add(rhs.memory)
-	u.storage = u.storage.Add(rhs.storage)
+
+	// u.storage = u.storage.Add(rhs.storage)
 }
 
 func (u *resourceLimits) mul(count uint32) {
 	u.cpu = u.cpu.MulRaw(int64(count))
 	u.memory = u.memory.MulRaw(int64(count))
-	u.storage = u.storage.MulRaw(int64(count))
+	for i := range u.storage {
+		u.storage[i] = u.storage[i].MulRaw(int64(count))
+	}
 }

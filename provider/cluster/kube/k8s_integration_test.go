@@ -1,3 +1,4 @@
+//go:build k8s_integration
 // +build k8s_integration
 
 package kube
@@ -13,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/ovrclk/akash/provider/cluster/kube/builder"
 	"github.com/ovrclk/akash/testutil"
 )
 
@@ -20,15 +22,15 @@ func TestNewClient(t *testing.T) {
 	// create lease
 	lid := testutil.LeaseID(t)
 	group := testutil.AppManifestGenerator.Group(t)
-	ns := lidNS(lid)
+	ns := builder.LidNS(lid)
 
-	settings := Settings{
+	settings := builder.Settings{
 		DeploymentServiceType:          corev1.ServiceTypeClusterIP,
 		DeploymentIngressStaticHosts:   false,
 		DeploymentIngressDomain:        "bar.com",
 		DeploymentIngressExposeLBHosts: false,
 	}
-	ctx := context.WithValue(context.Background(), SettingsKey, settings)
+	ctx := context.WithValue(context.Background(), builder.SettingsKey, settings)
 
 	ac, err := newClientWithSettings(testutil.Logger(t), ns, "", true)
 	require.NoError(t, err)
@@ -41,14 +43,18 @@ func TestNewClient(t *testing.T) {
 	// kc := cc.kc
 
 	// check inventory
-	nodes, err := ac.Inventory(ctx)
+	inventory, err := ac.Inventory(ctx)
 	require.NoError(t, err)
-	require.Len(t, nodes, 1)
+	require.NotNil(t, inventory)
+
+	metrics := inventory.Metrics()
+	require.Len(t, metrics.Nodes, 1)
 
 	// ensure available nodes
-	node := nodes[0]
-	require.NotZero(t, node.Available().CPU)
-	require.NotZero(t, node.Available().Memory)
+	for _, node := range inventory.Metrics().Nodes {
+		require.NotZero(t, node.Available.CPU)
+		require.NotZero(t, node.Available.Memory)
+	}
 
 	// ensure no deployments
 	deployments, err := ac.Deployments(ctx)

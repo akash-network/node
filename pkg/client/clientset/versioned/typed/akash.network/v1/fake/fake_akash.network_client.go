@@ -36,6 +36,10 @@ func (c *FakeAkashV1) ProviderHosts(namespace string) v1.ProviderHostInterface {
 	return &FakeProviderHosts{c, namespace}
 }
 
+func (c *FakeAkashV1) StorageClassInfos() v1.StorageClassInfoInterface {
+	return &FakeStorageClassInfos{c}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeAkashV1) RESTClient() rest.Interface {

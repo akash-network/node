@@ -6,11 +6,19 @@ import (
 	"io"
 	"time"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/pkg/errors"
 	eventsv1 "k8s.io/api/events/v1"
 
 	"github.com/ovrclk/akash/manifest"
-	atypes "github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/sdl"
+	"github.com/ovrclk/akash/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+)
+
+var (
+	// ErrInsufficientCapacity is the new error when capacity is insufficient
+	ErrInsufficientCapacity = errors.New("insufficient capacity")
 )
 
 // Status stores current leases and inventory statuses
@@ -19,12 +27,73 @@ type Status struct {
 	Inventory InventoryStatus `json:"inventory"`
 }
 
+type InventoryMetricTotal struct {
+	CPU              uint64           `json:"cpu"`
+	Memory           uint64           `json:"memory"`
+	StorageEphemeral uint64           `json:"storage_ephemeral"`
+	Storage          map[string]int64 `json:"storage,omitempty"`
+}
+
+type InventoryStorageStatus struct {
+	Class string `json:"class"`
+	Size  int64  `json:"size"`
+}
+
 // InventoryStatus stores active, pending and available units
 type InventoryStatus struct {
-	Active    []atypes.ResourceUnits `json:"active"`
-	Pending   []atypes.ResourceUnits `json:"pending"`
-	Available []atypes.ResourceUnits `json:"available"`
-	Error     error                  `json:"error"`
+	Active    []InventoryMetricTotal `json:"active,omitempty"`
+	Pending   []InventoryMetricTotal `json:"pending,omitempty"`
+	Available struct {
+		Nodes   []InventoryNodeMetric    `json:"nodes,omitempty"`
+		Storage []InventoryStorageStatus `json:"storage,omitempty"`
+	} `json:"available,omitempty"`
+	Error error `json:"error,omitempty"`
+}
+
+type InventoryNodeMetric struct {
+	CPU              uint64 `json:"cpu"`
+	Memory           uint64 `json:"memory"`
+	StorageEphemeral uint64 `json:"storage_ephemeral"`
+}
+
+func (inv *InventoryMetricTotal) AddResources(res types.Resources) {
+	cpu := sdk.NewIntFromUint64(inv.CPU)
+	mem := sdk.NewIntFromUint64(inv.Memory)
+	ephemeralStorage := sdk.NewIntFromUint64(inv.StorageEphemeral)
+
+	if res.Resources.CPU != nil {
+		cpu = cpu.Add(res.Resources.CPU.Units.Val.MulRaw(int64(res.Count)))
+	}
+
+	if res.Resources.Memory != nil {
+		mem = mem.Add(res.Resources.Memory.Quantity.Val.MulRaw(int64(res.Count)))
+	}
+
+	for _, storage := range res.Resources.Storage {
+		if storageClass, found := storage.Attributes.Find(sdl.StorageAttributeClass).AsString(); !found {
+			ephemeralStorage = ephemeralStorage.Add(storage.Quantity.Val.MulRaw(int64(res.Count)))
+		} else {
+			val := sdk.NewIntFromUint64(uint64(inv.Storage[storageClass]))
+			val = val.Add(storage.Quantity.Val.MulRaw(int64(res.Count)))
+			inv.Storage[storageClass] = val.Int64()
+		}
+	}
+
+	inv.CPU = cpu.Uint64()
+	inv.Memory = mem.Uint64()
+	inv.StorageEphemeral = ephemeralStorage.Uint64()
+}
+
+type InventoryNode struct {
+	Name        string              `json:"name"`
+	Allocatable InventoryNodeMetric `json:"allocatable"`
+	Available   InventoryNodeMetric `json:"available"`
+}
+
+type InventoryMetrics struct {
+	Nodes            []InventoryNode      `json:"nodes"`
+	TotalAllocatable InventoryMetricTotal `json:"total_allocatable"`
+	TotalAvailable   InventoryMetricTotal `json:"total_available"`
 }
 
 // ServiceStatus stores the current status of service
@@ -56,12 +125,9 @@ type LeaseStatus struct {
 	ForwardedPorts map[string][]ForwardedPortStatus `json:"forwarded_ports"` // Container services that are externally accessible
 }
 
-// Node interface predefined with ID and Available methods
-type Node interface {
-	ID() string
-	Available() atypes.ResourceUnits
-	Allocateable() atypes.ResourceUnits
-	Reserve(atypes.ResourceUnits) error
+type Inventory interface {
+	Adjust(Reservation) error
+	Metrics() InventoryMetrics
 }
 
 // Deployment interface defined with LeaseID and ManifestGroup methods
@@ -93,7 +159,6 @@ type LeaseEvent struct {
 	Object              LeaseEventObject `json:"object" yaml:"object"`
 }
 
-// EventsWatcher
 type EventsWatcher interface {
 	Shutdown()
 	Done() <-chan struct{}

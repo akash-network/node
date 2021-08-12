@@ -21,3 +21,5 @@ package v1
 type ManifestExpansion interface{}
 
 type ProviderHostExpansion interface{}
+
+type StorageClassInfoExpansion interface{}

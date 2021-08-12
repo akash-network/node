@@ -28,6 +28,8 @@ type Interface interface {
 	Manifests() ManifestInformer
 	// ProviderHosts returns a ProviderHostInformer.
 	ProviderHosts() ProviderHostInformer
+	// StorageClassInfos returns a StorageClassInfoInformer.
+	StorageClassInfos() StorageClassInfoInformer
 }
 
 type version struct {
@@ -49,4 +51,9 @@ func (v *version) Manifests() ManifestInformer {
 // ProviderHosts returns a ProviderHostInformer.
 func (v *version) ProviderHosts() ProviderHostInformer {
 	return &providerHostInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// StorageClassInfos returns a StorageClassInfoInformer.
+func (v *version) StorageClassInfos() StorageClassInfoInformer {
+	return &storageClassInfoInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

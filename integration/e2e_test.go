@@ -1,3 +1,4 @@
+//go:build !mainnet
 // +build !mainnet
 
 package integration
@@ -5,15 +6,8 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-
-	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
-
 	"io/ioutil"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
 	"net"
 	"net/url"
 	"os"
@@ -23,19 +17,29 @@ import (
 	"testing"
 	"time"
 
-	sdktest "github.com/cosmos/cosmos-sdk/testutil"
-	"github.com/ovrclk/akash/provider/gateway/rest"
-	clitestutil "github.com/ovrclk/akash/testutil/cli"
+	"golang.org/x/sync/errgroup"
 
-	"github.com/cosmos/cosmos-sdk/server"
-	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
+	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
+
+	sdktest "github.com/cosmos/cosmos-sdk/testutil"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	providerCmd "github.com/ovrclk/akash/provider/cmd"
+	"github.com/ovrclk/akash/provider/gateway/rest"
 	"github.com/ovrclk/akash/sdl"
-	ccli "github.com/ovrclk/akash/x/cert/client/cli"
+	clitestutil "github.com/ovrclk/akash/testutil/cli"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
+
+	"github.com/cosmos/cosmos-sdk/server"
+	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
+
+	ccli "github.com/ovrclk/akash/x/cert/client/cli"
 	"github.com/ovrclk/akash/x/provider/client/cli"
 	"github.com/ovrclk/akash/x/provider/types"
 
@@ -65,6 +69,7 @@ type IntegrationTestSuite struct {
 	keyProvider keyring.Info
 	keyTenant   keyring.Info
 
+	group     *errgroup.Group
 	ctx       context.Context
 	ctxCancel context.CancelFunc
 
@@ -264,12 +269,16 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	cctx := s.validator.ClientCtx
 
 	// A context object to tie the lifetime of the provider & hostname operator to
-	s.ctx, s.ctxCancel = context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	s.ctxCancel = cancel
+
+	s.group, s.ctx = errgroup.WithContext(ctx)
 
 	// all command use viper which is meant for use by a single goroutine only
 	// so wait for the provider to start before running the hostname operator
-	go func() {
-		_, err := ptestutil.RunLocalProvider(s.ctx,
+
+	s.group.Go(func() error {
+		_, err := ptestutil.RunLocalProvider(ctx,
 			cctx,
 			cctx.ChainID,
 			s.validator.RPCAddress,
@@ -279,8 +288,9 @@ func (s *IntegrationTestSuite) SetupSuite() {
 			fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 			"--deployment-runtime-class=none",
 		)
-		s.Require().ErrorIs(err, context.Canceled)
-	}()
+
+		return err
+	})
 
 	// Run the hostname operator, after confirming the provider starts
 	const maxAttempts = 30
@@ -305,11 +315,13 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		break
 	}
 
-	go func() {
+	s.group.Go(func() error {
 		s.T().Log("starting hostname operator for test")
 		_, err := ptestutil.RunLocalHostnameOperator(s.ctx, cctx)
 		s.Require().ErrorIs(err, context.Canceled)
-	}()
+
+		return nil
+	})
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 }
@@ -371,7 +383,7 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 
 	s.network.Cleanup()
 
-	// remove all entries of the providerhost CRD
+	// remove all entries of the provider host CRD
 	cfgPath := path.Join(homedir.HomeDir(), ".kube", "config")
 
 	restConfig, err := clientcmd.BuildConfigFromFlags("", cfgPath)
@@ -406,6 +418,8 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	time.Sleep(3 * time.Second) // Make sure hostname operator has time to delete ingress
 
 	s.ctxCancel() // Stop context that provider & hostname operator are tied to
+
+	_ = s.group.Wait()
 }
 
 func newestLease(leases []mtypes.QueryLeaseResponse) mtypes.Lease {
@@ -1330,6 +1344,8 @@ func TestIntegrationTestSuite(t *testing.T) {
 	suite.Run(t, new(E2EAppNodePort))
 	suite.Run(t, new(E2EDeploymentUpdate))
 	suite.Run(t, new(E2EApp))
+	suite.Run(t, new(E2EPersistentStorageDefault))
+	suite.Run(t, new(E2EPersistentStorageBeta2))
 }
 
 func (s *IntegrationTestSuite) waitForBlocksCommitted(height int) error {
@@ -1353,6 +1369,6 @@ func TestQueryApp(t *testing.T) {
 	integrationTestOnly(t)
 	host, appPort := appEnv(t)
 
-	appURL := fmt.Sprintf("https://%s:%s/", host, appPort)
+	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)
 	queryApp(t, appURL, 1)
 }

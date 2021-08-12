@@ -5,13 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
+	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/core/v1"
+	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +23,44 @@ type EndpointsInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, endpoints, opts
-func (_m *EndpointsInterface) Create(ctx context.Context, endpoints *v1.Endpoints, opts metav1.CreateOptions) (*v1.Endpoints, error) {
+// Apply provides a mock function with given fields: ctx, endpoints, opts
+func (_m *EndpointsInterface) Apply(ctx context.Context, endpoints *v1.EndpointsApplyConfiguration, opts metav1.ApplyOptions) (*corev1.Endpoints, error) {
 	ret := _m.Called(ctx, endpoints, opts)
 
-	var r0 *v1.Endpoints
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Endpoints, metav1.CreateOptions) *v1.Endpoints); ok {
+	var r0 *corev1.Endpoints
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.EndpointsApplyConfiguration, metav1.ApplyOptions) *corev1.Endpoints); ok {
 		r0 = rf(ctx, endpoints, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Endpoints)
+			r0 = ret.Get(0).(*corev1.Endpoints)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Endpoints, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.EndpointsApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, endpoints, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, endpoints, opts
+func (_m *EndpointsInterface) Create(ctx context.Context, endpoints *corev1.Endpoints, opts metav1.CreateOptions) (*corev1.Endpoints, error) {
+	ret := _m.Called(ctx, endpoints, opts)
+
+	var r0 *corev1.Endpoints
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.Endpoints, metav1.CreateOptions) *corev1.Endpoints); ok {
+		r0 = rf(ctx, endpoints, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.Endpoints)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.Endpoints, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, endpoints, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +98,15 @@ func (_m *EndpointsInterface) DeleteCollection(ctx context.Context, opts metav1.
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *EndpointsInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Endpoints, error) {
+func (_m *EndpointsInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.Endpoints, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.Endpoints
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.Endpoints); ok {
+	var r0 *corev1.Endpoints
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *corev1.Endpoints); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Endpoints)
+			r0 = ret.Get(0).(*corev1.Endpoints)
 		}
 	}
 
@@ -96,15 +121,15 @@ func (_m *EndpointsInterface) Get(ctx context.Context, name string, opts metav1.
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *EndpointsInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.EndpointsList, error) {
+func (_m *EndpointsInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.EndpointsList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.EndpointsList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.EndpointsList); ok {
+	var r0 *corev1.EndpointsList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *corev1.EndpointsList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.EndpointsList)
+			r0 = ret.Get(0).(*corev1.EndpointsList)
 		}
 	}
 
@@ -119,7 +144,7 @@ func (_m *EndpointsInterface) List(ctx context.Context, opts metav1.ListOptions)
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *EndpointsInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Endpoints, error) {
+func (_m *EndpointsInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*corev1.Endpoints, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +154,12 @@ func (_m *EndpointsInterface) Patch(ctx context.Context, name string, pt types.P
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.Endpoints
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.Endpoints); ok {
+	var r0 *corev1.Endpoints
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *corev1.Endpoints); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Endpoints)
+			r0 = ret.Get(0).(*corev1.Endpoints)
 		}
 	}
 
@@ -149,20 +174,20 @@ func (_m *EndpointsInterface) Patch(ctx context.Context, name string, pt types.P
 }
 
 // Update provides a mock function with given fields: ctx, endpoints, opts
-func (_m *EndpointsInterface) Update(ctx context.Context, endpoints *v1.Endpoints, opts metav1.UpdateOptions) (*v1.Endpoints, error) {
+func (_m *EndpointsInterface) Update(ctx context.Context, endpoints *corev1.Endpoints, opts metav1.UpdateOptions) (*corev1.Endpoints, error) {
 	ret := _m.Called(ctx, endpoints, opts)
 
-	var r0 *v1.Endpoints
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Endpoints, metav1.UpdateOptions) *v1.Endpoints); ok {
+	var r0 *corev1.Endpoints
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.Endpoints, metav1.UpdateOptions) *corev1.Endpoints); ok {
 		r0 = rf(ctx, endpoints, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Endpoints)
+			r0 = ret.Get(0).(*corev1.Endpoints)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Endpoints, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.Endpoints, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, endpoints, opts)
 	} else {
 		r1 = ret.Error(1)

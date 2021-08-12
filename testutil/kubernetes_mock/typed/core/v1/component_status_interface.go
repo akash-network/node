@@ -5,13 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
+	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/core/v1"
+	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +23,44 @@ type ComponentStatusInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, componentStatus, opts
-func (_m *ComponentStatusInterface) Create(ctx context.Context, componentStatus *v1.ComponentStatus, opts metav1.CreateOptions) (*v1.ComponentStatus, error) {
+// Apply provides a mock function with given fields: ctx, componentStatus, opts
+func (_m *ComponentStatusInterface) Apply(ctx context.Context, componentStatus *v1.ComponentStatusApplyConfiguration, opts metav1.ApplyOptions) (*corev1.ComponentStatus, error) {
 	ret := _m.Called(ctx, componentStatus, opts)
 
-	var r0 *v1.ComponentStatus
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.ComponentStatus, metav1.CreateOptions) *v1.ComponentStatus); ok {
+	var r0 *corev1.ComponentStatus
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.ComponentStatusApplyConfiguration, metav1.ApplyOptions) *corev1.ComponentStatus); ok {
 		r0 = rf(ctx, componentStatus, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ComponentStatus)
+			r0 = ret.Get(0).(*corev1.ComponentStatus)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.ComponentStatus, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.ComponentStatusApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, componentStatus, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, componentStatus, opts
+func (_m *ComponentStatusInterface) Create(ctx context.Context, componentStatus *corev1.ComponentStatus, opts metav1.CreateOptions) (*corev1.ComponentStatus, error) {
+	ret := _m.Called(ctx, componentStatus, opts)
+
+	var r0 *corev1.ComponentStatus
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.ComponentStatus, metav1.CreateOptions) *corev1.ComponentStatus); ok {
+		r0 = rf(ctx, componentStatus, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.ComponentStatus)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.ComponentStatus, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, componentStatus, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +98,15 @@ func (_m *ComponentStatusInterface) DeleteCollection(ctx context.Context, opts m
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *ComponentStatusInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ComponentStatus, error) {
+func (_m *ComponentStatusInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.ComponentStatus, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.ComponentStatus
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.ComponentStatus); ok {
+	var r0 *corev1.ComponentStatus
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *corev1.ComponentStatus); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ComponentStatus)
+			r0 = ret.Get(0).(*corev1.ComponentStatus)
 		}
 	}
 
@@ -96,15 +121,15 @@ func (_m *ComponentStatusInterface) Get(ctx context.Context, name string, opts m
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *ComponentStatusInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.ComponentStatusList, error) {
+func (_m *ComponentStatusInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.ComponentStatusList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.ComponentStatusList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.ComponentStatusList); ok {
+	var r0 *corev1.ComponentStatusList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *corev1.ComponentStatusList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ComponentStatusList)
+			r0 = ret.Get(0).(*corev1.ComponentStatusList)
 		}
 	}
 
@@ -119,7 +144,7 @@ func (_m *ComponentStatusInterface) List(ctx context.Context, opts metav1.ListOp
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *ComponentStatusInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ComponentStatus, error) {
+func (_m *ComponentStatusInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*corev1.ComponentStatus, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +154,12 @@ func (_m *ComponentStatusInterface) Patch(ctx context.Context, name string, pt t
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.ComponentStatus
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.ComponentStatus); ok {
+	var r0 *corev1.ComponentStatus
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *corev1.ComponentStatus); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ComponentStatus)
+			r0 = ret.Get(0).(*corev1.ComponentStatus)
 		}
 	}
 
@@ -149,20 +174,20 @@ func (_m *ComponentStatusInterface) Patch(ctx context.Context, name string, pt t
 }
 
 // Update provides a mock function with given fields: ctx, componentStatus, opts
-func (_m *ComponentStatusInterface) Update(ctx context.Context, componentStatus *v1.ComponentStatus, opts metav1.UpdateOptions) (*v1.ComponentStatus, error) {
+func (_m *ComponentStatusInterface) Update(ctx context.Context, componentStatus *corev1.ComponentStatus, opts metav1.UpdateOptions) (*corev1.ComponentStatus, error) {
 	ret := _m.Called(ctx, componentStatus, opts)
 
-	var r0 *v1.ComponentStatus
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.ComponentStatus, metav1.UpdateOptions) *v1.ComponentStatus); ok {
+	var r0 *corev1.ComponentStatus
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.ComponentStatus, metav1.UpdateOptions) *corev1.ComponentStatus); ok {
 		r0 = rf(ctx, componentStatus, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ComponentStatus)
+			r0 = ret.Get(0).(*corev1.ComponentStatus)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.ComponentStatus, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.ComponentStatus, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, componentStatus, opts)
 	} else {
 		r1 = ret.Error(1)

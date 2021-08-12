@@ -1,3 +1,4 @@
+//go:build k8s_integration
 // +build k8s_integration
 
 package v1_test
@@ -9,9 +10,6 @@ import (
 	"path"
 	"testing"
 
-	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
-	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
-	"github.com/ovrclk/akash/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -20,6 +18,11 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
+
+	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
+	clusterutil "github.com/ovrclk/akash/provider/cluster/util"
+	"github.com/ovrclk/akash/testutil"
 )
 
 func TestWriteRead(t *testing.T) {
@@ -29,18 +32,16 @@ func TestWriteRead(t *testing.T) {
 		client, err := akashclient.NewForConfig(kcfg)
 		require.NoError(t, err)
 
-		for i, spec := range testutil.ManifestGenerators {
-
+		for _, spec := range testutil.ManifestGenerators {
 			// ensure decode(encode(obj)) == obj
 
 			var (
 				lid   = testutil.LeaseID(t)
 				group = spec.Generator.Group(t)
-				name  = fmt.Sprintf("foo-%v", i)
 			)
 
 			// create local k8s manifest object
-			kmani, err := akashv1.NewManifest(name, lid, &group)
+			kmani, err := akashv1.NewManifest(ns, lid, &group)
 
 			require.NoError(t, err, spec.Name)
 
@@ -49,7 +50,7 @@ func TestWriteRead(t *testing.T) {
 			require.NoError(t, err, spec.Name)
 
 			// ensure created CRD has correct name
-			assert.Equal(t, name, obj.GetName(), spec.Name)
+			assert.Equal(t, clusterutil.LeaseIDToNamespace(lid), obj.GetName(), spec.Name)
 
 			// convert to akash-native objects and ensure no data corruption
 			deployment, err := obj.Deployment()

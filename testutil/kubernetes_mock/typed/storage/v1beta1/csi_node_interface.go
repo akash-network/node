@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1beta1 "k8s.io/api/storage/v1beta1"
+	v1beta1 "k8s.io/client-go/applyconfigurations/storage/v1beta1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,44 @@ type CSINodeInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, cSINode, opts
-func (_m *CSINodeInterface) Create(ctx context.Context, cSINode *v1beta1.CSINode, opts v1.CreateOptions) (*v1beta1.CSINode, error) {
+// Apply provides a mock function with given fields: ctx, cSINode, opts
+func (_m *CSINodeInterface) Apply(ctx context.Context, cSINode *v1beta1.CSINodeApplyConfiguration, opts v1.ApplyOptions) (*storagev1beta1.CSINode, error) {
 	ret := _m.Called(ctx, cSINode, opts)
 
-	var r0 *v1beta1.CSINode
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.CSINode, v1.CreateOptions) *v1beta1.CSINode); ok {
+	var r0 *storagev1beta1.CSINode
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.CSINodeApplyConfiguration, v1.ApplyOptions) *storagev1beta1.CSINode); ok {
 		r0 = rf(ctx, cSINode, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.CSINode)
+			r0 = ret.Get(0).(*storagev1beta1.CSINode)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.CSINode, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.CSINodeApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, cSINode, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, cSINode, opts
+func (_m *CSINodeInterface) Create(ctx context.Context, cSINode *storagev1beta1.CSINode, opts v1.CreateOptions) (*storagev1beta1.CSINode, error) {
+	ret := _m.Called(ctx, cSINode, opts)
+
+	var r0 *storagev1beta1.CSINode
+	if rf, ok := ret.Get(0).(func(context.Context, *storagev1beta1.CSINode, v1.CreateOptions) *storagev1beta1.CSINode); ok {
+		r0 = rf(ctx, cSINode, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*storagev1beta1.CSINode)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *storagev1beta1.CSINode, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, cSINode, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +97,15 @@ func (_m *CSINodeInterface) DeleteCollection(ctx context.Context, opts v1.Delete
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *CSINodeInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.CSINode, error) {
+func (_m *CSINodeInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*storagev1beta1.CSINode, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1beta1.CSINode
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta1.CSINode); ok {
+	var r0 *storagev1beta1.CSINode
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *storagev1beta1.CSINode); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.CSINode)
+			r0 = ret.Get(0).(*storagev1beta1.CSINode)
 		}
 	}
 
@@ -96,15 +120,15 @@ func (_m *CSINodeInterface) Get(ctx context.Context, name string, opts v1.GetOpt
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *CSINodeInterface) List(ctx context.Context, opts v1.ListOptions) (*v1beta1.CSINodeList, error) {
+func (_m *CSINodeInterface) List(ctx context.Context, opts v1.ListOptions) (*storagev1beta1.CSINodeList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1beta1.CSINodeList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1beta1.CSINodeList); ok {
+	var r0 *storagev1beta1.CSINodeList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *storagev1beta1.CSINodeList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.CSINodeList)
+			r0 = ret.Get(0).(*storagev1beta1.CSINodeList)
 		}
 	}
 
@@ -119,7 +143,7 @@ func (_m *CSINodeInterface) List(ctx context.Context, opts v1.ListOptions) (*v1b
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *CSINodeInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1beta1.CSINode, error) {
+func (_m *CSINodeInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*storagev1beta1.CSINode, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +153,12 @@ func (_m *CSINodeInterface) Patch(ctx context.Context, name string, pt types.Pat
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1beta1.CSINode
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1beta1.CSINode); ok {
+	var r0 *storagev1beta1.CSINode
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *storagev1beta1.CSINode); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.CSINode)
+			r0 = ret.Get(0).(*storagev1beta1.CSINode)
 		}
 	}
 
@@ -149,20 +173,20 @@ func (_m *CSINodeInterface) Patch(ctx context.Context, name string, pt types.Pat
 }
 
 // Update provides a mock function with given fields: ctx, cSINode, opts
-func (_m *CSINodeInterface) Update(ctx context.Context, cSINode *v1beta1.CSINode, opts v1.UpdateOptions) (*v1beta1.CSINode, error) {
+func (_m *CSINodeInterface) Update(ctx context.Context, cSINode *storagev1beta1.CSINode, opts v1.UpdateOptions) (*storagev1beta1.CSINode, error) {
 	ret := _m.Called(ctx, cSINode, opts)
 
-	var r0 *v1beta1.CSINode
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.CSINode, v1.UpdateOptions) *v1beta1.CSINode); ok {
+	var r0 *storagev1beta1.CSINode
+	if rf, ok := ret.Get(0).(func(context.Context, *storagev1beta1.CSINode, v1.UpdateOptions) *storagev1beta1.CSINode); ok {
 		r0 = rf(ctx, cSINode, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.CSINode)
+			r0 = ret.Get(0).(*storagev1beta1.CSINode)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.CSINode, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *storagev1beta1.CSINode, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, cSINode, opts)
 	} else {
 		r1 = ret.Error(1)

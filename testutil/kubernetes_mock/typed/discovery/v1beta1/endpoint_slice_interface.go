@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1beta1 "k8s.io/api/discovery/v1beta1"
+	v1beta1 "k8s.io/client-go/applyconfigurations/discovery/v1beta1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,44 @@ type EndpointSliceInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, endpointSlice, opts
-func (_m *EndpointSliceInterface) Create(ctx context.Context, endpointSlice *v1beta1.EndpointSlice, opts v1.CreateOptions) (*v1beta1.EndpointSlice, error) {
+// Apply provides a mock function with given fields: ctx, endpointSlice, opts
+func (_m *EndpointSliceInterface) Apply(ctx context.Context, endpointSlice *v1beta1.EndpointSliceApplyConfiguration, opts v1.ApplyOptions) (*discoveryv1beta1.EndpointSlice, error) {
 	ret := _m.Called(ctx, endpointSlice, opts)
 
-	var r0 *v1beta1.EndpointSlice
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.EndpointSlice, v1.CreateOptions) *v1beta1.EndpointSlice); ok {
+	var r0 *discoveryv1beta1.EndpointSlice
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.EndpointSliceApplyConfiguration, v1.ApplyOptions) *discoveryv1beta1.EndpointSlice); ok {
 		r0 = rf(ctx, endpointSlice, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.EndpointSlice)
+			r0 = ret.Get(0).(*discoveryv1beta1.EndpointSlice)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.EndpointSlice, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.EndpointSliceApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, endpointSlice, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, endpointSlice, opts
+func (_m *EndpointSliceInterface) Create(ctx context.Context, endpointSlice *discoveryv1beta1.EndpointSlice, opts v1.CreateOptions) (*discoveryv1beta1.EndpointSlice, error) {
+	ret := _m.Called(ctx, endpointSlice, opts)
+
+	var r0 *discoveryv1beta1.EndpointSlice
+	if rf, ok := ret.Get(0).(func(context.Context, *discoveryv1beta1.EndpointSlice, v1.CreateOptions) *discoveryv1beta1.EndpointSlice); ok {
+		r0 = rf(ctx, endpointSlice, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*discoveryv1beta1.EndpointSlice)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *discoveryv1beta1.EndpointSlice, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, endpointSlice, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +97,15 @@ func (_m *EndpointSliceInterface) DeleteCollection(ctx context.Context, opts v1.
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *EndpointSliceInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.EndpointSlice, error) {
+func (_m *EndpointSliceInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*discoveryv1beta1.EndpointSlice, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1beta1.EndpointSlice
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta1.EndpointSlice); ok {
+	var r0 *discoveryv1beta1.EndpointSlice
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *discoveryv1beta1.EndpointSlice); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.EndpointSlice)
+			r0 = ret.Get(0).(*discoveryv1beta1.EndpointSlice)
 		}
 	}
 
@@ -96,15 +120,15 @@ func (_m *EndpointSliceInterface) Get(ctx context.Context, name string, opts v1.
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *EndpointSliceInterface) List(ctx context.Context, opts v1.ListOptions) (*v1beta1.EndpointSliceList, error) {
+func (_m *EndpointSliceInterface) List(ctx context.Context, opts v1.ListOptions) (*discoveryv1beta1.EndpointSliceList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1beta1.EndpointSliceList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1beta1.EndpointSliceList); ok {
+	var r0 *discoveryv1beta1.EndpointSliceList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *discoveryv1beta1.EndpointSliceList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.EndpointSliceList)
+			r0 = ret.Get(0).(*discoveryv1beta1.EndpointSliceList)
 		}
 	}
 
@@ -119,7 +143,7 @@ func (_m *EndpointSliceInterface) List(ctx context.Context, opts v1.ListOptions)
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *EndpointSliceInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1beta1.EndpointSlice, error) {
+func (_m *EndpointSliceInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*discoveryv1beta1.EndpointSlice, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +153,12 @@ func (_m *EndpointSliceInterface) Patch(ctx context.Context, name string, pt typ
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1beta1.EndpointSlice
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1beta1.EndpointSlice); ok {
+	var r0 *discoveryv1beta1.EndpointSlice
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *discoveryv1beta1.EndpointSlice); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.EndpointSlice)
+			r0 = ret.Get(0).(*discoveryv1beta1.EndpointSlice)
 		}
 	}
 
@@ -149,20 +173,20 @@ func (_m *EndpointSliceInterface) Patch(ctx context.Context, name string, pt typ
 }
 
 // Update provides a mock function with given fields: ctx, endpointSlice, opts
-func (_m *EndpointSliceInterface) Update(ctx context.Context, endpointSlice *v1beta1.EndpointSlice, opts v1.UpdateOptions) (*v1beta1.EndpointSlice, error) {
+func (_m *EndpointSliceInterface) Update(ctx context.Context, endpointSlice *discoveryv1beta1.EndpointSlice, opts v1.UpdateOptions) (*discoveryv1beta1.EndpointSlice, error) {
 	ret := _m.Called(ctx, endpointSlice, opts)
 
-	var r0 *v1beta1.EndpointSlice
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.EndpointSlice, v1.UpdateOptions) *v1beta1.EndpointSlice); ok {
+	var r0 *discoveryv1beta1.EndpointSlice
+	if rf, ok := ret.Get(0).(func(context.Context, *discoveryv1beta1.EndpointSlice, v1.UpdateOptions) *discoveryv1beta1.EndpointSlice); ok {
 		r0 = rf(ctx, endpointSlice, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.EndpointSlice)
+			r0 = ret.Get(0).(*discoveryv1beta1.EndpointSlice)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.EndpointSlice, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *discoveryv1beta1.EndpointSlice, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, endpointSlice, opts)
 	} else {
 		r1 = ret.Error(1)
