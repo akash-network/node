@@ -48,7 +48,7 @@ test-full:
 test-coverage:
 	$(GO) test -tags=$(BUILD_MAINNET) -coverprofile=coverage.txt \
 		-covermode=count \
-		-coverpkg=$(COVER_PACKAGES)
+		-coverpkg=./... $(COVER_PACKAGES)
 
 test-vet:
 	$(GO) vet ./...
