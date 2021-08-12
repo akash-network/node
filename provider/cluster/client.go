@@ -3,27 +3,28 @@ package cluster
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"k8s.io/client-go/tools/remotecommand"
 	"math/rand"
 	"sync"
 	"time"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/pkg/errors"
+	"k8s.io/client-go/tools/remotecommand"
 
 	eventsv1 "k8s.io/api/events/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/ovrclk/akash/manifest"
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
-	atypes "github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
 	mquery "github.com/ovrclk/akash/x/market/query"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 var (
-	_ Client = (*nullClient)(nil)
 	// Errors types returned by the Exec function on the client interface
 	ErrExec                        = errors.New("remote command execute error")
 	ErrExecNoServiceWithName       = fmt.Errorf("%w: no such service exists with that name", ErrExec)
@@ -34,10 +35,15 @@ var (
 	ErrExecMultiplePods            = fmt.Errorf("%w: cannot execute without specifying a pod explicitly", ErrExec)
 	ErrExecPodIndexOutOfRange      = fmt.Errorf("%w: pod index out of range", ErrExec)
 
+	ErrUnknownStorageClass = errors.New("inventory: unknown storage class")
+
 	errNotImplemented = errors.New("not implemented")
 )
 
+var _ Client = (*nullClient)(nil)
+
 type ReadClient interface {
+	ActiveStorageClasses() (map[string]bool, error)
 	LeaseStatus(context.Context, mtypes.LeaseID) (*ctypes.LeaseStatus, error)
 	LeaseEvents(context.Context, mtypes.LeaseID, string, bool) (ctypes.EventsWatcher, error)
 	LeaseLogs(context.Context, mtypes.LeaseID, string, bool, *int64) ([]*ctypes.ServiceLog, error)
@@ -50,7 +56,7 @@ type Client interface {
 	Deploy(context.Context, mtypes.LeaseID, *manifest.Group) error
 	TeardownLease(context.Context, mtypes.LeaseID) error
 	Deployments(context.Context) ([]ctypes.Deployment, error)
-	Inventory(context.Context) ([]ctypes.Node, error)
+	Inventory(context.Context) (ctypes.Inventory, error)
 	Exec(ctx context.Context,
 		lID mtypes.LeaseID,
 		service string,
@@ -67,33 +73,180 @@ func ErrorIsOkToSendToClient(err error) bool {
 	return errors.Is(err, ErrExec)
 }
 
+type resourcePair struct {
+	allocatable sdk.Int
+	allocated   sdk.Int
+}
+
+func (rp *resourcePair) dup() resourcePair {
+	return resourcePair{
+		allocatable: rp.allocatable.AddRaw(0),
+		allocated:   rp.allocated.AddRaw(0),
+	}
+}
+
+func (rp *resourcePair) subNLZ(val types.ResourceValue) (resourcePair, bool) {
+	avail := rp.available()
+
+	res := avail.Sub(val.Val)
+	if res.IsNegative() {
+		return resourcePair{}, false
+	}
+
+	return resourcePair{
+		allocatable: rp.allocatable.AddRaw(0),
+		allocated:   rp.allocated.Add(val.Val),
+	}, true
+}
+
+func (rp resourcePair) available() sdk.Int {
+	return rp.allocatable.Sub(rp.allocated)
+}
+
 type node struct {
-	id                    string
-	availableResources    atypes.ResourceUnits
-	allocateableResources atypes.ResourceUnits
+	id               string
+	cpu              resourcePair
+	memory           resourcePair
+	ephemeralStorage resourcePair
 }
 
-// NewNode returns new Node instance with provided details
-func NewNode(id string, allocateable atypes.ResourceUnits, available atypes.ResourceUnits) ctypes.Node {
-	return &node{id: id, allocateableResources: allocateable, availableResources: available}
+type inventory struct {
+	nodes []*node
 }
 
-// ID returns id of node
-func (n *node) ID() string {
-	return n.id
+var _ ctypes.Inventory = (*inventory)(nil)
+
+func (inv *inventory) Adjust(reservation ctypes.Reservation) error {
+	resources := make([]types.Resources, len(reservation.Resources().GetResources()))
+	copy(resources, reservation.Resources().GetResources())
+
+	currInventory := inv.dup()
+
+nodes:
+	for nodeName, nd := range currInventory.nodes {
+		// with persistent storage go through iff there is capacity available
+		// there is no point to go through any other node without available storage
+		currResources := resources[:0]
+
+		for _, res := range resources {
+			for ; res.Count > 0; res.Count-- {
+				var adjusted bool
+
+				cpu := nd.cpu.dup()
+				if cpu, adjusted = cpu.subNLZ(res.Resources.CPU.Units); !adjusted {
+					continue nodes
+				}
+
+				memory := nd.memory.dup()
+				if memory, adjusted = memory.subNLZ(res.Resources.Memory.Quantity); !adjusted {
+					continue nodes
+				}
+
+				ephemeralStorage := nd.ephemeralStorage.dup()
+
+				// all requirements for current group have been satisfied
+				// commit and move on
+				currInventory.nodes[nodeName] = &node{
+					id:               nd.id,
+					cpu:              cpu,
+					memory:           memory,
+					ephemeralStorage: ephemeralStorage,
+				}
+			}
+
+			if res.Count > 0 {
+				currResources = append(currResources, res)
+			}
+		}
+
+		resources = currResources
+	}
+
+	if len(resources) == 0 {
+		*inv = *currInventory
+
+		return nil
+	}
+
+	return ctypes.ErrInsufficientCapacity
 }
 
-func (n *node) Reserve(atypes.ResourceUnits) error {
-	return nil
+func (inv *inventory) Metrics() ctypes.InventoryMetrics {
+	cpuTotal := 0.0
+	memoryTotal := uint64(0)
+	storageEphemeralTotal := uint64(0)
+	storageTotal := make(map[string]uint64)
+
+	cpuAvailable := 0.0
+	memoryAvailable := uint64(0)
+	storageEphemeralAvailable := uint64(0)
+	storageAvailable := make(map[string]uint64)
+
+	ret := ctypes.InventoryMetrics{
+		Nodes: make([]ctypes.InventoryNode, 0, len(inv.nodes)),
+	}
+
+	for _, nd := range inv.nodes {
+		invNode := ctypes.InventoryNode{
+			Name: nd.id,
+			Allocatable: ctypes.InventoryNodeMetric{
+				CPU:              float64(nd.cpu.allocatable.Uint64()) / 1000,
+				Memory:           nd.memory.allocatable.Uint64(),
+				StorageEphemeral: nd.ephemeralStorage.allocatable.Uint64(),
+			},
+		}
+
+		cpuTotal += float64(nd.cpu.allocatable.Uint64()) / 1000
+		memoryTotal += nd.memory.allocatable.Uint64()
+		storageEphemeralTotal += nd.ephemeralStorage.allocatable.Uint64()
+
+		tmp := nd.cpu.allocatable.Sub(nd.cpu.allocated)
+		invNode.Available.CPU = float64(tmp.Uint64()) / 1000
+		cpuAvailable += invNode.Available.CPU
+
+		tmp = nd.memory.allocatable.Sub(nd.memory.allocated)
+		invNode.Available.Memory = tmp.Uint64()
+		memoryAvailable += invNode.Available.Memory
+
+		tmp = nd.ephemeralStorage.allocatable.Sub(nd.ephemeralStorage.allocated)
+		invNode.Available.StorageEphemeral = tmp.Uint64()
+		storageEphemeralAvailable += invNode.Available.StorageEphemeral
+
+		ret.Nodes = append(ret.Nodes, invNode)
+	}
+
+	ret.TotalAllocatable = ctypes.InventoryMetricTotal{
+		CPU:              cpuTotal,
+		Memory:           memoryTotal,
+		StorageEphemeral: storageEphemeralTotal,
+		Storage:          storageTotal,
+	}
+
+	ret.TotalAvailable = ctypes.InventoryMetricTotal{
+		CPU:              cpuAvailable,
+		Memory:           memoryAvailable,
+		StorageEphemeral: storageEphemeralAvailable,
+		Storage:          storageAvailable,
+	}
+
+	return ret
 }
 
-// Available returns available units of node
-func (n *node) Available() atypes.ResourceUnits {
-	return n.availableResources
-}
+func (inv *inventory) dup() *inventory {
+	res := &inventory{
+		nodes: make([]*node, 0, len(inv.nodes)),
+	}
 
-func (n *node) Allocateable() atypes.ResourceUnits {
-	return n.allocateableResources
+	for _, nd := range inv.nodes {
+		res.nodes = append(res.nodes, &node{
+			id:               nd.id,
+			cpu:              nd.cpu.dup(),
+			memory:           nd.memory.dup(),
+			ephemeralStorage: nd.ephemeralStorage.dup(),
+		})
+	}
+
+	return res
 }
 
 const (
@@ -129,6 +282,10 @@ func NullClient() Client {
 		leases: make(map[string]*nullLease),
 		mtx:    sync.Mutex{},
 	}
+}
+
+func (c *nullClient) ActiveStorageClasses() (map[string]bool, error) {
+	return make(map[string]bool), nil
 }
 
 func (c *nullClient) Deploy(ctx context.Context, lid mtypes.LeaseID, mgroup *manifest.Group) error {
@@ -252,31 +409,28 @@ func (c *nullClient) Deployments(context.Context) ([]ctypes.Deployment, error) {
 	return nil, nil
 }
 
-func (c *nullClient) Inventory(context.Context) ([]ctypes.Node, error) {
-	return []ctypes.Node{
-		NewNode("solo", atypes.ResourceUnits{
-			CPU: &atypes.CPU{
-				Units: atypes.NewResourceValue(nullClientCPU),
-			},
-			Memory: &atypes.Memory{
-				Quantity: atypes.NewResourceValue(nullClientMemory),
-			},
-			Storage: &atypes.Storage{
-				Quantity: atypes.NewResourceValue(nullClientStorage),
+func (c *nullClient) Inventory(context.Context) (ctypes.Inventory, error) {
+	inv := &inventory{
+		nodes: []*node{
+			{
+				id: "solo",
+				cpu: resourcePair{
+					allocatable: sdk.NewInt(nullClientCPU),
+					allocated:   sdk.NewInt(nullClientCPU - 100),
+				},
+				memory: resourcePair{
+					allocatable: sdk.NewInt(nullClientMemory),
+					allocated:   sdk.NewInt(nullClientMemory - unit.Gi),
+				},
+				ephemeralStorage: resourcePair{
+					allocatable: sdk.NewInt(nullClientStorage),
+					allocated:   sdk.NewInt(nullClientStorage - (10 * unit.Gi)),
+				},
 			},
 		},
-			atypes.ResourceUnits{
-				CPU: &atypes.CPU{
-					Units: atypes.NewResourceValue(nullClientCPU),
-				},
-				Memory: &atypes.Memory{
-					Quantity: atypes.NewResourceValue(nullClientMemory),
-				},
-				Storage: &atypes.Storage{
-					Quantity: atypes.NewResourceValue(nullClientStorage),
-				},
-			}),
-	}, nil
+	}
+
+	return inv, nil
 }
 
 func (c *nullClient) Exec(context.Context, mtypes.LeaseID, string, uint, []string, io.Reader, io.Writer, io.Writer, bool, remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error) {

@@ -12,10 +12,11 @@ option go_package = "github.com/ovrclk/akash/types";
 message CPU {
   option (gogoproto.equal)      = true;
   ResourceValue      units      = 1 [(gogoproto.nullable) = false];
-  repeated Attribute attributes = 2 [
+  repeated akash.base.v1beta1.Attribute attributes = 2 [
     (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "Attributes",
     (gogoproto.jsontag)  = "attributes,omitempty",
-    (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
+    (gogoproto.moretags) = "yaml:\"attributes,omitempty\""
   ];
 }
 
@@ -24,22 +25,31 @@ message Memory {
   option (gogoproto.equal) = true;
   ResourceValue quantity   = 1
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "size", (gogoproto.moretags) = "yaml:\"size\""];
-  repeated Attribute attributes = 2 [
+  repeated akash.base.v1beta1.Attribute attributes = 2 [
     (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "Attributes",
     (gogoproto.jsontag)  = "attributes,omitempty",
-    (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
+    (gogoproto.moretags) = "yaml:\"attributes,omitempty\""
   ];
 }
 
 // Storage stores resource quantity and storage attributes
 message Storage {
   option (gogoproto.equal) = true;
-  ResourceValue quantity   = 1
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "size", (gogoproto.moretags) = "yaml:\"size\""];
-  repeated Attribute attributes = 2 [
+  string name = 1 [
+    (gogoproto.jsontag) = "name",
+    (gogoproto.moretags) = "yaml:\"name\""
+  ];
+  ResourceValue quantity = 2 [
     (gogoproto.nullable) = false,
-    (gogoproto.jsontag)  = "attributes,omitempty",
-    (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
+    (gogoproto.jsontag) = "size",
+    (gogoproto.moretags) = "yaml:\"size\""
+  ];
+  repeated akash.base.v1beta1.Attribute attributes = 3 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "Attributes",
+    (gogoproto.jsontag) = "attributes,omitempty",
+    (gogoproto.moretags) = "yaml:\"attributes,omitempty\""
   ];
 }
 
@@ -58,11 +68,16 @@ message ResourceUnits {
     (gogoproto.jsontag)  = "memory,omitempty",
     (gogoproto.moretags) = "yaml:\"memory,omitempty\""
   ];
-  Storage storage = 3 [
-    (gogoproto.nullable) = true,
+  repeated Storage storage = 3 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "Volumes",
     (gogoproto.jsontag)  = "storage,omitempty",
     (gogoproto.moretags) = "yaml:\"storage,omitempty\""
   ];
-  repeated akash.base.v1beta1.Endpoint endpoints = 4
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "endpoints", (gogoproto.moretags) = "yaml:\"endpoints\""];
+  repeated akash.base.v1beta1.Endpoint endpoints = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "Endpoints",
+    (gogoproto.jsontag) = "endpoints",
+    (gogoproto.moretags) = "yaml:\"endpoints\""
+  ];
 }

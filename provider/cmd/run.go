@@ -10,11 +10,14 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/shopspring/decimal"
+
+	"github.com/ovrclk/akash/provider/cluster/kube/builder"
 	mparams "github.com/ovrclk/akash/x/market/types"
 	config2 "github.com/ovrclk/akash/x/provider/config"
-	"github.com/shopspring/decimal"
 
 	"github.com/pkg/errors"
 
@@ -33,6 +36,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/events"
@@ -327,10 +331,26 @@ func createBidPricingStrategy(strategy string) (bidengine.BidPricingStrategy, er
 		if err != nil {
 			return nil, err
 		}
-		storageScale, err := strToBidPriceScale(viper.GetString(FlagBidPriceStorageScale))
-		if err != nil {
-			return nil, err
+		storageScale := make(bidengine.Storage)
+
+		storageScales := strings.Split(viper.GetString(FlagBidPriceStorageScale), ",")
+		for _, scalePair := range storageScales {
+			vals := strings.Split(scalePair, "=")
+
+			name := "default"
+			scaleVal := vals[0]
+
+			if len(vals) == 2 {
+				name = vals[0]
+				scaleVal = vals[1]
+			}
+
+			storageScale[name], err = strToBidPriceScale(scaleVal)
+			if err != nil {
+				return nil, err
+			}
 		}
+
 		endpointScale, err := strToBidPriceScale(viper.GetString(FlagBidPriceEndpointScale))
 		if err != nil {
 			return nil, err
@@ -476,7 +496,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	pinfo := &res.Provider
 
 	// k8s client creation
-	kubeSettings := kube.NewDefaultSettings()
+	kubeSettings := builder.NewDefaultSettings()
 	kubeSettings.DeploymentIngressDomain = deploymentIngressDomain
 	kubeSettings.DeploymentIngressExposeLBHosts = deploymentIngressExposeLBHosts
 	kubeSettings.DeploymentIngressStaticHosts = deploymentIngressStaticHosts
@@ -585,7 +605,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 			srv := http.Server{Addr: metricsListener, Handler: metricsRouter}
 			go func() {
 				<-ctx.Done()
-				srv.Close()
+				_ = srv.Close()
 			}()
 			err := srv.ListenAndServe()
 			if errors.Is(err, http.ErrServerClosed) {
@@ -611,7 +631,7 @@ func openLogger() log.Logger {
 	})
 }
 
-func createClusterClient(log log.Logger, _ *cobra.Command, settings kube.Settings) (cluster.Client, error) {
+func createClusterClient(log log.Logger, _ *cobra.Command, settings builder.Settings) (cluster.Client, error) {
 	if !viper.GetBool(FlagClusterK8s) {
 		// Condition that there is no Kubernetes API to work with.
 		return cluster.NullClient(), nil
