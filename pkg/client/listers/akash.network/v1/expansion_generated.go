@@ -33,3 +33,7 @@ type ProviderHostListerExpansion interface{}
 // ProviderHostNamespaceListerExpansion allows custom methods to be added to
 // ProviderHostNamespaceLister.
 type ProviderHostNamespaceListerExpansion interface{}
+
+// StorageClassInfoListerExpansion allows custom methods to be added to
+// StorageClassInfoLister.
+type StorageClassInfoListerExpansion interface{}

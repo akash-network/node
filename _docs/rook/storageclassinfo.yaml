@@ -1,0 +1,9 @@
+apiVersion: akash.network/v1
+kind: StorageClassInfo
+metadata:
+  name: beta2
+  labels:
+    akash.network/component: "storage"
+    akash.network: "true"
+spec:
+  capacity: 64205594624

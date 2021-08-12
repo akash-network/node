@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -14,9 +13,12 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
+
+	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/types/unit"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/shopspring/decimal"
 )
 
 type BidPricingStrategy interface {
@@ -25,22 +27,63 @@ type BidPricingStrategy interface {
 
 const denom = "uakt"
 
-var errAllScalesZero = errors.New("At least one bid price must be a non-zero number")
+var (
+	errAllScalesZero               = errors.New("at least one bid price must be a non-zero number")
+	errNoPriceScaleForStorageClass = errors.New("no pricing configured for storage class")
+)
+
+type Storage map[string]decimal.Decimal
+
+func (ss Storage) IsAnyZero() bool {
+	if len(ss) == 0 {
+		return true
+	}
+
+	for _, val := range ss {
+		if val.IsZero() {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (ss Storage) IsAnyNegative() bool {
+	for _, val := range ss {
+		if val.IsNegative() {
+			return true
+		}
+	}
+
+	return false
+}
+
+// AllLessThenOrEqual check all storage classes fit into max limits
+// note better have dedicated limits for each class
+func (ss Storage) AllLessThenOrEqual(val decimal.Decimal) bool {
+	for _, storage := range ss {
+		if !storage.LessThanOrEqual(val) {
+			return false
+		}
+	}
+
+	return true
+}
 
 type scalePricing struct {
 	cpuScale      decimal.Decimal
 	memoryScale   decimal.Decimal
-	storageScale  decimal.Decimal
+	storageScale  Storage
 	endpointScale decimal.Decimal
 }
 
 func MakeScalePricing(
 	cpuScale decimal.Decimal,
 	memoryScale decimal.Decimal,
-	storageScale decimal.Decimal,
+	storageScale Storage,
 	endpointScale decimal.Decimal) (BidPricingStrategy, error) {
 
-	if cpuScale.IsZero() && memoryScale.IsZero() && storageScale.IsZero() && endpointScale.IsZero() {
+	if cpuScale.IsZero() && memoryScale.IsZero() && storageScale.IsAnyZero() && endpointScale.IsZero() {
 		return nil, errAllScalesZero
 	}
 
@@ -75,7 +118,12 @@ func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes
 	// a possible configuration
 	cpuTotal := decimal.NewFromInt(0)
 	memoryTotal := decimal.NewFromInt(0)
-	storageTotal := decimal.NewFromInt(0)
+	storageTotal := make(Storage)
+
+	for k := range fp.storageScale {
+		storageTotal[k] = decimal.NewFromInt(0)
+	}
+
 	endpointTotal := decimal.NewFromInt(0)
 
 	// iterate over everything & sum it up
@@ -90,9 +138,29 @@ func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes
 		memoryQuantity = memoryQuantity.Mul(groupCount)
 		memoryTotal = memoryTotal.Add(memoryQuantity)
 
-		storageQuantity := decimal.NewFromBigInt(group.Resources.Storage.Quantity.Val.BigInt(), 0)
-		storageQuantity = storageQuantity.Mul(groupCount)
-		storageTotal = storageTotal.Add(storageQuantity)
+		for _, storage := range group.Resources.Storage {
+			storageQuantity := decimal.NewFromBigInt(storage.Quantity.Val.BigInt(), 0)
+			storageQuantity = storageQuantity.Mul(groupCount)
+
+			storageClass := sdl.StorageEphemeral
+			attr := storage.Attributes.Find(sdl.StorageAttributePersistent)
+			if isPersistent, _ := attr.AsBool(); isPersistent {
+				attr = storage.Attributes.Find(sdl.StorageAttributeClass)
+				if class, set := attr.AsString(); set {
+					storageClass = class
+				}
+			}
+
+			total, exists := storageTotal[storageClass]
+
+			if !exists {
+				return sdk.Coin{}, errors.Wrapf(errNoPriceScaleForStorageClass, storageClass)
+			}
+
+			total = total.Add(storageQuantity)
+
+			storageTotal[storageClass] = total
+		}
 
 		endpointQuantity := decimal.NewFromInt(int64(len(group.Resources.Endpoints)))
 		endpointTotal = endpointTotal.Add(endpointQuantity)
@@ -105,8 +173,14 @@ func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes
 	memoryTotal = memoryTotal.Div(mebibytes)
 	memoryTotal = memoryTotal.Mul(fp.memoryScale)
 
-	storageTotal = storageTotal.Div(mebibytes)
-	storageTotal = storageTotal.Mul(fp.storageScale)
+	for class, total := range storageTotal {
+		total = total.Div(mebibytes)
+
+		// at this point presence of class in storageScale has been validated
+		total = total.Mul(fp.storageScale[class])
+
+		storageTotal[class] = total
+	}
 
 	endpointTotal = endpointTotal.Mul(fp.endpointScale)
 
@@ -115,14 +189,16 @@ func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes
 	// and fit into an Int64
 	if cpuTotal.IsNegative() || !cpuTotal.LessThanOrEqual(maxAllowedValue) ||
 		memoryTotal.IsNegative() || !memoryTotal.LessThanOrEqual(maxAllowedValue) ||
-		storageTotal.IsNegative() || !storageTotal.LessThanOrEqual(maxAllowedValue) ||
+		storageTotal.IsAnyNegative() || !storageTotal.AllLessThenOrEqual(maxAllowedValue) ||
 		endpointTotal.IsNegative() || !endpointTotal.LessThanOrEqual(maxAllowedValue) {
 		return sdk.Coin{}, ErrBidQuantityInvalid
 	}
 
 	totalCost := cpuTotal
 	totalCost = totalCost.Add(memoryTotal)
-	totalCost = totalCost.Add(storageTotal)
+	for _, total := range storageTotal {
+		totalCost = totalCost.Add(total)
+	}
 	totalCost = totalCost.Add(endpointTotal)
 	totalCost = totalCost.Ceil() // Round upwards to get an integer
 
@@ -146,7 +222,7 @@ func MakeRandomRangePricing() (BidPricingStrategy, error) {
 	return randomRangePricing(0), nil
 }
 
-func (randomRangePricing) CalculatePrice(ctx context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (randomRangePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
 	min, max := calculatePriceRange(gspec)
 
 	if min.IsEqual(max) {
@@ -237,7 +313,7 @@ func MakeShellScriptPricing(path string, processLimit uint, runtimeLimit time.Du
 
 	// Use the channel as a semaphore to limit the number of processes created for computing bid processes
 	// Most platforms put a limit on the number of processes a user can open. Even if the limit is high
-	// it isn't a good idea to open thuosands of processes.
+	// it isn't a good idea to open thousands of processes.
 	for i := uint(0); i != processLimit; i++ {
 		result.processLimit <- 0
 	}
@@ -246,11 +322,11 @@ func MakeShellScriptPricing(path string, processLimit uint, runtimeLimit time.Du
 }
 
 type dataForScriptElement struct {
-	Memory           uint64 `json:"memory"`
-	CPU              uint64 `json:"cpu"`
-	Storage          uint64 `json:"storage"`
-	Count            uint32 `json:"count"`
-	EndpointQuantity int    `json:"endpoint_quantity"`
+	Memory           uint64            `json:"memory"`
+	CPU              uint64            `json:"cpu"`
+	Storage          map[string]uint64 `json:"storage"`
+	Count            uint32            `json:"count"`
+	EndpointQuantity int               `json:"endpoint_quantity"`
 }
 
 func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
@@ -263,7 +339,13 @@ func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, 
 		groupCount := group.Count
 		cpuQuantity := group.Resources.CPU.Units.Val.Uint64()
 		memoryQuantity := group.Resources.Memory.Quantity.Value()
-		storageQuantity := group.Resources.Storage.Quantity.Val.Uint64()
+		storageQuantity := make(map[string]uint64)
+
+		for _, storage := range group.Resources.Storage {
+			class := "default"
+			storageQuantity[class] = storage.Quantity.Val.Uint64()
+		}
+
 		endpointQuantity := len(group.Resources.Endpoints)
 
 		dataForScript[i] = dataForScriptElement{

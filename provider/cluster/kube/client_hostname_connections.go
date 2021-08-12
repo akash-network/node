@@ -3,16 +3,19 @@ package kube
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
-	akashtypes "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/pager"
-	"strings"
+
+	akashtypes "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	"github.com/ovrclk/akash/provider/cluster/kube/builder"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 type hostnameResourceEvent struct {
@@ -31,9 +34,9 @@ type hostnameResourceEvent struct {
 func (c *client) DeclareHostname(ctx context.Context, lID mtypes.LeaseID, host string, serviceName string, externalPort uint32) error {
 	// Label each entry with the standard labels
 	labels := map[string]string{
-		akashManagedLabelName: "true",
+		builder.AkashManagedLabelName: "true",
 	}
-	appendLeaseLabels(lID, labels)
+	builder.AppendLeaseLabels(lID, labels)
 
 	foundEntry, err := c.ac.AkashV1().ProviderHosts(c.ns).Get(ctx, host, metav1.GetOptions{})
 	exists := true
@@ -251,7 +254,7 @@ func (c *client) AllHostnames(ctx context.Context) ([]ctypes.ActiveHostname, err
 	})
 
 	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=true", akashManagedLabelName),
+		LabelSelector: fmt.Sprintf("%s=true", builder.AkashManagedLabelName),
 	}
 
 	result := make([]ctypes.ActiveHostname, 0)
@@ -263,12 +266,12 @@ func (c *client) AllHostnames(ctx context.Context) ([]ctypes.ActiveHostname, err
 		gseq := ph.Spec.Gseq
 		oseq := ph.Spec.Oseq
 
-		owner, ok := ph.Labels[akashLeaseOwnerLabelName]
+		owner, ok := ph.Labels[builder.AkashLeaseOwnerLabelName]
 		if !ok || len(owner) == 0 {
 			c.log.Error("providerhost missing owner label", "host", hostname)
 			return nil
 		}
-		provider, ok := ph.Labels[akashLeaseProviderLabelName]
+		provider, ok := ph.Labels[builder.AkashLeaseProviderLabelName]
 		if !ok || len(provider) == 0 {
 			c.log.Error("providerhost missing provider label", "host", hostname)
 			return nil

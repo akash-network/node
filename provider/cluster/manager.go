@@ -3,22 +3,25 @@ package cluster
 import (
 	"context"
 	"fmt"
-	lifecycle "github.com/boz/go-lifecycle"
+	"sync"
+	"time"
+
+	"github.com/boz/go-lifecycle"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	"github.com/ovrclk/akash/manifest"
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/provider/event"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"time"
 
-	retry "github.com/avast/retry-go"
+	"github.com/avast/retry-go"
+	"github.com/tendermint/tendermint/libs/log"
+
 	clusterutil "github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	"github.com/tendermint/tendermint/libs/log"
-	"sync"
 )
 
 type deploymentState string

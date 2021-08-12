@@ -2,13 +2,17 @@ package util
 
 import (
 	"encoding/base32"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/manifest"
-	atypes "github.com/ovrclk/akash/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
-	uuid "github.com/satori/go.uuid"
 	"math"
 	"strings"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/ovrclk/akash/manifest"
+	atypes "github.com/ovrclk/akash/types"
+
+	uuid "github.com/satori/go.uuid"
+
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 func ShouldBeIngress(expose manifest.ServiceExpose) bool {
@@ -30,15 +34,15 @@ func ComputeCommittedResources(factor float64, rv atypes.ResourceValue) atypes.R
 
 	v := rv.Val.Uint64()
 	fraction := 1.0 / factor
-	commitedValue := math.Round(float64(v) * fraction)
+	committedValue := math.Round(float64(v) * fraction)
 
 	// Don't return a value of zero, since this is used as a resource request
-	if commitedValue <= 0 {
-		commitedValue = 1
+	if committedValue <= 0 {
+		committedValue = 1
 	}
 
 	result := atypes.ResourceValue{
-		Val: sdk.NewInt(int64(commitedValue)),
+		Val: sdk.NewInt(int64(committedValue)),
 	}
 
 	return result

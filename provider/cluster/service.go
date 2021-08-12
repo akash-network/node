@@ -2,12 +2,17 @@ package cluster
 
 import (
 	"context"
-	lifecycle "github.com/boz/go-lifecycle"
+
+	"github.com/boz/go-lifecycle"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
+
 	v1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	"github.com/tendermint/tendermint/libs/log"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/event"
@@ -16,7 +21,6 @@ import (
 	atypes "github.com/ovrclk/akash/types"
 	mquery "github.com/ovrclk/akash/x/market/query"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
 // ErrNotRunning is the error when service is not running
@@ -24,6 +28,7 @@ var ErrNotRunning = errors.New("not running")
 
 var (
 	deploymentManagerGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		// fixme provider_deployment_manager
 		Name:        "provider_deploymetn_manager",
 		Help:        "",
 		ConstLabels: nil,
@@ -240,7 +245,6 @@ func (s *service) Status(ctx context.Context) (*ctypes.Status, error) {
 		result.Inventory = istatus
 		return result, nil
 	}
-
 }
 
 func (s *service) updateDeploymentManagerGauge() {
@@ -265,7 +269,6 @@ loop:
 		case err := <-s.lc.ShutdownRequest():
 			s.lc.ShutdownInitiated(err)
 			break loop
-
 		case ev := <-s.sub.Events():
 			switch ev := ev.(type) {
 			case event.ManifestReceived:
@@ -295,14 +298,11 @@ loop:
 
 			case mtypes.EventLeaseClosed:
 				s.teardownLease(ev.ID)
-
 			}
-
 		case ch := <-s.statusch:
 			ch <- &ctypes.Status{
 				Leases: uint32(len(s.managers)),
 			}
-
 		case dm := <-s.managerch:
 			s.log.Info("manager done", "lease", dm.lease)
 

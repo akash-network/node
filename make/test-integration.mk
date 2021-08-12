@@ -9,7 +9,7 @@ INTEGRATION_VARS := TEST_INTEGRATION=true
 
 test-e2e-integration:
 	# Assumes cluster created: `make -s -C _run/kube kind-cluster-create`
-	$(KIND_VARS) $(INTEGRATION_VARS) go test -count=1 -mod=readonly -p 4 -tags "e2e $(BUILD_MAINNET)" -v ./integration/... -run TestIntegrationTestSuite
+	$(KIND_VARS) $(INTEGRATION_VARS) go test -count=1 -mod=readonly -p 4 -tags "e2e $(BUILD_MAINNET)" -v ./integration/... -run TestIntegrationTestSuite -timeout 1000s
 
 test-e2e-integration-k8s:
 	$(INTEGRATION_VARS) KUBE_NODE_IP="$(KUBE_NODE_IP)" KUBE_INGRESS_IP=127.0.0.1 KUBE_INGRESS_PORT=10080 go test -count=1 -mod=readonly -p 4 -tags "e2e $(BUILD_MAINNET)" -v ./integration/... -run TestIntegrationTestSuite

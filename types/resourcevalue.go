@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	errOverflow       = errors.Errorf("resource value overflow")
-	errCannotSub      = errors.Errorf("cannot subtract resources when lhs does not have same units as rhs")
-	errNegativeResult = errors.Errorf("result of subtraction is negative")
+	ErrOverflow       = errors.Errorf("resource value overflow")
+	ErrCannotSub      = errors.Errorf("cannot subtract resources when lhs does not have same units as rhs")
+	ErrNegativeResult = errors.Errorf("result of subtraction is negative")
 )
 
 /*
@@ -48,33 +48,10 @@ func (m ResourceValue) Value() uint64 {
 	return m.Val.Uint64()
 }
 
-func (m ResourceValue) equals(rhs ResourceValue) bool {
-	return m.Val.Equal(rhs.Val)
-}
-
-func (m ResourceValue) le(rhs ResourceValue) bool {
-	return m.Val.LTE(rhs.Val)
-}
-
-func (m ResourceValue) add(rhs ResourceValue) (ResourceValue, error) {
-	res := m.Val
-	res = res.Add(rhs.Val)
-
-	if res.Sign() == -1 {
-		return ResourceValue{}, errOverflow
+func (m ResourceValue) Dup() ResourceValue {
+	res := ResourceValue{
+		Val: sdk.NewIntFromBigInt(m.Val.BigInt()),
 	}
 
-	return ResourceValue{res}, nil
-}
-
-func (m ResourceValue) sub(rhs ResourceValue) (ResourceValue, error) {
-	res := m.Val
-
-	res = res.Sub(rhs.Val)
-
-	if res.Sign() == -1 {
-		return ResourceValue{}, errNegativeResult
-	}
-
-	return ResourceValue{res}, nil
+	return res
 }

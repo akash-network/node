@@ -44,3 +44,6 @@ provider-lease-ping:
 .PHONY: hostname-operator
 hostname-operator:
 	$(AKASH) provider hostname-operator
+
+.PHONY: clean-$(KIND_NAME)
+clean-$(KIND_NAME):

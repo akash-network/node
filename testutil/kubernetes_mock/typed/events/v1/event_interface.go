@@ -5,13 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
+	eventsv1 "k8s.io/api/events/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/events/v1"
+	v1 "k8s.io/client-go/applyconfigurations/events/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +23,44 @@ type EventInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, event, opts
-func (_m *EventInterface) Create(ctx context.Context, event *v1.Event, opts metav1.CreateOptions) (*v1.Event, error) {
+// Apply provides a mock function with given fields: ctx, event, opts
+func (_m *EventInterface) Apply(ctx context.Context, event *v1.EventApplyConfiguration, opts metav1.ApplyOptions) (*eventsv1.Event, error) {
 	ret := _m.Called(ctx, event, opts)
 
-	var r0 *v1.Event
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Event, metav1.CreateOptions) *v1.Event); ok {
+	var r0 *eventsv1.Event
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.EventApplyConfiguration, metav1.ApplyOptions) *eventsv1.Event); ok {
 		r0 = rf(ctx, event, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Event)
+			r0 = ret.Get(0).(*eventsv1.Event)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Event, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.EventApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, event, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, event, opts
+func (_m *EventInterface) Create(ctx context.Context, event *eventsv1.Event, opts metav1.CreateOptions) (*eventsv1.Event, error) {
+	ret := _m.Called(ctx, event, opts)
+
+	var r0 *eventsv1.Event
+	if rf, ok := ret.Get(0).(func(context.Context, *eventsv1.Event, metav1.CreateOptions) *eventsv1.Event); ok {
+		r0 = rf(ctx, event, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eventsv1.Event)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eventsv1.Event, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, event, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +98,15 @@ func (_m *EventInterface) DeleteCollection(ctx context.Context, opts metav1.Dele
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *EventInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Event, error) {
+func (_m *EventInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*eventsv1.Event, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.Event
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.Event); ok {
+	var r0 *eventsv1.Event
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *eventsv1.Event); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Event)
+			r0 = ret.Get(0).(*eventsv1.Event)
 		}
 	}
 
@@ -96,15 +121,15 @@ func (_m *EventInterface) Get(ctx context.Context, name string, opts metav1.GetO
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *EventInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.EventList, error) {
+func (_m *EventInterface) List(ctx context.Context, opts metav1.ListOptions) (*eventsv1.EventList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.EventList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.EventList); ok {
+	var r0 *eventsv1.EventList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *eventsv1.EventList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.EventList)
+			r0 = ret.Get(0).(*eventsv1.EventList)
 		}
 	}
 
@@ -119,7 +144,7 @@ func (_m *EventInterface) List(ctx context.Context, opts metav1.ListOptions) (*v
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *EventInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Event, error) {
+func (_m *EventInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*eventsv1.Event, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +154,12 @@ func (_m *EventInterface) Patch(ctx context.Context, name string, pt types.Patch
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.Event
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.Event); ok {
+	var r0 *eventsv1.Event
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *eventsv1.Event); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Event)
+			r0 = ret.Get(0).(*eventsv1.Event)
 		}
 	}
 
@@ -149,20 +174,20 @@ func (_m *EventInterface) Patch(ctx context.Context, name string, pt types.Patch
 }
 
 // Update provides a mock function with given fields: ctx, event, opts
-func (_m *EventInterface) Update(ctx context.Context, event *v1.Event, opts metav1.UpdateOptions) (*v1.Event, error) {
+func (_m *EventInterface) Update(ctx context.Context, event *eventsv1.Event, opts metav1.UpdateOptions) (*eventsv1.Event, error) {
 	ret := _m.Called(ctx, event, opts)
 
-	var r0 *v1.Event
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Event, metav1.UpdateOptions) *v1.Event); ok {
+	var r0 *eventsv1.Event
+	if rf, ok := ret.Get(0).(func(context.Context, *eventsv1.Event, metav1.UpdateOptions) *eventsv1.Event); ok {
 		r0 = rf(ctx, event, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Event)
+			r0 = ret.Get(0).(*eventsv1.Event)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Event, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *eventsv1.Event, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, event, opts)
 	} else {
 		r1 = ret.Error(1)

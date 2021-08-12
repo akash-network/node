@@ -2,21 +2,21 @@ package kube
 
 import (
 	"context"
-	"errors"
-	"github.com/ovrclk/akash/manifest"
-	"github.com/ovrclk/akash/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	"testing"
+
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"testing"
+	"github.com/ovrclk/akash/manifest"
+	"github.com/ovrclk/akash/provider/cluster/kube/builder"
+	"github.com/ovrclk/akash/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -46,11 +46,11 @@ func clientForTest(t *testing.T, kc kubernetes.Interface, ac akashclient.Interfa
 }
 
 func TestNewClientWithBogusIngressDomain(t *testing.T) {
-	settings := Settings{
+	settings := builder.Settings{
 		DeploymentIngressStaticHosts: true,
 		DeploymentIngressDomain:      "*.foo.bar.com",
 	}
-	ctx := context.WithValue(context.Background(), SettingsKey, settings)
+	ctx := context.WithValue(context.Background(), builder.SettingsKey, settings)
 
 	kmock := &kubernetes_mocks.Interface{}
 	client := clientForTest(t, kmock, nil)
@@ -58,32 +58,32 @@ func TestNewClientWithBogusIngressDomain(t *testing.T) {
 
 	result, err := client.LeaseStatus(ctx, testutil.LeaseID(t))
 	require.Error(t, err)
-	require.ErrorIs(t, err, errSettingsValidation)
+	require.ErrorIs(t, err, builder.ErrSettingsValidation)
 	require.Nil(t, result)
 
-	settings = Settings{
+	settings = builder.Settings{
 		DeploymentIngressStaticHosts: true,
 		DeploymentIngressDomain:      "foo.bar.com-",
 	}
-	ctx = context.WithValue(context.Background(), SettingsKey, settings)
+	ctx = context.WithValue(context.Background(), builder.SettingsKey, settings)
 	result, err = client.LeaseStatus(ctx, testutil.LeaseID(t))
 	require.Error(t, err)
-	require.ErrorIs(t, err, errSettingsValidation)
+	require.ErrorIs(t, err, builder.ErrSettingsValidation)
 	require.Nil(t, result)
 
-	settings = Settings{
+	settings = builder.Settings{
 		DeploymentIngressStaticHosts: true,
 		DeploymentIngressDomain:      "foo.ba!!!r.com",
 	}
-	ctx = context.WithValue(context.Background(), SettingsKey, settings)
+	ctx = context.WithValue(context.Background(), builder.SettingsKey, settings)
 	result, err = client.LeaseStatus(ctx, testutil.LeaseID(t))
 	require.Error(t, err)
-	require.ErrorIs(t, err, errSettingsValidation)
+	require.ErrorIs(t, err, builder.ErrSettingsValidation)
 	require.Nil(t, result)
 }
 
 func TestNewClientWithEmptyIngressDomain(t *testing.T) {
-	settings := Settings{
+	settings := builder.Settings{
 		DeploymentIngressStaticHosts: true,
 		DeploymentIngressDomain:      "",
 	}
@@ -91,10 +91,10 @@ func TestNewClientWithEmptyIngressDomain(t *testing.T) {
 	kmock := &kubernetes_mocks.Interface{}
 	client := clientForTest(t, kmock, nil)
 
-	ctx := context.WithValue(context.Background(), SettingsKey, settings)
+	ctx := context.WithValue(context.Background(), builder.SettingsKey, settings)
 	result, err := client.LeaseStatus(ctx, testutil.LeaseID(t))
 	require.Error(t, err)
-	require.ErrorIs(t, err, errSettingsValidation)
+	require.ErrorIs(t, err, builder.ErrSettingsValidation)
 	require.Nil(t, result)
 
 }
@@ -110,16 +110,16 @@ func TestLeaseStatusWithNoDeployments(t *testing.T) {
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
-	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
+	namespaceMock.On("Get", mock.Anything, builder.LidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
-	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
+	appsV1Mock.On("Deployments", builder.LidNS(lid)).Return(deploymentsMock)
 
 	deploymentsMock.On("List", mock.Anything, metav1.ListOptions{}).Return(nil, nil)
 
 	clientInterface := clientForTest(t, kmock, nil)
 
-	ctx := context.WithValue(context.Background(), SettingsKey, Settings{
+	ctx := context.WithValue(context.Background(), builder.SettingsKey, builder.Settings{
 		ClusterPublicHostname: "meow.com",
 	})
 	status, err := clientInterface.LeaseStatus(ctx, lid)
@@ -139,10 +139,10 @@ func TestLeaseStatusWithNoIngressNoService(t *testing.T) {
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
-	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
+	namespaceMock.On("Get", mock.Anything, builder.LidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
-	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
+	appsV1Mock.On("Deployments", builder.LidNS(lid)).Return(deploymentsMock)
 
 	deploymentItems := make([]appsv1.Deployment, 1)
 	deploymentItems[0].Name = "A"
@@ -156,14 +156,14 @@ func TestLeaseStatusWithNoIngressNoService(t *testing.T) {
 	deploymentsMock.On("List", mock.Anything, metav1.ListOptions{}).Return(deploymentList, nil)
 
 	servicesMock := &corev1_mocks.ServiceInterface{}
-	coreV1Mock.On("Services", lidNS(lid)).Return(servicesMock)
+	coreV1Mock.On("Services", builder.LidNS(lid)).Return(servicesMock)
 
 	servicesList := &v1.ServiceList{} // This is concrete so no mock is used
 	servicesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(servicesList, nil)
 
 	clientInterface := clientForTest(t, kmock, akashMock)
 
-	ctx := context.WithValue(context.Background(), SettingsKey, Settings{
+	ctx := context.WithValue(context.Background(), builder.SettingsKey, builder.Settings{
 		ClusterPublicHostname: "meow.com",
 	})
 	status, err := clientInterface.LeaseStatus(ctx, lid)
@@ -175,14 +175,13 @@ func TestLeaseStatusWithNoIngressNoService(t *testing.T) {
 
 func fakeProviderHost(hostname string, leaseID mtypes.LeaseID, serviceName string, externalPort uint32) runtime.Object {
 	labels := make(map[string]string)
-	appendLeaseLabels(leaseID, labels)
+	builder.AppendLeaseLabels(leaseID, labels)
 	return &akashv1_types.ProviderHost{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:                       hostname,
 			GenerateName:               "",
 			Namespace:                  testKubeClientNs,
-			SelfLink:                   "",
 			UID:                        "",
 			ResourceVersion:            "",
 			Generation:                 0,
@@ -222,10 +221,10 @@ func TestLeaseStatusWithIngressOnly(t *testing.T) {
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
-	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
+	namespaceMock.On("Get", mock.Anything, builder.LidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
-	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
+	appsV1Mock.On("Deployments", builder.LidNS(lid)).Return(deploymentsMock)
 
 	deploymentItems := make([]appsv1.Deployment, 2)
 	deploymentItems[0].Name = "myingress"
@@ -244,14 +243,14 @@ func TestLeaseStatusWithIngressOnly(t *testing.T) {
 	deploymentsMock.On("List", mock.Anything, metav1.ListOptions{}).Return(deploymentList, nil)
 
 	servicesMock := &corev1_mocks.ServiceInterface{}
-	coreV1Mock.On("Services", lidNS(lid)).Return(servicesMock)
+	coreV1Mock.On("Services", builder.LidNS(lid)).Return(servicesMock)
 
 	servicesList := &v1.ServiceList{} // This is concrete so no mock is used
 	servicesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(servicesList, nil)
 
 	clientInterface := clientForTest(t, kmock, akashMock)
 
-	ctx := context.WithValue(context.Background(), SettingsKey, Settings{
+	ctx := context.WithValue(context.Background(), builder.SettingsKey, builder.Settings{
 		ClusterPublicHostname: "meow.com",
 	})
 
@@ -289,10 +288,10 @@ func TestLeaseStatusWithForwardedPortOnly(t *testing.T) {
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
-	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
+	namespaceMock.On("Get", mock.Anything, builder.LidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
-	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
+	appsV1Mock.On("Deployments", builder.LidNS(lid)).Return(deploymentsMock)
 
 	const serviceName = "myservice"
 	deploymentItems := make([]appsv1.Deployment, 2)
@@ -312,12 +311,12 @@ func TestLeaseStatusWithForwardedPortOnly(t *testing.T) {
 	deploymentsMock.On("List", mock.Anything, metav1.ListOptions{}).Return(deploymentList, nil)
 
 	servicesMock := &corev1_mocks.ServiceInterface{}
-	coreV1Mock.On("Services", lidNS(lid)).Return(servicesMock)
+	coreV1Mock.On("Services", builder.LidNS(lid)).Return(servicesMock)
 
 	servicesList := &v1.ServiceList{} // This is concrete so no mock is used
 	servicesList.Items = make([]v1.Service, 1)
 
-	servicesList.Items[0].Name = serviceName + suffixForNodePortServiceName
+	servicesList.Items[0].Name = serviceName + builder.SuffixForNodePortServiceName
 
 	servicesList.Items[0].Spec.Type = v1.ServiceTypeNodePort
 	servicesList.Items[0].Spec.Ports = make([]v1.ServicePort, 1)
@@ -328,7 +327,7 @@ func TestLeaseStatusWithForwardedPortOnly(t *testing.T) {
 
 	clientInterface := clientForTest(t, kmock, akashMock)
 
-	ctx := context.WithValue(context.Background(), SettingsKey, Settings{
+	ctx := context.WithValue(context.Background(), builder.SettingsKey, builder.Settings{
 		ClusterPublicHostname: "meow.com",
 	})
 	status, err := clientInterface.LeaseStatus(ctx, lid)
@@ -360,7 +359,7 @@ func TestServiceStatusNoLease(t *testing.T) {
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
 	testErr := kubeErrors.NewNotFound(schema.GroupResource{}, "bob")
 	require.True(t, kubeErrors.IsNotFound(testErr))
-	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, testErr)
+	namespaceMock.On("Get", mock.Anything, builder.LidNS(lid), mock.Anything).Return(nil, testErr)
 
 	clientInterface := clientForTest(t, kmock, nil)
 
@@ -381,10 +380,10 @@ func TestServiceStatusNoDeployment(t *testing.T) {
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
-	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
+	namespaceMock.On("Get", mock.Anything, builder.LidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
-	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
+	appsV1Mock.On("Deployments", builder.LidNS(lid)).Return(deploymentsMock)
 	deploymentsMock.On("Get", mock.Anything, serviceName, metav1.GetOptions{}).Return(nil, nil)
 
 	akashMock := akashclient_fake.NewSimpleClientset()
@@ -408,10 +407,10 @@ func TestServiceStatusNoServiceWithName(t *testing.T) {
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
-	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
+	namespaceMock.On("Get", mock.Anything, builder.LidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
-	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
+	appsV1Mock.On("Deployments", builder.LidNS(lid)).Return(deploymentsMock)
 
 	deployment := appsv1.Deployment{}
 	deployment.Name = "aname0"
@@ -425,9 +424,8 @@ func TestServiceStatusNoServiceWithName(t *testing.T) {
 		Services: nil,
 	}
 
-	m, err := crd.NewManifest(lidNS(lid), lid, mg)
+	m, err := crd.NewManifest(testKubeClientNs, lid, mg)
 	require.NoError(t, err)
-	m.Namespace = testKubeClientNs
 	akashMock := akashclient_fake.NewSimpleClientset(m)
 
 	clientInterface := clientForTest(t, kmock, akashMock)
@@ -449,10 +447,10 @@ func TestServiceStatusNoCRDManifest(t *testing.T) {
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
-	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
+	namespaceMock.On("Get", mock.Anything, builder.LidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
-	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
+	appsV1Mock.On("Deployments", builder.LidNS(lid)).Return(deploymentsMock)
 
 	deployment := appsv1.Deployment{}
 	deployment.Name = "aname1"
@@ -466,7 +464,7 @@ func TestServiceStatusNoCRDManifest(t *testing.T) {
 		Services: nil,
 	}
 
-	m, err := crd.NewManifest(lidNS(lid)+"a", lid, mg)
+	m, err := crd.NewManifest(testKubeClientNs+"a", lid, mg)
 	require.NoError(t, err)
 	akashMock := akashclient_fake.NewSimpleClientset(m)
 
@@ -490,10 +488,10 @@ func TestServiceStatusWithIngress(t *testing.T) {
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
-	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
+	namespaceMock.On("Get", mock.Anything, builder.LidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
-	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
+	appsV1Mock.On("Deployments", builder.LidNS(lid)).Return(deploymentsMock)
 
 	deployment := appsv1.Deployment{}
 	deployment.Name = "aname2"
@@ -546,9 +544,8 @@ func TestServiceStatusWithIngress(t *testing.T) {
 		Services: services,
 	}
 
-	m, err := crd.NewManifest(lidNS(lid), lid, mg)
+	m, err := crd.NewManifest(testKubeClientNs, lid, mg)
 	require.NoError(t, err)
-	m.Namespace = testKubeClientNs
 	akashMock := akashclient_fake.NewSimpleClientset(m, fakeProviderHost("abcd.com", lid, "echo", 9000))
 
 	clientInterface := clientForTest(t, kmock, akashMock)
@@ -572,10 +569,10 @@ func TestServiceStatusWithNoManifest(t *testing.T) {
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
-	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
+	namespaceMock.On("Get", mock.Anything, builder.LidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
-	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
+	appsV1Mock.On("Deployments", builder.LidNS(lid)).Return(deploymentsMock)
 
 	deployment := appsv1.Deployment{}
 	deployment.Name = "aname4"
@@ -644,10 +641,10 @@ func TestServiceStatusWithoutIngress(t *testing.T) {
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
-	namespaceMock.On("Get", mock.Anything, lidNS(lid), mock.Anything).Return(nil, nil)
+	namespaceMock.On("Get", mock.Anything, builder.LidNS(lid), mock.Anything).Return(nil, nil)
 
 	deploymentsMock := &appsv1_mocks.DeploymentInterface{}
-	appsV1Mock.On("Deployments", lidNS(lid)).Return(deploymentsMock)
+	appsV1Mock.On("Deployments", builder.LidNS(lid)).Return(deploymentsMock)
 
 	deployment := appsv1.Deployment{}
 	deployment.Name = "aname5"
@@ -700,9 +697,8 @@ func TestServiceStatusWithoutIngress(t *testing.T) {
 		Services: services,
 	}
 
-	m, err := crd.NewManifest(lidNS(lid), lid, mg)
+	m, err := crd.NewManifest(testKubeClientNs, lid, mg)
 	require.NoError(t, err)
-	m.Namespace = testKubeClientNs
 	akashMock := akashclient_fake.NewSimpleClientset(m)
 
 	clientInterface := clientForTest(t, kmock, akashMock)
@@ -711,267 +707,4 @@ func TestServiceStatusWithoutIngress(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, status)
 	require.Len(t, status.URIs, 0)
-}
-
-type inventoryScaffold struct {
-	kmock             *kubernetes_mocks.Interface
-	corev1Mock        *corev1_mocks.CoreV1Interface
-	nodeInterfaceMock *corev1_mocks.NodeInterface
-	podInterfaceMock  *corev1_mocks.PodInterface
-}
-
-func makeInventoryScaffold() *inventoryScaffold {
-	s := &inventoryScaffold{
-		kmock:             &kubernetes_mocks.Interface{},
-		corev1Mock:        &corev1_mocks.CoreV1Interface{},
-		nodeInterfaceMock: &corev1_mocks.NodeInterface{},
-		podInterfaceMock:  &corev1_mocks.PodInterface{},
-	}
-
-	s.kmock.On("CoreV1").Return(s.corev1Mock)
-	s.corev1Mock.On("Nodes").Return(s.nodeInterfaceMock, nil)
-	s.corev1Mock.On("Pods", "" /* all namespaces */).Return(s.podInterfaceMock, nil)
-
-	return s
-}
-
-func TestInventoryZero(t *testing.T) {
-	s := makeInventoryScaffold()
-
-	nodeList := &v1.NodeList{}
-	listOptions := metav1.ListOptions{}
-	s.nodeInterfaceMock.On("List", mock.Anything, listOptions).Return(nodeList, nil)
-
-	podList := &v1.PodList{}
-	s.podInterfaceMock.On("List", mock.Anything, mock.Anything).Return(podList, nil)
-
-	clientInterface := clientForTest(t, s.kmock, nil)
-	inventory, err := clientInterface.Inventory(context.Background())
-	require.NoError(t, err)
-	require.NotNil(t, inventory)
-
-	// The inventory was called and the kubernetes client says there are no nodes & no pods. Inventory
-	// should be zero
-	require.Len(t, inventory, 0)
-
-	podListOptionsInCall := s.podInterfaceMock.Calls[0].Arguments[1].(metav1.ListOptions)
-	require.Equal(t, "status.phase!=Failed,status.phase!=Succeeded", podListOptionsInCall.FieldSelector)
-}
-
-func TestInventorySingleNodeNoPods(t *testing.T) {
-	s := makeInventoryScaffold()
-
-	nodeList := &v1.NodeList{}
-	nodeList.Items = make([]v1.Node, 1)
-
-	nodeResourceList := make(v1.ResourceList)
-	const expectedCPU = 13
-	cpuQuantity := resource.NewQuantity(expectedCPU, "m")
-	nodeResourceList[v1.ResourceCPU] = *cpuQuantity
-
-	const expectedMemory = 14
-	memoryQuantity := resource.NewQuantity(expectedMemory, "M")
-	nodeResourceList[v1.ResourceMemory] = *memoryQuantity
-
-	const expectedStorage = 15
-	ephemeralStorageQuantity := resource.NewQuantity(expectedStorage, "M")
-	nodeResourceList[v1.ResourceEphemeralStorage] = *ephemeralStorageQuantity
-
-	nodeConditions := make([]v1.NodeCondition, 1)
-	nodeConditions[0] = v1.NodeCondition{
-		Type:   v1.NodeReady,
-		Status: v1.ConditionTrue,
-	}
-
-	nodeList.Items[0] = v1.Node{
-		TypeMeta:   metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{},
-		Spec:       v1.NodeSpec{},
-		Status: v1.NodeStatus{
-			Allocatable: nodeResourceList,
-			Conditions:  nodeConditions,
-		},
-	}
-
-	listOptions := metav1.ListOptions{}
-	s.nodeInterfaceMock.On("List", mock.Anything, listOptions).Return(nodeList, nil)
-
-	podList := &v1.PodList{}
-	s.podInterfaceMock.On("List", mock.Anything, mock.Anything).Return(podList, nil)
-
-	clientInterface := clientForTest(t, s.kmock, nil)
-	inventory, err := clientInterface.Inventory(context.Background())
-	require.NoError(t, err)
-	require.NotNil(t, inventory)
-
-	require.Len(t, inventory, 1)
-
-	node := inventory[0]
-	availableResources := node.Available()
-	// Multiply expected value by 1000 since millicpu is used
-	require.Equal(t, uint64(expectedCPU*1000), availableResources.CPU.Units.Value())
-	require.Equal(t, uint64(expectedMemory), availableResources.Memory.Quantity.Value())
-	require.Equal(t, uint64(expectedStorage), availableResources.Storage.Quantity.Value())
-}
-
-func TestInventorySingleNodeWithPods(t *testing.T) {
-	s := makeInventoryScaffold()
-
-	nodeList := &v1.NodeList{}
-	nodeList.Items = make([]v1.Node, 1)
-
-	nodeResourceList := make(v1.ResourceList)
-	const expectedCPU = 13
-	cpuQuantity := resource.NewQuantity(expectedCPU, "m")
-	nodeResourceList[v1.ResourceCPU] = *cpuQuantity
-
-	const expectedMemory = 2048
-	memoryQuantity := resource.NewQuantity(expectedMemory, "M")
-	nodeResourceList[v1.ResourceMemory] = *memoryQuantity
-
-	const expectedStorage = 4096
-	ephemeralStorageQuantity := resource.NewQuantity(expectedStorage, "M")
-	nodeResourceList[v1.ResourceEphemeralStorage] = *ephemeralStorageQuantity
-
-	nodeConditions := make([]v1.NodeCondition, 1)
-	nodeConditions[0] = v1.NodeCondition{
-		Type:   v1.NodeReady,
-		Status: v1.ConditionTrue,
-	}
-
-	nodeList.Items[0] = v1.Node{
-		TypeMeta:   metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{},
-		Spec:       v1.NodeSpec{},
-		Status: v1.NodeStatus{
-			Allocatable: nodeResourceList,
-			Conditions:  nodeConditions,
-		},
-	}
-
-	listOptions := metav1.ListOptions{}
-	s.nodeInterfaceMock.On("List", mock.Anything, listOptions).Return(nodeList, nil)
-
-	const cpuPerContainer = 1
-	const memoryPerContainer = 3
-	const storagePerContainer = 17
-	// Define two pods
-	pods := make([]v1.Pod, 2)
-	// First pod has 1 container
-	podContainers := make([]v1.Container, 1)
-	containerRequests := make(v1.ResourceList)
-	cpuQuantity.SetMilli(cpuPerContainer)
-	containerRequests[v1.ResourceCPU] = *cpuQuantity
-
-	memoryQuantity = resource.NewQuantity(memoryPerContainer, "M")
-	containerRequests[v1.ResourceMemory] = *memoryQuantity
-
-	ephemeralStorageQuantity = resource.NewQuantity(storagePerContainer, "M")
-	containerRequests[v1.ResourceEphemeralStorage] = *ephemeralStorageQuantity
-
-	podContainers[0] = v1.Container{
-		Resources: v1.ResourceRequirements{
-			Limits:   nil,
-			Requests: containerRequests,
-		},
-	}
-	pods[0] = v1.Pod{
-		TypeMeta:   metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{},
-		Spec: v1.PodSpec{
-			Containers: podContainers,
-		},
-		Status: v1.PodStatus{},
-	}
-
-	// Define 2nd pod with multiple containers
-	podContainers = make([]v1.Container, 2)
-	for i := range podContainers {
-		containerRequests := make(v1.ResourceList)
-		cpuQuantity.SetMilli(cpuPerContainer)
-		containerRequests[v1.ResourceCPU] = *cpuQuantity
-
-		memoryQuantity = resource.NewQuantity(memoryPerContainer, "M")
-		containerRequests[v1.ResourceMemory] = *memoryQuantity
-
-		ephemeralStorageQuantity = resource.NewQuantity(storagePerContainer, "M")
-		containerRequests[v1.ResourceEphemeralStorage] = *ephemeralStorageQuantity
-
-		// Container limits are enforced by kubernetes as absolute limits, but not
-		// used when considering inventory since overcommit is possible in a kubernetes cluster
-		// Set limits to any value larger than requests in this test since it should not change
-		// the value returned  by the code
-		containerLimits := make(v1.ResourceList)
-
-		for k, v := range containerRequests {
-			replacementV := resource.NewQuantity(0, "")
-			replacementV.Set(v.Value() * int64(testutil.RandRangeInt(2, 100)))
-			containerLimits[k] = *replacementV
-		}
-
-		podContainers[i] = v1.Container{
-			Resources: v1.ResourceRequirements{
-				Limits:   containerLimits,
-				Requests: containerRequests,
-			},
-		}
-	}
-	pods[1] = v1.Pod{
-		TypeMeta:   metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{},
-		Spec: v1.PodSpec{
-			Containers: podContainers,
-		},
-		Status: v1.PodStatus{},
-	}
-
-	podList := &v1.PodList{
-		Items: pods,
-	}
-
-	s.podInterfaceMock.On("List", mock.Anything, mock.Anything).Return(podList, nil)
-
-	clientInterface := clientForTest(t, s.kmock, nil)
-	inventory, err := clientInterface.Inventory(context.Background())
-	require.NoError(t, err)
-	require.NotNil(t, inventory)
-
-	require.Len(t, inventory, 1)
-
-	node := inventory[0]
-	availableResources := node.Available()
-	// Multiply expected value by 1000 since millicpu is used
-	require.Equal(t, uint64(expectedCPU*1000)-3*cpuPerContainer, availableResources.CPU.Units.Value())
-	require.Equal(t, uint64(expectedMemory)-3*memoryPerContainer, availableResources.Memory.Quantity.Value())
-	require.Equal(t, uint64(expectedStorage)-3*storagePerContainer, availableResources.Storage.Quantity.Value())
-}
-
-var errForTest = errors.New("error in test")
-
-func TestInventoryWithNodeError(t *testing.T) {
-	s := makeInventoryScaffold()
-
-	listOptions := metav1.ListOptions{}
-	s.nodeInterfaceMock.On("List", mock.Anything, listOptions).Return(nil, errForTest)
-
-	clientInterface := clientForTest(t, s.kmock, nil)
-	inventory, err := clientInterface.Inventory(context.Background())
-	require.Error(t, err)
-	require.True(t, errors.Is(err, errForTest))
-	require.Nil(t, inventory)
-}
-
-func TestInventoryWithPodsError(t *testing.T) {
-	s := makeInventoryScaffold()
-
-	listOptions := metav1.ListOptions{}
-	nodeList := &v1.NodeList{}
-	s.nodeInterfaceMock.On("List", mock.Anything, listOptions).Return(nodeList, nil)
-	s.podInterfaceMock.On("List", mock.Anything, mock.Anything).Return(nil, errForTest)
-
-	clientInterface := clientForTest(t, s.kmock, nil)
-	inventory, err := clientInterface.Inventory(context.Background())
-	require.Error(t, err)
-	require.True(t, errors.Is(err, errForTest))
-	require.Nil(t, inventory)
 }

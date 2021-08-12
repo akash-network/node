@@ -24,6 +24,7 @@ var (
 type SDL interface {
 	DeploymentGroups() ([]*dtypes.GroupSpec, error)
 	Manifest() (manifest.Manifest, error)
+	validate() error
 }
 
 var _ SDL = (*sdl)(nil)
@@ -77,6 +78,10 @@ func ReadFile(path string) (SDL, error) {
 func Read(buf []byte) (SDL, error) {
 	obj := &sdl{}
 	if err := yaml.Unmarshal(buf, obj); err != nil {
+		return nil, err
+	}
+
+	if err := obj.validate(); err != nil {
 		return nil, err
 	}
 
@@ -147,4 +152,12 @@ func (s *sdl) Manifest() (manifest.Manifest, error) {
 	}
 
 	return s.data.Manifest()
+}
+
+func (s *sdl) validate() error {
+	if s.data == nil {
+		return errUninitializedConfig
+	}
+
+	return s.data.validate()
 }

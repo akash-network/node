@@ -8,9 +8,11 @@ import (
 	mock "github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	rbacv1 "k8s.io/api/rbac/v1"
+
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/rbac/v1"
+	v1 "k8s.io/client-go/applyconfigurations/rbac/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +22,44 @@ type ClusterRoleBindingInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, clusterRoleBinding, opts
-func (_m *ClusterRoleBindingInterface) Create(ctx context.Context, clusterRoleBinding *v1.ClusterRoleBinding, opts metav1.CreateOptions) (*v1.ClusterRoleBinding, error) {
+// Apply provides a mock function with given fields: ctx, clusterRoleBinding, opts
+func (_m *ClusterRoleBindingInterface) Apply(ctx context.Context, clusterRoleBinding *v1.ClusterRoleBindingApplyConfiguration, opts metav1.ApplyOptions) (*rbacv1.ClusterRoleBinding, error) {
 	ret := _m.Called(ctx, clusterRoleBinding, opts)
 
-	var r0 *v1.ClusterRoleBinding
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.ClusterRoleBinding, metav1.CreateOptions) *v1.ClusterRoleBinding); ok {
+	var r0 *rbacv1.ClusterRoleBinding
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.ClusterRoleBindingApplyConfiguration, metav1.ApplyOptions) *rbacv1.ClusterRoleBinding); ok {
 		r0 = rf(ctx, clusterRoleBinding, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ClusterRoleBinding)
+			r0 = ret.Get(0).(*rbacv1.ClusterRoleBinding)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.ClusterRoleBinding, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.ClusterRoleBindingApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, clusterRoleBinding, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, clusterRoleBinding, opts
+func (_m *ClusterRoleBindingInterface) Create(ctx context.Context, clusterRoleBinding *rbacv1.ClusterRoleBinding, opts metav1.CreateOptions) (*rbacv1.ClusterRoleBinding, error) {
+	ret := _m.Called(ctx, clusterRoleBinding, opts)
+
+	var r0 *rbacv1.ClusterRoleBinding
+	if rf, ok := ret.Get(0).(func(context.Context, *rbacv1.ClusterRoleBinding, metav1.CreateOptions) *rbacv1.ClusterRoleBinding); ok {
+		r0 = rf(ctx, clusterRoleBinding, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rbacv1.ClusterRoleBinding)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rbacv1.ClusterRoleBinding, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, clusterRoleBinding, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +97,15 @@ func (_m *ClusterRoleBindingInterface) DeleteCollection(ctx context.Context, opt
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *ClusterRoleBindingInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ClusterRoleBinding, error) {
+func (_m *ClusterRoleBindingInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*rbacv1.ClusterRoleBinding, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.ClusterRoleBinding
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.ClusterRoleBinding); ok {
+	var r0 *rbacv1.ClusterRoleBinding
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *rbacv1.ClusterRoleBinding); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ClusterRoleBinding)
+			r0 = ret.Get(0).(*rbacv1.ClusterRoleBinding)
 		}
 	}
 
@@ -95,15 +120,15 @@ func (_m *ClusterRoleBindingInterface) Get(ctx context.Context, name string, opt
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *ClusterRoleBindingInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.ClusterRoleBindingList, error) {
+func (_m *ClusterRoleBindingInterface) List(ctx context.Context, opts metav1.ListOptions) (*rbacv1.ClusterRoleBindingList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.ClusterRoleBindingList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.ClusterRoleBindingList); ok {
+	var r0 *rbacv1.ClusterRoleBindingList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *rbacv1.ClusterRoleBindingList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ClusterRoleBindingList)
+			r0 = ret.Get(0).(*rbacv1.ClusterRoleBindingList)
 		}
 	}
 
@@ -118,7 +143,7 @@ func (_m *ClusterRoleBindingInterface) List(ctx context.Context, opts metav1.Lis
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *ClusterRoleBindingInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ClusterRoleBinding, error) {
+func (_m *ClusterRoleBindingInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*rbacv1.ClusterRoleBinding, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +153,12 @@ func (_m *ClusterRoleBindingInterface) Patch(ctx context.Context, name string, p
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.ClusterRoleBinding
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.ClusterRoleBinding); ok {
+	var r0 *rbacv1.ClusterRoleBinding
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *rbacv1.ClusterRoleBinding); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ClusterRoleBinding)
+			r0 = ret.Get(0).(*rbacv1.ClusterRoleBinding)
 		}
 	}
 
@@ -148,20 +173,20 @@ func (_m *ClusterRoleBindingInterface) Patch(ctx context.Context, name string, p
 }
 
 // Update provides a mock function with given fields: ctx, clusterRoleBinding, opts
-func (_m *ClusterRoleBindingInterface) Update(ctx context.Context, clusterRoleBinding *v1.ClusterRoleBinding, opts metav1.UpdateOptions) (*v1.ClusterRoleBinding, error) {
+func (_m *ClusterRoleBindingInterface) Update(ctx context.Context, clusterRoleBinding *rbacv1.ClusterRoleBinding, opts metav1.UpdateOptions) (*rbacv1.ClusterRoleBinding, error) {
 	ret := _m.Called(ctx, clusterRoleBinding, opts)
 
-	var r0 *v1.ClusterRoleBinding
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.ClusterRoleBinding, metav1.UpdateOptions) *v1.ClusterRoleBinding); ok {
+	var r0 *rbacv1.ClusterRoleBinding
+	if rf, ok := ret.Get(0).(func(context.Context, *rbacv1.ClusterRoleBinding, metav1.UpdateOptions) *rbacv1.ClusterRoleBinding); ok {
 		r0 = rf(ctx, clusterRoleBinding, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ClusterRoleBinding)
+			r0 = ret.Get(0).(*rbacv1.ClusterRoleBinding)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.ClusterRoleBinding, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *rbacv1.ClusterRoleBinding, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, clusterRoleBinding, opts)
 	} else {
 		r1 = ret.Error(1)

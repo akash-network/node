@@ -188,15 +188,15 @@ func (_m *Client) GetManifestGroup(_a0 context.Context, _a1 types.LeaseID) (bool
 }
 
 // Inventory provides a mock function with given fields: _a0
-func (_m *Client) Inventory(_a0 context.Context) ([]cluster.Node, error) {
+func (_m *Client) Inventory(_a0 context.Context) (cluster.Inventory, error) {
 	ret := _m.Called(_a0)
 
-	var r0 []cluster.Node
-	if rf, ok := ret.Get(0).(func(context.Context) []cluster.Node); ok {
+	var r0 cluster.Inventory
+	if rf, ok := ret.Get(0).(func(context.Context) cluster.Inventory); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]cluster.Node)
+			r0 = ret.Get(0).(cluster.Inventory)
 		}
 	}
 

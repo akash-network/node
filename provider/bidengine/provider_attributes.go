@@ -3,36 +3,84 @@ package bidengine
 import (
 	"context"
 	"errors"
-	"github.com/boz/go-lifecycle"
-	"github.com/ovrclk/akash/provider/session"
-	"github.com/ovrclk/akash/pubsub"
-	atypes "github.com/ovrclk/akash/x/audit/types"
 	"regexp"
 	"sync"
 	"time"
+
+	"github.com/boz/go-lifecycle"
+
+	"github.com/ovrclk/akash/provider/session"
+	"github.com/ovrclk/akash/pubsub"
+	"github.com/ovrclk/akash/types"
+	atypes "github.com/ovrclk/akash/x/audit/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
+
+const (
+	attrFetchRetryPeriod = 5 * time.Second
+	attrReqTimeout       = 5 * time.Second
+)
+
+var (
+	errShuttingDown = errors.New("provider attribute signature service is shutting down")
+
+	invalidProviderPattern = regexp.MustCompile("^.*invalid provider: address not found.*$")
+)
+
+type attrRequest struct {
+	successCh chan<- types.Attributes
+	errCh     chan<- error
+}
+
+type auditedAttrRequest struct {
+	auditor   string
+	successCh chan<- []atypes.Provider
+	errCh     chan<- error
+}
+
+type providerAttrEntry struct {
+	providerAttr []atypes.Provider
+	at           time.Time
+}
+
+type auditedAttrResult struct {
+	auditor      string
+	providerAttr []atypes.Provider
+	err          error
+}
 
 type ProviderAttrSignatureService interface {
 	GetAuditorAttributeSignatures(auditor string) ([]atypes.Provider, error)
+	GetAttributes() (types.Attributes, error)
 }
 
 type providerAttrSignatureService struct {
 	providerAddr string
 	lc           lifecycle.Lifecycle
-	requests     chan providerAttrRequest
+	requests     chan auditedAttrRequest
+
+	reqAttr         chan attrRequest
+	currAttr        chan types.Attributes
+	fetchAttr       chan struct{}
+	pushAttr        chan struct{}
+	fetchInProgress chan struct{}
+	newAttr         chan types.Attributes
+	errFetchAttr    chan error
 
 	session session.Session
-	fetchCh chan providerAttrResult
+	fetchCh chan auditedAttrResult
 
 	data       map[string]providerAttrEntry
 	inProgress map[string]struct{}
-	pending    map[string][]providerAttrRequest
+	pending    map[string][]auditedAttrRequest
 
 	wg sync.WaitGroup
 
 	sub pubsub.Subscriber
 
 	ttl time.Duration
+
+	attr types.Attributes
 }
 
 func newProviderAttrSignatureService(s session.Session, bus pubsub.Bus) (*providerAttrSignatureService, error) {
@@ -48,13 +96,22 @@ func newProviderAttrSignatureServiceInternal(s session.Session, bus pubsub.Bus, 
 		providerAddr: s.Provider().Owner,
 		lc:           lifecycle.New(),
 		session:      s,
-		requests:     make(chan providerAttrRequest),
-		fetchCh:      make(chan providerAttrResult),
+		requests:     make(chan auditedAttrRequest),
+		fetchCh:      make(chan auditedAttrResult),
 		data:         make(map[string]providerAttrEntry),
-		pending:      make(map[string][]providerAttrRequest),
+		pending:      make(map[string][]auditedAttrRequest),
 		inProgress:   make(map[string]struct{}),
-		sub:          subscriber,
-		ttl:          ttl,
+
+		reqAttr:         make(chan attrRequest, 1),
+		currAttr:        make(chan types.Attributes, 1),
+		fetchAttr:       make(chan struct{}, 1),
+		pushAttr:        make(chan struct{}, 1),
+		fetchInProgress: make(chan struct{}, 1),
+		newAttr:         make(chan types.Attributes),
+		errFetchAttr:    make(chan error, 1),
+
+		sub: subscriber,
+		ttl: ttl,
 	}
 
 	go retval.run()
@@ -67,6 +124,8 @@ func (pass *providerAttrSignatureService) run() {
 	defer pass.lc.ShutdownCompleted()
 
 	ctx, cancel := context.WithCancel(context.Background())
+
+	pass.fetchAttributes()
 
 loop:
 	for {
@@ -88,6 +147,24 @@ loop:
 				pass.completeAllPending(result.auditor, result.providerAttr)
 			}
 			delete(pass.pending, result.auditor)
+		case <-pass.fetchAttr:
+			pass.tryFetchAttributes(ctx)
+		case req := <-pass.reqAttr:
+			pass.processAttrReq(ctx, req)
+		case <-pass.pushAttr:
+			select {
+			case pass.currAttr <- pass.attr:
+			default:
+			}
+		case attr := <-pass.newAttr:
+			// todo fetch current cluster storage inventory
+			pass.attr = attr
+			pass.pushCurrAttributes()
+		case <-pass.errFetchAttr:
+			// if attributes fetch fails give it retry within reasonable timeout
+			time.AfterFunc(attrFetchRetryPeriod, func() {
+				pass.fetchAttributes()
+			})
 		}
 	}
 
@@ -99,6 +176,21 @@ func (pass *providerAttrSignatureService) purgeAuditor(auditor string) {
 	delete(pass.data, auditor)
 }
 
+func (pass *providerAttrSignatureService) fetchAttributes() {
+	select {
+	case pass.fetchAttr <- struct{}{}:
+	default:
+		return
+	}
+}
+
+func (pass *providerAttrSignatureService) pushCurrAttributes() {
+	select {
+	case pass.pushAttr <- struct{}{}:
+	default:
+	}
+}
+
 func (pass *providerAttrSignatureService) handleEvent(ev pubsub.Event) {
 	switch ev := ev.(type) {
 	case atypes.EventTrustedAuditorCreated:
@@ -108,6 +200,10 @@ func (pass *providerAttrSignatureService) handleEvent(ev pubsub.Event) {
 	case atypes.EventTrustedAuditorDeleted:
 		if ev.Owner.String() == pass.providerAddr {
 			pass.purgeAuditor(ev.Auditor.String())
+		}
+	case ptypes.EventProviderUpdated:
+		if ev.Owner.String() == pass.providerAddr {
+			pass.fetchAttributes()
 		}
 	default:
 		// Ignore the event, we don't need it
@@ -213,9 +309,7 @@ func (pass *providerAttrSignatureService) maybeStart(ctx context.Context, audito
 	}()
 }
 
-var invalidProviderPattern = regexp.MustCompile("^.*invalid provider: address not found.*$")
-
-func (pass *providerAttrSignatureService) fetch(ctx context.Context, auditor string) providerAttrResult {
+func (pass *providerAttrSignatureService) fetch(ctx context.Context, auditor string) auditedAttrResult {
 	req := &atypes.QueryProviderAuditorRequest{
 		Owner:   pass.providerAddr,
 		Auditor: auditor,
@@ -226,21 +320,21 @@ func (pass *providerAttrSignatureService) fetch(ctx context.Context, auditor str
 	if err != nil {
 		// Error type is always "errors.fundamental" so use pattern matching here
 		if invalidProviderPattern.MatchString(err.Error()) {
-			return providerAttrResult{auditor: auditor} // No data
+			return auditedAttrResult{auditor: auditor} // No data
 		}
-		return providerAttrResult{auditor: auditor, err: err}
+		return auditedAttrResult{auditor: auditor, err: err}
 	}
 
 	value := result.GetProviders()
 	pass.session.Log().Info("got auditor attributes", "auditor", auditor, "size", providerAttrSize(value))
 
-	return providerAttrResult{
+	return auditedAttrResult{
 		auditor:      auditor,
 		providerAttr: value,
 	}
 }
 
-func (pass *providerAttrSignatureService) addRequest(request providerAttrRequest) bool {
+func (pass *providerAttrSignatureService) addRequest(request auditedAttrRequest) bool {
 	entry, present := pass.data[request.auditor]
 
 	if present { // Cached value is present
@@ -259,12 +353,10 @@ func (pass *providerAttrSignatureService) addRequest(request providerAttrRequest
 	return true
 }
 
-var errShuttingDown = errors.New("provider attribute signature service is shutting down")
-
 func (pass *providerAttrSignatureService) GetAuditorAttributeSignatures(auditor string) ([]atypes.Provider, error) {
 	successCh := make(chan []atypes.Provider, 1)
 	errCh := make(chan error, 1)
-	req := providerAttrRequest{
+	req := auditedAttrRequest{
 		auditor:   auditor,
 		successCh: successCh,
 		errCh:     errCh,
@@ -284,4 +376,76 @@ func (pass *providerAttrSignatureService) GetAuditorAttributeSignatures(auditor 
 	case result := <-successCh:
 		return result, nil
 	}
+}
+
+func (pass *providerAttrSignatureService) GetAttributes() (types.Attributes, error) {
+	successCh := make(chan types.Attributes, 1)
+	errCh := make(chan error, 1)
+
+	req := attrRequest{
+		successCh: successCh,
+		errCh:     errCh,
+	}
+
+	select {
+	case pass.reqAttr <- req:
+	case <-pass.lc.ShuttingDown():
+		return nil, errShuttingDown
+	}
+
+	select {
+	case <-pass.lc.ShuttingDown():
+		return nil, errShuttingDown
+	case err := <-errCh:
+		return nil, err
+	case result := <-successCh:
+		return result, nil
+	}
+}
+
+func (pass *providerAttrSignatureService) tryFetchAttributes(ctx context.Context) {
+	select {
+	case pass.fetchInProgress <- struct{}{}:
+		go func() {
+			var err error
+			defer func() {
+				<-pass.fetchInProgress
+				if err != nil {
+					pass.errFetchAttr <- err
+				}
+			}()
+
+			var result *ptypes.QueryProviderResponse
+
+			req := &ptypes.QueryProviderRequest{
+				Owner: pass.providerAddr,
+			}
+
+			result, err = pass.session.Client().Query().Provider(ctx, req)
+			if err != nil {
+				pass.session.Log().Error("fetching provider attributes", "provider", req.Owner)
+				return
+			}
+			pass.session.Log().Info("fetched provider attributes", "provider", req.Owner)
+
+			pass.newAttr <- result.Provider.Attributes
+		}()
+	default:
+		return
+	}
+}
+
+func (pass *providerAttrSignatureService) processAttrReq(ctx context.Context, req attrRequest) {
+	go func() {
+		ctx, cancel := context.WithTimeout(ctx, attrReqTimeout)
+		defer cancel()
+
+		select {
+		case <-ctx.Done():
+			req.errCh <- ctx.Err()
+		case attr := <-pass.currAttr:
+			req.successCh <- attr
+			pass.pushCurrAttributes()
+		}
+	}()
 }

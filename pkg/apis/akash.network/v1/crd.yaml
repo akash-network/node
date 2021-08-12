@@ -68,8 +68,10 @@ spec:
                                 type: string
                                 format: uint64
                               storage:
-                                type: string
-                                format: uint64
+                                type: array
+                                items:
+                                  type: string
+                                  format: uint64
                           count:
                             type: number
                             format: uint64
@@ -112,4 +114,48 @@ spec:
                                   type: array
                                   items:
                                     type: string
-
+                          params:
+                            type: object
+                            nullable: true
+                            properties:
+                              storage:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                    readOnly:
+                                      type: boolean
+                                    mount:
+                                      type: string
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: storageclassinfos.akash.network
+spec:
+  group: akash.network
+  scope: Cluster
+  names:
+    plural: storageclassinfos
+    singular: storageclassinfo
+    kind: StorageClassInfo
+    shortNames:
+      - sci
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                capacity:
+                  type: integer
+                  format: int64
+                  default: -1
+                  minimum: -1
