@@ -9,6 +9,8 @@ services:
         as: 80
         to:
           - global: true
+        accept:
+          - webdistest.localhost
     params:
       storage:
         data:

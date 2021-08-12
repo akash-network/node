@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// Manifests returns a ManifestInformer.
 	Manifests() ManifestInformer
+	// StorageClassInfos returns a StorageClassInfoInformer.
+	StorageClassInfos() StorageClassInfoInformer
 }
 
 type version struct {
@@ -42,4 +44,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // Manifests returns a ManifestInformer.
 func (v *version) Manifests() ManifestInformer {
 	return &manifestInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// StorageClassInfos returns a StorageClassInfoInformer.
+func (v *version) StorageClassInfos() StorageClassInfoInformer {
+	return &storageClassInfoInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

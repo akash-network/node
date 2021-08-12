@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1beta1 "k8s.io/api/policy/v1beta1"
+	v1beta1 "k8s.io/client-go/applyconfigurations/policy/v1beta1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,67 @@ type PodDisruptionBudgetInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, podDisruptionBudget, opts
-func (_m *PodDisruptionBudgetInterface) Create(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudget, opts v1.CreateOptions) (*v1beta1.PodDisruptionBudget, error) {
+// Apply provides a mock function with given fields: ctx, podDisruptionBudget, opts
+func (_m *PodDisruptionBudgetInterface) Apply(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudgetApplyConfiguration, opts v1.ApplyOptions) (*policyv1beta1.PodDisruptionBudget, error) {
 	ret := _m.Called(ctx, podDisruptionBudget, opts)
 
-	var r0 *v1beta1.PodDisruptionBudget
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.PodDisruptionBudget, v1.CreateOptions) *v1beta1.PodDisruptionBudget); ok {
+	var r0 *policyv1beta1.PodDisruptionBudget
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.PodDisruptionBudgetApplyConfiguration, v1.ApplyOptions) *policyv1beta1.PodDisruptionBudget); ok {
 		r0 = rf(ctx, podDisruptionBudget, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.PodDisruptionBudget)
+			r0 = ret.Get(0).(*policyv1beta1.PodDisruptionBudget)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.PodDisruptionBudget, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.PodDisruptionBudgetApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, podDisruptionBudget, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, podDisruptionBudget, opts
+func (_m *PodDisruptionBudgetInterface) ApplyStatus(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudgetApplyConfiguration, opts v1.ApplyOptions) (*policyv1beta1.PodDisruptionBudget, error) {
+	ret := _m.Called(ctx, podDisruptionBudget, opts)
+
+	var r0 *policyv1beta1.PodDisruptionBudget
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.PodDisruptionBudgetApplyConfiguration, v1.ApplyOptions) *policyv1beta1.PodDisruptionBudget); ok {
+		r0 = rf(ctx, podDisruptionBudget, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*policyv1beta1.PodDisruptionBudget)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.PodDisruptionBudgetApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, podDisruptionBudget, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, podDisruptionBudget, opts
+func (_m *PodDisruptionBudgetInterface) Create(ctx context.Context, podDisruptionBudget *policyv1beta1.PodDisruptionBudget, opts v1.CreateOptions) (*policyv1beta1.PodDisruptionBudget, error) {
+	ret := _m.Called(ctx, podDisruptionBudget, opts)
+
+	var r0 *policyv1beta1.PodDisruptionBudget
+	if rf, ok := ret.Get(0).(func(context.Context, *policyv1beta1.PodDisruptionBudget, v1.CreateOptions) *policyv1beta1.PodDisruptionBudget); ok {
+		r0 = rf(ctx, podDisruptionBudget, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*policyv1beta1.PodDisruptionBudget)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *policyv1beta1.PodDisruptionBudget, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, podDisruptionBudget, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +120,15 @@ func (_m *PodDisruptionBudgetInterface) DeleteCollection(ctx context.Context, op
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *PodDisruptionBudgetInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.PodDisruptionBudget, error) {
+func (_m *PodDisruptionBudgetInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*policyv1beta1.PodDisruptionBudget, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1beta1.PodDisruptionBudget
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta1.PodDisruptionBudget); ok {
+	var r0 *policyv1beta1.PodDisruptionBudget
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *policyv1beta1.PodDisruptionBudget); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.PodDisruptionBudget)
+			r0 = ret.Get(0).(*policyv1beta1.PodDisruptionBudget)
 		}
 	}
 
@@ -96,15 +143,15 @@ func (_m *PodDisruptionBudgetInterface) Get(ctx context.Context, name string, op
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *PodDisruptionBudgetInterface) List(ctx context.Context, opts v1.ListOptions) (*v1beta1.PodDisruptionBudgetList, error) {
+func (_m *PodDisruptionBudgetInterface) List(ctx context.Context, opts v1.ListOptions) (*policyv1beta1.PodDisruptionBudgetList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1beta1.PodDisruptionBudgetList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1beta1.PodDisruptionBudgetList); ok {
+	var r0 *policyv1beta1.PodDisruptionBudgetList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *policyv1beta1.PodDisruptionBudgetList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.PodDisruptionBudgetList)
+			r0 = ret.Get(0).(*policyv1beta1.PodDisruptionBudgetList)
 		}
 	}
 
@@ -119,7 +166,7 @@ func (_m *PodDisruptionBudgetInterface) List(ctx context.Context, opts v1.ListOp
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *PodDisruptionBudgetInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1beta1.PodDisruptionBudget, error) {
+func (_m *PodDisruptionBudgetInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*policyv1beta1.PodDisruptionBudget, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +176,12 @@ func (_m *PodDisruptionBudgetInterface) Patch(ctx context.Context, name string, 
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1beta1.PodDisruptionBudget
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1beta1.PodDisruptionBudget); ok {
+	var r0 *policyv1beta1.PodDisruptionBudget
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *policyv1beta1.PodDisruptionBudget); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.PodDisruptionBudget)
+			r0 = ret.Get(0).(*policyv1beta1.PodDisruptionBudget)
 		}
 	}
 
@@ -149,20 +196,20 @@ func (_m *PodDisruptionBudgetInterface) Patch(ctx context.Context, name string, 
 }
 
 // Update provides a mock function with given fields: ctx, podDisruptionBudget, opts
-func (_m *PodDisruptionBudgetInterface) Update(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudget, opts v1.UpdateOptions) (*v1beta1.PodDisruptionBudget, error) {
+func (_m *PodDisruptionBudgetInterface) Update(ctx context.Context, podDisruptionBudget *policyv1beta1.PodDisruptionBudget, opts v1.UpdateOptions) (*policyv1beta1.PodDisruptionBudget, error) {
 	ret := _m.Called(ctx, podDisruptionBudget, opts)
 
-	var r0 *v1beta1.PodDisruptionBudget
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.PodDisruptionBudget, v1.UpdateOptions) *v1beta1.PodDisruptionBudget); ok {
+	var r0 *policyv1beta1.PodDisruptionBudget
+	if rf, ok := ret.Get(0).(func(context.Context, *policyv1beta1.PodDisruptionBudget, v1.UpdateOptions) *policyv1beta1.PodDisruptionBudget); ok {
 		r0 = rf(ctx, podDisruptionBudget, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.PodDisruptionBudget)
+			r0 = ret.Get(0).(*policyv1beta1.PodDisruptionBudget)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.PodDisruptionBudget, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *policyv1beta1.PodDisruptionBudget, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, podDisruptionBudget, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -172,20 +219,20 @@ func (_m *PodDisruptionBudgetInterface) Update(ctx context.Context, podDisruptio
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, podDisruptionBudget, opts
-func (_m *PodDisruptionBudgetInterface) UpdateStatus(ctx context.Context, podDisruptionBudget *v1beta1.PodDisruptionBudget, opts v1.UpdateOptions) (*v1beta1.PodDisruptionBudget, error) {
+func (_m *PodDisruptionBudgetInterface) UpdateStatus(ctx context.Context, podDisruptionBudget *policyv1beta1.PodDisruptionBudget, opts v1.UpdateOptions) (*policyv1beta1.PodDisruptionBudget, error) {
 	ret := _m.Called(ctx, podDisruptionBudget, opts)
 
-	var r0 *v1beta1.PodDisruptionBudget
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.PodDisruptionBudget, v1.UpdateOptions) *v1beta1.PodDisruptionBudget); ok {
+	var r0 *policyv1beta1.PodDisruptionBudget
+	if rf, ok := ret.Get(0).(func(context.Context, *policyv1beta1.PodDisruptionBudget, v1.UpdateOptions) *policyv1beta1.PodDisruptionBudget); ok {
 		r0 = rf(ctx, podDisruptionBudget, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.PodDisruptionBudget)
+			r0 = ret.Get(0).(*policyv1beta1.PodDisruptionBudget)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.PodDisruptionBudget, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *policyv1beta1.PodDisruptionBudget, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, podDisruptionBudget, opts)
 	} else {
 		r1 = ret.Error(1)

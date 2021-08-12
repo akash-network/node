@@ -25,3 +25,7 @@ type ManifestListerExpansion interface{}
 // ManifestNamespaceListerExpansion allows custom methods to be added to
 // ManifestNamespaceLister.
 type ManifestNamespaceListerExpansion interface{}
+
+// StorageClassInfoListerExpansion allows custom methods to be added to
+// StorageClassInfoLister.
+type StorageClassInfoListerExpansion interface{}

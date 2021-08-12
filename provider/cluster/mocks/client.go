@@ -23,6 +23,29 @@ type Client struct {
 	mock.Mock
 }
 
+// ActiveStorageClasses provides a mock function with given fields:
+func (_m *Client) ActiveStorageClasses() (map[string]bool, error) {
+	ret := _m.Called()
+
+	var r0 map[string]bool
+	if rf, ok := ret.Get(0).(func() map[string]bool); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]bool)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Deploy provides a mock function with given fields: _a0, _a1, _a2
 func (_m *Client) Deploy(_a0 context.Context, _a1 types.LeaseID, _a2 *manifest.Group) error {
 	ret := _m.Called(_a0, _a1, _a2)
@@ -84,15 +107,15 @@ func (_m *Client) Exec(ctx context.Context, lID types.LeaseID, service string, p
 }
 
 // Inventory provides a mock function with given fields: _a0
-func (_m *Client) Inventory(_a0 context.Context) ([]clustertypes.Node, error) {
+func (_m *Client) Inventory(_a0 context.Context) (clustertypes.Inventory, error) {
 	ret := _m.Called(_a0)
 
-	var r0 []clustertypes.Node
-	if rf, ok := ret.Get(0).(func(context.Context) []clustertypes.Node); ok {
+	var r0 clustertypes.Inventory
+	if rf, ok := ret.Get(0).(func(context.Context) clustertypes.Inventory); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]clustertypes.Node)
+			r0 = ret.Get(0).(clustertypes.Inventory)
 		}
 	}
 

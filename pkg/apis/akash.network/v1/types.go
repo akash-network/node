@@ -2,9 +2,10 @@ package v1
 
 import (
 	"fmt"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"math"
 	"strconv"
+
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,7 +92,7 @@ func (d deployment) ManifestGroup() manifest.Group {
 	return d.group
 }
 
-// NewManifest creates new manifest with provided details. Returns error incase of failure.
+// NewManifest creates new manifest with provided details. Returns error in case of failure.
 func NewManifest(name string, lid mtypes.LeaseID, mgroup *manifest.Group) (*Manifest, error) {
 	group, err := manifestGroupFromAkash(mgroup)
 	if err != nil {
@@ -351,9 +352,9 @@ func manifestServiceExposeFromAkash(amse manifest.ServiceExpose) ManifestService
 
 // ResourceUnits stores cpu, memory and storage details
 type ResourceUnits struct {
-	CPU     uint32 `json:"cpu,omitempty"`
-	Memory  string `json:"memory,omitempty"`
-	Storage string `json:"storage,omitempty"`
+	CPU     uint32   `json:"cpu,omitempty"`
+	Memory  string   `json:"memory,omitempty"`
+	Storage []string `json:"storage,omitempty"`
 }
 
 func (ru ResourceUnits) toAkash() (types.ResourceUnits, error) {
@@ -361,9 +362,18 @@ func (ru ResourceUnits) toAkash() (types.ResourceUnits, error) {
 	if err != nil {
 		return types.ResourceUnits{}, err
 	}
-	storage, err := strconv.ParseUint(ru.Storage, 10, 64)
-	if err != nil {
-		return types.ResourceUnits{}, err
+
+	storage := make([]types.Storage, 0, len(ru.Storage))
+
+	for _, st := range ru.Storage {
+		size, err := strconv.ParseUint(st, 10, 64)
+		if err != nil {
+			return types.ResourceUnits{}, err
+		}
+
+		storage = append(storage, types.Storage{
+			Quantity: types.NewResourceValue(size),
+		})
 	}
 
 	return types.ResourceUnits{
@@ -373,9 +383,7 @@ func (ru ResourceUnits) toAkash() (types.ResourceUnits, error) {
 		Memory: &types.Memory{
 			Quantity: types.NewResourceValue(memory),
 		},
-		Storage: &types.Storage{
-			Quantity: types.NewResourceValue(storage),
-		},
+		Storage: storage,
 	}, nil
 }
 
@@ -391,8 +399,9 @@ func resourceUnitsFromAkash(aru types.ResourceUnits) (ResourceUnits, error) {
 		res.Memory = strconv.FormatUint(aru.Memory.Quantity.Value(), 10)
 	}
 
-	if aru.Storage != nil {
-		res.Storage = strconv.FormatUint(aru.Storage.Quantity.Value(), 10)
+	res.Storage = make([]string, 0, len(aru.Storage))
+	for _, size := range aru.Storage {
+		res.Storage = append(res.Storage, strconv.FormatUint(size.Quantity.Value(), 10))
 	}
 
 	return res, nil
