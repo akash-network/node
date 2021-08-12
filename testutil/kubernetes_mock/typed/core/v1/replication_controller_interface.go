@@ -7,13 +7,15 @@ import (
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 
+	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/core/v1"
+	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -23,21 +25,67 @@ type ReplicationControllerInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, replicationController, opts
-func (_m *ReplicationControllerInterface) Create(ctx context.Context, replicationController *v1.ReplicationController, opts metav1.CreateOptions) (*v1.ReplicationController, error) {
+// Apply provides a mock function with given fields: ctx, replicationController, opts
+func (_m *ReplicationControllerInterface) Apply(ctx context.Context, replicationController *v1.ReplicationControllerApplyConfiguration, opts metav1.ApplyOptions) (*corev1.ReplicationController, error) {
 	ret := _m.Called(ctx, replicationController, opts)
 
-	var r0 *v1.ReplicationController
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.ReplicationController, metav1.CreateOptions) *v1.ReplicationController); ok {
+	var r0 *corev1.ReplicationController
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.ReplicationControllerApplyConfiguration, metav1.ApplyOptions) *corev1.ReplicationController); ok {
 		r0 = rf(ctx, replicationController, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ReplicationController)
+			r0 = ret.Get(0).(*corev1.ReplicationController)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.ReplicationController, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.ReplicationControllerApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, replicationController, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, replicationController, opts
+func (_m *ReplicationControllerInterface) ApplyStatus(ctx context.Context, replicationController *v1.ReplicationControllerApplyConfiguration, opts metav1.ApplyOptions) (*corev1.ReplicationController, error) {
+	ret := _m.Called(ctx, replicationController, opts)
+
+	var r0 *corev1.ReplicationController
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.ReplicationControllerApplyConfiguration, metav1.ApplyOptions) *corev1.ReplicationController); ok {
+		r0 = rf(ctx, replicationController, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.ReplicationController)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.ReplicationControllerApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, replicationController, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, replicationController, opts
+func (_m *ReplicationControllerInterface) Create(ctx context.Context, replicationController *corev1.ReplicationController, opts metav1.CreateOptions) (*corev1.ReplicationController, error) {
+	ret := _m.Called(ctx, replicationController, opts)
+
+	var r0 *corev1.ReplicationController
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.ReplicationController, metav1.CreateOptions) *corev1.ReplicationController); ok {
+		r0 = rf(ctx, replicationController, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.ReplicationController)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.ReplicationController, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, replicationController, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -75,15 +123,15 @@ func (_m *ReplicationControllerInterface) DeleteCollection(ctx context.Context, 
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *ReplicationControllerInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ReplicationController, error) {
+func (_m *ReplicationControllerInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.ReplicationController, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.ReplicationController
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.ReplicationController); ok {
+	var r0 *corev1.ReplicationController
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *corev1.ReplicationController); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ReplicationController)
+			r0 = ret.Get(0).(*corev1.ReplicationController)
 		}
 	}
 
@@ -121,15 +169,15 @@ func (_m *ReplicationControllerInterface) GetScale(ctx context.Context, replicat
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *ReplicationControllerInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.ReplicationControllerList, error) {
+func (_m *ReplicationControllerInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.ReplicationControllerList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.ReplicationControllerList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.ReplicationControllerList); ok {
+	var r0 *corev1.ReplicationControllerList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *corev1.ReplicationControllerList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ReplicationControllerList)
+			r0 = ret.Get(0).(*corev1.ReplicationControllerList)
 		}
 	}
 
@@ -144,7 +192,7 @@ func (_m *ReplicationControllerInterface) List(ctx context.Context, opts metav1.
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *ReplicationControllerInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ReplicationController, error) {
+func (_m *ReplicationControllerInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*corev1.ReplicationController, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -154,12 +202,12 @@ func (_m *ReplicationControllerInterface) Patch(ctx context.Context, name string
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.ReplicationController
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.ReplicationController); ok {
+	var r0 *corev1.ReplicationController
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *corev1.ReplicationController); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ReplicationController)
+			r0 = ret.Get(0).(*corev1.ReplicationController)
 		}
 	}
 
@@ -174,20 +222,20 @@ func (_m *ReplicationControllerInterface) Patch(ctx context.Context, name string
 }
 
 // Update provides a mock function with given fields: ctx, replicationController, opts
-func (_m *ReplicationControllerInterface) Update(ctx context.Context, replicationController *v1.ReplicationController, opts metav1.UpdateOptions) (*v1.ReplicationController, error) {
+func (_m *ReplicationControllerInterface) Update(ctx context.Context, replicationController *corev1.ReplicationController, opts metav1.UpdateOptions) (*corev1.ReplicationController, error) {
 	ret := _m.Called(ctx, replicationController, opts)
 
-	var r0 *v1.ReplicationController
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.ReplicationController, metav1.UpdateOptions) *v1.ReplicationController); ok {
+	var r0 *corev1.ReplicationController
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.ReplicationController, metav1.UpdateOptions) *corev1.ReplicationController); ok {
 		r0 = rf(ctx, replicationController, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ReplicationController)
+			r0 = ret.Get(0).(*corev1.ReplicationController)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.ReplicationController, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.ReplicationController, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, replicationController, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -220,20 +268,20 @@ func (_m *ReplicationControllerInterface) UpdateScale(ctx context.Context, repli
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, replicationController, opts
-func (_m *ReplicationControllerInterface) UpdateStatus(ctx context.Context, replicationController *v1.ReplicationController, opts metav1.UpdateOptions) (*v1.ReplicationController, error) {
+func (_m *ReplicationControllerInterface) UpdateStatus(ctx context.Context, replicationController *corev1.ReplicationController, opts metav1.UpdateOptions) (*corev1.ReplicationController, error) {
 	ret := _m.Called(ctx, replicationController, opts)
 
-	var r0 *v1.ReplicationController
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.ReplicationController, metav1.UpdateOptions) *v1.ReplicationController); ok {
+	var r0 *corev1.ReplicationController
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.ReplicationController, metav1.UpdateOptions) *corev1.ReplicationController); ok {
 		r0 = rf(ctx, replicationController, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ReplicationController)
+			r0 = ret.Get(0).(*corev1.ReplicationController)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.ReplicationController, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.ReplicationController, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, replicationController, opts)
 	} else {
 		r1 = ret.Error(1)

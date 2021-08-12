@@ -5,12 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
-	mock "github.com/stretchr/testify/mock"
+	appsv1 "k8s.io/api/apps/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/client-go/applyconfigurations/apps/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +23,67 @@ type DaemonSetInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, daemonSet, opts
-func (_m *DaemonSetInterface) Create(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.CreateOptions) (*v1.DaemonSet, error) {
+// Apply provides a mock function with given fields: ctx, daemonSet, opts
+func (_m *DaemonSetInterface) Apply(ctx context.Context, daemonSet *v1.DaemonSetApplyConfiguration, opts metav1.ApplyOptions) (*appsv1.DaemonSet, error) {
 	ret := _m.Called(ctx, daemonSet, opts)
 
-	var r0 *v1.DaemonSet
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.DaemonSet, metav1.CreateOptions) *v1.DaemonSet); ok {
+	var r0 *appsv1.DaemonSet
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.DaemonSetApplyConfiguration, metav1.ApplyOptions) *appsv1.DaemonSet); ok {
 		r0 = rf(ctx, daemonSet, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.DaemonSet)
+			r0 = ret.Get(0).(*appsv1.DaemonSet)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.DaemonSet, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.DaemonSetApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, daemonSet, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, daemonSet, opts
+func (_m *DaemonSetInterface) ApplyStatus(ctx context.Context, daemonSet *v1.DaemonSetApplyConfiguration, opts metav1.ApplyOptions) (*appsv1.DaemonSet, error) {
+	ret := _m.Called(ctx, daemonSet, opts)
+
+	var r0 *appsv1.DaemonSet
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.DaemonSetApplyConfiguration, metav1.ApplyOptions) *appsv1.DaemonSet); ok {
+		r0 = rf(ctx, daemonSet, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*appsv1.DaemonSet)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.DaemonSetApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, daemonSet, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, daemonSet, opts
+func (_m *DaemonSetInterface) Create(ctx context.Context, daemonSet *appsv1.DaemonSet, opts metav1.CreateOptions) (*appsv1.DaemonSet, error) {
+	ret := _m.Called(ctx, daemonSet, opts)
+
+	var r0 *appsv1.DaemonSet
+	if rf, ok := ret.Get(0).(func(context.Context, *appsv1.DaemonSet, metav1.CreateOptions) *appsv1.DaemonSet); ok {
+		r0 = rf(ctx, daemonSet, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*appsv1.DaemonSet)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *appsv1.DaemonSet, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, daemonSet, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +121,15 @@ func (_m *DaemonSetInterface) DeleteCollection(ctx context.Context, opts metav1.
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *DaemonSetInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.DaemonSet, error) {
+func (_m *DaemonSetInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*appsv1.DaemonSet, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.DaemonSet
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.DaemonSet); ok {
+	var r0 *appsv1.DaemonSet
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *appsv1.DaemonSet); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.DaemonSet)
+			r0 = ret.Get(0).(*appsv1.DaemonSet)
 		}
 	}
 
@@ -95,15 +144,15 @@ func (_m *DaemonSetInterface) Get(ctx context.Context, name string, opts metav1.
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *DaemonSetInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.DaemonSetList, error) {
+func (_m *DaemonSetInterface) List(ctx context.Context, opts metav1.ListOptions) (*appsv1.DaemonSetList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.DaemonSetList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.DaemonSetList); ok {
+	var r0 *appsv1.DaemonSetList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *appsv1.DaemonSetList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.DaemonSetList)
+			r0 = ret.Get(0).(*appsv1.DaemonSetList)
 		}
 	}
 
@@ -118,7 +167,7 @@ func (_m *DaemonSetInterface) List(ctx context.Context, opts metav1.ListOptions)
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *DaemonSetInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.DaemonSet, error) {
+func (_m *DaemonSetInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*appsv1.DaemonSet, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +177,12 @@ func (_m *DaemonSetInterface) Patch(ctx context.Context, name string, pt types.P
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.DaemonSet
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.DaemonSet); ok {
+	var r0 *appsv1.DaemonSet
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *appsv1.DaemonSet); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.DaemonSet)
+			r0 = ret.Get(0).(*appsv1.DaemonSet)
 		}
 	}
 
@@ -148,20 +197,20 @@ func (_m *DaemonSetInterface) Patch(ctx context.Context, name string, pt types.P
 }
 
 // Update provides a mock function with given fields: ctx, daemonSet, opts
-func (_m *DaemonSetInterface) Update(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.UpdateOptions) (*v1.DaemonSet, error) {
+func (_m *DaemonSetInterface) Update(ctx context.Context, daemonSet *appsv1.DaemonSet, opts metav1.UpdateOptions) (*appsv1.DaemonSet, error) {
 	ret := _m.Called(ctx, daemonSet, opts)
 
-	var r0 *v1.DaemonSet
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.DaemonSet, metav1.UpdateOptions) *v1.DaemonSet); ok {
+	var r0 *appsv1.DaemonSet
+	if rf, ok := ret.Get(0).(func(context.Context, *appsv1.DaemonSet, metav1.UpdateOptions) *appsv1.DaemonSet); ok {
 		r0 = rf(ctx, daemonSet, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.DaemonSet)
+			r0 = ret.Get(0).(*appsv1.DaemonSet)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.DaemonSet, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *appsv1.DaemonSet, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, daemonSet, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -171,20 +220,20 @@ func (_m *DaemonSetInterface) Update(ctx context.Context, daemonSet *v1.DaemonSe
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, daemonSet, opts
-func (_m *DaemonSetInterface) UpdateStatus(ctx context.Context, daemonSet *v1.DaemonSet, opts metav1.UpdateOptions) (*v1.DaemonSet, error) {
+func (_m *DaemonSetInterface) UpdateStatus(ctx context.Context, daemonSet *appsv1.DaemonSet, opts metav1.UpdateOptions) (*appsv1.DaemonSet, error) {
 	ret := _m.Called(ctx, daemonSet, opts)
 
-	var r0 *v1.DaemonSet
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.DaemonSet, metav1.UpdateOptions) *v1.DaemonSet); ok {
+	var r0 *appsv1.DaemonSet
+	if rf, ok := ret.Get(0).(func(context.Context, *appsv1.DaemonSet, metav1.UpdateOptions) *appsv1.DaemonSet); ok {
 		r0 = rf(ctx, daemonSet, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.DaemonSet)
+			r0 = ret.Get(0).(*appsv1.DaemonSet)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.DaemonSet, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *appsv1.DaemonSet, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, daemonSet, opts)
 	} else {
 		r1 = ret.Error(1)

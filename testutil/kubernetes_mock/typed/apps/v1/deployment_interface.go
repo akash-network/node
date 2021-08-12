@@ -3,9 +3,10 @@
 package kubernetes_mocks
 
 import (
-	context "context"
-
+	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+
+	context "context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -13,7 +14,7 @@ import (
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/client-go/applyconfigurations/apps/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -23,21 +24,67 @@ type DeploymentInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, deployment, opts
-func (_m *DeploymentInterface) Create(ctx context.Context, deployment *v1.Deployment, opts metav1.CreateOptions) (*v1.Deployment, error) {
+// Apply provides a mock function with given fields: ctx, deployment, opts
+func (_m *DeploymentInterface) Apply(ctx context.Context, deployment *v1.DeploymentApplyConfiguration, opts metav1.ApplyOptions) (*appsv1.Deployment, error) {
 	ret := _m.Called(ctx, deployment, opts)
 
-	var r0 *v1.Deployment
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Deployment, metav1.CreateOptions) *v1.Deployment); ok {
+	var r0 *appsv1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.DeploymentApplyConfiguration, metav1.ApplyOptions) *appsv1.Deployment); ok {
 		r0 = rf(ctx, deployment, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Deployment)
+			r0 = ret.Get(0).(*appsv1.Deployment)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Deployment, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.DeploymentApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, deployment, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, deployment, opts
+func (_m *DeploymentInterface) ApplyStatus(ctx context.Context, deployment *v1.DeploymentApplyConfiguration, opts metav1.ApplyOptions) (*appsv1.Deployment, error) {
+	ret := _m.Called(ctx, deployment, opts)
+
+	var r0 *appsv1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.DeploymentApplyConfiguration, metav1.ApplyOptions) *appsv1.Deployment); ok {
+		r0 = rf(ctx, deployment, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*appsv1.Deployment)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.DeploymentApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, deployment, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, deployment, opts
+func (_m *DeploymentInterface) Create(ctx context.Context, deployment *appsv1.Deployment, opts metav1.CreateOptions) (*appsv1.Deployment, error) {
+	ret := _m.Called(ctx, deployment, opts)
+
+	var r0 *appsv1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, *appsv1.Deployment, metav1.CreateOptions) *appsv1.Deployment); ok {
+		r0 = rf(ctx, deployment, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*appsv1.Deployment)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *appsv1.Deployment, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, deployment, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -75,15 +122,15 @@ func (_m *DeploymentInterface) DeleteCollection(ctx context.Context, opts metav1
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *DeploymentInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Deployment, error) {
+func (_m *DeploymentInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*appsv1.Deployment, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.Deployment
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.Deployment); ok {
+	var r0 *appsv1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *appsv1.Deployment); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Deployment)
+			r0 = ret.Get(0).(*appsv1.Deployment)
 		}
 	}
 
@@ -121,15 +168,15 @@ func (_m *DeploymentInterface) GetScale(ctx context.Context, deploymentName stri
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *DeploymentInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.DeploymentList, error) {
+func (_m *DeploymentInterface) List(ctx context.Context, opts metav1.ListOptions) (*appsv1.DeploymentList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.DeploymentList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.DeploymentList); ok {
+	var r0 *appsv1.DeploymentList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *appsv1.DeploymentList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.DeploymentList)
+			r0 = ret.Get(0).(*appsv1.DeploymentList)
 		}
 	}
 
@@ -144,7 +191,7 @@ func (_m *DeploymentInterface) List(ctx context.Context, opts metav1.ListOptions
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *DeploymentInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Deployment, error) {
+func (_m *DeploymentInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*appsv1.Deployment, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -154,12 +201,12 @@ func (_m *DeploymentInterface) Patch(ctx context.Context, name string, pt types.
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.Deployment
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.Deployment); ok {
+	var r0 *appsv1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *appsv1.Deployment); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Deployment)
+			r0 = ret.Get(0).(*appsv1.Deployment)
 		}
 	}
 
@@ -174,20 +221,20 @@ func (_m *DeploymentInterface) Patch(ctx context.Context, name string, pt types.
 }
 
 // Update provides a mock function with given fields: ctx, deployment, opts
-func (_m *DeploymentInterface) Update(ctx context.Context, deployment *v1.Deployment, opts metav1.UpdateOptions) (*v1.Deployment, error) {
+func (_m *DeploymentInterface) Update(ctx context.Context, deployment *appsv1.Deployment, opts metav1.UpdateOptions) (*appsv1.Deployment, error) {
 	ret := _m.Called(ctx, deployment, opts)
 
-	var r0 *v1.Deployment
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Deployment, metav1.UpdateOptions) *v1.Deployment); ok {
+	var r0 *appsv1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, *appsv1.Deployment, metav1.UpdateOptions) *appsv1.Deployment); ok {
 		r0 = rf(ctx, deployment, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Deployment)
+			r0 = ret.Get(0).(*appsv1.Deployment)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Deployment, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *appsv1.Deployment, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, deployment, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -220,20 +267,20 @@ func (_m *DeploymentInterface) UpdateScale(ctx context.Context, deploymentName s
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, deployment, opts
-func (_m *DeploymentInterface) UpdateStatus(ctx context.Context, deployment *v1.Deployment, opts metav1.UpdateOptions) (*v1.Deployment, error) {
+func (_m *DeploymentInterface) UpdateStatus(ctx context.Context, deployment *appsv1.Deployment, opts metav1.UpdateOptions) (*appsv1.Deployment, error) {
 	ret := _m.Called(ctx, deployment, opts)
 
-	var r0 *v1.Deployment
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Deployment, metav1.UpdateOptions) *v1.Deployment); ok {
+	var r0 *appsv1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, *appsv1.Deployment, metav1.UpdateOptions) *appsv1.Deployment); ok {
 		r0 = rf(ctx, deployment, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Deployment)
+			r0 = ret.Get(0).(*appsv1.Deployment)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Deployment, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *appsv1.Deployment, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, deployment, opts)
 	} else {
 		r1 = ret.Error(1)

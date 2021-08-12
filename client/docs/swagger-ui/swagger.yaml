@@ -183,30 +183,34 @@ paths:
                                       Memory stores resource quantity and memory
                                       attributes
                                   storage:
-                                    type: object
-                                    properties:
-                                      quantity:
-                                        type: object
-                                        properties:
-                                          val:
-                                            type: string
-                                            format: byte
-                                        title: >-
-                                          Unit stores cpu, memory and storage
-                                          metrics
-                                      attributes:
-                                        type: array
-                                        items:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        name:
+                                          type: string
+                                        quantity:
                                           type: object
                                           properties:
-                                            key:
+                                            val:
                                               type: string
-                                            value:
-                                              type: string
-                                          title: Attribute represents key value pair
-                                    title: >-
-                                      Storage stores resource quantity and
-                                      storage attributes
+                                              format: byte
+                                          title: >-
+                                            Unit stores cpu, memory and storage
+                                            metrics
+                                        attributes:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              key:
+                                                type: string
+                                              value:
+                                                type: string
+                                            title: Attribute represents key value pair
+                                      title: >-
+                                        Storage stores resource quantity and
+                                        storage attributes
                                   endpoints:
                                     type: array
                                     items:
@@ -545,30 +549,34 @@ paths:
                                             Memory stores resource quantity and
                                             memory attributes
                                         storage:
-                                          type: object
-                                          properties:
-                                            quantity:
-                                              type: object
-                                              properties:
-                                                val:
-                                                  type: string
-                                                  format: byte
-                                              title: >-
-                                                Unit stores cpu, memory and storage
-                                                metrics
-                                            attributes:
-                                              type: array
-                                              items:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              name:
+                                                type: string
+                                              quantity:
                                                 type: object
                                                 properties:
-                                                  key:
+                                                  val:
                                                     type: string
-                                                  value:
-                                                    type: string
-                                                title: Attribute represents key value pair
-                                          title: >-
-                                            Storage stores resource quantity and
-                                            storage attributes
+                                                    format: byte
+                                                title: >-
+                                                  Unit stores cpu, memory and storage
+                                                  metrics
+                                              attributes:
+                                                type: array
+                                                items:
+                                                  type: object
+                                                  properties:
+                                                    key:
+                                                      type: string
+                                                    value:
+                                                      type: string
+                                                  title: Attribute represents key value pair
+                                            title: >-
+                                              Storage stores resource quantity and
+                                              storage attributes
                                         endpoints:
                                           type: array
                                           items:
@@ -957,30 +965,34 @@ paths:
                                     Memory stores resource quantity and memory
                                     attributes
                                 storage:
-                                  type: object
-                                  properties:
-                                    quantity:
-                                      type: object
-                                      properties:
-                                        val:
-                                          type: string
-                                          format: byte
-                                      title: >-
-                                        Unit stores cpu, memory and storage
-                                        metrics
-                                    attributes:
-                                      type: array
-                                      items:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      name:
+                                        type: string
+                                      quantity:
                                         type: object
                                         properties:
-                                          key:
+                                          val:
                                             type: string
-                                          value:
-                                            type: string
-                                        title: Attribute represents key value pair
-                                  title: >-
-                                    Storage stores resource quantity and storage
-                                    attributes
+                                            format: byte
+                                        title: >-
+                                          Unit stores cpu, memory and storage
+                                          metrics
+                                      attributes:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            key:
+                                              type: string
+                                            value:
+                                              type: string
+                                          title: Attribute represents key value pair
+                                    title: >-
+                                      Storage stores resource quantity and
+                                      storage attributes
                                 endpoints:
                                   type: array
                                   items:
@@ -2146,30 +2158,34 @@ paths:
                                     Memory stores resource quantity and memory
                                     attributes
                                 storage:
-                                  type: object
-                                  properties:
-                                    quantity:
-                                      type: object
-                                      properties:
-                                        val:
-                                          type: string
-                                          format: byte
-                                      title: >-
-                                        Unit stores cpu, memory and storage
-                                        metrics
-                                    attributes:
-                                      type: array
-                                      items:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      name:
+                                        type: string
+                                      quantity:
                                         type: object
                                         properties:
-                                          key:
+                                          val:
                                             type: string
-                                          value:
-                                            type: string
-                                        title: Attribute represents key value pair
-                                  title: >-
-                                    Storage stores resource quantity and storage
-                                    attributes
+                                            format: byte
+                                        title: >-
+                                          Unit stores cpu, memory and storage
+                                          metrics
+                                      attributes:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            key:
+                                              type: string
+                                            value:
+                                              type: string
+                                          title: Attribute represents key value pair
+                                    title: >-
+                                      Storage stores resource quantity and
+                                      storage attributes
                                 endpoints:
                                   type: array
                                   items:
@@ -2415,30 +2431,34 @@ paths:
                                       Memory stores resource quantity and memory
                                       attributes
                                   storage:
-                                    type: object
-                                    properties:
-                                      quantity:
-                                        type: object
-                                        properties:
-                                          val:
-                                            type: string
-                                            format: byte
-                                        title: >-
-                                          Unit stores cpu, memory and storage
-                                          metrics
-                                      attributes:
-                                        type: array
-                                        items:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        name:
+                                          type: string
+                                        quantity:
                                           type: object
                                           properties:
-                                            key:
+                                            val:
                                               type: string
-                                            value:
-                                              type: string
-                                          title: Attribute represents key value pair
-                                    title: >-
-                                      Storage stores resource quantity and
-                                      storage attributes
+                                              format: byte
+                                          title: >-
+                                            Unit stores cpu, memory and storage
+                                            metrics
+                                        attributes:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              key:
+                                                type: string
+                                              value:
+                                                type: string
+                                            title: Attribute represents key value pair
+                                      title: >-
+                                        Storage stores resource quantity and
+                                        storage attributes
                                   endpoints:
                                     type: array
                                     items:
@@ -26404,26 +26424,30 @@ definitions:
               title: Attribute represents key value pair
         title: Memory stores resource quantity and memory attributes
       storage:
-        type: object
-        properties:
-          quantity:
-            type: object
-            properties:
-              val:
-                type: string
-                format: byte
-            title: 'Unit stores cpu, memory and storage metrics'
-          attributes:
-            type: array
-            items:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            quantity:
               type: object
               properties:
-                key:
+                val:
                   type: string
-                value:
-                  type: string
-              title: Attribute represents key value pair
-        title: Storage stores resource quantity and storage attributes
+                  format: byte
+              title: 'Unit stores cpu, memory and storage metrics'
+            attributes:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  value:
+                    type: string
+                title: Attribute represents key value pair
+          title: Storage stores resource quantity and storage attributes
       endpoints:
         type: array
         items:
@@ -26483,6 +26507,8 @@ definitions:
   akash.base.v1beta1.Storage:
     type: object
     properties:
+      name:
+        type: string
       quantity:
         type: object
         properties:
@@ -26688,26 +26714,32 @@ definitions:
                             title: Attribute represents key value pair
                       title: Memory stores resource quantity and memory attributes
                     storage:
-                      type: object
-                      properties:
-                        quantity:
-                          type: object
-                          properties:
-                            val:
-                              type: string
-                              format: byte
-                          title: 'Unit stores cpu, memory and storage metrics'
-                        attributes:
-                          type: array
-                          items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          quantity:
                             type: object
                             properties:
-                              key:
+                              val:
                                 type: string
-                              value:
-                                type: string
-                            title: Attribute represents key value pair
-                      title: Storage stores resource quantity and storage attributes
+                                format: byte
+                            title: 'Unit stores cpu, memory and storage metrics'
+                          attributes:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                key:
+                                  type: string
+                                value:
+                                  type: string
+                              title: Attribute represents key value pair
+                        title: >-
+                          Storage stores resource quantity and storage
+                          attributes
                     endpoints:
                       type: array
                       items:
@@ -26872,26 +26904,30 @@ definitions:
                         title: Attribute represents key value pair
                   title: Memory stores resource quantity and memory attributes
                 storage:
-                  type: object
-                  properties:
-                    quantity:
-                      type: object
-                      properties:
-                        val:
-                          type: string
-                          format: byte
-                      title: 'Unit stores cpu, memory and storage metrics'
-                    attributes:
-                      type: array
-                      items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      quantity:
                         type: object
                         properties:
-                          key:
+                          val:
                             type: string
-                          value:
-                            type: string
-                        title: Attribute represents key value pair
-                  title: Storage stores resource quantity and storage attributes
+                            format: byte
+                        title: 'Unit stores cpu, memory and storage metrics'
+                      attributes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            key:
+                              type: string
+                            value:
+                              type: string
+                          title: Attribute represents key value pair
+                    title: Storage stores resource quantity and storage attributes
                 endpoints:
                   type: array
                   items:
@@ -27105,28 +27141,32 @@ definitions:
                               Memory stores resource quantity and memory
                               attributes
                           storage:
-                            type: object
-                            properties:
-                              quantity:
-                                type: object
-                                properties:
-                                  val:
-                                    type: string
-                                    format: byte
-                                title: 'Unit stores cpu, memory and storage metrics'
-                              attributes:
-                                type: array
-                                items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                quantity:
                                   type: object
                                   properties:
-                                    key:
+                                    val:
                                       type: string
-                                    value:
-                                      type: string
-                                  title: Attribute represents key value pair
-                            title: >-
-                              Storage stores resource quantity and storage
-                              attributes
+                                      format: byte
+                                  title: 'Unit stores cpu, memory and storage metrics'
+                                attributes:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      key:
+                                        type: string
+                                      value:
+                                        type: string
+                                    title: Attribute represents key value pair
+                              title: >-
+                                Storage stores resource quantity and storage
+                                attributes
                           endpoints:
                             type: array
                             items:
@@ -27420,30 +27460,34 @@ definitions:
                                     Memory stores resource quantity and memory
                                     attributes
                                 storage:
-                                  type: object
-                                  properties:
-                                    quantity:
-                                      type: object
-                                      properties:
-                                        val:
-                                          type: string
-                                          format: byte
-                                      title: >-
-                                        Unit stores cpu, memory and storage
-                                        metrics
-                                    attributes:
-                                      type: array
-                                      items:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      name:
+                                        type: string
+                                      quantity:
                                         type: object
                                         properties:
-                                          key:
+                                          val:
                                             type: string
-                                          value:
-                                            type: string
-                                        title: Attribute represents key value pair
-                                  title: >-
-                                    Storage stores resource quantity and storage
-                                    attributes
+                                            format: byte
+                                        title: >-
+                                          Unit stores cpu, memory and storage
+                                          metrics
+                                      attributes:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            key:
+                                              type: string
+                                            value:
+                                              type: string
+                                          title: Attribute represents key value pair
+                                    title: >-
+                                      Storage stores resource quantity and
+                                      storage attributes
                                 endpoints:
                                   type: array
                                   items:
@@ -27722,28 +27766,32 @@ definitions:
                             Memory stores resource quantity and memory
                             attributes
                         storage:
-                          type: object
-                          properties:
-                            quantity:
-                              type: object
-                              properties:
-                                val:
-                                  type: string
-                                  format: byte
-                              title: 'Unit stores cpu, memory and storage metrics'
-                            attributes:
-                              type: array
-                              items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              quantity:
                                 type: object
                                 properties:
-                                  key:
+                                  val:
                                     type: string
-                                  value:
-                                    type: string
-                                title: Attribute represents key value pair
-                          title: >-
-                            Storage stores resource quantity and storage
-                            attributes
+                                    format: byte
+                                title: 'Unit stores cpu, memory and storage metrics'
+                              attributes:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    key:
+                                      type: string
+                                    value:
+                                      type: string
+                                  title: Attribute represents key value pair
+                            title: >-
+                              Storage stores resource quantity and storage
+                              attributes
                         endpoints:
                           type: array
                           items:
@@ -27845,26 +27893,30 @@ definitions:
                   title: Attribute represents key value pair
             title: Memory stores resource quantity and memory attributes
           storage:
-            type: object
-            properties:
-              quantity:
-                type: object
-                properties:
-                  val:
-                    type: string
-                    format: byte
-                title: 'Unit stores cpu, memory and storage metrics'
-              attributes:
-                type: array
-                items:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                quantity:
                   type: object
                   properties:
-                    key:
+                    val:
                       type: string
-                    value:
-                      type: string
-                  title: Attribute represents key value pair
-            title: Storage stores resource quantity and storage attributes
+                      format: byte
+                  title: 'Unit stores cpu, memory and storage metrics'
+                attributes:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                      value:
+                        type: string
+                    title: Attribute represents key value pair
+              title: Storage stores resource quantity and storage attributes
           endpoints:
             type: array
             items:
@@ -28811,26 +28863,32 @@ definitions:
                             title: Attribute represents key value pair
                       title: Memory stores resource quantity and memory attributes
                     storage:
-                      type: object
-                      properties:
-                        quantity:
-                          type: object
-                          properties:
-                            val:
-                              type: string
-                              format: byte
-                          title: 'Unit stores cpu, memory and storage metrics'
-                        attributes:
-                          type: array
-                          items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          quantity:
                             type: object
                             properties:
-                              key:
+                              val:
                                 type: string
-                              value:
-                                type: string
-                            title: Attribute represents key value pair
-                      title: Storage stores resource quantity and storage attributes
+                                format: byte
+                            title: 'Unit stores cpu, memory and storage metrics'
+                          attributes:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                key:
+                                  type: string
+                                value:
+                                  type: string
+                              title: Attribute represents key value pair
+                        title: >-
+                          Storage stores resource quantity and storage
+                          attributes
                     endpoints:
                       type: array
                       items:
@@ -29633,28 +29691,32 @@ definitions:
                             Memory stores resource quantity and memory
                             attributes
                         storage:
-                          type: object
-                          properties:
-                            quantity:
-                              type: object
-                              properties:
-                                val:
-                                  type: string
-                                  format: byte
-                              title: 'Unit stores cpu, memory and storage metrics'
-                            attributes:
-                              type: array
-                              items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              quantity:
                                 type: object
                                 properties:
-                                  key:
+                                  val:
                                     type: string
-                                  value:
-                                    type: string
-                                title: Attribute represents key value pair
-                          title: >-
-                            Storage stores resource quantity and storage
-                            attributes
+                                    format: byte
+                                title: 'Unit stores cpu, memory and storage metrics'
+                              attributes:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    key:
+                                      type: string
+                                    value:
+                                      type: string
+                                  title: Attribute represents key value pair
+                            title: >-
+                              Storage stores resource quantity and storage
+                              attributes
                         endpoints:
                           type: array
                           items:
@@ -29842,28 +29904,32 @@ definitions:
                               Memory stores resource quantity and memory
                               attributes
                           storage:
-                            type: object
-                            properties:
-                              quantity:
-                                type: object
-                                properties:
-                                  val:
-                                    type: string
-                                    format: byte
-                                title: 'Unit stores cpu, memory and storage metrics'
-                              attributes:
-                                type: array
-                                items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                quantity:
                                   type: object
                                   properties:
-                                    key:
+                                    val:
                                       type: string
-                                    value:
-                                      type: string
-                                  title: Attribute represents key value pair
-                            title: >-
-                              Storage stores resource quantity and storage
-                              attributes
+                                      format: byte
+                                  title: 'Unit stores cpu, memory and storage metrics'
+                                attributes:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      key:
+                                        type: string
+                                      value:
+                                        type: string
+                                    title: Attribute represents key value pair
+                              title: >-
+                                Storage stores resource quantity and storage
+                                attributes
                           endpoints:
                             type: array
                             items:

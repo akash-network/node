@@ -5,7 +5,7 @@ package mocks
 import (
 	context "context"
 
-	cluster "github.com/ovrclk/akash/provider/cluster/types"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -17,16 +17,39 @@ type ReadClient struct {
 	mock.Mock
 }
 
+// ActiveStorageClasses provides a mock function with given fields:
+func (_m *ReadClient) ActiveStorageClasses() (map[string]bool, error) {
+	ret := _m.Called()
+
+	var r0 map[string]bool
+	if rf, ok := ret.Get(0).(func() map[string]bool); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]bool)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // LeaseEvents provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *ReadClient) LeaseEvents(_a0 context.Context, _a1 types.LeaseID, _a2 string, _a3 bool) (cluster.EventsWatcher, error) {
+func (_m *ReadClient) LeaseEvents(_a0 context.Context, _a1 types.LeaseID, _a2 string, _a3 bool) (clustertypes.EventsWatcher, error) {
 	ret := _m.Called(_a0, _a1, _a2, _a3)
 
-	var r0 cluster.EventsWatcher
-	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, string, bool) cluster.EventsWatcher); ok {
+	var r0 clustertypes.EventsWatcher
+	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, string, bool) clustertypes.EventsWatcher); ok {
 		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(cluster.EventsWatcher)
+			r0 = ret.Get(0).(clustertypes.EventsWatcher)
 		}
 	}
 
@@ -41,15 +64,15 @@ func (_m *ReadClient) LeaseEvents(_a0 context.Context, _a1 types.LeaseID, _a2 st
 }
 
 // LeaseLogs provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4
-func (_m *ReadClient) LeaseLogs(_a0 context.Context, _a1 types.LeaseID, _a2 string, _a3 bool, _a4 *int64) ([]*cluster.ServiceLog, error) {
+func (_m *ReadClient) LeaseLogs(_a0 context.Context, _a1 types.LeaseID, _a2 string, _a3 bool, _a4 *int64) ([]*clustertypes.ServiceLog, error) {
 	ret := _m.Called(_a0, _a1, _a2, _a3, _a4)
 
-	var r0 []*cluster.ServiceLog
-	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, string, bool, *int64) []*cluster.ServiceLog); ok {
+	var r0 []*clustertypes.ServiceLog
+	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, string, bool, *int64) []*clustertypes.ServiceLog); ok {
 		r0 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*cluster.ServiceLog)
+			r0 = ret.Get(0).([]*clustertypes.ServiceLog)
 		}
 	}
 
@@ -64,15 +87,15 @@ func (_m *ReadClient) LeaseLogs(_a0 context.Context, _a1 types.LeaseID, _a2 stri
 }
 
 // LeaseStatus provides a mock function with given fields: _a0, _a1
-func (_m *ReadClient) LeaseStatus(_a0 context.Context, _a1 types.LeaseID) (*cluster.LeaseStatus, error) {
+func (_m *ReadClient) LeaseStatus(_a0 context.Context, _a1 types.LeaseID) (*clustertypes.LeaseStatus, error) {
 	ret := _m.Called(_a0, _a1)
 
-	var r0 *cluster.LeaseStatus
-	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID) *cluster.LeaseStatus); ok {
+	var r0 *clustertypes.LeaseStatus
+	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID) *clustertypes.LeaseStatus); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*cluster.LeaseStatus)
+			r0 = ret.Get(0).(*clustertypes.LeaseStatus)
 		}
 	}
 
@@ -87,15 +110,15 @@ func (_m *ReadClient) LeaseStatus(_a0 context.Context, _a1 types.LeaseID) (*clus
 }
 
 // ServiceStatus provides a mock function with given fields: _a0, _a1, _a2
-func (_m *ReadClient) ServiceStatus(_a0 context.Context, _a1 types.LeaseID, _a2 string) (*cluster.ServiceStatus, error) {
+func (_m *ReadClient) ServiceStatus(_a0 context.Context, _a1 types.LeaseID, _a2 string) (*clustertypes.ServiceStatus, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
-	var r0 *cluster.ServiceStatus
-	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, string) *cluster.ServiceStatus); ok {
+	var r0 *clustertypes.ServiceStatus
+	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, string) *clustertypes.ServiceStatus); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*cluster.ServiceStatus)
+			r0 = ret.Get(0).(*clustertypes.ServiceStatus)
 		}
 	}
 

@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	v1beta1 "k8s.io/client-go/applyconfigurations/extensions/v1beta1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,44 @@ type PodSecurityPolicyInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, podSecurityPolicy, opts
-func (_m *PodSecurityPolicyInterface) Create(ctx context.Context, podSecurityPolicy *v1beta1.PodSecurityPolicy, opts v1.CreateOptions) (*v1beta1.PodSecurityPolicy, error) {
+// Apply provides a mock function with given fields: ctx, podSecurityPolicy, opts
+func (_m *PodSecurityPolicyInterface) Apply(ctx context.Context, podSecurityPolicy *v1beta1.PodSecurityPolicyApplyConfiguration, opts v1.ApplyOptions) (*extensionsv1beta1.PodSecurityPolicy, error) {
 	ret := _m.Called(ctx, podSecurityPolicy, opts)
 
-	var r0 *v1beta1.PodSecurityPolicy
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.PodSecurityPolicy, v1.CreateOptions) *v1beta1.PodSecurityPolicy); ok {
+	var r0 *extensionsv1beta1.PodSecurityPolicy
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.PodSecurityPolicyApplyConfiguration, v1.ApplyOptions) *extensionsv1beta1.PodSecurityPolicy); ok {
 		r0 = rf(ctx, podSecurityPolicy, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.PodSecurityPolicy)
+			r0 = ret.Get(0).(*extensionsv1beta1.PodSecurityPolicy)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.PodSecurityPolicy, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.PodSecurityPolicyApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, podSecurityPolicy, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, podSecurityPolicy, opts
+func (_m *PodSecurityPolicyInterface) Create(ctx context.Context, podSecurityPolicy *extensionsv1beta1.PodSecurityPolicy, opts v1.CreateOptions) (*extensionsv1beta1.PodSecurityPolicy, error) {
+	ret := _m.Called(ctx, podSecurityPolicy, opts)
+
+	var r0 *extensionsv1beta1.PodSecurityPolicy
+	if rf, ok := ret.Get(0).(func(context.Context, *extensionsv1beta1.PodSecurityPolicy, v1.CreateOptions) *extensionsv1beta1.PodSecurityPolicy); ok {
+		r0 = rf(ctx, podSecurityPolicy, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*extensionsv1beta1.PodSecurityPolicy)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *extensionsv1beta1.PodSecurityPolicy, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, podSecurityPolicy, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +97,15 @@ func (_m *PodSecurityPolicyInterface) DeleteCollection(ctx context.Context, opts
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *PodSecurityPolicyInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.PodSecurityPolicy, error) {
+func (_m *PodSecurityPolicyInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*extensionsv1beta1.PodSecurityPolicy, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1beta1.PodSecurityPolicy
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta1.PodSecurityPolicy); ok {
+	var r0 *extensionsv1beta1.PodSecurityPolicy
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *extensionsv1beta1.PodSecurityPolicy); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.PodSecurityPolicy)
+			r0 = ret.Get(0).(*extensionsv1beta1.PodSecurityPolicy)
 		}
 	}
 
@@ -96,15 +120,15 @@ func (_m *PodSecurityPolicyInterface) Get(ctx context.Context, name string, opts
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *PodSecurityPolicyInterface) List(ctx context.Context, opts v1.ListOptions) (*v1beta1.PodSecurityPolicyList, error) {
+func (_m *PodSecurityPolicyInterface) List(ctx context.Context, opts v1.ListOptions) (*extensionsv1beta1.PodSecurityPolicyList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1beta1.PodSecurityPolicyList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1beta1.PodSecurityPolicyList); ok {
+	var r0 *extensionsv1beta1.PodSecurityPolicyList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *extensionsv1beta1.PodSecurityPolicyList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.PodSecurityPolicyList)
+			r0 = ret.Get(0).(*extensionsv1beta1.PodSecurityPolicyList)
 		}
 	}
 
@@ -119,7 +143,7 @@ func (_m *PodSecurityPolicyInterface) List(ctx context.Context, opts v1.ListOpti
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *PodSecurityPolicyInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1beta1.PodSecurityPolicy, error) {
+func (_m *PodSecurityPolicyInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*extensionsv1beta1.PodSecurityPolicy, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +153,12 @@ func (_m *PodSecurityPolicyInterface) Patch(ctx context.Context, name string, pt
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1beta1.PodSecurityPolicy
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1beta1.PodSecurityPolicy); ok {
+	var r0 *extensionsv1beta1.PodSecurityPolicy
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *extensionsv1beta1.PodSecurityPolicy); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.PodSecurityPolicy)
+			r0 = ret.Get(0).(*extensionsv1beta1.PodSecurityPolicy)
 		}
 	}
 
@@ -149,20 +173,20 @@ func (_m *PodSecurityPolicyInterface) Patch(ctx context.Context, name string, pt
 }
 
 // Update provides a mock function with given fields: ctx, podSecurityPolicy, opts
-func (_m *PodSecurityPolicyInterface) Update(ctx context.Context, podSecurityPolicy *v1beta1.PodSecurityPolicy, opts v1.UpdateOptions) (*v1beta1.PodSecurityPolicy, error) {
+func (_m *PodSecurityPolicyInterface) Update(ctx context.Context, podSecurityPolicy *extensionsv1beta1.PodSecurityPolicy, opts v1.UpdateOptions) (*extensionsv1beta1.PodSecurityPolicy, error) {
 	ret := _m.Called(ctx, podSecurityPolicy, opts)
 
-	var r0 *v1beta1.PodSecurityPolicy
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.PodSecurityPolicy, v1.UpdateOptions) *v1beta1.PodSecurityPolicy); ok {
+	var r0 *extensionsv1beta1.PodSecurityPolicy
+	if rf, ok := ret.Get(0).(func(context.Context, *extensionsv1beta1.PodSecurityPolicy, v1.UpdateOptions) *extensionsv1beta1.PodSecurityPolicy); ok {
 		r0 = rf(ctx, podSecurityPolicy, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.PodSecurityPolicy)
+			r0 = ret.Get(0).(*extensionsv1beta1.PodSecurityPolicy)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.PodSecurityPolicy, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *extensionsv1beta1.PodSecurityPolicy, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, podSecurityPolicy, opts)
 	} else {
 		r1 = ret.Error(1)

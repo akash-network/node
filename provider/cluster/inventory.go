@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	// errNotFound is the new error with message "not found"
+	// errReservationNotFound is the new error with message "not found"
 	errReservationNotFound = errors.New("reservation not found")
 )
 
