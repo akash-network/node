@@ -27,6 +27,12 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ManifestList{},
 	)
 	scheme.AddKnownTypes(SchemeGroupVersion,
+		&InventoryRequest{},
+		&InventoryRequestList{},
+		&Inventory{},
+		&InventoryList{},
+	)
+	scheme.AddKnownTypes(SchemeGroupVersion,
 		&ProviderHost{},
 		&ProviderHostList{})
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)

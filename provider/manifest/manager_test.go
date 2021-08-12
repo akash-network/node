@@ -8,6 +8,9 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	clientMocks "github.com/ovrclk/akash/client/mocks"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/util"
@@ -21,8 +24,6 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	markettypes "github.com/ovrclk/akash/x/market/types"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 type scaffold struct {
@@ -140,8 +141,8 @@ func TestManagerRequiresHostname(t *testing.T) {
 	require.NoError(t, err)
 
 	sdlManifest, err := sdl2.Manifest()
-	require.Len(t, sdlManifest[0].Services[0].Expose[0].Hosts, 0)
 	require.NoError(t, err)
+	require.Len(t, sdlManifest[0].Services[0].Expose[0].Hosts, 0)
 
 	lid := testutil.LeaseID(t)
 	did := lid.DeploymentID()
@@ -164,8 +165,8 @@ func TestManagerRequiresHostname(t *testing.T) {
 		},
 	}
 	version, err := sdl.ManifestVersion(sdlManifest)
-	require.NotNil(t, version)
 	require.NoError(t, err)
+	require.NotNil(t, version)
 	s := serviceForManifestTest(t, ServiceConfig{HTTPServicesRequireAtLeastOneHost: true}, sdl2, did)
 	err = s.bus.Publish(ev)
 	require.NoError(t, err)

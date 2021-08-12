@@ -8,9 +8,11 @@ import (
 	mock "github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	storagev1 "k8s.io/api/storage/v1"
+
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/storage/v1"
+	v1 "k8s.io/client-go/applyconfigurations/storage/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +22,67 @@ type VolumeAttachmentInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, volumeAttachment, opts
-func (_m *VolumeAttachmentInterface) Create(ctx context.Context, volumeAttachment *v1.VolumeAttachment, opts metav1.CreateOptions) (*v1.VolumeAttachment, error) {
+// Apply provides a mock function with given fields: ctx, volumeAttachment, opts
+func (_m *VolumeAttachmentInterface) Apply(ctx context.Context, volumeAttachment *v1.VolumeAttachmentApplyConfiguration, opts metav1.ApplyOptions) (*storagev1.VolumeAttachment, error) {
 	ret := _m.Called(ctx, volumeAttachment, opts)
 
-	var r0 *v1.VolumeAttachment
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.VolumeAttachment, metav1.CreateOptions) *v1.VolumeAttachment); ok {
+	var r0 *storagev1.VolumeAttachment
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.VolumeAttachmentApplyConfiguration, metav1.ApplyOptions) *storagev1.VolumeAttachment); ok {
 		r0 = rf(ctx, volumeAttachment, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.VolumeAttachment)
+			r0 = ret.Get(0).(*storagev1.VolumeAttachment)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.VolumeAttachment, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.VolumeAttachmentApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, volumeAttachment, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, volumeAttachment, opts
+func (_m *VolumeAttachmentInterface) ApplyStatus(ctx context.Context, volumeAttachment *v1.VolumeAttachmentApplyConfiguration, opts metav1.ApplyOptions) (*storagev1.VolumeAttachment, error) {
+	ret := _m.Called(ctx, volumeAttachment, opts)
+
+	var r0 *storagev1.VolumeAttachment
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.VolumeAttachmentApplyConfiguration, metav1.ApplyOptions) *storagev1.VolumeAttachment); ok {
+		r0 = rf(ctx, volumeAttachment, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*storagev1.VolumeAttachment)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.VolumeAttachmentApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, volumeAttachment, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, volumeAttachment, opts
+func (_m *VolumeAttachmentInterface) Create(ctx context.Context, volumeAttachment *storagev1.VolumeAttachment, opts metav1.CreateOptions) (*storagev1.VolumeAttachment, error) {
+	ret := _m.Called(ctx, volumeAttachment, opts)
+
+	var r0 *storagev1.VolumeAttachment
+	if rf, ok := ret.Get(0).(func(context.Context, *storagev1.VolumeAttachment, metav1.CreateOptions) *storagev1.VolumeAttachment); ok {
+		r0 = rf(ctx, volumeAttachment, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*storagev1.VolumeAttachment)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *storagev1.VolumeAttachment, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, volumeAttachment, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +120,15 @@ func (_m *VolumeAttachmentInterface) DeleteCollection(ctx context.Context, opts 
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *VolumeAttachmentInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.VolumeAttachment, error) {
+func (_m *VolumeAttachmentInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*storagev1.VolumeAttachment, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.VolumeAttachment
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.VolumeAttachment); ok {
+	var r0 *storagev1.VolumeAttachment
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *storagev1.VolumeAttachment); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.VolumeAttachment)
+			r0 = ret.Get(0).(*storagev1.VolumeAttachment)
 		}
 	}
 
@@ -95,15 +143,15 @@ func (_m *VolumeAttachmentInterface) Get(ctx context.Context, name string, opts 
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *VolumeAttachmentInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.VolumeAttachmentList, error) {
+func (_m *VolumeAttachmentInterface) List(ctx context.Context, opts metav1.ListOptions) (*storagev1.VolumeAttachmentList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.VolumeAttachmentList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.VolumeAttachmentList); ok {
+	var r0 *storagev1.VolumeAttachmentList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *storagev1.VolumeAttachmentList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.VolumeAttachmentList)
+			r0 = ret.Get(0).(*storagev1.VolumeAttachmentList)
 		}
 	}
 
@@ -118,7 +166,7 @@ func (_m *VolumeAttachmentInterface) List(ctx context.Context, opts metav1.ListO
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *VolumeAttachmentInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.VolumeAttachment, error) {
+func (_m *VolumeAttachmentInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*storagev1.VolumeAttachment, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +176,12 @@ func (_m *VolumeAttachmentInterface) Patch(ctx context.Context, name string, pt 
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.VolumeAttachment
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.VolumeAttachment); ok {
+	var r0 *storagev1.VolumeAttachment
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *storagev1.VolumeAttachment); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.VolumeAttachment)
+			r0 = ret.Get(0).(*storagev1.VolumeAttachment)
 		}
 	}
 
@@ -148,20 +196,20 @@ func (_m *VolumeAttachmentInterface) Patch(ctx context.Context, name string, pt 
 }
 
 // Update provides a mock function with given fields: ctx, volumeAttachment, opts
-func (_m *VolumeAttachmentInterface) Update(ctx context.Context, volumeAttachment *v1.VolumeAttachment, opts metav1.UpdateOptions) (*v1.VolumeAttachment, error) {
+func (_m *VolumeAttachmentInterface) Update(ctx context.Context, volumeAttachment *storagev1.VolumeAttachment, opts metav1.UpdateOptions) (*storagev1.VolumeAttachment, error) {
 	ret := _m.Called(ctx, volumeAttachment, opts)
 
-	var r0 *v1.VolumeAttachment
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.VolumeAttachment, metav1.UpdateOptions) *v1.VolumeAttachment); ok {
+	var r0 *storagev1.VolumeAttachment
+	if rf, ok := ret.Get(0).(func(context.Context, *storagev1.VolumeAttachment, metav1.UpdateOptions) *storagev1.VolumeAttachment); ok {
 		r0 = rf(ctx, volumeAttachment, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.VolumeAttachment)
+			r0 = ret.Get(0).(*storagev1.VolumeAttachment)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.VolumeAttachment, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *storagev1.VolumeAttachment, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, volumeAttachment, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -171,20 +219,20 @@ func (_m *VolumeAttachmentInterface) Update(ctx context.Context, volumeAttachmen
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, volumeAttachment, opts
-func (_m *VolumeAttachmentInterface) UpdateStatus(ctx context.Context, volumeAttachment *v1.VolumeAttachment, opts metav1.UpdateOptions) (*v1.VolumeAttachment, error) {
+func (_m *VolumeAttachmentInterface) UpdateStatus(ctx context.Context, volumeAttachment *storagev1.VolumeAttachment, opts metav1.UpdateOptions) (*storagev1.VolumeAttachment, error) {
 	ret := _m.Called(ctx, volumeAttachment, opts)
 
-	var r0 *v1.VolumeAttachment
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.VolumeAttachment, metav1.UpdateOptions) *v1.VolumeAttachment); ok {
+	var r0 *storagev1.VolumeAttachment
+	if rf, ok := ret.Get(0).(func(context.Context, *storagev1.VolumeAttachment, metav1.UpdateOptions) *storagev1.VolumeAttachment); ok {
 		r0 = rf(ctx, volumeAttachment, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.VolumeAttachment)
+			r0 = ret.Get(0).(*storagev1.VolumeAttachment)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.VolumeAttachment, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *storagev1.VolumeAttachment, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, volumeAttachment, opts)
 	} else {
 		r1 = ret.Error(1)

@@ -8,9 +8,11 @@ import (
 	mock "github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	networkingv1 "k8s.io/api/networking/v1"
+
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/networking/v1"
+	v1 "k8s.io/client-go/applyconfigurations/networking/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +22,67 @@ type IngressInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, ingress, opts
-func (_m *IngressInterface) Create(ctx context.Context, ingress *v1.Ingress, opts metav1.CreateOptions) (*v1.Ingress, error) {
+// Apply provides a mock function with given fields: ctx, ingress, opts
+func (_m *IngressInterface) Apply(ctx context.Context, ingress *v1.IngressApplyConfiguration, opts metav1.ApplyOptions) (*networkingv1.Ingress, error) {
 	ret := _m.Called(ctx, ingress, opts)
 
-	var r0 *v1.Ingress
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Ingress, metav1.CreateOptions) *v1.Ingress); ok {
+	var r0 *networkingv1.Ingress
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.IngressApplyConfiguration, metav1.ApplyOptions) *networkingv1.Ingress); ok {
 		r0 = rf(ctx, ingress, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Ingress)
+			r0 = ret.Get(0).(*networkingv1.Ingress)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Ingress, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.IngressApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, ingress, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, ingress, opts
+func (_m *IngressInterface) ApplyStatus(ctx context.Context, ingress *v1.IngressApplyConfiguration, opts metav1.ApplyOptions) (*networkingv1.Ingress, error) {
+	ret := _m.Called(ctx, ingress, opts)
+
+	var r0 *networkingv1.Ingress
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.IngressApplyConfiguration, metav1.ApplyOptions) *networkingv1.Ingress); ok {
+		r0 = rf(ctx, ingress, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*networkingv1.Ingress)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.IngressApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, ingress, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, ingress, opts
+func (_m *IngressInterface) Create(ctx context.Context, ingress *networkingv1.Ingress, opts metav1.CreateOptions) (*networkingv1.Ingress, error) {
+	ret := _m.Called(ctx, ingress, opts)
+
+	var r0 *networkingv1.Ingress
+	if rf, ok := ret.Get(0).(func(context.Context, *networkingv1.Ingress, metav1.CreateOptions) *networkingv1.Ingress); ok {
+		r0 = rf(ctx, ingress, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*networkingv1.Ingress)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *networkingv1.Ingress, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, ingress, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +120,15 @@ func (_m *IngressInterface) DeleteCollection(ctx context.Context, opts metav1.De
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *IngressInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Ingress, error) {
+func (_m *IngressInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*networkingv1.Ingress, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.Ingress
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.Ingress); ok {
+	var r0 *networkingv1.Ingress
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *networkingv1.Ingress); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Ingress)
+			r0 = ret.Get(0).(*networkingv1.Ingress)
 		}
 	}
 
@@ -95,15 +143,15 @@ func (_m *IngressInterface) Get(ctx context.Context, name string, opts metav1.Ge
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *IngressInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.IngressList, error) {
+func (_m *IngressInterface) List(ctx context.Context, opts metav1.ListOptions) (*networkingv1.IngressList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.IngressList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.IngressList); ok {
+	var r0 *networkingv1.IngressList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *networkingv1.IngressList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.IngressList)
+			r0 = ret.Get(0).(*networkingv1.IngressList)
 		}
 	}
 
@@ -118,7 +166,7 @@ func (_m *IngressInterface) List(ctx context.Context, opts metav1.ListOptions) (
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *IngressInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Ingress, error) {
+func (_m *IngressInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*networkingv1.Ingress, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +176,12 @@ func (_m *IngressInterface) Patch(ctx context.Context, name string, pt types.Pat
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.Ingress
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.Ingress); ok {
+	var r0 *networkingv1.Ingress
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *networkingv1.Ingress); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Ingress)
+			r0 = ret.Get(0).(*networkingv1.Ingress)
 		}
 	}
 
@@ -148,20 +196,20 @@ func (_m *IngressInterface) Patch(ctx context.Context, name string, pt types.Pat
 }
 
 // Update provides a mock function with given fields: ctx, ingress, opts
-func (_m *IngressInterface) Update(ctx context.Context, ingress *v1.Ingress, opts metav1.UpdateOptions) (*v1.Ingress, error) {
+func (_m *IngressInterface) Update(ctx context.Context, ingress *networkingv1.Ingress, opts metav1.UpdateOptions) (*networkingv1.Ingress, error) {
 	ret := _m.Called(ctx, ingress, opts)
 
-	var r0 *v1.Ingress
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Ingress, metav1.UpdateOptions) *v1.Ingress); ok {
+	var r0 *networkingv1.Ingress
+	if rf, ok := ret.Get(0).(func(context.Context, *networkingv1.Ingress, metav1.UpdateOptions) *networkingv1.Ingress); ok {
 		r0 = rf(ctx, ingress, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Ingress)
+			r0 = ret.Get(0).(*networkingv1.Ingress)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Ingress, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *networkingv1.Ingress, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, ingress, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -171,20 +219,20 @@ func (_m *IngressInterface) Update(ctx context.Context, ingress *v1.Ingress, opt
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, ingress, opts
-func (_m *IngressInterface) UpdateStatus(ctx context.Context, ingress *v1.Ingress, opts metav1.UpdateOptions) (*v1.Ingress, error) {
+func (_m *IngressInterface) UpdateStatus(ctx context.Context, ingress *networkingv1.Ingress, opts metav1.UpdateOptions) (*networkingv1.Ingress, error) {
 	ret := _m.Called(ctx, ingress, opts)
 
-	var r0 *v1.Ingress
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Ingress, metav1.UpdateOptions) *v1.Ingress); ok {
+	var r0 *networkingv1.Ingress
+	if rf, ok := ret.Get(0).(func(context.Context, *networkingv1.Ingress, metav1.UpdateOptions) *networkingv1.Ingress); ok {
 		r0 = rf(ctx, ingress, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Ingress)
+			r0 = ret.Get(0).(*networkingv1.Ingress)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Ingress, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *networkingv1.Ingress, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, ingress, opts)
 	} else {
 		r1 = ret.Error(1)

@@ -5,12 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+
 	mock "github.com/stretchr/testify/mock"
+
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	v1beta1 "k8s.io/client-go/applyconfigurations/admissionregistration/v1beta1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +23,44 @@ type ValidatingWebhookConfigurationInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, validatingWebhookConfiguration, opts
-func (_m *ValidatingWebhookConfigurationInterface) Create(ctx context.Context, validatingWebhookConfiguration *v1beta1.ValidatingWebhookConfiguration, opts v1.CreateOptions) (*v1beta1.ValidatingWebhookConfiguration, error) {
+// Apply provides a mock function with given fields: ctx, validatingWebhookConfiguration, opts
+func (_m *ValidatingWebhookConfigurationInterface) Apply(ctx context.Context, validatingWebhookConfiguration *v1beta1.ValidatingWebhookConfigurationApplyConfiguration, opts v1.ApplyOptions) (*admissionregistrationv1beta1.ValidatingWebhookConfiguration, error) {
 	ret := _m.Called(ctx, validatingWebhookConfiguration, opts)
 
-	var r0 *v1beta1.ValidatingWebhookConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.ValidatingWebhookConfiguration, v1.CreateOptions) *v1beta1.ValidatingWebhookConfiguration); ok {
+	var r0 *admissionregistrationv1beta1.ValidatingWebhookConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.ValidatingWebhookConfigurationApplyConfiguration, v1.ApplyOptions) *admissionregistrationv1beta1.ValidatingWebhookConfiguration); ok {
 		r0 = rf(ctx, validatingWebhookConfiguration, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.ValidatingWebhookConfiguration)
+			r0 = ret.Get(0).(*admissionregistrationv1beta1.ValidatingWebhookConfiguration)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.ValidatingWebhookConfiguration, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.ValidatingWebhookConfigurationApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, validatingWebhookConfiguration, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, validatingWebhookConfiguration, opts
+func (_m *ValidatingWebhookConfigurationInterface) Create(ctx context.Context, validatingWebhookConfiguration *admissionregistrationv1beta1.ValidatingWebhookConfiguration, opts v1.CreateOptions) (*admissionregistrationv1beta1.ValidatingWebhookConfiguration, error) {
+	ret := _m.Called(ctx, validatingWebhookConfiguration, opts)
+
+	var r0 *admissionregistrationv1beta1.ValidatingWebhookConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, *admissionregistrationv1beta1.ValidatingWebhookConfiguration, v1.CreateOptions) *admissionregistrationv1beta1.ValidatingWebhookConfiguration); ok {
+		r0 = rf(ctx, validatingWebhookConfiguration, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*admissionregistrationv1beta1.ValidatingWebhookConfiguration)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *admissionregistrationv1beta1.ValidatingWebhookConfiguration, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, validatingWebhookConfiguration, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +98,15 @@ func (_m *ValidatingWebhookConfigurationInterface) DeleteCollection(ctx context.
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *ValidatingWebhookConfigurationInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.ValidatingWebhookConfiguration, error) {
+func (_m *ValidatingWebhookConfigurationInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*admissionregistrationv1beta1.ValidatingWebhookConfiguration, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1beta1.ValidatingWebhookConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta1.ValidatingWebhookConfiguration); ok {
+	var r0 *admissionregistrationv1beta1.ValidatingWebhookConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *admissionregistrationv1beta1.ValidatingWebhookConfiguration); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.ValidatingWebhookConfiguration)
+			r0 = ret.Get(0).(*admissionregistrationv1beta1.ValidatingWebhookConfiguration)
 		}
 	}
 
@@ -95,15 +121,15 @@ func (_m *ValidatingWebhookConfigurationInterface) Get(ctx context.Context, name
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *ValidatingWebhookConfigurationInterface) List(ctx context.Context, opts v1.ListOptions) (*v1beta1.ValidatingWebhookConfigurationList, error) {
+func (_m *ValidatingWebhookConfigurationInterface) List(ctx context.Context, opts v1.ListOptions) (*admissionregistrationv1beta1.ValidatingWebhookConfigurationList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1beta1.ValidatingWebhookConfigurationList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1beta1.ValidatingWebhookConfigurationList); ok {
+	var r0 *admissionregistrationv1beta1.ValidatingWebhookConfigurationList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *admissionregistrationv1beta1.ValidatingWebhookConfigurationList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.ValidatingWebhookConfigurationList)
+			r0 = ret.Get(0).(*admissionregistrationv1beta1.ValidatingWebhookConfigurationList)
 		}
 	}
 
@@ -118,7 +144,7 @@ func (_m *ValidatingWebhookConfigurationInterface) List(ctx context.Context, opt
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *ValidatingWebhookConfigurationInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1beta1.ValidatingWebhookConfiguration, error) {
+func (_m *ValidatingWebhookConfigurationInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*admissionregistrationv1beta1.ValidatingWebhookConfiguration, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +154,12 @@ func (_m *ValidatingWebhookConfigurationInterface) Patch(ctx context.Context, na
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1beta1.ValidatingWebhookConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1beta1.ValidatingWebhookConfiguration); ok {
+	var r0 *admissionregistrationv1beta1.ValidatingWebhookConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *admissionregistrationv1beta1.ValidatingWebhookConfiguration); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.ValidatingWebhookConfiguration)
+			r0 = ret.Get(0).(*admissionregistrationv1beta1.ValidatingWebhookConfiguration)
 		}
 	}
 
@@ -148,20 +174,20 @@ func (_m *ValidatingWebhookConfigurationInterface) Patch(ctx context.Context, na
 }
 
 // Update provides a mock function with given fields: ctx, validatingWebhookConfiguration, opts
-func (_m *ValidatingWebhookConfigurationInterface) Update(ctx context.Context, validatingWebhookConfiguration *v1beta1.ValidatingWebhookConfiguration, opts v1.UpdateOptions) (*v1beta1.ValidatingWebhookConfiguration, error) {
+func (_m *ValidatingWebhookConfigurationInterface) Update(ctx context.Context, validatingWebhookConfiguration *admissionregistrationv1beta1.ValidatingWebhookConfiguration, opts v1.UpdateOptions) (*admissionregistrationv1beta1.ValidatingWebhookConfiguration, error) {
 	ret := _m.Called(ctx, validatingWebhookConfiguration, opts)
 
-	var r0 *v1beta1.ValidatingWebhookConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.ValidatingWebhookConfiguration, v1.UpdateOptions) *v1beta1.ValidatingWebhookConfiguration); ok {
+	var r0 *admissionregistrationv1beta1.ValidatingWebhookConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, *admissionregistrationv1beta1.ValidatingWebhookConfiguration, v1.UpdateOptions) *admissionregistrationv1beta1.ValidatingWebhookConfiguration); ok {
 		r0 = rf(ctx, validatingWebhookConfiguration, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.ValidatingWebhookConfiguration)
+			r0 = ret.Get(0).(*admissionregistrationv1beta1.ValidatingWebhookConfiguration)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.ValidatingWebhookConfiguration, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *admissionregistrationv1beta1.ValidatingWebhookConfiguration, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, validatingWebhookConfiguration, opts)
 	} else {
 		r1 = ret.Error(1)

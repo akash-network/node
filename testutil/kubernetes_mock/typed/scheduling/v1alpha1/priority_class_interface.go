@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	schedulingv1alpha1 "k8s.io/api/scheduling/v1alpha1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1alpha1 "k8s.io/api/scheduling/v1alpha1"
+	v1alpha1 "k8s.io/client-go/applyconfigurations/scheduling/v1alpha1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,44 @@ type PriorityClassInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, priorityClass, opts
-func (_m *PriorityClassInterface) Create(ctx context.Context, priorityClass *v1alpha1.PriorityClass, opts v1.CreateOptions) (*v1alpha1.PriorityClass, error) {
+// Apply provides a mock function with given fields: ctx, priorityClass, opts
+func (_m *PriorityClassInterface) Apply(ctx context.Context, priorityClass *v1alpha1.PriorityClassApplyConfiguration, opts v1.ApplyOptions) (*schedulingv1alpha1.PriorityClass, error) {
 	ret := _m.Called(ctx, priorityClass, opts)
 
-	var r0 *v1alpha1.PriorityClass
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.PriorityClass, v1.CreateOptions) *v1alpha1.PriorityClass); ok {
+	var r0 *schedulingv1alpha1.PriorityClass
+	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.PriorityClassApplyConfiguration, v1.ApplyOptions) *schedulingv1alpha1.PriorityClass); ok {
 		r0 = rf(ctx, priorityClass, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.PriorityClass)
+			r0 = ret.Get(0).(*schedulingv1alpha1.PriorityClass)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.PriorityClass, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.PriorityClassApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, priorityClass, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, priorityClass, opts
+func (_m *PriorityClassInterface) Create(ctx context.Context, priorityClass *schedulingv1alpha1.PriorityClass, opts v1.CreateOptions) (*schedulingv1alpha1.PriorityClass, error) {
+	ret := _m.Called(ctx, priorityClass, opts)
+
+	var r0 *schedulingv1alpha1.PriorityClass
+	if rf, ok := ret.Get(0).(func(context.Context, *schedulingv1alpha1.PriorityClass, v1.CreateOptions) *schedulingv1alpha1.PriorityClass); ok {
+		r0 = rf(ctx, priorityClass, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*schedulingv1alpha1.PriorityClass)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *schedulingv1alpha1.PriorityClass, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, priorityClass, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +97,15 @@ func (_m *PriorityClassInterface) DeleteCollection(ctx context.Context, opts v1.
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *PriorityClassInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.PriorityClass, error) {
+func (_m *PriorityClassInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*schedulingv1alpha1.PriorityClass, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1alpha1.PriorityClass
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1alpha1.PriorityClass); ok {
+	var r0 *schedulingv1alpha1.PriorityClass
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *schedulingv1alpha1.PriorityClass); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.PriorityClass)
+			r0 = ret.Get(0).(*schedulingv1alpha1.PriorityClass)
 		}
 	}
 
@@ -96,15 +120,15 @@ func (_m *PriorityClassInterface) Get(ctx context.Context, name string, opts v1.
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *PriorityClassInterface) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.PriorityClassList, error) {
+func (_m *PriorityClassInterface) List(ctx context.Context, opts v1.ListOptions) (*schedulingv1alpha1.PriorityClassList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1alpha1.PriorityClassList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1alpha1.PriorityClassList); ok {
+	var r0 *schedulingv1alpha1.PriorityClassList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *schedulingv1alpha1.PriorityClassList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.PriorityClassList)
+			r0 = ret.Get(0).(*schedulingv1alpha1.PriorityClassList)
 		}
 	}
 
@@ -119,7 +143,7 @@ func (_m *PriorityClassInterface) List(ctx context.Context, opts v1.ListOptions)
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *PriorityClassInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1alpha1.PriorityClass, error) {
+func (_m *PriorityClassInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*schedulingv1alpha1.PriorityClass, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +153,12 @@ func (_m *PriorityClassInterface) Patch(ctx context.Context, name string, pt typ
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1alpha1.PriorityClass
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1alpha1.PriorityClass); ok {
+	var r0 *schedulingv1alpha1.PriorityClass
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *schedulingv1alpha1.PriorityClass); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.PriorityClass)
+			r0 = ret.Get(0).(*schedulingv1alpha1.PriorityClass)
 		}
 	}
 
@@ -149,20 +173,20 @@ func (_m *PriorityClassInterface) Patch(ctx context.Context, name string, pt typ
 }
 
 // Update provides a mock function with given fields: ctx, priorityClass, opts
-func (_m *PriorityClassInterface) Update(ctx context.Context, priorityClass *v1alpha1.PriorityClass, opts v1.UpdateOptions) (*v1alpha1.PriorityClass, error) {
+func (_m *PriorityClassInterface) Update(ctx context.Context, priorityClass *schedulingv1alpha1.PriorityClass, opts v1.UpdateOptions) (*schedulingv1alpha1.PriorityClass, error) {
 	ret := _m.Called(ctx, priorityClass, opts)
 
-	var r0 *v1alpha1.PriorityClass
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.PriorityClass, v1.UpdateOptions) *v1alpha1.PriorityClass); ok {
+	var r0 *schedulingv1alpha1.PriorityClass
+	if rf, ok := ret.Get(0).(func(context.Context, *schedulingv1alpha1.PriorityClass, v1.UpdateOptions) *schedulingv1alpha1.PriorityClass); ok {
 		r0 = rf(ctx, priorityClass, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.PriorityClass)
+			r0 = ret.Get(0).(*schedulingv1alpha1.PriorityClass)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.PriorityClass, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *schedulingv1alpha1.PriorityClass, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, priorityClass, opts)
 	} else {
 		r1 = ret.Error(1)

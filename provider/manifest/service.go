@@ -3,10 +3,12 @@ package manifest
 import (
 	"context"
 	"errors"
+	"time"
+
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"time"
 
 	"github.com/boz/go-lifecycle"
 
@@ -42,7 +44,7 @@ type StatusClient interface {
 	Status(context.Context) (*Status, error)
 }
 
-// Handler is the interface that wraps HandleManifest method
+// Client is the interface that wraps HandleManifest method
 type Client interface {
 	Submit(context.Context, dtypes.DeploymentID, manifest.Manifest) error
 	IsActive(context.Context, dtypes.DeploymentID) (bool, error)
@@ -55,7 +57,7 @@ type Service interface {
 	Done() <-chan struct{}
 }
 
-// NewHandler creates and returns new Service instance
+// NewService creates and returns new Service instance
 // Manage incoming leases and manifests and pair the two together to construct and emit a ManifestReceived event.
 func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, hostnameService clustertypes.HostnameServiceClient, cfg ServiceConfig) (Service, error) {
 	session = session.ForModule("provider-manifest")
@@ -132,7 +134,6 @@ type isActiveCheck struct {
 }
 
 func (s *service) IsActive(ctx context.Context, dID dtypes.DeploymentID) (bool, error) {
-
 	ch := make(chan bool, 1)
 	req := isActiveCheck{
 		Deployment: dID,
@@ -159,7 +160,7 @@ func (s *service) IsActive(ctx context.Context, dID dtypes.DeploymentID) (bool, 
 	}
 }
 
-// Send incoming manifest request.
+// Submit incoming manifest request.
 func (s *service) Submit(ctx context.Context, did dtypes.DeploymentID, mani manifest.Manifest) error {
 	ch := make(chan error, 1)
 	req := manifestRequest{

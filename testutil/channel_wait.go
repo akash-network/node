@@ -27,7 +27,7 @@ func ChannelWaitForValueUpTo(t *testing.T, waitOn interface{}, waitFor time.Dura
 		t.Fatal("Channel has been closed")
 	}
 	if idx != 0 {
-		t.Fatalf("No message after waiting %v seconds", waitOn)
+		t.Fatalf("No message after waiting %v seconds", waitFor)
 	}
 
 	return v.Interface()

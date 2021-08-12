@@ -1,0 +1,45 @@
+---
+version: "2.0"
+
+services:
+  grafana:
+    image: grafana/grafana
+    expose:
+      - port: 3000
+        as: 80
+        to:
+          - global: true
+        accept:
+          - webdistest.localhost
+    params:
+      storage:
+        data:
+          mount: /var/lib/grafana
+profiles:
+  compute:
+    grafana:
+      resources:
+        cpu:
+          units: 1
+        memory:
+          size: 1Gi
+        storage:
+          - size: 512Mi
+          - name: data
+            size: 1Gi
+            attributes:
+              persistent: true
+              class: beta2
+  placement:
+    westcoast:
+      attributes:
+        region: us-west
+      pricing:
+        grafana:
+          denom: uakt
+          amount: 1000
+deployment:
+  grafana:
+    westcoast:
+      profile: grafana
+      count: 1

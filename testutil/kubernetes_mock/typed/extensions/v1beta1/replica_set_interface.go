@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	v1beta1 "k8s.io/client-go/applyconfigurations/extensions/v1beta1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,67 @@ type ReplicaSetInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, replicaSet, opts
-func (_m *ReplicaSetInterface) Create(ctx context.Context, replicaSet *v1beta1.ReplicaSet, opts v1.CreateOptions) (*v1beta1.ReplicaSet, error) {
+// Apply provides a mock function with given fields: ctx, replicaSet, opts
+func (_m *ReplicaSetInterface) Apply(ctx context.Context, replicaSet *v1beta1.ReplicaSetApplyConfiguration, opts v1.ApplyOptions) (*extensionsv1beta1.ReplicaSet, error) {
 	ret := _m.Called(ctx, replicaSet, opts)
 
-	var r0 *v1beta1.ReplicaSet
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.ReplicaSet, v1.CreateOptions) *v1beta1.ReplicaSet); ok {
+	var r0 *extensionsv1beta1.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.ReplicaSetApplyConfiguration, v1.ApplyOptions) *extensionsv1beta1.ReplicaSet); ok {
 		r0 = rf(ctx, replicaSet, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.ReplicaSet)
+			r0 = ret.Get(0).(*extensionsv1beta1.ReplicaSet)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.ReplicaSet, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.ReplicaSetApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, replicaSet, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, replicaSet, opts
+func (_m *ReplicaSetInterface) ApplyStatus(ctx context.Context, replicaSet *v1beta1.ReplicaSetApplyConfiguration, opts v1.ApplyOptions) (*extensionsv1beta1.ReplicaSet, error) {
+	ret := _m.Called(ctx, replicaSet, opts)
+
+	var r0 *extensionsv1beta1.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.ReplicaSetApplyConfiguration, v1.ApplyOptions) *extensionsv1beta1.ReplicaSet); ok {
+		r0 = rf(ctx, replicaSet, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*extensionsv1beta1.ReplicaSet)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.ReplicaSetApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, replicaSet, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, replicaSet, opts
+func (_m *ReplicaSetInterface) Create(ctx context.Context, replicaSet *extensionsv1beta1.ReplicaSet, opts v1.CreateOptions) (*extensionsv1beta1.ReplicaSet, error) {
+	ret := _m.Called(ctx, replicaSet, opts)
+
+	var r0 *extensionsv1beta1.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, *extensionsv1beta1.ReplicaSet, v1.CreateOptions) *extensionsv1beta1.ReplicaSet); ok {
+		r0 = rf(ctx, replicaSet, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*extensionsv1beta1.ReplicaSet)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *extensionsv1beta1.ReplicaSet, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, replicaSet, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +120,15 @@ func (_m *ReplicaSetInterface) DeleteCollection(ctx context.Context, opts v1.Del
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *ReplicaSetInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.ReplicaSet, error) {
+func (_m *ReplicaSetInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*extensionsv1beta1.ReplicaSet, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1beta1.ReplicaSet
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta1.ReplicaSet); ok {
+	var r0 *extensionsv1beta1.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *extensionsv1beta1.ReplicaSet); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.ReplicaSet)
+			r0 = ret.Get(0).(*extensionsv1beta1.ReplicaSet)
 		}
 	}
 
@@ -96,15 +143,15 @@ func (_m *ReplicaSetInterface) Get(ctx context.Context, name string, opts v1.Get
 }
 
 // GetScale provides a mock function with given fields: ctx, replicaSetName, options
-func (_m *ReplicaSetInterface) GetScale(ctx context.Context, replicaSetName string, options v1.GetOptions) (*v1beta1.Scale, error) {
+func (_m *ReplicaSetInterface) GetScale(ctx context.Context, replicaSetName string, options v1.GetOptions) (*extensionsv1beta1.Scale, error) {
 	ret := _m.Called(ctx, replicaSetName, options)
 
-	var r0 *v1beta1.Scale
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta1.Scale); ok {
+	var r0 *extensionsv1beta1.Scale
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *extensionsv1beta1.Scale); ok {
 		r0 = rf(ctx, replicaSetName, options)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Scale)
+			r0 = ret.Get(0).(*extensionsv1beta1.Scale)
 		}
 	}
 
@@ -119,15 +166,15 @@ func (_m *ReplicaSetInterface) GetScale(ctx context.Context, replicaSetName stri
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *ReplicaSetInterface) List(ctx context.Context, opts v1.ListOptions) (*v1beta1.ReplicaSetList, error) {
+func (_m *ReplicaSetInterface) List(ctx context.Context, opts v1.ListOptions) (*extensionsv1beta1.ReplicaSetList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1beta1.ReplicaSetList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1beta1.ReplicaSetList); ok {
+	var r0 *extensionsv1beta1.ReplicaSetList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *extensionsv1beta1.ReplicaSetList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.ReplicaSetList)
+			r0 = ret.Get(0).(*extensionsv1beta1.ReplicaSetList)
 		}
 	}
 
@@ -142,7 +189,7 @@ func (_m *ReplicaSetInterface) List(ctx context.Context, opts v1.ListOptions) (*
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *ReplicaSetInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1beta1.ReplicaSet, error) {
+func (_m *ReplicaSetInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*extensionsv1beta1.ReplicaSet, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -152,12 +199,12 @@ func (_m *ReplicaSetInterface) Patch(ctx context.Context, name string, pt types.
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1beta1.ReplicaSet
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1beta1.ReplicaSet); ok {
+	var r0 *extensionsv1beta1.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *extensionsv1beta1.ReplicaSet); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.ReplicaSet)
+			r0 = ret.Get(0).(*extensionsv1beta1.ReplicaSet)
 		}
 	}
 
@@ -172,20 +219,20 @@ func (_m *ReplicaSetInterface) Patch(ctx context.Context, name string, pt types.
 }
 
 // Update provides a mock function with given fields: ctx, replicaSet, opts
-func (_m *ReplicaSetInterface) Update(ctx context.Context, replicaSet *v1beta1.ReplicaSet, opts v1.UpdateOptions) (*v1beta1.ReplicaSet, error) {
+func (_m *ReplicaSetInterface) Update(ctx context.Context, replicaSet *extensionsv1beta1.ReplicaSet, opts v1.UpdateOptions) (*extensionsv1beta1.ReplicaSet, error) {
 	ret := _m.Called(ctx, replicaSet, opts)
 
-	var r0 *v1beta1.ReplicaSet
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.ReplicaSet, v1.UpdateOptions) *v1beta1.ReplicaSet); ok {
+	var r0 *extensionsv1beta1.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, *extensionsv1beta1.ReplicaSet, v1.UpdateOptions) *extensionsv1beta1.ReplicaSet); ok {
 		r0 = rf(ctx, replicaSet, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.ReplicaSet)
+			r0 = ret.Get(0).(*extensionsv1beta1.ReplicaSet)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.ReplicaSet, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *extensionsv1beta1.ReplicaSet, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, replicaSet, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -195,20 +242,20 @@ func (_m *ReplicaSetInterface) Update(ctx context.Context, replicaSet *v1beta1.R
 }
 
 // UpdateScale provides a mock function with given fields: ctx, replicaSetName, scale, opts
-func (_m *ReplicaSetInterface) UpdateScale(ctx context.Context, replicaSetName string, scale *v1beta1.Scale, opts v1.UpdateOptions) (*v1beta1.Scale, error) {
+func (_m *ReplicaSetInterface) UpdateScale(ctx context.Context, replicaSetName string, scale *extensionsv1beta1.Scale, opts v1.UpdateOptions) (*extensionsv1beta1.Scale, error) {
 	ret := _m.Called(ctx, replicaSetName, scale, opts)
 
-	var r0 *v1beta1.Scale
-	if rf, ok := ret.Get(0).(func(context.Context, string, *v1beta1.Scale, v1.UpdateOptions) *v1beta1.Scale); ok {
+	var r0 *extensionsv1beta1.Scale
+	if rf, ok := ret.Get(0).(func(context.Context, string, *extensionsv1beta1.Scale, v1.UpdateOptions) *extensionsv1beta1.Scale); ok {
 		r0 = rf(ctx, replicaSetName, scale, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Scale)
+			r0 = ret.Get(0).(*extensionsv1beta1.Scale)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, *v1beta1.Scale, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, *extensionsv1beta1.Scale, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, replicaSetName, scale, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -218,20 +265,20 @@ func (_m *ReplicaSetInterface) UpdateScale(ctx context.Context, replicaSetName s
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, replicaSet, opts
-func (_m *ReplicaSetInterface) UpdateStatus(ctx context.Context, replicaSet *v1beta1.ReplicaSet, opts v1.UpdateOptions) (*v1beta1.ReplicaSet, error) {
+func (_m *ReplicaSetInterface) UpdateStatus(ctx context.Context, replicaSet *extensionsv1beta1.ReplicaSet, opts v1.UpdateOptions) (*extensionsv1beta1.ReplicaSet, error) {
 	ret := _m.Called(ctx, replicaSet, opts)
 
-	var r0 *v1beta1.ReplicaSet
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.ReplicaSet, v1.UpdateOptions) *v1beta1.ReplicaSet); ok {
+	var r0 *extensionsv1beta1.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, *extensionsv1beta1.ReplicaSet, v1.UpdateOptions) *extensionsv1beta1.ReplicaSet); ok {
 		r0 = rf(ctx, replicaSet, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.ReplicaSet)
+			r0 = ret.Get(0).(*extensionsv1beta1.ReplicaSet)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.ReplicaSet, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *extensionsv1beta1.ReplicaSet, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, replicaSet, opts)
 	} else {
 		r1 = ret.Error(1)

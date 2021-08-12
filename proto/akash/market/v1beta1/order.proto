@@ -2,7 +2,7 @@ syntax = "proto3";
 package akash.market.v1beta1;
 
 import "gogoproto/gogo.proto";
-import "akash/deployment/v1beta1/group.proto";
+import "akash/deployment/v1beta1/groupspec.proto";
 
 option go_package = "github.com/ovrclk/akash/x/market/types";
 

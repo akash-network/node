@@ -4,8 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/shopspring/decimal"
-	io "io"
+	"io"
 	"math"
 	"math/big"
 	"os"
@@ -14,36 +13,73 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/require"
+
+	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
 	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_ScalePricingRejectsAllZero(t *testing.T) {
-	pricing, err := MakeScalePricing(decimal.Zero, decimal.Zero, decimal.Zero, decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.Zero, decimal.Zero, make(Storage), decimal.Zero)
 	require.NotNil(t, err)
 	require.Nil(t, pricing)
 }
 
 func Test_ScalePricingAcceptsOneForASingleScale(t *testing.T) {
-	pricing, err := MakeScalePricing(decimal.NewFromInt(1), decimal.Zero, decimal.Zero, decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.NewFromInt(1), decimal.Zero, make(Storage), decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
-	pricing, err = MakeScalePricing(decimal.Zero, decimal.NewFromInt(1), decimal.Zero, decimal.Zero)
+	pricing, err = MakeScalePricing(decimal.Zero, decimal.NewFromInt(1), make(Storage), decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
-	pricing, err = MakeScalePricing(decimal.Zero, decimal.Zero, decimal.NewFromInt(1), decimal.Zero)
+	storageScale := Storage{
+		"": decimal.NewFromInt(1),
+	}
+	pricing, err = MakeScalePricing(decimal.Zero, decimal.Zero, storageScale, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
-	pricing, err = MakeScalePricing(decimal.Zero, decimal.Zero, decimal.Zero, decimal.NewFromInt(1))
+	pricing, err = MakeScalePricing(decimal.Zero, decimal.Zero, make(Storage), decimal.NewFromInt(1))
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
+}
+
+func defaultGroupSpecCPUMem() *dtypes.GroupSpec {
+	gspec := &dtypes.GroupSpec{
+		Name:         "",
+		Requirements: atypes.PlacementRequirements{},
+		Resources:    make([]dtypes.Resource, 1),
+	}
+
+	cpu := atypes.CPU{}
+	cpu.Units = atypes.NewResourceValue(11)
+
+	memory := atypes.Memory{}
+	memory.Quantity = atypes.NewResourceValue(10000)
+
+	clusterResources := atypes.ResourceUnits{
+		CPU:    &cpu,
+		Memory: &memory,
+	}
+
+	price := sdk.NewInt64Coin("uakt", 23)
+	resource := dtypes.Resource{
+		Resources: clusterResources,
+		Count:     1,
+		Price:     price,
+	}
+
+	gspec.Resources[0] = resource
+	gspec.Resources[0].Resources.Endpoints = make([]atypes.Endpoint, testutil.RandRangeInt(1, 10))
+	return gspec
 }
 
 func defaultGroupSpec() *dtypes.GroupSpec {
@@ -59,13 +95,14 @@ func defaultGroupSpec() *dtypes.GroupSpec {
 	memory := atypes.Memory{}
 	memory.Quantity = atypes.NewResourceValue(10000)
 
-	storage := atypes.Storage{}
-	storage.Quantity = atypes.NewResourceValue(4096)
-
 	clusterResources := atypes.ResourceUnits{
-		CPU:     &cpu,
-		Memory:  &memory,
-		Storage: &storage,
+		CPU:    &cpu,
+		Memory: &memory,
+		Storage: atypes.Volumes{
+			atypes.Storage{
+				Quantity: atypes.NewResourceValue(4096),
+			},
+		},
 	}
 	price := sdk.NewInt64Coin("uakt", 23)
 	resource := dtypes.Resource{
@@ -80,7 +117,11 @@ func defaultGroupSpec() *dtypes.GroupSpec {
 }
 
 func Test_ScalePricingFailsOnOverflow(t *testing.T) {
-	pricing, err := MakeScalePricing(decimal.New(math.MaxInt64, 2), decimal.Zero, decimal.Zero, decimal.Zero)
+	storageScale := Storage{
+		sdl.StorageEphemeral: decimal.NewFromInt(1),
+	}
+
+	pricing, err := MakeScalePricing(decimal.New(math.MaxInt64, 2), decimal.Zero, storageScale, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
@@ -92,174 +133,184 @@ func Test_ScalePricingFailsOnOverflow(t *testing.T) {
 
 func Test_ScalePricingOnCpu(t *testing.T) {
 	cpuScale := decimal.NewFromInt(22)
-	pricing, err := MakeScalePricing(cpuScale, decimal.Zero, decimal.Zero, decimal.Zero)
+
+	pricing, err := MakeScalePricing(cpuScale, decimal.Zero, make(Storage), decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
-	gspec := defaultGroupSpec()
+	gspec := defaultGroupSpecCPUMem()
 	cpuQuantity := uint64(13)
 	gspec.Resources[0].Resources.CPU.Units = atypes.NewResourceValue(cpuQuantity)
 	price, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
+	require.NotNil(t, pricing)
 
 	expectedPrice := testutil.AkashCoin(t, cpuScale.IntPart()*int64(cpuQuantity))
 	require.Equal(t, expectedPrice, price)
-	require.NoError(t, err)
 }
 
 func Test_ScalePricingOnCpuRoundsUpToOne(t *testing.T) {
 	cpuScale, err := decimal.NewFromString("0.000001") // A small number
 	require.NoError(t, err)
-	pricing, err := MakeScalePricing(cpuScale, decimal.Zero, decimal.Zero, decimal.Zero)
+	pricing, err := MakeScalePricing(cpuScale, decimal.Zero, make(Storage), decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
-	gspec := defaultGroupSpec()
+	gspec := defaultGroupSpecCPUMem()
 	cpuQuantity := testutil.RandRangeInt(10, 1000)
 	gspec.Resources[0].Resources.CPU.Units = atypes.NewResourceValue(uint64(cpuQuantity))
 	price, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
 
 	// Implementation rounds up to 1
 	expectedPrice := testutil.AkashCoin(t, 1)
 	require.Equal(t, expectedPrice, price)
-	require.NoError(t, err)
+
 }
 
 func Test_ScalePricingOnCpuRoundsUp(t *testing.T) {
 	cpuScale, err := decimal.NewFromString("0.666667") // approximate 2/3
 	require.NoError(t, err)
-	pricing, err := MakeScalePricing(cpuScale, decimal.Zero, decimal.Zero, decimal.Zero)
+	pricing, err := MakeScalePricing(cpuScale, decimal.Zero, make(Storage), decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
-	gspec := defaultGroupSpec()
+	gspec := defaultGroupSpecCPUMem()
 	cpuQuantity := testutil.RandRangeInt(10, 1000)
 	gspec.Resources[0].Resources.CPU.Units = atypes.NewResourceValue(uint64(cpuQuantity))
 	price, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
 
 	// Implementation rounds up to nearest whole uakt
 	expected := cpuScale.Mul(decimal.NewFromInt(int64(cpuQuantity))).Ceil()
 	require.True(t, expected.IsPositive()) // sanity check expected value
 	expectedPrice := testutil.AkashCoin(t, expected.IntPart())
 	require.Equal(t, expectedPrice, price)
-	require.NoError(t, err)
 }
 
 func Test_ScalePricingOnMemory(t *testing.T) {
 	memoryScale := uint64(23)
 	memoryPrice := decimal.NewFromInt(int64(memoryScale)).Mul(decimal.NewFromInt(unit.Mi))
-	pricing, err := MakeScalePricing(decimal.Zero, memoryPrice, decimal.Zero, decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.Zero, memoryPrice, make(Storage), decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
-	gspec := defaultGroupSpec()
+	gspec := defaultGroupSpecCPUMem()
 	memoryQuantity := uint64(123456)
 	gspec.Resources[0].Resources.Memory.Quantity = atypes.NewResourceValue(memoryQuantity)
 	price, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
 
 	expectedPrice := testutil.AkashCoin(t, int64(memoryScale*memoryQuantity))
 	require.Equal(t, expectedPrice, price)
-	require.NoError(t, err)
 }
 
 func Test_ScalePricingOnMemoryRoundsUpA(t *testing.T) {
 	memoryScale := uint64(123)
 	memoryPrice := decimal.NewFromInt(int64(memoryScale))
-	pricing, err := MakeScalePricing(decimal.Zero, memoryPrice, decimal.Zero, decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.Zero, memoryPrice, make(Storage), decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
-	gspec := defaultGroupSpec()
+	gspec := defaultGroupSpecCPUMem()
 	// Make a resource exactly 1 byte greater than a megabyte
 	memoryQuantity := uint64(unit.Mi + 1)
 	gspec.Resources[0].Resources.Memory.Quantity = atypes.NewResourceValue(memoryQuantity)
 	price, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
 
 	// The pricing function cannot round down, so the price must exactly 1 uakt larger
 	// than the scale provided
 	expectedPrice := testutil.AkashCoin(t, int64(124))
 	require.Equal(t, expectedPrice, price)
-	require.NoError(t, err)
 }
 
 func Test_ScalePricingOnMemoryRoundsUpB(t *testing.T) {
 	memoryScale := uint64(123)
 	memoryPrice := decimal.NewFromInt(int64(memoryScale))
-	pricing, err := MakeScalePricing(decimal.Zero, memoryPrice, decimal.Zero, decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.Zero, memoryPrice, make(Storage), decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
-	gspec := defaultGroupSpec()
+	gspec := defaultGroupSpecCPUMem()
 	// Make a resource exactly 1 less byte less than two megabytes
 	memoryQuantity := uint64(2*unit.Mi - 1)
 	gspec.Resources[0].Resources.Memory.Quantity = atypes.NewResourceValue(memoryQuantity)
 	price, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
 
 	// The pricing function cannot round down, so the price must exactly twice the scale
 	expectedPrice := testutil.AkashCoin(t, int64(246))
 	require.Equal(t, expectedPrice, price)
-	require.NoError(t, err)
 }
 
 func Test_ScalePricingOnMemoryRoundsUpFromZero(t *testing.T) {
 	memoryScale := uint64(1) // 1 uakt per megabyte
 	memoryPrice := decimal.NewFromInt(int64(memoryScale))
-	pricing, err := MakeScalePricing(decimal.Zero, memoryPrice, decimal.Zero, decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.Zero, memoryPrice, make(Storage), decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
-	gspec := defaultGroupSpec()
+	gspec := defaultGroupSpecCPUMem()
 	// Make a resource exactly 1 byte
 	memoryQuantity := uint64(1)
 	gspec.Resources[0].Resources.Memory.Quantity = atypes.NewResourceValue(memoryQuantity)
 	price, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
 
 	// The pricing function cannot round down, so the price must exactly 1 uakt
 	expectedPrice := testutil.AkashCoin(t, int64(1))
 	require.Equal(t, expectedPrice, price)
-	require.NoError(t, err)
 }
 
 func Test_ScalePricingOnStorage(t *testing.T) {
 	storageScale := uint64(24)
-	storagePrice := decimal.NewFromInt(int64(storageScale)).Mul(decimal.NewFromInt(unit.Mi))
+	storagePrice := Storage{
+		sdl.StorageEphemeral: decimal.NewFromInt(int64(storageScale)).Mul(decimal.NewFromInt(unit.Mi)),
+	}
+
 	pricing, err := MakeScalePricing(decimal.Zero, decimal.Zero, storagePrice, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
 	gspec := defaultGroupSpec()
 	storageQuantity := uint64(98765)
-	gspec.Resources[0].Resources.Storage.Quantity = atypes.NewResourceValue(storageQuantity)
+	gspec.Resources[0].Resources.Storage[0].Quantity = atypes.NewResourceValue(storageQuantity)
 	price, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
 
 	// one is added due to fractional rounding in the implementation
 	expectedPrice := testutil.AkashCoin(t, int64(storageScale*storageQuantity)+1)
 	require.Equal(t, expectedPrice, price)
-	require.NoError(t, err)
 }
 
 func Test_ScalePricingByCountOfResources(t *testing.T) {
 	storageScale := uint64(3)
-	storagePrice := decimal.NewFromInt(int64(storageScale)).Mul(decimal.NewFromInt(unit.Mi))
+	storagePrice := Storage{
+		sdl.StorageEphemeral: decimal.NewFromInt(int64(storageScale)).Mul(decimal.NewFromInt(unit.Mi)),
+	}
+
 	pricing, err := MakeScalePricing(decimal.Zero, decimal.Zero, storagePrice, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
 	gspec := defaultGroupSpec()
 	storageQuantity := uint64(111)
-	gspec.Resources[0].Resources.Storage.Quantity = atypes.NewResourceValue(storageQuantity)
+	gspec.Resources[0].Resources.Storage[0].Quantity = atypes.NewResourceValue(storageQuantity)
 	firstPrice, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
 
 	// one is added due to fractional rounding in the implementation
 	firstExpectedPrice := testutil.AkashCoin(t, int64(storageScale*storageQuantity)+1)
 	require.Equal(t, firstExpectedPrice, firstPrice)
-	require.NoError(t, err)
 
 	gspec.Resources[0].Count = 2
 	secondPrice, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
+
 	// one is added due to fractional rounding in the implementation
 	secondExpectedPrice := testutil.AkashCoin(t, 2*int64(storageScale*storageQuantity)+1)
 	require.Equal(t, secondExpectedPrice, secondPrice)
-	require.NoError(t, err)
 }
 
 func Test_ScriptPricingRejectsEmptyStringForPath(t *testing.T) {
@@ -528,7 +579,9 @@ func Test_ScriptPricingWritesJsonToStdin(t *testing.T) {
 	// Open the file and make sure it has the JSON
 	fin, err := os.Open(jsonPath)
 	require.NoError(t, err)
-	defer fin.Close()
+	defer func() {
+		_ = fin.Close()
+	}()
 	decoder := json.NewDecoder(fin)
 	data := make([]dataForScriptElement, 0)
 	err = decoder.Decode(&data)
@@ -539,7 +592,7 @@ func Test_ScriptPricingWritesJsonToStdin(t *testing.T) {
 	for i, r := range gspec.Resources {
 		require.Equal(t, r.Resources.CPU.Units.Val.Uint64(), data[i].CPU)
 		require.Equal(t, r.Resources.Memory.Quantity.Val.Uint64(), data[i].Memory)
-		require.Equal(t, r.Resources.Storage.Quantity.Val.Uint64(), data[i].Storage)
+		require.Equal(t, r.Resources.Storage[0].Quantity.Val.Uint64(), data[i].Storage["default"])
 		require.Equal(t, r.Count, data[i].Count)
 		require.Equal(t, len(r.Resources.Endpoints), data[i].EndpointQuantity)
 	}

@@ -3,10 +3,10 @@ package kube
 import (
 	"context"
 	"fmt"
-	"github.com/ovrclk/akash/provider/cluster"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
 	"io"
+	"sort"
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,8 +15,11 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 	executil "k8s.io/client-go/util/exec"
-	"sort"
-	"strings"
+
+	"github.com/ovrclk/akash/provider/cluster"
+	"github.com/ovrclk/akash/provider/cluster/kube/builder"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 // the type implementing the interface returned by the Exec command
@@ -47,7 +50,7 @@ func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName s
 	stdout io.Writer,
 	stderr io.Writer, tty bool,
 	tsq remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error) {
-	namespace := lidNS(leaseID)
+	namespace := builder.LidNS(leaseID)
 
 	// Check that the deployment exists
 	deployments, err := c.kc.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{

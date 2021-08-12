@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1beta1 "k8s.io/api/rbac/v1beta1"
+	v1beta1 "k8s.io/client-go/applyconfigurations/rbac/v1beta1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,44 @@ type RoleInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, role, opts
-func (_m *RoleInterface) Create(ctx context.Context, role *v1beta1.Role, opts v1.CreateOptions) (*v1beta1.Role, error) {
+// Apply provides a mock function with given fields: ctx, role, opts
+func (_m *RoleInterface) Apply(ctx context.Context, role *v1beta1.RoleApplyConfiguration, opts v1.ApplyOptions) (*rbacv1beta1.Role, error) {
 	ret := _m.Called(ctx, role, opts)
 
-	var r0 *v1beta1.Role
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.Role, v1.CreateOptions) *v1beta1.Role); ok {
+	var r0 *rbacv1beta1.Role
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.RoleApplyConfiguration, v1.ApplyOptions) *rbacv1beta1.Role); ok {
 		r0 = rf(ctx, role, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Role)
+			r0 = ret.Get(0).(*rbacv1beta1.Role)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.Role, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.RoleApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, role, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, role, opts
+func (_m *RoleInterface) Create(ctx context.Context, role *rbacv1beta1.Role, opts v1.CreateOptions) (*rbacv1beta1.Role, error) {
+	ret := _m.Called(ctx, role, opts)
+
+	var r0 *rbacv1beta1.Role
+	if rf, ok := ret.Get(0).(func(context.Context, *rbacv1beta1.Role, v1.CreateOptions) *rbacv1beta1.Role); ok {
+		r0 = rf(ctx, role, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rbacv1beta1.Role)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rbacv1beta1.Role, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, role, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +97,15 @@ func (_m *RoleInterface) DeleteCollection(ctx context.Context, opts v1.DeleteOpt
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *RoleInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.Role, error) {
+func (_m *RoleInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*rbacv1beta1.Role, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1beta1.Role
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta1.Role); ok {
+	var r0 *rbacv1beta1.Role
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *rbacv1beta1.Role); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Role)
+			r0 = ret.Get(0).(*rbacv1beta1.Role)
 		}
 	}
 
@@ -96,15 +120,15 @@ func (_m *RoleInterface) Get(ctx context.Context, name string, opts v1.GetOption
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *RoleInterface) List(ctx context.Context, opts v1.ListOptions) (*v1beta1.RoleList, error) {
+func (_m *RoleInterface) List(ctx context.Context, opts v1.ListOptions) (*rbacv1beta1.RoleList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1beta1.RoleList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1beta1.RoleList); ok {
+	var r0 *rbacv1beta1.RoleList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *rbacv1beta1.RoleList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.RoleList)
+			r0 = ret.Get(0).(*rbacv1beta1.RoleList)
 		}
 	}
 
@@ -119,7 +143,7 @@ func (_m *RoleInterface) List(ctx context.Context, opts v1.ListOptions) (*v1beta
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *RoleInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1beta1.Role, error) {
+func (_m *RoleInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*rbacv1beta1.Role, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +153,12 @@ func (_m *RoleInterface) Patch(ctx context.Context, name string, pt types.PatchT
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1beta1.Role
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1beta1.Role); ok {
+	var r0 *rbacv1beta1.Role
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *rbacv1beta1.Role); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Role)
+			r0 = ret.Get(0).(*rbacv1beta1.Role)
 		}
 	}
 
@@ -149,20 +173,20 @@ func (_m *RoleInterface) Patch(ctx context.Context, name string, pt types.PatchT
 }
 
 // Update provides a mock function with given fields: ctx, role, opts
-func (_m *RoleInterface) Update(ctx context.Context, role *v1beta1.Role, opts v1.UpdateOptions) (*v1beta1.Role, error) {
+func (_m *RoleInterface) Update(ctx context.Context, role *rbacv1beta1.Role, opts v1.UpdateOptions) (*rbacv1beta1.Role, error) {
 	ret := _m.Called(ctx, role, opts)
 
-	var r0 *v1beta1.Role
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.Role, v1.UpdateOptions) *v1beta1.Role); ok {
+	var r0 *rbacv1beta1.Role
+	if rf, ok := ret.Get(0).(func(context.Context, *rbacv1beta1.Role, v1.UpdateOptions) *rbacv1beta1.Role); ok {
 		r0 = rf(ctx, role, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Role)
+			r0 = ret.Get(0).(*rbacv1beta1.Role)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.Role, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *rbacv1beta1.Role, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, role, opts)
 	} else {
 		r1 = ret.Error(1)

@@ -1,31 +1,36 @@
 package cluster
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"sync/atomic"
 	"time"
 
-	"github.com/boz/go-lifecycle"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
+
+	"github.com/boz/go-lifecycle"
+	"github.com/tendermint/tendermint/libs/log"
+
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	clusterUtil "github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/pubsub"
 	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/util/runner"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
 var (
-	// errNotFound is the new error with message "not found"
-	errReservationNotFound = errors.New("reservation not found")
-	// ErrInsufficientCapacity is the new error when capacity is insufficient
-	ErrInsufficientCapacity = errors.New("insufficient capacity")
+	// errReservationNotFound is the new error with message "not found"
+	errReservationNotFound      = errors.New("reservation not found")
+	errInventoryNotAvailableYet = errors.New("inventory status not available yet")
 )
 
 var (
@@ -207,7 +212,7 @@ type inventoryResponse struct {
 	err   error
 }
 
-func (is *inventoryService) committedResources(rgroup atypes.ResourceGroup) atypes.ResourceGroup {
+func (is *inventoryService) resourcesToCommit(rgroup atypes.ResourceGroup) atypes.ResourceGroup {
 	replacedResources := make([]dtypes.Resource, 0)
 
 	for _, resource := range rgroup.GetResources() {
@@ -220,12 +225,21 @@ func (is *inventoryService) committedResources(rgroup atypes.ResourceGroup) atyp
 				Quantity:   clusterUtil.ComputeCommittedResources(is.config.MemoryCommitLevel, resource.Resources.GetMemory().GetQuantity()),
 				Attributes: resource.Resources.GetMemory().GetAttributes(),
 			},
-			Storage: &atypes.Storage{
-				Quantity:   clusterUtil.ComputeCommittedResources(is.config.StorageCommitLevel, resource.Resources.GetStorage().GetQuantity()),
-				Attributes: resource.Resources.GetStorage().GetAttributes(),
-			},
 			Endpoints: resource.Resources.GetEndpoints(),
 		}
+
+		storage := make(atypes.Volumes, 0, len(resource.Resources.GetStorage()))
+
+		for _, volume := range resource.Resources.GetStorage() {
+			storage = append(storage, atypes.Storage{
+				Name:       volume.Name,
+				Quantity:   clusterUtil.ComputeCommittedResources(is.config.StorageCommitLevel, volume.GetQuantity()),
+				Attributes: volume.GetAttributes(),
+			})
+		}
+
+		runits.Storage = storage
+
 		v := dtypes.Resource{
 			Resources: runits,
 			Count:     resource.Count,
@@ -243,37 +257,25 @@ func (is *inventoryService) committedResources(rgroup atypes.ResourceGroup) atyp
 	return result
 }
 
-func (is *inventoryService) updateInventoryMetrics(inventory []ctypes.Node) {
-	clusterInventoryAllocateable.WithLabelValues("nodes").Set(float64(len(inventory)))
+func (is *inventoryService) updateInventoryMetrics(metrics ctypes.InventoryMetrics) {
+	clusterInventoryAllocateable.WithLabelValues("nodes").Set(float64(len(metrics.Nodes)))
 
-	cpuTotal := 0.0
-	memoryTotal := 0.0
-	storageTotal := 0.0
-
-	cpuAvailable := 0.0
-	memoryAvailable := 0.0
-	storageAvailable := 0.0
-
-	for _, node := range inventory {
-		tmp := node.Allocateable()
-		cpuTotal += float64((&tmp).GetCPU().GetUnits().Value())
-		memoryTotal += float64((&tmp).GetMemory().Quantity.Value())
-		storageTotal += float64((&tmp).GetStorage().Quantity.Value())
-
-		tmp = node.Available()
-		cpuAvailable += float64((&tmp).GetCPU().GetUnits().Value())
-		memoryAvailable += float64((&tmp).GetMemory().Quantity.Value())
-		storageAvailable += float64((&tmp).GetStorage().Quantity.Value())
+	clusterInventoryAllocateable.WithLabelValues("cpu").Set(float64(metrics.TotalAllocatable.CPU) / 1000)
+	clusterInventoryAllocateable.WithLabelValues("memory").Set(float64(metrics.TotalAllocatable.Memory))
+	clusterInventoryAllocateable.WithLabelValues("storage-ephemeral").Set(float64(metrics.TotalAllocatable.StorageEphemeral))
+	for class, val := range metrics.TotalAllocatable.Storage {
+		clusterInventoryAllocateable.WithLabelValues(fmt.Sprintf("storage-%s", class)).Set(float64(val))
 	}
 
-	clusterInventoryAllocateable.WithLabelValues("cpu").Set(cpuTotal)
-	clusterInventoryAllocateable.WithLabelValues("memory").Set(memoryTotal)
-	clusterInventoryAllocateable.WithLabelValues("storage").Set(storageTotal)
 	clusterInventoryAllocateable.WithLabelValues("endpoints").Set(float64(is.config.InventoryExternalPortQuantity))
 
-	clusterInventoryAvailable.WithLabelValues("cpu").Set(cpuAvailable)
-	clusterInventoryAvailable.WithLabelValues("memory").Set(memoryAvailable)
-	clusterInventoryAvailable.WithLabelValues("storage").Set(storageAvailable)
+	clusterInventoryAvailable.WithLabelValues("cpu").Set(float64(metrics.TotalAvailable.CPU) / 1000)
+	clusterInventoryAvailable.WithLabelValues("memory").Set(float64(metrics.TotalAvailable.Memory))
+	clusterInventoryAvailable.WithLabelValues("storage-ephemeral").Set(float64(metrics.TotalAvailable.StorageEphemeral))
+	for class, val := range metrics.TotalAvailable.Storage {
+		clusterInventoryAvailable.WithLabelValues(fmt.Sprintf("storage-%s", class)).Set(float64(val))
+	}
+
 	clusterInventoryAvailable.WithLabelValues("endpoints").Set(float64(is.availableExternalPorts))
 }
 
@@ -282,32 +284,32 @@ func updateReservationMetrics(reservations []*reservation) {
 
 	activeCPUTotal := 0.0
 	activeMemoryTotal := 0.0
-	activeStorageTotal := 0.0
+	activeStorageEphemeralTotal := 0.0
 	activeEndpointsTotal := 0.0
 
 	pendingCPUTotal := 0.0
 	pendingMemoryTotal := 0.0
-	pendingStorageTotal := 0.0
+	pendingStorageEphemeralTotal := 0.0
 	pendingEndpointsTotal := 0.0
 
 	allocated := 0.0
 	for _, reservation := range reservations {
 		cpuTotal := &pendingCPUTotal
 		memoryTotal := &pendingMemoryTotal
-		storageTotal := &pendingStorageTotal
+		// storageTotal := &pendingStorageTotal
 		endpointsTotal := &pendingEndpointsTotal
 
 		if reservation.allocated {
 			allocated++
 			cpuTotal = &activeCPUTotal
 			memoryTotal = &activeMemoryTotal
-			storageTotal = &activeStorageTotal
+			// storageTotal = &activeStorageTotal
 			endpointsTotal = &activeEndpointsTotal
 		}
 		for _, resource := range reservation.Resources().GetResources() {
 			*cpuTotal += float64(resource.Resources.GetCPU().GetUnits().Value() * uint64(resource.Count))
 			*memoryTotal += float64(resource.Resources.GetMemory().Quantity.Value() * uint64(resource.Count))
-			*storageTotal += float64(resource.Resources.GetStorage().Quantity.Value() * uint64(resource.Count))
+			// *storageTotal += float64(resource.Resources.GetStorage().Quantity.Value() * uint64(resource.Count))
 			*endpointsTotal += float64(len(resource.Resources.GetEndpoints()))
 		}
 	}
@@ -316,12 +318,12 @@ func updateReservationMetrics(reservations []*reservation) {
 
 	inventoryReservations.WithLabelValues("active", "cpu").Set(activeCPUTotal)
 	inventoryReservations.WithLabelValues("active", "memory").Set(activeMemoryTotal)
-	inventoryReservations.WithLabelValues("active", "storage").Set(activeStorageTotal)
+	inventoryReservations.WithLabelValues("active", "storage-ephemeral").Set(activeStorageEphemeralTotal)
 	inventoryReservations.WithLabelValues("active", "endpoints").Set(activeEndpointsTotal)
 
 	inventoryReservations.WithLabelValues("pending", "cpu").Set(pendingCPUTotal)
 	inventoryReservations.WithLabelValues("pending", "memory").Set(pendingMemoryTotal)
-	inventoryReservations.WithLabelValues("pending", "storage").Set(pendingStorageTotal)
+	inventoryReservations.WithLabelValues("pending", "storage-ephemeral").Set(pendingStorageEphemeralTotal)
 	inventoryReservations.WithLabelValues("pending", "endpoints").Set(pendingEndpointsTotal)
 }
 
@@ -336,8 +338,7 @@ func (is *inventoryService) run(reservations []*reservation) {
 	t.Stop()
 	defer t.Stop()
 
-	var inventory []ctypes.Node
-	ready := false
+	var inventory ctypes.Inventory
 
 	// Run an inventory check immediately.
 	runch := is.runCheck(ctx)
@@ -345,11 +346,12 @@ func (is *inventoryService) run(reservations []*reservation) {
 	var fetchCount uint
 
 	var reserveChLocal <-chan inventoryRequest
-	allowProcessingReservations := func() {
+
+	resumeProcessingReservations := func() {
 		reserveChLocal = is.reservech
 	}
 
-	stopProcessingReservations := func() {
+	updateInventory := func() {
 		reserveChLocal = nil
 		if runch == nil {
 			runch = is.runCheck(ctx)
@@ -377,7 +379,7 @@ loop:
 
 					allocatedPrev := res.allocated
 					res.allocated = ev.Status == event.ClusterDeploymentDeployed
-					stopProcessingReservations()
+					updateInventory()
 
 					if res.allocated != allocatedPrev {
 						externalPortCount := reservationCountEndpoints(res)
@@ -398,14 +400,15 @@ loop:
 			}
 
 		case req := <-reserveChLocal:
-			// convert the resources to the commmitted amount
-			resourcesToCommit := is.committedResources(req.resources)
+			// convert the resources to the committed amount
+			resourcesToCommit := is.resourcesToCommit(req.resources)
 			// create new registration if capacity available
 			reservation := newReservation(req.order, resourcesToCommit)
 
 			is.log.Debug("reservation requested", "order", req.order, "resources", req.resources)
 
-			if reservationAllocateable(inventory, is.availableExternalPorts, reservations, reservation) {
+			err := inventory.Adjust(reservation)
+			if err == nil {
 				reservations = append(reservations, reservation)
 				req.ch <- inventoryResponse{value: reservation}
 				inventoryRequestsCounter.WithLabelValues("reserve", "create").Inc()
@@ -414,7 +417,7 @@ loop:
 
 			is.log.Info("insufficient capacity for reservation", "order", req.order)
 			inventoryRequestsCounter.WithLabelValues("reserve", "insufficient-capacity").Inc()
-			req.ch <- inventoryResponse{err: ErrInsufficientCapacity}
+			req.ch <- inventoryResponse{err: err}
 
 		case req := <-is.lookupch:
 			// lookup registration
@@ -486,28 +489,43 @@ loop:
 				break
 			}
 
-			if !ready {
+			select {
+			case _ = <-is.readych:
+				break
+			default:
 				is.log.Debug("inventory ready")
-				ready = true
 				close(is.readych)
 			}
 
-			inventory = res.Value().([]ctypes.Node)
-			is.updateInventoryMetrics(inventory)
+			inventory = res.Value().(ctypes.Inventory)
+			metrics := inventory.Metrics()
+
+			is.updateInventoryMetrics(metrics)
+
 			if fetchCount%is.config.InventoryResourceDebugFrequency == 0 {
-				is.log.Debug("inventory fetched", "nodes", len(inventory))
-				for _, node := range inventory {
-					available := node.Available()
-					is.log.Debug("node resources",
-						"node-id", node.ID(),
-						"available-cpu", available.CPU,
-						"available-memory", available.Memory,
-						"available-storage", available.Storage)
+				buf := &bytes.Buffer{}
+				enc := json.NewEncoder(buf)
+				err := enc.Encode(&metrics)
+				if err == nil {
+					is.log.Debug("cluster resources", "dump", buf.String())
+				} else {
+					is.log.Error("unable to dump cluster inventory", "error", err.Error())
 				}
 			}
 			fetchCount++
-			allowProcessingReservations()
+
+			// readjust inventory accordingly with pending leases
+			for _, r := range reservations {
+				if !r.allocated {
+					if err := inventory.Adjust(r); err != nil {
+						is.log.Error("adjust inventory for pending reservation", "error", err.Error())
+					}
+				}
+			}
+
+			resumeProcessingReservations()
 		}
+
 		updateReservationMetrics(reservations)
 	}
 	cancel()
@@ -523,53 +541,37 @@ func (is *inventoryService) runCheck(ctx context.Context) <-chan runner.Result {
 	})
 }
 
-func (is *inventoryService) getStatus(inventory []ctypes.Node, reservations []*reservation) ctypes.InventoryStatus {
+func (is *inventoryService) getStatus(inventory ctypes.Inventory, reservations []*reservation) ctypes.InventoryStatus {
 	status := ctypes.InventoryStatus{}
-	for _, reserve := range reservations {
-		total := atypes.ResourceUnits{}
+	if inventory == nil {
+		status.Error = errInventoryNotAvailableYet
+		return status
+	}
 
-		for _, resource := range reserve.Resources().GetResources() {
-			// 🤔
-			if total, status.Error = total.Add(resource.Resources); status.Error != nil {
-				return status
-			}
+	for _, reservation := range reservations {
+		total := ctypes.InventoryMetricTotal{
+			Storage: make(map[string]int64),
 		}
 
-		if reserve.allocated {
+		for _, resources := range reservation.Resources().GetResources() {
+			total.AddResources(resources)
+		}
+
+		if reservation.allocated {
 			status.Active = append(status.Active, total)
 		} else {
 			status.Pending = append(status.Pending, total)
 		}
 	}
 
-	for _, node := range inventory {
-		status.Available = append(status.Available, node.Available())
+	for _, nd := range inventory.Metrics().Nodes {
+		status.Available.Nodes = append(status.Available.Nodes, nd.Available)
 	}
 
+	for class, size := range inventory.Metrics().TotalAvailable.Storage {
+		status.Available.Storage = append(status.Available.Storage, ctypes.InventoryStorageStatus{Class: class, Size: size})
+	}
 	return status
-}
-
-func reservationAllocateable(inventory []ctypes.Node, externalPortsAvailable uint, reservations []*reservation, newReservation *reservation) bool {
-	// 1. for each unallocated reservation, subtract its resources
-	//    from inventory.
-	// 2. subtract resources for new reservation from inventory.
-	// 3. return true iff 1 and 2 succeed.
-
-	var ok bool
-
-	for _, res := range reservations {
-		if res.allocated {
-			continue
-		}
-		inventory, externalPortsAvailable, ok = reservationAdjustInventory(inventory, externalPortsAvailable, res)
-		if !ok {
-			return false
-		}
-	}
-
-	_, _, ok = reservationAdjustInventory(inventory, externalPortsAvailable, newReservation)
-
-	return ok
 }
 
 func reservationCountEndpoints(reservation *reservation) uint {
@@ -583,46 +585,4 @@ func reservationCountEndpoints(reservation *reservation) uint {
 	}
 
 	return externalPortCount
-}
-
-func reservationAdjustInventory(prevInventory []ctypes.Node, externalPortsAvailable uint, reservation *reservation) ([]ctypes.Node, uint, bool) {
-	// for each node in the inventory
-	//   subtract resource capacity from node capacity if the former will fit in the latter
-	//   remove resource capacity that fit in node capacity from requested resource capacity
-	// return remaining inventory, true iff all resources are able to fit
-
-	resources := make([]atypes.Resources, len(reservation.resources.GetResources()))
-	copy(resources, reservation.resources.GetResources())
-
-	inventory := make([]ctypes.Node, 0, len(prevInventory))
-
-	externalPortCount := reservationCountEndpoints(reservation)
-	if externalPortsAvailable < externalPortCount {
-		return nil, 0, false
-	}
-	externalPortsAvailable -= externalPortCount
-	for _, node := range prevInventory {
-		available := node.Available()
-		curResources := resources[:0]
-
-		for _, resource := range resources {
-			for ; resource.Count > 0; resource.Count-- {
-				var err error
-				var remaining atypes.ResourceUnits
-				if remaining, err = available.Sub(resource.Resources); err != nil {
-					break
-				}
-				available = remaining
-			}
-
-			if resource.Count > 0 {
-				curResources = append(curResources, resource)
-			}
-		}
-
-		resources = curResources
-		inventory = append(inventory, NewNode(node.ID(), node.Allocateable(), available))
-	}
-
-	return inventory, externalPortsAvailable, len(resources) == 0
 }
