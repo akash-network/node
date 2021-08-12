@@ -3,16 +3,18 @@ package kube
 import (
 	"context"
 
-	"github.com/ovrclk/akash/manifest"
-	mtypes "github.com/ovrclk/akash/x/market/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/ovrclk/akash/manifest"
+	"github.com/ovrclk/akash/provider/cluster/kube/builder"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
 func cleanupStaleResources(ctx context.Context, kc kubernetes.Interface, lid mtypes.LeaseID, group *manifest.Group) error {
-	ns := lidNS(lid)
+	ns := builder.LidNS(lid)
 
 	// build label selector for objects not in current manifest group
 	svcnames := make([]string, 0, len(group.Services))
@@ -20,11 +22,11 @@ func cleanupStaleResources(ctx context.Context, kc kubernetes.Interface, lid mty
 		svcnames = append(svcnames, svc.Name)
 	}
 
-	req1, err := labels.NewRequirement(akashManifestServiceLabelName, selection.NotIn, svcnames)
+	req1, err := labels.NewRequirement(builder.AkashManifestServiceLabelName, selection.NotIn, svcnames)
 	if err != nil {
 		return err
 	}
-	req2, err := labels.NewRequirement(akashManagedLabelName, selection.Equals, []string{"true"})
+	req2, err := labels.NewRequirement(builder.AkashManagedLabelName, selection.Equals, []string{"true"})
 	if err != nil {
 		return err
 	}

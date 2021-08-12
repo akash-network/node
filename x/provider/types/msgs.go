@@ -1,7 +1,9 @@
 package types
 
 import (
+	"fmt"
 	"net/url"
+	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -19,6 +21,18 @@ const (
 var (
 	_, _, _ sdk.Msg = &MsgCreateProvider{}, &MsgUpdateProvider{}, &MsgDeleteProvider{}
 )
+
+var (
+	ErrInvalidStorageClass  = errors.New("provider: invalid storage class")
+	ErrUnsupportedAttribute = errors.New("provider: unsupported attribute")
+)
+
+var allowedStorageClasses = map[string]bool{
+	"default": true,
+	"beta1":   true,
+	"beta2":   true,
+	"beta3":   true,
+}
 
 // NewMsgCreateProvider creates a new MsgCreateProvider instance
 func NewMsgCreateProvider(owner sdk.AccAddress, hostURI string, attributes types.Attributes) *MsgCreateProvider {
@@ -44,6 +58,9 @@ func (msg MsgCreateProvider) ValidateBasic() error {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgCreate: Invalid Provider Address")
 	}
 	if err := msg.Attributes.Validate(); err != nil {
+		return err
+	}
+	if err := validateProviderAttributes(msg.Attributes); err != nil {
 		return err
 	}
 	if err := msg.Info.Validate(); err != nil {
@@ -91,6 +108,9 @@ func (msg MsgUpdateProvider) ValidateBasic() error {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgUpdate: Invalid Provider Address")
 	}
 	if err := msg.Attributes.Validate(); err != nil {
+		return err
+	}
+	if err := validateProviderAttributes(msg.Attributes); err != nil {
 		return err
 	}
 	if err := msg.Info.Validate(); err != nil {
@@ -169,6 +189,28 @@ func validateProviderURI(val string) error {
 
 	if u.Path != "" {
 		return errors.Wrapf(ErrInvalidProviderURI, "path in %q should be empty", val)
+	}
+
+	return nil
+}
+
+func validateProviderAttributes(attrs types.Attributes) error {
+	storage := attrs.GetCapabilitiesGroup("storage")
+	for _, group := range storage {
+		for _, attr := range group {
+			switch attr.Key {
+			case "persistent":
+				if _, err := strconv.ParseBool(attr.Value); err != nil {
+					return err
+				}
+			case "class":
+				if _, valid := allowedStorageClasses[attr.Value]; !valid {
+					return errors.Wrap(ErrInvalidStorageClass, attr.Value)
+				}
+			default:
+				return errors.Wrap(ErrUnsupportedAttribute, fmt.Sprintf("%s for capability group storage", attr.Key))
+			}
+		}
 	}
 
 	return nil

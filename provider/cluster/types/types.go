@@ -6,11 +6,17 @@ import (
 	"io"
 	"time"
 
+	"github.com/pkg/errors"
 	eventsv1 "k8s.io/api/events/v1"
 
 	"github.com/ovrclk/akash/manifest"
-	atypes "github.com/ovrclk/akash/types"
+	"github.com/ovrclk/akash/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
+)
+
+var (
+	// ErrInsufficientCapacity is the new error when capacity is insufficient
+	ErrInsufficientCapacity = errors.New("insufficient capacity")
 )
 
 // Status stores current leases and inventory statuses
@@ -21,10 +27,35 @@ type Status struct {
 
 // InventoryStatus stores active, pending and available units
 type InventoryStatus struct {
-	Active    []atypes.ResourceUnits `json:"active"`
-	Pending   []atypes.ResourceUnits `json:"pending"`
-	Available []atypes.ResourceUnits `json:"available"`
-	Error     error                  `json:"error"`
+	Active    []types.ResourceUnits `json:"active"`
+	Pending   []types.ResourceUnits `json:"pending"`
+	Available []types.ResourceUnits `json:"available"`
+	Error     error                 `json:"error"`
+}
+
+type InventoryMetricTotal struct {
+	CPU              float64           `json:"cpu"`
+	Memory           uint64            `json:"memory"`
+	StorageEphemeral uint64            `json:"storage_ephemeral"`
+	Storage          map[string]uint64 `json:"storage,omitempty"`
+}
+
+type InventoryNodeMetric struct {
+	CPU              float64 `json:"cpu"`
+	Memory           uint64  `json:"memory"`
+	StorageEphemeral uint64  `json:"storage_ephemeral"`
+}
+
+type InventoryNode struct {
+	Name        string              `json:"name"`
+	Allocatable InventoryNodeMetric `json:"allocatable"`
+	Available   InventoryNodeMetric `json:"available"`
+}
+
+type InventoryMetrics struct {
+	Nodes            []InventoryNode      `json:"nodes"`
+	TotalAllocatable InventoryMetricTotal `json:"total_allocatable"`
+	TotalAvailable   InventoryMetricTotal `json:"total_available"`
 }
 
 // ServiceStatus stores the current status of service
@@ -56,12 +87,9 @@ type LeaseStatus struct {
 	ForwardedPorts map[string][]ForwardedPortStatus `json:"forwarded_ports"` // Container services that are externally accessible
 }
 
-// Node interface predefined with ID and Available methods
-type Node interface {
-	ID() string
-	Available() atypes.ResourceUnits
-	Allocateable() atypes.ResourceUnits
-	Reserve(atypes.ResourceUnits) error
+type Inventory interface {
+	Adjust(Reservation) error
+	Metrics() InventoryMetrics
 }
 
 // Deployment interface defined with LeaseID and ManifestGroup methods
@@ -93,7 +121,6 @@ type LeaseEvent struct {
 	Object              LeaseEventObject `json:"object" yaml:"object"`
 }
 
-// EventsWatcher
 type EventsWatcher interface {
 	Shutdown()
 	Done() <-chan struct{}

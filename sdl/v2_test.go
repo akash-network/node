@@ -133,8 +133,11 @@ func Test_v1_Parse_simple(t *testing.T) {
 			Memory: &atypes.Memory{
 				Quantity: atypes.NewResourceValue(randMemory),
 			},
-			Storage: &atypes.Storage{
-				Quantity: atypes.NewResourceValue(randStorage),
+			Storage: atypes.Volumes{
+				{
+					Name:     "default",
+					Quantity: atypes.NewResourceValue(randStorage),
+				},
 			},
 			Endpoints: []atypes.Endpoint{
 				{
@@ -167,8 +170,11 @@ func Test_v1_Parse_simple(t *testing.T) {
 					Memory: &atypes.Memory{
 						Quantity: atypes.NewResourceValue(128 * unit.Mi),
 					},
-					Storage: &atypes.Storage{
-						Quantity: atypes.NewResourceValue(1 * unit.Gi),
+					Storage: atypes.Volumes{
+						{
+							Name:     "default",
+							Quantity: atypes.NewResourceValue(1 * unit.Gi),
+						},
 					},
 				},
 				Count: 2,

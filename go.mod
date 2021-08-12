@@ -19,7 +19,7 @@ require (
 	github.com/hashicorp/hcl v1.0.1-0.20191016231534-914dc3f8dd7c // indirect
 	github.com/jmhodges/levigo v1.0.1-0.20191019112844-b572e7f4cdac // indirect
 	github.com/libp2p/go-buffer-pool v0.0.3-0.20190619091711-d94255cb3dfc // indirect
-	github.com/moby/term v0.0.0-20200312100748-672ec06f55cd
+	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.11.0
@@ -42,12 +42,12 @@ require (
 	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
 	google.golang.org/grpc v1.38.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-	k8s.io/api v0.19.3
-	k8s.io/apimachinery v0.20.2
-	k8s.io/client-go v0.19.3
-	k8s.io/code-generator v0.19.3
-	k8s.io/kubectl v0.19.3
-	k8s.io/metrics v0.19.3
+	k8s.io/api v0.21.3
+	k8s.io/apimachinery v0.21.3
+	k8s.io/client-go v0.21.3
+	k8s.io/code-generator v0.21.3
+	k8s.io/kubectl v0.21.3
+	k8s.io/metrics v0.21.3
 	sigs.k8s.io/kind v0.11.1
 )
 

@@ -3,14 +3,14 @@ package bidengine
 import (
 	"context"
 	"errors"
-	atypes "github.com/ovrclk/akash/x/audit/types"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"time"
 
-	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/boz/go-lifecycle"
 
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
@@ -48,7 +48,7 @@ type Service interface {
 	Done() <-chan struct{}
 }
 
-// NewService creates new service instance and returns error incase of failure
+// NewService creates new service instance and returns error in case of failure
 func NewService(ctx context.Context, session session.Session, cluster cluster.Cluster, bus pubsub.Bus, cfg Config) (Service, error) {
 	session = session.ForModule("bidengine-service")
 
@@ -87,23 +87,6 @@ func NewService(ctx context.Context, session session.Session, cluster cluster.Cl
 	go s.run(existingOrders)
 
 	return s, nil
-}
-
-type providerAttrRequest struct {
-	auditor   string
-	successCh chan<- []atypes.Provider
-	errCh     chan<- error
-}
-
-type providerAttrEntry struct {
-	providerAttr []atypes.Provider
-	at           time.Time
-}
-
-type providerAttrResult struct {
-	auditor      string
-	providerAttr []atypes.Provider
-	err          error
 }
 
 type service struct {
@@ -253,5 +236,4 @@ func queryExistingOrders(ctx context.Context, session session.Session) ([]mtypes
 	}
 
 	return existingOrders, nil
-
 }

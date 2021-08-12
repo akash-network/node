@@ -40,7 +40,29 @@ type ManifestSpec struct {
 	Group   ManifestGroup `json:"group"`
 }
 
-// type ResourceUnits types.ResourceUnits
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type StorageClassInfo struct {
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	// +optional
+	metav1.ObjectMeta `json:"metadata"`
+
+	Spec   StorageClassInfoSpec   `json:"spec,omitempty"`
+	Status StorageClassInfoStatus `json:"status,omitempty"`
+}
+
+type StorageClassInfoStatus struct {
+	State   string `json:"state,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+type StorageClassInfoSpec struct {
+	Capacity uint64 `json:"capacity,omitempty"`
+}
 
 // Deployment returns the cluster.Deployment that the saved manifest represents.
 func (m Manifest) Deployment() (ctypes.Deployment, error) {
@@ -182,6 +204,16 @@ func manifestGroupFromAkash(m *manifest.Group) (ManifestGroup, error) {
 	return ma, nil
 }
 
+type ManifestStorageParams struct {
+	Name     string `json:"name" yaml:"name"`
+	Mount    string `json:"mount" yaml:"mount"`
+	ReadOnly bool   `json:"readOnly" yaml:"readOnly"`
+}
+
+type ManifestServiceParams struct {
+	Storage []ManifestStorageParams `json:"storage,omitempty"`
+}
+
 // ManifestService stores name, image, args, env, unit, count and expose list of service
 type ManifestService struct {
 	// Service name
@@ -197,6 +229,8 @@ type ManifestService struct {
 	Count uint32 `json:"count,omitempty"`
 	// Overlay Network Links
 	Expose []ManifestServiceExpose `json:"expose,omitempty"`
+	// Miscellaneous service parameters
+	Params *ManifestServiceParams `json:"params,omitempty"`
 }
 
 func (ms ManifestService) toAkash() (manifest.Service, error) {
@@ -223,6 +257,20 @@ func (ms ManifestService) toAkash() (manifest.Service, error) {
 		ams.Expose = append(ams.Expose, value)
 	}
 
+	if ms.Params != nil {
+		ams.Params = &manifest.ServiceParams{
+			Storage: make([]manifest.StorageParams, 0, len(ms.Params.Storage)),
+		}
+
+		for _, storage := range ms.Params.Storage {
+			ams.Params.Storage = append(ams.Params.Storage, manifest.StorageParams{
+				Name:     storage.Name,
+				Mount:    storage.Mount,
+				ReadOnly: storage.ReadOnly,
+			})
+		}
+	}
+
 	return *ams, nil
 }
 
@@ -244,6 +292,20 @@ func manifestServiceFromAkash(ams manifest.Service) (ManifestService, error) {
 
 	for _, expose := range ams.Expose {
 		ms.Expose = append(ms.Expose, manifestServiceExposeFromAkash(expose))
+	}
+
+	if ams.Params != nil {
+		ms.Params = &ManifestServiceParams{
+			Storage: make([]ManifestStorageParams, 0, len(ams.Params.Storage)),
+		}
+
+		for _, storage := range ams.Params.Storage {
+			ms.Params.Storage = append(ms.Params.Storage, ManifestStorageParams{
+				Name:     storage.Name,
+				Mount:    storage.Mount,
+				ReadOnly: storage.ReadOnly,
+			})
+		}
 	}
 
 	return ms, nil
@@ -343,4 +405,13 @@ type ManifestList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:",inline"`
 	Items           []Manifest `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// StorageClassInfoList stores metadata and items list of storage class states
+type StorageClassInfoList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:",inline"`
+	Items           []StorageClassInfo `json:"items"`
 }

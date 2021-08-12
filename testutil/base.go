@@ -98,8 +98,10 @@ func Resources(t testing.TB) []dtypes.Resource {
 				Memory: &types.Memory{
 					Quantity: types.NewResourceValue(dtypes.GetValidationConfig().MinUnitMemory),
 				},
-				Storage: &types.Storage{
-					Quantity: types.NewResourceValue(dtypes.GetValidationConfig().MinUnitStorage),
+				Storage: types.Volumes{
+					types.Storage{
+						Quantity: types.NewResourceValue(dtypes.GetValidationConfig().MinUnitStorage),
+					},
 				},
 			},
 			Count: 1,

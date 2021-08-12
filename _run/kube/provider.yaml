@@ -2,3 +2,11 @@ host: https://localhost:8443
 attributes:
   - key: region
     value: us-west
+  - key: capabilities/storage/1/persistent
+    value: true
+  - key: capabilities/storage/1/class
+    value: default
+  - key: capabilities/storage/2/persistent
+    value: true
+  - key: capabilities/storage/2/class
+    value: beta2

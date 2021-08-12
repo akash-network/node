@@ -1,10 +1,10 @@
+//go:build !mainnet
 // +build !mainnet
 
 package integration
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -16,18 +16,20 @@ import (
 	"time"
 
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
-	"github.com/ovrclk/akash/provider/gateway/rest"
-	clitestutil "github.com/ovrclk/akash/testutil/cli"
-
-	"github.com/cosmos/cosmos-sdk/server"
-	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	providerCmd "github.com/ovrclk/akash/provider/cmd"
+	"github.com/ovrclk/akash/provider/gateway/rest"
 	"github.com/ovrclk/akash/sdl"
-	ccli "github.com/ovrclk/akash/x/cert/client/cli"
+	clitestutil "github.com/ovrclk/akash/testutil/cli"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
+
+	"github.com/cosmos/cosmos-sdk/server"
+	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
+
+	ccli "github.com/ovrclk/akash/x/cert/client/cli"
 	"github.com/ovrclk/akash/x/provider/client/cli"
 	"github.com/ovrclk/akash/x/provider/types"
 
@@ -990,6 +992,8 @@ func TestIntegrationTestSuite(t *testing.T) {
 	suite.Run(t, new(E2EAppNodePort))
 	suite.Run(t, new(E2EDeploymentUpdate))
 	suite.Run(t, new(E2EApp))
+	suite.Run(t, new(E2EPersistentStorageDefault))
+	suite.Run(t, new(E2EPersistentStorageBeta2))
 }
 
 func (s *IntegrationTestSuite) waitForBlocksCommitted(height int) error {
@@ -1013,6 +1017,6 @@ func TestQueryApp(t *testing.T) {
 	integrationTestOnly(t)
 	host, appPort := appEnv(t)
 
-	appURL := fmt.Sprintf("https://%s:%s/", host, appPort)
+	appURL := fmt.Sprintf("http://%s:%s/", host, appPort)
 	queryApp(t, appURL, 1)
 }
