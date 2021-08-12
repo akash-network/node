@@ -5,13 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
+	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/core/v1"
+	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +23,44 @@ type LimitRangeInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, limitRange, opts
-func (_m *LimitRangeInterface) Create(ctx context.Context, limitRange *v1.LimitRange, opts metav1.CreateOptions) (*v1.LimitRange, error) {
+// Apply provides a mock function with given fields: ctx, limitRange, opts
+func (_m *LimitRangeInterface) Apply(ctx context.Context, limitRange *v1.LimitRangeApplyConfiguration, opts metav1.ApplyOptions) (*corev1.LimitRange, error) {
 	ret := _m.Called(ctx, limitRange, opts)
 
-	var r0 *v1.LimitRange
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.LimitRange, metav1.CreateOptions) *v1.LimitRange); ok {
+	var r0 *corev1.LimitRange
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.LimitRangeApplyConfiguration, metav1.ApplyOptions) *corev1.LimitRange); ok {
 		r0 = rf(ctx, limitRange, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.LimitRange)
+			r0 = ret.Get(0).(*corev1.LimitRange)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.LimitRange, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.LimitRangeApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, limitRange, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, limitRange, opts
+func (_m *LimitRangeInterface) Create(ctx context.Context, limitRange *corev1.LimitRange, opts metav1.CreateOptions) (*corev1.LimitRange, error) {
+	ret := _m.Called(ctx, limitRange, opts)
+
+	var r0 *corev1.LimitRange
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.LimitRange, metav1.CreateOptions) *corev1.LimitRange); ok {
+		r0 = rf(ctx, limitRange, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.LimitRange)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.LimitRange, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, limitRange, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +98,15 @@ func (_m *LimitRangeInterface) DeleteCollection(ctx context.Context, opts metav1
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *LimitRangeInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.LimitRange, error) {
+func (_m *LimitRangeInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.LimitRange, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.LimitRange
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.LimitRange); ok {
+	var r0 *corev1.LimitRange
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *corev1.LimitRange); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.LimitRange)
+			r0 = ret.Get(0).(*corev1.LimitRange)
 		}
 	}
 
@@ -96,15 +121,15 @@ func (_m *LimitRangeInterface) Get(ctx context.Context, name string, opts metav1
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *LimitRangeInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.LimitRangeList, error) {
+func (_m *LimitRangeInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.LimitRangeList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.LimitRangeList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.LimitRangeList); ok {
+	var r0 *corev1.LimitRangeList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *corev1.LimitRangeList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.LimitRangeList)
+			r0 = ret.Get(0).(*corev1.LimitRangeList)
 		}
 	}
 
@@ -119,7 +144,7 @@ func (_m *LimitRangeInterface) List(ctx context.Context, opts metav1.ListOptions
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *LimitRangeInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.LimitRange, error) {
+func (_m *LimitRangeInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*corev1.LimitRange, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +154,12 @@ func (_m *LimitRangeInterface) Patch(ctx context.Context, name string, pt types.
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.LimitRange
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.LimitRange); ok {
+	var r0 *corev1.LimitRange
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *corev1.LimitRange); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.LimitRange)
+			r0 = ret.Get(0).(*corev1.LimitRange)
 		}
 	}
 
@@ -149,20 +174,20 @@ func (_m *LimitRangeInterface) Patch(ctx context.Context, name string, pt types.
 }
 
 // Update provides a mock function with given fields: ctx, limitRange, opts
-func (_m *LimitRangeInterface) Update(ctx context.Context, limitRange *v1.LimitRange, opts metav1.UpdateOptions) (*v1.LimitRange, error) {
+func (_m *LimitRangeInterface) Update(ctx context.Context, limitRange *corev1.LimitRange, opts metav1.UpdateOptions) (*corev1.LimitRange, error) {
 	ret := _m.Called(ctx, limitRange, opts)
 
-	var r0 *v1.LimitRange
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.LimitRange, metav1.UpdateOptions) *v1.LimitRange); ok {
+	var r0 *corev1.LimitRange
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.LimitRange, metav1.UpdateOptions) *corev1.LimitRange); ok {
 		r0 = rf(ctx, limitRange, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.LimitRange)
+			r0 = ret.Get(0).(*corev1.LimitRange)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.LimitRange, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.LimitRange, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, limitRange, opts)
 	} else {
 		r1 = ret.Error(1)

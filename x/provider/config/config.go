@@ -3,21 +3,26 @@ package config
 import (
 	"io/ioutil"
 
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	"github.com/ovrclk/akash/types"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
 )
 
+var (
+	ErrDuplicatedAttribute = errors.New("provider: duplicated attribute")
+)
+
 // Config is the struct that stores provider config
 type Config struct {
 	Host       string              `json:"host" yaml:"host"`
 	Info       ptypes.ProviderInfo `json:"info" yaml:"info"`
-	Attributes []types.Attribute   `json:"attributes" yaml:"attributes"`
+	Attributes types.Attributes    `json:"attributes" yaml:"attributes"`
 }
 
 // GetAttributes returns config attributes into key value pairs
-func (c Config) GetAttributes() []types.Attribute {
+func (c Config) GetAttributes() types.Attributes {
 	return c.Attributes
 }
 
@@ -31,5 +36,15 @@ func ReadConfigPath(path string) (Config, error) {
 	if err := yaml.Unmarshal(buf, &val); err != nil {
 		return Config{}, err
 	}
+
+	dups := make(map[string]string)
+	for _, attr := range val.Attributes {
+		if _, exists := dups[attr.Key]; exists {
+			return Config{}, errors.Wrapf(ErrDuplicatedAttribute, attr.Key)
+		}
+
+		dups[attr.Key] = attr.Value
+	}
+
 	return val, err
 }

@@ -5,12 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
-	mock "github.com/stretchr/testify/mock"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/admissionregistration/v1"
+	v1 "k8s.io/client-go/applyconfigurations/admissionregistration/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +23,44 @@ type MutatingWebhookConfigurationInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, mutatingWebhookConfiguration, opts
-func (_m *MutatingWebhookConfigurationInterface) Create(ctx context.Context, mutatingWebhookConfiguration *v1.MutatingWebhookConfiguration, opts metav1.CreateOptions) (*v1.MutatingWebhookConfiguration, error) {
+// Apply provides a mock function with given fields: ctx, mutatingWebhookConfiguration, opts
+func (_m *MutatingWebhookConfigurationInterface) Apply(ctx context.Context, mutatingWebhookConfiguration *v1.MutatingWebhookConfigurationApplyConfiguration, opts metav1.ApplyOptions) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
 	ret := _m.Called(ctx, mutatingWebhookConfiguration, opts)
 
-	var r0 *v1.MutatingWebhookConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.MutatingWebhookConfiguration, metav1.CreateOptions) *v1.MutatingWebhookConfiguration); ok {
+	var r0 *admissionregistrationv1.MutatingWebhookConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.MutatingWebhookConfigurationApplyConfiguration, metav1.ApplyOptions) *admissionregistrationv1.MutatingWebhookConfiguration); ok {
 		r0 = rf(ctx, mutatingWebhookConfiguration, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.MutatingWebhookConfiguration)
+			r0 = ret.Get(0).(*admissionregistrationv1.MutatingWebhookConfiguration)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.MutatingWebhookConfiguration, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.MutatingWebhookConfigurationApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, mutatingWebhookConfiguration, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, mutatingWebhookConfiguration, opts
+func (_m *MutatingWebhookConfigurationInterface) Create(ctx context.Context, mutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfiguration, opts metav1.CreateOptions) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
+	ret := _m.Called(ctx, mutatingWebhookConfiguration, opts)
+
+	var r0 *admissionregistrationv1.MutatingWebhookConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, *admissionregistrationv1.MutatingWebhookConfiguration, metav1.CreateOptions) *admissionregistrationv1.MutatingWebhookConfiguration); ok {
+		r0 = rf(ctx, mutatingWebhookConfiguration, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*admissionregistrationv1.MutatingWebhookConfiguration)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *admissionregistrationv1.MutatingWebhookConfiguration, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, mutatingWebhookConfiguration, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +98,15 @@ func (_m *MutatingWebhookConfigurationInterface) DeleteCollection(ctx context.Co
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *MutatingWebhookConfigurationInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.MutatingWebhookConfiguration, error) {
+func (_m *MutatingWebhookConfigurationInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.MutatingWebhookConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.MutatingWebhookConfiguration); ok {
+	var r0 *admissionregistrationv1.MutatingWebhookConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *admissionregistrationv1.MutatingWebhookConfiguration); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.MutatingWebhookConfiguration)
+			r0 = ret.Get(0).(*admissionregistrationv1.MutatingWebhookConfiguration)
 		}
 	}
 
@@ -95,15 +121,15 @@ func (_m *MutatingWebhookConfigurationInterface) Get(ctx context.Context, name s
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *MutatingWebhookConfigurationInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.MutatingWebhookConfigurationList, error) {
+func (_m *MutatingWebhookConfigurationInterface) List(ctx context.Context, opts metav1.ListOptions) (*admissionregistrationv1.MutatingWebhookConfigurationList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.MutatingWebhookConfigurationList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.MutatingWebhookConfigurationList); ok {
+	var r0 *admissionregistrationv1.MutatingWebhookConfigurationList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *admissionregistrationv1.MutatingWebhookConfigurationList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.MutatingWebhookConfigurationList)
+			r0 = ret.Get(0).(*admissionregistrationv1.MutatingWebhookConfigurationList)
 		}
 	}
 
@@ -118,7 +144,7 @@ func (_m *MutatingWebhookConfigurationInterface) List(ctx context.Context, opts 
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *MutatingWebhookConfigurationInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.MutatingWebhookConfiguration, error) {
+func (_m *MutatingWebhookConfigurationInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +154,12 @@ func (_m *MutatingWebhookConfigurationInterface) Patch(ctx context.Context, name
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.MutatingWebhookConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.MutatingWebhookConfiguration); ok {
+	var r0 *admissionregistrationv1.MutatingWebhookConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *admissionregistrationv1.MutatingWebhookConfiguration); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.MutatingWebhookConfiguration)
+			r0 = ret.Get(0).(*admissionregistrationv1.MutatingWebhookConfiguration)
 		}
 	}
 
@@ -148,20 +174,20 @@ func (_m *MutatingWebhookConfigurationInterface) Patch(ctx context.Context, name
 }
 
 // Update provides a mock function with given fields: ctx, mutatingWebhookConfiguration, opts
-func (_m *MutatingWebhookConfigurationInterface) Update(ctx context.Context, mutatingWebhookConfiguration *v1.MutatingWebhookConfiguration, opts metav1.UpdateOptions) (*v1.MutatingWebhookConfiguration, error) {
+func (_m *MutatingWebhookConfigurationInterface) Update(ctx context.Context, mutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfiguration, opts metav1.UpdateOptions) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
 	ret := _m.Called(ctx, mutatingWebhookConfiguration, opts)
 
-	var r0 *v1.MutatingWebhookConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.MutatingWebhookConfiguration, metav1.UpdateOptions) *v1.MutatingWebhookConfiguration); ok {
+	var r0 *admissionregistrationv1.MutatingWebhookConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, *admissionregistrationv1.MutatingWebhookConfiguration, metav1.UpdateOptions) *admissionregistrationv1.MutatingWebhookConfiguration); ok {
 		r0 = rf(ctx, mutatingWebhookConfiguration, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.MutatingWebhookConfiguration)
+			r0 = ret.Get(0).(*admissionregistrationv1.MutatingWebhookConfiguration)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.MutatingWebhookConfiguration, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *admissionregistrationv1.MutatingWebhookConfiguration, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, mutatingWebhookConfiguration, opts)
 	} else {
 		r1 = ret.Error(1)

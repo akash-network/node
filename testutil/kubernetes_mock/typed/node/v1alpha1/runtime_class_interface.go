@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	nodev1alpha1 "k8s.io/api/node/v1alpha1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1alpha1 "k8s.io/api/node/v1alpha1"
+	v1alpha1 "k8s.io/client-go/applyconfigurations/node/v1alpha1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,44 @@ type RuntimeClassInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, runtimeClass, opts
-func (_m *RuntimeClassInterface) Create(ctx context.Context, runtimeClass *v1alpha1.RuntimeClass, opts v1.CreateOptions) (*v1alpha1.RuntimeClass, error) {
+// Apply provides a mock function with given fields: ctx, runtimeClass, opts
+func (_m *RuntimeClassInterface) Apply(ctx context.Context, runtimeClass *v1alpha1.RuntimeClassApplyConfiguration, opts v1.ApplyOptions) (*nodev1alpha1.RuntimeClass, error) {
 	ret := _m.Called(ctx, runtimeClass, opts)
 
-	var r0 *v1alpha1.RuntimeClass
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.RuntimeClass, v1.CreateOptions) *v1alpha1.RuntimeClass); ok {
+	var r0 *nodev1alpha1.RuntimeClass
+	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.RuntimeClassApplyConfiguration, v1.ApplyOptions) *nodev1alpha1.RuntimeClass); ok {
 		r0 = rf(ctx, runtimeClass, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.RuntimeClass)
+			r0 = ret.Get(0).(*nodev1alpha1.RuntimeClass)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.RuntimeClass, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.RuntimeClassApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, runtimeClass, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, runtimeClass, opts
+func (_m *RuntimeClassInterface) Create(ctx context.Context, runtimeClass *nodev1alpha1.RuntimeClass, opts v1.CreateOptions) (*nodev1alpha1.RuntimeClass, error) {
+	ret := _m.Called(ctx, runtimeClass, opts)
+
+	var r0 *nodev1alpha1.RuntimeClass
+	if rf, ok := ret.Get(0).(func(context.Context, *nodev1alpha1.RuntimeClass, v1.CreateOptions) *nodev1alpha1.RuntimeClass); ok {
+		r0 = rf(ctx, runtimeClass, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*nodev1alpha1.RuntimeClass)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *nodev1alpha1.RuntimeClass, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, runtimeClass, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +97,15 @@ func (_m *RuntimeClassInterface) DeleteCollection(ctx context.Context, opts v1.D
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *RuntimeClassInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.RuntimeClass, error) {
+func (_m *RuntimeClassInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*nodev1alpha1.RuntimeClass, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1alpha1.RuntimeClass
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1alpha1.RuntimeClass); ok {
+	var r0 *nodev1alpha1.RuntimeClass
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *nodev1alpha1.RuntimeClass); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.RuntimeClass)
+			r0 = ret.Get(0).(*nodev1alpha1.RuntimeClass)
 		}
 	}
 
@@ -96,15 +120,15 @@ func (_m *RuntimeClassInterface) Get(ctx context.Context, name string, opts v1.G
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *RuntimeClassInterface) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.RuntimeClassList, error) {
+func (_m *RuntimeClassInterface) List(ctx context.Context, opts v1.ListOptions) (*nodev1alpha1.RuntimeClassList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1alpha1.RuntimeClassList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1alpha1.RuntimeClassList); ok {
+	var r0 *nodev1alpha1.RuntimeClassList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *nodev1alpha1.RuntimeClassList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.RuntimeClassList)
+			r0 = ret.Get(0).(*nodev1alpha1.RuntimeClassList)
 		}
 	}
 
@@ -119,7 +143,7 @@ func (_m *RuntimeClassInterface) List(ctx context.Context, opts v1.ListOptions) 
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *RuntimeClassInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1alpha1.RuntimeClass, error) {
+func (_m *RuntimeClassInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*nodev1alpha1.RuntimeClass, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +153,12 @@ func (_m *RuntimeClassInterface) Patch(ctx context.Context, name string, pt type
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1alpha1.RuntimeClass
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1alpha1.RuntimeClass); ok {
+	var r0 *nodev1alpha1.RuntimeClass
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *nodev1alpha1.RuntimeClass); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.RuntimeClass)
+			r0 = ret.Get(0).(*nodev1alpha1.RuntimeClass)
 		}
 	}
 
@@ -149,20 +173,20 @@ func (_m *RuntimeClassInterface) Patch(ctx context.Context, name string, pt type
 }
 
 // Update provides a mock function with given fields: ctx, runtimeClass, opts
-func (_m *RuntimeClassInterface) Update(ctx context.Context, runtimeClass *v1alpha1.RuntimeClass, opts v1.UpdateOptions) (*v1alpha1.RuntimeClass, error) {
+func (_m *RuntimeClassInterface) Update(ctx context.Context, runtimeClass *nodev1alpha1.RuntimeClass, opts v1.UpdateOptions) (*nodev1alpha1.RuntimeClass, error) {
 	ret := _m.Called(ctx, runtimeClass, opts)
 
-	var r0 *v1alpha1.RuntimeClass
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.RuntimeClass, v1.UpdateOptions) *v1alpha1.RuntimeClass); ok {
+	var r0 *nodev1alpha1.RuntimeClass
+	if rf, ok := ret.Get(0).(func(context.Context, *nodev1alpha1.RuntimeClass, v1.UpdateOptions) *nodev1alpha1.RuntimeClass); ok {
 		r0 = rf(ctx, runtimeClass, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.RuntimeClass)
+			r0 = ret.Get(0).(*nodev1alpha1.RuntimeClass)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.RuntimeClass, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *nodev1alpha1.RuntimeClass, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, runtimeClass, opts)
 	} else {
 		r1 = ret.Error(1)

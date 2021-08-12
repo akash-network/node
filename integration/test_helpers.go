@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -8,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,8 +19,30 @@ attributes:
     value: us-west
   - key: moniker
     value: akash
+  - key: capabilities/storage/1/persistent
+    value: true
+  - key: capabilities/storage/1/class
+    value: default
+  - key: capabilities/storage/2/persistent
+    value: true
+  - key: capabilities/storage/2/class
+    value: beta2
 `
 )
+
+type queryOpt struct {
+	body *bytes.Buffer
+}
+
+type queryOption func(*queryOpt)
+
+func queryWithBody(val []byte) queryOption {
+	return func(opt *queryOpt) {
+		if len(val) > 0 {
+			opt.body = bytes.NewBuffer(val)
+		}
+	}
+}
 
 // skip integration-only tests.
 // using build tags breaks tooling for compilation, etc...
@@ -32,9 +54,19 @@ func integrationTestOnly(t testing.TB) {
 	}
 }
 
-func queryAppWithRetries(t *testing.T, appURL string, appHost string, limit int) *http.Response {
+// nolint: unparam
+func queryAppWithRetries(t *testing.T, appURL string, appHost string, limit int, opts ...queryOption) *http.Response {
 	t.Helper()
-	req, err := http.NewRequest("GET", appURL, nil)
+
+	opt := &queryOpt{
+		body: bytes.NewBuffer([]byte{}),
+	}
+
+	for _, o := range opts {
+		o(opt)
+	}
+
+	req, err := http.NewRequest("GET", appURL, opt.body)
 	require.NoError(t, err)
 	req.Host = appHost
 	req.Header.Add("Cache-Control", "no-cache")
@@ -42,19 +74,19 @@ func queryAppWithRetries(t *testing.T, appURL string, appHost string, limit int)
 	tr := &http.Transport{
 		DisableKeepAlives: false,
 		DialContext: (&net.Dialer{
-			Timeout:   1 * time.Second,
-			KeepAlive: 1 * time.Second,
-			DualStack: false,
+			Timeout:       1 * time.Second,
+			KeepAlive:     1 * time.Second,
+			FallbackDelay: time.Duration(-1),
 		}).DialContext,
 	}
-	client := &http.Client{
+	httpClient := &http.Client{
 		Transport: tr,
 	}
 
 	var resp *http.Response
 	const delay = 1 * time.Second
 	for i := 0; i != limit; i++ {
-		resp, err = client.Do(req)
+		resp, err = httpClient.Do(req)
 		if resp != nil {
 			t.Log("GET: ", appURL, resp.StatusCode)
 		}
@@ -67,7 +99,7 @@ func queryAppWithRetries(t *testing.T, appURL string, appHost string, limit int)
 		}
 		time.Sleep(delay)
 	}
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	return resp
 }
@@ -76,11 +108,21 @@ func queryApp(t *testing.T, appURL string, limit int) {
 	queryAppWithHostname(t, appURL, limit, "test.localhost")
 }
 
-func queryAppWithHostname(t *testing.T, appURL string, limit int, hostname string) {
+// nolint: unparam
+func queryAppWithHostname(t *testing.T, appURL string, limit int, hostname string, opts ...queryOption) {
 	t.Helper()
 	// Assert provider launches app in kind cluster
 
-	req, err := http.NewRequest("GET", appURL, nil)
+	opt := &queryOpt{
+		body: bytes.NewBuffer([]byte{}),
+	}
+
+	for _, o := range opts {
+		o(opt)
+	}
+
+	req, err := http.NewRequest("GET", appURL, opt.body)
+
 	require.NoError(t, err)
 	req.Host = hostname // NOTE: cannot be inserted as a req.Header element, that is overwritten by this req.Host field.
 	req.Header.Add("Cache-Control", "no-cache")
@@ -89,7 +131,7 @@ func queryAppWithHostname(t *testing.T, appURL string, limit int, hostname strin
 	tr := &http.Transport{
 		DisableKeepAlives: false,
 	}
-	client := &http.Client{
+	httpClient := &http.Client{
 		Transport: tr,
 	}
 
@@ -97,7 +139,7 @@ func queryAppWithHostname(t *testing.T, appURL string, limit int, hostname strin
 	var resp *http.Response
 	for i := 0; i < limit; i++ {
 		time.Sleep(1 * time.Second) // reduce absurdly long wait period
-		resp, err = client.Do(req)
+		resp, err = httpClient.Do(req)
 		if err != nil {
 			t.Log(err)
 			continue
@@ -107,13 +149,13 @@ func queryAppWithHostname(t *testing.T, appURL string, limit int, hostname strin
 			break
 		}
 	}
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	bytes, err := ioutil.ReadAll(resp.Body)
-	assert.NoError(t, err)
-	assert.Contains(t, string(bytes), "The Future of The Cloud is Decentralized")
+	body, err := ioutil.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(body), "The Future of The Cloud is Decentralized")
 }
 
 // appEnv asserts that there is an addressable docker container for KinD

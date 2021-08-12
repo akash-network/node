@@ -5,13 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
+	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/core/v1"
+	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +23,44 @@ type PodTemplateInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, podTemplate, opts
-func (_m *PodTemplateInterface) Create(ctx context.Context, podTemplate *v1.PodTemplate, opts metav1.CreateOptions) (*v1.PodTemplate, error) {
+// Apply provides a mock function with given fields: ctx, podTemplate, opts
+func (_m *PodTemplateInterface) Apply(ctx context.Context, podTemplate *v1.PodTemplateApplyConfiguration, opts metav1.ApplyOptions) (*corev1.PodTemplate, error) {
 	ret := _m.Called(ctx, podTemplate, opts)
 
-	var r0 *v1.PodTemplate
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.PodTemplate, metav1.CreateOptions) *v1.PodTemplate); ok {
+	var r0 *corev1.PodTemplate
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.PodTemplateApplyConfiguration, metav1.ApplyOptions) *corev1.PodTemplate); ok {
 		r0 = rf(ctx, podTemplate, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.PodTemplate)
+			r0 = ret.Get(0).(*corev1.PodTemplate)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.PodTemplate, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.PodTemplateApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, podTemplate, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, podTemplate, opts
+func (_m *PodTemplateInterface) Create(ctx context.Context, podTemplate *corev1.PodTemplate, opts metav1.CreateOptions) (*corev1.PodTemplate, error) {
+	ret := _m.Called(ctx, podTemplate, opts)
+
+	var r0 *corev1.PodTemplate
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.PodTemplate, metav1.CreateOptions) *corev1.PodTemplate); ok {
+		r0 = rf(ctx, podTemplate, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.PodTemplate)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.PodTemplate, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, podTemplate, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +98,15 @@ func (_m *PodTemplateInterface) DeleteCollection(ctx context.Context, opts metav
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *PodTemplateInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.PodTemplate, error) {
+func (_m *PodTemplateInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.PodTemplate, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.PodTemplate
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.PodTemplate); ok {
+	var r0 *corev1.PodTemplate
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *corev1.PodTemplate); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.PodTemplate)
+			r0 = ret.Get(0).(*corev1.PodTemplate)
 		}
 	}
 
@@ -96,15 +121,15 @@ func (_m *PodTemplateInterface) Get(ctx context.Context, name string, opts metav
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *PodTemplateInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.PodTemplateList, error) {
+func (_m *PodTemplateInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.PodTemplateList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.PodTemplateList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.PodTemplateList); ok {
+	var r0 *corev1.PodTemplateList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *corev1.PodTemplateList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.PodTemplateList)
+			r0 = ret.Get(0).(*corev1.PodTemplateList)
 		}
 	}
 
@@ -119,7 +144,7 @@ func (_m *PodTemplateInterface) List(ctx context.Context, opts metav1.ListOption
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *PodTemplateInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.PodTemplate, error) {
+func (_m *PodTemplateInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*corev1.PodTemplate, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +154,12 @@ func (_m *PodTemplateInterface) Patch(ctx context.Context, name string, pt types
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.PodTemplate
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.PodTemplate); ok {
+	var r0 *corev1.PodTemplate
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *corev1.PodTemplate); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.PodTemplate)
+			r0 = ret.Get(0).(*corev1.PodTemplate)
 		}
 	}
 
@@ -149,20 +174,20 @@ func (_m *PodTemplateInterface) Patch(ctx context.Context, name string, pt types
 }
 
 // Update provides a mock function with given fields: ctx, podTemplate, opts
-func (_m *PodTemplateInterface) Update(ctx context.Context, podTemplate *v1.PodTemplate, opts metav1.UpdateOptions) (*v1.PodTemplate, error) {
+func (_m *PodTemplateInterface) Update(ctx context.Context, podTemplate *corev1.PodTemplate, opts metav1.UpdateOptions) (*corev1.PodTemplate, error) {
 	ret := _m.Called(ctx, podTemplate, opts)
 
-	var r0 *v1.PodTemplate
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.PodTemplate, metav1.UpdateOptions) *v1.PodTemplate); ok {
+	var r0 *corev1.PodTemplate
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.PodTemplate, metav1.UpdateOptions) *corev1.PodTemplate); ok {
 		r0 = rf(ctx, podTemplate, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.PodTemplate)
+			r0 = ret.Get(0).(*corev1.PodTemplate)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.PodTemplate, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.PodTemplate, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, podTemplate, opts)
 	} else {
 		r1 = ret.Error(1)

@@ -5,12 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
-	mock "github.com/stretchr/testify/mock"
+	certificatesv1 "k8s.io/api/certificates/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/certificates/v1"
+	v1 "k8s.io/client-go/applyconfigurations/certificates/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +23,67 @@ type CertificateSigningRequestInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, certificateSigningRequest, opts
-func (_m *CertificateSigningRequestInterface) Create(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.CreateOptions) (*v1.CertificateSigningRequest, error) {
+// Apply provides a mock function with given fields: ctx, certificateSigningRequest, opts
+func (_m *CertificateSigningRequestInterface) Apply(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequestApplyConfiguration, opts metav1.ApplyOptions) (*certificatesv1.CertificateSigningRequest, error) {
 	ret := _m.Called(ctx, certificateSigningRequest, opts)
 
-	var r0 *v1.CertificateSigningRequest
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.CertificateSigningRequest, metav1.CreateOptions) *v1.CertificateSigningRequest); ok {
+	var r0 *certificatesv1.CertificateSigningRequest
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.CertificateSigningRequestApplyConfiguration, metav1.ApplyOptions) *certificatesv1.CertificateSigningRequest); ok {
 		r0 = rf(ctx, certificateSigningRequest, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.CertificateSigningRequest)
+			r0 = ret.Get(0).(*certificatesv1.CertificateSigningRequest)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.CertificateSigningRequest, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.CertificateSigningRequestApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, certificateSigningRequest, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, certificateSigningRequest, opts
+func (_m *CertificateSigningRequestInterface) ApplyStatus(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequestApplyConfiguration, opts metav1.ApplyOptions) (*certificatesv1.CertificateSigningRequest, error) {
+	ret := _m.Called(ctx, certificateSigningRequest, opts)
+
+	var r0 *certificatesv1.CertificateSigningRequest
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.CertificateSigningRequestApplyConfiguration, metav1.ApplyOptions) *certificatesv1.CertificateSigningRequest); ok {
+		r0 = rf(ctx, certificateSigningRequest, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*certificatesv1.CertificateSigningRequest)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.CertificateSigningRequestApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, certificateSigningRequest, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, certificateSigningRequest, opts
+func (_m *CertificateSigningRequestInterface) Create(ctx context.Context, certificateSigningRequest *certificatesv1.CertificateSigningRequest, opts metav1.CreateOptions) (*certificatesv1.CertificateSigningRequest, error) {
+	ret := _m.Called(ctx, certificateSigningRequest, opts)
+
+	var r0 *certificatesv1.CertificateSigningRequest
+	if rf, ok := ret.Get(0).(func(context.Context, *certificatesv1.CertificateSigningRequest, metav1.CreateOptions) *certificatesv1.CertificateSigningRequest); ok {
+		r0 = rf(ctx, certificateSigningRequest, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*certificatesv1.CertificateSigningRequest)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *certificatesv1.CertificateSigningRequest, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, certificateSigningRequest, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +121,15 @@ func (_m *CertificateSigningRequestInterface) DeleteCollection(ctx context.Conte
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *CertificateSigningRequestInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.CertificateSigningRequest, error) {
+func (_m *CertificateSigningRequestInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*certificatesv1.CertificateSigningRequest, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.CertificateSigningRequest
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.CertificateSigningRequest); ok {
+	var r0 *certificatesv1.CertificateSigningRequest
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *certificatesv1.CertificateSigningRequest); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.CertificateSigningRequest)
+			r0 = ret.Get(0).(*certificatesv1.CertificateSigningRequest)
 		}
 	}
 
@@ -95,15 +144,15 @@ func (_m *CertificateSigningRequestInterface) Get(ctx context.Context, name stri
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *CertificateSigningRequestInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.CertificateSigningRequestList, error) {
+func (_m *CertificateSigningRequestInterface) List(ctx context.Context, opts metav1.ListOptions) (*certificatesv1.CertificateSigningRequestList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.CertificateSigningRequestList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.CertificateSigningRequestList); ok {
+	var r0 *certificatesv1.CertificateSigningRequestList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *certificatesv1.CertificateSigningRequestList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.CertificateSigningRequestList)
+			r0 = ret.Get(0).(*certificatesv1.CertificateSigningRequestList)
 		}
 	}
 
@@ -118,7 +167,7 @@ func (_m *CertificateSigningRequestInterface) List(ctx context.Context, opts met
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *CertificateSigningRequestInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.CertificateSigningRequest, error) {
+func (_m *CertificateSigningRequestInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*certificatesv1.CertificateSigningRequest, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +177,12 @@ func (_m *CertificateSigningRequestInterface) Patch(ctx context.Context, name st
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.CertificateSigningRequest
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.CertificateSigningRequest); ok {
+	var r0 *certificatesv1.CertificateSigningRequest
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *certificatesv1.CertificateSigningRequest); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.CertificateSigningRequest)
+			r0 = ret.Get(0).(*certificatesv1.CertificateSigningRequest)
 		}
 	}
 
@@ -148,20 +197,20 @@ func (_m *CertificateSigningRequestInterface) Patch(ctx context.Context, name st
 }
 
 // Update provides a mock function with given fields: ctx, certificateSigningRequest, opts
-func (_m *CertificateSigningRequestInterface) Update(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (*v1.CertificateSigningRequest, error) {
+func (_m *CertificateSigningRequestInterface) Update(ctx context.Context, certificateSigningRequest *certificatesv1.CertificateSigningRequest, opts metav1.UpdateOptions) (*certificatesv1.CertificateSigningRequest, error) {
 	ret := _m.Called(ctx, certificateSigningRequest, opts)
 
-	var r0 *v1.CertificateSigningRequest
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.CertificateSigningRequest, metav1.UpdateOptions) *v1.CertificateSigningRequest); ok {
+	var r0 *certificatesv1.CertificateSigningRequest
+	if rf, ok := ret.Get(0).(func(context.Context, *certificatesv1.CertificateSigningRequest, metav1.UpdateOptions) *certificatesv1.CertificateSigningRequest); ok {
 		r0 = rf(ctx, certificateSigningRequest, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.CertificateSigningRequest)
+			r0 = ret.Get(0).(*certificatesv1.CertificateSigningRequest)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.CertificateSigningRequest, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *certificatesv1.CertificateSigningRequest, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, certificateSigningRequest, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -171,20 +220,20 @@ func (_m *CertificateSigningRequestInterface) Update(ctx context.Context, certif
 }
 
 // UpdateApproval provides a mock function with given fields: ctx, certificateSigningRequestName, certificateSigningRequest, opts
-func (_m *CertificateSigningRequestInterface) UpdateApproval(ctx context.Context, certificateSigningRequestName string, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (*v1.CertificateSigningRequest, error) {
+func (_m *CertificateSigningRequestInterface) UpdateApproval(ctx context.Context, certificateSigningRequestName string, certificateSigningRequest *certificatesv1.CertificateSigningRequest, opts metav1.UpdateOptions) (*certificatesv1.CertificateSigningRequest, error) {
 	ret := _m.Called(ctx, certificateSigningRequestName, certificateSigningRequest, opts)
 
-	var r0 *v1.CertificateSigningRequest
-	if rf, ok := ret.Get(0).(func(context.Context, string, *v1.CertificateSigningRequest, metav1.UpdateOptions) *v1.CertificateSigningRequest); ok {
+	var r0 *certificatesv1.CertificateSigningRequest
+	if rf, ok := ret.Get(0).(func(context.Context, string, *certificatesv1.CertificateSigningRequest, metav1.UpdateOptions) *certificatesv1.CertificateSigningRequest); ok {
 		r0 = rf(ctx, certificateSigningRequestName, certificateSigningRequest, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.CertificateSigningRequest)
+			r0 = ret.Get(0).(*certificatesv1.CertificateSigningRequest)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, *v1.CertificateSigningRequest, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, *certificatesv1.CertificateSigningRequest, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, certificateSigningRequestName, certificateSigningRequest, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -194,20 +243,20 @@ func (_m *CertificateSigningRequestInterface) UpdateApproval(ctx context.Context
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, certificateSigningRequest, opts
-func (_m *CertificateSigningRequestInterface) UpdateStatus(ctx context.Context, certificateSigningRequest *v1.CertificateSigningRequest, opts metav1.UpdateOptions) (*v1.CertificateSigningRequest, error) {
+func (_m *CertificateSigningRequestInterface) UpdateStatus(ctx context.Context, certificateSigningRequest *certificatesv1.CertificateSigningRequest, opts metav1.UpdateOptions) (*certificatesv1.CertificateSigningRequest, error) {
 	ret := _m.Called(ctx, certificateSigningRequest, opts)
 
-	var r0 *v1.CertificateSigningRequest
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.CertificateSigningRequest, metav1.UpdateOptions) *v1.CertificateSigningRequest); ok {
+	var r0 *certificatesv1.CertificateSigningRequest
+	if rf, ok := ret.Get(0).(func(context.Context, *certificatesv1.CertificateSigningRequest, metav1.UpdateOptions) *certificatesv1.CertificateSigningRequest); ok {
 		r0 = rf(ctx, certificateSigningRequest, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.CertificateSigningRequest)
+			r0 = ret.Get(0).(*certificatesv1.CertificateSigningRequest)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.CertificateSigningRequest, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *certificatesv1.CertificateSigningRequest, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, certificateSigningRequest, opts)
 	} else {
 		r1 = ret.Error(1)

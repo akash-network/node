@@ -6,6 +6,7 @@ import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
 import "akash/deployment/v1beta1/deployment.proto";
 import "akash/deployment/v1beta1/group.proto";
+import "akash/deployment/v1beta1/groupid.proto";
 import "akash/escrow/v1beta1/types.proto";
 
 option go_package = "github.com/ovrclk/akash/x/deployment/types";

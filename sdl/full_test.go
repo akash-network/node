@@ -20,6 +20,10 @@ services:
         - hello.localhost
       to:
         - global: true
+    params:
+      storage:
+        data:
+          mount: "/var/lib/demo-app/data"
 profiles:
   compute:
     web:
@@ -31,9 +35,12 @@ profiles:
         memory:
           size: 16Mi
         storage:
-          size: 128Mi
-          attributes:
-            storage-class: ssd
+          - size: 128Mi
+          - name: data
+            size: 1Gi
+            attributes:
+              persistent: true
+              class: default
   placement:
     westcoast:
       attributes:

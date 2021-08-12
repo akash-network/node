@@ -1,0 +1,48 @@
+syntax = "proto3";
+package akash.deployment.v1beta1legacy;
+
+import "gogoproto/gogo.proto";
+import "akash/deployment/v1beta1/groupid.proto";
+import "akash/deployment/v1beta1legacy/groupspec.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types/legacy";
+
+// Group stores group id, state and specifications of group
+message Group {
+  option (gogoproto.equal) = false;
+
+  akash.deployment.v1beta1.GroupID group_id = 1 [
+    (gogoproto.customname) = "GroupID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+
+  // State is an enum which refers to state of group
+  enum State {
+    option (gogoproto.goproto_enum_prefix) = false;
+
+    // Prefix should start with 0 in enum. So declaring dummy state
+    invalid = 0 [(gogoproto.enumvalue_customname) = "GroupStateInvalid"];
+    // GroupOpen denotes state for group open
+    open = 1 [(gogoproto.enumvalue_customname) = "GroupOpen"];
+    // GroupOrdered denotes state for group ordered
+    paused = 2 [(gogoproto.enumvalue_customname) = "GroupPaused"];
+    // GroupInsufficientFunds denotes state for group insufficient_funds
+    insufficient_funds = 3 [(gogoproto.enumvalue_customname) = "GroupInsufficientFunds"];
+    // GroupClosed denotes state for group closed
+    closed = 4 [(gogoproto.enumvalue_customname) = "GroupClosed"];
+  }
+
+  State state = 2 [
+    (gogoproto.jsontag) = "state",
+    (gogoproto.moretags) = "yaml:\"state\""
+  ];
+  GroupSpec group_spec = 3 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "spec",
+    (gogoproto.moretags) = "yaml:\"spec\""
+  ];
+
+  int64 created_at = 4;
+}

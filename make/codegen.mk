@@ -12,7 +12,7 @@ mocks: $(MOCKERY) modvendor
 	$(MOCKERY) --case=underscore --dir provider/cluster            --output provider/cluster/mocks      --name Client
 	$(MOCKERY) --case=underscore --dir provider/cluster            --output provider/cluster/mocks      --name ReadClient
 	$(MOCKERY) --case=underscore --dir provider/cluster            --output provider/cluster/mocks      --name Cluster
-	$(MOCKERY) --case=underscore --dir provider/cluster/types            --output provider/cluster/mocks      --name HostnameServiceClient
+	$(MOCKERY) --case=underscore --dir provider/cluster/types      --output provider/cluster/mocks      --name HostnameServiceClient
 	$(MOCKERY) --case=underscore --dir provider/cluster            --output provider/cluster/mocks      --name Service
 	$(MOCKERY) --case=underscore --dir provider/cluster/types      --output provider/cluster/mocks      --name Reservation
 	$(MOCKERY) --case=underscore --dir provider/manifest           --output provider/manifest/mocks     --name Client

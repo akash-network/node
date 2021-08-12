@@ -2,6 +2,8 @@ include ../common.mk
 include ../common-commands.mk
 include ../common-kind.mk
 
+SDL_PATH = grafana.yaml
+
 GATEWAY_HOSTNAME ?= localhost
 GATEWAY_HOST     ?= $(GATEWAY_HOSTNAME):8443
 GATEWAY_ENDPOINT ?= https://$(GATEWAY_HOST)
@@ -48,3 +50,6 @@ clean-kube:
 .PHONY: hostname-operator
 hostname-operator:
 	$(AKASH) provider hostname-operator
+
+.PHONY: clean-$(KIND_NAME)
+clean-$(KIND_NAME):

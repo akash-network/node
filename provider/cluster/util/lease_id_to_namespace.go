@@ -3,11 +3,12 @@ package util
 import (
 	"crypto/sha256"
 	"encoding/base32"
-	mtypes "github.com/ovrclk/akash/x/market/types"
 	"strings"
+
+	mtypes "github.com/ovrclk/akash/x/market/types"
 )
 
-// lidNS generates a unique sha256 sum for identifying a provider's object name.
+// LeaseIDToNamespace generates a unique sha256 sum for identifying a provider's object name.
 func LeaseIDToNamespace(lid mtypes.LeaseID) string {
 	path := lid.String()
 	// DNS-1123 label must consist of lower case alphanumeric characters or '-',

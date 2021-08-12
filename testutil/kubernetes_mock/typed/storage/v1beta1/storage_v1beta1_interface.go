@@ -46,6 +46,22 @@ func (_m *StorageV1beta1Interface) CSINodes() v1beta1.CSINodeInterface {
 	return r0
 }
 
+// CSIStorageCapacities provides a mock function with given fields: namespace
+func (_m *StorageV1beta1Interface) CSIStorageCapacities(namespace string) v1beta1.CSIStorageCapacityInterface {
+	ret := _m.Called(namespace)
+
+	var r0 v1beta1.CSIStorageCapacityInterface
+	if rf, ok := ret.Get(0).(func(string) v1beta1.CSIStorageCapacityInterface); ok {
+		r0 = rf(namespace)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(v1beta1.CSIStorageCapacityInterface)
+		}
+	}
+
+	return r0
+}
+
 // RESTClient provides a mock function with given fields:
 func (_m *StorageV1beta1Interface) RESTClient() rest.Interface {
 	ret := _m.Called()

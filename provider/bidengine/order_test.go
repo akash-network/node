@@ -3,12 +3,12 @@ package bidengine
 import (
 	"context"
 	"errors"
+	"testing"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/sdkutil"
 
-	"testing"
+	"github.com/ovrclk/akash/sdkutil"
 
 	"github.com/stretchr/testify/mock"
 
@@ -46,7 +46,6 @@ type orderTestScaffold struct {
 }
 
 func makeMocks(s *orderTestScaffold) {
-
 	groupResult := &dtypes.QueryGroupResponse{}
 	groupResult.Group.GroupSpec.Name = "testGroupName"
 	groupResult.Group.GroupSpec.Resources = make([]dtypes.Resource, 1)
@@ -57,13 +56,16 @@ func makeMocks(s *orderTestScaffold) {
 	memory := atypes.Memory{}
 	memory.Quantity = atypes.NewResourceValue(dtypes.GetValidationConfig().MinUnitMemory)
 
-	storage := atypes.Storage{}
-	storage.Quantity = atypes.NewResourceValue(dtypes.GetValidationConfig().MinUnitStorage)
+	storage := atypes.Volumes{
+		atypes.Storage{
+			Quantity: atypes.NewResourceValue(dtypes.GetValidationConfig().MinUnitStorage),
+		},
+	}
 
 	clusterResources := atypes.ResourceUnits{
 		CPU:     &cpu,
 		Memory:  &memory,
-		Storage: &storage,
+		Storage: storage,
 	}
 	price := sdk.NewInt64Coin(testutil.CoinDenom, 23)
 	resource := dtypes.Resource{
@@ -76,8 +78,8 @@ func makeMocks(s *orderTestScaffold) {
 
 	queryClientMock := &clientmocks.QueryClient{}
 	queryClientMock.On("Group", mock.Anything, mock.Anything).Return(groupResult, nil)
-
 	queryClientMock.On("Orders", mock.Anything, mock.Anything).Return(&mtypes.QueryOrdersResponse{}, nil)
+	queryClientMock.On("Provider", mock.Anything, mock.Anything).Return(&ptypes.QueryProviderResponse{}, nil)
 
 	txClientMock := &broadcastmocks.Client{}
 	s.broadcasts = make(chan sdk.Msg, 1)
@@ -105,12 +107,15 @@ func makeMocks(s *orderTestScaffold) {
 	}).Return(mockReservation, nil)
 
 	s.cluster.On("Unreserve", s.orderID, mock.Anything).Return(nil)
-
 }
 
 type nullProviderAttrSignatureService struct{}
 
 func (nullProviderAttrSignatureService) GetAuditorAttributeSignatures(auditor string) ([]audittypes.Provider, error) {
+	return nil, nil // Return no attributes & no error
+}
+
+func (nullProviderAttrSignatureService) GetAttributes() (atypes.Attributes, error) {
 	return nil, nil // Return no attributes & no error
 }
 

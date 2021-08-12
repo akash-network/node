@@ -1,0 +1,36 @@
+syntax = "proto3";
+package akash.base.v1beta1legacy;
+
+import "gogoproto/gogo.proto";
+import "akash/base/v1beta1/endpoint.proto";
+import "akash/base/v1beta1/resource.proto";
+
+option go_package = "github.com/ovrclk/akash/types/legacy";
+
+// ResourceUnits describes all available resources types for deployment/node etc
+// if field is nil resource is not present in the given data-structure
+message ResourceUnits {
+  option (gogoproto.equal) = true;
+  akash.base.v1beta1.CPU cpu                  = 1 [
+    (gogoproto.nullable)   = true,
+    (gogoproto.customname) = "CPU",
+    (gogoproto.jsontag)    = "cpu,omitempty",
+    (gogoproto.moretags)   = "yaml:\"cpu,omitempty\""
+  ];
+  akash.base.v1beta1.Memory memory = 2 [
+    (gogoproto.nullable) = true,
+    (gogoproto.jsontag)  = "memory,omitempty",
+    (gogoproto.moretags) = "yaml:\"memory,omitempty\""
+  ];
+  akash.base.v1beta1.Storage storage = 3 [
+    (gogoproto.nullable) = true,
+    (gogoproto.jsontag)  = "storage,omitempty",
+    (gogoproto.moretags) = "yaml:\"storage,omitempty\""
+  ];
+  repeated akash.base.v1beta1.Endpoint endpoints = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "github.com/ovrclk/akash/types.Endpoints",
+    (gogoproto.jsontag) = "endpoints",
+    (gogoproto.moretags) = "yaml:\"endpoints\""
+  ];
+}
