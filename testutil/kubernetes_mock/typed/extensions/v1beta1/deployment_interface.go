@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	v1beta1 "k8s.io/client-go/applyconfigurations/extensions/v1beta1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,67 @@ type DeploymentInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, deployment, opts
-func (_m *DeploymentInterface) Create(ctx context.Context, deployment *v1beta1.Deployment, opts v1.CreateOptions) (*v1beta1.Deployment, error) {
+// Apply provides a mock function with given fields: ctx, deployment, opts
+func (_m *DeploymentInterface) Apply(ctx context.Context, deployment *v1beta1.DeploymentApplyConfiguration, opts v1.ApplyOptions) (*extensionsv1beta1.Deployment, error) {
 	ret := _m.Called(ctx, deployment, opts)
 
-	var r0 *v1beta1.Deployment
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.Deployment, v1.CreateOptions) *v1beta1.Deployment); ok {
+	var r0 *extensionsv1beta1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.DeploymentApplyConfiguration, v1.ApplyOptions) *extensionsv1beta1.Deployment); ok {
 		r0 = rf(ctx, deployment, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Deployment)
+			r0 = ret.Get(0).(*extensionsv1beta1.Deployment)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.Deployment, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.DeploymentApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, deployment, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, deployment, opts
+func (_m *DeploymentInterface) ApplyStatus(ctx context.Context, deployment *v1beta1.DeploymentApplyConfiguration, opts v1.ApplyOptions) (*extensionsv1beta1.Deployment, error) {
+	ret := _m.Called(ctx, deployment, opts)
+
+	var r0 *extensionsv1beta1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.DeploymentApplyConfiguration, v1.ApplyOptions) *extensionsv1beta1.Deployment); ok {
+		r0 = rf(ctx, deployment, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*extensionsv1beta1.Deployment)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.DeploymentApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, deployment, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, deployment, opts
+func (_m *DeploymentInterface) Create(ctx context.Context, deployment *extensionsv1beta1.Deployment, opts v1.CreateOptions) (*extensionsv1beta1.Deployment, error) {
+	ret := _m.Called(ctx, deployment, opts)
+
+	var r0 *extensionsv1beta1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, *extensionsv1beta1.Deployment, v1.CreateOptions) *extensionsv1beta1.Deployment); ok {
+		r0 = rf(ctx, deployment, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*extensionsv1beta1.Deployment)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *extensionsv1beta1.Deployment, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, deployment, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +120,15 @@ func (_m *DeploymentInterface) DeleteCollection(ctx context.Context, opts v1.Del
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *DeploymentInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.Deployment, error) {
+func (_m *DeploymentInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*extensionsv1beta1.Deployment, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1beta1.Deployment
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta1.Deployment); ok {
+	var r0 *extensionsv1beta1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *extensionsv1beta1.Deployment); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Deployment)
+			r0 = ret.Get(0).(*extensionsv1beta1.Deployment)
 		}
 	}
 
@@ -96,15 +143,15 @@ func (_m *DeploymentInterface) Get(ctx context.Context, name string, opts v1.Get
 }
 
 // GetScale provides a mock function with given fields: ctx, deploymentName, options
-func (_m *DeploymentInterface) GetScale(ctx context.Context, deploymentName string, options v1.GetOptions) (*v1beta1.Scale, error) {
+func (_m *DeploymentInterface) GetScale(ctx context.Context, deploymentName string, options v1.GetOptions) (*extensionsv1beta1.Scale, error) {
 	ret := _m.Called(ctx, deploymentName, options)
 
-	var r0 *v1beta1.Scale
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta1.Scale); ok {
+	var r0 *extensionsv1beta1.Scale
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *extensionsv1beta1.Scale); ok {
 		r0 = rf(ctx, deploymentName, options)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Scale)
+			r0 = ret.Get(0).(*extensionsv1beta1.Scale)
 		}
 	}
 
@@ -119,15 +166,15 @@ func (_m *DeploymentInterface) GetScale(ctx context.Context, deploymentName stri
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *DeploymentInterface) List(ctx context.Context, opts v1.ListOptions) (*v1beta1.DeploymentList, error) {
+func (_m *DeploymentInterface) List(ctx context.Context, opts v1.ListOptions) (*extensionsv1beta1.DeploymentList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1beta1.DeploymentList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1beta1.DeploymentList); ok {
+	var r0 *extensionsv1beta1.DeploymentList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *extensionsv1beta1.DeploymentList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.DeploymentList)
+			r0 = ret.Get(0).(*extensionsv1beta1.DeploymentList)
 		}
 	}
 
@@ -142,7 +189,7 @@ func (_m *DeploymentInterface) List(ctx context.Context, opts v1.ListOptions) (*
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *DeploymentInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1beta1.Deployment, error) {
+func (_m *DeploymentInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*extensionsv1beta1.Deployment, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -152,12 +199,12 @@ func (_m *DeploymentInterface) Patch(ctx context.Context, name string, pt types.
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1beta1.Deployment
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1beta1.Deployment); ok {
+	var r0 *extensionsv1beta1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *extensionsv1beta1.Deployment); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Deployment)
+			r0 = ret.Get(0).(*extensionsv1beta1.Deployment)
 		}
 	}
 
@@ -172,11 +219,11 @@ func (_m *DeploymentInterface) Patch(ctx context.Context, name string, pt types.
 }
 
 // Rollback provides a mock function with given fields: _a0, _a1, _a2
-func (_m *DeploymentInterface) Rollback(_a0 context.Context, _a1 *v1beta1.DeploymentRollback, _a2 v1.CreateOptions) error {
+func (_m *DeploymentInterface) Rollback(_a0 context.Context, _a1 *extensionsv1beta1.DeploymentRollback, _a2 v1.CreateOptions) error {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.DeploymentRollback, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *extensionsv1beta1.DeploymentRollback, v1.CreateOptions) error); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		r0 = ret.Error(0)
@@ -186,20 +233,20 @@ func (_m *DeploymentInterface) Rollback(_a0 context.Context, _a1 *v1beta1.Deploy
 }
 
 // Update provides a mock function with given fields: ctx, deployment, opts
-func (_m *DeploymentInterface) Update(ctx context.Context, deployment *v1beta1.Deployment, opts v1.UpdateOptions) (*v1beta1.Deployment, error) {
+func (_m *DeploymentInterface) Update(ctx context.Context, deployment *extensionsv1beta1.Deployment, opts v1.UpdateOptions) (*extensionsv1beta1.Deployment, error) {
 	ret := _m.Called(ctx, deployment, opts)
 
-	var r0 *v1beta1.Deployment
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.Deployment, v1.UpdateOptions) *v1beta1.Deployment); ok {
+	var r0 *extensionsv1beta1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, *extensionsv1beta1.Deployment, v1.UpdateOptions) *extensionsv1beta1.Deployment); ok {
 		r0 = rf(ctx, deployment, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Deployment)
+			r0 = ret.Get(0).(*extensionsv1beta1.Deployment)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.Deployment, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *extensionsv1beta1.Deployment, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, deployment, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -209,20 +256,20 @@ func (_m *DeploymentInterface) Update(ctx context.Context, deployment *v1beta1.D
 }
 
 // UpdateScale provides a mock function with given fields: ctx, deploymentName, scale, opts
-func (_m *DeploymentInterface) UpdateScale(ctx context.Context, deploymentName string, scale *v1beta1.Scale, opts v1.UpdateOptions) (*v1beta1.Scale, error) {
+func (_m *DeploymentInterface) UpdateScale(ctx context.Context, deploymentName string, scale *extensionsv1beta1.Scale, opts v1.UpdateOptions) (*extensionsv1beta1.Scale, error) {
 	ret := _m.Called(ctx, deploymentName, scale, opts)
 
-	var r0 *v1beta1.Scale
-	if rf, ok := ret.Get(0).(func(context.Context, string, *v1beta1.Scale, v1.UpdateOptions) *v1beta1.Scale); ok {
+	var r0 *extensionsv1beta1.Scale
+	if rf, ok := ret.Get(0).(func(context.Context, string, *extensionsv1beta1.Scale, v1.UpdateOptions) *extensionsv1beta1.Scale); ok {
 		r0 = rf(ctx, deploymentName, scale, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Scale)
+			r0 = ret.Get(0).(*extensionsv1beta1.Scale)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, *v1beta1.Scale, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, *extensionsv1beta1.Scale, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, deploymentName, scale, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -232,20 +279,20 @@ func (_m *DeploymentInterface) UpdateScale(ctx context.Context, deploymentName s
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, deployment, opts
-func (_m *DeploymentInterface) UpdateStatus(ctx context.Context, deployment *v1beta1.Deployment, opts v1.UpdateOptions) (*v1beta1.Deployment, error) {
+func (_m *DeploymentInterface) UpdateStatus(ctx context.Context, deployment *extensionsv1beta1.Deployment, opts v1.UpdateOptions) (*extensionsv1beta1.Deployment, error) {
 	ret := _m.Called(ctx, deployment, opts)
 
-	var r0 *v1beta1.Deployment
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.Deployment, v1.UpdateOptions) *v1beta1.Deployment); ok {
+	var r0 *extensionsv1beta1.Deployment
+	if rf, ok := ret.Get(0).(func(context.Context, *extensionsv1beta1.Deployment, v1.UpdateOptions) *extensionsv1beta1.Deployment); ok {
 		r0 = rf(ctx, deployment, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Deployment)
+			r0 = ret.Get(0).(*extensionsv1beta1.Deployment)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.Deployment, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *extensionsv1beta1.Deployment, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, deployment, opts)
 	} else {
 		r1 = ret.Error(1)

@@ -2,12 +2,16 @@ package manifest
 
 import (
 	"context"
-	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
-	escrowtypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 	"testing"
 	"time"
 
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
+	escrowtypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	clientMocks "github.com/ovrclk/akash/client/mocks"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/util"
@@ -17,12 +21,11 @@ import (
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
+
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 type scaffold struct {
@@ -311,7 +314,9 @@ func TestManagerRequiresHostname(t *testing.T) {
 	}
 	version, err := sdl.ManifestVersion(sdlManifest)
 	require.NotNil(t, version)
+
 	require.NoError(t, err)
+
 	leases := []mtypes.Lease{{
 		LeaseID:   lid,
 		State:     mtypes.LeaseActive,
@@ -319,6 +324,7 @@ func TestManagerRequiresHostname(t *testing.T) {
 		CreatedAt: 0,
 	}}
 	s := serviceForManifestTest(t, ServiceConfig{HTTPServicesRequireAtLeastOneHost: true}, sdl2, did, leases, lid.GetProvider(), false)
+
 	err = s.bus.Publish(ev)
 	require.NoError(t, err)
 

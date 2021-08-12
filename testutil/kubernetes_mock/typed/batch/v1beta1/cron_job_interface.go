@@ -5,12 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
+
 	mock "github.com/stretchr/testify/mock"
+
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1beta1 "k8s.io/api/batch/v1beta1"
+	v1beta1 "k8s.io/client-go/applyconfigurations/batch/v1beta1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +23,67 @@ type CronJobInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, cronJob, opts
-func (_m *CronJobInterface) Create(ctx context.Context, cronJob *v1beta1.CronJob, opts v1.CreateOptions) (*v1beta1.CronJob, error) {
+// Apply provides a mock function with given fields: ctx, cronJob, opts
+func (_m *CronJobInterface) Apply(ctx context.Context, cronJob *v1beta1.CronJobApplyConfiguration, opts v1.ApplyOptions) (*batchv1beta1.CronJob, error) {
 	ret := _m.Called(ctx, cronJob, opts)
 
-	var r0 *v1beta1.CronJob
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.CronJob, v1.CreateOptions) *v1beta1.CronJob); ok {
+	var r0 *batchv1beta1.CronJob
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.CronJobApplyConfiguration, v1.ApplyOptions) *batchv1beta1.CronJob); ok {
 		r0 = rf(ctx, cronJob, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.CronJob)
+			r0 = ret.Get(0).(*batchv1beta1.CronJob)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.CronJob, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.CronJobApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, cronJob, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, cronJob, opts
+func (_m *CronJobInterface) ApplyStatus(ctx context.Context, cronJob *v1beta1.CronJobApplyConfiguration, opts v1.ApplyOptions) (*batchv1beta1.CronJob, error) {
+	ret := _m.Called(ctx, cronJob, opts)
+
+	var r0 *batchv1beta1.CronJob
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.CronJobApplyConfiguration, v1.ApplyOptions) *batchv1beta1.CronJob); ok {
+		r0 = rf(ctx, cronJob, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*batchv1beta1.CronJob)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.CronJobApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, cronJob, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, cronJob, opts
+func (_m *CronJobInterface) Create(ctx context.Context, cronJob *batchv1beta1.CronJob, opts v1.CreateOptions) (*batchv1beta1.CronJob, error) {
+	ret := _m.Called(ctx, cronJob, opts)
+
+	var r0 *batchv1beta1.CronJob
+	if rf, ok := ret.Get(0).(func(context.Context, *batchv1beta1.CronJob, v1.CreateOptions) *batchv1beta1.CronJob); ok {
+		r0 = rf(ctx, cronJob, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*batchv1beta1.CronJob)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *batchv1beta1.CronJob, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, cronJob, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +121,15 @@ func (_m *CronJobInterface) DeleteCollection(ctx context.Context, opts v1.Delete
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *CronJobInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.CronJob, error) {
+func (_m *CronJobInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*batchv1beta1.CronJob, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1beta1.CronJob
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta1.CronJob); ok {
+	var r0 *batchv1beta1.CronJob
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *batchv1beta1.CronJob); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.CronJob)
+			r0 = ret.Get(0).(*batchv1beta1.CronJob)
 		}
 	}
 
@@ -95,15 +144,15 @@ func (_m *CronJobInterface) Get(ctx context.Context, name string, opts v1.GetOpt
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *CronJobInterface) List(ctx context.Context, opts v1.ListOptions) (*v1beta1.CronJobList, error) {
+func (_m *CronJobInterface) List(ctx context.Context, opts v1.ListOptions) (*batchv1beta1.CronJobList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1beta1.CronJobList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1beta1.CronJobList); ok {
+	var r0 *batchv1beta1.CronJobList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *batchv1beta1.CronJobList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.CronJobList)
+			r0 = ret.Get(0).(*batchv1beta1.CronJobList)
 		}
 	}
 
@@ -118,7 +167,7 @@ func (_m *CronJobInterface) List(ctx context.Context, opts v1.ListOptions) (*v1b
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *CronJobInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1beta1.CronJob, error) {
+func (_m *CronJobInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*batchv1beta1.CronJob, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +177,12 @@ func (_m *CronJobInterface) Patch(ctx context.Context, name string, pt types.Pat
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1beta1.CronJob
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1beta1.CronJob); ok {
+	var r0 *batchv1beta1.CronJob
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *batchv1beta1.CronJob); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.CronJob)
+			r0 = ret.Get(0).(*batchv1beta1.CronJob)
 		}
 	}
 
@@ -148,20 +197,20 @@ func (_m *CronJobInterface) Patch(ctx context.Context, name string, pt types.Pat
 }
 
 // Update provides a mock function with given fields: ctx, cronJob, opts
-func (_m *CronJobInterface) Update(ctx context.Context, cronJob *v1beta1.CronJob, opts v1.UpdateOptions) (*v1beta1.CronJob, error) {
+func (_m *CronJobInterface) Update(ctx context.Context, cronJob *batchv1beta1.CronJob, opts v1.UpdateOptions) (*batchv1beta1.CronJob, error) {
 	ret := _m.Called(ctx, cronJob, opts)
 
-	var r0 *v1beta1.CronJob
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.CronJob, v1.UpdateOptions) *v1beta1.CronJob); ok {
+	var r0 *batchv1beta1.CronJob
+	if rf, ok := ret.Get(0).(func(context.Context, *batchv1beta1.CronJob, v1.UpdateOptions) *batchv1beta1.CronJob); ok {
 		r0 = rf(ctx, cronJob, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.CronJob)
+			r0 = ret.Get(0).(*batchv1beta1.CronJob)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.CronJob, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *batchv1beta1.CronJob, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, cronJob, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -171,20 +220,20 @@ func (_m *CronJobInterface) Update(ctx context.Context, cronJob *v1beta1.CronJob
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, cronJob, opts
-func (_m *CronJobInterface) UpdateStatus(ctx context.Context, cronJob *v1beta1.CronJob, opts v1.UpdateOptions) (*v1beta1.CronJob, error) {
+func (_m *CronJobInterface) UpdateStatus(ctx context.Context, cronJob *batchv1beta1.CronJob, opts v1.UpdateOptions) (*batchv1beta1.CronJob, error) {
 	ret := _m.Called(ctx, cronJob, opts)
 
-	var r0 *v1beta1.CronJob
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.CronJob, v1.UpdateOptions) *v1beta1.CronJob); ok {
+	var r0 *batchv1beta1.CronJob
+	if rf, ok := ret.Get(0).(func(context.Context, *batchv1beta1.CronJob, v1.UpdateOptions) *batchv1beta1.CronJob); ok {
 		r0 = rf(ctx, cronJob, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.CronJob)
+			r0 = ret.Get(0).(*batchv1beta1.CronJob)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.CronJob, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *batchv1beta1.CronJob, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, cronJob, opts)
 	} else {
 		r1 = ret.Error(1)

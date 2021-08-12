@@ -76,6 +76,11 @@ func (o Order) MatchRequirements(prov []atypes.Provider) bool {
 	return o.Spec.MatchRequirements(prov)
 }
 
+// MatchResourcesRequirements method compares provider capabilities with specific order resources attributes
+func (o Order) MatchResourcesRequirements(attr types.Attributes) bool {
+	return o.Spec.MatchResourcesRequirements(attr)
+}
+
 // Accept returns whether order filters valid or not
 func (filters OrderFilters) Accept(obj Order, stateVal Order_State) bool {
 	// Checking owner filter

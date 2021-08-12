@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #  To run this script, the following commands need to be installed:
 #
@@ -15,8 +15,15 @@ DEFAULT_API_URL="https://api.coingecko.com/api/v3/simple/price?ids=akash-network
 # These are the variables one can modify to change the USD scale for each resource kind
 CPU_USD_SCALE=0.10
 MEMORY_USD_SCALE=0.02
-STORAGE_USD_SCALE=0.01
 ENDPOINT_USD_SCALE=0.02
+
+declare -A STORAGE_USD_SCALE
+
+STORAGE_USD_SCALE[ephemeral]=0.01
+STORAGE_USD_SCALE[default]=0.02
+STORAGE_USD_SCALE[beta1]=0.02
+STORAGE_USD_SCALE[beta2]=0.03
+STORAGE_USD_SCALE[beta3]=0.04
 
 # used later for validation
 MAX_INT64=9223372036854775807
@@ -24,8 +31,8 @@ MAX_INT64=9223372036854775807
 # local variables used for calculation
 memory_total=0
 cpu_total=0
-storage_total=0
 endpoint_total=0
+storage_cost_usd=0
 
 # read the JSON in `stdin` into $script_input
 read -r script_input
@@ -42,11 +49,20 @@ for group in $(jq -c '.[]' <<<"$script_input"); do
   cpu_quantity=$((cpu_quantity * count))
   cpu_total=$((cpu_total + cpu_quantity))
 
-  storage_quantity=$(jq '.storage' <<<"$group")
-  storage_quantity=$((storage_quantity * count))
-  storage_total=$((storage_total + storage_quantity))
+  for storage in $(jq -c '.storage[]' <<<"$group"); do
+      storage_size=$(jq -r '.size' <<<"$storage")
+      # jq has to be with -r to not quote value
+      class=$(jq -r '.class' <<<"$storage")
 
-  endpoint_quantity=$(jq '.endpoint_quantity' <<<"$group")
+      if [ -v 'STORAGE_USD_SCALE[class]' ]; then
+        exit 1
+      fi
+
+      storage_size=$((storage_size * count))
+      storage_cost_usd=$(bc -l <<<"(${storage_size}*${STORAGE_USD_SCALE[$class]}) + ${storage_cost_usd}")
+  done
+
+  endpoint_quantity=$(jq ".endpoint_quantity" <<<"$group")
   endpoint_quantity=$((endpoint_quantity * count))
   endpoint_total=$((endpoint_total + endpoint_quantity))
 done
@@ -54,7 +70,7 @@ done
 # calculate the total cost in USD for each resource
 cpu_cost_usd=$(bc -l <<<"${cpu_total}*${CPU_USD_SCALE}")
 memory_cost_usd=$(bc -l <<<"${memory_total}*${MEMORY_USD_SCALE}")
-storage_cost_usd=$(bc -l <<<"${storage_total}*${STORAGE_USD_SCALE}")
+#storage_cost_usd=$(bc -l <<<"${storage_total}*${STORAGE_USD_SCALE}")
 endpoint_cost_usd=$(bc -l <<<"${endpoint_total}*${ENDPOINT_USD_SCALE}")
 
 # validate the USD cost for each resource

@@ -5,13 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
+	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/core/v1"
+	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +23,67 @@ type PersistentVolumeInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, persistentVolume, opts
-func (_m *PersistentVolumeInterface) Create(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.CreateOptions) (*v1.PersistentVolume, error) {
+// Apply provides a mock function with given fields: ctx, persistentVolume, opts
+func (_m *PersistentVolumeInterface) Apply(ctx context.Context, persistentVolume *v1.PersistentVolumeApplyConfiguration, opts metav1.ApplyOptions) (*corev1.PersistentVolume, error) {
 	ret := _m.Called(ctx, persistentVolume, opts)
 
-	var r0 *v1.PersistentVolume
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.PersistentVolume, metav1.CreateOptions) *v1.PersistentVolume); ok {
+	var r0 *corev1.PersistentVolume
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.PersistentVolumeApplyConfiguration, metav1.ApplyOptions) *corev1.PersistentVolume); ok {
 		r0 = rf(ctx, persistentVolume, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.PersistentVolume)
+			r0 = ret.Get(0).(*corev1.PersistentVolume)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.PersistentVolume, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.PersistentVolumeApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, persistentVolume, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, persistentVolume, opts
+func (_m *PersistentVolumeInterface) ApplyStatus(ctx context.Context, persistentVolume *v1.PersistentVolumeApplyConfiguration, opts metav1.ApplyOptions) (*corev1.PersistentVolume, error) {
+	ret := _m.Called(ctx, persistentVolume, opts)
+
+	var r0 *corev1.PersistentVolume
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.PersistentVolumeApplyConfiguration, metav1.ApplyOptions) *corev1.PersistentVolume); ok {
+		r0 = rf(ctx, persistentVolume, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.PersistentVolume)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.PersistentVolumeApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, persistentVolume, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, persistentVolume, opts
+func (_m *PersistentVolumeInterface) Create(ctx context.Context, persistentVolume *corev1.PersistentVolume, opts metav1.CreateOptions) (*corev1.PersistentVolume, error) {
+	ret := _m.Called(ctx, persistentVolume, opts)
+
+	var r0 *corev1.PersistentVolume
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.PersistentVolume, metav1.CreateOptions) *corev1.PersistentVolume); ok {
+		r0 = rf(ctx, persistentVolume, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.PersistentVolume)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.PersistentVolume, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, persistentVolume, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +121,15 @@ func (_m *PersistentVolumeInterface) DeleteCollection(ctx context.Context, opts 
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *PersistentVolumeInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.PersistentVolume, error) {
+func (_m *PersistentVolumeInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.PersistentVolume, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.PersistentVolume
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.PersistentVolume); ok {
+	var r0 *corev1.PersistentVolume
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *corev1.PersistentVolume); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.PersistentVolume)
+			r0 = ret.Get(0).(*corev1.PersistentVolume)
 		}
 	}
 
@@ -96,15 +144,15 @@ func (_m *PersistentVolumeInterface) Get(ctx context.Context, name string, opts 
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *PersistentVolumeInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.PersistentVolumeList, error) {
+func (_m *PersistentVolumeInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.PersistentVolumeList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.PersistentVolumeList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.PersistentVolumeList); ok {
+	var r0 *corev1.PersistentVolumeList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *corev1.PersistentVolumeList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.PersistentVolumeList)
+			r0 = ret.Get(0).(*corev1.PersistentVolumeList)
 		}
 	}
 
@@ -119,7 +167,7 @@ func (_m *PersistentVolumeInterface) List(ctx context.Context, opts metav1.ListO
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *PersistentVolumeInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.PersistentVolume, error) {
+func (_m *PersistentVolumeInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*corev1.PersistentVolume, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +177,12 @@ func (_m *PersistentVolumeInterface) Patch(ctx context.Context, name string, pt 
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.PersistentVolume
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.PersistentVolume); ok {
+	var r0 *corev1.PersistentVolume
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *corev1.PersistentVolume); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.PersistentVolume)
+			r0 = ret.Get(0).(*corev1.PersistentVolume)
 		}
 	}
 
@@ -149,20 +197,20 @@ func (_m *PersistentVolumeInterface) Patch(ctx context.Context, name string, pt 
 }
 
 // Update provides a mock function with given fields: ctx, persistentVolume, opts
-func (_m *PersistentVolumeInterface) Update(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.UpdateOptions) (*v1.PersistentVolume, error) {
+func (_m *PersistentVolumeInterface) Update(ctx context.Context, persistentVolume *corev1.PersistentVolume, opts metav1.UpdateOptions) (*corev1.PersistentVolume, error) {
 	ret := _m.Called(ctx, persistentVolume, opts)
 
-	var r0 *v1.PersistentVolume
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.PersistentVolume, metav1.UpdateOptions) *v1.PersistentVolume); ok {
+	var r0 *corev1.PersistentVolume
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.PersistentVolume, metav1.UpdateOptions) *corev1.PersistentVolume); ok {
 		r0 = rf(ctx, persistentVolume, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.PersistentVolume)
+			r0 = ret.Get(0).(*corev1.PersistentVolume)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.PersistentVolume, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.PersistentVolume, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, persistentVolume, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -172,20 +220,20 @@ func (_m *PersistentVolumeInterface) Update(ctx context.Context, persistentVolum
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, persistentVolume, opts
-func (_m *PersistentVolumeInterface) UpdateStatus(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.UpdateOptions) (*v1.PersistentVolume, error) {
+func (_m *PersistentVolumeInterface) UpdateStatus(ctx context.Context, persistentVolume *corev1.PersistentVolume, opts metav1.UpdateOptions) (*corev1.PersistentVolume, error) {
 	ret := _m.Called(ctx, persistentVolume, opts)
 
-	var r0 *v1.PersistentVolume
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.PersistentVolume, metav1.UpdateOptions) *v1.PersistentVolume); ok {
+	var r0 *corev1.PersistentVolume
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.PersistentVolume, metav1.UpdateOptions) *corev1.PersistentVolume); ok {
 		r0 = rf(ctx, persistentVolume, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.PersistentVolume)
+			r0 = ret.Get(0).(*corev1.PersistentVolume)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.PersistentVolume, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.PersistentVolume, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, persistentVolume, opts)
 	} else {
 		r1 = ret.Error(1)

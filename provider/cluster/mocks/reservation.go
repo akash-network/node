@@ -14,6 +14,20 @@ type Reservation struct {
 	mock.Mock
 }
 
+// Allocated provides a mock function with given fields:
+func (_m *Reservation) Allocated() bool {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
 // OrderID provides a mock function with given fields:
 func (_m *Reservation) OrderID() v1beta2.OrderID {
 	ret := _m.Called()

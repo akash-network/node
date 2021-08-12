@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 

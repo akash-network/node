@@ -5,12 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
+
 	mock "github.com/stretchr/testify/mock"
+
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1beta2 "k8s.io/api/apps/v1beta2"
+	v1beta2 "k8s.io/client-go/applyconfigurations/apps/v1beta2"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +23,67 @@ type ReplicaSetInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, replicaSet, opts
-func (_m *ReplicaSetInterface) Create(ctx context.Context, replicaSet *v1beta2.ReplicaSet, opts v1.CreateOptions) (*v1beta2.ReplicaSet, error) {
+// Apply provides a mock function with given fields: ctx, replicaSet, opts
+func (_m *ReplicaSetInterface) Apply(ctx context.Context, replicaSet *v1beta2.ReplicaSetApplyConfiguration, opts v1.ApplyOptions) (*appsv1beta2.ReplicaSet, error) {
 	ret := _m.Called(ctx, replicaSet, opts)
 
-	var r0 *v1beta2.ReplicaSet
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta2.ReplicaSet, v1.CreateOptions) *v1beta2.ReplicaSet); ok {
+	var r0 *appsv1beta2.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta2.ReplicaSetApplyConfiguration, v1.ApplyOptions) *appsv1beta2.ReplicaSet); ok {
 		r0 = rf(ctx, replicaSet, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta2.ReplicaSet)
+			r0 = ret.Get(0).(*appsv1beta2.ReplicaSet)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta2.ReplicaSet, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta2.ReplicaSetApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, replicaSet, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, replicaSet, opts
+func (_m *ReplicaSetInterface) ApplyStatus(ctx context.Context, replicaSet *v1beta2.ReplicaSetApplyConfiguration, opts v1.ApplyOptions) (*appsv1beta2.ReplicaSet, error) {
+	ret := _m.Called(ctx, replicaSet, opts)
+
+	var r0 *appsv1beta2.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta2.ReplicaSetApplyConfiguration, v1.ApplyOptions) *appsv1beta2.ReplicaSet); ok {
+		r0 = rf(ctx, replicaSet, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*appsv1beta2.ReplicaSet)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta2.ReplicaSetApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, replicaSet, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, replicaSet, opts
+func (_m *ReplicaSetInterface) Create(ctx context.Context, replicaSet *appsv1beta2.ReplicaSet, opts v1.CreateOptions) (*appsv1beta2.ReplicaSet, error) {
+	ret := _m.Called(ctx, replicaSet, opts)
+
+	var r0 *appsv1beta2.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, *appsv1beta2.ReplicaSet, v1.CreateOptions) *appsv1beta2.ReplicaSet); ok {
+		r0 = rf(ctx, replicaSet, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*appsv1beta2.ReplicaSet)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *appsv1beta2.ReplicaSet, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, replicaSet, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +121,15 @@ func (_m *ReplicaSetInterface) DeleteCollection(ctx context.Context, opts v1.Del
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *ReplicaSetInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta2.ReplicaSet, error) {
+func (_m *ReplicaSetInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*appsv1beta2.ReplicaSet, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1beta2.ReplicaSet
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta2.ReplicaSet); ok {
+	var r0 *appsv1beta2.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *appsv1beta2.ReplicaSet); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta2.ReplicaSet)
+			r0 = ret.Get(0).(*appsv1beta2.ReplicaSet)
 		}
 	}
 
@@ -95,15 +144,15 @@ func (_m *ReplicaSetInterface) Get(ctx context.Context, name string, opts v1.Get
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *ReplicaSetInterface) List(ctx context.Context, opts v1.ListOptions) (*v1beta2.ReplicaSetList, error) {
+func (_m *ReplicaSetInterface) List(ctx context.Context, opts v1.ListOptions) (*appsv1beta2.ReplicaSetList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1beta2.ReplicaSetList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1beta2.ReplicaSetList); ok {
+	var r0 *appsv1beta2.ReplicaSetList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *appsv1beta2.ReplicaSetList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta2.ReplicaSetList)
+			r0 = ret.Get(0).(*appsv1beta2.ReplicaSetList)
 		}
 	}
 
@@ -118,7 +167,7 @@ func (_m *ReplicaSetInterface) List(ctx context.Context, opts v1.ListOptions) (*
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *ReplicaSetInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1beta2.ReplicaSet, error) {
+func (_m *ReplicaSetInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*appsv1beta2.ReplicaSet, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +177,12 @@ func (_m *ReplicaSetInterface) Patch(ctx context.Context, name string, pt types.
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1beta2.ReplicaSet
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1beta2.ReplicaSet); ok {
+	var r0 *appsv1beta2.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *appsv1beta2.ReplicaSet); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta2.ReplicaSet)
+			r0 = ret.Get(0).(*appsv1beta2.ReplicaSet)
 		}
 	}
 
@@ -148,20 +197,20 @@ func (_m *ReplicaSetInterface) Patch(ctx context.Context, name string, pt types.
 }
 
 // Update provides a mock function with given fields: ctx, replicaSet, opts
-func (_m *ReplicaSetInterface) Update(ctx context.Context, replicaSet *v1beta2.ReplicaSet, opts v1.UpdateOptions) (*v1beta2.ReplicaSet, error) {
+func (_m *ReplicaSetInterface) Update(ctx context.Context, replicaSet *appsv1beta2.ReplicaSet, opts v1.UpdateOptions) (*appsv1beta2.ReplicaSet, error) {
 	ret := _m.Called(ctx, replicaSet, opts)
 
-	var r0 *v1beta2.ReplicaSet
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta2.ReplicaSet, v1.UpdateOptions) *v1beta2.ReplicaSet); ok {
+	var r0 *appsv1beta2.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, *appsv1beta2.ReplicaSet, v1.UpdateOptions) *appsv1beta2.ReplicaSet); ok {
 		r0 = rf(ctx, replicaSet, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta2.ReplicaSet)
+			r0 = ret.Get(0).(*appsv1beta2.ReplicaSet)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta2.ReplicaSet, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *appsv1beta2.ReplicaSet, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, replicaSet, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -171,20 +220,20 @@ func (_m *ReplicaSetInterface) Update(ctx context.Context, replicaSet *v1beta2.R
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, replicaSet, opts
-func (_m *ReplicaSetInterface) UpdateStatus(ctx context.Context, replicaSet *v1beta2.ReplicaSet, opts v1.UpdateOptions) (*v1beta2.ReplicaSet, error) {
+func (_m *ReplicaSetInterface) UpdateStatus(ctx context.Context, replicaSet *appsv1beta2.ReplicaSet, opts v1.UpdateOptions) (*appsv1beta2.ReplicaSet, error) {
 	ret := _m.Called(ctx, replicaSet, opts)
 
-	var r0 *v1beta2.ReplicaSet
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta2.ReplicaSet, v1.UpdateOptions) *v1beta2.ReplicaSet); ok {
+	var r0 *appsv1beta2.ReplicaSet
+	if rf, ok := ret.Get(0).(func(context.Context, *appsv1beta2.ReplicaSet, v1.UpdateOptions) *appsv1beta2.ReplicaSet); ok {
 		r0 = rf(ctx, replicaSet, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta2.ReplicaSet)
+			r0 = ret.Get(0).(*appsv1beta2.ReplicaSet)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta2.ReplicaSet, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *appsv1beta2.ReplicaSet, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, replicaSet, opts)
 	} else {
 		r1 = ret.Error(1)

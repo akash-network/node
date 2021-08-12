@@ -33,9 +33,9 @@ message PlacementRequirements {
 
   // SignedBy list of keys that tenants expect to have signatures from
   SignedBy signed_by = 1
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "signed_by", (gogoproto.moretags) = "yaml:\"signed_by\""];
+  [(gogoproto.nullable) = false, (gogoproto.jsontag) = "signed_by", (gogoproto.moretags) = "yaml:\"signed_by\""];
 
   // Attribute list of attributes tenant expects from the provider
   repeated Attribute attributes = 2
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "attributes", (gogoproto.moretags) = "yaml:\"attributes\""];
+  [(gogoproto.nullable) = false, (gogoproto.jsontag) = "attributes", (gogoproto.moretags) = "yaml:\"attributes\""];
 }

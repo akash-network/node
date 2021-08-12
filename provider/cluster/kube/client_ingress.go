@@ -3,17 +3,21 @@ package kube
 import (
 	"context"
 	"fmt"
+	"math"
+	"strconv"
+	"strings"
+
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+
 	netv1 "k8s.io/api/networking/v1"
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/pager"
-	"math"
-	"strconv"
-	"strings"
+
+	"github.com/ovrclk/akash/provider/cluster/kube/builder"
 )
 
 const (
@@ -36,46 +40,45 @@ func kubeNginxIngressAnnotations(directive ctypes.ConnectHostnameToDeploymentDir
 	}
 
 	nextTimeoutKey := fmt.Sprintf("%s/proxy-next-upstream-timeout", root)
+	nextTimeout := 0 // default magic value for disable
 	if directive.NextTimeout > 0 {
-		nextTimeout := math.Ceil(float64(directive.NextTimeout) / 1000.0)
-		result[nextTimeoutKey] = fmt.Sprintf("%d", int(nextTimeout))
-	} else {
-		result[nextTimeoutKey] = "0" // Magic value for disable
+		nextTimeout = int(math.Ceil(float64(directive.NextTimeout) / 1000.0))
 	}
 
-	builder := strings.Builder{}
+	result[nextTimeoutKey] = fmt.Sprintf("%d", nextTimeout)
+
+	strBuilder := strings.Builder{}
 
 	for i, v := range directive.NextCases {
 		first := string(v[0])
 		isHTTPCode := strings.ContainsAny(first, "12345")
 
 		if isHTTPCode {
-			builder.WriteString("http_")
+			strBuilder.WriteString("http_")
 		}
-		builder.WriteString(v)
+		strBuilder.WriteString(v)
 
 		if i != len(directive.NextCases)-1 {
 			// The actual separator is the space character for kubernetes/ingress-nginx
-			builder.WriteRune(' ')
+			strBuilder.WriteRune(' ')
 		}
 	}
 
-	result[fmt.Sprintf("%s/proxy-next-upstream", root)] = builder.String()
-
+	result[fmt.Sprintf("%s/proxy-next-upstream", root)] = strBuilder.String()
 	return result
 }
 
 func (c *client) ConnectHostnameToDeployment(ctx context.Context, directive ctypes.ConnectHostnameToDeploymentDirective) error {
 	ingressName := directive.Hostname
-	ns := lidNS(directive.LeaseID)
+	ns := builder.LidNS(directive.LeaseID)
 	rules := ingressRules(directive.Hostname, directive.ServiceName, directive.ServicePort)
 
 	_, err := c.kc.NetworkingV1().Ingresses(ns).Get(ctx, ingressName, metav1.GetOptions{})
 	metricsutils.IncCounterVecWithLabelValuesFiltered(kubeCallsCounter, "ingresses-get", err, kubeErrors.IsNotFound)
 
 	labels := make(map[string]string)
-	labels[akashManagedLabelName] = "true"
-	appendLeaseLabels(directive.LeaseID, labels)
+	labels[builder.AkashManagedLabelName] = "true"
+	builder.AppendLeaseLabels(directive.LeaseID, labels)
 
 	ingressClassName := akashIngressClassName
 	obj := &netv1.Ingress{
@@ -103,12 +106,12 @@ func (c *client) ConnectHostnameToDeployment(ctx context.Context, directive ctyp
 }
 
 func (c *client) RemoveHostnameFromDeployment(ctx context.Context, hostname string, leaseID mtypes.LeaseID, allowMissing bool) error {
-	ns := lidNS(leaseID)
+	ns := builder.LidNS(leaseID)
 	labelSelector := &strings.Builder{}
 	kubeSelectorForLease(labelSelector, leaseID)
 
 	fieldSelector := &strings.Builder{}
-	fmt.Fprintf(fieldSelector, "metadata.name=%s", hostname)
+	_, _ = fmt.Fprintf(fieldSelector, "metadata.name=%s", hostname)
 
 	// This delete only works if the ingress exists & the labels match the lease ID given
 	err := c.kc.NetworkingV1().Ingresses(ns).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
@@ -185,29 +188,29 @@ func (c *client) GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes
 
 	results := make([]ctypes.LeaseIDHostnameConnection, 0)
 	err := ingressPager.EachListItem(ctx,
-		metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=true", akashManagedLabelName)},
+		metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=true", builder.AkashManagedLabelName)},
 		func(obj runtime.Object) error {
 			ingress := obj.(*netv1.Ingress)
-			dseqS, ok := ingress.Labels[akashLeaseDSeqLabelName]
+			dseqS, ok := ingress.Labels[builder.AkashLeaseDSeqLabelName]
 			if !ok {
-				return fmt.Errorf("%w: %q", ErrMissingLabel, akashLeaseDSeqLabelName)
+				return fmt.Errorf("%w: %q", ErrMissingLabel, builder.AkashLeaseDSeqLabelName)
 			}
-			gseqS, ok := ingress.Labels[akashLeaseGSeqLabelName]
+			gseqS, ok := ingress.Labels[builder.AkashLeaseGSeqLabelName]
 			if !ok {
-				return fmt.Errorf("%w: %q", ErrMissingLabel, akashLeaseGSeqLabelName)
+				return fmt.Errorf("%w: %q", ErrMissingLabel, builder.AkashLeaseGSeqLabelName)
 			}
-			oseqS, ok := ingress.Labels[akashLeaseOSeqLabelName]
+			oseqS, ok := ingress.Labels[builder.AkashLeaseOSeqLabelName]
 			if !ok {
-				return fmt.Errorf("%w: %q", ErrMissingLabel, akashLeaseOSeqLabelName)
+				return fmt.Errorf("%w: %q", ErrMissingLabel, builder.AkashLeaseOSeqLabelName)
 			}
-			owner, ok := ingress.Labels[akashLeaseOwnerLabelName]
+			owner, ok := ingress.Labels[builder.AkashLeaseOwnerLabelName]
 			if !ok {
-				return fmt.Errorf("%w: %q", ErrMissingLabel, akashLeaseOwnerLabelName)
+				return fmt.Errorf("%w: %q", ErrMissingLabel, builder.AkashLeaseOwnerLabelName)
 			}
 
-			provider, ok := ingress.Labels[akashLeaseProviderLabelName]
+			provider, ok := ingress.Labels[builder.AkashLeaseProviderLabelName]
 			if !ok {
-				return fmt.Errorf("%w: %q", ErrMissingLabel, akashLeaseProviderLabelName)
+				return fmt.Errorf("%w: %q", ErrMissingLabel, builder.AkashLeaseProviderLabelName)
 			}
 
 			dseq, err := strconv.ParseUint(dseqS, 10, 64)

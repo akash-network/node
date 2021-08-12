@@ -4,6 +4,7 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	types "github.com/ovrclk/akash/types/v1beta2"
 )
 

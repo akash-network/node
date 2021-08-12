@@ -1,0 +1,31 @@
+syntax = "proto3";
+package akash.deployment.v1beta2;
+
+import "gogoproto/gogo.proto";
+import "akash/base/v1beta2/attribute.proto";
+import "akash/deployment/v1beta2/resource.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types/v1beta2";
+
+// GroupSpec stores group specifications
+message GroupSpec {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  string name = 1 [
+    (gogoproto.jsontag) = "name",
+    (gogoproto.moretags) = "yaml:\"name\""
+  ];
+
+  akash.base.v1beta2.PlacementRequirements requirements = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "requirements",
+    (gogoproto.moretags) = "yaml:\"requirements\""
+  ];
+
+  repeated Resource resources = 3 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "resources",
+    (gogoproto.moretags) = "yaml:\"resources\""
+  ];
+}

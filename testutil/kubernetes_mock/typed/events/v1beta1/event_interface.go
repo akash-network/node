@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	eventsv1beta1 "k8s.io/api/events/v1beta1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1beta1 "k8s.io/api/events/v1beta1"
+	v1beta1 "k8s.io/client-go/applyconfigurations/events/v1beta1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,44 @@ type EventInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, event, opts
-func (_m *EventInterface) Create(ctx context.Context, event *v1beta1.Event, opts v1.CreateOptions) (*v1beta1.Event, error) {
+// Apply provides a mock function with given fields: ctx, event, opts
+func (_m *EventInterface) Apply(ctx context.Context, event *v1beta1.EventApplyConfiguration, opts v1.ApplyOptions) (*eventsv1beta1.Event, error) {
 	ret := _m.Called(ctx, event, opts)
 
-	var r0 *v1beta1.Event
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.Event, v1.CreateOptions) *v1beta1.Event); ok {
+	var r0 *eventsv1beta1.Event
+	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.EventApplyConfiguration, v1.ApplyOptions) *eventsv1beta1.Event); ok {
 		r0 = rf(ctx, event, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Event)
+			r0 = ret.Get(0).(*eventsv1beta1.Event)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.Event, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.EventApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, event, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, event, opts
+func (_m *EventInterface) Create(ctx context.Context, event *eventsv1beta1.Event, opts v1.CreateOptions) (*eventsv1beta1.Event, error) {
+	ret := _m.Called(ctx, event, opts)
+
+	var r0 *eventsv1beta1.Event
+	if rf, ok := ret.Get(0).(func(context.Context, *eventsv1beta1.Event, v1.CreateOptions) *eventsv1beta1.Event); ok {
+		r0 = rf(ctx, event, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*eventsv1beta1.Event)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *eventsv1beta1.Event, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, event, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -45,20 +69,20 @@ func (_m *EventInterface) Create(ctx context.Context, event *v1beta1.Event, opts
 }
 
 // CreateWithEventNamespace provides a mock function with given fields: event
-func (_m *EventInterface) CreateWithEventNamespace(event *v1beta1.Event) (*v1beta1.Event, error) {
+func (_m *EventInterface) CreateWithEventNamespace(event *eventsv1beta1.Event) (*eventsv1beta1.Event, error) {
 	ret := _m.Called(event)
 
-	var r0 *v1beta1.Event
-	if rf, ok := ret.Get(0).(func(*v1beta1.Event) *v1beta1.Event); ok {
+	var r0 *eventsv1beta1.Event
+	if rf, ok := ret.Get(0).(func(*eventsv1beta1.Event) *eventsv1beta1.Event); ok {
 		r0 = rf(event)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Event)
+			r0 = ret.Get(0).(*eventsv1beta1.Event)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*v1beta1.Event) error); ok {
+	if rf, ok := ret.Get(1).(func(*eventsv1beta1.Event) error); ok {
 		r1 = rf(event)
 	} else {
 		r1 = ret.Error(1)
@@ -96,15 +120,15 @@ func (_m *EventInterface) DeleteCollection(ctx context.Context, opts v1.DeleteOp
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *EventInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.Event, error) {
+func (_m *EventInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*eventsv1beta1.Event, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1beta1.Event
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1beta1.Event); ok {
+	var r0 *eventsv1beta1.Event
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *eventsv1beta1.Event); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Event)
+			r0 = ret.Get(0).(*eventsv1beta1.Event)
 		}
 	}
 
@@ -119,15 +143,15 @@ func (_m *EventInterface) Get(ctx context.Context, name string, opts v1.GetOptio
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *EventInterface) List(ctx context.Context, opts v1.ListOptions) (*v1beta1.EventList, error) {
+func (_m *EventInterface) List(ctx context.Context, opts v1.ListOptions) (*eventsv1beta1.EventList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1beta1.EventList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1beta1.EventList); ok {
+	var r0 *eventsv1beta1.EventList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *eventsv1beta1.EventList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.EventList)
+			r0 = ret.Get(0).(*eventsv1beta1.EventList)
 		}
 	}
 
@@ -142,7 +166,7 @@ func (_m *EventInterface) List(ctx context.Context, opts v1.ListOptions) (*v1bet
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *EventInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1beta1.Event, error) {
+func (_m *EventInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*eventsv1beta1.Event, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -152,12 +176,12 @@ func (_m *EventInterface) Patch(ctx context.Context, name string, pt types.Patch
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1beta1.Event
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1beta1.Event); ok {
+	var r0 *eventsv1beta1.Event
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *eventsv1beta1.Event); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Event)
+			r0 = ret.Get(0).(*eventsv1beta1.Event)
 		}
 	}
 
@@ -172,20 +196,20 @@ func (_m *EventInterface) Patch(ctx context.Context, name string, pt types.Patch
 }
 
 // PatchWithEventNamespace provides a mock function with given fields: event, data
-func (_m *EventInterface) PatchWithEventNamespace(event *v1beta1.Event, data []byte) (*v1beta1.Event, error) {
+func (_m *EventInterface) PatchWithEventNamespace(event *eventsv1beta1.Event, data []byte) (*eventsv1beta1.Event, error) {
 	ret := _m.Called(event, data)
 
-	var r0 *v1beta1.Event
-	if rf, ok := ret.Get(0).(func(*v1beta1.Event, []byte) *v1beta1.Event); ok {
+	var r0 *eventsv1beta1.Event
+	if rf, ok := ret.Get(0).(func(*eventsv1beta1.Event, []byte) *eventsv1beta1.Event); ok {
 		r0 = rf(event, data)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Event)
+			r0 = ret.Get(0).(*eventsv1beta1.Event)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*v1beta1.Event, []byte) error); ok {
+	if rf, ok := ret.Get(1).(func(*eventsv1beta1.Event, []byte) error); ok {
 		r1 = rf(event, data)
 	} else {
 		r1 = ret.Error(1)
@@ -195,20 +219,20 @@ func (_m *EventInterface) PatchWithEventNamespace(event *v1beta1.Event, data []b
 }
 
 // Update provides a mock function with given fields: ctx, event, opts
-func (_m *EventInterface) Update(ctx context.Context, event *v1beta1.Event, opts v1.UpdateOptions) (*v1beta1.Event, error) {
+func (_m *EventInterface) Update(ctx context.Context, event *eventsv1beta1.Event, opts v1.UpdateOptions) (*eventsv1beta1.Event, error) {
 	ret := _m.Called(ctx, event, opts)
 
-	var r0 *v1beta1.Event
-	if rf, ok := ret.Get(0).(func(context.Context, *v1beta1.Event, v1.UpdateOptions) *v1beta1.Event); ok {
+	var r0 *eventsv1beta1.Event
+	if rf, ok := ret.Get(0).(func(context.Context, *eventsv1beta1.Event, v1.UpdateOptions) *eventsv1beta1.Event); ok {
 		r0 = rf(ctx, event, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Event)
+			r0 = ret.Get(0).(*eventsv1beta1.Event)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1beta1.Event, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *eventsv1beta1.Event, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, event, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -218,20 +242,20 @@ func (_m *EventInterface) Update(ctx context.Context, event *v1beta1.Event, opts
 }
 
 // UpdateWithEventNamespace provides a mock function with given fields: event
-func (_m *EventInterface) UpdateWithEventNamespace(event *v1beta1.Event) (*v1beta1.Event, error) {
+func (_m *EventInterface) UpdateWithEventNamespace(event *eventsv1beta1.Event) (*eventsv1beta1.Event, error) {
 	ret := _m.Called(event)
 
-	var r0 *v1beta1.Event
-	if rf, ok := ret.Get(0).(func(*v1beta1.Event) *v1beta1.Event); ok {
+	var r0 *eventsv1beta1.Event
+	if rf, ok := ret.Get(0).(func(*eventsv1beta1.Event) *eventsv1beta1.Event); ok {
 		r0 = rf(event)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.Event)
+			r0 = ret.Get(0).(*eventsv1beta1.Event)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*v1beta1.Event) error); ok {
+	if rf, ok := ret.Get(1).(func(*eventsv1beta1.Event) error); ok {
 		r1 = rf(event)
 	} else {
 		r1 = ret.Error(1)

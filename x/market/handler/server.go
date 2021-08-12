@@ -18,7 +18,7 @@ type msgServer struct {
 	keepers Keepers
 }
 
-// NewMsgServerImpl returns an implementation of the market MsgServer interface
+// NewServer returns an implementation of the market MsgServer interface
 // for the provided Keeper.
 func NewServer(k Keepers) types.MsgServer {
 	return &msgServer{keepers: k}
@@ -79,6 +79,10 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 
 	if !order.MatchRequirements(provAttr) {
 		return nil, types.ErrAttributeMismatch
+	}
+
+	if !order.MatchResourcesRequirements(prov.Attributes) {
+		return nil, types.ErrCapabilitiesMismatch
 	}
 
 	bid, err := ms.keepers.Market.CreateBid(ctx, msg.Order, provider, msg.Price)

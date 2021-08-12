@@ -52,8 +52,10 @@ func ResourceUnits(_ testing.TB) types.ResourceUnits {
 		Memory: &types.Memory{
 			Quantity: types.NewResourceValue(RandMemoryQuantity()),
 		},
-		Storage: &types.Storage{
-			Quantity: types.NewResourceValue(RandStorageQuantity()),
+		Storage: types.Volumes{
+			types.Storage{
+				Quantity: types.NewResourceValue(RandStorageQuantity()),
+			},
 		},
 	}
 }

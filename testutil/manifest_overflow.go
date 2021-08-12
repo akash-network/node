@@ -44,8 +44,10 @@ func (mg manifestGeneratorOverflow) Service(t testing.TB) manifest.Service {
 			Memory: &types.Memory{
 				Quantity: types.NewResourceValue(math.MaxUint64),
 			},
-			Storage: &types.Storage{
-				Quantity: types.NewResourceValue(math.MaxUint64),
+			Storage: types.Volumes{
+				types.Storage{
+					Quantity: types.NewResourceValue(math.MaxUint64),
+				},
 			},
 		},
 		Count: math.MaxUint32,

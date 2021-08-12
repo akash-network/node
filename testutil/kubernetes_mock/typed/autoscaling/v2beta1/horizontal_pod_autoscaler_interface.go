@@ -5,12 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
+
 	mock "github.com/stretchr/testify/mock"
+
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v2beta1 "k8s.io/api/autoscaling/v2beta1"
+	v2beta1 "k8s.io/client-go/applyconfigurations/autoscaling/v2beta1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +23,67 @@ type HorizontalPodAutoscalerInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, horizontalPodAutoscaler, opts
-func (_m *HorizontalPodAutoscalerInterface) Create(ctx context.Context, horizontalPodAutoscaler *v2beta1.HorizontalPodAutoscaler, opts v1.CreateOptions) (*v2beta1.HorizontalPodAutoscaler, error) {
+// Apply provides a mock function with given fields: ctx, horizontalPodAutoscaler, opts
+func (_m *HorizontalPodAutoscalerInterface) Apply(ctx context.Context, horizontalPodAutoscaler *v2beta1.HorizontalPodAutoscalerApplyConfiguration, opts v1.ApplyOptions) (*autoscalingv2beta1.HorizontalPodAutoscaler, error) {
 	ret := _m.Called(ctx, horizontalPodAutoscaler, opts)
 
-	var r0 *v2beta1.HorizontalPodAutoscaler
-	if rf, ok := ret.Get(0).(func(context.Context, *v2beta1.HorizontalPodAutoscaler, v1.CreateOptions) *v2beta1.HorizontalPodAutoscaler); ok {
+	var r0 *autoscalingv2beta1.HorizontalPodAutoscaler
+	if rf, ok := ret.Get(0).(func(context.Context, *v2beta1.HorizontalPodAutoscalerApplyConfiguration, v1.ApplyOptions) *autoscalingv2beta1.HorizontalPodAutoscaler); ok {
 		r0 = rf(ctx, horizontalPodAutoscaler, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v2beta1.HorizontalPodAutoscaler)
+			r0 = ret.Get(0).(*autoscalingv2beta1.HorizontalPodAutoscaler)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v2beta1.HorizontalPodAutoscaler, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v2beta1.HorizontalPodAutoscalerApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, horizontalPodAutoscaler, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, horizontalPodAutoscaler, opts
+func (_m *HorizontalPodAutoscalerInterface) ApplyStatus(ctx context.Context, horizontalPodAutoscaler *v2beta1.HorizontalPodAutoscalerApplyConfiguration, opts v1.ApplyOptions) (*autoscalingv2beta1.HorizontalPodAutoscaler, error) {
+	ret := _m.Called(ctx, horizontalPodAutoscaler, opts)
+
+	var r0 *autoscalingv2beta1.HorizontalPodAutoscaler
+	if rf, ok := ret.Get(0).(func(context.Context, *v2beta1.HorizontalPodAutoscalerApplyConfiguration, v1.ApplyOptions) *autoscalingv2beta1.HorizontalPodAutoscaler); ok {
+		r0 = rf(ctx, horizontalPodAutoscaler, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*autoscalingv2beta1.HorizontalPodAutoscaler)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v2beta1.HorizontalPodAutoscalerApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, horizontalPodAutoscaler, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, horizontalPodAutoscaler, opts
+func (_m *HorizontalPodAutoscalerInterface) Create(ctx context.Context, horizontalPodAutoscaler *autoscalingv2beta1.HorizontalPodAutoscaler, opts v1.CreateOptions) (*autoscalingv2beta1.HorizontalPodAutoscaler, error) {
+	ret := _m.Called(ctx, horizontalPodAutoscaler, opts)
+
+	var r0 *autoscalingv2beta1.HorizontalPodAutoscaler
+	if rf, ok := ret.Get(0).(func(context.Context, *autoscalingv2beta1.HorizontalPodAutoscaler, v1.CreateOptions) *autoscalingv2beta1.HorizontalPodAutoscaler); ok {
+		r0 = rf(ctx, horizontalPodAutoscaler, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*autoscalingv2beta1.HorizontalPodAutoscaler)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *autoscalingv2beta1.HorizontalPodAutoscaler, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, horizontalPodAutoscaler, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +121,15 @@ func (_m *HorizontalPodAutoscalerInterface) DeleteCollection(ctx context.Context
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *HorizontalPodAutoscalerInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v2beta1.HorizontalPodAutoscaler, error) {
+func (_m *HorizontalPodAutoscalerInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*autoscalingv2beta1.HorizontalPodAutoscaler, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v2beta1.HorizontalPodAutoscaler
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v2beta1.HorizontalPodAutoscaler); ok {
+	var r0 *autoscalingv2beta1.HorizontalPodAutoscaler
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *autoscalingv2beta1.HorizontalPodAutoscaler); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v2beta1.HorizontalPodAutoscaler)
+			r0 = ret.Get(0).(*autoscalingv2beta1.HorizontalPodAutoscaler)
 		}
 	}
 
@@ -95,15 +144,15 @@ func (_m *HorizontalPodAutoscalerInterface) Get(ctx context.Context, name string
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *HorizontalPodAutoscalerInterface) List(ctx context.Context, opts v1.ListOptions) (*v2beta1.HorizontalPodAutoscalerList, error) {
+func (_m *HorizontalPodAutoscalerInterface) List(ctx context.Context, opts v1.ListOptions) (*autoscalingv2beta1.HorizontalPodAutoscalerList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v2beta1.HorizontalPodAutoscalerList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v2beta1.HorizontalPodAutoscalerList); ok {
+	var r0 *autoscalingv2beta1.HorizontalPodAutoscalerList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *autoscalingv2beta1.HorizontalPodAutoscalerList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v2beta1.HorizontalPodAutoscalerList)
+			r0 = ret.Get(0).(*autoscalingv2beta1.HorizontalPodAutoscalerList)
 		}
 	}
 
@@ -118,7 +167,7 @@ func (_m *HorizontalPodAutoscalerInterface) List(ctx context.Context, opts v1.Li
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *HorizontalPodAutoscalerInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v2beta1.HorizontalPodAutoscaler, error) {
+func (_m *HorizontalPodAutoscalerInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*autoscalingv2beta1.HorizontalPodAutoscaler, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +177,12 @@ func (_m *HorizontalPodAutoscalerInterface) Patch(ctx context.Context, name stri
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v2beta1.HorizontalPodAutoscaler
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v2beta1.HorizontalPodAutoscaler); ok {
+	var r0 *autoscalingv2beta1.HorizontalPodAutoscaler
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *autoscalingv2beta1.HorizontalPodAutoscaler); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v2beta1.HorizontalPodAutoscaler)
+			r0 = ret.Get(0).(*autoscalingv2beta1.HorizontalPodAutoscaler)
 		}
 	}
 
@@ -148,20 +197,20 @@ func (_m *HorizontalPodAutoscalerInterface) Patch(ctx context.Context, name stri
 }
 
 // Update provides a mock function with given fields: ctx, horizontalPodAutoscaler, opts
-func (_m *HorizontalPodAutoscalerInterface) Update(ctx context.Context, horizontalPodAutoscaler *v2beta1.HorizontalPodAutoscaler, opts v1.UpdateOptions) (*v2beta1.HorizontalPodAutoscaler, error) {
+func (_m *HorizontalPodAutoscalerInterface) Update(ctx context.Context, horizontalPodAutoscaler *autoscalingv2beta1.HorizontalPodAutoscaler, opts v1.UpdateOptions) (*autoscalingv2beta1.HorizontalPodAutoscaler, error) {
 	ret := _m.Called(ctx, horizontalPodAutoscaler, opts)
 
-	var r0 *v2beta1.HorizontalPodAutoscaler
-	if rf, ok := ret.Get(0).(func(context.Context, *v2beta1.HorizontalPodAutoscaler, v1.UpdateOptions) *v2beta1.HorizontalPodAutoscaler); ok {
+	var r0 *autoscalingv2beta1.HorizontalPodAutoscaler
+	if rf, ok := ret.Get(0).(func(context.Context, *autoscalingv2beta1.HorizontalPodAutoscaler, v1.UpdateOptions) *autoscalingv2beta1.HorizontalPodAutoscaler); ok {
 		r0 = rf(ctx, horizontalPodAutoscaler, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v2beta1.HorizontalPodAutoscaler)
+			r0 = ret.Get(0).(*autoscalingv2beta1.HorizontalPodAutoscaler)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v2beta1.HorizontalPodAutoscaler, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *autoscalingv2beta1.HorizontalPodAutoscaler, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, horizontalPodAutoscaler, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -171,20 +220,20 @@ func (_m *HorizontalPodAutoscalerInterface) Update(ctx context.Context, horizont
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, horizontalPodAutoscaler, opts
-func (_m *HorizontalPodAutoscalerInterface) UpdateStatus(ctx context.Context, horizontalPodAutoscaler *v2beta1.HorizontalPodAutoscaler, opts v1.UpdateOptions) (*v2beta1.HorizontalPodAutoscaler, error) {
+func (_m *HorizontalPodAutoscalerInterface) UpdateStatus(ctx context.Context, horizontalPodAutoscaler *autoscalingv2beta1.HorizontalPodAutoscaler, opts v1.UpdateOptions) (*autoscalingv2beta1.HorizontalPodAutoscaler, error) {
 	ret := _m.Called(ctx, horizontalPodAutoscaler, opts)
 
-	var r0 *v2beta1.HorizontalPodAutoscaler
-	if rf, ok := ret.Get(0).(func(context.Context, *v2beta1.HorizontalPodAutoscaler, v1.UpdateOptions) *v2beta1.HorizontalPodAutoscaler); ok {
+	var r0 *autoscalingv2beta1.HorizontalPodAutoscaler
+	if rf, ok := ret.Get(0).(func(context.Context, *autoscalingv2beta1.HorizontalPodAutoscaler, v1.UpdateOptions) *autoscalingv2beta1.HorizontalPodAutoscaler); ok {
 		r0 = rf(ctx, horizontalPodAutoscaler, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v2beta1.HorizontalPodAutoscaler)
+			r0 = ret.Get(0).(*autoscalingv2beta1.HorizontalPodAutoscaler)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v2beta1.HorizontalPodAutoscaler, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *autoscalingv2beta1.HorizontalPodAutoscaler, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, horizontalPodAutoscaler, opts)
 	} else {
 		r1 = ret.Error(1)

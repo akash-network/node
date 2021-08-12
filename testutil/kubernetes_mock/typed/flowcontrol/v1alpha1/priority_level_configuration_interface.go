@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	flowcontrolv1alpha1 "k8s.io/api/flowcontrol/v1alpha1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1alpha1 "k8s.io/api/flowcontrol/v1alpha1"
+	v1alpha1 "k8s.io/client-go/applyconfigurations/flowcontrol/v1alpha1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,67 @@ type PriorityLevelConfigurationInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, priorityLevelConfiguration, opts
-func (_m *PriorityLevelConfigurationInterface) Create(ctx context.Context, priorityLevelConfiguration *v1alpha1.PriorityLevelConfiguration, opts v1.CreateOptions) (*v1alpha1.PriorityLevelConfiguration, error) {
+// Apply provides a mock function with given fields: ctx, priorityLevelConfiguration, opts
+func (_m *PriorityLevelConfigurationInterface) Apply(ctx context.Context, priorityLevelConfiguration *v1alpha1.PriorityLevelConfigurationApplyConfiguration, opts v1.ApplyOptions) (*flowcontrolv1alpha1.PriorityLevelConfiguration, error) {
 	ret := _m.Called(ctx, priorityLevelConfiguration, opts)
 
-	var r0 *v1alpha1.PriorityLevelConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.PriorityLevelConfiguration, v1.CreateOptions) *v1alpha1.PriorityLevelConfiguration); ok {
+	var r0 *flowcontrolv1alpha1.PriorityLevelConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.PriorityLevelConfigurationApplyConfiguration, v1.ApplyOptions) *flowcontrolv1alpha1.PriorityLevelConfiguration); ok {
 		r0 = rf(ctx, priorityLevelConfiguration, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.PriorityLevelConfiguration)
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.PriorityLevelConfiguration)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.PriorityLevelConfiguration, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.PriorityLevelConfigurationApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, priorityLevelConfiguration, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, priorityLevelConfiguration, opts
+func (_m *PriorityLevelConfigurationInterface) ApplyStatus(ctx context.Context, priorityLevelConfiguration *v1alpha1.PriorityLevelConfigurationApplyConfiguration, opts v1.ApplyOptions) (*flowcontrolv1alpha1.PriorityLevelConfiguration, error) {
+	ret := _m.Called(ctx, priorityLevelConfiguration, opts)
+
+	var r0 *flowcontrolv1alpha1.PriorityLevelConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.PriorityLevelConfigurationApplyConfiguration, v1.ApplyOptions) *flowcontrolv1alpha1.PriorityLevelConfiguration); ok {
+		r0 = rf(ctx, priorityLevelConfiguration, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.PriorityLevelConfiguration)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.PriorityLevelConfigurationApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, priorityLevelConfiguration, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, priorityLevelConfiguration, opts
+func (_m *PriorityLevelConfigurationInterface) Create(ctx context.Context, priorityLevelConfiguration *flowcontrolv1alpha1.PriorityLevelConfiguration, opts v1.CreateOptions) (*flowcontrolv1alpha1.PriorityLevelConfiguration, error) {
+	ret := _m.Called(ctx, priorityLevelConfiguration, opts)
+
+	var r0 *flowcontrolv1alpha1.PriorityLevelConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, *flowcontrolv1alpha1.PriorityLevelConfiguration, v1.CreateOptions) *flowcontrolv1alpha1.PriorityLevelConfiguration); ok {
+		r0 = rf(ctx, priorityLevelConfiguration, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.PriorityLevelConfiguration)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *flowcontrolv1alpha1.PriorityLevelConfiguration, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, priorityLevelConfiguration, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +120,15 @@ func (_m *PriorityLevelConfigurationInterface) DeleteCollection(ctx context.Cont
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *PriorityLevelConfigurationInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.PriorityLevelConfiguration, error) {
+func (_m *PriorityLevelConfigurationInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*flowcontrolv1alpha1.PriorityLevelConfiguration, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1alpha1.PriorityLevelConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1alpha1.PriorityLevelConfiguration); ok {
+	var r0 *flowcontrolv1alpha1.PriorityLevelConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *flowcontrolv1alpha1.PriorityLevelConfiguration); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.PriorityLevelConfiguration)
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.PriorityLevelConfiguration)
 		}
 	}
 
@@ -96,15 +143,15 @@ func (_m *PriorityLevelConfigurationInterface) Get(ctx context.Context, name str
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *PriorityLevelConfigurationInterface) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.PriorityLevelConfigurationList, error) {
+func (_m *PriorityLevelConfigurationInterface) List(ctx context.Context, opts v1.ListOptions) (*flowcontrolv1alpha1.PriorityLevelConfigurationList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1alpha1.PriorityLevelConfigurationList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1alpha1.PriorityLevelConfigurationList); ok {
+	var r0 *flowcontrolv1alpha1.PriorityLevelConfigurationList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *flowcontrolv1alpha1.PriorityLevelConfigurationList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.PriorityLevelConfigurationList)
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.PriorityLevelConfigurationList)
 		}
 	}
 
@@ -119,7 +166,7 @@ func (_m *PriorityLevelConfigurationInterface) List(ctx context.Context, opts v1
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *PriorityLevelConfigurationInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1alpha1.PriorityLevelConfiguration, error) {
+func (_m *PriorityLevelConfigurationInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*flowcontrolv1alpha1.PriorityLevelConfiguration, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +176,12 @@ func (_m *PriorityLevelConfigurationInterface) Patch(ctx context.Context, name s
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1alpha1.PriorityLevelConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1alpha1.PriorityLevelConfiguration); ok {
+	var r0 *flowcontrolv1alpha1.PriorityLevelConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *flowcontrolv1alpha1.PriorityLevelConfiguration); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.PriorityLevelConfiguration)
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.PriorityLevelConfiguration)
 		}
 	}
 
@@ -149,20 +196,20 @@ func (_m *PriorityLevelConfigurationInterface) Patch(ctx context.Context, name s
 }
 
 // Update provides a mock function with given fields: ctx, priorityLevelConfiguration, opts
-func (_m *PriorityLevelConfigurationInterface) Update(ctx context.Context, priorityLevelConfiguration *v1alpha1.PriorityLevelConfiguration, opts v1.UpdateOptions) (*v1alpha1.PriorityLevelConfiguration, error) {
+func (_m *PriorityLevelConfigurationInterface) Update(ctx context.Context, priorityLevelConfiguration *flowcontrolv1alpha1.PriorityLevelConfiguration, opts v1.UpdateOptions) (*flowcontrolv1alpha1.PriorityLevelConfiguration, error) {
 	ret := _m.Called(ctx, priorityLevelConfiguration, opts)
 
-	var r0 *v1alpha1.PriorityLevelConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.PriorityLevelConfiguration, v1.UpdateOptions) *v1alpha1.PriorityLevelConfiguration); ok {
+	var r0 *flowcontrolv1alpha1.PriorityLevelConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, *flowcontrolv1alpha1.PriorityLevelConfiguration, v1.UpdateOptions) *flowcontrolv1alpha1.PriorityLevelConfiguration); ok {
 		r0 = rf(ctx, priorityLevelConfiguration, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.PriorityLevelConfiguration)
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.PriorityLevelConfiguration)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.PriorityLevelConfiguration, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *flowcontrolv1alpha1.PriorityLevelConfiguration, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, priorityLevelConfiguration, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -172,20 +219,20 @@ func (_m *PriorityLevelConfigurationInterface) Update(ctx context.Context, prior
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, priorityLevelConfiguration, opts
-func (_m *PriorityLevelConfigurationInterface) UpdateStatus(ctx context.Context, priorityLevelConfiguration *v1alpha1.PriorityLevelConfiguration, opts v1.UpdateOptions) (*v1alpha1.PriorityLevelConfiguration, error) {
+func (_m *PriorityLevelConfigurationInterface) UpdateStatus(ctx context.Context, priorityLevelConfiguration *flowcontrolv1alpha1.PriorityLevelConfiguration, opts v1.UpdateOptions) (*flowcontrolv1alpha1.PriorityLevelConfiguration, error) {
 	ret := _m.Called(ctx, priorityLevelConfiguration, opts)
 
-	var r0 *v1alpha1.PriorityLevelConfiguration
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.PriorityLevelConfiguration, v1.UpdateOptions) *v1alpha1.PriorityLevelConfiguration); ok {
+	var r0 *flowcontrolv1alpha1.PriorityLevelConfiguration
+	if rf, ok := ret.Get(0).(func(context.Context, *flowcontrolv1alpha1.PriorityLevelConfiguration, v1.UpdateOptions) *flowcontrolv1alpha1.PriorityLevelConfiguration); ok {
 		r0 = rf(ctx, priorityLevelConfiguration, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.PriorityLevelConfiguration)
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.PriorityLevelConfiguration)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.PriorityLevelConfiguration, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *flowcontrolv1alpha1.PriorityLevelConfiguration, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, priorityLevelConfiguration, opts)
 	} else {
 		r1 = ret.Error(1)

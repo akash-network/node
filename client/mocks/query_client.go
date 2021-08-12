@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	certtypes "github.com/ovrclk/akash/x/cert/types/v1beta2"
+	certtypesv1beta2 "github.com/ovrclk/akash/x/cert/types/v1beta2"
 
 	context "context"
 
@@ -171,7 +171,7 @@ func (_m *QueryClient) Bids(ctx context.Context, in *v1beta2.QueryBidsRequest, o
 }
 
 // Certificates provides a mock function with given fields: ctx, in, opts
-func (_m *QueryClient) Certificates(ctx context.Context, in *certtypes.QueryCertificatesRequest, opts ...grpc.CallOption) (*certtypes.QueryCertificatesResponse, error) {
+func (_m *QueryClient) Certificates(ctx context.Context, in *certtypesv1beta2.QueryCertificatesRequest, opts ...grpc.CallOption) (*certtypesv1beta2.QueryCertificatesResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -181,17 +181,17 @@ func (_m *QueryClient) Certificates(ctx context.Context, in *certtypes.QueryCert
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *certtypes.QueryCertificatesResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *certtypes.QueryCertificatesRequest, ...grpc.CallOption) *certtypes.QueryCertificatesResponse); ok {
+	var r0 *certtypesv1beta2.QueryCertificatesResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *certtypesv1beta2.QueryCertificatesRequest, ...grpc.CallOption) *certtypesv1beta2.QueryCertificatesResponse); ok {
 		r0 = rf(ctx, in, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*certtypes.QueryCertificatesResponse)
+			r0 = ret.Get(0).(*certtypesv1beta2.QueryCertificatesResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *certtypes.QueryCertificatesRequest, ...grpc.CallOption) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *certtypesv1beta2.QueryCertificatesRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)

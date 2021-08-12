@@ -1,0 +1,31 @@
+syntax = "proto3";
+package akash.deployment.v1beta2;
+
+import "akash/deployment/v1beta2/deploymentmsg.proto";
+import "akash/deployment/v1beta2/groupmsg.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types/v1beta2";
+
+// Msg defines the deployment Msg service.
+service Msg {
+  // CreateDeployment defines a method to create new deployment given proper inputs.
+  rpc CreateDeployment(MsgCreateDeployment) returns (MsgCreateDeploymentResponse);
+
+  // DepositDeployment deposits more funds into the deployment account
+  rpc DepositDeployment(MsgDepositDeployment) returns (MsgDepositDeploymentResponse);
+
+  // UpdateDeployment defines a method to update a deployment given proper inputs.
+  rpc UpdateDeployment(MsgUpdateDeployment) returns (MsgUpdateDeploymentResponse);
+
+  // CloseDeployment defines a method to close a deployment given proper inputs.
+  rpc CloseDeployment(MsgCloseDeployment) returns (MsgCloseDeploymentResponse);
+
+  // CloseGroup defines a method to close a group of a deployment given proper inputs.
+  rpc CloseGroup(MsgCloseGroup) returns (MsgCloseGroupResponse);
+
+  // PauseGroup defines a method to close a group of a deployment given proper inputs.
+  rpc PauseGroup(MsgPauseGroup) returns (MsgPauseGroupResponse);
+
+  // StartGroup defines a method to close a group of a deployment given proper inputs.
+  rpc StartGroup(MsgStartGroup) returns (MsgStartGroupResponse);
+}
