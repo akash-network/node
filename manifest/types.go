@@ -46,6 +46,16 @@ func (g Group) GetResources() []types.Resources {
 	return resources
 }
 
+type StorageParams struct {
+	Name     string `json:"name" yaml:"name"`
+	Mount    string `json:"readOnly" yaml:"mount"`
+	ReadOnly bool   `json:"mount" yaml:"readOnly"`
+}
+
+type ServiceParams struct {
+	Storage []StorageParams
+}
+
 // Service stores name, image, args, env, unit, count and expose list of service
 type Service struct {
 	Name      string
@@ -56,9 +66,10 @@ type Service struct {
 	Resources types.ResourceUnits
 	Count     uint32
 	Expose    []ServiceExpose
+	Params    *ServiceParams `json:"params,omitempty" yaml:"params,omitempty"`
 }
 
-// GetResourcesUnit returns resources unit of service
+// GetResourceUnits returns resources unit of service
 func (s Service) GetResourceUnits() types.ResourceUnits {
 	return s.Resources
 }

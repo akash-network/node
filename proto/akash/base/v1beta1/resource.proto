@@ -4,7 +4,6 @@ package akash.base.v1beta1;
 import "gogoproto/gogo.proto";
 import "akash/base/v1beta1/attribute.proto";
 import "akash/base/v1beta1/resourcevalue.proto";
-import "akash/base/v1beta1/endpoint.proto";
 
 option go_package = "github.com/ovrclk/akash/types";
 
@@ -12,10 +11,11 @@ option go_package = "github.com/ovrclk/akash/types";
 message CPU {
   option (gogoproto.equal)      = true;
   ResourceValue      units      = 1 [(gogoproto.nullable) = false];
-  repeated Attribute attributes = 2 [
+  repeated akash.base.v1beta1.Attribute attributes = 2 [
     (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "Attributes",
     (gogoproto.jsontag)  = "attributes,omitempty",
-    (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
+    (gogoproto.moretags) = "yaml:\"attributes,omitempty\""
   ];
 }
 
@@ -24,45 +24,30 @@ message Memory {
   option (gogoproto.equal) = true;
   ResourceValue quantity   = 1
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "size", (gogoproto.moretags) = "yaml:\"size\""];
-  repeated Attribute attributes = 2 [
+  repeated akash.base.v1beta1.Attribute attributes = 2 [
     (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "Attributes",
     (gogoproto.jsontag)  = "attributes,omitempty",
-    (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
+    (gogoproto.moretags) = "yaml:\"attributes,omitempty\""
   ];
 }
 
 // Storage stores resource quantity and storage attributes
 message Storage {
   option (gogoproto.equal) = true;
-  ResourceValue quantity   = 1
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "size", (gogoproto.moretags) = "yaml:\"size\""];
-  repeated Attribute attributes = 2 [
+  string name = 1 [
+    (gogoproto.jsontag) = "name",
+    (gogoproto.moretags) = "yaml:\"name\""
+  ];
+  ResourceValue quantity = 2 [
     (gogoproto.nullable) = false,
-    (gogoproto.jsontag)  = "attributes,omitempty",
-    (gogoproto.moretags) = "yaml:\"cpu,omitempty\""
+    (gogoproto.jsontag) = "size",
+    (gogoproto.moretags) = "yaml:\"size\""
   ];
-}
-
-// ResourceUnits describes all available resources types for deployment/node etc
-// if field is nil resource is not present in the given data-structure
-message ResourceUnits {
-  option (gogoproto.equal) = true;
-  CPU cpu                  = 1 [
-    (gogoproto.nullable)   = true,
-    (gogoproto.customname) = "CPU",
-    (gogoproto.jsontag)    = "cpu,omitempty",
-    (gogoproto.moretags)   = "yaml:\"cpu,omitempty\""
+  repeated akash.base.v1beta1.Attribute attributes = 3 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "Attributes",
+    (gogoproto.jsontag) = "attributes,omitempty",
+    (gogoproto.moretags) = "yaml:\"attributes,omitempty\""
   ];
-  Memory memory = 2 [
-    (gogoproto.nullable) = true,
-    (gogoproto.jsontag)  = "memory,omitempty",
-    (gogoproto.moretags) = "yaml:\"memory,omitempty\""
-  ];
-  Storage storage = 3 [
-    (gogoproto.nullable) = true,
-    (gogoproto.jsontag)  = "storage,omitempty",
-    (gogoproto.moretags) = "yaml:\"storage,omitempty\""
-  ];
-  repeated akash.base.v1beta1.Endpoint endpoints = 4
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "endpoints", (gogoproto.moretags) = "yaml:\"endpoints\""];
 }

@@ -14,7 +14,7 @@ type ValidationConfig struct {
 	MaxUnitMemory uint64
 	// MaxUnitStorage is the maximum number of bytes of storage that a unit can consume
 	MaxUnitStorage uint64
-	// MaxUnitCount is the maximum number of replias of a service
+	// MaxUnitCount is the maximum number of replicas of a service
 	MaxUnitCount uint
 	// MaxUnitPrice is the maximum price that a unit can have
 	MaxUnitPrice uint64

@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1
 
+// InventoryListerExpansion allows custom methods to be added to
+// InventoryLister.
+type InventoryListerExpansion interface{}
+
+// InventoryRequestListerExpansion allows custom methods to be added to
+// InventoryRequestLister.
+type InventoryRequestListerExpansion interface{}
+
 // ManifestListerExpansion allows custom methods to be added to
 // ManifestLister.
 type ManifestListerExpansion interface{}

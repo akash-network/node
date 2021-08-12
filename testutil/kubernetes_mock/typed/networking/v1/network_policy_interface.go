@@ -8,9 +8,11 @@ import (
 	mock "github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	networkingv1 "k8s.io/api/networking/v1"
+
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/networking/v1"
+	v1 "k8s.io/client-go/applyconfigurations/networking/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +22,44 @@ type NetworkPolicyInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, networkPolicy, opts
-func (_m *NetworkPolicyInterface) Create(ctx context.Context, networkPolicy *v1.NetworkPolicy, opts metav1.CreateOptions) (*v1.NetworkPolicy, error) {
+// Apply provides a mock function with given fields: ctx, networkPolicy, opts
+func (_m *NetworkPolicyInterface) Apply(ctx context.Context, networkPolicy *v1.NetworkPolicyApplyConfiguration, opts metav1.ApplyOptions) (*networkingv1.NetworkPolicy, error) {
 	ret := _m.Called(ctx, networkPolicy, opts)
 
-	var r0 *v1.NetworkPolicy
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.NetworkPolicy, metav1.CreateOptions) *v1.NetworkPolicy); ok {
+	var r0 *networkingv1.NetworkPolicy
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.NetworkPolicyApplyConfiguration, metav1.ApplyOptions) *networkingv1.NetworkPolicy); ok {
 		r0 = rf(ctx, networkPolicy, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.NetworkPolicy)
+			r0 = ret.Get(0).(*networkingv1.NetworkPolicy)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.NetworkPolicy, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.NetworkPolicyApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, networkPolicy, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, networkPolicy, opts
+func (_m *NetworkPolicyInterface) Create(ctx context.Context, networkPolicy *networkingv1.NetworkPolicy, opts metav1.CreateOptions) (*networkingv1.NetworkPolicy, error) {
+	ret := _m.Called(ctx, networkPolicy, opts)
+
+	var r0 *networkingv1.NetworkPolicy
+	if rf, ok := ret.Get(0).(func(context.Context, *networkingv1.NetworkPolicy, metav1.CreateOptions) *networkingv1.NetworkPolicy); ok {
+		r0 = rf(ctx, networkPolicy, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*networkingv1.NetworkPolicy)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *networkingv1.NetworkPolicy, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, networkPolicy, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +97,15 @@ func (_m *NetworkPolicyInterface) DeleteCollection(ctx context.Context, opts met
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *NetworkPolicyInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.NetworkPolicy, error) {
+func (_m *NetworkPolicyInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*networkingv1.NetworkPolicy, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.NetworkPolicy
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.NetworkPolicy); ok {
+	var r0 *networkingv1.NetworkPolicy
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *networkingv1.NetworkPolicy); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.NetworkPolicy)
+			r0 = ret.Get(0).(*networkingv1.NetworkPolicy)
 		}
 	}
 
@@ -95,15 +120,15 @@ func (_m *NetworkPolicyInterface) Get(ctx context.Context, name string, opts met
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *NetworkPolicyInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.NetworkPolicyList, error) {
+func (_m *NetworkPolicyInterface) List(ctx context.Context, opts metav1.ListOptions) (*networkingv1.NetworkPolicyList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.NetworkPolicyList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.NetworkPolicyList); ok {
+	var r0 *networkingv1.NetworkPolicyList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *networkingv1.NetworkPolicyList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.NetworkPolicyList)
+			r0 = ret.Get(0).(*networkingv1.NetworkPolicyList)
 		}
 	}
 
@@ -118,7 +143,7 @@ func (_m *NetworkPolicyInterface) List(ctx context.Context, opts metav1.ListOpti
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *NetworkPolicyInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.NetworkPolicy, error) {
+func (_m *NetworkPolicyInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*networkingv1.NetworkPolicy, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +153,12 @@ func (_m *NetworkPolicyInterface) Patch(ctx context.Context, name string, pt typ
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.NetworkPolicy
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.NetworkPolicy); ok {
+	var r0 *networkingv1.NetworkPolicy
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *networkingv1.NetworkPolicy); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.NetworkPolicy)
+			r0 = ret.Get(0).(*networkingv1.NetworkPolicy)
 		}
 	}
 
@@ -148,20 +173,20 @@ func (_m *NetworkPolicyInterface) Patch(ctx context.Context, name string, pt typ
 }
 
 // Update provides a mock function with given fields: ctx, networkPolicy, opts
-func (_m *NetworkPolicyInterface) Update(ctx context.Context, networkPolicy *v1.NetworkPolicy, opts metav1.UpdateOptions) (*v1.NetworkPolicy, error) {
+func (_m *NetworkPolicyInterface) Update(ctx context.Context, networkPolicy *networkingv1.NetworkPolicy, opts metav1.UpdateOptions) (*networkingv1.NetworkPolicy, error) {
 	ret := _m.Called(ctx, networkPolicy, opts)
 
-	var r0 *v1.NetworkPolicy
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.NetworkPolicy, metav1.UpdateOptions) *v1.NetworkPolicy); ok {
+	var r0 *networkingv1.NetworkPolicy
+	if rf, ok := ret.Get(0).(func(context.Context, *networkingv1.NetworkPolicy, metav1.UpdateOptions) *networkingv1.NetworkPolicy); ok {
 		r0 = rf(ctx, networkPolicy, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.NetworkPolicy)
+			r0 = ret.Get(0).(*networkingv1.NetworkPolicy)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.NetworkPolicy, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *networkingv1.NetworkPolicy, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, networkPolicy, opts)
 	} else {
 		r1 = ret.Error(1)

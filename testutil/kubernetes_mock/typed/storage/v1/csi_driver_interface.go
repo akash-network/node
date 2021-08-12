@@ -8,9 +8,11 @@ import (
 	mock "github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	storagev1 "k8s.io/api/storage/v1"
+
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/storage/v1"
+	v1 "k8s.io/client-go/applyconfigurations/storage/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +22,44 @@ type CSIDriverInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, cSIDriver, opts
-func (_m *CSIDriverInterface) Create(ctx context.Context, cSIDriver *v1.CSIDriver, opts metav1.CreateOptions) (*v1.CSIDriver, error) {
+// Apply provides a mock function with given fields: ctx, cSIDriver, opts
+func (_m *CSIDriverInterface) Apply(ctx context.Context, cSIDriver *v1.CSIDriverApplyConfiguration, opts metav1.ApplyOptions) (*storagev1.CSIDriver, error) {
 	ret := _m.Called(ctx, cSIDriver, opts)
 
-	var r0 *v1.CSIDriver
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.CSIDriver, metav1.CreateOptions) *v1.CSIDriver); ok {
+	var r0 *storagev1.CSIDriver
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.CSIDriverApplyConfiguration, metav1.ApplyOptions) *storagev1.CSIDriver); ok {
 		r0 = rf(ctx, cSIDriver, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.CSIDriver)
+			r0 = ret.Get(0).(*storagev1.CSIDriver)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.CSIDriver, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.CSIDriverApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, cSIDriver, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, cSIDriver, opts
+func (_m *CSIDriverInterface) Create(ctx context.Context, cSIDriver *storagev1.CSIDriver, opts metav1.CreateOptions) (*storagev1.CSIDriver, error) {
+	ret := _m.Called(ctx, cSIDriver, opts)
+
+	var r0 *storagev1.CSIDriver
+	if rf, ok := ret.Get(0).(func(context.Context, *storagev1.CSIDriver, metav1.CreateOptions) *storagev1.CSIDriver); ok {
+		r0 = rf(ctx, cSIDriver, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*storagev1.CSIDriver)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *storagev1.CSIDriver, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, cSIDriver, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +97,15 @@ func (_m *CSIDriverInterface) DeleteCollection(ctx context.Context, opts metav1.
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *CSIDriverInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.CSIDriver, error) {
+func (_m *CSIDriverInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*storagev1.CSIDriver, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.CSIDriver
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.CSIDriver); ok {
+	var r0 *storagev1.CSIDriver
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *storagev1.CSIDriver); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.CSIDriver)
+			r0 = ret.Get(0).(*storagev1.CSIDriver)
 		}
 	}
 
@@ -95,15 +120,15 @@ func (_m *CSIDriverInterface) Get(ctx context.Context, name string, opts metav1.
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *CSIDriverInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.CSIDriverList, error) {
+func (_m *CSIDriverInterface) List(ctx context.Context, opts metav1.ListOptions) (*storagev1.CSIDriverList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.CSIDriverList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.CSIDriverList); ok {
+	var r0 *storagev1.CSIDriverList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *storagev1.CSIDriverList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.CSIDriverList)
+			r0 = ret.Get(0).(*storagev1.CSIDriverList)
 		}
 	}
 
@@ -118,7 +143,7 @@ func (_m *CSIDriverInterface) List(ctx context.Context, opts metav1.ListOptions)
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *CSIDriverInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.CSIDriver, error) {
+func (_m *CSIDriverInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*storagev1.CSIDriver, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +153,12 @@ func (_m *CSIDriverInterface) Patch(ctx context.Context, name string, pt types.P
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.CSIDriver
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.CSIDriver); ok {
+	var r0 *storagev1.CSIDriver
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *storagev1.CSIDriver); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.CSIDriver)
+			r0 = ret.Get(0).(*storagev1.CSIDriver)
 		}
 	}
 
@@ -148,20 +173,20 @@ func (_m *CSIDriverInterface) Patch(ctx context.Context, name string, pt types.P
 }
 
 // Update provides a mock function with given fields: ctx, cSIDriver, opts
-func (_m *CSIDriverInterface) Update(ctx context.Context, cSIDriver *v1.CSIDriver, opts metav1.UpdateOptions) (*v1.CSIDriver, error) {
+func (_m *CSIDriverInterface) Update(ctx context.Context, cSIDriver *storagev1.CSIDriver, opts metav1.UpdateOptions) (*storagev1.CSIDriver, error) {
 	ret := _m.Called(ctx, cSIDriver, opts)
 
-	var r0 *v1.CSIDriver
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.CSIDriver, metav1.UpdateOptions) *v1.CSIDriver); ok {
+	var r0 *storagev1.CSIDriver
+	if rf, ok := ret.Get(0).(func(context.Context, *storagev1.CSIDriver, metav1.UpdateOptions) *storagev1.CSIDriver); ok {
 		r0 = rf(ctx, cSIDriver, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.CSIDriver)
+			r0 = ret.Get(0).(*storagev1.CSIDriver)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.CSIDriver, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *storagev1.CSIDriver, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, cSIDriver, opts)
 	} else {
 		r1 = ret.Error(1)

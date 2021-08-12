@@ -7,13 +7,15 @@ import (
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 
+	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/core/v1"
+	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -23,21 +25,44 @@ type ServiceAccountInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, serviceAccount, opts
-func (_m *ServiceAccountInterface) Create(ctx context.Context, serviceAccount *v1.ServiceAccount, opts metav1.CreateOptions) (*v1.ServiceAccount, error) {
+// Apply provides a mock function with given fields: ctx, serviceAccount, opts
+func (_m *ServiceAccountInterface) Apply(ctx context.Context, serviceAccount *v1.ServiceAccountApplyConfiguration, opts metav1.ApplyOptions) (*corev1.ServiceAccount, error) {
 	ret := _m.Called(ctx, serviceAccount, opts)
 
-	var r0 *v1.ServiceAccount
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.ServiceAccount, metav1.CreateOptions) *v1.ServiceAccount); ok {
+	var r0 *corev1.ServiceAccount
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.ServiceAccountApplyConfiguration, metav1.ApplyOptions) *corev1.ServiceAccount); ok {
 		r0 = rf(ctx, serviceAccount, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ServiceAccount)
+			r0 = ret.Get(0).(*corev1.ServiceAccount)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.ServiceAccount, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.ServiceAccountApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, serviceAccount, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, serviceAccount, opts
+func (_m *ServiceAccountInterface) Create(ctx context.Context, serviceAccount *corev1.ServiceAccount, opts metav1.CreateOptions) (*corev1.ServiceAccount, error) {
+	ret := _m.Called(ctx, serviceAccount, opts)
+
+	var r0 *corev1.ServiceAccount
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.ServiceAccount, metav1.CreateOptions) *corev1.ServiceAccount); ok {
+		r0 = rf(ctx, serviceAccount, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.ServiceAccount)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.ServiceAccount, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, serviceAccount, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -98,15 +123,15 @@ func (_m *ServiceAccountInterface) DeleteCollection(ctx context.Context, opts me
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *ServiceAccountInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ServiceAccount, error) {
+func (_m *ServiceAccountInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.ServiceAccount, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.ServiceAccount
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.ServiceAccount); ok {
+	var r0 *corev1.ServiceAccount
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *corev1.ServiceAccount); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ServiceAccount)
+			r0 = ret.Get(0).(*corev1.ServiceAccount)
 		}
 	}
 
@@ -121,15 +146,15 @@ func (_m *ServiceAccountInterface) Get(ctx context.Context, name string, opts me
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *ServiceAccountInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.ServiceAccountList, error) {
+func (_m *ServiceAccountInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.ServiceAccountList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.ServiceAccountList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.ServiceAccountList); ok {
+	var r0 *corev1.ServiceAccountList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *corev1.ServiceAccountList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ServiceAccountList)
+			r0 = ret.Get(0).(*corev1.ServiceAccountList)
 		}
 	}
 
@@ -144,7 +169,7 @@ func (_m *ServiceAccountInterface) List(ctx context.Context, opts metav1.ListOpt
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *ServiceAccountInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.ServiceAccount, error) {
+func (_m *ServiceAccountInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*corev1.ServiceAccount, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -154,12 +179,12 @@ func (_m *ServiceAccountInterface) Patch(ctx context.Context, name string, pt ty
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.ServiceAccount
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.ServiceAccount); ok {
+	var r0 *corev1.ServiceAccount
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *corev1.ServiceAccount); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ServiceAccount)
+			r0 = ret.Get(0).(*corev1.ServiceAccount)
 		}
 	}
 
@@ -174,20 +199,20 @@ func (_m *ServiceAccountInterface) Patch(ctx context.Context, name string, pt ty
 }
 
 // Update provides a mock function with given fields: ctx, serviceAccount, opts
-func (_m *ServiceAccountInterface) Update(ctx context.Context, serviceAccount *v1.ServiceAccount, opts metav1.UpdateOptions) (*v1.ServiceAccount, error) {
+func (_m *ServiceAccountInterface) Update(ctx context.Context, serviceAccount *corev1.ServiceAccount, opts metav1.UpdateOptions) (*corev1.ServiceAccount, error) {
 	ret := _m.Called(ctx, serviceAccount, opts)
 
-	var r0 *v1.ServiceAccount
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.ServiceAccount, metav1.UpdateOptions) *v1.ServiceAccount); ok {
+	var r0 *corev1.ServiceAccount
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.ServiceAccount, metav1.UpdateOptions) *corev1.ServiceAccount); ok {
 		r0 = rf(ctx, serviceAccount, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ServiceAccount)
+			r0 = ret.Get(0).(*corev1.ServiceAccount)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.ServiceAccount, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.ServiceAccount, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, serviceAccount, opts)
 	} else {
 		r1 = ret.Error(1)

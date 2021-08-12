@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1alpha1 "k8s.io/api/rbac/v1alpha1"
+	v1alpha1 "k8s.io/client-go/applyconfigurations/rbac/v1alpha1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,44 @@ type RoleBindingInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, roleBinding, opts
-func (_m *RoleBindingInterface) Create(ctx context.Context, roleBinding *v1alpha1.RoleBinding, opts v1.CreateOptions) (*v1alpha1.RoleBinding, error) {
+// Apply provides a mock function with given fields: ctx, roleBinding, opts
+func (_m *RoleBindingInterface) Apply(ctx context.Context, roleBinding *v1alpha1.RoleBindingApplyConfiguration, opts v1.ApplyOptions) (*rbacv1alpha1.RoleBinding, error) {
 	ret := _m.Called(ctx, roleBinding, opts)
 
-	var r0 *v1alpha1.RoleBinding
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.RoleBinding, v1.CreateOptions) *v1alpha1.RoleBinding); ok {
+	var r0 *rbacv1alpha1.RoleBinding
+	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.RoleBindingApplyConfiguration, v1.ApplyOptions) *rbacv1alpha1.RoleBinding); ok {
 		r0 = rf(ctx, roleBinding, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.RoleBinding)
+			r0 = ret.Get(0).(*rbacv1alpha1.RoleBinding)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.RoleBinding, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.RoleBindingApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, roleBinding, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, roleBinding, opts
+func (_m *RoleBindingInterface) Create(ctx context.Context, roleBinding *rbacv1alpha1.RoleBinding, opts v1.CreateOptions) (*rbacv1alpha1.RoleBinding, error) {
+	ret := _m.Called(ctx, roleBinding, opts)
+
+	var r0 *rbacv1alpha1.RoleBinding
+	if rf, ok := ret.Get(0).(func(context.Context, *rbacv1alpha1.RoleBinding, v1.CreateOptions) *rbacv1alpha1.RoleBinding); ok {
+		r0 = rf(ctx, roleBinding, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rbacv1alpha1.RoleBinding)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rbacv1alpha1.RoleBinding, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, roleBinding, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +97,15 @@ func (_m *RoleBindingInterface) DeleteCollection(ctx context.Context, opts v1.De
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *RoleBindingInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.RoleBinding, error) {
+func (_m *RoleBindingInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*rbacv1alpha1.RoleBinding, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1alpha1.RoleBinding
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1alpha1.RoleBinding); ok {
+	var r0 *rbacv1alpha1.RoleBinding
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *rbacv1alpha1.RoleBinding); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.RoleBinding)
+			r0 = ret.Get(0).(*rbacv1alpha1.RoleBinding)
 		}
 	}
 
@@ -96,15 +120,15 @@ func (_m *RoleBindingInterface) Get(ctx context.Context, name string, opts v1.Ge
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *RoleBindingInterface) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.RoleBindingList, error) {
+func (_m *RoleBindingInterface) List(ctx context.Context, opts v1.ListOptions) (*rbacv1alpha1.RoleBindingList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1alpha1.RoleBindingList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1alpha1.RoleBindingList); ok {
+	var r0 *rbacv1alpha1.RoleBindingList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *rbacv1alpha1.RoleBindingList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.RoleBindingList)
+			r0 = ret.Get(0).(*rbacv1alpha1.RoleBindingList)
 		}
 	}
 
@@ -119,7 +143,7 @@ func (_m *RoleBindingInterface) List(ctx context.Context, opts v1.ListOptions) (
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *RoleBindingInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1alpha1.RoleBinding, error) {
+func (_m *RoleBindingInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*rbacv1alpha1.RoleBinding, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +153,12 @@ func (_m *RoleBindingInterface) Patch(ctx context.Context, name string, pt types
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1alpha1.RoleBinding
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1alpha1.RoleBinding); ok {
+	var r0 *rbacv1alpha1.RoleBinding
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *rbacv1alpha1.RoleBinding); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.RoleBinding)
+			r0 = ret.Get(0).(*rbacv1alpha1.RoleBinding)
 		}
 	}
 
@@ -149,20 +173,20 @@ func (_m *RoleBindingInterface) Patch(ctx context.Context, name string, pt types
 }
 
 // Update provides a mock function with given fields: ctx, roleBinding, opts
-func (_m *RoleBindingInterface) Update(ctx context.Context, roleBinding *v1alpha1.RoleBinding, opts v1.UpdateOptions) (*v1alpha1.RoleBinding, error) {
+func (_m *RoleBindingInterface) Update(ctx context.Context, roleBinding *rbacv1alpha1.RoleBinding, opts v1.UpdateOptions) (*rbacv1alpha1.RoleBinding, error) {
 	ret := _m.Called(ctx, roleBinding, opts)
 
-	var r0 *v1alpha1.RoleBinding
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.RoleBinding, v1.UpdateOptions) *v1alpha1.RoleBinding); ok {
+	var r0 *rbacv1alpha1.RoleBinding
+	if rf, ok := ret.Get(0).(func(context.Context, *rbacv1alpha1.RoleBinding, v1.UpdateOptions) *rbacv1alpha1.RoleBinding); ok {
 		r0 = rf(ctx, roleBinding, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.RoleBinding)
+			r0 = ret.Get(0).(*rbacv1alpha1.RoleBinding)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.RoleBinding, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *rbacv1alpha1.RoleBinding, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, roleBinding, opts)
 	} else {
 		r1 = ret.Error(1)

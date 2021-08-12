@@ -3,7 +3,9 @@
 package kubernetes_mocks
 
 import (
+	apiserverinternalv1alpha1 "k8s.io/client-go/kubernetes/typed/apiserverinternal/v1alpha1"
 	appsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
+
 	appsv1beta1 "k8s.io/client-go/kubernetes/typed/apps/v1beta1"
 
 	authenticationv1 "k8s.io/client-go/kubernetes/typed/authentication/v1"
@@ -32,6 +34,8 @@ import (
 
 	discovery "k8s.io/client-go/discovery"
 
+	discoveryv1 "k8s.io/client-go/kubernetes/typed/discovery/v1"
+
 	discoveryv1beta1 "k8s.io/client-go/kubernetes/typed/discovery/v1beta1"
 
 	eventsv1 "k8s.io/client-go/kubernetes/typed/events/v1"
@@ -40,7 +44,7 @@ import (
 
 	extensionsv1beta1 "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 
-	flowcontrolv1alpha1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1alpha1"
+	flowcontrolv1beta1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta1"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -48,9 +52,13 @@ import (
 
 	networkingv1beta1 "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
 
+	nodev1 "k8s.io/client-go/kubernetes/typed/node/v1"
+
 	nodev1alpha1 "k8s.io/client-go/kubernetes/typed/node/v1alpha1"
 
 	nodev1beta1 "k8s.io/client-go/kubernetes/typed/node/v1beta1"
+
+	policyv1 "k8s.io/client-go/kubernetes/typed/policy/v1"
 
 	policyv1beta1 "k8s.io/client-go/kubernetes/typed/policy/v1beta1"
 
@@ -66,8 +74,6 @@ import (
 
 	schedulingv1beta1 "k8s.io/client-go/kubernetes/typed/scheduling/v1beta1"
 
-	settingsv1alpha1 "k8s.io/client-go/kubernetes/typed/settings/v1alpha1"
-
 	storagev1 "k8s.io/client-go/kubernetes/typed/storage/v1"
 
 	storagev1alpha1 "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
@@ -76,13 +82,11 @@ import (
 
 	v1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1"
 
-	v1alpha1 "k8s.io/client-go/kubernetes/typed/discovery/v1alpha1"
+	v1alpha1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1alpha1"
 
 	v1beta1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1beta1"
 
 	v1beta2 "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
-
-	v2alpha1 "k8s.io/client-go/kubernetes/typed/batch/v2alpha1"
 
 	v2beta1 "k8s.io/client-go/kubernetes/typed/autoscaling/v2beta1"
 
@@ -318,22 +322,6 @@ func (_m *Interface) BatchV1beta1() batchv1beta1.BatchV1beta1Interface {
 	return r0
 }
 
-// BatchV2alpha1 provides a mock function with given fields:
-func (_m *Interface) BatchV2alpha1() v2alpha1.BatchV2alpha1Interface {
-	ret := _m.Called()
-
-	var r0 v2alpha1.BatchV2alpha1Interface
-	if rf, ok := ret.Get(0).(func() v2alpha1.BatchV2alpha1Interface); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(v2alpha1.BatchV2alpha1Interface)
-		}
-	}
-
-	return r0
-}
-
 // CertificatesV1 provides a mock function with given fields:
 func (_m *Interface) CertificatesV1() certificatesv1.CertificatesV1Interface {
 	ret := _m.Called()
@@ -430,16 +418,16 @@ func (_m *Interface) Discovery() discovery.DiscoveryInterface {
 	return r0
 }
 
-// DiscoveryV1alpha1 provides a mock function with given fields:
-func (_m *Interface) DiscoveryV1alpha1() v1alpha1.DiscoveryV1alpha1Interface {
+// DiscoveryV1 provides a mock function with given fields:
+func (_m *Interface) DiscoveryV1() discoveryv1.DiscoveryV1Interface {
 	ret := _m.Called()
 
-	var r0 v1alpha1.DiscoveryV1alpha1Interface
-	if rf, ok := ret.Get(0).(func() v1alpha1.DiscoveryV1alpha1Interface); ok {
+	var r0 discoveryv1.DiscoveryV1Interface
+	if rf, ok := ret.Get(0).(func() discoveryv1.DiscoveryV1Interface); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(v1alpha1.DiscoveryV1alpha1Interface)
+			r0 = ret.Get(0).(discoveryv1.DiscoveryV1Interface)
 		}
 	}
 
@@ -511,15 +499,47 @@ func (_m *Interface) ExtensionsV1beta1() extensionsv1beta1.ExtensionsV1beta1Inte
 }
 
 // FlowcontrolV1alpha1 provides a mock function with given fields:
-func (_m *Interface) FlowcontrolV1alpha1() flowcontrolv1alpha1.FlowcontrolV1alpha1Interface {
+func (_m *Interface) FlowcontrolV1alpha1() v1alpha1.FlowcontrolV1alpha1Interface {
 	ret := _m.Called()
 
-	var r0 flowcontrolv1alpha1.FlowcontrolV1alpha1Interface
-	if rf, ok := ret.Get(0).(func() flowcontrolv1alpha1.FlowcontrolV1alpha1Interface); ok {
+	var r0 v1alpha1.FlowcontrolV1alpha1Interface
+	if rf, ok := ret.Get(0).(func() v1alpha1.FlowcontrolV1alpha1Interface); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(flowcontrolv1alpha1.FlowcontrolV1alpha1Interface)
+			r0 = ret.Get(0).(v1alpha1.FlowcontrolV1alpha1Interface)
+		}
+	}
+
+	return r0
+}
+
+// FlowcontrolV1beta1 provides a mock function with given fields:
+func (_m *Interface) FlowcontrolV1beta1() flowcontrolv1beta1.FlowcontrolV1beta1Interface {
+	ret := _m.Called()
+
+	var r0 flowcontrolv1beta1.FlowcontrolV1beta1Interface
+	if rf, ok := ret.Get(0).(func() flowcontrolv1beta1.FlowcontrolV1beta1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(flowcontrolv1beta1.FlowcontrolV1beta1Interface)
+		}
+	}
+
+	return r0
+}
+
+// InternalV1alpha1 provides a mock function with given fields:
+func (_m *Interface) InternalV1alpha1() apiserverinternalv1alpha1.InternalV1alpha1Interface {
+	ret := _m.Called()
+
+	var r0 apiserverinternalv1alpha1.InternalV1alpha1Interface
+	if rf, ok := ret.Get(0).(func() apiserverinternalv1alpha1.InternalV1alpha1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(apiserverinternalv1alpha1.InternalV1alpha1Interface)
 		}
 	}
 
@@ -558,6 +578,22 @@ func (_m *Interface) NetworkingV1beta1() networkingv1beta1.NetworkingV1beta1Inte
 	return r0
 }
 
+// NodeV1 provides a mock function with given fields:
+func (_m *Interface) NodeV1() nodev1.NodeV1Interface {
+	ret := _m.Called()
+
+	var r0 nodev1.NodeV1Interface
+	if rf, ok := ret.Get(0).(func() nodev1.NodeV1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(nodev1.NodeV1Interface)
+		}
+	}
+
+	return r0
+}
+
 // NodeV1alpha1 provides a mock function with given fields:
 func (_m *Interface) NodeV1alpha1() nodev1alpha1.NodeV1alpha1Interface {
 	ret := _m.Called()
@@ -584,6 +620,22 @@ func (_m *Interface) NodeV1beta1() nodev1beta1.NodeV1beta1Interface {
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(nodev1beta1.NodeV1beta1Interface)
+		}
+	}
+
+	return r0
+}
+
+// PolicyV1 provides a mock function with given fields:
+func (_m *Interface) PolicyV1() policyv1.PolicyV1Interface {
+	ret := _m.Called()
+
+	var r0 policyv1.PolicyV1Interface
+	if rf, ok := ret.Get(0).(func() policyv1.PolicyV1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(policyv1.PolicyV1Interface)
 		}
 	}
 
@@ -696,22 +748,6 @@ func (_m *Interface) SchedulingV1beta1() schedulingv1beta1.SchedulingV1beta1Inte
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(schedulingv1beta1.SchedulingV1beta1Interface)
-		}
-	}
-
-	return r0
-}
-
-// SettingsV1alpha1 provides a mock function with given fields:
-func (_m *Interface) SettingsV1alpha1() settingsv1alpha1.SettingsV1alpha1Interface {
-	ret := _m.Called()
-
-	var r0 settingsv1alpha1.SettingsV1alpha1Interface
-	if rf, ok := ret.Get(0).(func() settingsv1alpha1.SettingsV1alpha1Interface); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(settingsv1alpha1.SettingsV1alpha1Interface)
 		}
 	}
 

@@ -1,0 +1,28 @@
+syntax = "proto3";
+package akash.deployment.v1beta1legacy;
+
+import "gogoproto/gogo.proto";
+import "akash/base/v1beta1legacy/resourceunits.proto";
+import "cosmos/base/v1beta1/coin.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types/legacy";
+
+// Resource stores unit, total count and price of resource
+message Resource {
+  option (gogoproto.equal) = false;
+
+  akash.base.v1beta1legacy.ResourceUnits resources = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "unit",
+    (gogoproto.moretags) = "yaml:\"unit\""
+  ];
+  uint32 count = 2 [
+    (gogoproto.jsontag) = "count",
+    (gogoproto.moretags) = "yaml:\"count\""
+  ];
+  cosmos.base.v1beta1.Coin price = 3 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "price",
+    (gogoproto.moretags) = "yaml:\"price\""
+  ];
+}

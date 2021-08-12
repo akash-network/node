@@ -66,6 +66,24 @@ func (g GroupSpec) Price() sdk.Coin {
 	return price
 }
 
+// MatchResourcesRequirements check if resources attributes match provider's capabilities
+func (g GroupSpec) MatchResourcesRequirements(pattr types.Attributes) bool {
+	for _, rgroup := range g.GetResources() {
+		pgroup := pattr.GetCapabilitiesGroup("storage")
+		for _, storage := range rgroup.Resources.Storage {
+			if len(storage.Attributes) == 0 {
+				continue
+			}
+
+			if !storage.Attributes.IN(pgroup) {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
 // MatchRequirements method compares provided attributes with specific group attributes.
 // Argument provider is a bit cumbersome. First element is attributes from x/provider store
 // in case tenant does not need signed attributes at all
@@ -143,7 +161,7 @@ func (g Group) ValidatePausable() error {
 	}
 }
 
-// ValidatePausable provides error response if group is not pausable
+// ValidateStartable provides error response if group is not pausable
 func (g Group) ValidateStartable() error {
 	switch g.State {
 	case GroupClosed:
