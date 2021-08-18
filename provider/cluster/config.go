@@ -10,6 +10,8 @@ type Config struct {
 	MemoryCommitLevel               float64
 	StorageCommitLevel              float64
 	BlockedHostnames                []string
+	DeploymentIngressStaticHosts bool
+	DeploymentIngressDomain string
 }
 
 func NewDefaultConfig() Config {

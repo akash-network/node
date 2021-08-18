@@ -7,6 +7,10 @@ services:
     expose:
       - port: 80
         as: 80
+        http_options:
+          max_body_size: 2097152
+          next_cases: 
+            - off
         accept:
           - hello.localhost
         to:

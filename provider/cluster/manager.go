@@ -6,11 +6,13 @@ import (
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/cluster/util"
+	"github.com/ovrclk/akash/provider/event"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"time"
 
 	retry "github.com/avast/retry-go"
+	clusterutil "github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -52,31 +54,33 @@ type deploymentManager struct {
 	monitor    *deploymentMonitor
 	withdrawal *deploymentWithdrawal
 	wg         sync.WaitGroup
-
 	updatech   chan *manifest.Group
 	teardownch chan struct{}
 
 	log             log.Logger
 	lc              lifecycle.Lifecycle
 	hostnameService HostnameServiceClient
+
+	config Config
 }
 
 func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Group) *deploymentManager {
 	log := s.log.With("cmp", "deployment-manager", "lease", lease, "manifest-group", mgroup.Name)
 
 	dm := &deploymentManager{
-		bus:             s.bus,
-		client:          s.client,
-		session:         s.session,
-		state:           dsDeployActive,
-		lease:           lease,
-		mgroup:          mgroup,
-		wg:              sync.WaitGroup{},
-		updatech:        make(chan *manifest.Group),
-		teardownch:      make(chan struct{}),
-		log:             log,
-		lc:              lifecycle.New(),
-		hostnameService: s.HostnameService(),
+		bus:               s.bus,
+		client:            s.client,
+		session:           s.session,
+		state:             dsDeployActive,
+		lease:             lease,
+		mgroup:            mgroup,
+		wg:                sync.WaitGroup{},
+		updatech:          make(chan *manifest.Group),
+		teardownch:        make(chan struct{}),
+		log:               log,
+		lc:                lifecycle.New(),
+		hostnameService:   s.HostnameService(),
+		config: s.config,
 	}
 
 	go dm.lc.WatchChannel(s.lc.ShuttingDown())
@@ -108,47 +112,45 @@ func (dm *deploymentManager) teardown() error {
 	}
 }
 
+func (dm *deploymentManager) handleUpdate() <- chan error{
+	switch dm.state {
+	case dsDeployActive:
+		dm.state = dsDeployPending
+	case dsDeployComplete:
+		// start update
+		return dm.startDeploy()
+	case dsDeployPending, dsTeardownActive, dsTeardownPending, dsTeardownComplete:
+		// do nothing
+	}
+
+	return nil
+}
+
 func (dm *deploymentManager) run() {
 	defer dm.lc.ShutdownCompleted()
-
-	allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
-	reserveHostnamesCh := dm.hostnameService.ReserveHostnames(allHostnames, dm.lease.DeploymentID())
-
-	var runch <-chan error
-
 	var shutdownErr error
+
+	runch := dm.startDeploy()
+
+	defer func() {
+		err := dm.hostnameService.ReleaseHostnames(dm.lease)
+		if err != nil {
+			dm.log.Error("failed releasing hostnames", "err", err)
+		}
+	}()
+
 loop:
 	for {
 		select {
-		case err := <-reserveHostnamesCh:
-			reserveHostnamesCh = nil
-			if err != nil {
-				deploymentCounter.WithLabelValues("reserve-hostnames", "err").Inc()
-				dm.log.Error("deploy hostname error", "state", dm.state, "err", err)
-				break loop
-			}
-			deploymentCounter.WithLabelValues("reserve-hostnames", "success").Inc()
-			defer dm.hostnameService.ReleaseHostnames(allHostnames)
-			runch = dm.startDeploy()
 
 		case shutdownErr = <-dm.lc.ShutdownRequest():
 			break loop
 
 		case mgroup := <-dm.updatech:
 			dm.mgroup = mgroup
-
-			switch dm.state {
-			case dsDeployActive:
-				dm.mgroup = mgroup
-				dm.state = dsDeployPending
-			case dsDeployPending:
-				dm.mgroup = mgroup
-			case dsDeployComplete:
-				dm.mgroup = mgroup
-				// start update
-				runch = dm.startDeploy()
-			case dsTeardownActive, dsTeardownPending, dsTeardownComplete:
-				// do nothing
+			newch := dm.handleUpdate()
+			if newch != nil {
+				runch = newch
 			}
 
 		case result := <-runch:
@@ -199,6 +201,7 @@ loop:
 			}
 		}
 	}
+
 	dm.lc.ShutdownInitiated(shutdownErr)
 
 	if runch != nil {
@@ -242,10 +245,38 @@ func (dm *deploymentManager) stopMonitor() {
 	}
 }
 
-func (dm *deploymentManager) startDeploy() <-chan error {
+func (dm *deploymentManager) startDeploy() (<-chan error) {
 	dm.stopMonitor()
 	dm.state = dsDeployActive
-	return dm.do(dm.doDeploy)
+
+	chErr := make(chan error, 1)
+
+	go func() {
+		hostnames, err := dm.doDeploy()
+		if err != nil {
+			chErr <- err
+			return
+		}
+
+		if len(hostnames) != 0 {
+			// start update to takeover hostnames
+			dm.log.Info("hostnames withheld from deployment", "cnt", len(hostnames))
+		}
+
+		groupCopy := *dm.mgroup
+		ev := event.ClusterDeployment{
+			LeaseID: dm.lease,
+			Group:   &groupCopy,
+			Status:  event.ClusterDeploymentUpdated,
+		}
+		err = dm.bus.Publish(ev)
+		if err != nil {
+			dm.log.Error("failed publishing event", "err", err)
+		}
+
+		close(chErr)
+	}()
+	return chErr
 }
 
 func (dm *deploymentManager) startTeardown() <-chan error {
@@ -254,16 +285,72 @@ func (dm *deploymentManager) startTeardown() <-chan error {
 	return dm.do(dm.doTeardown)
 }
 
-func (dm *deploymentManager) doDeploy() error {
+func (dm *deploymentManager) doDeploy() ([]string, error) {
+	var err error
+
+	allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
+	// Either reserve the hostnames, or confirm that they already are held
+	reservationResult := dm.hostnameService.ReserveHostnames(allHostnames, dm.lease)
+	withheldHostnames, err := reservationResult.Wait(dm.lc.ShuttingDown())
+	if err != nil {
+		deploymentCounter.WithLabelValues("reserve-hostnames", "err").Inc()
+		dm.log.Error("deploy hostname reservation error", "state", dm.state, "err", err)
+		return nil, err
+	}
+	deploymentCounter.WithLabelValues("reserve-hostnames", "success").Inc()
+
+	dm.log.Info("hostnames withheld", "cnt", len(withheldHostnames))
+
 	// Don't use a context tied to the lifecycle, as we don't want to cancel Kubernetes operations
 	ctx := context.Background()
-	result := dm.client.Deploy(ctx, dm.lease, dm.mgroup)
+
+	err = dm.client.Deploy(ctx, dm.lease, dm.mgroup)
 	label := "success"
-	if result != nil {
+	if err != nil {
 		label = "fail"
 	}
 	deploymentCounter.WithLabelValues("deploy", label).Inc()
-	return result
+
+	// Figure out what hostnames to declare
+	blockedHostnames := make(map[string]struct{})
+	for _, hostname := range withheldHostnames {
+		blockedHostnames[hostname] = struct{}{}
+	}
+	hosts := make(map[string]manifest.ServiceExpose)
+	hostToServiceName := make(map[string]string)
+	for _, service := range dm.mgroup.Services {
+		for _, expose := range service.Expose {
+			if !util.ShouldBeIngress(expose) {
+				continue
+			}
+
+			if dm.config.DeploymentIngressStaticHosts {
+				uid := clusterutil.IngressHost(dm.lease, service.Name)
+				host := fmt.Sprintf("%s.%s", uid, dm.config.DeploymentIngressDomain)
+				hosts[host] = expose
+				hostToServiceName[host] = service.Name
+			}
+
+			for _, host := range expose.Hosts {
+				_, blocked := blockedHostnames[host]
+				if ! blocked {
+					hosts[host] = expose
+					hostToServiceName[host] = service.Name
+				}
+			}
+		}
+	}
+
+	for host, serviceExpose := range hosts {
+		err = dm.client.DeclareHostname(ctx, dm.lease, host, hostToServiceName[host], uint32(serviceExpose.ExternalPort))
+		if err != nil {
+			// TODO - counter
+			return withheldHostnames, err
+		}
+	}
+	// TODO - counter
+
+	return withheldHostnames, nil
 }
 
 func (dm *deploymentManager) doTeardown() error {
@@ -288,6 +375,21 @@ func (dm *deploymentManager) doTeardown() error {
 		label = "fail"
 	}
 	deploymentCounter.WithLabelValues("teardown", label).Inc()
+
+	result = retry.Do(func() error {
+		err := dm.client.PurgeDeclaredHostnames(ctx, dm.lease)
+		if err != nil {
+			dm.log.Error("lease teardown failed", "err", err)
+		}
+		return err
+	},
+		retry.Attempts(50),
+		retry.Delay(100*time.Millisecond),
+		retry.MaxDelay(3000*time.Millisecond),
+		retry.DelayType(retry.BackOffDelay),
+		retry.LastErrorOnly(true))
+
+	// TODO - counter
 	return result
 }
 

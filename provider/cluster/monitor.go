@@ -111,6 +111,7 @@ loop:
 				tickch = m.scheduleHealthcheck()
 				m.publishStatus(event.ClusterDeploymentDeployed)
 				deploymentHealthCheckCounter.WithLabelValues("up").Inc()
+
 				break
 			} else {
 				deploymentHealthCheckCounter.WithLabelValues("down").Inc()

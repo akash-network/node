@@ -258,6 +258,16 @@ type ManifestServiceExpose struct {
 	Global       bool   `json:"global,omitempty"`
 	// accepted hostnames
 	Hosts []string `json:"hosts,omitempty"`
+	HttpOptions ManifestServiceExposeHttpOptions `json:"http_options,omitempty"`
+}
+
+type ManifestServiceExposeHttpOptions struct {
+	MaxBodySize uint32 `json:"max_body_size,omitempty"`
+	ReadTimeout uint32 `json:"read_timeout,omitempty"`
+	SendTimeout uint32 `json:"send_timeout,omitempty"`
+	NextTries uint32 `json:"next_tries,omitempty"`
+	NextTimeout uint32 `json:"next_timeout,omitempty"`
+	NextCases []string `json:"next_cases,omitempty"`
 }
 
 func (mse ManifestServiceExpose) toAkash() (manifest.ServiceExpose, error) {
@@ -284,6 +294,14 @@ func manifestServiceExposeFromAkash(amse manifest.ServiceExpose) ManifestService
 		Service:      amse.Service,
 		Global:       amse.Global,
 		Hosts:        amse.Hosts,
+		HttpOptions: ManifestServiceExposeHttpOptions{
+			MaxBodySize: amse.HTTPOptions.MaxBodySize,
+			ReadTimeout: amse.HTTPOptions.ReadTimeout,
+			SendTimeout: amse.HTTPOptions.SendTimeout,
+			NextTries:   amse.HTTPOptions.NextTries,
+			NextTimeout: amse.HTTPOptions.NextTimeout,
+			NextCases:   amse.HTTPOptions.NextCases,
+		},
 	}
 }
 
@@ -341,6 +359,41 @@ func resourceUnitsFromAkash(aru types.ResourceUnits) (ResourceUnits, error) {
 // ManifestList stores metadata and items list of manifest
 type ManifestList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
 	Items           []Manifest `json:"items"`
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type ProviderHost struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+
+	Spec   ProviderHostSpec   `json:"spec,omitempty"`
+	Status ProviderHostStatus `json:"status,omitempty"`
+}
+
+type ProviderHostStatus struct {
+	State   string `json:"state,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+type ProviderHostSpec struct {
+	Owner string `json:"owner"`
+	Provider string `json:"provider"`
+	Hostname string `json:"hostname"`
+	Dseq uint64 `json:"dseq"`
+	Gseq uint32 `json:"gseq"`
+	Oseq uint32 `json:"oseq"`
+	ServiceName string `json:"service_name"`
+	ExternalPort uint32 `json:"external_port"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type ProviderHostList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []ProviderHost `json:"items"`
 }

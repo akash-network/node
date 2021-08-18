@@ -54,6 +54,7 @@ type Client interface {
 		stderr io.Writer,
 		tty bool,
 		tsq <-chan remotecommand.TerminalSize) error
+	MigrateHostnames(ctx context.Context, hostnames []string, dseq uint64, gseq uint32) error
 }
 
 type LeaseKubeEvent struct {
@@ -103,11 +104,19 @@ func NewClient(qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Ce
 		MinVersion:            tls.VersionTLS13,
 	}
 
-	cl.hclient = &http.Client{
+	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
+		// Never  follow redirects
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+		Jar:           nil,
+		Timeout:       0,
 	}
+
+	cl.hclient = httpClient 
 
 	cl.wsclient = &websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
@@ -338,6 +347,46 @@ func (c *client) SubmitManifest(ctx context.Context, dseq uint64, mani manifest.
 	}
 
 	req.Header.Set("Content-Type", contentTypeJSON)
+	resp, err := c.hclient.Do(req)
+	if err != nil {
+		return err
+	}
+	responseBuf := &bytes.Buffer{}
+	_, err = io.Copy(responseBuf, resp.Body)
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if err != nil {
+		return err
+	}
+
+	return createClientResponseErrorIfNotOK(resp, responseBuf)
+}
+
+func (c *client) MigrateHostnames(ctx context.Context, hostnames []string, dseq uint64, gseq uint32) error {
+	uri, err := makeURI(c.host, "hostname/migrate")
+	if err != nil {
+		return err
+	}
+
+	body := migrateRequestBody{
+		HostnamesToMigrate: hostnames,
+		DestinationDSeq:    dseq,
+		DestinationGSeq: gseq,
+	}
+
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("sending as body: %s\n", string(buf))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, bytes.NewReader(buf))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", contentTypeJSON)
+
 	resp, err := c.hclient.Do(req)
 	if err != nil {
 		return err
