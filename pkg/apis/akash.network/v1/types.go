@@ -257,17 +257,17 @@ type ManifestServiceExpose struct {
 	Service      string `json:"service,omitempty"`
 	Global       bool   `json:"global,omitempty"`
 	// accepted hostnames
-	Hosts []string `json:"hosts,omitempty"`
+	Hosts       []string                         `json:"hosts,omitempty"`
 	HttpOptions ManifestServiceExposeHttpOptions `json:"http_options,omitempty"`
 }
 
 type ManifestServiceExposeHttpOptions struct {
-	MaxBodySize uint32 `json:"max_body_size,omitempty"`
-	ReadTimeout uint32 `json:"read_timeout,omitempty"`
-	SendTimeout uint32 `json:"send_timeout,omitempty"`
-	NextTries uint32 `json:"next_tries,omitempty"`
-	NextTimeout uint32 `json:"next_timeout,omitempty"`
-	NextCases []string `json:"next_cases,omitempty"`
+	MaxBodySize uint32   `json:"max_body_size,omitempty"`
+	ReadTimeout uint32   `json:"read_timeout,omitempty"`
+	SendTimeout uint32   `json:"send_timeout,omitempty"`
+	NextTries   uint32   `json:"next_tries,omitempty"`
+	NextTimeout uint32   `json:"next_timeout,omitempty"`
+	NextCases   []string `json:"next_cases,omitempty"`
 }
 
 func (mse ManifestServiceExpose) toAkash() (manifest.ServiceExpose, error) {
@@ -380,13 +380,13 @@ type ProviderHostStatus struct {
 }
 
 type ProviderHostSpec struct {
-	Owner string `json:"owner"`
-	Provider string `json:"provider"`
-	Hostname string `json:"hostname"`
-	Dseq uint64 `json:"dseq"`
-	Gseq uint32 `json:"gseq"`
-	Oseq uint32 `json:"oseq"`
-	ServiceName string `json:"service_name"`
+	Owner        string `json:"owner"`
+	Provider     string `json:"provider"`
+	Hostname     string `json:"hostname"`
+	Dseq         uint64 `json:"dseq"`
+	Gseq         uint32 `json:"gseq"`
+	Oseq         uint32 `json:"oseq"`
+	ServiceName  string `json:"service_name"`
 	ExternalPort uint32 `json:"external_port"`
 }
 

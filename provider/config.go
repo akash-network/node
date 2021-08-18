@@ -24,10 +24,10 @@ type Config struct {
 	BlockedHostnames                []string
 	BidTimeout                      time.Duration
 	ManifestTimeout                 time.Duration
-	BalanceCheckerCfg BalanceCheckerConfig
-	Attributes        types.Attributes
-	DeploymentIngressStaticHosts bool
-	DeploymentIngressDomain string
+	BalanceCheckerCfg               BalanceCheckerConfig
+	Attributes                      types.Attributes
+	DeploymentIngressStaticHosts    bool
+	DeploymentIngressDomain         string
 }
 
 func NewDefaultConfig() Config {

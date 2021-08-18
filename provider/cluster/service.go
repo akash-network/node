@@ -95,19 +95,19 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 	}
 
 	s := &service{
-		session:   session,
-		client:    client,
-		hostnames: hostnames,
-		bus:       bus,
-		sub:       sub,
-		inventory: inventory,
-		statusch:  make(chan chan<- *ctypes.Status),
-		managers:  make(map[mtypes.LeaseID]*deploymentManager),
-		managerch: make(chan *deploymentManager),
+		session:                        session,
+		client:                         client,
+		hostnames:                      hostnames,
+		bus:                            bus,
+		sub:                            sub,
+		inventory:                      inventory,
+		statusch:                       make(chan chan<- *ctypes.Status),
+		managers:                       make(map[mtypes.LeaseID]*deploymentManager),
+		managerch:                      make(chan *deploymentManager),
 		checkDeploymentExistsRequestCh: make(chan checkDeploymentExistsRequest),
 
-		log: log,
-		lc:  lc,
+		log:    log,
+		lc:     lc,
 		config: cfg,
 	}
 
@@ -127,8 +127,8 @@ type service struct {
 	hostnames *hostnameService
 
 	checkDeploymentExistsRequestCh chan checkDeploymentExistsRequest
-	statusch chan chan<- *ctypes.Status
-	managers map[mtypes.LeaseID]*deploymentManager
+	statusch                       chan chan<- *ctypes.Status
+	managers                       map[mtypes.LeaseID]*deploymentManager
 
 	managerch chan *deploymentManager
 
@@ -140,14 +140,14 @@ type service struct {
 
 type checkDeploymentExistsRequest struct {
 	owner sdktypes.Address
-	dseq uint64
-	gseq uint32
+	dseq  uint64
+	gseq  uint32
 
-	responseCh chan <- mtypes.LeaseID
+	responseCh chan<- mtypes.LeaseID
 }
 
 type ActiveLease struct {
-	ID mtypes.LeaseID
+	ID    mtypes.LeaseID
 	Group akashv1.ManifestGroup
 }
 
@@ -157,29 +157,27 @@ func (s *service) FindActiveLease(ctx context.Context, owner sdktypes.Address, d
 	response := make(chan mtypes.LeaseID, 1)
 	req := checkDeploymentExistsRequest{
 		responseCh: response,
-		dseq: dseq,
-		gseq: gseq,
-		owner: owner,
+		dseq:       dseq,
+		gseq:       gseq,
+		owner:      owner,
 	}
 	select {
 	case s.checkDeploymentExistsRequestCh <- req:
-	case <- ctx.Done():
+	case <-ctx.Done():
 		return false, ActiveLease{}, ctx.Err()
 	}
-
 
 	var leaseID mtypes.LeaseID
 	var ok bool
 	select {
-		case leaseID, ok = <- response:
-			if !ok {
-				return false, ActiveLease{}, nil
-			}
+	case leaseID, ok = <-response:
+		if !ok {
+			return false, ActiveLease{}, nil
+		}
 
-		case <-ctx.Done():
-			return false, ActiveLease{}, ctx.Err()
+	case <-ctx.Done():
+		return false, ActiveLease{}, ctx.Err()
 	}
-
 
 	found, mgroup, err := s.client.GetManifestGroup(ctx, leaseID)
 	if err != nil {
@@ -187,14 +185,13 @@ func (s *service) FindActiveLease(ctx context.Context, owner sdktypes.Address, d
 	}
 
 	if !found {
-		return false, ActiveLease{},  errNoManifestGroup
+		return false, ActiveLease{}, errNoManifestGroup
 	}
 
 	result := ActiveLease{
-		ID:   leaseID,
+		ID:    leaseID,
 		Group: mgroup,
 	}
-
 
 	return true, result, nil
 }
@@ -326,7 +323,7 @@ loop:
 			}
 
 			delete(s.managers, dm.lease)
-		case req := <- s.checkDeploymentExistsRequestCh:
+		case req := <-s.checkDeploymentExistsRequestCh:
 			s.doCheckDeploymentExists(req)
 		}
 		s.updateDeploymentManagerGauge()
@@ -346,7 +343,7 @@ loop:
 func (s *service) doCheckDeploymentExists(req checkDeploymentExistsRequest) {
 	for leaseID := range s.managers {
 		// Check for a match
-		if  leaseID.GSeq == req.gseq && leaseID.DSeq == req.dseq && leaseID.Owner == req.owner.String() {
+		if leaseID.GSeq == req.gseq && leaseID.DSeq == req.dseq && leaseID.Owner == req.owner.String() {
 			req.responseCh <- leaseID
 			return
 		}

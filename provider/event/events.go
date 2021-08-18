@@ -39,7 +39,7 @@ type ClusterDeploymentStatus string
 
 const (
 	// ClusterDeploymentUpdated is used whenever the deployment in the cluster is updated but may not be functional
-	ClusterDeploymentUpdated  ClusterDeploymentStatus = "updated"
+	ClusterDeploymentUpdated ClusterDeploymentStatus = "updated"
 	// ClusterDeploymentPending is used when cluster deployment status is pending
 	ClusterDeploymentPending ClusterDeploymentStatus = "pending"
 	// ClusterDeploymentDeployed is used when cluster deployment status is deployed

@@ -34,14 +34,15 @@ var (
 	ErrExecCommandDoesNotExist     = fmt.Errorf("%w: command could not be executed because it does not exist", ErrExec)
 	ErrExecDeploymentNotYetRunning = fmt.Errorf("%w: deployment is not yet active", ErrExec)
 	ErrExecPodIndexOutOfRange      = fmt.Errorf("%w: pod index out of range", ErrExec)
-	errNotImplemented = errors.New("not implemented")
+	errNotImplemented              = errors.New("not implemented")
 )
 
 type ProviderResourceEvent string
+
 const (
-	ProviderResourceAdd = ProviderResourceEvent("add")
-	ProviderResourceUpdate  = ProviderResourceEvent("update")
-	ProviderResourceDelete  = ProviderResourceEvent("delete")
+	ProviderResourceAdd    = ProviderResourceEvent("add")
+	ProviderResourceUpdate = ProviderResourceEvent("update")
+	ProviderResourceDelete = ProviderResourceEvent("delete")
 )
 
 type HostnameResourceEvent interface {
@@ -61,7 +62,7 @@ type ReadClient interface {
 	AllHostnames(context.Context) ([]ActiveHostname, error)
 	GetManifestGroup(context.Context, mtypes.LeaseID) (bool, akashv1.ManifestGroup, error)
 
-	ObserveHostnameState(ctx context.Context) (<- chan HostnameResourceEvent, error)
+	ObserveHostnameState(ctx context.Context) (<-chan HostnameResourceEvent, error)
 	GetHostnameDeploymentConnections(ctx context.Context) ([]LeaseIdHostnameConnection, error)
 }
 
@@ -94,25 +95,23 @@ type Client interface {
 	PurgeDeclaredHostnames(ctx context.Context, lID mtypes.LeaseID) error
 }
 
-
 type ConnectHostnameToDeploymentDirective struct {
-	Hostname string
-	LeaseID mtypes.LeaseID
+	Hostname    string
+	LeaseID     mtypes.LeaseID
 	ServiceName string
 	ServicePort int32
 	ReadTimeout uint32
 	SendTimeout uint32
 	NextTimeout uint32
 	MaxBodySize uint32
-	NextTries uint32
-	NextCases []string //
+	NextTries   uint32
+	NextCases   []string //
 }
-
 
 type LeaseIdHostnameConnection interface {
 	GetLeaseID() mtypes.LeaseID
 	GetHostname() string
-    GetExternalPort() int32
+	GetExternalPort() int32
 	GetServiceName() string
 }
 
@@ -121,7 +120,7 @@ func ErrorIsOkToSendToClient(err error) bool {
 }
 
 type ActiveHostname struct {
-	ID mtypes.LeaseID
+	ID       mtypes.LeaseID
 	Hostname string
 }
 
@@ -193,7 +192,7 @@ func (c *nullClient) RemoveHostnameFromDeployment(ctx context.Context, hostname 
 	return errNotImplemented
 }
 
-func (c *nullClient) ObserveHostnameState(ctx context.Context) (<- chan HostnameResourceEvent, error) {
+func (c *nullClient) ObserveHostnameState(ctx context.Context) (<-chan HostnameResourceEvent, error) {
 	return nil, errNotImplemented
 }
 func (c *nullClient) GetDeployments(ctx context.Context, dID dtypes.DeploymentID) ([]ctypes.Deployment, error) {
@@ -212,6 +211,7 @@ func (c *nullClient) ConnectHostnameToDeployment(ctx context.Context, directive 
 func (c *nullClient) DeclareHostname(ctx context.Context, lID mtypes.LeaseID, host string, serviceName string, externalPort uint32) error {
 	return errNotImplemented
 }
+
 // Purge any hostnames associated with a given deployment
 func (c *nullClient) PurgeDeclaredHostnames(ctx context.Context, lID mtypes.LeaseID) error {
 	return errNotImplemented
@@ -376,4 +376,3 @@ func (c *nullClient) GetManifestGroup(context.Context, mtypes.LeaseID) (bool, ak
 func (c *nullClient) AllHostnames(context.Context) ([]ActiveHostname, error) {
 	return nil, nil
 }
-

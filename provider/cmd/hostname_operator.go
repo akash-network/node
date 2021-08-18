@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ovrclk/akash/manifest"
 	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	"github.com/ovrclk/akash/provider/cluster"
 	clusterClient "github.com/ovrclk/akash/provider/cluster/kube"
 	"github.com/ovrclk/akash/provider/cluster/util"
-	"github.com/ovrclk/akash/manifest"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -16,12 +16,11 @@ import (
 	"time"
 )
 
-
 type managedHostname struct {
-	lastEvent cluster.HostnameResourceEvent
+	lastEvent    cluster.HostnameResourceEvent
 	presentLease mtypes.LeaseID
 
-	presentServiceName string
+	presentServiceName  string
 	presentExternalPort int32
 }
 
@@ -50,10 +49,10 @@ func (op *hostnameOperator) run(parentCtx context.Context) error {
 		if elapsed < threshold {
 			op.log.Info("delaying")
 			select {
-				case <- parentCtx.Done():
-					return parentCtx.Err()
-				case <- time.After(threshold):
-					// delay complete
+			case <-parentCtx.Done():
+				return parentCtx.Err()
+			case <-time.After(threshold):
+				// delay complete
 			}
 		}
 	}
@@ -67,7 +66,7 @@ func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 		Ingress objects in the kube cluster not managed by Akash & then
 		avoid trying to create Ingress objects with those names. This isn't really
 		needed at this time.
-	 */
+	*/
 	ctx, cancel := context.WithCancel(parentCtx)
 	op.log.Info("starting observation")
 
@@ -81,9 +80,9 @@ func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 		leaseID := conn.GetLeaseID()
 		hostname := conn.GetHostname()
 		entry := managedHostname{
-			lastEvent:    nil,
-			presentLease: leaseID,
-			presentServiceName: conn.GetServiceName(),
+			lastEvent:           nil,
+			presentLease:        leaseID,
+			presentServiceName:  conn.GetServiceName(),
 			presentExternalPort: conn.GetExternalPort(),
 		}
 
@@ -102,14 +101,14 @@ func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 	}
 
 	var exitError error
-	loop:
+loop:
 	for {
 		select {
 		case <-ctx.Done():
 			exitError = ctx.Err()
 			break loop
 
-		case ev, ok := <- events:
+		case ev, ok := <-events:
 			if !ok {
 				exitError = errObservationStopped
 				break loop
@@ -128,7 +127,7 @@ func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 }
 
 func (op *hostnameOperator) applyEvent(ctx context.Context, ev cluster.HostnameResourceEvent) error {
-	op.log.Debug("apply event", "event-type", ev.GetEventType(),  "hostname", ev.GetHostname())
+	op.log.Debug("apply event", "event-type", ev.GetEventType(), "hostname", ev.GetHostname())
 	switch ev.GetEventType() {
 	case cluster.ProviderResourceDelete:
 		// note that on delete the resource might be gone anyways because the namespace is deleted
@@ -164,21 +163,21 @@ func buildDirective(ev cluster.HostnameResourceEvent, serviceExpose crd.Manifest
 		Populate the configuration options
 		selectedExpose.HttpOptions has zero values if this is from an earlier CRD. Just insert
 		defaults and move on
-	 */
+	*/
 	if serviceExpose.HttpOptions.MaxBodySize == 0 {
 		directive.ReadTimeout = 60000
 		directive.SendTimeout = 60000
 		directive.NextTimeout = 60000
 		directive.MaxBodySize = 1048576
-		directive.NextTries   = 3
-		directive.NextCases   = []string{"error", "timeout"}
+		directive.NextTries = 3
+		directive.NextCases = []string{"error", "timeout"}
 	} else {
 		directive.ReadTimeout = serviceExpose.HttpOptions.ReadTimeout
 		directive.SendTimeout = serviceExpose.HttpOptions.SendTimeout
 		directive.NextTimeout = serviceExpose.HttpOptions.NextTimeout
 		directive.MaxBodySize = serviceExpose.HttpOptions.MaxBodySize
-		directive.NextTries   = serviceExpose.HttpOptions.NextTries
-		directive.NextCases   = serviceExpose.HttpOptions.NextCases
+		directive.NextTries = serviceExpose.HttpOptions.NextTries
+		directive.NextCases = serviceExpose.HttpOptions.NextCases
 	}
 
 	return directive
@@ -196,7 +195,7 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev cluste
 			restarts and should work the attempt anyways. If this becomes a pain point then the oeprator
 			can be rewritten to watch for CRD events on the manifest as well, then avoid running this code
 			until the manifest exists.
-		 */
+		*/
 		return fmt.Errorf("%w: no manifest found for %v", ev.GetLeaseID())
 	}
 
@@ -214,7 +213,7 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev cluste
 
 	var selectedExpose crd.ManifestServiceExpose
 	for _, expose := range selectedService.Expose {
-		if ! expose.Global {
+		if !expose.Global {
 			continue
 		}
 
@@ -282,7 +281,7 @@ func doHostnameOperator(cmd *cobra.Command) error {
 	// to do anything with 'settings' in this context, but the object needs to be passed in anyways
 	// TODO - make sure the client can pickup the in-cluster authorization to support running as a kubernetes
 	// deployment
-	client, err  := clusterClient.NewClient(log, ns, clusterClient.Settings{})
+	client, err := clusterClient.NewClient(log, ns, clusterClient.Settings{})
 	if err != nil {
 		return err
 	}
@@ -290,7 +289,7 @@ func doHostnameOperator(cmd *cobra.Command) error {
 	op := hostnameOperator{
 		hostnames: make(map[string]managedHostname),
 		client:    client,
-		log: log,
+		log:       log,
 	}
 
 	return op.run(cmd.Context())
@@ -313,4 +312,3 @@ func hostnameOperatorCmd() *cobra.Command {
 
 	return cmd
 }
-

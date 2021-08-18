@@ -112,11 +112,11 @@ func NewClient(qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Ce
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
-		Jar:           nil,
-		Timeout:       0,
+		Jar:     nil,
+		Timeout: 0,
 	}
 
-	cl.hclient = httpClient 
+	cl.hclient = httpClient
 
 	cl.wsclient = &websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
@@ -373,7 +373,7 @@ func (c *client) MigrateHostnames(ctx context.Context, hostnames []string, dseq 
 	body := migrateRequestBody{
 		HostnamesToMigrate: hostnames,
 		DestinationDSeq:    dseq,
-		DestinationGSeq: gseq,
+		DestinationGSeq:    gseq,
 	}
 
 	buf, err := json.Marshal(body)

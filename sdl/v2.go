@@ -39,7 +39,6 @@ var (
 	errHTTPOptionNotAllowed          = errors.New("http option not allowed")
 )
 
-
 type v2 struct {
 	Include     []string                `yaml:",omitempty"`
 	Services    map[string]v2Service    `yaml:"services,omitempty"`
@@ -48,8 +47,8 @@ type v2 struct {
 }
 
 type v2ExposeTo struct {
-	Service string `yaml:"service,omitempty"`
-	Global  bool   `yaml:"global,omitempty"`
+	Service     string        `yaml:"service,omitempty"`
+	Global      bool          `yaml:"global,omitempty"`
 	HTTPOptions v2HTTPOptions `yaml:"http_options"`
 }
 
@@ -125,11 +124,11 @@ func (ho v2HTTPOptions) asManifest() (manifest.ServiceExposeHTTPOptions, error) 
 }
 
 type v2Expose struct {
-	Port   uint16
-	As     uint16
-	Proto  string       `yaml:"proto,omitempty"`
-	To     []v2ExposeTo `yaml:"to,omitempty"`
-	Accept v2Accept     `yaml:"accept"`
+	Port        uint16
+	As          uint16
+	Proto       string        `yaml:"proto,omitempty"`
+	To          []v2ExposeTo  `yaml:"to,omitempty"`
+	Accept      v2Accept      `yaml:"accept"`
 	HTTPOptions v2HTTPOptions `yaml:"http_options"`
 }
 
@@ -317,7 +316,6 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 					return manifest.Manifest{}, err
 				}
 
-
 				if len(expose.To) != 0 {
 					for _, to := range expose.To {
 						msvc.Expose = append(msvc.Expose, manifest.ServiceExpose{
@@ -327,7 +325,7 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 							Proto:        proto,
 							Global:       to.Global,
 							Hosts:        expose.Accept.Items,
-							HTTPOptions: httpOptions,
+							HTTPOptions:  httpOptions,
 						})
 					}
 				} else { // Nothing explicitly set, fill in without any information from "expose.To"
@@ -338,7 +336,7 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 						Proto:        proto,
 						Global:       false,
 						Hosts:        expose.Accept.Items,
-						HTTPOptions: httpOptions,
+						HTTPOptions:  httpOptions,
 					})
 				}
 			}

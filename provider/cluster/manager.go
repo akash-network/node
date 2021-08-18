@@ -68,19 +68,19 @@ func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Gro
 	log := s.log.With("cmp", "deployment-manager", "lease", lease, "manifest-group", mgroup.Name)
 
 	dm := &deploymentManager{
-		bus:               s.bus,
-		client:            s.client,
-		session:           s.session,
-		state:             dsDeployActive,
-		lease:             lease,
-		mgroup:            mgroup,
-		wg:                sync.WaitGroup{},
-		updatech:          make(chan *manifest.Group),
-		teardownch:        make(chan struct{}),
-		log:               log,
-		lc:                lifecycle.New(),
-		hostnameService:   s.HostnameService(),
-		config: s.config,
+		bus:             s.bus,
+		client:          s.client,
+		session:         s.session,
+		state:           dsDeployActive,
+		lease:           lease,
+		mgroup:          mgroup,
+		wg:              sync.WaitGroup{},
+		updatech:        make(chan *manifest.Group),
+		teardownch:      make(chan struct{}),
+		log:             log,
+		lc:              lifecycle.New(),
+		hostnameService: s.HostnameService(),
+		config:          s.config,
 	}
 
 	go dm.lc.WatchChannel(s.lc.ShuttingDown())
@@ -112,7 +112,7 @@ func (dm *deploymentManager) teardown() error {
 	}
 }
 
-func (dm *deploymentManager) handleUpdate() <- chan error{
+func (dm *deploymentManager) handleUpdate() <-chan error {
 	switch dm.state {
 	case dsDeployActive:
 		dm.state = dsDeployPending
@@ -245,7 +245,7 @@ func (dm *deploymentManager) stopMonitor() {
 	}
 }
 
-func (dm *deploymentManager) startDeploy() (<-chan error) {
+func (dm *deploymentManager) startDeploy() <-chan error {
 	dm.stopMonitor()
 	dm.state = dsDeployActive
 
@@ -333,7 +333,7 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 
 			for _, host := range expose.Hosts {
 				_, blocked := blockedHostnames[host]
-				if ! blocked {
+				if !blocked {
 					hosts[host] = expose
 					hostToServiceName[host] = service.Name
 				}

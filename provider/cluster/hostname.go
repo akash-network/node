@@ -16,17 +16,17 @@ type HostnameServiceClient interface {
 	ReserveHostnames(hostnames []string, leaseID mtypes.LeaseID) ReservationResult
 	ReleaseHostnames(leaseID mtypes.LeaseID) error
 	CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) <-chan error
-	PrepareHostnamesForTransfer(hostnames []string, leaseID mtypes.LeaseID) <- chan error
+	PrepareHostnamesForTransfer(hostnames []string, leaseID mtypes.LeaseID) <-chan error
 }
 
 /**
 This type exists to identify the target of a reservation. The lease ID type is not used directly because
 there is no need to consider order ID or provider ID for the purposes oft this
- */
+*/
 type hostnameID struct {
 	owner sdktypes.Address
-	dseq uint64
-	gseq uint32
+	dseq  uint64
+	gseq  uint32
 }
 
 func (hID hostnameID) Equals(other hostnameID) bool {
@@ -69,7 +69,7 @@ func (rr ReservationResult) Wait(wait <-chan struct{}) ([]string, error) {
 	}
 }
 
-func (sh *SimpleHostnames) PrepareHostnameForTransfer(hostnames []string, leaseID mtypes.LeaseID) <- chan error{
+func (sh *SimpleHostnames) PrepareHostnameForTransfer(hostnames []string, leaseID mtypes.LeaseID) <-chan error {
 	sh.lock.Lock()
 	defer sh.lock.Unlock()
 	errCh := make(chan error, 1)
@@ -82,7 +82,7 @@ func (sh *SimpleHostnames) PrepareHostnameForTransfer(hostnames []string, leaseI
 	return errCh
 }
 
-func prepareHostnamesImpl(store map[string]hostnameID, hostnames []string, hID hostnameID, errCh chan <- error){
+func prepareHostnamesImpl(store map[string]hostnameID, hostnames []string, hID hostnameID, errCh chan<- error) {
 	toChange := make([]string, 0, len(hostnames))
 	for _, hostname := range hostnames {
 		existingID, ok := store[hostname]
@@ -131,14 +131,14 @@ func reserveHostnamesImpl(store map[string]hostnameID, hostnames []string, hID h
 		existingID, inUse := store[hostname]
 		if inUse {
 			// Check to see if the same address already is using this hostname
-			if ! existingID.owner.Equals(hID.owner)  {
+			if !existingID.owner.Equals(hID.owner) {
 				// The owner is not the same, this can't be done
 				ch <- fmt.Errorf("%w: host %q in use", ErrHostnameNotAllowed, hostname)
 				return
 			}
 
 			// Check for a deployment replacing another one
-			if ! existingID.Equals(hID) {
+			if !existingID.Equals(hID) {
 				// Record that the hostname is being replaced
 				withheldHostnames = append(withheldHostnames, hostname)
 				withheldHostnamesMap[hostname] = struct{}{}
@@ -212,7 +212,7 @@ type reserveRequest struct {
 	chErr               chan<- error
 	chReplacedHostnames chan<- []string
 	hostnames           []string
-	hID        hostnameID
+	hID                 hostnameID
 }
 
 type canReserveRequest struct {
@@ -223,23 +223,22 @@ type canReserveRequest struct {
 
 type prepareTransferRequest struct {
 	hostnames []string
-	hID        hostnameID
-	chErr chan<- error
+	hID       hostnameID
+	chErr     chan<- error
 }
 
 type hostnameService struct {
 	inUse map[string]hostnameID
 
-	requests   chan reserveRequest
-	canRequest chan canReserveRequest
+	requests       chan reserveRequest
+	canRequest     chan canReserveRequest
 	prepareRequest chan prepareTransferRequest
-	releases   chan hostnameID
-	lc         lifecycle.Lifecycle
+	releases       chan hostnameID
+	lc             lifecycle.Lifecycle
 
 	blockedHostnames []string
 	blockedDomains   []string
 }
-
 
 const HostnameSeparator = '.'
 
@@ -263,7 +262,7 @@ func newHostnameService(ctx context.Context, cfg Config, initialData map[string]
 		canRequest:       make(chan canReserveRequest),
 		releases:         make(chan hostnameID),
 		lc:               lifecycle.New(),
-		prepareRequest: make(chan prepareTransferRequest),
+		prepareRequest:   make(chan prepareTransferRequest),
 	}
 	for k, v := range initialData {
 		hID, err := hostnameIDFromLeaseID(v)
@@ -306,7 +305,7 @@ loop:
 
 var ErrHostnameNotAllowed = errors.New("hostname not allowed")
 
-func (hs *hostnameService) PrepareHostnamesForTransfer(hostnames []string, leaseID mtypes.LeaseID) <- chan error {
+func (hs *hostnameService) PrepareHostnamesForTransfer(hostnames []string, leaseID mtypes.LeaseID) <-chan error {
 	chErr := make(chan error, 1)
 
 	hID, err := hostnameIDFromLeaseID(leaseID)
@@ -315,13 +314,13 @@ func (hs *hostnameService) PrepareHostnamesForTransfer(hostnames []string, lease
 		return chErr
 	}
 
-	v:= prepareTransferRequest{
+	v := prepareTransferRequest{
 		hostnames: hostnames,
-		hID: hID,
+		hID:       hID,
 		chErr:     chErr,
 	}
 	select {
-		case hs.prepareRequest <- v:
+	case hs.prepareRequest <- v:
 	case <-hs.lc.ShuttingDown():
 		chErr <- ErrNotRunning
 	}

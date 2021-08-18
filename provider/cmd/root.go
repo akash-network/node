@@ -32,4 +32,3 @@ func RootCmd() *cobra.Command {
 
 	return cmd
 }
-

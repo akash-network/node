@@ -15,14 +15,14 @@ import (
 	"strings"
 )
 
-func kubeNginxIngressAnnotations(directive cluster.ConnectHostnameToDeploymentDirective ) map[string]string {
+func kubeNginxIngressAnnotations(directive cluster.ConnectHostnameToDeploymentDirective) map[string]string {
 	// For kubernetes/ingress-nginx
 	// https://github.com/kubernetes/ingress-nginx
 	const root = "nginx.ingress.kubernetes.io"
 
 	result := map[string]string{
-		fmt.Sprintf("%s/proxy-read-timeout", root):        fmt.Sprintf("%dms", directive.ReadTimeout),
-		fmt.Sprintf("%s/proxy-send-timeout", root):        fmt.Sprintf("%dms", directive.SendTimeout),
+		fmt.Sprintf("%s/proxy-read-timeout", root): fmt.Sprintf("%dms", directive.ReadTimeout),
+		fmt.Sprintf("%s/proxy-send-timeout", root): fmt.Sprintf("%dms", directive.SendTimeout),
 
 		fmt.Sprintf("%s/proxy-next-upstream-tries", root): strconv.Itoa(int(directive.NextTries)),
 		fmt.Sprintf("%s/proxy-body-size", root):           strconv.Itoa(int(directive.MaxBodySize)),
@@ -57,7 +57,6 @@ func kubeNginxIngressAnnotations(directive cluster.ConnectHostnameToDeploymentDi
 	return result
 }
 
-
 func (c *client) ConnectHostnameToDeployment(ctx context.Context, directive cluster.ConnectHostnameToDeploymentDirective) error {
 	ingressName := directive.Hostname
 	ns := lidNS(directive.LeaseID)
@@ -72,8 +71,8 @@ func (c *client) ConnectHostnameToDeployment(ctx context.Context, directive clus
 
 	obj := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   ingressName,
-			Labels: labels,
+			Name:        ingressName,
+			Labels:      labels,
 			Annotations: kubeNginxIngressAnnotations(directive),
 		},
 		Spec: netv1.IngressSpec{
@@ -122,39 +121,37 @@ func (c *client) RemoveHostnameFromDeployment(ctx context.Context, hostname stri
 	return err
 }
 
-func ingressRules(hostname string, kubeServiceName string, kubeServicePort int32) []netv1.IngressRule{
+func ingressRules(hostname string, kubeServiceName string, kubeServicePort int32) []netv1.IngressRule {
 	// for some reason we need to pass a pointer to this
 	pathTypeForAll := netv1.PathTypePrefix
 	ruleValue := netv1.HTTPIngressRuleValue{
 		Paths: []netv1.HTTPIngressPath{{
 			Path:     "/",
 			PathType: &pathTypeForAll,
-			Backend:  netv1.IngressBackend{
-				Service:  &netv1.IngressServiceBackend{
+			Backend: netv1.IngressBackend{
+				Service: &netv1.IngressServiceBackend{
 					Name: kubeServiceName,
 					Port: netv1.ServiceBackendPort{
 						Number: kubeServicePort,
 					},
 				},
 			},
-		},},
+		}},
 	}
 
 	return []netv1.IngressRule{{
 		Host:             hostname,
 		IngressRuleValue: netv1.IngressRuleValue{HTTP: &ruleValue},
-	},}
+	}}
 
 }
-
 
 type leaseIdHostnameConnection struct {
-	leaseID mtypes.LeaseID
-	hostname string
+	leaseID      mtypes.LeaseID
+	hostname     string
 	externalPort int32
-	serviceName string
+	serviceName  string
 }
-
 
 func (lh leaseIdHostnameConnection) GetHostname() string {
 	return lh.hostname
@@ -179,7 +176,7 @@ func (c *client) GetHostnameDeploymentConnections(ctx context.Context) ([]cluste
 
 	results := make([]cluster.LeaseIdHostnameConnection, 0)
 	err := ingressPager.EachListItem(ctx,
-		metav1.ListOptions{ LabelSelector: fmt.Sprintf("%s=true", akashManagedLabelName) },
+		metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=true", akashManagedLabelName)},
 		func(obj runtime.Object) error {
 			ingress := obj.(*netv1.Ingress)
 			dseqS, ok := ingress.Labels[akashLeaseDSeqLabelName]
@@ -204,7 +201,7 @@ func (c *client) GetHostnameDeploymentConnections(ctx context.Context) ([]cluste
 				return fmt.Errorf("%w: %q", ErrMissingLabel, akashLeaseProviderLabelName)
 			}
 
-			dseq, err := strconv.ParseUint(dseqS,10, 64)
+			dseq, err := strconv.ParseUint(dseqS, 10, 64)
 			if err != nil {
 				return fmt.Errorf("%w: dseq %q not a uint", ErrInvalidLabelValue, dseqS)
 			}

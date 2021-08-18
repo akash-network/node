@@ -906,6 +906,7 @@ func (b *netPolBuilder) update(obj *netv1.NetworkPolicy) (*netv1.NetworkPolicy, 
 	obj.Labels = b.labels()
 	return obj, nil
 }
+
 // lidNS generates a unique sha256 sum for identifying a provider's object name.
 func lidNS(lid mtypes.LeaseID) string {
 	return clusterUtil.LeaseIdToNamespace(lid)

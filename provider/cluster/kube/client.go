@@ -45,13 +45,13 @@ import (
 )
 
 var (
-	ErrLeaseNotFound            = errors.New("kube: lease not found")
-	ErrNoDeploymentForLease     = errors.New("kube: no deployments for lease")
-	ErrInternalError            = errors.New("kube: internal error")
-	ErrNoServiceForLease        = errors.New("no service for that lease")
+	ErrLeaseNotFound             = errors.New("kube: lease not found")
+	ErrNoDeploymentForLease      = errors.New("kube: no deployments for lease")
+	ErrInternalError             = errors.New("kube: internal error")
+	ErrNoServiceForLease         = errors.New("no service for that lease")
 	ErrInvalidHostnameConnection = errors.New("kube: invalid hostname connection")
-	ErrMissingLabel = errors.New("kube: missing label")
-	ErrInvalidLabelValue = errors.New("kube: invalid label value")
+	ErrMissingLabel              = errors.New("kube: missing label")
+	ErrInvalidLabelValue         = errors.New("kube: invalid label value")
 )
 
 var (
@@ -144,7 +144,6 @@ func openKubeConfig(cfgPath string, log log.Logger) (*rest.Config, error) {
 	return rest.InClusterConfig()
 }
 
-
 func (c *client) GetDeployments(ctx context.Context, dID dtypes.DeploymentID) ([]ctypes.Deployment, error) {
 	labelSelectors := &strings.Builder{}
 	fmt.Fprintf(labelSelectors, "%s=%d", akashLeaseDSeqLabelName, dID.DSeq)
@@ -178,7 +177,7 @@ func (c *client) GetDeployments(ctx context.Context, dID dtypes.DeploymentID) ([
 	return result, nil
 }
 
-func (c *client) GetManifestGroup(ctx context.Context, lID mtypes.LeaseID) (bool, akashv1.ManifestGroup, error){
+func (c *client) GetManifestGroup(ctx context.Context, lID mtypes.LeaseID) (bool, akashv1.ManifestGroup, error) {
 	leaseNamespace := lidNS(lID)
 
 	obj, err := c.ac.AkashV1().Manifests(c.ns).Get(ctx, leaseNamespace, metav1.GetOptions{})
@@ -260,7 +259,6 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 				return err
 			}
 		}
-
 
 	}
 
@@ -423,7 +421,7 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 	labelSelector := &strings.Builder{}
 	kubeSelectorForLease(labelSelector, lid)
 	phResult, err := c.ac.AkashV1().ProviderHosts(c.ns).List(ctx, metav1.ListOptions{
-		LabelSelector:        labelSelector.String(),
+		LabelSelector: labelSelector.String(),
 	})
 
 	if err != nil {
@@ -551,7 +549,7 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 	}
 
 	found := false
-	exposeCheckLoop:
+exposeCheckLoop:
 	for _, service := range obj.Spec.Group.Services {
 		if service.Name == name {
 			found = true
@@ -597,8 +595,8 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 		labelSelector := &strings.Builder{}
 		kubeSelectorForLease(labelSelector, lid)
 
-		phs, err := c.ac.AkashV1().ProviderHosts(c.ns).List(ctx,metav1.ListOptions{
-			LabelSelector:        labelSelector.String(),
+		phs, err := c.ac.AkashV1().ProviderHosts(c.ns).List(ctx, metav1.ListOptions{
+			LabelSelector: labelSelector.String(),
 		})
 		label := metricsutils.SuccessLabel
 		if err != nil {

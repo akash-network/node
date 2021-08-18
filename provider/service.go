@@ -151,7 +151,7 @@ type service struct {
 	lc     lifecycle.Lifecycle
 }
 
-func (s* service) Hostname() cluster.HostnameServiceClient {
+func (s *service) Hostname() cluster.HostnameServiceClient {
 	return s.cluster.HostnameService()
 }
 

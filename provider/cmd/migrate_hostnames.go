@@ -57,7 +57,7 @@ func migrateHostnamesCmd() *cobra.Command {
 		Use:          "migrate-hostnames",
 		Short:        "",
 		SilenceUsage: true,
-		RunE: migrateHostnames,
+		RunE:         migrateHostnames,
 	}
 
 	addCmdFlags(cmd)

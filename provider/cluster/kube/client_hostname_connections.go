@@ -17,18 +17,16 @@ import (
 
 type hostnameResourceEvent struct {
 	eventType cluster.ProviderResourceEvent
-	hostname string
+	hostname  string
 
-	owner sdktypes.Address
-	dseq uint64
-	oseq uint32
-	gseq uint32
-	provider sdktypes.Address
-	serviceName string
+	owner        sdktypes.Address
+	dseq         uint64
+	oseq         uint32
+	gseq         uint32
+	provider     sdktypes.Address
+	serviceName  string
 	externalPort uint32
 }
-
-
 
 func (c *client) DeclareHostname(ctx context.Context, lID mtypes.LeaseID, host string, serviceName string, externalPort uint32) error {
 	// Label each entry with the standard labels
@@ -51,21 +49,21 @@ func (c *client) DeclareHostname(ctx context.Context, lID mtypes.LeaseID, host s
 
 	obj := akashtypes.ProviderHost{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: host, // Name is always the hostname, to prevent duplicates
-			Labels: labels,
+			Name:            host, // Name is always the hostname, to prevent duplicates
+			Labels:          labels,
 			ResourceVersion: resourceVersion,
 		},
-		Spec:       akashtypes.ProviderHostSpec{
-			Hostname:    host,
-			Owner:       lID.GetOwner(),
-			Dseq:        lID.GetDSeq(),
-			Oseq: 		 lID.GetOSeq(),
-			Gseq:        lID.GetGSeq(),
-			Provider: 	lID.GetProvider(),
-			ServiceName: serviceName,
+		Spec: akashtypes.ProviderHostSpec{
+			Hostname:     host,
+			Owner:        lID.GetOwner(),
+			Dseq:         lID.GetDSeq(),
+			Oseq:         lID.GetOSeq(),
+			Gseq:         lID.GetGSeq(),
+			Provider:     lID.GetProvider(),
+			ServiceName:  serviceName,
 			ExternalPort: externalPort,
 		},
-		Status:     akashtypes.ProviderHostStatus{},
+		Status: akashtypes.ProviderHostStatus{},
 	}
 
 	c.log.Info("declaring hostname", "lease", lID, "service-name", serviceName, "external-port", externalPort)
@@ -78,18 +76,15 @@ func (c *client) DeclareHostname(ctx context.Context, lID mtypes.LeaseID, host s
 	return err
 }
 
-
-
 func (c *client) PurgeDeclaredHostnames(ctx context.Context, lID mtypes.LeaseID) error {
 	labelSelector := &strings.Builder{}
 	kubeSelectorForLease(labelSelector, lID)
 	result := c.ac.AkashV1().ProviderHosts(c.ns).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
-		LabelSelector:       labelSelector.String(),
+		LabelSelector: labelSelector.String(),
 	})
 
 	return result
 }
-
 
 func (ev hostnameResourceEvent) GetLeaseID() mtypes.LeaseID {
 	return mtypes.LeaseID{
@@ -117,7 +112,7 @@ func (ev hostnameResourceEvent) GetExternalPort() uint32 {
 	return ev.externalPort
 }
 
-func (c *client) ObserveHostnameState(ctx context.Context) (<- chan cluster.HostnameResourceEvent, error) {
+func (c *client) ObserveHostnameState(ctx context.Context) (<-chan cluster.HostnameResourceEvent, error) {
 	var lastResourceVersion string
 	phpager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
 		resources, err := c.ac.AkashV1().ProviderHosts(c.ns).List(ctx, opts)
@@ -139,7 +134,7 @@ func (c *client) ObserveHostnameState(ctx context.Context) (<- chan cluster.Host
 		return nil, err
 	}
 
-	c.log.Info("starting hostname watch","resourceVersion", lastResourceVersion)
+	c.log.Info("starting hostname watch", "resourceVersion", lastResourceVersion)
 	watcher, err := c.ac.AkashV1().ProviderHosts(c.ns).Watch(ctx, metav1.ListOptions{
 		TypeMeta:             metav1.TypeMeta{},
 		LabelSelector:        "",
@@ -167,14 +162,14 @@ func (c *client) ObserveHostnameState(ctx context.Context) (<- chan cluster.Host
 			return nil, err
 		}
 		ev := hostnameResourceEvent{
-			eventType: cluster.ProviderResourceAdd,
-			hostname:  v.Spec.Hostname,
-			oseq: v.Spec.Oseq,
-			gseq: v.Spec.Gseq,
-			dseq:      v.Spec.Dseq,
-			owner:     ownerAddr,
-			provider: providerAddr,
-			serviceName: v.Spec.ServiceName,
+			eventType:    cluster.ProviderResourceAdd,
+			hostname:     v.Spec.Hostname,
+			oseq:         v.Spec.Oseq,
+			gseq:         v.Spec.Gseq,
+			dseq:         v.Spec.Dseq,
+			owner:        ownerAddr,
+			provider:     providerAddr,
+			serviceName:  v.Spec.ServiceName,
 			externalPort: v.Spec.ExternalPort,
 		}
 		evData[i] = ev
@@ -184,7 +179,7 @@ func (c *client) ObserveHostnameState(ctx context.Context) (<- chan cluster.Host
 
 	output := make(chan cluster.HostnameResourceEvent)
 
-	go func () {
+	go func() {
 		defer close(output)
 		for _, v := range evData {
 			output <- v
@@ -210,13 +205,13 @@ func (c *client) ObserveHostnameState(ctx context.Context) (<- chan cluster.Host
 					continue // Ignore event
 				}
 				ev := hostnameResourceEvent{
-					hostname:  ph.Spec.Hostname,
-					dseq:      ph.Spec.Dseq,
-					oseq: ph.Spec.Oseq,
-					gseq: ph.Spec.Gseq,
-					owner:     ownerAddr,
-					provider: providerAddr,
-					serviceName: ph.Spec.ServiceName,
+					hostname:     ph.Spec.Hostname,
+					dseq:         ph.Spec.Dseq,
+					oseq:         ph.Spec.Oseq,
+					gseq:         ph.Spec.Gseq,
+					owner:        ownerAddr,
+					provider:     providerAddr,
+					serviceName:  ph.Spec.ServiceName,
 					externalPort: ph.Spec.ExternalPort,
 				}
 				switch result.Type {
@@ -248,15 +243,13 @@ func (c *client) ObserveHostnameState(ctx context.Context) (<- chan cluster.Host
 	return output, nil
 }
 
-
-
 func (c *client) AllHostnames(ctx context.Context) ([]cluster.ActiveHostname, error) {
-	ingressPager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error){
+	ingressPager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
 		return c.ac.AkashV1().ProviderHosts(c.ns).List(ctx, opts)
 	})
 
 	listOptions := metav1.ListOptions{
-		LabelSelector:        fmt.Sprintf("%s=true", akashManagedLabelName),
+		LabelSelector: fmt.Sprintf("%s=true", akashManagedLabelName),
 	}
 
 	result := make([]cluster.ActiveHostname, 0)
@@ -288,7 +281,7 @@ func (c *client) AllHostnames(ctx context.Context) ([]cluster.ActiveHostname, er
 		}
 
 		result = append(result, cluster.ActiveHostname{
-			ID: leaseID,
+			ID:       leaseID,
 			Hostname: hostname,
 		})
 		return nil
@@ -298,4 +291,3 @@ func (c *client) AllHostnames(ctx context.Context) ([]cluster.ActiveHostname, er
 	}
 	return result, nil
 }
-
