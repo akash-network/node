@@ -1,4 +1,4 @@
-COVER_PACKAGES = $(shell go list ./... | grep -v mock | tr "\n" "," | rev | cut -c2- | rev)
+COVER_PACKAGES = $(shell go list ./... | grep -v mock | xargs | tr ' ' ',')
 # This is statically specified in the vagrant configuration
 KUBE_NODE_IP ?= 172.18.8.101
 ###############################################################################
