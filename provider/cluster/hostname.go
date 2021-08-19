@@ -15,8 +15,8 @@ import (
 type HostnameServiceClient interface {
 	ReserveHostnames(hostnames []string, leaseID mtypes.LeaseID) ReservationResult
 	ReleaseHostnames(leaseID mtypes.LeaseID) error
-	CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) <-chan error
-	PrepareHostnamesForTransfer(hostnames []string, leaseID mtypes.LeaseID) <-chan error
+	CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) error
+	PrepareHostnamesForTransfer(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID) error
 }
 
 /**
@@ -100,7 +100,7 @@ func prepareHostnamesImpl(store map[string]hostnameID, hostnames []string, hID h
 	for _, hostname := range toChange {
 		store[hostname] = hID
 	}
-	close(errCh)
+	errCh <- nil
 }
 
 func (sh *SimpleHostnames) ReserveHostnames(hostnames []string, leaseID mtypes.LeaseID) ReservationResult {
@@ -159,12 +159,12 @@ func reserveHostnamesImpl(store map[string]hostnameID, hostnames []string, hID h
 	return
 }
 
-func (sh *SimpleHostnames) CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) <-chan error {
+func (sh *SimpleHostnames) CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) error {
 	sh.lock.Lock()
 	defer sh.lock.Unlock()
 	ch := make(chan error, 1)
 	canReserveHostnamesImpl(sh.Hostnames, hostnames, ownerAddr, ch)
-	return ch
+	return <-ch
 }
 
 func canReserveHostnamesImpl(store map[string]hostnameID, hostnames []string, ownerAddr sdktypes.Address, chErr chan<- error) {
@@ -305,13 +305,12 @@ loop:
 
 var ErrHostnameNotAllowed = errors.New("hostname not allowed")
 
-func (hs *hostnameService) PrepareHostnamesForTransfer(hostnames []string, leaseID mtypes.LeaseID) <-chan error {
+func (hs *hostnameService) PrepareHostnamesForTransfer(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID) error {
 	chErr := make(chan error, 1)
 
 	hID, err := hostnameIDFromLeaseID(leaseID)
 	if err != nil {
-		chErr <- err
-		return chErr
+		return err
 	}
 
 	v := prepareTransferRequest{
@@ -323,9 +322,18 @@ func (hs *hostnameService) PrepareHostnamesForTransfer(hostnames []string, lease
 	case hs.prepareRequest <- v:
 	case <-hs.lc.ShuttingDown():
 		chErr <- ErrNotRunning
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 
-	return chErr
+	select {
+	case err = <- chErr:
+		return err
+	case <- ctx.Done():
+		return ctx.Err()
+	case <- hs.lc.ShuttingDown():
+		return ErrNotRunning
+	}
 }
 
 func (hs *hostnameService) isHostnameBlocked(hostname string) error {
@@ -405,7 +413,7 @@ func (hs *hostnameService) ReleaseHostnames(leaseID mtypes.LeaseID) error {
 	return nil
 }
 
-func (hs *hostnameService) CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) <-chan error {
+func (hs *hostnameService) CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) error {
 	returnValue := make(chan error, 1) // Buffer of one so service does not block
 	lowercaseHostnames := make([]string, len(hostnames))
 	for i, hostname := range hostnames {
@@ -424,5 +432,5 @@ func (hs *hostnameService) CanReserveHostnames(hostnames []string, ownerAddr sdk
 		returnValue <- ErrNotRunning
 	}
 
-	return returnValue
+	return <- returnValue
 }

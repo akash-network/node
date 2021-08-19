@@ -368,13 +368,7 @@ func (m *manager) checkHostnamesForManifest(requestManifest manifest.Manifest, g
 		}
 	}
 
-	select {
-	case err := <-m.hostnameService.CanReserveHostnames(allHostnames, ownerAddr):
-		return err
-	case <-m.lc.ShutdownRequest():
-		return ErrNotRunning
-	}
-
+	return m.hostnameService.CanReserveHostnames(allHostnames, ownerAddr)
 }
 
 func (m *manager) validateRequest(req manifestRequest) error {
