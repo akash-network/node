@@ -590,7 +590,7 @@ func accountSettleFullblocks(
 	sdk.Coin,
 ) {
 
-	numFullBlocks := account.Balance.Add(account.Funds).Amount.Quo(blockRate.Amount)
+	numFullBlocks := account.TotalBalance().Amount.Quo(blockRate.Amount)
 
 	if numFullBlocks.GT(heightDelta) {
 		numFullBlocks = heightDelta
@@ -612,7 +612,7 @@ func accountSettleFullblocks(
 		account.Funds.Amount = sdk.ZeroInt()
 	}
 
-	remaining := account.Balance.Add(account.Funds)
+	remaining := account.TotalBalance()
 	overdrawn := true
 	if numFullBlocks.Equal(heightDelta) {
 		remaining.Amount = sdk.ZeroInt()

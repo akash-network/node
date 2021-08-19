@@ -46,3 +46,8 @@ func (obj *Payment) ValidateBasic() error {
 	}
 	return nil
 }
+
+// TotalBalance is the sum of Balance and Funds
+func (obj *Account) TotalBalance() sdk.Coin {
+	return obj.Balance.Add(obj.Funds)
+}
