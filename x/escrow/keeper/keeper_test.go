@@ -24,14 +24,14 @@ func Test_AccountCreate(t *testing.T) {
 	bkeeper.
 		On("SendCoinsFromAccountToModule", ctx, owner, types.ModuleName, sdk.NewCoins(amt)).
 		Return(nil)
-	assert.NoError(t, keeper.AccountCreate(ctx, id, owner, amt))
+	assert.NoError(t, keeper.AccountCreate(ctx, id, owner, owner, amt))
 
 	// deposit more tokens
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
 	bkeeper.
 		On("SendCoinsFromAccountToModule", ctx, owner, types.ModuleName, sdk.NewCoins(amt2)).
 		Return(nil)
-	assert.NoError(t, keeper.AccountDeposit(ctx, id, amt2))
+	assert.NoError(t, keeper.AccountDeposit(ctx, id, owner, amt2))
 
 	// close account
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
@@ -41,10 +41,10 @@ func Test_AccountCreate(t *testing.T) {
 	assert.NoError(t, keeper.AccountClose(ctx, id))
 
 	// no deposits after closed
-	assert.Error(t, keeper.AccountDeposit(ctx, id, amt))
+	assert.Error(t, keeper.AccountDeposit(ctx, id, owner, amt))
 
 	// no re-creating account
-	assert.Error(t, keeper.AccountCreate(ctx, id, owner, amt))
+	assert.Error(t, keeper.AccountCreate(ctx, id, owner, owner, amt))
 }
 
 func Test_PaymentCreate(t *testing.T) {
@@ -61,7 +61,7 @@ func Test_PaymentCreate(t *testing.T) {
 	bkeeper.
 		On("SendCoinsFromAccountToModule", ctx, aowner, types.ModuleName, sdk.NewCoins(amt)).
 		Return(nil)
-	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, amt))
+	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, aowner, amt))
 
 	{
 		acct, err := keeper.GetAccount(ctx, aid)
@@ -150,7 +150,7 @@ func Test_Payment_Overdraw(t *testing.T) {
 	bkeeper.
 		On("SendCoinsFromAccountToModule", ctx, aowner, types.ModuleName, sdk.NewCoins(amt)).
 		Return(nil)
-	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, amt))
+	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, aowner, amt))
 
 	// create payment
 	assert.NoError(t, keeper.PaymentCreate(ctx, aid, pid, powner, rate))
@@ -196,7 +196,7 @@ func Test_PaymentCreate_later(t *testing.T) {
 	bkeeper.
 		On("SendCoinsFromAccountToModule", ctx, aowner, types.ModuleName, sdk.NewCoins(amt)).
 		Return(nil)
-	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, amt))
+	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, aowner, amt))
 
 	blkdelta := int64(10)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + blkdelta)

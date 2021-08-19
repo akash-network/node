@@ -19,6 +19,7 @@ mocks: $(MOCKERY) modvendor
 	$(MOCKERY) --case=underscore --dir client                      --output client/mocks/               --name QueryClient
 	$(MOCKERY) --case=underscore --dir client                      --output client/mocks/               --name Client
 	$(MOCKERY) --case=underscore --dir x/escrow/keeper             --output x/escrow/keeper/mocks       --name BankKeeper
+	$(MOCKERY) --case=underscore --dir x/escrow/keeper             --output x/escrow/keeper/mocks       --name AuthzKeeper
 
 .PHONY: kubetypes
 kubetypes: $(K8S_GENERATE_GROUPS)

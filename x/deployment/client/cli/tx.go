@@ -89,11 +89,17 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
+			depositorAcc, err := DepositorFromFlags(cmd.Flags(), id.Owner)
+			if err != nil {
+				return err
+			}
+
 			msg := &types.MsgCreateDeployment{
-				ID:      id,
-				Version: version,
-				Groups:  make([]types.GroupSpec, 0, len(groups)),
-				Deposit: deposit,
+				ID:        id,
+				Version:   version,
+				Groups:    make([]types.GroupSpec, 0, len(groups)),
+				Deposit:   deposit,
+				Depositor: depositorAcc,
 			}
 
 			for _, group := range groups {
@@ -111,6 +117,7 @@ func cmdCreate(key string) *cobra.Command {
 	flags.AddTxFlagsToCmd(cmd)
 	AddDeploymentIDFlags(cmd.Flags())
 	common.AddDepositFlags(cmd.Flags(), DefaultDeposit)
+	AddDepositorFlag(cmd.Flags())
 
 	return cmd
 }
@@ -136,9 +143,15 @@ func cmdDeposit(key string) *cobra.Command {
 				return err
 			}
 
+			depositorAcc, err := DepositorFromFlags(cmd.Flags(), id.Owner)
+			if err != nil {
+				return err
+			}
+
 			msg := &types.MsgDepositDeployment{
-				ID:     id,
-				Amount: deposit,
+				ID:        id,
+				Amount:    deposit,
+				Depositor: depositorAcc,
 			}
 
 			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
@@ -147,6 +160,7 @@ func cmdDeposit(key string) *cobra.Command {
 
 	flags.AddTxFlagsToCmd(cmd)
 	AddDeploymentIDFlags(cmd.Flags())
+	AddDepositorFlag(cmd.Flags())
 
 	return cmd
 }

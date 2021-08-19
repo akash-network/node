@@ -25,6 +25,9 @@ func (obj *Account) ValidateBasic() error {
 	if obj.State == AccountStateInvalid {
 		return errors.Wrapf(ErrInvalidAccount, "invalid account: state - %s", obj.State)
 	}
+	if _, err := sdk.AccAddressFromBech32(obj.Depositor); err != nil {
+		return errors.Wrapf(ErrInvalidAccount, "invalid account: depositor - %s", err)
+	}
 	return nil
 }
 

@@ -16,6 +16,7 @@ service Query {
   }
 }
 
+// CertificateResponse is used by QueryCertificatesResponse
 message CertificateResponse {
   Certificate certificate = 1 [
     (gogoproto.nullable) = false,

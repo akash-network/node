@@ -262,6 +262,7 @@ func createLease(t testing.TB, suite *state.TestSuite) types.LeaseID {
 		ctx,
 		dtypes.EscrowAccountForDeployment(bid.ID().DeploymentID()),
 		owner,
+		owner,
 		dtypes.DefaultDeploymentMinDeposit,
 	)
 	require.NoError(t, err)
@@ -296,6 +297,7 @@ func createBid(t testing.TB, suite *state.TestSuite) (types.Bid, types.Order) {
 	err = suite.EscrowKeeper().AccountCreate(
 		ctx,
 		types.EscrowAccountForBid(bid.ID()),
+		provider,
 		provider,
 		types.DefaultBidMinDeposit,
 	)

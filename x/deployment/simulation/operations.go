@@ -130,7 +130,7 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCreateDeployment, "unable to generate fees"), nil, err
 		}
 
-		msg := types.NewMsgCreateDeployment(dID, make([]types.GroupSpec, 0, len(groupSpecs)), sdlSum, depositAmount)
+		msg := types.NewMsgCreateDeployment(dID, make([]types.GroupSpec, 0, len(groupSpecs)), sdlSum, depositAmount, simAccount.Address)
 
 		for _, spec := range groupSpecs {
 			msg.Groups = append(msg.Groups, *spec)

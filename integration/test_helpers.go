@@ -2,12 +2,18 @@ package integration
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/testutil"
+	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
+	authzcli "github.com/cosmos/cosmos-sdk/x/authz/client/cli"
+	deploymenttypes "github.com/ovrclk/akash/x/deployment/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -131,11 +137,7 @@ func appEnv(t *testing.T) (string, string) {
 	return host, appPort
 }
 
-// this function is a gentle response to inappropriate approach of cli test utils
-// send transaction may fail and calling cli routine won't know about it
-func validateTxSuccessful(t testing.TB, cctx client.Context, data []byte) {
-	t.Helper()
-
+func getTxResponse(t testing.TB, cctx client.Context, data []byte) *sdk.TxResponse {
 	var resp sdk.TxResponse
 
 	err := jsonpb.Unmarshal(bytes.NewBuffer(data), &resp)
@@ -144,5 +146,47 @@ func validateTxSuccessful(t testing.TB, cctx client.Context, data []byte) {
 	res, err := tx.QueryTx(cctx, resp.TxHash)
 	require.NoError(t, err)
 
+	return res
+}
+
+// this function is a gentle response to inappropriate approach of cli test utils
+// send transaction may fail and calling cli routine won't know about it
+func validateTxSuccessful(t testing.TB, cctx client.Context, data []byte) {
+	t.Helper()
+
+	res := getTxResponse(t, cctx, data)
 	require.Zero(t, res.Code, res)
+}
+
+func validateTxUnSuccessful(t testing.TB, cctx client.Context, data []byte) {
+	t.Helper()
+
+	res := getTxResponse(t, cctx, data)
+	require.NotZero(t, res.Code, res)
+}
+
+func authzTxGrantSend(clientCtx client.Context, granter, grantee sdk.AccAddress,
+	extraArgs ...string) (testutil.BufferWriter, error) {
+	spendLimit := sdk.NewCoin(deploymenttypes.DefaultDeploymentMinDeposit.Denom, deploymenttypes.DefaultDeploymentMinDeposit.Amount.MulRaw(3))
+	args := []string{
+		grantee.String(),
+		"send",
+		fmt.Sprintf("--spend-limit=%s", spendLimit.String()),
+		fmt.Sprintf("--from=%s", granter.String()),
+	}
+	args = append(args, extraArgs...)
+
+	return clitestutil.ExecTestCLICmd(clientCtx, authzcli.NewCmdGrantAuthorization(), args)
+}
+
+func authzTxRevokeSend(clientCtx client.Context, granter, grantee sdk.AccAddress,
+	extraArgs ...string) (testutil.BufferWriter, error) {
+	args := []string{
+		grantee.String(),
+		"/cosmos.bank.v1beta1.MsgSend",
+		fmt.Sprintf("--from=%s", granter.String()),
+	}
+	args = append(args, extraArgs...)
+
+	return clitestutil.ExecTestCLICmd(clientCtx, authzcli.NewCmdRevokeAuthorization(), args)
 }

@@ -63,6 +63,104 @@ func TestSettleFullblocks(t *testing.T) {
 				overdrawn:    true,
 			},
 		},
+		{
+			name: "plenty funds",
+			cfg: distTestConfig{
+				blocks:       5,
+				balanceStart: 0,
+				rates:        []int64{1, 2},
+				balanceEnd:   0,
+				fundsStart:   100,
+				fundsEnd:     85,
+				transferred:  []int64{5, 10},
+				remaining:    0,
+				overdrawn:    false,
+			},
+		},
+		{
+			name: "use all funds",
+			cfg: distTestConfig{
+				blocks:       5,
+				balanceStart: 100,
+				rates:        []int64{10, 10},
+				balanceEnd:   100,
+				fundsStart:   100,
+				fundsEnd:     0,
+				transferred:  []int64{50, 50},
+				remaining:    0,
+				overdrawn:    false,
+			},
+		},
+		{
+			name: "use all funds with some balance",
+			cfg: distTestConfig{
+				blocks:       6,
+				balanceStart: 100,
+				rates:        []int64{10, 10},
+				balanceEnd:   80,
+				fundsStart:   100,
+				fundsEnd:     0,
+				transferred:  []int64{60, 60},
+				remaining:    0,
+				overdrawn:    false,
+			},
+		},
+		{
+			name: "use all funds and balance",
+			cfg: distTestConfig{
+				blocks:       10,
+				balanceStart: 100,
+				rates:        []int64{10, 10},
+				balanceEnd:   0,
+				fundsStart:   100,
+				fundsEnd:     0,
+				transferred:  []int64{100, 100},
+				remaining:    0,
+				overdrawn:    false,
+			},
+		},
+		{
+			name: "overdrawn with all funds and balance used up",
+			cfg: distTestConfig{
+				blocks:       11,
+				balanceStart: 100,
+				rates:        []int64{10, 10},
+				balanceEnd:   0,
+				fundsStart:   100,
+				fundsEnd:     0,
+				transferred:  []int64{100, 100},
+				remaining:    0,
+				overdrawn:    true,
+			},
+		},
+		{
+			name: "overdrawn with all funds used and some balance left",
+			cfg: distTestConfig{
+				blocks:       10,
+				balanceStart: 100,
+				rates:        []int64{10, 10},
+				balanceEnd:   10,
+				fundsStart:   90,
+				fundsEnd:     0,
+				transferred:  []int64{90, 90},
+				remaining:    10,
+				overdrawn:    true,
+			},
+		},
+		{
+			name: "overdrawn when only funds",
+			cfg: distTestConfig{
+				blocks:       6,
+				balanceStart: 0,
+				rates:        []int64{10, 10},
+				balanceEnd:   10,
+				fundsStart:   90,
+				fundsEnd:     0,
+				transferred:  []int64{40, 40},
+				remaining:    10,
+				overdrawn:    true,
+			},
+		},
 	} {
 		account, payments, blocks, blockRate := setupDistTest(tt.cfg)
 
@@ -70,6 +168,7 @@ func TestSettleFullblocks(t *testing.T) {
 			account, payments, blocks, blockRate)
 
 		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.balanceEnd), account.Balance, tt.name)
+		assertCoinsEqual(t, sdk.NewInt64Coin(denom, tt.cfg.fundsEnd), account.Funds, tt.name)
 
 		for idx := range payments {
 			assert.Equal(t, sdk.NewInt64Coin(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
@@ -178,6 +277,8 @@ type distTestConfig struct {
 	balanceStart int64
 	rates        []int64
 	balanceEnd   int64
+	fundsStart   int64
+	fundsEnd     int64
 	transferred  []int64
 	remaining    int64
 	overdrawn    bool
@@ -187,6 +288,7 @@ func setupDistTest(cfg distTestConfig) (types.Account, []types.Payment, sdk.Int,
 	account := types.Account{
 		Balance:     sdk.NewInt64Coin(denom, cfg.balanceStart),
 		Transferred: sdk.NewInt64Coin(denom, 0),
+		Funds:       sdk.NewInt64Coin(denom, cfg.fundsStart),
 	}
 
 	payments := make([]types.Payment, 0, len(cfg.rates))

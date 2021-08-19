@@ -5,6 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	testutilcli "github.com/ovrclk/akash/testutil/cli"
 	"github.com/ovrclk/akash/x/deployment/types"
@@ -48,6 +49,18 @@ func TxCloseDeploymentExec(clientCtx client.Context, from fmt.Stringer, extraArg
 	args = append(args, extraArgs...)
 
 	return testutilcli.ExecTestCLICmd(clientCtx, cmdClose(key), args...)
+}
+
+// TxDepositDeploymentExec is used for testing deposit deployment tx
+func TxDepositDeploymentExec(clientCtx client.Context, deposit sdk.Coin, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
+	args := []string{
+		deposit.String(),
+		fmt.Sprintf("--from=%s", from.String()),
+	}
+
+	args = append(args, extraArgs...)
+
+	return testutilcli.ExecTestCLICmd(clientCtx, cmdDeposit(key), args...)
 }
 
 // TxCloseGroupExec is used for testing close group tx

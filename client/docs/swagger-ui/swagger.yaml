@@ -265,16 +265,20 @@ paths:
                 type: object
                 properties:
                   id:
+                    title: unique identifier for this escrow account
                     type: object
                     properties:
                       scope:
                         type: string
                       xid:
                         type: string
-                    title: AccountID is the account identifier
                   owner:
                     type: string
+                    title: >-
+                      bech32 encoded account address of the owner of this escrow
+                      account
                   state:
+                    title: current state of this escrow account
                     type: string
                     enum:
                       - invalid
@@ -287,7 +291,6 @@ paths:
                        - open: AccountOpen is the state when an account is open
                        - closed: AccountClosed is the state when an account is closed
                        - overdrawn: AccountOverdrawn is the state when an account is overdrawn
-                    title: State stores state for an escrow account
                   balance:
                     type: object
                     properties:
@@ -303,6 +306,7 @@ paths:
                       custom method
 
                       signatures required by gogoproto.
+                    title: unspent coins received from the owner's wallet
                   transferred:
                     type: object
                     properties:
@@ -318,9 +322,36 @@ paths:
                       custom method
 
                       signatures required by gogoproto.
+                    title: total coins spent by this account
                   settled_at:
                     type: string
                     format: int64
+                    title: block height at which this account was last settled
+                  depositor:
+                    type: string
+                    description: >-
+                      bech32 encoded account address of the depositor.
+
+                      If depositor is same as the owner, then any incoming coins
+                      are added to the Balance.
+
+                      If depositor isn't same as the owner, then any incoming
+                      coins are added to the Funds.
+                  funds:
+                    type: object
+                    properties:
+                      denom:
+                        type: string
+                      amount:
+                        type: string
+                    description: >-
+                      Coin defines a token with a denomination and an amount.
+
+
+                      NOTE: The amount field is an Int which implements the
+                      custom method
+
+                      signatures required by gogoproto.
                 title: Account stores state for an escrow account
             title: >-
               QueryDeploymentResponse is response type for the Query/Deployment
@@ -629,16 +660,20 @@ paths:
                       type: object
                       properties:
                         id:
+                          title: unique identifier for this escrow account
                           type: object
                           properties:
                             scope:
                               type: string
                             xid:
                               type: string
-                          title: AccountID is the account identifier
                         owner:
                           type: string
+                          title: >-
+                            bech32 encoded account address of the owner of this
+                            escrow account
                         state:
+                          title: current state of this escrow account
                           type: string
                           enum:
                             - invalid
@@ -651,7 +686,6 @@ paths:
                              - open: AccountOpen is the state when an account is open
                              - closed: AccountClosed is the state when an account is closed
                              - overdrawn: AccountOverdrawn is the state when an account is overdrawn
-                          title: State stores state for an escrow account
                         balance:
                           type: object
                           properties:
@@ -668,6 +702,7 @@ paths:
                             the custom method
 
                             signatures required by gogoproto.
+                          title: unspent coins received from the owner's wallet
                         transferred:
                           type: object
                           properties:
@@ -684,9 +719,37 @@ paths:
                             the custom method
 
                             signatures required by gogoproto.
+                          title: total coins spent by this account
                         settled_at:
                           type: string
                           format: int64
+                          title: block height at which this account was last settled
+                        depositor:
+                          type: string
+                          description: >-
+                            bech32 encoded account address of the depositor.
+
+                            If depositor is same as the owner, then any incoming
+                            coins are added to the Balance.
+
+                            If depositor isn't same as the owner, then any
+                            incoming coins are added to the Funds.
+                        funds:
+                          type: object
+                          properties:
+                            denom:
+                              type: string
+                            amount:
+                              type: string
+                          description: >-
+                            Coin defines a token with a denomination and an
+                            amount.
+
+
+                            NOTE: The amount field is an Int which implements
+                            the custom method
+
+                            signatures required by gogoproto.
                       title: Account stores state for an escrow account
                   title: >-
                     QueryDeploymentResponse is response type for the
@@ -1147,16 +1210,20 @@ paths:
                 type: object
                 properties:
                   id:
+                    title: unique identifier for this escrow account
                     type: object
                     properties:
                       scope:
                         type: string
                       xid:
                         type: string
-                    title: AccountID is the account identifier
                   owner:
                     type: string
+                    title: >-
+                      bech32 encoded account address of the owner of this escrow
+                      account
                   state:
+                    title: current state of this escrow account
                     type: string
                     enum:
                       - invalid
@@ -1169,7 +1236,6 @@ paths:
                        - open: AccountOpen is the state when an account is open
                        - closed: AccountClosed is the state when an account is closed
                        - overdrawn: AccountOverdrawn is the state when an account is overdrawn
-                    title: State stores state for an escrow account
                   balance:
                     type: object
                     properties:
@@ -1185,6 +1251,7 @@ paths:
                       custom method
 
                       signatures required by gogoproto.
+                    title: unspent coins received from the owner's wallet
                   transferred:
                     type: object
                     properties:
@@ -1200,9 +1267,36 @@ paths:
                       custom method
 
                       signatures required by gogoproto.
+                    title: total coins spent by this account
                   settled_at:
                     type: string
                     format: int64
+                    title: block height at which this account was last settled
+                  depositor:
+                    type: string
+                    description: >-
+                      bech32 encoded account address of the depositor.
+
+                      If depositor is same as the owner, then any incoming coins
+                      are added to the Balance.
+
+                      If depositor isn't same as the owner, then any incoming
+                      coins are added to the Funds.
+                  funds:
+                    type: object
+                    properties:
+                      denom:
+                        type: string
+                      amount:
+                        type: string
+                    description: >-
+                      Coin defines a token with a denomination and an amount.
+
+
+                      NOTE: The amount field is an Int which implements the
+                      custom method
+
+                      signatures required by gogoproto.
                 title: Account stores state for an escrow account
             title: QueryBidResponse is response type for the Query/Bid RPC method
         default:
@@ -1331,16 +1425,20 @@ paths:
                       type: object
                       properties:
                         id:
+                          title: unique identifier for this escrow account
                           type: object
                           properties:
                             scope:
                               type: string
                             xid:
                               type: string
-                          title: AccountID is the account identifier
                         owner:
                           type: string
+                          title: >-
+                            bech32 encoded account address of the owner of this
+                            escrow account
                         state:
+                          title: current state of this escrow account
                           type: string
                           enum:
                             - invalid
@@ -1353,7 +1451,6 @@ paths:
                              - open: AccountOpen is the state when an account is open
                              - closed: AccountClosed is the state when an account is closed
                              - overdrawn: AccountOverdrawn is the state when an account is overdrawn
-                          title: State stores state for an escrow account
                         balance:
                           type: object
                           properties:
@@ -1370,6 +1467,7 @@ paths:
                             the custom method
 
                             signatures required by gogoproto.
+                          title: unspent coins received from the owner's wallet
                         transferred:
                           type: object
                           properties:
@@ -1386,9 +1484,37 @@ paths:
                             the custom method
 
                             signatures required by gogoproto.
+                          title: total coins spent by this account
                         settled_at:
                           type: string
                           format: int64
+                          title: block height at which this account was last settled
+                        depositor:
+                          type: string
+                          description: >-
+                            bech32 encoded account address of the depositor.
+
+                            If depositor is same as the owner, then any incoming
+                            coins are added to the Balance.
+
+                            If depositor isn't same as the owner, then any
+                            incoming coins are added to the Funds.
+                        funds:
+                          type: object
+                          properties:
+                            denom:
+                              type: string
+                            amount:
+                              type: string
+                          description: >-
+                            Coin defines a token with a denomination and an
+                            amount.
+
+
+                            NOTE: The amount field is an Int which implements
+                            the custom method
+
+                            signatures required by gogoproto.
                       title: Account stores state for an escrow account
                   title: >-
                     QueryBidResponse is response type for the Query/Bid RPC
@@ -27183,16 +27309,18 @@ definitions:
         type: object
         properties:
           id:
+            title: unique identifier for this escrow account
             type: object
             properties:
               scope:
                 type: string
               xid:
                 type: string
-            title: AccountID is the account identifier
           owner:
             type: string
+            title: bech32 encoded account address of the owner of this escrow account
           state:
+            title: current state of this escrow account
             type: string
             enum:
               - invalid
@@ -27205,7 +27333,6 @@ definitions:
                - open: AccountOpen is the state when an account is open
                - closed: AccountClosed is the state when an account is closed
                - overdrawn: AccountOverdrawn is the state when an account is overdrawn
-            title: State stores state for an escrow account
           balance:
             type: object
             properties:
@@ -27221,6 +27348,7 @@ definitions:
               method
 
               signatures required by gogoproto.
+            title: unspent coins received from the owner's wallet
           transferred:
             type: object
             properties:
@@ -27236,9 +27364,36 @@ definitions:
               method
 
               signatures required by gogoproto.
+            title: total coins spent by this account
           settled_at:
             type: string
             format: int64
+            title: block height at which this account was last settled
+          depositor:
+            type: string
+            description: >-
+              bech32 encoded account address of the depositor.
+
+              If depositor is same as the owner, then any incoming coins are
+              added to the Balance.
+
+              If depositor isn't same as the owner, then any incoming coins are
+              added to the Funds.
+          funds:
+            type: object
+            properties:
+              denom:
+                type: string
+              amount:
+                type: string
+            description: >-
+              Coin defines a token with a denomination and an amount.
+
+
+              NOTE: The amount field is an Int which implements the custom
+              method
+
+              signatures required by gogoproto.
         title: Account stores state for an escrow account
     title: >-
       QueryDeploymentResponse is response type for the Query/Deployment RPC
@@ -27502,16 +27657,20 @@ definitions:
               type: object
               properties:
                 id:
+                  title: unique identifier for this escrow account
                   type: object
                   properties:
                     scope:
                       type: string
                     xid:
                       type: string
-                  title: AccountID is the account identifier
                 owner:
                   type: string
+                  title: >-
+                    bech32 encoded account address of the owner of this escrow
+                    account
                 state:
+                  title: current state of this escrow account
                   type: string
                   enum:
                     - invalid
@@ -27524,7 +27683,6 @@ definitions:
                      - open: AccountOpen is the state when an account is open
                      - closed: AccountClosed is the state when an account is closed
                      - overdrawn: AccountOverdrawn is the state when an account is overdrawn
-                  title: State stores state for an escrow account
                 balance:
                   type: object
                   properties:
@@ -27540,6 +27698,7 @@ definitions:
                     method
 
                     signatures required by gogoproto.
+                  title: unspent coins received from the owner's wallet
                 transferred:
                   type: object
                   properties:
@@ -27555,9 +27714,36 @@ definitions:
                     method
 
                     signatures required by gogoproto.
+                  title: total coins spent by this account
                 settled_at:
                   type: string
                   format: int64
+                  title: block height at which this account was last settled
+                depositor:
+                  type: string
+                  description: >-
+                    bech32 encoded account address of the depositor.
+
+                    If depositor is same as the owner, then any incoming coins
+                    are added to the Balance.
+
+                    If depositor isn't same as the owner, then any incoming
+                    coins are added to the Funds.
+                funds:
+                  type: object
+                  properties:
+                    denom:
+                      type: string
+                    amount:
+                      type: string
+                  description: >-
+                    Coin defines a token with a denomination and an amount.
+
+
+                    NOTE: The amount field is an Int which implements the custom
+                    method
+
+                    signatures required by gogoproto.
               title: Account stores state for an escrow account
           title: >-
             QueryDeploymentResponse is response type for the Query/Deployment
@@ -27909,16 +28095,18 @@ definitions:
     type: object
     properties:
       id:
+        title: unique identifier for this escrow account
         type: object
         properties:
           scope:
             type: string
           xid:
             type: string
-        title: AccountID is the account identifier
       owner:
         type: string
+        title: bech32 encoded account address of the owner of this escrow account
       state:
+        title: current state of this escrow account
         type: string
         enum:
           - invalid
@@ -27931,7 +28119,6 @@ definitions:
            - open: AccountOpen is the state when an account is open
            - closed: AccountClosed is the state when an account is closed
            - overdrawn: AccountOverdrawn is the state when an account is overdrawn
-        title: State stores state for an escrow account
       balance:
         type: object
         properties:
@@ -27944,6 +28131,7 @@ definitions:
 
           NOTE: The amount field is an Int which implements the custom method
           signatures required by gogoproto.
+        title: unspent coins received from the owner's wallet
       transferred:
         type: object
         properties:
@@ -27956,9 +28144,33 @@ definitions:
 
           NOTE: The amount field is an Int which implements the custom method
           signatures required by gogoproto.
+        title: total coins spent by this account
       settled_at:
         type: string
         format: int64
+        title: block height at which this account was last settled
+      depositor:
+        type: string
+        description: >-
+          bech32 encoded account address of the depositor.
+
+          If depositor is same as the owner, then any incoming coins are added
+          to the Balance.
+
+          If depositor isn't same as the owner, then any incoming coins are
+          added to the Funds.
+      funds:
+        type: object
+        properties:
+          denom:
+            type: string
+          amount:
+            type: string
+        description: |-
+          Coin defines a token with a denomination and an amount.
+
+          NOTE: The amount field is an Int which implements the custom method
+          signatures required by gogoproto.
     title: Account stores state for an escrow account
   akash.escrow.v1beta1.Account.State:
     type: string
@@ -28991,16 +29203,18 @@ definitions:
         type: object
         properties:
           id:
+            title: unique identifier for this escrow account
             type: object
             properties:
               scope:
                 type: string
               xid:
                 type: string
-            title: AccountID is the account identifier
           owner:
             type: string
+            title: bech32 encoded account address of the owner of this escrow account
           state:
+            title: current state of this escrow account
             type: string
             enum:
               - invalid
@@ -29013,7 +29227,6 @@ definitions:
                - open: AccountOpen is the state when an account is open
                - closed: AccountClosed is the state when an account is closed
                - overdrawn: AccountOverdrawn is the state when an account is overdrawn
-            title: State stores state for an escrow account
           balance:
             type: object
             properties:
@@ -29029,6 +29242,7 @@ definitions:
               method
 
               signatures required by gogoproto.
+            title: unspent coins received from the owner's wallet
           transferred:
             type: object
             properties:
@@ -29044,9 +29258,36 @@ definitions:
               method
 
               signatures required by gogoproto.
+            title: total coins spent by this account
           settled_at:
             type: string
             format: int64
+            title: block height at which this account was last settled
+          depositor:
+            type: string
+            description: >-
+              bech32 encoded account address of the depositor.
+
+              If depositor is same as the owner, then any incoming coins are
+              added to the Balance.
+
+              If depositor isn't same as the owner, then any incoming coins are
+              added to the Funds.
+          funds:
+            type: object
+            properties:
+              denom:
+                type: string
+              amount:
+                type: string
+            description: >-
+              Coin defines a token with a denomination and an amount.
+
+
+              NOTE: The amount field is an Int which implements the custom
+              method
+
+              signatures required by gogoproto.
         title: Account stores state for an escrow account
     title: QueryBidResponse is response type for the Query/Bid RPC method
   akash.market.v1beta1.QueryBidsResponse:
@@ -29119,16 +29360,20 @@ definitions:
               type: object
               properties:
                 id:
+                  title: unique identifier for this escrow account
                   type: object
                   properties:
                     scope:
                       type: string
                     xid:
                       type: string
-                  title: AccountID is the account identifier
                 owner:
                   type: string
+                  title: >-
+                    bech32 encoded account address of the owner of this escrow
+                    account
                 state:
+                  title: current state of this escrow account
                   type: string
                   enum:
                     - invalid
@@ -29141,7 +29386,6 @@ definitions:
                      - open: AccountOpen is the state when an account is open
                      - closed: AccountClosed is the state when an account is closed
                      - overdrawn: AccountOverdrawn is the state when an account is overdrawn
-                  title: State stores state for an escrow account
                 balance:
                   type: object
                   properties:
@@ -29157,6 +29401,7 @@ definitions:
                     method
 
                     signatures required by gogoproto.
+                  title: unspent coins received from the owner's wallet
                 transferred:
                   type: object
                   properties:
@@ -29172,9 +29417,36 @@ definitions:
                     method
 
                     signatures required by gogoproto.
+                  title: total coins spent by this account
                 settled_at:
                   type: string
                   format: int64
+                  title: block height at which this account was last settled
+                depositor:
+                  type: string
+                  description: >-
+                    bech32 encoded account address of the depositor.
+
+                    If depositor is same as the owner, then any incoming coins
+                    are added to the Balance.
+
+                    If depositor isn't same as the owner, then any incoming
+                    coins are added to the Funds.
+                funds:
+                  type: object
+                  properties:
+                    denom:
+                      type: string
+                    amount:
+                      type: string
+                  description: >-
+                    Coin defines a token with a denomination and an amount.
+
+
+                    NOTE: The amount field is an Int which implements the custom
+                    method
+
+                    signatures required by gogoproto.
               title: Account stores state for an escrow account
           title: QueryBidResponse is response type for the Query/Bid RPC method
       pagination:

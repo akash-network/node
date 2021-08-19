@@ -31,10 +31,11 @@ type testSuite struct {
 func setupTestSuite(t *testing.T) *testSuite {
 	ssuite := state.SetupTestSuite(t)
 	suite := &testSuite{
-		t:       t,
-		ctx:     ssuite.Context(),
-		mkeeper: ssuite.MarketKeeper(),
-		dkeeper: ssuite.DeploymentKeeper(),
+		TestSuite: ssuite,
+		t:         t,
+		ctx:       ssuite.Context(),
+		mkeeper:   ssuite.MarketKeeper(),
+		dkeeper:   ssuite.DeploymentKeeper(),
 	}
 
 	suite.handler = handler.NewHandler(suite.dkeeper, suite.mkeeper, ssuite.EscrowKeeper())
@@ -57,9 +58,10 @@ func TestCreateDeployment(t *testing.T) {
 	deployment, groups := suite.createDeployment()
 
 	msg := &types.MsgCreateDeployment{
-		ID:      deployment.ID(),
-		Groups:  make([]types.GroupSpec, 0, len(groups)),
-		Deposit: types.DefaultDeploymentMinDeposit,
+		ID:        deployment.ID(),
+		Groups:    make([]types.GroupSpec, 0, len(groups)),
+		Deposit:   types.DefaultDeploymentMinDeposit,
+		Depositor: deployment.ID().Owner,
 	}
 
 	for _, group := range groups {
@@ -123,10 +125,11 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 	deployment, groups := suite.createDeployment()
 
 	msg := &types.MsgCreateDeployment{
-		ID:      deployment.ID(),
-		Groups:  make([]types.GroupSpec, 0, len(groups)),
-		Version: testutil.DefaultDeploymentVersion[:],
-		Deposit: types.DefaultDeploymentMinDeposit,
+		ID:        deployment.ID(),
+		Groups:    make([]types.GroupSpec, 0, len(groups)),
+		Version:   testutil.DefaultDeploymentVersion[:],
+		Deposit:   types.DefaultDeploymentMinDeposit,
+		Depositor: deployment.ID().Owner,
 	}
 
 	for _, group := range groups {
@@ -190,9 +193,10 @@ func TestCloseDeploymentExisting(t *testing.T) {
 	deployment, groups := suite.createDeployment()
 
 	msg := &types.MsgCreateDeployment{
-		ID:      deployment.ID(),
-		Groups:  make([]types.GroupSpec, 0, len(groups)),
-		Deposit: types.DefaultDeploymentMinDeposit,
+		ID:        deployment.ID(),
+		Groups:    make([]types.GroupSpec, 0, len(groups)),
+		Deposit:   types.DefaultDeploymentMinDeposit,
+		Depositor: deployment.ID().Owner,
 	}
 
 	for _, group := range groups {
@@ -244,6 +248,114 @@ func TestCloseDeploymentExisting(t *testing.T) {
 	res, err = suite.handler(suite.ctx, msgClose)
 	require.Nil(t, res)
 	require.EqualError(t, err, types.ErrDeploymentClosed.Error())
+}
+
+func TestFundedDeployment(t *testing.T) {
+	suite := setupTestSuite(t)
+
+	deployment, groups := suite.createDeployment()
+	depositor := testutil.AccAddress(t).String()
+
+	// create a funded deployment
+	msg := &types.MsgCreateDeployment{
+		ID:        deployment.ID(),
+		Groups:    make([]types.GroupSpec, 0, len(groups)),
+		Deposit:   types.DefaultDeploymentMinDeposit,
+		Depositor: depositor,
+	}
+
+	for _, group := range groups {
+		msg.Groups = append(msg.Groups, group.GroupSpec)
+	}
+
+	res, err := suite.handler(suite.ctx, msg)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// ensure that it got created
+	_, exists := suite.dkeeper.GetDeployment(suite.ctx, deployment.ID())
+	require.True(t, exists)
+
+	// ensure that the escrow account has correct state
+	accID := types.EscrowAccountForDeployment(deployment.ID())
+	acc, err := suite.EscrowKeeper().GetAccount(suite.ctx, accID)
+	require.NoError(t, err)
+	require.Equal(t, deployment.ID().Owner, acc.Owner)
+	require.Equal(t, depositor, acc.Depositor)
+	require.Equal(t, sdk.NewCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Balance)
+	require.Equal(t, msg.Deposit, acc.Funds)
+
+	// deposit additional amount from the owner
+	depositMsg := &types.MsgDepositDeployment{
+		ID:        deployment.ID(),
+		Amount:    types.DefaultDeploymentMinDeposit,
+		Depositor: deployment.ID().Owner,
+	}
+	res, err = suite.handler(suite.ctx, depositMsg)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// ensure that the escrow account's state gets updated correctly
+	acc, err = suite.EscrowKeeper().GetAccount(suite.ctx, accID)
+	require.NoError(t, err)
+	require.Equal(t, deployment.ID().Owner, acc.Owner)
+	require.Equal(t, depositor, acc.Depositor)
+	require.Equal(t, depositMsg.Amount, acc.Balance)
+	require.Equal(t, msg.Deposit, acc.Funds)
+
+	// deposit additional amount from the depositor
+	depositMsg1 := &types.MsgDepositDeployment{
+		ID:        deployment.ID(),
+		Amount:    types.DefaultDeploymentMinDeposit,
+		Depositor: depositor,
+	}
+	res, err = suite.handler(suite.ctx, depositMsg1)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// ensure that the escrow account's state gets updated correctly
+	acc, err = suite.EscrowKeeper().GetAccount(suite.ctx, accID)
+	require.NoError(t, err)
+	require.Equal(t, deployment.ID().Owner, acc.Owner)
+	require.Equal(t, depositor, acc.Depositor)
+	require.Equal(t, depositMsg.Amount, acc.Balance)
+	require.Equal(t, msg.Deposit.Add(depositMsg1.Amount), acc.Funds)
+
+	// depositing additional amount from a random depositor should fail
+	depositMsg2 := &types.MsgDepositDeployment{
+		ID:        deployment.ID(),
+		Amount:    types.DefaultDeploymentMinDeposit,
+		Depositor: testutil.AccAddress(t).String(),
+	}
+	res, err = suite.handler(suite.ctx, depositMsg2)
+	require.Error(t, err)
+	require.Nil(t, res)
+
+	// make some payment from the escrow account
+	pid := "test_pid"
+	providerAddr := testutil.AccAddress(t)
+	rate := sdk.NewCoin(msg.Deposit.Denom, sdk.NewInt(12500000))
+	require.NoError(t, suite.EscrowKeeper().PaymentCreate(suite.ctx, accID, pid, providerAddr, rate))
+	ctx := suite.ctx.WithBlockHeight(acc.SettledAt + 1)
+	require.NoError(t, suite.EscrowKeeper().PaymentWithdraw(ctx, accID, pid))
+
+	// ensure that the escrow account's state gets updated correctly
+	acc, err = suite.EscrowKeeper().GetAccount(ctx, accID)
+	require.NoError(t, err)
+	require.Equal(t, sdk.NewCoin(msg.Deposit.Denom, sdk.NewInt(2500000)), acc.Balance)
+	require.Equal(t, sdk.NewCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Funds)
+
+	// close the deployment
+	closeMsg := &types.MsgCloseDeployment{ID: deployment.ID()}
+	res, err = suite.handler(ctx, closeMsg)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// ensure that the escrow account has no balance left
+	acc, err = suite.EscrowKeeper().GetAccount(ctx, accID)
+	require.NoError(t, err)
+	require.Equal(t, sdk.NewCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Balance)
+	require.Equal(t, sdk.NewCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Funds)
 }
 
 func (st *testSuite) createDeployment() (types.Deployment, []types.Group) {

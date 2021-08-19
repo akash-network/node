@@ -18,20 +18,22 @@ const (
 	errInvalidSettlement
 	errInvalidAccountID
 	errInvalidAccount
+	errUnauthorizedDepositor
 )
 
 var (
-	ErrAccountExists       = sdkerrors.Register(ModuleName, errAccountExists, "account exists")
-	ErrAccountClosed       = sdkerrors.Register(ModuleName, errAccountClosed, "account closed")
-	ErrAccountNotFound     = sdkerrors.Register(ModuleName, errAccountNotFound, "account not found")
-	ErrAccountOverdrawn    = sdkerrors.Register(ModuleName, errAccountOverdrawn, "account overdrawn")
-	ErrInvalidDenomination = sdkerrors.Register(ModuleName, errInvalidDenomination, "invalid denomination")
-	ErrPaymentExists       = sdkerrors.Register(ModuleName, errPaymentExists, "payment exists")
-	ErrPaymentClosed       = sdkerrors.Register(ModuleName, errPaymentClosed, "payment closed")
-	ErrPaymentNotFound     = sdkerrors.Register(ModuleName, errPaymentNotFound, "payment not found")
-	ErrPaymentRateZero     = sdkerrors.Register(ModuleName, errPaymentRateZero, "payment rate zero")
-	ErrInvalidPayment      = sdkerrors.Register(ModuleName, errInvalidPayment, "invalid payment")
-	ErrInvalidSettlement   = sdkerrors.Register(ModuleName, errInvalidSettlement, "invalid settlement")
-	ErrInvalidAccountID    = sdkerrors.Register(ModuleName, errInvalidAccountID, "invalid account ID")
-	ErrInvalidAccount      = sdkerrors.Register(ModuleName, errInvalidAccount, "invalid account")
+	ErrAccountExists         = sdkerrors.Register(ModuleName, errAccountExists, "account exists")
+	ErrAccountClosed         = sdkerrors.Register(ModuleName, errAccountClosed, "account closed")
+	ErrAccountNotFound       = sdkerrors.Register(ModuleName, errAccountNotFound, "account not found")
+	ErrAccountOverdrawn      = sdkerrors.Register(ModuleName, errAccountOverdrawn, "account overdrawn")
+	ErrInvalidDenomination   = sdkerrors.Register(ModuleName, errInvalidDenomination, "invalid denomination")
+	ErrPaymentExists         = sdkerrors.Register(ModuleName, errPaymentExists, "payment exists")
+	ErrPaymentClosed         = sdkerrors.Register(ModuleName, errPaymentClosed, "payment closed")
+	ErrPaymentNotFound       = sdkerrors.Register(ModuleName, errPaymentNotFound, "payment not found")
+	ErrPaymentRateZero       = sdkerrors.Register(ModuleName, errPaymentRateZero, "payment rate zero")
+	ErrInvalidPayment        = sdkerrors.Register(ModuleName, errInvalidPayment, "invalid payment")
+	ErrInvalidSettlement     = sdkerrors.Register(ModuleName, errInvalidSettlement, "invalid settlement")
+	ErrInvalidAccountID      = sdkerrors.Register(ModuleName, errInvalidAccountID, "invalid account ID")
+	ErrInvalidAccount        = sdkerrors.Register(ModuleName, errInvalidAccount, "invalid account")
+	ErrUnauthorizedDepositor = sdkerrors.Register(ModuleName, errUnauthorizedDepositor, "unauthorized depositor")
 )

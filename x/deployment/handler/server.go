@@ -79,9 +79,15 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		return &types.MsgCreateDeploymentResponse{}, err
 	}
 
+	depositor, err := sdk.AccAddressFromBech32(msg.Depositor)
+	if err != nil {
+		return &types.MsgCreateDeploymentResponse{}, err
+	}
+
 	if err := ms.escrow.AccountCreate(ctx,
 		types.EscrowAccountForDeployment(deployment.ID()),
 		owner,
+		depositor,
 		msg.Deposit,
 	); err != nil {
 		return &types.MsgCreateDeploymentResponse{}, err
@@ -102,8 +108,14 @@ func (ms msgServer) DepositDeployment(goCtx context.Context, msg *types.MsgDepos
 		return &types.MsgDepositDeploymentResponse{}, types.ErrDeploymentClosed
 	}
 
+	depositor, err := sdk.AccAddressFromBech32(msg.Depositor)
+	if err != nil {
+		return &types.MsgDepositDeploymentResponse{}, err
+	}
+
 	if err := ms.escrow.AccountDeposit(ctx,
 		types.EscrowAccountForDeployment(msg.ID),
+		depositor,
 		msg.Amount); err != nil {
 		return &types.MsgDepositDeploymentResponse{}, err
 	}
