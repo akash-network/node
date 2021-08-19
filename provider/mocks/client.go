@@ -37,6 +37,38 @@ func (_m *Client) Cluster() cluster.Client {
 	return r0
 }
 
+// ClusterService provides a mock function with given fields:
+func (_m *Client) ClusterService() cluster.Service {
+	ret := _m.Called()
+
+	var r0 cluster.Service
+	if rf, ok := ret.Get(0).(func() cluster.Service); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(cluster.Service)
+		}
+	}
+
+	return r0
+}
+
+// Hostname provides a mock function with given fields:
+func (_m *Client) Hostname() cluster.HostnameServiceClient {
+	ret := _m.Called()
+
+	var r0 cluster.HostnameServiceClient
+	if rf, ok := ret.Get(0).(func() cluster.HostnameServiceClient); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(cluster.HostnameServiceClient)
+		}
+	}
+
+	return r0
+}
+
 // Manifest provides a mock function with given fields:
 func (_m *Client) Manifest() manifest.Client {
 	ret := _m.Called()

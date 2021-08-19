@@ -5,7 +5,7 @@ import (
 	"fmt"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	akashtypes "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
-	"github.com/ovrclk/akash/provider/cluster"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +16,7 @@ import (
 )
 
 type hostnameResourceEvent struct {
-	eventType cluster.ProviderResourceEvent
+	eventType ctypes.ProviderResourceEvent
 	hostname  string
 
 	owner        sdktypes.Address
@@ -100,7 +100,7 @@ func (ev hostnameResourceEvent) GetHostname() string {
 	return ev.hostname
 }
 
-func (ev hostnameResourceEvent) GetEventType() cluster.ProviderResourceEvent {
+func (ev hostnameResourceEvent) GetEventType() ctypes.ProviderResourceEvent {
 	return ev.eventType
 }
 
@@ -112,7 +112,7 @@ func (ev hostnameResourceEvent) GetExternalPort() uint32 {
 	return ev.externalPort
 }
 
-func (c *client) ObserveHostnameState(ctx context.Context) (<-chan cluster.HostnameResourceEvent, error) {
+func (c *client) ObserveHostnameState(ctx context.Context) (<-chan ctypes.HostnameResourceEvent, error) {
 	var lastResourceVersion string
 	phpager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
 		resources, err := c.ac.AkashV1().ProviderHosts(c.ns).List(ctx, opts)
@@ -162,7 +162,7 @@ func (c *client) ObserveHostnameState(ctx context.Context) (<-chan cluster.Hostn
 			return nil, err
 		}
 		ev := hostnameResourceEvent{
-			eventType:    cluster.ProviderResourceAdd,
+			eventType:    ctypes.ProviderResourceAdd,
 			hostname:     v.Spec.Hostname,
 			oseq:         v.Spec.Oseq,
 			gseq:         v.Spec.Gseq,
@@ -177,7 +177,7 @@ func (c *client) ObserveHostnameState(ctx context.Context) (<-chan cluster.Hostn
 
 	data = nil
 
-	output := make(chan cluster.HostnameResourceEvent)
+	output := make(chan ctypes.HostnameResourceEvent)
 
 	go func() {
 		defer close(output)
@@ -217,11 +217,11 @@ func (c *client) ObserveHostnameState(ctx context.Context) (<-chan cluster.Hostn
 				switch result.Type {
 
 				case watch.Added:
-					ev.eventType = cluster.ProviderResourceAdd
+					ev.eventType = ctypes.ProviderResourceAdd
 				case watch.Modified:
-					ev.eventType = cluster.ProviderResourceUpdate
+					ev.eventType = ctypes.ProviderResourceUpdate
 				case watch.Deleted:
-					ev.eventType = cluster.ProviderResourceDelete
+					ev.eventType = ctypes.ProviderResourceDelete
 
 				case watch.Error:
 					// Based on examination of the implementation code, this is basically never called anyways
@@ -243,7 +243,7 @@ func (c *client) ObserveHostnameState(ctx context.Context) (<-chan cluster.Hostn
 	return output, nil
 }
 
-func (c *client) AllHostnames(ctx context.Context) ([]cluster.ActiveHostname, error) {
+func (c *client) AllHostnames(ctx context.Context) ([]ctypes.ActiveHostname, error) {
 	ingressPager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
 		return c.ac.AkashV1().ProviderHosts(c.ns).List(ctx, opts)
 	})
@@ -252,7 +252,7 @@ func (c *client) AllHostnames(ctx context.Context) ([]cluster.ActiveHostname, er
 		LabelSelector: fmt.Sprintf("%s=true", akashManagedLabelName),
 	}
 
-	result := make([]cluster.ActiveHostname, 0)
+	result := make([]ctypes.ActiveHostname, 0)
 
 	err := ingressPager.EachListItem(ctx, listOptions, func(obj runtime.Object) error {
 		ph := obj.(*akashtypes.ProviderHost)
@@ -280,7 +280,7 @@ func (c *client) AllHostnames(ctx context.Context) ([]cluster.ActiveHostname, er
 			Provider: provider,
 		}
 
-		result = append(result, cluster.ActiveHostname{
+		result = append(result, ctypes.ActiveHostname{
 			ID:       leaseID,
 			Hostname: hostname,
 		})

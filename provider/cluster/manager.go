@@ -290,8 +290,8 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 
 	allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
 	// Either reserve the hostnames, or confirm that they already are held
-	reservationResult := dm.hostnameService.ReserveHostnames(allHostnames, dm.lease)
-	withheldHostnames, err := reservationResult.Wait(dm.lc.ShuttingDown())
+	// TODO - tie context to this lifecycle
+	withheldHostnames, err := dm.hostnameService.ReserveHostnames(context.Background(), allHostnames, dm.lease)
 	if err != nil {
 		deploymentCounter.WithLabelValues("reserve-hostnames", "err").Inc()
 		dm.log.Error("deploy hostname reservation error", "state", dm.state, "err", err)

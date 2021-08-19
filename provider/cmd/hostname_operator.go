@@ -8,6 +8,7 @@ import (
 	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	"github.com/ovrclk/akash/provider/cluster"
 	clusterClient "github.com/ovrclk/akash/provider/cluster/kube"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/cluster/util"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/spf13/cobra"
@@ -17,7 +18,7 @@ import (
 )
 
 type managedHostname struct {
-	lastEvent    cluster.HostnameResourceEvent
+	lastEvent    ctypes.HostnameResourceEvent
 	presentLease mtypes.LeaseID
 
 	presentServiceName  string
@@ -126,13 +127,13 @@ loop:
 	return exitError
 }
 
-func (op *hostnameOperator) applyEvent(ctx context.Context, ev cluster.HostnameResourceEvent) error {
+func (op *hostnameOperator) applyEvent(ctx context.Context, ev ctypes.HostnameResourceEvent) error {
 	op.log.Debug("apply event", "event-type", ev.GetEventType(), "hostname", ev.GetHostname())
 	switch ev.GetEventType() {
-	case cluster.ProviderResourceDelete:
+	case ctypes.ProviderResourceDelete:
 		// note that on delete the resource might be gone anyways because the namespace is deleted
 		return op.applyDeleteEvent(ctx, ev)
-	case cluster.ProviderResourceAdd, cluster.ProviderResourceUpdate:
+	case ctypes.ProviderResourceAdd, ctypes.ProviderResourceUpdate:
 		return op.applyAddOrUpdateEvent(ctx, ev)
 	default:
 		return fmt.Errorf("%w: unknown event type %v", errObservationStopped, ev.GetEventType())
@@ -140,7 +141,7 @@ func (op *hostnameOperator) applyEvent(ctx context.Context, ev cluster.HostnameR
 
 }
 
-func (op *hostnameOperator) applyDeleteEvent(ctx context.Context, ev cluster.HostnameResourceEvent) error {
+func (op *hostnameOperator) applyDeleteEvent(ctx context.Context, ev ctypes.HostnameResourceEvent) error {
 	leaseID := ev.GetLeaseID()
 	err := op.client.RemoveHostnameFromDeployment(ctx, ev.GetHostname(), leaseID, true)
 
@@ -151,9 +152,9 @@ func (op *hostnameOperator) applyDeleteEvent(ctx context.Context, ev cluster.Hos
 	return err
 }
 
-func buildDirective(ev cluster.HostnameResourceEvent, serviceExpose crd.ManifestServiceExpose) cluster.ConnectHostnameToDeploymentDirective {
+func buildDirective(ev ctypes.HostnameResourceEvent, serviceExpose crd.ManifestServiceExpose) ctypes.ConnectHostnameToDeploymentDirective {
 	// Build the directive based off the event
-	directive := cluster.ConnectHostnameToDeploymentDirective{
+	directive := ctypes.ConnectHostnameToDeploymentDirective{
 		Hostname:    ev.GetHostname(),
 		LeaseID:     ev.GetLeaseID(),
 		ServiceName: ev.GetServiceName(),
@@ -183,7 +184,7 @@ func buildDirective(ev cluster.HostnameResourceEvent, serviceExpose crd.Manifest
 	return directive
 }
 
-func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev cluster.HostnameResourceEvent) error {
+func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes.HostnameResourceEvent) error {
 	// Locate the matchin service name & expose directive in the manifest CRD
 	found, manifestGroup, err := op.client.GetManifestGroup(ctx, ev.GetLeaseID())
 	if err != nil {
@@ -192,7 +193,7 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev cluste
 	if !found {
 		/*
 			It's possible this code could race to read the CRD, although unlikely. If this fails the operator
-			restarts and should work the attempt anyways. If this becomes a pain point then the oeprator
+			restarts and should work the attempt anyways. If this becomes a pain point then the operator
 			can be rewritten to watch for CRD events on the manifest as well, then avoid running this code
 			until the manifest exists.
 		*/

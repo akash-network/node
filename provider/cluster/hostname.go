@@ -13,7 +13,7 @@ import (
 )
 
 type HostnameServiceClient interface {
-	ReserveHostnames(hostnames []string, leaseID mtypes.LeaseID) ReservationResult
+	ReserveHostnames(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID) ([]string, error)
 	ReleaseHostnames(leaseID mtypes.LeaseID) error
 	CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) error
 	PrepareHostnamesForTransfer(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID) error
@@ -103,24 +103,27 @@ func prepareHostnamesImpl(store map[string]hostnameID, hostnames []string, hID h
 	errCh <- nil
 }
 
-func (sh *SimpleHostnames) ReserveHostnames(hostnames []string, leaseID mtypes.LeaseID) ReservationResult {
+func (sh *SimpleHostnames) ReserveHostnames(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID) ([]string, error) {
 	sh.lock.Lock()
 	defer sh.lock.Unlock()
 	errCh := make(chan error, 1)
 	resultCh := make(chan []string, 1)
 
-	result := ReservationResult{
-		ChErr:               errCh,
-		ChWithheldHostnames: resultCh,
-	}
-
 	hID, err := hostnameIDFromLeaseID(leaseID)
 	if err != nil {
-		errCh <- err
+		return nil, err
 	} else {
 		reserveHostnamesImpl(sh.Hostnames, hostnames, hID, errCh, resultCh)
 	}
-	return result
+
+	select {
+	case err := <- errCh:
+		return nil, err
+	case result := <- resultCh:
+		return result, nil
+	case <- ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 func reserveHostnamesImpl(store map[string]hostnameID, hostnames []string, hID hostnameID, ch chan<- error, resultCh chan<- []string) {
@@ -365,7 +368,7 @@ func (hs *hostnameService) doRequest(rr reserveRequest) {
 	reserveHostnamesImpl(hs.inUse, rr.hostnames, rr.hID, rr.chErr, rr.chReplacedHostnames)
 }
 
-func (hs *hostnameService) ReserveHostnames(hostnames []string, leaseID mtypes.LeaseID) ReservationResult {
+func (hs *hostnameService) ReserveHostnames(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID) ([]string, error) {
 	lowercaseHostnames := make([]string, len(hostnames))
 	for i, hostname := range hostnames {
 		lowercaseHostnames[i] = strings.ToLower(hostname)
@@ -377,26 +380,34 @@ func (hs *hostnameService) ReserveHostnames(hostnames []string, leaseID mtypes.L
 	hID, err := hostnameIDFromLeaseID(leaseID)
 
 	if err != nil {
-		chErr <- err
-	} else {
-		request := reserveRequest{
-			chErr:               chErr,
-			chReplacedHostnames: chWithheldHostnames,
-			hostnames:           lowercaseHostnames,
-			hID:                 hID,
-		}
-
-		select {
-		case hs.requests <- request:
-
-		case <-hs.lc.ShuttingDown():
-			chErr <- ErrNotRunning
-		}
+		return nil, err
+	}
+	request := reserveRequest{
+		chErr:               chErr,
+		chReplacedHostnames: chWithheldHostnames,
+		hostnames:           lowercaseHostnames,
+		hID:                 hID,
 	}
 
-	return ReservationResult{
-		ChErr:               chErr,
-		ChWithheldHostnames: chWithheldHostnames,
+	select {
+	case <- ctx.Done():
+		return nil, ctx.Err()
+
+	case hs.requests <- request:
+
+	case <-hs.lc.ShuttingDown():
+		return nil, ErrNotRunning
+	}
+
+	select {
+	case <- ctx.Done():
+		return nil, ctx.Err()
+	case <-hs.lc.ShuttingDown():
+		return nil, ErrNotRunning
+	case err := <- chErr:
+		return nil, err
+	case result := <- chWithheldHostnames:
+		return result, nil
 	}
 }
 

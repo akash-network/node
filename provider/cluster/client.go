@@ -37,21 +37,6 @@ var (
 	errNotImplemented              = errors.New("not implemented")
 )
 
-type ProviderResourceEvent string
-
-const (
-	ProviderResourceAdd    = ProviderResourceEvent("add")
-	ProviderResourceUpdate = ProviderResourceEvent("update")
-	ProviderResourceDelete = ProviderResourceEvent("delete")
-)
-
-type HostnameResourceEvent interface {
-	GetLeaseID() mtypes.LeaseID
-	GetEventType() ProviderResourceEvent
-	GetHostname() string
-	GetServiceName() string
-	GetExternalPort() uint32
-}
 
 type ReadClient interface {
 	LeaseStatus(context.Context, mtypes.LeaseID) (*ctypes.LeaseStatus, error)
@@ -59,11 +44,11 @@ type ReadClient interface {
 	LeaseLogs(context.Context, mtypes.LeaseID, string, bool, *int64) ([]*ctypes.ServiceLog, error)
 	ServiceStatus(context.Context, mtypes.LeaseID, string) (*ctypes.ServiceStatus, error)
 
-	AllHostnames(context.Context) ([]ActiveHostname, error)
+	AllHostnames(context.Context) ([]ctypes.ActiveHostname, error)
 	GetManifestGroup(context.Context, mtypes.LeaseID) (bool, akashv1.ManifestGroup, error)
 
-	ObserveHostnameState(ctx context.Context) (<-chan HostnameResourceEvent, error)
-	GetHostnameDeploymentConnections(ctx context.Context) ([]LeaseIdHostnameConnection, error)
+	ObserveHostnameState(ctx context.Context) (<-chan ctypes.HostnameResourceEvent, error)
+	GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes.LeaseIdHostnameConnection, error)
 }
 
 // Client interface lease and deployment methods
@@ -85,7 +70,7 @@ type Client interface {
 		tsq remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error)
 
 	// Connect a given hostname to a deployment
-	ConnectHostnameToDeployment(ctx context.Context, directive ConnectHostnameToDeploymentDirective) error
+	ConnectHostnameToDeployment(ctx context.Context, directive ctypes.ConnectHostnameToDeploymentDirective) error
 	// Remove a given hostname from a deployment
 	RemoveHostnameFromDeployment(ctx context.Context, hostname string, leaseID mtypes.LeaseID, allowMissing bool) error
 
@@ -95,34 +80,12 @@ type Client interface {
 	PurgeDeclaredHostnames(ctx context.Context, lID mtypes.LeaseID) error
 }
 
-type ConnectHostnameToDeploymentDirective struct {
-	Hostname    string
-	LeaseID     mtypes.LeaseID
-	ServiceName string
-	ServicePort int32
-	ReadTimeout uint32
-	SendTimeout uint32
-	NextTimeout uint32
-	MaxBodySize uint32
-	NextTries   uint32
-	NextCases   []string //
-}
-
-type LeaseIdHostnameConnection interface {
-	GetLeaseID() mtypes.LeaseID
-	GetHostname() string
-	GetExternalPort() int32
-	GetServiceName() string
-}
-
 func ErrorIsOkToSendToClient(err error) bool {
 	return errors.Is(err, ErrExec)
 }
 
-type ActiveHostname struct {
-	ID       mtypes.LeaseID
-	Hostname string
-}
+
+
 
 type node struct {
 	id                    string
@@ -192,18 +155,18 @@ func (c *nullClient) RemoveHostnameFromDeployment(ctx context.Context, hostname 
 	return errNotImplemented
 }
 
-func (c *nullClient) ObserveHostnameState(ctx context.Context) (<-chan HostnameResourceEvent, error) {
+func (c *nullClient) ObserveHostnameState(ctx context.Context) (<-chan ctypes.HostnameResourceEvent, error) {
 	return nil, errNotImplemented
 }
 func (c *nullClient) GetDeployments(ctx context.Context, dID dtypes.DeploymentID) ([]ctypes.Deployment, error) {
 	return nil, errNotImplemented
 }
-func (c *nullClient) GetHostnameDeploymentConnections(ctx context.Context) ([]LeaseIdHostnameConnection, error) {
+func (c *nullClient) GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes.LeaseIdHostnameConnection, error) {
 	return nil, errNotImplemented
 }
 
 // Connect a given hostname to a deployment
-func (c *nullClient) ConnectHostnameToDeployment(ctx context.Context, directive ConnectHostnameToDeploymentDirective) error {
+func (c *nullClient) ConnectHostnameToDeployment(ctx context.Context, directive ctypes.ConnectHostnameToDeploymentDirective) error {
 	return errNotImplemented
 }
 
@@ -373,6 +336,6 @@ func (c *nullClient) GetManifestGroup(context.Context, mtypes.LeaseID) (bool, ak
 	return false, akashv1.ManifestGroup{}, nil
 }
 
-func (c *nullClient) AllHostnames(context.Context) ([]ActiveHostname, error) {
+func (c *nullClient) AllHostnames(context.Context) ([]ctypes.ActiveHostname, error) {
 	return nil, nil
 }

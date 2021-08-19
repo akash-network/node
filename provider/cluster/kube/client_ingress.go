@@ -3,7 +3,7 @@ package kube
 import (
 	"context"
 	"fmt"
-	"github.com/ovrclk/akash/provider/cluster"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	netv1 "k8s.io/api/networking/v1"
@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-func kubeNginxIngressAnnotations(directive cluster.ConnectHostnameToDeploymentDirective) map[string]string {
+func kubeNginxIngressAnnotations(directive ctypes.ConnectHostnameToDeploymentDirective) map[string]string {
 	// For kubernetes/ingress-nginx
 	// https://github.com/kubernetes/ingress-nginx
 	const root = "nginx.ingress.kubernetes.io"
@@ -57,7 +57,7 @@ func kubeNginxIngressAnnotations(directive cluster.ConnectHostnameToDeploymentDi
 	return result
 }
 
-func (c *client) ConnectHostnameToDeployment(ctx context.Context, directive cluster.ConnectHostnameToDeploymentDirective) error {
+func (c *client) ConnectHostnameToDeployment(ctx context.Context, directive ctypes.ConnectHostnameToDeploymentDirective) error {
 	ingressName := directive.Hostname
 	ns := lidNS(directive.LeaseID)
 	rules := ingressRules(directive.Hostname, directive.ServiceName, directive.ServicePort)
@@ -169,12 +169,12 @@ func (lh leaseIdHostnameConnection) GetServiceName() string {
 	return lh.serviceName
 }
 
-func (c *client) GetHostnameDeploymentConnections(ctx context.Context) ([]cluster.LeaseIdHostnameConnection, error) {
+func (c *client) GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes.LeaseIdHostnameConnection, error) {
 	ingressPager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
 		return c.kc.NetworkingV1().Ingresses(metav1.NamespaceAll).List(ctx, opts)
 	})
 
-	results := make([]cluster.LeaseIdHostnameConnection, 0)
+	results := make([]ctypes.LeaseIdHostnameConnection, 0)
 	err := ingressPager.EachListItem(ctx,
 		metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=true", akashManagedLabelName)},
 		func(obj runtime.Object) error {

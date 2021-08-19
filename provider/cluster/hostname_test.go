@@ -15,10 +15,13 @@ type scaffold struct {
 	cancel  context.CancelFunc
 }
 
-func makeHostnameScaffold(blockedHostnames []string) *scaffold {
+func makeHostnameScaffold(t *testing.T, blockedHostnames []string) *scaffold {
 	ctx, cancel := context.WithCancel(context.Background())
+	svc, err := newHostnameService(ctx, Config{BlockedHostnames: blockedHostnames}, nil)
+	require.NoError(t, err)
+
 	v := &scaffold{
-		service: newHostnameService(ctx, Config{BlockedHostnames: blockedHostnames}),
+		service: svc,
 		ctx:     ctx,
 		cancel:  cancel,
 	}
@@ -29,20 +32,15 @@ func makeHostnameScaffold(blockedHostnames []string) *scaffold {
 const testWait = time.Second * time.Duration(5)
 
 func TestBlockedHostname(t *testing.T) {
-	s := makeHostnameScaffold([]string{"foobar.com", "bobsdefi.com"})
+	s := makeHostnameScaffold(t, []string{"foobar.com", "bobsdefi.com"})
 
-	did := testutil.DeploymentID(t)
-	responseCh := s.service.CanReserveHostnames([]string{"foobar.com", "other.org"}, did)
-	select {
-	case err := <-responseCh:
-		require.Error(t, err)
-		require.True(t, errors.Is(err, errHostnameNotAllowed))
-		require.Regexp(t, "^.*blocked by this provider.*$", err.Error())
-	case <-time.After(testWait):
-		t.Fatal("test timed out waiting on response from service")
-	}
+	ownerAddr := testutil.AccAddress(t)
+	err := s.service.CanReserveHostnames([]string{"foobar.com", "other.org"}, ownerAddr)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrHostnameNotAllowed))
+	require.Regexp(t, "^.*blocked by this provider.*$", err.Error())
+
 	s.cancel()
-
 	select {
 	case <-s.service.lc.Done():
 
@@ -52,20 +50,16 @@ func TestBlockedHostname(t *testing.T) {
 }
 
 func TestBlockedDomain(t *testing.T) {
-	s := makeHostnameScaffold([]string{"foobar.com", ".bobsdefi.com"})
+	s := makeHostnameScaffold(t, []string{"foobar.com", ".bobsdefi.com"})
 
-	did := testutil.DeploymentID(t)
-	responseCh := s.service.CanReserveHostnames([]string{"accounts.bobsdefi.com"}, did)
-	select {
-	case err := <-responseCh:
+	ownerAddr := testutil.AccAddress(t)
+	err := s.service.CanReserveHostnames([]string{"accounts.bobsdefi.com"}, ownerAddr)
+
 		require.Error(t, err)
-		require.True(t, errors.Is(err, errHostnameNotAllowed))
+		require.True(t, errors.Is(err, ErrHostnameNotAllowed))
 		require.Regexp(t, "^.*blocked by this provider.*$", err.Error())
-	case <-time.After(testWait):
-		t.Fatal("test timed out waiting on response from service")
-	}
-	s.cancel()
 
+	s.cancel()
 	select {
 	case <-s.service.lc.Done():
 
@@ -75,64 +69,52 @@ func TestBlockedDomain(t *testing.T) {
 }
 
 func TestReserveMoreHostnamesSameDeployment(t *testing.T) {
-	s := makeHostnameScaffold([]string{"foobar.com", ".bobsdefi.com"})
+	// TODO - tie context used in this test to a timeout
+	s := makeHostnameScaffold(t, []string{"foobar.com", ".bobsdefi.com"})
 
-	did := testutil.DeploymentID(t)
-	responseCh := s.service.ReserveHostnames([]string{"meow.com", "kittens.com"}, did)
-	select {
-	case err := <-responseCh:
-		require.NoError(t, err)
-	case <-time.After(testWait):
-		t.Fatal("test timed out waiting on response from service")
-	}
+	leaseID := testutil.LeaseID(t)
+	result, err := s.service.ReserveHostnames(context.Background(), []string{"meow.com", "kittens.com"}, leaseID)
+	require.NoError(t, err)
+	require.Len(t, result, 0)
 
-	responseCh = s.service.ReserveHostnames([]string{"kittens.com", "meow.com", "cats.com"}, did)
-	select {
-	case err := <-responseCh:
-		require.NoError(t, err)
-	case <-time.After(testWait):
-		t.Fatal("test timed out waiting on response from service")
-	}
-
-}
-
-func TestReserveAndReleaseDomain(t *testing.T) {
-	s := makeHostnameScaffold([]string{"foobar.com", ".bobsdefi.com"})
-
-	did := testutil.DeploymentID(t)
-	responseCh := s.service.ReserveHostnames([]string{"meow.com", "kittens.com"}, did)
-	select {
-	case err := <-responseCh:
-		require.NoError(t, err)
-	case <-time.After(testWait):
-		t.Fatal("test timed out waiting on response from service")
-	}
-
-	secondDid := testutil.DeploymentID(t)
-	responseCh = s.service.ReserveHostnames([]string{"KITTENS.com"}, secondDid)
-	select {
-	case err := <-responseCh:
-		require.Error(t, err)
-		require.True(t, errors.Is(err, errHostnameNotAllowed))
-	case <-time.After(testWait):
-		t.Fatal("test timed out waiting on response from service")
-	}
-
-	s.service.ReleaseHostnames([]string{"meow.com", "kittens.com"})
-
-	responseCh = s.service.ReserveHostnames([]string{"kittens.com"}, secondDid)
-	select {
-	case err := <-responseCh:
-		require.NoError(t, err)
-	case <-time.After(testWait):
-		t.Fatal("test timed out waiting on response from service")
-	}
+	result, err = s.service.ReserveHostnames(context.Background(), []string{"kittens.com", "meow.com", "cats.com"}, leaseID)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	require.Equal(t, result[0], "meow.com")
 
 	s.cancel()
 
 	select {
 	case <-s.service.lc.Done():
+	case <-time.After(testWait):
+		t.Fatal("timed out waiting for service shutdown")
+	}
+}
 
+func TestReserveAndReleaseDomain(t *testing.T) {
+	s := makeHostnameScaffold(t, []string{"foobar.com", ".bobsdefi.com"})
+
+	leaseID := testutil.LeaseID(t)
+	result, err := s.service.ReserveHostnames(context.Background(), []string{"meow.com", "kittens.com"}, leaseID)
+	require.NoError(t, err)
+	require.Len(t, result, 0)
+
+	secondLeaseID := testutil.LeaseID(t)
+	result, err = s.service.ReserveHostnames(context.Background(), []string{"KITTENS.com"}, secondLeaseID)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrHostnameNotAllowed))
+
+
+	s.service.ReleaseHostnames(leaseID)
+
+	result, err = s.service.ReserveHostnames(context.Background(), []string{"KITTENS.com"}, secondLeaseID)
+	require.NoError(t, err)
+	require.Len(t, result, 0)
+
+	s.cancel()
+
+	select {
+	case <-s.service.lc.Done():
 	case <-time.After(testWait):
 		t.Fatal("timed out waiting for service shutdown")
 	}
