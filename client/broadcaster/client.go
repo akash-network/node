@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ovrclk/akash/sdkutil"
+
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -35,7 +37,7 @@ func NewClient(cctx sdkclient.Context, txf tx.Factory, info keyring.Info) Client
 }
 
 func (c *simpleClient) Broadcast(_ context.Context, msgs ...sdk.Msg) error {
-	txf, err := tx.PrepareFactory(c.cctx, c.txf)
+	txf, err := sdkutil.PrepareFactory(c.cctx, c.txf)
 	if err != nil {
 		return err
 	}

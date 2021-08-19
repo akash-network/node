@@ -10,3 +10,7 @@ const (
 	// RouterKey is the message route for provider
 	RouterKey = ModuleName
 )
+
+func PrefixCertificateID() []byte {
+	return []byte{0x01}
+}

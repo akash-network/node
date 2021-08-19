@@ -21,7 +21,6 @@ import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	cinpuit "github.com/cosmos/cosmos-sdk/client/input"
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
@@ -303,7 +302,7 @@ func addCertToGenesis(cmd *cobra.Command, cert types.GenesisCertificate) error {
 		return err
 	}
 
-	cdc := cctx.JSONMarshaler.(codec.Marshaler)
+	cdc := cctx.Codec
 
 	serverCtx := server.GetServerContextFromCmd(cmd)
 	config := serverCtx.Config

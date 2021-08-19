@@ -31,7 +31,7 @@ const (
 
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simtypes.AppParams, cdc codec.JSONMarshaler, ak govtypes.AccountKeeper,
+	appParams simtypes.AppParams, cdc codec.JSONCodec, ak govtypes.AccountKeeper,
 	bk bankkeeper.Keeper, k keeper.IKeeper) simulation.WeightedOperations {
 	var (
 		weightMsgCreateDeployment int
@@ -156,7 +156,7 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "create deployment - unable to deliver mock tx"), nil, err
 		}
 
-		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(msg, true, "", nil), nil, nil
 	}
 }
 
@@ -245,7 +245,7 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "update deployment - unable to deliver mock tx"), nil, err
 		}
 
-		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(msg, true, "", nil), nil, nil
 	}
 }
 
@@ -312,7 +312,7 @@ func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper,
 			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "close deployment - unable to deliver mock tx"), nil, err
 		}
 
-		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
+		return simtypes.NewOperationMsg(msg, true, "", nil), nil, nil
 	}
 }
 
@@ -397,6 +397,6 @@ func SimulateMsgCloseGroup(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k ke
 			err = errors.Wrapf(err, "%s: msg delivery error closing group: %v", types.ModuleName, group.ID())
 			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), err.Error()), nil, err
 		}
-		return simtypes.NewOperationMsg(msg, true, "submitting MsgCloseGroup"), nil, nil
+		return simtypes.NewOperationMsg(msg, true, "submitting MsgCloseGroup", nil), nil, nil
 	}
 }

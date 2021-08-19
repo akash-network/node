@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ovrclk/akash/sdkutil"
+
 	"github.com/boz/go-lifecycle"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -47,7 +49,7 @@ type serialBroadcaster struct {
 func NewSerialClient(log log.Logger, cctx sdkclient.Context, txf tx.Factory, info keyring.Info) (SerialClient, error) {
 
 	// populate account number, current sequence number
-	poptxf, err := tx.PrepareFactory(cctx, txf)
+	poptxf, err := sdkutil.PrepareFactory(cctx, txf)
 	if err != nil {
 		return nil, err
 	}
