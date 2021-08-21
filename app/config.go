@@ -40,6 +40,7 @@ import (
 	transfer "github.com/cosmos/ibc-go/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/modules/core"
+	ibcclientclient "github.com/cosmos/ibc-go/modules/core/02-client/client"
 	ibchost "github.com/cosmos/ibc-go/modules/core/24-host"
 	appparams "github.com/ovrclk/akash/app/params"
 )
@@ -64,6 +65,7 @@ var (
 			gov.NewAppModuleBasic(
 				paramsclient.ProposalHandler, distrclient.ProposalHandler,
 				upgradeclient.ProposalHandler, upgradeclient.CancelProposalHandler,
+				ibcclientclient.UpdateClientProposalHandler, ibcclientclient.UpgradeProposalHandler,
 			),
 			// chain parameters
 			params.AppModuleBasic{},
