@@ -197,7 +197,7 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 			can be rewritten to watch for CRD events on the manifest as well, then avoid running this code
 			until the manifest exists.
 		*/
-		return fmt.Errorf("%w: no manifest found for %v", ev.GetLeaseID())
+		return fmt.Errorf("%w: no manifest found for %v", errObservationStopped, ev.GetLeaseID())
 	}
 
 	var selectedService crd.ManifestService

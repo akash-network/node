@@ -560,53 +560,6 @@ func TestRouteLeaseStatusOk(t *testing.T) {
 	})
 }
 
-func TestRouteLeaseStatusNoGlobalServices(t *testing.T) {
-	runRouterTest(t, true, func(test *routerTest) {
-		dseq := uint64(testutil.RandRangeInt(1, 1000))
-		oseq := uint32(testutil.RandRangeInt(2000, 3000))
-		gseq := uint32(testutil.RandRangeInt(4000, 5000))
-
-		test.pcclient.On("LeaseStatus", mock.Anything, types.LeaseID{
-			Owner:    test.caddr.String(),
-			DSeq:     dseq,
-			GSeq:     gseq,
-			OSeq:     oseq,
-			Provider: test.paddr.String(),
-		}).Return(nil, kubeClient.ErrNoGlobalServicesForLease)
-
-		lid := types.LeaseID{
-			DSeq:     dseq,
-			GSeq:     gseq,
-			OSeq:     oseq,
-			Provider: test.paddr.String(),
-		}
-
-		uri, err := makeURI(test.host, leaseStatusPath(lid))
-		require.NoError(t, err)
-
-		sdl, err := sdl.ReadFile(testSDL)
-		require.NoError(t, err)
-
-		mani, err := sdl.Manifest()
-		require.NoError(t, err)
-
-		buf, err := json.Marshal(mani)
-		require.NoError(t, err)
-
-		req, err := http.NewRequest("GET", uri, bytes.NewBuffer(buf))
-		require.NoError(t, err)
-
-		req.Header.Set("Content-Type", contentTypeJSON)
-
-		resp, err := test.gclient.hclient.Do(req)
-		require.NoError(t, err)
-		require.Equal(t, resp.StatusCode, http.StatusServiceUnavailable)
-		data, err := ioutil.ReadAll(resp.Body)
-		require.NoError(t, err)
-		require.Regexp(t, "^kube: no global services(?s:.)*$", string(data))
-	})
-}
-
 func TestRouteLeaseNotInKubernetes(t *testing.T) {
 	runRouterTest(t, true, func(test *routerTest) {
 		dseq := uint64(testutil.RandRangeInt(1, 1000))
