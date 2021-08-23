@@ -412,8 +412,8 @@ Examples:
 			if err != nil {
 				return err
 			}
-			if !spendLimit.IsPositive() {
-				return fmt.Errorf("spend-limit should be greater than zero")
+			if spendLimit.IsZero() || spendLimit.IsNegative() {
+				return errors.Errorf("spend-limit should be greater than zero, got: %s", spendLimit)
 			}
 
 			exp, err := cmd.Flags().GetInt64(FlagExpiration)
