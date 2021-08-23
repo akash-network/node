@@ -463,8 +463,8 @@ Example:
 			}
 
 			granter := clientCtx.GetFromAddress()
-			msgTypeUrl := types.DepositDeploymentAuthorization{}.MsgTypeURL()
-			msg := authz.NewMsgRevoke(granter, grantee, msgTypeUrl)
+			msgTypeURL := types.DepositDeploymentAuthorization{}.MsgTypeURL()
+			msg := authz.NewMsgRevoke(granter, grantee, msgTypeURL)
 
 			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), &msg)
 		},
