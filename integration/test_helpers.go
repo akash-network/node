@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"bytes"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -9,10 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth/tx"
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -129,32 +124,4 @@ func appEnv(t *testing.T) (string, string) {
 	appPort := os.Getenv("KUBE_INGRESS_PORT")
 	require.NotEmpty(t, appPort)
 	return host, appPort
-}
-
-func getTxResponse(t testing.TB, cctx client.Context, data []byte) *sdk.TxResponse {
-	var resp sdk.TxResponse
-
-	err := jsonpb.Unmarshal(bytes.NewBuffer(data), &resp)
-	require.NoError(t, err)
-
-	res, err := tx.QueryTx(cctx, resp.TxHash)
-	require.NoError(t, err)
-
-	return res
-}
-
-// this function is a gentle response to inappropriate approach of cli test utils
-// send transaction may fail and calling cli routine won't know about it
-func validateTxSuccessful(t testing.TB, cctx client.Context, data []byte) {
-	t.Helper()
-
-	res := getTxResponse(t, cctx, data)
-	require.Zero(t, res.Code, res)
-}
-
-func validateTxUnSuccessful(t testing.TB, cctx client.Context, data []byte) {
-	t.Helper()
-
-	res := getTxResponse(t, cctx, data)
-	require.NotZero(t, res.Code, res)
 }

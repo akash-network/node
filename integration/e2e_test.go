@@ -15,10 +15,9 @@ import (
 	"testing"
 	"time"
 
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
 	"github.com/ovrclk/akash/provider/gateway/rest"
+	clitestutil "github.com/ovrclk/akash/testutil/cli"
 
 	"github.com/cosmos/cosmos-sdk/server"
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
@@ -28,7 +27,6 @@ import (
 	providerCmd "github.com/ovrclk/akash/provider/cmd"
 	"github.com/ovrclk/akash/sdl"
 	ccli "github.com/ovrclk/akash/x/cert/client/cli"
-	deploymenttypes "github.com/ovrclk/akash/x/deployment/types"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	"github.com/ovrclk/akash/x/provider/client/cli"
 	"github.com/ovrclk/akash/x/provider/types"
@@ -58,7 +56,6 @@ type IntegrationTestSuite struct {
 	validator   *network.Validator
 	keyProvider keyring.Info
 	keyTenant   keyring.Info
-	keyFunder   keyring.Info
 
 	appHost string
 	appPort string
@@ -80,33 +77,6 @@ type E2EApp struct {
 	IntegrationTestSuite
 }
 
-type E2EDeploymentFunding struct {
-	IntegrationTestSuite
-}
-
-func (s *IntegrationTestSuite) initActor(keyActor *keyring.Info, uid string, sendTokens sdk.Coin) {
-	var err error
-
-	// Setup a key for the actor
-	*keyActor, err = s.validator.ClientCtx.Keyring.Key(uid)
-	s.Require().NoError(err)
-
-	// give the actor some coins
-	res, err := bankcli.MsgSendExec(
-		s.validator.ClientCtx,
-		s.validator.Address,
-		(*keyActor).GetAddress(),
-		sdk.NewCoins(sendTokens),
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
-}
-
 func (s *IntegrationTestSuite) SetupSuite() {
 	s.appHost, s.appPort = appEnv(s.T())
 
@@ -122,8 +92,6 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	_, _, err = kb.NewMnemonic("keyFoo", keyring.English, sdk.FullFundraiserPath, "", hd.Secp256k1)
 	s.Require().NoError(err)
-	_, _, err = kb.NewMnemonic("keyBaz", keyring.English, sdk.FullFundraiserPath, "", hd.Secp256k1)
-	s.Require().NoError(err)
 
 	// Wait for the network to start
 	_, err = s.network.WaitForHeight(1)
@@ -135,10 +103,43 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	// Send coins value
 	sendTokens := sdk.NewCoin(s.cfg.BondDenom, mtypes.DefaultBidMinDeposit.Amount.MulRaw(4))
 
-	// Initialize provider, tenant & funder keys with coins
-	s.initActor(&s.keyProvider, "keyFoo", sendTokens)
-	s.initActor(&s.keyTenant, "keyBar", sendTokens)
-	s.initActor(&s.keyFunder, "keyBaz", sendTokens)
+	// Setup a Provider key
+	s.keyProvider, err = s.validator.ClientCtx.Keyring.Key("keyFoo")
+	s.Require().NoError(err)
+
+	// give provider some coins
+	res, err := bankcli.MsgSendExec(
+		s.validator.ClientCtx,
+		s.validator.Address,
+		s.keyProvider.GetAddress(),
+		sdk.NewCoins(sendTokens),
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+
+	// Set up second tenant key
+	s.keyTenant, err = s.validator.ClientCtx.Keyring.Key("keyBar")
+	s.Require().NoError(err)
+
+	// give tenant some coins too
+	res, err = bankcli.MsgSendExec(
+		s.validator.ClientCtx,
+		s.validator.Address,
+		s.keyTenant.GetAddress(),
+		sdk.NewCoins(sendTokens),
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// address for provider to listen on
 	_, port, err := server.FreeTCPAddr()
@@ -164,7 +165,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	require.NoError(s.T(), err)
 
 	// create Provider blockchain declaration
-	res, err := cli.TxCreateProviderExec(
+	_, err = cli.TxCreateProviderExec(
 		s.validator.ClientCtx,
 		s.keyProvider.GetAddress(),
 		fmt.Sprintf("%s/%s", s.network.BaseDir, fstat.Name()),
@@ -175,7 +176,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Create provider's certificate
 	_, err = ccli.TxCreateServerExec(
@@ -189,7 +190,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Create tenant's certificate
 	_, err = ccli.TxCreateServerExec(
@@ -203,7 +204,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	pemSrc := fmt.Sprintf("%s/%s.pem", s.validator.ClientCtx.HomeDir, s.keyProvider.GetAddress().String())
 	pemDst := fmt.Sprintf("%s/%s.pem", strings.Replace(s.validator.ClientCtx.HomeDir, "simd", "simcli", 1), s.keyProvider.GetAddress().String())
@@ -302,7 +303,7 @@ func (s *IntegrationTestSuite) closeDeployments() int {
 		)
 		s.Require().NoError(err)
 		s.Require().NoError(s.waitForBlocksCommitted(1))
-		validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+		clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 	}
 
 	return len(deployments)
@@ -370,7 +371,7 @@ func (s *E2EContainerToContainer) TestE2EContainerToContainer() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(7))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	bidID := mtypes.MakeBidID(
 		mtypes.MakeOrderID(dtypes.MakeGroupID(deploymentID, 1), 1),
@@ -393,7 +394,7 @@ func (s *E2EContainerToContainer) TestE2EContainerToContainer() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	lid := bidID.LeaseID()
 
@@ -449,7 +450,7 @@ func (s *E2EAppNodePort) TestE2EAppNodePort() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(3))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	bidID := mtypes.MakeBidID(
 		mtypes.MakeOrderID(dtypes.MakeGroupID(deploymentID, 1), 1),
@@ -471,7 +472,7 @@ func (s *E2EAppNodePort) TestE2EAppNodePort() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Assert provider made bid and created lease; test query leases ---------
 	resp, err := mcli.QueryLeasesExec(s.validator.ClientCtx.WithOutputFormat("json"))
@@ -577,7 +578,7 @@ func (s *E2EDeploymentUpdate) TestE2EDeploymentUpdate() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(3))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	bidID := mtypes.MakeBidID(
 		mtypes.MakeOrderID(dtypes.MakeGroupID(deploymentID, 1), 1),
@@ -599,7 +600,7 @@ func (s *E2EDeploymentUpdate) TestE2EDeploymentUpdate() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Assert provider made bid and created lease; test query leases ---------
 	resp, err := mcli.QueryLeasesExec(s.validator.ClientCtx.WithOutputFormat("json"))
@@ -646,7 +647,7 @@ func (s *E2EDeploymentUpdate) TestE2EDeploymentUpdate() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Send Updated Manifest to Provider
 	_, err = ptestutil.TestSendManifest(
@@ -687,7 +688,7 @@ func (s *E2EApp) TestE2EApp() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Test query deployments ---------------------------------------------
 	res, err = deploycli.QueryDeploymentsExec(cctxJSON)
@@ -759,7 +760,7 @@ func (s *E2EApp) TestE2EApp() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(6))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	res, err = mcli.QueryLeasesExec(cctxJSON)
 	s.Require().NoError(err)
@@ -867,7 +868,7 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(3))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	bidID := mtypes.MakeBidID(
 		mtypes.MakeOrderID(dtypes.MakeGroupID(deploymentID, 1), 1),
@@ -889,7 +890,7 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Assert provider made bid and created lease; test query leases ---------
 	resp, err := mcli.QueryLeasesExec(s.validator.ClientCtx.WithOutputFormat("json"))
@@ -983,188 +984,12 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 
 }
 
-func (s *IntegrationTestSuite) getAccountBalance(address sdk.AccAddress) sdk.Int {
-	cctxJSON := s.validator.ClientCtx.WithOutputFormat("json")
-	res, err := bankcli.QueryBalancesExec(cctxJSON, address)
-	s.Require().NoError(err)
-	var balRes banktypes.QueryAllBalancesResponse
-	err = cctxJSON.Codec.UnmarshalJSON(res.Bytes(), &balRes)
-	s.Require().NoError(err)
-
-	return balRes.Balances.AmountOf(s.cfg.BondDenom)
-}
-
-func (s *E2EDeploymentFunding) TestE2EDeploymentFunding() {
-	// setup
-	deploymentPath, err := filepath.Abs("../x/deployment/testdata/deployment-v2.yaml")
-	s.Require().NoError(err)
-
-	deploymentID := dtypes.DeploymentID{
-		Owner: s.keyTenant.GetAddress().String(),
-		DSeq:  uint64(105),
-	}
-
-	prevFunderBal := s.getAccountBalance(s.keyFunder.GetAddress())
-
-	// Creating deployment paid by funder's account without any authorization from funder should
-	// fail
-	res, err := deploycli.TxCreateDeploymentExec(
-		s.validator.ClientCtx,
-		s.keyTenant.GetAddress(),
-		deploymentPath,
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxUnSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
-
-	// funder's balance shouldn't be deducted
-	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.keyFunder.GetAddress()))
-
-	// Grant the tenant authorization to use funds from the funder's account
-	res, err = deploycli.TxGrantAuthorizationExec(
-		s.validator.ClientCtx,
-		s.keyFunder.GetAddress(),
-		s.keyTenant.GetAddress(),
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
-	prevFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
-
-	// Creating deployment paid by funder's account should work now
-	res, err = deploycli.TxCreateDeploymentExec(
-		s.validator.ClientCtx,
-		s.keyTenant.GetAddress(),
-		deploymentPath,
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
-
-	// funder's balance should be deducted correctly
-	curFunderBal := s.getAccountBalance(s.keyFunder.GetAddress())
-	s.Require().Equal(prevFunderBal.Sub(deploymenttypes.DefaultDeploymentMinDeposit.Amount), curFunderBal)
-	prevFunderBal = curFunderBal
-	prevOwnerBal := s.getAccountBalance(s.keyTenant.GetAddress())
-
-	// depositing additional funds from the owner's account should work
-	res, err = deploycli.TxDepositDeploymentExec(
-		s.validator.ClientCtx,
-		deploymenttypes.DefaultDeploymentMinDeposit,
-		s.keyTenant.GetAddress(),
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
-
-	// owner's balance should be deducted correctly
-	curOwnerBal := s.getAccountBalance(s.keyTenant.GetAddress())
-	s.Require().Equal(prevOwnerBal.Sub(deploymenttypes.DefaultDeploymentMinDeposit.Amount).SubRaw(20), curOwnerBal)
-	prevOwnerBal = curOwnerBal
-
-	// depositing additional funds from the funder's account should work
-	res, err = deploycli.TxDepositDeploymentExec(
-		s.validator.ClientCtx,
-		deploymenttypes.DefaultDeploymentMinDeposit,
-		s.keyTenant.GetAddress(),
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
-
-	// funder's balance should be deducted correctly
-	curFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
-	s.Require().Equal(prevFunderBal.Sub(deploymenttypes.DefaultDeploymentMinDeposit.Amount), curFunderBal)
-	prevFunderBal = curFunderBal
-	prevOwnerBal = s.getAccountBalance(s.keyTenant.GetAddress())
-
-	// revoke the authorization given to the deployment owner by the funder
-	res, err = deploycli.TxRevokeAuthorizationExec(
-		s.validator.ClientCtx,
-		s.keyFunder.GetAddress(),
-		s.keyTenant.GetAddress(),
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
-	prevFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
-
-	// depositing additional funds from the funder's account should fail now
-	res, err = deploycli.TxDepositDeploymentExec(
-		s.validator.ClientCtx,
-		deploymenttypes.DefaultDeploymentMinDeposit,
-		s.keyTenant.GetAddress(),
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxUnSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
-
-	// funder's balance shouldn't be deducted
-	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.keyFunder.GetAddress()))
-	prevOwnerBal = s.getAccountBalance(s.keyTenant.GetAddress())
-
-	// closing the deployment should return the funds and balance in escrow to the funder and
-	// owner's account
-	res, err = deploycli.TxCloseDeploymentExec(
-		s.validator.ClientCtx,
-		s.keyTenant.GetAddress(),
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
-	s.Require().Equal(prevFunderBal.Add(deploymenttypes.DefaultDeploymentMinDeposit.Amount.MulRaw(2)), s.getAccountBalance(s.keyFunder.GetAddress()))
-	s.Require().Equal(prevOwnerBal.Add(deploymenttypes.DefaultDeploymentMinDeposit.Amount).SubRaw(20), s.getAccountBalance(s.keyTenant.GetAddress()))
-}
-
 func TestIntegrationTestSuite(t *testing.T) {
 	integrationTestOnly(t)
 	suite.Run(t, new(E2EContainerToContainer))
 	suite.Run(t, new(E2EAppNodePort))
 	suite.Run(t, new(E2EDeploymentUpdate))
 	suite.Run(t, new(E2EApp))
-	suite.Run(t, new(E2EDeploymentFunding))
 }
 
 func (s *IntegrationTestSuite) waitForBlocksCommitted(height int) error {
