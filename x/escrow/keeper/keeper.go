@@ -3,8 +3,6 @@ package keeper
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/ovrclk/akash/x/escrow/types"
 	"github.com/pkg/errors"
 )
@@ -32,20 +30,18 @@ type Keeper interface {
 	SavePayment(sdk.Context, types.Payment)
 }
 
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, bkeeper BankKeeper, authzKeeper AuthzKeeper) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, bkeeper BankKeeper) Keeper {
 	return &keeper{
-		cdc:         cdc,
-		skey:        skey,
-		bkeeper:     bkeeper,
-		authzKeeper: authzKeeper,
+		cdc:     cdc,
+		skey:    skey,
+		bkeeper: bkeeper,
 	}
 }
 
 type keeper struct {
-	cdc         codec.BinaryCodec
-	skey        sdk.StoreKey
-	bkeeper     BankKeeper
-	authzKeeper AuthzKeeper
+	cdc     codec.BinaryCodec
+	skey    sdk.StoreKey
+	bkeeper BankKeeper
 
 	hooks struct {
 		onAccountClosed []AccountHook
@@ -76,7 +72,7 @@ func (k *keeper) AccountCreate(ctx sdk.Context, id types.AccountID, owner, depos
 		return err
 	}
 
-	if err := k.fetchDepositToAccount(ctx, obj, owner, depositor, depositor, deposit); err != nil {
+	if err := k.fetchDepositToAccount(ctx, obj, owner, depositor, deposit); err != nil {
 		return err
 	}
 
@@ -85,47 +81,16 @@ func (k *keeper) AccountCreate(ctx sdk.Context, id types.AccountID, owner, depos
 	return nil
 }
 
-// fetchDepositToAccount fetches deposit amount from the appropriate source account to the escrow
+// fetchDepositToAccount fetches deposit amount from the depositor's account to the escrow
 // account and accordingly updates the balance or funds.
-func (k *keeper) fetchDepositToAccount(ctx sdk.Context, acc *types.Account, owner, depositor, authorizedDepositor sdk.AccAddress, deposit sdk.Coin) error {
-	amt := sdk.NewCoins(deposit)
-	switch {
-	case owner.Equals(depositor):
-		// use owner's account to add funds to escrow account
-		if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, owner, types.ModuleName, amt); err != nil {
-			return err
-		}
+func (k *keeper) fetchDepositToAccount(ctx sdk.Context, acc *types.Account, owner, depositor sdk.AccAddress, deposit sdk.Coin) error {
+	if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, depositor, types.ModuleName, sdk.NewCoins(deposit)); err != nil {
+		return err
+	}
+	if owner.Equals(depositor) {
 		acc.Balance = acc.Balance.Add(deposit)
-	case authorizedDepositor.Equals(depositor):
-		// check if the owner has a SendAuthorization from the depositor and if there is enough spend-limit left
-		msg := &banktypes.MsgSend{Amount: amt}
-		authorization, expiration := k.authzKeeper.GetCleanAuthorization(ctx, owner, depositor, sdk.MsgTypeURL(msg))
-		if authorization == nil {
-			return sdkerrors.ErrUnauthorized.Wrap("authorization not found")
-		}
-		resp, err := authorization.Accept(ctx, msg)
-		if err != nil {
-			return err
-		}
-		if resp.Delete {
-			err = k.authzKeeper.DeleteGrant(ctx, owner, depositor, sdk.MsgTypeURL(msg))
-		} else if resp.Updated != nil {
-			err = k.authzKeeper.SaveGrant(ctx, owner, depositor, resp.Updated, expiration)
-		}
-		if err != nil {
-			return err
-		}
-		if !resp.Accept {
-			return sdkerrors.ErrUnauthorized
-		}
-
-		// use depositor's account to add funds to escrow account
-		if err = k.bkeeper.SendCoinsFromAccountToModule(ctx, depositor, types.ModuleName, amt); err != nil {
-			return err
-		}
+	} else {
 		acc.Funds = acc.Funds.Add(deposit)
-	default:
-		return types.ErrUnauthorizedDepositor
 	}
 	return nil
 }
@@ -148,12 +113,7 @@ func (k *keeper) AccountDeposit(ctx sdk.Context, id types.AccountID, depositor s
 		return err
 	}
 
-	authorizedDepositor, err := sdk.AccAddressFromBech32(obj.Depositor)
-	if err != nil {
-		return err
-	}
-
-	if err = k.fetchDepositToAccount(ctx, &obj, owner, depositor, authorizedDepositor, amount); err != nil {
+	if err = k.fetchDepositToAccount(ctx, &obj, owner, depositor, amount); err != nil {
 		return err
 	}
 

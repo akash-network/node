@@ -3,9 +3,12 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/x/authz"
 	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/cmd/common"
@@ -32,6 +35,7 @@ func GetTxCmd(key string) *cobra.Command {
 		cmdDeposit(key),
 		cmdClose(key),
 		cmdGroup(key),
+		cmdAuthz(),
 	)
 	return cmd
 }
@@ -361,6 +365,113 @@ func cmdGroupStart(_ string) *cobra.Command {
 	flags.AddTxFlagsToCmd(cmd)
 	AddGroupIDFlags(cmd.Flags())
 	MarkReqGroupIDFlags(cmd)
+
+	return cmd
+}
+
+func cmdAuthz() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "authz",
+		Short: "Deployment authorization transaction subcommands",
+		Long:  "Authorize and revoke access to pay for deployments on behalf of your address",
+	}
+
+	cmd.AddCommand(
+		cmdGrantAuthorization(),
+		cmdRevokeAuthorization(),
+	)
+
+	return cmd
+}
+
+func cmdGrantAuthorization() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "grant <grantee> <spend_limit> --from <granter>",
+		Short: "Grant deposit deployment authorization to an address",
+		Long: strings.TrimSpace(
+			fmt.Sprintf(`grant authorization to an address to pay for a deployment on your behalf:
+
+Examples:
+ $ akash tx %s authz grant akash1skjw.. 50akt --from=akash1skl..
+ $ akash tx %s authz grant akash1skjw.. 50akt --from=akash1skl.. --expiration=1661020200
+	`, types.ModuleName, types.ModuleName),
+		),
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			grantee, err := sdk.AccAddressFromBech32(args[0])
+			if err != nil {
+				return err
+			}
+
+			spendLimit, err := sdk.ParseCoinNormalized(args[1])
+			if err != nil {
+				return err
+			}
+			if !spendLimit.IsPositive() {
+				return fmt.Errorf("spend-limit should be greater than zero")
+			}
+
+			exp, err := cmd.Flags().GetInt64(FlagExpiration)
+			if err != nil {
+				return err
+			}
+
+			granter := clientCtx.GetFromAddress()
+			authorization := types.NewDepositDeploymentAuthorization(spendLimit)
+
+			msg, err := authz.NewMsgGrant(granter, grantee, authorization, time.Unix(exp, 0))
+			if err != nil {
+				return err
+			}
+
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	cmd.Flags().Int64(FlagExpiration, time.Now().AddDate(1, 0, 0).Unix(), "The Unix timestamp. Default is one year.")
+	_ = cmd.MarkFlagRequired(flags.FlagFrom)
+
+	return cmd
+}
+
+func cmdRevokeAuthorization() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "revoke [grantee] --from=[granter]",
+		Short: "Revoke deposit deployment authorization given to an address",
+		Long: strings.TrimSpace(
+			fmt.Sprintf(`revoke deposit deployment authorization from a granter to a grantee:
+Example:
+ $ akash tx %s authz revoke akash1skj.. --from=akash1skj..
+			`, types.ModuleName),
+		),
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			grantee, err := sdk.AccAddressFromBech32(args[0])
+			if err != nil {
+				return err
+			}
+
+			granter := clientCtx.GetFromAddress()
+			msgTypeUrl := types.DepositDeploymentAuthorization{}.MsgTypeURL()
+			msg := authz.NewMsgRevoke(granter, grantee, msgTypeUrl)
+
+			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), &msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	_ = cmd.MarkFlagRequired(flags.FlagFrom)
 
 	return cmd
 }

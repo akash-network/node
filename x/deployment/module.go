@@ -104,20 +104,22 @@ func (AppModuleBasic) GetQueryClient(clientCtx client.Context) types.QueryClient
 // AppModule implements an application module for the deployment module.
 type AppModule struct {
 	AppModuleBasic
-	keeper     keeper.IKeeper
-	mkeeper    handler.MarketKeeper
-	ekeeper    handler.EscrowKeeper
-	coinKeeper bankkeeper.Keeper
+	keeper      keeper.IKeeper
+	mkeeper     handler.MarketKeeper
+	ekeeper     handler.EscrowKeeper
+	coinKeeper  bankkeeper.Keeper
+	authzKeeper handler.AuthzKeeper
 }
 
 // NewAppModule creates a new AppModule Object
-func NewAppModule(cdc codec.Codec, k keeper.IKeeper, mkeeper handler.MarketKeeper, ekeeper handler.EscrowKeeper, bankKeeper bankkeeper.Keeper) AppModule {
+func NewAppModule(cdc codec.Codec, k keeper.IKeeper, mkeeper handler.MarketKeeper, ekeeper handler.EscrowKeeper, bankKeeper bankkeeper.Keeper, authzKeeper handler.AuthzKeeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keeper:         k,
 		mkeeper:        mkeeper,
 		ekeeper:        ekeeper,
 		coinKeeper:     bankKeeper,
+		authzKeeper:    authzKeeper,
 	}
 }
 
@@ -131,7 +133,7 @@ func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
 
 // Route returns the message routing key for the deployment module
 func (am AppModule) Route() sdk.Route {
-	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keeper, am.mkeeper, am.ekeeper))
+	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keeper, am.mkeeper, am.ekeeper, am.authzKeeper))
 }
 
 // QuerierRoute returns the deployment module's querier route name.
@@ -146,7 +148,7 @@ func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
 
 // RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgServer(cfg.MsgServer(), handler.NewServer(am.keeper, am.mkeeper, am.ekeeper))
+	types.RegisterMsgServer(cfg.MsgServer(), handler.NewServer(am.keeper, am.mkeeper, am.ekeeper, am.authzKeeper))
 	querier := am.keeper.NewQuerier()
 	types.RegisterQueryServer(cfg.QueryServer(), querier)
 

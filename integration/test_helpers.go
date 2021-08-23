@@ -2,18 +2,12 @@ package integration
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"testing"
 	"time"
-
-	"github.com/cosmos/cosmos-sdk/testutil"
-	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
-	authzcli "github.com/cosmos/cosmos-sdk/x/authz/client/cli"
-	deploymenttypes "github.com/ovrclk/akash/x/deployment/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -163,30 +157,4 @@ func validateTxUnSuccessful(t testing.TB, cctx client.Context, data []byte) {
 
 	res := getTxResponse(t, cctx, data)
 	require.NotZero(t, res.Code, res)
-}
-
-func authzTxGrantSend(clientCtx client.Context, granter, grantee sdk.AccAddress,
-	extraArgs ...string) (testutil.BufferWriter, error) {
-	spendLimit := sdk.NewCoin(deploymenttypes.DefaultDeploymentMinDeposit.Denom, deploymenttypes.DefaultDeploymentMinDeposit.Amount.MulRaw(3))
-	args := []string{
-		grantee.String(),
-		"send",
-		fmt.Sprintf("--spend-limit=%s", spendLimit.String()),
-		fmt.Sprintf("--from=%s", granter.String()),
-	}
-	args = append(args, extraArgs...)
-
-	return clitestutil.ExecTestCLICmd(clientCtx, authzcli.NewCmdGrantAuthorization(), args)
-}
-
-func authzTxRevokeSend(clientCtx client.Context, granter, grantee sdk.AccAddress,
-	extraArgs ...string) (testutil.BufferWriter, error) {
-	args := []string{
-		grantee.String(),
-		"/cosmos.bank.v1beta1.MsgSend",
-		fmt.Sprintf("--from=%s", granter.String()),
-	}
-	args = append(args, extraArgs...)
-
-	return clitestutil.ExecTestCLICmd(clientCtx, authzcli.NewCmdRevokeAuthorization(), args)
 }

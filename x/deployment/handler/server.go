@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
@@ -14,15 +16,16 @@ import (
 var _ types.MsgServer = msgServer{}
 
 type msgServer struct {
-	deployment keeper.IKeeper
-	market     MarketKeeper
-	escrow     EscrowKeeper
+	deployment  keeper.IKeeper
+	market      MarketKeeper
+	escrow      EscrowKeeper
+	authzKeeper AuthzKeeper
 }
 
 // NewServer returns an implementation of the deployment MsgServer interface
 // for the provided Keeper.
-func NewServer(k keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper) types.MsgServer {
-	return &msgServer{deployment: k, market: mkeeper, escrow: ekeeper}
+func NewServer(k keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper, authzKeeper AuthzKeeper) types.MsgServer {
+	return &msgServer{deployment: k, market: mkeeper, escrow: ekeeper, authzKeeper: authzKeeper}
 }
 
 func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreateDeployment) (*types.MsgCreateDeploymentResponse, error) {
@@ -52,6 +55,20 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		return nil, errors.Wrap(types.ErrInvalidGroups, err.Error())
 	}
 
+	owner, err := sdk.AccAddressFromBech32(msg.ID.Owner)
+	if err != nil {
+		return &types.MsgCreateDeploymentResponse{}, err
+	}
+
+	depositor, err := sdk.AccAddressFromBech32(msg.Depositor)
+	if err != nil {
+		return &types.MsgCreateDeploymentResponse{}, err
+	}
+
+	if err = ms.authorizeDeposit(ctx, owner, depositor, msg.Deposit); err != nil {
+		return nil, err
+	}
+
 	groups := make([]types.Group, 0, len(msg.Groups))
 
 	for idx, spec := range msg.Groups {
@@ -74,16 +91,6 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		}
 	}
 
-	owner, err := sdk.AccAddressFromBech32(deployment.ID().Owner)
-	if err != nil {
-		return &types.MsgCreateDeploymentResponse{}, err
-	}
-
-	depositor, err := sdk.AccAddressFromBech32(msg.Depositor)
-	if err != nil {
-		return &types.MsgCreateDeploymentResponse{}, err
-	}
-
 	if err := ms.escrow.AccountCreate(ctx,
 		types.EscrowAccountForDeployment(deployment.ID()),
 		owner,
@@ -94,6 +101,38 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 	}
 
 	return &types.MsgCreateDeploymentResponse{}, nil
+}
+
+func (ms msgServer) authorizeDeposit(ctx sdk.Context, owner, depositor sdk.AccAddress, deposit sdk.Coin) error {
+	// if owner is the depositor, then no need to check authorization
+	if owner.Equals(depositor) {
+		return nil
+	}
+
+	// find the DepositDeploymentAuthorization given to the owner by the depositor and check
+	// acceptance
+	msg := &types.MsgDepositDeployment{Amount: deposit}
+	authorization, expiration := ms.authzKeeper.GetCleanAuthorization(ctx, owner, depositor, sdk.MsgTypeURL(msg))
+	if authorization == nil {
+		return sdkerrors.ErrUnauthorized.Wrap("authorization not found")
+	}
+	resp, err := authorization.Accept(ctx, msg)
+	if err != nil {
+		return err
+	}
+	if resp.Delete {
+		err = ms.authzKeeper.DeleteGrant(ctx, owner, depositor, sdk.MsgTypeURL(msg))
+	} else if resp.Updated != nil {
+		err = ms.authzKeeper.SaveGrant(ctx, owner, depositor, resp.Updated, expiration)
+	}
+	if err != nil {
+		return err
+	}
+	if !resp.Accept {
+		return sdkerrors.ErrUnauthorized
+	}
+
+	return nil
 }
 
 func (ms msgServer) DepositDeployment(goCtx context.Context, msg *types.MsgDepositDeployment) (*types.MsgDepositDeploymentResponse, error) {
@@ -108,9 +147,18 @@ func (ms msgServer) DepositDeployment(goCtx context.Context, msg *types.MsgDepos
 		return &types.MsgDepositDeploymentResponse{}, types.ErrDeploymentClosed
 	}
 
+	owner, err := sdk.AccAddressFromBech32(deployment.ID().Owner)
+	if err != nil {
+		return &types.MsgDepositDeploymentResponse{}, err
+	}
+
 	depositor, err := sdk.AccAddressFromBech32(msg.Depositor)
 	if err != nil {
 		return &types.MsgDepositDeploymentResponse{}, err
+	}
+
+	if err = ms.authorizeDeposit(ctx, owner, depositor, msg.Amount); err != nil {
+		return nil, err
 	}
 
 	if err := ms.escrow.AccountDeposit(ctx,

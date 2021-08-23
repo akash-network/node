@@ -5,6 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
+	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	testutilcli "github.com/ovrclk/akash/testutil/cli"
@@ -105,4 +106,26 @@ func QueryGroupExec(clientCtx client.Context, id types.GroupID, extraArgs ...str
 	args = append(args, extraArgs...)
 
 	return testutilcli.ExecTestCLICmd(clientCtx, cmdGetGroup(), args...)
+}
+
+func TxGrantAuthorizationExec(clientCtx client.Context, granter, grantee sdk.AccAddress, extraArgs ...string) (sdktest.BufferWriter, error) {
+	spendLimit := sdk.NewCoin(types.DefaultDeploymentMinDeposit.Denom, types.DefaultDeploymentMinDeposit.Amount.MulRaw(3))
+	args := []string{
+		grantee.String(),
+		spendLimit.String(),
+		fmt.Sprintf("--from=%s", granter.String()),
+	}
+	args = append(args, extraArgs...)
+
+	return clitestutil.ExecTestCLICmd(clientCtx, cmdGrantAuthorization(), args)
+}
+
+func TxRevokeAuthorizationExec(clientCtx client.Context, granter, grantee sdk.AccAddress, extraArgs ...string) (sdktest.BufferWriter, error) {
+	args := []string{
+		grantee.String(),
+		fmt.Sprintf("--from=%s", granter.String()),
+	}
+	args = append(args, extraArgs...)
+
+	return clitestutil.ExecTestCLICmd(clientCtx, cmdRevokeAuthorization(), args)
 }

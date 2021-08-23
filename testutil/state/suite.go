@@ -2,9 +2,6 @@ package state
 
 import (
 	"testing"
-	"time"
-
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/mock"
@@ -42,7 +39,6 @@ type Keepers struct {
 	Deployment dkeeper.IKeeper
 	Provider   pkeeper.IKeeper
 	Bank       *emocks.BankKeeper
-	Authz      *emocks.AuthzKeeper
 }
 
 // SetupTestSuite provides toolkit for accessing stores and keepers
@@ -62,27 +58,6 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 			Return(nil)
 		keepers.Bank = bkeeper
 	}
-	if keepers.Authz == nil {
-		authzKeeper := &emocks.AuthzKeeper{}
-		authzKeeper.
-			On("DeleteGrant", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
-		authzKeeper.
-			On("GetCleanAuthorization", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(&banktypes.SendAuthorization{
-				SpendLimit: sdk.NewCoins(dtypes.DefaultDeploymentMinDeposit.Add(dtypes.DefaultDeploymentMinDeposit)),
-			}, time.Time{}).
-			Once().
-			On("GetCleanAuthorization", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(&banktypes.SendAuthorization{
-				SpendLimit: sdk.NewCoins(dtypes.DefaultDeploymentMinDeposit),
-			}, time.Time{}).
-			Once()
-		authzKeeper.
-			On("SaveGrant", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
-		keepers.Authz = authzKeeper
-	}
 
 	app := app.Setup(false)
 
@@ -90,7 +65,7 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		keepers.Audit = akeeper.NewKeeper(atypes.ModuleCdc, app.GetKey(atypes.StoreKey))
 	}
 	if keepers.Escrow == nil {
-		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.StoreKey), keepers.Bank, keepers.Authz)
+		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.StoreKey), keepers.Bank)
 	}
 	if keepers.Market == nil {
 		keepers.Market = mkeeper.NewKeeper(mtypes.ModuleCdc, app.GetKey(mtypes.StoreKey), app.GetSubspace(mtypes.ModuleName), keepers.Escrow)
@@ -162,9 +137,4 @@ func (ts *TestSuite) ProviderKeeper() pkeeper.IKeeper {
 // BankKeeper key store
 func (ts *TestSuite) BankKeeper() *emocks.BankKeeper {
 	return ts.keepers.Bank
-}
-
-// AuthzKeeper key store
-func (ts *TestSuite) AuthzKeeper() *emocks.AuthzKeeper {
-	return ts.keepers.Authz
 }

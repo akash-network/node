@@ -6,6 +6,7 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
+	"github.com/cosmos/cosmos-sdk/x/authz"
 )
 
 var (
@@ -47,6 +48,10 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgCloseGroup{},
 		&MsgPauseGroup{},
 		&MsgStartGroup{},
+	)
+	registry.RegisterImplementations(
+		(*authz.Authorization)(nil),
+		&DepositDeploymentAuthorization{},
 	)
 
 	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)

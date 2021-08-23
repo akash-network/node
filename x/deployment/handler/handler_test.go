@@ -3,17 +3,21 @@ package handler_test
 import (
 	"crypto/sha256"
 	"testing"
+	"time"
+
+	"github.com/ovrclk/akash/x/deployment/handler"
 
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/testutil/state"
-	"github.com/ovrclk/akash/x/deployment/handler"
+	"github.com/ovrclk/akash/x/deployment/handler/mocks"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/types"
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
@@ -21,24 +25,55 @@ import (
 
 type testSuite struct {
 	*state.TestSuite
-	t       *testing.T
-	ctx     sdk.Context
-	mkeeper mkeeper.IKeeper
-	dkeeper keeper.IKeeper
-	handler sdk.Handler
+	t           *testing.T
+	ctx         sdk.Context
+	mkeeper     mkeeper.IKeeper
+	dkeeper     keeper.IKeeper
+	authzKeeper handler.AuthzKeeper
+	depositor   string
+	handler     sdk.Handler
 }
 
 func setupTestSuite(t *testing.T) *testSuite {
 	ssuite := state.SetupTestSuite(t)
+
+	depositor := testutil.AccAddress(t)
+	authzKeeper := &mocks.AuthzKeeper{}
+	authzKeeper.
+		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
+		Return(&types.DepositDeploymentAuthorization{
+			SpendLimit: types.DefaultDeploymentMinDeposit.Add(types.DefaultDeploymentMinDeposit),
+		}, time.Time{}).
+		Once().
+		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
+		Return(&types.DepositDeploymentAuthorization{
+			SpendLimit: types.DefaultDeploymentMinDeposit,
+		}, time.Time{}).
+		Once().
+		On("GetCleanAuthorization", mock.Anything, mock.Anything,
+			mock.MatchedBy(func(addr sdk.AccAddress) bool {
+				return !depositor.Equals(addr)
+			}), sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
+		Return(nil, time.Time{})
+	authzKeeper.
+		On("DeleteGrant", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil)
+	authzKeeper.
+		On("SaveGrant", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil)
+
 	suite := &testSuite{
-		TestSuite: ssuite,
-		t:         t,
-		ctx:       ssuite.Context(),
-		mkeeper:   ssuite.MarketKeeper(),
-		dkeeper:   ssuite.DeploymentKeeper(),
+		TestSuite:   ssuite,
+		t:           t,
+		ctx:         ssuite.Context(),
+		mkeeper:     ssuite.MarketKeeper(),
+		dkeeper:     ssuite.DeploymentKeeper(),
+		authzKeeper: authzKeeper,
+		depositor:   depositor.String(),
 	}
 
-	suite.handler = handler.NewHandler(suite.dkeeper, suite.mkeeper, ssuite.EscrowKeeper())
+	suite.handler = handler.NewHandler(suite.dkeeper, suite.mkeeper, ssuite.EscrowKeeper(),
+		suite.authzKeeper)
 
 	return suite
 }
@@ -254,14 +289,13 @@ func TestFundedDeployment(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	deployment, groups := suite.createDeployment()
-	depositor := testutil.AccAddress(t).String()
 
 	// create a funded deployment
 	msg := &types.MsgCreateDeployment{
 		ID:        deployment.ID(),
 		Groups:    make([]types.GroupSpec, 0, len(groups)),
 		Deposit:   types.DefaultDeploymentMinDeposit,
-		Depositor: depositor,
+		Depositor: suite.depositor,
 	}
 
 	for _, group := range groups {
@@ -281,7 +315,7 @@ func TestFundedDeployment(t *testing.T) {
 	acc, err := suite.EscrowKeeper().GetAccount(suite.ctx, accID)
 	require.NoError(t, err)
 	require.Equal(t, deployment.ID().Owner, acc.Owner)
-	require.Equal(t, depositor, acc.Depositor)
+	require.Equal(t, suite.depositor, acc.Depositor)
 	require.Equal(t, sdk.NewCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Balance)
 	require.Equal(t, msg.Deposit, acc.Funds)
 
@@ -299,7 +333,7 @@ func TestFundedDeployment(t *testing.T) {
 	acc, err = suite.EscrowKeeper().GetAccount(suite.ctx, accID)
 	require.NoError(t, err)
 	require.Equal(t, deployment.ID().Owner, acc.Owner)
-	require.Equal(t, depositor, acc.Depositor)
+	require.Equal(t, suite.depositor, acc.Depositor)
 	require.Equal(t, depositMsg.Amount, acc.Balance)
 	require.Equal(t, msg.Deposit, acc.Funds)
 
@@ -307,7 +341,7 @@ func TestFundedDeployment(t *testing.T) {
 	depositMsg1 := &types.MsgDepositDeployment{
 		ID:        deployment.ID(),
 		Amount:    types.DefaultDeploymentMinDeposit,
-		Depositor: depositor,
+		Depositor: suite.depositor,
 	}
 	res, err = suite.handler(suite.ctx, depositMsg1)
 	require.NoError(t, err)
@@ -317,7 +351,7 @@ func TestFundedDeployment(t *testing.T) {
 	acc, err = suite.EscrowKeeper().GetAccount(suite.ctx, accID)
 	require.NoError(t, err)
 	require.Equal(t, deployment.ID().Owner, acc.Owner)
-	require.Equal(t, depositor, acc.Depositor)
+	require.Equal(t, suite.depositor, acc.Depositor)
 	require.Equal(t, depositMsg.Amount, acc.Balance)
 	require.Equal(t, msg.Deposit.Add(depositMsg1.Amount), acc.Funds)
 

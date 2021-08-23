@@ -13,6 +13,7 @@ import (
 
 const (
 	FlagDepositorAccount = "depositor-account"
+	FlagExpiration       = "expiration"
 )
 
 var (

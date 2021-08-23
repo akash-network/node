@@ -1027,7 +1027,7 @@ func (s *E2EDeploymentFunding) TestE2EDeploymentFunding() {
 	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.keyFunder.GetAddress()))
 
 	// Grant the tenant authorization to use funds from the funder's account
-	res, err = authzTxGrantSend(
+	res, err = deploycli.TxGrantAuthorizationExec(
 		s.validator.ClientCtx,
 		s.keyFunder.GetAddress(),
 		s.keyTenant.GetAddress(),
@@ -1106,7 +1106,7 @@ func (s *E2EDeploymentFunding) TestE2EDeploymentFunding() {
 	prevOwnerBal = s.getAccountBalance(s.keyTenant.GetAddress())
 
 	// revoke the authorization given to the deployment owner by the funder
-	res, err = authzTxRevokeSend(
+	res, err = deploycli.TxRevokeAuthorizationExec(
 		s.validator.ClientCtx,
 		s.keyFunder.GetAddress(),
 		s.keyTenant.GetAddress(),
