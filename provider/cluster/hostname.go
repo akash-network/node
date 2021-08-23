@@ -53,6 +53,12 @@ type SimpleHostnames struct {
 	lock      sync.Mutex
 } /* Used in test code */
 
+func NewSimpleHostnames() HostnameServiceClient {
+	return &SimpleHostnames{
+		Hostnames: make(map[string]hostnameID),
+	}
+}
+
 type ReservationResult struct {
 	ChErr               <-chan error
 	ChWithheldHostnames <-chan []string
@@ -69,17 +75,23 @@ func (rr ReservationResult) Wait(wait <-chan struct{}) ([]string, error) {
 	}
 }
 
-func (sh *SimpleHostnames) PrepareHostnameForTransfer(hostnames []string, leaseID mtypes.LeaseID) <-chan error {
+func (sh *SimpleHostnames) PrepareHostnamesForTransfer(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID)  error {
 	sh.lock.Lock()
 	defer sh.lock.Unlock()
 	errCh := make(chan error, 1)
 	hID, err := hostnameIDFromLeaseID(leaseID)
 	if err != nil {
-		errCh <- err
-	} else {
-		prepareHostnamesImpl(sh.Hostnames, hostnames, hID, errCh)
+		return err
 	}
-	return errCh
+
+	prepareHostnamesImpl(sh.Hostnames, hostnames, hID, errCh)
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <- errCh:
+		return err
+	}
 }
 
 func prepareHostnamesImpl(store map[string]hostnameID, hostnames []string, hID hostnameID, errCh chan<- error) {
@@ -293,7 +305,7 @@ loop:
 			hs.lc.ShutdownInitiated(nil)
 			break loop
 		case rr := <-hs.requests:
-			hs.doRequest(rr)
+			reserveHostnamesImpl(hs.inUse, rr.hostnames, rr.hID, rr.chErr, rr.chReplacedHostnames)
 		case crr := <-hs.canRequest:
 			canReserveHostnamesImpl(hs.inUse, crr.hostnames, crr.ownerAddr, crr.result)
 		case v := <-hs.releases:
@@ -355,23 +367,18 @@ func (hs *hostnameService) isHostnameBlocked(hostname string) error {
 	return nil
 }
 
-func (hs *hostnameService) doRequest(rr reserveRequest) {
-	// check if hostname is blocked
-	for _, hostname := range rr.hostnames {
-		blockedErr := hs.isHostnameBlocked(hostname)
-		if blockedErr != nil {
-			rr.chErr <- blockedErr
-			return
-		}
-	}
-
-	reserveHostnamesImpl(hs.inUse, rr.hostnames, rr.hID, rr.chErr, rr.chReplacedHostnames)
-}
-
 func (hs *hostnameService) ReserveHostnames(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID) ([]string, error) {
 	lowercaseHostnames := make([]string, len(hostnames))
 	for i, hostname := range hostnames {
 		lowercaseHostnames[i] = strings.ToLower(hostname)
+	}
+
+	// check if hostname is blocked
+	for _, hostname := range lowercaseHostnames {
+		blockedErr := hs.isHostnameBlocked(hostname)
+		if blockedErr != nil {
+			return nil, blockedErr
+		}
 	}
 
 	chErr := make(chan error, 1)                  // Buffer of one so service does not block
@@ -430,6 +437,15 @@ func (hs *hostnameService) CanReserveHostnames(hostnames []string, ownerAddr sdk
 	for i, hostname := range hostnames {
 		lowercaseHostnames[i] = strings.ToLower(hostname)
 	}
+
+	// check if hostname is blocked
+	for _, hostname := range lowercaseHostnames {
+		blockedErr := hs.isHostnameBlocked(hostname)
+		if blockedErr != nil {
+			return blockedErr
+		}
+	}
+
 	request := canReserveRequest{ // do not actually reserve hostnames
 		hostnames: lowercaseHostnames,
 		result:    returnValue,

@@ -62,6 +62,8 @@ type deploymentManager struct {
 	hostnameService HostnameServiceClient
 
 	config Config
+
+	serviceShuttingDown <- chan struct{}
 }
 
 func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Group) *deploymentManager {
@@ -81,9 +83,10 @@ func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Gro
 		lc:              lifecycle.New(),
 		hostnameService: s.HostnameService(),
 		config:          s.config,
+		serviceShuttingDown: s.lc.ShuttingDown(),
 	}
 
-	go dm.lc.WatchChannel(s.lc.ShuttingDown())
+	go dm.lc.WatchChannel(dm.serviceShuttingDown)
 	go dm.run()
 
 	go func() {
@@ -290,8 +293,19 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 
 	allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
 	// Either reserve the hostnames, or confirm that they already are held
-	// TODO - tie context to this lifecycle
-	withheldHostnames, err := dm.hostnameService.ReserveHostnames(context.Background(), allHostnames, dm.lease)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	// Weird hack to tie this context to the lifecycle of the parent service, so this doesn't
+	// block forever or anything weird like that
+	go func() {
+		select {
+			case <- dm.serviceShuttingDown:
+				cancel()
+			case <- ctx.Done():
+		}
+	}()
+	withheldHostnames, err := dm.hostnameService.ReserveHostnames(ctx, allHostnames, dm.lease)
+	cancel()
 	if err != nil {
 		deploymentCounter.WithLabelValues("reserve-hostnames", "err").Inc()
 		dm.log.Error("deploy hostname reservation error", "state", dm.state, "err", err)
@@ -302,9 +316,7 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 	dm.log.Info("hostnames withheld", "cnt", len(withheldHostnames))
 
 	// Don't use a context tied to the lifecycle, as we don't want to cancel Kubernetes operations
-	ctx := context.Background()
-
-	err = dm.client.Deploy(ctx, dm.lease, dm.mgroup)
+		err = dm.client.Deploy(context.Background(), dm.lease, dm.mgroup)
 	label := "success"
 	if err != nil {
 		label = "fail"

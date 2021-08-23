@@ -14,9 +14,10 @@ type scaffold struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 }
+const testWait = time.Second * time.Duration(15)
 
 func makeHostnameScaffold(t *testing.T, blockedHostnames []string) *scaffold {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), testWait)
 	svc, err := newHostnameService(ctx, Config{BlockedHostnames: blockedHostnames}, nil)
 	require.NoError(t, err)
 
@@ -29,7 +30,7 @@ func makeHostnameScaffold(t *testing.T, blockedHostnames []string) *scaffold {
 	return v
 }
 
-const testWait = time.Second * time.Duration(5)
+
 
 func TestBlockedHostname(t *testing.T) {
 	s := makeHostnameScaffold(t, []string{"foobar.com", "bobsdefi.com"})
@@ -55,9 +56,9 @@ func TestBlockedDomain(t *testing.T) {
 	ownerAddr := testutil.AccAddress(t)
 	err := s.service.CanReserveHostnames([]string{"accounts.bobsdefi.com"}, ownerAddr)
 
-		require.Error(t, err)
-		require.True(t, errors.Is(err, ErrHostnameNotAllowed))
-		require.Regexp(t, "^.*blocked by this provider.*$", err.Error())
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrHostnameNotAllowed))
+	require.Regexp(t, "^.*blocked by this provider.*$", err.Error())
 
 	s.cancel()
 	select {
@@ -69,17 +70,22 @@ func TestBlockedDomain(t *testing.T) {
 }
 
 func TestReserveMoreHostnamesSameDeployment(t *testing.T) {
-	// TODO - tie context used in this test to a timeout
 	s := makeHostnameScaffold(t, []string{"foobar.com", ".bobsdefi.com"})
 
 	leaseID := testutil.LeaseID(t)
-	result, err := s.service.ReserveHostnames(context.Background(), []string{"meow.com", "kittens.com"}, leaseID)
+	result, err := s.service.ReserveHostnames(s.ctx, []string{"meow.com", "kittens.com"}, leaseID)
 	require.NoError(t, err)
 	require.Len(t, result, 0)
 
-	result, err = s.service.ReserveHostnames(context.Background(), []string{"kittens.com", "meow.com", "cats.com"}, leaseID)
+	result, err = s.service.ReserveHostnames(s.ctx, []string{"kittens.com", "meow.com", "cats.com"}, leaseID)
 	require.NoError(t, err)
-	require.Len(t, result, 1)
+	require.Len(t, result, 0) // Not withheld because it's the same lease
+
+	secondLeaseID := testutil.LeaseID(t)
+	secondLeaseID.Owner = leaseID.Owner
+	result, err = s.service.ReserveHostnames(s.ctx, []string{"dogs.com", "meow.com", "ferrets.com"}, secondLeaseID)
+	require.NoError(t, err)
+	require.Len(t, result, 1) // Withheld because it's the same owner but a different lease
 	require.Equal(t, result[0], "meow.com")
 
 	s.cancel()
@@ -95,19 +101,20 @@ func TestReserveAndReleaseDomain(t *testing.T) {
 	s := makeHostnameScaffold(t, []string{"foobar.com", ".bobsdefi.com"})
 
 	leaseID := testutil.LeaseID(t)
-	result, err := s.service.ReserveHostnames(context.Background(), []string{"meow.com", "kittens.com"}, leaseID)
+	result, err := s.service.ReserveHostnames(s.ctx, []string{"meow.com", "kittens.com"}, leaseID)
 	require.NoError(t, err)
 	require.Len(t, result, 0)
 
 	secondLeaseID := testutil.LeaseID(t)
-	result, err = s.service.ReserveHostnames(context.Background(), []string{"KITTENS.com"}, secondLeaseID)
+	result, err = s.service.ReserveHostnames(s.ctx, []string{"KITTENS.com"}, secondLeaseID)
 	require.Error(t, err)
 	require.True(t, errors.Is(err, ErrHostnameNotAllowed))
 
 
-	s.service.ReleaseHostnames(leaseID)
+	err = s.service.ReleaseHostnames(leaseID)
+	require.NoError(t, err)
 
-	result, err = s.service.ReserveHostnames(context.Background(), []string{"KITTENS.com"}, secondLeaseID)
+	result, err = s.service.ReserveHostnames(s.ctx, []string{"KITTENS.com"}, secondLeaseID)
 	require.NoError(t, err)
 	require.Len(t, result, 0)
 

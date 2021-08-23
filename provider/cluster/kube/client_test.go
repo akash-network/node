@@ -5,7 +5,9 @@ import (
 	"errors"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"testing"
@@ -14,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -26,8 +27,11 @@ import (
 	kubernetes_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock"
 	appsv1_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock/typed/apps/v1"
 	corev1_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock/typed/core/v1"
-	netv1_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock/typed/networking/v1"
+
+	akashv1_types "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 )
+
+const testKubeClientNs = "nstest1111"
 
 func clientForTest(t *testing.T, kc kubernetes.Interface, ac akashclient.Interface) Client {
 	myLog := testutil.Logger(t)
@@ -35,6 +39,7 @@ func clientForTest(t *testing.T, kc kubernetes.Interface, ac akashclient.Interfa
 		kc:  kc,
 		ac:  ac,
 		log: myLog.With("mode", "test-kube-provider-client"),
+		ns:  testKubeClientNs,
 	}
 
 	return result
@@ -111,6 +116,7 @@ func TestLeaseStatusWithNoIngressNoService(t *testing.T) {
 	kmock := &kubernetes_mocks.Interface{}
 	appsV1Mock := &appsv1_mocks.AppsV1Interface{}
 	coreV1Mock := &corev1_mocks.CoreV1Interface{}
+	akashMock := akashclient_fake.NewSimpleClientset() // TODO - add objects
 	kmock.On("AppsV1").Return(appsV1Mock)
 	kmock.On("CoreV1").Return(coreV1Mock)
 
@@ -132,25 +138,55 @@ func TestLeaseStatusWithNoIngressNoService(t *testing.T) {
 	}
 	deploymentsMock.On("List", mock.Anything, metav1.ListOptions{}).Return(deploymentList, nil)
 
-	netv1Mock := &netv1_mocks.NetworkingV1Interface{}
-	kmock.On("NetworkingV1").Return(netv1Mock)
-	ingressesMock := &netv1_mocks.IngressInterface{}
-	ingressList := &netv1.IngressList{}
-
-	ingressesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(ingressList, nil)
-	netv1Mock.On("Ingresses", lidNS(lid)).Return(ingressesMock)
-
 	servicesMock := &corev1_mocks.ServiceInterface{}
 	coreV1Mock.On("Services", lidNS(lid)).Return(servicesMock)
 
 	servicesList := &v1.ServiceList{} // This is concrete so no mock is used
 	servicesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(servicesList, nil)
 
-	clientInterface := clientForTest(t, kmock, nil)
+	clientInterface := clientForTest(t, kmock, akashMock)
 
 	status, err := clientInterface.LeaseStatus(context.Background(), lid)
-	require.Equal(t, ErrNoGlobalServicesForLease, err)
-	require.Nil(t, status)
+	require.NoError(t, err)
+	require.NotNil(t, status)
+	// TODO - more coverage on the status object
+}
+
+func fakeProviderHost(hostname string, leaseID mtypes.LeaseID, serviceName string, externalPort uint32) runtime.Object {
+	labels := make(map[string]string)
+	appendLeaseLabels(leaseID, labels)
+	return &akashv1_types.ProviderHost{
+		TypeMeta:   metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:                       hostname,
+			GenerateName:               "",
+			Namespace:                  testKubeClientNs,
+			SelfLink:                   "",
+			UID:                        "",
+			ResourceVersion:            "",
+			Generation:                 0,
+			CreationTimestamp:          metav1.Time{},
+			DeletionTimestamp:          nil,
+			DeletionGracePeriodSeconds: nil,
+			Labels:                     labels,
+			Annotations:                nil,
+			OwnerReferences:            nil,
+			Finalizers:                 nil,
+			ClusterName:                "",
+			ManagedFields:              nil,
+		},
+		Spec:       akashv1_types.ProviderHostSpec{
+			Owner:        leaseID.Owner,
+			Provider:     leaseID.Provider,
+			Hostname:     hostname,
+			Dseq:         leaseID.DSeq,
+			Gseq:         leaseID.GSeq,
+			Oseq:         leaseID.OSeq,
+			ServiceName:  serviceName,
+			ExternalPort: externalPort,
+		},
+		Status:     akashv1_types.ProviderHostStatus{},
+	}
 }
 
 func TestLeaseStatusWithIngressOnly(t *testing.T) {
@@ -161,6 +197,7 @@ func TestLeaseStatusWithIngressOnly(t *testing.T) {
 	coreV1Mock := &corev1_mocks.CoreV1Interface{}
 	kmock.On("AppsV1").Return(appsV1Mock)
 	kmock.On("CoreV1").Return(coreV1Mock)
+	akashMock := akashclient_fake.NewSimpleClientset(fakeProviderHost("mytesthost.dev", lid, "myingress", 1337, ))
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
@@ -185,34 +222,13 @@ func TestLeaseStatusWithIngressOnly(t *testing.T) {
 
 	deploymentsMock.On("List", mock.Anything, metav1.ListOptions{}).Return(deploymentList, nil)
 
-	netv1Mock := &netv1_mocks.NetworkingV1Interface{}
-	kmock.On("NetworkingV1").Return(netv1Mock)
-	ingressesMock := &netv1_mocks.IngressInterface{}
-	ingressList := &netv1.IngressList{}
-	ingressList.Items = make([]netv1.Ingress, 1)
-	rules := make([]netv1.IngressRule, 1)
-	rules[0] = netv1.IngressRule{
-		Host: "mytesthost.dev",
-	}
-	ingressList.Items[0] = netv1.Ingress{
-
-		ObjectMeta: metav1.ObjectMeta{Name: "myingress"},
-
-		Spec: netv1.IngressSpec{
-			Rules: rules,
-		},
-	}
-
-	ingressesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(ingressList, nil)
-	netv1Mock.On("Ingresses", lidNS(lid)).Return(ingressesMock)
-
 	servicesMock := &corev1_mocks.ServiceInterface{}
 	coreV1Mock.On("Services", lidNS(lid)).Return(servicesMock)
 
 	servicesList := &v1.ServiceList{} // This is concrete so no mock is used
 	servicesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(servicesList, nil)
 
-	clientInterface := clientForTest(t, kmock, nil)
+	clientInterface := clientForTest(t, kmock, akashMock)
 
 	status, err := clientInterface.LeaseStatus(context.Background(), lid)
 	require.NoError(t, err)
@@ -244,6 +260,7 @@ func TestLeaseStatusWithForwardedPortOnly(t *testing.T) {
 	coreV1Mock := &corev1_mocks.CoreV1Interface{}
 	kmock.On("AppsV1").Return(appsV1Mock)
 	kmock.On("CoreV1").Return(coreV1Mock)
+	akashMock := akashclient_fake.NewSimpleClientset() // TODO - add objects
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
@@ -269,14 +286,6 @@ func TestLeaseStatusWithForwardedPortOnly(t *testing.T) {
 
 	deploymentsMock.On("List", mock.Anything, metav1.ListOptions{}).Return(deploymentList, nil)
 
-	netv1Mock := &netv1_mocks.NetworkingV1Interface{}
-	kmock.On("NetworkingV1").Return(netv1Mock)
-	ingressesMock := &netv1_mocks.IngressInterface{}
-	ingressList := &netv1.IngressList{}
-
-	ingressesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(ingressList, nil)
-	netv1Mock.On("Ingresses", lidNS(lid)).Return(ingressesMock)
-
 	servicesMock := &corev1_mocks.ServiceInterface{}
 	coreV1Mock.On("Services", lidNS(lid)).Return(servicesMock)
 
@@ -292,7 +301,7 @@ func TestLeaseStatusWithForwardedPortOnly(t *testing.T) {
 	servicesList.Items[0].Spec.Ports[0].Protocol = v1.ProtocolTCP
 	servicesMock.On("List", mock.Anything, metav1.ListOptions{}).Return(servicesList, nil)
 
-	clientInterface := clientForTest(t, kmock, nil)
+	clientInterface := clientForTest(t, kmock, akashMock)
 
 	status, err := clientInterface.LeaseStatus(context.Background(), lid)
 	require.NoError(t, err)
@@ -390,6 +399,7 @@ func TestServiceStatusNoServiceWithName(t *testing.T) {
 
 	m, err := crd.NewManifest(lidNS(lid), lid, mg)
 	require.NoError(t, err)
+	m.Namespace = testKubeClientNs
 	akashMock := akashclient_fake.NewSimpleClientset(m)
 
 	clientInterface := clientForTest(t, kmock, akashMock)
@@ -510,31 +520,8 @@ func TestServiceStatusWithIngress(t *testing.T) {
 
 	m, err := crd.NewManifest(lidNS(lid), lid, mg)
 	require.NoError(t, err)
-	akashMock := akashclient_fake.NewSimpleClientset(m)
-
-	netmock := &netv1_mocks.NetworkingV1Interface{}
-	kmock.On("NetworkingV1").Return(netmock)
-
-	ingressMock := &netv1_mocks.IngressInterface{}
-	netmock.On("Ingresses", lidNS(lid)).Return(ingressMock)
-
-	ingress := &netv1.Ingress{
-		TypeMeta:   metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{},
-		Spec: netv1.IngressSpec{
-			IngressClassName: nil,
-			DefaultBackend:   nil,
-			TLS:              nil,
-			Rules: []netv1.IngressRule{
-				{
-					Host:             "abcd.com",
-					IngressRuleValue: netv1.IngressRuleValue{},
-				},
-			},
-		},
-		Status: netv1.IngressStatus{},
-	}
-	ingressMock.On("Get", mock.Anything, serviceName, metav1.GetOptions{}).Return(ingress, nil)
+	m.Namespace = testKubeClientNs
+	akashMock := akashclient_fake.NewSimpleClientset(m, fakeProviderHost("abcd.com", lid, "echo", 9000, ))
 
 	clientInterface := clientForTest(t, kmock, akashMock)
 
@@ -545,9 +532,7 @@ func TestServiceStatusWithIngress(t *testing.T) {
 	require.Equal(t, status.URIs, []string{"abcd.com"})
 }
 
-var errNoSuchIngress = errors.New("no such ingress")
-
-func TestServiceStatusWithIngressError(t *testing.T) {
+func TestServiceStatusWithNoManifest(t *testing.T) {
 	const serviceName = "foobar"
 	lid := testutil.LeaseID(t)
 
@@ -610,26 +595,12 @@ func TestServiceStatusWithIngressError(t *testing.T) {
 			},
 		},
 	}
-	mg := &manifest.Group{
-		Name:     "my-awesome-group",
-		Services: services,
-	}
 
-	m, err := crd.NewManifest(lidNS(lid), lid, mg)
-	require.NoError(t, err)
-	akashMock := akashclient_fake.NewSimpleClientset(m)
-
-	netmock := &netv1_mocks.NetworkingV1Interface{}
-	kmock.On("NetworkingV1").Return(netmock)
-
-	ingressMock := &netv1_mocks.IngressInterface{}
-	netmock.On("Ingresses", lidNS(lid)).Return(ingressMock)
-
-	ingressMock.On("Get", mock.Anything, serviceName, metav1.GetOptions{}).Return(nil, errNoSuchIngress)
+	akashMock := akashclient_fake.NewSimpleClientset()
 	clientInterface := clientForTest(t, kmock, akashMock)
 
 	status, err := clientInterface.ServiceStatus(context.Background(), lid, serviceName)
-	require.ErrorIs(t, err, errNoSuchIngress)
+	require.True(t, kubeErrors.IsNotFound(err))
 	require.Nil(t, status)
 }
 
@@ -703,6 +674,7 @@ func TestServiceStatusWithoutIngress(t *testing.T) {
 
 	m, err := crd.NewManifest(lidNS(lid), lid, mg)
 	require.NoError(t, err)
+	m.Namespace = testKubeClientNs
 	akashMock := akashclient_fake.NewSimpleClientset(m)
 
 	clientInterface := clientForTest(t, kmock, akashMock)
