@@ -9,6 +9,7 @@ import (
 	"github.com/ovrclk/akash/x/deployment"
 	"github.com/ovrclk/akash/x/escrow"
 	ekeeper "github.com/ovrclk/akash/x/escrow/keeper"
+	"github.com/ovrclk/akash/x/inflation"
 	"github.com/ovrclk/akash/x/market"
 	mhooks "github.com/ovrclk/akash/x/market/hooks"
 	"github.com/ovrclk/akash/x/provider"
@@ -22,6 +23,7 @@ func akashModuleBasics() []module.AppModuleBasic {
 		provider.AppModuleBasic{},
 		audit.AppModuleBasic{},
 		cert.AppModuleBasic{},
+		inflation.AppModuleBasic{},
 	}
 }
 
@@ -33,12 +35,14 @@ func akashKVStoreKeys() []string {
 		provider.StoreKey,
 		audit.StoreKey,
 		cert.StoreKey,
+		inflation.StoreKey,
 	}
 }
 
 func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
 	k.Subspace(deployment.ModuleName)
 	k.Subspace(market.ModuleName)
+	k.Subspace(inflation.ModuleName)
 	return k
 }
 
@@ -82,6 +86,12 @@ func (app *AkashApp) setAkashKeepers() {
 	app.keeper.cert = cert.NewKeeper(
 		app.appCodec,
 		app.keys[cert.StoreKey],
+	)
+
+	app.keeper.inflation = inflation.NewKeeper(
+		app.appCodec,
+		app.keys[inflation.StoreKey],
+		app.GetSubspace(inflation.ModuleName),
 	)
 }
 
@@ -128,6 +138,11 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 			app.appCodec,
 			app.keeper.cert,
 		),
+
+		inflation.NewAppModule(
+			app.appCodec,
+			app.keeper.inflation,
+		),
 	}
 }
 
@@ -144,6 +159,7 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		deployment.ModuleName,
 		provider.ModuleName,
 		market.ModuleName,
+		inflation.ModuleName,
 	}
 }
 

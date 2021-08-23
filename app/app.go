@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -55,9 +56,12 @@ import (
 	ibc "github.com/cosmos/ibc-go/modules/core"
 	porttypes "github.com/cosmos/ibc-go/modules/core/05-port/types"
 	"github.com/gorilla/mux"
+	"github.com/ovrclk/akash/x/inflation"
+	inflationtypes "github.com/ovrclk/akash/x/inflation/types/v1beta2"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
 	tmjson "github.com/tendermint/tendermint/libs/json"
+	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
@@ -155,6 +159,7 @@ type AkashApp struct {
 		provider   pkeeper.IKeeper
 		audit      audit.Keeper
 		cert       cert.Keeper
+		inflation  inflation.Keeper
 	}
 
 	mm *module.Manager
@@ -173,6 +178,12 @@ func NewApp(
 	logger log.Logger, db dbm.DB, tio io.Writer, loadLatest bool, invCheckPeriod uint, skipUpgradeHeights map[int64]bool,
 	homePath string, appOpts servertypes.AppOptions, options ...func(*bam.BaseApp),
 ) *AkashApp {
+	// find out the genesis time, to be used later in inflation calculation
+	if genDoc, err := tmtypes.GenesisDocFromFile(filepath.Join(homePath, "config/genesis.json")); err != nil {
+		panic(err)
+	} else {
+		inflationtypes.GenesisTime = genDoc.GenesisTime
+	}
 
 	// TODO: Remove cdc in favor of appCodec once all modules are migrated.
 	encodingConfig := MakeEncodingConfig()
@@ -334,6 +345,7 @@ func NewApp(
 	app.keeper.evidence = *evidenceKeeper
 
 	app.setAkashKeepers()
+	inflationtypes.InflationParamSubspace = app.GetSubspace(inflation.ModuleName)
 
 	// NOTE: we may consider parsing `appOpts` inside module constructors. For the moment
 	// we prefer to be more strict in what arguments the modules expect.
@@ -349,7 +361,7 @@ func NewApp(
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			crisis.NewAppModule(&app.keeper.crisis, skipGenesisInvariants),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
-			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
+			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, inflationtypes.InflationCalculator),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			distr.NewAppModule(appCodec, app.keeper.distr, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
@@ -416,7 +428,7 @@ func NewApp(
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
-			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
+			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, inflationtypes.InflationCalculator),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
 			distr.NewAppModule(appCodec, app.keeper.distr, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
