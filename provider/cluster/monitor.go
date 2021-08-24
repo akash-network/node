@@ -50,13 +50,13 @@ type deploymentMonitor struct {
 
 func newDeploymentMonitor(dm *deploymentManager) *deploymentMonitor {
 	m := &deploymentMonitor{
-		bus:     dm.bus,
-		session: dm.session,
-		client:  dm.client,
-		lease:   dm.lease,
-		mgroup:  dm.mgroup,
-		log:     dm.log.With("cmp", "deployment-monitor"),
-		lc:      lifecycle.New(),
+		bus:             dm.bus,
+		session:         dm.session,
+		client:          dm.client,
+		lease:           dm.lease,
+		mgroup:          dm.mgroup,
+		log:             dm.log.With("cmp", "deployment-monitor"),
+		lc:              lifecycle.New(),
 		clusterSettings: dm.config.ClusterSettings,
 	}
 

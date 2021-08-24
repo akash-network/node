@@ -75,7 +75,7 @@ func (rr ReservationResult) Wait(wait <-chan struct{}) ([]string, error) {
 	}
 }
 
-func (sh *SimpleHostnames) PrepareHostnamesForTransfer(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID)  error {
+func (sh *SimpleHostnames) PrepareHostnamesForTransfer(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID) error {
 	sh.lock.Lock()
 	defer sh.lock.Unlock()
 	errCh := make(chan error, 1)
@@ -89,7 +89,7 @@ func (sh *SimpleHostnames) PrepareHostnamesForTransfer(ctx context.Context, host
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case err := <- errCh:
+	case err := <-errCh:
 		return err
 	}
 }
@@ -129,11 +129,11 @@ func (sh *SimpleHostnames) ReserveHostnames(ctx context.Context, hostnames []str
 	}
 
 	select {
-	case err := <- errCh:
+	case err := <-errCh:
 		return nil, err
-	case result := <- resultCh:
+	case result := <-resultCh:
 		return result, nil
-	case <- ctx.Done():
+	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
 }
@@ -171,7 +171,6 @@ func reserveHostnamesImpl(store map[string]hostnameID, hostnames []string, hID h
 	}
 
 	resultCh <- withheldHostnames
-	return
 }
 
 func (sh *SimpleHostnames) CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) error {
@@ -342,11 +341,11 @@ func (hs *hostnameService) PrepareHostnamesForTransfer(ctx context.Context, host
 	}
 
 	select {
-	case err = <- chErr:
+	case err = <-chErr:
 		return err
-	case <- ctx.Done():
+	case <-ctx.Done():
 		return ctx.Err()
-	case <- hs.lc.ShuttingDown():
+	case <-hs.lc.ShuttingDown():
 		return ErrNotRunning
 	}
 }
@@ -397,7 +396,7 @@ func (hs *hostnameService) ReserveHostnames(ctx context.Context, hostnames []str
 	}
 
 	select {
-	case <- ctx.Done():
+	case <-ctx.Done():
 		return nil, ctx.Err()
 
 	case hs.requests <- request:
@@ -407,13 +406,13 @@ func (hs *hostnameService) ReserveHostnames(ctx context.Context, hostnames []str
 	}
 
 	select {
-	case <- ctx.Done():
+	case <-ctx.Done():
 		return nil, ctx.Err()
 	case <-hs.lc.ShuttingDown():
 		return nil, ErrNotRunning
-	case err := <- chErr:
+	case err := <-chErr:
 		return nil, err
-	case result := <- chWithheldHostnames:
+	case result := <-chWithheldHostnames:
 		return result, nil
 	}
 }
@@ -459,5 +458,5 @@ func (hs *hostnameService) CanReserveHostnames(hostnames []string, ownerAddr sdk
 		returnValue <- ErrNotRunning
 	}
 
-	return <- returnValue
+	return <-returnValue
 }

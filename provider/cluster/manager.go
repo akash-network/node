@@ -63,26 +63,26 @@ type deploymentManager struct {
 
 	config Config
 
-	serviceShuttingDown <- chan struct{}
+	serviceShuttingDown <-chan struct{}
 }
 
 func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Group) *deploymentManager {
 	log := s.log.With("cmp", "deployment-manager", "lease", lease, "manifest-group", mgroup.Name)
 
 	dm := &deploymentManager{
-		bus:             s.bus,
-		client:          s.client,
-		session:         s.session,
-		state:           dsDeployActive,
-		lease:           lease,
-		mgroup:          mgroup,
-		wg:              sync.WaitGroup{},
-		updatech:        make(chan *manifest.Group),
-		teardownch:      make(chan struct{}),
-		log:             log,
-		lc:              lifecycle.New(),
-		hostnameService: s.HostnameService(),
-		config:          s.config,
+		bus:                 s.bus,
+		client:              s.client,
+		session:             s.session,
+		state:               dsDeployActive,
+		lease:               lease,
+		mgroup:              mgroup,
+		wg:                  sync.WaitGroup{},
+		updatech:            make(chan *manifest.Group),
+		teardownch:          make(chan struct{}),
+		log:                 log,
+		lc:                  lifecycle.New(),
+		hostnameService:     s.HostnameService(),
+		config:              s.config,
 		serviceShuttingDown: s.lc.ShuttingDown(),
 	}
 
@@ -300,9 +300,9 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 	// block forever or anything weird like that
 	go func() {
 		select {
-			case <- dm.serviceShuttingDown:
-				cancel()
-			case <- ctx.Done():
+		case <-dm.serviceShuttingDown:
+			cancel()
+		case <-ctx.Done():
 		}
 	}()
 	withheldHostnames, err := dm.hostnameService.ReserveHostnames(ctx, allHostnames, dm.lease)

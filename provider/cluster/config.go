@@ -12,7 +12,7 @@ type Config struct {
 	BlockedHostnames                []string
 	DeploymentIngressStaticHosts    bool
 	DeploymentIngressDomain         string
-	ClusterSettings map[interface{}]interface{}
+	ClusterSettings                 map[interface{}]interface{}
 }
 
 func NewDefaultConfig() Config {

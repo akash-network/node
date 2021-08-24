@@ -14,8 +14,6 @@ type ActiveHostname struct {
 	Hostname string
 }
 
-
-
 type ProviderResourceEvent string
 
 const (

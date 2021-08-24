@@ -64,4 +64,6 @@ func NewDefaultSettings() Settings {
 	}
 }
 
-const SettingsKey = "kube-client-settings"
+type ContextKey string
+
+const SettingsKey = ContextKey("kube-client-settings")

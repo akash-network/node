@@ -61,7 +61,6 @@ func TestNewClientWithBogusIngressDomain(t *testing.T) {
 	require.ErrorIs(t, err, errSettingsValidation)
 	require.Nil(t, result)
 
-
 	settings = Settings{
 		DeploymentIngressStaticHosts: true,
 		DeploymentIngressDomain:      "foo.bar.com-",
@@ -93,7 +92,7 @@ func TestNewClientWithEmptyIngressDomain(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, client)
 
-	ctx := context.WithValue(context.Background(),SettingsKey, settings)
+	ctx := context.WithValue(context.Background(), SettingsKey, settings)
 	result, err := client.LeaseStatus(ctx, testutil.LeaseID(t))
 	require.Error(t, err)
 	require.ErrorIs(t, err, errSettingsValidation)
@@ -122,8 +121,7 @@ func TestLeaseStatusWithNoDeployments(t *testing.T) {
 	clientInterface := clientForTest(t, kmock, nil)
 
 	ctx := context.WithValue(context.Background(), SettingsKey, Settings{
-		ClusterPublicHostname:          "meow.com",
-
+		ClusterPublicHostname: "meow.com",
 	})
 	status, err := clientInterface.LeaseStatus(ctx, lid)
 	require.Equal(t, ErrNoDeploymentForLease, err)
@@ -167,8 +165,7 @@ func TestLeaseStatusWithNoIngressNoService(t *testing.T) {
 	clientInterface := clientForTest(t, kmock, akashMock)
 
 	ctx := context.WithValue(context.Background(), SettingsKey, Settings{
-		ClusterPublicHostname:          "meow.com",
-
+		ClusterPublicHostname: "meow.com",
 	})
 	status, err := clientInterface.LeaseStatus(ctx, lid)
 	require.NoError(t, err)
@@ -181,7 +178,7 @@ func fakeProviderHost(hostname string, leaseID mtypes.LeaseID, serviceName strin
 	labels := make(map[string]string)
 	appendLeaseLabels(leaseID, labels)
 	return &akashv1_types.ProviderHost{
-		TypeMeta:   metav1.TypeMeta{},
+		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:                       hostname,
 			GenerateName:               "",
@@ -200,7 +197,7 @@ func fakeProviderHost(hostname string, leaseID mtypes.LeaseID, serviceName strin
 			ClusterName:                "",
 			ManagedFields:              nil,
 		},
-		Spec:       akashv1_types.ProviderHostSpec{
+		Spec: akashv1_types.ProviderHostSpec{
 			Owner:        leaseID.Owner,
 			Provider:     leaseID.Provider,
 			Hostname:     hostname,
@@ -210,7 +207,7 @@ func fakeProviderHost(hostname string, leaseID mtypes.LeaseID, serviceName strin
 			ServiceName:  serviceName,
 			ExternalPort: externalPort,
 		},
-		Status:     akashv1_types.ProviderHostStatus{},
+		Status: akashv1_types.ProviderHostStatus{},
 	}
 }
 
@@ -222,7 +219,7 @@ func TestLeaseStatusWithIngressOnly(t *testing.T) {
 	coreV1Mock := &corev1_mocks.CoreV1Interface{}
 	kmock.On("AppsV1").Return(appsV1Mock)
 	kmock.On("CoreV1").Return(coreV1Mock)
-	akashMock := akashclient_fake.NewSimpleClientset(fakeProviderHost("mytesthost.dev", lid, "myingress", 1337, ))
+	akashMock := akashclient_fake.NewSimpleClientset(fakeProviderHost("mytesthost.dev", lid, "myingress", 1337))
 
 	namespaceMock := &corev1_mocks.NamespaceInterface{}
 	coreV1Mock.On("Namespaces").Return(namespaceMock)
@@ -256,8 +253,7 @@ func TestLeaseStatusWithIngressOnly(t *testing.T) {
 	clientInterface := clientForTest(t, kmock, akashMock)
 
 	ctx := context.WithValue(context.Background(), SettingsKey, Settings{
-		ClusterPublicHostname:          "meow.com",
-
+		ClusterPublicHostname: "meow.com",
 	})
 
 	status, err := clientInterface.LeaseStatus(ctx, lid)
@@ -334,8 +330,7 @@ func TestLeaseStatusWithForwardedPortOnly(t *testing.T) {
 	clientInterface := clientForTest(t, kmock, akashMock)
 
 	ctx := context.WithValue(context.Background(), SettingsKey, Settings{
-		ClusterPublicHostname:          "meow.com",
-
+		ClusterPublicHostname: "meow.com",
 	})
 	status, err := clientInterface.LeaseStatus(ctx, lid)
 	require.NoError(t, err)
@@ -555,7 +550,7 @@ func TestServiceStatusWithIngress(t *testing.T) {
 	m, err := crd.NewManifest(lidNS(lid), lid, mg)
 	require.NoError(t, err)
 	m.Namespace = testKubeClientNs
-	akashMock := akashclient_fake.NewSimpleClientset(m, fakeProviderHost("abcd.com", lid, "echo", 9000, ))
+	akashMock := akashclient_fake.NewSimpleClientset(m, fakeProviderHost("abcd.com", lid, "echo", 9000))
 
 	clientInterface := clientForTest(t, kmock, akashMock)
 

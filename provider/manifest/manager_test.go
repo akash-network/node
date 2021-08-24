@@ -225,10 +225,11 @@ func TestManagerAllowsUpdate(t *testing.T) {
 	err = s.svc.Submit(context.Background(), did, sdlManifest)
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 
 	// Pretend that the hostname has been reserved by a running deployment
 	withheld, err := s.hostnames.ReserveHostnames(ctx, util.AllHostnamesOfManifestGroup(sdlManifest.GetGroups()[0]), lid)
+	require.NoError(t, err)
 	cancel()
 	require.Len(t, withheld, 0)
 

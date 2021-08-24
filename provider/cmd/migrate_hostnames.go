@@ -43,6 +43,9 @@ func migrateHostnames(cmd *cobra.Command, args []string) error {
 	}
 
 	gseq, err := cmd.Flags().GetUint32("gseq")
+	if err != nil {
+		return err
+	}
 
 	err = gclient.MigrateHostnames(cmd.Context(), hostnames, dseq, gseq)
 	if err != nil {

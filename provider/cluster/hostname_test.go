@@ -14,6 +14,7 @@ type scaffold struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 }
+
 const testWait = time.Second * time.Duration(15)
 
 func makeHostnameScaffold(t *testing.T, blockedHostnames []string) *scaffold {
@@ -29,8 +30,6 @@ func makeHostnameScaffold(t *testing.T, blockedHostnames []string) *scaffold {
 
 	return v
 }
-
-
 
 func TestBlockedHostname(t *testing.T) {
 	s := makeHostnameScaffold(t, []string{"foobar.com", "bobsdefi.com"})
@@ -109,7 +108,7 @@ func TestReserveAndReleaseDomain(t *testing.T) {
 	result, err = s.service.ReserveHostnames(s.ctx, []string{"KITTENS.com"}, secondLeaseID)
 	require.Error(t, err)
 	require.True(t, errors.Is(err, ErrHostnameNotAllowed))
-
+	require.Nil(t, result)
 
 	err = s.service.ReleaseHostnames(leaseID)
 	require.NoError(t, err)

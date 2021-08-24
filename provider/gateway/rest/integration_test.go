@@ -234,7 +234,7 @@ func createMocks() (*pmock.Client, *pmmock.Client, *pcmock.Client, *qmock.QueryC
 
 func withServer(t testing.TB, addr sdk.Address, pclient provider.Client, qclient *qmock.QueryClient, certs []tls.Certificate, fn func(string)) {
 	t.Helper()
-	router := newRouter(testutil.Logger(t), addr, pclient)
+	router := newRouter(testutil.Logger(t), addr, pclient, map[interface{}]interface{}{})
 
 	if len(certs) == 0 {
 		crt := testutil.Certificate(

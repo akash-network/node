@@ -46,7 +46,7 @@ func (op *hostnameOperator) run(parentCtx context.Context) error {
 		op.log.Error("observation stopped", "err", err)
 
 		// don't spin if there is a condition causing fast failure
-		elapsed := time.Now().Sub(lastAttempt)
+		elapsed := time.Since(lastAttempt)
 		if elapsed < threshold {
 			op.log.Info("delaying")
 			select {
