@@ -258,10 +258,10 @@ type ManifestServiceExpose struct {
 	Global       bool   `json:"global,omitempty"`
 	// accepted hostnames
 	Hosts       []string                         `json:"hosts,omitempty"`
-	HttpOptions ManifestServiceExposeHttpOptions `json:"http_options,omitempty"`
+	HTTPOptions ManifestServiceExposeHTTPOptions `json:"http_options,omitempty"`
 }
 
-type ManifestServiceExposeHttpOptions struct {
+type ManifestServiceExposeHTTPOptions struct {
 	MaxBodySize uint32   `json:"max_body_size,omitempty"`
 	ReadTimeout uint32   `json:"read_timeout,omitempty"`
 	SendTimeout uint32   `json:"send_timeout,omitempty"`
@@ -294,7 +294,7 @@ func manifestServiceExposeFromAkash(amse manifest.ServiceExpose) ManifestService
 		Service:      amse.Service,
 		Global:       amse.Global,
 		Hosts:        amse.Hosts,
-		HttpOptions: ManifestServiceExposeHttpOptions{
+		HTTPOptions: ManifestServiceExposeHTTPOptions{
 			MaxBodySize: amse.HTTPOptions.MaxBodySize,
 			ReadTimeout: amse.HTTPOptions.ReadTimeout,
 			SendTimeout: amse.HTTPOptions.SendTimeout,

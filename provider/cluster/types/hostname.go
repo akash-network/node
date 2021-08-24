@@ -2,7 +2,7 @@ package cluster
 
 import mtypes "github.com/ovrclk/akash/x/market/types"
 
-type LeaseIdHostnameConnection interface {
+type LeaseIDHostnameConnection interface {
 	GetLeaseID() mtypes.LeaseID
 	GetHostname() string
 	GetExternalPort() int32

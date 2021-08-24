@@ -909,7 +909,7 @@ func (b *netPolBuilder) update(obj *netv1.NetworkPolicy) (*netv1.NetworkPolicy, 
 
 // lidNS generates a unique sha256 sum for identifying a provider's object name.
 func lidNS(lid mtypes.LeaseID) string {
-	return clusterUtil.LeaseIdToNamespace(lid)
+	return clusterUtil.LeaseIDToNamespace(lid)
 }
 
 // manifestBuilder composes the k8s akashv1.Manifest type from LeaseID and

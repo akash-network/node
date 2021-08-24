@@ -43,15 +43,15 @@ func (_m *ReadClient) AllHostnames(_a0 context.Context) ([]cluster.ActiveHostnam
 }
 
 // GetHostnameDeploymentConnections provides a mock function with given fields: ctx
-func (_m *ReadClient) GetHostnameDeploymentConnections(ctx context.Context) ([]cluster.LeaseIdHostnameConnection, error) {
+func (_m *ReadClient) GetHostnameDeploymentConnections(ctx context.Context) ([]cluster.LeaseIDHostnameConnection, error) {
 	ret := _m.Called(ctx)
 
-	var r0 []cluster.LeaseIdHostnameConnection
-	if rf, ok := ret.Get(0).(func(context.Context) []cluster.LeaseIdHostnameConnection); ok {
+	var r0 []cluster.LeaseIDHostnameConnection
+	if rf, ok := ret.Get(0).(func(context.Context) []cluster.LeaseIDHostnameConnection); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]cluster.LeaseIdHostnameConnection)
+			r0 = ret.Get(0).([]cluster.LeaseIDHostnameConnection)
 		}
 	}
 

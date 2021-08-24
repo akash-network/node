@@ -124,9 +124,8 @@ func (sh *SimpleHostnames) ReserveHostnames(ctx context.Context, hostnames []str
 	hID, err := hostnameIDFromLeaseID(leaseID)
 	if err != nil {
 		return nil, err
-	} else {
-		reserveHostnamesImpl(sh.Hostnames, hostnames, hID, errCh, resultCh)
 	}
+	reserveHostnamesImpl(sh.Hostnames, hostnames, hID, errCh, resultCh)
 
 	select {
 	case err := <-errCh:

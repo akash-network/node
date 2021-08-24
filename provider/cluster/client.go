@@ -47,7 +47,7 @@ type ReadClient interface {
 	GetManifestGroup(context.Context, mtypes.LeaseID) (bool, akashv1.ManifestGroup, error)
 
 	ObserveHostnameState(ctx context.Context) (<-chan ctypes.HostnameResourceEvent, error)
-	GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes.LeaseIdHostnameConnection, error)
+	GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes.LeaseIDHostnameConnection, error)
 }
 
 // Client interface lease and deployment methods
@@ -157,7 +157,7 @@ func (c *nullClient) ObserveHostnameState(ctx context.Context) (<-chan ctypes.Ho
 func (c *nullClient) GetDeployments(ctx context.Context, dID dtypes.DeploymentID) ([]ctypes.Deployment, error) {
 	return nil, errNotImplemented
 }
-func (c *nullClient) GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes.LeaseIdHostnameConnection, error) {
+func (c *nullClient) GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes.LeaseIDHostnameConnection, error) {
 	return nil, errNotImplemented
 }
 

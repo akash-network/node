@@ -225,7 +225,7 @@ func createMocks() (*pmock.Client, *pmmock.Client, *pcmock.Client, *qmock.QueryC
 	pclient.On("Manifest").Return(pmclient)
 	pclient.On("Cluster").Return(pcclient)
 
-	//TODO - return stubs here when tests are added
+	// TODO - return stubs here when tests are added
 	pclient.On("Hostname").Return(nil)
 	pclient.On("ClusterService").Return(nil)
 

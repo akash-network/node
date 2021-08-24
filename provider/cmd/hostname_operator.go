@@ -165,7 +165,7 @@ func buildDirective(ev ctypes.HostnameResourceEvent, serviceExpose crd.ManifestS
 		selectedExpose.HttpOptions has zero values if this is from an earlier CRD. Just insert
 		defaults and move on
 	*/
-	if serviceExpose.HttpOptions.MaxBodySize == 0 {
+	if serviceExpose.HTTPOptions.MaxBodySize == 0 {
 		directive.ReadTimeout = 60000
 		directive.SendTimeout = 60000
 		directive.NextTimeout = 60000
@@ -173,12 +173,12 @@ func buildDirective(ev ctypes.HostnameResourceEvent, serviceExpose crd.ManifestS
 		directive.NextTries = 3
 		directive.NextCases = []string{"error", "timeout"}
 	} else {
-		directive.ReadTimeout = serviceExpose.HttpOptions.ReadTimeout
-		directive.SendTimeout = serviceExpose.HttpOptions.SendTimeout
-		directive.NextTimeout = serviceExpose.HttpOptions.NextTimeout
-		directive.MaxBodySize = serviceExpose.HttpOptions.MaxBodySize
-		directive.NextTries = serviceExpose.HttpOptions.NextTries
-		directive.NextCases = serviceExpose.HttpOptions.NextCases
+		directive.ReadTimeout = serviceExpose.HTTPOptions.ReadTimeout
+		directive.SendTimeout = serviceExpose.HTTPOptions.SendTimeout
+		directive.NextTimeout = serviceExpose.HTTPOptions.NextTimeout
+		directive.MaxBodySize = serviceExpose.HTTPOptions.MaxBodySize
+		directive.NextTries = serviceExpose.HTTPOptions.NextTries
+		directive.NextCases = serviceExpose.HTTPOptions.NextCases
 	}
 
 	return directive

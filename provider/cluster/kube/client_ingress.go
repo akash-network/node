@@ -143,38 +143,37 @@ func ingressRules(hostname string, kubeServiceName string, kubeServicePort int32
 		Host:             hostname,
 		IngressRuleValue: netv1.IngressRuleValue{HTTP: &ruleValue},
 	}}
-
 }
 
-type leaseIdHostnameConnection struct {
+type leaseIDHostnameConnection struct {
 	leaseID      mtypes.LeaseID
 	hostname     string
 	externalPort int32
 	serviceName  string
 }
 
-func (lh leaseIdHostnameConnection) GetHostname() string {
+func (lh leaseIDHostnameConnection) GetHostname() string {
 	return lh.hostname
 }
 
-func (lh leaseIdHostnameConnection) GetLeaseID() mtypes.LeaseID {
+func (lh leaseIDHostnameConnection) GetLeaseID() mtypes.LeaseID {
 	return lh.leaseID
 }
 
-func (lh leaseIdHostnameConnection) GetExternalPort() int32 {
+func (lh leaseIDHostnameConnection) GetExternalPort() int32 {
 	return lh.externalPort
 }
 
-func (lh leaseIdHostnameConnection) GetServiceName() string {
+func (lh leaseIDHostnameConnection) GetServiceName() string {
 	return lh.serviceName
 }
 
-func (c *client) GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes.LeaseIdHostnameConnection, error) {
+func (c *client) GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes.LeaseIDHostnameConnection, error) {
 	ingressPager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
 		return c.kc.NetworkingV1().Ingresses(metav1.NamespaceAll).List(ctx, opts)
 	})
 
-	results := make([]ctypes.LeaseIdHostnameConnection, 0)
+	results := make([]ctypes.LeaseIDHostnameConnection, 0)
 	err := ingressPager.EachListItem(ctx,
 		metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=true", akashManagedLabelName)},
 		func(obj runtime.Object) error {
@@ -232,7 +231,7 @@ func (c *client) GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes
 				return fmt.Errorf("%w: invalid number of paths %d", ErrInvalidHostnameConnection, len(rule.IngressRuleValue.HTTP.Paths))
 			}
 			rulePath := rule.IngressRuleValue.HTTP.Paths[0]
-			results = append(results, leaseIdHostnameConnection{
+			results = append(results, leaseIDHostnameConnection{
 				leaseID:      ingressLeaseID,
 				hostname:     rule.Host,
 				externalPort: rulePath.Backend.Service.Port.Number,
