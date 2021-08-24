@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"context"
+	"github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"math/rand"
@@ -43,6 +44,8 @@ type deploymentMonitor struct {
 	attempts int
 	log      log.Logger
 	lc       lifecycle.Lifecycle
+
+	clusterSettings map[interface{}]interface{}
 }
 
 func newDeploymentMonitor(dm *deploymentManager) *deploymentMonitor {
@@ -54,6 +57,7 @@ func newDeploymentMonitor(dm *deploymentManager) *deploymentMonitor {
 		mgroup:  dm.mgroup,
 		log:     dm.log.With("cmp", "deployment-monitor"),
 		lc:      lifecycle.New(),
+		clusterSettings: dm.config.ClusterSettings,
 	}
 
 	go m.lc.WatchChannel(dm.lc.ShuttingDown())
@@ -159,7 +163,9 @@ func (m *deploymentMonitor) runCheck(ctx context.Context) <-chan runner.Result {
 }
 
 func (m *deploymentMonitor) doCheck(ctx context.Context) (bool, error) {
-	status, err := m.client.LeaseStatus(ctx, m.lease)
+	clientCtx := util.ApplyToContext(ctx, m.clusterSettings)
+
+	status, err := m.client.LeaseStatus(clientCtx, m.lease)
 
 	if err != nil {
 		m.log.Error("lease status", "err", err)

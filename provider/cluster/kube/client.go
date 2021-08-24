@@ -52,6 +52,8 @@ var (
 	ErrInvalidHostnameConnection = errors.New("kube: invalid hostname connection")
 	ErrMissingLabel              = errors.New("kube: missing label")
 	ErrInvalidLabelValue         = errors.New("kube: invalid label value")
+
+	errNotConfiguredWithSettings = errors.New("not configured with settings in the context passed to function")
 )
 
 var (
@@ -72,23 +74,20 @@ type client struct {
 	ac                akashclient.Interface
 	metc              metricsclient.Interface
 	ns                string
-	settings          Settings
 	log               log.Logger
 	kubeContentConfig *restclient.Config
 }
 
 // NewClient returns new Kubernetes Client instance with provided logger, host and ns. Returns error incase of failure
-func NewClient(log log.Logger, ns string, settings Settings) (Client, error) {
-	if err := validateSettings(settings); err != nil {
-		return nil, err
-	}
-	return newClientWithSettings(log, ns, settings)
+// configPath may be the empty string
+func NewClient(log log.Logger, ns string, configPath string) (Client, error) {
+	return newClientWithSettings(log, ns, configPath)
 }
 
-func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client, error) {
+func newClientWithSettings(log log.Logger, ns string, configPath string) (Client, error) {
 	ctx := context.Background()
 
-	config, err := openKubeConfig(settings.ConfigPath, log)
+	config, err := openKubeConfig(configPath, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "kube: error building config flags")
 	}
@@ -118,7 +117,6 @@ func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client
 	}
 
 	return &client{
-		settings:          settings,
 		kc:                kc,
 		ac:                mc,
 		metc:              metc,
@@ -146,8 +144,8 @@ func openKubeConfig(cfgPath string, log log.Logger) (*rest.Config, error) {
 
 func (c *client) GetDeployments(ctx context.Context, dID dtypes.DeploymentID) ([]ctypes.Deployment, error) {
 	labelSelectors := &strings.Builder{}
-	fmt.Fprintf(labelSelectors, "%s=%d", akashLeaseDSeqLabelName, dID.DSeq)
-	fmt.Fprintf(labelSelectors, ",%s=%s", akashLeaseOwnerLabelName, dID.Owner)
+	_, _ = fmt.Fprintf(labelSelectors, "%s=%d", akashLeaseDSeqLabelName, dID.DSeq)
+	_, _ = fmt.Fprintf(labelSelectors, ",%s=%s", akashLeaseOwnerLabelName, dID.Owner)
 
 	manifests, err := c.ac.AkashV1().Manifests(c.ns).List(ctx, metav1.ListOptions{
 		TypeMeta:             metav1.TypeMeta{},
@@ -212,17 +210,26 @@ func (c *client) Deployments(ctx context.Context) ([]ctypes.Deployment, error) {
 }
 
 func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest.Group) error {
-	if err := applyNS(ctx, c.kc, newNSBuilder(c.settings, lid, group)); err != nil {
+	settingsI := ctx.Value(SettingsKey)
+	if nil == settingsI {
+		return errNotConfiguredWithSettings
+	}
+	settings := settingsI.(Settings)
+	if err := ValidateSettings(settings); err != nil {
+		return err
+	}
+
+	if err := applyNS(ctx, c.kc, newNSBuilder(settings, lid, group)); err != nil {
 		c.log.Error("applying namespace", "err", err, "lease", lid)
 		return err
 	}
 
-	if err := applyNetPolicies(ctx, c.kc, newNetPolBuilder(c.settings, lid, group)); err != nil {
+	if err := applyNetPolicies(ctx, c.kc, newNetPolBuilder(settings, lid, group)); err != nil {
 		c.log.Error("applying namespace network policies", "err", err, "lease", lid)
 		return err
 	}
 
-	if err := applyManifest(ctx, c.ac, newManifestBuilder(c.log, c.settings, c.ns, lid, group)); err != nil {
+	if err := applyManifest(ctx, c.ac, newManifestBuilder(c.log, settings, c.ns, lid, group)); err != nil {
 		c.log.Error("applying manifest", "err", err, "lease", lid)
 		return err
 	}
@@ -234,7 +241,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 
 	for svcIdx := range group.Services {
 		service := &group.Services[svcIdx]
-		if err := applyDeployment(ctx, c.kc, newDeploymentBuilder(c.log, c.settings, lid, group, service)); err != nil {
+		if err := applyDeployment(ctx, c.kc, newDeploymentBuilder(c.log, settings, lid, group, service)); err != nil {
 			c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
@@ -244,7 +251,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 			continue
 		}
 
-		serviceBuilderLocal := newServiceBuilder(c.log, c.settings, lid, group, service, false)
+		serviceBuilderLocal := newServiceBuilder(c.log, settings, lid, group, service, false)
 		if serviceBuilderLocal.any() {
 			if err := applyService(ctx, c.kc, serviceBuilderLocal); err != nil {
 				c.log.Error("applying local service", "err", err, "lease", lid, "service", service.Name)
@@ -252,7 +259,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 			}
 		}
 
-		serviceBuilderGlobal := newServiceBuilder(c.log, c.settings, lid, group, service, true)
+		serviceBuilderGlobal := newServiceBuilder(c.log, settings, lid, group, service, true)
 		if serviceBuilderGlobal.any() {
 			if err := applyService(ctx, c.kc, serviceBuilderGlobal); err != nil {
 				c.log.Error("applying global service", "err", err, "lease", lid, "service", service.Name)
@@ -278,10 +285,10 @@ func (c *client) TeardownLease(ctx context.Context, lid mtypes.LeaseID) error {
 	return result
 }
 func kubeSelectorForLease(dst *strings.Builder, lID mtypes.LeaseID) {
-	fmt.Fprintf(dst, "%s=%s", akashLeaseOwnerLabelName, lID.Owner)
-	fmt.Fprintf(dst, ",%s=%d", akashLeaseDSeqLabelName, lID.DSeq)
-	fmt.Fprintf(dst, ",%s=%d", akashLeaseGSeqLabelName, lID.GSeq)
-	fmt.Fprintf(dst, ",%s=%d", akashLeaseOSeqLabelName, lID.OSeq)
+	_, _ = fmt.Fprintf(dst, "%s=%s", akashLeaseOwnerLabelName, lID.Owner)
+	_, _ = fmt.Fprintf(dst, ",%s=%d", akashLeaseDSeqLabelName, lID.DSeq)
+	_, _ = fmt.Fprintf(dst, ",%s=%d", akashLeaseGSeqLabelName, lID.GSeq)
+	_, _ = fmt.Fprintf(dst, ",%s=%d", akashLeaseOSeqLabelName, lID.OSeq)
 }
 
 func newEventsFeedList(ctx context.Context, events []eventsv1.Event) ctypes.EventsWatcher {
@@ -414,6 +421,15 @@ func (c *client) LeaseLogs(ctx context.Context, lid mtypes.LeaseID,
 
 // todo: limit number of results and do pagination / streaming
 func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.LeaseStatus, error) {
+	settingsI := ctx.Value(SettingsKey)
+	if nil == settingsI {
+		return nil, errNotConfiguredWithSettings
+	}
+	settings := settingsI.(Settings)
+	if err := ValidateSettings(settings); err != nil {
+		return nil, err
+	}
+
 	deployments, err := c.deploymentsForLease(ctx, lid)
 	if err != nil {
 		return nil, err
@@ -479,7 +495,7 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 					if nodePort > 0 {
 						// Record the actual port inside the container that is exposed
 						v := ctypes.ForwardedPortStatus{
-							Host:         c.exposedHostForPort(),
+							Host:         settings.ClusterPublicHostname,
 							Port:         uint16(port.TargetPort.IntVal),
 							ExternalPort: uint16(nodePort),
 							Available:    deployment.Available,
@@ -511,10 +527,6 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 	}
 
 	return response, nil
-}
-
-func (c *client) exposedHostForPort() string {
-	return c.settings.ClusterPublicHostname
 }
 
 func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name string) (*ctypes.ServiceStatus, error) {

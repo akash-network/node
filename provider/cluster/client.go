@@ -37,7 +37,6 @@ var (
 	errNotImplemented              = errors.New("not implemented")
 )
 
-
 type ReadClient interface {
 	LeaseStatus(context.Context, mtypes.LeaseID) (*ctypes.LeaseStatus, error)
 	LeaseEvents(context.Context, mtypes.LeaseID, string, bool) (ctypes.EventsWatcher, error)
@@ -83,9 +82,6 @@ type Client interface {
 func ErrorIsOkToSendToClient(err error) bool {
 	return errors.Is(err, ErrExec)
 }
-
-
-
 
 type node struct {
 	id                    string

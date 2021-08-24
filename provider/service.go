@@ -69,6 +69,7 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 	clusterConfig.BlockedHostnames = cfg.BlockedHostnames
 	clusterConfig.DeploymentIngressStaticHosts = cfg.DeploymentIngressStaticHosts
 	clusterConfig.DeploymentIngressDomain = cfg.DeploymentIngressDomain
+	clusterConfig.ClusterSettings = cfg.ClusterSettings
 
 	cluster, err := cluster.NewService(ctx, session, bus, cclient, clusterConfig)
 	if err != nil {

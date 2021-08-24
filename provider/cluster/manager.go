@@ -295,6 +295,7 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 	// Either reserve the hostnames, or confirm that they already are held
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	// Weird hack to tie this context to the lifecycle of the parent service, so this doesn't
 	// block forever or anything weird like that
 	go func() {
@@ -305,7 +306,7 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 		}
 	}()
 	withheldHostnames, err := dm.hostnameService.ReserveHostnames(ctx, allHostnames, dm.lease)
-	cancel()
+
 	if err != nil {
 		deploymentCounter.WithLabelValues("reserve-hostnames", "err").Inc()
 		dm.log.Error("deploy hostname reservation error", "state", dm.state, "err", err)
@@ -316,7 +317,9 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 	dm.log.Info("hostnames withheld", "cnt", len(withheldHostnames))
 
 	// Don't use a context tied to the lifecycle, as we don't want to cancel Kubernetes operations
-		err = dm.client.Deploy(context.Background(), dm.lease, dm.mgroup)
+	deployCtx := util.ApplyToContext(context.Background(), dm.config.ClusterSettings)
+
+	err = dm.client.Deploy(deployCtx, dm.lease, dm.mgroup)
 	label := "success"
 	if err != nil {
 		label = "fail"

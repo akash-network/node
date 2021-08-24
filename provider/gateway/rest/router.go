@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/util/wsutil"
 	"io"
 	"k8s.io/client-go/tools/remotecommand"
@@ -66,7 +67,7 @@ type wsStreamConfig struct {
 	client    cluster.ReadClient
 }
 
-func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.Router {
+func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ctxConfig map[interface{}]interface{}) *mux.Router {
 
 	router := mux.NewRouter()
 
@@ -115,7 +116,7 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client) *mux.R
 
 	// GET /lease/<lease-id>/status
 	lrouter.HandleFunc("/status",
-		leaseStatusHandler(log, pclient.Cluster())).
+		leaseStatusHandler(log, pclient.Cluster(), ctxConfig)).
 		Methods(http.MethodGet)
 
 	// GET /lease/<lease-id>/kubeevents
@@ -545,9 +546,10 @@ func leaseKubeEventsHandler(log log.Logger, cclient cluster.ReadClient) http.Han
 	}
 }
 
-func leaseStatusHandler(log log.Logger, cclient cluster.ReadClient) http.HandlerFunc {
+func leaseStatusHandler(log log.Logger, cclient cluster.ReadClient, clusterSettings map[interface{}]interface{}) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		status, err := cclient.LeaseStatus(req.Context(), requestLeaseID(req))
+		ctx := util.ApplyToContext(req.Context(), clusterSettings)
+		status, err := cclient.LeaseStatus(ctx, requestLeaseID(req))
 		if err != nil {
 			if errors.Is(err, kubeClient.ErrNoDeploymentForLease) {
 				http.Error(w, err.Error(), http.StatusNotFound)

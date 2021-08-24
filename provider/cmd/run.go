@@ -485,10 +485,17 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	kubeSettings.CPUCommitLevel = overcommitPercentCPU
 	kubeSettings.MemoryCommitLevel = overcommitPercentMemory
 	kubeSettings.StorageCommitLevel = overcommitPercentStorage
-	kubeSettings.ConfigPath = kubeConfig
 	kubeSettings.DeploymentRuntimeClass = deploymentRuntimeClass
 
-	cclient, err := createClusterClient(log, cmd, kubeSettings)
+	if err := kube.ValidateSettings(kubeSettings); err != nil {
+		return err
+	}
+
+	clusterSettings := map[interface{}]interface{}{
+		kube.SettingsKey: kubeSettings,
+	}
+
+	cclient, err := createClusterClient(log, cmd, kubeConfig)
 	if err != nil {
 		return err
 	}
@@ -538,6 +545,8 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	}
 
 	config.BidPricingStrategy = pricing
+	config.ClusterSettings = clusterSettings
+
 	service, err := provider.NewService(ctx, cctx, info.GetAddress(), session, bus, cclient, config)
 	if err != nil {
 		return err
@@ -557,6 +566,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		gwaddr,
 		cctx.FromAddress,
 		[]tls.Certificate{cert},
+		clusterSettings,
 	)
 	if err != nil {
 		return err
@@ -612,7 +622,7 @@ func openLogger() log.Logger {
 	})
 }
 
-func createClusterClient(log log.Logger, _ *cobra.Command, settings kube.Settings) (cluster.Client, error) {
+func createClusterClient(log log.Logger, _ *cobra.Command, configPath string) (cluster.Client, error) {
 	if !viper.GetBool(FlagClusterK8s) {
 		// Condition that there is no Kubernetes API to work with.
 		return cluster.NullClient(), nil
@@ -621,7 +631,7 @@ func createClusterClient(log log.Logger, _ *cobra.Command, settings kube.Setting
 	if ns == "" {
 		return nil, fmt.Errorf("%w: --%s required", errInvalidConfig, FlagK8sManifestNS)
 	}
-	return kube.NewClient(log, ns, settings)
+	return kube.NewClient(log, ns, configPath)
 }
 
 func showErrorToUser(err error) error {

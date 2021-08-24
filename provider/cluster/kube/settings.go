@@ -36,14 +36,12 @@ type Settings struct {
 	MemoryCommitLevel  float64
 	StorageCommitLevel float64
 
-	// path to kube config file, may be left blank
-	ConfigPath             string
 	DeploymentRuntimeClass string
 }
 
 var errSettingsValidation = errors.New("settings validation")
 
-func validateSettings(settings Settings) error {
+func ValidateSettings(settings Settings) error {
 	if settings.DeploymentIngressStaticHosts {
 		if settings.DeploymentIngressDomain == "" {
 			return errors.Wrap(errSettingsValidation, "empty ingress domain")
@@ -65,3 +63,5 @@ func NewDefaultSettings() Settings {
 		NetworkPoliciesEnabled:         false,
 	}
 }
+
+const SettingsKey = "kube-client-settings"

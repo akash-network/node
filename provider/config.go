@@ -28,6 +28,7 @@ type Config struct {
 	Attributes                      types.Attributes
 	DeploymentIngressStaticHosts    bool
 	DeploymentIngressDomain         string
+	ClusterSettings map[interface{}]interface{}
 }
 
 func NewDefaultConfig() Config {

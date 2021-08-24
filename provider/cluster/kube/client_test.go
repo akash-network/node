@@ -50,28 +50,37 @@ func TestNewClientWithBogusIngressDomain(t *testing.T) {
 		DeploymentIngressStaticHosts: true,
 		DeploymentIngressDomain:      "*.foo.bar.com",
 	}
-	client, err := NewClient(testutil.Logger(t), "aNamespace0", settings)
+	ctx := context.WithValue(context.Background(), SettingsKey, settings)
+
+	client, err := NewClient(testutil.Logger(t), "anamespace0", "")
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	result, err := client.LeaseStatus(ctx, testutil.LeaseID(t))
 	require.Error(t, err)
 	require.ErrorIs(t, err, errSettingsValidation)
-	require.Nil(t, client)
+	require.Nil(t, result)
+
 
 	settings = Settings{
 		DeploymentIngressStaticHosts: true,
 		DeploymentIngressDomain:      "foo.bar.com-",
 	}
-	client, err = NewClient(testutil.Logger(t), "aNamespace1", settings)
+	ctx = context.WithValue(context.Background(), SettingsKey, settings)
+	result, err = client.LeaseStatus(ctx, testutil.LeaseID(t))
 	require.Error(t, err)
 	require.ErrorIs(t, err, errSettingsValidation)
-	require.Nil(t, client)
+	require.Nil(t, result)
 
 	settings = Settings{
 		DeploymentIngressStaticHosts: true,
 		DeploymentIngressDomain:      "foo.ba!!!r.com",
 	}
-	client, err = NewClient(testutil.Logger(t), "aNamespace2", settings)
+	ctx = context.WithValue(context.Background(), SettingsKey, settings)
+	result, err = client.LeaseStatus(ctx, testutil.LeaseID(t))
 	require.Error(t, err)
 	require.ErrorIs(t, err, errSettingsValidation)
-	require.Nil(t, client)
+	require.Nil(t, result)
 }
 
 func TestNewClientWithEmptyIngressDomain(t *testing.T) {
@@ -79,10 +88,17 @@ func TestNewClientWithEmptyIngressDomain(t *testing.T) {
 		DeploymentIngressStaticHosts: true,
 		DeploymentIngressDomain:      "",
 	}
-	client, err := NewClient(testutil.Logger(t), "aNamespace3", settings)
+
+	client, err := NewClient(testutil.Logger(t), "anamespace3", "")
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	ctx := context.WithValue(context.Background(),SettingsKey, settings)
+	result, err := client.LeaseStatus(ctx, testutil.LeaseID(t))
 	require.Error(t, err)
 	require.ErrorIs(t, err, errSettingsValidation)
-	require.Nil(t, client)
+	require.Nil(t, result)
+
 }
 
 func TestLeaseStatusWithNoDeployments(t *testing.T) {
@@ -105,7 +121,11 @@ func TestLeaseStatusWithNoDeployments(t *testing.T) {
 
 	clientInterface := clientForTest(t, kmock, nil)
 
-	status, err := clientInterface.LeaseStatus(context.Background(), lid)
+	ctx := context.WithValue(context.Background(), SettingsKey, Settings{
+		ClusterPublicHostname:          "meow.com",
+
+	})
+	status, err := clientInterface.LeaseStatus(ctx, lid)
 	require.Equal(t, ErrNoDeploymentForLease, err)
 	require.Nil(t, status)
 }
@@ -146,9 +166,14 @@ func TestLeaseStatusWithNoIngressNoService(t *testing.T) {
 
 	clientInterface := clientForTest(t, kmock, akashMock)
 
-	status, err := clientInterface.LeaseStatus(context.Background(), lid)
+	ctx := context.WithValue(context.Background(), SettingsKey, Settings{
+		ClusterPublicHostname:          "meow.com",
+
+	})
+	status, err := clientInterface.LeaseStatus(ctx, lid)
 	require.NoError(t, err)
 	require.NotNil(t, status)
+
 	// TODO - more coverage on the status object
 }
 
@@ -230,7 +255,12 @@ func TestLeaseStatusWithIngressOnly(t *testing.T) {
 
 	clientInterface := clientForTest(t, kmock, akashMock)
 
-	status, err := clientInterface.LeaseStatus(context.Background(), lid)
+	ctx := context.WithValue(context.Background(), SettingsKey, Settings{
+		ClusterPublicHostname:          "meow.com",
+
+	})
+
+	status, err := clientInterface.LeaseStatus(ctx, lid)
 	require.NoError(t, err)
 	require.NotNil(t, status)
 
@@ -303,7 +333,11 @@ func TestLeaseStatusWithForwardedPortOnly(t *testing.T) {
 
 	clientInterface := clientForTest(t, kmock, akashMock)
 
-	status, err := clientInterface.LeaseStatus(context.Background(), lid)
+	ctx := context.WithValue(context.Background(), SettingsKey, Settings{
+		ClusterPublicHostname:          "meow.com",
+
+	})
+	status, err := clientInterface.LeaseStatus(ctx, lid)
 	require.NoError(t, err)
 	require.NotNil(t, status)
 

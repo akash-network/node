@@ -277,12 +277,11 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 
 func doHostnameOperator(cmd *cobra.Command) error {
 	ns := viper.GetString(FlagK8sManifestNS)
-	log := openLogger()
-	// TODO - figure out a way to split out the client object. At this time there is no real need
-	// to do anything with 'settings' in this context, but the object needs to be passed in anyways
+	logger := openLogger()
+
 	// TODO - make sure the client can pickup the in-cluster authorization to support running as a kubernetes
 	// deployment
-	client, err := clusterClient.NewClient(log, ns, clusterClient.Settings{})
+	client, err := clusterClient.NewClient(logger, ns, "")
 	if err != nil {
 		return err
 	}
@@ -290,7 +289,7 @@ func doHostnameOperator(cmd *cobra.Command) error {
 	op := hostnameOperator{
 		hostnames: make(map[string]managedHostname),
 		client:    client,
-		log:       log,
+		log:       logger,
 	}
 
 	return op.run(cmd.Context())
