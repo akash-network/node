@@ -631,7 +631,7 @@ func createClusterClient(log log.Logger, _ *cobra.Command, configPath string) (c
 	if ns == "" {
 		return nil, fmt.Errorf("%w: --%s required", errInvalidConfig, FlagK8sManifestNS)
 	}
-	return kube.NewClient(log, ns, configPath)
+	return kube.NewPreparedClient(log, ns, configPath)
 }
 
 func showErrorToUser(err error) error {

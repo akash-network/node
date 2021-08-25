@@ -81,10 +81,15 @@ type client struct {
 // NewClient returns new Kubernetes Client instance with provided logger, host and ns. Returns error incase of failure
 // configPath may be the empty string
 func NewClient(log log.Logger, ns string, configPath string) (Client, error) {
-	return newClientWithSettings(log, ns, configPath)
+	return newClientWithSettings(log, ns, configPath, false)
 }
 
-func newClientWithSettings(log log.Logger, ns string, configPath string) (Client, error) {
+func NewPreparedClient(log log.Logger, ns string, configPath string) (Client, error) {
+	return newClientWithSettings(log, ns, configPath, true)
+}
+
+
+func newClientWithSettings(log log.Logger, ns string, configPath string, prepare bool) (Client, error) {
 	ctx := context.Background()
 
 	config, err := openKubeConfig(configPath, log)
@@ -108,12 +113,14 @@ func newClientWithSettings(log log.Logger, ns string, configPath string) (Client
 		return nil, errors.Wrap(err, "kube: error creating metrics client")
 	}
 
-	if err := prepareEnvironment(ctx, kc, ns); err != nil {
-		return nil, errors.Wrap(err, "kube: error preparing environment")
-	}
+	if prepare {
+		if err := prepareEnvironment(ctx, kc, ns); err != nil {
+			return nil, errors.Wrap(err, "kube: error preparing environment")
+		}
 
-	if _, err := kc.CoreV1().Namespaces().List(ctx, metav1.ListOptions{Limit: 1}); err != nil {
-		return nil, errors.Wrap(err, "kube: error connecting to kubernetes")
+		if _, err := kc.CoreV1().Namespaces().List(ctx, metav1.ListOptions{Limit: 1}); err != nil {
+			return nil, errors.Wrap(err, "kube: error connecting to kubernetes")
+		}
 	}
 
 	return &client{

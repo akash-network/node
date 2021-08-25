@@ -11,6 +11,7 @@ spec:
       labels:
         app: akash-provider
     spec:
+      serviceAccountName: akash-provider
       containers:
         - name: akash-provider
           image: ghcr.io/ovrclk/akash:stable
@@ -84,6 +85,14 @@ spec:
                 secretKeyRef:
                   name: akash-provider-keys
                   key: provider-cert.pem
+
+            # include unique hostnames for apps
+            - name: AKASH_DEPLOYMENT_RUNTIME_CLASS
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: deployment-runtime-class
+                  optional: true           
 
             # include unique hostnames for apps
             - name: AKASH_DEPLOYMENT_INGRESS_STATIC_HOSTS

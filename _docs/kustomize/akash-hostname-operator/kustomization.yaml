@@ -1,0 +1,18 @@
+resources:
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - rbac.yaml
+  - service_account.yaml
+  - cluster_role.yaml
+
+namespace: akash-services
+ 
+configMapGenerator:
+  - name: akash-hostname-operator-boot
+    files:
+      - run.sh
+  - name: akash-provider-config 
+    literals:
+      - k8s-manifest-ns=lease
+   

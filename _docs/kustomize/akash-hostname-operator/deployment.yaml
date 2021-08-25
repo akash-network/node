@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: akash-hostname-operator
+  labels:
+    akash.network/component: akash-hostname-operator
+spec:
+  selector:
+    matchLabels:
+      app: akash-hostname-operator
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: akash-hostname-operator
+        akash.network/component: akash-hostname-operator
+    spec:
+      serviceAccountName: akash-operator
+      containers:
+      - name: akash-hostname-operator
+        image: ghcr.io/ovrclk/akash:stable
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "/boot/run.sh"]
+        ports: 
+          - name: status
+            containerPort: 8188
+        env:
+          - name: AKASH_K8S_MANIFEST_NS
+            valueFrom:
+              configMapKeyRef:
+                name: akash-provider-config
+                key: k8s-manifest-ns
+        volumeMounts:
+          - name: boot
+            mountPath: /boot
+            readOnly: true
+      volumes:
+        - name: boot
+          configMap:
+            name: akash-hostname-operator-boot
+    
+        
