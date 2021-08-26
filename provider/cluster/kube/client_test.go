@@ -52,8 +52,8 @@ func TestNewClientWithBogusIngressDomain(t *testing.T) {
 	}
 	ctx := context.WithValue(context.Background(), SettingsKey, settings)
 
-	client, err := NewClient(testutil.Logger(t), "anamespace0", "")
-	require.NoError(t, err)
+	kmock := &kubernetes_mocks.Interface{}
+	client := clientForTest(t, kmock, nil)
 	require.NotNil(t, client)
 
 	result, err := client.LeaseStatus(ctx, testutil.LeaseID(t))
@@ -88,9 +88,8 @@ func TestNewClientWithEmptyIngressDomain(t *testing.T) {
 		DeploymentIngressDomain:      "",
 	}
 
-	client, err := NewClient(testutil.Logger(t), "anamespace3", "")
-	require.NoError(t, err)
-	require.NotNil(t, client)
+	kmock := &kubernetes_mocks.Interface{}
+	client := clientForTest(t, kmock, nil)
 
 	ctx := context.WithValue(context.Background(), SettingsKey, settings)
 	result, err := client.LeaseStatus(ctx, testutil.LeaseID(t))

@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -250,6 +251,8 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 	cctx := s.validator.ClientCtx
 
+	// all command use viper which is meant for use by a single goroutine only
+	// so wait for the provider to start before running the hostname operator
 	go func() {
 		_, err := ptestutil.RunLocalProvider(cctx,
 			cctx.ChainID,
@@ -265,6 +268,38 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 	// Run the hostname operator
 	go func() {
+		const maxAttempts = 30
+		dialer := net.Dialer{
+			Timeout:       time.Second * 3,
+			Deadline:      time.Time{},
+			LocalAddr:     nil,
+			DualStack:     false,
+			FallbackDelay: 0,
+			KeepAlive:     0,
+			Resolver:      nil,
+			Cancel:        nil,
+			Control:       nil,
+		}
+
+		ctx := context.Background()
+		attempts := 0
+		s.T().Log("waiting for provider to run before starting hostname operator")
+		for {
+			conn, err := dialer.DialContext(ctx, "tcp", provHost)
+			if err != nil {
+				s.T().Logf("connecting to provider returned %v", err)
+				_, ok := err.(net.Error)
+				s.Require().True(ok, "error should be net error not %v", err)
+				attempts++
+				s.Require().Less(attempts, maxAttempts)
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			_ = conn.Close() // Connected OK
+			break
+		}
+		s.T().Log("starting hostname operator")
+
 		_, err := ptestutil.RunLocalHostnameOperator(cctx)
 		s.Require().NoError(err)
 	}()
