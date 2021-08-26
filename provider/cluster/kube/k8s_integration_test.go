@@ -17,7 +17,7 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	ctx := context.Background()
+
 
 	// create lease
 	lid := testutil.LeaseID(t)
@@ -30,8 +30,9 @@ func TestNewClient(t *testing.T) {
 		DeploymentIngressDomain:        "bar.com",
 		DeploymentIngressExposeLBHosts: false,
 	}
+	ctx := context.WithValue(context.Background(), SettingsKey, settings)
 
-	ac, err := newClientWithSettings(testutil.Logger(t), ns, settings)
+	ac, err := newClientWithSettings(testutil.Logger(t), ns, "", true)
 	require.NoError(t, err)
 
 	cc, ok := ac.(*client)
