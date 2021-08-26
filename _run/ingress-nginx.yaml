@@ -36,6 +36,7 @@ metadata:
   name: ingress-nginx-controller
   namespace: ingress-nginx
 data:
+  proxy-body-size: 10m
 ---
 # Source: ingress-nginx/templates/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
