@@ -20,12 +20,13 @@ const (
 )
 
 var cmdLock = make(chan struct{}, 1)
-func init () {
+
+func init() {
 	releaseCmdLock()
 }
 
-func takeCmdLock(){
-	<- cmdLock
+func takeCmdLock() {
+	<-cmdLock
 }
 
 func releaseCmdLock() {
