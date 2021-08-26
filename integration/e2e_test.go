@@ -263,6 +263,12 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		s.Require().NoError(err)
 	}()
 
+	// Run the hostname operator
+	go func () {
+		_, err := ptestutil.RunLocalHostnameOperator(cctx)
+		s.Require().NoError(err)
+	}()
+
 	s.Require().NoError(s.network.WaitForNextBlock())
 }
 

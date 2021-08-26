@@ -357,7 +357,8 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 	}
 
 	for host, serviceExpose := range hosts {
-		err = dm.client.DeclareHostname(ctx, dm.lease, host, hostToServiceName[host], uint32(serviceExpose.ExternalPort))
+		externalPort := uint32(util.ExposeExternalPort(serviceExpose))
+		err = dm.client.DeclareHostname(ctx, dm.lease, host, hostToServiceName[host], externalPort)
 		if err != nil {
 			// TODO - counter
 			return withheldHostnames, err

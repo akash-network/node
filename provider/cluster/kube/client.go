@@ -88,7 +88,6 @@ func NewPreparedClient(log log.Logger, ns string, configPath string) (Client, er
 	return newClientWithSettings(log, ns, configPath, true)
 }
 
-
 func newClientWithSettings(log log.Logger, ns string, configPath string, prepare bool) (Client, error) {
 	ctx := context.Background()
 

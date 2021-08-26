@@ -295,7 +295,7 @@ func doHostnameOperator(cmd *cobra.Command) error {
 	return op.run(cmd.Context())
 }
 
-func hostnameOperatorCmd() *cobra.Command {
+func HostnameOperatorCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "hostname-operator",
 		Short:        "",

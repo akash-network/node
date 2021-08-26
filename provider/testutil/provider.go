@@ -2,7 +2,6 @@ package testutil
 
 import (
 	"fmt"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	cosmosclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -20,6 +19,19 @@ const (
 	TestClusterNodePortQuantity = 100
 )
 
+var cmdLock = make(chan struct{}, 1)
+func init () {
+	releaseCmdLock()
+}
+
+func takeCmdLock(){
+	<- cmdLock
+}
+
+func releaseCmdLock() {
+	cmdLock <- struct{}{}
+}
+
 /*
 TestSendManifest for integration testing
 this is similar to cli command exampled below
@@ -36,7 +48,12 @@ func TestSendManifest(clientCtx client.Context, id mtypes.BidID, sdlPath string,
 	args = append(args, sdlPath)
 	args = append(args, extraArgs...)
 	fmt.Printf("%v\n", args)
-	return testutilcli.ExecTestCLICmd(clientCtx, pcmd.SendManifestCmd(), args...)
+
+	takeCmdLock()
+	cobraCmd := pcmd.SendManifestCmd()
+	releaseCmdLock()
+
+	return testutilcli.ExecTestCLICmd(clientCtx, cobraCmd, args...)
 }
 
 func TestLeaseShell(clientCtx client.Context, extraArgs []string, lID mtypes.LeaseID, replicaIndex int, tty bool, stdin bool, serviceName string, cmd ...string) (sdktest.BufferWriter, error) {
@@ -56,14 +73,21 @@ func TestLeaseShell(clientCtx client.Context, extraArgs []string, lID mtypes.Lea
 	args = append(args, serviceName)
 	args = append(args, cmd...)
 	fmt.Printf("%v\n", args)
-	return testutilcli.ExecTestCLICmd(clientCtx, pcmd.LeaseShellCmd(), args...)
+
+	takeCmdLock()
+	cobraCmd := pcmd.LeaseShellCmd()
+	releaseCmdLock()
+
+	return testutilcli.ExecTestCLICmd(clientCtx, cobraCmd, args...)
 }
 
 // RunLocalProvider wraps up the Provider cobra command for testing and supplies
 // new default values to the flags.
 // prev: akashctl provider run --from=foo --cluster-k8s --gateway-listen-address=localhost:39729 --home=/tmp/akash_integration_TestE2EApp_324892307/.akashctl --node=tcp://0.0.0.0:41863 --keyring-backend test
 func RunLocalProvider(clientCtx cosmosclient.Context, chainID, nodeRPC, akashHome, from, gatewayListenAddress string, extraArgs ...string) (sdktest.BufferWriter, error) {
+	takeCmdLock()
 	cmd := pcmd.RunCmd()
+	releaseCmdLock()
 	// Flags added because command not being wrapped by the Tendermint's PrepareMainCmd()
 	cmd.PersistentFlags().StringP(tmcli.HomeFlag, "", akashHome, "directory for config and data")
 	cmd.PersistentFlags().Bool(tmcli.TraceFlag, false, "print out full stack trace on errors")
@@ -84,4 +108,11 @@ func RunLocalProvider(clientCtx cosmosclient.Context, chainID, nodeRPC, akashHom
 	args = append(args, extraArgs...)
 
 	return testutilcli.ExecTestCLICmd(clientCtx, cmd, args...)
+}
+
+func RunLocalHostnameOperator(clientCtx cosmosclient.Context) (sdktest.BufferWriter, error) {
+	takeCmdLock()
+	cmd := pcmd.HostnameOperatorCmd()
+	releaseCmdLock()
+	return testutilcli.ExecTestCLICmd(clientCtx, cmd)
 }
