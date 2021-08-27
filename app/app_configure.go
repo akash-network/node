@@ -99,6 +99,7 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 			app.keeper.market,
 			app.keeper.escrow,
 			app.keeper.bank,
+			app.keeper.authz,
 		),
 
 		market.NewAppModule(

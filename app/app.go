@@ -14,6 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/simapp"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -25,6 +26,9 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
+	"github.com/cosmos/cosmos-sdk/x/authz"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -123,6 +127,7 @@ type AkashApp struct {
 
 	keeper struct {
 		acct     authkeeper.AccountKeeper
+		authz    authzkeeper.Keeper
 		bank     bankkeeper.Keeper
 		cap      *capabilitykeeper.Keeper
 		staking  stakingkeeper.Keeper
@@ -214,6 +219,9 @@ func NewApp(
 		authtypes.ProtoBaseAccount,
 		MacPerms(),
 	)
+
+	// add authz keeper
+	app.keeper.authz = authzkeeper.NewKeeper(app.keys[authzkeeper.StoreKey], appCodec, app.MsgServiceRouter())
 
 	app.keeper.bank = bankkeeper.NewBaseKeeper(
 		appCodec,
@@ -333,6 +341,7 @@ func NewApp(
 		append([]module.AppModule{
 			genutil.NewAppModule(app.keeper.acct, app.keeper.staking, app.BaseApp.DeliverTx, encodingConfig.TxConfig),
 			auth.NewAppModule(appCodec, app.keeper.acct, nil),
+			authzmodule.NewAppModule(appCodec, app.keeper.authz, app.keeper.acct, app.keeper.bank, app.interfaceRegistry),
 			vesting.NewAppModule(app.keeper.acct, app.keeper.bank),
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			capability.NewAppModule(appCodec, *app.keeper.cap),
@@ -373,6 +382,7 @@ func NewApp(
 		append([]string{
 			capabilitytypes.ModuleName,
 			authtypes.ModuleName,
+			authz.ModuleName,
 			banktypes.ModuleName,
 			distrtypes.ModuleName,
 			stakingtypes.ModuleName,
@@ -400,6 +410,7 @@ func NewApp(
 	app.sm = module.NewSimulationManager(
 		append([]module.AppModuleSimulation{
 			auth.NewAppModule(appCodec, app.keeper.acct, authsims.RandomGenesisAccounts),
+			authzmodule.NewAppModule(appCodec, app.keeper.authz, app.keeper.acct, app.keeper.bank, app.interfaceRegistry),
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
@@ -486,6 +497,20 @@ func (app *AkashApp) registerUpgradeHandlers() {
 
 		return app.mm.RunMigrations(ctx, app.configurator, fromVM)
 	})
+
+	upgradeInfo, err := app.keeper.upgrade.ReadUpgradeInfoFromDisk()
+	if err != nil {
+		panic(err)
+	}
+
+	if upgradeInfo.Name == "akash_v0.13.0_cosmos_v0.43.0" && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
+		storeUpgrades := storetypes.StoreUpgrades{
+			Added: []string{"authz"},
+		}
+
+		// configure store loader that checks if version == upgradeHeight and applies store upgrades
+		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+	}
 }
 
 // MakeCodecs constructs the *std.Codec and *codec.LegacyAmino instances used by

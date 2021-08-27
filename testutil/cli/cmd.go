@@ -1,7 +1,15 @@
 package cli
 
 import (
+	"bytes"
 	"context"
+	"testing"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	"github.com/gogo/protobuf/jsonpb"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/testutil"
@@ -23,4 +31,32 @@ func ExecTestCLICmd(clientCtx client.Context, cmd *cobra.Command, extraArgs ...s
 	}
 
 	return out, nil
+}
+
+// this function is a gentle response to inappropriate approach of cli test utils
+// send transaction may fail and calling cli routine won't know about it
+func ValidateTxSuccessful(t testing.TB, cctx client.Context, data []byte) {
+	t.Helper()
+
+	res := getTxResponse(t, cctx, data)
+	require.Zero(t, res.Code, res)
+}
+
+func ValidateTxUnSuccessful(t testing.TB, cctx client.Context, data []byte) {
+	t.Helper()
+
+	res := getTxResponse(t, cctx, data)
+	require.NotZero(t, res.Code, res)
+}
+
+func getTxResponse(t testing.TB, cctx client.Context, data []byte) *sdk.TxResponse {
+	var resp sdk.TxResponse
+
+	err := jsonpb.Unmarshal(bytes.NewBuffer(data), &resp)
+	require.NoError(t, err)
+
+	res, err := tx.QueryTx(cctx, resp.TxHash)
+	require.NoError(t, err)
+
+	return res
 }

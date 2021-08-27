@@ -1,12 +1,19 @@
 package cli
 
 import (
+	"strings"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	"github.com/ovrclk/akash/x/deployment/types"
+)
+
+const (
+	FlagDepositorAccount = "depositor-account"
+	FlagExpiration       = "expiration"
 )
 
 var (
@@ -180,4 +187,26 @@ func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, error) 
 	}
 
 	return dfilters, nil
+}
+
+// AddDepositorFlag adds the `--depositor-account` flag
+func AddDepositorFlag(flags *pflag.FlagSet) {
+	flags.String(FlagDepositorAccount, "", "Depositor account pays for the deposit instead of deducting from the owner")
+}
+
+// DepositorFromFlags returns the depositor account if one was specified in flags,
+// otherwise it returns the owner's account.
+func DepositorFromFlags(flags *pflag.FlagSet, owner string) (string, error) {
+	depositorAcc, err := flags.GetString(FlagDepositorAccount)
+	if err != nil {
+		return "", err
+	}
+
+	// if no depositor is specified, owner is the default depositor
+	if strings.TrimSpace(depositorAcc) == "" {
+		return owner, nil
+	}
+
+	_, err = sdk.AccAddressFromBech32(depositorAcc)
+	return depositorAcc, err
 }

@@ -17,6 +17,7 @@ import (
 
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
 	"github.com/ovrclk/akash/provider/gateway/rest"
+	clitestutil "github.com/ovrclk/akash/testutil/cli"
 
 	"github.com/cosmos/cosmos-sdk/server"
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
@@ -119,7 +120,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Set up second tenant key
 	s.keyTenant, err = s.validator.ClientCtx.Keyring.Key("keyBar")
@@ -138,7 +139,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// address for provider to listen on
 	_, port, err := server.FreeTCPAddr()
@@ -175,7 +176,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Create provider's certificate
 	_, err = ccli.TxCreateServerExec(
@@ -189,7 +190,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Create tenant's certificate
 	_, err = ccli.TxCreateServerExec(
@@ -203,7 +204,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	pemSrc := fmt.Sprintf("%s/%s.pem", s.validator.ClientCtx.HomeDir, s.keyProvider.GetAddress().String())
 	pemDst := fmt.Sprintf("%s/%s.pem", strings.Replace(s.validator.ClientCtx.HomeDir, "simd", "simcli", 1), s.keyProvider.GetAddress().String())
@@ -302,7 +303,7 @@ func (s *IntegrationTestSuite) closeDeployments() int {
 		)
 		s.Require().NoError(err)
 		s.Require().NoError(s.waitForBlocksCommitted(1))
-		validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+		clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 	}
 
 	return len(deployments)
@@ -370,7 +371,7 @@ func (s *E2EContainerToContainer) TestE2EContainerToContainer() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(7))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	bidID := mtypes.MakeBidID(
 		mtypes.MakeOrderID(dtypes.MakeGroupID(deploymentID, 1), 1),
@@ -393,7 +394,7 @@ func (s *E2EContainerToContainer) TestE2EContainerToContainer() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	lid := bidID.LeaseID()
 
@@ -449,7 +450,7 @@ func (s *E2EAppNodePort) TestE2EAppNodePort() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(3))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	bidID := mtypes.MakeBidID(
 		mtypes.MakeOrderID(dtypes.MakeGroupID(deploymentID, 1), 1),
@@ -471,7 +472,7 @@ func (s *E2EAppNodePort) TestE2EAppNodePort() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Assert provider made bid and created lease; test query leases ---------
 	resp, err := mcli.QueryLeasesExec(s.validator.ClientCtx.WithOutputFormat("json"))
@@ -577,7 +578,7 @@ func (s *E2EDeploymentUpdate) TestE2EDeploymentUpdate() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(3))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	bidID := mtypes.MakeBidID(
 		mtypes.MakeOrderID(dtypes.MakeGroupID(deploymentID, 1), 1),
@@ -599,7 +600,7 @@ func (s *E2EDeploymentUpdate) TestE2EDeploymentUpdate() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Assert provider made bid and created lease; test query leases ---------
 	resp, err := mcli.QueryLeasesExec(s.validator.ClientCtx.WithOutputFormat("json"))
@@ -646,7 +647,7 @@ func (s *E2EDeploymentUpdate) TestE2EDeploymentUpdate() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Send Updated Manifest to Provider
 	_, err = ptestutil.TestSendManifest(
@@ -687,7 +688,7 @@ func (s *E2EApp) TestE2EApp() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Test query deployments ---------------------------------------------
 	res, err = deploycli.QueryDeploymentsExec(cctxJSON)
@@ -759,7 +760,7 @@ func (s *E2EApp) TestE2EApp() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(6))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	res, err = mcli.QueryLeasesExec(cctxJSON)
 	s.Require().NoError(err)
@@ -867,7 +868,7 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(3))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	bidID := mtypes.MakeBidID(
 		mtypes.MakeOrderID(dtypes.MakeGroupID(deploymentID, 1), 1),
@@ -889,7 +890,7 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
-	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	// Assert provider made bid and created lease; test query leases ---------
 	resp, err := mcli.QueryLeasesExec(s.validator.ClientCtx.WithOutputFormat("json"))

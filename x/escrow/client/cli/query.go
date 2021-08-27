@@ -103,7 +103,7 @@ func cmdBlocksRemaining() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			balance := res.EscrowAccount.Balance.Amount
+			balance := res.EscrowAccount.TotalBalance().Amount
 			settledAt := res.EscrowAccount.SettledAt
 			balanceRemain := float64(balance.Int64() - ((int64(blockchainHeight) - settledAt) * (totalLeaseAmount.Int64())))
 			blocksRemain := (balanceRemain / float64(totalLeaseAmount.Int64()))

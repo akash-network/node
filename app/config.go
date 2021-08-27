@@ -8,6 +8,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/capability"
@@ -45,6 +47,8 @@ var (
 		append([]module.AppModuleBasic{
 			// accounts, fees.
 			auth.AppModuleBasic{},
+			// authorizations
+			authzmodule.AppModuleBasic{},
 			// genesis utilities
 			genutil.AppModuleBasic{},
 			// tokens, token balance.
@@ -96,6 +100,7 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 	return sdk.NewKVStoreKeys(
 		append([]string{
 			authtypes.StoreKey,
+			authzkeeper.StoreKey,
 			banktypes.StoreKey,
 			stakingtypes.StoreKey,
 			minttypes.StoreKey,

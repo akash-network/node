@@ -9,8 +9,8 @@ import (
 )
 
 // NewHandler returns a handler for "deployment" type messages
-func NewHandler(keeper keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper) sdk.Handler {
-	ms := NewServer(keeper, mkeeper, ekeeper)
+func NewHandler(keeper keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper, authzKeeper AuthzKeeper) sdk.Handler {
+	ms := NewServer(keeper, mkeeper, ekeeper, authzKeeper)
 
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		switch msg := msg.(type) {
