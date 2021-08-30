@@ -49,18 +49,18 @@ func (fkse fakeKubernetesStatusError) Error() string {
 }
 
 type routerTest struct {
-	caddr    sdk.Address
-	paddr    sdk.Address
-	pmclient *pmmock.Client
-	pcclient *pcmock.Client
-	pclient  *pmock.Client
-	qclient  *qmock.QueryClient
+	caddr          sdk.Address
+	paddr          sdk.Address
+	pmclient       *pmmock.Client
+	pcclient       *pcmock.Client
+	pclient        *pmock.Client
+	qclient        *qmock.QueryClient
 	clusterService *pcmock.Service
 	hostnameClient *pcmock.HostnameServiceClient
-	gclient  *client
-	ccert    testutil.TestCertificate
-	pcert    testutil.TestCertificate
-	host     *url.URL
+	gclient        *client
+	ccert          testutil.TestCertificate
+	pcert          testutil.TestCertificate
+	host           *url.URL
 }
 
 func runRouterTest(t *testing.T, authClient bool, fn func(*routerTest)) {
@@ -69,12 +69,12 @@ func runRouterTest(t *testing.T, authClient bool, fn func(*routerTest)) {
 	mocks := createMocks()
 
 	mf := &routerTest{
-		caddr:    testutil.AccAddress(t),
-		paddr:    testutil.AccAddress(t),
-		pmclient: mocks.pmclient,
-		pcclient: mocks.pcclient,
-		pclient:  mocks.pclient,
-		qclient:  mocks.qclient,
+		caddr:          testutil.AccAddress(t),
+		paddr:          testutil.AccAddress(t),
+		pmclient:       mocks.pmclient,
+		pcclient:       mocks.pcclient,
+		pclient:        mocks.pclient,
+		qclient:        mocks.qclient,
 		hostnameClient: mocks.hostnameClient,
 		clusterService: mocks.clusterService,
 	}

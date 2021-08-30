@@ -343,7 +343,6 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 	}
 }
 
-
 func createStatusHandler(log log.Logger, sclient provider.StatusClient) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		status, err := sclient.Status(req.Context())

@@ -10,7 +10,7 @@ const (
 	deploymentPathPrefix = "/deployment/{dseq}"
 	leasePathPrefix      = "/lease/{dseq}/{gseq}/{oseq}"
 	hostnamePrefix       = "/hostname"
-	migratePathPrefix = "/migrate"
+	migratePathPrefix    = "/migrate"
 )
 
 func statusPath() string {

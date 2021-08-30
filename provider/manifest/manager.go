@@ -5,9 +5,9 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"time"
 
-	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/util"
 
 	"github.com/pkg/errors"
@@ -82,7 +82,7 @@ type manager struct {
 	log log.Logger
 	lc  lifecycle.Lifecycle
 
-	hostnameService cluster.HostnameServiceClient
+	hostnameService clustertypes.HostnameServiceClient
 }
 
 func (m *manager) stop() {

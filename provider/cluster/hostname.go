@@ -5,19 +5,13 @@ import (
 	"fmt"
 	lifecycle "github.com/boz/go-lifecycle"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/pkg/errors"
 	"strings"
 	"sync"
 )
-
-type HostnameServiceClient interface {
-	ReserveHostnames(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID) ([]string, error)
-	ReleaseHostnames(leaseID mtypes.LeaseID) error
-	CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) error
-	PrepareHostnamesForTransfer(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID) error
-}
 
 /**
 This type exists to identify the target of a reservation. The lease ID type is not used directly because
@@ -53,7 +47,7 @@ type SimpleHostnames struct {
 	lock      sync.Mutex
 } /* Used in test code */
 
-func NewSimpleHostnames() HostnameServiceClient {
+func NewSimpleHostnames() clustertypes.HostnameServiceClient {
 	return &SimpleHostnames{
 		Hostnames: make(map[string]hostnameID),
 	}

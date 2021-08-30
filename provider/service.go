@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -38,7 +39,7 @@ type Client interface {
 	ValidateClient
 	Manifest() manifest.Client
 	Cluster() cluster.Client
-	Hostname() cluster.HostnameServiceClient
+	Hostname() clustertypes.HostnameServiceClient
 	ClusterService() cluster.Service
 }
 
@@ -152,7 +153,7 @@ type service struct {
 	lc     lifecycle.Lifecycle
 }
 
-func (s *service) Hostname() cluster.HostnameServiceClient {
+func (s *service) Hostname() clustertypes.HostnameServiceClient {
 	return s.cluster.HostnameService()
 }
 

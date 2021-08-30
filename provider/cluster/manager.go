@@ -5,6 +5,7 @@ import (
 	"fmt"
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/manifest"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/prometheus/client_golang/prometheus"
@@ -59,7 +60,7 @@ type deploymentManager struct {
 
 	log             log.Logger
 	lc              lifecycle.Lifecycle
-	hostnameService HostnameServiceClient
+	hostnameService clustertypes.HostnameServiceClient
 
 	config Config
 

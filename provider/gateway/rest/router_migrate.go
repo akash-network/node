@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ovrclk/akash/provider/cluster"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/tendermint/tendermint/libs/log"
 	"net/http"
 	"strings"
@@ -16,7 +17,7 @@ type migrateRequestBody struct {
 	DestinationGSeq    uint32   `json:"destination_gseq"`
 }
 
-func migrateHandler(log log.Logger, hostnameService cluster.HostnameServiceClient, clusterService cluster.Service) http.HandlerFunc {
+func migrateHandler(log log.Logger, hostnameService clustertypes.HostnameServiceClient, clusterService cluster.Service) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		body := migrateRequestBody{}
 		dec := json.NewDecoder(req.Body)
@@ -41,7 +42,7 @@ func migrateHandler(log log.Logger, hostnameService cluster.HostnameServiceClien
 
 		// Make sure this hostname can be taken
 		//  make sure destination deployment actually exists
-		found, activeLease, err := clusterService.FindActiveLease(req.Context(), owner, body.DestinationDSeq, body.DestinationGSeq)
+		found, leaseID, mgroup, err := clusterService.FindActiveLease(req.Context(), owner, body.DestinationDSeq, body.DestinationGSeq)
 		if err != nil {
 			log.Error("failed checking if destination deployment exists", "err", err)
 			rw.WriteHeader(http.StatusInternalServerError)
@@ -59,7 +60,7 @@ func migrateHandler(log log.Logger, hostnameService cluster.HostnameServiceClien
 
 		// check that the destination leases can actually use the requested hostnames
 		// for a hostname to be migrated it must be declared in the SDL
-		for _, service := range activeLease.Group.Services {
+		for _, service := range mgroup.Services {
 			for _, expose := range service.Expose {
 				for _, host := range expose.Hosts {
 					hostnameToServiceName[host] = service.Name
@@ -76,8 +77,6 @@ func migrateHandler(log log.Logger, hostnameService cluster.HostnameServiceClien
 				return
 			}
 		}
-
-		leaseID := activeLease.ID
 
 		// Tell the hostname service to move the hostnames to the new deployment, unconditionally
 		log.Debug("preparing migration of hostnames", "cnt", len(body.HostnamesToMigrate))

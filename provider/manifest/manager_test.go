@@ -3,6 +3,7 @@ package manifest
 import (
 	"context"
 	"errors"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"testing"
 	"time"
 
@@ -29,7 +30,7 @@ type scaffold struct {
 	cancel    context.CancelFunc
 	bus       pubsub.Bus
 	queryMock *clientMocks.QueryClient
-	hostnames cluster.HostnameServiceClient
+	hostnames clustertypes.HostnameServiceClient
 }
 
 func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did dtypes.DeploymentID) *scaffold {

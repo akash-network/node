@@ -3,8 +3,8 @@ package rest
 import (
 	"context"
 	v1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
-	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/testutil"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -17,7 +17,7 @@ func TestRouteMigrateHostnameDoesNotExist(t *testing.T) {
 		const dseq = uint64(33)
 		const gseq = uint32(34)
 
-		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(false, cluster.ActiveLease{}, nil)
+		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(false, mtypes.LeaseID{}, v1.ManifestGroup{}, nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 		defer cancel()
@@ -33,12 +33,10 @@ func TestRouteMigrateHostnameDeploymentDoesNotUse(t *testing.T) {
 		const dseq = uint64(133)
 		const gseq = uint32(134)
 
-		lease := cluster.ActiveLease{
-			ID:    testutil.LeaseID(t),
-			Group: v1.ManifestGroup{},
-		}
-		lease.ID.Owner = test.caddr.String()
-		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(true, lease, nil)
+		leaseID := testutil.LeaseID(t)
+
+		leaseID.Owner = test.caddr.String()
+		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(true, leaseID, v1.ManifestGroup{}, nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 		defer cancel()
@@ -57,34 +55,32 @@ func TestRouteMigrateHostname(t *testing.T) {
 	const serviceExternalPort = uint32(1111)
 
 	runRouterTest(t, true, func(test *routerTest) {
-		lease  := cluster.ActiveLease{
-			ID:    testutil.LeaseID(t),
-			Group: v1.ManifestGroup{
-				Name:     "some-group",
-				Services: []v1.ManifestService{
-					v1.ManifestService{
-						Name:      serviceName,
-						Image:     "some-awesome-image",
-						Count:     1,
-						Expose:    []v1.ManifestServiceExpose{
-							v1.ManifestServiceExpose{
-								Port:         1234,
-								ExternalPort: uint16(serviceExternalPort),
-								Proto:        "TCP",
-								Service:      serviceName,
-								Global:       true,
-								Hosts:        []string{"dogs.pet", hostname},
-								/* Remaining fields not relevant in this test */
-							},
+		mgroup := v1.ManifestGroup{
+			Name: "some-group",
+			Services: []v1.ManifestService{
+				{
+					Name:  serviceName,
+					Image: "some-awesome-image",
+					Count: 1,
+					Expose: []v1.ManifestServiceExpose{
+						{
+							Port:         1234,
+							ExternalPort: uint16(serviceExternalPort),
+							Proto:        "TCP",
+							Service:      serviceName,
+							Global:       true,
+							Hosts:        []string{"dogs.pet", hostname},
+							/* Remaining fields not relevant in this test */
 						},
 					},
 				},
 			},
 		}
-		lease.ID.Owner = test.caddr.String()
-		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(true, lease, nil)
-		test.hostnameClient.On("PrepareHostnamesForTransfer", mock.Anything, []string{hostname}, lease.ID).Return(nil)
-		test.clusterService.On("TransferHostname", mock.Anything, lease.ID, hostname, serviceName, serviceExternalPort).Return(nil)
+		leaseID := testutil.LeaseID(t)
+		leaseID.Owner = test.caddr.String()
+		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(true, leaseID, mgroup, nil)
+		test.hostnameClient.On("PrepareHostnamesForTransfer", mock.Anything, []string{hostname}, leaseID).Return(nil)
+		test.clusterService.On("TransferHostname", mock.Anything, leaseID, hostname, serviceName, serviceExternalPort).Return(nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 		defer cancel()
@@ -104,33 +100,31 @@ func TestRouteMigrateHostnamePrepareFails(t *testing.T) {
 	const serviceExternalPort = uint32(999)
 
 	runRouterTest(t, true, func(test *routerTest) {
-		lease  := cluster.ActiveLease{
-			ID:    testutil.LeaseID(t),
-			Group: v1.ManifestGroup{
-				Name:     "some-group",
-				Services: []v1.ManifestService{
-					v1.ManifestService{
-						Name:      serviceName,
-						Image:     "some-awesome-image",
-						Count:     1,
-						Expose:    []v1.ManifestServiceExpose{
-							v1.ManifestServiceExpose{
-								Port:         1234,
-								ExternalPort: uint16(serviceExternalPort),
-								Proto:        "TCP",
-								Service:      serviceName,
-								Global:       true,
-								Hosts:        []string{"dogs.pet", hostname},
-								/* Remaining fields not relevant in this test */
-							},
+		mgroup := v1.ManifestGroup{
+			Name: "some-group",
+			Services: []v1.ManifestService{
+				{
+					Name:  serviceName,
+					Image: "some-awesome-image",
+					Count: 1,
+					Expose: []v1.ManifestServiceExpose{
+						{
+							Port:         1234,
+							ExternalPort: uint16(serviceExternalPort),
+							Proto:        "TCP",
+							Service:      serviceName,
+							Global:       true,
+							Hosts:        []string{"dogs.pet", hostname},
+							/* Remaining fields not relevant in this test */
 						},
 					},
 				},
 			},
 		}
-		lease.ID.Owner = test.caddr.String()
-		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(true, lease, nil)
-		test.hostnameClient.On("PrepareHostnamesForTransfer", mock.Anything, []string{hostname}, lease.ID).Return(io.EOF)
+		leaseID := testutil.LeaseID(t)
+		leaseID.Owner = test.caddr.String()
+		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(true, leaseID, mgroup, nil)
+		test.hostnameClient.On("PrepareHostnamesForTransfer", mock.Anything, []string{hostname}, leaseID).Return(io.EOF)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 		defer cancel()
@@ -149,34 +143,34 @@ func TestRouteMigrateHostnameTransferFails(t *testing.T) {
 	const serviceExternalPort = uint32(1112)
 
 	runRouterTest(t, true, func(test *routerTest) {
-		lease  := cluster.ActiveLease{
-			ID:    testutil.LeaseID(t),
-			Group: v1.ManifestGroup{
-				Name:     "some-group",
-				Services: []v1.ManifestService{
-					v1.ManifestService{
-						Name:      serviceName,
-						Image:     "some-awesome-image",
-						Count:     1,
-						Expose:    []v1.ManifestServiceExpose{
-							v1.ManifestServiceExpose{
-								Port:         1234,
-								ExternalPort: uint16(serviceExternalPort),
-								Proto:        "TCP",
-								Service:      serviceName,
-								Global:       true,
-								Hosts:        []string{"dogs.pet", hostname},
-								/* Remaining fields not relevant in this test */
-							},
+
+		mgroup := v1.ManifestGroup{
+			Name: "some-group",
+			Services: []v1.ManifestService{
+				{
+					Name:  serviceName,
+					Image: "some-awesome-image",
+					Count: 1,
+					Expose: []v1.ManifestServiceExpose{
+						{
+							Port:         1234,
+							ExternalPort: uint16(serviceExternalPort),
+							Proto:        "TCP",
+							Service:      serviceName,
+							Global:       true,
+							Hosts:        []string{"dogs.pet", hostname},
+							/* Remaining fields not relevant in this test */
 						},
 					},
 				},
 			},
 		}
-		lease.ID.Owner = test.caddr.String()
-		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(true, lease, nil)
-		test.hostnameClient.On("PrepareHostnamesForTransfer", mock.Anything, []string{hostname}, lease.ID).Return(nil)
-		test.clusterService.On("TransferHostname", mock.Anything, lease.ID, hostname, serviceName, serviceExternalPort).Return(io.EOF)
+		leaseID := testutil.LeaseID(t)
+		leaseID.Owner = test.caddr.String()
+
+		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(true, leaseID, mgroup, nil)
+		test.hostnameClient.On("PrepareHostnamesForTransfer", mock.Anything, []string{hostname}, leaseID).Return(nil)
+		test.clusterService.On("TransferHostname", mock.Anything, leaseID, hostname, serviceName, serviceExternalPort).Return(io.EOF)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 		defer cancel()

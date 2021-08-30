@@ -216,20 +216,20 @@ func Test_router_ServiceStatus(t *testing.T) {
 }
 
 type integrationMocks struct {
-	pmclient *pmmock.Client
-	pcclient *pcmock.Client
-	pclient *pmock.Client
-	qclient *qmock.QueryClient
+	pmclient       *pmmock.Client
+	pcclient       *pcmock.Client
+	pclient        *pmock.Client
+	qclient        *qmock.QueryClient
 	hostnameClient *pcmock.HostnameServiceClient
 	clusterService *pcmock.Service
 }
 
-func createMocks() integrationMocks  {
+func createMocks() integrationMocks {
 	var (
-		pmclient = &pmmock.Client{}
-		pcclient = &pcmock.Client{}
-		pclient  = &pmock.Client{}
-		qclient  = &qmock.QueryClient{}
+		pmclient       = &pmmock.Client{}
+		pcclient       = &pcmock.Client{}
+		pclient        = &pmock.Client{}
+		qclient        = &qmock.QueryClient{}
 		hostnameClient = &pcmock.HostnameServiceClient{}
 		clusterService = &pcmock.Service{}
 	)
