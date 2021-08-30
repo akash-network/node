@@ -1,9 +1,9 @@
 package cluster
 
 import (
+	"context"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	mtypes "github.com/ovrclk/akash/x/market/types"
-	"context"
 )
 
 type HostnameServiceClient interface {
@@ -12,4 +12,3 @@ type HostnameServiceClient interface {
 	CanReserveHostnames(hostnames []string, ownerAddr sdktypes.Address) error
 	PrepareHostnamesForTransfer(ctx context.Context, hostnames []string, leaseID mtypes.LeaseID) error
 }
-
