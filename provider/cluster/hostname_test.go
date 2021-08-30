@@ -128,7 +128,7 @@ func TestReserveAndReleaseDomain(t *testing.T) {
 	}
 }
 
-func TestPrepareHostnamesForTransfer(t *testing.T){
+func TestPrepareHostnamesForTransfer(t *testing.T) {
 	s := makeHostnameScaffold(t, []string{"challenger.com"})
 	defer s.cancel()
 
@@ -143,7 +143,7 @@ func TestPrepareHostnamesForTransfer(t *testing.T){
 	require.NoError(t, err)
 }
 
-func TestPrepareHostnamesForTransferSameLease(t *testing.T){
+func TestPrepareHostnamesForTransferSameLease(t *testing.T) {
 	s := makeHostnameScaffold(t, []string{"challenger.com"})
 	defer s.cancel()
 
@@ -156,7 +156,7 @@ func TestPrepareHostnamesForTransferSameLease(t *testing.T){
 	require.NoError(t, err)
 }
 
-func TestPrepareHostnamesForTransferDifferentOwner(t *testing.T){
+func TestPrepareHostnamesForTransferDifferentOwner(t *testing.T) {
 	s := makeHostnameScaffold(t, []string{"challenger.com"})
 	defer s.cancel()
 
@@ -171,7 +171,7 @@ func TestPrepareHostnamesForTransferDifferentOwner(t *testing.T){
 	require.Regexp(t, `^.*host "kittens.org" in use.*$`, err)
 }
 
-func TestPrepareHostnamesForTransferNotReserved(t *testing.T){
+func TestPrepareHostnamesForTransferNotReserved(t *testing.T) {
 	s := makeHostnameScaffold(t, []string{"challenger.com"})
 	defer s.cancel()
 
@@ -181,7 +181,7 @@ func TestPrepareHostnamesForTransferNotReserved(t *testing.T){
 	require.Len(t, result, 0)
 
 	secondLeaseID := testutil.LeaseID(t)
-	secondLeaseID.Owner = leaseID.Owner // Same owner, different leases
+	secondLeaseID.Owner = leaseID.Owner                                                     // Same owner, different leases
 	err = s.service.PrepareHostnamesForTransfer(s.ctx, []string{"pets.com"}, secondLeaseID) // unreserved hostname
 	require.NoError(t, err)
 }

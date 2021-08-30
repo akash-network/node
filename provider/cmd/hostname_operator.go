@@ -281,7 +281,6 @@ func doHostnameOperator(cmd *cobra.Command) error {
 	ns := viper.GetString(FlagK8sManifestNS)
 	logger := openLogger()
 
-
 	// Config path not provided because the authorization comes from the role assigned to the deployment
 	// and provided by kubernetes
 	client, err := clusterClient.NewClient(logger, ns, "")

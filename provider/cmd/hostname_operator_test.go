@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"context"
-	"github.com/ovrclk/akash/provider/cluster/mocks"
 	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	"github.com/ovrclk/akash/provider/cluster/mocks"
 	cluster "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/testutil"
 	mtypes "github.com/ovrclk/akash/x/market/types"
@@ -15,10 +15,10 @@ import (
 )
 
 type testHostnameResourceEv struct {
-	leaseID mtypes.LeaseID
-	hostname string
-	eventType cluster.ProviderResourceEvent
-	serviceName string
+	leaseID      mtypes.LeaseID
+	hostname     string
+	eventType    cluster.ProviderResourceEvent
+	serviceName  string
 	externalPort uint32
 }
 
@@ -30,7 +30,7 @@ func (ev testHostnameResourceEv) GetHostname() string {
 	return ev.hostname
 }
 
-func (ev testHostnameResourceEv) GetEventType() cluster.ProviderResourceEvent{
+func (ev testHostnameResourceEv) GetEventType() cluster.ProviderResourceEvent {
 	return ev.eventType
 }
 
@@ -42,7 +42,7 @@ func (ev testHostnameResourceEv) GetExternalPort() uint32 {
 	return ev.externalPort
 }
 
-func TestBuildDirectiveWithDefaults(t *testing.T){
+func TestBuildDirectiveWithDefaults(t *testing.T) {
 	ev := testHostnameResourceEv{
 		leaseID:      testutil.LeaseID(t),
 		hostname:     "foobar.com",
@@ -52,7 +52,7 @@ func TestBuildDirectiveWithDefaults(t *testing.T){
 	}
 	directive := buildDirective(ev, crd.ManifestServiceExpose{
 		/* Other fields of no consequence in this test */
-		HTTPOptions:  crd.ManifestServiceExposeHTTPOptions{},
+		HTTPOptions: crd.ManifestServiceExposeHTTPOptions{},
 	})
 
 	require.Equal(t, directive.LeaseID, ev.leaseID)
@@ -68,7 +68,7 @@ func TestBuildDirectiveWithDefaults(t *testing.T){
 	require.Equal(t, directive.NextCases, []string{"error", "timeout"})
 }
 
-func TestBuildDirectiveWithValues(t *testing.T){
+func TestBuildDirectiveWithValues(t *testing.T) {
 	ev := testHostnameResourceEv{
 		leaseID:      testutil.LeaseID(t),
 		hostname:     "data.io",
@@ -78,7 +78,7 @@ func TestBuildDirectiveWithValues(t *testing.T){
 	}
 	directive := buildDirective(ev, crd.ManifestServiceExpose{
 		/* Other fields of no consequence in this test */
-		HTTPOptions:  crd.ManifestServiceExposeHTTPOptions{
+		HTTPOptions: crd.ManifestServiceExposeHTTPOptions{
 			MaxBodySize: 1,
 			ReadTimeout: 2,
 			SendTimeout: 3,
@@ -102,23 +102,22 @@ func TestBuildDirectiveWithValues(t *testing.T){
 }
 
 type hostnameOperatorScaffold struct {
-	ctx context.Context
+	ctx    context.Context
 	cancel context.CancelFunc
-	op *hostnameOperator
+	op     *hostnameOperator
 	client *mocks.Client
 }
 
-func makeHostnameOperatorScaffold(t *testing.T) *hostnameOperatorScaffold{
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 20)
+func makeHostnameOperatorScaffold(t *testing.T) *hostnameOperatorScaffold {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 
 	client := &mocks.Client{}
 	scaffold := &hostnameOperatorScaffold{
-		ctx : ctx,
+		ctx:    ctx,
 		cancel: cancel,
 		client: client,
 	}
 	l := testutil.Logger(t)
-
 
 	op := &hostnameOperator{
 		hostnames: make(map[string]managedHostname),
@@ -131,7 +130,7 @@ func makeHostnameOperatorScaffold(t *testing.T) *hostnameOperatorScaffold{
 	return scaffold
 }
 
-func TestHostnameOperatorApplyDelete(t *testing.T){
+func TestHostnameOperatorApplyDelete(t *testing.T) {
 	s := makeHostnameOperatorScaffold(t)
 	require.NotNil(t, s)
 	defer s.cancel()
@@ -159,7 +158,7 @@ func TestHostnameOperatorApplyDelete(t *testing.T){
 	require.False(t, exists) // Removed from dataset
 }
 
-func TestHostnameOperatorApplyDeleteFails(t *testing.T){
+func TestHostnameOperatorApplyDeleteFails(t *testing.T) {
 	s := makeHostnameOperatorScaffold(t)
 	require.NotNil(t, s)
 	defer s.cancel()
@@ -187,7 +186,7 @@ func TestHostnameOperatorApplyDeleteFails(t *testing.T){
 	require.True(t, exists) // Still in dataset
 }
 
-func TestHostnameOperatorApplyAddNoManifestGroup(t *testing.T){
+func TestHostnameOperatorApplyAddNoManifestGroup(t *testing.T) {
 	s := makeHostnameOperatorScaffold(t)
 	require.NotNil(t, s)
 	defer s.cancel()
@@ -205,7 +204,7 @@ func TestHostnameOperatorApplyAddNoManifestGroup(t *testing.T){
 
 	s.client.On("GetManifestGroup", mock.Anything, leaseID).Return(false, crd.ManifestGroup{}, nil)
 
-	err := s.op.applyAddOrUpdateEvent(s.ctx, ev)
+	err := s.op.applyEvent(s.ctx, ev)
 	require.Error(t, err)
 	require.Regexp(t, "^.*no manifest found.*$", err)
 
@@ -213,7 +212,7 @@ func TestHostnameOperatorApplyAddNoManifestGroup(t *testing.T){
 	require.False(t, exists) // not added
 }
 
-func TestHostnameOperatorApplyAdd(t *testing.T){
+func TestHostnameOperatorApplyAdd(t *testing.T) {
 	s := makeHostnameOperatorScaffold(t)
 	require.NotNil(t, s)
 	defer s.cancel()
@@ -239,24 +238,23 @@ func TestHostnameOperatorApplyAdd(t *testing.T){
 		Hosts:        []string{hostname},
 	}
 	mg := crd.ManifestGroup{
-		Name:     "a-manifest-group",
+		Name: "a-manifest-group",
 		Services: []crd.ManifestService{
-			crd.ManifestService{
-				Name:      "the-service",
-				Expose:    []crd.ManifestServiceExpose{
+			{
+				Name: "the-service",
+				Expose: []crd.ManifestServiceExpose{
 					serviceExpose,
 				},
 				Count: 1,
 				/* Other fields not relevant in this test */
 			},
 		},
-
 	}
 	s.client.On("GetManifestGroup", mock.Anything, leaseID).Return(true, mg, nil)
 	directive := buildDirective(ev, serviceExpose) // result tested in other unit tests
 	s.client.On("ConnectHostnameToDeployment", mock.Anything, directive).Return(nil)
 
-	err := s.op.applyAddOrUpdateEvent(s.ctx, ev)
+	err := s.op.applyEvent(s.ctx, ev)
 	require.NoError(t, err)
 
 	managedValue, exists := s.op.hostnames[hostname]
@@ -264,7 +262,7 @@ func TestHostnameOperatorApplyAdd(t *testing.T){
 	require.Equal(t, managedValue.presentLease, leaseID)
 }
 
-func TestHostnameOperatorApplyAddMultipleServices(t *testing.T){
+func TestHostnameOperatorApplyAddMultipleServices(t *testing.T) {
 	s := makeHostnameOperatorScaffold(t)
 	require.NotNil(t, s)
 	defer s.cancel()
@@ -290,30 +288,30 @@ func TestHostnameOperatorApplyAddMultipleServices(t *testing.T){
 		Hosts:        []string{hostname},
 	}
 	serviceExposeA := crd.ManifestServiceExpose{
-		Port: 3125,
+		Port:    3125,
 		Service: "public-service",
-		Proto: "TCP",
-		Global: false,
+		Proto:   "TCP",
+		Global:  false,
 	}
 	serviceExposeB := crd.ManifestServiceExpose{
-		Port: 31211,
+		Port:    31211,
 		Service: "public-service",
-		Proto: "UDP",
-		Global: true,
+		Proto:   "UDP",
+		Global:  true,
 	}
 	serviceExposeC := crd.ManifestServiceExpose{
-		Port: 22,
+		Port:    22,
 		Service: "public-service",
-		Proto: "TCP",
-		Global: true,
+		Proto:   "TCP",
+		Global:  true,
 	}
 
 	mg := crd.ManifestGroup{
-		Name:     "a-manifest-group",
+		Name: "a-manifest-group",
 		Services: []crd.ManifestService{
-			crd.ManifestService{
-				Name:      "public-service",
-				Expose:    []crd.ManifestServiceExpose{
+			{
+				Name: "public-service",
+				Expose: []crd.ManifestServiceExpose{
 					serviceExposeA,
 					serviceExposeB,
 					serviceExposeC,
@@ -323,13 +321,12 @@ func TestHostnameOperatorApplyAddMultipleServices(t *testing.T){
 				/* Other fields not relevant in this test */
 			},
 		},
-
 	}
 	s.client.On("GetManifestGroup", mock.Anything, leaseID).Return(true, mg, nil)
 	directive := buildDirective(ev, serviceExpose) // result tested in other unit tests
 	s.client.On("ConnectHostnameToDeployment", mock.Anything, directive).Return(nil)
 
-	err := s.op.applyAddOrUpdateEvent(s.ctx, ev)
+	err := s.op.applyEvent(s.ctx, ev)
 	require.NoError(t, err)
 
 	managedValue, exists := s.op.hostnames[hostname]
@@ -337,7 +334,7 @@ func TestHostnameOperatorApplyAddMultipleServices(t *testing.T){
 	require.Equal(t, managedValue.presentLease, leaseID)
 }
 
-func TestHostnameOperatorApplyUpdate(t *testing.T){
+func TestHostnameOperatorApplyUpdate(t *testing.T) {
 	s := makeHostnameOperatorScaffold(t)
 	require.NotNil(t, s)
 	defer s.cancel()
@@ -358,8 +355,8 @@ func TestHostnameOperatorApplyUpdate(t *testing.T){
 
 	const secondExternalPort = 55100
 	secondEv := testHostnameResourceEv{
-		leaseID: secondLeaseID,
-		hostname: hostname,
+		leaseID:      secondLeaseID,
+		hostname:     hostname,
 		eventType:    cluster.ProviderResourceUpdate,
 		serviceName:  "second-service",
 		externalPort: secondExternalPort,
@@ -374,11 +371,11 @@ func TestHostnameOperatorApplyUpdate(t *testing.T){
 		Hosts:        []string{hostname},
 	}
 	mg := crd.ManifestGroup{
-		Name:     "a-manifest-group",
+		Name: "a-manifest-group",
 		Services: []crd.ManifestService{
-			crd.ManifestService{
-				Name:      "the-service",
-				Expose:    []crd.ManifestServiceExpose{
+			{
+				Name: "the-service",
+				Expose: []crd.ManifestServiceExpose{
 					serviceExpose,
 				},
 				Count: 1,
@@ -395,11 +392,11 @@ func TestHostnameOperatorApplyUpdate(t *testing.T){
 		Hosts:        []string{hostname},
 	}
 	mg2 := crd.ManifestGroup{
-		Name:     "some-manifest-group",
+		Name: "some-manifest-group",
 		Services: []crd.ManifestService{
-			crd.ManifestService{
-				Name:      "second-service",
-				Expose:    []crd.ManifestServiceExpose{
+			{
+				Name: "second-service",
+				Expose: []crd.ManifestServiceExpose{
 					secondServiceExpose,
 				},
 				Count: 4000,
@@ -418,14 +415,14 @@ func TestHostnameOperatorApplyUpdate(t *testing.T){
 
 	s.client.On("RemoveHostnameFromDeployment", mock.Anything, hostname, leaseID, false).Return(nil)
 
-	err := s.op.applyAddOrUpdateEvent(s.ctx, ev)
+	err := s.op.applyEvent(s.ctx, ev)
 	require.NoError(t, err)
 
 	managedValue, exists := s.op.hostnames[hostname]
 	require.True(t, exists) // not added
 	require.Equal(t, managedValue.presentLease, leaseID)
 
-	err = s.op.applyAddOrUpdateEvent(s.ctx, secondEv)
+	err = s.op.applyEvent(s.ctx, secondEv)
 	require.NoError(t, err)
 
 	managedValue, exists = s.op.hostnames[hostname]
