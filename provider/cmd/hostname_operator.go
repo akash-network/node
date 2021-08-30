@@ -22,7 +22,7 @@ type managedHostname struct {
 	presentLease mtypes.LeaseID
 
 	presentServiceName  string
-	presentExternalPort int32
+	presentExternalPort uint32
 }
 
 type hostnameOperator struct {
@@ -84,7 +84,7 @@ func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 			lastEvent:           nil,
 			presentLease:        leaseID,
 			presentServiceName:  conn.GetServiceName(),
-			presentExternalPort: conn.GetExternalPort(),
+			presentExternalPort: uint32(conn.GetExternalPort()),
 		}
 
 		op.hostnames[hostname] = entry
@@ -267,6 +267,8 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 	}
 
 	if err == nil { // Update sored entry if everything went OK
+		entry.presentExternalPort = ev.GetExternalPort()
+		entry.presentServiceName = ev.GetServiceName()
 		entry.presentLease = leaseID
 		entry.lastEvent = ev
 		op.hostnames[ev.GetHostname()] = entry
@@ -279,8 +281,9 @@ func doHostnameOperator(cmd *cobra.Command) error {
 	ns := viper.GetString(FlagK8sManifestNS)
 	logger := openLogger()
 
-	// TODO - make sure the client can pickup the in-cluster authorization to support running as a kubernetes
-	// deployment
+
+	// Config path not provided because the authorization comes from the role assigned to the deployment
+	// and provided by kubernetes
 	client, err := clusterClient.NewClient(logger, ns, "")
 	if err != nil {
 		return err

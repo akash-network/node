@@ -17,8 +17,6 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-
-
 	// create lease
 	lid := testutil.LeaseID(t)
 	group := testutil.AppManifestGenerator.Group(t)

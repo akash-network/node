@@ -18,6 +18,8 @@ type scaffold struct {
 const testWait = time.Second * time.Duration(15)
 
 func makeHostnameScaffold(t *testing.T, blockedHostnames []string) *scaffold {
+	// Create a context with no more than 15 seconds of wait here. Tests should not
+	// take that long to run
 	ctx, cancel := context.WithTimeout(context.Background(), testWait)
 	svc, err := newHostnameService(ctx, Config{BlockedHostnames: blockedHostnames}, nil)
 	require.NoError(t, err)
@@ -124,4 +126,62 @@ func TestReserveAndReleaseDomain(t *testing.T) {
 	case <-time.After(testWait):
 		t.Fatal("timed out waiting for service shutdown")
 	}
+}
+
+func TestPrepareHostnamesForTransfer(t *testing.T){
+	s := makeHostnameScaffold(t, []string{"challenger.com"})
+	defer s.cancel()
+
+	leaseID := testutil.LeaseID(t)
+	result, err := s.service.ReserveHostnames(s.ctx, []string{"meow.com", "kittens.org"}, leaseID)
+	require.NoError(t, err)
+	require.Len(t, result, 0)
+
+	secondLeaseID := testutil.LeaseID(t)
+	secondLeaseID.Owner = leaseID.Owner // Same owner, different leases
+	err = s.service.PrepareHostnamesForTransfer(s.ctx, []string{"kittens.org"}, secondLeaseID)
+	require.NoError(t, err)
+}
+
+func TestPrepareHostnamesForTransferSameLease(t *testing.T){
+	s := makeHostnameScaffold(t, []string{"challenger.com"})
+	defer s.cancel()
+
+	leaseID := testutil.LeaseID(t)
+	result, err := s.service.ReserveHostnames(s.ctx, []string{"meow.com", "kittens.org"}, leaseID)
+	require.NoError(t, err)
+	require.Len(t, result, 0)
+
+	err = s.service.PrepareHostnamesForTransfer(s.ctx, []string{"kittens.org"}, leaseID) // Same lease
+	require.NoError(t, err)
+}
+
+func TestPrepareHostnamesForTransferDifferentOwner(t *testing.T){
+	s := makeHostnameScaffold(t, []string{"challenger.com"})
+	defer s.cancel()
+
+	leaseID := testutil.LeaseID(t)
+	result, err := s.service.ReserveHostnames(s.ctx, []string{"meow.com", "kittens.org"}, leaseID)
+	require.NoError(t, err)
+	require.Len(t, result, 0)
+
+	secondLeaseID := testutil.LeaseID(t) // Different owner
+	err = s.service.PrepareHostnamesForTransfer(s.ctx, []string{"kittens.org"}, secondLeaseID)
+	require.Error(t, err)
+	require.Regexp(t, `^.*host "kittens.org" in use.*$`, err)
+}
+
+func TestPrepareHostnamesForTransferNotReserved(t *testing.T){
+	s := makeHostnameScaffold(t, []string{"challenger.com"})
+	defer s.cancel()
+
+	leaseID := testutil.LeaseID(t)
+	result, err := s.service.ReserveHostnames(s.ctx, []string{"meow.com", "kittens.org"}, leaseID)
+	require.NoError(t, err)
+	require.Len(t, result, 0)
+
+	secondLeaseID := testutil.LeaseID(t)
+	secondLeaseID.Owner = leaseID.Owner // Same owner, different leases
+	err = s.service.PrepareHostnamesForTransfer(s.ctx, []string{"pets.com"}, secondLeaseID) // unreserved hostname
+	require.NoError(t, err)
 }
