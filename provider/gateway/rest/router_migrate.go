@@ -64,7 +64,11 @@ func migrateHandler(log log.Logger, hostnameService clustertypes.HostnameService
 			for _, expose := range service.Expose {
 				for _, host := range expose.Hosts {
 					hostnameToServiceName[host] = service.Name
-					hostnameToExternalPort[host] = uint32(expose.ExternalPort)
+					port := uint32(expose.ExternalPort)
+					if port == 0 {
+						port = uint32(expose.Port)
+					}
+					hostnameToExternalPort[host] = port
 				}
 			}
 		}

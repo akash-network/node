@@ -28,7 +28,7 @@ func RootCmd() *cobra.Command {
 	cmd.AddCommand(RunCmd())
 	cmd.AddCommand(LeaseShellCmd())
 	cmd.AddCommand(HostnameOperatorCmd())
-	cmd.AddCommand(migrateHostnamesCmd())
+	cmd.AddCommand(MigrateHostnamesCmd())
 
 	return cmd
 }

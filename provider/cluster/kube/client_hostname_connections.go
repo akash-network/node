@@ -30,7 +30,9 @@ type hostnameResourceEvent struct {
 
 func (c *client) DeclareHostname(ctx context.Context, lID mtypes.LeaseID, host string, serviceName string, externalPort uint32) error {
 	// Label each entry with the standard labels
-	labels := make(map[string]string)
+	labels := map[string]string{
+		akashManagedLabelName: "true",
+	}
 	appendLeaseLabels(lID, labels)
 
 	foundEntry, err := c.ac.AkashV1().ProviderHosts(c.ns).Get(ctx, host, metav1.GetOptions{})

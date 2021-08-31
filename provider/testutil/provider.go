@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/client"
 	cosmosclient "github.com/cosmos/cosmos-sdk/client"
@@ -54,7 +55,7 @@ func TestSendManifest(clientCtx client.Context, id mtypes.BidID, sdlPath string,
 	cobraCmd := pcmd.SendManifestCmd()
 	releaseCmdLock()
 
-	return testutilcli.ExecTestCLICmd(clientCtx, cobraCmd, args...)
+	return testutilcli.ExecTestCLICmd(nil, clientCtx, cobraCmd, args...)
 }
 
 func TestLeaseShell(clientCtx client.Context, extraArgs []string, lID mtypes.LeaseID, replicaIndex int, tty bool, stdin bool, serviceName string, cmd ...string) (sdktest.BufferWriter, error) {
@@ -79,13 +80,29 @@ func TestLeaseShell(clientCtx client.Context, extraArgs []string, lID mtypes.Lea
 	cobraCmd := pcmd.LeaseShellCmd()
 	releaseCmdLock()
 
-	return testutilcli.ExecTestCLICmd(clientCtx, cobraCmd, args...)
+	return testutilcli.ExecTestCLICmd(nil, clientCtx, cobraCmd, args...)
+}
+
+func TestMigrateHostname(clientCtx client.Context, leaseID mtypes.LeaseID, dseq uint64, hostname string, cmd ... string) (sdktest.BufferWriter, error) {
+	args := []string{
+		fmt.Sprintf("--provider=%s", leaseID.Provider),
+		fmt.Sprintf("--dseq=%v", dseq),
+	}
+	args = append(args, cmd...)
+	args = append(args, hostname)
+	fmt.Printf("%v\n", args)
+
+	takeCmdLock()
+	cobraCmd := pcmd.MigrateHostnamesCmd()
+	releaseCmdLock()
+
+	return testutilcli.ExecTestCLICmd(nil, clientCtx, cobraCmd, args...)
 }
 
 // RunLocalProvider wraps up the Provider cobra command for testing and supplies
 // new default values to the flags.
 // prev: akashctl provider run --from=foo --cluster-k8s --gateway-listen-address=localhost:39729 --home=/tmp/akash_integration_TestE2EApp_324892307/.akashctl --node=tcp://0.0.0.0:41863 --keyring-backend test
-func RunLocalProvider(clientCtx cosmosclient.Context, chainID, nodeRPC, akashHome, from, gatewayListenAddress string, extraArgs ...string) (sdktest.BufferWriter, error) {
+func RunLocalProvider(ctx context.Context, clientCtx cosmosclient.Context, chainID, nodeRPC, akashHome, from, gatewayListenAddress string, extraArgs ...string) (sdktest.BufferWriter, error) {
 	takeCmdLock()
 	cmd := pcmd.RunCmd()
 	releaseCmdLock()
@@ -108,12 +125,12 @@ func RunLocalProvider(clientCtx cosmosclient.Context, chainID, nodeRPC, akashHom
 
 	args = append(args, extraArgs...)
 
-	return testutilcli.ExecTestCLICmd(clientCtx, cmd, args...)
+	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmd, args...)
 }
 
-func RunLocalHostnameOperator(clientCtx cosmosclient.Context) (sdktest.BufferWriter, error) {
+func RunLocalHostnameOperator(ctx context.Context, clientCtx cosmosclient.Context) (sdktest.BufferWriter, error) {
 	takeCmdLock()
 	cmd := pcmd.HostnameOperatorCmd()
 	releaseCmdLock()
-	return testutilcli.ExecTestCLICmd(clientCtx, cmd)
+	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmd)
 }

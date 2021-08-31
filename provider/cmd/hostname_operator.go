@@ -34,12 +34,14 @@ type hostnameOperator struct {
 }
 
 func (op *hostnameOperator) run(parentCtx context.Context) error {
+	op.log.Debug("hostname operator start")
 	const threshold = 3 * time.Second
 
 	for {
 		lastAttempt := time.Now()
 		err := op.monitorUntilError(parentCtx)
 		if errors.Is(err, context.Canceled) {
+			op.log.Debug("hostname operator terminate")
 			return err
 		}
 
@@ -124,6 +126,7 @@ loop:
 	}
 
 	cancel()
+	op.log.Debug("hostname operator done")
 	return exitError
 }
 
@@ -250,9 +253,21 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 	directive := buildDirective(ev, selectedExpose)
 
 	if isSameLease {
-		// Check to see if port or service name is different
-		changed := !exists || uint32(entry.presentExternalPort) != ev.GetExternalPort() || entry.presentServiceName != ev.GetServiceName()
-		if changed {
+		shouldConnect := false
+
+		if !exists {
+			shouldConnect = true
+			op.log.Debug("hostname target is new, applying")
+		} else {
+			// Check to see if port or service name is different
+			if entry.presentExternalPort != ev.GetExternalPort() || entry.presentServiceName != ev.GetServiceName() {
+				shouldConnect = true
+				op.log.Debug("hostname target has changed, applying")
+			}
+
+		}
+
+		if shouldConnect {
 			op.log.Debug("Updating ingress")
 			// Update or create the existing ingress
 			err = op.client.ConnectHostnameToDeployment(ctx, directive)

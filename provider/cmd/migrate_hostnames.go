@@ -55,7 +55,7 @@ func migrateHostnames(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func migrateHostnamesCmd() *cobra.Command {
+func MigrateHostnamesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "migrate-hostnames",
 		Short:        "",
