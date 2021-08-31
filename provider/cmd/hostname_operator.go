@@ -258,13 +258,10 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 		if !exists {
 			shouldConnect = true
 			op.log.Debug("hostname target is new, applying")
-		} else {
 			// Check to see if port or service name is different
-			if entry.presentExternalPort != ev.GetExternalPort() || entry.presentServiceName != ev.GetServiceName() {
-				shouldConnect = true
-				op.log.Debug("hostname target has changed, applying")
-			}
-
+		} else if entry.presentExternalPort != ev.GetExternalPort() || entry.presentServiceName != ev.GetServiceName() {
+			shouldConnect = true
+			op.log.Debug("hostname target has changed, applying")
 		}
 
 		if shouldConnect {

@@ -61,7 +61,7 @@ type IntegrationTestSuite struct {
 	keyProvider keyring.Info
 	keyTenant   keyring.Info
 
-	ctx context.Context
+	ctx       context.Context
 	ctxCancel context.CancelFunc
 
 	appHost string
@@ -281,7 +281,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	// Run the hostname operator, after confirming the provider starts
 	const maxAttempts = 30
 	dialer := net.Dialer{
-		Timeout:       time.Second * 3,
+		Timeout: time.Second * 3,
 	}
 
 	attempts := 0
@@ -323,8 +323,6 @@ func (s *IntegrationTestSuite) closeDeployments() int {
 	deployResp := &dtypes.QueryDeploymentsResponse{}
 	err = s.validator.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), deployResp)
 	s.Require().NoError(err)
-
-	//s.Require().False(0 == len(deployResp.Deployments), "no deployments created")
 
 	deployments := deployResp.Deployments
 
@@ -374,9 +372,6 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 
 	restConfig, err := clientcmd.BuildConfigFromFlags("", cfgPath)
 	s.Require().NoError(err)
-
-	//log.Info("using in cluster kube config")
-	//return rest.InClusterConfig()
 
 	ac, err := akashclient.NewForConfig(restConfig)
 	s.Require().NoError(err)
@@ -1066,7 +1061,6 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 
 }
 
-
 func (s *E2EApp) TestE2EMigrateHostname() {
 	// create a deployment
 	deploymentPath, err := filepath.Abs("../x/deployment/testdata/deployment-v2-migrate.yaml")
@@ -1263,7 +1257,7 @@ func (s *E2EApp) TestE2EMigrateHostname() {
 	// migrate hostname
 	_, err = ptestutil.TestMigrateHostname(cctxJSON, lid, secondDeploymentID.DSeq, secondaryHostname,
 		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
-		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),)
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir))
 	s.Require().NoError(err)
 
 	time.Sleep(10 * time.Second) // update happens in kube async
