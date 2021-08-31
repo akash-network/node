@@ -16,7 +16,6 @@ func TestHomeFlag(t *testing.T) {
 	// create a temp directory to store the init configuration
 	tmpDir, err := ioutil.TempDir("", "akash-home")
 	require.NoError(t, err)
-	t.Log("tmpDir: ", tmpDir)
 
 	// Run init genesis command, it should create "config/genesis.json" in the given home directory.
 	// $ akash --home=tmpDir init test-node
