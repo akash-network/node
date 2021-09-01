@@ -41,106 +41,106 @@ func TestContextFlags(t *testing.T) {
 		flags.FlagFrom:             testutil.AccAddress(t).String(),
 	}
 
-	tcases := []struct {
-		Flag           string
+	tCases := []struct {
+		flag           string
 		ctxFieldGetter func(ctx client.Context) interface{}
 		isQueryOnly    bool
 		isTxOnly       bool
 	}{
 		{
-			Flag: tmcli.OutputFlag,
+			flag: tmcli.OutputFlag,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.OutputFormat
 			},
 		},
 		{
-			Flag: flags.FlagHome,
+			flag: flags.FlagHome,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.HomeDir
 			},
 		},
 		{
-			Flag: flags.FlagDryRun,
+			flag: flags.FlagDryRun,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.Simulate
 			},
 		},
 		{
-			Flag: flags.FlagKeyringDir,
+			flag: flags.FlagKeyringDir,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.KeyringDir
 			},
 		},
 		{
-			Flag: flags.FlagChainID,
+			flag: flags.FlagChainID,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.ChainID
 			},
 		},
 		{
-			Flag: flags.FlagNode,
+			flag: flags.FlagNode,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.NodeURI
 			},
 		},
 		{
-			Flag: flags.FlagHeight,
+			flag: flags.FlagHeight,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.Height
 			},
 			isQueryOnly: true,
 		},
 		{
-			Flag: flags.FlagUseLedger,
+			flag: flags.FlagUseLedger,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.UseLedger
 			},
 			isQueryOnly: true,
 		},
 		{
-			Flag: flags.FlagGenerateOnly,
+			flag: flags.FlagGenerateOnly,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.GenerateOnly
 			},
 			isTxOnly: true,
 		},
 		{
-			Flag: flags.FlagOffline,
+			flag: flags.FlagOffline,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.Offline
 			},
 			isTxOnly: true,
 		},
 		{
-			Flag: flags.FlagBroadcastMode,
+			flag: flags.FlagBroadcastMode,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.BroadcastMode
 			},
 			isTxOnly: true,
 		},
 		{
-			Flag: flags.FlagSkipConfirmation,
+			flag: flags.FlagSkipConfirmation,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.SkipConfirm
 			},
 			isTxOnly: true,
 		},
 		{
-			Flag: flags.FlagSignMode,
+			flag: flags.FlagSignMode,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.SignModeStr
 			},
 			isTxOnly: true,
 		},
 		{
-			Flag: flags.FlagFeeAccount,
+			flag: flags.FlagFeeAccount,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.FeeGranter.String()
 			},
 			isTxOnly: true,
 		},
 		{
-			Flag: flags.FlagFrom,
+			flag: flags.FlagFrom,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				require.Equal(t, ctx.From, ctx.FromAddress.String())
 				return ctx.From
@@ -160,18 +160,19 @@ func TestContextFlags(t *testing.T) {
 	flags.AddTxFlagsToCmd(cmd)
 
 	// test runner
-	for _, tcase := range tcases {
-		t.Run(tcase.Flag, func(t *testing.T) {
+	for _, tCase := range tCases {
+		t.Run(tCase.flag, func(t *testing.T) {
+			testCase := tCase
 			// set the run func
 			cmd.RunE = func(cmd *cobra.Command, args []string) error {
 				var clientCtx client.Context
 
 				// prepare context
 				switch {
-				case tcase.isQueryOnly:
+				case testCase.isQueryOnly:
 					clientCtx, err = client.GetClientQueryContext(cmd)
 					require.NoError(t, err)
-				case tcase.isTxOnly:
+				case testCase.isTxOnly:
 					clientCtx, err = client.GetClientTxContext(cmd)
 					require.NoError(t, err)
 				default:
@@ -179,7 +180,7 @@ func TestContextFlags(t *testing.T) {
 				}
 
 				// check that we got the expected flag value in context
-				require.Equal(t, expectedFlagValues[tcase.Flag], tcase.ctxFieldGetter(clientCtx))
+				require.Equal(t, expectedFlagValues[testCase.flag], testCase.ctxFieldGetter(clientCtx))
 
 				return nil
 			}
@@ -188,7 +189,7 @@ func TestContextFlags(t *testing.T) {
 			_, err = testutilcli.ExecTestCLICmd(
 				client.Context{},
 				cmd,
-				fmt.Sprintf("--%s=%v", tcase.Flag, expectedFlagValues[tcase.Flag]),
+				fmt.Sprintf("--%s=%v", testCase.flag, expectedFlagValues[testCase.flag]),
 			)
 			require.NoError(t, err)
 		})
