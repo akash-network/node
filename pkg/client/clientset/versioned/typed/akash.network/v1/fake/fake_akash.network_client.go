@@ -32,6 +32,10 @@ func (c *FakeAkashV1) Manifests(namespace string) v1.ManifestInterface {
 	return &FakeManifests{c, namespace}
 }
 
+func (c *FakeAkashV1) ProviderHosts(namespace string) v1.ProviderHostInterface {
+	return &FakeProviderHosts{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeAkashV1) RESTClient() rest.Interface {

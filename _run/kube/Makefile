@@ -41,6 +41,10 @@ provider-service-status:
 provider-lease-ping:
 	curl -sIH "Host: hello.localhost" localhost:$(KIND_HTTP_PORT)
 
+.PHONY: hostname-operator
+hostname-operator:
+	$(AKASH) provider hostname-operator
+
 .PHONY: clean-kube
 clean-kube:
 	# noop

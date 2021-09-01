@@ -3,16 +3,12 @@ package kube
 // nolint:deadcode,golint
 
 import (
-	"crypto/sha256"
-	"encoding/base32"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/ovrclk/akash/provider/cluster/util"
-	uuid "github.com/satori/go.uuid"
-
 	"github.com/tendermint/tendermint/libs/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -463,6 +459,7 @@ var errInvalidServiceBuilder = errors.New("service builder invalid")
 
 func (b *serviceBuilder) ports() ([]corev1.ServicePort, error) {
 	ports := make([]corev1.ServicePort, 0, len(b.service.Expose))
+	portsAdded := make(map[int32]struct{})
 	for i, expose := range b.service.Expose {
 		shouldBeIngress := util.ShouldBeIngress(expose)
 		if expose.Global == b.requireNodePort || (!b.requireNodePort && shouldBeIngress) {
@@ -480,12 +477,17 @@ func (b *serviceBuilder) ports() ([]corev1.ServicePort, error) {
 				return nil, errUnsupportedProtocol
 			}
 			externalPort := util.ExposeExternalPort(b.service.Expose[i])
-			ports = append(ports, corev1.ServicePort{
-				Name:       fmt.Sprintf("%d-%d", i, int(externalPort)),
-				Port:       externalPort,
-				TargetPort: intstr.FromInt(int(expose.Port)),
-				Protocol:   exposeProtocol,
-			})
+
+			_, added := portsAdded[externalPort]
+			if !added {
+				portsAdded[externalPort] = struct{}{}
+				ports = append(ports, corev1.ServicePort{
+					Name:       fmt.Sprintf("%d-%d", i, int(externalPort)),
+					Port:       externalPort,
+					TargetPort: intstr.FromInt(int(expose.Port)),
+					Protocol:   exposeProtocol,
+				})
+			}
 		}
 	}
 
@@ -905,102 +907,9 @@ func (b *netPolBuilder) update(obj *netv1.NetworkPolicy) (*netv1.NetworkPolicy, 
 	return obj, nil
 }
 
-// ingress
-type ingressBuilder struct {
-	deploymentBuilder
-	expose *manifest.ServiceExpose
-	hosts  []string
-}
-
-func newIngressBuilder(log log.Logger, settings Settings, lid mtypes.LeaseID, group *manifest.Group, service *manifest.Service, expose *manifest.ServiceExpose) *ingressBuilder {
-
-	builder := &ingressBuilder{
-		deploymentBuilder: deploymentBuilder{
-			builder: builder{
-				log:      log.With("module", "kube-builder"),
-				settings: settings,
-				lid:      lid,
-				group:    group,
-			},
-			service: service,
-		},
-		expose: expose,
-		hosts:  make([]string, len(expose.Hosts), len(expose.Hosts)+1),
-	}
-
-	copy(builder.hosts, expose.Hosts)
-
-	if settings.DeploymentIngressStaticHosts {
-		uid := ingressHost(lid, service)
-		host := fmt.Sprintf("%s.%s", uid, settings.DeploymentIngressDomain)
-		builder.hosts = append(builder.hosts, host)
-	}
-
-	return builder
-}
-
-func ingressHost(lid mtypes.LeaseID, svc *manifest.Service) string {
-	uid := uuid.NewV5(uuid.NamespaceDNS, lid.String()+svc.Name).Bytes()
-	return strings.ToLower(base32.HexEncoding.WithPadding(base32.NoPadding).EncodeToString(uid))
-}
-
-func (b *ingressBuilder) create() (*netv1.Ingress, error) { // nolint:golint,unparam
-	return &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   b.name(),
-			Labels: b.labels(),
-		},
-		Spec: netv1.IngressSpec{
-			Rules: b.rules(),
-		},
-	}, nil
-}
-
-func (b *ingressBuilder) update(obj *netv1.Ingress) (*netv1.Ingress, error) { // nolint:golint,unparam
-	obj.Labels = b.labels()
-	obj.Spec.Rules = b.rules()
-	return obj, nil
-}
-
-func (b *ingressBuilder) rules() []netv1.IngressRule {
-	// for some reason we need top pass a pointer to this
-	pathTypeForAll := netv1.PathTypePrefix
-
-	rules := make([]netv1.IngressRule, 0, len(b.expose.Hosts))
-	httpRule := &netv1.HTTPIngressRuleValue{
-		Paths: []netv1.HTTPIngressPath{{
-			Path:     "/",
-			PathType: &pathTypeForAll,
-			Backend: netv1.IngressBackend{
-				Service: &netv1.IngressServiceBackend{
-					Name: b.name(),
-					Port: netv1.ServiceBackendPort{
-						Number: util.ExposeExternalPort(*b.expose),
-					},
-				},
-			}},
-		},
-	}
-
-	for _, host := range b.hosts {
-		rules = append(rules, netv1.IngressRule{
-			Host:             host,
-			IngressRuleValue: netv1.IngressRuleValue{HTTP: httpRule},
-		})
-	}
-	b.log.Debug("provider/cluster/kube/builder: created rules", "rules", rules)
-	return rules
-}
-
 // lidNS generates a unique sha256 sum for identifying a provider's object name.
 func lidNS(lid mtypes.LeaseID) string {
-	path := lid.String()
-	// DNS-1123 label must consist of lower case alphanumeric characters or '-',
-	// and must start and end with an alphanumeric character
-	// (e.g. 'my-name',  or '123-abc', regex used for validation
-	// is '[a-z0-9]([-a-z0-9]*[a-z0-9])?')
-	sha := sha256.Sum224([]byte(path))
-	return strings.ToLower(base32.HexEncoding.WithPadding(base32.NoPadding).EncodeToString(sha[:]))
+	return clusterUtil.LeaseIDToNamespace(lid)
 }
 
 // manifestBuilder composes the k8s akashv1.Manifest type from LeaseID and

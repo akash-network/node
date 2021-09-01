@@ -3,6 +3,7 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
+  - service_account.yaml
 
 namespace: akash-services
 

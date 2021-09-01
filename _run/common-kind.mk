@@ -46,7 +46,8 @@ kind-k8s-ip:
 .PHONY: kind-configure-image
 kind-configure-image:
 	echo "- op: replace\n  path: /spec/template/spec/containers/0/image\n  value: $(DOCKER_IMAGE)" > ./kustomize/akash-node/docker-image.yaml && \
-    cp ./kustomize/akash-node/docker-image.yaml ./kustomize/akash-provider/docker-image.yaml
+	cp ./kustomize/akash-node/docker-image.yaml ./kustomize/akash-provider/docker-image.yaml && \
+	cp ./kustomize/akash-node/docker-image.yaml ./kustomize/akash-hostname-operator/docker-image.yaml
 
 .PHONY: kind-upload-image
 kind-upload-image: $(KIND)

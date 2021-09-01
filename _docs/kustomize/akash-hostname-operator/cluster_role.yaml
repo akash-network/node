@@ -1,0 +1,26 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manage-ingress
+rules:
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "create", "update", "delete", "deletecollection", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: watch-providerhosts
+rules:
+  - apiGroups: ["akash.network"]
+    resources: ["providerhosts"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: watch-manifests
+rules:
+  - apiGroups: ["akash.network"]
+    resources: ["providerhosts", "manifests"]
+    verbs: ["get", "list", "watch"]

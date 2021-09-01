@@ -25,3 +25,11 @@ type ManifestListerExpansion interface{}
 // ManifestNamespaceListerExpansion allows custom methods to be added to
 // ManifestNamespaceLister.
 type ManifestNamespaceListerExpansion interface{}
+
+// ProviderHostListerExpansion allows custom methods to be added to
+// ProviderHostLister.
+type ProviderHostListerExpansion interface{}
+
+// ProviderHostNamespaceListerExpansion allows custom methods to be added to
+// ProviderHostNamespaceLister.
+type ProviderHostNamespaceListerExpansion interface{}

@@ -45,6 +45,10 @@ kustomize-install-node:
 kustomize-install-provider:
 	kubectl kustomize kustomize/akash-provider | kubectl apply -f-
 
+.PHONY: kustomize-install-hostname-operator
+kustomize-install-hostname-operator:
+	kubectl kustomize ./kustomize/akash-hostname-operator | kubectl apply -f -
+
 .PHONY: provider-lease-ping
 provider-lease-ping:
 	curl -sIH "Host: hello.localhost" localhost:$(KIND_HTTP_PORT)
