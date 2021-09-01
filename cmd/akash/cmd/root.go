@@ -63,6 +63,30 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 // main function.
 func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 	encodingConfig := app.MakeEncodingConfig()
+
+	rootCmd := &cobra.Command{
+		Use:               "akash",
+		Short:             "Akash Blockchain Application",
+		Long:              "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
+		SilenceUsage:      true,
+		PersistentPreRunE: persistentPreRunE,
+	}
+
+	initRootCmd(rootCmd, encodingConfig)
+
+	return rootCmd, encodingConfig
+}
+
+func persistentPreRunE(cmd *cobra.Command, _ []string) error {
+	if err := server.InterceptConfigsPreRunHandler(cmd, "", nil); err != nil {
+		return err
+	}
+
+	ctx := server.GetServerContextFromCmd(cmd)
+
+	bindFlags(cmd, ctx.Viper)
+
+	encodingConfig := app.MakeEncodingConfig()
 	initClientCtx := client.Context{}.
 		WithCodec(encodingConfig.Marshaler).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
@@ -73,27 +97,7 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 		WithBroadcastMode(flags.BroadcastBlock).
 		WithHomeDir(app.DefaultHome)
 
-	rootCmd := &cobra.Command{
-		Use:          "akash",
-		Short:        "Akash Blockchain Application",
-		Long:         "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
-		SilenceUsage: true,
-		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			if err := server.InterceptConfigsPreRunHandler(cmd, "", nil); err != nil {
-				return err
-			}
-
-			ctx := server.GetServerContextFromCmd(cmd)
-
-			bindFlags(cmd, ctx.Viper)
-
-			return client.SetCmdClientContextHandler(initClientCtx, cmd)
-		},
-	}
-
-	initRootCmd(rootCmd, encodingConfig)
-
-	return rootCmd, encodingConfig
+	return client.SetCmdClientContextHandler(initClientCtx, cmd)
 }
 
 // Execute executes the root command.
