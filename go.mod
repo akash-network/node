@@ -51,10 +51,10 @@ require (
 	sigs.k8s.io/kind v0.11.1
 )
 
-replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
-
-replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-
-replace google.golang.org/grpc => google.golang.org/grpc v1.33.2
-
-replace github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.11-patches
+replace (
+	github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.43.0-patches
+	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+	github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
+	github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.11-patches
+	google.golang.org/grpc => google.golang.org/grpc v1.33.2
+)
