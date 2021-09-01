@@ -69,7 +69,7 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 		Short:             "Akash Blockchain Application",
 		Long:              "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
 		SilenceUsage:      true,
-		PersistentPreRunE: persistentPreRunE,
+		PersistentPreRunE: getPersistentPreRunE(encodingConfig),
 	}
 
 	initRootCmd(rootCmd, encodingConfig)
@@ -77,27 +77,28 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 	return rootCmd, encodingConfig
 }
 
-func persistentPreRunE(cmd *cobra.Command, _ []string) error {
-	if err := server.InterceptConfigsPreRunHandler(cmd, "", nil); err != nil {
-		return err
+func getPersistentPreRunE(encodingConfig params.EncodingConfig) func(*cobra.Command, []string) error {
+	return func(cmd *cobra.Command, _ []string) error {
+		if err := server.InterceptConfigsPreRunHandler(cmd, "", nil); err != nil {
+			return err
+		}
+
+		ctx := server.GetServerContextFromCmd(cmd)
+
+		bindFlags(cmd, ctx.Viper)
+
+		initClientCtx := client.Context{}.
+			WithCodec(encodingConfig.Marshaler).
+			WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
+			WithTxConfig(encodingConfig.TxConfig).
+			WithLegacyAmino(encodingConfig.Amino).
+			WithInput(os.Stdin).
+			WithAccountRetriever(authtypes.AccountRetriever{}).
+			WithBroadcastMode(flags.BroadcastBlock).
+			WithHomeDir(app.DefaultHome)
+
+		return client.SetCmdClientContextHandler(initClientCtx, cmd)
 	}
-
-	ctx := server.GetServerContextFromCmd(cmd)
-
-	bindFlags(cmd, ctx.Viper)
-
-	encodingConfig := app.MakeEncodingConfig()
-	initClientCtx := client.Context{}.
-		WithCodec(encodingConfig.Marshaler).
-		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
-		WithTxConfig(encodingConfig.TxConfig).
-		WithLegacyAmino(encodingConfig.Amino).
-		WithInput(os.Stdin).
-		WithAccountRetriever(authtypes.AccountRetriever{}).
-		WithBroadcastMode(flags.BroadcastBlock).
-		WithHomeDir(app.DefaultHome)
-
-	return client.SetCmdClientContextHandler(initClientCtx, cmd)
 }
 
 // Execute executes the root command.

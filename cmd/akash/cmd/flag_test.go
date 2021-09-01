@@ -33,7 +33,7 @@ func TestContextFlags(t *testing.T) {
 	useLedger := true               // default = false
 	generateOnly := true            // default = false
 	offline := true                 // default = false
-	broadcastMode := "block"        // default = "sync"
+	broadcastMode := "async"        // default = "sync"
 	skipConfirmation := true        // default = false
 	signMode := "direct"
 	feeAccount := testutil.AccAddress(t).String()
@@ -66,7 +66,7 @@ func TestContextFlags(t *testing.T) {
 	// test command
 	cmd := &cobra.Command{
 		Use:               "test",
-		PersistentPreRunE: persistentPreRunE,
+		PersistentPreRunE: getPersistentPreRunE(app.MakeEncodingConfig()),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// check that the PersistentCommandFlags have been set correctly based on
 			// PersistentPreRunE
