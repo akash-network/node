@@ -161,8 +161,8 @@ func TestContextFlags(t *testing.T) {
 
 	// test runner
 	for _, tCase := range tCases {
-		t.Run(tCase.flag, func(t *testing.T) {
-			testCase := tCase
+		testCase := tCase
+		t.Run(testCase.flag, func(t *testing.T) {
 			// set the run func
 			cmd.RunE = func(cmd *cobra.Command, args []string) error {
 				var clientCtx client.Context
