@@ -3,6 +3,7 @@ package manifest
 import (
 	"context"
 	"errors"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"testing"
 	"time"
 
@@ -29,7 +30,7 @@ type scaffold struct {
 	cancel    context.CancelFunc
 	bus       pubsub.Bus
 	queryMock *clientMocks.QueryClient
-	hostnames cluster.HostnameServiceClient
+	hostnames clustertypes.HostnameServiceClient
 }
 
 func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did dtypes.DeploymentID) *scaffold {
@@ -81,9 +82,8 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	hostnames := &cluster.SimpleHostnames{
-		Hostnames: make(map[string]dtypes.DeploymentID),
-	}
+	// Use this type in test
+	hostnames := cluster.NewSimpleHostnames()
 
 	log := testutil.Logger(t)
 	bus := pubsub.NewBus()
@@ -226,13 +226,13 @@ func TestManagerAllowsUpdate(t *testing.T) {
 	err = s.svc.Submit(context.Background(), did, sdlManifest)
 	require.NoError(t, err)
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+
 	// Pretend that the hostname has been reserved by a running deployment
-	select {
-	case err := <-s.hostnames.ReserveHostnames(util.AllHostnamesOfManifestGroup(sdlManifest.GetGroups()[0]), did):
-		require.NoError(t, err)
-	case <-time.After(10 * time.Second):
-		t.Fatal("timed out waiting for reserve hostnames")
-	}
+	withheld, err := s.hostnames.ReserveHostnames(ctx, util.AllHostnamesOfManifestGroup(sdlManifest.GetGroups()[0]), lid)
+	require.NoError(t, err)
+	cancel()
+	require.Len(t, withheld, 0)
 
 	sdlManifest, err = sdl2NewContainer.Manifest()
 	require.NoError(t, err)

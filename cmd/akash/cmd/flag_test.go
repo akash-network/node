@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -187,6 +188,7 @@ func TestContextFlags(t *testing.T) {
 
 			// run the test command with expected flag value
 			_, err = testutilcli.ExecTestCLICmd(
+				context.Background(),
 				client.Context{},
 				cmd,
 				fmt.Sprintf("--%s=%v", testCase.flag, expectedFlagValues[testCase.flag]),

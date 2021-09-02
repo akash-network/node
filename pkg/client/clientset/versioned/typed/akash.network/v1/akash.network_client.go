@@ -27,6 +27,7 @@ import (
 type AkashV1Interface interface {
 	RESTClient() rest.Interface
 	ManifestsGetter
+	ProviderHostsGetter
 }
 
 // AkashV1Client is used to interact with features provided by the akash.network group.
@@ -36,6 +37,10 @@ type AkashV1Client struct {
 
 func (c *AkashV1Client) Manifests(namespace string) ManifestInterface {
 	return newManifests(c, namespace)
+}
+
+func (c *AkashV1Client) ProviderHosts(namespace string) ProviderHostInterface {
+	return newProviderHosts(c, namespace)
 }
 
 // NewForConfig creates a new AkashV1Client for the given config.

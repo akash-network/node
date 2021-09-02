@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -38,6 +39,8 @@ type Client interface {
 	ValidateClient
 	Manifest() manifest.Client
 	Cluster() cluster.Client
+	Hostname() clustertypes.HostnameServiceClient
+	ClusterService() cluster.Service
 }
 
 // Service is the interface that includes StatusClient interface.
@@ -65,6 +68,9 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 	clusterConfig.MemoryCommitLevel = cfg.MemoryCommitLevel
 	clusterConfig.StorageCommitLevel = cfg.StorageCommitLevel
 	clusterConfig.BlockedHostnames = cfg.BlockedHostnames
+	clusterConfig.DeploymentIngressStaticHosts = cfg.DeploymentIngressStaticHosts
+	clusterConfig.DeploymentIngressDomain = cfg.DeploymentIngressDomain
+	clusterConfig.ClusterSettings = cfg.ClusterSettings
 
 	cluster, err := cluster.NewService(ctx, session, bus, cclient, clusterConfig)
 	if err != nil {
@@ -145,6 +151,14 @@ type service struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	lc     lifecycle.Lifecycle
+}
+
+func (s *service) Hostname() clustertypes.HostnameServiceClient {
+	return s.cluster.HostnameService()
+}
+
+func (s *service) ClusterService() cluster.Service {
+	return s.cluster
 }
 
 func (s *service) Close() error {

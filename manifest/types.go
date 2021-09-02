@@ -76,4 +76,14 @@ type ServiceExpose struct {
 	Service      string
 	Global       bool
 	Hosts        []string
+	HTTPOptions  ServiceExposeHTTPOptions
+}
+
+type ServiceExposeHTTPOptions struct {
+	MaxBodySize uint32
+	ReadTimeout uint32
+	SendTimeout uint32
+	NextTries   uint32
+	NextTimeout uint32
+	NextCases   []string
 }
