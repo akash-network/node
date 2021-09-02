@@ -5,6 +5,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/server"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/gogo/protobuf/jsonpb"
@@ -25,6 +27,7 @@ func ExecTestCLICmd(clientCtx client.Context, cmd *cobra.Command, extraArgs ...s
 
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, client.ClientContextKey, &clientCtx)
+	ctx = context.WithValue(ctx, server.ServerContextKey, server.NewDefaultContext())
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		return out, err
