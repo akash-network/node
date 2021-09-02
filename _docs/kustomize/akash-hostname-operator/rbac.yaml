@@ -1,0 +1,35 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: akash-operator-manage-hostnames
+subjects:
+  - kind: ServiceAccount
+    name: akash-operator
+roleRef:
+  kind: ClusterRole
+  name: manage-ingress
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: akash-operator-watch-providerhosts
+subjects:
+  - kind: ServiceAccount
+    name: akash-operator
+roleRef:
+  kind: ClusterRole
+  name: watch-providerhosts
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: akash-operator-watch-manifests
+subjects:
+  - kind: ServiceAccount
+    name: akash-operator
+roleRef:
+  kind: ClusterRole
+  name: watch-manifests
+  apiGroup: rbac.authorization.k8s.io

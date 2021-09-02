@@ -90,6 +90,24 @@ spec:
                                   type: string
                                 global:
                                   type: boolean
+                                http_options:
+                                  type: object
+                                  properties:
+                                    max_body_size:
+                                      type: integer
+                                    read_timeout:
+                                      type: integer
+                                    send_timeout:
+                                      type: integer
+                                    next_tries:
+                                      type: integer
+                                    next_timeout:
+                                      type: integer
+                                    next_cases:
+                                      type: array
+                                      items:
+                                        type: string
+
                                 hosts:
                                   type: array
                                   items:

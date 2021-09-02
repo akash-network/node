@@ -3,16 +3,18 @@ package kube
 import (
 	"context"
 	"fmt"
+	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
+	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"os"
-	"path"
-
-	"k8s.io/client-go/util/flowcontrol"
+	"strings"
 
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/util/flowcontrol"
+	"os"
+	"path"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/cluster/util"
@@ -43,11 +45,15 @@ import (
 )
 
 var (
-	ErrLeaseNotFound            = errors.New("kube: lease not found")
-	ErrNoDeploymentForLease     = errors.New("kube: no deployments for lease")
-	ErrNoGlobalServicesForLease = errors.New("kube: no global services for lease")
-	ErrInternalError            = errors.New("kube: internal error")
-	ErrNoServiceForLease        = errors.New("no service for that lease")
+	ErrLeaseNotFound             = errors.New("kube: lease not found")
+	ErrNoDeploymentForLease      = errors.New("kube: no deployments for lease")
+	ErrInternalError             = errors.New("kube: internal error")
+	ErrNoServiceForLease         = errors.New("no service for that lease")
+	ErrInvalidHostnameConnection = errors.New("kube: invalid hostname connection")
+	ErrMissingLabel              = errors.New("kube: missing label")
+	ErrInvalidLabelValue         = errors.New("kube: invalid label value")
+
+	errNotConfiguredWithSettings = errors.New("not configured with settings in the context passed to function")
 )
 
 var (
@@ -68,23 +74,24 @@ type client struct {
 	ac                akashclient.Interface
 	metc              metricsclient.Interface
 	ns                string
-	settings          Settings
 	log               log.Logger
 	kubeContentConfig *restclient.Config
 }
 
 // NewClient returns new Kubernetes Client instance with provided logger, host and ns. Returns error incase of failure
-func NewClient(log log.Logger, ns string, settings Settings) (Client, error) {
-	if err := validateSettings(settings); err != nil {
-		return nil, err
-	}
-	return newClientWithSettings(log, ns, settings)
+// configPath may be the empty string
+func NewClient(log log.Logger, ns string, configPath string) (Client, error) {
+	return newClientWithSettings(log, ns, configPath, false)
 }
 
-func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client, error) {
+func NewPreparedClient(log log.Logger, ns string, configPath string) (Client, error) {
+	return newClientWithSettings(log, ns, configPath, true)
+}
+
+func newClientWithSettings(log log.Logger, ns string, configPath string, prepare bool) (Client, error) {
 	ctx := context.Background()
 
-	config, err := openKubeConfig(settings.ConfigPath, log)
+	config, err := openKubeConfig(configPath, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "kube: error building config flags")
 	}
@@ -105,16 +112,17 @@ func newClientWithSettings(log log.Logger, ns string, settings Settings) (Client
 		return nil, errors.Wrap(err, "kube: error creating metrics client")
 	}
 
-	if err := prepareEnvironment(ctx, kc, ns); err != nil {
-		return nil, errors.Wrap(err, "kube: error preparing environment")
-	}
+	if prepare {
+		if err := prepareEnvironment(ctx, kc, ns); err != nil {
+			return nil, errors.Wrap(err, "kube: error preparing environment")
+		}
 
-	if _, err := kc.CoreV1().Namespaces().List(ctx, metav1.ListOptions{Limit: 1}); err != nil {
-		return nil, errors.Wrap(err, "kube: error connecting to kubernetes")
+		if _, err := kc.CoreV1().Namespaces().List(ctx, metav1.ListOptions{Limit: 1}); err != nil {
+			return nil, errors.Wrap(err, "kube: error connecting to kubernetes")
+		}
 	}
 
 	return &client{
-		settings:          settings,
 		kc:                kc,
 		ac:                mc,
 		metc:              metc,
@@ -140,6 +148,55 @@ func openKubeConfig(cfgPath string, log log.Logger) (*rest.Config, error) {
 	return rest.InClusterConfig()
 }
 
+func (c *client) GetDeployments(ctx context.Context, dID dtypes.DeploymentID) ([]ctypes.Deployment, error) {
+	labelSelectors := &strings.Builder{}
+	_, _ = fmt.Fprintf(labelSelectors, "%s=%d", akashLeaseDSeqLabelName, dID.DSeq)
+	_, _ = fmt.Fprintf(labelSelectors, ",%s=%s", akashLeaseOwnerLabelName, dID.Owner)
+
+	manifests, err := c.ac.AkashV1().Manifests(c.ns).List(ctx, metav1.ListOptions{
+		TypeMeta:             metav1.TypeMeta{},
+		LabelSelector:        labelSelectors.String(),
+		FieldSelector:        "",
+		Watch:                false,
+		AllowWatchBookmarks:  false,
+		ResourceVersion:      "",
+		ResourceVersionMatch: "",
+		TimeoutSeconds:       nil,
+		Limit:                0,
+		Continue:             "",
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]ctypes.Deployment, len(manifests.Items))
+	for i, manifest := range manifests.Items {
+		result[i], err = manifest.Deployment()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
+func (c *client) GetManifestGroup(ctx context.Context, lID mtypes.LeaseID) (bool, akashv1.ManifestGroup, error) {
+	leaseNamespace := lidNS(lID)
+
+	obj, err := c.ac.AkashV1().Manifests(c.ns).Get(ctx, leaseNamespace, metav1.GetOptions{})
+	if err != nil {
+		if kubeErrors.IsNotFound(err) {
+			c.log.Info("CRD manifest not found", "lease-ns", leaseNamespace)
+			return false, akashv1.ManifestGroup{}, nil
+		}
+
+		return false, akashv1.ManifestGroup{}, err
+	}
+
+	return true, obj.Spec.Group, nil
+}
+
 func (c *client) Deployments(ctx context.Context) ([]ctypes.Deployment, error) {
 	manifests, err := c.ac.AkashV1().Manifests(c.ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -159,23 +216,26 @@ func (c *client) Deployments(ctx context.Context) ([]ctypes.Deployment, error) {
 }
 
 func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest.Group) error {
-	if err := applyNS(ctx, c.kc, newNSBuilder(c.settings, lid, group)); err != nil {
+	settingsI := ctx.Value(SettingsKey)
+	if nil == settingsI {
+		return errNotConfiguredWithSettings
+	}
+	settings := settingsI.(Settings)
+	if err := ValidateSettings(settings); err != nil {
+		return err
+	}
+
+	if err := applyNS(ctx, c.kc, newNSBuilder(settings, lid, group)); err != nil {
 		c.log.Error("applying namespace", "err", err, "lease", lid)
 		return err
 	}
 
-	// TODO: re-enable.  see #946
-	// if err := applyRestrictivePodSecPoliciesToNS(ctx, c.kc, newPspBuilder(c.settings, lid, group)); err != nil {
-	// 	c.log.Error("applying pod security policies", "err", err, "lease", lid)
-	// 	return err
-	// }
-
-	if err := applyNetPolicies(ctx, c.kc, newNetPolBuilder(c.settings, lid, group)); err != nil {
+	if err := applyNetPolicies(ctx, c.kc, newNetPolBuilder(settings, lid, group)); err != nil {
 		c.log.Error("applying namespace network policies", "err", err, "lease", lid)
 		return err
 	}
 
-	if err := applyManifest(ctx, c.ac, newManifestBuilder(c.log, c.settings, c.ns, lid, group)); err != nil {
+	if err := applyManifest(ctx, c.ac, newManifestBuilder(c.log, settings, c.ns, lid, group)); err != nil {
 		c.log.Error("applying manifest", "err", err, "lease", lid)
 		return err
 	}
@@ -187,7 +247,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 
 	for svcIdx := range group.Services {
 		service := &group.Services[svcIdx]
-		if err := applyDeployment(ctx, c.kc, newDeploymentBuilder(c.log, c.settings, lid, group, service)); err != nil {
+		if err := applyDeployment(ctx, c.kc, newDeploymentBuilder(c.log, settings, lid, group, service)); err != nil {
 			c.log.Error("applying deployment", "err", err, "lease", lid, "service", service.Name)
 			return err
 		}
@@ -197,7 +257,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 			continue
 		}
 
-		serviceBuilderLocal := newServiceBuilder(c.log, c.settings, lid, group, service, false)
+		serviceBuilderLocal := newServiceBuilder(c.log, settings, lid, group, service, false)
 		if serviceBuilderLocal.any() {
 			if err := applyService(ctx, c.kc, serviceBuilderLocal); err != nil {
 				c.log.Error("applying local service", "err", err, "lease", lid, "service", service.Name)
@@ -205,7 +265,7 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 			}
 		}
 
-		serviceBuilderGlobal := newServiceBuilder(c.log, c.settings, lid, group, service, true)
+		serviceBuilderGlobal := newServiceBuilder(c.log, settings, lid, group, service, true)
 		if serviceBuilderGlobal.any() {
 			if err := applyService(ctx, c.kc, serviceBuilderGlobal); err != nil {
 				c.log.Error("applying global service", "err", err, "lease", lid, "service", service.Name)
@@ -213,23 +273,14 @@ func (c *client) Deploy(ctx context.Context, lid mtypes.LeaseID, group *manifest
 			}
 		}
 
-		for expIdx := range service.Expose {
-			expose := service.Expose[expIdx]
-			if !util.ShouldBeIngress(expose) {
-				continue
-			}
-			if err := applyIngress(ctx, c.kc, newIngressBuilder(c.log, c.settings, lid, group, service, &service.Expose[expIdx])); err != nil {
-				c.log.Error("applying ingress", "err", err, "lease", lid, "service", service.Name, "expose", expose)
-				return err
-			}
-		}
 	}
 
 	return nil
 }
 
 func (c *client) TeardownLease(ctx context.Context, lid mtypes.LeaseID) error {
-	result := c.kc.CoreV1().Namespaces().Delete(ctx, lidNS(lid), metav1.DeleteOptions{})
+	leaseNamespace := lidNS(lid)
+	result := c.kc.CoreV1().Namespaces().Delete(ctx, leaseNamespace, metav1.DeleteOptions{})
 
 	label := metricsutils.SuccessLabel
 	if result != nil {
@@ -238,6 +289,12 @@ func (c *client) TeardownLease(ctx context.Context, lid mtypes.LeaseID) error {
 	kubeCallsCounter.WithLabelValues("namespaces-delete", label).Inc()
 
 	return result
+}
+func kubeSelectorForLease(dst *strings.Builder, lID mtypes.LeaseID) {
+	_, _ = fmt.Fprintf(dst, "%s=%s", akashLeaseOwnerLabelName, lID.Owner)
+	_, _ = fmt.Fprintf(dst, ",%s=%d", akashLeaseDSeqLabelName, lID.DSeq)
+	_, _ = fmt.Fprintf(dst, ",%s=%d", akashLeaseGSeqLabelName, lID.GSeq)
+	_, _ = fmt.Fprintf(dst, ",%s=%d", akashLeaseOSeqLabelName, lID.OSeq)
 }
 
 func newEventsFeedList(ctx context.Context, events []eventsv1.Event) ctypes.EventsWatcher {
@@ -370,7 +427,25 @@ func (c *client) LeaseLogs(ctx context.Context, lid mtypes.LeaseID,
 
 // todo: limit number of results and do pagination / streaming
 func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.LeaseStatus, error) {
+	settingsI := ctx.Value(SettingsKey)
+	if nil == settingsI {
+		return nil, errNotConfiguredWithSettings
+	}
+	settings := settingsI.(Settings)
+	if err := ValidateSettings(settings); err != nil {
+		return nil, err
+	}
+
 	deployments, err := c.deploymentsForLease(ctx, lid)
+	if err != nil {
+		return nil, err
+	}
+	labelSelector := &strings.Builder{}
+	kubeSelectorForLease(labelSelector, lid)
+	phResult, err := c.ac.AkashV1().ProviderHosts(c.ns).List(ctx, metav1.ListOptions{
+		LabelSelector: labelSelector.String(),
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -391,19 +466,17 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 		serviceStatus[deployment.Name] = status
 	}
 
-	ingress, err := c.kc.NetworkingV1().Ingresses(lidNS(lid)).List(ctx, metav1.ListOptions{})
-	label := metricsutils.SuccessLabel
-	if err != nil {
-		label = metricsutils.FailLabel
-	}
-	kubeCallsCounter.WithLabelValues("ingresses-list", label).Inc()
-	if err != nil {
-		c.log.Error("list ingresses", "err", err)
-		return nil, errors.Wrap(err, ErrInternalError.Error())
+	// For each provider host entry, update the status of each service to indicate
+	// the presently assigned hostnames
+	for _, ph := range phResult.Items {
+		entry, ok := serviceStatus[ph.Spec.ServiceName]
+		if ok {
+			entry.URIs = append(entry.URIs, ph.Spec.Hostname)
+		}
 	}
 
 	services, err := c.kc.CoreV1().Services(lidNS(lid)).List(ctx, metav1.ListOptions{})
-	label = metricsutils.SuccessLabel
+	label := metricsutils.SuccessLabel
 	if err != nil {
 		label = metricsutils.FailLabel
 	}
@@ -411,34 +484,6 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 	if err != nil {
 		c.log.Error("list services", "err", err)
 		return nil, errors.Wrap(err, ErrInternalError.Error())
-	}
-
-	foundCnt := 0
-	for _, ing := range ingress.Items {
-		service, found := serviceStatus[ing.Name]
-		if !found {
-			continue
-		}
-
-		hosts := make([]string, 0, len(ing.Spec.Rules)+(len(ing.Status.LoadBalancer.Ingress)*2))
-
-		for _, rule := range ing.Spec.Rules {
-			hosts = append(hosts, rule.Host)
-		}
-
-		if c.settings.DeploymentIngressExposeLBHosts {
-			for _, lbing := range ing.Status.LoadBalancer.Ingress {
-				if val := lbing.IP; val != "" {
-					hosts = append(hosts, val)
-				}
-				if val := lbing.Hostname; val != "" {
-					hosts = append(hosts, val)
-				}
-			}
-		}
-
-		service.URIs = hosts
-		foundCnt++
 	}
 
 	// Search for a Kubernetes service declared as nodeport
@@ -456,7 +501,7 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 					if nodePort > 0 {
 						// Record the actual port inside the container that is exposed
 						v := ctypes.ForwardedPortStatus{
-							Host:         c.exposedHostForPort(),
+							Host:         settings.ClusterPublicHostname,
 							Port:         uint16(port.TargetPort.IntVal),
 							ExternalPort: uint16(nodePort),
 							Available:    deployment.Available,
@@ -473,7 +518,6 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 							isValid = false // Skip this, since the Protocol is set to something not supported by Akash
 						}
 						if isValid {
-							foundCnt++
 							portsForDeployment = append(portsForDeployment, v)
 						}
 					}
@@ -483,21 +527,12 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 		}
 	}
 
-	// If no ingress are found and at least 1 NodePort is not found, that is an error
-	if 0 == foundCnt {
-		return nil, ErrNoGlobalServicesForLease
-	}
-
 	response := &ctypes.LeaseStatus{
 		Services:       serviceStatus,
 		ForwardedPorts: forwardedPorts,
 	}
 
 	return response, nil
-}
-
-func (c *client) exposedHostForPort() string {
-	return c.settings.ClusterPublicHostname
 }
 
 func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name string) (*ctypes.ServiceStatus, error) {
@@ -522,7 +557,7 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 		return nil, ErrNoDeploymentForLease
 	}
 
-	hasIngress := false
+	hasHostnames := false
 	// Get manifest definition from CRD
 	c.log.Debug("Pulling manifest from CRD", "lease-ns", lidNS(lid))
 	obj, err := c.ac.AkashV1().Manifests(c.ns).Get(ctx, lidNS(lid), metav1.GetOptions{})
@@ -551,7 +586,7 @@ exposeCheckLoop:
 					Hosts:        expose.Hosts,
 				}
 				if util.ShouldBeIngress(mse) {
-					hasIngress = true
+					hasHostnames = true
 					break exposeCheckLoop
 				}
 			}
@@ -561,7 +596,7 @@ exposeCheckLoop:
 		return nil, fmt.Errorf("%w: service %q", ErrNoServiceForLease, name)
 	}
 
-	c.log.Debug("service result", "lease-ns", lidNS(lid), "hasIngress", hasIngress)
+	c.log.Debug("service result", "lease-ns", lidNS(lid), "has-hostnames", hasHostnames)
 
 	result := &ctypes.ServiceStatus{
 		Name:               deployment.Name,
@@ -574,32 +609,26 @@ exposeCheckLoop:
 		AvailableReplicas:  deployment.Status.AvailableReplicas,
 	}
 
-	if hasIngress {
-		ingress, err := c.kc.NetworkingV1().Ingresses(lidNS(lid)).Get(ctx, name, metav1.GetOptions{})
+	if hasHostnames {
+		labelSelector := &strings.Builder{}
+		kubeSelectorForLease(labelSelector, lid)
+
+		phs, err := c.ac.AkashV1().ProviderHosts(c.ns).List(ctx, metav1.ListOptions{
+			LabelSelector: labelSelector.String(),
+		})
 		label := metricsutils.SuccessLabel
 		if err != nil {
 			label = metricsutils.FailLabel
 		}
-		kubeCallsCounter.WithLabelValues("networking-ingresses", label).Inc()
+		kubeCallsCounter.WithLabelValues("provider-hosts", label).Inc()
 		if err != nil {
-			c.log.Error("ingresses get", "err", err)
+			c.log.Error("provider hosts get", "err", err)
 			return nil, errors.Wrap(err, ErrInternalError.Error())
 		}
 
-		hosts := make([]string, 0, len(ingress.Spec.Rules))
-		for _, rule := range ingress.Spec.Rules {
-			hosts = append(hosts, rule.Host)
-		}
-
-		if c.settings.DeploymentIngressExposeLBHosts {
-			for _, lbing := range ingress.Status.LoadBalancer.Ingress {
-				if val := lbing.IP; val != "" {
-					hosts = append(hosts, val)
-				}
-				if val := lbing.Hostname; val != "" {
-					hosts = append(hosts, val)
-				}
-			}
+		hosts := make([]string, 0, len(phs.Items))
+		for _, ph := range phs.Items {
+			hosts = append(hosts, ph.Spec.Hostname)
 		}
 
 		result.URIs = hosts

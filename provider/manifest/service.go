@@ -3,11 +3,10 @@ package manifest
 import (
 	"context"
 	"errors"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"time"
-
-	"github.com/ovrclk/akash/provider/cluster"
 
 	"github.com/boz/go-lifecycle"
 
@@ -58,7 +57,7 @@ type Service interface {
 
 // NewHandler creates and returns new Service instance
 // Manage incoming leases and manifests and pair the two together to construct and emit a ManifestReceived event.
-func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, hostnameService cluster.HostnameServiceClient, cfg ServiceConfig) (Service, error) {
+func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, hostnameService clustertypes.HostnameServiceClient, cfg ServiceConfig) (Service, error) {
 	session = session.ForModule("provider-manifest")
 
 	leases, err := fetchExistingLeases(ctx, session)
@@ -110,7 +109,7 @@ type service struct {
 	managers  map[string]*manager
 	managerch chan *manager
 
-	hostnameService cluster.HostnameServiceClient
+	hostnameService clustertypes.HostnameServiceClient
 
 	watchdogs  map[dtypes.DeploymentID]*watchdog
 	watchdogch chan dtypes.DeploymentID

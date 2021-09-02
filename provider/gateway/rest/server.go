@@ -21,11 +21,12 @@ func NewServer(
 	cquery ctypes.QueryClient,
 	address string,
 	pid sdk.Address,
-	certs []tls.Certificate) (*http.Server, error) {
+	certs []tls.Certificate,
+	clusterConfig map[interface{}]interface{}) (*http.Server, error) {
 
 	srv := &http.Server{
 		Addr:    address,
-		Handler: newRouter(log, pid, pclient),
+		Handler: newRouter(log, pid, pclient, clusterConfig),
 		BaseContext: func(_ net.Listener) context.Context {
 			return ctx
 		},

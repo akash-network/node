@@ -5,9 +5,9 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"time"
 
-	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/util"
 
 	"github.com/pkg/errors"
@@ -82,7 +82,7 @@ type manager struct {
 	log log.Logger
 	lc  lifecycle.Lifecycle
 
-	hostnameService cluster.HostnameServiceClient
+	hostnameService clustertypes.HostnameServiceClient
 }
 
 func (m *manager) stop() {
@@ -338,6 +338,12 @@ func (m *manager) validateRequests() {
 var errManifestRejected = errors.New("manifest rejected")
 
 func (m *manager) checkHostnamesForManifest(requestManifest manifest.Manifest, groupNames []string) error {
+	// Check if the hostnames are available. Do not block forever
+	ownerAddr, err := m.data.GetDeployment().DeploymentID.GetOwnerAddress()
+	if err != nil {
+		return err
+	}
+
 	allHostnames := make([]string, 0)
 
 	for _, mgroup := range requestManifest.GetGroups() {
@@ -362,14 +368,7 @@ func (m *manager) checkHostnamesForManifest(requestManifest manifest.Manifest, g
 		}
 	}
 
-	// Check if the hostnames are available. Do not block forever
-	select {
-	case err := <-m.hostnameService.CanReserveHostnames(allHostnames, m.data.Deployment.DeploymentID):
-		return err
-	case <-m.lc.ShutdownRequest():
-		return ErrNotRunning
-	}
-
+	return m.hostnameService.CanReserveHostnames(allHostnames, ownerAddr)
 }
 
 func (m *manager) validateRequest(req manifestRequest) error {
