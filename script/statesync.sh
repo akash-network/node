@@ -7,7 +7,7 @@ INTERVAL=1000
 # GET TRUST HASH AND TRUST HEIGHT
 
 LATEST_HEIGHT=$(curl -s 162.55.132.230:2021/block | jq -r .result.block.header.height);
-BLOCK_HEIGHT=$(($LATEST_HEIGHT-$INTERVAL)) 
+BLOCK_HEIGHT=$(($ATEST_HEIGHT-INTERVAL)) 
 TRUST_HASH=$(curl -s "162.55.132.230:2021/block?height=$BLOCK_HEIGHT" | jq -r .result.block_id.hash)
 
 
