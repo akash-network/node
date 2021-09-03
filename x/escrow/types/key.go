@@ -10,3 +10,11 @@ const (
 	// RouterKey is the message route for deployment
 	RouterKey = ModuleName
 )
+
+func AccountKeyPrefix() []byte {
+	return []byte{0x01}
+}
+
+func PaymentKeyPrefix() []byte {
+	return []byte{0x02}
+}

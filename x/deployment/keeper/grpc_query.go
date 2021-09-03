@@ -35,12 +35,12 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 	ctx := sdk.UnwrapSDKContext(c)
 
 	store := ctx.KVStore(k.skey)
-	depStore := prefix.NewStore(store, deploymentPrefix)
+	depStore := prefix.NewStore(store, types.DeploymentPrefix())
 
 	pageRes, err := sdkquery.FilteredPaginate(depStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		var deployment types.Deployment
 
-		err := k.cdc.UnmarshalBinaryBare(value, &deployment)
+		err := k.cdc.Unmarshal(value, &deployment)
 		if err != nil {
 			return false, err
 		}

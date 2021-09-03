@@ -23,6 +23,7 @@ func TestVersionValidation(t *testing.T) {
 				Groups: []types.GroupSpec{
 					testutil.GroupSpec(t),
 				},
+				Depositor: testutil.AccAddress(t).String(),
 			},
 			err: nil,
 		},
@@ -33,6 +34,7 @@ func TestVersionValidation(t *testing.T) {
 				Groups: []types.GroupSpec{
 					testutil.GroupSpec(t),
 				},
+				Depositor: testutil.AccAddress(t).String(),
 			},
 			err: types.ErrEmptyVersion,
 		},
@@ -43,6 +45,7 @@ func TestVersionValidation(t *testing.T) {
 				Groups: []types.GroupSpec{
 					testutil.GroupSpec(t),
 				},
+				Depositor: testutil.AccAddress(t).String(),
 			},
 			err: types.ErrInvalidVersion,
 		},

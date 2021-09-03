@@ -90,6 +90,7 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 	if err := ms.keepers.Escrow.AccountCreate(ctx,
 		types.EscrowAccountForBid(bid.ID()),
 		provider,
+		provider, // bids currently don't support deposits by non-owners
 		msg.Deposit); err != nil {
 		return &types.MsgCreateBidResponse{}, err
 	}

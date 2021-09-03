@@ -13,7 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/input"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/spf13/pflag"
 	ttypes "github.com/tendermint/tendermint/types"
 )
@@ -44,7 +44,7 @@ func BroadcastTX(ctx client.Context, flags *pflag.FlagSet, msgs ...sdk.Msg) erro
 		return tx.GenerateTx(ctx, txf, msgs...)
 	}
 
-	txf, err := tx.PrepareFactory(ctx, txf)
+	txf, err := PrepareFactory(ctx, txf)
 	if err != nil {
 		return err
 	}
@@ -67,6 +67,7 @@ func BroadcastTX(ctx client.Context, flags *pflag.FlagSet, msgs ...sdk.Msg) erro
 		return err
 	}
 
+	txb.SetFeeGranter(ctx.GetFeeGranterAddress())
 	err = tx.Sign(txf, ctx.GetFromName(), txb, true)
 	if err != nil {
 		return err
@@ -84,6 +85,34 @@ func BroadcastTX(ctx client.Context, flags *pflag.FlagSet, msgs ...sdk.Msg) erro
 
 	return ctx.PrintProto(res)
 
+}
+
+// PrepareFactory has been copied from cosmos-sdk to make it public.
+// Source: https://github.com/cosmos/cosmos-sdk/blob/v0.43.0-rc2/client/tx/tx.go#L311
+func PrepareFactory(clientCtx client.Context, txf tx.Factory) (tx.Factory, error) {
+	from := clientCtx.GetFromAddress()
+
+	if err := txf.AccountRetriever().EnsureExists(clientCtx, from); err != nil {
+		return txf, err
+	}
+
+	initNum, initSeq := txf.AccountNumber(), txf.Sequence()
+	if initNum == 0 || initSeq == 0 {
+		num, seq, err := txf.AccountRetriever().GetAccountNumberSequence(clientCtx, from)
+		if err != nil {
+			return txf, err
+		}
+
+		if initNum == 0 {
+			txf = txf.WithAccountNumber(num)
+		}
+
+		if initSeq == 0 {
+			txf = txf.WithSequence(seq)
+		}
+	}
+
+	return txf, nil
 }
 
 func doBroadcast(ctx client.Context, timeout time.Duration, txb ttypes.Tx) (*sdk.TxResponse, error) {
@@ -124,7 +153,8 @@ func doBroadcast(ctx client.Context, timeout time.Duration, txb ttypes.Tx) (*sdk
 		}
 
 		// check transaction
-		res, err := authclient.QueryTx(ctx, cres.TxHash)
+		// https://github.com/cosmos/cosmos-sdk/pull/8734
+		res, err := authtx.QueryTx(ctx, cres.TxHash)
 		if err == nil {
 			return res, nil
 		}
@@ -165,7 +195,7 @@ func adjustGas(ctx client.Context, txf tx.Factory, msgs ...sdk.Msg) (tx.Factory,
 	if !ctx.Simulate && !txf.SimulateAndExecute() {
 		return txf, nil
 	}
-	_, adjusted, err := tx.CalculateGas(ctx.QueryWithData, txf, msgs...)
+	_, adjusted, err := tx.CalculateGas(ctx, txf, msgs...)
 	if err != nil {
 		return txf, err
 	}

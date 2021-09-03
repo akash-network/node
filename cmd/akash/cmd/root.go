@@ -20,7 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	vestingcli "github.com/cosmos/cosmos-sdk/x/auth/vesting/client/cli"
@@ -64,37 +63,42 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 // main function.
 func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 	encodingConfig := app.MakeEncodingConfig()
-	initClientCtx := client.Context{}.
-		WithJSONMarshaler(encodingConfig.Marshaler).
-		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
-		WithTxConfig(encodingConfig.TxConfig).
-		WithLegacyAmino(encodingConfig.Amino).
-		WithInput(os.Stdin).
-		WithAccountRetriever(authtypes.AccountRetriever{}).
-		WithBroadcastMode(flags.BroadcastBlock).
-		WithHomeDir(app.DefaultHome)
 
 	rootCmd := &cobra.Command{
-		Use:          "akash",
-		Short:        "Akash Blockchain Application",
-		Long:         "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
-		SilenceUsage: true,
-		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			if err := server.InterceptConfigsPreRunHandler(cmd); err != nil {
-				return err
-			}
-
-			ctx := server.GetServerContextFromCmd(cmd)
-
-			bindFlags(cmd, ctx.Viper)
-
-			return client.SetCmdClientContextHandler(initClientCtx, cmd)
-		},
+		Use:               "akash",
+		Short:             "Akash Blockchain Application",
+		Long:              "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
+		SilenceUsage:      true,
+		PersistentPreRunE: getPersistentPreRunE(encodingConfig),
 	}
 
 	initRootCmd(rootCmd, encodingConfig)
 
 	return rootCmd, encodingConfig
+}
+
+func getPersistentPreRunE(encodingConfig params.EncodingConfig) func(*cobra.Command, []string) error {
+	return func(cmd *cobra.Command, _ []string) error {
+		if err := server.InterceptConfigsPreRunHandler(cmd, "", nil); err != nil {
+			return err
+		}
+
+		ctx := server.GetServerContextFromCmd(cmd)
+
+		bindFlags(cmd, ctx.Viper)
+
+		initClientCtx := client.Context{}.
+			WithCodec(encodingConfig.Marshaler).
+			WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
+			WithTxConfig(encodingConfig.TxConfig).
+			WithLegacyAmino(encodingConfig.Amino).
+			WithInput(os.Stdin).
+			WithAccountRetriever(authtypes.AccountRetriever{}).
+			WithBroadcastMode(flags.BroadcastBlock).
+			WithHomeDir(app.DefaultHome)
+
+		return client.SetCmdClientContextHandler(initClientCtx, cmd)
+	}
 }
 
 // Execute executes the root command.
@@ -119,7 +123,6 @@ func Execute(rootCmd *cobra.Command) error {
 
 func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 	sdkutil.InitSDKConfig()
-	authclient.Codec = encodingConfig.Marshaler
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
 		dcmd.RootCmd(),

@@ -10,3 +10,15 @@ const (
 	// RouterKey is the message route for market
 	RouterKey = ModuleName
 )
+
+func OrderPrefix() []byte {
+	return []byte{0x01, 0x00}
+}
+
+func BidPrefix() []byte {
+	return []byte{0x02, 0x00}
+}
+
+func LeasePrefix() []byte {
+	return []byte{0x03, 0x00}
+}

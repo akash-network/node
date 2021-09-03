@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"strings"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -9,21 +11,26 @@ import (
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
+const (
+	FlagDepositorAccount = "depositor-account"
+	FlagExpiration       = "expiration"
+)
+
 var (
 	ErrStateValue  = errors.New("query: invalid state value")
 	DefaultDeposit = types.DefaultDeploymentMinDeposit
 )
 
-type deploymentIDOption struct {
-	noOwner bool
+type DeploymentIDOptions struct {
+	NoOwner bool
 }
 
-type DeploymentIDOption func(*deploymentIDOption)
+type DeploymentIDOption func(*DeploymentIDOptions)
 
 // DeploymentIDOptionNoOwner do not add mark as required owner flag
 func DeploymentIDOptionNoOwner(val bool) DeploymentIDOption {
-	return func(opt *deploymentIDOption) {
-		opt.noOwner = val
+	return func(opt *DeploymentIDOptions) {
+		opt.NoOwner = val
 	}
 }
 
@@ -46,30 +53,30 @@ func WithProvider(val sdk.AccAddress) MarketOption {
 	}
 }
 
-// AddDeploymentIDFlags add flags for deployment except for Owner when noOwner is set
+// AddDeploymentIDFlags add flags for deployment except for Owner when NoOwner is set
 func AddDeploymentIDFlags(flags *pflag.FlagSet, opts ...DeploymentIDOption) {
-	opt := &deploymentIDOption{}
+	opt := &DeploymentIDOptions{}
 
 	for _, o := range opts {
 		o(opt)
 	}
 
-	if !opt.noOwner {
+	if !opt.NoOwner {
 		flags.String("owner", "", "Deployment Owner")
 	}
 
 	flags.Uint64("dseq", 0, "Deployment Sequence")
 }
 
-// MarkReqDeploymentIDFlags marks flags required except for Owner when noOwner is set
+// MarkReqDeploymentIDFlags marks flags required except for Owner when NoOwner is set
 func MarkReqDeploymentIDFlags(cmd *cobra.Command, opts ...DeploymentIDOption) {
-	opt := &deploymentIDOption{}
+	opt := &DeploymentIDOptions{}
 
 	for _, o := range opts {
 		o(opt)
 	}
 
-	if !opt.noOwner {
+	if !opt.NoOwner {
 		_ = cmd.MarkFlagRequired("owner")
 	}
 
@@ -180,4 +187,26 @@ func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, error) 
 	}
 
 	return dfilters, nil
+}
+
+// AddDepositorFlag adds the `--depositor-account` flag
+func AddDepositorFlag(flags *pflag.FlagSet) {
+	flags.String(FlagDepositorAccount, "", "Depositor account pays for the deposit instead of deducting from the owner")
+}
+
+// DepositorFromFlags returns the depositor account if one was specified in flags,
+// otherwise it returns the owner's account.
+func DepositorFromFlags(flags *pflag.FlagSet, owner string) (string, error) {
+	depositorAcc, err := flags.GetString(FlagDepositorAccount)
+	if err != nil {
+		return "", err
+	}
+
+	// if no depositor is specified, owner is the default depositor
+	if strings.TrimSpace(depositorAcc) == "" {
+		return owner, nil
+	}
+
+	_, err = sdk.AccAddressFromBech32(depositorAcc)
+	return depositorAcc, err
 }

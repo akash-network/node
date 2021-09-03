@@ -32,7 +32,7 @@ func (k Querier) Providers(c context.Context, req *types.QueryProvidersRequest) 
 	pageRes, err := sdkquery.Paginate(store, req.Pagination, func(key []byte, value []byte) error {
 		var provider types.Provider
 
-		err := k.cdc.UnmarshalBinaryBare(value, &provider)
+		err := k.cdc.Unmarshal(value, &provider)
 		if err != nil {
 			return err
 		}
