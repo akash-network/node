@@ -2,7 +2,13 @@ name: State Sync
 
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
-on: [push, pull_request, workflow_dispatch]
+on: 
+  push: 
+    branches: 
+      - mainnet/main
+  pull_request:
+    branches:
+      - mainnet/main
 
 # This workflow makes x86_64 binaries for mac, windows, and linux.
 
