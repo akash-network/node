@@ -38,7 +38,25 @@ var _ Unit = (*Storage)(nil)
 // AddUnit it rather searches for existing entry of the same type and sums values
 // if type not found it appends
 func (m ResourceUnits) Add(rhs ResourceUnits) (ResourceUnits, error) {
-	res := m
+	// Make a deep copy
+	res := ResourceUnits{
+		CPU:       nil,
+		Memory:    nil,
+		Storage:   nil,
+		Endpoints: nil,
+	}
+
+	if m.CPU != nil {
+		*res.CPU = *m.CPU
+	}
+	if m.Memory != nil {
+		*res.Memory = *m.Memory
+	}
+	if m.Storage != nil {
+		*res.Storage = *m.Storage
+	}
+	res.Endpoints = make([]Endpoint, len(m.Endpoints))
+	copy(res.Endpoints, m.Endpoints)
 
 	if res.CPU != nil {
 		if err := res.CPU.add(rhs.CPU); err != nil {
