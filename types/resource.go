@@ -1,7 +1,7 @@
 package types
 
 import (
-	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
+	cosmos "github.com/cosmos/cosmos-sdk/types"
 	"reflect"
 )
 
@@ -48,7 +48,7 @@ func (m ResourceUnits) deepcopy() ResourceUnits {
 	} else {
 		res.CPU = &CPU {
 			Units: ResourceValue{
-				Val: cosmosTypes.NewInt(0),
+				Val: cosmos.NewInt(0),
 			},
 		}
 	}
@@ -62,7 +62,7 @@ func (m ResourceUnits) deepcopy() ResourceUnits {
 	} else {
 		res.Memory = &Memory{
 			Quantity:   ResourceValue{
-				Val: cosmosTypes.NewInt(0),
+				Val: cosmos.NewInt(0),
 			},
 		}
 	}
@@ -77,7 +77,7 @@ func (m ResourceUnits) deepcopy() ResourceUnits {
 	} else {
 		res.Storage = &Storage{
 			Quantity: ResourceValue{
-				Val: cosmosTypes.NewInt(0),
+				Val: cosmos.NewInt(0),
 			},
 		}
 	}
