@@ -1,6 +1,7 @@
 package types
 
 import (
+	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	"reflect"
 )
 
@@ -35,51 +36,74 @@ var _ Unit = (*CPU)(nil)
 var _ Unit = (*Memory)(nil)
 var _ Unit = (*Storage)(nil)
 
+func (m ResourceUnits) deepcopy() ResourceUnits {
+	res := ResourceUnits{}
+
+	if m.CPU != nil {
+		res.CPU = &CPU {
+			Units:      m.CPU.Units,
+		}
+		res.CPU.Attributes = make([]Attribute, len(m.CPU.Attributes))
+		copy(res.CPU.Attributes, m.CPU.Attributes)
+	} else {
+		res.CPU = &CPU {
+			Units: ResourceValue{
+				Val: cosmosTypes.NewInt(0),
+			},
+		}
+	}
+
+	if m.Memory != nil {
+		res.Memory = &Memory{
+			Quantity:   m.Memory.Quantity,
+		}
+		res.Memory.Attributes = make([]Attribute, len(m.Memory.Attributes))
+		copy(res.Memory.Attributes, m.Memory.Attributes)
+	} else {
+		res.Memory = &Memory{
+			Quantity:   ResourceValue{
+				Val: cosmosTypes.NewInt(0),
+			},
+		}
+	}
+
+	if m.Storage != nil {
+		res.Storage = &Storage{
+			Quantity:   m.Storage.Quantity,
+			Attributes: nil,
+		}
+		res.Storage.Attributes = make([]Attribute, len(m.Storage.Attributes))
+		copy(res.Storage.Attributes, m.Storage.Attributes)
+	} else {
+		res.Storage = &Storage{
+			Quantity: ResourceValue{
+				Val: cosmosTypes.NewInt(0),
+			},
+		}
+	}
+
+	res.Endpoints = make([]Endpoint, len(m.Endpoints))
+	copy(res.Endpoints, m.Endpoints)
+
+	return res
+}
+
 // AddUnit it rather searches for existing entry of the same type and sums values
 // if type not found it appends
 func (m ResourceUnits) Add(rhs ResourceUnits) (ResourceUnits, error) {
 	// Make a deep copy
-	res := ResourceUnits{
-		CPU:       nil,
-		Memory:    nil,
-		Storage:   nil,
-		Endpoints: nil,
+	res := m.deepcopy()
+
+	if err := res.CPU.add(rhs.CPU); err != nil {
+		return ResourceUnits{}, err
 	}
 
-	if m.CPU != nil {
-		*res.CPU = *m.CPU
-	}
-	if m.Memory != nil {
-		*res.Memory = *m.Memory
-	}
-	if m.Storage != nil {
-		*res.Storage = *m.Storage
-	}
-	res.Endpoints = make([]Endpoint, len(m.Endpoints))
-	copy(res.Endpoints, m.Endpoints)
-
-	if res.CPU != nil {
-		if err := res.CPU.add(rhs.CPU); err != nil {
-			return ResourceUnits{}, err
-		}
-	} else {
-		res.CPU = rhs.CPU
+	if err := res.Memory.add(rhs.Memory); err != nil {
+		return ResourceUnits{}, err
 	}
 
-	if res.Memory != nil {
-		if err := res.Memory.add(rhs.Memory); err != nil {
-			return ResourceUnits{}, err
-		}
-	} else {
-		res.Memory = rhs.Memory
-	}
-
-	if res.Storage != nil {
-		if err := res.Storage.add(rhs.Storage); err != nil {
-			return ResourceUnits{}, err
-		}
-	} else {
-		res.Storage = rhs.Storage
+	if err := res.Storage.add(rhs.Storage); err != nil {
+		return ResourceUnits{}, err
 	}
 
 	return res, nil
@@ -94,33 +118,18 @@ func (m ResourceUnits) Sub(rhs ResourceUnits) (ResourceUnits, error) {
 	}
 
 	// Make a deep copy
-	res := ResourceUnits{
-		CPU:       &CPU{},
-		Memory:    &Memory{},
-		Storage:   &Storage{},
-		Endpoints: nil,
-	}
-	*res.CPU = *m.CPU
-	*res.Memory = *m.Memory
-	*res.Storage = *m.Storage
-	res.Endpoints = make([]Endpoint, len(m.Endpoints))
-	copy(res.Endpoints, m.Endpoints)
+	res := m.deepcopy()
 
-	if res.CPU != nil {
-		if err := res.CPU.sub(rhs.CPU); err != nil {
-			return ResourceUnits{}, err
-		}
-	}
-	if res.Memory != nil {
-		if err := res.Memory.sub(rhs.Memory); err != nil {
-			return ResourceUnits{}, err
-		}
+	if err := res.CPU.sub(rhs.CPU); err != nil {
+		return ResourceUnits{}, err
 	}
 
-	if res.Storage != nil {
-		if err := res.Storage.sub(rhs.Storage); err != nil {
-			return ResourceUnits{}, err
-		}
+	if err := res.Memory.sub(rhs.Memory); err != nil {
+		return ResourceUnits{}, err
+	}
+
+	if err := res.Storage.sub(rhs.Storage); err != nil {
+		return ResourceUnits{}, err
 	}
 
 	return res, nil
