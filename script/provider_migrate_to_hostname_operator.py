@@ -120,13 +120,16 @@ def read_from_datafile(fin):
 PROVIDER_HOSTS_FILE_NAME = 'provider_hosts.pickle'
 
 def remove_ingresses():
+  done = set()
   with open(PROVIDER_HOSTS_FILE_NAME, 'rb') as fin:
     while True:
       phd = read_from_datafile(fin)
       if phd is None:
         break
 
-      run_kubectl('delete', 'ingress', phd.service_name, '--namespace=' + phd.namespace, '--dry-run=server', ojson = False)
+      if phd.namespace not in done:
+        run_kubectl('delete', 'ingress', phd.service_name, '--namespace=' + phd.namespace, ojson = False)
+        done.add(phd.namespace)
  
 def traverse_ingresses():
   provider_hosts_fout = open(PROVIDER_HOSTS_FILE_NAME, 'wb')
