@@ -40,13 +40,13 @@ func (m ResourceUnits) deepcopy() ResourceUnits {
 	res := ResourceUnits{}
 
 	if m.CPU != nil {
-		res.CPU = &CPU {
-			Units:      m.CPU.Units,
+		res.CPU = &CPU{
+			Units: m.CPU.Units,
 		}
 		res.CPU.Attributes = make([]Attribute, len(m.CPU.Attributes))
 		copy(res.CPU.Attributes, m.CPU.Attributes)
 	} else {
-		res.CPU = &CPU {
+		res.CPU = &CPU{
 			Units: ResourceValue{
 				Val: cosmos.NewInt(0),
 			},
@@ -55,13 +55,13 @@ func (m ResourceUnits) deepcopy() ResourceUnits {
 
 	if m.Memory != nil {
 		res.Memory = &Memory{
-			Quantity:   m.Memory.Quantity,
+			Quantity: m.Memory.Quantity,
 		}
 		res.Memory.Attributes = make([]Attribute, len(m.Memory.Attributes))
 		copy(res.Memory.Attributes, m.Memory.Attributes)
 	} else {
 		res.Memory = &Memory{
-			Quantity:   ResourceValue{
+			Quantity: ResourceValue{
 				Val: cosmos.NewInt(0),
 			},
 		}
