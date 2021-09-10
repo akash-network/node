@@ -126,7 +126,7 @@ def remove_ingresses():
       if phd is None:
         break
 
-      run_kubectl('delete', 'ingress', phd.service_name, '--namespace=' + phd.namespace, '--dry-run=server', ojson = False)
+      run_kubectl('delete', 'ingress', phd.service_name, '--namespace=' + phd.namespace, ojson = False)
  
 def traverse_ingresses():
   provider_hosts_fout = open(PROVIDER_HOSTS_FILE_NAME, 'wb')
