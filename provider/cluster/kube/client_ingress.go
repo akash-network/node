@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/pager"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -20,9 +21,11 @@ func kubeNginxIngressAnnotations(directive ctypes.ConnectHostnameToDeploymentDir
 	// https://github.com/kubernetes/ingress-nginx
 	const root = "nginx.ingress.kubernetes.io"
 
+	readTimeout := math.Ceil(float64(directive.ReadTimeout) / 1000.0)
+	sendTimeout := math.Ceil(float64(directive.SendTimeout) / 1000.0)
 	result := map[string]string{
-		fmt.Sprintf("%s/proxy-read-timeout", root): fmt.Sprintf("%dms", directive.ReadTimeout),
-		fmt.Sprintf("%s/proxy-send-timeout", root): fmt.Sprintf("%dms", directive.SendTimeout),
+		fmt.Sprintf("%s/proxy-read-timeout", root): fmt.Sprintf("%d", int(readTimeout)),
+		fmt.Sprintf("%s/proxy-send-timeout", root): fmt.Sprintf("%d", int(sendTimeout)),
 
 		fmt.Sprintf("%s/proxy-next-upstream-tries", root): strconv.Itoa(int(directive.NextTries)),
 		fmt.Sprintf("%s/proxy-body-size", root):           strconv.Itoa(int(directive.MaxBodySize)),
@@ -30,7 +33,8 @@ func kubeNginxIngressAnnotations(directive ctypes.ConnectHostnameToDeploymentDir
 
 	nextTimeoutKey := fmt.Sprintf("%s/proxy-next-upstream-timeout", root)
 	if directive.NextTimeout > 0 {
-		result[nextTimeoutKey] = fmt.Sprintf("%dms", directive.NextTimeout)
+		nextTimeout := math.Ceil(float64(directive.NextTimeout) / 1000.0)
+		result[nextTimeoutKey] = fmt.Sprintf("%d", int(nextTimeout))
 	} else {
 		result[nextTimeoutKey] = "0" // Magic value for disable
 	}
@@ -52,7 +56,7 @@ func kubeNginxIngressAnnotations(directive ctypes.ConnectHostnameToDeploymentDir
 		}
 	}
 
-	result[fmt.Sprintf("%s/next-upstream", root)] = builder.String()
+	result[fmt.Sprintf("%s/proxy-next-upstream", root)] = builder.String()
 
 	return result
 }
