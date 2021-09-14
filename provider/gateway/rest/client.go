@@ -380,7 +380,7 @@ func (c *client) MigrateHostnames(ctx context.Context, hostnames []string, dseq 
 	if err != nil {
 		return err
 	}
-	fmt.Printf("sending as body: %s\n", string(buf))
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, bytes.NewReader(buf))
 	if err != nil {
 		return err
