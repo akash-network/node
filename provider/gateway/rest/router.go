@@ -691,7 +691,6 @@ done:
 				Type:                evt.Type,
 				ReportingController: evt.ReportingController,
 				ReportingInstance:   evt.ReportingInstance,
-				Time:                evt.EventTime.Time,
 				Reason:              evt.Reason,
 				Note:                evt.Note,
 				Object: cltypes.LeaseEventObject{
