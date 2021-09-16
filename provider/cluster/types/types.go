@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"context"
 	"io"
-	"time"
-
 	eventsv1 "k8s.io/api/events/v1"
 
 	"github.com/ovrclk/akash/manifest"
@@ -87,7 +85,6 @@ type LeaseEvent struct {
 	Type                string           `json:"type" yaml:"type"`
 	ReportingController string           `json:"reportingController,omitempty" yaml:"reportingController"`
 	ReportingInstance   string           `json:"reportingInstance,omitempty" yaml:"reportingInstance"`
-	Time                time.Time        `json:"time" yaml:"time"`
 	Reason              string           `json:"reason" yaml:"reason"`
 	Note                string           `json:"note" yaml:"note"`
 	Object              LeaseEventObject `json:"object" yaml:"object"`
