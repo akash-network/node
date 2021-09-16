@@ -202,6 +202,7 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 				Env:       svc.Env,
 				Resources: compute.Resources.toResourceUnits(),
 				Count:     svcdepl.Count,
+				Command:   svc.Command,
 			}
 
 			for _, expose := range svc.Expose {
