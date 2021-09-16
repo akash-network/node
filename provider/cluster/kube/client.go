@@ -270,7 +270,10 @@ func newEventsFeedWatch(ctx context.Context, events watch.Interface) ctypes.Even
 	done:
 		for {
 			select {
-			case obj := <-events.ResultChan():
+			case obj, ok := <-events.ResultChan():
+				if !ok {
+					break done
+				}
 				evt := obj.Object.(*eventsv1.Event)
 				if !wtch.SendEvent(evt) {
 					break done
