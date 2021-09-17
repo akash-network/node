@@ -16,6 +16,10 @@ import (
 	"strings"
 )
 
+const (
+	akashIngressClassName = "akash-ingress-class"
+)
+
 func kubeNginxIngressAnnotations(directive ctypes.ConnectHostnameToDeploymentDirective) map[string]string {
 	// For kubernetes/ingress-nginx
 	// https://github.com/kubernetes/ingress-nginx
@@ -73,6 +77,7 @@ func (c *client) ConnectHostnameToDeployment(ctx context.Context, directive ctyp
 	labels[akashManagedLabelName] = "true"
 	appendLeaseLabels(directive.LeaseID, labels)
 
+	ingressClassName := akashIngressClassName
 	obj := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        ingressName,
@@ -80,7 +85,8 @@ func (c *client) ConnectHostnameToDeployment(ctx context.Context, directive ctyp
 			Annotations: kubeNginxIngressAnnotations(directive),
 		},
 		Spec: netv1.IngressSpec{
-			Rules: rules,
+			IngressClassName: &ingressClassName,
+			Rules:            rules,
 		},
 	}
 
