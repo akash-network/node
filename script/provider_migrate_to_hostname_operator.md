@@ -29,10 +29,24 @@ This is meant to be a stopgap measure.
 *Step 3*: Run `python3 provider_migrate_to_hostname_operator.py backup`. This creates two files. The first file is `provider_hosts.pickle` which is the data used to rebuild
 the objects later. The second file is `ingresses_backup.json` which is just a raw backup of each ingress object as retrieved from Kubernetes
 
-*Step 4*: Make sure the provider host CRD stored in `pkg/apis/akash.network/v1/provider_hosts_crd.yaml` is applied to your kubernetes cluster by running
+*Step 4*:
+
+Apply provider host CRD stored in `pkg/apis/akash.network/v1/provider_hosts_crd.yaml` is applied to your kubernetes cluster by running
 
 ```
 kubectl apply -f pkg/apis/akash.network/v1/provider_hosts_crd.yaml
+```
+
+Apply the newest ingress controller stored in `_run/ingress-nginx.yaml`
+
+```
+kubectl apply -f _run/ingress-nginx.yaml
+```
+
+Apply the newest ingress class stored in `_run/ingress-nginx.yaml`
+
+```
+kubectl apply -f _run/ingress-nginx-class.yaml
 ```
 
 *Step 5*: Run `python3 provider_migrate_to_hostname_operator.py create`. This parses the data and adds the provider hosts entries in kubernetes.
