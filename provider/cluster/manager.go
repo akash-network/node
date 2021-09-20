@@ -52,11 +52,12 @@ type deploymentManager struct {
 	lease  mtypes.LeaseID
 	mgroup *manifest.Group
 
-	monitor    *deploymentMonitor
-	withdrawal *deploymentWithdrawal
-	wg         sync.WaitGroup
-	updatech   chan *manifest.Group
-	teardownch chan struct{}
+	monitor          *deploymentMonitor
+	withdrawal       *deploymentWithdrawal
+	wg               sync.WaitGroup
+	updatech         chan *manifest.Group
+	teardownch       chan struct{}
+	currentHostnames map[string]struct{}
 
 	log             log.Logger
 	lc              lifecycle.Lifecycle
@@ -85,6 +86,7 @@ func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Gro
 		hostnameService:     s.HostnameService(),
 		config:              s.config,
 		serviceShuttingDown: s.lc.ShuttingDown(),
+		currentHostnames:    make(map[string]struct{}),
 	}
 
 	go dm.lc.WatchChannel(dm.serviceShuttingDown)
@@ -298,7 +300,7 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	// Weird hack to tie this context to the lifecycle of the parent service, so this doesn't
-	// block forever or anything weird like that
+	// block forever or anything like that
 	go func() {
 		select {
 		case <-dm.serviceShuttingDown:
@@ -317,6 +319,20 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 
 	dm.log.Info("hostnames withheld", "cnt", len(withheldHostnames))
 
+	hostnamesInThisRequest := make(map[string]struct{})
+	for _, hostname := range allHostnames {
+		hostnamesInThisRequest[hostname] = struct{}{}
+	}
+
+	// Figure out what hostnames were removed from the manifest if any
+	purgeHostnames := make([]string, 0)
+	for hostnameInUse := range dm.currentHostnames {
+		_, stillInUse := hostnamesInThisRequest[hostnameInUse]
+		if !stillInUse {
+			purgeHostnames = append(purgeHostnames, hostnameInUse)
+		}
+	}
+
 	// Don't use a context tied to the lifecycle, as we don't want to cancel Kubernetes operations
 	deployCtx := util.ApplyToContext(context.Background(), dm.config.ClusterSettings)
 
@@ -334,6 +350,9 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 	}
 	hosts := make(map[string]manifest.ServiceExpose)
 	hostToServiceName := make(map[string]string)
+
+	// clear this out so it gets rebpopulated
+	dm.currentHostnames = make(map[string]struct{})
 	for _, service := range dm.mgroup.Services {
 		for _, expose := range service.Expose {
 			if !util.ShouldBeIngress(expose) {
@@ -350,6 +369,7 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 			for _, host := range expose.Hosts {
 				_, blocked := blockedHostnames[host]
 				if !blocked {
+					dm.currentHostnames[host] = struct{}{}
 					hosts[host] = expose
 					hostToServiceName[host] = service.Name
 				}
@@ -366,6 +386,13 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 		}
 	}
 	// TODO - counter
+
+	for _, hostname := range purgeHostnames {
+		err = dm.client.PurgeDeclaredHostname(ctx, dm.lease, hostname)
+		if err != nil {
+			return withheldHostnames, err
+		}
+	}
 
 	return withheldHostnames, nil
 }

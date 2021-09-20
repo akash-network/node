@@ -302,6 +302,20 @@ func (_m *Client) ObserveHostnameState(ctx context.Context) (<-chan cluster.Host
 	return r0, r1
 }
 
+// PurgeDeclaredHostname provides a mock function with given fields: ctx, lID, hostname
+func (_m *Client) PurgeDeclaredHostname(ctx context.Context, lID types.LeaseID, hostname string) error {
+	ret := _m.Called(ctx, lID, hostname)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, types.LeaseID, string) error); ok {
+		r0 = rf(ctx, lID, hostname)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // PurgeDeclaredHostnames provides a mock function with given fields: ctx, lID
 func (_m *Client) PurgeDeclaredHostnames(ctx context.Context, lID types.LeaseID) error {
 	ret := _m.Called(ctx, lID)

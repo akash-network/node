@@ -134,7 +134,11 @@ func (sh *SimpleHostnames) ReserveHostnames(ctx context.Context, hostnames []str
 func reserveHostnamesImpl(store map[string]hostnameID, hostnames []string, hID hostnameID, ch chan<- error, resultCh chan<- []string) {
 	withheldHostnamesMap := make(map[string]struct{})
 	withheldHostnames := make([]string, 0)
+
+	requestedHostnames := make(map[string]struct{})
+
 	for _, hostname := range hostnames {
+		requestedHostnames[hostname] = struct{}{}
 		// Check if in use
 		existingID, inUse := store[hostname]
 		if inUse {
@@ -154,12 +158,33 @@ func reserveHostnamesImpl(store map[string]hostnameID, hostnames []string, hID h
 		}
 	}
 
+	// Check to see if any hostnames that were previously in use by this ID
+	// are no longer used
+	removeHostnames := make([]string, 0)
+	for hostname, existingID := range store {
+		// Skip anything marked as in use still
+		_, requested := requestedHostnames[hostname]
+		if requested {
+			continue
+		}
+		// If it is equal to this, add it to the list to be removed
+		// it is no longer in use
+		if existingID.Equals(hID) {
+			removeHostnames = append(removeHostnames, hostname)
+		}
+	}
+
 	// There was no error, mark everything as in use that is not withheld
 	for _, hostname := range hostnames {
 		_, withheld := withheldHostnamesMap[hostname]
 		if !withheld {
 			store[hostname] = hID
 		}
+	}
+
+	// Remove everything that is no longer in use
+	for _, removeHostname := range removeHostnames {
+		delete(store, removeHostname)
 
 	}
 

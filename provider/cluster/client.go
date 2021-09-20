@@ -77,6 +77,8 @@ type Client interface {
 	DeclareHostname(ctx context.Context, lID mtypes.LeaseID, host string, serviceName string, externalPort uint32) error
 	// Purge any hostnames associated with a given deployment
 	PurgeDeclaredHostnames(ctx context.Context, lID mtypes.LeaseID) error
+
+	PurgeDeclaredHostname(ctx context.Context, lID mtypes.LeaseID, hostname string) error
 }
 
 func ErrorIsOkToSendToClient(err error) bool {
@@ -173,6 +175,10 @@ func (c *nullClient) DeclareHostname(ctx context.Context, lID mtypes.LeaseID, ho
 
 // Purge any hostnames associated with a given deployment
 func (c *nullClient) PurgeDeclaredHostnames(ctx context.Context, lID mtypes.LeaseID) error {
+	return errNotImplemented
+}
+
+func (c *nullClient) PurgeDeclaredHostname(ctx context.Context, lID mtypes.LeaseID, hostname string) error {
 	return errNotImplemented
 }
 

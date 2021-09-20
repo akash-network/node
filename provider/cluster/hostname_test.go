@@ -128,6 +128,39 @@ func TestReserveAndReleaseDomain(t *testing.T) {
 	}
 }
 
+func TestReserveAndReserve(t *testing.T) {
+	s := makeHostnameScaffold(t, []string{"foobar.com", ".bobsdefi.com"})
+
+	leaseID := testutil.LeaseID(t)
+	result, err := s.service.ReserveHostnames(s.ctx, []string{"meow.com", "kittens.com"}, leaseID)
+	require.NoError(t, err)
+	require.Len(t, result, 0)
+
+	secondLeaseID := testutil.LeaseID(t)
+	result, err = s.service.ReserveHostnames(s.ctx, []string{"kittens.com"}, secondLeaseID)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrHostnameNotAllowed))
+	require.Nil(t, result)
+
+	// The first deployment changes. It is no longer using the hostname 'kittens.com'
+	// so it gets dropped
+	result, err = s.service.ReserveHostnames(s.ctx, []string{"meow.com"}, leaseID)
+	require.NoError(t, err)
+	require.Len(t, result, 0)
+
+	result, err = s.service.ReserveHostnames(s.ctx, []string{"KITTENS.com"}, secondLeaseID)
+	require.NoError(t, err)
+	require.Len(t, result, 0)
+
+	s.cancel()
+
+	select {
+	case <-s.service.lc.Done():
+	case <-time.After(testWait):
+		t.Fatal("timed out waiting for service shutdown")
+	}
+}
+
 func TestPrepareHostnamesForTransfer(t *testing.T) {
 	s := makeHostnameScaffold(t, []string{"challenger.com"})
 	defer s.cancel()
