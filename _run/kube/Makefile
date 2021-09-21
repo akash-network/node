@@ -44,3 +44,7 @@ provider-lease-ping:
 .PHONY: clean-kube
 clean-kube:
 	# noop
+
+.PHONY: hostname-operator
+hostname-operator:
+	$(AKASH) provider hostname-operator

@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// Manifests returns a ManifestInformer.
 	Manifests() ManifestInformer
+	// ProviderHosts returns a ProviderHostInformer.
+	ProviderHosts() ProviderHostInformer
 }
 
 type version struct {
@@ -42,4 +44,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // Manifests returns a ManifestInformer.
 func (v *version) Manifests() ManifestInformer {
 	return &manifestInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ProviderHosts returns a ProviderHostInformer.
+func (v *version) ProviderHosts() ProviderHostInformer {
+	return &providerHostInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

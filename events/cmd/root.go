@@ -22,7 +22,7 @@ func EventCmd() *cobra.Command {
 		Use:   "events",
 		Short: "Prints out akash events in real time",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return common.RunForever(func(ctx context.Context) error {
+			return common.RunForeverWithContext(cmd.Context(), func(ctx context.Context) error {
 				return getEvents(ctx, cmd, args)
 			})
 		},

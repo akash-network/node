@@ -49,50 +49,54 @@ func (fkse fakeKubernetesStatusError) Error() string {
 }
 
 type routerTest struct {
-	caddr    sdk.Address
-	paddr    sdk.Address
-	pmclient *pmmock.Client
-	pcclient *pcmock.Client
-	pclient  *pmock.Client
-	qclient  *qmock.QueryClient
-	gclient  *client
-	ccert    testutil.TestCertificate
-	pcert    testutil.TestCertificate
-	host     *url.URL
+	caddr          sdk.Address
+	paddr          sdk.Address
+	pmclient       *pmmock.Client
+	pcclient       *pcmock.Client
+	pclient        *pmock.Client
+	qclient        *qmock.QueryClient
+	clusterService *pcmock.Service
+	hostnameClient *pcmock.HostnameServiceClient
+	gclient        *client
+	ccert          testutil.TestCertificate
+	pcert          testutil.TestCertificate
+	host           *url.URL
 }
 
 func runRouterTest(t *testing.T, authClient bool, fn func(*routerTest)) {
 	t.Helper()
 
-	pclient, pmclient, pcclient, qclient := createMocks()
+	mocks := createMocks()
 
 	mf := &routerTest{
-		caddr:    testutil.AccAddress(t),
-		paddr:    testutil.AccAddress(t),
-		pmclient: pmclient,
-		pcclient: pcclient,
-		pclient:  pclient,
-		qclient:  qclient,
+		caddr:          testutil.AccAddress(t),
+		paddr:          testutil.AccAddress(t),
+		pmclient:       mocks.pmclient,
+		pcclient:       mocks.pcclient,
+		pclient:        mocks.pclient,
+		qclient:        mocks.qclient,
+		hostnameClient: mocks.hostnameClient,
+		clusterService: mocks.clusterService,
 	}
 
-	mf.ccert = testutil.Certificate(t, mf.caddr, testutil.CertificateOptionMocks(qclient))
+	mf.ccert = testutil.Certificate(t, mf.caddr, testutil.CertificateOptionMocks(mocks.qclient))
 	mf.pcert = testutil.Certificate(
 		t,
 		mf.paddr,
 		testutil.CertificateOptionDomains([]string{"localhost", "127.0.0.1"}),
-		testutil.CertificateOptionMocks(qclient))
+		testutil.CertificateOptionMocks(mocks.qclient))
 
 	var certs []tls.Certificate
 	if authClient {
 		certs = mf.ccert.Cert
 	}
 
-	withServer(t, mf.paddr, pclient, qclient, mf.pcert.Cert, func(host string) {
+	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, func(host string) {
 		var err error
 		mf.host, err = url.Parse(host)
 		require.NoError(t, err)
 
-		gclient, err := NewClient(qclient, mf.paddr, certs)
+		gclient, err := NewClient(mocks.qclient, mf.paddr, certs)
 		require.NoError(t, err)
 		require.NotNil(t, gclient)
 
@@ -137,31 +141,31 @@ func testCertHelper(t *testing.T, test *routerTest) {
 }
 
 func TestRouteNotActiveClientCert(t *testing.T) {
-	pclient, pmclient, pcclient, qclient := createMocks()
+	mocks := createMocks()
 
 	mf := &routerTest{
 		caddr:    testutil.AccAddress(t),
 		paddr:    testutil.AccAddress(t),
-		pmclient: pmclient,
-		pcclient: pcclient,
-		pclient:  pclient,
-		qclient:  qclient,
+		pmclient: mocks.pmclient,
+		pcclient: mocks.pcclient,
+		pclient:  mocks.pclient,
+		qclient:  mocks.qclient,
 	}
 
 	mf.ccert = testutil.Certificate(
 		t,
 		mf.caddr,
-		testutil.CertificateOptionMocks(qclient),
+		testutil.CertificateOptionMocks(mocks.qclient),
 		testutil.CertificateOptionNotBefore(time.Now().Add(time.Hour*24)),
 	)
-	mf.pcert = testutil.Certificate(t, mf.paddr, testutil.CertificateOptionMocks(qclient))
+	mf.pcert = testutil.Certificate(t, mf.paddr, testutil.CertificateOptionMocks(mocks.qclient))
 
-	withServer(t, mf.paddr, pclient, qclient, mf.pcert.Cert, func(host string) {
+	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, func(host string) {
 		var err error
 		mf.host, err = url.Parse(host)
 		require.NoError(t, err)
 
-		gclient, err := NewClient(qclient, mf.paddr, mf.ccert.Cert)
+		gclient, err := NewClient(mocks.qclient, mf.paddr, mf.ccert.Cert)
 		require.NoError(t, err)
 		require.NotNil(t, gclient)
 
@@ -172,32 +176,32 @@ func TestRouteNotActiveClientCert(t *testing.T) {
 }
 
 func TestRouteExpiredClientCert(t *testing.T) {
-	pclient, pmclient, pcclient, qclient := createMocks()
+	mocks := createMocks()
 
 	mf := &routerTest{
 		caddr:    testutil.AccAddress(t),
 		paddr:    testutil.AccAddress(t),
-		pmclient: pmclient,
-		pcclient: pcclient,
-		pclient:  pclient,
-		qclient:  qclient,
+		pmclient: mocks.pmclient,
+		pcclient: mocks.pcclient,
+		pclient:  mocks.pclient,
+		qclient:  mocks.qclient,
 	}
 
 	mf.ccert = testutil.Certificate(
 		t,
 		mf.caddr,
-		testutil.CertificateOptionMocks(qclient),
+		testutil.CertificateOptionMocks(mocks.qclient),
 		testutil.CertificateOptionNotBefore(time.Now().Add(time.Hour*(-48))),
 		testutil.CertificateOptionNotAfter(time.Now().Add(time.Hour*(-24))),
 	)
-	mf.pcert = testutil.Certificate(t, mf.paddr, testutil.CertificateOptionMocks(qclient))
+	mf.pcert = testutil.Certificate(t, mf.paddr, testutil.CertificateOptionMocks(mocks.qclient))
 
-	withServer(t, mf.paddr, pclient, qclient, mf.pcert.Cert, func(host string) {
+	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, func(host string) {
 		var err error
 		mf.host, err = url.Parse(host)
 		require.NoError(t, err)
 
-		gclient, err := NewClient(qclient, mf.paddr, mf.ccert.Cert)
+		gclient, err := NewClient(mocks.qclient, mf.paddr, mf.ccert.Cert)
 		require.NoError(t, err)
 		require.NotNil(t, gclient)
 
@@ -208,35 +212,35 @@ func TestRouteExpiredClientCert(t *testing.T) {
 }
 
 func TestRouteNotActiveServerCert(t *testing.T) {
-	pclient, pmclient, pcclient, qclient := createMocks()
+	mocks := createMocks()
 
 	mf := &routerTest{
 		caddr:    testutil.AccAddress(t),
 		paddr:    testutil.AccAddress(t),
-		pmclient: pmclient,
-		pcclient: pcclient,
-		pclient:  pclient,
-		qclient:  qclient,
+		pmclient: mocks.pmclient,
+		pcclient: mocks.pcclient,
+		pclient:  mocks.pclient,
+		qclient:  mocks.qclient,
 	}
 
 	mf.ccert = testutil.Certificate(
 		t,
 		mf.caddr,
-		testutil.CertificateOptionMocks(qclient),
+		testutil.CertificateOptionMocks(mocks.qclient),
 	)
 	mf.pcert = testutil.Certificate(
 		t,
 		mf.paddr,
-		testutil.CertificateOptionMocks(qclient),
+		testutil.CertificateOptionMocks(mocks.qclient),
 		testutil.CertificateOptionNotBefore(time.Now().Add(time.Hour*24)),
 	)
 
-	withServer(t, mf.paddr, pclient, qclient, mf.pcert.Cert, func(host string) {
+	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, func(host string) {
 		var err error
 		mf.host, err = url.Parse(host)
 		require.NoError(t, err)
 
-		gclient, err := NewClient(qclient, mf.paddr, mf.ccert.Cert)
+		gclient, err := NewClient(mocks.qclient, mf.paddr, mf.ccert.Cert)
 		require.NoError(t, err)
 		require.NotNil(t, gclient)
 
@@ -247,36 +251,36 @@ func TestRouteNotActiveServerCert(t *testing.T) {
 }
 
 func TestRouteExpiredServerCert(t *testing.T) {
-	pclient, pmclient, pcclient, qclient := createMocks()
+	mocks := createMocks()
 
 	mf := &routerTest{
 		caddr:    testutil.AccAddress(t),
 		paddr:    testutil.AccAddress(t),
-		pmclient: pmclient,
-		pcclient: pcclient,
-		pclient:  pclient,
-		qclient:  qclient,
+		pmclient: mocks.pmclient,
+		pcclient: mocks.pcclient,
+		pclient:  mocks.pclient,
+		qclient:  mocks.qclient,
 	}
 
 	mf.ccert = testutil.Certificate(
 		t,
 		mf.caddr,
-		testutil.CertificateOptionMocks(qclient),
+		testutil.CertificateOptionMocks(mocks.qclient),
 	)
 	mf.pcert = testutil.Certificate(
 		t,
 		mf.paddr,
-		testutil.CertificateOptionMocks(qclient),
+		testutil.CertificateOptionMocks(mocks.qclient),
 		testutil.CertificateOptionNotBefore(time.Now().Add(time.Hour*(-48))),
 		testutil.CertificateOptionNotAfter(time.Now().Add(time.Hour*(-24))),
 	)
 
-	withServer(t, mf.paddr, pclient, qclient, mf.pcert.Cert, func(host string) {
+	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, func(host string) {
 		var err error
 		mf.host, err = url.Parse(host)
 		require.NoError(t, err)
 
-		gclient, err := NewClient(qclient, mf.paddr, mf.ccert.Cert)
+		gclient, err := NewClient(mocks.qclient, mf.paddr, mf.ccert.Cert)
 		require.NoError(t, err)
 		require.NotNil(t, gclient)
 
@@ -557,53 +561,6 @@ func TestRouteLeaseStatusOk(t *testing.T) {
 		dec := json.NewDecoder(resp.Body)
 		err = dec.Decode(&data)
 		require.NoError(t, err)
-	})
-}
-
-func TestRouteLeaseStatusNoGlobalServices(t *testing.T) {
-	runRouterTest(t, true, func(test *routerTest) {
-		dseq := uint64(testutil.RandRangeInt(1, 1000))
-		oseq := uint32(testutil.RandRangeInt(2000, 3000))
-		gseq := uint32(testutil.RandRangeInt(4000, 5000))
-
-		test.pcclient.On("LeaseStatus", mock.Anything, types.LeaseID{
-			Owner:    test.caddr.String(),
-			DSeq:     dseq,
-			GSeq:     gseq,
-			OSeq:     oseq,
-			Provider: test.paddr.String(),
-		}).Return(nil, kubeClient.ErrNoGlobalServicesForLease)
-
-		lid := types.LeaseID{
-			DSeq:     dseq,
-			GSeq:     gseq,
-			OSeq:     oseq,
-			Provider: test.paddr.String(),
-		}
-
-		uri, err := makeURI(test.host, leaseStatusPath(lid))
-		require.NoError(t, err)
-
-		sdl, err := sdl.ReadFile(testSDL)
-		require.NoError(t, err)
-
-		mani, err := sdl.Manifest()
-		require.NoError(t, err)
-
-		buf, err := json.Marshal(mani)
-		require.NoError(t, err)
-
-		req, err := http.NewRequest("GET", uri, bytes.NewBuffer(buf))
-		require.NoError(t, err)
-
-		req.Header.Set("Content-Type", contentTypeJSON)
-
-		resp, err := test.gclient.hclient.Do(req)
-		require.NoError(t, err)
-		require.Equal(t, resp.StatusCode, http.StatusServiceUnavailable)
-		data, err := ioutil.ReadAll(resp.Body)
-		require.NoError(t, err)
-		require.Regexp(t, "^kube: no global services(?s:.)*$", string(data))
 	})
 }
 
