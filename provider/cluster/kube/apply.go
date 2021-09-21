@@ -128,26 +128,6 @@ func applyService(ctx context.Context, kc kubernetes.Interface, b *serviceBuilde
 	return err
 }
 
-func applyIngress(ctx context.Context, kc kubernetes.Interface, b *ingressBuilder) error {
-	obj, err := kc.NetworkingV1().Ingresses(b.ns()).Get(ctx, b.name(), metav1.GetOptions{})
-	metricsutils.IncCounterVecWithLabelValuesFiltered(kubeCallsCounter, "ingresses-get", err, errors.IsNotFound)
-	switch {
-	case err == nil:
-		obj, err = b.update(obj)
-		if err == nil {
-			_, err = kc.NetworkingV1().Ingresses(b.ns()).Update(ctx, obj, metav1.UpdateOptions{})
-			metricsutils.IncCounterVecWithLabelValues(kubeCallsCounter, "networking-ingresses-update", err)
-		}
-	case errors.IsNotFound(err):
-		obj, err = b.create()
-		if err == nil {
-			_, err = kc.NetworkingV1().Ingresses(b.ns()).Create(ctx, obj, metav1.CreateOptions{})
-			metricsutils.IncCounterVecWithLabelValues(kubeCallsCounter, "networking-ingresses-create", err)
-		}
-	}
-	return err
-}
-
 func prepareEnvironment(ctx context.Context, kc kubernetes.Interface, ns string) error {
 	_, err := kc.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
 	metricsutils.IncCounterVecWithLabelValuesFiltered(kubeCallsCounter, "namespaces-get", err, errors.IsNotFound)

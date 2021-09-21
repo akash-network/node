@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: akash-hostname-operator
+spec:
+  ports:
+    - name: status
+      port: 8188

@@ -1,17 +1,24 @@
+//go:build !mainnet
 // +build !mainnet
 
 package integration
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
+	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/gateway/rest"
 	"io/ioutil"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 	"net"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -54,6 +61,9 @@ type IntegrationTestSuite struct {
 	validator   *network.Validator
 	keyProvider keyring.Info
 	keyTenant   keyring.Info
+
+	ctx       context.Context
+	ctxCancel context.CancelFunc
 
 	appHost string
 	appPort string
@@ -250,8 +260,14 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 	cctx := s.validator.ClientCtx
 
+	// A context object to tie the lifetime of the provider & hostname operator to
+	s.ctx, s.ctxCancel = context.WithCancel(context.Background())
+
+	// all command use viper which is meant for use by a single goroutine only
+	// so wait for the provider to start before running the hostname operator
 	go func() {
-		_, err := ptestutil.RunLocalProvider(cctx,
+		_, err := ptestutil.RunLocalProvider(s.ctx,
+			cctx,
 			cctx.ChainID,
 			s.validator.RPCAddress,
 			cliHome,
@@ -260,7 +276,36 @@ func (s *IntegrationTestSuite) SetupSuite() {
 			fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 			"--deployment-runtime-class=none",
 		)
-		s.Require().NoError(err)
+		s.Require().ErrorIs(err, context.Canceled)
+	}()
+
+	// Run the hostname operator, after confirming the provider starts
+	const maxAttempts = 30
+	dialer := net.Dialer{
+		Timeout: time.Second * 3,
+	}
+
+	attempts := 0
+	s.T().Log("waiting for provider to run before starting hostname operator")
+	for {
+		conn, err := dialer.DialContext(s.ctx, "tcp", provHost)
+		if err != nil {
+			s.T().Logf("connecting to provider returned %v", err)
+			_, ok := err.(net.Error)
+			s.Require().True(ok, "error should be net error not %v", err)
+			attempts++
+			s.Require().Less(attempts, maxAttempts)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		_ = conn.Close() // Connected OK
+		break
+	}
+
+	go func() {
+		s.T().Log("starting hostname operator for test")
+		_, err := ptestutil.RunLocalHostnameOperator(s.ctx, cctx)
+		s.Require().ErrorIs(err, context.Canceled)
 	}()
 
 	s.Require().NoError(s.network.WaitForNextBlock())
@@ -279,7 +324,6 @@ func (s *IntegrationTestSuite) closeDeployments() int {
 	deployResp := &dtypes.QueryDeploymentsResponse{}
 	err = s.validator.ClientCtx.JSONMarshaler.UnmarshalJSON(resp.Bytes(), deployResp)
 	s.Require().NoError(err)
-	s.Require().False(0 == len(deployResp.Deployments), "no deployments created")
 
 	deployments := deployResp.Deployments
 
@@ -323,6 +367,42 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	s.Require().True(len(qResp.Deployments) == n, "Deployment Close Failed")
 
 	s.network.Cleanup()
+
+	// remove all entries of the providerhost CRD
+	cfgPath := path.Join(homedir.HomeDir(), ".kube", "config")
+
+	restConfig, err := clientcmd.BuildConfigFromFlags("", cfgPath)
+	s.Require().NoError(err)
+
+	ac, err := akashclient.NewForConfig(restConfig)
+	s.Require().NoError(err)
+	const ns = "lease"
+	propagation := metav1.DeletePropagationForeground
+	err = ac.AkashV1().ProviderHosts(ns).DeleteCollection(s.ctx, metav1.DeleteOptions{
+		TypeMeta:           metav1.TypeMeta{},
+		GracePeriodSeconds: nil,
+		Preconditions:      nil,
+		OrphanDependents:   nil,
+		PropagationPolicy:  &propagation,
+		DryRun:             nil,
+	}, metav1.ListOptions{
+
+		LabelSelector:        `akash.network=true`,
+		FieldSelector:        "",
+		Watch:                false,
+		AllowWatchBookmarks:  false,
+		ResourceVersion:      "",
+		ResourceVersionMatch: "",
+		TimeoutSeconds:       nil,
+		Limit:                0,
+		Continue:             "",
+	},
+	)
+	s.Require().NoError(err)
+
+	time.Sleep(3 * time.Second) // Make sure hostname operator has time to delete ingress
+
+	s.ctxCancel() // Stop context that provider & hostname operator are tied to
 }
 
 func newestLease(leases []mtypes.QueryLeaseResponse) mtypes.Lease {
@@ -980,6 +1060,265 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 	require.Error(s.T(), err)
 	require.Regexp(s.T(), ".*no such service exists with that name.*", err.Error())
 
+}
+
+func (s *E2EApp) TestE2EMigrateHostname() {
+	// create a deployment
+	deploymentPath, err := filepath.Abs("../x/deployment/testdata/deployment-v2-migrate.yaml")
+	s.Require().NoError(err)
+
+	cctxJSON := s.validator.ClientCtx.WithOutputFormat("json")
+
+	deploymentID := dtypes.DeploymentID{
+		Owner: s.keyTenant.GetAddress().String(),
+		DSeq:  uint64(105),
+	}
+
+	// Create Deployments and assert query to assert
+	res, err := deploycli.TxCreateDeploymentExec(
+		s.validator.ClientCtx,
+		s.keyTenant.GetAddress(),
+		deploymentPath,
+		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
+	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+
+	// Wait for then EndBlock to handle bidding and creating lease
+	s.Require().NoError(s.waitForBlocksCommitted(15))
+
+	// Assert provider made bid and created lease; test query leases
+	res, err = mcli.QueryBidsExec(cctxJSON)
+	s.Require().NoError(err)
+	bidsRes := &mtypes.QueryBidsResponse{}
+	err = s.validator.ClientCtx.JSONMarshaler.UnmarshalJSON(res.Bytes(), bidsRes)
+	s.Require().NoError(err)
+	selectedIdx := -1
+	for i, bidEntry := range bidsRes.Bids {
+		bid := bidEntry.GetBid()
+		if bid.GetBidID().DeploymentID().Equals(deploymentID) {
+			selectedIdx = i
+			break
+		}
+	}
+	s.Require().NotEqual(selectedIdx, -1)
+	bid := bidsRes.Bids[selectedIdx].GetBid()
+
+	res, err = mcli.TxCreateLeaseExec(
+		cctxJSON,
+		bid.BidID,
+		s.keyTenant.GetAddress(),
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.waitForBlocksCommitted(6))
+	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+
+	res, err = mcli.QueryLeasesExec(cctxJSON)
+	s.Require().NoError(err)
+
+	leaseRes := &mtypes.QueryLeasesResponse{}
+	err = s.validator.ClientCtx.JSONMarshaler.UnmarshalJSON(res.Bytes(), leaseRes)
+	s.Require().NoError(err)
+	selectedIdx = -1
+	for idx, leaseEntry := range leaseRes.Leases {
+		lease := leaseEntry.GetLease()
+		if lease.GetLeaseID().DeploymentID().Equals(deploymentID) {
+			selectedIdx = idx
+			break
+		}
+	}
+	s.Require().NotEqual(selectedIdx, -1)
+
+	lease := leaseRes.Leases[selectedIdx].GetLease()
+	lid := lease.LeaseID
+	s.Require().Equal(s.keyProvider.GetAddress().String(), lid.Provider)
+
+	// Send Manifest to Provider ----------------------------------------------
+	_, err = ptestutil.TestSendManifest(
+		cctxJSON,
+		lid.BidID(),
+		deploymentPath,
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.waitForBlocksCommitted(20))
+
+	const primaryHostname = "leaveme.com"
+	const secondaryHostname = "migrateme.com"
+
+	appURL := fmt.Sprintf("http://%s:%s/", s.appHost, s.appPort)
+	queryAppWithHostname(s.T(), appURL, 50, primaryHostname)
+	queryAppWithHostname(s.T(), appURL, 50, secondaryHostname)
+
+	cmdResult, err := providerCmd.ProviderStatusExec(s.validator.ClientCtx, lid.Provider)
+	assert.NoError(s.T(), err)
+	data := make(map[string]interface{})
+	err = json.Unmarshal(cmdResult.Bytes(), &data)
+	assert.NoError(s.T(), err)
+	leaseCount, ok := data["cluster"].(map[string]interface{})["leases"]
+	assert.True(s.T(), ok)
+	assert.Equal(s.T(), float64(1), leaseCount)
+
+	// Create another deployment, use the same exact SDL
+
+	secondDeploymentID := dtypes.DeploymentID{
+		Owner: s.keyTenant.GetAddress().String(),
+		DSeq:  uint64(106),
+	}
+
+	res, err = deploycli.TxCreateDeploymentExec(
+		s.validator.ClientCtx,
+		s.keyTenant.GetAddress(),
+		deploymentPath,
+		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--dseq=%v", secondDeploymentID.DSeq),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
+	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+
+	// Wait for then EndBlock to handle bidding and creating lease
+	s.Require().NoError(s.waitForBlocksCommitted(15))
+
+	// Assert provider made bid and created lease; test query leases
+	res, err = mcli.QueryBidsExec(cctxJSON)
+	s.Require().NoError(err)
+	bidsRes = &mtypes.QueryBidsResponse{}
+	err = s.validator.ClientCtx.JSONMarshaler.UnmarshalJSON(res.Bytes(), bidsRes)
+	s.Require().NoError(err)
+
+	selectedIdx = -1
+	for i, bidEntry := range bidsRes.Bids {
+		bid := bidEntry.GetBid()
+		if bid.GetBidID().DeploymentID().Equals(secondDeploymentID) {
+			selectedIdx = i
+			break
+		}
+	}
+	s.Require().NotEqual(selectedIdx, -1)
+	bid = bidsRes.Bids[selectedIdx].GetBid()
+
+	res, err = mcli.TxCreateLeaseExec(
+		cctxJSON,
+		bid.BidID,
+		s.keyTenant.GetAddress(),
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.waitForBlocksCommitted(6))
+	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+
+	res, err = mcli.QueryLeasesExec(cctxJSON)
+	s.Require().NoError(err)
+
+	leaseRes = &mtypes.QueryLeasesResponse{}
+	err = s.validator.ClientCtx.JSONMarshaler.UnmarshalJSON(res.Bytes(), leaseRes)
+	s.Require().NoError(err)
+	selectedIdx = -1
+	for idx, leaseEntry := range leaseRes.Leases {
+		lease := leaseEntry.GetLease()
+		if lease.GetLeaseID().DeploymentID().Equals(secondDeploymentID) {
+			selectedIdx = idx
+			break
+		}
+	}
+	s.Require().NotEqual(selectedIdx, -1)
+
+	secondLease := leaseRes.Leases[selectedIdx].GetLease()
+	secondLID := secondLease.LeaseID
+	s.Require().Equal(s.keyProvider.GetAddress().String(), lid.Provider)
+
+	// Send Manifest to Provider ----------------------------------------------
+	_, err = ptestutil.TestSendManifest(
+		cctxJSON,
+		secondLID.BidID(),
+		deploymentPath,
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.waitForBlocksCommitted(20))
+
+	// migrate hostname
+	_, err = ptestutil.TestMigrateHostname(cctxJSON, lid, secondDeploymentID.DSeq, secondaryHostname,
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir))
+	s.Require().NoError(err)
+
+	time.Sleep(10 * time.Second) // update happens in kube async
+
+	// Get the lease status and confirm hostname is present
+	cmdResult, err = providerCmd.ProviderLeaseStatusExec(
+		s.validator.ClientCtx,
+		fmt.Sprintf("--%s=%v", "dseq", secondLID.DSeq),
+		fmt.Sprintf("--%s=%v", "gseq", secondLID.GSeq),
+		fmt.Sprintf("--%s=%v", "oseq", secondLID.OSeq),
+		fmt.Sprintf("--%s=%v", "provider", secondLID.Provider),
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
+	assert.NoError(s.T(), err)
+	leaseStatusData := ctypes.LeaseStatus{}
+	err = json.Unmarshal(cmdResult.Bytes(), &leaseStatusData)
+	assert.NoError(s.T(), err)
+
+	hostnameFound := false
+	for _, service := range leaseStatusData.Services {
+		for _, serviceURI := range service.URIs {
+			if serviceURI == secondaryHostname {
+				hostnameFound = true
+				break
+			}
+		}
+	}
+	s.Require().True(hostnameFound, "could not find hostname")
+
+	// close first deployment & lease
+	res, err = deploycli.TxCloseDeploymentExec(
+		s.validator.ClientCtx,
+		s.keyTenant.GetAddress(),
+		fmt.Sprintf("--owner=%s", deploymentID.GetOwner()),
+		fmt.Sprintf("--dseq=%v", deploymentID.GetDSeq()),
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.waitForBlocksCommitted(1))
+	validateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+
+	time.Sleep(10 * time.Second) // Make sure provider has time to close the lease
+	cmdResult, err = providerCmd.ProviderLeaseStatusExec(
+		s.validator.ClientCtx,
+		fmt.Sprintf("--%s=%v", "dseq", lid.DSeq),
+		fmt.Sprintf("--%s=%v", "gseq", lid.GSeq),
+		fmt.Sprintf("--%s=%v", "oseq", lid.OSeq),
+		fmt.Sprintf("--%s=%v", "provider", lid.Provider),
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
+	s.Require().NoError(err)
+	s.Require().Len(cmdResult.Bytes(), 0)
+
+	// confirm hostname still reachable, on the hostname it was migrated to
+	queryAppWithHostname(s.T(), appURL, 50, secondaryHostname)
 }
 
 func TestIntegrationTestSuite(t *testing.T) {

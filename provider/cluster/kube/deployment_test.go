@@ -42,9 +42,10 @@ func TestDeploy(t *testing.T) {
 	require.NoError(t, err)
 
 	log := testutil.Logger(t)
-	client, err := NewClient(log, "lease", NewDefaultSettings())
+	client, err := NewClient(log, "lease", "")
 	assert.NoError(t, err)
 
+	ctx = context.WithValue(ctx, SettingsKey, NewDefaultSettings())
 	err = client.Deploy(ctx, leaseID, &mani.GetGroups()[0])
 	assert.NoError(t, err)
 }

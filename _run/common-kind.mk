@@ -33,6 +33,7 @@ PROVIDER_HOST     ?= $(PROVIDER_HOSTNAME):$(KIND_HTTP_PORT)
 PROVIDER_ENDPOINT ?= http://$(PROVIDER_HOST)
 
 INGRESS_CONFIG_PATH ?= ../ingress-nginx.yaml
+INGRESS_CLASS_CONFIG_PATH ?= ../ingress-nginx-class.yaml
 CALICO_MANIFEST     ?= https://docs.projectcalico.org/v3.8/manifests/calico.yaml
 
 .PHONY: app-http-port
@@ -46,7 +47,8 @@ kind-k8s-ip:
 .PHONY: kind-configure-image
 kind-configure-image:
 	echo "- op: replace\n  path: /spec/template/spec/containers/0/image\n  value: $(DOCKER_IMAGE)" > ./kustomize/akash-node/docker-image.yaml && \
-    cp ./kustomize/akash-node/docker-image.yaml ./kustomize/akash-provider/docker-image.yaml
+	cp ./kustomize/akash-node/docker-image.yaml ./kustomize/akash-provider/docker-image.yaml && \
+	cp ./kustomize/akash-node/docker-image.yaml ./kustomize/akash-hostname-operator/docker-image.yaml
 
 .PHONY: kind-upload-image
 kind-upload-image: $(KIND)
@@ -64,6 +66,7 @@ kind-cluster-create: $(KIND)
 		--image "$(KIND_IMG)"
 	kubectl label nodes $(KIND_NAME)-control-plane akash.network/role=ingress
 	kubectl apply -f "$(INGRESS_CONFIG_PATH)"
+	kubectl apply -f "$(INGRESS_CLASS_CONFIG_PATH)"
 	"$(AKASH_ROOT)/script/setup-kind.sh"
 
 .PHONY: kind-cluster-calico-create
@@ -82,6 +85,7 @@ kind-cluster-calico-create: $(KIND)
 kind-ingress-setup:
 	kubectl label nodes $(KIND_NAME)-control-plane akash.network/role=ingress
 	kubectl apply -f "$(INGRESS_CONFIG_PATH)"
+	kubectl apply -f "$(INGRESS_CLASS_CONFIG_PATH)"
 	"$(AKASH_ROOT)/script/setup-kind.sh"
 
 

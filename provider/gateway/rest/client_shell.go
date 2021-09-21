@@ -104,13 +104,13 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 		stdinWriter := wsutil.NewWsWriterWrapper(conn, LeaseShellCodeStdin, l)
 		// This goroutine is orphaned. There is no universal way to cancel a read from stdin
 		// at this time
-		go handleStdin(ctx, stdin, stdinWriter, saveError)
+		go handleStdin(subctx, stdin, stdinWriter, saveError)
 	}
 
 	if tty && terminalResize != nil {
 		wg.Add(1)
 		terminalOutput := wsutil.NewWsWriterWrapper(conn, LeaseShellCodeTerminalResize, l)
-		go handleTerminalResize(ctx, wg, terminalResize, terminalOutput, saveError)
+		go handleTerminalResize(subctx, wg, terminalResize, terminalOutput, saveError)
 	}
 
 	var remoteErrorData *bytes.Buffer
