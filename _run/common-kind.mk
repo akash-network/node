@@ -85,6 +85,7 @@ kind-cluster-calico-create: $(KIND)
 kind-ingress-setup:
 	kubectl label nodes $(KIND_NAME)-control-plane akash.network/role=ingress
 	kubectl apply -f "$(INGRESS_CONFIG_PATH)"
+	kubectl apply -f "$(INGRESS_CLASS_CONFIG_PATH)"
 	"$(AKASH_ROOT)/script/setup-kind.sh"
 
 
