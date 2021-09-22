@@ -547,16 +547,16 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	config.BidPricingStrategy = pricing
 	config.ClusterSettings = clusterSettings
 
-	service, err := provider.NewService(ctx, cctx, info.GetAddress(), session, bus, cclient, config)
-	if err != nil {
-		return err
-	}
-
 	bidDeposit, err := sdk.ParseCoinNormalized(viper.GetString(FlagBidDeposit))
 	if err != nil {
 		return err
 	}
 	config.BidDeposit = bidDeposit
+
+	service, err := provider.NewService(ctx, cctx, info.GetAddress(), session, bus, cclient, config)
+	if err != nil {
+		return err
+	}
 
 	gateway, err := gwrest.NewServer(
 		ctx,
