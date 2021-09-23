@@ -47,7 +47,7 @@ func BuildAndBroadcastTx(clientCtx client.Context, flags *pflag.FlagSet, msgs []
 	txf = txf.WithGas(adjusted)
 
 	// Build the transaction builder
-	txb, err := tx.BuildUnsignedTx(txf, msgs...)
+	txb, err := txf.BuildUnsignedTx(msgs...)
 	if err != nil {
 		return nil, err
 	}
