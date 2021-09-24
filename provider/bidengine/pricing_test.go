@@ -4,22 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/shopspring/decimal"
 	io "io"
 	"math"
 	"math/big"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/require"
+
 	"github.com/ovrclk/akash/testutil"
 	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_ScalePricingRejectsAllZero(t *testing.T) {
@@ -543,6 +546,21 @@ func Test_ScriptPricingWritesJsonToStdin(t *testing.T) {
 		require.Equal(t, r.Count, data[i].Count)
 		require.Equal(t, len(r.Resources.Endpoints), data[i].EndpointQuantity)
 	}
+}
+
+func Test_ScriptPricingFromScript(t *testing.T) {
+
+	scriptPath, err := filepath.Abs("testdata/usd_pricing_oracle.sh")
+	require.NoError(t, err)
+	_, err = os.OpenFile(scriptPath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
+	require.NoError(t, err)
+	pricing, err := MakeShellScriptPricing(scriptPath, 1, 30000*time.Millisecond)
+	require.NoError(t, err)
+	require.NotNil(t, pricing)
+
+	gspec := defaultGroupSpec()
+	_, err = pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
 }
 
 func TestRationalToIntConversion(t *testing.T) {
