@@ -549,18 +549,17 @@ func Test_ScriptPricingWritesJsonToStdin(t *testing.T) {
 }
 
 func Test_ScriptPricingFromScript(t *testing.T) {
-
 	scriptPath, err := filepath.Abs("testdata/usd_pricing_oracle.sh")
-	require.NoError(t, err)
-	_, err = os.OpenFile(scriptPath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
 	require.NoError(t, err)
 	pricing, err := MakeShellScriptPricing(scriptPath, 1, 30000*time.Millisecond)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
 	gspec := defaultGroupSpec()
-	_, err = pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	price, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(),
+		gspec)
 	require.NoError(t, err)
+	require.True(t, price.Amount.GT(sdk.ZeroInt()))
 }
 
 func TestRationalToIntConversion(t *testing.T) {
