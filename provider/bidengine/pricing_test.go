@@ -14,15 +14,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shopspring/decimal"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/stretchr/testify/require"
-
 	"github.com/ovrclk/akash/testutil"
 	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_ScalePricingRejectsAllZero(t *testing.T) {
