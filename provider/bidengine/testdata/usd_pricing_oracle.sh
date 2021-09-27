@@ -16,25 +16,25 @@ storage_total=0
 endpoint_total=0
 
 # read the JSON in `stdin` into $script_input
-read script_input
+read -r script_input
 
 # iterate over all the groups and calculate total quantity of each resource
-for group in $(jq -c '.[]' <<<$script_input); do
-  count=$(jq '.count' <<<$group)
+for group in $(jq -c '.[]' <<<"$script_input"); do
+  count=$(jq '.count' <<<"$group")
 
-  memory_quantity=$(jq '.memory' <<<$group)
+  memory_quantity=$(jq '.memory' <<<"$group")
   memory_quantity=$((memory_quantity * count))
   memory_total=$((memory_total + memory_quantity))
 
-  cpu_quantity=$(jq '.cpu' <<<$group)
+  cpu_quantity=$(jq '.cpu' <<<"$group")
   cpu_quantity=$((cpu_quantity * count))
   cpu_total=$((cpu_total + cpu_quantity))
 
-  storage_quantity=$(jq '.storage' <<<$group)
+  storage_quantity=$(jq '.storage' <<<"$group")
   storage_quantity=$((storage_quantity * count))
   storage_total=$((storage_total + storage_quantity))
 
-  endpoint_quantity=$(jq '.endpoint_quantity' <<<$group)
+  endpoint_quantity=$(jq '.endpoint_quantity' <<<"$group")
   endpoint_quantity=$((endpoint_quantity * count))
   endpoint_total=$((endpoint_total + endpoint_quantity))
 done
@@ -65,14 +65,14 @@ curl_exit_status=$?
 if [ $curl_exit_status != 0 ]; then
   exit $curl_exit_status
 fi
-usd_per_akt=$(jq '."akash-network"."usd"' <<<$API_RESPONSE)
+usd_per_akt=$(jq '."akash-network"."usd"' <<<"$API_RESPONSE")
 
 # calculate the total cost in uAKT
 total_cost_akt=$(bc -l <<<"${total_cost_usd}/${usd_per_akt}")
 total_cost_uakt=$(bc -l <<<"${total_cost_akt}*1000000")
 
 # Round upwards to get an integer
-total_cost_uakt=$(echo $total_cost_uakt | jq '.|ceil')
+total_cost_uakt=$(echo "$total_cost_uakt" | jq '.|ceil')
 
 # return the price in uAKT
-echo $total_cost_uakt
+echo "$total_cost_uakt"
