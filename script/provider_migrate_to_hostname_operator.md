@@ -54,3 +54,20 @@ kubectl apply -f _run/ingress-nginx-class.yaml
 *Step 6*: Run `python3 provider_migrate_to_hostname_operator.py purge`. This removes all the ingress objects from kubernetes.
 
 *Step 7*: Install the new kubernetes hostname operator, which manages hostnames going forward.
+
+The hostname operator is implemented in `_docs/kustomize/akash-hostname-operator`. It normally uses the latest version of the docker container image but you should specify the version you are deploying. This is done by editing `_docs/kustomize/akash-hostname-operator/kustomization.yaml` and appending the following section
+
+```
+images:
+  - name: ghcr.io/ovrclk/akash:stable
+    newName: ghcr.io/ovrclk/akash
+    newTag: v0.14.0
+```
+
+The last line specifies the image tag and should correspond to whatever version you are installing.
+
+To install the operator into kubernetes perform the following from the `/_docs` directory.
+
+```
+kubectl kustomize ./kustomize/akash-hostname-operator | kubectl apply -f -
+```
