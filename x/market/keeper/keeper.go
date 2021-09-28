@@ -217,6 +217,7 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease types.Lease, state types.Le
 		return
 	}
 	lease.State = state
+	lease.ClosedOn = ctx.BlockHeight()
 	k.updateLease(ctx, lease)
 
 	ctx.EventManager().EmitEvent(

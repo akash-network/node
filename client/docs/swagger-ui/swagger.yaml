@@ -1727,6 +1727,9 @@ paths:
                   created_at:
                     type: string
                     format: int64
+                  closed_on:
+                    type: string
+                    format: int64
                 title: 'Lease stores LeaseID, state of lease and price'
               escrow_payment:
                 type: object
@@ -1920,6 +1923,9 @@ paths:
 
                             signatures required by gogoproto.
                         created_at:
+                          type: string
+                          format: int64
+                        closed_on:
                           type: string
                           format: int64
                       title: 'Lease stores LeaseID, state of lease and price'
@@ -28902,6 +28908,9 @@ definitions:
       created_at:
         type: string
         format: int64
+      closed_on:
+        type: string
+        format: int64
     title: 'Lease stores LeaseID, state of lease and price'
   akash.market.v1beta1.Lease.State:
     type: string
@@ -29589,6 +29598,9 @@ definitions:
           created_at:
             type: string
             format: int64
+          closed_on:
+            type: string
+            format: int64
         title: 'Lease stores LeaseID, state of lease and price'
       escrow_payment:
         type: object
@@ -29726,6 +29738,9 @@ definitions:
 
                     signatures required by gogoproto.
                 created_at:
+                  type: string
+                  format: int64
+                closed_on:
                   type: string
                   format: int64
               title: 'Lease stores LeaseID, state of lease and price'
