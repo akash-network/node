@@ -37,6 +37,13 @@ Apply provider host CRD stored in `pkg/apis/akash.network/v1/provider_hosts_crd.
 kubectl apply -f pkg/apis/akash.network/v1/provider_hosts_crd.yaml
 ```
 
+Remove the existing ingress controller
+
+```
+kubectl delete deployment --namespace=ingress-nginx ingress-nginx-controller
+kubectl delete all -l app.kubernetes.io/component=admission-webhook -n ingress-nginx
+```
+
 Apply the newest ingress controller stored in `_run/ingress-nginx.yaml`
 
 ```
@@ -53,7 +60,13 @@ kubectl apply -f _run/ingress-nginx-class.yaml
 
 *Step 6*: Run `python3 provider_migrate_to_hostname_operator.py purge`. This removes all the ingress objects from kubernetes.
 
-*Step 7*: Install the new kubernetes hostname operator, which manages hostnames going forward.
+*Step 7*: Make sure the `akash-services` namespace exists
+
+```
+kubectl kustomize _docs/kustomize/akash-services/ | kubectl apply -f -
+```
+
+*Step 8*: Install the new kubernetes hostname operator, which manages hostnames going forward.
 
 The hostname operator is implemented in `_docs/kustomize/akash-hostname-operator`. It normally uses the latest version of the docker container image but you should specify the version you are deploying. This is done by editing `_docs/kustomize/akash-hostname-operator/kustomization.yaml` and appending the following section
 
