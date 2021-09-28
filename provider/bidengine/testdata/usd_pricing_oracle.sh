@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#URL to get current USD price per AKT
+DEFAULT_API_URL="https://api.coingecko.com/api/v3/simple/price?ids=akash-network&vs_currencies=usd"
+
 # These are the variables one can modify to change the USD scale for each resource kind
 CPU_USD_SCALE=0.10
 MEMORY_USD_SCALE=0.02
@@ -60,12 +63,21 @@ if [ 1 -eq "$(bc <<<"${total_cost_usd}<0")" ] || [ 0 -eq "$(bc <<<"${total_cost_
 fi
 
 # call the API and find out the current USD price per AKT
-API_RESPONSE=$(curl -s "https://api.coingecko.com/api/v3/simple/price?ids=akash-network&vs_currencies=usd")
+if [ -z "$API_URL" ]; then
+  API_URL=$DEFAULT_API_URL
+fi
+
+API_RESPONSE=$(curl -s $API_URL)
 curl_exit_status=$?
 if [ $curl_exit_status != 0 ]; then
   exit $curl_exit_status
 fi
 usd_per_akt=$(jq '."akash-network"."usd"' <<<"$API_RESPONSE")
+
+#validate the current USD price per AKT is not zero
+if [ "$usd_per_akt" == 0 ]; then
+  exit 1
+fi
 
 # calculate the total cost in uAKT
 total_cost_akt=$(bc -l <<<"${total_cost_usd}/${usd_per_akt}")
