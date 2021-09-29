@@ -1,6 +1,15 @@
 #!/bin/bash
 
-#URL to get current USD price per AKT
+#  To run this script, the following commands need to be installed:
+#
+# * jq
+# * bc
+# * curl
+
+# One can set API_URL env variable to the url that returns coingecko like response, something like: `{"akash-network":{"usd":3.57}}`
+# and if the API_URL isn't set, the default api url will be used
+
+# URL to get current USD price per AKT
 DEFAULT_API_URL="https://api.coingecko.com/api/v3/simple/price?ids=akash-network&vs_currencies=usd"
 
 # These are the variables one can modify to change the USD scale for each resource kind
@@ -67,15 +76,15 @@ if [ -z "$API_URL" ]; then
   API_URL=$DEFAULT_API_URL
 fi
 
-API_RESPONSE=$(curl -s $API_URL)
+API_RESPONSE=$(curl -s "$API_URL")
 curl_exit_status=$?
 if [ $curl_exit_status != 0 ]; then
   exit $curl_exit_status
 fi
 usd_per_akt=$(jq '."akash-network"."usd"' <<<"$API_RESPONSE")
 
-#validate the current USD price per AKT is not zero
-if [ "$usd_per_akt" == 0 ]; then
+# validate the current USD price per AKT is not zero
+if [ 1 -eq "$(bc <<< "${usd_per_akt}==0")" ]; then
   exit 1
 fi
 

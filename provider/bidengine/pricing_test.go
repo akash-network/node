@@ -550,23 +550,24 @@ func Test_ScriptPricingWritesJsonToStdin(t *testing.T) {
 
 func Test_ScriptPricingFromScript(t *testing.T) {
 	const (
-		mockApiResponse = `{"akash-network":{"usd":3.57}}`
+		mockAPIResponse = `{"akash-network":{"usd":3.57}}`
 		addr            = "localhost:8080"
 		expectedPrice   = 67843138
 	)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, mockApiResponse)
+		_, err := fmt.Fprint(w, mockAPIResponse)
+		require.NoError(t, err)
 	})
 
 	go func() {
-		t.Fatal(http.ListenAndServe(addr, nil))
+		t.Error(http.ListenAndServe(addr, nil))
 	}()
 
 	err := os.Setenv("API_URL", addr)
 	require.NoError(t, err)
 
-	scriptPath, err := filepath.Abs("testdata/usd_pricing_oracle.sh")
+	scriptPath, err := filepath.Abs("../../script/usd_pricing_oracle.sh")
 	require.NoError(t, err)
 	pricing, err := MakeShellScriptPricing(scriptPath, 1, 30000*time.Millisecond)
 	require.NoError(t, err)
