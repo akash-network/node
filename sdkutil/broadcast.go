@@ -53,7 +53,6 @@ func BroadcastTX(ctx client.Context, flags *pflag.FlagSet, msgs ...sdk.Msg) erro
 		return nil
 	}
 
-
 	txb, err := tx.BuildUnsignedTx(txf, msgs...)
 	if err != nil {
 		return err
