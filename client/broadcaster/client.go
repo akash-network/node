@@ -54,7 +54,7 @@ func (c *simpleClient) Broadcast(_ context.Context, msgs ...sdk.Msg) error {
 }
 
 func doBroadcast(cctx sdkclient.Context, txf tx.Factory, keyName string, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
-	txn, err := txf.BuildUnsignedTx(msgs...)
+	txn, err := tx.BuildUnsignedTx(txf, msgs...)
 	if err != nil {
 		return nil, err
 	}

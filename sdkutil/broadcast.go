@@ -40,10 +40,6 @@ func BroadcastTX(ctx client.Context, flags *pflag.FlagSet, msgs ...sdk.Msg) erro
 
 	txf := tx.NewFactoryCLI(ctx, flags)
 
-	if ctx.GenerateOnly {
-		txf.PrintUnsignedTx(ctx, msgs...)
-	}
-
 	txf, err := PrepareFactory(ctx, txf)
 	if err != nil {
 		return err
@@ -57,9 +53,18 @@ func BroadcastTX(ctx client.Context, flags *pflag.FlagSet, msgs ...sdk.Msg) erro
 		return nil
 	}
 
-	txb, err := txf.BuildUnsignedTx(msgs...)
+
+	txb, err := tx.BuildUnsignedTx(txf, msgs...)
 	if err != nil {
 		return err
+	}
+
+	if ctx.GenerateOnly {
+		json, err := ctx.TxConfig.TxJSONEncoder()(txb.GetTx())
+		if err != nil {
+			return err
+		}
+		return ctx.PrintString(fmt.Sprintf("%s\n", json))
 	}
 
 	ok, err := confirmTx(ctx, txb)
