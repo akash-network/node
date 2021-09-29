@@ -5,7 +5,7 @@ IGNORE="godownloader.sh"
 
 unset FAILED
 
-FILES=$(find /shellcheck/ -type f -name "*.sh" ! -path "/shellcheck/vendor/*")
+FILES=$(find /shellcheck/ -type f -name "*.sh" ! -path "/shellcheck/vendor/*" ! -path "/shellcheck/.git/*")
 
 for file in $FILES; do
     name="$(basename "$file")";
