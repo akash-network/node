@@ -74,7 +74,7 @@ The hostname operator is implemented in `_docs/kustomize/akash-hostname-operator
 images:
   - name: ghcr.io/ovrclk/akash:stable
     newName: ghcr.io/ovrclk/akash
-    newTag: v0.14.0
+    newTag: 0.14.0
 ```
 
 The last line specifies the image tag and should correspond to whatever version you are installing.
