@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/big"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path"
@@ -551,24 +552,21 @@ func Test_ScriptPricingWritesJsonToStdin(t *testing.T) {
 func Test_ScriptPricingFromScript(t *testing.T) {
 	const (
 		mockAPIResponse = `{"akash-network":{"usd":3.57}}`
-		addr            = "localhost:8080"
 		expectedPrice   = 67843138
 	)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		_, err := fmt.Fprint(w, mockAPIResponse)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write([]byte(mockAPIResponse))
 		require.NoError(t, err)
-	})
+	}))
+	defer server.Close()
 
-	go func() {
-		t.Error(http.ListenAndServe(addr, nil))
-	}()
-
-	err := os.Setenv("API_URL", addr)
+	err := os.Setenv("API_URL", server.URL)
 	require.NoError(t, err)
 
 	scriptPath, err := filepath.Abs("../../script/usd_pricing_oracle.sh")
 	require.NoError(t, err)
+
 	pricing, err := MakeShellScriptPricing(scriptPath, 1, 30000*time.Millisecond)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
