@@ -30,7 +30,24 @@ implements the decentralized exchange as well as client functionality to access 
 
 ## Get Started with Akash
 
-The easiest way to get started with Akash is by following the [Quick Start Guide](https://docs.akash.network/guides/deploy) to get started. 
+To get a node running extremely quickly:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/ovrclk/akash/master/godownloader.sh | sh
+akash init choose-a-cool-name
+wget -O ~/.akash/config/genesis.json https://raw.githubusercontent.com/ovrclk/net/master/mainnet/genesis.json
+akash start --p2p.persistent_peers 27eb432ccd5e895c5c659659120d68b393dd8c60@35.247.65.183:26656,9180b99a5be3443677e0f57fc5f40e8f071bdcd8@161.35.239.0:51656,47c9acc0e7d9b244a6404458e76d50b6284bfbbb@142.93.77.25:26656,ab7b55588ea3f4f7a477e852aa262959e54117cd@3.235.249.94:26656,4acf579e2744268f834c713e894850995bbf0ffa@50.18.31.225:26656,3691ac1f56389ffec8579c13a6eb8eca41cf8ae3@54.219.88.246:26656,86afe23f116ba4754a19819a55d153008eb74b48@15.164.87.75:26656,6fbc3808f7d6c961e84944ae2d8c800a8bbffbb4@138.201.159.100:26656,a2a3ffe7ac122a218e1f59c32a670f04b8fd3033@165.22.69.102:26656
+```
+
+NB: to run an archive node, please add `--pruning nothing` to the line containing `akash start`.
+
+**welcome, Akashian!**
+
+
+
+
+
+Our [Quick Start Guide](https://docs.akash.network/guides/deploy) has more details on getting started. 
 
 ## Join the Community
 
