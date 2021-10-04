@@ -11,24 +11,28 @@ import (
 )
 
 type watchdog struct {
-	leaseID types.LeaseID
-	timeout time.Duration
-	lc      lifecycle.Lifecycle
-	sess    session.Session
-	ctx     context.Context
-	log     log.Logger
+	leaseID  types.LeaseID
+	timeout  time.Duration
+	lc       lifecycle.Lifecycle
+	sess     session.Session
+	ctx      context.Context
+	log      log.Logger
+	stopLock chan struct{}
 }
 
 func newWatchdog(sess session.Session, parent <-chan struct{}, done chan<- dtypes.DeploymentID, leaseID types.LeaseID, timeout time.Duration) *watchdog {
 	ctx, cancel := context.WithCancel(context.Background())
 	result := &watchdog{
-		leaseID: leaseID,
-		timeout: timeout,
-		lc:      lifecycle.New(),
-		sess:    sess,
-		ctx:     ctx,
-		log:     sess.Log().With("leaseID", leaseID),
+		leaseID:  leaseID,
+		timeout:  timeout,
+		lc:       lifecycle.New(),
+		sess:     sess,
+		ctx:      ctx,
+		log:      sess.Log().With("leaseID", leaseID),
+		stopLock: make(chan struct{}, 1),
 	}
+
+	result.stopLock <- struct{}{} // Allow this to be read from once
 
 	go func() {
 		result.lc.WatchChannel(parent)
@@ -46,7 +50,11 @@ func newWatchdog(sess session.Session, parent <-chan struct{}, done chan<- dtype
 }
 
 func (wd *watchdog) stop() {
-	wd.lc.ShutdownAsync(nil)
+	select {
+	case <-wd.stopLock:
+		wd.lc.ShutdownAsync(nil)
+	default:
+	}
 }
 
 func (wd *watchdog) run() {

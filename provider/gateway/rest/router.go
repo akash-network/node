@@ -383,7 +383,7 @@ func validateHandler(log log.Logger, cl provider.ValidateClient) http.HandlerFun
 	}
 }
 
-func createManifestHandler(_ log.Logger, mclient pmanifest.Client) http.HandlerFunc {
+func createManifestHandler(log log.Logger, mclient pmanifest.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var mani manifest.Manifest
 		decoder := json.NewDecoder(req.Body)
@@ -405,6 +405,7 @@ func createManifestHandler(_ log.Logger, mclient pmanifest.Client) http.HandlerF
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
+			log.Error("manifest submit failed", "err", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
