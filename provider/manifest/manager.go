@@ -65,21 +65,21 @@ type manager struct {
 	session session.Session
 	bus     pubsub.Bus
 
-	leasech    chan event.LeaseWon
-	rmleasech  chan mtypes.LeaseID
-	manifestch chan manifestRequest
+	leasech                chan event.LeaseWon
+	rmleasech              chan mtypes.LeaseID
+	manifestch             chan manifestRequest
 	manifestRequestTimeOut chan manifestRequest
-	updatech   chan []byte
+	updatech               chan []byte
 
-	data            *dtypes.QueryDeploymentResponse
-	requests        []manifestRequest
-	pendingRequests []manifestRequest
-	pendingContext context.Context
+	data                 *dtypes.QueryDeploymentResponse
+	requests             []manifestRequest
+	pendingRequests      []manifestRequest
+	pendingContext       context.Context
 	pendingContextCancel context.CancelFunc
-	manifests       []*manifest.Manifest
-	versions        [][]byte
+	manifests            []*manifest.Manifest
+	versions             [][]byte
 
-	localLeases []event.LeaseWon
+	localLeases  []event.LeaseWon
 	localLeaseAt time.Time
 
 	stoptimer *time.Timer
@@ -90,7 +90,7 @@ type manager struct {
 	hostnameService clustertypes.HostnameServiceClient
 }
 
-func (m *manager) getPendingContext() context.Context{
+func (m *manager) getPendingContext() context.Context {
 	if m.pendingContextCancel == nil {
 		m.pendingContext, m.pendingContextCancel = context.WithCancel(context.Background())
 	}
@@ -216,7 +216,7 @@ loop:
 			m.emitReceivedEvents()
 			m.maybeScheduleStop()
 
-		case timedOutRequest := <- m.manifestRequestTimeOut:
+		case timedOutRequest := <-m.manifestRequestTimeOut:
 			m.handleTimeout(timedOutRequest)
 		}
 	}
@@ -237,7 +237,7 @@ loop:
 
 }
 
-func (m *manager) handleTimeout(req manifestRequest){
+func (m *manager) handleTimeout(req manifestRequest) {
 	x := -1
 	for i, reqEntry := range m.pendingRequests {
 		if reqEntry == req {
@@ -248,7 +248,7 @@ func (m *manager) handleTimeout(req manifestRequest){
 
 	if x != -1 {
 		removed := m.requests[x]
-		replacement := make([]manifestRequest, len(m.requests) - 1)
+		replacement := make([]manifestRequest, len(m.requests)-1)
 		i := 0
 		for j, reqEntry := range m.pendingRequests {
 			if j != x {
@@ -323,11 +323,15 @@ var errNoGroupForLease = errors.New("group not found")
 
 func (m *manager) getLeases() ([]event.LeaseWon, error) {
 	const maxResultAge = time.Second * 5
-	elapsed := time.Now().Sub(m.localLeaseAt)
+	elapsed := time.Since(m.localLeaseAt)
 	if elapsed < maxResultAge { // Check to see if the cached result can be used
 		return m.localLeases, nil
 	}
-	deployment, err := m.session.Client().Query().Deployment(context.Background(), &dtypes.QueryDeploymentRequest{
+
+	const maxRequestDuration = 60 * time.Second
+	subctx, cancel := context.WithTimeout(context.Background(), maxRequestDuration)
+	defer cancel()
+	deployment, err := m.session.Client().Query().Deployment(subctx, &dtypes.QueryDeploymentRequest{
 		ID: m.daddr,
 	})
 
@@ -335,8 +339,8 @@ func (m *manager) getLeases() ([]event.LeaseWon, error) {
 		return nil, err
 	}
 
-	response, err := m.session.Client().Query().Leases(context.Background(), &mtypes.QueryLeasesRequest{
-		Filters:    mtypes.LeaseFilters{
+	response, err := m.session.Client().Query().Leases(subctx, &mtypes.QueryLeasesRequest{
+		Filters: mtypes.LeaseFilters{
 			Owner:    m.daddr.Owner,
 			DSeq:     m.daddr.DSeq,
 			GSeq:     0,
@@ -377,7 +381,7 @@ func (m *manager) getLeases() ([]event.LeaseWon, error) {
 	return m.localLeases, nil
 }
 
-func (m *manager) emitReceivedEvents()  {
+func (m *manager) emitReceivedEvents() {
 	leases, err := m.getLeases()
 	if err != nil {
 		m.fillAllRequests(err)
@@ -416,10 +420,9 @@ func (m *manager) emitReceivedEvents()  {
 	m.pendingRequests = nil
 }
 
-
-func handleManifestRequestTimeout(ctx context.Context, mr manifestRequest, lc lifecycle.Lifecycle, timedOut chan <- manifestRequest) {
+func handleManifestRequestTimeout(ctx context.Context, mr manifestRequest, lc lifecycle.Lifecycle, timedOut chan<- manifestRequest) {
 	select {
-	case <- ctx.Done(): // pending requests are complete
+	case <-ctx.Done(): // pending requests are complete
 		return
 	case <-mr.ctx.Done(): // request context expires
 		timedOut <- mr // Tell manager timeout happened

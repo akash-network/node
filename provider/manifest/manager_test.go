@@ -62,7 +62,7 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 				GroupID: dtypes.GroupID{
 					Owner: did.GetOwner(),
 					DSeq:  did.DSeq,
-					GSeq: uint32(i),
+					GSeq:  uint32(i),
 				},
 				State:     dtypes.GroupOpen,
 				GroupSpec: *g,
@@ -88,7 +88,7 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 	leasesMock := make([]mtypes.QueryLeaseResponse, 0)
 	for _, lease := range leases {
 		leasesMock = append(leasesMock, mtypes.QueryLeaseResponse{
-			Lease:         mtypes.Lease{
+			Lease: mtypes.Lease{
 				LeaseID:   lease.GetLeaseID(),
 				State:     lease.GetState(),
 				Price:     lease.GetPrice(),
@@ -98,7 +98,7 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 		})
 	}
 	queryMock.On("Leases", mock.Anything, &mtypes.QueryLeasesRequest{
-		Filters:    mtypes.LeaseFilters{
+		Filters: mtypes.LeaseFilters{
 			Owner:    did.GetOwner(),
 			DSeq:     did.GetDSeq(),
 			GSeq:     0,
@@ -230,10 +230,10 @@ func TestManagerHandlesMissingGroup(t *testing.T) {
 	version, err := sdl.ManifestVersion(sdlManifest)
 	require.NotNil(t, version)
 	require.NoError(t, err)
-	leases := []mtypes.Lease{mtypes.Lease{
-		LeaseID:   lid,
-		State:     mtypes.LeaseActive,
-		Price:     sdk.Coin{
+	leases := []mtypes.Lease{{
+		LeaseID: lid,
+		State:   mtypes.LeaseActive,
+		Price: sdk.Coin{
 			Denom:  "uakt",
 			Amount: sdk.NewInt(111),
 		},
@@ -286,7 +286,7 @@ func TestManagerRequiresHostname(t *testing.T) {
 	version, err := sdl.ManifestVersion(sdlManifest)
 	require.NotNil(t, version)
 	require.NoError(t, err)
-	leases := []mtypes.Lease{mtypes.Lease{
+	leases := []mtypes.Lease{{
 		LeaseID:   lid,
 		State:     mtypes.LeaseActive,
 		Price:     ev.Price,
@@ -344,7 +344,7 @@ func TestManagerAllowsUpdate(t *testing.T) {
 	version, err := sdl.ManifestVersion(sdlManifest)
 	require.NotNil(t, version)
 	require.NoError(t, err)
-	leases := []mtypes.Lease{mtypes.Lease{
+	leases := []mtypes.Lease{{
 		LeaseID:   lid,
 		State:     mtypes.LeaseActive,
 		Price:     ev.Price,
