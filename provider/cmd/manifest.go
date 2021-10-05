@@ -59,6 +59,7 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 	if err != nil {
 		return err
 	}
+	// TODO - dump mani
 
 	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, cctx.Keyring)
 	if err != nil {

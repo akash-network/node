@@ -25,6 +25,7 @@ configMapGenerator:
       - cluster-public-hostname=app.localhost
       - cluster-node-port-quantity=100
       - bid-price-strategy=randomRange
+      - deployment-runtime-class=none
       # - ingress-static-hosts=false
 
 patchesJson6902:

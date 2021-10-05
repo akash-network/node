@@ -37,13 +37,6 @@ func cleanupStaleResources(ctx context.Context, kc kubernetes.Interface, lid mty
 		return err
 	}
 
-	// delete stale ingresses
-	if err := kc.NetworkingV1().Ingresses(ns).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
-		LabelSelector: selector,
-	}); err != nil {
-		return err
-	}
-
 	// delete stale services (no DeleteCollection)
 	services, err := kc.CoreV1().Services(ns).List(ctx, metav1.ListOptions{
 		LabelSelector: selector,

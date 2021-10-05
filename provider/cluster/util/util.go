@@ -1,10 +1,14 @@
 package util
 
 import (
+	"encoding/base32"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/manifest"
 	atypes "github.com/ovrclk/akash/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
+	uuid "github.com/satori/go.uuid"
 	"math"
+	"strings"
 )
 
 func ShouldBeIngress(expose manifest.ServiceExpose) bool {
@@ -49,4 +53,9 @@ func AllHostnamesOfManifestGroup(mgroup manifest.Group) []string {
 	}
 
 	return allHostnames
+}
+
+func IngressHost(lid mtypes.LeaseID, svcName string) string {
+	uid := uuid.NewV5(uuid.NamespaceDNS, lid.String()+svcName).Bytes()
+	return strings.ToLower(base32.HexEncoding.WithPadding(base32.NoPadding).EncodeToString(uid))
 }

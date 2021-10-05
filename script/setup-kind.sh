@@ -22,6 +22,7 @@ install_network_policies() {
 
 install_crd() {
   kubectl apply -f "$rootdir/pkg/apis/akash.network/v1/crd.yaml"
+  kubectl apply -f "$rootdir/pkg/apis/akash.network/v1/provider_hosts_crd.yaml"
 }
 
 install_metrics() {

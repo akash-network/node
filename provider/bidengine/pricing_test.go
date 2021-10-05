@@ -4,22 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/shopspring/decimal"
 	io "io"
 	"math"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/require"
+
 	"github.com/ovrclk/akash/testutil"
 	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_ScalePricingRejectsAllZero(t *testing.T) {
@@ -543,6 +547,37 @@ func Test_ScriptPricingWritesJsonToStdin(t *testing.T) {
 		require.Equal(t, r.Count, data[i].Count)
 		require.Equal(t, len(r.Resources.Endpoints), data[i].EndpointQuantity)
 	}
+}
+
+func Test_ScriptPricingFromScript(t *testing.T) {
+	const (
+		mockAPIResponse = `{"akash-network":{"usd":3.57}}`
+		expectedPrice   = 67843138
+	)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write([]byte(mockAPIResponse))
+		require.NoError(t, err)
+	}))
+	defer server.Close()
+
+	err := os.Setenv("API_URL", server.URL)
+	require.NoError(t, err)
+
+	scriptPath, err := filepath.Abs("../../script/usd_pricing_oracle.sh")
+	require.NoError(t, err)
+
+	pricing, err := MakeShellScriptPricing(scriptPath, 1, 30000*time.Millisecond)
+	require.NoError(t, err)
+	require.NotNil(t, pricing)
+
+	gspec := defaultGroupSpec()
+	gspec.Resources[0].Resources.Endpoints = make([]atypes.Endpoint, 7)
+
+	price, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(),
+		gspec)
+	require.NoError(t, err)
+	require.True(t, price.Equal(sdk.NewCoin("uakt", sdk.NewInt(expectedPrice))))
 }
 
 func TestRationalToIntConversion(t *testing.T) {

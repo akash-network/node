@@ -67,7 +67,7 @@ func Test_V2_Cross_Validates(t *testing.T) {
 	require.NoError(t, err)
 	dgroups, err := sdl2.DeploymentGroups()
 	require.NoError(t, err)
-	manifest, err := sdl2.Manifest()
+	m, err := sdl2.Manifest()
 	require.NoError(t, err)
 
 	// This is a single document producing both the manifest & deployment groups
@@ -75,7 +75,7 @@ func Test_V2_Cross_Validates(t *testing.T) {
 	// following is ture
 	// 1. Cross validation logic is wrong
 	// 2. The DeploymentGroups() & Manifest() code do not agree with one another
-	err = validation.ValidateManifestWithGroupSpecs(&manifest, dgroups)
+	err = validation.ValidateManifestWithGroupSpecs(&m, dgroups)
 	require.NoError(t, err)
 
 	// Repeat the same test with another file
@@ -83,12 +83,12 @@ func Test_V2_Cross_Validates(t *testing.T) {
 	require.NoError(t, err)
 	dgroups, err = sdl2.DeploymentGroups()
 	require.NoError(t, err)
-	manifest, err = sdl2.Manifest()
+	m, err = sdl2.Manifest()
 	require.NoError(t, err)
 
 	// This is a single document producing both the manifest & deployment groups
 	// These should always agree with each other
-	err = validation.ValidateManifestWithGroupSpecs(&manifest, dgroups)
+	err = validation.ValidateManifestWithGroupSpecs(&m, dgroups)
 	require.NoError(t, err)
 
 	// Repeat the same test with another file
@@ -96,12 +96,12 @@ func Test_V2_Cross_Validates(t *testing.T) {
 	require.NoError(t, err)
 	dgroups, err = sdl2.DeploymentGroups()
 	require.NoError(t, err)
-	manifest, err = sdl2.Manifest()
+	m, err = sdl2.Manifest()
 	require.NoError(t, err)
 
 	// This is a single document producing both the manifest & deployment groups
 	// These should always agree with each other
-	err = validation.ValidateManifestWithGroupSpecs(&manifest, dgroups)
+	err = validation.ValidateManifestWithGroupSpecs(&m, dgroups)
 	require.NoError(t, err)
 
 }
@@ -173,8 +173,24 @@ func Test_v1_Parse_simple(t *testing.T) {
 				},
 				Count: 2,
 				Expose: []manifest.ServiceExpose{
-					{Port: 80, Global: true, Proto: manifest.TCP, Hosts: expectedHosts},
-					{Port: 12345, Global: true, Proto: manifest.UDP},
+					{Port: 80, Global: true, Proto: manifest.TCP, Hosts: expectedHosts,
+						HTTPOptions: manifest.ServiceExposeHTTPOptions{
+							MaxBodySize: 1048576,
+							ReadTimeout: 60000,
+							SendTimeout: 60000,
+							NextTries:   3,
+							NextTimeout: 0,
+							NextCases:   []string{"error", "timeout"},
+						}},
+					{Port: 12345, Global: true, Proto: manifest.UDP,
+						HTTPOptions: manifest.ServiceExposeHTTPOptions{
+							MaxBodySize: 1048576,
+							ReadTimeout: 60000,
+							SendTimeout: 60000,
+							NextTries:   3,
+							NextTimeout: 0,
+							NextCases:   []string{"error", "timeout"},
+						}},
 				},
 			},
 		},
