@@ -234,6 +234,9 @@ loop:
 			switch ev := ev.(type) {
 
 			case event.LeaseWon:
+				if ev.LeaseID.GetProvider() != s.session.Provider().Address().String() {
+					continue
+				}
 				s.session.Log().Info("lease won", "lease", ev.LeaseID)
 				s.handleLease(ev, true)
 
@@ -254,7 +257,7 @@ loop:
 				}
 
 			case mtypes.EventLeaseClosed:
-				if ev.ID.Provider != s.session.Provider().Address().String() {
+				if ev.ID.GetProvider() != s.session.Provider().Address().String() {
 					continue
 				}
 

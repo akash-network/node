@@ -68,14 +68,19 @@ type manager struct {
 	leasech    chan event.LeaseWon
 	rmleasech  chan mtypes.LeaseID
 	manifestch chan manifestRequest
+	manifestRequestTimeOut chan manifestRequest
 	updatech   chan []byte
 
 	data            *dtypes.QueryDeploymentResponse
 	requests        []manifestRequest
-	pendingRequests []chan<- error
-	leases          []event.LeaseWon
+	pendingRequests []manifestRequest
+	pendingContext context.Context
+	pendingContextCancel context.CancelFunc
 	manifests       []*manifest.Manifest
 	versions        [][]byte
+
+	localLeases []event.LeaseWon
+	localLeaseAt time.Time
 
 	stoptimer *time.Timer
 
@@ -83,6 +88,21 @@ type manager struct {
 	lc  lifecycle.Lifecycle
 
 	hostnameService clustertypes.HostnameServiceClient
+}
+
+func (m *manager) getPendingContext() context.Context{
+	if m.pendingContextCancel == nil {
+		m.pendingContext, m.pendingContextCancel = context.WithCancel(context.Background())
+	}
+	return m.pendingContext
+}
+
+func (m *manager) cancelPendingContext() {
+	if nil != m.pendingContextCancel {
+		m.pendingContextCancel()
+		m.pendingContextCancel = nil
+		m.pendingContext = nil
+	}
 }
 
 func (m *manager) stop() {
@@ -151,21 +171,15 @@ loop:
 
 		case ev := <-m.leasech:
 			m.log.Info("new lease", "lease", ev.LeaseID)
+			m.localLeaseAt = time.Time{}
 
-			m.leases = append(m.leases, ev)
 			m.emitReceivedEvents()
 			m.maybeScheduleStop()
 			runch = m.maybeFetchData(ctx, runch)
 
 		case id := <-m.rmleasech:
 			m.log.Info("lease removed", "lease", id)
-
-			for idx, lease := range m.leases {
-				if id.Equals(lease.LeaseID) {
-					m.leases = append(m.leases[:idx], m.leases[idx+1:]...)
-				}
-			}
-
+			m.localLeaseAt = time.Time{}
 			m.maybeScheduleStop()
 
 		case req := <-m.manifestch:
@@ -202,6 +216,8 @@ loop:
 			m.emitReceivedEvents()
 			m.maybeScheduleStop()
 
+		case timedOutRequest := <- m.manifestRequestTimeOut:
+			m.handleTimeout(timedOutRequest)
 		}
 	}
 
@@ -219,6 +235,30 @@ loop:
 		<-runch
 	}
 
+}
+
+func (m *manager) handleTimeout(req manifestRequest){
+	x := -1
+	for i, reqEntry := range m.pendingRequests {
+		if reqEntry == req {
+			x = i
+			break
+		}
+	}
+
+	if x != -1 {
+		removed := m.requests[x]
+		replacement := make([]manifestRequest, len(m.requests) - 1)
+		i := 0
+		for j, reqEntry := range m.pendingRequests {
+			if j != x {
+				replacement[i] = reqEntry
+				i++
+			}
+		}
+		removed.ch <- removed.ctx.Err()
+		m.pendingRequests = replacement
+	}
 }
 
 func (m *manager) maybeFetchData(ctx context.Context, runch <-chan runner.Result) <-chan runner.Result {
@@ -244,7 +284,11 @@ func (m *manager) doFetchData(ctx context.Context) (*dtypes.QueryDeploymentRespo
 }
 
 func (m *manager) maybeScheduleStop() bool { // nolint:golint,unparam
-	if len(m.leases) > 0 || len(m.manifests) > 0 {
+	leases, err := m.getLeases()
+	if err != nil {
+		m.log.Error("failed getting leases", "err", err)
+	}
+	if len(leases) > 0 || len(m.manifests) > 0 {
 		if m.stoptimer != nil {
 			m.log.Info("stopping stop timer")
 			if m.stoptimer.Stop() {
@@ -263,8 +307,9 @@ func (m *manager) maybeScheduleStop() bool { // nolint:golint,unparam
 }
 
 func (m *manager) fillAllRequests(response error) {
-	for _, reqch := range m.pendingRequests {
-		reqch <- response
+	m.cancelPendingContext()
+	for _, req := range m.pendingRequests {
+		req.ch <- response
 	}
 	m.pendingRequests = nil
 
@@ -274,27 +319,89 @@ func (m *manager) fillAllRequests(response error) {
 	m.requests = nil
 }
 
-func (m *manager) emitReceivedEvents() {
-	if len(m.leases) == 0 {
-		m.log.Debug("emit received events skips due to no leases", "data", m.data, "leases", len(m.leases), "manifests", len(m.manifests))
+var errNoGroupForLease = errors.New("group not found")
+
+func (m *manager) getLeases() ([]event.LeaseWon, error) {
+	const maxResultAge = time.Second * 5
+	elapsed := time.Now().Sub(m.localLeaseAt)
+	if elapsed < maxResultAge { // Check to see if the cached result can be used
+		return m.localLeases, nil
+	}
+	deployment, err := m.session.Client().Query().Deployment(context.Background(), &dtypes.QueryDeploymentRequest{
+		ID: m.daddr,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := m.session.Client().Query().Leases(context.Background(), &mtypes.QueryLeasesRequest{
+		Filters:    mtypes.LeaseFilters{
+			Owner:    m.daddr.Owner,
+			DSeq:     m.daddr.DSeq,
+			GSeq:     0,
+			OSeq:     0,
+			Provider: m.session.Provider().GetOwner(),
+			State:    mtypes.LeaseActive.String(),
+		},
+		Pagination: nil,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	groups := make(map[uint32]dtypes.Group)
+	for _, g := range deployment.GetGroups() {
+		groups[g.ID().GSeq] = g
+	}
+
+	leases := make([]event.LeaseWon, len(response.Leases))
+	for i, leaseEntry := range response.Leases {
+		lease := leaseEntry.GetLease()
+		leaseID := lease.GetLeaseID()
+		groupForLease, foundGroup := groups[leaseID.GetGSeq()]
+		if !foundGroup {
+			return nil, fmt.Errorf("%w: could not locate group %v ", errNoGroupForLease, leaseID)
+		}
+		ev := event.LeaseWon{
+			LeaseID: leaseID,
+			Group:   &groupForLease,
+			Price:   lease.GetPrice(),
+		}
+
+		leases[i] = ev
+	}
+	m.localLeases = leases
+	m.localLeaseAt = time.Now()
+	return m.localLeases, nil
+}
+
+func (m *manager) emitReceivedEvents()  {
+	leases, err := m.getLeases()
+	if err != nil {
+		m.fillAllRequests(err)
+		return
+	}
+
+	if len(leases) == 0 {
+		m.log.Debug("emit received events skips due to no leases", "data", m.data, "leases", len(leases), "manifests", len(m.manifests))
 		m.fillAllRequests(ErrNoLeaseForDeployment)
 		return
 	}
 	if m.data == nil || len(m.manifests) == 0 {
-		m.log.Debug("emit received events skipped", "data", m.data, "leases", len(m.leases), "manifests", len(m.manifests))
+		m.log.Debug("emit received events skipped", "data", m.data, "leases", len(leases), "manifests", len(m.manifests))
 		return
 	}
 
-	manifest := m.manifests[len(m.manifests)-1]
-
-	m.log.Debug("publishing manifest received", "num-leases", len(m.leases))
-
-	for _, lease := range m.leases {
+	latestManifest := m.manifests[len(m.manifests)-1]
+	m.log.Debug("publishing manifest received", "num-leases", len(leases))
+	for _, lease := range leases {
 		m.log.Debug("publishing manifest received for lease", "lease_id", lease.LeaseID)
 		if err := m.bus.Publish(event.ManifestReceived{
 			LeaseID:    lease.LeaseID,
 			Group:      lease.Group,
-			Manifest:   manifest,
+			Manifest:   latestManifest,
 			Deployment: m.data,
 		}); err != nil {
 			m.log.Error("publishing event", "err", err, "lease", lease.LeaseID)
@@ -302,10 +409,23 @@ func (m *manager) emitReceivedEvents() {
 	}
 
 	// A manifest has been published, satisfy all pending requests
-	for _, reqch := range m.pendingRequests {
-		reqch <- nil
+	m.cancelPendingContext()
+	for _, req := range m.pendingRequests {
+		req.ch <- nil
 	}
 	m.pendingRequests = nil
+}
+
+
+func handleManifestRequestTimeout(ctx context.Context, mr manifestRequest, lc lifecycle.Lifecycle, timedOut chan <- manifestRequest) {
+	select {
+	case <- ctx.Done(): // pending requests are complete
+		return
+	case <-mr.ctx.Done(): // request context expires
+		timedOut <- mr // Tell manager timeout happened
+	case <-lc.ShuttingDown(): // manager shuts down
+		return
+	}
 }
 
 func (m *manager) validateRequests() {
@@ -322,10 +442,12 @@ func (m *manager) validateRequests() {
 		}
 		manifests = append(manifests, &req.value.Manifest)
 
-		// The manifest has been  grabbed from the request but not published yet, store this response
-		m.pendingRequests = append(m.pendingRequests, req.ch)
+		// The manifest has been grabbed from the request but not published yet, store this response
+		m.pendingRequests = append(m.pendingRequests, req)
+
+		go handleManifestRequestTimeout(m.getPendingContext(), req, m.lc, m.manifestRequestTimeOut)
 	}
-	m.requests = nil
+	m.requests = nil // all requests processed at this time
 
 	m.log.Debug("requests valid", "num-requests", len(manifests))
 
@@ -400,7 +522,11 @@ func (m *manager) validateRequest(req manifestRequest) error {
 	}
 
 	groupNames := make([]string, 0)
-	for _, lease := range m.leases {
+	leases, err := m.getLeases()
+	if err != nil {
+		return err
+	}
+	for _, lease := range leases {
 		groupNames = append(groupNames, lease.Group.GroupSpec.Name)
 	}
 	// Check that hostnames are not in use

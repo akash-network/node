@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
+	escrowtypes "github.com/ovrclk/akash/x/escrow/types"
 	"testing"
 	"time"
 
@@ -19,7 +20,7 @@ import (
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/x/deployment/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	markettypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types"
 	ptypes "github.com/ovrclk/akash/x/provider/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -33,8 +34,7 @@ type scaffold struct {
 	hostnames clustertypes.HostnameServiceClient
 }
 
-func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did dtypes.DeploymentID) *scaffold {
-
+func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did dtypes.DeploymentID, leases []mtypes.Lease, providerAddr string, delayQueryDeployment bool) *scaffold {
 	clientMock := &clientMocks.Client{}
 	queryMock := &clientMocks.QueryClient{}
 
@@ -57,14 +57,14 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 		dgroups, err := mani.DeploymentGroups()
 		require.NoError(t, err)
 		require.NotNil(t, dgroups)
-		for _, g := range dgroups {
+		for i, g := range dgroups {
 			groups = append(groups, dtypes.Group{
 				GroupID: dtypes.GroupID{
-					Owner: "",
-					DSeq:  0,
-					GSeq:  0,
+					Owner: did.GetOwner(),
+					DSeq:  did.DSeq,
+					GSeq: uint32(i),
 				},
-				State:     0,
+				State:     dtypes.GroupOpen,
 				GroupSpec: *g,
 			})
 		}
@@ -78,7 +78,39 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 		},
 		Groups: groups,
 	}
-	queryMock.On("Deployment", mock.Anything, mock.Anything).Return(res, nil)
+
+	x := queryMock.On("Deployment", mock.Anything, mock.Anything).After(time.Second*2).Return(res, nil)
+	if delayQueryDeployment {
+		x = x.After(time.Second * 2)
+	}
+	x.Return(res, nil)
+
+	leasesMock := make([]mtypes.QueryLeaseResponse, 0)
+	for _, lease := range leases {
+		leasesMock = append(leasesMock, mtypes.QueryLeaseResponse{
+			Lease:         mtypes.Lease{
+				LeaseID:   lease.GetLeaseID(),
+				State:     lease.GetState(),
+				Price:     lease.GetPrice(),
+				CreatedAt: lease.GetCreatedAt(),
+			},
+			EscrowPayment: escrowtypes.Payment{}, // Ignored in this test
+		})
+	}
+	queryMock.On("Leases", mock.Anything, &mtypes.QueryLeasesRequest{
+		Filters:    mtypes.LeaseFilters{
+			Owner:    did.GetOwner(),
+			DSeq:     did.GetDSeq(),
+			GSeq:     0,
+			OSeq:     0,
+			Provider: providerAddr,
+			State:    mtypes.LeaseActive.String(),
+		},
+		Pagination: nil,
+	}).Return(&mtypes.QueryLeasesResponse{
+		Leases:     leasesMock,
+		Pagination: nil,
+	}, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -88,14 +120,13 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 	log := testutil.Logger(t)
 	bus := pubsub.NewBus()
 
-	accAddr := testutil.AccAddress(t)
 	p := &ptypes.Provider{
-		Owner:      accAddr.String(),
+		Owner:      providerAddr,
 		HostURI:    "",
 		Attributes: nil,
 	}
 
-	queryMock.On("ActiveLeasesForProvider", p.Address()).Return([]markettypes.QueryLeaseResponse{}, nil)
+	queryMock.On("ActiveLeasesForProvider", p.Address()).Return([]mtypes.QueryLeaseResponse{}, nil)
 
 	serviceInterface, err := NewService(ctx, session.New(log, clientMock, p), bus, hostnames, cfg)
 	require.NoError(t, err)
@@ -112,7 +143,8 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 }
 
 func TestManagerReturnsNoLease(t *testing.T) {
-	s := serviceForManifestTest(t, ServiceConfig{}, nil, dtypes.DeploymentID{})
+	did := testutil.DeploymentID(t)
+	s := serviceForManifestTest(t, ServiceConfig{}, nil, did, nil, testutil.AccAddress(t).String(), false)
 
 	sdl2, err := sdl.ReadFile("../../x/deployment/testdata/deployment-v2.yaml")
 	require.NoError(t, err)
@@ -120,7 +152,6 @@ func TestManagerReturnsNoLease(t *testing.T) {
 	sdlManifest, err := sdl2.Manifest()
 	require.NoError(t, err)
 
-	did := testutil.DeploymentID(t)
 	err = s.svc.Submit(context.Background(), did, sdlManifest)
 	require.Error(t, err)
 	require.True(t, errors.Is(ErrNoLeaseForDeployment, err))
@@ -135,15 +166,104 @@ func TestManagerReturnsNoLease(t *testing.T) {
 	}
 }
 
+func TestManagerHandlesTimeout(t *testing.T) {
+	sdl2, err := sdl.ReadFile("../../x/deployment/testdata/deployment-v2.yaml")
+	require.NoError(t, err)
+
+	sdlManifest, err := sdl2.Manifest()
+	require.NoError(t, err)
+
+	lid := testutil.LeaseID(t)
+	lid.GSeq = 0
+	did := lid.DeploymentID()
+
+	dgroups, err := sdl2.DeploymentGroups()
+	require.NoError(t, err)
+
+	// Tell the service that a lease has been won
+	dgroup := &dtypes.Group{
+		GroupID:   lid.GroupID(),
+		State:     0,
+		GroupSpec: *dgroups[0],
+	}
+
+	ev := event.LeaseWon{
+		LeaseID: lid,
+		Group:   dgroup,
+		Price: sdk.Coin{
+			Denom:  testutil.CoinDenom,
+			Amount: sdk.NewInt(111),
+		},
+	}
+
+	s := serviceForManifestTest(t, ServiceConfig{HTTPServicesRequireAtLeastOneHost: true}, sdl2, did, nil, lid.GetProvider(), true)
+	err = s.bus.Publish(ev)
+	require.NoError(t, err)
+	time.Sleep(time.Second) // Wait for publish to do its thing
+
+	testctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	err = s.svc.Submit(testctx, did, sdlManifest)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	s.cancel()
+
+	select {
+	case <-s.svc.lc.Done():
+
+	case <-time.After(20 * time.Second):
+		t.Fatal("timed out waiting for service shutdown")
+	}
+}
+
+func TestManagerHandlesMissingGroup(t *testing.T) {
+	sdl2, err := sdl.ReadFile("../../x/deployment/testdata/deployment-v2.yaml")
+	require.NoError(t, err)
+
+	sdlManifest, err := sdl2.Manifest()
+	require.NoError(t, err)
+
+	lid := testutil.LeaseID(t)
+	lid.GSeq = 99999
+	did := lid.DeploymentID()
+
+	version, err := sdl.ManifestVersion(sdlManifest)
+	require.NotNil(t, version)
+	require.NoError(t, err)
+	leases := []mtypes.Lease{mtypes.Lease{
+		LeaseID:   lid,
+		State:     mtypes.LeaseActive,
+		Price:     sdk.Coin{
+			Denom:  "uakt",
+			Amount: sdk.NewInt(111),
+		},
+		CreatedAt: 0,
+	}}
+	s := serviceForManifestTest(t, ServiceConfig{}, sdl2, did, leases, lid.GetProvider(), false)
+
+	err = s.svc.Submit(context.Background(), did, sdlManifest)
+	require.Error(t, err)
+	require.Regexp(t, `^group not found:.+$`, err.Error())
+
+	s.cancel()
+	select {
+	case <-s.svc.lc.Done():
+
+	case <-time.After(10 * time.Second):
+		t.Fatal("timed out waiting for service shutdown")
+	}
+}
+
 func TestManagerRequiresHostname(t *testing.T) {
 	sdl2, err := sdl.ReadFile("../../x/deployment/testdata/deployment-v2-nohost.yaml")
 	require.NoError(t, err)
 
 	sdlManifest, err := sdl2.Manifest()
-	require.Len(t, sdlManifest[0].Services[0].Expose[0].Hosts, 0)
 	require.NoError(t, err)
+	require.Len(t, sdlManifest[0].Services[0].Expose[0].Hosts, 0)
 
 	lid := testutil.LeaseID(t)
+	lid.GSeq = 0
 	did := lid.DeploymentID()
 	dgroups, err := sdl2.DeploymentGroups()
 	require.NoError(t, err)
@@ -166,7 +286,13 @@ func TestManagerRequiresHostname(t *testing.T) {
 	version, err := sdl.ManifestVersion(sdlManifest)
 	require.NotNil(t, version)
 	require.NoError(t, err)
-	s := serviceForManifestTest(t, ServiceConfig{HTTPServicesRequireAtLeastOneHost: true}, sdl2, did)
+	leases := []mtypes.Lease{mtypes.Lease{
+		LeaseID:   lid,
+		State:     mtypes.LeaseActive,
+		Price:     ev.Price,
+		CreatedAt: 0,
+	}}
+	s := serviceForManifestTest(t, ServiceConfig{HTTPServicesRequireAtLeastOneHost: true}, sdl2, did, leases, lid.GetProvider(), false)
 	err = s.bus.Publish(ev)
 	require.NoError(t, err)
 
@@ -195,6 +321,7 @@ func TestManagerAllowsUpdate(t *testing.T) {
 	require.NoError(t, err)
 
 	lid := testutil.LeaseID(t)
+	lid.GSeq = 0
 	did := lid.DeploymentID()
 	dgroups, err := sdl2.DeploymentGroups()
 	require.NoError(t, err)
@@ -217,7 +344,13 @@ func TestManagerAllowsUpdate(t *testing.T) {
 	version, err := sdl.ManifestVersion(sdlManifest)
 	require.NotNil(t, version)
 	require.NoError(t, err)
-	s := serviceForManifestTest(t, ServiceConfig{HTTPServicesRequireAtLeastOneHost: true}, sdl2, did)
+	leases := []mtypes.Lease{mtypes.Lease{
+		LeaseID:   lid,
+		State:     mtypes.LeaseActive,
+		Price:     ev.Price,
+		CreatedAt: 0,
+	}}
+	s := serviceForManifestTest(t, ServiceConfig{HTTPServicesRequireAtLeastOneHost: true}, sdl2, did, leases, lid.GetProvider(), false)
 
 	err = s.bus.Publish(ev)
 	require.NoError(t, err)

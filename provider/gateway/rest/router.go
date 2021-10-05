@@ -396,7 +396,9 @@ func createManifestHandler(log log.Logger, mclient pmanifest.Client) http.Handle
 			return
 		}
 
-		if err := mclient.Submit(req.Context(), requestDeploymentID(req), mani); err != nil {
+		subctx, cancel := context.WithTimeout(req.Context(), 20 * time.Second)
+		defer cancel()
+		if err := mclient.Submit(subctx, requestDeploymentID(req), mani); err != nil {
 			if errors.Is(err, manifestValidation.ErrInvalidManifest) {
 				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 				return
