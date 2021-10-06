@@ -29,6 +29,8 @@ type Config struct {
 	DeploymentIngressStaticHosts    bool
 	DeploymentIngressDomain         string
 	ClusterSettings                 map[interface{}]interface{}
+	RPCQueryTimeout                 time.Duration
+	CachedResultMaxAge              time.Duration
 }
 
 func NewDefaultConfig() Config {
