@@ -2,7 +2,6 @@ package manifest
 
 import (
 	"context"
-	"errors"
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	escrowtypes "github.com/ovrclk/akash/x/escrow/types"
 	"testing"
@@ -142,19 +141,47 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 	}
 }
 
-func TestManagerReturnsNoLease(t *testing.T) {
-	did := testutil.DeploymentID(t)
-	s := serviceForManifestTest(t, ServiceConfig{}, nil, did, nil, testutil.AccAddress(t).String(), false)
 
+func TestManagerReturnsWrongVersion(t *testing.T) {
+	sdl2A, err := sdl.ReadFile("../../x/deployment/testdata/deployment-v2-c2c.yaml")
+	require.NoError(t, err)
+
+	sdl2B, err := sdl.ReadFile("../../x/deployment/testdata/deployment-v2.yaml")
+	require.NoError(t, err)
+
+	did := testutil.DeploymentID(t)
+	s := serviceForManifestTest(t, ServiceConfig{}, sdl2B, did, nil, testutil.AccAddress(t).String(), false)
+
+	sdlManifest, err := sdl2A.Manifest()
+	require.NoError(t, err)
+
+	err = s.svc.Submit(context.Background(), did, sdlManifest)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrManifestVersion)
+
+	s.cancel()
+
+	select {
+	case <-s.svc.lc.Done():
+
+	case <-time.After(10 * time.Second):
+		t.Fatal("timed out waiting for service shutdown")
+	}
+}
+
+func TestManagerReturnsNoLease(t *testing.T) {
 	sdl2, err := sdl.ReadFile("../../x/deployment/testdata/deployment-v2.yaml")
 	require.NoError(t, err)
+
+	did := testutil.DeploymentID(t)
+	s := serviceForManifestTest(t, ServiceConfig{}, sdl2, did, nil, testutil.AccAddress(t).String(), false)
 
 	sdlManifest, err := sdl2.Manifest()
 	require.NoError(t, err)
 
 	err = s.svc.Submit(context.Background(), did, sdlManifest)
 	require.Error(t, err)
-	require.True(t, errors.Is(ErrNoLeaseForDeployment, err))
+	require.ErrorIs(t, err, ErrNoLeaseForDeployment)
 
 	s.cancel()
 

@@ -85,6 +85,9 @@ const (
 	FlagMinimumBalance                   = "minimum-balance"
 	FlagBalanceCheckPeriod               = "balance-check-period"
 	FlagProviderConfig                   = "provider-config"
+	FlagCachedResultMaxAge = "cached-result-max-age"
+	FlagRPCQueryTimeout = "rpc-query-timeout"
+
 )
 
 var (
@@ -285,6 +288,16 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().Duration(FlagRPCQueryTimeout, time.Minute, "timeout for requests made to the RPC node")
+	if err := viper.BindPFlag(FlagRPCQueryTimeout, cmd.Flags().Lookup(FlagRPCQueryTimeout)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagCachedResultMaxAge, 5 * time.Second, "max. cache age for results from the RPC node")
+	if err := viper.BindPFlag(FlagCachedResultMaxAge, cmd.Flags().Lookup(FlagCachedResultMaxAge)); err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
@@ -378,6 +391,8 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	manifestTimeout := viper.GetDuration(FlagManifestTimeout)
 	metricsListener := viper.GetString(FlagMetricsListener)
 	providerConfig := viper.GetString(FlagProviderConfig)
+	cachedResultMaxAge := viper.GetDuration(FlagCachedResultMaxAge)
+	rpcQueryTimeout := viper.GetDuration(FlagRPCQueryTimeout)
 
 	var metricsRouter http.Handler
 	if len(metricsListener) != 0 {
@@ -552,6 +567,8 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	config.BidDeposit = bidDeposit
+	config.RPCQueryTimeout = rpcQueryTimeout
+	config.CachedResultMaxAge = cachedResultMaxAge
 
 	service, err := provider.NewService(ctx, cctx, info.GetAddress(), session, bus, cclient, config)
 	if err != nil {

@@ -161,6 +161,8 @@ func (s *service) IsActive(ctx context.Context, dID dtypes.DeploymentID) (bool, 
 
 // Send incoming manifest request.
 func (s *service) Submit(ctx context.Context, did dtypes.DeploymentID, mani manifest.Manifest) error {
+	// This needs to be buffered because the goroutine writing to this may get the result
+	// after the context has returned an error
 	ch := make(chan error, 1)
 	req := manifestRequest{
 		value: &submitRequest{
