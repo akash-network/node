@@ -55,6 +55,7 @@ const (
 	// errors from private use staring
 	websocketInternalServerErrorCode = 4000
 	websocketLeaseNotFound           = 4001
+	manifestSubmitTimeout            = 120 * time.Second
 )
 
 type wsStreamConfig struct {
@@ -396,7 +397,7 @@ func createManifestHandler(log log.Logger, mclient pmanifest.Client) http.Handle
 			return
 		}
 
-		subctx, cancel := context.WithTimeout(req.Context(), 20*time.Second)
+		subctx, cancel := context.WithTimeout(req.Context(), manifestSubmitTimeout)
 		defer cancel()
 		if err := mclient.Submit(subctx, requestDeploymentID(req), mani); err != nil {
 			if errors.Is(err, manifestValidation.ErrInvalidManifest) {

@@ -351,13 +351,15 @@ func (m *manager) emitReceivedEvents() {
 
 	latestManifest := m.manifests[len(m.manifests)-1]
 	m.log.Debug("publishing manifest received", "num-leases", len(m.localLeases))
+	copyOfData := new(dtypes.QueryDeploymentResponse)
+	*copyOfData = m.data
 	for _, lease := range m.localLeases {
 		m.log.Debug("publishing manifest received for lease", "lease_id", lease.LeaseID)
 		if err := m.bus.Publish(event.ManifestReceived{
 			LeaseID:    lease.LeaseID,
 			Group:      lease.Group,
 			Manifest:   latestManifest,
-			Deployment: &m.data,
+			Deployment: copyOfData,
 		}); err != nil {
 			m.log.Error("publishing event", "err", err, "lease", lease.LeaseID)
 		}
