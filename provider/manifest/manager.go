@@ -27,8 +27,6 @@ import (
 
 const (
 	manifestLingerDuration = time.Minute * time.Duration(5)
-    //maxResultAge = time.Second * 5
-    //maxRequestDuration = 60 * time.Second
 )
 
 var (
@@ -39,7 +37,7 @@ var (
 	ErrManifestVersion         = errors.New("manifest version validation failed")
 	ErrNoManifestForDeployment = errors.New("manifest not yet received for that deployment")
 	ErrNoLeaseForDeployment    = errors.New("no lease for deployment")
-    errNoGroupForLease = errors.New("group not found")
+	errNoGroupForLease         = errors.New("group not found")
 )
 
 func newManager(h *service, daddr dtypes.DeploymentID) *manager {
@@ -72,20 +70,20 @@ type manager struct {
 	session session.Session
 	bus     pubsub.Bus
 
-	leasech                chan event.LeaseWon
-	rmleasech              chan mtypes.LeaseID
-	manifestch             chan manifestRequest
-	updatech               chan []byte
+	leasech    chan event.LeaseWon
+	rmleasech  chan mtypes.LeaseID
+	manifestch chan manifestRequest
+	updatech   chan []byte
 
-	data                 dtypes.QueryDeploymentResponse
-	requests             []manifestRequest
-	pendingRequests      []manifestRequest
-	manifests            []*manifest.Manifest
-	versions             [][]byte
+	data            dtypes.QueryDeploymentResponse
+	requests        []manifestRequest
+	pendingRequests []manifestRequest
+	manifests       []*manifest.Manifest
+	versions        [][]byte
 
-	localLeases  []event.LeaseWon
-	fetched bool
-	fetchedAt time.Time
+	localLeases []event.LeaseWon
+	fetched     bool
+	fetchedAt   time.Time
 
 	stoptimer *time.Timer
 
@@ -237,7 +235,7 @@ func (m *manager) maybeFetchData(ctx context.Context, runch <-chan runner.Result
 	}
 
 	expired := time.Since(m.fetchedAt) > m.config.CachedResultMaxAge
-	if !m.fetched  || expired {
+	if !m.fetched || expired {
 		m.clearFetched()
 		return m.fetchData(ctx)
 	}
@@ -251,9 +249,9 @@ func (m *manager) fetchData(ctx context.Context) <-chan runner.Result {
 	})
 }
 
-type manifestManagerFetchDataResult struct{
+type manifestManagerFetchDataResult struct {
 	deployment dtypes.QueryDeploymentResponse
-	leases []event.LeaseWon
+	leases     []event.LeaseWon
 }
 
 func (m *manager) doFetchData(ctx context.Context) (manifestManagerFetchDataResult, error) {
@@ -304,7 +302,7 @@ func (m *manager) doFetchData(ctx context.Context) (manifestManagerFetchDataResu
 
 	return manifestManagerFetchDataResult{
 		deployment: *deploymentResponse,
-		leases: leases,
+		leases:     leases,
 	}, nil
 }
 

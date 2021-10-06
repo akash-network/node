@@ -141,7 +141,6 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 	}
 }
 
-
 func TestManagerReturnsWrongVersion(t *testing.T) {
 	sdl2A, err := sdl.ReadFile("../../x/deployment/testdata/deployment-v2-c2c.yaml")
 	require.NoError(t, err)

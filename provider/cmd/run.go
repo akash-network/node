@@ -85,9 +85,8 @@ const (
 	FlagMinimumBalance                   = "minimum-balance"
 	FlagBalanceCheckPeriod               = "balance-check-period"
 	FlagProviderConfig                   = "provider-config"
-	FlagCachedResultMaxAge = "cached-result-max-age"
-	FlagRPCQueryTimeout = "rpc-query-timeout"
-
+	FlagCachedResultMaxAge               = "cached-result-max-age"
+	FlagRPCQueryTimeout                  = "rpc-query-timeout"
 )
 
 var (
@@ -293,7 +292,7 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
-	cmd.Flags().Duration(FlagCachedResultMaxAge, 5 * time.Second, "max. cache age for results from the RPC node")
+	cmd.Flags().Duration(FlagCachedResultMaxAge, 5*time.Second, "max. cache age for results from the RPC node")
 	if err := viper.BindPFlag(FlagCachedResultMaxAge, cmd.Flags().Lookup(FlagCachedResultMaxAge)); err != nil {
 		return nil
 	}
