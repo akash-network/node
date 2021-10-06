@@ -60,9 +60,10 @@ kubectl apply -f _run/ingress-nginx-class.yaml
 
 *Step 6*: Run `python3 provider_migrate_to_hostname_operator.py purge`. This removes all the ingress objects from kubernetes.
 
-*Step 7*: Make sure the `akash-services` namespace exists
+*Step 7*: Make sure the `akash-services` namespace exists and apply the module
 
 ```
+kubectl apply -f _docs/kustomize/networking/namespace.yaml
 kubectl kustomize _docs/kustomize/akash-services/ | kubectl apply -f -
 ```
 
@@ -79,8 +80,8 @@ images:
 
 The last line specifies the image tag and should correspond to whatever version you are installing.
 
-To install the operator into kubernetes perform the following from the `/_docs` directory.
+Install the akash hostname operator into kubernetes:
 
 ```
-kubectl kustomize ./kustomize/akash-hostname-operator | kubectl apply -f -
+kubectl kustomize _docs/kustomize/akash-hostname-operator | kubectl apply -f -
 ```
