@@ -72,6 +72,7 @@ func TestWatchdogStops(t *testing.T) {
 	wd, scaffold := makeWatchdogTestScaffold(t, 1*time.Minute)
 
 	wd.stop() // ask it to stop immediately
+	wd.stop() // ask it to stop a second time, this is expected usage
 
 	select {
 	case <-wd.lc.Done():
