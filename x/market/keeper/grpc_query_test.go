@@ -2,6 +2,8 @@ package keeper_test
 
 import (
 	"fmt"
+	"math"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/testutil/state"
 	"github.com/ovrclk/akash/x/market/keeper"
@@ -25,7 +28,6 @@ type grpcTestSuite struct {
 }
 
 func setupTest(t *testing.T) *grpcTestSuite {
-
 	ssuite := state.SetupTestSuite(t)
 
 	suite := &grpcTestSuite{
@@ -178,6 +180,453 @@ func TestGRPCQueryOrders(t *testing.T) {
 			require.NotNil(t, res)
 			require.Equal(t, tc.expLen, len(res.Orders))
 		})
+	}
+}
+
+type orderFilterModifier struct {
+	fieldName string
+	f         func(orderID types.OrderID, filter types.OrderFilters) types.OrderFilters
+	getField  func(orderID types.OrderID) interface{}
+}
+
+type bidFilterModifier struct {
+	fieldName string
+	f         func(bidID types.BidID, filter types.BidFilters) types.BidFilters
+	getField  func(bidID types.BidID) interface{}
+}
+
+func TestGRPCQueryOrdersWithFilter(t *testing.T) {
+	suite := setupTest(t)
+
+	// creating orders with different states
+	orderA, _ := createOrder(t, suite.ctx, suite.keeper)
+	orderB, _ := createOrder(t, suite.ctx, suite.keeper)
+	orderC, _ := createOrder(t, suite.ctx, suite.keeper)
+
+	orders := []types.OrderID{
+		orderA.GetOrderID(),
+		orderB.GetOrderID(),
+		orderC.GetOrderID(),
+	}
+
+	modifiers := []orderFilterModifier{
+		{
+			"owner",
+			func(orderID types.OrderID, filter types.OrderFilters) types.OrderFilters {
+				filter.Owner = orderID.GetOwner()
+				return filter
+			},
+			func(orderID types.OrderID) interface{} {
+				return orderID.Owner
+			},
+		},
+		{
+			"dseq",
+			func(orderID types.OrderID, filter types.OrderFilters) types.OrderFilters {
+				filter.DSeq = orderID.DSeq
+				return filter
+			},
+			func(orderID types.OrderID) interface{} {
+				return orderID.DSeq
+			},
+		},
+		{
+			"gseq",
+			func(orderID types.OrderID, filter types.OrderFilters) types.OrderFilters {
+				filter.GSeq = orderID.GSeq
+				return filter
+			},
+			func(orderID types.OrderID) interface{} {
+				return orderID.GSeq
+			},
+		},
+		{
+			"oseq",
+			func(orderID types.OrderID, filter types.OrderFilters) types.OrderFilters {
+				filter.OSeq = orderID.OSeq
+				return filter
+			},
+			func(orderID types.OrderID) interface{} {
+				return orderID.OSeq
+			},
+		},
+	}
+
+	ctx := sdk.WrapSDKContext(suite.ctx)
+
+	for _, orderID := range orders {
+		for _, m := range modifiers {
+			req := &types.QueryOrdersRequest{
+				Filters: m.f(orderID, types.OrderFilters{}),
+			}
+
+			res, err := suite.queryClient.Orders(ctx, req)
+
+			require.NoError(t, err, "testing %v", m.fieldName)
+			require.NotNil(t, res, "testing %v", m.fieldName)
+			// At least 1 result
+			require.GreaterOrEqual(t, len(res.Orders), 1, "testing %v", m.fieldName)
+
+			for _, order := range res.Orders {
+				resultOrderID := order.GetOrderID()
+				require.Equal(t, m.getField(orderID), m.getField(resultOrderID), "testing %v", m.fieldName)
+			}
+		}
+	}
+
+	limit := int(math.Pow(2, float64(len(modifiers))))
+
+	// Use an order ID that matches absolutely nothing in any field
+	bogusOrderID := types.OrderID{
+		Owner: testutil.AccAddress(t).String(),
+		DSeq:  9999999,
+		GSeq:  8888888,
+		OSeq:  7777777,
+	}
+	for i := 0; i != limit; i++ {
+		modifiersToUse := make([]bool, len(modifiers))
+
+		for j := 0; j != len(modifiers); j++ {
+			mask := int(math.Pow(2, float64(j)))
+			modifiersToUse[j] = (mask & i) != 0
+		}
+
+		for _, orderID := range orders {
+			filter := types.OrderFilters{}
+			msg := strings.Builder{}
+			msg.WriteString("testing filtering on: ")
+			for k, useModifier := range modifiersToUse {
+				if !useModifier {
+					continue
+				}
+				modifier := modifiers[k]
+				filter = modifier.f(orderID, filter)
+				msg.WriteString(modifier.fieldName)
+				msg.WriteString(", ")
+			}
+
+			req := &types.QueryOrdersRequest{
+				Filters: filter,
+			}
+
+			res, err := suite.queryClient.Orders(ctx, req)
+
+			require.NoError(t, err, msg.String())
+			require.NotNil(t, res, msg.String())
+			// At least 1 result
+			require.GreaterOrEqual(t, len(res.Orders), 1, msg.String())
+
+			for _, order := range res.Orders {
+				resultOrderID := order.GetOrderID()
+				for k, useModifier := range modifiersToUse {
+					if !useModifier {
+						continue
+					}
+					m := modifiers[k]
+					require.Equal(t, m.getField(orderID), m.getField(resultOrderID), "testing %v", m.fieldName)
+				}
+			}
+		}
+
+		filter := types.OrderFilters{}
+		msg := strings.Builder{}
+		msg.WriteString("testing filtering on (using non matching ID): ")
+		for k, useModifier := range modifiersToUse {
+			if !useModifier {
+				continue
+			}
+			modifier := modifiers[k]
+			filter = modifier.f(bogusOrderID, filter)
+			msg.WriteString(modifier.fieldName)
+			msg.WriteString(", ")
+		}
+
+		req := &types.QueryOrdersRequest{
+			Filters: filter,
+		}
+
+		res, err := suite.queryClient.Orders(ctx, req)
+
+		require.NoError(t, err, msg.String())
+		require.NotNil(t, res, msg.String())
+		expected := 0
+		if i == 0 {
+			expected = len(orders)
+		}
+		require.Len(t, res.Orders, expected, msg.String())
+	}
+
+	for _, orderID := range orders {
+		// Query by owner
+		req := &types.QueryOrdersRequest{
+			Filters: types.OrderFilters{
+				Owner: orderID.Owner,
+			},
+		}
+
+		res, err := suite.queryClient.Orders(ctx, req)
+
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		// Just 1 result
+		require.Len(t, res.Orders, 1)
+		orderResult := res.Orders[0]
+		require.Equal(t, orderID, orderResult.GetOrderID())
+
+		// Query with valid DSeq
+		req = &types.QueryOrdersRequest{
+			Filters: types.OrderFilters{
+				Owner: orderID.Owner,
+				DSeq:  orderID.DSeq,
+			},
+		}
+
+		res, err = suite.queryClient.Orders(ctx, req)
+
+		// Expect the same match
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.Len(t, res.Orders, 1)
+		orderResult = res.Orders[0]
+		require.Equal(t, orderID, orderResult.GetOrderID())
+
+		// Query with a bogus DSeq
+		req = &types.QueryOrdersRequest{
+			Filters: types.OrderFilters{
+				Owner: orderID.Owner,
+				DSeq:  orderID.DSeq + 1,
+			},
+		}
+
+		res, err = suite.queryClient.Orders(ctx, req)
+
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		// expect nothing matches
+		require.Len(t, res.Orders, 0)
+	}
+}
+
+func TestGRPCQueryBidsWithFilter(t *testing.T) {
+	suite := setupTest(t)
+
+	// creating orders with different states
+	bidA, _ := createBid(t, suite.TestSuite)
+	bidB, _ := createBid(t, suite.TestSuite)
+	bidC, _ := createBid(t, suite.TestSuite)
+
+	bids := []types.BidID{
+		bidA.GetBidID(),
+		bidB.GetBidID(),
+		bidC.GetBidID(),
+	}
+
+	modifiers := []bidFilterModifier{
+		{
+			"owner",
+			func(bidID types.BidID, filter types.BidFilters) types.BidFilters {
+				filter.Owner = bidID.GetOwner()
+				return filter
+			},
+			func(bidID types.BidID) interface{} {
+				return bidID.Owner
+			},
+		},
+		{
+			"dseq",
+			func(bidID types.BidID, filter types.BidFilters) types.BidFilters {
+				filter.DSeq = bidID.DSeq
+				return filter
+			},
+			func(bidID types.BidID) interface{} {
+				return bidID.DSeq
+			},
+		},
+		{
+			"gseq",
+			func(bidID types.BidID, filter types.BidFilters) types.BidFilters {
+				filter.GSeq = bidID.GSeq
+				return filter
+			},
+			func(bidID types.BidID) interface{} {
+				return bidID.GSeq
+			},
+		},
+		{
+			"oseq",
+			func(bidID types.BidID, filter types.BidFilters) types.BidFilters {
+				filter.OSeq = bidID.OSeq
+				return filter
+			},
+			func(bidID types.BidID) interface{} {
+				return bidID.OSeq
+			},
+		},
+		{
+			"provider",
+			func(bidID types.BidID, filter types.BidFilters) types.BidFilters {
+				filter.Provider = bidID.Provider
+				return filter
+			},
+			func(bidID types.BidID) interface{} {
+				return bidID.Provider
+			},
+		},
+	}
+
+	ctx := sdk.WrapSDKContext(suite.ctx)
+
+	for _, bidID := range bids {
+		for _, m := range modifiers {
+			req := &types.QueryBidsRequest{
+				Filters: m.f(bidID, types.BidFilters{}),
+			}
+
+			res, err := suite.queryClient.Bids(ctx, req)
+
+			require.NoError(t, err, "testing %v", m.fieldName)
+			require.NotNil(t, res, "testing %v", m.fieldName)
+			// At least 1 result
+			require.GreaterOrEqual(t, len(res.Bids), 1, "testing %v", m.fieldName)
+
+			for _, bid := range res.Bids {
+				resultBidID := bid.GetBid().BidID
+				require.Equal(t, m.getField(bidID), m.getField(resultBidID), "testing %v", m.fieldName)
+			}
+		}
+	}
+
+	limit := int(math.Pow(2, float64(len(modifiers))))
+
+	// Use an order ID that matches absolutely nothing in any field
+	bogusBidID := types.BidID{
+		Owner:    testutil.AccAddress(t).String(),
+		DSeq:     9999999,
+		GSeq:     8888888,
+		OSeq:     7777777,
+		Provider: testutil.AccAddress(t).String(),
+	}
+	for i := 0; i != limit; i++ {
+		modifiersToUse := make([]bool, len(modifiers))
+
+		for j := 0; j != len(modifiers); j++ {
+			mask := int(math.Pow(2, float64(j)))
+			modifiersToUse[j] = (mask & i) != 0
+		}
+
+		for _, bidID := range bids {
+			filter := types.BidFilters{}
+			msg := strings.Builder{}
+			msg.WriteString("testing filtering on: ")
+			for k, useModifier := range modifiersToUse {
+				if !useModifier {
+					continue
+				}
+				modifier := modifiers[k]
+				filter = modifier.f(bidID, filter)
+				msg.WriteString(modifier.fieldName)
+				msg.WriteString(", ")
+			}
+
+			req := &types.QueryBidsRequest{
+				Filters: filter,
+			}
+
+			res, err := suite.queryClient.Bids(ctx, req)
+
+			require.NoError(t, err, msg.String())
+			require.NotNil(t, res, msg.String())
+			// At least 1 result
+			require.GreaterOrEqual(t, len(res.Bids), 1, msg.String())
+
+			for _, bid := range res.Bids {
+				resultBidID := bid.GetBid().BidID
+				for k, useModifier := range modifiersToUse {
+					if !useModifier {
+						continue
+					}
+					m := modifiers[k]
+					require.Equal(t, m.getField(bidID), m.getField(resultBidID), "testing %v", m.fieldName)
+				}
+			}
+		}
+
+		filter := types.BidFilters{}
+		msg := strings.Builder{}
+		msg.WriteString("testing filtering on (using non matching ID): ")
+		for k, useModifier := range modifiersToUse {
+			if !useModifier {
+				continue
+			}
+			modifier := modifiers[k]
+			filter = modifier.f(bogusBidID, filter)
+			msg.WriteString(modifier.fieldName)
+			msg.WriteString(", ")
+		}
+
+		req := &types.QueryBidsRequest{
+			Filters: filter,
+		}
+
+		res, err := suite.queryClient.Bids(ctx, req)
+
+		require.NoError(t, err, msg.String())
+		require.NotNil(t, res, msg.String())
+		expected := 0
+		if i == 0 {
+			expected = len(bids)
+		}
+		require.Len(t, res.Bids, expected, msg.String())
+	}
+
+	for _, bidID := range bids {
+		// Query by owner
+		req := &types.QueryBidsRequest{
+			Filters: types.BidFilters{
+				Owner: bidID.Owner,
+			},
+		}
+
+		res, err := suite.queryClient.Bids(ctx, req)
+
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		// Just 1 result
+		require.Len(t, res.Bids, 1)
+		orderResult := res.Bids[0]
+		require.Equal(t, bidID, orderResult.GetBid().BidID)
+
+		// Query with valid DSeq
+		req = &types.QueryBidsRequest{
+			Filters: types.BidFilters{
+				Owner: bidID.Owner,
+				DSeq:  bidID.DSeq,
+			},
+		}
+
+		res, err = suite.queryClient.Bids(ctx, req)
+
+		// Expect the same match
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.Len(t, res.Bids, 1)
+		orderResult = res.Bids[0]
+		require.Equal(t, bidID, orderResult.GetBid().BidID)
+
+		// Query with a bogus DSeq
+		req = &types.QueryBidsRequest{
+			Filters: types.BidFilters{
+				Owner: bidID.Owner,
+				DSeq:  bidID.DSeq + 1,
+			},
+		}
+
+		res, err = suite.queryClient.Bids(ctx, req)
+
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		// expect nothing matches
+		require.Len(t, res.Bids, 0)
 	}
 }
 
