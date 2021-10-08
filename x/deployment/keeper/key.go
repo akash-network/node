@@ -43,3 +43,37 @@ func groupsKey(id types.DeploymentID) []byte {
 	}
 	return buf.Bytes()
 }
+
+func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq uint32) ([]byte, error) {
+	buf := bytes.NewBuffer(prefix)
+
+	if len(owner) == 0 {
+		return buf.Bytes(), nil
+	}
+
+	if _, err := buf.Write([]byte(owner)); err != nil {
+		return nil, err
+	}
+
+	if dseq == 0 {
+		return buf.Bytes(), nil
+	}
+
+	if err := binary.Write(buf, binary.BigEndian, dseq); err != nil {
+		return nil, err
+	}
+
+	if gseq == 0 {
+		return buf.Bytes(), nil
+	}
+
+	if err := binary.Write(buf, binary.BigEndian, gseq); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func deploymentPrefixFromFilter(f types.DeploymentFilters) ([]byte, error) {
+	return filterToPrefix(deploymentPrefix, f.Owner, f.DSeq, 0)
+}

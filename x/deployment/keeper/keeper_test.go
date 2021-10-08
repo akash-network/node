@@ -119,7 +119,7 @@ func Test_OnEscrowAccountClosed_overdrawn(t *testing.T) {
 	t.Skip("Hooks Refactor")
 	ctx, keeper := setupKeeper(t)
 
-	groups := createActiveDeployment(t, ctx, keeper)
+	_, groups := createActiveDeployment(t, ctx, keeper)
 
 	did := groups[0].ID().DeploymentID()
 
@@ -154,7 +154,7 @@ func Test_OnEscrowAccountClosed_overdrawn(t *testing.T) {
 func Test_OnBidClosed(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
 
-	groups := createActiveDeployment(t, ctx, keeper)
+	_, groups := createActiveDeployment(t, ctx, keeper)
 
 	err := keeper.OnBidClosed(ctx, groups[0].ID())
 	require.NoError(t, err)
@@ -174,7 +174,7 @@ func Test_OnBidClosed(t *testing.T) {
 
 func Test_CloseGroup(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
-	groups := createActiveDeployment(t, ctx, keeper)
+	_, groups := createActiveDeployment(t, ctx, keeper)
 
 	t.Run("assert group 0 state closed", func(t *testing.T) {
 		assert.NoError(t, keeper.OnCloseGroup(ctx, groups[0], types.GroupClosed))
@@ -202,7 +202,7 @@ func Test_Empty_CloseGroup(t *testing.T) {
 	})
 }
 
-func createActiveDeployment(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) []types.Group {
+func createActiveDeployment(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) (types.DeploymentID, []types.Group) {
 	t.Helper()
 
 	deployment := testutil.Deployment(t)
@@ -217,7 +217,7 @@ func createActiveDeployment(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper
 	err := keeper.Create(ctx, deployment, groups)
 	require.NoError(t, err)
 
-	return groups
+	return deployment.DeploymentID, groups
 }
 
 func setupKeeper(t testing.TB) (sdk.Context, keeper.IKeeper) {

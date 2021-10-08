@@ -14,6 +14,59 @@ var (
 	leasePrefix = []byte{0x03, 0x00}
 )
 
+func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq, oseq uint32, provider string) ([]byte, error) {
+	buf := bytes.NewBuffer(prefix)
+
+	if len(owner) == 0 {
+		return buf.Bytes(), nil
+	}
+	if _, err := buf.Write([]byte(owner)); err != nil {
+		return nil, err
+	}
+
+	if dseq == 0 {
+		return buf.Bytes(), nil
+	}
+	if err := binary.Write(buf, binary.BigEndian, dseq); err != nil {
+		return nil, err
+	}
+
+	if gseq == 0 {
+		return buf.Bytes(), nil
+	}
+	if err := binary.Write(buf, binary.BigEndian, gseq); err != nil {
+		return nil, err
+	}
+
+	if oseq == 0 {
+		return buf.Bytes(), nil
+	}
+	if err := binary.Write(buf, binary.BigEndian, oseq); err != nil {
+		return nil, err
+	}
+
+	if len(provider) == 0 {
+		return buf.Bytes(), nil
+	}
+	if _, err := buf.Write([]byte(provider)); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func orderPrefixFromFilter(f types.OrderFilters) ([]byte, error) {
+	return filterToPrefix(orderPrefix, f.Owner, f.DSeq, f.GSeq, f.OSeq, "")
+}
+
+func leasePrefixFromFilter(f types.LeaseFilters) ([]byte, error) {
+	return filterToPrefix(leasePrefix, f.Owner, f.DSeq, f.GSeq, f.OSeq, f.Provider)
+}
+
+func bidPrefixFromFilter(f types.BidFilters) ([]byte, error) {
+	return filterToPrefix(bidPrefix, f.Owner, f.DSeq, f.GSeq, f.OSeq, f.Provider)
+}
+
 func orderKey(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(orderPrefix)
 	buf.Write([]byte(id.Owner))

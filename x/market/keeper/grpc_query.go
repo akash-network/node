@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/types"
 )
@@ -35,8 +36,12 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 	var orders types.Orders
 	ctx := sdk.UnwrapSDKContext(c)
 
-	store := ctx.KVStore(k.skey)
-	orderStore := prefix.NewStore(store, orderPrefix)
+	searchPrefix, err := orderPrefixFromFilter(req.Filters)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	orderStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
 
 	pageRes, err := sdkquery.FilteredPaginate(orderStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		var order types.Order
@@ -102,8 +107,12 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 	var bids []types.QueryBidResponse
 	ctx := sdk.UnwrapSDKContext(c)
 
-	store := ctx.KVStore(k.skey)
-	bidStore := prefix.NewStore(store, bidPrefix)
+	searchPrefix, err := bidPrefixFromFilter(req.Filters)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	bidStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
 
 	pageRes, err := sdkquery.FilteredPaginate(bidStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		var bid types.Bid
@@ -189,8 +198,12 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 	var leases []types.QueryLeaseResponse
 	ctx := sdk.UnwrapSDKContext(c)
 
-	store := ctx.KVStore(k.skey)
-	leaseStore := prefix.NewStore(store, leasePrefix)
+	searchPrefix, err := leasePrefixFromFilter(req.Filters)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	leaseStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
 
 	pageRes, err := sdkquery.FilteredPaginate(leaseStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		var lease types.Lease
