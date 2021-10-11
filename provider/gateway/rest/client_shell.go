@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/ovrclk/akash/util/wsutil"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"io"
 	"k8s.io/client-go/tools/remotecommand"
 	"net/url"

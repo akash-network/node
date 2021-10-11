@@ -23,7 +23,7 @@ import (
 	"github.com/ovrclk/akash/manifest"
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	clusterUtil "github.com/ovrclk/akash/provider/cluster/util"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 const (

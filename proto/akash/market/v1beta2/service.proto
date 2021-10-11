@@ -1,0 +1,24 @@
+syntax = "proto3";
+package akash.market.v1beta2;
+
+import "akash/market/v1beta2/bid.proto";
+import "akash/market/v1beta2/lease.proto";
+option go_package = "github.com/ovrclk/akash/x/market/types/v1beta2";
+
+// Msg defines the market Msg service
+service Msg {
+  // CreateBid defines a method to create a bid given proper inputs.
+  rpc CreateBid(MsgCreateBid) returns (MsgCreateBidResponse);
+
+  // CloseBid defines a method to close a bid given proper inputs.
+  rpc CloseBid(MsgCloseBid) returns (MsgCloseBidResponse);
+
+  // WithdrawLease withdraws accrued funds from the lease payment
+  rpc WithdrawLease(MsgWithdrawLease) returns (MsgWithdrawLeaseResponse);
+
+  // CreateLease creates a new lease
+  rpc CreateLease(MsgCreateLease) returns (MsgCreateLeaseResponse);
+
+  // CloseLease defines a method to close an order given proper inputs.
+  rpc CloseLease(MsgCloseLease) returns (MsgCloseLeaseResponse);
+}

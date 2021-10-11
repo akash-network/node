@@ -5,7 +5,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/ovrclk/akash/types"
+	types "github.com/ovrclk/akash/types/v1beta2"
 )
 
 type v2StorageAttributes types.Attributes

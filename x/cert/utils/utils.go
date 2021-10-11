@@ -16,7 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/pkg/errors"
 
-	ctypes "github.com/ovrclk/akash/x/cert/types"
+	ctypes "github.com/ovrclk/akash/x/cert/types/v1beta2"
 )
 
 type PEMBlocks struct {

@@ -9,8 +9,8 @@ import (
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/sdl"
 	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/spf13/pflag"
 )
 

@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/ovrclk/akash/cmd/common"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 
 	"github.com/avast/retry-go"
 	"github.com/cosmos/cosmos-sdk/client"

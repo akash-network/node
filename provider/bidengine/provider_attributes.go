@@ -6,7 +6,7 @@ import (
 	"github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
-	atypes "github.com/ovrclk/akash/x/audit/types"
+	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
 	"regexp"
 	"sync"
 	"time"

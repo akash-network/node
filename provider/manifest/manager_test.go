@@ -3,7 +3,7 @@ package manifest
 import (
 	"context"
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
-	escrowtypes "github.com/ovrclk/akash/x/escrow/types"
+	escrowtypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 	"testing"
 	"time"
 
@@ -17,10 +17,10 @@ import (
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
-	"github.com/ovrclk/akash/x/deployment/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )

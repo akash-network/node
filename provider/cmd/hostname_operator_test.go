@@ -6,7 +6,7 @@ import (
 	"github.com/ovrclk/akash/provider/cluster/mocks"
 	cluster "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/testutil"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"io"

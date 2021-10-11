@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	mparams "github.com/ovrclk/akash/x/market/types"
+	mparams "github.com/ovrclk/akash/x/market/types/v1beta2"
 	config2 "github.com/ovrclk/akash/x/provider/config"
 	"github.com/shopspring/decimal"
 
@@ -20,7 +20,7 @@ import (
 
 	"github.com/ovrclk/akash/client/broadcaster"
 	"github.com/ovrclk/akash/provider/bidengine"
-	ctypes "github.com/ovrclk/akash/x/cert/types"
+	ctypes "github.com/ovrclk/akash/x/cert/types/v1beta2"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
@@ -43,7 +43,7 @@ import (
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	cmodule "github.com/ovrclk/akash/x/cert"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 const (

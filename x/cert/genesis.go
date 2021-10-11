@@ -10,7 +10,7 @@ import (
 
 	"github.com/ovrclk/akash/x/cert/keeper"
 
-	"github.com/ovrclk/akash/x/cert/types"
+	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error in case of failure

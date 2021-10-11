@@ -4,11 +4,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 
-	atypes "github.com/ovrclk/akash/x/audit/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	etypes "github.com/ovrclk/akash/x/escrow/types"
+	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	etypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 	"github.com/ovrclk/akash/x/market/keeper"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 type EscrowKeeper interface {

@@ -6,7 +6,7 @@ import (
 
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
 	"github.com/ovrclk/akash/x/provider/keeper"
-	"github.com/ovrclk/akash/x/provider/types"
+	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 // NewHandler returns a handler for "provider" type messages.

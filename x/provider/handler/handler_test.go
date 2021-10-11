@@ -11,12 +11,12 @@ import (
 
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/testutil/state"
-	akashtypes "github.com/ovrclk/akash/types"
+	akashtypes "github.com/ovrclk/akash/types/v1beta2"
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
 	"github.com/ovrclk/akash/x/provider/handler"
 
 	"github.com/ovrclk/akash/x/provider/keeper"
-	"github.com/ovrclk/akash/x/provider/types"
+	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 const (

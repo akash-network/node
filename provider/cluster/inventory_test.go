@@ -11,15 +11,15 @@ import (
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/testutil"
-	atypes "github.com/ovrclk/akash/types"
+	atypes "github.com/ovrclk/akash/types/v1beta2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/types/v1beta2"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
 func newResourceUnits() types.ResourceUnits {

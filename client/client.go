@@ -14,15 +14,15 @@ import (
 
 	"github.com/ovrclk/akash/client/broadcaster"
 	amodule "github.com/ovrclk/akash/x/audit"
-	atypes "github.com/ovrclk/akash/x/audit/types"
+	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
 	cmodule "github.com/ovrclk/akash/x/cert"
-	ctypes "github.com/ovrclk/akash/x/cert/types"
+	ctypes "github.com/ovrclk/akash/x/cert/types/v1beta2"
 	dmodule "github.com/ovrclk/akash/x/deployment"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mmodule "github.com/ovrclk/akash/x/market"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	pmodule "github.com/ovrclk/akash/x/provider"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 var (

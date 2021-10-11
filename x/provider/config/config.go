@@ -5,8 +5,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/ovrclk/akash/types"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
+	types "github.com/ovrclk/akash/types/v1beta2"
+	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 // Config is the struct that stores provider config

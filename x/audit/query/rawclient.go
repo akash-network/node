@@ -6,7 +6,7 @@ import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/ovrclk/akash/x/audit/types"
+	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
 )
 
 // RawClient interface

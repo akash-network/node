@@ -3,7 +3,7 @@ package market
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/x/market/keeper"
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 

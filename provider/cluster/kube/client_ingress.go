@@ -5,7 +5,7 @@ import (
 	"fmt"
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	netv1 "k8s.io/api/networking/v1"
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -7,7 +7,7 @@ import (
 
 	"github.com/ovrclk/akash/x/escrow/keeper"
 
-	"github.com/ovrclk/akash/x/escrow/types"
+	types "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error incase of failure

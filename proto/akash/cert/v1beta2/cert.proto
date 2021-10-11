@@ -1,0 +1,118 @@
+syntax = "proto3";
+package akash.cert.v1beta2;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/ovrclk/akash/x/cert/types/v1beta2";
+
+// Msg defines the provider Msg service
+service Msg {
+  // CreateCertificate defines a method to create new certificate given proper inputs.
+  rpc CreateCertificate(MsgCreateCertificate) returns(MsgCreateCertificateResponse);
+  // RevokeCertificate defines a method to revoke the certificate
+  rpc RevokeCertificate(MsgRevokeCertificate) returns(MsgRevokeCertificateResponse);
+}
+
+// CertificateID stores owner and sequence number
+message CertificateID {
+  option (gogoproto.equal) = false;
+  option (gogoproto.goproto_stringer) = false;
+
+  string owner = 1 [
+    (gogoproto.jsontag) = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+
+  string serial = 2 [
+    (gogoproto.jsontag) = "serial",
+    (gogoproto.moretags) = "yaml:\"serial\""
+  ];
+}
+
+// Certificate stores state, certificate and it's public key
+message Certificate {
+  // State is an enum which refers to state of deployment
+  enum State {
+    option (gogoproto.goproto_enum_prefix) = false;
+
+    // Prefix should start with 0 in enum. So declaring dummy state
+    invalid = 0 [(gogoproto.enumvalue_customname) = "CertificateStateInvalid"];
+    // CertificateValid denotes state for deployment active
+    valid = 1 [(gogoproto.enumvalue_customname) = "CertificateValid"];
+    // CertificateRevoked denotes state for deployment closed
+    revoked = 2 [(gogoproto.enumvalue_customname) = "CertificateRevoked"];
+  }
+
+  State state = 2 [
+    (gogoproto.jsontag) = "state",
+    (gogoproto.moretags) = "yaml:\"state\""
+  ];
+
+  bytes cert = 3 [
+    (gogoproto.jsontag) = "cert",
+    (gogoproto.moretags) = "yaml:\"cert\""
+  ];
+
+  bytes pubkey = 4 [
+    (gogoproto.jsontag) = "pubkey",
+    (gogoproto.moretags) = "yaml:\"pubkey\""
+  ];
+}
+
+// CertificateFilter defines filters used to filter certificates
+message CertificateFilter {
+  option (gogoproto.equal) = false;
+
+  string owner = 1 [
+    (gogoproto.jsontag) = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+
+  string serial = 2 [
+    (gogoproto.jsontag) = "serial",
+    (gogoproto.moretags) = "yaml:\"serial\""
+  ];
+
+  string state = 3 [
+    (gogoproto.jsontag) = "state",
+    (gogoproto.moretags) = "yaml:\"state\""
+  ];
+}
+
+// MsgCreateCertificate defines an SDK message for creating certificate
+message MsgCreateCertificate {
+  option (gogoproto.equal) = false;
+
+  string owner = 1 [
+    (gogoproto.jsontag) = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+
+  bytes cert = 2 [
+    (gogoproto.jsontag) = "cert",
+    (gogoproto.moretags) = "yaml:\"cert\""
+  ];
+
+  bytes pubkey = 3 [
+    (gogoproto.jsontag) = "pubkey",
+    (gogoproto.moretags) = "yaml:\"pubkey\""
+  ];
+}
+
+// MsgCreateCertificateResponse defines the Msg/CreateCertificate response type.
+message MsgCreateCertificateResponse {}
+
+// MsgRevokeCertificate defines an SDK message for revoking certificate
+message MsgRevokeCertificate {
+  option (gogoproto.equal) = false;
+
+  CertificateID id = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.customname) = "ID",
+    (gogoproto.jsontag) = "id",
+    (gogoproto.moretags) = "yaml:\"id\""
+  ];
+}
+
+// MsgRevokeCertificateResponse defines the Msg/RevokeCertificate response type.
+message MsgRevokeCertificateResponse {}

@@ -2,8 +2,8 @@ package hooks
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 type DeploymentKeeper interface {

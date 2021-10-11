@@ -10,7 +10,7 @@ import (
 
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/x/provider/config"
-	"github.com/ovrclk/akash/x/provider/types"
+	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 // GetTxCmd returns the transaction commands for provider module

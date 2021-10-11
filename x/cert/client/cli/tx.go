@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/ovrclk/akash/sdkutil"
-	"github.com/ovrclk/akash/x/cert/types"
+	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
 )
 

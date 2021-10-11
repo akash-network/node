@@ -38,7 +38,7 @@ import (
 	ccli "github.com/ovrclk/akash/x/cert/client/cli"
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	"github.com/ovrclk/akash/x/provider/client/cli"
-	"github.com/ovrclk/akash/x/provider/types"
+	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -52,8 +52,8 @@ import (
 	ptestutil "github.com/ovrclk/akash/provider/testutil"
 	"github.com/ovrclk/akash/testutil"
 	deploycli "github.com/ovrclk/akash/x/deployment/client/cli"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 // IntegrationTestSuite wraps testing components

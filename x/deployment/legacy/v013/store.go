@@ -3,7 +3,7 @@ package v013
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	v013 "github.com/ovrclk/akash/util/legacy/v013"
-	"github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
 // MigrateStore performs in-place store migrations from v0.12 to v0.13. The

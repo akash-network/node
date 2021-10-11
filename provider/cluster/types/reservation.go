@@ -1,8 +1,8 @@
 package cluster
 
 import (
-	atypes "github.com/ovrclk/akash/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	atypes "github.com/ovrclk/akash/types/v1beta2"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 // Reservation interface implements orders and resources

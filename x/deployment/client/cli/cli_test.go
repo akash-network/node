@@ -19,7 +19,7 @@ import (
 	"github.com/ovrclk/akash/testutil"
 	ccli "github.com/ovrclk/akash/x/cert/client/cli"
 	"github.com/ovrclk/akash/x/deployment/client/cli"
-	"github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
 type IntegrationTestSuite struct {

@@ -12,8 +12,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/manifest"
-	"github.com/ovrclk/akash/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/types/v1beta2"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 // +genclient

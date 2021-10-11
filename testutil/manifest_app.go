@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/ovrclk/akash/manifest"
-	"github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
+	types "github.com/ovrclk/akash/types/v1beta2"
 )
 
 // AppManifestGenerator represents a real-world, deployable configuration.

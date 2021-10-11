@@ -1,0 +1,21 @@
+syntax = "proto3";
+package akash.deployment.v1beta2;
+
+import "gogoproto/gogo.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/base/v1beta1/coin.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types/v1beta2";
+
+// DepositDeploymentAuthorization allows the grantee to deposit up to spend_limit coins from
+// the granter's account for a deployment.
+message DepositDeploymentAuthorization {
+  option (cosmos_proto.implements_interface) = "Authorization";
+
+  // SpendLimit is the amount the grantee is authorized to spend from the granter's account for
+  // the purpose of deployment.
+  cosmos.base.v1beta1.Coin spend_limit = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "spend_limit"
+  ];
+}

@@ -10,8 +10,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/ovrclk/akash/manifest"
-	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
+	atypes "github.com/ovrclk/akash/types/v1beta2"
 )
 
 func TestV2Expose(t *testing.T) {

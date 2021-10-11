@@ -16,7 +16,7 @@ import (
 	clusterutil "github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/tendermint/tendermint/libs/log"
 	"sync"
 )

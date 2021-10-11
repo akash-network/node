@@ -12,7 +12,7 @@ import (
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/testutil/state"
 	"github.com/ovrclk/akash/x/market/keeper"
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 type grpcTestSuite struct {

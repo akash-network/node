@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package akash.base.v1beta2;
+
+import "gogoproto/gogo.proto";
+
+option (gogoproto.goproto_stringer_all) = false;
+option (gogoproto.stringer_all)         = false;
+option go_package                       = "github.com/ovrclk/akash/types/v1beta2";
+
+// Attribute represents key value pair
+message Attribute {
+  option (gogoproto.goproto_getters) = false;
+  string key                         = 1 [(gogoproto.moretags) = "yaml:\"key\""];
+  string value                       = 2 [(gogoproto.moretags) = "yaml:\"value\""];
+}
+
+// SignedBy represents validation accounts that tenant expects signatures for provider attributes
+// AllOf has precedence i.e. if there is at least one entry AnyOf is ignored regardless to how many
+// entries there
+// this behaviour to be discussed
+message SignedBy {
+  option (gogoproto.goproto_getters) = false;
+  // all_of all keys in this list must have signed attributes
+  repeated string all_of = 1 [(gogoproto.jsontag) = "all_of", (gogoproto.moretags) = "yaml:\"allOf\""];
+  // any_of at least of of the keys from the list must have signed attributes
+  repeated string any_of = 2 [(gogoproto.jsontag) = "any_of", (gogoproto.moretags) = "yaml:\"anyOf\""];
+}
+
+// PlacementRequirements
+message PlacementRequirements {
+  option (gogoproto.goproto_getters) = false;
+
+  // SignedBy list of keys that tenants expect to have signatures from
+  SignedBy signed_by = 1
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "signed_by", (gogoproto.moretags) = "yaml:\"signed_by\""];
+
+  // Attribute list of attributes tenant expects from the provider
+  repeated Attribute attributes = 2
+      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "attributes", (gogoproto.moretags) = "yaml:\"attributes\""];
+}
