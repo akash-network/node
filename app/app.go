@@ -89,6 +89,8 @@ import (
 	ibctransferkeeper "github.com/cosmos/ibc-go/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/modules/apps/transfer/types"
 	ibcclient "github.com/cosmos/ibc-go/modules/core/02-client"
+	ibcclienttypes "github.com/cosmos/ibc-go/modules/core/02-client/types"
+	ibcconnectiontypes "github.com/cosmos/ibc-go/modules/core/03-connection/types"
 	ibchost "github.com/cosmos/ibc-go/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/modules/core/keeper"
 
@@ -298,7 +300,7 @@ func NewApp(
 		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(app.keeper.params)).
 		AddRoute(distrtypes.RouterKey, distr.NewCommunityPoolSpendProposalHandler(app.keeper.distr)).
 		AddRoute(upgradetypes.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.keeper.upgrade)).
-		AddRoute(ibchost.RouterKey, ibcclient.NewClientProposalHandler(app.keeper.ibc.ClientKeeper))
+		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(app.keeper.ibc.ClientKeeper))
 
 	app.keeper.gov = govkeeper.NewKeeper(
 		appCodec,
@@ -466,6 +468,9 @@ func NewApp(
 func (app *AkashApp) registerUpgradeHandlers() {
 	app.keeper.upgrade.SetUpgradeHandler("akash_v0.13.0_cosmos_v0.43.0", func(ctx sdk.Context,
 		plan upgradetypes.Plan, _ module.VersionMap) (module.VersionMap, error) {
+		// set max expected block time parameter. Replace the default with your expected value
+		app.keeper.ibc.ConnectionKeeper.SetParams(ctx, ibcconnectiontypes.DefaultParams())
+
 		// 1st-time running in-store migrations, using 1 as fromVersion to
 		// avoid running InitGenesis.
 		fromVM := map[string]uint64{
