@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/provider/session"
+	"github.com/ovrclk/akash/util/runner"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -52,20 +53,28 @@ func (wd *watchdog) stop() {
 func (wd *watchdog) run() {
 	defer wd.lc.ShutdownCompleted()
 
+	var runch <-chan runner.Result
+	var err error
+
 	wd.log.Debug("watchdog start")
 	select {
 	case <-time.After(wd.timeout):
 		// Close the bid, since if this point is reached then a manifest has not been received
-	case err := <-wd.lc.ShutdownRequest():
-		wd.lc.ShutdownInitiated(err)
-		return // Nothing to do
+		wd.log.Info("watchdog closing bid")
+
+		runch = runner.Do(func() runner.Result {
+			return runner.NewResult(nil, wd.sess.Client().Tx().Broadcast(wd.ctx, &types.MsgCloseBid{
+				BidID: types.MakeBidID(wd.leaseID.OrderID(), wd.sess.Provider().Address()),
+			}))
+		})
+	case err = <-wd.lc.ShutdownRequest():
 	}
 
-	wd.log.Info("watchdog closing bid")
-	err := wd.sess.Client().Tx().Broadcast(wd.ctx, &types.MsgCloseBid{
-		BidID: types.MakeBidID(wd.leaseID.OrderID(), wd.sess.Provider().Address()),
-	})
-	if err != nil {
-		wd.log.Error("failed closing bid", "err", err)
+	wd.lc.ShutdownInitiated(err)
+	if runch != nil {
+		result := <-runch
+		if err := result.Error(); err != nil {
+			wd.log.Error("failed closing bid", "err", err)
+		}
 	}
 }

@@ -3,12 +3,12 @@ package bidengine
 import (
 	"context"
 	"errors"
+	"testing"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/sdkutil"
 
-	"testing"
+	"github.com/ovrclk/akash/sdkutil"
 
 	"github.com/stretchr/testify/mock"
 
@@ -189,8 +189,9 @@ func Test_BidOrderAndUnreserve(t *testing.T) {
 	// Should have called reserve once
 	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
 
-	createBidMsg, ok := broadcast.(*mtypes.MsgCreateBid)
-	require.True(t, ok)
+	require.IsType(t, &mtypes.MsgCreateBid{}, broadcast)
+
+	createBidMsg := broadcast.(*mtypes.MsgCreateBid)
 
 	require.Equal(t, createBidMsg.Order, scaffold.orderID)
 
@@ -218,9 +219,9 @@ func Test_BidOrderAndUnreserveOnTimeout(t *testing.T) {
 	// Should have called reserve once
 	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
 
-	createBidMsg, ok := broadcast.(*mtypes.MsgCreateBid)
-	require.True(t, ok)
+	require.IsType(t, &mtypes.MsgCreateBid{}, broadcast)
 
+	createBidMsg := broadcast.(*mtypes.MsgCreateBid)
 	require.Equal(t, createBidMsg.Order, scaffold.orderID)
 
 	priceDenom := createBidMsg.Price.Denom
@@ -233,8 +234,7 @@ func Test_BidOrderAndUnreserveOnTimeout(t *testing.T) {
 	// After the broadcast call the timeout should take effect
 	// and then close the bid, unreserving capacity in the process
 	broadcast = testutil.ChannelWaitForValue(t, scaffold.broadcasts)
-	_, ok = broadcast.(*mtypes.MsgCloseBid)
-	require.True(t, ok)
+	require.IsType(t, &mtypes.MsgCloseBid{}, broadcast)
 
 	// After the broadcast call shut down happens automatically
 	order.lc.Shutdown(nil)
@@ -339,9 +339,9 @@ func Test_BidOrderAndThenLeaseCreated(t *testing.T) {
 
 	// Wait for first broadcast
 	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
+	require.IsType(t, &mtypes.MsgCreateBid{}, broadcast)
 
-	createBidMsg, ok := broadcast.(*mtypes.MsgCreateBid)
-	require.True(t, ok)
+	createBidMsg := broadcast.(*mtypes.MsgCreateBid)
 	require.Equal(t, createBidMsg.Order, scaffold.orderID)
 	priceDenom := createBidMsg.Price.Denom
 	require.Equal(t, testutil.CoinDenom, priceDenom)
@@ -383,9 +383,9 @@ func Test_BidOrderAndThenLeaseCreatedForDifferentDeployment(t *testing.T) {
 
 	// Should have called reserve once
 	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
+	require.IsType(t, &mtypes.MsgCreateBid{}, broadcast)
 
-	createBidMsg, ok := broadcast.(*mtypes.MsgCreateBid)
-	require.True(t, ok)
+	createBidMsg := broadcast.(*mtypes.MsgCreateBid)
 	require.Equal(t, createBidMsg.Order, scaffold.orderID)
 
 	otherOrderID := scaffold.orderID
@@ -421,9 +421,9 @@ func Test_BidOrderAndThenLeaseCreatedForDifferentDeployment(t *testing.T) {
 	lastBroadcast := txCalls[len(txCalls)-1]
 	require.Equal(t, "Broadcast", lastBroadcast.Method)
 	msg := lastBroadcast.Arguments[1]
-	closeBidMsg, ok := msg.(*mtypes.MsgCloseBid)
-	require.True(t, ok)
-	require.NotNil(t, closeBidMsg)
+	require.IsType(t, &mtypes.MsgCloseBid{}, msg)
+	closeBidMsg := msg.(*mtypes.MsgCloseBid)
+
 	expectedBidID := mtypes.MakeBidID(order.orderID, scaffold.testAddr)
 	require.Equal(t, closeBidMsg.BidID, expectedBidID)
 }
@@ -446,8 +446,11 @@ func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
 		}
 	}
 	require.Equal(t, "Bid", lastBid.Method)
-	query, ok := lastBid.Arguments[1].(*mtypes.QueryBidRequest)
-	require.True(t, ok)
+
+	qResult := lastBid.Arguments[1]
+	require.IsType(t, &mtypes.QueryBidRequest{}, qResult)
+
+	query := qResult.(*mtypes.QueryBidRequest)
 	require.Equal(t, *scaffold.bidID, query.ID)
 
 	// Should have called reserve once
@@ -477,10 +480,9 @@ func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
 	default:
 	}
 	// Should have broadcast
-	require.NotNil(t, broadcast)
-	closeBid, ok := broadcast.(*mtypes.MsgCloseBid)
-	require.True(t, ok)
-	require.NotNil(t, closeBid)
+	require.IsType(t, &mtypes.MsgCloseBid{}, broadcast)
+
+	closeBid := broadcast.(*mtypes.MsgCloseBid)
 
 	require.Equal(t, closeBid.BidID, *scaffold.bidID)
 }
@@ -537,9 +539,9 @@ func Test_BidOrderUsesBidPricingStrategy(t *testing.T) {
 	order, scaffold, _ := makeOrderForTest(t, false, pricing, nil)
 
 	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
+	require.IsType(t, &mtypes.MsgCreateBid{}, broadcast)
 
-	createBidMsg, ok := broadcast.(*mtypes.MsgCreateBid)
-	require.True(t, ok)
+	createBidMsg := broadcast.(*mtypes.MsgCreateBid)
 	require.Equal(t, createBidMsg.Order, scaffold.orderID)
 
 	priceDenom := createBidMsg.Price.Denom
