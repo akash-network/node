@@ -3,6 +3,7 @@ package keeper
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -54,7 +55,7 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 					types.EscrowAccountForDeployment(deployment.ID()),
 				)
 				if err != nil {
-					return true, err
+					return true, errors.Wrapf(err, "fetching escrow account for DeploymentID=%s", deployment.DeploymentID)
 				}
 
 				value := types.QueryDeploymentResponse{
