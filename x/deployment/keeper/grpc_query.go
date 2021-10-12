@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+
 	"github.com/ovrclk/akash/x/deployment/types"
 )
 
@@ -34,8 +35,12 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 	var deployments types.DeploymentResponses
 	ctx := sdk.UnwrapSDKContext(c)
 
-	store := ctx.KVStore(k.skey)
-	depStore := prefix.NewStore(store, deploymentPrefix)
+	searchPrefix, err := deploymentPrefixFromFilter(req.Filters)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	depStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
 
 	pageRes, err := sdkquery.FilteredPaginate(depStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		var deployment types.Deployment
