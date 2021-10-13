@@ -14,9 +14,9 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/ovrclk/akash/x/deployment/client/cli"
-	deploymentTypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/ovrclk/akash/x/escrow/types"
-	marketTypes "github.com/ovrclk/akash/x/market/types"
+	deploymentTypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	types "github.com/ovrclk/akash/x/escrow/types/v1beta2"
+	marketTypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 func GetQueryCmd() *cobra.Command {

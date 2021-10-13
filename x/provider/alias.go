@@ -2,7 +2,7 @@ package provider
 
 import (
 	"github.com/ovrclk/akash/x/provider/keeper"
-	"github.com/ovrclk/akash/x/provider/types"
+	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 const (

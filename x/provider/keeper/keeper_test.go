@@ -10,7 +10,7 @@ import (
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/testutil/state"
 	"github.com/ovrclk/akash/x/provider/keeper"
-	"github.com/ovrclk/akash/x/provider/types"
+	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 func TestProviderCreate(t *testing.T) {

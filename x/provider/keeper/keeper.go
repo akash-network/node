@@ -4,7 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/ovrclk/akash/x/provider/types"
+	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 type IKeeper interface {

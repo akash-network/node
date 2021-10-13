@@ -15,7 +15,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/types/unit"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	"github.com/shopspring/decimal"
 )
 

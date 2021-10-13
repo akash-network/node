@@ -8,8 +8,8 @@ import (
 
 	"github.com/ovrclk/akash/manifest"
 	providerUtil "github.com/ovrclk/akash/provider/cluster/util"
-	"github.com/ovrclk/akash/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/types/v1beta2"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
 const (

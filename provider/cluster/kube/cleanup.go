@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/ovrclk/akash/manifest"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"

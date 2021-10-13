@@ -6,7 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
-	"github.com/ovrclk/akash/x/provider/types"
+	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 const key string = types.StoreKey

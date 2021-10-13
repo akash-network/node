@@ -1,0 +1,44 @@
+syntax = "proto3";
+package akash.provider.v1beta2;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "akash/provider/v1beta2/provider.proto";
+
+option go_package = "github.com/ovrclk/akash/x/provider/types/v1beta2";
+
+// Query defines the gRPC querier service
+service Query {
+  // Providers queries providers
+  rpc Providers(QueryProvidersRequest) returns (QueryProvidersResponse) {
+    option (google.api.http).get = "/akash/provider/v1beta2/providers";
+  }
+
+  // Provider queries provider details
+  rpc Provider(QueryProviderRequest) returns (QueryProviderResponse) {
+    option (google.api.http).get = "/akash/provider/v1beta2/providers/{owner}";
+  }
+}
+
+// QueryProvidersRequest is request type for the Query/Providers RPC method
+message QueryProvidersRequest {
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
+
+// QueryProvidersResponse is response type for the Query/Providers RPC method
+message QueryProvidersResponse {
+  repeated Provider providers = 1 [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "Providers"];
+
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// QueryProviderRequest is request type for the Query/Provider RPC method
+message QueryProviderRequest {
+  string owner = 1;
+}
+
+// QueryProviderResponse is response type for the Query/Provider RPC method
+message QueryProviderResponse {
+  Provider provider = 1 [(gogoproto.nullable) = false];
+}

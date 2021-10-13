@@ -8,7 +8,7 @@ import (
 	"github.com/ovrclk/akash/testutil/state"
 	"github.com/ovrclk/akash/x/escrow/keeper"
 	"github.com/ovrclk/akash/x/escrow/keeper/mocks"
-	"github.com/ovrclk/akash/x/escrow/types"
+	types "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

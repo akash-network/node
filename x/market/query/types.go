@@ -3,7 +3,7 @@ package query
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 type (

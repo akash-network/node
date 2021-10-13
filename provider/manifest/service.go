@@ -16,8 +16,8 @@ import (
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	dquery "github.com/ovrclk/akash/x/deployment/query"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 // ErrNotRunning is the error when service is not running

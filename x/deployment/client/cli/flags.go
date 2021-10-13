@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
 const (

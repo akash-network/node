@@ -7,7 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 
-	"github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
 // GetQueryCmd returns the query commands for the deployment module

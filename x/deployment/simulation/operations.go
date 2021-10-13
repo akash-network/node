@@ -18,7 +18,7 @@ import (
 	appparams "github.com/ovrclk/akash/app/params"
 	sdlv1 "github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/x/deployment/keeper"
-	"github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
 // Simulation operation weights constants

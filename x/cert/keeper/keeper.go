@@ -4,7 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/ovrclk/akash/x/cert/types"
+	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 )
 
 // Keeper of the provider store

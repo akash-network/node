@@ -15,7 +15,7 @@ import (
 
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/x/audit/keeper"
-	"github.com/ovrclk/akash/x/audit/types"
+	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
 )
 
 func TestProviderCreate(t *testing.T) {

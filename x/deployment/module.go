@@ -20,7 +20,7 @@ import (
 	"github.com/ovrclk/akash/x/deployment/handler"
 	"github.com/ovrclk/akash/x/deployment/keeper"
 	"github.com/ovrclk/akash/x/deployment/simulation"
-	"github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"

@@ -25,7 +25,7 @@ import (
 	"github.com/ovrclk/akash/x/escrow/client/rest"
 	"github.com/ovrclk/akash/x/escrow/keeper"
 	"github.com/ovrclk/akash/x/escrow/query"
-	"github.com/ovrclk/akash/x/escrow/types"
+	types "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 )
 
 var (

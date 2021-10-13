@@ -17,7 +17,7 @@ import (
 	appparams "github.com/ovrclk/akash/app/params"
 	"github.com/ovrclk/akash/x/provider/config"
 	"github.com/ovrclk/akash/x/provider/keeper"
-	"github.com/ovrclk/akash/x/provider/types"
+	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 // Simulation operation weights constants

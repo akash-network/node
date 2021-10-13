@@ -466,7 +466,7 @@ func NewApp(
 }
 
 func (app *AkashApp) registerUpgradeHandlers() {
-	app.keeper.upgrade.SetUpgradeHandler("akash_v0.13.0_cosmos_v0.43.0", func(ctx sdk.Context,
+	app.keeper.upgrade.SetUpgradeHandler("akash_v0.15.0_cosmos_v0.44.x", func(ctx sdk.Context,
 		plan upgradetypes.Plan, _ module.VersionMap) (module.VersionMap, error) {
 		// set max expected block time parameter. Replace the default with your expected value
 		app.keeper.ibc.ConnectionKeeper.SetParams(ctx, ibcconnectiontypes.DefaultParams())
@@ -508,7 +508,7 @@ func (app *AkashApp) registerUpgradeHandlers() {
 		panic(err)
 	}
 
-	if upgradeInfo.Name == "akash_v0.13.0_cosmos_v0.43.0" && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
+	if upgradeInfo.Name == "akash_v0.15.0_cosmos_v0.44.x" && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
 		storeUpgrades := storetypes.StoreUpgrades{
 			Added: []string{"authz"},
 		}

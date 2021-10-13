@@ -5,7 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/spf13/cobra"
 )
 

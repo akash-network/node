@@ -7,8 +7,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/libs/rand"
 
-	"github.com/ovrclk/akash/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/types/v1beta2"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
 func init() {

@@ -22,7 +22,7 @@ import (
 	"github.com/ovrclk/akash/x/market/handler"
 	"github.com/ovrclk/akash/x/market/keeper"
 	"github.com/ovrclk/akash/x/market/simulation"
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"

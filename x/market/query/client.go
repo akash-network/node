@@ -1,7 +1,7 @@
 package query
 
 import (
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 // Client interface

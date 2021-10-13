@@ -13,7 +13,7 @@ import (
 
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/validation"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
 var (

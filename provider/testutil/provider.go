@@ -12,7 +12,7 @@ import (
 
 	pcmd "github.com/ovrclk/akash/provider/cmd"
 	testutilcli "github.com/ovrclk/akash/testutil/cli"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 const (

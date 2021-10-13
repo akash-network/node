@@ -8,7 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 
-	"github.com/ovrclk/akash/x/audit/types"
+	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
 )
 
 func GetQueryCmd() *cobra.Command {

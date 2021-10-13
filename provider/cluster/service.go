@@ -13,9 +13,9 @@ import (
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
-	atypes "github.com/ovrclk/akash/types"
+	atypes "github.com/ovrclk/akash/types/v1beta2"
 	mquery "github.com/ovrclk/akash/x/market/query"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/tendermint/tendermint/libs/log"
 )
 

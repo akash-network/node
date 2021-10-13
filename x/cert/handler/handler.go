@@ -5,7 +5,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"github.com/ovrclk/akash/x/cert/keeper"
-	"github.com/ovrclk/akash/x/cert/types"
+	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 )
 
 // NewHandler returns a handler for "provider" type messages.

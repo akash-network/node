@@ -11,7 +11,7 @@ import (
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/sdkutil"
 	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 // GetTxCmd returns the transaction commands for market module

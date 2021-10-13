@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	"io"
 	"k8s.io/client-go/tools/remotecommand"
 	"math/rand"
@@ -18,10 +18,10 @@ import (
 
 	"github.com/ovrclk/akash/manifest"
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
-	atypes "github.com/ovrclk/akash/types"
 	"github.com/ovrclk/akash/types/unit"
+	atypes "github.com/ovrclk/akash/types/v1beta2"
 	mquery "github.com/ovrclk/akash/x/market/query"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 var (

@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/manifest"
-	"github.com/ovrclk/akash/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/types/v1beta2"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 )
 

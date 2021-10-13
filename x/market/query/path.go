@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	dpath "github.com/ovrclk/akash/x/deployment/query"
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 const (

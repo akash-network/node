@@ -17,7 +17,7 @@ import (
 	"time"
 
 	cutils "github.com/ovrclk/akash/x/cert/utils"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/websocket"
@@ -29,9 +29,9 @@ import (
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider"
 	cltypes "github.com/ovrclk/akash/provider/cluster/types"
-	ctypes "github.com/ovrclk/akash/x/cert/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
+	ctypes "github.com/ovrclk/akash/x/cert/types/v1beta2"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 const (

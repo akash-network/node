@@ -15,7 +15,7 @@ import (
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	appparams "github.com/ovrclk/akash/app/params"
 	keepers "github.com/ovrclk/akash/x/market/handler"
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 // Simulation operation weights constants

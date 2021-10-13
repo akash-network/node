@@ -10,9 +10,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mquery "github.com/ovrclk/akash/x/market/query"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 type contextKey int

@@ -10,7 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	testutilcli "github.com/ovrclk/akash/testutil/cli"
-	"github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
 const key string = types.StoreKey

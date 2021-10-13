@@ -3,7 +3,7 @@ package util_test
 import (
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/cluster/util"
-	atypes "github.com/ovrclk/akash/types"
+	atypes "github.com/ovrclk/akash/types/v1beta2"
 	"github.com/stretchr/testify/require"
 	"testing"
 )

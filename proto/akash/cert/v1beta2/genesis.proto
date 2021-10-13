@@ -1,0 +1,31 @@
+syntax = "proto3";
+package akash.cert.v1beta2;
+
+import "akash/cert/v1beta2/cert.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/ovrclk/akash/x/cert/types/v1beta2";
+
+// GenesisCertificate defines certificate entry at genesis
+message GenesisCertificate {
+  string owner = 1 [
+    (gogoproto.jsontag) = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+
+  Certificate certificate = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "certificate",
+    (gogoproto.moretags) = "yaml:\"certificate\""
+  ];
+}
+
+// GenesisState defines the basic genesis state used by cert module
+message GenesisState {
+  repeated GenesisCertificate certificates = 1 [
+    (gogoproto.castrepeated) = "GenesisCertificates",
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "certificates",
+    (gogoproto.moretags) = "yaml:\"certificates\""
+  ];
+}

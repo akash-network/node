@@ -9,17 +9,17 @@ import (
 
 	"github.com/ovrclk/akash/app"
 	akeeper "github.com/ovrclk/akash/x/audit/keeper"
-	atypes "github.com/ovrclk/akash/x/audit/types"
+	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
 	dkeeper "github.com/ovrclk/akash/x/deployment/keeper"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	ekeeper "github.com/ovrclk/akash/x/escrow/keeper"
 	emocks "github.com/ovrclk/akash/x/escrow/keeper/mocks"
-	etypes "github.com/ovrclk/akash/x/escrow/types"
+	etypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 	mhooks "github.com/ovrclk/akash/x/market/hooks"
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 // TestSuite encapsulates a functional Akash nodes data stores for

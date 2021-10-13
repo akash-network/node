@@ -6,8 +6,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types/address"
 	"github.com/ovrclk/akash/sdkutil"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	"github.com/ovrclk/akash/x/market/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 func orderKey(id types.OrderID) []byte {

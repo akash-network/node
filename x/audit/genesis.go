@@ -6,7 +6,7 @@ import (
 
 	"github.com/ovrclk/akash/x/audit/keeper"
 
-	"github.com/ovrclk/akash/x/audit/types"
+	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error incase of failure

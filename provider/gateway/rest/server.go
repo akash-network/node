@@ -11,7 +11,7 @@ import (
 
 	"github.com/ovrclk/akash/provider"
 	gwutils "github.com/ovrclk/akash/provider/gateway/utils"
-	ctypes "github.com/ovrclk/akash/x/cert/types"
+	ctypes "github.com/ovrclk/akash/x/cert/types/v1beta2"
 )
 
 func NewServer(
