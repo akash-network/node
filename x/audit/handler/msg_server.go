@@ -6,7 +6,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/x/audit/keeper"
-	"github.com/ovrclk/akash/x/audit/types"
+	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
 )
 
 type msgServer struct {

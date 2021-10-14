@@ -2,7 +2,7 @@ package query
 
 import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	"github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
 // Client interface

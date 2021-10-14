@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -26,7 +27,7 @@ import (
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
 	manifestValidation "github.com/ovrclk/akash/validation"
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 const (
@@ -437,14 +438,16 @@ func TestRouteValidateFailsEmptyBody(t *testing.T) {
 
 func TestRoutePutManifestOK(t *testing.T) {
 	runRouterTest(t, true, func(test *routerTest) {
+		dseq := uint64(testutil.RandRangeInt(1, 1000))
 		test.pmclient.On(
 			"Submit",
 			mock.Anything,
-			mock.AnythingOfType("types.DeploymentID"),
+			dtypes.DeploymentID{
+				Owner: test.caddr.String(),
+				DSeq:  dseq,
+			},
 			mock.AnythingOfType("manifest.Manifest"),
 		).Return(nil)
-
-		dseq := uint64(testutil.RandRangeInt(1, 1000))
 
 		uri, err := makeURI(test.host, submitManifestPath(dseq))
 		require.NoError(t, err)
@@ -474,14 +477,18 @@ func TestRoutePutManifestOK(t *testing.T) {
 }
 
 func TestRoutePutInvalidManifest(t *testing.T) {
+	_ = dtypes.DeploymentID{}
 	runRouterTest(t, true, func(test *routerTest) {
+		dseq := uint64(testutil.RandRangeInt(1, 1000))
 		test.pmclient.On("Submit",
 			mock.Anything,
-			mock.AnythingOfType("types.DeploymentID"),
+			dtypes.DeploymentID{
+				Owner: test.caddr.String(),
+				DSeq:  dseq,
+			},
+
 			mock.AnythingOfType("manifest.Manifest"),
 		).Return(manifestValidation.ErrInvalidManifest)
-
-		dseq := uint64(testutil.RandRangeInt(1, 1000))
 
 		uri, err := makeURI(test.host, submitManifestPath(dseq))
 		require.NoError(t, err)

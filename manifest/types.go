@@ -1,7 +1,7 @@
 package manifest
 
 import (
-	"github.com/ovrclk/akash/types"
+	types "github.com/ovrclk/akash/types/v1beta2"
 )
 
 // Manifest store list of groups

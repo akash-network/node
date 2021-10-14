@@ -27,7 +27,7 @@ import (
 	"github.com/ovrclk/akash/x/provider/handler"
 	"github.com/ovrclk/akash/x/provider/keeper"
 	"github.com/ovrclk/akash/x/provider/simulation"
-	"github.com/ovrclk/akash/x/provider/types"
+	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 var (

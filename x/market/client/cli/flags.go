@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/pflag"
 
 	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 var (

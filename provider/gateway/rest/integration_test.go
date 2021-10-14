@@ -20,8 +20,8 @@ import (
 	pmmock "github.com/ovrclk/akash/provider/manifest/mocks"
 	pmock "github.com/ovrclk/akash/provider/mocks"
 	"github.com/ovrclk/akash/testutil"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
-	providertypes "github.com/ovrclk/akash/x/provider/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	providertypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 func Test_router_Status(t *testing.T) {

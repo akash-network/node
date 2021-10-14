@@ -1,0 +1,21 @@
+syntax = "proto3";
+package akash.market.v1beta2;
+import "gogoproto/gogo.proto";
+import "cosmos/base/v1beta1/coin.proto";
+
+option go_package = "github.com/ovrclk/akash/x/market/types/v1beta2";
+
+// Params is the params for the x/market module
+message Params {
+  cosmos.base.v1beta1.Coin bid_min_deposit = 1 [
+    (gogoproto.customname) = "BidMinDeposit",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "bid_min_deposit",
+    (gogoproto.moretags)   = "yaml:\"bid_min_deposit\""
+  ];
+  uint32 order_max_bids = 2 [
+    (gogoproto.customname) = "OrderMaxBids",
+    (gogoproto.jsontag)    = "order_max_bids",
+    (gogoproto.moretags)   = "yaml:\"order_max_bids\""
+  ];
+}

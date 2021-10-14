@@ -4,7 +4,7 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/types"
+	types "github.com/ovrclk/akash/types/v1beta2"
 )
 
 type Config struct {

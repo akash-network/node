@@ -15,7 +15,7 @@ import (
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/sdl"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
-	"github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"

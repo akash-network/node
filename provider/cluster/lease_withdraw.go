@@ -8,7 +8,7 @@ import (
 	"github.com/ovrclk/akash/pubsub"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
 	"github.com/ovrclk/akash/util/runner"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/tendermint/tendermint/libs/log"

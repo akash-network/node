@@ -3,7 +3,7 @@ package provider
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/x/provider/keeper"
-	"github.com/ovrclk/akash/x/provider/types"
+	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 

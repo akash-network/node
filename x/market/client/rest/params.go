@@ -7,7 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	drest "github.com/ovrclk/akash/x/deployment/client/rest"
 	"github.com/ovrclk/akash/x/market/query"
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 // OrderIDFromRequest returns OrderID from parsing request

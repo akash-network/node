@@ -7,7 +7,7 @@ import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/pkg/errors"
 	"strings"
 	"sync"

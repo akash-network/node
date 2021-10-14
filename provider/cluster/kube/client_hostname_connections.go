@@ -6,7 +6,7 @@ import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	akashtypes "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

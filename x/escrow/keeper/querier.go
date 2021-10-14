@@ -1,6 +1,8 @@
 package keeper
 
-import "github.com/ovrclk/akash/x/escrow/types"
+import (
+	types "github.com/ovrclk/akash/x/escrow/types/v1beta2"
+)
 
 func NewQuerier(k Keeper) types.QueryServer {
 	return nil

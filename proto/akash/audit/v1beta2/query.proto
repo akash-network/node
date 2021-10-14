@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+// buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+
+package akash.audit.v1beta2;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "akash/audit/v1beta2/audit.proto";
+
+option go_package = "github.com/ovrclk/akash/x/audit/types/v1beta2";
+
+// Query defines the gRPC querier service
+service Query {
+  // AllProvidersAttributes queries all providers
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc AllProvidersAttributes(QueryAllProvidersAttributesRequest) returns (QueryProvidersResponse) {
+    option (google.api.http).get = "/akash/audit/v1beta2/audit/attributes/list";
+  }
+
+  // ProviderAttributes queries all provider signed attributes
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc ProviderAttributes(QueryProviderAttributesRequest) returns (QueryProvidersResponse) {
+    option (google.api.http).get = "/akash/audit/v1beta2/audit/attributes/{owner}/list";
+  }
+
+  // ProviderAuditorAttributes queries provider signed attributes by specific auditor
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc ProviderAuditorAttributes(QueryProviderAuditorRequest) returns (QueryProvidersResponse) {
+    option (google.api.http).get = "/akash/audit/v1beta2/audit/attributes/{auditor}/{owner}";
+  }
+
+  // AuditorAttributes queries all providers signed by this auditor
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc AuditorAttributes(QueryAuditorAttributesRequest) returns (QueryProvidersResponse) {
+    option (google.api.http).get = "/akash/provider/v1beta2/auditor/{auditor}/list";
+  }
+}
+
+// QueryProvidersResponse is response type for the Query/Providers RPC method
+message QueryProvidersResponse {
+  repeated Provider providers = 1 [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "Providers"];
+
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// QueryProviderRequest is request type for the Query/Provider RPC method
+message QueryProviderRequest {
+  string auditor = 1;
+  string owner   = 2;
+}
+
+// QueryAllProvidersAttributesRequest is request type for the Query/All Providers RPC method
+message QueryAllProvidersAttributesRequest {
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
+
+// QueryProviderAttributesRequest is request type for the Query/Provider RPC method
+message QueryProviderAttributesRequest {
+  string                                owner      = 1;
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+// QueryProviderAuditorRequest is request type for the Query/Providers RPC method
+message QueryProviderAuditorRequest {
+  string auditor = 1;
+  string owner   = 2;
+}
+
+// QueryAuditorAttributesRequest is request type for the Query/Providers RPC method
+message QueryAuditorAttributesRequest {
+  string                                auditor    = 1;
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}

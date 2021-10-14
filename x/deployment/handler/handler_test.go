@@ -19,7 +19,7 @@ import (
 	"github.com/ovrclk/akash/testutil/state"
 	"github.com/ovrclk/akash/x/deployment/handler/mocks"
 	"github.com/ovrclk/akash/x/deployment/keeper"
-	"github.com/ovrclk/akash/x/deployment/types"
+	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
 )
 

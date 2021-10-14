@@ -1,6 +1,6 @@
 package cluster
 
-import mtypes "github.com/ovrclk/akash/x/market/types"
+import mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 
 type ConnectHostnameToDeploymentDirective struct {
 	Hostname    string

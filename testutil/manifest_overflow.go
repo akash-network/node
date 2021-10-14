@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/ovrclk/akash/manifest"
-	"github.com/ovrclk/akash/types"
+	types "github.com/ovrclk/akash/types/v1beta2"
 )
 
 // OverflowManifestGenerator generates a manifest maximum integer values

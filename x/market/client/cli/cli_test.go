@@ -18,11 +18,11 @@ import (
 	"github.com/ovrclk/akash/testutil"
 	ccli "github.com/ovrclk/akash/x/cert/client/cli"
 	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
-	dtypes "github.com/ovrclk/akash/x/deployment/types"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	"github.com/ovrclk/akash/x/market/client/cli"
-	"github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 	pcli "github.com/ovrclk/akash/x/provider/client/cli"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
+	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 type IntegrationTestSuite struct {
@@ -254,7 +254,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	s.Require().NoError(err)
 
 	var bid types.QueryBidResponse
-	fmt.Println(string(resp.Bytes()))
+	s.T().Logf("query response: %v", resp.String())
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), &bid)
 	s.Require().NoError(err)
 	s.Require().Equal(createdBid, bid.Bid)

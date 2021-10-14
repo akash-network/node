@@ -3,7 +3,7 @@ package cluster
 import (
 	"context"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 type HostnameServiceClient interface {

@@ -10,10 +10,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ovrclk/akash/sdkutil"
-	akashtypes "github.com/ovrclk/akash/types"
-	atypes "github.com/ovrclk/akash/types"
-	"github.com/ovrclk/akash/x/audit/types"
-	ptypes "github.com/ovrclk/akash/x/provider/types"
+	akashtypes "github.com/ovrclk/akash/types/v1beta2"
+	atypes "github.com/ovrclk/akash/types/v1beta2"
+	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
+	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 // GetTxCmd returns the transaction commands for audit module

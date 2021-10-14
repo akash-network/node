@@ -4,7 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/x/escrow/types"
+	types "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 )
 
 // MigrateStore performs in-place store migrations from v0.12 to v0.13. The

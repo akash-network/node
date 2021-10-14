@@ -3,7 +3,7 @@ package util
 import (
 	"crypto/sha256"
 	"encoding/base32"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"strings"
 )
 

@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ovrclk/akash/client/mocks"
-	"github.com/ovrclk/akash/x/cert/types"
+	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 )
 
 var AuthVersionOID = asn1.ObjectIdentifier{2, 23, 133, 2, 6}

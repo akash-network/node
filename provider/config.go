@@ -5,9 +5,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/provider/bidengine"
-	"github.com/ovrclk/akash/types"
-	mparams "github.com/ovrclk/akash/x/market/types"
-	mtypes "github.com/ovrclk/akash/x/market/types"
+	types "github.com/ovrclk/akash/types/v1beta2"
+	mparams "github.com/ovrclk/akash/x/market/types/v1beta2"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 type Config struct {
