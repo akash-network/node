@@ -2,6 +2,9 @@ package keeper_test
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"math"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+
 	"github.com/ovrclk/akash/app"
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/testutil/state"
@@ -195,6 +199,205 @@ func TestGRPCQueryDeployments(t *testing.T) {
 			require.NotNil(t, res)
 			require.Equal(t, tc.expLen, len(res.Deployments))
 		})
+	}
+}
+
+type deploymentFilterModifier struct {
+	fieldName string
+	f         func(leaseID types.DeploymentID, filter types.DeploymentFilters) types.DeploymentFilters
+	getField  func(leaseID types.DeploymentID) interface{}
+}
+
+func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
+	suite := setupTest(t)
+
+	// creating orders with different states
+	depA, _ := createActiveDeployment(t, suite.ctx, suite.keeper)
+	depB, _ := createActiveDeployment(t, suite.ctx, suite.keeper)
+	depC, _ := createActiveDeployment(t, suite.ctx, suite.keeper)
+
+	suite.createEscrowAccount(depA)
+	suite.createEscrowAccount(depB)
+	suite.createEscrowAccount(depC)
+
+	deps := []types.DeploymentID{
+		depA,
+		depB,
+		depC,
+	}
+
+	modifiers := []deploymentFilterModifier{
+		{
+			"owner",
+			func(depID types.DeploymentID, filter types.DeploymentFilters) types.DeploymentFilters {
+				filter.Owner = depID.GetOwner()
+				return filter
+			},
+			func(depID types.DeploymentID) interface{} {
+				return depID.Owner
+			},
+		},
+		{
+			"dseq",
+			func(depID types.DeploymentID, filter types.DeploymentFilters) types.DeploymentFilters {
+				filter.DSeq = depID.DSeq
+				return filter
+			},
+			func(depID types.DeploymentID) interface{} {
+				return depID.DSeq
+			},
+		},
+	}
+
+	ctx := sdk.WrapSDKContext(suite.ctx)
+
+	for _, depID := range deps {
+		for _, m := range modifiers {
+			req := &types.QueryDeploymentsRequest{
+				Filters: m.f(depID, types.DeploymentFilters{}),
+			}
+
+			res, err := suite.queryClient.Deployments(ctx, req)
+
+			require.NoError(t, err, "testing %v", m.fieldName)
+			require.NotNil(t, res, "testing %v", m.fieldName)
+			// At least 1 result
+			assert.GreaterOrEqual(t, len(res.Deployments), 1, "testing %v", m.fieldName)
+
+			for _, dep := range res.Deployments {
+				assert.Equal(t, m.getField(depID), m.getField(dep.Deployment.DeploymentID), "testing %v", m.fieldName)
+			}
+		}
+	}
+
+	limit := int(math.Pow(2, float64(len(modifiers))))
+
+	// Use an order ID that matches absolutely nothing in any field
+	bogusOrderID := types.DeploymentID{
+		Owner: testutil.AccAddress(t).String(),
+		DSeq:  9999999,
+	}
+
+	for i := 0; i != limit; i++ {
+		modifiersToUse := make([]bool, len(modifiers))
+
+		for j := 0; j != len(modifiers); j++ {
+			mask := int(math.Pow(2, float64(j)))
+			modifiersToUse[j] = (mask & i) != 0
+		}
+
+		for _, orderID := range deps {
+			filter := types.DeploymentFilters{}
+			msg := strings.Builder{}
+			msg.WriteString("testing filtering on: ")
+			for k, useModifier := range modifiersToUse {
+				if !useModifier {
+					continue
+				}
+				modifier := modifiers[k]
+				filter = modifier.f(orderID, filter)
+				msg.WriteString(modifier.fieldName)
+				msg.WriteString(", ")
+			}
+
+			req := &types.QueryDeploymentsRequest{
+				Filters: filter,
+			}
+
+			res, err := suite.queryClient.Deployments(ctx, req)
+
+			require.NoError(t, err, msg.String())
+			require.NotNil(t, res, msg.String())
+			// At least 1 result
+			require.GreaterOrEqual(t, len(res.Deployments), 1, msg.String())
+
+			for _, dep := range res.Deployments {
+				for k, useModifier := range modifiersToUse {
+					if !useModifier {
+						continue
+					}
+					m := modifiers[k]
+					require.Equal(t, m.getField(orderID), m.getField(dep.Deployment.DeploymentID), "testing %v", m.fieldName)
+				}
+			}
+		}
+
+		filter := types.DeploymentFilters{}
+		msg := strings.Builder{}
+		msg.WriteString("testing filtering on (using non matching ID): ")
+		for k, useModifier := range modifiersToUse {
+			if !useModifier {
+				continue
+			}
+			modifier := modifiers[k]
+			filter = modifier.f(bogusOrderID, filter)
+			msg.WriteString(modifier.fieldName)
+			msg.WriteString(", ")
+		}
+
+		req := &types.QueryDeploymentsRequest{
+			Filters: filter,
+		}
+
+		res, err := suite.queryClient.Deployments(ctx, req)
+
+		require.NoError(t, err, msg.String())
+		require.NotNil(t, res, msg.String())
+		expected := 0
+		if i == 0 {
+			expected = len(deps)
+		}
+		require.Len(t, res.Deployments, expected, msg.String())
+	}
+
+	for _, depID := range deps {
+		// Query by owner
+		req := &types.QueryDeploymentsRequest{
+			Filters: types.DeploymentFilters{
+				Owner: depID.Owner,
+			},
+		}
+
+		res, err := suite.queryClient.Deployments(ctx, req)
+
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		// Just 1 result
+		require.Len(t, res.Deployments, 1)
+		depResult := res.Deployments[0]
+		require.Equal(t, depID, depResult.GetDeployment().DeploymentID)
+
+		// Query with valid DSeq
+		req = &types.QueryDeploymentsRequest{
+			Filters: types.DeploymentFilters{
+				Owner: depID.Owner,
+				DSeq:  depID.DSeq,
+			},
+		}
+
+		res, err = suite.queryClient.Deployments(ctx, req)
+
+		// Expect the same match
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.Len(t, res.Deployments, 1)
+		depResult = res.Deployments[0]
+		require.Equal(t, depID, depResult.Deployment.DeploymentID)
+
+		// Query with a bogus DSeq
+		req = &types.QueryDeploymentsRequest{
+			Filters: types.DeploymentFilters{
+				Owner: depID.Owner,
+				DSeq:  depID.DSeq + 1,
+			},
+		}
+
+		res, err = suite.queryClient.Deployments(ctx, req)
+
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		// expect nothing matches
+		require.Len(t, res.Deployments, 0)
 	}
 }
 
