@@ -1,7 +1,8 @@
-package v1beta2
+package v1beta2_test
 
 import (
 	"fmt"
+	_ "github.com/ovrclk/akash/testutil"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -9,15 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ovrclk/akash/sdkutil"
+	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 var (
-	_ = func() string {
-		config := sdk.GetConfig()
-		config.SetBech32PrefixForAccount(sdkutil.Bech32PrefixAccAddr, sdkutil.Bech32PrefixAccPub)
-		return ""
-	}()
-
 	errWildcard = errors.New("wildcard string error can't be matched")
 )
 
@@ -27,7 +23,7 @@ type testEventParsing struct {
 }
 
 func (tep testEventParsing) testMessageType() func(t *testing.T) {
-	_, err := ParseEvent(tep.msg)
+	_, err := types.ParseEvent(tep.msg)
 	return func(t *testing.T) {
 		// if the error expected is errWildcard to catch untyped errors, don't fail the test, the error was expected.
 		if errors.Is(tep.expErr, errWildcard) {
@@ -55,7 +51,7 @@ var TEPS = []testEventParsing{
 	{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
-			Module: ModuleName,
+			Module: types.ModuleName,
 		},
 		expErr: sdkutil.ErrUnknownAction,
 	},
@@ -70,7 +66,7 @@ var TEPS = []testEventParsing{
 	{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
-			Module: ModuleName,
+			Module: types.ModuleName,
 			Action: "nil",
 		},
 		expErr: sdkutil.ErrUnknownAction,
@@ -79,11 +75,11 @@ var TEPS = []testEventParsing{
 	{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
-			Module: ModuleName,
-			Action: evActionProviderCreated,
+			Module: types.ModuleName,
+			Action: types.EvActionProviderCreated,
 			Attributes: []sdk.Attribute{
 				{
-					Key:   evOwnerKey,
+					Key:   types.EvOwnerKey,
 					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 			},
@@ -93,11 +89,11 @@ var TEPS = []testEventParsing{
 	{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
-			Module: ModuleName,
-			Action: evActionProviderCreated,
+			Module: types.ModuleName,
+			Action: types.EvActionProviderCreated,
 			Attributes: []sdk.Attribute{
 				{
-					Key:   evOwnerKey,
+					Key:   types.EvOwnerKey,
 					Value: "hello",
 				},
 			},
@@ -107,8 +103,8 @@ var TEPS = []testEventParsing{
 	{
 		msg: sdkutil.Event{
 			Type:       sdkutil.EventTypeMessage,
-			Module:     ModuleName,
-			Action:     evActionProviderCreated,
+			Module:     types.ModuleName,
+			Action:     types.EvActionProviderCreated,
 			Attributes: []sdk.Attribute{},
 		},
 		expErr: errWildcard,
@@ -117,11 +113,11 @@ var TEPS = []testEventParsing{
 	{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
-			Module: ModuleName,
-			Action: evActionProviderUpdated,
+			Module: types.ModuleName,
+			Action: types.EvActionProviderUpdated,
 			Attributes: []sdk.Attribute{
 				{
-					Key:   evOwnerKey,
+					Key:   types.EvOwnerKey,
 					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 			},
@@ -131,11 +127,11 @@ var TEPS = []testEventParsing{
 	{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
-			Module: ModuleName,
-			Action: evActionProviderUpdated,
+			Module: types.ModuleName,
+			Action: types.EvActionProviderUpdated,
 			Attributes: []sdk.Attribute{
 				{
-					Key:   evOwnerKey,
+					Key:   types.EvOwnerKey,
 					Value: "hello",
 				},
 			},
@@ -145,8 +141,8 @@ var TEPS = []testEventParsing{
 	{
 		msg: sdkutil.Event{
 			Type:       sdkutil.EventTypeMessage,
-			Module:     ModuleName,
-			Action:     evActionProviderUpdated,
+			Module:     types.ModuleName,
+			Action:     types.EvActionProviderUpdated,
 			Attributes: []sdk.Attribute{},
 		},
 		expErr: errWildcard,
@@ -155,11 +151,11 @@ var TEPS = []testEventParsing{
 	{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
-			Module: ModuleName,
-			Action: evActionProviderDeleted,
+			Module: types.ModuleName,
+			Action: types.EvActionProviderDeleted,
 			Attributes: []sdk.Attribute{
 				{
-					Key:   evOwnerKey,
+					Key:   types.EvOwnerKey,
 					Value: "akash1qtqpdszzakz7ugkey7ka2cmss95z26ygar2mgr",
 				},
 			},
@@ -169,11 +165,11 @@ var TEPS = []testEventParsing{
 	{
 		msg: sdkutil.Event{
 			Type:   sdkutil.EventTypeMessage,
-			Module: ModuleName,
-			Action: evActionProviderDeleted,
+			Module: types.ModuleName,
+			Action: types.EvActionProviderDeleted,
 			Attributes: []sdk.Attribute{
 				{
-					Key:   evOwnerKey,
+					Key:   types.EvOwnerKey,
 					Value: "hello",
 				},
 			},
@@ -183,8 +179,8 @@ var TEPS = []testEventParsing{
 	{
 		msg: sdkutil.Event{
 			Type:       sdkutil.EventTypeMessage,
-			Module:     ModuleName,
-			Action:     evActionProviderDeleted,
+			Module:     types.ModuleName,
+			Action:     types.EvActionProviderDeleted,
 			Attributes: []sdk.Attribute{},
 		},
 		expErr: errWildcard,

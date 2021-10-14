@@ -5,6 +5,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	"github.com/ovrclk/akash/x/market/keeper/keys"
 	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/pkg/errors"
 )
@@ -95,7 +96,7 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 		CreatedAt: ctx.BlockHeight(),
 	}
 
-	key := orderKey(order.ID())
+	key := keys.OrderKey(order.ID())
 
 	if store.Has(key) {
 		return types.Order{}, types.ErrOrderExists
@@ -122,7 +123,7 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAd
 		CreatedAt: ctx.BlockHeight(),
 	}
 
-	key := bidKey(bid.ID())
+	key := keys.BidKey(bid.ID())
 
 	if store.Has(key) {
 		return types.Bid{}, types.ErrBidExists
@@ -151,7 +152,7 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 	}
 
 	// create (active) lease in store
-	key := leaseKey(lease.ID())
+	key := keys.LeaseKey(lease.ID())
 	store.Set(key, k.cdc.MustMarshal(&lease))
 
 	ctx.Logger().Info("created lease", "lease", lease.ID())
@@ -159,6 +160,11 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 		types.NewEventLeaseCreated(lease.ID(), lease.Price).
 			ToSDKEvent(),
 	)
+
+	secondaryKeys := keys.SecondaryKeysForLease(lease.ID())
+	for _, secondaryKey := range secondaryKeys {
+		store.Set(secondaryKey, key)
+	}
 }
 
 // OnOrderMatched updates order state to matched
@@ -250,7 +256,7 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) {
 // GetOrder returns order with given orderID from market store
 func (k Keeper) GetOrder(ctx sdk.Context, id types.OrderID) (types.Order, bool) {
 	store := ctx.KVStore(k.skey)
-	key := orderKey(id)
+	key := keys.OrderKey(id)
 	if !store.Has(key) {
 		return types.Order{}, false
 	}
@@ -265,7 +271,7 @@ func (k Keeper) GetOrder(ctx sdk.Context, id types.OrderID) (types.Order, bool) 
 // GetBid returns bid with given bidID from market store
 func (k Keeper) GetBid(ctx sdk.Context, id types.BidID) (types.Bid, bool) {
 	store := ctx.KVStore(k.skey)
-	key := bidKey(id)
+	key := keys.BidKey(id)
 	if !store.Has(key) {
 		return types.Bid{}, false
 	}
@@ -280,7 +286,7 @@ func (k Keeper) GetBid(ctx sdk.Context, id types.BidID) (types.Bid, bool) {
 // GetLease returns lease with given leaseID from market store
 func (k Keeper) GetLease(ctx sdk.Context, id types.LeaseID) (types.Lease, bool) {
 	store := ctx.KVStore(k.skey)
-	key := leaseKey(id)
+	key := keys.LeaseKey(id)
 	if !store.Has(key) {
 		return types.Lease{}, false
 	}
@@ -358,7 +364,7 @@ func (k Keeper) WithLeases(ctx sdk.Context, fn func(types.Lease) bool) {
 // WithOrdersForGroup iterates all orders of a group in market with given GroupID
 func (k Keeper) WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, fn func(types.Order) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, ordersForGroupPrefix(id))
+	iter := sdk.KVStorePrefixIterator(store, keys.OrdersForGroupPrefix(id))
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		var val types.Order
@@ -372,7 +378,7 @@ func (k Keeper) WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, fn func(t
 // WithBidsForOrder iterates all bids of a order in market with given OrderID
 func (k Keeper) WithBidsForOrder(ctx sdk.Context, id types.OrderID, fn func(types.Bid) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, bidsForOrderPrefix(id))
+	iter := sdk.KVStorePrefixIterator(store, keys.BidsForOrderPrefix(id))
 
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
@@ -386,7 +392,7 @@ func (k Keeper) WithBidsForOrder(ctx sdk.Context, id types.OrderID, fn func(type
 
 func (k Keeper) BidCountForOrder(ctx sdk.Context, id types.OrderID) uint32 {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, bidsForOrderPrefix(id))
+	iter := sdk.KVStorePrefixIterator(store, keys.BidsForOrderPrefix(id))
 	defer iter.Close()
 	count := uint32(0)
 	for ; iter.Valid(); iter.Next() {
@@ -408,18 +414,18 @@ func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
 
 func (k Keeper) updateOrder(ctx sdk.Context, order types.Order) {
 	store := ctx.KVStore(k.skey)
-	key := orderKey(order.ID())
+	key := keys.OrderKey(order.ID())
 	store.Set(key, k.cdc.MustMarshal(&order))
 }
 
 func (k Keeper) updateBid(ctx sdk.Context, bid types.Bid) {
 	store := ctx.KVStore(k.skey)
-	key := bidKey(bid.ID())
+	key := keys.BidKey(bid.ID())
 	store.Set(key, k.cdc.MustMarshal(&bid))
 }
 
 func (k Keeper) updateLease(ctx sdk.Context, lease types.Lease) {
 	store := ctx.KVStore(k.skey)
-	key := leaseKey(lease.ID())
+	key := keys.LeaseKey(lease.ID())
 	store.Set(key, k.cdc.MustMarshal(&lease))
 }

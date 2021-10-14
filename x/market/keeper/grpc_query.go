@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"github.com/ovrclk/akash/x/market/keeper/keys"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -36,7 +37,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 	ctx := sdk.UnwrapSDKContext(c)
 
 	store := ctx.KVStore(k.skey)
-	searchPrefix, err := orderPrefixFromFilter(req.Filters)
+	searchPrefix, err := keys.OrderPrefixFromFilter(req.Filters)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -108,7 +109,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 	ctx := sdk.UnwrapSDKContext(c)
 
 	store := ctx.KVStore(k.skey)
-	searchPrefix, err := bidPrefixFromFilter(req.Filters)
+	searchPrefix, err := keys.BidPrefixFromFilter(req.Filters)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -200,14 +201,20 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 	ctx := sdk.UnwrapSDKContext(c)
 
 	store := ctx.KVStore(k.skey)
-	searchPrefix, err := leasePrefixFromFilter(req.Filters)
+	searchPrefix, isSecondaryPrefix, err := keys.LeasePrefixFromFilter(req.Filters)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	leaseStore := prefix.NewStore(store, searchPrefix)
+	searchedStore := prefix.NewStore(store, searchPrefix)
 
-	pageRes, err := sdkquery.FilteredPaginate(leaseStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+	pageRes, err := sdkquery.FilteredPaginate(searchedStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		var lease types.Lease
+
+		if isSecondaryPrefix {
+			secondaryKey := value
+			// Load the actual key, from the secondary key
+			value = store.Get(secondaryKey)
+		}
 
 		err := k.cdc.Unmarshal(value, &lease)
 		if err != nil {
