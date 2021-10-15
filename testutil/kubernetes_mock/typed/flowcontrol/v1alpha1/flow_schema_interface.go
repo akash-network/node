@@ -6,12 +6,13 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+	flowcontrolv1alpha1 "k8s.io/api/flowcontrol/v1alpha1"
 
 	types "k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1alpha1 "k8s.io/api/flowcontrol/v1alpha1"
+	v1alpha1 "k8s.io/client-go/applyconfigurations/flowcontrol/v1alpha1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +22,67 @@ type FlowSchemaInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, flowSchema, opts
-func (_m *FlowSchemaInterface) Create(ctx context.Context, flowSchema *v1alpha1.FlowSchema, opts v1.CreateOptions) (*v1alpha1.FlowSchema, error) {
+// Apply provides a mock function with given fields: ctx, flowSchema, opts
+func (_m *FlowSchemaInterface) Apply(ctx context.Context, flowSchema *v1alpha1.FlowSchemaApplyConfiguration, opts v1.ApplyOptions) (*flowcontrolv1alpha1.FlowSchema, error) {
 	ret := _m.Called(ctx, flowSchema, opts)
 
-	var r0 *v1alpha1.FlowSchema
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.FlowSchema, v1.CreateOptions) *v1alpha1.FlowSchema); ok {
+	var r0 *flowcontrolv1alpha1.FlowSchema
+	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.FlowSchemaApplyConfiguration, v1.ApplyOptions) *flowcontrolv1alpha1.FlowSchema); ok {
 		r0 = rf(ctx, flowSchema, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.FlowSchema)
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.FlowSchema)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.FlowSchema, v1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.FlowSchemaApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, flowSchema, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, flowSchema, opts
+func (_m *FlowSchemaInterface) ApplyStatus(ctx context.Context, flowSchema *v1alpha1.FlowSchemaApplyConfiguration, opts v1.ApplyOptions) (*flowcontrolv1alpha1.FlowSchema, error) {
+	ret := _m.Called(ctx, flowSchema, opts)
+
+	var r0 *flowcontrolv1alpha1.FlowSchema
+	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.FlowSchemaApplyConfiguration, v1.ApplyOptions) *flowcontrolv1alpha1.FlowSchema); ok {
+		r0 = rf(ctx, flowSchema, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.FlowSchema)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.FlowSchemaApplyConfiguration, v1.ApplyOptions) error); ok {
+		r1 = rf(ctx, flowSchema, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, flowSchema, opts
+func (_m *FlowSchemaInterface) Create(ctx context.Context, flowSchema *flowcontrolv1alpha1.FlowSchema, opts v1.CreateOptions) (*flowcontrolv1alpha1.FlowSchema, error) {
+	ret := _m.Called(ctx, flowSchema, opts)
+
+	var r0 *flowcontrolv1alpha1.FlowSchema
+	if rf, ok := ret.Get(0).(func(context.Context, *flowcontrolv1alpha1.FlowSchema, v1.CreateOptions) *flowcontrolv1alpha1.FlowSchema); ok {
+		r0 = rf(ctx, flowSchema, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.FlowSchema)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *flowcontrolv1alpha1.FlowSchema, v1.CreateOptions) error); ok {
 		r1 = rf(ctx, flowSchema, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +120,15 @@ func (_m *FlowSchemaInterface) DeleteCollection(ctx context.Context, opts v1.Del
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *FlowSchemaInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.FlowSchema, error) {
+func (_m *FlowSchemaInterface) Get(ctx context.Context, name string, opts v1.GetOptions) (*flowcontrolv1alpha1.FlowSchema, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1alpha1.FlowSchema
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *v1alpha1.FlowSchema); ok {
+	var r0 *flowcontrolv1alpha1.FlowSchema
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.GetOptions) *flowcontrolv1alpha1.FlowSchema); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.FlowSchema)
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.FlowSchema)
 		}
 	}
 
@@ -96,15 +143,15 @@ func (_m *FlowSchemaInterface) Get(ctx context.Context, name string, opts v1.Get
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *FlowSchemaInterface) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.FlowSchemaList, error) {
+func (_m *FlowSchemaInterface) List(ctx context.Context, opts v1.ListOptions) (*flowcontrolv1alpha1.FlowSchemaList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1alpha1.FlowSchemaList
-	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v1alpha1.FlowSchemaList); ok {
+	var r0 *flowcontrolv1alpha1.FlowSchemaList
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *flowcontrolv1alpha1.FlowSchemaList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.FlowSchemaList)
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.FlowSchemaList)
 		}
 	}
 
@@ -119,7 +166,7 @@ func (_m *FlowSchemaInterface) List(ctx context.Context, opts v1.ListOptions) (*
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *FlowSchemaInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1alpha1.FlowSchema, error) {
+func (_m *FlowSchemaInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*flowcontrolv1alpha1.FlowSchema, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +176,12 @@ func (_m *FlowSchemaInterface) Patch(ctx context.Context, name string, pt types.
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1alpha1.FlowSchema
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *v1alpha1.FlowSchema); ok {
+	var r0 *flowcontrolv1alpha1.FlowSchema
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, v1.PatchOptions, ...string) *flowcontrolv1alpha1.FlowSchema); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.FlowSchema)
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.FlowSchema)
 		}
 	}
 
@@ -149,20 +196,20 @@ func (_m *FlowSchemaInterface) Patch(ctx context.Context, name string, pt types.
 }
 
 // Update provides a mock function with given fields: ctx, flowSchema, opts
-func (_m *FlowSchemaInterface) Update(ctx context.Context, flowSchema *v1alpha1.FlowSchema, opts v1.UpdateOptions) (*v1alpha1.FlowSchema, error) {
+func (_m *FlowSchemaInterface) Update(ctx context.Context, flowSchema *flowcontrolv1alpha1.FlowSchema, opts v1.UpdateOptions) (*flowcontrolv1alpha1.FlowSchema, error) {
 	ret := _m.Called(ctx, flowSchema, opts)
 
-	var r0 *v1alpha1.FlowSchema
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.FlowSchema, v1.UpdateOptions) *v1alpha1.FlowSchema); ok {
+	var r0 *flowcontrolv1alpha1.FlowSchema
+	if rf, ok := ret.Get(0).(func(context.Context, *flowcontrolv1alpha1.FlowSchema, v1.UpdateOptions) *flowcontrolv1alpha1.FlowSchema); ok {
 		r0 = rf(ctx, flowSchema, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.FlowSchema)
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.FlowSchema)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.FlowSchema, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *flowcontrolv1alpha1.FlowSchema, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, flowSchema, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -172,20 +219,20 @@ func (_m *FlowSchemaInterface) Update(ctx context.Context, flowSchema *v1alpha1.
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, flowSchema, opts
-func (_m *FlowSchemaInterface) UpdateStatus(ctx context.Context, flowSchema *v1alpha1.FlowSchema, opts v1.UpdateOptions) (*v1alpha1.FlowSchema, error) {
+func (_m *FlowSchemaInterface) UpdateStatus(ctx context.Context, flowSchema *flowcontrolv1alpha1.FlowSchema, opts v1.UpdateOptions) (*flowcontrolv1alpha1.FlowSchema, error) {
 	ret := _m.Called(ctx, flowSchema, opts)
 
-	var r0 *v1alpha1.FlowSchema
-	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.FlowSchema, v1.UpdateOptions) *v1alpha1.FlowSchema); ok {
+	var r0 *flowcontrolv1alpha1.FlowSchema
+	if rf, ok := ret.Get(0).(func(context.Context, *flowcontrolv1alpha1.FlowSchema, v1.UpdateOptions) *flowcontrolv1alpha1.FlowSchema); ok {
 		r0 = rf(ctx, flowSchema, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1alpha1.FlowSchema)
+			r0 = ret.Get(0).(*flowcontrolv1alpha1.FlowSchema)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1alpha1.FlowSchema, v1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *flowcontrolv1alpha1.FlowSchema, v1.UpdateOptions) error); ok {
 		r1 = rf(ctx, flowSchema, opts)
 	} else {
 		r1 = ret.Error(1)

@@ -10,11 +10,17 @@ option go_package = "github.com/ovrclk/akash/x/deployment/types/v1beta2";
 
 // GenesisDeployment defines the basic genesis state used by deployment module
 message GenesisDeployment {
-  Deployment deployment = 1
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "deployment", (gogoproto.moretags) = "yaml:\"deployment\""];
+  Deployment deployment = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "deployment",
+    (gogoproto.moretags) = "yaml:\"deployment\""
+  ];
 
-  repeated Group groups = 2
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "groups", (gogoproto.moretags) = "yaml:\"groups\""];
+  repeated Group groups = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "groups",
+    (gogoproto.moretags) = "yaml:\"groups\""
+  ];
 }
 
 // GenesisState stores slice of genesis deployment instance

@@ -11,9 +11,9 @@ message Endpoint {
   // This describes how the endpoint is implemented when the lease is deployed
   enum Kind {
     // Describes an endpoint that becomes a Kubernetes Ingress
-  	SHARED_HTTP = 0;
-  	// Describes an endpoint that becomes a Kubernetes NodePort
-  	RANDOM_PORT = 1;
+    SHARED_HTTP = 0;
+    // Describes an endpoint that becomes a Kubernetes NodePort
+    RANDOM_PORT = 1;
   }
   Kind kind = 1;
 }

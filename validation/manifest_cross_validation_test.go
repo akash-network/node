@@ -70,7 +70,7 @@ func TestManifestWithDeploymentMultiple(t *testing.T) {
 	m[0].Name = "testgroup-2"
 
 	m[1] = simpleManifest()[0]
-	m[1].Services[0].Resources.Storage.Quantity.Val = sdk.NewInt(storage)
+	m[1].Services[0].Resources.Storage[0].Quantity.Val = sdk.NewInt(storage)
 	m[1].Name = "testgroup-1"
 
 	m[2] = simpleManifest()[0]
@@ -83,7 +83,7 @@ func TestManifestWithDeploymentMultiple(t *testing.T) {
 	deployment[0].GroupSpec.Name = "testgroup-0"
 
 	deployment[1] = simpleDeployment(t)[0]
-	deployment[1].GroupSpec.Resources[0].Resources.Storage.Quantity.Val = sdk.NewInt(storage)
+	deployment[1].GroupSpec.Resources[0].Resources.Storage[0].Quantity.Val = sdk.NewInt(storage)
 	deployment[1].GroupSpec.Name = "testgroup-1"
 
 	deployment[2] = simpleDeployment(t)[0]
@@ -115,7 +115,7 @@ func TestManifestWithDeploymentMemoryMismatch(t *testing.T) {
 func TestManifestWithDeploymentStorageMismatch(t *testing.T) {
 	m := simpleManifest()
 	deployment := simpleDeployment(t)
-	deployment[0].GroupSpec.Resources[0].Resources.Storage.Quantity.Val = sdk.NewInt(99999)
+	deployment[0].GroupSpec.Resources[0].Resources.Storage[0].Quantity.Val = sdk.NewInt(99999)
 	err := validation.ValidateManifestWithDeployment(&m, deployment)
 	require.Error(t, err)
 	require.Regexp(t, "^.*underutilized deployment group.+$", err)

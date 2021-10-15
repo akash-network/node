@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
+
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/x/provider/client/cli"
 	types "github.com/ovrclk/akash/x/provider/types/v1beta2"

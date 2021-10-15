@@ -24,6 +24,10 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// Inventories returns a InventoryInformer.
+	Inventories() InventoryInformer
+	// InventoryRequests returns a InventoryRequestInformer.
+	InventoryRequests() InventoryRequestInformer
 	// Manifests returns a ManifestInformer.
 	Manifests() ManifestInformer
 	// ProviderHosts returns a ProviderHostInformer.
@@ -39,6 +43,16 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// Inventories returns a InventoryInformer.
+func (v *version) Inventories() InventoryInformer {
+	return &inventoryInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// InventoryRequests returns a InventoryRequestInformer.
+func (v *version) InventoryRequests() InventoryRequestInformer {
+	return &inventoryRequestInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Manifests returns a ManifestInformer.

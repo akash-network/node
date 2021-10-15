@@ -67,11 +67,13 @@ func validSimpleGroupSpec() types.GroupSpec {
 				},
 				Attributes: nil,
 			},
-			Storage: &akashtypes.Storage{
-				Quantity: akashtypes.ResourceValue{
-					Val: sdk.NewIntFromUint64(types.GetValidationConfig().MinUnitStorage),
+			Storage: akashtypes.Volumes{
+				akashtypes.Storage{
+					Quantity: akashtypes.ResourceValue{
+						Val: sdk.NewIntFromUint64(types.GetValidationConfig().MinUnitStorage),
+					},
+					Attributes: nil,
 				},
-				Attributes: nil,
 			},
 			Endpoints: nil,
 		},
@@ -137,7 +139,7 @@ func TestGroupWithZeroMemory(t *testing.T) {
 
 func TestGroupWithZeroStorage(t *testing.T) {
 	group := validSimpleGroupSpec()
-	group.Resources[0].Resources.Storage.Quantity.Val = sdk.NewInt(0)
+	group.Resources[0].Resources.Storage[0].Quantity.Val = sdk.NewInt(0)
 	err := group.ValidateBasic()
 	require.Error(t, err)
 	require.Regexp(t, "^.*invalid unit storage.*$", err)

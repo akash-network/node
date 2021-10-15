@@ -4,7 +4,7 @@ info:
   description: 'A REST interface for state queries, legacy transactions'
   version: 1.0.0
 paths:
-  /akash/deployment/v1beta1/deployments/info:
+  /akash/deployment/v1beta2/deployments/info:
     get:
       summary: Deployment queries deployment details
       operationId: Deployment
@@ -183,30 +183,34 @@ paths:
                                       Memory stores resource quantity and memory
                                       attributes
                                   storage:
-                                    type: object
-                                    properties:
-                                      quantity:
-                                        type: object
-                                        properties:
-                                          val:
-                                            type: string
-                                            format: byte
-                                        title: >-
-                                          Unit stores cpu, memory and storage
-                                          metrics
-                                      attributes:
-                                        type: array
-                                        items:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        name:
+                                          type: string
+                                        quantity:
                                           type: object
                                           properties:
-                                            key:
+                                            val:
                                               type: string
-                                            value:
-                                              type: string
-                                          title: Attribute represents key value pair
-                                    title: >-
-                                      Storage stores resource quantity and
-                                      storage attributes
+                                              format: byte
+                                          title: >-
+                                            Unit stores cpu, memory and storage
+                                            metrics
+                                        attributes:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              key:
+                                                type: string
+                                              value:
+                                                type: string
+                                            title: Attribute represents key value pair
+                                      title: >-
+                                        Storage stores resource quantity and
+                                        storage attributes
                                   endpoints:
                                     type: array
                                     items:
@@ -390,7 +394,7 @@ paths:
           format: uint64
       tags:
         - Query
-  /akash/deployment/v1beta1/deployments/list:
+  /akash/deployment/v1beta2/deployments/list:
     get:
       summary: Deployments queries deployments
       operationId: Deployments
@@ -576,30 +580,34 @@ paths:
                                             Memory stores resource quantity and
                                             memory attributes
                                         storage:
-                                          type: object
-                                          properties:
-                                            quantity:
-                                              type: object
-                                              properties:
-                                                val:
-                                                  type: string
-                                                  format: byte
-                                              title: >-
-                                                Unit stores cpu, memory and storage
-                                                metrics
-                                            attributes:
-                                              type: array
-                                              items:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              name:
+                                                type: string
+                                              quantity:
                                                 type: object
                                                 properties:
-                                                  key:
+                                                  val:
                                                     type: string
-                                                  value:
-                                                    type: string
-                                                title: Attribute represents key value pair
-                                          title: >-
-                                            Storage stores resource quantity and
-                                            storage attributes
+                                                    format: byte
+                                                title: >-
+                                                  Unit stores cpu, memory and storage
+                                                  metrics
+                                              attributes:
+                                                type: array
+                                                items:
+                                                  type: object
+                                                  properties:
+                                                    key:
+                                                      type: string
+                                                    value:
+                                                      type: string
+                                                  title: Attribute represents key value pair
+                                            title: >-
+                                              Storage stores resource quantity and
+                                              storage attributes
                                         endpoints:
                                           type: array
                                           items:
@@ -875,7 +883,7 @@ paths:
           type: boolean
       tags:
         - Query
-  /akash/deployment/v1beta1/groups/info:
+  /akash/deployment/v1beta2/groups/info:
     get:
       summary: Group queries group details
       operationId: Group
@@ -1020,30 +1028,34 @@ paths:
                                     Memory stores resource quantity and memory
                                     attributes
                                 storage:
-                                  type: object
-                                  properties:
-                                    quantity:
-                                      type: object
-                                      properties:
-                                        val:
-                                          type: string
-                                          format: byte
-                                      title: >-
-                                        Unit stores cpu, memory and storage
-                                        metrics
-                                    attributes:
-                                      type: array
-                                      items:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      name:
+                                        type: string
+                                      quantity:
                                         type: object
                                         properties:
-                                          key:
+                                          val:
                                             type: string
-                                          value:
-                                            type: string
-                                        title: Attribute represents key value pair
-                                  title: >-
-                                    Storage stores resource quantity and storage
-                                    attributes
+                                            format: byte
+                                        title: >-
+                                          Unit stores cpu, memory and storage
+                                          metrics
+                                      attributes:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            key:
+                                              type: string
+                                            value:
+                                              type: string
+                                          title: Attribute represents key value pair
+                                    title: >-
+                                      Storage stores resource quantity and
+                                      storage attributes
                                 endpoints:
                                   type: array
                                   items:
@@ -1138,7 +1150,7 @@ paths:
           format: int64
       tags:
         - Query
-  /akash/market/v1beta1/bids/info:
+  /akash/market/v1beta2/bids/info:
     get:
       summary: Bid queries bid details
       operationId: Bid
@@ -1347,7 +1359,7 @@ paths:
           type: string
       tags:
         - Query
-  /akash/market/v1beta1/bids/list:
+  /akash/market/v1beta2/bids/list:
     get:
       summary: Bids queries bids with filters
       operationId: Bids
@@ -1652,7 +1664,7 @@ paths:
           type: boolean
       tags:
         - Query
-  /akash/market/v1beta1/leases/info:
+  /akash/market/v1beta2/leases/info:
     get:
       summary: Lease queries lease details
       operationId: Lease
@@ -1841,7 +1853,7 @@ paths:
           type: string
       tags:
         - Query
-  /akash/market/v1beta1/leases/list:
+  /akash/market/v1beta2/leases/list:
     get:
       summary: Leases queries leases with filters
       operationId: Leases
@@ -2128,7 +2140,7 @@ paths:
           type: boolean
       tags:
         - Query
-  /akash/market/v1beta1/orders/info:
+  /akash/market/v1beta2/orders/info:
     get:
       summary: Order queries order details
       operationId: Order
@@ -2272,30 +2284,34 @@ paths:
                                     Memory stores resource quantity and memory
                                     attributes
                                 storage:
-                                  type: object
-                                  properties:
-                                    quantity:
-                                      type: object
-                                      properties:
-                                        val:
-                                          type: string
-                                          format: byte
-                                      title: >-
-                                        Unit stores cpu, memory and storage
-                                        metrics
-                                    attributes:
-                                      type: array
-                                      items:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      name:
+                                        type: string
+                                      quantity:
                                         type: object
                                         properties:
-                                          key:
+                                          val:
                                             type: string
-                                          value:
-                                            type: string
-                                        title: Attribute represents key value pair
-                                  title: >-
-                                    Storage stores resource quantity and storage
-                                    attributes
+                                            format: byte
+                                        title: >-
+                                          Unit stores cpu, memory and storage
+                                          metrics
+                                      attributes:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            key:
+                                              type: string
+                                            value:
+                                              type: string
+                                          title: Attribute represents key value pair
+                                    title: >-
+                                      Storage stores resource quantity and
+                                      storage attributes
                                 endpoints:
                                   type: array
                                   items:
@@ -2395,7 +2411,7 @@ paths:
           format: int64
       tags:
         - Query
-  /akash/market/v1beta1/orders/list:
+  /akash/market/v1beta2/orders/list:
     get:
       summary: Orders queries orders with filters
       operationId: Orders
@@ -2541,30 +2557,34 @@ paths:
                                       Memory stores resource quantity and memory
                                       attributes
                                   storage:
-                                    type: object
-                                    properties:
-                                      quantity:
-                                        type: object
-                                        properties:
-                                          val:
-                                            type: string
-                                            format: byte
-                                        title: >-
-                                          Unit stores cpu, memory and storage
-                                          metrics
-                                      attributes:
-                                        type: array
-                                        items:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        name:
+                                          type: string
+                                        quantity:
                                           type: object
                                           properties:
-                                            key:
+                                            val:
                                               type: string
-                                            value:
-                                              type: string
-                                          title: Attribute represents key value pair
-                                    title: >-
-                                      Storage stores resource quantity and
-                                      storage attributes
+                                              format: byte
+                                          title: >-
+                                            Unit stores cpu, memory and storage
+                                            metrics
+                                        attributes:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              key:
+                                                type: string
+                                              value:
+                                                type: string
+                                            title: Attribute represents key value pair
+                                      title: >-
+                                        Storage stores resource quantity and
+                                        storage attributes
                                   endpoints:
                                     type: array
                                     items:
@@ -2750,7 +2770,7 @@ paths:
           type: boolean
       tags:
         - Query
-  /akash/provider/v1beta1/providers:
+  /akash/provider/v1beta2/providers:
     get:
       summary: Providers queries providers
       operationId: Providers
@@ -2896,7 +2916,7 @@ paths:
           type: boolean
       tags:
         - Query
-  '/akash/provider/v1beta1/providers/{owner}':
+  '/akash/provider/v1beta2/providers/{owner}':
     get:
       summary: Provider queries provider details
       operationId: Provider
@@ -26377,7 +26397,7 @@ paths:
       tags:
         - Query
 definitions:
-  akash.base.v1beta1.Attribute:
+  akash.base.v1beta2.Attribute:
     type: object
     properties:
       key:
@@ -26385,7 +26405,7 @@ definitions:
       value:
         type: string
     title: Attribute represents key value pair
-  akash.base.v1beta1.CPU:
+  akash.base.v1beta2.CPU:
     type: object
     properties:
       units:
@@ -26406,7 +26426,7 @@ definitions:
               type: string
           title: Attribute represents key value pair
     title: CPU stores resource units and cpu config attributes
-  akash.base.v1beta1.Endpoint:
+  akash.base.v1beta2.Endpoint:
     type: object
     properties:
       kind:
@@ -26422,7 +26442,7 @@ definitions:
           This describes how the endpoint is implemented when the lease is
           deployed
     title: Endpoint describes a publicly accessible IP service
-  akash.base.v1beta1.Endpoint.Kind:
+  akash.base.v1beta2.Endpoint.Kind:
     type: string
     enum:
       - SHARED_HTTP
@@ -26432,7 +26452,7 @@ definitions:
       - SHARED_HTTP: Describes an endpoint that becomes a Kubernetes Ingress
        - RANDOM_PORT: Describes an endpoint that becomes a Kubernetes NodePort
     title: This describes how the endpoint is implemented when the lease is deployed
-  akash.base.v1beta1.Memory:
+  akash.base.v1beta2.Memory:
     type: object
     properties:
       quantity:
@@ -26453,7 +26473,7 @@ definitions:
               type: string
           title: Attribute represents key value pair
     title: Memory stores resource quantity and memory attributes
-  akash.base.v1beta1.PlacementRequirements:
+  akash.base.v1beta2.PlacementRequirements:
     type: object
     properties:
       signed_by:
@@ -26484,7 +26504,7 @@ definitions:
           title: Attribute represents key value pair
         title: Attribute list of attributes tenant expects from the provider
     title: PlacementRequirements
-  akash.base.v1beta1.ResourceUnits:
+  akash.base.v1beta2.ResourceUnits:
     type: object
     properties:
       cpu:
@@ -26530,26 +26550,30 @@ definitions:
               title: Attribute represents key value pair
         title: Memory stores resource quantity and memory attributes
       storage:
-        type: object
-        properties:
-          quantity:
-            type: object
-            properties:
-              val:
-                type: string
-                format: byte
-            title: 'Unit stores cpu, memory and storage metrics'
-          attributes:
-            type: array
-            items:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            quantity:
               type: object
               properties:
-                key:
+                val:
                   type: string
-                value:
-                  type: string
-              title: Attribute represents key value pair
-        title: Storage stores resource quantity and storage attributes
+                  format: byte
+              title: 'Unit stores cpu, memory and storage metrics'
+            attributes:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  value:
+                    type: string
+                title: Attribute represents key value pair
+          title: Storage stores resource quantity and storage attributes
       endpoints:
         type: array
         items:
@@ -26574,14 +26598,14 @@ definitions:
       etc
 
       if field is nil resource is not present in the given data-structure
-  akash.base.v1beta1.ResourceValue:
+  akash.base.v1beta2.ResourceValue:
     type: object
     properties:
       val:
         type: string
         format: byte
     title: 'Unit stores cpu, memory and storage metrics'
-  akash.base.v1beta1.SignedBy:
+  akash.base.v1beta2.SignedBy:
     type: object
     properties:
       all_of:
@@ -26606,9 +26630,11 @@ definitions:
       entries there
 
       this behaviour to be discussed
-  akash.base.v1beta1.Storage:
+  akash.base.v1beta2.Storage:
     type: object
     properties:
+      name:
+        type: string
       quantity:
         type: object
         properties:
@@ -26627,7 +26653,7 @@ definitions:
               type: string
           title: Attribute represents key value pair
     title: Storage stores resource quantity and storage attributes
-  akash.deployment.v1beta1.Deployment:
+  akash.deployment.v1beta2.Deployment:
     type: object
     properties:
       deployment_id:
@@ -26659,7 +26685,7 @@ definitions:
         type: string
         format: int64
     title: 'Deployment stores deploymentID, state and version details'
-  akash.deployment.v1beta1.Deployment.State:
+  akash.deployment.v1beta2.Deployment.State:
     type: string
     enum:
       - invalid
@@ -26671,7 +26697,7 @@ definitions:
        - active: DeploymentActive denotes state for deployment active
        - closed: DeploymentClosed denotes state for deployment closed
     title: State is an enum which refers to state of deployment
-  akash.deployment.v1beta1.DeploymentFilters:
+  akash.deployment.v1beta2.DeploymentFilters:
     type: object
     properties:
       owner:
@@ -26682,7 +26708,7 @@ definitions:
       state:
         type: string
     title: DeploymentFilters defines filters used to filter deployments
-  akash.deployment.v1beta1.DeploymentID:
+  akash.deployment.v1beta2.DeploymentID:
     type: object
     properties:
       owner:
@@ -26691,7 +26717,7 @@ definitions:
         type: string
         format: uint64
     title: DeploymentID stores owner and sequence number
-  akash.deployment.v1beta1.Group:
+  akash.deployment.v1beta2.Group:
     type: object
     properties:
       group_id:
@@ -26814,26 +26840,32 @@ definitions:
                             title: Attribute represents key value pair
                       title: Memory stores resource quantity and memory attributes
                     storage:
-                      type: object
-                      properties:
-                        quantity:
-                          type: object
-                          properties:
-                            val:
-                              type: string
-                              format: byte
-                          title: 'Unit stores cpu, memory and storage metrics'
-                        attributes:
-                          type: array
-                          items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          quantity:
                             type: object
                             properties:
-                              key:
+                              val:
                                 type: string
-                              value:
-                                type: string
-                            title: Attribute represents key value pair
-                      title: Storage stores resource quantity and storage attributes
+                                format: byte
+                            title: 'Unit stores cpu, memory and storage metrics'
+                          attributes:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                key:
+                                  type: string
+                                value:
+                                  type: string
+                              title: Attribute represents key value pair
+                        title: >-
+                          Storage stores resource quantity and storage
+                          attributes
                     endpoints:
                       type: array
                       items:
@@ -26883,7 +26915,7 @@ definitions:
         type: string
         format: int64
     title: 'Group stores group id, state and specifications of group'
-  akash.deployment.v1beta1.Group.State:
+  akash.deployment.v1beta2.Group.State:
     type: string
     enum:
       - invalid
@@ -26899,7 +26931,7 @@ definitions:
        - insufficient_funds: GroupInsufficientFunds denotes state for group insufficient_funds
        - closed: GroupClosed denotes state for group closed
     title: State is an enum which refers to state of group
-  akash.deployment.v1beta1.GroupID:
+  akash.deployment.v1beta2.GroupID:
     type: object
     properties:
       owner:
@@ -26911,7 +26943,7 @@ definitions:
         type: integer
         format: int64
     title: 'GroupID stores owner, deployment sequence number and group sequence number'
-  akash.deployment.v1beta1.GroupSpec:
+  akash.deployment.v1beta2.GroupSpec:
     type: object
     properties:
       name:
@@ -26998,26 +27030,30 @@ definitions:
                         title: Attribute represents key value pair
                   title: Memory stores resource quantity and memory attributes
                 storage:
-                  type: object
-                  properties:
-                    quantity:
-                      type: object
-                      properties:
-                        val:
-                          type: string
-                          format: byte
-                      title: 'Unit stores cpu, memory and storage metrics'
-                    attributes:
-                      type: array
-                      items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      quantity:
                         type: object
                         properties:
-                          key:
+                          val:
                             type: string
-                          value:
-                            type: string
-                        title: Attribute represents key value pair
-                  title: Storage stores resource quantity and storage attributes
+                            format: byte
+                        title: 'Unit stores cpu, memory and storage metrics'
+                      attributes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            key:
+                              type: string
+                            value:
+                              type: string
+                          title: Attribute represents key value pair
+                    title: Storage stores resource quantity and storage attributes
                 endpoints:
                   type: array
                   items:
@@ -27063,7 +27099,7 @@ definitions:
                 signatures required by gogoproto.
           title: 'Resource stores unit, total count and price of resource'
     title: GroupSpec stores group specifications
-  akash.deployment.v1beta1.QueryDeploymentResponse:
+  akash.deployment.v1beta2.QueryDeploymentResponse:
     type: object
     properties:
       deployment:
@@ -27231,28 +27267,32 @@ definitions:
                               Memory stores resource quantity and memory
                               attributes
                           storage:
-                            type: object
-                            properties:
-                              quantity:
-                                type: object
-                                properties:
-                                  val:
-                                    type: string
-                                    format: byte
-                                title: 'Unit stores cpu, memory and storage metrics'
-                              attributes:
-                                type: array
-                                items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                quantity:
                                   type: object
                                   properties:
-                                    key:
+                                    val:
                                       type: string
-                                    value:
-                                      type: string
-                                  title: Attribute represents key value pair
-                            title: >-
-                              Storage stores resource quantity and storage
-                              attributes
+                                      format: byte
+                                  title: 'Unit stores cpu, memory and storage metrics'
+                                attributes:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      key:
+                                        type: string
+                                      value:
+                                        type: string
+                                    title: Attribute represents key value pair
+                              title: >-
+                                Storage stores resource quantity and storage
+                                attributes
                           endpoints:
                             type: array
                             items:
@@ -27398,7 +27438,7 @@ definitions:
     title: >-
       QueryDeploymentResponse is response type for the Query/Deployment RPC
       method
-  akash.deployment.v1beta1.QueryDeploymentsResponse:
+  akash.deployment.v1beta2.QueryDeploymentsResponse:
     type: object
     properties:
       deployments:
@@ -27575,30 +27615,34 @@ definitions:
                                     Memory stores resource quantity and memory
                                     attributes
                                 storage:
-                                  type: object
-                                  properties:
-                                    quantity:
-                                      type: object
-                                      properties:
-                                        val:
-                                          type: string
-                                          format: byte
-                                      title: >-
-                                        Unit stores cpu, memory and storage
-                                        metrics
-                                    attributes:
-                                      type: array
-                                      items:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      name:
+                                        type: string
+                                      quantity:
                                         type: object
                                         properties:
-                                          key:
+                                          val:
                                             type: string
-                                          value:
-                                            type: string
-                                        title: Attribute represents key value pair
-                                  title: >-
-                                    Storage stores resource quantity and storage
-                                    attributes
+                                            format: byte
+                                        title: >-
+                                          Unit stores cpu, memory and storage
+                                          metrics
+                                      attributes:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            key:
+                                              type: string
+                                            value:
+                                              type: string
+                                          title: Attribute represents key value pair
+                                    title: >-
+                                      Storage stores resource quantity and
+                                      storage attributes
                                 endpoints:
                                   type: array
                                   items:
@@ -27776,7 +27820,7 @@ definitions:
     title: >-
       QueryDeploymentsResponse is response type for the Query/Deployments RPC
       method
-  akash.deployment.v1beta1.QueryGroupResponse:
+  akash.deployment.v1beta2.QueryGroupResponse:
     type: object
     properties:
       group:
@@ -27908,28 +27952,32 @@ definitions:
                             Memory stores resource quantity and memory
                             attributes
                         storage:
-                          type: object
-                          properties:
-                            quantity:
-                              type: object
-                              properties:
-                                val:
-                                  type: string
-                                  format: byte
-                              title: 'Unit stores cpu, memory and storage metrics'
-                            attributes:
-                              type: array
-                              items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              quantity:
                                 type: object
                                 properties:
-                                  key:
+                                  val:
                                     type: string
-                                  value:
-                                    type: string
-                                title: Attribute represents key value pair
-                          title: >-
-                            Storage stores resource quantity and storage
-                            attributes
+                                    format: byte
+                                title: 'Unit stores cpu, memory and storage metrics'
+                              attributes:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    key:
+                                      type: string
+                                    value:
+                                      type: string
+                                  title: Attribute represents key value pair
+                            title: >-
+                              Storage stores resource quantity and storage
+                              attributes
                         endpoints:
                           type: array
                           items:
@@ -27982,7 +28030,7 @@ definitions:
             format: int64
         title: 'Group stores group id, state and specifications of group'
     title: QueryGroupResponse is response type for the Query/Group RPC method
-  akash.deployment.v1beta1.Resource:
+  akash.deployment.v1beta2.Resource:
     type: object
     properties:
       resources:
@@ -28031,26 +28079,30 @@ definitions:
                   title: Attribute represents key value pair
             title: Memory stores resource quantity and memory attributes
           storage:
-            type: object
-            properties:
-              quantity:
-                type: object
-                properties:
-                  val:
-                    type: string
-                    format: byte
-                title: 'Unit stores cpu, memory and storage metrics'
-              attributes:
-                type: array
-                items:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                quantity:
                   type: object
                   properties:
-                    key:
+                    val:
                       type: string
-                    value:
-                      type: string
-                  title: Attribute represents key value pair
-            title: Storage stores resource quantity and storage attributes
+                      format: byte
+                  title: 'Unit stores cpu, memory and storage metrics'
+                attributes:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                      value:
+                        type: string
+                    title: Attribute represents key value pair
+              title: Storage stores resource quantity and storage attributes
           endpoints:
             type: array
             items:
@@ -28091,7 +28143,7 @@ definitions:
           NOTE: The amount field is an Int which implements the custom method
           signatures required by gogoproto.
     title: 'Resource stores unit, total count and price of resource'
-  akash.escrow.v1beta1.Account:
+  akash.escrow.v1beta2.Account:
     type: object
     properties:
       id:
@@ -28172,7 +28224,7 @@ definitions:
           NOTE: The amount field is an Int which implements the custom method
           signatures required by gogoproto.
     title: Account stores state for an escrow account
-  akash.escrow.v1beta1.Account.State:
+  akash.escrow.v1beta2.Account.State:
     type: string
     enum:
       - invalid
@@ -28186,7 +28238,7 @@ definitions:
        - closed: AccountClosed is the state when an account is closed
        - overdrawn: AccountOverdrawn is the state when an account is overdrawn
     title: State stores state for an escrow account
-  akash.escrow.v1beta1.AccountID:
+  akash.escrow.v1beta2.AccountID:
     type: object
     properties:
       scope:
@@ -28610,7 +28662,7 @@ definitions:
                   "@type": "type.googleapis.com/google.protobuf.Duration",
                   "value": "1.212s"
                 }
-  akash.escrow.v1beta1.Payment:
+  akash.escrow.v1beta2.Payment:
     type: object
     properties:
       account_id:
@@ -28677,7 +28729,7 @@ definitions:
           NOTE: The amount field is an Int which implements the custom method
           signatures required by gogoproto.
     title: Payment stores state for a payment
-  akash.escrow.v1beta1.Payment.State:
+  akash.escrow.v1beta2.Payment.State:
     type: string
     enum:
       - invalid
@@ -28691,7 +28743,7 @@ definitions:
        - closed: PaymentStateClosed is the state when the payment is closed
        - overdrawn: PaymentStateOverdrawn is the state when the payment is overdrawn
     title: Payment State
-  akash.market.v1beta1.Bid:
+  akash.market.v1beta2.Bid:
     type: object
     properties:
       bid_id:
@@ -28746,7 +28798,7 @@ definitions:
         type: string
         format: int64
     title: 'Bid stores BidID, state of bid and price'
-  akash.market.v1beta1.Bid.State:
+  akash.market.v1beta2.Bid.State:
     type: string
     enum:
       - invalid
@@ -28762,7 +28814,7 @@ definitions:
        - lost: BidLost denotes state for bid lost
        - closed: BidClosed denotes state for bid closed
     title: State is an enum which refers to state of bid
-  akash.market.v1beta1.BidFilters:
+  akash.market.v1beta2.BidFilters:
     type: object
     properties:
       owner:
@@ -28781,7 +28833,7 @@ definitions:
       state:
         type: string
     title: BidFilters defines flags for bid list filter
-  akash.market.v1beta1.BidID:
+  akash.market.v1beta2.BidID:
     type: object
     properties:
       owner:
@@ -28800,7 +28852,7 @@ definitions:
     description: |-
       BidID stores owner and all other seq numbers
       A successful bid becomes a Lease(ID).
-  akash.market.v1beta1.Lease:
+  akash.market.v1beta2.Lease:
     type: object
     properties:
       lease_id:
@@ -28851,7 +28903,7 @@ definitions:
         type: string
         format: int64
     title: 'Lease stores LeaseID, state of lease and price'
-  akash.market.v1beta1.Lease.State:
+  akash.market.v1beta2.Lease.State:
     type: string
     enum:
       - invalid
@@ -28865,7 +28917,7 @@ definitions:
        - insufficient_funds: LeaseInsufficientFunds denotes state for lease insufficient_funds
        - closed: LeaseClosed denotes state for lease closed
     title: State is an enum which refers to state of lease
-  akash.market.v1beta1.LeaseFilters:
+  akash.market.v1beta2.LeaseFilters:
     type: object
     properties:
       owner:
@@ -28884,7 +28936,7 @@ definitions:
       state:
         type: string
     title: LeaseFilters defines flags for lease list filter
-  akash.market.v1beta1.LeaseID:
+  akash.market.v1beta2.LeaseID:
     type: object
     properties:
       owner:
@@ -28901,7 +28953,7 @@ definitions:
       provider:
         type: string
     title: LeaseID stores bid details of lease
-  akash.market.v1beta1.Order:
+  akash.market.v1beta2.Order:
     type: object
     properties:
       order_id:
@@ -29023,26 +29075,32 @@ definitions:
                             title: Attribute represents key value pair
                       title: Memory stores resource quantity and memory attributes
                     storage:
-                      type: object
-                      properties:
-                        quantity:
-                          type: object
-                          properties:
-                            val:
-                              type: string
-                              format: byte
-                          title: 'Unit stores cpu, memory and storage metrics'
-                        attributes:
-                          type: array
-                          items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          quantity:
                             type: object
                             properties:
-                              key:
+                              val:
                                 type: string
-                              value:
-                                type: string
-                            title: Attribute represents key value pair
-                      title: Storage stores resource quantity and storage attributes
+                                format: byte
+                            title: 'Unit stores cpu, memory and storage metrics'
+                          attributes:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                key:
+                                  type: string
+                                value:
+                                  type: string
+                              title: Attribute represents key value pair
+                        title: >-
+                          Storage stores resource quantity and storage
+                          attributes
                     endpoints:
                       type: array
                       items:
@@ -29092,7 +29150,7 @@ definitions:
         type: string
         format: int64
     title: 'Order stores orderID, state of order and other details'
-  akash.market.v1beta1.Order.State:
+  akash.market.v1beta2.Order.State:
     type: string
     enum:
       - invalid
@@ -29106,7 +29164,7 @@ definitions:
        - active: OrderMatched denotes state for order matched
        - closed: OrderClosed denotes state for order lost
     title: State is an enum which refers to state of order
-  akash.market.v1beta1.OrderFilters:
+  akash.market.v1beta2.OrderFilters:
     type: object
     properties:
       owner:
@@ -29123,7 +29181,7 @@ definitions:
       state:
         type: string
     title: OrderFilters defines flags for order list filter
-  akash.market.v1beta1.OrderID:
+  akash.market.v1beta2.OrderID:
     type: object
     properties:
       owner:
@@ -29138,7 +29196,7 @@ definitions:
         type: integer
         format: int64
     title: OrderID stores owner and all other seq numbers
-  akash.market.v1beta1.QueryBidResponse:
+  akash.market.v1beta2.QueryBidResponse:
     type: object
     properties:
       bid:
@@ -29290,7 +29348,7 @@ definitions:
               signatures required by gogoproto.
         title: Account stores state for an escrow account
     title: QueryBidResponse is response type for the Query/Bid RPC method
-  akash.market.v1beta1.QueryBidsResponse:
+  akash.market.v1beta2.QueryBidsResponse:
     type: object
     properties:
       bids:
@@ -29475,7 +29533,7 @@ definitions:
                    PageResponse page = 2;
            }
     title: QueryBidsResponse is response type for the Query/Bids RPC method
-  akash.market.v1beta1.QueryLeaseResponse:
+  akash.market.v1beta2.QueryLeaseResponse:
     type: object
     properties:
       lease:
@@ -29609,7 +29667,7 @@ definitions:
               signatures required by gogoproto.
         title: Payment stores state for a payment
     title: QueryLeaseResponse is response type for the Query/Lease RPC method
-  akash.market.v1beta1.QueryLeasesResponse:
+  akash.market.v1beta2.QueryLeasesResponse:
     type: object
     properties:
       leases:
@@ -29774,7 +29832,7 @@ definitions:
                    PageResponse page = 2;
            }
     title: QueryLeasesResponse is response type for the Query/Leases RPC method
-  akash.market.v1beta1.QueryOrderResponse:
+  akash.market.v1beta2.QueryOrderResponse:
     type: object
     properties:
       order:
@@ -29905,28 +29963,32 @@ definitions:
                             Memory stores resource quantity and memory
                             attributes
                         storage:
-                          type: object
-                          properties:
-                            quantity:
-                              type: object
-                              properties:
-                                val:
-                                  type: string
-                                  format: byte
-                              title: 'Unit stores cpu, memory and storage metrics'
-                            attributes:
-                              type: array
-                              items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              quantity:
                                 type: object
                                 properties:
-                                  key:
+                                  val:
                                     type: string
-                                  value:
-                                    type: string
-                                title: Attribute represents key value pair
-                          title: >-
-                            Storage stores resource quantity and storage
-                            attributes
+                                    format: byte
+                                title: 'Unit stores cpu, memory and storage metrics'
+                              attributes:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    key:
+                                      type: string
+                                    value:
+                                      type: string
+                                  title: Attribute represents key value pair
+                            title: >-
+                              Storage stores resource quantity and storage
+                              attributes
                         endpoints:
                           type: array
                           items:
@@ -29979,7 +30041,7 @@ definitions:
             format: int64
         title: 'Order stores orderID, state of order and other details'
     title: QueryOrderResponse is response type for the Query/Order RPC method
-  akash.market.v1beta1.QueryOrdersResponse:
+  akash.market.v1beta2.QueryOrdersResponse:
     type: object
     properties:
       orders:
@@ -30114,28 +30176,32 @@ definitions:
                               Memory stores resource quantity and memory
                               attributes
                           storage:
-                            type: object
-                            properties:
-                              quantity:
-                                type: object
-                                properties:
-                                  val:
-                                    type: string
-                                    format: byte
-                                title: 'Unit stores cpu, memory and storage metrics'
-                              attributes:
-                                type: array
-                                items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                quantity:
                                   type: object
                                   properties:
-                                    key:
+                                    val:
                                       type: string
-                                    value:
-                                      type: string
-                                  title: Attribute represents key value pair
-                            title: >-
-                              Storage stores resource quantity and storage
-                              attributes
+                                      format: byte
+                                  title: 'Unit stores cpu, memory and storage metrics'
+                                attributes:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      key:
+                                        type: string
+                                      value:
+                                        type: string
+                                    title: Attribute represents key value pair
+                              title: >-
+                                Storage stores resource quantity and storage
+                                attributes
                           endpoints:
                             type: array
                             items:
@@ -30214,7 +30280,7 @@ definitions:
                    PageResponse page = 2;
            }
     title: QueryOrdersResponse is response type for the Query/Orders RPC method
-  akash.provider.v1beta1.Provider:
+  akash.provider.v1beta2.Provider:
     type: object
     properties:
       owner:
@@ -30240,7 +30306,7 @@ definitions:
             type: string
         title: ProviderInfo
     title: Provider stores owner and host details
-  akash.provider.v1beta1.ProviderInfo:
+  akash.provider.v1beta2.ProviderInfo:
     type: object
     properties:
       email:
@@ -30248,7 +30314,7 @@ definitions:
       website:
         type: string
     title: ProviderInfo
-  akash.provider.v1beta1.QueryProviderResponse:
+  akash.provider.v1beta2.QueryProviderResponse:
     type: object
     properties:
       provider:
@@ -30278,7 +30344,7 @@ definitions:
             title: ProviderInfo
         title: Provider stores owner and host details
     title: QueryProviderResponse is response type for the Query/Provider RPC method
-  akash.provider.v1beta1.QueryProvidersResponse:
+  akash.provider.v1beta2.QueryProvidersResponse:
     type: object
     properties:
       providers:

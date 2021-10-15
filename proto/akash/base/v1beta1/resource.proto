@@ -23,7 +23,7 @@ message CPU {
 message Memory {
   option (gogoproto.equal) = true;
   ResourceValue quantity   = 1
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "size", (gogoproto.moretags) = "yaml:\"size\""];
+  [(gogoproto.nullable) = false, (gogoproto.jsontag) = "size", (gogoproto.moretags) = "yaml:\"size\""];
   repeated Attribute attributes = 2 [
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "attributes,omitempty",
@@ -35,7 +35,7 @@ message Memory {
 message Storage {
   option (gogoproto.equal) = true;
   ResourceValue quantity   = 1
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "size", (gogoproto.moretags) = "yaml:\"size\""];
+  [(gogoproto.nullable) = false, (gogoproto.jsontag) = "size", (gogoproto.moretags) = "yaml:\"size\""];
   repeated Attribute attributes = 2 [
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "attributes,omitempty",
@@ -64,5 +64,5 @@ message ResourceUnits {
     (gogoproto.moretags) = "yaml:\"storage,omitempty\""
   ];
   repeated akash.base.v1beta1.Endpoint endpoints = 4
-      [(gogoproto.nullable) = false, (gogoproto.jsontag) = "endpoints", (gogoproto.moretags) = "yaml:\"endpoints\""];
+  [(gogoproto.nullable) = false, (gogoproto.jsontag) = "endpoints", (gogoproto.moretags) = "yaml:\"endpoints\""];
 }

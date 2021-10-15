@@ -1,0 +1,111 @@
+syntax = "proto3";
+package akash.deployment.v1beta2;
+
+import "gogoproto/gogo.proto";
+
+import "akash/deployment/v1beta2/deployment.proto";
+import "akash/deployment/v1beta2/groupspec.proto";
+
+import "cosmos/base/v1beta1/coin.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types/v1beta2";
+
+// MsgCreateDeployment defines an SDK message for creating deployment
+message MsgCreateDeployment {
+  option (gogoproto.equal) = false;
+
+  DeploymentID id = 1 [
+    (gogoproto.nullable)   = false,
+    (gogoproto.customname) = "ID",
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+  repeated GroupSpec groups = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "groups",
+    (gogoproto.moretags) = "yaml:\"groups\""
+  ];
+  bytes version = 3 [
+    (gogoproto.jsontag) = "version",
+    (gogoproto.moretags) = "yaml:\"version\""
+  ];
+  cosmos.base.v1beta1.Coin deposit = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "deposit",
+    (gogoproto.moretags) = "yaml:\"deposit\""
+  ];
+  // Depositor pays for the deposit
+  string depositor = 5 [
+    (gogoproto.jsontag)  = "depositor",
+    (gogoproto.moretags) = "yaml:\"depositor\""
+  ];
+}
+
+// MsgCreateDeploymentResponse defines the Msg/CreateDeployment response type.
+message MsgCreateDeploymentResponse {}
+
+// MsgDepositDeployment deposits more funds into the deposit account
+message MsgDepositDeployment {
+  option (gogoproto.equal) = false;
+
+  DeploymentID id = 1 [
+    (gogoproto.nullable)   = false,
+    (gogoproto.customname) = "ID",
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+
+  cosmos.base.v1beta1.Coin amount = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "amount",
+    (gogoproto.moretags) = "yaml:\"amount\""
+  ];
+
+  // Depositor pays for the deposit
+  string depositor = 3 [
+    (gogoproto.jsontag)  = "depositor",
+    (gogoproto.moretags) = "yaml:\"depositor\""
+  ];
+}
+
+// MsgCreateDeploymentResponse defines the Msg/CreateDeployment response type.
+message MsgDepositDeploymentResponse {}
+
+// MsgUpdateDeployment defines an SDK message for updating deployment
+message MsgUpdateDeployment {
+  option (gogoproto.equal) = false;
+
+  DeploymentID id = 1 [
+    (gogoproto.nullable)   = false,
+    (gogoproto.customname) = "ID",
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+  repeated GroupSpec groups = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag) = "groups",
+    (gogoproto.moretags) = "yaml:\"groups\""
+  ];
+  bytes version = 3 [
+    (gogoproto.jsontag) = "version",
+    (gogoproto.moretags) = "yaml:\"version\""
+  ];
+}
+
+// MsgUpdateDeploymentResponse defines the Msg/UpdateDeployment response type.
+message MsgUpdateDeploymentResponse {}
+
+// MsgCloseDeployment defines an SDK message for closing deployment
+message MsgCloseDeployment {
+  option (gogoproto.equal) = false;
+
+  DeploymentID id = 1 [
+    (gogoproto.nullable)   = false,
+    (gogoproto.customname) = "ID",
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+// MsgCloseDeploymentResponse defines the Msg/CloseDeployment response type.
+message MsgCloseDeploymentResponse {}

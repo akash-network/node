@@ -9,4 +9,5 @@ import (
 type Reservation interface {
 	OrderID() mtypes.OrderID
 	Resources() atypes.ResourceGroup
+	Allocated() bool
 }

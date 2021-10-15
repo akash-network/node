@@ -30,8 +30,10 @@ var randUnits1 = akashtypes.ResourceUnits{
 	Memory: &akashtypes.Memory{
 		Quantity: akashtypes.NewResourceValue(randMemory),
 	},
-	Storage: &akashtypes.Storage{
-		Quantity: akashtypes.NewResourceValue(randStorage),
+	Storage: akashtypes.Volumes{
+		akashtypes.Storage{
+			Quantity: akashtypes.NewResourceValue(randStorage),
+		},
 	},
 }
 
@@ -42,8 +44,10 @@ var randUnits2 = akashtypes.ResourceUnits{
 	Memory: &akashtypes.Memory{
 		Quantity: akashtypes.NewResourceValue(randMemory),
 	},
-	Storage: &akashtypes.Storage{
-		Quantity: akashtypes.NewResourceValue(randStorage),
+	Storage: akashtypes.Volumes{
+		akashtypes.Storage{
+			Quantity: akashtypes.NewResourceValue(randStorage),
+		},
 	},
 }
 
@@ -261,11 +265,13 @@ func simpleResourceUnits() akashtypes.ResourceUnits {
 			},
 			Attributes: nil,
 		},
-		Storage: &akashtypes.Storage{
-			Quantity: akashtypes.ResourceValue{
-				Val: sdk.NewIntFromUint64(randStorage),
+		Storage: akashtypes.Volumes{
+			akashtypes.Storage{
+				Name: "default",
+				Quantity: akashtypes.ResourceValue{
+					Val: sdk.NewIntFromUint64(randStorage),
+				},
 			},
-			Attributes: nil,
 		},
 		Endpoints: []akashtypes.Endpoint{
 			{

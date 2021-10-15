@@ -5,6 +5,8 @@ package kubernetes_mocks
 import (
 	context "context"
 
+	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mock "github.com/stretchr/testify/mock"
@@ -13,7 +15,7 @@ import (
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/core/v1"
+	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -23,21 +25,67 @@ type ServiceInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, service, opts
-func (_m *ServiceInterface) Create(ctx context.Context, service *v1.Service, opts metav1.CreateOptions) (*v1.Service, error) {
+// Apply provides a mock function with given fields: ctx, service, opts
+func (_m *ServiceInterface) Apply(ctx context.Context, service *v1.ServiceApplyConfiguration, opts metav1.ApplyOptions) (*corev1.Service, error) {
 	ret := _m.Called(ctx, service, opts)
 
-	var r0 *v1.Service
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Service, metav1.CreateOptions) *v1.Service); ok {
+	var r0 *corev1.Service
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.ServiceApplyConfiguration, metav1.ApplyOptions) *corev1.Service); ok {
 		r0 = rf(ctx, service, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Service)
+			r0 = ret.Get(0).(*corev1.Service)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Service, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.ServiceApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, service, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, service, opts
+func (_m *ServiceInterface) ApplyStatus(ctx context.Context, service *v1.ServiceApplyConfiguration, opts metav1.ApplyOptions) (*corev1.Service, error) {
+	ret := _m.Called(ctx, service, opts)
+
+	var r0 *corev1.Service
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.ServiceApplyConfiguration, metav1.ApplyOptions) *corev1.Service); ok {
+		r0 = rf(ctx, service, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.Service)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.ServiceApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, service, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, service, opts
+func (_m *ServiceInterface) Create(ctx context.Context, service *corev1.Service, opts metav1.CreateOptions) (*corev1.Service, error) {
+	ret := _m.Called(ctx, service, opts)
+
+	var r0 *corev1.Service
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.Service, metav1.CreateOptions) *corev1.Service); ok {
+		r0 = rf(ctx, service, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.Service)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.Service, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, service, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -61,15 +109,15 @@ func (_m *ServiceInterface) Delete(ctx context.Context, name string, opts metav1
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *ServiceInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Service, error) {
+func (_m *ServiceInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.Service, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.Service
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.Service); ok {
+	var r0 *corev1.Service
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *corev1.Service); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Service)
+			r0 = ret.Get(0).(*corev1.Service)
 		}
 	}
 
@@ -84,15 +132,15 @@ func (_m *ServiceInterface) Get(ctx context.Context, name string, opts metav1.Ge
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *ServiceInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.ServiceList, error) {
+func (_m *ServiceInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.ServiceList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.ServiceList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.ServiceList); ok {
+	var r0 *corev1.ServiceList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *corev1.ServiceList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.ServiceList)
+			r0 = ret.Get(0).(*corev1.ServiceList)
 		}
 	}
 
@@ -107,7 +155,7 @@ func (_m *ServiceInterface) List(ctx context.Context, opts metav1.ListOptions) (
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *ServiceInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Service, error) {
+func (_m *ServiceInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*corev1.Service, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -117,12 +165,12 @@ func (_m *ServiceInterface) Patch(ctx context.Context, name string, pt types.Pat
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.Service
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.Service); ok {
+	var r0 *corev1.Service
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *corev1.Service); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Service)
+			r0 = ret.Get(0).(*corev1.Service)
 		}
 	}
 
@@ -153,20 +201,20 @@ func (_m *ServiceInterface) ProxyGet(scheme string, name string, port string, pa
 }
 
 // Update provides a mock function with given fields: ctx, service, opts
-func (_m *ServiceInterface) Update(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (*v1.Service, error) {
+func (_m *ServiceInterface) Update(ctx context.Context, service *corev1.Service, opts metav1.UpdateOptions) (*corev1.Service, error) {
 	ret := _m.Called(ctx, service, opts)
 
-	var r0 *v1.Service
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Service, metav1.UpdateOptions) *v1.Service); ok {
+	var r0 *corev1.Service
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.Service, metav1.UpdateOptions) *corev1.Service); ok {
 		r0 = rf(ctx, service, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Service)
+			r0 = ret.Get(0).(*corev1.Service)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Service, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.Service, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, service, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -176,20 +224,20 @@ func (_m *ServiceInterface) Update(ctx context.Context, service *v1.Service, opt
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, service, opts
-func (_m *ServiceInterface) UpdateStatus(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (*v1.Service, error) {
+func (_m *ServiceInterface) UpdateStatus(ctx context.Context, service *corev1.Service, opts metav1.UpdateOptions) (*corev1.Service, error) {
 	ret := _m.Called(ctx, service, opts)
 
-	var r0 *v1.Service
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Service, metav1.UpdateOptions) *v1.Service); ok {
+	var r0 *corev1.Service
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.Service, metav1.UpdateOptions) *corev1.Service); ok {
 		r0 = rf(ctx, service, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Service)
+			r0 = ret.Get(0).(*corev1.Service)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Service, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.Service, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, service, opts)
 	} else {
 		r1 = ret.Error(1)

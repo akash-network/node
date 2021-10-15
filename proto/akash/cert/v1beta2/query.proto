@@ -12,7 +12,7 @@ option go_package = "github.com/ovrclk/akash/x/cert/types/v1beta2";
 service Query {
   // Certificates queries certificates
   rpc Certificates(QueryCertificatesRequest) returns (QueryCertificatesResponse) {
-    option (google.api.http).get = "/akash/cert/v1beta1/certificates/list";
+    option (google.api.http).get = "/akash/cert/v1beta2/certificates/list";
   }
 }
 

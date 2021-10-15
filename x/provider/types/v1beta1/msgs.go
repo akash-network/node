@@ -1,8 +1,9 @@
 package v1beta1
 
 import (
-	types "github.com/ovrclk/akash/types/v1beta1"
 	"net/url"
+
+	types "github.com/ovrclk/akash/types/v1beta1"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -17,6 +18,11 @@ const (
 
 var (
 	_, _, _ sdk.Msg = &MsgCreateProvider{}, &MsgUpdateProvider{}, &MsgDeleteProvider{}
+)
+
+var (
+	ErrInvalidStorageClass  = errors.New("provider: invalid storage class")
+	ErrUnsupportedAttribute = errors.New("provider: unsupported attribute")
 )
 
 // NewMsgCreateProvider creates a new MsgCreateProvider instance
@@ -43,6 +49,9 @@ func (msg MsgCreateProvider) ValidateBasic() error {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgCreate: Invalid Provider Address")
 	}
 	if err := msg.Attributes.Validate(); err != nil {
+		return err
+	}
+	if err := validateProviderAttributes(msg.Attributes); err != nil {
 		return err
 	}
 	if err := msg.Info.Validate(); err != nil {
@@ -90,6 +99,9 @@ func (msg MsgUpdateProvider) ValidateBasic() error {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgUpdate: Invalid Provider Address")
 	}
 	if err := msg.Attributes.Validate(); err != nil {
+		return err
+	}
+	if err := validateProviderAttributes(msg.Attributes); err != nil {
 		return err
 	}
 	if err := msg.Info.Validate(); err != nil {
@@ -170,5 +182,9 @@ func validateProviderURI(val string) error {
 		return errors.Wrapf(ErrInvalidProviderURI, "path in %q should be empty", val)
 	}
 
+	return nil
+}
+
+func validateProviderAttributes(_ types.Attributes) error {
 	return nil
 }

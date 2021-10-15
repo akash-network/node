@@ -1,0 +1,52 @@
+syntax = "proto3";
+package akash.deployment.v1beta2;
+
+import "gogoproto/gogo.proto";
+import "akash/deployment/v1beta2/groupid.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types/v1beta2";
+
+// MsgCloseGroup defines SDK message to close a single Group within a Deployment.
+message MsgCloseGroup {
+  option (gogoproto.equal) = false;
+
+  GroupID id = 1 [
+    (gogoproto.customname) = "ID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+// MsgCloseGroupResponse defines the Msg/CloseGroup response type.
+message MsgCloseGroupResponse {}
+
+// MsgPauseGroup defines SDK message to close a single Group within a Deployment.
+message MsgPauseGroup {
+  option (gogoproto.equal) = false;
+
+  GroupID id = 1 [
+    (gogoproto.customname) = "ID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+// MsgPauseGroupResponse defines the Msg/PauseGroup response type.
+message MsgPauseGroupResponse {}
+
+// MsgStartGroup defines SDK message to close a single Group within a Deployment.
+message MsgStartGroup {
+  option (gogoproto.equal) = false;
+
+  GroupID id = 1 [
+    (gogoproto.customname) = "ID",
+    (gogoproto.nullable)   = false,
+    (gogoproto.jsontag)    = "id",
+    (gogoproto.moretags)   = "yaml:\"id\""
+  ];
+}
+
+// MsgStartGroupResponse defines the Msg/StartGroup response type.
+message MsgStartGroupResponse {}

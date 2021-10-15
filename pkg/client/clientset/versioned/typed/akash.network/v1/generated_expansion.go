@@ -18,6 +18,10 @@ limitations under the License.
 
 package v1
 
+type InventoryExpansion interface{}
+
+type InventoryRequestExpansion interface{}
+
 type ManifestExpansion interface{}
 
 type ProviderHostExpansion interface{}

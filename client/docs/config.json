@@ -7,13 +7,13 @@
   },
   "apis": [
     {
-      "url": "./.cache/tmp/swagger-gen/akash/deployment/v1beta1/query.swagger.json"
+      "url": "./.cache/tmp/swagger-gen/akash/deployment/v1beta2/query.swagger.json"
     },
     {
-      "url": "./.cache/tmp/swagger-gen/akash/market/v1beta1/query.swagger.json"
+      "url": "./.cache/tmp/swagger-gen/akash/market/v1beta2/query.swagger.json"
     },
     {
-      "url": "./.cache/tmp/swagger-gen/akash/provider/v1beta1/query.swagger.json"
+      "url": "./.cache/tmp/swagger-gen/akash/provider/v1beta2/query.swagger.json"
     },
     {
       "url": "./vendor/github.com/cosmos/cosmos-sdk/client/docs/swagger-ui/swagger.yaml",

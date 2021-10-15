@@ -42,8 +42,10 @@ func (mg manifestGeneratorApp) Service(t testing.TB) manifest.Service {
 			Memory: &types.Memory{
 				Quantity: types.NewResourceValue(128 * unit.Mi),
 			},
-			Storage: &types.Storage{
-				Quantity: types.NewResourceValue(256 * unit.Mi),
+			Storage: types.Volumes{
+				types.Storage{
+					Quantity: types.NewResourceValue(256 * unit.Mi),
+				},
 			},
 		},
 		Count: 1,

@@ -5,13 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
+	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/core/v1"
+	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -21,21 +23,44 @@ type SecretInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, secret, opts
-func (_m *SecretInterface) Create(ctx context.Context, secret *v1.Secret, opts metav1.CreateOptions) (*v1.Secret, error) {
+// Apply provides a mock function with given fields: ctx, secret, opts
+func (_m *SecretInterface) Apply(ctx context.Context, secret *v1.SecretApplyConfiguration, opts metav1.ApplyOptions) (*corev1.Secret, error) {
 	ret := _m.Called(ctx, secret, opts)
 
-	var r0 *v1.Secret
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Secret, metav1.CreateOptions) *v1.Secret); ok {
+	var r0 *corev1.Secret
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.SecretApplyConfiguration, metav1.ApplyOptions) *corev1.Secret); ok {
 		r0 = rf(ctx, secret, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Secret)
+			r0 = ret.Get(0).(*corev1.Secret)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Secret, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.SecretApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, secret, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, secret, opts
+func (_m *SecretInterface) Create(ctx context.Context, secret *corev1.Secret, opts metav1.CreateOptions) (*corev1.Secret, error) {
+	ret := _m.Called(ctx, secret, opts)
+
+	var r0 *corev1.Secret
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.Secret, metav1.CreateOptions) *corev1.Secret); ok {
+		r0 = rf(ctx, secret, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.Secret)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.Secret, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, secret, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -73,15 +98,15 @@ func (_m *SecretInterface) DeleteCollection(ctx context.Context, opts metav1.Del
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *SecretInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Secret, error) {
+func (_m *SecretInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.Secret, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.Secret
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.Secret); ok {
+	var r0 *corev1.Secret
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *corev1.Secret); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Secret)
+			r0 = ret.Get(0).(*corev1.Secret)
 		}
 	}
 
@@ -96,15 +121,15 @@ func (_m *SecretInterface) Get(ctx context.Context, name string, opts metav1.Get
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *SecretInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.SecretList, error) {
+func (_m *SecretInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.SecretList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.SecretList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.SecretList); ok {
+	var r0 *corev1.SecretList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *corev1.SecretList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.SecretList)
+			r0 = ret.Get(0).(*corev1.SecretList)
 		}
 	}
 
@@ -119,7 +144,7 @@ func (_m *SecretInterface) List(ctx context.Context, opts metav1.ListOptions) (*
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *SecretInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Secret, error) {
+func (_m *SecretInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*corev1.Secret, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -129,12 +154,12 @@ func (_m *SecretInterface) Patch(ctx context.Context, name string, pt types.Patc
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.Secret
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.Secret); ok {
+	var r0 *corev1.Secret
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *corev1.Secret); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Secret)
+			r0 = ret.Get(0).(*corev1.Secret)
 		}
 	}
 
@@ -149,20 +174,20 @@ func (_m *SecretInterface) Patch(ctx context.Context, name string, pt types.Patc
 }
 
 // Update provides a mock function with given fields: ctx, secret, opts
-func (_m *SecretInterface) Update(ctx context.Context, secret *v1.Secret, opts metav1.UpdateOptions) (*v1.Secret, error) {
+func (_m *SecretInterface) Update(ctx context.Context, secret *corev1.Secret, opts metav1.UpdateOptions) (*corev1.Secret, error) {
 	ret := _m.Called(ctx, secret, opts)
 
-	var r0 *v1.Secret
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Secret, metav1.UpdateOptions) *v1.Secret); ok {
+	var r0 *corev1.Secret
+	if rf, ok := ret.Get(0).(func(context.Context, *corev1.Secret, metav1.UpdateOptions) *corev1.Secret); ok {
 		r0 = rf(ctx, secret, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Secret)
+			r0 = ret.Get(0).(*corev1.Secret)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Secret, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *corev1.Secret, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, secret, opts)
 	} else {
 		r1 = ret.Error(1)

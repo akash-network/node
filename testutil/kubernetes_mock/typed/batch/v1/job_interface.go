@@ -5,12 +5,15 @@ package kubernetes_mocks
 import (
 	context "context"
 
-	mock "github.com/stretchr/testify/mock"
+	batchv1 "k8s.io/api/batch/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	mock "github.com/stretchr/testify/mock"
 
 	types "k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/api/batch/v1"
+	v1 "k8s.io/client-go/applyconfigurations/batch/v1"
 
 	watch "k8s.io/apimachinery/pkg/watch"
 )
@@ -20,21 +23,67 @@ type JobInterface struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, job, opts
-func (_m *JobInterface) Create(ctx context.Context, job *v1.Job, opts metav1.CreateOptions) (*v1.Job, error) {
+// Apply provides a mock function with given fields: ctx, job, opts
+func (_m *JobInterface) Apply(ctx context.Context, job *v1.JobApplyConfiguration, opts metav1.ApplyOptions) (*batchv1.Job, error) {
 	ret := _m.Called(ctx, job, opts)
 
-	var r0 *v1.Job
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Job, metav1.CreateOptions) *v1.Job); ok {
+	var r0 *batchv1.Job
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.JobApplyConfiguration, metav1.ApplyOptions) *batchv1.Job); ok {
 		r0 = rf(ctx, job, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Job)
+			r0 = ret.Get(0).(*batchv1.Job)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Job, metav1.CreateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.JobApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, job, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ApplyStatus provides a mock function with given fields: ctx, job, opts
+func (_m *JobInterface) ApplyStatus(ctx context.Context, job *v1.JobApplyConfiguration, opts metav1.ApplyOptions) (*batchv1.Job, error) {
+	ret := _m.Called(ctx, job, opts)
+
+	var r0 *batchv1.Job
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.JobApplyConfiguration, metav1.ApplyOptions) *batchv1.Job); ok {
+		r0 = rf(ctx, job, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*batchv1.Job)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.JobApplyConfiguration, metav1.ApplyOptions) error); ok {
+		r1 = rf(ctx, job, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Create provides a mock function with given fields: ctx, job, opts
+func (_m *JobInterface) Create(ctx context.Context, job *batchv1.Job, opts metav1.CreateOptions) (*batchv1.Job, error) {
+	ret := _m.Called(ctx, job, opts)
+
+	var r0 *batchv1.Job
+	if rf, ok := ret.Get(0).(func(context.Context, *batchv1.Job, metav1.CreateOptions) *batchv1.Job); ok {
+		r0 = rf(ctx, job, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*batchv1.Job)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *batchv1.Job, metav1.CreateOptions) error); ok {
 		r1 = rf(ctx, job, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -72,15 +121,15 @@ func (_m *JobInterface) DeleteCollection(ctx context.Context, opts metav1.Delete
 }
 
 // Get provides a mock function with given fields: ctx, name, opts
-func (_m *JobInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Job, error) {
+func (_m *JobInterface) Get(ctx context.Context, name string, opts metav1.GetOptions) (*batchv1.Job, error) {
 	ret := _m.Called(ctx, name, opts)
 
-	var r0 *v1.Job
-	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *v1.Job); ok {
+	var r0 *batchv1.Job
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.GetOptions) *batchv1.Job); ok {
 		r0 = rf(ctx, name, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Job)
+			r0 = ret.Get(0).(*batchv1.Job)
 		}
 	}
 
@@ -95,15 +144,15 @@ func (_m *JobInterface) Get(ctx context.Context, name string, opts metav1.GetOpt
 }
 
 // List provides a mock function with given fields: ctx, opts
-func (_m *JobInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.JobList, error) {
+func (_m *JobInterface) List(ctx context.Context, opts metav1.ListOptions) (*batchv1.JobList, error) {
 	ret := _m.Called(ctx, opts)
 
-	var r0 *v1.JobList
-	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.JobList); ok {
+	var r0 *batchv1.JobList
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *batchv1.JobList); ok {
 		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.JobList)
+			r0 = ret.Get(0).(*batchv1.JobList)
 		}
 	}
 
@@ -118,7 +167,7 @@ func (_m *JobInterface) List(ctx context.Context, opts metav1.ListOptions) (*v1.
 }
 
 // Patch provides a mock function with given fields: ctx, name, pt, data, opts, subresources
-func (_m *JobInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*v1.Job, error) {
+func (_m *JobInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*batchv1.Job, error) {
 	_va := make([]interface{}, len(subresources))
 	for _i := range subresources {
 		_va[_i] = subresources[_i]
@@ -128,12 +177,12 @@ func (_m *JobInterface) Patch(ctx context.Context, name string, pt types.PatchTy
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *v1.Job
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *v1.Job); ok {
+	var r0 *batchv1.Job
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) *batchv1.Job); ok {
 		r0 = rf(ctx, name, pt, data, opts, subresources...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Job)
+			r0 = ret.Get(0).(*batchv1.Job)
 		}
 	}
 
@@ -148,20 +197,20 @@ func (_m *JobInterface) Patch(ctx context.Context, name string, pt types.PatchTy
 }
 
 // Update provides a mock function with given fields: ctx, job, opts
-func (_m *JobInterface) Update(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (*v1.Job, error) {
+func (_m *JobInterface) Update(ctx context.Context, job *batchv1.Job, opts metav1.UpdateOptions) (*batchv1.Job, error) {
 	ret := _m.Called(ctx, job, opts)
 
-	var r0 *v1.Job
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Job, metav1.UpdateOptions) *v1.Job); ok {
+	var r0 *batchv1.Job
+	if rf, ok := ret.Get(0).(func(context.Context, *batchv1.Job, metav1.UpdateOptions) *batchv1.Job); ok {
 		r0 = rf(ctx, job, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Job)
+			r0 = ret.Get(0).(*batchv1.Job)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Job, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *batchv1.Job, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, job, opts)
 	} else {
 		r1 = ret.Error(1)
@@ -171,20 +220,20 @@ func (_m *JobInterface) Update(ctx context.Context, job *v1.Job, opts metav1.Upd
 }
 
 // UpdateStatus provides a mock function with given fields: ctx, job, opts
-func (_m *JobInterface) UpdateStatus(ctx context.Context, job *v1.Job, opts metav1.UpdateOptions) (*v1.Job, error) {
+func (_m *JobInterface) UpdateStatus(ctx context.Context, job *batchv1.Job, opts metav1.UpdateOptions) (*batchv1.Job, error) {
 	ret := _m.Called(ctx, job, opts)
 
-	var r0 *v1.Job
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.Job, metav1.UpdateOptions) *v1.Job); ok {
+	var r0 *batchv1.Job
+	if rf, ok := ret.Get(0).(func(context.Context, *batchv1.Job, metav1.UpdateOptions) *batchv1.Job); ok {
 		r0 = rf(ctx, job, opts)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Job)
+			r0 = ret.Get(0).(*batchv1.Job)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.Job, metav1.UpdateOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *batchv1.Job, metav1.UpdateOptions) error); ok {
 		r1 = rf(ctx, job, opts)
 	} else {
 		r1 = ret.Error(1)

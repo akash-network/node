@@ -31,7 +31,7 @@ func TestAttributes_Validate(t *testing.T) {
 	require.EqualError(t, attr.Validate(), types.ErrInvalidAttributeKey.Error())
 	// to long key
 	attr = types.Attributes{
-		{Key: "sdgkhaeirugaeroigheirghseiargfs3s"},
+		{Key: "sdgkhaeirugaeroigheirghseiargfs3ssdgkhaeirugaeroigheirghseiargfs3"},
 	}
 
 	require.EqualError(t, attr.Validate(), types.ErrInvalidAttributeKey.Error())

@@ -2,18 +2,21 @@ package bidengine
 
 import (
 	"errors"
+	"testing"
+	"time"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	clientmocks "github.com/ovrclk/akash/client/mocks"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/testutil"
+
 	akashtypes "github.com/ovrclk/akash/types/v1beta2"
 	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
 	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 type providerAttributesTestScaffold struct {
@@ -88,6 +91,24 @@ func TestProvAttrCachesValue(t *testing.T) {
 		}
 		queryClient.On("ProviderAuditorAttributes", mock.Anything, req).Return(response, nil)
 
+		attrReq := &ptypes.QueryProviderRequest{
+			Owner: scaffold.provider.Owner,
+		}
+
+		attrResp := &ptypes.QueryProviderResponse{
+			Provider: ptypes.Provider{
+				Owner:   scaffold.providerAddr.String(),
+				HostURI: "",
+				Attributes: akashtypes.Attributes{
+					akashtypes.Attribute{
+						Key:   "foo",
+						Value: "bar",
+					},
+				},
+			},
+		}
+		queryClient.On("Provider", mock.Anything, attrReq).Return(attrResp, nil)
+
 		return queryClient
 	})
 
@@ -101,8 +122,8 @@ func TestProvAttrCachesValue(t *testing.T) {
 
 	scaffold.stop(t)
 
-	// Should have just 1 call
-	require.Len(t, scaffold.queryClient.Calls, 1)
+	// Should have 2 calls
+	require.Len(t, scaffold.queryClient.Calls, 2)
 }
 
 func TestProvAttrReturnsEmpty(t *testing.T) {
@@ -113,6 +134,25 @@ func TestProvAttrReturnsEmpty(t *testing.T) {
 		}
 		queryClient := &clientmocks.QueryClient{}
 		queryClient.On("ProviderAuditorAttributes", mock.Anything, req).Return(nil, errWithExpectedText)
+
+		attrReq := &ptypes.QueryProviderRequest{
+			Owner: scaffold.provider.Owner,
+		}
+
+		attrResp := &ptypes.QueryProviderResponse{
+			Provider: ptypes.Provider{
+				Owner:   scaffold.providerAddr.String(),
+				HostURI: "",
+				Attributes: akashtypes.Attributes{
+					akashtypes.Attribute{
+						Key:   "foo",
+						Value: "bar",
+					},
+				},
+			},
+		}
+		queryClient.On("Provider", mock.Anything, attrReq).Return(attrResp, nil)
+
 		return queryClient
 	})
 
@@ -120,10 +160,13 @@ func TestProvAttrReturnsEmpty(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, attrs, 0) // Nothing is returned
 
+	_, err = scaffold.service.GetAttributes()
+	require.NoError(t, err)
+
 	scaffold.stop(t)
 
 	// Should have just 1 call
-	require.Len(t, scaffold.queryClient.Calls, 1)
+	require.Len(t, scaffold.queryClient.Calls, 2)
 }
 
 func TestProvAttrObeysTTL(t *testing.T) {
@@ -150,6 +193,24 @@ func TestProvAttrObeysTTL(t *testing.T) {
 		}
 		queryClient.On("ProviderAuditorAttributes", mock.Anything, req).Return(response, nil)
 
+		attrReq := &ptypes.QueryProviderRequest{
+			Owner: scaffold.provider.Owner,
+		}
+
+		attrResp := &ptypes.QueryProviderResponse{
+			Provider: ptypes.Provider{
+				Owner:   scaffold.providerAddr.String(),
+				HostURI: "",
+				Attributes: akashtypes.Attributes{
+					akashtypes.Attribute{
+						Key:   "foo",
+						Value: "bar",
+					},
+				},
+			},
+		}
+		queryClient.On("Provider", mock.Anything, attrReq).Return(attrResp, nil)
+
 		return queryClient
 	})
 
@@ -166,7 +227,7 @@ func TestProvAttrObeysTTL(t *testing.T) {
 	scaffold.stop(t)
 
 	// Should have just 1 call
-	require.Len(t, scaffold.queryClient.Calls, 2)
+	require.Len(t, scaffold.queryClient.Calls, 3)
 }
 
 func TestProvAttrTrimsCache(t *testing.T) {
@@ -190,6 +251,24 @@ func TestProvAttrTrimsCache(t *testing.T) {
 			Pagination: nil,
 		}
 		queryClient.On("ProviderAuditorAttributes", mock.Anything, mock.Anything).Return(response, nil)
+
+		attrReq := &ptypes.QueryProviderRequest{
+			Owner: scaffold.provider.Owner,
+		}
+
+		attrResp := &ptypes.QueryProviderResponse{
+			Provider: ptypes.Provider{
+				Owner:   scaffold.providerAddr.String(),
+				HostURI: "",
+				Attributes: akashtypes.Attributes{
+					akashtypes.Attribute{
+						Key:   "foo",
+						Value: "bar",
+					},
+				},
+			},
+		}
+		queryClient.On("Provider", mock.Anything, attrReq).Return(attrResp, nil)
 
 		return queryClient
 	})
@@ -226,6 +305,25 @@ func TestProvAttrReturnsErrors(t *testing.T) {
 	scaffold := setupProviderAttributesTestScaffold(t, ttl, func(scaffold *providerAttributesTestScaffold) *clientmocks.QueryClient {
 		queryClient := &clientmocks.QueryClient{}
 		queryClient.On("ProviderAuditorAttributes", mock.Anything, mock.Anything).Return(nil, errForTest)
+
+		attrReq := &ptypes.QueryProviderRequest{
+			Owner: scaffold.provider.Owner,
+		}
+
+		attrResp := &ptypes.QueryProviderResponse{
+			Provider: ptypes.Provider{
+				Owner:   scaffold.providerAddr.String(),
+				HostURI: "",
+				Attributes: akashtypes.Attributes{
+					akashtypes.Attribute{
+						Key:   "foo",
+						Value: "bar",
+					},
+				},
+			},
+		}
+		queryClient.On("Provider", mock.Anything, attrReq).Return(attrResp, nil)
+
 		return queryClient
 	})
 
@@ -260,6 +358,24 @@ func TestProvAttrClearsCache(t *testing.T) {
 		}
 		queryClient.On("ProviderAuditorAttributes", mock.Anything, req).Return(response, nil)
 
+		attrReq := &ptypes.QueryProviderRequest{
+			Owner: scaffold.provider.Owner,
+		}
+
+		attrResp := &ptypes.QueryProviderResponse{
+			Provider: ptypes.Provider{
+				Owner:   scaffold.providerAddr.String(),
+				HostURI: "",
+				Attributes: akashtypes.Attributes{
+					akashtypes.Attribute{
+						Key:   "foo",
+						Value: "bar",
+					},
+				},
+			},
+		}
+		queryClient.On("Provider", mock.Anything, attrReq).Return(attrResp, nil)
+
 		return queryClient
 	})
 
@@ -292,5 +408,5 @@ func TestProvAttrClearsCache(t *testing.T) {
 	scaffold.stop(t)
 
 	// Should have 3 calls
-	require.Len(t, scaffold.queryClient.Calls, 3)
+	require.Len(t, scaffold.queryClient.Calls, 4)
 }

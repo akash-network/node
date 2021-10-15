@@ -1,5 +1,7 @@
 syntax = "proto3";
+
 package akash.deployment.v1beta2;
+
 import "gogoproto/gogo.proto";
 import "cosmos/base/v1beta1/coin.proto";
 

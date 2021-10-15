@@ -6,8 +6,13 @@ import (
 	"regexp"
 	"time"
 
-	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	"github.com/boz/go-lifecycle"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/tendermint/tendermint/libs/log"
+
 	"github.com/ovrclk/akash/provider/cluster"
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/event"
@@ -18,9 +23,6 @@ import (
 	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
 // order manages bidding and general lifecycle handling of an order.
@@ -79,6 +81,7 @@ var (
 func newOrder(svc *service, oid mtypes.OrderID, cfg Config, pass ProviderAttrSignatureService, checkForExistingBid bool) (*order, error) {
 	return newOrderInternal(svc, oid, cfg, pass, checkForExistingBid, nil)
 }
+
 func newOrderInternal(svc *service, oid mtypes.OrderID, cfg Config, pass ProviderAttrSignatureService, checkForExistingBid bool, reservationFulfilledNotify chan<- int) (*order, error) {
 	// Create a subscription that will see all events that have not been read from e.sub.Events()
 	sub, err := svc.sub.Clone()
@@ -408,7 +411,6 @@ loop:
 }
 
 func (o *order) shouldBid(group *dtypes.Group) (bool, error) {
-
 	// does provider have required attributes?
 	if !group.GroupSpec.MatchAttributes(o.session.Provider().Attributes) {
 		o.log.Debug("unable to fulfill: incompatible provider attributes")
@@ -418,6 +420,17 @@ func (o *order) shouldBid(group *dtypes.Group) (bool, error) {
 	// does order have required attributes?
 	if !o.cfg.Attributes.SubsetOf(group.GroupSpec.Requirements.Attributes) {
 		o.log.Debug("unable to fulfill: incompatible order attributes")
+		return false, nil
+	}
+
+	attr, err := o.pass.GetAttributes()
+	if err != nil {
+		return false, err
+	}
+
+	// does provider have required capabilities?
+	if !group.GroupSpec.MatchResourcesRequirements(attr) {
+		o.log.Debug("unable to fulfill: incompatible attributes for resources requirements", "wanted", group.GroupSpec, "have", attr)
 		return false, nil
 	}
 

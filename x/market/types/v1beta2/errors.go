@@ -36,6 +36,7 @@ const (
 	errInvalidParam
 	errUnknownProvider
 	errInvalidBid
+	errCodeCapabilitiesMismatch
 )
 
 var (
@@ -49,6 +50,8 @@ var (
 	ErrBidOverOrder = sdkerrors.Register(ModuleName, errCodeOverOrder, "bid price above max order price")
 	// ErrAttributeMismatch is the error for attribute mismatch
 	ErrAttributeMismatch = sdkerrors.Register(ModuleName, errCodeAttributeMismatch, "attribute mismatch")
+	// ErrCapabilitiesMismatch is the error for capabilities mismatch
+	ErrCapabilitiesMismatch = sdkerrors.Register(ModuleName, errCodeCapabilitiesMismatch, "capabilities mismatch")
 	// ErrUnknownBid is the error for unknown bid
 	ErrUnknownBid = sdkerrors.Register(ModuleName, errCodeUnknownBid, "unknown bid")
 	// ErrUnknownLease is the error for unknown bid

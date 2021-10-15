@@ -68,8 +68,10 @@ spec:
                                 type: string
                                 format: uint64
                               storage:
-                                type: string
-                                format: uint64
+                                type: array
+                                items:
+                                  type: string
+                                  format: uint64
                           count:
                             type: number
                             format: uint64
@@ -107,9 +109,22 @@ spec:
                                       type: array
                                       items:
                                         type: string
-
                                 hosts:
                                   type: array
                                   items:
                                     type: string
-
+                          params:
+                            type: object
+                            nullable: true
+                            properties:
+                              storage:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                    readOnly:
+                                      type: boolean
+                                    mount:
+                                      type: string

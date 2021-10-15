@@ -1,0 +1,27 @@
+syntax = "proto3";
+package akash.deployment.v1beta2;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/ovrclk/akash/x/deployment/types/v1beta2";
+
+// GroupID stores owner, deployment sequence number and group sequence number
+message GroupID {
+  option (gogoproto.equal)            = false;
+  option (gogoproto.goproto_stringer) = false;
+
+  string owner = 1 [
+    (gogoproto.jsontag) = "owner",
+    (gogoproto.moretags) = "yaml:\"owner\""
+  ];
+  uint64 dseq = 2 [
+    (gogoproto.customname) = "DSeq",
+    (gogoproto.jsontag) = "dseq",
+    (gogoproto.moretags) = "yaml:\"dseq\""
+  ];
+  uint32 gseq = 3 [
+    (gogoproto.customname) = "GSeq",
+    (gogoproto.jsontag) = "gseq",
+    (gogoproto.moretags) = "yaml:\"gseq\""
+  ];
+}
