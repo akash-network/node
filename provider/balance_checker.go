@@ -69,6 +69,14 @@ func newBalanceChecker(ctx context.Context,
 	return bc
 }
 func (bc *balanceChecker) doCheck(ctx context.Context) (bool, error) {
+	after := time.After(bc.balanceCheckDelay)
+
+	select {
+	case <- ctx.Done():
+		return false, ctx.Err()
+	case <- after:
+	}
+
 	// if a bunch of providrs are restarted at the same time they could
 	// stack up and hit the same RPC node. Space this out since it isn't time critical
 
