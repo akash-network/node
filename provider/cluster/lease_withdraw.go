@@ -12,14 +12,17 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/tendermint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/libs/rand"
+	"time"
 )
 
 type deploymentWithdrawal struct {
-	bus     pubsub.Bus
-	session session.Session
-	lease   mtypes.LeaseID
-	log     log.Logger
-	lc      lifecycle.Lifecycle
+	bus           pubsub.Bus
+	session       session.Session
+	lease         mtypes.LeaseID
+	log           log.Logger
+	lc            lifecycle.Lifecycle
+	withdrawDelay time.Duration
 }
 
 var (
@@ -28,13 +31,31 @@ var (
 	}, []string{"result"})
 )
 
-func newDeploymentWithdrawal(dm *deploymentManager) *deploymentWithdrawal {
+const baseWithdrawDelay = time.Second * 12
+const withdrawDelayModulus = 50
+
+func newDeploymentWithdrawal(dm *deploymentManager, delayIndex uint, baseDelay time.Duration) *deploymentWithdrawal {
+	// Compute a delay based off the index passed in
+	withdrawDelay := time.Duration(0)
+	if delayIndex > 0 {
+		withdrawDelay = baseWithdrawDelay
+		delayIndex %= withdrawDelayModulus // Prevent this value from becoming very large
+		withdrawDelay *= time.Duration(delayIndex)
+
+		randOffset := rand.Float64() - 0.5
+		randOffset *= float64(baseWithdrawDelay.Milliseconds())
+		withdrawDelay += time.Millisecond * time.Duration(randOffset)
+	}
+	// add in the base time
+	withdrawDelay += baseDelay
+
 	m := &deploymentWithdrawal{
-		bus:     dm.bus,
-		session: dm.session,
-		lease:   dm.lease,
-		log:     dm.log.With("cmp", "deployment-withdrawal"),
-		lc:      lifecycle.New(),
+		bus:           dm.bus,
+		session:       dm.session,
+		lease:         dm.lease,
+		log:           dm.log.With("cmp", "deployment-withdrawal"),
+		lc:            lifecycle.New(),
+		withdrawDelay: withdrawDelay,
 	}
 
 	go m.lc.WatchChannel(dm.lc.ShuttingDown())
@@ -44,6 +65,17 @@ func newDeploymentWithdrawal(dm *deploymentManager) *deploymentWithdrawal {
 }
 
 func (dw *deploymentWithdrawal) doWithdrawal(ctx context.Context) error {
+	if dw.withdrawDelay > time.Duration(0) {
+		after := time.After(dw.withdrawDelay)
+
+		// Wait until the context is cancelled, or the delay elapses
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-after:
+		}
+	}
+
 	msg := &mtypes.MsgWithdrawLease{
 		LeaseID: dw.lease,
 	}
@@ -69,6 +101,7 @@ func (dw *deploymentWithdrawal) run() {
 	defer events.Close()
 
 	var result <-chan runner.Result
+
 loop:
 	for {
 		withdraw := false

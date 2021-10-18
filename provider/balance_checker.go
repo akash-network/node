@@ -7,6 +7,7 @@ import (
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
+	putil "github.com/ovrclk/akash/provider/util"
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/util/runner"
 	"github.com/prometheus/client_golang/prometheus"
@@ -31,6 +32,8 @@ type balanceChecker struct {
 	bankQueryClient bankTypes.QueryClient
 
 	cfg BalanceCheckerConfig
+
+	balanceCheckDelay time.Duration
 }
 
 type BalanceCheckerConfig struct {
@@ -45,16 +48,19 @@ func newBalanceChecker(ctx context.Context,
 	clientSession session.Session,
 	bus pubsub.Bus,
 	cfg BalanceCheckerConfig) *balanceChecker {
-	bc := &balanceChecker{
 
+	balanceCheckDelay := putil.PseudoRandomUintFromAddr(clientSession.Provider().GetOwner(), 10000)
+
+	bc := &balanceChecker{
 		session: clientSession,
 		log:     clientSession.Log().With("cmp", "balance-checker"),
 		lc:      lifecycle.New(),
 		bus:     bus,
 		ownAddr: accAddr,
 
-		bankQueryClient: bankQueryClient,
-		cfg:             cfg,
+		bankQueryClient:   bankQueryClient,
+		cfg:               cfg,
+		balanceCheckDelay: time.Duration(balanceCheckDelay) * time.Millisecond,
 	}
 
 	go bc.lc.WatchContext(ctx)
@@ -63,6 +69,8 @@ func newBalanceChecker(ctx context.Context,
 	return bc
 }
 func (bc *balanceChecker) doCheck(ctx context.Context) (bool, error) {
+	// if a bunch of providrs are restarted at the same time they could
+	// stack up and hit the same RPC node. Space this out since it isn't time critical
 
 	// Get the current wallet balance
 	query := bankTypes.NewQueryBalanceRequest(bc.ownAddr, "uakt")
