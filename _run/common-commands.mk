@@ -55,6 +55,12 @@ provider-update:
 provider-status:
 	$(AKASH) provider status $(PROVIDER_ADDRESS)
 
+.PHONY: jwt-server-authenticate
+jwt-server-authenticate:
+	$(AKASH) provider jwt-server-authenticate \
+		--from      "$(KEY_ADDRESS)" \
+		--provider  "$(PROVIDER_ADDRESS)"
+
 .PHONY: send-manifest
 send-manifest:
 	$(AKASH) provider send-manifest "$(SDL_PATH)" \

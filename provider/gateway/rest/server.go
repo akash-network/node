@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -35,6 +36,32 @@ func NewServer(
 	var err error
 
 	srv.TLSConfig, err = gwutils.NewServerTLSConfig(context.Background(), certs, cquery)
+	if err != nil {
+		return nil, err
+	}
+
+	return srv, nil
+}
+
+func NewJwtServer(ctx context.Context,
+	cquery ctypes.QueryClient,
+	jwtGatewayAddr string,
+	providerAddr sdk.Address,
+	cert tls.Certificate,
+	certSerialNumber string,
+	jwtExpiresAfter time.Duration,
+) (*http.Server, error) {
+
+	srv := &http.Server{
+		Addr:    jwtGatewayAddr,
+		Handler: newJwtServerRouter(providerAddr, cert.PrivateKey, jwtExpiresAfter, certSerialNumber),
+		BaseContext: func(_ net.Listener) context.Context {
+			return ctx
+		},
+	}
+
+	var err error
+	srv.TLSConfig, err = gwutils.NewServerTLSConfig(context.Background(), []tls.Certificate{cert}, cquery)
 	if err != nil {
 		return nil, err
 	}

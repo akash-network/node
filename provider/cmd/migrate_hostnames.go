@@ -3,6 +3,7 @@ package cmd
 import (
 	"crypto/tls"
 	"errors"
+
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	akashclient "github.com/ovrclk/akash/client"
 	gwrest "github.com/ovrclk/akash/provider/gateway/rest"

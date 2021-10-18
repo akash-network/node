@@ -59,6 +59,7 @@ const (
 	FlagK8sManifestNS = "k8s-manifest-ns"
 	// FlagGatewayListenAddress determines listening address for Manifests
 	FlagGatewayListenAddress             = "gateway-listen-address"
+	FlagJWTGatewayListenAddress          = "jwt-gateway-listen-address"
 	FlagBidPricingStrategy               = "bid-price-strategy"
 	FlagBidPriceCPUScale                 = "bid-price-cpu-scale"
 	FlagBidPriceMemoryScale              = "bid-price-memory-scale"
@@ -133,6 +134,11 @@ func RunCmd() *cobra.Command {
 
 	cmd.Flags().String(FlagGatewayListenAddress, "0.0.0.0:8443", "Gateway listen address")
 	if err := viper.BindPFlag(FlagGatewayListenAddress, cmd.Flags().Lookup(FlagGatewayListenAddress)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().String(FlagJWTGatewayListenAddress, "0.0.0.0:8444", "JWT Gateway listen address")
+	if err := viper.BindPFlag(FlagJWTGatewayListenAddress, cmd.Flags().Lookup(FlagJWTGatewayListenAddress)); err != nil {
 		return nil
 	}
 
@@ -303,6 +309,11 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().Duration(FlagJwtExpiresAfter, 600*time.Second, "duration for which the JWT is valid after it is issued")
+	if err := viper.BindPFlag(FlagJwtExpiresAfter, cmd.Flags().Lookup(FlagJwtExpiresAfter)); err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
@@ -414,6 +425,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	providerConfig := viper.GetString(FlagProviderConfig)
 	cachedResultMaxAge := viper.GetDuration(FlagCachedResultMaxAge)
 	rpcQueryTimeout := viper.GetDuration(FlagRPCQueryTimeout)
+	expiresAfter := viper.GetDuration(FlagJwtExpiresAfter)
 
 	var metricsRouter http.Handler
 	if len(metricsListener) != 0 {
@@ -445,6 +457,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	}
 
 	gwaddr := viper.GetString(FlagGatewayListenAddress)
+	jwtGwAddr := viper.GetString(FlagJWTGatewayListenAddress)
 
 	var certFromFlag io.Reader
 	if val := cmd.Flag(FlagAuthPem).Value.String(); val != "" {
@@ -610,6 +623,19 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	jwtGateway, err := gwrest.NewJwtServer(
+		ctx,
+		cquery,
+		jwtGwAddr,
+		cctx.FromAddress,
+		cert,
+		x509cert.SerialNumber.String(),
+		expiresAfter,
+	)
+	if err != nil {
+		return err
+	}
+
 	group.Go(func() error {
 		return events.Publish(ctx, cctx.Client, "provider-cli", bus)
 	})
@@ -627,6 +653,15 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	group.Go(func() error {
 		<-ctx.Done()
 		return gateway.Close()
+	})
+
+	group.Go(func() error {
+		return jwtGateway.ListenAndServeTLS("", "")
+	})
+
+	group.Go(func() error {
+		<-ctx.Done()
+		return jwtGateway.Close()
 	})
 
 	if metricsRouter != nil {

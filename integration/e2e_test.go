@@ -19,6 +19,8 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/golang-jwt/jwt/v4"
+
 	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +33,7 @@ import (
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	providerCmd "github.com/ovrclk/akash/provider/cmd"
+
 	"github.com/ovrclk/akash/provider/gateway/rest"
 	"github.com/ovrclk/akash/sdl"
 	clitestutil "github.com/ovrclk/akash/testutil/cli"
@@ -165,7 +168,15 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		Host:   provHost,
 		Scheme: "https",
 	}
-	provFileStr := fmt.Sprintf(providerTemplate, provURL.String())
+	// address for JWT server to listen on
+	_, port, err = server.FreeTCPAddr()
+	require.NoError(s.T(), err)
+	jwtHost := fmt.Sprintf("localhost:%s", port)
+	jwtURL := url.URL{
+		Host:   jwtHost,
+		Scheme: "https",
+	}
+	provFileStr := fmt.Sprintf(providerTemplate, provURL.String(), jwtURL.String())
 	tmpFile, err := ioutil.TempFile(s.network.BaseDir, "provider.yaml")
 	require.NoError(s.T(), err)
 
@@ -285,6 +296,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 			cliHome,
 			keyName,
 			provURL.Host,
+			jwtURL.Host,
 			fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 			"--deployment-runtime-class=none",
 		)
@@ -1336,6 +1348,23 @@ func (s *E2EApp) TestE2EMigrateHostname() {
 
 	// confirm hostname still reachable, on the hostname it was migrated to
 	queryAppWithHostname(s.T(), appURL, 50, secondaryHostname)
+}
+
+func (s *E2EApp) TestE2EJwtServerAuthenticate() {
+	cctx := s.validator.ClientCtx
+	provider := s.keyProvider.GetAddress().String()
+	tenant := s.keyTenant.GetAddress().String()
+
+	buf, err := ptestutil.TestJwtServerAuthenticate(cctx, provider, tenant)
+	s.Require().NoError(err)
+
+	var claims rest.ClientCustomClaims
+	_, _, err = (&jwt.Parser{}).ParseUnverified(buf.String(), &claims)
+	require.NoError(s.T(), err)
+
+	require.Equal(s.T(), provider, claims.Issuer)
+	require.Equal(s.T(), tenant, claims.Subject)
+	require.NotEmpty(s.T(), claims.AkashNamespace.V1.CertSerialNumber)
 }
 
 func TestIntegrationTestSuite(t *testing.T) {

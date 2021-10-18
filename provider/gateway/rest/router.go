@@ -5,14 +5,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/ovrclk/akash/provider/cluster/util"
-	"github.com/ovrclk/akash/util/wsutil"
 	"io"
-	"k8s.io/client-go/tools/remotecommand"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/golang-jwt/jwt/v4"
+
+	"k8s.io/client-go/tools/remotecommand"
+
+	"github.com/ovrclk/akash/provider/cluster/util"
+	"github.com/ovrclk/akash/util/wsutil"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	gcontext "github.com/gorilla/context"
@@ -153,6 +157,51 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ctxCon
 		leaseShellHandler(log, pclient.Manifest(), pclient.Cluster()))
 
 	return router
+}
+
+func newJwtServerRouter(addr sdk.Address, privateKey interface{}, jwtExpiresAfter time.Duration, certSerialNumber string) *mux.Router {
+
+	router := mux.NewRouter()
+
+	router.HandleFunc("/jwt",
+		jwtServiceHandler(addr, privateKey, jwtExpiresAfter, certSerialNumber)).
+		Methods("GET")
+
+	return router
+}
+
+func jwtServiceHandler(paddr sdk.Address, privateKey interface{}, jwtExpiresAfter time.Duration, certSerialNumber string) http.HandlerFunc {
+
+	return func(writer http.ResponseWriter, request *http.Request) {
+		now := time.Now()
+		claim := ClientCustomClaims{
+			AkashNamespace: &AkashNamespace{
+				V1: &ClaimsV1{
+					CertSerialNumber: certSerialNumber,
+				},
+			},
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(now.Add(jwtExpiresAfter)),
+				IssuedAt:  jwt.NewNumericDate(now),
+				// account address of the tenant: trustable as it has already been verified by mTLS
+				Subject: request.TLS.PeerCertificates[0].Subject.CommonName,
+				Issuer:  paddr.String(),
+			},
+		}
+
+		token := jwt.NewWithClaims(jwt.SigningMethodES256, &claim)
+		jwtString, err := token.SignedString(privateKey)
+		if err != nil {
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		_, err = io.WriteString(writer, jwtString)
+		if err != nil {
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 }
 
 type channelToTerminalSizeQueue <-chan remotecommand.TerminalSize

@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"testing"
 	"time"
+
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
