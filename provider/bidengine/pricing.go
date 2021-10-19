@@ -391,17 +391,21 @@ func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, 
 	cmd.Stdin = buf
 	outputBuf := &bytes.Buffer{}
 	cmd.Stdout = outputBuf
+	stderrBuf := &bytes.Buffer{}
+	cmd.Stderr = stderrBuf
 
 	subprocEnv := os.Environ()
 	subprocEnv = append(subprocEnv, fmt.Sprintf("AKASH_OWNER=%s", owner))
 	cmd.Env = subprocEnv
 
 	err = cmd.Run()
+
 	if ctxErr := processCtx.Err(); ctxErr != nil {
 		return sdk.Coin{}, ctxErr
 	}
+
 	if err != nil {
-		return sdk.Coin{}, err
+		return sdk.Coin{}, fmt.Errorf("%w: script failure %s", err, stderrBuf.String())
 	}
 
 	// Decode the result
@@ -411,7 +415,7 @@ func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, 
 	var priceNumber json.Number
 	err = decoder.Decode(&priceNumber)
 	if err != nil {
-		return sdk.Coin{}, err
+		return sdk.Coin{}, fmt.Errorf("%w: script failure %s", err, stderrBuf.String())
 	}
 
 	price, err := priceNumber.Int64()

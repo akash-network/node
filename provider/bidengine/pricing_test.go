@@ -3,6 +3,7 @@ package bidengine
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -347,7 +348,7 @@ func Test_ScriptPricingFailsWhenScriptDoesNotExist(t *testing.T) {
 	require.NotNil(t, pricing)
 
 	_, err = pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), defaultGroupSpec())
-	require.IsType(t, &os.PathError{}, err)
+	require.IsType(t, &os.PathError{}, errors.Unwrap(err))
 }
 
 func Test_ScriptPricingFailsWhenScriptExitsNonZero(t *testing.T) {
@@ -366,7 +367,7 @@ func Test_ScriptPricingFailsWhenScriptExitsNonZero(t *testing.T) {
 	require.NotNil(t, pricing)
 
 	_, err = pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), defaultGroupSpec())
-	require.IsType(t, &exec.ExitError{}, err)
+	require.IsType(t, &exec.ExitError{}, errors.Unwrap(err))
 }
 
 func Test_ScriptPricingFailsWhenScriptExitsWithoutWritingResultToStdout(t *testing.T) {
@@ -385,7 +386,7 @@ func Test_ScriptPricingFailsWhenScriptExitsWithoutWritingResultToStdout(t *testi
 	require.NotNil(t, pricing)
 
 	_, err = pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), defaultGroupSpec())
-	require.Equal(t, io.EOF, err)
+	require.Equal(t, io.EOF, errors.Unwrap(err))
 }
 
 func Test_ScriptPricingFailsWhenScriptWritesZeroResult(t *testing.T) {
@@ -609,7 +610,8 @@ func Test_ScriptPricingFromScript(t *testing.T) {
 	)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte(mockAPIResponse))
+		w.WriteHeader(http.StatusOK)
+		_, err := io.WriteString(w, mockAPIResponse)
 		require.NoError(t, err)
 	}))
 	defer server.Close()
