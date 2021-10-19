@@ -2,7 +2,7 @@
 
 #  To run this script, the following commands need to be installed:
 #
-# * jq
+# * jq 1.5.1 or newer
 # * bc
 # * curl
 
@@ -109,7 +109,7 @@ total_cost_akt=$(bc -l <<<"${total_cost_usd}/${usd_per_akt}")
 total_cost_uakt=$(bc -l <<<"${total_cost_akt}*1000000")
 
 # Round upwards to get an integer
-total_cost_uakt=$(echo "$total_cost_uakt" | jq '.|ceil')
+total_cost_uakt=$(echo "$total_cost_uakt" | jq 'def ceil: if . | floor == . then . else . + 1.0 | floor end; .|ceil')
 
 # return the price in uAKT
 echo "$total_cost_uakt"
