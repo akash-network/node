@@ -581,7 +581,11 @@ func reservationCountEndpoints(reservation *reservation) uint {
 	// Count the number of endpoints per resource. The number of instances does not affect
 	// the number of ports
 	for _, resource := range resources {
-		externalPortCount += uint(len(resource.Resources.Endpoints))
+		for _, endpoint := range resource.Resources.Endpoints {
+			if endpoint.Kind == atypes.Endpoint_RANDOM_PORT {
+				externalPortCount++
+			}
+		}
 	}
 
 	return externalPortCount

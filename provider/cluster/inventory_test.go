@@ -163,6 +163,16 @@ func TestInventory_ClusterDeploymentDeployed(t *testing.T) {
 
 	serviceCount := testutil.RandRangeInt(1, 10)
 	serviceEndpoints := make([]types.Endpoint, serviceCount)
+
+	countOfRandomPortService := testutil.RandRangeInt(0, serviceCount)
+	for i := range serviceEndpoints {
+		if i < countOfRandomPortService {
+			serviceEndpoints[i].Kind = types.Endpoint_RANDOM_PORT
+		} else {
+			serviceEndpoints[i].Kind = types.Endpoint_SHARED_HTTP
+		}
+	}
+
 	groupServices[0] = manifest.Service{
 		Count: 1,
 		Resources: types.ResourceUnits{
@@ -250,7 +260,7 @@ func TestInventory_ClusterDeploymentDeployed(t *testing.T) {
 	}
 
 	// availableExternalEndpoints should be consumed because of the deployed reservation
-	require.Equal(t, uint(1000-serviceCount), inv.availableExternalPorts)
+	require.Equal(t, uint(1000-countOfRandomPortService), inv.availableExternalPorts)
 
 	// Unreserving the allocated reservation should reclaim the availableExternalEndpoints
 	err = inv.unreserve(lid.OrderID())
@@ -280,8 +290,17 @@ func TestInventory_OverReservations(t *testing.T) {
 
 	groupServices := make([]manifest.Service, 1)
 
-	serviceCount := testutil.RandRangeInt(1, 10)
+	serviceCount := testutil.RandRangeInt(1, 50)
 	serviceEndpoints := make([]types.Endpoint, serviceCount)
+
+	countOfRandomPortService := testutil.RandRangeInt(0, serviceCount)
+	for i := range serviceEndpoints {
+		if i < countOfRandomPortService {
+			serviceEndpoints[i].Kind = types.Endpoint_RANDOM_PORT
+		} else {
+			serviceEndpoints[i].Kind = types.Endpoint_SHARED_HTTP
+		}
+	}
 
 	deploymentRequirements := types.ResourceUnits{
 		CPU: &types.CPU{
@@ -373,5 +392,5 @@ func TestInventory_OverReservations(t *testing.T) {
 	<-inv.lc.Done()
 
 	// No ports used yet
-	require.Equal(t, uint(1000-serviceCount), inv.availableExternalPorts)
+	require.Equal(t, uint(1000-countOfRandomPortService), inv.availableExternalPorts)
 }
