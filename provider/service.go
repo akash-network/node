@@ -71,6 +71,7 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 	clusterConfig.DeploymentIngressStaticHosts = cfg.DeploymentIngressStaticHosts
 	clusterConfig.DeploymentIngressDomain = cfg.DeploymentIngressDomain
 	clusterConfig.ClusterSettings = cfg.ClusterSettings
+	clusterConfig.WithdrawalPeriod = cfg.WithdrawalPeriod
 
 	cluster, err := cluster.NewService(ctx, session, bus, cclient, clusterConfig)
 	if err != nil {

@@ -136,8 +136,6 @@ type service struct {
 	lc  lifecycle.Lifecycle
 
 	config Config
-
-	managersIndex uint
 }
 
 type checkDeploymentExistsRequest struct {
@@ -257,8 +255,7 @@ func (s *service) run(deployments []ctypes.Deployment) {
 	for _, deployment := range deployments {
 		key := deployment.LeaseID()
 		mgroup := deployment.ManifestGroup()
-		s.managers[key] = newDeploymentManager(s, deployment.LeaseID(), &mgroup, s.managersIndex)
-		s.managersIndex++
+		s.managers[key] = newDeploymentManager(s, deployment.LeaseID(), &mgroup)
 		s.updateDeploymentManagerGauge()
 	}
 
@@ -293,8 +290,7 @@ loop:
 					break
 				}
 
-				manager := newDeploymentManager(s, ev.LeaseID, mgroup, s.managersIndex)
-				s.managersIndex++
+				manager := newDeploymentManager(s, ev.LeaseID, mgroup)
 				s.managers[key] = manager
 
 			case mtypes.EventLeaseClosed:

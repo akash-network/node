@@ -8,7 +8,6 @@ import (
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/provider/event"
-	putil "github.com/ovrclk/akash/provider/util"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"time"
@@ -67,11 +66,9 @@ type deploymentManager struct {
 	config Config
 
 	serviceShuttingDown <-chan struct{}
-
-	managerIndex uint
 }
 
-func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Group, managerIndex uint) *deploymentManager {
+func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Group) *deploymentManager {
 	log := s.log.With("cmp", "deployment-manager", "lease", lease, "manifest-group", mgroup.Name)
 
 	dm := &deploymentManager{
@@ -90,7 +87,6 @@ func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Gro
 		config:              s.config,
 		serviceShuttingDown: s.lc.ShuttingDown(),
 		currentHostnames:    make(map[string]struct{}),
-		managerIndex:        managerIndex,
 	}
 
 	go dm.lc.WatchChannel(dm.serviceShuttingDown)
@@ -232,12 +228,7 @@ loop:
 func (dm *deploymentManager) startWithdrawal() {
 	dm.wg.Add(1)
 
-	// Use provider owner address to compute a pseudorandom
-	// static offset into the future. This prevents a bunch of
-	// providers from stacking up all the same time for withdrawal
-	// TX if they are restarted all at the same time
-	baseDelay := putil.PseudoRandomUintFromAddr(dm.session.Provider().GetOwner(), 7777)
-	dm.withdrawal = newDeploymentWithdrawal(dm, dm.managerIndex, time.Duration(baseDelay)*time.Millisecond)
+	dm.withdrawal = newDeploymentWithdrawal(dm)
 	go func(m *deploymentMonitor) {
 		defer dm.wg.Done()
 		<-m.done()

@@ -31,23 +31,21 @@ var (
 	}, []string{"result"})
 )
 
-const baseWithdrawDelay = time.Second * 12
-const withdrawDelayModulus = 50
+const minWithdrawDelayBaseValue = 5000
 
-func newDeploymentWithdrawal(dm *deploymentManager, delayIndex uint, baseDelay time.Duration) *deploymentWithdrawal {
-	// Compute a delay based off the index passed in
-	withdrawDelay := time.Duration(0)
-	if delayIndex > 0 {
-		withdrawDelay = baseWithdrawDelay
-		delayIndex %= withdrawDelayModulus // Prevent this value from becoming very large
-		withdrawDelay *= time.Duration(delayIndex)
+func newDeploymentWithdrawal(dm *deploymentManager) *deploymentWithdrawal {
+	// Use 2% of the withdrawal period as the delay offset
+	withdrawDelayMs := float64(dm.config.WithdrawalPeriod.Milliseconds()) * 0.02
 
-		randOffset := rand.Float64() - 0.5
-		randOffset *= float64(baseWithdrawDelay.Milliseconds())
-		withdrawDelay += time.Millisecond * time.Duration(randOffset)
+	// A percentage of a small number could be a very small number, almost zero
+	// make sure this value has a minimum
+	if withdrawDelayMs < minWithdrawDelayBaseValue {
+		withdrawDelayMs = minWithdrawDelayBaseValue
 	}
-	// add in the base time
-	withdrawDelay += baseDelay
+
+	// Multiply by a random number
+	withdrawDelayMs *= rand.Float64() // nolint: gosec
+	withdrawDelay := time.Millisecond * time.Duration(withdrawDelayMs)
 
 	m := &deploymentWithdrawal{
 		bus:           dm.bus,
@@ -122,7 +120,7 @@ loop:
 			}
 		}
 
-		if withdraw {
+		if result == nil && withdraw {
 			// do the withdrawal
 			result = runner.Do(func() runner.Result {
 				return runner.NewResult(nil, dw.doWithdrawal(ctx))
@@ -131,6 +129,9 @@ loop:
 
 	}
 	cancel()
+
+	// The context has been cancelled, so wait for the result now and discard it
+	<-result
 
 	dw.log.Debug("shutdown complete")
 }
