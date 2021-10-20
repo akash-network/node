@@ -1,4 +1,4 @@
-package keeper
+package keys
 
 import (
 	"bytes"
@@ -45,6 +45,7 @@ func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq, oseq uint32,
 	if len(provider) == 0 {
 		return buf.Bytes(), nil
 	}
+
 	if _, err := buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(provider))); err != nil {
 		return nil, err
 	}
@@ -52,19 +53,68 @@ func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq, oseq uint32,
 	return buf.Bytes(), nil
 }
 
-func orderPrefixFromFilter(f types.OrderFilters) ([]byte, error) {
+func OrderPrefixFromFilter(f types.OrderFilters) ([]byte, error) {
 	return filterToPrefix(types.OrderPrefix(), f.Owner, f.DSeq, f.GSeq, f.OSeq, "")
 }
 
-func leasePrefixFromFilter(f types.LeaseFilters) ([]byte, error) {
-	return filterToPrefix(types.LeasePrefix(), f.Owner, f.DSeq, f.GSeq, f.OSeq, f.Provider)
+func filterToSecondaryPrefixByProvider(prefix []byte, owner string, dseq uint64, gseq, oseq uint32, provider string) ([]byte, error) {
+	buf := bytes.NewBuffer(prefix)
+
+	if len(provider) == 0 {
+		return buf.Bytes(), nil
+	}
+
+	if _, err := buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(provider))); err != nil {
+		return nil, err
+	}
+
+	if len(owner) == 0 {
+		return buf.Bytes(), nil
+	}
+
+	if _, err := buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(owner))); err != nil {
+		return nil, err
+	}
+
+	if dseq == 0 {
+		return buf.Bytes(), nil
+	}
+	if err := binary.Write(buf, binary.BigEndian, dseq); err != nil {
+		return nil, err
+	}
+
+	if gseq == 0 {
+		return buf.Bytes(), nil
+	}
+	if err := binary.Write(buf, binary.BigEndian, gseq); err != nil {
+		return nil, err
+	}
+
+	if oseq == 0 {
+		return buf.Bytes(), nil
+	}
+	if err := binary.Write(buf, binary.BigEndian, oseq); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
-func bidPrefixFromFilter(f types.BidFilters) ([]byte, error) {
+func LeasePrefixFromFilter(f types.LeaseFilters) ([]byte, bool, error) {
+	if len(f.Owner) == 0 && len(f.Provider) != 0 {
+		prefix, err := filterToSecondaryPrefixByProvider(types.SecondaryLeasePrefix(), f.Owner, f.DSeq, f.GSeq, f.OSeq, f.Provider)
+		return prefix, true, err
+	}
+
+	prefix, err := filterToPrefix(types.LeasePrefix(), f.Owner, f.DSeq, f.GSeq, f.OSeq, f.Provider)
+	return prefix, false, err
+}
+
+func BidPrefixFromFilter(f types.BidFilters) ([]byte, error) {
 	return filterToPrefix(types.BidPrefix(), f.Owner, f.DSeq, f.GSeq, f.OSeq, f.Provider)
 }
 
-func orderKey(id types.OrderID) []byte {
+func OrderKey(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(types.OrderPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
@@ -79,7 +129,7 @@ func orderKey(id types.OrderID) []byte {
 	return buf.Bytes()
 }
 
-func bidKey(id types.BidID) []byte {
+func BidKey(id types.BidID) []byte {
 	buf := bytes.NewBuffer(types.BidPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
@@ -95,7 +145,7 @@ func bidKey(id types.BidID) []byte {
 	return buf.Bytes()
 }
 
-func leaseKey(id types.LeaseID) []byte {
+func LeaseKey(id types.LeaseID) []byte {
 	buf := bytes.NewBuffer(types.LeasePrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
@@ -111,7 +161,29 @@ func leaseKey(id types.LeaseID) []byte {
 	return buf.Bytes()
 }
 
-func ordersForGroupPrefix(id dtypes.GroupID) []byte {
+func secondaryLeaseKeyByProvider(id types.LeaseID) []byte {
+	buf := bytes.NewBuffer(types.SecondaryLeasePrefix())
+	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Provider)))
+	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
+	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
+		panic(err)
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
+		panic(err)
+	}
+	if err := binary.Write(buf, binary.BigEndian, id.OSeq); err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
+
+func SecondaryKeysForLease(id types.LeaseID) [][]byte {
+	return [][]byte{
+		secondaryLeaseKeyByProvider(id),
+	}
+}
+
+func OrdersForGroupPrefix(id dtypes.GroupID) []byte {
 	buf := bytes.NewBuffer(types.OrderPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
@@ -123,7 +195,7 @@ func ordersForGroupPrefix(id dtypes.GroupID) []byte {
 	return buf.Bytes()
 }
 
-func bidsForOrderPrefix(id types.OrderID) []byte {
+func BidsForOrderPrefix(id types.OrderID) []byte {
 	buf := bytes.NewBuffer(types.BidPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {

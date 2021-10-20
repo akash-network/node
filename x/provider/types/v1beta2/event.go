@@ -6,10 +6,10 @@ import (
 )
 
 const (
-	evActionProviderCreated = "provider-created"
-	evActionProviderUpdated = "provider-updated"
-	evActionProviderDeleted = "provider-deleted"
-	evOwnerKey              = "owner"
+	EvActionProviderCreated = "provider-created"
+	EvActionProviderUpdated = "provider-updated"
+	EvActionProviderDeleted = "provider-deleted"
+	EvOwnerKey              = "owner"
 )
 
 // EventProviderCreated struct
@@ -22,7 +22,7 @@ func NewEventProviderCreated(owner sdk.AccAddress) EventProviderCreated {
 	return EventProviderCreated{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
-			Action: evActionProviderCreated,
+			Action: EvActionProviderCreated,
 		},
 		Owner: owner,
 	}
@@ -33,7 +33,7 @@ func (ev EventProviderCreated) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-			sdk.NewAttribute(sdk.AttributeKeyAction, evActionProviderCreated),
+			sdk.NewAttribute(sdk.AttributeKeyAction, EvActionProviderCreated),
 		}, ProviderEVAttributes(ev.Owner)...)...,
 	)
 }
@@ -48,7 +48,7 @@ func NewEventProviderUpdated(owner sdk.AccAddress) EventProviderUpdated {
 	return EventProviderUpdated{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
-			Action: evActionProviderUpdated,
+			Action: EvActionProviderUpdated,
 		},
 		Owner: owner,
 	}
@@ -59,7 +59,7 @@ func (ev EventProviderUpdated) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-			sdk.NewAttribute(sdk.AttributeKeyAction, evActionProviderUpdated),
+			sdk.NewAttribute(sdk.AttributeKeyAction, EvActionProviderUpdated),
 		}, ProviderEVAttributes(ev.Owner)...)...,
 	)
 }
@@ -74,7 +74,7 @@ func NewEventProviderDeleted(owner sdk.AccAddress) EventProviderDeleted {
 	return EventProviderDeleted{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
-			Action: evActionProviderDeleted,
+			Action: EvActionProviderDeleted,
 		},
 		Owner: owner,
 	}
@@ -85,7 +85,7 @@ func (ev EventProviderDeleted) ToSDKEvent() sdk.Event {
 	return sdk.NewEvent(sdkutil.EventTypeMessage,
 		append([]sdk.Attribute{
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-			sdk.NewAttribute(sdk.AttributeKeyAction, evActionProviderDeleted),
+			sdk.NewAttribute(sdk.AttributeKeyAction, EvActionProviderDeleted),
 		}, ProviderEVAttributes(ev.Owner)...)...,
 	)
 }
@@ -93,13 +93,13 @@ func (ev EventProviderDeleted) ToSDKEvent() sdk.Event {
 // ProviderEVAttributes returns event attribues for given Provider
 func ProviderEVAttributes(owner sdk.AccAddress) []sdk.Attribute {
 	return []sdk.Attribute{
-		sdk.NewAttribute(evOwnerKey, owner.String()),
+		sdk.NewAttribute(EvOwnerKey, owner.String()),
 	}
 }
 
 // ParseEVProvider returns provider details for given event attributes
 func ParseEVProvider(attrs []sdk.Attribute) (sdk.AccAddress, error) {
-	owner, err := sdkutil.GetAccAddress(attrs, evOwnerKey)
+	owner, err := sdkutil.GetAccAddress(attrs, EvOwnerKey)
 	if err != nil {
 		return sdk.AccAddress{}, err
 	}
@@ -117,19 +117,19 @@ func ParseEvent(ev sdkutil.Event) (sdkutil.ModuleEvent, error) {
 		return nil, sdkutil.ErrUnknownModule
 	}
 	switch ev.Action {
-	case evActionProviderCreated:
+	case EvActionProviderCreated:
 		owner, err := ParseEVProvider(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
 		return NewEventProviderCreated(owner), nil
-	case evActionProviderUpdated:
+	case EvActionProviderUpdated:
 		owner, err := ParseEVProvider(ev.Attributes)
 		if err != nil {
 			return nil, err
 		}
 		return NewEventProviderUpdated(owner), nil
-	case evActionProviderDeleted:
+	case EvActionProviderDeleted:
 		owner, err := ParseEVProvider(ev.Attributes)
 		if err != nil {
 			return nil, err

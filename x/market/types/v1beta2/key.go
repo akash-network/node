@@ -22,3 +22,7 @@ func BidPrefix() []byte {
 func LeasePrefix() []byte {
 	return []byte{0x03, 0x00}
 }
+
+func SecondaryLeasePrefix() []byte {
+	return []byte{0x03, 0x01}
+}
