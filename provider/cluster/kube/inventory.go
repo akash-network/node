@@ -243,7 +243,9 @@ func (inv *inventory) Metrics() ctypes.InventoryMetrics {
 func (c *client) Inventory(ctx context.Context) (ctypes.Inventory, error) {
 	cstorage, err := c.fetchStorage(ctx)
 	if err != nil {
-		return nil, err
+		// log inventory operator error but keep going to fetch nodes
+		// as provider still may make bids on orders without persistent storage
+		c.log.Error("checking storage inventory", "error", err.Error())
 	}
 
 	knodes, err := c.fetchActiveNodes(ctx, cstorage)
