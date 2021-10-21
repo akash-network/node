@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	amigrate "github.com/ovrclk/akash/types/v1beta2/migrate"
 	"github.com/ovrclk/akash/x/deployment/types/v1beta1"
 	"github.com/ovrclk/akash/x/deployment/types/v1beta2"
@@ -10,7 +11,7 @@ func ResourceFromV1Beta1(from v1beta1.Resource) v1beta2.Resource {
 	return v1beta2.Resource{
 		Resources: amigrate.ResourceUnitsFromV1Beta1(from.Resources),
 		Count:     from.Count,
-		Price:     from.Price,
+		Price:     sdk.NewDecCoinFromCoin(from.Price),
 	}
 }
 

@@ -57,14 +57,14 @@ message Account {
   ];
 
   // unspent coins received from the owner's wallet
-  cosmos.base.v1beta1.Coin balance   = 4 [
+  cosmos.base.v1beta1.DecCoin balance   = 4 [
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "balance",
     (gogoproto.moretags) = "yaml:\"balance\""
   ];
 
   // total coins spent by this account
-  cosmos.base.v1beta1.Coin transferred = 5 [
+  cosmos.base.v1beta1.DecCoin transferred = 5 [
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "transferred",
     (gogoproto.moretags) = "yaml:\"transferred\""
@@ -87,7 +87,7 @@ message Account {
 
   // Funds are unspent coins received from the (non-Owner) Depositor's wallet.
   // If there are any funds, they should be spent before spending the Balance.
-  cosmos.base.v1beta1.Coin funds = 8 [
+  cosmos.base.v1beta1.DecCoin funds = 8 [
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "funds",
     (gogoproto.moretags) = "yaml:\"funds\""
@@ -95,7 +95,7 @@ message Account {
 }
 
 // Payment stores state for a payment
-message Payment {
+message FractionalPayment {
   option (gogoproto.goproto_stringer) = true;
 
   // Payment State
@@ -135,13 +135,13 @@ message Payment {
     (gogoproto.moretags) = "yaml:\"state\""
   ];
 
-  cosmos.base.v1beta1.Coin rate      = 5 [
+  cosmos.base.v1beta1.DecCoin rate   = 5 [
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "rate",
     (gogoproto.moretags) = "yaml:\"rate\""
   ];
 
-  cosmos.base.v1beta1.Coin balance   = 6 [
+  cosmos.base.v1beta1.DecCoin balance   = 6 [
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "balance",
     (gogoproto.moretags) = "yaml:\"balance\""

@@ -156,10 +156,6 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	if err := cfg.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
 		panic(err)
 	}
-
-	if err := cfg.RegisterMigration(types.ModuleName, 2, m.MigrateGroupSpec); err != nil {
-		panic(err)
-	}
 }
 
 // BeginBlock performs no-op

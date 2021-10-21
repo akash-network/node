@@ -23,7 +23,6 @@ type ValidationConfig struct {
 	MinUnitMemory  uint64
 	MinUnitStorage uint64
 	MinUnitCount   uint
-	MinUnitPrice   uint64
 
 	// MaxGroupCount is the maximum number of groups allowed per deployment
 	MaxGroupCount int
@@ -49,7 +48,6 @@ var validationConfig = ValidationConfig{
 	MinUnitMemory:  unit.Mi,
 	MinUnitStorage: 5 * unit.Mi,
 	MinUnitCount:   1,
-	MinUnitPrice:   1,
 
 	MaxGroupCount: 20,
 	MaxGroupUnits: 20,

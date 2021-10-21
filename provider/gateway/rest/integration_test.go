@@ -58,7 +58,7 @@ func Test_router_Status(t *testing.T) {
 func Test_router_Validate(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		expected := provider.ValidateGroupSpecResult{
-			MinBidPrice: testutil.AkashCoin(t, 200),
+			MinBidPrice: testutil.AkashDecCoin(t, 200),
 		}
 		addr := testutil.AccAddress(t)
 		mocks := createMocks()

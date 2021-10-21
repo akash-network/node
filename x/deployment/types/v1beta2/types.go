@@ -84,8 +84,8 @@ func (g Group) GetResources() []types.Resources {
 }
 
 // FullPrice method returns full price of resource
-func (r Resource) FullPrice() sdk.Coin {
-	return sdk.NewCoin(r.Price.Denom, r.Price.Amount.MulRaw(int64(r.Count)))
+func (r Resource) FullPrice() sdk.DecCoin {
+	return sdk.NewDecCoinFromDec(r.Price.Denom, r.Price.Amount.MulInt64(int64(r.Count)))
 }
 
 // DeploymentResponses is a collection of DeploymentResponse

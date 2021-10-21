@@ -2,7 +2,7 @@ package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	v013 "github.com/ovrclk/akash/x/audit/legacy/v013"
+	v015 "github.com/ovrclk/akash/x/audit/legacy/v015"
 )
 
 // Migrator is a struct for handling in-place store migrations.
@@ -17,5 +17,5 @@ func NewMigrator(k Keeper) Migrator {
 
 // Migrate1to2 migrates from version 1 to 2.
 func (m Migrator) Migrate1to2(ctx sdk.Context) error {
-	return v013.MigrateStore(ctx, m.keeper.skey)
+	return v015.MigrateStore(ctx, m.keeper.skey)
 }
