@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -61,11 +60,11 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 	if err != nil {
 		return err
 	}
-	// TODO - dump mani
 
+	// TODO - dump mani
 	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, cctx.Keyring)
 	if err != nil {
-		return err
+		return markRPCServerError(err)
 	}
 
 	dseq, err := dseqFromFlags(cmd.Flags())
@@ -79,7 +78,7 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 		DSeq:  dseq,
 	})
 	if err != nil {
-		return err
+		return markRPCServerError(err)
 	}
 
 	type result struct {

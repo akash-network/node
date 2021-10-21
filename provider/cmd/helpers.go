@@ -2,14 +2,17 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/url"
 
+	"errors"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	akashclient "github.com/ovrclk/akash/client"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -31,6 +34,10 @@ const (
 	outputText = "text"
 	outputYAML = "yaml"
 	outputJSON = "json"
+)
+
+var (
+	errNoActiveLease = errors.New("no active leases found")
 )
 
 func addCmdFlags(cmd *cobra.Command) {
@@ -120,7 +127,7 @@ func leasesForDeployment(ctx context.Context, cctx client.Context, flags *pflag.
 	}
 
 	if len(resp.Leases) == 0 {
-		return nil, errors.Errorf("no active leases found for dseq=%v", did.DSeq)
+		return nil, fmt.Errorf("%w  for dseq=%v", errNoActiveLease, did.DSeq)
 	}
 
 	leases := make([]mtypes.LeaseID, 0, len(resp.Leases))
@@ -130,4 +137,16 @@ func leasesForDeployment(ctx context.Context, cctx client.Context, flags *pflag.
 	}
 
 	return leases, nil
+}
+
+func markRPCServerError(err error) error {
+	unwrappedErr := errors.Unwrap(err)
+	if unwrappedErr != nil {
+		_, isSyntaxError := unwrappedErr.(*json.SyntaxError)
+		_, isURLError := unwrappedErr.(*url.Error)
+		if isSyntaxError || isURLError {
+			return fmt.Errorf("error communicating with RPC server: %w", unwrappedErr)
+		}
+	}
+	return err
 }
