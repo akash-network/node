@@ -2,7 +2,7 @@ include ../common.mk
 include ../common-commands.mk
 include ../common-kind.mk
 
-SDL_PATH = grafana.yaml
+SDL_PATH ?= grafana.yaml
 
 GATEWAY_HOSTNAME ?= localhost
 GATEWAY_HOST     ?= $(GATEWAY_HOSTNAME):8443
