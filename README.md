@@ -11,7 +11,7 @@
 
 [Akash](https://akash.network) is a secure, transparent, and decentralized cloud computing marketplace that connects those who need computing resources (tenants) with those that have computing capacity to lease (providers).
 
-For a high-level overview of the Akash protocol and network economics, check out the [whitepapers](https://akash.network/research); a detailed protocol definition can be 
+For a high-level overview of the Akash protocol and network economics, check out the [whitepaper](https://akash-web-prod.s3.amazonaws.com/uploads/2020/03/akash-econ.pdf); a detailed protocol definition can be 
 found in the [design documentation](https://docs.akash.network); and the target workload definition spec is [here](https://docs.akash.network/sdl).
 
 # Branching and Versioning
@@ -23,7 +23,7 @@ The `master` branch contains new features and is under active development; the `
 
 ## Akash Suite
 
-Akash Suite is the reference implementation of the [Akash Protocol](https://akash.network/l/whitepaper). Akash is an actively-developed prototype currently focused on the distributed marketplace functionality.
+Akash Suite is the reference implementation of the [Akash Protocol](https://akash-web-prod.s3.amazonaws.com/uploads/2020/03/akash-econ.pdf). Akash is an actively-developed prototype currently focused on the distributed marketplace functionality.
 
 The Suite is composed of one binary, `akash`, which contains a ([tendermint](https://github.com/tendermint/tendermint)-powered) blockchain node that
 implements the decentralized exchange as well as client functionality to access the exchange and network data in general.
