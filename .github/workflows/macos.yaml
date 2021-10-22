@@ -1,10 +1,17 @@
 name: macos
 
+defaults:
+  run:
+    shell: bash
+
 on:
   push:
     branches:
       - master
       - mainnet/main
+  pull_request:
+#    paths:
+#      - '.github.com/workflows/macos.yaml'
 
 env:
   MAINNET: ${{ github.ref == 'refs/heads/mainnet/main'}}
@@ -14,11 +21,13 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
-      - shell: bash
-        run: |
+      - run: |
           while IFS='' read -r LINE || [ -n "${LINE}" ]; do
             echo "$LINE" >> $GITHUB_ENV;
           done < .makerc
+      - run: |
+          brew install bash
+          sudo chsh -s /usr/local/bin/bash
       - uses: actions/setup-go@v2
         with:
           go-version: "${{ env.GOLANG_VERSION }}"

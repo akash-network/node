@@ -228,7 +228,7 @@ func TestManagerHandlesTimeout(t *testing.T) {
 	s := serviceForManifestTest(t, ServiceConfig{HTTPServicesRequireAtLeastOneHost: true}, sdl2, did, nil, lid.GetProvider(), true)
 	err = s.bus.Publish(ev)
 	require.NoError(t, err)
-	time.Sleep(time.Second) // Wait for publish to do its thing
+	// time.Sleep(10 * time.Second) // Wait for publish to do its thing
 
 	testctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
