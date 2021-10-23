@@ -9,7 +9,7 @@ K8S_FEATURE_GATES=${K8S_FEATURE_GATES:-"BlockVolume=true,CSIBlockVolume=true,Vol
 VDISK_SIZE=64
 VDISK_FILE="${AKASH_HOME}/disk1-${VDISK_SIZE}gb"
 
-LOSETUP_RPM=https://www.rpmfind.net/linux/openmandriva/cooker/repository/x86_64/main/release/util-linux-2.37.2-1-omv4050.x86_64.rpm
+LOSETUP_RPM=https://www.rpmfind.net/linux/openmandriva/4.2/repository/x86_64/main/updates/util-linux-2.36.2-1-omv4002.x86_64.rpm
 
 # configure minikube
 KUBE_VERSION=${KUBE_VERSION:-"v1.22.1"}

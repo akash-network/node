@@ -36,8 +36,7 @@ spec:
               description: PoolSpec represents the spec of ceph pool
               properties:
                 compressionMode:
-                  default: none
-                  description: 'The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force)'
+                  description: 'DEPRECATED: use Parameters instead, e.g., Parameters["compression_mode"] = "force" The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force) Do NOT set a default value for kubebuilder as this will override the Parameters'
                   enum:
                     - none
                     - passive
@@ -89,6 +88,16 @@ spec:
                     mode:
                       description: 'Mode is the mirroring mode: either pool or image'
                       type: string
+                    peers:
+                      description: Peers represents the peers spec
+                      nullable: true
+                      properties:
+                        secretNames:
+                          description: SecretNames represents the Kubernetes Secret names to add rbd-mirror or cephfs-mirror peers
+                          items:
+                            type: string
+                          type: array
+                      type: object
                     snapshotSchedules:
                       description: SnapshotSchedules is the scheduling of snapshot for mirrored images/pools
                       items:
@@ -96,6 +105,9 @@ spec:
                         properties:
                           interval:
                             description: Interval represent the periodicity of the snapshot.
+                            type: string
+                          path:
+                            description: Path is the path to snapshot, only valid for CephFS
                             type: string
                           startTime:
                             description: StartTime indicates when to start the snapshot
@@ -130,6 +142,22 @@ spec:
                 replicated:
                   description: The replication settings
                   properties:
+                    hybridStorage:
+                      description: HybridStorage represents hybrid storage tier settings
+                      nullable: true
+                      properties:
+                        primaryDeviceClass:
+                          description: PrimaryDeviceClass represents high performance tier (for example SSD or NVME) for Primary OSD
+                          minLength: 1
+                          type: string
+                        secondaryDeviceClass:
+                          description: SecondaryDeviceClass represents low performance tier (for example HDDs) for remaining OSDs
+                          minLength: 1
+                          type: string
+                      required:
+                        - primaryDeviceClass
+                        - secondaryDeviceClass
+                      type: object
                     replicasPerFailureDomain:
                       description: ReplicasPerFailureDomain the number of replica in the specified failure domain
                       minimum: 1
@@ -174,7 +202,6 @@ spec:
                 info:
                   additionalProperties:
                     type: string
-                  description: Use only info and put mirroringStatus in it?
                   nullable: true
                   type: object
                 mirroringInfo:
@@ -477,7 +504,7 @@ spec:
                       description: Whether to allow unsupported versions (do not set to true in production)
                       type: boolean
                     image:
-                      description: Image is the container image used to launch the ceph daemons, such as ceph/ceph:v16.2.4
+                      description: Image is the container image used to launch the ceph daemons, such as quay.io/ceph/ceph:<tag> The full list of images can be found at https://quay.io/repository/ceph/ceph?tab=tags
                       type: string
                   type: object
                 cleanupPolicy:
@@ -784,6 +811,7 @@ spec:
                       type: boolean
                     count:
                       description: Count is the number of Ceph monitors
+                      maximum: 9
                       minimum: 0
                       type: integer
                     stretchCluster:
@@ -1216,7 +1244,6 @@ spec:
                       description: HostNetwork to enable host network
                       type: boolean
                     ipFamily:
-                      default: IPv4
                       description: IPFamily is the single stack IPv6 or IPv4 protocol
                       enum:
                         - IPv4
@@ -1859,6 +1886,7 @@ spec:
                           config:
                             additionalProperties:
                               type: string
+                            nullable: true
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           fullpath:
@@ -1893,6 +1921,7 @@ spec:
                                 config:
                                   additionalProperties:
                                     type: string
+                                  nullable: true
                                   type: object
                                   x-kubernetes-preserve-unknown-fields: true
                                 fullpath:
@@ -2104,6 +2133,8 @@ spec:
                         type: object
                       nullable: true
                       type: array
+                    onlyApplyOSDPlacement:
+                      type: boolean
                     storageClassDeviceSets:
                       items:
                         description: StorageClassDeviceSet is a storage class device set
@@ -3682,7 +3713,7 @@ spec:
                   type: object
                 conditions:
                   items:
-                    description: Condition represents
+                    description: Condition represents a status condition on any Rook-Ceph Custom Resource.
                     properties:
                       lastHeartbeatTime:
                         format: date-time
@@ -3693,7 +3724,7 @@ spec:
                       message:
                         type: string
                       reason:
-                        description: ClusterReasonType is cluster reason
+                        description: ConditionReason is a reason for a condition
                         type: string
                       status:
                         type: string
@@ -3777,7 +3808,7 @@ spec:
             metadata:
               type: object
             spec:
-              description: FilesystemMirroringSpec is the filesystem mirorring specification
+              description: FilesystemMirroringSpec is the filesystem mirroring specification
               properties:
                 annotations:
                   additionalProperties:
@@ -4424,8 +4455,7 @@ spec:
                     description: PoolSpec represents the spec of ceph pool
                     properties:
                       compressionMode:
-                        default: none
-                        description: 'The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force)'
+                        description: 'DEPRECATED: use Parameters instead, e.g., Parameters["compression_mode"] = "force" The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force) Do NOT set a default value for kubebuilder as this will override the Parameters'
                         enum:
                           - none
                           - passive
@@ -4477,6 +4507,16 @@ spec:
                           mode:
                             description: 'Mode is the mirroring mode: either pool or image'
                             type: string
+                          peers:
+                            description: Peers represents the peers spec
+                            nullable: true
+                            properties:
+                              secretNames:
+                                description: SecretNames represents the Kubernetes Secret names to add rbd-mirror or cephfs-mirror peers
+                                items:
+                                  type: string
+                                type: array
+                            type: object
                           snapshotSchedules:
                             description: SnapshotSchedules is the scheduling of snapshot for mirrored images/pools
                             items:
@@ -4484,6 +4524,9 @@ spec:
                               properties:
                                 interval:
                                   description: Interval represent the periodicity of the snapshot.
+                                  type: string
+                                path:
+                                  description: Path is the path to snapshot, only valid for CephFS
                                   type: string
                                 startTime:
                                   description: StartTime indicates when to start the snapshot
@@ -4518,6 +4561,22 @@ spec:
                       replicated:
                         description: The replication settings
                         properties:
+                          hybridStorage:
+                            description: HybridStorage represents hybrid storage tier settings
+                            nullable: true
+                            properties:
+                              primaryDeviceClass:
+                                description: PrimaryDeviceClass represents high performance tier (for example SSD or NVME) for Primary OSD
+                                minLength: 1
+                                type: string
+                              secondaryDeviceClass:
+                                description: SecondaryDeviceClass represents low performance tier (for example HDDs) for remaining OSDs
+                                minLength: 1
+                                type: string
+                            required:
+                              - primaryDeviceClass
+                              - secondaryDeviceClass
+                            type: object
                           replicasPerFailureDomain:
                             description: ReplicasPerFailureDomain the number of replica in the specified failure domain
                             minimum: 1
@@ -4563,8 +4622,7 @@ spec:
                   nullable: true
                   properties:
                     compressionMode:
-                      default: none
-                      description: 'The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force)'
+                      description: 'DEPRECATED: use Parameters instead, e.g., Parameters["compression_mode"] = "force" The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force) Do NOT set a default value for kubebuilder as this will override the Parameters'
                       enum:
                         - none
                         - passive
@@ -4616,6 +4674,16 @@ spec:
                         mode:
                           description: 'Mode is the mirroring mode: either pool or image'
                           type: string
+                        peers:
+                          description: Peers represents the peers spec
+                          nullable: true
+                          properties:
+                            secretNames:
+                              description: SecretNames represents the Kubernetes Secret names to add rbd-mirror or cephfs-mirror peers
+                              items:
+                                type: string
+                              type: array
+                          type: object
                         snapshotSchedules:
                           description: SnapshotSchedules is the scheduling of snapshot for mirrored images/pools
                           items:
@@ -4623,6 +4691,9 @@ spec:
                             properties:
                               interval:
                                 description: Interval represent the periodicity of the snapshot.
+                                type: string
+                              path:
+                                description: Path is the path to snapshot, only valid for CephFS
                                 type: string
                               startTime:
                                 description: StartTime indicates when to start the snapshot
@@ -4657,6 +4728,22 @@ spec:
                     replicated:
                       description: The replication settings
                       properties:
+                        hybridStorage:
+                          description: HybridStorage represents hybrid storage tier settings
+                          nullable: true
+                          properties:
+                            primaryDeviceClass:
+                              description: PrimaryDeviceClass represents high performance tier (for example SSD or NVME) for Primary OSD
+                              minLength: 1
+                              type: string
+                            secondaryDeviceClass:
+                              description: SecondaryDeviceClass represents low performance tier (for example HDDs) for remaining OSDs
+                              minLength: 1
+                              type: string
+                          required:
+                            - primaryDeviceClass
+                            - secondaryDeviceClass
+                          type: object
                         replicasPerFailureDomain:
                           description: ReplicasPerFailureDomain the number of replica in the specified failure domain
                           minimum: 1
@@ -5295,6 +5382,45 @@ spec:
                     enabled:
                       description: Enabled whether this filesystem is mirrored or not
                       type: boolean
+                    peers:
+                      description: Peers represents the peers spec
+                      nullable: true
+                      properties:
+                        secretNames:
+                          description: SecretNames represents the Kubernetes Secret names to add rbd-mirror or cephfs-mirror peers
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    snapshotRetention:
+                      description: Retention is the retention policy for a snapshot schedule One path has exactly one retention policy. A policy can however contain multiple count-time period pairs in order to specify complex retention policies
+                      items:
+                        description: SnapshotScheduleRetentionSpec is a retention policy
+                        properties:
+                          duration:
+                            description: Duration represents the retention duration for a snapshot
+                            type: string
+                          path:
+                            description: Path is the path to snapshot
+                            type: string
+                        type: object
+                      type: array
+                    snapshotSchedules:
+                      description: SnapshotSchedules is the scheduling of snapshot for mirrored filesystems
+                      items:
+                        description: SnapshotScheduleSpec represents the snapshot scheduling settings of a mirrored pool
+                        properties:
+                          interval:
+                            description: Interval represent the periodicity of the snapshot.
+                            type: string
+                          path:
+                            description: Path is the path to snapshot, only valid for CephFS
+                            type: string
+                          startTime:
+                            description: StartTime indicates when to start the snapshot
+                            type: string
+                        type: object
+                      type: array
                   type: object
                 preserveFilesystemOnDelete:
                   description: Preserve the fs in the cluster on CephFilesystem CR deletion. Setting this to true automatically implies PreservePoolsOnDelete is true.
@@ -5302,16 +5428,175 @@ spec:
                 preservePoolsOnDelete:
                   description: Preserve pools on filesystem deletion
                   type: boolean
+                statusCheck:
+                  description: The mirroring statusCheck
+                  properties:
+                    mirror:
+                      description: HealthCheckSpec represents the health check of an object store bucket
+                      nullable: true
+                      properties:
+                        disabled:
+                          type: boolean
+                        interval:
+                          description: Interval is the internal in second or minute for the health check to run like 60s for 60 seconds
+                          type: string
+                        timeout:
+                          type: string
+                      type: object
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
               required:
                 - dataPools
                 - metadataPool
                 - metadataServer
               type: object
             status:
-              description: Status represents the status of an object
+              description: CephFilesystemStatus represents the status of a Ceph Filesystem
               properties:
+                info:
+                  additionalProperties:
+                    type: string
+                  description: Use only info and put mirroringStatus in it?
+                  nullable: true
+                  type: object
+                mirroringStatus:
+                  description: MirroringStatus is the filesystem mirroring status
+                  properties:
+                    daemonsStatus:
+                      description: PoolMirroringStatus is the mirroring status of a filesystem
+                      items:
+                        description: FilesystemMirrorInfoSpec is the filesystem mirror status of a given filesystem
+                        properties:
+                          daemon_id:
+                            description: DaemonID is the cephfs-mirror name
+                            type: integer
+                          filesystems:
+                            description: Filesystems is the list of filesystems managed by a given cephfs-mirror daemon
+                            items:
+                              description: FilesystemsSpec is spec for the mirrored filesystem
+                              properties:
+                                directory_count:
+                                  description: DirectoryCount is the number of directories in the filesystem
+                                  type: integer
+                                filesystem_id:
+                                  description: FilesystemID is the filesystem identifier
+                                  type: integer
+                                name:
+                                  description: Name is name of the filesystem
+                                  type: string
+                                peers:
+                                  description: Peers represents the mirroring peers
+                                  items:
+                                    description: FilesystemMirrorInfoPeerSpec is the specification of a filesystem peer mirror
+                                    properties:
+                                      remote:
+                                        description: Remote are the remote cluster information
+                                        properties:
+                                          client_name:
+                                            description: ClientName is cephx name
+                                            type: string
+                                          cluster_name:
+                                            description: ClusterName is the name of the cluster
+                                            type: string
+                                          fs_name:
+                                            description: FsName is the filesystem name
+                                            type: string
+                                        type: object
+                                      stats:
+                                        description: Stats are the stat a peer mirror
+                                        properties:
+                                          failure_count:
+                                            description: FailureCount is the number of mirroring failure
+                                            type: integer
+                                          recovery_count:
+                                            description: RecoveryCount is the number of recovery attempted after failures
+                                            type: integer
+                                        type: object
+                                      uuid:
+                                        description: UUID is the peer unique identifier
+                                        type: string
+                                    type: object
+                                  type: array
+                              type: object
+                            type: array
+                        type: object
+                      nullable: true
+                      type: array
+                    details:
+                      description: Details contains potential status errors
+                      type: string
+                    lastChanged:
+                      description: LastChanged is the last time time the status last changed
+                      type: string
+                    lastChecked:
+                      description: LastChecked is the last time time the status was checked
+                      type: string
+                  type: object
                 phase:
+                  description: ConditionType represent a resource's status
                   type: string
+                snapshotScheduleStatus:
+                  description: FilesystemSnapshotScheduleStatusSpec is the status of the snapshot schedule
+                  properties:
+                    details:
+                      description: Details contains potential status errors
+                      type: string
+                    lastChanged:
+                      description: LastChanged is the last time time the status last changed
+                      type: string
+                    lastChecked:
+                      description: LastChecked is the last time time the status was checked
+                      type: string
+                    snapshotSchedules:
+                      description: SnapshotSchedules is the list of snapshots scheduled
+                      items:
+                        description: FilesystemSnapshotSchedulesSpec is the list of snapshot scheduled for images in a pool
+                        properties:
+                          fs:
+                            description: Fs is the name of the Ceph Filesystem
+                            type: string
+                          path:
+                            description: Path is the path on the filesystem
+                            type: string
+                          rel_path:
+                            type: string
+                          retention:
+                            description: FilesystemSnapshotScheduleStatusRetention is the retention specification for a filesystem snapshot schedule
+                            properties:
+                              active:
+                                description: Active is whether the scheduled is active or not
+                                type: boolean
+                              created:
+                                description: Created is when the snapshot schedule was created
+                                type: string
+                              created_count:
+                                description: CreatedCount is total amount of snapshots
+                                type: integer
+                              first:
+                                description: First is when the first snapshot schedule was taken
+                                type: string
+                              last:
+                                description: Last is when the last snapshot schedule was taken
+                                type: string
+                              last_pruned:
+                                description: LastPruned is when the last snapshot schedule was pruned
+                                type: string
+                              pruned_count:
+                                description: PrunedCount is total amount of pruned snapshots
+                                type: integer
+                              start:
+                                description: Start is when the snapshot schedule starts
+                                type: string
+                            type: object
+                          schedule:
+                            type: string
+                          subvol:
+                            description: Subvol is the name of the sub volume
+                            type: string
+                        type: object
+                      nullable: true
+                      type: array
+                  type: object
               type: object
               x-kubernetes-preserve-unknown-fields: true
           required:
@@ -5365,6 +5650,7 @@ spec:
               properties:
                 rados:
                   description: RADOS is the Ganesha RADOS specification
+                  nullable: true
                   properties:
                     namespace:
                       description: Namespace is the RADOS namespace where NFS client recovery data is stored.
@@ -5967,7 +6253,6 @@ spec:
                     - active
                   type: object
               required:
-                - rados
                 - server
               type: object
             status:
@@ -6094,8 +6379,7 @@ spec:
                   nullable: true
                   properties:
                     compressionMode:
-                      default: none
-                      description: 'The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force)'
+                      description: 'DEPRECATED: use Parameters instead, e.g., Parameters["compression_mode"] = "force" The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force) Do NOT set a default value for kubebuilder as this will override the Parameters'
                       enum:
                         - none
                         - passive
@@ -6147,6 +6431,16 @@ spec:
                         mode:
                           description: 'Mode is the mirroring mode: either pool or image'
                           type: string
+                        peers:
+                          description: Peers represents the peers spec
+                          nullable: true
+                          properties:
+                            secretNames:
+                              description: SecretNames represents the Kubernetes Secret names to add rbd-mirror or cephfs-mirror peers
+                              items:
+                                type: string
+                              type: array
+                          type: object
                         snapshotSchedules:
                           description: SnapshotSchedules is the scheduling of snapshot for mirrored images/pools
                           items:
@@ -6154,6 +6448,9 @@ spec:
                             properties:
                               interval:
                                 description: Interval represent the periodicity of the snapshot.
+                                type: string
+                              path:
+                                description: Path is the path to snapshot, only valid for CephFS
                                 type: string
                               startTime:
                                 description: StartTime indicates when to start the snapshot
@@ -6188,6 +6485,22 @@ spec:
                     replicated:
                       description: The replication settings
                       properties:
+                        hybridStorage:
+                          description: HybridStorage represents hybrid storage tier settings
+                          nullable: true
+                          properties:
+                            primaryDeviceClass:
+                              description: PrimaryDeviceClass represents high performance tier (for example SSD or NVME) for Primary OSD
+                              minLength: 1
+                              type: string
+                            secondaryDeviceClass:
+                              description: SecondaryDeviceClass represents low performance tier (for example HDDs) for remaining OSDs
+                              minLength: 1
+                              type: string
+                          required:
+                            - primaryDeviceClass
+                            - secondaryDeviceClass
+                          type: object
                         replicasPerFailureDomain:
                           description: ReplicasPerFailureDomain the number of replica in the specified failure domain
                           minimum: 1
@@ -6237,6 +6550,10 @@ spec:
                       nullable: true
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    caBundleRef:
+                      description: The name of the secret that stores custom ca-bundle with root and intermediate certificates.
+                      nullable: true
+                      type: string
                     externalRgwEndpoints:
                       description: ExternalRgwEndpoints points to external rgw endpoint(s)
                       items:
@@ -7000,8 +7317,7 @@ spec:
                   nullable: true
                   properties:
                     compressionMode:
-                      default: none
-                      description: 'The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force)'
+                      description: 'DEPRECATED: use Parameters instead, e.g., Parameters["compression_mode"] = "force" The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force) Do NOT set a default value for kubebuilder as this will override the Parameters'
                       enum:
                         - none
                         - passive
@@ -7053,6 +7369,16 @@ spec:
                         mode:
                           description: 'Mode is the mirroring mode: either pool or image'
                           type: string
+                        peers:
+                          description: Peers represents the peers spec
+                          nullable: true
+                          properties:
+                            secretNames:
+                              description: SecretNames represents the Kubernetes Secret names to add rbd-mirror or cephfs-mirror peers
+                              items:
+                                type: string
+                              type: array
+                          type: object
                         snapshotSchedules:
                           description: SnapshotSchedules is the scheduling of snapshot for mirrored images/pools
                           items:
@@ -7060,6 +7386,9 @@ spec:
                             properties:
                               interval:
                                 description: Interval represent the periodicity of the snapshot.
+                                type: string
+                              path:
+                                description: Path is the path to snapshot, only valid for CephFS
                                 type: string
                               startTime:
                                 description: StartTime indicates when to start the snapshot
@@ -7094,6 +7423,22 @@ spec:
                     replicated:
                       description: The replication settings
                       properties:
+                        hybridStorage:
+                          description: HybridStorage represents hybrid storage tier settings
+                          nullable: true
+                          properties:
+                            primaryDeviceClass:
+                              description: PrimaryDeviceClass represents high performance tier (for example SSD or NVME) for Primary OSD
+                              minLength: 1
+                              type: string
+                            secondaryDeviceClass:
+                              description: SecondaryDeviceClass represents low performance tier (for example HDDs) for remaining OSDs
+                              minLength: 1
+                              type: string
+                          required:
+                            - primaryDeviceClass
+                            - secondaryDeviceClass
+                          type: object
                         replicasPerFailureDomain:
                           description: ReplicasPerFailureDomain the number of replica in the specified failure domain
                           minimum: 1
@@ -7182,6 +7527,28 @@ spec:
                     lastChecked:
                       type: string
                   type: object
+                conditions:
+                  items:
+                    description: Condition represents a status condition on any Rook-Ceph Custom Resource.
+                    properties:
+                      lastHeartbeatTime:
+                        format: date-time
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        type: string
+                      reason:
+                        description: ConditionReason is a reason for a condition
+                        type: string
+                      status:
+                        type: string
+                      type:
+                        description: ConditionType represent a resource's status
+                        type: string
+                    type: object
+                  type: array
                 info:
                   additionalProperties:
                     type: string
@@ -7244,9 +7611,76 @@ spec:
             spec:
               description: ObjectStoreUserSpec represent the spec of an Objectstoreuser
               properties:
+                capabilities:
+                  description: Additional admin-level capabilities for the Ceph object store user
+                  nullable: true
+                  properties:
+                    bucket:
+                      description: Admin capabilities to read/write Ceph object store buckets. Documented in https://docs.ceph.com/en/latest/radosgw/admin/?#add-remove-admin-capabilities
+                      enum:
+                        - '*'
+                        - read
+                        - write
+                        - read, write
+                      type: string
+                    metadata:
+                      description: Admin capabilities to read/write Ceph object store metadata. Documented in https://docs.ceph.com/en/latest/radosgw/admin/?#add-remove-admin-capabilities
+                      enum:
+                        - '*'
+                        - read
+                        - write
+                        - read, write
+                      type: string
+                    usage:
+                      description: Admin capabilities to read/write Ceph object store usage. Documented in https://docs.ceph.com/en/latest/radosgw/admin/?#add-remove-admin-capabilities
+                      enum:
+                        - '*'
+                        - read
+                        - write
+                        - read, write
+                      type: string
+                    user:
+                      description: Admin capabilities to read/write Ceph object store users. Documented in https://docs.ceph.com/en/latest/radosgw/admin/?#add-remove-admin-capabilities
+                      enum:
+                        - '*'
+                        - read
+                        - write
+                        - read, write
+                      type: string
+                    zone:
+                      description: Admin capabilities to read/write Ceph object store zones. Documented in https://docs.ceph.com/en/latest/radosgw/admin/?#add-remove-admin-capabilities
+                      enum:
+                        - '*'
+                        - read
+                        - write
+                        - read, write
+                      type: string
+                  type: object
                 displayName:
                   description: The display name for the ceph users
                   type: string
+                quotas:
+                  description: ObjectUserQuotaSpec can be used to set quotas for the object store user to limit their usage. See the [Ceph docs](https://docs.ceph.com/en/latest/radosgw/admin/?#quota-management) for more
+                  nullable: true
+                  properties:
+                    maxBuckets:
+                      description: Maximum bucket limit for the ceph user
+                      nullable: true
+                      type: integer
+                    maxObjects:
+                      description: Maximum number of objects across all the user's buckets
+                      format: int64
+                      nullable: true
+                      type: integer
+                    maxSize:
+                      anyOf:
+                        - type: integer
+                        - type: string
+                      description: Maximum size limit of all objects across all the user's buckets See https://pkg.go.dev/k8s.io/apimachinery/pkg/api/resource#Quantity for more info.
+                      nullable: true
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                  type: object
                 store:
                   description: The store the user will be created in
                   type: string
@@ -7375,8 +7809,7 @@ spec:
                   nullable: true
                   properties:
                     compressionMode:
-                      default: none
-                      description: 'The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force)'
+                      description: 'DEPRECATED: use Parameters instead, e.g., Parameters["compression_mode"] = "force" The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force) Do NOT set a default value for kubebuilder as this will override the Parameters'
                       enum:
                         - none
                         - passive
@@ -7428,6 +7861,16 @@ spec:
                         mode:
                           description: 'Mode is the mirroring mode: either pool or image'
                           type: string
+                        peers:
+                          description: Peers represents the peers spec
+                          nullable: true
+                          properties:
+                            secretNames:
+                              description: SecretNames represents the Kubernetes Secret names to add rbd-mirror or cephfs-mirror peers
+                              items:
+                                type: string
+                              type: array
+                          type: object
                         snapshotSchedules:
                           description: SnapshotSchedules is the scheduling of snapshot for mirrored images/pools
                           items:
@@ -7435,6 +7878,9 @@ spec:
                             properties:
                               interval:
                                 description: Interval represent the periodicity of the snapshot.
+                                type: string
+                              path:
+                                description: Path is the path to snapshot, only valid for CephFS
                                 type: string
                               startTime:
                                 description: StartTime indicates when to start the snapshot
@@ -7469,6 +7915,22 @@ spec:
                     replicated:
                       description: The replication settings
                       properties:
+                        hybridStorage:
+                          description: HybridStorage represents hybrid storage tier settings
+                          nullable: true
+                          properties:
+                            primaryDeviceClass:
+                              description: PrimaryDeviceClass represents high performance tier (for example SSD or NVME) for Primary OSD
+                              minLength: 1
+                              type: string
+                            secondaryDeviceClass:
+                              description: SecondaryDeviceClass represents low performance tier (for example HDDs) for remaining OSDs
+                              minLength: 1
+                              type: string
+                          required:
+                            - primaryDeviceClass
+                            - secondaryDeviceClass
+                          type: object
                         replicasPerFailureDomain:
                           description: ReplicasPerFailureDomain the number of replica in the specified failure domain
                           minimum: 1
@@ -7512,8 +7974,7 @@ spec:
                   nullable: true
                   properties:
                     compressionMode:
-                      default: none
-                      description: 'The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force)'
+                      description: 'DEPRECATED: use Parameters instead, e.g., Parameters["compression_mode"] = "force" The inline compression mode in Bluestore OSD to set to (options are: none, passive, aggressive, force) Do NOT set a default value for kubebuilder as this will override the Parameters'
                       enum:
                         - none
                         - passive
@@ -7565,6 +8026,16 @@ spec:
                         mode:
                           description: 'Mode is the mirroring mode: either pool or image'
                           type: string
+                        peers:
+                          description: Peers represents the peers spec
+                          nullable: true
+                          properties:
+                            secretNames:
+                              description: SecretNames represents the Kubernetes Secret names to add rbd-mirror or cephfs-mirror peers
+                              items:
+                                type: string
+                              type: array
+                          type: object
                         snapshotSchedules:
                           description: SnapshotSchedules is the scheduling of snapshot for mirrored images/pools
                           items:
@@ -7572,6 +8043,9 @@ spec:
                             properties:
                               interval:
                                 description: Interval represent the periodicity of the snapshot.
+                                type: string
+                              path:
+                                description: Path is the path to snapshot, only valid for CephFS
                                 type: string
                               startTime:
                                 description: StartTime indicates when to start the snapshot
@@ -7606,6 +8080,22 @@ spec:
                     replicated:
                       description: The replication settings
                       properties:
+                        hybridStorage:
+                          description: HybridStorage represents hybrid storage tier settings
+                          nullable: true
+                          properties:
+                            primaryDeviceClass:
+                              description: PrimaryDeviceClass represents high performance tier (for example SSD or NVME) for Primary OSD
+                              minLength: 1
+                              type: string
+                            secondaryDeviceClass:
+                              description: SecondaryDeviceClass represents low performance tier (for example HDDs) for remaining OSDs
+                              minLength: 1
+                              type: string
+                          required:
+                            - primaryDeviceClass
+                            - secondaryDeviceClass
+                          type: object
                         replicasPerFailureDomain:
                           description: ReplicasPerFailureDomain the number of replica in the specified failure domain
                           minimum: 1
@@ -7725,11 +8215,11 @@ spec:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
                 peers:
-                  description: RBDMirroringPeerSpec represents the peers spec
+                  description: Peers represents the peers spec
                   nullable: true
                   properties:
                     secretNames:
-                      description: SecretNames represents the Kubernetes Secret names to add rbd-mirror peers
+                      description: SecretNames represents the Kubernetes Secret names to add rbd-mirror or cephfs-mirror peers
                       items:
                         type: string
                       type: array
@@ -8435,226 +8925,6 @@ spec:
               x-kubernetes-preserve-unknown-fields: true
       subresources:
         status: {}
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.5.1-0.20210420220833-f284e2e8098c
-  creationTimestamp: null
-  name: volumereplicationclasses.replication.storage.openshift.io
-spec:
-  group: replication.storage.openshift.io
-  names:
-    kind: VolumeReplicationClass
-    listKind: VolumeReplicationClassList
-    plural: volumereplicationclasses
-    shortNames:
-      - vrc
-    singular: volumereplicationclass
-  scope: Cluster
-  versions:
-    - additionalPrinterColumns:
-        - jsonPath: .spec.provisioner
-          name: provisioner
-          type: string
-      name: v1alpha1
-      schema:
-        openAPIV3Schema:
-          description: VolumeReplicationClass is the Schema for the volumereplicationclasses API
-          properties:
-            apiVersion:
-              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-              type: string
-            kind:
-              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-              type: string
-            metadata:
-              type: object
-            spec:
-              description: VolumeReplicationClassSpec specifies parameters that an underlying storage system uses when creating a volume replica. A specific VolumeReplicationClass is used by specifying its name in a VolumeReplication object.
-              properties:
-                parameters:
-                  additionalProperties:
-                    type: string
-                  description: Parameters is a key-value map with storage provisioner specific configurations for creating volume replicas
-                  type: object
-                provisioner:
-                  description: Provisioner is the name of storage provisioner
-                  type: string
-              required:
-                - provisioner
-              type: object
-            status:
-              description: VolumeReplicationClassStatus defines the observed state of VolumeReplicationClass
-              type: object
-          type: object
-      served: true
-      storage: true
-      subresources:
-        status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.5.1-0.20210420220833-f284e2e8098c
-  creationTimestamp: null
-  name: volumereplications.replication.storage.openshift.io
-spec:
-  group: replication.storage.openshift.io
-  names:
-    kind: VolumeReplication
-    listKind: VolumeReplicationList
-    plural: volumereplications
-    shortNames:
-      - vr
-    singular: volumereplication
-  scope: Namespaced
-  versions:
-    - additionalPrinterColumns:
-        - jsonPath: .metadata.creationTimestamp
-          name: Age
-          type: date
-        - jsonPath: .spec.volumeReplicationClass
-          name: volumeReplicationClass
-          type: string
-        - jsonPath: .spec.dataSource.name
-          name: pvcName
-          type: string
-        - jsonPath: .spec.replicationState
-          name: desiredState
-          type: string
-        - jsonPath: .status.state
-          name: currentState
-          type: string
-      name: v1alpha1
-      schema:
-        openAPIV3Schema:
-          description: VolumeReplication is the Schema for the volumereplications API
-          properties:
-            apiVersion:
-              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-              type: string
-            kind:
-              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-              type: string
-            metadata:
-              type: object
-            spec:
-              description: VolumeReplicationSpec defines the desired state of VolumeReplication
-              properties:
-                dataSource:
-                  description: DataSource represents the object associated with the volume
-                  properties:
-                    apiGroup:
-                      description: APIGroup is the group for the resource being referenced. If APIGroup is not specified, the specified Kind must be in the core API group. For any other third-party types, APIGroup is required.
-                      type: string
-                    kind:
-                      description: Kind is the type of resource being referenced
-                      type: string
-                    name:
-                      description: Name is the name of resource being referenced
-                      type: string
-                  required:
-                    - kind
-                    - name
-                  type: object
-                replicationState:
-                  description: ReplicationState represents the replication operation to be performed on the volume. Supported operations are "primary", "secondary" and "resync"
-                  enum:
-                    - primary
-                    - secondary
-                    - resync
-                  type: string
-                volumeReplicationClass:
-                  description: VolumeReplicationClass is the VolumeReplicationClass name for this VolumeReplication resource
-                  type: string
-              required:
-                - dataSource
-                - replicationState
-                - volumeReplicationClass
-              type: object
-            status:
-              description: VolumeReplicationStatus defines the observed state of VolumeReplication
-              properties:
-                conditions:
-                  description: Conditions are the list of conditions and their status.
-                  items:
-                    description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, type FooStatus struct{     // Represents the observations of a foo's current state.     // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\"     // +patchMergeKey=type     // +patchStrategy=merge     // +listType=map     // +listMapKey=type     Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n     // other fields }"
-                    properties:
-                      lastTransitionTime:
-                        description: lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
-                        format: date-time
-                        type: string
-                      message:
-                        description: message is a human readable message indicating details about the transition. This may be an empty string.
-                        maxLength: 32768
-                        type: string
-                      observedGeneration:
-                        description: observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.
-                        format: int64
-                        minimum: 0
-                        type: integer
-                      reason:
-                        description: reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.
-                        maxLength: 1024
-                        minLength: 1
-                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                        type: string
-                      status:
-                        description: status of the condition, one of True, False, Unknown.
-                        enum:
-                          - "True"
-                          - "False"
-                          - Unknown
-                        type: string
-                      type:
-                        description: type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
-                        maxLength: 316
-                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                        type: string
-                    required:
-                      - lastTransitionTime
-                      - message
-                      - reason
-                      - status
-                      - type
-                    type: object
-                  type: array
-                lastCompletionTime:
-                  format: date-time
-                  type: string
-                lastStartTime:
-                  format: date-time
-                  type: string
-                message:
-                  type: string
-                observedGeneration:
-                  description: observedGeneration is the last generation change the operator has dealt with
-                  format: int64
-                  type: integer
-                state:
-                  description: State captures the latest state of the replication operation
-                  type: string
-              type: object
-          type: object
-      served: true
-      storage: true
-      subresources:
-        status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
