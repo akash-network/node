@@ -3,14 +3,7 @@ ignore:
   - "**/mocks/.*"
   - "**/kubernetes_mock/.*"
   - "pkg"
-comment:
-  layout: " diff, flags"
-  behavior: once
-  require_changes: true  # if true: only post the comment if coverage changes
-  require_base: yes      # [yes :: must have a base report to post]
-  require_head: yes      # [yes :: must have a head report to post]
-  branches:              # branch names that can post comment
-    - "master"
+comment: false
 codecov:
   require_ci_to_pass: true
 parsers:
