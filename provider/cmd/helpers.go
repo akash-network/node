@@ -3,20 +3,20 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 
-	"errors"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	akashclient "github.com/ovrclk/akash/client"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	"github.com/ovrclk/akash/app"
+	akashclient "github.com/ovrclk/akash/client"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 const (
@@ -140,13 +140,15 @@ func leasesForDeployment(ctx context.Context, cctx client.Context, flags *pflag.
 }
 
 func markRPCServerError(err error) error {
-	unwrappedErr := errors.Unwrap(err)
-	if unwrappedErr != nil {
-		_, isSyntaxError := unwrappedErr.(*json.SyntaxError)
-		_, isURLError := unwrappedErr.(*url.Error)
-		if isSyntaxError || isURLError {
-			return fmt.Errorf("error communicating with RPC server: %w", unwrappedErr)
-		}
+	var jsonError *json.SyntaxError
+	var urlError *url.Error
+
+	switch {
+	case errors.As(err, &jsonError):
+		fallthrough
+	case errors.As(err, &urlError):
+		return fmt.Errorf("error communicating with RPC server: %w", err)
 	}
+
 	return err
 }
