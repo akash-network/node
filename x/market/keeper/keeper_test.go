@@ -214,34 +214,44 @@ func Test_OnOrderClosed(t *testing.T) {
 }
 
 func Test_OnLeaseClosed(t *testing.T) {
-	ctx, keeper, suite := setupKeeper(t)
+	_, keeper, suite := setupKeeper(t)
+	suite.SetBlockHeight(1)
 	id := createLease(t, suite)
 
-	lease, ok := keeper.GetLease(ctx, id)
+	lease, ok := keeper.GetLease(suite.Context(), id)
 	require.True(t, ok)
+	require.Equal(t, int64(0), lease.ClosedOn)
 
-	keeper.OnLeaseClosed(ctx, lease, types.LeaseClosed)
+	const testBlockHeight = 1337
+	suite.SetBlockHeight(testBlockHeight)
 
-	result, ok := keeper.GetLease(ctx, id)
+	require.Equal(t, types.LeaseActive, lease.State)
+	keeper.OnLeaseClosed(suite.Context(), lease, types.LeaseClosed)
+
+	result, ok := keeper.GetLease(suite.Context(), id)
 	require.True(t, ok)
 	assert.Equal(t, types.LeaseClosed, result.State)
+	assert.Equal(t, int64(testBlockHeight), result.ClosedOn)
 }
 
 func Test_OnGroupClosed(t *testing.T) {
-	ctx, keeper, suite := setupKeeper(t)
+	_, keeper, suite := setupKeeper(t)
 	id := createLease(t, suite)
 
-	keeper.OnGroupClosed(ctx, id.BidID().GroupID())
+	const testBlockHeight = 133
+	suite.SetBlockHeight(testBlockHeight)
+	keeper.OnGroupClosed(suite.Context(), id.BidID().GroupID())
 
-	lease, ok := keeper.GetLease(ctx, id)
+	lease, ok := keeper.GetLease(suite.Context(), id)
 	require.True(t, ok)
 	assert.Equal(t, types.LeaseClosed, lease.State)
+	assert.Equal(t, int64(testBlockHeight), lease.ClosedOn)
 
-	bid, ok := keeper.GetBid(ctx, id.BidID())
+	bid, ok := keeper.GetBid(suite.Context(), id.BidID())
 	require.True(t, ok)
 	assert.Equal(t, types.BidClosed, bid.State)
 
-	order, ok := keeper.GetOrder(ctx, id.OrderID())
+	order, ok := keeper.GetOrder(suite.Context(), id.OrderID())
 	require.True(t, ok)
 	assert.Equal(t, types.OrderClosed, order.State)
 }
