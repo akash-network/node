@@ -1,11 +1,11 @@
-package v013
+package v015
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
 )
 
-// MigrateStore performs in-place store migrations from v0.12 to v0.13. The
+// MigrateStore performs in-place store migrations from v0.14 to v0.15. The
 // migration includes:
 //
 // - Change addresses to be length-prefixed

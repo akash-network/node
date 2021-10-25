@@ -14,7 +14,7 @@ import (
 func ValidateGenesis(data *types.GenesisState) error {
 
 	amap := make(map[types.AccountID]types.Account, len(data.Accounts))
-	pmap := make(map[types.AccountID][]types.Payment, len(data.Payments))
+	pmap := make(map[types.AccountID][]types.FractionalPayment, len(data.Payments))
 
 	for idx, account := range data.Accounts {
 		if err := account.ValidateBasic(); err != nil {
@@ -80,7 +80,7 @@ func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 		state.Accounts = append(state.Accounts, obj)
 		return false
 	})
-	k.WithPayments(ctx, func(obj types.Payment) bool {
+	k.WithPayments(ctx, func(obj types.FractionalPayment) bool {
 		state.Payments = append(state.Payments, obj)
 		return false
 	})

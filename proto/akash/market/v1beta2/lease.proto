@@ -49,7 +49,7 @@ message Lease {
   }
 
   State                    state = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
-  cosmos.base.v1beta1.Coin price = 3
+  cosmos.base.v1beta1.DecCoin price = 3
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "price", (gogoproto.moretags) = "yaml:\"price\""];
   int64 created_at = 4;
 }

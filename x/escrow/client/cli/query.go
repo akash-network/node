@@ -83,7 +83,7 @@ func cmdBlocksRemaining() *cobra.Command {
 
 			// Fetch the balance of the escrow account
 			deploymentClient := deploymentTypes.NewQueryClient(clientCtx)
-			totalLeaseAmount := cosmosTypes.NewInt(0)
+			totalLeaseAmount := cosmosTypes.NewDec(0)
 			blockchainHeight, err := cli.CurrentBlockHeight(clientCtx)
 			if err != nil {
 				return err
@@ -105,8 +105,8 @@ func cmdBlocksRemaining() *cobra.Command {
 			}
 			balance := res.EscrowAccount.TotalBalance().Amount
 			settledAt := res.EscrowAccount.SettledAt
-			balanceRemain := float64(balance.Int64() - ((int64(blockchainHeight) - settledAt) * (totalLeaseAmount.Int64())))
-			blocksRemain := (balanceRemain / float64(totalLeaseAmount.Int64()))
+			balanceRemain := balance.MustFloat64() - (float64(int64(blockchainHeight)-settledAt) * totalLeaseAmount.MustFloat64())
+			blocksRemain := balanceRemain / totalLeaseAmount.MustFloat64()
 			output := struct {
 				BalanceRemain       float64 `json:"balance_remaining" yaml:"balance_remaining"`
 				BlocksRemain        float64 `json:"blocks_remaining" yaml:"blocks_remaining"`

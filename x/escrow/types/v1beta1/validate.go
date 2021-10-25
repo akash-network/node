@@ -25,9 +25,6 @@ func (obj *Account) ValidateBasic() error {
 	if obj.State == AccountStateInvalid {
 		return errors.Wrapf(ErrInvalidAccount, "invalid account: state - %s", obj.State)
 	}
-	if _, err := sdk.AccAddressFromBech32(obj.Depositor); err != nil {
-		return errors.Wrapf(ErrInvalidAccount, "invalid account: depositor - %s", err)
-	}
 	return nil
 }
 
@@ -45,9 +42,4 @@ func (obj *Payment) ValidateBasic() error {
 		return errors.Wrap(ErrInvalidPayment, "invalid state")
 	}
 	return nil
-}
-
-// TotalBalance is the sum of Balance and Funds
-func (obj *Account) TotalBalance() sdk.Coin {
-	return obj.Balance.Add(obj.Funds)
 }

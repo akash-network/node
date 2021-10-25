@@ -1,4 +1,4 @@
-package v013
+package v015
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -6,7 +6,7 @@ import (
 	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
 )
 
-// MigrateStore performs in-place store migrations from v0.12 to v0.13. The
+// MigrateStore performs in-place store migrations from v0.14 to v0.15. The
 // migration includes:
 //
 // - Change addresses to be length-prefixed

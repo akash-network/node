@@ -1,6 +1,7 @@
 package sdl
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -9,15 +10,17 @@ import (
 )
 
 func TestPricing(t *testing.T) {
+	lessThanOne, err := sdk.NewDecFromStr("0.7")
+	require.NoError(t, err)
 	tests := []struct {
 		text  string
-		value sdk.Coin
+		value sdk.DecCoin
 		err   bool
 	}{
-		{"amount: 1\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(1)), false},
-		{"amount: -1\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(1)), true},
-		{"amount: 0.7\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(0)), true},
-		{"amount: -0.7\ndenom: uakt", sdk.NewCoin("uakt", sdk.NewInt(0)), true},
+		{"amount: 1\ndenom: uakt", sdk.NewDecCoin("uakt", sdk.NewInt(1)), false},
+		{"amount: -1\ndenom: uakt", sdk.NewDecCoin("uakt", sdk.NewInt(1)), true},
+		{"amount: 0.7\ndenom: uakt", sdk.NewDecCoinFromDec("uakt", lessThanOne), false},
+		{"amount: -0.7\ndenom: uakt", sdk.NewDecCoin("uakt", sdk.NewInt(0)), true},
 	}
 
 	for idx, test := range tests {
