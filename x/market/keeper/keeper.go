@@ -15,7 +15,7 @@ type IKeeper interface {
 	NewQuerier() Querier
 	Codec() codec.BinaryCodec
 	CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.GroupSpec) (types.Order, error)
-	CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.Coin) (types.Bid, error)
+	CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.DecCoin) (types.Bid, error)
 	CreateLease(ctx sdk.Context, bid types.Bid)
 	OnOrderMatched(ctx sdk.Context, order types.Order)
 	OnBidMatched(ctx sdk.Context, bid types.Bid)
@@ -113,7 +113,7 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 }
 
 // CreateBid creates a bid for a order with given orderID, price for bid and provider
-func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.Coin) (types.Bid, error) {
+func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.DecCoin) (types.Bid, error) {
 	store := ctx.KVStore(k.skey)
 
 	bid := types.Bid{

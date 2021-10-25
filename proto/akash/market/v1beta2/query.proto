@@ -117,7 +117,7 @@ message QueryLeaseRequest {
 // QueryLeaseResponse is response type for the Query/Lease RPC method
 message QueryLeaseResponse {
   Lease lease = 1 [(gogoproto.nullable) = false];
-  akash.escrow.v1beta2.Payment escrow_payment = 2 [
+  akash.escrow.v1beta2.FractionalPayment escrow_payment = 2 [
     (gogoproto.nullable) = false
   ];
 }

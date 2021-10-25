@@ -76,22 +76,6 @@ message Account {
     (gogoproto.moretags)   = "yaml:\"settledAt\"",
     (gogoproto.customname) = "SettledAt"
   ];
-
-  // bech32 encoded account address of the depositor.
-  // If depositor is same as the owner, then any incoming coins are added to the Balance.
-  // If depositor isn't same as the owner, then any incoming coins are added to the Funds.
-  string depositor = 7 [
-    (gogoproto.jsontag)  = "depositor",
-    (gogoproto.moretags) = "yaml:\"depositor\""
-  ];
-
-  // Funds are unspent coins received from the (non-Owner) Depositor's wallet.
-  // If there are any funds, they should be spent before spending the Balance.
-  cosmos.base.v1beta1.Coin funds = 8 [
-    (gogoproto.nullable) = false,
-    (gogoproto.jsontag)  = "funds",
-    (gogoproto.moretags) = "yaml:\"funds\""
-  ];
 }
 
 // Payment stores state for a payment

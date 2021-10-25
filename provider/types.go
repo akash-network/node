@@ -17,5 +17,5 @@ type Status struct {
 }
 
 type ValidateGroupSpecResult struct {
-	MinBidPrice sdk.Coin `json:"min_bid_price"`
+	MinBidPrice sdk.DecCoin `json:"min_bid_price"`
 }

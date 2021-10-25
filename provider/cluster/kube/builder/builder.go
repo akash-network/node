@@ -45,7 +45,8 @@ const (
 
 var (
 	dnsPort     = intstr.FromInt(53)
-	dnsProtocol = corev1.Protocol("UDP")
+	udpProtocol = corev1.Protocol("UDP")
+	tcpProtocol = corev1.Protocol("UDP")
 )
 
 type builderBase interface {

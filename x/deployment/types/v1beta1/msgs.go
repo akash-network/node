@@ -1,8 +1,6 @@
 package v1beta1
 
 import (
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -24,11 +22,10 @@ var (
 func NewMsgCreateDeployment(id DeploymentID, groups []GroupSpec, version []byte,
 	deposit sdk.Coin, depositor sdk.AccAddress) *MsgCreateDeployment {
 	return &MsgCreateDeployment{
-		ID:        id,
-		Groups:    groups,
-		Version:   version,
-		Deposit:   deposit,
-		Depositor: depositor.String(),
+		ID:      id,
+		Groups:  groups,
+		Version: version,
+		Deposit: deposit,
 	}
 }
 
@@ -77,20 +74,14 @@ func (msg MsgCreateDeployment) ValidateBasic() error {
 		}
 	}
 
-	_, err := sdk.AccAddressFromBech32(msg.Depositor)
-	if err != nil {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgCreateDeployment: Invalid Depositor Address")
-	}
-
 	return nil
 }
 
 // NewMsgDepositDeployment creates a new MsgDepositDeployment instance
 func NewMsgDepositDeployment(id DeploymentID, amount sdk.Coin, depositor string) *MsgDepositDeployment {
 	return &MsgDepositDeployment{
-		ID:        id,
-		Amount:    amount,
-		Depositor: depositor,
+		ID:     id,
+		Amount: amount,
 	}
 }
 
@@ -123,11 +114,6 @@ func (msg MsgDepositDeployment) ValidateBasic() error {
 
 	if msg.Amount.IsZero() {
 		return ErrInvalidDeposit
-	}
-
-	_, err := sdk.AccAddressFromBech32(msg.Depositor)
-	if err != nil {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "MsgDepositDeployment: Invalid Depositor Address")
 	}
 
 	return nil

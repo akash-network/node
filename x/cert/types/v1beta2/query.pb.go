@@ -30,7 +30,7 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-// CertificateResponse is used by QueryCertificatesResponse
+// CertificateResponse contains a single X509 certificate and its serial number
 type CertificateResponse struct {
 	Certificate Certificate `protobuf:"bytes,1,opt,name=certificate,proto3" json:"certificate" yaml:"certificate"`
 	Serial      string      `protobuf:"bytes,2,opt,name=serial,proto3" json:"serial" yaml:"serial"`

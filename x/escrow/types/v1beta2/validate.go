@@ -31,7 +31,7 @@ func (obj *Account) ValidateBasic() error {
 	return nil
 }
 
-func (obj *Payment) ValidateBasic() error {
+func (obj *FractionalPayment) ValidateBasic() error {
 	if err := obj.AccountID.ValidateBasic(); err != nil {
 		return errors.Wrapf(ErrInvalidPayment, "invalid account id: %s", err)
 	}
@@ -48,6 +48,6 @@ func (obj *Payment) ValidateBasic() error {
 }
 
 // TotalBalance is the sum of Balance and Funds
-func (obj *Account) TotalBalance() sdk.Coin {
+func (obj *Account) TotalBalance() sdk.DecCoin {
 	return obj.Balance.Add(obj.Funds)
 }

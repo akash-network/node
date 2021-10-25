@@ -47,12 +47,6 @@ message MsgCreateDeployment {
 
   cosmos.base.v1beta1.Coin deposit = 4
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "deposit", (gogoproto.moretags) = "yaml:\"deposit\""];
-
-  // Depositor pays for the deposit
-  string depositor = 5 [
-    (gogoproto.jsontag)  = "depositor",
-    (gogoproto.moretags) = "yaml:\"depositor\""
-  ];
 }
 
 // MsgCreateDeploymentResponse defines the Msg/CreateDeployment response type.
@@ -71,12 +65,6 @@ message MsgDepositDeployment {
 
   cosmos.base.v1beta1.Coin amount = 2
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "amount", (gogoproto.moretags) = "yaml:\"amount\""];
-
-  // Depositor pays for the deposit
-  string depositor = 3 [
-    (gogoproto.jsontag)  = "depositor",
-    (gogoproto.moretags) = "yaml:\"depositor\""
-  ];
 }
 
 // MsgCreateDeploymentResponse defines the Msg/CreateDeployment response type.
