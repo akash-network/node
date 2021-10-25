@@ -13,6 +13,7 @@ type Config struct {
 	DeploymentIngressStaticHosts    bool
 	DeploymentIngressDomain         string
 	ClusterSettings                 map[interface{}]interface{}
+	WithdrawalPeriod                time.Duration
 }
 
 func NewDefaultConfig() Config {

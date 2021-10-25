@@ -31,6 +31,7 @@ type Config struct {
 	ClusterSettings                 map[interface{}]interface{}
 	RPCQueryTimeout                 time.Duration
 	CachedResultMaxAge              time.Duration
+	WithdrawalPeriod                time.Duration
 }
 
 func NewDefaultConfig() Config {

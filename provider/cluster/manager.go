@@ -231,6 +231,7 @@ loop:
 
 func (dm *deploymentManager) startWithdrawal() {
 	dm.wg.Add(1)
+
 	dm.withdrawal = newDeploymentWithdrawal(dm)
 	go func(m *deploymentMonitor) {
 		defer dm.wg.Done()
