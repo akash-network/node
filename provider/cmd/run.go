@@ -392,6 +392,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	providerConfig := viper.GetString(FlagProviderConfig)
 	cachedResultMaxAge := viper.GetDuration(FlagCachedResultMaxAge)
 	rpcQueryTimeout := viper.GetDuration(FlagRPCQueryTimeout)
+	withdrawalPeriod := viper.GetDuration(FlagWithdrawalPeriod)
 
 	var metricsRouter http.Handler
 	if len(metricsListener) != 0 {
@@ -540,6 +541,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	config.DeploymentIngressDomain = deploymentIngressDomain
 	config.BidTimeout = bidTimeout
 	config.ManifestTimeout = manifestTimeout
+	config.WithdrawalPeriod = withdrawalPeriod
 
 	if len(providerConfig) != 0 {
 		pConf, err := config2.ReadConfigPath(providerConfig)
@@ -555,7 +557,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	config.BalanceCheckerCfg = provider.BalanceCheckerConfig{
 		PollingPeriod:           viper.GetDuration(FlagBalanceCheckPeriod),
 		MinimumBalanceThreshold: viper.GetUint64(FlagMinimumBalance),
-		WithdrawalPeriod:        viper.GetDuration(FlagWithdrawalPeriod),
+		WithdrawalPeriod:        withdrawalPeriod,
 	}
 
 	config.BidPricingStrategy = pricing

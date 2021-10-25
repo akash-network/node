@@ -85,6 +85,14 @@ type E2EApp struct {
 	IntegrationTestSuite
 }
 
+type E2EAppMigrateHostname struct {
+	IntegrationTestSuite
+}
+
+type E2ELeaseShell struct {
+	IntegrationTestSuite
+}
+
 func (s *IntegrationTestSuite) SetupSuite() {
 	s.appHost, s.appPort = appEnv(s.T())
 
@@ -923,7 +931,7 @@ func (s *E2EApp) TestE2EApp() {
 	}
 }
 
-func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
+func (s *E2ELeaseShell) TestE2ELeaseShell() {
 	// create a deployment
 	deploymentPath, err := filepath.Abs("../x/deployment/testdata/deployment-v2.yaml")
 	s.Require().NoError(err)
@@ -1062,13 +1070,14 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 
 }
 
-func (s *E2EApp) TestE2EMigrateHostname() {
+func (s *E2EAppMigrateHostname) TestE2EMigrateHostname() {
 	// create a deployment
 	deploymentPath, err := filepath.Abs("../x/deployment/testdata/deployment-v2-migrate.yaml")
 	s.Require().NoError(err)
 
 	cctxJSON := s.validator.ClientCtx.WithOutputFormat("json")
 
+	// TODO - change key tenant so it is not reused ?
 	deploymentID := dtypes.DeploymentID{
 		Owner: s.keyTenant.GetAddress().String(),
 		DSeq:  uint64(105),
@@ -1167,7 +1176,7 @@ func (s *E2EApp) TestE2EMigrateHostname() {
 	assert.NoError(s.T(), err)
 	leaseCount, ok := data["cluster"].(map[string]interface{})["leases"]
 	assert.True(s.T(), ok)
-	assert.Equal(s.T(), float64(1), leaseCount)
+	require.Equal(s.T(), float64(1), leaseCount, cmdResult.String())
 
 	// Create another deployment, use the same exact SDL
 
@@ -1327,6 +1336,8 @@ func TestIntegrationTestSuite(t *testing.T) {
 	suite.Run(t, new(E2EAppNodePort))
 	suite.Run(t, new(E2EDeploymentUpdate))
 	suite.Run(t, new(E2EApp))
+	suite.Run(t, new(E2EAppMigrateHostname))
+	suite.Run(t, new(E2ELeaseShell))
 }
 
 func (s *IntegrationTestSuite) waitForBlocksCommitted(height int) error {

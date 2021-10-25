@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/tendermint/tendermint/libs/log"
+	"math/rand"
 
 	"time"
 )
@@ -31,6 +32,8 @@ type balanceChecker struct {
 	bankQueryClient bankTypes.QueryClient
 
 	cfg BalanceCheckerConfig
+
+	balanceCheckDelay time.Duration
 }
 
 type BalanceCheckerConfig struct {
@@ -45,16 +48,20 @@ func newBalanceChecker(ctx context.Context,
 	clientSession session.Session,
 	bus pubsub.Bus,
 	cfg BalanceCheckerConfig) *balanceChecker {
-	bc := &balanceChecker{
 
+	// nolint: gosec
+	balanceCheckDelayMs := rand.Float64() * float64(cfg.WithdrawalPeriod.Milliseconds()) * 0.1
+
+	bc := &balanceChecker{
 		session: clientSession,
 		log:     clientSession.Log().With("cmp", "balance-checker"),
 		lc:      lifecycle.New(),
 		bus:     bus,
 		ownAddr: accAddr,
 
-		bankQueryClient: bankQueryClient,
-		cfg:             cfg,
+		bankQueryClient:   bankQueryClient,
+		cfg:               cfg,
+		balanceCheckDelay: time.Duration(balanceCheckDelayMs) * time.Millisecond,
 	}
 
 	go bc.lc.WatchContext(ctx)
@@ -63,6 +70,19 @@ func newBalanceChecker(ctx context.Context,
 	return bc
 }
 func (bc *balanceChecker) doCheck(ctx context.Context) (bool, error) {
+	if bc.cfg.MinimumBalanceThreshold == 0 {
+		return false, nil
+	}
+
+	if bc.balanceCheckDelay > time.Duration(0) {
+		after := time.After(bc.balanceCheckDelay)
+
+		select {
+		case <-ctx.Done():
+			return false, ctx.Err()
+		case <-after:
+		}
+	}
 
 	// Get the current wallet balance
 	query := bankTypes.NewQueryBalanceRequest(bc.ownAddr, "uakt")
@@ -73,10 +93,6 @@ func (bc *balanceChecker) doCheck(ctx context.Context) (bool, error) {
 
 	balance := result.Balance.Amount
 	balanceGauge.Set(float64(balance.Uint64()))
-
-	if bc.cfg.MinimumBalanceThreshold == 0 {
-		return false, nil
-	}
 
 	tooLow := sdk.NewIntFromUint64(bc.cfg.MinimumBalanceThreshold).GT(balance)
 
@@ -109,10 +125,12 @@ loop:
 			break loop
 		case <-tick.C:
 			tick.Stop() // Stop the timer
-			// Start the balance check
-			balanceCheckResult = runner.Do(func() runner.Result {
-				return runner.NewResult(bc.doCheck(ctx))
-			})
+			if balanceCheckResult == nil {
+				// Start the balance check
+				balanceCheckResult = runner.Do(func() runner.Result {
+					return runner.NewResult(bc.doCheck(ctx))
+				})
+			}
 
 		case balanceCheck := <-balanceCheckResult:
 			balanceCheckResult = nil
@@ -141,7 +159,7 @@ loop:
 			withdrawalTicker.Stop()
 		}
 
-		if withdrawAllNow {
+		if withdrawAllNow && withdrawAllResult == nil {
 			bc.log.Info("balance below target amount, withdrawing now")
 			withdrawAllResult = runner.Do(func() runner.Result {
 				return runner.NewResult(nil, bc.startWithdrawAll())
