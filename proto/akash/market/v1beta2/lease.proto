@@ -52,6 +52,7 @@ message Lease {
   cosmos.base.v1beta1.DecCoin price = 3
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "price", (gogoproto.moretags) = "yaml:\"price\""];
   int64 created_at = 4;
+  int64 closed_on = 5;
 }
 
 // LeaseFilters defines flags for lease list filter
