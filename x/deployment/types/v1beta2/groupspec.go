@@ -32,8 +32,8 @@ func (g GroupSpec) GetName() string {
 }
 
 // Price method returns price of group
-func (g GroupSpec) Price() sdk.Coin {
-	var price sdk.Coin
+func (g GroupSpec) Price() sdk.DecCoin {
+	var price sdk.DecCoin
 	for idx, resource := range g.Resources {
 		if idx == 0 {
 			price = resource.FullPrice()

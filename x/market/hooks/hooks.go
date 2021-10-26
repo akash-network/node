@@ -9,7 +9,7 @@ import (
 
 type Hooks interface {
 	OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account)
-	OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment)
+	OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.FractionalPayment)
 }
 
 type hooks struct {
@@ -53,7 +53,7 @@ func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
 	}
 }
 
-func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment) {
+func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.FractionalPayment) {
 	id, ok := mtypes.LeaseIDFromEscrowAccount(obj.AccountID, obj.PaymentID)
 	if !ok {
 		return

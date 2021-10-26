@@ -224,14 +224,13 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	_, err = cli.TxCreateBidExec(
 		val.ClientCtx,
 		createdOrder.OrderID,
-		sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(0)),
+		sdk.NewDecCoinFromDec(testutil.CoinDenom, sdk.MustNewDecFromStr("1.1")),
 		keyBar.GetAddress(),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 		fmt.Sprintf("--deposit=%s", cli.DefaultDeposit),
-		"--price=1uakt",
 	)
 	s.Require().NoError(err)
 

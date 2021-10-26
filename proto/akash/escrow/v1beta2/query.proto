@@ -53,6 +53,6 @@ message QueryPaymentsRequest {
 
 // QueryProvidersResponse is response type for the Query/Providers RPC method
 message QueryPaymentsResponse {
-  repeated Payment payments = 1 [(gogoproto.nullable) = false];
+  repeated FractionalPayment payments = 1 [(gogoproto.nullable) = false];
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }

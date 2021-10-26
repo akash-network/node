@@ -96,7 +96,7 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 				Price:     lease.GetPrice(),
 				CreatedAt: lease.GetCreatedAt(),
 			},
-			EscrowPayment: escrowtypes.Payment{}, // Ignored in this test
+			EscrowPayment: escrowtypes.FractionalPayment{}, // Ignored in this test
 		})
 	}
 	queryMock.On("Leases", mock.Anything, &mtypes.QueryLeasesRequest{
@@ -219,9 +219,9 @@ func TestManagerHandlesTimeout(t *testing.T) {
 	ev := event.LeaseWon{
 		LeaseID: lid,
 		Group:   dgroup,
-		Price: sdk.Coin{
+		Price: sdk.DecCoin{
 			Denom:  testutil.CoinDenom,
-			Amount: sdk.NewInt(111),
+			Amount: sdk.NewDec(111),
 		},
 	}
 
@@ -262,9 +262,9 @@ func TestManagerHandlesMissingGroup(t *testing.T) {
 	leases := []mtypes.Lease{{
 		LeaseID: lid,
 		State:   mtypes.LeaseActive,
-		Price: sdk.Coin{
+		Price: sdk.DecCoin{
 			Denom:  "uakt",
-			Amount: sdk.NewInt(111),
+			Amount: sdk.NewDec(111),
 		},
 		CreatedAt: 0,
 	}}
@@ -307,10 +307,7 @@ func TestManagerRequiresHostname(t *testing.T) {
 	ev := event.LeaseWon{
 		LeaseID: lid,
 		Group:   dgroup,
-		Price: sdk.Coin{
-			Denom:  "uakt",
-			Amount: sdk.NewInt(111),
-		},
+		Price:   sdk.NewDecCoin("uakt", sdk.NewInt(111)),
 	}
 	version, err := sdl.ManifestVersion(sdlManifest)
 	require.NotNil(t, version)
@@ -368,10 +365,7 @@ func TestManagerAllowsUpdate(t *testing.T) {
 	ev := event.LeaseWon{
 		LeaseID: lid,
 		Group:   dgroup,
-		Price: sdk.Coin{
-			Denom:  "uakt",
-			Amount: sdk.NewInt(111),
-		},
+		Price:   sdk.NewDecCoinFromDec(testutil.CoinDenom, sdk.NewDec(111)),
 	}
 	version, err := sdl.ManifestVersion(sdlManifest)
 	require.NotNil(t, version)

@@ -20,7 +20,7 @@ message Resource {
     (gogoproto.jsontag) = "count",
     (gogoproto.moretags) = "yaml:\"count\""
   ];
-  cosmos.base.v1beta1.Coin price = 3 [
+  cosmos.base.v1beta1.DecCoin price = 3 [
     (gogoproto.nullable) = false,
     (gogoproto.jsontag) = "price",
     (gogoproto.moretags) = "yaml:\"price\""

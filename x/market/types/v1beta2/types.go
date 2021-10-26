@@ -62,7 +62,7 @@ func (o Order) ValidateInactive() error {
 }
 
 // Price method returns price of specific order
-func (o Order) Price() sdk.Coin {
+func (o Order) Price() sdk.DecCoin {
 	return o.Spec.Price()
 }
 

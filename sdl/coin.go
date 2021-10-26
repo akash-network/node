@@ -5,7 +5,6 @@ import (
 	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"gopkg.in/yaml.v3"
-	"math/big"
 )
 
 // v2Coin is an alias sdk.Coin to allow our custom UnmarshalYAML
@@ -14,7 +13,7 @@ import (
 // into Value field.
 // discussion https://github.com/ovrclk/akash/issues/771
 type v2Coin struct {
-	Value sdk.Coin `yaml:"-"`
+	Value sdk.DecCoin `yaml:"-"`
 }
 
 var errInvalidCoinAmount = errors.New("invalid coin amount")
@@ -29,18 +28,21 @@ func (sdl *v2Coin) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 
-	asFloat, _, err := big.ParseFloat(parsedCoin.Amount, 0, 54, big.AwayFromZero)
+	amount, err := sdk.NewDecFromStr(parsedCoin.Amount)
 	if err != nil {
 		return err
-	}
-	if !asFloat.IsInt() {
-		return fmt.Errorf("%w: %q is not an integer", errInvalidCoinAmount, parsedCoin.Amount)
 	}
 
-	coin, err := sdk.ParseCoinNormalized(parsedCoin.Amount + parsedCoin.Denom)
-	if err != nil {
-		return err
+	if amount.IsZero() {
+		return fmt.Errorf("%w: amount is zero", errInvalidCoinAmount)
 	}
+
+	// Never pass negative amounts to cosmos SDK DecCoin
+	if amount.IsNegative() {
+		return fmt.Errorf("%w: amount %q is negative", errNegativeValue, amount.String())
+	}
+
+	coin := sdk.NewDecCoinFromDec(parsedCoin.Denom, amount)
 
 	*sdl = v2Coin{
 		Value: coin,

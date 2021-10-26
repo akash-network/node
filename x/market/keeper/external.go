@@ -7,7 +7,7 @@ import (
 
 type EscrowKeeper interface {
 	GetAccount(ctx sdk.Context, id etypes.AccountID) (etypes.Account, error)
-	GetPayment(ctx sdk.Context, id etypes.AccountID, pid string) (etypes.Payment, error)
+	GetPayment(ctx sdk.Context, id etypes.AccountID, pid string) (etypes.FractionalPayment, error)
 	AccountClose(ctx sdk.Context, id etypes.AccountID) error
 	PaymentClose(ctx sdk.Context, id etypes.AccountID, pid string) error
 }

@@ -11,7 +11,7 @@ import (
 type LeaseWon struct {
 	LeaseID mtypes.LeaseID
 	Group   *dtypes.Group
-	Price   sdk.Coin
+	Price   sdk.DecCoin
 }
 
 // ManifestReceived stores leaseID, manifest received, deployment and group details

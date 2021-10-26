@@ -4,7 +4,6 @@ package akash.provider.v1beta2;
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
-
 import "akash/provider/v1beta2/provider.proto";
 
 option go_package = "github.com/ovrclk/akash/x/provider/types/v1beta2";

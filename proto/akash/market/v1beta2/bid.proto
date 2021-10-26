@@ -18,7 +18,7 @@ message MsgCreateBid {
     (gogoproto.moretags)   = "yaml:\"order\""
   ];
   string                   provider = 2 [(gogoproto.jsontag) = "provider", (gogoproto.moretags) = "yaml:\"provider\""];
-  cosmos.base.v1beta1.Coin price    = 3
+  cosmos.base.v1beta1.DecCoin price    = 3
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "price", (gogoproto.moretags) = "yaml:\"price\""];
 
   cosmos.base.v1beta1.Coin deposit = 4
@@ -88,7 +88,7 @@ message Bid {
   }
 
   State                    state = 2 [(gogoproto.jsontag) = "state", (gogoproto.moretags) = "yaml:\"state\""];
-  cosmos.base.v1beta1.Coin price = 3
+  cosmos.base.v1beta1.DecCoin price = 3
       [(gogoproto.nullable) = false, (gogoproto.jsontag) = "price", (gogoproto.moretags) = "yaml:\"price\""];
   int64 created_at = 4;
 }

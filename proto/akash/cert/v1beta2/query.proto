@@ -16,7 +16,7 @@ service Query {
   }
 }
 
-// CertificateResponse is used by QueryCertificatesResponse
+// CertificateResponse contains a single X509 certificate and its serial number
 message CertificateResponse {
   Certificate certificate = 1 [
     (gogoproto.nullable) = false,

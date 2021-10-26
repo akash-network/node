@@ -67,7 +67,7 @@ func makeMocks(s *orderTestScaffold) {
 		Memory:  &memory,
 		Storage: storage,
 	}
-	price := sdk.NewInt64Coin(testutil.CoinDenom, 23)
+	price := sdk.NewInt64DecCoin(testutil.CoinDenom, 23)
 	resource := dtypes.Resource{
 		Resources: clusterResources,
 		Count:     2,
@@ -121,9 +121,7 @@ func (nullProviderAttrSignatureService) GetAttributes() (atypes.Attributes, erro
 
 func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricingStrategy, callerConfig *Config) (*order, orderTestScaffold, <-chan int) {
 	if pricing == nil {
-		var err error
-		pricing, err = MakeRandomRangePricing()
-		require.NoError(t, err)
+		pricing = testBidPricingStrategy(1)
 		require.NotNil(t, pricing)
 	}
 
@@ -172,7 +170,7 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricing
 			Bid: mtypes.Bid{
 				BidID: bidID,
 				State: mtypes.BidOpen,
-				Price: sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(int64(testutil.RandRangeInt(100, 1000)))),
+				Price: sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(int64(testutil.RandRangeInt(100, 1000)))),
 			},
 		}
 		scaffold.queryClient.On("Bid", mock.Anything, queryBidRequest).Return(response, nil)
@@ -202,10 +200,10 @@ func Test_BidOrderAndUnreserve(t *testing.T) {
 
 	priceDenom := createBidMsg.Price.Denom
 	require.Equal(t, testutil.CoinDenom, priceDenom)
-	priceAmount := createBidMsg.Price.Amount.Int64()
+	priceAmount := createBidMsg.Price.Amount
 
-	require.GreaterOrEqual(t, priceAmount, int64(1))
-	require.Less(t, priceAmount, int64(100))
+	require.GreaterOrEqual(t, priceAmount.TruncateInt64(), int64(1))
+	require.Less(t, priceAmount.TruncateInt64(), int64(100))
 
 	// After the broadcast call shut the thing down
 	// and then check what was broadcast
@@ -231,10 +229,10 @@ func Test_BidOrderAndUnreserveOnTimeout(t *testing.T) {
 
 	priceDenom := createBidMsg.Price.Denom
 	require.Equal(t, testutil.CoinDenom, priceDenom)
-	priceAmount := createBidMsg.Price.Amount.Int64()
+	priceAmount := createBidMsg.Price.Amount
 
-	require.GreaterOrEqual(t, priceAmount, int64(1))
-	require.Less(t, priceAmount, int64(100))
+	require.True(t, priceAmount.GT(sdk.NewDec(0)))
+	require.True(t, priceAmount.LT(sdk.NewDec(100)))
 
 	// After the broadcast call the timeout should take effect
 	// and then close the bid, unreserving capacity in the process
@@ -350,17 +348,17 @@ func Test_BidOrderAndThenLeaseCreated(t *testing.T) {
 	require.Equal(t, createBidMsg.Order, scaffold.orderID)
 	priceDenom := createBidMsg.Price.Denom
 	require.Equal(t, testutil.CoinDenom, priceDenom)
-	priceAmount := createBidMsg.Price.Amount.Int64()
+	priceAmount := createBidMsg.Price.Amount
 
-	require.GreaterOrEqual(t, priceAmount, int64(1))
-	require.Less(t, priceAmount, int64(100))
+	require.GreaterOrEqual(t, priceAmount.TruncateInt64(), int64(1))
+	require.Less(t, priceAmount.TruncateInt64(), int64(100))
 
 	leaseID := mtypes.MakeLeaseID(mtypes.MakeBidID(scaffold.orderID, scaffold.testAddr))
 
 	ev := mtypes.EventLeaseCreated{
 		Context: sdkutil.BaseModuleEvent{},
 		ID:      leaseID,
-		Price:   testutil.AkashCoin(t, 1),
+		Price:   testutil.AkashDecCoin(t, 1),
 	}
 
 	require.Equal(t, order.orderID.GroupID(), ev.ID.GroupID())
@@ -400,7 +398,7 @@ func Test_BidOrderAndThenLeaseCreatedForDifferentDeployment(t *testing.T) {
 	ev := mtypes.EventLeaseCreated{
 		Context: sdkutil.BaseModuleEvent{},
 		ID:      leaseID,
-		Price:   testutil.AkashCoin(t, 1),
+		Price:   testutil.AkashDecCoin(t, 1),
 	}
 
 	subscriber, err := scaffold.testBus.Subscribe()
@@ -509,7 +507,7 @@ func Test_ShouldRecognizeLeaseCreatedIfBiddingIsSkipped(t *testing.T) {
 	ev := mtypes.EventLeaseCreated{
 		Context: sdkutil.BaseModuleEvent{},
 		ID:      leaseID,
-		Price:   testutil.AkashCoin(t, 1),
+		Price:   testutil.AkashDecCoin(t, 1),
 	}
 
 	err := scaffold.testBus.Publish(ev)
@@ -533,8 +531,8 @@ func Test_ShouldRecognizeLeaseCreatedIfBiddingIsSkipped(t *testing.T) {
 
 type testBidPricingStrategy int64
 
-func (tbps testBidPricingStrategy) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
-	return sdk.NewInt64Coin(testutil.CoinDenom, int64(tbps)), nil
+func (tbps testBidPricingStrategy) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.DecCoin, error) {
+	return sdk.NewInt64DecCoin(testutil.CoinDenom, int64(tbps)), nil
 }
 
 func Test_BidOrderUsesBidPricingStrategy(t *testing.T) {
@@ -551,9 +549,9 @@ func Test_BidOrderUsesBidPricingStrategy(t *testing.T) {
 
 	priceDenom := createBidMsg.Price.Denom
 	require.Equal(t, testutil.CoinDenom, priceDenom)
-	priceAmount := createBidMsg.Price.Amount.Int64()
+	priceAmount := createBidMsg.Price.Amount
 
-	require.Equal(t, priceAmount, expectedBid)
+	require.Equal(t, priceAmount, sdk.NewDec(expectedBid))
 
 	// After the broadcast call shut the thing down
 	// and then check what was broadcast
@@ -567,8 +565,8 @@ type alwaysFailsBidPricingStrategy struct {
 	failure error
 }
 
-func (afbps alwaysFailsBidPricingStrategy) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
-	return sdk.Coin{}, afbps.failure
+func (afbps alwaysFailsBidPricingStrategy) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.DecCoin, error) {
+	return sdk.DecCoin{}, afbps.failure
 }
 
 var errBidPricingAlwaysFails = errors.New("bid pricing fail in test")
