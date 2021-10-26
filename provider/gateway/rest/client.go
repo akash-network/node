@@ -16,23 +16,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
-	"k8s.io/client-go/tools/remotecommand"
-
-	cutils "github.com/ovrclk/akash/x/cert/utils"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-
+	cosmosclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
-
-	cosmosclient "github.com/cosmos/cosmos-sdk/client"
+	"k8s.io/client-go/tools/remotecommand"
 
 	akashclient "github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider"
 	cltypes "github.com/ovrclk/akash/provider/cluster/types"
 	ctypes "github.com/ovrclk/akash/x/cert/types/v1beta2"
+	cutils "github.com/ovrclk/akash/x/cert/utils"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )

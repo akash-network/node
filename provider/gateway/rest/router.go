@@ -160,7 +160,6 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ctxCon
 }
 
 func newJwtServerRouter(addr sdk.Address, privateKey interface{}, jwtExpiresAfter time.Duration, certSerialNumber string) *mux.Router {
-
 	router := mux.NewRouter()
 
 	router.HandleFunc("/jwt",
@@ -171,7 +170,6 @@ func newJwtServerRouter(addr sdk.Address, privateKey interface{}, jwtExpiresAfte
 }
 
 func jwtServiceHandler(paddr sdk.Address, privateKey interface{}, jwtExpiresAfter time.Duration, certSerialNumber string) http.HandlerFunc {
-
 	return func(writer http.ResponseWriter, request *http.Request) {
 		now := time.Now()
 		claim := ClientCustomClaims{

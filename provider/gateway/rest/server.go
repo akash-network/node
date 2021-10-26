@@ -51,7 +51,6 @@ func NewJwtServer(ctx context.Context,
 	certSerialNumber string,
 	jwtExpiresAfter time.Duration,
 ) (*http.Server, error) {
-
 	srv := &http.Server{
 		Addr:    jwtGatewayAddr,
 		Handler: newJwtServerRouter(providerAddr, cert.PrivateKey, jwtExpiresAfter, certSerialNumber),
