@@ -14,6 +14,8 @@ message Endpoint {
     SHARED_HTTP = 0;
     // Describes an endpoint that becomes a Kubernetes NodePort
     RANDOM_PORT = 1;
+    // Describes an endpoint that becomes a leased IP
+    LEASED_IP = 2;
   }
   Kind kind = 1;
 }
