@@ -11,7 +11,7 @@
 
 [Akash](https://akash.network) is a secure, transparent, and decentralized cloud computing marketplace that connects those who need computing resources (tenants) with those that have computing capacity to lease (providers).
 
-For a high-level overview of the Akash protocol and network economics, check out the [whitepapers](https://akash.network/research); a detailed protocol definition can be 
+For a high-level overview of the Akash protocol and network economics, check out the [whitepaper](https://ipfs.io/ipfs/QmVwsi5kTrg7UcUEGi5UfdheVLBWoHjze2pHy4tLqYvLYv); a detailed protocol definition can be 
 found in the [design documentation](https://docs.akash.network); and the target workload definition spec is [here](https://docs.akash.network/sdl).
 
 # Branching and Versioning
@@ -23,7 +23,7 @@ The `master` branch contains new features and is under active development; the `
 
 ## Akash Suite
 
-Akash Suite is the reference implementation of the [Akash Protocol](https://akash.network/l/whitepaper). Akash is an actively-developed prototype currently focused on the distributed marketplace functionality.
+Akash Suite is the reference implementation of the [Akash Protocol](https://ipfs.io/ipfs/QmdV52bF7j4utynJ6L11RgG93FuJiUmBH1i7pRD6NjUt6B). Akash is an actively-developed prototype currently focused on the distributed marketplace functionality.
 
 The Suite is composed of one binary, `akash`, which contains a ([tendermint](https://github.com/tendermint/tendermint)-powered) blockchain node that
 implements the decentralized exchange as well as client functionality to access the exchange and network data in general.
@@ -35,7 +35,7 @@ The easiest way to get started with Akash is by following the [Quick Start Guide
 ## Join the Community
 
 - [Join Developer Chat](https://discord.gg/6Rtn8aJkU4)
-- [Become a validator](https://akash.network/token)
+- [Become a validator](https://akash.network/validators)
 
 ## Official blog and documentation
 
