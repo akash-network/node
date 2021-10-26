@@ -6,24 +6,21 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"math"
 	"math/big"
 	"os"
 	"os/exec"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/pkg/errors"
-	"github.com/shopspring/decimal"
-
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/types/unit"
-
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
 )
 
 type BidPricingStrategy interface {
-	CalculatePrice(ctx context.Context, owner string, gspec *dtypes.GroupSpec) (sdk.Coin, error)
+	CalculatePrice(ctx context.Context, owner string, gspec *dtypes.GroupSpec) (sdk.DecCoin, error)
 }
 
 const denom = "uakt"
@@ -113,7 +110,7 @@ func ceilBigRatToBigInt(v *big.Rat) *big.Int {
 	return result
 }
 
-func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.DecCoin, error) {
 	// Use unlimited precision math here.
 	// Otherwise a correctly crafted order could create a cost of '1' given
 	// a possible configuration
@@ -155,7 +152,7 @@ func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes
 			total, exists := storageTotal[storageClass]
 
 			if !exists {
-				return sdk.Coin{}, errors.Wrapf(errNoPriceScaleForStorageClass, storageClass)
+				return sdk.DecCoin{}, errors.Wrapf(errNoPriceScaleForStorageClass, storageClass)
 			}
 
 			total = total.Add(storageQuantity)
@@ -185,14 +182,13 @@ func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes
 
 	endpointTotal = endpointTotal.Mul(fp.endpointScale)
 
-	maxAllowedValue := decimal.NewFromInt(math.MaxInt64)
 	// Each quantity must be non negative
 	// and fit into an Int64
-	if cpuTotal.IsNegative() || !cpuTotal.LessThanOrEqual(maxAllowedValue) ||
-		memoryTotal.IsNegative() || !memoryTotal.LessThanOrEqual(maxAllowedValue) ||
-		storageTotal.IsAnyNegative() || !storageTotal.AllLessThenOrEqual(maxAllowedValue) ||
-		endpointTotal.IsNegative() || !endpointTotal.LessThanOrEqual(maxAllowedValue) {
-		return sdk.Coin{}, ErrBidQuantityInvalid
+	if cpuTotal.IsNegative() ||
+		memoryTotal.IsNegative() ||
+		storageTotal.IsAnyNegative() ||
+		endpointTotal.IsNegative() {
+		return sdk.DecCoin{}, ErrBidQuantityInvalid
 	}
 
 	totalCost := cpuTotal
@@ -201,20 +197,26 @@ func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes
 		totalCost = totalCost.Add(total)
 	}
 	totalCost = totalCost.Add(endpointTotal)
-	totalCost = totalCost.Ceil() // Round upwards to get an integer
 
-	if totalCost.IsNegative() || !totalCost.LessThanOrEqual(maxAllowedValue) {
-		return sdk.Coin{}, ErrBidQuantityInvalid
+	if totalCost.IsNegative() {
+		return sdk.DecCoin{}, ErrBidQuantityInvalid
 	}
 
 	if totalCost.IsZero() {
 		// Return an error indicating we can't bid with a cost of zero
-		return sdk.Coin{}, ErrBidZero
+		return sdk.DecCoin{}, ErrBidZero
 	}
 
-	cost := sdk.NewCoin(denom, sdk.NewIntFromBigInt(totalCost.BigInt()))
+	costDec, err := sdk.NewDecFromStr(totalCost.String())
+	if err != nil {
+		return sdk.DecCoin{}, err
+	}
 
-	return cost, nil
+	if !costDec.LTE(sdk.MaxSortableDec) {
+		return sdk.DecCoin{}, ErrBidQuantityInvalid
+	}
+
+	return sdk.NewDecCoinFromDec(denom, costDec), nil
 }
 
 type randomRangePricing int
@@ -223,24 +225,31 @@ func MakeRandomRangePricing() (BidPricingStrategy, error) {
 	return randomRangePricing(0), nil
 }
 
-func (randomRangePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (randomRangePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes.GroupSpec) (sdk.DecCoin, error) {
 	min, max := calculatePriceRange(gspec)
-
 	if min.IsEqual(max) {
 		return max, nil
 	}
 
-	delta := max.Amount.Sub(min.Amount)
+	const scale = 10000
 
-	val, err := rand.Int(rand.Reader, delta.BigInt())
+	delta := max.Amount.Sub(min.Amount).Mul(sdk.NewDec(scale))
+
+	minbid := delta.TruncateInt64()
+	if minbid < 1 {
+		minbid = 1
+	}
+	val, err := rand.Int(rand.Reader, big.NewInt(minbid))
 	if err != nil {
-		return sdk.Coin{}, err
+		return sdk.DecCoin{}, err
 	}
 
-	return sdk.NewCoin(min.Denom, min.Amount.Add(sdk.NewIntFromBigInt(val))), nil
+	scaledValue := sdk.NewDecFromBigInt(val).QuoInt64(scale).QuoInt64(100)
+	amount := min.Amount.Add(scaledValue)
+	return sdk.NewDecCoinFromDec(min.Denom, amount), nil
 }
 
-func calculatePriceRange(gspec *dtypes.GroupSpec) (sdk.Coin, sdk.Coin) {
+func calculatePriceRange(gspec *dtypes.GroupSpec) (sdk.DecCoin, sdk.DecCoin) {
 	// memory-based pricing:
 	//   min: requested memory * configured min price per Gi
 	//   max: requested memory * configured max price per Gi
@@ -262,27 +271,27 @@ func calculatePriceRange(gspec *dtypes.GroupSpec) (sdk.Coin, sdk.Coin) {
 	const minGroupMemPrice = int64(50)
 	const maxGroupMemPrice = int64(1048576)
 
-	cmin := mem.MulRaw(
+	cmin := sdk.NewDecFromInt(mem.MulRaw(
 		minGroupMemPrice).
-		Quo(sdk.NewInt(unit.Gi))
+		Quo(sdk.NewInt(unit.Gi)))
 
-	cmax := mem.MulRaw(
+	cmax := sdk.NewDecFromInt(mem.MulRaw(
 		maxGroupMemPrice).
-		Quo(sdk.NewInt(unit.Gi))
+		Quo(sdk.NewInt(unit.Gi)))
 
 	if cmax.GT(rmax.Amount) {
 		cmax = rmax.Amount
 	}
 
 	if cmin.IsZero() {
-		cmin = sdk.NewInt(1)
+		cmin = sdk.NewDec(1)
 	}
 
 	if cmax.IsZero() {
-		cmax = sdk.NewInt(1)
+		cmax = sdk.NewDec(1)
 	}
 
-	return sdk.NewCoin(rmax.Denom, cmin), sdk.NewCoin(rmax.Denom, cmax)
+	return sdk.NewDecCoinFromDec(rmax.Denom, cmin), sdk.NewDecCoinFromDec(rmax.Denom, cmax)
 }
 
 type shellScriptPricing struct {
@@ -335,7 +344,7 @@ type dataForScriptElement struct {
 	EndpointQuantity int              `json:"endpoint_quantity"`
 }
 
-func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, gspec *dtypes.GroupSpec) (sdk.Coin, error) {
+func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, gspec *dtypes.GroupSpec) (sdk.DecCoin, error) {
 	buf := &bytes.Buffer{}
 
 	dataForScript := make([]dataForScriptElement, len(gspec.Resources))
@@ -375,7 +384,7 @@ func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, 
 	encoder := json.NewEncoder(buf)
 	err := encoder.Encode(dataForScript)
 	if err != nil {
-		return sdk.Coin{}, err
+		return sdk.DecCoin{}, err
 	}
 
 	// Take 1 from the channel
@@ -401,11 +410,11 @@ func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, 
 	err = cmd.Run()
 
 	if ctxErr := processCtx.Err(); ctxErr != nil {
-		return sdk.Coin{}, ctxErr
+		return sdk.DecCoin{}, ctxErr
 	}
 
 	if err != nil {
-		return sdk.Coin{}, fmt.Errorf("%w: script failure %s", err, stderrBuf.String())
+		return sdk.DecCoin{}, fmt.Errorf("%w: script failure %s", err, stderrBuf.String())
 	}
 
 	// Decode the result
@@ -415,21 +424,25 @@ func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, 
 	var priceNumber json.Number
 	err = decoder.Decode(&priceNumber)
 	if err != nil {
-		return sdk.Coin{}, fmt.Errorf("%w: script failure %s", err, stderrBuf.String())
+		return sdk.DecCoin{}, fmt.Errorf("%w: script failure %s", err, stderrBuf.String())
 	}
 
-	price, err := priceNumber.Int64()
+	price, err := sdk.NewDecFromStr(priceNumber.String())
 	if err != nil {
-		return sdk.Coin{}, ErrBidQuantityInvalid
+		return sdk.DecCoin{}, ErrBidQuantityInvalid
 	}
 
-	if price == 0 {
-		return sdk.Coin{}, ErrBidZero
+	if price.IsZero() {
+		return sdk.DecCoin{}, ErrBidZero
 	}
 
-	if price < 0 {
-		return sdk.Coin{}, ErrBidQuantityInvalid
+	if price.IsNegative() {
+		return sdk.DecCoin{}, ErrBidQuantityInvalid
 	}
 
-	return sdk.NewInt64Coin(denom, price), nil
+	if !price.LTE(sdk.MaxSortableDec) {
+		return sdk.DecCoin{}, ErrBidQuantityInvalid
+	}
+
+	return sdk.NewDecCoinFromDec(denom, price), nil
 }

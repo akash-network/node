@@ -4,7 +4,7 @@
 # image's name in GH Actions.
 export KIND_NAME ?= $(shell basename $$PWD)
 
-KINDEST_VERSION  ?= v1.21.1
+KINDEST_VERSION  ?= v1.22.2
 KIND_IMG         ?= kindest/node:$(KINDEST_VERSION)
 
 K8S_CONTEXT      ?= $(shell kubectl config current-context)

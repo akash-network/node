@@ -243,7 +243,7 @@ func (is *inventoryService) resourcesToCommit(rgroup atypes.ResourceGroup) atype
 		v := dtypes.Resource{
 			Resources: runits,
 			Count:     resource.Count,
-			Price:     sdk.Coin{},
+			Price:     sdk.DecCoin{},
 		}
 
 		replacedResources = append(replacedResources, v)

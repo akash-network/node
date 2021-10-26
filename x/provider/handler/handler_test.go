@@ -232,7 +232,7 @@ func TestProviderUpdateAttributes(t *testing.T) {
 	order, err := suite.mkeeper.CreateOrder(suite.ctx, group.ID(), group.GroupSpec)
 	require.NoError(t, err)
 
-	price := testutil.Coin(t)
+	price := testutil.DecCoin(t)
 
 	bid, err := suite.mkeeper.CreateBid(suite.ctx, order.ID(), addr, price)
 	require.NoError(t, err)

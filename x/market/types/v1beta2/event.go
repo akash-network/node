@@ -84,10 +84,10 @@ func (e EventOrderClosed) ToSDKEvent() sdk.Event {
 type EventBidCreated struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
 	ID      BidID                   `json:"id"`
-	Price   sdk.Coin                `json:"price"`
+	Price   sdk.DecCoin             `json:"price"`
 }
 
-func NewEventBidCreated(id BidID, price sdk.Coin) EventBidCreated {
+func NewEventBidCreated(id BidID, price sdk.DecCoin) EventBidCreated {
 	return EventBidCreated{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
@@ -114,10 +114,10 @@ func (e EventBidCreated) ToSDKEvent() sdk.Event {
 type EventBidClosed struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
 	ID      BidID                   `json:"id"`
-	Price   sdk.Coin                `json:"price"`
+	Price   sdk.DecCoin             `json:"price"`
 }
 
-func NewEventBidClosed(id BidID, price sdk.Coin) EventBidClosed {
+func NewEventBidClosed(id BidID, price sdk.DecCoin) EventBidClosed {
 	return EventBidClosed{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
@@ -144,10 +144,10 @@ func (e EventBidClosed) ToSDKEvent() sdk.Event {
 type EventLeaseCreated struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
 	ID      LeaseID                 `json:"id"`
-	Price   sdk.Coin                `json:"price"`
+	Price   sdk.DecCoin             `json:"price"`
 }
 
-func NewEventLeaseCreated(id LeaseID, price sdk.Coin) EventLeaseCreated {
+func NewEventLeaseCreated(id LeaseID, price sdk.DecCoin) EventLeaseCreated {
 	return EventLeaseCreated{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
@@ -173,10 +173,10 @@ func (e EventLeaseCreated) ToSDKEvent() sdk.Event {
 type EventLeaseClosed struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
 	ID      LeaseID                 `json:"id"`
-	Price   sdk.Coin                `json:"price"`
+	Price   sdk.DecCoin             `json:"price"`
 }
 
-func NewEventLeaseClosed(id LeaseID, price sdk.Coin) EventLeaseClosed {
+func NewEventLeaseClosed(id LeaseID, price sdk.DecCoin) EventLeaseClosed {
 	return EventLeaseClosed{
 		Context: sdkutil.BaseModuleEvent{
 			Module: ModuleName,
@@ -266,30 +266,30 @@ func parseEVLeaseID(attrs []sdk.Attribute) (LeaseID, error) {
 	return LeaseID(bid), nil
 }
 
-func priceEVAttributes(price sdk.Coin) []sdk.Attribute {
+func priceEVAttributes(price sdk.DecCoin) []sdk.Attribute {
 	return []sdk.Attribute{
 		sdk.NewAttribute(evPriceDenomKey, price.Denom),
 		sdk.NewAttribute(evPriceAmountKey, price.Amount.String()),
 	}
 }
 
-func parseEVPriceAttributes(attrs []sdk.Attribute) (sdk.Coin, error) {
+func parseEVPriceAttributes(attrs []sdk.Attribute) (sdk.DecCoin, error) {
 	denom, err := sdkutil.GetString(attrs, evPriceDenomKey)
 	if err != nil {
-		return sdk.Coin{}, err
+		return sdk.DecCoin{}, err
 	}
 
 	amounts, err := sdkutil.GetString(attrs, evPriceAmountKey)
 	if err != nil {
-		return sdk.Coin{}, err
+		return sdk.DecCoin{}, err
 	}
 
-	amount, ok := sdk.NewIntFromString(amounts)
-	if !ok {
-		return sdk.Coin{}, ErrParsingPrice
+	amount, err := sdk.NewDecFromStr(amounts)
+	if err != nil {
+		return sdk.DecCoin{}, ErrParsingPrice
 	}
 
-	return sdk.NewCoin(denom, amount), nil
+	return sdk.NewDecCoinFromDec(denom, amount), nil
 }
 
 // ParseEvent parses event and returns details of event and error if occurred

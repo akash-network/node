@@ -1,10 +1,35 @@
 #!/usr/bin/env bash
+# shellcheck shell=bash
+
+set -e
+
+if [[ "$SHELL" == "bash" ]]; then
+  if [ "${BASH_VERSINFO:-0}" -lt 4 ]; then
+    echo "the script needs BASH 4 or above" >&2
+    exit 1
+  fi
+fi
 
 #  To run this script, the following commands need to be installed:
 #
 # * jq 1.5.1 or newer
 # * bc
 # * curl
+
+if ! command -v jq &> /dev/null ; then
+  echo "jq could not be found"
+  exit 1
+fi
+
+if ! command -v bc &> /dev/null ; then
+  echo "bc could not be found"
+  exit 1
+fi
+
+if ! command -v curl &> /dev/null ; then
+  echo "curl could not be found"
+  exit 1
+fi
 
 # One can set API_URL env variable to the url that returns coingecko like response, something like: `{"akash-network":{"usd":3.57}}`
 # and if the API_URL isn't set, the default api url will be used
@@ -55,6 +80,7 @@ for group in $(jq -c '.[]' <<<"$script_input"); do
       class=$(jq -r '.class' <<<"$storage")
 
       if [ -v 'STORAGE_USD_SCALE[class]' ]; then
+        echo "requests unsupported storage class \"$class\"" >&2
         exit 1
       fi
 
@@ -70,7 +96,6 @@ done
 # calculate the total cost in USD for each resource
 cpu_cost_usd=$(bc -l <<<"${cpu_total}*${CPU_USD_SCALE}")
 memory_cost_usd=$(bc -l <<<"${memory_total}*${MEMORY_USD_SCALE}")
-#storage_cost_usd=$(bc -l <<<"${storage_total}*${STORAGE_USD_SCALE}")
 endpoint_cost_usd=$(bc -l <<<"${endpoint_total}*${ENDPOINT_USD_SCALE}")
 
 # validate the USD cost for each resource
@@ -78,12 +103,14 @@ if [ 1 -eq "$(bc <<<"${cpu_cost_usd}<0")" ] || [ 0 -eq "$(bc <<<"${cpu_cost_usd}
   [ 1 -eq "$(bc <<<"${memory_cost_usd}<0")" ] || [ 0 -eq "$(bc <<<"${memory_cost_usd}<=${MAX_INT64}")" ] ||
   [ 1 -eq "$(bc <<<"${storage_cost_usd}<0")" ] || [ 0 -eq "$(bc <<<"${storage_cost_usd}<=${MAX_INT64}")" ] ||
   [ 1 -eq "$(bc <<<"${endpoint_cost_usd}<0")" ] || [ 0 -eq "$(bc <<<"${endpoint_cost_usd}<=${MAX_INT64}")" ]; then
+  echo "invalid cost results for units" >&2
   exit 1
 fi
 
 # finally, calculate the total cost in USD of all resources and validate it
 total_cost_usd=$(bc -l <<<"${cpu_cost_usd}+${memory_cost_usd}+${storage_cost_usd}+${endpoint_cost_usd}")
 if [ 1 -eq "$(bc <<<"${total_cost_usd}<0")" ] || [ 0 -eq "$(bc <<<"${total_cost_usd}<=${MAX_INT64}")" ]; then
+  echo "invalid total cost $total_cost_usd" >&2
   exit 1
 fi
 

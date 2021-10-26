@@ -316,7 +316,7 @@ loop:
 				break loop
 			}
 
-			price := result.Value().(sdk.Coin)
+			price := result.Value().(sdk.DecCoin)
 			maxPrice := group.GroupSpec.Price()
 
 			if maxPrice.IsLT(price) {

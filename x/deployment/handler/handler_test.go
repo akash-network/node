@@ -316,8 +316,8 @@ func TestFundedDeployment(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, deployment.ID().Owner, acc.Owner)
 	require.Equal(t, suite.depositor, acc.Depositor)
-	require.Equal(t, sdk.NewCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Balance)
-	require.Equal(t, msg.Deposit, acc.Funds)
+	require.Equal(t, sdk.NewDecCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Balance)
+	require.Equal(t, sdk.NewDecCoinFromCoin(msg.Deposit), acc.Funds)
 
 	// deposit additional amount from the owner
 	depositMsg := &types.MsgDepositDeployment{
@@ -334,8 +334,8 @@ func TestFundedDeployment(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, deployment.ID().Owner, acc.Owner)
 	require.Equal(t, suite.depositor, acc.Depositor)
-	require.Equal(t, depositMsg.Amount, acc.Balance)
-	require.Equal(t, msg.Deposit, acc.Funds)
+	require.Equal(t, sdk.NewDecCoinFromCoin(depositMsg.Amount), acc.Balance)
+	require.Equal(t, sdk.NewDecCoinFromCoin(msg.Deposit), acc.Funds)
 
 	// deposit additional amount from the depositor
 	depositMsg1 := &types.MsgDepositDeployment{
@@ -352,8 +352,8 @@ func TestFundedDeployment(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, deployment.ID().Owner, acc.Owner)
 	require.Equal(t, suite.depositor, acc.Depositor)
-	require.Equal(t, depositMsg.Amount, acc.Balance)
-	require.Equal(t, msg.Deposit.Add(depositMsg1.Amount), acc.Funds)
+	require.Equal(t, sdk.NewDecCoinFromCoin(depositMsg.Amount), acc.Balance)
+	require.Equal(t, sdk.NewDecCoinFromCoin(msg.Deposit.Add(depositMsg1.Amount)), acc.Funds)
 
 	// depositing additional amount from a random depositor should fail
 	depositMsg2 := &types.MsgDepositDeployment{
@@ -368,7 +368,7 @@ func TestFundedDeployment(t *testing.T) {
 	// make some payment from the escrow account
 	pid := "test_pid"
 	providerAddr := testutil.AccAddress(t)
-	rate := sdk.NewCoin(msg.Deposit.Denom, sdk.NewInt(12500000))
+	rate := sdk.NewDecCoin(msg.Deposit.Denom, sdk.NewInt(12500000))
 	require.NoError(t, suite.EscrowKeeper().PaymentCreate(suite.ctx, accID, pid, providerAddr, rate))
 	ctx := suite.ctx.WithBlockHeight(acc.SettledAt + 1)
 	require.NoError(t, suite.EscrowKeeper().PaymentWithdraw(ctx, accID, pid))
@@ -376,8 +376,8 @@ func TestFundedDeployment(t *testing.T) {
 	// ensure that the escrow account's state gets updated correctly
 	acc, err = suite.EscrowKeeper().GetAccount(ctx, accID)
 	require.NoError(t, err)
-	require.Equal(t, sdk.NewCoin(msg.Deposit.Denom, sdk.NewInt(2500000)), acc.Balance)
-	require.Equal(t, sdk.NewCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Funds)
+	require.Equal(t, sdk.NewDecCoin(msg.Deposit.Denom, sdk.NewInt(2500000)), acc.Balance)
+	require.Equal(t, sdk.NewDecCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Funds)
 
 	// close the deployment
 	closeMsg := &types.MsgCloseDeployment{ID: deployment.ID()}
@@ -388,8 +388,8 @@ func TestFundedDeployment(t *testing.T) {
 	// ensure that the escrow account has no balance left
 	acc, err = suite.EscrowKeeper().GetAccount(ctx, accID)
 	require.NoError(t, err)
-	require.Equal(t, sdk.NewCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Balance)
-	require.Equal(t, sdk.NewCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Funds)
+	require.Equal(t, sdk.NewDecCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Balance)
+	require.Equal(t, sdk.NewDecCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Funds)
 }
 
 func (st *testSuite) createDeployment() (types.Deployment, []types.Group) {
@@ -401,7 +401,7 @@ func (st *testSuite) createDeployment() (types.Deployment, []types.Group) {
 		{
 			Resources: testutil.ResourceUnits(st.t),
 			Count:     1,
-			Price:     testutil.AkashCoinRandom(st.t),
+			Price:     testutil.AkashDecCoinRandom(st.t),
 		},
 	}
 	groups := []types.Group{

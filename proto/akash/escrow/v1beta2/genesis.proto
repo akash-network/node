@@ -14,7 +14,7 @@ message GenesisState {
     (gogoproto.moretags) = "yaml:\"accounts\""
   ];
 
-  repeated Payment payments = 2 [
+  repeated FractionalPayment payments = 2 [
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "payments",
     (gogoproto.moretags) = "yaml:\"payments\""
