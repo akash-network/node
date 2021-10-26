@@ -103,6 +103,7 @@ func migrateLease(oldValueBz []byte, cdc codec.BinaryCodec) codec.ProtoMarshaler
 		State:     types.Lease_State(oldObj.State),
 		Price:     sdk.NewDecCoinFromCoin(oldObj.Price),
 		CreatedAt: oldObj.CreatedAt,
+		ClosedOn:  0, // For leases created prior to this change never report the data
 	}
 }
 
