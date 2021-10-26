@@ -47,7 +47,7 @@ func doLeaseStatus(cmd *cobra.Command) error {
 
 	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, cctx.Keyring)
 	if err != nil {
-		return err
+		return markRPCServerError(err)
 	}
 
 	gclient, err := gwrest.NewClient(akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})

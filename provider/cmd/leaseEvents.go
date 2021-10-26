@@ -42,7 +42,7 @@ func doLeaseEvents(cmd *cobra.Command) error {
 
 	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, cctx.Keyring)
 	if err != nil {
-		return err
+		return markRPCServerError(err)
 	}
 
 	dseq, err := dseqFromFlags(cmd.Flags())
@@ -55,7 +55,7 @@ func doLeaseEvents(cmd *cobra.Command) error {
 		DSeq:  dseq,
 	})
 	if err != nil {
-		return err
+		return markRPCServerError(err)
 	}
 
 	svcs, err := cmd.Flags().GetString(FlagService)
