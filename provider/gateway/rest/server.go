@@ -60,7 +60,7 @@ func NewJwtServer(ctx context.Context,
 	}
 
 	var err error
-	srv.TLSConfig, err = gwutils.NewServerTLSConfig(context.Background(), []tls.Certificate{cert}, cquery)
+	srv.TLSConfig, err = gwutils.NewServerTLSConfig(ctx, []tls.Certificate{cert}, cquery)
 	if err != nil {
 		return nil, err
 	}

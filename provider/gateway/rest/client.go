@@ -81,8 +81,8 @@ type ServiceLogs struct {
 	OnClose <-chan string
 }
 
-func NewJwtClient(qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Certificate) (JwtClient, error) {
-	res, err := qclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: addr.String()})
+func NewJwtClient(ctx context.Context, qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Certificate) (JwtClient, error) {
+	res, err := qclient.Provider(ctx, &ptypes.QueryProviderRequest{Owner: addr.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -223,6 +223,7 @@ type ClaimsV1 struct {
 }
 
 var errRequiredCertSerialNum = errors.New("cert_serial_number must be present in claims")
+var errNonNumericCertSerialNum = errors.New("cert_serial_number must be numeric in claims")
 
 func (c *ClientCustomClaims) Valid() error {
 	_, err := sdk.AccAddressFromBech32(c.Subject)
@@ -235,6 +236,9 @@ func (c *ClientCustomClaims) Valid() error {
 	}
 	if c.AkashNamespace == nil || c.AkashNamespace.V1 == nil || c.AkashNamespace.V1.CertSerialNumber == "" {
 		return errRequiredCertSerialNum
+	}
+	if !sdk.IsNumeric(c.AkashNamespace.V1.CertSerialNumber) {
+		return errNonNumericCertSerialNum
 	}
 	return nil
 }

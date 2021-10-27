@@ -72,7 +72,7 @@ func doJwtServerAuthenticateCmd(ctx context.Context, cmd *cobra.Command, _ []str
 		return err
 	}
 
-	gclient, err := gwrest.NewJwtClient(akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})
+	gclient, err := gwrest.NewJwtClient(ctx, akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})
 	if err != nil {
 		return err
 	}
