@@ -37,7 +37,7 @@ else
 fi
 
 # s2
-if [[ -z $("${SCRIPT_DIR}"/semver.sh get prerel "$to_tag") ]]; then
+if [[ -z $("${SCRIPT_DIR}"/semver.sh get prerel "$to_tag" 2>/dev/null) ]]; then
 	tag_regexp=$version_rel
 else
 	tag_regexp=$version_prerel
