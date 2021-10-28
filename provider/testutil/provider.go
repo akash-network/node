@@ -116,7 +116,7 @@ func TestJwtServerAuthenticate(clientCtx client.Context, provider, from string) 
 // RunLocalProvider wraps up the Provider cobra command for testing and supplies
 // new default values to the flags.
 // prev: akashctl provider run --from=foo --cluster-k8s --gateway-listen-address=localhost:39729 --home=/tmp/akash_integration_TestE2EApp_324892307/.akashctl --node=tcp://0.0.0.0:41863 --keyring-backend test
-func RunLocalProvider(ctx context.Context, clientCtx cosmosclient.Context, chainID, nodeRPC, akashHome, from, gatewayListenAddress, jwtGatewayListenAddress string, extraArgs ...string) (sdktest.BufferWriter,
+func RunLocalProvider(ctx context.Context, clientCtx cosmosclient.Context, chainID, nodeRPC, akashHome, from, gatewayListenAddress string, extraArgs ...string) (sdktest.BufferWriter,
 	error) {
 	takeCmdLock()
 	cmd := pcmd.RunCmd()
@@ -132,11 +132,26 @@ func RunLocalProvider(ctx context.Context, clientCtx cosmosclient.Context, chain
 		fmt.Sprintf("--%s=%s", flags.FlagHome, akashHome),
 		fmt.Sprintf("--from=%s", from),
 		fmt.Sprintf("--%s=%s", pcmd.FlagGatewayListenAddress, gatewayListenAddress),
-		fmt.Sprintf("--%s=%s", pcmd.FlagJWTGatewayListenAddress, jwtGatewayListenAddress),
 		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
 		fmt.Sprintf("--%s=%s", pcmd.FlagClusterPublicHostname, TestClusterPublicHostname),
 		fmt.Sprintf("--%s=%d", pcmd.FlagClusterNodePortQuantity, TestClusterNodePortQuantity),
 		fmt.Sprintf("--%s=%s", pcmd.FlagBidPricingStrategy, "randomRange"),
+	}
+
+	args = append(args, extraArgs...)
+
+	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmd, args...)
+}
+
+func RunProviderJWTServer(ctx context.Context, clientCtx cosmosclient.Context, from, jwtGatewayListenAddress string, extraArgs ...string) (sdktest.BufferWriter,
+	error) {
+	takeCmdLock()
+	cmd := pcmd.RunJWTServerCmd()
+	releaseCmdLock()
+
+	args := []string{
+		fmt.Sprintf("--from=%s", from),
+		fmt.Sprintf("--%s=%s", pcmd.FlagJWTGatewayListenAddress, jwtGatewayListenAddress),
 	}
 
 	args = append(args, extraArgs...)

@@ -296,9 +296,18 @@ func (s *IntegrationTestSuite) SetupSuite() {
 			cliHome,
 			keyName,
 			provURL.Host,
-			jwtURL.Host,
 			fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 			"--deployment-runtime-class=none",
+		)
+
+		return err
+	})
+
+	s.group.Go(func() error {
+		_, err := ptestutil.RunProviderJWTServer(ctx,
+			cctx,
+			keyName,
+			jwtURL.Host,
 		)
 
 		return err

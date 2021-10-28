@@ -20,15 +20,14 @@ import (
 )
 
 const (
-	FlagService         = "service"
-	FlagProvider        = "provider"
-	FlagDSeq            = "dseq"
-	FlagGSeq            = "gseq"
-	FlagOSeq            = "oseq"
-	flagOutput          = "output"
-	flagFollow          = "follow"
-	flagTail            = "tail"
-	FlagJwtExpiresAfter = "jwt-expires-after"
+	FlagService  = "service"
+	FlagProvider = "provider"
+	FlagDSeq     = "dseq"
+	FlagGSeq     = "gseq"
+	FlagOSeq     = "oseq"
+	flagOutput   = "output"
+	flagFollow   = "follow"
+	flagTail     = "tail"
 )
 
 const (

@@ -10,13 +10,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	akashclient "github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/cmd/common"
 	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func JwtServerAuthenticateCmd() *cobra.Command {
