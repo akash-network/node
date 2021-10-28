@@ -150,7 +150,7 @@ loop:
 		case withdrawAll := <-withdrawAllResult:
 
 			withdrawAllResult = nil
-			withdrawalTicker.Reset(bc.cfg.PollingPeriod) // Re-enable the timer
+			withdrawalTicker.Reset(bc.cfg.WithdrawalPeriod) // Re-enable the timer
 			if err := withdrawAll.Error(); err != nil {
 				bc.log.Error("failed to started withdrawals", "err", err)
 			}
