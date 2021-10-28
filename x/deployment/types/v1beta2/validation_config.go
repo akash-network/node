@@ -52,9 +52,9 @@ var validationConfig = ValidationConfig{
 	MaxGroupCount: 20,
 	MaxGroupUnits: 20,
 
-	MaxGroupCPU:     20 * 1000,
-	MaxGroupMemory:  32 * unit.Gi,
-	MaxGroupStorage: unit.Ti,
+	MaxGroupCPU:     512 * 1000,
+	MaxGroupMemory:  1024 * unit.Gi,
+	MaxGroupStorage: 32 * unit.Ti,
 }
 
 func GetValidationConfig() ValidationConfig {
