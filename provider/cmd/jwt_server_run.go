@@ -6,8 +6,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"io"
+	"net/http"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -31,7 +35,7 @@ func RunJWTServerCmd() *cobra.Command {
 		Short:        "run jwt server",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return common.RunForever(func(ctx context.Context) error {
+			return common.RunForeverWithContext(cmd.Context(), func(ctx context.Context) error {
 				return doRunJwtServerCmd(ctx, cmd, args)
 			})
 		},
@@ -86,6 +90,7 @@ func doRunJwtServerCmd(ctx context.Context, cmd *cobra.Command, _ []string) erro
 	}
 
 	cquery := cmodule.AppModuleBasic{}.GetQueryClient(cctx)
+	group, ctx := errgroup.WithContext(ctx)
 
 	jwtGateway, err := gwrest.NewJwtServer(
 		ctx,
@@ -100,6 +105,19 @@ func doRunJwtServerCmd(ctx context.Context, cmd *cobra.Command, _ []string) erro
 		return err
 	}
 
-	return jwtGateway.ListenAndServeTLS("", "")
+	group.Go(func() error {
+		return jwtGateway.ListenAndServeTLS("", "")
+	})
 
+	group.Go(func() error {
+		<-ctx.Done()
+		return jwtGateway.Close()
+	})
+
+	err = group.Wait()
+	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+
+	return nil
 }

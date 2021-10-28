@@ -303,8 +303,32 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		return err
 	})
 
+	// Run the hostname operator, after confirming the provider starts
+	const maxAttempts = 30
+	dialer := net.Dialer{
+		Timeout: time.Second * 3,
+	}
+
+	attempts := 0
+	s.T().Log("waiting for provider to run before starting JWT server")
+	for {
+		conn, err := dialer.DialContext(s.ctx, "tcp", provHost)
+		if err != nil {
+			s.T().Logf("connecting to provider returned %v", err)
+			_, ok := err.(net.Error)
+			s.Require().True(ok, "error should be net error not %v", err)
+			attempts++
+			s.Require().Less(attempts, maxAttempts)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		_ = conn.Close() // Connected OK
+		break
+	}
+
 	s.group.Go(func() error {
-		_, err := ptestutil.RunProviderJWTServer(ctx,
+		s.T().Log("starting JWT server for test")
+		_, err := ptestutil.RunProviderJWTServer(s.ctx,
 			cctx,
 			keyName,
 			jwtURL.Host,
@@ -313,18 +337,12 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		return err
 	})
 
-	// Run the hostname operator, after confirming the provider starts
-	const maxAttempts = 30
-	dialer := net.Dialer{
-		Timeout: time.Second * 3,
-	}
-
-	attempts := 0
-	s.T().Log("waiting for provider to run before starting hostname operator")
+	attempts = 0
+	s.T().Log("waiting for JWT server to run before starting hostname operator")
 	for {
-		conn, err := dialer.DialContext(s.ctx, "tcp", provHost)
+		conn, err := dialer.DialContext(s.ctx, "tcp", jwtHost)
 		if err != nil {
-			s.T().Logf("connecting to provider returned %v", err)
+			s.T().Logf("connecting to JWT server returned %v", err)
 			_, ok := err.(net.Error)
 			s.Require().True(ok, "error should be net error not %v", err)
 			attempts++
