@@ -40,7 +40,7 @@ type ValidationConfig struct {
 var validationConfig = ValidationConfig{
 	MaxUnitCPU:     256 * 1000,    // 256 CPUs
 	MaxUnitMemory:  512 * unit.Gi, // 512 Gi
-	MaxUnitStorage: 32 * unit.Ti,      // 32 Ti
+	MaxUnitStorage: 32 * unit.Ti,  // 32 Ti
 	MaxUnitCount:   50,
 	MaxUnitPrice:   10000000, // 10akt
 
