@@ -12,6 +12,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 
 	"github.com/ovrclk/akash/x/inflation/keeper"
+	"github.com/ovrclk/akash/x/inflation/simulation"
 	types "github.com/ovrclk/akash/x/inflation/types/v1beta2"
 
 	"github.com/pkg/errors"
@@ -162,7 +163,7 @@ func NewAppModuleSimulation(k keeper.IKeeper) AppModuleSimulation {
 
 // GenerateGenesisState creates a randomized GenState of the staking module.
 func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
-	//simulation.RandomizedGenState(simState)
+	simulation.RandomizedGenState(simState)
 }
 
 // ProposalContents doesn't return any content functions for governance proposals.

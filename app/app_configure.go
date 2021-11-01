@@ -188,5 +188,9 @@ func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 		cert.NewAppModuleSimulation(
 			app.keeper.cert,
 		),
+
+		inflation.NewAppModuleSimulation(
+			app.keeper.inflation,
+		),
 	}
 }
