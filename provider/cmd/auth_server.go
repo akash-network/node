@@ -25,25 +25,25 @@ import (
 )
 
 const (
-	FlagJWTGatewayListenAddress = "jwt-gateway-listen-address"
-	FlagJwtExpiresAfter         = "jwt-expires-after"
+	FlagJwtAuthListenAddress = "jwt-auth-listen-address"
+	FlagJwtExpiresAfter      = "jwt-expires-after"
 )
 
-func RunJWTServerCmd() *cobra.Command {
+func AuthServerCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:          "run-jwt-server",
-		Short:        "run jwt server",
+		Use:          "auth-server",
+		Short:        "Run the authentication server to issue JWTs to tenants",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return common.RunForeverWithContext(cmd.Context(), func(ctx context.Context) error {
-				return doRunJwtServerCmd(ctx, cmd, args)
+				return doAuthServerCmd(ctx, cmd, args)
 			})
 		},
 	}
 	flags.AddTxFlagsToCmd(cmd)
 
-	cmd.Flags().String(FlagJWTGatewayListenAddress, "0.0.0.0:8444", "JWT Gateway listen address")
-	if err := viper.BindPFlag(FlagJWTGatewayListenAddress, cmd.Flags().Lookup(FlagJWTGatewayListenAddress)); err != nil {
+	cmd.Flags().String(FlagJwtAuthListenAddress, "0.0.0.0:8444", "`host:port` for the JWT server to listen on")
+	if err := viper.BindPFlag(FlagJwtAuthListenAddress, cmd.Flags().Lookup(FlagJwtAuthListenAddress)); err != nil {
 		return nil
 	}
 
@@ -57,9 +57,9 @@ func RunJWTServerCmd() *cobra.Command {
 	return cmd
 }
 
-func doRunJwtServerCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
+func doAuthServerCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	expiresAfter := viper.GetDuration(FlagJwtExpiresAfter)
-	jwtGwAddr := viper.GetString(FlagJWTGatewayListenAddress)
+	jwtGwAddr := viper.GetString(FlagJwtAuthListenAddress)
 
 	cctx, err := sdkclient.GetClientTxContext(cmd)
 	if err != nil {

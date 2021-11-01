@@ -18,14 +18,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-func JwtServerAuthenticateCmd() *cobra.Command {
+func AuthenticateCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:          "jwt-server-authenticate",
-		Short:        "get JWT",
+		Use:          "authenticate",
+		Short:        "Authenticate with a provider using mTLS and get a JWT in return",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return common.RunForever(func(ctx context.Context) error {
-				return doJwtServerAuthenticateCmd(ctx, cmd, args)
+				return doAuthenticateCmd(ctx, cmd, args)
 			})
 		},
 	}
@@ -44,7 +44,7 @@ func JwtServerAuthenticateCmd() *cobra.Command {
 	return cmd
 }
 
-func doJwtServerAuthenticateCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
+func doAuthenticateCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	cctx, err := sdkclient.GetClientTxContext(cmd)
 	txFactory := tx.NewFactoryCLI(cctx, cmd.Flags()).WithTxConfig(cctx.TxConfig).WithAccountRetriever(cctx.AccountRetriever)
 	if err != nil {

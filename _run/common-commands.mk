@@ -15,9 +15,8 @@ PRICE          ?= 10uakt
 CERT_HOSTNAME  ?= localhost
 LEASE_SERVICES ?= web
 
-GATEWAY_JWT_HOSTNAME ?= localhost
-GATEWAY_JWT_HOST     ?= $(GATEWAY_JWT_HOSTNAME):8444
-GATEWAY_ENDPOINT ?= https://$(GATEWAY_JWT_HOST)
+JWT_AUTH_HOSTNAME ?= localhost
+JWT_AUTH_HOST     ?= $(JWT_AUTH_HOSTNAME):8444
 
 .PHONY: multisig-send
 multisig-send:
@@ -59,17 +58,17 @@ provider-update:
 provider-status:
 	$(AKASH) provider status $(PROVIDER_ADDRESS)
 
-.PHONY: jwt-server-authenticate
-jwt-server-authenticate:
-	$(AKASH) provider jwt-server-authenticate \
+.PHONY: authenticate
+authenticate:
+	$(AKASH) provider authenticate \
 		--from      "$(KEY_ADDRESS)" \
 		--provider  "$(PROVIDER_ADDRESS)"
 
-.PHONY: run-jwt-server
-run-jwt-server:
-	$(AKASH) provider run-jwt-server \
+.PHONY: auth-server
+auth-server:
+	$(AKASH) provider auth-server \
 		--from "$(PROVIDER_KEY_NAME)" \
-		--jwt-gateway-listen-address "$(GATEWAY_JWT_HOST)" \
+		--jwt-auth-listen-address "$(JWT_AUTH_HOST)" \
 
 .PHONY: send-manifest
 send-manifest:

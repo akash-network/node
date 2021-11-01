@@ -107,7 +107,7 @@ func TestJwtServerAuthenticate(clientCtx client.Context, provider, from string) 
 	}
 
 	takeCmdLock()
-	cobraCmd := pcmd.JwtServerAuthenticateCmd()
+	cobraCmd := pcmd.AuthenticateCmd()
 	releaseCmdLock()
 
 	return testutilcli.ExecTestCLICmd(context.Background(), clientCtx, cobraCmd, args...)
@@ -146,12 +146,12 @@ func RunLocalProvider(ctx context.Context, clientCtx cosmosclient.Context, chain
 func RunProviderJWTServer(ctx context.Context, clientCtx cosmosclient.Context, from, jwtGatewayListenAddress string, extraArgs ...string) (sdktest.BufferWriter,
 	error) {
 	takeCmdLock()
-	cmd := pcmd.RunJWTServerCmd()
+	cmd := pcmd.AuthServerCmd()
 	releaseCmdLock()
 
 	args := []string{
 		fmt.Sprintf("--from=%s", from),
-		fmt.Sprintf("--%s=%s", pcmd.FlagJWTGatewayListenAddress, jwtGatewayListenAddress),
+		fmt.Sprintf("--%s=%s", pcmd.FlagJwtAuthListenAddress, jwtGatewayListenAddress),
 	}
 
 	args = append(args, extraArgs...)
