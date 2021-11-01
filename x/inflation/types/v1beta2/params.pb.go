@@ -4,7 +4,6 @@
 package v1beta2
 
 import (
-	encoding_binary "encoding/binary"
 	fmt "fmt"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -29,9 +28,13 @@ type Params struct {
 	// InflationDecayFactor is the number of years it takes inflation to halve.
 	InflationDecayFactor uint32 `protobuf:"varint,1,opt,name=inflation_decay_factor,json=inflationDecayFactor,proto3" json:"inflation_decay_factor" yaml:"inflation_decay_factor"`
 	// InitialInflation is the rate at which inflation starts at genesis.
-	InitialInflation float32 `protobuf:"fixed32,2,opt,name=initial_inflation,json=initialInflation,proto3" json:"initial_inflation" yaml:"initial_inflation"`
+	// It is a float value. Maximum: 100.0
+	// Amino has issues marshalling float, so type is marked string.
+	InitialInflation string `protobuf:"bytes,2,opt,name=initial_inflation,json=initialInflation,proto3" json:"initial_inflation" yaml:"initial_inflation"`
 	// Variance defines the fraction by which inflation can vary from its previous value in a block.
-	Variance float32 `protobuf:"fixed32,3,opt,name=variance,proto3" json:"variance" yaml:"variance"`
+	// It is a float value in the range [0.0, 1.0].
+	// Amino has issues marshalling float, so type is marked string.
+	Variance string `protobuf:"bytes,3,opt,name=variance,proto3" json:"variance" yaml:"variance"`
 }
 
 func (m *Params) Reset()         { *m = Params{} }
@@ -74,18 +77,18 @@ func (m *Params) GetInflationDecayFactor() uint32 {
 	return 0
 }
 
-func (m *Params) GetInitialInflation() float32 {
+func (m *Params) GetInitialInflation() string {
 	if m != nil {
 		return m.InitialInflation
 	}
-	return 0
+	return ""
 }
 
-func (m *Params) GetVariance() float32 {
+func (m *Params) GetVariance() string {
 	if m != nil {
 		return m.Variance
 	}
-	return 0
+	return ""
 }
 
 func init() {
@@ -108,7 +111,7 @@ var fileDescriptor_fea313162cb1e23f = []byte{
 	0x09, 0x53, 0xe1, 0x02, 0x52, 0xe0, 0x06, 0x96, 0x7f, 0x75, 0x4f, 0x1e, 0x87, 0xce, 0x4f, 0xf7,
 	0xe4, 0x65, 0x2b, 0x13, 0x73, 0x73, 0xac, 0x94, 0xb0, 0xcb, 0x2b, 0x05, 0x89, 0x64, 0x62, 0x31,
 	0x50, 0xa8, 0x88, 0x4b, 0x30, 0x33, 0x2f, 0xb3, 0x24, 0x33, 0x31, 0x27, 0x1e, 0x2e, 0x2f, 0xc1,
-	0xa4, 0xc0, 0xa8, 0xc1, 0xe4, 0xe4, 0xfa, 0xe8, 0x9e, 0xbc, 0x80, 0x27, 0x44, 0x12, 0xee, 0x98,
+	0xa4, 0xc0, 0xa8, 0xc1, 0xe9, 0xe4, 0xfa, 0xe8, 0x9e, 0xbc, 0x80, 0x27, 0x44, 0x12, 0xee, 0x98,
 	0x57, 0xf7, 0xe4, 0x31, 0x35, 0x7c, 0xba, 0x27, 0x2f, 0x01, 0xb3, 0x1c, 0x4d, 0x4a, 0x29, 0x48,
 	0x20, 0x13, 0xcd, 0x08, 0x21, 0x77, 0x2e, 0x8e, 0xb2, 0xc4, 0xa2, 0xcc, 0xc4, 0xbc, 0xe4, 0x54,
 	0x09, 0x66, 0xb0, 0x55, 0xda, 0x8f, 0xee, 0xc9, 0x73, 0x84, 0x41, 0xc5, 0x5e, 0xdd, 0x93, 0x87,
@@ -117,7 +120,7 @@ var fileDescriptor_fea313162cb1e23f = []byte{
 	0xb8, 0xf0, 0x58, 0x8e, 0xe1, 0xc6, 0x63, 0x39, 0x86, 0x28, 0xc3, 0xf4, 0xcc, 0x92, 0x8c, 0xd2,
 	0x24, 0xbd, 0xe4, 0xfc, 0x5c, 0xfd, 0xfc, 0xb2, 0xa2, 0xe4, 0x9c, 0x6c, 0x7d, 0x48, 0xa4, 0x56,
 	0x20, 0x45, 0x6b, 0x49, 0x65, 0x41, 0x6a, 0x31, 0x2c, 0x72, 0x93, 0xd8, 0xc0, 0xf1, 0x64, 0x0c,
-	0x08, 0x00, 0x00, 0xff, 0xff, 0x53, 0x0b, 0xb4, 0x34, 0xfe, 0x01, 0x00, 0x00,
+	0x08, 0x00, 0x00, 0xff, 0xff, 0x74, 0xeb, 0x02, 0xbf, 0xfe, 0x01, 0x00, 0x00,
 }
 
 func (m *Params) Marshal() (dAtA []byte, err error) {
@@ -140,17 +143,19 @@ func (m *Params) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.Variance != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.Variance))))
+	if len(m.Variance) > 0 {
+		i -= len(m.Variance)
+		copy(dAtA[i:], m.Variance)
+		i = encodeVarintParams(dAtA, i, uint64(len(m.Variance)))
 		i--
-		dAtA[i] = 0x1d
+		dAtA[i] = 0x1a
 	}
-	if m.InitialInflation != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.InitialInflation))))
+	if len(m.InitialInflation) > 0 {
+		i -= len(m.InitialInflation)
+		copy(dAtA[i:], m.InitialInflation)
+		i = encodeVarintParams(dAtA, i, uint64(len(m.InitialInflation)))
 		i--
-		dAtA[i] = 0x15
+		dAtA[i] = 0x12
 	}
 	if m.InflationDecayFactor != 0 {
 		i = encodeVarintParams(dAtA, i, uint64(m.InflationDecayFactor))
@@ -180,11 +185,13 @@ func (m *Params) Size() (n int) {
 	if m.InflationDecayFactor != 0 {
 		n += 1 + sovParams(uint64(m.InflationDecayFactor))
 	}
-	if m.InitialInflation != 0 {
-		n += 5
+	l = len(m.InitialInflation)
+	if l > 0 {
+		n += 1 + l + sovParams(uint64(l))
 	}
-	if m.Variance != 0 {
-		n += 5
+	l = len(m.Variance)
+	if l > 0 {
+		n += 1 + l + sovParams(uint64(l))
 	}
 	return n
 }
@@ -244,27 +251,69 @@ func (m *Params) Unmarshal(dAtA []byte) error {
 				}
 			}
 		case 2:
-			if wireType != 5 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field InitialInflation", wireType)
 			}
-			var v uint32
-			if (iNdEx + 4) > l {
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowParams
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthParams
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthParams
+			}
+			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.InitialInflation = float32(math.Float32frombits(v))
+			m.InitialInflation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		case 3:
-			if wireType != 5 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Variance", wireType)
 			}
-			var v uint32
-			if (iNdEx + 4) > l {
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowParams
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthParams
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthParams
+			}
+			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.Variance = float32(math.Float32frombits(v))
+			m.Variance = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipParams(dAtA[iNdEx:])

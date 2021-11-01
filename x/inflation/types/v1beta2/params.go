@@ -1,6 +1,8 @@
 package v1beta2
 
 import (
+	"strconv"
+
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/pkg/errors"
 )
@@ -8,9 +10,9 @@ import (
 var _ paramtypes.ParamSet = (*Params)(nil)
 
 const (
-	DefaultInflationDecayFactor uint32  = 2 // years
-	DefaultInitialInflation     float32 = 100.0
-	DefaultVarince              float32 = 0.05
+	DefaultInflationDecayFactor uint32 = 2 // years
+	DefaultInitialInflation     string = "100.0"
+	DefaultVarince              string = "0.05"
 
 	keyInflationDecayFactor = "InflationDecayFactor"
 	keyInitialInflation     = "InitialInflation"
@@ -61,18 +63,32 @@ func validateInflationDecayFactor(i interface{}) error {
 }
 
 func validateInitialInflation(i interface{}) error {
-	v, ok := i.(float32)
-	if !ok || v > 100.0 {
+	v, ok := i.(string)
+	if !ok {
 		return errors.Wrapf(ErrInvalidParam, "%T", i)
+	}
+	initialInflation, err := strconv.ParseFloat(v, 32)
+	if err != nil {
+		return err
+	}
+	if initialInflation > 100.0 {
+		return errors.Wrapf(ErrInvalidInitialInflation, "%v", initialInflation)
 	}
 
 	return nil
 }
 
 func validateVariance(i interface{}) error {
-	v, ok := i.(float32)
-	if !ok || v < 0.0 || v > 1.0 {
+	v, ok := i.(string)
+	if !ok {
 		return errors.Wrapf(ErrInvalidParam, "%T", i)
+	}
+	variance, err := strconv.ParseFloat(v, 32)
+	if err != nil {
+		return err
+	}
+	if variance < 0.0 || variance > 1.0 {
+		return errors.Wrapf(ErrInvalidVariance, "%v", variance)
 	}
 
 	return nil

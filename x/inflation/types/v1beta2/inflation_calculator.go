@@ -1,8 +1,8 @@
 package v1beta2
 
 import (
-	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -21,13 +21,17 @@ func InflationCalculator(ctx sdk.Context, minter minttypes.Minter, params mintty
 	var inflationParams Params
 	InflationParamSubspace.GetParamSet(ctx, &inflationParams)
 	tHalf := float64(inflationParams.InflationDecayFactor)
+	initialInflation, err := strconv.ParseFloat(inflationParams.InitialInflation, 32)
+	if err != nil {
+		panic(err)
+	}
 
 	// Number of hours in an year = 8766 (averaging the leap year hours)
 	// Number of minutes in an hour = 60
 	// Number of seconds in a minute = 60
 	// => 60 * 60 * 8766 = Number of seconds per year
 	t := ctx.BlockTime().Sub(GenesisTime).Seconds() / (60 * 60 * 8766) // years passed
-	i := float64(inflationParams.InitialInflation) * math.Pow(2, -t/tHalf)
+	i := initialInflation * math.Pow(2, -t/tHalf)
 	idealInflation := sdk.NewDec(int64(i))
 
 	// (1 - bondedRatio/GoalBonded) * InflationRateChange
@@ -41,7 +45,7 @@ func InflationCalculator(ctx sdk.Context, minter minttypes.Minter, params mintty
 
 	// min, max currentInflation based on a defined range parameter 'r'
 	// currentInflation range = [I(t) - I(t) * R, I(t) + I(t) * R]
-	r, err := sdk.NewDecFromStr(fmt.Sprintf("%f", inflationParams.Variance))
+	r, err := sdk.NewDecFromStr(inflationParams.Variance)
 	if err != nil {
 		panic(err)
 	}

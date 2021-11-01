@@ -10,8 +10,8 @@ func RandomizedGenState(simState *module.SimulationState) {
 	deploymentGenesis := &types.GenesisState{
 		Params: types.Params{
 			InflationDecayFactor: 2,
-			InitialInflation:     100.0,
-			Variance:             0.05,
+			InitialInflation:     "100.0",
+			Variance:             "0.05",
 		},
 	}
 

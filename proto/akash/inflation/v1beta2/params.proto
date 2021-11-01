@@ -14,14 +14,18 @@ message Params {
   ];
 
   // InitialInflation is the rate at which inflation starts at genesis.
-  float initial_inflation = 2 [
+  // It is a float value. Maximum: 100.0
+  // Amino has issues marshalling float, so type is marked string.
+  string initial_inflation = 2 [
     (gogoproto.customname) = "InitialInflation",
     (gogoproto.jsontag)    = "initial_inflation",
     (gogoproto.moretags)   = "yaml:\"initial_inflation\""
   ];
 
   // Variance defines the fraction by which inflation can vary from its previous value in a block.
-  float variance = 3 [
+  // It is a float value in the range [0.0, 1.0].
+  // Amino has issues marshalling float, so type is marked string.
+  string variance = 3 [
     (gogoproto.customname) = "Variance",
     (gogoproto.jsontag)    = "variance",
     (gogoproto.moretags)   = "yaml:\"variance\""
