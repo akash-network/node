@@ -83,7 +83,7 @@ func TestFullAppSimulation(t *testing.T) {
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 
-	app1 := NewApp(logger, db, nil, true, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, simapp.EmptyAppOptions{}, fauxMerkleModeOpt)
+	app1 := NewApp(logger, db, nil, true, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, AppOptsWithGenesisTime(config.Seed), fauxMerkleModeOpt)
 	require.Equal(t, "akash", app1.Name())
 
 	fmt.Printf("config-------- %v", config)
@@ -112,7 +112,7 @@ func TestAppImportExport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 
-	app := NewApp(logger, db, nil, true, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, simapp.EmptyAppOptions{}, fauxMerkleModeOpt)
+	app := NewApp(logger, db, nil, true, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, AppOptsWithGenesisTime(config.Seed), fauxMerkleModeOpt)
 	require.Equal(t, AppName, app.Name())
 
 	// Run randomized simulation
@@ -142,7 +142,7 @@ func TestAppImportExport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
-	newApp := NewApp(log.NewNopLogger(), newDB, nil, true, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, simapp.EmptyAppOptions{}, fauxMerkleModeOpt)
+	newApp := NewApp(log.NewNopLogger(), newDB, nil, true, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, AppOptsWithGenesisTime(config.Seed), fauxMerkleModeOpt)
 	require.Equal(t, AppName, newApp.Name())
 
 	var genesisState simapp.GenesisState
@@ -202,7 +202,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 
-	app := NewApp(logger, db, nil, true, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, simapp.EmptyAppOptions{}, fauxMerkleModeOpt)
+	app := NewApp(logger, db, nil, true, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, AppOptsWithGenesisTime(config.Seed), fauxMerkleModeOpt)
 	require.Equal(t, AppName, app.Name())
 
 	// Run randomized simulation
@@ -237,7 +237,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
-	newApp := NewApp(log.NewNopLogger(), newDB, nil, true, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, simapp.EmptyAppOptions{}, fauxMerkleModeOpt)
+	newApp := NewApp(log.NewNopLogger(), newDB, nil, true, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, AppOptsWithGenesisTime(config.Seed), fauxMerkleModeOpt)
 	require.Equal(t, AppName, newApp.Name())
 
 	newApp.InitChain(abci.RequestInitChain{
@@ -277,7 +277,7 @@ func TestAppStateDeterminism(t *testing.T) {
 
 			db := dbm.NewMemDB()
 
-			app := NewApp(logger, db, nil, true, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, simapp.EmptyAppOptions{}, interBlockCacheOpt())
+			app := NewApp(logger, db, nil, true, simapp.FlagPeriodValue, map[int64]bool{}, DefaultHome, AppOptsWithGenesisTime(config.Seed), interBlockCacheOpt())
 
 			fmt.Printf(
 				"running non-determinism simulation; seed %d: %d/%d, attempt: %d/%d\n",

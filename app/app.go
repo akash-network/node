@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -179,7 +180,14 @@ func NewApp(
 	homePath string, appOpts servertypes.AppOptions, options ...func(*bam.BaseApp),
 ) *AkashApp {
 	// find out the genesis time, to be used later in inflation calculation
-	if genDoc, err := tmtypes.GenesisDocFromFile(filepath.Join(homePath, "config/genesis.json")); err != nil {
+	if v := appOpts.Get("GenesisTime"); v != nil {
+		// in tests, GenesisTime is supplied using appOpts
+		genTime, ok := v.(time.Time)
+		if !ok {
+			panic("expected GenesisTime to be a Time value")
+		}
+		inflationtypes.GenesisTime = genTime
+	} else if genDoc, err := tmtypes.GenesisDocFromFile(filepath.Join(homePath, "config/genesis.json")); err != nil {
 		panic(err)
 	} else {
 		inflationtypes.GenesisTime = genDoc.GenesisTime

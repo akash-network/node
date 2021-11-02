@@ -9,14 +9,13 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/cosmos/cosmos-sdk/simapp"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 func TestAppExport(t *testing.T) {
 	db := dbm.NewMemDB()
 	app1 := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)),
-		db, nil, true, 0, map[int64]bool{}, DefaultHome, simapp.EmptyAppOptions{})
+		db, nil, true, 0, map[int64]bool{}, DefaultHome, AppOptsWithGenesisTime(0))
 
 	for acc := range MacPerms() {
 		require.Equal(t, !allowedReceivingModAcc[acc], app1.keeper.bank.BlockedAddr(app1.keeper.acct.GetModuleAddress(acc)),
@@ -37,7 +36,7 @@ func TestAppExport(t *testing.T) {
 	app1.Commit()
 
 	// Making a new app object with the db, so that initchain hasn't been called
-	app2 := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, true, 0, map[int64]bool{}, DefaultHome, simapp.EmptyAppOptions{})
+	app2 := NewApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, true, 0, map[int64]bool{}, DefaultHome, AppOptsWithGenesisTime(0))
 	_, err = app2.ExportAppStateAndValidators(false, []string{})
 	require.NoError(t, err, "ExportAppStateAndValidators should not have an error")
 }

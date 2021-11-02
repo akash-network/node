@@ -20,8 +20,6 @@ import (
 	tmrand "github.com/tendermint/tendermint/libs/rand"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/cosmos/cosmos-sdk/simapp"
-
 	"github.com/ovrclk/akash/app"
 	types "github.com/ovrclk/akash/types/v1beta2"
 )
@@ -63,7 +61,7 @@ func ResourceUnits(_ testing.TB) types.ResourceUnits {
 func NewApp(val network.Validator) servertypes.Application {
 	return app.NewApp(
 		val.Ctx.Logger, dbm.NewMemDB(), nil, true, 0, make(map[int64]bool), val.Ctx.Config.RootDir,
-		simapp.EmptyAppOptions{},
+		app.AppOptsWithGenesisTime(0),
 		baseapp.SetPruning(storetypes.NewPruningOptionsFromString(val.AppConfig.Pruning)),
 		baseapp.SetMinGasPrices(val.AppConfig.MinGasPrices),
 	)

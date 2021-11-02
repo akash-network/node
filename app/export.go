@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"log"
+	"math/rand"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	logger "github.com/tendermint/tendermint/libs/log"
@@ -12,9 +13,11 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/simapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/simulation"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/spf13/viper"
 )
 
 // ExportAppStateAndValidators exports the state of the application for a genesis
@@ -204,7 +207,7 @@ func Setup(isCheckTx bool) *AkashApp {
 	db := dbm.NewMemDB()
 
 	// TODO: make this configurable via config or flag.
-	app := NewApp(logger.NewNopLogger(), db, nil, true, 5, map[int64]bool{}, DefaultHome, simapp.EmptyAppOptions{})
+	app := NewApp(logger.NewNopLogger(), db, nil, true, 5, map[int64]bool{}, DefaultHome, AppOptsWithGenesisTime(0))
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := NewDefaultGenesisState()
@@ -223,4 +226,15 @@ func Setup(isCheckTx bool) *AkashApp {
 	}
 
 	return app
+}
+
+func AppOptsWithGenesisTime(seed int64) servertypes.AppOptions {
+	r := rand.New(rand.NewSource(seed))
+	genTime := simulation.RandTimestamp(r)
+
+	appOpts := viper.New()
+	appOpts.Set("GenesisTime", genTime)
+	simapp.FlagGenesisTimeValue = genTime.Unix()
+
+	return appOpts
 }
