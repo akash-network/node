@@ -207,7 +207,7 @@ func Setup(isCheckTx bool) *AkashApp {
 	db := dbm.NewMemDB()
 
 	// TODO: make this configurable via config or flag.
-	app := NewApp(logger.NewNopLogger(), db, nil, true, 5, map[int64]bool{}, DefaultHome, AppOptsWithGenesisTime(0))
+	app := NewApp(logger.NewNopLogger(), db, nil, true, 5, map[int64]bool{}, DefaultHome, OptsWithGenesisTime(0))
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := NewDefaultGenesisState()
@@ -228,7 +228,7 @@ func Setup(isCheckTx bool) *AkashApp {
 	return app
 }
 
-func AppOptsWithGenesisTime(seed int64) servertypes.AppOptions {
+func OptsWithGenesisTime(seed int64) servertypes.AppOptions {
 	r := rand.New(rand.NewSource(seed))
 	genTime := simulation.RandTimestamp(r)
 

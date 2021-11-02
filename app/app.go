@@ -530,7 +530,7 @@ func (app *AkashApp) registerUpgradeHandlers() {
 
 	if upgradeInfo.Name == "akash_v0.15.0_cosmos_v0.44.x" && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
 		storeUpgrades := storetypes.StoreUpgrades{
-			Added: []string{"authz"},
+			Added: []string{"authz", "inflation"},
 		}
 
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades
