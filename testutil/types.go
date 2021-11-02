@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	"github.com/cosmos/cosmos-sdk/simapp"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -61,7 +62,7 @@ func ResourceUnits(_ testing.TB) types.ResourceUnits {
 func NewApp(val network.Validator) servertypes.Application {
 	return app.NewApp(
 		val.Ctx.Logger, dbm.NewMemDB(), nil, true, 0, make(map[int64]bool), val.Ctx.Config.RootDir,
-		app.AppOptsWithGenesisTime(0),
+		simapp.EmptyAppOptions{},
 		baseapp.SetPruning(storetypes.NewPruningOptionsFromString(val.AppConfig.Pruning)),
 		baseapp.SetMinGasPrices(val.AppConfig.MinGasPrices),
 	)
