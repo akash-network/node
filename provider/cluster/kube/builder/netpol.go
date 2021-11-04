@@ -109,12 +109,12 @@ func (b *netPol) Create() ([]*netv1.NetworkPolicy, error) { // nolint:golint,unp
 							{
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										"kubernetes.io/metadata.name": "kube-system",
+										"k8s-app": "kube-dns",
 									},
 								},
 								NamespaceSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										"k8s-app": "kube-dns",
+										"kubernetes.io/metadata.name": "kube-system",
 									},
 								},
 							},
