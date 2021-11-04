@@ -42,7 +42,8 @@ const (
 
 var (
 	dnsPort     = intstr.FromInt(53)
-	dnsProtocol = corev1.Protocol("UDP")
+	udpProtocol = corev1.Protocol("UDP")
+	tcpProtocol = corev1.Protocol("TCP")
 )
 
 type builder struct {
@@ -575,17 +576,25 @@ func (b *netPolBuilder) create() ([]*netv1.NetworkPolicy, error) { // nolint:gol
 					{ // Allow DNS to internal server
 						Ports: []netv1.NetworkPolicyPort{
 							{
-								Protocol: &dnsProtocol,
+								Protocol: &udpProtocol,
+								Port:     &dnsPort,
+							},
+							{
+								Protocol: &tcpProtocol,
 								Port:     &dnsPort,
 							},
 						},
 						To: []netv1.NetworkPolicyPeer{
 							{
-								PodSelector:       nil,
-								NamespaceSelector: nil,
-								IPBlock: &netv1.IPBlock{
-									CIDR:   "169.254.0.0/16",
-									Except: nil,
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"k8s-app": "kube-dns",
+									},
+								},
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"kubernetes.io/metadata.name": "kube-system",
+									},
 								},
 							},
 						},
