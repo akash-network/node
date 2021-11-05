@@ -229,7 +229,7 @@ func Setup(isCheckTx bool) *AkashApp {
 }
 
 func OptsWithGenesisTime(seed int64) servertypes.AppOptions {
-	r := rand.New(rand.NewSource(seed))
+	r := rand.New(rand.NewSource(seed)) // nolint: gosec
 	genTime := simulation.RandTimestamp(r)
 
 	appOpts := viper.New()
