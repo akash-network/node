@@ -29,6 +29,8 @@ func RootCmd() *cobra.Command {
 	cmd.AddCommand(LeaseShellCmd())
 	cmd.AddCommand(HostnameOperatorCmd())
 	cmd.AddCommand(MigrateHostnamesCmd())
+	cmd.AddCommand(AuthServerCmd())
+	cmd.AddCommand(AuthenticateCmd())
 
 	return cmd
 }

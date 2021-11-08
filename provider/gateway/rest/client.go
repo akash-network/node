@@ -3,12 +3,12 @@ package rest
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
-	"k8s.io/client-go/tools/remotecommand"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -16,20 +16,20 @@ import (
 	"sync"
 	"time"
 
-	cutils "github.com/ovrclk/akash/x/cert/utils"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-
+	cosmosclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
-
-	cosmosclient "github.com/cosmos/cosmos-sdk/client"
+	"k8s.io/client-go/tools/remotecommand"
 
 	akashclient "github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider"
 	cltypes "github.com/ovrclk/akash/provider/cluster/types"
 	ctypes "github.com/ovrclk/akash/x/cert/types/v1beta2"
+	cutils "github.com/ovrclk/akash/x/cert/utils"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
@@ -57,6 +57,10 @@ type Client interface {
 	MigrateHostnames(ctx context.Context, hostnames []string, dseq uint64, gseq uint32) error
 }
 
+type JwtClient interface {
+	GetJWT(ctx context.Context) (*jwt.Token, error)
+}
+
 type LeaseKubeEvent struct {
 	Action  string `json:"action"`
 	Message string `json:"message"`
@@ -77,6 +81,20 @@ type ServiceLogs struct {
 	OnClose <-chan string
 }
 
+func NewJwtClient(ctx context.Context, qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Certificate) (JwtClient, error) {
+	res, err := qclient.Provider(ctx, &ptypes.QueryProviderRequest{Owner: addr.String()})
+	if err != nil {
+		return nil, err
+	}
+
+	uri, err := url.Parse(res.Provider.JWTHostURI)
+	if err != nil {
+		return nil, err
+	}
+
+	return newClient(qclient, addr, certs, uri), nil
+}
+
 // NewClient returns a new Client
 func NewClient(qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Certificate) (Client, error) {
 	res, err := qclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: addr.String()})
@@ -89,6 +107,10 @@ func NewClient(qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Ce
 		return nil, err
 	}
 
+	return newClient(qclient, addr, certs, uri), nil
+}
+
+func newClient(qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Certificate, uri *url.URL) *client {
 	cl := &client{
 		host:    uri,
 		addr:    addr,
@@ -124,7 +146,7 @@ func NewClient(qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Ce
 		TLSClientConfig:  tlsConfig,
 	}
 
-	return cl, nil
+	return cl
 }
 
 type ClientDirectory struct {
@@ -185,6 +207,82 @@ type client struct {
 	wsclient *websocket.Dialer
 	addr     sdk.Address
 	cclient  ctypes.QueryClient
+}
+
+type ClientCustomClaims struct {
+	AkashNamespace *AkashNamespace `json:"https://akash.network/"`
+	jwt.RegisteredClaims
+}
+
+type AkashNamespace struct {
+	V1 *ClaimsV1 `json:"v1"`
+}
+
+type ClaimsV1 struct {
+	CertSerialNumber string `json:"cert_serial_number"`
+}
+
+var errRequiredCertSerialNum = errors.New("cert_serial_number must be present in claims")
+var errNonNumericCertSerialNum = errors.New("cert_serial_number must be numeric in claims")
+
+func (c *ClientCustomClaims) Valid() error {
+	_, err := sdk.AccAddressFromBech32(c.Subject)
+	if err != nil {
+		return err
+	}
+	_, err = sdk.AccAddressFromBech32(c.Issuer)
+	if err != nil {
+		return err
+	}
+	if c.AkashNamespace == nil || c.AkashNamespace.V1 == nil || c.AkashNamespace.V1.CertSerialNumber == "" {
+		return errRequiredCertSerialNum
+	}
+	if !sdk.IsNumeric(c.AkashNamespace.V1.CertSerialNumber) {
+		return errNonNumericCertSerialNum
+	}
+	return nil
+}
+
+func (c *client) GetJWT(ctx context.Context) (*jwt.Token, error) {
+	uri, err := makeURI(c.host, "jwt")
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.hclient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	responseBuf := &bytes.Buffer{}
+	_, err = io.Copy(responseBuf, resp.Body)
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = createClientResponseErrorIfNotOK(resp, responseBuf)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := jwt.ParseWithClaims(responseBuf.String(), &ClientCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// return the public key to be used for JWT verification
+		return resp.TLS.PeerCertificates[0].PublicKey.(*ecdsa.PublicKey), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
 }
 
 type ClientResponseError struct {

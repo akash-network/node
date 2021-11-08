@@ -1,4 +1,5 @@
 host: https://localhost:8443
+jwt-host: https://localhost:8444
 attributes:
   - key: region
     value: us-west

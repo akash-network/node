@@ -53,6 +53,11 @@ message MsgCreateProvider {
     (gogoproto.jsontag)  = "info",
     (gogoproto.moretags) = "yaml:\"info\""
   ];
+  string jwt_host_uri = 5 [
+    (gogoproto.customname) = "JWTHostURI",
+    (gogoproto.jsontag)    = "jwt_host_uri",
+    (gogoproto.moretags)   = "yaml:\"jwt_host_uri\""
+  ];
 }
 
 // MsgCreateProviderResponse defines the Msg/CreateProvider response type.
@@ -78,6 +83,11 @@ message MsgUpdateProvider {
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "info",
     (gogoproto.moretags) = "yaml:\"info\""
+  ];
+  string jwt_host_uri = 5 [
+    (gogoproto.customname) = "JWTHostURI",
+    (gogoproto.jsontag)    = "jwt_host_uri",
+    (gogoproto.moretags)   = "yaml:\"jwt_host_uri\""
   ];
 }
 
@@ -116,5 +126,10 @@ message Provider {
     (gogoproto.nullable) = false,
     (gogoproto.jsontag)  = "info",
     (gogoproto.moretags) = "yaml:\"info\""
+  ];
+  string jwt_host_uri = 5 [
+    (gogoproto.customname) = "JWTHostURI",
+    (gogoproto.jsontag)    = "jwt_host_uri",
+    (gogoproto.moretags)   = "yaml:\"jwt_host_uri\""
   ];
 }

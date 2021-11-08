@@ -5,6 +5,12 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	dockerterm "github.com/moby/term"
 	akashclient "github.com/ovrclk/akash/client"
@@ -14,13 +20,8 @@ import (
 	mcli "github.com/ovrclk/akash/x/market/client/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"io"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/kubectl/pkg/util/term"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
 )
 
 const (

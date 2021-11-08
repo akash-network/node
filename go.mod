@@ -12,6 +12,7 @@ require (
 	github.com/gin-gonic/gin v1.7.0 // indirect
 	github.com/go-kit/kit v0.10.0
 	github.com/gogo/protobuf v1.3.3
+	github.com/golang-jwt/jwt/v4 v4.1.0
 	github.com/golang/protobuf v1.5.2
 	github.com/gorilla/context v1.1.1
 	github.com/gorilla/mux v1.8.0

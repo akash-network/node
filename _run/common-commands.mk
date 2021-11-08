@@ -15,6 +15,9 @@ PRICE          ?= 10uakt
 CERT_HOSTNAME  ?= localhost
 LEASE_SERVICES ?= web
 
+JWT_AUTH_HOSTNAME ?= localhost
+JWT_AUTH_HOST     ?= $(JWT_AUTH_HOSTNAME):8444
+
 .PHONY: multisig-send
 multisig-send:
 	$(AKASH) tx send \
@@ -54,6 +57,18 @@ provider-update:
 .PHONY: provider-status
 provider-status:
 	$(AKASH) provider status $(PROVIDER_ADDRESS)
+
+.PHONY: authenticate
+authenticate:
+	$(AKASH) provider authenticate \
+		--from      "$(KEY_ADDRESS)" \
+		--provider  "$(PROVIDER_ADDRESS)"
+
+.PHONY: auth-server
+auth-server:
+	$(AKASH) provider auth-server \
+		--from "$(PROVIDER_KEY_NAME)" \
+		--jwt-auth-listen-address "$(JWT_AUTH_HOST)" \
 
 .PHONY: send-manifest
 send-manifest:

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -27,6 +26,7 @@ import (
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
 	manifestValidation "github.com/ovrclk/akash/validation"
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 

@@ -51,6 +51,7 @@ func cmdCreate(key string) *cobra.Command {
 				HostURI:    cfg.Host,
 				Info:       cfg.Info,
 				Attributes: cfg.GetAttributes(),
+				JWTHostURI: cfg.JWTHost,
 			}
 
 			if err := msg.ValidateBasic(); err != nil {
@@ -87,6 +88,7 @@ func cmdUpdate(key string) *cobra.Command {
 				HostURI:    cfg.Host,
 				Info:       cfg.Info,
 				Attributes: cfg.GetAttributes(),
+				JWTHostURI: cfg.JWTHost,
 			}
 
 			if err := msg.ValidateBasic(); err != nil {

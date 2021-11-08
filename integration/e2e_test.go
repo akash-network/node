@@ -19,6 +19,8 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/golang-jwt/jwt/v4"
+
 	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +33,7 @@ import (
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	providerCmd "github.com/ovrclk/akash/provider/cmd"
+
 	"github.com/ovrclk/akash/provider/gateway/rest"
 	"github.com/ovrclk/akash/sdl"
 	clitestutil "github.com/ovrclk/akash/testutil/cli"
@@ -165,7 +168,15 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		Host:   provHost,
 		Scheme: "https",
 	}
-	provFileStr := fmt.Sprintf(providerTemplate, provURL.String())
+	// address for JWT server to listen on
+	_, port, err = server.FreeTCPAddr()
+	require.NoError(s.T(), err)
+	jwtHost := fmt.Sprintf("localhost:%s", port)
+	jwtURL := url.URL{
+		Host:   jwtHost,
+		Scheme: "https",
+	}
+	provFileStr := fmt.Sprintf(providerTemplate, provURL.String(), jwtURL.String())
 	tmpFile, err := ioutil.TempFile(s.network.BaseDir, "provider.yaml")
 	require.NoError(s.T(), err)
 
@@ -299,11 +310,39 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	}
 
 	attempts := 0
-	s.T().Log("waiting for provider to run before starting hostname operator")
+	s.T().Log("waiting for provider to run before starting JWT server")
 	for {
 		conn, err := dialer.DialContext(s.ctx, "tcp", provHost)
 		if err != nil {
 			s.T().Logf("connecting to provider returned %v", err)
+			_, ok := err.(net.Error)
+			s.Require().True(ok, "error should be net error not %v", err)
+			attempts++
+			s.Require().Less(attempts, maxAttempts)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		_ = conn.Close() // Connected OK
+		break
+	}
+
+	s.group.Go(func() error {
+		s.T().Log("starting JWT server for test")
+		_, err := ptestutil.RunProviderJWTServer(s.ctx,
+			cctx,
+			keyName,
+			jwtURL.Host,
+		)
+
+		return err
+	})
+
+	attempts = 0
+	s.T().Log("waiting for JWT server to run before starting hostname operator")
+	for {
+		conn, err := dialer.DialContext(s.ctx, "tcp", jwtHost)
+		if err != nil {
+			s.T().Logf("connecting to JWT server returned %v", err)
 			_, ok := err.(net.Error)
 			s.Require().True(ok, "error should be net error not %v", err)
 			attempts++
@@ -1336,6 +1375,23 @@ func (s *E2EApp) TestE2EMigrateHostname() {
 
 	// confirm hostname still reachable, on the hostname it was migrated to
 	queryAppWithHostname(s.T(), appURL, 50, secondaryHostname)
+}
+
+func (s *E2EApp) TestE2EJwtServerAuthenticate() {
+	cctx := s.validator.ClientCtx
+	provider := s.keyProvider.GetAddress().String()
+	tenant := s.keyTenant.GetAddress().String()
+
+	buf, err := ptestutil.TestJwtServerAuthenticate(cctx, provider, tenant)
+	s.Require().NoError(err)
+
+	var claims rest.ClientCustomClaims
+	_, _, err = (&jwt.Parser{}).ParseUnverified(buf.String(), &claims)
+	require.NoError(s.T(), err)
+
+	require.Equal(s.T(), provider, claims.Issuer)
+	require.Equal(s.T(), tenant, claims.Subject)
+	require.NotEmpty(s.T(), claims.AkashNamespace.V1.CertSerialNumber)
 }
 
 func TestIntegrationTestSuite(t *testing.T) {

@@ -1,7 +1,7 @@
 swagger: '2.0'
 info:
   title: AKASH - gRPC Gateway docs
-  description: 'A REST interface for state queries, legacy transactions'
+  description: A REST interface for state queries, legacy transactions
   version: 1.0.0
 paths:
   /akash/deployment/v1beta2/deployments/info:
@@ -45,7 +45,7 @@ paths:
                   created_at:
                     type: string
                     format: int64
-                title: 'Deployment stores deploymentID, state and version details'
+                title: Deployment stores deploymentID, state and version details
               groups:
                 type: array
                 items:
@@ -264,7 +264,7 @@ paths:
                     created_at:
                       type: string
                       format: int64
-                  title: 'Group stores group id, state and specifications of group'
+                  title: Group stores group id, state and specifications of group
               escrow_account:
                 type: object
                 properties:
@@ -1112,7 +1112,7 @@ paths:
                   created_at:
                     type: string
                     format: int64
-                title: 'Group stores group id, state and specifications of group'
+                title: Group stores group id, state and specifications of group
             title: QueryGroupResponse is response type for the Query/Group RPC method
         default:
           description: An unexpected error response.
@@ -1221,7 +1221,7 @@ paths:
                   created_at:
                     type: string
                     format: int64
-                title: 'Bid stores BidID, state of bid and price'
+                title: Bid stores BidID, state of bid and price
               escrow_account:
                 type: object
                 properties:
@@ -1439,7 +1439,7 @@ paths:
                         created_at:
                           type: string
                           format: int64
-                      title: 'Bid stores BidID, state of bid and price'
+                      title: Bid stores BidID, state of bid and price
                     escrow_account:
                       type: object
                       properties:
@@ -1735,7 +1735,7 @@ paths:
                   created_at:
                     type: string
                     format: int64
-                title: 'Lease stores LeaseID, state of lease and price'
+                title: Lease stores LeaseID, state of lease and price
               escrow_payment:
                 type: object
                 properties:
@@ -1932,7 +1932,7 @@ paths:
                         created_at:
                           type: string
                           format: int64
-                      title: 'Lease stores LeaseID, state of lease and price'
+                      title: Lease stores LeaseID, state of lease and price
                     escrow_payment:
                       type: object
                       properties:
@@ -2375,7 +2375,7 @@ paths:
                   created_at:
                     type: string
                     format: int64
-                title: 'Order stores orderID, state of order and other details'
+                title: Order stores orderID, state of order and other details
             title: QueryOrderResponse is response type for the Query/Order RPC method
         default:
           description: An unexpected error response.
@@ -2648,7 +2648,7 @@ paths:
                     created_at:
                       type: string
                       format: int64
-                  title: 'Order stores orderID, state of order and other details'
+                  title: Order stores orderID, state of order and other details
               pagination:
                 type: object
                 properties:
@@ -2817,6 +2817,8 @@ paths:
                         website:
                           type: string
                       title: ProviderInfo
+                    jwt_host_uri:
+                      type: string
                   title: Provider stores owner and host details
               pagination:
                 type: object
@@ -2926,7 +2928,7 @@ paths:
           type: boolean
       tags:
         - Query
-  '/akash/provider/v1beta2/providers/{owner}':
+  /akash/provider/v1beta2/providers/{owner}:
     get:
       summary: Provider queries provider details
       operationId: Provider
@@ -2961,6 +2963,8 @@ paths:
                       website:
                         type: string
                     title: ProviderInfo
+                  jwt_host_uri:
+                    type: string
                 title: Provider stores owner and host details
             title: >-
               QueryProviderResponse is response type for the Query/Provider RPC
@@ -3049,7 +3053,7 @@ paths:
                     type: string
                   listen_addr:
                     type: string
-                    example: '192.168.56.1:26656'
+                    example: 192.168.56.1:26656
                   version:
                     description: Tendermint version
                     type: string
@@ -3063,7 +3067,7 @@ paths:
                         example: 'on'
                       rpc_address:
                         type: string
-                        example: 'tcp://0.0.0.0:26657'
+                        example: tcp://0.0.0.0:26657
         '500':
           description: Failed to query node status
   /syncing:
@@ -3327,7 +3331,7 @@ paths:
                                 7uTC74QlknqYWEwg7Vn6M8Om7FuZ0EO4bjvuj6rwH1mTUJrRuMMZvAAqT9VjNgP0RA/TDp6u/92AqrZfXJSpBQ==
         '500':
           description: Server internal error
-  '/blocks/{height}':
+  /blocks/{height}:
     get:
       summary: Get a block at a certain height
       tags:
@@ -3617,7 +3621,7 @@ paths:
                       example: '1000'
         '500':
           description: Server internal error
-  '/validatorsets/{height}':
+  /validatorsets/{height}:
     get:
       summary: Get a validator set a certain height
       tags:
@@ -3664,7 +3668,7 @@ paths:
           description: Block at height not available
         '500':
           description: Server internal error
-  '/txs/{hash}':
+  /txs/{hash}:
     get:
       deprecated: true
       summary: Get a Tx by hash
@@ -4223,7 +4227,7 @@ paths:
           description: The tx was malformated
         '500':
           description: Server internal error
-  '/bank/balances/{address}':
+  /bank/balances/{address}:
     get:
       deprecated: true
       summary: Get the account balances
@@ -4254,7 +4258,7 @@ paths:
                   example: '50'
         '500':
           description: Server internal error
-  '/bank/accounts/{address}/transfers':
+  /bank/accounts/{address}/transfers:
     post:
       deprecated: true
       summary: Send coins from one account to another
@@ -4287,7 +4291,7 @@ paths:
                     description: Sender address or Keybase name to generate a transaction
                   memo:
                     type: string
-                    example: "Sent via Cosmos Voyager \U0001F680"
+                    example: Sent via Cosmos Voyager 🚀
                   chain_id:
                     type: string
                     example: Cosmos-Hub
@@ -4412,7 +4416,7 @@ paths:
                       example: '50'
         '500':
           description: Internal Server Error
-  '/bank/total/{denomination}':
+  /bank/total/{denomination}:
     parameters:
       - in: path
         name: denomination
@@ -4436,7 +4440,7 @@ paths:
           description: Invalid coin denomination
         '500':
           description: Internal Server Error
-  '/auth/accounts/{address}':
+  /auth/accounts/{address}:
     get:
       deprecated: true
       summary: Get the account information on blockchain
@@ -4488,7 +4492,7 @@ paths:
                     type: string
         '500':
           description: Server internel error
-  '/staking/delegators/{delegatorAddr}/delegations':
+  /staking/delegators/{delegatorAddr}/delegations:
     parameters:
       - in: path
         name: delegatorAddr
@@ -4548,7 +4552,7 @@ paths:
                     description: Sender address or Keybase name to generate a transaction
                   memo:
                     type: string
-                    example: "Sent via Cosmos Voyager \U0001F680"
+                    example: Sent via Cosmos Voyager 🚀
                   chain_id:
                     type: string
                     example: Cosmos-Hub
@@ -4660,7 +4664,7 @@ paths:
           description: Key password is wrong
         '500':
           description: Internal Server Error
-  '/staking/delegators/{delegatorAddr}/delegations/{validatorAddr}':
+  /staking/delegators/{delegatorAddr}/delegations/{validatorAddr}:
     parameters:
       - in: path
         name: delegatorAddr
@@ -4706,7 +4710,7 @@ paths:
           description: Invalid delegator address or validator address
         '500':
           description: Internal Server Error
-  '/staking/delegators/{delegatorAddr}/unbonding_delegations':
+  /staking/delegators/{delegatorAddr}/unbonding_delegations:
     parameters:
       - in: path
         name: delegatorAddr
@@ -4763,7 +4767,7 @@ paths:
                     description: Sender address or Keybase name to generate a transaction
                   memo:
                     type: string
-                    example: "Sent via Cosmos Voyager \U0001F680"
+                    example: Sent via Cosmos Voyager 🚀
                   chain_id:
                     type: string
                     example: Cosmos-Hub
@@ -4875,7 +4879,7 @@ paths:
           description: Key password is wrong
         '500':
           description: Internal Server Error
-  '/staking/delegators/{delegatorAddr}/unbonding_delegations/{validatorAddr}':
+  /staking/delegators/{delegatorAddr}/unbonding_delegations/{validatorAddr}:
     parameters:
       - in: path
         name: delegatorAddr
@@ -4956,7 +4960,7 @@ paths:
               $ref: '#/definitions/Redelegation'
         '500':
           description: Internal Server Error
-  '/staking/delegators/{delegatorAddr}/redelegations':
+  /staking/delegators/{delegatorAddr}/redelegations:
     parameters:
       - in: path
         name: delegatorAddr
@@ -4983,7 +4987,7 @@ paths:
                     description: Sender address or Keybase name to generate a transaction
                   memo:
                     type: string
-                    example: "Sent via Cosmos Voyager \U0001F680"
+                    example: Sent via Cosmos Voyager 🚀
                   chain_id:
                     type: string
                     example: Cosmos-Hub
@@ -5091,7 +5095,7 @@ paths:
           description: Invalid delegator address or redelegation request body
         '500':
           description: Internal Server Error
-  '/staking/delegators/{delegatorAddr}/validators':
+  /staking/delegators/{delegatorAddr}/validators:
     parameters:
       - in: path
         name: delegatorAddr
@@ -5174,7 +5178,7 @@ paths:
           description: Invalid delegator address
         '500':
           description: Internal Server Error
-  '/staking/delegators/{delegatorAddr}/validators/{validatorAddr}':
+  /staking/delegators/{delegatorAddr}/validators/{validatorAddr}:
     parameters:
       - in: path
         name: delegatorAddr
@@ -5355,7 +5359,7 @@ paths:
                       example: '1970-01-01T00:00:00Z'
         '500':
           description: Internal Server Error
-  '/staking/validators/{validatorAddr}':
+  /staking/validators/{validatorAddr}:
     parameters:
       - in: path
         name: validatorAddr
@@ -5436,7 +5440,7 @@ paths:
           description: Invalid validator address
         '500':
           description: Internal Server Error
-  '/staking/validators/{validatorAddr}/delegations':
+  /staking/validators/{validatorAddr}/delegations:
     parameters:
       - in: path
         name: validatorAddr
@@ -5478,7 +5482,7 @@ paths:
           description: Invalid validator address
         '500':
           description: Internal Server Error
-  '/staking/validators/{validatorAddr}/unbonding_delegations':
+  /staking/validators/{validatorAddr}/unbonding_delegations:
     parameters:
       - in: path
         name: validatorAddr
@@ -5617,7 +5621,7 @@ paths:
           description: Invalid validator public key for one of the validators
         '500':
           description: Internal Server Error
-  '/slashing/validators/{validatorAddr}/unjail':
+  /slashing/validators/{validatorAddr}/unjail:
     post:
       deprecated: true
       summary: Unjail a jailed validator
@@ -5803,7 +5807,7 @@ paths:
                     description: Sender address or Keybase name to generate a transaction
                   memo:
                     type: string
-                    example: "Sent via Cosmos Voyager \U0001F680"
+                    example: Sent via Cosmos Voyager 🚀
                   chain_id:
                     type: string
                     example: Cosmos-Hub
@@ -6020,7 +6024,7 @@ paths:
                     description: Sender address or Keybase name to generate a transaction
                   memo:
                     type: string
-                    example: "Sent via Cosmos Voyager \U0001F680"
+                    example: Sent via Cosmos Voyager 🚀
                   chain_id:
                     type: string
                     example: Cosmos-Hub
@@ -6144,7 +6148,7 @@ paths:
           description: Invalid proposal body
         '500':
           description: Internal Server Error
-  '/gov/proposals/{proposalId}':
+  /gov/proposals/{proposalId}:
     get:
       deprecated: true
       summary: Query a proposal
@@ -6209,7 +6213,7 @@ paths:
           description: Invalid proposal id
         '500':
           description: Internal Server Error
-  '/gov/proposals/{proposalId}/proposer':
+  /gov/proposals/{proposalId}/proposer:
     get:
       deprecated: true
       summary: Query proposer
@@ -6238,7 +6242,7 @@ paths:
           description: Invalid proposal ID
         '500':
           description: Internal Server Error
-  '/gov/proposals/{proposalId}/deposits':
+  /gov/proposals/{proposalId}/deposits:
     get:
       deprecated: true
       summary: Query deposits
@@ -6315,7 +6319,7 @@ paths:
                     description: Sender address or Keybase name to generate a transaction
                   memo:
                     type: string
-                    example: "Sent via Cosmos Voyager \U0001F680"
+                    example: Sent via Cosmos Voyager 🚀
                   chain_id:
                     type: string
                     example: Cosmos-Hub
@@ -6419,7 +6423,7 @@ paths:
           description: Key password is wrong
         '500':
           description: Internal Server Error
-  '/gov/proposals/{proposalId}/deposits/{depositor}':
+  /gov/proposals/{proposalId}/deposits/{depositor}:
     get:
       deprecated: true
       summary: Query deposit
@@ -6470,7 +6474,7 @@ paths:
           description: Found no deposit
         '500':
           description: Internal Server Error
-  '/gov/proposals/{proposalId}/votes':
+  /gov/proposals/{proposalId}/votes:
     get:
       deprecated: true
       summary: Query voters
@@ -6539,7 +6543,7 @@ paths:
                     description: Sender address or Keybase name to generate a transaction
                   memo:
                     type: string
-                    example: "Sent via Cosmos Voyager \U0001F680"
+                    example: Sent via Cosmos Voyager 🚀
                   chain_id:
                     type: string
                     example: Cosmos-Hub
@@ -6635,7 +6639,7 @@ paths:
           description: Key password is wrong
         '500':
           description: Internal Server Error
-  '/gov/proposals/{proposalId}/votes/{voter}':
+  /gov/proposals/{proposalId}/votes/{voter}:
     get:
       deprecated: true
       summary: Query vote
@@ -6675,7 +6679,7 @@ paths:
           description: Found no vote
         '500':
           description: Internal Server Error
-  '/gov/proposals/{proposalId}/tally':
+  /gov/proposals/{proposalId}/tally:
     get:
       deprecated: true
       summary: Get a proposal's tally result at the current time
@@ -6807,7 +6811,7 @@ paths:
           description: Found no voting parameters
         '500':
           description: Internal Server Error
-  '/distribution/delegators/{delegatorAddr}/rewards':
+  /distribution/delegators/{delegatorAddr}/rewards:
     parameters:
       - in: path
         name: delegatorAddr
@@ -6890,7 +6894,7 @@ paths:
                     description: Sender address or Keybase name to generate a transaction
                   memo:
                     type: string
-                    example: "Sent via Cosmos Voyager \U0001F680"
+                    example: Sent via Cosmos Voyager 🚀
                   chain_id:
                     type: string
                     example: Cosmos-Hub
@@ -6979,7 +6983,7 @@ paths:
           description: Key password is wrong
         '500':
           description: Internal Server Error
-  '/distribution/delegators/{delegatorAddr}/rewards/{validatorAddr}':
+  /distribution/delegators/{delegatorAddr}/rewards/{validatorAddr}:
     parameters:
       - in: path
         name: delegatorAddr
@@ -7043,7 +7047,7 @@ paths:
                     description: Sender address or Keybase name to generate a transaction
                   memo:
                     type: string
-                    example: "Sent via Cosmos Voyager \U0001F680"
+                    example: Sent via Cosmos Voyager 🚀
                   chain_id:
                     type: string
                     example: Cosmos-Hub
@@ -7132,7 +7136,7 @@ paths:
           description: Key password is wrong
         '500':
           description: Internal Server Error
-  '/distribution/delegators/{delegatorAddr}/withdraw_address':
+  /distribution/delegators/{delegatorAddr}/withdraw_address:
     parameters:
       - in: path
         name: delegatorAddr
@@ -7185,7 +7189,7 @@ paths:
                     description: Sender address or Keybase name to generate a transaction
                   memo:
                     type: string
-                    example: "Sent via Cosmos Voyager \U0001F680"
+                    example: Sent via Cosmos Voyager 🚀
                   chain_id:
                     type: string
                     example: Cosmos-Hub
@@ -7278,7 +7282,7 @@ paths:
           description: Key password is wrong
         '500':
           description: Internal Server Error
-  '/distribution/validators/{validatorAddr}':
+  /distribution/validators/{validatorAddr}:
     parameters:
       - in: path
         name: validatorAddr
@@ -7330,7 +7334,7 @@ paths:
           description: Invalid validator address
         '500':
           description: Internal Server Error
-  '/distribution/validators/{validatorAddr}/outstanding_rewards':
+  /distribution/validators/{validatorAddr}/outstanding_rewards:
     parameters:
       - in: path
         name: validatorAddr
@@ -7361,7 +7365,7 @@ paths:
                   example: '50'
         '500':
           description: Internal Server Error
-  '/distribution/validators/{validatorAddr}/rewards':
+  /distribution/validators/{validatorAddr}/rewards:
     parameters:
       - in: path
         name: validatorAddr
@@ -7419,7 +7423,7 @@ paths:
                     description: Sender address or Keybase name to generate a transaction
                   memo:
                     type: string
-                    example: "Sent via Cosmos Voyager \U0001F680"
+                    example: Sent via Cosmos Voyager 🚀
                   chain_id:
                     type: string
                     example: Cosmos-Hub
@@ -8066,7 +8070,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/auth/v1beta1/accounts/{address}':
+  /cosmos/auth/v1beta1/accounts/{address}:
     get:
       summary: Account returns account details based on address.
       operationId: Account
@@ -8670,7 +8674,7 @@ paths:
                         }
       tags:
         - Query
-  '/cosmos/bank/v1beta1/balances/{address}':
+  /cosmos/bank/v1beta1/balances/{address}:
     get:
       summary: AllBalances queries the balance of all coins for a single account.
       operationId: AllBalances
@@ -8806,7 +8810,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/bank/v1beta1/balances/{address}/{denom}':
+  /cosmos/bank/v1beta1/balances/{address}/{denom}:
     get:
       summary: Balance queries the balance of a single coin for a single account.
       operationId: Balance
@@ -8869,7 +8873,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/bank/v1beta1/denom_owners/{denom}':
+  /cosmos/bank/v1beta1/denom_owners/{denom}:
     get:
       summary: >-
         DenomOwners queries for all account addresses that own a particular
@@ -9223,7 +9227,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/bank/v1beta1/denoms_metadata/{denom}':
+  /cosmos/bank/v1beta1/denoms_metadata/{denom}:
     get:
       summary: DenomsMetadata queries the client metadata of a given coin denomination.
       operationId: DenomMetadata
@@ -9537,7 +9541,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/bank/v1beta1/supply/{denom}':
+  /cosmos/bank/v1beta1/supply/{denom}:
     get:
       summary: SupplyOf queries the supply of a single coin.
       operationId: SupplyOf
@@ -10353,7 +10357,7 @@ paths:
                         }
       tags:
         - Service
-  '/cosmos/base/tendermint/v1beta1/blocks/{height}':
+  /cosmos/base/tendermint/v1beta1/blocks/{height}:
     get:
       summary: GetBlockByHeight queries block for given height.
       operationId: GetBlockByHeight
@@ -12068,7 +12072,7 @@ paths:
           format: boolean
       tags:
         - Service
-  '/cosmos/base/tendermint/v1beta1/validatorsets/{height}':
+  /cosmos/base/tendermint/v1beta1/validatorsets/{height}:
     get:
       summary: GetValidatorSetByHeight queries validator-set at a given height.
       operationId: GetValidatorSetByHeight
@@ -12603,7 +12607,7 @@ paths:
                       format: byte
       tags:
         - Query
-  '/cosmos/distribution/v1beta1/delegators/{delegator_address}/rewards':
+  /cosmos/distribution/v1beta1/delegators/{delegator_address}/rewards:
     get:
       summary: |-
         DelegationTotalRewards queries the total rewards accrued by a each
@@ -12696,7 +12700,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/distribution/v1beta1/delegators/{delegator_address}/rewards/{validator_address}':
+  /cosmos/distribution/v1beta1/delegators/{delegator_address}/rewards/{validator_address}:
     get:
       summary: DelegationRewards queries the total rewards accrued by a delegation.
       operationId: DelegationRewards
@@ -12763,7 +12767,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/distribution/v1beta1/delegators/{delegator_address}/validators':
+  /cosmos/distribution/v1beta1/delegators/{delegator_address}/validators:
     get:
       summary: DelegatorValidators queries the validators of a delegator.
       operationId: DelegatorValidators
@@ -12813,7 +12817,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/distribution/v1beta1/delegators/{delegator_address}/withdraw_address':
+  /cosmos/distribution/v1beta1/delegators/{delegator_address}/withdraw_address:
     get:
       summary: DelegatorWithdrawAddress queries withdraw address of a delegator.
       operationId: DelegatorWithdrawAddress
@@ -12909,7 +12913,7 @@ paths:
                       format: byte
       tags:
         - Query
-  '/cosmos/distribution/v1beta1/validators/{validator_address}/commission':
+  /cosmos/distribution/v1beta1/validators/{validator_address}/commission:
     get:
       summary: ValidatorCommission queries accumulated commission for a validator.
       operationId: ValidatorCommission
@@ -12974,7 +12978,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/distribution/v1beta1/validators/{validator_address}/outstanding_rewards':
+  /cosmos/distribution/v1beta1/validators/{validator_address}/outstanding_rewards:
     get:
       summary: ValidatorOutstandingRewards queries rewards of a validator address.
       operationId: ValidatorOutstandingRewards
@@ -13046,7 +13050,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/distribution/v1beta1/validators/{validator_address}/slashes':
+  /cosmos/distribution/v1beta1/validators/{validator_address}/slashes:
     get:
       summary: ValidatorSlashes queries slash events of a validator.
       operationId: ValidatorSlashes
@@ -13657,7 +13661,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/evidence/v1beta1/evidence/{evidence_hash}':
+  /cosmos/evidence/v1beta1/evidence/{evidence_hash}:
     get:
       summary: Evidence queries evidence based on evidence hash.
       operationId: Evidence
@@ -14039,7 +14043,7 @@ paths:
           format: byte
       tags:
         - Query
-  '/cosmos/gov/v1beta1/params/{params_type}':
+  /cosmos/gov/v1beta1/params/{params_type}:
     get:
       summary: Params queries all parameters of the gov module.
       operationId: GovParams
@@ -14885,7 +14889,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/gov/v1beta1/proposals/{proposal_id}':
+  /cosmos/gov/v1beta1/proposals/{proposal_id}:
     get:
       summary: Proposal queries proposal details based on ProposalID.
       operationId: Proposal
@@ -15348,7 +15352,7 @@ paths:
           format: uint64
       tags:
         - Query
-  '/cosmos/gov/v1beta1/proposals/{proposal_id}/deposits':
+  /cosmos/gov/v1beta1/proposals/{proposal_id}/deposits:
     get:
       summary: Deposits queries all deposits of a single proposal.
       operationId: Deposits
@@ -15665,7 +15669,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/gov/v1beta1/proposals/{proposal_id}/deposits/{depositor}':
+  /cosmos/gov/v1beta1/proposals/{proposal_id}/deposits/{depositor}:
     get:
       summary: >-
         Deposit queries single deposit information based proposalID,
@@ -15913,7 +15917,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/gov/v1beta1/proposals/{proposal_id}/tally':
+  /cosmos/gov/v1beta1/proposals/{proposal_id}/tally:
     get:
       summary: TallyResult queries the tally of a proposal vote.
       operationId: TallyResult
@@ -16138,7 +16142,7 @@ paths:
           format: uint64
       tags:
         - Query
-  '/cosmos/gov/v1beta1/proposals/{proposal_id}/votes':
+  /cosmos/gov/v1beta1/proposals/{proposal_id}/votes:
     get:
       summary: Votes queries votes of a given proposal.
       operationId: Votes
@@ -16484,9 +16488,9 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/gov/v1beta1/proposals/{proposal_id}/votes/{voter}':
+  /cosmos/gov/v1beta1/proposals/{proposal_id}/votes/{voter}:
     get:
-      summary: 'Vote queries voted information based on proposalID, voterAddr.'
+      summary: Vote queries voted information based on proposalID, voterAddr.
       operationId: Vote
       responses:
         '200':
@@ -17198,7 +17202,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/slashing/v1beta1/signing_infos/{cons_address}':
+  /cosmos/slashing/v1beta1/signing_infos/{cons_address}:
     get:
       summary: SigningInfo queries the signing info of given cons address
       operationId: SigningInfo
@@ -17297,7 +17301,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/staking/v1beta1/delegations/{delegator_addr}':
+  /cosmos/staking/v1beta1/delegations/{delegator_addr}:
     get:
       summary: >-
         DelegatorDelegations queries all delegations of a given delegator
@@ -17635,7 +17639,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/staking/v1beta1/delegators/{delegator_addr}/redelegations':
+  /cosmos/staking/v1beta1/delegators/{delegator_addr}/redelegations:
     get:
       summary: Redelegations queries redelegations of given address.
       operationId: Redelegations
@@ -18043,7 +18047,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/staking/v1beta1/delegators/{delegator_addr}/unbonding_delegations':
+  /cosmos/staking/v1beta1/delegators/{delegator_addr}/unbonding_delegations:
     get:
       summary: >-
         DelegatorUnbondingDelegations queries all unbonding delegations of a
@@ -18383,7 +18387,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/staking/v1beta1/delegators/{delegator_addr}/validators':
+  /cosmos/staking/v1beta1/delegators/{delegator_addr}/validators:
     get:
       summary: |-
         DelegatorValidators queries all validators info for given delegator
@@ -18982,7 +18986,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/staking/v1beta1/delegators/{delegator_addr}/validators/{validator_addr}':
+  /cosmos/staking/v1beta1/delegators/{delegator_addr}/validators/{validator_addr}:
     get:
       summary: |-
         DelegatorValidator queries validator info for given delegator validator
@@ -19507,7 +19511,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/staking/v1beta1/historical_info/{height}':
+  /cosmos/staking/v1beta1/historical_info/{height}:
     get:
       summary: HistoricalInfo queries the historical info for given height.
       operationId: HistoricalInfo
@@ -21153,7 +21157,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/staking/v1beta1/validators/{validator_addr}':
+  /cosmos/staking/v1beta1/validators/{validator_addr}:
     get:
       summary: Validator queries validator info for given validator address.
       operationId: Validator
@@ -21671,7 +21675,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/staking/v1beta1/validators/{validator_addr}/delegations':
+  /cosmos/staking/v1beta1/validators/{validator_addr}/delegations:
     get:
       summary: ValidatorDelegations queries delegate info for given validator.
       operationId: ValidatorDelegations
@@ -22004,7 +22008,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/staking/v1beta1/validators/{validator_addr}/delegations/{delegator_addr}':
+  /cosmos/staking/v1beta1/validators/{validator_addr}/delegations/{delegator_addr}:
     get:
       summary: Delegation queries delegate info for given validator delegator pair.
       operationId: Delegation
@@ -22267,7 +22271,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/staking/v1beta1/validators/{validator_addr}/delegations/{delegator_addr}/unbonding_delegation':
+  /cosmos/staking/v1beta1/validators/{validator_addr}/delegations/{delegator_addr}/unbonding_delegation:
     get:
       summary: |-
         UnbondingDelegation queries unbonding info for given validator delegator
@@ -22533,7 +22537,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/staking/v1beta1/validators/{validator_addr}/unbonding_delegations':
+  /cosmos/staking/v1beta1/validators/{validator_addr}/unbonding_delegations:
     get:
       summary: >-
         ValidatorUnbondingDelegations queries unbonding delegations of a
@@ -23455,7 +23459,7 @@ paths:
                     description: Response code.
                   data:
                     type: string
-                    description: 'Result bytes, if any.'
+                    description: Result bytes, if any.
                   raw_log:
                     type: string
                     description: >-
@@ -23941,7 +23945,7 @@ paths:
               RPC method.
       tags:
         - Service
-  '/cosmos/tx/v1beta1/txs/{hash}':
+  /cosmos/tx/v1beta1/txs/{hash}:
     get:
       summary: GetTx fetches a tx by hash.
       operationId: GetTx
@@ -24141,13 +24145,13 @@ paths:
                         }
       parameters:
         - name: hash
-          description: 'hash is the tx hash to query, encoded as a hex string.'
+          description: hash is the tx hash to query, encoded as a hex string.
           in: path
           required: true
           type: string
       tags:
         - Service
-  '/cosmos/upgrade/v1beta1/applied_plan/{name}':
+  /cosmos/upgrade/v1beta1/applied_plan/{name}:
     get:
       summary: AppliedPlan queries a previously applied upgrade plan by its name.
       operationId: AppliedPlan
@@ -25025,7 +25029,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/upgrade/v1beta1/upgraded_consensus_state/{last_height}':
+  /cosmos/upgrade/v1beta1/upgraded_consensus_state/{last_height}:
     get:
       summary: |-
         UpgradedConsensusState queries the consensus state that will serve
@@ -25249,7 +25253,7 @@ paths:
         - Query
   /cosmos/authz/v1beta1/grants:
     get:
-      summary: 'Returns list of `Authorization`, granted to the grantee by the granter.'
+      summary: Returns list of `Authorization`, granted to the grantee by the granter.
       operationId: Grants
       responses:
         '200':
@@ -25731,7 +25735,7 @@ paths:
           format: boolean
       tags:
         - Query
-  '/cosmos/feegrant/v1beta1/allowance/{granter}/{grantee}':
+  /cosmos/feegrant/v1beta1/allowance/{granter}/{grantee}:
     get:
       summary: Allowance returns fee granted to the grantee by the granter.
       operationId: Allowance
@@ -26035,7 +26039,7 @@ paths:
           type: string
       tags:
         - Query
-  '/cosmos/feegrant/v1beta1/allowances/{grantee}':
+  /cosmos/feegrant/v1beta1/allowances/{grantee}:
     get:
       summary: Allowances returns all the grants for address.
       operationId: Allowances
@@ -26424,7 +26428,7 @@ definitions:
           val:
             type: string
             format: byte
-        title: 'Unit stores cpu, memory and storage metrics'
+        title: Unit stores cpu, memory and storage metrics
       attributes:
         type: array
         items:
@@ -26471,7 +26475,7 @@ definitions:
           val:
             type: string
             format: byte
-        title: 'Unit stores cpu, memory and storage metrics'
+        title: Unit stores cpu, memory and storage metrics
       attributes:
         type: array
         items:
@@ -26526,7 +26530,7 @@ definitions:
               val:
                 type: string
                 format: byte
-            title: 'Unit stores cpu, memory and storage metrics'
+            title: Unit stores cpu, memory and storage metrics
           attributes:
             type: array
             items:
@@ -26547,7 +26551,7 @@ definitions:
               val:
                 type: string
                 format: byte
-            title: 'Unit stores cpu, memory and storage metrics'
+            title: Unit stores cpu, memory and storage metrics
           attributes:
             type: array
             items:
@@ -26572,7 +26576,7 @@ definitions:
                 val:
                   type: string
                   format: byte
-              title: 'Unit stores cpu, memory and storage metrics'
+              title: Unit stores cpu, memory and storage metrics
             attributes:
               type: array
               items:
@@ -26614,7 +26618,7 @@ definitions:
       val:
         type: string
         format: byte
-    title: 'Unit stores cpu, memory and storage metrics'
+    title: Unit stores cpu, memory and storage metrics
   akash.base.v1beta2.SignedBy:
     type: object
     properties:
@@ -26651,7 +26655,7 @@ definitions:
           val:
             type: string
             format: byte
-        title: 'Unit stores cpu, memory and storage metrics'
+        title: Unit stores cpu, memory and storage metrics
       attributes:
         type: array
         items:
@@ -26694,7 +26698,7 @@ definitions:
       created_at:
         type: string
         format: int64
-    title: 'Deployment stores deploymentID, state and version details'
+    title: Deployment stores deploymentID, state and version details
   akash.deployment.v1beta2.Deployment.State:
     type: string
     enum:
@@ -26816,7 +26820,7 @@ definitions:
                             val:
                               type: string
                               format: byte
-                          title: 'Unit stores cpu, memory and storage metrics'
+                          title: Unit stores cpu, memory and storage metrics
                         attributes:
                           type: array
                           items:
@@ -26837,7 +26841,7 @@ definitions:
                             val:
                               type: string
                               format: byte
-                          title: 'Unit stores cpu, memory and storage metrics'
+                          title: Unit stores cpu, memory and storage metrics
                         attributes:
                           type: array
                           items:
@@ -26862,7 +26866,7 @@ definitions:
                               val:
                                 type: string
                                 format: byte
-                            title: 'Unit stores cpu, memory and storage metrics'
+                            title: Unit stores cpu, memory and storage metrics
                           attributes:
                             type: array
                             items:
@@ -26920,12 +26924,12 @@ definitions:
                     method
 
                     signatures required by gogoproto.
-              title: 'Resource stores unit, total count and price of resource'
+              title: Resource stores unit, total count and price of resource
         title: GroupSpec stores group specifications
       created_at:
         type: string
         format: int64
-    title: 'Group stores group id, state and specifications of group'
+    title: Group stores group id, state and specifications of group
   akash.deployment.v1beta2.Group.State:
     type: string
     enum:
@@ -26953,7 +26957,7 @@ definitions:
       gseq:
         type: integer
         format: int64
-    title: 'GroupID stores owner, deployment sequence number and group sequence number'
+    title: GroupID stores owner, deployment sequence number and group sequence number
   akash.deployment.v1beta2.GroupSpec:
     type: object
     properties:
@@ -27007,7 +27011,7 @@ definitions:
                         val:
                           type: string
                           format: byte
-                      title: 'Unit stores cpu, memory and storage metrics'
+                      title: Unit stores cpu, memory and storage metrics
                     attributes:
                       type: array
                       items:
@@ -27028,7 +27032,7 @@ definitions:
                         val:
                           type: string
                           format: byte
-                      title: 'Unit stores cpu, memory and storage metrics'
+                      title: Unit stores cpu, memory and storage metrics
                     attributes:
                       type: array
                       items:
@@ -27053,7 +27057,7 @@ definitions:
                           val:
                             type: string
                             format: byte
-                        title: 'Unit stores cpu, memory and storage metrics'
+                        title: Unit stores cpu, memory and storage metrics
                       attributes:
                         type: array
                         items:
@@ -27109,7 +27113,7 @@ definitions:
                 method
 
                 signatures required by gogoproto.
-          title: 'Resource stores unit, total count and price of resource'
+          title: Resource stores unit, total count and price of resource
     title: GroupSpec stores group specifications
   akash.deployment.v1beta2.QueryDeploymentResponse:
     type: object
@@ -27145,7 +27149,7 @@ definitions:
           created_at:
             type: string
             format: int64
-        title: 'Deployment stores deploymentID, state and version details'
+        title: Deployment stores deploymentID, state and version details
       groups:
         type: array
         items:
@@ -27241,7 +27245,7 @@ definitions:
                                   val:
                                     type: string
                                     format: byte
-                                title: 'Unit stores cpu, memory and storage metrics'
+                                title: Unit stores cpu, memory and storage metrics
                               attributes:
                                 type: array
                                 items:
@@ -27264,7 +27268,7 @@ definitions:
                                   val:
                                     type: string
                                     format: byte
-                                title: 'Unit stores cpu, memory and storage metrics'
+                                title: Unit stores cpu, memory and storage metrics
                               attributes:
                                 type: array
                                 items:
@@ -27291,7 +27295,7 @@ definitions:
                                     val:
                                       type: string
                                       format: byte
-                                  title: 'Unit stores cpu, memory and storage metrics'
+                                  title: Unit stores cpu, memory and storage metrics
                                 attributes:
                                   type: array
                                   items:
@@ -27351,12 +27355,12 @@ definitions:
                           custom method
 
                           signatures required by gogoproto.
-                    title: 'Resource stores unit, total count and price of resource'
+                    title: Resource stores unit, total count and price of resource
               title: GroupSpec stores group specifications
             created_at:
               type: string
               format: int64
-          title: 'Group stores group id, state and specifications of group'
+          title: Group stores group id, state and specifications of group
       escrow_account:
         type: object
         properties:
@@ -27489,7 +27493,7 @@ definitions:
                 created_at:
                   type: string
                   format: int64
-              title: 'Deployment stores deploymentID, state and version details'
+              title: Deployment stores deploymentID, state and version details
             groups:
               type: array
               items:
@@ -27708,7 +27712,7 @@ definitions:
                   created_at:
                     type: string
                     format: int64
-                title: 'Group stores group id, state and specifications of group'
+                title: Group stores group id, state and specifications of group
             escrow_account:
               type: object
               properties:
@@ -27931,7 +27935,7 @@ definitions:
                                 val:
                                   type: string
                                   format: byte
-                              title: 'Unit stores cpu, memory and storage metrics'
+                              title: Unit stores cpu, memory and storage metrics
                             attributes:
                               type: array
                               items:
@@ -27952,7 +27956,7 @@ definitions:
                                 val:
                                   type: string
                                   format: byte
-                              title: 'Unit stores cpu, memory and storage metrics'
+                              title: Unit stores cpu, memory and storage metrics
                             attributes:
                               type: array
                               items:
@@ -27979,7 +27983,7 @@ definitions:
                                   val:
                                     type: string
                                     format: byte
-                                title: 'Unit stores cpu, memory and storage metrics'
+                                title: Unit stores cpu, memory and storage metrics
                               attributes:
                                 type: array
                                 items:
@@ -28039,12 +28043,12 @@ definitions:
                         custom method
 
                         signatures required by gogoproto.
-                  title: 'Resource stores unit, total count and price of resource'
+                  title: Resource stores unit, total count and price of resource
             title: GroupSpec stores group specifications
           created_at:
             type: string
             format: int64
-        title: 'Group stores group id, state and specifications of group'
+        title: Group stores group id, state and specifications of group
     title: QueryGroupResponse is response type for the Query/Group RPC method
   akash.deployment.v1beta2.Resource:
     type: object
@@ -28061,7 +28065,7 @@ definitions:
                   val:
                     type: string
                     format: byte
-                title: 'Unit stores cpu, memory and storage metrics'
+                title: Unit stores cpu, memory and storage metrics
               attributes:
                 type: array
                 items:
@@ -28082,7 +28086,7 @@ definitions:
                   val:
                     type: string
                     format: byte
-                title: 'Unit stores cpu, memory and storage metrics'
+                title: Unit stores cpu, memory and storage metrics
               attributes:
                 type: array
                 items:
@@ -28107,7 +28111,7 @@ definitions:
                     val:
                       type: string
                       format: byte
-                  title: 'Unit stores cpu, memory and storage metrics'
+                  title: Unit stores cpu, memory and storage metrics
                 attributes:
                   type: array
                   items:
@@ -28158,7 +28162,7 @@ definitions:
 
           NOTE: The amount field is an Dec which implements the custom method
           signatures required by gogoproto.
-    title: 'Resource stores unit, total count and price of resource'
+    title: Resource stores unit, total count and price of resource
   akash.escrow.v1beta2.Account:
     type: object
     properties:
@@ -28813,7 +28817,7 @@ definitions:
       created_at:
         type: string
         format: int64
-    title: 'Bid stores BidID, state of bid and price'
+    title: Bid stores BidID, state of bid and price
   akash.market.v1beta2.Bid.State:
     type: string
     enum:
@@ -28918,7 +28922,7 @@ definitions:
       created_at:
         type: string
         format: int64
-    title: 'Lease stores LeaseID, state of lease and price'
+    title: Lease stores LeaseID, state of lease and price
   akash.market.v1beta2.Lease.State:
     type: string
     enum:
@@ -29057,7 +29061,7 @@ definitions:
                             val:
                               type: string
                               format: byte
-                          title: 'Unit stores cpu, memory and storage metrics'
+                          title: Unit stores cpu, memory and storage metrics
                         attributes:
                           type: array
                           items:
@@ -29078,7 +29082,7 @@ definitions:
                             val:
                               type: string
                               format: byte
-                          title: 'Unit stores cpu, memory and storage metrics'
+                          title: Unit stores cpu, memory and storage metrics
                         attributes:
                           type: array
                           items:
@@ -29103,7 +29107,7 @@ definitions:
                               val:
                                 type: string
                                 format: byte
-                            title: 'Unit stores cpu, memory and storage metrics'
+                            title: Unit stores cpu, memory and storage metrics
                           attributes:
                             type: array
                             items:
@@ -29161,12 +29165,12 @@ definitions:
                     method
 
                     signatures required by gogoproto.
-              title: 'Resource stores unit, total count and price of resource'
+              title: Resource stores unit, total count and price of resource
         title: GroupSpec stores group specifications
       created_at:
         type: string
         format: int64
-    title: 'Order stores orderID, state of order and other details'
+    title: Order stores orderID, state of order and other details
   akash.market.v1beta2.Order.State:
     type: string
     enum:
@@ -29273,7 +29277,7 @@ definitions:
           created_at:
             type: string
             format: int64
-        title: 'Bid stores BidID, state of bid and price'
+        title: Bid stores BidID, state of bid and price
       escrow_account:
         type: object
         properties:
@@ -29431,7 +29435,7 @@ definitions:
                 created_at:
                   type: string
                   format: int64
-              title: 'Bid stores BidID, state of bid and price'
+              title: Bid stores BidID, state of bid and price
             escrow_account:
               type: object
               properties:
@@ -29610,7 +29614,7 @@ definitions:
           created_at:
             type: string
             format: int64
-        title: 'Lease stores LeaseID, state of lease and price'
+        title: Lease stores LeaseID, state of lease and price
       escrow_payment:
         type: object
         properties:
@@ -29750,7 +29754,7 @@ definitions:
                 created_at:
                   type: string
                   format: int64
-              title: 'Lease stores LeaseID, state of lease and price'
+              title: Lease stores LeaseID, state of lease and price
             escrow_payment:
               type: object
               properties:
@@ -29951,7 +29955,7 @@ definitions:
                                 val:
                                   type: string
                                   format: byte
-                              title: 'Unit stores cpu, memory and storage metrics'
+                              title: Unit stores cpu, memory and storage metrics
                             attributes:
                               type: array
                               items:
@@ -29972,7 +29976,7 @@ definitions:
                                 val:
                                   type: string
                                   format: byte
-                              title: 'Unit stores cpu, memory and storage metrics'
+                              title: Unit stores cpu, memory and storage metrics
                             attributes:
                               type: array
                               items:
@@ -29999,7 +30003,7 @@ definitions:
                                   val:
                                     type: string
                                     format: byte
-                                title: 'Unit stores cpu, memory and storage metrics'
+                                title: Unit stores cpu, memory and storage metrics
                               attributes:
                                 type: array
                                 items:
@@ -30059,12 +30063,12 @@ definitions:
                         custom method
 
                         signatures required by gogoproto.
-                  title: 'Resource stores unit, total count and price of resource'
+                  title: Resource stores unit, total count and price of resource
             title: GroupSpec stores group specifications
           created_at:
             type: string
             format: int64
-        title: 'Order stores orderID, state of order and other details'
+        title: Order stores orderID, state of order and other details
     title: QueryOrderResponse is response type for the Query/Order RPC method
   akash.market.v1beta2.QueryOrdersResponse:
     type: object
@@ -30163,7 +30167,7 @@ definitions:
                                   val:
                                     type: string
                                     format: byte
-                                title: 'Unit stores cpu, memory and storage metrics'
+                                title: Unit stores cpu, memory and storage metrics
                               attributes:
                                 type: array
                                 items:
@@ -30186,7 +30190,7 @@ definitions:
                                   val:
                                     type: string
                                     format: byte
-                                title: 'Unit stores cpu, memory and storage metrics'
+                                title: Unit stores cpu, memory and storage metrics
                               attributes:
                                 type: array
                                 items:
@@ -30213,7 +30217,7 @@ definitions:
                                     val:
                                       type: string
                                       format: byte
-                                  title: 'Unit stores cpu, memory and storage metrics'
+                                  title: Unit stores cpu, memory and storage metrics
                                 attributes:
                                   type: array
                                   items:
@@ -30273,12 +30277,12 @@ definitions:
                           custom method
 
                           signatures required by gogoproto.
-                    title: 'Resource stores unit, total count and price of resource'
+                    title: Resource stores unit, total count and price of resource
               title: GroupSpec stores group specifications
             created_at:
               type: string
               format: int64
-          title: 'Order stores orderID, state of order and other details'
+          title: Order stores orderID, state of order and other details
       pagination:
         type: object
         properties:
@@ -30342,6 +30346,8 @@ definitions:
           website:
             type: string
         title: ProviderInfo
+      jwt_host_uri:
+        type: string
     title: Provider stores owner and host details
   akash.provider.v1beta2.ProviderInfo:
     type: object
@@ -30379,6 +30385,8 @@ definitions:
               website:
                 type: string
             title: ProviderInfo
+          jwt_host_uri:
+            type: string
         title: Provider stores owner and host details
     title: QueryProviderResponse is response type for the Query/Provider RPC method
   akash.provider.v1beta2.QueryProvidersResponse:
@@ -30411,6 +30419,8 @@ definitions:
                 website:
                   type: string
               title: ProviderInfo
+            jwt_host_uri:
+              type: string
           title: Provider stores owner and host details
       pagination:
         type: object
@@ -31347,7 +31357,7 @@ definitions:
         description: Sender address or Keybase name to generate a transaction
       memo:
         type: string
-        example: "Sent via Cosmos Voyager \U0001F680"
+        example: Sent via Cosmos Voyager 🚀
       chain_id:
         type: string
         example: Cosmos-Hub
@@ -39150,7 +39160,7 @@ definitions:
         properties:
           rate:
             type: string
-            description: 'rate is the commission rate charged to delegators, as a fraction.'
+            description: rate is the commission rate charged to delegators, as a fraction.
           max_rate:
             type: string
             description: >-
@@ -39171,7 +39181,7 @@ definitions:
     properties:
       rate:
         type: string
-        description: 'rate is the commission rate charged to delegators, as a fraction.'
+        description: rate is the commission rate charged to delegators, as a fraction.
       max_rate:
         type: string
         description: >-
@@ -42558,7 +42568,7 @@ definitions:
         description: Response code.
       data:
         type: string
-        description: 'Result bytes, if any.'
+        description: Result bytes, if any.
       raw_log:
         type: string
         description: |-
@@ -42981,7 +42991,7 @@ definitions:
             description: Response code.
           data:
             type: string
-            description: 'Result bytes, if any.'
+            description: Result bytes, if any.
           raw_log:
             type: string
             description: |-
@@ -43308,7 +43318,7 @@ definitions:
             description: Response code.
           data:
             type: string
-            description: 'Result bytes, if any.'
+            description: Result bytes, if any.
           raw_log:
             type: string
             description: |-
@@ -43583,7 +43593,7 @@ definitions:
               description: Response code.
             data:
               type: string
-              description: 'Result bytes, if any.'
+              description: Result bytes, if any.
             raw_log:
               type: string
               description: |-
@@ -45384,7 +45394,7 @@ definitions:
             index:
               type: boolean
               format: boolean
-          description: 'EventAttribute is a single key-value pair, associated with an event.'
+          description: EventAttribute is a single key-value pair, associated with an event.
     description: >-
       Event allows application developers to attach additional information to
 
@@ -45404,7 +45414,7 @@ definitions:
       index:
         type: boolean
         format: boolean
-    description: 'EventAttribute is a single key-value pair, associated with an event.'
+    description: EventAttribute is a single key-value pair, associated with an event.
   cosmos.upgrade.v1beta1.ModuleVersion:
     type: object
     properties:
