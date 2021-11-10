@@ -139,7 +139,7 @@ func (op *hostnameOperator) webRouter() http.Handler {
 }
 
 var errObservationStopped = errors.New("observation stopped")
-var errExpectedResourceNotFound = fmt.Errorf("%w: resource not found")
+var errExpectedResourceNotFound = fmt.Errorf("%w: resource not found", errObservationStopped)
 
 func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 	/*

@@ -121,13 +121,42 @@ func makeHostnameOperatorScaffold(t *testing.T) *hostnameOperatorScaffold {
 
 	op := &hostnameOperator{
 		hostnames: make(map[string]managedHostname),
+		ignoreList: make(map[mtypes.LeaseID]ignoreListEntry),
 		client:    client,
 		log:       l,
+		ignoreListData: newPreparedResult(),
+		hostnamesData: newPreparedResult(),
 	}
 
 	scaffold.op = op
 
 	return scaffold
+}
+
+func TestHostnameOperatorPrune(t *testing.T) {
+	s := makeHostnameOperatorScaffold(t)
+	require.NotNil(t, s)
+	defer s.cancel()
+
+	s.op.prune() // does nothing, should be fine to call
+	s.client.On("GetManifestGroup", mock.Anything, mock.Anything).Return(false, crd.ManifestGroup{}, nil)
+	const testIterationCount = 200000
+	for i := 0 ; i != testIterationCount; i++ {
+		ev := testHostnameResourceEv{
+			leaseID:      testutil.LeaseID(t),
+			hostname:     "foobar.com",
+			eventType:    cluster.ProviderResourceAdd,
+			serviceName:  "the-ervice",
+			externalPort: 1234,
+		}
+		err := s.op.applyEvent(s.ctx, ev)
+		require.Error(t, err)
+	}
+
+	require.Len(t, s.op.ignoreList, testIterationCount)
+	s.op.prune()
+	require.Less(t, len(s.op.ignoreList), testIterationCount)
+
 }
 
 func TestHostnameOperatorApplyDelete(t *testing.T) {
@@ -156,6 +185,8 @@ func TestHostnameOperatorApplyDelete(t *testing.T) {
 
 	_, exists := s.op.hostnames[hostname]
 	require.False(t, exists) // Removed from dataset
+
+	require.True(t, s.op.hostnamesData.needsPrepare)
 }
 
 func TestHostnameOperatorApplyDeleteFails(t *testing.T) {
@@ -206,10 +237,49 @@ func TestHostnameOperatorApplyAddNoManifestGroup(t *testing.T) {
 
 	err := s.op.applyEvent(s.ctx, ev)
 	require.Error(t, err)
-	require.Regexp(t, "^.*no manifest found.*$", err)
+	require.Regexp(t, "^.*resource not found: manifest.*$", err)
 
 	_, exists := s.op.hostnames[hostname]
 	require.False(t, exists) // not added
+
+	ignoreEntry := s.op.ignoreList[ev.leaseID]
+	require.Equal(t, ignoreEntry.failureCount, uint(1))
+	require.True(t, s.op.ignoreListData.needsPrepare)
+}
+
+func TestHostnameOperatorIgnoresAfterLimit(t *testing.T){
+	s := makeHostnameOperatorScaffold(t)
+	require.NotNil(t, s)
+	defer s.cancel()
+
+	const hostname = "qux.io"
+
+	leaseID := testutil.LeaseID(t)
+
+
+	s.client.On("GetManifestGroup", mock.Anything, leaseID).Return(false, crd.ManifestGroup{}, nil)
+
+	const testEventCount = 10
+	ev := testHostnameResourceEv{
+		leaseID:      leaseID,
+		hostname:     hostname,
+		eventType:    cluster.ProviderResourceAdd,
+		serviceName:  "the-ervice",
+		externalPort: 1234,
+	}
+
+	for i := 0 ; i != testEventCount ; i++ {
+		err := s.op.applyEvent(s.ctx, ev)
+		if err != nil {
+			require.Error(t, err, "iteration %d", i)
+			require.Regexp(t, "^.*resource not found: manifest.*$", err, "iteration %d", i)
+		}
+	}
+
+	_, exists := s.op.hostnames[hostname]
+	require.False(t, exists) // not added
+
+	require.True(t, s.op.isEventIgnored(ev))
 }
 
 func TestHostnameOperatorApplyAdd(t *testing.T) {
@@ -260,6 +330,12 @@ func TestHostnameOperatorApplyAdd(t *testing.T) {
 	managedValue, exists := s.op.hostnames[hostname]
 	require.True(t, exists) // not added
 	require.Equal(t, managedValue.presentLease, leaseID)
+
+	ignoreEntry := s.op.ignoreList[ev.leaseID]
+	require.Equal(t, ignoreEntry.failureCount, uint(0))
+
+	require.False(t, s.op.ignoreListData.needsPrepare)
+	require.True(t, s.op.hostnamesData.needsPrepare)
 }
 
 func TestHostnameOperatorApplyAddMultipleServices(t *testing.T) {
