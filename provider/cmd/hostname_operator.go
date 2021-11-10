@@ -23,6 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 	"github.com/gorilla/mux"
+
+	clusterutil "github.com/ovrclk/akash/provider/cluster/util"
 )
 
 type managedHostname struct {
@@ -31,6 +33,7 @@ type managedHostname struct {
 
 	presentServiceName  string
 	presentExternalPort uint32
+	lastChangeAt time.Time
 }
 
 type preparedResultData struct {
@@ -46,16 +49,17 @@ type preparedResult struct {
 func newPreparedResult() preparedResult {
 	result := preparedResult{
 		data: new(atomic.Value),
+		needsPrepare: true,
 	}
 	result.set([]byte{})
 	return result
 }
 
-func (pr preparedResult) flag() {
+func (pr *preparedResult) flag() {
 	pr.needsPrepare = true
 }
 
-func (pr preparedResult) set(data []byte) {
+func (pr *preparedResult) set(data []byte) {
 	pr.needsPrepare = false
 	pr.data.Store(preparedResultData{
 		preparedAt: time.Now(),
@@ -63,7 +67,7 @@ func (pr preparedResult) set(data []byte) {
 	})
 }
 
-func (pr preparedResult) get() preparedResultData {
+func (pr *preparedResult) get() preparedResultData {
 	return (pr.data.Load()).(preparedResultData)
 }
 
@@ -107,23 +111,28 @@ func (op *hostnameOperator) run(parentCtx context.Context) error {
 	}
 }
 
+func servePreparedResult(rw http.ResponseWriter, pd preparedResult) {
+	rw.Header().Set("Cache-Control", "no-cache, max-age=0")
+	value := pd.get()
+	if len(value.data) == 0 {
+		rw.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	rw.Header().Set("Last-Modified", value.preparedAt.UTC().Format(http.TimeFormat))
+	rw.WriteHeader(http.StatusOK)
+	_, _ = rw.Write(value.data)
+}
+
 func (op *hostnameOperator) webRouter() http.Handler {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/ignore-list", func(rw http.ResponseWriter, req *http.Request) {
-		value := op.ignoreListData.get()
-		if len(value.data) == 0 {
-			rw.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		rw.Header().Set("Last-Modified", value.preparedAt.UTC().Format(http.TimeFormat))
-		rw.WriteHeader(http.StatusOK)
-		_, _ = rw.Write(value.data)
+		servePreparedResult(rw, op.ignoreListData)
 	}).Methods("GET")
 
-	router.HandleFunc("/managed-list", func(rw http.ResponseWriter, req *http.Request) {
-		rw.WriteHeader(http.StatusOK)
+	router.HandleFunc("/managed-hostnames", func(rw http.ResponseWriter, req *http.Request) {
+		servePreparedResult(rw, op.hostnamesData)
 	}).Methods("GET")
 
 	return router
@@ -176,7 +185,7 @@ func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 
 	pruneTicker := time.NewTicker(10 * time.Minute)
 	defer pruneTicker.Stop()
-	prepareTicker := time.NewTicker(time.Minute)
+	prepareTicker := time.NewTicker(5 * time.Second)
 	defer prepareTicker.Stop()
 
 	var exitError error
@@ -214,7 +223,9 @@ loop:
 }
 
 func (op *hostnameOperator) prepare() error {
+	// Check each dataset and rebuild it if needed
 	if op.ignoreListData.needsPrepare {
+		op.log.Debug("preparing ignore-list")
 		buf := &bytes.Buffer{}
 		data := make(map[string]interface{})
 
@@ -225,11 +236,13 @@ func (op *hostnameOperator) prepare() error {
 				LastErrorType string `json:"last-error-type"`
 				FailedAt string `json:"failed-at"`
 				FailureCount uint `json:"failure-count"`
+				Namespace string `json:"namespace"`
 			}{
 				LastError:     ignored.lastError.Error(),
 				LastErrorType: fmt.Sprintf("%T", ignored.lastError),
 				FailedAt:     ignored.failedAt.UTC().String(),
 				FailureCount:  ignored.failureCount,
+				Namespace: 	clusterutil.LeaseIDToNamespace(leaseID),
 			}
 
 			for hostname := range ignored.hostnames {
@@ -246,6 +259,37 @@ func (op *hostnameOperator) prepare() error {
 		}
 
 		op.ignoreListData.set(buf.Bytes())
+	}
+
+	if op.hostnamesData.needsPrepare {
+		op.log.Debug("preparing managed-hostnames")
+		buf := &bytes.Buffer{}
+		data := make(map[string]interface{})
+
+		for hostname, entry := range op.hostnames {
+			preparedEntry := struct {
+				LeaseID mtypes.LeaseID
+				Namespace string
+				ExternalPort uint32
+				ServiceName string
+				LastUpdate string
+			}{
+				LeaseID: entry.presentLease,
+				Namespace: clusterutil.LeaseIDToNamespace(entry.presentLease),
+				ExternalPort: entry.presentExternalPort,
+				ServiceName: entry.presentServiceName,
+				LastUpdate: entry.lastChangeAt.String(),
+			}
+			data[hostname] = preparedEntry
+		}
+
+		enc := json.NewEncoder(buf)
+		err := enc.Encode(data)
+		if err != nil {
+			return err
+		}
+
+		op.hostnamesData.set(buf.Bytes())
 	}
 
 	return nil
@@ -282,6 +326,7 @@ func (op *hostnameOperator) prune() {
 			op.log.Info("removing ignore list entry", "lease", leaseID.String())
 			delete(op.ignoreList, leaseID)
 		}
+		op.ignoreListData.flag()
 	}
 }
 
@@ -499,6 +544,7 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 		entry.presentServiceName = ev.GetServiceName()
 		entry.presentLease = leaseID
 		entry.lastEvent = ev
+		entry.lastChangeAt = time.Now()
 		op.hostnames[ev.GetHostname()] = entry
 		op.hostnamesData.flag()
 	}
