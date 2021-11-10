@@ -26,25 +26,23 @@ import (
 	clusterutil "github.com/ovrclk/akash/provider/cluster/util"
 )
 
-
-const(
-	FlagListenAddress = "listen"
-	FlagPruneInterval = "prune-interval"
+const (
+	FlagListenAddress        = "listen"
+	FlagPruneInterval        = "prune-interval"
 	FlagIgnoreListEntryLimit = "ignore-list-entry-limit"
-	FlagWebRefreshInterval = "web-refresh-interval"
-	FlagRetryDelay = "retry-delay"
-	FlagIgnoreListAgeLimit = "ignore-list-age-limit"
-	FlagEventFailureLimit = "event=failure-limit"
+	FlagWebRefreshInterval   = "web-refresh-interval"
+	FlagRetryDelay           = "retry-delay"
+	FlagIgnoreListAgeLimit   = "ignore-list-age-limit"
+	FlagEventFailureLimit    = "event=failure-limit"
 )
 
-
 var (
-	errObservationStopped = errors.New("observation stopped")
-errExpectedResourceNotFound = fmt.Errorf("%w: resource not found", errObservationStopped)
+	errObservationStopped       = errors.New("observation stopped")
+	errExpectedResourceNotFound = fmt.Errorf("%w: resource not found", errObservationStopped)
 )
 
 type hostnameOperator struct {
-	hostnames map[string]managedHostname
+	hostnames  map[string]managedHostname
 	ignoreList map[mtypes.LeaseID]ignoreListEntry
 
 	client cluster.Client
@@ -52,7 +50,7 @@ type hostnameOperator struct {
 	log log.Logger
 
 	ignoreListData preparedResult
-	hostnamesData preparedResult
+	hostnamesData  preparedResult
 
 	cfg hostnameOperatorConfig
 }
@@ -111,7 +109,6 @@ func (op *hostnameOperator) webRouter() http.Handler {
 	return router
 }
 
-
 func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 	/*
 		Note - the only possible enhancement here would be to enumerate all
@@ -153,7 +150,6 @@ func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 		return err
 	}
 
-
 	pruneTicker := time.NewTicker(op.cfg.pruneInterval)
 	defer pruneTicker.Stop()
 	prepareTicker := time.NewTicker(op.cfg.webRefreshInterval)
@@ -178,9 +174,9 @@ loop:
 				exitError = err
 				break loop
 			}
-		case <- pruneTicker.C:
+		case <-pruneTicker.C:
 			op.prune()
-		case <- prepareTicker.C:
+		case <-prepareTicker.C:
 			if err := op.prepare(); err != nil {
 				op.log.Error("preparing web data failed", "err", err)
 			}
@@ -202,18 +198,18 @@ func (op *hostnameOperator) prepare() error {
 
 		for leaseID, ignored := range op.ignoreList {
 			preparedEntry := struct {
-				Hostnames []string `json:"hostnames"`
-				LastError string `json:"last-error"`
-				LastErrorType string `json:"last-error-type"`
-				FailedAt string `json:"failed-at"`
-				FailureCount uint `json:"failure-count"`
-				Namespace string `json:"namespace"`
+				Hostnames     []string `json:"hostnames"`
+				LastError     string   `json:"last-error"`
+				LastErrorType string   `json:"last-error-type"`
+				FailedAt      string   `json:"failed-at"`
+				FailureCount  uint     `json:"failure-count"`
+				Namespace     string   `json:"namespace"`
 			}{
 				LastError:     ignored.lastError.Error(),
 				LastErrorType: fmt.Sprintf("%T", ignored.lastError),
-				FailedAt:     ignored.failedAt.UTC().String(),
+				FailedAt:      ignored.failedAt.UTC().String(),
 				FailureCount:  ignored.failureCount,
-				Namespace: 	clusterutil.LeaseIDToNamespace(leaseID),
+				Namespace:     clusterutil.LeaseIDToNamespace(leaseID),
 			}
 
 			for hostname := range ignored.hostnames {
@@ -239,17 +235,17 @@ func (op *hostnameOperator) prepare() error {
 
 		for hostname, entry := range op.hostnames {
 			preparedEntry := struct {
-				LeaseID mtypes.LeaseID
-				Namespace string
+				LeaseID      mtypes.LeaseID
+				Namespace    string
 				ExternalPort uint32
-				ServiceName string
-				LastUpdate string
+				ServiceName  string
+				LastUpdate   string
 			}{
-				LeaseID: entry.presentLease,
-				Namespace: clusterutil.LeaseIDToNamespace(entry.presentLease),
+				LeaseID:      entry.presentLease,
+				Namespace:    clusterutil.LeaseIDToNamespace(entry.presentLease),
 				ExternalPort: entry.presentExternalPort,
-				ServiceName: entry.presentServiceName,
-				LastUpdate: entry.lastChangeAt.String(),
+				ServiceName:  entry.presentServiceName,
+				LastUpdate:   entry.lastChangeAt.String(),
 			}
 			data[hostname] = preparedEntry
 		}
@@ -280,10 +276,10 @@ func (op *hostnameOperator) prune() {
 
 		// if enough entries have not been selected for deletion
 		// then just remove half of the entries
-		if len(op.ignoreList) - len(toDelete) > int(op.cfg.ignoreListEntryLimit) {
+		if len(op.ignoreList)-len(toDelete) > int(op.cfg.ignoreListEntryLimit) {
 			op.log.Info("removing half of ignore list entries")
 			i := 0
-			for leaseID:= range op.ignoreList {
+			for leaseID := range op.ignoreList {
 				if (i % 2) == 0 {
 					toDelete = append(toDelete, leaseID)
 				}
@@ -322,7 +318,7 @@ func (op *hostnameOperator) recordEventError(ev ctypes.HostnameResourceEvent, fa
 
 	errStr := failure.Error()
 	// unless the error indicates a resource was not found, no action
-	if !strings.Contains(errStr, "not found") {
+	if strings.Contains(errStr, "not found") {
 		mark = true
 	}
 
@@ -334,7 +330,7 @@ func (op *hostnameOperator) recordEventError(ev ctypes.HostnameResourceEvent, fa
 
 	// Increment the error counter
 	entry := op.ignoreList[ev.GetLeaseID()]
-	entry.failureCount += 1
+	entry.failureCount++
 	entry.failedAt = time.Now()
 	entry.lastError = failure
 	if entry.hostnames == nil {
@@ -530,8 +526,8 @@ func doHostnameOperator(cmd *cobra.Command) error {
 		ignoreListEntryLimit: viper.GetUint(FlagIgnoreListEntryLimit),
 		webRefreshInterval:   viper.GetDuration(FlagWebRefreshInterval),
 		retryDelay:           viper.GetDuration(FlagRetryDelay),
-		ignoreListAgeLimit: viper.GetDuration(FlagIgnoreListAgeLimit),
-		eventFailureLimit: viper.GetUint(FlagEventFailureLimit),
+		ignoreListAgeLimit:   viper.GetDuration(FlagIgnoreListAgeLimit),
+		eventFailureLimit:    viper.GetUint(FlagEventFailureLimit),
 	}
 
 	// Config path not provided because the authorization comes from the role assigned to the deployment
@@ -542,14 +538,14 @@ func doHostnameOperator(cmd *cobra.Command) error {
 	}
 
 	op := hostnameOperator{
-		hostnames: make(map[string]managedHostname),
-		client:    client,
-		log:       logger,
+		hostnames:  make(map[string]managedHostname),
+		client:     client,
+		log:        logger,
 		ignoreList: make(map[mtypes.LeaseID]ignoreListEntry),
-		cfg: config,
+		cfg:        config,
 
 		ignoreListData: newPreparedResult(),
-		hostnamesData: newPreparedResult(),
+		hostnamesData:  newPreparedResult(),
 	}
 
 	router := op.webRouter()
@@ -600,7 +596,7 @@ func HostnameOperatorCmd() *cobra.Command {
 		return nil
 	}
 
-	cmd.Flags().Duration(FlagPruneInterval, 10 * time.Minute, "data pruning interval")
+	cmd.Flags().Duration(FlagPruneInterval, 10*time.Minute, "data pruning interval")
 	if err := viper.BindPFlag(FlagPruneInterval, cmd.Flags().Lookup(FlagPruneInterval)); err != nil {
 		return nil
 	}
@@ -610,27 +606,25 @@ func HostnameOperatorCmd() *cobra.Command {
 		return nil
 	}
 
-	cmd.Flags().Duration(FlagIgnoreListAgeLimit, time.Hour * 726, "ignore list entry age limit")
+	cmd.Flags().Duration(FlagIgnoreListAgeLimit, time.Hour*726, "ignore list entry age limit")
 	if err := viper.BindPFlag(FlagIgnoreListAgeLimit, cmd.Flags().Lookup(FlagIgnoreListAgeLimit)); err != nil {
 		return nil
 	}
 
-	cmd.Flags().Duration(FlagWebRefreshInterval, 5 * time.Second, "web data refresh interval")
+	cmd.Flags().Duration(FlagWebRefreshInterval, 5*time.Second, "web data refresh interval")
 	if err := viper.BindPFlag(FlagWebRefreshInterval, cmd.Flags().Lookup(FlagWebRefreshInterval)); err != nil {
 		return nil
 	}
 
-	cmd.Flags().Duration(FlagRetryDelay, 3 * time.Second, "retry delay")
+	cmd.Flags().Duration(FlagRetryDelay, 3*time.Second, "retry delay")
 	if err := viper.BindPFlag(FlagRetryDelay, cmd.Flags().Lookup(FlagRetryDelay)); err != nil {
 		return nil
 	}
 
 	cmd.Flags().Uint(FlagEventFailureLimit, 3, "event failure limit before it is ignored")
-	if err := viper.BindPFlag(FlagEventFailureLimit, cmd.Flags().Lookup(FlagEventFailureLimit)); err != nil{
+	if err := viper.BindPFlag(FlagEventFailureLimit, cmd.Flags().Lookup(FlagEventFailureLimit)); err != nil {
 		return nil
 	}
 
-
 	return cmd
 }
-

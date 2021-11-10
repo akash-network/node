@@ -120,12 +120,12 @@ func makeHostnameOperatorScaffold(t *testing.T) *hostnameOperatorScaffold {
 	l := testutil.Logger(t)
 
 	op := &hostnameOperator{
-		hostnames: make(map[string]managedHostname),
-		ignoreList: make(map[mtypes.LeaseID]ignoreListEntry),
-		client:    client,
-		log:       l,
+		hostnames:      make(map[string]managedHostname),
+		ignoreList:     make(map[mtypes.LeaseID]ignoreListEntry),
+		client:         client,
+		log:            l,
 		ignoreListData: newPreparedResult(),
-		hostnamesData: newPreparedResult(),
+		hostnamesData:  newPreparedResult(),
 		cfg: hostnameOperatorConfig{
 			pruneInterval:        time.Hour,
 			ignoreListEntryLimit: 10,
@@ -149,7 +149,7 @@ func TestHostnameOperatorPrune(t *testing.T) {
 	s.op.prune() // does nothing, should be fine to call
 	s.client.On("GetManifestGroup", mock.Anything, mock.Anything).Return(false, crd.ManifestGroup{}, nil)
 	const testIterationCount = 20
-	for i := 0 ; i != testIterationCount; i++ {
+	for i := 0; i != testIterationCount; i++ {
 		ev := testHostnameResourceEv{
 			leaseID:      testutil.LeaseID(t),
 			hostname:     "foobar.com",
@@ -205,7 +205,7 @@ func TestHostnameOperatorApplyDeleteFails(t *testing.T) {
 	require.NotNil(t, s)
 	defer s.cancel()
 
-	const hostname = "qux.io"
+	const hostname = "lsn.io"
 	// Shove in something so we can confirm it is deleted
 	s.op.hostnames[hostname] = managedHostname{}
 
@@ -260,7 +260,37 @@ func TestHostnameOperatorApplyAddNoManifestGroup(t *testing.T) {
 	require.False(t, s.op.ignoreListData.needsPrepare)
 }
 
-func TestHostnameOperatorIgnoresAfterLimit(t *testing.T){
+func TestHostnameOperatorApplyAddWithError(t *testing.T) {
+	s := makeHostnameOperatorScaffold(t)
+	require.NotNil(t, s)
+	defer s.cancel()
+
+	const hostname = "zab.io"
+
+	leaseID := testutil.LeaseID(t)
+	ev := testHostnameResourceEv{
+		leaseID:      leaseID,
+		hostname:     hostname,
+		eventType:    cluster.ProviderResourceAdd,
+		serviceName:  "the-ervice",
+		externalPort: 1234,
+	}
+
+	s.client.On("GetManifestGroup", mock.Anything, leaseID).Return(false, crd.ManifestGroup{}, io.EOF)
+
+	err := s.op.applyEvent(s.ctx, ev)
+	require.Error(t, err)
+	require.ErrorIs(t, err, io.EOF)
+
+	_, exists := s.op.hostnames[hostname]
+	require.False(t, exists) // not added
+
+	_, exists = s.op.ignoreList[ev.leaseID] // not ignored
+	require.False(t, exists)
+	require.False(t, s.op.ignoreListData.needsPrepare)
+}
+
+func TestHostnameOperatorIgnoresAfterLimit(t *testing.T) {
 	s := makeHostnameOperatorScaffold(t)
 	require.NotNil(t, s)
 	defer s.cancel()
@@ -268,7 +298,6 @@ func TestHostnameOperatorIgnoresAfterLimit(t *testing.T){
 	const hostname = "qux.io"
 
 	leaseID := testutil.LeaseID(t)
-
 
 	s.client.On("GetManifestGroup", mock.Anything, leaseID).Return(false, crd.ManifestGroup{}, nil)
 
@@ -281,7 +310,7 @@ func TestHostnameOperatorIgnoresAfterLimit(t *testing.T){
 		externalPort: 1234,
 	}
 
-	for i := 0 ; i != testEventCount ; i++ {
+	for i := 0; i != testEventCount; i++ {
 		err := s.op.applyEvent(s.ctx, ev)
 		if err != nil {
 			require.Error(t, err, "iteration %d", i)
