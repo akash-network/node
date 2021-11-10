@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ovrclk/akash/manifest"
@@ -14,7 +16,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/log"
+	"golang.org/x/sync/errgroup"
+	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
+	"net/http"
+	"strings"
+	"sync/atomic"
 	"time"
+	"github.com/gorilla/mux"
 )
 
 type managedHostname struct {
@@ -25,12 +33,50 @@ type managedHostname struct {
 	presentExternalPort uint32
 }
 
+type preparedResultData struct {
+	preparedAt time.Time
+	data []byte
+}
+
+type preparedResult struct {
+	needsPrepare bool
+	data *atomic.Value
+}
+
+func newPreparedResult() preparedResult {
+	result := preparedResult{
+		data: new(atomic.Value),
+	}
+	result.set([]byte{})
+	return result
+}
+
+func (pr preparedResult) flag() {
+	pr.needsPrepare = true
+}
+
+func (pr preparedResult) set(data []byte) {
+	pr.needsPrepare = false
+	pr.data.Store(preparedResultData{
+		preparedAt: time.Now(),
+		data:       data,
+	})
+}
+
+func (pr preparedResult) get() preparedResultData {
+	return (pr.data.Load()).(preparedResultData)
+}
+
 type hostnameOperator struct {
 	hostnames map[string]managedHostname
+	ignoreList map[mtypes.LeaseID]ignoreListEntry
 
 	client cluster.Client
 
 	log log.Logger
+
+	ignoreListData preparedResult
+	hostnamesData preparedResult
 }
 
 func (op *hostnameOperator) run(parentCtx context.Context) error {
@@ -61,7 +107,30 @@ func (op *hostnameOperator) run(parentCtx context.Context) error {
 	}
 }
 
+func (op *hostnameOperator) webRouter() http.Handler {
+	router := mux.NewRouter()
+
+	router.HandleFunc("/ignore-list", func(rw http.ResponseWriter, req *http.Request) {
+		value := op.ignoreListData.get()
+		if len(value.data) == 0 {
+			rw.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		rw.Header().Set("Last-Modified", value.preparedAt.UTC().Format(http.TimeFormat))
+		rw.WriteHeader(http.StatusOK)
+		_, _ = rw.Write(value.data)
+	}).Methods("GET")
+
+	router.HandleFunc("/managed-list", func(rw http.ResponseWriter, req *http.Request) {
+		rw.WriteHeader(http.StatusOK)
+	}).Methods("GET")
+
+	return router
+}
+
 var errObservationStopped = errors.New("observation stopped")
+var errExpectedResourceNotFound = fmt.Errorf("%w: resource not found")
 
 func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 	/*
@@ -96,12 +165,19 @@ func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 			"service", entry.presentServiceName,
 			"port", entry.presentExternalPort)
 	}
+	op.hostnamesData.flag()
 
 	events, err := op.client.ObserveHostnameState(ctx)
 	if err != nil {
 		cancel()
 		return err
 	}
+
+
+	pruneTicker := time.NewTicker(10 * time.Minute)
+	defer pruneTicker.Stop()
+	prepareTicker := time.NewTicker(time.Minute)
+	defer prepareTicker.Stop()
 
 	var exitError error
 loop:
@@ -122,12 +198,145 @@ loop:
 				exitError = err
 				break loop
 			}
+		case <- pruneTicker.C:
+			op.prune()
+		case <- prepareTicker.C:
+			if err := op.prepare(); err != nil {
+				op.log.Error("preparing web data failed", "err", err)
+			}
+
 		}
 	}
 
 	cancel()
 	op.log.Debug("hostname operator done")
 	return exitError
+}
+
+func (op *hostnameOperator) prepare() error {
+	if op.ignoreListData.needsPrepare {
+		buf := &bytes.Buffer{}
+		data := make(map[string]interface{})
+
+		for leaseID, ignored := range op.ignoreList {
+			preparedEntry := struct {
+				Hostnames []string `json:"hostnames"`
+				LastError string `json:"last-error"`
+				LastErrorType string `json:"last-error-type"`
+				FailedAt string `json:"failed-at"`
+				FailureCount uint `json:"failure-count"`
+			}{
+				LastError:     ignored.lastError.Error(),
+				LastErrorType: fmt.Sprintf("%T", ignored.lastError),
+				FailedAt:     ignored.failedAt.UTC().String(),
+				FailureCount:  ignored.failureCount,
+			}
+
+			for hostname := range ignored.hostnames {
+				preparedEntry.Hostnames = append(preparedEntry.Hostnames, hostname)
+			}
+
+			data[leaseID.String()] = preparedEntry
+		}
+
+		enc := json.NewEncoder(buf)
+		err := enc.Encode(data)
+		if err != nil {
+			return err
+		}
+
+		op.ignoreListData.set(buf.Bytes())
+	}
+
+	return nil
+}
+
+func (op *hostnameOperator) prune() {
+	// do not let the ignore list grow unbounded, it would eventually
+	// consume 100% of available memory otherwise
+	const ignoreListEntryLimit = 131071
+	const ignoreListAgeLimit = time.Hour * 72
+	if len(op.ignoreList) > ignoreListEntryLimit {
+		var toDelete []mtypes.LeaseID
+
+		for leaseID, entry := range op.ignoreList {
+			if time.Since(entry.failedAt) > ignoreListAgeLimit {
+				toDelete = append(toDelete, leaseID)
+			}
+		}
+
+		// if enough entries have not been selected for deletion
+		// then just remove half of the entries
+		if len(op.ignoreList) - len(toDelete) > ignoreListEntryLimit {
+			op.log.Info("removing half of ignore list entries")
+			i := 0
+			for leaseID:= range op.ignoreList {
+				if (i % 2) == 0 {
+					toDelete = append(toDelete, leaseID)
+				}
+				i++
+			}
+		}
+
+		for _, leaseID := range toDelete {
+			op.log.Info("removing ignore list entry", "lease", leaseID.String())
+			delete(op.ignoreList, leaseID)
+		}
+	}
+}
+
+func (op *hostnameOperator) recordEventError(ev ctypes.HostnameResourceEvent, failure error) {
+	// ff no error, no action
+	if failure == nil {
+		return
+	}
+
+	// check the error, only consider errors that are obviously
+	// indicating a missing resource
+	// otherwise simple errors like network issues could wind up with all CRDs
+	// being ignored
+
+	mark := false
+
+	if kubeErrors.IsNotFound(failure) {
+		mark = true
+	}
+
+	if errors.Is(failure, errExpectedResourceNotFound) {
+		mark = true
+	}
+
+	errStr := failure.Error()
+	// unless the error indicates a resource was not found, no action
+	if !strings.Contains(errStr, "not found") {
+		mark = true
+	}
+
+	if !mark {
+		return
+	}
+
+	op.log.Info("recording error for", "lease", ev.GetLeaseID().String(), "err", failure)
+
+	// Increment the error counter
+	entry := op.ignoreList[ev.GetLeaseID()]
+	entry.failureCount += 1
+	entry.failedAt = time.Now()
+	entry.lastError = failure
+	if entry.hostnames == nil {
+		entry.hostnames = make(map[string]struct{})
+	}
+
+	entry.hostnames[ev.GetHostname()] = struct{}{}
+
+	op.ignoreList[ev.GetLeaseID()] = entry
+	op.ignoreListData.flag()
+}
+
+func (op *hostnameOperator) isEventIgnored(ev ctypes.HostnameResourceEvent) bool {
+	const failureLimit = 3
+	entry := op.ignoreList[ev.GetLeaseID()]
+	return entry.failureCount >= failureLimit
 }
 
 func (op *hostnameOperator) applyEvent(ctx context.Context, ev ctypes.HostnameResourceEvent) error {
@@ -137,7 +346,13 @@ func (op *hostnameOperator) applyEvent(ctx context.Context, ev ctypes.HostnameRe
 		// note that on delete the resource might be gone anyways because the namespace is deleted
 		return op.applyDeleteEvent(ctx, ev)
 	case ctypes.ProviderResourceAdd, ctypes.ProviderResourceUpdate:
-		return op.applyAddOrUpdateEvent(ctx, ev)
+		if op.isEventIgnored(ev) {
+			op.log.Info("ignoring event for", "lease", ev.GetLeaseID().String())
+			return nil
+		}
+		err := op.applyAddOrUpdateEvent(ctx, ev)
+		op.recordEventError(ev, err)
+		return err
 	default:
 		return fmt.Errorf("%w: unknown event type %v", errObservationStopped, ev.GetEventType())
 	}
@@ -150,6 +365,7 @@ func (op *hostnameOperator) applyDeleteEvent(ctx context.Context, ev ctypes.Host
 
 	if err == nil {
 		delete(op.hostnames, ev.GetHostname())
+		op.hostnamesData.flag()
 	}
 
 	return err
@@ -200,7 +416,7 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 			can be rewritten to watch for CRD events on the manifest as well, then avoid running this code
 			until the manifest exists.
 		*/
-		return fmt.Errorf("%w: no manifest found for %v", errObservationStopped, ev.GetLeaseID())
+		return fmt.Errorf("%w: manifest for %v", errExpectedResourceNotFound, ev.GetLeaseID())
 	}
 
 	var selectedService crd.ManifestService
@@ -212,7 +428,7 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 	}
 
 	if selectedService.Count == 0 {
-		return fmt.Errorf("%w: no service found for %v - %v", errObservationStopped, ev.GetLeaseID(), ev.GetServiceName())
+		return fmt.Errorf("%w: service for %v - %v", errExpectedResourceNotFound, ev.GetLeaseID(), ev.GetServiceName())
 	}
 
 	var selectedExpose crd.ManifestServiceExpose
@@ -231,7 +447,7 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 	}
 
 	if selectedExpose.Port == 0 {
-		return fmt.Errorf("%w: no service expose found for %v - %v - %v", errObservationStopped, ev.GetLeaseID(), ev.GetServiceName(), ev.GetExternalPort())
+		return fmt.Errorf("%w: service expose for %v - %v - %v", errExpectedResourceNotFound, ev.GetLeaseID(), ev.GetServiceName(), ev.GetExternalPort())
 	}
 
 	leaseID := ev.GetLeaseID()
@@ -284,6 +500,7 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 		entry.presentLease = leaseID
 		entry.lastEvent = ev
 		op.hostnames[ev.GetHostname()] = entry
+		op.hostnamesData.flag()
 	}
 
 	return err
@@ -304,9 +521,38 @@ func doHostnameOperator(cmd *cobra.Command) error {
 		hostnames: make(map[string]managedHostname),
 		client:    client,
 		log:       logger,
+		ignoreList: make(map[mtypes.LeaseID]ignoreListEntry),
+
+		ignoreListData: newPreparedResult(),
+		hostnamesData: newPreparedResult(),
 	}
 
-	return op.run(cmd.Context())
+	router := op.webRouter()
+
+	group, ctx := errgroup.WithContext(cmd.Context())
+
+	group.Go(func() error {
+		srv := http.Server{Addr: "0.0.0.0:8085", Handler: router}
+		go func() {
+			<-ctx.Done()
+			_ = srv.Close()
+		}()
+		err := srv.ListenAndServe()
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+	})
+
+	group.Go(func() error {
+		return op.run(ctx)
+	})
+
+	err = group.Wait()
+	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	return nil
 }
 
 func HostnameOperatorCmd() *cobra.Command {
@@ -325,4 +571,11 @@ func HostnameOperatorCmd() *cobra.Command {
 	}
 
 	return cmd
+}
+
+type ignoreListEntry struct {
+	failureCount uint
+	failedAt time.Time
+	lastError error
+	hostnames map[string]struct{}
 }
