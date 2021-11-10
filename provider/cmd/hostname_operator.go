@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/ovrclk/akash/manifest"
 	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	"github.com/ovrclk/akash/provider/cluster"
@@ -20,56 +21,27 @@ import (
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	"net/http"
 	"strings"
-	"sync/atomic"
 	"time"
-	"github.com/gorilla/mux"
 
 	clusterutil "github.com/ovrclk/akash/provider/cluster/util"
 )
 
-type managedHostname struct {
-	lastEvent    ctypes.HostnameResourceEvent
-	presentLease mtypes.LeaseID
 
-	presentServiceName  string
-	presentExternalPort uint32
-	lastChangeAt time.Time
-}
+const(
+	FlagListenAddress = "listen"
+	FlagPruneInterval = "prune-interval"
+	FlagIgnoreListEntryLimit = "ignore-list-entry-limit"
+	FlagWebRefreshInterval = "web-refresh-interval"
+	FlagRetryDelay = "retry-delay"
+	FlagIgnoreListAgeLimit = "ignore-list-age-limit"
+	FlagEventFailureLimit = "event=failure-limit"
+)
 
-type preparedResultData struct {
-	preparedAt time.Time
-	data []byte
-}
 
-type preparedResult struct {
-	needsPrepare bool
-	data *atomic.Value
-}
-
-func newPreparedResult() preparedResult {
-	result := preparedResult{
-		data: new(atomic.Value),
-		needsPrepare: true,
-	}
-	result.set([]byte{})
-	return result
-}
-
-func (pr *preparedResult) flag() {
-	pr.needsPrepare = true
-}
-
-func (pr *preparedResult) set(data []byte) {
-	pr.needsPrepare = false
-	pr.data.Store(preparedResultData{
-		preparedAt: time.Now(),
-		data:       data,
-	})
-}
-
-func (pr *preparedResult) get() preparedResultData {
-	return (pr.data.Load()).(preparedResultData)
-}
+var (
+	errObservationStopped = errors.New("observation stopped")
+errExpectedResourceNotFound = fmt.Errorf("%w: resource not found", errObservationStopped)
+)
 
 type hostnameOperator struct {
 	hostnames map[string]managedHostname
@@ -81,11 +53,12 @@ type hostnameOperator struct {
 
 	ignoreListData preparedResult
 	hostnamesData preparedResult
+
+	cfg hostnameOperatorConfig
 }
 
 func (op *hostnameOperator) run(parentCtx context.Context) error {
 	op.log.Debug("hostname operator start")
-	const threshold = 3 * time.Second
 
 	for {
 		lastAttempt := time.Now()
@@ -99,12 +72,12 @@ func (op *hostnameOperator) run(parentCtx context.Context) error {
 
 		// don't spin if there is a condition causing fast failure
 		elapsed := time.Since(lastAttempt)
-		if elapsed < threshold {
+		if elapsed < op.cfg.retryDelay {
 			op.log.Info("delaying")
 			select {
 			case <-parentCtx.Done():
 				return parentCtx.Err()
-			case <-time.After(threshold):
+			case <-time.After(op.cfg.retryDelay):
 				// delay complete
 			}
 		}
@@ -138,8 +111,6 @@ func (op *hostnameOperator) webRouter() http.Handler {
 	return router
 }
 
-var errObservationStopped = errors.New("observation stopped")
-var errExpectedResourceNotFound = fmt.Errorf("%w: resource not found", errObservationStopped)
 
 func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 	/*
@@ -183,9 +154,9 @@ func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 	}
 
 
-	pruneTicker := time.NewTicker(10 * time.Minute)
+	pruneTicker := time.NewTicker(op.cfg.pruneInterval)
 	defer pruneTicker.Stop()
-	prepareTicker := time.NewTicker(5 * time.Second)
+	prepareTicker := time.NewTicker(op.cfg.webRefreshInterval)
 	defer prepareTicker.Stop()
 
 	var exitError error
@@ -298,20 +269,18 @@ func (op *hostnameOperator) prepare() error {
 func (op *hostnameOperator) prune() {
 	// do not let the ignore list grow unbounded, it would eventually
 	// consume 100% of available memory otherwise
-	const ignoreListEntryLimit = 131071
-	const ignoreListAgeLimit = time.Hour * 72
-	if len(op.ignoreList) > ignoreListEntryLimit {
+	if len(op.ignoreList) > int(op.cfg.ignoreListEntryLimit) {
 		var toDelete []mtypes.LeaseID
 
 		for leaseID, entry := range op.ignoreList {
-			if time.Since(entry.failedAt) > ignoreListAgeLimit {
+			if time.Since(entry.failedAt) > op.cfg.ignoreListAgeLimit {
 				toDelete = append(toDelete, leaseID)
 			}
 		}
 
 		// if enough entries have not been selected for deletion
 		// then just remove half of the entries
-		if len(op.ignoreList) - len(toDelete) > ignoreListEntryLimit {
+		if len(op.ignoreList) - len(toDelete) > int(op.cfg.ignoreListEntryLimit) {
 			op.log.Info("removing half of ignore list entries")
 			i := 0
 			for leaseID:= range op.ignoreList {
@@ -379,9 +348,8 @@ func (op *hostnameOperator) recordEventError(ev ctypes.HostnameResourceEvent, fa
 }
 
 func (op *hostnameOperator) isEventIgnored(ev ctypes.HostnameResourceEvent) bool {
-	const failureLimit = 3
 	entry := op.ignoreList[ev.GetLeaseID()]
-	return entry.failureCount >= failureLimit
+	return entry.failureCount >= op.cfg.eventFailureLimit
 }
 
 func (op *hostnameOperator) applyEvent(ctx context.Context, ev ctypes.HostnameResourceEvent) error {
@@ -556,6 +524,16 @@ func doHostnameOperator(cmd *cobra.Command) error {
 	ns := viper.GetString(FlagK8sManifestNS)
 	logger := openLogger()
 
+	config := hostnameOperatorConfig{
+		listenAddress:        viper.GetString(FlagListenAddress),
+		pruneInterval:        viper.GetDuration(FlagPruneInterval),
+		ignoreListEntryLimit: viper.GetUint(FlagIgnoreListEntryLimit),
+		webRefreshInterval:   viper.GetDuration(FlagWebRefreshInterval),
+		retryDelay:           viper.GetDuration(FlagRetryDelay),
+		ignoreListAgeLimit: viper.GetDuration(FlagIgnoreListAgeLimit),
+		eventFailureLimit: viper.GetUint(FlagEventFailureLimit),
+	}
+
 	// Config path not provided because the authorization comes from the role assigned to the deployment
 	// and provided by kubernetes
 	client, err := clusterClient.NewClient(logger, ns, "")
@@ -568,6 +546,7 @@ func doHostnameOperator(cmd *cobra.Command) error {
 		client:    client,
 		log:       logger,
 		ignoreList: make(map[mtypes.LeaseID]ignoreListEntry),
+		cfg: config,
 
 		ignoreListData: newPreparedResult(),
 		hostnamesData: newPreparedResult(),
@@ -616,12 +595,42 @@ func HostnameOperatorCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().String(FlagListenAddress, "0.0.0.0:8085", "listen address for web server")
+	if err := viper.BindPFlag(FlagListenAddress, cmd.Flags().Lookup(FlagListenAddress)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagPruneInterval, 10 * time.Minute, "data pruning interval")
+	if err := viper.BindPFlag(FlagPruneInterval, cmd.Flags().Lookup(FlagPruneInterval)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint(FlagIgnoreListEntryLimit, 131072, "ignore list size limit")
+	if err := viper.BindPFlag(FlagIgnoreListEntryLimit, cmd.Flags().Lookup(FlagIgnoreListEntryLimit)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagIgnoreListAgeLimit, time.Hour * 726, "ignore list entry age limit")
+	if err := viper.BindPFlag(FlagIgnoreListAgeLimit, cmd.Flags().Lookup(FlagIgnoreListAgeLimit)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagWebRefreshInterval, 5 * time.Second, "web data refresh interval")
+	if err := viper.BindPFlag(FlagWebRefreshInterval, cmd.Flags().Lookup(FlagWebRefreshInterval)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagRetryDelay, 3 * time.Second, "retry delay")
+	if err := viper.BindPFlag(FlagRetryDelay, cmd.Flags().Lookup(FlagRetryDelay)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Uint(FlagEventFailureLimit, 3, "event failure limit before it is ignored")
+	if err := viper.BindPFlag(FlagEventFailureLimit, cmd.Flags().Lookup(FlagEventFailureLimit)); err != nil{
+		return nil
+	}
+
+
 	return cmd
 }
 
-type ignoreListEntry struct {
-	failureCount uint
-	failedAt time.Time
-	lastError error
-	hostnames map[string]struct{}
-}

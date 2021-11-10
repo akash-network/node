@@ -126,6 +126,14 @@ func makeHostnameOperatorScaffold(t *testing.T) *hostnameOperatorScaffold {
 		log:       l,
 		ignoreListData: newPreparedResult(),
 		hostnamesData: newPreparedResult(),
+		cfg: hostnameOperatorConfig{
+			pruneInterval:        time.Hour,
+			ignoreListEntryLimit: 10,
+			ignoreListAgeLimit:   time.Hour,
+			webRefreshInterval:   time.Second,
+			retryDelay:           time.Second,
+			eventFailureLimit:    3,
+		},
 	}
 
 	scaffold.op = op
@@ -140,7 +148,7 @@ func TestHostnameOperatorPrune(t *testing.T) {
 
 	s.op.prune() // does nothing, should be fine to call
 	s.client.On("GetManifestGroup", mock.Anything, mock.Anything).Return(false, crd.ManifestGroup{}, nil)
-	const testIterationCount = 200000
+	const testIterationCount = 20
 	for i := 0 ; i != testIterationCount; i++ {
 		ev := testHostnameResourceEv{
 			leaseID:      testutil.LeaseID(t),
@@ -187,6 +195,9 @@ func TestHostnameOperatorApplyDelete(t *testing.T) {
 	require.False(t, exists) // Removed from dataset
 
 	require.True(t, s.op.hostnamesData.needsPrepare)
+	require.NoError(t, s.op.prepare())
+	require.False(t, s.op.hostnamesData.needsPrepare)
+
 }
 
 func TestHostnameOperatorApplyDeleteFails(t *testing.T) {
@@ -245,6 +256,8 @@ func TestHostnameOperatorApplyAddNoManifestGroup(t *testing.T) {
 	ignoreEntry := s.op.ignoreList[ev.leaseID]
 	require.Equal(t, ignoreEntry.failureCount, uint(1))
 	require.True(t, s.op.ignoreListData.needsPrepare)
+	require.NoError(t, s.op.prepare())
+	require.False(t, s.op.ignoreListData.needsPrepare)
 }
 
 func TestHostnameOperatorIgnoresAfterLimit(t *testing.T){
