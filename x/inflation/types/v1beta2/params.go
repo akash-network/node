@@ -1,7 +1,7 @@
 package v1beta2
 
 import (
-	"strconv"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/pkg/errors"
@@ -11,12 +11,21 @@ var _ paramtypes.ParamSet = (*Params)(nil)
 
 const (
 	DefaultInflationDecayFactor uint32 = 2 // years
-	DefaultInitialInflation     string = "100.0"
-	DefaultVarince              string = "0.05"
 
 	keyInflationDecayFactor = "InflationDecayFactor"
 	keyInitialInflation     = "InitialInflation"
 	keyVariance             = "Variance"
+)
+
+var (
+	DefaultInitialInflation = sdk.NewDec(100)
+	DefaultVarince          = sdk.MustNewDecFromStr("0.05")
+
+	MaxInitialInflation = sdk.NewDec(100)
+	MinInitialInflation = sdk.ZeroDec()
+
+	MaxVariance = sdk.NewDec(1)
+	MinVariance = sdk.ZeroDec()
 )
 
 func ParamKeyTable() paramtypes.KeyTable {
@@ -63,32 +72,24 @@ func validateInflationDecayFactor(i interface{}) error {
 }
 
 func validateInitialInflation(i interface{}) error {
-	v, ok := i.(string)
+	v, ok := i.(sdk.Dec)
 	if !ok {
 		return errors.Wrapf(ErrInvalidParam, "%T", i)
 	}
-	initialInflation, err := strconv.ParseFloat(v, 32)
-	if err != nil {
-		return err
-	}
-	if initialInflation > 100.0 {
-		return errors.Wrapf(ErrInvalidInitialInflation, "%v", initialInflation)
+	if v.GT(MaxInitialInflation) || v.LT(MinInitialInflation) {
+		return errors.Wrapf(ErrInvalidInitialInflation, "%v", v)
 	}
 
 	return nil
 }
 
 func validateVariance(i interface{}) error {
-	v, ok := i.(string)
+	v, ok := i.(sdk.Dec)
 	if !ok {
 		return errors.Wrapf(ErrInvalidParam, "%T", i)
 	}
-	variance, err := strconv.ParseFloat(v, 32)
-	if err != nil {
-		return err
-	}
-	if variance < 0.0 || variance > 1.0 {
-		return errors.Wrapf(ErrInvalidVariance, "%v", variance)
+	if v.GT(MaxVariance) || v.LT(MinVariance) {
+		return errors.Wrapf(ErrInvalidVariance, "%v", v)
 	}
 
 	return nil
