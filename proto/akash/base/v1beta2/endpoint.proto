@@ -18,4 +18,6 @@ message Endpoint {
     LEASED_IP = 2;
   }
   Kind kind = 1;
+  uint32 sequence_number = 2
+    [(gogoproto.customname) = "SequenceNumber", (gogoproto.jsontag) = "sequence_number", (gogoproto.moretags) = "yaml:\"sequence_number\""];
 }
