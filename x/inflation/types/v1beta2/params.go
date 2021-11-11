@@ -17,16 +17,14 @@ const (
 	keyVariance             = "Variance"
 )
 
-var (
-	DefaultInitialInflation = sdk.NewDec(100)
-	DefaultVarince          = sdk.MustNewDecFromStr("0.05")
+func DefaultInitialInflation() sdk.Dec { return sdk.NewDec(100) }
+func DefaultVarince() sdk.Dec          { return sdk.MustNewDecFromStr("0.05") }
 
-	MaxInitialInflation = sdk.NewDec(100)
-	MinInitialInflation = sdk.ZeroDec()
+func MaxInitialInflation() sdk.Dec { return sdk.NewDec(100) }
+func MinInitialInflation() sdk.Dec { return sdk.ZeroDec() }
 
-	MaxVariance = sdk.NewDec(1)
-	MinVariance = sdk.ZeroDec()
-)
+func MaxVariance() sdk.Dec { return sdk.NewDec(1) }
+func MinVariance() sdk.Dec { return sdk.ZeroDec() }
 
 func ParamKeyTable() paramtypes.KeyTable {
 	return paramtypes.NewKeyTable().RegisterParamSet(&Params{})
@@ -43,8 +41,8 @@ func (p *Params) ParamSetPairs() paramtypes.ParamSetPairs {
 func DefaultParams() Params {
 	return Params{
 		InflationDecayFactor: DefaultInflationDecayFactor,
-		InitialInflation:     DefaultInitialInflation,
-		Variance:             DefaultVarince,
+		InitialInflation:     DefaultInitialInflation(),
+		Variance:             DefaultVarince(),
 	}
 }
 
@@ -76,7 +74,7 @@ func validateInitialInflation(i interface{}) error {
 	if !ok {
 		return errors.Wrapf(ErrInvalidParam, "%T", i)
 	}
-	if v.GT(MaxInitialInflation) || v.LT(MinInitialInflation) {
+	if v.GT(MaxInitialInflation()) || v.LT(MinInitialInflation()) {
 		return errors.Wrapf(ErrInvalidInitialInflation, "%v", v)
 	}
 
@@ -88,7 +86,7 @@ func validateVariance(i interface{}) error {
 	if !ok {
 		return errors.Wrapf(ErrInvalidParam, "%T", i)
 	}
-	if v.GT(MaxVariance) || v.LT(MinVariance) {
+	if v.GT(MaxVariance()) || v.LT(MinVariance()) {
 		return errors.Wrapf(ErrInvalidVariance, "%v", v)
 	}
 

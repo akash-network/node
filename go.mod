@@ -9,6 +9,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.44.3
 	github.com/cosmos/ibc-go v1.0.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/ericlagergren/decimal v0.0.0-20211103172832-aca2edc11f73
 	github.com/gin-gonic/gin v1.7.0 // indirect
 	github.com/go-kit/kit v0.10.0
 	github.com/gogo/protobuf v1.3.3
