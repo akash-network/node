@@ -172,7 +172,7 @@ func TestHostnameOperatorApplyDelete(t *testing.T) {
 	require.NotNil(t, s)
 	defer s.cancel()
 
-	const hostname = "qux.xyz"
+	const hostname = "qux.test"
 	// Shove in something so we can confirm it is deleted
 	s.op.hostnames[hostname] = managedHostname{}
 
@@ -205,7 +205,7 @@ func TestHostnameOperatorApplyDeleteFails(t *testing.T) {
 	require.NotNil(t, s)
 	defer s.cancel()
 
-	const hostname = "lsn.io"
+	const hostname = "lsn.test"
 	// Shove in something so we can confirm it is deleted
 	s.op.hostnames[hostname] = managedHostname{}
 
@@ -233,7 +233,7 @@ func TestHostnameOperatorApplyAddNoManifestGroup(t *testing.T) {
 	require.NotNil(t, s)
 	defer s.cancel()
 
-	const hostname = "qux.io"
+	const hostname = "qux.test"
 
 	leaseID := testutil.LeaseID(t)
 	ev := testHostnameResourceEv{
@@ -265,7 +265,7 @@ func TestHostnameOperatorApplyAddWithError(t *testing.T) {
 	require.NotNil(t, s)
 	defer s.cancel()
 
-	const hostname = "zab.io"
+	const hostname = "zab.test"
 
 	leaseID := testutil.LeaseID(t)
 	ev := testHostnameResourceEv{
@@ -295,7 +295,7 @@ func TestHostnameOperatorIgnoresAfterLimit(t *testing.T) {
 	require.NotNil(t, s)
 	defer s.cancel()
 
-	const hostname = "qux.io"
+	const hostname = "qux.test"
 
 	leaseID := testutil.LeaseID(t)
 
@@ -329,7 +329,7 @@ func TestHostnameOperatorApplyAdd(t *testing.T) {
 	require.NotNil(t, s)
 	defer s.cancel()
 
-	const hostname = "qux.io"
+	const hostname = "qux.test"
 
 	const externalPort = 41333
 	leaseID := testutil.LeaseID(t)
@@ -385,7 +385,7 @@ func TestHostnameOperatorApplyAddMultipleServices(t *testing.T) {
 	require.NotNil(t, s)
 	defer s.cancel()
 
-	const hostname = "qux.io"
+	const hostname = "qux.test"
 
 	const externalPort = 41333
 	leaseID := testutil.LeaseID(t)
@@ -457,7 +457,7 @@ func TestHostnameOperatorApplyUpdate(t *testing.T) {
 	require.NotNil(t, s)
 	defer s.cancel()
 
-	const hostname = "qux.io"
+	const hostname = "qux.test"
 
 	const externalPort = 41333
 	leaseID := testutil.LeaseID(t)
