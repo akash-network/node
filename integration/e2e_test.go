@@ -313,7 +313,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	go func() {
 		s.T().Log("starting hostname operator for test")
 		_, err := ptestutil.RunLocalHostnameOperator(s.ctx, cctx)
-		s.Require().ErrorIs(err, context.Canceled)
+		s.Require().NoError(err)
 	}()
 
 	s.Require().NoError(s.network.WaitForNextBlock())
