@@ -3,10 +3,11 @@ kind: Ingress
 metadata:
   name: akash-hostname-operator
   annotations:
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
 
 spec:
+  ingressClassName: "akash-ingress-class"
   rules:
     - host: akash-hostname-operator.localhost
       http:
