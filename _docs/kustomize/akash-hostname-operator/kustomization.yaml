@@ -15,3 +15,11 @@ configMapGenerator:
   - name: akash-provider-config
     literals:
       - k8s-manifest-ns=lease
+  - name: akash-hostname-operator-config
+    literals:
+      - prune-interval=600s
+      - ignore-list-entry-limit=131072
+      - web-refresh-interval=5s
+      - retry-delay=3s
+      - ignore-list-age-limit=2613600s
+      - event-failure-limit=3

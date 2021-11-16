@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: akash-hostname-operator
 spec:
+  selector:
+    akash.network/component: akash-hostname-operator
   ports:
     - name: status
-      port: 8188
+      port: 8085
