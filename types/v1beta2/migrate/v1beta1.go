@@ -78,7 +78,8 @@ func EndpointsFromV1Beta1(from []v1beta1.Endpoint) []v1beta2.Endpoint {
 
 	for _, endpoint := range from {
 		res = append(res, v1beta2.Endpoint{
-			Kind: v1beta2.Endpoint_Kind(endpoint.Kind),
+			Kind:           v1beta2.Endpoint_Kind(endpoint.Kind),
+			SequenceNumber: 0, // All previous data does not have a use for sequence number
 		})
 	}
 
