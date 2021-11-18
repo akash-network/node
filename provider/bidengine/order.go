@@ -285,6 +285,8 @@ loop:
 
 				// Bid has been closed (possibly by someone manually closing it on the CLI)
 				bidPlaced = false // bid already not on the blockchain
+				orderCompleteCounter.WithLabelValues("bid-closed-external").Inc()
+				break loop
 			}
 
 		case result := <-groupch:
