@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -97,7 +96,7 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 			return err
 		}
 
-		err = gclient.SubmitManifest(context.Background(), dseq, mani)
+		err = gclient.SubmitManifest(cmd.Context(), dseq, mani)
 		res := result{
 			Provider: prov,
 			Status:   "PASS",

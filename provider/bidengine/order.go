@@ -26,7 +26,6 @@ import (
 // order manages bidding and general lifecycle handling of an order.
 type order struct {
 	orderID   mtypes.OrderID
-	bidPlaced bool
 	cfg       Config
 
 	session                    session.Session
@@ -93,7 +92,6 @@ func newOrderInternal(svc *service, oid mtypes.OrderID, cfg Config, pass Provide
 	order := &order{
 		cfg:                        cfg,
 		orderID:                    oid,
-		bidPlaced:                  false,
 		session:                    session,
 		cluster:                    svc.cluster,
 		bus:                        svc.bus,
@@ -121,6 +119,18 @@ func newOrderInternal(svc *service, oid mtypes.OrderID, cfg Config, pass Provide
 
 var matchBidNotFound = regexp.MustCompile("^.+bid not found.+$")
 
+func (o *order) bidTimeoutEnabled() bool {
+	return o.cfg.BidTimeout > time.Duration(0)
+}
+
+func (o *order) getBidTimeout() <- chan time.Time{
+	if o.bidTimeoutEnabled() {
+		return time.After(o.cfg.BidTimeout)
+	}
+
+	return nil
+}
+
 func (o *order) run(checkForExistingBid bool) {
 	defer o.lc.ShutdownCompleted()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -140,6 +150,7 @@ func (o *order) run(checkForExistingBid bool) {
 		reservation ctypes.Reservation
 
 		won bool
+		bidPlaced bool
 		msg *mtypes.MsgCreateBid
 	)
 
@@ -163,6 +174,7 @@ func (o *order) run(checkForExistingBid bool) {
 		storedGroupCh = groupch
 		groupch = nil
 	}
+
 loop:
 	for {
 		select {
@@ -182,8 +194,31 @@ loop:
 			}
 
 			if bidFound {
-				o.bidPlaced = true
-				o.session.Log().Info("Found existing bid ")
+				o.session.Log().Info("found existing bid")
+				bidResponse := queryBid.Value().(*mtypes.QueryBidResponse)
+				bid := bidResponse.GetBid()
+				bidState := bid.GetState()
+				if bidState != mtypes.BidOpen {
+					o.session.Log().Error("bid in unexpected state", "bid-state", bidState)
+					break loop
+				}
+				bidPlaced = true
+
+				if o.bidTimeoutEnabled() {
+					// This bid could be very old, compute the minimum age of the bid
+					// do not try anything clever here like asking the RPC node for the current height
+					// just use the height from when the session is created
+					createdAtBlock := bid.GetCreatedAt()
+					blockAge := createdAtBlock - o.session.CreatedAtBlockHeight()
+					const minTimePerBlock = 5 * time.Second
+					atLeastThisOld := time.Duration(blockAge) * minTimePerBlock
+					if atLeastThisOld > o.cfg.BidTimeout {
+						o.session.Log().Info("found expired bid", "block-height", createdAtBlock)
+						break loop
+					}
+				}
+
+				bidTimeout = o.getBidTimeout()
 			}
 			groupch = storedGroupCh // Allow getting the group details result now
 			storedGroupCh = nil
@@ -202,6 +237,7 @@ loop:
 				if ev.ID.Provider != o.session.Provider().Address().String() {
 					orderCompleteCounter.WithLabelValues("lease-lost").Inc()
 					o.log.Info("lease lost", "lease", ev.ID)
+					bidPlaced = false // Lease lost, network closes bid
 					break loop
 				}
 				orderCompleteCounter.WithLabelValues("lease-won").Inc()
@@ -230,6 +266,25 @@ loop:
 				o.log.Info("order closed")
 				orderCompleteCounter.WithLabelValues("order-closed").Inc()
 				break loop
+
+			case mtypes.EventBidClosed:
+				if won {
+					// Ignore any event after LeaseCreated
+					continue
+				}
+
+				// Ignore bid closed not for this group
+				if !o.orderID.GroupID().Equals(ev.ID.GroupID()) {
+					break
+				}
+
+				// Ignore bid closed not for this provider
+				if ev.ID.GetProvider() != o.session.Provider().String() {
+					break
+				}
+
+				// Bid has been closed (possibly by someone manually closing it on the CLI)
+				bidPlaced = false // bid already not on the blockchain
 			}
 
 		case result := <-groupch:
@@ -297,7 +352,7 @@ loop:
 
 			// Resources reserved.
 			reservation = result.Value().(ctypes.Reservation)
-			if o.bidPlaced {
+			if bidPlaced {
 				o.log.Info("Fulfillment already exists")
 				// fulfillment already created (state recovered via queryExistingOrders)
 				break
@@ -331,23 +386,21 @@ loop:
 
 		case result := <-bidch:
 			bidch = nil
-			o.log.Info("bid complete")
-
 			if result.Error() != nil {
 				bidCounter.WithLabelValues(metricsutils.OpenLabel, metricsutils.FailLabel).Inc()
-				o.log.Error("submitting fulfillment", "err", result.Error())
+				o.log.Error("bid failed", "err", result.Error())
 				break loop
 			}
+
+			o.log.Info("bid complete")
 			bidCounter.WithLabelValues(metricsutils.OpenLabel, metricsutils.SuccessLabel).Inc()
 
 			// Fulfillment placed.
-			o.bidPlaced = true
+			bidPlaced = true
 
-			if o.cfg.BidTimeout > time.Duration(0) {
-				bidTimeout = time.After(o.cfg.BidTimeout)
-			}
-
+			bidTimeout = o.getBidTimeout()
 		case <-bidTimeout:
+			// The bid was not acted upon (e.g. lease created or deployment closed) so close it now
 			o.log.Info("bid timeout, closing bid")
 			orderCompleteCounter.WithLabelValues("bid-timeout").Inc()
 			break loop
@@ -377,7 +430,7 @@ loop:
 			}
 		}
 
-		if o.bidPlaced {
+		if bidPlaced  {
 			o.log.Debug("closing bid")
 			err := o.session.Client().Tx().Broadcast(ctx, &mtypes.MsgCloseBid{
 				BidID: mtypes.MakeBidID(o.orderID, o.session.Provider().Address()),

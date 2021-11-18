@@ -52,7 +52,7 @@ func balanceCheckerForTest(t *testing.T, balance int64) (*scaffold, *balanceChec
 		HostURI:    "http://test.localhost:7443",
 		Attributes: nil,
 	}
-	mySession := session.New(myLog, nil, myProvider)
+	mySession := session.New(myLog, nil, myProvider, -1)
 	s.testBus = pubsub.NewBus()
 
 	bc := &balanceChecker{

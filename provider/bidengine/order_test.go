@@ -114,7 +114,9 @@ func (nullProviderAttrSignatureService) GetAuditorAttributeSignatures(auditor st
 	return nil, nil // Return no attributes & no error
 }
 
-func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricingStrategy, callerConfig *Config) (*order, orderTestScaffold, <-chan int) {
+const testBidCreatedAt = 1234556789
+
+func makeOrderForTest(t *testing.T, checkForExistingBid bool, bidState mtypes.Bid_State, pricing BidPricingStrategy, callerConfig *Config, sessionHeight int64) (*order, orderTestScaffold, <-chan int) {
 	if pricing == nil {
 		var err error
 		pricing, err = MakeRandomRangePricing()
@@ -140,7 +142,7 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricing
 		HostURI:    "",
 		Attributes: nil,
 	}
-	mySession := session.New(myLog, scaffold.client, myProvider)
+	mySession := session.New(myLog, scaffold.client, myProvider, sessionHeight)
 
 	scaffold.testBus = pubsub.NewBus()
 	var cfg Config
@@ -166,8 +168,9 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricing
 		response := &mtypes.QueryBidResponse{
 			Bid: mtypes.Bid{
 				BidID: bidID,
-				State: mtypes.BidOpen,
+				State: bidState,
 				Price: sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(int64(testutil.RandRangeInt(100, 1000)))),
+				CreatedAt: testBidCreatedAt,
 			},
 		}
 		scaffold.queryClient.On("Bid", mock.Anything, queryBidRequest).Return(response, nil)
@@ -183,7 +186,7 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, pricing BidPricing
 }
 
 func Test_BidOrderAndUnreserve(t *testing.T) {
-	order, scaffold, _ := makeOrderForTest(t, false, nil, nil)
+	order, scaffold, _ := makeOrderForTest(t, false, mtypes.BidStateInvalid, nil, nil, testBidCreatedAt)
 
 	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 	// Should have called reserve once
@@ -210,9 +213,9 @@ func Test_BidOrderAndUnreserve(t *testing.T) {
 }
 
 func Test_BidOrderAndUnreserveOnTimeout(t *testing.T) {
-	order, scaffold, _ := makeOrderForTest(t, false, nil, &Config{
+	order, scaffold, _ := makeOrderForTest(t, false, mtypes.BidStateInvalid, nil, &Config{
 		BidTimeout: 5 * time.Second,
-	})
+	}, testBidCreatedAt)
 
 	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 	// Should have called reserve once
@@ -251,7 +254,7 @@ func Test_BidOrderAndUnreserveOnTimeout(t *testing.T) {
 
 func Test_BidOrderPriceTooHigh(t *testing.T) {
 	pricing := testBidPricingStrategy(9999999999)
-	order, scaffold, _ := makeOrderForTest(t, false, pricing, nil)
+	order, scaffold, _ := makeOrderForTest(t, false, mtypes.BidStateInvalid, pricing, nil, testBidCreatedAt)
 
 	select {
 	case <-order.lc.Done(): // Should stop on its own
@@ -274,7 +277,7 @@ func Test_BidOrderPriceTooHigh(t *testing.T) {
 }
 
 func Test_BidOrderAndThenClosedUnreserve(t *testing.T) {
-	order, scaffold, _ := makeOrderForTest(t, false, nil, nil)
+	order, scaffold, _ := makeOrderForTest(t, false, mtypes.BidStateInvalid, nil, nil, testBidCreatedAt)
 
 	testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 	// Should have called reserve once at this point
@@ -296,7 +299,7 @@ func Test_BidOrderAndThenClosedUnreserve(t *testing.T) {
 }
 
 func Test_OrderCloseBeforeReserveReturn(t *testing.T) {
-	order, scaffold, reservationFulfilledNotify := makeOrderForTest(t, false, nil, nil)
+	order, scaffold, reservationFulfilledNotify := makeOrderForTest(t, false, mtypes.BidStateInvalid, nil, nil, testBidCreatedAt)
 
 	testutil.ChannelWaitForValue(t, scaffold.reserveCallNotify)
 	// Should have called reserve once at this point
@@ -335,7 +338,7 @@ func Test_OrderCloseBeforeReserveReturn(t *testing.T) {
 }
 
 func Test_BidOrderAndThenLeaseCreated(t *testing.T) {
-	order, scaffold, _ := makeOrderForTest(t, false, nil, nil)
+	order, scaffold, _ := makeOrderForTest(t, false, mtypes.BidStateInvalid, nil, nil, testBidCreatedAt)
 
 	// Wait for first broadcast
 	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
@@ -376,7 +379,7 @@ func Test_BidOrderAndThenLeaseCreated(t *testing.T) {
 
 func Test_BidOrderAndThenLeaseCreatedForDifferentDeployment(t *testing.T) {
 
-	order, scaffold, _ := makeOrderForTest(t, false, nil, nil)
+	order, scaffold, _ := makeOrderForTest(t, false, mtypes.BidStateInvalid, nil, nil, testBidCreatedAt)
 
 	// Wait for first broadcast
 	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
@@ -429,8 +432,7 @@ func Test_BidOrderAndThenLeaseCreatedForDifferentDeployment(t *testing.T) {
 }
 
 func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
-
-	order, scaffold, reservationFulfilledNotify := makeOrderForTest(t, true, nil, nil)
+	order, scaffold, reservationFulfilledNotify := makeOrderForTest(t, true, mtypes.BidOpen, nil, nil, testBidCreatedAt)
 
 	// Wait for a reserve call
 	testutil.ChannelWaitForValue(t, scaffold.reserveCallNotify)
@@ -485,8 +487,80 @@ func Test_ShouldNotBidWhenAlreadySet(t *testing.T) {
 	require.Equal(t, closeBid.BidID, *scaffold.bidID)
 }
 
+func Test_ShouldCloseBidWhenAlreadySetAndOld(t *testing.T) {
+	pricing, err := MakeRandomRangePricing()
+	require.NoError(t, err)
+	cfg := Config{
+		PricingStrategy: pricing,
+		Deposit:         sdk.NewInt64Coin(testutil.CoinDenom,1),
+		BidTimeout:      time.Second,
+		Attributes:      nil,
+	}
+
+	order, scaffold, _ := makeOrderForTest(t, true, mtypes.BidOpen, nil, &cfg,1)
+
+	testutil.ChannelWaitForClose(t, order.lc.Done())
+
+	// Should not have called reserve
+	scaffold.cluster.AssertNotCalled(t, "Reserve", scaffold.orderID, mock.Anything)
+
+	// Should have closed the bid
+	scaffold.txClient.AssertCalled(t,"Broadcast", mock.Anything, &mtypes.MsgCloseBid{
+		BidID: mtypes.MakeBidID(order.orderID, scaffold.testAddr),
+	})
+}
+
+
+func Test_ShouldExitWhenAlreadySetAndLost(t *testing.T) {
+	pricing, err := MakeRandomRangePricing()
+	require.NoError(t, err)
+	cfg := Config{
+		PricingStrategy: pricing,
+		Deposit:         sdk.NewInt64Coin(testutil.CoinDenom,1),
+		BidTimeout:      time.Minute,
+		Attributes:      nil,
+	}
+
+	order, scaffold, _ := makeOrderForTest(t, true, mtypes.BidLost, nil, &cfg,testBidCreatedAt)
+
+	testutil.ChannelWaitForClose(t, order.lc.Done())
+
+	// Should not have called reserve
+	scaffold.cluster.AssertNotCalled(t, "Reserve", scaffold.orderID, mock.Anything)
+
+	// Should not have closed the bid
+	scaffold.txClient.AssertNotCalled(t,"Broadcast", mock.Anything, &mtypes.MsgCloseBid{
+		BidID: mtypes.MakeBidID(order.orderID, scaffold.testAddr),
+	})
+}
+func Test_ShouldCloseBidWhenAlreadySetAndThenTimeout(t *testing.T) {
+	pricing, err := MakeRandomRangePricing()
+	require.NoError(t, err)
+	cfg := Config{
+		PricingStrategy: pricing,
+		Deposit:         sdk.NewInt64Coin(testutil.CoinDenom, 1),
+		BidTimeout:      6 * time.Second,
+		Attributes:      nil,
+	}
+
+	order, scaffold, _ := makeOrderForTest(t, true, mtypes.BidOpen, nil, &cfg, testBidCreatedAt)
+
+	testutil.ChannelWaitForClose(t, order.lc.Done())
+
+	// Should have called reserve
+	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
+
+	// Should have closed the bid
+	scaffold.txClient.AssertCalled(t,"Broadcast", mock.Anything, &mtypes.MsgCloseBid{
+		BidID: mtypes.MakeBidID(order.orderID, scaffold.testAddr),
+	})
+
+	// Should have called unreserve
+	scaffold.cluster.AssertCalled(t, "Unreserve", scaffold.orderID)
+}
+
 func Test_ShouldRecognizeLeaseCreatedIfBiddingIsSkipped(t *testing.T) {
-	order, scaffold, _ := makeOrderForTest(t, true, nil, nil)
+	order, scaffold, _ := makeOrderForTest(t, true, mtypes.BidOpen, nil, nil, testBidCreatedAt)
 
 	// Wait for a reserve call
 	testutil.ChannelWaitForValue(t, scaffold.reserveCallNotify)
@@ -534,7 +608,7 @@ func Test_BidOrderUsesBidPricingStrategy(t *testing.T) {
 	expectedBid := int64(37)
 	// Create a test strategy that gives a fixed price
 	pricing := testBidPricingStrategy(expectedBid)
-	order, scaffold, _ := makeOrderForTest(t, false, pricing, nil)
+	order, scaffold, _ := makeOrderForTest(t, false, mtypes.BidStateInvalid, pricing, nil, testBidCreatedAt)
 
 	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 
@@ -569,7 +643,7 @@ var errBidPricingAlwaysFails = errors.New("bid pricing fail in test")
 func Test_BidOrderFailsAndAborts(t *testing.T) {
 	// Create a test strategy that gives a fixed price
 	pricing := alwaysFailsBidPricingStrategy{failure: errBidPricingAlwaysFails}
-	order, scaffold, _ := makeOrderForTest(t, false, pricing, nil)
+	order, scaffold, _ := makeOrderForTest(t, false, mtypes.BidStateInvalid, pricing, nil, testBidCreatedAt)
 
 	<-order.lc.Done() // Stops whenever the bid pricing is called and returns an errro
 
@@ -597,7 +671,7 @@ func Test_ShouldntBidIfOrderAttrsDontMatch(t *testing.T) {
 			Value: "me",
 		},
 	}}
-	order, scaffold, _ := makeOrderForTest(t, false, nil, cfg)
+	order, scaffold, _ := makeOrderForTest(t, false, mtypes.BidStateInvalid, nil, cfg, testBidCreatedAt)
 
 	<-order.lc.Done() // Stops whenever it figures it shouldn't bid
 
