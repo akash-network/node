@@ -19,17 +19,17 @@ type Session interface {
 // New returns new session instance with provided details
 func New(log log.Logger, client client.Client, provider *ptypes.Provider, createdAtBlockHeight int64) Session {
 	return session{
-		client:   client,
-		provider: provider,
-		log:      log,
+		client:               client,
+		provider:             provider,
+		log:                  log,
 		createdAtBlockHeight: createdAtBlockHeight,
 	}
 }
 
 type session struct {
-	client   client.Client
-	provider *ptypes.Provider
-	log      log.Logger
+	client               client.Client
+	provider             *ptypes.Provider
+	log                  log.Logger
 	createdAtBlockHeight int64
 }
 

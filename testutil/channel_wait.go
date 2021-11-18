@@ -34,12 +34,12 @@ func ChannelWaitForValueUpTo(t *testing.T, waitOn interface{}, waitFor time.Dura
 }
 
 const waitForDefault = 10 * time.Second
-func ChannelWaitForValue(t *testing.T, waitOn interface{}) interface{} {
 
+func ChannelWaitForValue(t *testing.T, waitOn interface{}) interface{} {
 	return ChannelWaitForValueUpTo(t, waitOn, waitForDefault)
 }
 
-func ChannelWaitForCloseUpTo(t *testing.T, waitOn interface{}, waitFor time.Duration)  {
+func ChannelWaitForCloseUpTo(t *testing.T, waitOn interface{}, waitFor time.Duration) {
 	cases := make([]reflect.SelectCase, 2)
 	cases[0] = reflect.SelectCase{
 		Dir:  reflect.SelectRecv,
@@ -58,7 +58,6 @@ func ChannelWaitForCloseUpTo(t *testing.T, waitOn interface{}, waitFor time.Dura
 	idx, v, ok := reflect.Select(cases)
 	if !ok {
 		return // Channel closed, everything OK
-		t.Fatal("Channel has been closed")
 	}
 	if idx != 0 {
 		t.Fatalf("channel not closed after waiting %v seconds", waitOn)

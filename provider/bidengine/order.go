@@ -25,8 +25,8 @@ import (
 
 // order manages bidding and general lifecycle handling of an order.
 type order struct {
-	orderID   mtypes.OrderID
-	cfg       Config
+	orderID mtypes.OrderID
+	cfg     Config
 
 	session                    session.Session
 	cluster                    cluster.Cluster
@@ -123,7 +123,7 @@ func (o *order) bidTimeoutEnabled() bool {
 	return o.cfg.BidTimeout > time.Duration(0)
 }
 
-func (o *order) getBidTimeout() <- chan time.Time{
+func (o *order) getBidTimeout() <-chan time.Time {
 	if o.bidTimeoutEnabled() {
 		return time.After(o.cfg.BidTimeout)
 	}
@@ -149,9 +149,9 @@ func (o *order) run(checkForExistingBid bool) {
 		group       *dtypes.Group
 		reservation ctypes.Reservation
 
-		won bool
+		won       bool
 		bidPlaced bool
-		msg *mtypes.MsgCreateBid
+		msg       *mtypes.MsgCreateBid
 	)
 
 	// Begin fetching group details immediately.
@@ -430,7 +430,7 @@ loop:
 			}
 		}
 
-		if bidPlaced  {
+		if bidPlaced {
 			o.log.Debug("closing bid")
 			err := o.session.Client().Tx().Broadcast(ctx, &mtypes.MsgCloseBid{
 				BidID: mtypes.MakeBidID(o.orderID, o.session.Provider().Address()),

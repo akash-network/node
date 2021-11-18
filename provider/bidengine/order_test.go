@@ -167,9 +167,9 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, bidState mtypes.Bi
 		}
 		response := &mtypes.QueryBidResponse{
 			Bid: mtypes.Bid{
-				BidID: bidID,
-				State: bidState,
-				Price: sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(int64(testutil.RandRangeInt(100, 1000)))),
+				BidID:     bidID,
+				State:     bidState,
+				Price:     sdk.NewCoin(testutil.CoinDenom, sdk.NewInt(int64(testutil.RandRangeInt(100, 1000)))),
 				CreatedAt: testBidCreatedAt,
 			},
 		}
@@ -492,12 +492,12 @@ func Test_ShouldCloseBidWhenAlreadySetAndOld(t *testing.T) {
 	require.NoError(t, err)
 	cfg := Config{
 		PricingStrategy: pricing,
-		Deposit:         sdk.NewInt64Coin(testutil.CoinDenom,1),
+		Deposit:         sdk.NewInt64Coin(testutil.CoinDenom, 1),
 		BidTimeout:      time.Second,
 		Attributes:      nil,
 	}
 
-	order, scaffold, _ := makeOrderForTest(t, true, mtypes.BidOpen, nil, &cfg,1)
+	order, scaffold, _ := makeOrderForTest(t, true, mtypes.BidOpen, nil, &cfg, 1)
 
 	testutil.ChannelWaitForClose(t, order.lc.Done())
 
@@ -505,23 +505,22 @@ func Test_ShouldCloseBidWhenAlreadySetAndOld(t *testing.T) {
 	scaffold.cluster.AssertNotCalled(t, "Reserve", scaffold.orderID, mock.Anything)
 
 	// Should have closed the bid
-	scaffold.txClient.AssertCalled(t,"Broadcast", mock.Anything, &mtypes.MsgCloseBid{
+	scaffold.txClient.AssertCalled(t, "Broadcast", mock.Anything, &mtypes.MsgCloseBid{
 		BidID: mtypes.MakeBidID(order.orderID, scaffold.testAddr),
 	})
 }
-
 
 func Test_ShouldExitWhenAlreadySetAndLost(t *testing.T) {
 	pricing, err := MakeRandomRangePricing()
 	require.NoError(t, err)
 	cfg := Config{
 		PricingStrategy: pricing,
-		Deposit:         sdk.NewInt64Coin(testutil.CoinDenom,1),
+		Deposit:         sdk.NewInt64Coin(testutil.CoinDenom, 1),
 		BidTimeout:      time.Minute,
 		Attributes:      nil,
 	}
 
-	order, scaffold, _ := makeOrderForTest(t, true, mtypes.BidLost, nil, &cfg,testBidCreatedAt)
+	order, scaffold, _ := makeOrderForTest(t, true, mtypes.BidLost, nil, &cfg, testBidCreatedAt)
 
 	testutil.ChannelWaitForClose(t, order.lc.Done())
 
@@ -529,7 +528,7 @@ func Test_ShouldExitWhenAlreadySetAndLost(t *testing.T) {
 	scaffold.cluster.AssertNotCalled(t, "Reserve", scaffold.orderID, mock.Anything)
 
 	// Should not have closed the bid
-	scaffold.txClient.AssertNotCalled(t,"Broadcast", mock.Anything, &mtypes.MsgCloseBid{
+	scaffold.txClient.AssertNotCalled(t, "Broadcast", mock.Anything, &mtypes.MsgCloseBid{
 		BidID: mtypes.MakeBidID(order.orderID, scaffold.testAddr),
 	})
 }
@@ -551,7 +550,7 @@ func Test_ShouldCloseBidWhenAlreadySetAndThenTimeout(t *testing.T) {
 	scaffold.cluster.AssertCalled(t, "Reserve", scaffold.orderID, mock.Anything)
 
 	// Should have closed the bid
-	scaffold.txClient.AssertCalled(t,"Broadcast", mock.Anything, &mtypes.MsgCloseBid{
+	scaffold.txClient.AssertCalled(t, "Broadcast", mock.Anything, &mtypes.MsgCloseBid{
 		BidID: mtypes.MakeBidID(order.orderID, scaffold.testAddr),
 	})
 
