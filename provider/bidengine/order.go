@@ -257,7 +257,6 @@ loop:
 				break loop
 
 			case mtypes.EventOrderClosed:
-
 				// different deployment
 				if !ev.ID.Equals(o.orderID) {
 					break
