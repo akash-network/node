@@ -31,7 +31,7 @@ type Params struct {
 	// InitialInflation is the rate at which inflation starts at genesis.
 	// It is a decimal value in the range [0.0, 100.0].
 	InitialInflation github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,2,opt,name=initial_inflation,json=initialInflation,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"initial_inflation" yaml:"initial_inflation"`
-	// Variance defines the fraction by which inflation can vary from its previous value in a block.
+	// Variance defines the fraction by which inflation can vary from ideal inflation in a block.
 	// It is a decimal value in the range [0.0, 1.0].
 	Variance github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,3,opt,name=variance,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"variance" yaml:"variance"`
 }

@@ -23,7 +23,7 @@ message Params {
     (gogoproto.moretags)   = "yaml:\"initial_inflation\""
   ];
 
-  // Variance defines the fraction by which inflation can vary from its previous value in a block.
+  // Variance defines the fraction by which inflation can vary from ideal inflation in a block.
   // It is a decimal value in the range [0.0, 1.0].
   string variance = 3 [
     (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",

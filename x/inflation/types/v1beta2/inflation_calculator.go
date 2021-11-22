@@ -49,7 +49,14 @@ func GetInflationCalculator(
 							),
 					),
 			)
-		idealInflation := inflationParams.InitialInflation.Mul(sdk.MustNewDecFromStr(pow.String()))
+		// convert pow to sdk.Dec with a 6 unit precision: sdk.Decimal(big.Int(pow * 10^6)) / 10^6
+		powDec := sdk.NewDecFromBigInt(
+			decimal.WithPrecision(sdk.Precision).
+				Mul(pow, decimal.New(1000000, 0)).
+				Int(nil),
+		).QuoInt64(1000000)
+
+		idealInflation := inflationParams.InitialInflation.Mul(powDec)
 
 		// (1 - bondedRatio/GoalBonded) * InflationRateChange
 		inflationRateChangePerYear := sdk.OneDec().
