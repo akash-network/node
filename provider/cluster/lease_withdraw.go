@@ -130,8 +130,10 @@ loop:
 	}
 	cancel()
 
-	// The context has been cancelled, so wait for the result now and discard it
-	<-result
+	if result != nil {
+		// The context has been cancelled, so wait for the result now and discard it
+		<-result
+	}
 
 	dw.log.Debug("shutdown complete")
 }

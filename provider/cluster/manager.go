@@ -94,6 +94,7 @@ func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Gro
 
 	go func() {
 		<-dm.lc.Done()
+		dm.log.Debug("sending manager into channel")
 		s.managerch <- dm
 	}()
 
@@ -143,6 +144,7 @@ func (dm *deploymentManager) run() {
 		if err != nil {
 			dm.log.Error("failed releasing hostnames", "err", err)
 		}
+		dm.log.Debug("hostnames released")
 	}()
 
 loop:
@@ -208,6 +210,7 @@ loop:
 		}
 	}
 
+	dm.log.Debug("shutting down")
 	dm.lc.ShutdownInitiated(shutdownErr)
 
 	if runch != nil {
