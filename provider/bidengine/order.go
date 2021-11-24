@@ -131,6 +131,21 @@ func (o *order) getBidTimeout() <-chan time.Time {
 	return nil
 }
 
+func (o *order) isStaleBid(bid mtypes.Bid) bool {
+	if !o.bidTimeoutEnabled() {
+		return false
+	}
+
+	// This bid could be very old, compute the minimum age of the bid
+	// do not try anything clever here like asking the RPC node for the current height
+	// just use the height from when the session is created
+	createdAtBlock := bid.GetCreatedAt()
+	blockAge := createdAtBlock - o.session.CreatedAtBlockHeight()
+	const minTimePerBlock = 5 * time.Second
+	atLeastThisOld := time.Duration(blockAge) * minTimePerBlock
+	return atLeastThisOld > o.cfg.BidTimeout
+}
+
 func (o *order) run(checkForExistingBid bool) {
 	defer o.lc.ShutdownCompleted()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -204,18 +219,9 @@ loop:
 				}
 				bidPlaced = true
 
-				if o.bidTimeoutEnabled() {
-					// This bid could be very old, compute the minimum age of the bid
-					// do not try anything clever here like asking the RPC node for the current height
-					// just use the height from when the session is created
-					createdAtBlock := bid.GetCreatedAt()
-					blockAge := createdAtBlock - o.session.CreatedAtBlockHeight()
-					const minTimePerBlock = 5 * time.Second
-					atLeastThisOld := time.Duration(blockAge) * minTimePerBlock
-					if atLeastThisOld > o.cfg.BidTimeout {
-						o.session.Log().Info("found expired bid", "block-height", createdAtBlock)
-						break loop
-					}
+				if o.isStaleBid(bid) {
+					o.session.Log().Info("found expired bid", "block-height", bid.GetCreatedAt())
+					break loop
 				}
 
 				bidTimeout = o.getBidTimeout()
