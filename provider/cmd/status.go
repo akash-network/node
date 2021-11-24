@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"context"
-
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
@@ -42,7 +40,7 @@ func doStatus(cmd *cobra.Command, addr sdk.Address) error {
 		return err
 	}
 
-	result, err := gclient.Status(context.Background())
+	result, err := gclient.Status(cmd.Context())
 	if err != nil {
 		return showErrorToUser(err)
 	}

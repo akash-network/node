@@ -41,7 +41,7 @@ func makeWatchdogTestScaffold(t *testing.T, timeout time.Duration) (*watchdog, *
 
 	scaffold.client = &clientmocks.Client{}
 	scaffold.client.On("Tx").Return(txClientMock)
-	sess := session.New(testutil.Logger(t), scaffold.client, &scaffold.provider)
+	sess := session.New(testutil.Logger(t), scaffold.client, &scaffold.provider, -1)
 	require.NotNil(t, sess.Client())
 
 	wd := newWatchdog(sess, scaffold.parentCh, scaffold.doneCh, scaffold.leaseID, timeout)

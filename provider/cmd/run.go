@@ -481,7 +481,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	)
 
 	res, err := aclient.Query().Provider(
-		context.Background(),
+		cmd.Context(),
 		&ptypes.QueryProviderRequest{Owner: info.GetAddress().String()},
 	)
 	if err != nil {
@@ -515,7 +515,12 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	session := session.New(log, aclient, pinfo)
+	statusResult, err := cctx.Client.Status(cmd.Context())
+	if err != nil {
+		return err
+	}
+	currentBlockHeight := statusResult.SyncInfo.LatestBlockHeight
+	session := session.New(log, aclient, pinfo, currentBlockHeight)
 
 	if err := cctx.Client.Start(); err != nil {
 		return err
