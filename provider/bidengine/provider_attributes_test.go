@@ -46,7 +46,7 @@ func setupProviderAttributesTestScaffold(t *testing.T, ttl time.Duration, client
 
 	retval.queryClient = clientFactory(retval)
 	retval.client.On("Query").Return(retval.queryClient)
-	retval.s = session.New(testutil.Logger(t), retval.client, retval.provider)
+	retval.s = session.New(testutil.Logger(t), retval.client, retval.provider, -1)
 	retval.bus = pubsub.NewBus()
 	var err error
 	retval.service, err = newProviderAttrSignatureServiceInternal(retval.s, retval.bus, ttl)
