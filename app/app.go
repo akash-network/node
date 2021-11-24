@@ -4,6 +4,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"time"
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -55,9 +57,12 @@ import (
 	ibc "github.com/cosmos/ibc-go/modules/core"
 	porttypes "github.com/cosmos/ibc-go/modules/core/05-port/types"
 	"github.com/gorilla/mux"
+	"github.com/ovrclk/akash/x/inflation"
+	inflationtypes "github.com/ovrclk/akash/x/inflation/types/v1beta2"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
 	tmjson "github.com/tendermint/tendermint/libs/json"
+	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
@@ -155,6 +160,7 @@ type AkashApp struct {
 		provider   pkeeper.IKeeper
 		audit      audit.Keeper
 		cert       cert.Keeper
+		inflation  inflation.Keeper
 	}
 
 	mm *module.Manager
@@ -173,6 +179,8 @@ func NewApp(
 	logger log.Logger, db dbm.DB, tio io.Writer, loadLatest bool, invCheckPeriod uint, skipUpgradeHeights map[int64]bool,
 	homePath string, appOpts servertypes.AppOptions, options ...func(*bam.BaseApp),
 ) *AkashApp {
+	// find out the genesis time, to be used later in inflation calculation
+	genesisTime := getGenesisTime(appOpts, homePath)
 
 	// TODO: Remove cdc in favor of appCodec once all modules are migrated.
 	encodingConfig := MakeEncodingConfig()
@@ -349,7 +357,7 @@ func NewApp(
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			crisis.NewAppModule(&app.keeper.crisis, skipGenesisInvariants),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
-			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
+			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, inflationtypes.GetInflationCalculator(genesisTime, app.GetSubspace(inflation.ModuleName))),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			distr.NewAppModule(appCodec, app.keeper.distr, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
@@ -416,7 +424,7 @@ func NewApp(
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
-			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
+			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, inflationtypes.GetInflationCalculator(genesisTime, app.GetSubspace(inflation.ModuleName))),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
 			distr.NewAppModule(appCodec, app.keeper.distr, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
@@ -510,12 +518,30 @@ func (app *AkashApp) registerUpgradeHandlers() {
 
 	if upgradeInfo.Name == "akash_v0.15.0_cosmos_v0.44.x" && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
 		storeUpgrades := storetypes.StoreUpgrades{
-			Added: []string{"authz"},
+			Added: []string{"authz", "inflation"},
 		}
 
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades
 		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
 	}
+}
+
+func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time {
+	if v := appOpts.Get("GenesisTime"); v != nil {
+		// in tests, GenesisTime is supplied using appOpts
+		genTime, ok := v.(time.Time)
+		if !ok {
+			panic("expected GenesisTime to be a Time value")
+		}
+		return genTime
+	}
+
+	genDoc, err := tmtypes.GenesisDocFromFile(filepath.Join(homePath, "config/genesis.json"))
+	if err != nil {
+		panic(err)
+	}
+
+	return genDoc.GenesisTime
 }
 
 // MakeCodecs constructs the *std.Codec and *codec.LegacyAmino instances used by

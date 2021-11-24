@@ -1,0 +1,16 @@
+syntax = "proto3";
+package akash.inflation.v1beta2;
+
+import "gogoproto/gogo.proto";
+import "akash/inflation/v1beta2/params.proto";
+
+option go_package = "github.com/ovrclk/akash/x/inflation/types/v1beta2";
+
+// GenesisState stores slice of genesis deployment instance
+message GenesisState {
+  Params params = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.jsontag)  = "params",
+    (gogoproto.moretags) = "yaml:\"params\""
+  ];
+}

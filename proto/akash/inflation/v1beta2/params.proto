@@ -1,0 +1,35 @@
+syntax = "proto3";
+package akash.inflation.v1beta2;
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/ovrclk/akash/x/inflation/types/v1beta2";
+
+// Params defines the parameters for the x/deployment package
+message Params {
+  // InflationDecayFactor is the number of years it takes inflation to halve.
+  uint32 inflation_decay_factor = 1 [
+    (gogoproto.customname) = "InflationDecayFactor",
+    (gogoproto.jsontag)    = "inflation_decay_factor",
+    (gogoproto.moretags)   = "yaml:\"inflation_decay_factor\""
+  ];
+
+  // InitialInflation is the rate at which inflation starts at genesis.
+  // It is a decimal value in the range [0.0, 100.0].
+  string initial_inflation = 2 [
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",
+    (gogoproto.nullable)   = false,
+    (gogoproto.customname) = "InitialInflation",
+    (gogoproto.jsontag)    = "initial_inflation",
+    (gogoproto.moretags)   = "yaml:\"initial_inflation\""
+  ];
+
+  // Variance defines the fraction by which inflation can vary from ideal inflation in a block.
+  // It is a decimal value in the range [0.0, 1.0].
+  string variance = 3 [
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",
+    (gogoproto.nullable)   = false,
+    (gogoproto.customname) = "Variance",
+    (gogoproto.jsontag)    = "variance",
+    (gogoproto.moretags)   = "yaml:\"variance\""
+  ];
+}
