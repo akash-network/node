@@ -27,7 +27,6 @@ import (
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/x/cert/types"
@@ -107,7 +106,7 @@ func cmdRevoke() *cobra.Command {
 				serial = cert.SerialNumber.String()
 			}
 
-			return doRevoke(cctx, cmd.Flags(), serial)
+			return doRevoke(cmd, cctx, serial)
 		},
 	}
 
@@ -158,7 +157,7 @@ func handleCreate(cctx sdkclient.Context, cmd *cobra.Command, pemFile string, do
 	}
 
 	if !toGenesis {
-		return sdkutil.BroadcastTX(cctx, cmd.Flags(), msg)
+		return sdkutil.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
 	}
 
 	return addCertToGenesis(cmd, types.GenesisCertificate{
@@ -258,12 +257,12 @@ func doCreateCmd(cmd *cobra.Command, domains []string) error {
 						return err
 					}
 
-					return sdkutil.BroadcastTX(cctx, cmd.Flags(), msg)
+					return sdkutil.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
 				}
 			}
 		} else {
 			if res.Certificates[0].Certificate.IsState(types.CertificateValid) {
-				err = doRevoke(cctx, cmd.Flags(), x509cert.SerialNumber.String())
+				err = doRevoke(cmd, cctx, x509cert.SerialNumber.String())
 				if err == nil {
 					removeFile = true
 				}
@@ -509,7 +508,7 @@ func createAuthPem(cmd *cobra.Command, pemFile string, domains []string) (*types
 	return msg, nil
 }
 
-func doRevoke(cctx sdkclient.Context, flags *pflag.FlagSet, serial string) error {
+func doRevoke(cmd *cobra.Command, cctx sdkclient.Context, serial string) error {
 	msg := &types.MsgRevokeCertificate{
 		ID: types.CertificateID{
 			Owner:  cctx.FromAddress.String(),
@@ -517,7 +516,7 @@ func doRevoke(cctx sdkclient.Context, flags *pflag.FlagSet, serial string) error
 		},
 	}
 
-	return sdkutil.BroadcastTX(cctx, flags, msg)
+	return sdkutil.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
 }
 
 func getConfirmation(cmd *cobra.Command, prompt string) (bool, error) {

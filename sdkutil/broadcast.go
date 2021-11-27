@@ -3,6 +3,7 @@ package sdkutil
 import (
 	"bufio"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -19,7 +20,7 @@ import (
 )
 
 const (
-	broadcastBlockRetryTimeout = 30 * time.Second
+	broadcastBlockRetryTimeout = 300 * time.Second
 	broadcastBlockRetryPeriod  = time.Second
 
 	// sadface.
@@ -33,27 +34,27 @@ const (
 	notFoundErrorMessageSuffix = ") not found"
 )
 
-func BroadcastTX(ctx client.Context, flags *pflag.FlagSet, msgs ...sdk.Msg) error {
+func BroadcastTX(ctx context.Context, cctx client.Context, flags *pflag.FlagSet, msgs ...sdk.Msg) error {
 
 	// rewrite of https://github.com/cosmos/cosmos-sdk/blob/ca98fda6eae597b1e7d468f96d030b6d905748d7/client/tx/tx.go#L29
 	// to add continuing retries if broadcast-mode=block fails with a timeout.
 
-	txf := tx.NewFactoryCLI(ctx, flags)
+	txf := tx.NewFactoryCLI(cctx, flags)
 
-	if ctx.GenerateOnly {
-		return tx.GenerateTx(ctx, txf, msgs...)
+	if cctx.GenerateOnly {
+		return tx.GenerateTx(cctx, txf, msgs...)
 	}
 
-	txf, err := tx.PrepareFactory(ctx, txf)
+	txf, err := tx.PrepareFactory(cctx, txf)
 	if err != nil {
 		return err
 	}
 
-	txf, err = adjustGas(ctx, txf, msgs...)
+	txf, err = adjustGas(cctx, txf, msgs...)
 	if err != nil {
 		return err
 	}
-	if ctx.Simulate {
+	if cctx.Simulate {
 		return nil
 	}
 
@@ -62,56 +63,52 @@ func BroadcastTX(ctx client.Context, flags *pflag.FlagSet, msgs ...sdk.Msg) erro
 		return err
 	}
 
-	ok, err := confirmTx(ctx, txb)
+	ok, err := confirmTx(cctx, txb)
 	if !ok || err != nil {
 		return err
 	}
 
-	err = tx.Sign(txf, ctx.GetFromName(), txb, true)
+	err = tx.Sign(txf, cctx.GetFromName(), txb, true)
 	if err != nil {
 		return err
 	}
 
-	txBytes, err := ctx.TxConfig.TxEncoder()(txb.GetTx())
+	txBytes, err := cctx.TxConfig.TxEncoder()(txb.GetTx())
 	if err != nil {
 		return err
 	}
 
-	res, err := doBroadcast(ctx, broadcastBlockRetryTimeout, txBytes)
+	res, err := doBroadcast(ctx, cctx, broadcastBlockRetryTimeout, txBytes)
 	if err != nil {
 		return err
 	}
 
-	return ctx.PrintProto(res)
+	return cctx.PrintProto(res)
 
 }
 
-func doBroadcast(ctx client.Context, timeout time.Duration, txb ttypes.Tx) (*sdk.TxResponse, error) {
-	switch ctx.BroadcastMode {
+func doBroadcast(ctx context.Context, cctx client.Context, timeout time.Duration, txb ttypes.Tx) (*sdk.TxResponse, error) {
+	switch cctx.BroadcastMode {
 	case flags.BroadcastSync:
-		return ctx.BroadcastTxSync(txb)
+		return cctx.BroadcastTxSync(txb)
 	case flags.BroadcastAsync:
-		return ctx.BroadcastTxAsync(txb)
+		return cctx.BroadcastTxAsync(txb)
 	}
 
+	hash := hex.EncodeToString(txb.Hash())
+
 	// broadcast-mode=block
-
 	// submit with mode commit/block
-	cres, err := ctx.BroadcastTxCommit(txb)
-
-	switch {
-	case err == nil:
-		// no error, return
+	cres, err := cctx.BroadcastTxCommit(txb)
+	if err == nil {
+		// good job
+		return cres, nil
+	} else if !strings.HasSuffix(err.Error(), timeoutErrorMessage) {
 		return cres, err
-	case err.Error() != timeoutErrorMessage:
-		// other error, return
-		return cres, err
-	default:
-		// timeout error, continue on to retry
 	}
 
 	// loop
-	lctx, cancel := context.WithTimeout(context.Background(), timeout)
+	lctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	for lctx.Err() == nil {
@@ -124,7 +121,7 @@ func doBroadcast(ctx client.Context, timeout time.Duration, txb ttypes.Tx) (*sdk
 		}
 
 		// check transaction
-		res, err := authclient.QueryTx(ctx, cres.TxHash)
+		res, err := authclient.QueryTx(cctx, hash)
 		if err == nil {
 			return res, nil
 		}
