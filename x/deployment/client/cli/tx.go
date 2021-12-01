@@ -114,7 +114,7 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -158,7 +158,7 @@ func cmdDeposit(key string) *cobra.Command {
 				Depositor: depositorAcc,
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -187,7 +187,7 @@ func cmdClose(key string) *cobra.Command {
 
 			msg := &types.MsgCloseDeployment{ID: id}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -236,7 +236,7 @@ func cmdUpdate(key string) *cobra.Command {
 				msg.Groups = append(msg.Groups, *group)
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -286,7 +286,7 @@ func cmdGroupClose(_ string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -322,7 +322,7 @@ func cmdGroupPause(_ string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -358,7 +358,7 @@ func cmdGroupStart(_ string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -429,7 +429,7 @@ Examples:
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -466,7 +466,7 @@ Example:
 			msgTypeURL := types.DepositDeploymentAuthorization{}.MsgTypeURL()
 			msg := authz.NewMsgRevoke(granter, grantee, msgTypeURL)
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), &msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), &msg)
 		},
 	}
 
