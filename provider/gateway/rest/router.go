@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/version"
+
 	"github.com/golang-jwt/jwt/v4"
 
 	"k8s.io/client-go/tools/remotecommand"
@@ -27,6 +29,7 @@ import (
 	"github.com/gorilla/mux"
 
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
+	kubeVersion "k8s.io/apimachinery/pkg/version"
 
 	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider"
@@ -83,6 +86,12 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ctxCon
 			next.ServeHTTP(w, r)
 		})
 	})
+
+	// GET /version
+	// provider version endpoint does not require authentication
+	router.HandleFunc("/version",
+		createVersionHandler(log, pclient)).
+		Methods(http.MethodGet)
 
 	// GET /status
 	// provider status endpoint does not require authentication
@@ -388,6 +397,25 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 			close(terminalSizeUpdate)
 		}
 
+	}
+}
+
+type versionInfo struct {
+	Akash string            `json:"akash"`
+	Kube  *kubeVersion.Info `json:"kube"`
+}
+
+func createVersionHandler(log log.Logger, pclient provider.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		kube, err := pclient.Cluster().KubeVersion()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(log, w, versionInfo{
+			Akash: version.Version,
+			Kube:  kube,
+		})
 	}
 }
 

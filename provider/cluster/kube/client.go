@@ -15,6 +15,7 @@ import (
 	eventsv1 "k8s.io/api/events/v1"
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -785,4 +786,8 @@ func (c *client) deploymentsForLease(ctx context.Context, lid mtypes.LeaseID) (m
 	}
 
 	return serviceStatus, nil
+}
+
+func (c *client) KubeVersion() (*version.Info, error) {
+	return c.kc.(*kubernetes.Clientset).ServerVersion()
 }

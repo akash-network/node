@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/version"
 
 	qmock "github.com/ovrclk/akash/client/mocks"
 	"github.com/ovrclk/akash/provider"
@@ -304,6 +305,44 @@ func TestRouteDoesNotExist(t *testing.T) {
 		resp, err := test.gclient.hclient.Do(req)
 		require.NoError(t, err)
 		require.Equal(t, resp.StatusCode, http.StatusNotFound)
+	})
+}
+
+func TestRouteVersionOK(t *testing.T) {
+	runRouterTest(t, false, func(test *routerTest) {
+		status := versionInfo{
+			Akash: "",
+			Kube: &version.Info{
+				Major:        "1",
+				Minor:        "2",
+				GitVersion:   "3",
+				GitCommit:    "4",
+				GitTreeState: "5",
+				BuildDate:    "6",
+				GoVersion:    "7",
+				Compiler:     "8",
+				Platform:     "9",
+			},
+		}
+
+		test.pcclient.On("KubeVersion").Return(status.Kube, nil)
+
+		uri, err := makeURI(test.host, versionPath())
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("GET", uri, nil)
+		require.NoError(t, err)
+
+		req.Header.Set("Content-Type", contentTypeJSON)
+
+		resp, err := test.gclient.hclient.Do(req)
+		require.NoError(t, err)
+		require.Equal(t, resp.StatusCode, http.StatusOK)
+		var data versionInfo
+		decoder := json.NewDecoder(resp.Body)
+		err = decoder.Decode(&data)
+		require.NoError(t, err)
+		require.Equal(t, data, status)
 	})
 }
 
