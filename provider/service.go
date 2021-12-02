@@ -2,8 +2,9 @@ package provider
 
 import (
 	"context"
-	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"time"
+
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -92,6 +93,7 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 		Deposit:         cfg.BidDeposit,
 		BidTimeout:      cfg.BidTimeout,
 		Attributes:      cfg.Attributes,
+		MaxGroupVolumes: cfg.MaxGroupVolumes,
 	})
 	if err != nil {
 		errmsg := "creating bidengine service"

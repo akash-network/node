@@ -494,6 +494,12 @@ func (o *order) shouldBid(group *dtypes.Group) (bool, error) {
 		return false, nil
 	}
 
+	for _, resources := range group.GroupSpec.GetResources() {
+		if len(resources.Resources.Storage) > o.cfg.MaxGroupVolumes {
+			o.log.Info(fmt.Sprintf("unable to fulfill: group volumes count exceeds (%d > %d)", len(resources.Resources.Storage), o.cfg.MaxGroupVolumes))
+			return false, nil
+		}
+	}
 	signatureRequirements := group.GroupSpec.Requirements.SignedBy
 	if signatureRequirements.Size() != 0 {
 		// Check that the signature requirements are met for each attribute

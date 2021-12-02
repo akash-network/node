@@ -13,4 +13,5 @@ type Config struct {
 	Deposit         sdk.Coin
 	BidTimeout      time.Duration
 	Attributes      types.Attributes
+	MaxGroupVolumes int
 }

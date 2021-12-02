@@ -1,3 +1,7 @@
 package constants
 
-const AkashDenom = "uakt"
+const (
+	AkashDenom = "uakt"
+
+	DefaultMaxGroupVolumes = 2
+)
