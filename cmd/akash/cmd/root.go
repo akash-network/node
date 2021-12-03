@@ -145,6 +145,10 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 	rootCmd.SetErr(rootCmd.ErrOrStderr())
 
 	server.AddCommands(rootCmd, app.DefaultHome, newApp, createAppAndExport, addModuleInitFlags)
+
+	rootCmd.AddCommand(
+		server.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Marshaler))
+
 }
 
 func addModuleInitFlags(startCmd *cobra.Command) {
