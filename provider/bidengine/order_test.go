@@ -613,7 +613,7 @@ func Test_BidOrderUsesBidPricingStrategy(t *testing.T) {
 	// Create a test strategy that gives a fixed price
 	pricing := testBidPricingStrategy(expectedBid)
 	order, scaffold, _ := makeOrderForTest(t, false, mtypes.BidStateInvalid, pricing, nil, testBidCreatedAt)
-	
+
 	broadcast := testutil.ChannelWaitForValue(t, scaffold.broadcasts)
 	require.IsType(t, &mtypes.MsgCreateBid{}, broadcast)
 
