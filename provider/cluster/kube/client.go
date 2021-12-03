@@ -789,5 +789,5 @@ func (c *client) deploymentsForLease(ctx context.Context, lid mtypes.LeaseID) (m
 }
 
 func (c *client) KubeVersion() (*version.Info, error) {
-	return c.kc.(*kubernetes.Clientset).ServerVersion()
+	return c.kc.Discovery().ServerVersion()
 }
