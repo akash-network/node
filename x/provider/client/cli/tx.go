@@ -58,7 +58,7 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -95,7 +95,7 @@ func cmdUpdate(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 

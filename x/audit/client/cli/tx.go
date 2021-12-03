@@ -85,7 +85,7 @@ func cmdCreateProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -125,7 +125,7 @@ func cmdDeleteProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
