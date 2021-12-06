@@ -401,8 +401,16 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 }
 
 type versionInfo struct {
-	Akash string            `json:"akash"`
+	Akash *akashVersionInfo `json:"akash"`
 	Kube  *kubeVersion.Info `json:"kube"`
+}
+
+type akashVersionInfo struct {
+	Version          string `json:"version"`
+	GitCommit        string `json:"commit"`
+	BuildTags        string `json:"buildTags"`
+	GoVersion        string `json:"go"`
+	CosmosSdkVersion string `json:"cosmosSdkVersion"`
 }
 
 func createVersionHandler(log log.Logger, pclient provider.Client) http.HandlerFunc {
@@ -412,9 +420,16 @@ func createVersionHandler(log log.Logger, pclient provider.Client) http.HandlerF
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		verInfo := version.NewInfo()
 		writeJSON(log, w, versionInfo{
-			Akash: version.Version,
-			Kube:  kube,
+			Akash: &akashVersionInfo{
+				Version:          verInfo.Version,
+				GitCommit:        verInfo.GitCommit,
+				BuildTags:        verInfo.BuildTags,
+				GoVersion:        verInfo.GoVersion,
+				CosmosSdkVersion: verInfo.CosmosSdkVersion,
+			},
+			Kube: kube,
 		})
 	}
 }

@@ -11,11 +11,12 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/version"
+	kubeVersion "k8s.io/apimachinery/pkg/version"
 
 	qmock "github.com/ovrclk/akash/client/mocks"
 	"github.com/ovrclk/akash/provider"
@@ -310,9 +311,20 @@ func TestRouteDoesNotExist(t *testing.T) {
 
 func TestRouteVersionOK(t *testing.T) {
 	runRouterTest(t, false, func(test *routerTest) {
+		// these are set at build time
+		version.Version = "akashTest"
+		version.Commit = "testCommit"
+		version.BuildTags = "testTags"
+
 		status := versionInfo{
-			Akash: "",
-			Kube: &version.Info{
+			Akash: &akashVersionInfo{
+				Version:          "akashTest",
+				GitCommit:        "testCommit",
+				BuildTags:        "testTags",
+				GoVersion:        "", // ignored in comparison
+				CosmosSdkVersion: "", // ignored in comparison
+			},
+			Kube: &kubeVersion.Info{
 				Major:        "1",
 				Minor:        "2",
 				GitVersion:   "3",
@@ -342,7 +354,10 @@ func TestRouteVersionOK(t *testing.T) {
 		decoder := json.NewDecoder(resp.Body)
 		err = decoder.Decode(&data)
 		require.NoError(t, err)
-		require.Equal(t, data, status)
+		require.Equal(t, status.Kube, data.Kube)
+		require.Equal(t, status.Akash.Version, data.Akash.Version)
+		require.Equal(t, status.Akash.GitCommit, data.Akash.GitCommit)
+		require.Equal(t, status.Akash.BuildTags, data.Akash.BuildTags)
 	})
 }
 
