@@ -358,7 +358,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		s.T().Log("starting hostname operator for test")
 		_, err := ptestutil.RunLocalHostnameOperator(s.ctx, cctx)
 		s.Require().NoError(err)
-		
+
 		return nil
 	})
 
