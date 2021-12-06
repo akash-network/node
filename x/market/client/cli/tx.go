@@ -85,7 +85,7 @@ func cmdBidCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -121,7 +121,7 @@ func cmdBidClose(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -170,7 +170,7 @@ func cmdLeaseCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -205,7 +205,7 @@ func cmdLeaseWithdraw(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -240,7 +240,7 @@ func cmdLeaseClose(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(clientCtx, cmd.Flags(), msg)
+			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
