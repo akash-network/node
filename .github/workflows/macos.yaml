@@ -32,4 +32,3 @@ jobs:
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - run: make bins
-      - run: make test
