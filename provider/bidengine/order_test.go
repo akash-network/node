@@ -9,6 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ovrclk/akash/sdkutil"
+	"github.com/ovrclk/akash/validation/constants"
 
 	"github.com/stretchr/testify/mock"
 
@@ -155,6 +156,7 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, bidState mtypes.Bi
 	// Overwrite some with stuff built in this function
 	cfg.PricingStrategy = pricing
 	cfg.Deposit = mtypes.DefaultBidMinDeposit
+	cfg.MaxGroupVolumes = constants.DefaultMaxGroupVolumes
 
 	myService, err := NewService(context.Background(), mySession, scaffold.cluster, scaffold.testBus, cfg)
 	require.NoError(t, err)
