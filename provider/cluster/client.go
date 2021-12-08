@@ -20,6 +20,7 @@ import (
 
 	eventsv1 "k8s.io/api/events/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/version"
 
 	"github.com/ovrclk/akash/manifest"
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
@@ -88,6 +89,9 @@ type Client interface {
 	PurgeDeclaredHostnames(ctx context.Context, lID mtypes.LeaseID) error
 
 	PurgeDeclaredHostname(ctx context.Context, lID mtypes.LeaseID, hostname string) error
+
+	// KubeVersion returns the version information of kubernetes running in the cluster
+	KubeVersion() (*version.Info, error)
 }
 
 func ErrorIsOkToSendToClient(err error) bool {
@@ -564,5 +568,9 @@ func (c *nullClient) GetManifestGroup(context.Context, mtypes.LeaseID) (bool, ak
 }
 
 func (c *nullClient) AllHostnames(context.Context) ([]ctypes.ActiveHostname, error) {
+	return nil, nil
+}
+
+func (c *nullClient) KubeVersion() (*version.Info, error) {
 	return nil, nil
 }
