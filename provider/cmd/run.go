@@ -77,6 +77,7 @@ const (
 	FlagDeploymentIngressDomain          = "deployment-ingress-domain"
 	FlagDeploymentIngressExposeLBHosts   = "deployment-ingress-expose-lb-hosts"
 	FlagDeploymentNetworkPoliciesEnabled = "deployment-network-policies-enabled"
+	FlagDockerImagePullSecretsName       = "docker-image-pull-secrets-name"
 	FlagOvercommitPercentMemory          = "overcommit-pct-mem"
 	FlagOvercommitPercentCPU             = "overcommit-pct-cpu"
 	FlagOvercommitPercentStorage         = "overcommit-pct-storage"
@@ -223,6 +224,11 @@ func RunCmd() *cobra.Command {
 
 	cmd.Flags().Bool(FlagDeploymentNetworkPoliciesEnabled, true, "Enable network policies")
 	if err := viper.BindPFlag(FlagDeploymentNetworkPoliciesEnabled, cmd.Flags().Lookup(FlagDeploymentNetworkPoliciesEnabled)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().String(FlagDockerImagePullSecretsName, "", "Name of the local image pull secret configured with kubectl")
+	if err := viper.BindPFlag(FlagDockerImagePullSecretsName, cmd.Flags().Lookup(FlagDockerImagePullSecretsName)); err != nil {
 		return nil
 	}
 
@@ -398,6 +404,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	deploymentIngressStaticHosts := viper.GetBool(FlagDeploymentIngressStaticHosts)
 	deploymentIngressDomain := viper.GetString(FlagDeploymentIngressDomain)
 	deploymentNetworkPoliciesEnabled := viper.GetBool(FlagDeploymentNetworkPoliciesEnabled)
+	dockerImagePullSecretsName := viper.GetString(FlagDockerImagePullSecretsName)
 	strategy := viper.GetString(FlagBidPricingStrategy)
 	deploymentIngressExposeLBHosts := viper.GetBool(FlagDeploymentIngressExposeLBHosts)
 	from := viper.GetString(flags.FlagFrom)
@@ -522,6 +529,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	kubeSettings.MemoryCommitLevel = overcommitPercentMemory
 	kubeSettings.StorageCommitLevel = overcommitPercentStorage
 	kubeSettings.DeploymentRuntimeClass = deploymentRuntimeClass
+	kubeSettings.DockerImagePullSecretsName = strings.TrimSpace(dockerImagePullSecretsName)
 
 	if err := builder.ValidateSettings(kubeSettings); err != nil {
 		return err
