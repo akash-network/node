@@ -77,7 +77,7 @@ const (
 	FlagDeploymentIngressDomain          = "deployment-ingress-domain"
 	FlagDeploymentIngressExposeLBHosts   = "deployment-ingress-expose-lb-hosts"
 	FlagDeploymentNetworkPoliciesEnabled = "deployment-network-policies-enabled"
-	FlagDockerImagePullSecretsName       = "docker-image-pull-secrets-name"
+	FlagDockerImagePullSecretsName       = "docker-image-pull-secrets-name" // nolint: gosec
 	FlagOvercommitPercentMemory          = "overcommit-pct-mem"
 	FlagOvercommitPercentCPU             = "overcommit-pct-cpu"
 	FlagOvercommitPercentStorage         = "overcommit-pct-storage"
