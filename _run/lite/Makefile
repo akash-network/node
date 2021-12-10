@@ -28,3 +28,5 @@ provider-service-status:
 		--from      "$(KEY_NAME)" \
 		--provider  "$(PROVIDER_ADDRESS)"
 
+.PHONY: clean-lite
+clean-lite:
