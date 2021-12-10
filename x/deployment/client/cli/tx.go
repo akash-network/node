@@ -14,6 +14,7 @@ import (
 	"github.com/ovrclk/akash/cmd/common"
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/ovrclk/akash/sdl"
+	"github.com/ovrclk/akash/validation/constants"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
 	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 
@@ -70,6 +71,8 @@ func cmdCreate(key string) *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			warnIfGroupVolumesExceeds(clientCtx, groups)
 
 			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(clientCtx.FromAddress))
 			if err != nil {
@@ -225,6 +228,8 @@ func cmdUpdate(key string) *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			warnIfGroupVolumesExceeds(clientCtx, groups)
 
 			msg := &types.MsgUpdateDeployment{
 				ID:      id,
@@ -474,4 +479,15 @@ Example:
 	_ = cmd.MarkFlagRequired(flags.FlagFrom)
 
 	return cmd
+}
+
+func warnIfGroupVolumesExceeds(cctx client.Context, dgroups []*types.GroupSpec) {
+	for _, group := range dgroups {
+		for _, resources := range group.GetResources() {
+			if len(resources.Resources.Storage) > constants.DefaultMaxGroupVolumes {
+				_ = cctx.PrintString(fmt.Sprintf("amount of volumes for service exceeds recommended value (%v > %v)\n"+
+					"there may no providers on network to bid", len(resources.Resources.Storage), constants.DefaultMaxGroupVolumes))
+			}
+		}
+	}
 }

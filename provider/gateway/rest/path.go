@@ -13,6 +13,10 @@ const (
 	migratePathPrefix    = "/migrate"
 )
 
+func versionPath() string {
+	return "version"
+}
+
 func statusPath() string {
 	return "status"
 }

@@ -24,7 +24,7 @@ func TestMonitorInstantiate(t *testing.T) {
 
 	statusResult := &ctypes.LeaseStatus{}
 	client.On("LeaseStatus", mock.Anything, lid).Return(statusResult, nil)
-	mySession := session.New(myLog, nil, nil)
+	mySession := session.New(myLog, nil, nil, -1)
 
 	lc := lifecycle.New()
 	myDeploymentManager := &deploymentManager{
@@ -59,7 +59,7 @@ func TestMonitorSendsClusterDeploymentPending(t *testing.T) {
 
 	statusResult := &ctypes.LeaseStatus{}
 	client.On("LeaseStatus", mock.Anything, lid).Return(statusResult, nil)
-	mySession := session.New(myLog, nil, nil)
+	mySession := session.New(myLog, nil, nil, -1)
 
 	sub, err := bus.Subscribe()
 	require.NoError(t, err)
@@ -114,7 +114,7 @@ func TestMonitorSendsClusterDeploymentDeployed(t *testing.T) {
 		AvailableReplicas:  0,
 	}
 	client.On("LeaseStatus", mock.Anything, lid).Return(statusResult, nil)
-	mySession := session.New(myLog, nil, nil)
+	mySession := session.New(myLog, nil, nil, -1)
 
 	sub, err := bus.Subscribe()
 	require.NoError(t, err)
@@ -180,7 +180,7 @@ func TestMonitorSendsClusterDeploymentWithForwardedPort(t *testing.T) {
 		Name:         serviceName,
 	}
 	client.On("LeaseStatus", mock.Anything, lid).Return(statusResult, nil)
-	mySession := session.New(myLog, nil, nil)
+	mySession := session.New(myLog, nil, nil, -1)
 
 	sub, err := bus.Subscribe()
 	require.NoError(t, err)

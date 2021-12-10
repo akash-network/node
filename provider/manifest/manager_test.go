@@ -130,7 +130,11 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 
 	queryMock.On("ActiveLeasesForProvider", p.Address()).Return([]mtypes.QueryLeaseResponse{}, nil)
 
-	serviceInterface, err := NewService(ctx, session.New(log, clientMock, p), bus, hostnames, cfg)
+	createdAtBlockHeight := int64(-1)
+	if len(leases) != 0 {
+		createdAtBlockHeight = leases[0].GetCreatedAt() - 1
+	}
+	serviceInterface, err := NewService(ctx, session.New(log, clientMock, p, createdAtBlockHeight), bus, hostnames, cfg)
 	require.NoError(t, err)
 
 	svc := serviceInterface.(*service)
