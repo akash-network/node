@@ -8,9 +8,9 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/kubernetes"
 
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 
-	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider/cluster/kube/builder"
 )
 

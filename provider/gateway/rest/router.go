@@ -17,6 +17,7 @@ import (
 
 	"k8s.io/client-go/tools/remotecommand"
 
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	"github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/util/wsutil"
 
@@ -31,11 +32,10 @@ import (
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	kubeVersion "k8s.io/apimachinery/pkg/version"
 
-	"github.com/ovrclk/akash/manifest"
 	"github.com/ovrclk/akash/provider"
 	"github.com/ovrclk/akash/provider/cluster"
 	kubeClient "github.com/ovrclk/akash/provider/cluster/kube"
-	cltypes "github.com/ovrclk/akash/provider/cluster/types"
+	cltypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	pmanifest "github.com/ovrclk/akash/provider/manifest"
 	manifestValidation "github.com/ovrclk/akash/validation"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"

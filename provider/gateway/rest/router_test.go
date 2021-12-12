@@ -22,7 +22,7 @@ import (
 	"github.com/ovrclk/akash/provider"
 	kubeClient "github.com/ovrclk/akash/provider/cluster/kube"
 	pcmock "github.com/ovrclk/akash/provider/cluster/mocks"
-	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	pmmock "github.com/ovrclk/akash/provider/manifest/mocks"
 	pmock "github.com/ovrclk/akash/provider/mocks"
 	"github.com/ovrclk/akash/sdl"
@@ -114,7 +114,7 @@ func testCertHelper(t *testing.T, test *routerTest) {
 		"Submit",
 		mock.Anything,
 		mock.AnythingOfType("types.DeploymentID"),
-		mock.AnythingOfType("manifest.Manifest"),
+		mock.AnythingOfType("v2beta1.Manifest"),
 	).Return(nil)
 
 	dseq := uint64(testutil.RandRangeInt(1, 1000))
@@ -500,7 +500,7 @@ func TestRoutePutManifestOK(t *testing.T) {
 				Owner: test.caddr.String(),
 				DSeq:  dseq,
 			},
-			mock.AnythingOfType("manifest.Manifest"),
+			mock.AnythingOfType("v2beta1.Manifest"),
 		).Return(nil)
 
 		uri, err := makeURI(test.host, submitManifestPath(dseq))
@@ -541,7 +541,7 @@ func TestRoutePutInvalidManifest(t *testing.T) {
 				DSeq:  dseq,
 			},
 
-			mock.AnythingOfType("manifest.Manifest"),
+			mock.AnythingOfType("v2beta1.Manifest"),
 		).Return(manifestValidation.ErrInvalidManifest)
 
 		uri, err := makeURI(test.host, submitManifestPath(dseq))

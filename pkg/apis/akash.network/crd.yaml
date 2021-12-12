@@ -1,0 +1,234 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: manifests.akash.network
+spec:
+  group: akash.network
+  scope: Namespaced
+  names:
+    plural: manifests
+    singular: manifest
+    kind: Manifest
+    shortNames:
+      - mani
+  versions:
+    - name: v2beta1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                lease_id:
+                  type: object
+                  properties:
+                    owner:
+                      type: string
+                    dseq:
+                      type: string
+                      format: uint64
+                    gseq:
+                      type: integer
+                    oseq:
+                      type: integer
+                    provider:
+                      type: string
+                group:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    services:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          image:
+                            type: string
+                          args:
+                            type: array
+                            items:
+                              type: string
+                          env:
+                            type: array
+                            items:
+                              type: string
+                          unit:
+                            type: object
+                            properties:
+                              cpu:
+                                type: number
+                                format: uint32
+                              memory:
+                                type: string
+                                format: uint64
+                              storage:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    size:
+                                      type: string
+                                      format: uint64
+                                    name:
+                                      type: string
+                          count:
+                            type: number
+                            format: uint64
+                          expose:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                port:
+                                  type: integer
+                                  format: uint16
+                                external_port:
+                                  type: integer
+                                  format: uint16
+                                proto:
+                                  type: string
+                                service:
+                                  type: string
+                                global:
+                                  type: boolean
+                                http_options:
+                                  type: object
+                                  properties:
+                                    max_body_size:
+                                      type: integer
+                                    read_timeout:
+                                      type: integer
+                                    send_timeout:
+                                      type: integer
+                                    next_tries:
+                                      type: integer
+                                    next_timeout:
+                                      type: integer
+                                    next_cases:
+                                      type: array
+                                      items:
+                                        type: string
+                                hosts:
+                                  type: array
+                                  items:
+                                    type: string
+                          params:
+                            type: object
+                            nullable: true
+                            properties:
+                              storage:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                    readOnly:
+                                      type: boolean
+                                    mount:
+                                      type: string
+    - name: v1
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                lease_id:
+                  type: object
+                  properties:
+                    owner:
+                      type: string
+                    dseq:
+                      type: string
+                      format: uint64
+                    gseq:
+                      type: integer
+                    oseq:
+                      type: integer
+                    provider:
+                      type: string
+                group:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    services:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          image:
+                            type: string
+                          args:
+                            type: array
+                            items:
+                              type: string
+                          env:
+                            type: array
+                            items:
+                              type: string
+                          unit:
+                            type: object
+                            properties:
+                              cpu:
+                                type: number
+                                format: uint32
+                              memory:
+                                type: string
+                                format: uint64
+                              storage:
+                                type: string
+                                format: uint64
+                          count:
+                            type: number
+                            format: uint64
+                          expose:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                port:
+                                  type: integer
+                                  format: uint16
+                                external_port:
+                                  type: integer
+                                  format: uint16
+                                proto:
+                                  type: string
+                                service:
+                                  type: string
+                                global:
+                                  type: boolean
+                                http_options:
+                                  type: object
+                                  properties:
+                                    max_body_size:
+                                      type: integer
+                                    read_timeout:
+                                      type: integer
+                                    send_timeout:
+                                      type: integer
+                                    next_tries:
+                                      type: integer
+                                    next_timeout:
+                                      type: integer
+                                    next_cases:
+                                      type: array
+                                      items:
+                                        type: string
+                                hosts:
+                                  type: array
+                                  items:
+                                    type: string

@@ -6,7 +6,7 @@ import (
 	"github.com/boz/go-lifecycle"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 
-	v1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -14,7 +14,7 @@ import (
 
 	"github.com/tendermint/tendermint/libs/log"
 
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
@@ -44,7 +44,7 @@ type Cluster interface {
 // StatusClient is the interface which includes status of service
 type StatusClient interface {
 	Status(context.Context) (*ctypes.Status, error)
-	FindActiveLease(ctx context.Context, owner sdktypes.Address, dseq uint64, gseq uint32) (bool, mtypes.LeaseID, v1.ManifestGroup, error)
+	FindActiveLease(ctx context.Context, owner sdktypes.Address, dseq uint64, gseq uint32) (bool, mtypes.LeaseID, crd.ManifestGroup, error)
 }
 
 // Service manage compute cluster for the provider.  Will eventually integrate with kubernetes, etc...
@@ -153,7 +153,7 @@ type checkDeploymentExistsRequest struct {
 
 var errNoManifestGroup = errors.New("no manifest group could be found")
 
-func (s *service) FindActiveLease(ctx context.Context, owner sdktypes.Address, dseq uint64, gseq uint32) (bool, mtypes.LeaseID, v1.ManifestGroup, error) {
+func (s *service) FindActiveLease(ctx context.Context, owner sdktypes.Address, dseq uint64, gseq uint32) (bool, mtypes.LeaseID, crd.ManifestGroup, error) {
 	response := make(chan mtypes.LeaseID, 1)
 	req := checkDeploymentExistsRequest{
 		responseCh: response,
@@ -164,7 +164,7 @@ func (s *service) FindActiveLease(ctx context.Context, owner sdktypes.Address, d
 	select {
 	case s.checkDeploymentExistsRequestCh <- req:
 	case <-ctx.Done():
-		return false, mtypes.LeaseID{}, v1.ManifestGroup{}, ctx.Err()
+		return false, mtypes.LeaseID{}, crd.ManifestGroup{}, ctx.Err()
 	}
 
 	var leaseID mtypes.LeaseID
@@ -172,20 +172,20 @@ func (s *service) FindActiveLease(ctx context.Context, owner sdktypes.Address, d
 	select {
 	case leaseID, ok = <-response:
 		if !ok {
-			return false, mtypes.LeaseID{}, v1.ManifestGroup{}, nil
+			return false, mtypes.LeaseID{}, crd.ManifestGroup{}, nil
 		}
 
 	case <-ctx.Done():
-		return false, mtypes.LeaseID{}, v1.ManifestGroup{}, ctx.Err()
+		return false, mtypes.LeaseID{}, crd.ManifestGroup{}, ctx.Err()
 	}
 
 	found, mgroup, err := s.client.GetManifestGroup(ctx, leaseID)
 	if err != nil {
-		return false, mtypes.LeaseID{}, v1.ManifestGroup{}, err
+		return false, mtypes.LeaseID{}, crd.ManifestGroup{}, err
 	}
 
 	if !found {
-		return false, mtypes.LeaseID{}, v1.ManifestGroup{}, errNoManifestGroup
+		return false, mtypes.LeaseID{}, crd.ManifestGroup{}, errNoManifestGroup
 	}
 
 	return true, leaseID, mgroup, nil

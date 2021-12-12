@@ -11,7 +11,7 @@ import (
 
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
-	"github.com/ovrclk/akash/manifest"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	types "github.com/ovrclk/akash/types/v1beta2"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )

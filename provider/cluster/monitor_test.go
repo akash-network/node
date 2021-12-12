@@ -2,9 +2,9 @@ package cluster
 
 import (
 	"github.com/boz/go-lifecycle"
-	"github.com/ovrclk/akash/manifest"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	"github.com/ovrclk/akash/provider/cluster/mocks"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"

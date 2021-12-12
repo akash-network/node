@@ -224,6 +224,8 @@ func TestProvAttrObeysTTL(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, attrs, 1)
 
+	time.Sleep(2 * ttl)
+
 	scaffold.stop(t)
 
 	// Should have just 1 call

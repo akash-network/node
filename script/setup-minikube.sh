@@ -223,8 +223,8 @@ akash-setup)
 	kubectl_retry label nodes minikube akash.network/storageclasses=beta2
 	kubectl_retry label nodes minikube akash.network/role=ingress
 
-	kubectl_retry apply -f "${AKASH_ROOT}/pkg/apis/akash.network/v1/crd.yaml"
-	kubectl_retry apply -f "${AKASH_ROOT}/pkg/apis/akash.network/v1/provider_hosts_crd.yaml"
+	kubectl_retry apply -f "${AKASH_ROOT}/pkg/apis/akash.network/crd.yaml"
+	kubectl_retry apply -f "${AKASH_ROOT}/pkg/apis/akash.network/provider_hosts_crd.yaml"
 
 	kubectl kustomize "${AKASH_ROOT}/_docs/kustomize/akash-services/" | kubectl_retry apply -f-
 

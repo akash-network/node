@@ -9,7 +9,7 @@ import (
 	"time"
 
 	lifecycle "github.com/boz/go-lifecycle"
-	"github.com/ovrclk/akash/manifest"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"

@@ -5,16 +5,18 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"time"
+
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 
 	"github.com/ovrclk/akash/provider/cluster/util"
 
 	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/libs/log"
 
-	lifecycle "github.com/boz/go-lifecycle"
-	"github.com/ovrclk/akash/manifest"
+	"github.com/boz/go-lifecycle"
+
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"

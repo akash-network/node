@@ -23,12 +23,12 @@ import (
 	"k8s.io/client-go/util/homedir"
 	metricsclient "k8s.io/metrics/pkg/client/clientset/versioned"
 
-	"github.com/ovrclk/akash/manifest"
-	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
+	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	"github.com/ovrclk/akash/provider/cluster"
 	"github.com/ovrclk/akash/provider/cluster/kube/builder"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	"github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/sdl"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
@@ -148,7 +148,7 @@ func (c *client) GetDeployments(ctx context.Context, dID dtypes.DeploymentID) ([
 	_, _ = fmt.Fprintf(labelSelectors, "%s=%d", builder.AkashLeaseDSeqLabelName, dID.DSeq)
 	_, _ = fmt.Fprintf(labelSelectors, ",%s=%s", builder.AkashLeaseOwnerLabelName, dID.Owner)
 
-	manifests, err := c.ac.AkashV1().Manifests(c.ns).List(ctx, metav1.ListOptions{
+	manifests, err := c.ac.AkashV2beta1().Manifests(c.ns).List(ctx, metav1.ListOptions{
 		TypeMeta:             metav1.TypeMeta{},
 		LabelSelector:        labelSelectors.String(),
 		FieldSelector:        "",
@@ -176,24 +176,24 @@ func (c *client) GetDeployments(ctx context.Context, dID dtypes.DeploymentID) ([
 	return result, nil
 }
 
-func (c *client) GetManifestGroup(ctx context.Context, lID mtypes.LeaseID) (bool, akashv1.ManifestGroup, error) {
+func (c *client) GetManifestGroup(ctx context.Context, lID mtypes.LeaseID) (bool, crd.ManifestGroup, error) {
 	leaseNamespace := builder.LidNS(lID)
 
-	obj, err := c.ac.AkashV1().Manifests(c.ns).Get(ctx, leaseNamespace, metav1.GetOptions{})
+	obj, err := c.ac.AkashV2beta1().Manifests(c.ns).Get(ctx, leaseNamespace, metav1.GetOptions{})
 	if err != nil {
 		if kubeErrors.IsNotFound(err) {
 			c.log.Info("CRD manifest not found", "lease-ns", leaseNamespace)
-			return false, akashv1.ManifestGroup{}, nil
+			return false, crd.ManifestGroup{}, nil
 		}
 
-		return false, akashv1.ManifestGroup{}, err
+		return false, crd.ManifestGroup{}, err
 	}
 
 	return true, obj.Spec.Group, nil
 }
 
 func (c *client) Deployments(ctx context.Context) ([]ctypes.Deployment, error) {
-	manifests, err := c.ac.AkashV1().Manifests(c.ns).List(ctx, metav1.ListOptions{})
+	manifests, err := c.ac.AkashV2beta1().Manifests(c.ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func (c *client) TeardownLease(ctx context.Context, lid mtypes.LeaseID) error {
 	}
 	kubeCallsCounter.WithLabelValues("namespaces-delete", label).Inc()
 
-	err := c.ac.AkashV1().Manifests(c.ns).Delete(ctx, builder.LidNS(lid), metav1.DeleteOptions{})
+	err := c.ac.AkashV2beta1().Manifests(c.ns).Delete(ctx, builder.LidNS(lid), metav1.DeleteOptions{})
 	if err != nil {
 		c.log.Error("teardown lease: unable to delete manifest", "ns", builder.LidNS(lid), "error", err)
 	}
@@ -460,7 +460,7 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 	}
 	labelSelector := &strings.Builder{}
 	kubeSelectorForLease(labelSelector, lid)
-	phResult, err := c.ac.AkashV1().ProviderHosts(c.ns).List(ctx, metav1.ListOptions{
+	phResult, err := c.ac.AkashV2beta1().ProviderHosts(c.ns).List(ctx, metav1.ListOptions{
 		LabelSelector: labelSelector.String(),
 	})
 
@@ -547,7 +547,7 @@ func (c *client) ServiceStatus(ctx context.Context, lid mtypes.LeaseID, name str
 
 	// Get manifest definition from CRD
 	c.log.Debug("Pulling manifest from CRD", "lease-ns", builder.LidNS(lid))
-	mani, err := c.ac.AkashV1().Manifests(c.ns).Get(ctx, builder.LidNS(lid), metav1.GetOptions{})
+	mani, err := c.ac.AkashV2beta1().Manifests(c.ns).Get(ctx, builder.LidNS(lid), metav1.GetOptions{})
 	if err != nil {
 		c.log.Error("CRD manifest not found", "lease-ns", builder.LidNS(lid), "name", name)
 		return nil, ErrNoManifestForLease
@@ -667,7 +667,7 @@ exposeCheckLoop:
 		labelSelector := &strings.Builder{}
 		kubeSelectorForLease(labelSelector, lid)
 
-		phs, err := c.ac.AkashV1().ProviderHosts(c.ns).List(ctx, metav1.ListOptions{
+		phs, err := c.ac.AkashV2beta1().ProviderHosts(c.ns).List(ctx, metav1.ListOptions{
 			LabelSelector: labelSelector.String(),
 		})
 

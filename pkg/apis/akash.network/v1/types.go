@@ -5,17 +5,16 @@ import (
 	"math"
 	"strconv"
 
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
-	clusterutil "github.com/ovrclk/akash/provider/cluster/util"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta1"
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/ovrclk/akash/manifest"
-	types "github.com/ovrclk/akash/types/v1beta2"
-	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+	manifest "github.com/ovrclk/akash/manifest/v1"
+	types "github.com/ovrclk/akash/types/v1beta1"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta1"
 )
 
 // +genclient
@@ -41,6 +40,8 @@ type ManifestSpec struct {
 	LeaseID LeaseID       `json:"lease_id"`
 	Group   ManifestGroup `json:"group"`
 }
+
+// type ResourceUnits types.ResourceUnits
 
 // Deployment returns the cluster.Deployment that the saved manifest represents.
 func (m Manifest) Deployment() (ctypes.Deployment, error) {
@@ -69,8 +70,8 @@ func (d deployment) ManifestGroup() manifest.Group {
 	return d.group
 }
 
-// NewManifest creates new manifest with provided details. Returns error in case of failure.
-func NewManifest(ns string, lid mtypes.LeaseID, mgroup *manifest.Group) (*Manifest, error) {
+// NewManifest creates new manifest with provided details. Returns error incase of failure.
+func NewManifest(name string, lid mtypes.LeaseID, mgroup *manifest.Group) (*Manifest, error) {
 	group, err := manifestGroupFromAkash(mgroup)
 	if err != nil {
 		return nil, err
@@ -82,8 +83,7 @@ func NewManifest(ns string, lid mtypes.LeaseID, mgroup *manifest.Group) (*Manife
 			APIVersion: "akash.network/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      clusterutil.LeaseIDToNamespace(lid),
-			Namespace: ns,
+			Name: name,
 		},
 		Spec: ManifestSpec{
 			Group:   group,
@@ -183,16 +183,6 @@ func manifestGroupFromAkash(m *manifest.Group) (ManifestGroup, error) {
 	return ma, nil
 }
 
-type ManifestStorageParams struct {
-	Name     string `json:"name" yaml:"name"`
-	Mount    string `json:"mount" yaml:"mount"`
-	ReadOnly bool   `json:"readOnly" yaml:"readOnly"`
-}
-
-type ManifestServiceParams struct {
-	Storage []ManifestStorageParams `json:"storage,omitempty"`
-}
-
 // ManifestService stores name, image, args, env, unit, count and expose list of service
 type ManifestService struct {
 	// Service name
@@ -208,8 +198,6 @@ type ManifestService struct {
 	Count uint32 `json:"count,omitempty"`
 	// Overlay Network Links
 	Expose []ManifestServiceExpose `json:"expose,omitempty"`
-	// Miscellaneous service parameters
-	Params *ManifestServiceParams `json:"params,omitempty"`
 }
 
 func (ms ManifestService) toAkash() (manifest.Service, error) {
@@ -236,20 +224,6 @@ func (ms ManifestService) toAkash() (manifest.Service, error) {
 		ams.Expose = append(ams.Expose, value)
 	}
 
-	if ms.Params != nil {
-		ams.Params = &manifest.ServiceParams{
-			Storage: make([]manifest.StorageParams, 0, len(ms.Params.Storage)),
-		}
-
-		for _, storage := range ms.Params.Storage {
-			ams.Params.Storage = append(ams.Params.Storage, manifest.StorageParams{
-				Name:     storage.Name,
-				Mount:    storage.Mount,
-				ReadOnly: storage.ReadOnly,
-			})
-		}
-	}
-
 	return *ams, nil
 }
 
@@ -271,20 +245,6 @@ func manifestServiceFromAkash(ams manifest.Service) (ManifestService, error) {
 
 	for _, expose := range ams.Expose {
 		ms.Expose = append(ms.Expose, manifestServiceExposeFromAkash(expose))
-	}
-
-	if ams.Params != nil {
-		ms.Params = &ManifestServiceParams{
-			Storage: make([]ManifestStorageParams, 0, len(ams.Params.Storage)),
-		}
-
-		for _, storage := range ams.Params.Storage {
-			ms.Params.Storage = append(ms.Params.Storage, ManifestStorageParams{
-				Name:     storage.Name,
-				Mount:    storage.Mount,
-				ReadOnly: storage.ReadOnly,
-			})
-		}
 	}
 
 	return ms, nil
@@ -346,16 +306,11 @@ func manifestServiceExposeFromAkash(amse manifest.ServiceExpose) ManifestService
 	}
 }
 
-type ManifestServiceStorage struct {
-	Name string `json:"name"`
-	Size string `json:"size"`
-}
-
 // ResourceUnits stores cpu, memory and storage details
 type ResourceUnits struct {
-	CPU     uint32                   `json:"cpu,omitempty"`
-	Memory  string                   `json:"memory,omitempty"`
-	Storage []ManifestServiceStorage `json:"storage,omitempty"`
+	CPU     uint32 `json:"cpu,omitempty"`
+	Memory  string `json:"memory,omitempty"`
+	Storage string `json:"storage,omitempty"`
 }
 
 func (ru ResourceUnits) toAkash() (types.ResourceUnits, error) {
@@ -363,19 +318,9 @@ func (ru ResourceUnits) toAkash() (types.ResourceUnits, error) {
 	if err != nil {
 		return types.ResourceUnits{}, err
 	}
-
-	storage := make([]types.Storage, 0, len(ru.Storage))
-
-	for _, st := range ru.Storage {
-		size, err := strconv.ParseUint(st.Size, 10, 64)
-		if err != nil {
-			return types.ResourceUnits{}, err
-		}
-
-		storage = append(storage, types.Storage{
-			Name:     st.Name,
-			Quantity: types.NewResourceValue(size),
-		})
+	storage, err := strconv.ParseUint(ru.Storage, 10, 64)
+	if err != nil {
+		return types.ResourceUnits{}, err
 	}
 
 	return types.ResourceUnits{
@@ -385,7 +330,9 @@ func (ru ResourceUnits) toAkash() (types.ResourceUnits, error) {
 		Memory: &types.Memory{
 			Quantity: types.NewResourceValue(memory),
 		},
-		Storage: storage,
+		Storage: &types.Storage{
+			Quantity: types.NewResourceValue(storage),
+		},
 	}, nil
 }
 
@@ -401,12 +348,8 @@ func resourceUnitsFromAkash(aru types.ResourceUnits) (ResourceUnits, error) {
 		res.Memory = strconv.FormatUint(aru.Memory.Quantity.Value(), 10)
 	}
 
-	res.Storage = make([]ManifestServiceStorage, 0, len(aru.Storage))
-	for _, storage := range aru.Storage {
-		res.Storage = append(res.Storage, ManifestServiceStorage{
-			Name: storage.Name,
-			Size: strconv.FormatUint(storage.Quantity.Value(), 10),
-		})
+	if aru.Storage != nil {
+		res.Storage = strconv.FormatUint(aru.Storage.Quantity.Value(), 10)
 	}
 
 	return res, nil

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ovrclk/akash/provider/cluster"
-	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	"github.com/tendermint/tendermint/libs/log"
 	"net/http"
 	"strings"

@@ -20,6 +20,7 @@ package scheme
 
 import (
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	akashv2beta1 "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,6 +33,7 @@ var Codecs = serializer.NewCodecFactory(Scheme)
 var ParameterCodec = runtime.NewParameterCodec(Scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
 	akashv1.AddToScheme,
+	akashv2beta1.AddToScheme,
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition

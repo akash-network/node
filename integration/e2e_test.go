@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	providerCmd "github.com/ovrclk/akash/provider/cmd"
 
 	"github.com/ovrclk/akash/provider/gateway/rest"
@@ -432,7 +432,7 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	s.Require().NoError(err)
 	const ns = "lease"
 	propagation := metav1.DeletePropagationForeground
-	err = ac.AkashV1().ProviderHosts(ns).DeleteCollection(s.ctx, metav1.DeleteOptions{
+	err = ac.AkashV2beta1().ProviderHosts(ns).DeleteCollection(s.ctx, metav1.DeleteOptions{
 		TypeMeta:           metav1.TypeMeta{},
 		GracePeriodSeconds: nil,
 		Preconditions:      nil,

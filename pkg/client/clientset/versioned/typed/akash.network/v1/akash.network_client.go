@@ -26,8 +26,6 @@ import (
 
 type AkashV1Interface interface {
 	RESTClient() rest.Interface
-	InventoriesGetter
-	InventoryRequestsGetter
 	ManifestsGetter
 	ProviderHostsGetter
 }
@@ -35,14 +33,6 @@ type AkashV1Interface interface {
 // AkashV1Client is used to interact with features provided by the akash.network group.
 type AkashV1Client struct {
 	restClient rest.Interface
-}
-
-func (c *AkashV1Client) Inventories() InventoryInterface {
-	return newInventories(c)
-}
-
-func (c *AkashV1Client) InventoryRequests() InventoryRequestInterface {
-	return newInventoryRequests(c)
 }
 
 func (c *AkashV1Client) Manifests(namespace string) ManifestInterface {

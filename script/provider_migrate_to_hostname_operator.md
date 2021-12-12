@@ -31,10 +31,10 @@ the objects later. The second file is `ingresses_backup.json` which is just a ra
 
 *Step 4*:
 
-Apply provider host CRD stored in `pkg/apis/akash.network/v1/provider_hosts_crd.yaml` is applied to your kubernetes cluster by running
+Apply provider host CRD stored in `pkg/apis/akash.network/provider_hosts_crd.yaml` is applied to your kubernetes cluster by running
 
 ```
-kubectl apply -f pkg/apis/akash.network/v1/provider_hosts_crd.yaml
+kubectl apply -f pkg/apis/akash.network/provider_hosts_crd.yaml
 ```
 
 Apply the newest ingress controller stored in `_run/ingress-nginx.yaml`

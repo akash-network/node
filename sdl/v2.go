@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/ovrclk/akash/manifest"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	providerUtil "github.com/ovrclk/akash/provider/cluster/util"
 	types "github.com/ovrclk/akash/types/v1beta2"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"

@@ -24,9 +24,9 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 
 	akashclient "github.com/ovrclk/akash/client"
-	"github.com/ovrclk/akash/manifest"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	"github.com/ovrclk/akash/provider"
-	cltypes "github.com/ovrclk/akash/provider/cluster/types"
+	cltypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	ctypes "github.com/ovrclk/akash/x/cert/types/v1beta2"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"

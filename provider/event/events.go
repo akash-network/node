@@ -2,7 +2,7 @@ package event
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/manifest"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )

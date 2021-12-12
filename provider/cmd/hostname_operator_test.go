@@ -2,16 +2,18 @@ package cmd
 
 import (
 	"context"
-	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
-	"github.com/ovrclk/akash/provider/cluster/mocks"
-	cluster "github.com/ovrclk/akash/provider/cluster/types"
-	"github.com/ovrclk/akash/testutil"
-	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
+	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
+	"github.com/ovrclk/akash/provider/cluster/mocks"
+	cluster "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
+	"github.com/ovrclk/akash/testutil"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 type testHostnameResourceEv struct {
