@@ -11,7 +11,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	manifesttypes "github.com/ovrclk/akash/manifest"
+	manifesttypes "github.com/ovrclk/akash/manifest/v2beta1"
 	clusterUtil "github.com/ovrclk/akash/provider/cluster/util"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )

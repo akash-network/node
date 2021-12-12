@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/ovrclk/akash/manifest"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	"github.com/ovrclk/akash/sdl"
 	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"

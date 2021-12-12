@@ -18,7 +18,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	gateway "github.com/ovrclk/akash/provider/gateway/rest"
 	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
 	"github.com/pkg/errors"
@@ -281,7 +281,7 @@ loop:
 				}
 			}
 			logger.Info("Multiple bids with identical price", "gseq", gseq, "price", winningBid.Price.String(), "qty", len(identical))
-			rng := rand.New(rand.NewSource(int64(winningBid.ID.DSeq))) //nolint
+			rng := rand.New(rand.NewSource(int64(winningBid.ID.DSeq))) // nolint
 			choice := rng.Intn(len(identical))
 
 			winningBid = identical[choice]

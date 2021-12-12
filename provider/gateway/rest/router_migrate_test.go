@@ -2,14 +2,17 @@ package rest
 
 import (
 	"context"
-	v1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
-	"github.com/ovrclk/akash/testutil"
-	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
 	"time"
+
+	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
+
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
+	"github.com/ovrclk/akash/testutil"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 func TestRouteMigrateHostnameDoesNotExist(t *testing.T) {
@@ -17,7 +20,7 @@ func TestRouteMigrateHostnameDoesNotExist(t *testing.T) {
 		const dseq = uint64(33)
 		const gseq = uint32(34)
 
-		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(false, mtypes.LeaseID{}, v1.ManifestGroup{}, nil)
+		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(false, mtypes.LeaseID{}, crd.ManifestGroup{}, nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 		defer cancel()
@@ -36,7 +39,7 @@ func TestRouteMigrateHostnameDeploymentDoesNotUse(t *testing.T) {
 		leaseID := testutil.LeaseID(t)
 
 		leaseID.Owner = test.caddr.String()
-		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(true, leaseID, v1.ManifestGroup{}, nil)
+		test.clusterService.On("FindActiveLease", mock.Anything, mock.Anything, dseq, gseq).Return(true, leaseID, crd.ManifestGroup{}, nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 		defer cancel()
@@ -55,14 +58,14 @@ func TestRouteMigrateHostname(t *testing.T) {
 	const serviceExternalPort = uint32(1111)
 
 	runRouterTest(t, true, func(test *routerTest) {
-		mgroup := v1.ManifestGroup{
+		mgroup := crd.ManifestGroup{
 			Name: "some-group",
-			Services: []v1.ManifestService{
+			Services: []crd.ManifestService{
 				{
 					Name:  serviceName,
 					Image: "some-awesome-image",
 					Count: 1,
-					Expose: []v1.ManifestServiceExpose{
+					Expose: []crd.ManifestServiceExpose{
 						{
 							Port:         1234,
 							ExternalPort: uint16(serviceExternalPort),
@@ -100,14 +103,14 @@ func TestRouteMigrateHostnamePrepareFails(t *testing.T) {
 	const serviceExternalPort = uint32(999)
 
 	runRouterTest(t, true, func(test *routerTest) {
-		mgroup := v1.ManifestGroup{
+		mgroup := crd.ManifestGroup{
 			Name: "some-group",
-			Services: []v1.ManifestService{
+			Services: []crd.ManifestService{
 				{
 					Name:  serviceName,
 					Image: "some-awesome-image",
 					Count: 1,
-					Expose: []v1.ManifestServiceExpose{
+					Expose: []crd.ManifestServiceExpose{
 						{
 							Port:         1234,
 							ExternalPort: uint16(serviceExternalPort),
@@ -144,14 +147,14 @@ func TestRouteMigrateHostnameTransferFails(t *testing.T) {
 
 	runRouterTest(t, true, func(test *routerTest) {
 
-		mgroup := v1.ManifestGroup{
+		mgroup := crd.ManifestGroup{
 			Name: "some-group",
-			Services: []v1.ManifestService{
+			Services: []crd.ManifestService{
 				{
 					Name:  serviceName,
 					Image: "some-awesome-image",
 					Count: 1,
-					Expose: []v1.ManifestServiceExpose{
+					Expose: []crd.ManifestServiceExpose{
 						{
 							Port:         1234,
 							ExternalPort: uint16(serviceExternalPort),

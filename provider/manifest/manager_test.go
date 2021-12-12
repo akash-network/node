@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	escrowtypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"

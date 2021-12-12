@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 
 	"github.com/ovrclk/akash/sdl"
@@ -22,8 +22,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 
-	"github.com/ovrclk/akash/manifest"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 
 	types "github.com/ovrclk/akash/types/v1beta2"
 
@@ -54,7 +54,7 @@ type ReadClient interface {
 	ServiceStatus(context.Context, mtypes.LeaseID, string) (*ctypes.ServiceStatus, error)
 
 	AllHostnames(context.Context) ([]ctypes.ActiveHostname, error)
-	GetManifestGroup(context.Context, mtypes.LeaseID) (bool, akashv1.ManifestGroup, error)
+	GetManifestGroup(context.Context, mtypes.LeaseID) (bool, crd.ManifestGroup, error)
 
 	ObserveHostnameState(ctx context.Context) (<-chan ctypes.HostnameResourceEvent, error)
 	GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes.LeaseIDHostnameConnection, error)
@@ -563,8 +563,8 @@ func (c *nullClient) Exec(context.Context, mtypes.LeaseID, string, uint, []strin
 	return nil, errNotImplemented
 }
 
-func (c *nullClient) GetManifestGroup(context.Context, mtypes.LeaseID) (bool, akashv1.ManifestGroup, error) {
-	return false, akashv1.ManifestGroup{}, nil
+func (c *nullClient) GetManifestGroup(context.Context, mtypes.LeaseID) (bool, crd.ManifestGroup, error) {
+	return false, crd.ManifestGroup{}, nil
 }
 
 func (c *nullClient) AllHostnames(context.Context) ([]ctypes.ActiveHostname, error) {

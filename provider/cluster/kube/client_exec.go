@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/ovrclk/akash/provider/cluster"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 
 	corev1 "k8s.io/api/core/v1"

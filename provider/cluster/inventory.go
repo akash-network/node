@@ -16,7 +16,7 @@ import (
 	"github.com/boz/go-lifecycle"
 	"github.com/tendermint/tendermint/libs/log"
 
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	clusterUtil "github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/pubsub"

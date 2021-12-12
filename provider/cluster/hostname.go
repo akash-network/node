@@ -5,7 +5,7 @@ import (
 	"fmt"
 	lifecycle "github.com/boz/go-lifecycle"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
-	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/pkg/errors"

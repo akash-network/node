@@ -2,6 +2,7 @@ package migrate
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	amigrate "github.com/ovrclk/akash/types/v1beta2/migrate"
 	"github.com/ovrclk/akash/x/deployment/types/v1beta1"
 	"github.com/ovrclk/akash/x/deployment/types/v1beta2"

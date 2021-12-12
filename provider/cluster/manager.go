@@ -10,8 +10,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"github.com/ovrclk/akash/manifest"
-	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	"github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/provider/event"
 

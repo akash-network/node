@@ -6,7 +6,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 	types "github.com/ovrclk/akash/types/v1beta2"
 )
 
@@ -26,7 +26,7 @@ func (cs clusterStorage) dup() clusterStorage {
 	return res
 }
 
-func rpNewFromAkash(res akashv1.ResourcePair) *resourcePair {
+func rpNewFromAkash(res crd.ResourcePair) *resourcePair {
 	return &resourcePair{
 		allocatable: *resource.NewQuantity(int64(res.Allocatable), resource.DecimalSI),
 		allocated:   *resource.NewQuantity(int64(res.Allocated), resource.DecimalSI),

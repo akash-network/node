@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	manifesttypes "github.com/ovrclk/akash/manifest"
+	manifesttypes "github.com/ovrclk/akash/manifest/v2beta1"
 	clusterUtil "github.com/ovrclk/akash/provider/cluster/util"
 	"github.com/ovrclk/akash/sdl"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"

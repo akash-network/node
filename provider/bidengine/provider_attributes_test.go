@@ -69,6 +69,7 @@ func (scaffold *providerAttributesTestScaffold) stop(t *testing.T) {
 var errWithExpectedText = errors.New("invalid provider: address not found")
 
 func TestProvAttrCachesValue(t *testing.T) {
+	// the ttl is such short to make sure attributes are fetched twice
 	scaffold := setupProviderAttributesTestScaffold(t, 1*time.Hour, func(scaffold *providerAttributesTestScaffold) *clientmocks.QueryClient {
 		req := &atypes.QueryProviderAuditorRequest{
 			Owner:   scaffold.providerAddr.String(),

@@ -7,7 +7,7 @@ import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	cmdcommon "github.com/ovrclk/akash/cmd/common"
-	cltypes "github.com/ovrclk/akash/provider/cluster/types"
+	cltypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/spf13/cobra"
