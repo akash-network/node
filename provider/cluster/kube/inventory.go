@@ -478,6 +478,11 @@ func (c *client) nodeIsActive(node corev1.Node) bool {
 		}
 	}
 
+	// If the node has been tainted, don't consider it active.
+	if len(node.Spec.Taints) != 0 {
+		issues++
+	}
+
 	return ready && issues == 0
 }
 
