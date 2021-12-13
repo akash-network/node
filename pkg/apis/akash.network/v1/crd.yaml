@@ -70,8 +70,13 @@ spec:
                               storage:
                                 type: array
                                 items:
-                                  type: string
-                                  format: uint64
+                                  type: object
+                                  properties:
+                                    size:
+                                      type: string
+                                      format: uint64
+                                    name:
+                                      type: string
                           count:
                             type: number
                             format: uint64

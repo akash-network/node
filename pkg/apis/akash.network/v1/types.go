@@ -346,11 +346,16 @@ func manifestServiceExposeFromAkash(amse manifest.ServiceExpose) ManifestService
 	}
 }
 
+type ManifestServiceStorage struct {
+	Name string `json:"name"`
+	Size string `json:"size"`
+}
+
 // ResourceUnits stores cpu, memory and storage details
 type ResourceUnits struct {
-	CPU     uint32   `json:"cpu,omitempty"`
-	Memory  string   `json:"memory,omitempty"`
-	Storage []string `json:"storage,omitempty"`
+	CPU     uint32                   `json:"cpu,omitempty"`
+	Memory  string                   `json:"memory,omitempty"`
+	Storage []ManifestServiceStorage `json:"storage,omitempty"`
 }
 
 func (ru ResourceUnits) toAkash() (types.ResourceUnits, error) {
@@ -362,12 +367,13 @@ func (ru ResourceUnits) toAkash() (types.ResourceUnits, error) {
 	storage := make([]types.Storage, 0, len(ru.Storage))
 
 	for _, st := range ru.Storage {
-		size, err := strconv.ParseUint(st, 10, 64)
+		size, err := strconv.ParseUint(st.Size, 10, 64)
 		if err != nil {
 			return types.ResourceUnits{}, err
 		}
 
 		storage = append(storage, types.Storage{
+			Name:     st.Name,
 			Quantity: types.NewResourceValue(size),
 		})
 	}
@@ -395,9 +401,12 @@ func resourceUnitsFromAkash(aru types.ResourceUnits) (ResourceUnits, error) {
 		res.Memory = strconv.FormatUint(aru.Memory.Quantity.Value(), 10)
 	}
 
-	res.Storage = make([]string, 0, len(aru.Storage))
-	for _, size := range aru.Storage {
-		res.Storage = append(res.Storage, strconv.FormatUint(size.Quantity.Value(), 10))
+	res.Storage = make([]ManifestServiceStorage, 0, len(aru.Storage))
+	for _, storage := range aru.Storage {
+		res.Storage = append(res.Storage, ManifestServiceStorage{
+			Name: storage.Name,
+			Size: strconv.FormatUint(storage.Quantity.Value(), 10),
+		})
 	}
 
 	return res, nil
