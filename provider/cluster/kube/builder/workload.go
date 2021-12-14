@@ -166,6 +166,14 @@ func (b *workload) labels() map[string]string {
 	return obj
 }
 
+func (b *workload) imagePullSecrets() []corev1.LocalObjectReference {
+	if b.settings.DockerImagePullSecretsName == "" {
+		return nil
+	}
+
+	return []corev1.LocalObjectReference{{Name: b.settings.DockerImagePullSecretsName}}
+}
+
 func (b *workload) addEnvVarsForDeployment(envVarsAlreadyAdded map[string]int, env []corev1.EnvVar) []corev1.EnvVar {
 	// Add each env. var. if it is not already set by the SDL
 	env = addIfNotPresent(envVarsAlreadyAdded, env, envVarAkashGroupSequence, b.lid.GetGSeq())

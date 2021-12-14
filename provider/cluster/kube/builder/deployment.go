@@ -58,6 +58,7 @@ func (b *deployment) Create() (*appsv1.Deployment, error) { // nolint:golint,unp
 					},
 					AutomountServiceAccountToken: &falseValue,
 					Containers:                   []corev1.Container{b.container()},
+					ImagePullSecrets:             b.imagePullSecrets(),
 				},
 			},
 		},
@@ -73,6 +74,7 @@ func (b *deployment) Update(obj *appsv1.Deployment) (*appsv1.Deployment, error) 
 	obj.Spec.Replicas = &replicas
 	obj.Spec.Template.Labels = b.labels()
 	obj.Spec.Template.Spec.Containers = []corev1.Container{b.container()}
+	obj.Spec.Template.Spec.ImagePullSecrets = b.imagePullSecrets()
 
 	return obj, nil
 }
