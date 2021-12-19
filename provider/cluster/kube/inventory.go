@@ -478,6 +478,13 @@ func (c *client) nodeIsActive(node corev1.Node) bool {
 		}
 	}
 
+	// If the node has been tainted, don't consider it active.
+	for _, taint := range node.Spec.Taints {
+		if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
+			issues++
+		}
+	}
+
 	return ready && issues == 0
 }
 

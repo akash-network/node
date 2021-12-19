@@ -39,6 +39,9 @@ type Settings struct {
 	StorageCommitLevel float64
 
 	DeploymentRuntimeClass string
+
+	// Name of the image pull secret to use in pod spec
+	DockerImagePullSecretsName string
 }
 
 var ErrSettingsValidation = errors.New("settings validation")
