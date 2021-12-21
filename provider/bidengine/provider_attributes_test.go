@@ -120,6 +120,10 @@ func TestProvAttrCachesValue(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, attrs, 1)
 
+	// fetching provider attributes prevents call check below from flapping between values 1 and 2
+	_, err = scaffold.service.GetAttributes()
+	require.NoError(t, err)
+
 	scaffold.stop(t)
 
 	// Should have 2 calls
