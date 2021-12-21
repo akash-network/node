@@ -119,3 +119,7 @@ rest-server-run:
 .PHONY: clean
 clean: clean-$(AKASH_RUN_NAME)
 	rm -rf "$(AKASH_HOME)"
+
+.PHONY: rosetta-run
+rosetta-run:
+	$(AKASH) rosetta --addr localhost:8080 --grpc localhost:9090 --network=$(AKASH_CHAIN_ID) --blockchain=akash
