@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"

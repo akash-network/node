@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 

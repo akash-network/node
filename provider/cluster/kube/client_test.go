@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ovrclk/akash/manifest"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	types "github.com/ovrclk/akash/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 
@@ -21,15 +21,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 	akashclient "github.com/ovrclk/akash/pkg/client/clientset/versioned"
 	akashclient_fake "github.com/ovrclk/akash/pkg/client/clientset/versioned/fake"
 	"github.com/ovrclk/akash/testutil"
 	kubernetes_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock"
 	appsv1_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock/typed/apps/v1"
 	corev1_mocks "github.com/ovrclk/akash/testutil/kubernetes_mock/typed/core/v1"
-
-	akashv1_types "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 )
 
 const testKubeClientNs = "nstest1111"
@@ -184,7 +182,7 @@ func TestLeaseStatusWithNoIngressNoService(t *testing.T) {
 func fakeProviderHost(hostname string, leaseID mtypes.LeaseID, serviceName string, externalPort uint32) runtime.Object {
 	labels := make(map[string]string)
 	builder.AppendLeaseLabels(leaseID, labels)
-	return &akashv1_types.ProviderHost{
+	return &crd.ProviderHost{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:                       hostname,
@@ -203,7 +201,7 @@ func fakeProviderHost(hostname string, leaseID mtypes.LeaseID, serviceName strin
 			ClusterName:                "",
 			ManagedFields:              nil,
 		},
-		Spec: akashv1_types.ProviderHostSpec{
+		Spec: crd.ProviderHostSpec{
 			Owner:        leaseID.Owner,
 			Provider:     leaseID.Provider,
 			Hostname:     hostname,
@@ -213,7 +211,7 @@ func fakeProviderHost(hostname string, leaseID mtypes.LeaseID, serviceName strin
 			ServiceName:  serviceName,
 			ExternalPort: externalPort,
 		},
-		Status: akashv1_types.ProviderHostStatus{},
+		Status: crd.ProviderHostStatus{},
 	}
 }
 
@@ -402,7 +400,7 @@ func TestServiceStatusNoDeployment(t *testing.T) {
 	appsV1Mock.On("Deployments", builder.LidNS(lid)).Return(deploymentsMock)
 	deploymentsMock.On("Get", mock.Anything, serviceName, metav1.GetOptions{}).Return(nil, nil)
 
-	mani := &akashv1_types.Manifest{
+	mani := &crd.Manifest{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      builder.LidNS(lid),
 			Namespace: testKubeClientNs,

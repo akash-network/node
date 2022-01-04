@@ -12,9 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/pager"
 
-	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 	"github.com/ovrclk/akash/provider/cluster/kube/builder"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	"github.com/ovrclk/akash/sdl"
 	types "github.com/ovrclk/akash/types/v1beta2"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
@@ -287,7 +287,7 @@ func (c *client) fetchStorage(ctx context.Context) (clusterStorage, error) {
 		return nil, err
 	}
 
-	inv := &akashv1.Inventory{}
+	inv := &crd.Inventory{}
 
 	if err := result.Into(inv); err != nil {
 		return nil, err

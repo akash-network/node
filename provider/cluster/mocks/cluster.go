@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	cluster "github.com/ovrclk/akash/provider/cluster/types"
+	clustertypesv1beta2 "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	mock "github.com/stretchr/testify/mock"
 
 	typesv1beta2 "github.com/ovrclk/akash/types/v1beta2"
@@ -17,15 +17,15 @@ type Cluster struct {
 }
 
 // Reserve provides a mock function with given fields: _a0, _a1
-func (_m *Cluster) Reserve(_a0 v1beta2.OrderID, _a1 typesv1beta2.ResourceGroup) (cluster.Reservation, error) {
+func (_m *Cluster) Reserve(_a0 v1beta2.OrderID, _a1 typesv1beta2.ResourceGroup) (clustertypesv1beta2.Reservation, error) {
 	ret := _m.Called(_a0, _a1)
 
-	var r0 cluster.Reservation
-	if rf, ok := ret.Get(0).(func(v1beta2.OrderID, typesv1beta2.ResourceGroup) cluster.Reservation); ok {
+	var r0 clustertypesv1beta2.Reservation
+	if rf, ok := ret.Get(0).(func(v1beta2.OrderID, typesv1beta2.ResourceGroup) clustertypesv1beta2.Reservation); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(cluster.Reservation)
+			r0 = ret.Get(0).(clustertypesv1beta2.Reservation)
 		}
 	}
 

@@ -3,15 +3,15 @@ package builder
 import (
 	"github.com/tendermint/tendermint/libs/log"
 
-	manitypes "github.com/ovrclk/akash/manifest"
-	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
+	manitypes "github.com/ovrclk/akash/manifest/v2beta1"
+	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 type Manifest interface {
 	builderBase
-	Create() (*akashv1.Manifest, error)
-	Update(obj *akashv1.Manifest) (*akashv1.Manifest, error)
+	Create() (*crd.Manifest, error)
+	Update(obj *crd.Manifest) (*crd.Manifest, error)
 	Name() string
 }
 
@@ -40,8 +40,8 @@ func (b *manifest) labels() map[string]string {
 	return AppendLeaseLabels(b.lid, b.builder.labels())
 }
 
-func (b *manifest) Create() (*akashv1.Manifest, error) {
-	obj, err := akashv1.NewManifest(b.mns, b.lid, b.group)
+func (b *manifest) Create() (*crd.Manifest, error) {
+	obj, err := crd.NewManifest(b.mns, b.lid, b.group)
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +49,8 @@ func (b *manifest) Create() (*akashv1.Manifest, error) {
 	return obj, nil
 }
 
-func (b *manifest) Update(obj *akashv1.Manifest) (*akashv1.Manifest, error) {
-	m, err := akashv1.NewManifest(b.mns, b.lid, b.group)
+func (b *manifest) Update(obj *crd.Manifest) (*crd.Manifest, error) {
+	m, err := crd.NewManifest(b.mns, b.lid, b.group)
 	if err != nil {
 		return nil, err
 	}

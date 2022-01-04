@@ -13,10 +13,10 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	qmock "github.com/ovrclk/akash/client/mocks"
-	akashmanifest "github.com/ovrclk/akash/manifest"
+	akashmanifest "github.com/ovrclk/akash/manifest/v2beta1"
 	"github.com/ovrclk/akash/provider"
 	pcmock "github.com/ovrclk/akash/provider/cluster/mocks"
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	pmmock "github.com/ovrclk/akash/provider/manifest/mocks"
 	pmock "github.com/ovrclk/akash/provider/mocks"
 	"github.com/ovrclk/akash/testutil"

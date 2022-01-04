@@ -4,7 +4,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	manitypes "github.com/ovrclk/akash/manifest"
+	manitypes "github.com/ovrclk/akash/manifest/v2beta1"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 

@@ -5,14 +5,14 @@ import (
 	"errors"
 	"time"
 
-	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/boz/go-lifecycle"
 
-	"github.com/ovrclk/akash/manifest"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"

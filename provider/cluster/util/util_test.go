@@ -1,7 +1,7 @@
 package util_test
 
 import (
-	"github.com/ovrclk/akash/manifest"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	"github.com/ovrclk/akash/provider/cluster/util"
 	atypes "github.com/ovrclk/akash/types/v1beta2"
 	"github.com/stretchr/testify/require"

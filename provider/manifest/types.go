@@ -1,7 +1,7 @@
 package manifest
 
 import (
-	"github.com/ovrclk/akash/manifest"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 

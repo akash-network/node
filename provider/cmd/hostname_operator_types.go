@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	ctypes "github.com/ovrclk/akash/provider/cluster/types"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"sync/atomic"
 	"time"

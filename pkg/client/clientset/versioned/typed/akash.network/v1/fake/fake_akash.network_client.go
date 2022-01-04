@@ -28,14 +28,6 @@ type FakeAkashV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeAkashV1) Inventories() v1.InventoryInterface {
-	return &FakeInventories{c}
-}
-
-func (c *FakeAkashV1) InventoryRequests() v1.InventoryRequestInterface {
-	return &FakeInventoryRequests{c}
-}
-
 func (c *FakeAkashV1) Manifests(namespace string) v1.ManifestInterface {
 	return &FakeManifests{c, namespace}
 }

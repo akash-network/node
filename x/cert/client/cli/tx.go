@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bufio"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -20,7 +19,6 @@ import (
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	cinpuit "github.com/cosmos/cosmos-sdk/client/input"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
@@ -28,6 +26,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ovrclk/akash/sdkutil"
+	"github.com/ovrclk/akash/util/cli"
 	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
 )
@@ -205,7 +204,7 @@ func doCreateCmd(cmd *cobra.Command, domains []string) error {
 	// then certificate is being revoked (if valid) and file is removed without any prompts
 	yes := revokeIfExists
 	if !yes {
-		yes, err = getConfirmation(cmd, fmt.Sprintf("certificate file for address %q already exist. check it on-chain status?", fromAddress))
+		yes, err = cli.GetConfirmation(cmd, fmt.Sprintf("certificate file for address %q already exist. check it on-chain status?", fromAddress))
 		if err != nil {
 			return err
 		}
@@ -228,13 +227,13 @@ func doCreateCmd(cmd *cobra.Command, domains []string) error {
 
 		if len(res.Certificates) == 0 {
 			if !revokeIfExists {
-				yes, err = getConfirmation(cmd, "this certificate has not been found on chain. would you like to commit it?")
+				yes, err = cli.GetConfirmation(cmd, "this certificate has not been found on chain. would you like to commit it?")
 				if err != nil {
 					return err
 				}
 
 				if !yes {
-					yes, err = getConfirmation(cmd, "would you like to remove the file?")
+					yes, err = cli.GetConfirmation(cmd, "would you like to remove the file?")
 					if err != nil {
 						return err
 					}
@@ -516,8 +515,4 @@ func doRevoke(cmd *cobra.Command, cctx sdkclient.Context, serial string) error {
 	}
 
 	return sdkutil.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
-}
-
-func getConfirmation(cmd *cobra.Command, prompt string) (bool, error) {
-	return cinpuit.GetConfirmation(prompt, bufio.NewReader(cmd.InOrStdin()), cmd.ErrOrStderr())
 }

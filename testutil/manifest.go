@@ -3,7 +3,7 @@ package testutil
 import (
 	"testing"
 
-	"github.com/ovrclk/akash/manifest"
+	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 )
 
 var (
