@@ -263,9 +263,8 @@ func (c *client) fetchStorage(ctx context.Context) (clusterStorage, error) {
 	// empty namespace mean search through all namespaces
 	svcResult, err := c.kc.CoreV1().Services("").List(ctx, metav1.ListOptions{
 		LabelSelector: builder.AkashManagedLabelName + "=true" +
-			",app.kubernetes.io/name=akash" +
-			",app.kubernetes.io/instance=inventory" +
-			",app.kubernetes.io/component=operator",
+			",app.kubernetes.io/name=inventory-operator" +
+			",app.kubernetes.io/instance=inventory-operator",
 	})
 	if err != nil {
 		return nil, err
