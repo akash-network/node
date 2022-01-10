@@ -21,7 +21,7 @@ modvendor: $(MODVENDOR) modsensure
 	$(MODVENDOR) -copy="**/*.proto" -include=\
 github.com/cosmos/cosmos-sdk/proto,\
 github.com/cosmos/cosmos-sdk/third_party/proto,\
-github.com/cosmos/ibc-go/proto
+github.com/cosmos/ibc-go/v2/proto
 	$(MODVENDOR) -copy="**/*.h **/*.c" -include=\
 github.com/zondax/hid
 	$(MODVENDOR) -copy="**/swagger.yaml" -include=\
