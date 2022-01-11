@@ -6,8 +6,8 @@ require (
 	github.com/avast/retry-go v2.7.0+incompatible
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/boz/go-lifecycle v0.1.1-0.20190620234137-5139c86739b8
-	github.com/cosmos/cosmos-sdk v0.44.3
-	github.com/cosmos/ibc-go/v2 v2.0.0
+	github.com/cosmos/cosmos-sdk v0.44.5
+	github.com/cosmos/ibc-go/v2 v2.0.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/ericlagergren/decimal v0.0.0-20211103172832-aca2edc11f73
 	github.com/gin-gonic/gin v1.7.0 // indirect
@@ -42,8 +42,8 @@ require (
 	github.com/tendermint/tendermint v0.34.14
 	github.com/tendermint/tm-db v0.6.4
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
-	google.golang.org/grpc v1.40.0
+	google.golang.org/genproto v0.0.0-20210828152312-66f60bf46e71
+	google.golang.org/grpc v1.42.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/api v0.21.3
 	k8s.io/apimachinery v0.21.3
@@ -55,7 +55,7 @@ require (
 )
 
 replace (
-	github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.44.4-patches
+	github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.44.5-patches
 	github.com/cosmos/ledger-cosmos-go => github.com/ovrclk/ledger-cosmos-go v0.13.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
