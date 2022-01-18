@@ -3,9 +3,11 @@ package rest
 import (
 	"bufio"
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"sync"
@@ -28,6 +30,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/gorilla/mux"
+	"github.com/vulcand/oxy/forward"
 
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	kubeVersion "k8s.io/apimachinery/pkg/version"
@@ -176,6 +179,94 @@ func newJwtServerRouter(addr sdk.Address, privateKey interface{}, jwtExpiresAfte
 		Methods("GET")
 
 	return router
+}
+
+func newResourceServerRouter(log log.Logger, publicKey *ecdsa.PublicKey, lokiPort int32) *mux.Router {
+	router := mux.NewRouter()
+
+	// add a middleware to verify the JWT provided in Authorization header
+	router.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			jwtString := r.Header.Get("Authorization")
+			token, err := jwt.ParseWithClaims(jwtString, &ClientCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+				// return the public key to be used for JWT verification
+				return publicKey, nil
+			})
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			// store the tenant address in request context to be used in later handlers
+			tenantAddress := token.Claims.(*ClientCustomClaims).Subject
+			gcontext.Set(r, tenantContextKey, tenantAddress)
+
+			log.Info("tenant authenticated: " + tenantAddress)
+
+			next.ServeHTTP(w, r)
+		})
+	})
+
+	router.HandleFunc("/logs",
+		lokiLogsHandler(log, lokiPort)).
+		Methods("POST")
+
+	return router
+}
+
+type LogsRequest struct {
+	Lid   mtypes.LeaseID `json:"lid"`
+	LogQL string         `json:"log_ql"` // TODO: once it is working, form logql internally, don't accept that from user
+}
+
+func lokiLogsHandler(log log.Logger, lokiPort int32) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// unmarshal the request body
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var req LogsRequest
+		err = json.Unmarshal(b, &req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// ensure that the owner provided in the lease id is same as the one in JWT
+		if req.Lid.Owner != requestTenant(r) {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		// Forwards incoming requests to whatever location URL points to, adds proper forwarding headers
+		fwd, err := forward.New()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		rawUrl := fmt.Sprintf("ws://localhost:%d/loki/api/v1/tail?query=%s", lokiPort, req.LogQL)
+		log.Info("loki url: " + rawUrl)
+		//lokiTailUrl, err := url.Parse(rawUrl)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		log.Info("Forwarding request to loki")
+		//r.URL = lokiTailUrl
+		//r.Method = http.MethodGet
+		//r.Body = http.NoBody
+		r, err = http.NewRequestWithContext(r.Context(), http.MethodGet, rawUrl, nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		fwd.ServeHTTP(w, r)
+	}
 }
 
 func jwtServiceHandler(paddr sdk.Address, privateKey interface{}, jwtExpiresAfter time.Duration, certSerialNumber string) http.HandlerFunc {

@@ -26,6 +26,7 @@ const (
 	ownerContextKey
 	providerContextKey
 	servicesContextKey
+	tenantContextKey
 )
 
 func requestLeaseID(req *http.Request) mtypes.LeaseID {
@@ -50,6 +51,10 @@ func requestServices(req *http.Request) string {
 
 func requestProvider(req *http.Request) sdk.Address {
 	return context.Get(req, providerContextKey).(sdk.Address)
+}
+
+func requestTenant(req *http.Request) string {
+	return context.Get(req, tenantContextKey).(string)
 }
 
 func requestOwner(req *http.Request) sdk.Address {
