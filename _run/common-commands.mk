@@ -15,8 +15,9 @@ PRICE          ?= 10uakt
 CERT_HOSTNAME  ?= localhost
 LEASE_SERVICES ?= web
 
-JWT_AUTH_HOSTNAME ?= localhost
-JWT_AUTH_HOST     ?= $(JWT_AUTH_HOSTNAME):8444
+JWT_AUTH_HOSTNAME    ?= localhost
+JWT_AUTH_HOST        ?= $(JWT_AUTH_HOSTNAME):8444
+RESOURCE_SERVER_HOST ?= localhost:8445
 
 .PHONY: multisig-send
 multisig-send:
@@ -69,6 +70,13 @@ auth-server:
 	$(AKASH) provider auth-server \
 		--from "$(PROVIDER_KEY_NAME)" \
 		--jwt-auth-listen-address "$(JWT_AUTH_HOST)" \
+
+.PHONY: run-resource-server
+run-resource-server:
+	$(AKASH) provider run-resource-server \
+		--from "$(PROVIDER_KEY_NAME)" \
+		--resource-server-listen-address "$(RESOURCE_SERVER_HOST)" \
+		--loki-localhost-port 3100 \
 
 .PHONY: send-manifest
 send-manifest:
