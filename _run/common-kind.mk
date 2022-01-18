@@ -76,6 +76,7 @@ kind-cluster-create: $(KIND)
 		--config "$(KIND_CONFIG)" \
 		--name "$(KIND_NAME)" \
 		--image "$(KIND_IMG)"
+	chmod 600 $$HOME/.kube/config
 	kubectl label nodes $(KIND_NAME)-control-plane akash.network/role=ingress
 	kubectl apply -f "$(INGRESS_CONFIG_PATH)"
 	kubectl apply -f "$(INGRESS_CLASS_CONFIG_PATH)"
@@ -83,20 +84,38 @@ kind-cluster-create: $(KIND)
 	kubectl apply -f "$(METALLB_IP_CONFIG_PATH)"
 	kubectl apply -f "$(METALLB_SERVICE_PATH)"
 	"$(AKASH_ROOT)/script/setup-kind.sh"
+	helm repo add grafana https://grafana.github.io/helm-charts
+	helm repo update
+	helm upgrade --install loki grafana/loki \
+		--version 2.9.1 \
+		--create-namespace \
+		--namespace loki-stack \
+		--set config.table_manager.retention_period=48h,config.table_manager.retention_deletes_enabled=true,persistence.enabled=true,persistence.size=10Gi,persistence.storageClassName=standard,config.auth_enabled=true
+	helm upgrade --install promtail grafana/promtail \
+		--version 3.11.0 \
+		--namespace loki-stack \
+		-f ../promtail-values.yaml
 
-# Create a kubernetes cluster with loki & grafana integrated for logging.
+
+# Create a kubernetes cluster with multi-tenant loki, promtail and grafana integrated for logging.
 # See: https://www.scaleway.com/en/docs/tutorials/manage-k8s-logging-loki/ for more info.
 .PHONY: kind-cluster-loki-create
 kind-cluster-loki-create: kind-cluster-create
 	helm repo add grafana https://grafana.github.io/helm-charts
 	helm repo update
-	helm install loki-stack grafana/loki-stack \
+	helm upgrade --install loki grafana/loki \
+		--version 2.9.1 \
 		--create-namespace \
 		--namespace loki-stack \
-		--set promtail.enabled=true,loki.persistence.enabled=true,loki.persistence.size=10Gi
-	helm install loki-grafana grafana/grafana \
-		--set persistence.enabled=true,persistence.type=pvc,persistence.size=10Gi \
-		--namespace=loki-stack
+		--set persistence.enabled=true,persistence.size=10Gi,config.auth_enabled=true
+	helm upgrade --install promtail grafana/promtail \
+		--version 3.11.0 \
+		--namespace loki-stack \
+		-f ../promtail-values.yaml
+	helm upgrade --install grafana grafana/grafana \
+		--version 6.21.2 \
+		--namespace loki-stack \
+		--set persistence.enabled=true,persistence.type=pvc,persistence.size=10Gi
 
 .PHONY: kind-cluster-calico-create
 kind-cluster-calico-create: $(KIND)

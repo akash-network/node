@@ -3,6 +3,7 @@ package rest
 import (
 	"bufio"
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"github.com/ovrclk/akash/provider/cluster/operatorclients"
@@ -10,11 +11,17 @@ import (
 	ipoptypes "github.com/ovrclk/akash/provider/operator/ipoperator/types"
 	"io"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/ovrclk/akash/provider/cluster/kube/builder"
+
+	"github.com/cosmos/cosmos-sdk/version"
 
 	"k8s.io/client-go/tools/remotecommand"
 
@@ -183,6 +190,59 @@ func newJwtServerRouter(addr sdk.Address, privateKey interface{}, jwtExpiresAfte
 		Methods("GET")
 
 	return router
+}
+
+func newResourceServerRouter(log log.Logger, providerAddr sdk.Address, publicKey *ecdsa.PublicKey, lokiGwAddr string) *mux.Router {
+	router := mux.NewRouter()
+
+	// add a middleware to verify the JWT provided in Authorization header
+	router.Use(resourceServerAuth(log, providerAddr, publicKey))
+
+	lrouter := router.PathPrefix(leasePathPrefix).Subrouter()
+	lrouter.Use(requireLeaseID())
+
+	lokiServiceRouter := lrouter.PathPrefix("/loki-service").Subrouter()
+	lokiServiceRouter.NewRoute().Handler(lokiServiceHandler(log, lokiGwAddr))
+
+	return router
+}
+
+// lokiServiceHandler forwards all requests to the loki instance running in provider's cluster.
+// Example:
+// 		Incoming Request: http://localhost:8445/lease/1/1/1/loki-service/loki/api/v1/query?query={app=".+"}
+// 		Outgoing Request: http://{lokiGwAddr}/loki/api/v1/query?query={app=".+"}
+func lokiServiceHandler(log log.Logger, lokiGwAddr string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// set the X-Scope-OrgID header for fetching logs for the right tenant
+		r.Header.Set("X-Scope-OrgID", builder.LidNS(requestLeaseID(r)))
+
+		// build target url for the reverse proxy
+		scheme := "http" // for http & https
+		if strings.HasPrefix(r.URL.Scheme, "ws") {
+			scheme = "ws" // for ws & wss
+		}
+		lokiURL, err := url.Parse(fmt.Sprintf("%s://%s", scheme, lokiGwAddr))
+		if err != nil {
+			log.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		reverseProxy := httputil.NewSingleHostReverseProxy(lokiURL)
+
+		// remove the "/lease/{dseq}/{gseq}/{oseq}/loki-service" path prefix from the request url
+		// before it is sent to the reverse proxy.
+		pathSplits := strings.SplitN(r.URL.Path, "/", 7)
+		if len(pathSplits) < 7 || pathSplits[6] == "" {
+			log.Error("loki api not provided in url")
+			http.Error(w, "loki api not provided in url", http.StatusBadRequest)
+			return
+		}
+		r.URL.Path = pathSplits[6]
+
+		// serve the request using the reverse proxy
+		log.Info("Forwarding request to loki", "HTTP_API", pathSplits[6])
+		reverseProxy.ServeHTTP(w, r)
+	}
 }
 
 func jwtServiceHandler(paddr sdk.Address, privateKey interface{}, jwtExpiresAfter time.Duration, certSerialNumber string) http.HandlerFunc {
