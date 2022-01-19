@@ -73,12 +73,13 @@ func NewJwtServer(ctx context.Context,
 func NewResourceServer(ctx context.Context,
 	log log.Logger,
 	serverAddr string,
+	providerAddr sdk.Address,
 	cert *x509.Certificate,
 	lokiPort int32,
 ) (*http.Server, error) {
 	srv := &http.Server{
 		Addr:    serverAddr,
-		Handler: newResourceServerRouter(log, cert.PublicKey.(*ecdsa.PublicKey), lokiPort),
+		Handler: newResourceServerRouter(log, providerAddr, cert.PublicKey.(*ecdsa.PublicKey), lokiPort),
 		BaseContext: func(_ net.Listener) context.Context {
 			return ctx
 		},
