@@ -87,7 +87,7 @@ func doRunResourceServer(ctx context.Context, cmd *cobra.Command, _ []string) er
 	group, ctx := errgroup.WithContext(ctx)
 	log := openLogger()
 
-	resourceServer, err := gwrest.NewResourceServer(ctx, log, gwAddr, x509cert, lokiPort)
+	resourceServer, err := gwrest.NewResourceServer(ctx, log, gwAddr, cctx.FromAddress, x509cert, lokiPort)
 	if err != nil {
 		return err
 	}

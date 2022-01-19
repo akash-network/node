@@ -7,11 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/ovrclk/akash/provider/cluster/kube/builder"
 
 	"github.com/cosmos/cosmos-sdk/version"
 
@@ -181,65 +183,63 @@ func newJwtServerRouter(addr sdk.Address, privateKey interface{}, jwtExpiresAfte
 	return router
 }
 
-func newResourceServerRouter(log log.Logger, publicKey *ecdsa.PublicKey, lokiPort int32) *mux.Router {
+func newResourceServerRouter(log log.Logger, providerAddr sdk.Address, publicKey *ecdsa.PublicKey, lokiPort int32) *mux.Router {
 	router := mux.NewRouter()
 
 	// add a middleware to verify the JWT provided in Authorization header
 	router.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Info("Finding Authorization header ...")
 			jwtString := r.Header.Get("Authorization")
+			log.Info("Authorization JWT: " + jwtString)
+			log.Info("All headers: " + fmt.Sprint(r.Header))
 			token, err := jwt.ParseWithClaims(jwtString, &ClientCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 				// return the public key to be used for JWT verification
 				return publicKey, nil
 			})
 			if err != nil {
+				log.Error(err.Error())
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}
 
-			// store the tenant address in request context to be used in later handlers
-			tenantAddress := token.Claims.(*ClientCustomClaims).Subject
-			gcontext.Set(r, tenantContextKey, tenantAddress)
+			// store the owner & provider address in request context to be used in later handlers
+			ownerAddress := token.Claims.(*ClientCustomClaims).Subject
+			gcontext.Set(r, ownerContextKey, ownerAddress)
+			gcontext.Set(r, providerContextKey, providerAddr)
 
-			log.Info("tenant authenticated: " + tenantAddress)
+			log.Info("tenant authenticated: " + ownerAddress)
 
 			next.ServeHTTP(w, r)
 		})
 	})
 
-	router.HandleFunc("/logs",
+	lrouter := router.PathPrefix(leasePathPrefix).Subrouter()
+	lrouter.Use(requireLeaseID())
+
+	lrouter.HandleFunc("/logs",
 		lokiLogsHandler(log, lokiPort)).
-		Methods("POST")
+		Methods("GET")
 
 	return router
 }
 
-type LogsRequest struct {
-	Lid   mtypes.LeaseID `json:"lid"`
-	LogQL string         `json:"log_ql"` // TODO: once it is working, form logql internally, don't accept that from user
-}
-
 func lokiLogsHandler(log log.Logger, lokiPort int32) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// unmarshal the request body
-		b, err := ioutil.ReadAll(r.Body)
+		// Find out namespace
+		lidNS := builder.LidNS(requestLeaseID(r))
+		log.Info("Lease namespace: " + lidNS)
+
+		// build loki url
+		//rawUrl := fmt.Sprintf("ws://localhost:%d/loki/api/v1/tail?query=%s", lokiPort, "{namespace=\"akash-services\",pod=\"inventory-operator-84d6698659-pdt4z\"}")
+		rawUrl := fmt.Sprintf("ws://localhost:%d/loki/api/v1/tail?query={namespace=\"%s\"}", lokiPort, lidNS)
+		log.Info("loki url: " + rawUrl)
+		lokiTailUrl, err := url.Parse(rawUrl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		var req LogsRequest
-		err = json.Unmarshal(b, &req)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		// ensure that the owner provided in the lease id is same as the one in JWT
-		if req.Lid.Owner != requestTenant(r) {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
-			return
-		}
+		r.URL = lokiTailUrl
 
 		// Forwards incoming requests to whatever location URL points to, adds proper forwarding headers
 		fwd, err := forward.New()
@@ -247,24 +247,7 @@ func lokiLogsHandler(log log.Logger, lokiPort int32) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		rawUrl := fmt.Sprintf("ws://localhost:%d/loki/api/v1/tail?query=%s", lokiPort, req.LogQL)
-		log.Info("loki url: " + rawUrl)
-		//lokiTailUrl, err := url.Parse(rawUrl)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
 		log.Info("Forwarding request to loki")
-		//r.URL = lokiTailUrl
-		//r.Method = http.MethodGet
-		//r.Body = http.NoBody
-		r, err = http.NewRequestWithContext(r.Context(), http.MethodGet, rawUrl, nil)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
 		fwd.ServeHTTP(w, r)
 	}
 }
