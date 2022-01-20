@@ -387,7 +387,6 @@ func (c *client) fetchActiveNodes(ctx context.Context, cstorage clusterStorage) 
 
 		entry, validNode := retnodes[nodeName]
 		if !validNode {
-			c.log.Error("invalid node requested while iterating pods", "node-name", nodeName)
 			return nil
 		}
 
@@ -482,6 +481,10 @@ func (c *client) nodeIsActive(node corev1.Node) bool {
 	for _, taint := range node.Spec.Taints {
 		if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
 			issues++
+			c.log.Error("node in poor condition due to active taint",
+				"node", node.Name,
+				"key", taint.Key,
+				"effect", taint.Effect)
 		}
 	}
 
