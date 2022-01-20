@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    component: controller
+  name: controller
+  namespace: metallb-system
+spec:
+  selector:
+    component: controller
+    app: metallb
+  ports:
+    - protocol: TCP
+      name: monitoring
+      port: 7472
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: from-akash
+  namespace: metallb-system
+spec:
+  podSelector:
+    matchLabels:  
+      app: metallb
+      component: controller
+  policyTypes:
+  - Ingress
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: akash-services
+            kubernetes.io/metadata.name: ingress-nginxq
+        podSelector: 
+          matchLabels: {}
+#    ports:
+#    - protocol: TCP
+#      port: 6379

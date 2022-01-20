@@ -4,6 +4,11 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
+	"github.com/ovrclk/akash/provider/cluster/operatorclients"
+	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
+	"github.com/ovrclk/akash/provider/gateway/utils"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -66,6 +71,8 @@ type routerTest struct {
 	host           *url.URL
 }
 
+// TODO - add some tests in here to make sure the IP operator calls work as intended
+
 func runRouterTest(t *testing.T, authClient bool, fn func(*routerTest)) {
 	t.Helper()
 
@@ -94,7 +101,7 @@ func runRouterTest(t *testing.T, authClient bool, fn func(*routerTest)) {
 		certs = mf.ccert.Cert
 	}
 
-	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, func(host string) {
+	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, operatorclients.NullIPOperatorClient(), func(host string) {
 		var err error
 		mf.host, err = url.Parse(host)
 		require.NoError(t, err)
@@ -163,7 +170,7 @@ func TestRouteNotActiveClientCert(t *testing.T) {
 	)
 	mf.pcert = testutil.Certificate(t, mf.paddr, testutil.CertificateOptionMocks(mocks.qclient))
 
-	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, func(host string) {
+	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, operatorclients.NullIPOperatorClient(), func(host string) {
 		var err error
 		mf.host, err = url.Parse(host)
 		require.NoError(t, err)
@@ -199,7 +206,7 @@ func TestRouteExpiredClientCert(t *testing.T) {
 	)
 	mf.pcert = testutil.Certificate(t, mf.paddr, testutil.CertificateOptionMocks(mocks.qclient))
 
-	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, func(host string) {
+	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, operatorclients.NullIPOperatorClient(), func(host string) {
 		var err error
 		mf.host, err = url.Parse(host)
 		require.NoError(t, err)
@@ -238,7 +245,7 @@ func TestRouteNotActiveServerCert(t *testing.T) {
 		testutil.CertificateOptionNotBefore(time.Now().Add(time.Hour*24)),
 	)
 
-	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, func(host string) {
+	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, operatorclients.NullIPOperatorClient(), func(host string) {
 		var err error
 		mf.host, err = url.Parse(host)
 		require.NoError(t, err)
@@ -278,7 +285,7 @@ func TestRouteExpiredServerCert(t *testing.T) {
 		testutil.CertificateOptionNotAfter(time.Now().Add(time.Hour*(-24))),
 	)
 
-	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, func(host string) {
+	withServer(t, mf.paddr, mocks.pclient, mocks.qclient, mf.pcert.Cert, operatorclients.NullIPOperatorClient(), func(host string) {
 		var err error
 		mf.host, err = url.Parse(host)
 		require.NoError(t, err)
@@ -317,7 +324,7 @@ func TestRouteVersionOK(t *testing.T) {
 		version.BuildTags = "testTags"
 
 		status := versionInfo{
-			Akash: &akashVersionInfo{
+			Akash: utils.AkashVersionInfo{
 				Version:          "akashTest",
 				GitCommit:        "testCommit",
 				BuildTags:        "testTags",
@@ -571,39 +578,73 @@ func TestRoutePutInvalidManifest(t *testing.T) {
 	})
 }
 
+func mockManifestGroupsForRouterTest(rt *routerTest, leaseID mtypes.LeaseID) {
+	status := make(map[string]*ctypes.ServiceStatus)
+	status[testServiceName] = &ctypes.ServiceStatus{
+		Name:               testServiceName,
+		Available:          8,
+		Total:              8,
+		URIs:               nil,
+		ObservedGeneration: 0,
+		Replicas:           0,
+		UpdatedReplicas:    0,
+		ReadyReplicas:      0,
+		AvailableReplicas:  0,
+	}
+	rt.pcclient.On("LeaseStatus", mock.Anything, leaseID).Return(status, nil)
+	rt.pcclient.On("GetManifestGroup", mock.Anything, leaseID).Return(true, v2beta1.ManifestGroup{
+		Name: testGroupName,
+		Services: []v2beta1.ManifestService{{
+			Name:  testServiceName,
+			Image: testImageName,
+			Args:  nil,
+			Env:   nil,
+			Resources: v2beta1.ResourceUnits{
+				CPU:    1000,
+				Memory: "3333",
+				Storage: []v2beta1.ManifestServiceStorage{{
+					Name: "",
+					Size: "4444",
+				}},
+			},
+			Count: 1,
+			Expose: []v2beta1.ManifestServiceExpose{{
+				Port:         8080,
+				ExternalPort: 80,
+				Proto:        "TCP",
+				Service:      testServiceName,
+				Global:       true,
+				Hosts:        []string{"hello.localhost"},
+				HTTPOptions: v2beta1.ManifestServiceExposeHTTPOptions{
+					MaxBodySize: 1,
+					ReadTimeout: 2,
+					SendTimeout: 3,
+					NextTries:   4,
+					NextTimeout: 5,
+					NextCases:   nil,
+				},
+				IP:                     "",
+				EndpointSequenceNumber: 1,
+			}},
+			Params: nil,
+		}},
+	}, nil)
+}
+
 func TestRouteLeaseStatusOk(t *testing.T) {
 	runRouterTest(t, true, func(test *routerTest) {
-		dseq := uint64(testutil.RandRangeInt(1, 1000))
-		oseq := uint32(testutil.RandRangeInt(2000, 3000))
-		gseq := uint32(testutil.RandRangeInt(4000, 5000))
+		leaseID := testutil.LeaseID(t)
+		leaseID.Owner = test.caddr.String()
+		leaseID.Provider = test.paddr.String()
+		mockManifestGroupsForRouterTest(test, leaseID)
 
-		status := &clustertypes.LeaseStatus{
-			Services:       nil,
-			ForwardedPorts: nil,
-		}
-
-		test.pcclient.On("LeaseStatus", mock.Anything, types.LeaseID{
-			Owner:    test.caddr.String(),
-			DSeq:     dseq,
-			GSeq:     gseq,
-			OSeq:     oseq,
-			Provider: test.paddr.String(),
-		}).Return(status, nil)
-
-		lid := types.LeaseID{
-			DSeq:     dseq,
-			GSeq:     gseq,
-			OSeq:     oseq,
-			Provider: test.paddr.String(),
-		}
-
-		uri, err := makeURI(test.host, leaseStatusPath(lid))
+		uri, err := makeURI(test.host, leaseStatusPath(leaseID))
 		require.NoError(t, err)
 
-		sdl, err := sdl.ReadFile(testSDL)
+		parsedSDL, err := sdl.ReadFile(testSDL)
 		require.NoError(t, err)
 
-		mani, err := sdl.Manifest()
+		mani, err := parsedSDL.Manifest()
 		require.NoError(t, err)
 
 		buf, err := json.Marshal(mani)
@@ -627,9 +668,9 @@ func TestRouteLeaseStatusOk(t *testing.T) {
 
 func TestRouteLeaseNotInKubernetes(t *testing.T) {
 	runRouterTest(t, true, func(test *routerTest) {
-		dseq := uint64(testutil.RandRangeInt(1, 1000))
-		oseq := uint32(testutil.RandRangeInt(2000, 3000))
-		gseq := uint32(testutil.RandRangeInt(4000, 5000))
+		leaseID := testutil.LeaseID(t)
+		leaseID.Owner = test.caddr.String()
+		leaseID.Provider = test.paddr.String()
 
 		kubeStatus := fakeKubernetesStatusError{
 			status: metav1.Status{
@@ -642,29 +683,16 @@ func TestRouteLeaseNotInKubernetes(t *testing.T) {
 				Code:     0,
 			},
 		}
+		test.pcclient.On("LeaseStatus", mock.Anything, leaseID).Return(nil, kubeStatus)
+		mockManifestGroupsForRouterTest(test, leaseID)
 
-		test.pcclient.On("LeaseStatus", mock.Anything, types.LeaseID{
-			Owner:    test.caddr.String(),
-			DSeq:     dseq,
-			GSeq:     gseq,
-			OSeq:     oseq,
-			Provider: test.paddr.String(),
-		}).Return(nil, kubeStatus)
-
-		lid := types.LeaseID{
-			DSeq:     dseq,
-			GSeq:     gseq,
-			OSeq:     oseq,
-			Provider: test.paddr.String(),
-		}
-
-		uri, err := makeURI(test.host, leaseStatusPath(lid))
+		uri, err := makeURI(test.host, leaseStatusPath(leaseID))
 		require.NoError(t, err)
 
-		sdl, err := sdl.ReadFile(testSDL)
+		parsedSDL, err := sdl.ReadFile(testSDL)
 		require.NoError(t, err)
 
-		mani, err := sdl.Manifest()
+		mani, err := parsedSDL.Manifest()
 		require.NoError(t, err)
 
 		buf, err := json.Marshal(mani)
@@ -683,26 +711,13 @@ func TestRouteLeaseNotInKubernetes(t *testing.T) {
 
 func TestRouteLeaseStatusErr(t *testing.T) {
 	runRouterTest(t, true, func(test *routerTest) {
-		dseq := uint64(testutil.RandRangeInt(1, 1000))
-		oseq := uint32(testutil.RandRangeInt(2000, 3000))
-		gseq := uint32(testutil.RandRangeInt(4000, 5000))
+		leaseID := testutil.LeaseID(t)
+		leaseID.Owner = test.caddr.String()
+		leaseID.Provider = test.paddr.String()
+		test.pcclient.On("LeaseStatus", mock.Anything, leaseID).Return(nil, errGeneric)
+		mockManifestGroupsForRouterTest(test, leaseID)
 
-		test.pcclient.On("LeaseStatus", mock.Anything, types.LeaseID{
-			Owner:    test.caddr.String(),
-			DSeq:     dseq,
-			GSeq:     gseq,
-			OSeq:     oseq,
-			Provider: test.paddr.String(),
-		}).Return(nil, errGeneric)
-
-		lid := types.LeaseID{
-			DSeq:     dseq,
-			GSeq:     gseq,
-			OSeq:     oseq,
-			Provider: test.paddr.String(),
-		}
-
-		uri, err := makeURI(test.host, leaseStatusPath(lid))
+		uri, err := makeURI(test.host, leaseStatusPath(leaseID))
 		require.NoError(t, err)
 
 		req, err := http.NewRequest("GET", uri, nil)

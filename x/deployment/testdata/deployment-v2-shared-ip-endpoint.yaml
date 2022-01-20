@@ -1,0 +1,55 @@
+---
+version: "2.0"
+
+services:
+  web:
+    image: quay.io/ovrclk/demo-app
+    expose:
+      - port: 80
+        to:
+          - global: true
+            ip: "meow"
+        accept:
+          - test.localhost         
+  anotherweb:
+    image: quay.io/ovrclk/demo-app
+    expose:
+      - port: 80
+        as: 81
+        to:
+          - global: true
+            ip: "meow"
+        accept:
+          - extratest.localhost
+
+profiles:
+  compute:
+    web:
+      resources:
+        cpu:
+          units: "0.01"
+        memory:
+          size: "128Mi"
+        storage:
+          size: "512Mi"
+
+  placement:
+    global:
+      pricing:
+        web:
+          denom: uakt
+          amount: 10
+
+deployment:
+  web:
+    global:
+      profile: web
+      count: 1
+  anotherweb:
+    global:
+      profile: web
+      count: 3
+
+endpoints:
+  meow:
+    kind: "ip"

@@ -9,6 +9,7 @@ services:
         as: 80
         to:
           - global: true
+            ip: true
         accept:
           - webdistest.localhost
     params:

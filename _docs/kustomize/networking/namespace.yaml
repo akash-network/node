@@ -6,3 +6,12 @@ metadata:
     name: akash-services
     akash.network: "true"
     akash.network/name: akash-services
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lease
+  labels:
+    name: lease
+    akash.network: "true"
+

@@ -25,3 +25,5 @@ type InventoryRequestExpansion interface{}
 type ManifestExpansion interface{}
 
 type ProviderHostExpansion interface{}
+
+type ProviderLeasedIPExpansion interface{}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ovrclk/akash/provider/cluster/util"
 	"io"
 	"math"
 	"math/big"
@@ -29,28 +30,28 @@ import (
 )
 
 func Test_ScalePricingRejectsAllZero(t *testing.T) {
-	pricing, err := MakeScalePricing(decimal.Zero, decimal.Zero, make(Storage), decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.Zero, decimal.Zero, make(Storage), decimal.Zero, decimal.Zero)
 	require.NotNil(t, err)
 	require.Nil(t, pricing)
 }
 
 func Test_ScalePricingAcceptsOneForASingleScale(t *testing.T) {
-	pricing, err := MakeScalePricing(decimal.NewFromInt(1), decimal.Zero, make(Storage), decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.NewFromInt(1), decimal.Zero, make(Storage), decimal.Zero, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
-	pricing, err = MakeScalePricing(decimal.Zero, decimal.NewFromInt(1), make(Storage), decimal.Zero)
+	pricing, err = MakeScalePricing(decimal.Zero, decimal.NewFromInt(1), make(Storage), decimal.Zero, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
 	storageScale := Storage{
 		"": decimal.NewFromInt(1),
 	}
-	pricing, err = MakeScalePricing(decimal.Zero, decimal.Zero, storageScale, decimal.Zero)
+	pricing, err = MakeScalePricing(decimal.Zero, decimal.Zero, storageScale, decimal.Zero, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
-	pricing, err = MakeScalePricing(decimal.Zero, decimal.Zero, make(Storage), decimal.NewFromInt(1))
+	pricing, err = MakeScalePricing(decimal.Zero, decimal.Zero, make(Storage), decimal.NewFromInt(1), decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 }
@@ -124,7 +125,7 @@ func Test_ScalePricingFailsOnOverflow(t *testing.T) {
 		sdl.StorageEphemeral: decimal.NewFromInt(1),
 	}
 
-	pricing, err := MakeScalePricing(decimal.New(math.MaxInt64, 2), decimal.Zero, storageScale, decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.New(math.MaxInt64, 2), decimal.Zero, storageScale, decimal.Zero, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
@@ -137,7 +138,7 @@ func Test_ScalePricingFailsOnOverflow(t *testing.T) {
 func Test_ScalePricingOnCpu(t *testing.T) {
 	cpuScale := decimal.NewFromInt(22)
 
-	pricing, err := MakeScalePricing(cpuScale, decimal.Zero, make(Storage), decimal.Zero)
+	pricing, err := MakeScalePricing(cpuScale, decimal.Zero, make(Storage), decimal.Zero, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
@@ -155,7 +156,7 @@ func Test_ScalePricingOnCpu(t *testing.T) {
 func Test_ScalePricingOnMemory(t *testing.T) {
 	memoryScale := uint64(23)
 	memoryPrice := decimal.NewFromInt(int64(memoryScale)).Mul(decimal.NewFromInt(unit.Mi))
-	pricing, err := MakeScalePricing(decimal.Zero, memoryPrice, make(Storage), decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.Zero, memoryPrice, make(Storage), decimal.Zero, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
@@ -172,7 +173,7 @@ func Test_ScalePricingOnMemory(t *testing.T) {
 func Test_ScalePricingOnMemoryLessThanOne(t *testing.T) {
 	memoryScale := uint64(1) // 1 uakt per megabyte
 	memoryPrice := decimal.NewFromInt(int64(memoryScale))
-	pricing, err := MakeScalePricing(decimal.Zero, memoryPrice, make(Storage), decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.Zero, memoryPrice, make(Storage), decimal.Zero, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
@@ -207,10 +208,10 @@ func decNearly(t *testing.T, v sdk.Dec, expected int64) {
 	require.NoError(t, err)
 
 	expectedLow := sdk.NewDec(expected).Sub(delta)
-	require.True(t, v.GT(expectedLow), "should be greater than", v.String(), expectedLow.String())
+	require.True(t, v.GT(expectedLow), "%v should be greater than %v", v.String(), expectedLow.String())
 
 	expectedHigh := sdk.NewDec(expected).Add(delta)
-	require.True(t, v.LT(expectedHigh), "should be less than", v.String(), expectedHigh.String())
+	require.True(t, v.LT(expectedHigh), "%v should be less than %v", v.String(), expectedHigh.String())
 }
 
 func Test_ScalePricingOnStorage(t *testing.T) {
@@ -219,7 +220,7 @@ func Test_ScalePricingOnStorage(t *testing.T) {
 		sdl.StorageEphemeral: decimal.NewFromInt(int64(storageScale)).Mul(decimal.NewFromInt(unit.Mi)),
 	}
 
-	pricing, err := MakeScalePricing(decimal.Zero, decimal.Zero, storagePrice, decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.Zero, decimal.Zero, storagePrice, decimal.Zero, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
@@ -238,7 +239,7 @@ func Test_ScalePricingByCountOfResources(t *testing.T) {
 		sdl.StorageEphemeral: decimal.NewFromInt(int64(storageScale)).Mul(decimal.NewFromInt(unit.Mi)),
 	}
 
-	pricing, err := MakeScalePricing(decimal.Zero, decimal.Zero, storagePrice, decimal.Zero)
+	pricing, err := MakeScalePricing(decimal.Zero, decimal.Zero, storagePrice, decimal.Zero, decimal.Zero)
 	require.NoError(t, err)
 	require.NotNil(t, pricing)
 
@@ -256,6 +257,46 @@ func Test_ScalePricingByCountOfResources(t *testing.T) {
 	secondPrice, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
 	require.NoError(t, err)
 	decNearly(t, secondPrice.Amount, 2*int64(storageScale*storageQuantity))
+}
+
+func Test_ScalePricingForIPs(t *testing.T) {
+	ipPriceInt := int64(testutil.RandRangeInt(100, 1000))
+	ipPrice := decimal.NewFromInt(ipPriceInt)
+
+	pricing, err := MakeScalePricing(decimal.Zero, decimal.Zero, Storage{
+		sdl.StorageEphemeral: decimal.Zero,
+	}, decimal.Zero, ipPrice)
+	require.NoError(t, err)
+	require.NotNil(t, pricing)
+
+	gspec := defaultGroupSpec()
+	gspec.Resources[0].Resources.Endpoints = append(gspec.Resources[0].Resources.Endpoints, atypes.Endpoint{
+		Kind:           atypes.Endpoint_LEASED_IP,
+		SequenceNumber: 1367,
+	})
+
+	require.Equal(t, uint(1), util.GetEndpointQuantityOfResourceGroup(gspec, atypes.Endpoint_LEASED_IP))
+	price, err := pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
+
+	require.NoError(t, err)
+	decNearly(t, price.Amount, ipPriceInt)
+
+	gspec.Resources[0].Resources.Endpoints = append(gspec.Resources[0].Resources.Endpoints, atypes.Endpoint{
+		Kind:           atypes.Endpoint_LEASED_IP,
+		SequenceNumber: 1368,
+	})
+	require.Equal(t, uint(2), util.GetEndpointQuantityOfResourceGroup(gspec, atypes.Endpoint_LEASED_IP))
+	price, err = pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
+
+	require.NoError(t, err)
+	decNearly(t, price.Amount, 2*ipPriceInt)
+
+	gspec.Resources[0].Count = 33 // any number greater than 1 works here
+	price, err = pricing.CalculatePrice(context.Background(), testutil.AccAddress(t).String(), gspec)
+	require.NoError(t, err)
+	decNearly(t, price.Amount, 2*ipPriceInt)
 }
 
 func Test_ScriptPricingRejectsEmptyStringForPath(t *testing.T) {
@@ -543,6 +584,7 @@ func Test_ScriptPricingWritesJsonToStdin(t *testing.T) {
 		require.Equal(t, r.Resources.Storage[0].Quantity.Val.Uint64(), data[i].Storage[0].Size)
 		require.Equal(t, r.Count, data[i].Count)
 		require.Equal(t, len(r.Resources.Endpoints), data[i].EndpointQuantity)
+		require.Equal(t, util.GetEndpointQuantityOfResourceUnits(r.Resources, atypes.Endpoint_LEASED_IP), data[i].IPLeaseQuantity)
 	}
 }
 

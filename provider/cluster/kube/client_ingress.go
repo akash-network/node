@@ -3,6 +3,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	"github.com/ovrclk/akash/provider/cluster/kube/clientcommon"
 	"math"
 	"strconv"
 	"strings"
@@ -73,7 +74,7 @@ func (c *client) ConnectHostnameToDeployment(ctx context.Context, directive ctyp
 	ns := builder.LidNS(directive.LeaseID)
 	rules := ingressRules(directive.Hostname, directive.ServiceName, directive.ServicePort)
 
-	_, err := c.kc.NetworkingV1().Ingresses(ns).Get(ctx, ingressName, metav1.GetOptions{})
+	foundEntry, err := c.kc.NetworkingV1().Ingresses(ns).Get(ctx, ingressName, metav1.GetOptions{})
 	metricsutils.IncCounterVecWithLabelValuesFiltered(kubeCallsCounter, "ingresses-get", err, kubeErrors.IsNotFound)
 
 	labels := make(map[string]string)
@@ -95,6 +96,7 @@ func (c *client) ConnectHostnameToDeployment(ctx context.Context, directive ctyp
 
 	switch {
 	case err == nil:
+		obj.ResourceVersion = foundEntry.ResourceVersion
 		_, err = c.kc.NetworkingV1().Ingresses(ns).Update(ctx, obj, metav1.UpdateOptions{})
 		metricsutils.IncCounterVecWithLabelValues(kubeCallsCounter, "networking-ingresses-update", err)
 	case kubeErrors.IsNotFound(err):
@@ -190,50 +192,11 @@ func (c *client) GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes
 	err := ingressPager.EachListItem(ctx,
 		metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=true", builder.AkashManagedLabelName)},
 		func(obj runtime.Object) error {
+
 			ingress := obj.(*netv1.Ingress)
-			dseqS, ok := ingress.Labels[builder.AkashLeaseDSeqLabelName]
-			if !ok {
-				return fmt.Errorf("%w: %q", ErrMissingLabel, builder.AkashLeaseDSeqLabelName)
-			}
-			gseqS, ok := ingress.Labels[builder.AkashLeaseGSeqLabelName]
-			if !ok {
-				return fmt.Errorf("%w: %q", ErrMissingLabel, builder.AkashLeaseGSeqLabelName)
-			}
-			oseqS, ok := ingress.Labels[builder.AkashLeaseOSeqLabelName]
-			if !ok {
-				return fmt.Errorf("%w: %q", ErrMissingLabel, builder.AkashLeaseOSeqLabelName)
-			}
-			owner, ok := ingress.Labels[builder.AkashLeaseOwnerLabelName]
-			if !ok {
-				return fmt.Errorf("%w: %q", ErrMissingLabel, builder.AkashLeaseOwnerLabelName)
-			}
-
-			provider, ok := ingress.Labels[builder.AkashLeaseProviderLabelName]
-			if !ok {
-				return fmt.Errorf("%w: %q", ErrMissingLabel, builder.AkashLeaseProviderLabelName)
-			}
-
-			dseq, err := strconv.ParseUint(dseqS, 10, 64)
+			ingressLeaseID, err := clientcommon.RecoverLeaseIDFromLabels(ingress.Labels)
 			if err != nil {
-				return fmt.Errorf("%w: dseq %q not a uint", ErrInvalidLabelValue, dseqS)
-			}
-
-			gseq, err := strconv.ParseUint(gseqS, 10, 32)
-			if err != nil {
-				return fmt.Errorf("%w: gseq %q not a uint", ErrInvalidLabelValue, gseqS)
-			}
-
-			oseq, err := strconv.ParseUint(oseqS, 10, 32)
-			if err != nil {
-				return fmt.Errorf("%w: oesq %q not a uint", ErrInvalidLabelValue, oseqS)
-			}
-
-			ingressLeaseID := mtypes.LeaseID{
-				Owner:    owner,
-				DSeq:     dseq,
-				GSeq:     uint32(gseq),
-				OSeq:     uint32(oseq),
-				Provider: provider,
+				return err
 			}
 			if len(ingress.Spec.Rules) != 1 {
 				return fmt.Errorf("%w: invalid number of rules %d", ErrInvalidHostnameConnection, len(ingress.Spec.Rules))

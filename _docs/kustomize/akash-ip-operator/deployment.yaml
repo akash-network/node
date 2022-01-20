@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: akash-ip-operator
+  labels:
+    akash.network/component: akash-ip-operator
+spec:
+  selector:
+    matchLabels:
+      app: akash-ip-operator
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: akash-ip-operator
+        akash.network/component: akash-ip-operator
+    spec:
+      serviceAccountName: akash-ip-operator
+      containers:
+      - name: akash-ip-operator
+        image: ghcr.io/ovrclk/akash:stable
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "/boot/run.sh"]
+        ports:
+          - name: api
+            containerPort: 8086
+        env:
+          - name: AKASH_K8S_MANIFEST_NS
+            valueFrom:
+              configMapKeyRef:
+                name: akash-provider-config
+                key: k8s-manifest-ns
+          - name: AKASH_PRUNE_INTERVAL
+            valueFrom:
+              configMapKeyRef:
+                name: akash-ip-operator-config
+                key: prune-interval
+          - name: AKASH_IGNORE_LIST_ENTRY_LIMIT
+            valueFrom:
+              configMapKeyRef:
+                name: akash-ip-operator-config
+                key: ignore-list-entry-limit
+          - name: AKASH_WEB_REFRESH_INTERVAL
+            valueFrom:
+              configMapKeyRef:
+                name: akash-ip-operator-config
+                key: web-refresh-interval
+          - name: AKASH_RETRY_DELAY
+            valueFrom:
+              configMapKeyRef:
+                name: akash-ip-operator-config
+                key: retry-delay
+          - name: AKASH_IGNORE_LIST_AGE_LIMIT
+            valueFrom:
+              configMapKeyRef:
+                name: akash-ip-operator-config
+                key: ignore-list-age-limit
+          - name: AKASH_EVENT_FAILURE_LIMIT
+            valueFrom:
+              configMapKeyRef:
+                name: akash-ip-operator-config
+                key: event-failure-limit
+
+        volumeMounts:
+          - name: boot
+            mountPath: /boot
+            readOnly: true
+      volumes:
+        - name: boot
+          configMap:
+            name: akash-ip-operator-boot

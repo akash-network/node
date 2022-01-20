@@ -259,6 +259,8 @@ func (c *client) Inventory(ctx context.Context) (ctypes.Inventory, error) {
 func (c *client) fetchStorage(ctx context.Context) (clusterStorage, error) {
 	cstorage := make(clusterStorage)
 
+	// TODO - figure out if we can get this back via ServiceDiscoveryAgent query akash-services inventory-operator api
+
 	// discover inventory operator
 	// empty namespace mean search through all namespaces
 	svcResult, err := c.kc.CoreV1().Services("").List(ctx, metav1.ListOptions{

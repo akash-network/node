@@ -32,15 +32,13 @@ func TestNewClient(t *testing.T) {
 	}
 	ctx := context.WithValue(context.Background(), builder.SettingsKey, settings)
 
-	ac, err := newClientWithSettings(testutil.Logger(t), ns, "", true)
+	ac, err := NewClient(testutil.Logger(t), ns, "")
+
 	require.NoError(t, err)
 
 	cc, ok := ac.(*client)
 	require.True(t, ok)
 	require.NotNil(t, cc)
-
-	// TODO: re-enable.  see #946
-	// kc := cc.kc
 
 	// check inventory
 	inventory, err := ac.Inventory(ctx)
@@ -73,18 +71,15 @@ func TestNewClient(t *testing.T) {
 
 	assert.Equal(t, lid, deployment.LeaseID())
 
-	// query namespace and pod security policies
-	// TODO: re-enable.  see #946
-	// psp, err := kc.PolicyV1beta1().PodSecurityPolicies().Get(ctx, ns, metav1.GetOptions{})
-	// require.NoError(t, err)
-	// require.NotNil(t, psp)
-
 	svcname := group.Services[0].Name
+
+	// There is some sort of race here, work around it
+	time.Sleep(time.Second * 10)
 
 	lstat, err := ac.LeaseStatus(ctx, lid)
 	assert.NoError(t, err)
-	assert.Len(t, lstat.Services, 1)
-	assert.Equal(t, svcname, lstat.Services[svcname].Name)
+	assert.Len(t, lstat, 1)
+	assert.Equal(t, svcname, lstat[svcname].Name)
 
 	sstat, err := ac.ServiceStatus(ctx, lid, svcname)
 	require.NoError(t, err)
@@ -135,15 +130,6 @@ func TestNewClient(t *testing.T) {
 	npList, err := npi.List(ctx, metav1.ListOptions{})
 	assert.NoError(t, err)
 	assert.Equal(t, len(npList.Items), 0)
-
-	// ensure inventory used
-	// XXX: not working with kind. might be a delay issue?
-	// curnodes, err := kubeClient.Inventory(ctx)
-	// require.NoError(t, err)
-	// require.Len(t, curnodes, 1)
-	// curnode := curnodes[0]
-	// assert.Less(t, node.Available().CPU, curnode.Available().CPU)
-	// assert.Less(t, node.Available().Memory, curnode.Available().Memory)
 
 	// teardown lease
 	err = ac.TeardownLease(ctx, lid)

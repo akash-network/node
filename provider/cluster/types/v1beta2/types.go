@@ -116,7 +116,6 @@ type ForwardedPortStatus struct {
 	Port         uint16                   `json:"port"`
 	ExternalPort uint16                   `json:"externalPort"`
 	Proto        manifest.ServiceProtocol `json:"proto"`
-	Available    int32                    `json:"available"`
 	Name         string                   `json:"name"`
 }
 

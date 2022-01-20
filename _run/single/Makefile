@@ -19,11 +19,12 @@ kind-namespace-setup:
 	kubectl apply -f "$(KUSTOMIZE_ROOT)/networking"
 
 .PHONY: kustomize-init
-kustomize-init: kustomize-init-akash-node kustomize-init-provider kind-namespace-setup
+kustomize-init: kustomize-init-node kustomize-init-provider kind-namespace-setup
 
-.PHONY: kustomize-init-akash-node
-kustomize-init-akash-node:
+.PHONY: kustomize-init-node
+kustomize-init-node:
 	mkdir -p "$(KUSTOMIZE_AKASHD_CACHE)"
+	chmod u+w -R "$(KUSTOMIZE_AKASHD_CACHE)/"
 	cp -r "$(AKASH_HOME)/"* "$(KUSTOMIZE_AKASHD_CACHE)/"
 
 .PHONY: kustomize-init-provider
@@ -37,6 +38,12 @@ kustomize-init-provider:
 		cat "$(KUSTOMIZE_PROVIDER_CACHE)/key-pass.txt"   \
 	) | $(AKASH) keys export provider 1> "$(KUSTOMIZE_PROVIDER_CACHE)/key.txt"
 
+.PHONY: kustomize-init-hostname-operator
+kustomize-init-hostname-operator:
+
+.PHONY: kustomize-init-ip-operator
+kustomize-init-ip-operator:
+
 .PHONY: kustomize-install-node
 kustomize-install-node:
 	kubectl kustomize kustomize/akash-node | kubectl apply -f-
@@ -45,9 +52,13 @@ kustomize-install-node:
 kustomize-install-provider:
 	kubectl kustomize kustomize/akash-provider | kubectl apply -f-
 
-.PHONY: kustmoize-install-hostname-operator
+.PHONY: kustomize-install-hostname-operator
 kustomize-install-hostname-operator:
 	kubectl kustomize ./kustomize/akash-hostname-operator | kubectl apply -f -
+
+.PHONE: kustomize-install-ip-operator
+kustomize-install-ip-operator:
+	kubectl kustomize ./kustomize/akash-ip-operator | kubectl apply -f -
 
 .PHONY: provider-lease-ping
 provider-lease-ping:
@@ -68,3 +79,11 @@ clean-$(AKASH_RUN_NAME):
 	rm -f  $(CURDIR)/kustomize/akash-node/docker-image.yaml
 	rm -rf $(CURDIR)/kustomize/akash-provider/cache
 	rm -f  $(CURDIR)/kustomize/akash-provider/docker-image.yaml
+
+.PHONY: hostname-operator-hostnames
+hostname-operator-hostnames:
+	curl -H 'Host: $(HOSTNAME_OPERATOR_HOST)' localhost:$(KIND_PORT_BINDINGS)/managed-hostnames
+
+.PHONY: hostname-operator-ignored
+hostname-operator-ignored:
+	curl -H 'Host: $(HOSTNAME_OPERATOR_HOST)' localhost:$(KIND_PORT_BINDINGS)/ignore-list

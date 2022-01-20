@@ -60,6 +60,8 @@ import (
 	deploycli "github.com/ovrclk/akash/x/deployment/client/cli"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+
+	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
 )
 
 // IntegrationTestSuite wraps testing components
@@ -78,6 +80,8 @@ type IntegrationTestSuite struct {
 
 	appHost string
 	appPort string
+
+	ipMarketplace bool
 }
 
 type E2EContainerToContainer struct {
@@ -93,6 +97,18 @@ type E2EDeploymentUpdate struct {
 }
 
 type E2EApp struct {
+	IntegrationTestSuite
+}
+
+type E2EIPAddress struct {
+	IntegrationTestSuite
+}
+
+type E2EMigrateHostname struct {
+	IntegrationTestSuite
+}
+
+type E2EJWTServer struct {
 	IntegrationTestSuite
 }
 
@@ -176,6 +192,18 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		Host:   jwtHost,
 		Scheme: "https",
 	}
+
+	_, port, err = server.FreeTCPAddr()
+	require.NoError(s.T(), err)
+	hostnameOperatorHost := fmt.Sprintf("localhost:%s", port)
+
+	var ipOperatorHost string
+	if s.ipMarketplace {
+		_, port, err = server.FreeTCPAddr()
+		require.NoError(s.T(), err)
+		ipOperatorHost = fmt.Sprintf("localhost:%s", port)
+	}
+
 	provFileStr := fmt.Sprintf(providerTemplate, provURL.String(), jwtURL.String())
 	tmpFile, err := ioutil.TempFile(s.network.BaseDir, "provider.yaml")
 	require.NoError(s.T(), err)
@@ -287,7 +315,16 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 	// all command use viper which is meant for use by a single goroutine only
 	// so wait for the provider to start before running the hostname operator
+	extraArgs := []string{
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		"--deployment-runtime-class=none", // do not use gvisor in test
+		fmt.Sprintf("--hostname-operator-endpoint=%s", hostnameOperatorHost),
+	}
 
+	if s.ipMarketplace {
+		extraArgs = append(extraArgs, fmt.Sprintf("--ip-operator-endpoint=%s", ipOperatorHost))
+		extraArgs = append(extraArgs, "--ip-operator")
+	}
 	s.group.Go(func() error {
 		_, err := ptestutil.RunLocalProvider(ctx,
 			cctx,
@@ -296,73 +333,88 @@ func (s *IntegrationTestSuite) SetupSuite() {
 			cliHome,
 			keyName,
 			provURL.Host,
-			fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-			"--deployment-runtime-class=none",
+			extraArgs...,
 		)
-
 		return err
 	})
 
-	// Run the hostname operator, after confirming the provider starts
-	const maxAttempts = 30
 	dialer := net.Dialer{
 		Timeout: time.Second * 3,
 	}
 
-	attempts := 0
-	s.T().Log("waiting for provider to run before starting JWT server")
-	for {
-		conn, err := dialer.DialContext(s.ctx, "tcp", provHost)
-		if err != nil {
-			s.T().Logf("connecting to provider returned %v", err)
-			_, ok := err.(net.Error)
-			s.Require().True(ok, "error should be net error not %v", err)
-			attempts++
-			s.Require().Less(attempts, maxAttempts)
-			time.Sleep(1 * time.Second)
-			continue
-		}
-		_ = conn.Close() // Connected OK
-		break
-	}
+	// Wait for the provider gateway to be up and running
 
+	s.T().Log("waiting for provider gateway")
+	waitForTCPSocket(s.ctx, dialer, provHost, s.T())
+
+	// --- Start JWT Server
 	s.group.Go(func() error {
-		s.T().Log("starting JWT server for test")
+		s.T().Logf("starting JWT server for test on %v", jwtURL.Host)
 		_, err := ptestutil.RunProviderJWTServer(s.ctx,
 			cctx,
 			keyName,
 			jwtURL.Host,
 		)
-
+		s.Assert().NoError(err)
 		return err
 	})
 
-	attempts = 0
-	s.T().Log("waiting for JWT server to run before starting hostname operator")
-	for {
-		conn, err := dialer.DialContext(s.ctx, "tcp", jwtHost)
-		if err != nil {
-			s.T().Logf("connecting to JWT server returned %v", err)
-			_, ok := err.(net.Error)
-			s.Require().True(ok, "error should be net error not %v", err)
-			attempts++
-			s.Require().Less(attempts, maxAttempts)
-			time.Sleep(1 * time.Second)
-			continue
-		}
-		_ = conn.Close() // Connected OK
-		break
-	}
+	s.T().Log("waiting for JWT server")
+	waitForTCPSocket(s.ctx, dialer, jwtHost, s.T())
 
+	// --- Start hostname operator
 	s.group.Go(func() error {
-		s.T().Log("starting hostname operator for test")
-		_, err := ptestutil.RunLocalHostnameOperator(s.ctx, cctx)
-		s.Require().NoError(err)
-
-		return nil
+		s.T().Logf("starting hostname operator for test on %v", hostnameOperatorHost)
+		_, err := ptestutil.RunLocalHostnameOperator(s.ctx, cctx, hostnameOperatorHost)
+		s.Assert().NoError(err)
+		return err
 	})
 
+	s.T().Log("waiting for hostname operator")
+	waitForTCPSocket(s.ctx, dialer, hostnameOperatorHost, s.T())
+
+	if s.ipMarketplace {
+		s.group.Go(func() error {
+			s.T().Logf("starting ip operator for test on %v", ipOperatorHost)
+			_, err := ptestutil.RunLocalIPOerator(s.ctx, cctx, ipOperatorHost, provURL.Host)
+			s.Assert().NoError(err)
+			return err
+		})
+
+		s.T().Log("waiting for IP operator")
+		waitForTCPSocket(s.ctx, dialer, ipOperatorHost, s.T())
+	}
+
 	s.Require().NoError(s.network.WaitForNextBlock())
+}
+
+func waitForTCPSocket(ctx context.Context, dialer net.Dialer, host string, t *testing.T) {
+	// Wait no more than 30 seconds for the socket to be listening
+	subctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	for {
+		if err := subctx.Err(); err != nil {
+			t.Fatalf("timed out trying to connect to host %q", host)
+		}
+
+		// Just test for TCP socket accepting connections, not for an actual functional server
+		conn, err := dialer.DialContext(subctx, "tcp", host)
+		if err != nil {
+			t.Logf("connecting to %q returned %v", host, err)
+
+			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+				t.Fatalf("timed out trying to connect to host %q", host)
+			}
+
+			_, ok := err.(net.Error)
+			require.Truef(t, ok, "error should be net.Error not [%T] %v", err, err)
+			time.Sleep(333 * time.Millisecond)
+			continue
+		}
+		_ = conn.Close()
+		return
+	}
 }
 
 func (s *IntegrationTestSuite) TearDownTest() {
@@ -1118,7 +1170,7 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 
 }
 
-func (s *E2EApp) TestE2EMigrateHostname() {
+func (s *E2EMigrateHostname) TestE2EMigrateHostname() {
 	// create a deployment
 	deploymentPath, err := filepath.Abs("../x/deployment/testdata/deployment-v2-migrate.yaml")
 	s.Require().NoError(err)
@@ -1361,6 +1413,7 @@ func (s *E2EApp) TestE2EMigrateHostname() {
 	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
 	time.Sleep(10 * time.Second) // Make sure provider has time to close the lease
+	// Query the first lease, make sure it is closed
 	cmdResult, err = providerCmd.ProviderLeaseStatusExec(
 		s.validator.ClientCtx,
 		fmt.Sprintf("--%s=%v", "dseq", lid.DSeq),
@@ -1370,14 +1423,15 @@ func (s *E2EApp) TestE2EMigrateHostname() {
 		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
 		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
 	)
-	s.Require().NoError(err)
-	s.Require().Len(cmdResult.Bytes(), 0)
+	s.Require().Error(err)
+	s.Require().Contains(err.Error(), "remote server returned 404")
+	s.Require().NotNil(cmdResult)
 
 	// confirm hostname still reachable, on the hostname it was migrated to
 	queryAppWithHostname(s.T(), appURL, 50, secondaryHostname)
 }
 
-func (s *E2EApp) TestE2EJwtServerAuthenticate() {
+func (s *E2EJWTServer) TestE2EJwtServerAuthenticate() {
 	cctx := s.validator.ClientCtx
 	provider := s.keyProvider.GetAddress().String()
 	tenant := s.keyTenant.GetAddress().String()
@@ -1394,6 +1448,135 @@ func (s *E2EApp) TestE2EJwtServerAuthenticate() {
 	require.NotEmpty(s.T(), claims.AkashNamespace.V1.CertSerialNumber)
 }
 
+func (s *E2EIPAddress) TestIPAddressLease() {
+	// create a deployment
+	deploymentPath, err := filepath.Abs("../x/deployment/testdata/deployment-v2-ip-endpoint.yaml")
+	s.Require().NoError(err)
+
+	cctxJSON := s.validator.ClientCtx.WithOutputFormat("json")
+
+	deploymentID := dtypes.DeploymentID{
+		Owner: s.keyTenant.GetAddress().String(),
+		DSeq:  uint64(105),
+	}
+
+	// Create Deployments and assert query to assert
+	res, err := deploycli.TxCreateDeploymentExec(
+		s.validator.ClientCtx,
+		s.keyTenant.GetAddress(),
+		deploymentPath,
+		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+
+	// Wait for then EndBlock to handle bidding and creating lease
+	s.Require().NoError(s.waitForBlocksCommitted(15))
+
+	// Assert provider made bid and created lease; test query leases
+	res, err = mcli.QueryBidsExec(cctxJSON)
+	s.Require().NoError(err)
+	bidsRes := &mtypes.QueryBidsResponse{}
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(res.Bytes(), bidsRes)
+	s.Require().NoError(err)
+	selectedIdx := -1
+	for i, bidEntry := range bidsRes.Bids {
+		bid := bidEntry.GetBid()
+		if bid.GetBidID().DeploymentID().Equals(deploymentID) {
+			selectedIdx = i
+			break
+		}
+	}
+	s.Require().NotEqual(selectedIdx, -1)
+	bid := bidsRes.Bids[selectedIdx].GetBid()
+
+	res, err = mcli.TxCreateLeaseExec(
+		cctxJSON,
+		bid.BidID,
+		s.keyTenant.GetAddress(),
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.waitForBlocksCommitted(6))
+	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
+
+	res, err = mcli.QueryLeasesExec(cctxJSON)
+	s.Require().NoError(err)
+
+	leaseRes := &mtypes.QueryLeasesResponse{}
+	err = s.validator.ClientCtx.Codec.UnmarshalJSON(res.Bytes(), leaseRes)
+	s.Require().NoError(err)
+	selectedIdx = -1
+	for idx, leaseEntry := range leaseRes.Leases {
+		lease := leaseEntry.GetLease()
+		if lease.GetLeaseID().DeploymentID().Equals(deploymentID) {
+			selectedIdx = idx
+			break
+		}
+	}
+	s.Require().NotEqual(selectedIdx, -1)
+
+	lease := leaseRes.Leases[selectedIdx].GetLease()
+	leaseID := lease.LeaseID
+	s.Require().Equal(s.keyProvider.GetAddress().String(), leaseID.Provider)
+
+	// Send Manifest to Provider ----------------------------------------------
+	_, err = ptestutil.TestSendManifest(
+		cctxJSON,
+		leaseID.BidID(),
+		deploymentPath,
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.waitForBlocksCommitted(20))
+
+	cmdResult, err := providerCmd.ProviderStatusExec(s.validator.ClientCtx, leaseID.Provider)
+	require.NoError(s.T(), err)
+	data := make(map[string]interface{})
+	err = json.Unmarshal(cmdResult.Bytes(), &data)
+	require.NoError(s.T(), err)
+	leaseCount, ok := data["cluster"].(map[string]interface{})["leases"]
+	require.True(s.T(), ok)
+	require.Equal(s.T(), float64(1), leaseCount)
+
+	// Get the lease status and confirm IP is present
+	cmdResult, err = providerCmd.ProviderLeaseStatusExec(
+		s.validator.ClientCtx,
+		fmt.Sprintf("--%s=%v", "dseq", leaseID.DSeq),
+		fmt.Sprintf("--%s=%v", "gseq", leaseID.GSeq),
+		fmt.Sprintf("--%s=%v", "oseq", leaseID.OSeq),
+		fmt.Sprintf("--%s=%v", "provider", leaseID.Provider),
+		fmt.Sprintf("--%s=%s", flags.FlagFrom, s.keyTenant.GetAddress().String()),
+		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
+	)
+	require.NoError(s.T(), err)
+	leaseStatusData := gwrest.LeaseStatus{}
+	err = json.Unmarshal(cmdResult.Bytes(), &leaseStatusData)
+	require.NoError(s.T(), err)
+
+	s.Require().Len(leaseStatusData.IPs, 1)
+
+	webService := leaseStatusData.IPs["web"]
+	s.Require().Len(webService, 1)
+	leasedIP := webService[0]
+	s.Assert().Equal(leasedIP.Port, uint32(80))
+	s.Assert().Equal(leasedIP.ExternalPort, uint32(80))
+	s.Assert().Equal(strings.ToUpper(leasedIP.Protocol), "TCP")
+	ipAddr := leasedIP.IP
+	ip := net.ParseIP(ipAddr)
+	s.Assert().NotNilf(ip, "after parsing %q got nil", ipAddr)
+
+}
+
 func TestIntegrationTestSuite(t *testing.T) {
 	integrationTestOnly(t)
 	suite.Run(t, new(E2EContainerToContainer))
@@ -1402,6 +1585,9 @@ func TestIntegrationTestSuite(t *testing.T) {
 	suite.Run(t, new(E2EApp))
 	suite.Run(t, new(E2EPersistentStorageDefault))
 	suite.Run(t, new(E2EPersistentStorageBeta2))
+	suite.Run(t, new(E2EMigrateHostname))
+	suite.Run(t, new(E2EJWTServer))
+	suite.Run(t, &E2EIPAddress{IntegrationTestSuite{ipMarketplace: true}})
 }
 
 func (s *IntegrationTestSuite) waitForBlocksCommitted(height int) error {

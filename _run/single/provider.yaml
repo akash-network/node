@@ -1,4 +1,4 @@
-host: https://akash-provider.localhost
+host: https://akash-provider.localhost:9443
 attributes:
   - key: region
     value: us-west

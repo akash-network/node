@@ -1,7 +1,6 @@
 package v2beta1
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 
@@ -44,7 +43,7 @@ type ManifestSpec struct {
 
 // Deployment returns the cluster.Deployment that the saved manifest represents.
 func (m Manifest) Deployment() (ctypes.Deployment, error) {
-	lid, err := m.Spec.LeaseID.toAkash()
+	lid, err := m.Spec.LeaseID.ToAkash()
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +86,7 @@ func NewManifest(ns string, lid mtypes.LeaseID, mgroup *manifest.Group) (*Manife
 		},
 		Spec: ManifestSpec{
 			Group:   group,
-			LeaseID: leaseIDFromAkash(lid),
+			LeaseID: LeaseIDFromAkash(lid),
 		},
 	}, nil
 }
@@ -102,7 +101,7 @@ type LeaseID struct {
 }
 
 // ToAkash returns LeaseID from LeaseID details
-func (id LeaseID) toAkash() (mtypes.LeaseID, error) {
+func (id LeaseID) ToAkash() (mtypes.LeaseID, error) {
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	if err != nil {
 		return mtypes.LeaseID{}, err
@@ -128,7 +127,7 @@ func (id LeaseID) toAkash() (mtypes.LeaseID, error) {
 }
 
 // LeaseIDFromAkash returns LeaseID instance from akash
-func leaseIDFromAkash(id mtypes.LeaseID) LeaseID {
+func LeaseIDFromAkash(id mtypes.LeaseID) LeaseID {
 	return LeaseID{
 		Owner:    id.Owner,
 		DSeq:     strconv.FormatUint(id.DSeq, 10),
@@ -226,6 +225,8 @@ func (ms ManifestService) toAkash() (manifest.Service, error) {
 		Resources: res,
 		Count:     ms.Count,
 		Expose:    make([]manifest.ServiceExpose, 0, len(ms.Expose)),
+		Params:    nil, // TODO - store in CRD
+		Command:   nil, // TODO - store in CRD
 	}
 
 	for _, expose := range ms.Expose {
@@ -234,6 +235,13 @@ func (ms ManifestService) toAkash() (manifest.Service, error) {
 			return manifest.Service{}, err
 		}
 		ams.Expose = append(ams.Expose, value)
+
+		if len(value.IP) != 0 {
+			res.Endpoints = append(res.Endpoints, types.Endpoint{
+				Kind:           types.Endpoint_LEASED_IP,
+				SequenceNumber: value.EndpointSequenceNumber,
+			})
+		}
 	}
 
 	if ms.Params != nil {
@@ -298,8 +306,10 @@ type ManifestServiceExpose struct {
 	Service      string `json:"service,omitempty"`
 	Global       bool   `json:"global,omitempty"`
 	// accepted hostnames
-	Hosts       []string                         `json:"hosts,omitempty"`
-	HTTPOptions ManifestServiceExposeHTTPOptions `json:"http_options,omitempty"`
+	Hosts                  []string                         `json:"hosts,omitempty"`
+	HTTPOptions            ManifestServiceExposeHTTPOptions `json:"http_options,omitempty"`
+	IP                     string                           `json:"ip,omitempty"`
+	EndpointSequenceNumber uint32                           `json:"endpoint_sequence_number"`
 }
 
 type ManifestServiceExposeHTTPOptions struct {
@@ -314,27 +324,38 @@ type ManifestServiceExposeHTTPOptions struct {
 func (mse ManifestServiceExpose) toAkash() (manifest.ServiceExpose, error) {
 	proto, err := manifest.ParseServiceProtocol(mse.Proto)
 	if err != nil {
-		fmt.Printf("foobar: %q\n", mse.Proto)
 		return manifest.ServiceExpose{}, err
 	}
 	return manifest.ServiceExpose{
-		Port:         mse.Port,
-		ExternalPort: mse.ExternalPort,
-		Proto:        proto,
-		Service:      mse.Service,
-		Global:       mse.Global,
-		Hosts:        mse.Hosts,
+		Port:                   mse.Port,
+		ExternalPort:           mse.ExternalPort,
+		Proto:                  proto,
+		Service:                mse.Service,
+		Global:                 mse.Global,
+		Hosts:                  mse.Hosts,
+		EndpointSequenceNumber: mse.EndpointSequenceNumber,
+		IP:                     mse.IP,
+		HTTPOptions: manifest.ServiceExposeHTTPOptions{
+			MaxBodySize: mse.HTTPOptions.MaxBodySize,
+			ReadTimeout: mse.HTTPOptions.ReadTimeout,
+			SendTimeout: mse.HTTPOptions.SendTimeout,
+			NextTries:   mse.HTTPOptions.NextTries,
+			NextTimeout: mse.HTTPOptions.NextTimeout,
+			NextCases:   mse.HTTPOptions.NextCases,
+		},
 	}, nil
 }
 
 func manifestServiceExposeFromAkash(amse manifest.ServiceExpose) ManifestServiceExpose {
 	return ManifestServiceExpose{
-		Port:         amse.Port,
-		ExternalPort: amse.ExternalPort,
-		Proto:        amse.Proto.ToString(),
-		Service:      amse.Service,
-		Global:       amse.Global,
-		Hosts:        amse.Hosts,
+		Port:                   amse.Port,
+		ExternalPort:           amse.ExternalPort,
+		Proto:                  amse.Proto.ToString(),
+		Service:                amse.Service,
+		Global:                 amse.Global,
+		Hosts:                  amse.Hosts,
+		IP:                     amse.IP,
+		EndpointSequenceNumber: amse.EndpointSequenceNumber,
 		HTTPOptions: ManifestServiceExposeHTTPOptions{
 			MaxBodySize: amse.HTTPOptions.MaxBodySize,
 			ReadTimeout: amse.HTTPOptions.ReadTimeout,
@@ -448,9 +469,39 @@ type ProviderHostSpec struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 type ProviderHostList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 	Items           []ProviderHost `json:"items"`
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type ProviderLeasedIP struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+
+	Spec   ProviderLeasedIPSpec   `json:"spec,omitempty"`
+	Status ProviderLeasedIPStatus `json:"status,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type ProviderLeasedIPList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []ProviderLeasedIP `json:"items"`
+}
+
+type ProviderLeasedIPStatus struct {
+	State   string `json:"state,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+type ProviderLeasedIPSpec struct {
+	LeaseID      LeaseID `json:"lease_id"`
+	ServiceName  string  `json:"service_name"`
+	Port         uint32  `json:"port"`
+	ExternalPort uint32  `json:"external_port"`
+	SharingKey   string  `json:"sharing_key"`
+	Protocol     string  `json:"protocol"`
 }

@@ -44,7 +44,7 @@ type Client interface {
 	Status(ctx context.Context) (*provider.Status, error)
 	Validate(ctx context.Context, gspec dtypes.GroupSpec) (provider.ValidateGroupSpecResult, error)
 	SubmitManifest(ctx context.Context, dseq uint64, mani manifest.Manifest) error
-	LeaseStatus(ctx context.Context, id mtypes.LeaseID) (*cltypes.LeaseStatus, error)
+	LeaseStatus(ctx context.Context, id mtypes.LeaseID) (LeaseStatus, error)
 	LeaseEvents(ctx context.Context, id mtypes.LeaseID, services string, follow bool) (*LeaseKubeEvents, error)
 	LeaseLogs(ctx context.Context, id mtypes.LeaseID, services string, follow bool, tailLines int64) (*ServiceLogs, error)
 	ServiceStatus(ctx context.Context, id mtypes.LeaseID, service string) (*cltypes.ServiceStatus, error)
@@ -502,18 +502,18 @@ func (c *client) MigrateHostnames(ctx context.Context, hostnames []string, dseq 
 	return createClientResponseErrorIfNotOK(resp, responseBuf)
 }
 
-func (c *client) LeaseStatus(ctx context.Context, id mtypes.LeaseID) (*cltypes.LeaseStatus, error) {
+func (c *client) LeaseStatus(ctx context.Context, id mtypes.LeaseID) (LeaseStatus, error) {
 	uri, err := makeURI(c.host, leaseStatusPath(id))
 	if err != nil {
-		return nil, err
+		return LeaseStatus{}, err
 	}
 
-	var obj cltypes.LeaseStatus
+	var obj LeaseStatus
 	if err := c.getStatus(ctx, uri, &obj); err != nil {
-		return nil, err
+		return LeaseStatus{}, err
 	}
 
-	return &obj, nil
+	return obj, nil
 }
 
 func (c *client) LeaseEvents(ctx context.Context, id mtypes.LeaseID, _ string, follow bool) (*LeaseKubeEvents, error) {

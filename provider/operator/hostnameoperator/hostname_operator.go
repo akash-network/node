@@ -1,4 +1,4 @@
-package cmd
+package hostnameoperator
 
 import (
 	"bytes"
@@ -6,55 +6,45 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"strings"
-	"time"
-
-	"github.com/gorilla/mux"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"github.com/tendermint/tendermint/libs/log"
-	"golang.org/x/sync/errgroup"
-	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
-
 	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 	"github.com/ovrclk/akash/provider/cluster"
 	clusterClient "github.com/ovrclk/akash/provider/cluster/kube"
 	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	"github.com/ovrclk/akash/provider/cluster/util"
+	provider_flags "github.com/ovrclk/akash/provider/cmd/flags"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"github.com/tendermint/tendermint/libs/log"
+	"golang.org/x/sync/errgroup"
+	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
+	"net/http"
+	"strings"
+	"time"
 
 	clusterutil "github.com/ovrclk/akash/provider/cluster/util"
-)
-
-const (
-	FlagListenAddress        = "listen"
-	FlagPruneInterval        = "prune-interval"
-	FlagIgnoreListEntryLimit = "ignore-list-entry-limit"
-	FlagWebRefreshInterval   = "web-refresh-interval"
-	FlagRetryDelay           = "retry-delay"
-	FlagIgnoreListAgeLimit   = "ignore-list-age-limit"
-	FlagEventFailureLimit    = "event=failure-limit"
+	"github.com/ovrclk/akash/provider/operator/operatorcommon"
 )
 
 var (
-	errObservationStopped       = errors.New("observation stopped")
-	errExpectedResourceNotFound = fmt.Errorf("%w: resource not found", errObservationStopped)
+	errExpectedResourceNotFound = fmt.Errorf("%w: resource not found", operatorcommon.ErrObservationStopped)
 )
 
 type hostnameOperator struct {
-	hostnames  map[string]managedHostname
-	ignoreList map[mtypes.LeaseID]ignoreListEntry
+	hostnames map[string]managedHostname
+
+	leasesIgnored operatorcommon.IgnoreList
 
 	client cluster.Client
 
 	log log.Logger
 
-	ignoreListData preparedResult
-	hostnamesData  preparedResult
+	cfg    hostnameOperatorConfig
+	server operatorcommon.OperatorHTTP
 
-	cfg hostnameOperatorConfig
+	flagHostnamesData  operatorcommon.PrepareFlagFn
+	flagIgnoreListData operatorcommon.PrepareFlagFn
 }
 
 func (op *hostnameOperator) run(parentCtx context.Context) error {
@@ -84,33 +74,6 @@ func (op *hostnameOperator) run(parentCtx context.Context) error {
 	}
 }
 
-func servePreparedResult(rw http.ResponseWriter, pd preparedResult) {
-	rw.Header().Set("Cache-Control", "no-cache, max-age=0")
-	value := pd.get()
-	if len(value.data) == 0 {
-		rw.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	rw.Header().Set("Last-Modified", value.preparedAt.UTC().Format(http.TimeFormat))
-	rw.WriteHeader(http.StatusOK)
-	_, _ = rw.Write(value.data)
-}
-
-func (op *hostnameOperator) webRouter() http.Handler {
-	router := mux.NewRouter()
-
-	router.HandleFunc("/ignore-list", func(rw http.ResponseWriter, req *http.Request) {
-		servePreparedResult(rw, op.ignoreListData)
-	}).Methods("GET")
-
-	router.HandleFunc("/managed-hostnames", func(rw http.ResponseWriter, req *http.Request) {
-		servePreparedResult(rw, op.hostnamesData)
-	}).Methods("GET")
-
-	return router
-}
-
 func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 	/*
 		Note - the only possible enhancement here would be to enumerate all
@@ -118,6 +81,7 @@ func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 		avoid trying to create Ingress objects with those names. This isn't really
 		needed at this time.
 	*/
+	op.hostnames = make(map[string]managedHostname)
 	ctx, cancel := context.WithCancel(parentCtx)
 	op.log.Info("starting observation")
 
@@ -144,7 +108,7 @@ func (op *hostnameOperator) monitorUntilError(parentCtx context.Context) error {
 			"service", entry.presentServiceName,
 			"port", entry.presentExternalPort)
 	}
-	op.hostnamesData.flag()
+	op.flagHostnamesData()
 
 	events, err := op.client.ObserveHostnameState(ctx)
 	if err != nil {
@@ -167,7 +131,7 @@ loop:
 
 		case ev, ok := <-events:
 			if !ok {
-				exitError = errObservationStopped
+				exitError = operatorcommon.ErrObservationStopped
 				break loop
 			}
 			err = op.applyEvent(ctx, ev)
@@ -179,7 +143,7 @@ loop:
 		case <-pruneTicker.C:
 			op.prune()
 		case <-prepareTicker.C:
-			if err := op.prepare(); err != nil {
+			if err := op.server.PrepareAll(); err != nil {
 				op.log.Error("preparing web data failed", "err", err)
 			}
 
@@ -191,138 +155,75 @@ loop:
 	return exitError
 }
 
-func (op *hostnameOperator) prepare() error {
-	// Check each dataset and rebuild it if needed
-	if op.ignoreListData.needsPrepare {
-		op.log.Debug("preparing ignore-list")
-		buf := &bytes.Buffer{}
-		data := make(map[string]interface{})
+func (op *hostnameOperator) prepareIgnoreListData(pd operatorcommon.PreparedResult) error {
+	op.log.Debug("preparing ignore-list")
+	return op.leasesIgnored.Prepare(pd)
+}
 
-		for leaseID, ignored := range op.ignoreList {
-			preparedEntry := struct {
-				Hostnames     []string `json:"hostnames"`
-				LastError     string   `json:"last-error"`
-				LastErrorType string   `json:"last-error-type"`
-				FailedAt      string   `json:"failed-at"`
-				FailureCount  uint     `json:"failure-count"`
-				Namespace     string   `json:"namespace"`
-			}{
-				LastError:     ignored.lastError.Error(),
-				LastErrorType: fmt.Sprintf("%T", ignored.lastError),
-				FailedAt:      ignored.failedAt.UTC().String(),
-				FailureCount:  ignored.failureCount,
-				Namespace:     clusterutil.LeaseIDToNamespace(leaseID),
-			}
+func (op *hostnameOperator) prepareHostnamesData(pd operatorcommon.PreparedResult) error {
+	op.log.Debug("preparing managed-hostnames")
+	buf := &bytes.Buffer{}
+	data := make(map[string]interface{})
 
-			for hostname := range ignored.hostnames {
-				preparedEntry.Hostnames = append(preparedEntry.Hostnames, hostname)
-			}
-
-			data[leaseID.String()] = preparedEntry
+	for hostname, entry := range op.hostnames {
+		preparedEntry := struct {
+			LeaseID      mtypes.LeaseID
+			Namespace    string
+			ExternalPort uint32
+			ServiceName  string
+			LastUpdate   string
+		}{
+			LeaseID:      entry.presentLease,
+			Namespace:    clusterutil.LeaseIDToNamespace(entry.presentLease),
+			ExternalPort: entry.presentExternalPort,
+			ServiceName:  entry.presentServiceName,
+			LastUpdate:   entry.lastChangeAt.String(),
 		}
-
-		enc := json.NewEncoder(buf)
-		err := enc.Encode(data)
-		if err != nil {
-			return err
-		}
-
-		op.ignoreListData.set(buf.Bytes())
+		data[hostname] = preparedEntry
 	}
 
-	if op.hostnamesData.needsPrepare {
-		op.log.Debug("preparing managed-hostnames")
-		buf := &bytes.Buffer{}
-		data := make(map[string]interface{})
-
-		for hostname, entry := range op.hostnames {
-			preparedEntry := struct {
-				LeaseID      mtypes.LeaseID
-				Namespace    string
-				ExternalPort uint32
-				ServiceName  string
-				LastUpdate   string
-			}{
-				LeaseID:      entry.presentLease,
-				Namespace:    clusterutil.LeaseIDToNamespace(entry.presentLease),
-				ExternalPort: entry.presentExternalPort,
-				ServiceName:  entry.presentServiceName,
-				LastUpdate:   entry.lastChangeAt.String(),
-			}
-			data[hostname] = preparedEntry
-		}
-
-		enc := json.NewEncoder(buf)
-		err := enc.Encode(data)
-		if err != nil {
-			return err
-		}
-
-		op.hostnamesData.set(buf.Bytes())
+	enc := json.NewEncoder(buf)
+	err := enc.Encode(data)
+	if err != nil {
+		return err
 	}
 
+	pd.Set(buf.Bytes())
 	return nil
 }
 
 func (op *hostnameOperator) prune() {
-	// do not let the ignore list grow unbounded, it would eventually
-	// consume 100% of available memory otherwise
-	if len(op.ignoreList) > int(op.cfg.ignoreListEntryLimit) {
-		var toDelete []mtypes.LeaseID
-
-		for leaseID, entry := range op.ignoreList {
-			if time.Since(entry.failedAt) > op.cfg.ignoreListAgeLimit {
-				toDelete = append(toDelete, leaseID)
-			}
-		}
-
-		// if enough entries have not been selected for deletion
-		// then just remove half of the entries
-		if len(op.ignoreList)-len(toDelete) > int(op.cfg.ignoreListEntryLimit) {
-			op.log.Info("removing half of ignore list entries")
-			i := 0
-			for leaseID := range op.ignoreList {
-				if (i % 2) == 0 {
-					toDelete = append(toDelete, leaseID)
-				}
-				i++
-			}
-		}
-
-		for _, leaseID := range toDelete {
-			op.log.Info("removing ignore list entry", "lease", leaseID.String())
-			delete(op.ignoreList, leaseID)
-		}
-		op.ignoreListData.flag()
+	if op.leasesIgnored.Prune() {
+		op.flagIgnoreListData()
 	}
 }
 
-func (op *hostnameOperator) recordEventError(ev ctypes.HostnameResourceEvent, failure error) {
-	// ff no error, no action
-	if failure == nil {
-		return
-	}
-
+func errorIsKubernetesResourceNotFound(failure error) bool {
 	// check the error, only consider errors that are obviously
 	// indicating a missing resource
 	// otherwise simple errors like network issues could wind up with all CRDs
 	// being ignored
 
-	mark := false
-
 	if kubeErrors.IsNotFound(failure) {
-		mark = true
+		return true
 	}
 
 	if errors.Is(failure, errExpectedResourceNotFound) {
-		mark = true
+		return true
 	}
 
 	errStr := failure.Error()
 	// unless the error indicates a resource was not found, no action
-	if strings.Contains(errStr, "not found") {
-		mark = true
+	return strings.Contains(errStr, "not found")
+}
+
+func (op *hostnameOperator) recordEventError(ev ctypes.HostnameResourceEvent, failure error) {
+	// no error, no action
+	if failure == nil {
+		return
 	}
+
+	mark := errorIsKubernetesResourceNotFound(failure)
 
 	if !mark {
 		return
@@ -330,24 +231,12 @@ func (op *hostnameOperator) recordEventError(ev ctypes.HostnameResourceEvent, fa
 
 	op.log.Info("recording error for", "lease", ev.GetLeaseID().String(), "err", failure)
 
-	// Increment the error counter
-	entry := op.ignoreList[ev.GetLeaseID()]
-	entry.failureCount++
-	entry.failedAt = time.Now()
-	entry.lastError = failure
-	if entry.hostnames == nil {
-		entry.hostnames = make(map[string]struct{})
-	}
-
-	entry.hostnames[ev.GetHostname()] = struct{}{}
-
-	op.ignoreList[ev.GetLeaseID()] = entry
-	op.ignoreListData.flag()
+	op.leasesIgnored.AddError(ev.GetLeaseID(), failure, ev.GetHostname())
+	op.flagIgnoreListData()
 }
 
 func (op *hostnameOperator) isEventIgnored(ev ctypes.HostnameResourceEvent) bool {
-	entry := op.ignoreList[ev.GetLeaseID()]
-	return entry.failureCount >= op.cfg.eventFailureLimit
+	return op.leasesIgnored.IsFlagged(ev.GetLeaseID())
 }
 
 func (op *hostnameOperator) applyEvent(ctx context.Context, ev ctypes.HostnameResourceEvent) error {
@@ -365,7 +254,7 @@ func (op *hostnameOperator) applyEvent(ctx context.Context, ev ctypes.HostnameRe
 		op.recordEventError(ev, err)
 		return err
 	default:
-		return fmt.Errorf("%w: unknown event type %v", errObservationStopped, ev.GetEventType())
+		return fmt.Errorf("%w: unknown event type %v", operatorcommon.ErrObservationStopped, ev.GetEventType())
 	}
 
 }
@@ -376,7 +265,7 @@ func (op *hostnameOperator) applyDeleteEvent(ctx context.Context, ev ctypes.Host
 
 	if err == nil {
 		delete(op.hostnames, ev.GetHostname())
-		op.hostnamesData.flag()
+		op.flagHostnamesData()
 	}
 
 	return err
@@ -414,11 +303,12 @@ func buildDirective(ev ctypes.HostnameResourceEvent, serviceExpose crd.ManifestS
 	return directive
 }
 
-func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes.HostnameResourceEvent) error {
+func locateServiceFromManifest(ctx context.Context, client cluster.Client, leaseID mtypes.LeaseID, serviceName string, externalPort uint32) (crd.ManifestServiceExpose, error) {
+
 	// Locate the matchin service name & expose directive in the manifest CRD
-	found, manifestGroup, err := op.client.GetManifestGroup(ctx, ev.GetLeaseID())
+	found, manifestGroup, err := client.GetManifestGroup(ctx, leaseID)
 	if err != nil {
-		return err
+		return crd.ManifestServiceExpose{}, err
 	}
 	if !found {
 		/*
@@ -427,19 +317,19 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 			can be rewritten to watch for CRD events on the manifest as well, then avoid running this code
 			until the manifest exists.
 		*/
-		return fmt.Errorf("%w: manifest for %v", errExpectedResourceNotFound, ev.GetLeaseID())
+		return crd.ManifestServiceExpose{}, fmt.Errorf("%w: manifest for %v", errExpectedResourceNotFound, leaseID)
 	}
 
 	var selectedService crd.ManifestService
 	for _, service := range manifestGroup.Services {
-		if service.Name == ev.GetServiceName() {
+		if service.Name == serviceName {
 			selectedService = service
 			break
 		}
 	}
 
 	if selectedService.Count == 0 {
-		return fmt.Errorf("%w: service for %v - %v", errExpectedResourceNotFound, ev.GetLeaseID(), ev.GetServiceName())
+		return crd.ManifestServiceExpose{}, fmt.Errorf("%w: service for %v - %v", errExpectedResourceNotFound, leaseID, serviceName)
 	}
 
 	var selectedExpose crd.ManifestServiceExpose
@@ -448,7 +338,7 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 			continue
 		}
 
-		if ev.GetExternalPort() == uint32(util.ExposeExternalPort(manifest.ServiceExpose{
+		if externalPort == uint32(util.ExposeExternalPort(manifest.ServiceExpose{
 			Port:         expose.Port,
 			ExternalPort: expose.ExternalPort,
 		})) {
@@ -458,7 +348,16 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 	}
 
 	if selectedExpose.Port == 0 {
-		return fmt.Errorf("%w: service expose for %v - %v - %v", errExpectedResourceNotFound, ev.GetLeaseID(), ev.GetServiceName(), ev.GetExternalPort())
+		return crd.ManifestServiceExpose{}, fmt.Errorf("%w: service expose for %v - %v - %v", errExpectedResourceNotFound, leaseID, serviceName, externalPort)
+	}
+
+	return selectedExpose, nil
+}
+
+func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes.HostnameResourceEvent) error {
+	selectedExpose, err := locateServiceFromManifest(ctx, op.client, ev.GetLeaseID(), ev.GetServiceName(), ev.GetExternalPort())
+	if err != nil {
+		return err
 	}
 
 	leaseID := ev.GetLeaseID()
@@ -500,37 +399,57 @@ func (op *hostnameOperator) applyAddOrUpdateEvent(ctx context.Context, ev ctypes
 		op.log.Debug("Swapping ingress to new deployment")
 		//  Delete the ingress in one namespace and recreate it in the correct one
 		err = op.client.RemoveHostnameFromDeployment(ctx, ev.GetHostname(), entry.presentLease, false)
+		// TODO - remove entry
 		if err == nil {
 			err = op.client.ConnectHostnameToDeployment(ctx, directive)
 		}
 	}
 
-	if err == nil { // Update sored entry if everything went OK
+	if err == nil { // Update stored entry if everything went OK
 		entry.presentExternalPort = ev.GetExternalPort()
 		entry.presentServiceName = ev.GetServiceName()
 		entry.presentLease = leaseID
 		entry.lastEvent = ev
 		entry.lastChangeAt = time.Now()
 		op.hostnames[ev.GetHostname()] = entry
-		op.hostnamesData.flag()
+		op.flagHostnamesData()
 	}
 
 	return err
 }
 
-func doHostnameOperator(cmd *cobra.Command) error {
-	ns := viper.GetString(FlagK8sManifestNS)
-	logger := openLogger()
-
-	config := hostnameOperatorConfig{
-		listenAddress:        viper.GetString(FlagListenAddress),
-		pruneInterval:        viper.GetDuration(FlagPruneInterval),
-		ignoreListEntryLimit: viper.GetUint(FlagIgnoreListEntryLimit),
-		webRefreshInterval:   viper.GetDuration(FlagWebRefreshInterval),
-		retryDelay:           viper.GetDuration(FlagRetryDelay),
-		ignoreListAgeLimit:   viper.GetDuration(FlagIgnoreListAgeLimit),
-		eventFailureLimit:    viper.GetUint(FlagEventFailureLimit),
+func newHostnameOperator(logger log.Logger, client cluster.Client, config hostnameOperatorConfig, ilc operatorcommon.IgnoreListConfig) (*hostnameOperator, error) {
+	opHTTP, err := operatorcommon.NewOperatorHTTP()
+	if err != nil {
+		return nil, err
 	}
+	op := &hostnameOperator{
+		hostnames:     make(map[string]managedHostname),
+		client:        client,
+		log:           logger,
+		cfg:           config,
+		server:        opHTTP,
+		leasesIgnored: operatorcommon.NewIgnoreList(ilc),
+	}
+
+	op.flagIgnoreListData = op.server.AddPreparedEndpoint("/ignore-list", op.prepareIgnoreListData)
+	op.flagHostnamesData = op.server.AddPreparedEndpoint("/managed-hostnames", op.prepareHostnamesData)
+
+	return op, nil
+}
+
+func doHostnameOperator(cmd *cobra.Command) error {
+	ns := viper.GetString(provider_flags.FlagK8sManifestNS)
+
+	listenAddr := viper.GetString(provider_flags.FlagListenAddress)
+	config := hostnameOperatorConfig{
+		pruneInterval:      viper.GetDuration(provider_flags.FlagPruneInterval),
+		webRefreshInterval: viper.GetDuration(provider_flags.FlagWebRefreshInterval),
+		retryDelay:         viper.GetDuration(provider_flags.FlagRetryDelay),
+	}
+
+	logger := operatorcommon.OpenLogger().With("op", "hostname")
+	logger.Info("HTTP listening", "address", listenAddr)
 
 	// Config path not provided because the authorization comes from the role assigned to the deployment
 	// and provided by kubernetes
@@ -539,23 +458,16 @@ func doHostnameOperator(cmd *cobra.Command) error {
 		return err
 	}
 
-	op := hostnameOperator{
-		hostnames:  make(map[string]managedHostname),
-		client:     client,
-		log:        logger,
-		ignoreList: make(map[mtypes.LeaseID]ignoreListEntry),
-		cfg:        config,
-
-		ignoreListData: newPreparedResult(),
-		hostnamesData:  newPreparedResult(),
+	op, err := newHostnameOperator(logger, client, config, operatorcommon.IgnoreListConfigFromViper())
+	if err != nil {
+		return err
 	}
 
-	router := op.webRouter()
-
+	router := op.server.GetRouter()
 	group, ctx := errgroup.WithContext(cmd.Context())
 
 	group.Go(func() error {
-		srv := http.Server{Addr: "0.0.0.0:8085", Handler: router}
+		srv := http.Server{Addr: listenAddr, Handler: router}
 		go func() {
 			<-ctx.Done()
 			_ = srv.Close()
@@ -578,55 +490,17 @@ func doHostnameOperator(cmd *cobra.Command) error {
 	return nil
 }
 
-func HostnameOperatorCmd() *cobra.Command {
+func Cmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "hostname-operator",
-		Short:        "",
+		Short:        "kubernetes operator interfacing with k8s nginx ingress",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return doHostnameOperator(cmd)
 		},
 	}
-
-	cmd.Flags().String(FlagK8sManifestNS, "lease", "Cluster manifest namespace")
-	if err := viper.BindPFlag(FlagK8sManifestNS, cmd.Flags().Lookup(FlagK8sManifestNS)); err != nil {
-		return nil
-	}
-
-	cmd.Flags().String(FlagListenAddress, "0.0.0.0:8085", "listen address for web server")
-	if err := viper.BindPFlag(FlagListenAddress, cmd.Flags().Lookup(FlagListenAddress)); err != nil {
-		return nil
-	}
-
-	cmd.Flags().Duration(FlagPruneInterval, 10*time.Minute, "data pruning interval")
-	if err := viper.BindPFlag(FlagPruneInterval, cmd.Flags().Lookup(FlagPruneInterval)); err != nil {
-		return nil
-	}
-
-	cmd.Flags().Uint(FlagIgnoreListEntryLimit, 131072, "ignore list size limit")
-	if err := viper.BindPFlag(FlagIgnoreListEntryLimit, cmd.Flags().Lookup(FlagIgnoreListEntryLimit)); err != nil {
-		return nil
-	}
-
-	cmd.Flags().Duration(FlagIgnoreListAgeLimit, time.Hour*726, "ignore list entry age limit")
-	if err := viper.BindPFlag(FlagIgnoreListAgeLimit, cmd.Flags().Lookup(FlagIgnoreListAgeLimit)); err != nil {
-		return nil
-	}
-
-	cmd.Flags().Duration(FlagWebRefreshInterval, 5*time.Second, "web data refresh interval")
-	if err := viper.BindPFlag(FlagWebRefreshInterval, cmd.Flags().Lookup(FlagWebRefreshInterval)); err != nil {
-		return nil
-	}
-
-	cmd.Flags().Duration(FlagRetryDelay, 3*time.Second, "retry delay")
-	if err := viper.BindPFlag(FlagRetryDelay, cmd.Flags().Lookup(FlagRetryDelay)); err != nil {
-		return nil
-	}
-
-	cmd.Flags().Uint(FlagEventFailureLimit, 3, "event failure limit before it is ignored")
-	if err := viper.BindPFlag(FlagEventFailureLimit, cmd.Flags().Lookup(FlagEventFailureLimit)); err != nil {
-		return nil
-	}
+	operatorcommon.AddOperatorFlags(cmd, "0.0.0.0:8085")
+	operatorcommon.AddIgnoreListFlags(cmd)
 
 	return cmd
 }

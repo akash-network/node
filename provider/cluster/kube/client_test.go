@@ -267,23 +267,26 @@ func TestLeaseStatusWithIngressOnly(t *testing.T) {
 	status, err := clientInterface.LeaseStatus(ctx, lid)
 	require.NoError(t, err)
 	require.NotNil(t, status)
+	require.Len(t, status, 2)
 
-	require.Len(t, status.ForwardedPorts, 0)
-	require.Len(t, status.Services, 2)
-	services := status.Services
-
-	myIngressService, found := services["myingress"]
+	myIngressService, found := status["myingress"]
 	require.True(t, found)
 
 	require.Equal(t, myIngressService.Name, "myingress")
 	require.Len(t, myIngressService.URIs, 1)
 	require.Equal(t, myIngressService.URIs[0], "mytesthost.dev")
 
-	noIngressService, found := services["noingress"]
+	noIngressService, found := status["noingress"]
 	require.True(t, found)
 
 	require.Equal(t, noIngressService.Name, "noingress")
 	require.Len(t, noIngressService.URIs, 0)
+
+	// Test fordwared ports - there should not be any
+	fps, err := clientInterface.ForwardedPortStatus(ctx, lid)
+	require.NoError(t, err)
+	require.NotNil(t, fps)
+	require.Len(t, fps, 0)
 }
 
 func TestLeaseStatusWithForwardedPortOnly(t *testing.T) {
@@ -348,13 +351,20 @@ func TestLeaseStatusWithForwardedPortOnly(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, status)
 
-	require.Len(t, status.Services, 2)
-	for _, service := range status.Services {
+	require.Len(t, status, 2)
+	for _, service := range status {
 		require.Len(t, service.URIs, 0) // No ingresses, so there should be no URIs
 	}
-	require.Len(t, status.ForwardedPorts, 1)
 
-	ports := status.ForwardedPorts[serviceName]
+	// Test forwarded ports
+	fps, err := clientInterface.ForwardedPortStatus(ctx, lid)
+	require.NoError(t, err)
+	require.NotNil(t, fps)
+
+	require.Len(t, fps, 1)
+
+	ports, exists := fps[serviceName]
+	require.True(t, exists)
 	require.Len(t, ports, 1)
 	require.Equal(t, int(ports[0].ExternalPort), expectedExternalPort)
 }

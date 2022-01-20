@@ -1,6 +1,8 @@
 package v1beta2
 
-import mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+import (
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+)
 
 type LeaseIDHostnameConnection interface {
 	GetLeaseID() mtypes.LeaseID

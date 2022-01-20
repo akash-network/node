@@ -1,19 +1,21 @@
-package cmd
+package hostnameoperator
 
 import (
 	"context"
-	"io"
-	"testing"
-	"time"
-
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-
+	"encoding/json"
 	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 	"github.com/ovrclk/akash/provider/cluster/mocks"
 	cluster "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
+	"github.com/ovrclk/akash/provider/operator/operatorcommon"
 	"github.com/ovrclk/akash/testutil"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
 )
 
 type testHostnameResourceEv struct {
@@ -121,25 +123,19 @@ func makeHostnameOperatorScaffold(t *testing.T) *hostnameOperatorScaffold {
 	}
 	l := testutil.Logger(t)
 
-	op := &hostnameOperator{
-		hostnames:      make(map[string]managedHostname),
-		ignoreList:     make(map[mtypes.LeaseID]ignoreListEntry),
-		client:         client,
-		log:            l,
-		ignoreListData: newPreparedResult(),
-		hostnamesData:  newPreparedResult(),
-		cfg: hostnameOperatorConfig{
-			pruneInterval:        time.Hour,
-			ignoreListEntryLimit: 10,
-			ignoreListAgeLimit:   time.Hour,
-			webRefreshInterval:   time.Second,
-			retryDelay:           time.Second,
-			eventFailureLimit:    3,
-		},
-	}
+	op, err := newHostnameOperator(l, client, hostnameOperatorConfig{
+		pruneInterval:      time.Hour,
+		webRefreshInterval: time.Second,
+		retryDelay:         time.Second,
+	},
+		operatorcommon.IgnoreListConfig{
+			FailureLimit: 3,
+			EntryLimit:   19,
+			AgeLimit:     time.Hour,
+		})
+	require.NoError(t, err)
 
 	scaffold.op = op
-
 	return scaffold
 }
 
@@ -163,10 +159,9 @@ func TestHostnameOperatorPrune(t *testing.T) {
 		require.Error(t, err)
 	}
 
-	require.Len(t, s.op.ignoreList, testIterationCount)
+	require.Equal(t, s.op.leasesIgnored.Size(), testIterationCount)
 	s.op.prune()
-	require.Less(t, len(s.op.ignoreList), testIterationCount)
-
+	require.Less(t, s.op.leasesIgnored.Size(), testIterationCount)
 }
 
 func TestHostnameOperatorApplyDelete(t *testing.T) {
@@ -190,16 +185,18 @@ func TestHostnameOperatorApplyDelete(t *testing.T) {
 	// Simulate everything working fine
 	s.client.On("RemoveHostnameFromDeployment", mock.Anything, hostname, leaseID, true).Return(nil)
 
+	managed := grabManagedHostnames(t, s.op.server.GetRouter().ServeHTTP)
+	require.Empty(t, managed)
+
 	err := s.op.applyDeleteEvent(s.ctx, ev)
 	require.NoError(t, err)
 
 	_, exists := s.op.hostnames[hostname]
 	require.False(t, exists) // Removed from dataset
 
-	require.True(t, s.op.hostnamesData.needsPrepare)
-	require.NoError(t, s.op.prepare())
-	require.False(t, s.op.hostnamesData.needsPrepare)
-
+	require.NoError(t, s.op.server.PrepareAll())
+	managed = grabManagedHostnames(t, s.op.server.GetRouter().ServeHTTP)
+	require.Empty(t, managed)
 }
 
 func TestHostnameOperatorApplyDeleteFails(t *testing.T) {
@@ -230,6 +227,58 @@ func TestHostnameOperatorApplyDeleteFails(t *testing.T) {
 	require.True(t, exists) // Still in dataset
 }
 
+type ignoreListTestEntry struct {
+	FailureCount uint `json:"failure-count"`
+}
+
+func grabIgnoredList(t *testing.T, handler http.HandlerFunc) map[string]ignoreListTestEntry {
+	req, err := http.NewRequest(http.MethodGet, "/ignore-list", nil)
+	require.NoError(t, err)
+	rr := httptest.NewRecorder()
+
+	handler(rr, req)
+
+	switch rr.Code {
+	case http.StatusNoContent:
+		return nil
+	case http.StatusOK:
+
+	default:
+		t.Fatalf("unknown status code from ignore list endpoint %v", rr.Code)
+	}
+
+	decoder := json.NewDecoder(rr.Body)
+	data := make(map[string]ignoreListTestEntry)
+	err = decoder.Decode(&data)
+	require.NoError(t, err)
+
+	return data
+}
+
+func grabManagedHostnames(t *testing.T, handler http.HandlerFunc) map[string]interface{} {
+	req, err := http.NewRequest(http.MethodGet, "/managed-hostnames", nil)
+	require.NoError(t, err)
+	rr := httptest.NewRecorder()
+
+	handler(rr, req)
+
+	switch rr.Code {
+	case http.StatusNoContent:
+		return nil
+	case http.StatusOK:
+
+	default:
+		t.Fatalf("unknown status code from managed hostnames endpoint %v", rr.Code)
+	}
+
+	decoder := json.NewDecoder(rr.Body)
+	data := make(map[string]interface{})
+	err = decoder.Decode(&data)
+	require.NoError(t, err)
+
+	return data
+}
+
 func TestHostnameOperatorApplyAddNoManifestGroup(t *testing.T) {
 	s := makeHostnameOperatorScaffold(t)
 	require.NotNil(t, s)
@@ -248,6 +297,9 @@ func TestHostnameOperatorApplyAddNoManifestGroup(t *testing.T) {
 
 	s.client.On("GetManifestGroup", mock.Anything, leaseID).Return(false, crd.ManifestGroup{}, nil)
 
+	ignored := grabIgnoredList(t, s.op.server.GetRouter().ServeHTTP)
+	require.NotContains(t, ignored, leaseID.String())
+
 	err := s.op.applyEvent(s.ctx, ev)
 	require.Error(t, err)
 	require.Regexp(t, "^.*resource not found: manifest.*$", err)
@@ -255,11 +307,10 @@ func TestHostnameOperatorApplyAddNoManifestGroup(t *testing.T) {
 	_, exists := s.op.hostnames[hostname]
 	require.False(t, exists) // not added
 
-	ignoreEntry := s.op.ignoreList[ev.leaseID]
-	require.Equal(t, ignoreEntry.failureCount, uint(1))
-	require.True(t, s.op.ignoreListData.needsPrepare)
-	require.NoError(t, s.op.prepare())
-	require.False(t, s.op.ignoreListData.needsPrepare)
+	require.NoError(t, s.op.server.PrepareAll())
+	ignored = grabIgnoredList(t, s.op.server.GetRouter().ServeHTTP)
+	require.Contains(t, ignored, leaseID.String())
+	require.Equal(t, ignored[leaseID.String()].FailureCount, uint(1))
 }
 
 func TestHostnameOperatorApplyAddWithError(t *testing.T) {
@@ -279,17 +330,18 @@ func TestHostnameOperatorApplyAddWithError(t *testing.T) {
 	}
 
 	s.client.On("GetManifestGroup", mock.Anything, leaseID).Return(false, crd.ManifestGroup{}, io.EOF)
+	require.False(t, s.op.leasesIgnored.IsFlagged(leaseID))
 
-	err := s.op.applyEvent(s.ctx, ev)
-	require.Error(t, err)
-	require.ErrorIs(t, err, io.EOF)
+	for i := 0; i != 100; i++ {
+		err := s.op.applyEvent(s.ctx, ev)
+		require.Error(t, err)
+		require.ErrorIs(t, err, io.EOF)
+	}
 
 	_, exists := s.op.hostnames[hostname]
 	require.False(t, exists) // not added
 
-	_, exists = s.op.ignoreList[ev.leaseID] // not ignored
-	require.False(t, exists)
-	require.False(t, s.op.ignoreListData.needsPrepare)
+	require.False(t, s.op.leasesIgnored.IsFlagged(leaseID))
 }
 
 func TestHostnameOperatorIgnoresAfterLimit(t *testing.T) {
@@ -368,6 +420,12 @@ func TestHostnameOperatorApplyAdd(t *testing.T) {
 	directive := buildDirective(ev, serviceExpose) // result tested in other unit tests
 	s.client.On("ConnectHostnameToDeployment", mock.Anything, directive).Return(nil)
 
+	managed := grabManagedHostnames(t, s.op.server.GetRouter().ServeHTTP)
+	require.Empty(t, managed)
+
+	ignored := grabIgnoredList(t, s.op.server.GetRouter().ServeHTTP)
+	require.Empty(t, ignored)
+
 	err := s.op.applyEvent(s.ctx, ev)
 	require.NoError(t, err)
 
@@ -375,11 +433,14 @@ func TestHostnameOperatorApplyAdd(t *testing.T) {
 	require.True(t, exists) // not added
 	require.Equal(t, managedValue.presentLease, leaseID)
 
-	ignoreEntry := s.op.ignoreList[ev.leaseID]
-	require.Equal(t, ignoreEntry.failureCount, uint(0))
+	require.NoError(t, s.op.server.PrepareAll())
 
-	require.False(t, s.op.ignoreListData.needsPrepare)
-	require.True(t, s.op.hostnamesData.needsPrepare)
+	ignored = grabIgnoredList(t, s.op.server.GetRouter().ServeHTTP)
+	require.Empty(t, ignored)
+
+	managed = grabManagedHostnames(t, s.op.server.GetRouter().ServeHTTP)
+
+	require.Contains(t, managed, hostname)
 }
 
 func TestHostnameOperatorApplyAddMultipleServices(t *testing.T) {
