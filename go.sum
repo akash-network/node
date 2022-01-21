@@ -779,8 +779,8 @@ github.com/otiai10/curr v0.0.0-20150429015615-9b4961190c95/go.mod h1:9qAhocn7zKJ
 github.com/otiai10/curr v1.0.0/go.mod h1:LskTG5wDwr8Rs+nNQ+1LlxRjAtTZZjtJW4rMXl6j4vs=
 github.com/otiai10/mint v1.3.0/go.mod h1:F5AjcsTsWUqX+Na9fpHb52P8pcRX2CI6A3ctIT91xUo=
 github.com/otiai10/mint v1.3.2/go.mod h1:/yxELlJQ0ufhjUwhshSj+wFjZ78CnZ48/1wtmBH1OTc=
-github.com/ovrclk/cosmos-sdk v0.44.5-patches h1:nFpuGPlHVlEhebBGwJV9loHoZO94iZ9Aa3HvON6F0hc=
-github.com/ovrclk/cosmos-sdk v0.44.5-patches/go.mod h1:maUA6m2TBxOJZkbwl0eRtEBgTX37kcaiOWU5t1HEGaY=
+github.com/ovrclk/cosmos-sdk v0.44.5-grpc.patches.1 h1:1do2L7HwZXHezmOGcw08YLQ3Enn8WUXJSPskzY+GwpE=
+github.com/ovrclk/cosmos-sdk v0.44.5-grpc.patches.1/go.mod h1:maUA6m2TBxOJZkbwl0eRtEBgTX37kcaiOWU5t1HEGaY=
 github.com/ovrclk/ledger-cosmos-go v0.13.2 h1:MwjDy5tw1olqUHaVIGrPexvdkAl/5wMQubnfjgvT8M4=
 github.com/ovrclk/ledger-cosmos-go v0.13.2/go.mod h1:yFLa7PuoNE5B4kcZhurZbVXMae2jJeaijmh91+RiSto=
 github.com/ovrclk/ledger-go v0.13.4 h1:etwWczrjFota24DRSFctc0kA3MkabLfsExWxdXqvWuk=
