@@ -1,7 +1,7 @@
 apiVersion: ceph.rook.io/v1
 kind: CephBlockPool
 metadata:
-  name: replicapool
+  name: akash-deployments
   namespace: rook-ceph
 spec:
   failureDomain: host

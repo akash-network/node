@@ -2,7 +2,7 @@ INGRESS_CONFIG_PATH ?= ../ingress-nginx.yaml
 
 MINIKUBE_VM_DRIVER ?=
 MINIKUBE_IP         = $(shell minikube ip)
-MINIKUBE_INVOKE     = VM_DRIVER=$(MINIKUBE_VM_DRIVER) ROOK_PATH=$(AKASH_ROOT)/_docs/rook $(AKASH_ROOT)/script/setup-minikube.sh
+MINIKUBE_INVOKE     = VM_DRIVER=$(MINIKUBE_VM_DRIVER) ROOK_PATH=$(AKASH_ROOT)/_docs/rook/test $(AKASH_ROOT)/script/setup-minikube.sh
 
 .PHONY: minikube-cluster-create
 minikube-cluster-create: init-dirs
