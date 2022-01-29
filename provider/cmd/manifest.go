@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -81,9 +82,10 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 	}
 
 	type result struct {
-		Provider sdk.Address `json:"provider" yaml:"provider"`
-		Status   string      `json:"status" yaml:"status"`
-		Error    error       `json:"error,omitempty" yaml:"error,omitempty"`
+		Provider     sdk.Address `json:"provider" yaml:"provider"`
+		Status       string      `json:"status" yaml:"status"`
+		Error        string      `json:"error,omitempty" yaml:"error,omitempty"`
+		ErrorMessage string      `json:"errorMessage,omitempty" yaml:"errorMessage,omitempty"`
 	}
 
 	results := make([]result, len(leases))
@@ -101,10 +103,12 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 		res := result{
 			Provider: prov,
 			Status:   "PASS",
-			Error:    err,
 		}
-
 		if err != nil {
+			res.Error = err.Error()
+			if e, valid := err.(gwrest.ClientResponseError); valid {
+				res.ErrorMessage = e.Message
+			}
 			res.Status = "FAIL"
 			submitFailed = true
 		}
@@ -117,9 +121,12 @@ func doSendManifest(cmd *cobra.Command, sdlpath string) error {
 	switch cmd.Flag(flagOutput).Value.String() {
 	case outputText:
 		for _, res := range results {
-			_, _ = fmt.Fprintf(buf, "provider: %s\n\tstatus: %s\n", res.Provider, res.Status)
-			if res.Error != nil {
-				_, _ = fmt.Fprintf(buf, "\terror: %v\n", res.Error)
+			_, _ = fmt.Fprintf(buf, "provider: %s\n\tstatus:       %s\n", res.Provider, res.Status)
+			if res.Error != "" {
+				_, _ = fmt.Fprintf(buf, "\terror:        %v\n", res.Error)
+			}
+			if res.ErrorMessage != "" {
+				_, _ = fmt.Fprintf(buf, "\terrorMessage: %v\n", res.ErrorMessage)
 			}
 		}
 	case outputJSON:
