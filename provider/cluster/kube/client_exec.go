@@ -53,52 +53,26 @@ func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName s
 	tsq remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error) {
 	namespace := builder.LidNS(leaseID)
 
-	// Check that the deployment exists
-	deployments, err := c.kc.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{
-		TypeMeta:             metav1.TypeMeta{},
-		LabelSelector:        "",
-		FieldSelector:        "",
-		Watch:                false,
-		AllowWatchBookmarks:  false,
-		ResourceVersion:      "",
-		ResourceVersionMatch: "",
-		TimeoutSeconds:       nil,
-		Limit:                0,
-		Continue:             "",
-	})
+	mani, err := c.ac.AkashV2beta1().Manifests(c.ns).Get(ctx, namespace, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed getting deployments for namespace %q", err, namespace)
+		return nil, fmt.Errorf("%w: failed getting manifest", err)
 	}
 
-	// If no deployments are found yet then the deployment hasn't been spun up kubernetes yet
-	if 0 == len(deployments.Items) {
-		return nil, cluster.ErrExecDeploymentNotYetRunning
-	}
-
-	// Check that the service named exists
-	serviceExists := false
-	for _, deployment := range deployments.Items {
-		if serviceName == deployment.GetName() {
-			serviceExists = true
+loop:
+	for idx := range mani.Spec.Group.Services {
+		if mani.Spec.Group.Services[idx].Name == serviceName {
+			break loop
 		}
 
-	}
-	if !serviceExists {
-		return nil, cluster.ErrExecNoServiceWithName
+		if idx == len(mani.Spec.Group.Services)-1 {
+			return nil, cluster.ErrExecNoServiceWithName
+		}
 	}
 
 	// Check that the pod exists
 	pods, err := c.kc.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-		TypeMeta:             metav1.TypeMeta{},
-		LabelSelector:        fmt.Sprintf("akash.network/manifest-service=%s", serviceName),
-		FieldSelector:        "",
-		Watch:                false,
-		AllowWatchBookmarks:  false,
-		ResourceVersion:      "",
-		ResourceVersionMatch: "",
-		TimeoutSeconds:       nil,
-		Limit:                0,
-		Continue:             "",
+		TypeMeta:      metav1.TypeMeta{},
+		LabelSelector: fmt.Sprintf("akash.network/manifest-service=%s", serviceName),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed getting pods in namespace %q", err, namespace)
@@ -126,6 +100,7 @@ func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName s
 		return nil, fmt.Errorf("%w: the service has failed", cluster.ErrExecServiceNotRunning)
 	default:
 	}
+
 	podName := selectedPod.Name
 	containerName := serviceName // Container name is always the same as the service name
 
