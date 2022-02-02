@@ -331,13 +331,11 @@ func TestManifestWithBadServiceNameIsInvalid(t *testing.T) {
 
 func TestManifestWithServiceNameIsValid(t *testing.T) {
 	m := simpleManifest()
-	m[0].Services[0].Name = "12345" // allows all numbers
-	err := validation.ValidateManifest(m)
-	require.NoError(t, err)
 
-	m[0].Services[0].Name = "9aaa-bar" // allows starting with a number
-	err = validation.ValidateManifest(m)
-	require.NoError(t, err)
+	m[0].Services[0].Name = "9aaa-bar" // does not allow starting with a number
+	err := validation.ValidateManifest(m)
+	require.ErrorIs(t, err, validation.ErrInvalidManifest)
+	require.Regexp(t, "^.*name is invalid.*$", err)
 }
 
 func TestManifestWithDuplicateHostIsInvalid(t *testing.T) {
