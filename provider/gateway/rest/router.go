@@ -232,7 +232,7 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 		leaseID := requestLeaseID(req)
 
 		//  check if deployment actually exists in the first place before querying kubernetes
-		active, err := mclient.IsActive(context.Background(), leaseID.DeploymentID())
+		active, err := mclient.IsActive(req.Context(), leaseID.DeploymentID())
 		if err != nil {
 			log.Error("failed checking deployment activity", "err", err)
 			rw.WriteHeader(http.StatusInternalServerError)
