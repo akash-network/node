@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,7 +34,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/gorilla/mux"
-	"github.com/vulcand/oxy/forward"
 
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	kubeVersion "k8s.io/apimachinery/pkg/version"
@@ -69,18 +70,6 @@ const (
 	websocketLeaseNotFound           = 4001
 	manifestSubmitTimeout            = 120 * time.Second
 )
-
-var (
-	forwarder *forward.Forwarder
-)
-
-func init() {
-	var err error
-	forwarder, err = forward.New()
-	if err != nil {
-		panic(err)
-	}
-}
 
 type wsStreamConfig struct {
 	lid       mtypes.LeaseID
@@ -201,11 +190,8 @@ func newResourceServerRouter(log log.Logger, providerAddr sdk.Address, publicKey
 	// add a middleware to verify the JWT provided in Authorization header
 	router.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			log.Info("Finding Authorization header ...")
-			jwtString := r.Header.Get("Authorization")
-			log.Info("Authorization JWT: " + jwtString)
-			log.Info("All headers: " + fmt.Sprint(r.Header))
-			token, err := jwt.ParseWithClaims(jwtString, &ClientCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+			// verify the provided JWT
+			token, err := jwt.ParseWithClaims(r.Header.Get("Authorization"), &ClientCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 				// return the public key to be used for JWT verification
 				return publicKey, nil
 			})
@@ -214,6 +200,8 @@ func newResourceServerRouter(log log.Logger, providerAddr sdk.Address, publicKey
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}
+			// delete the Authorization header as it is no more needed
+			r.Header.Del("Authorization")
 
 			// store the owner & provider address in request context to be used in later handlers
 			ownerAddress, err := sdk.AccAddressFromBech32(token.Claims.(*ClientCustomClaims).Subject)
@@ -225,8 +213,6 @@ func newResourceServerRouter(log log.Logger, providerAddr sdk.Address, publicKey
 			gcontext.Set(r, ownerContextKey, ownerAddress)
 			gcontext.Set(r, providerContextKey, providerAddr)
 
-			log.Info("tenant authenticated: " + ownerAddress.String())
-
 			next.ServeHTTP(w, r)
 		})
 	})
@@ -234,33 +220,48 @@ func newResourceServerRouter(log log.Logger, providerAddr sdk.Address, publicKey
 	lrouter := router.PathPrefix(leasePathPrefix).Subrouter()
 	lrouter.Use(requireLeaseID())
 
-	lrouter.HandleFunc("/loki-logs",
-		lokiLogsHandler(log, lokiGwAddr)).
-		Methods("GET")
+	lokiServiceRouter := lrouter.PathPrefix("/loki-service").Subrouter()
+	lokiServiceRouter.NewRoute().Handler(lokiServiceHandler(log, lokiGwAddr))
 
 	return router
 }
 
-func lokiLogsHandler(log log.Logger, lokiGwAddr string) http.HandlerFunc {
+// lokiServiceHandler forwards all requests to the loki instance running in provider's cluster.
+// Example:
+// 		Incoming Request: http://localhost:8445/lease/1/1/1/loki-service/loki/api/v1/query?query={app=".+"}
+// 		Outgoing Request: http://{lokiGwAddr}/loki/api/v1/query?query={app=".+"}
+func lokiServiceHandler(log log.Logger, lokiGwAddr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// build loki url and set in request
-		rawUrl := fmt.Sprintf("ws://%s/loki/api/v1/tail?%s", lokiGwAddr, r.URL.RawQuery)
-		log.Info("loki url: " + rawUrl)
-		lokiTailUrl, err := url.Parse(rawUrl)
+		// set the X-Scope-OrgID header for fetching logs for the right tenant
+		r.Header.Set("X-Scope-OrgID", builder.LidNS(requestLeaseID(r)))
+
+		// build target url for the reverse proxy
+		scheme := "http" // for http & https
+		if strings.HasPrefix(r.URL.Scheme, "ws") {
+			scheme = "ws" // for ws & wss
+		}
+		rawLokiUrl := fmt.Sprintf("%s://%s", scheme, lokiGwAddr)
+		lokiUrl, err := url.Parse(rawLokiUrl)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		r.URL = lokiTailUrl
+		reverseProxy := httputil.NewSingleHostReverseProxy(lokiUrl)
 
-		// set the X-Scope-OrgID header for fetching logs for the right tenant
-		lidNS := builder.LidNS(requestLeaseID(r))
-		log.Info("Lease namespace: " + lidNS)
-		r.Header.Set("X-Scope-OrgID", lidNS)
+		// remove the "/lease/{dseq}/{gseq}/{oseq}/loki-service" path prefix from the request url
+		// before it is sent to the reverse proxy.
+		pathSplits := strings.SplitN(r.URL.Path, "/", 7)
+		if len(pathSplits) < 7 || pathSplits[6] == "" {
+			log.Error("loki api not provided in url")
+			http.Error(w, "loki api not provided in url", http.StatusBadRequest)
+			return
+		}
+		r.URL.Path = pathSplits[6]
 
-		// Forwards incoming requests to whatever location request URL points to, adds proper forwarding headers
-		log.Info("Forwarding request to loki")
-		forwarder.ServeHTTP(w, r)
+		// serve the request using the reverse proxy
+		log.Info("Forwarding request to loki", "HTTP_API", pathSplits[6])
+		reverseProxy.ServeHTTP(w, r)
 	}
 }
 
