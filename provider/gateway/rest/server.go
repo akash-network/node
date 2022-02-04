@@ -75,11 +75,11 @@ func NewResourceServer(ctx context.Context,
 	serverAddr string,
 	providerAddr sdk.Address,
 	cert *x509.Certificate,
-	lokiPort int32,
+	lokiGwAddr string,
 ) (*http.Server, error) {
 	srv := &http.Server{
 		Addr:    serverAddr,
-		Handler: newResourceServerRouter(log, providerAddr, cert.PublicKey.(*ecdsa.PublicKey), lokiPort),
+		Handler: newResourceServerRouter(log, providerAddr, cert.PublicKey.(*ecdsa.PublicKey), lokiGwAddr),
 		BaseContext: func(_ net.Listener) context.Context {
 			return ctx
 		},

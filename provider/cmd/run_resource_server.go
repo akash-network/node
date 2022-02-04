@@ -23,7 +23,7 @@ import (
 
 const (
 	FlagResourceServerListenAddress = "resource-server-listen-address"
-	FlagLokiLocalhostPort           = "loki-localhost-port"
+	FlagLokiGatewayListenAddress    = "loki-gateway-listen-address"
 )
 
 func RunResourceServerCmd() *cobra.Command {
@@ -46,9 +46,9 @@ func RunResourceServerCmd() *cobra.Command {
 		return nil
 	}
 
-	cmd.Flags().Int32(FlagLokiLocalhostPort, 3100,
-		"port where the loki instance is exposed on provider's localhost")
-	if err := viper.BindPFlag(FlagLokiLocalhostPort, cmd.Flags().Lookup(FlagLokiLocalhostPort)); err != nil {
+	cmd.Flags().String(FlagLokiGatewayListenAddress, "localhost:3100",
+		"`host:port` where the loki instance is exposed on provider's network")
+	if err := viper.BindPFlag(FlagLokiGatewayListenAddress, cmd.Flags().Lookup(FlagLokiGatewayListenAddress)); err != nil {
 		return nil
 	}
 
@@ -59,7 +59,7 @@ func RunResourceServerCmd() *cobra.Command {
 
 func doRunResourceServer(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	gwAddr := viper.GetString(FlagResourceServerListenAddress)
-	lokiPort := viper.GetInt32(FlagLokiLocalhostPort)
+	lokiGwAddr := viper.GetString(FlagLokiGatewayListenAddress)
 
 	cctx, err := sdkclient.GetClientTxContext(cmd)
 	if err != nil {
@@ -87,7 +87,7 @@ func doRunResourceServer(ctx context.Context, cmd *cobra.Command, _ []string) er
 	group, ctx := errgroup.WithContext(ctx)
 	log := openLogger()
 
-	resourceServer, err := gwrest.NewResourceServer(ctx, log, gwAddr, cctx.FromAddress, x509cert, lokiPort)
+	resourceServer, err := gwrest.NewResourceServer(ctx, log, gwAddr, cctx.FromAddress, x509cert, lokiGwAddr)
 	if err != nil {
 		return err
 	}

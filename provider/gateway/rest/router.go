@@ -70,6 +70,18 @@ const (
 	manifestSubmitTimeout            = 120 * time.Second
 )
 
+var (
+	forwarder *forward.Forwarder
+)
+
+func init() {
+	var err error
+	forwarder, err = forward.New()
+	if err != nil {
+		panic(err)
+	}
+}
+
 type wsStreamConfig struct {
 	lid       mtypes.LeaseID
 	services  string
@@ -183,7 +195,7 @@ func newJwtServerRouter(addr sdk.Address, privateKey interface{}, jwtExpiresAfte
 	return router
 }
 
-func newResourceServerRouter(log log.Logger, providerAddr sdk.Address, publicKey *ecdsa.PublicKey, lokiPort int32) *mux.Router {
+func newResourceServerRouter(log log.Logger, providerAddr sdk.Address, publicKey *ecdsa.PublicKey, lokiGwAddr string) *mux.Router {
 	router := mux.NewRouter()
 
 	// add a middleware to verify the JWT provided in Authorization header
@@ -204,11 +216,16 @@ func newResourceServerRouter(log log.Logger, providerAddr sdk.Address, publicKey
 			}
 
 			// store the owner & provider address in request context to be used in later handlers
-			ownerAddress := token.Claims.(*ClientCustomClaims).Subject
+			ownerAddress, err := sdk.AccAddressFromBech32(token.Claims.(*ClientCustomClaims).Subject)
+			if err != nil {
+				log.Error(err.Error())
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
 			gcontext.Set(r, ownerContextKey, ownerAddress)
 			gcontext.Set(r, providerContextKey, providerAddr)
 
-			log.Info("tenant authenticated: " + ownerAddress)
+			log.Info("tenant authenticated: " + ownerAddress.String())
 
 			next.ServeHTTP(w, r)
 		})
@@ -217,22 +234,17 @@ func newResourceServerRouter(log log.Logger, providerAddr sdk.Address, publicKey
 	lrouter := router.PathPrefix(leasePathPrefix).Subrouter()
 	lrouter.Use(requireLeaseID())
 
-	lrouter.HandleFunc("/logs",
-		lokiLogsHandler(log, lokiPort)).
+	lrouter.HandleFunc("/loki-logs",
+		lokiLogsHandler(log, lokiGwAddr)).
 		Methods("GET")
 
 	return router
 }
 
-func lokiLogsHandler(log log.Logger, lokiPort int32) http.HandlerFunc {
+func lokiLogsHandler(log log.Logger, lokiGwAddr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Find out namespace
-		lidNS := builder.LidNS(requestLeaseID(r))
-		log.Info("Lease namespace: " + lidNS)
-
-		// build loki url
-		//rawUrl := fmt.Sprintf("ws://localhost:%d/loki/api/v1/tail?query=%s", lokiPort, "{namespace=\"akash-services\",pod=\"inventory-operator-84d6698659-pdt4z\"}")
-		rawUrl := fmt.Sprintf("ws://localhost:%d/loki/api/v1/tail?query={namespace=\"%s\"}", lokiPort, lidNS)
+		// build loki url and set in request
+		rawUrl := fmt.Sprintf("ws://%s/loki/api/v1/tail?%s", lokiGwAddr, r.URL.RawQuery)
 		log.Info("loki url: " + rawUrl)
 		lokiTailUrl, err := url.Parse(rawUrl)
 		if err != nil {
@@ -241,14 +253,14 @@ func lokiLogsHandler(log log.Logger, lokiPort int32) http.HandlerFunc {
 		}
 		r.URL = lokiTailUrl
 
-		// Forwards incoming requests to whatever location URL points to, adds proper forwarding headers
-		fwd, err := forward.New()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+		// set the X-Scope-OrgID header for fetching logs for the right tenant
+		lidNS := builder.LidNS(requestLeaseID(r))
+		log.Info("Lease namespace: " + lidNS)
+		r.Header.Set("X-Scope-OrgID", lidNS)
+
+		// Forwards incoming requests to whatever location request URL points to, adds proper forwarding headers
 		log.Info("Forwarding request to loki")
-		fwd.ServeHTTP(w, r)
+		forwarder.ServeHTTP(w, r)
 	}
 }
 

@@ -76,7 +76,7 @@ run-resource-server:
 	$(AKASH) provider run-resource-server \
 		--from "$(PROVIDER_KEY_NAME)" \
 		--resource-server-listen-address "$(RESOURCE_SERVER_HOST)" \
-		--loki-localhost-port 3100 \
+		--loki-gateway-listen-address localhost:3100 \
 
 .PHONY: send-manifest
 send-manifest:
