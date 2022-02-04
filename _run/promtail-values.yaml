@@ -1,0 +1,28 @@
+config:
+  lokiAddress: http://loki.loki-stack:3100/loki/api/v1/push
+  snippets:
+    pipelineStages:
+      - cri: {}
+      - tenant:
+          source: namespace
+#    extraClientConfigs: |
+#      tenant_id: akash-services
+#    extraScrapeConfigs: |
+#      - job_name: config-tenant
+#        pipeline_stages:
+#          - tenant:
+#              source: namespace
+#        kubernetes_sd_configs:
+#          - role: pod
+#        relabel_configs:
+#          - action: replace
+#            source_labels:
+#              - __meta_kubernetes_namespace
+#            target_label: namespace
+#        static_configs:
+#        file_sd_configs:
+#    scrape_configs:
+#      - job_name: config-tenant
+#        pipeline_stages:
+#          - tenant:
+#              source: namespace
