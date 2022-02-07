@@ -15,11 +15,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/ovrclk/akash/provider/cluster/kube/builder"
 
 	"github.com/cosmos/cosmos-sdk/version"
-
-	"github.com/golang-jwt/jwt/v4"
 
 	"k8s.io/client-go/tools/remotecommand"
 
@@ -240,14 +239,13 @@ func lokiServiceHandler(log log.Logger, lokiGwAddr string) http.HandlerFunc {
 		if strings.HasPrefix(r.URL.Scheme, "ws") {
 			scheme = "ws" // for ws & wss
 		}
-		rawLokiUrl := fmt.Sprintf("%s://%s", scheme, lokiGwAddr)
-		lokiUrl, err := url.Parse(rawLokiUrl)
+		lokiURL, err := url.Parse(fmt.Sprintf("%s://%s", scheme, lokiGwAddr))
 		if err != nil {
 			log.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		reverseProxy := httputil.NewSingleHostReverseProxy(lokiUrl)
+		reverseProxy := httputil.NewSingleHostReverseProxy(lokiURL)
 
 		// remove the "/lease/{dseq}/{gseq}/{oseq}/loki-service" path prefix from the request url
 		// before it is sent to the reverse proxy.
