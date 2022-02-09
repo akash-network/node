@@ -187,34 +187,7 @@ func newResourceServerRouter(log log.Logger, providerAddr sdk.Address, publicKey
 	router := mux.NewRouter()
 
 	// add a middleware to verify the JWT provided in Authorization header
-	router.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// verify the provided JWT
-			token, err := jwt.ParseWithClaims(r.Header.Get("Authorization"), &ClientCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-				// return the public key to be used for JWT verification
-				return publicKey, nil
-			})
-			if err != nil {
-				log.Error(err.Error())
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-				return
-			}
-			// delete the Authorization header as it is no more needed
-			r.Header.Del("Authorization")
-
-			// store the owner & provider address in request context to be used in later handlers
-			ownerAddress, err := sdk.AccAddressFromBech32(token.Claims.(*ClientCustomClaims).Subject)
-			if err != nil {
-				log.Error(err.Error())
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-				return
-			}
-			gcontext.Set(r, ownerContextKey, ownerAddress)
-			gcontext.Set(r, providerContextKey, providerAddr)
-
-			next.ServeHTTP(w, r)
-		})
-	})
+	router.Use(resourceServerAuth(log, providerAddr, publicKey))
 
 	lrouter := router.PathPrefix(leasePathPrefix).Subrouter()
 	lrouter.Use(requireLeaseID())

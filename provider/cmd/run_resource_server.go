@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -84,10 +85,15 @@ func doRunResourceServer(ctx context.Context, cmd *cobra.Command, _ []string) er
 		return err
 	}
 
+	pubkey, ok := x509cert.PublicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return errors.New("expected a ecdsa public key")
+	}
+
 	group, ctx := errgroup.WithContext(ctx)
 	log := openLogger()
 
-	resourceServer, err := gwrest.NewResourceServer(ctx, log, gwAddr, cctx.FromAddress, x509cert, lokiGwAddr)
+	resourceServer, err := gwrest.NewResourceServer(ctx, log, gwAddr, cctx.FromAddress, pubkey, lokiGwAddr)
 	if err != nil {
 		return err
 	}

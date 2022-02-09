@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/tls"
-	"crypto/x509"
 	"net"
 	"net/http"
 	"time"
@@ -74,15 +73,13 @@ func NewResourceServer(ctx context.Context,
 	log log.Logger,
 	serverAddr string,
 	providerAddr sdk.Address,
-	cert *x509.Certificate,
+	pubkey *ecdsa.PublicKey,
 	lokiGwAddr string,
 ) (*http.Server, error) {
 	srv := &http.Server{
-		Addr:    serverAddr,
-		Handler: newResourceServerRouter(log, providerAddr, cert.PublicKey.(*ecdsa.PublicKey), lokiGwAddr),
-		BaseContext: func(_ net.Listener) context.Context {
-			return ctx
-		},
+		Addr:        serverAddr,
+		Handler:     newResourceServerRouter(log, providerAddr, pubkey, lokiGwAddr),
+		BaseContext: func(_ net.Listener) context.Context { return ctx },
 	}
 
 	return srv, nil
