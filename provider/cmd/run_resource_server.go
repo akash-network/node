@@ -27,6 +27,10 @@ const (
 	FlagLokiGatewayListenAddress    = "loki-gateway-listen-address"
 )
 
+var (
+	ErrEcdsaPubkeyExpected = errors.New("expected a ecdsa public key")
+)
+
 func RunResourceServerCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "run-resource-server",
@@ -87,7 +91,7 @@ func doRunResourceServer(ctx context.Context, cmd *cobra.Command, _ []string) er
 
 	pubkey, ok := x509cert.PublicKey.(*ecdsa.PublicKey)
 	if !ok {
-		return errors.New("expected a ecdsa public key")
+		return ErrEcdsaPubkeyExpected
 	}
 
 	group, ctx := errgroup.WithContext(ctx)
