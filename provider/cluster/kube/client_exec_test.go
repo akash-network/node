@@ -3,7 +3,7 @@ package kube
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"errors"
 	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 	akashclient_fake "github.com/ovrclk/akash/pkg/client/clientset/versioned/fake"
 	"github.com/ovrclk/akash/provider/cluster"
@@ -11,7 +11,6 @@ import (
 	"github.com/ovrclk/akash/sdl"
 	"github.com/ovrclk/akash/testutil"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
-	"errors"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +27,7 @@ import (
 
 const (
 	execTestServiceName = "web"
-	)
+)
 
 var errNoSPDYInTest = errors.New("SPDY connections blocked in test")
 
@@ -68,27 +67,20 @@ func TestExecResultImpl(t *testing.T) {
 
 type execScaffold struct {
 	settings builder.Settings
-	leaseID mtypes.LeaseID
+	leaseID  mtypes.LeaseID
 
 	deploymentSDL sdl.SDL
-	crdManifest *crd.Manifest
+	crdManifest   *crd.Manifest
 
 	akashFake *akashclient_fake.Clientset
-	kubeFake *kubefake.Clientset
+	kubeFake  *kubefake.Clientset
 
 	client Client
 
 	ctx context.Context
-
 }
 
-type fakeRoundTripper int
-
-func (fakeRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	return nil, fmt.Errorf("joe")
-}
-
-func withExecTestScaffold(t *testing.T, changePod func(pod *corev1.Pod) error, test func(s *execScaffold)){
+func withExecTestScaffold(t *testing.T, changePod func(pod *corev1.Pod) error, test func(s *execScaffold)) {
 	s := &execScaffold{}
 
 	s.leaseID = testutil.LeaseID(t)
@@ -99,7 +91,7 @@ func withExecTestScaffold(t *testing.T, changePod func(pod *corev1.Pod) error, t
 
 	settingCtx := context.WithValue(context.Background(), builder.SettingsKey, s.settings)
 	var cancel context.CancelFunc
-	s.ctx, cancel = context.WithTimeout(settingCtx, 30 *time.Second)
+	s.ctx, cancel = context.WithTimeout(settingCtx, 30*time.Second)
 	defer cancel()
 
 	deploymentPath, err := filepath.Abs("../../../x/deployment/testdata/deployment-v2.yaml")
@@ -121,19 +113,19 @@ func withExecTestScaffold(t *testing.T, changePod func(pod *corev1.Pod) error, t
 	s.kubeFake = kubefake.NewSimpleClientset()
 
 	pod := &corev1.Pod{
-		TypeMeta:   metav1.TypeMeta{},
+		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:                       "testpod0",
-			Labels:                     map[string]string{
-				"akash.network/manifest-service" : execTestServiceName,
+			Name: "testpod0",
+			Labels: map[string]string{
+				"akash.network/manifest-service": execTestServiceName,
 			},
 		},
-		Status:     corev1.PodStatus{
-			Phase:                      corev1.PodRunning,
-			Conditions:                 []corev1.PodCondition{
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
+			Conditions: []corev1.PodCondition{
 				{
-					Type:               corev1.PodReady,
-					Status:             corev1.ConditionTrue,
+					Type:   corev1.PodReady,
+					Status: corev1.ConditionTrue,
 				},
 			},
 		},
@@ -149,22 +141,22 @@ func withExecTestScaffold(t *testing.T, changePod func(pod *corev1.Pod) error, t
 
 	myLog := testutil.Logger(t)
 
-		s.client = &client{
-		kc:                s.kubeFake,
-		ac:                s.akashFake,
-		ns:                testKubeClientNs,
-		log:               myLog.With("mode", "test-kube-provider-client"),
+	s.client = &client{
+		kc:  s.kubeFake,
+		ac:  s.akashFake,
+		ns:  testKubeClientNs,
+		log: myLog.With("mode", "test-kube-provider-client"),
 		kubeContentConfig: &rest.Config{
 			/**
 			The Transport and Dial members of this aren't used because a SPDY transport is created. The only
 			opportunity to hijack that is in the Proxy function
-			 */
-			Host:                "localhost:1234", // Never connected to, just needs to be something valid
-			APIPath:             "/client-exec-test",
-			UserAgent:           "client_exec_test.go",
-			Username: "theusername",
-			Password: "thepassword",
-			Proxy: func(req *http.Request) (*url.URL, error){
+			*/
+			Host:      "localhost:1234", // Never connected to, just needs to be something valid
+			APIPath:   "/client-exec-test",
+			UserAgent: "client_exec_test.go",
+			Username:  "theusername",
+			Password:  "thepassword",
+			Proxy: func(req *http.Request) (*url.URL, error) {
 				return nil, errNoSPDYInTest
 			},
 		},
@@ -174,7 +166,7 @@ func withExecTestScaffold(t *testing.T, changePod func(pod *corev1.Pod) error, t
 }
 
 func TestClientExec(t *testing.T) {
-	withExecTestScaffold(t, nil, func(s *execScaffold){
+	withExecTestScaffold(t, nil, func(s *execScaffold) {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 
@@ -197,7 +189,7 @@ func TestClientExec(t *testing.T) {
 }
 
 func TestClientExecTty(t *testing.T) {
-	withExecTestScaffold(t, nil, func(s *execScaffold){
+	withExecTestScaffold(t, nil, func(s *execScaffold) {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		stdin := &bytes.Buffer{}
@@ -221,7 +213,7 @@ func TestClientExecTty(t *testing.T) {
 }
 
 func TestClientExecWrongServiceName(t *testing.T) {
-	withExecTestScaffold(t, nil, func(s *execScaffold){
+	withExecTestScaffold(t, nil, func(s *execScaffold) {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 
@@ -240,7 +232,7 @@ func TestClientExecWrongServiceName(t *testing.T) {
 }
 
 func TestClientExecWrongPodIndex(t *testing.T) {
-	withExecTestScaffold(t, nil, func(s *execScaffold){
+	withExecTestScaffold(t, nil, func(s *execScaffold) {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 
@@ -262,7 +254,7 @@ func TestClientExecPodNotRunning(t *testing.T) {
 	withExecTestScaffold(t, func(pod *corev1.Pod) error {
 		pod.Status.Phase = corev1.PodSucceeded
 		return nil
-	}, func(s *execScaffold){
+	}, func(s *execScaffold) {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 
@@ -285,7 +277,7 @@ func TestClientExecPodFailed(t *testing.T) {
 	withExecTestScaffold(t, func(pod *corev1.Pod) error {
 		pod.Status.Phase = corev1.PodFailed
 		return nil
-	}, func(s *execScaffold){
+	}, func(s *execScaffold) {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 
@@ -308,7 +300,7 @@ func TestClientExecPodNotReady(t *testing.T) {
 	withExecTestScaffold(t, func(pod *corev1.Pod) error {
 		pod.Status.Conditions[0].Status = corev1.ConditionFalse
 		return nil
-	}, func(s *execScaffold){
+	}, func(s *execScaffold) {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 

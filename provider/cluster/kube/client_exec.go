@@ -105,7 +105,7 @@ loop:
 	isReady := false
 	for _, cond := range selectedPod.Status.Conditions {
 		if cond.Type == corev1.PodReady {
-			 isReady = cond.Status == corev1.ConditionTrue
+			isReady = cond.Status == corev1.ConditionTrue
 		}
 	}
 
