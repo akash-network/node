@@ -2,6 +2,7 @@ package kube
 
 import (
 	"context"
+	"k8s.io/client-go/rest"
 	"testing"
 
 	manifest "github.com/ovrclk/akash/manifest/v2beta1"
@@ -35,10 +36,11 @@ const testKubeClientNs = "nstest1111"
 func clientForTest(t *testing.T, kc kubernetes.Interface, ac akashclient.Interface) Client {
 	myLog := testutil.Logger(t)
 	result := &client{
-		kc:  kc,
-		ac:  ac,
-		log: myLog.With("mode", "test-kube-provider-client"),
-		ns:  testKubeClientNs,
+		kc:                kc,
+		ac:                ac,
+		ns:                testKubeClientNs,
+		log:               myLog.With("mode", "test-kube-provider-client"),
+		kubeContentConfig: &rest.Config{},
 	}
 
 	return result
