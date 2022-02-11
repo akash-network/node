@@ -59,7 +59,7 @@ func TestSendManifest(clientCtx client.Context, id mtypes.BidID, sdlPath string,
 	return testutilcli.ExecTestCLICmd(context.Background(), clientCtx, cobraCmd, args...)
 }
 
-func TestLeaseShell(clientCtx client.Context, extraArgs []string, lID mtypes.LeaseID, replicaIndex int, tty bool, stdin bool, serviceName string, cmd ...string) (sdktest.BufferWriter, error) {
+func TestLeaseShell(ctx context.Context, clientCtx client.Context, extraArgs []string, lID mtypes.LeaseID, replicaIndex int, tty bool, stdin bool, serviceName string, cmd ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--provider=%s", lID.Provider),
 		fmt.Sprintf("--replica-index=%d", replicaIndex),
@@ -81,7 +81,7 @@ func TestLeaseShell(clientCtx client.Context, extraArgs []string, lID mtypes.Lea
 	cobraCmd := pcmd.LeaseShellCmd()
 	releaseCmdLock()
 
-	return testutilcli.ExecTestCLICmd(context.Background(), clientCtx, cobraCmd, args...)
+	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cobraCmd, args...)
 }
 
 func TestMigrateHostname(clientCtx client.Context, leaseID mtypes.LeaseID, dseq uint64, hostname string, cmd ...string) (sdktest.BufferWriter, error) {
