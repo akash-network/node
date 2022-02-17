@@ -43,8 +43,16 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	deploymentPath, err := filepath.Abs("../../testdata/deployment.yaml")
 	s.Require().NoError(err)
 
-	// Create client certificate
-	_, err = ccli.TxCreateClientExec(
+	// Generate client certificate
+	_, err = ccli.TxGenerateClientExec(
+		val.ClientCtx,
+		val.Address,
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.network.WaitForNextBlock())
+
+	// Publish client certificate
+	_, err = ccli.TxPublishClientExec(
 		val.ClientCtx,
 		val.Address,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),

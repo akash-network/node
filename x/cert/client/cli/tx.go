@@ -1,25 +1,31 @@
 package cli
 
 import (
+	"crypto/x509"
 	"encoding/asn1"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/ovrclk/akash/sdkutil"
 	"github.com/spf13/cobra"
 	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 	"github.com/spf13/viper"
+	"math/big"
 	"time"
 )
 
 const (
-
-	flagRie    = "rie"
 	flagSerial = "serial"
 	flagOverwrite = "overwrite"
 	flagValidTime = "valid-duration"
 	flagStart = "start-time"
 	flagToGenesis = "to-genesis"
+)
+
+var (
+	errCertificate = errors.New("certificate error")
+	errCertificateDoesNotExist = fmt.Errorf("%w: does not exist", errCertificate)
 )
 
 var AuthVersionOID = asn1.ObjectIdentifier{2, 23, 133, 2, 6}
@@ -100,6 +106,14 @@ func doPublishCmd(cmd *cobra.Command) error {
 		return err
 	}
 
+	exists, err := kpm.keyExists()
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errCertificateDoesNotExist
+	}
+
 	cert, _, pubKey, err := kpm.read()
 	if err != nil {
 		return err
@@ -131,6 +145,52 @@ func doPublishCmd(cmd *cobra.Command) error {
 			},
 		})
 
+	}
+
+	return sdkutil.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
+}
+
+func doRevokeCmd(cmd *cobra.Command) error {
+	serial := viper.GetString(flagSerial)
+	cctx, err := sdkclient.GetClientTxContext(cmd)
+	if err != nil {
+		return err
+	}
+
+	if len(serial) == 0 {
+		if _, valid := new(big.Int).SetString(serial, 10); !valid {
+			return errInvalidSerialFlag
+		}
+	} else {
+
+		fromAddress := cctx.GetFromAddress()
+
+		kpm, err := newKeyPairManager(cctx, fromAddress)
+		if err != nil {
+			return err
+		}
+
+		cert, _, _, err := kpm.read()
+		if err != nil {
+			return err
+		}
+
+
+		parsedCert, err := x509.ParseCertificate(cert)
+		if err != nil {
+			return err
+		}
+
+		serial = parsedCert.SerialNumber.String()
+	}
+
+	// TODO - query to check that cert actually is on chain & not revoked
+
+	msg := &types.MsgRevokeCertificate{
+		ID: types.CertificateID{
+			Owner:  cctx.FromAddress.String(),
+			Serial: serial,
+		},
 	}
 
 	return sdkutil.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)

@@ -68,7 +68,15 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
 
 	// Create client certificate
-	_, err = ccli.TxCreateClientExec(
+	_, err = ccli.TxGenerateClientExec(
+		val.ClientCtx,
+		val.Address,
+	)
+	s.Require().NoError(err)
+
+
+	// Publish client certificate
+	_, err = ccli.TxPublishClientExec(
 		val.ClientCtx,
 		val.Address,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),

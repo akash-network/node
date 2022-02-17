@@ -19,6 +19,12 @@ import (
 	"time"
 )
 
+var (
+	errCertificateNotFoundInPEM = fmt.Errorf("%w: certificate not found in PEM", errCertificate)
+	errPrivateKeyNotFoundInPEM = fmt.Errorf("%w: private key not found in PEM", errCertificate)
+	errPublicKeyNotFoundInPEM = fmt.Errorf("%w: public key not found in PEM", errCertificate)
+)
+
 type keyPairManager struct {
 	addr sdk.AccAddress
 	passwordBytes []byte
@@ -77,7 +83,7 @@ func (kpm *keyPairManager) generateImpl(notBefore, notAfter time.Time, domains [
 	// Generate the private key
 	var priv *ecdsa.PrivateKey
 	if priv, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader); err != nil {
-		return err
+		return fmt.Errorf("could not generate key: %w", err)
 	}
 
 	serialNumber := new(big.Int).SetInt64(time.Now().UTC().UnixNano())
@@ -129,34 +135,34 @@ func (kpm *keyPairManager) generateImpl(notBefore, notAfter time.Time, domains [
 
 	var certDer []byte
 	if certDer, err = x509.CreateCertificate(rand.Reader, &template, &template, priv.Public(), priv); err != nil {
-		return err
+		return fmt.Errorf("could not create certificate: %w", err)
 	}
 
 	var keyDer []byte
 	if keyDer, err = x509.MarshalPKCS8PrivateKey(priv); err != nil {
-		return err
+		return fmt.Errorf("could not create private key: %w", err)
 	}
 
 	var pubKeyDer []byte
 	if pubKeyDer, err = x509.MarshalPKIXPublicKey(priv.Public()); err != nil {
-		return err
+		return fmt.Errorf("could not create public key: %w", err)
 	}
 
 	var blk *pem.Block
 	// fixme #1182
 	blk, err = x509.EncryptPEMBlock(rand.Reader, types.PemBlkTypeECPrivateKey, keyDer, kpm.passwordBytes, x509.PEMCipherAES256) // nolint: staticcheck
 	if err != nil {
-		return err
+		return fmt.Errorf("could not encrypt private key as PEM: %w", err)
 	}
 
 	// Write the certificate
 	if err = pem.Encode(fout, &pem.Block{Type: types.PemBlkTypeCertificate, Bytes: certDer}); err != nil {
-		return err
+		return fmt.Errorf("could not encode certificate as PEM: %w", err)
 	}
 
 	// Write the encrypted private key
 	if err = pem.Encode(fout, blk); err != nil {
-		return err
+		return fmt.Errorf("could not encode private key as PEM: %w", err)
 	}
 
 	// Write the public key
@@ -164,7 +170,7 @@ func (kpm *keyPairManager) generateImpl(notBefore, notAfter time.Time, domains [
 		Type:    types.PemBlkTypeECPublicKey,
 		Bytes:   pubKeyDer,
 	}); err != nil {
-		return err
+		return fmt.Errorf("could not encode public key as PEM: %w", err)
 	}
 
 	return nil
@@ -180,7 +186,7 @@ func (kpm *keyPairManager) read() ([]byte, []byte, []byte, error) {
 
 	closeErr := pemIn.Close()
 	if closeErr != nil {
-		return nil, nil, nil, closeErr
+		return nil, nil, nil, fmt.Errorf("could not close PEM file: %w", closeErr)
 	}
 
 	return cert, privKey, pubKey, err
@@ -198,21 +204,21 @@ func (kpm *keyPairManager) readImpl(fin io.Reader) ([]byte, []byte, []byte, erro
 	// Read certificate
 	block, remaining := pem.Decode(data)
 	if block == nil {
-		return nil, nil, nil, fmt.Errorf("certificate key not found in PEM")
+		return nil, nil, nil, errCertificateNotFoundInPEM
 	}
 	cert := block.Bytes
 
 	// Read private key
 	block, remaining = pem.Decode(remaining)
 	if block == nil {
-		return nil, nil, nil, fmt.Errorf("private key not found in PEM")
+		return nil, nil, nil, errPrivateKeyNotFoundInPEM
 	}
 	privKey := block.Bytes
 
 	// Read public key
 	block, remaining = pem.Decode(remaining)
 	if block == nil {
-		return nil, nil, nil, fmt.Errorf("public key not found in PEM")
+		return nil, nil, nil, errPublicKeyNotFoundInPEM
 	}
 	pubKey := block.Bytes
 

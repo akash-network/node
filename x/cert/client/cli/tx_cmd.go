@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
@@ -9,11 +8,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/ovrclk/akash/sdkutil"
 	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"math/big"
 	"time"
 )
 
@@ -32,14 +29,23 @@ func cmdGenerate() *cobra.Command {
 	return cmd
 }
 
-
-
-func addGenerateflags(cmd *cobra.Command){
+func addGenerateflags(cmd *cobra.Command) error {
 	cmd.Flags().String(flagStart, "", "certificate is not valid before this date. default current timestamp. RFC3339")
+	if err := viper.BindPFlag(flagStart, cmd.Flags().Lookup(flagStart)); err != nil {
+		return err
+	}
+
 	cmd.Flags().Duration(flagValidTime, time.Hour * 24 * 365, "certificate is not valid after this date. RFC3339")
+	if err := viper.BindPFlag(flagValidTime, cmd.Flags().Lookup(flagValidTime)); err != nil {
+		return err
+	}
 	cmd.Flags().Bool(flagOverwrite, false, "overwrite existing certificate if present")
+	if err := viper.BindPFlag(flagOverwrite, cmd.Flags().Lookup(flagOverwrite)); err != nil {
+		return err
+	}
 
 	flags.AddTxFlagsToCmd(cmd) // TODO - add just the keyring flags? not all the TX ones
+	return nil
 }
 
 func cmdGenerateClient() *cobra.Command {
@@ -52,7 +58,10 @@ func cmdGenerateClient() *cobra.Command {
 		},
 		SilenceUsage: true,
 	}
-	addGenerateflags(cmd)
+	err := addGenerateflags(cmd)
+	if err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -68,7 +77,10 @@ func cmdGenerateServer() *cobra.Command {
 		SilenceUsage: true,
 		Args:         cobra.MinimumNArgs(1),
 	}
-	addGenerateflags(cmd)
+	err := addGenerateflags(cmd)
+	if err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -97,7 +109,10 @@ func cmdPublishClient() *cobra.Command {
 		},
 		SilenceUsage: true,
 	}
-	addPublishFlags(cmd)
+	err := addPublishFlags(cmd)
+	if err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -112,14 +127,23 @@ func cmdPublishServer() *cobra.Command {
 		},
 		SilenceUsage: true,
 	}
-	addPublishFlags(cmd)
+	err := addPublishFlags(cmd)
+	if err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
 
-func addPublishFlags(cmd *cobra.Command) {
+func addPublishFlags(cmd *cobra.Command) error {
 	cmd.Flags().Bool(flagToGenesis, false, "add to genesis")
+	if err := viper.BindPFlag(flagToGenesis, cmd.Flags().Lookup(flagToGenesis)); err != nil {
+		return err
+	}
+
 	flags.AddTxFlagsToCmd(cmd)
+
+	return nil
 }
 
 func addCertToGenesis(cmd *cobra.Command, cert types.GenesisCertificate) error {
@@ -148,7 +172,7 @@ func addCertToGenesis(cmd *cobra.Command, cert types.GenesisCertificate) error {
 	certsGenState := types.GetGenesisStateFromAppState(cdc, appState)
 
 	if certsGenState.Certificates.Contains(cert) {
-		return fmt.Errorf("%w: cannot add already existing certificate")
+		return fmt.Errorf("%w: cannot add already existing certificate", err)
 	}
 	certsGenState.Certificates = append(certsGenState.Certificates, cert)
 
@@ -182,51 +206,6 @@ func cmdRevoke() *cobra.Command {
 	return cmd
 }
 
-func doRevokeCmd(cmd *cobra.Command) error {
-	serial := viper.GetString(flagSerial)
-	cctx, err := sdkclient.GetClientTxContext(cmd)
-	if err != nil {
-		return err
-	}
-
-	if len(serial) == 0 {
-		if _, valid := new(big.Int).SetString(serial, 10); !valid {
-			return errInvalidSerialFlag
-		}
-	} else {
-
-		fromAddress := cctx.GetFromAddress()
-
-		kpm, err := newKeyPairManager(cctx, fromAddress)
-		if err != nil {
-			return err
-		}
-
-		cert, _, _, err := kpm.read()
-		if err != nil {
-			return err
-		}
-
-
-		parsedCert, err := x509.ParseCertificate(cert)
-		if err != nil {
-			return err
-		}
-
-		serial = parsedCert.SerialNumber.String()
-	}
-
-
-	msg := &types.MsgRevokeCertificate{
-		ID: types.CertificateID{
-		Owner:  cctx.FromAddress.String(),
-		Serial: serial,
-		},
-	}
-
-	return sdkutil.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
-}
-
 func cmdRevokeClient() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "server",
@@ -237,7 +216,10 @@ func cmdRevokeClient() *cobra.Command {
 		},
 		SilenceUsage: true,
 	}
-	addRevokeCmdFlags(cmd)
+	err := addRevokeCmdFlags(cmd)
+	if err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -252,12 +234,20 @@ func cmdRevokeServer() *cobra.Command {
 		},
 		SilenceUsage: true,
 	}
-	addRevokeCmdFlags(cmd)
+	err := addRevokeCmdFlags(cmd)
+	if err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
 
-func addRevokeCmdFlags(cmd *cobra.Command) {
+func addRevokeCmdFlags(cmd *cobra.Command) error {
 	cmd.Flags().String(flagSerial, "", "revoke certificate by serial number")
+	if err := viper.BindPFlag(flagSerial, cmd.Flags().Lookup(flagSerial)); err != nil {
+		return err
+	}
+
 	flags.AddTxFlagsToCmd(cmd)
+	return nil
 }
