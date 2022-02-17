@@ -1,41 +1,25 @@
 package cli
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/asn1"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"math/big"
-	"net"
-	"os"
-	"strconv"
-	"strings"
-	"time"
-
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-
 	"github.com/ovrclk/akash/sdkutil"
-	"github.com/ovrclk/akash/util/cli"
+	"github.com/spf13/cobra"
 	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
-	cutils "github.com/ovrclk/akash/x/cert/utils"
+	"github.com/spf13/viper"
+	"time"
 )
 
 const (
-	flagNbf    = "nbf"
-	flagNaf    = "naf"
+
 	flagRie    = "rie"
 	flagSerial = "serial"
+	flagOverwrite = "overwrite"
+	flagValidTime = "valid-duration"
+	flagStart = "start-time"
+	flagToGenesis = "to-genesis"
 )
 
 var AuthVersionOID = asn1.ObjectIdentifier{2, 23, 133, 2, 6}
@@ -48,10 +32,118 @@ func GetTxCmd() *cobra.Command {
 		RunE:                       sdkclient.ValidateCmd,
 	}
 
+	/**
+	Commands
+	1. Generate - create public / private key pair
+	2. Publish - publish a key pair to the blockchain
+	3. Revoke - revoke a key pair on the blockchain
+
+	 */
+
 	cmd.AddCommand(
-		cmdCreate(),
+		cmdGenerate(),
+		cmdPublish(),
 		cmdRevoke(),
 	)
+
+	return cmd
+}
+
+func doGenerateCmd(cmd *cobra.Command, domains []string) error {
+	allowOverwrite := viper.GetBool(flagOverwrite)
+
+	cctx, err := sdkclient.GetClientTxContext(cmd)
+	if err != nil {
+		return err
+	}
+	fromAddress := cctx.GetFromAddress()
+
+	kpm, err := newKeyPairManager(cctx, fromAddress)
+	if err != nil {
+		return err
+	}
+
+	exists, err := kpm.keyExists()
+	if err != nil {
+		return err
+	}
+	if !allowOverwrite && exists{
+		return fmt.Errorf("cannot overwrite")
+	}
+
+	var startTime time.Time
+	startTimeStr := viper.GetString(flagStart)
+	if len(startTimeStr) == 0 {
+		startTime = time.Now().Truncate(time.Second)
+	} else {
+		startTime, err = time.Parse(time.RFC3339, startTimeStr)
+		if err != nil {
+			return err
+		}
+	}
+	validDuration := viper.GetDuration(flagValidTime)
+
+	return kpm.generate(startTime, startTime.Add(validDuration), domains)
+}
+
+func doPublishCmd(cmd *cobra.Command) error {
+	toGenesis := viper.GetBool(flagToGenesis)
+
+	cctx, err := sdkclient.GetClientTxContext(cmd)
+	if err != nil {
+		return err
+	}
+	fromAddress := cctx.GetFromAddress()
+
+	kpm, err := newKeyPairManager(cctx, fromAddress)
+	if err != nil {
+		return err
+	}
+
+	cert, _, pubKey, err := kpm.read()
+	if err != nil {
+		return err
+	}
+
+	msg := &types.MsgCreateCertificate{
+		Owner: fromAddress.String(),
+		Cert: pem.EncodeToMemory(&pem.Block{
+			Type:  types.PemBlkTypeCertificate,
+			Bytes: cert,
+		}),
+		Pubkey: pem.EncodeToMemory(&pem.Block{
+			Type:  types.PemBlkTypeECPublicKey,
+			Bytes: pubKey,
+		}),
+	}
+
+	if err = msg.ValidateBasic(); err != nil {
+		return err
+	}
+
+	if toGenesis {
+		return addCertToGenesis(cmd, types.GenesisCertificate{
+			Owner: msg.Owner,
+			Certificate: types.Certificate{
+				State:  types.CertificateValid,
+				Cert:   msg.Cert,
+				Pubkey: msg.Pubkey,
+			},
+		})
+
+	}
+
+	return sdkutil.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
+}
+
+/**
+func cmdRevoke() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:                        "revoke",
+		Short:                      "",
+		SuggestionsMinimumDistance: 2,
+		RunE:                       sdkclient.ValidateCmd,
+	}
 
 	return cmd
 }
@@ -72,7 +164,7 @@ func cmdCreate() *cobra.Command {
 	return cmd
 }
 
-func cmdRevoke() *cobra.Command {
+func cmdRevokeOld() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "revoke",
 		Short:        "revoke api certificate",
@@ -185,7 +277,6 @@ func doCreateCmd(cmd *cobra.Command, domains []string) error {
 
 	if _, err = os.Stat(pemFile); os.IsNotExist(err) {
 		_ = cctx.PrintString(fmt.Sprintf("no certificate found for address %s. generating new...\n", fromAddress))
-
 		return handleCreate(cctx, cmd, pemFile, domains)
 	}
 
@@ -286,8 +377,9 @@ func setCreateFlags(cmd *cobra.Command) {
 		panic(err.Error())
 	}
 
-	cmd.Flags().String(flagNbf, "", "certificate is not valid before this date. default current timestamp. RFC3339")
-	cmd.Flags().String(flagNaf, "", "certificate is not valid after this date. default 365d. days or RFC3339")
+
+	//cmd.Flags().String(flagNbf, "", "certificate is not valid before this date. default current timestamp. RFC3339")
+	//cmd.Flags().String(flagNaf, "", "certificate is not valid after this date. default 365d. days or RFC3339")
 	cmd.Flags().Bool(flagRie, false, "revoke current certificate if it already present on chain")
 
 	// fixme shall we use gentx instead? 🤔
@@ -339,6 +431,7 @@ func addCertToGenesis(cmd *cobra.Command, cert types.GenesisCertificate) error {
 	genDoc.AppState = appStateJSON
 	return genutil.ExportGenesisFile(genDoc, genFile)
 }
+
 
 func createAuthPem(cmd *cobra.Command, pemFile string, domains []string) (*types.MsgCreateCertificate, error) {
 	cctx, err := sdkclient.GetClientTxContext(cmd)
@@ -516,3 +609,4 @@ func doRevoke(cmd *cobra.Command, cctx sdkclient.Context, serial string) error {
 
 	return sdkutil.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
 }
+**/
