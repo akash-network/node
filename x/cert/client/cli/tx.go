@@ -24,8 +24,9 @@ const (
 )
 
 var (
-	errCertificate = errors.New("certificate error")
-	errCertificateDoesNotExist = fmt.Errorf("%w: does not exist", errCertificate)
+	ErrCertificate = errors.New("certificate error")
+	errCertificateDoesNotExist = fmt.Errorf("%w: does not exist", ErrCertificate)
+	errCannotOverwriteCertificate = fmt.Errorf("%w: cannot overwrite certificate", ErrCertificate)
 )
 
 var AuthVersionOID = asn1.ObjectIdentifier{2, 23, 133, 2, 6}
@@ -74,7 +75,7 @@ func doGenerateCmd(cmd *cobra.Command, domains []string) error {
 		return err
 	}
 	if !allowOverwrite && exists{
-		return fmt.Errorf("cannot overwrite")
+		return errCannotOverwriteCertificate
 	}
 
 	var startTime time.Time

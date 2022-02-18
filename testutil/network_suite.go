@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"fmt"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -9,11 +10,13 @@ import (
 	sdknetworktest "github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -79,9 +82,8 @@ func (nts *NetworkTestSuite) SetupSuite(){
 	require.NoError(nts.T(), err)
 	txf = txf.WithAccountNumber(num)
 	txf = txf.WithSequence(seq)
-	_, adjusted, err := tx.CalculateGas(nts.Context(), txf, msgs...)
-	require.NoError(nts.T(), err)
-	txf = txf.WithGas(adjusted)
+	txf = txf.WithGas(uint64(24000 * nts.countTests())) // Just made this up
+	txf = txf.WithFees(fmt.Sprintf("%d%s", 100, nts.Config().BondDenom)) // Just made this up
 
 	txb, err := tx.BuildUnsignedTx(txf, msgs...)
 	require.NoError(nts.T(), err)
@@ -93,7 +95,26 @@ func (nts *NetworkTestSuite) SetupSuite(){
 
 	txr, err := nts.Context().BroadcastTxSync(txBytes)
 	require.NoError(nts.T(), err)
-	require.NotEqual(nts.T(), txr.Code, 0)
+	require.Equal(nts.T(), uint32(0), txr.Code)
+
+	lctx, cancel := context.WithTimeout(context.Background(), 30 * time.Second)
+	defer cancel()
+
+	for lctx.Err() == nil {
+		// check the TX
+		txStatus, err := authtx.QueryTx(nts.Context(), txr.TxHash)
+		if err != nil {
+			if strings.Contains(err.Error(), ") not found") {
+				continue
+			}
+		}
+		require.NoError(nts.T(), err)
+		require.NotNil(nts.T(), txStatus)
+		require.Equalf(nts.T(), uint32(0), txStatus.Code, "tx status is %v", txStatus)
+		break
+	}
+	require.NoError(nts.T(), lctx.Err())
+
 }
 
 func (nts *NetworkTestSuite) Validator(idxT ...int) *sdknetworktest.Validator {

@@ -20,9 +20,9 @@ import (
 )
 
 var (
-	errCertificateNotFoundInPEM = fmt.Errorf("%w: certificate not found in PEM", errCertificate)
-	errPrivateKeyNotFoundInPEM = fmt.Errorf("%w: private key not found in PEM", errCertificate)
-	errPublicKeyNotFoundInPEM = fmt.Errorf("%w: public key not found in PEM", errCertificate)
+	errCertificateNotFoundInPEM = fmt.Errorf("%w: certificate not found in PEM", ErrCertificate)
+	errPrivateKeyNotFoundInPEM = fmt.Errorf("%w: private key not found in PEM", ErrCertificate)
+	errPublicKeyNotFoundInPEM = fmt.Errorf("%w: public key not found in PEM", ErrCertificate)
 )
 
 type keyPairManager struct {
