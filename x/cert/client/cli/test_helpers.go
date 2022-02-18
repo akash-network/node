@@ -9,6 +9,7 @@ import (
 
 // TxCreateServerExec is used for testing create server certificate tx
 func TxGenerateServerExec(clientCtx client.Context, from fmt.Stringer, host string, extraArgs ...string) (sdktest.BufferWriter, error) {
+
 	args := []string{
 		host,
 		fmt.Sprintf("--from=%s", from.String()),

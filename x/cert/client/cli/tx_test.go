@@ -1,19 +1,32 @@
-package cli
+package cli_test
 
 import (
-	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	"github.com/ovrclk/akash/testutil"
+	"github.com/ovrclk/akash/x/cert/client/cli"
+
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"testing"
 )
 
-func TestGenerateServer(t *testing.T){
-	sdkclient.GetClientTxContext(cmd)
+const testHost = "foobar.dev"
 
-	args := []string{
-		host,
-		fmt.Sprintf("--from=%s", from.String()),
-	}
+type certificateCLISuite struct {
+	testutil.NetworkTestSuite
+}
 
-	args = append(args, extraArgs...)
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdGenerateServer(), args)
+func (s *certificateCLISuite) TestGenerateServer(){
+	result, err := cli.TxGenerateServerExec(s.ContextForTest(), s.WalletForTest(), testHost)
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), result)
+}
 
+func (s *certificateCLISuite) TestGenerateClient(){
+	result, err := cli.TxGenerateClientExec(s.ContextForTest(), s.WalletForTest())
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), result)
+}
+
+func TestCertificateCLI(t *testing.T){
+	suite.Run(t, &certificateCLISuite{NetworkTestSuite:testutil.NewNetworkTestSuite(nil)})
 }
