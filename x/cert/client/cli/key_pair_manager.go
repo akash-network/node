@@ -179,7 +179,7 @@ func (kpm *keyPairManager) generateImpl(notBefore, notAfter time.Time, domains [
 func (kpm *keyPairManager) read() ([]byte, []byte, []byte, error) {
 	pemIn, err := os.OpenFile(kpm.getKeyPath(), os.O_RDONLY, 0x0)
 	if err != nil {
-		return nil,nil,nil, err
+		return nil,nil,nil, fmt.Errorf("could not open certificate PEM file: %w", err)
 	}
 
 	cert, privKey, pubKey, err := kpm.readImpl(pemIn)
@@ -197,7 +197,7 @@ func (kpm *keyPairManager) readImpl(fin io.Reader) ([]byte, []byte, []byte, erro
 	buf := &bytes.Buffer{}
 	_, err := io.Copy(buf, fin)
 	if err != nil {
-		return nil,nil,nil, err
+		return nil,nil,nil, fmt.Errorf("failed reading certificate PEM file: %w", err)
 	}
 	data := buf.Bytes()
 

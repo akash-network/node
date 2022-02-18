@@ -1,14 +1,15 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
-	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
+	testutilcli "github.com/ovrclk/akash/testutil/cli"
 )
 
 // TxCreateServerExec is used for testing create server certificate tx
-func TxGenerateServerExec(clientCtx client.Context, from fmt.Stringer, host string, extraArgs ...string) (sdktest.BufferWriter, error) {
+func TxGenerateServerExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, host string, extraArgs ...string) (sdktest.BufferWriter, error) {
 
 	args := []string{
 		host,
@@ -16,35 +17,55 @@ func TxGenerateServerExec(clientCtx client.Context, from fmt.Stringer, host stri
 	}
 
 	args = append(args, extraArgs...)
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdGenerateServer(), args)
+	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdGenerateServer(), args...)
 }
 
 // TxCreateClientExec is used for testing create client certificate tx
-func TxGenerateClientExec(clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
+func TxGenerateClientExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
 	}
 
 	args = append(args, extraArgs...)
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdGenerateClient(), args)
+	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdGenerateClient(), args...)
 }
 
 // TxCreateServerExec is used for testing create server certificate tx
-func TxPublishServerExec(clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
+func TxPublishServerExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
 	}
 
 	args = append(args, extraArgs...)
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdPublishServer(), args)
+	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdPublishServer(), args...)
 }
 
 // TxCreateClientExec is used for testing create client certificate tx
-func TxPublishClientExec(clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
+func TxPublishClientExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
 	}
 
 	args = append(args, extraArgs...)
-	return clitestutil.ExecTestCLICmd(clientCtx, cmdPublishClient(), args)
+	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdPublishClient(), args...)
+}
+
+// TxCreateServerExec is used for testing create server certificate tx
+func TxRevokeServerExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
+	args := []string{
+		fmt.Sprintf("--from=%s", from.String()),
+	}
+
+	args = append(args, extraArgs...)
+	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdRevokeServer(), args...)
+}
+
+// TxCreateClientExec is used for testing create client certificate tx
+func TxRevokeClientExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
+	args := []string{
+		fmt.Sprintf("--from=%s", from.String()),
+	}
+
+	args = append(args, extraArgs...)
+	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdRevokeClient(), args...)
 }

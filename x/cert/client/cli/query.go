@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"math/big"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -13,6 +12,11 @@ import (
 	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 )
 
+
+const (
+	stateValid = "valid"
+	stateRevoked = "revoked"
+)
 func GetQueryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
@@ -72,14 +76,14 @@ func cmdGetCertificates() *cobra.Command {
 			}
 
 			if value := cmd.Flag("state").Value.String(); value != "" {
-				if value != "valid" && value != "revoked" {
+				if value != stateValid && value != stateRevoked {
 					return errors.Errorf("invalid value of --state flag. expected valid|revoked")
 				}
 
 				params.Filter.State = value
 			}
 
-			res, err := queryClient.Certificates(context.Background(), params)
+			res, err := queryClient.Certificates(cmd.Context(), params)
 			if err != nil {
 				return err
 			}

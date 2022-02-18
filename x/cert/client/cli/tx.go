@@ -8,8 +8,8 @@ import (
 	"fmt"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/ovrclk/akash/sdkutil"
-	"github.com/spf13/cobra"
 	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"math/big"
 	"time"
@@ -157,15 +157,13 @@ func doRevokeCmd(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
+	fromAddress := cctx.GetFromAddress()
 
-	if len(serial) == 0 {
+	if len(serial) != 0 {
 		if _, valid := new(big.Int).SetString(serial, 10); !valid {
 			return errInvalidSerialFlag
 		}
 	} else {
-
-		fromAddress := cctx.GetFromAddress()
-
 		kpm, err := newKeyPairManager(cctx, fromAddress)
 		if err != nil {
 			return err
@@ -186,6 +184,27 @@ func doRevokeCmd(cmd *cobra.Command) error {
 	}
 
 	// TODO - query to check that cert actually is on chain & not revoked
+
+
+	params := &types.QueryCertificatesRequest{
+		Filter: types.CertificateFilter{
+			Owner:  fromAddress.String(),
+			Serial: serial,
+			State: stateValid,
+		},
+	}
+
+	queryClient := types.NewQueryClient(cctx)
+
+	res, err := queryClient.Certificates(cmd.Context(), params)
+	if err != nil {
+		return err
+	}
+
+	exists := len(res.Certificates) != 0
+	if !exists {
+		return fmt.Errorf("%w: certificate with serial %v does not exist on chain and cannot be revoked", ErrCertificate, serial)
+	}
 
 	msg := &types.MsgRevokeCertificate{
 		ID: types.CertificateID{

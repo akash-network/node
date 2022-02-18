@@ -27,13 +27,20 @@ type NetworkTestSuite struct {
 	testIdx int
 
 	kr keyring.Keyring
+	container interface{}
+
+	testCtx context.Context
+	cancelTestCtx context.CancelFunc
 }
 
-func NewNetworkTestSuite(cfg *sdknetworktest.Config) NetworkTestSuite {
-	nts := NetworkTestSuite{}
+func NewNetworkTestSuite(cfg *sdknetworktest.Config, container interface{}) NetworkTestSuite {
+	nts := NetworkTestSuite{
+		container: container,
+		testIdx: -1,
+	}
 	if cfg == nil {
-		nts.cfg = sdknetworktest.DefaultConfig()
-		//nts.cfg.NumValidators = 1
+		nts.cfg = DefaultConfig()
+		nts.cfg.NumValidators = 1
 	} else {
 		nts.cfg = *cfg
 	}
@@ -42,7 +49,22 @@ func NewNetworkTestSuite(cfg *sdknetworktest.Config) NetworkTestSuite {
 }
 
 func (nts *NetworkTestSuite) countTests() int {
-	return reflect.ValueOf(nts).NumMethod()
+	vof := reflect.TypeOf(nts.container)
+
+	cnt := 0
+	for i := 0; i != vof.NumMethod(); i++ {
+		method := vof.Method(i)
+		methodName := method.Name
+		if strings.HasPrefix(methodName, "Test") {
+			cnt++
+		}
+	}
+
+	return cnt
+}
+
+func (nts *NetworkTestSuite) TearDownSuite(){
+	nts.network.Cleanup()
 }
 
 func (nts *NetworkTestSuite) SetupSuite(){
@@ -53,6 +75,7 @@ func (nts *NetworkTestSuite) SetupSuite(){
 	require.NoError(nts.T(), err)
 
 	walletCount := nts.countTests()
+	nts.T().Logf("setting up %d wallets for test", walletCount)
 	var msgs []sdk.Msg
 
 	for i := 0; i != walletCount ; i++{
@@ -63,7 +86,7 @@ func (nts *NetworkTestSuite) SetupSuite(){
 
 		toAddr := kinfo.GetAddress()
 
-		coins := sdk.NewCoins(sdk.NewCoin(nts.Config().BondDenom, sdk.NewInt(1)))
+		coins := sdk.NewCoins(sdk.NewCoin(nts.Config().BondDenom, sdk.NewInt(1000000)))
 		msg := banktypes.NewMsgSend(nts.Validator().Address,toAddr, coins)
 		msgs = append(msgs, msg)
 	}
@@ -77,12 +100,11 @@ func (nts *NetworkTestSuite) SetupSuite(){
 	require.NoError(nts.T(), err)
 	require.NotNil(nts.T(), keyInfo)
 
-
 	num, seq , err := txf.AccountRetriever().GetAccountNumberSequence(nts.Context(), nts.Validator().Address)
 	require.NoError(nts.T(), err)
 	txf = txf.WithAccountNumber(num)
 	txf = txf.WithSequence(seq)
-	txf = txf.WithGas(uint64(24000 * nts.countTests())) // Just made this up
+	txf = txf.WithGas(uint64(150000 * nts.countTests())) // Just made this up
 	txf = txf.WithFees(fmt.Sprintf("%d%s", 100, nts.Config().BondDenom)) // Just made this up
 
 	txb, err := tx.BuildUnsignedTx(txf, msgs...)
@@ -146,7 +168,11 @@ func (nts *NetworkTestSuite) ContextForTest() sdkclient.Context {
 	result := nts.Context()
 	k, err := nts.kr.Key(nts.WalletNameForTest())
 	require.NoError(nts.T(), err)
-	return result.WithKeyring(nts.kr).WithFromAddress(k.GetAddress()).WithFrom(nts.WalletNameForTest())
+	return result.WithKeyring(nts.kr).WithFromAddress(k.GetAddress()).WithFromName(nts.WalletNameForTest())
+}
+
+func (nts *NetworkTestSuite) GoContextForTest() context.Context {
+	return nts.testCtx
 }
 
 func (nts *NetworkTestSuite) Network() *sdknetworktest.Network {
@@ -170,5 +196,10 @@ func (nts *NetworkTestSuite) Config() sdknetworktest.Config {
 
 func (nts *NetworkTestSuite) SetupTest(){
 	nts.testIdx++
+	nts.testCtx, nts.cancelTestCtx = context.WithTimeout(context.Background(), 30 * time.Second)
+}
+
+func (nts *NetworkTestSuite) TearDownTest() {
+	nts.cancelTestCtx()
 }
 
