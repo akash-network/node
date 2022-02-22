@@ -2,13 +2,13 @@ package cli
 
 import (
 	"crypto/x509"
-	"encoding/asn1"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/ovrclk/akash/sdkutil"
+	certerrors "github.com/ovrclk/akash/x/cert/errors"
 	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
+	"github.com/ovrclk/akash/x/cert/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"math/big"
@@ -16,20 +16,17 @@ import (
 )
 
 const (
-	flagSerial = "serial"
+	flagSerial    = "serial"
 	flagOverwrite = "overwrite"
 	flagValidTime = "valid-duration"
-	flagStart = "start-time"
+	flagStart     = "start-time"
 	flagToGenesis = "to-genesis"
 )
 
 var (
-	ErrCertificate = errors.New("certificate error")
-	errCertificateDoesNotExist = fmt.Errorf("%w: does not exist", ErrCertificate)
-	errCannotOverwriteCertificate = fmt.Errorf("%w: cannot overwrite certificate", ErrCertificate)
+	errCertificateDoesNotExist    = fmt.Errorf("%w: does not exist", certerrors.ErrCertificate)
+	errCannotOverwriteCertificate = fmt.Errorf("%w: cannot overwrite certificate", certerrors.ErrCertificate)
 )
-
-var AuthVersionOID = asn1.ObjectIdentifier{2, 23, 133, 2, 6}
 
 func GetTxCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -45,7 +42,7 @@ func GetTxCmd() *cobra.Command {
 	2. Publish - publish a key pair to the blockchain
 	3. Revoke - revoke a key pair on the blockchain
 
-	 */
+	*/
 
 	cmd.AddCommand(
 		cmdGenerate(),
@@ -65,16 +62,16 @@ func doGenerateCmd(cmd *cobra.Command, domains []string) error {
 	}
 	fromAddress := cctx.GetFromAddress()
 
-	kpm, err := newKeyPairManager(cctx, fromAddress)
+	kpm, err := utils.NewKeyPairManager(cctx, fromAddress)
 	if err != nil {
 		return err
 	}
 
-	exists, err := kpm.keyExists()
+	exists, err := kpm.KeyExists()
 	if err != nil {
 		return err
 	}
-	if !allowOverwrite && exists{
+	if !allowOverwrite && exists {
 		return errCannotOverwriteCertificate
 	}
 
@@ -90,7 +87,7 @@ func doGenerateCmd(cmd *cobra.Command, domains []string) error {
 	}
 	validDuration := viper.GetDuration(flagValidTime)
 
-	return kpm.generate(startTime, startTime.Add(validDuration), domains)
+	return kpm.Generate(startTime, startTime.Add(validDuration), domains)
 }
 
 func doPublishCmd(cmd *cobra.Command) error {
@@ -102,12 +99,12 @@ func doPublishCmd(cmd *cobra.Command) error {
 	}
 	fromAddress := cctx.GetFromAddress()
 
-	kpm, err := newKeyPairManager(cctx, fromAddress)
+	kpm, err := utils.NewKeyPairManager(cctx, fromAddress)
 	if err != nil {
 		return err
 	}
 
-	exists, err := kpm.keyExists()
+	exists, err := kpm.KeyExists()
 	if err != nil {
 		return err
 	}
@@ -115,7 +112,7 @@ func doPublishCmd(cmd *cobra.Command) error {
 		return errCertificateDoesNotExist
 	}
 
-	cert, _, pubKey, err := kpm.read()
+	cert, _, pubKey, err := kpm.Read()
 	if err != nil {
 		return err
 	}
@@ -164,16 +161,15 @@ func doRevokeCmd(cmd *cobra.Command) error {
 			return errInvalidSerialFlag
 		}
 	} else {
-		kpm, err := newKeyPairManager(cctx, fromAddress)
+		kpm, err := utils.NewKeyPairManager(cctx, fromAddress)
 		if err != nil {
 			return err
 		}
 
-		cert, _, _, err := kpm.read()
+		cert, _, _, err := kpm.Read()
 		if err != nil {
 			return err
 		}
-
 
 		parsedCert, err := x509.ParseCertificate(cert)
 		if err != nil {
@@ -183,14 +179,11 @@ func doRevokeCmd(cmd *cobra.Command) error {
 		serial = parsedCert.SerialNumber.String()
 	}
 
-	// TODO - query to check that cert actually is on chain & not revoked
-
-
 	params := &types.QueryCertificatesRequest{
 		Filter: types.CertificateFilter{
 			Owner:  fromAddress.String(),
 			Serial: serial,
-			State: stateValid,
+			State:  stateValid,
 		},
 	}
 
@@ -203,7 +196,7 @@ func doRevokeCmd(cmd *cobra.Command) error {
 
 	exists := len(res.Certificates) != 0
 	if !exists {
-		return fmt.Errorf("%w: certificate with serial %v does not exist on chain and cannot be revoked", ErrCertificate, serial)
+		return fmt.Errorf("%w: certificate with serial %v does not exist on chain and cannot be revoked", certerrors.ErrCertificate, serial)
 	}
 
 	msg := &types.MsgRevokeCertificate{

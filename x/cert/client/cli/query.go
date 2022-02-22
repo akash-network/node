@@ -12,11 +12,11 @@ import (
 	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 )
 
-
 const (
-	stateValid = "valid"
+	stateValid   = "valid"
 	stateRevoked = "revoked"
 )
+
 func GetQueryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,

@@ -35,7 +35,7 @@ func addGenerateflags(cmd *cobra.Command) error {
 		return err
 	}
 
-	cmd.Flags().Duration(flagValidTime, time.Hour * 24 * 365, "certificate is not valid after this date. RFC3339")
+	cmd.Flags().Duration(flagValidTime, time.Hour*24*365, "certificate is not valid after this date. RFC3339")
 	if err := viper.BindPFlag(flagValidTime, cmd.Flags().Lookup(flagValidTime)); err != nil {
 		return err
 	}
@@ -53,11 +53,9 @@ func cmdGenerateClient() *cobra.Command {
 		Use:                        "client",
 		Short:                      "",
 		SuggestionsMinimumDistance: 2,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return doGenerateCmd(cmd, args)
-		},
-		SilenceUsage: true,
-		Args: cobra.ExactArgs(0),
+		RunE:                       doGenerateCmd,
+		SilenceUsage:               true,
+		Args:                       cobra.ExactArgs(0),
 	}
 	err := addGenerateflags(cmd)
 	if err != nil {
@@ -72,11 +70,9 @@ func cmdGenerateServer() *cobra.Command {
 		Use:                        "server",
 		Short:                      "",
 		SuggestionsMinimumDistance: 2,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return doGenerateCmd(cmd, args)
-		},
-		SilenceUsage: true,
-		Args:         cobra.MinimumNArgs(1),
+		RunE:                       doGenerateCmd,
+		SilenceUsage:               true,
+		Args:                       cobra.MinimumNArgs(1),
 	}
 	err := addGenerateflags(cmd)
 	if err != nil {
@@ -109,7 +105,7 @@ func cmdPublishClient() *cobra.Command {
 			return doPublishCmd(cmd)
 		},
 		SilenceUsage: true,
-		Args: cobra.ExactArgs(0),
+		Args:         cobra.ExactArgs(0),
 	}
 	err := addPublishFlags(cmd)
 	if err != nil {
@@ -128,7 +124,7 @@ func cmdPublishServer() *cobra.Command {
 			return doPublishCmd(cmd)
 		},
 		SilenceUsage: true,
-		Args: cobra.ExactArgs(0),
+		Args:         cobra.ExactArgs(0),
 	}
 	err := addPublishFlags(cmd)
 	if err != nil {
@@ -195,7 +191,6 @@ func addCertToGenesis(cmd *cobra.Command, cert types.GenesisCertificate) error {
 	return genutil.ExportGenesisFile(genDoc, genFile)
 }
 
-
 func cmdRevoke() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "revoke",
@@ -218,7 +213,7 @@ func cmdRevokeClient() *cobra.Command {
 			return doRevokeCmd(cmd)
 		},
 		SilenceUsage: true,
-		Args: cobra.ExactArgs(0),
+		Args:         cobra.ExactArgs(0),
 	}
 	err := addRevokeCmdFlags(cmd)
 	if err != nil {
@@ -237,7 +232,7 @@ func cmdRevokeServer() *cobra.Command {
 			return doRevokeCmd(cmd)
 		},
 		SilenceUsage: true,
-		Args: cobra.ExactArgs(0),
+		Args:         cobra.ExactArgs(0),
 	}
 	err := addRevokeCmdFlags(cmd)
 	if err != nil {

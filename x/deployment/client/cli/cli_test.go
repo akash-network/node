@@ -76,7 +76,6 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	)
 	s.Require().NoError(err)
 
-
 	// Publish client certificate
 	_, err = ccli.TxPublishClientExec(
 		context.Background(),

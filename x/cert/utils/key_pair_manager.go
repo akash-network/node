@@ -1,16 +1,18 @@
-package cli
+package utils
 
 import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	certerrors "github.com/ovrclk/akash/x/cert/errors"
 	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 	"io"
 	"math/big"
@@ -20,18 +22,29 @@ import (
 )
 
 var (
-	errCertificateNotFoundInPEM = fmt.Errorf("%w: certificate not found in PEM", ErrCertificate)
-	errPrivateKeyNotFoundInPEM = fmt.Errorf("%w: private key not found in PEM", ErrCertificate)
-	errPublicKeyNotFoundInPEM = fmt.Errorf("%w: public key not found in PEM", ErrCertificate)
+	errCertificateNotFoundInPEM = fmt.Errorf("%w: certificate not found in PEM", certerrors.ErrCertificate)
+	errPrivateKeyNotFoundInPEM  = fmt.Errorf("%w: private key not found in PEM", certerrors.ErrCertificate)
+	errPublicKeyNotFoundInPEM   = fmt.Errorf("%w: public key not found in PEM", certerrors.ErrCertificate)
 )
 
-type keyPairManager struct {
-	addr sdk.AccAddress
-	passwordBytes []byte
-	homeDir string
+type KeyPairManager interface {
+
+	KeyExists() (bool, error)
+	Generate(notBefore, notAfter time.Time, domains []string) error
+
+	// Read the PEM blocks, containing the cert, private key, & public key
+	Read(fin ...io.Reader) ([]byte, []byte, []byte, error)
+
+	ReadX509KeyPair(fin ...io.Reader) (*x509.Certificate, tls.Certificate, error)
 }
 
-func newKeyPairManager(cctx sdkclient.Context, fromAddress sdk.AccAddress) (*keyPairManager, error) {
+type keyPairManager struct {
+	addr          sdk.AccAddress
+	passwordBytes []byte
+	homeDir       string
+}
+
+func NewKeyPairManager(cctx sdkclient.Context, fromAddress sdk.AccAddress) (KeyPairManager, error) {
 	sig, _, err := cctx.Keyring.SignByAddress(fromAddress, fromAddress.Bytes())
 	if err != nil {
 		return nil, err
@@ -40,7 +53,7 @@ func newKeyPairManager(cctx sdkclient.Context, fromAddress sdk.AccAddress) (*key
 	return &keyPairManager{
 		addr:          fromAddress,
 		passwordBytes: sig,
-		homeDir: cctx.HomeDir,
+		homeDir:       cctx.HomeDir,
 	}, nil
 }
 
@@ -48,7 +61,36 @@ func (kpm *keyPairManager) getKeyPath() string {
 	return kpm.homeDir + "/" + kpm.addr.String() + ".pem"
 }
 
-func (kpm *keyPairManager) keyExists() (bool, error) {
+func (kpm *keyPairManager) ReadX509KeyPair(fin ...io.Reader) (*x509.Certificate, tls.Certificate, error) {
+	certData, privKeyData, _, err := kpm.Read(fin...)
+
+	x509cert, err := x509.ParseCertificate(certData)
+	if err != nil {
+		return nil, tls.Certificate{}, fmt.Errorf("could not parse x509 cert: %w", err)
+	}
+	
+	result := tls.Certificate{
+		Certificate:                  [][]byte{certData},
+	}
+
+	result.PrivateKey, err = x509.ParsePKCS8PrivateKey(privKeyData)
+	if err != nil {
+		return nil, tls.Certificate{}, fmt.Errorf("%w: failed parsing private key data", err)
+	}
+
+	return x509cert, result, err
+
+	/**
+	cert, err := tls.X509KeyPair(certData, privKeyData)
+	if err != nil {
+		return nil, tls.Certificate{}, fmt.Errorf("could not create TLS x509 pair: %w", err)
+	}
+
+	return x509cert, cert, err
+	 */
+}
+
+func (kpm *keyPairManager) KeyExists() (bool, error) {
 	_, err := os.Stat(kpm.getKeyPath())
 	if err == nil {
 		return true, nil
@@ -61,7 +103,7 @@ func (kpm *keyPairManager) keyExists() (bool, error) {
 	return false, err
 }
 
-func (kpm *keyPairManager) generate(notBefore, notAfter time.Time, domains []string) error {
+func (kpm *keyPairManager) Generate(notBefore, notAfter time.Time, domains []string) error {
 	var err error
 	var pemOut *os.File
 	if pemOut, err = os.OpenFile(kpm.getKeyPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600); err != nil {
@@ -143,13 +185,7 @@ func (kpm *keyPairManager) generateImpl(notBefore, notAfter time.Time, domains [
 		return fmt.Errorf("could not create private key: %w", err)
 	}
 
-	var pubKeyDer []byte
-	if pubKeyDer, err = x509.MarshalPKIXPublicKey(priv.Public()); err != nil {
-		return fmt.Errorf("could not create public key: %w", err)
-	}
-
 	var blk *pem.Block
-	// fixme #1182
 	blk, err = x509.EncryptPEMBlock(rand.Reader, types.PemBlkTypeECPrivateKey, keyDer, kpm.passwordBytes, x509.PEMCipherAES256) // nolint: staticcheck
 	if err != nil {
 		return fmt.Errorf("could not encrypt private key as PEM: %w", err)
@@ -165,39 +201,46 @@ func (kpm *keyPairManager) generateImpl(notBefore, notAfter time.Time, domains [
 		return fmt.Errorf("could not encode private key as PEM: %w", err)
 	}
 
-	// Write the public key
-	if err = pem.Encode(fout, &pem.Block{
-		Type:    types.PemBlkTypeECPublicKey,
-		Bytes:   pubKeyDer,
-	}); err != nil {
-		return fmt.Errorf("could not encode public key as PEM: %w", err)
-	}
-
 	return nil
 }
 
-func (kpm *keyPairManager) read() ([]byte, []byte, []byte, error) {
-	pemIn, err := os.OpenFile(kpm.getKeyPath(), os.O_RDONLY, 0x0)
-	if err != nil {
-		return nil,nil,nil, fmt.Errorf("could not open certificate PEM file: %w", err)
+func (kpm *keyPairManager) Read(fin ...io.Reader) ([]byte, []byte, []byte, error) {
+	var pemIn io.Reader
+	var closeMe io.ReadCloser
+
+	if len(fin) != 0 {
+		if len(fin) != 1 {
+			return nil, nil, nil, fmt.Errorf("%w: Read() takes exactly 1 or 0 arguments, not %d", certerrors.ErrCertificate, len(fin))
+		}
+		pemIn = fin[0]
+	}
+
+	if pemIn == nil {
+		fopen, err := os.OpenFile(kpm.getKeyPath(), os.O_RDONLY, 0x0)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("could not open certificate PEM file: %w", err)
+		}
+		closeMe = fopen
+		pemIn = fopen
 	}
 
 	cert, privKey, pubKey, err := kpm.readImpl(pemIn)
 
-	closeErr := pemIn.Close()
-	if closeErr != nil {
-		return nil, nil, nil, fmt.Errorf("could not close PEM file: %w", closeErr)
+	if closeMe != nil {
+		closeErr := closeMe.Close()
+		if closeErr != nil {
+			return nil, nil, nil, fmt.Errorf("could not close PEM file: %w", closeErr)
+		}
 	}
 
 	return cert, privKey, pubKey, err
 }
 
-
 func (kpm *keyPairManager) readImpl(fin io.Reader) ([]byte, []byte, []byte, error) {
 	buf := &bytes.Buffer{}
 	_, err := io.Copy(buf, fin)
 	if err != nil {
-		return nil,nil,nil, fmt.Errorf("failed reading certificate PEM file: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed reading certificate PEM file: %w", err)
 	}
 	data := buf.Bytes()
 
@@ -213,14 +256,30 @@ func (kpm *keyPairManager) readImpl(fin io.Reader) ([]byte, []byte, []byte, erro
 	if block == nil {
 		return nil, nil, nil, errPrivateKeyNotFoundInPEM
 	}
-	privKey := block.Bytes
 
-	// Read public key
-	block, remaining = pem.Decode(remaining)
-	if block == nil {
-		return nil, nil, nil, errPublicKeyNotFoundInPEM
+	var privKeyPlaintext []byte
+	// fixme #1182
+	if privKeyPlaintext, err = x509.DecryptPEMBlock(block, kpm.passwordBytes); err != nil { // nolint: staticcheck
+		return nil, nil, nil, fmt.Errorf("%w: failed decrypting x509 block with private key", err)
 	}
-	pubKey := block.Bytes
 
-	return cert, privKey, pubKey, nil
+	var privKeyI interface{}
+	if privKeyI, err = x509.ParsePKCS8PrivateKey(privKeyPlaintext); err != nil {
+		return nil, nil, nil, fmt.Errorf("%w: failed parsing private key data", err)
+	}
+
+	eckey, valid := privKeyI.(*ecdsa.PrivateKey)
+	if !valid {
+		return nil, nil, nil, fmt.Errorf("%w: unexpected private key type, expected %T but got %T",
+			errPublicKeyNotFoundInPEM,
+			&ecdsa.PrivateKey{},
+			privKeyI)
+	}
+
+	var pubKey []byte
+	if pubKey, err = x509.MarshalPKIXPublicKey(eckey.Public()); err != nil {
+		return nil, nil, nil, fmt.Errorf("%w: failed extracting public key", err)
+	}
+
+	return cert, privKeyPlaintext, pubKey, nil
 }

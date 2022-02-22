@@ -333,6 +333,12 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	attempts := 0
 	s.T().Log("waiting for provider to run before starting JWT server")
 	for {
+		// TODO - remove me
+		if s.ctx.Err() != nil {
+			require.NoError(s.T(), s.group.Wait())
+		}
+		// END TODO
+
 		conn, err := dialer.DialContext(s.ctx, "tcp", provHost)
 		if err != nil {
 			s.T().Logf("connecting to provider returned %v", err)

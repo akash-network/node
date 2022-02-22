@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/asn1"
 	"encoding/pem"
 	"math/big"
 	"net"
@@ -20,9 +19,11 @@ import (
 
 	"github.com/ovrclk/akash/client/mocks"
 	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
+
+	certutils "github.com/ovrclk/akash/x/cert/utils"
 )
 
-var AuthVersionOID = asn1.ObjectIdentifier{2, 23, 133, 2, 6}
+
 
 type TestCertificate struct {
 	Cert   []tls.Certificate
@@ -103,7 +104,7 @@ func Certificate(t testing.TB, addr sdk.Address, opts ...CertificateOption) Test
 			CommonName: addr.String(),
 			ExtraNames: []pkix.AttributeTypeAndValue{
 				{
-					Type:  AuthVersionOID,
+					Type:  certutils.AuthVersionOID,
 					Value: "v0.0.1",
 				},
 			},

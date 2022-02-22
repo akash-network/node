@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	cosmosauthtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"bytes"
 	"context"
 	"fmt"
@@ -13,33 +12,34 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	cosmosauthtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"reflect"
 	"strings"
-	"github.com/gogo/protobuf/jsonpb"
 	"time"
 )
 
 type NetworkTestSuite struct {
 	suite.Suite
-	cfg sdknetworktest.Config
+	cfg     sdknetworktest.Config
 	network *sdknetworktest.Network
 	testIdx int
 
-	kr keyring.Keyring
+	kr        keyring.Keyring
 	container interface{}
 
-	testCtx context.Context
+	testCtx       context.Context
 	cancelTestCtx context.CancelFunc
 }
 
 func NewNetworkTestSuite(cfg *sdknetworktest.Config, container interface{}) NetworkTestSuite {
 	nts := NetworkTestSuite{
 		container: container,
-		testIdx: -1,
+		testIdx:   -1,
 	}
 	if cfg == nil {
 		nts.cfg = DefaultConfig()
@@ -66,22 +66,22 @@ func (nts *NetworkTestSuite) countTests() int {
 	return cnt
 }
 
-func (nts *NetworkTestSuite) TearDownSuite(){
+func (nts *NetworkTestSuite) TearDownSuite() {
 	nts.network.Cleanup()
 }
 
-func (nts *NetworkTestSuite) SetupSuite(){
+func (nts *NetworkTestSuite) SetupSuite() {
 	nts.kr = Keyring(nts.T())
 	nts.network = sdknetworktest.New(nts.T(), nts.cfg)
 
-	_, err := nts.network.WaitForHeightWithTimeout(1, time.Second * 30)
+	_, err := nts.network.WaitForHeightWithTimeout(1, time.Second*30)
 	require.NoError(nts.T(), err)
 
 	walletCount := nts.countTests()
 	nts.T().Logf("setting up %d wallets for test", walletCount)
 	var msgs []sdk.Msg
 
-	for i := 0; i != walletCount ; i++{
+	for i := 0; i != walletCount; i++ {
 		name := fmt.Sprintf("wallet%d", i)
 		kinfo, str, err := nts.kr.NewMnemonic(name, keyring.English, sdk.FullFundraiserPath, keyring.DefaultBIP39Passphrase, hd.Secp256k1)
 		require.NoError(nts.T(), err)
@@ -90,7 +90,7 @@ func (nts *NetworkTestSuite) SetupSuite(){
 		toAddr := kinfo.GetAddress()
 
 		coins := sdk.NewCoins(sdk.NewCoin(nts.Config().BondDenom, sdk.NewInt(1000000)))
-		msg := banktypes.NewMsgSend(nts.Validator().Address,toAddr, coins)
+		msg := banktypes.NewMsgSend(nts.Validator().Address, toAddr, coins)
 		msgs = append(msgs, msg)
 	}
 
@@ -103,11 +103,11 @@ func (nts *NetworkTestSuite) SetupSuite(){
 	require.NoError(nts.T(), err)
 	require.NotNil(nts.T(), keyInfo)
 
-	num, seq , err := txf.AccountRetriever().GetAccountNumberSequence(nts.Context(), nts.Validator().Address)
+	num, seq, err := txf.AccountRetriever().GetAccountNumberSequence(nts.Context(), nts.Validator().Address)
 	require.NoError(nts.T(), err)
 	txf = txf.WithAccountNumber(num)
 	txf = txf.WithSequence(seq)
-	txf = txf.WithGas(uint64(150000 * nts.countTests())) // Just made this up
+	txf = txf.WithGas(uint64(150000 * nts.countTests()))                 // Just made this up
 	txf = txf.WithFees(fmt.Sprintf("%d%s", 100, nts.Config().BondDenom)) // Just made this up
 
 	txb, err := tx.BuildUnsignedTx(txf, msgs...)
@@ -117,12 +117,13 @@ func (nts *NetworkTestSuite) SetupSuite(){
 
 	require.NoError(nts.T(), tx.Sign(txf, nts.Context().GetFromName(), txb, true))
 	txBytes, err := nts.Context().TxConfig.TxEncoder()(txb.GetTx())
+	require.NoError(nts.T(), err)
 
 	txr, err := nts.Context().BroadcastTxSync(txBytes)
 	require.NoError(nts.T(), err)
 	require.Equal(nts.T(), uint32(0), txr.Code)
 
-	lctx, cancel := context.WithTimeout(context.Background(), 30 * time.Second)
+	lctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	for lctx.Err() == nil {
@@ -197,9 +198,9 @@ func (nts *NetworkTestSuite) Config() sdknetworktest.Config {
 	return nts.cfg
 }
 
-func (nts *NetworkTestSuite) SetupTest(){
+func (nts *NetworkTestSuite) SetupTest() {
 	nts.testIdx++
-	nts.testCtx, nts.cancelTestCtx = context.WithTimeout(context.Background(), 30 * time.Second)
+	nts.testCtx, nts.cancelTestCtx = context.WithTimeout(context.Background(), 30*time.Second)
 }
 
 func (nts *NetworkTestSuite) TearDownTest() {
@@ -214,7 +215,7 @@ func (nts *NetworkTestSuite) ValidateTx(resultData []byte) string {
 	err := jsonpb.Unmarshal(bytes.NewBuffer(resultData), &resp)
 	require.NoError(nts.T(), err, "failed trying to unmarshal JSON transaction result")
 
-	for  {
+	for {
 		res, err := cosmosauthtx.QueryTx(nts.ContextForTest(), resp.TxHash)
 		if err != nil {
 			ctxDone := nts.GoContextForTest().Err() != nil
@@ -223,9 +224,9 @@ func (nts *NetworkTestSuite) ValidateTx(resultData []byte) string {
 			} else {
 				nts.T().Logf("waiting before checking for TX %s", resp.TxHash)
 				select {
-				case <- nts.GoContextForTest().Done():
+				case <-nts.GoContextForTest().Done():
 					require.NoError(nts.T(), nts.GoContextForTest().Err())
-				case <- time.After(500 * time.Millisecond):
+				case <-time.After(500 * time.Millisecond):
 
 				}
 			}
@@ -238,4 +239,3 @@ func (nts *NetworkTestSuite) ValidateTx(resultData []byte) string {
 
 	return resp.TxHash
 }
-
