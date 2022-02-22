@@ -209,7 +209,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	_, err = ccli.TxGenerateServerExec(
 		context.Background(),
 		s.validator.ClientCtx,
-		s.keyTenant.GetAddress(),
+		s.keyProvider.GetAddress(),
 		"localhost",
 	)
 	s.Require().NoError(err)
@@ -218,7 +218,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	_, err = ccli.TxPublishServerExec(
 		context.Background(),
 		s.validator.ClientCtx,
-		s.keyTenant.GetAddress(),
+		s.keyProvider.GetAddress(),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
@@ -232,7 +232,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	_, err = ccli.TxGenerateClientExec(
 		context.Background(),
 		s.validator.ClientCtx,
-		s.keyProvider.GetAddress(),
+		s.keyTenant.GetAddress(),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
@@ -244,7 +244,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	_, err = ccli.TxPublishClientExec(
 		context.Background(),
 		s.validator.ClientCtx,
-		s.keyProvider.GetAddress(),
+		s.keyTenant.GetAddress(),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
