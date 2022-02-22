@@ -207,6 +207,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 	// Generate provider's certificate
 	_, err = ccli.TxGenerateServerExec(
+		context.Background(),
 		s.validator.ClientCtx,
 		s.keyTenant.GetAddress(),
 		"localhost",
@@ -215,6 +216,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 	// Publish provider's certificate
 	_, err = ccli.TxPublishServerExec(
+		context.Background(),
 		s.validator.ClientCtx,
 		s.keyTenant.GetAddress(),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
@@ -228,6 +230,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 	// Generate tenant's certificate
 	_, err = ccli.TxGenerateClientExec(
+		context.Background(),
 		s.validator.ClientCtx,
 		s.keyProvider.GetAddress(),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
@@ -239,6 +242,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 	// Publish tenant's certificate
 	_, err = ccli.TxPublishClientExec(
+		context.Background(),
 		s.validator.ClientCtx,
 		s.keyProvider.GetAddress(),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
