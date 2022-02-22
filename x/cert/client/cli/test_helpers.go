@@ -10,12 +10,12 @@ import (
 
 // TxCreateServerExec is used for testing create server certificate tx
 func TxGenerateServerExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, host string, extraArgs ...string) (sdktest.BufferWriter, error) {
+	var args []string
 
-	args := []string{
-		host,
-		fmt.Sprintf("--from=%s", from.String()),
+	if len(host) != 0 { // for testing purposes, of passing no arguments
+		args = []string{host}
 	}
-
+	args = append(args, fmt.Sprintf("--from=%s", from.String()))
 	args = append(args, extraArgs...)
 	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdGenerateServer(), args...)
 }

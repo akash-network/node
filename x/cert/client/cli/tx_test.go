@@ -16,19 +16,45 @@ type certificateCLISuite struct {
 	testutil.NetworkTestSuite
 }
 
-func (s *certificateCLISuite) TestGenerateAndPublishServer(){
+func (s *certificateCLISuite) TestGeneratePublishAndRevokeServer() {
 	result, err := cli.TxGenerateServerExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(), testHost)
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), result)
 
-	result, err = cli.TxPublishServerExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(), testHost,
+	result, err = cli.TxPublishServerExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(),
 		fmt.Sprintf("--fees=%d%s", 1000, s.Config().BondDenom),
 		 "--yes")
 	require.NoError(s.T(), err)
-	require.NotNil(s.T(), result)
+	require.NoError(s.T(), s.Network().WaitForNextBlock())
+	_ = s.ValidateTx(result.Bytes())
+
+	result, err = cli.TxRevokeServerExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(),
+		fmt.Sprintf("--fees=%d%s", 1000, s.Config().BondDenom),
+		"--yes")
+
+	require.NoError(s.T(), err)
+	require.NoError(s.T(), s.Network().WaitForNextBlock())
+	_ = s.ValidateTx(result.Bytes())
 }
 
-func (s *certificateCLISuite) TestGenerateAndPublishClient(){
+func (s *certificateCLISuite) TestGenerateServerRequiresArguments(){
+	_, err := cli.TxGenerateServerExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(), "")
+	require.Error(s.T(), err)
+	require.Contains(s.T(), err.Error(), "requires at least 1 arg(s), only received 0")
+}
+
+func (s *certificateCLISuite) TestGenerateServerAllowsManyArguments(){
+	_, err := cli.TxGenerateServerExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(), "a.dev", "b.dev")
+	require.NoError(s.T(), err)
+}
+
+func (s *certificateCLISuite) TestGenerateClientRejectsArguments(){
+	_, err := cli.TxGenerateClientExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(), testHost)
+	require.Error(s.T(), err)
+	require.Contains(s.T(), err.Error(), "accepts 0 arg(s), received 1")
+}
+
+func (s *certificateCLISuite) TestGeneratePublishAndRevokeClient(){
 	result, err := cli.TxGenerateClientExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest())
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), result)
@@ -37,7 +63,16 @@ func (s *certificateCLISuite) TestGenerateAndPublishClient(){
 		fmt.Sprintf("--fees=%d%s", 1000, s.Config().BondDenom),
 		 "--yes")
 	require.NoError(s.T(), err)
-	require.NotNil(s.T(), result)
+	require.NoError(s.T(), s.Network().WaitForNextBlock())
+	_ = s.ValidateTx(result.Bytes())
+
+	result, err = cli.TxRevokeClientExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(),
+		fmt.Sprintf("--fees=%d%s", 1000, s.Config().BondDenom),
+		"--yes")
+
+	require.NoError(s.T(), err)
+	require.NoError(s.T(), s.Network().WaitForNextBlock())
+	_ = s.ValidateTx(result.Bytes())
 }
 
 func (s *certificateCLISuite) TestGenerateAndRevokeFailsServer() {
@@ -45,7 +80,7 @@ func (s *certificateCLISuite) TestGenerateAndRevokeFailsServer() {
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), result)
 
-	result, err = cli.TxRevokeServerExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(), testHost,
+	result, err = cli.TxRevokeServerExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(),
 		fmt.Sprintf("--fees=%d%s", 1000, s.Config().BondDenom),
 		"--yes")
 	require.ErrorIs(s.T(), err, cli.ErrCertificate)
@@ -53,7 +88,7 @@ func (s *certificateCLISuite) TestGenerateAndRevokeFailsServer() {
 }
 
 func (s *certificateCLISuite) TestRevokeFailsServer() {
-	_, err := cli.TxRevokeServerExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(), testHost,
+	_, err := cli.TxRevokeServerExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(),
 		fmt.Sprintf("--fees=%d%s", 1000, s.Config().BondDenom),
 		"--yes",
 		"--serial=1")
@@ -62,7 +97,7 @@ func (s *certificateCLISuite) TestRevokeFailsServer() {
 }
 
 func (s *certificateCLISuite) TestRevokeFailsClient() {
-	_, err := cli.TxRevokeClientExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(), testHost,
+	_, err := cli.TxRevokeClientExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(),
 		fmt.Sprintf("--fees=%d%s", 1000, s.Config().BondDenom),
 		"--yes",
 		"--serial=1")

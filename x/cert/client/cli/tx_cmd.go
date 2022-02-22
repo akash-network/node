@@ -57,6 +57,7 @@ func cmdGenerateClient() *cobra.Command {
 			return doGenerateCmd(cmd, args)
 		},
 		SilenceUsage: true,
+		Args: cobra.ExactArgs(0),
 	}
 	err := addGenerateflags(cmd)
 	if err != nil {
@@ -108,6 +109,7 @@ func cmdPublishClient() *cobra.Command {
 			return doPublishCmd(cmd)
 		},
 		SilenceUsage: true,
+		Args: cobra.ExactArgs(0),
 	}
 	err := addPublishFlags(cmd)
 	if err != nil {
@@ -126,6 +128,7 @@ func cmdPublishServer() *cobra.Command {
 			return doPublishCmd(cmd)
 		},
 		SilenceUsage: true,
+		Args: cobra.ExactArgs(0),
 	}
 	err := addPublishFlags(cmd)
 	if err != nil {
@@ -215,6 +218,7 @@ func cmdRevokeClient() *cobra.Command {
 			return doRevokeCmd(cmd)
 		},
 		SilenceUsage: true,
+		Args: cobra.ExactArgs(0),
 	}
 	err := addRevokeCmdFlags(cmd)
 	if err != nil {
@@ -233,6 +237,7 @@ func cmdRevokeServer() *cobra.Command {
 			return doRevokeCmd(cmd)
 		},
 		SilenceUsage: true,
+		Args: cobra.ExactArgs(0),
 	}
 	err := addRevokeCmdFlags(cmd)
 	if err != nil {

@@ -1,6 +1,8 @@
 package testutil
 
 import (
+	cosmosauthtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	"bytes"
 	"context"
 	"fmt"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
@@ -17,6 +19,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"reflect"
 	"strings"
+	"github.com/gogo/protobuf/jsonpb"
 	"time"
 )
 
@@ -201,5 +204,38 @@ func (nts *NetworkTestSuite) SetupTest(){
 
 func (nts *NetworkTestSuite) TearDownTest() {
 	nts.cancelTestCtx()
+}
+
+func (nts *NetworkTestSuite) ValidateTx(resultData []byte) string {
+	nts.T().Helper()
+
+	var resp sdk.TxResponse
+
+	err := jsonpb.Unmarshal(bytes.NewBuffer(resultData), &resp)
+	require.NoError(nts.T(), err, "failed trying to unmarshal JSON transaction result")
+
+	for  {
+		res, err := cosmosauthtx.QueryTx(nts.ContextForTest(), resp.TxHash)
+		if err != nil {
+			ctxDone := nts.GoContextForTest().Err() != nil
+			if ctxDone {
+				require.NoErrorf(nts.T(), err, "failed querying for transaction %q", resp.TxHash)
+			} else {
+				nts.T().Logf("waiting before checking for TX %s", resp.TxHash)
+				select {
+				case <- nts.GoContextForTest().Done():
+					require.NoError(nts.T(), nts.GoContextForTest().Err())
+				case <- time.After(500 * time.Millisecond):
+
+				}
+			}
+			continue
+		}
+
+		require.Zero(nts.T(), res.Code, res, "expected response code in transaction to be zero")
+		break
+	}
+
+	return resp.TxHash
 }
 
