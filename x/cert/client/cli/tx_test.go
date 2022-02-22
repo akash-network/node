@@ -5,10 +5,10 @@ import (
 	"github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/x/cert/client/cli"
 
+	certerrors "github.com/ovrclk/akash/x/cert/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"testing"
-	certerrors "github.com/ovrclk/akash/x/cert/errors"
 )
 
 const testHost = "foobar.dev"

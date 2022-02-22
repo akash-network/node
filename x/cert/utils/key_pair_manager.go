@@ -28,7 +28,6 @@ var (
 )
 
 type KeyPairManager interface {
-
 	KeyExists() (bool, error)
 	Generate(notBefore, notAfter time.Time, domains []string) error
 
@@ -63,14 +62,17 @@ func (kpm *keyPairManager) getKeyPath() string {
 
 func (kpm *keyPairManager) ReadX509KeyPair(fin ...io.Reader) (*x509.Certificate, tls.Certificate, error) {
 	certData, privKeyData, _, err := kpm.Read(fin...)
+	if err != nil {
+		return nil, tls.Certificate{}, err
+	}
 
 	x509cert, err := x509.ParseCertificate(certData)
 	if err != nil {
 		return nil, tls.Certificate{}, fmt.Errorf("could not parse x509 cert: %w", err)
 	}
-	
+
 	result := tls.Certificate{
-		Certificate:                  [][]byte{certData},
+		Certificate: [][]byte{certData},
 	}
 
 	result.PrivateKey, err = x509.ParsePKCS8PrivateKey(privKeyData)
@@ -79,15 +81,6 @@ func (kpm *keyPairManager) ReadX509KeyPair(fin ...io.Reader) (*x509.Certificate,
 	}
 
 	return x509cert, result, err
-
-	/**
-	cert, err := tls.X509KeyPair(certData, privKeyData)
-	if err != nil {
-		return nil, tls.Certificate{}, fmt.Errorf("could not create TLS x509 pair: %w", err)
-	}
-
-	return x509cert, cert, err
-	 */
 }
 
 func (kpm *keyPairManager) KeyExists() (bool, error) {
@@ -252,7 +245,7 @@ func (kpm *keyPairManager) readImpl(fin io.Reader) ([]byte, []byte, []byte, erro
 	cert := block.Bytes
 
 	// Read private key
-	block, remaining = pem.Decode(remaining)
+	block, _ = pem.Decode(remaining)
 	if block == nil {
 		return nil, nil, nil, errPrivateKeyNotFoundInPEM
 	}

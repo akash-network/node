@@ -23,8 +23,6 @@ import (
 	certutils "github.com/ovrclk/akash/x/cert/utils"
 )
 
-
-
 type TestCertificate struct {
 	Cert   []tls.Certificate
 	Serial big.Int
