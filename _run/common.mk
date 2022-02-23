@@ -78,11 +78,13 @@ node-init-genesis-certs: $(patsubst %,node-init-genesis-client-cert-%,$(CLIENT_C
 
 .PHONY: node-init-genesis-client-cert-%
 node-init-genesis-client-cert-%:
-	$(AKASH) tx cert create client --to-genesis=true --from=$(@:node-init-genesis-client-cert-%=%)
+	$(AKASH) tx cert generate client --from=$*
+	$(AKASH) tx cert publish client --to-genesis=true --from=$*
 
 .PHONY: node-init-genesis-server-cert-%
 node-init-genesis-server-cert-%:
-	$(AKASH) tx cert create server localhost akash-provider.localhost --to-genesis=true --from=$(@:node-init-genesis-server-cert-%=%)
+	$(AKASH) tx cert generate server localhost akash-provider.localhost --from=$*
+	$(AKASH) tx cert publish server --to-genesis=true --from=$*
 
 .PHONY: node-init-genesis-accounts
 node-init-genesis-accounts: $(patsubst %,node-init-genesis-account-%,$(GENESIS_ACCOUNTS))
