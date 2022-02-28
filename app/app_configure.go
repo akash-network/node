@@ -171,6 +171,36 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 }
 
 // akashEndBlockModules returns all end block modules.
+func (app *AkashApp) akashBeginBlockModules() []string {
+	return []string{
+		upgradetypes.ModuleName,
+		capabilitytypes.ModuleName,
+		banktypes.ModuleName,
+		paramstypes.ModuleName,
+		deploymenttypes.ModuleName,
+		govtypes.ModuleName,
+		providertypes.ModuleName,
+		certtypes.ModuleName,
+		markettypes.ModuleName,
+		audittypes.ModuleName,
+		genutiltypes.ModuleName,
+		vestingtypes.ModuleName,
+		crisistypes.ModuleName,
+		inflationtypes.ModuleName,
+		authtypes.ModuleName,
+		authz.ModuleName,
+		escrowtypes.ModuleName,
+		minttypes.ModuleName,
+		distrtypes.ModuleName,
+		slashingtypes.ModuleName,
+		evidencetypes.ModuleName,
+		stakingtypes.ModuleName,
+		transfertypes.ModuleName,
+		ibchost.ModuleName,
+	}
+}
+
+// akashEndBlockModules returns all end block modules.
 func (app *AkashApp) akashEndBlockModules() []string {
 	return []string{
 		crisistypes.ModuleName,

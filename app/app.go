@@ -28,7 +28,6 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
-	"github.com/cosmos/cosmos-sdk/x/authz"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -43,7 +42,6 @@ import (
 	evidencekeeper "github.com/cosmos/cosmos-sdk/x/evidence/keeper"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -72,17 +70,9 @@ import (
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
-	transfertypes "github.com/cosmos/ibc-go/v2/modules/apps/transfer/types"
 	"github.com/ovrclk/akash/x/audit"
-	audittypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
 	"github.com/ovrclk/akash/x/cert"
-	certtypes "github.com/ovrclk/akash/x/cert/types/v1beta2"
-	deploymenttypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
-	escrowtypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
-	markettypes "github.com/ovrclk/akash/x/market/types/v1beta2"
-	providertypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
@@ -384,30 +374,7 @@ func NewApp(
 	// NOTE: capability module's beginblocker must come before any modules using capabilities (e.g. IBC)
 	// NOTE: As of v0.45.0 of cosmos SDK, all modules need to be here.
 	app.mm.SetOrderBeginBlockers(
-		upgradetypes.ModuleName,
-		capabilitytypes.ModuleName,
-		banktypes.ModuleName,
-		paramstypes.ModuleName,
-		deploymenttypes.ModuleName,
-		govtypes.ModuleName,
-		providertypes.ModuleName,
-		certtypes.ModuleName,
-		markettypes.ModuleName,
-		audittypes.ModuleName,
-		genutiltypes.ModuleName,
-		vestingtypes.ModuleName,
-		crisistypes.ModuleName,
-		inflationtypes.ModuleName,
-		authtypes.ModuleName,
-		authz.ModuleName,
-		escrowtypes.ModuleName,
-		minttypes.ModuleName,
-		distrtypes.ModuleName,
-		slashingtypes.ModuleName,
-		evidencetypes.ModuleName,
-		stakingtypes.ModuleName,
-		transfertypes.ModuleName,
-		ibchost.ModuleName,
+		app.akashBeginBlockModules()...,
 	)
 	app.mm.SetOrderEndBlockers(
 		app.akashEndBlockModules()...,
