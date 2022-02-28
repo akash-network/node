@@ -37,7 +37,130 @@ func leaseLogsCmd() *cobra.Command {
 	return cmd
 }
 
+func leaseLogStatusCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:          "lease-log-status",
+		Short:        "get lease log status",
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return doLeaseLogsStatus(cmd)
+		},
+	}
+
+	addServiceFlags(cmd)
+
+	return cmd
+}
+
+func doLeaseLogsStatus(cmd *cobra.Command) error {
+	/**
+	cctx, err := sdkclient.GetClientTxContext(cmd)
+	if err != nil {
+		return err
+	}
+
+	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, cctx.Keyring)
+	if err != nil {
+		return markRPCServerError(err)
+	}
+
+	dseq, err := dseqFromFlags(cmd.Flags())
+	if err != nil {
+		return err
+	}
+
+	leases, err := leasesForDeployment(cmd.Context(), cctx, cmd.Flags(), dtypes.DeploymentID{
+		Owner: cctx.GetFromAddress().String(),
+		DSeq:  dseq,
+	})
+	if err != nil {
+		return markRPCServerError(err)
+	}
+
+	svcs, err := cmd.Flags().GetString(FlagService)
+	if err != nil {
+		return err
+	}
+
+	type result struct {
+		lid    mtypes.LeaseID
+		error  error
+		stream *gwrest.ServiceLogs
+	}
+
+	streams := make([]result, 0, len(leases))
+
+	ctx := cmd.Context()
+
+	for _, lid := range leases {
+		stream := result{lid: lid}
+		prov, _ := sdk.AccAddressFromBech32(lid.Provider)
+		gclient, err := gwrest.NewClient(akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})
+		if err == nil {
+			stream.stream, stream.error = gclient.LeaseLogs(ctx, lid, svcs, follow, tailLines)
+		} else {
+			stream.error = err
+		}
+
+		streams = append(streams, stream)
+	}
+
+	var wgStreams sync.WaitGroup
+
+	type logEntry struct {
+		gwrest.ServiceLogMessage `json:",inline"`
+		Lid                      mtypes.LeaseID `json:"lease_id"`
+	}
+
+	outch := make(chan logEntry)
+
+	printFn := func(evt logEntry) {
+		fmt.Printf("[%s][%s] %s\n", evt.Lid, evt.Name, evt.Message)
+	}
+
+	if outputFormat == "json" {
+		printFn = func(evt logEntry) {
+			_ = cmdcommon.PrintJSON(cctx, evt)
+		}
+	}
+
+	go func() {
+		for evt := range outch {
+			printFn(evt)
+		}
+	}()
+
+	for _, stream := range streams {
+		if stream.error != nil {
+			continue
+		}
+
+		wgStreams.Add(1)
+		go func(stream result) {
+			defer wgStreams.Done()
+
+			for res := range stream.stream.Stream {
+				outch <- logEntry{
+					ServiceLogMessage: res,
+					Lid:               stream.lid,
+				}
+			}
+		}(stream)
+	}
+
+	wgStreams.Wait()
+	close(outch)
+
+	return nil
+
+	 */
+	return nil
+}
+
 func doLeaseLogs(cmd *cobra.Command) error {
+
+	// TODO - clean up most of this into some sort of simple "withEachLease" function that calls a
+	// function for each lease found
 	cctx, err := sdkclient.GetClientTxContext(cmd)
 	if err != nil {
 		return err

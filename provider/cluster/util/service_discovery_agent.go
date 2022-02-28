@@ -29,6 +29,7 @@ func NewServiceDiscoveryAgent(logger log.Logger, kubeConfig *rest.Config, portNa
 		return staticServiceDiscoveryAgent(*endpoint), nil
 	}
 
+	// TODO - only assign this if that discovery mode is selected
 	kc, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
 		return nil, err

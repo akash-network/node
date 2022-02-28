@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"github.com/ovrclk/akash/provider/cluster/kube/loki"
 	"github.com/ovrclk/akash/provider/cluster/operatorclients"
 	"github.com/ovrclk/akash/provider/gateway/utils"
 	ipoptypes "github.com/ovrclk/akash/provider/operator/ipoperator/types"
@@ -20,8 +21,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/ovrclk/akash/provider/cluster/kube/builder"
-
-	"github.com/cosmos/cosmos-sdk/version"
 
 	"k8s.io/client-go/tools/remotecommand"
 
@@ -82,7 +81,7 @@ type wsStreamConfig struct {
 	client    cluster.ReadClient
 }
 
-func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopclient operatorclients.IPOperatorClient, ctxConfig map[interface{}]interface{}) *mux.Router {
+func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopclient operatorclients.IPOperatorClient, lokiClient loki.Client, ctxConfig map[interface{}]interface{}) *mux.Router {
 
 	router := mux.NewRouter()
 
@@ -165,6 +164,9 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopcl
 		leaseLogsHandler(log, pclient.Cluster())).
 		Methods("GET")
 
+	logRouter.HandleFunc("/status",
+		logStatusHandler(log, lokiClient)).Methods(http.MethodGet)
+
 	srouter := lrouter.PathPrefix("/service/{serviceName}").Subrouter()
 	srouter.Use(
 		requireService(),
@@ -180,6 +182,25 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopcl
 		leaseShellHandler(log, pclient.Manifest(), pclient.Cluster()))
 
 	return router
+}
+
+func logStatusHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc{
+	return func(rw http.ResponseWriter, req *http.Request) {
+		leaseID := requestLeaseID(req)
+		result, err := lokiClient.FindLogsByLease(req.Context(), leaseID)
+		if err != nil {
+			logger.Error("could not get logs for lease", "lease", leaseID, "err", err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		rw.WriteHeader(http.StatusOK)
+		enc := json.NewEncoder(rw)
+		err = enc.Encode(result)
+		if err != nil {
+			logger.Error("could not write lease log status", "lease", leaseID, "err", err)
+		}
+	}
 }
 
 func newJwtServerRouter(addr sdk.Address, privateKey interface{}, jwtExpiresAfter time.Duration, certSerialNumber string) *mux.Router {
