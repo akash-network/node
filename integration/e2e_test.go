@@ -138,7 +138,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--gas=%s", flags.GasFlagAuto),
 		fmt.Sprintf("--%s=%s", flags.FlagGasAdjustment, Adjustment),
-		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, Adjustment),
+		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, Price),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
@@ -158,7 +158,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--gas=%s", flags.GasFlagAuto),
 		fmt.Sprintf("--%s=%s", flags.FlagGasAdjustment, Adjustment),
-		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, Adjustment),
+		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, Price),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
@@ -204,7 +204,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--gas=%s", flags.GasFlagAuto),
 		fmt.Sprintf("--%s=%s", flags.FlagGasAdjustment, Adjustment),
-		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, Adjustment),
+		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, Price),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
