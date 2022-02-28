@@ -79,8 +79,8 @@ type IntegrationTestSuite struct {
 	appPort string
 }
 
-const Price = "0.025uakt"
-const Adjustment = "1.15"
+const Price = "0.03uakt"
+const Adjustment = "1.4"
 
 type E2EContainerToContainer struct {
 	IntegrationTestSuite
