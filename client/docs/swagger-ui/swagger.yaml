@@ -3782,7 +3782,7 @@ paths:
                     type: string
                   gas_wanted:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_used:
                     type: string
                     example: '26354'
@@ -3930,7 +3930,7 @@ paths:
                           type: string
                         gas_wanted:
                           type: string
-                          example: '200000'
+                          example: '210000'
                         gas_used:
                           type: string
                           example: '26354'
@@ -4334,7 +4334,7 @@ paths:
                     example: '1'
                   gas:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_adjustment:
                     type: string
                     example: '1.2'
@@ -4595,7 +4595,7 @@ paths:
                     example: '1'
                   gas:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_adjustment:
                     type: string
                     example: '1.2'
@@ -4810,7 +4810,7 @@ paths:
                     example: '1'
                   gas:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_adjustment:
                     type: string
                     example: '1.2'
@@ -5030,7 +5030,7 @@ paths:
                     example: '1'
                   gas:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_adjustment:
                     type: string
                     example: '1.2'
@@ -5850,7 +5850,7 @@ paths:
                     example: '1'
                   gas:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_adjustment:
                     type: string
                     example: '1.2'
@@ -6067,7 +6067,7 @@ paths:
                     example: '1'
                   gas:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_adjustment:
                     type: string
                     example: '1.2'
@@ -6362,7 +6362,7 @@ paths:
                     example: '1'
                   gas:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_adjustment:
                     type: string
                     example: '1.2'
@@ -6586,7 +6586,7 @@ paths:
                     example: '1'
                   gas:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_adjustment:
                     type: string
                     example: '1.2'
@@ -6937,7 +6937,7 @@ paths:
                     example: '1'
                   gas:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_adjustment:
                     type: string
                     example: '1.2'
@@ -7090,7 +7090,7 @@ paths:
                     example: '1'
                   gas:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_adjustment:
                     type: string
                     example: '1.2'
@@ -7232,7 +7232,7 @@ paths:
                     example: '1'
                   gas:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_adjustment:
                     type: string
                     example: '1.2'
@@ -7466,7 +7466,7 @@ paths:
                     example: '1'
                   gas:
                     type: string
-                    example: '200000'
+                    example: '210000'
                   gas_adjustment:
                     type: string
                     example: '1.2'
@@ -30781,7 +30781,7 @@ definitions:
             type: string
           gas_wanted:
             type: string
-            example: '200000'
+            example: '210000'
           gas_used:
             type: string
             example: '26354'
@@ -30877,7 +30877,7 @@ definitions:
                   type: string
                 gas_wanted:
                   type: string
-                  example: '200000'
+                  example: '210000'
                 gas_used:
                   type: string
                   example: '26354'
@@ -31466,7 +31466,7 @@ definitions:
         example: '1'
       gas:
         type: string
-        example: '200000'
+        example: '210000'
       gas_adjustment:
         type: string
         example: '1.2'
