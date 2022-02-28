@@ -73,6 +73,14 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/ovrclk/akash/x/audit"
+	audittypes "github.com/ovrclk/akash/x/audit/types"
+	deploymenttypes "github.com/ovrclk/akash/x/deployment/types"
+	escrowtypes "github.com/ovrclk/akash/x/escrow/types"
+	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
+	authztypes "github.com/cosmos/cosmos-sdk/x/authz/module"
+	markettypes "github.com/ovrclk/akash/x/market/types"
+	transfertypes "github.com/cosmos/ibc-go/v2/modules/apps/transfer/types"
+	certtypes "github.com/ovrclk/akash/x/cert/types"
 	"github.com/ovrclk/akash/x/cert"
 	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
 
@@ -374,10 +382,32 @@ func NewApp(
 	// CanWithdrawInvariant invariant.
 	// NOTE: staking module is required if HistoricalEntries param > 0
 	// NOTE: capability module's beginblocker must come before any modules using capabilities (e.g. IBC)
+	// NOTE: As of v0.45.0 of cosmos SDK, all modules need to be here.
 	app.mm.SetOrderBeginBlockers(
-		upgradetypes.ModuleName, capabilitytypes.ModuleName, minttypes.ModuleName,
-		distrtypes.ModuleName, slashingtypes.ModuleName, evidencetypes.ModuleName,
-		stakingtypes.ModuleName, ibchost.ModuleName,
+		upgradetypes.ModuleName,
+		capabilitytypes.ModuleName,
+		banktypes.ModuleName,
+		paramstypes.ModuleName, 
+		deploymenttypes.ModuleName,
+		govtypes.ModuleName, 
+		providertypes.ModuleName, 
+		certtypes.ModuleName, 
+		markettypes.ModuleName, 
+		audittypes.ModuleName, 
+		genutiltypes.ModuleName, 
+		vestingtypes.ModuleName, 
+		crisistypes.ModuleName,
+		inflationtypes.ModuleName, 
+		authtypes.ModuleName, 
+		authztypes.ModuleName,
+		escrowtypes.ModuleName, 
+		minttypes.ModuleName,
+		distrtypes.ModuleName, 
+		slashingtypes.ModuleName, 
+		evidencetypes.ModuleName,
+		stakingtypes.ModuleName,
+		transfertypes.ModuleName, 
+		ibchost.ModuleName,
 	)
 	app.mm.SetOrderEndBlockers(
 		append([]string{
