@@ -46,7 +46,7 @@ func (s *E2EPersistentStorageDefault) TestDefaultStorageClass() {
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--gas=%s", flags.GasFlagAuto),
 		fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
 	)
@@ -69,7 +69,7 @@ func (s *E2EPersistentStorageDefault) TestDefaultStorageClass() {
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--gas=%s", flags.GasFlagAuto),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
@@ -155,7 +155,7 @@ func (s *E2EPersistentStorageBeta2) TestDedicatedStorageClass() {
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--gas=%s", flags.GasFlagAuto),
 		fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
 	)
@@ -178,7 +178,7 @@ func (s *E2EPersistentStorageBeta2) TestDedicatedStorageClass() {
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--gas=%s", flags.GasFlagAuto),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
