@@ -117,7 +117,7 @@ func DefaultConfig() network.Config {
 		ChainID:           "chain-" + tmrand.NewRand().Str(6),
 		NumValidators:     4,
 		BondDenom:         CoinDenom,
-		MinGasPrices:      fmt.Sprintf("0.000008%s", CoinDenom),
+		MinGasPrices:      fmt.Sprintf("0.000006%s", CoinDenom),
 		AccountTokens:     sdk.TokensFromConsensusPower(1000000000000, sdk.DefaultPowerReduction),
 		StakingTokens:     sdk.TokensFromConsensusPower(100000, sdk.DefaultPowerReduction),
 		BondedTokens:      sdk.TokensFromConsensusPower(100, sdk.DefaultPowerReduction),
