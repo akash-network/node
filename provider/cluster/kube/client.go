@@ -694,6 +694,7 @@ exposeCheckLoop:
 	return result, nil
 }
 
+//nolint:unused
 func (c *client) countKubeCall(err error, name string) {
 	label := metricsutils.SuccessLabel
 	if err != nil {
