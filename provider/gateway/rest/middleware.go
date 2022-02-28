@@ -1,12 +1,17 @@
 package rest
 
 import (
+	"crypto/ecdsa"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/golang-jwt/jwt/v4"
+	"github.com/tendermint/tendermint/libs/log"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/context"
+	gcontext "github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 
@@ -204,6 +209,43 @@ func requestStreamParams() mux.MiddlewareFunc {
 			context.Set(req, servicesContextKey, services)
 
 			next.ServeHTTP(w, req)
+		})
+	}
+}
+
+func resourceServerAuth(log log.Logger, providerAddr sdk.Address, publicKey *ecdsa.PublicKey) mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// verify the provided JWT
+			token, err := jwt.ParseWithClaims(r.Header.Get("Authorization"), &ClientCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+				// return the public key to be used for JWT verification
+				return publicKey, nil
+			})
+			if err != nil {
+				log.Error("falied to parse JWT", "error", err)
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+			// delete the Authorization header as it is no more needed
+			r.Header.Del("Authorization")
+
+			// store the owner & provider address in request context to be used in later handlers
+			customClaims, ok := token.Claims.(*ClientCustomClaims)
+			if !ok {
+				log.Error("failed to parse JWT claims")
+				http.Error(w, "Invalid JWT", http.StatusUnauthorized)
+				return
+			}
+			ownerAddress, err := sdk.AccAddressFromBech32(customClaims.Subject)
+			if err != nil {
+				log.Error("failed parsing owner address", "error", err, "address", customClaims.Subject)
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+			gcontext.Set(r, ownerContextKey, ownerAddress)
+			gcontext.Set(r, providerContextKey, providerAddr)
+
+			next.ServeHTTP(w, r)
 		})
 	}
 }

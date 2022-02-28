@@ -2,6 +2,7 @@ package rest
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"crypto/tls"
 	"net"
 	"net/http"
@@ -63,6 +64,22 @@ func NewJwtServer(ctx context.Context,
 	srv.TLSConfig, err = gwutils.NewServerTLSConfig(ctx, []tls.Certificate{cert}, cquery)
 	if err != nil {
 		return nil, err
+	}
+
+	return srv, nil
+}
+
+func NewResourceServer(ctx context.Context,
+	log log.Logger,
+	serverAddr string,
+	providerAddr sdk.Address,
+	pubkey *ecdsa.PublicKey,
+	lokiGwAddr string,
+) (*http.Server, error) {
+	srv := &http.Server{
+		Addr:        serverAddr,
+		Handler:     newResourceServerRouter(log, providerAddr, pubkey, lokiGwAddr),
+		BaseContext: func(_ net.Listener) context.Context { return ctx },
 	}
 
 	return srv, nil

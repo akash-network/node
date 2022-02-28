@@ -33,6 +33,7 @@ func RootCmd() *cobra.Command {
 	cmd.AddCommand(AuthenticateCmd())
 	cmd.AddCommand(clusterNSCmd())
 	cmd.AddCommand(migrate())
+	cmd.AddCommand(RunResourceServerCmd())
 
 	return cmd
 }
