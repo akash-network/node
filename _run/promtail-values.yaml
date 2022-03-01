@@ -1,0 +1,7 @@
+config:
+  lokiAddress: http://loki.loki-stack:3100/loki/api/v1/push
+  snippets:
+    pipelineStages:
+      - cri: {}
+      - tenant:
+          source: namespace
