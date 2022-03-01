@@ -42,13 +42,8 @@ func (s *E2EPersistentStorageDefault) TestDefaultStorageClass() {
 		s.validator.ClientCtx,
 		s.keyTenant.GetAddress(),
 		deploymentPath,
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--gas=%s", flags.GasFlagAuto),
-		fmt.Sprintf("--%s=%s", flags.FlagGasAdjustment, Adjustment),
-		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, Price),
-		fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit),
-		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
+		cliGlobalFlags(fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit),
+			fmt.Sprintf("--dseq=%v", deploymentID.DSeq))...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(7))
@@ -66,11 +61,7 @@ func (s *E2EPersistentStorageDefault) TestDefaultStorageClass() {
 		s.validator.ClientCtx,
 		bidID,
 		s.keyTenant.GetAddress(),
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--gas=%s", flags.GasFlagAuto),
-		fmt.Sprintf("--%s=%s", flags.FlagGasAdjustment, Adjustment),
-		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, Price),
+		cliGlobalFlags()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
@@ -153,13 +144,8 @@ func (s *E2EPersistentStorageBeta2) TestDedicatedStorageClass() {
 		s.validator.ClientCtx,
 		s.keyTenant.GetAddress(),
 		deploymentPath,
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--gas=%s", flags.GasFlagAuto),
-		fmt.Sprintf("--%s=%s", flags.FlagGasAdjustment, Adjustment),
-		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, Price),
-		fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit),
-		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
+		cliGlobalFlags(fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit),
+			fmt.Sprintf("--dseq=%v", deploymentID.DSeq))...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(7))
@@ -177,11 +163,7 @@ func (s *E2EPersistentStorageBeta2) TestDedicatedStorageClass() {
 		s.validator.ClientCtx,
 		bidID,
 		s.keyTenant.GetAddress(),
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--gas=%s", flags.GasFlagAuto),
-		fmt.Sprintf("--%s=%s", flags.FlagGasAdjustment, Adjustment),
-		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, Price),
+		cliGlobalFlags()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
