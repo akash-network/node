@@ -21,7 +21,6 @@ GRPC_GATEWAY_VERSION       := $(shell $(GO) list -mod=readonly -m -f '{{ .Versio
 PROTOC_SWAGGER_GEN_VERSION := $(GRPC_GATEWAY_VERSION)
 GOLANGCI_LINT_VERSION      ?= v1.38.0
 GOLANG_VERSION             ?= 1.16.1
-GOLANG_CROSS_VERSION       := v$(GOLANG_VERSION)
 STATIK_VERSION             ?= v0.1.7
 GIT_CHGLOG_VERSION         ?= v0.10.0
 MODVENDOR_VERSION          ?= v0.3.0
