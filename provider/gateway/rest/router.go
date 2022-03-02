@@ -167,6 +167,9 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopcl
 	logRouter.HandleFunc("/status",
 		logStatusHandler(log, lokiClient)).Methods(http.MethodGet)
 
+	logRouter.HandleFunc("/query/{serviceName}/{replicaIndex}",
+		logQueryHandler(log, lokiClient)).Methods(http.MethodGet)
+
 	srouter := lrouter.PathPrefix("/service/{serviceName}").Subrouter()
 	srouter.Use(
 		requireService(),
@@ -184,9 +187,45 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopcl
 	return router
 }
 
+func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc{
+	return func(rw http.ResponseWriter, req *http.Request) {
+		leaseID := requestLeaseID(req)
+		// TODO - make sure the lease actually exists first
+
+		serviceName := mux.Vars(req)["serviceName"] // TODO validate this exists
+		replicaIndexStr := mux.Vars(req)["replicaIndex"]
+
+		replicaIndex, err :=  strconv.ParseUint(replicaIndexStr, 10, 31)
+		if err != nil {
+			logger.Error("could not parse path compeonent for replica index", "err", err, "replicaIndex", replicaIndexStr)
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		logs, err := lokiClient.GetLogByService(req.Context(),leaseID, serviceName, uint(replicaIndex),
+			-1,
+			time.Now().Add(time.Hour * 72 * -1), // TODO - configurable
+			time.Now(), false)
+
+		if err != nil {
+			logger.Error("could not get logs for lease", "lease", leaseID, "err", err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		rw.WriteHeader(http.StatusOK)
+		enc := json.NewEncoder(rw)
+		err = enc.Encode(logs)
+		if err != nil {
+			logger.Error("could not write lease log status", "lease", leaseID, "err", err)
+		}
+	}
+}
+
 func logStatusHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc{
 	return func(rw http.ResponseWriter, req *http.Request) {
 		leaseID := requestLeaseID(req)
+		// TODO - make sure the lease actually exists first
 		result, err := lokiClient.FindLogsByLease(req.Context(), leaseID)
 		if err != nil {
 			logger.Error("could not get logs for lease", "lease", leaseID, "err", err)
