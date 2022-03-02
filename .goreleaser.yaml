@@ -39,6 +39,9 @@ builds:
   - id: akash-linux-amd64
     binary: akash
     main: ./cmd/akash
+    env:
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
     goarch:
       - amd64
     goos:
