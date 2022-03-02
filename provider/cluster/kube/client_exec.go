@@ -101,6 +101,18 @@ loop:
 	default:
 	}
 
+	// Check the conditions, make sure the pod is marked as ready
+	isReady := false
+	for _, cond := range selectedPod.Status.Conditions {
+		if cond.Type == corev1.PodReady {
+			isReady = cond.Status == corev1.ConditionTrue
+		}
+	}
+
+	if !isReady {
+		return nil, fmt.Errorf("%w: the service is not ready", cluster.ErrExecServiceNotRunning)
+	}
+
 	podName := selectedPod.Name
 	containerName := serviceName // Container name is always the same as the service name
 
