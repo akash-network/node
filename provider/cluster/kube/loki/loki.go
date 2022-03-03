@@ -117,6 +117,61 @@ type LogResult struct {
 
 }
 
+func (c *client) discoverFilename(ctx context.Context, leaseID mtypes.LeaseID, startTime, endTime time.Time, podName string) (string,error) {
+	// Query using the pod name to get the result
+	lc, err := c.getLokiClient(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	httpQueryString := url.Values{}
+	httpQueryString.Set("start", fmt.Sprintf("%d", startTime.UnixNano()))
+	httpQueryString.Set("end", fmt.Sprintf("%d", endTime.UnixNano()))
+	httpQueryString.Set("limit", "1")
+	// TODO - guard against injection
+	lokiQuery := fmt.Sprintf("{%s=%q}", podLabel, podName) // Note this is not JSON
+	httpQueryString.Set("query", lokiQuery)
+	httpQueryString.Set("direction", string(BACKWARD))
+
+	request, err := lc.CreateRequest(ctx, http.MethodGet, queryRangePath, nil )
+	if err != nil {
+		return "", err
+	}
+	request.URL.RawQuery = httpQueryString.Encode()
+
+	request.Header.Add(lokiOrgIdHeader, clusterutil.LeaseIDToNamespace(leaseID))
+
+	resp, err := lc.DoRequest(request)
+	if err != nil {
+		return "" , fmt.Errorf("loki filename discovery log query for pod %q failed: %w", podName, err)
+	}
+
+	if resp.StatusCode != 200 {
+		buf := &bytes.Buffer{}
+		_, _ = io.Copy(buf, resp.Body)
+		msg := strings.Trim(buf.String(), "\n\t\r")
+		return "", fmt.Errorf("%w: loki filename discovery log query failed for pod %q, got status code %d; %s", ErrLoki, podName, resp.StatusCode, msg)
+	}
+
+	decoder := json.NewDecoder(resp.Body)
+	lokiResult := lokiLogQueryResponse{}
+	err = decoder.Decode(&lokiResult)
+	if err != nil {
+		return "",fmt.Errorf("loki log query response for pod %q could not be decoded: %w", podName, err)
+	}
+
+	if len(lokiResult.Data.Result) == 0 {
+		return "", fmt.Errorf("%w: loki filename discovery for pod %q returned no results", ErrLoki, podName)
+	}
+
+	filename, exists:= lokiResult.Data.Result[0].Stream[filenameLabel]
+	if !exists {
+		return "", fmt.Errorf("%w: loki filename discovery for pod %q had no label %q", ErrLoki, podName, filenameLabel)
+	}
+
+	return filename, nil
+}
+
 func (c *client) GetLogByService(ctx context.Context, leaseID mtypes.LeaseID, serviceName string, replicaIndex uint, runIndex int, startTime, endTime time.Time, forward bool) (LogResult, error) {
 	lidNS := clusterutil.LeaseIDToNamespace(leaseID)
 	// get a list of possible logs for this service
@@ -142,19 +197,43 @@ func (c *client) GetLogByService(ctx context.Context, leaseID mtypes.LeaseID, se
 		return LogResult{},err
 	}
 
-	// TODO - if runIndex >= 0 then launch a query to get a single log line back from the backend
+	// if runIndex >= 0 then launch a query to get a single log line back from the backend
 	// then use that log line to determine the correct label to query on. Will need to parse it out and then
 	// modify it to be the expected value
+	specifyRunIndex := runIndex >= 0
+	filenameLabelFilter := ""
+	if specifyRunIndex  {
+		filename, err := c.discoverFilename(ctx, leaseID, startTime, endTime, podName)
+		if err != nil {
+			return LogResult{}, err
+		}
+
+		head, tail := path.Split(filename)
+		parts := strings.SplitN(tail, ".", 2)
+		if len(parts) != 2 {
+			return LogResult{}, fmt.Errorf("%w: while constructing fielname filter cannot make sense of filepath %q", ErrLoki, filename)
+		}
+
+		filenameLabelFilter = fmt.Sprintf("%s/%d.%s", head, runIndex, parts[1])
+	}
 
 	httpQueryString := url.Values{}
 	httpQueryString.Set("start", fmt.Sprintf("%d", startTime.UnixNano()))
 	httpQueryString.Set("end", fmt.Sprintf("%d", endTime.UnixNano()))
 	httpQueryString.Set("limit", "1000") // TODO - configurable or something? Maybe user requestable?
+
+	lokiQueryBuf := &bytes.Buffer{}
+	// Note this is not JSON
 	// TODO - guard against injection here even though it is unlikely
-	// TODO - specify filename label here if runIndex >= 0
-	lokiQuery := fmt.Sprintf("{pod=%q}", podName) // Note this is not JSON
-	// TODO - query by run index as well ? do I even need this
-	httpQueryString.Set("query", lokiQuery)
+	_, _ = fmt.Fprint(lokiQueryBuf, "{")
+	_, _ = fmt.Fprintf(lokiQueryBuf, "%s=%q", podLabel, podName)
+	// specify filename label here if runIndex >= 0
+	if specifyRunIndex {
+		_, _ = fmt.Fprintf(lokiQueryBuf,",%s=%q", filenameLabel, filenameLabelFilter)
+	}
+	_, _ = fmt.Fprint(lokiQueryBuf, "}")
+
+	httpQueryString.Set("query", lokiQueryBuf.String())
 
 	direction := FORWARD
 	if !forward {
@@ -188,7 +267,7 @@ func (c *client) GetLogByService(ctx context.Context, leaseID mtypes.LeaseID, se
 	lokiResult := lokiLogQueryResponse{}
 	err = decoder.Decode(&lokiResult)
 	if err != nil {
-		return LogResult{},fmt.Errorf("loki log request could not be decoded: %w", err)
+		return LogResult{},fmt.Errorf("loki log query response could not be decoded: %w", err)
 	}
 
 	result := LogResult{

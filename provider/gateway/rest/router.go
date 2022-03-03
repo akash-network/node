@@ -205,15 +205,78 @@ func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc
 		// TODO - validate replica index
 
 		// TODO - get the following from the query, with defaults
-		// runIndex
+		query := req.URL.Query()
+
+		// Parse runIndex from query, if present
+		runIndex := -1
+		runIndexStr := query.Get("runIndex")
+		if len(runIndexStr) != 0 {
+			runIndex64, err := strconv.ParseUint(runIndexStr, 10, 31)
+			if err != nil {
+				logger.Error("could not parse run index", "runIndex", runIndexStr, "err", err)
+				rw.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			runIndex = int(runIndex64)
+		}
+
+		// Parse start time from query, if present
+		startTime := time.Now().Add(-1 * time.Hour)
 		// start time
-		// end time
+		startTimeStr := query.Get("startTime")
+		if len(startTimeStr) != 0 {
+			startTimeInt, err := strconv.ParseInt(startTimeStr, 10, 64)
+			if err != nil {
+				logger.Error("could not parse startTime", "startTime", startTimeStr, "err", err)
+				rw.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			startTime = time.Unix(startTimeInt,0)
+		}
+
+		// Parse end time from query, if present
+		endTime := time.Now()
+		endTimeStr := query.Get("endTime")
+		if len(startTimeStr) != 0 {
+			endTimeInt, err := strconv.ParseInt(endTimeStr, 10, 64)
+			if err != nil {
+				logger.Error("could not parse endTime", "endTime", endTimeStr, "err", err)
+				rw.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			endTime = time.Unix(endTimeInt,0)
+		}
+
+		const timeLimit = time.Hour * 72 // TODO - configurable
+		duration := endTime.Sub(startTime)
+		if duration > timeLimit || duration < 0 {
+			logger.Error("duration of time range queried is not allowed", "startTime", startTime, "endTime", endTime)
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		forward := true
+		// Parse direction from query, if present
+		forwardStr := query.Get("forward")
+		if len(forwardStr) != 0 {
+			switch(forwardStr){
+			case "0":
+				forward = false
+			case "1":
+				forward = true
+			default:
+				logger.Error("unknown value for forward", "forward", forwardStr)
+				rw.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
 
 		logs, err := lokiClient.GetLogByService(req.Context(),leaseID, serviceName, uint(replicaIndex),
-			-1,
-			time.Now().Add(time.Hour * 72 * -1), // TODO - configurable. Loki apparently has a default time limit of 720hrs here
-			time.Now(), false)
-
+			runIndex,
+			startTime,
+			endTime, forward)
 		if err != nil {
 			logger.Error("could not get logs for lease", "lease", leaseID, "err", err)
 			rw.WriteHeader(http.StatusInternalServerError)
