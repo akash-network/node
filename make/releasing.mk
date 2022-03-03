@@ -1,6 +1,6 @@
 GORELEASER_SKIP_VALIDATE ?= false
-
-GON_CONFIGFILE ?= gon.json
+GORELEASER_IMAGE         := ghcr.io/goreleaser/goreleaser-cross:v$(GOLANG_VERSION)
+GON_CONFIGFILE           ?= gon.json
 
 ifeq ($(OS),Windows_NT)
     DETECTED_OS := Windows
@@ -45,7 +45,7 @@ docker-image:
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
-		troian/golang-cross:${GOLANG_CROSS_VERSION} \
+		$(GORELEASER_IMAGE) \
 		-f .goreleaser-docker.yaml --rm-dist --skip-validate --skip-publish --snapshot
 
 .PHONY: gen-changelog
@@ -66,7 +66,7 @@ release-dry-run: modvendor gen-changelog
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
-		troian/golang-cross:${GOLANG_CROSS_VERSION} \
+		$(GORELEASER_IMAGE) \
 		-f "$(GORELEASER_CONFIG)" --skip-validate=$(GORELEASER_SKIP_VALIDATE) --rm-dist --skip-publish --release-notes=/go/src/github.com/ovrclk/akash/.cache/changelog.md
 
 .PHONY: release
@@ -87,5 +87,5 @@ release: modvendor gen-changelog
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
-		troian/golang-cross:${GOLANG_CROSS_VERSION} \
+		$(GORELEASER_IMAGE) \
 		-f "$(GORELEASER_CONFIG)" release --rm-dist --release-notes=/go/src/github.com/ovrclk/akash/.cache/changelog.md
