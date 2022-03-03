@@ -3,9 +3,6 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"io"
 	"net/http"
@@ -15,7 +12,6 @@ import (
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/ovrclk/akash/cmd/common"
 	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
 	cmodule "github.com/ovrclk/akash/x/cert"
@@ -66,25 +62,17 @@ func doAuthServerCmd(ctx context.Context, cmd *cobra.Command, _ []string) error 
 		return err
 	}
 
-	txFactory := tx.NewFactoryCLI(cctx, cmd.Flags()).WithTxConfig(cctx.TxConfig).WithAccountRetriever(cctx.AccountRetriever)
-
 	var certFromFlag io.Reader
 	if val := cmd.Flag(FlagAuthPem).Value.String(); val != "" {
 		certFromFlag = bytes.NewBufferString(val)
 	}
 
-	cpem, err := cutils.LoadPEMForAccount(cctx, txFactory.Keybase(), cutils.PEMFromReader(certFromFlag))
+	kpm, err := cutils.NewKeyPairManager(cctx, cctx.FromAddress)
 	if err != nil {
 		return err
 	}
 
-	blk, _ := pem.Decode(cpem.Cert)
-	x509cert, err := x509.ParseCertificate(blk.Bytes)
-	if err != nil {
-		return err
-	}
-
-	cert, err := tls.X509KeyPair(cpem.Cert, cpem.Priv)
+	x509cert, tlsCert, err := kpm.ReadX509KeyPair(certFromFlag)
 	if err != nil {
 		return err
 	}
@@ -97,7 +85,7 @@ func doAuthServerCmd(ctx context.Context, cmd *cobra.Command, _ []string) error 
 		cquery,
 		jwtGwAddr,
 		cctx.FromAddress,
-		cert,
+		tlsCert,
 		x509cert.SerialNumber.String(),
 		expiresAfter,
 	)

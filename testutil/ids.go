@@ -15,6 +15,7 @@ import (
 )
 
 func Keyring(t testing.TB) keyring.Keyring {
+	t.Helper()
 	obj := keyring.NewInMemory()
 	return obj
 }
@@ -25,6 +26,11 @@ func AccAddress(t testing.TB) sdk.AccAddress {
 	t.Helper()
 	privKey := ed25519.GenPrivKey()
 	return sdk.AccAddress(privKey.PubKey().Address())
+}
+
+func Key(t testing.TB) ed25519.PrivKey {
+	t.Helper()
+	return ed25519.GenPrivKey()
 }
 
 func DeploymentID(t testing.TB) dtypes.DeploymentID {

@@ -28,7 +28,7 @@ func migrateHostnames(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, cctx.Keyring)
+	cert, err := cutils.LoadAndQueryCertificateForAccount(cmd.Context(), cctx, nil)
 	if err != nil {
 		return markRPCServerError(err)
 	}

@@ -53,7 +53,7 @@ func cmdCreate(key string) *cobra.Command {
 			}
 
 			// first lets validate certificate exists for given account
-			if _, err = cutils.LoadAndQueryCertificateForAccount(cmd.Context(), clientCtx, clientCtx.Keyring); err != nil {
+			if _, err = cutils.LoadAndQueryCertificateForAccount(cmd.Context(), clientCtx, nil); err != nil {
 				if os.IsNotExist(err) {
 					err = errors.Errorf("no certificate file found for account %q.\n"+
 						"consider creating it as certificate required to submit manifest", clientCtx.FromAddress.String())

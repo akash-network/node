@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"io"
 	"net/http"
@@ -14,7 +12,6 @@ import (
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/ovrclk/akash/cmd/common"
 	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
 	cutils "github.com/ovrclk/akash/x/cert/utils"
@@ -71,20 +68,17 @@ func doRunResourceServer(ctx context.Context, cmd *cobra.Command, _ []string) er
 		return err
 	}
 
-	txFactory := tx.NewFactoryCLI(cctx, cmd.Flags()).WithTxConfig(cctx.TxConfig).WithAccountRetriever(cctx.AccountRetriever)
-
 	var certFromFlag io.Reader
 	if val := cmd.Flag(FlagAuthPem).Value.String(); val != "" {
 		certFromFlag = bytes.NewBufferString(val)
 	}
 
-	cpem, err := cutils.LoadPEMForAccount(cctx, txFactory.Keybase(), cutils.PEMFromReader(certFromFlag))
+	kpm, err := cutils.NewKeyPairManager(cctx, cctx.GetFromAddress())
 	if err != nil {
 		return err
 	}
 
-	blk, _ := pem.Decode(cpem.Cert)
-	x509cert, err := x509.ParseCertificate(blk.Bytes)
+	x509cert, _, err := kpm.ReadX509KeyPair(certFromFlag)
 	if err != nil {
 		return err
 	}
