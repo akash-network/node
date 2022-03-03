@@ -197,14 +197,21 @@ func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc
 
 		replicaIndex, err :=  strconv.ParseUint(replicaIndexStr, 10, 31)
 		if err != nil {
-			logger.Error("could not parse path compeonent for replica index", "err", err, "replicaIndex", replicaIndexStr)
+			logger.Error("could not parse path component for replica index", "err", err, "replicaIndex", replicaIndexStr)
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
 
+		// TODO - validate replica index
+
+		// TODO - get the following from the query, with defaults
+		// runIndex
+		// start time
+		// end time
+
 		logs, err := lokiClient.GetLogByService(req.Context(),leaseID, serviceName, uint(replicaIndex),
 			-1,
-			time.Now().Add(time.Hour * 72 * -1), // TODO - configurable
+			time.Now().Add(time.Hour * 72 * -1), // TODO - configurable. Loki apparently has a default time limit of 720hrs here
 			time.Now(), false)
 
 		if err != nil {

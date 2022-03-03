@@ -142,11 +142,16 @@ func (c *client) GetLogByService(ctx context.Context, leaseID mtypes.LeaseID, se
 		return LogResult{},err
 	}
 
+	// TODO - if runIndex >= 0 then launch a query to get a single log line back from the backend
+	// then use that log line to determine the correct label to query on. Will need to parse it out and then
+	// modify it to be the expected value
+
 	httpQueryString := url.Values{}
 	httpQueryString.Set("start", fmt.Sprintf("%d", startTime.UnixNano()))
 	httpQueryString.Set("end", fmt.Sprintf("%d", endTime.UnixNano()))
 	httpQueryString.Set("limit", "1000") // TODO - configurable or something? Maybe user requestable?
 	// TODO - guard against injection here even though it is unlikely
+	// TODO - specify filename label here if runIndex >= 0
 	lokiQuery := fmt.Sprintf("{pod=%q}", podName) // Note this is not JSON
 	// TODO - query by run index as well ? do I even need this
 	httpQueryString.Set("query", lokiQuery)
