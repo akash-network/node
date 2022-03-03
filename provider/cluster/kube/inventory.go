@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -257,6 +258,9 @@ func (c *client) Inventory(ctx context.Context) (ctypes.Inventory, error) {
 }
 
 func (c *client) fetchStorage(ctx context.Context) (clusterStorage, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Second*2)
+	defer cancel()
+
 	cstorage := make(clusterStorage)
 
 	// discover inventory operator
@@ -366,8 +370,6 @@ func (c *client) fetchActiveNodes(ctx context.Context, cstorage clusterStorage) 
 			for _, class := range strings.Split(value, ".") {
 				if _, avail := cstorage[class]; avail {
 					entry.storageClasses[class] = true
-				} else {
-					c.log.Info("skipping inactive storage class requested by", "node", knode.Name, "storageClass", class)
 				}
 			}
 		}
