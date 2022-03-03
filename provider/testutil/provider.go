@@ -75,7 +75,6 @@ func TestLeaseShell(ctx context.Context, clientCtx client.Context, extraArgs []s
 	args = append(args, extraArgs...)
 	args = append(args, serviceName)
 	args = append(args, cmd...)
-	fmt.Printf("%v\n", args)
 
 	takeCmdLock()
 	cobraCmd := pcmd.LeaseShellCmd()
