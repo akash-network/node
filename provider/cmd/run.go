@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"io"
 	"net/http"
@@ -458,17 +456,17 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		certFromFlag = bytes.NewBufferString(val)
 	}
 
-	cpem, err := cutils.LoadPEMForAccount(cctx, txFactory.Keybase(), cutils.PEMFromReader(certFromFlag))
+	kpm, err := cutils.NewKeyPairManager(cctx, cctx.FromAddress)
 	if err != nil {
 		return err
 	}
 
-	blk, _ := pem.Decode(cpem.Cert)
-	x509cert, err := x509.ParseCertificate(blk.Bytes)
+	x509cert, tlsCert, err := kpm.ReadX509KeyPair(certFromFlag)
 	if err != nil {
 		return err
 	}
 
+	// Check that the certificate exists on chain and is not revoked
 	cquery := cmodule.AppModuleBasic{}.GetQueryClient(cctx)
 	cresp, err := cquery.Certificates(cmd.Context(), &ctypes.QueryCertificatesRequest{
 		Filter: ctypes.CertificateFilter{
@@ -485,27 +483,20 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return errors.Errorf("no valid found on chain certificate for account %s", cctx.FromAddress)
 	}
 
-	cert, err := tls.X509KeyPair(cpem.Cert, cpem.Priv)
+	logger := openLogger()
+
+	broadcasterClient, err := broadcaster.NewSerialClient(logger, cctx, txFactory, info)
 	if err != nil {
 		return err
 	}
 
-	log := openLogger()
-
-	broadcaster, err := broadcaster.NewSerialClient(log, cctx, txFactory, info)
-	if err != nil {
-		return err
-	}
-
-	// TODO: actually get the passphrase?
-	// passphrase, err := keys.GetPassphrase(fromName)
 	aclient := client.NewClientWithBroadcaster(
-		log,
+		logger,
 		cctx,
 		txFactory,
 		info,
 		client.NewQueryClientFromCtx(cctx),
-		broadcaster,
+		broadcasterClient,
 	)
 
 	res, err := aclient.Query().Provider(
@@ -539,7 +530,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		builder.SettingsKey: kubeSettings,
 	}
 
-	cclient, err := createClusterClient(log, cmd, kubeConfig)
+	cclient, err := createClusterClient(logger, cmd, kubeConfig)
 	if err != nil {
 		return err
 	}
@@ -549,7 +540,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	currentBlockHeight := statusResult.SyncInfo.LatestBlockHeight
-	session := session.New(log, aclient, pinfo, currentBlockHeight)
+	session := session.New(logger, aclient, pinfo, currentBlockHeight)
 
 	if err := cctx.Client.Start(); err != nil {
 		return err
@@ -611,12 +602,12 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	gateway, err := gwrest.NewServer(
 		ctx,
-		log,
+		logger,
 		service,
 		cquery,
 		gwaddr,
 		cctx.FromAddress,
-		[]tls.Certificate{cert},
+		[]tls.Certificate{tlsCert},
 		clusterSettings,
 	)
 	if err != nil {
@@ -658,7 +649,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	}
 
 	err = group.Wait()
-	broadcaster.Close()
+	broadcasterClient.Close()
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

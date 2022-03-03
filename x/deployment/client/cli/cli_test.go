@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -68,7 +69,16 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
 
 	// Create client certificate
-	_, err = ccli.TxCreateClientExec(
+	_, err = ccli.TxGenerateClientExec(
+		context.Background(),
+		val.ClientCtx,
+		val.Address,
+	)
+	s.Require().NoError(err)
+
+	// Publish client certificate
+	_, err = ccli.TxPublishClientExec(
+		context.Background(),
 		val.ClientCtx,
 		val.Address,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),

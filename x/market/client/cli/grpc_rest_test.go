@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -52,8 +53,17 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 
 	val := s.network.Validators[0]
 
-	// Create client certificate
-	_, err = ccli.TxCreateClientExec(
+	// Generate client certificate
+	_, err = ccli.TxGenerateClientExec(
+		context.Background(),
+		val.ClientCtx,
+		val.Address,
+	)
+	s.Require().NoError(err)
+
+	// Publish client certificate
+	_, err = ccli.TxPublishClientExec(
+		context.Background(),
 		val.ClientCtx,
 		val.Address,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
