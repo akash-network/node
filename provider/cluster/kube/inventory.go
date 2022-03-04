@@ -21,6 +21,10 @@ import (
 	metricsutils "github.com/ovrclk/akash/util/metrics"
 )
 
+const (
+	inventoryOperatorQueryTimeout = 5 * time.Second
+)
+
 type node struct {
 	id               string
 	arch             string
@@ -258,7 +262,7 @@ func (c *client) Inventory(ctx context.Context) (ctypes.Inventory, error) {
 }
 
 func (c *client) fetchStorage(ctx context.Context) (clusterStorage, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Second*2)
+	ctx, cancel := context.WithTimeout(ctx, inventoryOperatorQueryTimeout)
 	defer cancel()
 
 	cstorage := make(clusterStorage)
