@@ -487,10 +487,6 @@ func (c *client) nodeIsActive(node corev1.Node) bool {
 	for _, taint := range node.Spec.Taints {
 		if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
 			issues++
-			c.log.Error("node in poor condition due to active taint",
-				"node", node.Name,
-				"key", taint.Key,
-				"effect", taint.Effect)
 		}
 	}
 
