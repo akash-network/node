@@ -38,7 +38,7 @@ type Config struct {
 
 func NewDefaultConfig() Config {
 	return Config{
-		ClusterWaitReadyDuration: time.Second * 5,
+		ClusterWaitReadyDuration: time.Second * 10,
 		BidDeposit:               mtypes.DefaultBidMinDeposit,
 		BalanceCheckerCfg: BalanceCheckerConfig{
 			PollingPeriod:           5 * time.Minute,

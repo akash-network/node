@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -18,6 +19,10 @@ import (
 	"github.com/ovrclk/akash/sdl"
 	types "github.com/ovrclk/akash/types/v1beta2"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
+)
+
+const (
+	inventoryOperatorQueryTimeout = 5 * time.Second
 )
 
 type node struct {
@@ -257,6 +262,9 @@ func (c *client) Inventory(ctx context.Context) (ctypes.Inventory, error) {
 }
 
 func (c *client) fetchStorage(ctx context.Context) (clusterStorage, error) {
+	ctx, cancel := context.WithTimeout(ctx, inventoryOperatorQueryTimeout)
+	defer cancel()
+
 	cstorage := make(clusterStorage)
 
 	// discover inventory operator
@@ -366,8 +374,6 @@ func (c *client) fetchActiveNodes(ctx context.Context, cstorage clusterStorage) 
 			for _, class := range strings.Split(value, ".") {
 				if _, avail := cstorage[class]; avail {
 					entry.storageClasses[class] = true
-				} else {
-					c.log.Info("skipping inactive storage class requested by", "node", knode.Name, "storageClass", class)
 				}
 			}
 		}
