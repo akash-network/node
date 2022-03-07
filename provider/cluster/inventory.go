@@ -388,12 +388,12 @@ loop:
 						} else {
 							is.availableExternalPorts += externalPortCount
 						}
-					}
 
-					is.log.Debug("reservation status update",
-						"order", res.OrderID(),
-						"resource-group", res.Resources().GetName(),
-						"allocated", res.allocated)
+						is.log.Debug("reservation status update",
+							"order", res.OrderID(),
+							"resource-group", res.Resources().GetName(),
+							"allocated", res.allocated)
+					}
 
 					break
 				}

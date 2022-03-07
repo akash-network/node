@@ -8,7 +8,6 @@ import (
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	akashclient "github.com/ovrclk/akash/client"
 	"github.com/ovrclk/akash/cmd/common"
@@ -46,7 +45,6 @@ func AuthenticateCmd() *cobra.Command {
 
 func doAuthenticateCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	cctx, err := sdkclient.GetClientTxContext(cmd)
-	txFactory := tx.NewFactoryCLI(cctx, cmd.Flags()).WithTxConfig(cctx.TxConfig).WithAccountRetriever(cctx.AccountRetriever)
 	if err != nil {
 		return err
 	}
@@ -61,17 +59,17 @@ func doAuthenticateCmd(ctx context.Context, cmd *cobra.Command, _ []string) erro
 		certFromFlag = bytes.NewBufferString(val)
 	}
 
-	cpem, err := cutils.LoadPEMForAccount(cctx, txFactory.Keybase(), cutils.PEMFromReader(certFromFlag))
+	kpm, err := cutils.NewKeyPairManager(cctx, cctx.FromAddress)
 	if err != nil {
 		return err
 	}
 
-	cert, err := tls.X509KeyPair(cpem.Cert, cpem.Priv)
+	_, tlsCert, err := kpm.ReadX509KeyPair(certFromFlag)
 	if err != nil {
 		return err
 	}
 
-	gclient, err := gwrest.NewJwtClient(ctx, akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})
+	gclient, err := gwrest.NewJwtClient(ctx, akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{tlsCert})
 	if err != nil {
 		return err
 	}

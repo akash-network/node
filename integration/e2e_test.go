@@ -28,7 +28,6 @@ import (
 	"k8s.io/client-go/util/homedir"
 
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
@@ -205,11 +204,20 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
-	// Create provider's certificate
-	_, err = ccli.TxCreateServerExec(
+	// Generate provider's certificate
+	_, err = ccli.TxGenerateServerExec(
+		context.Background(),
 		s.validator.ClientCtx,
-		s.keyTenant.GetAddress(),
+		s.keyProvider.GetAddress(),
 		"localhost",
+	)
+	s.Require().NoError(err)
+
+	// Publish provider's certificate
+	_, err = ccli.TxPublishServerExec(
+		context.Background(),
+		s.validator.ClientCtx,
+		s.keyProvider.GetAddress(),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
@@ -219,11 +227,23 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), s.validator.ClientCtx, res.Bytes())
 
-	// Create tenant's certificate
-	_, err = ccli.TxCreateServerExec(
+	// Generate tenant's certificate
+	_, err = ccli.TxGenerateClientExec(
+		context.Background(),
 		s.validator.ClientCtx,
-		s.keyProvider.GetAddress(),
-		"localhost",
+		s.keyTenant.GetAddress(),
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+	)
+	s.Require().NoError(err)
+
+	// Publish tenant's certificate
+	_, err = ccli.TxPublishClientExec(
+		context.Background(),
+		s.validator.ClientCtx,
+		s.keyTenant.GetAddress(),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
@@ -1056,62 +1076,68 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 		fmt.Sprintf("--%s=%s", flags.FlagHome, s.validator.ClientCtx.HomeDir),
 	}
 
-	const attempts = 30
-	const pollingPeriod = time.Second
-
 	var out sdktest.BufferWriter
 
-	i := 0
-	for ; i != attempts; i++ {
-		out, err = ptestutil.TestLeaseShell(s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
+	leaseShellCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	logged := make(map[string]struct{})
+	// Loop until we get a shell or the context times out
+	for {
+		select {
+		case <-leaseShellCtx.Done():
+			s.T().Fatalf("context is done while trying to run lease-shell: %v", leaseShellCtx.Err())
+			return
+		default:
+		}
+		out, err = ptestutil.TestLeaseShell(leaseShellCtx, s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
 			lID, 0, false, false, "web", "/bin/echo", "foo")
 		if err != nil {
-			if errors.Is(err, rest.ErrLeaseShellProviderError) {
-				s.T().Logf("encountered %v waiting before next attempt", err)
-				time.Sleep(pollingPeriod)
-				continue
+			_, hasBeenLogged := logged[err.Error()]
+			if !hasBeenLogged {
+				// Don't spam an error message in a test, that is very annoying
+				s.T().Logf("encountered %v, waiting before next attempt", err)
+				logged[err.Error()] = struct{}{}
 			}
-
-			// Fail now
-			s.T().Fatalf("failed while trying to run lease-shell: %v", err)
+			time.Sleep(100 * time.Millisecond)
+			continue // Try again until the context times out
 		}
 		require.NotNil(s.T(), out)
 		break
 	}
-	require.NotEqual(s.T(), attempts, i, "failed to run lease shell after %d attempts", attempts)
 
 	// Test failure cases now
-	_, err = ptestutil.TestLeaseShell(s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
+	_, err = ptestutil.TestLeaseShell(leaseShellCtx, s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
 		lID, 0, false, false, "web", "/bin/baz", "foo")
 	require.Error(s.T(), err)
 	require.Regexp(s.T(), ".*command could not be executed because it does not exist.*", err.Error())
 
-	_, err = ptestutil.TestLeaseShell(s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
+	_, err = ptestutil.TestLeaseShell(leaseShellCtx, s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
 		lID, 0, false, false, "web", "baz", "foo")
 	require.Error(s.T(), err)
 	require.Regexp(s.T(), ".*command could not be executed because it does not exist.*", err.Error())
 
-	_, err = ptestutil.TestLeaseShell(s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
+	_, err = ptestutil.TestLeaseShell(leaseShellCtx, s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
 		lID, 0, false, false, "web", "baz", "foo")
 	require.Error(s.T(), err)
 	require.Regexp(s.T(), ".*command could not be executed because it does not exist.*", err.Error())
 
-	_, err = ptestutil.TestLeaseShell(s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
+	_, err = ptestutil.TestLeaseShell(leaseShellCtx, s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
 		lID, 99, false, false, "web", "/bin/echo", "foo")
 	require.Error(s.T(), err)
 	require.Regexp(s.T(), ".*pod index out of range.*", err.Error())
 
-	_, err = ptestutil.TestLeaseShell(s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
+	_, err = ptestutil.TestLeaseShell(leaseShellCtx, s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
 		lID, 99, false, false, "web", "/bin/echo", "foo")
 	require.Error(s.T(), err)
 	require.Regexp(s.T(), ".*pod index out of range.*", err.Error())
 
-	_, err = ptestutil.TestLeaseShell(s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
+	_, err = ptestutil.TestLeaseShell(leaseShellCtx, s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
 		lID, 0, false, false, "web", "/bin/cat", "/foo")
 	require.Error(s.T(), err)
 	require.Regexp(s.T(), ".*remote process exited with code 1.*", err.Error())
 
-	_, err = ptestutil.TestLeaseShell(s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
+	_, err = ptestutil.TestLeaseShell(leaseShellCtx, s.validator.ClientCtx.WithOutputFormat("json"), extraArgs,
 		lID, 99, false, false, "notaservice", "/bin/echo", "/foo")
 	require.Error(s.T(), err)
 	require.Regexp(s.T(), ".*no such service exists with that name.*", err.Error())
