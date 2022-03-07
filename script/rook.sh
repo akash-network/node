@@ -3,7 +3,7 @@
 CURDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$CURDIR"/kubectl_retry.sh
 
-ROOK_DEPLOY_TIMEOUT=${ROOK_DEPLOY_TIMEOUT:-600}
+ROOK_DEPLOY_TIMEOUT=${ROOK_DEPLOY_TIMEOUT:-6000}
 #ROOK_PATH=${AKASH_ROOT:-${pwd}}
 #ROOK_PATH=${ROOK_PATH}/_docs/rook
 
@@ -18,8 +18,10 @@ rook_files=(
 	"${ROOK_PATH}/operator.yaml"
 	"${ROOK_PATH}/cluster.yaml"
 	"${ROOK_PATH}/toolbox.yaml"
-	"${ROOK_PATH}/pool.yaml"
-	"${ROOK_PATH}/storageclass.yaml"
+	"${ROOK_PATH}/akash-nodes-pool.yaml"
+	"${ROOK_PATH}/akash-deployments-pool.yaml"
+	"${ROOK_PATH}/akash-nodes-storageclass.yaml"
+	"${ROOK_PATH}/akash-deployments-storageclass.yaml"
 )
 
 for idx in "${!rook_files[@]}"; do
@@ -60,7 +62,13 @@ function deploy_rook() {
 
 	# Check if CephCluster is empty
 	if ! kubectl_retry -n rook-ceph get cephclusters -oyaml | grep 'items: \[\]' &>/dev/null; then
-		check_ceph_cluster_health
+
+
+		if [[ $(check_ceph_cluster_health) -ne 0 ]]; then
+			echo ""
+		else
+			echo "CEPH cluster not in a healthy state (timeout)"
+		fi
 	fi
 
 	# Check if CephFileSystem is empty
@@ -82,24 +90,24 @@ function teardown_rook() {
 
 function check_ceph_cluster_health() {
 	for ((retry = 0; retry <= ROOK_DEPLOY_TIMEOUT; retry = retry + 5)); do
-		echo "Wait for rook deploy... ${retry}s" && sleep 5
-
 		CEPH_STATE=$(kubectl_retry -n rook-ceph get cephclusters -o jsonpath='{.items[0].status.state}')
 		CEPH_HEALTH=$(kubectl_retry -n rook-ceph get cephclusters -o jsonpath='{.items[0].status.ceph.health}')
 		echo "Checking CEPH cluster state: [$CEPH_STATE]"
 		if [ "$CEPH_STATE" = "Created" ]; then
 			if [ "$CEPH_HEALTH" = "HEALTH_OK" ]; then
-				echo "Creating CEPH cluster is done. [$CEPH_HEALTH]"
+				echo "The CEPH cluster health state [$CEPH_HEALTH]"
 				break
+			elif [ "$retry" -lt "$ROOK_DEPLOY_TIMEOUT" ]; then
+				sleep 5
 			fi
 		fi
 	done
 
 	if [ "$retry" -gt "$ROOK_DEPLOY_TIMEOUT" ]; then
-		echo "[Timeout] CEPH cluster not in a healthy state (timeout)"
 		return 1
 	fi
-	echo ""
+
+	return 0
 }
 
 function check_mds_stat() {
@@ -170,6 +178,7 @@ health)
 Available Commands:
   deploy             Deploy a rook
   teardown           Teardown a rook
+  health             Check cluster health
 " >&2
 	;;
 esac

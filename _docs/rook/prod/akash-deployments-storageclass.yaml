@@ -8,7 +8,7 @@ metadata:
     akash.network: "true"
 provisioner: rook-ceph.rbd.csi.ceph.com
 parameters:
-  pool: replicapool
+  pool: akash-deployments
 
   # The value of "clusterID" MUST be the same as the one in which your rook cluster exist
   clusterID: rook-ceph
