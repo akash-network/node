@@ -2,10 +2,12 @@ package util
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"github.com/boz/go-lifecycle"
 	"github.com/desertbit/timer"
+	"github.com/gorilla/websocket"
 	"github.com/ovrclk/akash/util/runner"
 	"github.com/tendermint/tendermint/libs/log"
 	corev1 "k8s.io/api/core/v1"
@@ -14,6 +16,8 @@ import (
 	"k8s.io/client-go/rest"
 	"math/rand"
 	"net"
+	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -134,7 +138,7 @@ func (sda *serviceDiscoveryAgent) setResult(factory clientFactory, err error) {
 	}
 }
 
-func (sda *serviceDiscoveryAgent) GetClient(ctx context.Context, isHTTPS, secure bool) (ServiceClient, error) {
+func (sda *serviceDiscoveryAgent) getClientFactory(ctx context.Context) (clientFactory, error){
 	errCh := make(chan error, 1)
 	resultCh := make(chan clientFactory, 1)
 	req := serviceDiscoveryRequest{
@@ -152,12 +156,33 @@ func (sda *serviceDiscoveryAgent) GetClient(ctx context.Context, isHTTPS, secure
 
 	select {
 	case result := <-resultCh:
-		return result(isHTTPS, secure), nil
+		return result, nil
 	case err := <-errCh:
 		return nil, err
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
+
+}
+
+func (sda *serviceDiscoveryAgent) GetClient(ctx context.Context, isHTTPS, secure bool) (ServiceClient, error) {
+	cf, err := sda.getClientFactory(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return cf.MakeServiceClient(isHTTPS, secure), nil
+}
+
+func (sda *serviceDiscoveryAgent) GetWebsocketClient(ctx context.Context, isHTTPS, secure bool) (WebsocketServiceClient, error) {
+	cf, err := sda.getClientFactory(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return cf.MakeWebsocketServiceClient(isHTTPS, secure), nil
 }
 
 func (sda *serviceDiscoveryAgent) discover() (clientFactory, error) {
@@ -171,6 +196,57 @@ func (sda *serviceDiscoveryAgent) discover() (clientFactory, error) {
 	}
 
 	return sda.discoverKube()
+}
+
+type kubeClientFactory struct {
+	httpTransport http.RoundTripper
+	kubeHost string
+	kubeNamespace string
+	serviceName string
+	portName string
+	tlsConfig *tls.Config
+	netDialContext func(context.Context, string, string) (net.Conn, error)
+	proxy func(*http.Request) (*url.URL, error)
+	handshakeTimeout time.Duration
+}
+
+func (kcf kubeClientFactory) MakeServiceClient(isHTTPS, secure bool) ServiceClient {
+	serviceName := kcf.serviceName
+	if isHTTPS {
+		serviceName = fmt.Sprintf("https:%s", kcf.serviceName)
+	}
+	/**
+	Documentation here: https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-services/
+
+	The structure is
+	http://kubernetes_master_address/api/v1/namespaces/namespace_name/services/[https:]service_name[:port_name]/proxy
+	*/
+	proxyURL := fmt.Sprintf("%s/api/v1/namespaces/%s/services/%s:%s/proxy", kcf.kubeHost, kcf.kubeNamespace, serviceName, kcf.portName)
+
+	return newHTTPWrapperServiceClientWithTransport(kcf.httpTransport, proxyURL)
+}
+
+func (kcf kubeClientFactory) MakeWebsocketServiceClient(isHTTPS, secure bool) WebsocketServiceClient {
+	dialer := websocket.Dialer{
+		NetDialContext:    kcf.netDialContext,
+		Proxy:             kcf.proxy,
+		TLSClientConfig:   kcf.tlsConfig,
+		HandshakeTimeout:  kcf.handshakeTimeout,
+	}
+
+	serviceName := kcf.serviceName
+	if isHTTPS {
+		serviceName = fmt.Sprintf("https:%s", kcf.serviceName)
+	}
+	/**
+	Documentation here: https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-services/
+
+	The structure is
+	http://kubernetes_master_address/api/v1/namespaces/namespace_name/services/[https:]service_name[:port_name]/proxy
+	*/
+	proxyURL := fmt.Sprintf("%s/api/v1/namespaces/%s/services/%s:%s/proxy", kcf.kubeHost, kcf.kubeNamespace, serviceName, kcf.portName)
+
+	return newWebsocketWrapperServiceClientFromDialer(dialer, proxyURL)
 }
 
 func (sda *serviceDiscoveryAgent) discoverKube() (clientFactory, error) {
@@ -189,8 +265,8 @@ func (sda *serviceDiscoveryAgent) discoverKube() (clientFactory, error) {
 	ports := service.Spec.Ports
 	selectedPort := -1
 
-	for i, port := range ports {
-		if port.Name == sda.portName && corev1.ProtocolTCP == port.Protocol {
+	for i, kPort := range ports {
+		if kPort.Name == sda.portName && corev1.ProtocolTCP == kPort.Protocol {
 			selectedPort = i
 			break
 		}
@@ -199,7 +275,7 @@ func (sda *serviceDiscoveryAgent) discoverKube() (clientFactory, error) {
 	if selectedPort == -1 {
 		return nil, fmt.Errorf("%w: service %q exists but has no port %q (TCP)", errServiceDiscovery, sda.serviceName, sda.portName)
 	}
-	port := ports[selectedPort]
+	kPort := ports[selectedPort]
 
 	// Get the host for the kube cluster
 	kubeHost := sda.kubeConfig.Host
@@ -210,22 +286,46 @@ func (sda *serviceDiscoveryAgent) discoverKube() (clientFactory, error) {
 		return nil, err
 	}
 
-	return func(isHTTPS, _ bool) ServiceClient {
-		serviceName := service.Name
-		if isHTTPS {
-			serviceName = fmt.Sprintf("https:%s", service.Name)
-		}
-		/**
-		Documentation here: https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-services/
 
-		The structure is
-		http://kubernetes_master_address/api/v1/namespaces/namespace_name/services/[https:]service_name[:port_name]/proxy
-		*/
-		proxyURL := fmt.Sprintf("%s/api/v1/namespaces/%s/services/%s:%s/proxy", kubeHost, service.Namespace, serviceName, port.Name)
+	tlsConfig, err := rest.TLSConfigFor(sda.kubeConfig)
+	if err != nil {
+		return nil, err
+	}
 
-		return newHTTPWrapperServiceClientWithTransport(httpTransport, proxyURL)
+	return kubeClientFactory{
+		httpTransport: httpTransport,
+		kubeHost:      kubeHost,
+		kubeNamespace: service.Namespace,
+		serviceName:   service.Name,
+		portName: kPort.Name,
+		tlsConfig: tlsConfig,
+		netDialContext: sda.kubeConfig.Dial,
+		proxy: sda.kubeConfig.Proxy,
+		handshakeTimeout: sda.kubeConfig.Timeout,
 	}, nil
 }
+
+type dnsClientFactory struct {
+	target string
+	port uint16
+
+}
+
+func (dcf dnsClientFactory) MakeServiceClient(isHTTPS, secure bool) ServiceClient {
+	proto := "http"
+	if isHTTPS {
+		proto = "https"
+	}
+	discoveredURL := fmt.Sprintf("%s://%v:%v", proto, dcf.target, dcf.port)
+
+	return newHTTPWrapperServiceClient(isHTTPS, secure, discoveredURL)
+}
+
+func (dcf dnsClientFactory) MakeWebsocketServiceClient(isHTTPS, secure bool) WebsocketServiceClient {
+	// TODO
+	panic("not implemented")
+}
+
 
 func (sda *serviceDiscoveryAgent) discoverDNS() (clientFactory, error) {
 	// FUTURE - try and find a 3rd party API that allows timeouts to be put on this request
@@ -245,13 +345,9 @@ func (sda *serviceDiscoveryAgent) discoverDNS() (clientFactory, error) {
 	// nolint:gosec
 	addrI := rand.Int31n(int32(len(addrs)))
 	choice := result[addrI]
-	return func(isHTTPS, secure bool) ServiceClient {
-		proto := "http"
-		if isHTTPS {
-			proto = "https"
-		}
-		discoveredURL := fmt.Sprintf("%s://%v:%v", proto, choice.Target, choice.Port)
 
-		return newHTTPWrapperServiceClient(isHTTPS, secure, discoveredURL)
+	return dnsClientFactory{
+		target: choice.Target,
+		port:   choice.Port,
 	}, nil
 }

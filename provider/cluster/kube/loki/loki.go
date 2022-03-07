@@ -59,6 +59,10 @@ var (
 type Client interface {
 	FindLogsByLease(ctx context.Context, leaseID mtypes.LeaseID) ([]LogStatus, error)
 	GetLogByService(ctx context.Context, leaseID mtypes.LeaseID, serviceName string, replicaIndex uint, runIndex int, startTime, endTime time.Time, forward bool) (LogResult, error)
+	TailLogsByService(ctx context.Context, leaseID mtypes.LeaseID, serviceName string, replicaIndex uint, runIndex int, startTime time.Time,
+		eachLogLine func(at time.Time, line string)error,
+		onFirstDroppedLog func() error) error
+
 	Stop()
 }
 
@@ -82,6 +86,7 @@ type client struct {
 	sda clusterutil.ServiceDiscoveryAgent
 	kc kubernetes.Interface
 	client clusterutil.ServiceClient
+	websocketClient clusterutil.WebsocketServiceClient
 	lock sync.Locker
 }
 
@@ -172,6 +177,138 @@ func (c *client) discoverFilename(ctx context.Context, leaseID mtypes.LeaseID, s
 	return filename, nil
 }
 
+// DroppedStream represents a dropped stream in tail call
+type droppedStream struct {
+	Timestamp time.Time
+	Labels    map[string]string
+}
+
+//Entry represents a log entry.  It includes a log message and the time it occurred at.
+type entry struct {
+	Timestamp time.Time
+	Line      string
+}
+
+//Stream represents a log stream.  It includes a set of log entries and their labels.
+type stream struct {
+	Labels  map[string]string `json:"stream"`
+	Entries []entry  `json:"values"`
+}
+
+// tailResponse represents the http json response to a tail query from loki
+type tailResponse struct {
+	Streams        []stream        `json:"streams,omitempty"`
+	DroppedStreams []droppedStream `json:"dropped_entries,omitempty"`
+}
+
+func (c *client) TailLogsByService(ctx context.Context, leaseID mtypes.LeaseID, serviceName string, replicaIndex uint, runIndex int, startTime time.Time,
+	eachLogLine func(at time.Time, line string)error,
+	onFirstDroppedLog func() error) error {
+	possiblePods, err := c.detectRunsForLease(ctx, leaseID)
+	if err != nil {
+		return err
+	}
+
+	datamap := serviceNameAndReplicaIndexToPodName(possiblePods)
+	podName, exists := datamap[serviceNameAndReplicaIndex{
+		replicaIndex: int(replicaIndex),
+		serviceName:  serviceName,
+	}]
+
+	if !exists {
+		return fmt.Errorf("%w: no entry for service %q and replica %d", ErrLoki, serviceName, replicaIndex)
+	}
+
+	httpQueryString := url.Values{}
+	httpQueryString.Set("from", fmt.Sprintf("%d", startTime.UnixNano()))
+	httpQueryString.Set("limit", "1000") // TODO - configurable or something? Maybe user requestable?
+	httpQueryString.Set("delay_for", "3") // TODO - what does this do
+
+	var filenameLabelFilter string
+	specifyRunIndex := runIndex >= 0
+	if specifyRunIndex {
+		var err error
+		filenameLabelFilter, err = c.getFilename(ctx, leaseID, startTime, time.Now(), runIndex, podName)
+		if err != nil {
+			return err
+		}
+	}
+
+	lokiQueryBuf := &bytes.Buffer{}
+	// Note this is not JSON
+	// TODO - guard against injection here even though it is unlikely
+	_, _ = fmt.Fprint(lokiQueryBuf, "{")
+	_, _ = fmt.Fprintf(lokiQueryBuf, "%s=%q", podLabel, podName)
+	// specify filename label here if runIndex >= 0
+	if specifyRunIndex {
+		_, _ = fmt.Fprintf(lokiQueryBuf,",%s=%q", filenameLabel, filenameLabelFilter)
+	}
+	_, _ = fmt.Fprint(lokiQueryBuf, "}")
+
+	httpQueryString.Set("query", lokiQueryBuf.String())
+
+	wslc, err := c.getLokiWebsocketClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	headers := http.Header{
+		lokiOrgIdHeader: []string{clusterutil.LeaseIDToNamespace(leaseID)},
+	}
+	conn, err := wslc.DialWebsocket(ctx, tailPath + "?" + httpQueryString.Encode(), headers)
+	if err != nil {
+		return err
+	}
+
+	dropCalled := false
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		var logs tailResponse
+		err := conn.ReadJSON(&logs)
+		if err != nil {
+			return fmt.Errorf("error parsing JSON from loki log tail: %w", err)
+		}
+
+		for _, stream := range logs.Streams {
+			for _, entry := range stream.Entries {
+				err = eachLogLine(entry.Timestamp, entry.Line)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		if !dropCalled && len(logs.DroppedStreams) != 0{
+			// caused by the client being too slow
+			dropCalled = true
+			err = onFirstDroppedLog()
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+
+}
+
+func (c *client) getFilename(ctx context.Context, leaseID mtypes.LeaseID, startTime, endTime time.Time, runIndex int, podName string) (string, error){
+	filename, err := c.discoverFilename(ctx, leaseID, startTime, endTime, podName)
+	if err != nil {
+		return "", err
+	}
+
+	head, tail := path.Split(filename)
+	parts := strings.SplitN(tail, ".", 2)
+	if len(parts) != 2 {
+		return "", fmt.Errorf("%w: while constructing fielname filter cannot make sense of filepath %q", ErrLoki, filename)
+	}
+
+	return fmt.Sprintf("%s/%d.%s", head, runIndex, parts[1]), nil
+}
+
+
 func (c *client) GetLogByService(ctx context.Context, leaseID mtypes.LeaseID, serviceName string, replicaIndex uint, runIndex int, startTime, endTime time.Time, forward bool) (LogResult, error) {
 	lidNS := clusterutil.LeaseIDToNamespace(leaseID)
 	// get a list of possible logs for this service
@@ -203,18 +340,10 @@ func (c *client) GetLogByService(ctx context.Context, leaseID mtypes.LeaseID, se
 	specifyRunIndex := runIndex >= 0
 	filenameLabelFilter := ""
 	if specifyRunIndex  {
-		filename, err := c.discoverFilename(ctx, leaseID, startTime, endTime, podName)
+		filenameLabelFilter, err = c.getFilename(ctx, leaseID, startTime, endTime, runIndex, podName)
 		if err != nil {
 			return LogResult{}, err
 		}
-
-		head, tail := path.Split(filename)
-		parts := strings.SplitN(tail, ".", 2)
-		if len(parts) != 2 {
-			return LogResult{}, fmt.Errorf("%w: while constructing fielname filter cannot make sense of filepath %q", ErrLoki, filename)
-		}
-
-		filenameLabelFilter = fmt.Sprintf("%s/%d.%s", head, runIndex, parts[1])
 	}
 
 	httpQueryString := url.Values{}
@@ -261,8 +390,7 @@ func (c *client) GetLogByService(ctx context.Context, leaseID mtypes.LeaseID, se
 		return LogResult{},fmt.Errorf("%w: fetching logs from loki failed, got status code %d; %s", ErrLoki, resp.StatusCode, msg)
 	}
 
-	// TODO - parse response
-
+	// Parse the response & grab the values we care about
 	decoder := json.NewDecoder(resp.Body)
 	lokiResult := lokiLogQueryResponse{}
 	err = decoder.Decode(&lokiResult)
@@ -315,11 +443,26 @@ func (c *client) GetLogByService(ctx context.Context, leaseID mtypes.LeaseID, se
 	return result, nil
 }
 
+func (c *client) getLokiWebsocketClient(ctx context.Context) (clusterutil.WebsocketServiceClient, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// TODO - reset this client on error after HTTP request
+	if c.websocketClient == nil {
+		var err error
+		c.websocketClient, err = c.sda.GetWebsocketClient(ctx, false, false)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.websocketClient, nil
+}
+
 func (c *client) getLokiClient(ctx context.Context) (clusterutil.ServiceClient, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	// TODO - reset this client on error from Loki
+	// TODO - reset this client on error after HTTP request
 	if c.client == nil {
 		var err error
 		c.client, err = c.sda.GetClient(ctx, false, false)

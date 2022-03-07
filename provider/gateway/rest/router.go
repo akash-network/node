@@ -187,6 +187,60 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopcl
 	return router
 }
 
+func logQueryFollowHandler(logger log.Logger,
+	lokiClient loki.Client,
+	leaseID mtypes.LeaseID,
+	rw http.ResponseWriter,
+	req *http.Request,
+	serviceName string,
+	replicaIndex uint,
+	runIndex int,
+	startTime time.Time,
+	) {
+
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  0,
+		WriteBufferSize: 65535,
+	}
+
+	ws, err := upgrader.Upgrade(rw, req, nil)
+	if err != nil {
+		// At this point the connection either has a response sent already
+		// or it has been closed
+		logger.Error("failed handshake", "err", err)
+		return
+	}
+
+	ws.EnableWriteCompression(true)
+	sendLogLine := func(at time.Time, line string) error {
+		err := ws.SetWriteDeadline(time.Now().Add(time.Second * 10)) // TODO - configurable ???
+		if err != nil {
+			return err
+		}
+		return ws.WriteMessage(websocket.TextMessage, []byte(line))
+	}
+
+	onDropped := func() error {
+		return nil // Ignore for now
+	}
+
+	err = lokiClient.TailLogsByService(req.Context(),
+		leaseID,
+		serviceName,
+		replicaIndex,
+		runIndex,
+		startTime,
+		sendLogLine,
+		onDropped)
+
+	if err != nil {
+		if ! errors.Is(err, context.Canceled) {
+			logger.Error("failed during tail of logs", "err", err)
+		}
+	}
+
+}
+
 func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc{
 	return func(rw http.ResponseWriter, req *http.Request) {
 		leaseID := requestLeaseID(req)
@@ -202,7 +256,7 @@ func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc
 			return
 		}
 
-		// TODO - validate replica index
+		// TODO - validate replica index points to a valid replica
 
 		// TODO - get the following from the query, with defaults
 		query := req.URL.Query()
@@ -271,6 +325,38 @@ func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc
 				rw.WriteHeader(http.StatusBadRequest)
 				return
 			}
+		}
+
+		follow := false
+		followStr := query.Get("follow")
+		// TODO - if follow is true and forward is not true then error
+		// TODO - if endTime is specified and follow is true then error
+		if len(followStr) != 0 {
+			switch(followStr) {
+			case "0":
+				follow = false
+			case "1":
+				follow = true
+
+			default:
+				logger.Error("unknown value for follow", "follow", forwardStr)
+				rw.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
+
+		if follow {
+			// Upgrade to a websocket
+			logQueryFollowHandler(logger,
+				lokiClient,
+				leaseID,
+				rw,
+				req,
+				serviceName,
+				uint(replicaIndex),
+				runIndex,
+				startTime)
+			return
 		}
 
 		logs, err := lokiClient.GetLogByService(req.Context(),leaseID, serviceName, uint(replicaIndex),

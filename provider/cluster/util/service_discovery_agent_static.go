@@ -19,3 +19,8 @@ func (ssda staticServiceDiscoveryAgent) GetClient(ctx context.Context, isHTTPS, 
 	url := fmt.Sprintf("%s://%v:%v", proto, ssda.Target, ssda.Port)
 	return newHTTPWrapperServiceClient(isHTTPS, secure, url), nil
 }
+
+func (ssda staticServiceDiscoveryAgent) GetWebsocketClient(ctx context.Context, isHTTP, secure bool) (WebsocketServiceClient, error) {
+	// TODO
+	panic("not implemented")
+}
