@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ovrclk/akash/sdkutil"
+
 	"github.com/boz/go-lifecycle"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -172,6 +174,11 @@ func (c *serialBroadcaster) syncLoop(ch chan<- uint64) {
 }
 
 func (c *serialBroadcaster) doBroadcast(txf tx.Factory, retried bool, msgs ...sdk.Msg) (tx.Factory, error) {
+	txf, err := sdkutil.AdjustGas(c.cctx, txf, msgs...)
+	if err != nil {
+		return txf, err
+	}
+
 	response, err := doBroadcast(c.cctx, txf, c.info.GetName(), msgs...)
 
 	c.log.Info("broadcast response", "response", response, "err", err)
