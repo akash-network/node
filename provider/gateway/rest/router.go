@@ -47,6 +47,7 @@ import (
 	manifestValidation "github.com/ovrclk/akash/validation"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+	providermanifest "github.com/ovrclk/akash/provider/manifest"
 )
 
 type CtxAuthKey string
@@ -165,10 +166,10 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopcl
 		Methods("GET")
 
 	logRouter.HandleFunc("/status",
-		logStatusHandler(log, lokiClient)).Methods(http.MethodGet)
+		logStatusHandler(log, pclient.Manifest(), lokiClient)).Methods(http.MethodGet)
 
 	logRouter.HandleFunc("/query/{serviceName}/{replicaIndex}",
-		logQueryHandler(log, lokiClient)).Methods(http.MethodGet)
+		logQueryHandler(log, pclient.Manifest(), lokiClient)).Methods(http.MethodGet)
 
 	srouter := lrouter.PathPrefix("/service/{serviceName}").Subrouter()
 	srouter.Use(
@@ -250,10 +251,22 @@ func logQueryFollowHandler(logger log.Logger,
 	}
 }
 
-func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc{
+func logQueryHandler(logger log.Logger, manifestClient providermanifest.Client, lokiClient loki.Client) http.HandlerFunc{
 	return func(rw http.ResponseWriter, req *http.Request) {
 		leaseID := requestLeaseID(req)
-		// TODO - make sure the lease actually exists first
+
+		// Make sure lease is active
+		active, err := manifestClient.IsActive(req.Context(), leaseID.DeploymentID())
+		if err != nil {
+			logger.Error("could not check if lease is active", "lease-id", leaseID, err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if !active {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
 
 		serviceName := mux.Vars(req)["serviceName"] // TODO validate this exists
 		replicaIndexStr := mux.Vars(req)["replicaIndex"]
@@ -267,8 +280,19 @@ func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc
 
 		// TODO - validate replica index points to a valid replica
 
-		// TODO - get the following from the query, with defaults
 		query := req.URL.Query()
+
+		limit := uint(1000)
+		limitStr := query.Get("limit")
+		if len(limitStr) != 0 {
+			limit64, err := strconv.ParseUint(limitStr, 10, 31)
+			if err != nil {
+				logger.Error("could not parse limit", "limit", limitStr, "err", err)
+				rw.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			limit = uint(limit64)
+		}
 
 		// Parse runIndex from query, if present
 		runIndex := -1
@@ -312,7 +336,7 @@ func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc
 			endTime = time.Unix(endTimeInt,0)
 		}
 
-		const timeLimit = time.Hour * 72 // TODO - configurable
+		const timeLimit = time.Hour * 72 // TODO - configurable by the provider
 		duration := endTime.Sub(startTime)
 		if duration > timeLimit || duration < 0 {
 			logger.Error("duration of time range queried is not allowed", "startTime", startTime, "endTime", endTime)
@@ -338,8 +362,6 @@ func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc
 
 		follow := false
 		followStr := query.Get("follow")
-		// TODO - if follow is true and forward is not true then error
-		// TODO - if endTime is specified and follow is true then error
 		if len(followStr) != 0 {
 			switch(followStr) {
 			case "0":
@@ -355,6 +377,23 @@ func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc
 		}
 
 		if follow {
+			if len(endTimeStr) != 0 {
+				logger.Error("client requested log follow with endtime")
+				rw.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			if !forward {
+				logger.Error("client requested log follow with reverse direction")
+				rw.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			if len(limitStr) != 0 {
+				logger.Error("client request log follow with limit")
+				rw.WriteHeader(http.StatusBadRequest)
+				return
+			}
 			// Upgrade to a websocket
 			logQueryFollowHandler(logger,
 				lokiClient,
@@ -371,7 +410,7 @@ func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc
 		logs, err := lokiClient.GetLogByService(req.Context(),leaseID, serviceName, uint(replicaIndex),
 			runIndex,
 			startTime,
-			endTime, forward)
+			endTime, forward, limit)
 		if err != nil {
 			logger.Error("could not get logs for lease", "lease", leaseID, "err", err)
 			rw.WriteHeader(http.StatusInternalServerError)
@@ -387,10 +426,22 @@ func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc
 	}
 }
 
-func logStatusHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc{
+func logStatusHandler(logger log.Logger, manifestClient providermanifest.Client, lokiClient loki.Client) http.HandlerFunc{
 	return func(rw http.ResponseWriter, req *http.Request) {
 		leaseID := requestLeaseID(req)
-		// TODO - make sure the lease actually exists first
+		// Make sure lease is active
+		active, err := manifestClient.IsActive(req.Context(), leaseID.DeploymentID())
+		if err != nil {
+			logger.Error("could not check if lease is active", "lease-id", leaseID, err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if !active {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+
 		result, err := lokiClient.FindLogsByLease(req.Context(), leaseID)
 		if err != nil {
 			logger.Error("could not get logs for lease", "lease", leaseID, "err", err)
