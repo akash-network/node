@@ -10,19 +10,22 @@ ifndef AKASH_HOME
 $(error AKASH_HOME is not set)
 endif
 
-export AKASH_KEYRING_BACKEND = test
-export AKASH_GAS_ADJUSTMENT  = 2
-export AKASH_CHAIN_ID        = local
-export AKASH_YES             = true
+export AKASH_KEYRING_BACKEND    = test
+export AKASH_GAS_ADJUSTMENT     = 2
+export AKASH_CHAIN_ID           = local
+export AKASH_YES                = true
+export AKASH_GAS_PRICES         = 0.025uakt
+export AKASH_GAS                = auto
 
 AKASH        := $(AKASH) --home $(AKASH_HOME)
 
 KEY_OPTS     := --keyring-backend=$(AKASH_KEYRING_BACKEND)
 GENESIS_PATH := $(AKASH_HOME)/config/genesis.json
 
-CHAIN_MIN_DEPOSIT     := 10000000000000
-CHAIN_ACCOUNT_DEPOSIT := $(shell echo $$(($(CHAIN_MIN_DEPOSIT) * 10)))
-CHAIN_TOKEN_DENOM     := uakt
+CHAIN_MIN_DEPOSIT        := 10000000000000
+CHAIN_ACCOUNT_DEPOSIT    := $(shell echo $$(($(CHAIN_MIN_DEPOSIT) * 10)))
+CHAIN_VALIDATOR_DELEGATE := $(shell echo $$(($(CHAIN_MIN_DEPOSIT) / 2)))
+CHAIN_TOKEN_DENOM        := uakt
 
 KEY_NAMES := main provider validator other
 
@@ -99,7 +102,7 @@ node-init-genesis-account-%:
 .PHONY: node-init-gentx
 node-init-gentx:
 	$(AKASH) gentx validator \
-		"$(CHAIN_MIN_DEPOSIT)$(CHAIN_TOKEN_DENOM)"
+		"$(CHAIN_VALIDATOR_DELEGATE)$(CHAIN_TOKEN_DENOM)"
 
 .PHONY: node-init-finalize
 node-init-finalize:
@@ -108,7 +111,7 @@ node-init-finalize:
 
 .PHONY: node-run
 node-run:
-	$(AKASH) start
+	$(AKASH) start --minimum-gas-prices=$(AKASH_GAS_PRICES)
 
 .PHONY: node-status
 node-status:
