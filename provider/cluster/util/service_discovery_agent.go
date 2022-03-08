@@ -308,6 +308,7 @@ func (sda *serviceDiscoveryAgent) discoverKube() (clientFactory, error) {
 type dnsClientFactory struct {
 	target string
 	port uint16
+	handshakeTimeout time.Duration
 
 }
 
@@ -322,8 +323,22 @@ func (dcf dnsClientFactory) MakeServiceClient(isHTTPS, secure bool) ServiceClien
 }
 
 func (dcf dnsClientFactory) MakeWebsocketServiceClient(isHTTPS, secure bool) WebsocketServiceClient {
-	// TODO
-	panic("not implemented")
+	proto := "ws"
+	if isHTTPS {
+		proto = "wss"
+	}
+	discoveredURL := fmt.Sprintf("%s://%v:%v", proto, dcf.target, dcf.port)
+
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify:          !secure,
+	}
+
+	dialer := websocket.Dialer{
+		TLSClientConfig: tlsConfig,
+		HandshakeTimeout:  dcf.handshakeTimeout,
+	}
+
+	return newWebsocketWrapperServiceClientFromDialer(dialer, discoveredURL)
 }
 
 
@@ -349,5 +364,6 @@ func (sda *serviceDiscoveryAgent) discoverDNS() (clientFactory, error) {
 	return dnsClientFactory{
 		target: choice.Target,
 		port:   choice.Port,
+		handshakeTimeout: sda.kubeConfig.Timeout,
 	}, nil
 }

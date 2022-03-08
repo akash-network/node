@@ -211,6 +211,7 @@ func logQueryFollowHandler(logger log.Logger,
 		return
 	}
 
+	// TODO - figoure out how to flush this at a regular cadence to avoid buffering ?
 	ws.EnableWriteCompression(true)
 	sendLogLine := func(at time.Time, line string) error {
 		err := ws.SetWriteDeadline(time.Now().Add(time.Second * 10)) // TODO - configurable ???
@@ -239,6 +240,14 @@ func logQueryFollowHandler(logger log.Logger,
 		}
 	}
 
+	err = ws.WriteControl(websocket.CloseMessage,[]byte{}, time.Now().Add(time.Second * 30))
+	if err != nil {
+		logger.Error("could not send websocket close message", "err", err)
+	}
+	err = ws.Close()
+	if err != nil {
+		logger.Error("could not close websocket", "err", err)
+	}
 }
 
 func logQueryHandler(logger log.Logger, lokiClient loki.Client) http.HandlerFunc{

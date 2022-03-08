@@ -192,7 +192,7 @@ type entry struct {
 //Stream represents a log stream.  It includes a set of log entries and their labels.
 type stream struct {
 	Labels  map[string]string `json:"stream"`
-	Entries []entry  `json:"values"`
+	Entries [][]string  `json:"values"`
 }
 
 // tailResponse represents the http json response to a tail query from loki
@@ -273,7 +273,9 @@ func (c *client) TailLogsByService(ctx context.Context, leaseID mtypes.LeaseID, 
 
 		for _, stream := range logs.Streams {
 			for _, entry := range stream.Entries {
-				err = eachLogLine(entry.Timestamp, entry.Line)
+				at := time.Time{} // TODO
+				line := entry[1]
+				err = eachLogLine(at, line)
 				if err != nil {
 					return err
 				}

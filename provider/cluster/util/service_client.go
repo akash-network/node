@@ -13,6 +13,7 @@ import (
 )
 
 func (hwsc *httpWrapperServiceClient) CreateRequest(ctx context.Context, method, path string, body io.Reader) (*http.Request, error) {
+	path = strings.TrimLeft(path, "/")
 	serviceURL := fmt.Sprintf("%s/%s", hwsc.url, path)
 	req, err := http.NewRequestWithContext(ctx, method, serviceURL, body)
 	if err != nil {
@@ -26,8 +27,8 @@ func (hwsc *httpWrapperServiceClient) DoRequest(req *http.Request) (*http.Respon
 	return hwsc.httpClient.Do(req)
 }
 
-
 func newHTTPWrapperServiceClient(isHTTPS, secure bool, baseURL string) *httpWrapperServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
 	netDialer := &net.Dialer{}
 
 	// By default, block both things
@@ -61,6 +62,7 @@ func newHTTPWrapperServiceClient(isHTTPS, secure bool, baseURL string) *httpWrap
 }
 
 func newHTTPWrapperServiceClientWithTransport(transport http.RoundTripper, baseURL string) *httpWrapperServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
 	return &httpWrapperServiceClient{
 		url: baseURL,
 		httpClient: &http.Client{
@@ -71,6 +73,7 @@ func newHTTPWrapperServiceClientWithTransport(transport http.RoundTripper, baseU
 
 
 func newWebsocketWrapperServiceClientFromDialer(dialer websocket.Dialer, baseURL string) *websocketWrapperServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
 	return &websocketWrapperServiceClient{
 		url: baseURL,
 		dialer: &dialer,
@@ -78,6 +81,7 @@ func newWebsocketWrapperServiceClientFromDialer(dialer websocket.Dialer, baseURL
 }
 
 func (wwsc *websocketWrapperServiceClient) DialWebsocket(ctx context.Context, path string, requestHeaders http.Header) (*websocket.Conn, error) {
+	path = strings.TrimLeft(path, "/")
 	dialUrl := fmt.Sprintf("%s/%s", wwsc.url, path)
 
 	if strings.HasPrefix(dialUrl, "https") {
@@ -93,8 +97,9 @@ func (wwsc *websocketWrapperServiceClient) DialWebsocket(ctx context.Context, pa
 		}
 
 		buf, _ := ioutil.ReadAll(resp.Body) // nolint
-		return nil, fmt.Errorf("%w: error response from server when dialing websocket; status %v; response: %s", err, resp.StatusCode,
-			string(buf))
+		bufStr := strings.ReplaceAll(string(buf), "\n", " ")
+		return nil, fmt.Errorf("%w: error response from server when dialing websocket %q; status %v; response: %s", err, dialUrl, resp.StatusCode,
+			bufStr)
 	}
 
 	return conn, err
