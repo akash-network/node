@@ -206,7 +206,7 @@ func cmdRevoke() *cobra.Command {
 
 func cmdRevokeClient() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:                        "server",
+		Use:                        "client",
 		Short:                      "",
 		SuggestionsMinimumDistance: 2,
 		RunE: func(cmd *cobra.Command, args []string) error {
