@@ -52,3 +52,11 @@ func serviceStatusPath(id mtypes.LeaseID, service string) string {
 func serviceLogsPath(id mtypes.LeaseID) string {
 	return fmt.Sprintf("%s/logs", leasePath(id))
 }
+
+func leaseLogsStatusPath(leaseID mtypes.LeaseID) string {
+	return fmt.Sprintf("%s/logs/status", leasePath(leaseID))
+}
+
+func leaseLogsQuery(leaseID mtypes.LeaseID, serviceName string, replicaIndex uint) string {
+	return fmt.Sprintf("%s/logs/query/%s/%d", leasePath(leaseID), serviceName, replicaIndex)
+}

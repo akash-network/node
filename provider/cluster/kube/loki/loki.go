@@ -356,7 +356,7 @@ func (c *client) GetLogByService(ctx context.Context, leaseID mtypes.LeaseID, se
 	httpQueryString := url.Values{}
 	httpQueryString.Set("start", fmt.Sprintf("%d", startTime.UnixNano()))
 	httpQueryString.Set("end", fmt.Sprintf("%d", endTime.UnixNano()))
-	httpQueryString.Set("limit", fmt.Sprintf("%d","1000"))
+	httpQueryString.Set("limit", fmt.Sprintf("%d",limit))
 
 	lokiQueryBuf := &bytes.Buffer{}
 	// Note this is not JSON
@@ -413,7 +413,7 @@ func (c *client) GetLogByService(ctx context.Context, leaseID mtypes.LeaseID, se
 	for _, resultSet := range lokiResult.Data.Result {
 		filepath, exists := resultSet.Stream[filenameLabel]
 		if !exists {
-			return LogResult{},fmt.Errorf("%w: expected loki log result set to have label %q but it does not", ErrLoki, filenameLabel)
+			return LogResult{}, fmt.Errorf("%w: expected loki log result set to have label %q but it does not", ErrLoki, filenameLabel)
 		}
 
 		_, filename := path.Split(filepath)
@@ -421,7 +421,7 @@ func (c *client) GetLogByService(ctx context.Context, leaseID mtypes.LeaseID, se
 
 		runIndex, err := strconv.ParseUint(filenameParts[0], 0, 31)
 		if err != nil {
-			return LogResult{},fmt.Errorf("expected to parse filename %q as integer for kubernetes run index: %w", filename, err)
+			return LogResult{}, fmt.Errorf("expected to parse filename %q as integer for kubernetes run index: %w", filename, err)
 
 		}
 		for _, logEntry := range resultSet.Values {
@@ -456,7 +456,6 @@ func (c *client) clearClient(){
 
 	c.websocketClient = nil
 	c.client = nil
-
 }
 
 func (c *client) getLokiWebsocketClient(ctx context.Context) (clusterutil.WebsocketServiceClient, error) {
@@ -497,6 +496,7 @@ type LogStatus struct {
 	ServiceName string
 	ReplicaIndex int
 	Present bool
+	Restarts uint
 }
 func (c *client) FindLogsByLease(ctx context.Context, leaseID mtypes.LeaseID) ([]LogStatus, error) {
 	lidNS := clusterutil.LeaseIDToNamespace(leaseID)
@@ -526,8 +526,6 @@ func (c *client) FindLogsByLease(ctx context.Context, leaseID mtypes.LeaseID) ([
 		return nil, err
 	}
 
-	// TODO - on the query set end=1646072848813679310&start=1646065648813679310 or similar query args
-	// Based on the retention set on the provider
 	req.Header.Add(lokiOrgIdHeader, lidNS)
 	resp, err := lc.DoRequest(req)
 	if err != nil {
@@ -560,6 +558,7 @@ func (c *client) FindLogsByLease(ctx context.Context, leaseID mtypes.LeaseID) ([
 		returnValue = append(returnValue, LogStatus{
 			ServiceName:  entry.serviceName,
 			ReplicaIndex: podData.replicaIndex,
+			Restarts: entry.restarts,
 		})
 	}
 
@@ -572,6 +571,7 @@ func (c *client) FindLogsByLease(ctx context.Context, leaseID mtypes.LeaseID) ([
 		i := positionData[podData]
 		returnValue[i].Present = true
 	}
+
 
 	return returnValue, nil
 }

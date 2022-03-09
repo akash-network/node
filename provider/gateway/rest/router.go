@@ -71,6 +71,15 @@ const (
 	websocketInternalServerErrorCode = 4000
 	websocketLeaseNotFound           = 4001
 	manifestSubmitTimeout            = 120 * time.Second
+
+	serviceNameKey = "serviceName"
+	replicaIndexKey = "replicaIndex"
+	limitKey = "limit"
+	runIndexKey = "runIndex"
+	startTimeKey = "startTime"
+	endTimeKey = "endTime"
+	forwardKey = "forward"
+	followKey = "follow"
 )
 
 type wsStreamConfig struct {
@@ -226,6 +235,7 @@ func logQueryFollowHandler(logger log.Logger,
 		return nil // Ignore for now
 	}
 
+	// TODO - put a hard time limit on this to prevent forever running goroutines?
 	err = lokiClient.TailLogsByService(req.Context(),
 		leaseID,
 		serviceName,
@@ -268,13 +278,13 @@ func logQueryHandler(logger log.Logger, manifestClient providermanifest.Client, 
 			return
 		}
 
-		serviceName := mux.Vars(req)["serviceName"] // TODO validate this exists
-		replicaIndexStr := mux.Vars(req)["replicaIndex"]
+		serviceName := mux.Vars(req)[serviceNameKey] // TODO validate this exists
+		replicaIndexStr := mux.Vars(req)[replicaIndexKey]
 
 		replicaIndex, err :=  strconv.ParseUint(replicaIndexStr, 10, 31)
 		if err != nil {
 			logger.Error("could not parse path component for replica index", "err", err, "replicaIndex", replicaIndexStr)
-			rw.WriteHeader(http.StatusNotFound)
+			http.Error(rw, fmt.Sprintf("could not parse replica index %q - %v", replicaIndexStr, err), http.StatusNotFound)
 			return
 		}
 
@@ -283,12 +293,12 @@ func logQueryHandler(logger log.Logger, manifestClient providermanifest.Client, 
 		query := req.URL.Query()
 
 		limit := uint(1000)
-		limitStr := query.Get("limit")
+		limitStr := query.Get(limitKey)
 		if len(limitStr) != 0 {
 			limit64, err := strconv.ParseUint(limitStr, 10, 31)
 			if err != nil {
-				logger.Error("could not parse limit", "limit", limitStr, "err", err)
-				rw.WriteHeader(http.StatusBadRequest)
+				logger.Error("could not parse limit", limitKey, limitStr, "err", err)
+				http.Error(rw, fmt.Sprintf("could not parse limit %q - %v", limitStr, err), http.StatusBadRequest)
 				return
 			}
 			limit = uint(limit64)
@@ -296,12 +306,12 @@ func logQueryHandler(logger log.Logger, manifestClient providermanifest.Client, 
 
 		// Parse runIndex from query, if present
 		runIndex := -1
-		runIndexStr := query.Get("runIndex")
+		runIndexStr := query.Get(runIndexKey)
 		if len(runIndexStr) != 0 {
 			runIndex64, err := strconv.ParseUint(runIndexStr, 10, 31)
 			if err != nil {
-				logger.Error("could not parse run index", "runIndex", runIndexStr, "err", err)
-				rw.WriteHeader(http.StatusBadRequest)
+				logger.Error("could not parse run index", runIndexKey, runIndexStr, "err", err)
+				http.Error(rw, fmt.Sprintf("could not run index %q - %v", runIndexStr, err), http.StatusBadRequest)
 				return
 			}
 			runIndex = int(runIndex64)
@@ -310,12 +320,12 @@ func logQueryHandler(logger log.Logger, manifestClient providermanifest.Client, 
 		// Parse start time from query, if present
 		startTime := time.Now().Add(-1 * time.Hour)
 		// start time
-		startTimeStr := query.Get("startTime")
+		startTimeStr := query.Get(startTimeKey)
 		if len(startTimeStr) != 0 {
 			startTimeInt, err := strconv.ParseInt(startTimeStr, 10, 64)
 			if err != nil {
-				logger.Error("could not parse startTime", "startTime", startTimeStr, "err", err)
-				rw.WriteHeader(http.StatusBadRequest)
+				logger.Error("could not parse startTime", startTimeKey, startTimeStr, "err", err)
+				http.Error(rw, fmt.Sprintf("could not parse start time %q - %v", startTimeStr, err), http.StatusBadRequest)
 				return
 			}
 
@@ -324,12 +334,12 @@ func logQueryHandler(logger log.Logger, manifestClient providermanifest.Client, 
 
 		// Parse end time from query, if present
 		endTime := time.Now()
-		endTimeStr := query.Get("endTime")
-		if len(startTimeStr) != 0 {
+		endTimeStr := query.Get(endTimeKey)
+		if len(endTimeStr) != 0 {
 			endTimeInt, err := strconv.ParseInt(endTimeStr, 10, 64)
 			if err != nil {
-				logger.Error("could not parse endTime", "endTime", endTimeStr, "err", err)
-				rw.WriteHeader(http.StatusBadRequest)
+				logger.Error("could not parse endTime", endTimeKey, endTimeStr, "err", err)
+				http.Error(rw, fmt.Sprintf("could not parse end time %q - %v", endTimeStr, err), http.StatusBadRequest)
 				return
 			}
 
@@ -339,14 +349,14 @@ func logQueryHandler(logger log.Logger, manifestClient providermanifest.Client, 
 		const timeLimit = time.Hour * 72 // TODO - configurable by the provider
 		duration := endTime.Sub(startTime)
 		if duration > timeLimit || duration < 0 {
-			logger.Error("duration of time range queried is not allowed", "startTime", startTime, "endTime", endTime)
-			rw.WriteHeader(http.StatusBadRequest)
+			logger.Error("duration of time range queried is not allowed", startTimeKey, startTime, endTimeKey, endTime)
+			http.Error(rw, fmt.Sprintf("time range of %v too large, maximum is %v", duration, timeLimit), http.StatusBadRequest)
 			return
 		}
 
 		forward := true
 		// Parse direction from query, if present
-		forwardStr := query.Get("forward")
+		forwardStr := query.Get(forwardKey)
 		if len(forwardStr) != 0 {
 			switch(forwardStr){
 			case "0":
@@ -354,14 +364,14 @@ func logQueryHandler(logger log.Logger, manifestClient providermanifest.Client, 
 			case "1":
 				forward = true
 			default:
-				logger.Error("unknown value for forward", "forward", forwardStr)
-				rw.WriteHeader(http.StatusBadRequest)
+				logger.Error("unknown value for forward", forwardKey, forwardStr)
+				http.Error(rw, fmt.Sprintf("unacceptable value for forward %q", forwardStr), http.StatusBadRequest)
 				return
 			}
 		}
 
 		follow := false
-		followStr := query.Get("follow")
+		followStr := query.Get(followKey)
 		if len(followStr) != 0 {
 			switch(followStr) {
 			case "0":
@@ -370,28 +380,29 @@ func logQueryHandler(logger log.Logger, manifestClient providermanifest.Client, 
 				follow = true
 
 			default:
-				logger.Error("unknown value for follow", "follow", forwardStr)
-				rw.WriteHeader(http.StatusBadRequest)
+				logger.Error("unknown value for follow", followKey, forwardStr)
+				http.Error(rw, fmt.Sprintf("unacceptable value for follow %q", followStr), http.StatusBadRequest)
 				return
 			}
 		}
 
 		if follow {
+			const msg = "cannot specify end time, reverse order, or limit if logs are tailed"
 			if len(endTimeStr) != 0 {
 				logger.Error("client requested log follow with endtime")
-				rw.WriteHeader(http.StatusBadRequest)
+				http.Error(rw, msg, http.StatusBadRequest)
 				return
 			}
 
 			if !forward {
 				logger.Error("client requested log follow with reverse direction")
-				rw.WriteHeader(http.StatusBadRequest)
+				http.Error(rw, msg, http.StatusBadRequest)
 				return
 			}
 
 			if len(limitStr) != 0 {
 				logger.Error("client request log follow with limit")
-				rw.WriteHeader(http.StatusBadRequest)
+				http.Error(rw, msg, http.StatusBadRequest)
 				return
 			}
 			// Upgrade to a websocket

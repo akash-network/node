@@ -37,6 +37,7 @@ func RootCmd() *cobra.Command {
 	cmd.AddCommand(clusterNSCmd())
 	cmd.AddCommand(migrate())
 	cmd.AddCommand(RunResourceServerCmd())
+	cmd.AddCommand(leaseLogStatusCmd())
 
 	return cmd
 }
