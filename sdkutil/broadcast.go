@@ -50,7 +50,7 @@ func BroadcastTX(ctx context.Context, cctx client.Context, flags *pflag.FlagSet,
 		return err
 	}
 
-	txf, err = adjustGas(cctx, txf, msgs...)
+	txf, err = AdjustGas(cctx, txf, msgs...)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func confirmTx(ctx client.Context, txb client.TxBuilder) (bool, error) {
 	return true, nil
 }
 
-func adjustGas(ctx client.Context, txf tx.Factory, msgs ...sdk.Msg) (tx.Factory, error) {
+func AdjustGas(ctx client.Context, txf tx.Factory, msgs ...sdk.Msg) (tx.Factory, error) {
 	if !ctx.Simulate && !txf.SimulateAndExecute() {
 		return txf, nil
 	}
@@ -168,7 +168,6 @@ func adjustGas(ctx client.Context, txf tx.Factory, msgs ...sdk.Msg) (tx.Factory,
 	}
 
 	txf = txf.WithGas(adjusted)
-	_, _ = fmt.Fprintf(os.Stderr, "%s\n", tx.GasEstimateResponse{GasEstimate: txf.Gas()})
 
 	return txf, nil
 }
