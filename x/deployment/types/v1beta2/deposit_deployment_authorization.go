@@ -23,15 +23,15 @@ func (m DepositDeploymentAuthorization) MsgTypeURL() string {
 }
 
 // Accept implements Authorization.Accept.
-func (m DepositDeploymentAuthorization) Accept(ctx sdk.Context, msg sdk.Msg) (authz.AcceptResponse, error) {
+func (m DepositDeploymentAuthorization) Accept(_ sdk.Context, msg sdk.Msg) (authz.AcceptResponse, error) {
 	mDepositDeployment, ok := msg.(*MsgDepositDeployment)
 	if !ok {
 		return authz.AcceptResponse{}, sdkerrors.ErrInvalidType.Wrap("type mismatch")
 	}
-	limitLeft := m.SpendLimit.Sub(mDepositDeployment.Amount)
-	if limitLeft.IsNegative() {
+	if m.SpendLimit.IsLT(mDepositDeployment.Amount) {
 		return authz.AcceptResponse{}, sdkerrors.ErrInsufficientFunds.Wrapf("requested amount is more than spend limit")
 	}
+	limitLeft := m.SpendLimit.Sub(mDepositDeployment.Amount)
 	if limitLeft.IsZero() {
 		return authz.AcceptResponse{Accept: true, Delete: true}, nil
 	}

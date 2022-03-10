@@ -317,3 +317,40 @@ func TestGroupSpec_MatchResourcesAttributes(t *testing.T) {
 	require.False(t, group.MatchResourcesRequirements(prov2Attributes))
 	require.False(t, group.MatchResourcesRequirements(prov3Attributes))
 }
+
+func TestDepositDeploymentAuthorization_Accept(t *testing.T) {
+	limit := sdk.NewInt64Coin(testutil.CoinDenom, 333)
+	dda := types.NewDepositDeploymentAuthorization(limit)
+
+	// Send the wrong type of message, expect an error
+	var msg sdk.Msg
+	response, err := dda.Accept(sdk.Context{}, msg)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid type")
+	require.Zero(t, response)
+
+	// Try to deposit too much coin, expect an error
+	msg = types.NewMsgDepositDeployment(testutil.DeploymentID(t), limit.Add(sdk.NewInt64Coin(testutil.CoinDenom, 1)), testutil.AccAddress(t).String())
+	response, err = dda.Accept(sdk.Context{}, msg)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "requested amount is more than spend limit")
+	require.Zero(t, response)
+
+	// Deposit 1 less than the limit, expect  an updated deposit
+	msg = types.NewMsgDepositDeployment(testutil.DeploymentID(t), limit.Sub(sdk.NewInt64Coin(testutil.CoinDenom, 1)), testutil.AccAddress(t).String())
+	response, err = dda.Accept(sdk.Context{}, msg)
+	require.NoError(t, err)
+	require.True(t, response.Accept)
+	require.False(t, response.Delete)
+
+	ok := false
+	dda, ok = response.Updated.(*types.DepositDeploymentAuthorization)
+	require.True(t, ok)
+
+	// Deposit the limit (now 1), expect that it is deleted
+	msg = types.NewMsgDepositDeployment(testutil.DeploymentID(t), sdk.NewInt64Coin(testutil.CoinDenom, 1), testutil.AccAddress(t).String())
+	response, err = dda.Accept(sdk.Context{}, msg)
+	require.NoError(t, err)
+	require.True(t, response.Accept)
+	require.True(t, response.Delete)
+}
