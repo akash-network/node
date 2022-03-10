@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"context"
+
 	lifecycle "github.com/boz/go-lifecycle"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	v1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
@@ -14,7 +15,6 @@ import (
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	atypes "github.com/ovrclk/akash/types"
-	mquery "github.com/ovrclk/akash/x/market/query"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
 )
@@ -367,30 +367,33 @@ func findDeployments(ctx context.Context, log log.Logger, client Client, session
 		return nil, err
 	}
 
-	leaseList, err := session.Client().Query().ActiveLeasesForProvider(session.Provider().Address())
-	if err != nil {
-		log.Error("fetching deployments", "err", err)
-		return nil, err
-	}
+	log.Info("found deployments", "total", len(deployments))
+	return deployments, nil
 
-	leases := make(map[string]bool)
-	for _, lease := range leaseList {
-		leases[mquery.LeasePath(lease.Lease.LeaseID)] = true
-	}
+	// leaseList, err := session.Client().Query().ActiveLeasesForProvider(session.Provider().Address())
+	// if err != nil {
+	// 	log.Error("fetching active leases", "err", err)
+	// 	return nil, err
+	// }
 
-	log.Info("found leases", "num-active", len(leases))
+	// leases := make(map[string]bool)
+	// for _, lease := range leaseList {
+	// 	leases[mquery.LeasePath(lease.Lease.LeaseID)] = true
+	// }
 
-	active := make([]ctypes.Deployment, 0, len(deployments))
+	// log.Info("found leases", "num-active", len(leases))
 
-	for _, deployment := range deployments {
-		if _, ok := leases[mquery.LeasePath(deployment.LeaseID())]; !ok {
-			continue
-		}
-		active = append(active, deployment)
-		log.Debug("deployment", "lease", deployment.LeaseID(), "mgroup", deployment.ManifestGroup().Name)
-	}
+	// active := make([]ctypes.Deployment, 0, len(deployments))
 
-	log.Info("found deployments", "num-active", len(active), "num-skipped", len(deployments)-len(active))
+	// for _, deployment := range deployments {
+	// 	if _, ok := leases[mquery.LeasePath(deployment.LeaseID())]; !ok {
+	// 		continue
+	// 	}
+	// 	active = append(active, deployment)
+	// 	log.Debug("deployment", "lease", deployment.LeaseID(), "mgroup", deployment.ManifestGroup().Name)
+	// }
 
-	return active, nil
+	// log.Info("found deployments", "num-active", len(active), "num-skipped", len(deployments)-len(active))
+
+	// return active, nil
 }
