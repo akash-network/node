@@ -11,7 +11,7 @@ meta_url=https://raw.githubusercontent.com/ovrclk/net/master/mainnet/meta.json
 
 curl -sSfl "$meta_url" > "$META"
 
-export AKASH_HOME="${AKASH_HOME:-home}"
+export AKASH_HOME="${AKASH_HOME:-/akash}"
 export AKASH_MONIKER="${AKASH_MONIKER:-"todo"}"
 export AKASH_CHAIN_ID="${AKASH_CHAIN_ID:-"$(jq -Mr '.chain_id' "$META")"}"
 export AKASH_P2P_SEEDS="${AKASH_P2P_SEEDS:-"$(jq -Mr '.peers.seeds[] | .id + "@" + .address' "$META" | paste -sd, -)"}"
@@ -23,7 +23,7 @@ echo "$AKASH_P2P_SEEDS"
 echo "$AKASH_P2P_PERSISTENT_PEERS"
 
 # initialize
-if [ ! -d "$AKASH_HOME" ]; then
+if [ ! -d "$AKASH_HOME/config" ]; then
   ./bin/akash init "$AKASH_MONIKER" --home "$AKASH_HOME"
   genesis_url="$(jq -Mr '.genesis.genesis_url' "$META")"
   curl -sSfl "$genesis_url" > "$AKASH_HOME/config/genesis.json"
