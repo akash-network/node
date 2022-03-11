@@ -224,11 +224,12 @@ func logQueryFollowHandler(logger log.Logger,
 	// TODO - figoure out how to flush this at a regular cadence to avoid buffering ?
 	ws.EnableWriteCompression(true)
 	sendLogLine := func(at time.Time, line string) error {
+		msg := []interface{}{at.UnixNano(), line}
 		err := ws.SetWriteDeadline(time.Now().Add(time.Second * 10)) // TODO - configurable ???
 		if err != nil {
 			return err
 		}
-		return ws.WriteMessage(websocket.TextMessage, []byte(line))
+		return ws.WriteJSON(msg)
 	}
 
 	onDropped := func() error {

@@ -68,6 +68,13 @@ type Client interface {
 		endTime time.Time,
 		forward bool,
 		limit uint) (loki.LogResult, error)
+	LeaseLogsV2Follow(ctx context.Context,
+		leaseID mtypes.LeaseID,
+		serviceName string,
+		replicaIndex uint,
+		runIndex int,
+		startTime time.Time,
+		outputFn func(at time.Time, line string)error)  (error)
 }
 
 type JwtClient interface {
@@ -892,6 +899,74 @@ limit uint) (loki.LogResult, error) {
 	}
 
 	return obj, nil
+}
+
+var errBadLogLine = errors.New("bad log line")
+
+func (c *client) LeaseLogsV2Follow(ctx context.Context, leaseID mtypes.LeaseID,
+	serviceName string,
+	replicaIndex uint,
+	runIndex int,
+	startTime time.Time,
+	outputFn func(at time.Time, line string) error) (error)  {
+	query := url.Values{}
+	query.Set("follow", "1")
+
+	if runIndex > 0 {
+		query.Set(runIndexKey, fmt.Sprintf("%d", runIndex))
+	}
+
+	if !startTime.Equal(time.Time{}) {
+		query.Set(startTimeKey, fmt.Sprintf("%d", startTime.Unix()))
+	}
+
+	secure := c.host.Scheme == "https"
+	hostCopy := c.host
+	if secure {
+		hostCopy.Scheme = "wss"
+	} else {
+		hostCopy.Scheme = "ws"
+	}
+	path := c.host.String() + "/" + leaseLogsQuery(leaseID, serviceName, replicaIndex) + "?" + query.Encode()
+	ws, resp, err := c.wsclient.DialContext(ctx, path, nil )
+	if err != nil {
+		if resp == nil {
+			return err
+		}
+		if clientErr := createClientResponseErrorIfNotOK(resp, resp.Body); clientErr != nil {
+			return clientErr
+		}
+		return err
+	}
+
+	for {
+		msg := []interface{}{nil, nil}
+		err := ws.ReadJSON(&msg)
+		if err != nil {
+			return err
+		}
+
+		atNum, ok := msg[0].(*json.Number)
+		if !ok {
+			return fmt.Errorf("%w: expected number at index 0 of log line, got %T", errBadLogLine, msg[0])
+		}
+		atInt, err := atNum.Int64()
+		if err != nil {
+			return fmt.Errorf("%w: expected number that is int64 at index 0 of log line, got %v", errBadLogLine, atNum.String())
+		}
+
+		logLine ,ok := msg[1].(string)
+		if !ok {
+			return fmt.Errorf("%w: expected string at index 1 of log line got %T", errBadLogLine, msg[1])
+		}
+
+		at := time.Unix(0, atInt)
+
+		err = outputFn(at, logLine)
+		if err != nil {
+			return err
+		}
+	}
 }
 
 // parseCloseMessage extract close reason from websocket close message
