@@ -3,18 +3,20 @@ package kube
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	akashv1 "github.com/ovrclk/akash/pkg/apis/akash.network/v1"
 	metricsutils "github.com/ovrclk/akash/util/metrics"
 	dtypes "github.com/ovrclk/akash/x/deployment/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"strings"
+
+	"os"
+	"path"
 
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/util/flowcontrol"
-	"os"
-	"path"
 
 	ctypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/ovrclk/akash/provider/cluster/util"
@@ -287,6 +289,11 @@ func (c *client) TeardownLease(ctx context.Context, lid mtypes.LeaseID) error {
 		label = metricsutils.FailLabel
 	}
 	kubeCallsCounter.WithLabelValues("namespaces-delete", label).Inc()
+
+	err := c.ac.AkashV1().Manifests(c.ns).Delete(ctx, lidNS(lid), metav1.DeleteOptions{})
+	if err != nil {
+		c.log.Error("teardown lease: unable to delete manifest", "ns", lidNS(lid), "error", err)
+	}
 
 	return result
 }
