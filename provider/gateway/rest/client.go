@@ -941,12 +941,18 @@ func (c *client) LeaseLogsV2Follow(ctx context.Context, leaseID mtypes.LeaseID,
 
 	for {
 		msg := []interface{}{nil, nil}
-		err := ws.ReadJSON(&msg)
+		_, r, err := ws.NextReader()
+		if err != nil {
+			return err
+		}
+		dec := json.NewDecoder(r)
+		dec.UseNumber()
+		err = dec.Decode(&msg)
 		if err != nil {
 			return err
 		}
 
-		atNum, ok := msg[0].(*json.Number)
+		atNum, ok := msg[0].(json.Number)
 		if !ok {
 			return fmt.Errorf("%w: expected number at index 0 of log line, got %T", errBadLogLine, msg[0])
 		}

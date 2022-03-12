@@ -185,6 +185,43 @@ func doLeaseLogsStatus(cmd *cobra.Command) error {
 		})
 }
 
+func  streamLeaseLogs(ctx context.Context,
+	cert tls.Certificate,
+cctx sdkclient.Context,
+deploymentID dtypes.DeploymentID,
+provider string,
+gseq uint32,
+oseq uint32,
+serviceName string,
+startTime time.Time,
+replicaIndex int,
+runIndex int) error {
+	/** TODO - since service name is specified does this need to actually search for all the providers?
+	it should only be running on 1 provider with our architecture
+	 */
+	return withLeasesForDeployment(ctx,
+		cctx,
+		deploymentID,
+		provider,
+		gseq,
+		oseq,
+		func(leaseID mtypes.LeaseID) error {
+			prov, _ := sdk.AccAddressFromBech32(leaseID.GetProvider())
+			gclient, err := gwrest.NewClient(akashclient.NewQueryClientFromCtx(cctx), prov, []tls.Certificate{cert})
+			if err != nil {
+				return err
+			}
+
+			return gclient.LeaseLogsV2Follow(ctx,
+				leaseID,
+				serviceName,
+				uint(replicaIndex),
+				runIndex,
+				startTime, func(at time.Time, line string) error {
+					return cctx.PrintString(fmt.Sprintf("%v %s\n", at, line))
+				})
+		})
+}
 
 
 func doLeaseLogsV2(cmd *cobra.Command, args []string) error {
@@ -263,6 +300,27 @@ func doLeaseLogsV2(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	follow, err := cmd.Flags().GetBool(flagFollow)
+	if err != nil {
+		return err
+	}
+	if follow {
+		return streamLeaseLogs(cmd.Context(),
+			cert,
+			cctx,
+			deploymentID,
+			provider,
+			gseq,
+			oseq,
+			serviceName,
+			startTime,
+			int(replicaIndex),
+			runIndex)
+	}
+
+	/** TODO - since service name is specified does this need to actually search for all the providers?
+	it should only be running on 1 provider with our architecture
+	*/
 	return withLeasesForDeployment(cmd.Context(),
 		cctx,
 		deploymentID,
