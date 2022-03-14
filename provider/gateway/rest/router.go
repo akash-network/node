@@ -3,18 +3,24 @@ package rest
 import (
 	"bufio"
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"github.com/ovrclk/akash/provider/cluster/kube/loki"
 	"github.com/ovrclk/akash/provider/cluster/operatorclients"
 	"github.com/ovrclk/akash/provider/gateway/utils"
 	ipoptypes "github.com/ovrclk/akash/provider/operator/ipoperator/types"
 	"io"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/ovrclk/akash/provider/cluster/kube/builder"
 
 	"k8s.io/client-go/tools/remotecommand"
 
@@ -41,6 +47,7 @@ import (
 	manifestValidation "github.com/ovrclk/akash/validation"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+	providermanifest "github.com/ovrclk/akash/provider/manifest"
 )
 
 type CtxAuthKey string
@@ -64,6 +71,15 @@ const (
 	websocketInternalServerErrorCode = 4000
 	websocketLeaseNotFound           = 4001
 	manifestSubmitTimeout            = 120 * time.Second
+
+	serviceNameKey = "serviceName"
+	replicaIndexKey = "replicaIndex"
+	limitKey = "limit"
+	runIndexKey = "runIndex"
+	startTimeKey = "startTime"
+	endTimeKey = "endTime"
+	forwardKey = "forward"
+	followKey = "follow"
 )
 
 type wsStreamConfig struct {
@@ -75,7 +91,7 @@ type wsStreamConfig struct {
 	client    cluster.ReadClient
 }
 
-func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopclient operatorclients.IPOperatorClient, ctxConfig map[interface{}]interface{}) *mux.Router {
+func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopclient operatorclients.IPOperatorClient, lokiClient loki.Client, ctxConfig map[interface{}]interface{}) *mux.Router {
 
 	router := mux.NewRouter()
 
@@ -158,6 +174,12 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopcl
 		leaseLogsHandler(log, pclient.Cluster())).
 		Methods("GET")
 
+	logRouter.HandleFunc("/status",
+		logStatusHandler(log, pclient.Manifest(), lokiClient)).Methods(http.MethodGet)
+
+	logRouter.HandleFunc("/query/{serviceName}/{replicaIndex}",
+		logQueryHandler(log, pclient.Manifest(), lokiClient)).Methods(http.MethodGet)
+
 	srouter := lrouter.PathPrefix("/service/{serviceName}").Subrouter()
 	srouter.Use(
 		requireService(),
@@ -175,6 +197,279 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopcl
 	return router
 }
 
+func logQueryFollowHandler(logger log.Logger,
+	lokiClient loki.Client,
+	leaseID mtypes.LeaseID,
+	rw http.ResponseWriter,
+	req *http.Request,
+	serviceName string,
+	replicaIndex uint,
+	runIndex int,
+	startTime time.Time,
+	) {
+
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  0,
+		WriteBufferSize: 65535,
+	}
+
+	ws, err := upgrader.Upgrade(rw, req, nil)
+	if err != nil {
+		// At this point the connection either has a response sent already
+		// or it has been closed
+		logger.Error("failed handshake", "err", err)
+		return
+	}
+
+	// TODO - figoure out how to flush this at a regular cadence to avoid buffering ?
+	ws.EnableWriteCompression(true)
+	sendLogLine := func(at time.Time, line string) error {
+		msg := []interface{}{at.UnixNano(), line}
+		err := ws.SetWriteDeadline(time.Now().Add(time.Second * 10)) // TODO - configurable ???
+		if err != nil {
+			return err
+		}
+		return ws.WriteJSON(msg)
+	}
+
+	onDropped := func() error {
+		return nil // Ignore for now
+	}
+
+	// TODO - put a hard time limit on this to prevent forever running goroutines?
+	err = lokiClient.TailLogsByService(req.Context(),
+		leaseID,
+		serviceName,
+		replicaIndex,
+		runIndex,
+		startTime,
+		sendLogLine,
+		onDropped)
+
+	if err != nil {
+		if ! errors.Is(err, context.Canceled) {
+			logger.Error("failed during tail of logs", "err", err)
+		}
+	}
+
+	err = ws.WriteControl(websocket.CloseMessage,[]byte{}, time.Now().Add(time.Second * 30))
+	if err != nil {
+		logger.Error("could not send websocket close message", "err", err)
+	}
+	err = ws.Close()
+	if err != nil {
+		logger.Error("could not close websocket", "err", err)
+	}
+}
+
+func logQueryHandler(logger log.Logger, manifestClient providermanifest.Client, lokiClient loki.Client) http.HandlerFunc{
+	return func(rw http.ResponseWriter, req *http.Request) {
+		leaseID := requestLeaseID(req)
+
+		// Make sure lease is active
+		active, err := manifestClient.IsActive(req.Context(), leaseID.DeploymentID())
+		if err != nil {
+			logger.Error("could not check if lease is active", "lease-id", leaseID, err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if !active {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		serviceName := mux.Vars(req)[serviceNameKey] // TODO validate this exists
+		replicaIndexStr := mux.Vars(req)[replicaIndexKey]
+
+		replicaIndex, err :=  strconv.ParseUint(replicaIndexStr, 10, 31)
+		if err != nil {
+			logger.Error("could not parse path component for replica index", "err", err, "replicaIndex", replicaIndexStr)
+			http.Error(rw, fmt.Sprintf("could not parse replica index %q - %v", replicaIndexStr, err), http.StatusNotFound)
+			return
+		}
+
+		// TODO - validate replica index points to a valid replica
+
+		query := req.URL.Query()
+
+		limit := uint(1000)
+		limitStr := query.Get(limitKey)
+		if len(limitStr) != 0 {
+			limit64, err := strconv.ParseUint(limitStr, 10, 31)
+			if err != nil {
+				logger.Error("could not parse limit", limitKey, limitStr, "err", err)
+				http.Error(rw, fmt.Sprintf("could not parse limit %q - %v", limitStr, err), http.StatusBadRequest)
+				return
+			}
+			limit = uint(limit64)
+		}
+
+		// Parse runIndex from query, if present
+		runIndex := -1
+		runIndexStr := query.Get(runIndexKey)
+		if len(runIndexStr) != 0 {
+			runIndex64, err := strconv.ParseUint(runIndexStr, 10, 31)
+			if err != nil {
+				logger.Error("could not parse run index", runIndexKey, runIndexStr, "err", err)
+				http.Error(rw, fmt.Sprintf("could not run index %q - %v", runIndexStr, err), http.StatusBadRequest)
+				return
+			}
+			runIndex = int(runIndex64)
+		}
+
+		// Parse start time from query, if present
+		startTime := time.Now().Add(-1 * time.Hour)
+		// start time
+		startTimeStr := query.Get(startTimeKey)
+		if len(startTimeStr) != 0 {
+			startTimeInt, err := strconv.ParseInt(startTimeStr, 10, 64)
+			if err != nil {
+				logger.Error("could not parse startTime", startTimeKey, startTimeStr, "err", err)
+				http.Error(rw, fmt.Sprintf("could not parse start time %q - %v", startTimeStr, err), http.StatusBadRequest)
+				return
+			}
+
+			startTime = time.Unix(startTimeInt,0)
+		}
+
+		// Parse end time from query, if present
+		endTime := time.Now()
+		endTimeStr := query.Get(endTimeKey)
+		if len(endTimeStr) != 0 {
+			endTimeInt, err := strconv.ParseInt(endTimeStr, 10, 64)
+			if err != nil {
+				logger.Error("could not parse endTime", endTimeKey, endTimeStr, "err", err)
+				http.Error(rw, fmt.Sprintf("could not parse end time %q - %v", endTimeStr, err), http.StatusBadRequest)
+				return
+			}
+
+			endTime = time.Unix(endTimeInt,0)
+		}
+
+		const timeLimit = time.Hour * 72 // TODO - configurable by the provider
+		duration := endTime.Sub(startTime)
+		if duration > timeLimit || duration < 0 {
+			logger.Error("duration of time range queried is not allowed", startTimeKey, startTime, endTimeKey, endTime)
+			http.Error(rw, fmt.Sprintf("time range of %v too large, maximum is %v", duration, timeLimit), http.StatusBadRequest)
+			return
+		}
+
+		forward := true
+		// Parse direction from query, if present
+		forwardStr := query.Get(forwardKey)
+		if len(forwardStr) != 0 {
+			switch(forwardStr){
+			case "0":
+				forward = false
+			case "1":
+				forward = true
+			default:
+				logger.Error("unknown value for forward", forwardKey, forwardStr)
+				http.Error(rw, fmt.Sprintf("unacceptable value for forward %q", forwardStr), http.StatusBadRequest)
+				return
+			}
+		}
+
+		follow := false
+		followStr := query.Get(followKey)
+		if len(followStr) != 0 {
+			switch(followStr) {
+			case "0":
+				follow = false
+			case "1":
+				follow = true
+
+			default:
+				logger.Error("unknown value for follow", followKey, forwardStr)
+				http.Error(rw, fmt.Sprintf("unacceptable value for follow %q", followStr), http.StatusBadRequest)
+				return
+			}
+		}
+
+		if follow {
+			const msg = "cannot specify end time, reverse order, or limit if logs are tailed"
+			if len(endTimeStr) != 0 {
+				logger.Error("client requested log follow with endtime")
+				http.Error(rw, msg, http.StatusBadRequest)
+				return
+			}
+
+			if !forward {
+				logger.Error("client requested log follow with reverse direction")
+				http.Error(rw, msg, http.StatusBadRequest)
+				return
+			}
+
+			if len(limitStr) != 0 {
+				logger.Error("client request log follow with limit")
+				http.Error(rw, msg, http.StatusBadRequest)
+				return
+			}
+			// Upgrade to a websocket
+			logQueryFollowHandler(logger,
+				lokiClient,
+				leaseID,
+				rw,
+				req,
+				serviceName,
+				uint(replicaIndex),
+				runIndex,
+				startTime)
+			return
+		}
+
+		logs, err := lokiClient.GetLogByService(req.Context(),leaseID, serviceName, uint(replicaIndex),
+			runIndex,
+			startTime,
+			endTime, forward, limit)
+		if err != nil {
+			logger.Error("could not get logs for lease", "lease", leaseID, "err", err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		rw.WriteHeader(http.StatusOK)
+		enc := json.NewEncoder(rw)
+		err = enc.Encode(logs)
+		if err != nil {
+			logger.Error("could not write lease log status", "lease", leaseID, "err", err)
+		}
+	}
+}
+
+func logStatusHandler(logger log.Logger, manifestClient providermanifest.Client, lokiClient loki.Client) http.HandlerFunc{
+	return func(rw http.ResponseWriter, req *http.Request) {
+		leaseID := requestLeaseID(req)
+		// Make sure lease is active
+		active, err := manifestClient.IsActive(req.Context(), leaseID.DeploymentID())
+		if err != nil {
+			logger.Error("could not check if lease is active", "lease-id", leaseID, err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if !active {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		result, err := lokiClient.FindLogsByLease(req.Context(), leaseID)
+		if err != nil {
+			logger.Error("could not get logs for lease", "lease", leaseID, "err", err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		rw.WriteHeader(http.StatusOK)
+		enc := json.NewEncoder(rw)
+		err = enc.Encode(result)
+		if err != nil {
+			logger.Error("could not write lease log status", "lease", leaseID, "err", err)
+		}
+	}
+}
+
 func newJwtServerRouter(addr sdk.Address, privateKey interface{}, jwtExpiresAfter time.Duration, certSerialNumber string) *mux.Router {
 	router := mux.NewRouter()
 
@@ -183,6 +478,59 @@ func newJwtServerRouter(addr sdk.Address, privateKey interface{}, jwtExpiresAfte
 		Methods("GET")
 
 	return router
+}
+
+func newResourceServerRouter(log log.Logger, providerAddr sdk.Address, publicKey *ecdsa.PublicKey, lokiGwAddr string) *mux.Router {
+	router := mux.NewRouter()
+
+	// add a middleware to verify the JWT provided in Authorization header
+	router.Use(resourceServerAuth(log, providerAddr, publicKey))
+
+	lrouter := router.PathPrefix(leasePathPrefix).Subrouter()
+	lrouter.Use(requireLeaseID())
+
+	lokiServiceRouter := lrouter.PathPrefix("/loki-service").Subrouter()
+	lokiServiceRouter.NewRoute().Handler(lokiServiceHandler(log, lokiGwAddr))
+
+	return router
+}
+
+// lokiServiceHandler forwards all requests to the loki instance running in provider's cluster.
+// Example:
+// 		Incoming Request: http://localhost:8445/lease/1/1/1/loki-service/loki/api/v1/query?query={app=".+"}
+// 		Outgoing Request: http://{lokiGwAddr}/loki/api/v1/query?query={app=".+"}
+func lokiServiceHandler(log log.Logger, lokiGwAddr string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// set the X-Scope-OrgID header for fetching logs for the right tenant
+		r.Header.Set("X-Scope-OrgID", builder.LidNS(requestLeaseID(r)))
+
+		// build target url for the reverse proxy
+		scheme := "http" // for http & https
+		if strings.HasPrefix(r.URL.Scheme, "ws") {
+			scheme = "ws" // for ws & wss
+		}
+		lokiURL, err := url.Parse(fmt.Sprintf("%s://%s", scheme, lokiGwAddr))
+		if err != nil {
+			log.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		reverseProxy := httputil.NewSingleHostReverseProxy(lokiURL)
+
+		// remove the "/lease/{dseq}/{gseq}/{oseq}/loki-service" path prefix from the request url
+		// before it is sent to the reverse proxy.
+		pathSplits := strings.SplitN(r.URL.Path, "/", 7)
+		if len(pathSplits) < 7 || pathSplits[6] == "" {
+			log.Error("loki api not provided in url")
+			http.Error(w, "loki api not provided in url", http.StatusBadRequest)
+			return
+		}
+		r.URL.Path = pathSplits[6]
+
+		// serve the request using the reverse proxy
+		log.Info("Forwarding request to loki", "HTTP_API", pathSplits[6])
+		reverseProxy.ServeHTTP(w, r)
+	}
 }
 
 func jwtServiceHandler(paddr sdk.Address, privateKey interface{}, jwtExpiresAfter time.Duration, certSerialNumber string) http.HandlerFunc {

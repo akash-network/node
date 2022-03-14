@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/ovrclk/akash/provider/cluster/kube/clientcommon"
+	"github.com/ovrclk/akash/provider/cluster/kube/loki"
 	"github.com/ovrclk/akash/provider/cluster/operatorclients"
 	"github.com/ovrclk/akash/provider/operator/waiter"
 	"io"
@@ -455,6 +456,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	cachedResultMaxAge := viper.GetDuration(FlagCachedResultMaxAge)
 	rpcQueryTimeout := viper.GetDuration(FlagRPCQueryTimeout)
 	enableIPOperator := viper.GetBool(FlagEnableIPOperator)
+	enableLogging := true // TODO - configurable via flag
 
 	pricing, err := createBidPricingStrategy(strategy)
 	if err != nil {
@@ -656,6 +658,14 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		}
 	}
 
+	var lokiClient loki.Client
+	if enableLogging {
+		lokiClient, err = loki.NewClient(logger, kubeConfig, nil) // TODO - pass hostname configuration from flags
+		if err != nil {
+			return err
+		}
+	}
+
 	endpoint, err := provider_flags.GetServiceEndpointFlagValue(logger, serviceHostnameOperator)
 	if err != nil {
 		return err
@@ -685,6 +695,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		service,
 		cquery,
 		ipOperatorClient,
+		lokiClient,
 		gwaddr,
 		cctx.FromAddress,
 		[]tls.Certificate{cert},
@@ -732,6 +743,9 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	broadcasterInstance.Close()
 	if ipOperatorClient != nil {
 		ipOperatorClient.Stop()
+	}
+	if lokiClient != nil {
+		lokiClient.Stop()
 	}
 	hostnameOperatorClient.Stop()
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, http.ErrServerClosed) {
