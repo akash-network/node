@@ -9,6 +9,11 @@ provider-run:
 		--cluster-public-hostname "localhost" \
 		--bid-price-strategy "randomRange"
 
+.PHONY: clean-lite
+clean-lite:
+	#noop
+
+
 .PHONY: provider-lease-status
 provider-lease-status:
 	$(AKASH) provider lease-status \
