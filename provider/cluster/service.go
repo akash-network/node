@@ -369,31 +369,4 @@ func findDeployments(ctx context.Context, log log.Logger, client Client, session
 
 	log.Info("found deployments", "total", len(deployments))
 	return deployments, nil
-
-	// leaseList, err := session.Client().Query().ActiveLeasesForProvider(session.Provider().Address())
-	// if err != nil {
-	// 	log.Error("fetching active leases", "err", err)
-	// 	return nil, err
-	// }
-
-	// leases := make(map[string]bool)
-	// for _, lease := range leaseList {
-	// 	leases[mquery.LeasePath(lease.Lease.LeaseID)] = true
-	// }
-
-	// log.Info("found leases", "num-active", len(leases))
-
-	// active := make([]ctypes.Deployment, 0, len(deployments))
-
-	// for _, deployment := range deployments {
-	// 	if _, ok := leases[mquery.LeasePath(deployment.LeaseID())]; !ok {
-	// 		continue
-	// 	}
-	// 	active = append(active, deployment)
-	// 	log.Debug("deployment", "lease", deployment.LeaseID(), "mgroup", deployment.ManifestGroup().Name)
-	// }
-
-	// log.Info("found deployments", "num-active", len(active), "num-skipped", len(deployments)-len(active))
-
-	// return active, nil
 }
