@@ -2,7 +2,10 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
+
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/manifest"
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
@@ -10,7 +13,8 @@ import (
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"time"
+
+	"sync"
 
 	retry "github.com/avast/retry-go"
 	clusterutil "github.com/ovrclk/akash/provider/cluster/util"
@@ -18,7 +22,6 @@ import (
 	"github.com/ovrclk/akash/pubsub"
 	mtypes "github.com/ovrclk/akash/x/market/types"
 	"github.com/tendermint/tendermint/libs/log"
-	"sync"
 )
 
 type deploymentState string
@@ -40,6 +43,8 @@ var (
 	monitorCounter = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "provider_deployment_monitor",
 	}, []string{"action"})
+
+	ErrLeaseInactive = errors.New("Inactive Lease")
 )
 
 type deploymentManager struct {
@@ -298,9 +303,6 @@ func (dm *deploymentManager) startTeardown() <-chan error {
 func (dm *deploymentManager) doDeploy() ([]string, error) {
 	var err error
 
-	allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
-	// Either reserve the hostnames, or confirm that they already are held
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	// Weird hack to tie this context to the lifecycle of the parent service, so this doesn't
@@ -312,6 +314,14 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 		case <-ctx.Done():
 		}
 	}()
+
+	if err = dm.checkLeaseActive(ctx); err != nil {
+		return nil, err
+	}
+
+	allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
+	// Either reserve the hostnames, or confirm that they already are held
+
 	withheldHostnames, err := dm.hostnameService.ReserveHostnames(ctx, allHostnames, dm.lease)
 
 	if err != nil {
@@ -437,8 +447,39 @@ func (dm *deploymentManager) doTeardown() error {
 		retry.DelayType(retry.BackOffDelay),
 		retry.LastErrorOnly(true))
 
-	// TODO - counter
 	return result
+}
+
+func (dm *deploymentManager) checkLeaseActive(ctx context.Context) error {
+
+	var lease *mtypes.QueryLeaseResponse
+
+	err := retry.Do(func() error {
+		var err error
+		lease, err = dm.session.Client().Query().Lease(ctx, &mtypes.QueryLeaseRequest{
+			ID: dm.lease,
+		})
+		if err != nil {
+			dm.log.Error("lease query failed", "err")
+		}
+		return err
+	},
+		retry.Attempts(50),
+		retry.Delay(100*time.Millisecond),
+		retry.MaxDelay(3000*time.Millisecond),
+		retry.DelayType(retry.BackOffDelay),
+		retry.LastErrorOnly(true))
+
+	if err != nil {
+		return err
+	}
+
+	if lease.GetLease().State != mtypes.LeaseActive {
+		dm.log.Error("lease not active, not deploying")
+		return fmt.Errorf("%w: %s", ErrLeaseInactive, dm.lease)
+	}
+
+	return nil
 }
 
 func (dm *deploymentManager) do(fn func() error) <-chan error {
