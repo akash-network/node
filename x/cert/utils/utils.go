@@ -16,12 +16,12 @@ import (
 func LoadAndQueryCertificateForAccount(ctx context.Context, cctx client.Context, fin io.Reader) (tls.Certificate, error) {
 	kpm, err := NewKeyPairManager(cctx, cctx.FromAddress)
 	if err != nil {
-		return tls.Certificate{}, nil
+		return tls.Certificate{}, err
 	}
 
 	x509cert, tlsCert, err := kpm.ReadX509KeyPair(fin)
 	if err != nil {
-		return tls.Certificate{}, nil
+		return tls.Certificate{}, err
 	}
 
 	// Check if valid according to time
@@ -42,7 +42,7 @@ func LoadAndQueryCertificateForAccount(ctx context.Context, cctx client.Context,
 
 	certs, err := ctypes.NewQueryClient(cctx).Certificates(ctx, params)
 	if err != nil {
-		return tls.Certificate{}, nil
+		return tls.Certificate{}, err
 	}
 
 	if len(certs.Certificates) == 0 {
