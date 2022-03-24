@@ -19,7 +19,6 @@ type Config struct {
 	Host       string              `json:"host" yaml:"host"`
 	Info       ptypes.ProviderInfo `json:"info" yaml:"info"`
 	Attributes types.Attributes    `json:"attributes" yaml:"attributes"`
-	JWTHost    string              `json:"jwt-host" yaml:"jwt-host"`
 }
 
 // GetAttributes returns config attributes into key value pairs
