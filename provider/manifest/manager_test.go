@@ -2,10 +2,11 @@ package manifest
 
 import (
 	"context"
-	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
-	escrowtypes "github.com/ovrclk/akash/x/escrow/types"
 	"testing"
 	"time"
+
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
+	escrowtypes "github.com/ovrclk/akash/x/escrow/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	clientMocks "github.com/ovrclk/akash/client/mocks"
@@ -125,7 +126,12 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 		Attributes: nil,
 	}
 
-	queryMock.On("ActiveLeasesForProvider", p.Address()).Return([]mtypes.QueryLeaseResponse{}, nil)
+	queryMock.On("Lease", mock.Anything, mock.Anything).
+		Return(&mtypes.QueryLeaseResponse{
+			Lease: mtypes.Lease{
+				State: mtypes.LeaseActive,
+			},
+		}, nil)
 
 	createdAtBlockHeight := int64(-1)
 	if len(leases) != 0 {
