@@ -28,7 +28,6 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
-	"github.com/cosmos/cosmos-sdk/x/authz"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -43,7 +42,6 @@ import (
 	evidencekeeper "github.com/cosmos/cosmos-sdk/x/evidence/keeper"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -374,40 +372,18 @@ func NewApp(
 	// CanWithdrawInvariant invariant.
 	// NOTE: staking module is required if HistoricalEntries param > 0
 	// NOTE: capability module's beginblocker must come before any modules using capabilities (e.g. IBC)
+	// NOTE: As of v0.45.0 of cosmos SDK, all modules need to be here.
 	app.mm.SetOrderBeginBlockers(
-		upgradetypes.ModuleName, capabilitytypes.ModuleName, minttypes.ModuleName,
-		distrtypes.ModuleName, slashingtypes.ModuleName, evidencetypes.ModuleName,
-		stakingtypes.ModuleName, ibchost.ModuleName,
+		app.akashBeginBlockModules()...,
 	)
 	app.mm.SetOrderEndBlockers(
-		append([]string{
-			crisistypes.ModuleName, govtypes.ModuleName, stakingtypes.ModuleName},
-			app.akashEndBlockModules()...,
-		)...,
+		app.akashEndBlockModules()...,
 	)
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	//       properly initialized with tokens from genesis accounts.
 	app.mm.SetOrderInitGenesis(
-		append([]string{
-			capabilitytypes.ModuleName,
-			authtypes.ModuleName,
-			authz.ModuleName,
-			banktypes.ModuleName,
-			distrtypes.ModuleName,
-			stakingtypes.ModuleName,
-			slashingtypes.ModuleName,
-			govtypes.ModuleName,
-			minttypes.ModuleName,
-			crisistypes.ModuleName,
-			ibchost.ModuleName,
-			genutiltypes.ModuleName,
-			evidencetypes.ModuleName,
-			ibctransfertypes.ModuleName,
-		},
-
-			app.akashInitGenesisOrder()...,
-		)...,
+		app.akashInitGenesisOrder()...,
 	)
 
 	app.mm.RegisterInvariants(&app.keeper.crisis)

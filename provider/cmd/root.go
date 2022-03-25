@@ -30,7 +30,6 @@ func RootCmd() *cobra.Command {
 	cmd.AddCommand(HostnameOperatorCmd())
 	cmd.AddCommand(MigrateHostnamesCmd())
 	cmd.AddCommand(AuthServerCmd())
-	cmd.AddCommand(AuthenticateCmd())
 	cmd.AddCommand(clusterNSCmd())
 	cmd.AddCommand(migrate())
 	cmd.AddCommand(RunResourceServerCmd())
