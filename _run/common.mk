@@ -39,6 +39,7 @@ SERVER_CERTS := provider
 
 
 .PHONY: init
+init: AKASH_GAS='' AKASH_GAS_PRICES=''
 init: bins client-init node-init
 
 .PHONY: client-init
