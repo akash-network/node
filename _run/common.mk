@@ -39,6 +39,7 @@ SERVER_CERTS := provider
 
 
 .PHONY: init
+
 init: bins client-init node-init
 
 .PHONY: client-init
@@ -100,6 +101,7 @@ node-init-genesis-account-%:
 		"$(CHAIN_MIN_DEPOSIT)$(CHAIN_TOKEN_DENOM)"
 
 .PHONY: node-init-gentx
+node-init-gentx: AKASH_GAS='' AKASH_GAS_PRICES=''
 node-init-gentx:
 	$(AKASH) gentx validator \
 		"$(CHAIN_VALIDATOR_DELEGATE)$(CHAIN_TOKEN_DENOM)"
