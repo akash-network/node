@@ -13,12 +13,13 @@ builds:
       - CC=o64-clang
       - CXX=o64-clang++
     flags:
+      - "-mod={{ .Env.MOD }}"
+      - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
-      - -mod=readonly
-      - "{{ .Env.BUILD_FLAGS }}"
     ldflags:
-      - "{{ .Env.LD_FLAGS }}"
-      - -linkmode=external
+      - "{{ .Env.BUILD_VARS }}"
+      - "{{ .Env.STRIP_FLAGS }}"
+      - "-linkmode={{ .Env.LINKMODE }}"
   - id: akash-darwin-arm64
     binary: akash
     main: ./cmd/akash
@@ -30,12 +31,13 @@ builds:
       - CC=oa64-clang
       - CXX=oa64-clang++
     flags:
+      - "-mod={{ .Env.MOD }}"
+      - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
-      - -mod=readonly
-      - "{{ .Env.BUILD_FLAGS }}"
     ldflags:
-      - "{{ .Env.LD_FLAGS }}"
-      - -linkmode=external
+      - "{{ .Env.BUILD_VARS }}"
+      - "{{ .Env.STRIP_FLAGS }}"
+      - "-linkmode={{ .Env.LINKMODE }}"
   - id: akash-linux-amd64
     binary: akash
     main: ./cmd/akash
@@ -47,13 +49,14 @@ builds:
     goos:
       - linux
     flags:
-      - "{{ .Env.BUILD_FLAGS }}"
+      - "-mod={{ .Env.MOD }}"
+      - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
-      - -mod=readonly
     ldflags:
-      - "{{ .Env.LD_FLAGS }}"
+      - "{{ .Env.BUILD_VARS }}"
+      - "{{ .Env.STRIP_FLAGS }}"
+      - "-linkmode={{ .Env.LINKMODE }}"
       - -extldflags "-lc -lrt -lpthread --static"
-      - -linkmode=external
   - id: akash-linux-arm64
     binary: akash
     main: ./cmd/akash
@@ -65,13 +68,14 @@ builds:
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
     flags:
-      - "{{ .Env.BUILD_FLAGS }}"
+      - "-mod={{ .Env.MOD }}"
+      - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
-      - -mod=readonly
     ldflags:
-      - "{{ .Env.LD_FLAGS }}"
+      - "{{ .Env.BUILD_VARS }}"
+      - "{{ .Env.STRIP_FLAGS }}"
+      - "-linkmode={{ .Env.LINKMODE }}"
       - -extldflags "-lc -lrt -lpthread --static"
-      - -linkmode=external
   - id: akash-windows-amd64
     binary: akash
     main: ./cmd/akash
@@ -83,13 +87,14 @@ builds:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
     flags:
-      - "{{ .Env.BUILD_FLAGS }}"
+      - "-mod={{ .Env.MOD }}"
+      - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
-      - -mod=readonly
       - -buildmode=exe
     ldflags:
-      - "{{ .Env.LD_FLAGS }}"
-      - -linkmode=external
+      - "{{ .Env.BUILD_VARS }}"
+      - "{{ .Env.STRIP_FLAGS }}"
+      - "-linkmode={{ .Env.LINKMODE }}"
 archives:
   - id: akash
     builds:
