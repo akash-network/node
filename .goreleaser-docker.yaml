@@ -10,15 +10,16 @@ builds:
     goos:
       - linux
     env:
-      - CC=gcc
-      - CXX=g++
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
     flags:
+      - "-mod={{ .Env.MOD }}"
+      - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
-      - -mod=readonly
-      - -a
-      - "{{ .Env.BUILD_FLAGS }}"
     ldflags:
-      - "{{ .Env.LD_FLAGS }}"
+      - "{{ .Env.BUILD_VARS }}"
+      - "{{ .Env.STRIP_FLAGS }}"
+      - "-linkmode={{ .Env.LINKMODE }}"
       - -extldflags "-lc -lrt -lpthread --static"
 dockers:
   - ids:
