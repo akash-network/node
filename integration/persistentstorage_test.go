@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	uuid "github.com/satori/go.uuid"
 
 	ptestutil "github.com/ovrclk/akash/provider/testutil"
@@ -43,12 +42,8 @@ func (s *E2EPersistentStorageDefault) TestDefaultStorageClass() {
 		s.validator.ClientCtx,
 		s.keyTenant.GetAddress(),
 		deploymentPath,
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit),
-		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
+		cliGlobalFlags(fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit),
+			fmt.Sprintf("--dseq=%v", deploymentID.DSeq))...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(7))
@@ -66,10 +61,7 @@ func (s *E2EPersistentStorageDefault) TestDefaultStorageClass() {
 		s.validator.ClientCtx,
 		bidID,
 		s.keyTenant.GetAddress(),
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		cliGlobalFlags()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))
@@ -152,12 +144,8 @@ func (s *E2EPersistentStorageBeta2) TestDedicatedStorageClass() {
 		s.validator.ClientCtx,
 		s.keyTenant.GetAddress(),
 		deploymentPath,
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit),
-		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
+		cliGlobalFlags(fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit),
+			fmt.Sprintf("--dseq=%v", deploymentID.DSeq))...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(7))
@@ -175,10 +163,7 @@ func (s *E2EPersistentStorageBeta2) TestDedicatedStorageClass() {
 		s.validator.ClientCtx,
 		bidID,
 		s.keyTenant.GetAddress(),
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		cliGlobalFlags()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.waitForBlocksCommitted(2))

@@ -81,20 +81,6 @@ type ServiceLogs struct {
 	OnClose <-chan string
 }
 
-func NewJwtClient(ctx context.Context, qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Certificate) (JwtClient, error) {
-	res, err := qclient.Provider(ctx, &ptypes.QueryProviderRequest{Owner: addr.String()})
-	if err != nil {
-		return nil, err
-	}
-
-	uri, err := url.Parse(res.Provider.JWTHostURI)
-	if err != nil {
-		return nil, err
-	}
-
-	return newClient(qclient, addr, certs, uri), nil
-}
-
 // NewClient returns a new Client
 func NewClient(qclient akashclient.QueryClient, addr sdk.Address, certs []tls.Certificate) (Client, error) {
 	res, err := qclient.Provider(context.Background(), &ptypes.QueryProviderRequest{Owner: addr.String()})

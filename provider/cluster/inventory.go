@@ -490,7 +490,7 @@ loop:
 			}
 
 			select {
-			case _ = <-is.readych:
+			case <-is.readych:
 				break
 			default:
 				is.log.Debug("inventory ready")
