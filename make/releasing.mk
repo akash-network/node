@@ -1,4 +1,5 @@
 GORELEASER_SKIP_VALIDATE ?= false
+GORELEASER_DEBUG         ?= false
 GORELEASER_IMAGE         := ghcr.io/goreleaser/goreleaser-cross:v$(GOLANG_VERSION)
 GON_CONFIGFILE           ?= gon.json
 
@@ -38,36 +39,51 @@ docker-image:
 	docker run \
 		--rm \
 		--privileged \
-		-e MAINNET=$(MAINNET) \
-		-e BUILD_FLAGS="$(GORELEASER_FLAGS)" \
-		-e LD_FLAGS="$(GORELEASER_LD_FLAGS)" \
-		-e GOLANG_VERSION="$(GOLANG_VERSION)" \
+		-e MAINNET=$(IS_MAINNET) \
+		-e MOD="$(GO_MOD)" \
+		-e BUILD_TAGS="$(BUILD_TAGS)" \
+		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
+		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
+		-e LINKMODE="$(GO_LINKMODE)" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		$(GORELEASER_IMAGE) \
-		-f .goreleaser-docker.yaml --rm-dist --skip-validate --skip-publish --snapshot
+		-f .goreleaser-docker.yaml \
+		--debug=$(GORELEASER_DEBUG) \
+		--rm-dist \
+		--skip-validate \
+		--skip-publish \
+		--snapshot
 
 .PHONY: gen-changelog
 gen-changelog: $(GIT_CHGLOG)
 	@echo "generating changelog to .cache/changelog"
-	./script/genchangelog.sh "$(GORELEASER_TAG)" .cache/changelog.md
+	./script/genchangelog.sh "$(RELEASE_TAG)" .cache/changelog.md
 
 .PHONY: release-dry-run
 release-dry-run: modvendor gen-changelog
 	docker run \
 		--rm \
 		--privileged \
-		-e MAINNET=$(MAINNET) \
-		-e BUILD_FLAGS="$(GORELEASER_FLAGS)" \
-		-e LD_FLAGS="$(GORELEASER_LD_FLAGS)" \
+		-e MAINNET="$(IS_MAINNET)" \
+		-e MOD="$(GO_MOD)" \
+		-e BUILD_TAGS="$(BUILD_TAGS)" \
+		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
+		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
+		-e LINKMODE="$(GO_LINKMODE)" \
 		-e HOMEBREW_NAME="$(GORELEASER_HOMEBREW_NAME)" \
 		-e HOMEBREW_CUSTOM="$(GORELEASER_HOMEBREW_CUSTOM)" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		$(GORELEASER_IMAGE) \
-		-f "$(GORELEASER_CONFIG)" --skip-validate=$(GORELEASER_SKIP_VALIDATE) --rm-dist --skip-publish --release-notes=/go/src/github.com/ovrclk/akash/.cache/changelog.md
+		-f "$(GORELEASER_CONFIG)" \
+		--skip-validate=$(GORELEASER_SKIP_VALIDATE) \
+		--debug=$(GORELEASER_DEBUG) \
+		--rm-dist \
+		--skip-publish \
+		--release-notes=/go/src/github.com/ovrclk/akash/.cache/changelog.md
 
 .PHONY: release
 release: modvendor gen-changelog
@@ -78,9 +94,12 @@ release: modvendor gen-changelog
 	docker run \
 		--rm \
 		--privileged \
-		-e MAINNET=$(MAINNET) \
-		-e BUILD_FLAGS="$(GORELEASER_FLAGS)" \
-		-e LD_FLAGS="$(GORELEASER_LD_FLAGS)" \
+		-e MAINNET=$(IS_MAINNET) \
+		-e MOD="$(GO_MOD)" \
+		-e BUILD_TAGS="$(BUILD_TAGS)" \
+		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
+		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
+		-e LINKMODE="$(GO_LINKMODE)" \
 		-e HOMEBREW_NAME="$(GORELEASER_HOMEBREW_NAME)" \
 		-e HOMEBREW_CUSTOM="$(GORELEASER_HOMEBREW_CUSTOM)" \
 		--env-file .release-env \
@@ -88,4 +107,7 @@ release: modvendor gen-changelog
 		-v `pwd`:/go/src/github.com/ovrclk/akash \
 		-w /go/src/github.com/ovrclk/akash \
 		$(GORELEASER_IMAGE) \
-		-f "$(GORELEASER_CONFIG)" release --rm-dist --release-notes=/go/src/github.com/ovrclk/akash/.cache/changelog.md
+		-f "$(GORELEASER_CONFIG)" release \
+		--debug=$(GORELEASER_DEBUG) \
+		--rm-dist \
+		--release-notes=/go/src/github.com/ovrclk/akash/.cache/changelog.md

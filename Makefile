@@ -26,55 +26,51 @@ GIT_HEAD_COMMIT_LONG  := $(shell git log -1 --format='%H')
 GIT_HEAD_COMMIT_SHORT := $(shell git rev-parse --short HEAD)
 GIT_HEAD_ABBREV       := $(shell git rev-parse --abbrev-ref HEAD)
 
-GORELEASER_TAG       ?= $(shell git describe --tags --abbrev=0)
-GORELEASER_IS_PREREL ?= $(shell $(ROOT_DIR)/script/is_prerelease.sh "$(GORELEASER_TAG)")
+RELEASE_TAG           ?= $(shell git describe --tags --abbrev=0)
+IS_PREREL             := $(shell $(ROOT_DIR)/script/is_prerelease.sh "$(RELEASE_TAG)")
+IS_MAINNET            := $(shell $(ROOT_DIR)/script/mainnet-from-tag.sh "$(RELEASE_TAG)")
 
-# BUILD_TAGS are for builds withing this makefile
-# GORELEASER_BUILD_TAGS are for goreleaser only
-# Setting mainnet flag based on env value
-# export MAINNET=true to set build tag mainnet
-ifeq ($(MAINNET),true)
-	BUILD_MAINNET=mainnet
-	BUILD_TAGS=osusergo,netgo,ledger,mainnet,static_build
-	GORELEASER_BUILD_TAGS=$(BUILD_TAGS)
-else
-	BUILD_TAGS=osusergo,netgo,ledger,static_build
-	GORELEASER_BUILD_TAGS=$(BUILD_TAGS),testnet
-endif
+GO_LINKMODE            ?= external
+GO_MOD                 ?= readonly
+BUILD_TAGS             ?= osusergo,netgo,ledger,static_build
+GORELEASER_STRIP_FLAGS ?=
 
-ifeq ($(GORELEASER_IS_PREREL),false)
-	GORELEASER_HOMEBREW_NAME=akash
-	GORELEASER_HOMEBREW_CUSTOM=
+ifeq ($(IS_MAINNET), true)
+	ifeq ($(GORELEASER_IS_PREREL),false)
+		GORELEASER_HOMEBREW_NAME=akash
+		GORELEASER_HOMEBREW_CUSTOM=
+	else
+		GORELEASER_HOMEBREW_NAME="akash-test"
+		GORELEASER_HOMEBREW_CUSTOM=keg_only :unneeded, \"This is testnet release. Run brew install ovrclk/tap/akash to install mainnet version\"
+	endif
 else
 	GORELEASER_HOMEBREW_NAME="akash-edge"
-	GORELEASER_HOMEBREW_CUSTOM=keg_only :unneeded, \"This is testnet release. Run brew install ovrclk/tap/akash to install mainnet version\"
+	GORELEASER_HOMEBREW_CUSTOM=keg_only :unneeded, \"This is edgenet release. Run brew install ovrclk/tap/akash to install mainnet version\"
 endif
 
-GORELEASER_FLAGS    = -tags="$(GORELEASER_BUILD_TAGS)"
-GORELEASER_LD_FLAGS = -s -w -X github.com/cosmos/cosmos-sdk/version.Name=akash \
+GORELEASER_BUILD_VARS := \
+-X github.com/cosmos/cosmos-sdk/version.Name=akash \
 -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
--X github.com/cosmos/cosmos-sdk/version.BuildTags="$(GORELEASER_BUILD_TAGS)" \
--X github.com/cosmos/cosmos-sdk/version.Version=$(GORELEASER_TAG) \
+-X github.com/cosmos/cosmos-sdk/version.BuildTags=\"$(BUILD_TAGS)\" \
+-X github.com/cosmos/cosmos-sdk/version.Version=$(RELEASE_TAG) \
 -X github.com/cosmos/cosmos-sdk/version.Commit=$(GIT_HEAD_COMMIT_LONG)
 
-ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=akash \
+ldflags = -linkmode=$(GO_LINKMODE) -X github.com/cosmos/cosmos-sdk/version.Name=akash \
 -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
--X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(BUILD_TAGS)" \
+-X github.com/cosmos/cosmos-sdk/version.BuildTags="$(BUILD_TAGS)" \
 -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
 -X github.com/cosmos/cosmos-sdk/version.Commit=$(GIT_HEAD_COMMIT_LONG)
 
 # check for nostrip option
 ifeq (,$(findstring nostrip,$(BUILD_OPTIONS)))
-	ldflags += -s -w
+	ldflags                += -s -w
+	GORELEASER_STRIP_FLAGS += -s -w
 endif
+
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
 
-BUILD_FLAGS := -mod=readonly -tags "$(BUILD_TAGS)" -ldflags '$(ldflags)'
-# check for nostrip option
-ifeq (,$(findstring nostrip,$(BUILD_OPTIONS)))
-	BUILD_FLAGS += -trimpath
-endif
+BUILD_FLAGS := -mod=$(GO_MOD) -tags='$(BUILD_TAGS)' -ldflags '$(ldflags)'
 
 .PHONY: all
 all: build bins

@@ -28,7 +28,7 @@ jobs:
         id: branch_name
         run: |
           echo ::set-output name=MAINNET::$(./script/mainnet-from-tag.sh ${GITHUB_REF#refs/tags/})
-          echo ::set-output name=GORELEASER_TAG::${GITHUB_REF#refs/tags/}
+          echo ::set-output name=RELEASE_TAG::${GITHUB_REF#refs/tags/}
       - run: echo "Building for MAINNET=${{ steps.branch_name.outputs.MAINNET }}"
       - if: (github.ref == 'refs/heads/master') || (github.ref == 'refs/heads/mainnet/main')
         name: release dry-run GORELEASER_SKIP_VALIDATE=true
@@ -37,7 +37,7 @@ jobs:
         name: release dry-run
         run: make release-dry-run
         env:
-          GORELEASER_TAG: ${{ steps.branch_name.outputs.GORELEASER_TAG }}
+          RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'ovrclk/akash'
         name: setup release environment
         run: |-
@@ -51,4 +51,4 @@ jobs:
           make release
         env:
           MAINNET: ${{ steps.branch_name.outputs.MAINNET }}
-          GORELEASER_TAG: ${{ steps.branch_name.outputs.GORELEASER_TAG }}
+          RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
