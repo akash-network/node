@@ -21,6 +21,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
+      - run: git fetch --prune --unshallow
       - run: |
           while IFS='' read -r LINE || [ -n "${LINE}" ]; do
             echo "$LINE" >> $GITHUB_ENV;
