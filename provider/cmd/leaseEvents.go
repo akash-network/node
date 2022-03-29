@@ -6,11 +6,12 @@ import (
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/spf13/cobra"
+
 	cmdcommon "github.com/ovrclk/akash/cmd/common"
 	cltypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
-	"github.com/spf13/cobra"
 
 	akashclient "github.com/ovrclk/akash/client"
 	gwrest "github.com/ovrclk/akash/provider/gateway/rest"
@@ -22,6 +23,7 @@ func leaseEventsCmd() *cobra.Command {
 		Use:          "lease-events",
 		Short:        "get lease events",
 		SilenceUsage: true,
+		Args:         cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return doLeaseEvents(cmd)
 		},

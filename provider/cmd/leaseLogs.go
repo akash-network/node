@@ -7,10 +7,11 @@ import (
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 
 	akashclient "github.com/ovrclk/akash/client"
 	cmdcommon "github.com/ovrclk/akash/cmd/common"
@@ -23,6 +24,7 @@ func leaseLogsCmd() *cobra.Command {
 		Use:          "lease-logs",
 		Short:        "get lease logs",
 		SilenceUsage: true,
+		Args:         cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return doLeaseLogs(cmd)
 		},
