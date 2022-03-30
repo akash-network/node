@@ -51,7 +51,7 @@ jobs:
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - run: make test-coverage
-      - uses: codecov/codecov-action@v1
+      - uses: codecov/codecov-action@v2
 
   lint:
     runs-on: ubuntu-latest
