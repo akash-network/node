@@ -120,7 +120,6 @@ func Execute(rootCmd *cobra.Command) error {
 	return executor.ExecuteContext(ctx)
 }
 
-
 func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 	sdkutil.InitSDKConfig()
 	rootCmd.AddCommand(
@@ -155,7 +154,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 	keyCommand.AddCommand(
 		exportPackedCmd(),
 		importPackedCmd(),
-		)
+	)
 	rootCmd.SetOut(rootCmd.OutOrStdout())
 	rootCmd.SetErr(rootCmd.ErrOrStderr())
 

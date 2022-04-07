@@ -4,18 +4,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"io"
 	"strings"
 
 	"encoding/base64"
 	"encoding/hex"
 	"github.com/cosmos/cosmos-sdk/crypto"
-
-	//codeclegacy "github.com/cosmos/cosmos-sdk/codec/legacy"
-	//"github.com/btcsuite/btcd/btcec"
 )
 
 const PLAIN_TEXT_HEADER = "PT"
@@ -25,6 +22,7 @@ var errInputTruncated = errors.New("invalid input: truncated")
 var errInputInvalidBase64 = errors.New("invalid input: base64 decode failed")
 var errKeyringEmpty = errors.New("keyring is empty, no keys to export")
 var errKeyExists = errors.New("at least one key already exists, overwrite must be enabled ")
+
 const (
 	flagOverwrite = "overwrite"
 )
@@ -33,19 +31,6 @@ func importPacked(cmd *cobra.Command, args []string) error {
 	clientCtx, err := client.GetClientQueryContext(cmd)
 	if err != nil {
 		return err
-	}
-
-	keyNames := []string{}
-	if len(args) == 0 {
-		allKeys, err := clientCtx.Keyring.List()
-		if err != nil {
-			return err
-		}
-		for _, key := range allKeys {
-			keyNames = append(keyNames, key.GetName())
-		}
-	} else {
-		keyNames = args
 	}
 
 	input := cmd.InOrStdin()
@@ -67,11 +52,11 @@ func importPacked(cmd *cobra.Command, args []string) error {
 	}
 
 	inputParts = inputParts[1:]
-	if len(inputParts) % 2 != 0 {
+	if len(inputParts)%2 != 0 {
 		return errInputTruncated
 	}
 	packedKeys := make(map[string][]byte)
-	for i := 0; i != len(inputParts); i+=2 {
+	for i := 0; i != len(inputParts); i += 2 {
 		data, err := base64.RawURLEncoding.DecodeString(inputParts[i+1])
 		if err != nil {
 			return errInputInvalidBase64
@@ -107,7 +92,6 @@ func importPacked(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
-
 
 	const notPassword = "secret"
 	for keyName, keyBytes := range packedKeys {
@@ -162,7 +146,7 @@ func exportPacked(cmd *cobra.Command, args []string) error {
 
 		cmd.Printf("%s,%s", keyName, privKeyB64)
 
-		if i != len(keyNames) - 1 {
+		if i != len(keyNames)-1 {
 			cmd.Print(",")
 		}
 	}
@@ -170,7 +154,7 @@ func exportPacked(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func exportPackedCmd() *cobra.Command{
+func exportPackedCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "export-packed",
 		Aliases:                    nil,
@@ -212,7 +196,7 @@ func exportPackedCmd() *cobra.Command{
 	return cmd
 }
 
-func importPackedCmd() *cobra.Command{
+func importPackedCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "import-packed",
 		Aliases:                    nil,
@@ -255,4 +239,3 @@ func importPackedCmd() *cobra.Command{
 
 	return cmd
 }
-
