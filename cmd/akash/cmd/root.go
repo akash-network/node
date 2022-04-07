@@ -120,6 +120,7 @@ func Execute(rootCmd *cobra.Command) error {
 	return executor.ExecuteContext(ctx)
 }
 
+
 func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 	sdkutil.InitSDKConfig()
 	rootCmd.AddCommand(
@@ -139,6 +140,22 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		debug.Cmd(),
 	)
 
+	var keyCommand *cobra.Command
+	for _, cmd := range rootCmd.Commands() {
+		if cmd.Name() == "keys" {
+			keyCommand = cmd
+			break
+		}
+	}
+
+	if keyCommand == nil {
+		panic("cannot find keys command to modify")
+	}
+
+	keyCommand.AddCommand(
+		exportPackedCmd(),
+		importPackedCmd(),
+		)
 	rootCmd.SetOut(rootCmd.OutOrStdout())
 	rootCmd.SetErr(rootCmd.ErrOrStderr())
 
