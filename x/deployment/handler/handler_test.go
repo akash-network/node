@@ -231,6 +231,11 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 		assert.Equal(t, d.Version, depSum[:])
 	})
 
+	// Run the same update, should fail since nothing is different
+	res, err = suite.handler(suite.ctx, msgUpdate)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Invalid: deployment version")
+
 	// Change the groups - should fail
 	newQty := msgGroups[0].Resources[0].Resources.Memory.Quantity.Val.AddRaw(1)
 	msgGroups[0].Resources[0].Resources.Memory.Quantity.Val = newQty
@@ -241,6 +246,7 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 	}
 	_, err = suite.handler(suite.ctx, msgUpdate)
 	require.Error(t, err)
+	require.Contains(t, err.Error(), "Invalid: different groups")
 
 }
 

@@ -191,15 +191,17 @@ func (ms msgServer) UpdateDeployment(goCtx context.Context, msg *types.MsgUpdate
 
 	// If the groups have changed, reject the transaction
 	for i, existing := range existingGroups {
-		if !reflect.DeepEqual(msg.Groups[i], existing.GroupSpec){
+		if !reflect.DeepEqual(msg.Groups[i], existing.GroupSpec) {
 			return &types.MsgUpdateDeploymentResponse{}, types.ErrDifferentGroups
 		}
 	}
 
-	// If the version is not identical update it
-	if !bytes.Equal(msg.Version, deployment.Version) {
-		deployment.Version = msg.Version
+	// If the version is not identical do not allow the update, there is nothing to change in this transaction
+	if bytes.Equal(msg.Version, deployment.Version) {
+		return &types.MsgUpdateDeploymentResponse{}, types.ErrInvalidVersion
 	}
+
+	deployment.Version = msg.Version
 
 	if err := ms.deployment.UpdateDeployment(ctx, deployment); err != nil {
 		return &types.MsgUpdateDeploymentResponse{}, errors.Wrap(types.ErrInternal, err.Error())
