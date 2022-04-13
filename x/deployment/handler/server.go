@@ -3,8 +3,8 @@ package handler
 import (
 	"bytes"
 	"context"
-
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"reflect"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
@@ -179,10 +179,24 @@ func (ms msgServer) UpdateDeployment(goCtx context.Context, msg *types.MsgUpdate
 		return nil, types.ErrDeploymentNotFound
 	}
 
+	// If the deployment is not active, do not allow it to be updated
 	if deployment.State != types.DeploymentActive {
 		return &types.MsgUpdateDeploymentResponse{}, types.ErrDeploymentClosed
 	}
 
+	existingGroups := ms.deployment.GetGroups(ctx, msg.ID)
+	if len(existingGroups) != len(msg.Groups) {
+		return &types.MsgUpdateDeploymentResponse{}, types.ErrDifferentGroups
+	}
+
+	// If the groups have changed, reject the transaction
+	for i, existing := range existingGroups {
+		if !reflect.DeepEqual(msg.Groups[i], existing.GroupSpec){
+			return &types.MsgUpdateDeploymentResponse{}, types.ErrDifferentGroups
+		}
+	}
+
+	// If the version is not identical update it
 	if !bytes.Equal(msg.Version, deployment.Version) {
 		deployment.Version = msg.Version
 	}
