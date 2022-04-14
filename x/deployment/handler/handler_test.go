@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"crypto/sha256"
+	"github.com/ovrclk/akash/sdl"
 	"testing"
 	"time"
 
@@ -117,8 +118,17 @@ func TestCreateDeployment(t *testing.T) {
 		require.Equal(t, msg.ID, dev.ID)
 	})
 
-	_, exists := suite.dkeeper.GetDeployment(suite.ctx, deployment.ID())
+	deploymentResult, exists := suite.dkeeper.GetDeployment(suite.ctx, deployment.ID())
 	require.True(t, exists)
+	require.Equal(t, deploymentResult.Version, msg.Version)
+
+	groupsResult := suite.dkeeper.GetGroups(suite.ctx, deployment.ID())
+	require.NotEmpty(t, groupsResult)
+	require.Equal(t, len(groupsResult), len(groups))
+
+	for i, g := range groupsResult {
+		require.Equal(t, groups[i].GetName(), g.GetName())
+	}
 
 	res, err = suite.handler(suite.ctx, msg)
 	require.EqualError(t, err, types.ErrDeploymentExists.Error())
@@ -159,9 +169,22 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 
 	deployment, groups := suite.createDeployment()
 
+	sdlObj, err := sdl.ReadFile("../../../sdl/_testdata/simple.yaml")
+	require.NoError(t, err)
+
+	dgroups, err := sdlObj.DeploymentGroups()
+	require.NoError(t, err)
+
+	msgGroups := make([]types.GroupSpec, 0)
+	for _, g := range dgroups {
+		msgGroups = append(msgGroups, *g)
+	}
+	require.NotEmpty(t, msgGroups)
+	require.Equal(t, len(msgGroups), 1)
+
 	msg := &types.MsgCreateDeployment{
 		ID:        deployment.ID(),
-		Groups:    make([]types.GroupSpec, 0, len(groups)),
+		Groups:    msgGroups,
 		Version:   testutil.DefaultDeploymentVersion[:],
 		Deposit:   types.DefaultDeploymentMinDeposit,
 		Depositor: deployment.ID().Owner,
@@ -181,16 +204,16 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 		assert.Equal(t, d.Version, testutil.DefaultDeploymentVersion[:])
 	})
 
+	// Change the version
 	depSum := sha256.Sum256(testutil.DefaultDeploymentVersion[:])
 
 	msgUpdate := &types.MsgUpdateDeployment{
-		ID:      deployment.ID(),
+		ID:      msg.ID,
 		Version: depSum[:],
 	}
-
 	res, err = suite.handler(suite.ctx, msgUpdate)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	t.Run("ensure event created", func(t *testing.T) {
 		t.Skip("now has more events")
@@ -206,6 +229,12 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, d.Version, depSum[:])
 	})
+
+	// Run the same update, should fail since nothing is different
+	res, err = suite.handler(suite.ctx, msgUpdate)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Invalid: deployment version")
+
 }
 
 func TestCloseDeploymentNonExisting(t *testing.T) {

@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -20,6 +21,11 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
+)
+
+var (
+	errDeploymentUpdate              = errors.New("deployment update failed")
+	errDeploymentUpdateGroupsChanged = fmt.Errorf("%w: groups are different than existing deployment, you cannot update groups", errDeploymentUpdate)
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -219,14 +225,36 @@ func cmdUpdate(key string) *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			version, err := sdl.Version(sdlManifest)
+			if err != nil {
+				return err
+			}
+
 			groups, err := sdlManifest.DeploymentGroups()
 			if err != nil {
 				return err
 			}
 
-			version, err := sdl.Version(sdlManifest)
+			// Query the RPC node to make sure the existing groups are identical
+			queryClient := types.NewQueryClient(clientCtx)
+			existingDeployment, err := queryClient.Deployment(cmd.Context(), &types.QueryDeploymentRequest{
+				ID: id,
+			})
 			if err != nil {
 				return err
+			}
+
+			// do not send the transaction if the groups have changed
+			existingGroups := existingDeployment.GetGroups()
+			if len(existingGroups) != len(groups) {
+				return errDeploymentUpdateGroupsChanged
+			}
+
+			for i, existingGroup := range existingGroups {
+				if reflect.DeepEqual(groups[i], existingGroup.GroupSpec) {
+					return errDeploymentUpdateGroupsChanged
+				}
 			}
 
 			warnIfGroupVolumesExceeds(clientCtx, groups)
@@ -234,11 +262,6 @@ func cmdUpdate(key string) *cobra.Command {
 			msg := &types.MsgUpdateDeployment{
 				ID:      id,
 				Version: version,
-				Groups:  make([]types.GroupSpec, 0, len(groups)),
-			}
-
-			for _, group := range groups {
-				msg.Groups = append(msg.Groups, *group)
 			}
 
 			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
