@@ -81,12 +81,7 @@ message MsgUpdateDeployment {
     (gogoproto.jsontag)    = "id",
     (gogoproto.moretags)   = "yaml:\"id\""
   ];
-  repeated GroupSpec groups = 2 [
-    (gogoproto.nullable) = false,
-    (gogoproto.jsontag) = "groups",
-    (gogoproto.moretags) = "yaml:\"groups\""
-  ];
-  bytes version = 3 [
+  bytes version = 2 [
     (gogoproto.jsontag) = "version",
     (gogoproto.moretags) = "yaml:\"version\""
   ];

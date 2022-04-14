@@ -134,10 +134,9 @@ func (msg MsgDepositDeployment) ValidateBasic() error {
 }
 
 // NewMsgUpdateDeployment creates a new MsgUpdateDeployment instance
-func NewMsgUpdateDeployment(id DeploymentID, groups []GroupSpec, version []byte) *MsgUpdateDeployment {
+func NewMsgUpdateDeployment(id DeploymentID, version []byte) *MsgUpdateDeployment {
 	return &MsgUpdateDeployment{
 		ID:      id,
-		Groups:  groups,
 		Version: version,
 	}
 }
