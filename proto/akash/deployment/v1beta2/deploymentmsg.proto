@@ -81,7 +81,7 @@ message MsgUpdateDeployment {
     (gogoproto.jsontag)    = "id",
     (gogoproto.moretags)   = "yaml:\"id\""
   ];
-  bytes version = 2 [
+  bytes version = 3 [
     (gogoproto.jsontag) = "version",
     (gogoproto.moretags) = "yaml:\"version\""
   ];
