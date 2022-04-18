@@ -3,10 +3,11 @@ package manifest
 import (
 	"context"
 	"errors"
+	"time"
+
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"time"
 
 	"github.com/boz/go-lifecycle"
 
@@ -357,33 +358,36 @@ func (s *service) ensureManager(did dtypes.DeploymentID) (manager *manager) {
 }
 
 func fetchExistingLeases(ctx context.Context, session session.Session) ([]event.LeaseWon, error) {
-	leases, err := session.Client().Query().ActiveLeasesForProvider(session.Provider().Address())
-	if err != nil {
-		return nil, err
-	}
 
-	items := make([]event.LeaseWon, 0, len(leases))
-	for _, lease := range leases {
-		res, err := session.Client().Query().Group(
-			ctx,
-			&dtypes.QueryGroupRequest{
-				ID: lease.Lease.LeaseID.GroupID(),
-			},
-		)
-		if err != nil {
-			session.Log().Error("can't fetch deployment group", "err", err, "lease", lease)
-			continue
-		}
-		dgroup := res.Group
+	return []event.LeaseWon{}, nil
 
-		items = append(items, event.LeaseWon{
-			LeaseID: lease.Lease.LeaseID,
-			Price:   lease.Lease.Price,
-			Group:   &dgroup,
-		})
-	}
+	// leases, err := session.Client().Query().ActiveLeasesForProvider(session.Provider().Address())
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	session.Log().Debug("fetching leases", "lease-count", len(items))
+	// items := make([]event.LeaseWon, 0, len(leases))
+	// for _, lease := range leases {
+	// 	res, err := session.Client().Query().Group(
+	// 		ctx,
+	// 		&dtypes.QueryGroupRequest{
+	// 			ID: lease.Lease.LeaseID.GroupID(),
+	// 		},
+	// 	)
+	// 	if err != nil {
+	// 		session.Log().Error("can't fetch deployment group", "err", err, "lease", lease)
+	// 		continue
+	// 	}
+	// 	dgroup := res.Group
 
-	return items, nil
+	// 	items = append(items, event.LeaseWon{
+	// 		LeaseID: lease.Lease.LeaseID,
+	// 		Price:   lease.Lease.Price,
+	// 		Group:   &dgroup,
+	// 	})
+	// }
+
+	// session.Log().Debug("fetching leases", "lease-count", len(items))
+
+	// return items, nil
 }
