@@ -7,7 +7,9 @@ option go_package = "github.com/ovrclk/akash/x/inflation/types/v1beta2";
 // Params defines the parameters for the x/deployment package
 message Params {
   // InflationDecayFactor is the number of years it takes inflation to halve.
-  uint32 inflation_decay_factor = 1 [
+  string inflation_decay_factor = 1 [
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",
+    (gogoproto.nullable)   = false,
     (gogoproto.customname) = "InflationDecayFactor",
     (gogoproto.jsontag)    = "inflation_decay_factor",
     (gogoproto.moretags)   = "yaml:\"inflation_decay_factor\""
