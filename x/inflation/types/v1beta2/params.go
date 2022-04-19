@@ -10,12 +10,12 @@ import (
 var _ paramtypes.ParamSet = (*Params)(nil)
 
 const (
-	DefaultInflationDecayFactor uint32 = 2 // years
-
 	keyInflationDecayFactor = "InflationDecayFactor"
 	keyInitialInflation     = "InitialInflation"
 	keyVariance             = "Variance"
 )
+
+func DefaultInflationDecayFactor() sdk.Dec { return sdk.NewDec(2) } // years
 
 func DefaultInitialInflation() sdk.Dec { return sdk.NewDec(100) }
 func DefaultVarince() sdk.Dec          { return sdk.MustNewDecFromStr("0.05") }
@@ -40,7 +40,7 @@ func (p *Params) ParamSetPairs() paramtypes.ParamSetPairs {
 
 func DefaultParams() Params {
 	return Params{
-		InflationDecayFactor: DefaultInflationDecayFactor,
+		InflationDecayFactor: DefaultInflationDecayFactor(),
 		InitialInflation:     DefaultInitialInflation(),
 		Variance:             DefaultVarince(),
 	}
@@ -61,8 +61,8 @@ func (p Params) Validate() error {
 }
 
 func validateInflationDecayFactor(i interface{}) error {
-	v, ok := i.(uint32)
-	if !ok || v < 1 {
+	v, ok := i.(sdk.Dec)
+	if !ok || v.LT(sdk.NewDec(1)) {
 		return errors.Wrapf(ErrInvalidParam, "%T", i)
 	}
 

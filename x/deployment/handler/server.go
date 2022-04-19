@@ -3,10 +3,8 @@ package handler
 import (
 	"bytes"
 	"context"
-
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/x/deployment/keeper"
@@ -179,13 +177,17 @@ func (ms msgServer) UpdateDeployment(goCtx context.Context, msg *types.MsgUpdate
 		return nil, types.ErrDeploymentNotFound
 	}
 
+	// If the deployment is not active, do not allow it to be updated
 	if deployment.State != types.DeploymentActive {
 		return &types.MsgUpdateDeploymentResponse{}, types.ErrDeploymentClosed
 	}
 
-	if !bytes.Equal(msg.Version, deployment.Version) {
-		deployment.Version = msg.Version
+	// If the version is not identical do not allow the update, there is nothing to change in this transaction
+	if bytes.Equal(msg.Version, deployment.Version) {
+		return &types.MsgUpdateDeploymentResponse{}, types.ErrInvalidVersion
 	}
+
+	deployment.Version = msg.Version
 
 	if err := ms.deployment.UpdateDeployment(ctx, deployment); err != nil {
 		return &types.MsgUpdateDeploymentResponse{}, errors.Wrap(types.ErrInternal, err.Error())

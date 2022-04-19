@@ -30,7 +30,7 @@ kubetypes: $(K8S_GENERATE_GROUPS)
 	akash.network:v1,v2beta1
 
 .PHONY: proto-gen
-proto-gen: $(PROTOC) $(GRPC_GATEWAY) $(PROTOC_GEN_COSMOS) modvendor
+proto-gen: $(PROTOC) $(GRPC_GATEWAY) $(PROTOC_GEN_GOCOSMOS) modvendor
 	./script/protocgen.sh
 
 .PHONY: proto-swagger-gen

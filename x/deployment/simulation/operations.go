@@ -200,11 +200,6 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeUpdateDeployment, "unable to read config file"), nil, readError
 		}
 
-		groupSpecs, groupErr := sdl.DeploymentGroups()
-		if groupErr != nil {
-			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeUpdateDeployment, "unable to parse groups"), nil, groupErr
-		}
-
 		sdlSum, err := sdlv1.Version(sdl)
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeUpdateDeployment, "error parsing deployment version sum"),
@@ -219,11 +214,7 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeUpdateDeployment, "unable to generate fees"), nil, err
 		}
 
-		msg := types.NewMsgUpdateDeployment(deployment.ID(), make([]types.GroupSpec, 0, len(groupSpecs)), sdlSum)
-
-		for _, spec := range groupSpecs {
-			msg.Groups = append(msg.Groups, *spec)
-		}
+		msg := types.NewMsgUpdateDeployment(deployment.ID(), sdlSum)
 
 		txGen := simappparams.MakeTestEncodingConfig().TxConfig
 		tx, err := helpers.GenTx(

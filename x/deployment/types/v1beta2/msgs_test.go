@@ -53,9 +53,6 @@ func TestVersionValidation(t *testing.T) {
 			msg: &types.MsgUpdateDeployment{
 				ID:      testutil.DeploymentID(t),
 				Version: testutil.DeploymentVersion(t),
-				Groups: []types.GroupSpec{
-					testutil.GroupSpec(t),
-				},
 			},
 			err: nil,
 		},
@@ -63,9 +60,6 @@ func TestVersionValidation(t *testing.T) {
 			msg: &types.MsgUpdateDeployment{
 				ID:      testutil.DeploymentID(t),
 				Version: []byte(""),
-				Groups: []types.GroupSpec{
-					testutil.GroupSpec(t),
-				},
 			},
 			err: types.ErrEmptyVersion,
 		},
@@ -73,9 +67,6 @@ func TestVersionValidation(t *testing.T) {
 			msg: &types.MsgUpdateDeployment{
 				ID:      testutil.DeploymentID(t),
 				Version: []byte("invalidversion"),
-				Groups: []types.GroupSpec{
-					testutil.GroupSpec(t),
-				},
 			},
 			err: types.ErrInvalidVersion,
 		},

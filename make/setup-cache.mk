@@ -21,14 +21,14 @@ $(PROTOC_VERSION_FILE): $(AKASH_DEVCACHE)
 	touch $@
 $(PROTOC): $(PROTOC_VERSION_FILE)
 
-$(PROTOC_GEN_COSMOS_VERSION_FILE): $(AKASH_DEVCACHE)
-	@echo "installing protoc-gen-cosmos $(PROTOC_GEN_COSMOS_VERSION) ..."
-	rm -f $(PROTOC_GEN_COSMOS)
-	GOBIN=$(AKASH_DEVCACHE_BIN) go get github.com/regen-network/cosmos-proto/protoc-gen-gocosmos@$(PROTOC_GEN_COSMOS_VERSION)
+$(PROTOC_GEN_GOCOSMOS_VERSION_FILE): $(AKASH_DEVCACHE) modvendor
+	@echo "installing protoc-gen-gocosmos $(PROTOC_GEN_GOCOSMOS_VERSION) ..."
+	rm -f $(PROTOC_GEN_GOCOSMOS)
+	GOBIN=$(AKASH_DEVCACHE_BIN) $(GO) install $(ROOT_DIR)/vendor/github.com/regen-network/cosmos-proto/protoc-gen-gocosmos
 	rm -rf "$(dir $@)"
 	mkdir -p "$(dir $@)"
 	touch $@
-$(PROTOC_GEN_COSMOS): $(PROTOC_GEN_COSMOS_VERSION_FILE)
+$(PROTOC_GEN_GOCOSMOS): $(PROTOC_GEN_GOCOSMOS_VERSION_FILE)
 
 $(GRPC_GATEWAY_VERSION_FILE): $(AKASH_DEVCACHE)
 	@echo "Installing protoc-gen-grpc-gateway $(GRPC_GATEWAY_VERSION) ..."
