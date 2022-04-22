@@ -8,7 +8,6 @@ import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/libs/log"
 	"google.golang.org/grpc"
 
@@ -37,9 +36,6 @@ type QueryClient interface {
 	ptypes.QueryClient
 	atypes.QueryClient
 	ctypes.QueryClient
-
-	// TODO: implement with search parameters
-	ActiveLeasesForProvider(id sdk.AccAddress) ([]mtypes.QueryLeaseResponse, error)
 }
 
 // Client interface pre-defined with query and tx interfaces
