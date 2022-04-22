@@ -359,7 +359,7 @@ func (s *service) teardownLease(lid mtypes.LeaseID) {
 	}
 }
 
-func findDeployments(ctx context.Context, log log.Logger, client Client, session session.Session) ([]ctypes.Deployment, error) {
+func findDeployments(ctx context.Context, log log.Logger, client Client, _ session.Session) ([]ctypes.Deployment, error) {
 	deployments, err := client.Deployments(ctx)
 	if err != nil {
 		log.Error("fetching deployments", "err", err)

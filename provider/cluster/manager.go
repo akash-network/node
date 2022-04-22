@@ -307,8 +307,6 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Either reserve the hostnames, or confirm that they already are held
-
 	// Weird hack to tie this context to the lifecycle of the parent service, so this doesn't
 	// block forever or anything like that
 	go func() {
@@ -322,6 +320,8 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 	if err = dm.checkLeaseActive(ctx); err != nil {
 		return nil, err
 	}
+
+	// Either reserve the hostnames, or confirm that they already are held
 
 	allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
 	withheldHostnames, err := dm.hostnameService.ReserveHostnames(ctx, allHostnames, dm.lease)
