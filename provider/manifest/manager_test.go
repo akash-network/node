@@ -128,6 +128,8 @@ func serviceForManifestTest(t *testing.T, cfg ServiceConfig, mani sdl.SDL, did d
 		Attributes: nil,
 	}
 
+	queryMock.On("ActiveLeasesForProvider", p.Address()).Return([]mtypes.QueryLeaseResponse{}, nil)
+
 	createdAtBlockHeight := int64(-1)
 	if len(leases) != 0 {
 		createdAtBlockHeight = leases[0].GetCreatedAt() - 1

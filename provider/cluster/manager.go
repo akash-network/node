@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/boz/go-lifecycle"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -45,8 +44,6 @@ var (
 	monitorCounter = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "provider_deployment_monitor",
 	}, []string{"action"})
-
-	ErrLeaseInactive = errors.New("Inactive Lease")
 )
 
 type deploymentManager struct {
@@ -304,11 +301,11 @@ func (dm *deploymentManager) startTeardown() <-chan error {
 func (dm *deploymentManager) doDeploy() ([]string, error) {
 	var err error
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+	allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
 	// Either reserve the hostnames, or confirm that they already are held
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	// Weird hack to tie this context to the lifecycle of the parent service, so this doesn't
 	// block forever or anything like that
 	go func() {
@@ -318,12 +315,6 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 		case <-ctx.Done():
 		}
 	}()
-
-	if err = dm.checkLeaseActive(ctx); err != nil {
-		return nil, err
-	}
-
-	allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
 	withheldHostnames, err := dm.hostnameService.ReserveHostnames(ctx, allHostnames, dm.lease)
 
 	if err != nil {
@@ -451,38 +442,6 @@ func (dm *deploymentManager) doTeardown() error {
 
 	// TODO - counter
 	return result
-}
-
-func (dm *deploymentManager) checkLeaseActive(ctx context.Context) error {
-
-	var lease *mtypes.QueryLeaseResponse
-
-	err := retry.Do(func() error {
-		var err error
-		lease, err = dm.session.Client().Query().Lease(ctx, &mtypes.QueryLeaseRequest{
-			ID: dm.lease,
-		})
-		if err != nil {
-			dm.log.Error("lease query failed", "err")
-		}
-		return err
-	},
-		retry.Attempts(50),
-		retry.Delay(100*time.Millisecond),
-		retry.MaxDelay(3000*time.Millisecond),
-		retry.DelayType(retry.BackOffDelay),
-		retry.LastErrorOnly(true))
-
-	if err != nil {
-		return err
-	}
-
-	if lease.GetLease().State != mtypes.LeaseActive {
-		dm.log.Error("lease not active, not deploying")
-		return fmt.Errorf("%w: %s", ErrLeaseInactive, dm.lease)
-	}
-
-	return nil
 }
 
 func (dm *deploymentManager) do(fn func() error) <-chan error {

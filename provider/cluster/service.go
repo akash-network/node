@@ -19,6 +19,7 @@ import (
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	atypes "github.com/ovrclk/akash/types/v1beta2"
+	mquery "github.com/ovrclk/akash/x/market/query"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
@@ -365,5 +366,31 @@ func findDeployments(ctx context.Context, log log.Logger, client Client, session
 		log.Error("fetching deployments", "err", err)
 		return nil, err
 	}
-	return deployments, nil
+
+	leaseList, err := session.Client().Query().ActiveLeasesForProvider(session.Provider().Address())
+	if err != nil {
+		log.Error("fetching deployments", "err", err)
+		return nil, err
+	}
+
+	leases := make(map[string]bool)
+	for _, lease := range leaseList {
+		leases[mquery.LeasePath(lease.Lease.LeaseID)] = true
+	}
+
+	log.Info("found leases", "num-active", len(leases))
+
+	active := make([]ctypes.Deployment, 0, len(deployments))
+
+	for _, deployment := range deployments {
+		if _, ok := leases[mquery.LeasePath(deployment.LeaseID())]; !ok {
+			continue
+		}
+		active = append(active, deployment)
+		log.Debug("deployment", "lease", deployment.LeaseID(), "mgroup", deployment.ManifestGroup().Name)
+	}
+
+	log.Info("found deployments", "num-active", len(active), "num-skipped", len(deployments)-len(active))
+
+	return active, nil
 }

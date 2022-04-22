@@ -358,5 +358,33 @@ func (s *service) ensureManager(did dtypes.DeploymentID) (manager *manager) {
 }
 
 func fetchExistingLeases(ctx context.Context, session session.Session) ([]event.LeaseWon, error) {
-	return []event.LeaseWon{}, nil
+	leases, err := session.Client().Query().ActiveLeasesForProvider(session.Provider().Address())
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]event.LeaseWon, 0, len(leases))
+	for _, lease := range leases {
+		res, err := session.Client().Query().Group(
+			ctx,
+			&dtypes.QueryGroupRequest{
+				ID: lease.Lease.LeaseID.GroupID(),
+			},
+		)
+		if err != nil {
+			session.Log().Error("can't fetch deployment group", "err", err, "lease", lease)
+			continue
+		}
+		dgroup := res.Group
+
+		items = append(items, event.LeaseWon{
+			LeaseID: lease.Lease.LeaseID,
+			Price:   lease.Lease.Price,
+			Group:   &dgroup,
+		})
+	}
+
+	session.Log().Debug("fetching leases", "lease-count", len(items))
+
+	return items, nil
 }
