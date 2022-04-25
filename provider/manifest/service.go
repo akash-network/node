@@ -62,18 +62,11 @@ type Service interface {
 func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, hostnameService clustertypes.HostnameServiceClient, cfg ServiceConfig) (Service, error) {
 	session = session.ForModule("provider-manifest")
 
-	leases, err := fetchExistingLeases(ctx, session)
-	if err != nil {
-		session.Log().Error("fetching existing leases", "err", err)
-		return nil, err
-	}
-
 	sub, err := bus.Subscribe()
 	if err != nil {
 		return nil, err
 	}
 
-	session.Log().Info("found existing leases", "count", len(leases))
 	s := &service{
 		session:         session,
 		bus:             bus,
@@ -92,7 +85,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, ho
 	}
 
 	go s.lc.WatchContext(ctx)
-	go s.run(leases)
+	go s.run()
 
 	return s, nil
 }
@@ -219,12 +212,11 @@ func (s *service) Status(ctx context.Context) (*Status, error) {
 	}
 }
 
-func (s *service) run(leases []event.LeaseWon) {
+func (s *service) run() {
 	defer s.lc.ShutdownCompleted()
 	defer s.sub.Close()
 
 	s.updateGauges()
-	s.managePreExistingLease(leases)
 loop:
 	for {
 		select {
@@ -326,13 +318,6 @@ func (s *service) maybeRemoveWatchdog(deploymentID dtypes.DeploymentID) {
 	}
 }
 
-func (s *service) managePreExistingLease(leases []event.LeaseWon) {
-	for _, lease := range leases {
-		s.handleLease(lease, false)
-		s.updateGauges()
-	}
-}
-
 func (s *service) handleLease(ev event.LeaseWon, isNew bool) {
 	// Only run this if configured to do so
 	if isNew && s.config.ManifestTimeout > time.Duration(0) {
@@ -355,36 +340,4 @@ func (s *service) ensureManager(did dtypes.DeploymentID) (manager *manager) {
 		s.managers[dquery.DeploymentPath(did)] = manager
 	}
 	return manager
-}
-
-func fetchExistingLeases(ctx context.Context, session session.Session) ([]event.LeaseWon, error) {
-	leases, err := session.Client().Query().ActiveLeasesForProvider(session.Provider().Address())
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]event.LeaseWon, 0, len(leases))
-	for _, lease := range leases {
-		res, err := session.Client().Query().Group(
-			ctx,
-			&dtypes.QueryGroupRequest{
-				ID: lease.Lease.LeaseID.GroupID(),
-			},
-		)
-		if err != nil {
-			session.Log().Error("can't fetch deployment group", "err", err, "lease", lease)
-			continue
-		}
-		dgroup := res.Group
-
-		items = append(items, event.LeaseWon{
-			LeaseID: lease.Lease.LeaseID,
-			Price:   lease.Lease.Price,
-			Group:   &dgroup,
-		})
-	}
-
-	session.Log().Debug("fetching leases", "lease-count", len(items))
-
-	return items, nil
 }
