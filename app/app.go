@@ -177,7 +177,7 @@ func NewApp(
 	homePath string, appOpts servertypes.AppOptions, options ...func(*bam.BaseApp),
 ) *AkashApp {
 	// find out the genesis time, to be used later in inflation calculation
-	genesisTime := getGenesisTime(appOpts, homePath)
+	// genesisTime := getGenesisTime(appOpts, homePath)
 
 	// TODO: Remove cdc in favor of appCodec once all modules are migrated.
 	encodingConfig := MakeEncodingConfig()
