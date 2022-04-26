@@ -56,7 +56,6 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v2/modules/core/05-port/types"
 	"github.com/gorilla/mux"
 	"github.com/ovrclk/akash/x/inflation"
-	inflationtypes "github.com/ovrclk/akash/x/inflation/types/v1beta2"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
 	tmjson "github.com/tendermint/tendermint/libs/json"
@@ -355,7 +354,7 @@ func NewApp(
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			crisis.NewAppModule(&app.keeper.crisis, skipGenesisInvariants),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
-			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, inflationtypes.GetInflationCalculator(genesisTime, app.GetSubspace(inflation.ModuleName))),
+			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, nil),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			distr.NewAppModule(appCodec, app.keeper.distr, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
@@ -400,7 +399,7 @@ func NewApp(
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
-			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, inflationtypes.GetInflationCalculator(genesisTime, app.GetSubspace(inflation.ModuleName))),
+			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, nil),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
 			distr.NewAppModule(appCodec, app.keeper.distr, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
