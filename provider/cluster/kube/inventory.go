@@ -88,11 +88,13 @@ func (inv *inventory) Adjust(reservation ctypes.Reservation) error {
 	currInventory := inv.dup()
 
 nodes:
-	for nodeName, nd := range currInventory.nodes {
+	for nodeName := range currInventory.nodes {
 		currResources := resources[:0]
 
 		for _, res := range resources {
 			for ; res.Count > 0; res.Count-- {
+				nd := currInventory.nodes[nodeName]
+
 				// first check if there reservation needs persistent storage
 				// and node handles such class
 				if !nd.allowsStorageClasses(res.Resources.Storage) {
