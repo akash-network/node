@@ -7,9 +7,9 @@ SUBLINTERS = deadcode \
 			ineffassign \
 			unparam \
 			staticcheck \
-			golint \
+			revive \
 			gosec \
-			scopelint \
+			exportloopref \
 			prealloc
 # TODO: ^ gochecknoglobals
 
@@ -19,17 +19,17 @@ SUBLINTERS = deadcode \
 test-sublinters: $(patsubst %, test-sublinter-%,$(SUBLINTERS))
 
 .PHONY: test-lint-all
-test-lint-all:
-	$(GOLANGCI_LINT) ./... --issues-exit-code=0 --deadline=10m
+test-lint-all: $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT_RUN) ./... --issues-exit-code=0 --deadline=10m
 
 .PHONY: test-sublinter-misspell
-test-sublinter-misspell:
+test-sublinter-misspell: $(GOLANGCI_LINT)
 	$(LINT) misspell --no-config
 
 .PHONY: test-sublinter-ineffassign
-test-sublinter-ineffassign:
+test-sublinter-ineffassign: $(GOLANGCI_LINT)
 	$(LINT) ineffassign --no-config
 
 .PHONY: test-sublinter-%
-test-sublinter-%:
+test-sublinter-%: $(GOLANGCI_LINT)
 	$(LINT) $*

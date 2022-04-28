@@ -13,6 +13,7 @@ import (
 
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+
 	appparams "github.com/ovrclk/akash/app/params"
 	keepers "github.com/ovrclk/akash/x/market/handler"
 	types "github.com/ovrclk/akash/x/market/types/v1beta2"
@@ -20,9 +21,9 @@ import (
 
 // Simulation operation weights constants
 const (
-	OpWeightMsgCreateBid  = "op_weight_msg_create_bid"
-	OpWeightMsgCloseBid   = "op_weight_msg_close_bid"
-	OpWeightMsgCloseLease = "op_weight_msg_close_lease"
+	OpWeightMsgCreateBid  = "op_weight_msg_create_bid"  // nolint gosec
+	OpWeightMsgCloseBid   = "op_weight_msg_close_bid"   // nolint gosec
+	OpWeightMsgCloseLease = "op_weight_msg_close_lease" // nolint gosec
 )
 
 // WeightedOperations returns all the operations from the module with their respective weights
