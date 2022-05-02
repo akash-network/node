@@ -19,6 +19,7 @@ dist
 .idea/
 *.iml
 coverage.txt
+.vscode
 
 /.cache
 /.release-env
