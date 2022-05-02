@@ -615,7 +615,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	}
 
 	group.Go(func() error {
-		return events.Publish(ctx, cctx.Client, "provider-cli", bus)
+		return events.PublishFromPolling(ctx, logger, cctx.Client, bus)
 	})
 
 	group.Go(func() error {
