@@ -16,8 +16,9 @@ include make/init.mk
 DOCKER_RUN            := docker run --rm -v $(shell pwd):/workspace -w /workspace
 DOCKER_BUF            := $(DOCKER_RUN) bufbuild/buf:$(BUF_VERSION)
 DOCKER_CLANG          := $(DOCKER_RUN) tendermintdev/docker-build-proto
-GOLANGCI_LINT          = $(DOCKER_RUN) --network none golangci/golangci-lint:$(GOLANGCI_LINT_VERSION)-alpine golangci-lint run
-LINT                   = $(GOLANGCI_LINT) ./... --disable-all --deadline=5m --enable
+GOLANGCI_LINT_RUN     := $(GOLANGCI_LINT) run
+LINT                   = $(GOLANGCI_LINT_RUN) ./... --disable-all --deadline=5m --enable
+
 TEST_DOCKER_REPO      := ovrclk/akashtest
 
 GORELEASER_CONFIG      = .goreleaser.yaml

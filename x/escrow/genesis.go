@@ -18,7 +18,7 @@ func ValidateGenesis(data *types.GenesisState) error {
 
 	for idx, account := range data.Accounts {
 		if err := account.ValidateBasic(); err != nil {
-			return errors.Wrapf(err, "error with account %s (idx %v):", account.ID, idx)
+			return errors.Wrapf(err, "error with account %s (idx %v)", account.ID, idx)
 		}
 		if _, found := amap[account.ID]; found {
 			return errors.Wrapf(types.ErrAccountExists, "duplicate account %s (idx %v)", account.ID, idx)
@@ -28,7 +28,7 @@ func ValidateGenesis(data *types.GenesisState) error {
 
 	for idx, payment := range data.Payments {
 		if err := payment.ValidateBasic(); err != nil {
-			return errors.Wrapf(err, "error with payment %s %s (idx %v):", payment.AccountID, payment.PaymentID, idx)
+			return errors.Wrapf(err, "error with payment %s %s (idx %v)", payment.AccountID, payment.PaymentID, idx)
 		}
 
 		// make sure there's an account
