@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"github.com/tendermint/tendermint/libs/log"
+	"os"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -54,8 +56,10 @@ func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	logger := log.NewTMLogger(os.Stderr)
+
 	group.Go(func() error {
-		return events.Publish(ctx, cctx.Client, "akash-cli", bus)
+		return events.PublishFromPolling(ctx, logger, cctx.Client, bus)
 	})
 
 	group.Go(func() error {

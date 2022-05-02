@@ -2,34 +2,33 @@ package events
 
 import (
 	"context"
-	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
-
+	"github.com/cosmos/cosmos-sdk/client/polling"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/sdkutil"
+	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/log"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	tmtmtypes "github.com/tendermint/tendermint/types"
 	"golang.org/x/sync/errgroup"
 )
 
+const queueSize = 100
+
 // Publish events using tm buses to clients. Waits on context
 // shutdown signals to exit.
 func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus pubsub.Bus) (err error) {
-
-	const (
-		queuesz = 100
-	)
 	var (
 		txname  = name + "-tx"
 		blkname = name + "-blk"
 	)
 
-	txch, err := tmbus.Subscribe(ctx, txname, txQuery().String(), queuesz)
+	txch, err := tmbus.Subscribe(ctx, txname, txQuery().String(), queueSize)
 	if err != nil {
 		return err
 	}
@@ -37,7 +36,7 @@ func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus 
 		err = tmbus.UnsubscribeAll(ctx, txname)
 	}()
 
-	blkch, err := tmbus.Subscribe(ctx, blkname, blkQuery().String(), queuesz)
+	blkch, err := tmbus.Subscribe(ctx, blkname, blkQuery().String(), queueSize)
 	if err != nil {
 		return err
 	}
@@ -56,6 +55,38 @@ func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus 
 	})
 
 	return g.Wait()
+}
+
+func PublishFromPolling(ctx context.Context, logger log.Logger, c tmclient.Client, bus pubsub.Bus) error {
+	transactionsChannel, err := polling.PollForBlocks(ctx, logger, c, queueSize)
+	if err != nil {
+		return err
+	}
+
+	return publishEventsFrom(ctx, transactionsChannel, bus)
+}
+
+func publishEventsFrom(ctx context.Context, ch <-chan abci.ResponseDeliverTx, bus pubsub.Bus) error {
+	for {
+		var txn abci.ResponseDeliverTx
+		select {
+		case txn = <-ch:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+
+		if txn.Code != 0 {
+			continue
+		}
+		for _, ev := range txn.Events {
+			if mev, ok := processEvent(ev); ok {
+				if err := bus.Publish(mev); err != nil {
+					bus.Close()
+					return err
+				}
+			}
+		}
+	}
 }
 
 func publishEvents(ctx context.Context, ch <-chan ctypes.ResultEvent, bus pubsub.Bus) error {

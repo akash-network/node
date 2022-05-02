@@ -216,6 +216,7 @@ func (is *inventoryService) resourcesToCommit(rgroup atypes.ResourceGroup) atype
 	replacedResources := make([]dtypes.Resource, 0)
 
 	for _, resource := range rgroup.GetResources() {
+
 		runits := atypes.ResourceUnits{
 			CPU: &atypes.CPU{
 				Units:      clusterUtil.ComputeCommittedResources(is.config.CPUCommitLevel, resource.Resources.GetCPU().GetUnits()),
