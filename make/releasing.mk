@@ -39,7 +39,7 @@ docker-image:
 	docker run \
 		--rm \
 		--privileged \
-		-e MAINNET=$(IS_MAINNET) \
+		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GO_MOD)" \
 		-e BUILD_TAGS="$(BUILD_TAGS)" \
 		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
@@ -66,7 +66,7 @@ release-dry-run: modvendor gen-changelog
 	docker run \
 		--rm \
 		--privileged \
-		-e MAINNET="$(IS_MAINNET)" \
+		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GO_MOD)" \
 		-e BUILD_TAGS="$(BUILD_TAGS)" \
 		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
@@ -94,7 +94,7 @@ release: modvendor gen-changelog
 	docker run \
 		--rm \
 		--privileged \
-		-e MAINNET=$(IS_MAINNET) \
+		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GO_MOD)" \
 		-e BUILD_TAGS="$(BUILD_TAGS)" \
 		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
