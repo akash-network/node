@@ -116,7 +116,7 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - 'ghcr.io/ovrclk/akash:{{if eq .Env.MAINNET "true"}}stable{{else}}latest{{end}}'
+      - 'ghcr.io/ovrclk/akash:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}'
       - 'ghcr.io/ovrclk/akash:{{ .ShortCommit }}'
       - 'ghcr.io/ovrclk/akash:{{ .Version }}'
 brews:
