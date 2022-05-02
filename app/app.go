@@ -51,15 +51,16 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	transfer "github.com/cosmos/ibc-go/v2/modules/apps/transfer"
+	"github.com/cosmos/ibc-go/v2/modules/apps/transfer"
 	ibc "github.com/cosmos/ibc-go/v2/modules/core"
 	porttypes "github.com/cosmos/ibc-go/v2/modules/core/05-port/types"
 	"github.com/gorilla/mux"
-	"github.com/ovrclk/akash/x/inflation"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	tmtypes "github.com/tendermint/tendermint/types"
+
+	"github.com/ovrclk/akash/x/inflation"
 
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
@@ -501,7 +502,7 @@ func (app *AkashApp) registerUpgradeHandlers() {
 	}
 }
 
-func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time { // nolint: unused
+func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time { // nolint: unused,deadcode
 	if v := appOpts.Get("GenesisTime"); v != nil {
 		// in tests, GenesisTime is supplied using appOpts
 		genTime, ok := v.(time.Time)
