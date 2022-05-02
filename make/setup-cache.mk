@@ -77,6 +77,15 @@ $(MOCKERY_VERSION_FILE): $(AKASH_DEVCACHE)
 	touch $@
 $(MOCKERY): $(MOCKERY_VERSION_FILE)
 
+$(GOLANGCI_LINT_VERSION_FILE): $(AKASH_DEVCACHE)
+	@echo "installing golangci-lint $(GOLANGCI_LINT_VERSION) ..."
+	rm -f $(MOCKERY)
+	GOBIN=$(AKASH_DEVCACHE_BIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(GOLANGCI_LINT): $(GOLANGCI_LINT_VERSION_FILE)
+
 $(K8S_CODE_GEN_VERSION_FILE): $(AKASH_DEVCACHE) modvendor
 	@echo "installing k8s code-generator $(K8S_CODE_GEN_VERSION) ..."
 	rm -f $(K8S_GO_TO_PROTOBUF)

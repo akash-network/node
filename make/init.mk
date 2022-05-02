@@ -19,7 +19,7 @@ PROTOC_VERSION               ?= 3.13.0
 PROTOC_GEN_GOCOSMOS_VERSION  ?= v0.3.1
 GRPC_GATEWAY_VERSION         := $(shell $(GO) list -mod=readonly -m -f '{{ .Version }}' github.com/grpc-ecosystem/grpc-gateway)
 PROTOC_SWAGGER_GEN_VERSION   := $(GRPC_GATEWAY_VERSION)
-GOLANGCI_LINT_VERSION        ?= v1.38.0
+GOLANGCI_LINT_VERSION        ?= v1.45.2
 GOLANG_VERSION               ?= 1.16.1
 STATIK_VERSION               ?= v0.1.7
 GIT_CHGLOG_VERSION           ?= v0.15.1
@@ -37,6 +37,7 @@ MODVENDOR_VERSION_FILE           := $(AKASH_DEVCACHE_VERSIONS)/modvendor/$(MODVE
 GIT_CHGLOG_VERSION_FILE          := $(AKASH_DEVCACHE_VERSIONS)/git-chglog/$(GIT_CHGLOG_VERSION)
 MOCKERY_VERSION_FILE             := $(AKASH_DEVCACHE_VERSIONS)/mockery/v$(MOCKERY_VERSION)
 K8S_CODE_GEN_VERSION_FILE        := $(AKASH_DEVCACHE_VERSIONS)/k8s-codegen/$(K8S_CODE_GEN_VERSION)
+GOLANGCI_LINT_VERSION_FILE       := $(AKASH_DEVCACHE_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
 
 MODVENDOR                         = $(AKASH_DEVCACHE_BIN)/modvendor
 SWAGGER_COMBINE                   = $(AKASH_DEVCACHE_NODE_BIN)/swagger-combine
@@ -51,5 +52,6 @@ K8S_GENERATE_GROUPS              := $(AKASH_ROOT)/vendor/k8s.io/code-generator/g
 K8S_GO_TO_PROTOBUF               := $(AKASH_DEVCACHE_BIN)/go-to-protobuf
 KIND                             := kind
 NPM                              := npm
+GOLANGCI_LINT                    := $(AKASH_DEVCACHE_BIN)/golangci-lint
 
 include $(AKASH_ROOT)/make/setup-cache.mk

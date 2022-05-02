@@ -2,28 +2,31 @@ package cluster
 
 import (
 	"context"
-	"github.com/ovrclk/akash/provider/cluster/util"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"math/rand"
 	"time"
 
-	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	"github.com/ovrclk/akash/provider/cluster/util"
+
+	"github.com/boz/go-lifecycle"
+	"github.com/tendermint/tendermint/libs/log"
+
 	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/util/runner"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
 const (
 	monitorMaxRetries        = 40
-	monitorRetryPeriodMin    = time.Second * 4
+	monitorRetryPeriodMin    = time.Second * 4 // nolint revive
 	monitorRetryPeriodJitter = time.Second * 15
 
-	monitorHealthcheckPeriodMin    = time.Second * 10
+	monitorHealthcheckPeriodMin    = time.Second * 10 // nolint revive
 	monitorHealthcheckPeriodJitter = time.Second * 5
 )
 

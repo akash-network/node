@@ -22,8 +22,8 @@ import (
 
 // Simulation operation weights constants
 const (
-	OpWeightMsgCreate = "op_weight_msg_create"
-	OpWeightMsgUpdate = "op_weight_msg_update"
+	OpWeightMsgCreate = "op_weight_msg_create" // nolint gosec
+	OpWeightMsgUpdate = "op_weight_msg_update" // nolint gosec
 )
 
 // WeightedOperations returns all the operations from the module with their respective weights
