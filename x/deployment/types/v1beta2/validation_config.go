@@ -7,7 +7,6 @@ import "github.com/ovrclk/akash/types/unit"
 // and is the same across all members of the network
 
 type ValidationConfig struct {
-
 	// MaxUnitCPU is the maximum number of milli (1/1000) cpu units a unit can consume.
 	MaxUnitCPU uint
 	// MaxUnitMemory is the maximum number of bytes of memory that a unit can consume

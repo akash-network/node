@@ -79,8 +79,8 @@ func MakeScalePricing(
 	cpuScale decimal.Decimal,
 	memoryScale decimal.Decimal,
 	storageScale Storage,
-	endpointScale decimal.Decimal) (BidPricingStrategy, error) {
-
+	endpointScale decimal.Decimal,
+) (BidPricingStrategy, error) {
 	if cpuScale.IsZero() && memoryScale.IsZero() && storageScale.IsAnyZero() && endpointScale.IsZero() {
 		return nil, errAllScalesZero
 	}
@@ -95,8 +95,10 @@ func MakeScalePricing(
 	return result, nil
 }
 
-var ErrBidQuantityInvalid = errors.New("A bid quantity is invalid")
-var ErrBidZero = errors.New("A bid of zero was produced")
+var (
+	ErrBidQuantityInvalid = errors.New("A bid quantity is invalid")
+	ErrBidZero            = errors.New("A bid of zero was produced")
+)
 
 func ceilBigRatToBigInt(v *big.Rat) *big.Int {
 	numerator := v.Num()
@@ -300,9 +302,11 @@ type shellScriptPricing struct {
 	runtimeLimit time.Duration
 }
 
-var errPathEmpty = errors.New("script path cannot be the empty string")
-var errProcessLimitZero = errors.New("process limit must be greater than zero")
-var errProcessRuntimeLimitZero = errors.New("process runtime limit must be greater than zero")
+var (
+	errPathEmpty               = errors.New("script path cannot be the empty string")
+	errProcessLimitZero        = errors.New("process limit must be greater than zero")
+	errProcessRuntimeLimitZero = errors.New("process runtime limit must be greater than zero")
+)
 
 func MakeShellScriptPricing(path string, processLimit uint, runtimeLimit time.Duration) (BidPricingStrategy, error) {
 	if len(path) == 0 {

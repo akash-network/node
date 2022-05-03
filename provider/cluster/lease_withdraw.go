@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"context"
+
 	lifecycle "github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/provider/event"
 	"github.com/ovrclk/akash/provider/session"
@@ -22,11 +23,9 @@ type deploymentWithdrawal struct {
 	lc      lifecycle.Lifecycle
 }
 
-var (
-	leaseWithdrawalCounter = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "provider_lease_withdrawal",
-	}, []string{"result"})
-)
+var leaseWithdrawalCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "provider_lease_withdrawal",
+}, []string{"result"})
 
 func newDeploymentWithdrawal(dm *deploymentManager) *deploymentWithdrawal {
 	m := &deploymentWithdrawal{

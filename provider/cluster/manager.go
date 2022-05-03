@@ -2,11 +2,10 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
-
-	"errors"
 
 	"github.com/boz/go-lifecycle"
 	"github.com/prometheus/client_golang/prometheus"
@@ -326,7 +325,6 @@ func (dm *deploymentManager) doDeploy() ([]string, error) {
 
 	allHostnames := util.AllHostnamesOfManifestGroup(*dm.mgroup)
 	withheldHostnames, err := dm.hostnameService.ReserveHostnames(ctx, allHostnames, dm.lease)
-
 	if err != nil {
 		deploymentCounter.WithLabelValues("reserve-hostnames", "err").Inc()
 		dm.log.Error("deploy hostname reservation error", "state", dm.state, "err", err)
@@ -455,7 +453,6 @@ func (dm *deploymentManager) doTeardown() error {
 }
 
 func (dm *deploymentManager) checkLeaseActive(ctx context.Context) error {
-
 	var lease *mtypes.QueryLeaseResponse
 
 	err := retry.Do(func() error {
@@ -473,7 +470,6 @@ func (dm *deploymentManager) checkLeaseActive(ctx context.Context) error {
 		retry.MaxDelay(3000*time.Millisecond),
 		retry.DelayType(retry.BackOffDelay),
 		retry.LastErrorOnly(true))
-
 	if err != nil {
 		return err
 	}

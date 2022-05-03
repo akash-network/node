@@ -2,13 +2,14 @@ package manifest
 
 import (
 	"context"
+	"time"
+
 	"github.com/boz/go-lifecycle"
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/util/runner"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/tendermint/tendermint/libs/log"
-	"time"
 )
 
 type watchdog struct {

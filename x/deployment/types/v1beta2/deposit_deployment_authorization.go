@@ -6,9 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/authz"
 )
 
-var (
-	_ authz.Authorization = &DepositDeploymentAuthorization{}
-)
+var _ authz.Authorization = &DepositDeploymentAuthorization{}
 
 // NewDepositDeploymentAuthorization creates a new DepositDeploymentAuthorization object.
 func NewDepositDeploymentAuthorization(spendLimit sdk.Coin) *DepositDeploymentAuthorization {

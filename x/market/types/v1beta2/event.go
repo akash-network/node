@@ -24,9 +24,7 @@ const (
 	evPriceAmountKey = "price-amount"
 )
 
-var (
-	ErrParsingPrice = errors.New("error parsing price")
-)
+var ErrParsingPrice = errors.New("error parsing price")
 
 // EventOrderCreated struct
 type EventOrderCreated struct {
@@ -221,7 +219,6 @@ func parseEVOrderID(attrs []sdk.Attribute) (OrderID, error) {
 		GSeq:  gid.GSeq,
 		OSeq:  uint32(oseq),
 	}, nil
-
 }
 
 // bidIDEVAttributes returns event attribues for given bidID

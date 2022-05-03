@@ -367,7 +367,6 @@ func (op *hostnameOperator) applyEvent(ctx context.Context, ev ctypes.HostnameRe
 	default:
 		return fmt.Errorf("%w: unknown event type %v", errObservationStopped, ev.GetEventType())
 	}
-
 }
 
 func (op *hostnameOperator) applyDeleteEvent(ctx context.Context, ev ctypes.HostnameResourceEvent) error {

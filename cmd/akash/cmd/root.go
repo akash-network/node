@@ -146,7 +146,6 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 
 	rootCmd.AddCommand(
 		server.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Marshaler))
-
 }
 
 func addModuleInitFlags(startCmd *cobra.Command) {
@@ -199,8 +198,8 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 }
 
 func createAppAndExport(
-	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailAllowedAddrs []string, appOpts servertypes.AppOptions) (servertypes.ExportedApp, error) {
-
+	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailAllowedAddrs []string, appOpts servertypes.AppOptions,
+) (servertypes.ExportedApp, error) {
 	var akashApp *app.AkashApp
 
 	if height != -1 {

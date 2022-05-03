@@ -81,9 +81,7 @@ const (
 	defaultGasAdjustment = "1.4"
 )
 
-var (
-	deploymentDeposit = fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit)
-)
+var deploymentDeposit = fmt.Sprintf("--deposit=%s", dtypes.DefaultDeploymentMinDeposit)
 
 type E2EContainerToContainer struct {
 	IntegrationTestSuite
@@ -258,7 +256,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	input, err := ioutil.ReadFile(pemSrc)
 	s.Require().NoError(err)
 
-	err = ioutil.WriteFile(pemDst, input, 0400)
+	err = ioutil.WriteFile(pemDst, input, 0o400)
 	s.Require().NoError(err)
 
 	pemSrc = fmt.Sprintf("%s/%s.pem", s.validator.ClientCtx.HomeDir, s.keyTenant.GetAddress().String())
@@ -266,7 +264,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	input, err = ioutil.ReadFile(pemSrc)
 	s.Require().NoError(err)
 
-	err = ioutil.WriteFile(pemDst, input, 0400)
+	err = ioutil.WriteFile(pemDst, input, 0o400)
 	s.Require().NoError(err)
 
 	localCtx := s.validator.ClientCtx.WithOutputFormat("json")
@@ -456,7 +454,6 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 		PropagationPolicy:  &propagation,
 		DryRun:             nil,
 	}, metav1.ListOptions{
-
 		LabelSelector:        `akash.network=true`,
 		FieldSelector:        "",
 		Watch:                false,
@@ -1098,7 +1095,6 @@ func (s *E2EDeploymentUpdate) TestE2ELeaseShell() {
 		lID, 99, false, false, "notaservice", "/bin/echo", "/foo")
 	require.Error(s.T(), err)
 	require.Regexp(s.T(), ".*no such service exists with that name.*", err.Error())
-
 }
 
 func (s *E2EApp) TestE2EMigrateHostname() {

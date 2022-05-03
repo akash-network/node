@@ -4,9 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	certerrors "github.com/ovrclk/akash/x/cert/errors"
 	"io"
 	"time"
+
+	certerrors "github.com/ovrclk/akash/x/cert/errors"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	ctypes "github.com/ovrclk/akash/x/cert/types/v1beta2"

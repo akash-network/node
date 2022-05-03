@@ -83,7 +83,6 @@ func newInventoryService(
 	client Client,
 	deployments []ctypes.Deployment,
 ) (*inventoryService, error) {
-
 	sub, err := sub.Clone()
 	if err != nil {
 		return nil, err

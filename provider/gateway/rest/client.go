@@ -208,8 +208,10 @@ type ClaimsV1 struct {
 	CertSerialNumber string `json:"cert_serial_number"`
 }
 
-var errRequiredCertSerialNum = errors.New("cert_serial_number must be present in claims")
-var errNonNumericCertSerialNum = errors.New("cert_serial_number must be numeric in claims")
+var (
+	errRequiredCertSerialNum   = errors.New("cert_serial_number must be present in claims")
+	errNonNumericCertSerialNum = errors.New("cert_serial_number must be numeric in claims")
+)
 
 func (c *ClientCustomClaims) Valid() error {
 	_, err := sdk.AccAddressFromBech32(c.Subject)
@@ -669,8 +671,8 @@ func (c *client) LeaseLogs(ctx context.Context,
 	id mtypes.LeaseID,
 	services string,
 	follow bool,
-	tailLines int64) (*ServiceLogs, error) {
-
+	tailLines int64,
+) (*ServiceLogs, error) {
 	endpoint, err := url.Parse(c.host.String() + "/" + serviceLogsPath(id))
 	if err != nil {
 		return nil, err

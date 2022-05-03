@@ -86,7 +86,6 @@ func listLeasesHandler(ctx client.Context, ns string) http.HandlerFunc {
 
 func getOrderHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		id, errMsg := OrderIDFromRequest(r)
 
 		if len(errMsg) != 0 {
@@ -105,7 +104,6 @@ func getOrderHandler(ctx client.Context, ns string) http.HandlerFunc {
 
 func getBidHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		id, errMsg := BidIDFromRequest(r)
 
 		if len(errMsg) != 0 {
@@ -124,7 +122,6 @@ func getBidHandler(ctx client.Context, ns string) http.HandlerFunc {
 
 func getLeaseHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		id, errMsg := LeaseIDFromRequest(r)
 
 		if len(errMsg) != 0 {

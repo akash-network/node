@@ -457,6 +457,7 @@ func (cn clusterNodes) dup() clusterNodes {
 	}
 	return ret
 }
+
 func (c *client) nodeIsActive(node corev1.Node) bool {
 	ready := false
 	issues := 0

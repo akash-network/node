@@ -17,7 +17,5 @@ type (
 	Keeper = keeper.Keeper
 )
 
-var (
-	// NewKeeper creates new keeper instance of deployment module
-	NewKeeper = keeper.NewKeeper
-)
+// NewKeeper creates new keeper instance of deployment module
+var NewKeeper = keeper.NewKeeper

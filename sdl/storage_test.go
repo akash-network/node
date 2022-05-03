@@ -11,7 +11,7 @@ import (
 )
 
 func TestStorage_LegacyValid(t *testing.T) {
-	var stream = `
+	stream := `
 size: 1Gi
 `
 	var p v2ResourceStorageArray
@@ -25,7 +25,7 @@ size: 1Gi
 }
 
 func TestStorage_ArraySingleElemValid(t *testing.T) {
-	var stream = `
+	stream := `
 - size: 1Gi
 `
 	var p v2ResourceStorageArray
@@ -39,7 +39,7 @@ func TestStorage_ArraySingleElemValid(t *testing.T) {
 }
 
 func TestStorage_AttributesPersistentValidClass(t *testing.T) {
-	var stream = `
+	stream := `
 - size: 1Gi
   attributes:
     persistent: true
@@ -60,7 +60,7 @@ func TestStorage_AttributesPersistentValidClass(t *testing.T) {
 }
 
 func TestStorage_AttributesUnknown(t *testing.T) {
-	var stream = `
+	stream := `
 - size: 1Gi
   attributes:
     somefield: foo
@@ -72,7 +72,7 @@ func TestStorage_AttributesUnknown(t *testing.T) {
 }
 
 func TestStorage_MultipleUnnamedEphemeral(t *testing.T) {
-	var stream = `
+	stream := `
 - size: 1Gi
 - size: 2Gi
 `
@@ -83,7 +83,7 @@ func TestStorage_MultipleUnnamedEphemeral(t *testing.T) {
 }
 
 func TestStorage_EphemeralNoClass(t *testing.T) {
-	var stream = `
+	stream := `
 - size: 1Gi
 `
 	var p v2ResourceStorageArray
@@ -93,7 +93,7 @@ func TestStorage_EphemeralNoClass(t *testing.T) {
 }
 
 func TestStorage_EphemeralClass(t *testing.T) {
-	var stream = `
+	stream := `
 - size: 1Gi
   attributes:
     class: foo
@@ -106,7 +106,7 @@ func TestStorage_EphemeralClass(t *testing.T) {
 }
 
 func TestStorage_PersistentDefaultClass(t *testing.T) {
-	var stream = `
+	stream := `
 - size: 1Gi
   attributes:
     persistent: true
@@ -123,7 +123,7 @@ func TestStorage_PersistentDefaultClass(t *testing.T) {
 }
 
 func TestStorage_PersistentClass(t *testing.T) {
-	var stream = `
+	stream := `
 - size: 1Gi
   attributes:
     persistent: true

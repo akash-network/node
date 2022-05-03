@@ -14,9 +14,7 @@ const (
 	groupPath       = "group"
 )
 
-var (
-	ErrInvalidPath = errors.New("query: invalid path")
-)
+var ErrInvalidPath = errors.New("query: invalid path")
 
 // getDeploymentsPath returns deployments path for queries
 func getDeploymentsPath(dfilters DeploymentFilters) string {

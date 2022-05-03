@@ -25,9 +25,11 @@ type ResourceGroup interface {
 
 type Volumes []Storage
 
-var _ Unit = (*CPU)(nil)
-var _ Unit = (*Memory)(nil)
-var _ Unit = (*Storage)(nil)
+var (
+	_ Unit = (*CPU)(nil)
+	_ Unit = (*Memory)(nil)
+	_ Unit = (*Storage)(nil)
+)
 
 func (m ResourceUnits) Dup() ResourceUnits {
 	res := ResourceUnits{

@@ -48,7 +48,6 @@ type Keeper struct {
 
 // NewKeeper creates and returns an instance for Market keeper
 func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) IKeeper {
-
 	if !pspace.HasKeyTable() {
 		pspace = pspace.WithKeyTable(types.ParamKeyTable())
 	}

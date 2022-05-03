@@ -379,9 +379,11 @@ func (c *nullClient) RemoveHostnameFromDeployment(ctx context.Context, hostname 
 func (c *nullClient) ObserveHostnameState(ctx context.Context) (<-chan ctypes.HostnameResourceEvent, error) {
 	return nil, errNotImplemented
 }
+
 func (c *nullClient) GetDeployments(ctx context.Context, dID dtypes.DeploymentID) ([]ctypes.Deployment, error) {
 	return nil, errNotImplemented
 }
+
 func (c *nullClient) GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes.LeaseIDHostnameConnection, error) {
 	return nil, errNotImplemented
 }

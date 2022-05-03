@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"testing"
+
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
-	"net/url"
-
-	"testing"
 )
 
 var expectedErrMsgForRPC = "^error communicating with RPC.+$"

@@ -24,8 +24,8 @@ func NewServer(
 	address string,
 	pid sdk.Address,
 	certs []tls.Certificate,
-	clusterConfig map[interface{}]interface{}) (*http.Server, error) {
-
+	clusterConfig map[interface{}]interface{},
+) (*http.Server, error) {
 	srv := &http.Server{
 		Addr:    address,
 		Handler: newRouter(log, pid, pclient, clusterConfig),

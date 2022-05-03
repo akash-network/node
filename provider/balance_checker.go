@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"time"
+
 	"github.com/boz/go-lifecycle"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -12,15 +14,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/tendermint/tendermint/libs/log"
-
-	"time"
 )
 
-var (
-	balanceGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "provider_balance",
-	})
-)
+var balanceGauge = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "provider_balance",
+})
 
 type balanceChecker struct {
 	session         session.Session
@@ -44,9 +42,9 @@ func newBalanceChecker(ctx context.Context,
 	accAddr sdk.AccAddress,
 	clientSession session.Session,
 	bus pubsub.Bus,
-	cfg BalanceCheckerConfig) *balanceChecker {
+	cfg BalanceCheckerConfig,
+) *balanceChecker {
 	bc := &balanceChecker{
-
 		session: clientSession,
 		log:     clientSession.Log().With("cmp", "balance-checker"),
 		lc:      lifecycle.New(),
@@ -62,8 +60,8 @@ func newBalanceChecker(ctx context.Context,
 
 	return bc
 }
-func (bc *balanceChecker) doCheck(ctx context.Context) (bool, error) {
 
+func (bc *balanceChecker) doCheck(ctx context.Context) (bool, error) {
 	// Get the current wallet balance
 	query := bankTypes.NewQueryBalanceRequest(bc.ownAddr, "uakt")
 	result, err := bc.bankQueryClient.Balance(ctx, query)

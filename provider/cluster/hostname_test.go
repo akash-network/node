@@ -3,10 +3,11 @@ package cluster
 import (
 	"context"
 	"errors"
-	"github.com/ovrclk/akash/testutil"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/ovrclk/akash/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 type scaffold struct {

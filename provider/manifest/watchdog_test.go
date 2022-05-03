@@ -1,6 +1,9 @@
 package manifest
 
 import (
+	"testing"
+	"time"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	broadcastmocks "github.com/ovrclk/akash/client/broadcaster/mocks"
 	clientmocks "github.com/ovrclk/akash/client/mocks"
@@ -11,8 +14,6 @@ import (
 	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 type watchdogTestScaffold struct {

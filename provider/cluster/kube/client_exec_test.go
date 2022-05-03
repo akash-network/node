@@ -4,6 +4,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net/http"
+	"net/url"
+	"path/filepath"
+	"sort"
+	"testing"
+	"time"
+
 	crd "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 	akashclient_fake "github.com/ovrclk/akash/pkg/client/clientset/versioned/fake"
 	"github.com/ovrclk/akash/provider/cluster"
@@ -15,12 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"net/http"
-	"net/url"
-	"path/filepath"
-	"sort"
-	"testing"
-	"time"
 
 	kubefake "k8s.io/client-go/kubernetes/fake"
 )

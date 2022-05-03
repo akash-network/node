@@ -309,7 +309,6 @@ loop:
 			s.session.Log().Info("watchdog done", "lease", leaseID)
 		}
 	}
-
 }
 
 func (s *service) maybeRemoveWatchdog(deploymentID dtypes.DeploymentID) {

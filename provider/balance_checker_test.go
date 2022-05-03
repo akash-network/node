@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/boz/go-lifecycle"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -12,8 +15,6 @@ import (
 	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 
 	cosmosMock "github.com/ovrclk/akash/testutil/cosmos_mock"
 )

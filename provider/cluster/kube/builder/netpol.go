@@ -41,7 +41,6 @@ func (b *netPol) Create() ([]*netv1.NetworkPolicy, error) { // nolint:golint,unp
 
 	result := []*netv1.NetworkPolicy{
 		{
-
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      akashDeploymentPolicyName,
 				Labels:    b.labels(),
@@ -182,7 +181,6 @@ func (b *netPol) Create() ([]*netv1.NetworkPolicy, error) { // nolint:golint,unp
 				Namespace: LidNS(b.lid),
 			},
 			Spec: netv1.NetworkPolicySpec{
-
 				Ingress: []netv1.NetworkPolicyIngressRule{
 					{ // Allow Network Connections to same Namespace
 						Ports: ports,

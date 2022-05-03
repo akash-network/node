@@ -10,9 +10,7 @@ import (
 	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
-var (
-	ErrDuplicatedAttribute = errors.New("provider: duplicated attribute")
-)
+var ErrDuplicatedAttribute = errors.New("provider: duplicated attribute")
 
 // Config is the struct that stores provider config
 type Config struct {

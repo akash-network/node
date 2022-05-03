@@ -21,9 +21,7 @@ import (
 	cutils "github.com/ovrclk/akash/x/cert/utils"
 )
 
-var (
-	errSubmitManifestFailed = errors.New("submit manifest to some providers has been failed")
-)
+var errSubmitManifestFailed = errors.New("submit manifest to some providers has been failed")
 
 // SendManifestCmd looks up the Providers blockchain information,
 // and POSTs the SDL file to the Gateway address.

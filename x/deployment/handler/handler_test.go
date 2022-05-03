@@ -2,9 +2,10 @@ package handler_test
 
 import (
 	"crypto/sha256"
-	"github.com/ovrclk/akash/sdl"
 	"testing"
 	"time"
+
+	"github.com/ovrclk/akash/sdl"
 
 	"github.com/ovrclk/akash/x/deployment/handler"
 
@@ -234,7 +235,6 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 	res, err = suite.handler(suite.ctx, msgUpdate)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "Invalid: deployment version")
-
 }
 
 func TestCloseDeploymentNonExisting(t *testing.T) {

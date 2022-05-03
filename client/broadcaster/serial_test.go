@@ -20,5 +20,4 @@ func Test_parseNextSequence(t *testing.T) {
 	assert.True(t, ok)
 
 	assert.Equal(t, expected, nextseq)
-
 }

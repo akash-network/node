@@ -166,7 +166,6 @@ func TestHostnameOperatorPrune(t *testing.T) {
 	require.Len(t, s.op.ignoreList, testIterationCount)
 	s.op.prune()
 	require.Less(t, len(s.op.ignoreList), testIterationCount)
-
 }
 
 func TestHostnameOperatorApplyDelete(t *testing.T) {
@@ -199,7 +198,6 @@ func TestHostnameOperatorApplyDelete(t *testing.T) {
 	require.True(t, s.op.hostnamesData.needsPrepare)
 	require.NoError(t, s.op.prepare())
 	require.False(t, s.op.hostnamesData.needsPrepare)
-
 }
 
 func TestHostnameOperatorApplyDeleteFails(t *testing.T) {

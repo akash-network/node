@@ -25,9 +25,7 @@ var (
 	ErrInvalidAttributeKey     = sdkerrors.Register(moduleName, errInvalidAttributeKey, "attribute key does not match regexp")
 )
 
-var (
-	attributeNameRegexp = regexp.MustCompile(attributeNameRegexpString)
-)
+var attributeNameRegexp = regexp.MustCompile(attributeNameRegexpString)
 
 /*
 Attributes purpose of using this type in favor of Cosmos's sdk.Attribute is

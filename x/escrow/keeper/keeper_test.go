@@ -179,7 +179,6 @@ func Test_Payment_Overdraw(t *testing.T) {
 		assert.Equal(t, amt, payment.Withdrawn)
 		assert.Equal(t, testutil.AkashDecCoin(t, 0), payment.Balance)
 	}
-
 }
 
 func Test_PaymentCreate_later(t *testing.T) {

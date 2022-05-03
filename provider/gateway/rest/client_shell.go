@@ -7,13 +7,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/url"
+	"sync"
+
 	"github.com/gorilla/websocket"
 	"github.com/ovrclk/akash/util/wsutil"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
-	"io"
+
 	"k8s.io/client-go/tools/remotecommand"
-	"net/url"
-	"sync"
 )
 
 var (
@@ -26,8 +28,8 @@ func (c *client) LeaseShell(ctx context.Context, lID mtypes.LeaseID, service str
 	stdout io.Writer,
 	stderr io.Writer,
 	tty bool,
-	terminalResize <-chan remotecommand.TerminalSize) error {
-
+	terminalResize <-chan remotecommand.TerminalSize,
+) error {
 	endpoint, err := url.Parse(c.host.String() + "/" + leaseShellPath(lID))
 	if err != nil {
 		return err

@@ -134,7 +134,6 @@ func cmdBlocksRemaining() *cobra.Command {
 			}
 
 			return clientCtx.PrintBytes(data)
-
 		},
 	}
 

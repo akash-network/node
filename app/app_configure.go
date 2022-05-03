@@ -71,7 +71,6 @@ func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
 }
 
 func (app *AkashApp) setAkashKeepers() {
-
 	app.keeper.escrow = ekeeper.NewKeeper(
 		app.appCodec,
 		app.keys[escrow.StoreKey],
@@ -121,7 +120,6 @@ func (app *AkashApp) setAkashKeepers() {
 
 func (app *AkashApp) akashAppModules() []module.AppModule {
 	return []module.AppModule{
-
 		escrow.NewAppModule(
 			app.appCodec,
 			app.keeper.escrow,

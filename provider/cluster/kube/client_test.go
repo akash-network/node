@@ -2,8 +2,9 @@ package kube
 
 import (
 	"context"
-	"k8s.io/client-go/rest"
 	"testing"
+
+	"k8s.io/client-go/rest"
 
 	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	types "github.com/ovrclk/akash/types/v1beta2"
@@ -97,7 +98,6 @@ func TestNewClientWithEmptyIngressDomain(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorIs(t, err, builder.ErrSettingsValidation)
 	require.Nil(t, result)
-
 }
 
 func TestLeaseStatusWithNoDeployments(t *testing.T) {
@@ -650,7 +650,6 @@ func TestServiceStatusWithNoManifest(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, status)
 	require.EqualError(t, err, ErrNoManifestForLease.Error())
-
 }
 
 func TestServiceStatusWithoutIngress(t *testing.T) {

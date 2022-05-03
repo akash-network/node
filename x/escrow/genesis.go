@@ -12,7 +12,6 @@ import (
 
 // ValidateGenesis does validation check of the Genesis and returns error incase of failure
 func ValidateGenesis(data *types.GenesisState) error {
-
 	amap := make(map[types.AccountID]types.Account, len(data.Accounts))
 	pmap := make(map[types.AccountID][]types.FractionalPayment, len(data.Payments))
 

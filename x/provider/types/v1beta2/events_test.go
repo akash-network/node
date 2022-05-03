@@ -2,8 +2,9 @@ package v1beta2_test
 
 import (
 	"fmt"
-	_ "github.com/ovrclk/akash/testutil"
 	"testing"
+
+	_ "github.com/ovrclk/akash/testutil"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
@@ -13,9 +14,7 @@ import (
 	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
-var (
-	errWildcard = errors.New("wildcard string error can't be matched")
-)
+var errWildcard = errors.New("wildcard string error can't be matched")
 
 type testEventParsing struct {
 	msg    sdkutil.Event

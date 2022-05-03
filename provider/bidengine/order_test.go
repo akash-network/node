@@ -278,7 +278,6 @@ func Test_BidOrderPriceTooHigh(t *testing.T) {
 
 	// Should have called unreserve once, nothing happened after the bid
 	scaffold.cluster.AssertCalled(t, "Unreserve", scaffold.orderID, mock.Anything)
-
 }
 
 func Test_BidOrderAndThenClosedUnreserve(t *testing.T) {
@@ -383,7 +382,6 @@ func Test_BidOrderAndThenLeaseCreated(t *testing.T) {
 }
 
 func Test_BidOrderAndThenLeaseCreatedForDifferentDeployment(t *testing.T) {
-
 	order, scaffold, _ := makeOrderForTest(t, false, mtypes.BidStateInvalid, nil, nil, testBidCreatedAt)
 
 	// Wait for first broadcast
@@ -539,6 +537,7 @@ func Test_ShouldExitWhenAlreadySetAndLost(t *testing.T) {
 		BidID: mtypes.MakeBidID(order.orderID, scaffold.testAddr),
 	})
 }
+
 func Test_ShouldCloseBidWhenAlreadySetAndThenTimeout(t *testing.T) {
 	pricing, err := MakeRandomRangePricing()
 	require.NoError(t, err)

@@ -248,8 +248,10 @@ func TestNilManifestIsInvalid(t *testing.T) {
 	require.Regexp(t, "^.*manifest is empty.*$", err)
 }
 
-const nameOfTestService = "test-service"
-const nameOfTestGroup = "testGroup"
+const (
+	nameOfTestService = "test-service"
+	nameOfTestGroup   = "testGroup"
+)
 
 func simpleResourceUnits() akashtypes.ResourceUnits {
 	return akashtypes.ResourceUnits{

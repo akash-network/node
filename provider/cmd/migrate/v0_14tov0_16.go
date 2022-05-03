@@ -157,11 +157,11 @@ func doMigrateCRDs(ctx context.Context, cmd *cobra.Command) error {
 			oldHosts = hList.Items
 
 			if len(mList.Items) > 0 {
-				_ = os.MkdirAll(manifestsPath, 0755)
+				_ = os.MkdirAll(manifestsPath, 0o755)
 			}
 
 			if len(hList.Items) > 0 {
-				_ = os.MkdirAll(hostsPath, 0755)
+				_ = os.MkdirAll(hostsPath, 0o755)
 			}
 
 			// backup manifests

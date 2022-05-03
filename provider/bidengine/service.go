@@ -18,12 +18,10 @@ import (
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
-var (
-	ordersCounter = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "provider_order_handler",
-		Help: "The total number of orders created",
-	}, []string{"action"})
-)
+var ordersCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "provider_order_handler",
+	Help: "The total number of orders created",
+}, []string{"action"})
 
 // ErrNotRunning declares new error with message "not running"
 var ErrNotRunning = errors.New("not running")
@@ -33,13 +31,11 @@ type StatusClient interface {
 	Status(context.Context) (*Status, error)
 }
 
-var (
-	orderManagerGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name:        "provider_order_manager",
-		Help:        "",
-		ConstLabels: nil,
-	})
-)
+var orderManagerGauge = promauto.NewGauge(prometheus.GaugeOpts{
+	Name:        "provider_order_manager",
+	Help:        "",
+	ConstLabels: nil,
+})
 
 // Service handles bidding on orders.
 type Service interface {

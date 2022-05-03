@@ -114,7 +114,6 @@ func TestGRPCQueryOrder(t *testing.T) {
 				require.Error(t, err)
 				require.Nil(t, res)
 			}
-
 		})
 	}
 }
@@ -148,7 +147,8 @@ func TestGRPCQueryOrders(t *testing.T) {
 					Filters: types.OrderFilters{
 						OSeq:  37,
 						State: types.OrderActive.String(),
-					}}
+					},
+				}
 			},
 			0,
 		},
@@ -928,7 +928,6 @@ func TestGRPCQueryBid(t *testing.T) {
 				require.Error(t, err)
 				require.Nil(t, res)
 			}
-
 		})
 	}
 }
@@ -963,7 +962,8 @@ func TestGRPCQueryBids(t *testing.T) {
 						OSeq:     37,
 						State:    types.BidLost.String(),
 						Provider: testutil.AccAddress(t).String(),
-					}}
+					},
+				}
 			},
 			0,
 		},
@@ -1069,7 +1069,6 @@ func TestGRPCQueryLease(t *testing.T) {
 				require.Error(t, err)
 				require.Nil(t, res)
 			}
-
 		})
 	}
 }
@@ -1109,7 +1108,8 @@ func TestGRPCQueryLeases(t *testing.T) {
 						OSeq:     37,
 						State:    types.LeaseClosed.String(),
 						Provider: testutil.AccAddress(t).String(),
-					}}
+					},
+				}
 			},
 			0,
 		},

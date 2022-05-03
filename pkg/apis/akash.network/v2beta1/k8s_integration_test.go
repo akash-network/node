@@ -88,7 +88,6 @@ func withNamespace(ctx context.Context, t testing.TB, fn func(*rest.Config, stri
 
 	// invoke callback
 	fn(kcfg, nsname)
-
 }
 
 func kubeConfig(t testing.TB) *rest.Config {

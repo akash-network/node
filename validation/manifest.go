@@ -267,7 +267,6 @@ deploymentGroupLoop:
 				} else {
 					otherEndpointCount++
 				}
-
 			}
 		}
 	}

@@ -66,7 +66,6 @@ func TestProviderCreate(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
-
 		iev := testutil.ParseProviderEvent(t, res.Events)
 		require.IsType(t, types.EventProviderCreated{}, iev)
 
@@ -98,7 +97,6 @@ func TestProviderCreateWithInfo(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
-
 		iev := testutil.ParseProviderEvent(t, res.Events)
 		require.IsType(t, types.EventProviderCreated{}, iev)
 
@@ -244,7 +242,6 @@ func TestProviderUpdateAttributes(t *testing.T) {
 	require.NotNil(t, res)
 
 	t.Run("ensure event created", func(t *testing.T) {
-
 		iev := testutil.ParseProviderEvent(t, res.Events[4:])
 		require.IsType(t, types.EventProviderUpdated{}, iev)
 

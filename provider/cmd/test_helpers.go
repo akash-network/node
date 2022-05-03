@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
 

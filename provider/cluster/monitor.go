@@ -30,11 +30,9 @@ const (
 	monitorHealthcheckPeriodJitter = time.Second * 5
 )
 
-var (
-	deploymentHealthCheckCounter = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "provider_deployment_monitor_health",
-	}, []string{"state"})
-)
+var deploymentHealthCheckCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "provider_deployment_monitor_health",
+}, []string{"state"})
 
 type deploymentMonitor struct {
 	bus     pubsub.Bus
@@ -169,7 +167,6 @@ func (m *deploymentMonitor) doCheck(ctx context.Context) (bool, error) {
 	clientCtx := util.ApplyToContext(ctx, m.clusterSettings)
 
 	status, err := m.client.LeaseStatus(clientCtx, m.lease)
-
 	if err != nil {
 		m.log.Error("lease status", "err", err)
 		return false, err

@@ -1,6 +1,8 @@
 package cluster
 
 import (
+	"testing"
+
 	"github.com/boz/go-lifecycle"
 	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	"github.com/ovrclk/akash/provider/cluster/mocks"
@@ -11,7 +13,6 @@ import (
 	"github.com/ovrclk/akash/testutil"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestMonitorInstantiate(t *testing.T) {

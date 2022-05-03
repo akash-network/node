@@ -29,7 +29,8 @@ const (
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
 	appParams simtypes.AppParams, cdc codec.JSONCodec, ak govtypes.AccountKeeper,
-	bk bankkeeper.Keeper, k keeper.IKeeper) simulation.WeightedOperations {
+	bk bankkeeper.Keeper, k keeper.IKeeper,
+) simulation.WeightedOperations {
 	var (
 		weightMsgCreate int
 		weightMsgUpdate int
@@ -63,7 +64,8 @@ func WeightedOperations(
 // nolint:funlen
 func SimulateMsgCreate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper.IKeeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
-		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+		chainID string,
+	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		simAccount, _ := simtypes.RandomAcc(r, accounts)
 
 		// ensure the provider doesn't exist already
@@ -98,7 +100,6 @@ func SimulateMsgCreate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper
 			[]uint64{account.GetSequence()},
 			simAccount.PrivKey,
 		)
-
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to generate mock tx"), nil, err
 		}
@@ -116,7 +117,8 @@ func SimulateMsgCreate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper
 // nolint:funlen
 func SimulateMsgUpdate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper.IKeeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
-		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+		chainID string,
+	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var providers []types.Provider
 
 		k.WithProviders(ctx, func(provider types.Provider) bool {
@@ -169,7 +171,6 @@ func SimulateMsgUpdate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper
 			[]uint64{account.GetSequence()},
 			simAccount.PrivKey,
 		)
-
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to generate mock tx"), nil, err
 		}

@@ -52,11 +52,9 @@ var (
 	errNotConfiguredWithSettings = errors.New("not configured with settings in the context passed to function")
 )
 
-var (
-	kubeCallsCounter = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "provider_kube_calls",
-	}, []string{"action", "result"})
-)
+var kubeCallsCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "provider_kube_calls",
+}, []string{"action", "result"})
 
 // Client interface includes cluster client
 type Client interface {
@@ -160,7 +158,6 @@ func (c *client) GetDeployments(ctx context.Context, dID dtypes.DeploymentID) ([
 		Limit:                0,
 		Continue:             "",
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -400,7 +397,8 @@ func (c *client) LeaseEvents(ctx context.Context, lid mtypes.LeaseID, services s
 }
 
 func (c *client) LeaseLogs(ctx context.Context, lid mtypes.LeaseID,
-	services string, follow bool, tailLines *int64) ([]*ctypes.ServiceLog, error) {
+	services string, follow bool, tailLines *int64,
+) ([]*ctypes.ServiceLog, error) {
 	if err := c.leaseExists(ctx, lid); err != nil {
 		return nil, err
 	}
@@ -463,7 +461,6 @@ func (c *client) LeaseStatus(ctx context.Context, lid mtypes.LeaseID) (*ctypes.L
 	phResult, err := c.ac.AkashV2beta1().ProviderHosts(c.ns).List(ctx, metav1.ListOptions{
 		LabelSelector: labelSelector.String(),
 	})
-
 	if err != nil {
 		return nil, err
 	}

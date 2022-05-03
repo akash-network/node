@@ -1,10 +1,10 @@
 package v1beta1
 
 import (
+	"errors"
 	"reflect"
 	"regexp"
 
-	"errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -17,9 +17,7 @@ var (
 	ErrInvalidAttributeKey     = errors.New("attribute key does not match regexp " + attributeNameRegexpString)
 )
 
-var (
-	attributeNameRegexp = regexp.MustCompile(attributeNameRegexpString)
-)
+var attributeNameRegexp = regexp.MustCompile(attributeNameRegexpString)
 
 /*
 Attributes purpose of using this type in favor of Cosmos's sdk.Attribute is

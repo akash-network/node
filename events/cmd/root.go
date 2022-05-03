@@ -49,7 +49,6 @@ func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	group, ctx := errgroup.WithContext(ctx)
 
 	subscriber, err := bus.Subscribe()
-
 	if err != nil {
 		return err
 	}

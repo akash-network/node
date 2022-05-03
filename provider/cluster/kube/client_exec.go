@@ -50,7 +50,8 @@ func (sp sortablePods) Swap(i, j int) {
 func (c *client) Exec(ctx context.Context, leaseID mtypes.LeaseID, serviceName string, podIndex uint, cmd []string, stdin io.Reader,
 	stdout io.Writer,
 	stderr io.Writer, tty bool,
-	tsq remotecommand.TerminalSizeQueue) (ctypes.ExecResult, error) {
+	tsq remotecommand.TerminalSizeQueue,
+) (ctypes.ExecResult, error) {
 	namespace := builder.LidNS(leaseID)
 
 	mani, err := c.ac.AkashV2beta1().Manifests(c.ns).Get(ctx, namespace, metav1.GetOptions{})

@@ -25,14 +25,12 @@ import (
 // ErrNotRunning is the error when service is not running
 var ErrNotRunning = errors.New("not running")
 
-var (
-	deploymentManagerGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		// fixme provider_deployment_manager
-		Name:        "provider_deploymetn_manager",
-		Help:        "",
-		ConstLabels: nil,
-	})
-)
+var deploymentManagerGauge = promauto.NewGauge(prometheus.GaugeOpts{
+	// fixme provider_deployment_manager
+	Name:        "provider_deploymetn_manager",
+	Help:        "",
+	ConstLabels: nil,
+})
 
 // Cluster is the interface that wraps Reserve and Unreserve methods
 type Cluster interface {
@@ -326,7 +324,6 @@ loop:
 	}
 
 	<-s.inventory.done()
-
 }
 
 func (s *service) doCheckDeploymentExists(req checkDeploymentExistsRequest) {

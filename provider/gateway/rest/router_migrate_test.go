@@ -146,7 +146,6 @@ func TestRouteMigrateHostnameTransferFails(t *testing.T) {
 	const serviceExternalPort = uint32(1112)
 
 	runRouterTest(t, true, func(test *routerTest) {
-
 		mgroup := crd.ManifestGroup{
 			Name: "some-group",
 			Services: []crd.ManifestService{

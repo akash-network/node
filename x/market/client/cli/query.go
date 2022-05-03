@@ -8,7 +8,6 @@ import (
 
 // GetQueryCmd returns the transaction commands for the market module
 func GetQueryCmd() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Market query commands",

@@ -10,15 +10,16 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	certerrors "github.com/ovrclk/akash/x/cert/errors"
-	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 	"io"
 	"math/big"
 	"net"
 	"os"
 	"time"
+
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	certerrors "github.com/ovrclk/akash/x/cert/errors"
+	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 )
 
 var (
@@ -99,7 +100,7 @@ func (kpm *keyPairManager) KeyExists() (bool, error) {
 func (kpm *keyPairManager) Generate(notBefore, notAfter time.Time, domains []string) error {
 	var err error
 	var pemOut *os.File
-	if pemOut, err = os.OpenFile(kpm.getKeyPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600); err != nil {
+	if pemOut, err = os.OpenFile(kpm.getKeyPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600); err != nil {
 		return err
 	}
 

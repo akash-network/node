@@ -17,7 +17,5 @@ type (
 	Keeper = keeper.IKeeper
 )
 
-var (
-	// NewKeeper creates new keeper instance of inflation module
-	NewKeeper = keeper.NewKeeper
-)
+// NewKeeper creates new keeper instance of inflation module
+var NewKeeper = keeper.NewKeeper

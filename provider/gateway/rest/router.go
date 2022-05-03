@@ -80,7 +80,6 @@ type wsStreamConfig struct {
 }
 
 func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ctxConfig map[interface{}]interface{}) *mux.Router {
-
 	router := mux.NewRouter()
 
 	// store provider address in context as lease endpoints below need it
@@ -454,7 +453,6 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 		if terminalSizeUpdate != nil {
 			close(terminalSizeUpdate)
 		}
-
 	}
 }
 

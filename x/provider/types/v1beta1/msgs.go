@@ -16,9 +16,7 @@ const (
 	MsgTypeDeleteProvider = "delete-provider"
 )
 
-var (
-	_, _, _ sdk.Msg = &MsgCreateProvider{}, &MsgUpdateProvider{}, &MsgDeleteProvider{}
-)
+var _, _, _ sdk.Msg = &MsgCreateProvider{}, &MsgUpdateProvider{}, &MsgDeleteProvider{}
 
 var (
 	ErrInvalidStorageClass  = errors.New("provider: invalid storage class")

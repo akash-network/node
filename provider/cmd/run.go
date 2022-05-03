@@ -94,9 +94,7 @@ const (
 	FlagRPCQueryTimeout                  = "rpc-query-timeout"
 )
 
-var (
-	errInvalidConfig = errors.New("Invalid configuration")
-)
+var errInvalidConfig = errors.New("Invalid configuration")
 
 // RunCmd launches the Akash Provider service
 func RunCmd() *cobra.Command {
@@ -322,9 +320,11 @@ var allowedBidPricingStrategies = [...]string{
 	bidPricingStrategyShellScript,
 }
 
-var errNoSuchBidPricingStrategy = fmt.Errorf("No such bid pricing strategy. Allowed: %v", allowedBidPricingStrategies)
-var errInvalidValueForBidPrice = errors.New("not a valid bid price")
-var errBidPriceNegative = errors.New("Bid price cannot be a negative number")
+var (
+	errNoSuchBidPricingStrategy = fmt.Errorf("No such bid pricing strategy. Allowed: %v", allowedBidPricingStrategies)
+	errInvalidValueForBidPrice  = errors.New("not a valid bid price")
+	errBidPriceNegative         = errors.New("Bid price cannot be a negative number")
+)
 
 func strToBidPriceScale(val string) (decimal.Decimal, error) {
 	v, err := decimal.NewFromString(val)

@@ -32,7 +32,8 @@ const (
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
 	appParams simtypes.AppParams, cdc codec.JSONCodec, ak govtypes.AccountKeeper,
-	bk bankkeeper.Keeper, k keeper.IKeeper) simulation.WeightedOperations {
+	bk bankkeeper.Keeper, k keeper.IKeeper,
+) simulation.WeightedOperations {
 	var (
 		weightMsgCreateDeployment int
 		weightMsgUpdateDeployment int
@@ -87,7 +88,8 @@ func WeightedOperations(
 // SimulateMsgCreateDeployment generates a MsgCreate with random values
 func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper.IKeeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
-		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+		chainID string,
+	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		simAccount, _ := simtypes.RandomAcc(r, accounts)
 
 		dID := types.DeploymentID{
@@ -163,7 +165,8 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 // SimulateMsgUpdateDeployment generates a MsgUpdate with random values
 func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper.IKeeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
-		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+		chainID string,
+	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var deployments []types.Deployment
 
 		k.WithDeployments(ctx, func(deployment types.Deployment) bool {
@@ -243,7 +246,8 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 // SimulateMsgCloseDeployment generates a MsgClose with random values
 func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper.IKeeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
-		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+		chainID string,
+	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var deployments []types.Deployment
 
 		k.WithDeployments(ctx, func(deployment types.Deployment) bool {
@@ -310,7 +314,8 @@ func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper,
 // SimulateMsgCloseGroup generates a MsgCloseGroup for a random deployment
 func SimulateMsgCloseGroup(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper.IKeeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
-		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+		chainID string,
+	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var deployments []types.Deployment
 
 		k.WithDeployments(ctx, func(deployment types.Deployment) bool {

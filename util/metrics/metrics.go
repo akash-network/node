@@ -1,14 +1,17 @@
 package metrics
 
 import (
+	"time"
+
 	"github.com/ovrclk/akash/util/runner"
 	"github.com/prometheus/client_golang/prometheus"
-	"time"
 )
 
-const SuccessLabel = "success"
-const FailLabel = "fail"
-const OpenLabel = "open"
+const (
+	SuccessLabel = "success"
+	FailLabel    = "fail"
+	OpenLabel    = "open"
+)
 
 func IncCounterVecWithLabelValues(counter *prometheus.CounterVec, name string, err error) {
 	label := SuccessLabel

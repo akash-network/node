@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+
 	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -20,7 +21,6 @@ import (
 // Publish events using tm buses to clients. Waits on context
 // shutdown signals to exit.
 func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus pubsub.Bus) (err error) {
-
 	const (
 		queuesz = 100
 	)

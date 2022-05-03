@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"github.com/gorilla/websocket"
-	"github.com/tendermint/tendermint/libs/log"
 	"io"
-	"k8s.io/client-go/tools/remotecommand"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/tendermint/tendermint/libs/log"
+
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 func leaseShellPingHandler(ctx context.Context, wg *sync.WaitGroup, ws *websocket.Conn) {

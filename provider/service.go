@@ -21,9 +21,7 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
-var (
-	ErrClusterReadTimedout = errors.New("timeout waiting for cluster ready")
-)
+var ErrClusterReadTimedout = errors.New("timeout waiting for cluster ready")
 
 // ValidateClient is the interface to check if provider will bid on given groupspec
 type ValidateClient interface {

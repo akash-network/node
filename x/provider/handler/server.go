@@ -13,10 +13,8 @@ import (
 	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
-var (
-	// ErrInternal defines registered error code for internal error
-	ErrInternal = sdkerrors.Register(types.ModuleName, 10, "internal error")
-)
+// ErrInternal defines registered error code for internal error
+var ErrInternal = sdkerrors.Register(types.ModuleName, 10, "internal error")
 
 type msgServer struct {
 	provider keeper.IKeeper

@@ -36,9 +36,7 @@ const (
 	outputJSON = "json"
 )
 
-var (
-	errNoActiveLease = errors.New("no active leases found")
-)
+var errNoActiveLease = errors.New("no active leases found")
 
 func addCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().String(FlagProvider, "", "provider")

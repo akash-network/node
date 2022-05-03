@@ -17,10 +17,8 @@ import (
 	"github.com/ovrclk/akash/sdl"
 )
 
-var (
-	// ErrInsufficientCapacity is the new error when capacity is insufficient
-	ErrInsufficientCapacity = errors.New("insufficient capacity")
-)
+// ErrInsufficientCapacity is the new error when capacity is insufficient
+var ErrInsufficientCapacity = errors.New("insufficient capacity")
 
 // Status stores current leases and inventory statuses
 type Status struct {

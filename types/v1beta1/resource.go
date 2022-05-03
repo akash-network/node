@@ -1,8 +1,9 @@
 package v1beta1
 
 import (
-	cosmos "github.com/cosmos/cosmos-sdk/types"
 	"reflect"
+
+	cosmos "github.com/cosmos/cosmos-sdk/types"
 )
 
 type UnitType int
@@ -32,9 +33,11 @@ type ResourceGroup interface {
 	GetResources() []Resources
 }
 
-var _ Unit = (*CPU)(nil)
-var _ Unit = (*Memory)(nil)
-var _ Unit = (*Storage)(nil)
+var (
+	_ Unit = (*CPU)(nil)
+	_ Unit = (*Memory)(nil)
+	_ Unit = (*Storage)(nil)
+)
 
 func (m ResourceUnits) deepcopy() ResourceUnits {
 	res := ResourceUnits{}

@@ -16,7 +16,8 @@ const key string = types.StoreKey
 
 // TxCreateBidExec is used for testing create bid tx
 func TxCreateBidExec(clientCtx client.Context, orderID types.OrderID, price, from fmt.Stringer,
-	extraArgs ...string) (sdktest.BufferWriter, error) {
+	extraArgs ...string,
+) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
 		fmt.Sprintf("--owner=%s", orderID.Owner),
@@ -33,7 +34,8 @@ func TxCreateBidExec(clientCtx client.Context, orderID types.OrderID, price, fro
 
 // TxCloseBidExec is used for testing close bid tx
 func TxCloseBidExec(clientCtx client.Context, orderID types.OrderID, from fmt.Stringer,
-	extraArgs ...string) (sdktest.BufferWriter, error) {
+	extraArgs ...string,
+) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
 		fmt.Sprintf("--owner=%v", orderID.Owner),
@@ -49,7 +51,8 @@ func TxCloseBidExec(clientCtx client.Context, orderID types.OrderID, from fmt.St
 
 // TxCreateLeaseExec is used for creating a lease
 func TxCreateLeaseExec(clientCtx client.Context, bid types.BidID, from fmt.Stringer,
-	extraArgs ...string) (sdktest.BufferWriter, error) {
+	extraArgs ...string,
+) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
 		fmt.Sprintf("--dseq=%v", bid.DSeq),
@@ -65,7 +68,8 @@ func TxCreateLeaseExec(clientCtx client.Context, bid types.BidID, from fmt.Strin
 
 // TxCloseLeaseExec is used for testing close order tx
 func TxCloseLeaseExec(clientCtx client.Context, orderID types.OrderID, from fmt.Stringer,
-	extraArgs ...string) (sdktest.BufferWriter, error) {
+	extraArgs ...string,
+) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
 		fmt.Sprintf("--owner=%s", orderID.Owner),

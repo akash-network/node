@@ -5,10 +5,8 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
-var (
-	// ErrCouldNotRenderObject indicates response rendering error.
-	ErrCouldNotRenderObject = sdkerrors.New("sdkutil", 1, "could not render object")
-)
+// ErrCouldNotRenderObject indicates response rendering error.
+var ErrCouldNotRenderObject = sdkerrors.New("sdkutil", 1, "could not render object")
 
 // RenderQueryResponse uses codec to render query response. Returns error incase of failure.
 func RenderQueryResponse(cdc *codec.LegacyAmino, obj interface{}) ([]byte, error) {

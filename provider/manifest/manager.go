@@ -138,6 +138,7 @@ func (m *manager) clearFetched() {
 	m.data = dtypes.QueryDeploymentResponse{}
 	m.localLeases = nil
 }
+
 func (m *manager) run(donech chan<- *manager) {
 	defer m.lc.ShutdownCompleted()
 	defer func() { donech <- m }()
@@ -228,7 +229,6 @@ loop:
 	if runch != nil {
 		<-runch
 	}
-
 }
 
 func (m *manager) maybeFetchData(ctx context.Context, runch <-chan runner.Result) <-chan runner.Result {
@@ -275,7 +275,6 @@ func (m *manager) doFetchData(ctx context.Context) (manifestManagerFetchDataResu
 		},
 		Pagination: nil,
 	})
-
 	if err != nil {
 		return manifestManagerFetchDataResult{}, err
 	}

@@ -73,7 +73,6 @@ func TestBus(t *testing.T) {
 	}
 
 	assert.Equal(t, pubsub.ErrNotRunning, bus.Publish(ev))
-
 }
 
 func TestClone(t *testing.T) {
@@ -139,7 +138,6 @@ func TestClone(t *testing.T) {
 	case <-pubsub.AfterThreadStart(t):
 		require.Fail(t, "time out closing sub1")
 	}
-
 }
 
 type testEvent []byte

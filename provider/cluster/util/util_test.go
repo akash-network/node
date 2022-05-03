@@ -1,11 +1,12 @@
 package util_test
 
 import (
+	"testing"
+
 	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 	"github.com/ovrclk/akash/provider/cluster/util"
 	atypes "github.com/ovrclk/akash/types/v1beta2"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestShouldBeIngress(t *testing.T) {
@@ -39,7 +40,6 @@ func TestShouldBeIngress(t *testing.T) {
 }
 
 func TestComputeCommittedResources(t *testing.T) {
-
 	rv := atypes.NewResourceValue(100)
 	// Negative factor returns original value
 	require.Equal(t, uint64(100), util.ComputeCommittedResources(-1.0, rv).Val.Uint64())

@@ -3,14 +3,15 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
+
 	lifecycle "github.com/boz/go-lifecycle"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/pkg/errors"
-	"strings"
-	"sync"
 )
 
 /**
@@ -185,7 +186,6 @@ func reserveHostnamesImpl(store map[string]hostnameID, hostnames []string, hID h
 	// Remove everything that is no longer in use
 	for _, removeHostname := range removeHostnames {
 		delete(store, removeHostname)
-
 	}
 
 	resultCh <- withheldHostnames
@@ -315,7 +315,6 @@ func (hs *hostnameService) run() {
 
 loop:
 	for {
-
 		// Wait for any service to finish
 		select {
 		case <-hs.lc.ShutdownRequest():
@@ -332,7 +331,6 @@ loop:
 
 		}
 	}
-
 }
 
 var ErrHostnameNotAllowed = errors.New("hostname not allowed")
@@ -402,7 +400,6 @@ func (hs *hostnameService) ReserveHostnames(ctx context.Context, hostnames []str
 	chWithheldHostnames := make(chan []string, 1) // Buffer of one so service does not block
 
 	hID, err := hostnameIDFromLeaseID(leaseID)
-
 	if err != nil {
 		return nil, err
 	}

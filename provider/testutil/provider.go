@@ -103,7 +103,8 @@ func TestMigrateHostname(clientCtx client.Context, leaseID mtypes.LeaseID, dseq 
 // new default values to the flags.
 // prev: akashctl provider run --from=foo --cluster-k8s --gateway-listen-address=localhost:39729 --home=/tmp/akash_integration_TestE2EApp_324892307/.akashctl --node=tcp://0.0.0.0:41863 --keyring-backend test
 func RunLocalProvider(ctx context.Context, clientCtx cosmosclient.Context, chainID, nodeRPC, akashHome, from, gatewayListenAddress string, extraArgs ...string) (sdktest.BufferWriter,
-	error) {
+	error,
+) {
 	takeCmdLock()
 	cmd := pcmd.RunCmd()
 	releaseCmdLock()
@@ -130,7 +131,8 @@ func RunLocalProvider(ctx context.Context, clientCtx cosmosclient.Context, chain
 }
 
 func RunProviderJWTServer(ctx context.Context, clientCtx cosmosclient.Context, from, jwtGatewayListenAddress string, extraArgs ...string) (sdktest.BufferWriter,
-	error) {
+	error,
+) {
 	takeCmdLock()
 	cmd := pcmd.AuthServerCmd()
 	releaseCmdLock()

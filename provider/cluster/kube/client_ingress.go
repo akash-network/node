@@ -253,7 +253,6 @@ func (c *client) GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes
 
 			return nil
 		})
-
 	if err != nil {
 		return nil, err
 	}

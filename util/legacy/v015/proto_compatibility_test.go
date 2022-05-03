@@ -16,9 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	cdc = app.MakeEncodingConfig().Marshaler.(codec.BinaryCodec)
-)
+var cdc = app.MakeEncodingConfig().Marshaler.(codec.BinaryCodec)
 
 func TestDeployment_DeploymentProto_IsCompatible(t *testing.T) {
 	oldProto := dtypesv1beta1.Deployment{

@@ -16,9 +16,7 @@ import (
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
-var (
-	errUninitializedConfig = errors.New("uninitialized config")
-)
+var errUninitializedConfig = errors.New("uninitialized config")
 
 // SDL is the interface which wraps Validate, Deployment and Manifest methods
 type SDL interface {

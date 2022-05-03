@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
+	"time"
+
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -18,9 +22,6 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"reflect"
-	"strings"
-	"time"
 )
 
 type NetworkTestSuite struct {
@@ -140,7 +141,6 @@ func (nts *NetworkTestSuite) SetupSuite() {
 		break
 	}
 	require.NoError(nts.T(), lctx.Err())
-
 }
 
 func (nts *NetworkTestSuite) Validator(idxT ...int) *sdknetworktest.Validator {

@@ -16,13 +16,12 @@ const (
 	MsgTypeStartGroup        = "start-group"
 )
 
-var (
-	_, _, _, _ sdk.Msg = &MsgCreateDeployment{}, &MsgUpdateDeployment{}, &MsgCloseDeployment{}, &MsgCloseGroup{}
-)
+var _, _, _, _ sdk.Msg = &MsgCreateDeployment{}, &MsgUpdateDeployment{}, &MsgCloseDeployment{}, &MsgCloseGroup{}
 
 // NewMsgCreateDeployment creates a new MsgCreateDeployment instance
 func NewMsgCreateDeployment(id DeploymentID, groups []GroupSpec, version []byte,
-	deposit sdk.Coin, depositor sdk.AccAddress) *MsgCreateDeployment {
+	deposit sdk.Coin, depositor sdk.AccAddress,
+) *MsgCreateDeployment {
 	return &MsgCreateDeployment{
 		ID:        id,
 		Groups:    groups,

@@ -292,5 +292,4 @@ func (ms msgServer) CloseLease(goCtx context.Context, msg *types.MsgCloseLease) 
 		return &types.MsgCloseLeaseResponse{}, err
 	}
 	return &types.MsgCloseLeaseResponse{}, nil
-
 }

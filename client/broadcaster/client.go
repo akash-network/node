@@ -13,10 +13,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-var (
-	// ErrBroadcastTx is used when a broadcast fails due to tendermint errors
-	ErrBroadcastTx = errors.New("broadcast tx error")
-)
+// ErrBroadcastTx is used when a broadcast fails due to tendermint errors
+var ErrBroadcastTx = errors.New("broadcast tx error")
 
 type Client interface {
 	Broadcast(ctx context.Context, msgs ...sdk.Msg) error

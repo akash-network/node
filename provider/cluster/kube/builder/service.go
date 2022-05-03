@@ -81,10 +81,8 @@ func (b *service) Update(obj *corev1.Service) (*corev1.Service, error) { // noli
 
 	// retain provisioned NodePort values
 	if b.requireNodePort {
-
 		// for each newly-calculated port
 		for i, port := range ports {
-
 			// if there is a current (in-kube) port defined
 			// with the same specified values
 			for _, curport := range obj.Spec.Ports {
@@ -122,8 +120,10 @@ func (b *service) Any() bool {
 	return false
 }
 
-var errUnsupportedProtocol = errors.New("Unsupported protocol for service")
-var errInvalidServiceBuilder = errors.New("service builder invalid")
+var (
+	errUnsupportedProtocol   = errors.New("Unsupported protocol for service")
+	errInvalidServiceBuilder = errors.New("service builder invalid")
+)
 
 func (b *service) ports() ([]corev1.ServicePort, error) {
 	ports := make([]corev1.ServicePort, 0, len(b.service.Expose))

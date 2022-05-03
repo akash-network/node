@@ -24,10 +24,8 @@ import (
 	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
-var (
-	// ErrClientNotFound is a new error with message "Client not found"
-	ErrClientNotFound = errors.New("Client not found")
-)
+// ErrClientNotFound is a new error with message "Client not found"
+var ErrClientNotFound = errors.New("Client not found")
 
 // QueryClient interface includes query clients of deployment, market and provider modules
 type QueryClient interface {

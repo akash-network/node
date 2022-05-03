@@ -15,7 +15,7 @@ import (
 )
 
 func TestV2Expose(t *testing.T) {
-	var stream = `
+	stream := `
 - port: 80
   as: 80
   accept:
@@ -103,7 +103,6 @@ func Test_V2_Cross_Validates(t *testing.T) {
 	// These should always agree with each other
 	err = validation.ValidateManifestWithGroupSpecs(&m, dgroups)
 	require.NoError(t, err)
-
 }
 
 func Test_v1_Parse_simple(t *testing.T) {
@@ -179,7 +178,8 @@ func Test_v1_Parse_simple(t *testing.T) {
 				},
 				Count: 2,
 				Expose: []manifest.ServiceExpose{
-					{Port: 80, Global: true, Proto: manifest.TCP, Hosts: expectedHosts,
+					{
+						Port: 80, Global: true, Proto: manifest.TCP, Hosts: expectedHosts,
 						HTTPOptions: manifest.ServiceExposeHTTPOptions{
 							MaxBodySize: 1048576,
 							ReadTimeout: 60000,
@@ -187,8 +187,10 @@ func Test_v1_Parse_simple(t *testing.T) {
 							NextTries:   3,
 							NextTimeout: 0,
 							NextCases:   []string{"error", "timeout"},
-						}},
-					{Port: 12345, Global: true, Proto: manifest.UDP,
+						},
+					},
+					{
+						Port: 12345, Global: true, Proto: manifest.UDP,
 						HTTPOptions: manifest.ServiceExposeHTTPOptions{
 							MaxBodySize: 1048576,
 							ReadTimeout: 60000,
@@ -196,7 +198,8 @@ func Test_v1_Parse_simple(t *testing.T) {
 							NextTries:   3,
 							NextTimeout: 0,
 							NextCases:   []string{"error", "timeout"},
-						}},
+						},
+					},
 				},
 			},
 		},

@@ -42,7 +42,6 @@ func listDeploymentsHandler(ctx client.Context, ns string) http.HandlerFunc {
 
 func getDeploymentHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		id, errMsg := DeploymentIDFromRequest(r)
 
 		if len(errMsg) != 0 {
@@ -61,7 +60,6 @@ func getDeploymentHandler(ctx client.Context, ns string) http.HandlerFunc {
 
 func getGroupHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		id, errMsg := GroupIDFromRequest(r)
 
 		if len(errMsg) != 0 {

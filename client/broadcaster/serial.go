@@ -47,7 +47,6 @@ type serialBroadcaster struct {
 }
 
 func NewSerialClient(log log.Logger, cctx sdkclient.Context, txf tx.Factory, info keyring.Info) (SerialClient, error) {
-
 	// populate account number, current sequence number
 	poptxf, err := sdkutil.PrepareFactory(cctx, txf)
 	if err != nil {
@@ -157,8 +156,7 @@ func (c *serialBroadcaster) syncLoop(ch chan<- uint64) {
 			// query sequence number
 			_, seq, err := c.cctx.AccountRetriever.
 				GetAccountNumberSequence(c.cctx, c.info.GetAddress())
-
-			// send to main loop if no error
+				// send to main loop if no error
 			if err != nil {
 				c.log.Error("error requesting account", "err", err)
 				break
@@ -213,11 +211,9 @@ func (c *serialBroadcaster) doBroadcast(txf tx.Factory, retried bool, msgs ...sd
 
 	// try again
 	return c.doBroadcast(txf, true, msgs...)
-
 }
 
 func parseNextSequence(current uint64, message string) (uint64, bool) {
-
 	// errors are of the form:
 	// "account sequence mismatch, expected 25, got 27: incorrect account sequence"
 

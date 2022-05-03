@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	root "github.com/ovrclk/akash/cmd/akash/cmd"
 	"github.com/spf13/cobra/doc"
-	"os"
 )
 
 func main() {

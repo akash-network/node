@@ -148,7 +148,6 @@ func (c *client) ObserveHostnameState(ctx context.Context) (<-chan ctypes.Hostna
 		data = append(data, *ph)
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

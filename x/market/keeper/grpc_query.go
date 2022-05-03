@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+
 	"github.com/ovrclk/akash/x/market/keeper/keys"
 
 	"google.golang.org/grpc/codes"

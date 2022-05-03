@@ -4,6 +4,9 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"math/big"
+	"time"
+
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/ovrclk/akash/sdkutil"
 	certerrors "github.com/ovrclk/akash/x/cert/errors"
@@ -11,8 +14,6 @@ import (
 	"github.com/ovrclk/akash/x/cert/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"math/big"
-	"time"
 )
 
 const (
@@ -142,7 +143,6 @@ func doPublishCmd(cmd *cobra.Command) error {
 				Pubkey: msg.Pubkey,
 			},
 		})
-
 	}
 
 	return sdkutil.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)

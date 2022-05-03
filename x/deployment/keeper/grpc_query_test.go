@@ -2,10 +2,11 @@ package keeper_test
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"math"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 
@@ -126,7 +127,6 @@ func TestGRPCQueryDeployment(t *testing.T) {
 				require.Error(t, err)
 				require.Nil(t, res)
 			}
-
 		})
 	}
 }
@@ -167,7 +167,8 @@ func TestGRPCQueryDeployments(t *testing.T) {
 					Filters: types.DeploymentFilters{
 						DSeq:  37,
 						State: types.DeploymentClosed.String(),
-					}}
+					},
+				}
 			},
 			0,
 		},
@@ -470,7 +471,6 @@ func TestGRPCQueryGroup(t *testing.T) {
 				require.Error(t, err)
 				require.Nil(t, res)
 			}
-
 		})
 	}
 }

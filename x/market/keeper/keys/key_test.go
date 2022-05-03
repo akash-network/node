@@ -1,16 +1,16 @@
 package keys_test
 
 import (
+	"testing"
+
 	_ "github.com/ovrclk/akash/testutil"
 	"github.com/ovrclk/akash/x/market/keeper/keys"
 	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestKeysAndSecondaryKeysFilter(t *testing.T) {
-
 	filter := types.LeaseFilters{
 		Owner:    "akash104fq56d9attl4m709h7mgx9lwqklnh05fhy5nu",
 		DSeq:     1,

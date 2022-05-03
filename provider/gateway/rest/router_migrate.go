@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/ovrclk/akash/provider/cluster"
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	"github.com/tendermint/tendermint/libs/log"
-	"net/http"
-	"strings"
 )
 
 type migrateRequestBody struct {
@@ -120,5 +121,4 @@ func migrateHandler(log log.Logger, hostnameService clustertypes.HostnameService
 		result["transferred"] = body.HostnamesToMigrate
 		writeJSON(log, rw, result)
 	}
-
 }

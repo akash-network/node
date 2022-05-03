@@ -104,6 +104,7 @@ func queryAppWithRetries(t *testing.T, appURL string, appHost string, limit int,
 
 	return resp
 }
+
 func queryApp(t *testing.T, appURL string, limit int) {
 	t.Helper()
 	queryAppWithHostname(t, appURL, limit, "test.localhost")

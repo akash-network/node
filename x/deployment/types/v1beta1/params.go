@@ -8,9 +8,7 @@ import (
 
 var _ paramtypes.ParamSet = (*Params)(nil)
 
-var (
-	DefaultDeploymentMinDeposit = sdk.NewCoin("uakt", sdk.NewInt(5000000))
-)
+var DefaultDeploymentMinDeposit = sdk.NewCoin("uakt", sdk.NewInt(5000000))
 
 const (
 	keyDeploymentMinDeposit = "DeploymentMinDeposit"

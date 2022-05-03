@@ -3,12 +3,14 @@ package rest
 import (
 	"bytes"
 	"context"
-	"github.com/stretchr/testify/require"
 	"io"
-	"k8s.io/client-go/tools/remotecommand"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 func TestProcessRemoteErrorReturnsNoError(t *testing.T) {

@@ -16,9 +16,7 @@ const (
 	MsgTypeDeleteProvider = "delete-provider"
 )
 
-var (
-	_, _, _ sdk.Msg = &MsgCreateProvider{}, &MsgUpdateProvider{}, &MsgDeleteProvider{}
-)
+var _, _, _ sdk.Msg = &MsgCreateProvider{}, &MsgUpdateProvider{}, &MsgDeleteProvider{}
 
 // NewMsgCreateProvider creates a new MsgCreateProvider instance
 func NewMsgCreateProvider(owner sdk.AccAddress, hostURI string, attributes types.Attributes) *MsgCreateProvider {
