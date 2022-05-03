@@ -896,8 +896,8 @@ github.com/ovrclk/cosmos-sdk v0.45.4-akash.1 h1:ZuBoK0jELPPUtrFZhQWzBRi9LY8oBYTJ
 github.com/ovrclk/cosmos-sdk v0.45.4-akash.1/go.mod h1:WOqtDxN3eCCmnYLVla10xG7lEXkFjpTaqm2a2WasgCc=
 github.com/ovrclk/ledger-cosmos-go v0.13.2 h1:MwjDy5tw1olqUHaVIGrPexvdkAl/5wMQubnfjgvT8M4=
 github.com/ovrclk/ledger-cosmos-go v0.13.2/go.mod h1:yFLa7PuoNE5B4kcZhurZbVXMae2jJeaijmh91+RiSto=
-github.com/ovrclk/ledger-go v0.13.4 h1:etwWczrjFota24DRSFctc0kA3MkabLfsExWxdXqvWuk=
-github.com/ovrclk/ledger-go v0.13.4/go.mod h1:ePOnJDViaVfCnOfW5A4SjvgyqWupEEdsbvUEAqwliwA=
+github.com/ovrclk/ledger-go v0.13.6 h1:UG9fsaCPgV0zQYyFmuksLcnnN+1feOM0S1QoukdfTa4=
+github.com/ovrclk/ledger-go v0.13.6/go.mod h1:57KQ8iodWkunwR2SYYppfM8jaRXn/49O8XpGv3HM8/w=
 github.com/ovrclk/tendermint v0.34.19-patches h1:4BppAEGV1P+pU3R8pzbriswK03enldY9UqkeWj3NGBg=
 github.com/ovrclk/tendermint v0.34.19-patches/go.mod h1:R5+wgIwSxMdKQcmOaeudL0Cjkr3HDkhpcdum6VeU3R4=
 github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIwwtUjcrb0b5/5kLM=
@@ -1107,8 +1107,8 @@ github.com/tidwall/sjson v1.1.4/go.mod h1:wXpKXu8CtDjKAZ+3DrKY5ROCorDFahq8l0tey/
 github.com/tinylib/msgp v1.1.5/go.mod h1:eQsjooMTnV42mHu917E26IogZ2930nFyBQdofk10Udg=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
-github.com/troian/hid v0.9.9 h1:5cSdziibXdFwmcP80t00SbHW+YDCFGTqNHqzH1qt6TI=
-github.com/troian/hid v0.9.9/go.mod h1:n6adloQ1876oEXZr6fFsthy4FDHxwJhh7QYQspm30Ds=
+github.com/troian/hid v0.11.0 h1:g6flpECGJoCH1BPHAzrmDeHoxVT37iivAtSKGA2RxAw=
+github.com/troian/hid v0.11.0/go.mod h1:n6adloQ1876oEXZr6fFsthy4FDHxwJhh7QYQspm30Ds=
 github.com/ttacon/chalk v0.0.0-20160626202418-22c06c80ed31/go.mod h1:onvgF043R+lC5RZ8IT9rBXDaEDnpnw/Cl+HFiw+v/7Q=
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqriFuLhtthL60Sar/7RFoluCcXsuvEwTV5KM=
 github.com/tv42/httpunix v0.0.0-20191220191345-2ba4b9c3382c/go.mod h1:hzIxponao9Kjc7aWznkXaL4U4TWaDSs8zcsY4Ka08nM=
@@ -1682,8 +1682,9 @@ google.golang.org/protobuf v1.25.0/go.mod h1:9JNX74DMeImyA3h4bdi1ymwjUzf21/xIlba
 google.golang.org/protobuf v1.25.1-0.20200805231151-a709e31e5d12/go.mod h1:9JNX74DMeImyA3h4bdi1ymwjUzf21/xIlbajtzgsN7c=
 google.golang.org/protobuf v1.26.0-rc.1/go.mod h1:jlhhOSvTdKEhbULTjvd4ARK9grFBp09yW+WbY/TyQbw=
 google.golang.org/protobuf v1.26.0/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
-google.golang.org/protobuf v1.27.1 h1:SnqbnDw1V7RiZcXPx5MEeqPv2s79L9i7BJUlG/+RurQ=
 google.golang.org/protobuf v1.27.1/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
+google.golang.org/protobuf v1.28.0 h1:w43yiav+6bVFTBQFZX0r7ipe9JQ1QsbMgHwbBziscLw=
+google.golang.org/protobuf v1.28.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
 gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
