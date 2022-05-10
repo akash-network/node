@@ -2,11 +2,10 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
-
-	"errors"
 
 	"github.com/boz/go-lifecycle"
 	"github.com/prometheus/client_golang/prometheus"
@@ -76,7 +75,7 @@ type deploymentManager struct {
 	serviceShuttingDown <-chan struct{}
 }
 
-func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Group) *deploymentManager {
+func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Group, isNewLease bool) *deploymentManager {
 	log := s.log.With("cmp", "deployment-manager", "lease", lease, "manifest-group", mgroup.Name)
 
 	dm := &deploymentManager{
@@ -97,14 +96,24 @@ func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Gro
 		currentHostnames:    make(map[string]struct{}),
 	}
 
+	startCh := make(chan struct{}, 1)
 	go dm.lc.WatchChannel(dm.serviceShuttingDown)
-	go dm.run()
+	go dm.run(startCh)
+
+	// ensures lease withdraw monitor is started and subscribed to the bus prior
+	// sending LeaseAddFundsMonitor event
+	<-startCh
 
 	go func() {
 		<-dm.lc.Done()
 		dm.log.Debug("sending manager into channel")
 		s.managerch <- dm
 	}()
+
+	err := s.bus.Publish(event.LeaseAddFundsMonitor{LeaseID: lease, IsNewLease: isNewLease})
+	if err != nil {
+		s.log.Error("unable to publish LeaseAddFundsMonitor event", "error", err, "lease", lease)
+	}
 
 	return dm
 }
@@ -141,7 +150,7 @@ func (dm *deploymentManager) handleUpdate() <-chan error {
 	return nil
 }
 
-func (dm *deploymentManager) run() {
+func (dm *deploymentManager) run(startCh chan<- struct{}) {
 	defer dm.lc.ShutdownCompleted()
 	var shutdownErr error
 
@@ -155,10 +164,15 @@ func (dm *deploymentManager) run() {
 		dm.log.Debug("hostnames released")
 	}()
 
+	if err := dm.startWithdrawal(); err != nil {
+		dm.log.Error("couldn't start if withdraw monitor", "err", err, "lease", dm.lease)
+	}
+
+	startCh <- struct{}{}
+
 loop:
 	for {
 		select {
-
 		case shutdownErr = <-dm.lc.ShutdownRequest():
 			break loop
 
@@ -182,7 +196,6 @@ loop:
 				dm.log.Debug("deploy complete")
 				dm.state = dsDeployComplete
 				dm.startMonitor()
-				dm.startWithdrawal()
 			case dsDeployPending:
 				if result != nil {
 					break loop
@@ -236,13 +249,20 @@ loop:
 	dm.log.Info("shutdown complete")
 }
 
-func (dm *deploymentManager) startWithdrawal() {
+func (dm *deploymentManager) startWithdrawal() error {
+	var err error
+	dm.withdrawal, err = newDeploymentWithdrawal(dm)
+	if err != nil {
+		return err
+	}
+
 	dm.wg.Add(1)
-	dm.withdrawal = newDeploymentWithdrawal(dm)
 	go func(m *deploymentMonitor) {
 		defer dm.wg.Done()
 		<-m.done()
 	}(dm.monitor)
+
+	return nil
 }
 
 func (dm *deploymentManager) startMonitor() {

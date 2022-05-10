@@ -8,7 +8,6 @@ import (
 	"github.com/ovrclk/akash/provider/bidengine"
 	types "github.com/ovrclk/akash/types/v1beta2"
 	"github.com/ovrclk/akash/validation/constants"
-	mparams "github.com/ovrclk/akash/x/market/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
@@ -41,9 +40,9 @@ func NewDefaultConfig() Config {
 		ClusterWaitReadyDuration: time.Second * 10,
 		BidDeposit:               mtypes.DefaultBidMinDeposit,
 		BalanceCheckerCfg: BalanceCheckerConfig{
-			PollingPeriod:           5 * time.Minute,
-			MinimumBalanceThreshold: mparams.DefaultBidMinDeposit.Amount.Mul(sdk.NewIntFromUint64(2)).Uint64(),
-			WithdrawalPeriod:        24 * time.Hour,
+			// PollingPeriod:           5 * time.Minute,
+			// MinimumBalanceThreshold: mparams.DefaultBidMinDeposit.Amount.Mul(sdk.NewIntFromUint64(2)).Uint64(),
+			WithdrawalPeriod: 24 * time.Hour,
 		},
 		MaxGroupVolumes: constants.DefaultMaxGroupVolumes,
 	}

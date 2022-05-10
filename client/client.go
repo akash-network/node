@@ -11,6 +11,8 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	"google.golang.org/grpc"
 
+	tmrpc "github.com/tendermint/tendermint/rpc/core/types"
+
 	"github.com/ovrclk/akash/client/broadcaster"
 	amodule "github.com/ovrclk/akash/x/audit"
 	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
@@ -27,6 +29,7 @@ import (
 var (
 	// ErrClientNotFound is a new error with message "Client not found"
 	ErrClientNotFound = errors.New("Client not found")
+	ErrNodeNotSynced  = errors.New("rpc node is not catching up")
 )
 
 // QueryClient interface includes query clients of deployment, market and provider modules
@@ -42,6 +45,7 @@ type QueryClient interface {
 type Client interface {
 	Query() QueryClient
 	Tx() broadcaster.Client
+	NodeSyncInfo(context.Context) (*tmrpc.SyncInfo, error)
 }
 
 // NewClient creates new client instance to interface with tendermint.
@@ -95,6 +99,22 @@ func (c *client) Tx() broadcaster.Client {
 
 func (c *client) Query() QueryClient {
 	return c.qclient
+}
+
+func (c *client) NodeSyncInfo(ctx context.Context) (*tmrpc.SyncInfo, error) {
+	node, err := c.cctx.GetNode()
+	if err != nil {
+		return nil, err
+	}
+
+	status, err := node.Status(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	info := status.SyncInfo
+
+	return &info, nil
 }
 
 type qclient struct {
@@ -209,7 +229,7 @@ func (c *qclient) Provider(ctx context.Context, in *ptypes.QueryProviderRequest,
 	return c.pclient.Provider(ctx, in, opts...)
 }
 
-// ProviderValidatorAttributes queries all providers
+// AllProvidersAttributes queries all providers
 func (c *qclient) AllProvidersAttributes(ctx context.Context, in *atypes.QueryAllProvidersAttributesRequest, opts ...grpc.CallOption) (*atypes.QueryProvidersResponse, error) {
 	if c.aclient == nil {
 		return &atypes.QueryProvidersResponse{}, ErrClientNotFound
@@ -217,7 +237,7 @@ func (c *qclient) AllProvidersAttributes(ctx context.Context, in *atypes.QueryAl
 	return c.aclient.AllProvidersAttributes(ctx, in, opts...)
 }
 
-// ProviderValidatorAttributes queries all provider signed attributes
+// ProviderAttributes queries all provider signed attributes
 func (c *qclient) ProviderAttributes(ctx context.Context, in *atypes.QueryProviderAttributesRequest, opts ...grpc.CallOption) (*atypes.QueryProvidersResponse, error) {
 	if c.aclient == nil {
 		return &atypes.QueryProvidersResponse{}, ErrClientNotFound
@@ -225,7 +245,7 @@ func (c *qclient) ProviderAttributes(ctx context.Context, in *atypes.QueryProvid
 	return c.aclient.ProviderAttributes(ctx, in, opts...)
 }
 
-// ProviderValidatorAttributes queries provider signed attributes by specific validator
+// ProviderAuditorAttributes queries provider signed attributes by specific validator
 func (c *qclient) ProviderAuditorAttributes(ctx context.Context, in *atypes.QueryProviderAuditorRequest, opts ...grpc.CallOption) (*atypes.QueryProvidersResponse, error) {
 	if c.aclient == nil {
 		return &atypes.QueryProvidersResponse{}, ErrClientNotFound
@@ -233,7 +253,7 @@ func (c *qclient) ProviderAuditorAttributes(ctx context.Context, in *atypes.Quer
 	return c.aclient.ProviderAuditorAttributes(ctx, in, opts...)
 }
 
-// ValidatorAttributes queries all providers signed by this validator
+// AuditorAttributes queries all providers signed by this validator
 func (c *qclient) AuditorAttributes(ctx context.Context, in *atypes.QueryAuditorAttributesRequest, opts ...grpc.CallOption) (*atypes.QueryProvidersResponse, error) {
 	if c.aclient == nil {
 		return &atypes.QueryProvidersResponse{}, ErrClientNotFound

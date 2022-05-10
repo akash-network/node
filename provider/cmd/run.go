@@ -87,6 +87,7 @@ const (
 	FlagManifestTimeout                  = "manifest-timeout"
 	FlagMetricsListener                  = "metrics-listener"
 	FlagWithdrawalPeriod                 = "withdrawal-period"
+	FlagLeaseFundsMonitorInterval        = "lease-funds-monitor-interval"
 	FlagMinimumBalance                   = "minimum-balance"
 	FlagBalanceCheckPeriod               = "balance-check-period"
 	FlagProviderConfig                   = "provider-config"
@@ -104,6 +105,20 @@ func RunCmd() *cobra.Command {
 		Use:          "run",
 		Short:        "run akash provider",
 		SilenceUsage: true,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			leaseFundsMonInterval := viper.GetDuration(FlagLeaseFundsMonitorInterval)
+			withdrawPeriod := viper.GetDuration(FlagWithdrawalPeriod)
+
+			if leaseFundsMonInterval < time.Minute || leaseFundsMonInterval > 24*time.Hour {
+				return errors.Errorf(`flag "%s" contains invalid value. expected >=1m<=24h`, FlagLeaseFundsMonitorInterval) // nolint: goerr113
+			}
+
+			if withdrawPeriod > 0 && withdrawPeriod < leaseFundsMonInterval {
+				return errors.Errorf(`flag "%s" value must be > "%s"`, FlagWithdrawalPeriod, FlagLeaseFundsMonitorInterval) // nolint: goerr113
+			}
+
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return common.RunForeverWithContext(cmd.Context(), func(ctx context.Context) error {
 				return doRunCmd(ctx, cmd, args)
@@ -279,6 +294,11 @@ func RunCmd() *cobra.Command {
 
 	cmd.Flags().Duration(FlagWithdrawalPeriod, time.Hour*24, "period at which withdrawals are made from the escrow accounts")
 	if err := viper.BindPFlag(FlagWithdrawalPeriod, cmd.Flags().Lookup(FlagWithdrawalPeriod)); err != nil {
+		return nil
+	}
+
+	cmd.Flags().Duration(FlagLeaseFundsMonitorInterval, time.Minute*10, "interval at which lease is checked for funds available on the escrow accounts. >= 1m")
+	if err := viper.BindPFlag(FlagLeaseFundsMonitorInterval, cmd.Flags().Lookup(FlagLeaseFundsMonitorInterval)); err != nil {
 		return nil
 	}
 
@@ -579,9 +599,10 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	}
 
 	config.BalanceCheckerCfg = provider.BalanceCheckerConfig{
-		PollingPeriod:           viper.GetDuration(FlagBalanceCheckPeriod),
-		MinimumBalanceThreshold: viper.GetUint64(FlagMinimumBalance),
+		// PollingPeriod:           viper.GetDuration(FlagBalanceCheckPeriod),
+		// MinimumBalanceThreshold: viper.GetUint64(FlagMinimumBalance),
 		WithdrawalPeriod:        viper.GetDuration(FlagWithdrawalPeriod),
+		LeaseFundsCheckInterval: viper.GetDuration(FlagLeaseFundsMonitorInterval),
 	}
 
 	config.BidPricingStrategy = pricing
