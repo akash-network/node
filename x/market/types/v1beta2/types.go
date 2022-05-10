@@ -228,3 +228,13 @@ func (filters LeaseFilters) Accept(obj Lease, stateVal Lease_State) bool {
 
 	return true
 }
+
+func (m QueryLeasesResponse) TotalPriceAmount() sdk.Dec {
+	total := sdk.NewDec(0)
+
+	for _, lease := range m.Leases {
+		total = total.Add(lease.Lease.Price.Amount)
+	}
+
+	return total
+}

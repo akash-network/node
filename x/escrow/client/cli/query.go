@@ -4,17 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"math"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
+	netutil "github.com/ovrclk/akash/util/network"
 	"github.com/ovrclk/akash/x/deployment/client/cli"
 	deploymentTypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	"github.com/ovrclk/akash/x/escrow/client/util"
 	types "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 	marketTypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
@@ -33,9 +33,6 @@ func GetQueryCmd() *cobra.Command {
 
 	return cmd
 }
-
-// Define 6.5 seconds as average block-time
-const secondsPerBlock = 6.5
 
 var errNoLeaseMatches = errors.New("leases for deployment do not exist")
 
@@ -76,45 +73,45 @@ func cmdBlocksRemaining() *cobra.Command {
 				return err
 			}
 
-			leases := make([]marketTypes.Lease, 0)
-			for _, lease := range leasesResponse.Leases {
-				leases = append(leases, lease.Lease)
+			if len(leasesResponse.Leases) == 0 {
+				return errNoLeaseMatches
 			}
+
+			// leases := make([]marketTypes.Lease, 0)
+			// for _, lease := range leasesResponse.Leases {
+			// 	leases = append(leases, lease.Lease)
+			// }
 
 			// Fetch the balance of the escrow account
 			deploymentClient := deploymentTypes.NewQueryClient(clientCtx)
-			totalLeaseAmount := cosmosTypes.NewDec(0)
+			totalLeaseAmount := leasesResponse.TotalPriceAmount()
 			blockchainHeight, err := cli.CurrentBlockHeight(clientCtx)
 			if err != nil {
 				return err
 			}
-			if 0 == len(leases) {
-				return errNoLeaseMatches
-			}
-			for _, lease := range leases {
 
-				amount := lease.Price.Amount
-				totalLeaseAmount = totalLeaseAmount.Add(amount)
-
-			}
 			res, err := deploymentClient.Deployment(ctx, &deploymentTypes.QueryDeploymentRequest{
 				ID: deploymentTypes.DeploymentID{Owner: id.Owner, DSeq: id.DSeq},
 			})
 			if err != nil {
 				return err
 			}
-			balance := res.EscrowAccount.TotalBalance().Amount
-			settledAt := res.EscrowAccount.SettledAt
-			balanceRemain := balance.MustFloat64() - (float64(int64(blockchainHeight)-settledAt) * totalLeaseAmount.MustFloat64())
-			blocksRemain := balanceRemain / totalLeaseAmount.MustFloat64()
+
+			balanceRemain := util.LeaseCalcBalanceRemain(res.EscrowAccount.TotalBalance().Amount,
+				int64(blockchainHeight),
+				res.EscrowAccount.SettledAt,
+				totalLeaseAmount)
+
+			blocksRemain := util.LeaseCalcBlocksRemain(balanceRemain, totalLeaseAmount)
+
 			output := struct {
-				BalanceRemain       float64 `json:"balance_remaining" yaml:"balance_remaining"`
-				BlocksRemain        float64 `json:"blocks_remaining" yaml:"blocks_remaining"`
-				EstimatedTimeRemain string  `json:"estimated_time_remaining" yaml:"estimated_time_remaining"`
+				BalanceRemain       float64       `json:"balance_remaining" yaml:"balance_remaining"`
+				BlocksRemain        int64         `json:"blocks_remaining" yaml:"blocks_remaining"`
+				EstimatedTimeRemain time.Duration `json:"estimated_time_remaining" yaml:"estimated_time_remaining"`
 			}{
 				BalanceRemain:       balanceRemain,
 				BlocksRemain:        blocksRemain,
-				EstimatedTimeRemain: (time.Duration(math.Floor(secondsPerBlock*blocksRemain)) * time.Second).String(),
+				EstimatedTimeRemain: netutil.AverageBlockTime * time.Duration(blocksRemain),
 			}
 
 			outputType, err := cmd.Flags().GetString("output")

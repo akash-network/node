@@ -10,6 +10,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
+	aclient "github.com/ovrclk/akash/client"
+
 	"github.com/boz/go-lifecycle"
 	"github.com/pkg/errors"
 
@@ -119,9 +121,16 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 		return nil, err
 	}
 
-	bankQueryClient := bankTypes.NewQueryClient(cctx)
+	bc, err := newBalanceChecker(ctx, bankTypes.NewQueryClient(cctx), aclient.NewQueryClientFromCtx(cctx), accAddr, session, bus, cfg.BalanceCheckerCfg)
+	if err != nil {
+		session.Log().Error("starting balance checker", "err", err)
+		cancel()
+		<-cluster.Done()
+		<-bidengine.Done()
+		return nil, err
+	}
 
-	service := &service{
+	svc := &service{
 		session:   session,
 		bus:       bus,
 		cluster:   cluster,
@@ -130,15 +139,15 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 		manifest:  manifest,
 		ctx:       ctx,
 		cancel:    cancel,
-		bc:        newBalanceChecker(ctx, bankQueryClient, accAddr, session, bus, cfg.BalanceCheckerCfg),
+		bc:        bc,
 		lc:        lifecycle.New(),
 		config:    cfg,
 	}
 
-	go service.lc.WatchContext(ctx)
-	go service.run()
+	go svc.lc.WatchContext(ctx)
+	go svc.run()
 
-	return service, nil
+	return svc, nil
 }
 
 type service struct {
