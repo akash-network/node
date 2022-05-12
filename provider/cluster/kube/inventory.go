@@ -89,27 +89,26 @@ func (inv *inventory) Adjust(reservation ctypes.Reservation) error {
 
 nodes:
 	for nodeName := range currInventory.nodes {
-		currResources := resources[:0]
-
-		for _, res := range resources {
-			for ; res.Count > 0; res.Count-- {
+		for i := len(resources) - 1; i >= 0; i-- {
+			res := resources[i].Resources
+			for ; resources[i].Count > 0; resources[i].Count-- {
 				nd := currInventory.nodes[nodeName]
 
 				// first check if there reservation needs persistent storage
 				// and node handles such class
-				if !nd.allowsStorageClasses(res.Resources.Storage) {
+				if !nd.allowsStorageClasses(res.Storage) {
 					continue nodes
 				}
 
 				var adjusted bool
 
 				cpu := nd.cpu.dup()
-				if adjusted = cpu.subMilliNLZ(res.Resources.CPU.Units); !adjusted {
+				if adjusted = cpu.subMilliNLZ(res.CPU.Units); !adjusted {
 					continue nodes
 				}
 
 				memory := nd.memory.dup()
-				if adjusted = memory.subNLZ(res.Resources.Memory.Quantity); !adjusted {
+				if adjusted = memory.subNLZ(res.Memory.Quantity); !adjusted {
 					continue nodes
 				}
 
@@ -118,7 +117,7 @@ nodes:
 
 				storageClasses := currInventory.storageClasses.dup()
 
-				for _, storage := range res.Resources.Storage {
+				for _, storage := range res.Storage {
 					attr := storage.Attributes.Find(sdl.StorageAttributePersistent)
 
 					if persistent, _ := attr.AsBool(); !persistent {
@@ -162,12 +161,13 @@ nodes:
 				currInventory.storageClasses = storageClasses
 			}
 
-			if res.Count > 0 {
-				currResources = append(currResources, res)
+			// all replicas resources are fulfilled when count == 0.
+			// remove group from the list to prevent double request of the same resources
+			if resources[i].Count == 0 {
+				// tmpResources = append(tmpResources, resources[rIdx])
+				resources = append(resources[:i], resources[i+1:]...)
 			}
 		}
-
-		resources = currResources
 	}
 
 	if len(resources) == 0 {
