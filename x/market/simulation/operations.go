@@ -171,7 +171,7 @@ func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes
 		})
 
 		if len(bids) == 0 {
-			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseBid, "no matched bids found"), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseBid, "no active bids found"), nil, nil
 		}
 
 		// Get random bid

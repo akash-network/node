@@ -119,7 +119,7 @@ func LeaseIDFromFlags(flags *pflag.FlagSet, opts ...dcli.MarketOption) (types.Le
 // AddOrderFilterFlags add flags to filter for order list
 func AddOrderFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "order owner address to filter")
-	flags.String("state", "", "order state to filter (open,matched,closed)")
+	flags.String("state", "", "order state to filter (open,closed)")
 	flags.Uint64("dseq", 0, "deployment sequence to filter")
 	flags.Uint32("gseq", 1, "group sequence to filter")
 	flags.Uint32("oseq", 1, "order sequence to filter")
@@ -151,7 +151,7 @@ func OrderFiltersFromFlags(flags *pflag.FlagSet) (types.OrderFilters, error) {
 // AddBidFilterFlags add flags to filter for bid list
 func AddBidFilterFlags(flags *pflag.FlagSet) {
 	flags.String("owner", "", "bid owner address to filter")
-	flags.String("state", "", "bid state to filter (open,matched,lost,closed)")
+	flags.String("state", "", "bid state to filter (open,lost,closed)")
 	flags.Uint64("dseq", 0, "deployment sequence to filter")
 	flags.Uint32("gseq", 1, "group sequence to filter")
 	flags.Uint32("oseq", 1, "order sequence to filter")

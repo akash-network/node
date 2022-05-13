@@ -167,13 +167,13 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 	}
 }
 
-// OnOrderMatched updates order state to matched
+// OnOrderMatched updates order state to active
 func (k Keeper) OnOrderMatched(ctx sdk.Context, order types.Order) {
 	order.State = types.OrderActive
 	k.updateOrder(ctx, order)
 }
 
-// OnBidActive updates bid state to matched
+// OnBidActive updates bid state to active
 func (k Keeper) OnBidMatched(ctx sdk.Context, bid types.Bid) {
 	bid.State = types.BidActive
 	k.updateBid(ctx, bid)
