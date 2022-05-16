@@ -28,6 +28,6 @@ func TestKeysAndSecondaryKeysFilter(t *testing.T) {
 	filter.Owner = ""
 	prefix, isSecondary, err = keys.LeasePrefixFromFilter(filter)
 	require.NoError(t, err)
-	require.True(t, isSecondary)
-	require.Equal(t, types.SecondaryLeasePrefix(), prefix[0:2])
+	require.False(t, isSecondary)
+	require.Equal(t, types.LeasePrefix(), prefix[0:2])
 }
