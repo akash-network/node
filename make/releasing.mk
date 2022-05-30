@@ -68,6 +68,7 @@ release-dry-run: modvendor gen-changelog
 		--privileged \
 		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GO_MOD)" \
+		-e CGO_CFLAGS="$(CGO_CFLAGS)" \
 		-e BUILD_TAGS="$(BUILD_TAGS)" \
 		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
 		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
@@ -96,6 +97,7 @@ release: modvendor gen-changelog
 		--privileged \
 		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GO_MOD)" \
+		-e CGO_CFLAGS="$(CGO_CFLAGS)" \
 		-e BUILD_TAGS="$(BUILD_TAGS)" \
 		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
 		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \

@@ -123,7 +123,6 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/mimoo/StrobeGo v0.0.0-20181016162300-f8f6d4d2b643 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
@@ -176,10 +175,10 @@ require (
 )
 
 replace (
+	github.com/99designs/keyring => github.com/cosmos/keyring v1.1.7-0.20210622111912-ef00f8ac3d76
 	github.com/cosmos/cosmos-sdk => github.com/ovrclk/cosmos-sdk v0.45.4-akash.1
 	github.com/cosmos/ledger-cosmos-go => github.com/ovrclk/ledger-cosmos-go v0.13.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
 	github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.19-patches
 	github.com/zondax/hid => github.com/troian/hid v0.11.0
 	github.com/zondax/ledger-go => github.com/ovrclk/ledger-go v0.13.6

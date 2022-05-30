@@ -9,6 +9,14 @@ KIND_VARS             ?= KUBE_INGRESS_IP="$(KIND_APP_IP)" KUBE_INGRESS_PORT="$(K
 UNAME_OS              := $(shell uname -s)
 UNAME_ARCH            := $(shell uname -m)
 
+CGO_ENABLED           ?= 1
+
+ifeq ($(UNAME_OS),Darwin)
+	CGO_CFLAGS        ?= -Wno-deprecated-declarations
+else
+	CGO_CFLAGS        ?=
+endif
+
 include make/init.mk
 
 .DEFAULT_GOAL         := $(AKASH)

@@ -9,7 +9,7 @@ AKASH                       = $(AKASH_DEVCACHE_BIN)/akash
 
 BINS                       := $(AKASH)
 
-GO                         := GO111MODULE=$(GO111MODULE) go
+GO                         := GO111MODULE=$(GO111MODULE) CGO_ENABLED=1 CGO_CFLAGS=$(CGO_CFLAGS) go
 
 # setup .cache bins first in paths to have precedence over already installed same tools for system wide use
 PATH                       := "$(PATH):$(AKASH_DEVCACHE_BIN):$(AKASH_DEVCACHE_NODE_BIN)"
