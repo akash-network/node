@@ -25,6 +25,7 @@ import (
 	"github.com/ovrclk/akash/x/audit/client/rest"
 	"github.com/ovrclk/akash/x/audit/handler"
 	"github.com/ovrclk/akash/x/audit/keeper"
+	v1beta1types "github.com/ovrclk/akash/x/audit/types/v1beta1"
 	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
 	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
 )
@@ -53,6 +54,7 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 // RegisterInterfaces registers the module's interface types
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
+	v1beta1types.RegisterInterfaces(registry)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the provider
