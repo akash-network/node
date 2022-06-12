@@ -119,6 +119,15 @@ dockers:
       - 'ghcr.io/ovrclk/akash:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}'
       - 'ghcr.io/ovrclk/akash:{{ .ShortCommit }}'
       - 'ghcr.io/ovrclk/akash:{{ .Version }}'
+  - ids:
+      - akash-linux-amd64
+    dockerfile: _build/Dockerfile.akash-cli
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - 'ghcr.io/ovrclk/akash-cli:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}'
+      - 'ghcr.io/ovrclk/akash-cli:{{ .ShortCommit }}'
+      - 'ghcr.io/ovrclk/akash-cli:{{ .Version }}'
 brews:
   - name: "{{ .Env.HOMEBREW_NAME }}"
     tap:

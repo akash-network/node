@@ -1,0 +1,6 @@
+FROM gcr.io/distroless/static-debian11
+
+COPY ./akash /bin/
+
+ENTRYPOINT ["akash"]
+CMD ["version"]

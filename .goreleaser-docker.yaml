@@ -29,6 +29,13 @@ dockers:
     goarch: amd64
     image_templates:
       - 'ghcr.io/ovrclk/akash:latest'
+  - ids:
+    - akash-linux-amd64
+    dockerfile: _build/Dockerfile.akash-cli
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - 'ghcr.io/ovrclk/akash-cli:latest'
 
 archives:
   - format: binary
