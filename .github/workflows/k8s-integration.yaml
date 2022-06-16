@@ -7,7 +7,7 @@ on:
   pull_request:
     paths:
       - pkg/**
-      - provider/cluster/kube/*
+      - provider/*
       - integration/*
       - .github/workflows/k8s-integration.yaml
       - _run/**
