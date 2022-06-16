@@ -197,6 +197,8 @@ func (bc *balanceChecker) run(startCh chan<- error) {
 				<-lState.tm.C
 			}
 		}
+
+		bc.log.Debug("shutdown complete")
 	}()
 
 	leaseCheckCh := make(chan leaseCheckResponse, 1)
@@ -308,8 +310,6 @@ loop:
 			}
 		}
 	}
-
-	bc.log.Debug("shutdown complete")
 }
 
 func (bc *balanceChecker) timerFunc(ctx context.Context, d time.Duration, lid mtypes.LeaseID, scheduledWithdraw bool, ch chan<- leaseCheckResponse) *time.Timer {
