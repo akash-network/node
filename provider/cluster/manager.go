@@ -239,13 +239,14 @@ loop:
 		dm.log.Debug("read from runch during shutdown")
 	}
 
+	if nil != dm.withdrawal {
+		dm.log.Debug("waiting on withdrawal")
+		<-dm.withdrawal.lc.Done()
+	}
+
 	dm.log.Debug("waiting on dm.wg")
 	dm.wg.Wait()
 
-	if nil != dm.withdrawal {
-		dm.log.Debug("waiting on withdrawal")
-		dm.withdrawal.lc.Shutdown(nil)
-	}
 	dm.log.Info("shutdown complete")
 }
 
@@ -255,12 +256,6 @@ func (dm *deploymentManager) startWithdrawal() error {
 	if err != nil {
 		return err
 	}
-
-	dm.wg.Add(1)
-	go func() {
-		defer dm.wg.Done()
-		<-dm.lc.Done()
-	}()
 
 	return nil
 }
