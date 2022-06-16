@@ -4,9 +4,20 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	manifest "github.com/ovrclk/akash/manifest/v2beta1"
+	"github.com/ovrclk/akash/pubsub"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
+
+func init() {
+	_ = pubsub.EventBusRegisterTypes(
+		LeaseWon{},
+		ManifestReceived{},
+		ClusterDeployment{},
+		LeaseWithdraw{},
+		LeaseAddFundsMonitor{},
+		LeaseRemoveFundsMonitor{})
+}
 
 // LeaseWon is the data structure that includes leaseID, group and price
 type LeaseWon struct {

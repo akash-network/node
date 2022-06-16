@@ -6,6 +6,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
+	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/sdkutil"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
@@ -27,6 +28,16 @@ const (
 var (
 	ErrParsingPrice = errors.New("error parsing price")
 )
+
+func init() {
+	_ = pubsub.EventBusRegisterTypes(
+		EventOrderCreated{},
+		EventOrderClosed{},
+		EventBidCreated{},
+		EventBidClosed{},
+		EventLeaseCreated{},
+		EventLeaseClosed{})
+}
 
 // EventOrderCreated struct
 type EventOrderCreated struct {

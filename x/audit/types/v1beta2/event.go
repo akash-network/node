@@ -3,6 +3,7 @@ package v1beta2
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/sdkutil"
 )
 
@@ -18,6 +19,12 @@ type EventTrustedAuditorCreated struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
 	Owner   sdk.Address             `json:"owner"`
 	Auditor sdk.Address             `json:"auditor"`
+}
+
+func init() {
+	_ = pubsub.EventBusRegisterTypes(
+		EventTrustedAuditorCreated{},
+		EventTrustedAuditorDeleted{})
 }
 
 func NewEventTrustedAuditorCreated(owner sdk.Address, auditor sdk.Address) EventTrustedAuditorCreated {

@@ -2,6 +2,8 @@ package v1beta2
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/sdkutil"
 )
 
@@ -16,6 +18,13 @@ const (
 type EventProviderCreated struct {
 	Context sdkutil.BaseModuleEvent `json:"context"`
 	Owner   sdk.AccAddress          `json:"owner"`
+}
+
+func init() {
+	_ = pubsub.EventBusRegisterTypes(
+		EventProviderCreated{},
+		EventProviderUpdated{},
+		EventProviderDeleted{})
 }
 
 func NewEventProviderCreated(owner sdk.AccAddress) EventProviderCreated {

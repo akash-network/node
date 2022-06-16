@@ -9,6 +9,7 @@ on:
 
 env:
   MAINNET: ${{ github.ref == 'refs/heads/mainnet/main' || github.base_ref == 'refs/heads/mainnet/main' }}
+  AKASH_EVENTBUS_REDIS: "redis:6379"
 
 jobs:
 
@@ -37,6 +38,8 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
+      - name: start redis
+        uses: supercharge/redis-github-action@1.4.0
       - run: make test-full
 
   coverage:
@@ -50,6 +53,8 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
+      - name: start redis
+        uses: supercharge/redis-github-action@1.4.0
       - run: make test-coverage
       - uses: codecov/codecov-action@v2
 
@@ -67,6 +72,8 @@ jobs:
       - run: make deps-tidy
       - run: make deps-vendor
       - run: make build
+      - name: start redis
+        uses: supercharge/redis-github-action@1.4.0
       - run: make test-vet
       - name: lint all
         run: make test-lint-all

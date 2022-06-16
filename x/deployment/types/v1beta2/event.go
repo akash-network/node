@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/ovrclk/akash/pubsub"
 	"github.com/ovrclk/akash/sdkutil"
 )
 
@@ -21,6 +23,15 @@ const (
 	evVersionKey              = "version"
 	encodedVersionHexLen      = 64
 )
+
+func init() {
+	_ = pubsub.EventBusRegisterTypes(
+		EventDeploymentCreated{},
+		EventDeploymentUpdated{},
+		EventDeploymentClosed{},
+		EventGroupClosed{},
+		EventGroupPaused{})
+}
 
 // EventDeploymentCreated struct
 type EventDeploymentCreated struct {

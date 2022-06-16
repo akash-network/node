@@ -1,39 +1,12 @@
+//go:build !events_zeromq && !events_redis
+
 package pubsub
 
 import (
 	"errors"
 
-	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/boz/go-lifecycle"
 )
-
-// ErrNotRunning is the error with message "not running"
-var ErrNotRunning = errors.New("not running")
-
-// Event interface
-type Event interface{}
-
-// Bus is an async event bus that allows subscriptions to behave as a bus themselves.
-// When an event is published, it is sent to all subscribers asynchronously - a subscriber
-// cannot block other subscribers.
-//
-// NOTE: this should probably be in util/event or something (not in provider/event)
-type Bus interface {
-	Publish(Event) error
-	Subscribe() (Subscriber, error)
-	Close()
-	Done() <-chan struct{}
-}
-
-// Subscriber emits events it sees on the channel returned by Events().
-// A Clone() of a subscriber will emit all events that have not been emitted
-// from the cloned subscriber.  This is important so that events are not missed
-// when adding subscribers for sub-components (see `provider/bidengine/{service,order}.go`)
-type Subscriber interface {
-	Events() <-chan Event
-	Clone() (Subscriber, error)
-	Close()
-	Done() <-chan struct{}
-}
 
 type bus struct {
 	subscriptions map[*bus]bool
