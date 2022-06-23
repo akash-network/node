@@ -1,0 +1,3 @@
+- op: add
+  path: /spec/template/spec/containers/0/ports/0/hostPort
+  value: 9443

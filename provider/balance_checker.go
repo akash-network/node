@@ -283,7 +283,7 @@ loop:
 					timerPeriod = time.Minute
 				} else {
 					if !lState.scheduledWithdrawAt.IsZero() {
-						withdrawIn := lState.scheduledWithdrawAt.Sub(time.Now())
+						withdrawIn := time.Until(lState.scheduledWithdrawAt)
 						if timerPeriod >= withdrawIn {
 							timerPeriod = withdrawIn
 							scheduledWithdraw = true

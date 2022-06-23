@@ -3,6 +3,10 @@ package testutil
 import (
 	"context"
 	"fmt"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	provider_flags "github.com/ovrclk/akash/provider/cmd/flags"
+	"github.com/ovrclk/akash/provider/operator/hostnameoperator"
+	"github.com/ovrclk/akash/provider/operator/ipoperator"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	cosmosclient "github.com/cosmos/cosmos-sdk/client"
@@ -145,9 +149,26 @@ func RunProviderJWTServer(ctx context.Context, clientCtx cosmosclient.Context, f
 	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmd, args...)
 }
 
-func RunLocalHostnameOperator(ctx context.Context, clientCtx cosmosclient.Context) (sdktest.BufferWriter, error) {
+func RunLocalHostnameOperator(ctx context.Context, clientCtx cosmosclient.Context, listenAddress string) (sdktest.BufferWriter, error) {
 	takeCmdLock()
-	cmd := pcmd.HostnameOperatorCmd()
+	cmd := hostnameoperator.Cmd()
 	releaseCmdLock()
-	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmd)
+	args := []string{
+		fmt.Sprintf("--%s=%s", provider_flags.FlagListenAddress, listenAddress),
+	}
+
+	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmd, args...)
+}
+
+func RunLocalIPOerator(ctx context.Context, clientCtx cosmosclient.Context, listenAddress string, providerAddress sdk.AccAddress) (sdktest.BufferWriter, error) {
+	takeCmdLock()
+	cmd := ipoperator.Cmd()
+	releaseCmdLock()
+
+	args := []string{
+		fmt.Sprintf("--%s=%s", provider_flags.FlagListenAddress, listenAddress),
+		fmt.Sprintf("--provider=%s", providerAddress.String()),
+	}
+
+	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmd, args...)
 }

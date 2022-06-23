@@ -41,7 +41,9 @@ func (b *manifest) labels() map[string]string {
 }
 
 func (b *manifest) Create() (*crd.Manifest, error) {
+
 	obj, err := crd.NewManifest(b.mns, b.lid, b.group)
+
 	if err != nil {
 		return nil, err
 	}

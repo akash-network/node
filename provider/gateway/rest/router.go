@@ -6,6 +6,10 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	kubeclienterrors "github.com/ovrclk/akash/provider/cluster/kube/errors"
+	"github.com/ovrclk/akash/provider/cluster/operatorclients"
+	"github.com/ovrclk/akash/provider/gateway/utils"
+	ipoptypes "github.com/ovrclk/akash/provider/operator/ipoperator/types"
 	"io"
 	"net/http"
 	"net/http/httputil"
@@ -17,8 +21,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/ovrclk/akash/provider/cluster/kube/builder"
-
-	"github.com/cosmos/cosmos-sdk/version"
 
 	"k8s.io/client-go/tools/remotecommand"
 
@@ -39,7 +41,6 @@ import (
 
 	"github.com/ovrclk/akash/provider"
 	"github.com/ovrclk/akash/provider/cluster"
-	kubeClient "github.com/ovrclk/akash/provider/cluster/kube"
 	cltypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 	pmanifest "github.com/ovrclk/akash/provider/manifest"
 	manifestValidation "github.com/ovrclk/akash/validation"
@@ -79,7 +80,7 @@ type wsStreamConfig struct {
 	client    cluster.ReadClient
 }
 
-func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ctxConfig map[interface{}]interface{}) *mux.Router {
+func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ipopclient operatorclients.IPOperatorClient, ctxConfig map[interface{}]interface{}) *mux.Router {
 
 	router := mux.NewRouter()
 
@@ -98,10 +99,16 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ctxCon
 		createVersionHandler(log, pclient)).
 		Methods(http.MethodGet)
 
+	// GET /address
+	// provider status endpoint does not require authentication
+	router.HandleFunc("/address",
+		createAddressHandler(log, addr)).
+		Methods("GET")
+
 	// GET /status
 	// provider status endpoint does not require authentication
 	router.HandleFunc("/status",
-		createStatusHandler(log, pclient)).
+		createStatusHandler(log, pclient, addr)).
 		Methods("GET")
 
 	// GET /validate
@@ -113,6 +120,11 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ctxCon
 	hostnameRouter := router.PathPrefix(hostnamePrefix).Subrouter()
 	hostnameRouter.Use(requireOwner())
 	hostnameRouter.HandleFunc(migratePathPrefix, migrateHandler(log, pclient.Hostname(), pclient.ClusterService())).
+		Methods(http.MethodPost)
+
+	endpointRouter := router.PathPrefix(endpointPrefix).Subrouter()
+	endpointRouter.Use(requireOwner())
+	endpointRouter.HandleFunc(migratePathPrefix, migrateEndpointHandler(log, pclient.ClusterService(), pclient.Cluster())).
 		Methods(http.MethodPost)
 
 	// PUT /deployment/manifest
@@ -134,7 +146,7 @@ func newRouter(log log.Logger, addr sdk.Address, pclient provider.Client, ctxCon
 
 	// GET /lease/<lease-id>/status
 	lrouter.HandleFunc("/status",
-		leaseStatusHandler(log, pclient.Cluster(), ctxConfig)).
+		leaseStatusHandler(log, pclient.Cluster(), ipopclient, ctxConfig)).
 		Methods(http.MethodGet)
 
 	// GET /lease/<lease-id>/kubeevents
@@ -454,21 +466,23 @@ func leaseShellHandler(log log.Logger, mclient pmanifest.Client, cclient cluster
 		if terminalSizeUpdate != nil {
 			close(terminalSizeUpdate)
 		}
+	}
+}
 
+func createAddressHandler(log log.Logger, providerAddr sdk.Address) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		data := struct {
+			Address string `json:"address"`
+		}{
+			Address: providerAddr.String(),
+		}
+		writeJSON(log, w, data)
 	}
 }
 
 type versionInfo struct {
-	Akash *akashVersionInfo `json:"akash"`
-	Kube  *kubeVersion.Info `json:"kube"`
-}
-
-type akashVersionInfo struct {
-	Version          string `json:"version"`
-	GitCommit        string `json:"commit"`
-	BuildTags        string `json:"buildTags"`
-	GoVersion        string `json:"go"`
-	CosmosSdkVersion string `json:"cosmosSdkVersion"`
+	Akash utils.AkashVersionInfo `json:"akash"`
+	Kube  *kubeVersion.Info      `json:"kube"`
 }
 
 func createVersionHandler(log log.Logger, pclient provider.Client) http.HandlerFunc {
@@ -478,28 +492,29 @@ func createVersionHandler(log log.Logger, pclient provider.Client) http.HandlerF
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		verInfo := version.NewInfo()
+
 		writeJSON(log, w, versionInfo{
-			Akash: &akashVersionInfo{
-				Version:          verInfo.Version,
-				GitCommit:        verInfo.GitCommit,
-				BuildTags:        verInfo.BuildTags,
-				GoVersion:        verInfo.GoVersion,
-				CosmosSdkVersion: verInfo.CosmosSdkVersion,
-			},
-			Kube: kube,
+			Akash: utils.NewAkashVersionInfo(),
+			Kube:  kube,
 		})
 	}
 }
 
-func createStatusHandler(log log.Logger, sclient provider.StatusClient) http.HandlerFunc {
+func createStatusHandler(log log.Logger, sclient provider.StatusClient, providerAddr sdk.Address) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		status, err := sclient.Status(req.Context())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		writeJSON(log, w, status)
+		data := struct {
+			provider.Status
+			Address string `json:"address"`
+		}{
+			Status:  *status,
+			Address: providerAddr.String(),
+		}
+		writeJSON(log, w, data)
 	}
 }
 
@@ -587,16 +602,89 @@ func leaseKubeEventsHandler(log log.Logger, cclient cluster.ReadClient) http.Han
 	}
 }
 
-func leaseStatusHandler(log log.Logger, cclient cluster.ReadClient, clusterSettings map[interface{}]interface{}) http.HandlerFunc {
+func leaseStatusHandler(log log.Logger, cclient cluster.ReadClient, ipopclient operatorclients.IPOperatorClient, clusterSettings map[interface{}]interface{}) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		ctx := util.ApplyToContext(req.Context(), clusterSettings)
-		status, err := cclient.LeaseStatus(ctx, requestLeaseID(req))
+
+		leaseID := requestLeaseID(req)
+		result := LeaseStatus{}
+
+		found, manifestGroup, err := cclient.GetManifestGroup(req.Context(), leaseID)
 		if err != nil {
-			if errors.Is(err, kubeClient.ErrNoDeploymentForLease) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if !found { // If the manifest doesn't exist, there is no lease
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		hasLeasedIPs := false
+		if ipopclient != nil {
+		ipManifestGroupSearchLoop:
+			for _, service := range manifestGroup.Services {
+				for _, expose := range service.Expose {
+					if 0 != len(expose.IP) {
+						hasLeasedIPs = true
+						break ipManifestGroupSearchLoop
+					}
+				}
+			}
+		}
+
+		var ipLeaseStatus []ipoptypes.LeaseIPStatus
+		if hasLeasedIPs {
+			log.Debug("querying for IP address status", "lease-id", leaseID)
+			ipLeaseStatus, err = ipopclient.GetIPAddressStatus(req.Context(), leaseID.OrderID())
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			result.IPs = make(map[string][]LeasedIPStatus)
+
+			for _, ipLease := range ipLeaseStatus {
+				entries := result.IPs[ipLease.ServiceName]
+				if entries == nil {
+					entries = make([]LeasedIPStatus, 0)
+				}
+
+				entries = append(entries, LeasedIPStatus{
+					Port:         ipLease.Port,
+					ExternalPort: ipLease.ExternalPort,
+					Protocol:     ipLease.Protocol,
+					IP:           ipLease.IP,
+				})
+
+				result.IPs[ipLease.ServiceName] = entries
+			}
+		}
+
+		hasForwardedPorts := false
+	portManifestGroupSearchLoop:
+		for _, service := range manifestGroup.Services {
+			for _, expose := range service.Expose {
+				if expose.Global && expose.ExternalPort != 80 {
+					hasForwardedPorts = true
+					break portManifestGroupSearchLoop
+				}
+			}
+		}
+		if hasForwardedPorts {
+			result.ForwardedPorts, err = cclient.ForwardedPortStatus(ctx, leaseID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+
+		result.Services, err = cclient.LeaseStatus(ctx, leaseID)
+		if err != nil {
+			if errors.Is(err, kubeclienterrors.ErrNoDeploymentForLease) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
-			if errors.Is(err, kubeClient.ErrLeaseNotFound) {
+			if errors.Is(err, kubeclienterrors.ErrLeaseNotFound) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
@@ -607,7 +695,8 @@ func leaseStatusHandler(log log.Logger, cclient cluster.ReadClient, clusterSetti
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		writeJSON(log, w, status)
+
+		writeJSON(log, w, result)
 	}
 }
 
@@ -615,11 +704,11 @@ func leaseServiceStatusHandler(log log.Logger, cclient cluster.ReadClient) http.
 	return func(w http.ResponseWriter, req *http.Request) {
 		status, err := cclient.ServiceStatus(req.Context(), requestLeaseID(req), requestService(req))
 		if err != nil {
-			if errors.Is(err, kubeClient.ErrNoDeploymentForLease) {
+			if errors.Is(err, kubeclienterrors.ErrNoDeploymentForLease) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
-			if errors.Is(err, kubeClient.ErrLeaseNotFound) {
+			if errors.Is(err, kubeclienterrors.ErrLeaseNotFound) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}

@@ -3,6 +3,7 @@ package sdl
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 
 	"github.com/blang/semver"
@@ -18,6 +19,7 @@ import (
 
 var (
 	errUninitializedConfig = errors.New("uninitialized config")
+	errSDLInvalidNoVersion = fmt.Errorf("%w: no version found", errSDLInvalid)
 )
 
 // SDL is the interface which wraps Validate, Deployment and Manifest methods
@@ -37,15 +39,20 @@ type sdl struct {
 func (s *sdl) UnmarshalYAML(node *yaml.Node) error {
 	var result sdl
 
+	foundVersion := false
 	for idx := range node.Content {
 		if node.Content[idx].Value == "version" {
 			var err error
 			if result.Version, err = semver.ParseTolerant(node.Content[idx+1].Value); err != nil {
 				return err
 			}
-
+			foundVersion = true
 			break
 		}
+	}
+
+	if !foundVersion {
+		return errSDLInvalidNoVersion
 	}
 
 	// nolint: gocritic
@@ -57,7 +64,7 @@ func (s *sdl) UnmarshalYAML(node *yaml.Node) error {
 
 		result.data = &decoded
 	} else {
-		return errors.Errorf("config: unsupported version")
+		return fmt.Errorf("%w: config: unsupported version %q", errSDLInvalid, result.Version)
 	}
 
 	*s = result

@@ -1,0 +1,27 @@
+resources:
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - rbac.yaml
+  - service_account.yaml
+  - cluster_role.yaml
+
+namespace: akash-services
+
+configMapGenerator:
+  - name: akash-ip-operator-boot
+    files:
+      - run.sh
+  - name: akash-provider-config
+    literals:
+      - k8s-manifest-ns=lease
+  - name: akash-ip-operator-config
+    literals:
+      - prune-interval=600s
+      - ignore-list-entry-limit=131072
+      - web-refresh-interval=5s
+      - retry-delay=3s
+      - ignore-list-age-limit=2613600s
+      - event-failure-limit=3
+      # Update this with the address of the provider
+      # - provider-address=akash1esvcrfre038ffvknc5wzh7hha9wjkqpefqllf3

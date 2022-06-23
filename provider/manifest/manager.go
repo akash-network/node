@@ -57,6 +57,7 @@ func newManager(h *service, daddr dtypes.DeploymentID) *manager {
 		lc:              lifecycle.New(),
 		config:          h.config,
 		hostnameService: h.hostnameService,
+		manifestAdded:   false,
 	}
 
 	go m.lc.WatchChannel(h.lc.ShuttingDown())
@@ -93,6 +94,7 @@ type manager struct {
 	lc  lifecycle.Lifecycle
 
 	hostnameService clustertypes.HostnameServiceClient
+	manifestAdded   bool
 }
 
 func (m *manager) stop() {
@@ -351,20 +353,23 @@ func (m *manager) emitReceivedEvents() {
 		return
 	}
 
-	latestManifest := m.manifests[len(m.manifests)-1]
-	m.log.Debug("publishing manifest received", "num-leases", len(m.localLeases))
-	copyOfData := new(dtypes.QueryDeploymentResponse)
-	*copyOfData = m.data
-	for _, lease := range m.localLeases {
-		m.log.Debug("publishing manifest received for lease", "lease_id", lease.LeaseID)
-		if err := m.bus.Publish(event.ManifestReceived{
-			LeaseID:    lease.LeaseID,
-			Group:      lease.Group,
-			Manifest:   latestManifest,
-			Deployment: copyOfData,
-		}); err != nil {
-			m.log.Error("publishing event", "err", err, "lease", lease.LeaseID)
+	if m.manifestAdded {
+		latestManifest := m.manifests[len(m.manifests)-1]
+		m.log.Debug("creating manifest received", "num-leases", len(m.localLeases))
+		copyOfData := new(dtypes.QueryDeploymentResponse)
+		*copyOfData = m.data
+		for _, lease := range m.localLeases {
+			m.log.Debug("publishing manifest received for lease", "lease_id", lease.LeaseID)
+			if err := m.bus.Publish(event.ManifestReceived{
+				LeaseID:    lease.LeaseID,
+				Group:      lease.Group,
+				Manifest:   latestManifest,
+				Deployment: copyOfData,
+			}); err != nil {
+				m.log.Error("publishing event", "err", err, "lease", lease.LeaseID)
+			}
 		}
+		m.manifestAdded = false
 	}
 
 	// A manifest has been published, satisfy all pending requests
@@ -404,7 +409,8 @@ func (m *manager) validateRequests() {
 
 	if len(manifests) > 0 {
 		// XXX: only one version means only one valid manifest
-		m.manifests = append(m.manifests, manifests[0])
+		m.manifestAdded = true
+		m.manifests = append(m.manifests, manifests[len(manifests)-1])
 	}
 }
 

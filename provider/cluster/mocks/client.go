@@ -80,6 +80,20 @@ func (_m *Client) DeclareHostname(ctx context.Context, lID typesv1beta2.LeaseID,
 	return r0
 }
 
+// DeclareIP provides a mock function with given fields: ctx, lID, serviceName, port, externalPort, proto, sharingKey, overwrite
+func (_m *Client) DeclareIP(ctx context.Context, lID typesv1beta2.LeaseID, serviceName string, port uint32, externalPort uint32, proto v2beta1.ServiceProtocol, sharingKey string, overwrite bool) error {
+	ret := _m.Called(ctx, lID, serviceName, port, externalPort, proto, sharingKey, overwrite)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, typesv1beta2.LeaseID, string, uint32, uint32, v2beta1.ServiceProtocol, string, bool) error); ok {
+		r0 = rf(ctx, lID, serviceName, port, externalPort, proto, sharingKey, overwrite)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Deploy provides a mock function with given fields: ctx, lID, mgroup
 func (_m *Client) Deploy(ctx context.Context, lID typesv1beta2.LeaseID, mgroup *v2beta1.Group) error {
 	ret := _m.Called(ctx, lID, mgroup)
@@ -133,6 +147,52 @@ func (_m *Client) Exec(ctx context.Context, lID typesv1beta2.LeaseID, service st
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, typesv1beta2.LeaseID, string, uint, []string, io.Reader, io.Writer, io.Writer, bool, remotecommand.TerminalSizeQueue) error); ok {
 		r1 = rf(ctx, lID, service, podIndex, cmd, stdin, stdout, stderr, tty, tsq)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ForwardedPortStatus provides a mock function with given fields: _a0, _a1
+func (_m *Client) ForwardedPortStatus(_a0 context.Context, _a1 typesv1beta2.LeaseID) (map[string][]v1beta2.ForwardedPortStatus, error) {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 map[string][]v1beta2.ForwardedPortStatus
+	if rf, ok := ret.Get(0).(func(context.Context, typesv1beta2.LeaseID) map[string][]v1beta2.ForwardedPortStatus); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string][]v1beta2.ForwardedPortStatus)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, typesv1beta2.LeaseID) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetDeclaredIPs provides a mock function with given fields: ctx, leaseID
+func (_m *Client) GetDeclaredIPs(ctx context.Context, leaseID typesv1beta2.LeaseID) ([]akash_networkv2beta1.ProviderLeasedIPSpec, error) {
+	ret := _m.Called(ctx, leaseID)
+
+	var r0 []akash_networkv2beta1.ProviderLeasedIPSpec
+	if rf, ok := ret.Get(0).(func(context.Context, typesv1beta2.LeaseID) []akash_networkv2beta1.ProviderLeasedIPSpec); ok {
+		r0 = rf(ctx, leaseID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]akash_networkv2beta1.ProviderLeasedIPSpec)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, typesv1beta2.LeaseID) error); ok {
+		r1 = rf(ctx, leaseID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -284,15 +344,15 @@ func (_m *Client) LeaseLogs(_a0 context.Context, _a1 typesv1beta2.LeaseID, _a2 s
 }
 
 // LeaseStatus provides a mock function with given fields: _a0, _a1
-func (_m *Client) LeaseStatus(_a0 context.Context, _a1 typesv1beta2.LeaseID) (*v1beta2.LeaseStatus, error) {
+func (_m *Client) LeaseStatus(_a0 context.Context, _a1 typesv1beta2.LeaseID) (map[string]*v1beta2.ServiceStatus, error) {
 	ret := _m.Called(_a0, _a1)
 
-	var r0 *v1beta2.LeaseStatus
-	if rf, ok := ret.Get(0).(func(context.Context, typesv1beta2.LeaseID) *v1beta2.LeaseStatus); ok {
+	var r0 map[string]*v1beta2.ServiceStatus
+	if rf, ok := ret.Get(0).(func(context.Context, typesv1beta2.LeaseID) map[string]*v1beta2.ServiceStatus); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta2.LeaseStatus)
+			r0 = ret.Get(0).(map[string]*v1beta2.ServiceStatus)
 		}
 	}
 
@@ -329,6 +389,29 @@ func (_m *Client) ObserveHostnameState(ctx context.Context) (<-chan v1beta2.Host
 	return r0, r1
 }
 
+// ObserveIPState provides a mock function with given fields: ctx
+func (_m *Client) ObserveIPState(ctx context.Context) (<-chan v1beta2.IPResourceEvent, error) {
+	ret := _m.Called(ctx)
+
+	var r0 <-chan v1beta2.IPResourceEvent
+	if rf, ok := ret.Get(0).(func(context.Context) <-chan v1beta2.IPResourceEvent); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan v1beta2.IPResourceEvent)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // PurgeDeclaredHostname provides a mock function with given fields: ctx, lID, hostname
 func (_m *Client) PurgeDeclaredHostname(ctx context.Context, lID typesv1beta2.LeaseID, hostname string) error {
 	ret := _m.Called(ctx, lID, hostname)
@@ -345,6 +428,34 @@ func (_m *Client) PurgeDeclaredHostname(ctx context.Context, lID typesv1beta2.Le
 
 // PurgeDeclaredHostnames provides a mock function with given fields: ctx, lID
 func (_m *Client) PurgeDeclaredHostnames(ctx context.Context, lID typesv1beta2.LeaseID) error {
+	ret := _m.Called(ctx, lID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, typesv1beta2.LeaseID) error); ok {
+		r0 = rf(ctx, lID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// PurgeDeclaredIP provides a mock function with given fields: ctx, lID, serviceName, externalPort, proto
+func (_m *Client) PurgeDeclaredIP(ctx context.Context, lID typesv1beta2.LeaseID, serviceName string, externalPort uint32, proto v2beta1.ServiceProtocol) error {
+	ret := _m.Called(ctx, lID, serviceName, externalPort, proto)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, typesv1beta2.LeaseID, string, uint32, v2beta1.ServiceProtocol) error); ok {
+		r0 = rf(ctx, lID, serviceName, externalPort, proto)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// PurgeDeclaredIPs provides a mock function with given fields: ctx, lID
+func (_m *Client) PurgeDeclaredIPs(ctx context.Context, lID typesv1beta2.LeaseID) error {
 	ret := _m.Called(ctx, lID)
 
 	var r0 error

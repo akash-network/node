@@ -178,7 +178,7 @@ func (m *deploymentMonitor) doCheck(ctx context.Context) (bool, error) {
 	badsvc := 0
 
 	for _, spec := range m.mgroup.Services {
-		service, foundService := status.Services[spec.Name]
+		service, foundService := status[spec.Name]
 		if foundService {
 			if uint32(service.Available) < spec.Count {
 				badsvc++

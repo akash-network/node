@@ -2,9 +2,9 @@ package provider
 
 import (
 	"context"
-	"time"
-
+	"github.com/ovrclk/akash/provider/cluster/operatorclients"
 	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
+	"github.com/ovrclk/akash/provider/operator/waiter"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -21,10 +21,6 @@ import (
 	"github.com/ovrclk/akash/provider/session"
 	"github.com/ovrclk/akash/pubsub"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-)
-
-var (
-	ErrClusterReadTimedout = errors.New("timeout waiting for cluster ready")
 )
 
 // ValidateClient is the interface to check if provider will bid on given groupspec
@@ -58,7 +54,15 @@ type Service interface {
 // NewService creates and returns new Service instance
 // Simple wrapper around various services needed for running a provider.
 
-func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress, session session.Session, bus pubsub.Bus, cclient cluster.Client, cfg Config) (Service, error) {
+func NewService(ctx context.Context,
+	cctx client.Context,
+	accAddr sdk.AccAddress,
+	session session.Session,
+	bus pubsub.Bus,
+	cclient cluster.Client,
+	ipOperatorClient operatorclients.IPOperatorClient,
+	waiter waiter.OperatorWaiter,
+	cfg Config) (Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	session = session.ForModule("provider-service")
@@ -75,22 +79,13 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 	clusterConfig.DeploymentIngressDomain = cfg.DeploymentIngressDomain
 	clusterConfig.ClusterSettings = cfg.ClusterSettings
 
-	cluster, err := cluster.NewService(ctx, session, bus, cclient, clusterConfig)
+	cluster, err := cluster.NewService(ctx, session, bus, cclient, ipOperatorClient, waiter, clusterConfig)
 	if err != nil {
 		cancel()
 		return nil, err
 	}
 
-	select {
-	case <-cluster.Ready():
-	case <-time.After(cfg.ClusterWaitReadyDuration):
-		session.Log().Error(ErrClusterReadTimedout.Error())
-		cancel()
-		<-cluster.Done()
-		return nil, ErrClusterReadTimedout
-	}
-
-	bidengine, err := bidengine.NewService(ctx, session, cluster, bus, bidengine.Config{
+	bidengine, err := bidengine.NewService(ctx, session, cluster, bus, waiter, bidengine.Config{
 		PricingStrategy: cfg.BidPricingStrategy,
 		Deposit:         cfg.BidDeposit,
 		BidTimeout:      cfg.BidTimeout,

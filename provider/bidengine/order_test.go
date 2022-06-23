@@ -3,6 +3,7 @@ package bidengine
 import (
 	"context"
 	"errors"
+	"github.com/ovrclk/akash/provider/operator/waiter"
 	"testing"
 	"time"
 
@@ -158,7 +159,7 @@ func makeOrderForTest(t *testing.T, checkForExistingBid bool, bidState mtypes.Bi
 	cfg.Deposit = mtypes.DefaultBidMinDeposit
 	cfg.MaxGroupVolumes = constants.DefaultMaxGroupVolumes
 
-	myService, err := NewService(context.Background(), mySession, scaffold.cluster, scaffold.testBus, cfg)
+	myService, err := NewService(context.Background(), mySession, scaffold.cluster, scaffold.testBus, waiter.NewNullWaiter(), cfg)
 	require.NoError(t, err)
 	require.NotNil(t, myService)
 

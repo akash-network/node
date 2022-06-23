@@ -1,2 +1,4 @@
 helm
 cache
+docker_image.txt
+docker-image.yaml

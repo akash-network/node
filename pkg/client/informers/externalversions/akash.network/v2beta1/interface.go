@@ -32,6 +32,8 @@ type Interface interface {
 	Manifests() ManifestInformer
 	// ProviderHosts returns a ProviderHostInformer.
 	ProviderHosts() ProviderHostInformer
+	// ProviderLeasedIPs returns a ProviderLeasedIPInformer.
+	ProviderLeasedIPs() ProviderLeasedIPInformer
 }
 
 type version struct {
@@ -63,4 +65,9 @@ func (v *version) Manifests() ManifestInformer {
 // ProviderHosts returns a ProviderHostInformer.
 func (v *version) ProviderHosts() ProviderHostInformer {
 	return &providerHostInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ProviderLeasedIPs returns a ProviderLeasedIPInformer.
+func (v *version) ProviderLeasedIPs() ProviderLeasedIPInformer {
+	return &providerLeasedIPInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

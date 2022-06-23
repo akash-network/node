@@ -3,6 +3,7 @@ package bidengine
 import (
 	"context"
 	"errors"
+	"github.com/ovrclk/akash/provider/operator/waiter"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -49,7 +50,7 @@ type Service interface {
 }
 
 // NewService creates new service instance and returns error in case of failure
-func NewService(ctx context.Context, session session.Session, cluster cluster.Cluster, bus pubsub.Bus, cfg Config) (Service, error) {
+func NewService(ctx context.Context, session session.Session, cluster cluster.Cluster, bus pubsub.Bus, waiter waiter.OperatorWaiter, cfg Config) (Service, error) {
 	session = session.ForModule("bidengine-service")
 
 	existingOrders, err := queryExistingOrders(ctx, session)
@@ -81,10 +82,11 @@ func NewService(ctx context.Context, session session.Session, cluster cluster.Cl
 		lc:       lifecycle.New(),
 		cfg:      cfg,
 		pass:     providerAttrService,
+		waiter:   waiter,
 	}
 
 	go s.lc.WatchContext(ctx)
-	go s.run(existingOrders)
+	go s.run(ctx, existingOrders)
 
 	return s, nil
 }
@@ -103,6 +105,8 @@ type service struct {
 
 	lc   lifecycle.Lifecycle
 	pass *providerAttrSignatureService
+
+	waiter waiter.OperatorWaiter
 }
 
 func (s *service) Close() error {
@@ -139,10 +143,18 @@ func (s *service) updateOrderManagerGauge() {
 	orderManagerGauge.Set(float64(len(s.orders)))
 }
 
-func (s *service) run(existingOrders []mtypes.OrderID) {
+func (s *service) run(ctx context.Context, existingOrders []mtypes.OrderID) {
 	defer s.lc.ShutdownCompleted()
 	defer s.sub.Close()
 	s.updateOrderManagerGauge()
+
+	// wait for configured operators to be online & responsive before proceeding
+	err := s.waiter.WaitForAll(ctx)
+	if err != nil {
+		s.lc.ShutdownInitiated(err)
+		return
+	}
+
 	for _, orderID := range existingOrders {
 		key := mquery.OrderPath(orderID)
 		s.session.Log().Debug("creating catchup order", "order", key)

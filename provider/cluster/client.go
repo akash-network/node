@@ -30,6 +30,8 @@ import (
 	"github.com/ovrclk/akash/types/unit"
 	mquery "github.com/ovrclk/akash/x/market/query"
 	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+
+	akashtypes "github.com/ovrclk/akash/pkg/apis/akash.network/v2beta1"
 )
 
 var (
@@ -48,7 +50,8 @@ var (
 var _ Client = (*nullClient)(nil)
 
 type ReadClient interface {
-	LeaseStatus(context.Context, mtypes.LeaseID) (*ctypes.LeaseStatus, error)
+	LeaseStatus(context.Context, mtypes.LeaseID) (map[string]*ctypes.ServiceStatus, error)
+	ForwardedPortStatus(context.Context, mtypes.LeaseID) (map[string][]ctypes.ForwardedPortStatus, error)
 	LeaseEvents(context.Context, mtypes.LeaseID, string, bool) (ctypes.EventsWatcher, error)
 	LeaseLogs(context.Context, mtypes.LeaseID, string, bool, *int64) ([]*ctypes.ServiceLog, error)
 	ServiceStatus(context.Context, mtypes.LeaseID, string) (*ctypes.ServiceStatus, error)
@@ -58,6 +61,9 @@ type ReadClient interface {
 
 	ObserveHostnameState(ctx context.Context) (<-chan ctypes.HostnameResourceEvent, error)
 	GetHostnameDeploymentConnections(ctx context.Context) ([]ctypes.LeaseIDHostnameConnection, error)
+
+	ObserveIPState(ctx context.Context) (<-chan ctypes.IPResourceEvent, error)
+	GetDeclaredIPs(ctx context.Context, leaseID mtypes.LeaseID) ([]akashtypes.ProviderLeasedIPSpec, error)
 }
 
 // Client interface lease and deployment methods
@@ -92,6 +98,10 @@ type Client interface {
 
 	// KubeVersion returns the version information of kubernetes running in the cluster
 	KubeVersion() (*version.Info, error)
+
+	DeclareIP(ctx context.Context, lID mtypes.LeaseID, serviceName string, port uint32, externalPort uint32, proto manifest.ServiceProtocol, sharingKey string, overwrite bool) error
+	PurgeDeclaredIP(ctx context.Context, lID mtypes.LeaseID, serviceName string, externalPort uint32, proto manifest.ServiceProtocol) error
+	PurgeDeclaredIPs(ctx context.Context, lID mtypes.LeaseID) error
 }
 
 func ErrorIsOkToSendToClient(err error) bool {
@@ -419,7 +429,11 @@ func (c *nullClient) Deploy(ctx context.Context, lid mtypes.LeaseID, mgroup *man
 	return nil
 }
 
-func (c *nullClient) LeaseStatus(_ context.Context, lid mtypes.LeaseID) (*ctypes.LeaseStatus, error) {
+func (*nullClient) ForwardedPortStatus(context.Context, mtypes.LeaseID) (map[string][]ctypes.ForwardedPortStatus, error) {
+	return nil, errNotImplemented
+}
+
+func (c *nullClient) LeaseStatus(_ context.Context, lid mtypes.LeaseID) (map[string]*ctypes.ServiceStatus, error) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -428,10 +442,9 @@ func (c *nullClient) LeaseStatus(_ context.Context, lid mtypes.LeaseID) (*ctypes
 		return nil, nil
 	}
 
-	resp := &ctypes.LeaseStatus{}
-	resp.Services = make(map[string]*ctypes.ServiceStatus)
+	resp := make(map[string]*ctypes.ServiceStatus)
 	for _, svc := range lease.group.Services {
-		resp.Services[svc.Name] = &ctypes.ServiceStatus{
+		resp[svc.Name] = &ctypes.ServiceStatus{
 			Name:      svc.Name,
 			Available: int32(svc.Count),
 			Total:     int32(svc.Count),
@@ -573,4 +586,32 @@ func (c *nullClient) AllHostnames(context.Context) ([]ctypes.ActiveHostname, err
 
 func (c *nullClient) KubeVersion() (*version.Info, error) {
 	return nil, nil
+}
+
+func (c *nullClient) DeclareIP(ctx context.Context, lID mtypes.LeaseID, serviceName string, port uint32, externalPort uint32, proto manifest.ServiceProtocol, sharingKey string, overwrite bool) error {
+	return errNotImplemented
+}
+
+func (c *nullClient) PurgeDeclaredIPs(ctx context.Context, lID mtypes.LeaseID) error {
+	return errNotImplemented
+}
+
+func (c *nullClient) ObserveIPState(ctx context.Context) (<-chan ctypes.IPResourceEvent, error) {
+	return nil, errNotImplemented
+}
+
+func (c *nullClient) CreateIPPassthrough(ctx context.Context, lID mtypes.LeaseID, directive ctypes.ClusterIPPassthroughDirective) error {
+	return errNotImplemented
+}
+
+func (c *nullClient) PurgeIPPassthrough(ctx context.Context, lID mtypes.LeaseID, directive ctypes.ClusterIPPassthroughDirective) error {
+	return errNotImplemented
+}
+
+func (c *nullClient) PurgeDeclaredIP(ctx context.Context, lID mtypes.LeaseID, serviceName string, externalPort uint32, proto manifest.ServiceProtocol) error {
+	return errNotImplemented
+}
+
+func (c *nullClient) GetDeclaredIPs(ctx context.Context, leaseID mtypes.LeaseID) ([]akashtypes.ProviderLeasedIPSpec, error) {
+	return nil, errNotImplemented
 }

@@ -73,11 +73,12 @@ func (c *client) DeclareHostname(ctx context.Context, lID mtypes.LeaseID, host s
 		Status: crd.ProviderHostStatus{},
 	}
 
-	c.log.Info("declaring hostname", "lease", lID, "service-name", serviceName, "external-port", externalPort)
+	c.log.Info("declaring hostname", "lease", lID, "service-name", serviceName, "external-port", externalPort, "host", host)
 	// Create or update the entry
 	if exists {
 		_, err = c.ac.AkashV2beta1().ProviderHosts(c.ns).Update(ctx, &obj, metav1.UpdateOptions{})
 	} else {
+		obj.ResourceVersion = ""
 		_, err = c.ac.AkashV2beta1().ProviderHosts(c.ns).Create(ctx, &obj, metav1.CreateOptions{})
 	}
 	return err
@@ -87,12 +88,10 @@ func (c *client) PurgeDeclaredHostname(ctx context.Context, lID mtypes.LeaseID, 
 	labelSelector := &strings.Builder{}
 	kubeSelectorForLease(labelSelector, lID)
 
-	result := c.ac.AkashV2beta1().ProviderHosts(c.ns).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
+	return c.ac.AkashV2beta1().ProviderHosts(c.ns).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
 		LabelSelector: labelSelector.String(),
 		FieldSelector: fmt.Sprintf("metadata.name=%s", hostname),
 	})
-
-	return result
 }
 
 func (c *client) PurgeDeclaredHostnames(ctx context.Context, lID mtypes.LeaseID) error {

@@ -322,6 +322,13 @@ spec:
                   name: akash-provider-config
                   key: bid-script-process-timeout
                   optional: true
+
+            - name: AKASH_IP_OPERATOR
+              valueFrom:
+                configMapKeyRef:
+                  name: akash-provider-config
+                  key: ip-operator
+                  optional: true
           ports:
             - name: gateway
               containerPort: 8443

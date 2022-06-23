@@ -44,7 +44,7 @@ type Client interface {
 	Status(ctx context.Context) (*provider.Status, error)
 	Validate(ctx context.Context, gspec dtypes.GroupSpec) (provider.ValidateGroupSpecResult, error)
 	SubmitManifest(ctx context.Context, dseq uint64, mani manifest.Manifest) error
-	LeaseStatus(ctx context.Context, id mtypes.LeaseID) (*cltypes.LeaseStatus, error)
+	LeaseStatus(ctx context.Context, id mtypes.LeaseID) (LeaseStatus, error)
 	LeaseEvents(ctx context.Context, id mtypes.LeaseID, services string, follow bool) (*LeaseKubeEvents, error)
 	LeaseLogs(ctx context.Context, id mtypes.LeaseID, services string, follow bool, tailLines int64) (*ServiceLogs, error)
 	ServiceStatus(ctx context.Context, id mtypes.LeaseID, service string) (*cltypes.ServiceStatus, error)
@@ -55,6 +55,7 @@ type Client interface {
 		tty bool,
 		tsq <-chan remotecommand.TerminalSize) error
 	MigrateHostnames(ctx context.Context, hostnames []string, dseq uint64, gseq uint32) error
+	MigrateEndpoints(ctx context.Context, endpoints []string, dseq uint64, gseq uint32) error
 }
 
 type JwtClient interface {
@@ -448,6 +449,46 @@ func (c *client) SubmitManifest(ctx context.Context, dseq uint64, mani manifest.
 	return createClientResponseErrorIfNotOK(resp, responseBuf)
 }
 
+func (c *client) MigrateEndpoints(ctx context.Context, endpoints []string, dseq uint64, gseq uint32) error {
+	uri, err := makeURI(c.host, "endpoint/migrate")
+	if err != nil {
+		return err
+	}
+
+	body := endpointMigrateRequestBody{
+		EndpointsToMigrate: endpoints,
+		DestinationDSeq:    dseq,
+		DestinationGSeq:    gseq,
+	}
+
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, bytes.NewReader(buf))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", contentTypeJSON)
+
+	resp, err := c.hclient.Do(req)
+	if err != nil {
+		return err
+	}
+	responseBuf := &bytes.Buffer{}
+	_, err = io.Copy(responseBuf, resp.Body)
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if err != nil {
+		return err
+	}
+
+	return createClientResponseErrorIfNotOK(resp, responseBuf)
+}
+
 func (c *client) MigrateHostnames(ctx context.Context, hostnames []string, dseq uint64, gseq uint32) error {
 	uri, err := makeURI(c.host, "hostname/migrate")
 	if err != nil {
@@ -488,18 +529,18 @@ func (c *client) MigrateHostnames(ctx context.Context, hostnames []string, dseq 
 	return createClientResponseErrorIfNotOK(resp, responseBuf)
 }
 
-func (c *client) LeaseStatus(ctx context.Context, id mtypes.LeaseID) (*cltypes.LeaseStatus, error) {
+func (c *client) LeaseStatus(ctx context.Context, id mtypes.LeaseID) (LeaseStatus, error) {
 	uri, err := makeURI(c.host, leaseStatusPath(id))
 	if err != nil {
-		return nil, err
+		return LeaseStatus{}, err
 	}
 
-	var obj cltypes.LeaseStatus
+	var obj LeaseStatus
 	if err := c.getStatus(ctx, uri, &obj); err != nil {
-		return nil, err
+		return LeaseStatus{}, err
 	}
 
-	return &obj, nil
+	return obj, nil
 }
 
 func (c *client) LeaseEvents(ctx context.Context, id mtypes.LeaseID, _ string, follow bool) (*LeaseKubeEvents, error) {

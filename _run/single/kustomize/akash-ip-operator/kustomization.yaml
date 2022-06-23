@@ -1,0 +1,18 @@
+bases:
+  - ../../../../_docs/kustomize/akash-ip-operator
+
+namespace: akash-services
+
+configMapGenerator:
+  - name: akash-ip-operator-config
+    behavior: merge
+    files:
+      - operator.properties
+
+patchesJson6902:
+  - path: docker-image.yaml
+    target:
+      kind: Deployment
+      group: apps
+      name: akash-ip-operator
+      version: v1

@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"github.com/ovrclk/akash/provider/operator/hostnameoperator"
+	"github.com/ovrclk/akash/provider/operator/ipoperator"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -27,12 +29,14 @@ func RootCmd() *cobra.Command {
 	cmd.AddCommand(serviceStatusCmd())
 	cmd.AddCommand(RunCmd())
 	cmd.AddCommand(LeaseShellCmd())
-	cmd.AddCommand(HostnameOperatorCmd())
+	cmd.AddCommand(hostnameoperator.Cmd())
+	cmd.AddCommand(ipoperator.Cmd())
 	cmd.AddCommand(MigrateHostnamesCmd())
 	cmd.AddCommand(AuthServerCmd())
 	cmd.AddCommand(clusterNSCmd())
 	cmd.AddCommand(migrate())
 	cmd.AddCommand(RunResourceServerCmd())
+	cmd.AddCommand(MigrateEndpointsCmd())
 
 	return cmd
 }
