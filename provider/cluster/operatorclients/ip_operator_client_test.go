@@ -93,7 +93,7 @@ func TestIPOperatorClient(t *testing.T) {
 
 	go func() {
 		err := fakeServer.ListenAndServe()
-		if err != nil && errors.Is(err, http.ErrServerClosed) {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			panic(err)
 		}
 	}()
