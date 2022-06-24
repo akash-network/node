@@ -1,7 +1,10 @@
 package v2beta1
 
 import (
+	"errors"
+	"fmt"
 	types "github.com/ovrclk/akash/types/v1beta2"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Manifest store list of groups
@@ -14,8 +17,34 @@ const (
 	UDP = ServiceProtocol("UDP")
 )
 
+var (
+	errUnknownServiceProtocol = errors.New("unknown service protocol")
+)
+
 func (sp ServiceProtocol) ToString() string {
 	return string(sp)
+}
+
+func (sp ServiceProtocol) ToKube() (corev1.Protocol, error) {
+	switch sp {
+	case TCP:
+		return corev1.ProtocolTCP, nil
+	case UDP:
+		return corev1.ProtocolUDP, nil
+	}
+
+	return corev1.Protocol(""), fmt.Errorf("%w: %v", errUnknownServiceProtocol, sp)
+}
+
+func ServiceProtocolFromKube(proto corev1.Protocol) (ServiceProtocol, error) {
+	switch proto {
+	case corev1.ProtocolTCP:
+		return TCP, nil
+	case corev1.ProtocolUDP:
+		return UDP, nil
+	}
+
+	return ServiceProtocol(""), fmt.Errorf("%w: %v", errUnknownServiceProtocol, proto)
 }
 
 // GetGroups returns a manifest with groups list
@@ -43,6 +72,7 @@ func (g Group) GetResources() []types.Resources {
 			Count:     s.Count,
 		})
 	}
+
 	return resources
 }
 
@@ -81,13 +111,15 @@ func (s Service) GetCount() uint32 {
 
 // ServiceExpose stores exposed ports and hosts details
 type ServiceExpose struct {
-	Port         uint16 // Port on the container
-	ExternalPort uint16 // Port on the service definition
-	Proto        ServiceProtocol
-	Service      string
-	Global       bool
-	Hosts        []string
-	HTTPOptions  ServiceExposeHTTPOptions
+	Port                   uint16 // Port on the container
+	ExternalPort           uint16 // Port on the service definition
+	Proto                  ServiceProtocol
+	Service                string
+	Global                 bool
+	Hosts                  []string
+	HTTPOptions            ServiceExposeHTTPOptions
+	IP                     string // The name of the IP address associated with this, if any
+	EndpointSequenceNumber uint32 // The sequence number of the associated endpoint in the on-chain data
 }
 
 type ServiceExposeHTTPOptions struct {

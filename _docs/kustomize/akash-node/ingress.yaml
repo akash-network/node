@@ -3,6 +3,7 @@ kind: Ingress
 metadata:
   name: akash-node
 spec:
+  ingressClassName: "akash-ingress-class"
   rules:
     - host: akash.localhost
       http:

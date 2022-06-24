@@ -17,7 +17,7 @@ func TestDeploySetsEnvironmentVariables(t *testing.T) {
 		ClusterPublicHostname: fakeHostname,
 	}
 	lid := testutil.LeaseID(t)
-	sdl, err := sdl.ReadFile("../../../../_run/kube/deployment.yaml")
+	sdl, err := sdl.ReadFile("../../../../x/deployment/testdata/deployment.yaml")
 	require.NoError(t, err)
 
 	mani, err := sdl.Manifest()

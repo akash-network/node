@@ -5,7 +5,6 @@ package kube
 import (
 	"context"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -153,25 +152,6 @@ func applyService(ctx context.Context, kc kubernetes.Interface, b builder.Servic
 	return err
 }
 
-func prepareEnvironment(ctx context.Context, kc kubernetes.Interface, ns string) error {
-	_, err := kc.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
-	metricsutils.IncCounterVecWithLabelValuesFiltered(kubeCallsCounter, "namespaces-get", err, errors.IsNotFound)
-
-	if errors.IsNotFound(err) {
-		obj := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: ns,
-				Labels: map[string]string{
-					builder.AkashManagedLabelName: "true",
-				},
-			},
-		}
-		_, err = kc.CoreV1().Namespaces().Create(ctx, obj, metav1.CreateOptions{})
-		metricsutils.IncCounterVecWithLabelValues(kubeCallsCounter, "namespaces-create", err)
-	}
-	return err
-}
-
 func applyManifest(ctx context.Context, kc crdapi.Interface, b builder.Manifest) error {
 	obj, err := kc.AkashV2beta1().Manifests(b.NS()).Get(ctx, b.Name(), metav1.GetOptions{})
 
@@ -179,6 +159,7 @@ func applyManifest(ctx context.Context, kc crdapi.Interface, b builder.Manifest)
 
 	switch {
 	case err == nil:
+		// TODO - only run this update if it would change something
 		obj, err = b.Update(obj)
 		if err == nil {
 			_, err = kc.AkashV2beta1().Manifests(b.NS()).Update(ctx, obj, metav1.UpdateOptions{})

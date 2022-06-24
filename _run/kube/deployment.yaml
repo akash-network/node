@@ -15,6 +15,7 @@ services:
           - hello.localhost
         to:
           - global: true
+            ip: "foobario"
   bew:
     image: quay.io/ovrclk/demo-app
     expose:
@@ -53,3 +54,6 @@ deployment:
     westcoast:
       profile: web
       count: 1
+endpoints:
+  foobario:
+    kind: ip

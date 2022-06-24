@@ -41,3 +41,11 @@ type ProviderHostListerExpansion interface{}
 // ProviderHostNamespaceListerExpansion allows custom methods to be added to
 // ProviderHostNamespaceLister.
 type ProviderHostNamespaceListerExpansion interface{}
+
+// ProviderLeasedIPListerExpansion allows custom methods to be added to
+// ProviderLeasedIPLister.
+type ProviderLeasedIPListerExpansion interface{}
+
+// ProviderLeasedIPNamespaceListerExpansion allows custom methods to be added to
+// ProviderLeasedIPNamespaceLister.
+type ProviderLeasedIPNamespaceListerExpansion interface{}

@@ -2,6 +2,8 @@ package cluster
 
 import (
 	"context"
+	"github.com/ovrclk/akash/provider/cluster/operatorclients"
+	"github.com/ovrclk/akash/provider/operator/waiter"
 
 	"github.com/boz/go-lifecycle"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
@@ -58,7 +60,7 @@ type Service interface {
 }
 
 // NewService returns new Service instance
-func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, client Client, cfg Config) (Service, error) {
+func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, client Client, ipOperatorClient operatorclients.IPOperatorClient, waiter waiter.OperatorWaiter, cfg Config) (Service, error) {
 	log := session.Log().With("module", "provider-cluster", "cmp", "service")
 
 	lc := lifecycle.New()
@@ -74,7 +76,7 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 		return nil, err
 	}
 
-	inventory, err := newInventoryService(cfg, log, lc.ShuttingDown(), sub, client, deployments)
+	inventory, err := newInventoryService(cfg, log, lc.ShuttingDown(), sub, client, ipOperatorClient, waiter, deployments)
 	if err != nil {
 		sub.Close()
 		return nil, err
@@ -113,10 +115,11 @@ func NewService(ctx context.Context, session session.Session, bus pubsub.Bus, cl
 		log:    log,
 		lc:     lc,
 		config: cfg,
+		waiter: waiter,
 	}
 
 	go s.lc.WatchContext(ctx)
-	go s.run(deployments)
+	go s.run(ctx, deployments)
 
 	return s, nil
 }
@@ -138,6 +141,8 @@ type service struct {
 
 	log log.Logger
 	lc  lifecycle.Lifecycle
+
+	waiter waiter.OperatorWaiter
 
 	config Config
 }
@@ -250,11 +255,19 @@ func (s *service) updateDeploymentManagerGauge() {
 	deploymentManagerGauge.Set(float64(len(s.managers)))
 }
 
-func (s *service) run(deployments []ctypes.Deployment) {
+func (s *service) run(ctx context.Context, deployments []ctypes.Deployment) {
 	defer s.lc.ShutdownCompleted()
 	defer s.sub.Close()
 
 	s.updateDeploymentManagerGauge()
+
+	// wait for configured operators to be online & responsive before proceeding
+	err := s.waiter.WaitForAll(ctx)
+	if err != nil {
+		s.lc.ShutdownInitiated(err)
+		return
+	}
+
 	for _, deployment := range deployments {
 		key := deployment.LeaseID()
 		mgroup := deployment.ManifestGroup()
@@ -271,7 +284,7 @@ loop:
 		case ev := <-s.sub.Events():
 			switch ev := ev.(type) {
 			case event.ManifestReceived:
-				s.log.Info("manifest received")
+				s.log.Info("manifest received", "lease", ev.LeaseID)
 
 				mgroup := ev.ManifestGroup()
 				if mgroup == nil {

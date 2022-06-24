@@ -19,7 +19,10 @@ provider-run:
 		--cluster-node-port-quantity 100 \
 		--cluster-public-hostname "$(GATEWAY_HOSTNAME)" \
 		--bid-price-strategy "randomRange" \
-		--deployment-runtime-class "none"
+		--deployment-runtime-class "none" \
+		--hostname-operator-endpoint localhost:8085 \
+		--ip-operator-endpoint localhost:8086 \
+		--ip-operator
 
 .PHONY: provider-lease-status
 provider-lease-status:
@@ -50,6 +53,11 @@ clean-kube:
 .PHONY: hostname-operator
 hostname-operator:
 	$(AKASH) provider hostname-operator
+
+.PHONY: ip-operator
+ip-operator:
+	$(AKASH) provider ip-operator --provider=$(PROVIDER_ADDRESS)
+
 
 .PHONY: clean-$(KIND_NAME)
 clean-$(KIND_NAME):

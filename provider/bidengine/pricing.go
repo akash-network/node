@@ -6,6 +6,8 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"github.com/ovrclk/akash/provider/cluster/util"
+	atypes "github.com/ovrclk/akash/types/v1beta2"
 	"math/big"
 	"os"
 	"os/exec"
@@ -28,6 +30,7 @@ const denom = "uakt"
 var (
 	errAllScalesZero               = errors.New("at least one bid price must be a non-zero number")
 	errNoPriceScaleForStorageClass = errors.New("no pricing configured for storage class")
+	errScaleNegative               = errors.New("scale price cannot be negative")
 )
 
 type Storage map[string]decimal.Decimal
@@ -73,16 +76,23 @@ type scalePricing struct {
 	memoryScale   decimal.Decimal
 	storageScale  Storage
 	endpointScale decimal.Decimal
+	ipScale       decimal.Decimal
 }
 
 func MakeScalePricing(
 	cpuScale decimal.Decimal,
 	memoryScale decimal.Decimal,
 	storageScale Storage,
-	endpointScale decimal.Decimal) (BidPricingStrategy, error) {
+	endpointScale decimal.Decimal,
+	ipScale decimal.Decimal) (BidPricingStrategy, error) {
 
-	if cpuScale.IsZero() && memoryScale.IsZero() && storageScale.IsAnyZero() && endpointScale.IsZero() {
+	if cpuScale.IsZero() && memoryScale.IsZero() && storageScale.IsAnyZero() && endpointScale.IsZero() && ipScale.IsZero() {
 		return nil, errAllScalesZero
+	}
+
+	if cpuScale.IsNegative() || memoryScale.IsNegative() || storageScale.IsAnyNegative() || endpointScale.IsNegative() ||
+		ipScale.IsNegative() {
+		return nil, errScaleNegative
 	}
 
 	result := scalePricing{
@@ -90,6 +100,7 @@ func MakeScalePricing(
 		memoryScale:   memoryScale,
 		storageScale:  storageScale,
 		endpointScale: endpointScale,
+		ipScale:       ipScale,
 	}
 
 	return result, nil
@@ -123,6 +134,8 @@ func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes
 	}
 
 	endpointTotal := decimal.NewFromInt(0)
+	ipTotal := decimal.NewFromInt(0).Add(fp.ipScale)
+	ipTotal = ipTotal.Mul(decimal.NewFromInt(int64(util.GetEndpointQuantityOfResourceGroup(gspec, atypes.Endpoint_LEASED_IP))))
 
 	// iterate over everything & sum it up
 	for _, group := range gspec.Resources {
@@ -187,7 +200,8 @@ func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes
 	if cpuTotal.IsNegative() ||
 		memoryTotal.IsNegative() ||
 		storageTotal.IsAnyNegative() ||
-		endpointTotal.IsNegative() {
+		endpointTotal.IsNegative() ||
+		ipTotal.IsNegative() {
 		return sdk.DecCoin{}, ErrBidQuantityInvalid
 	}
 
@@ -197,6 +211,7 @@ func (fp scalePricing) CalculatePrice(_ context.Context, _ string, gspec *dtypes
 		totalCost = totalCost.Add(total)
 	}
 	totalCost = totalCost.Add(endpointTotal)
+	totalCost = totalCost.Add(ipTotal)
 
 	if totalCost.IsNegative() {
 		return sdk.DecCoin{}, ErrBidQuantityInvalid
@@ -342,9 +357,11 @@ type dataForScriptElement struct {
 	Storage          []storageElement `json:"storage"`
 	Count            uint32           `json:"count"`
 	EndpointQuantity int              `json:"endpoint_quantity"`
+	IPLeaseQuantity  uint             `json:"ip_lease_quantity"`
 }
 
 func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, gspec *dtypes.GroupSpec) (sdk.DecCoin, error) {
+
 	buf := &bytes.Buffer{}
 
 	dataForScript := make([]dataForScriptElement, len(gspec.Resources))
@@ -378,6 +395,7 @@ func (ssp shellScriptPricing) CalculatePrice(ctx context.Context, owner string, 
 			Storage:          storageQuantity,
 			Count:            groupCount,
 			EndpointQuantity: endpointQuantity,
+			IPLeaseQuantity:  util.GetEndpointQuantityOfResourceUnits(group.Resources, atypes.Endpoint_LEASED_IP),
 		}
 	}
 

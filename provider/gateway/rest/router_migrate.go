@@ -115,6 +115,7 @@ func migrateHandler(log log.Logger, hostnameService clustertypes.HostnameService
 			}
 		}
 
+		rw.Header().Set("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusOK)
 		result := make(map[string]interface{})
 		result["transferred"] = body.HostnamesToMigrate

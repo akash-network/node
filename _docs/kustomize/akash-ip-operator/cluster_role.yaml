@@ -1,0 +1,17 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: akash-ip-op-manage-service
+rules:
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "create", "update", "delete", "deletecollection", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: akash-ip-op-watch-providerleasedip
+rules:
+  - apiGroups: ["akash.network"]
+    resources: ["providerleasedips"]
+    verbs: ["get", "list", "watch"]

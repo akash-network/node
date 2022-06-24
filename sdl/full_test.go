@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 func TestFull(t *testing.T) {
@@ -56,8 +55,6 @@ deployment:
       count: 1
 `
 
-	var sdl v2
-
-	err := yaml.Unmarshal([]byte(stream), &sdl)
+	_, err := Read([]byte(stream))
 	require.NoError(t, err)
 }

@@ -30,7 +30,6 @@ type scaffold struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	qc       *cosmosMock.QueryClient
-	aqc      *akashmock.QueryClient
 	bc       *balanceChecker
 }
 
@@ -53,7 +52,7 @@ func leaseMonitorForTest(t *testing.T) (*scaffold, *balanceChecker) {
 
 	client := akashmock.NewClient(t)
 	client.On("NodeSyncInfo", mock.Anything).Run(func(args mock.Arguments) {
-		nodeSyncInfo.LatestBlockHeight = int64(time.Now().Sub(startedAt) / netutil.AverageBlockTime)
+		nodeSyncInfo.LatestBlockHeight = int64(time.Since(startedAt) / netutil.AverageBlockTime)
 	}).Return(nodeSyncInfo, nil)
 
 	queryClient := &cosmosMock.QueryClient{}
