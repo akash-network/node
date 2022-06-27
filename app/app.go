@@ -51,9 +51,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/cosmos/ibc-go/v2/modules/apps/transfer"
-	ibc "github.com/cosmos/ibc-go/v2/modules/core"
-	porttypes "github.com/cosmos/ibc-go/v2/modules/core/05-port/types"
+	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
+	ibc "github.com/cosmos/ibc-go/v3/modules/core"
+	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
@@ -89,13 +89,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	ibctransferkeeper "github.com/cosmos/ibc-go/v2/modules/apps/transfer/keeper"
-	ibctransfertypes "github.com/cosmos/ibc-go/v2/modules/apps/transfer/types"
-	ibcclient "github.com/cosmos/ibc-go/v2/modules/core/02-client"
-	ibcclienttypes "github.com/cosmos/ibc-go/v2/modules/core/02-client/types"
-	ibcconnectiontypes "github.com/cosmos/ibc-go/v2/modules/core/03-connection/types"
-	ibchost "github.com/cosmos/ibc-go/v2/modules/core/24-host"
-	ibckeeper "github.com/cosmos/ibc-go/v2/modules/core/keeper"
+	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
+	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	ibcclient "github.com/cosmos/ibc-go/v3/modules/core/02-client"
+	ibcclienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
+	ibcconnectiontypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
+	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
+	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
 
 	dkeeper "github.com/ovrclk/akash/x/deployment/keeper"
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
@@ -321,14 +321,16 @@ func NewApp(
 	// register Transfer Keepers
 	app.keeper.transfer = ibctransferkeeper.NewKeeper(
 		appCodec, app.keys[ibctransfertypes.StoreKey], app.GetSubspace(ibctransfertypes.ModuleName),
-		app.keeper.ibc.ChannelKeeper, &app.keeper.ibc.PortKeeper,
+		app.keeper.ibc.ChannelKeeper, app.keeper.ibc.ChannelKeeper, &app.keeper.ibc.PortKeeper,
 		app.keeper.acct, app.keeper.bank, scopedTransferKeeper,
 	)
+
 	transferModule := transfer.NewAppModule(app.keeper.transfer)
+	transferIBCModule := transfer.NewIBCModule(app.keeper.transfer)
 
 	// Create static IBC router, add transfer route, then set and seal it
 	ibcRouter := porttypes.NewRouter()
-	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferModule)
+	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferIBCModule)
 	app.keeper.ibc.SetRouter(ibcRouter)
 
 	// create evidence keeper with evidence router
