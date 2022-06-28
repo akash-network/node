@@ -31,9 +31,6 @@ spec:
       - namespaceSelector:
           matchLabels:
             name: akash-services
-            kubernetes.io/metadata.name: ingress-nginxq
+            kubernetes.io/metadata.name: ingress-nginx
         podSelector: 
           matchLabels: {}
-#    ports:
-#    - protocol: TCP
-#      port: 6379

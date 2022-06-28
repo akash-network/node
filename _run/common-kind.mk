@@ -37,7 +37,7 @@ INGRESS_CLASS_CONFIG_PATH ?= ../ingress-nginx-class.yaml
 CALICO_MANIFEST     ?= https://docs.projectcalico.org/v3.8/manifests/calico.yaml
 METALLB_CONFIG_PATH ?= ../metallb.yaml
 METALLB_IP_CONFIG_PATH ?= ../kind-config-metal-lb-ip.yaml
-METALLB_SERVICE_PATH ?= ../metallb-service.yaml
+METALLB_SERVICE_PATH ?= ../../_docs/provider/kube/metallb-service.yaml
 
 IMAGE_NAME_FILE ?= ./docker_image.txt
 
