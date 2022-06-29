@@ -60,7 +60,7 @@ func migrateEndpoints(cmd *cobra.Command, args []string) error {
 func MigrateEndpointsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "migrate-endpoints",
-		Short:        "",
+		Short:        "migrate endpoints between deployments on the same provider",
 		SilenceUsage: true,
 		RunE:         migrateEndpoints,
 	}
