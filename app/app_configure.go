@@ -18,9 +18,9 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-
 	"github.com/ovrclk/akash/x/audit"
 	audittypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
 	"github.com/ovrclk/akash/x/cert"
@@ -32,6 +32,7 @@ import (
 	escrowtypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 	"github.com/ovrclk/akash/x/inflation"
 	inflationtypes "github.com/ovrclk/akash/x/inflation/types/v1beta2"
+	intertxtypes "github.com/ovrclk/akash/x/inter-tx/types"
 	"github.com/ovrclk/akash/x/market"
 	mhooks "github.com/ovrclk/akash/x/market/hooks"
 	markettypes "github.com/ovrclk/akash/x/market/types/v1beta2"
@@ -197,6 +198,8 @@ func (app *AkashApp) akashBeginBlockModules() []string {
 		stakingtypes.ModuleName,
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
+		icatypes.ModuleName,
+		intertxtypes.ModuleName,
 	}
 }
 
@@ -227,6 +230,8 @@ func (app *AkashApp) akashEndBlockModules() []string {
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
+		icatypes.ModuleName,
+		intertxtypes.ModuleName,
 	}
 }
 
@@ -250,6 +255,8 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
+		icatypes.ModuleName,
+		intertxtypes.ModuleName,
 		cert.ModuleName,
 		escrow.ModuleName,
 		deployment.ModuleName,
