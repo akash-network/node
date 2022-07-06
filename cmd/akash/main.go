@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/cosmos/cosmos-sdk/server"
+
 	"github.com/ovrclk/akash/cmd/akash/cmd"
 )
 
@@ -11,7 +12,7 @@ import (
 func main() {
 	rootCmd, _ := cmd.NewRootCmd()
 
-	if err := cmd.Execute(rootCmd); err != nil {
+	if err := cmd.Execute(rootCmd, "AKASH"); err != nil {
 		switch e := err.(type) {
 		case server.ErrorCode:
 			os.Exit(e.Code)

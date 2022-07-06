@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/ovrclk/akash/provider/cluster/util"
+	"github.com/ovrclk/akash/sdl/util"
 
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
