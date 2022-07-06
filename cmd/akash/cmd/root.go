@@ -39,7 +39,6 @@ import (
 
 	"github.com/ovrclk/akash/app"
 	ecmd "github.com/ovrclk/akash/events/cmd"
-	pcmd "github.com/ovrclk/akash/provider/cmd"
 	"github.com/ovrclk/akash/sdkutil"
 )
 
@@ -68,7 +67,7 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 		Short:             "Akash Blockchain Application",
 		Long:              "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
 		SilenceUsage:      true,
-		PersistentPreRunE: getPersistentPreRunE(encodingConfig),
+		PersistentPreRunE: GetPersistentPreRunE(encodingConfig),
 	}
 
 	initRootCmd(rootCmd, encodingConfig)
@@ -76,7 +75,7 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 	return rootCmd, encodingConfig
 }
 
-func getPersistentPreRunE(encodingConfig params.EncodingConfig) func(*cobra.Command, []string) error {
+func GetPersistentPreRunE(encodingConfig params.EncodingConfig) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
 		if err := server.InterceptConfigsPreRunHandler(cmd, "", nil); err != nil {
 			return err
@@ -101,7 +100,7 @@ func getPersistentPreRunE(encodingConfig params.EncodingConfig) func(*cobra.Comm
 }
 
 // Execute executes the root command.
-func Execute(rootCmd *cobra.Command) error {
+func Execute(rootCmd *cobra.Command, envPrefix string) error {
 	// Create and set a client.Context on the command's Context. During the pre-run
 	// of the root command, a default initialized client.Context is provided to
 	// seed child command execution with values such as AccountRetriver, Keyring,
@@ -116,7 +115,7 @@ func Execute(rootCmd *cobra.Command) error {
 	rootCmd.PersistentFlags().String(flags.FlagLogLevel, zerolog.InfoLevel.String(), "The logging level (trace|debug|info|warn|error|fatal|panic)")
 	rootCmd.PersistentFlags().String(flags.FlagLogFormat, tmcfg.LogFormatPlain, "The logging format (json|plain)")
 
-	executor := tmcli.PrepareBaseCmd(rootCmd, "AKASH", app.DefaultHome)
+	executor := tmcli.PrepareBaseCmd(rootCmd, envPrefix, app.DefaultHome)
 	return executor.ExecuteContext(ctx)
 }
 
@@ -124,7 +123,6 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 	sdkutil.InitSDKConfig()
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
-		pcmd.RootCmd(),
 		ecmd.EventCmd(),
 		queryCmd(),
 		txCmd(),

@@ -1,0 +1,58 @@
+---
+version: "2.0"
+
+services:
+  web:
+    image: anapsix/webdis
+    env:
+      - REDIS_HOST=redis-server
+    expose:
+      - port: 7379
+        as: 80
+        to:
+          - global: true
+        accept:
+          - webdistest.localhost
+
+  redis-server:
+    image: redis:rc-alpine3.12
+    expose:
+      - port: 6379
+      
+profiles:
+  compute:
+    web:
+      resources:
+        cpu:
+          units: 0.1
+        memory:
+          size: 16Mi
+        storage:
+          size: 128Mi
+    redis-server:
+      resources:
+        cpu:
+          units: 0.1
+        memory:
+          size: 64Mi
+        storage:
+          size: 128Mi
+  placement:
+    global:
+      pricing:
+        web: 
+          denom: uakt
+          amount: 10000000
+        redis-server:
+          denom: uakt
+          amount: 10000000
+
+deployment:
+  web:
+    global:
+      profile: web
+      count: 1
+  redis-server:
+    global:
+      profile: redis-server
+      count: 1

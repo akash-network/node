@@ -9,12 +9,13 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/ovrclk/akash/app"
-	"github.com/ovrclk/akash/testutil"
-	testutilcli "github.com/ovrclk/akash/testutil/cli"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 	tmcli "github.com/tendermint/tendermint/libs/cli"
+
+	"github.com/ovrclk/akash/app"
+	"github.com/ovrclk/akash/testutil"
+	testutilcli "github.com/ovrclk/akash/testutil/cli"
 )
 
 // TestContextFlags tests that all the flags which are set in client.Context are parsed correctly.
@@ -153,7 +154,7 @@ func TestContextFlags(t *testing.T) {
 	// test command
 	cmd := &cobra.Command{
 		Use:               "test",
-		PersistentPreRunE: getPersistentPreRunE(app.MakeEncodingConfig()),
+		PersistentPreRunE: GetPersistentPreRunE(app.MakeEncodingConfig()),
 	}
 	cmd.PersistentFlags().String(flags.FlagHome, app.DefaultHome, "The application home directory")
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
