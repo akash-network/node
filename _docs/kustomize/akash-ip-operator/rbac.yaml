@@ -5,6 +5,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: akash-ip-operator
+    namespace: akash-services
 roleRef:
   kind: ClusterRole
   name: akash-ip-op-manage-service
@@ -17,6 +18,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: akash-ip-operator
+    namespace: akash-services
 roleRef:
   kind: ClusterRole
   name: akash-ip-op-watch-providerleasedip

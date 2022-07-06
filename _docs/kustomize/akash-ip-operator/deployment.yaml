@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: akash-ip-operator
+  namespace: akash-services
   labels:
     akash.network/component: akash-ip-operator
 spec:
