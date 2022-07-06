@@ -28,6 +28,7 @@ akash_docgen: $(AKASH_DEVCACHE)
 
 .PHONY: install
 install:
+	@echo installing akash
 	$(GO) install $(BUILD_FLAGS) ./cmd/akash
 
 .PHONY: image-minikube

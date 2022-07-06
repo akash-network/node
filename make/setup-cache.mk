@@ -86,22 +86,6 @@ $(GOLANGCI_LINT_VERSION_FILE): $(AKASH_DEVCACHE)
 	touch $@
 $(GOLANGCI_LINT): $(GOLANGCI_LINT_VERSION_FILE)
 
-$(K8S_CODE_GEN_VERSION_FILE): $(AKASH_DEVCACHE) modvendor
-	@echo "installing k8s code-generator $(K8S_CODE_GEN_VERSION) ..."
-	rm -f $(K8S_GO_TO_PROTOBUF)
-	GOBIN=$(AKASH_DEVCACHE_BIN) go install $(ROOT_DIR)/vendor/k8s.io/code-generator/...
-	rm -rf "$(dir $@)"
-	mkdir -p "$(dir $@)"
-	touch $@
-	chmod +x $(K8S_GENERATE_GROUPS)
-$(K8S_GO_TO_PROTOBUF): $(K8S_CODE_GEN_VERSION_FILE)
-$(K8S_GENERATE_GROUPS): $(K8S_CODE_GEN_VERSION_FILE)
-
-.PHONY: $(KIND)
-$(KIND):
-	@echo "installing kind ..."
-	$(GO) install sigs.k8s.io/kind
-
 $(NPM):
 ifeq (, $(shell which $(NPM) 2>/dev/null))
 	$(error "npm installation required")
