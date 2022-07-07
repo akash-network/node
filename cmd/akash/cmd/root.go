@@ -42,11 +42,14 @@ import (
 	"github.com/ovrclk/akash/sdkutil"
 )
 
-func bindFlags(cmd *cobra.Command, v *viper.Viper) {
+func bindFlags(cmd *cobra.Command, v *viper.Viper, envPrefixes []string) {
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
 		// Environment variables can't have dashes in them, so bind them to their equivalent
 		// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
-		_ = v.BindEnv(f.Name, fmt.Sprintf("%s_%s", "AKASH", strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))))
+		for _, prefix := range envPrefixes {
+			_ = v.BindEnv(f.Name, fmt.Sprintf("%s_%s", prefix, strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))))
+		}
+
 		_ = v.BindPFlag(f.Name, f)
 
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
@@ -67,7 +70,7 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 		Short:             "Akash Blockchain Application",
 		Long:              "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
 		SilenceUsage:      true,
-		PersistentPreRunE: GetPersistentPreRunE(encodingConfig),
+		PersistentPreRunE: GetPersistentPreRunE(encodingConfig, []string{"AKASH"}),
 	}
 
 	initRootCmd(rootCmd, encodingConfig)
@@ -75,7 +78,8 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 	return rootCmd, encodingConfig
 }
 
-func GetPersistentPreRunE(encodingConfig params.EncodingConfig) func(*cobra.Command, []string) error {
+// GetPersistentPreRunE persistent prerun hook for root command
+func GetPersistentPreRunE(encodingConfig params.EncodingConfig, envPrefixes []string) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
 		if err := server.InterceptConfigsPreRunHandler(cmd, "", nil); err != nil {
 			return err
@@ -83,7 +87,7 @@ func GetPersistentPreRunE(encodingConfig params.EncodingConfig) func(*cobra.Comm
 
 		ctx := server.GetServerContextFromCmd(cmd)
 
-		bindFlags(cmd, ctx.Viper)
+		bindFlags(cmd, ctx.Viper, envPrefixes)
 
 		initClientCtx := client.Context{}.
 			WithCodec(encodingConfig.Marshaler).
