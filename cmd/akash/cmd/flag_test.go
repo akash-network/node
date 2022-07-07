@@ -154,7 +154,7 @@ func TestContextFlags(t *testing.T) {
 	// test command
 	cmd := &cobra.Command{
 		Use:               "test",
-		PersistentPreRunE: GetPersistentPreRunE(app.MakeEncodingConfig()),
+		PersistentPreRunE: GetPersistentPreRunE(app.MakeEncodingConfig(), []string{"AKASH"}),
 	}
 	cmd.PersistentFlags().String(flags.FlagHome, app.DefaultHome, "The application home directory")
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
