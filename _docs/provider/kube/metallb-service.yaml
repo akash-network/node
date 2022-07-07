@@ -30,7 +30,6 @@ spec:
     - from:
       - namespaceSelector:
           matchLabels:
-            name: akash-services
-            kubernetes.io/metadata.name: ingress-nginx
+            kubernetes.io/metadata.name: akash-services
         podSelector: 
           matchLabels: {}
