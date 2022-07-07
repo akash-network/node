@@ -32,12 +32,13 @@ import (
 	escrowtypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 	"github.com/ovrclk/akash/x/inflation"
 	inflationtypes "github.com/ovrclk/akash/x/inflation/types/v1beta2"
-	intertxtypes "github.com/ovrclk/akash/x/inter-tx/types"
 	"github.com/ovrclk/akash/x/market"
 	mhooks "github.com/ovrclk/akash/x/market/hooks"
 	markettypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/ovrclk/akash/x/provider"
 	providertypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
+
+	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {
@@ -199,7 +200,7 @@ func (app *AkashApp) akashBeginBlockModules() []string {
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
 		icatypes.ModuleName,
-		intertxtypes.ModuleName,
+		icaauthtypes.ModuleName,
 	}
 }
 
@@ -231,7 +232,7 @@ func (app *AkashApp) akashEndBlockModules() []string {
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
 		icatypes.ModuleName,
-		intertxtypes.ModuleName,
+		icaauthtypes.ModuleName,
 	}
 }
 
@@ -256,7 +257,7 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
 		icatypes.ModuleName,
-		intertxtypes.ModuleName,
+		icaauthtypes.ModuleName,
 		cert.ModuleName,
 		escrow.ModuleName,
 		deployment.ModuleName,

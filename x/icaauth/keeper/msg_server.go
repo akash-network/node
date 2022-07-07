@@ -6,12 +6,11 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-
 	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
 	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
-
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	"github.com/ovrclk/akash/x/inter-tx/types"
+
+	"github.com/ovrclk/akash/x/icaauth/types"
 )
 
 var _ types.MsgServer = msgServer{}
@@ -20,7 +19,7 @@ type msgServer struct {
 	Keeper
 }
 
-// NewMsgServerImpl creates and returns a new types.MsgServer, fulfilling the intertx Msg service interface
+// NewMsgServerImpl creates and returns a new types.MsgServer, fulfilling the icaauth Msg service interface
 func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 	return &msgServer{Keeper: keeper}
 }

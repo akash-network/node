@@ -45,8 +45,8 @@ import (
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 
 	appparams "github.com/ovrclk/akash/app/params"
-	intertx "github.com/ovrclk/akash/x/inter-tx"
-	intertxtypes "github.com/ovrclk/akash/x/inter-tx/types"
+	icaauth "github.com/ovrclk/akash/x/icaauth"
+	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types"
 )
 
 var (
@@ -83,7 +83,7 @@ var (
 			transfer.AppModuleBasic{},
 			vesting.AppModuleBasic{},
 			ica.AppModuleBasic{},
-			intertx.AppModuleBasic{},
+			icaauth.AppModuleBasic{},
 		},
 			// akash
 			akashModuleBasics()...,
@@ -124,7 +124,7 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 			icacontrollertypes.StoreKey,
 			ibctransfertypes.StoreKey,
 			capabilitytypes.StoreKey,
-			intertxtypes.StoreKey,
+			icaauthtypes.StoreKey,
 			icahosttypes.StoreKey,
 		},
 			akashKVStoreKeys()...,

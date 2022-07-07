@@ -1,4 +1,4 @@
-package intertx
+package icaauth
 
 import (
 	"encoding/json"
@@ -14,9 +14,9 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
-	"github.com/ovrclk/akash/x/inter-tx/client/cli"
-	"github.com/ovrclk/akash/x/inter-tx/keeper"
-	"github.com/ovrclk/akash/x/inter-tx/types"
+	"github.com/ovrclk/akash/x/icaauth/client/cli"
+	"github.com/ovrclk/akash/x/icaauth/keeper"
+	"github.com/ovrclk/akash/x/icaauth/types"
 )
 
 var (
@@ -86,7 +86,7 @@ type AppModule struct {
 	keeper keeper.Keeper
 }
 
-// NewAppModule creates and returns a new intertx AppModule
+// NewAppModule creates and returns a new icaauth AppModule
 func NewAppModule(cdc codec.Codec, keeper keeper.Keeper) AppModule {
 	return AppModule{
 		AppModuleBasic: NewAppModuleBasic(cdc),

@@ -1,8 +1,7 @@
-package intertx
+package icaauth
 
 import (
 	"github.com/golang/protobuf/proto"
-	"github.com/ovrclk/akash/x/inter-tx/keeper"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -12,6 +11,8 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	"github.com/cosmos/ibc-go/v3/modules/core/exported"
+
+	"github.com/ovrclk/akash/x/icaauth/keeper"
 )
 
 var _ porttypes.IBCModule = IBCModule{}

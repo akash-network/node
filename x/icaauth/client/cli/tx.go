@@ -13,10 +13,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/ovrclk/akash/x/inter-tx/types"
+	"github.com/ovrclk/akash/x/icaauth/types"
 )
 
-// GetTxCmd creates and returns the intertx tx command
+// GetTxCmd creates and returns the icaauth tx command
 func GetTxCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,

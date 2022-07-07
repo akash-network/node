@@ -1,7 +1,7 @@
 package types
 
 const (
-	ModuleName = "intertx"
+	ModuleName = "icaauth"
 
 	StoreKey = ModuleName
 

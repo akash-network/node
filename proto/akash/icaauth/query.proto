@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package akash.intertx;
+package akash.icaauth;
 
-option go_package = "github.com/ovrclk/akash/x/inter-tx/types";
+option go_package = "github.com/ovrclk/akash/x/icaauth/types";
 
 import "gogoproto/gogo.proto";
 

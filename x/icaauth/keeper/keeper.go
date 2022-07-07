@@ -11,7 +11,8 @@ import (
 
 	icacontrollerkeeper "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/keeper"
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	"github.com/ovrclk/akash/x/inter-tx/types"
+
+	"github.com/ovrclk/akash/x/icaauth/types"
 )
 
 type Keeper struct {

@@ -110,9 +110,9 @@ import (
 	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
 
 	// this line is used by starport scaffolding # stargate/app/moduleImport
-	intertx "github.com/ovrclk/akash/x/inter-tx"
-	intertxkeeper "github.com/ovrclk/akash/x/inter-tx/keeper"
-	intertxtypes "github.com/ovrclk/akash/x/inter-tx/types"
+	icaauth "github.com/ovrclk/akash/x/icaauth"
+	icaauthkeeper "github.com/ovrclk/akash/x/icaauth/keeper"
+	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types"
 
 	// unnamed import of statik for swagger UI support
 	_ "github.com/ovrclk/akash/client/docs/statik"
@@ -161,14 +161,14 @@ type AkashApp struct {
 		transfer            ibctransferkeeper.Keeper
 		ICAHostKeeper       icahostkeeper.Keeper
 		ICAControllerKeeper icacontrollerkeeper.Keeper
-		InterTxKeeper       intertxkeeper.Keeper
+		IcaAuthKeeper       icaauthkeeper.Keeper
 
 		// make scoped keepers public for test purposes
 		ScopedIBCKeeper           capabilitykeeper.ScopedKeeper
 		ScopedTransferKeeper      capabilitykeeper.ScopedKeeper
 		ScopedICAControllerKeeper capabilitykeeper.ScopedKeeper
 		ScopedICAHostKeeper       capabilitykeeper.ScopedKeeper
-		ScopedInterTxKeeper       capabilitykeeper.ScopedKeeper
+		ScopedIcaAuthKeeper       capabilitykeeper.ScopedKeeper
 
 		// akash keepers
 		escrow     escrowkeeper.Keeper
@@ -236,7 +236,7 @@ func NewApp(
 
 	scopedIBCKeeper := app.keeper.cap.ScopeToModule(ibchost.ModuleName)
 	scopedTransferKeeper := app.keeper.cap.ScopeToModule(ibctransfertypes.ModuleName)
-	scopedInterTxKeeper := app.keeper.cap.ScopeToModule(intertxtypes.ModuleName)
+	scopedIcaAuthKeeper := app.keeper.cap.ScopeToModule(icaauthtypes.ModuleName)
 	scopedICAControllerKeeper := app.keeper.cap.ScopeToModule(icacontrollertypes.SubModuleName)
 	scopedICAHostKeeper := app.keeper.cap.ScopeToModule(icahosttypes.SubModuleName)
 
@@ -367,11 +367,11 @@ func NewApp(
 
 	icaModule := ica.NewAppModule(&app.keeper.ICAControllerKeeper, &app.keeper.ICAHostKeeper)
 
-	app.keeper.InterTxKeeper = intertxkeeper.NewKeeper(appCodec, keys[intertxtypes.StoreKey], app.keeper.ICAControllerKeeper, scopedInterTxKeeper)
-	interTxModule := intertx.NewAppModule(appCodec, app.keeper.InterTxKeeper)
-	interTxIBCModule := intertx.NewIBCModule(app.keeper.InterTxKeeper)
+	app.keeper.IcaAuthKeeper = icaauthkeeper.NewKeeper(appCodec, keys[icaauthtypes.StoreKey], app.keeper.ICAControllerKeeper, scopedIcaAuthKeeper)
+	icaAuthModule := icaauth.NewAppModule(appCodec, app.keeper.IcaAuthKeeper)
+	icaAuthIBCModule := icaauth.NewIBCModule(app.keeper.IcaAuthKeeper)
 
-	icaControllerIBCModule := icacontroller.NewIBCModule(app.keeper.ICAControllerKeeper, interTxIBCModule)
+	icaControllerIBCModule := icacontroller.NewIBCModule(app.keeper.ICAControllerKeeper, icaAuthIBCModule)
 	icaHostIBCModule := icahost.NewIBCModule(app.keeper.ICAHostKeeper)
 
 	// Create static IBC router, add transfer route, then set and seal it
@@ -379,7 +379,7 @@ func NewApp(
 	ibcRouter.AddRoute(icacontrollertypes.SubModuleName, icaControllerIBCModule).
 		AddRoute(icahosttypes.SubModuleName, icaHostIBCModule).
 		AddRoute(ibctransfertypes.ModuleName, transferIBCModule).
-		AddRoute(intertxtypes.ModuleName, icaControllerIBCModule)
+		AddRoute(icaauthtypes.ModuleName, icaControllerIBCModule)
 
 	app.keeper.ibc.SetRouter(ibcRouter)
 
@@ -417,7 +417,7 @@ func NewApp(
 			params.NewAppModule(app.keeper.params),
 			transferModule,
 			icaModule,
-			interTxModule,
+			icaAuthModule,
 		}, app.akashAppModules()...)...,
 	)
 
@@ -501,7 +501,7 @@ func NewApp(
 	app.keeper.ScopedTransferKeeper = scopedTransferKeeper
 	app.keeper.ScopedICAControllerKeeper = scopedICAControllerKeeper
 	app.keeper.ScopedICAHostKeeper = scopedICAHostKeeper
-	app.keeper.ScopedInterTxKeeper = scopedInterTxKeeper
+	app.keeper.ScopedIcaAuthKeeper = scopedIcaAuthKeeper
 
 	return app
 }

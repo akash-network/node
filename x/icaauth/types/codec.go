@@ -14,8 +14,8 @@ var (
 )
 
 func RegisterCodec(cdc *codec.LegacyAmino) {
-	cdc.RegisterConcrete(MsgRegisterAccount{}, "intertx/MsgRegisterAccount", nil)
-	cdc.RegisterConcrete(MsgSubmitTx{}, "intertx/MsgSubmitTx", nil)
+	cdc.RegisterConcrete(MsgRegisterAccount{}, "icaauth/MsgRegisterAccount", nil)
+	cdc.RegisterConcrete(MsgSubmitTx{}, "icaauth/MsgSubmitTx", nil)
 }
 
 func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {

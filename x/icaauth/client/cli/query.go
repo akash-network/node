@@ -5,14 +5,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 
-	"github.com/ovrclk/akash/x/inter-tx/types"
+	"github.com/ovrclk/akash/x/icaauth/types"
 )
 
-// GetQueryCmd creates and returns the intertx query command
+// GetQueryCmd creates and returns the icaauth query command
 func GetQueryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
-		Short:                      "Querying commands for the inter-tx module",
+		Short:                      "Querying commands for the icaatuh module",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
@@ -25,7 +25,7 @@ func GetQueryCmd() *cobra.Command {
 
 func getInterchainAccountCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "interchainaccounts [connection-id] [owner-account]",
+		Use:  "icaccounts [connection-id] [owner-account]",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
