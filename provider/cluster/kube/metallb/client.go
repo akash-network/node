@@ -27,6 +27,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 
 	kubeclienterrors "github.com/ovrclk/akash/provider/cluster/kube/errors"
 )
@@ -68,6 +69,7 @@ type client struct {
 
 	sda    clusterutil.ServiceDiscoveryAgent
 	client clusterutil.ServiceClient
+	l      sync.Locker
 
 	poolName string
 }
@@ -102,6 +104,7 @@ func NewClient(configPath string, logger log.Logger, poolName string, endpoint *
 		sda:      sda,
 		kube:     kc,
 		poolName: poolName,
+		l:        &sync.Mutex{},
 
 		log: logger.With("client", "metallb"),
 	}, nil
@@ -110,6 +113,17 @@ func NewClient(configPath string, logger log.Logger, poolName string, endpoint *
 
 func (c *client) Stop() {
 	c.sda.Stop()
+}
+
+func (c *client) setupClient(ctx context.Context) error {
+	c.l.Lock()
+	defer c.l.Unlock()
+	if c.client != nil {
+		return nil
+	}
+	var err error
+	c.client, err = c.sda.GetClient(ctx, false, false)
+	return err
 }
 
 /*
@@ -121,12 +135,9 @@ can get stuff like this to access metal lb metrics
 */
 
 func (c *client) GetIPAddressUsage(ctx context.Context) (uint, uint, error) {
-	if c.client == nil {
-		var err error
-		c.client, err = c.sda.GetClient(ctx, false, false)
-		if err != nil {
-			return math.MaxUint32, math.MaxUint32, err
-		}
+	err := c.setupClient(ctx)
+	if err != nil {
+		return math.MaxUint32, math.MaxUint32, err
 	}
 
 	request, err := c.client.CreateRequest(ctx, http.MethodGet, metricsPath, nil)
@@ -162,6 +173,7 @@ func (c *client) GetIPAddressUsage(ctx context.Context) (uint, uint, error) {
 	setAvailable := false
 	inUse := uint(0)
 	setInUse := false
+	poolsFound := make(map[string]struct{})
 	for _, entry := range mf {
 		if setInUse && setAvailable {
 			break
@@ -192,6 +204,9 @@ func (c *client) GetIPAddressUsage(ctx context.Context) (uint, uint, error) {
 					continue
 				}
 
+				// Record all pool names found, for debugging purposes
+				poolsFound[labelEntry.GetValue()] = struct{}{}
+
 				if labelEntry.GetValue() != c.poolName {
 					continue
 				}
@@ -204,7 +219,11 @@ func (c *client) GetIPAddressUsage(ctx context.Context) (uint, uint, error) {
 	}
 
 	if !setInUse || !setAvailable {
-		return math.MaxUint32, math.MaxUint32, fmt.Errorf("%w: data not found in metrics response", errMetalLB)
+		if len(poolsFound) == 0 {
+			c.log.Debug("no pools configured on Metal LB")
+		} else {
+			c.log.Debug("pools configured on Metal LB, but none matching", "configured-pool-name", c.poolName, "quantity-configured", len(poolsFound))
+		}
 	}
 
 	return inUse, available, nil
