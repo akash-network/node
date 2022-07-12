@@ -58,7 +58,7 @@ func (c *client) PurgeDeclaredIP(ctx context.Context, leaseID mtypes.LeaseID, se
 
 func (c *client) DeclareIP(ctx context.Context, lID mtypes.LeaseID, serviceName string, port uint32, externalPort uint32, proto manifest.ServiceProtocol, sharingKey string, overwrite bool) error {
 	// Note: This interface expects sharing key to contain a value that is unique per deployment owner, in this
-	// case it is the bech32 address
+	// case it is the bech32 address, or a derivative thereof
 	resourceName := strings.ToLower(fmt.Sprintf("%s-%s-%d", sharingKey, proto.ToString(), externalPort))
 
 	c.log.Debug("checking for resource", "resource-name", resourceName)
