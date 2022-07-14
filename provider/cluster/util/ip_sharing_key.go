@@ -10,12 +10,12 @@ import (
 	"strings"
 )
 
-var allowedIpEndpointNameRegex = regexp.MustCompile(`^[a-z0-9\-]+$`)
+var allowedIPEndpointNameRegex = regexp.MustCompile(`^[a-z0-9\-]+$`)
 
 func MakeIPSharingKey(lID mtypes.LeaseID, endpointName string) string {
 
 	effectiveName := endpointName
-	if !allowedIpEndpointNameRegex.MatchString(endpointName) {
+	if !allowedIPEndpointNameRegex.MatchString(endpointName) {
 		h := sha256.New()
 		_, err := io.WriteString(h, endpointName)
 		if err != nil {
