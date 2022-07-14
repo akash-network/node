@@ -59,6 +59,8 @@ type Client interface {
 	PurgeIPPassthrough(ctx context.Context, directive ctypes.ClusterIPPassthroughDirective) error
 	GetIPPassthroughs(ctx context.Context) ([]v1beta2.IPPassthrough, error)
 
+	DetectPoolChanges(ctx context.Context) (<-chan struct{}, error)
+
 	Stop()
 }
 
@@ -504,6 +506,38 @@ func (c *client) GetIPPassthroughs(ctx context.Context) ([]v1beta2.IPPassthrough
 		})
 
 	return result, err
+}
+
+func (c *client) DetectPoolChanges(ctx context.Context) (<-chan struct{}, error) {
+	const metalLBNamespace = "metallb-system"
+	watcher, err := c.kube.CoreV1().ConfigMaps(metalLBNamespace).Watch(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	output := make(chan struct{}, 1)
+	go func() {
+		defer close(output)
+		for {
+			select {
+			case <-ctx.Done():
+				err = ctx.Err()
+				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+					c.log.Error("failed watching metal LB config map changes", "err", err)
+				}
+				return
+			case ev, ok := <-watcher.ResultChan():
+				if !ok { // Channel closed when an error happens
+					return
+				}
+				// Do not log the whole event, it is too verbose
+				c.log.Debug("metal LB config change event", "event-type", ev.Type)
+				output <- struct{}{}
+			}
+		}
+	}()
+
+	return output, nil
 }
 
 type ipPassthrough struct {
