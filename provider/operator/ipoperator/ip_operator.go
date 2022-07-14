@@ -57,13 +57,13 @@ type ipOperator struct {
 }
 
 func (op *ipOperator) monitorUntilError(parentCtx context.Context) error {
-	var err error
-
 	op.log.Info("associated provider ", "addr", op.cfg.ProviderAddress)
+	monitorCtx, cancel := context.WithCancel(parentCtx)
+	defer cancel()
 
 	op.state = make(map[string]managedIP)
 	op.log.Info("fetching existing IP passthroughs")
-	entries, err := op.mllbc.GetIPPassthroughs(parentCtx)
+	entries, err := op.mllbc.GetIPPassthroughs(monitorCtx)
 	if err != nil {
 		return err
 	}
@@ -83,14 +83,20 @@ func (op *ipOperator) monitorUntilError(parentCtx context.Context) error {
 	op.flagState()
 
 	// Get the present counts before starting
-	err = op.updateCounts(parentCtx)
+	err = op.updateCounts(monitorCtx)
 	if err != nil {
 		return err
 	}
 
 	op.log.Info("starting observation")
 
-	events, err := op.client.ObserveIPState(parentCtx)
+	// Detect changes to the IP's declared by the provider
+	events, err := op.client.ObserveIPState(monitorCtx)
+	if err != nil {
+		return err
+	}
+
+	poolChanges, err := op.mllbc.DetectPoolChanges(monitorCtx)
 	if err != nil {
 		return err
 	}
@@ -105,6 +111,8 @@ func (op *ipOperator) monitorUntilError(parentCtx context.Context) error {
 	defer pruneTicker.Stop()
 	prepareTicker := time.NewTicker(op.cfg.WebRefreshInterval)
 	defer prepareTicker.Stop()
+	updateTicker := time.NewTicker(10 * time.Minute)
+	defer updateTicker.Stop()
 
 	op.log.Info("barrier can now be passed")
 	op.barrier.enable()
@@ -113,8 +121,8 @@ loop:
 		isUpdating := false
 		prepareData := false
 		select {
-		case <-parentCtx.Done():
-			exitError = parentCtx.Err()
+		case <-monitorCtx.Done():
+			exitError = monitorCtx.Err()
 			break loop
 
 		case ev, ok := <-events:
@@ -122,7 +130,7 @@ loop:
 				exitError = operatorcommon.ErrObservationStopped
 				break loop
 			}
-			err = op.applyEvent(parentCtx, ev)
+			err = op.applyEvent(monitorCtx, ev)
 			if err != nil {
 				op.log.Error("failed applying event", "err", err)
 				exitError = err
@@ -136,10 +144,14 @@ loop:
 			prepareData = true
 		case <-prepareTicker.C:
 			prepareData = true
+		case <-updateTicker.C:
+			isUpdating = true
+		case <-poolChanges:
+			isUpdating = true
 		}
 
 		if isUpdating {
-			err = op.updateCounts(parentCtx)
+			err = op.updateCounts(monitorCtx)
 			if err != nil {
 				exitError = err
 				break loop
