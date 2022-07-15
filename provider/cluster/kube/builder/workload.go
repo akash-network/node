@@ -53,7 +53,6 @@ func (b *workload) container() corev1.Container {
 			Limits:   make(corev1.ResourceList),
 			Requests: make(corev1.ResourceList),
 		},
-		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot:             &falseValue,
 			Privileged:               &falseValue,
