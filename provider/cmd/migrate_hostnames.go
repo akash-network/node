@@ -59,7 +59,7 @@ func migrateHostnames(cmd *cobra.Command, args []string) error {
 func MigrateHostnamesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "migrate-hostnames",
-		Short:        "",
+		Short:        "migrate hostnames between deployments on the same provider",
 		SilenceUsage: true,
 		RunE:         migrateHostnames,
 	}
