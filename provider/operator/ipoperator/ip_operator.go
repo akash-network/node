@@ -146,7 +146,10 @@ loop:
 			prepareData = true
 		case <-updateTicker.C:
 			isUpdating = true
-		case <-poolChanges:
+		case _, ok := <-poolChanges:
+			if !ok {
+				break loop
+			}
 			isUpdating = true
 		}
 
@@ -541,9 +544,12 @@ func handleIPLeaseStatusGet(op *ipOperator, rw http.ResponseWriter, req *http.Re
 	}
 
 	if len(ipStatus) == 0 {
+		op.log.Debug("no IP address to status for lease", "lease-id", leaseID)
 		rw.WriteHeader(http.StatusNoContent)
 		return
 	}
+
+	op.log.Debug("retrieved IP address status for lease", "lease-id", leaseID, "quantity", len(ipStatus))
 
 	rw.WriteHeader(http.StatusOK)
 	encoder := json.NewEncoder(rw)
