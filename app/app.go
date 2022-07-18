@@ -109,7 +109,6 @@ import (
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
 	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
 
-	// this line is used by starport scaffolding # stargate/app/moduleImport
 	icaauth "github.com/ovrclk/akash/x/icaauth"
 	icaauthkeeper "github.com/ovrclk/akash/x/icaauth/keeper"
 	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types"
