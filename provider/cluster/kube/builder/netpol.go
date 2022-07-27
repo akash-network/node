@@ -2,7 +2,6 @@ package builder
 
 import (
 	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -144,11 +143,9 @@ func (b *netPol) Create() ([]*netv1.NetworkPolicy, error) { // nolint:golint,unp
 	for _, service := range b.group.Services {
 		// find all the ports that are exposed directly
 		ports := make([]netv1.NetworkPolicyPort, 0)
-		for _, expose := range service.Expose {
-			if !expose.Global || util.ShouldBeIngress(expose) {
-				continue
-			}
+		portsWithIP := make([]netv1.NetworkPolicyPort, 0)
 
+		for _, expose := range service.Expose {
 			portToOpen := util.ExposeExternalPort(expose)
 			portAsIntStr := intstr.FromInt(int(portToOpen))
 
@@ -158,47 +155,81 @@ func (b *netPol) Create() ([]*netv1.NetworkPolicy, error) { // nolint:golint,unp
 				exposeProto = corev1.ProtocolTCP
 			case manitypes.UDP:
 				exposeProto = corev1.ProtocolUDP
-
 			}
+
 			entry := netv1.NetworkPolicyPort{
 				Port:     &portAsIntStr,
 				Protocol: &exposeProto,
 			}
+
+			if len(expose.IP) != 0 {
+				portsWithIP = append(portsWithIP, entry)
+			}
+
+			if !expose.Global || util.ShouldBeIngress(expose) {
+				continue
+			}
+
 			ports = append(ports, entry)
 		}
 
-		// If no ports are found, skip this service
-		if len(ports) == 0 {
-			continue
-		}
-
-		// Make a network policy just to open these ports to incoming traffic
 		serviceName := service.Name
-		policyName := fmt.Sprintf("akash-%s-np", serviceName)
-		policy := netv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:    b.labels(),
-				Name:      policyName,
-				Namespace: LidNS(b.lid),
-			},
-			Spec: netv1.NetworkPolicySpec{
-
-				Ingress: []netv1.NetworkPolicyIngressRule{
-					{ // Allow Network Connections to same Namespace
-						Ports: ports,
+		// If no ports are found, skip this service
+		if len(ports) != 0 {
+			// Make a network policy just to open these ports to incoming traffic
+			policyName := fmt.Sprintf("akash-%s-np", serviceName)
+			policy := netv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:    b.labels(),
+					Name:      policyName,
+					Namespace: LidNS(b.lid),
+				},
+				Spec: netv1.NetworkPolicySpec{
+					Ingress: []netv1.NetworkPolicyIngressRule{
+						{
+							Ports: ports,
+						},
+					},
+					PodSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							AkashManifestServiceLabelName: serviceName,
+						},
+					},
+					PolicyTypes: []netv1.PolicyType{
+						netv1.PolicyTypeIngress,
 					},
 				},
-				PodSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						AkashManifestServiceLabelName: serviceName,
-					},
-				},
-				PolicyTypes: []netv1.PolicyType{
-					netv1.PolicyTypeIngress,
-				},
-			},
+			}
+			result = append(result, &policy)
 		}
-		result = append(result, &policy)
+
+		if len(portsWithIP) != 0 {
+			// Make a network policy just to open these ports to incoming traffic from outside the cluster
+			policyName := fmt.Sprintf("akash-%s-ip", serviceName)
+			policy := netv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:    b.labels(),
+					Name:      policyName,
+					Namespace: LidNS(b.lid),
+				},
+				Spec: netv1.NetworkPolicySpec{
+					Ingress: []netv1.NetworkPolicyIngressRule{
+						{
+							Ports: portsWithIP,
+						},
+					},
+					PodSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							AkashManifestServiceLabelName: serviceName,
+						},
+					},
+					PolicyTypes: []netv1.PolicyType{
+						netv1.PolicyTypeIngress,
+					},
+				},
+			}
+			result = append(result, &policy)
+		}
 	}
 
 	return result, nil
