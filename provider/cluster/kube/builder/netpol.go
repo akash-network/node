@@ -235,7 +235,6 @@ func (b *netPol) Create() ([]*netv1.NetworkPolicy, error) { // nolint:golint,unp
 		}
 	}
 
-
 	return result, nil
 }
 
