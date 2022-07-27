@@ -2,8 +2,6 @@ package builder
 
 import (
 	"fmt"
-	"github.com/ovrclk/akash/provider/cluster/operatorclients"
-
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +20,6 @@ type NetPol interface {
 
 type netPol struct {
 	builder
-	ipop operatorclients.IPOperatorClient
 }
 
 var _ NetPol = (*netPol)(nil)
