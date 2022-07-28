@@ -215,6 +215,15 @@ func (b *netPol) Create() ([]*netv1.NetworkPolicy, error) { // nolint:golint,unp
 				Spec: netv1.NetworkPolicySpec{
 					Ingress: []netv1.NetworkPolicyIngressRule{
 						{
+							From: []netv1.NetworkPolicyPeer{
+								{
+									PodSelector:       nil,
+									NamespaceSelector: nil,
+									IPBlock: &netv1.IPBlock{
+										CIDR: "0.0.0.0/0",
+									},
+								},
+							},
 							Ports: portsWithIP,
 						},
 					},
