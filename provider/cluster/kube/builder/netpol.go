@@ -213,8 +213,16 @@ func (b *netPol) Create() ([]*netv1.NetworkPolicy, error) { // nolint:golint,unp
 					Namespace: LidNS(b.lid),
 				},
 				Spec: netv1.NetworkPolicySpec{
+
 					Ingress: []netv1.NetworkPolicyIngressRule{
 						{
+							From: []netv1.NetworkPolicyPeer{
+								{
+									IPBlock: &netv1.IPBlock{
+										CIDR: "0.0.0.0/0",
+									},
+								},
+							},
 							Ports: portsWithIP,
 						},
 					},
@@ -223,6 +231,7 @@ func (b *netPol) Create() ([]*netv1.NetworkPolicy, error) { // nolint:golint,unp
 							AkashManifestServiceLabelName: serviceName,
 						},
 					},
+
 					PolicyTypes: []netv1.PolicyType{
 						netv1.PolicyTypeIngress,
 					},
