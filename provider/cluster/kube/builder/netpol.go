@@ -146,8 +146,7 @@ func (b *netPol) Create() ([]*netv1.NetworkPolicy, error) { // nolint:golint,unp
 		portsWithIP := make([]netv1.NetworkPolicyPort, 0)
 
 		for _, expose := range service.Expose {
-			portToOpen := util.ExposeExternalPort(expose)
-			portAsIntStr := intstr.FromInt(int(portToOpen))
+			portAsIntStr := intstr.FromInt(int(expose.Port))
 
 			var exposeProto corev1.Protocol
 			switch expose.Proto {
