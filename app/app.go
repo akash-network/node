@@ -97,6 +97,7 @@ import (
 	icahost "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host"
 	icahostkeeper "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/keeper"
 	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
+	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibcclient "github.com/cosmos/ibc-go/v3/modules/core/02-client"
@@ -306,7 +307,6 @@ func NewApp(
 	)
 
 	app.keeper.upgrade = upgradekeeper.NewKeeper(skipUpgradeHeights, app.keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
-	app.registerUpgradeHandlers()
 
 	// register the staking hooks
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
@@ -496,6 +496,7 @@ func NewApp(
 		}
 	}
 
+	app.registerUpgradeHandlers(icaModule)
 	app.keeper.ScopedIBCKeeper = scopedIBCKeeper
 	app.keeper.ScopedTransferKeeper = scopedTransferKeeper
 	app.keeper.ScopedICAControllerKeeper = scopedICAControllerKeeper
@@ -505,7 +506,7 @@ func NewApp(
 	return app
 }
 
-func (app *AkashApp) registerUpgradeHandlers() {
+func (app *AkashApp) registerUpgradeHandlers(icaModule ica.AppModule) {
 	app.keeper.upgrade.SetUpgradeHandler("akash_v0.15.0_cosmos_v0.44.x", func(ctx sdk.Context,
 		plan upgradetypes.Plan, _ module.VersionMap) (module.VersionMap, error) {
 		// set max expected block time parameter. Replace the default with your expected value
@@ -554,6 +555,43 @@ func (app *AkashApp) registerUpgradeHandlers() {
 		}
 
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades
+		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+	}
+
+	// ica upgrade
+	const upgradeName = "akash_ica_upgrade"
+	app.keeper.upgrade.SetUpgradeHandler(
+		upgradeName,
+		func(ctx sdk.Context, _ upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+			fromVM[icatypes.ModuleName] = icaModule.ConsensusVersion()
+
+			// create ICS27 Controller submodule params
+			// enable the controller chain
+			controllerParams := icacontrollertypes.Params{ControllerEnabled: true}
+
+			// create ICS27 Host submodule params
+			hostParams := icahosttypes.Params{
+				// enable the host chain
+				HostEnabled: true,
+				// allowing the all messages
+				AllowMessages: []string{"*"},
+			}
+
+			ctx.Logger().Info("start to init interchainaccount module...")
+			// initialize ICS27 module
+			icaModule.InitModule(ctx, controllerParams, hostParams)
+
+			ctx.Logger().Info("start to run module migrations...")
+
+			return app.mm.RunMigrations(ctx, app.configurator, fromVM)
+		},
+	)
+
+	if upgradeInfo.Name == upgradeName && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
+		storeUpgrades := storetypes.StoreUpgrades{
+			Added: []string{icacontrollertypes.StoreKey, icahosttypes.StoreKey},
+		}
+
 		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
 	}
 }
