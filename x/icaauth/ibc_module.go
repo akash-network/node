@@ -1,6 +1,7 @@
 package icaauth
 
 import (
+	// nolint:staticcheck
 	"github.com/golang/protobuf/proto"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -97,7 +98,7 @@ func NewIBCModule(k keeper.Keeper) IBCModule {
 	}
 }
 
-func handleMsgData(ctx sdk.Context, msgData *sdk.MsgData) (string, error) {
+func handleMsgData(_ sdk.Context, msgData *sdk.MsgData) (string, error) {
 	switch msgData.MsgType {
 	case sdk.MsgTypeURL(&banktypes.MsgSend{}):
 		msgResponse := &banktypes.MsgSendResponse{}

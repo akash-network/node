@@ -1,7 +1,6 @@
 package types
 
 import (
-	fmt "fmt"
 	"strings"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -66,7 +65,7 @@ func NewMsgSubmitTx(sdkMsg sdk.Msg, connectionID, owner string) (*MsgSubmitTx, e
 func PackTxMsgAny(sdkMsg sdk.Msg) (*codectypes.Any, error) {
 	msg, ok := sdkMsg.(proto.Message)
 	if !ok {
-		return nil, fmt.Errorf("can't proto marshal %T", sdkMsg)
+		return nil, sdkerrors.Wrapf(sdkerrors.ErrProtoMarshal, "can't proto marshal %T", sdkMsg)
 	}
 
 	any, err := codectypes.NewAnyWithValue(msg)
