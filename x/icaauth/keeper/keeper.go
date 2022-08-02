@@ -15,6 +15,10 @@ import (
 	"github.com/ovrclk/akash/x/icaauth/types"
 )
 
+type IKeeper interface {
+	ClaimCapability(sdk.Context, *capabilitytypes.Capability, string) error
+}
+
 type Keeper struct {
 	cdc codec.Codec
 
@@ -23,6 +27,8 @@ type Keeper struct {
 	scopedKeeper        capabilitykeeper.ScopedKeeper
 	icaControllerKeeper icacontrollerkeeper.Keeper
 }
+
+var _ IKeeper = &Keeper{}
 
 func NewKeeper(cdc codec.Codec, storeKey sdk.StoreKey, iaKeeper icacontrollerkeeper.Keeper, scopedKeeper capabilitykeeper.ScopedKeeper) Keeper {
 	return Keeper{

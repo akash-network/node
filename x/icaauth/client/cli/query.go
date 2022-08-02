@@ -34,7 +34,13 @@ func getInterchainAccountCmd() *cobra.Command {
 			}
 
 			queryClient := types.NewQueryClient(clientCtx)
-			res, err := queryClient.InterchainAccountFromAddress(cmd.Context(), &types.QueryInterchainAccountFromAddressRequest{Owner: args[1], ConnectionId: args[0]})
+			res, err := queryClient.InterchainAccountFromAddress(
+				cmd.Context(),
+				&types.QueryInterchainAccountFromAddressRequest{
+					Owner:        args[1],
+					ConnectionId: args[0],
+				},
+			)
 			if err != nil {
 				return err
 			}

@@ -159,16 +159,16 @@ type AkashApp struct {
 		ibc                 *ibckeeper.Keeper
 		evidence            evidencekeeper.Keeper
 		transfer            ibctransferkeeper.Keeper
-		ICAHostKeeper       icahostkeeper.Keeper
-		ICAControllerKeeper icacontrollerkeeper.Keeper
-		IcaAuthKeeper       icaauthkeeper.Keeper
+		icaHostKeeper       icahostkeeper.Keeper
+		icaControllerKeeper icacontrollerkeeper.Keeper
+		icaAuthKeeper       icaauthkeeper.Keeper
 
 		// make scoped keepers public for test purposes
-		ScopedIBCKeeper           capabilitykeeper.ScopedKeeper
-		ScopedTransferKeeper      capabilitykeeper.ScopedKeeper
-		ScopedICAControllerKeeper capabilitykeeper.ScopedKeeper
-		ScopedICAHostKeeper       capabilitykeeper.ScopedKeeper
-		ScopedIcaAuthKeeper       capabilitykeeper.ScopedKeeper
+		scopedIBCKeeper           capabilitykeeper.ScopedKeeper
+		scopedTransferKeeper      capabilitykeeper.ScopedKeeper
+		scopedICAControllerKeeper capabilitykeeper.ScopedKeeper
+		scopedICAHostKeeper       capabilitykeeper.ScopedKeeper
+		scopedIcaAuthKeeper       capabilitykeeper.ScopedKeeper
 
 		// akash keepers
 		escrow     escrowkeeper.Keeper
@@ -351,27 +351,27 @@ func NewApp(
 	transferModule := transfer.NewAppModule(app.keeper.transfer)
 	transferIBCModule := transfer.NewIBCModule(app.keeper.transfer)
 
-	app.keeper.ICAControllerKeeper = icacontrollerkeeper.NewKeeper(
+	app.keeper.icaControllerKeeper = icacontrollerkeeper.NewKeeper(
 		appCodec, keys[icacontrollertypes.StoreKey], app.GetSubspace(icacontrollertypes.SubModuleName),
 		app.keeper.ibc.ChannelKeeper, // may be replaced with middleware such as ics29 fee
 		app.keeper.ibc.ChannelKeeper, &app.keeper.ibc.PortKeeper,
 		scopedICAControllerKeeper, app.MsgServiceRouter(),
 	)
 
-	app.keeper.ICAHostKeeper = icahostkeeper.NewKeeper(
+	app.keeper.icaHostKeeper = icahostkeeper.NewKeeper(
 		appCodec, keys[icahosttypes.StoreKey], app.GetSubspace(icahosttypes.SubModuleName),
 		app.keeper.ibc.ChannelKeeper, &app.keeper.ibc.PortKeeper,
 		app.keeper.acct, scopedICAHostKeeper, app.MsgServiceRouter(),
 	)
 
-	icaModule := ica.NewAppModule(&app.keeper.ICAControllerKeeper, &app.keeper.ICAHostKeeper)
+	icaModule := ica.NewAppModule(&app.keeper.icaControllerKeeper, &app.keeper.icaHostKeeper)
 
-	app.keeper.IcaAuthKeeper = icaauthkeeper.NewKeeper(appCodec, keys[icaauthtypes.StoreKey], app.keeper.ICAControllerKeeper, scopedIcaAuthKeeper)
-	icaAuthModule := icaauth.NewAppModule(appCodec, app.keeper.IcaAuthKeeper)
-	icaAuthIBCModule := icaauth.NewIBCModule(app.keeper.IcaAuthKeeper)
+	app.keeper.icaAuthKeeper = icaauthkeeper.NewKeeper(appCodec, keys[icaauthtypes.StoreKey], app.keeper.icaControllerKeeper, scopedIcaAuthKeeper)
+	icaAuthModule := icaauth.NewAppModule(appCodec, app.keeper.icaAuthKeeper)
+	icaAuthIBCModule := icaauth.NewIBCModule(app.keeper.icaAuthKeeper)
 
-	icaControllerIBCModule := icacontroller.NewIBCModule(app.keeper.ICAControllerKeeper, icaAuthIBCModule)
-	icaHostIBCModule := icahost.NewIBCModule(app.keeper.ICAHostKeeper)
+	icaControllerIBCModule := icacontroller.NewIBCModule(app.keeper.icaControllerKeeper, icaAuthIBCModule)
+	icaHostIBCModule := icahost.NewIBCModule(app.keeper.icaHostKeeper)
 
 	// Create static IBC router, add transfer route, then set and seal it
 	ibcRouter := porttypes.NewRouter()
@@ -496,12 +496,14 @@ func NewApp(
 		}
 	}
 
+	// register the upgrade handler
 	app.registerUpgradeHandlers(icaModule)
-	app.keeper.ScopedIBCKeeper = scopedIBCKeeper
-	app.keeper.ScopedTransferKeeper = scopedTransferKeeper
-	app.keeper.ScopedICAControllerKeeper = scopedICAControllerKeeper
-	app.keeper.ScopedICAHostKeeper = scopedICAHostKeeper
-	app.keeper.ScopedIcaAuthKeeper = scopedIcaAuthKeeper
+
+	app.keeper.scopedIBCKeeper = scopedIBCKeeper
+	app.keeper.scopedTransferKeeper = scopedTransferKeeper
+	app.keeper.scopedICAControllerKeeper = scopedICAControllerKeeper
+	app.keeper.scopedICAHostKeeper = scopedICAHostKeeper
+	app.keeper.scopedIcaAuthKeeper = scopedIcaAuthKeeper
 
 	return app
 }
@@ -559,7 +561,7 @@ func (app *AkashApp) registerUpgradeHandlers(icaModule ica.AppModule) {
 	}
 
 	// ica upgrade
-	const upgradeName = "akash_ica_upgrade"
+	const upgradeName = "01-ica-upgrade"
 	app.keeper.upgrade.SetUpgradeHandler(
 		upgradeName,
 		func(ctx sdk.Context, _ upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {

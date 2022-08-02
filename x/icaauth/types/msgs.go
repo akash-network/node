@@ -6,6 +6,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
 	proto "github.com/gogo/protobuf/proto"
 )
 
@@ -65,7 +66,7 @@ func NewMsgSubmitTx(sdkMsg sdk.Msg, connectionID, owner string) (*MsgSubmitTx, e
 func PackTxMsgAny(sdkMsg sdk.Msg) (*codectypes.Any, error) {
 	msg, ok := sdkMsg.(proto.Message)
 	if !ok {
-		return nil, sdkerrors.Wrapf(sdkerrors.ErrProtoMarshal, "can't proto marshal %T", sdkMsg)
+		return nil, sdkerrors.Wrapf(ErrProtoMarshal, "can't proto marshal %T", sdkMsg)
 	}
 
 	any, err := codectypes.NewAnyWithValue(msg)

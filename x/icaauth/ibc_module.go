@@ -44,7 +44,7 @@ func (im IBCModule) OnAcknowledgementPacket(ctx sdk.Context, packet channeltypes
 			if err != nil {
 				return err
 			}
-			im.keeper.Logger(ctx).Info("message response in ICS-27 packet response", "response", response)
+			im.keeper.Logger(ctx).Debug("message response in ICS-27 packet response", "response", response)
 		}
 		return nil
 	}

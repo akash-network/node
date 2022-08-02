@@ -16,6 +16,11 @@ import (
 	"github.com/ovrclk/akash/x/icaauth/types"
 )
 
+const (
+	// The connection end identifier on the controller chain
+	flagConnectionID = "connection-id"
+)
+
 // GetTxCmd creates and returns the icaauth tx command
 func GetTxCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -45,7 +50,7 @@ func getRegisterAccountCmd() *cobra.Command {
 
 			msg := types.NewMsgRegisterAccount(
 				clientCtx.GetFromAddress().String(),
-				viper.GetString(FlagConnectionID),
+				viper.GetString(flagConnectionID),
 			)
 
 			if err := msg.ValidateBasic(); err != nil {
@@ -56,10 +61,7 @@ func getRegisterAccountCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().AddFlagSet(fsConnectionID)
-	_ = cmd.MarkFlagRequired(FlagConnectionID)
-
-	flags.AddTxFlagsToCmd(cmd)
+	setCmdFlags(cmd)
 
 	return cmd
 }
@@ -78,7 +80,6 @@ func getSubmitTxCmd() *cobra.Command {
 
 			var txMsg sdk.Msg
 			if err := cdc.UnmarshalInterfaceJSON([]byte(args[0]), &txMsg); err != nil {
-
 				// check for file path if JSON input is not provided
 				contents, err := ioutil.ReadFile(args[0])
 				if err != nil {
@@ -90,7 +91,7 @@ func getSubmitTxCmd() *cobra.Command {
 				}
 			}
 
-			msg, err := types.NewMsgSubmitTx(txMsg, viper.GetString(FlagConnectionID), clientCtx.GetFromAddress().String())
+			msg, err := types.NewMsgSubmitTx(txMsg, viper.GetString(flagConnectionID), clientCtx.GetFromAddress().String())
 			if err != nil {
 				return err
 			}
@@ -103,10 +104,20 @@ func getSubmitTxCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().AddFlagSet(fsConnectionID)
-	_ = cmd.MarkFlagRequired(FlagConnectionID)
-
-	flags.AddTxFlagsToCmd(cmd)
+	setCmdFlags(cmd)
 
 	return cmd
+}
+
+func setCmdFlags(cmd *cobra.Command) {
+	flags.AddTxFlagsToCmd(cmd)
+
+	cmd.Flags().String(flagConnectionID, "", "Connection ID")
+	if err := cmd.MarkFlagRequired(flagConnectionID); err != nil {
+		panic(err.Error())
+	}
+
+	if err := cmd.MarkFlagRequired(flags.FlagFrom); err != nil {
+		panic(err.Error())
+	}
 }
