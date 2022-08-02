@@ -490,14 +490,14 @@ func NewApp(
 
 	app.SetEndBlocker(app.EndBlocker)
 
+	// register the upgrade handler
+	app.registerUpgradeHandlers(icaModule)
+
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
 			tmos.Exit("app initialization:" + err.Error())
 		}
 	}
-
-	// register the upgrade handler
-	app.registerUpgradeHandlers(icaModule)
 
 	app.keeper.scopedIBCKeeper = scopedIBCKeeper
 	app.keeper.scopedTransferKeeper = scopedTransferKeeper
