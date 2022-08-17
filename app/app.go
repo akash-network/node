@@ -461,6 +461,7 @@ func NewApp(
 			evidence.NewAppModule(app.keeper.evidence),
 			ibc.NewAppModule(app.keeper.ibc),
 			transferModule,
+			NewICAHostSimModule(icaModule, appCodec),
 		},
 			app.akashSimModules()...,
 		)...,
