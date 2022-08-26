@@ -4,32 +4,12 @@ generate:
 
 .PHONY: mocks
 mocks: $(MOCKERY) modvendor
-	$(MOCKERY) --case=underscore --dir vendor/k8s.io/client-go/kubernetes --output testutil/kubernetes_mock --all --recursive --outpkg kubernetes_mocks --keeptree
 	$(MOCKERY) --case=underscore --dir vendor/github.com/cosmos/cosmos-sdk/x/bank/types --output testutil/cosmos_mock        --name QueryClient --outpkg cosmos_mocks --keeptree
-	$(MOCKERY) --case=underscore --dir provider                                         --output provider/mocks              --name StatusClient
-	$(MOCKERY) --case=underscore --dir provider                                         --output provider/mocks              --name Client
-	$(MOCKERY) --case=underscore --dir provider/cluster                                 --output provider/cluster/mocks      --name Client
-	$(MOCKERY) --case=underscore --dir provider/cluster                                 --output provider/cluster/mocks      --name ReadClient
-	$(MOCKERY) --case=underscore --dir provider/cluster                                 --output provider/cluster/mocks      --name Cluster
-	$(MOCKERY) --case=underscore --dir provider/cluster                                 --output provider/cluster/mocks      --name Service
-	$(MOCKERY) --case=underscore --dir provider/cluster/kube/metallb                                 --output provider/cluster/mocks      --name Client --structname MetalLBClient --filename metallb_client.go
-	$(MOCKERY) --case=underscore --dir provider/cluster/operatorclients                                 --output provider/cluster/mocks      --name IPOperatorClient
-	$(MOCKERY) --case=underscore --dir provider/cluster/types/v1beta2                   --output provider/cluster/mocks      --name Deployment
-	$(MOCKERY) --case=underscore --dir provider/cluster/types/v1beta2                   --output provider/cluster/mocks      --name HostnameServiceClient
-	$(MOCKERY) --case=underscore --dir provider/cluster/types/v1beta2                   --output provider/cluster/mocks      --name Reservation
-	$(MOCKERY) --case=underscore --dir provider/manifest                                --output provider/manifest/mocks     --name Client
-	$(MOCKERY) --case=underscore --dir provider/manifest                                --output provider/manifest/mocks     --name StatusClient
 	$(MOCKERY) --case=underscore --dir client/broadcaster                               --output client/broadcaster/mocks    --name Client
 	$(MOCKERY) --case=underscore --dir client                                           --output client/mocks/               --name QueryClient
 	$(MOCKERY) --case=underscore --dir client                                           --output client/mocks/               --name Client
 	$(MOCKERY) --case=underscore --dir x/escrow/keeper                                  --output x/escrow/keeper/mocks       --name BankKeeper
 	$(MOCKERY) --case=underscore --dir x/deployment/handler                             --output x/deployment/handler/mocks  --name AuthzKeeper
-
-.PHONY: kubetypes
-kubetypes: $(K8S_GENERATE_GROUPS)
-	GOBIN=$(AKASH_DEVCACHE_BIN) $(K8S_GENERATE_GROUPS) all \
-	github.com/ovrclk/akash/pkg/client github.com/ovrclk/akash/pkg/apis \
-	akash.network:v1,v2beta1
 
 .PHONY: proto-gen
 proto-gen: $(PROTOC) $(GRPC_GATEWAY) $(PROTOC_GEN_GOCOSMOS) modvendor
@@ -50,4 +30,4 @@ update-swagger-docs: $(STATIK) proto-swagger-gen
 	fi
 
 .PHONY: codegen
-codegen: generate proto-gen update-swagger-docs kubetypes mocks
+codegen: generate proto-gen update-swagger-docs mocks

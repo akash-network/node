@@ -15,4 +15,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - run: git fetch --prune --unshallow
       - run: make shellcheck

@@ -110,26 +110,53 @@ archives:
       - none*
 
 dockers:
-  - ids:
-      - akash-linux-amd64
-    dockerfile: _build/Dockerfile.akash
-    goos: linux
+  - dockerfile: _build/Dockerfile.akash
+    use: buildx
     goarch: amd64
+    goos: linux
+    build_flag_templates:
+      - --platform=linux/amd64
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.description={{ .ProjectName }}
+      - --label=org.opencontainers.image.url={{.GitURL}}
+      - --label=org.opencontainers.image.source={{.GitURL}}
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
     image_templates:
-      - 'ghcr.io/ovrclk/akash:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}'
-      - 'ghcr.io/ovrclk/akash:{{ .ShortCommit }}'
-      - 'ghcr.io/ovrclk/akash:{{ .Version }}'
-brews:
-  - name: "{{ .Env.HOMEBREW_NAME }}"
-    tap:
-      owner: ovrclk
-      name: homebrew-tap
-    homepage: "https://akash.network"
-    description: "Blockchain-powered decentralized compute platform"
-    custom_block: |
-      {{ .Env.HOMEBREW_CUSTOM }}
-    install: |
-      bin.install "akash"
+      - 'ghcr.io/ovrclk/{{ .ProjectName }}:{{ .ShortCommit }}-amd64'
+      - 'ghcr.io/ovrclk/{{ .ProjectName }}:{{ .Version }}-amd64'
+      - 'ghcr.io/ovrclk/{{ .ProjectName }}:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}-amd64'
+  - dockerfile: _build/Dockerfile.akash
+    use: buildx
+    goarch: arm64
+    goos: linux
+    build_flag_templates:
+      - --platform=linux/arm64
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.description={{ .ProjectName }}
+      - --label=org.opencontainers.image.url={{.GitURL}}
+      - --label=org.opencontainers.image.source={{.GitURL}}
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    image_templates:
+      - 'ghcr.io/ovrclk/{{ .ProjectName }}:{{ .ShortCommit }}-arm64'
+      - 'ghcr.io/ovrclk/{{ .ProjectName }}:{{ .Version }}-arm64'
+      - 'ghcr.io/ovrclk/{{ .ProjectName }}:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}-arm64'
+docker_manifests:
+  - name_template: ghcr.io/ovrclk/{{ .ProjectName }}:{{ .ShortCommit }}
+    image_templates:
+      - ghcr.io/ovrclk/{{ .ProjectName }}:{{ .ShortCommit }}-amd64
+      - ghcr.io/ovrclk/{{ .ProjectName }}:{{ .ShortCommit }}-arm64
+  - name_template: ghcr.io/ovrclk/{{ .ProjectName }}:{{ .Version }}
+    image_templates:
+      - ghcr.io/ovrclk/{{ .ProjectName }}:{{ .Version }}-amd64
+      - ghcr.io/ovrclk/{{ .ProjectName }}:{{ .Version }}-arm64
+  - name_template: ghcr.io/ovrclk/{{ .ProjectName }}:latest
+    image_templates:
+      - ghcr.io/ovrclk/{{ .ProjectName }}:latest-amd64
+      - ghcr.io/ovrclk/{{ .ProjectName }}:latest-arm64
 
 nfpms:
   - vendor: "Overclock Labs Inc."
