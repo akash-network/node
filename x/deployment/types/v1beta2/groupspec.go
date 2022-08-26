@@ -46,6 +46,13 @@ func (g GroupSpec) Price() sdk.DecCoin {
 
 // MatchResourcesRequirements check if resources attributes match provider's capabilities
 func (g GroupSpec) MatchResourcesRequirements(pattr types.Attributes) bool {
+	ipEndpoints := false
+
+	ipAttr := pattr.Find("capabilities/network/endpoint/ip")
+	if val, valid := ipAttr.AsBool(); valid {
+		ipEndpoints = val
+	}
+
 	for _, rgroup := range g.GetResources() {
 		pgroup := pattr.GetCapabilitiesGroup("storage")
 		for _, storage := range rgroup.Resources.Storage {
@@ -54,6 +61,12 @@ func (g GroupSpec) MatchResourcesRequirements(pattr types.Attributes) bool {
 			}
 
 			if !storage.Attributes.IN(pgroup) {
+				return false
+			}
+		}
+
+		for _, endpoint := range rgroup.Resources.Endpoints {
+			if (endpoint.Kind == types.Endpoint_LEASED_IP) && ipEndpoints {
 				return false
 			}
 		}
