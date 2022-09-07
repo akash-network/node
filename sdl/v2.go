@@ -2,7 +2,6 @@ package sdl
 
 import (
 	"fmt"
-	providerUtil "github.com/ovrclk/akash/provider/cluster/util"
 	"path"
 	"regexp"
 	"sort"
@@ -12,6 +11,7 @@ import (
 
 	manifest "github.com/ovrclk/akash/manifest/v2beta1"
 
+	sdlutil "github.com/ovrclk/akash/sdl/util"
 	types "github.com/ovrclk/akash/types/v1beta2"
 	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
@@ -297,7 +297,7 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 					}
 
 					kind := types.Endpoint_RANDOM_PORT
-					if providerUtil.ShouldBeIngress(v) {
+					if sdlutil.ShouldBeIngress(v) {
 						kind = types.Endpoint_SHARED_HTTP
 					}
 

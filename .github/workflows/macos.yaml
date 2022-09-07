@@ -10,8 +10,6 @@ on:
       - master
       - mainnet/main
   pull_request:
-#    paths:
-#      - '.github.com/workflows/macos.yaml'
 
 env:
   MAINNET: ${{ github.ref == 'refs/heads/mainnet/main'}}
@@ -25,7 +23,7 @@ jobs:
       - run: |
           while IFS='' read -r LINE || [ -n "${LINE}" ]; do
             echo "$LINE" >> $GITHUB_ENV;
-          done < .makerc
+          done < .env
       - run: |
           brew install bash
           sudo chsh -s /usr/local/bin/bash

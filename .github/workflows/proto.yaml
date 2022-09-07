@@ -13,7 +13,7 @@ jobs:
       - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
-          env-file: .makerc
+          env-file: .env
       - uses: actions/setup-go@v2
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
@@ -32,7 +32,7 @@ jobs:
         run: git checkout $GITHUB_SHA
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
-          env-file: .makerc
+          env-file: .env
       - uses: actions/setup-go@v2
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
