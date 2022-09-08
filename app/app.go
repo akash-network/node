@@ -51,9 +51,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/cosmos/ibc-go/v2/modules/apps/transfer"
-	ibc "github.com/cosmos/ibc-go/v2/modules/core"
-	porttypes "github.com/cosmos/ibc-go/v2/modules/core/05-port/types"
+	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
+	ibc "github.com/cosmos/ibc-go/v3/modules/core"
+	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
@@ -89,17 +89,30 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	ibctransferkeeper "github.com/cosmos/ibc-go/v2/modules/apps/transfer/keeper"
-	ibctransfertypes "github.com/cosmos/ibc-go/v2/modules/apps/transfer/types"
-	ibcclient "github.com/cosmos/ibc-go/v2/modules/core/02-client"
-	ibcclienttypes "github.com/cosmos/ibc-go/v2/modules/core/02-client/types"
-	ibcconnectiontypes "github.com/cosmos/ibc-go/v2/modules/core/03-connection/types"
-	ibchost "github.com/cosmos/ibc-go/v2/modules/core/24-host"
-	ibckeeper "github.com/cosmos/ibc-go/v2/modules/core/keeper"
+
+	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
+	icacontroller "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller"
+	icacontrollerkeeper "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/keeper"
+	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
+	icahost "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host"
+	icahostkeeper "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/keeper"
+	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
+	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
+	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
+	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	ibcclient "github.com/cosmos/ibc-go/v3/modules/core/02-client"
+	ibcclienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
+	ibcconnectiontypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
+	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
+	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
 
 	dkeeper "github.com/ovrclk/akash/x/deployment/keeper"
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
 	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
+
+	icaauth "github.com/ovrclk/akash/x/icaauth"
+	icaauthkeeper "github.com/ovrclk/akash/x/icaauth/keeper"
+	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types"
 
 	// unnamed import of statik for swagger UI support
 	_ "github.com/ovrclk/akash/client/docs/statik"
@@ -131,25 +144,31 @@ type AkashApp struct {
 	memkeys map[string]*sdk.MemoryStoreKey
 
 	keeper struct {
-		acct     authkeeper.AccountKeeper
-		authz    authzkeeper.Keeper
-		bank     bankkeeper.Keeper
-		cap      *capabilitykeeper.Keeper
-		staking  stakingkeeper.Keeper
-		slashing slashingkeeper.Keeper
-		mint     mintkeeper.Keeper
-		distr    distrkeeper.Keeper
-		gov      govkeeper.Keeper
-		crisis   crisiskeeper.Keeper
-		upgrade  upgradekeeper.Keeper
-		params   paramskeeper.Keeper
-		ibc      *ibckeeper.Keeper
-		evidence evidencekeeper.Keeper
-		transfer ibctransferkeeper.Keeper
+		acct                authkeeper.AccountKeeper
+		authz               authzkeeper.Keeper
+		bank                bankkeeper.Keeper
+		cap                 *capabilitykeeper.Keeper
+		staking             stakingkeeper.Keeper
+		slashing            slashingkeeper.Keeper
+		mint                mintkeeper.Keeper
+		distr               distrkeeper.Keeper
+		gov                 govkeeper.Keeper
+		crisis              crisiskeeper.Keeper
+		upgrade             upgradekeeper.Keeper
+		params              paramskeeper.Keeper
+		ibc                 *ibckeeper.Keeper
+		evidence            evidencekeeper.Keeper
+		transfer            ibctransferkeeper.Keeper
+		icaHostKeeper       icahostkeeper.Keeper
+		icaControllerKeeper icacontrollerkeeper.Keeper
+		icaAuthKeeper       icaauthkeeper.Keeper
 
 		// make scoped keepers public for test purposes
-		scopedIBC      capabilitykeeper.ScopedKeeper
-		scopedTransfer capabilitykeeper.ScopedKeeper
+		scopedIBCKeeper           capabilitykeeper.ScopedKeeper
+		scopedTransferKeeper      capabilitykeeper.ScopedKeeper
+		scopedICAControllerKeeper capabilitykeeper.ScopedKeeper
+		scopedICAHostKeeper       capabilitykeeper.ScopedKeeper
+		scopedIcaAuthKeeper       capabilitykeeper.ScopedKeeper
 
 		// akash keepers
 		escrow     escrowkeeper.Keeper
@@ -214,8 +233,13 @@ func NewApp(
 
 	// add capability keeper and ScopeToModule for ibc module
 	app.keeper.cap = capabilitykeeper.NewKeeper(appCodec, app.keys[capabilitytypes.StoreKey], app.memkeys[capabilitytypes.MemStoreKey])
+
 	scopedIBCKeeper := app.keeper.cap.ScopeToModule(ibchost.ModuleName)
 	scopedTransferKeeper := app.keeper.cap.ScopeToModule(ibctransfertypes.ModuleName)
+	scopedIcaAuthKeeper := app.keeper.cap.ScopeToModule(icaauthtypes.ModuleName)
+	scopedICAControllerKeeper := app.keeper.cap.ScopeToModule(icacontrollertypes.SubModuleName)
+	scopedICAHostKeeper := app.keeper.cap.ScopeToModule(icahosttypes.SubModuleName)
+
 	// seal the capability keeper so all persistent capabilities are loaded in-memory and prevent
 	// any further modules from creating scoped sub-keepers.
 	app.keeper.cap.Seal()
@@ -283,7 +307,6 @@ func NewApp(
 	)
 
 	app.keeper.upgrade = upgradekeeper.NewKeeper(skipUpgradeHeights, app.keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
-	app.registerUpgradeHandlers()
 
 	// register the staking hooks
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
@@ -321,14 +344,42 @@ func NewApp(
 	// register Transfer Keepers
 	app.keeper.transfer = ibctransferkeeper.NewKeeper(
 		appCodec, app.keys[ibctransfertypes.StoreKey], app.GetSubspace(ibctransfertypes.ModuleName),
-		app.keeper.ibc.ChannelKeeper, &app.keeper.ibc.PortKeeper,
+		app.keeper.ibc.ChannelKeeper, app.keeper.ibc.ChannelKeeper, &app.keeper.ibc.PortKeeper,
 		app.keeper.acct, app.keeper.bank, scopedTransferKeeper,
 	)
+
 	transferModule := transfer.NewAppModule(app.keeper.transfer)
+	transferIBCModule := transfer.NewIBCModule(app.keeper.transfer)
+
+	app.keeper.icaControllerKeeper = icacontrollerkeeper.NewKeeper(
+		appCodec, keys[icacontrollertypes.StoreKey], app.GetSubspace(icacontrollertypes.SubModuleName),
+		app.keeper.ibc.ChannelKeeper, // may be replaced with middleware such as ics29 fee
+		app.keeper.ibc.ChannelKeeper, &app.keeper.ibc.PortKeeper,
+		scopedICAControllerKeeper, app.MsgServiceRouter(),
+	)
+
+	app.keeper.icaHostKeeper = icahostkeeper.NewKeeper(
+		appCodec, keys[icahosttypes.StoreKey], app.GetSubspace(icahosttypes.SubModuleName),
+		app.keeper.ibc.ChannelKeeper, &app.keeper.ibc.PortKeeper,
+		app.keeper.acct, scopedICAHostKeeper, app.MsgServiceRouter(),
+	)
+
+	icaModule := ica.NewAppModule(&app.keeper.icaControllerKeeper, &app.keeper.icaHostKeeper)
+
+	app.keeper.icaAuthKeeper = icaauthkeeper.NewKeeper(appCodec, keys[icaauthtypes.StoreKey], app.keeper.icaControllerKeeper, scopedIcaAuthKeeper)
+	icaAuthModule := icaauth.NewAppModule(appCodec, app.keeper.icaAuthKeeper)
+	icaAuthIBCModule := icaauth.NewIBCModule(app.keeper.icaAuthKeeper)
+
+	icaControllerIBCModule := icacontroller.NewIBCModule(app.keeper.icaControllerKeeper, icaAuthIBCModule)
+	icaHostIBCModule := icahost.NewIBCModule(app.keeper.icaHostKeeper)
 
 	// Create static IBC router, add transfer route, then set and seal it
 	ibcRouter := porttypes.NewRouter()
-	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferModule)
+	ibcRouter.AddRoute(icacontrollertypes.SubModuleName, icaControllerIBCModule).
+		AddRoute(icahosttypes.SubModuleName, icaHostIBCModule).
+		AddRoute(ibctransfertypes.ModuleName, transferIBCModule).
+		AddRoute(icaauthtypes.ModuleName, icaControllerIBCModule)
+
 	app.keeper.ibc.SetRouter(ibcRouter)
 
 	// create evidence keeper with evidence router
@@ -364,6 +415,8 @@ func NewApp(
 			ibc.NewAppModule(app.keeper.ibc),
 			params.NewAppModule(app.keeper.params),
 			transferModule,
+			icaModule,
+			icaAuthModule,
 		}, app.akashAppModules()...)...,
 	)
 
@@ -408,6 +461,7 @@ func NewApp(
 			evidence.NewAppModule(app.keeper.evidence),
 			ibc.NewAppModule(app.keeper.ibc),
 			transferModule,
+			NewICAHostSimModule(icaModule, appCodec),
 		},
 			app.akashSimModules()...,
 		)...,
@@ -437,19 +491,25 @@ func NewApp(
 
 	app.SetEndBlocker(app.EndBlocker)
 
+	// register the upgrade handler
+	app.registerUpgradeHandlers(icaModule)
+
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
 			tmos.Exit("app initialization:" + err.Error())
 		}
 	}
 
-	app.keeper.scopedIBC = scopedIBCKeeper
-	app.keeper.scopedTransfer = scopedTransferKeeper
+	app.keeper.scopedIBCKeeper = scopedIBCKeeper
+	app.keeper.scopedTransferKeeper = scopedTransferKeeper
+	app.keeper.scopedICAControllerKeeper = scopedICAControllerKeeper
+	app.keeper.scopedICAHostKeeper = scopedICAHostKeeper
+	app.keeper.scopedIcaAuthKeeper = scopedIcaAuthKeeper
 
 	return app
 }
 
-func (app *AkashApp) registerUpgradeHandlers() {
+func (app *AkashApp) registerUpgradeHandlers(icaModule ica.AppModule) {
 	app.keeper.upgrade.SetUpgradeHandler("akash_v0.15.0_cosmos_v0.44.x", func(ctx sdk.Context,
 		plan upgradetypes.Plan, _ module.VersionMap) (module.VersionMap, error) {
 		// set max expected block time parameter. Replace the default with your expected value
@@ -498,6 +558,43 @@ func (app *AkashApp) registerUpgradeHandlers() {
 		}
 
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades
+		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+	}
+
+	// ica upgrade
+	const upgradeName = "01-ica-upgrade"
+	app.keeper.upgrade.SetUpgradeHandler(
+		upgradeName,
+		func(ctx sdk.Context, _ upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+			fromVM[icatypes.ModuleName] = icaModule.ConsensusVersion()
+
+			// create ICS27 Controller submodule params
+			// enable the controller chain
+			controllerParams := icacontrollertypes.Params{ControllerEnabled: true}
+
+			// create ICS27 Host submodule params
+			hostParams := icahosttypes.Params{
+				// enable the host chain
+				HostEnabled: true,
+				// allowing the all messages
+				AllowMessages: []string{"*"},
+			}
+
+			ctx.Logger().Info("start to init interchainaccount module...")
+			// initialize ICS27 module
+			icaModule.InitModule(ctx, controllerParams, hostParams)
+
+			ctx.Logger().Info("start to run module migrations...")
+
+			return app.mm.RunMigrations(ctx, app.configurator, fromVM)
+		},
+	)
+
+	if upgradeInfo.Name == upgradeName && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
+		storeUpgrades := storetypes.StoreUpgrades{
+			Added: []string{icacontrollertypes.StoreKey, icahosttypes.StoreKey},
+		}
+
 		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
 	}
 }
@@ -669,6 +766,8 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibchost.ModuleName)
+	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
+	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 
 	return akashSubspaces(paramsKeeper)
 }

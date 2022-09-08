@@ -18,9 +18,9 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	transfertypes "github.com/cosmos/ibc-go/v2/modules/apps/transfer/types"
-	ibchost "github.com/cosmos/ibc-go/v2/modules/core/24-host"
-
+	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
+	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	"github.com/ovrclk/akash/x/audit"
 	audittypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
 	"github.com/ovrclk/akash/x/cert"
@@ -37,6 +37,8 @@ import (
 	markettypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/ovrclk/akash/x/provider"
 	providertypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
+
+	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {
@@ -197,6 +199,8 @@ func (app *AkashApp) akashBeginBlockModules() []string {
 		stakingtypes.ModuleName,
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
+		icatypes.ModuleName,
+		icaauthtypes.ModuleName,
 	}
 }
 
@@ -227,6 +231,8 @@ func (app *AkashApp) akashEndBlockModules() []string {
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
+		icatypes.ModuleName,
+		icaauthtypes.ModuleName,
 	}
 }
 
@@ -250,6 +256,8 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
+		icatypes.ModuleName,
+		icaauthtypes.ModuleName,
 		cert.ModuleName,
 		escrow.ModuleName,
 		deployment.ModuleName,
