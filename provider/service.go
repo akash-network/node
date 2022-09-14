@@ -4,15 +4,14 @@ import (
 	"context"
 	"time"
 
-	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
-
-	"github.com/cosmos/cosmos-sdk/client"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	aclient "github.com/ovrclk/akash/client"
+	clustertypes "github.com/ovrclk/akash/provider/cluster/types/v1beta2"
 
 	"github.com/boz/go-lifecycle"
+	"github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
 	"github.com/ovrclk/akash/provider/bidengine"
@@ -75,9 +74,17 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 	clusterConfig.DeploymentIngressDomain = cfg.DeploymentIngressDomain
 	clusterConfig.ClusterSettings = cfg.ClusterSettings
 
+	bc, err := newBalanceChecker(ctx, bankTypes.NewQueryClient(cctx), aclient.NewQueryClientFromCtx(cctx), accAddr, session, bus, cfg.BalanceCheckerCfg)
+	if err != nil {
+		session.Log().Error("starting balance checker", "err", err)
+		cancel()
+		return nil, err
+	}
+
 	cluster, err := cluster.NewService(ctx, session, bus, cclient, clusterConfig)
 	if err != nil {
 		cancel()
+		<-bc.lc.Done()
 		return nil, err
 	}
 
@@ -87,6 +94,7 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 		session.Log().Error(ErrClusterReadTimedout.Error())
 		cancel()
 		<-cluster.Done()
+		<-bc.lc.Done()
 		return nil, ErrClusterReadTimedout
 	}
 
@@ -102,6 +110,7 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 		session.Log().Error(errmsg, "err", err)
 		cancel()
 		<-cluster.Done()
+		<-bc.lc.Done()
 		return nil, errors.Wrap(err, errmsg)
 	}
 
@@ -118,15 +127,7 @@ func NewService(ctx context.Context, cctx client.Context, accAddr sdk.AccAddress
 		cancel()
 		<-cluster.Done()
 		<-bidengine.Done()
-		return nil, err
-	}
-
-	bc, err := newBalanceChecker(ctx, bankTypes.NewQueryClient(cctx), aclient.NewQueryClientFromCtx(cctx), accAddr, session, bus, cfg.BalanceCheckerCfg)
-	if err != nil {
-		session.Log().Error("starting balance checker", "err", err)
-		cancel()
-		<-cluster.Done()
-		<-bidengine.Done()
+		<-bc.lc.Done()
 		return nil, err
 	}
 
