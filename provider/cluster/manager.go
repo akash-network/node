@@ -60,7 +60,6 @@ type deploymentManager struct {
 	mgroup *manifest.Group
 
 	monitor          *deploymentMonitor
-	withdrawal       *deploymentWithdrawal
 	wg               sync.WaitGroup
 	updatech         chan *manifest.Group
 	teardownch       chan struct{}
@@ -96,13 +95,8 @@ func newDeploymentManager(s *service, lease mtypes.LeaseID, mgroup *manifest.Gro
 		currentHostnames:    make(map[string]struct{}),
 	}
 
-	startCh := make(chan struct{}, 1)
 	go dm.lc.WatchChannel(dm.serviceShuttingDown)
-	go dm.run(startCh)
-
-	// ensures lease withdraw monitor is started and subscribed to the bus prior
-	// sending LeaseAddFundsMonitor event
-	<-startCh
+	go dm.run()
 
 	go func() {
 		<-dm.lc.Done()
@@ -150,7 +144,7 @@ func (dm *deploymentManager) handleUpdate() <-chan error {
 	return nil
 }
 
-func (dm *deploymentManager) run(startCh chan<- struct{}) {
+func (dm *deploymentManager) run() {
 	defer dm.lc.ShutdownCompleted()
 	var shutdownErr error
 
@@ -163,12 +157,6 @@ func (dm *deploymentManager) run(startCh chan<- struct{}) {
 		}
 		dm.log.Debug("hostnames released")
 	}()
-
-	startCh <- struct{}{}
-
-	if err := dm.startWithdrawal(); err != nil {
-		dm.log.Error("couldn't start if withdraw monitor", "err", err, "lease", dm.lease)
-	}
 
 loop:
 	for {
@@ -239,25 +227,10 @@ loop:
 		dm.log.Debug("read from runch during shutdown")
 	}
 
-	if nil != dm.withdrawal {
-		dm.log.Debug("waiting on withdrawal")
-		<-dm.withdrawal.lc.Done()
-	}
-
 	dm.log.Debug("waiting on dm.wg")
 	dm.wg.Wait()
 
 	dm.log.Info("shutdown complete")
-}
-
-func (dm *deploymentManager) startWithdrawal() error {
-	var err error
-	dm.withdrawal, err = newDeploymentWithdrawal(dm)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (dm *deploymentManager) startMonitor() {
