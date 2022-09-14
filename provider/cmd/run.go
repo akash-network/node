@@ -92,6 +92,7 @@ const (
 	FlagProviderConfig                   = "provider-config"
 	FlagCachedResultMaxAge               = "cached-result-max-age"
 	FlagRPCQueryTimeout                  = "rpc-query-timeout"
+	FlagTxBroadcastTimeout               = "tx-broadcast-timeout"
 )
 
 var (
@@ -321,6 +322,11 @@ func RunCmd() *cobra.Command {
 		return nil
 	}
 
+	cmd.Flags().Duration(FlagTxBroadcastTimeout, 30*time.Second, "tx broadcast timeout. defaults to 30s")
+	if err := viper.BindPFlag(FlagTxBroadcastTimeout, cmd.Flags().Lookup(FlagTxBroadcastTimeout)); err != nil {
+		return nil
+	}
+
 	return cmd
 }
 
@@ -433,6 +439,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	providerConfig := viper.GetString(FlagProviderConfig)
 	cachedResultMaxAge := viper.GetDuration(FlagCachedResultMaxAge)
 	rpcQueryTimeout := viper.GetDuration(FlagRPCQueryTimeout)
+	txTimeout := viper.GetDuration(FlagTxBroadcastTimeout)
 
 	var metricsRouter http.Handler
 	if len(metricsListener) != 0 {
@@ -499,7 +506,7 @@ func doRunCmd(ctx context.Context, cmd *cobra.Command, _ []string) error {
 
 	logger := openLogger()
 
-	broadcasterClient, err := broadcaster.NewSerialClient(logger, cctx, txFactory, info)
+	broadcasterClient, err := broadcaster.NewSerialClient(logger, cctx, txTimeout, txFactory, info)
 	if err != nil {
 		return err
 	}
