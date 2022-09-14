@@ -54,11 +54,6 @@ type ClusterDeployment struct {
 	Status  ClusterDeploymentStatus
 }
 
-// LeaseWithdraw Empty type used as a marker to indicate specified lease should be withdrawn now
-type LeaseWithdraw struct {
-	mtypes.LeaseID
-}
-
 type LeaseAddFundsMonitor struct {
 	mtypes.LeaseID
 	IsNewLease bool
