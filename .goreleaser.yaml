@@ -95,11 +95,17 @@ builds:
       - "{{ .Env.BUILD_VARS }}"
       - "{{ .Env.STRIP_FLAGS }}"
       - "-linkmode={{ .Env.LINKMODE }}"
-archives:
-  - id: akash
-    builds:
+universal_binaries:
+  - id: akash-darwin-universal
+    ids:
       - akash-darwin-amd64
       - akash-darwin-arm64
+    replace: true
+    name_template: "{{.ProjectName}}"
+archives:
+  - id: w/version
+    builds:
+      - akash-darwin-universal
       - akash-linux-amd64
       - akash-linux-arm64
       - akash-windows-amd64
@@ -108,6 +114,30 @@ archives:
     format: zip
     files:
       - none*
+  - id: wo/version
+    builds:
+      - akash-darwin-universal
+      - akash-linux-amd64
+      - akash-linux-arm64
+      - akash-windows-amd64
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format: zip
+    files:
+      - none*
+brews:
+  - name: "{{ .Env.HOMEBREW_NAME }}"
+    ids:
+      - wo/version
+    tap:
+      owner: ovrclk
+      name: homebrew-tap
+    homepage: "https://akash.network"
+    description: "Blockchain-powered decentralized compute platform"
+    custom_block: |
+      {{ .Env.HOMEBREW_CUSTOM }}
+    install: |
+      bin.install "akash"
 
 dockers:
   - dockerfile: _build/Dockerfile.akash
@@ -159,9 +189,19 @@ docker_manifests:
       - ghcr.io/ovrclk/{{ .ProjectName }}:latest-arm64
 
 nfpms:
-  - vendor: "Overclock Labs Inc."
+  - id: w/version
+    vendor: "Overclock Labs Inc."
     homepage: "http://ovrclk.com"
     maintainer: "Akash Network <hello@akash.network>"
+    formats:
+      - deb
+      - rpm
+    license: Apache 2.0
+  - id: wo/version
+    vendor: "Overclock Labs Inc."
+    homepage: "https://ovrclk.com"
+    maintainer: "Overclock Labs Inc. <hello@akash.network>"
+    file_name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
     formats:
       - deb
       - rpm
