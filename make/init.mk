@@ -11,6 +11,8 @@ BINS                         := $(AKASH)
 
 GO                           := GO111MODULE=$(GO111MODULE) go
 
+GO_MOD_NAME                  := $(shell go list -m 2>/dev/null)
+
 # setup .cache bins first in paths to have precedence over already installed same tools for system wide use
 PATH                         := "$(PATH):$(AKASH_DEVCACHE_BIN):$(AKASH_DEVCACHE_NODE_BIN)"
 
