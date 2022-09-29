@@ -75,13 +75,16 @@ func validateAttributeStorageClass(_ string, val *string) error {
 
 // UnmarshalYAML unmarshal storage config
 // data can be present either as single entry mapping or an array of them
+// nolint: gofmt
 // e.g
 // single entity
 // ```yaml
 // storage:
-//   size: 1Gi
-//   attributes:
-//     class: ssd
+//
+//	size: 1Gi
+//	attributes:
+//	  class: ssd
+//
 // ```
 //
 // ```yaml
@@ -90,12 +93,13 @@ func validateAttributeStorageClass(_ string, val *string) error {
 //   - size: 1Gi
 //     name: cache
 //     attributes:
-//       class: ssd
+//     class: ssd
 //   - size: 100Gi
 //     name: data
 //     attributes:
-//       persistent: true # this volumes survives pod restart
-//       class: gp # aka general purpose
+//     persistent: true # this volumes survives pod restart
+//     class: gp # aka general purpose
+//
 // ```
 func (sdl *v2ResourceStorageArray) UnmarshalYAML(node *yaml.Node) error {
 	var nodes v2ResourceStorageArray

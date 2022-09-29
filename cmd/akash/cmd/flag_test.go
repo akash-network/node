@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -21,7 +20,7 @@ import (
 // TestContextFlags tests that all the flags which are set in client.Context are parsed correctly.
 // This test has been added because recently the --home flag broke with cosmos-sdk@v0.43.0 upgrade.
 func TestContextFlags(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "test-akash-home")
+	tmpDir, err := os.MkdirTemp("", "test-akash-home")
 	require.NoError(t, err)
 
 	// expected flag values
