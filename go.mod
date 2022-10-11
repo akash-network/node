@@ -144,6 +144,8 @@ require (
 replace (
 	// This is cosmos-sdk from release/v0.45.x, with the akash patches applied.
 	github.com/cosmos/cosmos-sdk => github.com/notional-labs/cosmos-sdk v0.45.4-0.20221011021425-b12b91c4b0bd
+	// ledger-go, cosmos flavored, updated with latest Zondax code
+	github.com/cosmos/ledger-go => github.com/notional-labs/ledger-go v0.0.0-20221011031342-5584ef49e681
 	// use cosmos flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// tendermint v0.34.21 with akash patches
