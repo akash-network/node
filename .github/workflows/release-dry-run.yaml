@@ -30,10 +30,8 @@ jobs:
         id: branch_name
         run: |
           echo ::set-output name=MAINNET::$(./script/mainnet-from-tag.sh ${GITHUB_REF#refs/tags/})
-          echo ::set-output name=RELEASE_TAG::${GITHUB_REF#refs/tags/}
       - run: echo "Building for MAINNET=${{ steps.branch_name.outputs.MAINNET }}"
       - name: release dry-run
         run: make release
         env:
-          RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
           MAINNET: ${{ steps.branch_name.outputs.MAINNET }}

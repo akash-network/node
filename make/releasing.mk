@@ -1,7 +1,10 @@
+GON_CONFIGFILE           ?= gon.json
+
 GORELEASER_SKIP_VALIDATE ?= false
 GORELEASER_DEBUG         ?= false
 GORELEASER_IMAGE         := ghcr.io/goreleaser/goreleaser-cross:v$(GOLANG_VERSION)
-GON_CONFIGFILE           ?= gon.json
+GORELEASER_RELEASE       ?= false
+GORELEASER_MOUNT_CONFIG  ?= false
 
 ifeq ($(GORELEASER_RELEASE),true)
 	GORELEASER_SKIP_VALIDATE := false
@@ -10,6 +13,10 @@ else
 	GORELEASER_SKIP_PUBLISH  := --skip-publish=true
 	GORELEASER_SKIP_VALIDATE ?= false
 	GITHUB_TOKEN=
+endif
+
+ifeq ($(GORELEASER_MOUNT_CONFIG),true)
+	GORELEASER_IMAGE := -v $(HOME)/.docker/config.json:/root/.docker/config.json $(GORELEASER_IMAGE)
 endif
 
 ifeq ($(OS),Windows_NT)
@@ -86,7 +93,6 @@ release: modvendor gen-changelog
 		-e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 		-e GORELEASER_CURRENT_TAG="$(RELEASE_TAG)" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v $(HOME)/.docker/config.json:/root/.docker/config.json \
 		-v `pwd`:/go/src/$(GO_MOD_NAME) \
 		-w /go/src/$(GO_MOD_NAME) \
 		$(GORELEASER_IMAGE) \
