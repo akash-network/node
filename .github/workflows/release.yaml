@@ -50,6 +50,7 @@ jobs:
           make release
         env:
           GORELEASER_RELEASE: true
+          GORELEASER_MOUNT_CONFIG: true
           MAINNET: ${{ steps.branch_name.outputs.MAINNET }}
           RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
           # using PAT as homebrew is located in different repo
