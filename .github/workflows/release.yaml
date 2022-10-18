@@ -25,12 +25,11 @@ jobs:
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-      - name: branch name
-        id: branch_name
-        run: |
-          echo ::set-output name=MAINNET::$(./script/mainnet-from-tag.sh ${GITHUB_REF#refs/tags/})
-          echo ::set-output name=RELEASE_TAG::${GITHUB_REF#refs/tags/}
-      - run: echo "Building for MAINNET=${{ steps.branch_name.outputs.MAINNET }}"
+      - name: release version
+        run: echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - name: detect network from release
+        run: echo "MAINNET=$(./script/mainnet-from-tag.sh ${{ env.RELEASE_TAG }})"
+      - run: echo "Building for MAINNET=${{ env.MAINNET }}"
       - if: (github.ref == 'refs/heads/master') || (github.ref == 'refs/heads/mainnet/main')
         name: release dry-run GORELEASER_SKIP_VALIDATE=true
         run: make release-dry-run GORELEASER_SKIP_VALIDATE=true
@@ -51,7 +50,7 @@ jobs:
         env:
           GORELEASER_RELEASE: true
           GORELEASER_MOUNT_CONFIG: true
-          MAINNET: ${{ steps.branch_name.outputs.MAINNET }}
-          RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
+          MAINNET: ${{ env.MAINNET }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
           # using PAT as homebrew is located in different repo
           GITHUB_TOKEN: ${{ secrets.GORELEASER_ACCESS_TOKEN }}
