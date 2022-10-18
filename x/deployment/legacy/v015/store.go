@@ -3,6 +3,7 @@ package v015
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	v015 "github.com/ovrclk/akash/util/legacy/v015"
 	"github.com/ovrclk/akash/x/deployment/types/v1beta1"
 	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
@@ -14,8 +15,8 @@ import (
 //
 // - Change addresses to be length-prefixed
 // - Migrating Group proto from v1beta1 to v1beta2
-// 		- Change deployments storage from single value to an array
-// 		- Change resource price from Coin to DecCoin
+//   - Change deployments storage from single value to an array
+//   - Change resource price from Coin to DecCoin
 func MigrateStore(ctx sdk.Context, storeKey sdk.StoreKey, cdc codec.BinaryCodec) error {
 	store := ctx.KVStore(storeKey)
 

@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/blang/semver"
 	"github.com/pkg/errors"
@@ -74,7 +74,7 @@ func (s *sdl) UnmarshalYAML(node *yaml.Node) error {
 
 // ReadFile read from given path and returns SDL instance
 func ReadFile(path string) (SDL, error) {
-	buf, err := ioutil.ReadFile(path)
+	buf, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

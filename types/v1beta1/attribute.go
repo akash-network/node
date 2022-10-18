@@ -1,10 +1,10 @@
 package v1beta1
 
 import (
+	"errors"
 	"reflect"
 	"regexp"
 
-	"errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -73,44 +73,52 @@ func (attr Attributes) Validate() error {
 	return nil
 }
 
-/*
-AttributesSubsetOf check if a is subset of that
-For example there are two yaml files being converted into these attributes
-example 1: a is subset of b
----
-// a
-attributes:
-  region:
-    - us-east-1
----
-b
-attributes:
-  region:
-    - us-east-1
-    - us-east-2
-
-example 2: a is not subset of b
-attributes:
-  region:
-    - us-east-1
----
-b
-attributes:
-  region:
-    - us-east-2
-    - us-east-3
-
-example 3: a is subset of b
-attributes:
-  region:
-    - us-east-2
-    - us-east-3
----
-b
-attributes:
-  region:
-    - us-east-2
-*/
+// AttributesSubsetOf check if a is subset of that
+// For example there are two yaml files being converted into these attributes
+// example 1: a is subset of b
+// ---
+// // a
+// // nolint: gofmt
+// attributes:
+//
+//	region:
+//	  - us-east-1
+//
+// ---
+// b
+// attributes:
+//
+//	region:
+//	  - us-east-1
+//	  - us-east-2
+//
+// example 2: a is not subset of b
+// attributes:
+//
+//	region:
+//	  - us-east-1
+//
+// ---
+// b
+// attributes:
+//
+//	region:
+//	  - us-east-2
+//	  - us-east-3
+//
+// example 3: a is subset of b
+// attributes:
+//
+//	region:
+//	  - us-east-2
+//	  - us-east-3
+//
+// ---
+// b
+// attributes:
+//
+//	region:
+//	  - us-east-2
 func AttributesSubsetOf(a, b Attributes) bool {
 loop:
 	for _, req := range a {

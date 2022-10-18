@@ -1,7 +1,7 @@
 package config
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -28,7 +28,7 @@ func (c Config) GetAttributes() types.Attributes {
 
 // ReadConfigPath reads and parses file
 func ReadConfigPath(path string) (Config, error) {
-	buf, err := ioutil.ReadFile(path)
+	buf, err := os.ReadFile(path)
 	if err != nil {
 		return Config{}, err
 	}

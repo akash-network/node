@@ -10,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
 	clitestutil "github.com/ovrclk/akash/testutil/cli"
 
 	"github.com/stretchr/testify/suite"
@@ -17,6 +18,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/ovrclk/akash/testutil"
 	ccli "github.com/ovrclk/akash/x/cert/client/cli"
 	"github.com/ovrclk/akash/x/deployment/client/cli"
@@ -399,7 +401,7 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	curFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
 	s.Require().Equal(prevFunderBal.Sub(types.DefaultDeploymentMinDeposit.Amount), curFunderBal)
 	prevFunderBal = curFunderBal
-	prevOwnerBal = s.getAccountBalance(val.Address)
+	// prevOwnerBal = s.getAccountBalance(val.Address)
 
 	// revoke the authorization given to the deployment owner by the funder
 	res, err = cli.TxRevokeAuthorizationExec(

@@ -125,44 +125,52 @@ func (attr Attributes) Dup() Attributes {
 	return res
 }
 
-/*
-AttributesSubsetOf check if a is subset of b
-For example there are two yaml files being converted into these attributes
-example 1: a is subset of b
----
-// a
-attributes:
-  region:
-    - us-east-1
----
-b
-attributes:
-  region:
-    - us-east-1
-    - us-east-2
-
-example 2: a is not subset of b
-attributes:
-  region:
-    - us-east-1
----
-b
-attributes:
-  region:
-    - us-east-2
-    - us-east-3
-
-example 3: a is subset of b
-attributes:
-  region:
-    - us-east-2
-    - us-east-3
----
-b
-attributes:
-  region:
-    - us-east-2
-*/
+// AttributesSubsetOf check if a is subset of b
+// nolint: gofmt
+// For example there are two yaml files being converted into these attributes
+// example 1: a is subset of b
+// ---
+// // a
+// attributes:
+//
+//	region:
+//	  - us-east-1
+//
+// ---
+// b
+// attributes:
+//
+//	region:
+//	  - us-east-1
+//	  - us-east-2
+//
+// example 2: a is not subset of b
+// attributes:
+//
+//	region:
+//	  - us-east-1
+//
+// ---
+// b
+// attributes:
+//
+//	region:
+//	  - us-east-2
+//	  - us-east-3
+//
+// example 3: a is subset of b
+// attributes:
+//
+//	region:
+//	  - us-east-2
+//	  - us-east-3
+//
+// ---
+// b
+// attributes:
+//
+//	region:
+//	  - us-east-2
 func AttributesSubsetOf(a, b Attributes) bool {
 loop:
 	for _, req := range a {
@@ -213,10 +221,11 @@ func (attr Attributes) Iterate(prefix string, fn func(group, key, value string))
 // capabilities/storage/1/class: io1
 // capabilities/storage/2/persistent: false
 //
+// nolint: gofmt
 // returns
-// - - persistent: true
+//   - - persistent: true
 //     class: nvme
-// - - persistent: false
+//   - - persistent: false
 func (attr Attributes) GetCapabilitiesGroup(prefix string) AttributesGroup {
 	var res AttributesGroup // nolint:prealloc
 
@@ -258,14 +267,14 @@ func (attr Attributes) GetCapabilitiesGroup(prefix string) AttributesGroup {
 
 // IN check if given attributes are in attributes group
 // AttributesGroup for storage
-// - persistent: true
-//   class: beta1
-// - persistent: true
-//   class: beta2
+//   - persistent: true
+//     class: beta1
+//   - persistent: true
+//     class: beta2
 //
 // that
-// - persistent: true
-//   class: beta1
+//   - persistent: true
+//     class: beta1
 func (attr Attributes) IN(group AttributesGroup) bool {
 	for _, group := range group {
 		if attr.SubsetOf(group) {

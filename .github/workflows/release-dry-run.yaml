@@ -6,8 +6,9 @@ defaults:
 
 on:
   push:
-    tags:
-      - v*
+    branches:
+      - master
+      - mainnet/main
 
 jobs:
   goreleaser:
@@ -31,26 +32,8 @@ jobs:
           echo ::set-output name=MAINNET::$(./script/mainnet-from-tag.sh ${GITHUB_REF#refs/tags/})
           echo ::set-output name=RELEASE_TAG::${GITHUB_REF#refs/tags/}
       - run: echo "Building for MAINNET=${{ steps.branch_name.outputs.MAINNET }}"
-      - if: (github.ref == 'refs/heads/master') || (github.ref == 'refs/heads/mainnet/main')
-        name: release dry-run GORELEASER_SKIP_VALIDATE=true
-        run: make release-dry-run GORELEASER_SKIP_VALIDATE=true
       - name: release dry-run
         run: make release
         env:
           RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
-      - name: Login to GHCR
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: release publish
-        run: |
-          sudo rm -rf dist
-          make release
-        env:
-          GORELEASER_RELEASE: true
           MAINNET: ${{ steps.branch_name.outputs.MAINNET }}
-          RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
-          # using PAT as homebrew is located in different repo
-          GITHUB_TOKEN: ${{ secrets.GORELEASER_ACCESS_TOKEN }}

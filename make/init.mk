@@ -11,6 +11,8 @@ BINS                         := $(AKASH)
 
 GO                           := GO111MODULE=$(GO111MODULE) go
 
+GO_MOD_NAME                  := $(shell go list -m 2>/dev/null)
+
 # setup .cache bins first in paths to have precedence over already installed same tools for system wide use
 PATH                         := "$(PATH):$(AKASH_DEVCACHE_BIN):$(AKASH_DEVCACHE_NODE_BIN)"
 
@@ -19,7 +21,7 @@ PROTOC_VERSION               ?= 3.13.0
 PROTOC_GEN_GOCOSMOS_VERSION  ?= v0.3.1
 GRPC_GATEWAY_VERSION         := $(shell $(GO) list -mod=readonly -m -f '{{ .Version }}' github.com/grpc-ecosystem/grpc-gateway)
 PROTOC_SWAGGER_GEN_VERSION   := $(GRPC_GATEWAY_VERSION)
-GOLANGCI_LINT_VERSION        ?= v1.45.2
+GOLANGCI_LINT_VERSION        ?= v1.50.0
 GOLANG_VERSION               ?= 1.16.1
 STATIK_VERSION               ?= v0.1.7
 GIT_CHGLOG_VERSION           ?= v0.15.1

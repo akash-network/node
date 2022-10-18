@@ -56,9 +56,10 @@ func (app *AkashApp) ExportAppStateAndValidators(
 	}, nil
 }
 
-// prepare for fresh start at zero height
+// prepForZeroHeightGenesis prepare for fresh start at zero height
 // NOTE zero height genesis is a temporary feature which will be deprecated
-//      in favour of export at a block height
+//
+//	in favour of export at a block height
 func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []string) {
 	applyAllowedAddrs := false
 
