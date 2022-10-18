@@ -15,12 +15,12 @@ jobs:
   build-bins:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - run: make bins
@@ -29,12 +29,12 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - run: make test-full
@@ -42,26 +42,26 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - run: make test-coverage
-      - uses: codecov/codecov-action@v2
+      - uses: codecov/codecov-action@v3
 
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - run: make deps-tidy

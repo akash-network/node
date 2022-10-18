@@ -24,12 +24,12 @@ jobs:
   test-sim-nondeterminism:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - name: test-sim-nondeterminism
@@ -38,12 +38,12 @@ jobs:
   test-sim-import-export:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - name: test-sim-import-export
@@ -52,12 +52,12 @@ jobs:
   test-sim-after-import:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - name: test-sim-after-import
@@ -66,12 +66,12 @@ jobs:
   test-sim-fullapp:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - name: test-sim-fullapp

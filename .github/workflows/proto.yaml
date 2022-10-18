@@ -9,12 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - name: go mod vendor
@@ -24,7 +24,7 @@ jobs:
   breakage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
       - name: prepare master branch
         run: git checkout master
@@ -33,7 +33,7 @@ jobs:
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - name: go mod vendor
