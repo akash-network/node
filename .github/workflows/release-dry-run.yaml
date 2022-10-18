@@ -1,4 +1,4 @@
-name: release
+name: release-dry-run
 
 defaults:
   run:
@@ -9,6 +9,7 @@ on:
     branches:
       - master
       - mainnet/main
+  pull_request:
 
 jobs:
   goreleaser:
@@ -26,12 +27,18 @@ jobs:
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-      - name: branch name
-        id: branch_name
+      - uses: fregante/setup-git-user@v1
+      - name: configure git tag
         run: |
-          echo ::set-output name=MAINNET::$(./script/mainnet-from-tag.sh ${GITHUB_REF#refs/tags/})
-      - run: echo "Building for MAINNET=${{ steps.branch_name.outputs.MAINNET }}"
+          echo "RELEASE_TAG=v$(./script/semver.sh bump patch $(git describe --tags --abbrev=0))" >> $GITHUB_ENV
+      - name: git tag
+        run: |
+          git tag -a ${{ env.RELEASE_TAG }} -m ${{ env.RELEASE_TAG }}
+      - name: detect network from tag
+        run: |
+          echo "MAINNET=$(./script/mainnet-from-tag.sh ${{ env.RELEASE_TAG }})" >> $GITHUB_ENV
+      - run: echo "Building for MAINNET=${{ env.MAINNET }}"
       - name: release dry-run
         run: make release
         env:
-          MAINNET: ${{ steps.branch_name.outputs.MAINNET }}
+          MAINNET: ${{ env.MAINNET }}
