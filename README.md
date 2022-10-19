@@ -1,7 +1,7 @@
 # Akash - Decentralized Serverless Network
 
 ![tests](https://github.com/ovrclk/akash/workflows/tests/badge.svg)
-![simulations](https://github.com/ovrclk/akash/workflows/Sims/badge.svg)
+![simulations](https://github.com/ovrclk/akash/workflows/simulation-tests/badge.svg)
 [![codecov](https://codecov.io/github/ovrclk/akash/coverage.svg?branch=master)](https://codecov.io/github/ovrclk/akash?branch=master)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/ovrclk/akash)](https://goreportcard.com/report/github.com/ovrclk/akash)

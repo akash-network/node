@@ -1,4 +1,4 @@
-name: standardize yaml
+name: standardize-yaml
 on:
   push:
     branches: [master]
