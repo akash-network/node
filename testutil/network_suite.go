@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
+	"time"
+
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -18,13 +22,10 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"reflect"
-	"strings"
-	"time"
 )
 
 type NetworkTestSuite struct {
-	suite.Suite
+	*suite.Suite
 	cfg     sdknetworktest.Config
 	network *sdknetworktest.Network
 	testIdx int
@@ -38,6 +39,7 @@ type NetworkTestSuite struct {
 
 func NewNetworkTestSuite(cfg *sdknetworktest.Config, container interface{}) NetworkTestSuite {
 	nts := NetworkTestSuite{
+		Suite:     &suite.Suite{},
 		container: container,
 		testIdx:   -1,
 	}
