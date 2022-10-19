@@ -20,9 +20,14 @@ ifeq ($(GORELEASER_MOUNT_CONFIG),true)
 endif
 
 ifeq ($(OS),Windows_NT)
-    DETECTED_OS := Windows
+	DETECTED_OS := Windows
 else
-    DETECTED_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+	DETECTED_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+endif
+
+# on MacOS disable deprecation warnings security framework
+ifeq ($(DETECTED_OS), Darwin)
+	export CGO_CFLAGS=-Wno-deprecated-declarations
 endif
 
 .PHONY: bins
