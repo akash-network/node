@@ -60,8 +60,6 @@ import (
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/ovrclk/akash/x/inflation"
-
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
@@ -70,15 +68,16 @@ import (
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/ovrclk/akash/x/audit"
-	"github.com/ovrclk/akash/x/cert"
-	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
-
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmos "github.com/tendermint/tendermint/libs/os"
+
+	"github.com/ovrclk/akash/x/audit"
+	"github.com/ovrclk/akash/x/cert"
+	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
+	"github.com/ovrclk/akash/x/inflation"
 
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -110,7 +109,7 @@ import (
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
 	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
 
-	icaauth "github.com/ovrclk/akash/x/icaauth"
+	"github.com/ovrclk/akash/x/icaauth"
 	icaauthkeeper "github.com/ovrclk/akash/x/icaauth/keeper"
 	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types"
 
@@ -406,7 +405,9 @@ func NewApp(
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			crisis.NewAppModule(&app.keeper.crisis, skipGenesisInvariants),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
-			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, nil),
+			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
+			// todo ovrclk/engineering#603
+			// mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, nil),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			distr.NewAppModule(appCodec, app.keeper.distr, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
@@ -453,7 +454,9 @@ func NewApp(
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
-			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, nil),
+			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
+			// todo ovrclk/engineering#603
+			// mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, nil),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
 			distr.NewAppModule(appCodec, app.keeper.distr, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
