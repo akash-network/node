@@ -1,4 +1,4 @@
-name: simulation tests
+name: simulation-tests
 on:
   push:
     branches:
