@@ -21,6 +21,7 @@ import (
 	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
+
 	"github.com/ovrclk/akash/x/audit"
 	audittypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
 	"github.com/ovrclk/akash/x/cert"
