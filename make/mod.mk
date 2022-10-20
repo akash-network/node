@@ -6,7 +6,7 @@ deps-install:
 
 .PHONY: deps-tidy
 deps-tidy:
-	$(GO) mod tidy
+	$(GO) mod tidy -compat=1.17
 
 .PHONY: deps-vendor
 deps-vendor:

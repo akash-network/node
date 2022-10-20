@@ -29,6 +29,7 @@ GIT_HEAD_ABBREV       := $(shell git rev-parse --abbrev-ref HEAD)
 RELEASE_TAG           ?= $(shell git describe --tags --abbrev=0)
 IS_PREREL             := $(shell $(ROOT_DIR)/script/is_prerelease.sh "$(RELEASE_TAG)")
 IS_MAINNET            := $(shell $(ROOT_DIR)/script/mainnet-from-tag.sh "$(RELEASE_TAG)")
+IS_STABLE             ?= false
 
 GO_LINKMODE            ?= external
 GO_MOD                 ?= readonly
@@ -37,15 +38,16 @@ GORELEASER_STRIP_FLAGS ?=
 
 ifeq ($(IS_MAINNET), true)
 	ifeq ($(GORELEASER_IS_PREREL),false)
-		GORELEASER_HOMEBREW_NAME=akash
-		GORELEASER_HOMEBREW_CUSTOM=
+		GORELEASER_HOMEBREW_NAME   := akash
+		GORELEASER_HOMEBREW_CUSTOM :=
+		IS_STABLE                  := true
 	else
-		GORELEASER_HOMEBREW_NAME="akash-test"
-		GORELEASER_HOMEBREW_CUSTOM=keg_only :unneeded, \"This is testnet release. Run brew install ovrclk/tap/akash to install mainnet version\"
+		GORELEASER_HOMEBREW_NAME   := "akash-test"
+		GORELEASER_HOMEBREW_CUSTOM := keg_only :unneeded, \"This is testnet release. Run brew install ovrclk/tap/akash to install mainnet version\"
 	endif
 else
-	GORELEASER_HOMEBREW_NAME="akash-edge"
-	GORELEASER_HOMEBREW_CUSTOM=keg_only :unneeded, \"This is edgenet release. Run brew install ovrclk/tap/akash to install mainnet version\"
+	GORELEASER_HOMEBREW_NAME       := "akash-edge"
+	GORELEASER_HOMEBREW_CUSTOM     := keg_only :unneeded, \"This is edgenet release. Run brew install ovrclk/tap/akash to install mainnet version\"
 endif
 
 GORELEASER_BUILD_VARS := \

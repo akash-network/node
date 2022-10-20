@@ -51,15 +51,16 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	transfer "github.com/cosmos/ibc-go/v2/modules/apps/transfer"
+	"github.com/cosmos/ibc-go/v2/modules/apps/transfer"
 	ibc "github.com/cosmos/ibc-go/v2/modules/core"
 	porttypes "github.com/cosmos/ibc-go/v2/modules/core/05-port/types"
 	"github.com/gorilla/mux"
-	"github.com/ovrclk/akash/x/inflation"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	tmtypes "github.com/tendermint/tendermint/types"
+
+	"github.com/ovrclk/akash/x/inflation"
 
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
@@ -68,10 +69,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-
-	"github.com/ovrclk/akash/x/audit"
-	"github.com/ovrclk/akash/x/cert"
-	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
 
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
@@ -95,6 +92,10 @@ import (
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v2/modules/core/03-connection/types"
 	ibchost "github.com/cosmos/ibc-go/v2/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v2/modules/core/keeper"
+
+	"github.com/ovrclk/akash/x/audit"
+	"github.com/ovrclk/akash/x/cert"
+	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
 
 	dkeeper "github.com/ovrclk/akash/x/deployment/keeper"
 	mkeeper "github.com/ovrclk/akash/x/market/keeper"
@@ -354,7 +355,9 @@ func NewApp(
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			crisis.NewAppModule(&app.keeper.crisis, skipGenesisInvariants),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
-			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, nil),
+			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
+			// todo ovrclk/engineering#603
+			// mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, nil),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			distr.NewAppModule(appCodec, app.keeper.distr, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
@@ -399,7 +402,9 @@ func NewApp(
 			bank.NewAppModule(appCodec, app.keeper.bank, app.keeper.acct),
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
-			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, nil),
+			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
+			// todo ovrclk/engineering#603
+			// mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, nil),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
 			distr.NewAppModule(appCodec, app.keeper.distr, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
