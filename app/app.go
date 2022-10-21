@@ -565,7 +565,7 @@ func (app *AkashApp) registerUpgradeHandlers(icaModule ica.AppModule) {
 	}
 
 	// ica upgrade
-	const upgradeName = "01-ica-upgrade"
+	const upgradeName = "v0.18.0"
 	app.keeper.upgrade.SetUpgradeHandler(
 		upgradeName,
 		func(ctx sdk.Context, _ upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
