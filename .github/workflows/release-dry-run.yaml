@@ -24,21 +24,16 @@ jobs:
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - uses: fregante/setup-git-user@v1
       - name: configure git tag
-        run: |
-          echo "RELEASE_TAG=v$(./script/semver.sh bump patch $(git describe --tags --abbrev=0))" >> $GITHUB_ENV
+        run: echo "RELEASE_TAG=v$(./script/semver.sh bump patch $(git describe --tags --abbrev=0))" >> $GITHUB_ENV
       - name: git tag
-        run: |
-          git tag -a ${{ env.RELEASE_TAG }} -m ${{ env.RELEASE_TAG }}
+        run: git tag -a ${{ env.RELEASE_TAG }} -m ${{ env.RELEASE_TAG }}
       - name: detect network from tag
-        run: |
-          echo "MAINNET=$(./script/mainnet-from-tag.sh ${{ env.RELEASE_TAG }})" >> $GITHUB_ENV
+        run: echo "MAINNET=$(./script/mainnet-from-tag.sh ${{ env.RELEASE_TAG }})" >> $GITHUB_ENV
       - run: echo "Building for MAINNET=${{ env.MAINNET }}"
       - name: release dry-run
         run: make release
-        env:
-          MAINNET: ${{ env.MAINNET }}
