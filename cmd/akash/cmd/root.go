@@ -128,8 +128,8 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
 		ecmd.EventCmd(),
-		queryCmd(),
-		txCmd(),
+		QueryCmd(),
+		TxCmd(),
 		keys.Commands(app.DefaultHome),
 		genutilcli.InitCmd(app.ModuleBasics(), app.DefaultHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultHome),
@@ -218,7 +218,7 @@ func createAppAndExport(
 	return akashApp.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs)
 }
 
-func queryCmd() *cobra.Command {
+func QueryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "query",
 		Aliases: []string{"q"},
@@ -240,7 +240,7 @@ func queryCmd() *cobra.Command {
 	return cmd
 }
 
-func txCmd() *cobra.Command {
+func TxCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tx",
 		Short: "Transactions subcommands",
