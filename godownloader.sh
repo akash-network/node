@@ -109,7 +109,11 @@ adjust_os() {
 }
 adjust_arch() {
   # adjust archive name based on ARCH
-  true
+  case ${OS} in
+    darwin)
+      ARCH=all
+      ;;
+  esac
 }
 
 cat /dev/null <<EOF
