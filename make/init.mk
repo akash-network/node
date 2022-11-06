@@ -1,21 +1,26 @@
+ifeq (, $(shell which direnv))
+$(warning "No direnv in $(PATH), consider installing. https://direnv.net")
+endif
+
 # AKASH_ROOT may not be set if environment does not support/use direnv
 # in this case define it manually as well as all required env variables
 ifndef AKASH_ROOT
-AKASH_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../)
-include $(AKASH_ROOT)/.env
-endif
+	AKASH_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../)
+	include $(AKASH_ROOT)/.env
 
-AKASH                         = $(AKASH_DEVCACHE_BIN)/akash
+	AKASH               := $(AKASH_DEVCACHE_BIN)/akash
+	# setup .cache bins first in paths to have precedence over already installed same tools for system wide use
+	PATH                := "$(AKASH_DEVCACHE_BIN):$(AKASH_DEVCACHE_NODE_BIN):$(PATH)"
+
+endif
 
 BINS                         := $(AKASH)
 
 GO                           := GO111MODULE=$(GO111MODULE) go
-
 GO_MOD_NAME                  := $(shell go list -m 2>/dev/null)
 
-# setup .cache bins first in paths to have precedence over already installed same tools for system wide use
-PATH                         := "$(PATH):$(AKASH_DEVCACHE_BIN):$(AKASH_DEVCACHE_NODE_BIN)"
-
+# ==== Build tools versions ====
+# Format <TOOL>_VERSION
 BUF_VERSION                  ?= 0.35.1
 PROTOC_VERSION               ?= 3.13.0
 PROTOC_GEN_GOCOSMOS_VERSION  ?= v0.3.1
@@ -28,6 +33,7 @@ GIT_CHGLOG_VERSION           ?= v0.15.1
 MODVENDOR_VERSION            ?= v0.3.0
 MOCKERY_VERSION              ?= 2.12.1
 
+# ==== Build tools version tracking ====
 # <TOOL>_VERSION_FILE points to the marker file for the installed version.
 # If <TOOL>_VERSION_FILE is changed, the binary will be re-downloaded.
 PROTOC_VERSION_FILE              := $(AKASH_DEVCACHE_VERSIONS)/protoc/$(PROTOC_VERSION)
@@ -39,8 +45,9 @@ GIT_CHGLOG_VERSION_FILE          := $(AKASH_DEVCACHE_VERSIONS)/git-chglog/$(GIT_
 MOCKERY_VERSION_FILE             := $(AKASH_DEVCACHE_VERSIONS)/mockery/v$(MOCKERY_VERSION)
 GOLANGCI_LINT_VERSION_FILE       := $(AKASH_DEVCACHE_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
 
-MODVENDOR                         = $(AKASH_DEVCACHE_BIN)/modvendor
-SWAGGER_COMBINE                   = $(AKASH_DEVCACHE_NODE_BIN)/swagger-combine
+# ==== Build tools executables ====
+MODVENDOR                        := $(AKASH_DEVCACHE_BIN)/modvendor
+SWAGGER_COMBINE                  := $(AKASH_DEVCACHE_NODE_BIN)/swagger-combine
 PROTOC_SWAGGER_GEN               := $(AKASH_DEVCACHE_BIN)/protoc-swagger-gen
 PROTOC                           := $(AKASH_DEVCACHE_BIN)/protoc
 STATIK                           := $(AKASH_DEVCACHE_BIN)/statik
