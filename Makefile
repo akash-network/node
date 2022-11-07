@@ -11,7 +11,7 @@ UNAME_ARCH            := $(shell uname -m)
 
 include make/init.mk
 
-.DEFAULT_GOAL         := $(AKASH)
+.DEFAULT_GOAL         := bins
 
 DOCKER_RUN            := docker run --rm -v $(shell pwd):/workspace -w /workspace
 DOCKER_BUF            := $(DOCKER_RUN) bufbuild/buf:$(BUF_VERSION)
@@ -21,7 +21,7 @@ LINT                   = $(GOLANGCI_LINT_RUN) ./... --disable-all --deadline=5m 
 
 TEST_DOCKER_REPO      := ovrclk/akashtest
 
-GORELEASER_CONFIG      = .goreleaser.yaml
+GORELEASER_CONFIG     ?= .goreleaser.yaml
 
 GIT_HEAD_COMMIT_LONG  := $(shell git log -1 --format='%H')
 GIT_HEAD_COMMIT_SHORT := $(shell git rev-parse --short HEAD)
