@@ -10,7 +10,7 @@ ifndef AKASH_ROOT
 
 	AKASH               := $(AKASH_DEVCACHE_BIN)/akash
 	# setup .cache bins first in paths to have precedence over already installed same tools for system wide use
-	PATH                := "$(AKASH_DEVCACHE_BIN):$(AKASH_DEVCACHE_NODE_BIN):$(PATH)"
+	PATH                := $(AKASH_DEVCACHE_BIN):$(AKASH_DEVCACHE_NODE_BIN):$(PATH)
 
 endif
 
