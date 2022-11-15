@@ -184,14 +184,15 @@ func manifestGroupFromAkash(m *manifest.Group) (ManifestGroup, error) {
 	return ma, nil
 }
 
-// ManifestService stores name, image, args, env, unit, count and expose list of service
+// ManifestService stores name, image, command, args, env, unit, count and expose list of service
 type ManifestService struct {
 	// Service name
 	Name string `json:"name,omitempty"`
 	// Docker image
 	Image string   `json:"image,omitempty"`
-	Args  []string `json:"args,omitempty"`
-	Env   []string `json:"env,omitempty"`
+	Command []string `json:"command,omitempty"`
+	Args    []string `json:"args,omitempty"`
+	Env     []string `json:"env,omitempty"`
 	// Resource requirements
 	// in current version of CRD it is named as unit
 	Resources ResourceUnits `json:"unit"`
@@ -210,6 +211,7 @@ func (ms ManifestService) toAkash() (manifest.Service, error) {
 	ams := &manifest.Service{
 		Name:      ms.Name,
 		Image:     ms.Image,
+		Command:   ms.Command,
 		Args:      ms.Args,
 		Env:       ms.Env,
 		Resources: res,
@@ -237,6 +239,7 @@ func manifestServiceFromAkash(ams manifest.Service) (ManifestService, error) {
 	ms := ManifestService{
 		Name:      ams.Name,
 		Image:     ams.Image,
+		Command:   ams.Command,
 		Args:      ams.Args,
 		Env:       ams.Env,
 		Resources: resources,

@@ -50,6 +50,10 @@ spec:
                             type: string
                           image:
                             type: string
+                          command:
+                            type: array
+                            items:
+                              type: string
                           args:
                             type: array
                             items:
