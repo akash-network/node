@@ -30,7 +30,7 @@ require (
 	github.com/stretchr/testify v1.8.0
 	github.com/tendermint/tendermint v0.34.23
 	github.com/tendermint/tm-db v0.6.7
-	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
+	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0
 	google.golang.org/genproto v0.0.0-20221014213838-99cd37c6964a
 	google.golang.org/grpc v1.50.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -75,7 +75,7 @@ require (
 	github.com/gogo/gateway v1.1.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.0.1 // indirect
-	github.com/google/go-cmp v0.5.8 // indirect
+	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/orderedcode v0.0.1 // indirect
 	github.com/gorilla/handlers v1.5.1 // indirect
@@ -155,8 +155,8 @@ replace (
 	// cosmos flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	// akash tendermint
-	github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.21-akash.1
+	// akash tendermint (actually 34.24, haven't tagged)
+	github.com/tendermint/tendermint => github.com/notional-labs/tendermint v0.34.14-0.20221122204837-10fe92771f41
 
 	// akash human interface device
 	github.com/zondax/hid => github.com/troian/hid v0.11.0
