@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/blang/semver"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
+	"github.com/blang/semver/v4"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	manifest "github.com/ovrclk/akash/manifest/v2beta1"
