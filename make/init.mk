@@ -11,7 +11,24 @@ ifndef AKASH_ROOT
 	AKASH               := $(AKASH_DEVCACHE_BIN)/akash
 	# setup .cache bins first in paths to have precedence over already installed same tools for system wide use
 	PATH                := $(AKASH_DEVCACHE_BIN):$(AKASH_DEVCACHE_NODE_BIN):$(PATH)
+endif
 
+# require go<major>.<minor> to be equal
+GO_MIN_REQUIRED              := $(shell echo $(GOLANG_VERSION) | cut -f1-2 -d ".")
+DETECTED_GO_VERSION          := $(shell go version | cut -d ' ' -f 3 |  sed 's/go*//' | cut -f1-2 -d ".")
+STRIPPED_GO_VERSION          := $(shell echo $(DETECTED_GO_VERSION) | cut -f1-2 -d ".")
+__IS_GO_UPTODATE             := $(shell ./script/semver.sh compare $(STRIPPED_GO_VERSION) $(GO_MIN_REQUIRED) && echo $?)
+GO_MOD_VERSION               := $(shell go mod edit -json | jq -r .Go | cut -f1-2 -d ".")
+__IS_GO_MOD_MATCHING         := $(shell ./script/semver.sh compare $(GO_MOD_VERSION) $(GO_MIN_REQUIRED) && echo $?)
+
+ifneq (0, $(__IS_GO_MOD_MATCHING))
+$(error go version $(GO_MOD_VERSION) from go.mod does not match GO_MIN_REQUIRED=$(GO_MIN_REQUIRED))
+endif
+
+ifneq (0, $(__IS_GO_UPTODATE))
+$(error invalid go$(DETECTED_GO_VERSION) version. installed must be >= $(GO_MIN_REQUIRED))
+else
+$(info using go$(DETECTED_GO_VERSION))
 endif
 
 BINS                         := $(AKASH)
