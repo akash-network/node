@@ -125,19 +125,6 @@ archives:
     format: zip
     files:
       - none*
-brews:
-  - name: "{{ .Env.HOMEBREW_NAME }}"
-    ids:
-      - wo/version
-    tap:
-      owner: ovrclk
-      name: homebrew-tap
-    homepage: "https://akash.network"
-    description: "Blockchain-powered decentralized compute platform"
-    custom_block: |
-      {{ .Env.HOMEBREW_CUSTOM }}
-    install: |
-      bin.install "akash"
 
 dockers:
   - dockerfile: _build/Dockerfile.akash

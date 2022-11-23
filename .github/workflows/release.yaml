@@ -49,4 +49,4 @@ jobs:
           GORELEASER_RELEASE: true
           GORELEASER_MOUNT_CONFIG: true
           # using PAT as homebrew is located in different repo
-          GITHUB_TOKEN: ${{ secrets.GORELEASER_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
