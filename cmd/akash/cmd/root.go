@@ -42,22 +42,39 @@ import (
 	"github.com/ovrclk/akash/sdkutil"
 )
 
-func bindFlags(cmd *cobra.Command, v *viper.Viper, envPrefixes []string) {
+func bindFlags(cmd *cobra.Command, v *viper.Viper, envPrefixes []string) error {
+	var err error
+
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
 		// Environment variables can't have dashes in them, so bind them to their equivalent
 		// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
 		for _, prefix := range envPrefixes {
-			_ = v.BindEnv(f.Name, fmt.Sprintf("%s_%s", prefix, strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))))
+			err = v.BindEnv(f.Name, fmt.Sprintf("%s_%s", prefix, strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))))
+			if err != nil {
+				return
+			}
 		}
 
-		_ = v.BindPFlag(f.Name, f)
+		err = v.BindPFlag(f.Name, f)
+		if err != nil {
+			return
+		}
 
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed && v.IsSet(f.Name) {
 			val := v.Get(f.Name)
-			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+			err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+			if err != nil {
+				return
+			}
 		}
 	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // NewRootCmd creates a new root command for akash. It is called once in the
@@ -87,7 +104,9 @@ func GetPersistentPreRunE(encodingConfig params.EncodingConfig, envPrefixes []st
 
 		ctx := server.GetServerContextFromCmd(cmd)
 
-		bindFlags(cmd, ctx.Viper, envPrefixes)
+		if err := bindFlags(cmd, ctx.Viper, envPrefixes); err != nil {
+			return err
+		}
 
 		initClientCtx := client.Context{}.
 			WithCodec(encodingConfig.Marshaler).
