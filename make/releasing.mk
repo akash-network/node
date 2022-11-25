@@ -60,7 +60,6 @@ image-minikube:
 docker-image:
 	docker run \
 		--rm \
-		--privileged \
 		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GO_MOD)" \
 		-e BUILD_TAGS="$(BUILD_TAGS)" \
@@ -86,7 +85,6 @@ gen-changelog: $(GIT_CHGLOG)
 release: modvendor gen-changelog
 	docker run \
 		--rm \
-		--privileged \
 		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GO_MOD)" \
 		-e BUILD_TAGS="$(BUILD_TAGS)" \
