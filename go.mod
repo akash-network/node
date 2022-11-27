@@ -150,7 +150,7 @@ replace (
 	github.com/cosmos/ledger-cosmos-go => github.com/ovrclk/ledger-go/cosmos v0.14.0
 
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.21-akash.1
+	github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.21-akash.2
 
 	github.com/zondax/hid => github.com/troian/hid v0.11.0
 	github.com/zondax/ledger-go => github.com/ovrclk/ledger-go v0.14.0
