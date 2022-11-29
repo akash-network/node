@@ -13,7 +13,7 @@ import (
 	typesv1beta2 "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
 )
 
-var _ typesv1beta2.MsgServer = msgServer{}
+var _ typesv1beta2.MsgServer = (*msgServer)(nil)
 
 type msgServer struct {
 	Keeper
@@ -25,7 +25,7 @@ func NewMsgServerImpl(keeper Keeper) typesv1beta2.MsgServer {
 }
 
 // RegisterAccount implements types.MsgServer
-func (k msgServer) RegisterAccount(goCtx context.Context, msg *typesv1beta2.MsgRegisterAccount) (*typesv1beta2.MsgRegisterAccountResponse, error) {
+func (k *msgServer) RegisterAccount(goCtx context.Context, msg *typesv1beta2.MsgRegisterAccount) (*typesv1beta2.MsgRegisterAccountResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	if err := k.icaControllerKeeper.RegisterInterchainAccount(ctx, msg.ConnectionId, msg.Owner); err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (k msgServer) RegisterAccount(goCtx context.Context, msg *typesv1beta2.MsgR
 }
 
 // SubmitTx implements types.MsgServer
-func (k msgServer) SubmitTx(goCtx context.Context, msg *typesv1beta2.MsgSubmitTx) (*typesv1beta2.MsgSubmitTxResponse, error) {
+func (k *msgServer) SubmitTx(goCtx context.Context, msg *typesv1beta2.MsgSubmitTx) (*typesv1beta2.MsgSubmitTxResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	// get the new controller port id

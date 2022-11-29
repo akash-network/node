@@ -75,47 +75,47 @@ func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
 
 func (app *AkashApp) setAkashKeepers() {
 
-	app.keeper.escrow = ekeeper.NewKeeper(
+	app.Keeper.escrow = ekeeper.NewKeeper(
 		app.appCodec,
 		app.keys[escrow.StoreKey],
-		app.keeper.bank,
+		app.Keeper.Bank,
 	)
 
-	app.keeper.deployment = deployment.NewKeeper(
+	app.Keeper.deployment = deployment.NewKeeper(
 		app.appCodec,
 		app.keys[deployment.StoreKey],
 		app.GetSubspace(deployment.ModuleName),
-		app.keeper.escrow,
+		app.Keeper.escrow,
 	)
 
-	app.keeper.market = market.NewKeeper(
+	app.Keeper.market = market.NewKeeper(
 		app.appCodec,
 		app.keys[market.StoreKey],
 		app.GetSubspace(market.ModuleName),
-		app.keeper.escrow,
+		app.Keeper.escrow,
 	)
 
-	hook := mhooks.New(app.keeper.deployment, app.keeper.market)
+	hook := mhooks.New(app.Keeper.deployment, app.Keeper.market)
 
-	app.keeper.escrow.AddOnAccountClosedHook(hook.OnEscrowAccountClosed)
-	app.keeper.escrow.AddOnPaymentClosedHook(hook.OnEscrowPaymentClosed)
+	app.Keeper.escrow.AddOnAccountClosedHook(hook.OnEscrowAccountClosed)
+	app.Keeper.escrow.AddOnPaymentClosedHook(hook.OnEscrowPaymentClosed)
 
-	app.keeper.provider = provider.NewKeeper(
+	app.Keeper.provider = provider.NewKeeper(
 		app.appCodec,
 		app.keys[provider.StoreKey],
 	)
 
-	app.keeper.audit = audit.NewKeeper(
+	app.Keeper.audit = audit.NewKeeper(
 		app.appCodec,
 		app.keys[audit.StoreKey],
 	)
 
-	app.keeper.cert = cert.NewKeeper(
+	app.Keeper.cert = cert.NewKeeper(
 		app.appCodec,
 		app.keys[cert.StoreKey],
 	)
 
-	app.keeper.inflation = inflation.NewKeeper(
+	app.Keeper.inflation = inflation.NewKeeper(
 		app.appCodec,
 		app.keys[inflation.StoreKey],
 		app.GetSubspace(inflation.ModuleName),
@@ -127,48 +127,48 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 
 		escrow.NewAppModule(
 			app.appCodec,
-			app.keeper.escrow,
+			app.Keeper.escrow,
 		),
 
 		deployment.NewAppModule(
 			app.appCodec,
-			app.keeper.deployment,
-			app.keeper.market,
-			app.keeper.escrow,
-			app.keeper.bank,
-			app.keeper.authz,
+			app.Keeper.deployment,
+			app.Keeper.market,
+			app.Keeper.escrow,
+			app.Keeper.Bank,
+			app.Keeper.authz,
 		),
 
 		market.NewAppModule(
 			app.appCodec,
-			app.keeper.market,
-			app.keeper.escrow,
-			app.keeper.audit,
-			app.keeper.deployment,
-			app.keeper.provider,
-			app.keeper.bank,
+			app.Keeper.market,
+			app.Keeper.escrow,
+			app.Keeper.audit,
+			app.Keeper.deployment,
+			app.Keeper.provider,
+			app.Keeper.Bank,
 		),
 
 		provider.NewAppModule(
 			app.appCodec,
-			app.keeper.provider,
-			app.keeper.bank,
-			app.keeper.market,
+			app.Keeper.provider,
+			app.Keeper.Bank,
+			app.Keeper.market,
 		),
 
 		audit.NewAppModule(
 			app.appCodec,
-			app.keeper.audit,
+			app.Keeper.audit,
 		),
 
 		cert.NewAppModule(
 			app.appCodec,
-			app.keeper.cert,
+			app.Keeper.cert,
 		),
 
 		inflation.NewAppModule(
 			app.appCodec,
-			app.keeper.inflation,
+			app.Keeper.inflation,
 		),
 	}
 }
@@ -271,31 +271,31 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 	return []module.AppModuleSimulation{
 		deployment.NewAppModuleSimulation(
-			app.keeper.deployment,
-			app.keeper.acct,
-			app.keeper.bank,
+			app.Keeper.deployment,
+			app.Keeper.acct,
+			app.Keeper.Bank,
 		),
 
 		market.NewAppModuleSimulation(
-			app.keeper.market,
-			app.keeper.acct,
-			app.keeper.deployment,
-			app.keeper.provider,
-			app.keeper.bank,
+			app.Keeper.market,
+			app.Keeper.acct,
+			app.Keeper.deployment,
+			app.Keeper.provider,
+			app.Keeper.Bank,
 		),
 
 		provider.NewAppModuleSimulation(
-			app.keeper.provider,
-			app.keeper.acct,
-			app.keeper.bank,
+			app.Keeper.provider,
+			app.Keeper.acct,
+			app.Keeper.Bank,
 		),
 
 		cert.NewAppModuleSimulation(
-			app.keeper.cert,
+			app.Keeper.cert,
 		),
 
 		inflation.NewAppModuleSimulation(
-			app.keeper.inflation,
+			app.Keeper.inflation,
 		),
 	}
 }

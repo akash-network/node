@@ -35,9 +35,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
 
 	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
-	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
 	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
 	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
@@ -83,6 +83,7 @@ var (
 			evidence.AppModuleBasic{},
 			transfer.AppModuleBasic{},
 			vesting.AppModuleBasic{},
+			// interchain accounts
 			ica.AppModuleBasic{},
 			icaauth.AppModuleBasic{},
 		},
@@ -122,9 +123,9 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 			ibchost.StoreKey,
 			upgradetypes.StoreKey,
 			evidencetypes.StoreKey,
-			icacontrollertypes.StoreKey,
 			ibctransfertypes.StoreKey,
 			capabilitytypes.StoreKey,
+			icacontrollertypes.StoreKey,
 			icaauthtypes.StoreKey,
 			icahosttypes.StoreKey,
 		},

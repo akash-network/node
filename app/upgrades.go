@@ -8,12 +8,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
-
 	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
 	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
 	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
 
+	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
 	inflationtypes "github.com/ovrclk/akash/x/inflation/types/v1beta2"
 )
 
@@ -29,6 +29,11 @@ type upgradeHandlers map[string]upgradeFuncs
 func (app *AkashApp) loadUpgradeHandlers(icaModule ica.AppModule) upgradeHandlers {
 	handlers := make(map[string]upgradeFuncs)
 
+	handlers["v0.20.0"] = upgradeFuncs{
+		handler:     app.upgrade_v0_20_0(icaModule),
+		storeLoader: storeLoader_v0_20_0,
+	}
+
 	handlers["v0.18.0"] = upgradeFuncs{
 		handler:     app.upgrade_v0_18_0(icaModule),
 		storeLoader: storeLoader_v0_18_0,
@@ -40,6 +45,78 @@ func (app *AkashApp) loadUpgradeHandlers(icaModule ica.AppModule) upgradeHandler
 	}
 
 	return handlers
+}
+
+// upgradeDefaultHandler creates an SDK upgrade handler for v4
+func (app *AkashApp) upgradeDefaultHandler() upgradetypes.UpgradeHandler {
+	return func(ctx sdk.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
+		newVm, err := app.mm.RunMigrations(ctx, app.configurator, vm)
+		if err != nil {
+			return newVm, err
+		}
+		return newVm, nil
+	}
+}
+
+// storeLoader_v0_20_0 fixes pruning issue introduced in the v0.18.0 upgrade due to missing icaauthtypes.StoreKey
+// it deletes previously added store keys and adds them again with icaauthtypes.StoreKey included
+// nolint: revive
+func storeLoader_v0_20_0(upgradeHeight int64) bam.StoreLoader {
+	return func(ms sdk.CommitMultiStore) error {
+		if upgradeHeight == ms.LastCommitID().Version+1 {
+			err := ms.LoadLatestVersionAndUpgrade(&storetypes.StoreUpgrades{
+				Deleted: []string{
+					icacontrollertypes.StoreKey,
+					icahosttypes.StoreKey,
+				},
+			})
+			if err != nil {
+				return err
+			}
+			err = ms.LoadLatestVersionAndUpgrade(&storetypes.StoreUpgrades{
+				Added: []string{
+					icacontrollertypes.StoreKey,
+					icahosttypes.StoreKey,
+					icaauthtypes.StoreKey,
+				},
+			})
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+
+		// Otherwise load default store loader
+		return bam.DefaultStoreLoader(ms)
+	}
+}
+
+// nolint: revive
+func (app *AkashApp) upgrade_v0_20_0(icaModule ica.AppModule) upgradetypes.UpgradeHandler {
+	return func(ctx sdk.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+		fromVM[icatypes.ModuleName] = icaModule.ConsensusVersion()
+
+		// create ICS27 Controller submodule params
+		// disable the controller chain
+		controllerParams := icacontrollertypes.Params{
+			ControllerEnabled: false,
+		}
+
+		// create ICS27 Host submodule params
+		hostParams := icahosttypes.Params{
+			// disable the host chain
+			HostEnabled:   false,
+			AllowMessages: []string{},
+		}
+
+		ctx.Logger().Info("start re-init interchainaccount module...")
+		// initialize ICS27 module
+		icaModule.InitModule(ctx, controllerParams, hostParams)
+
+		ctx.Logger().Info("start to run module migrations...")
+
+		return app.mm.RunMigrations(ctx, app.configurator, fromVM)
+	}
 }
 
 // nolint: revive
@@ -61,7 +138,9 @@ func (app *AkashApp) upgrade_v0_18_0(icaModule ica.AppModule) upgradetypes.Upgra
 
 		// create ICS27 Controller submodule params
 		// enable the controller chain
-		controllerParams := icacontrollertypes.Params{ControllerEnabled: true}
+		controllerParams := icacontrollertypes.Params{
+			ControllerEnabled: true,
+		}
 
 		// create ICS27 Host submodule params
 		hostParams := icahosttypes.Params{
@@ -97,7 +176,7 @@ func storeLoader_akash_v0_15_0_cosmos_v0_44_x(upgradeHeight int64) bam.StoreLoad
 func (app *AkashApp) upgrade_akash_v0_15_0_cosmos_v0_44_x() upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, plan upgradetypes.Plan, versionMap module.VersionMap) (module.VersionMap, error) {
 		// set max expected block time parameter. Replace the default with your expected value
-		app.keeper.ibc.ConnectionKeeper.SetParams(ctx, ibcconnectiontypes.DefaultParams())
+		app.Keeper.IBC.ConnectionKeeper.SetParams(ctx, ibcconnectiontypes.DefaultParams())
 
 		// 1st-time running in-store migrations, using 1 as fromVersion to
 		// avoid running InitGenesis.

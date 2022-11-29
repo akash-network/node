@@ -13,7 +13,7 @@ import (
 )
 
 // InterchainAccountFromAddress implements the Query/InterchainAccountFromAddress gRPC method
-func (k Keeper) InterchainAccountFromAddress(goCtx context.Context, req *typesv1beta2.QueryInterchainAccountFromAddressRequest) (*typesv1beta2.QueryInterchainAccountFromAddressResponse, error) {
+func (k *Keeper) InterchainAccountFromAddress(goCtx context.Context, req *typesv1beta2.QueryInterchainAccountFromAddressRequest) (*typesv1beta2.QueryInterchainAccountFromAddressResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	portID, err := icatypes.NewControllerPortID(req.Owner)
