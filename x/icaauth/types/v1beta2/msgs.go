@@ -1,4 +1,4 @@
-package types
+package v1beta2
 
 import (
 	"strings"
@@ -7,7 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	proto "github.com/gogo/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 )
 
 var (

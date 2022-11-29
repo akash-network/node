@@ -16,7 +16,7 @@ import (
 
 	"github.com/ovrclk/akash/x/icaauth/client/cli"
 	"github.com/ovrclk/akash/x/icaauth/keeper"
-	"github.com/ovrclk/akash/x/icaauth/types"
+	typesv1beta2 "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
 )
 
 var (
@@ -35,20 +35,20 @@ func NewAppModuleBasic(cdc codec.Codec) AppModuleBasic {
 
 // Name returns the capability module's name.
 func (AppModuleBasic) Name() string {
-	return types.ModuleName
+	return typesv1beta2.ModuleName
 }
 
 func (AppModuleBasic) RegisterCodec(cdc *codec.LegacyAmino) {
-	types.RegisterCodec(cdc)
+	typesv1beta2.RegisterCodec(cdc)
 }
 
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	types.RegisterCodec(cdc)
+	typesv1beta2.RegisterCodec(cdc)
 }
 
 // RegisterInterfaces registers the module's interface types
 func (a AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
-	types.RegisterInterfaces(reg)
+	typesv1beta2.RegisterInterfaces(reg)
 }
 
 // DefaultGenesis returns the capability module's default genesis state.
@@ -101,12 +101,12 @@ func (am AppModule) Name() string {
 
 // Route returns the capability module's message routing key.
 func (am AppModule) Route() sdk.Route {
-	return sdk.NewRoute(types.RouterKey, nil)
+	return sdk.NewRoute(typesv1beta2.RouterKey, nil)
 }
 
 // QuerierRoute returns the capability module's query routing key.
 func (AppModule) QuerierRoute() string {
-	return types.QuerierRoute
+	return typesv1beta2.QuerierRoute
 }
 
 // LegacyQuerierHandler returns the capability module's Querier.
@@ -117,8 +117,8 @@ func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sd
 // RegisterServices registers a GRPC query service to respond to the
 // module-specific GRPC queries.
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgServerImpl(am.keeper))
-	types.RegisterQueryServer(cfg.QueryServer(), am.keeper)
+	typesv1beta2.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgServerImpl(am.keeper))
+	typesv1beta2.RegisterQueryServer(cfg.QueryServer(), am.keeper)
 }
 
 // RegisterInvariants registers the capability module's invariants.

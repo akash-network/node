@@ -1,4 +1,4 @@
-package types
+package v1beta2
 
 import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"

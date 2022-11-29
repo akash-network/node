@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/ovrclk/akash/x/icaauth/types"
+	typesv1beta2 "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
 )
 
 const (
@@ -24,8 +24,8 @@ const (
 // GetTxCmd creates and returns the icaauth tx command
 func GetTxCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:                        types.ModuleName,
-		Short:                      fmt.Sprintf("%s transactions subcommands", types.ModuleName),
+		Use:                        typesv1beta2.ModuleName,
+		Short:                      fmt.Sprintf("%s transactions subcommands", typesv1beta2.ModuleName),
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
@@ -48,7 +48,7 @@ func getRegisterAccountCmd() *cobra.Command {
 				return err
 			}
 
-			msg := types.NewMsgRegisterAccount(
+			msg := typesv1beta2.NewMsgRegisterAccount(
 				clientCtx.GetFromAddress().String(),
 				viper.GetString(flagConnectionID),
 			)
@@ -91,7 +91,7 @@ func getSubmitTxCmd() *cobra.Command {
 				}
 			}
 
-			msg, err := types.NewMsgSubmitTx(txMsg, viper.GetString(flagConnectionID), clientCtx.GetFromAddress().String())
+			msg, err := typesv1beta2.NewMsgSubmitTx(txMsg, viper.GetString(flagConnectionID), clientCtx.GetFromAddress().String())
 			if err != nil {
 				return err
 			}

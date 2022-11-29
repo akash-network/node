@@ -12,7 +12,7 @@ import (
 	icacontrollerkeeper "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/keeper"
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 
-	"github.com/ovrclk/akash/x/icaauth/types"
+	typesv1beta2 "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
 )
 
 type IKeeper interface {
@@ -42,7 +42,7 @@ func NewKeeper(cdc codec.Codec, storeKey sdk.StoreKey, iaKeeper icacontrollerkee
 
 // Logger returns the application logger, scoped to the associated module
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s-%s", host.ModuleName, types.ModuleName))
+	return ctx.Logger().With("module", fmt.Sprintf("x/%s-%s", host.ModuleName, typesv1beta2.ModuleName))
 }
 
 // ClaimCapability claims the channel capability passed via the OnOpenChanInit callback
