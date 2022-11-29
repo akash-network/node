@@ -1,11 +1,20 @@
 package app
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
-	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/rakyll/statik/fs"
+	"github.com/spf13/cast"
+
+	abci "github.com/tendermint/tendermint/abci/types"
+	tmjson "github.com/tendermint/tendermint/libs/json"
+	"github.com/tendermint/tendermint/libs/log"
+	tmos "github.com/tendermint/tendermint/libs/os"
+	dbm "github.com/tendermint/tm-db"
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -15,11 +24,12 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/simapp"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
@@ -35,9 +45,13 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/capability"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
+	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
+	distr "github.com/cosmos/cosmos-sdk/x/distribution"
+	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	evidencekeeper "github.com/cosmos/cosmos-sdk/x/evidence/keeper"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
@@ -48,46 +62,19 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
-	"github.com/cosmos/cosmos-sdk/x/upgrade"
-	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
-	ibc "github.com/cosmos/ibc-go/v3/modules/core"
-	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
-	"github.com/gorilla/mux"
-	"github.com/rakyll/statik/fs"
-	"github.com/spf13/cast"
-	tmjson "github.com/tendermint/tendermint/libs/json"
-	tmtypes "github.com/tendermint/tendermint/types"
-
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
-	"github.com/cosmos/cosmos-sdk/x/staking"
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-
-	"github.com/tendermint/tendermint/libs/log"
-	dbm "github.com/tendermint/tm-db"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmos "github.com/tendermint/tendermint/libs/os"
-
-	"github.com/ovrclk/akash/x/audit"
-	"github.com/ovrclk/akash/x/cert"
-	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
-	"github.com/ovrclk/akash/x/inflation"
-
-	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	"github.com/cosmos/cosmos-sdk/version"
-	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
+	"github.com/cosmos/cosmos-sdk/x/staking"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/cosmos/cosmos-sdk/x/upgrade"
+	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
+	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
 	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
 	icacontroller "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller"
@@ -96,22 +83,26 @@ import (
 	icahost "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host"
 	icahostkeeper "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/keeper"
 	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
-	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
+	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	ibc "github.com/cosmos/ibc-go/v3/modules/core"
 	ibcclient "github.com/cosmos/ibc-go/v3/modules/core/02-client"
 	ibcclienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
-	ibcconnectiontypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
+	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
 
+	"github.com/ovrclk/akash/x/audit"
+	"github.com/ovrclk/akash/x/cert"
 	dkeeper "github.com/ovrclk/akash/x/deployment/keeper"
-	mkeeper "github.com/ovrclk/akash/x/market/keeper"
-	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
-
+	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
 	"github.com/ovrclk/akash/x/icaauth"
 	icaauthkeeper "github.com/ovrclk/akash/x/icaauth/keeper"
 	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
+	"github.com/ovrclk/akash/x/inflation"
+	mkeeper "github.com/ovrclk/akash/x/market/keeper"
+	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
 
 	// unnamed import of statik for swagger UI support
 	_ "github.com/ovrclk/akash/client/docs/statik"
@@ -129,7 +120,7 @@ var (
 	allowedReceivingModAcc = map[string]bool{}
 )
 
-// AkashApp extends ABCI appplication
+// AkashApp extends ABCI application
 type AkashApp struct {
 	*bam.BaseApp
 	cdc               *codec.LegacyAmino
@@ -167,7 +158,7 @@ type AkashApp struct {
 		scopedTransferKeeper      capabilitykeeper.ScopedKeeper
 		scopedICAControllerKeeper capabilitykeeper.ScopedKeeper
 		scopedICAHostKeeper       capabilitykeeper.ScopedKeeper
-		scopedIcaAuthKeeper       capabilitykeeper.ScopedKeeper
+		scopedICAAuthKeeper       capabilitykeeper.ScopedKeeper
 
 		// akash keepers
 		escrow     escrowkeeper.Keeper
@@ -235,7 +226,8 @@ func NewApp(
 
 	scopedIBCKeeper := app.keeper.cap.ScopeToModule(ibchost.ModuleName)
 	scopedTransferKeeper := app.keeper.cap.ScopeToModule(ibctransfertypes.ModuleName)
-	scopedIcaAuthKeeper := app.keeper.cap.ScopeToModule(icaauthtypes.ModuleName)
+
+	scopedICAAuthKeeper := app.keeper.cap.ScopeToModule(icaauthtypes.ModuleName)
 	scopedICAControllerKeeper := app.keeper.cap.ScopeToModule(icacontrollertypes.SubModuleName)
 	scopedICAHostKeeper := app.keeper.cap.ScopeToModule(icahosttypes.SubModuleName)
 
@@ -365,7 +357,7 @@ func NewApp(
 
 	icaModule := ica.NewAppModule(&app.keeper.icaControllerKeeper, &app.keeper.icaHostKeeper)
 
-	app.keeper.icaAuthKeeper = icaauthkeeper.NewKeeper(appCodec, keys[icaauthtypes.StoreKey], app.keeper.icaControllerKeeper, scopedIcaAuthKeeper)
+	app.keeper.icaAuthKeeper = icaauthkeeper.NewKeeper(appCodec, keys[icaauthtypes.StoreKey], app.keeper.icaControllerKeeper, scopedICAAuthKeeper)
 	icaAuthModule := icaauth.NewAppModule(appCodec, app.keeper.icaAuthKeeper)
 	icaAuthIBCModule := icaauth.NewIBCModule(app.keeper.icaAuthKeeper)
 
@@ -422,7 +414,7 @@ func NewApp(
 	)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
-	// there is nothing left over in the validator fee pool, so as to keep the
+	// there is nothing left over in the validator fee pool, to keep the
 	// CanWithdrawInvariant invariant.
 	// NOTE: staking module is required if HistoricalEntries param > 0
 	// NOTE: capability module's beginblocker must come before any modules using capabilities (e.g. IBC)
@@ -507,125 +499,30 @@ func NewApp(
 	app.keeper.scopedTransferKeeper = scopedTransferKeeper
 	app.keeper.scopedICAControllerKeeper = scopedICAControllerKeeper
 	app.keeper.scopedICAHostKeeper = scopedICAHostKeeper
-	app.keeper.scopedIcaAuthKeeper = scopedIcaAuthKeeper
+	app.keeper.scopedICAAuthKeeper = scopedICAAuthKeeper
 
 	return app
 }
 
 func (app *AkashApp) registerUpgradeHandlers(icaModule ica.AppModule) {
-	app.keeper.upgrade.SetUpgradeHandler("akash_v0.15.0_cosmos_v0.44.x", func(ctx sdk.Context,
-		plan upgradetypes.Plan, _ module.VersionMap) (module.VersionMap, error) {
-		// set max expected block time parameter. Replace the default with your expected value
-		app.keeper.ibc.ConnectionKeeper.SetParams(ctx, ibcconnectiontypes.DefaultParams())
+	handlers := app.loadUpgradeHandlers(icaModule)
 
-		// 1st-time running in-store migrations, using 1 as fromVersion to
-		// avoid running InitGenesis.
-		fromVM := map[string]uint64{
-			"auth":         1,
-			"bank":         1,
-			"capability":   1,
-			"crisis":       1,
-			"distribution": 1,
-			"evidence":     1,
-			"gov":          1,
-			"mint":         1,
-			"params":       1,
-			"slashing":     1,
-			"staking":      1,
-			"upgrade":      1,
-			"vesting":      1,
-			"ibc":          1,
-			"genutil":      1,
-			"transfer":     1,
-
-			// akash modules
-			"audit":      1,
-			"cert":       1,
-			"deployment": 1,
-			"escrow":     1,
-			"market":     1,
-			"provider":   1,
+	for name, fn := range handlers {
+		if fn.handler == nil {
+			panic(fmt.Sprintf("upgrade \"%s\" does not have handler set", name))
 		}
 
-		return app.mm.RunMigrations(ctx, app.configurator, fromVM)
-	})
+		app.keeper.upgrade.SetUpgradeHandler(name, fn.handler)
+	}
 
 	upgradeInfo, err := app.keeper.upgrade.ReadUpgradeInfoFromDisk()
 	if err != nil {
 		panic(err)
 	}
 
-	if upgradeInfo.Name == "akash_v0.15.0_cosmos_v0.44.x" && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
-		storeUpgrades := storetypes.StoreUpgrades{
-			Added: []string{"authz", "inflation"},
-		}
-
-		// configure store loader that checks if version == upgradeHeight and applies store upgrades
-		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+	if funcs, exists := handlers[upgradeInfo.Name]; exists && funcs.storeLoader != nil && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
+		app.SetStoreLoader(funcs.storeLoader(upgradeInfo.Height))
 	}
-
-	// ica upgrade
-	const upgradeName = "v0.18.0"
-	app.keeper.upgrade.SetUpgradeHandler(
-		upgradeName,
-		func(ctx sdk.Context, _ upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
-			fromVM[icatypes.ModuleName] = icaModule.ConsensusVersion()
-
-			// create ICS27 Controller submodule params
-			// enable the controller chain
-			controllerParams := icacontrollertypes.Params{ControllerEnabled: true}
-
-			// create ICS27 Host submodule params
-			hostParams := icahosttypes.Params{
-				// enable the host chain
-				HostEnabled: true,
-				// allowing the all messages
-				AllowMessages: []string{"*"},
-			}
-
-			ctx.Logger().Info("start to init interchainaccount module...")
-			// initialize ICS27 module
-			icaModule.InitModule(ctx, controllerParams, hostParams)
-
-			ctx.Logger().Info("start to run module migrations...")
-
-			return app.mm.RunMigrations(ctx, app.configurator, fromVM)
-		},
-	)
-
-	if upgradeInfo.Name == upgradeName && !app.keeper.upgrade.IsSkipHeight(upgradeInfo.Height) {
-		storeUpgrades := storetypes.StoreUpgrades{
-			Added: []string{icacontrollertypes.StoreKey, icahosttypes.StoreKey},
-		}
-
-		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
-	}
-}
-
-func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time { // nolint: unused,deadcode
-	if v := appOpts.Get("GenesisTime"); v != nil {
-		// in tests, GenesisTime is supplied using appOpts
-		genTime, ok := v.(time.Time)
-		if !ok {
-			panic("expected GenesisTime to be a Time value")
-		}
-		return genTime
-	}
-
-	genDoc, err := tmtypes.GenesisDocFromFile(filepath.Join(homePath, "config/genesis.json"))
-	if err != nil {
-		panic(err)
-	}
-
-	return genDoc.GenesisTime
-}
-
-// MakeCodecs constructs the *std.Codec and *codec.LegacyAmino instances used by
-// simapp. It is useful for tests and clients who do not want to construct the
-// full simapp
-func MakeCodecs() (codec.Codec, *codec.LegacyAmino) {
-	config := MakeEncodingConfig()
-	return config.Marshaler, config.Amino
 }
 
 // Name returns the name of the App
@@ -739,7 +636,7 @@ func (app *AkashApp) RegisterTendermintService(clientCtx client.Context) {
 }
 
 // RegisterSwaggerAPI registers swagger route with API Server
-func RegisterSwaggerAPI(ctx client.Context, rtr *mux.Router) {
+func RegisterSwaggerAPI(_ client.Context, rtr *mux.Router) {
 	statikFS, err := fs.New()
 	if err != nil {
 		panic(err)
@@ -755,8 +652,7 @@ func (app *AkashApp) LoadHeight(height int64) error {
 }
 
 // initParamsKeeper init params keeper and its subspaces
-func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key,
-	tkey sdk.StoreKey) paramskeeper.Keeper {
+func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey sdk.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
 
 	paramsKeeper.Subspace(authtypes.ModuleName)
